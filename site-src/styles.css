@@ -514,6 +514,9 @@ body::before{
 .callout.pred .label{color:var(--violet)}
 .callout.trap{background:var(--red-dim);   border-color:rgba(220,38,38,.25); color:var(--ink2)}
 .callout.trap .label{color:var(--red)}
+.callout.anlg{background:var(--green-dim); border-color:rgba(5,150,105,.25); color:var(--ink2)}
+.callout.anlg .label{color:var(--green)}
+[data-theme="dark"] .callout.anlg{border-color:rgba(16,185,129,.28)}
 
 /* Code */
 .fx{
