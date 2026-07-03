@@ -12,18 +12,20 @@
    TOKENS
 ════════════════════════════════════════════════════ */
 :root {
-  --bg:       #F7F8FC;
+  --bg:       #F4F6FC;
+  --bg-card:  #FFFFFF;
   --surface:  #FFFFFF;
-  --s2:       #EEF0F8;
-  --border:   #E2E5F0;
-  --ink:      #0F1117;
-  --ink2:     #475068;
-  --ink3:     #96A0BE;
-  --blue:     #4F52E0;
-  --blue-dim: rgba(79,82,224,.10);
-  --blue-gl:  rgba(79,82,224,.22);
-  --teal:     #0891B2;
-  --teal-dim: rgba(8,145,178,.10);
+  --s1:       #F0F3FB;
+  --s2:       #E8ECF8;
+  --border:   #E0E5F2;
+  --ink:      #0B0E1A;
+  --ink2:     #454F6B;
+  --ink3:     #8A93B0;
+  --blue:     #4B4EE6;
+  --blue-dim: rgba(75,78,230,.09);
+  --blue-gl:  rgba(75,78,230,.20);
+  --teal:     #0693B4;
+  --teal-dim: rgba(6,147,180,.09);
   --amber:    #B45309;
   --amber-dim:rgba(180,83,9,.09);
   --red:      #DC2626;
@@ -36,27 +38,39 @@
   --code-kw:  #6D28D9; --code-fn: #1D6FD9;
   --code-str: #059669; --code-num:#B45309;
   --code-cmt: #96A0BE; --code-txt:#252B40;
-  --bar-h:    52px;
+  --bar-h:    54px;
   --sb-w:     250px;
-  --r:        8px; --r-lg:14px;
+  --r:        10px; --r-lg:16px;
   --sans:'Inter',system-ui,sans-serif;
   --disp:'Space Grotesk',system-ui,sans-serif;
   --mono:'JetBrains Mono',ui-monospace,monospace;
-  --t:140ms ease;
+  --t:160ms cubic-bezier(.4,0,.2,1);
+  /* futuristic system */
+  --grad:      linear-gradient(135deg,var(--blue),var(--teal));
+  --grad-soft: linear-gradient(135deg,rgba(75,78,230,.14),rgba(6,147,180,.10));
+  --glow-blue: 0 0 24px rgba(75,78,230,.18);
+  --glass:     rgba(255,255,255,.72);
+  --grid-line: rgba(11,14,26,.035);
+  --shadow-sm: 0 1px 2px rgba(16,20,40,.05),0 2px 6px rgba(16,20,40,.05);
+  --shadow-md: 0 6px 24px rgba(16,20,40,.09);
+  --shadow-lg: 0 24px 60px rgba(16,20,40,.16);
+  --ring:      0 0 0 1px var(--blue-gl);
 }
 [data-theme="dark"] {
-  --bg:       #0D1117;
-  --surface:  #161C26;
-  --s2:       #1E2535;
-  --border:   #252F42;
-  --ink:      #E4EAF8;
-  --ink2:     #7887A8;
-  --ink3:     #374259;
-  --blue:     #6366F1;
-  --blue-dim: rgba(99,102,241,.13);
-  --blue-gl:  rgba(99,102,241,.28);
-  --teal:     #14B8C4;
-  --teal-dim: rgba(20,184,196,.12);
+  --bg:       #06080F;
+  --bg-card:  #0E1420;
+  --surface:  #101725;
+  --s1:       #0C121D;
+  --s2:       #1A2333;
+  --border:   #202A3D;
+  --ink:      #E7EDFB;
+  --ink2:     #8D9BBC;
+  --ink3:     #4E5B78;
+  --blue:     #6E72F5;
+  --blue-dim: rgba(110,114,245,.14);
+  --blue-gl:  rgba(110,114,245,.30);
+  --teal:     #22D3EE;
+  --teal-dim: rgba(34,211,238,.12);
   --amber:    #F59E0B;
   --amber-dim:rgba(245,158,11,.12);
   --red:      #F43F5E;
@@ -65,10 +79,18 @@
   --green-dim:rgba(16,185,129,.12);
   --violet:   #A78BFA;
   --violet-dim:rgba(167,139,250,.12);
-  --code-bg:  #090E1A;
+  --code-bg:  #070C16;
   --code-kw:  #C084FC; --code-fn: #60A5FA;
   --code-str: #34D399; --code-num:#FCD34D;
   --code-cmt: #4B5563; --code-txt:#CDD6F4;
+  --grad-soft: linear-gradient(135deg,rgba(110,114,245,.20),rgba(34,211,238,.12));
+  --glow-blue: 0 0 28px rgba(110,114,245,.32);
+  --glass:     rgba(14,20,32,.62);
+  --grid-line: rgba(140,160,220,.045);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.3),0 2px 8px rgba(0,0,0,.28);
+  --shadow-md: 0 8px 30px rgba(0,0,0,.42);
+  --shadow-lg: 0 30px 70px rgba(0,0,0,.55);
+  --ring:      0 0 0 1px var(--blue-gl);
 }
 
 /* ════════════════════════════════════════════════════
@@ -76,31 +98,54 @@
 ════════════════════════════════════════════════════ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:15px;scroll-behavior:smooth}
-body{font-family:var(--sans);background:var(--bg);color:var(--ink);
+body{font-family:var(--sans);color:var(--ink);
   line-height:1.6;-webkit-font-smoothing:antialiased;
-  transition:background .25s,color .25s}
+  transition:background .25s,color .25s;
+  background:var(--bg);
+  background-image:
+    radial-gradient(900px 520px at 88% -8%, var(--blue-dim), transparent 60%),
+    radial-gradient(760px 460px at -6% 12%, var(--teal-dim), transparent 55%);
+  background-attachment:fixed;
+}
+/* Ambient tech grid — sits behind everything, shows through content gutters */
+body::before{
+  content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size:40px 40px;
+  mask-image:radial-gradient(ellipse 100% 70% at 50% 0%, #000 40%, transparent 78%);
+  -webkit-mask-image:radial-gradient(ellipse 100% 70% at 50% 0%, #000 40%, transparent 78%);
+}
 
 /* ════════════════════════════════════════════════════
    TOPBAR
 ════════════════════════════════════════════════════ */
 .topbar{
   position:fixed;inset:0 0 auto 0;height:var(--bar-h);
-  background:color-mix(in srgb, var(--bg) 85%, transparent);
-  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  background:var(--glass);
+  backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);
   border-bottom:1px solid var(--border);
   display:flex;align-items:center;gap:0;
   padding:0;z-index:200;
 }
+/* gradient hairline under the bar */
+.topbar::after{
+  content:'';position:absolute;left:0;right:0;bottom:-1px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--blue-gl) 30%,var(--teal) 50%,var(--blue-gl) 70%,transparent);
+  opacity:.55;
+}
 .tb-logo{
   width:var(--sb-w);flex-shrink:0;
-  display:flex;align-items:center;gap:8px;
+  display:flex;align-items:center;gap:9px;
   padding:0 16px;border-right:1px solid var(--border);
   height:100%;
 }
 .tb-logo-icon{
-  width:26px;height:26px;border-radius:6px;
-  background:linear-gradient(135deg,var(--blue),var(--teal));
-  display:flex;align-items:center;justify-content:center;font-size:13px;
+  width:28px;height:28px;border-radius:8px;
+  background:var(--grad);
+  box-shadow:var(--glow-blue), inset 0 1px 0 rgba(255,255,255,.25);
+  display:flex;align-items:center;justify-content:center;font-size:14px;
 }
 .tb-logo-text{font-family:var(--disp);font-weight:700;font-size:14px;
   letter-spacing:-.02em;color:var(--ink)}
@@ -657,39 +702,63 @@ body{font-family:var(--sans);background:var(--bg);color:var(--ink);
 /* Hero */
 .syl-hero {
   position: relative;
-  padding: 4rem 2.5rem 3rem;
+  padding: 5rem 2.5rem 3.5rem;
   border-bottom: 1px solid var(--border);
   overflow: hidden;
   background:
-    radial-gradient(ellipse 800px 400px at 20% -20%, var(--blue-dim), transparent 70%),
+    radial-gradient(ellipse 900px 460px at 15% -30%, var(--blue-dim), transparent 68%),
+    radial-gradient(ellipse 700px 400px at 95% 120%, var(--teal-dim), transparent 62%),
     var(--bg-card);
 }
-.syl-hero-glow {
-  position: absolute; top: -100px; right: -50px;
-  width: 400px; height: 400px; border-radius: 50%;
-  background: radial-gradient(circle, var(--blue-gl), transparent 65%);
-  filter: blur(40px); pointer-events: none; opacity: .6;
+/* grid overlay inside hero */
+.syl-hero::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size:34px 34px;
+  mask-image:radial-gradient(ellipse 70% 100% at 0% 0%, #000, transparent 70%);
+  -webkit-mask-image:radial-gradient(ellipse 70% 100% at 0% 0%, #000, transparent 70%);
 }
-.syl-hero-inner { position: relative; z-index: 1; max-width: 720px; }
+.syl-hero-glow {
+  position: absolute; top: -140px; right: -60px;
+  width: 460px; height: 460px; border-radius: 50%;
+  background: radial-gradient(circle, var(--blue-gl), transparent 62%);
+  filter: blur(50px); pointer-events: none; opacity: .8;
+  animation: heroFloat 14s ease-in-out infinite;
+}
+@keyframes heroFloat{
+  0%,100%{transform:translate(0,0) scale(1)}
+  50%{transform:translate(-24px,24px) scale(1.08)}
+}
+.syl-hero-inner { position: relative; z-index: 1; max-width: 760px; }
 .syl-hero-badge {
-  display: inline-block; font-size: .68rem; font-weight: 700;
+  display: inline-flex; align-items:center; gap:.5rem;
+  font-size: .68rem; font-weight: 700;
   letter-spacing: .16em; text-transform: uppercase; color: var(--blue);
   border: 1px solid var(--blue-gl); border-radius: 30px;
-  padding: .3rem .9rem; margin-bottom: 1.4rem;
+  padding: .35rem 1rem; margin-bottom: 1.5rem;
   background: var(--blue-dim);
+  box-shadow: var(--ring);
 }
+.syl-hero-badge::before{
+  content:'';width:6px;height:6px;border-radius:50%;
+  background:var(--teal);box-shadow:0 0 8px var(--teal);
+  animation:pulseDot 2.4s ease-in-out infinite;
+}
+@keyframes pulseDot{0%,100%{opacity:1}50%{opacity:.3}}
 .syl-hero-title {
-  font-size: 3rem; font-weight: 900; line-height: 1.05;
-  letter-spacing: -.045em; color: var(--ink); margin: 0 0 1rem;
+  font-size: clamp(2.2rem, 5vw, 3.4rem); font-weight: 900; line-height: 1.04;
+  letter-spacing: -.045em; color: var(--ink); margin: 0 0 1.1rem;
 }
 .syl-hero-title span {
-  background: linear-gradient(120deg, var(--blue), var(--teal));
+  background: linear-gradient(120deg, var(--blue), var(--teal) 60%, var(--violet));
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 .syl-hero-sub {
-  font-size: .95rem; color: var(--ink3); margin: 0; line-height: 1.6;
-  font-weight: 500;
+  font-size: .98rem; color: var(--ink2); margin: 0; line-height: 1.6;
+  font-weight: 500; font-family: var(--mono); letter-spacing: -.01em;
 }
 
 /* Body */
@@ -714,17 +783,24 @@ body{font-family:var(--sans);background:var(--bg);color:var(--ink);
 
 /* Phase card */
 .syl-phase {
-  margin-bottom: .55rem;
+  position: relative;
+  margin-bottom: .6rem;
   border: 1px solid var(--border);
-  border-radius: 14px; overflow: hidden;
+  border-radius: var(--r-lg); overflow: hidden;
   background: var(--bg-card);
-  transition: border-color .2s;
+  transition: border-color .2s, box-shadow .2s, transform .2s;
 }
-.syl-phase:hover { border-color: var(--blue-gl); }
+.syl-phase::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:var(--grad);opacity:0;transition:opacity .2s;
+}
+.syl-phase:hover { border-color: var(--blue-gl); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.syl-phase:hover::before{ opacity:.7; }
 .syl-phase.open {
   border-color: var(--blue-gl);
-  box-shadow: 0 0 0 1px var(--blue-gl), 0 8px 30px rgba(0,0,0,.12);
+  box-shadow: var(--ring), var(--shadow-md);
 }
+.syl-phase.open::before{ opacity:1; }
 
 .syl-phase-hdr {
   display: flex; align-items: center; gap: 1rem;
@@ -736,11 +812,13 @@ body{font-family:var(--sans);background:var(--bg);color:var(--ink);
 .syl-phase-num {
   font-family: var(--mono, monospace); font-size: .8rem; font-weight: 800;
   color: var(--blue); background: var(--blue-dim);
-  border: 1px solid var(--blue-gl); border-radius: 8px;
+  border: 1px solid var(--blue-gl); border-radius: 9px;
   min-width: 2.4rem; height: 2.4rem;
   display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
+  flex-shrink: 0; transition: box-shadow .2s;
 }
+.syl-phase.open .syl-phase-num,
+.syl-phase:hover .syl-phase-num{ box-shadow: var(--glow-blue); }
 .syl-phase-ico { font-size: 1.4rem; flex-shrink: 0; }
 .syl-phase-meta { flex: 1; min-width: 0; }
 .syl-phase-name {
@@ -1119,6 +1197,73 @@ body{font-family:var(--sans);background:var(--bg);color:var(--ink);
 .pt-coming-badge{font-size:.65rem;color:var(--ink3);
   background:var(--s2);border-radius:4px;padding:.1rem .35rem}
 
+
+/* ════════════════════════════════════════════════════
+   FUTURISTIC POLISH LAYER
+════════════════════════════════════════════════════ */
+
+/* Search box — glow on focus */
+.tb-search{transition:border-color var(--t),box-shadow var(--t),background var(--t)}
+.tb-search:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-dim),var(--glow-blue);background:var(--surface)}
+
+/* Search results dropdown (classes emitted by app.js) */
+.search-results{box-shadow:var(--shadow-lg);backdrop-filter:blur(12px)}
+.search-result{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);
+  transition:background var(--t)}
+.search-result:last-child{border-bottom:none}
+.search-result:hover{background:var(--blue-dim)}
+.sr-top{display:flex;align-items:center;gap:8px;margin-bottom:3px}
+.sr-emoji{font-size:14px}
+.sr-label{font-size:13px;font-weight:600;color:var(--ink)}
+.sr-cat{margin-left:auto;font-size:10px;font-weight:700;color:var(--blue);
+  text-transform:uppercase;letter-spacing:.04em;background:var(--blue-dim);
+  border-radius:20px;padding:1px 8px}
+.sr-snippet{font-size:11.5px;color:var(--ink3);line-height:1.45;
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.search-empty{padding:16px;text-align:center;color:var(--ink3);font-size:13px}
+
+/* Theme button — subtle glass + glow */
+.theme-btn{backdrop-filter:blur(8px)}
+.theme-btn:hover{box-shadow:var(--glow-blue)}
+
+/* Topic cards & note buttons — lift + glow */
+.topic-card:hover{box-shadow:var(--shadow-md),var(--glow-blue)}
+.rm-note-btn:hover{box-shadow:var(--glow-blue)}
+
+/* Section h2 number badge — glow */
+.topic-content h2 .num{box-shadow:var(--glow-blue)}
+
+/* "read →" pill — gradient + glow */
+.syl-open{background:var(--grad);box-shadow:var(--glow-blue)}
+
+/* Sidebar active category bar already gradient; add glow on active topic dot */
+.sb-cat.active::before{box-shadow:var(--glow-blue)}
+
+/* Progress fill — animated sheen */
+.sb-progress-fill{position:relative;overflow:hidden}
+.sb-progress-fill::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);
+  transform:translateX(-100%);animation:sheen 2.6s ease-in-out infinite}
+@keyframes sheen{0%{transform:translateX(-100%)}60%,100%{transform:translateX(100%)}}
+
+/* Gradient scrollbar thumb */
+::-webkit-scrollbar-thumb{background:linear-gradient(var(--blue),var(--teal));border-radius:4px}
+
+/* Elevated cards pick up soft shadow */
+.topic-card,.stat,.roadmap-wrap,.panel,.qa{box-shadow:var(--shadow-sm)}
+
+/* Collapsible section blocks — glass + hover accent */
+.section-block{background:var(--bg-card);box-shadow:var(--shadow-sm);
+  transition:border-color .2s,box-shadow .2s}
+.section-block:hover{border-color:var(--blue-gl)}
+.section-block:not(.collapsed){border-color:var(--blue-gl);box-shadow:var(--ring),var(--shadow-sm)}
+.section-toggle .s-num{background:var(--grad);color:#fff;box-shadow:var(--glow-blue)}
+
+/* Reduce animation for users who prefer it (extends existing rule) */
+@media(prefers-reduced-motion:reduce){
+  .syl-hero-glow,.syl-hero-badge::before,.sb-progress-fill::after{animation:none !important}
+}
+
 </style>
 </head>
 <body>
@@ -1226,9 +1371,7 @@ const CATEGORIES = [
   { key: "softeng", label: "Software Engineering", emoji: "\u2699\ufe0f", topics: [] },
   { key: "dataanalysis", label: "Data Analysis Stack", emoji: "\ud83d\udcca", topics: [] },
   { key: "apis", label: "APIs & Backend", emoji: "\ud83c\udf10", topics: [] },
-  { key: "databases", label: "Databases", emoji: "\ud83d\uddc4\ufe0f", topics: [
-    {"key": "sql", "label": "SQL — full note"}
-  ] },
+  { key: "databases", label: "Databases", emoji: "\ud83d\uddc4\ufe0f", topics: [] },
   { key: "mathstats", label: "Mathematics & Statistics", emoji: "\u03a3", topics: [] },
   { key: "ml", label: "Machine Learning", emoji: "\ud83e\udd16", topics: [
     {"key": "ml_intro",          "label": "01 · ML Basics"},
@@ -1632,7 +1775,7 @@ const ROADMAP_PHASES = [
 
 
 
-const SYLLABUS = [{"num": "01", "name": "Python Programming", "icon": "\ud83d\udc0d", "tag": "Foundation", "desc": "Clean, scalable, production-level code", "topics": [{"name": "Variables & Data Types", "note": "py_fundamentals", "sub": ["variables", "memory references", "immutable vs mutable", "integers", "floats", "booleans", "strings", "bytes", "type conversion"]}, {"name": "Operators", "note": "py_fundamentals", "sub": ["arithmetic", "logical", "comparison", "assignment", "membership", "identity", "bitwise operators"]}, {"name": "Control Flow", "note": "py_fundamentals", "sub": ["if / else", "nested conditions", "loops", "break / continue", "loop else", "pattern matching"]}, {"name": "Functions", "note": "py_fundamentals", "sub": ["function creation", "parameters", "return values", "keyword arguments", "default arguments", "*args / **kwargs", "recursion", "lambda functions", "scope resolution"]}, {"name": "Data Structures", "note": "py_ds", "sub": ["lists \u2014 slicing, comprehensions, copying", "shallow vs deep copy", "tuples \u2014 immutable ordered", "sets \u2014 unique, fast lookup", "dictionaries \u2014 key-value, nested, comprehensions", "hashing basics", "strings \u2014 slicing, formatting, regex, encoding, unicode"]}, {"name": "Exception Handling", "note": "py_fundamentals", "sub": ["try / except / finally", "raising exceptions", "custom exceptions", "logging exceptions"]}, {"name": "File Handling", "note": "py_fundamentals", "sub": ["txt", "csv", "json", "parquet", "pickle", "yaml"]}, {"name": "Modules & Packages", "note": "py_fundamentals", "sub": ["imports", "package structure", "virtual environments", "pip", "poetry", "requirements.txt"]}, {"name": "OOP \u2605", "note": "py_oop", "sub": ["classes", "objects", "constructors (__init__)", "attributes", "methods", "static methods", "class methods", "Encapsulation", "Abstraction", "Inheritance", "Polymorphism", "magic / dunder methods", "operator overloading", "abstract base classes (ABC)", "interfaces", "composition vs inheritance", "MRO", "SOLID principles", "design patterns basics"]}, {"name": "Iterators & Generators", "note": "py_advanced", "sub": ["iter()", "next()", "yield keyword", "generator expressions", "lazy evaluation", "custom generators"]}, {"name": "Decorators", "note": "py_advanced", "sub": ["closures", "wrapper functions", "parameterized decorators", "functools.wraps"]}, {"name": "Context Managers", "note": "py_advanced", "sub": ["with statement", "__enter__", "__exit__", "contextlib"]}, {"name": "Multithreading", "note": "py_concurrency", "sub": ["threading module", "locks", "semaphores", "race conditions", "deadlocks", "thread pools"]}, {"name": "Multiprocessing", "note": "py_concurrency", "sub": ["process pools", "queues", "pipes", "shared memory", "IPC"]}, {"name": "Asyncio", "note": "py_concurrency", "sub": ["event loop", "coroutines", "async / await", "tasks", "asyncio.gather", "async HTTP requests"]}, {"name": "Testing & Debugging", "note": "py_testing", "sub": ["pytest", "unit testing", "mocking", "profiling", "debugging (pdb)", "logging module"]}]}, {"num": "02", "name": "Software Engineering", "icon": "\u2699\ufe0f", "tag": "Foundation", "desc": "Git \u00b7 Linux \u00b7 Docker", "topics": [{"name": "Git & GitHub", "note": null, "sub": ["commits & commit messages", "branches", "merge vs rebase", "pull requests", "conflict resolution", "gitignore", "tagging releases"]}, {"name": "Linux & Terminal", "note": null, "sub": ["shell commands (ls, cp, mv, grep, find)", "file permissions (chmod, chown)", "environment variables", "process monitoring (ps, top, htop)", "bash scripting", "SSH", "cron jobs"]}, {"name": "Docker Basics", "note": null, "sub": ["Dockerfile", "images", "containers", "docker-compose", "volumes", "networking", "docker registry"]}]}, {"num": "03", "name": "Data Analysis Stack", "icon": "\ud83d\udcca", "tag": "Core", "desc": "NumPy \u00b7 Pandas \u00b7 Matplotlib \u00b7 Streamlit", "topics": [{"name": "NumPy", "note": null, "sub": ["ndarrays", "vectorization", "broadcasting", "indexing & slicing", "reshaping", "stacking", "linear algebra operations", "random module", "performance vs lists"]}, {"name": "Pandas", "note": null, "sub": ["DataFrames & Series", "filtering & querying", "groupby & aggregations", "joins & merges", "handling missing values", "pivot tables", "window functions", "time series operations", "apply & map", "memory optimization", "reading/writing CSV, Excel, Parquet"]}, {"name": "Matplotlib", "note": null, "sub": ["line plots", "scatter plots", "histograms", "bar charts", "subplots", "customization"]}, {"name": "Seaborn", "note": null, "sub": ["heatmaps", "pairplots", "distribution plots", "categorical plots", "regression plots"]}, {"name": "Plotly", "note": null, "sub": ["interactive charts", "dashboards", "animations", "geographic plots"]}, {"name": "Streamlit", "note": null, "sub": ["widgets & forms", "session state", "caching", "deployment", "building ML demos"]}]}, {"num": "04", "name": "APIs & Backend", "icon": "\ud83c\udf10", "tag": "Core", "desc": "Flask \u00b7 FastAPI \u00b7 Redis \u00b7 Celery", "topics": [{"name": "API Fundamentals", "note": null, "sub": ["HTTP protocol", "REST principles", "request-response cycle", "JSON serialization", "status codes (200, 400, 404, 500)", "headers", "cookies", "API versioning"]}, {"name": "Authentication & Security", "note": null, "sub": ["JWT", "OAuth 2.0", "API keys", "session authentication", "HTTPS / TLS", "rate limiting"]}, {"name": "Flask", "note": null, "sub": ["routing", "middleware", "templates (Jinja2)", "request handling", "blueprints", "Flask-RESTful"]}, {"name": "FastAPI \u2605", "note": null, "sub": ["async APIs", "dependency injection", "Pydantic models & validation", "middleware", "WebSockets", "background tasks", "OpenAPI / Swagger docs", "path & query parameters", "response models", "error handling"]}, {"name": "Production Backend", "note": null, "sub": ["caching strategies", "Redis", "Celery (task queues)", "rate limiting", "monitoring & alerting", "structured logging", "nginx (reverse proxy)", "gunicorn / uvicorn", "health checks", "horizontal scaling"]}]}, {"num": "05", "name": "Databases", "icon": "\ud83d\uddc4\ufe0f", "tag": "Core", "desc": "SQL (deep) \u00b7 MongoDB", "topics": [{"name": "SQL \u2605 \u2014 full note", "note": "sql", "sub": ["logical execution order", "SELECT / WHERE / DISTINCT / LIMIT", "GROUP BY & HAVING vs WHERE", "JOINs + anti-join + self-join", "subqueries, CTEs, correlated cost", "EXISTS vs IN", "window functions & frames", "indexes & sargability", "EXPLAIN / execution plans", "transactions & ACID isolation", "normalization 1NF/2NF/3NF"]}, {"name": "MongoDB", "note": null, "sub": ["collections & documents", "CRUD in MongoDB", "aggregation pipeline", "indexing", "replication", "sharding", "schema design patterns"]}]}, {"num": "06", "name": "Mathematics & Statistics", "icon": "\u03a3", "tag": "Foundation", "desc": "Stats \u00b7 Linear Algebra \u00b7 Calculus \u00b7 Optimization", "topics": [{"name": "Descriptive Statistics", "note": null, "sub": ["mean, median, mode", "variance & standard deviation", "skewness", "kurtosis", "percentiles & IQR", "data distributions"]}, {"name": "Probability", "note": null, "sub": ["conditional probability", "Bayes' theorem", "random variables", "independence", "joint & marginal probability"]}, {"name": "Probability Distributions", "note": null, "sub": ["Bernoulli", "Binomial", "Poisson", "Gaussian (Normal)", "Exponential", "Uniform"]}, {"name": "Hypothesis Testing", "note": null, "sub": ["p-value", "confidence intervals", "t-tests (one-sample, two-sample, paired)", "chi-square test", "ANOVA", "Type I & Type II errors"]}, {"name": "Correlation & Relationships", "note": null, "sub": ["covariance", "Pearson correlation", "Spearman correlation", "multicollinearity", "causation vs correlation"]}, {"name": "A/B Testing", "note": null, "sub": ["experiment design", "control vs treatment groups", "statistical significance", "sample size calculation", "business impact measurement"]}, {"name": "Linear Algebra", "note": null, "sub": ["vectors", "matrices", "matrix multiplication", "dot product", "transpose", "inverse", "eigenvectors", "eigenvalues", "SVD", "PCA intuition"]}, {"name": "Calculus", "note": null, "sub": ["derivatives", "partial derivatives", "gradients", "chain rule", "Jacobian", "Hessian", "gradient interpretation"]}, {"name": "Optimization", "note": null, "sub": ["gradient descent", "stochastic gradient descent", "mini-batch gradient descent", "convex optimization", "learning rates", "loss landscapes", "momentum & adaptive methods"]}]}, {"num": "07", "name": "Machine Learning", "icon": "\ud83e\udd16", "tag": "Core", "desc": "Regression \u00b7 Classification \u00b7 Trees \u00b7 Clustering", "topics": [{"name": "ML Fundamentals", "note": "ml_intro", "sub": ["supervised learning", "unsupervised learning", "reinforcement learning basics", "bias-variance tradeoff", "overfitting & underfitting", "feature engineering", "sklearn pipelines", "cross validation (k-fold, stratified)", "train/val/test split", "data leakage", "feature scaling", "encoding (OHE, Label)"]}, {"name": "Core Concepts", "note": "ml_core", "sub": ["bias-variance decomposition", "loss functions", "gradient descent + Adam", "L1/L2 regularization", "nested cross-validation", "feature scaling"]}, {"name": "Regression", "note": "ml_regression", "sub": ["linear regression (OLS)", "ridge regression (L2)", "lasso regression (L1)", "elastic net", "polynomial regression", "assumptions & diagnostics"]}, {"name": "Classification", "note": "ml_classification", "sub": ["logistic regression", "Naive Bayes (Gaussian, Multinomial, Bernoulli)", "K-Nearest Neighbors", "Support Vector Machines", "SVM kernels (RBF, polynomial)", "decision boundaries"]}, {"name": "Tree-Based Models \u2605", "note": "ml_trees", "sub": ["decision trees (CART)", "information gain & Gini impurity", "random forest (bagging)", "feature importance", "gradient boosting", "XGBoost", "LightGBM", "CatBoost", "hyperparameter tuning", "early stopping"]}, {"name": "Clustering", "note": "ml_clustering", "sub": ["KMeans", "elbow method", "silhouette score", "DBSCAN", "hierarchical clustering", "dendrograms"]}, {"name": "Dimensionality Reduction", "note": "ml_dimred", "sub": ["PCA", "explained variance ratio", "t-SNE", "UMAP", "when to use each"]}, {"name": "Time Series Forecasting", "note": null, "sub": ["trend & seasonality", "stationarity (ADF test)", "autocorrelation (ACF, PACF)", "ARIMA", "SARIMA", "Prophet", "feature engineering for time series"]}, {"name": "Recommendation Systems", "note": null, "sub": ["collaborative filtering", "content-based filtering", "matrix factorization", "ranking systems", "cold start problem", "implicit vs explicit feedback"]}, {"name": "Model Evaluation", "note": "ml_evaluation", "sub": ["confusion matrix", "precision", "recall", "F1-score", "ROC-AUC", "precision-recall curve", "log loss", "MAE", "RMSE", "R\u00b2", "MAPE"]}]}, {"num": "08", "name": "Deep Learning", "icon": "\ud83e\udde0", "tag": "Core", "desc": "PyTorch \u00b7 CNNs \u00b7 RNNs \u00b7 Attention", "topics": [{"name": "Neural Network Foundations", "note": "dl_foundations", "sub": ["perceptron", "forward propagation", "backpropagation", "activation functions (ReLU, sigmoid, tanh, softmax)", "loss functions", "optimizers (SGD, Adam, RMSprop)", "regularization (L1/L2)", "batch normalization", "dropout"]}, {"name": "PyTorch \u2605", "note": "dl_pytorch", "sub": ["tensors", "autograd", "Datasets & DataLoaders", "GPU training (CUDA)", "custom model classes (nn.Module)", "training loops", "model checkpointing", "transfer learning", "torch.save / torch.load"]}, {"name": "CNNs", "note": "dl_cnns", "sub": ["convolution operation", "kernels & filters", "pooling (max, average)", "padding & stride", "feature maps", "architecture design", "ResNet (skip connections)", "EfficientNet", "transfer learning with CNNs"]}, {"name": "RNNs & Sequential", "note": "dl_rnns", "sub": ["RNN architecture", "vanishing gradient problem", "LSTM", "GRU", "sequence-to-sequence models", "bidirectional RNNs"]}, {"name": "Attention Mechanisms", "note": "dl_attention", "sub": ["attention concept", "self-attention", "encoder-decoder attention", "scaled dot-product attention", "multi-head attention", "attention masking", "positional encoding", "Transformer architecture overview"]}]}, {"num": "09", "name": "Generative AI", "icon": "\u2728", "tag": "Advanced", "desc": "Transformers \u00b7 LLMs \u00b7 RAG \u00b7 Agents", "topics": [{"name": "Transformers & Attention \u2605", "note": "transformers", "sub": ["query, key, value", "self-attention", "multi-head attention", "positional encoding (sinusoidal, learned)", "encoder-decoder", "masked attention", "cross attention", "residual connections", "layer norm", "feedforward", "full transformer block"]}, {"name": "NLP Foundations", "note": "nlp", "sub": ["tokenization", "stemming", "lemmatization", "stopwords", "bag of words", "TF-IDF", "Word2Vec (CBOW, Skip-gram)", "GloVe", "FastText", "cosine similarity"]}, {"name": "Embeddings & Vector Search", "note": "vectordb", "sub": ["sentence embeddings", "semantic similarity", "embedding spaces", "ANN search", "HNSW", "IVF", "product quantization", "metadata filtering", "FAISS", "ChromaDB", "Pinecone", "Weaviate", "Milvus"]}, {"name": "RAG \u2605", "note": "rag", "sub": ["retrieval pipeline", "context injection", "grounding", "chunking strategies", "overlap", "metadata", "similarity search", "hybrid search", "reranking", "BM25", "conversational RAG", "graph RAG", "agentic RAG", "query rewriting"]}, {"name": "LangChain", "note": "langchain", "sub": ["chains", "LCEL", "Runnable protocol", "retrievers", "memory", "callbacks", "output parsers", "RunnableParallel", "RunnableLambda", "fallbacks"]}, {"name": "LangGraph", "note": "langgraph", "sub": ["graph-based workflows", "state management", "nodes & edges", "conditional edges", "checkpointing", "persistence", "human-in-the-loop"]}, {"name": "Agentic AI", "note": "agentic", "sub": ["planning", "reasoning loops", "tool usage", "function calling", "memory", "agent architectures", "ReAct", "multi-agent", "agent failure modes"]}, {"name": "Fine-Tuning", "note": "finetuning", "sub": ["SFT", "dataset prep", "LoRA", "QLoRA", "adapters", "PEFT", "quantization (8-bit, 4-bit)", "RLHF intuition", "instruction tuning"]}, {"name": "Prompt Engineering", "note": null, "sub": ["system / user / role prompting", "zero-shot", "few-shot", "chain-of-thought", "self-consistency", "structured prompting", "hallucination mitigation", "prompt injection", "output validation"]}, {"name": "LLMOps & Production", "note": null, "sub": ["FastAPI serving", "GPU inference", "batching", "streaming", "KV cache", "tensor parallelism", "speculative decoding", "vLLM", "TGI", "Ollama", "Triton", "cost optimization", "model routing"]}, {"name": "Evaluation & Monitoring", "note": null, "sub": ["human eval", "automated eval", "hallucination detection", "groundedness", "context precision", "context recall", "answer relevance", "RAGAS", "drift", "token usage"]}]}, {"num": "10", "name": "MLOps & Deployment", "icon": "\ud83d\ude80", "tag": "Production", "desc": "MLflow \u00b7 Docker \u00b7 Kubernetes \u00b7 SageMaker", "topics": [{"name": "Foundations & Mental Models", "note": null, "sub": ["ML lifecycle", "research vs production gap", "why notebooks fail", "MLOps vs DevOps vs DataOps", "maturity levels 0/1/2", "hidden technical debt", "tooling landscape"]}, {"name": "Versioning: Code, Data, Config", "note": null, "sub": ["Git branching for ML", "Gitflow vs trunk-based", "DVC init/add/push/pull", "dvc.yaml pipelines", "dvc repro", "Hydra configs", "Pydantic schemas", "pre-commit hooks", "src layout"]}, {"name": "Data & Feature Pipelines", "note": null, "sub": ["Sklearn Pipeline", "ColumnTransformer", "train-serve skew", "feature stores", "Feast", "online vs offline", "point-in-time joins", "Great Expectations", "Pandera", "Airflow", "Prefect"]}, {"name": "Experiment Tracking & Registry", "note": null, "sub": ["MLflow tracking", "log_param / log_metric / log_artifact", "Optuna", "pruning", "Ray Tune", "model registry", "staging \u2192 production \u2192 archived", "reproducibility", "seed management"]}, {"name": "CI/CD for ML", "note": null, "sub": ["Docker multi-stage builds", "NVIDIA Container Toolkit", "CI vs CD", "Jenkins", "Jenkinsfile", "GitHub Actions", "matrix builds", "self-hosted runners", "GitLab CI"]}, {"name": "Model Serving & Inference", "note": null, "sub": ["batch inference", "real-time REST", "streaming", "shadow mode", "FastAPI serving", "lifespan events", "health/readiness", "BentoML", "Seldon Core", "KServe", "ONNX", "quantization"]}, {"name": "Kubernetes for ML", "note": null, "sub": ["Pods, Deployments, Services", "ConfigMaps & Secrets", "PersistentVolumes", "resource requests/limits", "GPU scheduling", "HPA", "Helm charts", "rolling update", "blue-green", "canary", "Kubeflow", "KServe"]}, {"name": "Cloud ML Platforms & IaC", "note": null, "sub": ["SageMaker training jobs", "SageMaker Pipelines", "SageMaker endpoints", "Vertex AI", "Azure ML", "Terraform", "Pulumi", "spot instances"]}, {"name": "Monitoring & Retraining", "note": null, "sub": ["data vs concept vs model drift", "PSI", "KS test", "Evidently AI", "structured logging", "EFK stack", "Prometheus", "Grafana", "SLOs / SLAs", "champion-challenger", "retraining triggers"]}, {"name": "Pipeline Orchestration", "note": null, "sub": ["DAG-based pipelines", "Airflow architecture", "PythonOperator", "XComs", "SensorOperators", "TaskGroups", "CeleryExecutor vs KubernetesExecutor", "Prefect flows", "end-to-end pipelines"]}, {"name": "Testing, Governance & Security", "note": null, "sub": ["unit tests for features", "integration tests", "model performance tests", "load testing (Locust, k6)", "slice-based evaluation", "model cards", "SHAP / LIME", "GDPR / EU AI Act", "Vault", "RBAC", "image scanning (Trivy)"]}, {"name": "GenAI & LLM MLOps", "note": null, "sub": ["vLLM PagedAttention", "TGI", "Triton", "GPTQ / AWQ", "tensor parallelism", "vector store management", "embedding versioning", "RAGAS", "hallucination metrics", "LLM-as-judge", "TTFT / TBT", "LoRA / QLoRA pipelines", "FSDP / DeepSpeed"]}]}, {"num": "11", "name": "Data Engineering", "icon": "\ud83d\udd27", "tag": "Production", "desc": "ETL \u00b7 Apache Spark \u00b7 Kafka", "topics": [{"name": "ETL Pipelines", "note": null, "sub": ["extraction (APIs, databases, files)", "transformation (cleaning, enriching, normalizing)", "loading (data warehouse, S3, database)", "orchestration (Airflow, Prefect, Luigi)", "pipeline idempotency", "error handling"]}, {"name": "Apache Spark", "note": null, "sub": ["Spark architecture (driver, executors)", "Spark DataFrames", "transformations (lazy)", "actions (eager)", "Spark SQL", "joins at scale", "partitioning", "PySpark"]}, {"name": "Kafka", "note": null, "sub": ["producers & consumers", "topics & partitions", "consumer groups", "offset management", "streaming pipelines", "Kafka Connect", "Kafka Streams"]}]}, {"num": "12", "name": "ML System Design", "icon": "\ud83c\udfd7\ufe0f", "tag": "Senior", "desc": "Feature Stores \u00b7 Drift \u00b7 Serving", "topics": [{"name": "ML System Design Patterns", "note": null, "sub": ["recommendation system design", "forecasting system design", "real-time inference architecture", "feature stores (Feast, Tecton)", "online vs offline serving", "model monitoring architecture", "drift detection", "shadow deployment", "A/B testing infrastructure", "feedback loops", "retraining pipelines"]}]}, {"num": "13", "name": "Data Structures & Algorithms", "icon": "\ud83c\udf32", "tag": "Interview", "desc": "17 phases \u00b7 Basics to MAANG level", "topics": [{"name": "Complexity & Python Internals", "note": "dsa_complexity", "sub": ["Big O notation [must]", "time vs space tradeoffs [must]", "Python list internals [must]", "Python dict internals [must]", "recursion & call stack [must]"]}, {"name": "Arrays & Strings", "note": null, "sub": ["array basics [must]", "two pointers [must][pattern]", "sliding window [must][pattern]", "prefix sums [must][pattern]", "Kadane's algorithm [must]", "string manipulation [must]", "matrix / 2D arrays [pattern]"]}, {"name": "Hashing", "note": null, "sub": ["how hash maps work [must]", "dict & set patterns [must][pattern]", "two sum pattern [must][pattern]", "group anagrams [must]", "subarray problems with hashing [pattern]"]}, {"name": "Linked Lists", "note": null, "sub": ["singly linked list [must]", "doubly linked list [must]", "fast & slow pointers [must][pattern]", "reverse a linked list [must]", "merge two sorted lists [must]", "LRU Cache [must][hard]"]}, {"name": "Stacks & Queues", "note": null, "sub": ["stack \u2014 LIFO [must]", "queue & deque \u2014 FIFO [must]", "valid parentheses [must]", "monotonic stack [must][pattern]", "min stack [must]", "sliding window maximum [pattern][hard]"]}, {"name": "Binary Search", "note": null, "sub": ["classic binary search [must]", "find leftmost / rightmost [must]", "binary search on answer [must][pattern]", "search in rotated array [must]", "2D binary search [pattern]"]}, {"name": "Trees", "note": null, "sub": ["binary tree basics [must]", "DFS \u2014 inorder, preorder, postorder [must]", "BFS / level order [must]", "binary search tree (BST) [must]", "tree path problems [must][pattern]", "lowest common ancestor [must]", "construct tree from traversals [hard]", "balanced & diameter [must]"]}, {"name": "Heaps & Priority Queue", "note": null, "sub": ["how a heap works [must]", "heapq in Python [must]", "top K elements [must][pattern]", "Kth largest in stream [must]", "merge K sorted lists [must][hard]", "task scheduler [hard]", "find median from data stream [hard]"]}, {"name": "Graphs", "note": null, "sub": ["graph representations [must]", "DFS on graphs [must]", "BFS on graphs [must]", "cycle detection [must]", "topological sort [must][pattern]", "Union Find (DSU) [must][pattern]", "Dijkstra's algorithm [must]", "Bellman-Ford [hard]", "minimum spanning tree [hard]", "bipartite check [pattern]"]}, {"name": "Backtracking", "note": null, "sub": ["backtracking template [must][pattern]", "subsets & permutations [must]", "combination sum [must]", "word search [must]", "N-Queens [hard]", "Sudoku solver [hard]"]}, {"name": "Dynamic Programming", "note": null, "sub": ["memoisation (top-down) [must]", "tabulation (bottom-up) [must]", "1D DP [must]", "2D DP [must]", "knapsack pattern [must][pattern]", "string DP [hard]", "interval DP [hard]", "DP on trees [hard]", "DP with bitmask [hard]"]}, {"name": "Tries", "note": null, "sub": ["trie from scratch [must]", "prefix search [must]", "word search II [hard]", "replace words [pattern]"]}, {"name": "Bit Manipulation", "note": null, "sub": ["bitwise operators [must]", "XOR tricks [must][pattern]", "check / set / clear a bit [must]", "count set bits [must]", "power of two [pattern]", "subsets using bitmask [pattern]"]}, {"name": "Advanced Data Structures", "note": null, "sub": ["segment tree [hard]", "Fenwick tree (BIT) [hard]", "monotonic deque [pattern][hard]", "sparse table [hard]"]}, {"name": "Sorting Algorithms (Deep)", "note": null, "sub": ["merge sort [must]", "quick sort [must]", "counting / radix sort [pattern]", "custom sort with comparator [must]"]}, {"name": "Intervals & Greedy", "note": null, "sub": ["interval merge pattern [must][pattern]", "insert interval [must]", "meeting rooms [must]", "greedy strategy [must]", "jump game I & II [must]", "gas station [hard]"]}, {"name": "Math & Number Theory", "note": null, "sub": ["GCD & LCM [must]", "prime numbers & Sieve [pattern]", "modular arithmetic [must]", "fast exponentiation [pattern]", "combinatorics basics [pattern]"]}, {"name": "Problem Tracker", "note": "dsa_problems", "sub": ["265 problems across all patterns"]}]}]
+const SYLLABUS = [{"num": "01", "name": "Python Programming", "icon": "\ud83d\udc0d", "tag": "Foundation", "desc": "Clean, scalable, production-level code", "topics": [{"name": "Variables & Data Types", "note": "py_fundamentals", "sub": ["variables", "memory references", "immutable vs mutable", "integers", "floats", "booleans", "strings", "bytes", "type conversion"]}, {"name": "Operators", "note": "py_fundamentals", "sub": ["arithmetic", "logical", "comparison", "assignment", "membership", "identity", "bitwise operators"]}, {"name": "Control Flow", "note": "py_fundamentals", "sub": ["if / else", "nested conditions", "loops", "break / continue", "loop else", "pattern matching"]}, {"name": "Functions", "note": "py_fundamentals", "sub": ["function creation", "parameters", "return values", "keyword arguments", "default arguments", "*args / **kwargs", "recursion", "lambda functions", "scope resolution"]}, {"name": "Data Structures", "note": "py_ds", "sub": ["lists \u2014 slicing, comprehensions, copying", "shallow vs deep copy", "tuples \u2014 immutable ordered", "sets \u2014 unique, fast lookup", "dictionaries \u2014 key-value, nested, comprehensions", "hashing basics", "strings \u2014 slicing, formatting, regex, encoding, unicode"]}, {"name": "Exception Handling", "note": "py_fundamentals", "sub": ["try / except / finally", "raising exceptions", "custom exceptions", "logging exceptions"]}, {"name": "File Handling", "note": "py_fundamentals", "sub": ["txt", "csv", "json", "parquet", "pickle", "yaml"]}, {"name": "Modules & Packages", "note": "py_fundamentals", "sub": ["imports", "package structure", "virtual environments", "pip", "poetry", "requirements.txt"]}, {"name": "OOP \u2605", "note": "py_oop", "sub": ["classes", "objects", "constructors (__init__)", "attributes", "methods", "static methods", "class methods", "Encapsulation", "Abstraction", "Inheritance", "Polymorphism", "magic / dunder methods", "operator overloading", "abstract base classes (ABC)", "interfaces", "composition vs inheritance", "MRO", "SOLID principles", "design patterns basics"]}, {"name": "Iterators & Generators", "note": "py_advanced", "sub": ["iter()", "next()", "yield keyword", "generator expressions", "lazy evaluation", "custom generators"]}, {"name": "Decorators", "note": "py_advanced", "sub": ["closures", "wrapper functions", "parameterized decorators", "functools.wraps"]}, {"name": "Context Managers", "note": "py_advanced", "sub": ["with statement", "__enter__", "__exit__", "contextlib"]}, {"name": "Multithreading", "note": "py_concurrency", "sub": ["threading module", "locks", "semaphores", "race conditions", "deadlocks", "thread pools"]}, {"name": "Multiprocessing", "note": "py_concurrency", "sub": ["process pools", "queues", "pipes", "shared memory", "IPC"]}, {"name": "Asyncio", "note": "py_concurrency", "sub": ["event loop", "coroutines", "async / await", "tasks", "asyncio.gather", "async HTTP requests"]}, {"name": "Testing & Debugging", "note": "py_testing", "sub": ["pytest", "unit testing", "mocking", "profiling", "debugging (pdb)", "logging module"]}]}, {"num": "02", "name": "Software Engineering", "icon": "\u2699\ufe0f", "tag": "Foundation", "desc": "Git \u00b7 Linux \u00b7 Docker", "topics": [{"name": "Git & GitHub", "note": null, "sub": ["commits & commit messages", "branches", "merge vs rebase", "pull requests", "conflict resolution", "gitignore", "tagging releases"]}, {"name": "Linux & Terminal", "note": null, "sub": ["shell commands (ls, cp, mv, grep, find)", "file permissions (chmod, chown)", "environment variables", "process monitoring (ps, top, htop)", "bash scripting", "SSH", "cron jobs"]}, {"name": "Docker Basics", "note": null, "sub": ["Dockerfile", "images", "containers", "docker-compose", "volumes", "networking", "docker registry"]}]}, {"num": "03", "name": "Data Analysis Stack", "icon": "\ud83d\udcca", "tag": "Core", "desc": "NumPy \u00b7 Pandas \u00b7 Matplotlib \u00b7 Streamlit", "topics": [{"name": "NumPy", "note": null, "sub": ["ndarrays", "vectorization", "broadcasting", "indexing & slicing", "reshaping", "stacking", "linear algebra operations", "random module", "performance vs lists"]}, {"name": "Pandas", "note": null, "sub": ["DataFrames & Series", "filtering & querying", "groupby & aggregations", "joins & merges", "handling missing values", "pivot tables", "window functions", "time series operations", "apply & map", "memory optimization", "reading/writing CSV, Excel, Parquet"]}, {"name": "Matplotlib", "note": null, "sub": ["line plots", "scatter plots", "histograms", "bar charts", "subplots", "customization"]}, {"name": "Seaborn", "note": null, "sub": ["heatmaps", "pairplots", "distribution plots", "categorical plots", "regression plots"]}, {"name": "Plotly", "note": null, "sub": ["interactive charts", "dashboards", "animations", "geographic plots"]}, {"name": "Streamlit", "note": null, "sub": ["widgets & forms", "session state", "caching", "deployment", "building ML demos"]}]}, {"num": "04", "name": "APIs & Backend", "icon": "\ud83c\udf10", "tag": "Core", "desc": "Flask \u00b7 FastAPI \u00b7 Redis \u00b7 Celery", "topics": [{"name": "API Fundamentals", "note": null, "sub": ["HTTP protocol", "REST principles", "request-response cycle", "JSON serialization", "status codes (200, 400, 404, 500)", "headers", "cookies", "API versioning"]}, {"name": "Authentication & Security", "note": null, "sub": ["JWT", "OAuth 2.0", "API keys", "session authentication", "HTTPS / TLS", "rate limiting"]}, {"name": "Flask", "note": null, "sub": ["routing", "middleware", "templates (Jinja2)", "request handling", "blueprints", "Flask-RESTful"]}, {"name": "FastAPI \u2605", "note": null, "sub": ["async APIs", "dependency injection", "Pydantic models & validation", "middleware", "WebSockets", "background tasks", "OpenAPI / Swagger docs", "path & query parameters", "response models", "error handling"]}, {"name": "Production Backend", "note": null, "sub": ["caching strategies", "Redis", "Celery (task queues)", "rate limiting", "monitoring & alerting", "structured logging", "nginx (reverse proxy)", "gunicorn / uvicorn", "health checks", "horizontal scaling"]}]}, {"num": "05", "name": "Databases", "icon": "\ud83d\uddc4\ufe0f", "tag": "Core", "desc": "SQL (deep) \u00b7 MongoDB", "topics": [{"name": "SQL Fundamentals \u2605", "note": null, "sub": ["CRUD (SELECT, INSERT, UPDATE, DELETE)", "JOINs (INNER, LEFT, RIGHT, FULL)", "aggregations (SUM, COUNT, AVG, MAX, MIN)", "filtering (WHERE, HAVING)", "sorting (ORDER BY)", "DISTINCT", "LIMIT / OFFSET"]}, {"name": "Intermediate SQL", "note": null, "sub": ["subqueries", "CTEs", "window functions (ROW_NUMBER, RANK, LAG, LEAD)", "indexes (B-tree, hash)", "normalization (1NF, 2NF, 3NF)", "views", "stored procedures"]}, {"name": "Advanced SQL", "note": null, "sub": ["query optimization", "execution plans (EXPLAIN)", "transactions", "ACID properties", "locks & concurrency", "partitioning", "sharding", "query profiling"]}, {"name": "MongoDB", "note": null, "sub": ["collections & documents", "CRUD in MongoDB", "aggregation pipeline", "indexing", "replication", "sharding", "schema design patterns"]}]}, {"num": "06", "name": "Mathematics & Statistics", "icon": "\u03a3", "tag": "Foundation", "desc": "Stats \u00b7 Linear Algebra \u00b7 Calculus \u00b7 Optimization", "topics": [{"name": "Descriptive Statistics", "note": null, "sub": ["mean, median, mode", "variance & standard deviation", "skewness", "kurtosis", "percentiles & IQR", "data distributions"]}, {"name": "Probability", "note": null, "sub": ["conditional probability", "Bayes' theorem", "random variables", "independence", "joint & marginal probability"]}, {"name": "Probability Distributions", "note": null, "sub": ["Bernoulli", "Binomial", "Poisson", "Gaussian (Normal)", "Exponential", "Uniform"]}, {"name": "Hypothesis Testing", "note": null, "sub": ["p-value", "confidence intervals", "t-tests (one-sample, two-sample, paired)", "chi-square test", "ANOVA", "Type I & Type II errors"]}, {"name": "Correlation & Relationships", "note": null, "sub": ["covariance", "Pearson correlation", "Spearman correlation", "multicollinearity", "causation vs correlation"]}, {"name": "A/B Testing", "note": null, "sub": ["experiment design", "control vs treatment groups", "statistical significance", "sample size calculation", "business impact measurement"]}, {"name": "Linear Algebra", "note": null, "sub": ["vectors", "matrices", "matrix multiplication", "dot product", "transpose", "inverse", "eigenvectors", "eigenvalues", "SVD", "PCA intuition"]}, {"name": "Calculus", "note": null, "sub": ["derivatives", "partial derivatives", "gradients", "chain rule", "Jacobian", "Hessian", "gradient interpretation"]}, {"name": "Optimization", "note": null, "sub": ["gradient descent", "stochastic gradient descent", "mini-batch gradient descent", "convex optimization", "learning rates", "loss landscapes", "momentum & adaptive methods"]}]}, {"num": "07", "name": "Machine Learning", "icon": "\ud83e\udd16", "tag": "Core", "desc": "Regression \u00b7 Classification \u00b7 Trees \u00b7 Clustering", "topics": [{"name": "ML Fundamentals", "note": "ml_intro", "sub": ["supervised learning", "unsupervised learning", "reinforcement learning basics", "bias-variance tradeoff", "overfitting & underfitting", "feature engineering", "sklearn pipelines", "cross validation (k-fold, stratified)", "train/val/test split", "data leakage", "feature scaling", "encoding (OHE, Label)"]}, {"name": "Core Concepts", "note": "ml_core", "sub": ["bias-variance decomposition", "loss functions", "gradient descent + Adam", "L1/L2 regularization", "nested cross-validation", "feature scaling"]}, {"name": "Regression", "note": "ml_regression", "sub": ["linear regression (OLS)", "ridge regression (L2)", "lasso regression (L1)", "elastic net", "polynomial regression", "assumptions & diagnostics"]}, {"name": "Classification", "note": "ml_classification", "sub": ["logistic regression", "Naive Bayes (Gaussian, Multinomial, Bernoulli)", "K-Nearest Neighbors", "Support Vector Machines", "SVM kernels (RBF, polynomial)", "decision boundaries"]}, {"name": "Tree-Based Models \u2605", "note": "ml_trees", "sub": ["decision trees (CART)", "information gain & Gini impurity", "random forest (bagging)", "feature importance", "gradient boosting", "XGBoost", "LightGBM", "CatBoost", "hyperparameter tuning", "early stopping"]}, {"name": "Clustering", "note": "ml_clustering", "sub": ["KMeans", "elbow method", "silhouette score", "DBSCAN", "hierarchical clustering", "dendrograms"]}, {"name": "Dimensionality Reduction", "note": "ml_dimred", "sub": ["PCA", "explained variance ratio", "t-SNE", "UMAP", "when to use each"]}, {"name": "Time Series Forecasting", "note": null, "sub": ["trend & seasonality", "stationarity (ADF test)", "autocorrelation (ACF, PACF)", "ARIMA", "SARIMA", "Prophet", "feature engineering for time series"]}, {"name": "Recommendation Systems", "note": null, "sub": ["collaborative filtering", "content-based filtering", "matrix factorization", "ranking systems", "cold start problem", "implicit vs explicit feedback"]}, {"name": "Model Evaluation", "note": "ml_evaluation", "sub": ["confusion matrix", "precision", "recall", "F1-score", "ROC-AUC", "precision-recall curve", "log loss", "MAE", "RMSE", "R\u00b2", "MAPE"]}]}, {"num": "08", "name": "Deep Learning", "icon": "\ud83e\udde0", "tag": "Core", "desc": "PyTorch \u00b7 CNNs \u00b7 RNNs \u00b7 Attention", "topics": [{"name": "Neural Network Foundations", "note": "dl_foundations", "sub": ["perceptron", "forward propagation", "backpropagation", "activation functions (ReLU, sigmoid, tanh, softmax)", "loss functions", "optimizers (SGD, Adam, RMSprop)", "regularization (L1/L2)", "batch normalization", "dropout"]}, {"name": "PyTorch \u2605", "note": "dl_pytorch", "sub": ["tensors", "autograd", "Datasets & DataLoaders", "GPU training (CUDA)", "custom model classes (nn.Module)", "training loops", "model checkpointing", "transfer learning", "torch.save / torch.load"]}, {"name": "CNNs", "note": "dl_cnns", "sub": ["convolution operation", "kernels & filters", "pooling (max, average)", "padding & stride", "feature maps", "architecture design", "ResNet (skip connections)", "EfficientNet", "transfer learning with CNNs"]}, {"name": "RNNs & Sequential", "note": "dl_rnns", "sub": ["RNN architecture", "vanishing gradient problem", "LSTM", "GRU", "sequence-to-sequence models", "bidirectional RNNs"]}, {"name": "Attention Mechanisms", "note": "dl_attention", "sub": ["attention concept", "self-attention", "encoder-decoder attention", "scaled dot-product attention", "multi-head attention", "attention masking", "positional encoding", "Transformer architecture overview"]}]}, {"num": "09", "name": "Generative AI", "icon": "\u2728", "tag": "Advanced", "desc": "Transformers \u00b7 LLMs \u00b7 RAG \u00b7 Agents", "topics": [{"name": "Transformers & Attention \u2605", "note": "transformers", "sub": ["query, key, value", "self-attention", "multi-head attention", "positional encoding (sinusoidal, learned)", "encoder-decoder", "masked attention", "cross attention", "residual connections", "layer norm", "feedforward", "full transformer block"]}, {"name": "NLP Foundations", "note": "nlp", "sub": ["tokenization", "stemming", "lemmatization", "stopwords", "bag of words", "TF-IDF", "Word2Vec (CBOW, Skip-gram)", "GloVe", "FastText", "cosine similarity"]}, {"name": "Embeddings & Vector Search", "note": "vectordb", "sub": ["sentence embeddings", "semantic similarity", "embedding spaces", "ANN search", "HNSW", "IVF", "product quantization", "metadata filtering", "FAISS", "ChromaDB", "Pinecone", "Weaviate", "Milvus"]}, {"name": "RAG \u2605", "note": "rag", "sub": ["retrieval pipeline", "context injection", "grounding", "chunking strategies", "overlap", "metadata", "similarity search", "hybrid search", "reranking", "BM25", "conversational RAG", "graph RAG", "agentic RAG", "query rewriting"]}, {"name": "LangChain", "note": "langchain", "sub": ["chains", "LCEL", "Runnable protocol", "retrievers", "memory", "callbacks", "output parsers", "RunnableParallel", "RunnableLambda", "fallbacks"]}, {"name": "LangGraph", "note": "langgraph", "sub": ["graph-based workflows", "state management", "nodes & edges", "conditional edges", "checkpointing", "persistence", "human-in-the-loop"]}, {"name": "Agentic AI", "note": "agentic", "sub": ["planning", "reasoning loops", "tool usage", "function calling", "memory", "agent architectures", "ReAct", "multi-agent", "agent failure modes"]}, {"name": "Fine-Tuning", "note": "finetuning", "sub": ["SFT", "dataset prep", "LoRA", "QLoRA", "adapters", "PEFT", "quantization (8-bit, 4-bit)", "RLHF intuition", "instruction tuning"]}, {"name": "Prompt Engineering", "note": null, "sub": ["system / user / role prompting", "zero-shot", "few-shot", "chain-of-thought", "self-consistency", "structured prompting", "hallucination mitigation", "prompt injection", "output validation"]}, {"name": "LLMOps & Production", "note": null, "sub": ["FastAPI serving", "GPU inference", "batching", "streaming", "KV cache", "tensor parallelism", "speculative decoding", "vLLM", "TGI", "Ollama", "Triton", "cost optimization", "model routing"]}, {"name": "Evaluation & Monitoring", "note": null, "sub": ["human eval", "automated eval", "hallucination detection", "groundedness", "context precision", "context recall", "answer relevance", "RAGAS", "drift", "token usage"]}]}, {"num": "10", "name": "MLOps & Deployment", "icon": "\ud83d\ude80", "tag": "Production", "desc": "MLflow \u00b7 Docker \u00b7 Kubernetes \u00b7 SageMaker", "topics": [{"name": "Foundations & Mental Models", "note": null, "sub": ["ML lifecycle", "research vs production gap", "why notebooks fail", "MLOps vs DevOps vs DataOps", "maturity levels 0/1/2", "hidden technical debt", "tooling landscape"]}, {"name": "Versioning: Code, Data, Config", "note": null, "sub": ["Git branching for ML", "Gitflow vs trunk-based", "DVC init/add/push/pull", "dvc.yaml pipelines", "dvc repro", "Hydra configs", "Pydantic schemas", "pre-commit hooks", "src layout"]}, {"name": "Data & Feature Pipelines", "note": null, "sub": ["Sklearn Pipeline", "ColumnTransformer", "train-serve skew", "feature stores", "Feast", "online vs offline", "point-in-time joins", "Great Expectations", "Pandera", "Airflow", "Prefect"]}, {"name": "Experiment Tracking & Registry", "note": null, "sub": ["MLflow tracking", "log_param / log_metric / log_artifact", "Optuna", "pruning", "Ray Tune", "model registry", "staging \u2192 production \u2192 archived", "reproducibility", "seed management"]}, {"name": "CI/CD for ML", "note": null, "sub": ["Docker multi-stage builds", "NVIDIA Container Toolkit", "CI vs CD", "Jenkins", "Jenkinsfile", "GitHub Actions", "matrix builds", "self-hosted runners", "GitLab CI"]}, {"name": "Model Serving & Inference", "note": null, "sub": ["batch inference", "real-time REST", "streaming", "shadow mode", "FastAPI serving", "lifespan events", "health/readiness", "BentoML", "Seldon Core", "KServe", "ONNX", "quantization"]}, {"name": "Kubernetes for ML", "note": null, "sub": ["Pods, Deployments, Services", "ConfigMaps & Secrets", "PersistentVolumes", "resource requests/limits", "GPU scheduling", "HPA", "Helm charts", "rolling update", "blue-green", "canary", "Kubeflow", "KServe"]}, {"name": "Cloud ML Platforms & IaC", "note": null, "sub": ["SageMaker training jobs", "SageMaker Pipelines", "SageMaker endpoints", "Vertex AI", "Azure ML", "Terraform", "Pulumi", "spot instances"]}, {"name": "Monitoring & Retraining", "note": null, "sub": ["data vs concept vs model drift", "PSI", "KS test", "Evidently AI", "structured logging", "EFK stack", "Prometheus", "Grafana", "SLOs / SLAs", "champion-challenger", "retraining triggers"]}, {"name": "Pipeline Orchestration", "note": null, "sub": ["DAG-based pipelines", "Airflow architecture", "PythonOperator", "XComs", "SensorOperators", "TaskGroups", "CeleryExecutor vs KubernetesExecutor", "Prefect flows", "end-to-end pipelines"]}, {"name": "Testing, Governance & Security", "note": null, "sub": ["unit tests for features", "integration tests", "model performance tests", "load testing (Locust, k6)", "slice-based evaluation", "model cards", "SHAP / LIME", "GDPR / EU AI Act", "Vault", "RBAC", "image scanning (Trivy)"]}, {"name": "GenAI & LLM MLOps", "note": null, "sub": ["vLLM PagedAttention", "TGI", "Triton", "GPTQ / AWQ", "tensor parallelism", "vector store management", "embedding versioning", "RAGAS", "hallucination metrics", "LLM-as-judge", "TTFT / TBT", "LoRA / QLoRA pipelines", "FSDP / DeepSpeed"]}]}, {"num": "11", "name": "Data Engineering", "icon": "\ud83d\udd27", "tag": "Production", "desc": "ETL \u00b7 Apache Spark \u00b7 Kafka", "topics": [{"name": "ETL Pipelines", "note": null, "sub": ["extraction (APIs, databases, files)", "transformation (cleaning, enriching, normalizing)", "loading (data warehouse, S3, database)", "orchestration (Airflow, Prefect, Luigi)", "pipeline idempotency", "error handling"]}, {"name": "Apache Spark", "note": null, "sub": ["Spark architecture (driver, executors)", "Spark DataFrames", "transformations (lazy)", "actions (eager)", "Spark SQL", "joins at scale", "partitioning", "PySpark"]}, {"name": "Kafka", "note": null, "sub": ["producers & consumers", "topics & partitions", "consumer groups", "offset management", "streaming pipelines", "Kafka Connect", "Kafka Streams"]}]}, {"num": "12", "name": "ML System Design", "icon": "\ud83c\udfd7\ufe0f", "tag": "Senior", "desc": "Feature Stores \u00b7 Drift \u00b7 Serving", "topics": [{"name": "ML System Design Patterns", "note": null, "sub": ["recommendation system design", "forecasting system design", "real-time inference architecture", "feature stores (Feast, Tecton)", "online vs offline serving", "model monitoring architecture", "drift detection", "shadow deployment", "A/B testing infrastructure", "feedback loops", "retraining pipelines"]}]}, {"num": "13", "name": "Data Structures & Algorithms", "icon": "\ud83c\udf32", "tag": "Interview", "desc": "17 phases \u00b7 Basics to MAANG level", "topics": [{"name": "Complexity & Python Internals", "note": "dsa_complexity", "sub": ["Big O notation [must]", "time vs space tradeoffs [must]", "Python list internals [must]", "Python dict internals [must]", "recursion & call stack [must]"]}, {"name": "Arrays & Strings", "note": null, "sub": ["array basics [must]", "two pointers [must][pattern]", "sliding window [must][pattern]", "prefix sums [must][pattern]", "Kadane's algorithm [must]", "string manipulation [must]", "matrix / 2D arrays [pattern]"]}, {"name": "Hashing", "note": null, "sub": ["how hash maps work [must]", "dict & set patterns [must][pattern]", "two sum pattern [must][pattern]", "group anagrams [must]", "subarray problems with hashing [pattern]"]}, {"name": "Linked Lists", "note": null, "sub": ["singly linked list [must]", "doubly linked list [must]", "fast & slow pointers [must][pattern]", "reverse a linked list [must]", "merge two sorted lists [must]", "LRU Cache [must][hard]"]}, {"name": "Stacks & Queues", "note": null, "sub": ["stack \u2014 LIFO [must]", "queue & deque \u2014 FIFO [must]", "valid parentheses [must]", "monotonic stack [must][pattern]", "min stack [must]", "sliding window maximum [pattern][hard]"]}, {"name": "Binary Search", "note": null, "sub": ["classic binary search [must]", "find leftmost / rightmost [must]", "binary search on answer [must][pattern]", "search in rotated array [must]", "2D binary search [pattern]"]}, {"name": "Trees", "note": null, "sub": ["binary tree basics [must]", "DFS \u2014 inorder, preorder, postorder [must]", "BFS / level order [must]", "binary search tree (BST) [must]", "tree path problems [must][pattern]", "lowest common ancestor [must]", "construct tree from traversals [hard]", "balanced & diameter [must]"]}, {"name": "Heaps & Priority Queue", "note": null, "sub": ["how a heap works [must]", "heapq in Python [must]", "top K elements [must][pattern]", "Kth largest in stream [must]", "merge K sorted lists [must][hard]", "task scheduler [hard]", "find median from data stream [hard]"]}, {"name": "Graphs", "note": null, "sub": ["graph representations [must]", "DFS on graphs [must]", "BFS on graphs [must]", "cycle detection [must]", "topological sort [must][pattern]", "Union Find (DSU) [must][pattern]", "Dijkstra's algorithm [must]", "Bellman-Ford [hard]", "minimum spanning tree [hard]", "bipartite check [pattern]"]}, {"name": "Backtracking", "note": null, "sub": ["backtracking template [must][pattern]", "subsets & permutations [must]", "combination sum [must]", "word search [must]", "N-Queens [hard]", "Sudoku solver [hard]"]}, {"name": "Dynamic Programming", "note": null, "sub": ["memoisation (top-down) [must]", "tabulation (bottom-up) [must]", "1D DP [must]", "2D DP [must]", "knapsack pattern [must][pattern]", "string DP [hard]", "interval DP [hard]", "DP on trees [hard]", "DP with bitmask [hard]"]}, {"name": "Tries", "note": null, "sub": ["trie from scratch [must]", "prefix search [must]", "word search II [hard]", "replace words [pattern]"]}, {"name": "Bit Manipulation", "note": null, "sub": ["bitwise operators [must]", "XOR tricks [must][pattern]", "check / set / clear a bit [must]", "count set bits [must]", "power of two [pattern]", "subsets using bitmask [pattern]"]}, {"name": "Advanced Data Structures", "note": null, "sub": ["segment tree [hard]", "Fenwick tree (BIT) [hard]", "monotonic deque [pattern][hard]", "sparse table [hard]"]}, {"name": "Sorting Algorithms (Deep)", "note": null, "sub": ["merge sort [must]", "quick sort [must]", "counting / radix sort [pattern]", "custom sort with comparator [must]"]}, {"name": "Intervals & Greedy", "note": null, "sub": ["interval merge pattern [must][pattern]", "insert interval [must]", "meeting rooms [must]", "greedy strategy [must]", "jump game I & II [must]", "gas station [hard]"]}, {"name": "Math & Number Theory", "note": null, "sub": ["GCD & LCM [must]", "prime numbers & Sieve [pattern]", "modular arithmetic [must]", "fast exponentiation [pattern]", "combinatorics basics [pattern]"]}, {"name": "Problem Tracker", "note": "dsa_problems", "sub": ["265 problems across all patterns"]}]}]
 ;
 
 const TOPIC_CONTENT = {};
@@ -1699,7 +1842,7 @@ Object.assign(TOPIC_CONTENT, {
 
 // ── State ────────────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'dsml_notes_v3';
-let appState = { visited: {}, catOpen: {}, theme: 'light' };
+let appState = { visited: {}, catOpen: {}, theme: 'dark' };
 try { appState = { ...appState, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') }; } catch(e) {}
 
 let activeTopic = null;

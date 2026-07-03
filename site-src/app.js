@@ -4,7 +4,7 @@
 
 // ── State ────────────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'dsml_notes_v3';
-let appState = { visited: {}, catOpen: {}, theme: 'light' };
+let appState = { visited: {}, catOpen: {}, theme: 'dark' };
 try { appState = { ...appState, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') }; } catch(e) {}
 
 let activeTopic = null;
