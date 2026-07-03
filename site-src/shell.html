@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DS·ML Interview Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* __CSS__ */
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="tb-logo" id="tbLogo" style="cursor:pointer" onclick="showHome()">
+    <div class="tb-logo-icon">🧠</div>
+    <span class="tb-logo-text">DS·ML Notes</span>
+  </div>
+  <div class="tb-center">
+    <button id="hamburger" onclick="toggleSidebar()" style="background:none;border:none;cursor:pointer;padding:6px;border-radius:6px;color:var(--ink3);display:flex;align-items:center;transition:background var(--t)" onmouseover="this.style.background='var(--blue-dim)'" onmouseout="this.style.background='none'">
+      <svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="2" y1="4" x2="15" y2="4"/><line x1="2" y1="8.5" x2="15" y2="8.5"/><line x1="2" y1="13" x2="15" y2="13"/>
+      </svg>
+    </button>
+    <div class="tb-search-wrap">
+      <span class="tb-search-icon"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5.5" cy="5.5" r="4"/><line x1="8.8" y1="8.8" x2="12" y2="12"/></svg></span>
+      <input class="tb-search" id="searchInput" type="text" placeholder="Search topics..." autocomplete="off" spellcheck="false">
+      <div class="search-results" id="searchResults"></div>
+    </div>
+  </div>
+  <div class="tb-right">
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">
+      <span class="ti" id="themeIcon">☀️</span>
+      <span id="themeLabel">Light</span>
+    </button>
+  </div>
+</header>
+
+<div class="sb-overlay" id="sbOverlay" onclick="toggleSidebar()"></div>
+
+<!-- APP -->
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-inner">
+      <button class="sb-home active" id="sbHome" onclick="showHome()">
+        <span class="sb-home-icon">🏠</span> Home
+      </button>
+      <div class="sb-divider"></div>
+      <div id="sbNav"></div>
+    </div>
+    <div class="sb-footer">
+      <div class="sb-progress-track">
+        <div class="sb-progress-fill" id="progressFill" style="width:0%"></div>
+      </div>
+      <div class="sb-progress-text" id="progressText">0 topics read</div>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <div class="main" id="mainEl">
+
+    <!-- HOME -->
+    <div id="homeEl" style="display:none">
+
+  <div class="syl-hero">
+    <div class="syl-hero-glow"></div>
+    <div class="syl-hero-inner">
+      <div class="syl-hero-badge">Complete Curriculum</div>
+      <h1 class="syl-hero-title">Data Science &amp; ML<br><span>Engineering Roadmap</span></h1>
+      <p class="syl-hero-sub">13 phases · 100+ topics · 780+ concepts · Python to production ML</p>
+    </div>
+  </div>
+
+  <div class="syl-body">
+    <div class="syl-toolbar">
+      <span class="syl-toolbar-label">Full Syllabus</span>
+      <span class="syl-expand" id="expandAllBtn">Expand all</span>
+    </div>
+    <div id="phaseTree"></div>
+  </div>
+
+</div>
+
+    <!-- TOPIC -->
+    <div class="topic-page" id="topicPage">
+      <div class="topic-bar" id="topicBar">
+        <button class="topic-bar-back" onclick="showHome()">← Home</button>
+        <span class="topic-bar-sep">/</span>
+        <span class="topic-bar-cat" id="tbCat"></span>
+        <span class="topic-bar-sep">/</span>
+        <span class="topic-bar-name" id="tbName"></span>
+      </div>
+      <div class="topic-content" id="topicContent"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- SEARCH RESULTS + MODALS rendered by JS -->
+
+<script>
+/* __DATA__ */
+/* __NOTES__ */
+/* __APP__ */
+</script>
+</body>
+</html>
