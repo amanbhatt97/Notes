@@ -76,6 +76,23 @@ Object.assign(TOPIC_CONTENT, {
     A constraint is a promise the database keeps for you: bad data is rejected at write time instead of discovered later in a broken report.</p>
   </div>
 
+  <div class="callout def">
+    <span class="label">The full family of keys — from super key down to foreign key</span>
+    <p>Interviewers love this taxonomy because each term is defined relative to the last:</p>
+    <p><strong>Super key</strong> — <em>any</em> set of columns that uniquely identifies a row, even with redundant extra columns. <code>(id)</code>, <code>(id, email)</code>, and <code>(id, email, name)</code> are all super keys if <code>id</code> alone is unique.<br>
+    <strong>Candidate key</strong> — a <em>minimal</em> super key: remove any column and it stops being unique. Each candidate key is a valid choice to identify the row. A table can have several (e.g. <code>id</code> AND <code>email</code>).<br>
+    <strong>Primary key</strong> — the one candidate key you <em>choose</em> as the row's official identity. Unique + NOT NULL, and typically the clustering key. One per table.<br>
+    <strong>Alternate key</strong> — the candidate keys you <em>didn't</em> pick as primary. You enforce them with a <code>UNIQUE</code> constraint (e.g. <code>email</code>).<br>
+    <strong>Composite / compound key</strong> — a key made of <em>two or more columns</em> together (e.g. <code>(order_id, product_id)</code> in a line-items table). Column order matters for the backing index.<br>
+    <strong>Foreign key</strong> — a column (or set) in one table that references a candidate/primary key in another, enforcing referential integrity.<br>
+    <strong>Unique key</strong> — a <code>UNIQUE</code> constraint: no duplicates, but (unlike a primary key) it may allow a NULL.</p>
+  </div>
+
+  <div class="callout intu">
+    <span class="label">Surrogate vs natural key — a decision you make on every table</span>
+    <p>A <strong>natural key</strong> comes from the real-world data itself (email, SSN, ISBN, country code). A <strong>surrogate key</strong> is an artificial, meaningless identifier the database generates (an auto-increment <code>INT</code> or a <code>UUID</code>). Natural keys read well and avoid an extra column, but they can change (people change email), can be large (slows every foreign-key join), and may leak PII. Surrogate keys never change and are compact and fast to join, at the cost of an opaque column. Most production schemas default to a surrogate primary key <em>plus</em> a <code>UNIQUE</code> constraint on the natural key — you get a stable identity and still enforce real-world uniqueness.</p>
+  </div>
+
   <div class="callout intu">
     <span class="label">Data types you actually reach for</span>
     <p><strong>Integers</strong>: <code>INT</code>, <code>BIGINT</code> (large IDs), <code>SMALLINT</code>. <strong>Exact decimals</strong>: <code>DECIMAL(p,s)</code>/<code>NUMERIC</code> — use this for money, never <code>FLOAT</code> (binary floats can't represent 0.10 exactly and quietly drift). <strong>Approximate</strong>: <code>FLOAT</code>/<code>REAL</code> for scientific values. <strong>Text</strong>: <code>VARCHAR(n)</code> (variable, capped), <code>CHAR(n)</code> (fixed, padded), <code>TEXT</code> (unbounded). <strong>Time</strong>: <code>DATE</code>, <code>TIME</code>, <code>TIMESTAMP</code> (store UTC), <code>INTERVAL</code>. <strong>Other</strong>: <code>BOOLEAN</code>, <code>UUID</code>, <code>JSON</code>/<code>JSONB</code> (Postgres — semi-structured). Picking the narrowest correct type saves storage and lets more of the index fit in memory.</p>
@@ -105,6 +122,19 @@ Object.assign(TOPIC_CONTENT, {
     <span class="label">DELETE vs TRUNCATE vs DROP — three different scopes</span>
     <p><strong>DELETE</strong> (DML) removes rows one at a time, honours the WHERE, fires triggers, and is transactional/rollback-able — but slow for wiping a huge table. <strong>TRUNCATE</strong> (DDL) instantly empties the whole table by deallocating its pages, resets identity counters, but takes no WHERE and usually can't be rolled back. <strong>DROP</strong> (DDL) deletes the table <em>and its structure</em> — the table no longer exists. Rule of thumb: DELETE for "remove some rows," TRUNCATE for "empty this table fast," DROP for "get rid of this table entirely." <code>ALTER TABLE</code> is how you change structure after creation: <code>ALTER TABLE customers ADD COLUMN phone VARCHAR(20);</code></p>
   </div>
+
+  <div class="callout def">
+    <span class="label">Views, stored procedures &amp; triggers — objects the database stores for you</span>
+    <p>A <strong>view</strong> is a saved <code>SELECT</code> given a name — a virtual table. It stores the query, not the data, so it's always up to date and is used to hide complexity, expose a stable interface, or restrict which columns a role can see. A <strong>materialised view</strong> physically stores the result and must be refreshed — you trade freshness for read speed on expensive aggregations.<br>
+    A <strong>stored procedure</strong> is a named block of SQL (with logic, loops, parameters) that lives in the database and runs server-side — useful for encapsulating multi-step business logic and cutting round-trips. A <strong>function</strong> is similar but returns a value and can be used inside a query.<br>
+    A <strong>trigger</strong> is procedural code that fires <em>automatically</em> on an event — <code>BEFORE</code>/<code>AFTER</code> an <code>INSERT</code>/<code>UPDATE</code>/<code>DELETE</code> — commonly for audit logging, maintaining derived columns, or enforcing rules a CHECK can't. Powerful but invisible: overusing triggers makes behaviour hard to trace.</p>
+  </div>
+
+  <div class="fx"><span class="c">-- A view: a named query you SELECT from like a table</span>
+<span class="k">CREATE</span> <span class="k">VIEW</span> active_customers <span class="k">AS</span>
+<span class="k">SELECT</span> customer_id, name, email <span class="k">FROM</span> customers <span class="k">WHERE</span> credit &gt; <span class="y">0</span>;
+
+<span class="k">SELECT</span> * <span class="k">FROM</span> active_customers <span class="k">WHERE</span> name <span class="k">LIKE</span> <span class="g">'A%'</span>;   <span class="c">-- query it like any table</span></div>
 
   <!-- ═══════════════════════════════ 02. FOUNDATIONS ═══════════════════════════════ -->
   <h2 id="foundations">02 &#183; Query Foundations</h2>
@@ -386,6 +416,11 @@ ranked <span class="k">AS</span> (
     <p>An index on <code>(region, date)</code> is sorted by region first, then date within region. It can serve <code>WHERE region = 'North'</code> and <code>WHERE region = 'North' AND date &gt; '...'</code> — but it <em>cannot</em> efficiently serve <code>WHERE date &gt; '...'</code> alone, because the dates aren't globally sorted, only within each region. Rule: put the column you filter on <em>equality</em> first, the <em>range</em> column second. This is the "leftmost prefix" rule and it's a frequent interview probe.</p>
   </div>
 
+  <div class="callout intu">
+    <span class="label">Clustered vs non-clustered — where the row data actually lives</span>
+    <p>A <strong>clustered index</strong> determines the <em>physical order of the table itself</em> — the rows <em>are</em> the leaf level of the index, sorted by the key. So there's only one per table (you can't store the rows in two orders at once), it's usually the primary key, and range scans on it are extremely fast because matching rows sit next to each other on disk. A <strong>non-clustered index</strong> is a <em>separate</em> structure holding just the key plus a pointer back to the row; you can have many. The catch is the "bookmark lookup" — after finding the key it must jump to the table to fetch other columns, an extra hop. A <strong>covering index</strong> (one that includes every column the query needs) avoids that hop entirely — that's the "Index Only Scan" you want to see in EXPLAIN. Postgres has no clustered index by default (heap tables); MyS/InnoDB and SQL Server cluster on the primary key.</p>
+  </div>
+
   <div class="fx"><span class="c">-- EXPLAIN shows the plan. What you're looking for:</span>
 <span class="k">EXPLAIN</span> <span class="k">ANALYZE</span> <span class="k">SELECT</span> * <span class="k">FROM</span> orders <span class="k">WHERE</span> customer_id = <span class="y">42</span>;
 
@@ -439,6 +474,12 @@ ranked <span class="k">AS</span> (
     <strong>3NF</strong>: 2NF, plus no non-key column depends on <em>another non-key</em> column (no transitive dependency).</p>
   </div>
 
+  <div class="callout def">
+    <span class="label">Beyond 3NF: BCNF, and a nod to 4NF / 5NF</span>
+    <p><strong>BCNF (Boyce-Codd Normal Form)</strong> is a stricter 3NF: for <em>every</em> functional dependency <code>X &#8594; Y</code>, <code>X</code> must be a super key. 3NF tolerates a rare edge case — a dependency where the determinant isn't a candidate key but the dependent attribute is <em>part of</em> a candidate key; BCNF removes even that. It bites when a table has <strong>multiple overlapping candidate keys</strong> (e.g. <code>(student, subject) &#8594; teacher</code> but also <code>teacher &#8594; subject</code>). Practical rule: get to 3NF always; push to BCNF when overlapping candidate keys create an anomaly.<br>
+    <strong>4NF</strong> removes multi-valued dependencies (two independent one-to-many facts crammed into one table — e.g. a person's phones <em>and</em> their skills, which multiply into spurious combinations). <strong>5NF</strong> handles join dependencies that only decompose into three-plus tables. You rarely design explicitly for 4NF/5NF, but you should recognise the names and that they exist to remove still-subtler redundancy.</p>
+  </div>
+
   <div class="callout intu">
     <span class="label">Why the abstract rules matter: a concrete anomaly</span>
     <p>Store <code>(order_id, product_id, product_name, product_category)</code> with the order. <code>product_name</code> depends on <code>product_id</code>, not on the order — a transitive dependency (violates 3NF). Now the product's name lives in every order row that contains it. Rename the product and you must update thousands of order rows; miss one and your data contradicts itself. Normalising — moving product attributes to a <code>products</code> table keyed by <code>product_id</code> — means the name lives in exactly one place. That's the point: one fact, one location.</p>
@@ -464,6 +505,18 @@ ranked <span class="k">AS</span> (
 
   <details class="qa"><summary class="qmark">What does a FOREIGN KEY give you, and what happens on delete?</summary>
   <div class="qa-body"><p>A foreign key enforces referential integrity: a child column (e.g. <code>orders.customer_id</code>) must match an existing primary key in the parent table, so you can't insert an order for a customer that doesn't exist. On deleting a parent row you choose the behaviour: <code>ON DELETE RESTRICT</code> (default — blocks the delete while children exist), <code>ON DELETE CASCADE</code> (delete the children too), or <code>ON DELETE SET NULL</code> (orphan them by nulling the reference). It's the database guaranteeing your relationships stay valid instead of trusting application code to never make a mistake.</p></div></details>
+
+  <details class="qa"><summary class="qmark">Super key vs candidate key vs primary key vs alternate key — define them.</summary>
+  <div class="qa-body"><p>A <strong>super key</strong> is any column set that uniquely identifies a row, including ones with redundant extra columns. A <strong>candidate key</strong> is a <em>minimal</em> super key — drop any column and uniqueness breaks; a table can have several. The <strong>primary key</strong> is the single candidate key you elect as the row's identity (unique + NOT NULL). The remaining candidate keys are <strong>alternate keys</strong>, enforced with UNIQUE constraints. Example: in a users table both <code>id</code> and <code>email</code> are candidate keys; you pick <code>id</code> as primary and put a UNIQUE constraint on <code>email</code> (the alternate key). A <strong>composite key</strong> is simply a key spanning multiple columns.</p></div></details>
+
+  <details class="qa"><summary class="qmark">Surrogate key or natural key — which do you choose and why?</summary>
+  <div class="qa-body"><p>A natural key comes from real data (email, ISBN); a surrogate key is a system-generated meaningless id (auto-increment INT, UUID). Natural keys can change, can be wide (slowing every foreign-key join), and may expose PII. Surrogate keys are stable, compact, and fast to join but carry no business meaning. The common production answer is "both": a surrogate primary key for stable identity and fast joins, <em>plus</em> a UNIQUE constraint on the natural key so real-world uniqueness is still enforced. You'd lean purely natural only for small static reference tables (e.g. currency codes).</p></div></details>
+
+  <details class="qa"><summary class="qmark">3NF vs BCNF — what does BCNF fix?</summary>
+  <div class="qa-body"><p>Both eliminate anomalies from functional dependencies, but BCNF is stricter: it requires that for <em>every</em> non-trivial dependency <code>X &#8594; Y</code>, <code>X</code> is a super key. 3NF permits one exception — a dependency whose determinant isn't a candidate key as long as the dependent attribute is a <em>prime</em> attribute (part of some candidate key). That gap only appears when a table has <strong>overlapping composite candidate keys</strong>. Classic example: <code>(student, subject) &#8594; teacher</code> and <code>teacher &#8594; subject</code> — it's in 3NF but not BCNF, so <code>teacher</code>'s subject is stored redundantly. Decomposing to satisfy BCNF removes it. In practice you always aim for 3NF and reach for BCNF when overlapping candidate keys cause a real anomaly.</p></div></details>
+
+  <details class="qa"><summary class="qmark">Clustered vs non-clustered index — what's the difference?</summary>
+  <div class="qa-body"><p>A clustered index defines the physical order of the table's rows — the data pages <em>are</em> the index leaves, so there's exactly one per table (usually the primary key), and range scans are very fast because matching rows are stored contiguously. A non-clustered index is a separate structure of key + row pointer; you can have many, but reading columns not in the index requires a "bookmark lookup" back to the table. Make the index <em>covering</em> (include every column the query returns) and that lookup disappears — the query is answered from the index alone (an Index Only Scan). SQL Server and InnoDB cluster on the primary key by default; Postgres uses unordered heap tables and has no clustered index unless you run <code>CLUSTER</code>.</p></div></details>
 
   <details class="qa"><summary class="qmark">Why can't you use a column alias defined in SELECT inside your WHERE clause?</summary>
   <div class="qa-body"><p>Because of logical execution order: WHERE runs before SELECT. The engine filters rows (WHERE) before it computes the output columns (SELECT), so the alias literally doesn't exist yet when WHERE runs. ORDER BY, which runs after SELECT, <em>can</em> use the alias. The fix is to repeat the expression in WHERE, or wrap the query in a subquery/CTE and filter on the alias in the outer query.</p></div></details>
