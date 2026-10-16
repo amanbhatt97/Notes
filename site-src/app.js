@@ -275,8 +275,12 @@ function makeCollapsible(container) {
       block.appendChild(btn);
       block.appendChild(body);
       h2.remove();
-      // The mind map is the revision view: show it expanded on arrival
-      if (body.querySelector('.mindmap')) block.classList.remove('collapsed');
+      // The mind map is for revision: it stays first but starts collapsed,
+      // so a first-time reader begins with the explanation
+      if (body.querySelector('.mindmap')) {
+        block.classList.add('collapsed', 'mm-block');
+        btn.querySelector('.s-title').textContent = 'Mind Map — quick revision';
+      }
     });
 
   // Step C: wire roadmap item clicks — expand section + scroll

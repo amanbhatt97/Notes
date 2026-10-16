@@ -134,25 +134,32 @@ const CATEGORIES = [
     {"key": "agent_capstone", "label": "Capstone: Ship an Agent"}
   ] },
   { key: "dsa", label: "Data Structures & Algos", emoji: "\ud83c\udf33", topics: [
-    {"key": "dsa_problems",   "label": "🟢 Problem Tracker", "badge": "265"},
-    {"key": "_divider_theory","label": "Theory ──", "divider": true},
-    {"key": "dsa_complexity", "label": "Complexity & Python Internals"},
-    {"key": "dsa_arrays",     "label": "Arrays & Strings"},
-    {"key": "dsa_hashing",    "label": "Hashing"},
-    {"key": "dsa_linkedlist", "label": "Linked Lists"},
-    {"key": "dsa_stacks",     "label": "Stacks & Queues"},
-    {"key": "dsa_binsearch",  "label": "Binary Search"},
-    {"key": "dsa_trees",      "label": "Trees"},
-    {"key": "dsa_heaps",      "label": "Heaps & Priority Queue"},
-    {"key": "dsa_graphs",     "label": "Graphs"},
-    {"key": "dsa_backtrack",  "label": "Backtracking"},
-    {"key": "dsa_dp",         "label": "Dynamic Programming"},
-    {"key": "dsa_tries",      "label": "Tries"},
-    {"key": "dsa_bits",       "label": "Bit Manipulation"},
-    {"key": "dsa_advanced",   "label": "Advanced Data Structures"},
-    {"key": "dsa_sorting",    "label": "Sorting (Deep)"},
-    {"key": "dsa_greedy",     "label": "Intervals & Greedy"},
-    {"key": "dsa_math",       "label": "Math & Number Theory"}
+    {"key": "dsa_problems", "label": "Problem Tracker"},
+    {"key": "grp_dsa_found", "label": "Foundations", "children": [
+      {"key": "dsa_complexity", "label": "Complexity & Python Internals"},
+      {"key": "dsa_arrays",     "label": "Arrays, Strings & Two Pointers"},
+      {"key": "dsa_hashing",    "label": "Hashing"},
+      {"key": "dsa_sorting",    "label": "Sorting"},
+      {"key": "dsa_binsearch",  "label": "Binary Search"}
+    ]},
+    {"key": "grp_dsa_linear", "label": "Linear Structures", "children": [
+      {"key": "dsa_linkedlist", "label": "Linked Lists"},
+      {"key": "dsa_stacks",     "label": "Stacks & Queues"}
+    ]},
+    {"key": "grp_dsa_nonlinear", "label": "Trees & Graphs", "children": [
+      {"key": "dsa_trees",  "label": "Trees"},
+      {"key": "dsa_heaps",  "label": "Heaps & Priority Queue"},
+      {"key": "dsa_tries",  "label": "Tries"},
+      {"key": "dsa_graphs", "label": "Graphs"}
+    ]},
+    {"key": "grp_dsa_tech", "label": "Problem-Solving Techniques", "children": [
+      {"key": "dsa_backtrack", "label": "Recursion & Backtracking"},
+      {"key": "dsa_greedy",    "label": "Intervals & Greedy"},
+      {"key": "dsa_dp",        "label": "Dynamic Programming"},
+      {"key": "dsa_bits",      "label": "Bit Manipulation"},
+      {"key": "dsa_math",      "label": "Math & Number Theory"}
+    ]},
+    {"key": "dsa_advanced", "label": "Advanced Data Structures"}
   ] }
 ];
 
