@@ -2,7 +2,7 @@
 Object.assign(TOPIC_CONTENT, {
   "llm_evals": `<main>
   <h1>Evaluation &amp; Observability</h1>
-  <p class="lead">You can now build prompts, RAG pipelines and agents (notes 04–12). This note shows how to <em>prove</em> they work: golden datasets, code and LLM graders, RAG and agent metrics, regression tests in CI, and tracing in production. Note 14 then uses these numbers to make cost and safety decisions.</p>
+  <p class="lead">You can now build prompts, RAG pipelines and agents (the notes from <a class="xref" data-note="prompting">Prompt Engineering</a> to <a class="xref" data-note="multiagent">Multi-Agent Systems &amp; MCP</a>). This note shows how to <em>prove</em> they work: golden datasets, code and LLM graders, RAG and agent metrics, regression tests in CI, and tracing in production. Note 14 then uses these numbers to make cost and safety decisions.</p>
 
   <h2 id="ev-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -233,7 +233,7 @@ Object.assign(TOPIC_CONTENT, {
   </table>
   <ul>
     <li><strong>Reason, then verdict</strong>: put a <code>reasoning</code> field before <code>verdict</code> in the schema, so the verdict follows the analysis.</li>
-    <li><strong>Structured output</strong>: use <code>output_config.format</code> with a JSON schema (from 05 · LLM APIs) so parsing never fails.</li>
+    <li><strong>Structured output</strong>: use <code>output_config.format</code> with a JSON schema (from <a class="xref" data-note="llm_apis">LLM APIs &amp; Tool Calling</a>) so parsing never fails.</li>
     <li><strong>Judge model</strong>: a cheap model (<code>claude-haiku-5-5</code>) for every PR; a stronger one (<code>claude-sonnet-5-5</code>, <code>claude-opus-5-5</code>) when criteria are subtle.</li>
     <li><strong>Known negatives</strong>: feed an empty string, "I don't know" and a confident answer to the wrong question. All three must fail.</li>
   </ul>
@@ -383,12 +383,12 @@ print(f"recall@3={recall_at_k(retrieved, relevant, 3):.2f}",
     <tr><td>User feedback (thumbs, edits), online grader scores</td><td>Quality signal from real traffic</td></tr>
   </table>
   <ul>
-    <li><strong>Tools</strong>: LangSmith (covered in 10 · LangChain), Langfuse, Arize Phoenix. <strong>OpenTelemetry</strong> is the vendor-neutral standard; its GenAI semantic conventions name fields like model and token counts so any backend can read them.</li>
+    <li><strong>Tools</strong>: LangSmith (covered in <a class="xref" data-note="langchain">LangChain</a>), Langfuse, Arize Phoenix. <strong>OpenTelemetry</strong> is the vendor-neutral standard; its GenAI semantic conventions name fields like model and token counts so any backend can read them.</li>
     <li><strong>Online evals</strong>: run cheap graders (format valid, refusal, PII leak) on every response and an LLM judge on a 1–5% sample.</li>
     <li><strong>Close the loop</strong>: every bad trace a user reports becomes a new golden case.</li>
   </ul>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>Logging raw prompts with customer emails, card numbers and health data. Redact before logging (see 14 · Guardrails), and set a retention period.</p>
+    <p>Logging raw prompts with customer emails, card numbers and health data. Redact before logging (see <a class="xref" data-note="llm_prod">Guardrails, Cost &amp; Deployment</a>), and set a retention period.</p>
   </div>
 
   <h2 id="ev-build"><span class="num">10</span>Build It: Eval Harness</h2>

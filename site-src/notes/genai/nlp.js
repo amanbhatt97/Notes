@@ -2,7 +2,7 @@
 Object.assign(TOPIC_CONTENT, {
   "nlp": `<main>
   <h1>NLP Foundations</h1>
-  <p class="lead">The first stop on the GenAI path. It assumes only basic Python and ML. You'll learn how text becomes numbers: from word counts to word vectors, and why that ended in contextual embeddings. That last step is what <em>02 · Transformers</em> builds on.</p>
+  <p class="lead">The first stop on the GenAI path. It assumes only basic Python and ML. You'll learn how text becomes numbers: from word counts to word vectors, and why that ended in contextual embeddings. That last step is what <em><a class="xref" data-note="transformers">Transformers</a></em> builds on.</p>
 
   <h2 id="nl-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -76,7 +76,7 @@ Object.assign(TOPIC_CONTENT, {
       <ul>
         <li><b>Definition</b> — word vector computed from the whole sentence</li>
         <li><b>ELMo</b> (2018) — bi-LSTMs: contextual but slow, forgetful</li>
-        <li><b>BERT</b> (2018) — Transformer encoder, attention → note 02</li>
+        <li><b>BERT</b> (2018) — Transformer encoder, attention → <a class="xref" data-note="transformers">Transformers</a></li>
         <li>⚠ <b>[CLS] as sentence vector</b> — weak; use Sentence-BERT-style models (06)</li>
       </ul>
     </div>
@@ -132,7 +132,7 @@ Object.assign(TOPIC_CONTENT, {
   <p>Raw, messy text → a clean, consistent form. Every later step inherits its quality.</p>
   <div class="flow"><span>"The Cats Sat!"</span><span>lowercase</span><span>tokenize: the, cats, sat</span><span>drop stopwords: cats, sat</span><span>lemmatize: cat, sit</span></div>
   <ul>
-    <li><strong>Tokenize</strong>: split into units (words here; subwords in 02). <strong>Stopwords</strong>: common, low-information words ("the", "is").</li>
+    <li><strong>Tokenize</strong>: split into units (words here; subwords in <a class="xref" data-note="transformers">Transformers</a>). <strong>Stopwords</strong>: common, low-information words ("the", "is").</li>
     <li><strong>Stem / lemmatize</strong>: reduce to a base form so "runs" and "running" count as one word.</li>
   </ul>
   <h3>Stemming vs lemmatization</h3>
@@ -223,7 +223,7 @@ for w, v in zip(tf.get_feature_names_out(), T.toarray()[0].round(2)):
     <text x="70" y="147" text-anchor="end" class="tm">chased</text><text x="70" y="163" text-anchor="end" class="tm">dog</text><text x="70" y="179" text-anchor="end" class="tm">log</text>
     <text x="90" y="163" class="tm">0 — not in doc 1</text>
   </svg><figcaption>Doc 1's real TF-IDF weights. Rare "mat" beats "cat"; "the" still wins because sklearn's IDF never hits 0.</figcaption></figure>
-  <p><strong>BM25</strong> = TF-IDF + two fixes: term frequency saturates (the 10th "GPU" adds little) and long documents are penalised. The default keyword score (Elasticsearch, hybrid search in 06).</p>
+  <p><strong>BM25</strong> = TF-IDF + two fixes: term frequency saturates (the 10th "GPU" adds little) and long documents are penalised. The default keyword score (Elasticsearch, hybrid search in <a class="xref" data-note="vectordb">Embeddings &amp; Vector DBs</a>).</p>
 
   <h2 id="nl-w2v"><span class="num">05</span>Word2Vec</h2>
   <p>In BoW, "cat" and "dog" are unrelated columns. <strong>Word2Vec</strong> gives each word a dense vector (~300 numbers); words used in similar contexts land close together.</p>
@@ -305,10 +305,10 @@ for w, v in zip(tf.get_feature_names_out(), T.toarray()[0].round(2)):
   </svg><figcaption>Static models give "bank" one averaged point; contextual models place each use next to its real meaning.</figcaption></figure>
   <ul>
     <li><strong>ELMo</strong> (2018): bidirectional LSTMs (recurrent networks that read word by word). Contextual, but slow and forgetful over long text.</li>
-    <li><strong>BERT</strong> (2018): a Transformer encoder. Every word looks at every other word at once. That mechanism, attention, is the subject of <em>02 · Transformers</em>.</li>
+    <li><strong>BERT</strong> (2018): a Transformer encoder. Every word looks at every other word at once. That mechanism, attention, is the subject of <em><a class="xref" data-note="transformers">Transformers</a></em>.</li>
   </ul>
   <div class="callout trap"><span class="label">Trap: BERT's [CLS] as a sentence vector</span>
-    <p>Raw BERT was never trained to make its [CLS] vector good for cosine similarity; it often loses to averaging token vectors. Use a model trained for sentence embeddings (Sentence-BERT and successors), covered in <em>06 · Embeddings &amp; Vector DBs</em>.</p>
+    <p>Raw BERT was never trained to make its [CLS] vector good for cosine similarity; it often loses to averaging token vectors. Use a model trained for sentence embeddings (Sentence-BERT and successors), covered in <em><a class="xref" data-note="vectordb">Embeddings &amp; Vector DBs</a></em>.</p>
   </div>
 
   <h2 id="nl-tasks"><span class="num">08</span>Classic NLP Tasks</h2>

@@ -2,7 +2,7 @@
 Object.assign(TOPIC_CONTENT, {
   "rag": `<main>
   <h1>Retrieval-Augmented Generation</h1>
-  <p class="lead">RAG lets an LLM answer from <em>your</em> documents: fetch the relevant pieces, put them in the prompt, ask for a cited answer. Needs prompting (04), the Messages API (05) and vector search (06). Unlocks agentic RAG in 08–11 and RAG evals in 13.</p>
+  <p class="lead">RAG lets an LLM answer from <em>your</em> documents: fetch the relevant pieces, put them in the prompt, ask for a cited answer. Needs prompting (04), the Messages API (05) and vector search (06). Unlocks agentic RAG in the Agents stage (<a class="xref" data-note="agentic">Agent Fundamentals</a> onwards) and RAG evals in <a class="xref" data-note="llm_evals">Evaluation &amp; Observability</a>.</p>
 
   <h2 id="rg-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -133,13 +133,13 @@ Object.assign(TOPIC_CONTENT, {
     <tr><td>Data changes often?</td><td>Yes: re-index, no retraining</td><td>Poor fit: retrain each time</td></tr>
     <tr><td>Citations / auditing</td><td>Built in</td><td>Not possible</td></tr>
   </table>
-  <p>Often both: fine-tune for style, RAG for facts. The full decision is in 15 · Fine-Tuning.</p>
+  <p>Often both: fine-tune for style, RAG for facts. The full decision is in <a class="xref" data-note="finetuning">Fine-Tuning</a>.</p>
 
   <h2 id="rg-pipe"><span class="num">02</span>The Pipeline</h2>
 <figure class="viz"><svg viewBox="0 0 600 196" width="600"><defs><marker id="rg-a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><text x="20" y="16" class="tm" font-size="11">OFFLINE · indexing — once, then on a schedule</text><rect x="20" y="26" width="92" height="44" rx="7" class="ft st"/><text x="66" y="46" text-anchor="middle" font-weight="bold">Load</text><text x="66" y="60" text-anchor="middle" font-size="10" class="tm">PDF · web · DB</text><rect x="132" y="26" width="92" height="44" rx="7" class="ft st"/><text x="178" y="46" text-anchor="middle" font-weight="bold">Chunk</text><text x="178" y="60" text-anchor="middle" font-size="10" class="tm">256–512 tok</text><line x1="112" y1="48" x2="130" y2="48" stroke="currentColor" marker-end="url(#rg-a1)"/><rect x="244" y="26" width="92" height="44" rx="7" class="ft st"/><text x="290" y="46" text-anchor="middle" font-weight="bold">Metadata</text><text x="290" y="60" text-anchor="middle" font-size="10" class="tm">src·page·date</text><line x1="224" y1="48" x2="242" y2="48" stroke="currentColor" marker-end="url(#rg-a1)"/><rect x="356" y="26" width="92" height="44" rx="7" class="ft st"/><text x="402" y="46" text-anchor="middle" font-weight="bold">Embed</text><text x="402" y="60" text-anchor="middle" font-size="10" class="tm">model v1</text><line x1="336" y1="48" x2="354" y2="48" stroke="currentColor" marker-end="url(#rg-a1)"/><rect x="468" y="26" width="112" height="44" rx="7" class="fv"/><text x="524" y="46" text-anchor="middle" font-weight="bold">Vector DB</text><text x="524" y="60" text-anchor="middle" font-size="10" class="tm">HNSW index</text><line x1="448" y1="48" x2="466" y2="48" stroke="currentColor" marker-end="url(#rg-a1)"/><text x="20" y="128" class="tm" font-size="11">ONLINE · every query</text><rect x="12" y="138" width="80" height="44" rx="7" class="fb sb"/><text x="52" y="164" text-anchor="middle" font-weight="bold">Query</text><rect x="108" y="138" width="80" height="44" rx="7" class="fb sb"/><text x="148" y="158" text-anchor="middle" font-weight="bold">Embed</text><text x="148" y="172" text-anchor="middle" font-size="10" class="tr">same model!</text><line x1="92" y1="160" x2="106" y2="160" stroke="currentColor" marker-end="url(#rg-a1)"/><rect x="204" y="138" width="80" height="44" rx="7" class="fb sb"/><text x="244" y="158" text-anchor="middle" font-weight="bold">Top ~50</text><text x="244" y="172" text-anchor="middle" font-size="10" class="tm">hybrid</text><line x1="188" y1="160" x2="202" y2="160" stroke="currentColor" marker-end="url(#rg-a1)"/><rect x="300" y="138" width="80" height="44" rx="7" class="fb sb"/><text x="340" y="158" text-anchor="middle" font-weight="bold">Rerank 5</text><text x="340" y="172" text-anchor="middle" font-size="10" class="tm">cross-enc</text><line x1="284" y1="160" x2="298" y2="160" stroke="currentColor" marker-end="url(#rg-a1)"/><rect x="396" y="138" width="80" height="44" rx="7" class="fb sb"/><text x="436" y="158" text-anchor="middle" font-weight="bold">Prompt</text><text x="436" y="172" text-anchor="middle" font-size="10" class="tm">+ sources</text><line x1="380" y1="160" x2="394" y2="160" stroke="currentColor" marker-end="url(#rg-a1)"/><rect x="492" y="138" width="96" height="44" rx="7" class="fg sg"/><text x="540" y="158" text-anchor="middle" font-weight="bold">LLM</text><text x="540" y="172" text-anchor="middle" font-size="10" class="tm">answer + [1]</text><line x1="476" y1="160" x2="490" y2="160" stroke="currentColor" marker-end="url(#rg-a1)"/><path d="M524,70 V100 H244 V136" fill="none" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#rg-a1)"/><text x="384" y="94" text-anchor="middle" font-size="10" class="tm">nearest-neighbour search</text></svg><figcaption>Top half runs offline and fills the vector DB; bottom half runs per question and reads from it. The query must use the same embedding model.</figcaption></figure>
   <ul>
     <li><strong>Metadata</strong> on every chunk (source, page, position, date) powers citations, filters ("only 2024 docs") and debugging.</li>
-    <li>Embeddings, similarity, indexes and hybrid search: 06 · Embeddings &amp; Vector DBs.</li>
+    <li>Embeddings, similarity, indexes and hybrid search: <a class="xref" data-note="vectordb">Embeddings &amp; Vector DBs</a>.</li>
   </ul>
   <div class="callout trap"><span class="label">Trap</span>
     <p>The query must be embedded with the <em>same</em> model as the chunks. A mismatch fails silently: results look random, no error is raised.</p>
@@ -174,7 +174,7 @@ Object.assign(TOPIC_CONTENT, {
 
   <h2 id="rg-ret"><span class="num">04</span>Retrieval &amp; Reranking</h2>
   <ul>
-    <li><strong>Dense</strong> catches paraphrase; <strong>BM25</strong> catches exact codes and names. <strong>Hybrid</strong> (fused with RRF) is the safe default (details in 06).</li>
+    <li><strong>Dense</strong> catches paraphrase; <strong>BM25</strong> catches exact codes and names. <strong>Hybrid</strong> (fused with RRF) is the safe default (details in <a class="xref" data-note="vectordb">Embeddings &amp; Vector DBs</a>).</li>
     <li><strong>Metadata filters</strong> narrow the search: tenant, product, date, access rights.</li>
     <li><strong>Multi-query</strong>: an LLM writes 3–5 rephrasings; retrieve for each and merge. Helps vague or oddly worded questions.</li>
   </ul>
@@ -201,7 +201,7 @@ top5 = [candidate_texts[r["corpus_id"]] for r in ranked]</div>
   </div>
 
   <h2 id="rg-prompt"><span class="num">05</span>Prompting with Context</h2>
-  <p>The prompt decides whether the model <em>uses</em> the sources or its own memory. Prompting basics (system prompts, XML tags) are in 04.</p>
+  <p>The prompt decides whether the model <em>uses</em> the sources or its own memory. Prompting basics (system prompts, XML tags) are in <a class="xref" data-note="prompting">Prompt Engineering</a>.</p>
   <div class="fx" data-lang="py">SYSTEM = """Answer using ONLY the sources provided.
 - Cite every claim with its source number, like [1].
 - If the sources don't contain the answer, say you don't know.
@@ -222,7 +222,7 @@ Question: How many leave days carry over?"""</div>
     <p>LLMs use the start and end of long context better than the middle. Ten mediocre chunks can bury the one good one. Send fewer, reranked chunks with the best one first.</p>
   </div>
   <div class="callout trap"><span class="label">Trap: retrieved text is untrusted</span>
-    <p>A document can contain "ignore previous instructions". Keep sources inside tags, tell the model they are data, not instructions. Defence in depth is in 14.</p>
+    <p>A document can contain "ignore previous instructions". Keep sources inside tags, tell the model they are data, not instructions. Defence in depth is in <a class="xref" data-note="llm_prod">Guardrails, Cost &amp; Deployment</a>.</p>
   </div>
 
   <h2 id="rg-adv"><span class="num">06</span>Advanced RAG</h2>
@@ -242,7 +242,7 @@ Question: How many leave days carry over?"""</div>
   <h3>Agentic RAG</h3>
   <p>Plain RAG retrieves once, always. <strong>Agentic RAG</strong> makes retrieval a <em>tool</em>: the model decides whether, what and where to search, and when it has enough.</p>
   <div class="flow"><span>Question</span><span>Model: search?</span><span>search_docs(query)</span><span>Read results</span><span>Enough? else search again</span><span>Answer</span></div>
-  <p>Better for multi-step questions; costs more calls and latency, and needs a step limit. The tool loop is in 05, agents in 08–09, and the LangGraph version (retrieve → grade → rewrite) in 11.</p>
+  <p>Better for multi-step questions; costs more calls and latency, and needs a step limit. The tool loop is in <a class="xref" data-note="llm_apis">LLM APIs &amp; Tool Calling</a>, agents in <a class="xref" data-note="agentic">Agent Fundamentals</a> and <a class="xref" data-note="agent_build">Build an Agent from Scratch</a>, and the LangGraph version (retrieve → grade → rewrite) in <a class="xref" data-note="langgraph">LangGraph</a>.</p>
 
   <h2 id="rg-fail"><span class="num">07</span>Failure Modes &amp; What to Measure</h2>
   <table class="tbl">
@@ -260,7 +260,7 @@ Question: How many leave days carry over?"""</div>
     <div><b>Generation</b><p>Faithfulness: claims supported by sources? Answer relevance: answers the question?</p><small>Hallucination lives here</small></div>
     <div><b>Context</b><p>Precision: how much retrieved text was useful? Recall: did it contain everything needed?</p><small>Tune k and chunking</small></div>
   </div>
-  <p>Golden datasets, LLM-as-judge, RAGAS and CI regression tests are in 13 · Evaluation &amp; Observability.</p>
+  <p>Golden datasets, LLM-as-judge, RAGAS and CI regression tests are in <a class="xref" data-note="llm_evals">Evaluation &amp; Observability</a>.</p>
 
   <h2 id="rg-build"><span class="num">08</span>Build It</h2>
   <p>Goal: a complete RAG in ~80 lines of plain Python. Chunker → embed + index → retrieve top-k → grounded prompt with citations → Claude. The embedding is a hashed bag of words so it runs offline; replace <code>embed()</code> with a real model (06) for meaning-based search.</p>
@@ -379,10 +379,10 @@ print(text, cited)</div>
   <details class="qa"><summary><span class="qmark">Q</span>What's the chunk-size trade-off, and how does parent–child help?</summary><div class="qa-body">Small chunks retrieve precisely but lack context, and answers get split. Large chunks have context but mix topics, blurring the embedding and adding noise. Parent–child embeds small child chunks for matching and returns their larger parent to the LLM.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What is HyDE and when does it help?</summary><div class="qa-body">Hypothetical Document Embeddings: have an LLM draft an answer, embed the draft, search with it. Docs are written as statements, so a draft answer lands nearer to them than the question does. Helps with vocabulary mismatch and technical domains. Costs an extra LLM call per query.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>The right chunk is retrieved but the answer ignores it. Why, and what do you do?</summary><div class="qa-body">Lost in the middle or too much noise: models use the start and end of context best. Rerank so the best chunk is first, send fewer chunks (3–5), compress or trim irrelevant sentences, and check faithfulness to confirm the answer uses the sources.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Answers are wrong. How do you tell retrieval failure from generation failure?</summary><div class="qa-body">Check retrieval alone first: for a labelled set of questions, is a correct chunk in the top k (Recall@k)? If not, fix chunking, embeddings, hybrid search. If yes but answers are still wrong, it's generation: measure faithfulness and answer relevance, tighten the prompt. Full method in 13.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Answers are wrong. How do you tell retrieval failure from generation failure?</summary><div class="qa-body">Check retrieval alone first: for a labelled set of questions, is a correct chunk in the top k (Recall@k)? If not, fix chunking, embeddings, hybrid search. If yes but answers are still wrong, it's generation: measure faithfulness and answer relevance, tighten the prompt. Full method in <a class="xref" data-note="llm_evals">Evaluation &amp; Observability</a>.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Low faithfulness vs low context recall: what does each tell you?</summary><div class="qa-body">Low faithfulness: the answer makes claims the sources don't support (hallucination) → stricter grounding prompt, "I don't know" path, citation checks. Low context recall: the needed facts weren't retrieved → larger k, better chunking, better embeddings, hybrid search.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>In the Build It code, why does "meal allowance on business trips" return nothing?</summary><div class="qa-body">The stand-in embedding hashes exact words. The doc has "Meals"/"trip", the query "meal"/"trips": no shared tokens, cosine 0, below <code>min_score</code>. A semantic embedding model (or BM25 with stemming in a hybrid) would match it. The empty result correctly triggers "I couldn't find this" instead of a guess.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What is agentic RAG and when is it worth it?</summary><div class="qa-body">The model gets retrieval as a tool and decides when and what to search, possibly several times, before answering. Worth it for multi-hop or ambiguous questions and multiple sources. Costs more latency and tokens, so cap the steps. Simple FAQ-style questions are better served by one-shot RAG.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you stop a retrieved document from hijacking the model?</summary><div class="qa-body">Treat retrieved text as data: wrap it in tags, tell the model instructions inside sources must be ignored, limit what tools the model can call afterwards, and filter outputs. This is indirect prompt injection; defence in depth is in 14.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you stop a retrieved document from hijacking the model?</summary><div class="qa-body">Treat retrieved text as data: wrap it in tags, tell the model instructions inside sources must be ignored, limit what tools the model can call afterwards, and filter outputs. This is indirect prompt injection; defence in depth is in <a class="xref" data-note="llm_prod">Guardrails, Cost &amp; Deployment</a>.</div></details>
 </main>`
 });

@@ -2,7 +2,7 @@
 Object.assign(TOPIC_CONTENT, {
   "llm_basics": `<main>
   <h1>How LLMs Work</h1>
-  <p class="lead">From note 02 you know the transformer decoder: tokens in, a vector per position out. This page turns that into a working LLM: how it is trained, how it picks each next word, and why it costs what it costs. Everything in 04 · Prompt Engineering and 05 · LLM APIs builds on these mechanics.</p>
+  <p class="lead">From <a class="xref" data-note="transformers">Transformers</a> you know the transformer decoder: tokens in, a vector per position out. This page turns that into a working LLM: how it is trained, how it picks each next word, and why it costs what it costs. Everything in <a class="xref" data-note="prompting">Prompt Engineering</a> and <a class="xref" data-note="llm_apis">LLM APIs &amp; Tool Calling</a> builds on these mechanics.</p>
 
   <h2 id="lb-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -35,7 +35,7 @@ Object.assign(TOPIC_CONTENT, {
         <li><b>1 Pre-train</b> → base model (knows a lot, follows nothing)</li>
         <li><b>2 SFT</b> — (instruction → answer) pairs → instruct model</li>
         <li><b>3 Preference</b> — RLHF / DPO on "A better than B" → helpful, safe</li>
-        <li><b>Post-training</b> = stages 2 + 3 (details: 15 · Fine-Tuning)</li>
+        <li><b>Post-training</b> = stages 2 + 3 (details: <a class="xref" data-note="finetuning">Fine-Tuning</a>)</li>
         <li>💡 intern: read library → job training → feedback on taste</li>
       </ul>
     </div>
@@ -173,7 +173,7 @@ Object.assign(TOPIC_CONTENT, {
   </div>
 
   <h2 id="lb-stages"><span class="num">03</span>The Three Training Stages</h2>
-  <p>A chat assistant is built in three stages. Stages 2 and 3 are called <strong>post-training</strong>. Their details (LoRA, RLHF, DPO) live in 15 · Fine-Tuning.</p>
+  <p>A chat assistant is built in three stages. Stages 2 and 3 are called <strong>post-training</strong>. Their details (LoRA, RLHF, DPO) live in <a class="xref" data-note="finetuning">Fine-Tuning</a>.</p>
   <div class="cards">
     <div><b>1 · Pre-training</b><p>Next-token prediction on trillions of tokens. Output: a <strong>base</strong> model that knows a lot and follows nothing.</p><small>$ millions · weeks to months · done by labs</small></div>
     <div><b>2 · SFT / instruction tuning</b><p>Supervised fine-tuning on (instruction → good answer) pairs. Output: an <strong>instruct</strong> model that answers questions.</p><small>Thousands to millions of examples</small></div>
@@ -319,7 +319,7 @@ per_8k_seq = per_token * 8192           # = 1 GiB for ONE 8K-token conversation<
     <p>The KV cache trades memory for speed. It is why serving long contexts to many users is memory-bound, and why tricks like grouped-query attention (fewer KV heads) and cache quantization exist.</p>
   </div>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>The KV cache lives inside one generation on the server. <strong>Prompt caching</strong> (reusing a processed prefix across API calls) is a different, API-level feature, covered in 05 · LLM APIs.</p>
+    <p>The KV cache lives inside one generation on the server. <strong>Prompt caching</strong> (reusing a processed prefix across API calls) is a different, API-level feature, covered in <a class="xref" data-note="llm_apis">LLM APIs &amp; Tool Calling</a>.</p>
   </div>
 
   <h2 id="lb-hall"><span class="num">06</span>Why Hallucinations Happen</h2>
@@ -336,14 +336,14 @@ per_8k_seq = per_token * 8192           # = 1 GiB for ONE 8K-token conversation<
   </div>
   <table class="tbl">
     <tr><th>Fix</th><th>How</th><th>Where</th></tr>
-    <tr><td>Ground it</td><td>Put the facts in the prompt (retrieval)</td><td>07 · RAG</td></tr>
+    <tr><td>Ground it</td><td>Put the facts in the prompt (retrieval)</td><td><a class="xref" data-note="rag">Retrieval-Augmented Generation</a></td></tr>
     <tr><td>Let it look things up</td><td>Tools: search, DB, calculator</td><td>05, 08</td></tr>
-    <tr><td>Give it an out</td><td>"If the context doesn't say, answer 'unknown'"</td><td>04 · Prompting</td></tr>
-    <tr><td>Check it</td><td>Citations, verification step, evals</td><td>13 · Evals</td></tr>
+    <tr><td>Give it an out</td><td>"If the context doesn't say, answer 'unknown'"</td><td><a class="xref" data-note="prompting">Prompt Engineering</a></td></tr>
+    <tr><td>Check it</td><td>Citations, verification step, evals</td><td><a class="xref" data-note="llm_evals">Evaluation &amp; Observability</a></td></tr>
   </table>
 
   <h2 id="lb-cost"><span class="num">07</span>Tokens = Cost &amp; Latency</h2>
-  <p>APIs bill per token, separately for input and output. A <strong>token</strong> is a sub-word piece (note 02): roughly 4 characters or ¾ of a word in English. Code, numbers and non-English text use more.</p>
+  <p>APIs bill per token, separately for input and output. A <strong>token</strong> is a sub-word piece (<a class="xref" data-note="transformers">Transformers</a>): roughly 4 characters or ¾ of a word in English. Code, numbers and non-English text use more.</p>
   <ul>
     <li><strong>Output costs ~5× input</strong> per token, because each output token needs its own sequential pass.</li>
     <li><strong>Latency</strong> ≈ TTFT + output tokens ÷ tokens-per-second. Long answers are slow answers.</li>
@@ -455,7 +455,7 @@ client = anthropic.Anthropic()            # API key comes from ANTHROPIC_API_KEY
 response = client.messages.create(
     model="claude-opus-5-5",              # which model
     max_tokens=1024,                      # hard cap on OUTPUT tokens (thinking + text)
-    system="You are a concise ML tutor.", # standing instructions (note 04)
+    system="You are a concise ML tutor.", # standing instructions (Prompt Engineering)
     messages=[                            # the conversation so far; API is stateless
         {"role": "user", "content": "Explain the KV cache in two sentences."}
     ],
@@ -474,7 +474,7 @@ print(response.usage.input_tokens, response.usage.output_tokens)  # what you pay
     <tr><td><code>model</code></td><td>Which LLM. Bigger models: smarter, slower, pricier.</td></tr>
     <tr><td><code>max_tokens</code></td><td>Ceiling on generated tokens. Hit it and <code>stop_reason</code> is <code>"max_tokens"</code> (answer cut off).</td></tr>
     <tr><td><code>system</code></td><td>Standing instructions: role, rules, tone (04).</td></tr>
-    <tr><td><code>messages</code></td><td>The whole conversation, every call. The API is stateless; full shape in 05.</td></tr>
+    <tr><td><code>messages</code></td><td>The whole conversation, every call. The API is stateless; full shape in <a class="xref" data-note="llm_apis">LLM APIs &amp; Tool Calling</a>.</td></tr>
     <tr><td><code>output_config.effort</code></td><td>How much thinking: the main quality/cost dial on reasoning models. Default on this model is <code>medium</code>.</td></tr>
     <tr><td><code>stop_sequences</code></td><td>Strings that end generation early.</td></tr>
     <tr><td><code>usage</code></td><td>Input and output tokens actually billed.</td></tr>

@@ -387,7 +387,7 @@ print(order.quantity + 1)</div>
     <tr><td><code>"disable_parallel_tool_use": true</code></td><td>At most one tool call per reply</td></tr>
   </table>
   <div class="callout intu"><span class="label">On current models</span><p>To make a call very likely: keep <code>auto</code>, say "Use the get_weather tool" in the prompt, set <code>strict: true</code>, and check that a <code>tool_use</code> block actually came back. If you only wanted JSON, use structured outputs instead of a fake tool.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>"The model ran my function." It didn't. It only wrote JSON. Your process executes the code, so you own validation, permissions and timeouts (deep dive in 14).</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>"The model ran my function." It didn't. It only wrote JSON. Your process executes the code, so you own validation, permissions and timeouts (deep dive in <a class="xref" data-note="llm_prod">Guardrails, Cost &amp; Deployment</a>).</p></div>
 
   <h2 id="la-cache"><span class="num">06</span>Prompt Caching</h2>
   <p>Agents and RAG resend the same long prefix every call. <strong>Prompt caching</strong> stores the processed prefix server-side; later calls starting with the same bytes are cheaper and faster.</p>

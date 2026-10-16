@@ -328,6 +328,11 @@ function loadTopic(key, cat) {
   highlightCode(_tc);
   makeCollapsible(_tc);
   try { hoistMindMap(_tc); addSectionTools(_tc); } catch (e) { console.error(e); }
+  // Cross-references between notes: <a class="xref" data-note="key">Title</a>
+  _tc.querySelectorAll('a.xref[data-note]').forEach(function(x) {
+    x.setAttribute('href', '#');
+    x.onclick = function(e) { e.preventDefault(); loadTopic(x.dataset.note); };
+  });
   appendStudyBox(_tc, key);
   if (foundCat) appendPrevNext(_tc, foundCat, key);
 

@@ -87,7 +87,7 @@ Object.assign(TOPIC_CONTENT, {
   <h2 id="gr-map"><span class="num">01</span>The Path at a Glance</h2>
   <div class="flow"><span>1 · Foundations</span><span>2 · Working with LLMs</span><span>3 · RAG</span><span>4 · Agents</span><span>5 · Production</span><span>6 · Customizing Models</span><span>Capstone</span></div>
   <ul>
-    <li><strong>1–2</strong>: how a model works and how to talk to it from code. The <strong>tool-calling loop</strong> in 05 is the hinge of the whole path.</li>
+    <li><strong>1–2</strong>: how a model works and how to talk to it from code. The <strong>tool-calling loop</strong> in <a class="xref" data-note="llm_apis">LLM APIs &amp; Tool Calling</a> is the hinge of the whole path.</li>
     <li><strong>3</strong>: give the model knowledge it doesn't have.</li>
     <li><strong>4</strong>: let the model take actions in a loop, first by hand, then with frameworks.</li>
     <li><strong>5</strong>: prove it works (evals) and keep it safe, cheap and running.</li>
@@ -103,37 +103,37 @@ Object.assign(TOPIC_CONTENT, {
   <h2 id="gr-stages"><span class="num">02</span>Stage by Stage</h2>
   <h3>Stage 1 · Foundations</h3>
   <ul>
-    <li><strong>Notes</strong>: 01 · NLP Foundations, 02 · Transformers, 03 · How LLMs Work.</li>
+    <li><strong>Notes</strong>: <a class="xref" data-note="nlp">NLP Foundations</a>, <a class="xref" data-note="transformers">Transformers</a>, <a class="xref" data-note="llm_basics">How LLMs Work</a>.</li>
     <li><strong>After it you can</strong>: explain tokens, embeddings and attention; say why models hallucinate; reason about context windows, temperature and token cost.</li>
     <li><strong>Mini-build</strong>: scaled dot-product attention in NumPy, then a sampler that turns logits into text at different temperatures.</li>
   </ul>
   <h3>Stage 2 · Working with LLMs</h3>
   <ul>
-    <li><strong>Notes</strong>: 04 · Prompt Engineering, 05 · LLM APIs &amp; Tool Calling.</li>
+    <li><strong>Notes</strong>: <a class="xref" data-note="prompting">Prompt Engineering</a>, <a class="xref" data-note="llm_apis">LLM APIs &amp; Tool Calling</a>.</li>
     <li><strong>After it you can</strong>: write a solid system prompt; get schema-valid JSON back; stream responses; run the <code>tool_use → tool_result</code> loop by hand, with errors and parallel calls.</li>
     <li><strong>Mini-build</strong>: a script where Claude answers questions using two of your Python functions as tools (e.g. a calculator and a file search).</li>
   </ul>
   <h3>Stage 3 · RAG</h3>
   <ul>
-    <li><strong>Notes</strong>: 06 · Embeddings &amp; Vector DBs, 07 · Retrieval-Augmented Generation.</li>
+    <li><strong>Notes</strong>: <a class="xref" data-note="vectordb">Embeddings &amp; Vector DBs</a>, <a class="xref" data-note="rag">Retrieval-Augmented Generation</a>.</li>
     <li><strong>After it you can</strong>: chunk and embed documents; choose an index and a vector DB; build retrieve → rerank → answer-with-citations; diagnose bad answers as retrieval or generation failures.</li>
     <li><strong>Mini-build</strong>: Q&amp;A over your own notes (or a folder of PDFs) that cites the chunks it used, plus a 10-question test set you re-run after every change.</li>
   </ul>
   <h3>Stage 4 · Agents</h3>
   <ul>
-    <li><strong>Notes</strong>: 08 · Agent Fundamentals, 09 · Build an Agent from Scratch, 10 · LangChain, 11 · LangGraph, 12 · Multi-Agent Systems &amp; MCP.</li>
+    <li><strong>Notes</strong>: <a class="xref" data-note="agentic">Agent Fundamentals</a>, <a class="xref" data-note="agent_build">Build an Agent from Scratch</a>, <a class="xref" data-note="langchain">LangChain</a>, <a class="xref" data-note="langgraph">LangGraph</a>, <a class="xref" data-note="multiagent">Multi-Agent Systems &amp; MCP</a>.</li>
     <li><strong>After it you can</strong>: choose between a workflow and an agent; write an agent loop in plain Python with a step limit and memory; rebuild it as a LangGraph graph with checkpoints and human approval; expose tools through an MCP server.</li>
     <li><strong>Mini-build</strong>: a research agent with search, read-file and save-note tools: first in plain Python (09), then as a graph (11), with its tools served over MCP (12).</li>
   </ul>
   <h3>Stage 5 · Production</h3>
   <ul>
-    <li><strong>Notes</strong>: 13 · Evaluation &amp; Observability, 14 · Guardrails, Cost &amp; Deployment.</li>
+    <li><strong>Notes</strong>: <a class="xref" data-note="llm_evals">Evaluation &amp; Observability</a>, <a class="xref" data-note="llm_prod">Guardrails, Cost &amp; Deployment</a>.</li>
     <li><strong>After it you can</strong>: build a golden dataset; score with code checks and LLM-as-judge; trace every step; defend against prompt injection; cut cost with caching and model choice; deploy behind an API.</li>
     <li><strong>Mini-build</strong>: wrap your Stage 3 or 4 project in a FastAPI endpoint with input/output guardrails, cost logging and an eval suite that runs in CI.</li>
   </ul>
   <h3>Stage 6 · Customizing Models</h3>
   <ul>
-    <li><strong>Notes</strong>: 15 · Fine-Tuning.</li>
+    <li><strong>Notes</strong>: <a class="xref" data-note="finetuning">Fine-Tuning</a>.</li>
     <li><strong>After it you can</strong>: decide prompt vs RAG vs fine-tune with evidence; prepare SFT data; explain LoRA, QLoRA, quantization and DPO; judge a fine-tune against its base model.</li>
     <li><strong>Mini-build</strong>: LoRA from scratch on one linear layer, then a QLoRA config with peft/trl.</li>
   </ul>
@@ -161,11 +161,11 @@ Object.assign(TOPIC_CONTENT, {
   <h2 id="gr-skip"><span class="num">04</span>Short on Time?</h2>
   <table class="tbl">
     <tr><th>Note</th><th>If you're short on time</th></tr>
-    <tr><td>01 · NLP Foundations</td><td>Skim; keep TF-IDF and "why contextual embeddings"</td></tr>
-    <tr><td>02 · Transformers</td><td>Keep attention intuition and decoder-only; skip positional-encoding maths</td></tr>
-    <tr><td>10 · LangChain</td><td>Skim; learn it when a job uses it</td></tr>
-    <tr><td>12 · Multi-Agent &amp; MCP</td><td>Read MCP fully; skim the multi-agent patterns</td></tr>
-    <tr><td>15 · Fine-Tuning</td><td>Read the decision section and LoRA; skim RLHF/DPO</td></tr>
+    <tr><td><a class="xref" data-note="nlp">NLP Foundations</a></td><td>Skim; keep TF-IDF and "why contextual embeddings"</td></tr>
+    <tr><td><a class="xref" data-note="transformers">Transformers</a></td><td>Keep attention intuition and decoder-only; skip positional-encoding maths</td></tr>
+    <tr><td><a class="xref" data-note="langchain">LangChain</a></td><td>Skim; learn it when a job uses it</td></tr>
+    <tr><td><a class="xref" data-note="multiagent">Multi-Agent Systems &amp; MCP</a> &amp; MCP</td><td>Read MCP fully; skim the multi-agent patterns</td></tr>
+    <tr><td><a class="xref" data-note="finetuning">Fine-Tuning</a></td><td>Read the decision section and LoRA; skim RLHF/DPO</td></tr>
   </table>
   <div class="callout intu"><span class="label">Never skip</span>
     <p><strong>05</strong> (tool calling), <strong>07</strong> (RAG), <strong>08</strong> (workflows vs agents), <strong>09</strong> (agent from scratch) and <strong>13</strong> (evals). These five are what "can build agentic systems" actually means. A 4-week sprint: 03–05, 06–07, 08–09 + 11, then 13–14 with a small capstone.</p>

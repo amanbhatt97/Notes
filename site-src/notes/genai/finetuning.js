@@ -2,7 +2,7 @@
 Object.assign(TOPIC_CONTENT, {
   "finetuning": `<main>
   <h1>Fine-Tuning</h1>
-  <p class="lead">How to change a model's <em>behaviour</em> by training it on your own examples, and how to do it on one GPU with LoRA and QLoRA. You need the training stages from 03 · How LLMs Work and the RAG pipeline from 07. This is the last stage before the capstone: it tells you when to customise a model, and when not to.</p>
+  <p class="lead">How to change a model's <em>behaviour</em> by training it on your own examples, and how to do it on one GPU with LoRA and QLoRA. You need the training stages from <a class="xref" data-note="llm_basics">How LLMs Work</a> and the RAG pipeline from 07. This is the last stage before the capstone: it tells you when to customise a model, and when not to.</p>
 
   <h2 id="ft-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -153,7 +153,7 @@ Object.assign(TOPIC_CONTENT, {
   </svg><figcaption>Golden rule: climb from the bottom. Move up only when an eval shows the cheaper rung failed.</figcaption></figure>
 
   <h2 id="ft-stages"><span class="num">02</span>Where Fine-Tuning Fits</h2>
-  <p>A chat model is built in three stages (overview in 03 · How LLMs Work). "Fine-tuning" means stages 2 and 3, together called <strong>post-training</strong>.</p>
+  <p>A chat model is built in three stages (overview in <a class="xref" data-note="llm_basics">How LLMs Work</a>). "Fine-tuning" means stages 2 and 3, together called <strong>post-training</strong>.</p>
   <div class="flow"><span>Pre-training → BASE model (autocomplete)</span><span>SFT / instruction tuning → INSTRUCT model</span><span>RLHF / DPO → aligned CHAT model</span></div>
   <p>You inherit stage 1 (someone else paid millions). You usually run stage 2, sometimes stage 3, on your data.</p>
   <ul>
@@ -298,7 +298,7 @@ print(f"int4, blocks of 64: mean relative error {np.abs(w - w_hat).mean() / np.a
     <tr><td><strong>AWQ</strong></td><td>Post-training; protects the small set of weights with large activations</td><td>GPU serving; often slightly better than GPTQ at 4-bit</td></tr>
     <tr><td><strong>GGUF</strong></td><td>llama.cpp file format (Q4_K_M, Q8_0…)</td><td>CPU / Apple Silicon; used by Ollama</td></tr>
   </table>
-  <p>Serving quantized models is covered in 14 · Guardrails, Cost &amp; Deployment.</p>
+  <p>Serving quantized models is covered in <a class="xref" data-note="llm_prod">Guardrails, Cost &amp; Deployment</a>.</p>
 
   <h2 id="ft-peft"><span class="num">06</span>Other PEFT Methods</h2>
   <p><strong>PEFT</strong> (parameter-efficient fine-tuning) = any method that trains a small add-on instead of all weights.</p>
@@ -346,7 +346,7 @@ trainer.train()</div>
   <p><strong>Names to recognise:</strong> <strong>RLAIF</strong> (an LLM labels the preferences), <strong>Constitutional AI</strong> (Anthropic: the model critiques its answers against written principles), <strong>ORPO / KTO</strong> (DPO cousins: preferences folded into SFT; single good/bad labels), <strong>RLVR / GRPO</strong> (RL on verifiable rewards such as passing tests: how reasoning models are trained).</p>
 
   <h2 id="ft-eval"><span class="num">08</span>Evaluating &amp; Failure Modes</h2>
-  <p>A fine-tune is only "better" if a held-out eval says so. Building eval sets and LLM-as-judge are covered in 13 · Evaluation &amp; Observability; here is what is specific to fine-tuning.</p>
+  <p>A fine-tune is only "better" if a held-out eval says so. Building eval sets and LLM-as-judge are covered in <a class="xref" data-note="llm_evals">Evaluation &amp; Observability</a>; here is what is specific to fine-tuning.</p>
   <table class="tbl">
     <tr><th>Level</th><th>Measures</th><th>Example</th></tr>
     <tr><td>Loss / perplexity</td><td>Sanity check on held-out data</td><td>Eval loss rising while train loss falls = overfitting</td></tr>

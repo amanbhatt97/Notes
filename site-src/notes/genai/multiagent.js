@@ -2,7 +2,7 @@
 Object.assign(TOPIC_CONTENT, {
   "multiagent": `<main>
   <h1>Multi-Agent Systems &amp; MCP</h1>
-  <p class="lead">You can build one agent (09) and wire it as a graph (11). This note covers splitting work across several agents, and MCP, the standard plug that connects any agent to any tool. Next: proving it works (13 · Evaluation) and shipping it safely (14).</p>
+  <p class="lead">You can build one agent (09) and wire it as a graph (11). This note covers splitting work across several agents, and MCP, the standard plug that connects any agent to any tool. Next: proving it works (<a class="xref" data-note="llm_evals">Evaluation &amp; Observability</a>) and shipping it safely (14).</p>
 
   <h2 id="mm-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -139,12 +139,12 @@ Object.assign(TOPIC_CONTENT, {
     <tr><td>More moving parts</td><td>Harder to debug: which agent made the bad call?</td></tr>
   </table>
   <h3>The one real benefit: context isolation</h3>
-  <p>A worker reads 50 pages in <em>its own</em> context and returns 150 words. The lead stays small and focused; workers run in parallel (picture in 02).</p>
+  <p>A worker reads 50 pages in <em>its own</em> context and returns 150 words. The lead stays small and focused; workers run in parallel (picture in <a class="xref" data-note="transformers">Transformers</a>).</p>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A manager sends three analysts to research three markets. Each reads hundreds of pages; the manager reads three one-page memos. It breaks when the tasks are tightly linked: three people writing three chapters of one plot, without talking, produce a mess.</p>
   </div>
   <div class="callout intu"><span class="label">Decision rule</span>
-    <p>Start with <strong>one agent</strong> (or a fixed workflow, see 08 · Agent Fundamentals). Split into several agents only if at least one is true:</p>
+    <p>Start with <strong>one agent</strong> (or a fixed workflow, see <a class="xref" data-note="agentic">Agent Fundamentals</a>). Split into several agents only if at least one is true:</p>
     <ol>
       <li><strong>Breadth:</strong> the work splits into <em>independent</em> sub-tasks whose raw material would overflow or pollute one context.</li>
       <li><strong>Separation:</strong> parts need different tools or permissions you want walled off (a reader must never hold the "send payment" tool).</li>
@@ -209,7 +209,7 @@ def lead_agent(goal: str, max_steps: int = 8) -&gt; str:
             for b, out in zip(calls, outputs)]})
     return "Stopped: step limit reached."</div>
   <ul>
-    <li>It is the normal tool loop from 05 · LLM APIs. Only the tool's body is special.</li>
+    <li>It is the normal tool loop from <a class="xref" data-note="llm_apis">LLM APIs &amp; Tool Calling</a>. Only the tool's body is special.</li>
     <li>Several <code>tool_use</code> blocks in one turn = independent sub-tasks, so run them in parallel. All results go back in <strong>one</strong> user message.</li>
     <li>Workers can use a cheaper model (<code>claude-sonnet-5-5</code>); the lead does the hard reasoning.</li>
     <li>The task string is the worker's <em>entire</em> world. Make the lead write self-contained tasks: goal, scope, output format, what to skip.</li>
@@ -219,7 +219,7 @@ def lead_agent(goal: str, max_steps: int = 8) -&gt; str:
   </div>
 
   <h2 id="mm-sup"><span class="num">03</span>Supervisor in LangGraph</h2>
-  <p>Same idea expressed as a graph (11 · LangGraph): a <strong>supervisor</strong> node picks the next worker; each worker node runs, writes its result to shared state, and returns control.</p>
+  <p>Same idea expressed as a graph (<a class="xref" data-note="langgraph">LangGraph</a>): a <strong>supervisor</strong> node picks the next worker; each worker node runs, writes its result to shared state, and returns control.</p>
   <div class="flow"><span>START</span><span>supervisor</span><span>researcher or writer</span><span>back to supervisor</span><span>FINISH → END</span></div>
   <div class="fx" data-lang="py">from typing import Literal
 from pydantic import BaseModel
@@ -414,7 +414,7 @@ def chat(messages, active="triage", max_steps=10):
   </table>
   <p>The older "HTTP + SSE" transport is deprecated; use Streamable HTTP for anything remote.</p>
   <div class="callout trap"><span class="label">Trap: MCP is not a security layer</span>
-    <p>A malicious or compromised server can put instructions in tool descriptions or results ("tool poisoning"). Install servers only from sources you trust, give them least privilege, and keep human approval for risky actions (14 · Guardrails).</p>
+    <p>A malicious or compromised server can put instructions in tool descriptions or results ("tool poisoning"). Install servers only from sources you trust, give them least privilege, and keep human approval for risky actions (<a class="xref" data-note="llm_prod">Guardrails, Cost &amp; Deployment</a>).</p>
   </div>
 
   <h2 id="mm-mcpsrv"><span class="num">07</span>MCP: Build &amp; Connect</h2>

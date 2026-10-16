@@ -150,7 +150,7 @@ prompt = ChatPromptTemplate.from_messages([
 ])
 prompt.input_variables          # ['history', 'question', 'role']
 tutor = prompt.partial(role="tutor")   # fill some slots now, the rest later</div>
-  <p>Also available: <code>FewShotChatMessagePromptTemplate</code> to insert example pairs (few-shot itself is in 04).</p>
+  <p>Also available: <code>FewShotChatMessagePromptTemplate</code> to insert example pairs (few-shot itself is in <a class="xref" data-note="prompting">Prompt Engineering</a>).</p>
   <div class="callout trap"><span class="label">Trap</span>
     <p><code>PromptTemplate</code> outputs one string; <code>ChatPromptTemplate</code> outputs a list of messages. For chat models, use the chat version.</p>
   </div>
@@ -218,11 +218,11 @@ t.category, t.urgent     # typed fields, not text</div>
   <ul>
     <li><strong><code>Document</code></strong>: <code>page_content</code> + <code>metadata</code> (source, page). Every loader returns a list of them.</li>
     <li><strong>Loaders</strong>: 100+ in <code>langchain-community</code> (PDF, web, CSV, Notion…). Use <code>lazy_load()</code> for big sources.</li>
-    <li><strong><code>RecursiveCharacterTextSplitter</code></strong>: tries <code>\\n\\n</code>, then <code>\\n</code>, then spaces, so paragraphs stay whole. Chunking strategy itself is in 07.</li>
+    <li><strong><code>RecursiveCharacterTextSplitter</code></strong>: tries <code>\\n\\n</code>, then <code>\\n</code>, then spaces, so paragraphs stay whole. Chunking strategy itself is in <a class="xref" data-note="rag">Retrieval-Augmented Generation</a>.</li>
     <li><strong>Vector stores</strong>: <code>InMemoryVectorStore</code> for demos; Chroma, pgvector, Pinecone etc. share the interface (06).</li>
     <li><strong>Retriever</strong>: <code>store.as_retriever(search_kwargs={"k": 4})</code>. Takes a string, returns documents, and is a Runnable.</li>
   </ul>
-  <p>Fancier retrievers from older tutorials (multi-query, contextual compression, ensemble/hybrid) now live in <code>langchain-classic</code>; the techniques themselves are covered in 07.</p>
+  <p>Fancier retrievers from older tutorials (multi-query, contextual compression, ensemble/hybrid) now live in <code>langchain-classic</code>; the techniques themselves are covered in <a class="xref" data-note="rag">Retrieval-Augmented Generation</a>.</p>
   <div class="callout trap"><span class="label">Trap</span>
     <p>A retriever returns <code>Document</code> objects, not text. Format them (join <code>page_content</code>) before they reach the prompt, or the model sees a Python repr.</p>
   </div>

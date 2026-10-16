@@ -1408,3 +1408,7 @@ body.sb-collapsed .tb-logo-text{opacity:0;width:0;overflow:hidden}
 .sb-group-arrow{margin-right:0}
 .sb-cat-arrow:hover,.sb-group-arrow:hover{background:var(--blue-dim);color:var(--blue)}
 .sb-group.active{color:var(--blue)}
+
+/* Links from one note to another */
+a.xref{color:var(--blue);text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;cursor:pointer}
+a.xref:hover{text-decoration-style:solid}

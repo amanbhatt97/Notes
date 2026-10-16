@@ -2,7 +2,7 @@
 Object.assign(TOPIC_CONTENT, {
   "transformers": `<main>
   <h1>Transformers</h1>
-  <p class="lead">The architecture under every modern LLM. You need <em>01 · NLP Foundations</em> (word vectors, and why context matters). Here you take one Transformer apart: tokens, embeddings, attention, the block, and the three model families. <em>03 · How LLMs Work</em> then shows how these models are trained and generate text.</p>
+  <p class="lead">The architecture under every modern LLM. You need <em><a class="xref" data-note="nlp">NLP Foundations</a></em> (word vectors, and why context matters). Here you take one Transformer apart: tokens, embeddings, attention, the block, and the three model families. <em><a class="xref" data-note="llm_basics">How LLMs Work</a></em> then shows how these models are trained and generate text.</p>
 
   <h2 id="tf-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -165,7 +165,7 @@ Object.assign(TOPIC_CONTENT, {
     <p>An RNN reads a book one word at a time with its eyes closed between words, summarising on a Post-it note. A Transformer lays the whole page on the table and lets every word look at every other word at once.</p>
   </div>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>"Every word looks at every word" costs O(n²) in sequence length n. That is why context length is expensive (more in 03).</p>
+    <p>"Every word looks at every word" costs O(n²) in sequence length n. That is why context length is expensive (more in <a class="xref" data-note="llm_basics">How LLMs Work</a>).</p>
   </div>
 
   <h2 id="tf-tok"><span class="num">02</span>Tokenization</h2>
@@ -215,7 +215,7 @@ merge 4: 'lo' + 'w' (seen 7x)
   <h2 id="tf-emb"><span class="num">03</span>Embeddings &amp; Position</h2>
   <p>The <strong>embedding layer</strong> is a learned table: one row per token ID, <code>d_model</code> numbers per row (768 in BERT-base). Looking up a token = picking its row.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A token ID is a stadium seat number: it identifies, but means nothing. The embedding is a spreadsheet row whose unlabelled columns the model invents during training (maybe "is alive", "is past tense"). Similar tokens get similar rows, like Word2Vec in 01.</p>
+    <p>A token ID is a stadium seat number: it identifies, but means nothing. The embedding is a spreadsheet row whose unlabelled columns the model invents during training (maybe "is alive", "is past tense"). Similar tokens get similar rows, like Word2Vec in <a class="xref" data-note="nlp">NLP Foundations</a>.</p>
   </div>
   <h3>Positional encoding</h3>
   <p>Attention treats its input as a <strong>set</strong>: "dog bites man" and "man bites dog" look identical. Position must be injected.</p>
@@ -371,7 +371,7 @@ merge 4: 'lo' + 'w' (seen 7x)
     <tr><th></th><th>BERT</th><th>GPT</th></tr>
     <tr><td>Architecture</td><td>Encoder-only</td><td>Decoder-only</td></tr>
     <tr><td>Attention</td><td>Bidirectional</td><td>Causal (left to right)</td></tr>
-    <tr><td>Training task</td><td><strong>Masked language modelling</strong>: hide ~15% of tokens, predict them from both sides</td><td>Next-token prediction (details in 03)</td></tr>
+    <tr><td>Training task</td><td><strong>Masked language modelling</strong>: hide ~15% of tokens, predict them from both sides</td><td>Next-token prediction (details in <a class="xref" data-note="llm_basics">How LLMs Work</a>)</td></tr>
     <tr><td>Output</td><td>A vector per token; add a small head for a task</td><td>Text, generated token by token</td></tr>
     <tr><td>Best at</td><td>Understanding: classify, tag, embed</td><td>Generation, and (at scale) nearly everything via prompting</td></tr>
   </table>
@@ -381,7 +381,7 @@ merge 4: 'lo' + 'w' (seen 7x)
   <div class="callout trap"><span class="label">Trap</span>
     <p>"BERT is obsolete" is wrong. Small encoders still power embeddings, rerankers and classifiers in production (06, 07), at a fraction of an LLM's cost.</p>
   </div>
-  <p>Decoder-only won for general-purpose LLMs: one simple objective, scales well, and any task can be phrased as text continuation. How that training and generation work is <em>03 · How LLMs Work</em>.</p>
+  <p>Decoder-only won for general-purpose LLMs: one simple objective, scales well, and any task can be phrased as text continuation. How that training and generation work is <em><a class="xref" data-note="llm_basics">How LLMs Work</a></em>.</p>
 
   <h2 id="tf-build"><span class="num">09</span>Build It: Attention in numpy</h2>
   <p>Scaled dot-product attention on 3 tokens with <code>d_model = 4</code>. The embeddings are hand-made and the weight matrices random; in a real model both are learned.</p>

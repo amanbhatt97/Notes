@@ -2,7 +2,7 @@
 Object.assign(TOPIC_CONTENT, {
   "vectordb": `<main>
   <h1>Embeddings &amp; Vector DBs</h1>
-  <p class="lead">How to search by <em>meaning</em>: turn text into vectors, then find the nearest ones fast. Builds on contextual embeddings from 01–02 and the API basics from 05. Everything here is the retrieval engine behind 07 · RAG.</p>
+  <p class="lead">How to search by <em>meaning</em>: turn text into vectors, then find the nearest ones fast. Builds on contextual embeddings from 01–02 and the API basics from 05. Everything here is the retrieval engine behind <a class="xref" data-note="rag">Retrieval-Augmented Generation</a>.</p>
 
   <h2 id="vd-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -77,7 +77,7 @@ Object.assign(TOPIC_CONTENT, {
         <li><b>Dense misses</b> exact codes, versions, SKUs; <b>BM25 misses</b> paraphrase</li>
         <li><b>RRF</b> — <code>Σ 1 / (60 + rank)</code>, ranks only, no score normalising</li>
         <li><b>Example</b> — dense [A,B,C] + BM25 [C,A,D] → A, C, B, D</li>
-        <li><b>RAG</b> — retrieve ~50 (recall) → rerank to ~5 (precision) in 07</li>
+        <li><b>RAG</b> — retrieve ~50 (recall) → rerank to ~5 (precision) in <a class="xref" data-note="rag">Retrieval-Augmented Generation</a></li>
         <li>💡 two detectives: one for meaning, one for case numbers</li>
       </ul>
     </div>
@@ -357,7 +357,7 @@ print(rrf([dense, bm25]))</div>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Two detectives. One recognises that "fled by car" and "drove off" are the same event. The other finds case file #2024-0847 when you quote the number. Suspects both rank highly are almost certainly right.</p>
   </div>
-  <p>Hybrid retrieval feeds a reranker in RAG: retrieve ~50 for recall, rerank to ~5 for precision (07 · RAG).</p>
+  <p>Hybrid retrieval feeds a reranker in RAG: retrieve ~50 for recall, rerank to ~5 for precision (<a class="xref" data-note="rag">Retrieval-Augmented Generation</a>).</p>
 
   <h2 id="vd-choose"><span class="num">08</span>Choosing a Vector DB</h2>
   <div class="cards">
