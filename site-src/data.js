@@ -1,141 +1,141 @@
 const CATEGORIES = [
   { key: "python", label: "Python Programming", emoji: "\ud83d\udc0d", topics: [
     {"key": "grp_py_fund", "label": "Fundamentals", "children": [
-      {"key": "py_fundamentals", "label": "01 · Python Fundamentals"},
-      {"key": "py_ds",           "label": "02 · Data Structures"},
-      {"key": "py_io",           "label": "03 · Exceptions, Files & Packages"}
+      {"key": "py_fundamentals", "label": "Python Fundamentals"},
+      {"key": "py_ds",           "label": "Data Structures"},
+      {"key": "py_io",           "label": "Exceptions, Files & Packages"}
     ]},
     {"key": "grp_py_adv", "label": "Advanced Python", "children": [
-      {"key": "py_oop",         "label": "04 · OOP"},
-      {"key": "py_advanced",    "label": "05 · Iterators, Generators, Decorators"},
-      {"key": "py_concurrency", "label": "06 · Concurrency & Async"},
-      {"key": "py_testing",     "label": "07 · Testing & Debugging"}
+      {"key": "py_oop",         "label": "OOP"},
+      {"key": "py_advanced",    "label": "Iterators, Generators, Decorators"},
+      {"key": "py_concurrency", "label": "Concurrency & Async"},
+      {"key": "py_testing",     "label": "Testing & Debugging"}
     ]}
   ] },
   { key: "softeng", label: "Software Engineering", emoji: "\u2699\ufe0f", topics: [
-    {"key": "se_git", "label": "01 · Git & GitHub"},
-    {"key": "se_linux", "label": "02 · Linux & Terminal"},
-    {"key": "se_docker", "label": "03 · Docker"}
+    {"key": "se_git", "label": "Git & GitHub"},
+    {"key": "se_linux", "label": "Linux & Terminal"},
+    {"key": "se_docker", "label": "Docker"}
   ] },
   { key: "dataanalysis", label: "Data Analysis Stack", emoji: "\ud83d\udcca", topics: [
-    {"key": "da_numpy", "label": "01 · NumPy"},
-    {"key": "da_pandas", "label": "02 · Pandas"},
-    {"key": "da_viz", "label": "03 · Matplotlib & Seaborn"},
-    {"key": "da_plotly_streamlit", "label": "04 · Plotly & Streamlit"}
+    {"key": "da_numpy", "label": "NumPy"},
+    {"key": "da_pandas", "label": "Pandas"},
+    {"key": "da_viz", "label": "Matplotlib & Seaborn"},
+    {"key": "da_plotly_streamlit", "label": "Plotly & Streamlit"}
   ] },
   { key: "apis", label: "APIs & Backend", emoji: "\ud83c\udf10", topics: [
-    {"key": "api_fundamentals", "label": "01 · HTTP & REST Fundamentals"},
-    {"key": "api_auth", "label": "02 · Authentication & Security"},
-    {"key": "api_flask", "label": "03 · Flask"},
-    {"key": "api_fastapi", "label": "04 · FastAPI"},
-    {"key": "api_production", "label": "05 · Production Backend"}
+    {"key": "api_fundamentals", "label": "HTTP & REST Fundamentals"},
+    {"key": "api_auth", "label": "Authentication & Security"},
+    {"key": "api_flask", "label": "Flask"},
+    {"key": "api_fastapi", "label": "FastAPI"},
+    {"key": "api_production", "label": "Production Backend"}
   ] },
   { key: "databases", label: "Databases", emoji: "\ud83d\uddc4\ufe0f", topics: [
     {"key": "db_intro", "label": "What is a Database"},
     {"key": "db_types", "label": "Types of Databases"},
     {"key": "grp_sql", "label": "SQL", "children": [
-      {"key": "sql_relational",   "label": "01 · Relational Model & PostgreSQL"},
-      {"key": "sql_fundamentals", "label": "02 · Querying Basics"},
-      {"key": "sql_joins",        "label": "03 · JOINs"},
-      {"key": "sql_subqueries",   "label": "04 · Subqueries, CTEs & Views"},
-      {"key": "sql_windows",      "label": "05 · Window Functions"},
-      {"key": "sql_optimization", "label": "06 · Indexes & Performance"},
-      {"key": "sql_transactions", "label": "07 · Transactions & Concurrency"},
-      {"key": "sql_modeling",     "label": "08 · Data Modeling"},
-      {"key": "sql_interview",    "label": "09 · Practice Q&A"}
+      {"key": "sql_relational",   "label": "Relational Model & PostgreSQL"},
+      {"key": "sql_fundamentals", "label": "Querying Basics"},
+      {"key": "sql_joins",        "label": "JOINs"},
+      {"key": "sql_subqueries",   "label": "Subqueries, CTEs & Views"},
+      {"key": "sql_windows",      "label": "Window Functions"},
+      {"key": "sql_optimization", "label": "Indexes & Performance"},
+      {"key": "sql_transactions", "label": "Transactions & Concurrency"},
+      {"key": "sql_modeling",     "label": "Data Modeling"},
+      {"key": "sql_interview",    "label": "Practice Q&A"}
     ]},
     {"key": "grp_mongo", "label": "MongoDB", "children": [
-      {"key": "mongo_basics",      "label": "01 · Documents & CRUD"},
-      {"key": "mongo_aggregation", "label": "02 · Aggregation Pipeline"},
-      {"key": "mongo_design",      "label": "03 · Schema Design, Indexes & Scaling"}
+      {"key": "mongo_basics",      "label": "Documents & CRUD"},
+      {"key": "mongo_aggregation", "label": "Aggregation Pipeline"},
+      {"key": "mongo_design",      "label": "Schema Design, Indexes & Scaling"}
     ]}
   ] },
   { key: "mathstats", label: "Mathematics & Statistics", emoji: "\u03a3", topics: [
     {"key": "grp_stats", "label": "Statistics", "children": [
-      {"key": "st_descriptive", "label": "01 · Descriptive Statistics"},
-      {"key": "st_probability", "label": "02 · Probability"},
-      {"key": "st_distributions", "label": "03 · Probability Distributions"},
-      {"key": "st_hypothesis", "label": "04 · Hypothesis Testing"},
-      {"key": "st_correlation", "label": "05 · Correlation & Relationships"},
-      {"key": "st_abtesting", "label": "06 · A/B Testing"}
+      {"key": "st_descriptive", "label": "Descriptive Statistics"},
+      {"key": "st_probability", "label": "Probability"},
+      {"key": "st_distributions", "label": "Probability Distributions"},
+      {"key": "st_hypothesis", "label": "Hypothesis Testing"},
+      {"key": "st_correlation", "label": "Correlation & Relationships"},
+      {"key": "st_abtesting", "label": "A/B Testing"}
     ]},
     {"key": "grp_math", "label": "Mathematics for ML", "children": [
-      {"key": "m_linalg", "label": "07 · Linear Algebra"},
-      {"key": "m_calculus", "label": "08 · Calculus"},
-      {"key": "m_optimization", "label": "09 · Optimization"}
+      {"key": "m_linalg", "label": "Linear Algebra"},
+      {"key": "m_calculus", "label": "Calculus"},
+      {"key": "m_optimization", "label": "Optimization"}
     ]}
   ] },
   { key: "ml", label: "Machine Learning", emoji: "\ud83e\udd16", topics: [
-    {"key": "ml_intro",          "label": "01 · ML Basics"},
-    {"key": "ml_core",           "label": "02 · Core Concepts"},
-    {"key": "ml_regression",     "label": "03 · Regression"},
-    {"key": "ml_classification", "label": "04 · Classification"},
-    {"key": "ml_trees",          "label": "05 · Tree-Based Models"},
-    {"key": "ml_clustering",     "label": "06 · Clustering"},
-    {"key": "ml_dimred",         "label": "07 · Dimensionality Reduction"},
-    {"key": "ml_evaluation",     "label": "08 · Model Evaluation"},
-    {"key": "ml_timeseries",     "label": "09 · Time Series Forecasting"},
-    {"key": "ml_recsys",         "label": "10 · Recommendation Systems"}
+    {"key": "ml_intro",          "label": "ML Basics"},
+    {"key": "ml_core",           "label": "Core Concepts"},
+    {"key": "ml_regression",     "label": "Regression"},
+    {"key": "ml_classification", "label": "Classification"},
+    {"key": "ml_trees",          "label": "Tree-Based Models"},
+    {"key": "ml_clustering",     "label": "Clustering"},
+    {"key": "ml_dimred",         "label": "Dimensionality Reduction"},
+    {"key": "ml_evaluation",     "label": "Model Evaluation"},
+    {"key": "ml_timeseries",     "label": "Time Series Forecasting"},
+    {"key": "ml_recsys",         "label": "Recommendation Systems"}
   ] },
   { key: "dl", label: "Deep Learning", emoji: "\ud83e\udde0", topics: [
-    {"key": "dl_foundations", "label": "01 · NN Foundations"},
-    {"key": "dl_pytorch",     "label": "02 · PyTorch"},
-    {"key": "dl_keras",       "label": "03 · TensorFlow & Keras"},
-    {"key": "dl_cnns",        "label": "04 · CNNs"},
-    {"key": "dl_rnns",        "label": "05 · RNNs & Sequential"},
-    {"key": "dl_attention",   "label": "06 · Attention Mechanisms"}
+    {"key": "dl_foundations", "label": "NN Foundations"},
+    {"key": "dl_pytorch",     "label": "PyTorch"},
+    {"key": "dl_keras",       "label": "TensorFlow & Keras"},
+    {"key": "dl_cnns",        "label": "CNNs"},
+    {"key": "dl_rnns",        "label": "RNNs & Sequential"},
+    {"key": "dl_attention",   "label": "Attention Mechanisms"}
   ] },
   { key: "mlops", label: "MLOps & Deployment", emoji: "\ud83d\ude80", topics: [
-    {"key": "mlops_lifecycle", "label": "01 · The ML Lifecycle"},
-    {"key": "mlops_mlflow", "label": "02 · MLflow & Experiment Tracking"},
-    {"key": "mlops_deploy", "label": "03 · Deployment Strategies"}
+    {"key": "mlops_lifecycle", "label": "The ML Lifecycle"},
+    {"key": "mlops_mlflow", "label": "MLflow & Experiment Tracking"},
+    {"key": "mlops_deploy", "label": "Deployment Strategies"}
   ] },
   { key: "dataeng", label: "Data Engineering", emoji: "\ud83d\udd27", topics: [
-    {"key": "de_etl", "label": "01 · ETL & Orchestration"},
-    {"key": "de_spark", "label": "02 · Apache Spark"},
-    {"key": "de_kafka", "label": "03 · Kafka & Streaming"}
+    {"key": "de_etl", "label": "ETL & Orchestration"},
+    {"key": "de_spark", "label": "Apache Spark"},
+    {"key": "de_kafka", "label": "Kafka & Streaming"}
   ] },
   { key: "systemdesign", label: "ML System Design", emoji: "\ud83c\udfd7\ufe0f", topics: [
-    {"key": "sd_framework", "label": "01 · How to Approach ML System Design"},
-    {"key": "sd_serving", "label": "02 · Feature Stores & Online/Offline Serving"},
-    {"key": "sd_monitoring", "label": "03 · Monitoring, Drift & Retraining"},
-    {"key": "sd_experiments", "label": "04 · Shadow, Canary & A/B Infrastructure"},
-    {"key": "sd_cases", "label": "05 · Case Studies"}
+    {"key": "sd_framework", "label": "How to Approach ML System Design"},
+    {"key": "sd_serving", "label": "Feature Stores & Online/Offline Serving"},
+    {"key": "sd_monitoring", "label": "Monitoring, Drift & Retraining"},
+    {"key": "sd_experiments", "label": "Shadow, Canary & A/B Infrastructure"},
+    {"key": "sd_cases", "label": "Case Studies"}
   ] },
   { key: "genai", label: "Generative AI", emoji: "\u2728", topics: [
     {"key": "genai_roadmap", "label": "Start Here: The Learning Path"},
-    {"key": "grp_genai_found", "label": "1 · Foundations", "children": [
-      {"key": "nlp",          "label": "01 · NLP Foundations"},
-      {"key": "transformers", "label": "02 · Transformers"},
-      {"key": "llm_basics",   "label": "03 · How LLMs Work"}
+    {"key": "grp_genai_found", "label": "Foundations", "children": [
+      {"key": "nlp",          "label": "NLP Foundations"},
+      {"key": "transformers", "label": "Transformers"},
+      {"key": "llm_basics",   "label": "How LLMs Work"}
     ]},
-    {"key": "grp_genai_use", "label": "2 · Working with LLMs", "children": [
-      {"key": "prompting", "label": "04 · Prompt Engineering"},
-      {"key": "llm_apis",  "label": "05 · LLM APIs & Tool Calling"}
+    {"key": "grp_genai_use", "label": "Working with LLMs", "children": [
+      {"key": "prompting", "label": "Prompt Engineering"},
+      {"key": "llm_apis",  "label": "LLM APIs & Tool Calling"}
     ]},
-    {"key": "grp_genai_rag", "label": "3 · RAG", "children": [
-      {"key": "vectordb", "label": "06 · Embeddings & Vector DBs"},
-      {"key": "rag",      "label": "07 · Retrieval-Augmented Generation"}
+    {"key": "grp_genai_rag", "label": "RAG", "children": [
+      {"key": "vectordb", "label": "Embeddings & Vector DBs"},
+      {"key": "rag",      "label": "Retrieval-Augmented Generation"}
     ]},
-    {"key": "grp_genai_agents", "label": "4 · Agents", "children": [
-      {"key": "agentic",     "label": "08 · Agent Fundamentals"},
-      {"key": "agent_build", "label": "09 · Build an Agent from Scratch"},
-      {"key": "langchain",   "label": "10 · LangChain"},
-      {"key": "langgraph",   "label": "11 · LangGraph"},
-      {"key": "multiagent",  "label": "12 · Multi-Agent Systems & MCP"}
+    {"key": "grp_genai_agents", "label": "Agents", "children": [
+      {"key": "agentic",     "label": "Agent Fundamentals"},
+      {"key": "agent_build", "label": "Build an Agent from Scratch"},
+      {"key": "langchain",   "label": "LangChain"},
+      {"key": "langgraph",   "label": "LangGraph"},
+      {"key": "multiagent",  "label": "Multi-Agent Systems & MCP"}
     ]},
-    {"key": "grp_genai_prod", "label": "5 · Production", "children": [
-      {"key": "llm_evals", "label": "13 · Evaluation & Observability"},
-      {"key": "llm_prod",  "label": "14 · Guardrails, Cost & Deployment"}
+    {"key": "grp_genai_prod", "label": "Production", "children": [
+      {"key": "llm_evals", "label": "Evaluation & Observability"},
+      {"key": "llm_prod",  "label": "Guardrails, Cost & Deployment"}
     ]},
-    {"key": "grp_genai_ft", "label": "6 · Customizing Models", "children": [
-      {"key": "finetuning", "label": "15 · Fine-Tuning"}
+    {"key": "grp_genai_ft", "label": "Customizing Models", "children": [
+      {"key": "finetuning", "label": "Fine-Tuning"}
     ]},
-    {"key": "agent_capstone", "label": "16 · Capstone: Ship an Agent"}
+    {"key": "agent_capstone", "label": "Capstone: Ship an Agent"}
   ] },
   { key: "dsa", label: "Data Structures & Algos", emoji: "\ud83c\udf33", topics: [
     {"key": "dsa_problems",   "label": "🟢 Problem Tracker", "badge": "265"},
-    {"key": "_divider_theory","label": "── Theory ──", "divider": true},
+    {"key": "_divider_theory","label": "Theory ──", "divider": true},
     {"key": "dsa_complexity", "label": "Complexity & Python Internals"},
     {"key": "dsa_arrays",     "label": "Arrays & Strings"},
     {"key": "dsa_hashing",    "label": "Hashing"},

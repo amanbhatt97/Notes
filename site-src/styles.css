@@ -1402,3 +1402,9 @@ body.sb-collapsed .tb-logo-text{opacity:0;width:0;overflow:hidden}
   .topic-bar{padding-left:20px;padding-right:20px}
   .syl-hero{padding-left:1.25rem;padding-right:1.25rem}
 }
+
+/* Tree sidebar: name opens the page, the arrow alone expands/collapses */
+.sb-cat-arrow,.sb-group-arrow{padding:6px;margin:-6px -6px -6px -6px;border-radius:4px;cursor:pointer}
+.sb-group-arrow{margin-right:0}
+.sb-cat-arrow:hover,.sb-group-arrow:hover{background:var(--blue-dim);color:var(--blue)}
+.sb-group.active{color:var(--blue)}

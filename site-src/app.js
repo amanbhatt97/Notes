@@ -85,14 +85,15 @@ function renderTopicList(list, container, cat, depth) {
       g.className = 'sb-group' + (isOpen ? ' open' : '');
       g.dataset.groupKey = t.key;
       g.style.paddingLeft = (pad - 14) + 'px';
-      var n = flatTopics(t.children).filter(function(x) { return TOPIC_CONTENT[x.key]; }).length;
-      g.innerHTML = '<span class="sb-group-arrow">▶</span><span class="sb-group-label">' + t.label + '</span>' +
-        (n ? '<span class="sb-group-count">' + n + '</span>' : '');
+      g.innerHTML = '<span class="sb-group-arrow" title="Show / hide topics">▶</span><span class="sb-group-label">' + t.label + '</span>';
       var kids = document.createElement('div');
       kids.className = 'sb-topics sb-subtopics' + (isOpen ? ' open' : '');
       kids.dataset.groupKey = t.key;
       renderTopicList(t.children, kids, cat, depth + 1);
-      g.onclick = function() {
+      // Name opens the group's page; only the arrow expands/collapses it
+      g.onclick = function() { showOverview(cat.key, t.key); };
+      g.querySelector('.sb-group-arrow').onclick = function(e) {
+        e.stopPropagation();
         var o = kids.classList.toggle('open');
         g.classList.toggle('open', o);
         appState.catOpen[t.key] = o;
@@ -146,25 +147,25 @@ function buildSidebar() {
       return;
     }
 
-    const isOpen = appState.catOpen[cat.key] !== false;
+    const isOpen = appState.catOpen[cat.key] === true;
 
     const btn = document.createElement('button');
     btn.className = 'sb-cat' + (isOpen ? ' open' : '');
     btn.dataset.catKey = cat.key;
 
-    const availCount = leaves.filter(t => TOPIC_CONTENT[t.key]).length;
-
     btn.innerHTML =
       '<div class="sb-cat-icon">' + cat.emoji + '</div>' +
       '<span class="sb-cat-label">' + cat.label + '</span>' +
-      (availCount > 0 ? '<span class="sb-cat-count">' + availCount + '</span>' : '') +
-      '<span class="sb-cat-arrow">▶</span>';
+      '<span class="sb-cat-arrow" title="Show / hide topics">▶</span>';
 
     const topicsDiv = document.createElement('div');
     topicsDiv.className = 'sb-topics' + (isOpen ? ' open' : '');
     renderTopicList(cat.topics, topicsDiv, cat, 0);
 
-    btn.onclick = () => {
+    // Name opens the category page; only the arrow expands/collapses it
+    btn.onclick = () => showOverview(cat.key);
+    btn.querySelector('.sb-cat-arrow').onclick = (e) => {
+      e.stopPropagation();
       const o = topicsDiv.classList.toggle('open');
       btn.classList.toggle('open', o);
       appState.catOpen[cat.key] = o;
@@ -180,6 +181,12 @@ function buildSidebar() {
 
 // Open every sidebar group on the way to `key` so the active note is visible.
 function revealInSidebar(cat, key) {
+  var cb = document.querySelector('.sb-cat[data-cat-key="' + cat.key + '"]');
+  if (cb && !cb.classList.contains('open')) {
+    cb.classList.add('open');
+    cb.nextElementSibling.classList.add('open');
+    appState.catOpen[cat.key] = true;
+  }
   (topicPath(cat.topics, key) || []).forEach(function(g) {
     document.querySelectorAll('[data-group-key="' + g.key + '"]').forEach(function(el) {
       el.classList.add('open');
@@ -338,6 +345,7 @@ function loadTopic(key, cat) {
 
   // Update sidebar
   document.getElementById('sbHome').classList.remove('active');
+  document.querySelectorAll('.sb-cat, .sb-group').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.sb-topic').forEach(b => {
     b.classList.toggle('active', b.dataset.key === key);
   });
@@ -515,7 +523,7 @@ function showOverview(catKey, groupKey) {
     if (t.divider) return;
     if (t.children) {
       var kids = flatTopics(t.children);
-      html += '<div class="ov-group"><button class="ov-group-title" data-group="' + t.key + '">' + t.label + ' <span>' + kids.length + ' notes →</span></button><div class="ov-cards">' +
+      html += '<div class="ov-group"><button class="ov-group-title" data-group="' + t.key + '">' + t.label + ' <span>Open →</span></button><div class="ov-cards">' +
         kids.map(function(k) { return ovCard(k); }).join('') + '</div></div>';
     } else {
       html += ovCard(t);
@@ -530,6 +538,10 @@ function showOverview(catKey, groupKey) {
   });
   renderCrumbs(cat, path);
   document.getElementById('tbName').textContent = 'Overview';
+  document.querySelectorAll('.sb-cat, .sb-group').forEach(function(b) { b.classList.remove('active'); });
+  var sel = groupKey ? '.sb-group[data-group-key="' + groupKey + '"]' : '.sb-cat[data-cat-key="' + cat.key + '"]';
+  var cur = document.querySelector(sel);
+  if (cur) cur.classList.add('active');
   document.getElementById('tbTools').style.display = 'none';
   document.getElementById('sbHome').classList.remove('active');
   document.querySelectorAll('.sb-topic').forEach(function(b) { b.classList.remove('active'); });
