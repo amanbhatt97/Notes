@@ -26346,6 +26346,1615 @@ def cd(path):
 });
 
 
+// notes/python/py_ds.js — Data Structures
+Object.assign(TOPIC_CONTENT, {
+  "py_ds": `<main>
+  <h1>Data Structures</h1>
+  <p class="lead">Python's four built-in containers (list, tuple, set, dict) plus strings carry almost every piece of data before it reaches numpy or pandas. Picking the right one turns O(n²) scripts into O(n) ones, and knowing how copying and hashing work prevents the nastiest silent bugs. Builds on <em>Python Fundamentals</em> (names, mutability). Run on Python 3.13.</p>
+
+  <h2 id="pd-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Data Structures</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Lists</div>
+        <ul>
+          <li><b>list</b> — ordered, mutable, duplicates OK; dynamic array of references</li>
+          <li><b>Slicing</b> <code>[start:stop:step]</code> — stop excluded; <code>[::-1]</code> reverses; never raises IndexError</li>
+          <li><b>append</b> O(1) amortised; <b>insert(0)/pop(0)</b> O(n) → use <code>deque</code></li>
+          <li>⚠ <code>lst.sort()</code> / <code>append</code> return <code>None</code>; <code>sorted(lst)</code> returns new list</li>
+          <li>⚠ <code>[[0]*3]*3</code> = three refs to ONE row → use a comprehension</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Comprehensions</div>
+        <ul>
+          <li><b>List</b> <code>[f(x) for x in xs if cond]</code>; filter at end, if/else at front</li>
+          <li><b>Nested</b> — loops read left→right like nested for: <code>[x for row in m for x in row]</code></li>
+          <li><b>Dict / set</b> — <code>{k: v for ...}</code>, <code>{x for ...}</code></li>
+          <li><b>Generator</b> <code>(x for ...)</code> — lazy, O(1) memory; feed <code>sum</code>/<code>max</code></li>
+          <li>Faster than append loops; past 2 levels → write a function</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Copying</div>
+        <ul>
+          <li><b>Alias</b> <code>b = a</code> — no copy at all</li>
+          <li><b>Shallow</b> <code>a.copy()</code>, <code>a[:]</code>, <code>list(a)</code> — new outer, shared inner objects</li>
+          <li><b>Deep</b> <code>copy.deepcopy(a)</code> — recursively copies everything</li>
+          <li>💡 shallow = photocopy of a table of contents: same chapters</li>
+          <li>⚠ nested lists/dicts (configs, JSON) need deepcopy before editing</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Tuples &amp; sets</div>
+        <ul>
+          <li><b>tuple</b> — immutable, hashable (if items are) → dict keys, fixed records</li>
+          <li><b>Unpacking</b> — <code>x, y = p</code>; <code>first, *rest = seq</code></li>
+          <li>⚠ <code>(5)</code> is an int; one-tuple is <code>(5,)</code></li>
+          <li><b>namedtuple</b> — tuple with field names</li>
+          <li><b>set</b> — unique, unordered, O(1) <code>in</code>; <code>| &amp; - ^</code></li>
+          <li>⚠ <code>{}</code> is an empty dict; empty set = <code>set()</code></li>
+          <li><b>Ordered dedupe</b> — <code>list(dict.fromkeys(xs))</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Dicts &amp; hashing</div>
+        <ul>
+          <li><b>Hash table</b> — <code>hash(key) % size</code> → slot; O(1) average lookup</li>
+          <li><b>Keys must be hashable</b> — hash must never change → immutable keys</li>
+          <li><b>Equal ⇒ same hash</b> — <code>1 == 1.0 == True</code> share a key</li>
+          <li><b>Ordered</b> by insertion (3.7+); <code>d.get(k, default)</code>, <code>d | other</code></li>
+          <li><b>defaultdict(list)</b> — grouping; <b>Counter</b> — <code>.most_common(k)</code></li>
+          <li>Worst case O(n) if many keys collide</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Strings &amp; f-strings</div>
+        <ul>
+          <li><b>Immutable</b> — every method returns a new string</li>
+          <li>⚠ <code>s += x</code> in a loop is O(n²) → <code>"".join(parts)</code></li>
+          <li><b>f-string spec</b> — <code>{x:.2f}</code> <code>{x:,}</code> <code>{p:.1%}</code> <code>{s:&gt;8}</code> <code>{x=}</code></li>
+          <li><b>find</b> → −1 if missing; <b>index</b> raises</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Regex &amp; Unicode</div>
+        <ul>
+          <li><b>search</b> anywhere; <b>match</b> only at start; <b>fullmatch</b> whole string</li>
+          <li><b>findall</b> — returns groups if the pattern has groups</li>
+          <li><b>Syntax</b> — <code>\\d \\w \\s . + * ? {m,n} ^ $ ( ) (?P&lt;name&gt;)</code>; use raw strings <code>r"..."</code></li>
+          <li><b>str ↔ bytes</b> — <code>encode</code>/<code>decode</code>; UTF-8 is 1–4 bytes per char</li>
+          <li>⚠ wrong codec → mojibake (<code>cafÃ©</code>); always pass <code>encoding="utf-8"</code></li>
+          <li>⚠ "é" can be 1 or 2 code points → <code>unicodedata.normalize("NFC")</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Big-O &amp; choosing</div>
+        <ul>
+          <li><b>Membership</b> — list O(n), set/dict O(1): 100k items → ~7,800× faster</li>
+          <li><b>Queue</b> → <code>deque</code>; <b>lookup by key</b> → dict; <b>unique</b> → set</li>
+          <li><b>Fixed record / key</b> → tuple; <b>ordered, indexed</b> → list</li>
+          <li><b>Top-k</b> → <code>heapq</code> / Counter; <b>sorted search</b> → <code>bisect</code></li>
+          <li><b>Big numeric arrays</b> → numpy, not lists</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="roadmap-wrap">
+    <h2 class="roadmap-title">What we'll cover</h2>
+    <div class="roadmap-grid">
+      <div class="rm-item rm-done" data-target="pd-list"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Lists &amp; Slicing</span><span class="rm-sub">The everyday sequence</span></div></div>
+      <div class="rm-item rm-done" data-target="pd-comp"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Comprehensions</span><span class="rm-sub">Build collections in one line</span></div></div>
+      <div class="rm-item rm-done" data-target="pd-copy"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Copying</span><span class="rm-sub">Alias, shallow, deep</span></div></div>
+      <div class="rm-item rm-done" data-target="pd-tup"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Tuples &amp; Sets</span><span class="rm-sub">Fixed records, unique items</span></div></div>
+      <div class="rm-item rm-done" data-target="pd-dict"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Dicts &amp; Hashing</span><span class="rm-sub">Why lookup is O(1)</span></div></div>
+      <div class="rm-item rm-done" data-target="pd-str"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Strings &amp; f-strings</span><span class="rm-sub">Methods and formatting</span></div></div>
+      <div class="rm-item rm-done" data-target="pd-re"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Regex &amp; Unicode</span><span class="rm-sub">Patterns, bytes, encodings</span></div></div>
+      <div class="rm-item rm-done" data-target="pd-big"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Big-O &amp; Choosing</span><span class="rm-sub">Pick the right container</span></div></div>
+      <div class="rm-item rm-done" data-target="pd-build"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Hands-on</span><span class="rm-sub">Log summariser</span></div></div>
+      <div class="rm-item rm-done" data-target="pd-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div><b>list</b><p>Ordered, mutable, duplicates</p><small>💡 shopping basket</small></div>
+    <div><b>tuple</b><p>Ordered, immutable, hashable</p><small>💡 sealed envelope</small></div>
+    <div><b>set</b><p>Unique, unordered, O(1) <code>in</code></p><small>💡 stamp collection</small></div>
+    <div><b>dict</b><p>Key → value, O(1) lookup</p><small>💡 labelled filing cabinet</small></div>
+  </div>
+
+  <h2 id="pd-list"><span class="num">01</span>Lists &amp; Slicing</h2>
+  <figure class="viz"><svg viewBox="0 0 470 120" width="470">
+    <text x="10" y="18" class="tm">lst = [0, 1, 2, 3, 4, 5]</text>
+    <g><rect x="40" y="40" width="60" height="34" class="fs" stroke="currentColor"/><rect x="100" y="40" width="60" height="34" class="fb sb"/><rect x="160" y="40" width="60" height="34" class="fb sb"/><rect x="220" y="40" width="60" height="34" class="fb sb"/><rect x="280" y="40" width="60" height="34" class="fs" stroke="currentColor"/><rect x="340" y="40" width="60" height="34" class="fs" stroke="currentColor"/></g>
+    <text x="66" y="62">0</text><text x="126" y="62">1</text><text x="186" y="62">2</text><text x="246" y="62">3</text><text x="306" y="62">4</text><text x="366" y="62">5</text>
+    <text x="36" y="36" class="tm">0</text><text x="96" y="36" class="tb">1</text><text x="156" y="36" class="tm">2</text><text x="216" y="36" class="tm">3</text><text x="276" y="36" class="tb">4</text><text x="336" y="36" class="tm">5</text><text x="396" y="36" class="tm">6</text>
+    <text x="30" y="92" class="tm">-6</text><text x="90" y="92" class="tm">-5</text><text x="150" y="92" class="tm">-4</text><text x="210" y="92" class="tm">-3</text><text x="270" y="92" class="tm">-2</text><text x="330" y="92" class="tm">-1</text>
+    <text x="130" y="112" class="tb">lst[1:4] → [1, 2, 3]   (cut at gaps 1 and 4)</text>
+  </svg><figcaption>Indices sit on the gaps between items. A slice takes everything between two cuts; stop is excluded.</figcaption></figure>
+  <div class="fx" data-lang="py">lst = [0, 1, 2, 3, 4, 5]
+print(lst[1:4], lst[:3], lst[-2:], lst[::2], lst[::-1])
+print(lst[10:])                   # slicing never raises
+lst[1:3] = ["a", "b", "c"]        # slice assignment can resize
+print(lst)
+nums = [5, 2, 8]
+print(nums.append(1), nums)       # append returns None
+print(sorted(nums), nums.pop(), nums)</div>
+  <div class="fx" data-lang="text">[1, 2, 3] [0, 1, 2] [4, 5] [0, 2, 4] [5, 4, 3, 2, 1, 0]
+[]
+[0, 'a', 'b', 'c', 3, 4, 5]
+None [5, 2, 8, 1]
+[1, 2, 5, 8] 1 [5, 2, 8]</div>
+  <div class="callout trap"><span class="label">Trap</span><p>In-place methods (<code>append</code>, <code>sort</code>, <code>reverse</code>) return <code>None</code>. <code>nums = nums.sort()</code> wipes your list.</p></div>
+  <p>A list stores <em>references</em>, so nesting is cheap but shared rows are easy to create by accident:</p>
+  <div class="fx" data-lang="py">grid = [[0] * 3] * 3              # 3 refs to ONE row
+grid[0][0] = 1
+print(grid)
+grid = [[0] * 3 for _ in range(3)] # 3 separate rows
+grid[0][0] = 1
+print(grid)</div>
+  <div class="fx" data-lang="text">[[1, 0, 0], [1, 0, 0], [1, 0, 0]]
+[[1, 0, 0], [0, 0, 0], [0, 0, 0]]</div>
+
+  <h2 id="pd-comp"><span class="num">02</span>Comprehensions</h2>
+  <div class="flow"><span>[ expression</span><span>for x in iterable</span><span>if condition ]</span></div>
+  <p>Same as a for-loop with <code>append</code>, but shorter and faster (the loop runs in C). Generators <code>( )</code> produce items lazily instead of building a list.</p>
+  <div class="fx" data-lang="py">print([x ** 2 for x in range(6) if x % 2 == 0])          # filter at the end
+print(["even" if x % 2 == 0 else "odd" for x in range(4)])  # if/else at the front
+m = [[1, 2], [3, 4]]
+print([x for row in m for x in row])                     # flatten
+print([[row[i] for row in m] for i in range(2)])          # transpose
+print({w: len(w) for w in ["ml", "data"]})                # dict comprehension
+g = (x * x for x in range(10**6))   # generator: lazy, no list built
+print(sum(g))</div>
+  <div class="fx" data-lang="text">[0, 4, 16]
+['even', 'odd', 'even', 'odd']
+[1, 2, 3, 4]
+[[1, 3], [2, 4]]
+{'ml': 2, 'data': 4}
+333332833333500000</div>
+  <div class="callout intu"><span class="label">Key insight</span><p>Read nested comprehensions as nested loops written left to right: <code>for row in m</code> is the outer loop, <code>for x in row</code> the inner. More than two levels → use a named function.</p></div>
+
+  <h2 id="pd-copy"><span class="num">03</span>Copying: Alias, Shallow, Deep</h2>
+  <figure class="viz"><svg viewBox="0 0 560 190" width="560">
+    <defs><marker id="pd-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="10" y="20" width="70" height="26" rx="5" class="fb sb"/><text x="18" y="38">orig</text>
+    <rect x="10" y="62" width="70" height="26" rx="5" class="fb sb"/><text x="18" y="80">alias</text>
+    <rect x="130" y="30" width="80" height="44" rx="5" class="fs" stroke="currentColor"/><text x="140" y="48">outer</text><text x="140" y="64" class="tm">[ • , • ]</text>
+    <line x1="80" y1="33" x2="128" y2="45" stroke="currentColor" marker-end="url(#pd-ah)"/>
+    <line x1="80" y1="75" x2="128" y2="60" stroke="currentColor" marker-end="url(#pd-ah)"/>
+    <rect x="10" y="120" width="70" height="26" rx="5" class="fb sb"/><text x="14" y="138">shallow</text>
+    <rect x="130" y="112" width="80" height="44" rx="5" class="fs" stroke="currentColor"/><text x="140" y="130">outer'</text><text x="140" y="146" class="tm">[ • , • ]</text>
+    <line x1="80" y1="133" x2="128" y2="133" stroke="currentColor" marker-end="url(#pd-ah)"/>
+    <rect x="270" y="40" width="80" height="28" rx="5" class="fr sr"/><text x="280" y="59">[1, 2]</text>
+    <rect x="270" y="110" width="80" height="28" rx="5" class="fr sr"/><text x="280" y="129">[3, 4]</text>
+    <line x1="210" y1="50" x2="268" y2="54" stroke="currentColor" marker-end="url(#pd-ah)"/>
+    <line x1="210" y1="64" x2="268" y2="118" stroke="currentColor" marker-end="url(#pd-ah)"/>
+    <line x1="210" y1="126" x2="268" y2="62" class="sr" stroke-dasharray="4 3" marker-end="url(#pd-ah)"/>
+    <line x1="210" y1="140" x2="268" y2="126" class="sr" stroke-dasharray="4 3" marker-end="url(#pd-ah)"/>
+    <text x="230" y="182" class="tr">inner lists SHARED</text>
+    <rect x="390" y="20" width="70" height="26" rx="5" class="fb sb"/><text x="398" y="38">deep</text>
+    <rect x="390" y="60" width="80" height="44" rx="5" class="fs" stroke="currentColor"/><text x="400" y="78">outer"</text><text x="400" y="94" class="tm">[ • , • ]</text>
+    <rect x="490" y="56" width="62" height="24" rx="5" class="fg sg"/><text x="494" y="73">[1, 2]</text>
+    <rect x="490" y="88" width="62" height="24" rx="5" class="fg sg"/><text x="494" y="105">[3, 4]</text>
+    <line x1="425" y1="46" x2="425" y2="58" stroke="currentColor" marker-end="url(#pd-ah)"/>
+    <line x1="470" y1="74" x2="488" y2="68" class="sg" marker-end="url(#pd-ah)"/><line x1="470" y1="90" x2="488" y2="98" class="sg" marker-end="url(#pd-ah)"/>
+    <text x="400" y="140" class="tg">all new objects</text>
+  </svg><figcaption>Shallow copy makes a new outer list whose slots point at the SAME inner lists. Deep copy duplicates every level.</figcaption></figure>
+  <div class="fx" data-lang="py">import copy
+orig = [[1, 2], [3, 4]]
+alias = orig
+shallow = orig.copy()            # same as orig[:] or list(orig)
+deep = copy.deepcopy(orig)
+orig[0].append(99)               # edit an inner list
+orig.append([5])                 # edit the outer list
+print("alias  ", alias)
+print("shallow", shallow)
+print("deep   ", deep)
+print(shallow[0] is orig[0], deep[0] is orig[0])</div>
+  <div class="fx" data-lang="text">alias   [[1, 2, 99], [3, 4], [5]]
+shallow [[1, 2, 99], [3, 4]]
+deep    [[1, 2], [3, 4]]
+True False</div>
+  <div class="callout anlg"><span class="label">Analogy</span><p>A shallow copy photocopies a table of contents: a new page, but the chapters it points to are the same. A deep copy reprints the whole book.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Copying a nested config dict with <code>.copy()</code> or <code>{**cfg}</code> and then editing <code>cfg2["params"]["lr"]</code> also changes the original. Use <code>copy.deepcopy</code>. (pandas <code>df.copy()</code> is deep by default for the data.)</p></div>
+
+  <h2 id="pd-tup"><span class="num">04</span>Tuples &amp; Sets</h2>
+  <p>A <strong>tuple</strong> is a fixed record: coordinates, RGB, a (user, item) pair. Being immutable makes it hashable, so it can be a dict key.</p>
+  <div class="fx" data-lang="py">point = (3, 4)
+x, y = point                       # unpacking
+first, *rest = (1, 2, 3, 4)
+print(x, y, first, rest)
+print((5,), type((5)), type((5,)))
+from collections import namedtuple
+Pt = namedtuple("Pt", "x y")
+p = Pt(3, 4)
+print(p.x, p, p._replace(x=0))
+dist = {(0, 0): "origin", (3, 4): "p"}   # tuple as key
+print(dist[(3, 4)])</div>
+  <div class="fx" data-lang="text">3 4 1 [2, 3, 4]
+(5,) &lt;class 'int'&gt; &lt;class 'tuple'&gt;
+3 Pt(x=3, y=4) Pt(x=0, y=4)
+p</div>
+  <p>A <strong>set</strong> holds unique hashable items with O(1) membership. Set algebra is the cleanest way to compare ID lists (train vs test users, old vs new columns).</p>
+  <div class="fx" data-lang="py">a = {1, 2, 3, 4}
+b = {3, 4, 5, 6}
+print(a | b, a &amp; b, a - b, a ^ b)
+print({1, 2} &lt;= a)                              # subset
+print(list(dict.fromkeys([3, 1, 3, 2, 1])))      # dedupe, keep order
+print(type({}), type(set()))
+try:
+    {[1, 2]}
+except TypeError as e:
+    print("TypeError:", e)</div>
+  <div class="fx" data-lang="text">{1, 2, 3, 4, 5, 6} {3, 4} {1, 2} {1, 2, 5, 6}
+True
+[3, 1, 2]
+&lt;class 'dict'&gt; &lt;class 'set'&gt;
+TypeError: unhashable type: 'list'</div>
+  <div class="callout trap"><span class="label">Trap</span><p><code>list(set(xs))</code> loses the original order. Use <code>dict.fromkeys</code> when order matters. Need a set inside a set or as a key? Use <code>frozenset</code>.</p></div>
+
+  <h2 id="pd-dict"><span class="num">05</span>Dicts &amp; Hashing</h2>
+  <figure class="viz"><svg viewBox="0 0 520 210" width="520">
+    <defs><marker id="pd-ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <text x="10" y="16" class="tm">key</text><text x="110" y="16" class="tm">hash(key) % 8</text><text x="330" y="16" class="tm">slots</text>
+    <rect x="10" y="40" width="50" height="24" rx="4" class="fb sb"/><text x="22" y="57">42</text>
+    <rect x="10" y="90" width="50" height="24" rx="4" class="fb sb"/><text x="22" y="107">17</text>
+    <rect x="10" y="140" width="50" height="24" rx="4" class="fb sb"/><text x="26" y="157">9</text>
+    <text x="110" y="57">→ 2</text><text x="110" y="107">→ 1</text><text x="110" y="157" class="tr">→ 1 (taken!)</text>
+    <g stroke="currentColor" fill="none"><rect x="300" y="26" width="120" height="20"/><rect x="300" y="46" width="120" height="20"/><rect x="300" y="66" width="120" height="20"/><rect x="300" y="86" width="120" height="20"/><rect x="300" y="106" width="120" height="20"/><rect x="300" y="126" width="120" height="20"/><rect x="300" y="146" width="120" height="20"/><rect x="300" y="166" width="120" height="20"/></g>
+    <g class="tm"><text x="280" y="41">0</text><text x="280" y="61">1</text><text x="280" y="81">2</text><text x="280" y="101">3</text><text x="280" y="121">4</text><text x="280" y="141">5</text><text x="280" y="161">6</text><text x="280" y="181">7</text></g>
+    <rect x="301" y="47" width="118" height="18" class="fb"/><text x="308" y="61">17: "b"</text>
+    <rect x="301" y="67" width="118" height="18" class="fb"/><text x="308" y="81">42: "a"</text>
+    <rect x="301" y="127" width="118" height="18" class="fr"/><text x="308" y="141">9: "c"</text>
+    <line x1="160" y1="53" x2="298" y2="76" stroke="currentColor" marker-end="url(#pd-ah2)"/>
+    <line x1="160" y1="103" x2="298" y2="58" stroke="currentColor" marker-end="url(#pd-ah2)"/>
+    <path d="M430,56 C470,70 470,120 430,136" class="sr" fill="none" stroke-dasharray="4 3" marker-end="url(#pd-ah2)"/>
+    <text x="440" y="100" class="tr">probe</text>
+    <text x="10" y="204" class="tm">lookup = compute hash, jump to slot, compare key: no scanning</text>
+  </svg><figcaption>A dict is an array of slots. The key's hash picks the slot; a collision probes another slot. Hash values shown are real for these ints.</figcaption></figure>
+  <div class="callout def"><span class="label">Definition</span><p><strong>Hashable</strong> = has a <code>hash()</code> that never changes during the object's life, and equal objects have equal hashes. Immutable built-ins qualify; list, dict, set don't.</p></div>
+  <p>If a key could mutate, its hash would change and the dict would look in the wrong slot — the entry becomes unfindable. That's why lists can't be keys.</p>
+  <div class="fx" data-lang="py">for k in [42, 17, 9]:
+    print(k, "-&gt; slot", hash(k) % 8)
+print(hash(1) == hash(1.0) == hash(True))
+print({1: "int", 1.0: "float", True: "bool"})   # one key!</div>
+  <div class="fx" data-lang="text">42 -&gt; slot 2
+17 -&gt; slot 1
+9 -&gt; slot 1
+True
+{1: 'bool'}</div>
+  <div class="fx" data-lang="py">d = {"name": "Asha", "age": 31}
+d["city"] = "Mumbai"
+print(d.get("salary", 0), d.pop("age"), d)
+print(d | {"age": 32})                           # merge (3.9+), new dict
+try:
+    d["salary"]
+except KeyError as e:
+    print("KeyError:", e)
+print({k: v * 2 for k, v in {"a": 1, "b": 2}.items() if v &gt; 1})
+from collections import defaultdict, Counter
+groups = defaultdict(list)                        # missing key → []
+for name, team in [("Asha", "ds"), ("Ben", "ml"), ("Chen", "ds")]:
+    groups[team].append(name)
+print(dict(groups))
+print(Counter("mississippi").most_common(2))</div>
+  <div class="fx" data-lang="text">0 31 {'name': 'Asha', 'city': 'Mumbai'}
+{'name': 'Asha', 'city': 'Mumbai', 'age': 32}
+KeyError: 'salary'
+{'b': 4}
+{'ds': ['Asha', 'Chen'], 'ml': ['Ben']}
+[('i', 4), ('s', 4)]</div>
+  <div class="callout trap"><span class="label">Trap</span><p>String hashes are randomised per process (<code>PYTHONHASHSEED</code>), so never use <code>hash(s)</code> for stable bucketing (e.g. A/B assignment or train/test split). Use <code>hashlib.md5(s.encode())</code>. Also: don't add or remove keys while iterating a dict (RuntimeError).</p></div>
+
+  <h2 id="pd-str"><span class="num">06</span>Strings &amp; f-strings</h2>
+  <div class="fx" data-lang="py">s = "Hello, World!"
+print(s[7:12], s[-6:], s[::-1])
+print(s.lower(), s.split(", "), s.find("World"), s.find("x"))
+print("  pad  ".strip() + "|", s.replace("l", "L"), s.startswith("He"))
+print("-".join(["2024", "05", "01"]))</div>
+  <div class="fx" data-lang="text">World World! !dlroW ,olleH
+hello, world! ['Hello', 'World!'] 7 -1
+pad| HeLLo, WorLd! True
+2024-05-01</div>
+  <table class="tbl">
+    <tr><th>Spec</th><th>Code</th><th>Gives</th></tr>
+    <tr><td>Decimals</td><td><code>{score:.2f}</code> / <code>{score:8.3f}</code></td><td>0.91 / width 8</td></tr>
+    <tr><td>Percent</td><td><code>{score:.2%}</code></td><td>91.23%</td></tr>
+    <tr><td>Thousands</td><td><code>{n:,}</code> / <code>{n:_}</code></td><td>1,234,567</td></tr>
+    <tr><td>Align</td><td><code>{name:&gt;6}</code> <code>&lt;</code> <code>^</code></td><td>right / left / centre</td></tr>
+    <tr><td>Zero-pad, hex, bin, sci</td><td><code>{7:03d} {255:x} {255:b} {x:e}</code></td><td>007 ff 11111111</td></tr>
+    <tr><td>Debug</td><td><code>{score=:.2f}</code>, <code>{name!r}</code></td><td>score=0.91, 'Asha'</td></tr>
+  </table>
+  <div class="fx" data-lang="py">name, score, n = "Asha", 0.91234, 1234567
+print(f"{name:&gt;6}|{score:.2%}|{n:,}|{n:_}|{score:8.3f}|")
+print(f"{name!r} {score=:.2f}")
+print(f"{7:03d} {255:x} {255:b} {3.14159:e}")</div>
+  <div class="fx" data-lang="text">  Asha|91.23%|1,234,567|1_234_567|   0.912|
+'Asha' score=0.91
+007 ff 11111111 3.141590e+00</div>
+  <div class="fx" data-lang="py">import timeit
+words = ["x"] * 20000
+def concat():
+    s = ""
+    for w in words:
+        s = s + w + ","          # copies the growing string each time
+    return s
+def join():
+    return ",".join(words)       # one pass, one allocation
+print(f"concat {timeit.timeit(concat, number=50)*20:.2f} ms, join {timeit.timeit(join, number=50)*20:.2f} ms")</div>
+  <div class="fx" data-lang="text">concat 20.02 ms, join 0.25 ms</div>
+  <div class="callout trap"><span class="label">Trap</span><p>Strings are immutable, so building one with <code>+</code> in a loop copies it every time: O(n²). Collect pieces in a list and <code>"".join</code> once. (CPython sometimes optimises <code>s += x</code> in place; don't rely on it.)</p></div>
+
+  <h2 id="pd-re"><span class="num">07</span>Regex &amp; Unicode</h2>
+  <table class="tbl">
+    <tr><th>Token</th><th>Matches</th><th>Token</th><th>Matches</th></tr>
+    <tr><td><code>\\d \\w \\s</code></td><td>digit, word char, whitespace</td><td><code>+ * ?</code></td><td>1+, 0+, 0 or 1 (add <code>?</code> for lazy)</td></tr>
+    <tr><td><code>.</code></td><td>any char except newline</td><td><code>{2,4}</code></td><td>2 to 4 times</td></tr>
+    <tr><td><code>^ $</code></td><td>start, end</td><td><code>[A-Z]</code></td><td>character class</td></tr>
+    <tr><td><code>( )</code></td><td>capture group</td><td><code>(?P&lt;name&gt;...)</code></td><td>named group</td></tr>
+  </table>
+  <div class="fx" data-lang="py">import re
+log = "2024-05-01 ERROR user=42 took 350ms; 2024-05-02 INFO user=7 took 12ms"
+print(re.findall(r"\\d+ms", log))
+print(re.findall(r"user=(\\d+)", log))                 # groups → only the group
+m = re.search(r"(?P&lt;date&gt;\\d{4}-\\d{2}-\\d{2}) (?P&lt;lvl&gt;[A-Z]+)", log)
+print(m.group("date"), m.group("lvl"), m.span())
+print(re.match(r"ERROR", log))                         # match = only at start
+print(re.sub(r"\\s+", " ", "too    many   spaces"))
+email = re.compile(r"^[\\w.+-]+@[\\w-]+\\.[\\w.]+$")        # compile once, reuse
+print(bool(email.match("a.b@x.com")), bool(email.match("bad@")))</div>
+  <div class="fx" data-lang="text">['350ms', '12ms']
+['42', '7']
+2024-05-01 ERROR (0, 16)
+None
+too many spaces
+True False</div>
+  <div class="callout trap"><span class="label">Trap</span><p>Always use raw strings <code>r"\\d"</code>; in a normal string, escapes like <code>"\\b"</code> become control characters. <code>re.match</code> anchors at the start only — use <code>search</code> to scan, <code>fullmatch</code> to validate.</p></div>
+  <p><strong>Unicode:</strong> a <code>str</code> is a sequence of code points; <code>bytes</code> is what's on disk or the wire. UTF-8 uses 1 byte for ASCII and up to 4 for other characters.</p>
+  <div class="flow"><span>str "naïve ☕"</span><span>.encode("utf-8")</span><span>bytes b'na\\xc3\\xafve ...'</span><span>.decode("utf-8")</span><span>str again</span></div>
+  <div class="fx" data-lang="py">s = "naïve ☕"
+print(len(s), len(s.encode("utf-8")), s.encode("utf-8"))
+print(ord("A"), chr(9749))
+try:
+    s.encode("ascii")
+except UnicodeEncodeError as e:
+    print("UnicodeEncodeError:", e.reason)
+print(s.encode("ascii", errors="ignore"))
+raw = "café".encode("utf-8")
+print(raw.decode("latin-1"))          # wrong codec = mojibake
+import unicodedata
+a, b = "é", "é"                 # 1 code point vs e + combining accent
+print(a == b, unicodedata.normalize("NFC", b) == a)</div>
+  <div class="fx" data-lang="text">7 10 b'na\\xc3\\xafve \\xe2\\x98\\x95'
+65 ☕
+UnicodeEncodeError: ordinal not in range(128)
+b'nave '
+cafÃ©
+False True</div>
+  <div class="callout trap"><span class="label">Trap</span><p>Garbled text like <code>cafÃ©</code> means UTF-8 bytes were decoded with the wrong codec. Always pass <code>encoding="utf-8"</code> to <code>open()</code>, and NFC-normalise text before comparing or deduplicating in NLP pipelines.</p></div>
+
+  <h2 id="pd-big"><span class="num">08</span>Big-O &amp; Choosing the Right Structure</h2>
+  <table class="tbl">
+    <tr><th>Operation</th><th>list</th><th>deque</th><th>set / dict</th></tr>
+    <tr><td>Index <code>x[i]</code></td><td>O(1)</td><td>O(n) middle</td><td>— / O(1) by key</td></tr>
+    <tr><td>Append / pop at end</td><td>O(1)*</td><td>O(1)</td><td>add O(1)</td></tr>
+    <tr><td>Insert / pop at front</td><td>O(n)</td><td>O(1)</td><td>—</td></tr>
+    <tr><td><code>x in c</code></td><td>O(n)</td><td>O(n)</td><td>O(1) avg</td></tr>
+    <tr><td>Delete by value / key</td><td>O(n)</td><td>O(n)</td><td>O(1) avg</td></tr>
+    <tr><td>Sort</td><td>O(n log n)</td><td>—</td><td>— (use <code>sorted</code>)</td></tr>
+    <tr><td>Copy / slice of k</td><td>O(n) / O(k)</td><td>O(n)</td><td>O(n)</td></tr>
+  </table>
+  <p>Timings are from one run here and vary by machine; the ratios are what matter. * amortised: the array over-allocates, so occasional resizes average out. Set/dict worst case is O(n) when keys collide.</p>
+  <div class="fx" data-lang="py">import timeit
+n = 100_000
+L = list(range(n)); S = set(L)
+t_list = timeit.timeit(lambda: (n - 1) in L, number=200)
+t_set = timeit.timeit(lambda: (n - 1) in S, number=200)
+print(f"list: {t_list*1e3/200:.3f} ms per lookup")
+print(f"set:  {t_set*1e6/200:.3f} us per lookup")
+print(f"set is ~{t_list/t_set:,.0f}x faster")</div>
+  <div class="fx" data-lang="text">list: 0.556 ms per lookup
+set:  0.071 us per lookup
+set is ~7,808x faster</div>
+  <div class="fx" data-lang="py">from collections import deque
+import timeit
+n = 100_000
+def drain_list():
+    q = list(range(n))
+    while q: q.pop(0)        # shifts every item left: O(n) each
+def drain_deque():
+    q = deque(range(n))
+    while q: q.popleft()     # O(1)
+print(f"list.pop(0): {timeit.timeit(drain_list, number=1):.2f}s")
+print(f"deque.popleft(): {timeit.timeit(drain_deque, number=1):.3f}s")</div>
+  <div class="fx" data-lang="text">list.pop(0): 2.03s
+deque.popleft(): 0.009s</div>
+  <table class="tbl">
+    <tr><th>You need…</th><th>Use</th></tr>
+    <tr><td>Ordered items, index access, duplicates</td><td><code>list</code></td></tr>
+    <tr><td>Fixed record, dict key, return several values</td><td><code>tuple</code> / <code>namedtuple</code> / dataclass</td></tr>
+    <tr><td>"Have I seen this?", dedupe, set algebra</td><td><code>set</code></td></tr>
+    <tr><td>Lookup by key, grouping, counting</td><td><code>dict</code>, <code>defaultdict</code>, <code>Counter</code></td></tr>
+    <tr><td>Queue / sliding window (BFS, last-k events)</td><td><code>deque(maxlen=k)</code></td></tr>
+    <tr><td>Top-k, priority queue</td><td><code>heapq.nlargest</code> / <code>heappush</code></td></tr>
+    <tr><td>Search in sorted data</td><td><code>bisect</code> (O(log n))</td></tr>
+    <tr><td>Millions of numbers, vector maths</td><td>numpy array / pandas</td></tr>
+  </table>
+  <div class="callout intu"><span class="label">Key insight</span><p>The most common interview optimisation: a list used for repeated <code>in</code> checks inside a loop is O(n²). Convert it to a set once (O(n)) and the loop becomes O(n).</p></div>
+
+  <h2 id="pd-build"><span class="num">09</span>Hands-on: Log Summariser</h2>
+  <p>Regex to parse, <code>Counter</code> to count, <code>defaultdict(set)</code> to group unique messages, f-strings to print a table.</p>
+  <div class="fx" data-lang="py">from collections import Counter, defaultdict
+import re
+logs = """2024-05-01 ERROR db timeout user=42
+2024-05-01 INFO  login user=7
+2024-05-02 ERROR db timeout user=42
+2024-05-02 WARN  slow query user=9
+2024-05-03 ERROR disk full user=7"""
+pat = re.compile(r"^(\\S+) (\\w+)\\s+(.*?) user=(\\d+)$")
+by_level = Counter()
+errors_by_user = defaultdict(set)
+for line in logs.splitlines():
+    date, lvl, msg, user = pat.match(line).groups()
+    by_level[lvl] += 1
+    if lvl == "ERROR":
+        errors_by_user[int(user)].add(msg)
+print(by_level.most_common())
+print({u: sorted(m) for u, m in errors_by_user.items()})
+print(f"{'level':&lt;6}|{'n':&gt;3}")
+for lvl, n in by_level.most_common():
+    print(f"{lvl:&lt;6}|{n:&gt;3}")</div>
+  <div class="fx" data-lang="text">[('ERROR', 3), ('INFO', 1), ('WARN', 1)]
+{42: ['db timeout'], 7: ['disk full']}
+level |  n
+ERROR |  3
+INFO  |  1
+WARN  |  1</div>
+  <p><strong>Extend it:</strong> keep only the last 3 errors per user with <code>defaultdict(lambda: deque(maxlen=3))</code>.</p>
+
+  <h2 id="pd-qa"><span class="num">10</span>Questions &amp; Answers</h2>
+  <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>List vs tuple: what's the real trade-off?</summary><div class="qa-body">List: mutable, resizable, not hashable. Tuple: immutable, slightly smaller/faster, hashable when its items are, so it can be a dict key or set item. Use a tuple for fixed records and as a guarantee that nobody changes the data.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why is <code>x in set</code> O(1) but <code>x in list</code> O(n)?</summary><div class="qa-body">A list must compare items one by one. A set is a hash table: <code>hash(x)</code> picks a slot directly, then one equality check confirms. Average O(1); worst case O(n) if many keys collide.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why must dict keys be hashable / immutable?</summary><div class="qa-body">The slot is chosen from the key's hash at insert time. If the key mutated, its hash would change and lookups would probe the wrong slot, making the entry unreachable. So Python requires a stable <code>__hash__</code>; lists, dicts and sets have none.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Shallow vs deep copy — when does it bite?</summary><div class="qa-body"><code>a.copy()</code>/<code>a[:]</code> create a new outer container but share the inner objects. Editing a nested list or dict through the copy changes the original. Use <code>copy.deepcopy</code> for nested data (configs, JSON, list of lists).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What's the output? <code>g = [[0]*2]*2; g[0][0] = 1; print(g)</code></summary><div class="qa-body"><code>[[1, 0], [1, 0]]</code>. <code>*2</code> repeats the reference to one inner list. Build rows with <code>[[0]*2 for _ in range(2)]</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What's the output? <code>print({1: "a", True: "b", 1.0: "c"})</code></summary><div class="qa-body"><code>{1: 'c'}</code>. <code>1 == True == 1.0</code> and they hash equally, so it's one key. The first key object is kept; the value is overwritten each time.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Remove duplicates from a list while keeping order.</summary><div class="qa-body"><code>list(dict.fromkeys(xs))</code> — dicts keep insertion order and keys are unique. <code>list(set(xs))</code> loses order. O(n) either way; items must be hashable.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why is building a string with <code>+=</code> in a loop slow? Fix?</summary><div class="qa-body">Strings are immutable; each concatenation allocates a new string and copies everything so far → O(n²) overall. Append pieces to a list and <code>"".join(parts)</code> once → O(n). Measured here: 20 ms vs 0.25 ms for 20k pieces.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>You need a FIFO queue for BFS. List or something else?</summary><div class="qa-body"><code>collections.deque</code>. <code>list.pop(0)</code> shifts every element (O(n)); <code>deque.popleft()</code> is O(1). Draining 100k items: 2.03 s vs 0.009 s.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span><code>re.match</code> vs <code>re.search</code> vs <code>re.fullmatch</code>?</summary><div class="qa-body"><code>match</code> only tries at position 0; <code>search</code> scans the whole string for the first hit; <code>fullmatch</code> requires the entire string to match (best for validation). <code>findall</code> returns all matches — or the groups, if the pattern has groups.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>A CSV shows <code>cafÃ©</code> instead of <code>café</code>. What happened?</summary><div class="qa-body">UTF-8 bytes were decoded as Latin-1/cp1252 (mojibake). Read with <code>encoding="utf-8"</code> (or <code>"utf-8-sig"</code> for Excel files with a BOM). <code>str</code> is text, <code>bytes</code> is encoded data; convert with <code>encode</code>/<code>decode</code> at the boundaries.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Write a one-liner: word frequencies, top 3.</summary><div class="qa-body"><code>Counter(text.lower().split()).most_common(3)</code>. For grouping instead of counting: <code>d = defaultdict(list); d[k].append(v)</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why not use <code>hash(user_id)</code> to assign users to A/B buckets?</summary><div class="qa-body">String hashing is randomised per Python process, so the same user lands in different buckets across runs or machines. Use a stable hash: <code>int(hashlib.md5(uid.encode()).hexdigest(), 16) % 100</code>.</div></details>
+</main>`
+});
+
+
+// notes/python/py_fundamentals.js — Python Fundamentals
+Object.assign(TOPIC_CONTENT, {
+  "py_fundamentals": `<main>
+  <h1>Python Fundamentals</h1>
+  <p class="lead">The mental model under every Python program: names point to objects, some objects can change and some can't, and functions decide which names they can see. Get this right and half of all "weird Python bugs" stop being weird. Everything here was run on Python 3.13.</p>
+
+  <h2 id="pf-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Python Fundamentals</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Names &amp; references</div>
+        <ul>
+          <li><b>Variable</b> — a name tag pointing to an object, not a box holding a value</li>
+          <li><b>b = a</b> — copies the reference; both names share one object</li>
+          <li><b>id(x)</b> — object identity (memory address in CPython)</li>
+          <li><b>==</b> value equality (<code>__eq__</code>); <b>is</b> same object (same id)</li>
+          <li><b>Mutate vs rebind</b> — <code>a.append()</code> changes the shared object; <code>a = [...]</code> moves only <code>a</code></li>
+          <li>⚠ <b>Small-int cache</b> (−5…256) makes <code>is</code> look like <code>==</code> — never rely on it; use <code>is</code> only for <code>None</code>/<code>True</code>/<code>False</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Mutable vs immutable</div>
+        <ul>
+          <li><b>Immutable</b> — int, float, bool, str, bytes, tuple, frozenset; "change" = new object</li>
+          <li><b>Mutable</b> — list, dict, set, bytearray; changed in place, id stays</li>
+          <li>💡 sealed envelope vs open notebook</li>
+          <li><b>Why it matters</b> — aliasing bugs, only immutables are hashable (dict keys), safe to share</li>
+          <li><b>+=</b> — new object for str/tuple, in-place for list</li>
+          <li>⚠ <b>Tuple of lists</b> — tuple fixed, inner list still mutable; <code>t[0] += [5]</code> mutates AND raises</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Core types</div>
+        <ul>
+          <li><b>int</b> — arbitrary precision, never overflows (slow vs numpy int64)</li>
+          <li><b>float</b> — 64-bit IEEE 754; ⚠ <code>0.1 + 0.2 != 0.3</code> → <code>math.isclose</code>, <code>Decimal</code> for money</li>
+          <li><b>bool</b> — subclass of int: <code>True + True == 2</code></li>
+          <li><b>round()</b> — banker's rounding: <code>round(2.5) == 2</code></li>
+          <li><b>str</b> = Unicode text; <b>bytes</b> = raw bytes; <code>encode</code>/<code>decode</code> between them</li>
+          <li><b>Conversion</b> — <code>int(3.9)</code> → 3 (truncates); ⚠ <code>int("3.9")</code> errors; ⚠ <code>bool("False")</code> is True</li>
+          <li><b>Falsy</b> — 0, 0.0, "", [], {}, set(), None, False</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Operators</div>
+        <ul>
+          <li><b>/</b> always float; <b>//</b> floors toward −∞: <code>-7 // 2 == -4</code></li>
+          <li><b>Chaining</b> — <code>1 &lt; x &lt; 10</code></li>
+          <li><b>and/or</b> short-circuit and return an operand: <code>0 or "default"</code> → "default"</li>
+          <li><b>in</b> — O(n) on list, O(1) on set/dict</li>
+          <li><b>Bitwise</b> &amp; | ^ ~ &lt;&lt; &gt;&gt;; <code>~x == -(x+1)</code></li>
+          <li>⚠ numpy/pandas masks need <code>&amp;</code> + parentheses, not <code>and</code></li>
+          <li><b>Walrus :=</b> — assign inside an expression</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Control flow</div>
+        <ul>
+          <li><b>Ternary</b> — <code>"pass" if s &gt;= 60 else "fail"</code></li>
+          <li><b>for</b> over any iterable; <code>enumerate</code>, <code>zip</code>, <code>.items()</code></li>
+          <li><b>loop-else</b> — else runs only if no <code>break</code>; search pattern</li>
+          <li><b>match/case</b> (3.10+) — structural: literals, <code>|</code>, dict/list shapes, <code>*rest</code>, guards <code>if</code>, <code>_</code></li>
+          <li>⚠ bare name in <code>case x:</code> captures anything; compare constants via dotted names</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Functions &amp; params</div>
+        <ul>
+          <li><b>Order</b> — <code>def f(pos_only, /, normal, *args, kw_only, **kwargs)</code></li>
+          <li><b>*args</b> → tuple; <b>**kwargs</b> → dict; <code>f(*lst, **d)</code> unpacks</li>
+          <li><b>Keyword-only</b> (after <code>*</code>) — forces readable calls: <code>fit(X, epochs=5)</code></li>
+          <li>⚠ <b>Mutable default</b> — <code>def f(x=[])</code> built once, shared by every call → use <code>None</code></li>
+          <li><b>First-class</b> — functions are objects: pass, return, store</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Recursion &amp; lambda</div>
+        <ul>
+          <li><b>Recursion</b> — base case + smaller step; default limit 1000 → <code>RecursionError</code></li>
+          <li><b>No tail-call optimisation</b> — deep recursion → use a loop</li>
+          <li><b>@lru_cache</b> — memoise overlapping subproblems (fib)</li>
+          <li><b>lambda</b> — one-expression anonymous function; for <code>key=</code>, <code>map</code></li>
+          <li>⚠ <b>Late binding</b> — <code>[lambda: i for i in ...]</code> all see last i; fix <code>lambda i=i: i</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Scope (LEGB)</div>
+        <ul>
+          <li><b>Lookup</b> — Local → Enclosing → Global → Built-in, first hit wins</li>
+          <li><b>Assignment</b> anywhere in a function makes the name local for the whole function</li>
+          <li>⚠ <code>count += 1</code> on a global → <code>UnboundLocalError</code></li>
+          <li><b>global</b> rebinds module name; <b>nonlocal</b> rebinds enclosing function's name</li>
+          <li><b>Closure</b> — inner function remembers enclosing variables (counters, decorators)</li>
+          <li>💡 nested rooms: look in your room, then the house, then the street</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="roadmap-wrap">
+    <h2 class="roadmap-title">What we'll cover</h2>
+    <div class="roadmap-grid">
+      <div class="rm-item rm-done" data-target="pf-names"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Names &amp; References</span><span class="rm-sub">Labels, id(), is vs ==</span></div></div>
+      <div class="rm-item rm-done" data-target="pf-mut"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Mutable vs Immutable</span><span class="rm-sub">Change in place or copy</span></div></div>
+      <div class="rm-item rm-done" data-target="pf-types"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Core Types</span><span class="rm-sub">Numbers, bools, str, bytes</span></div></div>
+      <div class="rm-item rm-done" data-target="pf-ops"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Operators</span><span class="rm-sub">Floor, short-circuit, bits</span></div></div>
+      <div class="rm-item rm-done" data-target="pf-flow"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Control Flow</span><span class="rm-sub">loop-else, match/case</span></div></div>
+      <div class="rm-item rm-done" data-target="pf-func"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Function Parameters</span><span class="rm-sub">*args, kw-only, defaults</span></div></div>
+      <div class="rm-item rm-done" data-target="pf-rec"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Recursion &amp; Lambda</span><span class="rm-sub">Base cases, late binding</span></div></div>
+      <div class="rm-item rm-done" data-target="pf-scope"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Scope: LEGB</span><span class="rm-sub">global, nonlocal, closures</span></div></div>
+      <div class="rm-item rm-done" data-target="pf-build"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Hands-on</span><span class="rm-sub">An event router</span></div></div>
+      <div class="rm-item rm-done" data-target="pf-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+    </div>
+  </div>
+
+  <h2 id="pf-names"><span class="num">01</span>Names &amp; References</h2>
+  <figure class="viz"><svg viewBox="0 0 560 170" width="560">
+    <defs><marker id="pf-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <text x="10" y="18" class="tm">after b = a ; a.append(4)</text>
+    <rect x="20" y="40" width="40" height="26" rx="5" class="fb sb"/><text x="35" y="58">a</text>
+    <rect x="20" y="96" width="40" height="26" rx="5" class="fb sb"/><text x="35" y="114">b</text>
+    <rect x="130" y="62" width="120" height="36" rx="6" class="fg sg"/><text x="142" y="85">[1, 2, 3, 4]</text>
+    <line x1="60" y1="53" x2="128" y2="74" stroke="currentColor" marker-end="url(#pf-ah)"/>
+    <line x1="60" y1="109" x2="128" y2="88" stroke="currentColor" marker-end="url(#pf-ah)"/>
+    <text x="300" y="18" class="tm">after a = [99]  (rebind)</text>
+    <rect x="300" y="40" width="40" height="26" rx="5" class="fb sb"/><text x="315" y="58">a</text>
+    <rect x="300" y="96" width="40" height="26" rx="5" class="fb sb"/><text x="315" y="114">b</text>
+    <rect x="420" y="30" width="80" height="34" rx="6" class="fv"/><text x="440" y="52">[99]</text>
+    <rect x="410" y="96" width="120" height="34" rx="6" class="fg sg"/><text x="422" y="118">[1, 2, 3, 4]</text>
+    <line x1="340" y1="53" x2="418" y2="48" stroke="currentColor" marker-end="url(#pf-ah)"/>
+    <line x1="340" y1="109" x2="408" y2="112" stroke="currentColor" marker-end="url(#pf-ah)"/>
+    <text x="20" y="160" class="tg">mutation: both names see it</text>
+    <text x="300" y="160" class="tb">rebinding: only a moves</text>
+  </svg><figcaption>Assignment never copies. It sticks another name tag on the same object.</figcaption></figure>
+  <div class="callout anlg"><span class="label">Analogy</span><p>A variable is a luggage tag, not a suitcase. Two tags can hang on one suitcase; moving a tag doesn't move the suitcase.</p></div>
+  <div class="fx" data-lang="py">a = [1, 2, 3]
+b = a                  # second name, same object
+print(a is b, id(a) == id(b))
+a.append(4)            # mutate: both names see it
+print(b)
+a = [99]               # rebind: only a moves
+print(b)
+c = [1, 2, 3, 4]
+print(b == c, b is c)  # equal values, different objects</div>
+  <div class="fx" data-lang="text">True True
+[1, 2, 3, 4]
+[1, 2, 3, 4]
+True False</div>
+  <table class="tbl">
+    <tr><th>Check</th><th>Asks</th><th>Use for</th></tr>
+    <tr><td><code>a == b</code></td><td>Same value? (calls <code>__eq__</code>)</td><td>Almost everything</td></tr>
+    <tr><td><code>a is b</code></td><td>Same object? (same <code>id</code>)</td><td><code>x is None</code>, sentinels</td></tr>
+  </table>
+  <div class="fx" data-lang="py">x = int("1000"); y = int("1000")
+print(x == y, x is y)          # 1000 not cached
+s = int("7"); t = int("7")
+print(s is t)                  # -5..256 cached: implementation detail</div>
+  <div class="fx" data-lang="text">True False
+True</div>
+  <div class="callout trap"><span class="label">Trap</span><p>CPython caches ints −5…256 and some strings, and merges equal constants in one file, so <code>is</code> sometimes "works" for values. It's an accident. Use <code>==</code> for values; <code>is</code> only for <code>None</code>, <code>True</code>, <code>False</code>.</p></div>
+
+  <h2 id="pf-mut"><span class="num">02</span>Mutable vs Immutable</h2>
+  <figure class="viz"><svg viewBox="0 0 560 150" width="560">
+    <defs><marker id="pf-ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <text x="10" y="18" class="tr">immutable: s += "!"</text>
+    <rect x="10" y="40" width="34" height="24" rx="5" class="fb sb"/><text x="22" y="57">s</text>
+    <rect x="110" y="30" width="110" height="30" rx="6" class="fs" stroke="currentColor" stroke-dasharray="4 3"/><text x="122" y="50" class="tm">"hi" id=A</text>
+    <rect x="110" y="80" width="110" height="30" rx="6" class="fg sg"/><text x="122" y="100">"hi!" id=B</text>
+    <line x1="44" y1="54" x2="108" y2="90" stroke="currentColor" marker-end="url(#pf-ah2)"/>
+    <text x="10" y="135" class="tm">new object, tag moved</text>
+    <text x="300" y="18" class="tg">mutable: L += [2]</text>
+    <rect x="300" y="55" width="34" height="24" rx="5" class="fb sb"/><text x="312" y="72">L</text>
+    <rect x="400" y="50" width="130" height="34" rx="6" class="fg sg"/><text x="412" y="72">[1, 2] id=C</text>
+    <line x1="334" y1="67" x2="398" y2="67" stroke="currentColor" marker-end="url(#pf-ah2)"/>
+    <text x="300" y="135" class="tm">same object, contents changed</text>
+  </svg><figcaption>Immutable "changes" create a new object; mutable changes edit the existing one.</figcaption></figure>
+  <div class="cards">
+    <div><b>Immutable</b><p>int, float, bool, str, bytes, tuple, frozenset</p><small>Hashable → dict keys, set items; safe to share</small></div>
+    <div><b>Mutable</b><p>list, dict, set, bytearray, most class instances</p><small>Edit in place → watch for aliasing</small></div>
+  </div>
+  <div class="callout anlg"><span class="label">Analogy</span><p>Immutable = a sealed envelope: to change the letter you make a new envelope. Mutable = an open notebook: same notebook, new pages.</p></div>
+  <div class="callout pred"><span class="label">Predict the output</span><p>A tuple holding a list. Can you change it?</p></div>
+  <div class="fx" data-lang="py">t = ([1], 2)
+t[0].append(9)          # the list inside is mutable
+print(t)
+try:
+    t[0] += [5]         # list.__iadd__ runs, THEN tuple item assignment fails
+except TypeError as e:
+    print("TypeError:", e)
+print(t)</div>
+  <div class="fx" data-lang="text">([1, 9], 2)
+TypeError: 'tuple' object does not support item assignment
+([1, 9, 5], 2)</div>
+  <div class="callout trap"><span class="label">Trap</span><p>Immutability is shallow. The tuple can't swap its items, but a list inside it can still change. Such a tuple is also unhashable.</p></div>
+
+  <h2 id="pf-types"><span class="num">03</span>Core Types &amp; Conversion</h2>
+  <table class="tbl">
+    <tr><th>Type</th><th>What it is</th><th>Gotcha</th></tr>
+    <tr><td><code>int</code></td><td>Arbitrary precision; grows as needed</td><td>No overflow, but ~50× slower than numpy int64</td></tr>
+    <tr><td><code>float</code></td><td>64-bit IEEE 754 binary fraction</td><td>0.1 has no exact binary form</td></tr>
+    <tr><td><code>bool</code></td><td>Subclass of int (True = 1)</td><td><code>sum(mask)</code> counts Trues</td></tr>
+    <tr><td><code>str</code></td><td>Immutable sequence of Unicode code points</td><td><code>len</code> counts characters, not bytes</td></tr>
+    <tr><td><code>bytes</code></td><td>Immutable sequence of 0–255 values</td><td>Files, network, hashing; <code>str.encode()</code></td></tr>
+  </table>
+  <div class="fx" data-lang="py">print(0.1 + 0.2)
+print(0.1 + 0.2 == 0.3)
+import math
+from decimal import Decimal
+print(math.isclose(0.1 + 0.2, 0.3))
+print(Decimal("0.1") + Decimal("0.2"))
+print(2 ** 100)                  # ints never overflow
+print(True + True, isinstance(True, int))
+print(round(2.5), round(3.5))    # banker's rounding</div>
+  <div class="fx" data-lang="text">0.30000000000000004
+False
+True
+0.3
+1267650600228229401496703205376
+2 True
+2 4</div>
+  <div class="callout trap"><span class="label">Trap</span><p>Never compare floats with <code>==</code>. Use <code>math.isclose</code> / <code>np.isclose</code>, and <code>Decimal</code> (built from strings) for money. <code>round()</code> rounds halves to even.</p></div>
+  <div class="fx" data-lang="py">s = "café"
+b = s.encode("utf-8")
+print(len(s), len(b), b)
+print(b.decode("utf-8"))
+print(int("42"), int(3.9), int(-3.9), float("1e-3"))
+print(bool("False"), bool(""), bool([]), bool(0.0))
+print(str(42) + "!", list("abc"), tuple([1, 2]))
+try:
+    int("3.9")
+except ValueError as e:
+    print("ValueError:", e)</div>
+  <div class="fx" data-lang="text">4 5 b'caf\\xc3\\xa9'
+café
+42 3 -3 0.001
+True False False False
+42! ['a', 'b', 'c'] (1, 2)
+ValueError: invalid literal for int() with base 10: '3.9'</div>
+  <ul>
+    <li><code>int()</code> truncates toward zero; it does not round.</li>
+    <li><code>bool(x)</code> tests emptiness, not meaning: any non-empty string is True. Parse flags with <code>s.lower() in {"1", "true", "yes"}</code>.</li>
+  </ul>
+
+  <h2 id="pf-ops"><span class="num">04</span>Operators</h2>
+  <table class="tbl">
+    <tr><th>Kind</th><th>Operators</th><th>Remember</th></tr>
+    <tr><td>Arithmetic</td><td><code>+ - * / // % **</code></td><td><code>/</code> → float; <code>//</code> floors toward −∞</td></tr>
+    <tr><td>Comparison</td><td><code>== != &lt; &lt;= &gt; &gt;=</code></td><td>Chains: <code>1 &lt; x &lt; 10</code></td></tr>
+    <tr><td>Logical</td><td><code>and or not</code></td><td>Short-circuit, return an operand</td></tr>
+    <tr><td>Membership</td><td><code>in, not in</code></td><td>list O(n), set/dict O(1)</td></tr>
+    <tr><td>Identity</td><td><code>is, is not</code></td><td>Same object</td></tr>
+    <tr><td>Bitwise</td><td><code>&amp; | ^ ~ &lt;&lt; &gt;&gt;</code></td><td>Flags, masks; <code>~x = -(x+1)</code></td></tr>
+    <tr><td>Assignment</td><td><code>= += -= *= :=</code></td><td>Walrus assigns inside an expression</td></tr>
+  </table>
+  <div class="fx" data-lang="py">print(7 / 2, 7 // 2, -7 // 2, -7 % 2, 2 ** 10)
+print(1 &lt; 5 &lt; 10, 3 == 3.0)
+print(0 or "default", 5 and "yes", 5 or "never", [] and 1/0)
+print(3 in [1, 2, 3], "py" in "python", "a" in {"a": 1})
+print(5 &amp; 3, 5 | 3, 5 ^ 3, ~5, 5 &lt;&lt; 1, 5 &gt;&gt; 1)
+print(bin(5), bin(3), bin(5 &amp; 3))
+data = [3, 8, 1, 9]
+if (n := len(data)) &gt; 3:
+    print(f"{n} items")</div>
+  <div class="fx" data-lang="text">3.5 3 -4 1 1024
+True True
+default yes 5 []
+True True True
+1 7 6 -6 10 2
+0b101 0b11 0b1
+4 items</div>
+  <p><code>[] and 1/0</code> never divides: <code>[]</code> is falsy, so <code>and</code> stops and returns it. <code>"a" in dict</code> checks keys only.</p>
+  <div class="fx" data-lang="py">import numpy as np
+age = np.array([15, 25, 40, 70])
+print((age &gt; 18) &amp; (age &lt; 65))
+age &gt; 18 and age &lt; 65</div>
+  <div class="fx" data-lang="text">[False  True  True False]
+Traceback (most recent call last): ...
+ValueError: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()</div>
+  <div class="callout trap"><span class="label">Trap</span><p>In numpy and pandas, element-wise logic uses <code>&amp;</code> <code>|</code> <code>~</code>, and each condition needs parentheses because <code>&amp;</code> binds tighter than <code>&gt;</code>.</p></div>
+
+  <h2 id="pf-flow"><span class="num">05</span>Control Flow</h2>
+  <div class="flow"><span>if / elif / else</span><span>for x in iterable</span><span>while cond</span><span>break / continue</span><span>loop-else</span><span>match / case</span></div>
+  <figure class="viz"><svg viewBox="0 0 520 150" width="520">
+    <defs><marker id="pf-ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="10" y="55" width="124" height="36" rx="6" class="fb sb"/><text x="20" y="77">for x in items</text>
+    <rect x="190" y="10" width="130" height="36" rx="6" class="fr sr"/><text x="204" y="32">hit break</text>
+    <rect x="190" y="100" width="130" height="36" rx="6" class="fg sg"/><text x="200" y="122">ran to the end</text>
+    <rect x="390" y="10" width="120" height="36" rx="6" class="fs" stroke="currentColor"/><text x="402" y="32">skip else</text>
+    <rect x="390" y="100" width="120" height="36" rx="6" class="fg sg"/><text x="402" y="122">run else:</text>
+    <line x1="134" y1="68" x2="188" y2="32" stroke="currentColor" marker-end="url(#pf-ah3)"/>
+    <line x1="134" y1="80" x2="188" y2="116" stroke="currentColor" marker-end="url(#pf-ah3)"/>
+    <line x1="320" y1="28" x2="388" y2="28" stroke="currentColor" marker-end="url(#pf-ah3)"/>
+    <line x1="320" y1="118" x2="388" y2="118" stroke="currentColor" marker-end="url(#pf-ah3)"/>
+  </svg><figcaption>The loop's else means "no break happened" — read it as "nobreak".</figcaption></figure>
+  <div class="fx" data-lang="py">def find(items, target):
+    for i, x in enumerate(items):
+        if x == target:
+            print("found at", i)
+            break
+    else:                      # runs only if no break
+        print("not found")
+find([4, 7, 9], 7)
+find([4, 7, 9], 5)</div>
+  <div class="fx" data-lang="text">found at 1
+not found</div>
+  <p><strong>match/case</strong> (3.10+) matches the <em>shape</em> of data, not just values, and pulls pieces out into names.</p>
+  <div class="fx" data-lang="py">def handle(cmd):
+    match cmd:
+        case "quit" | "exit":                          # OR of literals
+            return "bye"
+        case {"action": "train", "epochs": int(n)} if n &gt; 0:   # dict shape + type + guard
+            return f"train {n} epochs"
+        case [x, y]:                                   # any 2-item sequence
+            return f"point {x},{y}"
+        case [first, *rest]:
+            return f"first={first} rest={rest}"
+        case _:                                        # default
+            return "unknown"
+for c in ["exit", {"action": "train", "epochs": 5}, (3, 4), [1, 2, 3], 42]:
+    print(handle(c))</div>
+  <div class="fx" data-lang="text">bye
+train 5 epochs
+point 3,4
+first=1 rest=[2, 3]
+unknown</div>
+  <div class="callout trap"><span class="label">Trap</span><p><code>case LIMIT:</code> with a bare name doesn't compare to <code>LIMIT</code>; it captures the value into a new variable and always matches. Compare constants with dotted names (<code>case Color.RED:</code>) or a guard. Dict patterns match if the listed keys exist (extra keys are fine), and strings never match sequence patterns.</p></div>
+
+  <h2 id="pf-func"><span class="num">06</span>Function Parameters</h2>
+  <figure class="viz"><svg viewBox="0 0 600 110" width="600">
+    <text x="10" y="20">def f(a, /, b, *args, key, **kwargs)</text>
+    <rect x="10" y="38" width="90" height="34" rx="5" class="fv"/><text x="20" y="60">a</text>
+    <rect x="105" y="38" width="110" height="34" rx="5" class="fb sb"/><text x="115" y="60">b</text>
+    <rect x="220" y="38" width="110" height="34" rx="5" class="ft st"/><text x="230" y="60">*args</text>
+    <rect x="335" y="38" width="120" height="34" rx="5" class="fg sg"/><text x="345" y="60">key</text>
+    <rect x="460" y="38" width="130" height="34" rx="5" class="fs" stroke="currentColor"/><text x="470" y="60">**kwargs</text>
+    <text x="10" y="92" class="tm">positional</text><text x="10" y="105" class="tm">only</text>
+    <text x="105" y="92" class="tm">positional</text><text x="105" y="105" class="tm">or keyword</text>
+    <text x="220" y="92" class="tm">extra args</text><text x="220" y="105" class="tm">→ tuple</text>
+    <text x="335" y="92" class="tm">keyword-only</text><text x="335" y="105" class="tm">(after *)</text>
+    <text x="460" y="92" class="tm">extra kwargs</text><text x="460" y="105" class="tm">→ dict</text>
+  </svg><figcaption>Parameters always come in this left-to-right order. / and * are markers, not parameters.</figcaption></figure>
+  <div class="fx" data-lang="py">def f(a, b=2, *args, scale=1.0, **kwargs):
+    print(a, b, args, scale, kwargs)
+f(1)
+f(1, 3, 4, 5, scale=0.5, lr=0.01)
+
+def fit(X, /, *, epochs=10):       # X positional-only, epochs keyword-only
+    return f"{len(X)} rows, {epochs} epochs"
+print(fit([1, 2, 3], epochs=5))
+try:
+    fit([1, 2, 3], 5)              # positional epochs not allowed
+except TypeError as e:
+    print("TypeError:", e)
+
+nums = [1, 2, 3]
+cfg = {"scale": 2.0, "lr": 0.1}
+f(*nums, **cfg)                    # unpack at the call site</div>
+  <div class="fx" data-lang="text">1 2 () 1.0 {}
+1 3 (4, 5) 0.5 {'lr': 0.01}
+3 rows, 5 epochs
+TypeError: fit() takes 1 positional argument but 2 were given
+1 2 (3,) 2.0 {'lr': 0.1}</div>
+  <p>Keyword-only params make call sites self-documenting (<code>train(model, epochs=5)</code> vs a mystery <code>5</code>), which is why sklearn uses them.</p>
+  <div class="callout pred"><span class="label">Predict the output</span><p>What do the two calls print?</p></div>
+  <div class="fx" data-lang="py">def add_item(item, lst=[]):        # default built ONCE, at def time
+    lst.append(item)
+    return lst
+print(add_item(1), add_item(2))
+print(add_item.__defaults__)
+
+def add_item_ok(item, lst=None):   # None sentinel
+    if lst is None:
+        lst = []                   # fresh list per call
+    lst.append(item)
+    return lst
+print(add_item_ok(1), add_item_ok(2))</div>
+  <div class="fx" data-lang="text">[1, 2] [1, 2]
+([1, 2],)
+[1] [2]</div>
+  <div class="callout trap"><span class="label">Trap</span><p>Defaults are evaluated once when <code>def</code> runs and stored on the function. A mutable default is shared by every call. (Both prints show <code>[1, 2]</code> because both calls return the same list.)</p></div>
+
+  <h2 id="pf-rec"><span class="num">07</span>Recursion &amp; Lambda</h2>
+  <div class="flow"><span>fact(3)</span><span>3 * fact(2)</span><span>2 * fact(1)</span><span>base: 1</span><span>unwind → 6</span></div>
+  <p>A recursive function solves a smaller copy of the same problem until it hits a <strong>base case</strong>. Natural for trees, nested JSON, divide and conquer.</p>
+  <div class="fx" data-lang="py">import sys
+from functools import lru_cache
+def fact(n):
+    return 1 if n &lt;= 1 else n * fact(n - 1)   # base case + smaller step
+print(fact(5))
+print(sys.getrecursionlimit())
+try:
+    fact(5000)
+except RecursionError as e:
+    print("RecursionError:", e)
+
+@lru_cache(maxsize=None)            # memoise: each n computed once
+def fib(n):
+    return n if n &lt; 2 else fib(n - 1) + fib(n - 2)
+print(fib(80))</div>
+  <div class="fx" data-lang="text">120
+1000
+RecursionError: maximum recursion depth exceeded
+23416728348467685</div>
+  <div class="callout trap"><span class="label">Trap</span><p>Python has no tail-call optimisation and each frame costs memory. For depth in the thousands, rewrite as a loop or explicit stack instead of raising the limit.</p></div>
+  <p>A <strong>lambda</strong> is a one-expression function with no name. Use it for short <code>key=</code> functions; use <code>def</code> for anything you'd name or test.</p>
+  <div class="fx" data-lang="py">people = [("Asha", 31), ("Ben", 25), ("Chen", 40)]
+print(sorted(people, key=lambda p: p[1]))
+print(list(map(lambda x: x * 2, [1, 2, 3])))
+fs = [lambda: i for i in range(3)]
+print([g() for g in fs])                    # late binding
+fs = [lambda i=i: i for i in range(3)]      # default freezes current i
+print([g() for g in fs])</div>
+  <div class="fx" data-lang="text">[('Ben', 25), ('Asha', 31), ('Chen', 40)]
+[2, 4, 6]
+[2, 2, 2]
+[0, 1, 2]</div>
+  <div class="callout trap"><span class="label">Trap</span><p>Closures look variables up when called, not when created. All three lambdas read <code>i</code> after the loop ended (2).</p></div>
+
+  <h2 id="pf-scope"><span class="num">08</span>Scope: the LEGB Rule</h2>
+  <figure class="viz"><svg viewBox="0 0 440 190" width="440">
+    <rect x="5" y="5" width="430" height="180" rx="10" class="fs" stroke="currentColor"/><text x="15" y="24">B  built-in: len, print, sum</text>
+    <rect x="25" y="34" width="390" height="140" rx="10" class="fv"/><text x="35" y="53">G  module globals: x = "global"</text>
+    <rect x="45" y="63" width="350" height="100" rx="10" class="ft st"/><text x="55" y="82">E  outer(): x = "enclosing"</text>
+    <rect x="65" y="92" width="310" height="60" rx="10" class="fb sb"/><text x="75" y="113">L  inner(): looks here first</text>
+    <text x="75" y="136">miss → go one box out</text>
+  </svg><figcaption>Name lookup walks outward: Local → Enclosing → Global → Built-in. First match wins.</figcaption></figure>
+  <div class="callout anlg"><span class="label">Analogy</span><p>Looking for your keys: your room first, then the house, then the street, then lost-and-found.</p></div>
+  <div class="fx" data-lang="py">x = "global"
+def outer():
+    x = "enclosing"
+    def inner():
+        nonlocal x                 # rebind outer's x
+        x = "changed by inner"
+    inner()
+    print(x)
+outer()
+print(x)
+
+count = 0
+def bump():
+    count += 1                     # assignment makes count LOCAL
+try:
+    bump()
+except UnboundLocalError as e:
+    print("UnboundLocalError:", e)
+
+def bump_ok():
+    global count
+    count += 1
+bump_ok(); print(count)
+
+def make_counter():                # closure: step remembers n
+    n = 0
+    def step():
+        nonlocal n
+        n += 1
+        return n
+    return step
+c = make_counter()
+print(c(), c(), c())</div>
+  <div class="fx" data-lang="text">changed by inner
+global
+UnboundLocalError: cannot access local variable 'count' where it is not associated with a value
+1
+1 2 3</div>
+  <div class="callout trap"><span class="label">Trap</span><p>Python decides scope at compile time: any assignment to a name inside a function makes it local everywhere in that function. Reading a global is fine; rebinding it needs <code>global</code>. Mutating it (<code>items.append</code>) needs nothing. Prefer returning values over <code>global</code>.</p></div>
+
+  <h2 id="pf-build"><span class="num">09</span>Hands-on: An Event Router</h2>
+  <p>Combines a <code>None</code> default, keyword-only flag, <code>**kwargs</code>, lambdas and <code>match</code> guards. Predict each line, then run it.</p>
+  <div class="fx" data-lang="py">def route(event, handlers=None, *, verbose=False, **meta):
+    handlers = handlers if handlers is not None else {}
+    match event:
+        case {"type": "click", "x": int(x), "y": int(y)}:
+            out = f"click at ({x},{y})"
+        case {"type": "key", "key": str(k)} if len(k) == 1:
+            out = f"key {k!r}"
+        case {"type": t}:
+            out = handlers.get(t, lambda: f"no handler for {t}")()
+        case _:
+            out = "malformed"
+    if verbose:
+        out += f" {meta}"
+    return out
+
+print(route({"type": "click", "x": 3, "y": 4}))
+print(route({"type": "key", "key": "q"}, verbose=True, user="asha"))
+print(route({"type": "scroll"}, {"scroll": lambda: "scrolled"}))
+print(route({"type": "resize"}))
+print(route([1, 2]))</div>
+  <div class="fx" data-lang="text">click at (3,4)
+key 'q' {'user': 'asha'}
+scrolled
+no handler for resize
+malformed</div>
+  <p><strong>Extend it:</strong> add a <code>"batch"</code> case that matches <code>{"type": "batch", "events": [*evs]}</code> and routes each event recursively.</p>
+
+  <h2 id="pf-qa"><span class="num">10</span>Questions &amp; Answers</h2>
+  <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between <code>is</code> and <code>==</code>?</summary><div class="qa-body"><code>==</code> compares values via <code>__eq__</code>; <code>is</code> checks whether both names point to the same object (same <code>id</code>). <code>[1,2] == [1,2]</code> is True, <code>[1,2] is [1,2]</code> is False. Use <code>is</code> for <code>None</code> because <code>__eq__</code> can be overridden.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Mutable vs immutable: examples, and why it matters.</summary><div class="qa-body">Mutable (list, dict, set) change in place and keep their id; immutable (int, float, str, tuple) create a new object on every "change". It matters for (1) aliasing — two names on one mutable object see each other's edits; (2) hashing — only immutables can be dict keys / set items; (3) sharing — immutables are safe to pass around and across threads.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain the mutable default argument trap and its fix.</summary><div class="qa-body">Defaults are evaluated once at <code>def</code> time and stored in <code>f.__defaults__</code>. <code>def f(lst=[])</code> shares one list across all calls, so appends accumulate. Fix: <code>lst=None</code>, then <code>if lst is None: lst = []</code> inside.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What's the output? <code>print(0.1 + 0.2 == 0.3, round(2.5), -7 // 2)</code></summary><div class="qa-body"><code>False 2 -4</code>. Floats are binary approximations; <code>round</code> uses banker's rounding (half to even); <code>//</code> floors toward −∞.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does short-circuit evaluation return, and where is it useful?</summary><div class="qa-body"><code>A and B</code> returns A if A is falsy, else B. <code>A or B</code> returns A if A is truthy, else B. The right side may never run. Uses: <code>name = given or "default"</code>, <code>obj and obj.method()</code>, skipping an expensive check. Careful: <code>x or default</code> also replaces valid falsy values like 0.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When does the <code>else</code> of a <code>for</code> loop run?</summary><div class="qa-body">Only when the loop finishes without <code>break</code> (including when the iterable is empty). Typical use: search — <code>break</code> on found, <code>else</code> handles "not found" without a flag variable.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What do <code>*args</code> and <code>**kwargs</code> become inside the function?</summary><div class="qa-body"><code>args</code> is a tuple of extra positional arguments, <code>kwargs</code> a dict of extra keyword arguments. At a call site, <code>f(*lst)</code> and <code>f(**d)</code> unpack. The names are convention; the stars matter. Order: <code>a, /, b, *args, kw, **kwargs</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why would you make a parameter keyword-only?</summary><div class="qa-body">Readability and safety: callers must write <code>fit(X, epochs=5)</code>, so arguments can't be swapped by position and you can reorder or add parameters later without breaking calls. Put a bare <code>*</code> before them.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain LEGB, <code>global</code> and <code>nonlocal</code>.</summary><div class="qa-body">Name lookup order: Local → Enclosing function → Global (module) → Built-in; first match wins. Assigning to a name makes it local to the function. <code>global x</code> lets a function rebind the module-level x; <code>nonlocal x</code> rebinds the nearest enclosing function's x (used in closures).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does <code>count += 1</code> inside a function raise <code>UnboundLocalError</code> when <code>count</code> is global?</summary><div class="qa-body">The assignment makes <code>count</code> local for the whole function at compile time, so the read on the right side looks up an unassigned local. Fix with <code>global count</code>, or better, pass it in and return the new value.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What's the output? <code>fs = [lambda: i for i in range(3)]; print([f() for f in fs])</code></summary><div class="qa-body"><code>[2, 2, 2]</code>. Closures read <code>i</code> when called, after the loop finished. Fix: <code>lambda i=i: i</code> or <code>functools.partial</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Your recursive tree walk crashes with <code>RecursionError</code> on deep data. Options?</summary><div class="qa-body">Python has a default depth limit of ~1000 and no tail-call optimisation. Rewrite iteratively with an explicit stack (list) — the robust fix. Raising <code>sys.setrecursionlimit</code> is a stopgap and can crash the interpreter. If subproblems repeat, add <code>@lru_cache</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does <code>df[df.a &gt; 1 and df.b &lt; 5]</code> fail?</summary><div class="qa-body"><code>and</code> needs one True/False for the whole Series, which is ambiguous → ValueError. Use element-wise <code>(df.a &gt; 1) &amp; (df.b &lt; 5)</code>, with parentheses because <code>&amp;</code> binds tighter than comparisons.</div></details>
+</main>`
+});
+
+
+// notes/python/py_io.js — Exceptions, Files & Packages
+Object.assign(TOPIC_CONTENT, {
+  "py_io": `<main>
+  <h1>Exceptions, Files &amp; Packages</h1>
+  <p class="lead">The plumbing of every real DS/ML project: failing loudly but gracefully, reading and writing the file formats data actually comes in, and organising code into importable packages with reproducible environments. Builds on <em>Python Fundamentals</em> and <em>Data Structures</em>. Run on Python 3.13, pandas 3.0, PyYAML 6, Poetry 2.4.</p>
+
+  <h2 id="pi-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Exceptions, Files &amp; Packages</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">try / except / else / finally</div>
+        <ul>
+          <li><b>try</b> — risky code only; keep it small</li>
+          <li><b>except</b> — first matching type wins → specific before general</li>
+          <li><b>else</b> — runs only if no exception (success path)</li>
+          <li><b>finally</b> — always runs, even on <code>return</code> or a crash → cleanup</li>
+          <li>💡 bank transfer: attempt, handle failure, confirm success, always release the line</li>
+          <li>⚠ bare <code>except:</code> swallows Ctrl+C (KeyboardInterrupt) → at least <code>except Exception</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Raising &amp; custom errors</div>
+        <ul>
+          <li><b>raise ValueError("msg")</b> — fail fast on bad input</li>
+          <li><b>raise</b> (bare) inside except — re-raise, keep traceback</li>
+          <li><b>raise X from e</b> — wrap low-level error, keep cause (<code>__cause__</code>)</li>
+          <li><b>Hierarchy</b> — one base <code>PipelineError(Exception)</code>, specific subclasses; callers catch base or leaf</li>
+          <li><b>Carry context</b> — store fields (<code>self.column</code>) + call <code>super().__init__(msg)</code></li>
+          <li><b>Tree</b> — BaseException → Exception → ValueError / KeyError / OSError → FileNotFoundError</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Logging exceptions</div>
+        <ul>
+          <li><b>logger = logging.getLogger(__name__)</b>; configure once with <code>basicConfig</code></li>
+          <li><b>log.exception("msg")</b> — inside except: ERROR + full traceback</li>
+          <li><b>Levels</b> — DEBUG &lt; INFO &lt; WARNING &lt; ERROR &lt; CRITICAL</li>
+          <li><b>Lazy args</b> — <code>log.info("n=%d", n)</code>, not f-strings</li>
+          <li>⚠ <code>print(e)</code> loses the traceback</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Text files &amp; pathlib</div>
+        <ul>
+          <li><b>with open(p, mode, encoding="utf-8")</b> — auto-closes even on error</li>
+          <li><b>Modes</b> — r, w (truncate!), a (append), x (create only), +b for binary</li>
+          <li><b>Iterate the file</b> — line by line, constant memory</li>
+          <li><b>Path</b> — <code>root / "data" / "x.csv"</code>, <code>.name .stem .suffix .parent</code></li>
+          <li><b>glob / rglob</b>, <code>mkdir(parents=True, exist_ok=True)</code>, <code>read_text</code>/<code>write_text</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">CSV &amp; JSON</div>
+        <ul>
+          <li><b>csv.DictReader/DictWriter</b> — rows as dicts; open with <code>newline=""</code></li>
+          <li>⚠ csv module returns all strings; <b>pd.read_csv</b> infers types</li>
+          <li><b>json.load/dump</b> (file) vs <b>loads/dumps</b> (string)</li>
+          <li>⚠ JSON: tuple → list, int keys → str, datetime fails → <code>default=str</code></li>
+          <li>Human-readable, but no schema, slow and big</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Parquet, pickle, YAML</div>
+        <ul>
+          <li><b>Parquet</b> — columnar + compressed + typed; 13.7 MB CSV → 3.4 MB, ~5× faster read</li>
+          <li><b>Column pruning</b> <code>columns=[...]</code> + <b>filters</b> read only what you need</li>
+          <li><b>pickle</b> — any Python object (models); binary mode <code>"wb"/"rb"</code></li>
+          <li>⚠ <b>Unpickling runs code</b> — never load untrusted pickles; version-fragile</li>
+          <li><b>YAML</b> — configs; always <code>yaml.safe_load</code></li>
+          <li>⚠ YAML 1.1: <code>NO</code> → False, <code>1.10</code> → 1.1 → quote strings</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Modules &amp; packages</div>
+        <ul>
+          <li><b>Module</b> = one .py file; <b>package</b> = folder of modules (with <code>__init__.py</code>)</li>
+          <li><b>Import runs the file once</b>, then caches in <code>sys.modules</code></li>
+          <li><b>__init__.py</b> — marks package, runs on import, re-exports public API</li>
+          <li><b>Relative import</b> <code>from ..utils import mean</code> — only inside a package; run with <code>python -m</code></li>
+          <li><b>if __name__ == "__main__":</b> — runs only when executed directly, not on import</li>
+          <li>⚠ <code>from x import *</code> pollutes namespace; naming a file <code>json.py</code> shadows stdlib</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Environments &amp; deps</div>
+        <ul>
+          <li><b>venv</b> — per-project Python + site-packages; solves "A needs numpy 1, B needs 2"</li>
+          <li><b>pip</b> — installs; <code>pip freeze</code> pins everything incl. transitive deps</li>
+          <li><b>requirements.txt</b> — what you list (often loose ranges)</li>
+          <li><b>Lock file</b> (poetry.lock, uv.lock) — exact versions + hashes of the whole tree → reproducible</li>
+          <li><b>Poetry</b> — <code>pyproject.toml</code> + lock; <code>poetry add</code>, <code>--group dev</code>, <code>poetry install</code></li>
+          <li>⚠ commit the lock file for apps; never <code>pip install</code> into system Python</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="roadmap-wrap">
+    <h2 class="roadmap-title">What we'll cover</h2>
+    <div class="roadmap-grid">
+      <div class="rm-item rm-done" data-target="pi-try"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">try / except / else / finally</span><span class="rm-sub">The four-block flow</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-raise"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Raising &amp; Custom Errors</span><span class="rm-sub">Hierarchies, chaining</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-log"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Logging Exceptions</span><span class="rm-sub">Keep the traceback</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-txt"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Text Files &amp; pathlib</span><span class="rm-sub">open, modes, paths</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-csv"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">CSV &amp; JSON</span><span class="rm-sub">Readable interchange formats</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-pq"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Parquet</span><span class="rm-sub">Columnar data at scale</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-pkl"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Pickle &amp; YAML</span><span class="rm-sub">Objects and configs, safely</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-mod"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Modules &amp; Packages</span><span class="rm-sub">Imports, __init__, __main__</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-env"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Environments &amp; Dependencies</span><span class="rm-sub">venv, pip, poetry, locks</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-build"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Hands-on</span><span class="rm-sub">A tiny, robust ETL</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+    </div>
+  </div>
+
+  <h2 id="pi-try"><span class="num">01</span>try / except / else / finally</h2>
+  <figure class="viz"><svg viewBox="0 0 560 170" width="560">
+    <defs><marker id="pi-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="10" y="62" width="90" height="40" rx="6" class="fb sb"/><text x="38" y="87">try</text>
+    <rect x="180" y="12" width="130" height="40" rx="6" class="fg sg"/><text x="218" y="37">else</text>
+    <rect x="180" y="112" width="130" height="40" rx="6" class="fr sr"/><text x="210" y="137">except E</text>
+    <rect x="400" y="62" width="140" height="40" rx="6" class="fv"/><text x="434" y="87">finally</text>
+    <line x1="100" y1="74" x2="178" y2="36" stroke="currentColor" marker-end="url(#pi-ah)"/>
+    <line x1="100" y1="92" x2="178" y2="128" stroke="currentColor" marker-end="url(#pi-ah)"/>
+    <line x1="310" y1="34" x2="398" y2="74" stroke="currentColor" marker-end="url(#pi-ah)"/>
+    <line x1="310" y1="130" x2="398" y2="92" stroke="currentColor" marker-end="url(#pi-ah)"/>
+    <text x="96" y="34" class="tg">no error</text><text x="120" y="140" class="tr">raised</text>
+    <text x="400" y="125" class="tm">always runs:</text><text x="400" y="140" class="tm">close, release, log</text>
+  </svg><figcaption>Exactly one of else / except runs; finally runs in every case, even after return.</figcaption></figure>
+  <div class="callout anlg"><span class="label">Analogy</span><p>A bank transfer: attempt it (<code>try</code>), handle a frozen account (<code>except</code>), send the confirmation only on success (<code>else</code>), and always hang up the line (<code>finally</code>).</p></div>
+  <div class="fx" data-lang="py">def parse(s):
+    try:
+        n = int(s)
+    except ValueError as e:
+        print(f"  except: {e}")
+        return None
+    else:
+        print("  else: parsed", n)
+        return n
+    finally:
+        print("  finally: always runs")
+
+for s in ["42", "abc"]:
+    print(f"parse({s!r}) -&gt;", parse(s))</div>
+  <div class="fx" data-lang="text">  else: parsed 42
+  finally: always runs
+parse('42') -&gt; 42
+  except: invalid literal for int() with base 10: 'abc'
+  finally: always runs
+parse('abc') -&gt; None</div>
+  <ul>
+    <li>Keep <code>try</code> tiny: only the line that can fail. Put follow-up work in <code>else</code> so its bugs aren't swallowed by your except.</li>
+    <li>Several types: <code>except (ValueError, TypeError) as e:</code>. Order from most specific to most general.</li>
+  </ul>
+  <div class="callout trap"><span class="label">Trap</span><p>A bare <code>except:</code> also catches <code>KeyboardInterrupt</code> and <code>SystemExit</code>, so Ctrl+C stops working. Catch what you expect; <code>except Exception</code> only at the top level, and log it.</p></div>
+
+  <h2 id="pi-raise"><span class="num">02</span>Raising &amp; Custom Exception Hierarchies</h2>
+  <figure class="viz"><svg viewBox="0 0 600 190" width="600">
+    <g stroke="currentColor" opacity="0.6"><line x1="240" y1="32" x2="240" y2="52"/><line x1="100" y1="52" x2="440" y2="52"/><line x1="100" y1="52" x2="100" y2="66"/><line x1="240" y1="52" x2="240" y2="66"/><line x1="440" y1="52" x2="440" y2="66"/>
+    <line x1="240" y1="90" x2="240" y2="106"/><line x1="70" y1="106" x2="480" y2="106"/><line x1="70" y1="106" x2="70" y2="118"/><line x1="200" y1="106" x2="200" y2="118"/><line x1="330" y1="106" x2="330" y2="118"/><line x1="480" y1="106" x2="480" y2="118"/>
+    <line x1="480" y1="142" x2="480" y2="150"/><line x1="398" y1="150" x2="535" y2="150"/><line x1="398" y1="150" x2="398" y2="158"/><line x1="535" y1="150" x2="535" y2="158"/>
+    <line x1="200" y1="142" x2="200" y2="158"/></g>
+    <rect x="180" y="8" width="120" height="24" rx="4" class="fs" stroke="currentColor"/><text x="190" y="25">BaseException</text>
+    <rect x="30" y="66" width="140" height="24" rx="4" class="fs" stroke="currentColor"/><text x="36" y="83" class="tm">KeyboardInterrupt</text>
+    <rect x="190" y="66" width="100" height="24" rx="4" class="fb sb"/><text x="202" y="83">Exception</text>
+    <rect x="390" y="66" width="100" height="24" rx="4" class="fs" stroke="currentColor"/><text x="398" y="83" class="tm">SystemExit</text>
+    <rect x="20" y="118" width="100" height="24" rx="4" class="fb sb"/><text x="28" y="135">ValueError</text>
+    <rect x="140" y="118" width="120" height="24" rx="4" class="fg sg"/><text x="146" y="135">PipelineError</text>
+    <rect x="280" y="118" width="100" height="24" rx="4" class="fb sb"/><text x="296" y="135">KeyError</text>
+    <rect x="440" y="118" width="80" height="24" rx="4" class="fb sb"/><text x="455" y="135">OSError</text>
+    <rect x="120" y="158" width="160" height="24" rx="4" class="fg sg"/><text x="126" y="175">DataValidationError</text>
+    <rect x="330" y="158" width="136" height="24" rx="4" class="fb sb"/><text x="336" y="175">FileNotFoundError</text>
+    <rect x="475" y="158" width="120" height="24" rx="4" class="fb sb"/><text x="480" y="175">PermissionError</text>
+  </svg><figcaption>Built-in tree (blue) with your own branch (green). <code>except Exception</code> deliberately skips Ctrl+C and sys.exit.</figcaption></figure>
+  <p>One base class per project lets callers catch "anything from my pipeline" while still telling specific failures apart. Store context as attributes, not only in the message.</p>
+  <div class="fx" data-lang="py">class PipelineError(Exception):
+    """Base for everything our pipeline raises."""
+
+class DataValidationError(PipelineError):
+    def __init__(self, column, msg):
+        self.column = column                       # machine-readable context
+        super().__init__(f"column {column!r}: {msg}")
+
+class ModelNotFoundError(PipelineError):
+    pass
+
+def validate(row):
+    if row["age"] &lt; 0:
+        raise DataValidationError("age", "must be &gt;= 0")
+
+try:
+    validate({"age": -3})
+except DataValidationError as e:                   # specific first
+    print("bad data -&gt;", e, "| column:", e.column)
+except PipelineError:                              # then the family
+    print("other pipeline failure")
+
+def load_config(path):
+    try:
+        return open(path).read()
+    except FileNotFoundError as e:
+        raise PipelineError(f"config missing: {path}") from e   # chain
+
+try:
+    load_config("nope.yaml")
+except PipelineError as e:
+    print(type(e).__name__, "|", e, "| cause:", type(e.__cause__).__name__)</div>
+  <div class="fx" data-lang="text">bad data -&gt; column 'age': must be &gt;= 0 | column: age
+PipelineError | config missing: nope.yaml | cause: FileNotFoundError</div>
+  <table class="tbl">
+    <tr><th>Form</th><th>Does</th><th>Use when</th></tr>
+    <tr><td><code>raise ValueError("…")</code></td><td>New exception</td><td>Input breaks a rule</td></tr>
+    <tr><td><code>raise</code></td><td>Re-raise current one, traceback intact</td><td>Log/cleanup then let it propagate</td></tr>
+    <tr><td><code>raise New(…) from e</code></td><td>Wrap; keeps original as <code>__cause__</code></td><td>Translate low-level errors to your domain</td></tr>
+  </table>
+  <div class="callout trap"><span class="label">Trap</span><p>Subclass <code>Exception</code>, not <code>BaseException</code>. And don't catch-and-return-None everywhere: silent failures become wrong numbers downstream. Fail fast, fail loud.</p></div>
+
+  <h2 id="pi-log"><span class="num">03</span>Logging Exceptions with Tracebacks</h2>
+  <div class="fx" data-lang="py">import logging
+logging.basicConfig(level=logging.INFO,
+                    format="%(levelname)s %(name)s: %(message)s")
+log = logging.getLogger("etl")          # usually getLogger(__name__)
+
+def score(batch):
+    return sum(batch) / len(batch)
+
+for batch in [[1, 2, 3], []]:
+    try:
+        log.info("score=%.2f", score(batch))
+    except ZeroDivisionError:
+        log.exception("empty batch, skipping")   # message + traceback</div>
+  <div class="fx" data-lang="text">INFO etl: score=2.00
+ERROR etl: empty batch, skipping
+Traceback (most recent call last):
+  File "score.py", line 11, in &lt;module&gt;
+    log.info("score=%.2f", score(batch))
+                           ~~~~~^^^^^^^
+  File "score.py", line 7, in score
+    return sum(batch) / len(batch)
+           ~~~~~~~~~~~^~~~~~~~~~~~
+ZeroDivisionError: division by zero</div>
+  <p>(File paths shortened.) The loop kept going, and the log has everything needed to debug at 2 AM.</p>
+  <p><code>log.exception</code> = <code>log.error(..., exc_info=True)</code> and only works inside <code>except</code>. <code>print(e)</code> loses stack, level and timestamp. Pass args lazily (<code>log.debug("x=%s", x)</code>) so formatting is skipped when the level is off.</p>
+
+  <h2 id="pi-txt"><span class="num">04</span>Text Files &amp; pathlib</h2>
+  <table class="tbl">
+    <tr><th>Mode</th><th>Meaning</th><th>If file exists</th></tr>
+    <tr><td><code>"r"</code></td><td>Read text (default)</td><td>Missing → FileNotFoundError</td></tr>
+    <tr><td><code>"w"</code></td><td>Write text</td><td><strong>Truncates it to empty</strong></td></tr>
+    <tr><td><code>"a"</code></td><td>Append</td><td>Writes at the end</td></tr>
+    <tr><td><code>"x"</code></td><td>Create new</td><td>FileExistsError (safe "don't overwrite")</td></tr>
+    <tr><td><code>"rb" / "wb"</code></td><td>Binary (pickle, parquet, images)</td><td>No decoding, no newline translation</td></tr>
+  </table>
+  <div class="fx" data-lang="py">from pathlib import Path
+p = Path("notes.txt")
+with open(p, "w", encoding="utf-8") as f:     # "w" truncates, "a" appends
+    f.write("line one\\nline two\\n")
+with open(p, "a", encoding="utf-8") as f:
+    f.write("line three\\n")
+with open(p, encoding="utf-8") as f:
+    for i, line in enumerate(f, 1):            # streams, low memory
+        print(i, line.rstrip())
+print(repr(p.read_text(encoding="utf-8")[:9]))
+print(f.closed)                                # with closed it for us</div>
+  <div class="fx" data-lang="text">1 line one
+2 line two
+3 line three
+'line one\\n'
+True</div>
+  <div class="callout trap"><span class="label">Trap</span><p>Always pass <code>encoding="utf-8"</code>: the default depends on the OS (cp1252 on many Windows machines). And never <code>f.read()</code> a 20 GB log — iterate over the file object.</p></div>
+  <p><strong>pathlib</strong> treats paths as objects; <code>/</code> joins them correctly on every OS.</p>
+  <div class="fx" data-lang="py">from pathlib import Path
+root = Path("project")
+raw = root / "data" / "raw"
+raw.mkdir(parents=True, exist_ok=True)
+for name in ["jan.csv", "feb.csv", "notes.md"]:
+    (raw / name).write_text("x\\n")
+p = raw / "jan.csv"
+print(p, p.name, p.stem, p.suffix, p.parent)
+print(p.exists(), p.with_suffix(".parquet").name)
+print(sorted(f.name for f in raw.glob("*.csv")))
+print(sorted(str(f) for f in root.rglob("*.md")))</div>
+  <div class="fx" data-lang="text">project/data/raw/jan.csv jan.csv jan .csv project/data/raw
+True jan.parquet
+['feb.csv', 'jan.csv']
+['project/data/raw/notes.md']</div>
+
+  <h2 id="pi-csv"><span class="num">05</span>CSV &amp; JSON</h2>
+  <div class="fx" data-lang="py">import csv
+rows = [{"user": "asha", "clicks": 3}, {"user": "ben", "clicks": 5}]
+with open("clicks.csv", "w", newline="", encoding="utf-8") as f:
+    w = csv.DictWriter(f, fieldnames=["user", "clicks"])
+    w.writeheader()
+    w.writerows(rows)
+print(open("clicks.csv").read())
+with open("clicks.csv", newline="", encoding="utf-8") as f:
+    back = list(csv.DictReader(f))
+print(back)                              # everything comes back as str</div>
+  <div class="fx" data-lang="text">user,clicks
+asha,3
+ben,5
+
+[{'user': 'asha', 'clicks': '3'}, {'user': 'ben', 'clicks': '5'}]</div>
+  <div class="fx" data-lang="py">import pandas as pd
+df = pd.read_csv("clicks.csv")           # infers types
+print(df)
+print(df.dtypes)</div>
+  <div class="fx" data-lang="text">   user  clicks
+0  asha       3
+1   ben       5
+user        str
+clicks    int64
+dtype: object</div>
+  <p><code>newline=""</code> lets the csv module handle line endings itself (otherwise Windows gets blank rows). Use the csv module for streaming tiny files; pandas for analysis.</p>
+  <div class="fx" data-lang="py">import json
+from datetime import date
+cfg = {"model": "xgb", "lr": 0.1, "layers": [64, 32], "early_stop": True, "seed": None}
+with open("cfg.json", "w", encoding="utf-8") as f:
+    json.dump(cfg, f, indent=2)                # dump = to file, dumps = to str
+with open("cfg.json", encoding="utf-8") as f:
+    back = json.load(f)
+print(back == cfg, back["layers"])
+print(json.dumps({"t": (1, 2), 1: "a"}))      # tuple-&gt;list, int key-&gt;str
+try:
+    json.dumps({"d": date(2024, 5, 1)})
+except TypeError as e:
+    print("TypeError:", e)
+print(json.dumps({"d": date(2024, 5, 1)}, default=str))</div>
+  <div class="fx" data-lang="text">True [64, 32]
+{"t": [1, 2], "1": "a"}
+TypeError: Object of type date is not JSON serializable
+{"d": "2024-05-01"}</div>
+  <table class="tbl">
+    <tr><th>Python</th><th>JSON</th><th>Comes back as</th></tr>
+    <tr><td>dict / list / tuple</td><td>object / array / array</td><td>dict / list / <strong>list</strong></td></tr>
+    <tr><td>True / None</td><td>true / null</td><td>True / None</td></tr>
+    <tr><td>int dict key</td><td>string key</td><td><strong>str</strong> key</td></tr>
+    <tr><td>datetime, numpy types, set</td><td>— TypeError</td><td>convert first / <code>default=</code></td></tr>
+  </table>
+
+  <h2 id="pi-pq"><span class="num">06</span>Parquet</h2>
+  <figure class="viz"><svg viewBox="0 0 540 160" width="540">
+    <text x="10" y="16" class="tm">CSV: row by row, all text</text>
+    <g><rect x="10" y="26" width="220" height="22" class="fs" stroke="currentColor"/><text x="16" y="42">42,IN,0.37</text>
+    <rect x="10" y="50" width="220" height="22" class="fs" stroke="currentColor"/><text x="16" y="66">7,US,0.91</text>
+    <rect x="10" y="74" width="220" height="22" class="fs" stroke="currentColor"/><text x="16" y="90">13,IN,0.05</text></g>
+    <text x="10" y="120" class="tr">need "amount"? read every byte</text>
+    <text x="290" y="16" class="tm">Parquet: column chunks, typed</text>
+    <rect x="290" y="26" width="70" height="70" class="fb sb"/><text x="296" y="44">user_id</text><text x="296" y="62" class="tm">int64</text><text x="296" y="80" class="tm">42 7 13</text>
+    <rect x="365" y="26" width="70" height="70" class="fv"/><text x="371" y="44">country</text><text x="371" y="62" class="tm">dict-enc</text><text x="371" y="80" class="tm">IN US IN</text>
+    <rect x="440" y="26" width="90" height="70" class="fg sg" stroke-width="3"/><text x="446" y="44">amount</text><text x="446" y="62" class="tm">float64</text><text x="446" y="80" class="tm">.37 .91 .05</text>
+    <text x="290" y="120" class="tg">read just this column</text>
+    <text x="290" y="140" class="tm">+ min/max stats → skip chunks</text>
+  </svg><figcaption>Columnar layout: similar values sit together (compress well), and queries read only the columns they touch.</figcaption></figure>
+  <div class="fx" data-lang="py">import numpy as np, pandas as pd, os, time
+rng = np.random.default_rng(0)
+n = 1_000_000
+df = pd.DataFrame({"user_id": rng.integers(0, 50_000, n),
+                   "country": rng.choice(["IN", "US", "DE"], n),
+                   "amount": rng.random(n).round(2)})
+df.to_csv("tx.csv", index=False)
+df.to_parquet("tx.parquet", index=False)        # needs pyarrow
+for f in ["tx.csv", "tx.parquet"]:
+    print(f, round(os.path.getsize(f) / 1e6, 1), "MB")
+part = pd.read_parquet("tx.parquet", columns=["amount"],
+                       filters=[("country", "==", "IN")])
+print(part.shape)
+print(pd.read_parquet("tx.parquet").dtypes.to_dict() == df.dtypes.to_dict())
+t=time.perf_counter(); pd.read_csv("tx.csv"); a=time.perf_counter()-t
+t=time.perf_counter(); pd.read_parquet("tx.parquet"); b=time.perf_counter()-t
+print(f"read csv {a:.2f}s, parquet {b:.2f}s")</div>
+  <div class="fx" data-lang="text">tx.csv 13.7 MB
+tx.parquet 3.4 MB
+(333364, 1)
+True
+read csv 0.33s, parquet 0.07s</div>
+  <p>Rule of thumb: CSV for small hand-offs, JSON for nested/API data and configs, Parquet as the default for ML datasets, Spark and data lakes.</p>
+
+  <h2 id="pi-pkl"><span class="num">07</span>Pickle &amp; YAML</h2>
+  <p><strong>pickle</strong> serialises almost any Python object (a fitted model, a dict of arrays) to bytes and back.</p>
+  <div class="fx" data-lang="py">import pickle
+from sklearn.linear_model import LogisticRegression
+model = LogisticRegression().fit([[0], [1], [2], [3]], [0, 0, 1, 1])
+with open("model.pkl", "wb") as f:            # binary mode
+    pickle.dump(model, f)
+with open("model.pkl", "rb") as f:
+    back = pickle.load(f)
+print(back.predict([[2.5]]))
+
+class Evil:                                   # what an attacker ships
+    def __reduce__(self):
+        import os
+        return (os.system, ("echo PWNED: ran a shell command",))
+payload = pickle.dumps(Evil())
+pickle.loads(payload)                          # just LOADING runs it</div>
+  <div class="fx" data-lang="text">[1]
+PWNED: ran a shell command</div>
+  <div class="callout trap"><span class="label">Trap — security</span><p><code>pickle.load</code> can execute arbitrary code. Never unpickle files from untrusted sources (downloaded models, user uploads). Pickles also break across library versions. For sharing: <code>safetensors</code> for weights, ONNX for models, Parquet/JSON for data; <code>joblib</code> is pickle underneath, with the same risk.</p></div>
+  <p><strong>YAML</strong> is the usual format for configs (training params, CI, Kubernetes): readable, nested, supports comments.</p>
+  <div class="fx" data-lang="py">import yaml
+text = """
+model: xgb
+params:
+  lr: 0.1
+  max_depth: 6
+features: [age, income]
+country: NO
+version: 1.10
+"""
+cfg = yaml.safe_load(text)
+print(cfg)
+print(yaml.safe_dump({"lr": 0.1, "layers": [64, 32]}, sort_keys=False))
+try:
+    yaml.safe_load("!!python/object/apply:os.system ['echo hi']")
+except yaml.YAMLError as e:
+    print(type(e).__name__)</div>
+  <div class="fx" data-lang="text">{'model': 'xgb', 'params': {'lr': 0.1, 'max_depth': 6}, 'features': ['age', 'income'], 'country': False, 'version': 1.1}
+lr: 0.1
+layers:
+- 64
+- 32
+
+ConstructorError</div>
+  <div class="callout trap"><span class="label">Trap</span><p>PyYAML follows YAML 1.1: <code>NO</code> (Norway!) became <code>False</code> and <code>1.10</code> became <code>1.1</code>. Quote strings: <code>country: "NO"</code>, <code>version: "1.10"</code>. Use <code>safe_load</code> always — it refused the <code>os.system</code> tag above; plain <code>yaml.load</code> with an unsafe loader would run it.</p></div>
+
+  <h2 id="pi-mod"><span class="num">08</span>Modules &amp; Packages</h2>
+  <div class="fx" data-lang="text">pkg/
+├── main.py
+└── mlkit/                    ← package (import mlkit)
+    ├── __init__.py           ← runs on first import; re-exports API
+    ├── utils.py              ← module: def mean(xs)
+    └── features/
+        ├── __init__.py
+        └── scaling.py        ← from ..utils import mean</div>
+  <div class="fx" data-lang="py"># mlkit/__init__.py
+print("mlkit/__init__ runs once")
+from .features.scaling import standardize     # public API re-export
+__all__ = ["standardize"]
+
+# mlkit/features/scaling.py
+from ..utils import mean                       # relative import
+def standardize(xs):
+    m = mean(xs)
+    return [x - m for x in xs]
+print("scaling.__name__ =", __name__)
+
+# main.py
+import sys
+import mlkit
+import mlkit                                   # cached: no second print
+from mlkit import standardize
+print(standardize([10, 20, 30]))
+print("mlkit" in sys.modules, __name__)</div>
+  <div class="fx" data-lang="text">$ python main.py
+mlkit/__init__ runs once
+scaling.__name__ = mlkit.features.scaling
+[-10.0, 0.0, 10.0]
+True __main__
+
+$ python mlkit/features/scaling.py
+ImportError: attempted relative import with no known parent package</div>
+  <div class="flow"><span>import x</span><span>in sys.modules? → reuse</span><span>else search sys.path</span><span>run file top to bottom once</span><span>cache module object</span></div>
+  <p>Running a file inside a package directly breaks relative imports; run it as a module from the project root: <code>python -m mlkit.features.scaling</code>.</p>
+  <p><strong>The <code>__main__</code> guard:</strong> <code>__name__</code> is <code>"__main__"</code> when a file is executed, and the module's name when imported.</p>
+  <div class="fx" data-lang="py"># tools.py
+def clean(s):
+    return s.strip().lower()
+
+print("tools loaded, __name__ =", __name__)
+if __name__ == "__main__":
+    print("self-test:", clean("  Hello "))</div>
+  <div class="fx" data-lang="text">$ python tools.py
+tools loaded, __name__ = __main__
+self-test: hello
+$ python -c "import tools"
+tools loaded, __name__ = tools</div>
+  <div class="callout trap"><span class="label">Trap</span><p>Without the guard, importing your module runs its training script. Also: a file named <code>json.py</code>, <code>random.py</code> or <code>pandas.py</code> in your folder shadows the real library, because the script's directory comes first on <code>sys.path</code>.</p></div>
+  <p>Since Python 3.3 a folder without <code>__init__.py</code> still imports (a "namespace package"), but include it for normal packages: it makes intent explicit and is where the public API lives.</p>
+
+  <h2 id="pi-env"><span class="num">09</span>Environments &amp; Dependencies</h2>
+  <figure class="viz"><svg viewBox="0 0 540 150" width="540">
+    <rect x="10" y="10" width="240" height="100" rx="8" class="fb sb"/><text x="22" y="32">project-A/.venv</text>
+    <text x="22" y="56" class="tm">python 3.13</text><text x="22" y="76">numpy 1.26</text><text x="22" y="96">pandas 2.2</text>
+    <rect x="290" y="10" width="240" height="100" rx="8" class="fg sg"/><text x="302" y="32">project-B/.venv</text>
+    <text x="302" y="56" class="tm">python 3.13</text><text x="302" y="76">numpy 2.3</text><text x="302" y="96">torch 2.8</text>
+    <rect x="140" y="122" width="260" height="24" rx="6" class="fs" stroke="currentColor"/><text x="152" y="139" class="tm">system Python: don't install here</text>
+  </svg><figcaption>Each project gets its own interpreter link and site-packages, so conflicting versions never meet.</figcaption></figure>
+  <div class="fx" data-lang="text">$ python -m venv .venv
+$ source .venv/bin/activate          # Windows: .venv&#92;Scripts&#92;activate
+$ which python
+.../pyrun/.venv/bin/python
+$ pip install "requests==2.32.3"
+$ pip freeze
+certifi==2026.7.22
+charset-normalizer==3.5.2
+idna==3.20
+requests==2.32.3
+urllib3==2.8.0</div>
+  <p>One install pulled in four transitive dependencies. <code>pip freeze &gt; requirements.txt</code> pins them all, but without hashes or a record of which ones you actually chose.</p>
+  <div class="fx" data-lang="text">$ poetry new churn                     # src/churn/__init__.py, tests/, pyproject.toml
+$ poetry add "requests@^2.32"
+  - Installing charset-normalizer (3.5.2)
+  - Installing idna (3.20)
+  - Installing urllib3 (2.8.0)
+  - Installing requests (2.34.2)
+Writing lock file
+$ poetry add --group dev pytest
+$ poetry install                       # recreate env exactly from poetry.lock
+$ poetry run python -m churn</div>
+  <div class="fx" data-lang="text"># pyproject.toml (generated; excerpt)
+[project]
+name = "churn"
+requires-python = "&gt;=3.13"
+dependencies = [
+    "requests (&gt;=2.32,&lt;3.0)"
+]
+[dependency-groups]
+dev = [
+    "pytest (&gt;=9.1.1,&lt;10.0.0)"
+]
+# poetry.lock: 11 [[package]] entries, exact versions + file hashes</div>
+  <table class="tbl">
+    <tr><th></th><th>requirements.txt</th><th>Lock file (poetry.lock, uv.lock)</th></tr>
+    <tr><td>Written by</td><td>You (or <code>pip freeze</code>)</td><td>The tool, from the resolver</td></tr>
+    <tr><td>Contains</td><td>Direct deps, often ranges <code>pandas&gt;=2</code></td><td>Every package in the tree, exact version + hash</td></tr>
+    <tr><td>Reproducible?</td><td>Only if fully pinned; no hashes by default</td><td>Yes, byte-for-byte on every machine</td></tr>
+    <tr><td>Edit by hand?</td><td>Yes</td><td>Never; regenerate</td></tr>
+  </table>
+  <div class="callout intu"><span class="label">Key insight</span><p>Two layers: <em>what you want</em> (loose ranges in <code>pyproject.toml</code>) and <em>what you got</em> (exact lock). Commit both for applications and training pipelines; libraries publish ranges only. <code>uv</code> (not run here) does the same job as Poetry, much faster, with <code>uv add</code> / <code>uv.lock</code>.</p></div>
+
+  <h2 id="pi-build"><span class="num">10</span>Hands-on: A Tiny, Robust ETL</h2>
+  <p>YAML config → CSV in → validate rows with a custom exception → log bad rows and keep going → Parquet out. Every piece of this note in 40 lines.</p>
+  <div class="fx" data-lang="text"># users.csv                  # config.yaml
+user,age,spend               input: users.csv
+asha,31,120.5                output: clean/users.parquet
+ben,-4,80                    min_age: 0
+chen,40,abc
+dia,28,60</div>
+  <div class="fx" data-lang="py">import csv, logging, yaml
+from pathlib import Path
+import pandas as pd
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+log = logging.getLogger("etl")
+
+class RowError(ValueError):
+    def __init__(self, line, msg):
+        self.line = line
+        super().__init__(f"line {line}: {msg}")
+
+def parse(row, line, min_age):
+    try:
+        age, spend = int(row["age"]), float(row["spend"])
+    except ValueError as e:
+        raise RowError(line, "not a number") from e
+    if age &lt; min_age:
+        raise RowError(line, f"age {age} &lt; {min_age}")
+    return {"user": row["user"], "age": age, "spend": spend}
+
+def run(cfg_path="config.yaml"):
+    cfg = yaml.safe_load(Path(cfg_path).read_text())
+    good, bad = [], 0
+    with open(cfg["input"], newline="", encoding="utf-8") as f:
+        for line, row in enumerate(csv.DictReader(f), start=2):
+            try:
+                good.append(parse(row, line, cfg["min_age"]))
+            except RowError as e:
+                bad += 1
+                log.warning("skip %s", e)
+    out = Path(cfg["output"])
+    out.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(good).to_parquet(out, index=False)
+    log.info("wrote %d rows to %s (%d skipped)", len(good), out, bad)
+
+if __name__ == "__main__":
+    run()
+    print(pd.read_parquet("clean/users.parquet"))</div>
+  <div class="fx" data-lang="text">WARNING skip line 3: age -4 &lt; 0
+WARNING skip line 4: not a number
+INFO wrote 2 rows to clean/users.parquet (2 skipped)
+   user  age  spend
+0  asha   31  120.5
+1   dia   28   60.0</div>
+  <p><strong>Extend it:</strong> write rejected rows to <code>clean/rejects.csv</code>, and raise a <code>PipelineError</code> if more than 30% of rows fail.</p>
+
+  <h2 id="pi-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>When do <code>else</code> and <code>finally</code> run in a try statement?</summary><div class="qa-body"><code>else</code> runs only if the try block raised nothing. <code>finally</code> always runs: after success, after a handled or unhandled exception, even after a <code>return</code> in try. Use else for success-only work, finally for cleanup.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What's the output? <code>def f():<br>&nbsp;&nbsp;try: return "try"<br>&nbsp;&nbsp;finally: print("finally")<br>print(f())</code></summary><div class="qa-body"><code>finally</code> then <code>try</code>. The return value is computed, finally runs, then the function returns. (A <code>return</code> inside finally would override it — avoid that.)</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why is a bare <code>except:</code> dangerous?</summary><div class="qa-body">It catches <code>BaseException</code>, including <code>KeyboardInterrupt</code> and <code>SystemExit</code>, so Ctrl+C and <code>sys.exit</code> stop working, and it hides real bugs. Catch specific exceptions; use <code>except Exception</code> only at a top-level boundary, and log it.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How would you design exceptions for an ML pipeline library?</summary><div class="qa-body">One base <code>PipelineError(Exception)</code>; subclasses per failure kind (<code>DataValidationError</code>, <code>ModelNotFoundError</code>), optionally also inheriting a built-in (<code>class DataValidationError(PipelineError, ValueError)</code>). Store context as attributes, and wrap low-level errors with <code>raise ... from e</code> so the cause survives.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span><code>raise</code> vs <code>raise e</code> vs <code>raise New() from e</code>?</summary><div class="qa-body">Bare <code>raise</code> re-raises the current exception unchanged. <code>raise e</code> re-raises the same object (traceback gains the current line). <code>raise New() from e</code> raises a new exception and links the original as <code>__cause__</code>, printed as "The above exception was the direct cause…".</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you log an exception with its traceback?</summary><div class="qa-body">Inside the except block: <code>logger.exception("context message")</code> — ERROR level plus the full traceback. Equivalent: <code>logger.error("...", exc_info=True)</code>. <code>print(e)</code> loses the stack.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why use <code>with open(...)</code>?</summary><div class="qa-body">It's a context manager: the file is closed when the block exits, even if an exception is raised mid-read. Leaking file handles causes "too many open files" and unflushed writes.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>CSV vs Parquet for a 10 GB training set?</summary><div class="qa-body">Parquet: columnar (read only needed columns), compressed (here 13.7 MB → 3.4 MB), typed (no re-parsing dates/ints), with row-group stats for filter pushdown. CSV is text, untyped and must be fully parsed — fine only for small hand-offs.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Is it safe to load a pickled model someone emailed you?</summary><div class="qa-body">No. Unpickling can call any function via <code>__reduce__</code> — the demo ran a shell command just by loading. Only unpickle trusted files; prefer safetensors (weights), ONNX, or the framework's own safe format, and pin library versions since pickles are version-fragile.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why <code>yaml.safe_load</code>, and what are YAML's type gotchas?</summary><div class="qa-body"><code>safe_load</code> builds only plain types; unsafe loaders can construct arbitrary Python objects (code execution). Gotchas: <code>NO</code>/<code>yes</code>/<code>on</code> become booleans and <code>1.10</code> becomes float 1.1 — quote such values.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does <code>if __name__ == "__main__":</code> do?</summary><div class="qa-body">The block runs only when the file is executed directly (<code>__name__</code> is <code>"__main__"</code>), not when imported (then <code>__name__</code> is the module name). It keeps scripts importable without side effects like starting training.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What happens when you import a module twice? What is <code>__init__.py</code> for?</summary><div class="qa-body">The first import runs the file and caches the module in <code>sys.modules</code>; later imports reuse it (no re-run; <code>importlib.reload</code> forces it). <code>__init__.py</code> marks a regular package, runs on first import, and typically re-exports the public API.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>requirements.txt vs a lock file — which gives reproducible builds?</summary><div class="qa-body">The lock file: the resolver records every package in the tree with exact versions and hashes. A requirements.txt usually lists only direct deps (often as ranges), so transitive versions drift. Commit <code>pyproject.toml</code> + lock for apps; recreate with <code>poetry install</code> / <code>uv sync</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why use a virtual environment at all?</summary><div class="qa-body">Isolation: project A can pin numpy 1.26 while project B uses numpy 2.x, without either breaking the other or the OS's Python. It also makes the dependency list explicit and reproducible in CI and Docker.</div></details>
+</main>`
+});
+
+
 // notes/python/py_oop.js — OOP
 Object.assign(TOPIC_CONTENT, {
   "py_oop": `<main>
