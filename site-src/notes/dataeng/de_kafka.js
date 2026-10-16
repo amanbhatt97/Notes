@@ -231,7 +231,7 @@ clicks   0          2               4               2</div>
       <text x="10" y="80" font-weight="bold">At-least-once</text>
       <rect x="150" y="64" width="90" height="26" rx="4" class="fb"/><text x="195" y="82" text-anchor="middle">process</text>
       <rect x="250" y="64" width="90" height="26" rx="4" class="fv"/><text x="295" y="82" text-anchor="middle">commit</text>
-      <text x="355" y="82" class="tg">crash before commit → redo (duplicate)</text>
+      <text x="355" y="82" class="tg">crash before commit → duplicate</text>
       <text x="10" y="130" font-weight="bold">Exactly-once</text>
       <rect x="150" y="114" width="190" height="26" rx="4" class="ft"/><text x="245" y="132" text-anchor="middle">process + commit atomically</text>
       <text x="355" y="132">transaction, or idempotent sink</text>
@@ -294,9 +294,9 @@ feats.writeStream.outputMode("update").format("console") \\
     <defs><marker id="kf-ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <g font-size="11" text-anchor="middle">
       <rect x="5" y="40" width="80" height="40" rx="6" class="fs"/><text x="45" y="64">App events</text>
-      <rect x="115" y="40" width="80" height="40" rx="6" class="fb"/><text x="155" y="64">Kafka clicks</text>
+      <rect x="115" y="40" width="80" height="40" rx="6" class="fb"/><text x="155" y="58">Kafka</text><text x="155" y="72">clicks</text>
       <rect x="225" y="40" width="110" height="40" rx="6" class="fv"/><text x="280" y="58">feature job</text><text x="280" y="72">windows per user</text>
-      <rect x="370" y="10" width="110" height="36" rx="6" class="fg"/><text x="425" y="32">Online store (Redis)</text>
+      <rect x="370" y="10" width="110" height="36" rx="6" class="fg"/><text x="425" y="25">Online store</text><text x="425" y="39">(Redis)</text>
       <rect x="370" y="78" width="110" height="36" rx="6" class="ft"/><text x="425" y="100">Offline (lake)</text>
       <rect x="510" y="10" width="80" height="36" rx="6" class="fr"/><text x="550" y="32">Model API</text>
       <rect x="510" y="78" width="80" height="36" rx="6" class="fs"/><text x="550" y="100">Training</text>
