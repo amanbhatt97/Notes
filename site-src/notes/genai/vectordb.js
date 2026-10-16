@@ -4,6 +4,105 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Embeddings &amp; Vector DBs</h1>
   <p class="lead">How to search by <em>meaning</em>: turn text into vectors, then find the nearest ones fast. Builds on contextual embeddings from 01–02 and the API basics from 05. Everything here is the retrieval engine behind 07 · RAG.</p>
 
+  <h2 id="vd-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+  <div class="mm-center">Embeddings &amp; Vector DBs</div>
+  <div class="mm-branches">
+    <div class="mm-branch">
+      <div class="mm-title">Why vector search</div>
+      <ul>
+        <li><b>Gap</b> — SQL matches exact values; no operator for "same meaning"</li>
+        <li><b>Vector DB</b> — stores embeddings, returns k nearest to a query vector</li>
+        <li><b>Pipeline</b> — docs → embed → store vector + text; query → same model → k nearest</li>
+        <li>💡 "restaurants within 2 km", in 1,536 dimensions</li>
+        <li>⚠ <b>Doesn't replace SQL</b> — need metadata filters (user, date, status) too</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Sentence embeddings</div>
+      <ul>
+        <li><b>What</b> — one fixed-length vector per text (384–3,072 floats)</li>
+        <li><b>How</b> — pool transformer token outputs + contrastive training on (query, passage) pairs</li>
+        <li><b>Bi-encoder</b> — query and docs embedded separately → docs pre-computed</li>
+        <li><b>Models</b> — text-embedding-3-small 1,536 · bge-m3 1,024 · MiniLM 384</li>
+        <li><b>Choose</b> — MTEB leaderboard, then test on your data; mind query:/passage: prefixes</li>
+        <li>⚠ <b>Models don't mix</b> — new model = re-embed everything; store model + version</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Similarity metrics</div>
+      <ul>
+        <li><b>Cosine</b> — A·B / (‖A‖‖B‖): angle only, −1..1; text default</li>
+        <li><b>Dot</b> — angle and length; <b>L2</b> — endpoint distance</li>
+        <li><b>Unit vectors</b> — all three rank the same; ‖A−B‖² = 2 − 2cos</li>
+        <li><b>Trick</b> — normalise at index time, use cheap dot product</li>
+        <li>⚠ <b>Wrong metric</b> ranks slightly wrong, silently</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">ANN &amp; trade-offs</div>
+      <ul>
+        <li><b>Brute force</b> — 10M × 1,536 ≈ 15B mult-adds/query: too slow</li>
+        <li><b>ANN</b> — skip 95–99% of comparisons, lose a little recall, ~100× faster</li>
+        <li><b>Families</b> — graph (HNSW), clusters (IVF), compression (PQ)</li>
+        <li><b>Triangle</b> — recall vs latency vs memory: pick the hard constraint first</li>
+        <li>💡 library: read every book / go to the shelf / follow "similar books"</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">HNSW</div>
+      <ul>
+        <li><b>Structure</b> — layered graphs: layer 0 = all vectors, upper = sparse long links</li>
+        <li><b>Search</b> — greedy hops at top, drop a layer when stuck, wide local search at 0</li>
+        <li><b>Speed</b> — ~log n hops, ~1 ms at tens of millions; inserts without rebuild</li>
+        <li><b>Knobs</b> — <code>M</code> 16–64 links · <code>ef_construction</code> 100–200 · <code>ef_search</code> 40–200</li>
+        <li>⚠ <b>RAM-hungry</b> — 10M × 1,536 × 4 B ≈ 61 GB + links</li>
+        <li>💡 highway → ring road → your street</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">IVF + PQ</div>
+      <ul>
+        <li><b>IVF</b> — k-means into K clusters; query searches <code>nprobe</code> nearest clusters</li>
+        <li><b>Example</b> — 10M, K = 1,000, nprobe = 10 → 100K compared</li>
+        <li>⚠ <b>Boundary problem</b> — neighbour in next cluster; raise nprobe (10–20); retrain on drift</li>
+        <li><b>PQ</b> — 768-d → 96 sub-vectors × 1-byte code: 3,072 B → 96 B (32×)</li>
+        <li><b>PQ cost</b> — approximate distances; re-score top candidates</li>
+        <li>⚠ <b>PQ is compression, not search</b> → IVF-PQ (FAISS)</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Hybrid search</div>
+      <ul>
+        <li><b>Dense misses</b> exact codes, versions, SKUs; <b>BM25 misses</b> paraphrase</li>
+        <li><b>RRF</b> — <code>Σ 1 / (60 + rank)</code>, ranks only, no score normalising</li>
+        <li><b>Example</b> — dense [A,B,C] + BM25 [C,A,D] → A, C, B, D</li>
+        <li><b>RAG</b> — retrieve ~50 (recall) → rerank to ~5 (precision) in 07</li>
+        <li>💡 two detectives: one for meaning, one for case numbers</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Choosing a vector DB</div>
+      <ul>
+        <li><b>Chroma</b> prototype · <b>pgvector</b> already on Postgres · <b>Qdrant</b> heavy filters · <b>Pinecone</b> managed · <b>Milvus</b> billions</li>
+        <li><b>Ask</b> — how many vectors? how selective are filters? who runs it?</li>
+        <li>⚠ <b>Post-filtering</b> — 1% filter after ANN: ask 50, get 1; use filter-aware search / iterative scans / partitions</li>
+        <li><b>Benchmark</b> recall + p95 on your data</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">pgvector essentials</div>
+      <ul>
+        <li><b>Column</b> — <code>embedding vector(384)</code></li>
+        <li><b>Operators</b> — <code>&lt;=&gt;</code> cosine distance · <code>&lt;-&gt;</code> L2 · <code>&lt;#&gt;</code> negative inner product</li>
+        <li><b>Index</b> — <code>USING hnsw (embedding vector_cosine_ops)</code>; opclass must match operator</li>
+        <li><b>Recall knob</b> — <code>SET hnsw.ef_search = 100</code> (default 40)</li>
+        <li>⚠ <b>ORDER BY ... DESC</b> returns the least similar: it's a distance</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -16,14 +115,24 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="vd-hyb"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Hybrid Search</span><span class="rm-sub">Dense + BM25 via RRF</span></div></div>
       <div class="rm-item rm-done" data-target="vd-choose"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Choosing a Vector DB</span><span class="rm-sub">Chroma, pgvector, Qdrant…</span></div></div>
       <div class="rm-item rm-done" data-target="vd-build"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Build It</span><span class="rm-sub">numpy search, then pgvector</span></div></div>
-      <div class="rm-item rm-done" data-target="vd-rev"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 9 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="vd-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="vd-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
   <h2 id="vd-why"><span class="num">01</span>Why Vector Search</h2>
-  <p>SQL finds exact values: <code>WHERE category = 'AI'</code>. No SQL operator means "find text that <em>means</em> the same as this, even with zero shared words".</p>
-  <p>A <strong>vector database</strong> stores embeddings and returns the <em>k</em> vectors closest to a query vector (k-nearest-neighbour search).</p>
+  <p>SQL finds exact values. No operator means "text that <em>means</em> this, with zero shared words". A <strong>vector database</strong> stores embeddings and returns the <em>k</em> vectors closest to a query vector.</p>
+  <figure class="viz"><svg viewBox="0 0 600 230" width="600">
+    <circle cx="120" cy="100" r="62" fill="none" class="st" stroke-dasharray="5 4"/>
+    <circle cx="110" cy="70" r="5" class="tb"/><text x="119" y="74">kitten sleeping</text>
+    <circle cx="150" cy="110" r="5" class="tb"/><text x="159" y="114">cat sat on mat</text>
+    <circle cx="80" cy="140" r="5" class="tb"/><text x="89" y="144">dog chased ball</text>
+    <circle cx="450" cy="60" r="5" class="tg"/><text x="459" y="64">stocks fell</text>
+    <circle cx="450" cy="150" r="5" class="tr"/><text x="459" y="154">bread recipe</text>
+    <circle cx="330" cy="190" r="5" class="tr"/><text x="339" y="194">dog treats recipe</text>
+    <path d="M120,100 l4,9 l10,1 l-8,6 l3,10 l-9,-6 l-9,6 l3,-10 l-8,-6 l10,-1 z" class="fr sr" transform="translate(0,-12)"/>
+    <text x="40" y="200" class="tr">★ query "puppy napping"</text>
+    <text x="200" y="40" class="tm">k = 3 nearest</text>
+    </svg><figcaption>Each text is a point; similar meaning = nearby. Search = embed the query with the same model, return the k closest points.</figcaption></figure>
   <div class="flow"><span>Docs</span><span>Embedding model</span><span>Vectors + text stored</span><span>Query → same model</span><span>k nearest</span><span>Original text</span></div>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Looking up a restaurant by exact name is SQL. "All restaurants within 2 km of me" is vector search: points close to your coordinates. A vector DB does this in 1,536 dimensions, where "close" means "similar meaning".</p>
@@ -43,11 +152,10 @@ Object.assign(TOPIC_CONTENT, {
   <div class="callout def"><span class="label">Definition</span>
     <p>A <strong>sentence embedding</strong> is one fixed-length vector (e.g. 384–3,072 floats) for a whole text. Similar meaning → vectors pointing in nearly the same direction.</p>
   </div>
-  <p>Word vectors (01) and token vectors (02) aren't enough: you need <em>one</em> vector per chunk to compare. Sentence-embedding models get it by pooling a transformer's token outputs, then training on (query, relevant passage) pairs so matches land close and non-matches far apart (contrastive learning).</p>
+  <div class="flow"><span>text</span><span>transformer: a vector per token</span><span>pool → one vector</span><span>contrastive training: matches close, non-matches far</span></div>
   <ul>
-    <li>"Heart attack" and "myocardial infarction" → tiny angle. "Heart attack" and "pizza recipe" → large angle.</li>
-    <li>You don't design the numbers. You call the model and trust the geometry.</li>
-    <li>These are <strong>bi-encoders</strong>: query and document are embedded separately, so documents can be embedded once, ahead of time.</li>
+    <li>"Heart attack" vs "myocardial infarction" → tiny angle; vs "pizza recipe" → large angle. You don't design the numbers; you trust the geometry.</li>
+    <li><strong>Bi-encoders</strong>: query and document embedded separately, so documents are embedded once, ahead of time.</li>
   </ul>
   <table class="tbl">
     <tr><th>Model</th><th>Dims</th><th>Max input</th><th>Note</th></tr>
@@ -68,21 +176,30 @@ Object.assign(TOPIC_CONTENT, {
     <tr><td><strong>Dot product</strong></td><td>Σ AᵢBᵢ</td><td>Angle <em>and</em> length</td></tr>
     <tr><td><strong>Euclidean (L2)</strong></td><td>√Σ(Aᵢ−Bᵢ)²</td><td>Distance between endpoints</td></tr>
   </table>
+  <figure class="viz"><svg viewBox="0 0 560 190" width="560">
+    <defs><marker id="vd-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker><marker id="vd-ahb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="tb"/></marker></defs>
+    <line x1="40" y1="170" x2="144" y2="110" class="sb" stroke-width="2" marker-end="url(#vd-ahb)"/>
+    <line x1="40" y1="170" x2="300" y2="20" stroke="currentColor" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#vd-ah)"/>
+    <line x1="40" y1="170" x2="120" y2="55" stroke="currentColor" stroke-width="1.5" marker-end="url(#vd-ah)"/>
+    <text x="149" y="126" class="tb">A short</text><text x="130" y="12">A long (same direction)</text><text x="126" y="55">B</text>
+    <path d="M92,140 A60,60 0 0,0 74,121" fill="none" class="st" stroke-width="2"/>
+    <text x="108" y="118" class="tm">θ</text>
+    <line x1="144" y1="110" x2="300" y2="20" class="sr" stroke-dasharray="2 3"/>
+    <text x="320" y="150" class="tm">cosine(A short, A long) = 1</text><text x="320" y="168" class="tr">L2 distance: large</text>
+    </svg><figcaption>Cosine looks only at the angle θ; Euclidean also counts length. Normalise to unit length and they rank the same.</figcaption></figure>
   <ul>
-    <li>For text, <strong>direction = meaning</strong>; length often reflects text length or word frequency. So cosine is the usual default.</li>
-    <li>On <strong>unit-length</strong> (L2-normalised) vectors all three agree on ranking: dot = cosine, and ‖A−B‖² = 2 − 2·cos.</li>
-    <li>That's why many systems normalise once at index time, then use the cheaper dot product.</li>
+    <li>For text, <strong>direction = meaning</strong>; length often tracks text length. So cosine is the default.</li>
+    <li><strong>Unit-length</strong> vectors: dot = cosine and ‖A−B‖² = 2 − 2·cos, so all three rank the same. Normalise once at index time, then use the cheaper dot product.</li>
   </ul>
-  <div class="callout intu"><span class="label">Intuition</span>
-    <p>Two arrows pointing the same way, one short and one long: cosine says "identical topic"; Euclidean says "far apart". For text you usually want the first answer.</p>
-  </div>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Use the metric the model was trained for (its docs say). The wrong one doesn't crash. It just ranks slightly wrong, which is worse because nobody notices.</p>
   </div>
 
   <h2 id="vd-ann"><span class="num">04</span>ANN &amp; the Trade-off Triangle</h2>
-  <p><strong>Brute force</strong> (exact kNN) compares the query with every vector. 10M vectors × 1,536 dims ≈ 15 billion multiply-adds per query: hundreds of ms on CPU, too slow at real traffic.</p>
-  <p><strong>ANN</strong> (approximate nearest neighbour) indexes pre-organise vectors so a query skips 95–99% of comparisons. You give up a little recall (occasionally missing a true neighbour) for ~100× speed.</p>
+  <div class="cards">
+    <div><b>Brute force (exact kNN)</b><p>Compare with every vector. 10M × 1,536 dims ≈ 15 billion multiply-adds per query.</p><small>Hundreds of ms on CPU: too slow at real traffic</small></div>
+    <div><b>ANN (approximate)</b><p>Pre-organised index skips 95–99% of comparisons.</p><small>~100× faster; occasionally misses a true neighbour</small></div>
+  </div>
   <div class="cards">
     <div><b>Graph (HNSW)</b><p>Link similar vectors; walk the graph.</p><small>Best recall + latency. Whole graph in RAM.</small></div>
     <div><b>Clusters (IVF)</b><p>Group vectors; search only nearby groups.</p><small>Less RAM. Misses at cluster edges.</small></div>
@@ -106,8 +223,50 @@ Object.assign(TOPIC_CONTENT, {
   <div class="callout def"><span class="label">Definition</span>
     <p><strong>Hierarchical Navigable Small World</strong>: a stack of graphs. Layer 0 holds every vector, linked to its nearest neighbours. Each higher layer keeps a small random subset with longer-range links.</p>
   </div>
-  <p>Problem it solves: in one flat graph, greedy search takes many tiny hops. Upper layers give long jumps first.</p>
-  <div class="flow"><span>Enter top layer</span><span>Greedy hop to closest neighbour</span><span>Stuck? Drop a layer</span><span>Layer 0: wider local search</span><span>Top-k</span></div>
+  <p>A flat graph needs many tiny hops; upper layers give long jumps first.</p>
+  <figure class="viz"><svg viewBox="0 0 600 250" width="600">
+    <defs><marker id="vd-ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="tr"/></marker></defs>
+    <rect x="50" y="20" width="540" height="40" rx="6" class="fs"/><text x="10" y="44" class="tm">2</text>
+    <line x1="100" y1="40" x2="480" y2="40" stroke="currentColor" opacity="0.45"/>
+    <circle cx="100" cy="40" r="6" class="fb sb"/>
+    <circle cx="480" cy="40" r="6" class="fb sb"/>
+    <rect x="50" y="95" width="540" height="40" rx="6" class="fs"/><text x="10" y="119" class="tm">1</text>
+    <line x1="100" y1="115" x2="230" y2="115" stroke="currentColor" opacity="0.45"/>
+    <line x1="230" y1="115" x2="380" y2="115" stroke="currentColor" opacity="0.45"/>
+    <line x1="380" y1="115" x2="480" y2="115" stroke="currentColor" opacity="0.45"/>
+    <circle cx="100" cy="115" r="6" class="fb sb"/>
+    <circle cx="230" cy="115" r="6" class="fb sb"/>
+    <circle cx="380" cy="115" r="6" class="fb sb"/>
+    <circle cx="480" cy="115" r="6" class="fb sb"/>
+    <rect x="50" y="170" width="540" height="40" rx="6" class="fs"/><text x="10" y="194" class="tm">0</text>
+    <line x1="70" y1="190" x2="100" y2="190" stroke="currentColor" opacity="0.45"/>
+    <line x1="100" y1="190" x2="140" y2="190" stroke="currentColor" opacity="0.45"/>
+    <line x1="140" y1="190" x2="190" y2="190" stroke="currentColor" opacity="0.45"/>
+    <line x1="190" y1="190" x2="230" y2="190" stroke="currentColor" opacity="0.45"/>
+    <line x1="230" y1="190" x2="270" y2="190" stroke="currentColor" opacity="0.45"/>
+    <line x1="270" y1="190" x2="320" y2="190" stroke="currentColor" opacity="0.45"/>
+    <line x1="320" y1="190" x2="380" y2="190" stroke="currentColor" opacity="0.45"/>
+    <line x1="380" y1="190" x2="420" y2="190" stroke="currentColor" opacity="0.45"/>
+    <line x1="420" y1="190" x2="450" y2="190" stroke="currentColor" opacity="0.45"/>
+    <line x1="450" y1="190" x2="480" y2="190" stroke="currentColor" opacity="0.45"/>
+    <line x1="480" y1="190" x2="530" y2="190" stroke="currentColor" opacity="0.45"/>
+    <circle cx="70" cy="190" r="6" class="fb sb"/>
+    <circle cx="100" cy="190" r="6" class="fb sb"/>
+    <circle cx="140" cy="190" r="6" class="fb sb"/>
+    <circle cx="190" cy="190" r="6" class="fb sb"/>
+    <circle cx="230" cy="190" r="6" class="fb sb"/>
+    <circle cx="270" cy="190" r="6" class="fb sb"/>
+    <circle cx="320" cy="190" r="6" class="fb sb"/>
+    <circle cx="380" cy="190" r="6" class="fb sb"/>
+    <circle cx="420" cy="190" r="6" class="fb sb"/>
+    <circle cx="450" cy="190" r="6" class="fb sb"/>
+    <circle cx="480" cy="190" r="6" class="fb sb"/>
+    <circle cx="530" cy="190" r="6" class="fb sb"/>
+    <text x="10" y="18" class="tm">layer</text>
+    <polyline points="100,40 480,40 480,115 380,115 380,190 420,190" fill="none" class="sr" stroke-width="2.5" marker-end="url(#vd-ah2)"/>
+    <circle cx="420" cy="190" r="8" class="fr sr"/><text x="400" y="230" class="tr">target</text><text x="70" y="70" class="tm">enter at top</text>
+    <text x="250" y="28" class="tm">few nodes, long links</text><text x="190" y="230" class="tm">every vector, short links</text>
+    </svg><figcaption>Search: long hops on sparse upper layers, drop down when no neighbour is closer, finish with a local search (ef_search) on layer 0.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Delhi to a street in Mumbai: national highway → city ring road → suburb road → your street. You only switch to finer roads once you're in the right area. HNSW builds these road networks from your data.</p>
   </div>
@@ -124,11 +283,34 @@ Object.assign(TOPIC_CONTENT, {
 
   <h2 id="vd-ivf"><span class="num">06</span>IVF + Product Quantization</h2>
   <h3>IVF (inverted file index)</h3>
-  <ul>
-    <li><strong>Build:</strong> k-means splits all vectors into K clusters. Each vector is filed under its nearest centroid.</li>
-    <li><strong>Query:</strong> compare with the K centroids (cheap), then search only the <code>nprobe</code> nearest clusters.</li>
-    <li>10M vectors, K = 1,000, nprobe = 10 → search 100K vectors instead of 10M: 100× less work.</li>
-  </ul>
+  <div class="flow"><span>Build: k-means → K clusters</span><span>Query: compare with K centroids</span><span>Search only the nprobe nearest clusters</span></div>
+  <p>10M vectors, K = 1,000, nprobe = 10 → 100K compared instead of 10M: 100× less work.</p>
+  <figure class="viz"><svg viewBox="0 0 600 220" width="600">
+    <line x1="200" y1="10" x2="240" y2="210" stroke="currentColor" opacity="0.5"/><line x1="400" y1="10" x2="370" y2="210" stroke="currentColor" opacity="0.5"/>
+    <circle cx="60" cy="50" r="4" class="tb"/>
+    <circle cx="90" cy="120" r="4" class="tb"/>
+    <circle cx="140" cy="80" r="4" class="tb"/>
+    <circle cx="110" cy="170" r="4" class="tb"/>
+    <circle cx="160" cy="150" r="4" class="tb"/>
+    <circle cx="150" cy="40" r="4" class="tb"/>
+    <circle cx="260" cy="60" r="4" class="tg"/>
+    <circle cx="300" cy="150" r="4" class="tg"/>
+    <circle cx="330" cy="90" r="4" class="tg"/>
+    <circle cx="280" cy="190" r="4" class="tg"/>
+    <circle cx="350" cy="170" r="4" class="tg"/>
+    <circle cx="230" cy="115" r="4" class="tg"/>
+    <circle cx="450" cy="60" r="4" class="tm"/>
+    <circle cx="500" cy="140" r="4" class="tm"/>
+    <circle cx="540" cy="80" r="4" class="tm"/>
+    <circle cx="430" cy="180" r="4" class="tm"/>
+    <circle cx="480" cy="100" r="4" class="tm"/>
+    <path d="M116,106 l8,8 M124,106 l-8,8" stroke="currentColor" stroke-width="2.5"/>
+    <path d="M291,121 l8,8 M299,121 l-8,8" stroke="currentColor" stroke-width="2.5"/>
+    <path d="M481,106 l8,8 M489,106 l-8,8" stroke="currentColor" stroke-width="2.5"/>
+    <circle cx="195" cy="118" r="7" class="fr sr"/><text x="40" y="205" class="tr">query near an edge</text>
+    <circle cx="230" cy="115" r="10" fill="none" class="sg" stroke-width="2"/><text x="250" y="30" class="tg">true nearest is here</text>
+    <text x="40" y="25" class="tm">× = centroid</text><text x="440" y="210" class="tm">nprobe=1 misses it</text>
+    </svg><figcaption>IVF searches only the nprobe clusters with the nearest centroids. Near a boundary the true neighbour sits next door: raise nprobe.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Tax papers in 12 monthly folders. Need March? Open March only. IVF sorts vectors into folders at build time and opens only the relevant ones.</p>
   </div>
@@ -152,10 +334,11 @@ Object.assign(TOPIC_CONTENT, {
 
   <h2 id="vd-hyb"><span class="num">07</span>Hybrid Search</h2>
   <p>Dense and keyword search fail in <em>different</em> ways, so combining them catches what each misses.</p>
-  <ul>
-    <li><strong>Dense</strong> misses exact rare terms: error codes, versions like "v2.3.1", product SKUs.</li>
-    <li><strong>BM25</strong> (classic keyword scoring: term frequency × rarity, adjusted for doc length) misses paraphrase: "heart attack" vs "myocardial infarction" scores 0.</li>
-  </ul>
+  <table class="tbl">
+    <tr><th>Retriever</th><th>Misses</th><th>Example</th></tr>
+    <tr><td><strong>Dense</strong></td><td>Exact rare terms</td><td>error codes, "v2.3.1", SKUs</td></tr>
+    <tr><td><strong>BM25</strong> (TF-IDF-style keyword score, 01)</td><td>Paraphrase</td><td>"heart attack" vs "myocardial infarction" = 0</td></tr>
+  </table>
   <div class="callout def"><span class="label">Reciprocal Rank Fusion (RRF)</span>
     <p>score(doc) = Σ 1 / (k + rank) across retrievers, with k ≈ 60. Uses ranks only, so no need to normalise BM25 and cosine scores onto one scale.</p>
   </div>
@@ -295,20 +478,7 @@ LIMIT 2;</div>
     <p><code>ORDER BY embedding &lt;=&gt; q DESC</code> returns the <em>least</em> similar rows. It's a distance: smaller is closer.</p>
   </div>
 
-  <h2 id="vd-rev"><span class="num">10</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Vector DB:</strong> stores embeddings, returns the k nearest to a query vector. Complements SQL; doesn't replace it.</li>
-    <li><strong>Sentence embedding:</strong> one vector per text from a contrastively trained bi-encoder; similar meaning → small angle.</li>
-    <li><strong>Same model everywhere:</strong> index and query with one model; changing it means re-embedding everything.</li>
-    <li><strong>Metrics:</strong> cosine = angle; on normalised vectors cosine, dot and L2 give the same ranking.</li>
-    <li><strong>ANN:</strong> skip 95–99% of comparisons for a small recall loss. Brute force dies around millions of vectors.</li>
-    <li><strong>HNSW:</strong> layered graph, long jumps then local search, ~log n hops; best recall/latency, RAM-hungry. Knobs M, ef_search.</li>
-    <li><strong>IVF-PQ:</strong> k-means clusters + nprobe; PQ compresses 32×. For data bigger than RAM. Watch cluster boundaries.</li>
-    <li><strong>Hybrid:</strong> dense + BM25 fused by RRF Σ1/(60+rank); catches both paraphrase and exact codes.</li>
-    <li><strong>Choosing:</strong> scale, filter selectivity, ops capacity. Post-filtering with selective filters destroys recall.</li>
-  </ol></div>
-
-  <h2 id="vd-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <h2 id="vd-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>Why can't plain SQL find semantically similar documents?</summary><div class="qa-body">SQL indexes (B-trees) support exact matches and ranges. There's no column for "meaning" and no operator for "close in 1,536-d space". Embeddings encode meaning as geometry and a vector index finds nearby points. Real systems use both: vectors for meaning, SQL-style filters for user, date, status.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>When is dot product the same as cosine, and why would you prefer it?</summary><div class="qa-body">When vectors are L2-normalised: then ‖A‖ = ‖B‖ = 1 and A·B = cos θ. Normalise once at index time and use dot product at query time: same ranking, cheaper (no norms or square roots per comparison).</div></details>

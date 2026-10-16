@@ -4,6 +4,101 @@ Object.assign(TOPIC_CONTENT, {
   <h1>LLM APIs &amp; Tool Calling</h1>
   <p class="lead">You know how an LLM generates tokens (03) and how to write a good prompt (04). This note is the plumbing: the exact request and response shapes, and how a model "uses a tool" when it can only emit text. Every later note (RAG, agents, LangChain, MCP) is built on these mechanics.</p>
 
+  <h2 id="la-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+  <div class="mm-center">LLM APIs &amp; Tool Calling</div>
+  <div class="mm-branches">
+    <div class="mm-branch">
+      <div class="mm-title">Messages API</div>
+      <ul>
+        <li><b>Call</b> — <code>client.messages.create(model, max_tokens, system, messages, tools)</code></li>
+        <li><b>messages</b> — alternating user/assistant, first is user</li>
+        <li><b>system</b> — top-level field, not a message</li>
+        <li><b>Response</b> — list of content blocks: text, thinking, tool_use → check <code>block.type</code></li>
+        <li><b>Stateless</b> — resend the whole history every call; input grows per turn</li>
+        <li>⚠ <b>Append <code>response.content</code> whole</b>, not just the text</li>
+        <li>💡 call centre: new agent each call, hand over the full file</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">max_tokens &amp; stop_reason</div>
+      <ul>
+        <li><b>max_tokens</b> — required ceiling, not a target</li>
+        <li><b>stop_reason</b> — end_turn · max_tokens (truncated) · tool_use · stop_sequence · pause_turn · refusal</li>
+        <li>⚠ <b>max_tokens stop</b> = cut-off JSON / half tool call — never use it</li>
+        <li><b>Thinking</b> — always on, adaptive on claude-opus-5-5; <code>output_config={"effort": ...}</code>; never budget_tokens</li>
+        <li>⚠ <b>No prefill</b> on current models</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Streaming</div>
+      <ul>
+        <li><b>How</b> — <code>client.messages.stream(...)</code>, <code>text_stream</code>, <code>get_final_message()</code></li>
+        <li><b>Events</b> — message_start → block_start → deltas → block_stop → message_delta → message_stop</li>
+        <li><b>Wins</b> — time-to-first-token; not total time or cost</li>
+        <li><b>Use</b> — chat UIs, long outputs (SDK refuses non-stream calls &gt; ~10 min)</li>
+        <li><b>Tool input</b> streams as <code>input_json_delta</code>: act on the final block</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Structured outputs</div>
+      <ul>
+        <li><b>Why</b> — prompt-only JSON breaks pipelines "sometimes"</li>
+        <li><b>How</b> — <code>output_config={"format": {"type": "json_schema", ...}}</code> or <code>messages.parse(output_format=Model)</code></li>
+        <li><b>Tool args</b> — <code>strict: true</code></li>
+        <li>⚠ <b>additionalProperties: false</b> on every object; min/maxLength not API-enforced</li>
+        <li>⚠ refusal / max_tokens can still break the schema</li>
+        <li>💡 paper form with fixed boxes</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Tool calling</div>
+      <ul>
+        <li><b>Definition</b> — name + description + JSON Schema; model asks, <i>your code</i> runs</li>
+        <li><b>Loop</b> — tool_use → run → tool_result (matching <code>tool_use_id</code>) → call again</li>
+        <li><b>Parallel</b> — several tool_use blocks → all results in ONE user message</li>
+        <li><b>Errors</b> — return <code>is_error: true</code> + message, don't crash</li>
+        <li><b>Good tool</b> — verb_noun name, "when to call" in description, enums, strict</li>
+        <li><b>tool_choice</b> — auto / none; any/tool forced → 400 on claude-opus-5-5</li>
+        <li>⚠ <b>The model never runs code</b> — you own validation, permissions</li>
+        <li>💡 head chef writes tickets; kitchen (your code) cooks</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Prompt caching</div>
+      <ul>
+        <li><b>What</b> — reuse a processed prefix across calls</li>
+        <li><b>Order</b> — tools → system → messages; exact prefix match</li>
+        <li><b>How</b> — <code>cache_control={"type": "ephemeral"}</code> breakpoint (≤ 4) or top-level auto</li>
+        <li><b>Price</b> — write ≈1.25× (5 min) / 2× (1 h); read ≈0.1× (0.05× on opus-5-5)</li>
+        <li><b>Min prefix</b> — e.g. 512 tokens; shorter silently uncached</li>
+        <li>⚠ <b>Silent invalidators</b> — timestamps, unsorted JSON, varying tools; check <code>cache_read_input_tokens</code></li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Batches, limits, retries</div>
+      <ul>
+        <li><b>Batch API</b> — 50% off, async (≤ 24 h), results unordered → match <code>custom_id</code></li>
+        <li><b>429</b> rate limit · <b>5xx/529</b> overload → retry with backoff + jitter, honour retry-after</li>
+        <li><b>SDK</b> retries 408/409/429/5xx (default 2); tune <code>max_retries</code>, <code>timeout</code></li>
+        <li>⚠ <b>Never retry a 400</b> — fix the request</li>
+        <li><b>count_tokens</b> — free; tool schemas cost input tokens too</li>
+        <li><b>Cost</b> — 2k in + 500 out at $4/$20 per 1M = $0.018</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Build: weather + calculator</div>
+      <ul>
+        <li><b>Registry</b> — name → Python function</li>
+        <li><b>run_tool</b> — try/except → tool_result with is_error</li>
+        <li><b>Loop</b> — max_steps guard; stop when stop_reason ≠ tool_use</li>
+        <li><b>Calculator</b> — <code>ast</code> whitelist, never <code>eval</code> (inputs untrusted)</li>
+        <li><b>Test tools offline</b> like any function</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -15,13 +110,12 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="la-cache"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Prompt Caching</span><span class="rm-sub">Pay once for a long prefix</span></div></div>
       <div class="rm-item rm-done" data-target="la-scale"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Batches, Limits &amp; Retries</span><span class="rm-sub">Cheap bulk, robust calls</span></div></div>
       <div class="rm-item rm-done" data-target="la-build"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Build It</span><span class="rm-sub">Weather + calculator assistant</span></div></div>
-      <div class="rm-item rm-done" data-target="la-rev"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="la-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="la-qa"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
   <h2 id="la-msg"><span class="num">01</span>The Messages API</h2>
-  <p>One HTTP endpoint does almost everything: send a list of messages, get back the next assistant message. Code here uses the official Anthropic Python SDK (<code>pip install anthropic</code>). OpenAI, Gemini and others follow the same pattern with different field names.</p>
+  <p>One endpoint: send a list of messages, get back the next assistant message. Code uses the Anthropic Python SDK (<code>pip install anthropic</code>); OpenAI, Gemini and others follow the same pattern with different field names.</p>
   <div class="fx" data-lang="py">import anthropic
 
 client = anthropic.Anthropic()        # reads ANTHROPIC_API_KEY from the environment
@@ -57,7 +151,34 @@ messages.append({"role": "user", "content": "What is my name?"})
 r2 = client.messages.create(model="claude-opus-5-5", max_tokens=512, messages=messages)
 # r2 knows "Asha" only because turn 1 was sent again</div>
   <div class="callout anlg"><span class="label">Analogy</span><p>A call centre where a different agent picks up every time. They know nothing unless you hand over the full case file. Longer file = more reading = more cost and latency.</p></div>
-  <div class="callout intu"><span class="label">Consequence</span><p>Input tokens grow every turn, because turn 10 resends turns 1–9. That's why prompt caching (section 06) and trimming history matter. "Memory" in chat apps and agents is just your code choosing what to resend (memory types are covered in 08).</p></div>
+  <figure class="viz"><svg viewBox="0 0 600 160" width="600">
+    <text x="70" y="30" text-anchor="end" class="tm">call 1</text>
+    <rect x="80" y="12" width="46" height="24" class="fb sb"/><text x="103" y="29" text-anchor="middle">u1</text>
+    <text x="136" y="29" class="tm">→ a1</text>
+    <text x="70" y="64" text-anchor="end" class="tm">call 2</text>
+    <rect x="80" y="46" width="46" height="24" class="fb sb"/><text x="103" y="63" text-anchor="middle">u1</text>
+    <rect x="126" y="46" width="46" height="24" class="fg sg"/><text x="149" y="63" text-anchor="middle">a1</text>
+    <rect x="172" y="46" width="46" height="24" class="fb sb"/><text x="195" y="63" text-anchor="middle">u2</text>
+    <text x="228" y="63" class="tm">→ a2</text>
+    <text x="70" y="98" text-anchor="end" class="tm">call 3</text>
+    <rect x="80" y="80" width="46" height="24" class="fb sb"/><text x="103" y="97" text-anchor="middle">u1</text>
+    <rect x="126" y="80" width="46" height="24" class="fg sg"/><text x="149" y="97" text-anchor="middle">a1</text>
+    <rect x="172" y="80" width="46" height="24" class="fb sb"/><text x="195" y="97" text-anchor="middle">u2</text>
+    <rect x="218" y="80" width="46" height="24" class="fg sg"/><text x="241" y="97" text-anchor="middle">a2</text>
+    <rect x="264" y="80" width="46" height="24" class="fb sb"/><text x="287" y="97" text-anchor="middle">u3</text>
+    <text x="320" y="97" class="tm">→ a3</text>
+    <text x="70" y="132" text-anchor="end" class="tm">call 4</text>
+    <rect x="80" y="114" width="46" height="24" class="fb sb"/><text x="103" y="131" text-anchor="middle">u1</text>
+    <rect x="126" y="114" width="46" height="24" class="fg sg"/><text x="149" y="131" text-anchor="middle">a1</text>
+    <rect x="172" y="114" width="46" height="24" class="fb sb"/><text x="195" y="131" text-anchor="middle">u2</text>
+    <rect x="218" y="114" width="46" height="24" class="fg sg"/><text x="241" y="131" text-anchor="middle">a2</text>
+    <rect x="264" y="114" width="46" height="24" class="fb sb"/><text x="287" y="131" text-anchor="middle">u3</text>
+    <rect x="310" y="114" width="46" height="24" class="fg sg"/><text x="333" y="131" text-anchor="middle">a3</text>
+    <rect x="356" y="114" width="46" height="24" class="fb sb"/><text x="379" y="131" text-anchor="middle">u4</text>
+    <text x="412" y="131" class="tm">→ a4</text>
+    <text x="440" y="40" class="tm">input resent</text><text x="440" y="56" class="tm">every call:</text><text x="440" y="72" class="tr">grows each turn</text>
+    </svg><figcaption>Stateless API: call 4 resends u1…a3 plus u4. Cost and latency grow with history; caching and trimming fight it.</figcaption></figure>
+  <p>"Memory" in chat apps and agents is just your code choosing what to resend (memory types: 08).</p>
   <div class="callout trap"><span class="label">Trap</span><p>Appending only the reply's text instead of <code>response.content</code>. With tools or thinking, the full block list must go back unchanged, or the next call fails or loses context.</p></div>
 
   <h2 id="la-stop"><span class="num">02</span>max_tokens &amp; stop_reason</h2>
@@ -77,7 +198,23 @@ r2 = client.messages.create(model="claude-opus-5-5", max_tokens=512, messages=me
   <div class="callout trap"><span class="label">Trap</span><p>Old tutorials prefill the assistant turn (start the reply with <code>{</code>) to force JSON. Current models reject prefill. Use structured outputs (section 04) instead.</p></div>
 
   <h2 id="la-stream"><span class="num">03</span>Streaming</h2>
-  <p>Without streaming, the user stares at a spinner until the whole reply exists. With streaming, the server sends events as tokens are generated.</p>
+  <figure class="viz"><svg viewBox="0 0 600 120" width="600">
+    <text x="10" y="34" class="tm">no stream</text><rect x="100" y="18" width="400" height="24" class="fs"/><text x="300" y="35" text-anchor="middle" class="tm">spinner…</text><rect x="500" y="18" width="80" height="24" class="fg sg"/><text x="540" y="35" text-anchor="middle">all text</text>
+    <text x="10" y="82" class="tm">stream</text><rect x="100" y="66" width="40" height="24" class="fs"/>
+    <rect x="144" y="66" width="34" height="24" class="fg sg"/>
+    <rect x="184" y="66" width="34" height="24" class="fg sg"/>
+    <rect x="224" y="66" width="34" height="24" class="fg sg"/>
+    <rect x="264" y="66" width="34" height="24" class="fg sg"/>
+    <rect x="304" y="66" width="34" height="24" class="fg sg"/>
+    <rect x="344" y="66" width="34" height="24" class="fg sg"/>
+    <rect x="384" y="66" width="34" height="24" class="fg sg"/>
+    <rect x="424" y="66" width="34" height="24" class="fg sg"/>
+    <rect x="464" y="66" width="34" height="24" class="fg sg"/>
+    <rect x="504" y="66" width="34" height="24" class="fg sg"/>
+    <rect x="544" y="66" width="34" height="24" class="fg sg"/>
+    <line x1="140" y1="96" x2="140" y2="110" class="sb"/><text x="146" y="112" class="tb">first token (TTFT)</text>
+    <text x="580" y="112" text-anchor="end" class="tm">same end time</text>
+    </svg><figcaption>Streaming shows text after the first token instead of at the end. Total time and cost are unchanged.</figcaption></figure>
   <div class="fx" data-lang="py">with client.messages.stream(
     model="claude-opus-5-5",
     max_tokens=4096,
@@ -91,13 +228,12 @@ print("\\n", final.stop_reason, final.usage.output_tokens)</div>
   <div class="flow"><span>message_start</span><span>content_block_start</span><span>content_block_delta × N</span><span>content_block_stop</span><span>message_delta (stop_reason, usage)</span><span>message_stop</span></div>
   <div class="callout anlg"><span class="label">Analogy</span><p>Live subtitles vs. a transcript emailed after the show. Same words, same total time, but you start reading at once.</p></div>
   <ul>
-    <li><strong>Improves time-to-first-token</strong> (TTFT), not total time or cost.</li>
     <li>Use it for any chat UI, and for long outputs: the SDK refuses a non-streaming call it expects to run longer than about 10 minutes.</li>
     <li>Tool calls stream too: tool input arrives as <code>input_json_delta</code> fragments. Act only on the finished block from <code>get_final_message()</code>.</li>
   </ul>
 
   <h2 id="la-struct"><span class="num">04</span>Structured Outputs</h2>
-  <p>Asking for JSON in the prompt (04) works most of the time. "Most" breaks pipelines: a stray sentence or missing brace crashes <code>json.loads</code>. <strong>Structured outputs</strong> constrain decoding to a JSON Schema, so the result always parses and matches.</p>
+  <p>Prompt-only JSON (04) works "most of the time", and one stray sentence crashes <code>json.loads</code>. <strong>Structured outputs</strong> constrain decoding to a JSON Schema: the result always parses and matches.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>A paper form with fixed boxes vs. a blank page with "please include your name and city". The form can't come back without a city box.</p></div>
   <div class="fx" data-lang="py">import json
 
@@ -141,9 +277,27 @@ print(order.quantity + 1)</div>
 
   <h2 id="la-tools"><span class="num">05</span>Tool Calling</h2>
   <div class="callout def"><span class="label">Definition</span><p><strong>Tool calling</strong> (function calling): you describe functions with a name, a description and a JSON Schema. The model replies with a structured request to call one. <strong>Your code</strong> runs it and sends back the result.</p></div>
-  <p>Without tools, a model can't know today's weather, query your database or do exact arithmetic. It only predicts text. Tool calling turns "predict text" into "decide which action to take". That is the seed of every agent (08–09).</p>
+  <p>It turns "predict text" into "decide which action to take": weather, your database, exact arithmetic. The seed of every agent (08–09).</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>A head chef who never leaves the pass. They write order tickets ("2 × fries, table 4"); the kitchen staff do the actual work and send the plates back. The model writes tickets; your code is the kitchen.</p></div>
-  <div class="flow"><span>Define tools (schema)</span><span>Model replies tool_use</span><span>Your code runs the function</span><span>Send tool_result</span><span>Model answers (or calls again)</span></div>
+  <figure class="viz"><svg viewBox="0 0 620 315" width="620">
+    <defs><marker id="la-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <text x="90" y="20" text-anchor="middle">Your code</text><line x1="90" y1="30" x2="90" y2="290" stroke="currentColor" opacity="0.25" stroke-dasharray="3 3"/>
+    <text x="330" y="20" text-anchor="middle">Model (API)</text><line x1="330" y1="30" x2="330" y2="290" stroke="currentColor" opacity="0.25" stroke-dasharray="3 3"/>
+    <text x="540" y="20" text-anchor="middle">Tool function</text><line x1="540" y1="30" x2="540" y2="290" stroke="currentColor" opacity="0.25" stroke-dasharray="3 3"/>
+    <line x1="90" y1="55" x2="326" y2="55" class="sb" stroke-width="1.5" marker-end="url(#la-ah)"/>
+    <text x="210" y="49" text-anchor="middle" class="tm">user msg + tools schemas</text>
+    <line x1="330" y1="97" x2="94" y2="97" class="sr" stroke-width="1.5" marker-end="url(#la-ah)"/>
+    <text x="210" y="91" text-anchor="middle" class="tr">tool_use {city: Mumbai} · stop_reason=tool_use</text>
+    <line x1="90" y1="139" x2="536" y2="139" class="st" stroke-width="1.5" marker-end="url(#la-ah)"/>
+    <text x="315" y="133" text-anchor="middle" class="tm">get_weather("Mumbai", "celsius")</text>
+    <line x1="540" y1="181" x2="94" y2="181" class="st" stroke-width="1.5" marker-end="url(#la-ah)"/>
+    <text x="315" y="175" text-anchor="middle" class="tm">{"temp": 31, "condition": …}</text>
+    <line x1="90" y1="223" x2="326" y2="223" class="sb" stroke-width="1.5" marker-end="url(#la-ah)"/>
+    <text x="210" y="217" text-anchor="middle" class="tm">history + assistant turn + tool_result (same id)</text>
+    <line x1="330" y1="265" x2="94" y2="265" class="sg" stroke-width="1.5" marker-end="url(#la-ah)"/>
+    <text x="210" y="259" text-anchor="middle" class="tg">text answer · stop_reason=end_turn</text>
+    <text x="10" y="305" class="tm">↻ loop while stop_reason == "tool_use"</text>
+    </svg><figcaption>One tool round trip. The model only writes the request; your code runs the function and sends the result back.</figcaption></figure>
 
   <h3>One round trip, exact shapes</h3>
   <p><strong>Request 1</strong>: the user question plus tool definitions.</p>
@@ -236,7 +390,26 @@ print(order.quantity + 1)</div>
   <div class="callout trap"><span class="label">Trap</span><p>"The model ran my function." It didn't. It only wrote JSON. Your process executes the code, so you own validation, permissions and timeouts (deep dive in 14).</p></div>
 
   <h2 id="la-cache"><span class="num">06</span>Prompt Caching</h2>
-  <p>Agents and RAG resend the same long prefix (tools, system prompt, documents) on every call. <strong>Prompt caching</strong> stores the processed prefix server-side, so later calls that start with the same bytes are cheaper and faster.</p>
+  <p>Agents and RAG resend the same long prefix every call. <strong>Prompt caching</strong> stores the processed prefix server-side; later calls starting with the same bytes are cheaper and faster.</p>
+  <figure class="viz"><svg viewBox="0 0 600 170" width="600">
+    <text x="70" y="33" text-anchor="end" class="tm">call 1</text>
+    <rect x="80" y="15" width="110" height="26" class="fs"/><text x="135" y="33" text-anchor="middle">tools</text>
+    <rect x="190" y="15" width="170" height="26" class="fs"/><text x="275" y="33" text-anchor="middle">system + docs</text>
+    <rect x="360" y="15" width="140" height="26" class="fs"/><text x="430" y="33" text-anchor="middle">messages</text>
+    <line x1="360" y1="8" x2="360" y2="50" class="sr" stroke-width="2"/><text x="364" y="12" class="tr" font-size="11">cache_control</text>
+    <text x="508" y="33" class="tm">write ≈1.25×</text>
+    <text x="70" y="83" text-anchor="end" class="tm">call 2</text>
+    <rect x="80" y="65" width="110" height="26" class="fg sg"/><text x="135" y="83" text-anchor="middle">tools</text>
+    <rect x="190" y="65" width="170" height="26" class="fg sg"/><text x="275" y="83" text-anchor="middle">system + docs</text>
+    <rect x="360" y="65" width="140" height="26" class="fs"/><text x="430" y="83" text-anchor="middle">messages + new</text>
+    <text x="510" y="83" class="tg">read ≈0.1×</text>
+    <text x="70" y="133" text-anchor="end" class="tm">edit</text>
+    <rect x="80" y="115" width="110" height="26" class="fg sg"/><text x="135" y="133" text-anchor="middle">tools</text>
+    <rect x="190" y="115" width="40" height="26" class="fr sr"/><text x="210" y="133" text-anchor="middle">Δ</text>
+    <rect x="230" y="115" width="130" height="26" class="fs"/><text x="295" y="133" text-anchor="middle">re-read</text>
+    <rect x="360" y="115" width="140" height="26" class="fs"/><text x="430" y="133" text-anchor="middle">messages + new</text>
+    <text x="510" y="133" class="tr">miss</text>
+    </svg><figcaption>Cache = exact prefix match in render order tools → system → messages. One changed byte (Δ) invalidates everything after it.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span><p>A tutor who has read chapters 1–10 only needs to read chapter 11 today. But change one word on page 1 and they re-read everything from that page on.</p></div>
   <div class="fx" data-lang="py">response = client.messages.create(
     model="claude-opus-5-5",
@@ -265,7 +438,7 @@ client.messages.create(model="claude-opus-5-5", max_tokens=1024,
 
   <h2 id="la-scale"><span class="num">07</span>Batches, Limits &amp; Retries</h2>
   <h3>Message Batches: bulk at half price</h3>
-  <p>For work nobody is waiting on (labelling 50k reviews, nightly evals), send requests as a batch. Each request costs 50% less; results come back asynchronously, usually within an hour and at most 24 hours.</p>
+  <p>For work nobody waits on (labelling 50k reviews, nightly evals): 50% cheaper per request, results async, usually within an hour, at most 24 h.</p>
   <div class="fx" data-lang="py">import time
 
 reviews = ["Battery died in a day.", "Love the screen!", "Okay for the price."]
@@ -439,21 +612,7 @@ print(run_tool(bad_expr))</div>
   <div class="flow"><span>tool_use × 2: get_weather Mumbai, Delhi (parallel)</span><span>tool_result × 2 in one message</span><span>tool_use: calculator "(31 - 24) * 9 / 5"</span><span>tool_result "12.6"</span><span>end_turn: "about 12.6 °F warmer"</span></div>
   <div class="callout intu"><span class="label">What you just built</span><p>This <code>while stop_reason == "tool_use"</code> loop is the core of every agent. 09 grows it into a real agent: more tools, a step guard, memory, planning, approval and logging.</p></div>
 
-  <h2 id="la-rev"><span class="num">09</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Request</strong>: <code>model</code>, <code>max_tokens</code>, <code>system</code>, <code>messages</code> (user/assistant), optional <code>tools</code>.</li>
-    <li><strong>Response</strong>: a list of content blocks; check <code>block.type</code>.</li>
-    <li><strong>Stateless</strong>: resend the full history every call; append <code>response.content</code> whole.</li>
-    <li><strong>stop_reason</strong> drives control flow: end_turn, max_tokens, tool_use, pause_turn, refusal.</li>
-    <li><strong>Streaming</strong> cuts time-to-first-token, not cost.</li>
-    <li><strong>Structured outputs</strong>: <code>output_config.format</code> or <code>messages.parse</code>; <code>strict: true</code> for tool args.</li>
-    <li><strong>Tool loop</strong>: tool_use → run it yourself → tool_result (matching id, all in one user message) → call again.</li>
-    <li><strong>Errors</strong> go back as <code>is_error: true</code>, not exceptions. Forced <code>tool_choice</code> is rejected on claude-opus-5-5.</li>
-    <li><strong>Caching</strong>: prefix match over tools → system → messages; verify with <code>cache_read_input_tokens</code>.</li>
-    <li><strong>Batches</strong> = 50% off, async; SDK retries 429/5xx; never retry a 400.</li>
-  </ol></div>
-
-  <h2 id="la-qa"><span class="num">10</span>Questions &amp; Answers</h2>
+  <h2 id="la-qa"><span class="num">09</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>The API is stateless. How does a chatbot "remember" earlier turns, and what does that cost?</summary><div class="qa-body">The client resends the whole conversation in <code>messages</code> on every call. So input tokens, cost and latency grow each turn. Mitigate with prompt caching (cheap re-reads of the unchanged prefix), trimming or summarising old turns, and keeping long-term facts outside the prompt until needed.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Walk through one complete tool call, naming every message.</summary><div class="qa-body">(1) user message + <code>tools</code> schemas. (2) Response: assistant content with a <code>tool_use</code> block (<code>id</code>, <code>name</code>, <code>input</code>), <code>stop_reason: "tool_use"</code>. (3) Your code runs the function. (4) Next request: history + that assistant turn unchanged + a user turn with <code>{"type": "tool_result", "tool_use_id": id, "content": …}</code>. (5) Model answers with <code>end_turn</code>, or calls another tool.</div></details>

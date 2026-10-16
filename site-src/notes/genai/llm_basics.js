@@ -4,6 +4,106 @@ Object.assign(TOPIC_CONTENT, {
   <h1>How LLMs Work</h1>
   <p class="lead">From note 02 you know the transformer decoder: tokens in, a vector per position out. This page turns that into a working LLM: how it is trained, how it picks each next word, and why it costs what it costs. Everything in 04 · Prompt Engineering and 05 · LLM APIs builds on these mechanics.</p>
 
+  <h2 id="lb-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+  <div class="mm-center">How LLMs Work</div>
+  <div class="mm-branches">
+    <div class="mm-branch">
+      <div class="mm-title">Pre-training</div>
+      <ul>
+        <li><b>Objective</b> — predict the next token on trillions of tokens</li>
+        <li><b>Self-supervised</b> — the text labels itself; no humans</li>
+        <li><b>Loss</b> — cross-entropy (surprise); perplexity = e<sup>loss</sup></li>
+        <li><b>N tokens → N examples</b> in one pass (causal mask)</li>
+        <li><b>Knowledge</b> — side effect of compressing text</li>
+        <li>⚠ <b>Base model ≠ chatbot</b> — continues text, may answer with more questions</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Scaling laws</div>
+      <ul>
+        <li><b>Power law</b> — loss falls smoothly with params N, data D, compute C ≈ 6·N·D</li>
+        <li><b>Kaplan 2020</b> — predictable; bigger = more sample-efficient</li>
+        <li><b>Chinchilla 2022</b> — ~20 tokens/param: 70B → 1.4T tokens</li>
+        <li><b>Practice</b> — over-train small models: cheaper to serve forever</li>
+        <li>⚠ <b>Predicts loss, not skills</b>; "emergence" partly a metric artefact</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Three training stages</div>
+      <ul>
+        <li><b>1 Pre-train</b> → base model (knows a lot, follows nothing)</li>
+        <li><b>2 SFT</b> — (instruction → answer) pairs → instruct model</li>
+        <li><b>3 Preference</b> — RLHF / DPO on "A better than B" → helpful, safe</li>
+        <li><b>Post-training</b> = stages 2 + 3 (details: 15 · Fine-Tuning)</li>
+        <li>💡 intern: read library → job training → feedback on taste</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Inference &amp; sampling</div>
+      <ul>
+        <li><b>Loop</b> — logits → softmax → pick → append → repeat (autoregressive)</li>
+        <li><b>Greedy</b> (T = 0) — argmax; repeatable, dull, loops</li>
+        <li><b>Temperature</b> — logits ÷ T; &lt;1 sharpens, &gt;1 flattens; ranking unchanged</li>
+        <li><b>Top-k</b> — keep k tokens (fixed); <b>top-p</b> — smallest set ≥ p (adaptive)</li>
+        <li><b>Prefill</b> parallel → TTFT; <b>decode</b> sequential → tokens/sec</li>
+        <li>⚠ <b>T = 0 not deterministic</b> (GPU float order); claude-opus-5-5 has no temperature/top_p/top_k → use <code>effort</code></li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Context &amp; KV cache</div>
+      <ul>
+        <li><b>Context window</b> — max prompt + output tokens (~128K–1M)</li>
+        <li><b>No hidden memory</b> — outside the window = doesn't exist</li>
+        <li>⚠ <b>Lost in the middle</b> — buried facts get missed</li>
+        <li><b>KV cache</b> — store past K, V; compute only the new token</li>
+        <li><b>Memory</b> — 2 × layers × KV heads × head dim × bytes: 128 KiB/token, ~1 GiB per 8K seq</li>
+        <li><b>Fixes</b> — grouped-query attention, cache quantization</li>
+        <li>⚠ <b>≠ prompt caching</b> (API-level, across calls; 05)</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Hallucinations</div>
+      <ul>
+        <li><b>Definition</b> — fluent, confident, false/unsupported</li>
+        <li><b>Causes</b> — plausibility objective, lossy rare facts, cutoff, rewarded guessing, unlucky sample</li>
+        <li><b>Fixes</b> — ground (RAG 07), tools (05/08), allow "unknown" (04), check/cite (13)</li>
+        <li>💡 student bluffing in an oral exam</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Tokens = cost &amp; latency</div>
+      <ul>
+        <li><b>Token</b> ≈ 4 chars / ¾ word in English; code, numbers, non-English cost more</li>
+        <li><b>Output ≈ 5× input</b> price (sequential passes)</li>
+        <li><b>Latency</b> ≈ TTFT + output tokens ÷ tokens/sec</li>
+        <li><b>Example</b> — 2,000 in + 500 out at $4/$20 per 1M = $0.018</li>
+        <li><b>Thinking tokens</b> billed as output</li>
+        <li>⚠ <b>Count with the tokenizer</b>, not words</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Open vs closed</div>
+      <ul>
+        <li><b>Closed API</b> — Claude, GPT, Gemini: frontier, pay per token, zero infra</li>
+        <li><b>Open-weight</b> — Llama, Mistral, Qwen, DeepSeek: data stays, full fine-tune, you run GPUs</li>
+        <li><b>Rule</b> — prototype closed; switch for a named reason (residency, volume, offline)</li>
+        <li>⚠ <b>Open-weight ≠ open source</b> — no data/code, licence limits</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Reasoning models</div>
+      <ul>
+        <li><b>What</b> — long chain of thought before answering; RL on checkable tasks</li>
+        <li><b>Why</b> — test-time compute: more tokens = more thinking</li>
+        <li><b>Claude</b> — adaptive thinking; depth via <code>output_config={"effort": ...}</code></li>
+        <li><b>Skip for</b> — classification, extraction, short chat</li>
+        <li>⚠ <b>CoT prompting ≠ reasoning model</b> (trick vs trained)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -17,8 +117,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="lb-land"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Open vs Closed Models</span><span class="rm-sub">API or weights you host</span></div></div>
       <div class="rm-item rm-done" data-target="lb-reason"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Reasoning Models</span><span class="rm-sub">Thinking before answering</span></div></div>
       <div class="rm-item rm-done" data-target="lb-build"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Build It</span><span class="rm-sub">Sampler in numpy + one API call</span></div></div>
-      <div class="rm-item rm-done" data-target="lb-rev"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">The page in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="lb-qa"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="lb-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
@@ -26,12 +125,30 @@ Object.assign(TOPIC_CONTENT, {
   <div class="callout def"><span class="label">Definition</span>
     <p><strong>Pre-training</strong> = train a decoder transformer to predict the next token on trillions of tokens of text. That single objective is the whole recipe.</p>
   </div>
-  <p>It needs no human labels. The text labels itself: every position's "answer" is simply the next token. This is <strong>self-supervised</strong> learning (labels come from the data itself), which is why it scales to the whole internet.</p>
+  <figure class="viz"><svg viewBox="0 0 560 130" width="560">
+    <defs><marker id="lb-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <text x="10" y="34" class="tm">input</text><text x="10" y="104" class="tm">target</text>
+    <rect x="80" y="15" width="70" height="28" rx="4" class="fb sb"/><text x="115" y="34" text-anchor="middle">The</text>
+    <line x1="115" y1="46" x2="115" y2="80" stroke="currentColor" opacity="0.6" marker-end="url(#lb-ah)"/>
+    <rect x="80" y="85" width="70" height="28" rx="4" class="fg sg"/><text x="115" y="104" text-anchor="middle">cat</text>
+    <rect x="172" y="15" width="70" height="28" rx="4" class="fb sb"/><text x="207" y="34" text-anchor="middle">cat</text>
+    <line x1="207" y1="46" x2="207" y2="80" stroke="currentColor" opacity="0.6" marker-end="url(#lb-ah)"/>
+    <rect x="172" y="85" width="70" height="28" rx="4" class="fg sg"/><text x="207" y="104" text-anchor="middle">sat</text>
+    <rect x="264" y="15" width="70" height="28" rx="4" class="fb sb"/><text x="299" y="34" text-anchor="middle">sat</text>
+    <line x1="299" y1="46" x2="299" y2="80" stroke="currentColor" opacity="0.6" marker-end="url(#lb-ah)"/>
+    <rect x="264" y="85" width="70" height="28" rx="4" class="fg sg"/><text x="299" y="104" text-anchor="middle">on</text>
+    <rect x="356" y="15" width="70" height="28" rx="4" class="fb sb"/><text x="391" y="34" text-anchor="middle">on</text>
+    <line x1="391" y1="46" x2="391" y2="80" stroke="currentColor" opacity="0.6" marker-end="url(#lb-ah)"/>
+    <rect x="356" y="85" width="70" height="28" rx="4" class="fg sg"/><text x="391" y="104" text-anchor="middle">the</text>
+    <rect x="448" y="15" width="70" height="28" rx="4" class="fb sb"/><text x="483" y="34" text-anchor="middle">the</text>
+    <line x1="483" y1="46" x2="483" y2="80" stroke="currentColor" opacity="0.6" marker-end="url(#lb-ah)"/>
+    <rect x="448" y="85" width="70" height="28" rx="4" class="fg sg"/><text x="483" y="104" text-anchor="middle">mat</text>
+    </svg><figcaption>The text is its own answer key: one 5-token sequence = 5 next-token examples (causal mask: each sees only its left), no human labels.</figcaption></figure>
   <div class="flow"><span>"The cat sat on the"</span><span>Transformer</span><span>Probabilities over vocab</span><span>Loss = −log p("mat")</span><span>Backprop</span></div>
   <ul>
-    <li>One sequence of N tokens gives N training examples at once, thanks to the causal mask (note 02).</li>
-    <li>Loss is <strong>cross-entropy</strong>: how surprised the model was by the real next token. Perplexity = e<sup>loss</sup>.</li>
-    <li>To predict well, the model must absorb grammar, facts, code, and some reasoning. Knowledge is a side effect of compression.</li>
+    <li><strong>Self-supervised</strong>: labels come from the data, so it scales to the whole internet.</li>
+    <li>Loss = <strong>cross-entropy</strong> (how surprised by the real next token). Perplexity = e<sup>loss</sup>.</li>
+    <li>Predicting well forces grammar, facts, code and some reasoning: knowledge is a side effect of compression.</li>
   </ul>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Phone autocomplete that has read the entire library. It is brilliant at continuing text. It breaks as an analogy because the model also learns facts and skills deep enough to solve new problems.</p>
@@ -41,8 +158,7 @@ Object.assign(TOPIC_CONTENT, {
   </div>
 
   <h2 id="lb-scale"><span class="num">02</span>Scaling Laws</h2>
-  <p><strong>Scaling laws</strong>: test loss falls smoothly, as a power law, when you increase parameters (N), training tokens (D) and compute (C ≈ 6·N·D FLOPs).</p>
-  <p>They let labs predict a big model's loss from small runs before spending millions.</p>
+  <p><strong>Scaling laws</strong>: loss falls as a smooth power law in parameters (N), tokens (D) and compute (C ≈ 6·N·D FLOPs), so labs predict a big run from small ones.</p>
   <table class="tbl">
     <tr><th>Finding</th><th>What it says</th></tr>
     <tr><td><strong>Kaplan et al. (2020)</strong></td><td>Loss improves predictably with N, D, C. Bigger models are more sample-efficient.</td></tr>
@@ -67,17 +183,12 @@ Object.assign(TOPIC_CONTENT, {
     <p>Raising an intern. Pre-training: they read the whole library. SFT: job training with worked examples. Preference tuning: feedback on which of two answers is better, until they learn good taste.</p>
   </div>
   <div class="callout intu"><span class="label">Why "pre"?</span>
-    <p>"Pre-" marks position, not importance. It is the huge foundational training that comes before customisation. Pre-training creates the model; post-training shapes its behaviour.</p>
+    <p>Position, not importance: pre-training creates the model; post-training shapes its behaviour.</p>
   </div>
 
   <h2 id="lb-infer"><span class="num">04</span>Inference: Logits → Sampling</h2>
-  <p>Generation is a loop. The model outputs one token, appends it, and runs again. This is <strong>autoregressive</strong> decoding (each output becomes the next input).</p>
-  <div class="flow"><span>Prompt tokens</span><span>Forward pass</span><span>Logits (one per vocab token)</span><span>Softmax → probs</span><span>Pick a token</span><span>Append &amp; repeat</span></div>
-  <ul>
-    <li><strong>Logits</strong>: raw, unnormalised scores, one per vocabulary entry (often 100k+).</li>
-    <li><strong>Softmax</strong> turns logits into probabilities that sum to 1.</li>
-    <li>The <strong>decoding strategy</strong> picks a token from those probabilities. It stops at an end-of-sequence token or <code>max_tokens</code>.</li>
-  </ul>
+  <p>Generation is a loop: output one token, append it, run again (<strong>autoregressive</strong>). It stops at an end-of-sequence token or <code>max_tokens</code>.</p>
+  <div class="flow"><span>Prompt tokens</span><span>Forward pass</span><span>Logits: raw score per vocab token (100k+)</span><span>Softmax → probs</span><span>Pick a token</span><span>Append &amp; repeat</span></div>
   <h3>The sampling knobs</h3>
   <table class="tbl">
     <tr><th>Knob</th><th>What it does</th><th>Effect</th></tr>
@@ -86,13 +197,65 @@ Object.assign(TOPIC_CONTENT, {
     <tr><td><strong>Top-k</strong></td><td>Keep only the k most likely tokens</td><td>Cuts the long tail; k is fixed regardless of confidence</td></tr>
     <tr><td><strong>Top-p</strong> (nucleus)</td><td>Keep the smallest set whose probs sum to ≥ p</td><td>Adaptive: few tokens when confident, many when unsure</td></tr>
   </table>
-  <p>Example: logits for "The cat sat on the ___" at three temperatures (real output, code in Build It):</p>
+  <p>Logits for "The cat sat on the ___" at three temperatures (real output, code in Build It):</p>
+  <figure class="viz"><svg viewBox="0 0 600 200" width="600">
+    <line x1="40" y1="160" x2="590" y2="160" stroke="currentColor" opacity="0.4"/>
+    <rect x="50" y="42.7" width="22" height="117.3" class="fb sb"/>
+    <rect x="74" y="78.1" width="22" height="81.9" class="ft st"/>
+    <rect x="98" y="106.7" width="22" height="53.3" class="fr sr"/>
+    <text x="85" y="178" text-anchor="middle">mat</text>
+    <rect x="140" y="144.2" width="22" height="15.8" class="fb sb"/>
+    <rect x="164" y="129.9" width="22" height="30.1" class="ft st"/>
+    <rect x="188" y="127.7" width="22" height="32.3" class="fr sr"/>
+    <text x="175" y="178" text-anchor="middle">floor</text>
+    <rect x="230" y="154.1" width="22" height="5.9" class="fb sb"/>
+    <rect x="254" y="141.8" width="22" height="18.2" class="ft st"/>
+    <rect x="278" y="134.8" width="22" height="25.2" class="fr sr"/>
+    <text x="265" y="178" text-anchor="middle">sofa</text>
+    <rect x="320" y="159.2" width="22" height="0.8" class="fb sb"/>
+    <rect x="344" y="153.3" width="22" height="6.7" class="ft st"/>
+    <rect x="368" y="144.7" width="22" height="15.3" class="fr sr"/>
+    <text x="355" y="178" text-anchor="middle">roof</text>
+    <rect x="410" y="159.5" width="22" height="0.5" class="fb sb"/>
+    <rect x="434" y="157.5" width="22" height="2.5" class="ft st"/>
+    <rect x="458" y="150.8" width="22" height="9.2" class="fr sr"/>
+    <text x="445" y="178" text-anchor="middle">moon</text>
+    <rect x="500" y="159.5" width="22" height="0.5" class="fb sb"/>
+    <rect x="524" y="159.4" width="22" height="0.6" class="ft st"/>
+    <rect x="548" y="155.7" width="22" height="4.3" class="fr sr"/>
+    <text x="535" y="178" text-anchor="middle">banana</text>
+    <text x="40" y="20" class="tm">p</text>
+    <rect x="330" y="12" width="12" height="12" class="fb sb"/><text x="348" y="23">T=0.5</text><rect x="410" y="12" width="12" height="12" class="ft st"/><text x="428" y="23">T=1</text><rect x="480" y="12" width="12" height="12" class="fr sr"/><text x="498" y="23">T=2</text>
+    <text x="88" y="38" class="tb">0.84</text><text x="410" y="130" class="tr">tail grows</text>
+    </svg><figcaption>Same logits, three temperatures (real numbers from Build It). Low T piles mass on "mat"; high T feeds the tail.</figcaption></figure>
   <table class="tbl out"><caption>Result: softmax(logits / T)</caption>
     <tr><th>T</th><th>mat</th><th>floor</th><th>sofa</th><th>roof</th><th>moon</th><th>banana</th></tr>
     <tr><td>0.5</td><td>0.838</td><td>0.113</td><td>0.042</td><td>0.006</td><td>0.001</td><td>0.000</td></tr>
     <tr><td>1.0</td><td>0.585</td><td>0.215</td><td>0.130</td><td>0.048</td><td>0.018</td><td>0.004</td></tr>
     <tr><td>2.0</td><td>0.381</td><td>0.231</td><td>0.180</td><td>0.109</td><td>0.066</td><td>0.031</td></tr>
   </table>
+  <figure class="viz"><svg viewBox="0 0 600 190" width="600">
+    <line x1="40" y1="150" x2="590" y2="150" stroke="currentColor" opacity="0.4"/>
+    <rect x="60" y="62.2" width="50" height="87.8" class="fg sg"/>
+    <text x="85" y="168" text-anchor="middle">mat</text>
+    <text x="85" y="56.2" text-anchor="middle" class="tm">Σ0.585</text>
+    <rect x="148" y="117.8" width="50" height="32.2" class="fg sg"/>
+    <text x="173" y="168" text-anchor="middle">floor</text>
+    <text x="173" y="111.8" text-anchor="middle" class="tm">Σ0.80</text>
+    <rect x="236" y="130.5" width="50" height="19.5" class="fg sg"/>
+    <text x="261" y="168" text-anchor="middle">sofa</text>
+    <text x="261" y="124.5" text-anchor="middle" class="tm">Σ0.93</text>
+    <rect x="324" y="142.8" width="50" height="7.2" class="fs"/>
+    <text x="349" y="168" text-anchor="middle">roof</text>
+    <text x="349" y="136.8" text-anchor="middle" class="tm">Σ0.98</text>
+    <rect x="412" y="147.3" width="50" height="2.7" class="fs"/>
+    <text x="437" y="168" text-anchor="middle">moon</text>
+    <rect x="500" y="149.4" width="50" height="0.6" class="fs"/>
+    <text x="525" y="168" text-anchor="middle">banana</text>
+    <line x1="217" y1="40" x2="217" y2="150" class="sb" stroke-width="2" stroke-dasharray="5 4"/><text x="217" y="34" text-anchor="middle" class="tb">top-k=2</text>
+    <line x1="305" y1="40" x2="305" y2="150" class="sr" stroke-width="2"/><text x="305" y="34" text-anchor="middle" class="tr">top-p=0.9</text>
+    <text x="335" y="90" class="tm">dropped (tail)</text>
+    </svg><figcaption>T = 1 probabilities with running totals (Σ). Top-p stops once Σ ≥ 0.9 (3 tokens here); top-k=2 always keeps exactly two. Survivors are renormalised.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Temperature is a "boldness" dial on a nervous speaker. Low: always says the safest word. High: sometimes says "banana". Top-p is a rule: "only consider words that together cover 90% of your confidence".</p>
   </div>
@@ -100,11 +263,12 @@ Object.assign(TOPIC_CONTENT, {
     <p>Temperature 0 is not perfectly deterministic in production. Batched GPU maths and floating-point ordering can flip near-ties. Also, current Claude models (incl. <code>claude-opus-5-5</code>) don't accept <code>temperature</code>, <code>top_p</code> or <code>top_k</code> at all. You steer them with prompts and <code>effort</code>. Open models and many other APIs still expose these knobs.</p>
   </div>
   <h3>Prefill vs decode</h3>
-  <ul>
-    <li><strong>Prefill</strong>: the whole prompt is processed in one parallel pass. It sets <strong>time-to-first-token</strong> (TTFT).</li>
-    <li><strong>Decode</strong>: output tokens come one at a time, each needing a pass. It sets <strong>tokens per second</strong>.</li>
-  </ul>
-  <p>So 1,000 extra prompt tokens cost little time; 1,000 extra output tokens cost a lot.</p>
+  <table class="tbl">
+    <tr><th>Phase</th><th>How</th><th>Sets</th></tr>
+    <tr><td><strong>Prefill</strong></td><td>Whole prompt in one parallel pass</td><td><strong>Time-to-first-token</strong> (TTFT)</td></tr>
+    <tr><td><strong>Decode</strong></td><td>One pass per output token</td><td><strong>Tokens per second</strong></td></tr>
+  </table>
+  <p>1,000 extra prompt tokens cost little time; 1,000 extra output tokens cost a lot.</p>
 
   <h2 id="lb-ctx"><span class="num">05</span>Context Window &amp; KV Cache</h2>
   <div class="callout def"><span class="label">Definition</span>
@@ -116,7 +280,32 @@ Object.assign(TOPIC_CONTENT, {
     <li>Quality can drop for facts buried in the middle of very long inputs ("lost in the middle").</li>
   </ul>
   <h3>KV cache</h3>
-  <p>At each decode step, the new token attends to every earlier token's <strong>K</strong> (key) and <strong>V</strong> (value) vectors. Those never change, so compute them once and store them.</p>
+  <p>Each decode step attends to every earlier token's <strong>K</strong> and <strong>V</strong>. They never change, so compute once and store.</p>
+  <figure class="viz"><svg viewBox="0 0 600 170" width="600">
+    <text x="10" y="44" class="tm">K</text><text x="10" y="84" class="tm">V</text>
+    <rect x="40" y="26" width="60" height="26" rx="3" class="fg sg"/><rect x="40" y="66" width="60" height="26" rx="3" class="fg sg"/>
+    <text x="70" y="44" text-anchor="middle">k1</text><text x="70" y="84" text-anchor="middle">v1</text>
+    <text x="70" y="112" text-anchor="middle">The</text>
+    <rect x="112" y="26" width="60" height="26" rx="3" class="fg sg"/><rect x="112" y="66" width="60" height="26" rx="3" class="fg sg"/>
+    <text x="142" y="44" text-anchor="middle">k2</text><text x="142" y="84" text-anchor="middle">v2</text>
+    <text x="142" y="112" text-anchor="middle">cat</text>
+    <rect x="184" y="26" width="60" height="26" rx="3" class="fg sg"/><rect x="184" y="66" width="60" height="26" rx="3" class="fg sg"/>
+    <text x="214" y="44" text-anchor="middle">k3</text><text x="214" y="84" text-anchor="middle">v3</text>
+    <text x="214" y="112" text-anchor="middle">sat</text>
+    <rect x="256" y="26" width="60" height="26" rx="3" class="fg sg"/><rect x="256" y="66" width="60" height="26" rx="3" class="fg sg"/>
+    <text x="286" y="44" text-anchor="middle">k4</text><text x="286" y="84" text-anchor="middle">v4</text>
+    <text x="286" y="112" text-anchor="middle">on</text>
+    <rect x="328" y="26" width="60" height="26" rx="3" class="fg sg"/><rect x="328" y="66" width="60" height="26" rx="3" class="fg sg"/>
+    <text x="358" y="44" text-anchor="middle">k5</text><text x="358" y="84" text-anchor="middle">v5</text>
+    <text x="358" y="112" text-anchor="middle">the</text>
+    <rect x="400" y="26" width="60" height="26" rx="3" class="fb sb"/><rect x="400" y="66" width="60" height="26" rx="3" class="fb sb"/>
+    <text x="430" y="44" text-anchor="middle">k6</text><text x="430" y="84" text-anchor="middle">v6</text>
+    <text x="430" y="112" text-anchor="middle" class="tb">?</text>
+    <rect x="34" y="18" width="358" height="82" rx="6" fill="none" class="sg" stroke-dasharray="5 4"/>
+    <text x="40" y="136" class="tg">cached: computed once, read every step</text>
+    <text x="40" y="156" class="tb">new token: only its k, v are computed</text>
+    <text x="470" y="136" class="tm">cost: GPU memory</text><text x="470" y="156" class="tm">128 KiB / token*</text>
+    </svg><figcaption>Decode step 6: reuse k1–v5 from the cache. *Llama-3-8B-style, fp16; ≈ 1 GiB per 8K-token sequence.</figcaption></figure>
   <table class="tbl">
     <tr><th></th><th>Without KV cache</th><th>With KV cache</th></tr>
     <tr><td>Generating token 100</td><td>Recompute K, V for tokens 1–99, then 100</td><td>Load 1–99 from cache; compute only token 100</td></tr>
@@ -188,8 +377,7 @@ per_day  = per_call * 100_000                  # $1,800 per day at 100k calls</d
   </div>
 
   <h2 id="lb-reason"><span class="num">09</span>Reasoning ("Thinking") Models</h2>
-  <p>A <strong>reasoning model</strong> writes a long internal chain of thought before its final answer. It is trained for this with reinforcement learning on tasks whose answers can be checked (maths, code, logic).</p>
-  <p>The problem it solves: one forward pass per token is a fixed amount of compute. Hard problems need more. Thinking tokens are extra compute spent <em>at answer time</em> (test-time compute).</p>
+  <p>A <strong>reasoning model</strong> writes a long chain of thought before answering, trained by reinforcement learning on checkable tasks (maths, code, logic). One forward pass per token is fixed compute; thinking tokens add compute <em>at answer time</em> (test-time compute).</p>
   <div class="flow"><span>Question</span><span>Thinking tokens (hidden or summarised)</span><span>Final answer</span></div>
   <ul>
     <li><strong>Gain</strong>: big jumps on maths, coding, planning and multi-step agent tasks.</li>
@@ -298,21 +486,7 @@ This turns repeated recomputation into a lookup, trading GPU memory for speed.
 end_turn
 27 64</div>
 
-  <h2 id="lb-rev"><span class="num">11</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Pre-training:</strong> self-supervised next-token prediction, cross-entropy loss, trillions of tokens → base model.</li>
-    <li><strong>Scaling laws:</strong> loss falls as a power law in params, data, compute; Chinchilla ≈ 20 tokens per param.</li>
-    <li><strong>Stages:</strong> pre-train → SFT (follow instructions) → RLHF/DPO (preferences). Base ≠ chat model.</li>
-    <li><strong>Decoding:</strong> logits → softmax → pick → append → repeat (autoregressive).</li>
-    <li><strong>Temperature</strong> rescales logits; <strong>top-k</strong> keeps k tokens; <strong>top-p</strong> keeps the smallest set covering p.</li>
-    <li><strong>Prefill</strong> is parallel (TTFT); <strong>decode</strong> is sequential (tokens/sec).</li>
-    <li><strong>KV cache:</strong> store past K, V; faster decode, costs GPU memory per token.</li>
-    <li><strong>Hallucination:</strong> trained for plausibility, lossy memory, cutoff; fix with grounding, tools, an "unknown" option.</li>
-    <li><strong>Cost:</strong> per-token, output ~5× input; latency driven by output length.</li>
-    <li><strong>Reasoning models:</strong> spend thinking tokens at test time; tune with effort.</li>
-  </ol></div>
-
-  <h2 id="lb-qa"><span class="num">12</span>Questions &amp; Answers</h2>
+  <h2 id="lb-qa"><span class="num">11</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>What exactly does an LLM learn during pre-training, and why does it need no labels?</summary><div class="qa-body">It learns to predict the next token, minimising cross-entropy over trillions of tokens. The text supplies its own labels: the target at each position is the next token. Facts, grammar and reasoning emerge because they make prediction easier.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>You ask a base model "What's the capital of France?" and it replies with three more questions. Why?</summary><div class="qa-body">A base model only continues text. A list of quiz questions is a plausible continuation. Following instructions comes from SFT and preference tuning, which produce the instruct/chat model.</div></details>

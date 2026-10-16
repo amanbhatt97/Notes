@@ -4,6 +4,104 @@ Object.assign(TOPIC_CONTENT, {
   <h1>NLP Foundations</h1>
   <p class="lead">The first stop on the GenAI path. It assumes only basic Python and ML. You'll learn how text becomes numbers: from word counts to word vectors, and why that ended in contextual embeddings. That last step is what <em>02 · Transformers</em> builds on.</p>
 
+  <h2 id="nl-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+  <div class="mm-center">NLP Foundations: text → numbers</div>
+  <div class="mm-branches">
+    <div class="mm-branch">
+      <div class="mm-title">Why it still matters</div>
+      <ul>
+        <li><b>Path</b> — counts → static vectors → contextual vectors → LLMs</li>
+        <li><b>Inside LLMs</b> — subword tokenizer + embedding layer (Word2Vec's descendant)</li>
+        <li><b>In production</b> — BM25 first-pass search, tiny TF-IDF/FastText classifiers</li>
+        <li><b>Senior skill</b> — measure a cheap baseline before reaching for a transformer</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Preprocessing</div>
+      <ul>
+        <li><b>Pipeline</b> — lowercase → tokenize → (stopwords) → stem / lemmatize</li>
+        <li><b>Stemming</b> — rule chop, fast, non-words: studies → studi</li>
+        <li><b>Lemmatization</b> — dictionary + POS, real words: better → good</li>
+        <li>⚠ <b>"not" is a stopword</b> — "not good" → "good"; keep negations for sentiment</li>
+        <li>⚠ <b>Leakage</b> — fit vocabulary / IDF on train only</li>
+        <li><b>Transformers</b> — skip it; their tokenizer handles case and punctuation</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Bag-of-Words &amp; n-grams</div>
+      <ul>
+        <li><b>BoW</b> — doc = vector of word counts; order thrown away</li>
+        <li><b>Shape</b> — huge, sparse (mostly zeros); one column per vocab word</li>
+        <li><b>N-gram</b> — n consecutive words as one feature: "new york", "not good"</li>
+        <li><b>Cost</b> — vocab explodes, rare/unseen n-grams; smoothing patches it</li>
+        <li>⚠ <b>Order-blind</b> — "dog bites man" = "man bites dog"</li>
+        <li>💡 tear out every word, throw in a bag, count</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">TF-IDF &amp; BM25</div>
+      <ul>
+        <li><b>TF</b> — count in this doc; <b>IDF</b> — <code>log(N / df)</code>, rarity across docs</li>
+        <li><b>TF × IDF</b> — high when frequent here, rare elsewhere</li>
+        <li><b>Example</b> — "GPU" in 80 of 10k docs: IDF = ln 125 ≈ 4.8</li>
+        <li>⚠ <b>sklearn IDF</b> — <code>ln((1+N)/(1+df)) + 1</code>: "the" still ≠ 0; use <code>max_df</code>/stopwords</li>
+        <li><b>Rows L2-normalised</b> in sklearn</li>
+        <li><b>BM25</b> — TF-IDF + TF saturation + length penalty; default keyword score</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Word2Vec</div>
+      <ul>
+        <li><b>Idea</b> — dense vector (~300 d); similar contexts → close vectors</li>
+        <li><b>How</b> — train a fake "predict neighbours" task, keep the weights</li>
+        <li><b>Skip-gram</b> — word → neighbours; better for rare words</li>
+        <li><b>CBOW</b> — neighbours → word; faster, frequent words</li>
+        <li><b>Negative sampling</b> — real pair vs few random pairs, no full softmax</li>
+        <li><b>Analogy</b> — king − man + woman ≈ queen (relations = directions)</li>
+        <li>⚠ <b>One vector per word</b> — "bank" blends river + money</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">GloVe &amp; FastText</div>
+      <ul>
+        <li><b>GloVe</b> — learns from global co-occurrence counts</li>
+        <li><b>FastText</b> — Word2Vec on character n-grams</li>
+        <li><b>OOV</b> — FastText builds unseen words/typos from pieces; others can't</li>
+        <li><b>All static</b> — same vector in every sentence</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Contextual embeddings</div>
+      <ul>
+        <li><b>Definition</b> — word vector computed from the whole sentence</li>
+        <li><b>ELMo</b> (2018) — bi-LSTMs: contextual but slow, forgetful</li>
+        <li><b>BERT</b> (2018) — Transformer encoder, attention → note 02</li>
+        <li>⚠ <b>[CLS] as sentence vector</b> — weak; use Sentence-BERT-style models (06)</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Classic tasks &amp; metrics</div>
+      <ul>
+        <li><b>POS</b> — grammatical role per word; <b>NER</b> — people/orgs/places spans</li>
+        <li><b>Dependency parse</b> — who did what to whom (nsubj, obj)</li>
+        <li><b>BIO</b> — B-begin, I-inside, O-outside: span finding → token labels</li>
+        <li><b>Precision</b> TP/(TP+FP), <b>recall</b> TP/(TP+FN), <b>F1</b> harmonic mean</li>
+        <li>⚠ <b>99% accuracy</b> on 1% spam can mean 0 recall</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Build: TF-IDF baseline</div>
+      <ul>
+        <li><b>Recipe</b> — TfidfVectorizer(1–2 grams) + LogisticRegression</li>
+        <li><b>Keeps "not good"</b> — no stopword removal + bigrams</li>
+        <li><b>Interpretable</b> — one weight per feature</li>
+        <li><b>Weak at</b> — sarcasm, "not bad", unseen synonyms → transformers</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -17,27 +115,25 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="nl-tasks"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Classic NLP Tasks</span><span class="rm-sub">POS, NER, parsing</span></div></div>
       <div class="rm-item rm-done" data-target="nl-eval"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Evaluating a Classifier</span><span class="rm-sub">Precision, recall, F1</span></div></div>
       <div class="rm-item rm-done" data-target="nl-build"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Build It</span><span class="rm-sub">TF-IDF sentiment classifier</span></div></div>
-      <div class="rm-item rm-done" data-target="nl-rev"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="nl-qa"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="nl-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
   <h2 id="nl-why"><span class="num">01</span>Why Classical NLP</h2>
   <p>LLMs didn't replace these ideas; they are built on them.</p>
   <div class="flow"><span>Preprocessing &amp; counts</span><span>Static word vectors</span><span>Contextual embeddings</span><span>LLMs</span></div>
-  <ul>
-    <li><strong>Inside every LLM</strong>: subword tokenizers and an embedding layer, a direct descendant of Word2Vec.</li>
-    <li><strong>Still in production</strong>: BM25 (a TF-IDF variant) runs first-pass search and is paired with vector search in RAG. Tiny TF-IDF or FastText classifiers run where a 7B model won't fit.</li>
-    <li><strong>Senior skill</strong>: knowing when a cheap baseline is good enough, and measuring it before reaching for a transformer.</li>
-  </ul>
+  <div class="cards">
+    <div><b>Inside every LLM</b><p>Subword tokenizer + embedding layer, a direct descendant of Word2Vec.</p></div>
+    <div><b>Still in production</b><p>BM25 (a TF-IDF variant) runs first-pass search beside vector search in RAG; tiny classifiers run where a 7B model won't fit.</p></div>
+    <div><b>Senior skill</b><p>Measure the cheap baseline before reaching for a transformer.</p></div>
+  </div>
 
   <h2 id="nl-prep"><span class="num">02</span>Text Preprocessing</h2>
-  <p>Turning raw, messy text into a clean, consistent form before any model sees it. Every later step inherits its quality.</p>
+  <p>Raw, messy text → a clean, consistent form. Every later step inherits its quality.</p>
   <div class="flow"><span>"The Cats Sat!"</span><span>lowercase</span><span>tokenize: the, cats, sat</span><span>drop stopwords: cats, sat</span><span>lemmatize: cat, sit</span></div>
   <ul>
-    <li><strong>Tokenize</strong>: split text into units (words here; subwords in 02).</li>
-    <li><strong>Stopwords</strong>: very common, low-information words ("the", "is").</li>
-    <li><strong>Stemming / lemmatization</strong>: reduce words to a base form so "runs" and "running" count as one word.</li>
+    <li><strong>Tokenize</strong>: split into units (words here; subwords in 02). <strong>Stopwords</strong>: common, low-information words ("the", "is").</li>
+    <li><strong>Stem / lemmatize</strong>: reduce to a base form so "runs" and "running" count as one word.</li>
   </ul>
   <h3>Stemming vs lemmatization</h3>
   <table class="tbl">
@@ -57,7 +153,7 @@ Object.assign(TOPIC_CONTENT, {
   <div class="callout trap"><span class="label">Trap: leakage</span>
     <p>Fit vocabularies and IDF weights on training data only. Fitting on the full dataset leaks test information.</p>
   </div>
-  <p>For modern transformers you mostly <em>skip</em> this: no stopword removal or stemming, because the model uses every word, and its own tokenizer handles case and punctuation.</p>
+  <p>Modern transformers mostly <em>skip</em> this: they use every word, and their tokenizer handles case and punctuation.</p>
 
   <h2 id="nl-bow"><span class="num">03</span>Bag-of-Words &amp; N-grams</h2>
   <p><strong>Bag-of-Words (BoW)</strong>: a document becomes a vector of word counts, one slot per vocabulary word. Order is thrown away.</p>
@@ -76,24 +172,29 @@ print(X.toarray())</div>
     <tr><td>2</td><td>0</td><td>0</td><td>1</td><td>1</td><td>0</td><td>1</td><td>1</td><td>2</td></tr>
     <tr><td>3</td><td>1</td><td>1</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>2</td></tr>
   </table>
-  <p>It works surprisingly well for classification: a review full of "terrible", "broke", "refund" is negative whatever the word order. Vectors are huge and <strong>sparse</strong> (mostly zeros).</p>
+  <p>Still a strong classifier: "terrible, broke, refund" is negative in any order. Vectors are huge and <strong>sparse</strong> (mostly zeros).</p>
   <h3>N-grams</h3>
-  <p>An <strong>n-gram</strong> is a run of n consecutive words treated as one feature. Bigrams turn "New York" into one clear signal and keep "not good" together.</p>
-  <ul>
-    <li>Cost: the vocabulary explodes and most n-grams are rare or unseen at test time (sparsity).</li>
-    <li>Smoothing (adding small counts to unseen n-grams) patches this. Neural models fixed it: they generalise through word similarity.</li>
-  </ul>
+  <figure class="viz"><svg viewBox="0 0 560 120" width="560">
+    <text x="10" y="22" class="tm">unigrams</text>
+    <rect x="90" y="8" width="60" height="22" rx="4" class="fs"/><text x="120" y="23" text-anchor="middle">this</text>
+    <rect x="160" y="8" width="60" height="22" rx="4" class="fs"/><text x="190" y="23" text-anchor="middle">is</text>
+    <rect x="230" y="8" width="60" height="22" rx="4" class="fr sr"/><text x="260" y="23" text-anchor="middle">not</text>
+    <rect x="300" y="8" width="60" height="22" rx="4" class="fg sg"/><text x="330" y="23" text-anchor="middle">good</text>
+    <text x="380" y="23" class="tm">reads as positive</text>
+    <text x="10" y="66" class="tm">bigrams</text>
+    <rect x="90" y="52" width="130" height="22" rx="4" class="fs"/><text x="155" y="67" text-anchor="middle">this is</text>
+    <rect x="160" y="80" width="130" height="22" rx="4" class="fs"/><text x="225" y="95" text-anchor="middle">is not</text>
+    <rect x="230" y="52" width="130" height="22" rx="4" class="fr sr"/><text x="295" y="67" text-anchor="middle">not good</text>
+    <text x="380" y="67" class="tr">one negative feature</text>
+  </svg><figcaption>A bigram keeps "not good" together as one feature. Price: many more, rarer columns.</figcaption></figure>
+  <p>An <strong>n-gram</strong> = n consecutive words as one feature. Cost: the vocabulary explodes and most n-grams are rare or unseen at test time. Smoothing patches this; neural models fixed it by generalising through word similarity.</p>
   <div class="callout trap"><span class="label">Trap</span>
     <p>BoW sees "dog bites man" and "man bites dog" as identical. Bigrams help locally, but nothing count-based understands long-range order.</p>
   </div>
 
   <h2 id="nl-tfidf"><span class="num">04</span>TF-IDF</h2>
   <p>Raw counts reward words like "the". <strong>TF-IDF</strong> reweights each count by how rare the word is across documents.</p>
-  <ul>
-    <li><strong>TF</strong> (term frequency): how often the word appears in <em>this</em> document.</li>
-    <li><strong>IDF</strong> (inverse document frequency): <code>log(N / docs containing the word)</code>. High for rare words, near 0 for words in every document.</li>
-    <li><strong>TF × IDF</strong>: high when a word is frequent here and rare elsewhere.</li>
-  </ul>
+  <div class="flow"><span>TF: count in <em>this</em> doc</span><span>× IDF: log(N / docs containing it)</span><span>high = frequent here, rare elsewhere</span></div>
   <div class="callout intu"><span class="label">Example</span>
     <p>10,000 medical documents. "patient" is in nearly all of them, so IDF ≈ 0: it tells you nothing about one document. "GPU" in 80 of 10,000 docs gets IDF = ln(125) ≈ 4.8: a strong signal.</p>
   </div>
@@ -112,10 +213,39 @@ for w, v in zip(tf.get_feature_names_out(), T.toarray()[0].round(2)):
   <div class="callout trap"><span class="label">Trap: library IDF ≠ textbook IDF</span>
     <p>scikit-learn uses a smoothed IDF, <code>ln((1+N)/(1+df)) + 1</code>, so a word in every document still gets weight 1, and "the" appears twice here. "mat" (only in doc 1) still beats "cat" and "sat". Rows are also L2-normalised. In practice, add <code>stop_words</code> or <code>max_df</code> to drop such words.</p>
   </div>
-  <p><strong>BM25</strong> is TF-IDF with two fixes: term frequency saturates (the 10th "GPU" adds little) and long documents are penalised. It is the default keyword-search score (Elasticsearch, hybrid search in 06).</p>
+  <figure class="viz"><svg viewBox="0 0 600 190" width="600">
+    <line x1="80" y1="10" x2="80" y2="180" stroke="currentColor" opacity="0.4"/>
+    <text x="70" y="27" text-anchor="end">the</text><rect x="80" y="14" width="290" height="18" class="fr sr"/><text x="378" y="27">0.58</text><text x="420" y="27" class="tr">in all docs, twice here</text>
+    <text x="70" y="51" text-anchor="end">mat</text><rect x="80" y="38" width="245" height="18" class="fg sg"/><text x="333" y="51">0.49</text><text x="420" y="51" class="tg">only in doc 1</text>
+    <text x="70" y="75" text-anchor="end">cat</text><rect x="80" y="62" width="185" height="18" class="fb sb"/><text x="273" y="75">0.37</text>
+    <text x="70" y="99" text-anchor="end">on</text><rect x="80" y="86" width="185" height="18" class="fb sb"/><text x="273" y="99">0.37</text>
+    <text x="70" y="123" text-anchor="end">sat</text><rect x="80" y="110" width="185" height="18" class="fb sb"/><text x="273" y="123">0.37</text><text x="320" y="99" class="tm">each in 2 of 3 docs</text>
+    <text x="70" y="147" text-anchor="end" class="tm">chased</text><text x="70" y="163" text-anchor="end" class="tm">dog</text><text x="70" y="179" text-anchor="end" class="tm">log</text>
+    <text x="90" y="163" class="tm">0 — not in doc 1</text>
+  </svg><figcaption>Doc 1's real TF-IDF weights. Rare "mat" beats "cat"; "the" still wins because sklearn's IDF never hits 0.</figcaption></figure>
+  <p><strong>BM25</strong> = TF-IDF + two fixes: term frequency saturates (the 10th "GPU" adds little) and long documents are penalised. The default keyword score (Elasticsearch, hybrid search in 06).</p>
 
   <h2 id="nl-w2v"><span class="num">05</span>Word2Vec</h2>
-  <p>In BoW and TF-IDF, "cat" and "dog" are unrelated columns. <strong>Word2Vec</strong> gives each word a dense vector (e.g. 300 numbers) so that words used in similar contexts land close together.</p>
+  <p>In BoW, "cat" and "dog" are unrelated columns. <strong>Word2Vec</strong> gives each word a dense vector (~300 numbers); words used in similar contexts land close together.</p>
+  <figure class="viz"><svg viewBox="0 0 580 230" width="580">
+    <defs><marker id="nl-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="tb"/></marker></defs>
+    <rect x="20" y="20" width="200" height="90" rx="40" class="fb"/>
+    <circle cx="60" cy="50" r="4" class="tb"/><text x="68" y="54">cat</text>
+    <circle cx="80" cy="80" r="4" class="tb"/><text x="88" y="84">kitten</text>
+    <circle cx="140" cy="45" r="4" class="tb"/><text x="148" y="49">dog</text>
+    <circle cx="150" cy="78" r="4" class="tb"/><text x="158" y="82">puppy</text>
+    <rect x="30" y="140" width="180" height="70" rx="35" class="fg"/>
+    <circle cx="70" cy="170" r="4" class="tg"/><text x="78" y="174">bread</text>
+    <circle cx="140" cy="185" r="4" class="tg"/><text x="148" y="189">pizza</text>
+    <circle cx="330" cy="190" r="4" class="tb"/><text x="300" y="210">man</text>
+    <circle cx="330" cy="70" r="4" class="tb"/><text x="290" y="60">woman</text>
+    <circle cx="480" cy="190" r="4" class="tb"/><text x="470" y="210">king</text>
+    <circle cx="480" cy="70" r="4" class="tr"/><text x="470" y="60" class="tr">queen</text>
+    <line x1="330" y1="186" x2="330" y2="78" class="sb" stroke-width="2" marker-end="url(#nl-ah)"/>
+    <line x1="480" y1="186" x2="480" y2="78" class="sb" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#nl-ah)"/>
+    <text x="340" y="134" class="tm">gender</text><text x="490" y="134" class="tm">same</text><text x="490" y="148" class="tm">direction</text>
+    <text x="300" y="25">king − man + woman ≈ queen</text>
+  </svg><figcaption>Similar words cluster; consistent relations become parallel directions (2-D sketch of 300-D space).</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy: know a word by its company</span>
     <p>"Doctor" and "physician" both hang around "patient", "hospital", "diagnosis". Same social circle, so nearly the same vector. Meaning is never written down; it's inferred from neighbours.</p>
   </div>
@@ -124,9 +254,20 @@ for w, v in zip(tf.get_feature_names_out(), T.toarray()[0].round(2)):
     <div><b>Skip-gram</b><p>One word → predict its neighbours. "sat" → The, cat, on, the.</p><small>More training pairs per word: better for rare words</small></div>
     <div><b>CBOW</b><p>Neighbours → predict the centre word. The, cat, on, the → "sat".</p><small>Averages context: faster, good for frequent words</small></div>
   </div>
+  <figure class="viz"><svg viewBox="0 0 500 100" width="500">
+    <defs><marker id="nl-ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="tb"/></marker></defs>
+    <rect x="20" y="62" width="70" height="28" rx="4" class="fs"/><text x="55" y="81" text-anchor="middle">The</text>
+    <rect x="110" y="62" width="70" height="28" rx="4" class="fs"/><text x="145" y="81" text-anchor="middle">cat</text>
+    <rect x="200" y="62" width="70" height="28" rx="4" class="ft st"/><text x="235" y="81" text-anchor="middle">sat</text>
+    <rect x="290" y="62" width="70" height="28" rx="4" class="fs"/><text x="325" y="81" text-anchor="middle">on</text>
+    <rect x="380" y="62" width="70" height="28" rx="4" class="fs"/><text x="415" y="81" text-anchor="middle">the</text>
+    <path d="M225,60 Q140,0 60,58" fill="none" class="sb" marker-end="url(#nl-ah2)"/>
+    <path d="M230,60 Q188,28 150,58" fill="none" class="sb" marker-end="url(#nl-ah2)"/>
+    <path d="M240,60 Q282,28 320,58" fill="none" class="sb" marker-end="url(#nl-ah2)"/>
+    <path d="M245,60 Q330,0 410,58" fill="none" class="sb" marker-end="url(#nl-ah2)"/>
+    <text x="470" y="30" text-anchor="end" class="tm">window = 2</text>
+  </svg><figcaption>Skip-gram turns one sentence into 4 training pairs for "sat". CBOW reverses the arrows.</figcaption></figure>
   <ul>
-    <li>Window size 2 around "sat" in "The cat sat on the" gives pairs (sat→The), (sat→cat), (sat→on), (sat→the).</li>
-    <li>Famous result: <code>king − man + woman ≈ queen</code>. Directions in the space encode relations.</li>
     <li><strong>Negative sampling</strong>: instead of a softmax over the whole vocabulary, train "real pair vs a few random pairs". This made training cheap.</li>
   </ul>
   <div class="callout trap"><span class="label">Trap: one word, one vector</span>
@@ -147,11 +288,21 @@ for w, v in zip(tf.get_feature_names_out(), T.toarray()[0].round(2)):
 
   <h2 id="nl-ctx"><span class="num">07</span>Contextual Embeddings</h2>
   <p>A <strong>contextual embedding</strong> is a word vector computed from the whole sentence, so the same word gets different vectors in different contexts.</p>
-  <table class="tbl">
-    <tr><th></th><th>"sat on the river bank"</th><th>"paid money into the bank"</th></tr>
-    <tr><td>Static (Word2Vec, GloVe)</td><td>bank = v</td><td>bank = v (same)</td></tr>
-    <tr><td>Contextual (ELMo, BERT)</td><td>bank ≈ "shore"</td><td>bank ≈ "lender"</td></tr>
-  </table>
+  <figure class="viz"><svg viewBox="0 0 560 190" width="560">
+    <text x="20" y="20">Static: one "bank"</text><text x="300" y="20">Contextual: one per sentence</text>
+    <line x1="280" y1="10" x2="280" y2="180" stroke="currentColor" opacity="0.25"/>
+    <circle cx="50" cy="55" r="4" class="tg"/><text x="58" y="59" class="tm">river</text>
+    <circle cx="70" cy="85" r="4" class="tg"/><text x="78" y="89" class="tm">shore</text>
+    <circle cx="200" cy="140" r="4" class="tb"/><text x="208" y="144" class="tm">money</text>
+    <circle cx="180" cy="165" r="4" class="tb"/><text x="188" y="169" class="tm">loan</text>
+    <circle cx="130" cy="112" r="6" class="fr sr"/><text x="140" y="108" class="tr">bank (blend)</text>
+    <circle cx="320" cy="55" r="4" class="tg"/><text x="328" y="59" class="tm">river</text>
+    <circle cx="340" cy="85" r="4" class="tg"/><text x="348" y="89" class="tm">shore</text>
+    <circle cx="395" cy="75" r="6" class="fg sg"/><text x="406" y="79">bank₁ "river bank"</text>
+    <circle cx="470" cy="140" r="4" class="tb"/><text x="478" y="144" class="tm">money</text>
+    <circle cx="450" cy="165" r="4" class="tb"/><text x="458" y="169" class="tm">loan</text>
+    <circle cx="420" cy="150" r="6" class="fb sb"/><text x="300" y="128">bank₂ "paid into the bank"</text>
+  </svg><figcaption>Static models give "bank" one averaged point; contextual models place each use next to its real meaning.</figcaption></figure>
   <ul>
     <li><strong>ELMo</strong> (2018): bidirectional LSTMs (recurrent networks that read word by word). Contextual, but slow and forgetful over long text.</li>
     <li><strong>BERT</strong> (2018): a Transformer encoder. Every word looks at every other word at once. That mechanism, attention, is the subject of <em>02 · Transformers</em>.</li>
@@ -161,12 +312,13 @@ for w, v in zip(tf.get_feature_names_out(), T.toarray()[0].round(2)):
   </div>
 
   <h2 id="nl-tasks"><span class="num">08</span>Classic NLP Tasks</h2>
-  <p>Structure-extraction tasks. LLMs now do many of them zero-shot, but the vocabulary shows up in interviews.</p>
-  <ul>
-    <li><strong>POS tagging</strong>: label each word's grammatical role. The/DET angry/ADJ cat/NOUN ate/VERB. Lemmatizers need it ("better" → "good" only as an adjective).</li>
-    <li><strong>NER</strong> (named entity recognition): find spans that are people, organisations, places, dates.</li>
-    <li><strong>Dependency parsing</strong>: a grammar tree of who did what to whom. "cat" is the subject (nsubj) of "ate"; "fish" is its object (obj).</li>
-  </ul>
+  <p>LLMs now do these zero-shot, but the vocabulary shows up in interviews.</p>
+  <table class="tbl">
+    <tr><th>Task</th><th>Output</th><th>Example</th></tr>
+    <tr><td><strong>POS tagging</strong></td><td>Grammatical role per word</td><td>The/DET angry/ADJ cat/NOUN ate/VERB (lemmatizers need it)</td></tr>
+    <tr><td><strong>NER</strong></td><td>Spans: people, orgs, places, dates</td><td>[Elon Musk]PER founded [SpaceX]ORG</td></tr>
+    <tr><td><strong>Dependency parsing</strong></td><td>Who did what to whom</td><td>cat = subject (nsubj) of ate; fish = object (obj)</td></tr>
+  </table>
   <h3>BIO tagging for NER</h3>
   <p>Turns "find spans" into "label each token": <strong>B</strong>-type begins an entity, <strong>I</strong>-type continues it, <strong>O</strong> is outside.</p>
   <table class="tbl">
@@ -240,21 +392,7 @@ most positive: ['sound very', 'sound', 'very happy', 'great', 'happy']</div>
     <p>This baseline can't handle "not bad", sarcasm or unseen synonyms ("superb"). Transformers (02) give context-aware vectors; later notes classify the same reviews with a prompt (04) and compare cost and accuracy.</p>
   </div>
 
-  <h2 id="nl-rev"><span class="num">11</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Pipeline:</strong> lowercase → tokenize → (stopwords) → stem or lemmatize; fit on training data only.</li>
-    <li><strong>Stemming</strong> chops (fast, non-words); <strong>lemmatization</strong> looks up (slower, real words).</li>
-    <li><strong>Never drop "not"</strong> for sentiment: default stopword lists include it.</li>
-    <li><strong>BoW</strong>: word counts, order lost, sparse; a strong cheap baseline.</li>
-    <li><strong>N-grams</strong> keep local order ("not good"), at the cost of a huge sparse vocabulary.</li>
-    <li><strong>TF-IDF</strong> = frequent here × rare elsewhere; <strong>BM25</strong> adds saturation and length normalisation.</li>
-    <li><strong>Word2Vec</strong>: predict neighbours, keep the weights; skip-gram for rare words, CBOW for speed.</li>
-    <li><strong>GloVe</strong> uses global co-occurrence; <strong>FastText</strong> uses character n-grams, so no unknown words.</li>
-    <li>Static vectors give "bank" one meaning; <strong>contextual</strong> models (ELMo, BERT) give one per sentence.</li>
-    <li><strong>BIO tagging</strong> turns NER into per-token classification; judge classifiers by precision, recall, F1.</li>
-  </ol></div>
-
-  <h2 id="nl-qa"><span class="num">12</span>Questions &amp; Answers</h2>
+  <h2 id="nl-qa"><span class="num">11</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>Stemming vs lemmatization: when do you use each?</summary><div class="qa-body">Stemming chops endings by rule: fast, but gives non-words ("studies" → "studi") and misses irregular forms ("better"). Lemmatization uses a dictionary and part of speech: slower, returns real words ("better" → "good"). Stem for search and topic modelling; lemmatize when word identity matters (NER, parsing).</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Your sentiment model calls "this is not good" positive. What's the likely bug?</summary><div class="qa-body">Stopword removal deleted "not", leaving "good". Keep negations (custom stopword list or none), and add bigrams so "not good" is its own feature.</div></details>

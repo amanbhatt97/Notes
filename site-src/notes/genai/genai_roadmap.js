@@ -4,6 +4,74 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Start Here: The Learning Path</h1>
   <p class="lead">Sixteen notes, in order, that take you from "what is a token" to shipping an agent. Each one assumes only the notes before it and ends with a small build. Read this page first, then return to it whenever you're not sure what to study next.</p>
 
+  <h2 id="gr-mindmap" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+  <div class="mm-center">GenAI path: token → shipped agent</div>
+  <div class="mm-branches">
+    <div class="mm-branch">
+      <div class="mm-title">1 · Foundations</div>
+      <ul>
+        <li><b>01 NLP</b> — TF-IDF, word vectors, why context matters</li>
+        <li><b>02 Transformers</b> — BPE tokens, attention softmax(QKᵀ/√d)V, decoder-only</li>
+        <li><b>03 How LLMs Work</b> — next-token pre-training, sampling, KV cache, cost</li>
+        <li><b>Key skill</b> — explain prompt → token → price</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">2 · Working with LLMs</div>
+      <ul>
+        <li><b>04 Prompting</b> — system prompt, few-shot, CoT, XML tags, chaining</li>
+        <li><b>05 APIs &amp; Tools</b> — Messages API, structured outputs, tool loop, caching</li>
+        <li><b>Key skill</b> — write the <code>tool_use → tool_result</code> loop from a blank file</li>
+        <li>⚠ <b>The hinge</b> of the whole path: give 05 a full week</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">3 · RAG</div>
+      <ul>
+        <li><b>06 Vector DBs</b> — embeddings, cosine, HNSW / IVF-PQ, hybrid + RRF</li>
+        <li><b>07 RAG</b> — chunk → retrieve → rerank → answer with citations</li>
+        <li><b>Key skill</b> — tell a retrieval failure from a generation failure</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">4 · Agents</div>
+      <ul>
+        <li><b>08 Fundamentals</b> — workflows vs agents, ReAct, memory, tool design</li>
+        <li><b>09 From scratch</b> — plain-Python loop, step limit, memory</li>
+        <li><b>10 LangChain · 11 LangGraph</b> — LCEL; graphs, checkpoints, human approval</li>
+        <li><b>12 Multi-agent &amp; MCP</b> — supervisor/workers, MCP servers</li>
+        <li><b>Key skill</b> — choose workflow vs agent, and defend it</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">5 · Production</div>
+      <ul>
+        <li><b>13 Evals</b> — golden dataset, code checks, LLM-as-judge, tracing</li>
+        <li><b>14 Guardrails &amp; deploy</b> — injection defence, cost levers, FastAPI</li>
+        <li><b>Key skill</b> — prove a change helped with data, not vibes</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">6 · Customizing &amp; capstone</div>
+      <ul>
+        <li><b>15 Fine-tuning</b> — prompt vs RAG vs FT, LoRA/QLoRA, DPO</li>
+        <li><b>16 Capstone</b> — spec → RAG + tools + memory + guardrails + evals → API</li>
+        <li><b>Key skill</b> — know when fine-tuning is (not) the answer; ship alone</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">How to study</div>
+      <ul>
+        <li><b>Per note</b> — read fast, type the Build it, answer Q&amp;A aloud</li>
+        <li><b>Never skip</b> — 05, 07, 08, 09, 13</li>
+        <li>⚠ <b>Mistakes</b> — frameworks before the loop · agent where a workflow fits · no evals</li>
+        <li><b>Pace</b> — 10 weeks part-time; 4-week sprint possible</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
