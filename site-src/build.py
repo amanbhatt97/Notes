@@ -41,7 +41,9 @@ def main():
         if os.path.exists(os.path.join(HERE, p)):
             note_files.append(p)
     # include any extra note files not in the explicit order (e.g. new phases)
-    for p in sorted(glob.glob(os.path.join(HERE, 'notes', '*.js'))):
+    # notes/<phase>/*.js holds one note per file for phases split into a tree
+    for p in sorted(glob.glob(os.path.join(HERE, 'notes', '*.js')) +
+                    glob.glob(os.path.join(HERE, 'notes', '*', '*.js'))):
         rel = os.path.relpath(p, HERE)
         if rel not in note_files:
             note_files.append(rel)

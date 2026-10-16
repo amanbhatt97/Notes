@@ -29,7 +29,7 @@ site-src/
         dl.js          ← Deep Learning notes
         genai.js       ← Generative AI notes
         dsa.js         ← DSA notes
-        databases.js   ← Databases notes (SQL series)
+        databases/     ← Databases notes, one file per note (db_intro.js, sql_joins.js, mongo_basics.js, …)
     README.md          ← this file
 ```
 
@@ -40,6 +40,10 @@ site-src/
 - **Add a brand-new note** → add a key to the appropriate `notes/*.js` file, then add
   a matching entry (with `"note": "your_key"`) in the SYLLABUS array inside `data.js`
   so it shows up in the home-page roadmap.
+- **Sidebar tree** → in `CATEGORIES` (`data.js`), a topic with a `children` array is a
+  collapsible folder, e.g. Databases → SQL → JOINs. Folders can nest; leaves are notes.
+- **Code blocks** → write plain, HTML-escaped code in `<div class="fx" data-lang="sql">…</div>`
+  (or `data-lang="js"`); `app.js` colours it when the note opens.
 - **Change the roadmap / syllabus** → edit `data.js`.
 - **Change styling** → edit `styles.css`.
 - **Change app behaviour** → edit `app.js`.

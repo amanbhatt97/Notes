@@ -33,13 +33,96 @@ function saveState() {
 // ── Sidebar ──────────────────────────────────────────────────────────────────
 let sbOpen = window.innerWidth > 800;
 
+// Topics can nest: an entry with `children` is a collapsible group (folder),
+// any other non-divider entry is a leaf note. These helpers walk that tree.
+function flatTopics(list) {
+  var out = [];
+  (list || []).forEach(function(t) {
+    if (t.children) out = out.concat(flatTopics(t.children));
+    else if (!t.divider) out.push(t);
+  });
+  return out;
+}
+
+// Returns the chain of group nodes leading to `key`, or null if not found.
+function topicPath(list, key) {
+  for (var i = 0; i < (list || []).length; i++) {
+    var t = list[i];
+    if (t.key === key && !t.children) return [];
+    if (t.children) {
+      var sub = topicPath(t.children, key);
+      if (sub) return [t].concat(sub);
+    }
+  }
+  return null;
+}
+
+function renderTopicList(list, container, cat, depth) {
+  var pad = 42 + depth * 14;
+  list.forEach(function(t) {
+    if (t.divider) {
+      var d = document.createElement('div');
+      d.className = 'sb-divider-label';
+      d.textContent = t.label;
+      container.appendChild(d);
+      return;
+    }
+
+    if (t.children) {
+      var isOpen = appState.catOpen[t.key] === true;
+      var g = document.createElement('button');
+      g.className = 'sb-group' + (isOpen ? ' open' : '');
+      g.dataset.groupKey = t.key;
+      g.style.paddingLeft = (pad - 14) + 'px';
+      var n = flatTopics(t.children).filter(function(x) { return TOPIC_CONTENT[x.key]; }).length;
+      g.innerHTML = '<span class="sb-group-arrow">▶</span><span class="sb-group-label">' + t.label + '</span>' +
+        (n ? '<span class="sb-group-count">' + n + '</span>' : '');
+      var kids = document.createElement('div');
+      kids.className = 'sb-topics sb-subtopics' + (isOpen ? ' open' : '');
+      kids.dataset.groupKey = t.key;
+      renderTopicList(t.children, kids, cat, depth + 1);
+      g.onclick = function() {
+        var o = kids.classList.toggle('open');
+        g.classList.toggle('open', o);
+        appState.catOpen[t.key] = o;
+        saveState();
+      };
+      container.appendChild(g);
+      container.appendChild(kids);
+      return;
+    }
+
+    var tb = document.createElement('button');
+    tb.className = 'sb-topic' +
+      (activeTopic === t.key ? ' active' : '') +
+      (appState.visited[t.key] ? ' read' : '');
+    tb.dataset.key = t.key;
+    tb.style.paddingLeft = pad + 'px';
+    tb.style.setProperty('--dot-x', (pad - 14) + 'px');
+
+    var badge = t.badge
+      ? '<span style="margin-left:6px;background:var(--green-dim);color:var(--green);font-size:9px;font-weight:700;border-radius:10px;padding:1px 5px">' + t.badge + '</span>'
+      : '';
+
+    if (TOPIC_CONTENT[t.key]) {
+      tb.innerHTML = t.label + badge;
+      tb.onclick = function() { loadTopic(t.key, cat); };
+    } else {
+      tb.innerHTML = t.label + '<span style="margin-left:6px;font-size:9px;color:var(--ink3);background:var(--s2);border-radius:10px;padding:1px 5px">Soon</span>';
+      tb.style.opacity = '.5';
+      tb.style.cursor = 'default';
+    }
+    container.appendChild(tb);
+  });
+}
+
 function buildSidebar() {
   const nav = document.getElementById('sbNav');
   nav.innerHTML = '';
 
   CATEGORIES.forEach(cat => {
-    const hasTopics = cat.topics && cat.topics.filter(t => !t.divider).length > 0;
-    if (!hasTopics) {
+    const leaves = flatTopics(cat.topics);
+    if (leaves.length === 0) {
       // No topics — just a label
       const btn = document.createElement('button');
       btn.className = 'sb-cat';
@@ -57,9 +140,7 @@ function buildSidebar() {
     btn.className = 'sb-cat' + (isOpen ? ' open' : '');
     btn.dataset.catKey = cat.key;
 
-    // Count available topics
-    const availCount = cat.topics.filter(t => !t.divider && TOPIC_CONTENT[t.key]).length;
-    const totalCount = cat.topics.filter(t => !t.divider).length;
+    const availCount = leaves.filter(t => TOPIC_CONTENT[t.key]).length;
 
     btn.innerHTML =
       '<div class="sb-cat-icon">' + cat.emoji + '</div>' +
@@ -67,38 +148,9 @@ function buildSidebar() {
       (availCount > 0 ? '<span class="sb-cat-count">' + availCount + '</span>' : '') +
       '<span class="sb-cat-arrow">▶</span>';
 
-    // Topic list
     const topicsDiv = document.createElement('div');
     topicsDiv.className = 'sb-topics' + (isOpen ? ' open' : '');
-
-    cat.topics.forEach(t => {
-      if (t.divider) {
-        const d = document.createElement('div');
-        d.className = 'sb-divider-label';
-        d.textContent = t.label;
-        topicsDiv.appendChild(d);
-        return;
-      }
-      const tb = document.createElement('button');
-      tb.className = 'sb-topic' +
-        (activeTopic === t.key ? ' active' : '') +
-        (appState.visited[t.key] ? ' read' : '');
-      tb.dataset.key = t.key;
-
-      const badge = t.badge
-        ? '<span style="margin-left:6px;background:var(--green-dim);color:var(--green);font-size:9px;font-weight:700;border-radius:10px;padding:1px 5px">' + t.badge + '</span>'
-        : '';
-
-      if (TOPIC_CONTENT[t.key]) {
-        tb.innerHTML = t.label + badge;
-        tb.onclick = () => loadTopic(t.key, cat);
-      } else {
-        tb.innerHTML = t.label + '<span style="margin-left:6px;font-size:9px;color:var(--ink3);background:var(--s2);border-radius:10px;padding:1px 5px">Soon</span>';
-        tb.style.opacity = '.5';
-        tb.style.cursor = 'default';
-      }
-      topicsDiv.appendChild(tb);
-    });
+    renderTopicList(cat.topics, topicsDiv, cat, 0);
 
     btn.onclick = () => {
       const o = topicsDiv.classList.toggle('open');
@@ -112,6 +164,17 @@ function buildSidebar() {
   });
 
   updateProgress();
+}
+
+// Open every sidebar group on the way to `key` so the active note is visible.
+function revealInSidebar(cat, key) {
+  (topicPath(cat.topics, key) || []).forEach(function(g) {
+    document.querySelectorAll('[data-group-key="' + g.key + '"]').forEach(function(el) {
+      el.classList.add('open');
+    });
+    appState.catOpen[g.key] = true;
+  });
+  saveState();
 }
 
 function toggleSidebar() {
@@ -226,22 +289,27 @@ function loadTopic(key, cat) {
   appState.visited[key] = true;
   saveState();
 
-  // Find category for breadcrumb
-  const foundCat = cat || CATEGORIES.find(c =>
-    c.topics && c.topics.some(t => t.key === key)
-  );
-  const topicLabel = foundCat && foundCat.topics
-    ? (foundCat.topics.find(t => t.key === key) || {}).label || key
-    : key;
+  // Find category + group path for breadcrumb
+  if (typeof cat === 'string') cat = CATEGORIES.find(c => c.key === cat);
+  const foundCat = (cat && topicPath(cat.topics, key)) ? cat : CATEGORIES.find(c => topicPath(c.topics, key));
+  const path = foundCat ? topicPath(foundCat.topics, key) : [];
+  const leaf = foundCat ? flatTopics(foundCat.topics).find(t => t.key === key) : null;
+  const topicLabel = leaf ? leaf.label : key;
 
   document.getElementById('homeEl').style.display = 'none';
   const tp = document.getElementById('topicPage');
   tp.className = 'topic-page visible';
   const _tc = document.getElementById('topicContent');
   _tc.innerHTML = html;
+  highlightCode(_tc);
   makeCollapsible(_tc);
+  if (foundCat) appendPrevNext(_tc, foundCat, key);
 
-  if (foundCat) document.getElementById('tbCat').textContent = foundCat.label;
+  if (foundCat) {
+    document.getElementById('tbCat').textContent =
+      [foundCat.label].concat(path.map(g => g.label)).join(' › ');
+    revealInSidebar(foundCat, key);
+  }
   document.getElementById('tbName').textContent = topicLabel;
 
   // Wire Q&A reveal buttons
@@ -262,6 +330,27 @@ function loadTopic(key, cat) {
   if (searchIndex.length === 0) rebuildSearchIndex();
 
   if (window.innerWidth <= 800 && sbOpen) toggleSidebar();
+}
+
+// Previous / next buttons follow the sidebar order within the category,
+// so a learning path can be read start to finish.
+function appendPrevNext(container, cat, key) {
+  var list = flatTopics(cat.topics).filter(function(t) { return TOPIC_CONTENT[t.key]; });
+  var i = list.findIndex(function(t) { return t.key === key; });
+  if (i < 0) return;
+  var nav = document.createElement('div');
+  nav.className = 'note-nav';
+  [[list[i - 1], 'prev', '← Previous'], [list[i + 1], 'next', 'Next →']].forEach(function(x) {
+    var t = x[0];
+    var b = document.createElement(t ? 'button' : 'span');
+    b.className = 'note-nav-btn ' + x[1];
+    if (t) {
+      b.innerHTML = '<small>' + x[2] + '</small><span>' + t.label + '</span>';
+      b.onclick = function() { loadTopic(t.key, cat); };
+    }
+    nav.appendChild(b);
+  });
+  container.appendChild(nav);
 }
 
 // ── Home grid ─────────────────────────────────────────────────────────────────
@@ -370,6 +459,63 @@ function buildPhaseTree() {
 }
 
 
+// ── Code highlighting ────────────────────────────────────────────────────────
+// Notes can write plain code as <div class="fx" data-lang="sql|js">…</div>
+// (HTML-escaped, no spans) and it is coloured here at render time.
+var HL_KEYWORDS = {
+  sql: 'select from where and or not in is null as on join inner left right full outer cross natural using group by having order asc desc limit offset fetch first next rows only distinct all any some exists between like ilike case when then else end union intersect except insert into values update set delete returning create table view materialized index unique primary key foreign references constraint check default alter add drop column cascade restrict truncate begin commit rollback savepoint transaction isolation level read committed repeatable serializable with recursive over partition range unbounded preceding following current row filter lateral explain analyze grant revoke if replace temp temporary conflict do nothing true false int integer bigint smallint serial bigserial numeric decimal real float text varchar char boolean date time timestamp timestamptz interval jsonb json uuid lock for share nowait skip locked vacuum',
+  js: 'const let var function return if else for of in new true false null undefined await async db',
+  py: 'def class return if elif else for while in not and or is import from as with try except finally raise lambda None True False pass yield async await break continue global nonlocal assert del print self'
+};
+var HL_SETS = {};
+Object.keys(HL_KEYWORDS).forEach(function(l) {
+  HL_SETS[l] = {};
+  HL_KEYWORDS[l].split(' ').forEach(function(w) { HL_SETS[l][w] = 1; });
+});
+
+function hlEscape(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function highlightSource(src, lang) {
+  var kw = HL_SETS[lang] || {};
+  var comment = lang === 'sql' ? /^--[^\n]*/ : lang === 'py' ? /^#[^\n]*/ : /^\/\/[^\n]*/;
+  var out = '', i = 0, m;
+  while (i < src.length) {
+    var rest = src.slice(i);
+    if ((m = rest.match(comment)) || (lang !== 'py' && (m = rest.match(/^\/\*[\s\S]*?\*\//)))) {
+      out += '<span class="c">' + hlEscape(m[0]) + '</span>';
+    } else if (lang === 'py' && ((m = rest.match(/^[rfbu]?"""[\s\S]*?"""/i)) || (m = rest.match(/^[rfbu]?'''[\s\S]*?'''/i)))) {
+      out += '<span class="g">' + hlEscape(m[0]) + '</span>';
+    } else if (lang === 'py' && ((m = rest.match(/^[rfbu](?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")/i)))) {
+      out += '<span class="g">' + hlEscape(m[0]) + '</span>';
+    } else if ((m = rest.match(/^'(?:[^'\\]|\\.|'')*'/)) || (m = rest.match(/^"(?:[^"\\]|\\.)*"/))) {
+      // In SQL, double quotes are identifiers, not strings
+      out += lang === 'sql' && m[0][0] === '"' ? hlEscape(m[0]) : '<span class="g">' + hlEscape(m[0]) + '</span>';
+    } else if ((m = rest.match(/^\d+(?:\.\d+)?\b/))) {
+      out += '<span class="y">' + m[0] + '</span>';
+    } else if ((m = rest.match(/^\$?[A-Za-z_][A-Za-z0-9_]*/))) {
+      var w = m[0];
+      if (w[0] === '$') out += '<span class="o">' + w + '</span>';
+      else if (kw[lang === 'sql' ? w.toLowerCase() : w]) out += '<span class="k">' + w + '</span>';
+      else if (/^\s*\(/.test(src.slice(i + w.length))) out += '<span class="o">' + w + '</span>';
+      else out += w;
+    } else {
+      m = [rest[0]];
+      out += hlEscape(m[0]);
+    }
+    i += m[0].length;
+  }
+  return out;
+}
+
+function highlightCode(container) {
+  container.querySelectorAll('.fx[data-lang]').forEach(function(el) {
+    var lang = { python: 'py', javascript: 'js', mongo: 'js' }[el.dataset.lang] || el.dataset.lang;
+    el.innerHTML = highlightSource(el.textContent, lang);
+  });
+}
+
 // ── Q&A reveal buttons ───────────────────────────────────────────────────────
 function wireRevealAll() {
   var btn = document.getElementById('revealAll');
@@ -389,8 +535,8 @@ function wireRevealAll() {
 function updateProgress() {
   var total = 0, done = 0;
   CATEGORIES.forEach(function(cat) {
-    (cat.topics || []).forEach(function(t) {
-      if (!t.divider && TOPIC_CONTENT[t.key]) {
+    flatTopics(cat.topics).forEach(function(t) {
+      if (TOPIC_CONTENT[t.key]) {
         total++;
         if (appState.visited && appState.visited[t.key]) done++;
       }
@@ -406,8 +552,8 @@ function updateProgress() {
 function rebuildSearchIndex() {
   searchIndex = [];
   CATEGORIES.forEach(function(cat) {
-    (cat.topics || []).forEach(function(t) {
-      if (t.divider || !TOPIC_CONTENT[t.key]) return;
+    flatTopics(cat.topics).forEach(function(t) {
+      if (!TOPIC_CONTENT[t.key]) return;
       var html = TOPIC_CONTENT[t.key];
       var text = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
       searchIndex.push({
