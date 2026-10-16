@@ -13510,6 +13510,1050 @@ res = {"naive (last value)": np.repeat(train.iloc[-1], 12),
 });
 
 
+// notes/mlops/mlops_deploy.js — Deployment Strategies
+Object.assign(TOPIC_CONTENT, {
+  "mlops_deploy": `<main>
+  <h1>Deployment Strategies</h1>
+  <p class="lead">A model earns money only once it answers real requests. This page covers how predictions are served (batch, online, streaming), where they run (Docker, Kubernetes, SageMaker), how new versions ship safely (CI/CD, canary, shadow, rollback) and how models are packaged. It builds on <em>The ML Lifecycle</em> and <em>MLflow</em>.</p>
+
+  <h2 id="dp-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Deployment Strategies</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Inference modes</div>
+        <ul>
+          <li><b>Batch</b> — scheduled job scores a table; hours; cheap; churn, weekly recs</li>
+          <li><b>Online</b> — API per request; ms; always-on; checkout, search</li>
+          <li><b>Streaming</b> — consumer on Kafka; seconds; fraud on card swipes</li>
+          <li><b>Hybrid</b> — precompute heavy parts in batch, score online</li>
+          <li><b>Rule</b> — batch unless the input only exists at request time</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">FastAPI + Docker</div>
+        <ul>
+          <li><b>Pydantic</b> — validates input; bad shape → 422</li>
+          <li><b>Load at startup</b> — never per request</li>
+          <li><b><code>/health</code></b> — for readiness probes and load balancers</li>
+          <li><b>Docker image</b> — freezes code + model + deps; pin the tag</li>
+          <li>⚠ <b>Slow p99</b> — per-request loading, one worker, DB calls per request</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Kubernetes</div>
+        <ul>
+          <li><b>Pod</b> — smallest unit, one+ containers</li>
+          <li><b>Deployment</b> — keeps N replicas, rolling updates, <code>rollout undo</code></li>
+          <li><b>Service</b> — stable address, load-balances healthy pods</li>
+          <li><b>HPA</b> — scales replicas on CPU/memory/custom metrics</li>
+          <li>💡 Kitchen: chefs (pods), shift manager (Deployment), counter (Service), rush-hour hires (HPA)</li>
+          <li>⚠ <b>HPA needs <code>resources.requests</code></b>; add readiness probe for slow model loads</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">CI/CD for ML</div>
+        <ul>
+          <li><b>Code tests</b> — pytest on features, API contract</li>
+          <li><b>Data tests</b> — schema, nulls, ranges (Great Expectations, Pandera)</li>
+          <li><b>Model tests</b> — beat baseline + champion, slices, latency, invariance</li>
+          <li><b>Flow</b> — test → train on sample → build image → staging → canary</li>
+          <li>⚠ <b>Full retrain in CI</b> — too slow; that runs in a training pipeline</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">SageMaker</div>
+        <ul>
+          <li><b>Real-time endpoint</b> — always-on HTTPS; billed per instance-hour</li>
+          <li><b>Serverless</b> — scales to zero; cold starts</li>
+          <li><b>Async</b> — queued, large payloads, long jobs</li>
+          <li><b>Batch Transform</b> — scores S3 data, then shuts down</li>
+          <li><b>Call</b> — <code>boto3.client("sagemaker-runtime").invoke_endpoint(...)</code></li>
+          <li>⚠ <b>Idle endpoints still bill</b> — delete test endpoints</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Rollout strategies</div>
+        <ul>
+          <li><b>Blue-green</b> — two envs, flip all traffic; instant rollback; 2× infra briefly</li>
+          <li><b>Canary</b> — 5% → 25% → 100% while metrics hold; limits blast radius</li>
+          <li><b>Shadow</b> — v2 scores a copy of traffic silently; zero user risk</li>
+          <li><b>Order</b> — shadow (sane?) → canary (safe?) → A/B (better?)</li>
+          <li>⚠ <b>Canary ≠ A/B</b> — too small/short to prove business lift</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Versioning &amp; rollback</div>
+        <ul>
+          <li><b>Chain</b> — Git SHA → data version → registry version → image tag → deployment</li>
+          <li><b>Log model version per prediction</b> — trace any bad output</li>
+          <li><b>Rollback = move a pointer</b> — alias, <code>kubectl rollout undo</code>, back to blue</li>
+          <li>⚠ <b>Deleted feature pipeline</b> — keep old features alive or rollback breaks</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Packaging</div>
+        <ul>
+          <li><b>pickle / joblib</b> — any object; <code>__reduce__</code> runs code on load</li>
+          <li>⚠ <b>Untrusted pickle = remote code execution</b>; also breaks across library versions</li>
+          <li><b>skops</b> — safe sklearn format with type allow-list</li>
+          <li><b>safetensors</b> — weights only, for NN/LLMs</li>
+          <li><b>ONNX</b> — code-free op graph; any language/runtime; <code>skl2onnx.to_onnx</code></li>
+          <li><b>Verify</b> — converted outputs must match original (569/569 here)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="roadmap-wrap">
+    <h2 class="roadmap-title">What we'll cover</h2>
+    <div class="roadmap-grid">
+      <div class="rm-item rm-done" data-target="dp-modes"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Batch vs Online vs Streaming</span><span class="rm-sub">When predictions are made</span></div></div>
+      <div class="rm-item rm-done" data-target="dp-api"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">FastAPI + Docker</span><span class="rm-sub">The standard serving unit</span></div></div>
+      <div class="rm-item rm-done" data-target="dp-k8s"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Kubernetes Basics</span><span class="rm-sub">Pods, services, autoscaling</span></div></div>
+      <div class="rm-item rm-done" data-target="dp-cicd"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">CI/CD for ML</span><span class="rm-sub">Test code, data and model</span></div></div>
+      <div class="rm-item rm-done" data-target="dp-sm"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">AWS SageMaker</span><span class="rm-sub">Endpoints and Batch Transform</span></div></div>
+      <div class="rm-item rm-done" data-target="dp-roll"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Blue-Green, Canary, Shadow</span><span class="rm-sub">Shipping without fear</span></div></div>
+      <div class="rm-item rm-done" data-target="dp-ver"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Versioning &amp; Rollback</span><span class="rm-sub">Undo in one minute</span></div></div>
+      <div class="rm-item rm-done" data-target="dp-pack"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Model Packaging</span><span class="rm-sub">Pickle risks, ONNX</span></div></div>
+      <div class="rm-item rm-done" data-target="dp-qa"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+    </div>
+  </div>
+
+  <h2 id="dp-modes"><span class="num">01</span>Batch vs Online vs Streaming</h2>
+  <figure class="viz"><svg viewBox="0 0 600 170" width="600">
+    <defs><marker id="dp-ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs>
+    <g stroke="currentColor" fill="none" marker-end="url(#dp-ar1)">
+      <line x1="140" y1="30" x2="198" y2="30"/><line x1="340" y1="30" x2="398" y2="30"/>
+      <line x1="140" y1="85" x2="198" y2="85"/><line x1="340" y1="85" x2="398" y2="85"/>
+      <line x1="140" y1="140" x2="198" y2="140"/><line x1="340" y1="140" x2="398" y2="140"/>
+    </g>
+    <text x="10" y="34">Batch</text><rect x="200" y="12" width="140" height="36" rx="6" class="fb sb"/><text x="270" y="35" text-anchor="middle">nightly job, 10M rows</text><rect x="400" y="12" width="190" height="36" rx="6" class="fs" stroke="currentColor"/><text x="495" y="35" text-anchor="middle">table → app reads later</text>
+    <text x="10" y="89">Online</text><rect x="200" y="67" width="140" height="36" rx="6" class="fg sg"/><text x="270" y="90" text-anchor="middle">API, 1 request</text><rect x="400" y="67" width="190" height="36" rx="6" class="fs" stroke="currentColor"/><text x="495" y="90" text-anchor="middle">answer in ~50 ms</text>
+    <text x="10" y="144">Streaming</text><rect x="200" y="122" width="140" height="36" rx="6" class="ft st"/><text x="270" y="145" text-anchor="middle">consumer on Kafka</text><rect x="400" y="122" width="190" height="36" rx="6" class="fs" stroke="currentColor"/><text x="495" y="145" text-anchor="middle">event → score → topic</text>
+    <text x="70" y="52" class="tm" font-size="11">schedule</text><text x="70" y="107" class="tm" font-size="11">user request</text><text x="70" y="162" class="tm" font-size="11">event arrives</text>
+  </svg><figcaption>Same model, three ways to call it. The question is when the prediction must exist.</figcaption></figure>
+  <table class="tbl">
+    <tr><th></th><th>Batch</th><th>Online (real-time)</th><th>Streaming</th></tr>
+    <tr><td>Latency</td><td>Hours</td><td>Milliseconds</td><td>Seconds</td></tr>
+    <tr><td>Input</td><td>Whole table</td><td>One request</td><td>Continuous event stream</td></tr>
+    <tr><td>Fresh features?</td><td>As of last run</td><td>Yes, at request time</td><td>Yes, rolling windows</td></tr>
+    <tr><td>Infra cost</td><td>Low (spot instances, then off)</td><td>Always-on servers</td><td>Always-on consumers + broker</td></tr>
+    <tr><td>Use when</td><td>Churn scores, weekly recs, lead scoring</td><td>Search ranking, credit decision at checkout</td><td>Fraud on card swipes, IoT anomalies</td></tr>
+    <tr><td>Tools</td><td>Spark, Airflow, SageMaker Batch Transform</td><td>FastAPI, Triton, SageMaker endpoint</td><td>Kafka + Flink / Spark Streaming</td></tr>
+  </table>
+  <div class="callout intu"><span class="label">Rule of thumb</span>
+    <p>Start with batch if the business can wait. It is cheaper, simpler to debug and easy to rerun. Go online only when the input is unknown until the request arrives.</p>
+  </div>
+
+  <h2 id="dp-api"><span class="num">02</span>FastAPI + Docker</h2>
+  <div class="flow"><span>Client JSON</span><span>FastAPI validates (Pydantic)</span><span>Model loaded at startup</span><span>predict()</span><span>JSON response</span></div>
+  <div class="fx" data-lang="py">import numpy as np, onnxruntime as ort
+from fastapi import FastAPI
+from pydantic import BaseModel, Field
+
+sess = ort.InferenceSession("model.onnx")      # load ONCE at startup, not per request
+app = FastAPI()
+
+class Patient(BaseModel):
+    features: list[float] = Field(min_length=30, max_length=30)
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "model_version": "1"}
+
+@app.post("/predict")
+def predict(p: Patient):
+    x = np.array([p.features], dtype=np.float32)
+    label, probs = sess.run(None, {"X": x})
+    return {"label": int(label[0]), "p_benign": round(float(probs[0][1]), 4)}</div>
+  <div class="fx" data-lang="text"># tested with fastapi.testclient.TestClient
+GET  /health                     -&gt; {'status': 'ok', 'model_version': '1'}
+POST /predict  (row 0)           -&gt; {'label': 0, 'p_benign': 0.0}
+POST /predict  (row 20)          -&gt; {'label': 1, 'p_benign': 0.9987}
+POST /predict  [1.0, 2.0]        -&gt; 422 List should have at least 30 items after validation, not 2</div>
+  <p>Ship it as a Docker image (<code>FROM python:3.12-slim</code>, install pinned deps, copy <code>app.py</code> + <code>model.onnx</code>, <code>CMD uvicorn app:app</code>): code, model and dependencies frozen together. Details: the <em>FastAPI</em> and <em>Docker</em> notes.</p>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Loading the model inside the request handler adds seconds per call. Load at startup; expose <code>/health</code> so the orchestrator knows when the pod is ready.</p>
+  </div>
+
+  <h2 id="dp-k8s"><span class="num">03</span>Kubernetes Basics</h2>
+  <figure class="viz"><svg viewBox="0 0 600 160" width="600">
+    <defs><marker id="dp-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs>
+    <rect x="10" y="60" width="90" height="40" rx="6" class="fs" stroke="currentColor"/><text x="55" y="84" text-anchor="middle">clients</text>
+    <rect x="140" y="55" width="110" height="50" rx="6" class="fv" stroke="currentColor"/><text x="195" y="77" text-anchor="middle">Service</text><text x="195" y="93" text-anchor="middle" class="tm" font-size="11">stable IP, LB</text>
+    <rect x="290" y="10" width="200" height="140" rx="8" fill="none" stroke="currentColor" stroke-dasharray="5 3"/><text x="300" y="28" class="tm" font-size="11">Deployment: replicas=3</text>
+    <rect x="310" y="38" width="160" height="30" rx="5" class="fb sb"/><text x="390" y="58" text-anchor="middle">pod: model-api v2</text>
+    <rect x="310" y="76" width="160" height="30" rx="5" class="fb sb"/><text x="390" y="96" text-anchor="middle">pod: model-api v2</text>
+    <rect x="310" y="114" width="160" height="30" rx="5" class="fb sb"/><text x="390" y="134" text-anchor="middle">pod: model-api v2</text>
+    <rect x="510" y="55" width="80" height="50" rx="6" class="fg sg"/><text x="550" y="77" text-anchor="middle">HPA</text><text x="550" y="93" text-anchor="middle" class="tm" font-size="11">CPU&gt;70%</text>
+    <g stroke="currentColor" fill="none" marker-end="url(#dp-ar2)"><line x1="100" y1="80" x2="138" y2="80"/><line x1="250" y1="72" x2="308" y2="53"/><line x1="250" y1="80" x2="308" y2="91"/><line x1="250" y1="88" x2="308" y2="129"/><line x1="510" y1="80" x2="492" y2="80"/></g>
+  </svg><figcaption>The Service spreads traffic over identical pods; the HPA adds or removes pods with load.</figcaption></figure>
+  <table class="tbl">
+    <tr><th>Object</th><th>What it is</th><th>Analogy</th></tr>
+    <tr><td><strong>Pod</strong></td><td>Smallest unit: one or more containers sharing network</td><td>One chef at a station</td></tr>
+    <tr><td><strong>Deployment</strong></td><td>Keeps N identical pods running; does rolling updates</td><td>Manager who keeps 3 chefs on shift</td></tr>
+    <tr><td><strong>Service</strong></td><td>Stable name/IP that load-balances to healthy pods</td><td>The order counter</td></tr>
+    <tr><td><strong>HPA</strong></td><td>Horizontal Pod Autoscaler: scales replicas on CPU/memory/custom metrics</td><td>Calls in more chefs at rush hour</td></tr>
+  </table>
+  <div class="fx" data-lang="text"># model-api.yaml  (minimal; not run here, no cluster)   kubectl apply -f model-api.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: model-api}
+spec:
+  replicas: 3
+  selector: {matchLabels: {app: model-api}}
+  template:
+    metadata: {labels: {app: model-api}}
+    spec:
+      containers:
+      - name: api
+        image: registry.example.com/model-api:1.4.2     # pinned tag, never :latest
+        ports: [{containerPort: 8000}]
+        resources:
+          requests: {cpu: "500m", memory: "1Gi"}
+          limits:   {cpu: "1",    memory: "2Gi"}
+        readinessProbe: {httpGet: {path: /health, port: 8000}, initialDelaySeconds: 10}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: model-api}
+spec:
+  selector: {app: model-api}
+  ports: [{port: 80, targetPort: 8000}]
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata: {name: model-api}
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: model-api}
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource: {name: cpu, target: {type: Utilization, averageUtilization: 70}}</div>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>HPA on CPU needs <code>resources.requests</code>; utilisation is measured against them. Big models also need a readiness probe, or traffic hits pods still loading weights.</p>
+  </div>
+
+  <h2 id="dp-cicd"><span class="num">04</span>CI/CD for ML</h2>
+  <div class="flow"><span>Push / PR</span><span>Code tests</span><span>Data tests</span><span>Train + model tests</span><span>Build image</span><span>Deploy to staging</span><span>Canary to prod</span></div>
+  <table class="tbl">
+    <tr><th>Test on</th><th>Examples</th><th>Tools</th></tr>
+    <tr><td><strong>Code</strong></td><td>Feature functions on tiny fixtures; API returns 422 on bad input</td><td>pytest, ruff, mypy</td></tr>
+    <tr><td><strong>Data</strong></td><td>Schema, no nulls in key cols, ranges, row counts, label balance</td><td>Great Expectations, Pandera</td></tr>
+    <tr><td><strong>Model</strong></td><td>Beats baseline and current champion; per-slice metrics; latency; invariance (e.g. name change ≠ new prediction)</td><td>pytest + MLflow eval</td></tr>
+    <tr><td><strong>Serving</strong></td><td>Container starts, <code>/health</code> ok, training/serving give same output</td><td>Docker, smoke tests</td></tr>
+  </table>
+  <div class="fx" data-lang="text"># .github/workflows/ml.yml  (example, not run here)
+name: ml-ci
+on:
+  pull_request:
+  push: {branches: [main]}
+jobs:
+  test-train:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install -r requirements.txt
+      - run: pytest tests/code                     # unit tests
+      - run: dvc pull data/sample.csv              # versioned test data
+      - run: pytest tests/data                     # schema / range checks
+      - run: python train.py --data data/sample.csv --out model/
+      - run: pytest tests/model                    # must beat baseline, latency budget
+  deploy:
+    needs: test-train
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t registry.example.com/model-api:&#36;{{ github.sha }} .
+      - run: docker push registry.example.com/model-api:&#36;{{ github.sha }}
+      - run: kubectl set image deployment/model-api api=registry.example.com/model-api:&#36;{{ github.sha }}</div>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Full training in CI is too slow. CI trains on a small sample to catch breakage; the full retrain runs in a pipeline (Airflow, Kubeflow, SageMaker Pipelines) that registers a candidate.</p>
+  </div>
+
+  <h2 id="dp-sm"><span class="num">05</span>AWS SageMaker</h2>
+  <div class="cards">
+    <div><b>Real-time endpoint</b><p>Always-on HTTPS endpoint on chosen instances; autoscaling.</p><small>Online, ms latency</small></div>
+    <div><b>Serverless inference</b><p>Scales to zero; pay per request; cold starts.</p><small>Spiky, low traffic</small></div>
+    <div><b>Async inference</b><p>Queue; payloads up to 1 GB, minutes to process.</p><small>Big inputs, video, long LLM jobs</small></div>
+    <div><b>Batch Transform</b><p>Spins up, scores an S3 dataset, shuts down.</p><small>Offline, no endpoint</small></div>
+  </div>
+  <div class="flow"><span>model.tar.gz on S3</span><span>Model (image + artifact)</span><span>Endpoint config (instance type, count)</span><span>Endpoint</span></div>
+  <div class="fx" data-lang="py"># SageMaker Python SDK (v2-style API) — not run here, needs an AWS account + IAM role
+from sagemaker.sklearn.model import SKLearnModel
+
+model = SKLearnModel(model_data="s3://my-bucket/models/cancer/model.tar.gz",
+                     role="arn:aws:iam::123456789012:role/SageMakerRole",
+                     entry_point="inference.py",          # model_fn / predict_fn
+                     framework_version="1.2-1")
+
+# Online: real-time endpoint
+predictor = model.deploy(initial_instance_count=2, instance_type="ml.m5.large",
+                         endpoint_name="cancer-clf-v2")
+
+# Offline: Batch Transform over a whole S3 prefix
+transformer = model.transformer(instance_count=4, instance_type="ml.m5.xlarge",
+                                output_path="s3://my-bucket/predictions/")
+transformer.transform("s3://my-bucket/to-score/", content_type="text/csv", split_type="Line")</div>
+  <div class="fx" data-lang="py"># Calling an existing endpoint from any app (boto3) — not run here
+import boto3
+rt = boto3.client("sagemaker-runtime")
+resp = rt.invoke_endpoint(EndpointName="cancer-clf-v2", ContentType="text/csv",
+                          Body="17.99,10.38,122.8,...")   # 30 comma-separated features
+print(resp["Body"].read().decode())</div>
+  <p>Newer SDK releases restructure deployment around <code>ModelBuilder</code>; boto3 calls stay the same. Endpoints also support blue/green updates with canary or linear traffic shifting and auto-rollback on CloudWatch alarms.</p>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>A real-time endpoint bills every hour it exists, even with zero traffic. Delete test endpoints; use Batch Transform or serverless when you can.</p>
+  </div>
+
+  <h2 id="dp-roll"><span class="num">06</span>Blue-Green, Canary, Shadow</h2>
+  <figure class="viz"><svg viewBox="0 0 600 175" width="600">
+    <text x="95" y="16" text-anchor="middle">Blue-green</text>
+    <text x="300" y="16" text-anchor="middle">Canary</text>
+    <text x="505" y="16" text-anchor="middle">Shadow</text>
+    <rect x="20" y="30" width="150" height="34" rx="6" class="fb sb"/><text x="95" y="52" text-anchor="middle">blue v1: 100% → 0%</text>
+    <rect x="20" y="80" width="150" height="34" rx="6" class="fg sg"/><text x="95" y="102" text-anchor="middle">green v2: 0% → 100%</text>
+    <text x="95" y="140" text-anchor="middle" class="tm" font-size="11">flip the router at once;</text><text x="95" y="155" text-anchor="middle" class="tm" font-size="11">blue kept warm for rollback</text>
+    <rect x="225" y="30" width="150" height="34" rx="6" class="fb sb"/><text x="300" y="52" text-anchor="middle">v1: 95%</text>
+    <rect x="225" y="80" width="150" height="34" rx="6" class="fg sg"/><text x="300" y="102" text-anchor="middle">v2: 5% → 25 → 100</text>
+    <text x="300" y="140" text-anchor="middle" class="tm" font-size="11">ramp up while metrics</text><text x="300" y="155" text-anchor="middle" class="tm" font-size="11">stay healthy</text>
+    <rect x="430" y="30" width="150" height="34" rx="6" class="fb sb"/><text x="505" y="52" text-anchor="middle">v1: answers 100%</text>
+    <rect x="430" y="80" width="150" height="34" rx="6" class="fs" stroke="currentColor" stroke-dasharray="4 3"/><text x="505" y="102" text-anchor="middle">v2: sees copy, silent</text>
+    <text x="505" y="140" text-anchor="middle" class="tm" font-size="11">v2 output logged only;</text><text x="505" y="155" text-anchor="middle" class="tm" font-size="11">users never see it</text>
+    <line x1="200" y1="25" x2="200" y2="160" stroke="currentColor" stroke-opacity=".3"/><line x1="405" y1="25" x2="405" y2="160" stroke="currentColor" stroke-opacity=".3"/>
+  </svg><figcaption>Blue-green swaps everyone at once; canary shifts gradually; shadow tests with zero user risk.</figcaption></figure>
+  <table class="tbl">
+    <tr><th></th><th>Blue-green</th><th>Canary</th><th>Shadow</th><th>A/B test</th></tr>
+    <tr><td>Users exposed to v2</td><td>All, at once</td><td>A small, growing %</td><td>None</td><td>A fixed split (e.g. 50/50)</td></tr>
+    <tr><td>Goal</td><td>Zero-downtime switch, instant rollback</td><td>Catch errors on little traffic</td><td>Compare outputs, latency on real traffic</td><td>Measure business impact</td></tr>
+    <tr><td>Cost</td><td>2× infra briefly</td><td>Low</td><td>2× compute for scoring</td><td>Weeks of traffic</td></tr>
+  </table>
+  <div class="flow"><span>Shadow (is it sane?)</span><span>Canary (is it safe?)</span><span>A/B (is it better?)</span><span>Full rollout</span></div>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Canary is about safety, not proof of improvement: 5% for an hour can't measure a 1% conversion lift. That needs a proper A/B test, covered in <em>ML System Design → Shadow, Canary &amp; A/B Infrastructure</em>.</p>
+  </div>
+
+  <h2 id="dp-ver"><span class="num">07</span>Versioning &amp; Rollback</h2>
+  <div class="flow"><span>Git SHA</span><span>Data version</span><span>Registry version 7</span><span>Image tag model-api:1.4.2</span><span>Endpoint / Deployment</span></div>
+  <ul>
+    <li><strong>Every prediction logs the model version</strong>, so a bad prediction can be traced to its model, code and data.</li>
+    <li><strong>Pin everything:</strong> image tags (not <code>:latest</code>), registry versions or aliases, feature definitions.</li>
+    <li><strong>Rollback is a pointer move:</strong> registry alias back to v6, <code>kubectl rollout undo deployment/model-api</code>, or the blue environment.</li>
+    <li><strong>Keep the old version warm</strong> and its features computable; a rollback that needs a retrain is not a rollback.</li>
+  </ul>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>A new model that needs a new feature breaks rollback if the old feature pipeline was deleted. Version feature pipelines with the model and keep both alive during rollout.</p>
+  </div>
+  <p>What to watch after rollout (drift, latency, error rate, business KPIs): see <em>ML System Design → Monitoring, Drift &amp; Retraining</em>.</p>
+
+  <h2 id="dp-pack"><span class="num">08</span>Model Packaging</h2>
+  <p><code>pickle</code> and <code>joblib</code> save any Python object. Loading one can run any code the file's author chose:</p>
+  <div class="fx" data-lang="py">import pickle, os
+class Evil:
+    def __reduce__(self):                      # tells pickle how to "rebuild" the object
+        return (os.system, ("echo PWNED: this ran during pickle.load",))
+open("model.pkl", "wb").write(pickle.dumps(Evil()))
+pickle.load(open("model.pkl", "rb"))           # just loading runs the command</div>
+  <div class="fx" data-lang="text">PWNED: this ran during pickle.load</div>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Never unpickle a model from an untrusted source (random Hub repo, user upload). Pickles also break across library versions: a model pickled with sklearn 1.3 may fail or silently differ on 1.6.</p>
+  </div>
+  <p><strong>ONNX</strong> (Open Neural Network Exchange) stores the model as a graph of standard math ops, not Python objects. Any ONNX runtime can execute it.</p>
+  <div class="fx" data-lang="py">from skl2onnx import to_onnx
+import onnxruntime as ort
+
+pipe = make_pipeline(StandardScaler(), LogisticRegression()).fit(X, y)   # X float32
+onx = to_onnx(pipe, X[:1])                      # trace with a sample input
+open("model.onnx", "wb").write(onx.SerializeToString())
+
+sess = ort.InferenceSession("model.onnx")       # sklearn not needed here
+inp = sess.get_inputs()[0].name
+print("inputs:", [(i.name, i.shape) for i in sess.get_inputs()])
+print("sklearn:", pipe.predict(X[:5]))
+print("onnx:   ", sess.run(None, {inp: X[:5]})[0])
+print("all 569 agree:", (sess.run(None, {inp: X})[0] == pipe.predict(X)).all())</div>
+  <div class="fx" data-lang="text">inputs: [('X', [None, 30])]
+sklearn: [0 0 0 0 0]
+onnx:    [0 0 0 0 0]
+all 569 agree: True</div>
+  <table class="tbl">
+    <tr><th>Format</th><th>Safe to load?</th><th>Portable?</th><th>Use for</th></tr>
+    <tr><td>pickle / joblib</td><td>No: runs code</td><td>Same Python + library versions only</td><td>Quick internal work, trusted sources</td></tr>
+    <tr><td>skops</td><td>Yes, with an allow-list of types</td><td>sklearn only</td><td>sklearn models (MLflow 3 default)</td></tr>
+    <tr><td>safetensors</td><td>Yes: weights only</td><td>PyTorch, JAX, TF</td><td>Neural-network weights, LLMs</td></tr>
+    <tr><td>ONNX</td><td>Yes: graph, no code</td><td>Any language, CPU/GPU/edge</td><td>Fast, framework-free serving</td></tr>
+  </table>
+  <div class="callout intu"><span class="label">Key insight</span>
+    <p>Always check that the converted model matches the original on a real batch, as above. Custom transformers or unusual ops may not convert, or may convert with small numeric differences.</p>
+  </div>
+
+  <h2 id="dp-qa"><span class="num">09</span>Questions &amp; Answers</h2>
+  <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>Batch or online inference for a weekly "customers likely to churn" email?</summary><div class="qa-body">Batch. Predictions are needed once a week for a known customer list, so a scheduled job writes scores to a table. It's cheaper (no always-on servers), easy to rerun and debug. Online adds latency budgets and infra for no benefit.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When must you use online inference instead of precomputing?</summary><div class="qa-body">When the input only exists at request time or the key space is too large to precompute: a search query, a cart at checkout, a transaction to approve. A hybrid is common: precompute heavy features or candidates in batch, then score online.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What tests belong in an ML CI pipeline that normal software doesn't have?</summary><div class="qa-body">Data tests (schema, nulls, ranges, distribution vs reference), model tests (beats baseline and current champion overall and on key slices, latency/size budget, invariance and directional tests), and training/serving consistency (same input → same output in both paths).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Canary vs shadow deployment: which first, and why?</summary><div class="qa-body">Shadow first: v2 scores a copy of real traffic with zero user impact, so you catch crashes, latency issues and odd outputs safely. Then canary: a small % of users actually get v2 while you watch error rates and metrics. Then A/B or full rollout.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>SageMaker real-time endpoint vs Batch Transform?</summary><div class="qa-body">Endpoint: always-on HTTPS service for per-request, low-latency predictions; billed per instance-hour. Batch Transform: a job that starts instances, scores a dataset in S3, writes results to S3 and shuts down; no endpoint, billed only while running. Serverless and async endpoints sit in between.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why is loading a pickled model from the internet dangerous?</summary><div class="qa-body">Unpickling can call any function the file specifies via <code>__reduce__</code>, e.g. <code>os.system</code>. Our 5-line demo ran a shell command on <code>pickle.load</code>. Use safe formats (ONNX, safetensors, skops with an allow-list) or load only from trusted, signed sources.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does ONNX buy you, and what can go wrong?</summary><div class="qa-body">A framework-free, code-free graph: fast runtimes (ONNX Runtime, TensorRT), any language, edge devices, no sklearn/PyTorch in the serving image, no pickle risk. Risks: unsupported custom ops or transformers, small numeric differences, dtype quirks (float32). Always verify outputs against the original model.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>The new model is live and conversions dropped 8%. Walk through the rollback.</summary><div class="qa-body">Move traffic back first, investigate second: flip to blue / set the canary weight to 0 / move the registry alias back / <code>kubectl rollout undo</code>. Confirm metrics recover. Then use per-prediction model-version logs to compare v1 vs v2 outputs, check for feature skew or a data issue, and fix before trying again.</div></details>
+</main>`
+});
+
+
+// notes/mlops/mlops_lifecycle.js — The ML Lifecycle
+Object.assign(TOPIC_CONTENT, {
+  "mlops_lifecycle": `<main>
+  <h1>The ML Lifecycle</h1>
+  <p class="lead">Building a model is 10% of the work; the other 90% is getting it to production and keeping it right. This page shows the loop every production model lives in and the habits (versioning, reproducibility, drift checks) that keep it honest.</p>
+
+  <h2 id="ml-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">The ML Lifecycle</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">The loop</div>
+        <ul>
+          <li><b>Stages</b> — data + versioning → experiment → train → evaluate → deploy → monitor → retrain</li>
+          <li><b>Evaluation gate</b> — candidate must beat baseline and current champion before deploy</li>
+          <li><b>Train from scripts</b> — not notebooks, so pipelines can rerun it</li>
+          <li>💡 A model is a car, not a painting: needs fuel (data), servicing (retrain), dashboard (monitoring)</li>
+          <li><b>~10% modelling</b> — the rest is data, serving, monitoring, upkeep</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">MLOps vs DevOps</div>
+        <ul>
+          <li><b>Three things change</b> — code (Git), data (DVC/snapshots), model (registry)</li>
+          <li><b>Extra tests</b> — data validation, model quality, slices, fairness</li>
+          <li><b>Silent failure</b> — models get quietly worse, no crash</li>
+          <li><b>CT</b> — continuous training added to CI/CD</li>
+          <li>⚠ <b>Same code ≠ same model</b> — new data gives new weights; version all three</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Reproducibility</div>
+        <ul>
+          <li><b>Recipe</b> — Git SHA + data hash + locked env + params + seed = same model</li>
+          <li><b>Seeds</b> — <code>random_state</code>, <code>np.random.seed</code>, <code>torch.manual_seed</code></li>
+          <li><b>Env</b> — pinned requirements / lockfile / Docker image</li>
+          <li><b>GPU</b> — <code>torch.use_deterministic_algorithms(True)</code>, slower</li>
+          <li><b>Demo</b> — no seed: acc 0.993 vs 0.965 from luck alone</li>
+          <li>⚠ <b>Training on the live table</b> — unreproducible; use a snapshot and log its ID</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">DVC</div>
+        <ul>
+          <li><b>What</b> — Git for big data: pointer in Git, bytes in a remote</li>
+          <li><b><code>dvc add file</code></b> — writes <code>file.dvc</code> (md5, size) + gitignores the file</li>
+          <li><b><code>dvc push / pull</code></b> — sync bytes with S3/GCS/folder remote</li>
+          <li><b><code>dvc status</code></b> — shows data changed since last add</li>
+          <li><b>Time travel</b> — <code>git checkout &lt;rev&gt; -- file.dvc</code> then <code>dvc checkout</code></li>
+          <li><b>Payoff</b> — "which data trained v7?" becomes a <code>git log</code> question</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Drift</div>
+        <ul>
+          <li><b>Data drift</b> — P(X) changes; e.g. younger users; detect with PSI/KS, no labels</li>
+          <li><b>Concept drift</b> — P(y|X) changes; same input, new right answer; needs labels</li>
+          <li><b>Model drift / decay</b> — the symptom: live metric falls</li>
+          <li><b>Delayed labels</b> — use proxies: input drift, prediction drift, data quality</li>
+          <li>⚠ <b>Drift ≠ harm</b> — decide on live metrics; check for upstream pipeline bugs first</li>
+          <li>Deep dive: ML System Design → Monitoring, Drift &amp; Retraining</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Retraining triggers</div>
+        <ul>
+          <li><b>Scheduled</b> — simple, predictable; may waste compute or react late</li>
+          <li><b>Metric drop</b> — best signal; needs labels</li>
+          <li><b>Drift alert</b> — early, label-free, noisy</li>
+          <li><b>Data volume / events</b> — N new labels; product or market launch</li>
+          <li><b>Common combo</b> — schedule as floor + triggers for urgent drops</li>
+          <li>⚠ <b>No gate</b> — never auto-deploy; compare to champion, then canary</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Maturity &amp; roles</div>
+        <ul>
+          <li><b>Level 0</b> — manual notebooks, pickle handed over, rare releases</li>
+          <li><b>Level 1</b> — automated training pipeline (CT), registry, monitoring</li>
+          <li><b>Level 2</b> — CI/CD also tests and deploys the pipeline code</li>
+          <li><b>Roles</b> — data eng (tables) → DS (candidate model) → MLE (live endpoint) → platform (tools)</li>
+          <li><b>Handoff contract</b> — registry entry: code SHA, data version, signature, metrics</li>
+          <li>⚠ <b>Over the wall</b> — a <code>.pkl</code> in Slack is not a handoff</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="roadmap-wrap">
+    <h2 class="roadmap-title">What we'll cover</h2>
+    <div class="roadmap-grid">
+      <div class="rm-item rm-done" data-target="ml-loop"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">The Lifecycle Loop</span><span class="rm-sub">Seven stages, never "done"</span></div></div>
+      <div class="rm-item rm-done" data-target="ml-devops"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Why Not Just DevOps?</span><span class="rm-sub">Code, data and model all change</span></div></div>
+      <div class="rm-item rm-done" data-target="ml-repro"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Reproducibility</span><span class="rm-sub">Seeds, environments, data</span></div></div>
+      <div class="rm-item rm-done" data-target="ml-dvc"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Hands-on: DVC</span><span class="rm-sub">Git for big data files</span></div></div>
+      <div class="rm-item rm-done" data-target="ml-drift"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Data, Concept, Model Drift</span><span class="rm-sub">Why models rot</span></div></div>
+      <div class="rm-item rm-done" data-target="ml-retrain"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Retraining Triggers</span><span class="rm-sub">When to train again</span></div></div>
+      <div class="rm-item rm-done" data-target="ml-mature"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">MLOps Maturity Levels</span><span class="rm-sub">Manual → fully automated</span></div></div>
+      <div class="rm-item rm-done" data-target="ml-roles"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Roles &amp; Handoffs</span><span class="rm-sub">Who owns what</span></div></div>
+      <div class="rm-item rm-done" data-target="ml-qa"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+    </div>
+  </div>
+
+  <h2 id="ml-loop"><span class="num">01</span>The Lifecycle Loop</h2>
+  <figure class="viz"><svg viewBox="0 0 600 200" width="600">
+    <defs><marker id="ml-ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs>
+    <rect x="10" y="20" width="130" height="40" rx="6" class="fb sb"/><text x="75" y="44" text-anchor="middle">Data + versioning</text>
+    <rect x="160" y="20" width="130" height="40" rx="6" class="fb sb"/><text x="225" y="44" text-anchor="middle">Experimentation</text>
+    <rect x="310" y="20" width="130" height="40" rx="6" class="fb sb"/><text x="375" y="44" text-anchor="middle">Training</text>
+    <rect x="460" y="20" width="130" height="40" rx="6" class="fb sb"/><text x="525" y="44" text-anchor="middle">Evaluation</text>
+    <rect x="460" y="130" width="130" height="40" rx="6" class="fg sg"/><text x="525" y="154" text-anchor="middle">Deployment</text>
+    <rect x="235" y="130" width="130" height="40" rx="6" class="ft st"/><text x="300" y="154" text-anchor="middle">Monitoring</text>
+    <rect x="10" y="130" width="130" height="40" rx="6" class="fr sr"/><text x="75" y="154" text-anchor="middle">Retraining</text>
+    <g stroke="currentColor" fill="none" marker-end="url(#ml-ar1)">
+      <line x1="140" y1="40" x2="158" y2="40"/><line x1="290" y1="40" x2="308" y2="40"/><line x1="440" y1="40" x2="458" y2="40"/>
+      <line x1="525" y1="60" x2="525" y2="128"/><line x1="460" y1="150" x2="367" y2="150"/><line x1="235" y1="150" x2="142" y2="150"/>
+      <line x1="75" y1="130" x2="75" y2="62" stroke-dasharray="4 3"/>
+    </g>
+    <text x="535" y="98" class="tm" font-size="11">passes gate?</text>
+    <text x="85" y="98" class="tm" font-size="11">drift / schedule</text>
+    <text x="300" y="192" text-anchor="middle" class="tm" font-size="11">the loop never ends: production feedback becomes new data</text>
+  </svg><figcaption>Notice the dashed arrow: monitoring feeds retraining, which restarts the loop.</figcaption></figure>
+  <table class="tbl">
+    <tr><th>Stage</th><th>Output (the thing handed on)</th><th>Typical tools</th></tr>
+    <tr><td>Data collection &amp; versioning</td><td>A dataset with an ID / hash</td><td>SQL, Airflow, DVC, Delta Lake</td></tr>
+    <tr><td>Experimentation</td><td>Chosen features, model family, params</td><td>Notebooks, MLflow tracking</td></tr>
+    <tr><td>Training</td><td>A model artifact from a <em>script</em>, not a notebook</td><td>Pipelines, GPUs, SageMaker jobs</td></tr>
+    <tr><td>Evaluation</td><td>Metrics vs baseline + pass/fail gate</td><td>Holdout sets, slice metrics</td></tr>
+    <tr><td>Deployment</td><td>Model behind an API or batch job</td><td>Registry, Docker, K8s, endpoints</td></tr>
+    <tr><td>Monitoring</td><td>Alerts on errors, latency, drift, metrics</td><td>Prometheus, Evidently, dashboards</td></tr>
+    <tr><td>Retraining</td><td>New candidate model → back to evaluation</td><td>Scheduled or triggered pipelines</td></tr>
+  </table>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A model is a car, not a painting. Shipping it is the start: it needs fuel (fresh data), servicing (retraining) and a dashboard (monitoring).</p>
+  </div>
+
+  <h2 id="ml-devops"><span class="num">02</span>Why Not Just DevOps?</h2>
+  <div class="cards">
+    <div><b>Code changes</b><p>New feature logic, bug fix, library upgrade.</p><small>Versioned by: Git</small></div>
+    <div><b>Data changes</b><p>New rows daily, schema tweaks, the world shifts.</p><small>Versioned by: DVC, Delta, snapshots</small></div>
+    <div><b>Model changes</b><p>Retrained weights, new params, even with the same code.</p><small>Versioned by: model registry</small></div>
+  </div>
+  <table class="tbl">
+    <tr><th></th><th>DevOps (normal software)</th><th>MLOps</th></tr>
+    <tr><td>Behaviour set by</td><td>Code only</td><td>Code + data + params</td></tr>
+    <tr><td>Tests</td><td>Unit, integration</td><td>+ data validation, model quality, fairness</td></tr>
+    <tr><td>Failure mode</td><td>Crashes, errors (loud)</td><td>Silently worse predictions (quiet)</td></tr>
+    <tr><td>After release</td><td>Stays correct until code changes</td><td>Decays as the world drifts</td></tr>
+    <tr><td>Pipelines</td><td>CI/CD</td><td>CI/CD + <strong>CT</strong> (continuous training)</td></tr>
+  </table>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>"Same code, so same model" is false. Rerun the same script on next month's data and you get a different model. Version all three.</p>
+  </div>
+
+  <h2 id="ml-repro"><span class="num">03</span>Reproducibility</h2>
+  <p>Reproducible = anyone can rebuild the exact model from its recorded inputs. Needed for debugging, audits and fair comparisons.</p>
+  <div class="flow"><span>Code (Git SHA)</span><span>Data (DVC hash)</span><span>Env (lockfile / Docker)</span><span>Params + seed</span><span>Same model</span></div>
+  <div class="fx" data-lang="py">from sklearn.datasets import load_breast_cancer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+X, y = load_breast_cancer(return_X_y=True)
+
+def score(seed):
+    Xtr, Xte, ytr, yte = train_test_split(X, y, random_state=seed)
+    return RandomForestClassifier(n_estimators=20, random_state=seed).fit(Xtr, ytr).score(Xte, yte)
+
+print("no seed :", [round(score(None), 4) for _ in range(3)])
+print("seed=42 :", [round(score(42), 4) for _ in range(3)])</div>
+  <div class="fx" data-lang="text">no seed : [0.993, 0.965, 0.965]
+seed=42 : [0.965, 0.965, 0.965]</div>
+  <p>Without a seed, accuracy jumps 0.965 → 0.993 from pure luck. That "improvement" is noise, not a better model.</p>
+  <table class="tbl">
+    <tr><th>Source of randomness / drift</th><th>Pin it with</th></tr>
+    <tr><td>Splits, init, sampling</td><td><code>random_state</code>, <code>np.random.seed</code>, <code>torch.manual_seed</code></td></tr>
+    <tr><td>Library versions</td><td><code>requirements.txt</code> with exact pins, <code>uv.lock</code>/<code>poetry.lock</code>, Docker image</td></tr>
+    <tr><td>Data</td><td>DVC hash, table snapshot, or dated partition</td></tr>
+    <tr><td>GPU non-determinism</td><td><code>torch.use_deterministic_algorithms(True)</code> (slower)</td></tr>
+  </table>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Pointing training at "the live table" makes it unreproducible: rerun next week and the rows differ. Train on a snapshot and log its ID.</p>
+  </div>
+
+  <h2 id="ml-dvc"><span class="num">04</span>Hands-on: DVC</h2>
+  <p><strong>DVC</strong> (Data Version Control) puts a tiny pointer file in Git and stores the real data in a remote (S3, GCS, a folder).</p>
+  <figure class="viz"><svg viewBox="0 0 560 130" width="560">
+    <defs><marker id="ml-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs>
+    <rect x="10" y="40" width="140" height="50" rx="6" class="fs" stroke="currentColor"/><text x="80" y="62" text-anchor="middle">train.csv</text><text x="80" y="78" text-anchor="middle" class="tm" font-size="11">23 KB … 50 GB</text>
+    <rect x="220" y="10" width="140" height="44" rx="6" class="fb sb"/><text x="290" y="30" text-anchor="middle">train.csv.dvc</text><text x="290" y="46" text-anchor="middle" class="tm" font-size="11">md5 + size → Git</text>
+    <rect x="220" y="78" width="140" height="44" rx="6" class="ft st"/><text x="290" y="98" text-anchor="middle">cache / remote</text><text x="290" y="114" text-anchor="middle" class="tm" font-size="11">actual bytes → S3</text>
+    <g stroke="currentColor" fill="none" marker-end="url(#ml-ar2)"><line x1="150" y1="58" x2="218" y2="34"/><line x1="150" y1="72" x2="218" y2="98"/></g>
+    <rect x="420" y="40" width="130" height="50" rx="6" class="fg sg"/><text x="485" y="62" text-anchor="middle">git commit</text><text x="485" y="78" text-anchor="middle" class="tm" font-size="11">code + data pointer</text>
+    <line x1="360" y1="32" x2="418" y2="58" stroke="currentColor" marker-end="url(#ml-ar2)"/>
+  </svg><figcaption>Git holds a 5-line pointer; the heavy file lives in the DVC remote. Checking out a commit restores the matching data.</figcaption></figure>
+  <div class="fx" data-lang="text">$ git init &amp;&amp; dvc init
+$ dvc add data/train.csv
+To track the changes with git, run:
+	git add data/.gitignore data/train.csv.dvc
+
+$ cat data/train.csv.dvc
+outs:
+- md5: 34a93622469ea3eeeccce658cb813502
+  size: 23367
+  hash: md5
+  path: train.csv
+
+$ cat data/.gitignore          # DVC stops Git tracking the big file
+/train.csv
+
+$ git add -A &amp;&amp; git commit -m "data v1"
+$ dvc remote add -d store /path/to/dvcstore   # usually s3://bucket/dvc
+$ dvc push
+1 file pushed
+
+$ echo "1000,9999" &gt;&gt; data/train.csv        # data changes
+$ dvc status
+data/train.csv.dvc:
+	changed outs:
+		modified:           data/train.csv
+
+$ dvc add data/train.csv &amp;&amp; git commit -am "data v2"
+$ git checkout HEAD~1 -- data/train.csv.dvc &amp;&amp; dvc checkout   # back to v1
+M       data/train.csv
+$ wc -l data/train.csv
+1001 data/train.csv            # header + 1000 rows: v1 restored</div>
+  <div class="callout intu"><span class="label">Key insight</span>
+    <p>A Git commit now pins code <em>and</em> data together. "Which data trained model v7?" becomes a <code>git log</code> question.</p>
+  </div>
+
+  <h2 id="ml-drift"><span class="num">05</span>Data, Concept, Model Drift</h2>
+  <figure class="viz"><svg viewBox="0 0 580 150" width="580">
+    <text x="140" y="16" text-anchor="middle">Data drift: P(X) moves</text>
+    <line x1="20" y1="120" x2="270" y2="120" stroke="currentColor"/>
+    <path d="M30,120 C80,120 85,40 110,40 C135,40 140,120 190,120" class="sb fb" stroke-width="2"/>
+    <path d="M100,120 C150,120 155,55 180,55 C205,55 210,120 260,120" class="sr" fill="none" stroke-width="2" stroke-dasharray="5 3"/>
+    <text x="95" y="34" class="tb" font-size="11">train</text><text x="190" y="50" class="tr" font-size="11">prod</text>
+    <text x="140" y="140" text-anchor="middle" class="tm" font-size="11">e.g. users get younger</text>
+    <text x="440" y="16" text-anchor="middle">Concept drift: P(y|X) moves</text>
+    <rect x="310" y="28" width="260" height="92" fill="none" stroke="currentColor" stroke-opacity=".4"/>
+    <g class="tb"><circle cx="340" cy="50" r="4"/><circle cx="365" cy="95" r="4"/><circle cx="390" cy="65" r="4"/><circle cx="420" cy="100" r="4"/></g>
+    <g class="tr"><circle cx="490" cy="45" r="4"/><circle cx="520" cy="90" r="4"/><circle cx="540" cy="60" r="4"/><circle cx="470" cy="80" r="4"/></g>
+    <line x1="445" y1="28" x2="445" y2="120" class="sb" stroke-width="2"/>
+    <line x1="400" y1="28" x2="500" y2="120" class="sr" stroke-width="2" stroke-dasharray="5 3"/>
+    <text x="440" y="140" text-anchor="middle" class="tm" font-size="11">same inputs, new right answer (old line vs new)</text>
+  </svg><figcaption>Left: inputs look different. Right: inputs look the same, but the rule mapping them to labels changed.</figcaption></figure>
+  <table class="tbl">
+    <tr><th></th><th>Data drift (covariate shift)</th><th>Concept drift</th><th>Model drift (decay)</th></tr>
+    <tr><td>What changed</td><td>Input distribution P(X)</td><td>Relationship P(y|X)</td><td>The <em>outcome</em>: model performance drops</td></tr>
+    <tr><td>Example</td><td>New market brings younger users</td><td>COVID: "buys flour in bulk" stops meaning "bakery"</td><td>Fraud recall falls from 0.90 to 0.70</td></tr>
+    <tr><td>Detect with</td><td>PSI, KS test, feature stats vs training</td><td>Live metrics once labels arrive</td><td>Live metrics vs baseline</td></tr>
+    <tr><td>Needs labels?</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Fix</td><td>Retrain on recent data; maybe reweight</td><td>Retrain with new labels; rethink features</td><td>Find the cause (one of the left two, or a bug)</td></tr>
+  </table>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Data drift does not always hurt; concept drift can happen with zero data drift. Alert on drift, but decide on live metrics. A broken upstream pipeline (nulls, unit change) looks like drift too; check that first.</p>
+  </div>
+  <p>Detection math (PSI, KS), dashboards and alerting are covered in depth in <em>ML System Design → Monitoring, Drift &amp; Retraining</em>.</p>
+
+  <h2 id="ml-retrain"><span class="num">06</span>Retraining Triggers</h2>
+  <div class="cards">
+    <div><b>Scheduled</b><p>Every night / week / month.</p><small>Simple, predictable; may waste compute or react late</small></div>
+    <div><b>Performance drop</b><p>Live metric falls below a threshold.</p><small>Best signal; needs labels (often delayed)</small></div>
+    <div><b>Drift alert</b><p>PSI or KS on key features crosses a limit.</p><small>Early, label-free; noisy</small></div>
+    <div><b>New data volume</b><p>N new labelled rows collected.</p><small>Good when labels arrive in bursts</small></div>
+    <div><b>Event</b><p>New product, market or policy launch.</p><small>Manual, known in advance</small></div>
+  </div>
+  <div class="flow"><span>Trigger fires</span><span>Pipeline retrains on fresh snapshot</span><span>Eval vs current champion</span><span>Better? → register + deploy</span><span>Worse? → keep old, alert human</span></div>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Never auto-deploy a retrained model without a gate. If the new data was corrupt, automation ships a broken model at 3 a.m.</p>
+  </div>
+
+  <h2 id="ml-mature"><span class="num">07</span>MLOps Maturity Levels</h2>
+  <p>Google's widely quoted scale. Most companies sit at level 0 or 1.</p>
+  <table class="tbl">
+    <tr><th>Level</th><th>What it looks like</th><th>Release speed</th><th>Main risk</th></tr>
+    <tr><td><strong>0 · Manual</strong></td><td>Notebook → pickle → engineer rewrites it for prod</td><td>Months, a few times a year</td><td>Training/serving skew, no monitoring</td></tr>
+    <tr><td><strong>1 · Pipeline automation</strong></td><td>Training is an automated pipeline; continuous training (CT) on new data; registry + monitoring</td><td>Retrains daily/weekly</td><td>Pipeline code itself changed by hand</td></tr>
+    <tr><td><strong>2 · CI/CD automation</strong></td><td>Pipeline code is tested and deployed by CI/CD too; many models, many teams</td><td>Hours to days</td><td>Platform complexity, cost</td></tr>
+  </table>
+  <div class="callout intu"><span class="label">Interview tip</span>
+    <p>Level 0 → 1 is the big win: the same code trains in dev and prod, so "it worked in my notebook" stops being a problem.</p>
+  </div>
+
+  <h2 id="ml-roles"><span class="num">08</span>Roles &amp; Handoffs</h2>
+  <div class="flow"><span>Data engineer</span><span>Data scientist</span><span>ML engineer</span><span>Platform / DevOps</span><span>Product &amp; business</span></div>
+  <table class="tbl">
+    <tr><th>Role</th><th>Owns</th><th>Hands off</th></tr>
+    <tr><td>Data engineer</td><td>Ingestion, pipelines, warehouse, data quality</td><td>Clean, versioned tables / features</td></tr>
+    <tr><td>Data scientist</td><td>Problem framing, features, model choice, offline eval</td><td>Tracked experiment + candidate model in registry</td></tr>
+    <tr><td>ML engineer</td><td>Training pipelines, serving, monitoring, retraining</td><td>A live, monitored endpoint or batch job</td></tr>
+    <tr><td>Platform / DevOps</td><td>Clusters, CI/CD, infra, security, cost</td><td>Self-serve tools (K8s, MLflow, feature store)</td></tr>
+    <tr><td>Product / business</td><td>Success metric, guardrails, A/B decisions</td><td>Go / no-go; new requirements</td></tr>
+  </table>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>The classic failure is the notebook "thrown over the wall". The fix is a shared contract: a registry entry with code SHA, data version, signature and metrics, not a <code>.pkl</code> in Slack.</p>
+  </div>
+
+  <h2 id="ml-qa"><span class="num">09</span>Questions &amp; Answers</h2>
+  <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does ML need MLOps rather than plain DevOps?</summary><div class="qa-body">Behaviour depends on data and trained weights, not just code. So you must version data and models, test data and model quality (not only code), monitor for silent degradation, and retrain continuously (CT). Normal software doesn't decay when the world changes; models do.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Your colleague retrained with the same code and got different accuracy. List the likely causes.</summary><div class="qa-body">Unset random seeds (split, init, sampling); different data (live table changed); different library versions; GPU non-determinism; different hardware/thread counts. Fix: seeds, data snapshot or DVC hash, locked environment or Docker image, and log all of it with the run.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does DVC store in Git, and where does the data go?</summary><div class="qa-body">Git stores a small <code>.dvc</code> file with the data's md5 hash, size and path. The bytes go to the DVC cache and a remote (S3, GCS, Azure, SSH, a folder) via <code>dvc push</code>. Checking out an old commit and running <code>dvc checkout</code> restores the matching data.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Data drift vs concept drift: define each with an example.</summary><div class="qa-body">Data drift: the input distribution P(X) changes, e.g. a loan model starts seeing many more young applicants. Concept drift: the mapping P(y|X) changes, e.g. after a recession the same income profile now defaults more often. Data drift can be detected without labels; concept drift needs labels.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Can a model's accuracy drop with no data drift at all?</summary><div class="qa-body">Yes: concept drift. Inputs look identical but the correct answer changed (fraudsters change tactics, user tastes shift). Also a silent bug: a feature pipeline change that keeps distributions similar but breaks meaning. That's why you monitor live metrics, not only input stats.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Labels for your churn model arrive 90 days late. How do you monitor it?</summary><div class="qa-body">Use proxies until labels land: input drift (PSI/KS on top features), prediction drift (share predicted to churn), data-quality checks (nulls, ranges), and early proxy outcomes (e.g. reduced logins). Backfill true metrics when labels arrive and compare.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What should a data scientist hand to an ML engineer?</summary><div class="qa-body">A registered model version with lineage: code commit, data version, params, metrics (overall and per slice), input/output signature, dependencies and an example input. Plus the training code as a runnable script, not only a notebook, so the pipeline can retrain it.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why shouldn't a retraining pipeline auto-deploy every new model?</summary><div class="qa-body">Fresh data can be corrupt, mislabelled or biased, and a worse model would ship silently. Gate it: compare to the current champion on a fixed holdout and key slices, check data validation, then promote, ideally through canary or shadow deployment with a rollback path.</div></details>
+</main>`
+});
+
+
+// notes/mlops/mlops_mlflow.js — MLflow & Experiment Tracking
+Object.assign(TOPIC_CONTENT, {
+  "mlops_mlflow": `<main>
+  <h1>MLflow &amp; Experiment Tracking</h1>
+  <p class="lead">Every model you train should leave a receipt: what data, which params, what score, which file. MLflow is the most common open-source tool for writing those receipts and for promoting the winning model to production. Everything below was run locally with MLflow 3.17 and scikit-learn 1.9.</p>
+
+  <h2 id="mf-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">MLflow &amp; Experiment Tracking</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Why track</div>
+        <ul>
+          <li><b>Reproduce</b> — rebuild any model from logged params, code and data version</li>
+          <li><b>Compare</b> — rank many runs by a metric instead of a spreadsheet</li>
+          <li><b>Lineage</b> — which run produced the production model</li>
+          <li>💡 A chemist's lab notebook: ingredients, conditions, results, sample jar</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Data model</div>
+        <ul>
+          <li><b>Experiment</b> — named group of runs; <code>set_experiment("cancer-rf")</code></li>
+          <li><b>Run</b> — one training execution; <code>with mlflow.start_run():</code></li>
+          <li><b>Param</b> — input setting, logged once, stored as string</li>
+          <li><b>Metric</b> — number, can be per step: <code>log_metric("loss", v, step=e)</code></li>
+          <li><b>Artifact</b> — any file: plot, CSV, model dir</li>
+          <li><b>Tag</b> — metadata: git SHA, data version, owner</li>
+          <li><b>Logged model (MLflow 3)</b> — model with its own ID, linked to its run</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Logging &amp; autolog</div>
+        <ul>
+          <li><b>Manual</b> — <code>log_params</code>, <code>log_metrics</code>, <code>mlflow.sklearn.log_model(m, name="model", input_example=...)</code></li>
+          <li><b>input_example</b> — infers the signature (columns + types)</li>
+          <li><b><code>mlflow.autolog()</code></b> — params (incl. defaults), metrics, model in one line</li>
+          <li>⚠ <b>Autolog metrics are <code>training_*</code></b> — log your own validation/test scores</li>
+          <li>⚠ <b>skops default</b> — sklearn trees need <code>skops_trusted_types=[...]</code> in MLflow 3.x</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Comparing runs</div>
+        <ul>
+          <li><b><code>mlflow.search_runs</code></b> — returns a pandas DataFrame</li>
+          <li><b>order_by</b> — <code>["metrics.f1 DESC", "params.n_estimators ASC"]</code></li>
+          <li><b>filter_string</b> — <code>"attributes.run_name LIKE 'rf_%'"</code>, <code>"metrics.f1 &gt; 0.9"</code></li>
+          <li><b>Ties</b> — prefer the cheaper model (rf_100_5 = rf_300_None on F1 0.9721)</li>
+          <li>⚠ <b>Params are strings</b> — "1000" sorts before "300"</li>
+          <li><b>UI</b> — <code>mlflow ui</code>: tables, metric curves, parallel coordinates</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Model registry</div>
+        <ul>
+          <li><b>Registered model</b> — one name per use case</li>
+          <li><b>Version</b> — immutable, auto-numbered, linked to run</li>
+          <li><b>Alias</b> — movable pointer: <code>@champion</code>, <code>@challenger</code></li>
+          <li><b>Register</b> — <code>mlflow.register_model("models:/&lt;model_id&gt;", "name")</code></li>
+          <li><b>Promote / rollback</b> — <code>client.set_registered_model_alias(name, "champion", v)</code></li>
+          <li>⚠ <b>Stages deprecated</b> (since 2.9) — Staging/Production replaced by aliases + tags</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Loading &amp; serving</div>
+        <ul>
+          <li><b>Load</b> — <code>mlflow.pyfunc.load_model("models:/name@champion")</code></li>
+          <li><b>pyfunc</b> — one <code>.predict()</code> for any framework</li>
+          <li><b>URIs</b> — <code>models:/name/2</code>, <code>models:/name@alias</code>, <code>runs:/id/model</code></li>
+          <li><b>REST</b> — <code>mlflow models serve -m URI -p 5055</code> → POST <code>/invocations</code></li>
+          <li><b>Signature enforced</b> — missing columns → <code>SCHEMA_ENFORCEMENT_FAILED</code></li>
+          <li><b>MLmodel file</b> — flavours, env files, signature, run_id; <code>build-docker</code> for images</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Team setup &amp; projects</div>
+        <ul>
+          <li><b>Tracking server</b> — shared; clients set <code>MLFLOW_TRACKING_URI</code></li>
+          <li><b>Backend store</b> — Postgres/MySQL for metadata</li>
+          <li><b>Artifact store</b> — S3/GCS for models and files</li>
+          <li><b>MLproject</b> — env + entry points; <code>mlflow run . -P n_estimators=300</code></li>
+          <li><b>Managed</b> — Databricks, SageMaker, Azure ML</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="roadmap-wrap">
+    <h2 class="roadmap-title">What we'll cover</h2>
+    <div class="roadmap-grid">
+      <div class="rm-item rm-done" data-target="mf-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Why Track Experiments</span><span class="rm-sub">Reproduce and compare</span></div></div>
+      <div class="rm-item rm-done" data-target="mf-concepts"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Runs, Params, Metrics, Artifacts</span><span class="rm-sub">The data model</span></div></div>
+      <div class="rm-item rm-done" data-target="mf-log"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Logging Three Runs</span><span class="rm-sub">Real sklearn example</span></div></div>
+      <div class="rm-item rm-done" data-target="mf-auto"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Autologging</span><span class="rm-sub">One line, and its catch</span></div></div>
+      <div class="rm-item rm-done" data-target="mf-compare"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Comparing Runs</span><span class="rm-sub">search_runs as a DataFrame</span></div></div>
+      <div class="rm-item rm-done" data-target="mf-reg"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Model Registry</span><span class="rm-sub">Versions, aliases, rollback</span></div></div>
+      <div class="rm-item rm-done" data-target="mf-serve"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Loading &amp; Serving</span><span class="rm-sub">pyfunc and a REST endpoint</span></div></div>
+      <div class="rm-item rm-done" data-target="mf-setup"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Server Setup &amp; Projects</span><span class="rm-sub">Stores and MLproject</span></div></div>
+      <div class="rm-item rm-done" data-target="mf-build"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Build It</span><span class="rm-sub">Your own tracked sweep</span></div></div>
+      <div class="rm-item rm-done" data-target="mf-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+    </div>
+  </div>
+
+  <h2 id="mf-why"><span class="num">01</span>Why Track Experiments</h2>
+  <table class="tbl">
+    <tr><th>Without tracking</th><th>With tracking</th></tr>
+    <tr><td><code>model_final_v3_REAL.pkl</code></td><td>Model version 3, linked to its run</td></tr>
+    <tr><td>"I think it was depth 5 and the March data?"</td><td>Params, data version, Git SHA stored with the run</td></tr>
+    <tr><td>Scores pasted into a spreadsheet by hand</td><td>Every metric queryable and plottable</td></tr>
+    <tr><td>Can't rebuild last month's winner</td><td>Rebuild from the run's recorded inputs</td></tr>
+  </table>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A lab notebook for a chemist. Each experiment gets a page: ingredients (params), conditions (data, env), results (metrics) and the sample jar (artifacts).</p>
+  </div>
+
+  <h2 id="mf-concepts"><span class="num">02</span>Runs, Params, Metrics, Artifacts</h2>
+  <figure class="viz"><svg viewBox="0 0 600 170" width="600">
+    <rect x="10" y="60" width="120" height="44" rx="6" class="fv" stroke="currentColor"/><text x="70" y="80" text-anchor="middle">Experiment</text><text x="70" y="96" text-anchor="middle" class="tm" font-size="11">cancer-rf</text>
+    <rect x="170" y="15" width="110" height="34" rx="6" class="fb sb"/><text x="225" y="36" text-anchor="middle">run rf_10_2</text>
+    <rect x="170" y="65" width="110" height="34" rx="6" class="fb sb"/><text x="225" y="86" text-anchor="middle">run rf_100_5</text>
+    <rect x="170" y="115" width="110" height="34" rx="6" class="fb sb"/><text x="225" y="136" text-anchor="middle">run rf_300_None</text>
+    <g stroke="currentColor" fill="none"><line x1="130" y1="82" x2="170" y2="32"/><line x1="130" y1="82" x2="170" y2="82"/><line x1="130" y1="82" x2="170" y2="132"/>
+    <line x1="280" y1="82" x2="320" y2="22"/><line x1="280" y1="82" x2="320" y2="62"/><line x1="280" y1="82" x2="320" y2="102"/><line x1="280" y1="82" x2="320" y2="142"/></g>
+    <rect x="320" y="8" width="270" height="28" rx="5" class="fs"/><text x="330" y="27">params: n_estimators=100, max_depth=5</text>
+    <rect x="320" y="48" width="270" height="28" rx="5" class="fg"/><text x="330" y="67">metrics: accuracy=0.965, f1=0.9721</text>
+    <rect x="320" y="88" width="270" height="28" rx="5" class="ft"/><text x="330" y="107">artifacts: plots, files, model dir</text>
+    <rect x="320" y="128" width="270" height="28" rx="5" class="fs"/><text x="330" y="147">tags: git SHA, data version, user</text>
+  </svg><figcaption>An experiment groups runs; each run records four kinds of things.</figcaption></figure>
+  <table class="tbl">
+    <tr><th>Thing</th><th>What it is</th><th>API</th></tr>
+    <tr><td><strong>Experiment</strong></td><td>A named folder of runs for one problem</td><td><code>mlflow.set_experiment("cancer-rf")</code></td></tr>
+    <tr><td><strong>Run</strong></td><td>One training execution</td><td><code>with mlflow.start_run():</code></td></tr>
+    <tr><td><strong>Param</strong></td><td>Input setting, logged once (stored as string)</td><td><code>log_param</code> / <code>log_params</code></td></tr>
+    <tr><td><strong>Metric</strong></td><td>Number; can have many steps (a curve)</td><td><code>log_metric("loss", v, step=epoch)</code></td></tr>
+    <tr><td><strong>Artifact</strong></td><td>Any file: plot, CSV, model</td><td><code>log_artifact</code>, <code>log_figure</code></td></tr>
+    <tr><td><strong>Logged model</strong></td><td>Model + env + signature, its own ID in MLflow 3</td><td><code>mlflow.sklearn.log_model</code></td></tr>
+  </table>
+
+  <h2 id="mf-log"><span class="num">03</span>Logging Three Runs</h2>
+  <div class="fx" data-lang="py">import mlflow, mlflow.sklearn
+from sklearn.datasets import load_breast_cancer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, f1_score
+
+mlflow.set_tracking_uri("sqlite:///mlflow.db")     # local DB; in teams: http://mlflow-server
+mlflow.set_experiment("cancer-rf")
+
+X, y = load_breast_cancer(return_X_y=True, as_frame=True)
+X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.25, random_state=42)
+
+for n, depth in [(10, 2), (100, 5), (300, None)]:
+    with mlflow.start_run(run_name=f"rf_{n}_{depth}"):
+        mlflow.log_params({"n_estimators": n, "max_depth": depth})
+        model = RandomForestClassifier(n_estimators=n, max_depth=depth,
+                                       random_state=42).fit(X_tr, y_tr)
+        pred = model.predict(X_te)
+        mlflow.log_metrics({"accuracy": accuracy_score(y_te, pred),
+                            "f1": f1_score(y_te, pred)})
+        mlflow.sklearn.log_model(model, name="model", input_example=X_te.head(2),
+                                 skops_trusted_types=["sklearn.tree._tree.Tree"])</div>
+  <p><code>input_example</code> lets MLflow infer a <strong>signature</strong> (expected column names and types), which the server later enforces.</p>
+  <div class="callout trap"><span class="label">Trap (MLflow 3.x)</span>
+    <p>Recent MLflow saves sklearn models in the safer <strong>skops</strong> format, not pickle. Without <code>skops_trusted_types</code> this run failed: <em>"The saved sklearn model references untrusted types … ['sklearn.tree._tree.Tree']"</em>. Only trust types you reviewed. Why pickle is dangerous: see <em>Deployment Strategies → Packaging</em>.</p>
+  </div>
+
+  <h2 id="mf-auto"><span class="num">04</span>Autologging</h2>
+  <div class="fx" data-lang="py">mlflow.sklearn.autolog()          # or mlflow.autolog() for every supported library
+with mlflow.start_run(run_name="logreg_autolog") as run:
+    make_pipeline(StandardScaler(), LogisticRegression(C=0.5)).fit(X, y)
+
+r = mlflow.get_run(run.info.run_id)
+print(len(r.data.params), "params, e.g.", {k: r.data.params[k] for k in
+      ["logisticregression__C", "logisticregression__max_iter"]})
+print("metrics:", sorted(r.data.metrics))</div>
+  <div class="fx" data-lang="text">23 params, e.g. {'logisticregression__C': '0.5', 'logisticregression__max_iter': '100'}
+metrics: ['training_accuracy_score', 'training_f1_score', 'training_log_loss', 'training_precision_score', 'training_recall_score', 'training_roc_auc', 'training_score']</div>
+  <p>It captured every param, including defaults you never typed, plus the model. Works for sklearn, XGBoost, LightGBM, PyTorch Lightning, Keras, transformers.</p>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Every autologged metric starts with <code>training_</code>: scores on data the model has seen. Log your own validation/test metrics; never compare runs on training scores.</p>
+  </div>
+
+  <h2 id="mf-compare"><span class="num">05</span>Comparing Runs</h2>
+  <div class="fx" data-lang="py">runs = mlflow.search_runs(experiment_names=["cancer-rf"],
+                          filter_string="attributes.run_name LIKE 'rf_%'",
+                          order_by=["metrics.f1 DESC", "params.n_estimators ASC"])
+print(runs[["tags.mlflow.runName", "params.n_estimators",
+            "params.max_depth", "metrics.accuracy", "metrics.f1"]].round(4).to_string(index=False))</div>
+  <div class="fx" data-lang="text">tags.mlflow.runName params.n_estimators params.max_depth  metrics.accuracy  metrics.f1
+           rf_100_5                 100                5             0.965      0.9721
+        rf_300_None                 300             None             0.965      0.9721
+            rf_10_2                  10                2             0.951      0.9605</div>
+  <p>Two runs tie on F1. The tie-breaker prefers fewer trees: same quality, 3× cheaper to serve. The UI (<code>mlflow ui</code>) shows the same table plus parallel-coordinate and metric-curve plots.</p>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Params are stored as <strong>strings</strong>. Sorting works here only because 100 and 300 have the same number of digits; "1000" would sort before "300".</p>
+  </div>
+
+  <h2 id="mf-reg"><span class="num">06</span>Model Registry</h2>
+  <figure class="viz"><svg viewBox="0 0 600 150" width="600">
+    <defs><marker id="mf-ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs>
+    <text x="10" y="20">registered model: cancer-classifier</text>
+    <rect x="20" y="40" width="150" height="44" rx="6" class="fb sb"/><text x="95" y="60" text-anchor="middle">version 1</text><text x="95" y="76" text-anchor="middle" class="tm" font-size="11">from run rf_100_5</text>
+    <rect x="230" y="40" width="150" height="44" rx="6" class="fb sb"/><text x="305" y="60" text-anchor="middle">version 2</text><text x="305" y="76" text-anchor="middle" class="tm" font-size="11">from run rf_300_None</text>
+    <rect x="440" y="40" width="150" height="44" rx="6" class="fs" stroke="currentColor" stroke-dasharray="4 3"/><text x="515" y="66" text-anchor="middle" class="tm">version 3 …</text>
+    <rect x="245" y="105" width="120" height="30" rx="15" class="fg sg"/><text x="305" y="125" text-anchor="middle">@champion</text>
+    <rect x="35" y="105" width="120" height="30" rx="15" class="fs" stroke="currentColor"/><text x="95" y="125" text-anchor="middle">@previous</text>
+    <path d="M245,128 C200,145 160,145 157,130" class="sr" fill="none" stroke-dasharray="4 3" marker-end="url(#mf-ar1)"/>
+    <text x="200" y="148" text-anchor="middle" class="tr" font-size="11">rollback = move alias</text>
+  </svg><figcaption>Versions are immutable; aliases are movable pointers. Serving code asks for @champion and never changes.</figcaption></figure>
+  <div class="cards">
+    <div><b>Registered model</b><p>A name for one use case.</p><small>cancer-classifier</small></div>
+    <div><b>Version</b><p>Auto-numbered, immutable, linked to its run.</p><small>1, 2, 3 …</small></div>
+    <div><b>Alias</b><p>Movable label pointing to one version.</p><small>@champion, @challenger</small></div>
+    <div><b>Tags</b><p>Key-value notes on a version.</p><small>validated=true, owner=risk-team</small></div>
+  </div>
+  <div class="fx" data-lang="py">best = mlflow.search_runs(experiment_names=["cancer-rf"],
+                          order_by=["metrics.f1 DESC", "params.n_estimators ASC"],
+                          max_results=1).iloc[0]
+# MLflow 3: a logged model has its own ID, linked to the run that made it
+lm = mlflow.search_logged_models(experiment_ids=[best.experiment_id],
+        filter_string=f"source_run_id = '{best.run_id}'", output_format="list")[0]
+mv = mlflow.register_model(f"models:/{lm.model_id}", "cancer-classifier")
+
+client = MlflowClient()
+client.set_registered_model_alias("cancer-classifier", "champion", mv.version)
+print("best run:", best["tags.mlflow.runName"], "| version:", mv.version)</div>
+  <div class="fx" data-lang="text">Successfully registered model 'cancer-classifier'.
+Created version '1' of model 'cancer-classifier'.
+best run: rf_100_5 | version: 1</div>
+  <p>Promote a new version, then roll back, just by moving aliases:</p>
+  <div class="fx" data-lang="py"># lm2 = the logged model of run rf_300_None, found the same way as lm
+v2 = mlflow.register_model(f"models:/{lm2.model_id}", "cancer-classifier")
+client.set_registered_model_alias("cancer-classifier", "champion", v2.version)   # promote
+client.set_registered_model_alias("cancer-classifier", "previous", "1")
+for v in ["1", "2"]:
+    print("version", v, "aliases", client.get_model_version("cancer-classifier", v).aliases)
+client.set_registered_model_alias("cancer-classifier", "champion", "1")          # rollback
+print("after rollback, champion ->",
+      client.get_model_version_by_alias("cancer-classifier", "champion").version)</div>
+  <div class="fx" data-lang="text">Registered model 'cancer-classifier' already exists. Creating a new version of this model...
+Created version '2' of model 'cancer-classifier'.
+version 1 aliases ['previous']
+version 2 aliases ['champion']
+after rollback, champion -&gt; 1</div>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Older tutorials use <strong>stages</strong> (None → Staging → Production → Archived) and <code>transition_model_version_stage</code>. Stages are deprecated since MLflow 2.9; use aliases plus tags. Interviewers may still say "stages", so know both.</p>
+  </div>
+
+  <h2 id="mf-serve"><span class="num">07</span>Loading &amp; Serving</h2>
+  <div class="flow"><span>models:/name@champion</span><span>Registry resolves version</span><span>Download artifact</span><span>pyfunc.predict()</span></div>
+  <div class="fx" data-lang="py">model = mlflow.pyfunc.load_model("models:/cancer-classifier@champion")
+X, y = load_breast_cancer(return_X_y=True, as_frame=True)
+print("pred:", model.predict(X.iloc[[0, 1, 19, 20]]))
+print("true:", y.iloc[[0, 1, 19, 20]].values)</div>
+  <div class="fx" data-lang="text">pred: [0 0 1 1]
+true: [0 0 1 1]</div>
+  <p><strong>pyfunc</strong> is MLflow's generic wrapper: sklearn, XGBoost or PyTorch all expose the same <code>.predict()</code>. Other URI forms: <code>models:/name/2</code> (a version), <code>runs:/&lt;run_id&gt;/model</code>.</p>
+  <h3>A REST endpoint in one command</h3>
+  <div class="fx" data-lang="text">$ export MLFLOW_TRACKING_URI=sqlite:///mlflow.db
+$ mlflow models serve -m "models:/cancer-classifier@champion" -p 5055 --env-manager local
+
+$ curl -X POST localhost:5055/invocations -H 'Content-Type: application/json' -d @req.json
+{"predictions": [0, 1]}
+
+# send only one column -&gt; signature enforcement rejects it
+{"error_code": "INVALID_PARAMETER_VALUE", ... "Model is missing inputs ['mean texture', 'mean perimeter', ...]",
+ "error_class": "SCHEMA_ENFORCEMENT_FAILED"}</div>
+  <p><code>req.json</code> is <code>{"dataframe_split": {"columns": [...30 names], "data": [[...], [...]]}}</code>. <code>mlflow models build-docker</code> wraps the same server into an image.</p>
+  <h3>What a logged model contains (MLmodel file, trimmed)</h3>
+  <div class="fx" data-lang="text">flavors:
+  python_function:
+    env: {conda: conda.yaml, virtualenv: python_env.yaml}
+    loader_module: mlflow.sklearn
+    model_path: model.skops
+  sklearn:
+    serialization_format: skops
+    sklearn_version: 1.9.1
+mlflow_version: 3.17.1
+model_id: m-4b5281a46dd943baaac6600b7c859e09
+run_id: db6124d4737a4d26bbc161f9ec3a4fe4
+signature:
+  inputs: '[{"type": "double", "name": "mean radius", "required": true}, ...]'
+  outputs: '[{"type": "long", "required": true}]'
+# sibling files: requirements.txt, conda.yaml, python_env.yaml, input_example.json, model.skops</div>
+  <div class="callout intu"><span class="label">Key insight</span>
+    <p>The model directory carries its own dependency list and input schema. That is what makes "train here, serve anywhere" work.</p>
+  </div>
+
+  <h2 id="mf-setup"><span class="num">08</span>Server Setup &amp; Projects</h2>
+  <figure class="viz"><svg viewBox="0 0 600 130" width="600">
+    <defs><marker id="mf-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs>
+    <rect x="10" y="45" width="130" height="40" rx="6" class="fb sb"/><text x="75" y="69" text-anchor="middle">training code</text>
+    <rect x="210" y="45" width="150" height="40" rx="6" class="fv" stroke="currentColor"/><text x="285" y="69" text-anchor="middle">tracking server</text>
+    <rect x="430" y="10" width="160" height="44" rx="6" class="fs" stroke="currentColor"/><text x="510" y="30" text-anchor="middle">backend store</text><text x="510" y="46" text-anchor="middle" class="tm" font-size="11">Postgres/MySQL: metadata</text>
+    <rect x="430" y="76" width="160" height="44" rx="6" class="ft st"/><text x="510" y="96" text-anchor="middle">artifact store</text><text x="510" y="112" text-anchor="middle" class="tm" font-size="11">S3/GCS: models, plots</text>
+    <g stroke="currentColor" fill="none" marker-end="url(#mf-ar2)"><line x1="140" y1="65" x2="208" y2="65"/><line x1="360" y1="58" x2="428" y2="34"/><line x1="360" y1="72" x2="428" y2="96"/></g>
+  </svg><figcaption>Small numbers go to a database; big files go to object storage.</figcaption></figure>
+  <div class="fx" data-lang="text">mlflow server --backend-store-uri postgresql://user:pw@db/mlflow \\
+              --artifacts-destination s3://ml-artifacts --host 0.0.0.0 --port 5000
+# clients:  export MLFLOW_TRACKING_URI=http://mlflow.internal:5000</div>
+  <p>Not run here (needs Postgres + S3). Managed options: Databricks, SageMaker managed MLflow, Azure ML.</p>
+  <h3>MLflow Projects (brief)</h3>
+  <div class="fx" data-lang="text"># MLproject  (file at repo root)
+name: cancer-rf
+python_env: python_env.yaml
+entry_points:
+  main:
+    parameters:
+      n_estimators: {type: int, default: 100}
+      max_depth: {type: int, default: 5}
+    command: "python train.py --n {n_estimators} --depth {max_depth}"
+
+$ mlflow run . -P n_estimators=300            # or a Git URL</div>
+  <p>A Project packages code + env + entry point so anyone can rerun it. Many teams now use Docker or a pipeline tool (Airflow, Kubeflow) for this instead.</p>
+
+  <h2 id="mf-build"><span class="num">09</span>Build It</h2>
+  <ol>
+    <li><code>pip install mlflow scikit-learn</code>; run the Section 03 loop with 5 param combos.</li>
+    <li>Add <code>mlflow.set_tag("data_version", "&lt;dvc md5&gt;")</code> and log a confusion-matrix plot with <code>mlflow.log_figure</code>.</li>
+    <li>Run <code>mlflow ui --backend-store-uri sqlite:///mlflow.db</code>, open <code>localhost:5000</code>, compare the runs.</li>
+    <li>Register the best, alias it <code>@champion</code>, serve it with <code>mlflow models serve</code>, curl it.</li>
+    <li>Register a worse model, promote it, then roll back by moving the alias. Confirm predictions change back.</li>
+  </ol>
+
+  <h2 id="mf-qa"><span class="num">10</span>Questions &amp; Answers</h2>
+  <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>What problems does experiment tracking solve?</summary><div class="qa-body">Reproducibility (rebuild any model from logged params, code version and data version), comparison (rank hundreds of runs by a metric), collaboration (one shared history instead of personal spreadsheets) and lineage (which run produced the model in production).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>You compare runs using autologged metrics and pick the top one. What's wrong?</summary><div class="qa-body">Autolog's sklearn metrics are computed on the training data (<code>training_accuracy_score</code> etc.), so the "best" run is probably the most overfit. Log validation or test metrics yourself, or use <code>mlflow.evaluate</code> / <code>mlflow.models.evaluate</code> on a holdout set.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Two runs tie on the main metric. How do you choose?</summary><div class="qa-body">Prefer the cheaper or simpler model (fewer trees, lower latency, smaller artifact), then check secondary metrics, per-slice performance and stability across seeds or CV folds. In our run, rf_100_5 matched rf_300_None on F1 with a third of the trees.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Version vs alias in the registry?</summary><div class="qa-body">A version is an immutable snapshot of one model, auto-numbered and linked to the run that produced it. An alias (e.g. <code>@champion</code>) is a movable pointer to one version. Serving loads <code>models:/name@champion</code>, so promoting or rolling back is just moving the alias, with no code change.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Production model is misbehaving. How do you roll back with MLflow?</summary><div class="qa-body"><code>client.set_registered_model_alias("cancer-classifier", "champion", "1")</code>. Serving code that loads <code>@champion</code> picks up version 1 on next load or restart. Keep a <code>@previous</code> alias so you know the last good version instantly.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a model signature, and why log an input example?</summary><div class="qa-body">The signature is the expected input columns/types and output type. MLflow infers it from <code>input_example</code>. At serving time it enforces it: in our test, a request missing 29 columns was rejected with <code>SCHEMA_ENFORCEMENT_FAILED</code> instead of returning garbage.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How would you set up MLflow for a team of 20?</summary><div class="qa-body">A shared tracking server (on K8s or a VM, or a managed service) with a Postgres/MySQL backend store for metadata and S3/GCS for artifacts, behind auth. Everyone sets <code>MLFLOW_TRACKING_URI</code>. Conventions: one experiment per problem, required tags (git SHA, data version), registry aliases for deployment.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Where do MLflow Stages fit today?</summary><div class="qa-body">Stages (Staging / Production / Archived) were the old promotion workflow. They are deprecated since 2.9 because one fixed set of stages didn't fit every team. Aliases (any name, any number) and tags replace them, e.g. <code>@champion</code>, <code>@challenger</code>, tag <code>validated=true</code>.</div></details>
+</main>`
+});
+
+
 // notes/softeng/se_docker.js — Docker
 Object.assign(TOPIC_CONTENT, {
   "se_docker": `<main>
@@ -14833,8 +15877,7 @@ function loadTopic(key, cat) {
   _tc.innerHTML = html;
   highlightCode(_tc);
   makeCollapsible(_tc);
-  hoistMindMap(_tc);
-  addSectionTools(_tc);
+  try { hoistMindMap(_tc); addSectionTools(_tc); } catch (e) { console.error(e); }
   if (foundCat) appendPrevNext(_tc, foundCat, key);
 
   if (foundCat) {
@@ -14938,11 +15981,16 @@ function addSectionTools(container) {
 // Wherever a note puts its mind map, show it first (right after the lead).
 function hoistMindMap(container) {
   var mm = container.querySelector('.mindmap');
-  if (!mm) return;
-  var block = mm.closest('.section-block');
+  var block = mm && mm.closest('.section-block');
   if (!block) return;
-  var anchor = container.querySelector('.roadmap-wrap') || container.querySelector('.section-block');
-  if (anchor && anchor !== block) anchor.parentNode.insertBefore(block, anchor);
+  var rw = container.querySelector('.roadmap-wrap');
+  if (rw && block.contains(rw)) {
+    // Map placed before the roadmap: the section swallowed the roadmap, so lift it back out after the map
+    block.parentNode.insertBefore(rw, block.nextSibling);
+  } else {
+    var anchor = rw || container.querySelector('.section-block');
+    if (anchor && anchor !== block && !anchor.contains(block)) anchor.parentNode.insertBefore(block, anchor);
+  }
 }
 
 // Chain of groups from the category root down to group `key`.

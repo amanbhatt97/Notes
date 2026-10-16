@@ -306,8 +306,7 @@ function loadTopic(key, cat) {
   _tc.innerHTML = html;
   highlightCode(_tc);
   makeCollapsible(_tc);
-  hoistMindMap(_tc);
-  addSectionTools(_tc);
+  try { hoistMindMap(_tc); addSectionTools(_tc); } catch (e) { console.error(e); }
   if (foundCat) appendPrevNext(_tc, foundCat, key);
 
   if (foundCat) {
@@ -411,11 +410,16 @@ function addSectionTools(container) {
 // Wherever a note puts its mind map, show it first (right after the lead).
 function hoistMindMap(container) {
   var mm = container.querySelector('.mindmap');
-  if (!mm) return;
-  var block = mm.closest('.section-block');
+  var block = mm && mm.closest('.section-block');
   if (!block) return;
-  var anchor = container.querySelector('.roadmap-wrap') || container.querySelector('.section-block');
-  if (anchor && anchor !== block) anchor.parentNode.insertBefore(block, anchor);
+  var rw = container.querySelector('.roadmap-wrap');
+  if (rw && block.contains(rw)) {
+    // Map placed before the roadmap: the section swallowed the roadmap, so lift it back out after the map
+    block.parentNode.insertBefore(rw, block.nextSibling);
+  } else {
+    var anchor = rw || container.querySelector('.section-block');
+    if (anchor && anchor !== block && !anchor.contains(block)) anchor.parentNode.insertBefore(block, anchor);
+  }
 }
 
 // Chain of groups from the category root down to group `key`.
