@@ -4,8 +4,13 @@
 
 // ── State ────────────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'dsml_notes_v3';
-let appState = { visited: {}, catOpen: {}, theme: 'dark' };
+let appState = { studied: {}, catOpen: {}, theme: 'dark' };
 try { appState = { ...appState, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') }; } catch(e) {}
+// Opening a note used to mark it read; only explicit "studied" clicks count now.
+delete appState.visited;
+if (!appState.studied) appState.studied = {};
+
+function studyCount(key) { return (appState.studied[key] || []).length; }
 
 let activeTopic = null;
 let searchIndex = [];
@@ -95,8 +100,9 @@ function renderTopicList(list, container, cat, depth) {
     var tb = document.createElement('button');
     tb.className = 'sb-topic' +
       (activeTopic === t.key ? ' active' : '') +
-      (appState.visited[t.key] ? ' read' : '');
+      (studyCount(t.key) ? ' read' : '');
     tb.dataset.key = t.key;
+    if (studyCount(t.key)) tb.dataset.count = '×' + studyCount(t.key);
     tb.style.paddingLeft = pad + 'px';
     tb.style.setProperty('--dot-x', (pad - 14) + 'px');
 
@@ -289,8 +295,6 @@ function loadTopic(key, cat) {
   if (!html) return;
 
   activeTopic = key;
-  appState.visited[key] = true;
-  saveState();
 
   // Find category + group path for breadcrumb
   if (typeof cat === 'string') cat = CATEGORIES.find(c => c.key === cat);
@@ -307,6 +311,7 @@ function loadTopic(key, cat) {
   highlightCode(_tc);
   makeCollapsible(_tc);
   try { hoistMindMap(_tc); addSectionTools(_tc); } catch (e) { console.error(e); }
+  appendStudyBox(_tc, key);
   if (foundCat) appendPrevNext(_tc, foundCat, key);
 
   if (foundCat) {
@@ -325,7 +330,6 @@ function loadTopic(key, cat) {
   document.getElementById('sbHome').classList.remove('active');
   document.querySelectorAll('.sb-topic').forEach(b => {
     b.classList.toggle('active', b.dataset.key === key);
-    if (b.dataset.key === key) b.classList.add('read');
   });
 
   updateProgress();
@@ -334,6 +338,51 @@ function loadTopic(key, cat) {
   if (searchIndex.length === 0) rebuildSearchIndex();
 
   if (window.innerWidth <= 800 && sbOpen) toggleSidebar();
+}
+
+// "I studied this" counter at the bottom of each note. Each click logs a
+// date, so you can see how many times you've gone through a topic.
+function appendStudyBox(container, key) {
+  var box = document.createElement('div');
+  box.className = 'study-box';
+  container.appendChild(box);
+  function fmt(iso) {
+    return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+  function render() {
+    var log = appState.studied[key] || [];
+    var n = log.length;
+    box.innerHTML =
+      '<div class="study-info">' +
+        (n ? '<b>Studied ' + n + (n === 1 ? ' time' : ' times') + '</b><span>Last: ' + fmt(log[n - 1]) +
+             (n > 1 ? ' · First: ' + fmt(log[0]) : '') + '</span>'
+           : '<b>Not studied yet</b><span>Finished this topic? Log it.</span>') +
+      '</div>' +
+      '<div class="study-actions">' +
+        (n ? '<button class="study-undo" title="Remove the last entry">Undo</button>' : '') +
+        '<button class="study-btn">✓ I studied this' + (n ? ' again' : '') + '</button>' +
+      '</div>';
+    box.querySelector('.study-btn').onclick = function() {
+      (appState.studied[key] = appState.studied[key] || []).push(new Date().toISOString());
+      saveState(); render(); refreshTopicMark(key);
+    };
+    var u = box.querySelector('.study-undo');
+    if (u) u.onclick = function() {
+      appState.studied[key].pop();
+      if (!appState.studied[key].length) delete appState.studied[key];
+      saveState(); render(); refreshTopicMark(key);
+    };
+  }
+  render();
+}
+
+function refreshTopicMark(key) {
+  var n = studyCount(key);
+  document.querySelectorAll('.sb-topic[data-key="' + key + '"]').forEach(function(b) {
+    b.classList.toggle('read', n > 0);
+    if (n) b.dataset.count = '×' + n; else delete b.dataset.count;
+  });
+  updateProgress();
 }
 
 // Previous / next buttons follow the sidebar order within the category,
@@ -480,7 +529,7 @@ function showOverview(catKey, groupKey) {
 function ovCard(t) {
   var ok = !!TOPIC_CONTENT[t.key];
   return '<button class="ov-card' + (ok ? '' : ' soon') + '"' + (ok ? ' data-open="' + t.key + '"' : ' disabled') + '>' +
-    '<b>' + t.label + (appState.visited[t.key] ? ' <i class="ov-read">✓ read</i>' : '') + '</b>' +
+    '<b>' + t.label + (studyCount(t.key) ? ' <i class="ov-read">✓ studied ×' + studyCount(t.key) + '</i>' : '') + '</b>' +
     '<span>' + (ok ? noteLead(t.key) : 'Coming soon') + '</span></button>';
 }
 
@@ -669,12 +718,12 @@ function updateProgress() {
     flatTopics(cat.topics).forEach(function(t) {
       if (TOPIC_CONTENT[t.key]) {
         total++;
-        if (appState.visited && appState.visited[t.key]) done++;
+        if (studyCount(t.key)) done++;
       }
     });
   });
   var el = document.getElementById('progressText');
-  if (el) el.textContent = done + ' / ' + total + ' topics read';
+  if (el) el.textContent = done + ' / ' + total + ' topics studied';
   var bar = document.getElementById('progressFill');
   if (bar) bar.style.width = (total > 0 ? (done / total * 100) : 0) + '%';
 }
