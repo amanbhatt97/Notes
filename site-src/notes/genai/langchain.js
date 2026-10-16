@@ -4,6 +4,95 @@ Object.assign(TOPIC_CONTENT, {
   <h1>LangChain</h1>
   <p class="lead">LangChain is standard plumbing for LLM apps: one interface for models, prompts, parsers, retrievers and tools, joined with a pipe. You should know the raw API (05), RAG (07) and the agent loop (08–09); here you see what the framework saves you. 11 LangGraph builds on it for stateful agents.</p>
 
+  <h2 id="lc-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">LangChain</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">What it gives you</div>
+        <ul>
+          <li><b>Standard interfaces</b> for models, prompts, parsers, retrievers, tools; swap in one line</li>
+          <li>💡 <b>Pipe fittings</b> — any tap fits any pipe; water (LLM) no cleaner</li>
+          <li><b>Not</b> smarter models or reliable agents</li>
+          <li><b>Packages</b> — <code>langchain-core</code> (interfaces), <code>langchain</code> (create_agent), <code>langchain-anthropic</code>…, <code>-text-splitters</code>, <code>-classic</code> (legacy)</li>
+          <li>⚠ <code>LLMChain</code>, <code>initialize_agent</code>, <code>AgentExecutor</code>, <code>ConversationBufferMemory</code> = legacy (1.0+)</li>
+          <li><b>Skip it</b> — 1–2 calls, latency hot path, debugging framework &gt; model; stateful → LangGraph</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Models &amp; prompts</div>
+        <ul>
+          <li><b><code>ChatAnthropic(model=..., timeout, max_retries)</code></b> — same interface as <code>ChatOpenAI</code></li>
+          <li><b><code>invoke</code> → AIMessage</b> — <code>.content</code>, <code>.usage_metadata</code>, <code>.tool_calls</code></li>
+          <li><b><code>ChatPromptTemplate.from_messages</code></b> — named slots; <code>MessagesPlaceholder("history")</code></li>
+          <li><b><code>.partial(role=...)</code></b> — fill some slots now</li>
+          <li>⚠ <code>PromptTemplate</code> → one string; chat models want <code>ChatPromptTemplate</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">LCEL &amp; Runnables</div>
+        <ul>
+          <li><b>Runnable</b> — <code>invoke · stream · batch · ainvoke</code>; everything implements it</li>
+          <li><b><code>prompt | llm | parser</code></b> → RunnableSequence: dict → ChatPromptValue → AIMessage → str</li>
+          <li><b>RunnableParallel</b> (or a dict) — fan one input out, get a dict</li>
+          <li><b>RunnablePassthrough</b> — carry input unchanged (question past the retriever)</li>
+          <li><b>RunnableLambda</b> — wrap any function</li>
+          <li><b>Reliability</b> — <code>.with_retry()</code>, <code>.with_fallbacks([...])</code>, <code>max_concurrency</code></li>
+          <li>💡 Unix pipes, but typed objects</li>
+          <li>⚠ Type mismatches fail only at runtime → add parser/lambda</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Parsers &amp; structured output</div>
+        <ul>
+          <li><b>StrOutputParser</b> → str; <b>JsonOutputParser</b> → dict (strips fences)</li>
+          <li><b>PydanticOutputParser</b> — old: format instructions + validate text</li>
+          <li><b><code>with_structured_output(Model, method="json_schema")</code></b> — default; native schema → typed object</li>
+          <li>⚠ default <code>function_calling</code> forces a tool → rejected on claude-opus-5-5</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Documents &amp; retrievers</div>
+        <ul>
+          <li><b>Document</b> — <code>page_content</code> + <code>metadata</code></li>
+          <li><b>Loaders</b> — 100+; <code>lazy_load()</code> for big sources</li>
+          <li><b>RecursiveCharacterTextSplitter</b> — paragraphs → lines → spaces</li>
+          <li><b>Vector stores</b> — InMemory for demos; Chroma, pgvector, Pinecone share the API</li>
+          <li><b><code>as_retriever(search_kwargs={"k": 4})</code></b> — str in, Documents out, a Runnable</li>
+          <li>⚠ Format Documents to text before the prompt</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Tools &amp; agents</div>
+        <ul>
+          <li><b><code>@tool</code></b> — name + type hints + docstring = schema</li>
+          <li><b><code>bind_tools</code></b> — model may <em>ask</em>; doesn't run the loop</li>
+          <li><b><code>create_agent(llm, tools, system_prompt, middleware, checkpointer)</code></b> — LangGraph ReAct graph</li>
+          <li><b>Middleware</b> — ToolCallLimit, HumanInTheLoop, Summarization, ModelFallback</li>
+          <li><b>vs AgentExecutor</b> — state in graph → pause, inspect, resume</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Memory</div>
+        <ul>
+          <li><b>Memory = past messages put back in the prompt</b></li>
+          <li><b>Buffer</b> (all) · <b>Window</b> (last k) · <b>Summary</b> · <b>Summary + buffer</b> (best balance)</li>
+          <li><b>Today</b> — <code>trim_messages(...)</code> or a checkpointer keyed by <code>thread_id</code></li>
+          <li>⚠ History tokens are paid on every call → cap or summarise</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Observe &amp; build</div>
+        <ul>
+          <li><b>Streaming</b> — <code>stream()</code>; <code>astream_events(version="v2")</code> for UIs</li>
+          <li><b>Callbacks</b> — <code>BaseCallbackHandler</code>: on_llm_end, on_tool_start…</li>
+          <li><b>LangSmith</b> — <code>LANGSMITH_TRACING=true</code> + API key → per-step traces</li>
+          <li><b>RAG chain</b> — <code>{"context": retriever | format_docs, "question": RunnablePassthrough()} | prompt | llm | parser</code></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -16,25 +105,17 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="lc-mem"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Conversation Memory</span><span class="rm-sub">It's just history in the prompt</span></div></div>
       <div class="rm-item rm-done" data-target="lc-trace"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Streaming, Callbacks, LangSmith</span><span class="rm-sub">See what ran and what it cost</span></div></div>
       <div class="rm-item rm-done" data-target="lc-build"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Build It: a RAG Chain</span><span class="rm-sub">In-memory vector store, runnable</span></div></div>
-      <div class="rm-item rm-done" data-target="lc-rev"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 9 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="lc-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="lc-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
   <h2 id="lc-why"><span class="num">01</span>What It Gives You</h2>
-  <p>Every LLM app repeats the same plumbing: fill a prompt, call a model, parse the reply, keep history, fetch documents, run tools. LangChain gives each a <strong>standard interface</strong>, so parts snap together and swap with one line.</p>
+  <p>Every LLM app repeats the same plumbing (prompt, model, parse, history, documents, tools). LangChain gives each a <strong>standard interface</strong>: parts snap together and swap in one line.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Standard pipe fittings. Any tap fits any pipe. LangChain doesn't make the water (the LLM) any cleaner; it just stops you cutting custom joints for every project.</p>
   </div>
   <p>It does <strong>not</strong> make models smarter or agents more reliable. Hallucination and bad prompts are still your problem.</p>
-  <table class="tbl">
-    <tr><th>Package</th><th>Holds</th></tr>
-    <tr><td><code>langchain-core</code></td><td>Interfaces: messages, prompts, Runnables, parsers, tools, vector-store base</td></tr>
-    <tr><td><code>langchain</code></td><td><code>create_agent</code> and agent middleware (built on LangGraph)</td></tr>
-    <tr><td><code>langchain-anthropic</code>, <code>-openai</code>…</td><td>One package per provider integration</td></tr>
-    <tr><td><code>langchain-text-splitters</code></td><td>Chunkers</td></tr>
-    <tr><td><code>langchain-classic</code></td><td>Legacy: <code>LLMChain</code>, <code>AgentExecutor</code>, <code>ConversationBufferMemory</code>…</td></tr>
-  </table>
+<figure class="viz"><svg viewBox="0 0 600 168" width="600"><rect x="20" y="20" width="350" height="40" rx="6" class="fs" stroke="currentColor" stroke-dasharray="4 3" stroke-opacity=".5"/><text x="195" y="38" text-anchor="middle" font-weight="bold">langchain-classic (legacy)</text><text x="195" y="52" text-anchor="middle" font-size="10" class="tm">LLMChain · AgentExecutor · ConversationBufferMemory</text><rect x="380" y="20" width="200" height="40" rx="6" class="fg sg"/><text x="480" y="38" text-anchor="middle" font-weight="bold">langchain</text><text x="480" y="52" text-anchor="middle" font-size="10" class="tm">create_agent + middleware</text><rect x="20" y="70" width="170" height="40" rx="6" class="ft st"/><text x="105" y="88" text-anchor="middle" font-weight="bold">langchain-anthropic</text><text x="105" y="102" text-anchor="middle" font-size="10" class="tm">-openai … per provider</text><rect x="200" y="70" width="170" height="40" rx="6" class="ft st"/><text x="285" y="88" text-anchor="middle" font-weight="bold">text-splitters</text><text x="285" y="102" text-anchor="middle" font-size="10" class="tm">chunkers</text><rect x="380" y="70" width="200" height="40" rx="6" class="fv"/><text x="480" y="88" text-anchor="middle" font-weight="bold">langgraph</text><text x="480" y="102" text-anchor="middle" font-size="10" class="tm">stateful agent runtime</text><rect x="20" y="120" width="560" height="40" rx="6" class="fb sb"/><text x="300" y="138" text-anchor="middle" font-weight="bold">langchain-core</text><text x="300" y="152" text-anchor="middle" font-size="10" class="tm">interfaces: messages · prompts · Runnables · parsers · tools · vector-store base</text></svg><figcaption>Everything sits on langchain-core's interfaces. Integrations are separate packages; create_agent runs on LangGraph; old classes moved to langchain-classic.</figcaption></figure>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Old tutorials use <code>LLMChain</code>, <code>initialize_agent</code>, <code>AgentExecutor</code> and <code>ConversationBufferMemory</code>. Since LangChain 1.0 these live in <code>langchain-classic</code>. New code uses LCEL, <code>create_agent</code>, and LangGraph checkpointers.</p>
   </div>
@@ -78,8 +159,8 @@ tutor = prompt.partial(role="tutor")   # fill some slots now, the rest later</di
   <div class="callout def"><span class="label">Definition</span>
     <p>A <strong>Runnable</strong> is anything with <code>invoke</code>, <code>stream</code>, <code>batch</code> and async <code>ainvoke</code>. <strong>LCEL</strong> (LangChain Expression Language) joins Runnables with <code>|</code>: the output of the left becomes the input of the right.</p>
   </div>
-  <p>Prompts, models, parsers, retrievers and tools are all Runnables. So <code>prompt | llm | parser</code> builds a <code>RunnableSequence</code> that itself streams, batches and runs async, with no extra code.</p>
-  <div class="flow"><span>dict</span><span>prompt → ChatPromptValue</span><span>llm → AIMessage</span><span>parser → str</span></div>
+<figure class="viz"><svg viewBox="0 0 600 128" width="600"><defs><marker id="lc-a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><text x="14" y="64">dict</text><line x1="50" y1="60" x2="88" y2="60" stroke="currentColor" marker-end="url(#lc-a2)"/><rect x="90" y="40" width="100" height="40" rx="6" class="ft st"/><text x="140" y="64" text-anchor="middle" font-weight="bold">prompt</text><rect x="250" y="40" width="100" height="40" rx="6" class="fb sb"/><text x="300" y="64" text-anchor="middle" font-weight="bold">llm</text><rect x="410" y="40" width="100" height="40" rx="6" class="fg sg"/><text x="460" y="64" text-anchor="middle" font-weight="bold">parser</text><line x1="190" y1="60" x2="248" y2="60" stroke="currentColor" marker-end="url(#lc-a2)"/><text x="219" y="30" text-anchor="middle" font-size="10" class="tm">ChatPromptValue</text><line x1="350" y1="60" x2="408" y2="60" stroke="currentColor" marker-end="url(#lc-a2)"/><text x="379" y="30" text-anchor="middle" font-size="10" class="tm">AIMessage</text><line x1="510" y1="60" x2="548" y2="60" stroke="currentColor" marker-end="url(#lc-a2)"/><text x="552" y="64">str</text><path d="M90,92 V100 H510 V92" fill="none" stroke="currentColor" stroke-opacity=".5"/><text x="300" y="118" text-anchor="middle" font-size="11">RunnableSequence = a Runnable too: invoke · stream · batch · ainvoke</text></svg><figcaption>Each | hands the left output to the right. The types change at every step; the whole chain inherits streaming, batching and async.</figcaption></figure>
+  <p>Prompts, models, parsers, retrievers and tools are all Runnables, so any of them can sit in a chain.</p>
   <div class="fx" data-lang="py">from langchain_core.output_parsers import StrOutputParser
 
 chain = prompt | llm | StrOutputParser()
@@ -181,7 +262,8 @@ result["messages"][-1].content</div>
 
   <h2 id="lc-mem"><span class="num">07</span>Conversation Memory</h2>
   <p>There is no magic: "memory" is <strong>past messages put back into the prompt</strong>. The model itself remembers nothing between calls.</p>
-  <p>The classic strategies (legacy class names in brackets) are still the interview vocabulary:</p>
+<figure class="viz"><svg viewBox="0 0 600 150" width="600"><text x="10" y="27" font-size="11" font-weight="bold">Buffer</text><rect x="130" y="10" width="26" height="24" rx="4" class="fb sb"/><text x="143" y="26" text-anchor="middle" font-size="9">t1</text><rect x="160" y="10" width="26" height="24" rx="4" class="fb sb"/><text x="173" y="26" text-anchor="middle" font-size="9">t2</text><rect x="190" y="10" width="26" height="24" rx="4" class="fb sb"/><text x="203" y="26" text-anchor="middle" font-size="9">t3</text><rect x="220" y="10" width="26" height="24" rx="4" class="fb sb"/><text x="233" y="26" text-anchor="middle" font-size="9">t4</text><rect x="250" y="10" width="26" height="24" rx="4" class="fb sb"/><text x="263" y="26" text-anchor="middle" font-size="9">t5</text><rect x="280" y="10" width="26" height="24" rx="4" class="fb sb"/><text x="293" y="26" text-anchor="middle" font-size="9">t6</text><rect x="310" y="10" width="26" height="24" rx="4" class="fb sb"/><text x="323" y="26" text-anchor="middle" font-size="9">t7</text><rect x="340" y="10" width="26" height="24" rx="4" class="fb sb"/><text x="353" y="26" text-anchor="middle" font-size="9">t8</text><rect x="370" y="10" width="26" height="24" rx="4" class="fb sb"/><text x="383" y="26" text-anchor="middle" font-size="9">t9</text><rect x="400" y="10" width="26" height="24" rx="4" class="fb sb"/><text x="413" y="26" text-anchor="middle" font-size="9">t10</text><text x="440" y="26" font-size="10" class="tm">unbounded → overflows</text><text x="10" y="63" font-size="11" font-weight="bold">Window k=3</text><rect x="130" y="46" width="26" height="24" rx="4" class="fs" opacity=".35"/><text x="143" y="62" text-anchor="middle" font-size="9" opacity=".35">t1</text><rect x="160" y="46" width="26" height="24" rx="4" class="fs" opacity=".35"/><text x="173" y="62" text-anchor="middle" font-size="9" opacity=".35">t2</text><rect x="190" y="46" width="26" height="24" rx="4" class="fs" opacity=".35"/><text x="203" y="62" text-anchor="middle" font-size="9" opacity=".35">t3</text><rect x="220" y="46" width="26" height="24" rx="4" class="fs" opacity=".35"/><text x="233" y="62" text-anchor="middle" font-size="9" opacity=".35">t4</text><rect x="250" y="46" width="26" height="24" rx="4" class="fs" opacity=".35"/><text x="263" y="62" text-anchor="middle" font-size="9" opacity=".35">t5</text><rect x="280" y="46" width="26" height="24" rx="4" class="fs" opacity=".35"/><text x="293" y="62" text-anchor="middle" font-size="9" opacity=".35">t6</text><rect x="310" y="46" width="26" height="24" rx="4" class="fs" opacity=".35"/><text x="323" y="62" text-anchor="middle" font-size="9" opacity=".35">t7</text><rect x="340" y="46" width="26" height="24" rx="4" class="fb sb"/><text x="353" y="62" text-anchor="middle" font-size="9">t8</text><rect x="370" y="46" width="26" height="24" rx="4" class="fb sb"/><text x="383" y="62" text-anchor="middle" font-size="9">t9</text><rect x="400" y="46" width="26" height="24" rx="4" class="fb sb"/><text x="413" y="62" text-anchor="middle" font-size="9">t10</text><text x="440" y="62" font-size="10" class="tm">bounded; forgets t1–t7</text><text x="10" y="99" font-size="11" font-weight="bold">Summary</text><rect x="130" y="82" width="296" height="24" rx="4" class="fv"/><text x="278" y="98" text-anchor="middle" font-size="10">summary t1–t10</text><text x="440" y="98" font-size="10" class="tm">small + 1 summary call</text><text x="10" y="135" font-size="11" font-weight="bold">Summary+buffer</text><rect x="130" y="118" width="206" height="24" rx="4" class="fv"/><text x="233" y="134" text-anchor="middle" font-size="10">summary t1–t7</text><rect x="340" y="118" width="26" height="24" rx="4" class="fb sb"/><text x="353" y="134" text-anchor="middle" font-size="9">t8</text><rect x="370" y="118" width="26" height="24" rx="4" class="fb sb"/><text x="383" y="134" text-anchor="middle" font-size="9">t9</text><rect x="400" y="118" width="26" height="24" rx="4" class="fb sb"/><text x="413" y="134" text-anchor="middle" font-size="9">t10</text><text x="440" y="134" font-size="10" class="tm">recent verbatim + summary</text></svg><figcaption>What each strategy puts back into the prompt after 10 turns (blue = verbatim, violet = LLM-written summary, faded = dropped).</figcaption></figure>
+  <p>Legacy class names (in brackets) are still interview vocabulary:</p>
   <table class="tbl">
     <tr><th>Strategy</th><th>Keeps</th><th>Cost</th><th>Use</th></tr>
     <tr><td>Buffer <small>(ConversationBufferMemory)</small></td><td>Everything verbatim</td><td>Grows until the context overflows</td><td>Demos</td></tr>
@@ -199,17 +281,18 @@ recent = trim_messages(history, max_tokens=2000, token_counter=llm,
   </div>
 
   <h2 id="lc-trace"><span class="num">08</span>Streaming, Callbacks, LangSmith</h2>
-  <ul>
-    <li><strong>Streaming:</strong> <code>chain.stream()</code> yields tokens; <code>astream_events(..., version="v2")</code> yields fine-grained events (token, tool start, retriever end) for a UI.</li>
-    <li><strong>Callbacks:</strong> subclass <code>BaseCallbackHandler</code> (<code>on_llm_end</code>, <code>on_tool_start</code>, <code>on_chain_error</code>) and pass <code>config={"callbacks": [handler]}</code> for logging or cost tracking.</li>
-    <li><strong>LangSmith:</strong> set <code>LANGSMITH_TRACING=true</code> and <code>LANGSMITH_API_KEY</code> and every run is traced: inputs, outputs, latency, tokens per step. Older env names <code>LANGCHAIN_TRACING_V2</code> still work.</li>
-  </ul>
+  <div class="cards">
+    <div><b>Streaming</b><p><code>chain.stream()</code> yields tokens; <code>astream_events(..., version="v2")</code> yields events (token, tool start, retriever end) for a UI.</p></div>
+    <div><b>Callbacks</b><p>Subclass <code>BaseCallbackHandler</code> (<code>on_llm_end</code>, <code>on_tool_start</code>, <code>on_chain_error</code>); pass <code>config={"callbacks": [handler]}</code>.</p><small>Logging, cost tracking</small></div>
+    <div><b>LangSmith</b><p><code>LANGSMITH_TRACING=true</code> + <code>LANGSMITH_API_KEY</code>: every run traced with inputs, outputs, latency, tokens per step.</p><small>Old name <code>LANGCHAIN_TRACING_V2</code> still works</small></div>
+  </div>
   <div class="callout intu"><span class="label">Why it matters</span>
     <p>A trace shows which step went wrong: bad retrieval or bad generation. LangSmith also stores datasets and runs evaluations; that workflow is 13 Evaluation &amp; Observability.</p>
   </div>
 
   <h2 id="lc-build"><span class="num">09</span>Build It: a RAG Chain</h2>
-  <p>A shop-policy Q&amp;A bot: split a document, index it in memory, retrieve the top 2 chunks, answer with the context. It runs offline with a toy keyword embedding and a fake model; swap the two marked lines for real ones.</p>
+  <p>A shop-policy Q&amp;A bot: split, index in memory, retrieve the top 2 chunks, answer from them. Runs offline with a toy keyword embedding and a fake model; swap the two marked lines for real ones.</p>
+<figure class="viz"><svg viewBox="0 0 600 162" width="600"><defs><marker id="lc-a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><text x="10" y="91">question</text><path d="M76,87 H86 V37 H98" fill="none" stroke="currentColor" marker-end="url(#lc-a4)"/><path d="M86,87 V137 H98" fill="none" stroke="currentColor" marker-end="url(#lc-a4)"/><rect x="100" y="20" width="100" height="34" rx="6" class="ft st"/><text x="150" y="41" text-anchor="middle" font-weight="bold">retriever</text><rect x="215" y="20" width="110" height="34" rx="6" class="ft st"/><text x="270" y="41" text-anchor="middle" font-weight="bold">format_docs</text><line x1="200" y1="37" x2="213" y2="37" stroke="currentColor" marker-end="url(#lc-a4)"/><rect x="100" y="120" width="225" height="34" rx="6" class="fs"/><text x="212.5" y="141" text-anchor="middle" font-weight="bold">RunnablePassthrough()</text><text x="150" y="70" text-anchor="middle" font-size="10" class="tm">k=2 Documents</text><text x="270" y="70" text-anchor="middle" font-size="10" class="tm">→ one string</text><rect x="345" y="20" width="80" height="134" rx="6" class="fv"/><text x="385" y="41" text-anchor="middle" font-size="11">context</text><text x="385" y="91" text-anchor="middle" font-weight="bold">dict</text><text x="385" y="141" text-anchor="middle" font-size="11">question</text><line x1="325" y1="37" x2="343" y2="37" stroke="currentColor" marker-end="url(#lc-a4)"/><line x1="325" y1="137" x2="343" y2="137" stroke="currentColor" marker-end="url(#lc-a4)"/><rect x="445" y="66" width="145" height="42" rx="6" class="fb sb"/><text x="517.5" y="85" text-anchor="middle" font-weight="bold">prompt|llm|parser</text><text x="517.5" y="99" text-anchor="middle" font-size="10" class="tm">→ answer str</text><line x1="425" y1="87" x2="443" y2="87" stroke="currentColor" marker-end="url(#lc-a4)"/></svg><figcaption>The dict is a RunnableParallel: the same question goes to the retriever and, unchanged, into the prompt's {question} slot.</figcaption></figure>
   <div class="fx" data-lang="py"># pip install langchain-core langchain-text-splitters langchain-anthropic
 import math, re
 from langchain_core.documents import Document
@@ -284,20 +367,7 @@ print(rag_chain.invoke(q))</div>
     <p>Drop <code>RunnablePassthrough()</code> and pipe the retriever straight into the prompt. What breaks? (The prompt has no <code>question</code> key.) Then add <code>"sources"</code> to the dict so the answer can cite <code>metadata["source"]</code>.</p>
   </div>
 
-  <h2 id="lc-rev"><span class="num">10</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>LangChain</strong> = standard interfaces for LLM parts; swap providers in one line. Plumbing, not intelligence.</li>
-    <li><strong>Runnable</strong>: invoke / stream / batch / ainvoke. Everything implements it.</li>
-    <li><strong>LCEL</strong>: <code>prompt | llm | parser</code> → RunnableSequence; streaming and async come free.</li>
-    <li><strong>RunnableParallel + RunnablePassthrough</strong>: fan the question to the retriever while keeping it for the prompt.</li>
-    <li><strong>Structured output</strong>: <code>with_structured_output(Model, method="json_schema")</code> beats prompt-and-parse.</li>
-    <li><strong>RAG parts</strong>: Document → splitter → embeddings + vector store → retriever → format → prompt.</li>
-    <li><strong>Agents</strong>: <code>@tool</code> + <code>create_agent</code> (+ middleware for limits and approval); not <code>AgentExecutor</code>.</li>
-    <li><strong>Memory</strong> = history in the prompt; trim or summarise; checkpointer keyed by thread_id.</li>
-    <li><strong>LangSmith</strong>: two env vars, full traces; skip LangChain for one-call apps.</li>
-  </ol></div>
-
-  <h2 id="lc-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <h2 id="lc-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>What is the Runnable protocol and why does it matter?</summary><div class="qa-body">The shared interface (<code>invoke</code>, <code>stream</code>, <code>batch</code>, <code>ainvoke</code>) every component implements. <code>A | B</code> builds a <code>RunnableSequence</code> that calls A then feeds its output to B. Because every part speaks the same interface, they compose without glue, and streaming, batching and async propagate through the whole chain.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What does <code>chain.invoke({"question": "What is HNSW?"})</code> do for <code>prompt | llm | StrOutputParser()</code>?</summary><div class="qa-body">The prompt fills its template → <code>ChatPromptValue</code> (messages). The model sends them to the API → <code>AIMessage</code> with content and token usage. The parser pulls <code>.content</code> → a plain <code>str</code>. Three calls in sequence, no hidden state.</div></details>

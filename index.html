@@ -10746,6 +10746,100 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Build an Agent from Scratch</h1>
   <p class="lead">You know the tool-calling loop (05) and the agent ideas: ReAct, workflows vs agents, memory (08). Now build a real one in plain Python, piece by piece, with nothing hidden. Then rebuild it with the SDK's tool runner and see exactly what frameworks like LangChain and LangGraph (10–11) add on top.</p>
 
+  <h2 id="ab-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Build an Agent from Scratch</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">The agent</div>
+        <ul>
+          <li><b>Data analyst</b> — question about CSVs → explore → pandas → verify → Markdown report</li>
+          <li><b>Why an agent</b> — next step depends on data seen (columns, errors, follow-ups)</li>
+          <li><b>6 tools</b> — list_files, read_csv_head, run_python, write_report, update_todos, save_note</li>
+          <li><b>Files</b> — tools.py · schemas.py · memory.py · agent.py (loop)</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Step 1 · tool functions</div>
+        <ul>
+          <li><b>Plain Python, tested first</b> — most agent bugs are tool bugs</li>
+          <li><b>safe_path</b> — resolve + <code>is_relative_to(ROOT)</code>; blocks <code>../../etc/passwd</code></li>
+          <li><b>run_python</b> — subprocess, <code>cwd=ROOT</code>, timeout, <code>env={"PATH": ...}</code> (no API key), last 4,000 chars</li>
+          <li><b>Raise with a hint</b> — "Call list_files to see what exists" → loop makes it <code>is_error</code></li>
+          <li>⚠ Subprocess ≠ sandbox: still reads files + network → container/VM, no network, limits</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Step 2 · schemas</div>
+        <ul>
+          <li><b>Schema = all the model knows</b> — write it like docs for a new teammate</li>
+          <li><b>verb_noun names</b> + descriptions that say <em>when</em> ("call first", "once, at the end")</li>
+          <li><b><code>strict: true</code> + <code>additionalProperties: false</code></b> — args always match</li>
+          <li><b>enum</b> for status; "Requires human approval" in description</li>
+          <li><b>Few, focused</b> — 6 clear tools beat 30 overlapping</li>
+          <li><b>Narrow vs broad</b> — own tool when you must gate, audit, render</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Step 3 · memory &amp; planning</div>
+        <ul>
+          <li><b>Conversation</b> — <code>self.messages</code>, resent each call, one session</li>
+          <li><b>Working</b> — <code>TODOS</code> via <code>update_todos</code>, one task; full list each time (idempotent)</li>
+          <li><b>Long-term</b> — <code>notes.md</code> via <code>save_note</code>, survives restarts</li>
+          <li><b>Load notes once</b> into system prompt → stable prefix → prompt caching works</li>
+          <li>💡 Consultant: transcript · sticky-note checklist · notebook</li>
+          <li>⚠ Saving everything: stale "facts" re-injected forever; never secrets</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Step 4 · the loop</div>
+        <ul>
+          <li><b>Call</b> — <code>messages.create(system, tools, messages, cache_control)</code></li>
+          <li><b>stop_reason</b>
+            <ul><li><code>end_turn</code> → append, return text</li><li><code>tool_use</code> → run all, results in ONE user msg</li><li><code>max_tokens</code>/<code>refusal</code> → drop turn, stop</li></ul>
+          </li>
+          <li><b>Guard</b> — <code>for step in range(max_steps)</code></li>
+          <li><b>Errors</b> — try/except → <code>is_error: true</code> result</li>
+          <li><b>Approval</b> — <code>NEEDS_APPROVAL</code>; "no" returns as error</li>
+          <li><b>Log</b> — JSONL per step: stop_reason, tokens, tool, input, error</li>
+          <li>⚠ Dangling <code>tool_use</code> without <code>tool_result</code> → next call 400</li>
+          <li>⚠ Step counter/time in system prompt breaks caching</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Step 5 · run it</div>
+        <ul>
+          <li><b>Trace</b> — todos + list_files in parallel → wrong path error → self-correct → code → report</li>
+          <li><b>Answer</b> — South 50,700, driven by Laptops 40,800</li>
+          <li><b>Second chat()</b> works because <code>self.messages</code> keeps turn 1</li>
+          <li><b>Extend</b> — plot tool, smarter approval, token budget, regression test</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Step 6 · SDK tool runner</div>
+        <ul>
+          <li><b><code>@beta_tool</code></b> — schema from type hints + docstring <code>Args:</code></li>
+          <li><b><code>client.beta.messages.tool_runner(..., max_iterations=15)</code></b> owns the loop</li>
+          <li><b>Free</b> — input validation, exceptions → <code>is_error</code>, results appended</li>
+          <li><b>Approval</b> — gate <em>inside</em> the tool function</li>
+          <li>⚠ Doesn't auto-resume <code>pause_turn</code> (server tools)</li>
+          <li><b>Default</b> to the runner; hand loop to learn or for custom control</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">What frameworks add</div>
+        <ul>
+          <li><b>Same core loop</b> + infrastructure</li>
+          <li><b>Persistence</b> — checkpointers, resume after crash (LangGraph 11)</li>
+          <li><b>Control flow</b> — explicit graphs, branches, subgraphs</li>
+          <li><b>HITL</b> — interrupts across requests instead of blocking <code>input()</code></li>
+          <li><b>Tracing</b> (LangSmith/OTel), <b>provider swap</b> (LangChain), <b>MCP</b>, <b>streaming</b></li>
+          <li><b>Switch when</b> durable state, branching, cross-request approval, multi-agent</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -10757,14 +10851,13 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="ab-run"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Step 5: Run It</span><span class="rm-sub">A trace, read step by step</span></div></div>
       <div class="rm-item rm-done" data-target="ab-runner"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Step 6: SDK Tool Runner</span><span class="rm-sub">Same agent, no hand loop</span></div></div>
       <div class="rm-item rm-done" data-target="ab-fw"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">What Frameworks Add</span><span class="rm-sub">Bridge to LangChain/LangGraph</span></div></div>
-      <div class="rm-item rm-done" data-target="ab-rev"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="ab-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="ab-qa"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
   <h2 id="ab-spec"><span class="num">01</span>The Agent We'll Build</h2>
   <p>A <strong>data analyst agent</strong>: give it a question about CSV files in a folder, and it explores the data, writes and runs pandas code, checks its numbers and saves a Markdown report.</p>
-  <p>Why an agent and not a fixed workflow (08)? The steps depend on the data: which columns exist, whether code fails, whether a follow-up breakdown is needed. The model must choose the next step from what it just saw.</p>
+  <p>Why an agent, not a workflow (08)? The next step depends on the data: which columns exist, whether code fails, whether a follow-up is needed.</p>
   <div class="cards">
     <div><b>list_files</b><p>See what's in the workspace.</p><small>read-only</small></div>
     <div><b>read_csv_head</b><p>Row count, header, first rows.</p><small>read-only</small></div>
@@ -10773,8 +10866,8 @@ Object.assign(TOPIC_CONTENT, {
     <div><b>update_todos</b><p>The model's own plan.</p><small>working memory</small></div>
     <div><b>save_note</b><p>Facts for future sessions.</p><small>long-term memory</small></div>
   </div>
-  <div class="flow"><span>User question</span><span>Model: plan + tool_use</span><span>Approval gate</span><span>Run tool → tool_result / is_error</span><span>Log step</span><span>Repeat until end_turn or max steps</span></div>
-  <p>Files: <code>tools.py</code> (functions), <code>schemas.py</code> (what the model sees), <code>memory.py</code>, <code>agent.py</code> (the loop). Sample data, created once:</p>
+<figure class="viz"><svg viewBox="0 0 600 200" width="600"><defs><marker id="ab-a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><text x="10" y="104">user</text><line x1="44" y1="100" x2="58" y2="100" stroke="currentColor" marker-end="url(#ab-a1)"/><rect x="60" y="75" width="120" height="50" rx="6" class="fb sb"/><text x="120" y="98" text-anchor="middle" font-weight="bold">agent.py</text><text x="120" y="112" text-anchor="middle" font-size="10" class="tm">the loop</text><rect x="230" y="8" width="140" height="44" rx="6" class="fv"/><text x="300" y="28" text-anchor="middle" font-weight="bold">Claude API</text><text x="300" y="42" text-anchor="middle" font-size="10" class="tm">messages.create</text><rect x="410" y="8" width="170" height="44" rx="6" class="fs"/><text x="495" y="28" text-anchor="middle" font-weight="bold">schemas.py</text><text x="495" y="42" text-anchor="middle" font-size="10" class="tm">TOOLS = what model sees</text><line x1="408" y1="30" x2="372" y2="30" stroke="currentColor" marker-end="url(#ab-a1)"/><line x1="150" y1="75" x2="228" y2="40" stroke="currentColor" marker-end="url(#ab-a1)"/><line x1="232" y1="50" x2="168" y2="77" stroke="currentColor" stroke-opacity=".5" marker-end="url(#ab-a1)"/><rect x="230" y="80" width="140" height="44" rx="6" class="ft st"/><text x="300" y="100" text-anchor="middle" font-weight="bold">tools.py</text><text x="300" y="114" text-anchor="middle" font-size="10" class="tm">list·read·run·write</text><rect x="230" y="142" width="140" height="44" rx="6" class="fg sg"/><text x="300" y="162" text-anchor="middle" font-weight="bold">memory.py</text><text x="300" y="176" text-anchor="middle" font-size="10" class="tm">todos · notes</text><line x1="180" y1="102" x2="228" y2="102" stroke="currentColor" marker-end="url(#ab-a1)"/><text x="204" y="96" text-anchor="middle" font-size="10" class="tr">gate</text><path d="M150,125 V164 H228" fill="none" stroke="currentColor" marker-end="url(#ab-a1)"/><rect x="400" y="70" width="190" height="124" rx="8" fill="none" class="sr" stroke-dasharray="5 4"/><text x="410" y="88" font-size="11" class="tr">workspace/ = ROOT</text><text x="414" y="106" font-size="11">data/sales.csv</text><text x="414" y="123" font-size="11">reports/*.md</text><text x="414" y="140" font-size="11">notes.md</text><text x="414" y="157" font-size="11">_agent_log.jsonl</text><text x="414" y="174" font-size="11">_scratch.py</text><line x1="370" y1="102" x2="398" y2="102" stroke="currentColor" marker-end="url(#ab-a1)"/><line x1="370" y1="164" x2="398" y2="164" stroke="currentColor" marker-end="url(#ab-a1)"/></svg><figcaption>agent.py talks to the API and dispatches tools; every file the agent touches lives inside one root folder (red dashed). "gate" = human approval for run_python.</figcaption></figure>
+  <p>Sample data, created once:</p>
   <div class="fx" data-lang="py">from pathlib import Path
 
 CSV = """date,region,product,units,price
@@ -10853,13 +10946,8 @@ def write_report(filename: str, markdown: str) -&gt; str:
     p.parent.mkdir(exist_ok=True)
     p.write_text(markdown)
     return f"Wrote {p.relative_to(ROOT)} ({len(markdown)} chars)"</div>
-  <ul>
-    <li><strong>One root folder.</strong> Every path is model output, so it's untrusted. <code>safe_path</code> resolves it and rejects <code>..</code> or absolute escapes.</li>
-    <li><strong>Separate process + timeout.</strong> A runaway loop or crash kills the child, not your agent.</li>
-    <li><strong>Empty environment.</strong> <code>env={"PATH": …}</code> means generated code can't read your <code>ANTHROPIC_API_KEY</code>.</li>
-    <li><strong>Capped output.</strong> Only the last 4,000 characters return, so one huge print can't flood the context window.</li>
-    <li><strong>Errors are raised with a hint</strong> ("Call list_files to see what exists"). The loop turns them into <code>is_error</code> results the model can act on.</li>
-  </ul>
+<figure class="viz"><svg viewBox="0 0 600 200" width="600"><defs><marker id="ab-a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><rect x="20" y="14" width="400" height="176" rx="8" fill="none" class="sr" stroke-width="1.5"/><text x="30" y="30" font-size="11" class="tr">1 · human approval gate</text><rect x="40" y="40" width="360" height="142" rx="8" fill="none" class="sb" stroke-width="1.5"/><text x="50" y="56" font-size="11" class="tb">2 · subprocess + timeout (kills runaways)</text><rect x="60" y="66" width="320" height="108" rx="8" fill="none" class="st" stroke-width="1.5"/><text x="70" y="82" font-size="11">3 · cwd=ROOT + safe_path (no ../ escape)</text><rect x="80" y="92" width="280" height="74" rx="8" fill="none" class="sg" stroke-width="1.5"/><text x="90" y="108" font-size="11" class="tg">4 · env={"PATH": …} (no API key)</text><rect x="140" y="122" width="160" height="32" rx="6" class="fs"/><text x="220" y="142" text-anchor="middle" font-weight="bold">model-written code</text><path d="M300,138 H470 V112" fill="none" stroke="currentColor" marker-end="url(#ab-a2)"/><rect x="430" y="56" width="160" height="54" rx="6" class="fb sb"/><text x="510" y="78" text-anchor="middle" font-weight="bold">5 · output cap</text><text x="510" y="94" text-anchor="middle" font-size="10" class="tm">last 4,000 chars → model</text><text x="430" y="160" font-size="11" class="tr">still NOT a sandbox:</text><text x="430" y="175" font-size="11" class="tr">files + network open</text><text x="430" y="190" font-size="10" class="tm">→ container / VM in prod</text></svg><figcaption>Every model-supplied path and script is untrusted, so run_python sits inside four layers and only a capped slice of output returns.</figcaption></figure>
+  <p><strong>Errors are raised with a hint</strong> ("Call list_files to see what exists"); the loop turns them into <code>is_error</code> results the model can act on.</p>
   <div class="callout trap"><span class="label">Trap</span><p>A subprocess is <em>not</em> a real sandbox. The code can still read any file your user can, and open network connections. In production run it in a container or VM with no network and resource limits, or use a hosted code-execution tool (14 covers this).</p></div>
   <p>Test every success and failure path. Real output from this environment:</p>
   <div class="fx" data-lang="py">from tools import list_files, read_csv_head, run_python, write_report
@@ -10947,13 +11035,8 @@ TOOLS = [
   <div class="callout intu"><span class="label">Bash vs dedicated tools</span><p><code>run_python</code> is a broad "do anything" tool; <code>write_report</code> is narrow. Narrow tools give your code typed arguments to check, gate and log. Promote an action to its own tool when you need to gate, audit or render it.</p></div>
 
   <h2 id="ab-mem"><span class="num">04</span>Step 3: Memory &amp; Planning</h2>
-  <p>Three kinds of memory (types defined in 08), three implementations:</p>
-  <table class="tbl">
-    <tr><th>Memory</th><th>Lives in</th><th>Lifetime</th></tr>
-    <tr><td>Conversation (short-term)</td><td><code>self.messages</code>, resent every call</td><td>One session</td></tr>
-    <tr><td>Working memory / plan</td><td><code>TODOS</code>, via <code>update_todos</code></td><td>One task</td></tr>
-    <tr><td>Long-term</td><td><code>notes.md</code>, via <code>save_note</code></td><td>Across restarts</td></tr>
-  </table>
+  <p>Three kinds of memory (types defined in 08): conversation (short-term), working memory (the plan), long-term.</p>
+<figure class="viz"><svg viewBox="0 0 600 152" width="600"><line x1="130" y1="128" x2="590" y2="128" stroke="currentColor" stroke-opacity=".4"/><text x="590" y="144" text-anchor="end" font-size="10" class="tm">time →</text><line x1="355" y1="6" x2="355" y2="132" stroke="currentColor" class="sr" stroke-dasharray="4 3"/><text x="355" y="144" text-anchor="middle" font-size="10" class="tr">process restart</text><text x="10" y="22" font-weight="bold" font-size="11">self.messages</text><text x="10" y="36" font-size="10" class="tm">resent each call</text><rect x="130" y="10" width="215" height="28" rx="5" class="fb sb"/><text x="237.5" y="28" text-anchor="middle" font-size="10">session 1</text><rect x="370" y="10" width="215" height="28" rx="5" class="fb sb"/><text x="477.5" y="28" text-anchor="middle" font-size="10">session 2 (fresh)</text><text x="10" y="62" font-weight="bold" font-size="11">TODOS</text><text x="10" y="76" font-size="10" class="tm">update_todos</text><rect x="130" y="50" width="70" height="28" rx="5" class="ft st"/><text x="165" y="68" text-anchor="middle" font-size="10">task A</text><rect x="205" y="50" width="70" height="28" rx="5" class="ft st"/><text x="240" y="68" text-anchor="middle" font-size="10">task B</text><rect x="280" y="50" width="65" height="28" rx="5" class="ft st"/><text x="312.5" y="68" text-anchor="middle" font-size="10">task C</text><rect x="370" y="50" width="90" height="28" rx="5" class="ft st"/><text x="415" y="68" text-anchor="middle" font-size="10">task D</text><text x="10" y="102" font-weight="bold" font-size="11">notes.md</text><text x="10" y="116" font-size="10" class="tm">save_note</text><rect x="130" y="90" width="455" height="28" rx="5" class="fg sg"/><text x="357.5" y="108" text-anchor="middle" font-size="10">loaded once per session · survives restarts</text></svg><figcaption>Three memories, three lifetimes: the conversation dies with the process, the plan lives for one task, notes.md outlives everything.</figcaption></figure>
   <div class="fx" data-lang="py">import json
 from tools import ROOT
 
@@ -10982,6 +11065,7 @@ def update_todos(todos: list[dict]) -&gt; str:
 
   <h2 id="ab-loop"><span class="num">05</span>Step 4: The Agent Loop</h2>
   <p>The 05 loop plus five production habits: a step guard, error results, approval, logging and careful <code>stop_reason</code> handling.</p>
+<figure class="viz"><svg viewBox="0 0 600 202" width="600"><defs><marker id="ab-a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><rect x="20" y="70" width="130" height="44" rx="6" class="fb sb"/><text x="85" y="90" text-anchor="middle" font-weight="bold">messages.create</text><text x="85" y="104" text-anchor="middle" font-size="10" class="tm">system·tools·history</text><rect x="190" y="70" width="110" height="44" rx="6" class="fv"/><text x="245" y="96" text-anchor="middle">stop_reason?</text><line x1="150" y1="92" x2="188" y2="92" stroke="currentColor" marker-end="url(#ab-a4)"/><rect x="350" y="70" width="230" height="44" rx="6" class="fg sg"/><text x="465" y="90" text-anchor="middle" font-weight="bold">return text</text><text x="465" y="104" text-anchor="middle" font-size="10" class="tm">append assistant turn</text><line x1="300" y1="92" x2="348" y2="92" stroke="currentColor" marker-end="url(#ab-a4)" class="sg"/><text x="325" y="106" text-anchor="middle" font-size="10" class="tg">end_turn</text><rect x="350" y="8" width="230" height="44" rx="6" class="fr sr"/><text x="465" y="28" text-anchor="middle" font-weight="bold">drop turn, stop</text><text x="465" y="42" text-anchor="middle" font-size="10" class="tm">max_tokens · refusal</text><path d="M245,70 V30 H348" fill="none" class="sr" stroke="currentColor" marker-end="url(#ab-a4)"/><text x="290" y="24" text-anchor="middle" font-size="10" class="tr">other</text><rect x="170" y="150" width="150" height="44" rx="6" class="ft st"/><text x="245" y="170" text-anchor="middle" font-weight="bold">execute each</text><text x="245" y="184" text-anchor="middle" font-size="10" class="tm">gate→run→is_error</text><line x1="245" y1="114" x2="245" y2="148" stroke="currentColor" marker-end="url(#ab-a4)"/><text x="252" y="136" font-size="10">tool_use</text><path d="M170,172 H85 V116" fill="none" stroke="currentColor" marker-end="url(#ab-a4)"/><text x="78" y="140" text-anchor="end" font-size="10" class="tm">all results</text><text x="78" y="152" text-anchor="end" font-size="10" class="tm">in ONE user</text><text x="78" y="164" text-anchor="end" font-size="10" class="tm">message</text><rect x="350" y="150" width="230" height="44" rx="6" class="fs"/><text x="465" y="170" text-anchor="middle" font-weight="bold">max_steps reached</text><text x="465" y="184" text-anchor="middle" font-size="10" class="tm">stop: guard, partial work</text><line x1="320" y1="172" x2="348" y2="172" stroke="currentColor" marker-end="url(#ab-a4)" class="sr"/></svg><figcaption>One lap = one API call. Only tool_use loops back; every other stop_reason, or the step guard, ends the run.</figcaption></figure>
   <div class="fx" data-lang="py">import json, time
 import anthropic
 from tools import list_files, read_csv_head, run_python, write_report, ROOT
@@ -11197,7 +11281,7 @@ print("".join(b.text for b in message.content if b.type == "text"))</div>
   <div class="callout intu"><span class="label">Rule of thumb</span><p>Default to the tool runner for custom-tool agents. Write the manual loop to learn, or when you need control it doesn't expose, such as a custom transport or interleaving unrelated work mid-loop.</p></div>
 
   <h2 id="ab-fw"><span class="num">08</span>What Frameworks Add</h2>
-  <p>You now have a working agent in ~150 lines. Frameworks don't change the core loop; they add the infrastructure around it that gets painful at scale.</p>
+  <p>~150 lines, working agent. Frameworks keep the same core loop and add the infrastructure that hurts at scale:</p>
   <table class="tbl">
     <tr><th>Need</th><th>Our version</th><th>What a framework gives you</th></tr>
     <tr><td>State persistence</td><td><code>self.messages</code> dies with the process</td><td>Checkpointers that save state after every step; resume after a crash or days later (LangGraph, 11)</td></tr>
@@ -11210,21 +11294,7 @@ print("".join(b.text for b in message.content if b.type == "text"))</div>
   </table>
   <div class="callout intu"><span class="label">When to switch</span><p>Stay with plain code while the agent is one loop and a few tools. Move to LangGraph when you need durable state, branching graphs, human approval across requests, or several agents. Building it by hand first means you'll know what the framework is doing for you.</p></div>
 
-  <h2 id="ab-rev"><span class="num">09</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Agent</strong> = the 05 tool loop + tools + guardrails, choosing steps from what it observes.</li>
-    <li><strong>Test tools first</strong>, without the model; most bugs live there.</li>
-    <li><strong>Untrusted input</strong>: confine paths to one root, run code in a subprocess with timeout and a clean env, cap output.</li>
-    <li><strong>Schemas</strong>: verb_noun names, descriptions that say <em>when</em>, <code>strict: true</code>, enums.</li>
-    <li><strong>Errors</strong> become <code>is_error</code> tool results with an actionable hint, never crashes.</li>
-    <li><strong>max_steps guard</strong> stops infinite loops and runaway cost.</li>
-    <li><strong>Memory</strong>: messages (session), todo list (task), notes file (across sessions, loaded once).</li>
-    <li><strong>Approval</strong> for dangerous tools; a "no" returns as an error the model can work around.</li>
-    <li><strong>Log every step</strong> (stop_reason, tokens, tool, input, error flag) as JSONL.</li>
-    <li><strong>Tool runner</strong> = same agent, SDK owns the loop; frameworks add persistence, graphs, interrupts, tracing.</li>
-  </ol></div>
-
-  <h2 id="ab-qa"><span class="num">10</span>Questions &amp; Answers</h2>
+  <h2 id="ab-qa"><span class="num">09</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>Why does every agent loop need a max-steps guard?</summary><div class="qa-body">The model decides when to stop. If a tool keeps failing or the model keeps "checking one more thing", the loop never ends, and every step resends a growing transcript, so cost grows faster than linearly. A guard (or <code>max_iterations</code>) caps it and returns partial work.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>A tool raises <code>FileNotFoundError</code>. Should the agent crash, retry silently, or something else?</summary><div class="qa-body">Return a <code>tool_result</code> with <code>is_error: true</code> and an actionable message ("No file 'sales.csv'. Call list_files..."). The model reads it and corrects its next call. Crashing loses the run; silent retries repeat the same mistake.</div></details>
@@ -11997,6 +12067,102 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Agent Fundamentals</h1>
   <p class="lead">What an agent is, when a fixed workflow is the better choice, and how to design the loop, memory and tools so it doesn't fail silently. You need prompting (04), tool calling (05) and RAG (07). This note is concepts and design; 09 builds an agent in code, 10–12 add frameworks and multiple agents.</p>
 
+  <h2 id="ag-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Agent Fundamentals</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">What an agent is</div>
+        <ul>
+          <li><b>Agent</b> — LLM choosing its next action in a loop from what it observes</li>
+          <li><b>Augmented LLM</b> — model + tools + retrieval + memory; the building block</li>
+          <li><b>Key test</b> — who controls the loop? your code = workflow; the model = agent</li>
+          <li><b>Levels</b> — single call → workflow → read-only agent → read+write agent</li>
+          <li>💡 <b>Detective vs search engine</b> — hypothesise, investigate, revise</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Five workflow patterns</div>
+        <ul>
+          <li><b>Prompt chaining</b> — fixed steps + code <em>gate</em> between them</li>
+          <li><b>Routing</b> — classify once → specialised prompt/tools/cheaper model</li>
+          <li><b>Parallelization</b> — <em>sectioning</em> (split) or <em>voting</em> (majority)</li>
+          <li><b>Orchestrator-workers</b> — LLM splits the task <em>at runtime</em>, then synthesises</li>
+          <li><b>Evaluator-optimizer</b> — generate → critique vs criteria → loop</li>
+          <li><b>Autonomous agent</b> — open-ended steps + real feedback (tests, search)</li>
+          <li>⚠ Don't start with an agent: one call → simplest workflow → agent only if evals demand</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">When NOT to build one</div>
+        <ul>
+          <li><b>Errors compound</b> — 0.95<sup>10</sup> ≈ 60%; 0.98<sup>20</sup> ≈ 67%</li>
+          <li><b>Path is known</b> — you can draw the flowchart → workflow</li>
+          <li><b>Tight latency/cost</b> — each loop = full call over growing context</li>
+          <li><b>High-stakes, hard-to-spot errors</b> — human in the loop or don't automate</li>
+          <li><b>No progress signal</b> — without tests/verifiable results it can't tell it's wrong</li>
+          <li><b>One call + retrieval suffices</b> — that's RAG (07)</li>
+          <li>💡 No project manager for one cup of tea</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">ReAct</div>
+        <ul>
+          <li><b>Reason + Act</b> — thought → action (tool) → observation → repeat</li>
+          <li><b>vs CoT</b> — CoT reasons from training data; ReAct grounds each step in fetched facts</li>
+          <li><b>Loop</b> — <code>for step in range(MAX_STEPS)</code>; no tool call → answer</li>
+          <li><b>Security boundary</b> — model <em>requests</em>; your harness validates, gates, logs, runs</li>
+          <li>⚠ Grounded ≠ verified: a false web page is a real but wrong observation</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Planning</div>
+        <ul>
+          <li><b>ReAct</b> — one step at a time (default) · 💡 jazz improviser</li>
+          <li><b>Plan-and-execute</b> — full plan first, replan on failure · 💡 composer</li>
+          <li><b>Reflexion</b> — critique a failed try, load it next time (measurable success)</li>
+          <li><b>Tree of Thoughts</b> — branch, score, keep best; costly</li>
+          <li><b>Todo / scratchpad tool</b> — cheap middle ground; thinking models also plan</li>
+          <li>⚠ Plan without a <b>replan</b> step = brittle workflow</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Memory</div>
+        <ul>
+          <li><b>Short-term</b> — this chat + tool results, in the context window</li>
+          <li><b>Semantic</b> — facts/preferences in vector DB, KV store, files</li>
+          <li><b>Episodic</b> — past runs, retrieved by similarity ("last time…")</li>
+          <li><b>Procedural</b> — how-to: weights, system prompt, skill files</li>
+          <li><b>Long runs</b> — trim stale results · summarise/compact · offload to notes</li>
+          <li>⚠ Stuffing context "just in case": slower, costlier, buries the key line</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Tool design</div>
+        <ul>
+          <li><b>Tools = agent's UI</b> — confusing tool → misuse</li>
+          <li><b>Say <em>when</em> to call</b>, verb_noun names, typed args, enums</li>
+          <li><b>Clear outputs</b> — explicit success/error + recovery hint</li>
+          <li><b>Return errors, don't crash</b>; few focused tools; small outputs</li>
+          <li><b>Idempotent writes</b> — retried refund must not pay twice</li>
+          <li><b>Dedicated vs generic</b> — own tool when you must gate, audit, render, parallelise</li>
+          <li>⚠ Schema-valid ≠ correct: validate IDs against real data</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Why agents fail</div>
+        <ul>
+          <li><b>Silent + confident</b> — finishes, costs money, wrong</li>
+          <li><b>Hallucinated args</b> → validate. <b>Infinite loops</b> → max steps, repeat detection</li>
+          <li><b>Premature stop</b> → done criteria + verify. <b>Cascading errors</b> → checkpoints</li>
+          <li><b>Prompt injection</b> → tool output is data; gate writes (14)</li>
+          <li><b>Context overflow</b> → compaction, scratchpad</li>
+          <li><b>Stop conditions</b> — answer, max steps/time/cost, repeated call, errors, human reject; log which fired</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -12009,8 +12175,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="ag-tools"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Tool Design Principles</span><span class="rm-sub">The agent's user interface</span></div></div>
       <div class="rm-item rm-done" data-target="ag-fail"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Why Agents Fail</span><span class="rm-sub">Silent, compounding, confident</span></div></div>
       <div class="rm-item rm-done" data-target="ag-build"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Build It: Design on Paper</span><span class="rm-sub">A refund agent, end to end</span></div></div>
-      <div class="rm-item rm-done" data-target="ag-rev"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="ag-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="ag-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
@@ -12018,7 +12183,8 @@ Object.assign(TOPIC_CONTENT, {
   <div class="callout def"><span class="label">Definition</span>
     <p>An <strong>agent</strong> is an LLM that decides its own next step in a loop: act with a tool, observe the result, decide again, until the goal is met. The number of steps depends on what it finds, not on your code.</p>
   </div>
-  <p>The building block is the <strong>augmented LLM</strong>: a model plus tools, retrieval and memory. Every pattern below is some arrangement of augmented LLM calls.</p>
+<figure class="viz"><svg viewBox="0 0 600 172" width="600"><defs><marker id="ag-a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><text x="14" y="69">goal</text><line x1="50" y1="65" x2="98" y2="65" stroke="currentColor" marker-end="url(#ag-a1)"/><rect x="100" y="40" width="130" height="50" rx="6" class="fb sb"/><text x="165" y="63" text-anchor="middle" font-weight="bold">LLM</text><text x="165" y="77" text-anchor="middle" font-size="10" class="tm">decide next step</text><rect x="270" y="40" width="130" height="50" rx="6" class="fs" stroke="currentColor" stroke-dasharray="4 3"/><text x="335" y="62" text-anchor="middle" font-weight="bold">Harness</text><text x="335" y="76" text-anchor="middle" font-size="10" class="tm">validate · gate · log</text><rect x="440" y="40" width="140" height="50" rx="6" class="ft st"/><text x="510" y="63" text-anchor="middle" font-weight="bold">Tool / world</text><text x="510" y="77" text-anchor="middle" font-size="10" class="tm">search · DB · code</text><line x1="230" y1="65" x2="268" y2="65" stroke="currentColor" marker-end="url(#ag-a1)"/><text x="250" y="58" text-anchor="middle" font-size="10">act</text><line x1="400" y1="65" x2="438" y2="65" stroke="currentColor" marker-end="url(#ag-a1)"/><text x="420" y="58" text-anchor="middle" font-size="10">run</text><path d="M510,90 V120 H165 V92" fill="none" stroke="currentColor" marker-end="url(#ag-a1)"/><text x="337" y="136" text-anchor="middle" font-size="11">observation (tool result) → decide again</text><line x1="165" y1="40" x2="165" y2="14" stroke="currentColor" marker-end="url(#ag-a1)" class="sg"/><text x="175" y="20" font-size="11" class="tg">no tool call → final answer</text><text x="335" y="162" text-anchor="middle" font-size="10" class="tm">the model only requests actions; your code decides whether they run</text></svg><figcaption>The loop: the number of laps depends on what the model observes, not on your code. The harness in the middle is your security boundary.</figcaption></figure>
+  <p>Building block: the <strong>augmented LLM</strong> (model + tools, retrieval, memory). Every pattern below arranges these calls.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A search engine takes a query and returns results: one shot. A <strong>detective</strong> forms a hypothesis, investigates, learns something, revises, investigates again. An agent is the detective; a chain is the search engine.</p>
   </div>
@@ -12034,32 +12200,17 @@ Object.assign(TOPIC_CONTENT, {
   </div>
 
   <h2 id="ag-flows"><span class="num">02</span>Workflows vs Agents</h2>
-  <p><strong>Workflows</strong> orchestrate LLM calls through predefined code paths. <strong>Agents</strong> direct their own process. Workflows are predictable and cheap; agents are flexible and costly. Most production "agents" are workflows, and that's a good thing.</p>
+  <p><strong>Workflows</strong>: LLM calls on code paths you predefine (predictable, cheap). <strong>Agents</strong>: the model directs its own process (flexible, costly). Most production "agents" are workflows, and that's good.</p>
 
-  <h3>1. Prompt chaining</h3>
-  <p>Split a task into fixed steps; each call works on the previous output. Add a <strong>gate</strong> (a code check) between steps to stop early. The chaining technique itself is taught in 04 Prompt Engineering.</p>
-  <div class="flow"><span>Outline</span><span>Gate: has 5 sections?</span><span>Write draft</span><span>Translate</span></div>
-  <p><strong>Use when</strong> the task splits cleanly into fixed subtasks; you trade latency for accuracy per step.</p>
-
-  <h3>2. Routing</h3>
-  <p>One call classifies the input; code sends it to a specialised prompt, tool set or model.</p>
-  <div class="flow"><span>Ticket</span><span>Classifier LLM</span><span>refund | tech | general handler</span></div>
-  <p><strong>Use when</strong> inputs fall into distinct categories that each deserve their own prompt, or easy queries can go to a cheaper model.</p>
-
-  <h3>3. Parallelization</h3>
-  <p>Run several calls at once, then combine in code. Two flavours: <strong>sectioning</strong> (different subtasks in parallel) and <strong>voting</strong> (same task several times, take the majority).</p>
-  <div class="flow"><span>Input</span><span>N calls in parallel</span><span>Aggregate (merge or vote)</span></div>
-  <p><strong>Use when</strong> subtasks are independent (speed), or you want several opinions for confidence, e.g. three reviewers flag a vulnerability.</p>
-
-  <h3>4. Orchestrator-workers</h3>
-  <p>An orchestrator LLM breaks the task down <em>at runtime</em>, sends subtasks to worker calls, and merges their results.</p>
-  <div class="flow"><span>Task</span><span>Orchestrator plans subtasks</span><span>Workers</span><span>Orchestrator synthesises</span></div>
-  <p><strong>Use when</strong> you can't predict the subtasks in advance, e.g. "change every file affected by this API rename". Unlike parallelization, the split isn't fixed in code.</p>
-
-  <h3>5. Evaluator-optimizer</h3>
-  <p>One call generates; another critiques against clear criteria; loop until it passes or hits a limit.</p>
-  <div class="flow"><span>Generate</span><span>Evaluate vs criteria</span><span>Feedback</span><span>Generate again</span></div>
-  <p><strong>Use when</strong> you have clear evaluation criteria and refinement measurably helps: translation nuance, code that must pass tests.</p>
+<figure class="viz"><svg viewBox="0 0 600 206" width="600"><g font-size="10" text-anchor="middle"><defs><marker id="ag-a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><text x="60" y="14" font-size="11" font-weight="bold">Chaining</text><text x="60" y="198" class="tm">fixed steps</text><text x="180" y="14" font-size="11" font-weight="bold">Routing</text><text x="180" y="198" class="tm">pick one path</text><text x="300" y="14" font-size="11" font-weight="bold">Parallel</text><text x="300" y="198" class="tm">split or vote</text><text x="420" y="14" font-size="11" font-weight="bold">Orch–workers</text><text x="420" y="198" class="tm">split at runtime</text><text x="540" y="14" font-size="11" font-weight="bold">Eval–optimizer</text><text x="540" y="198" class="tm">loop until pass</text><line x1="120" y1="24" x2="120" y2="186" stroke="currentColor" stroke-opacity=".15"/><line x1="240" y1="24" x2="240" y2="186" stroke="currentColor" stroke-opacity=".15"/><line x1="360" y1="24" x2="360" y2="186" stroke="currentColor" stroke-opacity=".15"/><line x1="480" y1="24" x2="480" y2="186" stroke="currentColor" stroke-opacity=".15"/><rect x="28" y="28" width="64" height="22" rx="5" class="fb sb"/><text x="60" y="43">LLM 1</text><line x1="60" y1="50" x2="60" y2="66" stroke="currentColor" marker-end="url(#ag-a2)"/><rect x="34" y="68" width="52" height="22" rx="5" class="fr sr"/><text x="60" y="83">gate?</text><line x1="60" y1="90" x2="60" y2="106" stroke="currentColor" marker-end="url(#ag-a2)"/><text x="90" y="83" text-anchor="start" font-size="9" class="tr">✗stop</text><rect x="28" y="108" width="64" height="22" rx="5" class="fb sb"/><text x="60" y="123">LLM 2</text><line x1="60" y1="130" x2="60" y2="146" stroke="currentColor" marker-end="url(#ag-a2)"/><rect x="28" y="148" width="64" height="22" rx="5" class="fb sb"/><text x="60" y="163">LLM 3</text><rect x="148" y="40" width="64" height="22" rx="5" class="fv"/><text x="180" y="55">router</text><line x1="180" y1="62" x2="144" y2="118" stroke="currentColor" marker-end="url(#ag-a2)" stroke-opacity=".35"/><rect x="129" y="120" width="30" height="22" rx="5" class="fs"/><text x="144" y="135">A</text><line x1="180" y1="62" x2="180" y2="118" stroke="currentColor" marker-end="url(#ag-a2)"/><rect x="165" y="120" width="30" height="22" rx="5" class="fg sg"/><text x="180" y="135">B</text><line x1="180" y1="62" x2="216" y2="118" stroke="currentColor" marker-end="url(#ag-a2)" stroke-opacity=".35"/><rect x="201" y="120" width="30" height="22" rx="5" class="fs"/><text x="216" y="135">C</text><rect x="268" y="28" width="64" height="22" rx="5" class="fs"/><text x="300" y="43">input</text><line x1="300" y1="50" x2="264" y2="80" stroke="currentColor" marker-end="url(#ag-a2)"/><rect x="249" y="82" width="30" height="22" rx="5" class="fb sb"/><text x="264" y="97">LLM</text><line x1="264" y1="104" x2="300" y2="136" stroke="currentColor" marker-end="url(#ag-a2)"/><line x1="300" y1="50" x2="300" y2="80" stroke="currentColor" marker-end="url(#ag-a2)"/><rect x="285" y="82" width="30" height="22" rx="5" class="fb sb"/><text x="300" y="97">LLM</text><line x1="300" y1="104" x2="300" y2="136" stroke="currentColor" marker-end="url(#ag-a2)"/><line x1="300" y1="50" x2="336" y2="80" stroke="currentColor" marker-end="url(#ag-a2)"/><rect x="321" y="82" width="30" height="22" rx="5" class="fb sb"/><text x="336" y="97">LLM</text><line x1="336" y1="104" x2="300" y2="136" stroke="currentColor" marker-end="url(#ag-a2)"/><rect x="268" y="138" width="64" height="22" rx="5" class="fv"/><text x="300" y="153">merge</text><rect x="388" y="28" width="64" height="22" rx="5" class="fv"/><text x="420" y="43">orch</text><line x1="420" y1="50" x2="384" y2="80" stroke="currentColor" marker-end="url(#ag-a2)"/><rect x="369" y="82" width="30" height="22" rx="5" class="fb sb"/><text x="384" y="97">wkr</text><line x1="384" y1="104" x2="420" y2="136" stroke="currentColor" marker-end="url(#ag-a2)"/><line x1="420" y1="50" x2="420" y2="80" stroke="currentColor" marker-end="url(#ag-a2)"/><rect x="405" y="82" width="30" height="22" rx="5" class="fb sb"/><text x="420" y="97">wkr</text><line x1="420" y1="104" x2="420" y2="136" stroke="currentColor" marker-end="url(#ag-a2)"/><line x1="420" y1="50" x2="456" y2="80" stroke="currentColor" stroke-dasharray="3 3" marker-end="url(#ag-a2)"/><rect x="441" y="82" width="30" height="22" rx="5" class="fb sb" stroke-dasharray="3 3"/><text x="456" y="97">?</text><line x1="456" y1="104" x2="420" y2="136" stroke="currentColor" stroke-dasharray="3 3" marker-end="url(#ag-a2)"/><rect x="388" y="138" width="64" height="22" rx="5" class="fv"/><text x="420" y="153">synth</text><rect x="505" y="40" width="70" height="22" rx="5" class="fb sb"/><text x="540" y="55">generate</text><rect x="505" y="110" width="70" height="22" rx="5" class="fg sg"/><text x="540" y="125">evaluate</text><path d="M520,62 V108" fill="none" stroke="currentColor" marker-end="url(#ag-a2)"/><path d="M560,110 V64" fill="none" stroke="currentColor" class="sr" marker-end="url(#ag-a2)"/><text x="566" y="91" text-anchor="start" font-size="9" class="tr">fix</text><line x1="540" y1="132" x2="540" y2="160" stroke="currentColor" marker-end="url(#ag-a2)" class="sg"/><text x="548" y="158" text-anchor="start" font-size="9" class="tg">pass</text></g></svg><figcaption>All five are workflows: your code fixes the shape. Only orchestrator-workers decides the split at runtime (dashed "?" worker).</figcaption></figure>
+  <table class="tbl">
+    <tr><th>Pattern</th><th>How</th><th>Use when</th><th>Example</th></tr>
+    <tr><td><strong>1. Prompt chaining</strong></td><td>Fixed steps, each on the previous output; a code <strong>gate</strong> between steps stops early (technique in 04)</td><td>Task splits cleanly into fixed subtasks; trade latency for per-step accuracy</td><td>Outline → gate: 5 sections? → draft → translate</td></tr>
+    <tr><td><strong>2. Routing</strong></td><td>One call classifies; code sends input to a specialised prompt, tool set or model</td><td>Distinct input categories; easy queries can go to a cheaper model</td><td>Ticket → classifier → refund | tech | general</td></tr>
+    <tr><td><strong>3. Parallelization</strong></td><td>Several calls at once, combined in code. <strong>Sectioning</strong>: different subtasks. <strong>Voting</strong>: same task N times, majority</td><td>Independent subtasks (speed) or several opinions (confidence)</td><td>Three reviewers flag a vulnerability</td></tr>
+    <tr><td><strong>4. Orchestrator-workers</strong></td><td>An LLM breaks the task down <em>at runtime</em>, farms out subtasks, merges results</td><td>Subtasks can't be predicted; unlike parallelization the split isn't fixed in code</td><td>"Change every file affected by this API rename"</td></tr>
+    <tr><td><strong>5. Evaluator-optimizer</strong></td><td>One call generates, another critiques against clear criteria; loop until pass or limit</td><td>Clear criteria and refinement measurably helps</td><td>Translation nuance; code that must pass tests</td></tr>
+  </table>
 
   <h3>The autonomous agent</h3>
   <div class="flow"><span>Goal</span><span>LLM picks action</span><span>Tool runs</span><span>Observe</span><span>Done? else loop</span></div>
@@ -12069,7 +12220,8 @@ Object.assign(TOPIC_CONTENT, {
   </div>
 
   <h2 id="ag-not"><span class="num">03</span>When Not to Build an Agent</h2>
-  <p>Every step has some chance of going wrong, and errors <strong>compound</strong>. If each step is 95% reliable, a 10-step run succeeds only 0.95<sup>10</sup> ≈ <strong>60%</strong> of the time.</p>
+  <p>Errors <strong>compound</strong>: a 10-step run at 95% per step succeeds only 0.95<sup>10</sup> ≈ <strong>60%</strong> of the time.</p>
+<figure class="viz"><svg viewBox="0 0 600 208" width="600"><line x1="60" y1="170" x2="520" y2="170" stroke="currentColor" stroke-opacity="0.5"/><text x="52" y="174" text-anchor="end" font-size="10" class="tm">0%</text><line x1="60" y1="132.5" x2="520" y2="132.5" stroke="currentColor" stroke-opacity="0.12"/><text x="52" y="136.5" text-anchor="end" font-size="10" class="tm">25%</text><line x1="60" y1="95" x2="520" y2="95" stroke="currentColor" stroke-opacity="0.12"/><text x="52" y="99" text-anchor="end" font-size="10" class="tm">50%</text><line x1="60" y1="57.5" x2="520" y2="57.5" stroke="currentColor" stroke-opacity="0.12"/><text x="52" y="61.5" text-anchor="end" font-size="10" class="tm">75%</text><line x1="60" y1="20" x2="520" y2="20" stroke="currentColor" stroke-opacity="0.12"/><text x="52" y="24" text-anchor="end" font-size="10" class="tm">100%</text><text x="83" y="186" text-anchor="middle" font-size="10" class="tm">1</text><text x="175" y="186" text-anchor="middle" font-size="10" class="tm">5</text><text x="290" y="186" text-anchor="middle" font-size="10" class="tm">10</text><text x="405" y="186" text-anchor="middle" font-size="10" class="tm">15</text><text x="520" y="186" text-anchor="middle" font-size="10" class="tm">20</text><text x="290" y="202" text-anchor="middle" font-size="10" class="tm">steps in the run</text><polyline points="83,21.5 106,23.0 129,24.5 152,25.9 175,27.4 198,28.8 221,30.2 244,31.6 267,33.0 290,34.3 313,35.7 336,37.0 359,38.4 382,39.7 405,41.0 428,42.3 451,43.6 474,44.8 497,46.1 520,47.3" fill="none" class="sg" stroke-width="2"/><text x="526" y="51.3" font-size="11" class="tg">99%/step</text><polyline points="83,27.5 106,34.6 129,41.4 152,47.8 175,53.9 198,59.7 221,65.2 244,70.5 267,75.5 290,80.2 313,84.7 336,88.9 359,93.0 382,96.8 405,100.5 428,104.0 451,107.3 474,110.4 497,113.4 520,116.2" fill="none" class="sb" stroke-width="2"/><text x="526" y="120.2" font-size="11" class="tb">95%/step</text><polyline points="83,35.0 106,48.5 129,60.6 152,71.6 175,81.4 198,90.3 221,98.3 244,105.4 267,111.9 290,117.7 313,122.9 336,127.6 359,131.9 382,135.7 405,139.1 428,142.2 451,145.0 474,147.5 497,149.7 520,151.8" fill="none" class="sr" stroke-width="2"/><text x="526" y="155.8" font-size="11" class="tr">90%/step</text><circle cx="290" cy="80.2" r="4" class="fb sb"/><text x="298" y="72.2" font-size="11">10 steps × 95% ≈ 60%</text></svg><figcaption>Run success = per-step reliability<sup>steps</sup>. Even 95% per step loses 40% of 10-step runs.</figcaption></figure>
   <ul>
     <li><strong>The path is known.</strong> If you can draw the flowchart, write a workflow.</li>
     <li><strong>Latency or cost is tight.</strong> Each loop is a full LLM call over a growing context.</li>
@@ -12085,8 +12237,8 @@ Object.assign(TOPIC_CONTENT, {
   <div class="callout def"><span class="label">Definition</span>
     <p><strong>ReAct</strong> (Reason + Act) interleaves a <em>thought</em>, an <em>action</em> (tool call) and an <em>observation</em> (tool result), repeating until the model answers.</p>
   </div>
-  <p>Chain-of-thought (04 Prompt Engineering) reasons only from training data, so it can't know today's stock price. ReAct grounds each next thought in a real observation.</p>
-  <div class="flow"><span>Thought: "need NVDA price"</span><span>Action: search("NVDA price")</span><span>Observation: "$875.40"</span><span>Thought: enough? answer</span></div>
+<figure class="viz"><svg viewBox="0 0 600 168" width="600"><defs><marker id="ag-a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><text x="10" y="40" font-weight="bold">CoT</text><rect x="70" y="20" width="88" height="32" rx="6" class="fv"/><text x="114" y="40" text-anchor="middle" font-size="11">thought</text><rect x="170" y="20" width="88" height="32" rx="6" class="fv"/><text x="214" y="40" text-anchor="middle" font-size="11">thought</text><line x1="158" y1="36" x2="168" y2="36" stroke="currentColor" marker-end="url(#ag-a4)"/><rect x="270" y="20" width="88" height="32" rx="6" class="fr sr"/><text x="314" y="40" text-anchor="middle" font-size="11">answer?</text><line x1="258" y1="36" x2="268" y2="36" stroke="currentColor" marker-end="url(#ag-a4)"/><text x="372" y="34" font-size="11" class="tr">training data only:</text><text x="372" y="48" font-size="11" class="tr">today's price is invented</text><text x="10" y="112" font-weight="bold">ReAct</text><rect x="70" y="92" width="88" height="32" rx="6" class="fv"/><text x="114" y="112" text-anchor="middle" font-size="11">thought</text><rect x="170" y="92" width="88" height="32" rx="6" class="fb sb"/><text x="214" y="112" text-anchor="middle" font-size="11">search()</text><line x1="158" y1="108" x2="168" y2="108" stroke="currentColor" marker-end="url(#ag-a4)"/><rect x="270" y="92" width="88" height="32" rx="6" class="ft st"/><text x="314" y="112" text-anchor="middle" font-size="11">obs $875.40</text><line x1="258" y1="108" x2="268" y2="108" stroke="currentColor" marker-end="url(#ag-a4)"/><rect x="370" y="92" width="88" height="32" rx="6" class="fv"/><text x="414" y="112" text-anchor="middle" font-size="11">thought</text><line x1="358" y1="108" x2="368" y2="108" stroke="currentColor" marker-end="url(#ag-a4)"/><rect x="470" y="92" width="88" height="32" rx="6" class="fg sg"/><text x="514" y="112" text-anchor="middle" font-size="11">answer</text><line x1="458" y1="108" x2="468" y2="108" stroke="currentColor" marker-end="url(#ag-a4)"/><path d="M414,124 V146 H214 V126" fill="none" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#ag-a4)"/><text x="314" y="160" text-anchor="middle" font-size="10" class="tm">not enough? act again</text></svg><figcaption>CoT thinks only from memory. ReAct inserts real observations between thoughts, so each next thought is grounded.</figcaption></figure>
+  <p>Example: thought "need NVDA price" → action <code>search("NVDA price")</code> → observation "$875.40" → thought "enough" → answer. (CoT itself is in 04.)</p>
   <p>The loop in pseudo-code (the real API version, with <code>tool_use</code> and <code>tool_result</code> blocks, is in 05 and built in 09):</p>
   <div class="fx" data-lang="py">messages = [user_goal]
 for step in range(MAX_STEPS):              # hard stop: never loop forever
@@ -12142,15 +12294,15 @@ raise StepLimitReached</div>
 
   <h2 id="ag-tools"><span class="num">07</span>Tool Design Principles</h2>
   <p>Tools are the agent's user interface. A confusing tool gets misused just like a confusing UI. (Schema format and call mechanics are in 05.)</p>
-  <ul>
-    <li><strong>Say when to call it</strong>, not just what it does: "Use when the user asks about an order's delivery status."</li>
-    <li><strong>Specific names and typed arguments</strong>: <code>get_order_status(order_id)</code>, not <code>db(query)</code>. Use enums for fixed choices.</li>
-    <li><strong>Unambiguous outputs</strong>: explicit success or error, with a hint ("order not found; ask the user to check the ID").</li>
-    <li><strong>Return errors, don't crash</strong>: an error result lets the model recover; an exception kills the run.</li>
-    <li><strong>Few, focused tools</strong>: overlapping tools confuse selection.</li>
-    <li><strong>Return only what's needed</strong>: a 50 KB JSON dump eats context; filter or paginate.</li>
-    <li><strong>Idempotent writes</strong>: a retried <code>issue_refund</code> with the same key must not pay twice.</li>
-  </ul>
+  <div class="cards">
+    <div><b>Say when to call it</b><p>"Use when the user asks about an order's delivery status."</p></div>
+    <div><b>Specific + typed</b><p><code>get_order_status(order_id)</code>, not <code>db(query)</code>; enums for fixed choices.</p></div>
+    <div><b>Unambiguous output</b><p>Explicit success or error + hint: "order not found; ask the user to check the ID".</p></div>
+    <div><b>Errors, not crashes</b><p>An error result lets the model recover; an exception kills the run.</p></div>
+    <div><b>Few, focused</b><p>Overlapping tools confuse selection.</p></div>
+    <div><b>Small outputs</b><p>A 50 KB JSON dump eats context; filter or paginate.</p></div>
+    <div><b>Idempotent writes</b><p>A retried <code>issue_refund</code> with the same key must not pay twice.</p></div>
+  </div>
   <div class="callout intu"><span class="label">Generic vs dedicated tools</span>
     <p>A <code>bash</code> or <code>sql</code> tool gives breadth, but your harness sees only an opaque string. Promote an action to its own tool when you need to <strong>gate</strong> it (irreversible), <strong>audit</strong> it, <strong>render</strong> it, or know it's safe to <strong>run in parallel</strong>.</p>
   </div>
@@ -12200,26 +12352,15 @@ raise StepLimitReached</div>
                 continue
         messages.append(safe_run(call))           # errors come back as results
 escalate_to_human(summary(messages))</div>
-  <p><strong>4. Stop conditions:</strong> final answer; 8 steps; same call twice; 3 tool errors; reviewer rejects twice. Every non-success stop escalates to a human with a summary.</p>
-  <p><strong>5. Memory:</strong> short-term = this chat. Long-term semantic = customer profile (language, past issues) loaded at start. Episodic = resolved tickets, retrieved for similar cases. Procedural = the policy in the system prompt.</p>
-  <p><strong>6. Failure handling:</strong> validate <code>order_id</code> belongs to the customer; idempotency key stops double refunds on retry; order notes and emails are treated as untrusted data; every tool call is logged for audit.</p>
-  <p><strong>7. How you'd know it works:</strong> a test set of 50 real tickets with expected outcomes (refund / no refund / escalate), checked on task success and on "never refunded without lookup".</p>
+  <table class="tbl">
+    <tr><th>Design aspect</th><th>Decision</th></tr>
+    <tr><td><strong>4. Stop conditions</strong></td><td>Final answer; 8 steps; same call twice; 3 tool errors; reviewer rejects twice. Every non-success stop escalates to a human with a summary.</td></tr>
+    <tr><td><strong>5. Memory</strong></td><td>Short-term = this chat. Semantic = customer profile (language, past issues) loaded at start. Episodic = resolved tickets for similar cases. Procedural = policy in the system prompt.</td></tr>
+    <tr><td><strong>6. Failure handling</strong></td><td><code>order_id</code> must belong to the customer; idempotency key stops double refunds; order notes and emails are untrusted data; every tool call logged for audit.</td></tr>
+    <tr><td><strong>7. How you'd know it works</strong></td><td>50 real tickets with expected outcomes (refund / no refund / escalate), scored on task success and "never refunded without lookup".</td></tr>
+  </table>
 
-  <h2 id="ag-rev"><span class="num">10</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Agent:</strong> an LLM that chooses its next action in a loop from what it observes.</li>
-    <li><strong>Workflow vs agent:</strong> your code fixes the path vs the model picks it.</li>
-    <li><strong>Five workflows:</strong> chaining, routing, parallelization, orchestrator-workers, evaluator-optimizer.</li>
-    <li><strong>Start simple:</strong> one call → workflow → agent, only as evals demand.</li>
-    <li><strong>Compounding:</strong> 95% per step over 10 steps ≈ 60% success.</li>
-    <li><strong>ReAct:</strong> thought → action → observation, grounded in real tool results.</li>
-    <li><strong>Planning:</strong> ReAct by default; plan-and-execute with replanning; Reflexion when success is measurable.</li>
-    <li><strong>Memory:</strong> short-term (context), semantic (facts), episodic (past runs), procedural (how-to).</li>
-    <li><strong>Tools:</strong> say when to call, typed args, clear errors, few and focused, idempotent writes.</li>
-    <li><strong>Safety:</strong> the model requests, your code executes; gate irreversible actions; always cap steps.</li>
-  </ol></div>
-
-  <h2 id="ag-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <h2 id="ag-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>What makes something an agent rather than a chain or workflow?</summary><div class="qa-body">Who controls the loop. A workflow runs steps your code fixed in advance. An agent decides each next action from the latest observation and loops until the goal is met, so the number of steps varies per input.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Routing vs orchestrator-workers: what's the difference?</summary><div class="qa-body">Routing classifies an input once and sends it down one of several fixed paths. Orchestrator-workers has an LLM decompose the task at runtime into subtasks nobody predefined, farm them out, then synthesise the results.</div></details>
@@ -12957,6 +13098,95 @@ Object.assign(TOPIC_CONTENT, {
   <h1>LangChain</h1>
   <p class="lead">LangChain is standard plumbing for LLM apps: one interface for models, prompts, parsers, retrievers and tools, joined with a pipe. You should know the raw API (05), RAG (07) and the agent loop (08–09); here you see what the framework saves you. 11 LangGraph builds on it for stateful agents.</p>
 
+  <h2 id="lc-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">LangChain</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">What it gives you</div>
+        <ul>
+          <li><b>Standard interfaces</b> for models, prompts, parsers, retrievers, tools; swap in one line</li>
+          <li>💡 <b>Pipe fittings</b> — any tap fits any pipe; water (LLM) no cleaner</li>
+          <li><b>Not</b> smarter models or reliable agents</li>
+          <li><b>Packages</b> — <code>langchain-core</code> (interfaces), <code>langchain</code> (create_agent), <code>langchain-anthropic</code>…, <code>-text-splitters</code>, <code>-classic</code> (legacy)</li>
+          <li>⚠ <code>LLMChain</code>, <code>initialize_agent</code>, <code>AgentExecutor</code>, <code>ConversationBufferMemory</code> = legacy (1.0+)</li>
+          <li><b>Skip it</b> — 1–2 calls, latency hot path, debugging framework &gt; model; stateful → LangGraph</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Models &amp; prompts</div>
+        <ul>
+          <li><b><code>ChatAnthropic(model=..., timeout, max_retries)</code></b> — same interface as <code>ChatOpenAI</code></li>
+          <li><b><code>invoke</code> → AIMessage</b> — <code>.content</code>, <code>.usage_metadata</code>, <code>.tool_calls</code></li>
+          <li><b><code>ChatPromptTemplate.from_messages</code></b> — named slots; <code>MessagesPlaceholder("history")</code></li>
+          <li><b><code>.partial(role=...)</code></b> — fill some slots now</li>
+          <li>⚠ <code>PromptTemplate</code> → one string; chat models want <code>ChatPromptTemplate</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">LCEL &amp; Runnables</div>
+        <ul>
+          <li><b>Runnable</b> — <code>invoke · stream · batch · ainvoke</code>; everything implements it</li>
+          <li><b><code>prompt | llm | parser</code></b> → RunnableSequence: dict → ChatPromptValue → AIMessage → str</li>
+          <li><b>RunnableParallel</b> (or a dict) — fan one input out, get a dict</li>
+          <li><b>RunnablePassthrough</b> — carry input unchanged (question past the retriever)</li>
+          <li><b>RunnableLambda</b> — wrap any function</li>
+          <li><b>Reliability</b> — <code>.with_retry()</code>, <code>.with_fallbacks([...])</code>, <code>max_concurrency</code></li>
+          <li>💡 Unix pipes, but typed objects</li>
+          <li>⚠ Type mismatches fail only at runtime → add parser/lambda</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Parsers &amp; structured output</div>
+        <ul>
+          <li><b>StrOutputParser</b> → str; <b>JsonOutputParser</b> → dict (strips fences)</li>
+          <li><b>PydanticOutputParser</b> — old: format instructions + validate text</li>
+          <li><b><code>with_structured_output(Model, method="json_schema")</code></b> — default; native schema → typed object</li>
+          <li>⚠ default <code>function_calling</code> forces a tool → rejected on claude-opus-5-5</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Documents &amp; retrievers</div>
+        <ul>
+          <li><b>Document</b> — <code>page_content</code> + <code>metadata</code></li>
+          <li><b>Loaders</b> — 100+; <code>lazy_load()</code> for big sources</li>
+          <li><b>RecursiveCharacterTextSplitter</b> — paragraphs → lines → spaces</li>
+          <li><b>Vector stores</b> — InMemory for demos; Chroma, pgvector, Pinecone share the API</li>
+          <li><b><code>as_retriever(search_kwargs={"k": 4})</code></b> — str in, Documents out, a Runnable</li>
+          <li>⚠ Format Documents to text before the prompt</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Tools &amp; agents</div>
+        <ul>
+          <li><b><code>@tool</code></b> — name + type hints + docstring = schema</li>
+          <li><b><code>bind_tools</code></b> — model may <em>ask</em>; doesn't run the loop</li>
+          <li><b><code>create_agent(llm, tools, system_prompt, middleware, checkpointer)</code></b> — LangGraph ReAct graph</li>
+          <li><b>Middleware</b> — ToolCallLimit, HumanInTheLoop, Summarization, ModelFallback</li>
+          <li><b>vs AgentExecutor</b> — state in graph → pause, inspect, resume</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Memory</div>
+        <ul>
+          <li><b>Memory = past messages put back in the prompt</b></li>
+          <li><b>Buffer</b> (all) · <b>Window</b> (last k) · <b>Summary</b> · <b>Summary + buffer</b> (best balance)</li>
+          <li><b>Today</b> — <code>trim_messages(...)</code> or a checkpointer keyed by <code>thread_id</code></li>
+          <li>⚠ History tokens are paid on every call → cap or summarise</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Observe &amp; build</div>
+        <ul>
+          <li><b>Streaming</b> — <code>stream()</code>; <code>astream_events(version="v2")</code> for UIs</li>
+          <li><b>Callbacks</b> — <code>BaseCallbackHandler</code>: on_llm_end, on_tool_start…</li>
+          <li><b>LangSmith</b> — <code>LANGSMITH_TRACING=true</code> + API key → per-step traces</li>
+          <li><b>RAG chain</b> — <code>{"context": retriever | format_docs, "question": RunnablePassthrough()} | prompt | llm | parser</code></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -12969,25 +13199,17 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="lc-mem"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Conversation Memory</span><span class="rm-sub">It's just history in the prompt</span></div></div>
       <div class="rm-item rm-done" data-target="lc-trace"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Streaming, Callbacks, LangSmith</span><span class="rm-sub">See what ran and what it cost</span></div></div>
       <div class="rm-item rm-done" data-target="lc-build"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Build It: a RAG Chain</span><span class="rm-sub">In-memory vector store, runnable</span></div></div>
-      <div class="rm-item rm-done" data-target="lc-rev"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 9 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="lc-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="lc-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
   <h2 id="lc-why"><span class="num">01</span>What It Gives You</h2>
-  <p>Every LLM app repeats the same plumbing: fill a prompt, call a model, parse the reply, keep history, fetch documents, run tools. LangChain gives each a <strong>standard interface</strong>, so parts snap together and swap with one line.</p>
+  <p>Every LLM app repeats the same plumbing (prompt, model, parse, history, documents, tools). LangChain gives each a <strong>standard interface</strong>: parts snap together and swap in one line.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Standard pipe fittings. Any tap fits any pipe. LangChain doesn't make the water (the LLM) any cleaner; it just stops you cutting custom joints for every project.</p>
   </div>
   <p>It does <strong>not</strong> make models smarter or agents more reliable. Hallucination and bad prompts are still your problem.</p>
-  <table class="tbl">
-    <tr><th>Package</th><th>Holds</th></tr>
-    <tr><td><code>langchain-core</code></td><td>Interfaces: messages, prompts, Runnables, parsers, tools, vector-store base</td></tr>
-    <tr><td><code>langchain</code></td><td><code>create_agent</code> and agent middleware (built on LangGraph)</td></tr>
-    <tr><td><code>langchain-anthropic</code>, <code>-openai</code>…</td><td>One package per provider integration</td></tr>
-    <tr><td><code>langchain-text-splitters</code></td><td>Chunkers</td></tr>
-    <tr><td><code>langchain-classic</code></td><td>Legacy: <code>LLMChain</code>, <code>AgentExecutor</code>, <code>ConversationBufferMemory</code>…</td></tr>
-  </table>
+<figure class="viz"><svg viewBox="0 0 600 168" width="600"><rect x="20" y="20" width="350" height="40" rx="6" class="fs" stroke="currentColor" stroke-dasharray="4 3" stroke-opacity=".5"/><text x="195" y="38" text-anchor="middle" font-weight="bold">langchain-classic (legacy)</text><text x="195" y="52" text-anchor="middle" font-size="10" class="tm">LLMChain · AgentExecutor · ConversationBufferMemory</text><rect x="380" y="20" width="200" height="40" rx="6" class="fg sg"/><text x="480" y="38" text-anchor="middle" font-weight="bold">langchain</text><text x="480" y="52" text-anchor="middle" font-size="10" class="tm">create_agent + middleware</text><rect x="20" y="70" width="170" height="40" rx="6" class="ft st"/><text x="105" y="88" text-anchor="middle" font-weight="bold">langchain-anthropic</text><text x="105" y="102" text-anchor="middle" font-size="10" class="tm">-openai … per provider</text><rect x="200" y="70" width="170" height="40" rx="6" class="ft st"/><text x="285" y="88" text-anchor="middle" font-weight="bold">text-splitters</text><text x="285" y="102" text-anchor="middle" font-size="10" class="tm">chunkers</text><rect x="380" y="70" width="200" height="40" rx="6" class="fv"/><text x="480" y="88" text-anchor="middle" font-weight="bold">langgraph</text><text x="480" y="102" text-anchor="middle" font-size="10" class="tm">stateful agent runtime</text><rect x="20" y="120" width="560" height="40" rx="6" class="fb sb"/><text x="300" y="138" text-anchor="middle" font-weight="bold">langchain-core</text><text x="300" y="152" text-anchor="middle" font-size="10" class="tm">interfaces: messages · prompts · Runnables · parsers · tools · vector-store base</text></svg><figcaption>Everything sits on langchain-core's interfaces. Integrations are separate packages; create_agent runs on LangGraph; old classes moved to langchain-classic.</figcaption></figure>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Old tutorials use <code>LLMChain</code>, <code>initialize_agent</code>, <code>AgentExecutor</code> and <code>ConversationBufferMemory</code>. Since LangChain 1.0 these live in <code>langchain-classic</code>. New code uses LCEL, <code>create_agent</code>, and LangGraph checkpointers.</p>
   </div>
@@ -13031,8 +13253,8 @@ tutor = prompt.partial(role="tutor")   # fill some slots now, the rest later</di
   <div class="callout def"><span class="label">Definition</span>
     <p>A <strong>Runnable</strong> is anything with <code>invoke</code>, <code>stream</code>, <code>batch</code> and async <code>ainvoke</code>. <strong>LCEL</strong> (LangChain Expression Language) joins Runnables with <code>|</code>: the output of the left becomes the input of the right.</p>
   </div>
-  <p>Prompts, models, parsers, retrievers and tools are all Runnables. So <code>prompt | llm | parser</code> builds a <code>RunnableSequence</code> that itself streams, batches and runs async, with no extra code.</p>
-  <div class="flow"><span>dict</span><span>prompt → ChatPromptValue</span><span>llm → AIMessage</span><span>parser → str</span></div>
+<figure class="viz"><svg viewBox="0 0 600 128" width="600"><defs><marker id="lc-a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><text x="14" y="64">dict</text><line x1="50" y1="60" x2="88" y2="60" stroke="currentColor" marker-end="url(#lc-a2)"/><rect x="90" y="40" width="100" height="40" rx="6" class="ft st"/><text x="140" y="64" text-anchor="middle" font-weight="bold">prompt</text><rect x="250" y="40" width="100" height="40" rx="6" class="fb sb"/><text x="300" y="64" text-anchor="middle" font-weight="bold">llm</text><rect x="410" y="40" width="100" height="40" rx="6" class="fg sg"/><text x="460" y="64" text-anchor="middle" font-weight="bold">parser</text><line x1="190" y1="60" x2="248" y2="60" stroke="currentColor" marker-end="url(#lc-a2)"/><text x="219" y="30" text-anchor="middle" font-size="10" class="tm">ChatPromptValue</text><line x1="350" y1="60" x2="408" y2="60" stroke="currentColor" marker-end="url(#lc-a2)"/><text x="379" y="30" text-anchor="middle" font-size="10" class="tm">AIMessage</text><line x1="510" y1="60" x2="548" y2="60" stroke="currentColor" marker-end="url(#lc-a2)"/><text x="552" y="64">str</text><path d="M90,92 V100 H510 V92" fill="none" stroke="currentColor" stroke-opacity=".5"/><text x="300" y="118" text-anchor="middle" font-size="11">RunnableSequence = a Runnable too: invoke · stream · batch · ainvoke</text></svg><figcaption>Each | hands the left output to the right. The types change at every step; the whole chain inherits streaming, batching and async.</figcaption></figure>
+  <p>Prompts, models, parsers, retrievers and tools are all Runnables, so any of them can sit in a chain.</p>
   <div class="fx" data-lang="py">from langchain_core.output_parsers import StrOutputParser
 
 chain = prompt | llm | StrOutputParser()
@@ -13134,7 +13356,8 @@ result["messages"][-1].content</div>
 
   <h2 id="lc-mem"><span class="num">07</span>Conversation Memory</h2>
   <p>There is no magic: "memory" is <strong>past messages put back into the prompt</strong>. The model itself remembers nothing between calls.</p>
-  <p>The classic strategies (legacy class names in brackets) are still the interview vocabulary:</p>
+<figure class="viz"><svg viewBox="0 0 600 150" width="600"><text x="10" y="27" font-size="11" font-weight="bold">Buffer</text><rect x="130" y="10" width="26" height="24" rx="4" class="fb sb"/><text x="143" y="26" text-anchor="middle" font-size="9">t1</text><rect x="160" y="10" width="26" height="24" rx="4" class="fb sb"/><text x="173" y="26" text-anchor="middle" font-size="9">t2</text><rect x="190" y="10" width="26" height="24" rx="4" class="fb sb"/><text x="203" y="26" text-anchor="middle" font-size="9">t3</text><rect x="220" y="10" width="26" height="24" rx="4" class="fb sb"/><text x="233" y="26" text-anchor="middle" font-size="9">t4</text><rect x="250" y="10" width="26" height="24" rx="4" class="fb sb"/><text x="263" y="26" text-anchor="middle" font-size="9">t5</text><rect x="280" y="10" width="26" height="24" rx="4" class="fb sb"/><text x="293" y="26" text-anchor="middle" font-size="9">t6</text><rect x="310" y="10" width="26" height="24" rx="4" class="fb sb"/><text x="323" y="26" text-anchor="middle" font-size="9">t7</text><rect x="340" y="10" width="26" height="24" rx="4" class="fb sb"/><text x="353" y="26" text-anchor="middle" font-size="9">t8</text><rect x="370" y="10" width="26" height="24" rx="4" class="fb sb"/><text x="383" y="26" text-anchor="middle" font-size="9">t9</text><rect x="400" y="10" width="26" height="24" rx="4" class="fb sb"/><text x="413" y="26" text-anchor="middle" font-size="9">t10</text><text x="440" y="26" font-size="10" class="tm">unbounded → overflows</text><text x="10" y="63" font-size="11" font-weight="bold">Window k=3</text><rect x="130" y="46" width="26" height="24" rx="4" class="fs" opacity=".35"/><text x="143" y="62" text-anchor="middle" font-size="9" opacity=".35">t1</text><rect x="160" y="46" width="26" height="24" rx="4" class="fs" opacity=".35"/><text x="173" y="62" text-anchor="middle" font-size="9" opacity=".35">t2</text><rect x="190" y="46" width="26" height="24" rx="4" class="fs" opacity=".35"/><text x="203" y="62" text-anchor="middle" font-size="9" opacity=".35">t3</text><rect x="220" y="46" width="26" height="24" rx="4" class="fs" opacity=".35"/><text x="233" y="62" text-anchor="middle" font-size="9" opacity=".35">t4</text><rect x="250" y="46" width="26" height="24" rx="4" class="fs" opacity=".35"/><text x="263" y="62" text-anchor="middle" font-size="9" opacity=".35">t5</text><rect x="280" y="46" width="26" height="24" rx="4" class="fs" opacity=".35"/><text x="293" y="62" text-anchor="middle" font-size="9" opacity=".35">t6</text><rect x="310" y="46" width="26" height="24" rx="4" class="fs" opacity=".35"/><text x="323" y="62" text-anchor="middle" font-size="9" opacity=".35">t7</text><rect x="340" y="46" width="26" height="24" rx="4" class="fb sb"/><text x="353" y="62" text-anchor="middle" font-size="9">t8</text><rect x="370" y="46" width="26" height="24" rx="4" class="fb sb"/><text x="383" y="62" text-anchor="middle" font-size="9">t9</text><rect x="400" y="46" width="26" height="24" rx="4" class="fb sb"/><text x="413" y="62" text-anchor="middle" font-size="9">t10</text><text x="440" y="62" font-size="10" class="tm">bounded; forgets t1–t7</text><text x="10" y="99" font-size="11" font-weight="bold">Summary</text><rect x="130" y="82" width="296" height="24" rx="4" class="fv"/><text x="278" y="98" text-anchor="middle" font-size="10">summary t1–t10</text><text x="440" y="98" font-size="10" class="tm">small + 1 summary call</text><text x="10" y="135" font-size="11" font-weight="bold">Summary+buffer</text><rect x="130" y="118" width="206" height="24" rx="4" class="fv"/><text x="233" y="134" text-anchor="middle" font-size="10">summary t1–t7</text><rect x="340" y="118" width="26" height="24" rx="4" class="fb sb"/><text x="353" y="134" text-anchor="middle" font-size="9">t8</text><rect x="370" y="118" width="26" height="24" rx="4" class="fb sb"/><text x="383" y="134" text-anchor="middle" font-size="9">t9</text><rect x="400" y="118" width="26" height="24" rx="4" class="fb sb"/><text x="413" y="134" text-anchor="middle" font-size="9">t10</text><text x="440" y="134" font-size="10" class="tm">recent verbatim + summary</text></svg><figcaption>What each strategy puts back into the prompt after 10 turns (blue = verbatim, violet = LLM-written summary, faded = dropped).</figcaption></figure>
+  <p>Legacy class names (in brackets) are still interview vocabulary:</p>
   <table class="tbl">
     <tr><th>Strategy</th><th>Keeps</th><th>Cost</th><th>Use</th></tr>
     <tr><td>Buffer <small>(ConversationBufferMemory)</small></td><td>Everything verbatim</td><td>Grows until the context overflows</td><td>Demos</td></tr>
@@ -13152,17 +13375,18 @@ recent = trim_messages(history, max_tokens=2000, token_counter=llm,
   </div>
 
   <h2 id="lc-trace"><span class="num">08</span>Streaming, Callbacks, LangSmith</h2>
-  <ul>
-    <li><strong>Streaming:</strong> <code>chain.stream()</code> yields tokens; <code>astream_events(..., version="v2")</code> yields fine-grained events (token, tool start, retriever end) for a UI.</li>
-    <li><strong>Callbacks:</strong> subclass <code>BaseCallbackHandler</code> (<code>on_llm_end</code>, <code>on_tool_start</code>, <code>on_chain_error</code>) and pass <code>config={"callbacks": [handler]}</code> for logging or cost tracking.</li>
-    <li><strong>LangSmith:</strong> set <code>LANGSMITH_TRACING=true</code> and <code>LANGSMITH_API_KEY</code> and every run is traced: inputs, outputs, latency, tokens per step. Older env names <code>LANGCHAIN_TRACING_V2</code> still work.</li>
-  </ul>
+  <div class="cards">
+    <div><b>Streaming</b><p><code>chain.stream()</code> yields tokens; <code>astream_events(..., version="v2")</code> yields events (token, tool start, retriever end) for a UI.</p></div>
+    <div><b>Callbacks</b><p>Subclass <code>BaseCallbackHandler</code> (<code>on_llm_end</code>, <code>on_tool_start</code>, <code>on_chain_error</code>); pass <code>config={"callbacks": [handler]}</code>.</p><small>Logging, cost tracking</small></div>
+    <div><b>LangSmith</b><p><code>LANGSMITH_TRACING=true</code> + <code>LANGSMITH_API_KEY</code>: every run traced with inputs, outputs, latency, tokens per step.</p><small>Old name <code>LANGCHAIN_TRACING_V2</code> still works</small></div>
+  </div>
   <div class="callout intu"><span class="label">Why it matters</span>
     <p>A trace shows which step went wrong: bad retrieval or bad generation. LangSmith also stores datasets and runs evaluations; that workflow is 13 Evaluation &amp; Observability.</p>
   </div>
 
   <h2 id="lc-build"><span class="num">09</span>Build It: a RAG Chain</h2>
-  <p>A shop-policy Q&amp;A bot: split a document, index it in memory, retrieve the top 2 chunks, answer with the context. It runs offline with a toy keyword embedding and a fake model; swap the two marked lines for real ones.</p>
+  <p>A shop-policy Q&amp;A bot: split, index in memory, retrieve the top 2 chunks, answer from them. Runs offline with a toy keyword embedding and a fake model; swap the two marked lines for real ones.</p>
+<figure class="viz"><svg viewBox="0 0 600 162" width="600"><defs><marker id="lc-a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><text x="10" y="91">question</text><path d="M76,87 H86 V37 H98" fill="none" stroke="currentColor" marker-end="url(#lc-a4)"/><path d="M86,87 V137 H98" fill="none" stroke="currentColor" marker-end="url(#lc-a4)"/><rect x="100" y="20" width="100" height="34" rx="6" class="ft st"/><text x="150" y="41" text-anchor="middle" font-weight="bold">retriever</text><rect x="215" y="20" width="110" height="34" rx="6" class="ft st"/><text x="270" y="41" text-anchor="middle" font-weight="bold">format_docs</text><line x1="200" y1="37" x2="213" y2="37" stroke="currentColor" marker-end="url(#lc-a4)"/><rect x="100" y="120" width="225" height="34" rx="6" class="fs"/><text x="212.5" y="141" text-anchor="middle" font-weight="bold">RunnablePassthrough()</text><text x="150" y="70" text-anchor="middle" font-size="10" class="tm">k=2 Documents</text><text x="270" y="70" text-anchor="middle" font-size="10" class="tm">→ one string</text><rect x="345" y="20" width="80" height="134" rx="6" class="fv"/><text x="385" y="41" text-anchor="middle" font-size="11">context</text><text x="385" y="91" text-anchor="middle" font-weight="bold">dict</text><text x="385" y="141" text-anchor="middle" font-size="11">question</text><line x1="325" y1="37" x2="343" y2="37" stroke="currentColor" marker-end="url(#lc-a4)"/><line x1="325" y1="137" x2="343" y2="137" stroke="currentColor" marker-end="url(#lc-a4)"/><rect x="445" y="66" width="145" height="42" rx="6" class="fb sb"/><text x="517.5" y="85" text-anchor="middle" font-weight="bold">prompt|llm|parser</text><text x="517.5" y="99" text-anchor="middle" font-size="10" class="tm">→ answer str</text><line x1="425" y1="87" x2="443" y2="87" stroke="currentColor" marker-end="url(#lc-a4)"/></svg><figcaption>The dict is a RunnableParallel: the same question goes to the retriever and, unchanged, into the prompt's {question} slot.</figcaption></figure>
   <div class="fx" data-lang="py"># pip install langchain-core langchain-text-splitters langchain-anthropic
 import math, re
 from langchain_core.documents import Document
@@ -13237,20 +13461,7 @@ print(rag_chain.invoke(q))</div>
     <p>Drop <code>RunnablePassthrough()</code> and pipe the retriever straight into the prompt. What breaks? (The prompt has no <code>question</code> key.) Then add <code>"sources"</code> to the dict so the answer can cite <code>metadata["source"]</code>.</p>
   </div>
 
-  <h2 id="lc-rev"><span class="num">10</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>LangChain</strong> = standard interfaces for LLM parts; swap providers in one line. Plumbing, not intelligence.</li>
-    <li><strong>Runnable</strong>: invoke / stream / batch / ainvoke. Everything implements it.</li>
-    <li><strong>LCEL</strong>: <code>prompt | llm | parser</code> → RunnableSequence; streaming and async come free.</li>
-    <li><strong>RunnableParallel + RunnablePassthrough</strong>: fan the question to the retriever while keeping it for the prompt.</li>
-    <li><strong>Structured output</strong>: <code>with_structured_output(Model, method="json_schema")</code> beats prompt-and-parse.</li>
-    <li><strong>RAG parts</strong>: Document → splitter → embeddings + vector store → retriever → format → prompt.</li>
-    <li><strong>Agents</strong>: <code>@tool</code> + <code>create_agent</code> (+ middleware for limits and approval); not <code>AgentExecutor</code>.</li>
-    <li><strong>Memory</strong> = history in the prompt; trim or summarise; checkpointer keyed by thread_id.</li>
-    <li><strong>LangSmith</strong>: two env vars, full traces; skip LangChain for one-call apps.</li>
-  </ol></div>
-
-  <h2 id="lc-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <h2 id="lc-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>What is the Runnable protocol and why does it matter?</summary><div class="qa-body">The shared interface (<code>invoke</code>, <code>stream</code>, <code>batch</code>, <code>ainvoke</code>) every component implements. <code>A | B</code> builds a <code>RunnableSequence</code> that calls A then feeds its output to B. Because every part speaks the same interface, they compose without glue, and streaming, batching and async propagate through the whole chain.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What does <code>chain.invoke({"question": "What is HNSW?"})</code> do for <code>prompt | llm | StrOutputParser()</code>?</summary><div class="qa-body">The prompt fills its template → <code>ChatPromptValue</code> (messages). The model sends them to the API → <code>AIMessage</code> with content and token usage. The parser pulls <code>.content</code> → a plain <code>str</code>. Three calls in sequence, no hidden state.</div></details>
@@ -13272,6 +13483,96 @@ Object.assign(TOPIC_CONTENT, {
   <h1>LangGraph</h1>
   <p class="lead">LangGraph turns the agent loop from 08–09 into an explicit graph: shared state, nodes that update it, and edges (including loops) that you control. That gives you memory across turns, crash recovery and human approval for free. You need 08 Agent Fundamentals and 10 LangChain; 12 Multi-Agent Systems builds on this.</p>
 
+  <h2 id="lg-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">LangGraph</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Why LangGraph</div>
+        <ul>
+          <li><b>State machine for LLM apps</b> — typed state + nodes + edges, saved every step</li>
+          <li><b>Fixes AgentExecutor's black box</b> — pause/approve, resume after crash, memory, your own branches/loops</li>
+          <li>💡 Surgical robot <em>with</em> a pause button, live feed and rewind</li>
+          <li><b>vs LCEL</b> — LCEL builds one step (recipe); LangGraph the flow between steps (kitchen); often combined</li>
+          <li>⚠ Straight pipeline with no loops/branches/persistence → LCEL or plain code</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">State &amp; reducers</div>
+        <ul>
+          <li><b>State</b> — one <code>TypedDict</code> shared by all nodes</li>
+          <li><b>Node returns only changed keys</b>; LangGraph merges</li>
+          <li><b>Default</b> — overwrite</li>
+          <li><b>Reducer</b> — <code>Annotated[list, operator.add]</code> = append</li>
+          <li><b><code>add_messages</code></b> — append + replace by id; <code>MessagesState</code> ready-made</li>
+          <li>💡 Relay runners sharing one notebook</li>
+          <li>⚠ <code>messages: list</code> without reducer wipes history; parallel writes → <code>InvalidUpdateError</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Nodes, edges, cycles</div>
+        <ul>
+          <li><b>Node</b> — function: state → partial update</li>
+          <li><b>Edge</b> — <code>add_edge("a", "b")</code>; <code>START</code>, <code>END</code></li>
+          <li><b>Conditional edge</b> — <code>add_conditional_edges("a", router, mapping)</code>; router returns next node name</li>
+          <li><b>Cycle</b> — edge back to an earlier node (taste, adjust, taste)</li>
+          <li><b>Compile</b> — <code>g.compile()</code> → app with invoke/stream</li>
+          <li><b>Key</b> — LLM output influences routing, but the router is <em>your</em> code</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">ReAct as a graph</div>
+        <ul>
+          <li><b>START → agent</b>; agent →(tools_condition)→ tools | END; <b>tools → agent</b></li>
+          <li><b><code>ToolNode(tools)</code></b> — runs all tool calls, returns <code>ToolMessage</code>s; errors as messages</li>
+          <li><b><code>tools_condition</code></b> — "tools" if tool_calls else END</li>
+          <li><b>One-liner</b> — <code>langchain.agents.create_agent</code>; <code>create_react_agent</code> deprecated</li>
+          <li>⚠ Tool results as <code>AIMessage</code> → rejected; use <code>ToolMessage</code> + <code>tool_call_id</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Checkpointing &amp; memory</div>
+        <ul>
+          <li><b>Checkpointer</b> — full state saved after every step, per <code>thread_id</code></li>
+          <li><b><code>compile(checkpointer=InMemorySaver())</code></b>; prod: <code>SqliteSaver</code>, <code>PostgresSaver</code></li>
+          <li><b>Gives</b> — multi-turn memory, crash recovery, time travel (<code>get_state_history</code>, <code>update_state</code>), interrupts</li>
+          <li><b>Store</b> — <code>compile(store=...)</code> for facts across threads</li>
+          <li>💡 Video-game save points</li>
+          <li>⚠ Missing <code>thread_id</code> → error; shared id across users → leaked history</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Human-in-the-loop</div>
+        <ul>
+          <li><b><code>interrupt(payload)</code></b> — inside a node; graph saves and returns <code>__interrupt__</code></li>
+          <li><b><code>invoke(Command(resume=x), cfg)</code></b> — x becomes interrupt's return value</li>
+          <li><b><code>interrupt_before=["tools"]</code></b> — static breakpoint; resume with <code>invoke(None, cfg)</code></li>
+          <li><b><code>update_state</code></b> — edit args before resuming</li>
+          <li>💡 Bank: second signer only for large wires</li>
+          <li>⚠ Node <b>reruns from the top</b> on resume → side effects after interrupt or in own node</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Streaming &amp; subgraphs</div>
+        <ul>
+          <li><b><code>stream_mode</code></b> — values (full state), updates (node diffs), messages (tokens), custom</li>
+          <li><b>Subgraph</b> — compiled graph as a node; reusable agent, own state (12)</li>
+          <li>⚠ Shared reducer keys double up (<code>['start', 'start', …]</code>) → map state or separate keys</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Build: agent with approval</div>
+        <ul>
+          <li><b>Tools</b> — <code>order_status</code> (safe), <code>issue_refund</code> (risky)</li>
+          <li><b>route()</b> — END / "approval" if risky / "tools"</li>
+          <li><b>approval node</b> — <code>interrupt</code> → <code>Command(goto="tools")</code> or reject <code>ToolMessage</code> → agent</li>
+          <li><b>Result</b> — paused at <code>('approval',)</code>, resumed, 8 messages in thread</li>
+          <li><b>Extend</b> — gate only &gt; 1,000; edited amount via resume; SqliteSaver across restarts</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -13283,19 +13584,18 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="lg-hitl"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Human-in-the-Loop</span><span class="rm-sub">interrupt() and resume</span></div></div>
       <div class="rm-item rm-done" data-target="lg-stream"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Streaming &amp; Subgraphs</span><span class="rm-sub">Watch it run; nest graphs</span></div></div>
       <div class="rm-item rm-done" data-target="lg-build"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Build It: Agent with Approval</span><span class="rm-sub">Tools, memory, interrupt, verified</span></div></div>
-      <div class="rm-item rm-done" data-target="lg-rev"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 9 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="lg-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="lg-qa"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
   <h2 id="lg-why"><span class="num">01</span>Why LangGraph</h2>
-  <p>The old <code>AgentExecutor</code> ran the agent loop inside a black box. Real requirements it couldn't meet:</p>
-  <ul>
-    <li>Pause before the agent sends 1,000 refund emails, and let a human approve.</li>
-    <li>Crash at step 8 of 10, then resume from step 8, not step 1.</li>
-    <li>Remember the user's earlier messages without hand-built plumbing.</li>
-    <li>Branch, loop back, or run steps in parallel on <em>your</em> rules.</li>
-  </ul>
+  <p>The old <code>AgentExecutor</code> ran the loop in a black box. What it couldn't do:</p>
+  <div class="cards">
+    <div><b>Pause</b><p>Stop before 1,000 refund emails go out; let a human approve.</p></div>
+    <div><b>Resume</b><p>Crash at step 8 of 10, continue from step 8, not step 1.</p></div>
+    <div><b>Remember</b><p>Earlier messages, without hand-built plumbing.</p></div>
+    <div><b>Control flow</b><p>Branch, loop back or run in parallel on <em>your</em> rules.</p></div>
+  </div>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A surgical robot with no pause button vs one with a pause button, a live feed of every step, and the ability to rewind to any earlier moment. LangGraph is the second one.</p>
   </div>
@@ -13319,7 +13619,8 @@ Object.assign(TOPIC_CONTENT, {
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Relay runners sharing one notebook. Each reads everything so far and adds a line. Nobody passes notes directly to the next runner.</p>
   </div>
-  <p>By default a new value <strong>overwrites</strong> the old one. A <strong>reducer</strong> is a merge rule attached to a key, e.g. "append instead of replace". You attach it with <code>Annotated[type, reducer]</code>.</p>
+  <p>Default: a new value <strong>overwrites</strong>. A <strong>reducer</strong> is a per-key merge rule ("append instead"), attached with <code>Annotated[type, reducer]</code>.</p>
+<figure class="viz"><svg viewBox="0 0 600 160" width="600"><defs><marker id="lg-a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><text x="225" y="14" text-anchor="middle" font-size="10" class="tm">state before</text><text x="370" y="14" text-anchor="middle" font-size="10" class="tm">node returns</text><text x="525" y="14" text-anchor="middle" font-size="10" class="tm">state after</text><text x="10" y="40" font-weight="bold" font-size="12">attempts: int</text><text x="10" y="55" text-anchor="start" font-size="10" class="tm">no reducer → overwrite</text><rect x="170" y="24" width="110" height="36" rx="6" class="fs"/><text x="225" y="46" text-anchor="middle" font-size="11">1</text><rect x="320" y="24" width="100" height="36" rx="6" class="fv"/><text x="370" y="46" text-anchor="middle" font-size="11">2</text><rect x="450" y="24" width="144" height="36" rx="6" class="fb sb"/><text x="522" y="46" text-anchor="middle" font-size="11">2</text><text x="300" y="47" text-anchor="middle">+</text><line x1="422" y1="42" x2="448" y2="42" stroke="currentColor" marker-end="url(#lg-a1)"/><text x="10" y="94" font-weight="bold" font-size="12">steps</text><text x="10" y="109" text-anchor="start" font-size="10" class="tm">operator.add → append</text><rect x="170" y="78" width="110" height="36" rx="6" class="fs"/><text x="225" y="100" text-anchor="middle" font-size="11">['draft']</text><rect x="320" y="78" width="100" height="36" rx="6" class="fv"/><text x="370" y="100" text-anchor="middle" font-size="11">['check#1']</text><rect x="450" y="78" width="144" height="36" rx="6" class="fg sg"/><text x="522" y="100" text-anchor="middle" font-size="11">['draft','check#1']</text><text x="300" y="101" text-anchor="middle">+</text><line x1="422" y1="96" x2="448" y2="96" stroke="currentColor" marker-end="url(#lg-a1)"/><text x="10" y="150" text-anchor="start" font-size="10" class="tr">⚠ messages: list with no reducer → every node write replaces the chat history</text></svg><figcaption>Same node write, two merge rules: a key without a reducer is replaced, a key with operator.add (or add_messages) grows.</figcaption></figure>
   <div class="fx" data-lang="py">import operator
 from typing import TypedDict, Annotated
 
@@ -13368,7 +13669,7 @@ print(app.invoke({"question": "q", "steps": [], "attempts": 0}))</div>
 
   <h2 id="lg-react"><span class="num">04</span>A ReAct Agent as a Graph</h2>
   <p>The ReAct loop from 08 is two nodes and a cycle:</p>
-  <div class="flow"><span>START</span><span>agent (LLM)</span><span>tool calls? → tools</span><span>tools → back to agent</span><span>no calls → END</span></div>
+<figure class="viz"><svg viewBox="0 0 600 136" width="600"><defs><marker id="lg-a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><rect x="20" y="61" width="64" height="28" rx="14" class="fs"/><text x="52" y="79" text-anchor="middle" font-size="11">START</text><rect x="120" y="55" width="110" height="40" rx="6" class="fb sb"/><text x="175" y="73" text-anchor="middle" font-weight="bold">agent</text><text x="175" y="87" text-anchor="middle" font-size="10" class="tm">LLM + tools</text><line x1="84" y1="75" x2="118" y2="75" stroke="currentColor" marker-end="url(#lg-a2)"/><path d="M300,57 L322,75 L300,93 L278,75 Z" class="fv" stroke="currentColor" stroke-opacity=".5"/><line x1="230" y1="75" x2="276" y2="75" stroke="currentColor" marker-end="url(#lg-a2)"/><text x="300" y="112" text-anchor="middle" font-size="10" class="tm">tools_condition</text><rect x="400" y="12" width="130" height="40" rx="6" class="ft st"/><text x="465" y="30" text-anchor="middle" font-weight="bold">tools</text><text x="465" y="44" text-anchor="middle" font-size="10" class="tm">ToolNode</text><path d="M300,57 V32 H398" fill="none" stroke="currentColor" marker-end="url(#lg-a2)"/><text x="355" y="46" text-anchor="middle" font-size="10" class="tb">tool_calls</text><rect x="420" y="98" width="70" height="28" rx="14" class="fs"/><text x="455" y="116" text-anchor="middle" font-size="11">END</text><path d="M322,75 H360 V112 H418" fill="none" stroke="currentColor" marker-end="url(#lg-a2)"/><text x="390" y="106" text-anchor="middle" font-size="10" class="tg">none</text><path d="M465,12 V4 H175 V53" fill="none" stroke="currentColor" marker-end="url(#lg-a2)" stroke-dasharray="4 3"/><text x="186" y="20" text-anchor="start" font-size="10" class="tm">ToolMessages → back to agent</text></svg><figcaption>Two nodes and one cycle: the agent keeps going round through tools until its reply has no tool calls.</figcaption></figure>
   <div class="fx" data-lang="py">from langchain_anthropic import ChatAnthropic
 from langgraph.graph import StateGraph, MessagesState, START
 from langgraph.prebuilt import ToolNode, tools_condition
@@ -13396,6 +13697,7 @@ app = g.compile()</div>
 
   <h2 id="lg-ckpt"><span class="num">05</span>Checkpointing &amp; Memory</h2>
   <p>A <strong>checkpointer</strong> saves the full state after every step, under a <code>thread_id</code> (one conversation).</p>
+<figure class="viz"><svg viewBox="0 0 600 164" width="600"><defs><marker id="lg-a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><line x1="30" y1="60" x2="575" y2="60" stroke="currentColor" stroke-opacity=".5"/><path d="M50,30 V24 H215 V30" fill="none" stroke="currentColor" stroke-opacity=".4"/><text x="132" y="18" text-anchor="middle" font-size="10" class="tm">turn 1 · invoke</text><path d="M290,30 V24 H530 V30" fill="none" stroke="currentColor" stroke-opacity=".4"/><text x="410" y="18" text-anchor="middle" font-size="10" class="tm">turn 2 · invoke … resume</text><circle cx="50" cy="60" r="5" class="fb sb"/><text x="50" y="46" text-anchor="middle" font-size="10" class="">in</text><circle cx="105" cy="60" r="5" class="fb sb"/><text x="105" y="46" text-anchor="middle" font-size="10" class="">agent</text><circle cx="160" cy="60" r="5" class="fb sb"/><text x="160" y="46" text-anchor="middle" font-size="10" class="">tools</text><circle cx="215" cy="60" r="5" class="fb sb"/><text x="215" y="46" text-anchor="middle" font-size="10" class="">agent</text><circle cx="290" cy="60" r="5" class="fb sb"/><text x="290" y="46" text-anchor="middle" font-size="10" class="">in</text><circle cx="345" cy="60" r="5" class="fb sb"/><text x="345" y="46" text-anchor="middle" font-size="10" class="">agent</text><circle cx="400" cy="60" r="8" class="fr sr"/><text x="400" y="64" text-anchor="middle" font-size="9" class="tr">❚❚</text><text x="400" y="44" text-anchor="middle" font-size="10" class="tr">approval</text><circle cx="470" cy="60" r="5" class="fb sb"/><text x="470" y="46" text-anchor="middle" font-size="10" class="">tools</text><circle cx="530" cy="60" r="5" class="fb sb"/><text x="530" y="46" text-anchor="middle" font-size="10" class="">agent</text><text x="400" y="86" text-anchor="middle" font-size="10" class="tr">interrupt(): state saved, invoke returns</text><text x="470" y="102" text-anchor="middle" font-size="10" class="tg">Command(resume="approve")</text><path d="M160,66 Q170,128 230,128" fill="none" stroke="currentColor" marker-end="url(#lg-a3)" stroke-dasharray="4 3"/><circle cx="236" cy="128" r="5" fill="none" stroke="currentColor"/><text x="246" y="132" text-anchor="start" font-size="10" class="">update_state → replay a fork (time travel)</text><text x="30" y="156" text-anchor="start" font-size="10" class="tm">thread_id = "user-42" · every dot = a checkpoint · crash? rerun the thread from the last dot</text></svg><figcaption>A thread is a chain of save points. Memory, crash recovery, time travel and interrupts all read from this chain.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Save points in a long video game. Die at hour 20 and you restart from the last save, not from the beginning.</p>
   </div>
@@ -13466,7 +13768,7 @@ app.invoke(Command(resume="approve"), cfg)   # continue with the human's answer<
 
   <h2 id="lg-build"><span class="num">08</span>Build It: Agent with Approval</h2>
   <p>A shop agent with a safe tool and a risky one. Memory across turns via a checkpointer; an approval node interrupts before any refund. A scripted fake chat model stands in for Claude, so the control flow actually runs here.</p>
-  <div class="flow"><span>START</span><span>agent</span><span>risky call? → approval (interrupt)</span><span>tools</span><span>agent</span><span>END</span></div>
+<figure class="viz"><svg viewBox="0 0 600 222" width="600"><defs><marker id="lg-a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><rect x="10" y="86" width="60" height="28" rx="14" class="fs"/><text x="40" y="104" text-anchor="middle" font-size="11">START</text><line x1="70" y1="100" x2="98" y2="100" stroke="currentColor" marker-end="url(#lg-a4)"/><rect x="100" y="80" width="100" height="40" rx="6" class="fb sb"/><text x="150" y="98" text-anchor="middle" font-weight="bold">agent</text><text x="150" y="112" text-anchor="middle" font-size="10" class="tm">LLM</text><rect x="440" y="16" width="130" height="40" rx="6" class="ft st"/><text x="505" y="34" text-anchor="middle" font-weight="bold">tools</text><text x="505" y="48" text-anchor="middle" font-size="10" class="tm">ToolNode</text><path d="M140,80 V30 H438" fill="none" stroke="currentColor" marker-end="url(#lg-a4)"/><text x="290" y="24" text-anchor="middle" font-size="10" class="tb">safe call (order_status)</text><path d="M438,46 H170 V78" fill="none" stroke="currentColor" marker-end="url(#lg-a4)"/><text x="300" y="64" text-anchor="middle" font-size="10" class="tm">results</text><rect x="260" y="86" width="60" height="28" rx="14" class="fs"/><text x="290" y="104" text-anchor="middle" font-size="11">END</text><line x1="200" y1="100" x2="258" y2="100" stroke="currentColor" marker-end="url(#lg-a4)"/><text x="229" y="94" text-anchor="middle" font-size="10" class="tg">no calls</text><rect x="260" y="140" width="150" height="44" rx="6" class="fr sr"/><text x="335" y="160" text-anchor="middle" font-weight="bold">approval</text><text x="335" y="174" text-anchor="middle" font-size="10" class="tm">interrupt() ❚❚</text><path d="M150,120 V162 H258" fill="none" stroke="currentColor" marker-end="url(#lg-a4)"/><text x="204" y="178" text-anchor="middle" font-size="10" class="tr">risky (refund)</text><path d="M410,152 H505 V58" fill="none" stroke="currentColor" marker-end="url(#lg-a4)" class="sg"/><text x="512" y="110" text-anchor="start" font-size="10" class="tg">approve</text><path d="M335,184 V200 H120 V122" fill="none" stroke="currentColor" marker-end="url(#lg-a4)" class="sr"/><text x="228" y="214" text-anchor="middle" font-size="10" class="tr">reject → ToolMessage</text></svg><figcaption>route() sends safe calls straight to tools, risky ones through the approval node, which pauses until a human resumes it.</figcaption></figure>
   <div class="fx" data-lang="py"># pip install langgraph langchain-core
 from typing import Literal
 from langchain_core.tools import tool
@@ -13553,20 +13855,7 @@ print("messages in thread:", len(out["messages"]))</div>
     <p>Only gate refunds above 1,000 (read <code>args["amount"]</code> in <code>route</code>); let the reviewer send an edited amount via <code>Command(resume={"amount": 20})</code>; swap <code>InMemorySaver</code> for <code>SqliteSaver</code> and restart Python mid-approval.</p>
   </div>
 
-  <h2 id="lg-rev"><span class="num">09</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>LangGraph</strong> = state machine for LLM apps: state + nodes + edges, saved after each step.</li>
-    <li><strong>Node</strong>: function, state in, partial update out.</li>
-    <li><strong>Reducer</strong>: merge rule per key; <code>add_messages</code> appends chat history. No reducer = overwrite.</li>
-    <li><strong>Conditional edge</strong>: your router reads state and names the next node; a back-edge makes a cycle.</li>
-    <li><strong>ReAct graph</strong>: agent ⇄ <code>ToolNode</code>, routed by <code>tools_condition</code>; or <code>create_agent</code>.</li>
-    <li><strong>Checkpointer + thread_id</strong>: multi-turn memory, crash recovery, time travel.</li>
-    <li><strong><code>interrupt()</code> + <code>Command(resume=...)</code></strong>: human approval; the node reruns from the top on resume.</li>
-    <li><strong>Stream modes</strong>: values, updates, messages (tokens), custom.</li>
-    <li><strong>Skip it</strong> for straight pipelines; use it for loops, branches, approval, persistence.</li>
-  </ol></div>
-
-  <h2 id="lg-qa"><span class="num">10</span>Questions &amp; Answers</h2>
+  <h2 id="lg-qa"><span class="num">09</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>What problem does LangGraph solve that AgentExecutor didn't?</summary><div class="qa-body">AgentExecutor hid the loop: no pausing before a dangerous action, no resume after a crash, no inspectable state, no built-in memory. LangGraph makes every step a node and every transition an edge you control, and checkpoints state, so you get approval, recovery, branching, loops and memory.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Define state, node and edge.</summary><div class="qa-body">State: a typed dict shared by all nodes. Node: a function that takes the state and returns only the keys it changed. Edge: what runs next, either fixed (<code>add_edge</code>) or decided by a routing function (<code>add_conditional_edges</code>).</div></details>
@@ -17407,6 +17696,102 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Retrieval-Augmented Generation</h1>
   <p class="lead">RAG lets an LLM answer from <em>your</em> documents: fetch the relevant pieces, put them in the prompt, ask for a cited answer. Needs prompting (04), the Messages API (05) and vector search (06). Unlocks agentic RAG in 08–11 and RAG evals in 13.</p>
 
+  <h2 id="rg-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Retrieval-Augmented Generation</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Why RAG</div>
+        <ul>
+          <li><b>RAG</b> — retrieve relevant text per query, put it in the prompt, answer from it</li>
+          <li><b>Fixes</b>
+            <ul><li>knowledge cutoff (stale facts)</li><li>no private data (wiki, PDFs, tickets)</li><li>hallucination → grounded, cited answers</li></ul>
+          </li>
+          <li>💡 <b>Open-book exam</b> — smart student, but you must hand over the right pages</li>
+          <li><b>RAG vs fine-tuning</b> — RAG changes what it <em>knows</em>; FT changes how it <em>behaves</em></li>
+          <li><b>Docs change weekly?</b> RAG: re-index, no retraining, built-in citations. Often both.</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">The pipeline</div>
+        <ul>
+          <li><b>Offline (indexing)</b> — load → chunk → metadata → embed → vector DB</li>
+          <li><b>Online (per query)</b> — embed query → retrieve ~50 → rerank ~5 → prompt + sources → LLM → answer + citations</li>
+          <li><b>Metadata</b> — source, page, position, date → citations, filters, debugging</li>
+          <li>⚠ <b>Same embedding model</b> for query and chunks; mismatch fails silently (random results)</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Chunking</div>
+        <ul>
+          <li><b>Why</b> — embedding input limits; don't send 100 pages for 2 paragraphs</li>
+          <li><b>Start</b> — ~256–512 tokens, ~10–15% overlap; tune on your data</li>
+          <li><b>Too small</b> — answers split, no context. <b>Too big</b> — topics blur one embedding</li>
+          <li><b>Strategies</b>
+            <ul><li>fixed + overlap (default)</li><li>recursive / structural (headings → paragraphs → sentences)</li><li>semantic (split where similarity drops)</li><li>parent–child: match small, send big parent</li><li>contextual headers: prefix doc/section title</li></ul>
+          </li>
+          <li>💡 <b>Index cards</b> — each card must be findable <em>and</em> make sense alone</li>
+          <li>⚠ Bad chunks beat a great LLM: nothing downstream recovers a missed chunk</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Retrieval &amp; reranking</div>
+        <ul>
+          <li><b>Dense</b> = paraphrase; <b>BM25</b> = exact codes/names; <b>hybrid + RRF</b> = safe default</li>
+          <li><b>Metadata filters</b> — tenant, date, product, access rights</li>
+          <li><b>Multi-query</b> — LLM writes 3–5 rephrasings, merge results</li>
+          <li><b>Bi-encoder</b> — embeds separately, fast, top ~50 (recall)</li>
+          <li><b>Cross-encoder</b> — reads query+doc together, slow, accurate, top ~5 (precision)</li>
+          <li>💡 <b>Hiring</b> — recruiter skims 5,000 CVs → 50; manager interviews 50 → 5</li>
+          <li>⚠ <b>k ≠ n</b> — retrieve 20–100, rerank to 3–10; retrieve 5 and rank-8 best is lost</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Prompting with context</div>
+        <ul>
+          <li><b>Numbered, tagged sources</b> — <code>&lt;source id="1" ref="..."&gt;</code> → checkable [1] citations</li>
+          <li><b>Rules</b> — use ONLY sources; cite every claim; say "I don't know"; flag conflicts</li>
+          <li><b>Native citations</b> — some APIs (Anthropic) point to exact passages</li>
+          <li>⚠ <b>Lost in the middle</b> — fewer chunks, best first</li>
+          <li>⚠ <b>Retrieved text is untrusted</b> — data, not instructions (indirect injection, 14)</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Advanced RAG</div>
+        <ul>
+          <li><b>Query rewriting</b> — chatty follow-up → standalone query</li>
+          <li><b>HyDE</b> — embed a fake answer; it lands near real docs (statement vs question)</li>
+          <li><b>Multi-hop</b> — retrieve, read, re-query ("manager of team that owns X")</li>
+          <li><b>Corrective RAG</b> — grade chunks, drop weak, fall back to web</li>
+          <li><b>FLARE</b> — re-retrieve mid-generation when confidence drops</li>
+          <li><b>GraphRAG</b> — entity graph + communities; themes, relationships</li>
+          <li><b>Agentic RAG</b> — retrieval as a tool; model decides when/what/again; cap steps</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Failures &amp; metrics</div>
+        <ul>
+          <li><b>#1 cause</b> — right chunk not retrieved → hybrid, chunking, multi-query, k + rerank</li>
+          <li><b>Others</b> — ignores grounding, model mismatch, stale index, vocabulary mismatch</li>
+          <li><b>Retrieval</b> — Recall@k, MRR (check first)</li>
+          <li><b>Generation</b> — faithfulness, answer relevance</li>
+          <li><b>Context</b> — precision (useful share), recall (everything needed?)</li>
+          <li>⚠ Measure the halves <b>separately</b> or you can't tell which broke (deep evals: 13)</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Build it (plain Python)</div>
+        <ul>
+          <li><b>Chunker</b> — 20-word windows, 5-word overlap → 7 chunks</li>
+          <li><b>Embed</b> — hashed bag of words (offline stand-in), cosine via <code>index @ q</code></li>
+          <li><b>Retrieve</b> — top-k with <code>min_score</code>; empty → "couldn't find", no LLM call</li>
+          <li><b>Prompt</b> — numbered <code>&lt;source&gt;</code> tags + strict system prompt → Claude</li>
+          <li>⚠ "meal"/"trips" ≠ "Meals"/"trip" → bag-of-words misses; real embeddings fix it</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -17418,8 +17803,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="rg-adv"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Advanced RAG</span><span class="rm-sub">HyDE, multi-hop, agentic, graphs</span></div></div>
       <div class="rm-item rm-done" data-target="rg-fail"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Failure Modes &amp; What to Measure</span><span class="rm-sub">Blame retrieval first</span></div></div>
       <div class="rm-item rm-done" data-target="rg-build"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Build It</span><span class="rm-sub">End-to-end RAG in plain Python</span></div></div>
-      <div class="rm-item rm-done" data-target="rg-rev"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 9 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="rg-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="rg-qa"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
@@ -17444,20 +17828,18 @@ Object.assign(TOPIC_CONTENT, {
   <p>Often both: fine-tune for style, RAG for facts. The full decision is in 15 · Fine-Tuning.</p>
 
   <h2 id="rg-pipe"><span class="num">02</span>The Pipeline</h2>
-  <p><strong>Indexing</strong> runs offline (once, then on a schedule):</p>
-  <div class="flow"><span>Load (PDF, web, DB)</span><span>Chunk</span><span>Add metadata</span><span>Embed</span><span>Store in vector DB</span></div>
-  <p><strong>Answering</strong> runs per query:</p>
-  <div class="flow"><span>Query</span><span>Embed (same model)</span><span>Retrieve top ~50</span><span>Rerank → top ~5</span><span>Prompt + sources</span><span>LLM</span><span>Answer + citations</span></div>
+<figure class="viz"><svg viewBox="0 0 600 196" width="600"><defs><marker id="rg-a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><text x="20" y="16" class="tm" font-size="11">OFFLINE · indexing — once, then on a schedule</text><rect x="20" y="26" width="92" height="44" rx="7" class="ft st"/><text x="66" y="46" text-anchor="middle" font-weight="bold">Load</text><text x="66" y="60" text-anchor="middle" font-size="10" class="tm">PDF · web · DB</text><rect x="132" y="26" width="92" height="44" rx="7" class="ft st"/><text x="178" y="46" text-anchor="middle" font-weight="bold">Chunk</text><text x="178" y="60" text-anchor="middle" font-size="10" class="tm">256–512 tok</text><line x1="112" y1="48" x2="130" y2="48" stroke="currentColor" marker-end="url(#rg-a1)"/><rect x="244" y="26" width="92" height="44" rx="7" class="ft st"/><text x="290" y="46" text-anchor="middle" font-weight="bold">Metadata</text><text x="290" y="60" text-anchor="middle" font-size="10" class="tm">src·page·date</text><line x1="224" y1="48" x2="242" y2="48" stroke="currentColor" marker-end="url(#rg-a1)"/><rect x="356" y="26" width="92" height="44" rx="7" class="ft st"/><text x="402" y="46" text-anchor="middle" font-weight="bold">Embed</text><text x="402" y="60" text-anchor="middle" font-size="10" class="tm">model v1</text><line x1="336" y1="48" x2="354" y2="48" stroke="currentColor" marker-end="url(#rg-a1)"/><rect x="468" y="26" width="112" height="44" rx="7" class="fv"/><text x="524" y="46" text-anchor="middle" font-weight="bold">Vector DB</text><text x="524" y="60" text-anchor="middle" font-size="10" class="tm">HNSW index</text><line x1="448" y1="48" x2="466" y2="48" stroke="currentColor" marker-end="url(#rg-a1)"/><text x="20" y="128" class="tm" font-size="11">ONLINE · every query</text><rect x="12" y="138" width="80" height="44" rx="7" class="fb sb"/><text x="52" y="164" text-anchor="middle" font-weight="bold">Query</text><rect x="108" y="138" width="80" height="44" rx="7" class="fb sb"/><text x="148" y="158" text-anchor="middle" font-weight="bold">Embed</text><text x="148" y="172" text-anchor="middle" font-size="10" class="tr">same model!</text><line x1="92" y1="160" x2="106" y2="160" stroke="currentColor" marker-end="url(#rg-a1)"/><rect x="204" y="138" width="80" height="44" rx="7" class="fb sb"/><text x="244" y="158" text-anchor="middle" font-weight="bold">Top ~50</text><text x="244" y="172" text-anchor="middle" font-size="10" class="tm">hybrid</text><line x1="188" y1="160" x2="202" y2="160" stroke="currentColor" marker-end="url(#rg-a1)"/><rect x="300" y="138" width="80" height="44" rx="7" class="fb sb"/><text x="340" y="158" text-anchor="middle" font-weight="bold">Rerank 5</text><text x="340" y="172" text-anchor="middle" font-size="10" class="tm">cross-enc</text><line x1="284" y1="160" x2="298" y2="160" stroke="currentColor" marker-end="url(#rg-a1)"/><rect x="396" y="138" width="80" height="44" rx="7" class="fb sb"/><text x="436" y="158" text-anchor="middle" font-weight="bold">Prompt</text><text x="436" y="172" text-anchor="middle" font-size="10" class="tm">+ sources</text><line x1="380" y1="160" x2="394" y2="160" stroke="currentColor" marker-end="url(#rg-a1)"/><rect x="492" y="138" width="96" height="44" rx="7" class="fg sg"/><text x="540" y="158" text-anchor="middle" font-weight="bold">LLM</text><text x="540" y="172" text-anchor="middle" font-size="10" class="tm">answer + [1]</text><line x1="476" y1="160" x2="490" y2="160" stroke="currentColor" marker-end="url(#rg-a1)"/><path d="M524,70 V100 H244 V136" fill="none" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#rg-a1)"/><text x="384" y="94" text-anchor="middle" font-size="10" class="tm">nearest-neighbour search</text></svg><figcaption>Top half runs offline and fills the vector DB; bottom half runs per question and reads from it. The query must use the same embedding model.</figcaption></figure>
   <ul>
-    <li><strong>Metadata</strong> on every chunk: source, page, chunk position, date. You need it for citations, filters ("only 2024 docs") and debugging bad answers.</li>
-    <li>Embeddings, similarity, indexes and hybrid search are covered in 06 · Embeddings &amp; Vector DBs.</li>
+    <li><strong>Metadata</strong> on every chunk (source, page, position, date) powers citations, filters ("only 2024 docs") and debugging.</li>
+    <li>Embeddings, similarity, indexes and hybrid search: 06 · Embeddings &amp; Vector DBs.</li>
   </ul>
   <div class="callout trap"><span class="label">Trap</span>
     <p>The query must be embedded with the <em>same</em> model as the chunks. A mismatch fails silently: results look random, no error is raised.</p>
   </div>
 
   <h2 id="rg-chunk"><span class="num">03</span>Chunking</h2>
-  <p><strong>Chunking</strong> splits documents into pieces before embedding. Needed because embedding models have input limits, and a 100-page PDF in the prompt wastes context when you need two paragraphs.</p>
+  <p><strong>Chunking</strong> splits documents before embedding: embedders have input limits, and you need two paragraphs, not 100 pages.</p>
+<figure class="viz"><svg viewBox="0 0 600 222" width="600"><defs><marker id="rg-a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><text x="20" y="14" font-size="11" class="tm">document, word by word →</text><rect x="20" y="22" width="560" height="14" rx="3" class="fs"/><rect x="200" y="44" width="60" height="44" class="fg"/><rect x="380" y="68" width="60" height="44" class="fg"/><rect x="20" y="46" width="240" height="18" rx="4" fill="none" class="sb" stroke-width="1.5"/><rect x="200" y="70" width="240" height="18" rx="4" fill="none" class="sb" stroke-width="1.5"/><rect x="380" y="94" width="200" height="18" rx="4" fill="none" class="sb" stroke-width="1.5"/><text x="28" y="59" font-size="11">chunk 0 · 20 words</text><text x="268" y="83" font-size="11">chunk 1</text><text x="448" y="107" font-size="11">chunk 2</text><text x="230" y="130" text-anchor="middle" font-size="10" class="tg">overlap = "a maximum of 10 days"</text><text x="410" y="130" text-anchor="middle" font-size="10" class="tg">overlap</text><text x="20" y="158" font-size="11" class="tm">parent–child: match small, send big</text><rect x="20" y="166" width="262" height="48" rx="7" class="fv"/><text x="28" y="179" font-size="10" class="tm">parent (section)</text><rect x="28" y="185" width="78" height="22" rx="4" class="fs"/><text x="67" y="200" text-anchor="middle" font-size="10">child</text><rect x="112" y="185" width="78" height="22" rx="4" class="fg sg"/><text x="151" y="200" text-anchor="middle" font-size="10">child ✓ match</text><rect x="196" y="185" width="78" height="22" rx="4" class="fs"/><text x="235" y="200" text-anchor="middle" font-size="10">child</text><line x1="290" y1="190" x2="368" y2="190" stroke="currentColor" marker-end="url(#rg-a2)"/><text x="329" y="182" text-anchor="middle" font-size="10" class="tm">send</text><rect x="372" y="170" width="208" height="40" rx="7" class="fb sb"/><text x="476" y="187" text-anchor="middle">LLM gets whole parent</text><text x="476" y="202" text-anchor="middle" font-size="10" class="tm">precise match + full context</text></svg><figcaption>Overlap (green) keeps a fact on a boundary whole in at least one chunk. Parent–child searches small pieces but sends the big one.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy: index cards</span>
     <p>A card saying just "Napoleon" is useless. A card saying "Napoleon's 1812 retreat from Moscow failed due to supply lines and winter" is retrievable <em>and</em> understandable alone. Chunking decides the card size.</p>
   </div>
@@ -17489,6 +17871,7 @@ Object.assign(TOPIC_CONTENT, {
     <li><strong>Multi-query</strong>: an LLM writes 3–5 rephrasings; retrieve for each and merge. Helps vague or oddly worded questions.</li>
   </ul>
   <h3>Reranking: shortlist, then interview</h3>
+<figure class="viz"><svg viewBox="0 0 600 200" width="600"><defs><marker id="rg-a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><rect x="20" y="10" width="360" height="32" rx="6" class="fs"/><text x="200" y="30" text-anchor="middle" font-weight="bold">~1M chunks</text><text x="400" y="24" font-size="11">index, pre-embedded offline</text><rect x="110" y="60" width="180" height="32" rx="6" class="fb sb"/><text x="200" y="80" text-anchor="middle" font-weight="bold">top ~50</text><text x="400" y="74" font-size="11">bi-encoder / hybrid</text><text x="400" y="88" font-size="10" class="tm">fast · high recall</text><line x1="200" y1="43" x2="200" y2="58" stroke="currentColor" marker-end="url(#rg-a3)"/><rect x="155" y="110" width="90" height="32" rx="6" class="fg sg"/><text x="200" y="130" text-anchor="middle" font-weight="bold">top 5</text><text x="400" y="124" font-size="11">cross-encoder rerank</text><text x="400" y="138" font-size="10" class="tm">slow · high precision</text><line x1="200" y1="93" x2="200" y2="108" stroke="currentColor" marker-end="url(#rg-a3)"/><rect x="170" y="160" width="60" height="32" rx="6" class="fv"/><text x="200" y="180" text-anchor="middle" font-weight="bold">LLM</text><text x="400" y="174" font-size="11">best chunk first</text><text x="400" y="188" font-size="10" class="tm">fewer = less lost-in-middle</text><line x1="200" y1="143" x2="200" y2="158" stroke="currentColor" marker-end="url(#rg-a3)"/></svg><figcaption>Cheap, wide retrieval for recall; expensive, narrow reranking for precision. Only a handful of chunks reach the prompt.</figcaption></figure>
   <table class="tbl">
     <tr><th></th><th>Bi-encoder (retrieval)</th><th>Cross-encoder (reranker)</th></tr>
     <tr><td>Input</td><td>Query and doc embedded <em>separately</em></td><td>Query + doc fed <em>together</em></td></tr>
@@ -17544,11 +17927,12 @@ Question: How many leave days carry over?"""</div>
     <tr><td><strong>FLARE</strong></td><td>While generating, retrieve again when the model's confidence drops</td><td>Long answers needing facts mid-way</td></tr>
     <tr><td><strong>GraphRAG</strong></td><td>Extract entities and relations into a graph; retrieve over communities and links</td><td>"Summarise themes across the corpus", relationship questions</td></tr>
   </table>
+<figure class="viz"><svg viewBox="0 0 600 180" width="600"><rect x="10" y="10" width="580" height="160" rx="8" fill="none" stroke="currentColor" stroke-opacity=".25"/><text x="20" y="28" font-size="10" class="tm">embedding space</text><circle cx="90" cy="60" r="4" class="fs" stroke="currentColor" stroke-opacity=".4"/><circle cx="130" cy="140" r="4" class="fs" stroke="currentColor" stroke-opacity=".4"/><circle cx="250" cy="120" r="4" class="fs" stroke="currentColor" stroke-opacity=".4"/><circle cx="300" cy="40" r="4" class="fs" stroke="currentColor" stroke-opacity=".4"/><circle cx="470" cy="145" r="4" class="fs" stroke="currentColor" stroke-opacity=".4"/><circle cx="555" cy="125" r="4" class="fs" stroke="currentColor" stroke-opacity=".4"/><circle cx="200" cy="70" r="4" class="fs" stroke="currentColor" stroke-opacity=".4"/><circle cx="360" cy="70" r="7" class="fg sg"/><text x="374" y="66" font-size="11">doc: "Paris is the capital…"</text><circle cx="335" cy="94" r="6" class="fv" stroke="currentColor"/><text x="348" y="112" font-size="11">HyDE draft answer</text><circle cx="90" cy="110" r="6" class="fr sr"/><text x="40" y="96" font-size="11">question: "What is the capital…?"</text><line x1="97" y1="110" x2="352" y2="72" stroke="currentColor" stroke-dasharray="3 4" stroke-opacity=".5"/><text x="220" y="104" text-anchor="middle" font-size="10" class="tr">far</text><line x1="339" y1="89" x2="354" y2="75" class="sg" stroke-width="2"/><text x="334" y="68" text-anchor="end" font-size="10" class="tg">near</text></svg><figcaption>A question and its answer-bearing doc are phrased differently; a drafted answer is phrased like the doc, so it lands next to it.</figcaption></figure>
   <div class="callout intu"><span class="label">Why HyDE works</span>
     <p>"What is the capital of France?" is a question; the doc says "Paris is the capital of France…". A fake answer looks like the real doc, so its embedding lands next to it, even if the fake's details are wrong.</p>
   </div>
   <h3>Agentic RAG</h3>
-  <p>Plain RAG retrieves once, always. <strong>Agentic RAG</strong> gives the model retrieval as a <em>tool</em>: it decides whether to search, what to search, which source to use, and when it has enough.</p>
+  <p>Plain RAG retrieves once, always. <strong>Agentic RAG</strong> makes retrieval a <em>tool</em>: the model decides whether, what and where to search, and when it has enough.</p>
   <div class="flow"><span>Question</span><span>Model: search?</span><span>search_docs(query)</span><span>Read results</span><span>Enough? else search again</span><span>Answer</span></div>
   <p>Better for multi-step questions; costs more calls and latency, and needs a step limit. The tool loop is in 05, agents in 08–09, and the LangGraph version (retrieve → grade → rewrite) in 11.</p>
 
@@ -17563,11 +17947,11 @@ Question: How many leave days carry over?"""</div>
     <tr><td>Questions and docs use different words</td><td>Vocabulary mismatch</td><td>HyDE, multi-query, hybrid</td></tr>
   </table>
   <p>Measure the two halves <strong>separately</strong>, or you can't tell which one broke:</p>
-  <ul>
-    <li><strong>Retrieval:</strong> Recall@k (is a correct chunk in the top k?), MRR (how high is the first correct one?). Check this first: no LLM fixes missing context.</li>
-    <li><strong>Generation:</strong> faithfulness (claims supported by the sources?), answer relevance (does it answer the question?).</li>
-    <li><strong>Context:</strong> context precision (how much retrieved text was useful?), context recall (did it contain everything needed?).</li>
-  </ul>
+  <div class="cards">
+    <div><b>Retrieval</b><p>Recall@k: correct chunk in top k? MRR: how high is the first correct one?</p><small>Check first: no LLM fixes missing context</small></div>
+    <div><b>Generation</b><p>Faithfulness: claims supported by sources? Answer relevance: answers the question?</p><small>Hallucination lives here</small></div>
+    <div><b>Context</b><p>Precision: how much retrieved text was useful? Recall: did it contain everything needed?</p><small>Tune k and chunking</small></div>
+  </div>
   <p>Golden datasets, LLM-as-judge, RAGAS and CI regression tests are in 13 · Evaluation &amp; Observability.</p>
 
   <h2 id="rg-build"><span class="num">08</span>Build It</h2>
@@ -17678,20 +18062,7 @@ print(text, cited)</div>
   </div>
   <p>Next steps to grow it: real embeddings in pgvector (06), a reranker (section 04), and a small Recall@k test set (13).</p>
 
-  <h2 id="rg-rev"><span class="num">09</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Why RAG:</strong> fixes knowledge cutoff, missing private data and ungrounded answers by retrieving sources per query.</li>
-    <li><strong>RAG vs fine-tuning:</strong> RAG changes what the model knows; fine-tuning changes how it behaves. Often both.</li>
-    <li><strong>Pipeline:</strong> offline load → chunk → embed → store; online embed query → retrieve ~50 → rerank ~5 → prompt → answer.</li>
-    <li><strong>Chunking:</strong> ~256–512 tokens with overlap; parent–child for precision + context; always keep metadata.</li>
-    <li><strong>Reranking:</strong> bi-encoder for fast recall, cross-encoder for precise top-n. Retrieve k ≫ final n.</li>
-    <li><strong>Prompt:</strong> tagged, numbered sources; "only use sources", cite [n], explicit "I don't know".</li>
-    <li><strong>Lost in the middle:</strong> fewer, better chunks, best first.</li>
-    <li><strong>Advanced:</strong> query rewriting, HyDE, multi-hop, corrective RAG, GraphRAG; agentic RAG = retrieval as a tool.</li>
-    <li><strong>Measure:</strong> retrieval (Recall@k) separately from generation (faithfulness); details in 13.</li>
-  </ol></div>
-
-  <h2 id="rg-qa"><span class="num">10</span>Questions &amp; Answers</h2>
+  <h2 id="rg-qa"><span class="num">09</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>Walk me through a RAG pipeline end to end.</summary><div class="qa-body">Offline: load docs, chunk (~512 tokens, overlap), attach metadata (source, page, date), embed, store in a vector DB with an HNSW index. Online: embed the question with the same model, hybrid-retrieve ~50, rerank to ~5 with a cross-encoder, format numbered sources into the prompt, ask the LLM to answer only from them with citations, return answer + links.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Bi-encoder vs cross-encoder?</summary><div class="qa-body">Bi-encoder embeds query and doc separately; docs are pre-computed, so it scales to millions but never compares them directly. Cross-encoder reads query and doc together and outputs one relevance score; far more accurate but one forward pass per pair. Use bi-encoder to shortlist ~50, cross-encoder to pick ~5.</div></details>

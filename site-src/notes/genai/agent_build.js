@@ -4,6 +4,100 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Build an Agent from Scratch</h1>
   <p class="lead">You know the tool-calling loop (05) and the agent ideas: ReAct, workflows vs agents, memory (08). Now build a real one in plain Python, piece by piece, with nothing hidden. Then rebuild it with the SDK's tool runner and see exactly what frameworks like LangChain and LangGraph (10–11) add on top.</p>
 
+  <h2 id="ab-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Build an Agent from Scratch</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">The agent</div>
+        <ul>
+          <li><b>Data analyst</b> — question about CSVs → explore → pandas → verify → Markdown report</li>
+          <li><b>Why an agent</b> — next step depends on data seen (columns, errors, follow-ups)</li>
+          <li><b>6 tools</b> — list_files, read_csv_head, run_python, write_report, update_todos, save_note</li>
+          <li><b>Files</b> — tools.py · schemas.py · memory.py · agent.py (loop)</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Step 1 · tool functions</div>
+        <ul>
+          <li><b>Plain Python, tested first</b> — most agent bugs are tool bugs</li>
+          <li><b>safe_path</b> — resolve + <code>is_relative_to(ROOT)</code>; blocks <code>../../etc/passwd</code></li>
+          <li><b>run_python</b> — subprocess, <code>cwd=ROOT</code>, timeout, <code>env={"PATH": ...}</code> (no API key), last 4,000 chars</li>
+          <li><b>Raise with a hint</b> — "Call list_files to see what exists" → loop makes it <code>is_error</code></li>
+          <li>⚠ Subprocess ≠ sandbox: still reads files + network → container/VM, no network, limits</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Step 2 · schemas</div>
+        <ul>
+          <li><b>Schema = all the model knows</b> — write it like docs for a new teammate</li>
+          <li><b>verb_noun names</b> + descriptions that say <em>when</em> ("call first", "once, at the end")</li>
+          <li><b><code>strict: true</code> + <code>additionalProperties: false</code></b> — args always match</li>
+          <li><b>enum</b> for status; "Requires human approval" in description</li>
+          <li><b>Few, focused</b> — 6 clear tools beat 30 overlapping</li>
+          <li><b>Narrow vs broad</b> — own tool when you must gate, audit, render</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Step 3 · memory &amp; planning</div>
+        <ul>
+          <li><b>Conversation</b> — <code>self.messages</code>, resent each call, one session</li>
+          <li><b>Working</b> — <code>TODOS</code> via <code>update_todos</code>, one task; full list each time (idempotent)</li>
+          <li><b>Long-term</b> — <code>notes.md</code> via <code>save_note</code>, survives restarts</li>
+          <li><b>Load notes once</b> into system prompt → stable prefix → prompt caching works</li>
+          <li>💡 Consultant: transcript · sticky-note checklist · notebook</li>
+          <li>⚠ Saving everything: stale "facts" re-injected forever; never secrets</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Step 4 · the loop</div>
+        <ul>
+          <li><b>Call</b> — <code>messages.create(system, tools, messages, cache_control)</code></li>
+          <li><b>stop_reason</b>
+            <ul><li><code>end_turn</code> → append, return text</li><li><code>tool_use</code> → run all, results in ONE user msg</li><li><code>max_tokens</code>/<code>refusal</code> → drop turn, stop</li></ul>
+          </li>
+          <li><b>Guard</b> — <code>for step in range(max_steps)</code></li>
+          <li><b>Errors</b> — try/except → <code>is_error: true</code> result</li>
+          <li><b>Approval</b> — <code>NEEDS_APPROVAL</code>; "no" returns as error</li>
+          <li><b>Log</b> — JSONL per step: stop_reason, tokens, tool, input, error</li>
+          <li>⚠ Dangling <code>tool_use</code> without <code>tool_result</code> → next call 400</li>
+          <li>⚠ Step counter/time in system prompt breaks caching</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Step 5 · run it</div>
+        <ul>
+          <li><b>Trace</b> — todos + list_files in parallel → wrong path error → self-correct → code → report</li>
+          <li><b>Answer</b> — South 50,700, driven by Laptops 40,800</li>
+          <li><b>Second chat()</b> works because <code>self.messages</code> keeps turn 1</li>
+          <li><b>Extend</b> — plot tool, smarter approval, token budget, regression test</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Step 6 · SDK tool runner</div>
+        <ul>
+          <li><b><code>@beta_tool</code></b> — schema from type hints + docstring <code>Args:</code></li>
+          <li><b><code>client.beta.messages.tool_runner(..., max_iterations=15)</code></b> owns the loop</li>
+          <li><b>Free</b> — input validation, exceptions → <code>is_error</code>, results appended</li>
+          <li><b>Approval</b> — gate <em>inside</em> the tool function</li>
+          <li>⚠ Doesn't auto-resume <code>pause_turn</code> (server tools)</li>
+          <li><b>Default</b> to the runner; hand loop to learn or for custom control</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">What frameworks add</div>
+        <ul>
+          <li><b>Same core loop</b> + infrastructure</li>
+          <li><b>Persistence</b> — checkpointers, resume after crash (LangGraph 11)</li>
+          <li><b>Control flow</b> — explicit graphs, branches, subgraphs</li>
+          <li><b>HITL</b> — interrupts across requests instead of blocking <code>input()</code></li>
+          <li><b>Tracing</b> (LangSmith/OTel), <b>provider swap</b> (LangChain), <b>MCP</b>, <b>streaming</b></li>
+          <li><b>Switch when</b> durable state, branching, cross-request approval, multi-agent</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -15,14 +109,13 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="ab-run"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Step 5: Run It</span><span class="rm-sub">A trace, read step by step</span></div></div>
       <div class="rm-item rm-done" data-target="ab-runner"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Step 6: SDK Tool Runner</span><span class="rm-sub">Same agent, no hand loop</span></div></div>
       <div class="rm-item rm-done" data-target="ab-fw"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">What Frameworks Add</span><span class="rm-sub">Bridge to LangChain/LangGraph</span></div></div>
-      <div class="rm-item rm-done" data-target="ab-rev"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="ab-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="ab-qa"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
   <h2 id="ab-spec"><span class="num">01</span>The Agent We'll Build</h2>
   <p>A <strong>data analyst agent</strong>: give it a question about CSV files in a folder, and it explores the data, writes and runs pandas code, checks its numbers and saves a Markdown report.</p>
-  <p>Why an agent and not a fixed workflow (08)? The steps depend on the data: which columns exist, whether code fails, whether a follow-up breakdown is needed. The model must choose the next step from what it just saw.</p>
+  <p>Why an agent, not a workflow (08)? The next step depends on the data: which columns exist, whether code fails, whether a follow-up is needed.</p>
   <div class="cards">
     <div><b>list_files</b><p>See what's in the workspace.</p><small>read-only</small></div>
     <div><b>read_csv_head</b><p>Row count, header, first rows.</p><small>read-only</small></div>
@@ -31,8 +124,8 @@ Object.assign(TOPIC_CONTENT, {
     <div><b>update_todos</b><p>The model's own plan.</p><small>working memory</small></div>
     <div><b>save_note</b><p>Facts for future sessions.</p><small>long-term memory</small></div>
   </div>
-  <div class="flow"><span>User question</span><span>Model: plan + tool_use</span><span>Approval gate</span><span>Run tool → tool_result / is_error</span><span>Log step</span><span>Repeat until end_turn or max steps</span></div>
-  <p>Files: <code>tools.py</code> (functions), <code>schemas.py</code> (what the model sees), <code>memory.py</code>, <code>agent.py</code> (the loop). Sample data, created once:</p>
+<figure class="viz"><svg viewBox="0 0 600 200" width="600"><defs><marker id="ab-a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><text x="10" y="104">user</text><line x1="44" y1="100" x2="58" y2="100" stroke="currentColor" marker-end="url(#ab-a1)"/><rect x="60" y="75" width="120" height="50" rx="6" class="fb sb"/><text x="120" y="98" text-anchor="middle" font-weight="bold">agent.py</text><text x="120" y="112" text-anchor="middle" font-size="10" class="tm">the loop</text><rect x="230" y="8" width="140" height="44" rx="6" class="fv"/><text x="300" y="28" text-anchor="middle" font-weight="bold">Claude API</text><text x="300" y="42" text-anchor="middle" font-size="10" class="tm">messages.create</text><rect x="410" y="8" width="170" height="44" rx="6" class="fs"/><text x="495" y="28" text-anchor="middle" font-weight="bold">schemas.py</text><text x="495" y="42" text-anchor="middle" font-size="10" class="tm">TOOLS = what model sees</text><line x1="408" y1="30" x2="372" y2="30" stroke="currentColor" marker-end="url(#ab-a1)"/><line x1="150" y1="75" x2="228" y2="40" stroke="currentColor" marker-end="url(#ab-a1)"/><line x1="232" y1="50" x2="168" y2="77" stroke="currentColor" stroke-opacity=".5" marker-end="url(#ab-a1)"/><rect x="230" y="80" width="140" height="44" rx="6" class="ft st"/><text x="300" y="100" text-anchor="middle" font-weight="bold">tools.py</text><text x="300" y="114" text-anchor="middle" font-size="10" class="tm">list·read·run·write</text><rect x="230" y="142" width="140" height="44" rx="6" class="fg sg"/><text x="300" y="162" text-anchor="middle" font-weight="bold">memory.py</text><text x="300" y="176" text-anchor="middle" font-size="10" class="tm">todos · notes</text><line x1="180" y1="102" x2="228" y2="102" stroke="currentColor" marker-end="url(#ab-a1)"/><text x="204" y="96" text-anchor="middle" font-size="10" class="tr">gate</text><path d="M150,125 V164 H228" fill="none" stroke="currentColor" marker-end="url(#ab-a1)"/><rect x="400" y="70" width="190" height="124" rx="8" fill="none" class="sr" stroke-dasharray="5 4"/><text x="410" y="88" font-size="11" class="tr">workspace/ = ROOT</text><text x="414" y="106" font-size="11">data/sales.csv</text><text x="414" y="123" font-size="11">reports/*.md</text><text x="414" y="140" font-size="11">notes.md</text><text x="414" y="157" font-size="11">_agent_log.jsonl</text><text x="414" y="174" font-size="11">_scratch.py</text><line x1="370" y1="102" x2="398" y2="102" stroke="currentColor" marker-end="url(#ab-a1)"/><line x1="370" y1="164" x2="398" y2="164" stroke="currentColor" marker-end="url(#ab-a1)"/></svg><figcaption>agent.py talks to the API and dispatches tools; every file the agent touches lives inside one root folder (red dashed). "gate" = human approval for run_python.</figcaption></figure>
+  <p>Sample data, created once:</p>
   <div class="fx" data-lang="py">from pathlib import Path
 
 CSV = """date,region,product,units,price
@@ -111,13 +204,8 @@ def write_report(filename: str, markdown: str) -&gt; str:
     p.parent.mkdir(exist_ok=True)
     p.write_text(markdown)
     return f"Wrote {p.relative_to(ROOT)} ({len(markdown)} chars)"</div>
-  <ul>
-    <li><strong>One root folder.</strong> Every path is model output, so it's untrusted. <code>safe_path</code> resolves it and rejects <code>..</code> or absolute escapes.</li>
-    <li><strong>Separate process + timeout.</strong> A runaway loop or crash kills the child, not your agent.</li>
-    <li><strong>Empty environment.</strong> <code>env={"PATH": …}</code> means generated code can't read your <code>ANTHROPIC_API_KEY</code>.</li>
-    <li><strong>Capped output.</strong> Only the last 4,000 characters return, so one huge print can't flood the context window.</li>
-    <li><strong>Errors are raised with a hint</strong> ("Call list_files to see what exists"). The loop turns them into <code>is_error</code> results the model can act on.</li>
-  </ul>
+<figure class="viz"><svg viewBox="0 0 600 200" width="600"><defs><marker id="ab-a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><rect x="20" y="14" width="400" height="176" rx="8" fill="none" class="sr" stroke-width="1.5"/><text x="30" y="30" font-size="11" class="tr">1 · human approval gate</text><rect x="40" y="40" width="360" height="142" rx="8" fill="none" class="sb" stroke-width="1.5"/><text x="50" y="56" font-size="11" class="tb">2 · subprocess + timeout (kills runaways)</text><rect x="60" y="66" width="320" height="108" rx="8" fill="none" class="st" stroke-width="1.5"/><text x="70" y="82" font-size="11">3 · cwd=ROOT + safe_path (no ../ escape)</text><rect x="80" y="92" width="280" height="74" rx="8" fill="none" class="sg" stroke-width="1.5"/><text x="90" y="108" font-size="11" class="tg">4 · env={"PATH": …} (no API key)</text><rect x="140" y="122" width="160" height="32" rx="6" class="fs"/><text x="220" y="142" text-anchor="middle" font-weight="bold">model-written code</text><path d="M300,138 H470 V112" fill="none" stroke="currentColor" marker-end="url(#ab-a2)"/><rect x="430" y="56" width="160" height="54" rx="6" class="fb sb"/><text x="510" y="78" text-anchor="middle" font-weight="bold">5 · output cap</text><text x="510" y="94" text-anchor="middle" font-size="10" class="tm">last 4,000 chars → model</text><text x="430" y="160" font-size="11" class="tr">still NOT a sandbox:</text><text x="430" y="175" font-size="11" class="tr">files + network open</text><text x="430" y="190" font-size="10" class="tm">→ container / VM in prod</text></svg><figcaption>Every model-supplied path and script is untrusted, so run_python sits inside four layers and only a capped slice of output returns.</figcaption></figure>
+  <p><strong>Errors are raised with a hint</strong> ("Call list_files to see what exists"); the loop turns them into <code>is_error</code> results the model can act on.</p>
   <div class="callout trap"><span class="label">Trap</span><p>A subprocess is <em>not</em> a real sandbox. The code can still read any file your user can, and open network connections. In production run it in a container or VM with no network and resource limits, or use a hosted code-execution tool (14 covers this).</p></div>
   <p>Test every success and failure path. Real output from this environment:</p>
   <div class="fx" data-lang="py">from tools import list_files, read_csv_head, run_python, write_report
@@ -205,13 +293,8 @@ TOOLS = [
   <div class="callout intu"><span class="label">Bash vs dedicated tools</span><p><code>run_python</code> is a broad "do anything" tool; <code>write_report</code> is narrow. Narrow tools give your code typed arguments to check, gate and log. Promote an action to its own tool when you need to gate, audit or render it.</p></div>
 
   <h2 id="ab-mem"><span class="num">04</span>Step 3: Memory &amp; Planning</h2>
-  <p>Three kinds of memory (types defined in 08), three implementations:</p>
-  <table class="tbl">
-    <tr><th>Memory</th><th>Lives in</th><th>Lifetime</th></tr>
-    <tr><td>Conversation (short-term)</td><td><code>self.messages</code>, resent every call</td><td>One session</td></tr>
-    <tr><td>Working memory / plan</td><td><code>TODOS</code>, via <code>update_todos</code></td><td>One task</td></tr>
-    <tr><td>Long-term</td><td><code>notes.md</code>, via <code>save_note</code></td><td>Across restarts</td></tr>
-  </table>
+  <p>Three kinds of memory (types defined in 08): conversation (short-term), working memory (the plan), long-term.</p>
+<figure class="viz"><svg viewBox="0 0 600 152" width="600"><line x1="130" y1="128" x2="590" y2="128" stroke="currentColor" stroke-opacity=".4"/><text x="590" y="144" text-anchor="end" font-size="10" class="tm">time →</text><line x1="355" y1="6" x2="355" y2="132" stroke="currentColor" class="sr" stroke-dasharray="4 3"/><text x="355" y="144" text-anchor="middle" font-size="10" class="tr">process restart</text><text x="10" y="22" font-weight="bold" font-size="11">self.messages</text><text x="10" y="36" font-size="10" class="tm">resent each call</text><rect x="130" y="10" width="215" height="28" rx="5" class="fb sb"/><text x="237.5" y="28" text-anchor="middle" font-size="10">session 1</text><rect x="370" y="10" width="215" height="28" rx="5" class="fb sb"/><text x="477.5" y="28" text-anchor="middle" font-size="10">session 2 (fresh)</text><text x="10" y="62" font-weight="bold" font-size="11">TODOS</text><text x="10" y="76" font-size="10" class="tm">update_todos</text><rect x="130" y="50" width="70" height="28" rx="5" class="ft st"/><text x="165" y="68" text-anchor="middle" font-size="10">task A</text><rect x="205" y="50" width="70" height="28" rx="5" class="ft st"/><text x="240" y="68" text-anchor="middle" font-size="10">task B</text><rect x="280" y="50" width="65" height="28" rx="5" class="ft st"/><text x="312.5" y="68" text-anchor="middle" font-size="10">task C</text><rect x="370" y="50" width="90" height="28" rx="5" class="ft st"/><text x="415" y="68" text-anchor="middle" font-size="10">task D</text><text x="10" y="102" font-weight="bold" font-size="11">notes.md</text><text x="10" y="116" font-size="10" class="tm">save_note</text><rect x="130" y="90" width="455" height="28" rx="5" class="fg sg"/><text x="357.5" y="108" text-anchor="middle" font-size="10">loaded once per session · survives restarts</text></svg><figcaption>Three memories, three lifetimes: the conversation dies with the process, the plan lives for one task, notes.md outlives everything.</figcaption></figure>
   <div class="fx" data-lang="py">import json
 from tools import ROOT
 
@@ -240,6 +323,7 @@ def update_todos(todos: list[dict]) -&gt; str:
 
   <h2 id="ab-loop"><span class="num">05</span>Step 4: The Agent Loop</h2>
   <p>The 05 loop plus five production habits: a step guard, error results, approval, logging and careful <code>stop_reason</code> handling.</p>
+<figure class="viz"><svg viewBox="0 0 600 202" width="600"><defs><marker id="ab-a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><rect x="20" y="70" width="130" height="44" rx="6" class="fb sb"/><text x="85" y="90" text-anchor="middle" font-weight="bold">messages.create</text><text x="85" y="104" text-anchor="middle" font-size="10" class="tm">system·tools·history</text><rect x="190" y="70" width="110" height="44" rx="6" class="fv"/><text x="245" y="96" text-anchor="middle">stop_reason?</text><line x1="150" y1="92" x2="188" y2="92" stroke="currentColor" marker-end="url(#ab-a4)"/><rect x="350" y="70" width="230" height="44" rx="6" class="fg sg"/><text x="465" y="90" text-anchor="middle" font-weight="bold">return text</text><text x="465" y="104" text-anchor="middle" font-size="10" class="tm">append assistant turn</text><line x1="300" y1="92" x2="348" y2="92" stroke="currentColor" marker-end="url(#ab-a4)" class="sg"/><text x="325" y="106" text-anchor="middle" font-size="10" class="tg">end_turn</text><rect x="350" y="8" width="230" height="44" rx="6" class="fr sr"/><text x="465" y="28" text-anchor="middle" font-weight="bold">drop turn, stop</text><text x="465" y="42" text-anchor="middle" font-size="10" class="tm">max_tokens · refusal</text><path d="M245,70 V30 H348" fill="none" class="sr" stroke="currentColor" marker-end="url(#ab-a4)"/><text x="290" y="24" text-anchor="middle" font-size="10" class="tr">other</text><rect x="170" y="150" width="150" height="44" rx="6" class="ft st"/><text x="245" y="170" text-anchor="middle" font-weight="bold">execute each</text><text x="245" y="184" text-anchor="middle" font-size="10" class="tm">gate→run→is_error</text><line x1="245" y1="114" x2="245" y2="148" stroke="currentColor" marker-end="url(#ab-a4)"/><text x="252" y="136" font-size="10">tool_use</text><path d="M170,172 H85 V116" fill="none" stroke="currentColor" marker-end="url(#ab-a4)"/><text x="78" y="140" text-anchor="end" font-size="10" class="tm">all results</text><text x="78" y="152" text-anchor="end" font-size="10" class="tm">in ONE user</text><text x="78" y="164" text-anchor="end" font-size="10" class="tm">message</text><rect x="350" y="150" width="230" height="44" rx="6" class="fs"/><text x="465" y="170" text-anchor="middle" font-weight="bold">max_steps reached</text><text x="465" y="184" text-anchor="middle" font-size="10" class="tm">stop: guard, partial work</text><line x1="320" y1="172" x2="348" y2="172" stroke="currentColor" marker-end="url(#ab-a4)" class="sr"/></svg><figcaption>One lap = one API call. Only tool_use loops back; every other stop_reason, or the step guard, ends the run.</figcaption></figure>
   <div class="fx" data-lang="py">import json, time
 import anthropic
 from tools import list_files, read_csv_head, run_python, write_report, ROOT
@@ -455,7 +539,7 @@ print("".join(b.text for b in message.content if b.type == "text"))</div>
   <div class="callout intu"><span class="label">Rule of thumb</span><p>Default to the tool runner for custom-tool agents. Write the manual loop to learn, or when you need control it doesn't expose, such as a custom transport or interleaving unrelated work mid-loop.</p></div>
 
   <h2 id="ab-fw"><span class="num">08</span>What Frameworks Add</h2>
-  <p>You now have a working agent in ~150 lines. Frameworks don't change the core loop; they add the infrastructure around it that gets painful at scale.</p>
+  <p>~150 lines, working agent. Frameworks keep the same core loop and add the infrastructure that hurts at scale:</p>
   <table class="tbl">
     <tr><th>Need</th><th>Our version</th><th>What a framework gives you</th></tr>
     <tr><td>State persistence</td><td><code>self.messages</code> dies with the process</td><td>Checkpointers that save state after every step; resume after a crash or days later (LangGraph, 11)</td></tr>
@@ -468,21 +552,7 @@ print("".join(b.text for b in message.content if b.type == "text"))</div>
   </table>
   <div class="callout intu"><span class="label">When to switch</span><p>Stay with plain code while the agent is one loop and a few tools. Move to LangGraph when you need durable state, branching graphs, human approval across requests, or several agents. Building it by hand first means you'll know what the framework is doing for you.</p></div>
 
-  <h2 id="ab-rev"><span class="num">09</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Agent</strong> = the 05 tool loop + tools + guardrails, choosing steps from what it observes.</li>
-    <li><strong>Test tools first</strong>, without the model; most bugs live there.</li>
-    <li><strong>Untrusted input</strong>: confine paths to one root, run code in a subprocess with timeout and a clean env, cap output.</li>
-    <li><strong>Schemas</strong>: verb_noun names, descriptions that say <em>when</em>, <code>strict: true</code>, enums.</li>
-    <li><strong>Errors</strong> become <code>is_error</code> tool results with an actionable hint, never crashes.</li>
-    <li><strong>max_steps guard</strong> stops infinite loops and runaway cost.</li>
-    <li><strong>Memory</strong>: messages (session), todo list (task), notes file (across sessions, loaded once).</li>
-    <li><strong>Approval</strong> for dangerous tools; a "no" returns as an error the model can work around.</li>
-    <li><strong>Log every step</strong> (stop_reason, tokens, tool, input, error flag) as JSONL.</li>
-    <li><strong>Tool runner</strong> = same agent, SDK owns the loop; frameworks add persistence, graphs, interrupts, tracing.</li>
-  </ol></div>
-
-  <h2 id="ab-qa"><span class="num">10</span>Questions &amp; Answers</h2>
+  <h2 id="ab-qa"><span class="num">09</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>Why does every agent loop need a max-steps guard?</summary><div class="qa-body">The model decides when to stop. If a tool keeps failing or the model keeps "checking one more thing", the loop never ends, and every step resends a growing transcript, so cost grows faster than linearly. A guard (or <code>max_iterations</code>) caps it and returns partial work.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>A tool raises <code>FileNotFoundError</code>. Should the agent crash, retry silently, or something else?</summary><div class="qa-body">Return a <code>tool_result</code> with <code>is_error: true</code> and an actionable message ("No file 'sales.csv'. Call list_files..."). The model reads it and corrects its next call. Crashing loses the run; silent retries repeat the same mistake.</div></details>

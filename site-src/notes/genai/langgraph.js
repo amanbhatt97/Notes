@@ -4,6 +4,96 @@ Object.assign(TOPIC_CONTENT, {
   <h1>LangGraph</h1>
   <p class="lead">LangGraph turns the agent loop from 08–09 into an explicit graph: shared state, nodes that update it, and edges (including loops) that you control. That gives you memory across turns, crash recovery and human approval for free. You need 08 Agent Fundamentals and 10 LangChain; 12 Multi-Agent Systems builds on this.</p>
 
+  <h2 id="lg-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">LangGraph</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Why LangGraph</div>
+        <ul>
+          <li><b>State machine for LLM apps</b> — typed state + nodes + edges, saved every step</li>
+          <li><b>Fixes AgentExecutor's black box</b> — pause/approve, resume after crash, memory, your own branches/loops</li>
+          <li>💡 Surgical robot <em>with</em> a pause button, live feed and rewind</li>
+          <li><b>vs LCEL</b> — LCEL builds one step (recipe); LangGraph the flow between steps (kitchen); often combined</li>
+          <li>⚠ Straight pipeline with no loops/branches/persistence → LCEL or plain code</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">State &amp; reducers</div>
+        <ul>
+          <li><b>State</b> — one <code>TypedDict</code> shared by all nodes</li>
+          <li><b>Node returns only changed keys</b>; LangGraph merges</li>
+          <li><b>Default</b> — overwrite</li>
+          <li><b>Reducer</b> — <code>Annotated[list, operator.add]</code> = append</li>
+          <li><b><code>add_messages</code></b> — append + replace by id; <code>MessagesState</code> ready-made</li>
+          <li>💡 Relay runners sharing one notebook</li>
+          <li>⚠ <code>messages: list</code> without reducer wipes history; parallel writes → <code>InvalidUpdateError</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Nodes, edges, cycles</div>
+        <ul>
+          <li><b>Node</b> — function: state → partial update</li>
+          <li><b>Edge</b> — <code>add_edge("a", "b")</code>; <code>START</code>, <code>END</code></li>
+          <li><b>Conditional edge</b> — <code>add_conditional_edges("a", router, mapping)</code>; router returns next node name</li>
+          <li><b>Cycle</b> — edge back to an earlier node (taste, adjust, taste)</li>
+          <li><b>Compile</b> — <code>g.compile()</code> → app with invoke/stream</li>
+          <li><b>Key</b> — LLM output influences routing, but the router is <em>your</em> code</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">ReAct as a graph</div>
+        <ul>
+          <li><b>START → agent</b>; agent →(tools_condition)→ tools | END; <b>tools → agent</b></li>
+          <li><b><code>ToolNode(tools)</code></b> — runs all tool calls, returns <code>ToolMessage</code>s; errors as messages</li>
+          <li><b><code>tools_condition</code></b> — "tools" if tool_calls else END</li>
+          <li><b>One-liner</b> — <code>langchain.agents.create_agent</code>; <code>create_react_agent</code> deprecated</li>
+          <li>⚠ Tool results as <code>AIMessage</code> → rejected; use <code>ToolMessage</code> + <code>tool_call_id</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Checkpointing &amp; memory</div>
+        <ul>
+          <li><b>Checkpointer</b> — full state saved after every step, per <code>thread_id</code></li>
+          <li><b><code>compile(checkpointer=InMemorySaver())</code></b>; prod: <code>SqliteSaver</code>, <code>PostgresSaver</code></li>
+          <li><b>Gives</b> — multi-turn memory, crash recovery, time travel (<code>get_state_history</code>, <code>update_state</code>), interrupts</li>
+          <li><b>Store</b> — <code>compile(store=...)</code> for facts across threads</li>
+          <li>💡 Video-game save points</li>
+          <li>⚠ Missing <code>thread_id</code> → error; shared id across users → leaked history</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Human-in-the-loop</div>
+        <ul>
+          <li><b><code>interrupt(payload)</code></b> — inside a node; graph saves and returns <code>__interrupt__</code></li>
+          <li><b><code>invoke(Command(resume=x), cfg)</code></b> — x becomes interrupt's return value</li>
+          <li><b><code>interrupt_before=["tools"]</code></b> — static breakpoint; resume with <code>invoke(None, cfg)</code></li>
+          <li><b><code>update_state</code></b> — edit args before resuming</li>
+          <li>💡 Bank: second signer only for large wires</li>
+          <li>⚠ Node <b>reruns from the top</b> on resume → side effects after interrupt or in own node</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Streaming &amp; subgraphs</div>
+        <ul>
+          <li><b><code>stream_mode</code></b> — values (full state), updates (node diffs), messages (tokens), custom</li>
+          <li><b>Subgraph</b> — compiled graph as a node; reusable agent, own state (12)</li>
+          <li>⚠ Shared reducer keys double up (<code>['start', 'start', …]</code>) → map state or separate keys</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Build: agent with approval</div>
+        <ul>
+          <li><b>Tools</b> — <code>order_status</code> (safe), <code>issue_refund</code> (risky)</li>
+          <li><b>route()</b> — END / "approval" if risky / "tools"</li>
+          <li><b>approval node</b> — <code>interrupt</code> → <code>Command(goto="tools")</code> or reject <code>ToolMessage</code> → agent</li>
+          <li><b>Result</b> — paused at <code>('approval',)</code>, resumed, 8 messages in thread</li>
+          <li><b>Extend</b> — gate only &gt; 1,000; edited amount via resume; SqliteSaver across restarts</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -15,19 +105,18 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="lg-hitl"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Human-in-the-Loop</span><span class="rm-sub">interrupt() and resume</span></div></div>
       <div class="rm-item rm-done" data-target="lg-stream"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Streaming &amp; Subgraphs</span><span class="rm-sub">Watch it run; nest graphs</span></div></div>
       <div class="rm-item rm-done" data-target="lg-build"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Build It: Agent with Approval</span><span class="rm-sub">Tools, memory, interrupt, verified</span></div></div>
-      <div class="rm-item rm-done" data-target="lg-rev"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 9 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="lg-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="lg-qa"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
   <h2 id="lg-why"><span class="num">01</span>Why LangGraph</h2>
-  <p>The old <code>AgentExecutor</code> ran the agent loop inside a black box. Real requirements it couldn't meet:</p>
-  <ul>
-    <li>Pause before the agent sends 1,000 refund emails, and let a human approve.</li>
-    <li>Crash at step 8 of 10, then resume from step 8, not step 1.</li>
-    <li>Remember the user's earlier messages without hand-built plumbing.</li>
-    <li>Branch, loop back, or run steps in parallel on <em>your</em> rules.</li>
-  </ul>
+  <p>The old <code>AgentExecutor</code> ran the loop in a black box. What it couldn't do:</p>
+  <div class="cards">
+    <div><b>Pause</b><p>Stop before 1,000 refund emails go out; let a human approve.</p></div>
+    <div><b>Resume</b><p>Crash at step 8 of 10, continue from step 8, not step 1.</p></div>
+    <div><b>Remember</b><p>Earlier messages, without hand-built plumbing.</p></div>
+    <div><b>Control flow</b><p>Branch, loop back or run in parallel on <em>your</em> rules.</p></div>
+  </div>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A surgical robot with no pause button vs one with a pause button, a live feed of every step, and the ability to rewind to any earlier moment. LangGraph is the second one.</p>
   </div>
@@ -51,7 +140,8 @@ Object.assign(TOPIC_CONTENT, {
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Relay runners sharing one notebook. Each reads everything so far and adds a line. Nobody passes notes directly to the next runner.</p>
   </div>
-  <p>By default a new value <strong>overwrites</strong> the old one. A <strong>reducer</strong> is a merge rule attached to a key, e.g. "append instead of replace". You attach it with <code>Annotated[type, reducer]</code>.</p>
+  <p>Default: a new value <strong>overwrites</strong>. A <strong>reducer</strong> is a per-key merge rule ("append instead"), attached with <code>Annotated[type, reducer]</code>.</p>
+<figure class="viz"><svg viewBox="0 0 600 160" width="600"><defs><marker id="lg-a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><text x="225" y="14" text-anchor="middle" font-size="10" class="tm">state before</text><text x="370" y="14" text-anchor="middle" font-size="10" class="tm">node returns</text><text x="525" y="14" text-anchor="middle" font-size="10" class="tm">state after</text><text x="10" y="40" font-weight="bold" font-size="12">attempts: int</text><text x="10" y="55" text-anchor="start" font-size="10" class="tm">no reducer → overwrite</text><rect x="170" y="24" width="110" height="36" rx="6" class="fs"/><text x="225" y="46" text-anchor="middle" font-size="11">1</text><rect x="320" y="24" width="100" height="36" rx="6" class="fv"/><text x="370" y="46" text-anchor="middle" font-size="11">2</text><rect x="450" y="24" width="144" height="36" rx="6" class="fb sb"/><text x="522" y="46" text-anchor="middle" font-size="11">2</text><text x="300" y="47" text-anchor="middle">+</text><line x1="422" y1="42" x2="448" y2="42" stroke="currentColor" marker-end="url(#lg-a1)"/><text x="10" y="94" font-weight="bold" font-size="12">steps</text><text x="10" y="109" text-anchor="start" font-size="10" class="tm">operator.add → append</text><rect x="170" y="78" width="110" height="36" rx="6" class="fs"/><text x="225" y="100" text-anchor="middle" font-size="11">['draft']</text><rect x="320" y="78" width="100" height="36" rx="6" class="fv"/><text x="370" y="100" text-anchor="middle" font-size="11">['check#1']</text><rect x="450" y="78" width="144" height="36" rx="6" class="fg sg"/><text x="522" y="100" text-anchor="middle" font-size="11">['draft','check#1']</text><text x="300" y="101" text-anchor="middle">+</text><line x1="422" y1="96" x2="448" y2="96" stroke="currentColor" marker-end="url(#lg-a1)"/><text x="10" y="150" text-anchor="start" font-size="10" class="tr">⚠ messages: list with no reducer → every node write replaces the chat history</text></svg><figcaption>Same node write, two merge rules: a key without a reducer is replaced, a key with operator.add (or add_messages) grows.</figcaption></figure>
   <div class="fx" data-lang="py">import operator
 from typing import TypedDict, Annotated
 
@@ -100,7 +190,7 @@ print(app.invoke({"question": "q", "steps": [], "attempts": 0}))</div>
 
   <h2 id="lg-react"><span class="num">04</span>A ReAct Agent as a Graph</h2>
   <p>The ReAct loop from 08 is two nodes and a cycle:</p>
-  <div class="flow"><span>START</span><span>agent (LLM)</span><span>tool calls? → tools</span><span>tools → back to agent</span><span>no calls → END</span></div>
+<figure class="viz"><svg viewBox="0 0 600 136" width="600"><defs><marker id="lg-a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><rect x="20" y="61" width="64" height="28" rx="14" class="fs"/><text x="52" y="79" text-anchor="middle" font-size="11">START</text><rect x="120" y="55" width="110" height="40" rx="6" class="fb sb"/><text x="175" y="73" text-anchor="middle" font-weight="bold">agent</text><text x="175" y="87" text-anchor="middle" font-size="10" class="tm">LLM + tools</text><line x1="84" y1="75" x2="118" y2="75" stroke="currentColor" marker-end="url(#lg-a2)"/><path d="M300,57 L322,75 L300,93 L278,75 Z" class="fv" stroke="currentColor" stroke-opacity=".5"/><line x1="230" y1="75" x2="276" y2="75" stroke="currentColor" marker-end="url(#lg-a2)"/><text x="300" y="112" text-anchor="middle" font-size="10" class="tm">tools_condition</text><rect x="400" y="12" width="130" height="40" rx="6" class="ft st"/><text x="465" y="30" text-anchor="middle" font-weight="bold">tools</text><text x="465" y="44" text-anchor="middle" font-size="10" class="tm">ToolNode</text><path d="M300,57 V32 H398" fill="none" stroke="currentColor" marker-end="url(#lg-a2)"/><text x="355" y="46" text-anchor="middle" font-size="10" class="tb">tool_calls</text><rect x="420" y="98" width="70" height="28" rx="14" class="fs"/><text x="455" y="116" text-anchor="middle" font-size="11">END</text><path d="M322,75 H360 V112 H418" fill="none" stroke="currentColor" marker-end="url(#lg-a2)"/><text x="390" y="106" text-anchor="middle" font-size="10" class="tg">none</text><path d="M465,12 V4 H175 V53" fill="none" stroke="currentColor" marker-end="url(#lg-a2)" stroke-dasharray="4 3"/><text x="186" y="20" text-anchor="start" font-size="10" class="tm">ToolMessages → back to agent</text></svg><figcaption>Two nodes and one cycle: the agent keeps going round through tools until its reply has no tool calls.</figcaption></figure>
   <div class="fx" data-lang="py">from langchain_anthropic import ChatAnthropic
 from langgraph.graph import StateGraph, MessagesState, START
 from langgraph.prebuilt import ToolNode, tools_condition
@@ -128,6 +218,7 @@ app = g.compile()</div>
 
   <h2 id="lg-ckpt"><span class="num">05</span>Checkpointing &amp; Memory</h2>
   <p>A <strong>checkpointer</strong> saves the full state after every step, under a <code>thread_id</code> (one conversation).</p>
+<figure class="viz"><svg viewBox="0 0 600 164" width="600"><defs><marker id="lg-a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><line x1="30" y1="60" x2="575" y2="60" stroke="currentColor" stroke-opacity=".5"/><path d="M50,30 V24 H215 V30" fill="none" stroke="currentColor" stroke-opacity=".4"/><text x="132" y="18" text-anchor="middle" font-size="10" class="tm">turn 1 · invoke</text><path d="M290,30 V24 H530 V30" fill="none" stroke="currentColor" stroke-opacity=".4"/><text x="410" y="18" text-anchor="middle" font-size="10" class="tm">turn 2 · invoke … resume</text><circle cx="50" cy="60" r="5" class="fb sb"/><text x="50" y="46" text-anchor="middle" font-size="10" class="">in</text><circle cx="105" cy="60" r="5" class="fb sb"/><text x="105" y="46" text-anchor="middle" font-size="10" class="">agent</text><circle cx="160" cy="60" r="5" class="fb sb"/><text x="160" y="46" text-anchor="middle" font-size="10" class="">tools</text><circle cx="215" cy="60" r="5" class="fb sb"/><text x="215" y="46" text-anchor="middle" font-size="10" class="">agent</text><circle cx="290" cy="60" r="5" class="fb sb"/><text x="290" y="46" text-anchor="middle" font-size="10" class="">in</text><circle cx="345" cy="60" r="5" class="fb sb"/><text x="345" y="46" text-anchor="middle" font-size="10" class="">agent</text><circle cx="400" cy="60" r="8" class="fr sr"/><text x="400" y="64" text-anchor="middle" font-size="9" class="tr">❚❚</text><text x="400" y="44" text-anchor="middle" font-size="10" class="tr">approval</text><circle cx="470" cy="60" r="5" class="fb sb"/><text x="470" y="46" text-anchor="middle" font-size="10" class="">tools</text><circle cx="530" cy="60" r="5" class="fb sb"/><text x="530" y="46" text-anchor="middle" font-size="10" class="">agent</text><text x="400" y="86" text-anchor="middle" font-size="10" class="tr">interrupt(): state saved, invoke returns</text><text x="470" y="102" text-anchor="middle" font-size="10" class="tg">Command(resume="approve")</text><path d="M160,66 Q170,128 230,128" fill="none" stroke="currentColor" marker-end="url(#lg-a3)" stroke-dasharray="4 3"/><circle cx="236" cy="128" r="5" fill="none" stroke="currentColor"/><text x="246" y="132" text-anchor="start" font-size="10" class="">update_state → replay a fork (time travel)</text><text x="30" y="156" text-anchor="start" font-size="10" class="tm">thread_id = "user-42" · every dot = a checkpoint · crash? rerun the thread from the last dot</text></svg><figcaption>A thread is a chain of save points. Memory, crash recovery, time travel and interrupts all read from this chain.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Save points in a long video game. Die at hour 20 and you restart from the last save, not from the beginning.</p>
   </div>
@@ -198,7 +289,7 @@ app.invoke(Command(resume="approve"), cfg)   # continue with the human's answer<
 
   <h2 id="lg-build"><span class="num">08</span>Build It: Agent with Approval</h2>
   <p>A shop agent with a safe tool and a risky one. Memory across turns via a checkpointer; an approval node interrupts before any refund. A scripted fake chat model stands in for Claude, so the control flow actually runs here.</p>
-  <div class="flow"><span>START</span><span>agent</span><span>risky call? → approval (interrupt)</span><span>tools</span><span>agent</span><span>END</span></div>
+<figure class="viz"><svg viewBox="0 0 600 222" width="600"><defs><marker id="lg-a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><rect x="10" y="86" width="60" height="28" rx="14" class="fs"/><text x="40" y="104" text-anchor="middle" font-size="11">START</text><line x1="70" y1="100" x2="98" y2="100" stroke="currentColor" marker-end="url(#lg-a4)"/><rect x="100" y="80" width="100" height="40" rx="6" class="fb sb"/><text x="150" y="98" text-anchor="middle" font-weight="bold">agent</text><text x="150" y="112" text-anchor="middle" font-size="10" class="tm">LLM</text><rect x="440" y="16" width="130" height="40" rx="6" class="ft st"/><text x="505" y="34" text-anchor="middle" font-weight="bold">tools</text><text x="505" y="48" text-anchor="middle" font-size="10" class="tm">ToolNode</text><path d="M140,80 V30 H438" fill="none" stroke="currentColor" marker-end="url(#lg-a4)"/><text x="290" y="24" text-anchor="middle" font-size="10" class="tb">safe call (order_status)</text><path d="M438,46 H170 V78" fill="none" stroke="currentColor" marker-end="url(#lg-a4)"/><text x="300" y="64" text-anchor="middle" font-size="10" class="tm">results</text><rect x="260" y="86" width="60" height="28" rx="14" class="fs"/><text x="290" y="104" text-anchor="middle" font-size="11">END</text><line x1="200" y1="100" x2="258" y2="100" stroke="currentColor" marker-end="url(#lg-a4)"/><text x="229" y="94" text-anchor="middle" font-size="10" class="tg">no calls</text><rect x="260" y="140" width="150" height="44" rx="6" class="fr sr"/><text x="335" y="160" text-anchor="middle" font-weight="bold">approval</text><text x="335" y="174" text-anchor="middle" font-size="10" class="tm">interrupt() ❚❚</text><path d="M150,120 V162 H258" fill="none" stroke="currentColor" marker-end="url(#lg-a4)"/><text x="204" y="178" text-anchor="middle" font-size="10" class="tr">risky (refund)</text><path d="M410,152 H505 V58" fill="none" stroke="currentColor" marker-end="url(#lg-a4)" class="sg"/><text x="512" y="110" text-anchor="start" font-size="10" class="tg">approve</text><path d="M335,184 V200 H120 V122" fill="none" stroke="currentColor" marker-end="url(#lg-a4)" class="sr"/><text x="228" y="214" text-anchor="middle" font-size="10" class="tr">reject → ToolMessage</text></svg><figcaption>route() sends safe calls straight to tools, risky ones through the approval node, which pauses until a human resumes it.</figcaption></figure>
   <div class="fx" data-lang="py"># pip install langgraph langchain-core
 from typing import Literal
 from langchain_core.tools import tool
@@ -285,20 +376,7 @@ print("messages in thread:", len(out["messages"]))</div>
     <p>Only gate refunds above 1,000 (read <code>args["amount"]</code> in <code>route</code>); let the reviewer send an edited amount via <code>Command(resume={"amount": 20})</code>; swap <code>InMemorySaver</code> for <code>SqliteSaver</code> and restart Python mid-approval.</p>
   </div>
 
-  <h2 id="lg-rev"><span class="num">09</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>LangGraph</strong> = state machine for LLM apps: state + nodes + edges, saved after each step.</li>
-    <li><strong>Node</strong>: function, state in, partial update out.</li>
-    <li><strong>Reducer</strong>: merge rule per key; <code>add_messages</code> appends chat history. No reducer = overwrite.</li>
-    <li><strong>Conditional edge</strong>: your router reads state and names the next node; a back-edge makes a cycle.</li>
-    <li><strong>ReAct graph</strong>: agent ⇄ <code>ToolNode</code>, routed by <code>tools_condition</code>; or <code>create_agent</code>.</li>
-    <li><strong>Checkpointer + thread_id</strong>: multi-turn memory, crash recovery, time travel.</li>
-    <li><strong><code>interrupt()</code> + <code>Command(resume=...)</code></strong>: human approval; the node reruns from the top on resume.</li>
-    <li><strong>Stream modes</strong>: values, updates, messages (tokens), custom.</li>
-    <li><strong>Skip it</strong> for straight pipelines; use it for loops, branches, approval, persistence.</li>
-  </ol></div>
-
-  <h2 id="lg-qa"><span class="num">10</span>Questions &amp; Answers</h2>
+  <h2 id="lg-qa"><span class="num">09</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>What problem does LangGraph solve that AgentExecutor didn't?</summary><div class="qa-body">AgentExecutor hid the loop: no pausing before a dangerous action, no resume after a crash, no inspectable state, no built-in memory. LangGraph makes every step a node and every transition an edge you control, and checkpoints state, so you get approval, recovery, branching, loops and memory.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Define state, node and edge.</summary><div class="qa-body">State: a typed dict shared by all nodes. Node: a function that takes the state and returns only the keys it changed. Edge: what runs next, either fixed (<code>add_edge</code>) or decided by a routing function (<code>add_conditional_edges</code>).</div></details>
