@@ -19,7 +19,8 @@ const CATEGORIES = [
     {"key": "sql_transactions", "label": "06 · Transactions & Scaling"},
     {"key": "sql_modeling",     "label": "07 · Data Modeling"},
     {"key": "sql_interview",    "label": "08 · Interview Patterns"},
-    {"key": "sql",              "label": "── SQL Overview (revision)"}
+    {"key": "sql",              "label": "── SQL Overview (revision)"},
+    {"key": "sql_complete",     "label": "── SQL Complete Reference (Basics to Advanced)"}
   ] },
   { key: "mathstats", label: "Mathematics & Statistics", emoji: "\u03a3", topics: [] },
   { key: "ml", label: "Machine Learning", emoji: "\ud83e\udd16", topics: [
