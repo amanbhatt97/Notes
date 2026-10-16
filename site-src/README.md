@@ -29,6 +29,7 @@ site-src/
         dl.js          ← Deep Learning notes
         genai.js       ← Generative AI notes
         dsa.js         ← DSA notes
+        databases.js   ← Databases notes (SQL series)
     README.md          ← this file
 ```
 
