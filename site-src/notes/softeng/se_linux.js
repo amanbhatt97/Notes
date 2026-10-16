@@ -4,6 +4,113 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Linux &amp; Terminal</h1>
   <p class="lead">Every model you deploy runs on a Linux box you reach through a terminal: a cloud VM, a GPU server, a Docker container. This note covers the commands you need to move around, inspect data and logs, run long jobs and automate them.</p>
 
+  <h2 id="sl-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Linux &amp; Terminal</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Filesystem &amp; navigation</div>
+        <ul>
+          <li><b>One tree from <code>/</code></b> — no drive letters; disks are mounted as folders</li>
+          <li><b>Key dirs</b> — <code>/etc</code> config, <code>/home</code> users, <code>/var/log</code> logs, <code>/tmp</code> scratch, <code>/usr</code> programs, <code>/opt</code> add-ons</li>
+          <li><b>Absolute vs relative</b> — from <code>/</code> vs from current dir; 💡 full address vs "two doors down"</li>
+          <li><b>Moves</b> — <code>pwd</code>, <code>ls -la</code> (incl. hidden), <code>cd ~</code>, <code>cd ..</code>, <code>cd -</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Core commands</div>
+        <ul>
+          <li><b>Files</b> — <code>cp -r</code>, <code>mv</code>, <code>rm -r</code> (no recycle bin), <code>mkdir -p a/b/c</code></li>
+          <li><b>Peek</b> — <code>head -n 5</code>, <code>tail -n 5</code>, <code>less</code>; <code>tail -f log</code> follows live</li>
+          <li><b>grep</b> searches text — <code>grep -rn "X" src/</code>; <code>-i</code> ignore case, <code>-v</code> invert, <code>-c</code> count</li>
+          <li><b>find</b> searches files — <code>find . -name "*.csv" -size +100M -mtime -1</code></li>
+          <li><b><code>wc -l</code></b> — line count; CSV rows = lines − 1</li>
+          <li>⚠ Never <code>cat</code> a 10 GB CSV; ⚠ <code>rm -rf $DIR/</code> with empty DIR = <code>rm -rf /</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Pipes &amp; redirection</div>
+        <ul>
+          <li><b>Pipe <code>|</code></b> — stdout of one becomes stdin of next; small tools chained</li>
+          <li><b>Group-by count</b> — <code>awk '{print $4}' f | sort | uniq -c | sort -rn</code></li>
+          <li><b>CSV column</b> — <code>tail -n +2 f.csv | cut -d, -f2</code> (skip header)</li>
+          <li><b>Redirects</b> — <code>&gt;</code> overwrite, <code>&gt;&gt;</code> append, <code>2&gt;</code> stderr, <code>&gt; f 2&gt;&amp;1</code> both, <code>&lt;</code> stdin</li>
+          <li>⚠ <b>uniq</b> merges only adjacent duplicates → sort first</li>
+          <li>⚠ <b>cut -d,</b> breaks on quoted commas → pandas/csvkit for real CSVs</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Permissions</div>
+        <ul>
+          <li><b><code>-rwxr-xr-x</code></b> — type + owner/group/others × read/write/execute</li>
+          <li><b>Octal</b> — r=4 w=2 x=1 → 755 scripts/dirs, 644 files, 600 secrets/SSH keys, 640 = rw/r/none</li>
+          <li><b>chmod</b> — <code>chmod +x run.sh</code>, <code>chmod u+x,g-w f</code>; <b>chown</b> — <code>sudo chown -R asha:ds data/</code></li>
+          <li><b>Dir x bit</b> — means "may enter"</li>
+          <li><b>"Permission denied"</b> on <code>./script</code> → missing x bit</li>
+          <li>⚠ <code>chmod -R 777</code> "fix" lets everyone write everything — find the right user instead</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Environment &amp; PATH</div>
+        <ul>
+          <li><b><code>export VAR=x</code></b> — visible to child processes; plain <code>VAR=x</code> = shell-only</li>
+          <li><b>PATH</b> — colon-separated dirs scanned left → right; first match runs</li>
+          <li><b>"command not found"</b> → not in PATH; check <code>which</code>, <code>echo $PATH</code></li>
+          <li><b>Extend</b> — <code>export PATH="$HOME/.local/bin:$PATH"</code> in <code>~/.bashrc</code>; venv activate = prepend <code>.venv/bin</code></li>
+          <li><b>Python</b> — <code>os.environ["X"]</code> (fail fast) vs <code>os.getenv("X", default)</code></li>
+          <li><b>12-factor</b> — secrets &amp; per-env config in env vars, not code; same image everywhere</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Processes &amp; jobs</div>
+        <ul>
+          <li><b>Background + survive logout</b> — <code>nohup python train.py &gt; train.log 2&gt;&amp;1 &amp;</code>, or <code>tmux</code>/<code>screen</code></li>
+          <li><b>Inspect</b> — <code>ps aux</code>, <code>pgrep -f name</code>, <code>top</code>/<code>htop</code>, <code>nvidia-smi</code>, <code>jobs</code></li>
+          <li><b><code>kill PID</code></b> = SIGTERM (15): graceful, can save state</li>
+          <li><b><code>kill -9</code></b> = SIGKILL: instant, no cleanup, last resort; 💡 "close shop" vs cut power</li>
+          <li><b>Exit code 143</b> = 128 + 15 (killed by SIGTERM)</li>
+          <li><b>Keys</b> — Ctrl+C interrupt, Ctrl+Z pause, <code>bg</code>/<code>fg</code> resume</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Bash scripting</div>
+        <ul>
+          <li><b>Header</b> — <code>#!/usr/bin/env bash</code> + <code>set -euo pipefail</code></li>
+          <li><b>-e</b> stop on error · <b>-u</b> unset var = error · <b>pipefail</b> pipe fails if any stage fails</li>
+          <li><b>Exit codes</b> — 0 success, non-zero failure; read <code>$?</code>; <code>exit 1</code> on error, msg to <code>&gt;&amp;2</code></li>
+          <li><b><code>false | true; echo $?</code></b> → 0 (last cmd); with pipefail → 1</li>
+          <li><b>Constructs</b> — <code>[[ -d "$D" ]]</code>, <code>for f in "$D"/*.csv</code>, <code>$(cmd)</code>, <code>a &amp;&amp; b || c</code></li>
+          <li>⚠ No spaces around <code>=</code> (<code>X = 5</code> runs command X); always quote <code>"$var"</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">SSH, scp &amp; cron</div>
+        <ul>
+          <li><b>Key auth</b> — public key in server's <code>authorized_keys</code>; server sends challenge, client signs with private key</li>
+          <li><b>Setup</b> — <code>ssh-keygen -t ed25519</code>, <code>ssh-copy-id user@host</code>; private key must be <code>chmod 600</code></li>
+          <li><b>Tunnel</b> — <code>ssh -L 8888:localhost:8888 host</code> → remote Jupyter locally</li>
+          <li><b>Copy</b> — <code>scp f host:/dir</code>, <code>scp -r</code>; <code>rsync -avz</code> sends only changes</li>
+          <li><b>cron</b> — <code>min hour day-of-month month weekday cmd</code>
+            <ul><li><code>*/15 * * * *</code> every 15 min · <code>0 3 * * *</code> nightly · <code>0 8 * * 1-5</code> weekdays 08:00</li></ul>
+          </li>
+          <li>⚠ cron: tiny PATH, no .bashrc, server TZ (UTC) → absolute paths + log redirect</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Disk &amp; memory</div>
+        <ul>
+          <li><b><code>df -h</code></b> — free space per filesystem; <b><code>du -sh dir</code></b> — space used by files</li>
+          <li><b>Biggest dirs</b> — <code>du -h --max-depth=1 . | sort -h | tail</code></li>
+          <li><b><code>free -h</code></b> — read <b>available</b>, not "free" (buff/cache is reclaimable)</li>
+          <li><b><code>nproc</code></b> — CPU count</li>
+          <li><b>Silent job death</b> — <code>dmesg | grep -i oom</code> (OOM killer), <code>df -h</code> (disk full of checkpoints/logs)</li>
+          <li><b>Usual disk hogs</b> — checkpoints, logs, Docker images, pip/HF caches</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -16,8 +123,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="sl-bash"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Bash Scripting</span><span class="rm-sub">Safe scripts that fail loudly</span></div></div>
       <div class="rm-item rm-done" data-target="sl-ssh"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">SSH, scp &amp; cron</span><span class="rm-sub">Remote boxes, schedules</span></div></div>
       <div class="rm-item rm-done" data-target="sl-res"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Disk &amp; Memory</span><span class="rm-sub">df, du, free</span></div></div>
-      <div class="rm-item rm-done" data-target="sl-rev"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 9 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="sl-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="sl-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
@@ -304,20 +410,7 @@ $ nproc
     <p>Job died with no traceback? Check <code>dmesg | grep -i oom</code> (killed by the out-of-memory killer), <code>df -h</code> (disk full from checkpoints/logs), then <code>free -h</code>.</p>
   </div>
 
-  <h2 id="sl-rev"><span class="num">10</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li>One tree from <code>/</code>; <code>~</code> = home; absolute vs relative paths.</li>
-    <li><code>grep</code> searches text, <code>find</code> searches files, <code>head/tail/less</code> peek safely.</li>
-    <li>Pipes pass stdout → stdin; <code>sort | uniq -c | sort -rn</code> = group-by count.</li>
-    <li><code>&gt;</code> overwrite, <code>&gt;&gt;</code> append, <code>2&gt;&amp;1</code> merge stderr.</li>
-    <li><code>rwx</code> = 4/2/1 for owner/group/others; 755 scripts, 600 secrets.</li>
-    <li><code>export</code> makes a variable visible to children; PATH decides which program runs.</li>
-    <li><code>kill</code> = SIGTERM (graceful), <code>kill -9</code> = SIGKILL; <code>nohup</code>/<code>tmux</code> survive logout.</li>
-    <li>Scripts: <code>set -euo pipefail</code>, quote variables, exit 0 = success.</li>
-    <li>SSH keys: public on server, private stays home; cron = min hour dom month dow.</li>
-  </ol></div>
-
-  <h2 id="sl-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <h2 id="sl-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>Find the 3 most frequent IPs in an access log where IP is the first field.</summary><div class="qa-body"><code>awk '{print $1}' access.log | sort | uniq -c | sort -rn | head -3</code>. Sort first because <code>uniq</code> only collapses adjacent lines.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What does <code>chmod 640 file</code> mean?</summary><div class="qa-body">Owner 6 = read+write, group 4 = read, others 0 = nothing. Shown as <code>-rw-r-----</code>.</div></details>

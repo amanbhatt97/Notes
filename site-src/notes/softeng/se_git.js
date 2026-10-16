@@ -4,6 +4,113 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Git &amp; GitHub</h1>
   <p class="lead">Git records every version of your code so a team can work in parallel and undo anything. Interviewers expect you to branch, merge, resolve a conflict and recover a mistake without panic; DS repos add data, models and notebooks on top.</p>
 
+  <h2 id="sg-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Git &amp; GitHub</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">How Git stores history</div>
+        <ul>
+          <li><b>Commit</b> — full snapshot (tree) + author + message + parent pointer(s)</li>
+          <li><b>Snapshots, not diffs</b> — unchanged files reuse the same blob hash (cheap)</li>
+          <li><b>DAG</b> — commits point back to parents; merge commit has 2 parents</li>
+          <li><b>Branch</b> — file holding one commit hash; creating one is instant</li>
+          <li><b>HEAD</b> — "where you are"; usually points to a branch name</li>
+          <li><b>Objects</b> — blob (file), tree (folder), commit; inspect with <code>git cat-file -p</code></li>
+          <li>💡 photo album: commit = photo of whole room; branch = sticky note on a photo</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Three areas</div>
+        <ul>
+          <li><b>Working tree</b> → <code>git add</code> → <b>index (staging)</b> → <code>git commit</code> → <b>repo</b></li>
+          <li><b>Staging</b> — lets you choose exactly what goes into the next commit</li>
+          <li><b><code>git status --short</code></b> — left letter = index vs HEAD, right = worktree vs index
+            <ul><li><code>MM</code> staged then edited again; <code>??</code> untracked; <code>UU</code> conflict</li></ul>
+          </li>
+          <li><b><code>git diff</code></b> = unstaged changes; <b><code>git diff --staged</code></b> = what will be committed</li>
+          <li>⚠ <b>Commit after re-edit</b> saves only the staged version</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Commits &amp; branches</div>
+        <ul>
+          <li><b>Message</b> — subject ≤ ~50 chars, imperative ("Add…"), body explains <em>why</em></li>
+          <li><b>One logical change per commit</b> — reviewable and revertable alone</li>
+          <li><b>Syntax</b> — <code>git switch -c feat/x</code>, <code>git switch main</code>, <code>git branch -d feat/x</code></li>
+          <li>⚠ <b>Detached HEAD</b> — after <code>checkout &lt;hash&gt;</code>; new commits orphaned → <code>git switch -c rescue</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Merge vs rebase</div>
+        <ul>
+          <li><b>Merge</b> — keeps true branchy history, adds merge commit M (2 parents)</li>
+          <li><b>Fast-forward</b> — main has no new commits → label just slides forward, no M</li>
+          <li><b>Rebase</b> — replays your commits on top of main → linear, <em>new hashes</em> (C → C′)</li>
+          <li><b>Use</b> — rebase your own branch before a PR; merge/squash into shared main</li>
+          <li>⚠ <b>Golden rule</b> — never rebase commits others have pulled (duplicates, chaos)</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Resolving a conflict</div>
+        <ul>
+          <li><b>Cause</b> — both branches edited the same lines → merge stops, file marked <code>UU</code></li>
+          <li><b>Markers</b> — <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</code> (yours) / <code>=======</code> / <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt; branch</code> (incoming)</li>
+          <li><b>Fix</b> — write final content (either, both, or new), delete markers → <code>git add</code> → <code>git commit</code></li>
+          <li><b>Escape hatch</b> — <code>git merge --abort</code> returns to pre-merge state</li>
+          <li>⚠ <b>Leftover markers</b> break code (syntax error) — run tests before committing</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Pull requests &amp; remotes</div>
+        <ul>
+          <li><b>Flow</b> — branch → commit → <code>git push -u origin feat/x</code> → PR → CI → review → squash-merge → delete branch</li>
+          <li><b>Small PRs</b> — &lt; ~400 lines get real review; huge ones get "LGTM"</li>
+          <li><b>Reviewer checks</b> — correctness, edge cases, tests, naming, leakage, secrets</li>
+          <li><b>Merge styles</b> — merge commit, squash (1 commit), rebase-and-merge</li>
+          <li><b>fetch vs pull</b> — fetch downloads (updates <code>origin/main</code>); pull = fetch + merge/rebase</li>
+          <li><b>Fork</b> — your server-side copy of someone's repo; <b>origin</b> = default remote name</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">.gitignore, tags, releases</div>
+        <ul>
+          <li><b>Ignore</b> — raw data, <code>*.pkl</code> models, <code>.env</code>, <code>__pycache__/</code>, checkpoints, venvs</li>
+          <li><b><code>git check-ignore -v file</code></b> — shows which rule hides it</li>
+          <li>⚠ <b>Already tracked?</b> .gitignore won't untrack → <code>git rm --cached file</code></li>
+          <li>⚠ <b>Pushed secret</b> — rotate key FIRST, then purge history (filter-repo/BFG)</li>
+          <li><b>Tag</b> — branch that never moves: <code>git tag -a v1.0.0 -m "…"</code>, push it explicitly</li>
+          <li><b>Release</b> — tag + notes + files; semver MAJOR.MINOR.PATCH</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Undoing safely</div>
+        <ul>
+          <li><b><code>git restore file</code></b> — discard worktree edits; <code>--staged</code> = unstage</li>
+          <li><b><code>commit --amend</code></b> — fix last <em>unpushed</em> commit (rewrites)</li>
+          <li><b><code>git revert &lt;hash&gt;</code></b> — new inverse commit; safe for pushed history</li>
+          <li><b><code>git reset</code></b> — move branch pointer
+            <ul><li><code>--soft</code> keep staged · <code>--mixed</code> (default) keep unstaged · <code>--hard</code> delete changes</li></ul>
+          </li>
+          <li><b><code>git reflog</code></b> — local log of HEAD moves (~90 days) → <code>reset --hard HEAD@{n}</code> recovers</li>
+          <li>💡 revert = printed correction; reset = pulping today's paper; reflog = CCTV</li>
+          <li>⚠ Uncommitted work lost by <code>reset --hard</code> is gone for good</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Git for data science</div>
+        <ul>
+          <li><b>Problem</b> — big files bloat every clone forever; GitHub rejects &gt; 100 MB</li>
+          <li><b>Git LFS</b> — Git stores pointer (oid sha256 + size); binary lives in LFS store</li>
+          <li><b>DVC</b> — <code>dvc add</code> writes <code>.dvc</code> pointer; <code>dvc push</code> data to S3/GCS; versions pipelines too</li>
+          <li><b>Notebooks</b> — .ipynb = JSON + outputs → noisy diffs; nbstripout, nbdime, Jupytext</li>
+          <li><b>Reproducibility</b> = same code commit + data version + params (Git covers only code)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -16,8 +123,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="sg-ignore"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">.gitignore, Tags, Releases</span><span class="rm-sub">What never gets committed</span></div></div>
       <div class="rm-item rm-done" data-target="sg-undo"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Undoing Things Safely</span><span class="rm-sub">restore, revert, reset, reflog</span></div></div>
       <div class="rm-item rm-done" data-target="sg-ds"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Git for Data Science</span><span class="rm-sub">Big files, DVC, notebooks</span></div></div>
-      <div class="rm-item rm-done" data-target="sg-rev"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 9 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="sg-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="sg-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
@@ -293,20 +399,7 @@ dvc push                         # upload data to remote storage</div>
     <p>Reproducibility = same <strong>code commit</strong> + same <strong>data version</strong> + same <strong>params</strong>. Git alone covers only the first.</p>
   </div>
 
-  <h2 id="sg-rev"><span class="num">10</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Commit</strong> = snapshot + parent pointer; history is a DAG.</li>
-    <li><strong>Branch</strong> = movable pointer; <strong>HEAD</strong> = where you are; <strong>tag</strong> = fixed pointer.</li>
-    <li>Working tree → <code>add</code> → index → <code>commit</code> → repo.</li>
-    <li><strong>Merge</strong> keeps history (merge commit); <strong>rebase</strong> rewrites it linear — never on shared branches.</li>
-    <li>Conflict: edit file, remove markers, <code>git add</code>, <code>git commit</code> (or <code>--abort</code>).</li>
-    <li>PR flow: branch → push → PR → CI → review → squash-merge.</li>
-    <li>Pushed mistake → <code>revert</code>. Local mess → <code>reset</code>. Lost commit → <code>reflog</code>.</li>
-    <li>Ignore data, models, <code>.env</code>; a leaked secret must be rotated.</li>
-    <li>Big files → LFS/DVC pointers; notebooks → strip outputs.</li>
-  </ol></div>
-
-  <h2 id="sg-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <h2 id="sg-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>Does Git store diffs or snapshots?</summary><div class="qa-body">Snapshots: each commit points to a tree of the whole project. Unchanged files reuse the same blob, so it's cheap. (Packfiles compress with deltas on disk, but that's a storage detail.)</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What is a branch, physically?</summary><div class="qa-body">A file in <code>.git/refs/heads/</code> containing one commit hash. Committing moves it forward. That's why branching is instant and cheap.</div></details>

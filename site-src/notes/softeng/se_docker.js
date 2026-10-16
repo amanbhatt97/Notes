@@ -4,6 +4,108 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Docker</h1>
   <p class="lead">Docker packages your model, code, Python and system libraries into one image that runs the same on a laptop, in CI and in the cloud. It's the standard way ML APIs are shipped, and the base of Kubernetes and most MLOps tools. Builds on the Linux note (processes, env vars, ports).</p>
 
+  <h2 id="sd-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Docker</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Why Docker</div>
+        <ul>
+          <li><b>Problem</b> — "works on my machine": Python, package, system-lib, env-var drift</li>
+          <li><b>Example</b> — sklearn 1.6 pickle won't load on 1.3; missing libgomp crashes LightGBM</li>
+          <li><b>Flow</b> — Dockerfile → <code>docker build</code> → image → <code>docker run</code> → container</li>
+          <li><b>Container vs VM</b> — isolated process on host kernel (MBs, seconds) vs full guest OS (GBs, minutes)</li>
+          <li><b>Isolation via</b> — Linux namespaces + cgroups; weaker than a VM</li>
+          <li><b>vs virtualenv</b> — venv isolates Python packages only, not Python or system libs</li>
+          <li>💡 shipping container: every crane/ship handles the same box</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Images vs containers</div>
+        <ul>
+          <li><b>Image</b> — read-only layered template (class); <code>docker build</code>/<code>pull</code>, list <code>docker images</code></li>
+          <li><b>Container</b> — running/stopped instance (object) + thin writable layer; list <code>docker ps -a</code></li>
+          <li><b>One image → many containers</b> (different ports, tests)</li>
+          <li>⚠ <b>Container writes are throwaway</b> — new container starts from clean image</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Dockerfile &amp; layers</div>
+        <ul>
+          <li><b>Each instruction = cached layer</b>; a change invalidates that layer + all after it</li>
+          <li><b>Order</b> — FROM → COPY requirements.txt → RUN pip install → COPY code (changes most) last</li>
+          <li>⚠ <code>COPY . .</code> before pip install → every code edit reinstalls all packages</li>
+          <li><b>Multi-stage</b> — <code>FROM … AS builder</code> builds/trains; final stage <code>COPY --from=builder</code> venv + model only</li>
+          <li><b>Slim base</b> — <code>python:3.12-slim</code>; Alpine (musl) often breaks numpy/torch wheels</li>
+          <li><b>.dockerignore</b> — keep .git, .venv, data/, .env out of build context</li>
+          <li><b>CMD vs ENTRYPOINT</b> — ENTRYPOINT fixes executable; CMD = overridable default args; use exec form <code>["uvicorn", …]</code> so app is PID 1 and gets SIGTERM</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Build, run, ports, env</div>
+        <ul>
+          <li><b>Build</b> — <code>docker build -t iris-api:1.0 .</code></li>
+          <li><b>Run</b> — <code>docker run -d --name iris -p 8080:8000 -e KEY=val img</code>; <code>--rm</code> auto-delete</li>
+          <li><b><code>-p host:container</code></b> — opens a host port into the container</li>
+          <li><b>Debug</b> — <code>docker logs -f</code>, <code>docker exec -it NAME bash</code>, <code>docker ps</code></li>
+          <li><b>Lifecycle</b> — <code>stop</code> (SIGTERM) / <code>rm</code> container / <code>rmi</code> image; <code>--gpus all</code> needs NVIDIA toolkit</li>
+          <li>⚠ App must bind <code>0.0.0.0</code>, not <code>127.0.0.1</code> → else "connection reset"</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Volumes</div>
+        <ul>
+          <li><b>Named volume</b> — <code>-v mldata:/data</code>; Docker-managed, outlives containers (DB files, logs)</li>
+          <li><b>Bind mount</b> — <code>-v "$PWD/data":/data</code>; host folder inside (dev, live code)</li>
+          <li><b>tmpfs</b> — in-memory, gone on stop (scratch, secrets)</li>
+          <li>💡 container = hotel room cleaned at checkout; volume = locker in the lobby</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Networking</div>
+        <ul>
+          <li><b>User-defined network</b> — <code>docker network create mlnet</code>; containers resolve each other by <b>name</b> (built-in DNS)</li>
+          <li><b>Default network</b> — names don't resolve ("Name or service not known")</li>
+          <li><b>Container → container</b> uses container port (<code>api:8000</code>); <code>-p</code> is only for host</li>
+          <li>⚠ <code>localhost</code> inside a container = that container → use <code>db:5432</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Docker Compose</div>
+        <ul>
+          <li><b>What</b> — multi-container app (api + Postgres + Redis) in one <code>compose.yaml</code></li>
+          <li><b>Keys</b> — <code>services</code>, <code>image</code>/<code>build</code>, <code>ports</code>, <code>environment</code>, <code>volumes</code>, <code>healthcheck</code>, <code>depends_on</code></li>
+          <li><b>Auto network</b> — services reach each other by service name</li>
+          <li><b>Commands</b> — <code>up -d</code>, <code>ps</code>, <code>exec svc cmd</code>, <code>down</code> (keeps volumes) / <code>down -v</code> (deletes them)</li>
+          <li>⚠ Plain <code>depends_on</code> only orders start-up → healthcheck + <code>condition: service_healthy</code> + retry in code</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Registries &amp; tags</div>
+        <ul>
+          <li><b>Flow</b> — build → <code>docker tag img ghcr.io/user/name:1.1</code> → <code>push</code> → server pulls → run</li>
+          <li><b>Tag = label</b>; same image ID can have many names</li>
+          <li><b>Registries</b> — Docker Hub, ghcr.io, AWS ECR, GCP Artifact Registry</li>
+          <li>⚠ <code>:latest</code> = default tag, mutable, not "newest" → deploy version / git-SHA tags (or digests) for rollback</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">ML best practices</div>
+        <ul>
+          <li><b>Pin</b> base image + <code>==</code> package versions → pickles load next month</li>
+          <li><b>Small</b> — slim + multi-stage + <code>--no-cache-dir</code>; inspect with <code>docker history</code></li>
+          <li><b>Non-root</b> — <code>USER appuser</code>: compromise ≠ root on host</li>
+          <li><b>No secrets in image</b> — layers readable by anyone; pass at runtime (<code>-e</code>, <code>--env-file</code>, secret manager)</li>
+          <li><b>Big models</b> outside image (S3/registry/volume); small ones baked in with versioned tag</li>
+          <li><b>Ops</b> — one process per container, log to stdout, HEALTHCHECK</li>
+          <li><b>GPU</b> — <code>nvidia/cuda</code> / <code>pytorch/pytorch</code> base matching host driver</li>
+          <li>⚠ Deleting a file in a later layer doesn't shrink image → download+delete in same RUN</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -16,8 +118,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="sd-compose"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Docker Compose</span><span class="rm-sub">API + Postgres + Redis</span></div></div>
       <div class="rm-item rm-done" data-target="sd-reg"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Registries &amp; Tagging</span><span class="rm-sub">Ship images, pin versions</span></div></div>
       <div class="rm-item rm-done" data-target="sd-best"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Best Practices for ML</span><span class="rm-sub">Small, safe, reproducible</span></div></div>
-      <div class="rm-item rm-done" data-target="sd-rev"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 9 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="sd-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="sd-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
@@ -320,20 +421,7 @@ SIZE      CREATED BY
     <p>Deleting a file in a later layer doesn't shrink the image — it's still in the earlier layer. Download-and-delete in the <em>same</em> <code>RUN</code>, or use multi-stage.</p>
   </div>
 
-  <h2 id="sd-rev"><span class="num">10</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li>Container = isolated process sharing the host kernel; VM = full OS.</li>
-    <li><strong>Image</strong> = read-only template (class); <strong>container</strong> = running instance (object).</li>
-    <li>Each Dockerfile instruction is a cached layer; order rarely-changing steps first.</li>
-    <li>Multi-stage + slim base + .dockerignore → small, clean images.</li>
-    <li><code>-p host:container</code> publishes ports; app must bind <code>0.0.0.0</code>.</li>
-    <li>Container filesystem is throwaway; persist with volumes or bind mounts.</li>
-    <li>Same network → reach by name (<code>db:5432</code>); <code>localhost</code> = the container itself.</li>
-    <li>Compose = multi-container app in one YAML; healthcheck for real readiness.</li>
-    <li>Pin versions, non-root, no secrets, immutable tags; big models outside the image.</li>
-  </ol></div>
-
-  <h2 id="sd-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <h2 id="sd-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>Image vs container?</summary><div class="qa-body">An image is an immutable, layered template built from a Dockerfile. A container is a running instance of it with its own writable layer, process and network. One image can run as many containers.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Container vs VM?</summary><div class="qa-body">A VM virtualises hardware and runs a full guest OS kernel (heavy, minutes to boot, strong isolation). A container is a process isolated with Linux namespaces and cgroups on the host kernel (light, seconds to start, weaker isolation).</div></details>
