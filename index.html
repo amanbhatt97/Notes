@@ -10381,6 +10381,1097 @@ SELECT user_id, MAX(days) AS longest_streak FROM s GROUP BY user_id;</div>User 1
 });
 
 
+// notes/dataeng/de_etl.js — ETL & Orchestration
+Object.assign(TOPIC_CONTENT, {
+  "de_etl": `<main>
+  <h1>ETL &amp; Orchestration</h1>
+  <p class="lead">How raw data from apps, APIs and files becomes clean tables you can train models on, every day, without breaking. The ideas that matter in interviews: idempotency, backfills, data quality and Airflow DAGs. Builds on SQL and pandas.</p>
+
+  <h2 id="et-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">ETL &amp; Orchestration</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">ETL vs ELT</div>
+        <ul>
+          <li><b>ETL</b> — transform before loading; old-school, fixed schema, compute outside warehouse</li>
+          <li><b>ELT</b> — load raw first, transform inside warehouse with SQL (dbt)</li>
+          <li><b>Why ELT won</b> — cheap cloud storage + elastic warehouse compute; raw data kept for replays</li>
+          <li><b>Still ETL</b> — PII must be masked before landing; heavy non-SQL work (images, NLP)</li>
+          <li>💡 ETL = cook then deliver; ELT = deliver groceries, cook in the client's kitchen</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Extract</div>
+        <ul>
+          <li><b>APIs</b> — paginate, respect rate limits, retry 429/5xx with backoff</li>
+          <li><b>DB full dump</b> — simple, heavy; fine for small tables</li>
+          <li><b>Incremental</b> — <code>WHERE updated_at &gt; last_watermark</code>; misses hard deletes</li>
+          <li><b>CDC</b> — read the DB's change log (WAL/binlog) via Debezium; catches inserts, updates, deletes</li>
+          <li><b>Files</b> — CSV/JSON/Parquet dropped in S3/SFTP; wait with a sensor</li>
+          <li>⚠ <b>Never</b> run heavy extracts on the prod primary; use a replica</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Transform &amp; Load</div>
+        <ul>
+          <li><b>Clean</b> — dedupe, fix types, trim/case strings, handle NULLs, quarantine bad rows</li>
+          <li><b>Enrich</b> — join reference data (FX rates, geo, user attributes)</li>
+          <li><b>Normalize</b> — consistent units, currencies, time zones (store UTC)</li>
+          <li><b>Targets</b> — warehouse (BigQuery/Snowflake), lake (S3 Parquet), OLTP DB, feature store</li>
+          <li><b>Layers</b> — raw/bronze → cleaned/silver → business/gold</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Idempotency</div>
+        <ul>
+          <li><b>Definition</b> — running the same job twice gives the same result as once</li>
+          <li><b>Why</b> — retries, crashes, manual reruns and backfills all re-run jobs</li>
+          <li><b>Partition overwrite</b> — <code>DELETE WHERE date = ds; INSERT …</code> in one transaction</li>
+          <li><b>Upsert</b> — <code>INSERT … ON CONFLICT (key) DO UPDATE</code> / <code>MERGE</code></li>
+          <li><b>Parameterise by logical date</b> (<code>ds</code>), never <code>now()</code></li>
+          <li>⚠ <b>Plain append</b> doubles rows on rerun (we saw revenue 165.6 → 331.2)</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Reliability</div>
+        <ul>
+          <li><b>Backfill</b> — rerun past dates after a bug fix or new column; needs idempotent, date-parameterised jobs</li>
+          <li><b>Retries</b> — for transient errors (network, 429); exponential backoff; not for bad data</li>
+          <li><b>Fail loudly</b> — alerts on failure/SLA miss; dead-letter bad records</li>
+          <li><b>DQ checks</b> — row count, nulls, uniqueness, ranges, freshness, schema</li>
+          <li><b>Tools</b> — Great Expectations, dbt tests, Soda; block the load if checks fail</li>
+          <li>⚠ <b>Silent failure</b> — job "succeeds" with 0 rows; check counts</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Airflow</div>
+        <ul>
+          <li><b>DAG</b> — Python file defining tasks + dependencies, no cycles</li>
+          <li><b>Operator</b> — task template (Python, Bash, SQL, S3…); <b>task</b> = instance in a DAG</li>
+          <li><b>Schedule</b> — cron / <code>@daily</code>; run for date D starts after D ends</li>
+          <li><b>catchup</b> — auto-run all missed intervals since <code>start_date</code></li>
+          <li><b>XCom</b> — small values between tasks (paths, counts), not dataframes</li>
+          <li><b>Sensor</b> — waits for a condition (file, partition, other DAG); <code>mode="reschedule"</code> frees the slot</li>
+          <li><b>Alternatives</b> — Prefect (pythonic), Dagster (assets), Luigi (legacy)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="roadmap-wrap">
+    <h2 class="roadmap-title">What we'll cover</h2>
+    <div class="roadmap-grid">
+      <div class="rm-item rm-done" data-target="et-elt"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">ETL vs ELT</span><span class="rm-sub">Where the transform runs</span></div></div>
+      <div class="rm-item rm-done" data-target="et-ext"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Extract, Transform, Load</span><span class="rm-sub">Sources, cleaning, targets</span></div></div>
+      <div class="rm-item rm-done" data-target="et-idem"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Idempotency</span><span class="rm-sub">Re-running must be safe</span></div></div>
+      <div class="rm-item rm-done" data-target="et-rel"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Backfills, Retries, Quality</span><span class="rm-sub">Pipelines that don't lie</span></div></div>
+      <div class="rm-item rm-done" data-target="et-air"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Airflow</span><span class="rm-sub">DAGs, operators, XCom, sensors</span></div></div>
+      <div class="rm-item rm-done" data-target="et-tools"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Orchestrator Comparison</span><span class="rm-sub">Airflow, Prefect, Dagster, Luigi</span></div></div>
+      <div class="rm-item rm-done" data-target="et-build"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Build It: Local ETL</span><span class="rm-sub">CSV → pandas → Postgres</span></div></div>
+      <div class="rm-item rm-done" data-target="et-qa"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+    </div>
+  </div>
+
+  <h2 id="et-elt"><span class="num">01</span>ETL vs ELT</h2>
+  <figure class="viz"><svg viewBox="0 0 600 170" width="600">
+    <defs><marker id="et-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <text x="10" y="45" font-weight="bold">ETL</text>
+    <rect x="60" y="22" width="110" height="38" rx="6" class="fs"/><text x="115" y="46" text-anchor="middle">Sources</text>
+    <rect x="230" y="22" width="140" height="38" rx="6" class="fv"/><text x="300" y="40" text-anchor="middle">Transform</text><text x="300" y="54" text-anchor="middle" font-size="10">Spark / Python server</text>
+    <rect x="430" y="22" width="150" height="38" rx="6" class="fb"/><text x="505" y="46" text-anchor="middle">Warehouse (clean)</text>
+    <line x1="170" y1="41" x2="228" y2="41" stroke="currentColor" marker-end="url(#et-ar)"/>
+    <line x1="370" y1="41" x2="428" y2="41" stroke="currentColor" marker-end="url(#et-ar)"/>
+    <text x="10" y="125" font-weight="bold">ELT</text>
+    <rect x="60" y="102" width="110" height="38" rx="6" class="fs"/><text x="115" y="126" text-anchor="middle">Sources</text>
+    <rect x="230" y="92" width="350" height="62" rx="8" class="fb"/>
+    <text x="405" y="108" text-anchor="middle" font-size="11">Warehouse</text>
+    <rect x="245" y="115" width="90" height="30" rx="5" class="fs"/><text x="290" y="134" text-anchor="middle" font-size="11">raw</text>
+    <rect x="370" y="115" width="80" height="30" rx="5" class="fv"/><text x="410" y="134" text-anchor="middle" font-size="11">SQL / dbt</text>
+    <rect x="480" y="115" width="85" height="30" rx="5" class="fg"/><text x="522" y="134" text-anchor="middle" font-size="11">clean</text>
+    <line x1="170" y1="121" x2="243" y2="128" stroke="currentColor" marker-end="url(#et-ar)"/>
+    <line x1="335" y1="130" x2="368" y2="130" stroke="currentColor" marker-end="url(#et-ar)"/>
+    <line x1="450" y1="130" x2="478" y2="130" stroke="currentColor" marker-end="url(#et-ar)"/>
+  </svg><figcaption>Same three steps, different order. ELT keeps the raw copy inside the warehouse.</figcaption></figure>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>ETL is a meal-kit company that cooks before delivering. ELT delivers raw groceries and cooks in your (huge) kitchen, so you can cook a different dish later.</p>
+  </div>
+
+  <h2 id="et-ext"><span class="num">02</span>Extract, Transform, Load</h2>
+  <h3>Extract</h3>
+  <table class="tbl">
+    <tr><th>Method</th><th>How</th><th>Catch</th></tr>
+    <tr><td>Full snapshot</td><td><code>SELECT *</code> every run</td><td>Simple; too heavy for big tables</td></tr>
+    <tr><td>Incremental</td><td><code>WHERE updated_at &gt; :watermark</code></td><td>Misses hard deletes; needs a reliable timestamp</td></tr>
+    <tr><td><strong>CDC</strong> (change data capture)</td><td>Stream the DB's write-ahead log (Debezium → Kafka)</td><td>Catches every insert/update/delete, near real time; more infra</td></tr>
+    <tr><td>API</td><td>Paginated HTTP calls</td><td>Rate limits (429), retries, schema drift</td></tr>
+    <tr><td>Files</td><td>CSV/JSON/Parquet land in S3 or SFTP</td><td>Need a sensor to know when they've arrived</td></tr>
+  </table>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Pulling a huge extract from the production primary DB slows the live app. Read from a replica or use CDC.</p>
+  </div>
+  <h3>Transform</h3>
+  <div class="flow"><span>Dedupe</span><span>Fix types</span><span>Normalize (case, units, UTC)</span><span>Enrich (joins)</span><span>Validate</span></div>
+  <h3>Load</h3>
+  <div class="cards">
+    <div><b>Warehouse</b><p>BigQuery, Snowflake, Redshift. SQL analytics, BI.</p><small>Bulk load (COPY), not row-by-row INSERT</small></div>
+    <div><b>Data lake</b><p>Parquet files on S3/GCS, partitioned by date.</p><small>Cheap; Delta/Iceberg add ACID</small></div>
+    <div><b>Database</b><p>Postgres for serving results to apps.</p><small>Upserts on a key</small></div>
+  </div>
+  <div class="flow"><span>bronze: raw as landed</span><span>silver: cleaned, typed</span><span>gold: business tables, features</span></div>
+
+  <h2 id="et-idem"><span class="num">03</span>Idempotency</h2>
+  <div class="callout def"><span class="label">Definition</span>
+    <p>A job is <strong>idempotent</strong> if running it twice leaves the same result as running it once.</p>
+  </div>
+  <p>Jobs <em>will</em> re-run: retries, crashes halfway, backfills. Non-idempotent jobs then double-count.</p>
+  <div class="fx" data-lang="sql">-- naive: plain INSERT of the 2024-05-01 batch, run twice
+INSERT INTO naive SELECT order_id, amount_usd FROM fact_orders WHERE order_date = '2024-05-01';
+INSERT INTO naive SELECT order_id, amount_usd FROM fact_orders WHERE order_date = '2024-05-01';
+SELECT count(*) AS rows, sum(amount_usd) AS revenue FROM naive;</div>
+  <table class="tbl out"><caption>Result: revenue doubled</caption><tr><th>rows</th><th>revenue</th></tr><tr><td>6</td><td>331.2</td></tr></table>
+  <table class="tbl out"><caption>Idempotent table after 2 runs (partition overwrite)</caption><tr><th>rows</th><th>revenue</th></tr><tr><td>3</td><td>165.6</td></tr></table>
+  <div class="cards">
+    <div><b>Partition overwrite</b><p>Delete the day, insert the day, one transaction.</p><small><code>DELETE … WHERE date = :ds; INSERT …</code> · Spark: dynamic partition overwrite</small></div>
+    <div><b>Upsert / MERGE</b><p>Insert new keys, update existing ones.</p><small><code>INSERT … ON CONFLICT (id) DO UPDATE</code></small></div>
+    <div><b>Deterministic inputs</b><p>Use the run's logical date, not the clock.</p><small><code>ds</code>, not <code>now()</code></small></div>
+  </div>
+  <div class="fx" data-lang="sql">INSERT INTO dim_city VALUES ('Mumbai', 1) ON CONFLICT (city) DO UPDATE SET orders = EXCLUDED.orders;
+INSERT INTO dim_city VALUES ('Mumbai', 2) ON CONFLICT (city) DO UPDATE SET orders = EXCLUDED.orders;
+SELECT * FROM dim_city;</div>
+  <table class="tbl out"><caption>Result: one row, latest value</caption><tr><th>city</th><th>orders</th></tr><tr><td>Mumbai</td><td>2</td></tr></table>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A light switch set to "ON" is idempotent: pressing ON twice still means on. A "toggle" button is not. Write jobs like the ON button.</p>
+  </div>
+
+  <h2 id="et-rel"><span class="num">04</span>Backfills, Retries, Quality</h2>
+  <figure class="viz"><svg viewBox="0 0 600 120" width="600">
+    <text x="10" y="18" font-size="12" class="tm">Daily partitions of fact_orders</text>
+    <g font-size="11" text-anchor="middle">
+      <rect x="10" y="30" width="80" height="34" rx="4" class="fg"/><text x="50" y="52">05-01</text>
+      <rect x="100" y="30" width="80" height="34" rx="4" class="fr"/><text x="140" y="52">05-02 bug</text>
+      <rect x="190" y="30" width="80" height="34" rx="4" class="fr"/><text x="230" y="52">05-03 bug</text>
+      <rect x="280" y="30" width="80" height="34" rx="4" class="fr"/><text x="320" y="52">05-04 bug</text>
+      <rect x="370" y="30" width="80" height="34" rx="4" class="fg"/><text x="410" y="52">05-05 fixed</text>
+      <rect x="460" y="30" width="80" height="34" rx="4" class="fg"/><text x="500" y="52">05-06</text>
+    </g>
+    <path d="M100,74 L100,84 L360,84 L360,74" fill="none" stroke="currentColor"/>
+    <text x="230" y="104" text-anchor="middle" font-size="12" class="tb">backfill 05-02 → 05-04: rerun each date; overwrite its partition</text>
+  </svg><figcaption>A backfill is only safe because each run overwrites exactly its own partition.</figcaption></figure>
+  <div class="fx" data-lang="text">airflow backfill create --dag-id daily_orders --from-date 2024-05-02 --to-date 2024-05-04   # flags checked vs Airflow 3.3.2 --help</div>
+  <table class="tbl">
+    <tr><th>Failure type</th><th>Example</th><th>Response</th></tr>
+    <tr><td>Transient</td><td>Timeout, HTTP 429/503, DB failover</td><td>Retry with exponential backoff (e.g. 3× at 5, 10, 20 min)</td></tr>
+    <tr><td>Bad data</td><td>Price "abc", 40% nulls</td><td>Quarantine rows; fail if over a threshold; alert</td></tr>
+    <tr><td>Logic bug</td><td>Wrong join, wrong currency</td><td>Fix, then backfill affected dates</td></tr>
+  </table>
+  <h3>Data quality checks</h3>
+  <table class="tbl">
+    <tr><th>Check</th><th>Catches</th></tr>
+    <tr><td>Row count vs yesterday (±%)</td><td>Missing source file, broken join (fan-out)</td></tr>
+    <tr><td>Unique key</td><td>Duplicates from a re-delivered file</td></tr>
+    <tr><td>Not-null / range</td><td>Negative prices, missing IDs</td></tr>
+    <tr><td>Freshness (<code>max(updated_at)</code>)</td><td>Upstream stopped sending</td></tr>
+    <tr><td>Schema</td><td>Renamed / retyped column upstream</td></tr>
+  </table>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>The worst failure is silent: the job is green, but loaded 0 rows or doubled them. A model then trains on garbage. Check counts and uniqueness <em>before</em> publishing the table.</p>
+  </div>
+
+  <h2 id="et-air"><span class="num">05</span>Airflow</h2>
+  <figure class="viz"><svg viewBox="0 0 600 90" width="600">
+    <defs><marker id="et-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <g font-size="11" text-anchor="middle">
+      <rect x="5" y="25" width="100" height="36" rx="18" class="fv"/><text x="55" y="47">wait_for_file</text>
+      <rect x="125" y="25" width="80" height="36" rx="6" class="fb"/><text x="165" y="47">extract</text>
+      <rect x="225" y="25" width="90" height="36" rx="6" class="fb"/><text x="270" y="47">transform</text>
+      <rect x="335" y="25" width="110" height="36" rx="6" class="ft"/><text x="390" y="47">quality_check</text>
+      <rect x="465" y="25" width="70" height="36" rx="6" class="fg"/><text x="500" y="47">load</text>
+    </g>
+    <g stroke="currentColor" marker-end="url(#et-ar2)"><line x1="105" y1="43" x2="123" y2="43"/><line x1="205" y1="43" x2="223" y2="43"/><line x1="315" y1="43" x2="333" y2="43"/><line x1="445" y1="43" x2="463" y2="43"/></g>
+    <text x="300" y="82" text-anchor="middle" font-size="11" class="tm">sensor → tasks; return values pass along as XCom; any failure stops downstream</text>
+  </svg><figcaption>The DAG below, as Airflow sees it: a directed acyclic graph of tasks.</figcaption></figure>
+  <table class="tbl">
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <tr><td><strong>DAG</strong></td><td>Workflow: tasks + dependencies, no cycles. One Python file.</td></tr>
+    <tr><td><strong>Operator / task</strong></td><td>Template for a unit of work (PythonOperator, BashOperator, SQL…). A task is an operator placed in a DAG.</td></tr>
+    <tr><td><strong>DAG run / logical date</strong></td><td>One execution for one data interval. <code>ds</code> = that date as <code>YYYY-MM-DD</code>.</td></tr>
+    <tr><td><strong>Scheduler / executor / workers</strong></td><td>Scheduler decides what's due; executor (Local, Celery, Kubernetes) runs it on workers.</td></tr>
+    <tr><td><strong>XCom</strong></td><td>"Cross-communication": small values passed between tasks, stored in the metadata DB.</td></tr>
+    <tr><td><strong>Sensor</strong></td><td>Task that waits for a condition (file, table partition, other DAG).</td></tr>
+  </table>
+  <div class="fx" data-lang="py">from datetime import datetime, timedelta
+from airflow.sdk import dag, task
+from airflow.providers.standard.sensors.filesystem import FileSensor
+
+DATA = "/opt/data"                          # path shortened
+
+@dag(
+    schedule="@daily",                      # one run per day
+    start_date=datetime(2024, 5, 1),
+    catchup=False,                          # don't auto-run every missed day
+    max_active_runs=1,
+    default_args={"retries": 3, "retry_delay": timedelta(minutes=5),
+                  "retry_exponential_backoff": True},
+    tags=["etl"],
+)
+def daily_orders():
+    wait = FileSensor(                       # sensor: wait until the file lands
+        task_id="wait_for_file",
+        filepath=DATA + "/orders_{{ ds }}.csv",
+        poke_interval=60, timeout=60 * 60, mode="reschedule")
+
+    @task
+    def extract(ds=None) -&gt; str:             # ds = logical date, e.g. 2024-05-01
+        return f"{DATA}/orders_{ds}.csv"     # return value -&gt; XCom (keep it small!)
+
+    @task
+    def transform(path: str) -&gt; dict:
+        import pandas as pd
+        df = pd.read_csv(path, dtype=str).drop_duplicates("order_id")
+        df["amount"] = pd.to_numeric(df["amount"], errors="coerce")
+        good = df.dropna(subset=["amount"])
+        out = path.replace(".csv", ".clean.parquet")
+        good.to_parquet(out, index=False)
+        return {"path": out, "rows": len(good), "rejected": len(df) - len(good)}
+
+    @task
+    def quality_check(stats: dict) -&gt; dict:
+        if stats["rows"] == 0:
+            raise ValueError("empty batch")                 # fails -&gt; retries -&gt; alert
+        if stats["rejected"] / (stats["rows"] + stats["rejected"]) &gt; 0.2:
+            raise ValueError(f"too many bad rows: {stats}")
+        return stats
+
+    @task
+    def load(stats: dict, ds=None):
+        # real pipeline: DELETE partition ds + INSERT, in one transaction (idempotent)
+        print(f"overwrite partition {ds} with {stats['rows']} rows from {stats['path']}")
+
+    path = extract()
+    wait &gt;&gt; path                            # explicit dependency for the sensor
+    load(quality_check(transform(path)))
+
+daily_orders()</div>
+  <div class="fx" data-lang="text">$ export AIRFLOW_CONN_FS_DEFAULT='fs://'          # FileSensor needs this connection
+$ airflow dags test daily_orders 2024-05-01        # Airflow 3.3.2, real run (log trimmed)
+Poking for file /opt/data/orders_2024-05-01.csv
+[DAG TEST] end task task_id=wait_for_file           new_state=success
+Done. Returned value was: /opt/data/orders_2024-05-01.csv
+[DAG TEST] end task task_id=extract                 new_state=success
+Done. Returned value was: {'path': '/opt/data/orders_2024-05-01.clean.parquet', 'rows': 4, 'rejected': 1}
+[DAG TEST] end task task_id=transform               new_state=success
+[DAG TEST] end task task_id=quality_check           new_state=success
+overwrite partition 2024-05-01 with 4 rows from /opt/data/orders_2024-05-01.clean.parquet
+[DAG TEST] end task task_id=load                    new_state=success
+Marking run &lt;DagRun daily_orders @ 2024-05-01 00:00:00+00:00 ...&gt; successful</div>
+  <p>First attempt failed: <code>The conn_id fs_default isn't defined</code>, and the sensor went to <code>up_for_retry</code>. Connections are config, not code.</p>
+  <ul>
+    <li><strong>TaskFlow</strong> (<code>@task</code>): calling <code>transform(path)</code> wires the dependency <em>and</em> the XCom.</li>
+    <li><strong>Scheduling</strong>: the run for 2024-05-01 starts <em>after</em> that day ends, since its data is complete only then.</li>
+    <li><strong>catchup=True</strong> would create a run for every day since <code>start_date</code>. Handy for backfills, dangerous by accident.</li>
+  </ul>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Passing a DataFrame through XCom bloats the metadata DB. Pass a file path or table name; keep data in S3/warehouse. Also: top-level code in a DAG file (API calls, DB queries) runs on every parse, every few seconds.</p>
+  </div>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Airflow is a conductor. It doesn't play the instruments (heavy compute runs in Spark, the warehouse, dbt); it tells each one when to start and what to do if it fails.</p>
+  </div>
+
+  <h2 id="et-tools"><span class="num">06</span>Orchestrator Comparison</h2>
+  <table class="tbl">
+    <tr><th></th><th>Airflow</th><th>Prefect</th><th>Dagster</th><th>Luigi</th></tr>
+    <tr><td>Core idea</td><td>Tasks in a scheduled DAG</td><td>Plain Python functions as flows</td><td><strong>Assets</strong> (tables, models) and their lineage</td><td>Tasks with targets (outputs)</td></tr>
+    <tr><td>Strength</td><td>Industry standard, huge operator library, managed (MWAA, Composer, Astronomer)</td><td>Little boilerplate, dynamic flows, easy local runs</td><td>Typed I/O, testing, data lineage, built-in partitions/backfills</td><td>Simple, no scheduler service</td></tr>
+    <tr><td>Weakness</td><td>Heavier to run; task-centric, not data-centric</td><td>Smaller ecosystem</td><td>New concepts to learn</td><td>Legacy; little active development</td></tr>
+    <tr><td>Pick when</td><td>Default in most companies</td><td>Small team, Python-heavy ML</td><td>Asset-centric data/ML platforms</td><td>Maintaining an old stack</td></tr>
+  </table>
+
+  <h2 id="et-build"><span class="num">07</span>Build It: Local ETL</h2>
+  <p>Messy CSV → pandas → Postgres, with a quality gate and partition overwrite. Run against a throwaway DB (<code>createdb etl_demo</code>).</p>
+  <div class="fx" data-lang="text">order_id,order_date,city,amount,currency
+1,2024-05-01,mumbai,800,INR
+2,2024-05-01, Delhi ,500,INR
+2,2024-05-01, Delhi ,500,INR          &lt;- duplicate
+3,2024-05-01,MUMBAI,abc,INR           &lt;- bad amount
+4,2024-05-01,,150,USD                 &lt;- missing city
+5,2024-05-02,Pune,40,USD</div>
+  <div class="fx" data-lang="py">import sys, pandas as pd
+from sqlalchemy import create_engine, text
+
+RATES = {"INR": 0.012, "USD": 1.0}   # stand-in for an FX-rate API response
+
+def extract(path):
+    return pd.read_csv(path, dtype=str)
+
+def transform(df):
+    df = df.drop_duplicates("order_id")                         # dedupe
+    df["city"] = df["city"].str.strip().str.title()             # normalize
+    df["city"] = df["city"].fillna("Unknown")
+    df["amount"] = pd.to_numeric(df["amount"], errors="coerce")  # 'abc' -&gt; NaN
+    bad = df[df["amount"].isna()]
+    df = df.dropna(subset=["amount"])
+    df["amount_usd"] = (df["amount"] * df["currency"].map(RATES)).round(2)  # enrich
+    df["order_id"] = df["order_id"].astype(int)
+    return df, bad
+
+def check(df):                                                  # data-quality gate
+    assert df["order_id"].is_unique, "duplicate order_id"
+    assert (df["amount_usd"] &gt; 0).all(), "non-positive amount"
+    assert len(df) &gt; 0, "empty batch"
+
+def load(df, run_date, engine):                                 # partition overwrite
+    part = df[df["order_date"] == run_date]
+    with engine.begin() as con:                                 # one transaction
+        con.execute(text("""CREATE TABLE IF NOT EXISTS fact_orders(
+            order_id int PRIMARY KEY, order_date date, city text,
+            amount numeric, currency text, amount_usd numeric)"""))
+        con.execute(text("DELETE FROM fact_orders WHERE order_date = :d"), {"d": run_date})
+        part.to_sql("fact_orders", con, if_exists="append", index=False)
+    return len(part)
+
+if __name__ == "__main__":
+    run_date = sys.argv[1]
+    engine = create_engine("postgresql+psycopg2:///etl_demo")
+    df, bad = transform(extract("raw_orders.csv"))
+    check(df)
+    n = load(df, run_date, engine)
+    print(f"run_date={run_date} loaded={n} rejected={len(bad)}")</div>
+  <div class="fx" data-lang="text">$ python etl.py 2024-05-01
+run_date=2024-05-01 loaded=3 rejected=1
+$ python etl.py 2024-05-01          # rerun: same result, no duplicates
+run_date=2024-05-01 loaded=3 rejected=1
+$ python etl.py 2024-05-02
+run_date=2024-05-02 loaded=1 rejected=1</div>
+  <table class="tbl out"><caption>SELECT * FROM fact_orders ORDER BY order_id;</caption>
+    <tr><th>order_id</th><th>order_date</th><th>city</th><th>amount</th><th>currency</th><th>amount_usd</th></tr>
+    <tr><td>1</td><td>2024-05-01</td><td>Mumbai</td><td>800.0</td><td>INR</td><td>9.6</td></tr>
+    <tr><td>2</td><td>2024-05-01</td><td>Delhi</td><td>500.0</td><td>INR</td><td>6.0</td></tr>
+    <tr><td>4</td><td>2024-05-01</td><td>Unknown</td><td>150.0</td><td>USD</td><td>150.0</td></tr>
+    <tr><td>5</td><td>2024-05-02</td><td>Pune</td><td>40.0</td><td>USD</td><td>40.0</td></tr>
+  </table>
+  <p>Notice: duplicate removed, "mumbai"/" Delhi " normalised, row 3 rejected, rerun safe. Exercise: write rejected rows to a <code>quarantine</code> table and fail if they exceed 20%.</p>
+
+  <h2 id="et-qa"><span class="num">08</span>Questions &amp; Answers</h2>
+  <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>ETL vs ELT: which is more common today, and why?</summary><div class="qa-body">ELT. Cloud warehouses have cheap storage and elastic compute, so you land raw data and transform it with SQL/dbt inside. Raw data stays available for reprocessing. ETL remains for sensitive data that must be masked before landing, or heavy non-SQL transforms.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does idempotent mean for a pipeline? Give two ways to achieve it.</summary><div class="qa-body">Running it N times gives the same result as once. (1) Partition overwrite: delete the run's date partition and insert, in one transaction. (2) Upsert/MERGE on a natural key. Also parameterise by the logical date, not <code>now()</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>A daily job does <code>INSERT INTO sales SELECT … WHERE date = yesterday</code>. It failed after inserting, and Airflow retried. What's wrong?</summary><div class="qa-body">The retry inserts the same rows again, so revenue doubles. Also "yesterday" from the clock breaks backfills. Fix: <code>DELETE WHERE date = '{{ ds }}'</code> + <code>INSERT</code> in one transaction, using the logical date.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a backfill and what must be true for it to be safe?</summary><div class="qa-body">Re-running a pipeline for past dates, e.g. after fixing a bug or adding a column. Safe only if each run is idempotent and reads/writes only its own date partition, using the logical date. Otherwise reruns duplicate or overwrite the wrong data.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Incremental extract by <code>updated_at</code> vs CDC?</summary><div class="qa-body">Watermark queries are simple but miss hard deletes, need a reliable <code>updated_at</code>, and load the source DB. CDC reads the database's change log (WAL/binlog, e.g. Debezium), captures every insert/update/delete in order, near real time, with little source load. It needs more infrastructure (Kafka, connectors).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Which errors should be retried and which shouldn't?</summary><div class="qa-body">Retry transient ones: timeouts, 429/503, connection resets, with exponential backoff. Don't retry deterministic ones: bad data, schema mismatch, code bugs. Retrying them wastes time and delays the alert. Quarantine bad rows and fail loudly.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Name five data-quality checks you'd put before publishing a training table.</summary><div class="qa-body">Row count within ±X% of the usual; primary key unique; key columns not null; value ranges (price &gt; 0, age 0–120); freshness (latest timestamp is today); schema unchanged; label distribution not shifted sharply. Use dbt tests or Great Expectations, and block the load on failure.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is XCom, and what should you not put in it?</summary><div class="qa-body">Airflow's mechanism for passing small values between tasks, stored in the metadata DB (TaskFlow return values go there automatically). Don't pass DataFrames or large files; pass a path or table name and keep data in object storage or the warehouse.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does a sensor do, and why use <code>mode="reschedule"</code>?</summary><div class="qa-body">It waits until a condition is true: a file exists, a partition lands, another DAG finishes. In the default "poke" mode it holds a worker slot while sleeping. "reschedule" releases the slot between checks, so 100 waiting sensors don't block real work.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>A DAG has <code>start_date=2023-01-01</code>, <code>schedule="@daily"</code>, <code>catchup=True</code> and is deployed today. What happens?</summary><div class="qa-body">The scheduler creates a run for every day from 2023-01-01 until now, hundreds of runs, possibly hammering sources. Set <code>catchup=False</code> unless you want that, and run backfills deliberately with <code>max_active_runs</code> limits.</div></details>
+</main>`
+});
+
+
+// notes/dataeng/de_kafka.js — Kafka & Streaming
+Object.assign(TOPIC_CONTENT, {
+  "de_kafka": `<main>
+  <h1>Kafka &amp; Streaming</h1>
+  <p class="lead">Kafka is the pipe that moves events (clicks, payments, DB changes) between systems in real time. For ML it powers fresh features, fraud scoring and CDC into the warehouse. Builds on ETL: same ideas, but data never stops arriving.</p>
+
+  <h2 id="kf-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Kafka &amp; Streaming</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Batch vs Streaming</div>
+        <ul>
+          <li><b>Batch</b> — bounded data, run on a schedule; minutes–hours latency; simpler</li>
+          <li><b>Streaming</b> — unbounded events processed continuously; ms–seconds latency</li>
+          <li><b>Use streaming for</b> — fraud, real-time features, alerts, CDC</li>
+          <li><b>Event time vs processing time</b> — when it happened vs when we saw it</li>
+          <li>⚠ <b>Late / out-of-order events</b> — need windows + watermarks</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">The Log</div>
+        <ul>
+          <li><b>Log</b> — append-only, ordered sequence of records; never edited</li>
+          <li><b>Offset</b> — position of a record in a partition (0, 1, 2…)</li>
+          <li><b>Consumers don't delete</b> — each tracks its own offset; many readers, replay possible</li>
+          <li><b>Retention</b> — delete by time (<code>retention.ms</code>, default 7 days) or size; or <b>compaction</b> = keep latest per key</li>
+          <li>💡 like a shared diary: writers append, readers keep their own bookmark</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Topics &amp; Partitions</div>
+        <ul>
+          <li><b>Topic</b> — named stream (e.g. <code>clicks</code>), split into partitions</li>
+          <li><b>Partition</b> — unit of parallelism and ordering; lives on a broker, replicated</li>
+          <li><b>Key → partition</b> — <code>hash(key) % partitions</code>; same key, same partition</li>
+          <li><b>Ordering</b> — guaranteed within a partition only, not across a topic</li>
+          <li><b>Replication</b> — leader + followers; ISR = in-sync replicas; <code>acks=all</code> waits for ISR</li>
+          <li>⚠ <b>Adding partitions</b> remaps keys → breaks per-key ordering</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Consumer Groups</div>
+        <ul>
+          <li><b>Group</b> — consumers sharing <code>group.id</code> split partitions; each partition → one consumer</li>
+          <li><b>Scale</b> — max useful consumers = partitions; extras sit idle</li>
+          <li><b>Different groups</b> — each gets every message (fan-out)</li>
+          <li><b>Rebalance</b> — join/leave/crash → partitions reassigned; brief pause</li>
+          <li><b>Lag</b> — log-end offset − committed offset; key health metric</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Offsets &amp; Semantics</div>
+        <ul>
+          <li><b>Commit</b> — save "processed up to here" to <code>__consumer_offsets</code></li>
+          <li><b>At-most-once</b> — commit before processing; crash → message lost</li>
+          <li><b>At-least-once</b> — process then commit; crash → reprocessed (default; make sinks idempotent)</li>
+          <li><b>Exactly-once</b> — idempotent producer + transactions (read-process-write in Kafka), or idempotent sink</li>
+          <li><b>auto.offset.reset</b> — <code>earliest</code> / <code>latest</code> when group has no offset</li>
+          <li>⚠ <b>Auto-commit</b> can commit before you finish → silent loss</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Ecosystem</div>
+        <ul>
+          <li><b>Kafka Connect</b> — config-only source/sink connectors (Debezium CDC, S3, JDBC, Snowflake)</li>
+          <li><b>Kafka Streams</b> — Java library, Kafka → Kafka, no cluster</li>
+          <li><b>Flink</b> — true streaming engine; event time, big state, lowest latency</li>
+          <li><b>Spark Structured Streaming</b> — micro-batches, DataFrame API, Python-friendly</li>
+          <li><b>Schema Registry</b> — Avro/Protobuf schemas, compatibility checks</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Streaming ML Features</div>
+        <ul>
+          <li><b>Flow</b> — events → Kafka → windowed aggregates → online store (Redis) → model</li>
+          <li><b>Also write offline</b> → lake for training: same logic avoids training/serving skew</li>
+          <li><b>Windows</b> — tumbling (fixed), sliding/hopping (overlap), session (gap-based)</li>
+          <li>⚠ <b>Key by entity</b> (user_id) so a user's events stay ordered in one partition</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="roadmap-wrap">
+    <h2 class="roadmap-title">What we'll cover</h2>
+    <div class="roadmap-grid">
+      <div class="rm-item rm-done" data-target="kf-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Batch vs Streaming</span><span class="rm-sub">When latency matters</span></div></div>
+      <div class="rm-item rm-done" data-target="kf-log"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">The Log</span><span class="rm-sub">Kafka's one big idea</span></div></div>
+      <div class="rm-item rm-done" data-target="kf-part"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Producers, Topics, Partitions</span><span class="rm-sub">Keys decide ordering</span></div></div>
+      <div class="rm-item rm-done" data-target="kf-group"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Consumer Groups</span><span class="rm-sub">Scaling and rebalancing</span></div></div>
+      <div class="rm-item rm-done" data-target="kf-sem"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Offsets &amp; Delivery Semantics</span><span class="rm-sub">At-most, at-least, exactly once</span></div></div>
+      <div class="rm-item rm-done" data-target="kf-eco"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Connect &amp; Stream Processors</span><span class="rm-sub">Streams vs Flink vs Spark</span></div></div>
+      <div class="rm-item rm-done" data-target="kf-ml"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Build It: Streaming Features</span><span class="rm-sub">Clicks → features, real broker</span></div></div>
+      <div class="rm-item rm-done" data-target="kf-qa"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+    </div>
+  </div>
+
+  <h2 id="kf-why"><span class="num">01</span>Batch vs Streaming</h2>
+  <table class="tbl">
+    <tr><th></th><th>Batch</th><th>Streaming</th></tr>
+    <tr><td>Data</td><td>Bounded: "yesterday's orders"</td><td>Unbounded: events keep coming</td></tr>
+    <tr><td>Latency</td><td>Minutes to hours</td><td>Milliseconds to seconds</td></tr>
+    <tr><td>Tools</td><td>Airflow + Spark/SQL</td><td>Kafka + Flink / Spark Streaming</td></tr>
+    <tr><td>ML use</td><td>Nightly training, daily scores</td><td>Fraud checks, "clicks in last 5 min" features</td></tr>
+    <tr><td>Cost</td><td>Simple, cheap, easy to rerun</td><td>Always-on, harder to debug and backfill</td></tr>
+  </table>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Batch is the postman delivering once a day. Streaming is a phone call: each word arrives as it's spoken.</p>
+  </div>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>"Real-time" is often not needed. If the business acts on a dashboard each morning, an hourly batch is cheaper and simpler. Ask what latency the decision really needs.</p>
+  </div>
+
+  <h2 id="kf-log"><span class="num">02</span>The Log</h2>
+  <figure class="viz"><svg viewBox="0 0 600 150" width="600">
+    <defs><marker id="kf-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <g font-size="12" text-anchor="middle">
+      <rect x="20" y="50" width="56" height="36" class="fs" stroke="currentColor"/><text x="48" y="73">0</text>
+      <rect x="76" y="50" width="56" height="36" class="fs" stroke="currentColor"/><text x="104" y="73">1</text>
+      <rect x="132" y="50" width="56" height="36" class="fs" stroke="currentColor"/><text x="160" y="73">2</text>
+      <rect x="188" y="50" width="56" height="36" class="fs" stroke="currentColor"/><text x="216" y="73">3</text>
+      <rect x="244" y="50" width="56" height="36" class="fs" stroke="currentColor"/><text x="272" y="73">4</text>
+      <rect x="300" y="50" width="56" height="36" class="fs" stroke="currentColor"/><text x="328" y="73">5</text>
+      <rect x="356" y="50" width="56" height="36" class="fs" stroke="currentColor"/><text x="384" y="73">6</text>
+      <rect x="412" y="50" width="56" height="36" class="fb" stroke="currentColor"/><text x="440" y="73">7 new</text>
+    </g>
+    <line x1="560" y1="68" x2="472" y2="68" stroke="currentColor" marker-end="url(#kf-ar)"/>
+    <text x="520" y="58" text-anchor="middle" font-size="11">producer appends</text>
+    <line x1="160" y1="125" x2="160" y2="90" class="sg" stroke-width="2" marker-end="url(#kf-ar)"/>
+    <text x="160" y="142" text-anchor="middle" font-size="11" class="tg">analytics group @ 2</text>
+    <line x1="384" y1="125" x2="384" y2="90" class="sb" stroke-width="2" marker-end="url(#kf-ar)"/>
+    <text x="384" y="142" text-anchor="middle" font-size="11" class="tb">fraud group @ 6</text>
+    <text x="20" y="35" font-size="11" class="tm">oldest (deleted after retention)</text>
+    <text x="300" y="20" text-anchor="middle" font-size="12" font-weight="bold">partition 0 of topic "clicks"</text>
+  </svg><figcaption>Records are only appended. Each consumer group keeps its own offset, so slow and fast readers don't interfere.</figcaption></figure>
+  <ul>
+    <li><strong>Immutable + ordered</strong>: a record at offset 3 never changes.</li>
+    <li><strong>Reading doesn't delete</strong>: unlike a queue (RabbitMQ, SQS). Any number of groups read the same data; you can rewind to replay.</li>
+    <li><strong>Retention</strong>: records expire by age (<code>retention.ms</code>, default 7 days) or size. <strong>Compacted</strong> topics keep only the latest value per key, like a changelog table.</li>
+  </ul>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A ship's logbook. The crew only add lines at the end. Each reader keeps a bookmark. Tearing out pages happens only when they're old enough (retention).</p>
+  </div>
+
+  <h2 id="kf-part"><span class="num">03</span>Producers, Topics, Partitions</h2>
+  <p>A topic is split into partitions spread across brokers (Kafka servers). The <strong>key</strong> picks the partition: <code>hash(key) % num_partitions</code>.</p>
+  <div class="fx" data-lang="text">$ kafka-topics.sh --create --topic clicks --partitions 3 --replication-factor 1
+Created topic clicks.</div>
+  <div class="fx" data-lang="py">import json
+from confluent_kafka import Producer
+
+p = Producer({"bootstrap.servers": "localhost:9092",
+              "acks": "all", "enable.idempotence": True})
+
+def report(err, msg):
+    if err is None:
+        print(f"key={msg.key().decode()} -&gt; partition {msg.partition()} offset {msg.offset()}")
+
+events = [("u1", "home"), ("u2", "cart"), ("u1", "product"),
+          ("u3", "home"), ("u1", "checkout"), ("u2", "home")]
+for user, page in events:
+    p.produce("clicks", key=user, value=json.dumps({"user": user, "page": page}),
+              callback=report)
+p.flush()                                  # block until all are acknowledged</div>
+  <div class="fx" data-lang="text">key=u2 -&gt; partition 0 offset 0
+key=u2 -&gt; partition 0 offset 1
+key=u1 -&gt; partition 2 offset 0
+key=u1 -&gt; partition 2 offset 1
+key=u3 -&gt; partition 2 offset 2
+key=u1 -&gt; partition 2 offset 3</div>
+  <p>Real run (Kafka 3.9.1 in Docker). Every <code>u1</code> event landed in partition 2, in send order: home → product → checkout. Partition 1 got nothing: 3 keys is too few to spread.</p>
+  <table class="tbl">
+    <tr><th>Producer setting</th><th>Meaning</th></tr>
+    <tr><td><code>acks=0 / 1 / all</code></td><td>Don't wait / wait for leader / wait for all in-sync replicas (safest)</td></tr>
+    <tr><td><code>enable.idempotence=true</code></td><td>Broker drops duplicates from producer retries (per partition)</td></tr>
+    <tr><td><code>linger.ms</code>, <code>batch.size</code></td><td>Wait a bit to batch messages: more throughput, a little latency</td></tr>
+  </table>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Ordering is per <em>partition</em>, never per topic. Need a user's events in order? Key by <code>user_id</code>. No key = spread for throughput, but no ordering. Hot keys (one celebrity user) overload one partition.</p>
+  </div>
+
+  <h2 id="kf-group"><span class="num">04</span>Consumer Groups</h2>
+  <figure class="viz"><svg viewBox="0 0 600 200" width="600">
+    <defs><marker id="kf-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <text x="70" y="18" text-anchor="middle" font-weight="bold">topic clicks</text>
+    <rect x="20" y="30" width="100" height="32" rx="4" class="fs"/><text x="70" y="51" text-anchor="middle">P0</text>
+    <rect x="20" y="80" width="100" height="32" rx="4" class="fs"/><text x="70" y="101" text-anchor="middle">P1</text>
+    <rect x="20" y="130" width="100" height="32" rx="4" class="fs"/><text x="70" y="151" text-anchor="middle">P2</text>
+    <rect x="240" y="22" width="150" height="150" rx="8" fill="none" stroke="currentColor" stroke-dasharray="4 3"/>
+    <text x="315" y="190" text-anchor="middle" font-size="11">group "demo-group"</text>
+    <rect x="265" y="40" width="100" height="36" rx="6" class="fb"/><text x="315" y="63" text-anchor="middle">consumer A</text>
+    <rect x="265" y="115" width="100" height="36" rx="6" class="ft"/><text x="315" y="138" text-anchor="middle">consumer B</text>
+    <g stroke="currentColor" marker-end="url(#kf-ar2)">
+      <line x1="120" y1="146" x2="263" y2="62"/>
+      <line x1="120" y1="46" x2="263" y2="128"/>
+      <line x1="120" y1="96" x2="263" y2="136"/>
+    </g>
+    <rect x="450" y="70" width="130" height="36" rx="6" class="fv"/><text x="515" y="93" text-anchor="middle">group "analytics"</text>
+    <text x="515" y="125" text-anchor="middle" font-size="11" class="tm">separate group:</text>
+    <text x="515" y="140" text-anchor="middle" font-size="11" class="tm">gets ALL partitions too</text>
+  </svg><figcaption>Within a group, each partition goes to exactly one consumer. Across groups, everyone gets everything.</figcaption></figure>
+  <div class="fx" data-lang="py">c = Consumer({"bootstrap.servers": "localhost:9092", "group.id": "demo-group",
+              "auto.offset.reset": "earliest"})
+c.subscribe(["clicks"], on_assign=lambda c, ps: print(name, "assigned", sorted(p.partition for p in ps)))
+# start A; 6 s later start B (lives 10 s); A keeps running</div>
+  <div class="fx" data-lang="text">A assigned [0, 1, 2]      # A alone: all partitions
+A assigned [2]            # B joins -&gt; rebalance
+B assigned [0, 1]
+A assigned [0, 1, 2]      # B leaves -&gt; rebalance again</div>
+  <ul>
+    <li><strong>Scale out</strong> by adding consumers, up to the partition count. A 4th consumer on 3 partitions sits idle.</li>
+    <li><strong>Rebalance</strong>: triggered by join, leave, crash or a missed heartbeat. Processing pauses briefly; cooperative rebalancing reduces the pause.</li>
+    <li><strong>Lag</strong> = log-end offset − committed offset. Growing lag = consumers too slow.</li>
+  </ul>
+  <div class="fx" data-lang="text">$ kafka-consumer-groups.sh --describe --group feature-builder     # after 6 more events
+TOPIC    PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG
+clicks   2          4               8               4
+clicks   0          2               4               2</div>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Slow processing per batch (e.g. a 2-minute model call) can exceed <code>max.poll.interval.ms</code>. Kafka assumes the consumer died, rebalances, and another consumer reprocesses the same records: a rebalance storm.</p>
+  </div>
+
+  <h2 id="kf-sem"><span class="num">05</span>Offsets &amp; Delivery Semantics</h2>
+  <figure class="viz"><svg viewBox="0 0 600 150" width="600">
+    <g font-size="12">
+      <text x="10" y="30" font-weight="bold">At-most-once</text>
+      <rect x="150" y="14" width="90" height="26" rx="4" class="fv"/><text x="195" y="32" text-anchor="middle">commit</text>
+      <rect x="250" y="14" width="90" height="26" rx="4" class="fb"/><text x="295" y="32" text-anchor="middle">process</text>
+      <text x="355" y="32" class="tr">crash here → message lost</text>
+      <text x="10" y="80" font-weight="bold">At-least-once</text>
+      <rect x="150" y="64" width="90" height="26" rx="4" class="fb"/><text x="195" y="82" text-anchor="middle">process</text>
+      <rect x="250" y="64" width="90" height="26" rx="4" class="fv"/><text x="295" y="82" text-anchor="middle">commit</text>
+      <text x="355" y="82" class="tg">crash before commit → redo (duplicate)</text>
+      <text x="10" y="130" font-weight="bold">Exactly-once</text>
+      <rect x="150" y="114" width="190" height="26" rx="4" class="ft"/><text x="245" y="132" text-anchor="middle">process + commit atomically</text>
+      <text x="355" y="132">transaction, or idempotent sink</text>
+    </g>
+  </svg><figcaption>The order of "process" and "commit" decides what a crash costs you.</figcaption></figure>
+  <table class="tbl">
+    <tr><th>Semantics</th><th>How</th><th>Use when</th></tr>
+    <tr><td>At-most-once</td><td>Commit first (or auto-commit)</td><td>Losing some metrics/logs is fine</td></tr>
+    <tr><td><strong>At-least-once</strong></td><td><code>enable.auto.commit=false</code>; process, then commit</td><td>Default choice; make the sink idempotent (upsert by event id)</td></tr>
+    <tr><td>Exactly-once</td><td>Idempotent producer + <code>transactional.id</code> + consumers with <code>isolation.level=read_committed</code>; works Kafka → Kafka. To external DBs: at-least-once + idempotent writes</td><td>Payments, billing counters</td></tr>
+  </table>
+  <div class="fx" data-lang="py"># exactly-once read-process-write inside Kafka (not run here)
+p = Producer({"bootstrap.servers": "...", "transactional.id": "scorer-1"})
+p.init_transactions()
+p.begin_transaction()
+p.produce("scores", key=k, value=v)
+p.send_offsets_to_transaction(c.position(c.assignment()), c.consumer_group_metadata())
+p.commit_transaction()       # output + input offsets commit together, or neither</div>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Reading a book with a bookmark. Move the bookmark before reading the page (at-most-once): fall asleep, skip a page. Move it after (at-least-once): fall asleep, reread a page. Rereading is usually the cheaper mistake.</p>
+  </div>
+
+  <h2 id="kf-eco"><span class="num">06</span>Connect &amp; Stream Processors</h2>
+  <div class="flow"><span>Postgres WAL</span><span>Debezium source connector</span><span>Kafka topic</span><span>S3 / Snowflake sink connector</span><span>Warehouse</span></div>
+  <p><strong>Kafka Connect</strong> moves data in and out of Kafka with config, no code. It handles offsets, retries and scaling for you.</p>
+  <div class="fx" data-lang="text">{ "name": "shop-cdc",                                   (example config, not run here)
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "database.hostname": "db", "database.dbname": "shop",
+    "topic.prefix": "shop", "table.include.list": "public.orders" } }</div>
+  <table class="tbl">
+    <tr><th></th><th>Kafka Streams</th><th>Apache Flink</th><th>Spark Structured Streaming</th></tr>
+    <tr><td>What</td><td>Java library inside your app</td><td>Distributed stream engine</td><td>Spark's streaming DataFrame API</td></tr>
+    <tr><td>Model</td><td>Record at a time</td><td>Record at a time, event-time native</td><td>Micro-batches (100 ms+)</td></tr>
+    <tr><td>Latency</td><td>ms</td><td>ms</td><td>~0.1–few s</td></tr>
+    <tr><td>State &amp; windows</td><td>Local RocksDB, backed up to Kafka</td><td>Large state, checkpoints, best watermark support</td><td>Good; state store, watermarks</td></tr>
+    <tr><td>Sources</td><td>Kafka only</td><td>Many</td><td>Many; same code as batch</td></tr>
+    <tr><td>Pick when</td><td>JVM microservice, Kafka in &amp; out</td><td>Low latency, complex event-time logic at scale</td><td>Team already on Spark/Databricks, Python</td></tr>
+  </table>
+  <div class="fx" data-lang="py"># Spark Structured Streaming: clicks per user per 5-min window (not run here: needs the
+# spark-sql-kafka package and a broker)
+from pyspark.sql import functions as F
+clicks = (spark.readStream.format("kafka")
+          .option("kafka.bootstrap.servers", "localhost:9092").option("subscribe", "clicks").load()
+          .select(F.from_json(F.col("value").cast("string"), "user STRING, page STRING").alias("e"),
+                  "timestamp").select("e.*", "timestamp"))
+feats = (clicks.withWatermark("timestamp", "10 minutes")        # accept events up to 10 min late
+               .groupBy(F.window("timestamp", "5 minutes"), "user").count())
+feats.writeStream.outputMode("update").format("console") \\
+     .option("checkpointLocation", "/tmp/ckpt").start()</div>
+  <div class="cards">
+    <div><b>Tumbling</b><p>Fixed, non-overlapping: 12:00–12:05, 12:05–12:10.</p><small>Counts per 5 min</small></div>
+    <div><b>Sliding / hopping</b><p>5-min windows every 1 min; overlap.</p><small>"Last 5 minutes", updated each minute</small></div>
+    <div><b>Session</b><p>Closes after a gap of inactivity.</p><small>User sessions</small></div>
+  </div>
+  <p><strong>Watermark</strong>: how late an event may arrive (by event time) and still count. Older ones are dropped, so state doesn't grow forever.</p>
+
+  <h2 id="kf-ml"><span class="num">07</span>Build It: Streaming Features</h2>
+  <figure class="viz"><svg viewBox="0 0 600 130" width="600">
+    <defs><marker id="kf-ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <g font-size="11" text-anchor="middle">
+      <rect x="5" y="40" width="80" height="40" rx="6" class="fs"/><text x="45" y="64">App events</text>
+      <rect x="115" y="40" width="80" height="40" rx="6" class="fb"/><text x="155" y="64">Kafka clicks</text>
+      <rect x="225" y="40" width="110" height="40" rx="6" class="fv"/><text x="280" y="58">feature job</text><text x="280" y="72">windows per user</text>
+      <rect x="370" y="10" width="110" height="36" rx="6" class="fg"/><text x="425" y="32">Online store (Redis)</text>
+      <rect x="370" y="78" width="110" height="36" rx="6" class="ft"/><text x="425" y="100">Offline (lake)</text>
+      <rect x="510" y="10" width="80" height="36" rx="6" class="fr"/><text x="550" y="32">Model API</text>
+      <rect x="510" y="78" width="80" height="36" rx="6" class="fs"/><text x="550" y="100">Training</text>
+    </g>
+    <g stroke="currentColor" marker-end="url(#kf-ar3)">
+      <line x1="85" y1="60" x2="113" y2="60"/><line x1="195" y1="60" x2="223" y2="60"/>
+      <line x1="335" y1="55" x2="368" y2="30"/><line x1="335" y1="65" x2="368" y2="94"/>
+      <line x1="480" y1="28" x2="508" y2="28"/><line x1="480" y1="96" x2="508" y2="96"/>
+    </g>
+  </svg><figcaption>One feature computation feeds both serving (fresh, low latency) and training (history), so they match.</figcaption></figure>
+  <p>A toy version: consume <code>clicks</code>, keep a per-user click count, commit after processing (at-least-once).</p>
+  <div class="fx" data-lang="py">import json
+from confluent_kafka import Consumer
+
+c = Consumer({"bootstrap.servers": "localhost:9092",
+              "group.id": "feature-builder",
+              "auto.offset.reset": "earliest",   # no committed offset -&gt; start at beginning
+              "enable.auto.commit": False})      # we commit ourselves
+c.subscribe(["clicks"])
+
+features = {}                                     # user -&gt; click count (toy feature store)
+empty = 0
+while empty &lt; 5:
+    msg = c.poll(1.0)
+    if msg is None:
+        empty += 1; continue
+    e = json.loads(msg.value())
+    features[e["user"]] = features.get(e["user"], 0) + 1   # 1. process
+    c.commit(message=msg, asynchronous=False)              # 2. then commit -&gt; at-least-once
+    print(f"p{msg.partition()} off={msg.offset()} {e['user']:&gt;2} {e['page']:&lt;8} clicks={features[e['user']]}")
+c.close()
+print("features:", features)</div>
+  <div class="fx" data-lang="text">p2 off=0 u1 home     clicks=1
+p2 off=1 u1 product  clicks=2
+p2 off=2 u3 home     clicks=1
+p2 off=3 u1 checkout clicks=3
+p0 off=0 u2 cart     clicks=1
+p0 off=1 u2 home     clicks=2
+features: {'u1': 3, 'u3': 1, 'u2': 2}</div>
+  <p>Notice: partitions are read independently (all of p2, then p0), but each user's events are in order.</p>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>This feature dict lives in memory: a restart loses it, and a reprocessed message double-counts. Real jobs keep state in Flink/Spark checkpoints or Redis, and dedupe by event id.</p>
+  </div>
+  <p>Exercise: turn the count into "clicks in the last 5 minutes" using event timestamps, and write it to a dict keyed by <code>(user, window_start)</code>.</p>
+
+  <h2 id="kf-qa"><span class="num">08</span>Questions &amp; Answers</h2>
+  <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>How is Kafka different from a traditional message queue like RabbitMQ or SQS?</summary><div class="qa-body">Kafka is a durable, partitioned log: reading doesn't delete, so many consumer groups read the same data independently and can replay from any offset until retention expires. Queues typically delete a message once acknowledged and deliver each to one consumer. Kafka also has much higher throughput through sequential disk writes and batching.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Does Kafka guarantee ordering?</summary><div class="qa-body">Only within a partition. Messages with the same key go to the same partition, so per-key order is preserved. There is no order across partitions. With retries, keep order using the idempotent producer (or <code>max.in.flight.requests.per.connection=1</code> on old clients).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>A topic has 6 partitions; your group has 8 consumers. What happens?</summary><div class="qa-body">6 consumers get one partition each; 2 sit idle as hot standbys. To use more consumers, increase partitions, but that remaps keys to new partitions and breaks per-key ordering for in-flight data, so plan partition counts up front.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain at-most-once, at-least-once and exactly-once.</summary><div class="qa-body">At-most-once: commit the offset before processing; a crash loses the message. At-least-once: process then commit; a crash means reprocessing (duplicates). Exactly-once: the output and the offset commit happen atomically (Kafka transactions for Kafka → Kafka), or at-least-once plus an idempotent sink (upsert by event id).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Your consumer lag keeps growing. What do you check?</summary><div class="qa-body">Is processing per message too slow (model calls, sync DB writes)? Batch or parallelise. Are there more partitions than consumers? Add consumers. Is one partition hot (skewed key)? Fix the key. Are frequent rebalances happening (<code>max.poll.interval.ms</code> exceeded)? Check consumer logs.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What's a consumer rebalance and why is it painful?</summary><div class="qa-body">Reassigning partitions when a consumer joins, leaves or misses heartbeats. During an eager rebalance every consumer stops; uncommitted work gets reprocessed by the new owner. Mitigate with cooperative-sticky assignment, static membership, and committing before partitions are revoked.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Retention vs log compaction?</summary><div class="qa-body">Retention deletes segments older than a time or size limit, regardless of key. Compaction keeps at least the latest record for each key and drops older ones, so the topic acts as a changelog of current state (e.g. latest profile per user). A null value (tombstone) deletes a key.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Kafka Streams vs Flink vs Spark Structured Streaming: how do you choose?</summary><div class="qa-body">Kafka Streams: a library for JVM apps reading and writing Kafka, no cluster. Flink: lowest latency, true per-record processing, the best event-time and large-state handling. Spark Structured Streaming: micro-batches, same DataFrame API as batch, good when the team already uses Spark/Databricks and Python.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Design a real-time "number of transactions in the last 10 minutes" feature for a fraud model.</summary><div class="qa-body">Produce transactions to Kafka keyed by card_id. A Flink or Spark job computes a sliding 10-minute count per card with event-time windows and a watermark for late events. It writes to an online store (Redis) for the scoring API and to the lake for training, so both use the same definition. Make the sink idempotent and monitor lag.</div></details>
+</main>`
+});
+
+
+// notes/dataeng/de_spark.js — Apache Spark
+Object.assign(TOPIC_CONTENT, {
+  "de_spark": `<main>
+  <h1>Apache Spark</h1>
+  <p class="lead">Spark runs pandas-style DataFrame code across many machines. You need it when data stops fitting on one box, and interviewers love asking about shuffles, joins and skew. Builds on SQL and pandas.</p>
+
+  <h2 id="sp-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Apache Spark</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">When &amp; Why</div>
+        <ul>
+          <li><b>Spark</b> — distributed engine running DataFrame/SQL code across a cluster</li>
+          <li><b>Use when</b> — 100 GB+ or data already in a lakehouse (Databricks, EMR)</li>
+          <li><b>Don't</b> — &lt; ~5 GB: pandas/Polars/DuckDB are faster (no JVM/scheduling overhead)</li>
+          <li>💡 one clerk counts a village; Spark splits a country's ballots across clerks</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Architecture</div>
+        <ul>
+          <li><b>Driver</b> — runs your script, builds plan, schedules tasks; single machine</li>
+          <li><b>Executors</b> — worker JVMs; run tasks, hold cache</li>
+          <li><b>Cluster manager</b> — YARN / Kubernetes / standalone; allocates resources</li>
+          <li><b>Partition = task = core</b> — the unit of parallelism</li>
+          <li><b>Job → stages → tasks</b> — one action = one job; shuffles split stages</li>
+          <li>⚠ <b>Driver OOM</b> — <code>collect()</code>/<code>toPandas()</code> on big data</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Lazy Evaluation</div>
+        <ul>
+          <li><b>Transformations</b> — lazy: <code>select, filter, join, groupBy, withColumn</code></li>
+          <li><b>Actions</b> — trigger a job: <code>count, show, collect, write, take</code></li>
+          <li><b>Why lazy</b> — Catalyst optimizer sees the whole plan: filter pushdown, column pruning, join choice</li>
+          <li>⚠ <b>Each action recomputes lineage</b> — cache if reused</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Shuffles &amp; Plans</div>
+        <ul>
+          <li><b>Narrow</b> — 1 input partition → 1 output (filter, select); no network</li>
+          <li><b>Wide</b> — needs all rows of a key together (groupBy, join, distinct, orderBy) → <b>shuffle</b></li>
+          <li><b>Shuffle</b> — disk + network + serialisation; the main cost; new stage</li>
+          <li><b>explain()</b> — read bottom-up; <code>Exchange</code> = shuffle; <code>partial_sum</code> = map-side pre-aggregation</li>
+          <li><b>AQE</b> — adaptive query execution: re-plans at runtime, merges tiny partitions, splits skewed ones</li>
+          <li><b>Spark SQL</b> = DataFrame API — same optimizer, same plan</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Joins &amp; Skew</div>
+        <ul>
+          <li><b>Broadcast hash join</b> — small side (&lt; 10 MB default) copied to all executors; big side not shuffled; <code>F.broadcast(df)</code></li>
+          <li><b>Sort-merge join</b> — big ⋈ big; shuffle + sort both sides</li>
+          <li><b>Skew</b> — one key holds most rows → one straggler task</li>
+          <li><b>Fixes</b> — broadcast, salting (random suffix + replicate small side), AQE skewJoin, handle NULL keys</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Partitions, Cache, Files</div>
+        <ul>
+          <li><b>repartition(n)</b> — full shuffle, up/down, even</li>
+          <li><b>coalesce(n)</b> — down only, no shuffle, may be uneven; use before writing</li>
+          <li><b>Size</b> — ~100–200 MB per partition; ≥ 2–3× cores</li>
+          <li><b>cache()</b> — lazy; for DataFrames used 2+ times; <code>unpersist()</code> after</li>
+          <li><b>Parquet</b> — columnar, compressed, schema + min/max stats → column pruning, predicate pushdown</li>
+          <li><b>partitionBy("date")</b> — folder per value → partition pruning; ⚠ never on high-cardinality columns</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Performance Traps</div>
+        <ul>
+          <li>⚠ <b>Python UDF</b> — row-by-row JVM↔Python; ~11× slower in our run → built-ins or <code>pandas_udf</code></li>
+          <li>⚠ <b>Small files</b> — thousands of tiny files; coalesce before write, compact</li>
+          <li>⚠ <b>collect()</b> — pulls everything to the driver; use <code>take</code>/aggregate/write</li>
+          <li>⚠ <b>Bad partition count</b> — idle cores or scheduler overhead; tune <code>spark.sql.shuffle.partitions</code></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="roadmap-wrap">
+    <h2 class="roadmap-title">What we'll cover</h2>
+    <div class="roadmap-grid">
+      <div class="rm-item rm-done" data-target="sp-when"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">When You Need Spark</span><span class="rm-sub">One machine is not enough</span></div></div>
+      <div class="rm-item rm-done" data-target="sp-arch"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Architecture</span><span class="rm-sub">Driver, executors, cluster manager</span></div></div>
+      <div class="rm-item rm-done" data-target="sp-lazy"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">DataFrames &amp; Laziness</span><span class="rm-sub">Transformations vs actions</span></div></div>
+      <div class="rm-item rm-done" data-target="sp-shuffle"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Narrow, Wide &amp; Stages</span><span class="rm-sub">The shuffle is the cost</span></div></div>
+      <div class="rm-item rm-done" data-target="sp-sql"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Spark SQL &amp; explain()</span><span class="rm-sub">Read a physical plan</span></div></div>
+      <div class="rm-item rm-done" data-target="sp-join"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Joins at Scale</span><span class="rm-sub">Broadcast, sort-merge, skew</span></div></div>
+      <div class="rm-item rm-done" data-target="sp-part"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Partitions, Cache, Parquet</span><span class="rm-sub">Layout decides speed</span></div></div>
+      <div class="rm-item rm-done" data-target="sp-traps"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Performance Traps</span><span class="rm-sub">collect, UDFs, small files</span></div></div>
+      <div class="rm-item rm-done" data-target="sp-qa"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+    </div>
+  </div>
+
+  <h2 id="sp-when"><span class="num">01</span>When You Need Spark</h2>
+  <table class="tbl">
+    <tr><th>Data size</th><th>Tool</th><th>Why</th></tr>
+    <tr><td>&lt; ~5 GB</td><td>pandas / Polars</td><td>Fits in RAM; no cluster overhead</td></tr>
+    <tr><td>5–100 GB</td><td>DuckDB, Polars, one big VM</td><td>Out-of-core on a single machine is often enough</td></tr>
+    <tr><td>100 GB → PB</td><td><strong>Spark</strong> (Databricks, EMR, Dataproc)</td><td>Splits data and work across many machines</td></tr>
+  </table>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Counting votes for a country. One clerk (pandas) is fastest for a village. For a country, you split ballots across thousands of clerks and add up their tallies. Spark is the system that hands out ballots and collects tallies.</p>
+  </div>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Spark on 50 MB is <em>slower</em> than pandas: JVM start-up, scheduling and serialisation dominate. Pick Spark for a named reason (size, an existing lakehouse), not prestige.</p>
+  </div>
+
+  <h2 id="sp-arch"><span class="num">02</span>Architecture</h2>
+  <figure class="viz"><svg viewBox="0 0 600 230" width="600">
+    <defs><marker id="sp-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="20" y="85" width="140" height="60" rx="8" class="fb sb"/>
+    <text x="90" y="110" text-anchor="middle" font-weight="bold">Driver</text>
+    <text x="90" y="128" text-anchor="middle" font-size="11">plans DAG, schedules</text>
+    <rect x="220" y="10" width="140" height="44" rx="8" class="fv"/>
+    <text x="290" y="37" text-anchor="middle">Cluster manager</text>
+    <text x="290" y="70" text-anchor="middle" font-size="10" class="tm">YARN / Kubernetes / standalone</text>
+    <g>
+      <rect x="420" y="20" width="160" height="56" rx="8" class="ft st"/>
+      <text x="500" y="40" text-anchor="middle" font-weight="bold">Executor 1</text>
+      <rect x="432" y="50" width="40" height="18" rx="3" class="fs"/><text x="452" y="63" text-anchor="middle" font-size="10">task</text>
+      <rect x="480" y="50" width="40" height="18" rx="3" class="fs"/><text x="500" y="63" text-anchor="middle" font-size="10">task</text>
+      <rect x="528" y="50" width="40" height="18" rx="3" class="fg"/><text x="548" y="63" text-anchor="middle" font-size="10">cache</text>
+    </g>
+    <g>
+      <rect x="420" y="90" width="160" height="56" rx="8" class="ft st"/>
+      <text x="500" y="110" text-anchor="middle" font-weight="bold">Executor 2</text>
+      <rect x="432" y="120" width="40" height="18" rx="3" class="fs"/><text x="452" y="133" text-anchor="middle" font-size="10">task</text>
+      <rect x="480" y="120" width="40" height="18" rx="3" class="fs"/><text x="500" y="133" text-anchor="middle" font-size="10">task</text>
+      <rect x="528" y="120" width="40" height="18" rx="3" class="fg"/><text x="548" y="133" text-anchor="middle" font-size="10">cache</text>
+    </g>
+    <g>
+      <rect x="420" y="160" width="160" height="56" rx="8" class="ft st"/>
+      <text x="500" y="180" text-anchor="middle" font-weight="bold">Executor 3</text>
+      <rect x="432" y="190" width="40" height="18" rx="3" class="fs"/><text x="452" y="203" text-anchor="middle" font-size="10">task</text>
+      <rect x="480" y="190" width="40" height="18" rx="3" class="fs"/><text x="500" y="203" text-anchor="middle" font-size="10">task</text>
+      <rect x="528" y="190" width="40" height="18" rx="3" class="fg"/><text x="548" y="203" text-anchor="middle" font-size="10">cache</text>
+    </g>
+    <line x1="160" y1="100" x2="218" y2="40" stroke="currentColor" marker-end="url(#sp-ar)"/>
+    <text x="40" y="72" font-size="10" class="tm">1. ask for resources</text>
+    <line x1="360" y1="32" x2="418" y2="40" stroke="currentColor" marker-end="url(#sp-ar)"/>
+    <line x1="160" y1="115" x2="418" y2="115" stroke="currentColor" marker-end="url(#sp-ar)"/>
+    <line x1="160" y1="125" x2="418" y2="185" stroke="currentColor" marker-end="url(#sp-ar)"/>
+    <text x="230" y="108" font-size="10" class="tm">2. send tasks directly</text>
+  </svg><figcaption>The driver plans; executors (JVM processes on worker machines) run one task per partition per core.</figcaption></figure>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Driver = head chef writing the plan. Cluster manager = restaurant manager assigning cooks. Executors = cooks, each with a few burners (cores) and a fridge (cache).</p>
+  </div>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>The driver is a single machine. Anything that pulls all data to it (<code>collect()</code>, <code>toPandas()</code>) can crash it with out-of-memory.</p>
+  </div>
+
+  <h2 id="sp-lazy"><span class="num">03</span>DataFrames &amp; Laziness</h2>
+  <div class="flow"><span>filter</span><span>join</span><span>groupBy</span><span>(nothing runs)</span><span>show() = action</span><span>plan optimised + executed</span></div>
+  <p>A Spark DataFrame is a distributed table with a schema. <strong>Transformations</strong> only record a recipe; an <strong>action</strong> triggers the work.</p>
+  <div class="fx" data-lang="py">from pyspark.sql import SparkSession, functions as F
+spark = SparkSession.builder.master("local[4]").getOrCreate()
+
+q = (orders.filter(F.col("status") == "delivered")     # transformation
+           .join(customers, "customer_id")              # transformation
+           .groupBy("city").agg(F.sum("amount").alias("revenue"),
+                                F.count("*").alias("n")))
+print(type(q).__name__, "- nothing has run yet")
+q.show()                                                # action</div>
+  <div class="fx" data-lang="text">DataFrame - nothing has run yet
++------+-------+---+
+|  city|revenue|  n|
++------+-------+---+
+|Mumbai| 2530.0|  3|
++------+-------+---+</div>
+  <table class="tbl">
+    <tr><th>Transformations (lazy)</th><th>Actions (run the job)</th></tr>
+    <tr><td><code>select, filter, withColumn, join, groupBy, orderBy, repartition</code></td><td><code>show, count, collect, take, toPandas, write</code></td></tr>
+  </table>
+  <div class="callout intu"><span class="label">Why lazy?</span>
+    <p>Seeing the whole recipe first lets the optimizer (Catalyst) push filters down, drop unused columns and pick join strategies before touching data.</p>
+  </div>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Each action re-runs the whole lineage from the source. Calling <code>count()</code> then <code>show()</code> then <code>write</code> = three full jobs, unless you cache.</p>
+  </div>
+
+  <h2 id="sp-shuffle"><span class="num">04</span>Narrow, Wide &amp; Stages</h2>
+  <figure class="viz"><svg viewBox="0 0 600 190" width="600">
+    <defs><marker id="sp-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <text x="130" y="18" text-anchor="middle" font-weight="bold" class="tg">Narrow (filter, select)</text>
+    <rect x="40" y="35" width="60" height="30" rx="4" class="fb"/><rect x="40" y="85" width="60" height="30" rx="4" class="fb"/><rect x="40" y="135" width="60" height="30" rx="4" class="fb"/>
+    <rect x="170" y="35" width="60" height="30" rx="4" class="fg"/><rect x="170" y="85" width="60" height="30" rx="4" class="fg"/><rect x="170" y="135" width="60" height="30" rx="4" class="fg"/>
+    <line x1="100" y1="50" x2="168" y2="50" stroke="currentColor" marker-end="url(#sp-ar2)"/>
+    <line x1="100" y1="100" x2="168" y2="100" stroke="currentColor" marker-end="url(#sp-ar2)"/>
+    <line x1="100" y1="150" x2="168" y2="150" stroke="currentColor" marker-end="url(#sp-ar2)"/>
+    <text x="130" y="185" text-anchor="middle" font-size="11" class="tm">1 → 1, no network, same stage</text>
+    <text x="450" y="18" text-anchor="middle" font-weight="bold" class="tr">Wide (groupBy, join)</text>
+    <rect x="360" y="35" width="60" height="30" rx="4" class="fb"/><rect x="360" y="85" width="60" height="30" rx="4" class="fb"/><rect x="360" y="135" width="60" height="30" rx="4" class="fb"/>
+    <rect x="490" y="35" width="60" height="30" rx="4" class="fr"/><rect x="490" y="85" width="60" height="30" rx="4" class="fr"/><rect x="490" y="135" width="60" height="30" rx="4" class="fr"/>
+    <g stroke="currentColor" marker-end="url(#sp-ar2)">
+      <line x1="420" y1="50" x2="488" y2="50"/><line x1="420" y1="50" x2="488" y2="98"/><line x1="420" y1="50" x2="488" y2="146"/>
+      <line x1="420" y1="100" x2="488" y2="54"/><line x1="420" y1="100" x2="488" y2="146"/>
+      <line x1="420" y1="150" x2="488" y2="56"/><line x1="420" y1="150" x2="488" y2="104"/><line x1="420" y1="150" x2="488" y2="150"/>
+    </g>
+    <text x="450" y="185" text-anchor="middle" font-size="11" class="tm">many → many, network shuffle, new stage</text>
+  </svg><figcaption>Narrow: each output partition needs one input partition. Wide: rows with the same key must travel to the same partition.</figcaption></figure>
+  <ul>
+    <li><strong>Shuffle</strong>: redistributing rows across the network by key. Writes to disk, sends over network, reads back. The most expensive thing Spark does.</li>
+    <li><strong>Stage</strong>: a chain of narrow steps between shuffles. Each shuffle starts a new stage.</li>
+    <li><strong>Job → stages → tasks</strong>: one action = one job; tasks per stage = partitions.</li>
+  </ul>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Sorting mail. Stamping each letter (narrow) happens at each desk. Sorting by city (wide) means everyone walks letters to the right city's desk: that walking is the shuffle.</p>
+  </div>
+
+  <h2 id="sp-sql"><span class="num">05</span>Spark SQL &amp; explain()</h2>
+  <p>SQL and DataFrame code compile to the <em>same</em> plan. Use whichever reads better.</p>
+  <div class="fx" data-lang="py">orders.createOrReplaceTempView("orders")
+customers.createOrReplaceTempView("customers")
+spark.sql("""SELECT c.city, SUM(o.amount) AS revenue
+             FROM orders o JOIN customers c USING (customer_id)
+             WHERE o.status = 'delivered' GROUP BY c.city""").show()
+q.explain()     # physical plan of the DataFrame query above</div>
+  <div class="fx" data-lang="text">== Physical Plan ==
+AdaptiveSparkPlan isFinalPlan=false
++- HashAggregate(keys=[city#7], functions=[sum(amount#4), count(1)])
+   +- Exchange hashpartitioning(city#7, 8)                         &lt;- shuffle 2
+      +- HashAggregate(keys=[city#7], functions=[partial_sum(amount#4), partial_count(1)])
+         +- Project [amount#4, city#7]
+            +- SortMergeJoin [customer_id#1], [customer_id#5], Inner
+               :- Sort [customer_id#1 ASC NULLS FIRST]
+               :  +- Exchange hashpartitioning(customer_id#1, 8)   &lt;- shuffle 1
+               :     +- Project [customer_id#1, amount#4]
+               :        +- Filter ((isnotnull(status#3) AND (status#3 = delivered)) ...
+               +- Sort [customer_id#5 ASC NULLS FIRST]
+                  +- Exchange hashpartitioning(customer_id#5, 8)
+                     +- Project [customer_id#5, city#7]</div>
+  <p>Read bottom-up. What to notice (arrows added by hand, plan trimmed):</p>
+  <ul>
+    <li><strong>Filter pushed down</strong> below the join; <strong>Project</strong> keeps only needed columns.</li>
+    <li><strong>Exchange</strong> = shuffle = stage boundary. Fewer Exchanges, faster job.</li>
+    <li><strong>partial_sum → Exchange → sum</strong>: Spark pre-aggregates per partition before shuffling (like a combiner), so less data moves.</li>
+    <li><strong>AdaptiveSparkPlan</strong>: AQE can change the plan at runtime using real sizes.</li>
+  </ul>
+
+  <h2 id="sp-join"><span class="num">06</span>Joins at Scale</h2>
+  <div class="cards">
+    <div><b>Broadcast hash join</b><p>Copy the small table to every executor. The big table never moves.</p><small>Small side &lt; ~10 MB default (<code>autoBroadcastJoinThreshold</code>); force with <code>F.broadcast()</code></small></div>
+    <div><b>Sort-merge join</b><p>Shuffle both sides by key, sort, then merge.</p><small>Default for big ⋈ big. Two shuffles.</small></div>
+    <div><b>Shuffle hash join</b><p>Shuffle both, build a hash table on the smaller side per partition.</p><small>When one side is medium-sized</small></div>
+  </div>
+  <div class="fx" data-lang="py">big.join(F.broadcast(cust), "customer_id").groupBy("city").sum("amount").explain()</div>
+  <div class="fx" data-lang="text">+- BroadcastHashJoin [customer_id#1], [customer_id#3], Inner, BuildRight
+   :- Filter isnotnull(customer_id#1)
+   :  +- Range (0, 5000000, step=1, splits=4)          &lt;- 5M rows: no Exchange
+   +- BroadcastExchange HashedRelationBroadcastMode(...)  &lt;- 4-row table copied</div>
+  <p>Compare with section 05: the 5M-row side has <strong>no shuffle</strong> at all.</p>
+  <h3>Skew: one key with most of the rows</h3>
+  <div class="fx" data-lang="py">skewed = spark.range(2_000_000).withColumn(
+    "k", F.when(F.col("id") % 10 &lt; 9, 1).otherwise(F.col("id") % 8))   # 90% of rows: k = 1
+skewed.repartition(8, "k").groupBy(F.spark_partition_id()).count().show()
+
+salted = skewed.withColumn("salt", (F.rand(1) * 8).cast("int"))         # add random 0..7
+salted.repartition(8, "k", "salt").groupBy(F.spark_partition_id()).count().show()</div>
+  <table class="tbl out"><caption>Rows per shuffle partition (real run)</caption>
+    <tr><th>partition</th><th>hash on k</th><th>hash on (k, salt)</th></tr>
+    <tr><td>0</td><td>0</td><td>24,937</td></tr><tr><td>1</td><td>0</td><td>730,156</td></tr>
+    <tr><td>2</td><td>0</td><td>6,183</td></tr><tr><td>3</td><td>100,000</td><td>243,199</td></tr>
+    <tr><td>4</td><td>50,000</td><td>12,511</td></tr><tr><td>5</td><td><strong>1,850,000</strong></td><td>482,235</td></tr>
+    <tr><td>6</td><td>0</td><td>231,439</td></tr><tr><td>7</td><td>0</td><td>269,340</td></tr>
+  </table>
+  <p>One task did 92% of the work; salting cut the biggest partition 2.5×. (Uneven still: 8 salts hashed into 8 buckets collide. Real jobs use more partitions.)</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Skew is one supermarket checkout with 90 customers while 7 sit empty. Salting gives the giant queue several tills. The job ends only when the slowest till does.</p>
+  </div>
+  <ul>
+    <li><strong>Fixes</strong>: broadcast the other side; salt the key (and replicate the small side ×N salts for joins); AQE <code>spark.sql.adaptive.skewJoin.enabled</code> splits big partitions automatically; filter NULL keys (a classic hidden hot key).</li>
+  </ul>
+
+  <h2 id="sp-part"><span class="num">07</span>Partitions, Cache, Parquet</h2>
+  <div class="fx" data-lang="py">print(big.rdd.getNumPartitions())                                   # 4  (local[4])
+print(big.repartition(16).rdd.getNumPartitions())                   # 16 (full shuffle)
+print(big.coalesce(2).rdd.getNumPartitions())                       # 2  (merge, no shuffle)
+print(big.groupBy("customer_id").count().rdd.getNumPartitions())    # 1  (AQE shrank 8 tiny ones)</div>
+  <table class="tbl">
+    <tr><th></th><th><code>repartition(n)</code></th><th><code>coalesce(n)</code></th></tr>
+    <tr><td>Direction</td><td>Up or down</td><td>Down only</td></tr>
+    <tr><td>Shuffle?</td><td>Yes, full; evenly balanced</td><td>No; merges neighbours, can be uneven</td></tr>
+    <tr><td>Use for</td><td>More parallelism, partition by a key before a join/write</td><td>Fewer output files at the end</td></tr>
+  </table>
+  <p>Rule of thumb: partitions of ~100–200 MB; at least 2–3× total cores.</p>
+  <h3>Cache</h3>
+  <div class="fx" data-lang="py">df = spark.read.parquet("out/many").groupBy("customer_id", F.col("id") % 1000).agg(F.avg("amount"))
+df.count(); df.count()          # each re-reads + re-aggregates
+df.cache(); df.count()          # materialise into executor memory
+df.count()                      # served from cache
+df.unpersist()</div>
+  <div class="fx" data-lang="text">run 1 (no cache)  2.97s
+run 2 (no cache)  0.76s      (JVM warm, OS file cache)
+run 3 (cached)    0.12s</div>
+  <p>Cache only a DataFrame reused 2+ times (e.g. an ML training set across iterations). <code>cache()</code> is itself lazy.</p>
+  <h3>Parquet &amp; partitionBy</h3>
+  <div class="fx" data-lang="py">sales.coalesce(1).write.mode("overwrite").partitionBy("city").parquet("out/bycity")
+spark.read.parquet("out/bycity").filter("city = 'Pune'").explain()</div>
+  <div class="fx" data-lang="text">out/bycity/city=Delhi/  city=Mumbai/  city=Pune/
+FileScan parquet [...] PartitionFilters: [isnotnull(city#223), (city#223 = Pune)] ...
+Pune rows: 1250000</div>
+  <ul>
+    <li><strong>Parquet</strong>: columnar, compressed, stores schema and min/max stats. Reads only needed columns (projection) and skips row groups (predicate pushdown).</li>
+    <li><strong>partitionBy</strong> writes one folder per value. <em>PartitionFilters</em> means Spark only opened the <code>city=Pune</code> folder.</li>
+  </ul>
+
+  <h2 id="sp-traps"><span class="num">08</span>Performance Traps</h2>
+  <div class="fx" data-lang="py">to_usd = F.udf(lambda x: x * 0.012, DoubleType())         # Python UDF
+big.select(F.sum(to_usd("amount"))).collect()             # 5M rows
+big.select(F.sum(F.col("amount") * 0.012)).collect()      # built-in</div>
+  <table class="tbl out"><caption>Real timing, 5M rows, local[4]</caption>
+    <tr><th>method</th><th>time</th></tr><tr><td>Python UDF</td><td>5.53 s</td></tr><tr><td>built-in column expression</td><td><strong>0.48 s</strong></td></tr>
+  </table>
+  <p>A Python UDF ships every row JVM → Python → JVM and blinds the optimizer. ~11× slower here.</p>
+  <table class="tbl">
+    <tr><th>Trap</th><th>Symptom</th><th>Fix</th></tr>
+    <tr><td><code>collect()</code> / <code>toPandas()</code> on big data</td><td>Driver OOM</td><td><code>take(n)</code>, aggregate first, or <code>write</code></td></tr>
+    <tr><td>Python UDFs</td><td>Slow, no pushdown</td><td>Built-in <code>F.*</code> functions; else <code>pandas_udf</code> (vectorised via Arrow)</td></tr>
+    <tr><td>Small files</td><td>Thousands of KB-sized files; slow listing and reads</td><td><code>coalesce</code>/<code>repartition</code> before write; compaction (Delta <code>OPTIMIZE</code>)</td></tr>
+    <tr><td>Skewed key</td><td>One task runs for hours, rest idle</td><td>Broadcast, salt, AQE skew join</td></tr>
+    <tr><td>Too few / too many partitions</td><td>Idle cores / scheduler overhead</td><td>~100–200 MB each; tune <code>spark.sql.shuffle.partitions</code> or rely on AQE</td></tr>
+    <tr><td>Re-computing lineage</td><td>Same expensive step runs per action</td><td><code>cache()</code> reused DataFrames</td></tr>
+  </table>
+  <p>Small files, real run: <code>sales.repartition(200).write.parquet(...)</code> produced <strong>200 files</strong> for 5M rows. <code>coalesce(1)</code> per city produced 3.</p>
+
+  <h2 id="sp-qa"><span class="num">09</span>Questions &amp; Answers</h2>
+  <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>What's the difference between a transformation and an action? Give two of each.</summary><div class="qa-body">Transformations (<code>filter</code>, <code>groupBy</code>) return a new DataFrame and only add to the plan. Actions (<code>count</code>, <code>write</code>) make Spark optimise the plan and run a job. Laziness lets Catalyst optimise the whole pipeline at once.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a shuffle, and which operations cause one?</summary><div class="qa-body">Moving rows across the network so all rows with the same key land in the same partition. Caused by wide ops: <code>groupBy</code>, non-broadcast <code>join</code>, <code>distinct</code>, <code>orderBy</code>, <code>repartition</code>, window <code>partitionBy</code>. It costs disk writes, network and serialisation, and starts a new stage.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>You join a 2 TB events table with a 5 MB country table. What does Spark do, and how do you make sure?</summary><div class="qa-body">It should use a broadcast hash join: copy the 5 MB table to every executor, so the 2 TB side is never shuffled. Spark does this automatically under <code>autoBroadcastJoinThreshold</code> (10 MB) if it knows the size. Force it with <code>F.broadcast(countries)</code> and confirm <code>BroadcastHashJoin</code> in <code>explain()</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>A job's 199 tasks finish in 2 minutes; the last one takes 2 hours. Diagnose and fix.</summary><div class="qa-body">Data skew: one key (often NULL or a default like "unknown") holds most rows, so one partition is huge. Check key counts with <code>groupBy(key).count()</code>. Fix: broadcast the other side if small; enable AQE skew join; salt the hot key (append random 0..N-1, replicate the other side N times, join on (key, salt)); drop or handle NULL keys separately.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>repartition vs coalesce?</summary><div class="qa-body"><code>repartition(n)</code> does a full shuffle, can increase or decrease, and gives even partitions (optionally by a column). <code>coalesce(n)</code> only decreases, merges existing partitions without a shuffle, and can be uneven. Use coalesce to cut output files at the end; repartition to raise parallelism or co-locate keys.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why is a Python UDF slow, and what do you use instead?</summary><div class="qa-body">Every row is serialised from the JVM to a Python worker and back, row by row, and the optimizer can't see inside it (no pushdown, no codegen). Use built-in <code>pyspark.sql.functions</code>; if you must use Python, a <code>pandas_udf</code> processes Arrow batches and is much faster. In our run the UDF was ~11× slower.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What's the output: <code>df = spark.read.parquet(p); df2 = df.filter("x &gt; 0"); print("done")</code> on a 1 TB path. How long does it take?</summary><div class="qa-body">Near-instant. <code>filter</code> is lazy, and reading Parquet only fetches the schema from metadata. No job processes the data until an action like <code>count()</code> or <code>write</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When should you cache, and when is it harmful?</summary><div class="qa-body">Cache a DataFrame used by 2+ actions, such as features reused across training iterations or a cleaned table feeding several reports. Harmful when used once (wasted memory and time), when it's bigger than memory (spills, evicts other data), or when you forget <code>unpersist()</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What's the "small files problem" and how do you avoid it?</summary><div class="qa-body">Writing thousands of tiny files (e.g. 200 shuffle partitions × 365 date folders). Listing and opening each file costs more than reading it, and metadata in S3/HDFS explodes. Avoid with <code>coalesce</code>/<code>repartition(col)</code> before writing, aiming for ~128 MB–1 GB files, and periodic compaction (Delta <code>OPTIMIZE</code>).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does partitionBy("date") on write give you, and what's the danger?</summary><div class="qa-body">One folder per date, so queries filtering on date read only matching folders (partition pruning). Danger: partitioning on a high-cardinality column like <code>user_id</code> creates millions of folders and tiny files. Choose a low-cardinality column that queries filter on.</div></details>
+</main>`
+});
+
+
 // dl/dl_keras.js — TensorFlow & Keras
 Object.assign(TOPIC_CONTENT, {
   "dl_keras": `<main>
