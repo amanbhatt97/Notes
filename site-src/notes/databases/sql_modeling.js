@@ -4,6 +4,103 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Data Modeling</h1>
   <p class="lead">How to decide which tables exist and what goes in each. A good model makes wrong data hard to store and common questions easy to ask; a bad one quietly corrupts both.</p>
 
+  <h2 id="sm-map" class="open"><span class="num">★</span>Mind Map</h2>
+<div class="mindmap">
+  <div class="mm-center">Data Modeling</div>
+  <div class="mm-branches">
+    <div class="mm-branch">
+      <div class="mm-title">Why model</div>
+      <ul>
+        <li><b>Goal</b> — every fact stored once, in the right table</li>
+        <li><b>Update anomaly</b> — Asha's city on 3 rows; change one → two cities</li>
+        <li><b>Insert anomaly</b> — can't record Dia until she orders</li>
+        <li><b>Delete anomaly</b> — delete Ben's only order → Ben vanishes</li>
+        <li><b>Root cause</b> — one table describing several things → one table per thing</li>
+        <li>💡 one salt jar per dish: refill means hunting every jar</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Entities &amp; relationships</div>
+      <ul>
+        <li><b>Nouns</b> → tables; facts → columns; <b>verbs</b> → FKs</li>
+        <li><b>1:N</b> — FK on the "many" side (<code>orders.customer_id</code>)</li>
+        <li><b>M:N</b> — junction table <code>order_items</code>, PK (order_id, product_id)
+          <ul><li>holds its own attributes: qty, unit_price</li></ul></li>
+        <li><b>Self 1:N</b> — <code>employees.manager_id</code> → employees</li>
+        <li>⚠ <b>List column</b> <code>'10,13'</code> — string search, no FK; use a junction table</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Normal forms</div>
+      <ul>
+        <li><b>Functional dependency</b> — A → B: knowing A fixes B</li>
+        <li><b>1NF</b> — atomic cells, no lists / repeating groups, a key</li>
+        <li><b>2NF</b> — no column depends on <em>part</em> of a composite key</li>
+        <li><b>3NF</b> — no non-key → non-key (order → customer → city)
+          <ul><li>"the key, the whole key, nothing but the key"</li></ul></li>
+        <li><b>BCNF</b> — every determinant is a candidate key (rep → category)</li>
+        <li><b>4NF / 5NF</b> — no independent multi-valued lists; rare</li>
+        <li>⚠ <b>Lossless</b> — joining pieces must give back the original rows</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Denormalization</div>
+      <ul>
+        <li><b>What</b> — store a fact twice or precomputed for faster reads</li>
+        <li><b>Forms</b> — copied column, stored total, summary table, materialized view, one big table</li>
+        <li><b>Cost</b> — anomalies return; sync every copy or it drifts</li>
+        <li><b>MV</b> — stale until <code>REFRESH MATERIALIZED VIEW</code></li>
+        <li><b>Rule</b> — normalize the source of truth; denormalize copies</li>
+        <li>💡 "today's total" on a whiteboard</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Star &amp; snowflake</div>
+      <ul>
+        <li><b>OLTP</b> 3NF, current state, small writes; <b>OLAP</b> star, history, big reads</li>
+        <li><b>Fact</b> — one row per event; measures + FKs; tall &amp; narrow</li>
+        <li><b>Dimension</b> — who/what/when context; short &amp; wide</li>
+        <li><b>Grain</b> — what one fact row means; decide first</li>
+        <li><b>Measures</b> — additive (revenue), semi-additive (balance), non-additive (ratio)</li>
+        <li><b>Degenerate dim</b> — order_id kept in the fact, no table</li>
+        <li><b>Snowflake</b> — normalized dims; fewer repeats, more joins</li>
+        <li>⚠ <b>Mixed grain</b> — order-level shipping on line rows double-counts</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Slowly changing dims</div>
+      <ul>
+        <li><b>Type 1</b> — overwrite; no history (typo fixes)</li>
+        <li><b>Type 2</b> — new row per version: surrogate key, valid_from, valid_to, is_current</li>
+        <li><b>Type 3</b> — <code>previous_city</code> column; one step back</li>
+        <li><b>Type 2 join</b> — <code>order_date BETWEEN valid_from AND valid_to</code></li>
+        <li>⚠ <b>Join on id only</b> → every version matches → duplicated facts</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">JSONB vs columns</div>
+      <ul>
+        <li><b>JSONB</b> — binary JSON column; fields vary per row; <code>attrs -&gt;&gt; 'ram_gb'</code></li>
+        <li><b>Use for</b> — sparse attributes, raw event/API payloads</li>
+        <li><b>Columns for</b> — anything filtered, joined, grouped, constrained</li>
+        <li>⚠ <b>Hidden schema</b> — "16" vs 16 vs "16GB"; promote hot fields</li>
+        <li><b>GIN index</b> — speeds <code>@&gt;</code> containment</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Conventions</div>
+      <ul>
+        <li><b>Naming</b> — snake_case, FK named after target, <code>is_</code>/<code>has_</code>, avoid <code>user</code>/<code>order</code></li>
+        <li><b>Surrogate key</b> — <code>bigint GENERATED ALWAYS AS IDENTITY</code> or UUID; natural key UNIQUE</li>
+        <li><b>Audit</b> — <code>created_at</code>, <code>updated_at timestamptz</code> (trigger/app updates it)</li>
+        <li><b>Soft delete</b> — <code>deleted_at</code>; partial unique index <code>WHERE deleted_at IS NULL</code></li>
+        <li>⚠ <b>Leaks</b> — every query must filter deleted rows; use a view</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -15,8 +112,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="sm-scd"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Slowly Changing Dimensions</span><span class="rm-sub">When Asha moves city</span></div></div>
       <div class="rm-item rm-done" data-target="sm-json"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">JSONB vs Columns</span><span class="rm-sub">Flexible, but at a price</span></div></div>
       <div class="rm-item rm-done" data-target="sm-conv"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Practical Conventions</span><span class="rm-sub">Names, ids, timestamps, soft delete</span></div></div>
-      <div class="rm-item rm-done" data-target="sm-rev"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="sm-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including "design a schema for X"</span></div></div>
+      <div class="rm-item rm-done" data-target="sm-qa"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including "design a schema for X"</span></div></div>
     </div>
   </div>
 
@@ -54,8 +150,21 @@ SELECT count(*) AS ben_rows FROM orders_flat WHERE cust_name = 'Ben';</div>
   </div>
 
   <h2 id="sm-er"><span class="num">02</span>Entities &amp; Relationships</h2>
-  <p>ER (entity-relationship) thinking: <strong>nouns</strong> become tables (entities), their facts become columns (attributes), <strong>verbs</strong> become links (a customer <em>places</em> orders) built with foreign keys. <strong>Cardinality</strong> = how many on each side: 1:1, 1:N or M:N.</p>
-  <div class="flow"><span>customers</span><span>orders</span><span>order_items</span><span>products</span></div>
+  <p><strong>Nouns</strong> → tables, their facts → columns, <strong>verbs</strong> → foreign keys. <strong>Cardinality</strong> = how many on each side: 1:1, 1:N, M:N.</p>
+  <figure class="viz"><svg viewBox="0 0 600 130" width="600">
+    <g text-anchor="middle">
+      <rect x="0" y="40" width="120" height="40" rx="6" class="fb sb"/><text x="60" y="65" font-weight="bold">customers</text>
+      <rect x="160" y="40" width="120" height="40" rx="6" class="fb sb"/><text x="220" y="65" font-weight="bold">orders</text>
+      <rect x="320" y="40" width="130" height="40" rx="6" class="fv"/><text x="385" y="58" font-weight="bold">order_items</text><text x="385" y="73" font-size="10" class="tm">qty, unit_price</text>
+      <rect x="490" y="40" width="110" height="40" rx="6" class="fb sb"/><text x="545" y="65" font-weight="bold">products</text>
+    </g>
+    <g stroke="currentColor"><line x1="120" y1="60" x2="160" y2="60"/><line x1="280" y1="60" x2="320" y2="60"/><line x1="450" y1="60" x2="490" y2="60"/></g>
+    <g font-size="11" class="tb"><text x="124" y="54">1</text><text x="148" y="54">N</text><text x="284" y="54">1</text><text x="308" y="54">N</text><text x="454" y="54">N</text><text x="478" y="54">1</text></g>
+    <text x="140" y="98" text-anchor="middle" font-size="10" class="tm">FK orders.customer_id</text>
+    <text x="385" y="98" text-anchor="middle" font-size="10" class="tm">junction table = M:N orders ↔ products</text>
+    <text x="300" y="20" text-anchor="middle" font-size="11" class="tm">FK always sits on the "many" side</text>
+    <text x="140" y="116" text-anchor="middle" font-size="10" class="tm">(0..N: Dia has none)</text>
+  </svg><figcaption>The shop as an ER chain. M:N never fits in two tables; it needs the middle one.</figcaption></figure>
   <table class="tbl">
     <tr><th>Relationship (shop)</th><th>Cardinality</th><th>How it's built</th></tr>
     <tr><td>customer places orders</td><td>1 : N (0..N: Dia has none)</td><td>FK <code>orders.customer_id</code></td></tr>
@@ -71,9 +180,24 @@ SELECT count(*) AS ben_rows FROM orders_flat WHERE cust_name = 'Ben';</div>
   </div>
 
   <h2 id="sm-norm"><span class="num">03</span>Normalization</h2>
-  <p><strong>Normalization</strong> = splitting tables step by step until each fact lives in one place. Each "normal form" (NF) removes one kind of redundancy.</p>
-  <p>It rests on <strong>functional dependency</strong> (A → B: knowing A fixes B). <code>product → category</code>: a product always has the same category.</p>
-  <p>Running example: the shop as someone first typed it, one row per order with a list of items.</p>
+  <p><strong>Normalization</strong> = splitting tables until each fact lives in one place; each normal form (NF) removes one kind of redundancy. It rests on <strong>functional dependency</strong>: A → B means knowing A fixes B (<code>product → category</code>).</p>
+  <figure class="viz"><svg viewBox="0 0 600 220" width="600">
+    <defs><marker id="sm-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="0" y="10" width="190" height="200" rx="6" class="fs" stroke="currentColor" stroke-opacity=".4"/>
+    <text x="95" y="30" text-anchor="middle" font-weight="bold">orders_flat (1NF)</text>
+    <g font-size="11"><text x="14" y="54" class="tb">order_id, order_date</text><text x="14" y="74" class="tr">cust_name, cust_city</text><text x="14" y="94" class="tg">product, category</text><text x="14" y="114">qty, unit_price</text></g>
+    <text x="14" y="146" font-size="10" class="tm">key = (order_id, product)</text>
+    <text x="14" y="164" font-size="10" class="tm">7 rows; Asha's city ×3,</text><text x="14" y="178" font-size="10" class="tm">"Electronics" ×3</text>
+    <g stroke="currentColor"><line x1="190" y1="50" x2="268" y2="30" marker-end="url(#sm-ar)"/><line x1="190" y1="70" x2="268" y2="80" marker-end="url(#sm-ar)"/><line x1="190" y1="90" x2="268" y2="130" marker-end="url(#sm-ar)"/><line x1="190" y1="110" x2="268" y2="180" marker-end="url(#sm-ar)"/></g>
+    <text x="210" y="216" font-size="10" class="tm">split by what each column depends on</text>
+    <g font-size="11">
+      <rect x="270" y="12" width="320" height="36" rx="6" class="fb sb"/><text x="280" y="34">orders (order_id PK, order_date, cust → FK)</text>
+      <rect x="270" y="62" width="320" height="36" rx="6" class="fr sr"/><text x="280" y="84">customers (name PK, city)  ← 3NF step</text>
+      <rect x="270" y="112" width="320" height="36" rx="6" class="fg sg"/><text x="280" y="134">products (product PK, category)  ← 2NF</text>
+      <rect x="270" y="162" width="320" height="36" rx="6" class="fv"/><text x="280" y="184">items (order_id, product, qty, unit_price)</text>
+    </g>
+  </svg><figcaption>Each colour is one dependency. Give each its own table and every fact is stored once.</figcaption></figure>
+  <p>Step by step, starting from the shop as first typed: one row per order with a list of items.</p>
   
   <div class="fx" data-lang="sql">SELECT order_id, cust_name, cust_city,
        string_agg(product || ' x' || qty, ', ' ORDER BY product) AS items
@@ -159,11 +283,26 @@ SELECT * FROM customer_revenue ORDER BY revenue DESC;</div>
   </div>
 
   <h2 id="sm-olap"><span class="num">05</span>Star &amp; Snowflake Schemas</h2>
-  <p><strong>OLTP</strong> models (the app) are 3NF and hold current state, tuned for safe small writes. <strong>OLAP</strong> models (the warehouse) are star-shaped and keep history, tuned for big simple reads.</p>
+  <div class="cards">
+    <div><b>OLTP (the app)</b><p>3NF, current state, safe small writes.</p></div>
+    <div><b>OLAP (warehouse)</b><p>Star-shaped, keeps history, big simple reads.</p></div>
+  </div>
+  <figure class="viz"><svg viewBox="0 0 600 220" width="600">
+    <g stroke="currentColor" opacity=".6"><line x1="95" y1="64" x2="170" y2="96"/><line x1="505" y1="64" x2="430" y2="96"/><line x1="300" y1="156" x2="300" y2="166"/></g>
+    <rect x="170" y="70" width="260" height="86" rx="8" class="fb sb"/>
+    <text x="300" y="90" text-anchor="middle" font-weight="bold">fact_sales</text>
+    <g font-size="10" text-anchor="middle"><text x="300" y="106" class="tm">date_key, customer_key, product_key</text><text x="300" y="122">qty · revenue  (measures)</text><text x="300" y="138" class="tm">order_id · status (degenerate)</text></g>
+    <text x="300" y="150" text-anchor="middle" font-size="9" class="tm">grain: one order line</text>
+    <rect x="10" y="12" width="170" height="52" rx="8" class="ft st"/><text x="95" y="32" text-anchor="middle" font-weight="bold">dim_date</text><text x="95" y="50" text-anchor="middle" font-size="10" class="tm">year, month, weekday</text>
+    <rect x="420" y="12" width="170" height="52" rx="8" class="ft st"/><text x="505" y="32" text-anchor="middle" font-weight="bold">dim_customer</text><text x="505" y="50" text-anchor="middle" font-size="10" class="tm">name, city</text>
+    <rect x="215" y="166" width="170" height="48" rx="8" class="ft st"/><text x="300" y="186" text-anchor="middle" font-weight="bold">dim_product</text><text x="300" y="203" text-anchor="middle" font-size="10" class="tm">name, category</text>
+    <rect x="430" y="166" width="160" height="48" rx="8" fill="none" stroke="currentColor" stroke-dasharray="4 3" opacity=".6"/><text x="510" y="186" text-anchor="middle" font-size="11">dim_category</text><text x="510" y="203" text-anchor="middle" font-size="10" class="tm">snowflake only</text>
+    <line x1="385" y1="190" x2="428" y2="190" stroke="currentColor" stroke-dasharray="4 3" opacity=".6"/>
+  </svg><figcaption>Tall fact in the middle, short wide dimensions around it. Every query: fact → join dims → filter → group.</figcaption></figure>
   <ul>
-    <li><strong>Fact table</strong>: one row per measurable event, with numbers you add up (<code>qty</code>, <code>revenue</code>) and FKs to dimensions. Tall and narrow.</li>
-    <li><strong>Dimension table</strong>: the who/what/when context you filter and group by (customer, product, date). Short and wide.</li>
-    <li><strong>Grain</strong>: what exactly one fact row means. Decide it first. Here: <em>one row per order line</em>.</li>
+    <li><strong>Fact table</strong>: one row per measurable event: numbers you add up + FKs to dimensions.</li>
+    <li><strong>Dimension table</strong>: the who/what/when you filter and group by.</li>
+    <li><strong>Grain</strong>: what one fact row means. Decide it first. Here: <em>one order line</em>.</li>
   </ul>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A till receipt roll is the fact table: one line per item sold. The product catalogue, customer list and calendar are dimensions you look things up in.</p>
@@ -207,6 +346,14 @@ GROUP BY 1, 2 ORDER BY 1, 2;</div>
     <tr><td><strong>3</strong></td><td>Add a <code>previous_city</code> column</td><td>One step back</td><td>Only "before vs after" comparisons</td></tr>
   </table>
   <p>Type 2 example: Asha moves from Mumbai to Pune on 2024-05-10.</p>
+  <figure class="viz"><svg viewBox="0 0 600 120" width="600">
+    <rect x="20" y="44" width="300" height="32" class="fb sb"/><text x="170" y="65" text-anchor="middle">key 1 · Mumbai · is_current f</text>
+    <rect x="322" y="44" width="268" height="32" class="fg sg"/><text x="456" y="65" text-anchor="middle">key 5 · Pune · is_current t</text>
+    <g font-size="10" class="tm"><text x="20" y="96">2024-01-05</text><text x="320" y="96" text-anchor="end">05-09</text><text x="324" y="96">05-10</text><text x="590" y="96" text-anchor="end">9999-12-31</text></g>
+    <circle cx="280" cy="28" r="5" class="tb"/><text x="272" y="18" text-anchor="end" font-size="11">order 100 (05-01) → Mumbai</text>
+    <circle cx="380" cy="28" r="5" class="tg"/><text x="388" y="18" font-size="11">order 101 (05-20) → Pune</text>
+    <line x1="280" y1="33" x2="280" y2="44" stroke="currentColor"/><line x1="380" y1="33" x2="380" y2="44" stroke="currentColor"/>
+  </svg><figcaption>SCD Type 2: Asha's two versions tile the timeline; each order lands in the version valid on its date.</figcaption></figure>
   <div class="fx" data-lang="sql">CREATE TABLE dim_customer_scd (
   customer_key serial PRIMARY KEY,       -- surrogate: one per version
   customer_id int, name text, city text,
@@ -273,21 +420,7 @@ CREATE UNIQUE INDEX reviews_one_live ON reviews (customer_id, product_id) WHERE 
     <p>Soft deletes leak. Every query must add <code>WHERE deleted_at IS NULL</code>; forget once and deleted rows reappear in reports. A view <code>live_reviews</code> helps. Also, <code>updated_at</code> doesn't update itself: set it in a trigger or in the app.</p>
   </div>
 
-  <h2 id="sm-rev"><span class="num">09</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Wide table</strong> → update, insert and delete anomalies; cause: one table, many things.</li>
-    <li><strong>Entities</strong> → tables; <strong>relationships</strong> → FKs on the many side; <strong>M:N</strong> → junction table.</li>
-    <li><strong>1NF</strong>: atomic cells, no lists or repeating groups.</li>
-    <li><strong>2NF</strong>: no column depends on part of a composite key.</li>
-    <li><strong>3NF</strong>: no non-key → non-key dependency. <strong>BCNF</strong>: every determinant is a key.</li>
-    <li><strong>Denormalize</strong> copies for read speed; pay with sync work and staleness.</li>
-    <li><strong>Star</strong>: fact (events, measures) + dimensions (context). <strong>Declare the grain first.</strong></li>
-    <li><strong>Snowflake</strong> = star with normalized dimensions: less repetition, more joins.</li>
-    <li><strong>SCD</strong>: Type 1 overwrite, Type 2 new row with valid_from/valid_to, Type 3 previous-value column.</li>
-    <li><strong>JSONB</strong> for sparse or raw data; columns for anything filtered, joined or constrained.</li>
-  </ol></div>
-
-  <h2 id="sm-qa"><span class="num">10</span>Questions &amp; Answers</h2>
+  <h2 id="sm-qa"><span class="num">09</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>Name the three anomalies of an unnormalized table, with a shop example of each.</summary><div class="qa-body">Update: Asha's city stored on every order row; changing one row leaves her in two cities. Insert: a customer like Dia can't be stored until she orders. Delete: deleting Ben's only order deletes the only record of Ben.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>A table <code>enrolments(student_id, course_id, student_name, course_title, grade)</code> with key (student_id, course_id). Which NF does it break and how do you fix it?</summary><div class="qa-body">2NF: <code>student_name</code> depends only on student_id and <code>course_title</code> only on course_id (partial dependencies). Split into <code>students(student_id, name)</code>, <code>courses(course_id, title)</code>, <code>enrolments(student_id, course_id, grade)</code>. Grade depends on both, so it stays.</div></details>

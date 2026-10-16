@@ -5835,6 +5835,101 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Aggregation Pipeline</h1>
   <p class="lead">The aggregation pipeline is MongoDB's GROUP BY, JOIN and window functions in one tool. Learn the stages, map them to SQL, and write the classic analytics queries on the shop orders.</p>
 
+  <h2 id="ma-map" class="open"><span class="num">★</span>Mind Map</h2>
+<div class="mindmap">
+  <div class="mm-center">Aggregation Pipeline</div>
+  <div class="mm-branches">
+    <div class="mm-branch">
+      <div class="mm-title">The idea</div>
+      <ul>
+        <li><b>Pipeline</b> — array of stages; docs flow through in written order</li>
+        <li><b>Why</b> — find() only filters/projects; totals, groups, joins need a pipeline</li>
+        <li><b><code>"$field"</code></b> = field value; <b><code>"$$var"</code></b> = variable (inside <code>$map</code>)</li>
+        <li><b>Stages</b> can repeat, any order; order changes meaning and speed</li>
+        <li>⚠ <b>No $sort</b> → output order not guaranteed</li>
+        <li>💡 assembly line: each station sees only what the last one handed over</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Filter &amp; reshape</div>
+      <ul>
+        <li><b>$match</b> — find() filter syntax; put it first</li>
+        <li><b>$project</b> — keep/drop/rename/compute; unlisted fields dropped</li>
+        <li><b>$addFields</b> (= <code>$set</code>) — add fields, keep the rest</li>
+        <li><b>Array math</b> — <code>$sum: { $map: { input: "$items", as: "i", in: … } }</code></li>
+        <li><b>Expressions</b> — <code>$filter $cond $ifNull $dateToString $size</code></li>
+        <li>⚠ <b>$project { total: 1 }</b> drops every other field</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">$group</div>
+      <ul>
+        <li><b>_id</b> = group key; <code>_id: null</code> = one group; compound <code>{ a: "$a", b: "$b" }</code></li>
+        <li><b>Accumulators</b> — <code>$sum: 1</code> (COUNT), <code>$sum $avg $min $max</code></li>
+        <li><b>$push</b> = ARRAY_AGG; <b>$addToSet</b> = distinct, unordered</li>
+        <li><b>$first / $last</b> — only meaningful after <code>$sort</code></li>
+        <li><b>HAVING</b> = <code>$match</code> after <code>$group</code></li>
+        <li>⚠ After group only <code>_id</code> + accumulators exist</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">$unwind</div>
+      <ul>
+        <li><b>What</b> — one doc with n-element array → n docs, one element each</li>
+        <li><b>Why</b> — group by something inside an array (category)</li>
+        <li>⚠ <b>Empty/missing arrays dropped</b> — <code>preserveNullAndEmptyArrays: true</code></li>
+        <li>⚠ <b>Fan-out</b> — <code>$sum: 1</code> now counts items, not orders</li>
+        <li>⚠ <b>Group by array field without unwind</b> → key is the whole array, no error</li>
+        <li>💡 photocopy the form once per line item</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">$lookup (join)</div>
+      <ul>
+        <li><b>Left outer join</b> into an array: <code>{ from, localField, foreignField, as }</code></li>
+        <li><b>No match</b> → <code>[]</code> (Dia: 0 orders)</li>
+        <li><b>+ $unwind</b> → one row per pair, drops unmatched (inner join)</li>
+        <li><b>Pipeline form</b> — <code>{ from, let, pipeline: [...], as }</code> for extra conditions</li>
+        <li><b>Cost</b> — a query per input doc; index <code>foreignField</code>; group first</li>
+        <li><b>Hot path?</b> schema smell → extended reference (copy the name)</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">SQL → stage</div>
+      <ul>
+        <li><b>WHERE</b> → $match · <b>SELECT</b> → $project / $addFields</li>
+        <li><b>GROUP BY</b> → $group · <b>HAVING</b> → $match after</li>
+        <li><b>JOIN</b> → $lookup (+ $unwind) · <b>UNION ALL</b> → $unionWith</li>
+        <li><b>ORDER/LIMIT/OFFSET</b> → $sort / $limit / $skip · <b>COUNT</b> → $count</li>
+        <li><b>OVER()</b> → $setWindowFields · <b>CREATE TABLE AS</b> → $out / $merge</li>
+        <li><b>Key difference</b> — runs exactly in written order</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Advanced stages</div>
+      <ul>
+        <li><b>$facet</b> — several sub-pipelines, one pass (results + filter counts)</li>
+        <li><b>$bucket</b> — histogram; <code>_id</code> = lower bound, upper exclusive, <code>default</code></li>
+        <li><b>$setWindowFields</b> (5.0+) — <code>partitionBy</code>, <code>sortBy</code>, <code>window: { documents: ["unbounded","current"] }</code></li>
+        <li><b>Ranking</b> — <code>$rank: {}</code></li>
+        <li><b>Dates</b> — <code>$dateToString "%Y-%m"</code>, <code>$year/$month</code>, <code>$dateTrunc</code></li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Performance</div>
+      <ul>
+        <li><b>$match + $sort first</b> — only leading stages use indexes</li>
+        <li><b>$sort + $limit</b> adjacent → top-k, keeps k docs</li>
+        <li><b>100 MB per blocking stage</b> ($group, $sort); <code>allowDiskUse</code> spills (default 6.0+)</li>
+        <li><b>$unwind multiplies</b> — 1M orders × 5 items = 5M docs</li>
+        <li><b>16 MB</b> per output doc ($facet, big $push)</li>
+        <li><b>explain("executionStats")</b> — IXSCAN good, COLLSCAN bad</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -5847,8 +5942,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="ma-work"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Worked Examples</span><span class="rm-sub">Revenue, top product, months</span></div></div>
       <div class="rm-item rm-done" data-target="ma-adv"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">$facet, $bucket, Windows</span><span class="rm-sub">Multi-view and running totals</span></div></div>
       <div class="rm-item rm-done" data-target="ma-perf"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Performance Rules</span><span class="rm-sub">Indexes, 100 MB, $lookup cost</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-rev"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 9 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Write-the-pipeline drills</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Write-the-pipeline drills</span></div></div>
     </div>
   </div>
 
@@ -5858,9 +5952,28 @@ Object.assign(TOPIC_CONTENT, {
   </div>
   <p><code>find()</code> can only filter and project. Totals, groupings, joins and reshaping need a pipeline.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>An <strong>assembly line</strong>. Station 1 throws out rejects ($match), station 2 cuts parts apart ($unwind), station 3 sorts them into bins and counts ($group), station 4 lines up the bins ($sort). Each station only sees what the previous one handed over.</p>
+    <p>An <strong>assembly line</strong>: throw out rejects ($match), cut parts apart ($unwind), bin and count ($group), line up the bins ($sort). Each station sees only what the last one handed over.</p>
   </div>
-  <div class="flow"><span>orders</span><span>$match</span><span>$unwind</span><span>$group</span><span>$sort</span><span>result</span></div>
+  <figure class="viz"><svg viewBox="0 0 600 150" width="600">
+    <defs><marker id="ma-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <g text-anchor="middle">
+      <rect x="0" y="20" width="96" height="56" rx="6" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="48" y="44" font-weight="bold">orders</text><text x="48" y="62" font-size="11" class="tm">collection</text>
+      <rect x="124" y="20" width="96" height="56" rx="6" class="fb sb"/><text x="172" y="44">$match</text><text x="172" y="62" font-size="10" class="tm">≠ cancelled</text>
+      <rect x="248" y="20" width="96" height="56" rx="6" class="ft st"/><text x="296" y="44">$unwind</text><text x="296" y="62" font-size="10" class="tm">$items</text>
+      <rect x="372" y="20" width="96" height="56" rx="6" class="fv"/><text x="420" y="44">$group</text><text x="420" y="62" font-size="10" class="tm">by category</text>
+      <rect x="496" y="20" width="96" height="56" rx="6" class="fg sg"/><text x="544" y="44">$sort</text><text x="544" y="62" font-size="10" class="tm">revenue -1</text>
+    </g>
+    <g stroke="currentColor"><line x1="96" y1="48" x2="122" y2="48" marker-end="url(#ma-ar)"/><line x1="220" y1="48" x2="246" y2="48" marker-end="url(#ma-ar)"/><line x1="344" y1="48" x2="370" y2="48" marker-end="url(#ma-ar)"/><line x1="468" y1="48" x2="494" y2="48" marker-end="url(#ma-ar)"/></g>
+    <g text-anchor="middle" font-size="11"><text x="48" y="100">5 docs</text><text x="172" y="100">4 orders</text><text x="296" y="100" class="tr">6 items</text><text x="420" y="100">2 groups</text><text x="544" y="100">2 sorted</text></g>
+    <g class="tb">
+      <rect x="28" y="110" width="8" height="10"/><rect x="38" y="110" width="8" height="10"/><rect x="48" y="110" width="8" height="10"/><rect x="58" y="110" width="8" height="10"/><rect x="68" y="110" width="8" height="10"/>
+      <rect x="156" y="110" width="8" height="10"/><rect x="166" y="110" width="8" height="10"/><rect x="176" y="110" width="8" height="10"/><rect x="186" y="110" width="8" height="10"/>
+      <rect x="270" y="110" width="8" height="10"/><rect x="280" y="110" width="8" height="10"/><rect x="290" y="110" width="8" height="10"/><rect x="300" y="110" width="8" height="10"/><rect x="310" y="110" width="8" height="10"/><rect x="320" y="110" width="8" height="10"/>
+      <rect x="410" y="110" width="8" height="10"/><rect x="420" y="110" width="8" height="10"/>
+      <rect x="534" y="110" width="8" height="10"/><rect x="544" y="110" width="8" height="10"/>
+    </g>
+    <text x="0" y="144" font-size="10" class="tm">indexes help only at the start (reading the collection); later stages work on in-memory docs</text>
+  </svg><figcaption>Revenue per category: document count at each station. $unwind grows the stream; $group shrinks it.</figcaption></figure>
   <div class="fx" data-lang="js">db.orders.aggregate([
   { $match: { status: "delivered" } },
   { $group: { _id: "$customer_id", orders: { $sum: 1 } } }
@@ -5875,11 +5988,11 @@ Object.assign(TOPIC_CONTENT, {
   <p>The data (same as <em>Documents &amp; CRUD</em>): orders 100–104, each with an embedded <code>items</code> array of <code>{product, category, qty, price}</code>.</p>
 
   <h2 id="ma-basic"><span class="num">02</span>Filter &amp; Reshape</h2>
-  <ul>
-    <li><strong>$match</strong>: same filter syntax as <code>find()</code>. Put it first.</li>
-    <li><strong>$project</strong>: keep, drop, rename or compute fields. Unlisted fields are dropped (except <code>_id</code>).</li>
-    <li><strong>$addFields</strong> (alias <code>$set</code>): add computed fields, keep everything else.</li>
-  </ul>
+  <div class="cards">
+    <div><b>$match</b><p>find() filter syntax. Put it first.</p></div>
+    <div><b>$project</b><p>Keep, drop, rename, compute. Unlisted fields dropped (not <code>_id</code>).</p></div>
+    <div><b>$addFields</b><p>Alias <code>$set</code>. Add fields, keep the rest.</p></div>
+  </div>
   <p>Order total = sum of qty × price over the items array, without unwinding:</p>
   <div class="fx" data-lang="js">db.orders.aggregate([
   { $addFields: {
@@ -5936,7 +6049,20 @@ Object.assign(TOPIC_CONTENT, {
   </div>
 
   <h2 id="ma-unwind"><span class="num">04</span>$unwind</h2>
-  <p><code>$unwind</code> turns one document with an n-element array into n documents, each holding one element. It's how you group <em>by something inside an array</em>, such as category.</p>
+  <p><code>$unwind</code> turns one document with an n-element array into n documents. It's how you group <em>by something inside an array</em>, such as category.</p>
+  <figure class="viz"><svg viewBox="0 0 600 130" width="600">
+    <defs><marker id="ma-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="0" y="20" width="220" height="90" rx="6" class="fb sb"/>
+    <text x="10" y="40" font-size="11">_id 100 · customer 1</text><text x="10" y="58" font-size="11">items: [</text>
+    <rect x="20" y="64" width="90" height="24" rx="4" class="ft st"/><text x="65" y="80" text-anchor="middle" font-size="11">Laptop</text>
+    <rect x="118" y="64" width="90" height="24" rx="4" class="fv"/><text x="163" y="80" text-anchor="middle" font-size="11">Lamp</text>
+    <text x="10" y="104" font-size="11">]</text>
+    <line x1="222" y1="65" x2="290" y2="65" stroke="currentColor" marker-end="url(#ma-ar2)"/><text x="256" y="58" text-anchor="middle" font-size="10" class="tm">$unwind</text>
+    <rect x="300" y="8" width="290" height="50" rx="6" class="fb sb"/><text x="310" y="28" font-size="11">_id 100 · customer 1</text>
+    <rect x="310" y="34" width="190" height="20" rx="4" class="ft st"/><text x="318" y="48" font-size="11">items: Laptop (object)</text>
+    <rect x="300" y="70" width="290" height="50" rx="6" class="fb sb"/><text x="310" y="90" font-size="11">_id 100 · customer 1</text>
+    <rect x="310" y="96" width="190" height="20" rx="4" class="fv"/><text x="318" y="110" font-size="11">items: Lamp (object)</text>
+  </svg><figcaption>One document per array element; parent fields are copied onto each. Same _id twice.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Photocopying an order form once per line item, then cutting each copy so it shows only one item. Each slip still carries the order number and customer.</p>
   </div>
@@ -5957,7 +6083,22 @@ db.orders.aggregate([ { $match: { _id: 100 } }, { $unwind: "$items" } ])
   </div>
 
   <h2 id="ma-lookup"><span class="num">05</span>$lookup</h2>
-  <p><code>$lookup</code> pulls matching documents from another collection into an <strong>array field</strong>. It's a left outer join: no match gives an empty array.</p>
+  <p><code>$lookup</code> pulls matching documents from another collection into an <strong>array field</strong>.</p>
+  <figure class="viz"><svg viewBox="0 0 600 150" width="600">
+    <text x="0" y="14" font-size="11" class="tm">customers</text><text x="200" y="14" font-size="11" class="tm">+ as: "orders" (array from orders)</text>
+    <g font-size="11">
+      <rect x="0" y="22" width="120" height="26" rx="4" class="fb sb"/><text x="10" y="40">1 Asha</text>
+      <rect x="0" y="54" width="120" height="26" rx="4" class="fb sb"/><text x="10" y="72">2 Ben</text>
+      <rect x="0" y="86" width="120" height="26" rx="4" class="fb sb"/><text x="10" y="104">3 Chen</text>
+      <rect x="0" y="118" width="120" height="26" rx="4" class="fb sb"/><text x="10" y="136">4 Dia</text>
+      <rect x="200" y="22" width="70" height="26" rx="4" class="ft st"/><text x="235" y="40" text-anchor="middle">100</text><rect x="276" y="22" width="70" height="26" rx="4" class="ft st"/><text x="311" y="40" text-anchor="middle">101</text>
+      <rect x="200" y="54" width="70" height="26" rx="4" class="ft st"/><text x="235" y="72" text-anchor="middle">102</text>
+      <rect x="200" y="86" width="70" height="26" rx="4" class="ft st"/><text x="235" y="104" text-anchor="middle">103</text><rect x="276" y="86" width="70" height="26" rx="4" class="ft st"/><text x="311" y="104" text-anchor="middle">104</text>
+      <rect x="200" y="118" width="70" height="26" rx="4" fill="none" stroke="currentColor" stroke-dasharray="4 3" opacity=".6"/><text x="235" y="136" text-anchor="middle">[ ]</text>
+      <text x="420" y="40" class="tm">$size → 2</text><text x="420" y="72" class="tm">$size → 1</text><text x="420" y="104" class="tm">$size → 2</text><text x="420" y="136" class="tr">$size → 0 (kept)</text>
+    </g>
+    <g stroke="currentColor" opacity=".5"><line x1="120" y1="35" x2="198" y2="35"/><line x1="120" y1="67" x2="198" y2="67"/><line x1="120" y1="99" x2="198" y2="99"/><line x1="120" y1="131" x2="198" y2="131"/></g>
+  </svg><figcaption>$lookup keeps every left document and attaches matches as an array. Dia gets an empty one: a left outer join.</figcaption></figure>
   <div class="fx" data-lang="js">db.customers.aggregate([
   { $lookup: { from: "orders", localField: "_id",
                foreignField: "customer_id", as: "orders" } },
@@ -6105,20 +6246,7 @@ GROUP BY c.customer_id, c.name;</div>
     <p>Putting <code>$match: { status: "delivered" }</code> <em>after</em> <code>$unwind</code> gives the same answer but filters 5× more documents and loses the index. The optimizer can move some matches earlier, but don't rely on it.</p>
   </div>
 
-  <h2 id="ma-rev"><span class="num">10</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li>Pipeline = array of stages; documents flow through in written order.</li>
-    <li><code>"$field"</code> reads a field; <code>"$$var"</code> reads a variable (e.g. inside <code>$map</code>).</li>
-    <li><strong>$group</strong>: <code>_id</code> is the key; other fields must be accumulators (<code>$sum $avg $max $push $addToSet</code>).</li>
-    <li>WHERE → <code>$match</code> before group; HAVING → <code>$match</code> after group.</li>
-    <li><strong>$unwind</strong> = one doc per array element; drops empty/missing arrays unless <code>preserveNullAndEmptyArrays</code>.</li>
-    <li>Grouping by an array field without <code>$unwind</code> groups by the whole array.</li>
-    <li><strong>$lookup</strong> = left join into an array; costly, index <code>foreignField</code>, group before joining.</li>
-    <li><code>$facet</code> = many views in one pass; <code>$bucket</code> = histogram; <code>$setWindowFields</code> = window functions.</li>
-    <li>Index use only at the start; 100 MB per blocking stage, <code>allowDiskUse</code> to spill.</li>
-  </ol></div>
-
-  <h2 id="ma-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <h2 id="ma-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>When do you need <code>aggregate()</code> instead of <code>find()</code>?</summary><div class="qa-body">Whenever you compute across documents (counts, sums per group), reshape or compute new fields beyond simple projection, join collections, flatten arrays, or use window functions. <code>find()</code> only filters, projects, sorts and pages.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Write the pipeline: number of orders per status, most common first.</summary><div class="qa-body"><code>[ { $group: { _id: "$status", n: { $sum: 1 } } }, { $sort: { n: -1 } } ]</code> → delivered 3, then cancelled 1 and pending 1 (tie order not guaranteed; add <code>_id: 1</code> to the sort).</div></details>
@@ -6141,6 +6269,98 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Documents &amp; CRUD</h1>
   <p class="lead">MongoDB stores data as nested JSON-like documents instead of rows. This page models the same shop as documents and shows how to insert, query, update and delete them, with every result shown.</p>
 
+  <h2 id="mb-map" class="open"><span class="num">★</span>Mind Map</h2>
+<div class="mindmap">
+  <div class="mm-center">MongoDB: Documents &amp; CRUD</div>
+  <div class="mm-branches">
+    <div class="mm-branch">
+      <div class="mm-title">What &amp; why</div>
+      <ul>
+        <li><b>Document database</b> — records are nested JSON-like objects, no fixed columns</li>
+        <li><b>Why</b> — nested data in one object; maps 1:1 to code dicts; no migrations</li>
+        <li><b>Scale-out</b> — self-contained docs shard across machines</li>
+        <li>💡 SQL = linked spreadsheets; Mongo = folder of self-contained forms</li>
+        <li><b>Design rule</b> — model around the queries you'll run; unplanned queries hurt</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Documents &amp; collections</div>
+      <ul>
+        <li><b>Collection</b> ≈ table; docs may differ in shape</li>
+        <li><b>BSON</b> — binary JSON + dates, int64, Decimal128, ObjectId; fast to skip fields</li>
+        <li><b>_id</b> — required, unique, always indexed</li>
+        <li><b>ObjectId</b> — 12 bytes: 4 timestamp + 5 random + 3 counter; ~time-sortable, <code>getTimestamp()</code></li>
+        <li>⚠ <b>16 MB</b> doc cap — no ever-growing arrays</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">SQL ↔ Mongo</div>
+      <ul>
+        <li><b>table / row / column</b> → collection / document / field</li>
+        <li><b>JOIN</b> → embedding or <code>$lookup</code></li>
+        <li><b>GROUP BY</b> → <code>$group</code> in a pipeline</li>
+        <li><b>Schema</b> → optional <code>$jsonSchema</code> validation</li>
+        <li><b>Good fit</b> — catalogs, profiles, content, events, IoT</li>
+        <li><b>Poor fit</b> — multi-entity transactions (ledgers), ad-hoc joins/analytics</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Insert</div>
+      <ul>
+        <li><b>insertOne / insertMany</b> — batch = one round trip; collection auto-created</li>
+        <li><b>Duplicate _id</b> → <code>E11000 duplicate key error</code></li>
+        <li><b>Ordered</b> by default: stops at first error; <code>{ ordered: false }</code> continues</li>
+        <li><b>Missing field</b> = document version of NULL (Dia has no city)</li>
+        <li><b>Copy into order</b> — product name/price snapshot at purchase time</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Find &amp; filter</div>
+      <ul>
+        <li><b>find(filter, projection)</b> — <code>{}</code> = all; <code>{ name: 1, _id: 0 }</code></li>
+        <li><b>Operators</b> — <code>$eq $ne $gt $gte $lt $lte $in $nin $or $and $not $exists $regex</code></li>
+        <li><b>Fields listed together</b> = implicit AND</li>
+        <li>⚠ <b><code>{ city: null }</code></b> matches null <em>and</em> missing; <code>$exists: false</code> = missing only</li>
+        <li><b>sort → skip → limit</b> applied in that order regardless of chaining</li>
+        <li><b>Cursor</b> — lazy, fetched in batches</li>
+        <li>⚠ <b>Deep skip</b> walks docs; use <code>{ _id: { $gt: last } }</code></li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Nested &amp; arrays</div>
+      <ul>
+        <li><b>Dot notation</b> — <code>"items.product"</code>; on arrays matches <em>any</em> element</li>
+        <li><b>Position</b> — <code>"items.0.product"</code></li>
+        <li>⚠ <b>Multiple conditions</b> may hit different elements → use <code>$elemMatch</code></li>
+        <li><b>$size</b> — exact length only; <b>$all</b> — contains all values</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Update &amp; delete</div>
+      <ul>
+        <li><b>updateOne / updateMany</b> + operators: <code>$set $unset $inc $push $addToSet $pull</code></li>
+        <li><b>$push</b> allows dups; <b>$addToSet</b> only if absent</li>
+        <li><b>Upsert</b> — <code>{ upsert: true }</code>: update or insert; <code>$setOnInsert</code> for insert-only fields</li>
+        <li>⚠ <b>Replacement</b> — doc without <code>$</code> ops wipes other fields (<code>replaceOne</code>)</li>
+        <li><b>Atomic</b> — any single-document write, incl. nested arrays</li>
+        <li><b>deleteMany({})</b> keeps indexes; <b>drop()</b> removes them</li>
+        <li>⚠ <b>No FKs</b> — deletes don't cascade; clean references yourself</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">From Python</div>
+      <ul>
+        <li><b>pymongo</b> — dicts, snake_case: <code>count_documents</code>, <code>update_one</code></li>
+        <li><b>Flat → DataFrame</b> — <code>pd.DataFrame(list(cursor))</code></li>
+        <li><b>Nested → rows</b> — <code>pd.json_normalize(docs, record_path="items", meta=[…])</code></li>
+        <li><b>Filter/project server-side</b>; aggregate in Mongo for big jobs; <code>mongomock</code> for tests</li>
+        <li>⚠ <b>ObjectId</b> — string won't match; use <code>ObjectId("…")</code></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -6152,8 +6372,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="mb-nested"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Nested Fields &amp; Arrays</span><span class="rm-sub">Dot notation, $elemMatch</span></div></div>
       <div class="rm-item rm-done" data-target="mb-update"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Update &amp; Delete</span><span class="rm-sub">$set, $push, upsert, the trap</span></div></div>
       <div class="rm-item rm-done" data-target="mb-py"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">From Python</span><span class="rm-sub">pymongo to pandas</span></div></div>
-      <div class="rm-item rm-done" data-target="mb-rev"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="mb-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="mb-qa"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
@@ -6161,14 +6380,31 @@ Object.assign(TOPIC_CONTENT, {
   <div class="callout def"><span class="label">Definition</span>
     <p>MongoDB is a <strong>document database</strong>: each record is a JSON-like object that can hold nested objects and arrays. No fixed columns, no JOINs needed for data that belongs together.</p>
   </div>
-  <p>Why it exists:</p>
-  <ul>
-    <li><strong>Nested data fits naturally.</strong> An order with its line items is one object, not rows spread across two tables.</li>
-    <li><strong>Developer speed.</strong> Documents map 1:1 to objects in code (a Python dict). Adding a field needs no migration.</li>
-    <li><strong>Horizontal scale.</strong> Self-contained documents can be split across many machines (sharding) without cross-machine joins.</li>
-  </ul>
+  <figure class="viz"><svg viewBox="0 0 600 200" width="600">
+    <text x="0" y="14" font-weight="bold">SQL: linked sheets</text>
+    <g font-size="11">
+      <rect x="0" y="26" width="120" height="44" rx="5" class="fb sb"/><text x="60" y="44" text-anchor="middle">orders</text><text x="60" y="60" text-anchor="middle" class="tm">100, cust 1</text>
+      <rect x="0" y="86" width="120" height="58" rx="5" class="ft st"/><text x="60" y="102" text-anchor="middle">order_items</text><text x="60" y="118" text-anchor="middle" class="tm">100, prod 10</text><text x="60" y="134" text-anchor="middle" class="tm">100, prod 13</text>
+      <rect x="150" y="86" width="110" height="58" rx="5" class="fg sg"/><text x="205" y="102" text-anchor="middle">products</text><text x="205" y="118" text-anchor="middle" class="tm">10 Laptop</text><text x="205" y="134" text-anchor="middle" class="tm">13 Lamp</text>
+    </g>
+    <g stroke="currentColor" opacity=".6"><line x1="60" y1="70" x2="60" y2="86"/><line x1="120" y1="115" x2="150" y2="115"/></g>
+    <text x="0" y="168" font-size="11" class="tm">3 tables, 2 joins to rebuild one order</text>
+    <line x1="290" y1="10" x2="290" y2="190" stroke="currentColor" opacity=".2"/>
+    <text x="320" y="14" font-weight="bold">MongoDB: one document</text>
+    <rect x="320" y="26" width="270" height="146" rx="6" class="fb sb"/>
+    <g font-size="11"><text x="332" y="46">_id: 100, customer_id: 1</text><text x="332" y="64">status: "delivered"</text><text x="332" y="82">items: [</text></g>
+    <rect x="344" y="90" width="234" height="30" rx="4" class="ft st"/><text x="352" y="109" font-size="11">Laptop · Electronics · 1 · 800</text>
+    <rect x="344" y="126" width="234" height="30" rx="4" class="ft st"/><text x="352" y="145" font-size="11">Lamp · Furniture · 2 · 40</text>
+    <text x="332" y="168" font-size="11">]</text>
+    <text x="320" y="190" font-size="11" class="tm">one read, one atomic write</text>
+  </svg><figcaption>The same order. Items (and product details) live inside the order document instead of in joined tables.</figcaption></figure>
+  <div class="cards">
+    <div><b>Nested fits</b><p>An order and its items are one object.</p></div>
+    <div><b>Dev speed</b><p>Doc = Python dict. New field, no migration.</p></div>
+    <div><b>Scale-out</b><p>Self-contained docs shard without cross-machine joins.</p></div>
+  </div>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>SQL is a set of <strong>linked spreadsheets</strong>: customers in one, orders in another, items in a third, tied by ID columns. MongoDB is a <strong>folder of self-contained forms</strong>: each order form lists its items right on it. Reading one form is easy; answering "total Lamps sold across all forms" means flipping through every form.</p>
+    <p>SQL = <strong>linked spreadsheets</strong> tied by ID columns. MongoDB = a <strong>folder of self-contained forms</strong>. Reading one form is easy; "total Lamps sold" means flipping through every form.</p>
   </div>
 
   <h2 id="mb-doc"><span class="num">02</span>Documents &amp; Collections</h2>
@@ -6177,8 +6413,14 @@ Object.assign(TOPIC_CONTENT, {
     <li><strong>Collection</strong>: a group of documents, like a table. Documents in it <em>may</em> have different shapes.</li>
     <li><strong>BSON</strong> (Binary JSON): the on-disk format. Adds types JSON lacks: dates, 64-bit ints, Decimal128, ObjectId, binary.</li>
     <li><strong>_id</strong>: the required primary key of every document. Unique within the collection and always indexed. If you don't supply it, the driver generates an ObjectId.</li>
-    <li><strong>ObjectId</strong>: a 12-byte value: 4-byte timestamp + 5 random bytes + 3-byte counter. Roughly sortable by creation time, and you can read the time back with <code>getTimestamp()</code>.</li>
+    <li><strong>ObjectId</strong>: the default <code>_id</code>; read its time back with <code>getTimestamp()</code>.</li>
   </ul>
+  <figure class="viz"><svg viewBox="0 0 600 80" width="600">
+    <rect x="0" y="10" width="192" height="34" class="fb sb"/><text x="96" y="32" text-anchor="middle">4 B · timestamp (s)</text>
+    <rect x="192" y="10" width="240" height="34" class="fv"/><text x="312" y="32" text-anchor="middle">5 B · random</text>
+    <rect x="432" y="10" width="144" height="34" class="ft st"/><text x="504" y="32" text-anchor="middle">3 B · counter</text>
+    <text x="0" y="66" font-size="11" class="tm">time comes first → sort by _id ≈ sort by creation; made client-side, no central counter</text>
+  </svg><figcaption>ObjectId: 12 bytes, generated by the driver.</figcaption></figure>
   <div class="fx" data-lang="js">// one order document: the items live inside it
 {
   _id: 100,
@@ -6305,9 +6547,15 @@ db.orders.find({ "items.0.product": "Laptop" }, { _id: 1 })   // 100  (index 0 =
 
 db.orders.find({ items: { $elemMatch: { qty: { $gte: 2 }, price: { $gte: 500 } } } }, { _id: 1 })
 // 103</div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Without <code>$elemMatch</code>, each condition may be satisfied by a <strong>different</strong> element. Order 100 matched because the Lamp has qty 2 and the Laptop has price 800. <code>$elemMatch</code> forces both conditions onto the same element.</p>
-  </div>
+  <figure class="viz"><svg viewBox="0 0 600 160" width="600">
+    <text x="0" y="14" font-size="11" class="tm">order 100 items</text>
+    <rect x="0" y="22" width="170" height="30" rx="5" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="10" y="42" font-size="11">Laptop  qty 1  <tspan class="tg">price 800</tspan></text>
+    <rect x="0" y="58" width="170" height="30" rx="5" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="10" y="78" font-size="11">Lamp  <tspan class="tg">qty 2</tspan>  price 40</text>
+    <text x="200" y="42" font-size="11">without $elemMatch:</text><text x="200" y="58" font-size="11" class="tm">qty ≥ 2 → Lamp ✓, price ≥ 500 → Laptop ✓</text><text x="200" y="76" font-size="11" class="tr">→ order 100 matches (wrong)</text>
+    <text x="0" y="114" font-size="11" class="tm">order 103 items</text>
+    <rect x="0" y="122" width="170" height="30" rx="5" class="fg sg"/><text x="10" y="142" font-size="11">Phone <tspan class="tg">qty 2  price 500</tspan></text>
+    <text x="200" y="124" font-size="11">with $elemMatch: both on the <tspan class="tb">same</tspan> element</text><text x="200" y="142" font-size="11" class="tg">→ only order 103 matches</text>
+  </svg><figcaption>Dot-notation conditions are checked against the array separately; $elemMatch ties them to one element.</figcaption></figure>
   <table class="tbl">
     <tr><th>Operator</th><th>Meaning</th><th>Result on shop</th></tr>
     <tr><td><code>{ items: { $size: 2 } }</code></td><td>Array has exactly 2 elements (no ranges)</td><td>100, 103</td></tr>
@@ -6348,6 +6596,16 @@ db.orders.updateMany({ status: "delivered" }, { $set: { reviewed: false } })
 // upsertedId: 5 → new doc { _id: 5, name: 'Esha', city: 'Pune' }</div>
   <p>The new document combines the filter's equality fields (<code>_id: 5</code>) with the update. Use <code>$setOnInsert</code> for fields that should be written only on insert (e.g. <code>created_at</code>).</p>
   <h3>The replacement trap</h3>
+  <figure class="viz"><svg viewBox="0 0 600 128" width="600">
+    <defs><marker id="mb-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="0" y="34" width="170" height="54" rx="6" class="fs" stroke="currentColor" stroke-opacity=".4"/>
+    <g font-size="11"><text x="10" y="52">_id: 2, name: "Ben"</text><text x="10" y="68">city: "Delhi"</text><text x="10" y="82">signup_date: …</text></g>
+    <line x1="170" y1="52" x2="248" y2="28" stroke="currentColor" marker-end="url(#mb-ar)"/><line x1="170" y1="72" x2="248" y2="96" stroke="currentColor" marker-end="url(#mb-ar)"/>
+    <text x="176" y="26" font-size="10" class="tg">$set city</text><text x="172" y="120" font-size="10" class="tr">replaceOne</text>
+    <rect x="250" y="0" width="200" height="58" rx="6" class="fg sg"/><g font-size="11"><text x="260" y="17">_id: 2, name: "Ben"</text><text x="260" y="33">city: "Pune"</text><text x="260" y="49" class="tm">signup_date: … kept</text></g>
+    <rect x="250" y="70" width="200" height="40" rx="6" class="fr sr"/><g font-size="11"><text x="260" y="88">_id: 2, city: "Pune"</text><text x="260" y="103" class="tr">name, signup_date gone</text></g>
+    <text x="465" y="34" font-size="11" class="tg">partial change ✓</text><text x="465" y="94" font-size="11" class="tr">whole doc swapped ✗</text>
+  </svg><figcaption>No $ operator = replacement. Everything except _id is overwritten.</figcaption></figure>
   <div class="fx" data-lang="js">db.customers.replaceOne({ _id: 2 }, { city: "Pune" })
 db.customers.findOne({ _id: 2 })   // { _id: 2, city: 'Pune' }   ← name and signup_date gone</div>
   <div class="callout trap"><span class="label">Trap</span>
@@ -6408,21 +6666,7 @@ items = pd.json_normalize(docs, record_path="items", meta=["_id", "customer_id"]
     <p>ObjectIds come back as <code>bson.ObjectId</code>, not strings. Look up with <code>{"_id": ObjectId("...")}</code>; a plain string matches nothing.</p>
   </div>
 
-  <h2 id="mb-rev"><span class="num">09</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Document</strong> = nested JSON-like record (BSON on disk, 16 MB max); <strong>collection</strong> = group of documents.</li>
-    <li>Every document has a unique, indexed <strong>_id</strong>; default is a 12-byte <strong>ObjectId</strong> starting with a timestamp.</li>
-    <li>Pick MongoDB for data read as one unit, varying shapes and scale-out; avoid it for multi-entity transactions and ad-hoc joins.</li>
-    <li><code>find(filter, projection)</code>; operators <code>$gt $in $or $exists $regex</code>; <code>_id</code> shows unless <code>_id: 0</code>.</li>
-    <li><code>{ field: null }</code> matches null <strong>and</strong> missing.</li>
-    <li>Dot notation matches <em>any</em> array element; use <strong>$elemMatch</strong> when several conditions must hit the same element.</li>
-    <li><code>$set $inc $push $addToSet $pull</code>; <code>updateMany</code> for all matches; <code>upsert: true</code> inserts if nothing matches.</li>
-    <li>An update without <code>$</code> operators is a <strong>replacement</strong>: other fields vanish.</li>
-    <li>Single-document writes are atomic; no foreign keys, so deletes don't cascade.</li>
-    <li>pymongo + <code>pd.json_normalize(record_path=...)</code> flattens nested arrays.</li>
-  </ol></div>
-
-  <h2 id="mb-qa"><span class="num">10</span>Questions &amp; Answers</h2>
+  <h2 id="mb-qa"><span class="num">09</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>What is BSON and why doesn't MongoDB just store JSON?</summary><div class="qa-body">BSON is binary-encoded JSON. It adds types JSON lacks (dates, int32/int64, Decimal128, ObjectId, binary) and stores lengths, so the server can skip over fields quickly without parsing text.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What is inside an ObjectId, and what is one useful consequence?</summary><div class="qa-body">4-byte timestamp (seconds), 5 random bytes, 3-byte counter. Because it starts with time, sorting by <code>_id</code> roughly sorts by insertion time, and you can get the creation time without a separate field. It's generated client-side, so no central counter is needed.</div></details>
@@ -6445,6 +6689,106 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Schema Design, Indexes &amp; Scaling</h1>
   <p class="lead">In MongoDB, the shape of your documents decides your performance. This page covers how to model data, which indexes to build, and how replica sets and sharding keep it available and scalable.</p>
 
+  <h2 id="md-map" class="open"><span class="num">★</span>Mind Map</h2>
+<div class="mindmap">
+  <div class="mm-center">Mongo Schema, Indexes &amp; Scaling</div>
+  <div class="mm-branches">
+    <div class="mm-branch">
+      <div class="mm-title">Embed vs reference</div>
+      <ul>
+        <li><b>Core rule</b> — accessed together → stored together; model around queries</li>
+        <li><b>Embed</b> — 1:few, always read with parent, snapshots (items, price at purchase)</li>
+        <li><b>Reference</b> — store the other <code>_id</code>; nothing enforces it</li>
+        <li><b>1:many</b> → reference or embed a subset; <b>1:squillions</b> → child holds parent id</li>
+        <li><b>M:N</b> → array of ids on one/both sides</li>
+        <li>⚠ <b>Unbounded arrays</b> — 16 MB cap, growing rewrites, huge indexes</li>
+        <li>💡 recipe card lists ingredients, says "see aisle 4" for prices</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Design patterns</div>
+      <ul>
+        <li><b>Extended reference</b> — copy the few fields you always show (customer name) → no $lookup</li>
+        <li><b>Subset</b> — embed 10 newest reviews; rest in own collection</li>
+        <li><b>Computed</b> — store <code>total</code>, update on write</li>
+        <li><b>Bucket</b> — one doc per sensor per hour; time-series collections do it for you</li>
+        <li><b>Outlier</b> — design for typical; flag <code>has_overflow</code> for the huge one</li>
+        <li><b>Trade-off</b> — duplicated fields: fast reads, many-doc updates; duplicate rarely-changing data</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Schema validation</div>
+      <ul>
+        <li><b>Why</b> — typo <code>stauts</code> silently creates a new field</li>
+        <li><b>$jsonSchema</b> — <code>required</code>, <code>bsonType</code>, <code>enum</code>, <code>minimum</code>, <code>minItems</code></li>
+        <li><b>validationAction</b> — <code>"error"</code> rejects, <code>"warn"</code> logs</li>
+        <li>⚠ mongosh <code>1</code> is a double → use <code>"number"</code>, not <code>"int"</code></li>
+        <li>⚠ Existing docs not re-checked</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Indexes</div>
+      <ul>
+        <li><b>Single / compound</b> — compound used by a <em>prefix</em> of its fields</li>
+        <li><b>ESR</b> — Equality, then Sort, then Range: no in-memory sort</li>
+        <li><b>Multikey</b> — on arrays, entry per element; max one array field per compound</li>
+        <li><b>TTL</b> — <code>expireAfterSeconds</code>; deleter runs ~every 60 s</li>
+        <li><b>Unique</b> — missing field = null; only one doc may lack it (use partial)</li>
+        <li><b>Text</b> — one per collection; Atlas Search for real search</li>
+        <li>⚠ <b>Cost</b> — slower writes, RAM; drop unused (<code>$indexStats</code>); no boolean-only index</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">explain()</div>
+      <ul>
+        <li><b>explain("executionStats")</b></li>
+        <li><b>IXSCAN</b> (+FETCH) good · <b>COLLSCAN</b> = every doc</li>
+        <li><b>totalDocsExamined ≈ nReturned</b> — good selectivity</li>
+        <li><b>SORT stage</b> = in-memory sort → fix index order (ESR)</li>
+        <li><b>Docs examined 0</b> = covered query</li>
+        <li>⚠ <code>/lamp/i</code>, <code>$ne</code>, <code>$nin</code> can't use indexes well</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Replica sets</div>
+      <ul>
+        <li><b>Primary</b> takes writes; <b>secondaries</b> copy its oplog</li>
+        <li><b>Failover</b> — ~10 s no heartbeat → election; drivers retry</li>
+        <li><b>Odd voters</b> (3) so a majority exists</li>
+        <li><b>w: 1</b> fast, may roll back · <b>w: "majority"</b> survives failover (default 5.0+) · <b>j: true</b> journaled</li>
+        <li><b>readPreference</b> — primary (default) vs secondary/nearest (stale)</li>
+        <li>⚠ <b>Read-your-writes</b> — read primary or causally consistent session</li>
+        <li><b>Gives</b> availability + read scale, not write scale</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Sharding</div>
+      <ul>
+        <li><b>What</b> — split a collection across replica sets by a shard key; scales writes + storage</li>
+        <li><b>Parts</b> — mongos router, config servers, shards; chunks moved by balancer</li>
+        <li><b>Targeted</b> (key in query) vs <b>scatter-gather</b> (all shards)</li>
+        <li><b>Ranged</b> — good range queries, hot shard on monotonic keys · <b>Hashed</b> — even, ranges scatter</li>
+        <li><b>Good key</b> — high cardinality, even frequency, not monotonic, in most queries</li>
+        <li>⚠ <b>ObjectId / date</b> ranged key → all inserts on one shard; use <code>{ customer_id, order_date }</code></li>
+        <li><b>Resharding</b> (5.0+) copies everything; shard only when needed</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Transactions &amp; vs JSONB</div>
+      <ul>
+        <li><b>Single doc</b> — always atomic</li>
+        <li><b>Multi-doc</b> — 4.0 replica sets, 4.2 sharded; <code>startTransaction / commitTransaction</code></li>
+        <li><b>Cost</b> — latency, cache pressure, 60 s limit, ~1,000 docs, 2PC across shards</li>
+        <li><b>TransientTransactionError</b> → retry (<code>withTransaction</code>)</li>
+        <li><b>Many txns?</b> schema fights workload, or it's relational</li>
+        <li><b>PG + JSONB</b> — mostly relational + flexible attrs, one DB; GIN index</li>
+        <li><b>MongoDB</b> — docs are the model, built-in write scale-out, in-place partial updates</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -6457,8 +6801,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="md-shard"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Sharding</span><span class="rm-sub">Choosing the shard key</span></div></div>
       <div class="rm-item rm-done" data-target="md-txn"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Transactions</span><span class="rm-sub">Possible, but not free</span></div></div>
       <div class="rm-item rm-done" data-target="md-pg"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">MongoDB vs JSONB</span><span class="rm-sub">Do you need Mongo at all?</span></div></div>
-      <div class="rm-item rm-done" data-target="md-rev"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="md-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="md-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
@@ -6471,8 +6814,27 @@ Object.assign(TOPIC_CONTENT, {
     <li><strong>Reference</strong>: store the other document's <code>_id</code> (order holds <code>customer_id</code>). Like a foreign key, but nothing enforces it.</li>
   </ul>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A recipe card lists its ingredients right on the card (embed). It doesn't copy the whole supermarket's price list; it just says "see aisle 4" (reference).</p>
+    <p>A recipe card lists its ingredients right on the card (embed). For prices it just says "see aisle 4" (reference).</p>
   </div>
+  <figure class="viz"><svg viewBox="0 0 600 170" width="600">
+    <defs><marker id="md-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="0" y="20" width="200" height="130" rx="6" class="fb sb"/>
+    <text x="10" y="40" font-weight="bold">order 100</text><text x="10" y="58" font-size="11">customer_id: 1</text>
+    <rect x="10" y="70" width="180" height="70" rx="4" class="ft st"/>
+    <text x="20" y="88" font-size="11">items (embedded)</text><text x="20" y="106" font-size="11" class="tm">Laptop · 1 · 800</text><text x="20" y="124" font-size="11" class="tm">Lamp · 2 · 40</text>
+    <text x="100" y="166" text-anchor="middle" font-size="10" class="tg">1:few, read together, snapshot</text>
+    <rect x="260" y="20" width="140" height="56" rx="6" class="fv"/><text x="330" y="44" text-anchor="middle" font-weight="bold">customer 1</text><text x="330" y="62" text-anchor="middle" font-size="11" class="tm">Asha, Mumbai</text>
+    <path d="M110,58 C160,58 200,48 258,48" fill="none" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#md-ar)"/>
+    <text x="214" y="38" text-anchor="middle" font-size="10" class="tm">reference</text>
+    <g font-size="11">
+      <rect x="440" y="10" width="150" height="24" rx="4" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="450" y="26">click · cust 1</text>
+      <rect x="440" y="40" width="150" height="24" rx="4" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="450" y="56">click · cust 1</text>
+      <rect x="440" y="70" width="150" height="24" rx="4" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="450" y="86">click · cust 1</text>
+      <text x="515" y="112" text-anchor="middle" class="tm">… millions</text>
+    </g>
+    <g stroke="currentColor" stroke-dasharray="4 3"><line x1="440" y1="22" x2="402" y2="40" marker-end="url(#md-ar)"/><line x1="440" y1="82" x2="402" y2="62" marker-end="url(#md-ar)"/></g>
+    <text x="330" y="132" text-anchor="middle" font-size="10" class="tm">1:squillions: the child points at</text><text x="330" y="146" text-anchor="middle" font-size="10" class="tm">the parent, never an array in it</text>
+  </svg><figcaption>Embed what is small and read together; reference what is shared, big, or unbounded.</figcaption></figure>
   <table class="tbl">
     <tr><th>Situation</th><th>Choose</th><th>Shop example</th></tr>
     <tr><td><strong>1 : few</strong>, always read with the parent</td><td>Embed</td><td>Items in an order; addresses in a customer</td></tr>
@@ -6574,11 +6936,23 @@ db.orders.createIndex({ status: 1, customer_id: 1, order_date: 1 })</div>
   </div>
 
   <h2 id="md-repl"><span class="num">06</span>Replica Sets</h2>
-  <p>A <strong>replica set</strong> is a group of servers holding the same data: one <strong>primary</strong> takes all writes; <strong>secondaries</strong> copy its operation log (oplog) and can serve reads.</p>
-  <div class="flow"><span>App writes</span><span>Primary</span><span>Oplog</span><span>Secondary 1, 2</span></div>
+  <p>A <strong>replica set</strong>: servers holding the same data. One <strong>primary</strong> takes all writes; <strong>secondaries</strong> copy its operation log (oplog) and can serve reads.</p>
+  <figure class="viz"><svg viewBox="0 0 600 170" width="600">
+    <defs><marker id="md-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="0" y="60" width="90" height="40" rx="6" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="45" y="85" text-anchor="middle">App</text>
+    <line x1="90" y1="80" x2="168" y2="80" stroke="currentColor" marker-end="url(#md-ar2)"/><text x="129" y="72" text-anchor="middle" font-size="10" class="tm">writes</text>
+    <rect x="170" y="54" width="130" height="52" rx="8" class="fb sb"/><text x="235" y="76" text-anchor="middle" font-weight="bold">Primary</text><text x="235" y="94" text-anchor="middle" font-size="10" class="tm">oplog</text>
+    <rect x="370" y="8" width="130" height="44" rx="8" class="ft st"/><text x="435" y="35" text-anchor="middle">Secondary 1</text>
+    <rect x="370" y="108" width="130" height="44" rx="8" class="ft st"/><text x="435" y="135" text-anchor="middle">Secondary 2</text>
+    <line x1="300" y1="68" x2="368" y2="34" stroke="currentColor" marker-end="url(#md-ar2)"/><line x1="300" y1="92" x2="368" y2="126" stroke="currentColor" marker-end="url(#md-ar2)"/>
+    <text x="228" y="42" font-size="10" class="tm">copy oplog</text>
+    <line x1="435" y1="52" x2="435" y2="106" class="sr" stroke-dasharray="3 3"/><text x="443" y="76" font-size="10" class="tr">primary lost</text><text x="443" y="90" font-size="10" class="tr">~10 s → elect</text>
+    <text x="100" y="134" font-size="10" class="tg">w: "majority" = ack after 2 of 3</text>
+    <text x="100" y="150" font-size="10" class="tm">w: 1 = ack after primary only</text>
+  </svg><figcaption>3 voters: one primary takes writes, two secondaries replay its oplog and can take over.</figcaption></figure>
   <ul>
-    <li><strong>Automatic failover</strong>: if the primary is unreachable for ~10 s, secondaries hold an election and one becomes primary. Drivers retry and reconnect.</li>
-    <li>Use an <strong>odd number</strong> of voters (usually 3) so a majority can always be formed.</li>
+    <li><strong>Automatic failover</strong>: drivers retry and reconnect to the new primary.</li>
+    <li><strong>Odd number</strong> of voters (usually 3) so a majority can always form.</li>
   </ul>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>One head chef (primary) decides every dish; sous-chefs copy their notebook. If the head chef collapses, the kitchen votes a sous-chef in. A dish the head chef wrote but no one copied yet may be lost.</p>
@@ -6599,11 +6973,22 @@ db.orders.createIndex({ status: 1, customer_id: 1, order_date: 1 })</div>
 
   <h2 id="md-shard"><span class="num">07</span>Sharding</h2>
   <p><strong>Sharding</strong> splits one collection across several replica sets (shards) by a <strong>shard key</strong>. It scales writes and storage beyond one machine.</p>
-  <div class="flow"><span>App</span><span>mongos router</span><span>config servers (key ranges)</span><span>Shard A / B / C</span></div>
-  <ul>
-    <li>Data is split into <strong>chunks</strong> (key ranges); a balancer moves chunks to even out shards.</li>
-    <li>A query that includes the shard key is <strong>targeted</strong> to one shard. Without it, it's <strong>scatter-gather</strong>: sent to every shard.</li>
-  </ul>
+  <figure class="viz"><svg viewBox="0 0 600 190" width="600">
+    <defs><marker id="md-ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="0" y="16" width="80" height="36" rx="6" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="40" y="39" text-anchor="middle">App</text>
+    <line x1="80" y1="34" x2="198" y2="34" stroke="currentColor" marker-end="url(#md-ar3)"/>
+    <rect x="200" y="12" width="140" height="44" rx="8" class="fb sb"/><text x="270" y="38" text-anchor="middle" font-weight="bold">mongos</text>
+    <rect x="400" y="12" width="190" height="44" rx="8" class="fv"/><text x="495" y="31" text-anchor="middle">config servers</text><text x="495" y="47" text-anchor="middle" font-size="10" class="tm">which chunk lives where</text>
+    <line x1="340" y1="34" x2="398" y2="34" stroke="currentColor" stroke-dasharray="3 3"/>
+    <rect x="10" y="120" width="170" height="54" rx="8" class="ft st"/><text x="95" y="142" text-anchor="middle">Shard A</text><text x="95" y="162" text-anchor="middle" font-size="10" class="tm">cust 1–33k</text>
+    <rect x="215" y="120" width="170" height="54" rx="8" class="ft st"/><text x="300" y="142" text-anchor="middle">Shard B</text><text x="300" y="162" text-anchor="middle" font-size="10" class="tm">cust 33k–66k</text>
+    <rect x="420" y="120" width="170" height="54" rx="8" class="ft st"/><text x="505" y="142" text-anchor="middle">Shard C</text><text x="505" y="162" text-anchor="middle" font-size="10" class="tm">cust 66k–100k</text>
+    <line x1="250" y1="56" x2="110" y2="118" class="sg" stroke-width="2" marker-end="url(#md-ar3)"/>
+    <text x="170" y="76" text-anchor="end" font-size="10" class="tg">customer_id: 42 → targeted</text>
+    <g class="sr" stroke-dasharray="4 3"><line x1="300" y1="56" x2="300" y2="118" marker-end="url(#md-ar3)"/><line x1="310" y1="56" x2="490" y2="118" marker-end="url(#md-ar3)"/></g>
+    <text x="410" y="84" font-size="10" class="tr">no key → scatter-gather</text>
+  </svg><figcaption>Each shard is itself a replica set. Queries carrying the shard key go to one shard; others go to all.</figcaption></figure>
+  <p>Data is split into <strong>chunks</strong> (key ranges); a balancer moves chunks to even out shards.</p>
   <table class="tbl">
     <tr><th></th><th>Ranged key</th><th>Hashed key</th></tr>
     <tr><td>Placement</td><td>Nearby values on the same shard</td><td>Hash of the value spreads docs randomly</td></tr>
@@ -6612,8 +6997,18 @@ db.orders.createIndex({ status: 1, customer_id: 1, order_date: 1 })</div>
   </table>
   <p>A good shard key has <strong>high cardinality</strong> (many distinct values), <strong>even frequency</strong> (no single value dominates), is <strong>not monotonic</strong>, and appears in most queries.</p>
   <div class="callout trap"><span class="label">Trap: monotonically increasing keys</span>
-    <p>Sharding on <code>order_date</code> or an ObjectId: every new insert has the largest value, so all writes go to the one shard owning the top range. That shard is <strong>hot</strong>; the rest sit idle. Use a hashed key or a compound key like <code>{ customer_id: 1, order_date: 1 }</code>.</p>
+    <p>Sharding on <code>order_date</code> or an ObjectId sends every insert to the shard owning the top range. Use a hashed key or a compound key like <code>{ customer_id: 1, order_date: 1 }</code>.</p>
   </div>
+  <figure class="viz"><svg viewBox="0 0 600 120" width="600">
+    <text x="0" y="14" font-size="11" font-weight="bold">ranged on order_date / ObjectId</text>
+    <g><rect x="0" y="62" width="50" height="8" class="fs"/><rect x="60" y="62" width="50" height="8" class="fs"/><rect x="120" y="22" width="50" height="48" class="fr sr"/></g>
+    <g font-size="10" class="tm" text-anchor="middle"><text x="25" y="86">A</text><text x="85" y="86">B</text><text x="145" y="86">C</text></g>
+    <text x="0" y="106" font-size="10" class="tr">every new insert has the max key → one hot shard</text>
+    <text x="330" y="14" font-size="11" font-weight="bold">hashed / { customer_id, order_date }</text>
+    <g><rect x="330" y="38" width="50" height="32" class="fg sg"/><rect x="390" y="40" width="50" height="30" class="fg sg"/><rect x="450" y="36" width="50" height="34" class="fg sg"/></g>
+    <g font-size="10" class="tm" text-anchor="middle"><text x="355" y="86">A</text><text x="415" y="86">B</text><text x="475" y="86">C</text></g>
+    <text x="330" y="106" font-size="10" class="tg">writes spread evenly</text>
+  </svg><figcaption>Insert load per shard. A monotonic key funnels all writes into the shard owning the top range.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Filing cabinets split by surname letter. Splitting by "date joined" means every new file goes in the last cabinet, and one clerk does all the work.</p>
   </div>
@@ -6654,21 +7049,7 @@ WHERE doc -&gt; 'items' @&gt; '[{"product": "Lamp"}]';   -- GIN-indexable contai
     <tr><td>One database for the team to run, already on Postgres</td><td>PostgreSQL + JSONB</td></tr>
   </table>
 
-  <h2 id="md-rev"><span class="num">10</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Accessed together → stored together.</strong> Model around queries.</li>
-    <li>Embed 1:few and snapshots; reference 1:many read separately and 1:squillions. Never unbounded arrays (16 MB cap).</li>
-    <li>Patterns: extended reference, subset, computed, bucket, outlier.</li>
-    <li><code>$jsonSchema</code> validator enforces required fields, types and enums on write.</li>
-    <li>Compound index field order: <strong>Equality, Sort, Range</strong>; queries use a prefix.</li>
-    <li>Multikey = index on array; TTL auto-expires; unique enforces no duplicates.</li>
-    <li><code>explain("executionStats")</code>: want IXSCAN, docs examined ≈ returned, no in-memory SORT.</li>
-    <li>Replica set = primary + secondaries, auto failover; <code>w: "majority"</code> survives it; secondary reads can be stale.</li>
-    <li>Shard key: high cardinality, even, non-monotonic, in queries; hashed for even writes, ranged for range queries.</li>
-    <li>Multi-doc transactions work but cost; prefer single-document atomicity.</li>
-  </ol></div>
-
-  <h2 id="md-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <h2 id="md-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>Should a customer's orders be embedded in the customer document?</summary><div class="qa-body">No. Orders grow without bound (16 MB limit, ever-larger rewrites) and are often queried on their own. Store orders separately with <code>customer_id</code>. Embed the order's items in the order instead: few, always read together, a snapshot in time.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>An order page always shows the customer's name. How do you avoid a <code>$lookup</code> on every view?</summary><div class="qa-body">Extended reference: store <code>customer: { _id: 1, name: "Asha" }</code> in the order. If the name changes, update the copies with <code>updateMany</code>; acceptable because names rarely change.</div></details>
@@ -6954,6 +7335,110 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Practice Q&amp;A</h1>
   <p class="lead">Interview-style SQL problems on the <code>shop</code> database, each with a working query, its real output and the idea behind it. Try each one before opening it.</p>
 
+  <h2 id="si-map" class="open"><span class="num">★</span>Mind Map</h2>
+<div class="mindmap">
+  <div class="mm-center">SQL interview patterns</div>
+  <div class="mm-branches">
+    <div class="mm-branch">
+      <div class="mm-title">Approach (every question)</div>
+      <ul>
+        <li><b>Grain</b> — what is one output row? include zero rows? cancelled orders?</li>
+        <li><b>Tables + keys</b> — order-level × item-level join multiplies rows</li>
+        <li><b>CTEs</b> — one idea each: filter → aggregate → rank → pick</li>
+        <li><b>Edge cases</b> — ties, NULLs, duplicates, empty groups, ÷0, date boundaries</li>
+        <li><b>Say assumptions out loud</b> — revenue = qty × unit_price, excl. cancelled</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Top-N / Nth per group</div>
+      <ul>
+        <li><b>Rank in CTE, filter outside</b> — window results can't go in WHERE
+          <ul><li><code>rank() OVER (PARTITION BY g ORDER BY x DESC) AS rk</code> … <code>WHERE rk = 1</code></li></ul></li>
+        <li><b>Nth distinct value</b> — <code>dense_rank() … WHERE rk = N</code></li>
+        <li><b>2nd highest</b> — <code>max(s) WHERE s &lt; (SELECT max(s) …)</code></li>
+        <li><b>Latest per group</b> — <code>row_number() … rn = 1</code> + tie-breaker; or <code>DISTINCT ON</code></li>
+        <li>⚠ <b>LIMIT 1 OFFSET N-1</b> — counts tied rows separately</li>
+        <li><b>Ties?</b> ROW_NUMBER exactly N · RANK/DENSE_RANK keep ties</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Existence &amp; anti-join</div>
+      <ul>
+        <li><b>"Never did X"</b> — <code>WHERE NOT EXISTS (SELECT 1 … = c.id)</code></li>
+        <li><b>Or</b> — <code>LEFT JOIN o … WHERE o.id IS NULL</code></li>
+        <li>⚠ <b>NOT IN (subquery)</b> — one NULL → zero rows</li>
+        <li><b>"Bought both X and Y"</b> — <code>WHERE cat IN (X, Y) … HAVING count(DISTINCT cat) = 2</code></li>
+        <li><b>Self-join</b> — employee vs manager: <code>JOIN employees m ON m.emp_id = e.manager_id</code></li>
+        <li><b>Unique pairs</b> — <code>a.id &lt; b.id</code> (not <code>&lt;&gt;</code>)</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Keep zeros &amp; gaps</div>
+      <ul>
+        <li><b>LEFT JOIN from the "all" table</b> + <code>coalesce(sum(x), 0)</code></li>
+        <li>⚠ <b>Right-table filter in WHERE</b> → becomes inner join; put it in <code>ON</code></li>
+        <li><b>Missing periods</b> — <code>generate_series(start, end, '1 month')</code> LEFT JOIN data</li>
+        <li><b>Count right side</b> — <code>count(o.order_id)</code>, not <code>count(*)</code></li>
+        <li><b>Empty input</b> — COUNT → 0, SUM/AVG/MAX → NULL</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Fan-out &amp; duplicates</div>
+      <ul>
+        <li><b>Fan-out</b> — joining 1-per-order to 1-per-item repeats orders</li>
+        <li><b>Fix</b> — <code>count(DISTINCT o.order_id)</code> or aggregate in a CTE first</li>
+        <li><b>Find dups</b> — <code>GROUP BY key HAVING count(*) &gt; 1</code></li>
+        <li><b>Delete dups</b> — <code>row_number() OVER (PARTITION BY key ORDER BY id)</code>, delete <code>rn &gt; 1</code>
+          <ul><li>then add UNIQUE so it can't recur</li></ul></li>
+        <li>⚠ <b>JOIN for "who ordered"</b> → one row per order; use EXISTS</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Ratios, pivots, stats</div>
+      <ul>
+        <li><b>Share of total</b> — <code>100.0 * sum(x) / sum(sum(x)) OVER ()</code></li>
+        <li><b>Rate</b> — <code>avg((status = 'cancelled')::int)</code></li>
+        <li>⚠ <b>Integer ÷</b> — 1/5 = 0; cast or use <code>100.0</code></li>
+        <li><b>Pivot</b> — <code>sum(CASE WHEN cat = 'X' THEN v ELSE 0 END)</code> per column; PG <code>FILTER (WHERE …)</code></li>
+        <li><b>Median</b> — <code>percentile_cont(0.5) WITHIN GROUP (ORDER BY t)</code>; aggregate to grain first</li>
+        <li><b>Correlated subquery</b> — above own-category average</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Time series</div>
+      <ul>
+        <li><b>Previous row</b> — <code>lag(x) OVER (PARTITION BY u ORDER BY d)</code>; <code>lead</code> = next</li>
+        <li><b>Growth %</b> — <code>(x - lag) / nullif(lag, 0)</code>; fill gaps first</li>
+        <li><b>Running total</b> — <code>sum(x) OVER (ORDER BY d)</code>; ROWS frame for strict rows</li>
+        <li><b>Streaks</b> — <code>d - row_number() OVER (…)</code> constant per run; DISTINCT first</li>
+        <li><b>Retention</b> — first day per user → EXISTS activity in days 1–7 → group by cohort week</li>
+        <li><b>Recursive</b> — anchor <code>UNION ALL</code> step joining back (org chart)</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">NULL &amp; boundary traps</div>
+      <ul>
+        <li><b><code>NULL &lt;&gt; 'x'</code></b> is NULL → row dropped; use <code>IS DISTINCT FROM</code></li>
+        <li><b><code>count(col)</code></b> skips NULLs; <code>count(*)</code> doesn't</li>
+        <li><b>BETWEEN on timestamps</b> — end date = midnight; use <code>&gt;= start AND &lt; end + 1 day</code></li>
+        <li><b>UNION</b> dedups (slower); <b>UNION ALL</b> keeps all</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Rapid-fire facts</div>
+      <ul>
+        <li><b>Logical order</b> — FROM → WHERE → GROUP BY → HAVING → SELECT → DISTINCT → ORDER BY → LIMIT</li>
+        <li><b>WHERE vs HAVING</b> — rows before grouping vs groups after</li>
+        <li><b>DELETE / TRUNCATE / DROP</b> — rows (logged) / all rows fast / table</li>
+        <li><b>PK vs UNIQUE</b> — one, NOT NULL, identity vs many, NULLs allowed</li>
+        <li><b>Clustered index</b> — table stored in key order; PG heaps: all non-clustered</li>
+        <li><b>CHAR vs VARCHAR</b> — padded fixed vs variable; PG text = varchar</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -6965,18 +7450,17 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="si-date"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Dates &amp; Time</span><span class="rm-sub">Growth, streaks, retention</span></div></div>
       <div class="rm-item rm-done" data-target="si-null"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Tricky NULL &amp; Edge Cases</span><span class="rm-sub">Where correct-looking SQL lies</span></div></div>
       <div class="rm-item rm-done" data-target="si-rapid"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Conceptual Rapid-Fire</span><span class="rm-sub">Ten classic one-liners</span></div></div>
-      <div class="rm-item rm-done" data-target="si-rev"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">8 reusable patterns</span></div></div>
     </div>
   </div>
 
   <h2 id="si-how"><span class="num">01</span>How to Approach a Question</h2>
   <div class="flow"><span>Clarify the grain</span><span>Find the tables</span><span>Build step by step (CTEs)</span><span>Check edge cases</span></div>
-  <ol>
-    <li><strong>Clarify the grain</strong>: what is one output row? "Revenue per customer" = one row per customer, <em>including</em> those with zero? Ask. Also define terms: does revenue include cancelled orders?</li>
-    <li><strong>Find the tables</strong>: which tables hold the facts, and what is each table's key? Joining a 1-row-per-order table to a 1-row-per-item table multiplies rows.</li>
-    <li><strong>Build step by step</strong>: one CTE per idea (filter → aggregate → rank → pick). Run each piece; say it out loud.</li>
-    <li><strong>Check edge cases</strong>: ties, NULLs, duplicates, empty groups, division by zero, date boundaries.</li>
-  </ol>
+  <div class="cards">
+    <div><b>1 · Grain</b><p>One output row = ? Include zero rows? Does revenue count cancelled orders? Ask.</p></div>
+    <div><b>2 · Tables</b><p>Which hold the facts, and each one's key? Order × item joins multiply rows.</p></div>
+    <div><b>3 · CTEs</b><p>One idea each: filter → aggregate → rank → pick. Say each out loud.</p></div>
+    <div><b>4 · Edges</b><p>Ties, NULLs, duplicates, empty groups, ÷0, date boundaries.</p></div>
+  </div>
   <div class="callout intu"><span class="label">Convention on this page</span>
     <p>Revenue = <code>qty * unit_price</code> from <code>order_items</code>, excluding cancelled orders, unless the question says otherwise. Stating this out loud is itself a point scored.</p>
   </div>
@@ -7088,7 +7572,22 @@ JOIN orders o       USING (customer_id)
 JOIN order_items oi USING (order_id)
 GROUP BY c.customer_id, c.name ORDER BY c.name;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>wrong_orders</th><th>orders</th><th>items</th></tr><tr><td>Asha</td><td>3</td><td>2</td><td>4</td></tr><tr><td>Ben</td><td>1</td><td>1</td><td>1</td></tr><tr><td>Chen</td><td>3</td><td>2</td><td>6</td></tr></table>
-  <p><strong>Fan-out</strong>: after joining items, each order appears once per line, so <code>count(*)</code> counts lines. Use <code>COUNT(DISTINCT)</code>, or aggregate items per order in a CTE before joining.</p></div></details>
+  <p><strong>Fan-out</strong>: after joining items, each order appears once per line, so <code>count(*)</code> counts lines. Use <code>COUNT(DISTINCT)</code>, or aggregate items per order in a CTE before joining.</p>
+  <figure class="viz"><svg viewBox="0 0 600 150" width="600">
+    <defs><marker id="si-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <text x="0" y="14" font-size="11" class="tm">Asha's orders (2 rows)</text>
+    <rect x="0" y="24" width="120" height="30" rx="5" class="fb sb"/><text x="60" y="44" text-anchor="middle">order 100</text>
+    <rect x="0" y="84" width="120" height="30" rx="5" class="ft st"/><text x="60" y="104" text-anchor="middle">order 101</text>
+    <text x="200" y="14" font-size="11" class="tm">after JOIN order_items (3 rows)</text>
+    <rect x="200" y="24" width="190" height="26" rx="5" class="fb sb"/><text x="295" y="42" text-anchor="middle">100 · Laptop ×1</text>
+    <rect x="200" y="56" width="190" height="26" rx="5" class="fb sb"/><text x="295" y="74" text-anchor="middle">100 · Lamp ×2</text>
+    <rect x="200" y="88" width="190" height="26" rx="5" class="ft st"/><text x="295" y="106" text-anchor="middle">101 · Phone ×1</text>
+    <g stroke="currentColor"><line x1="120" y1="39" x2="198" y2="37" marker-end="url(#si-ar)"/><line x1="120" y1="39" x2="198" y2="69" marker-end="url(#si-ar)"/><line x1="120" y1="99" x2="198" y2="101" marker-end="url(#si-ar)"/></g>
+    <text x="410" y="42" class="tr">count(*) = 3 ✗</text>
+    <text x="410" y="74" class="tg">count(DISTINCT) = 2</text>
+    <text x="410" y="106">sum(qty) = 4 ✓</text>
+    <text x="0" y="140" font-size="11" class="tm">order 100 now appears twice: anything counted per order is inflated</text>
+  </svg><figcaption>Fan-out: a 1-row-per-order table joined to a 1-row-per-item table repeats each order once per line.</figcaption></figure></div></details>
 
   <details class="qa"><summary><span class="qmark">Q</span>List pairs of customers who live in the same city, each pair once.</summary><div class="qa-body">
   <div class="fx" data-lang="sql">SELECT a.name AS customer_1, b.name AS customer_2, a.city
@@ -7258,7 +7757,19 @@ SELECT user_id, min(login_date) AS streak_start, max(login_date) AS streak_end, 
 FROM g GROUP BY user_id, grp
 HAVING count(*) &gt;= 3 ORDER BY user_id;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>user_id</th><th>streak_start</th><th>streak_end</th><th>days</th></tr><tr><td>1</td><td>2024-07-01</td><td>2024-07-03</td><td>3</td></tr><tr><td>2</td><td>2024-07-08</td><td>2024-07-11</td><td>4</td></tr></table>
-  <p><strong>Gaps and islands</strong>: within a consecutive run, date and row number both rise by 1, so <code>date − row_number</code> is constant and labels the run. <code>DISTINCT</code> first: user 1's double login on 07-02 would break the trick.</p></div></details>
+  <figure class="viz"><svg viewBox="0 0 600 140" width="600">
+    <g font-size="11" class="tm"><text x="0" y="24">login_date</text><text x="0" y="56">row_number</text><text x="0" y="88">date − rn</text></g>
+    <g text-anchor="middle">
+      <rect x="100" y="8" width="84" height="88" rx="5" class="fb sb"/><rect x="190" y="8" width="84" height="88" rx="5" class="fb sb"/><rect x="280" y="8" width="84" height="88" rx="5" class="fb sb"/>
+      <rect x="410" y="8" width="84" height="88" rx="5" class="ft st"/><rect x="500" y="8" width="84" height="88" rx="5" class="ft st"/>
+      <text x="142" y="24">07-01</text><text x="232" y="24">07-02</text><text x="322" y="24">07-03</text><text x="452" y="24">07-05</text><text x="542" y="24">07-06</text>
+      <text x="142" y="56">1</text><text x="232" y="56">2</text><text x="322" y="56">3</text><text x="452" y="56">4</text><text x="542" y="56">5</text>
+      <text x="142" y="88" class="tb">06-30</text><text x="232" y="88" class="tb">06-30</text><text x="322" y="88" class="tb">06-30</text><text x="452" y="88" class="tg">07-01</text><text x="542" y="88" class="tg">07-01</text>
+      <text x="232" y="118" class="tb">island 1: 3 days ✓</text><text x="497" y="118" class="tg">island 2: 2 days</text>
+      <text x="387" y="56" class="tr">gap</text>
+    </g>
+  </svg><figcaption>User 1: both columns rise by 1 inside a run, so their difference is a constant label. The gap (07-04) bumps the label.</figcaption></figure>
+  <p><strong>Gaps and islands</strong>: <code>date − row_number</code> labels each run. <code>DISTINCT</code> first: user 1's double login on 07-02 would break the trick.</p></div></details>
 
   <details class="qa"><summary><span class="qmark">Q</span>7-day retention by weekly cohort: what % of users came back within 7 days of their first login?</summary><div class="qa-body">
   <div class="fx" data-lang="sql">WITH firsts AS (
@@ -7281,7 +7792,8 @@ FROM flagged GROUP BY 1 ORDER BY 1;</div>
   <div class="fx" data-lang="sql">SELECT name FROM employees
 WHERE emp_id NOT IN (SELECT manager_id FROM employees);</div>
   <table class="tbl out"><caption>Result (0 rows)</caption><tr><th>name</th></tr></table>
-  <p>Ravi's <code>manager_id</code> is NULL. <code>x NOT IN (1, 4, NULL)</code> means <code>x &lt;&gt; 1 AND x &lt;&gt; 4 AND x &lt;&gt; NULL</code>; the last part is UNKNOWN, so no row passes.</p>
+  <p>Ravi's <code>manager_id</code> is NULL, so the list is (1, 1, 1, 4, NULL):</p>
+  <div class="flow"><span>2 NOT IN (1, 4, NULL)</span><span>2 &lt;&gt; 1 AND 2 &lt;&gt; 4 AND 2 &lt;&gt; NULL</span><span>TRUE AND TRUE AND UNKNOWN</span><span>UNKNOWN → row dropped</span></div>
   <div class="fx" data-lang="sql">SELECT name FROM employees e
 WHERE NOT EXISTS (SELECT 1 FROM employees r WHERE r.manager_id = e.emp_id)
 ORDER BY e.emp_id;</div>
@@ -7344,20 +7856,9 @@ FROM customers;</div>
   <details class="qa"><summary><span class="qmark">Q</span>CHAR vs VARCHAR?</summary><div class="qa-body"><code>CHAR(n)</code> is fixed length, padded with spaces; <code>VARCHAR(n)</code> stores only what you give, up to n. Use CHAR only for truly fixed codes (country 'IN'). In PostgreSQL, <code>text</code> and <code>varchar</code> perform the same; CHAR is never faster.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Clustered vs non-clustered index?</summary><div class="qa-body">A <strong>clustered</strong> index <em>is</em> the table: rows are stored in key order, so only one per table (SQL Server, MySQL InnoDB's primary key). A <strong>non-clustered</strong> index is a separate structure pointing to the rows; you can have many. PostgreSQL tables are heaps, so every index is non-clustered (<code>CLUSTER</code> reorders once, not maintained).</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Primary key vs unique key?</summary><div class="qa-body">Both enforce uniqueness with an index. A primary key is one per table, implies NOT NULL, and is the row's identity that foreign keys point to. A table can have many unique keys, and they allow NULLs (in PostgreSQL, multiple NULLs, since NULL ≠ NULL).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>In what order does SQL evaluate a query? Can you use a SELECT alias in WHERE?</summary><div class="qa-body">Logically: <code>FROM/JOIN → WHERE → GROUP BY → HAVING → SELECT → DISTINCT → ORDER BY → LIMIT</code>. So a SELECT alias doesn't exist yet in <code>WHERE</code> (error), but works in <code>ORDER BY</code>. Window functions run at the SELECT stage, which is why you filter them in an outer query.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>In what order does SQL evaluate a query? Can you use a SELECT alias in WHERE?</summary><div class="qa-body"><div class="flow"><span>FROM / JOIN</span><span>WHERE</span><span>GROUP BY</span><span>HAVING</span><span>SELECT</span><span>DISTINCT</span><span>ORDER BY</span><span>LIMIT</span></div>So a SELECT alias doesn't exist yet in <code>WHERE</code> (error), but works in <code>ORDER BY</code>. Window functions run at the SELECT stage, which is why you filter them in an outer query.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>IN vs EXISTS vs JOIN for "customers who ordered"?</summary><div class="qa-body">All give Asha, Ben, Chen, and modern planners often produce the same plan. <code>EXISTS</code> stops at the first match and is NULL-safe in the negated form. A plain <code>JOIN</code> returns a customer once <em>per order</em>, so it needs <code>DISTINCT</code>: a classic duplicate bug.</div></details>
 
-  <h2 id="si-rev"><span class="num">09</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Top-N per group</strong>: rank in a CTE (<code>ROW_NUMBER</code> / <code>DENSE_RANK</code> <code>PARTITION BY</code>), filter outside.</li>
-    <li><strong>Anti-join</strong> ("never did X"): <code>NOT EXISTS</code> or <code>LEFT JOIN … IS NULL</code>, never <code>NOT IN</code> on a nullable column.</li>
-    <li><strong>Keep zero rows</strong>: LEFT JOIN, filters on the right table in <code>ON</code>, <code>COALESCE(SUM, 0)</code>.</li>
-    <li><strong>Avoid fan-out</strong>: aggregate each table to the target grain before joining, or <code>COUNT(DISTINCT)</code>.</li>
-    <li><strong>Share of total</strong>: <code>x / SUM(x) OVER ()</code>, times <code>100.0</code>.</li>
-    <li><strong>Change over time</strong>: <code>LAG</code> for previous period, <code>SUM() OVER (ORDER BY)</code> for running totals; fill gaps with <code>generate_series</code>.</li>
-    <li><strong>Pivot</strong>: <code>SUM(CASE WHEN … THEN x ELSE 0 END)</code> per column.</li>
-    <li><strong>Streaks</strong>: <code>date − ROW_NUMBER()</code> labels each consecutive run (gaps and islands).</li>
-  </ol></div>
 </main>`
 });
 
@@ -7645,6 +8146,103 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Data Modeling</h1>
   <p class="lead">How to decide which tables exist and what goes in each. A good model makes wrong data hard to store and common questions easy to ask; a bad one quietly corrupts both.</p>
 
+  <h2 id="sm-map" class="open"><span class="num">★</span>Mind Map</h2>
+<div class="mindmap">
+  <div class="mm-center">Data Modeling</div>
+  <div class="mm-branches">
+    <div class="mm-branch">
+      <div class="mm-title">Why model</div>
+      <ul>
+        <li><b>Goal</b> — every fact stored once, in the right table</li>
+        <li><b>Update anomaly</b> — Asha's city on 3 rows; change one → two cities</li>
+        <li><b>Insert anomaly</b> — can't record Dia until she orders</li>
+        <li><b>Delete anomaly</b> — delete Ben's only order → Ben vanishes</li>
+        <li><b>Root cause</b> — one table describing several things → one table per thing</li>
+        <li>💡 one salt jar per dish: refill means hunting every jar</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Entities &amp; relationships</div>
+      <ul>
+        <li><b>Nouns</b> → tables; facts → columns; <b>verbs</b> → FKs</li>
+        <li><b>1:N</b> — FK on the "many" side (<code>orders.customer_id</code>)</li>
+        <li><b>M:N</b> — junction table <code>order_items</code>, PK (order_id, product_id)
+          <ul><li>holds its own attributes: qty, unit_price</li></ul></li>
+        <li><b>Self 1:N</b> — <code>employees.manager_id</code> → employees</li>
+        <li>⚠ <b>List column</b> <code>'10,13'</code> — string search, no FK; use a junction table</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Normal forms</div>
+      <ul>
+        <li><b>Functional dependency</b> — A → B: knowing A fixes B</li>
+        <li><b>1NF</b> — atomic cells, no lists / repeating groups, a key</li>
+        <li><b>2NF</b> — no column depends on <em>part</em> of a composite key</li>
+        <li><b>3NF</b> — no non-key → non-key (order → customer → city)
+          <ul><li>"the key, the whole key, nothing but the key"</li></ul></li>
+        <li><b>BCNF</b> — every determinant is a candidate key (rep → category)</li>
+        <li><b>4NF / 5NF</b> — no independent multi-valued lists; rare</li>
+        <li>⚠ <b>Lossless</b> — joining pieces must give back the original rows</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Denormalization</div>
+      <ul>
+        <li><b>What</b> — store a fact twice or precomputed for faster reads</li>
+        <li><b>Forms</b> — copied column, stored total, summary table, materialized view, one big table</li>
+        <li><b>Cost</b> — anomalies return; sync every copy or it drifts</li>
+        <li><b>MV</b> — stale until <code>REFRESH MATERIALIZED VIEW</code></li>
+        <li><b>Rule</b> — normalize the source of truth; denormalize copies</li>
+        <li>💡 "today's total" on a whiteboard</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Star &amp; snowflake</div>
+      <ul>
+        <li><b>OLTP</b> 3NF, current state, small writes; <b>OLAP</b> star, history, big reads</li>
+        <li><b>Fact</b> — one row per event; measures + FKs; tall &amp; narrow</li>
+        <li><b>Dimension</b> — who/what/when context; short &amp; wide</li>
+        <li><b>Grain</b> — what one fact row means; decide first</li>
+        <li><b>Measures</b> — additive (revenue), semi-additive (balance), non-additive (ratio)</li>
+        <li><b>Degenerate dim</b> — order_id kept in the fact, no table</li>
+        <li><b>Snowflake</b> — normalized dims; fewer repeats, more joins</li>
+        <li>⚠ <b>Mixed grain</b> — order-level shipping on line rows double-counts</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Slowly changing dims</div>
+      <ul>
+        <li><b>Type 1</b> — overwrite; no history (typo fixes)</li>
+        <li><b>Type 2</b> — new row per version: surrogate key, valid_from, valid_to, is_current</li>
+        <li><b>Type 3</b> — <code>previous_city</code> column; one step back</li>
+        <li><b>Type 2 join</b> — <code>order_date BETWEEN valid_from AND valid_to</code></li>
+        <li>⚠ <b>Join on id only</b> → every version matches → duplicated facts</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">JSONB vs columns</div>
+      <ul>
+        <li><b>JSONB</b> — binary JSON column; fields vary per row; <code>attrs -&gt;&gt; 'ram_gb'</code></li>
+        <li><b>Use for</b> — sparse attributes, raw event/API payloads</li>
+        <li><b>Columns for</b> — anything filtered, joined, grouped, constrained</li>
+        <li>⚠ <b>Hidden schema</b> — "16" vs 16 vs "16GB"; promote hot fields</li>
+        <li><b>GIN index</b> — speeds <code>@&gt;</code> containment</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Conventions</div>
+      <ul>
+        <li><b>Naming</b> — snake_case, FK named after target, <code>is_</code>/<code>has_</code>, avoid <code>user</code>/<code>order</code></li>
+        <li><b>Surrogate key</b> — <code>bigint GENERATED ALWAYS AS IDENTITY</code> or UUID; natural key UNIQUE</li>
+        <li><b>Audit</b> — <code>created_at</code>, <code>updated_at timestamptz</code> (trigger/app updates it)</li>
+        <li><b>Soft delete</b> — <code>deleted_at</code>; partial unique index <code>WHERE deleted_at IS NULL</code></li>
+        <li>⚠ <b>Leaks</b> — every query must filter deleted rows; use a view</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -7656,8 +8254,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="sm-scd"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Slowly Changing Dimensions</span><span class="rm-sub">When Asha moves city</span></div></div>
       <div class="rm-item rm-done" data-target="sm-json"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">JSONB vs Columns</span><span class="rm-sub">Flexible, but at a price</span></div></div>
       <div class="rm-item rm-done" data-target="sm-conv"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Practical Conventions</span><span class="rm-sub">Names, ids, timestamps, soft delete</span></div></div>
-      <div class="rm-item rm-done" data-target="sm-rev"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="sm-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including "design a schema for X"</span></div></div>
+      <div class="rm-item rm-done" data-target="sm-qa"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including "design a schema for X"</span></div></div>
     </div>
   </div>
 
@@ -7695,8 +8292,21 @@ SELECT count(*) AS ben_rows FROM orders_flat WHERE cust_name = 'Ben';</div>
   </div>
 
   <h2 id="sm-er"><span class="num">02</span>Entities &amp; Relationships</h2>
-  <p>ER (entity-relationship) thinking: <strong>nouns</strong> become tables (entities), their facts become columns (attributes), <strong>verbs</strong> become links (a customer <em>places</em> orders) built with foreign keys. <strong>Cardinality</strong> = how many on each side: 1:1, 1:N or M:N.</p>
-  <div class="flow"><span>customers</span><span>orders</span><span>order_items</span><span>products</span></div>
+  <p><strong>Nouns</strong> → tables, their facts → columns, <strong>verbs</strong> → foreign keys. <strong>Cardinality</strong> = how many on each side: 1:1, 1:N, M:N.</p>
+  <figure class="viz"><svg viewBox="0 0 600 130" width="600">
+    <g text-anchor="middle">
+      <rect x="0" y="40" width="120" height="40" rx="6" class="fb sb"/><text x="60" y="65" font-weight="bold">customers</text>
+      <rect x="160" y="40" width="120" height="40" rx="6" class="fb sb"/><text x="220" y="65" font-weight="bold">orders</text>
+      <rect x="320" y="40" width="130" height="40" rx="6" class="fv"/><text x="385" y="58" font-weight="bold">order_items</text><text x="385" y="73" font-size="10" class="tm">qty, unit_price</text>
+      <rect x="490" y="40" width="110" height="40" rx="6" class="fb sb"/><text x="545" y="65" font-weight="bold">products</text>
+    </g>
+    <g stroke="currentColor"><line x1="120" y1="60" x2="160" y2="60"/><line x1="280" y1="60" x2="320" y2="60"/><line x1="450" y1="60" x2="490" y2="60"/></g>
+    <g font-size="11" class="tb"><text x="124" y="54">1</text><text x="148" y="54">N</text><text x="284" y="54">1</text><text x="308" y="54">N</text><text x="454" y="54">N</text><text x="478" y="54">1</text></g>
+    <text x="140" y="98" text-anchor="middle" font-size="10" class="tm">FK orders.customer_id</text>
+    <text x="385" y="98" text-anchor="middle" font-size="10" class="tm">junction table = M:N orders ↔ products</text>
+    <text x="300" y="20" text-anchor="middle" font-size="11" class="tm">FK always sits on the "many" side</text>
+    <text x="140" y="116" text-anchor="middle" font-size="10" class="tm">(0..N: Dia has none)</text>
+  </svg><figcaption>The shop as an ER chain. M:N never fits in two tables; it needs the middle one.</figcaption></figure>
   <table class="tbl">
     <tr><th>Relationship (shop)</th><th>Cardinality</th><th>How it's built</th></tr>
     <tr><td>customer places orders</td><td>1 : N (0..N: Dia has none)</td><td>FK <code>orders.customer_id</code></td></tr>
@@ -7712,9 +8322,24 @@ SELECT count(*) AS ben_rows FROM orders_flat WHERE cust_name = 'Ben';</div>
   </div>
 
   <h2 id="sm-norm"><span class="num">03</span>Normalization</h2>
-  <p><strong>Normalization</strong> = splitting tables step by step until each fact lives in one place. Each "normal form" (NF) removes one kind of redundancy.</p>
-  <p>It rests on <strong>functional dependency</strong> (A → B: knowing A fixes B). <code>product → category</code>: a product always has the same category.</p>
-  <p>Running example: the shop as someone first typed it, one row per order with a list of items.</p>
+  <p><strong>Normalization</strong> = splitting tables until each fact lives in one place; each normal form (NF) removes one kind of redundancy. It rests on <strong>functional dependency</strong>: A → B means knowing A fixes B (<code>product → category</code>).</p>
+  <figure class="viz"><svg viewBox="0 0 600 220" width="600">
+    <defs><marker id="sm-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="0" y="10" width="190" height="200" rx="6" class="fs" stroke="currentColor" stroke-opacity=".4"/>
+    <text x="95" y="30" text-anchor="middle" font-weight="bold">orders_flat (1NF)</text>
+    <g font-size="11"><text x="14" y="54" class="tb">order_id, order_date</text><text x="14" y="74" class="tr">cust_name, cust_city</text><text x="14" y="94" class="tg">product, category</text><text x="14" y="114">qty, unit_price</text></g>
+    <text x="14" y="146" font-size="10" class="tm">key = (order_id, product)</text>
+    <text x="14" y="164" font-size="10" class="tm">7 rows; Asha's city ×3,</text><text x="14" y="178" font-size="10" class="tm">"Electronics" ×3</text>
+    <g stroke="currentColor"><line x1="190" y1="50" x2="268" y2="30" marker-end="url(#sm-ar)"/><line x1="190" y1="70" x2="268" y2="80" marker-end="url(#sm-ar)"/><line x1="190" y1="90" x2="268" y2="130" marker-end="url(#sm-ar)"/><line x1="190" y1="110" x2="268" y2="180" marker-end="url(#sm-ar)"/></g>
+    <text x="210" y="216" font-size="10" class="tm">split by what each column depends on</text>
+    <g font-size="11">
+      <rect x="270" y="12" width="320" height="36" rx="6" class="fb sb"/><text x="280" y="34">orders (order_id PK, order_date, cust → FK)</text>
+      <rect x="270" y="62" width="320" height="36" rx="6" class="fr sr"/><text x="280" y="84">customers (name PK, city)  ← 3NF step</text>
+      <rect x="270" y="112" width="320" height="36" rx="6" class="fg sg"/><text x="280" y="134">products (product PK, category)  ← 2NF</text>
+      <rect x="270" y="162" width="320" height="36" rx="6" class="fv"/><text x="280" y="184">items (order_id, product, qty, unit_price)</text>
+    </g>
+  </svg><figcaption>Each colour is one dependency. Give each its own table and every fact is stored once.</figcaption></figure>
+  <p>Step by step, starting from the shop as first typed: one row per order with a list of items.</p>
   
   <div class="fx" data-lang="sql">SELECT order_id, cust_name, cust_city,
        string_agg(product || ' x' || qty, ', ' ORDER BY product) AS items
@@ -7800,11 +8425,26 @@ SELECT * FROM customer_revenue ORDER BY revenue DESC;</div>
   </div>
 
   <h2 id="sm-olap"><span class="num">05</span>Star &amp; Snowflake Schemas</h2>
-  <p><strong>OLTP</strong> models (the app) are 3NF and hold current state, tuned for safe small writes. <strong>OLAP</strong> models (the warehouse) are star-shaped and keep history, tuned for big simple reads.</p>
+  <div class="cards">
+    <div><b>OLTP (the app)</b><p>3NF, current state, safe small writes.</p></div>
+    <div><b>OLAP (warehouse)</b><p>Star-shaped, keeps history, big simple reads.</p></div>
+  </div>
+  <figure class="viz"><svg viewBox="0 0 600 220" width="600">
+    <g stroke="currentColor" opacity=".6"><line x1="95" y1="64" x2="170" y2="96"/><line x1="505" y1="64" x2="430" y2="96"/><line x1="300" y1="156" x2="300" y2="166"/></g>
+    <rect x="170" y="70" width="260" height="86" rx="8" class="fb sb"/>
+    <text x="300" y="90" text-anchor="middle" font-weight="bold">fact_sales</text>
+    <g font-size="10" text-anchor="middle"><text x="300" y="106" class="tm">date_key, customer_key, product_key</text><text x="300" y="122">qty · revenue  (measures)</text><text x="300" y="138" class="tm">order_id · status (degenerate)</text></g>
+    <text x="300" y="150" text-anchor="middle" font-size="9" class="tm">grain: one order line</text>
+    <rect x="10" y="12" width="170" height="52" rx="8" class="ft st"/><text x="95" y="32" text-anchor="middle" font-weight="bold">dim_date</text><text x="95" y="50" text-anchor="middle" font-size="10" class="tm">year, month, weekday</text>
+    <rect x="420" y="12" width="170" height="52" rx="8" class="ft st"/><text x="505" y="32" text-anchor="middle" font-weight="bold">dim_customer</text><text x="505" y="50" text-anchor="middle" font-size="10" class="tm">name, city</text>
+    <rect x="215" y="166" width="170" height="48" rx="8" class="ft st"/><text x="300" y="186" text-anchor="middle" font-weight="bold">dim_product</text><text x="300" y="203" text-anchor="middle" font-size="10" class="tm">name, category</text>
+    <rect x="430" y="166" width="160" height="48" rx="8" fill="none" stroke="currentColor" stroke-dasharray="4 3" opacity=".6"/><text x="510" y="186" text-anchor="middle" font-size="11">dim_category</text><text x="510" y="203" text-anchor="middle" font-size="10" class="tm">snowflake only</text>
+    <line x1="385" y1="190" x2="428" y2="190" stroke="currentColor" stroke-dasharray="4 3" opacity=".6"/>
+  </svg><figcaption>Tall fact in the middle, short wide dimensions around it. Every query: fact → join dims → filter → group.</figcaption></figure>
   <ul>
-    <li><strong>Fact table</strong>: one row per measurable event, with numbers you add up (<code>qty</code>, <code>revenue</code>) and FKs to dimensions. Tall and narrow.</li>
-    <li><strong>Dimension table</strong>: the who/what/when context you filter and group by (customer, product, date). Short and wide.</li>
-    <li><strong>Grain</strong>: what exactly one fact row means. Decide it first. Here: <em>one row per order line</em>.</li>
+    <li><strong>Fact table</strong>: one row per measurable event: numbers you add up + FKs to dimensions.</li>
+    <li><strong>Dimension table</strong>: the who/what/when you filter and group by.</li>
+    <li><strong>Grain</strong>: what one fact row means. Decide it first. Here: <em>one order line</em>.</li>
   </ul>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A till receipt roll is the fact table: one line per item sold. The product catalogue, customer list and calendar are dimensions you look things up in.</p>
@@ -7848,6 +8488,14 @@ GROUP BY 1, 2 ORDER BY 1, 2;</div>
     <tr><td><strong>3</strong></td><td>Add a <code>previous_city</code> column</td><td>One step back</td><td>Only "before vs after" comparisons</td></tr>
   </table>
   <p>Type 2 example: Asha moves from Mumbai to Pune on 2024-05-10.</p>
+  <figure class="viz"><svg viewBox="0 0 600 120" width="600">
+    <rect x="20" y="44" width="300" height="32" class="fb sb"/><text x="170" y="65" text-anchor="middle">key 1 · Mumbai · is_current f</text>
+    <rect x="322" y="44" width="268" height="32" class="fg sg"/><text x="456" y="65" text-anchor="middle">key 5 · Pune · is_current t</text>
+    <g font-size="10" class="tm"><text x="20" y="96">2024-01-05</text><text x="320" y="96" text-anchor="end">05-09</text><text x="324" y="96">05-10</text><text x="590" y="96" text-anchor="end">9999-12-31</text></g>
+    <circle cx="280" cy="28" r="5" class="tb"/><text x="272" y="18" text-anchor="end" font-size="11">order 100 (05-01) → Mumbai</text>
+    <circle cx="380" cy="28" r="5" class="tg"/><text x="388" y="18" font-size="11">order 101 (05-20) → Pune</text>
+    <line x1="280" y1="33" x2="280" y2="44" stroke="currentColor"/><line x1="380" y1="33" x2="380" y2="44" stroke="currentColor"/>
+  </svg><figcaption>SCD Type 2: Asha's two versions tile the timeline; each order lands in the version valid on its date.</figcaption></figure>
   <div class="fx" data-lang="sql">CREATE TABLE dim_customer_scd (
   customer_key serial PRIMARY KEY,       -- surrogate: one per version
   customer_id int, name text, city text,
@@ -7914,21 +8562,7 @@ CREATE UNIQUE INDEX reviews_one_live ON reviews (customer_id, product_id) WHERE 
     <p>Soft deletes leak. Every query must add <code>WHERE deleted_at IS NULL</code>; forget once and deleted rows reappear in reports. A view <code>live_reviews</code> helps. Also, <code>updated_at</code> doesn't update itself: set it in a trigger or in the app.</p>
   </div>
 
-  <h2 id="sm-rev"><span class="num">09</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Wide table</strong> → update, insert and delete anomalies; cause: one table, many things.</li>
-    <li><strong>Entities</strong> → tables; <strong>relationships</strong> → FKs on the many side; <strong>M:N</strong> → junction table.</li>
-    <li><strong>1NF</strong>: atomic cells, no lists or repeating groups.</li>
-    <li><strong>2NF</strong>: no column depends on part of a composite key.</li>
-    <li><strong>3NF</strong>: no non-key → non-key dependency. <strong>BCNF</strong>: every determinant is a key.</li>
-    <li><strong>Denormalize</strong> copies for read speed; pay with sync work and staleness.</li>
-    <li><strong>Star</strong>: fact (events, measures) + dimensions (context). <strong>Declare the grain first.</strong></li>
-    <li><strong>Snowflake</strong> = star with normalized dimensions: less repetition, more joins.</li>
-    <li><strong>SCD</strong>: Type 1 overwrite, Type 2 new row with valid_from/valid_to, Type 3 previous-value column.</li>
-    <li><strong>JSONB</strong> for sparse or raw data; columns for anything filtered, joined or constrained.</li>
-  </ol></div>
-
-  <h2 id="sm-qa"><span class="num">10</span>Questions &amp; Answers</h2>
+  <h2 id="sm-qa"><span class="num">09</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>Name the three anomalies of an unnormalized table, with a shop example of each.</summary><div class="qa-body">Update: Asha's city stored on every order row; changing one row leaves her in two cities. Insert: a customer like Dia can't be stored until she orders. Delete: deleting Ben's only order deletes the only record of Ben.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>A table <code>enrolments(student_id, course_id, student_name, course_title, grade)</code> with key (student_id, course_id). Which NF does it break and how do you fix it?</summary><div class="qa-body">2NF: <code>student_name</code> depends only on student_id and <code>course_title</code> only on course_id (partial dependencies). Split into <code>students(student_id, name)</code>, <code>courses(course_id, title)</code>, <code>enrolments(student_id, course_id, grade)</code>. Grade depends on both, so it stays.</div></details>
@@ -7951,6 +8585,106 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Indexes &amp; Performance</h1>
   <p class="lead">Why a query is slow, how an index makes it fast, and how to read the plan that proves it. Every plan below is real PostgreSQL 16 output on a 2-million-row table.</p>
 
+  <h2 id="so-map" class="open"><span class="num">★</span>Mind Map</h2>
+<div class="mindmap">
+  <div class="mm-center">Indexes &amp; Performance</div>
+  <div class="mm-branches">
+    <div class="mm-branch">
+      <div class="mm-title">Why queries are slow</div>
+      <ul>
+        <li><b>Cost = pages read</b> (8 KB each), not rows returned</li>
+        <li><b>Seq Scan</b> — read every page, test every row; 2M rows = 16,576 pages, 116 ms</li>
+        <li><b>Index</b> — sorted values + pointers to rows; 💡 the index at the back of a textbook</li>
+        <li><b>With index</b> — 25 pages, 0.24 ms (~480× faster)</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">B-tree (default index)</div>
+      <ul>
+        <li><b>Sorted + balanced</b> — every leaf same depth, every lookup same cost</li>
+        <li><b>O(log n)</b> — hundreds of keys/page → 3–4 levels for millions of rows</li>
+        <li><b>Linked leaves</b> — ranges, <code>ORDER BY</code>, prefix <code>LIKE 'abc%'</code> walk along</li>
+        <li><b>Serves</b> — <code>= &lt; &gt; BETWEEN</code>, sort, min/max</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">EXPLAIN</div>
+      <ul>
+        <li><b>EXPLAIN</b> — the chosen plan + estimates only</li>
+        <li><b>EXPLAIN ANALYZE</b> — actually runs it: real time, rows, loops</li>
+        <li><b>BUFFERS</b> — pages touched (hit = cache, read = disk)</li>
+        <li>⚠ <b>Runs writes</b> — wrap UPDATE/DELETE in <code>BEGIN … ROLLBACK</code></li>
+        <li><b>Read inside-out</b> — most-indented node runs first</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Designing the index</div>
+      <ul>
+        <li><b>Composite (a, b)</b> — sorted by a, then b within ties; 💡 phone book (last, first)</li>
+        <li><b>Leftmost prefix</b> — serves a, a+b; not b alone
+          <ul><li>(a, b) makes (a) redundant; (b) is not</li></ul></li>
+        <li><b>Column order</b> — equality columns first, range column last</li>
+        <li><b>Covering</b> — <code>INCLUDE (cols)</code> → Index Only Scan, no heap visit
+          <ul><li>⚠ needs a vacuumed table, else Heap Fetches stay high</li></ul></li>
+        <li><b>Partial</b> — <code>... WHERE status = 'pending'</code>: 3 MB vs 43 MB</li>
+        <li><b>Expression</b> — <code>ON (lower(email))</code>; query must use the same expression</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Other index types</div>
+      <ul>
+        <li><b>Hash</b> — only <code>=</code>; rarely beats B-tree</li>
+        <li><b>GIN</b> — inverted: JSONB, arrays, full-text, trigrams (<code>@&gt;</code>, <code>@@</code>)</li>
+        <li><b>GiST</b> — overlap / nearest: geo, ranges, bookings</li>
+        <li><b>BRIN</b> — min/max per block range; 24 kB vs 43 MB on time-ordered data
+          <ul><li>💡 date labels on archive boxes; useless if rows are shuffled</li></ul></li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Cost of indexes</div>
+      <ul>
+        <li><b>Slower writes</b> — 500k inserts: 0.49 s (0 idx) → 9.45 s (6 idx)</li>
+        <li><b>Space</b> — 6 indexes ≈ 210 MB on a 130 MB table</li>
+        <li><b>Unused</b> — <code>pg_stat_user_indexes</code> where <code>idx_scan = 0</code> → drop</li>
+        <li><b>Rule</b> — index hot filters/joins/sorts; bulk load → drop, load, rebuild</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Sargability</div>
+      <ul>
+        <li><b>Sargable</b> — index usable; keep the column <em>bare</em>, work on the constant</li>
+        <li>⚠ <b>Function</b> — <code>date(ts) = d</code> → <code>ts &gt;= d AND ts &lt; d+1</code> (172 → 0.4 ms)</li>
+        <li>⚠ <b>Leading %</b> — <code>LIKE '%x'</code> → anchor start or trigram GIN</li>
+        <li>⚠ <b>Implicit cast</b> — <code>int_col = 4242.0</code> casts every row</li>
+        <li>⚠ <b>OR</b> — one unindexed branch → Seq Scan; index both (BitmapOr) or UNION</li>
+        <li>⚠ <b>Collation</b> — prefix LIKE needs "C" or <code>text_pattern_ops</code></li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Reading a plan</div>
+      <ul>
+        <li><b>Scans</b> — Seq, Index, Index Only, Bitmap Heap (medium counts, AND/OR of indexes)</li>
+        <li><b>Joins</b> — Nested Loop (small outer + indexed inner), Hash (big equality), Merge (both sorted)</li>
+        <li><b>Debug</b> — find node where estimate vs actual differ ≥ 10× → <code>ANALYZE</code></li>
+        <li><b>Index ignored</b> — low selectivity (90% rows), stale stats, non-sargable, tiny table</li>
+        <li><b>Correlated cols</b> — <code>CREATE STATISTICS</code></li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">App patterns &amp; scale</div>
+      <ul>
+        <li><b>OFFSET</b> — reads + discards n rows (266 ms deep)</li>
+        <li><b>Keyset</b> — <code>WHERE id &gt; :last ORDER BY id LIMIT 20</code> (0.03 ms); 💡 bookmark
+          <ul><li>tie-breaker: <code>(ts, id) &gt; (:ts, :id)</code>; no "jump to page 500"</li></ul></li>
+        <li><b>N+1</b> — 1 query + 1 per parent; fix: JOIN / <code>ANY(:ids)</code> / eager loading</li>
+        <li><b>Partitioning</b> — split by date; pruning + cheap <code>DROP</code> retention; hurts without key</li>
+        <li><b>Column store</b> — reads only needed columns (OLAP); ⚠ <code>SELECT *</code> costs bytes</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -7964,8 +8698,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="so-plan"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Reading a Plan</span><span class="rm-sub">Nodes, estimates, ignored indexes</span></div></div>
       <div class="rm-item rm-done" data-target="so-patterns"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Pagination &amp; N+1</span><span class="rm-sub">Two app-side performance killers</span></div></div>
       <div class="rm-item rm-done" data-target="so-scale"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Partitioning &amp; Column Stores</span><span class="rm-sub">When the table gets huge</span></div></div>
-      <div class="rm-item rm-done" data-target="so-rev"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="so-qa"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="so-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
@@ -7979,24 +8712,45 @@ SELECT g AS order_id,
             WHEN random() &lt; 0.7  THEN 'pending' ELSE 'cancelled' END AS status,
        round((random()*1000)::numeric, 2)             AS amount
 FROM generate_series(1, 2000000) g;               -- 130 MB, 16,576 pages</div>
-  <p>Without an index, "find customer 4242's orders" is a <strong>full table scan</strong> (Seq Scan): read every 8 KB page, test every row, keep 22 of 2,000,000. Cost is mostly <strong>pages read</strong>, not rows returned.</p>
+  <div class="flow"><span>No index</span><span>Seq Scan: read all 16,576 pages</span><span>test 2M rows</span><span>keep 22</span></div>
+  <p>Cost is <strong>pages read</strong>, not rows returned.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Finding "photosynthesis" in a textbook with no index: you read all 600 pages. The index at the back says "p. 212", and you read one page. A database index is exactly that: a sorted list of values with pointers to where the rows live.</p>
+    <p>A textbook with no index: read all 600 pages. The index says "p. 212": read one. A database index is that sorted list of values with pointers to rows.</p>
   </div>
 
   <h2 id="so-btree"><span class="num">02</span>How a B-tree Index Works</h2>
-  <p>A <strong>B-tree</strong>, the default index, keeps column values <strong>sorted</strong> in a short, wide, <strong>balanced</strong> tree of pages. Leaves point to row locations.</p>
-  <div class="fx" data-lang="text">                  [ 30000 | 60000 ]                   root: 1 page
-           /              |               &#92;
-   [10k|20k]         [40k|50k]          [70k|85k]      internal pages
-      ...           /    |    &#92;            ...
-            [4200..4250] ⇄ [4251..4300] ⇄ ...          leaves, linked in order
-             4242 → (page 812, row 5)                  pointer into the table</div>
-  <ul>
-    <li><strong>Lookup</strong>: go root → leaf, one page per level. Each page holds hundreds of keys, so 2M rows need only 3–4 levels: <strong>O(log n)</strong>.</li>
-    <li><strong>Balanced</strong>: every leaf is the same depth, so every lookup costs the same.</li>
-    <li><strong>Sorted + linked leaves</strong>: ranges (<code>BETWEEN</code>, <code>&gt;</code>), <code>ORDER BY</code> and prefix <code>LIKE 'abc%'</code> just walk along the leaves.</li>
-  </ul>
+  <p>A <strong>B-tree</strong> (the default index) keeps values <strong>sorted</strong> in a short, wide, <strong>balanced</strong> tree of pages.</p>
+  <figure class="viz"><svg viewBox="0 0 600 236" width="600">
+    <defs><marker id="so-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <g stroke="currentColor" fill="none" opacity=".45">
+      <line x1="300" y1="38" x2="360" y2="70"/><line x1="300" y1="38" x2="525" y2="70"/>
+      <line x1="135" y1="98" x2="290" y2="130"/><line x1="135" y1="98" x2="405" y2="130"/>
+      <line x1="360" y1="98" x2="520" y2="130"/>
+    </g>
+    <g stroke-width="2" class="sb" fill="none"><line x1="300" y1="38" x2="135" y2="70"/><line x1="135" y1="98" x2="60" y2="130"/><line x1="135" y1="98" x2="175" y2="130"/></g>
+    <rect x="240" y="10" width="120" height="28" rx="5" class="fb sb"/><text x="300" y="29" text-anchor="middle">30k | 60k</text>
+    <rect x="80" y="70" width="110" height="28" rx="5" class="fb sb"/><text x="135" y="89" text-anchor="middle">10k | 20k</text>
+    <rect x="305" y="70" width="110" height="28" rx="5" class="fs"/><text x="360" y="89" text-anchor="middle">40k | 50k</text>
+    <rect x="470" y="70" width="110" height="28" rx="5" class="fs"/><text x="525" y="89" text-anchor="middle">70k | 85k</text>
+    <rect x="10" y="130" width="100" height="28" rx="5" class="fs"/><text x="60" y="149" text-anchor="middle">1‥4199</text>
+    <rect x="125" y="130" width="100" height="28" rx="5" class="ft st"/><text x="175" y="149" text-anchor="middle" font-weight="bold">4200‥4250</text>
+    <rect x="240" y="130" width="100" height="28" rx="5" class="fs"/><text x="290" y="149" text-anchor="middle">4251‥4300</text>
+    <rect x="355" y="130" width="100" height="28" rx="5" class="fs"/><text x="405" y="149" text-anchor="middle">…</text>
+    <rect x="470" y="130" width="100" height="28" rx="5" class="fs"/><text x="520" y="149" text-anchor="middle">85k‥2M</text>
+    <g stroke="currentColor" opacity=".6"><line x1="110" y1="144" x2="125" y2="144"/><line x1="225" y1="144" x2="240" y2="144"/><line x1="340" y1="144" x2="355" y2="144"/><line x1="455" y1="144" x2="470" y2="144"/></g>
+    <line x1="175" y1="158" x2="175" y2="190" stroke="currentColor" marker-end="url(#so-ar)"/>
+    <text x="183" y="179" font-size="11" class="tb">4242 → ctid</text>
+    <rect x="95" y="192" width="200" height="30" rx="5" class="fg sg"/><text x="195" y="212" text-anchor="middle">table page 812, row 5</text>
+    <text x="372" y="29" font-size="11" class="tm">root: 1 page</text>
+    <text x="196" y="89" font-size="11" class="tm">internal</text>
+    <text x="330" y="182" font-size="11" class="tm">leaves: sorted, linked ⇄</text>
+    <text x="330" y="198" font-size="11" class="tm">→ ranges &amp; ORDER BY walk along</text>
+  </svg><figcaption>Looking up 4242: one page per level (blue path), then one jump into the table. 2M rows = 3–4 levels.</figcaption></figure>
+  <div class="cards">
+    <div><b>O(log n) lookup</b><p>Hundreds of keys per page → 3–4 levels.</p></div>
+    <div><b>Balanced</b><p>Every leaf same depth → same cost.</p></div>
+    <div><b>Linked leaves</b><p><code>BETWEEN</code>, <code>ORDER BY</code>, <code>LIKE 'abc%'</code> walk along.</p></div>
+  </div>
 
   <h2 id="so-before"><span class="num">03</span>Before / After: EXPLAIN ANALYZE</h2>
   <p><code>EXPLAIN</code> shows the plan the optimizer chose. <code>EXPLAIN ANALYZE</code> also <em>runs</em> it and adds real times and row counts. <code>BUFFERS</code> adds pages touched.</p>
@@ -8024,7 +8778,34 @@ Execution Time: 0.243 ms</div>
 
   <h2 id="so-design"><span class="num">04</span>Designing the Right Index</h2>
   <h3>Composite indexes and the leftmost-prefix rule</h3>
-  <p>A <strong>composite index</strong> sorts by several columns: first by column 1, then by column 2 within ties.</p>
+  <p>A <strong>composite index</strong> sorts by column 1, then by column 2 within ties.</p>
+  <figure class="viz"><svg viewBox="0 0 600 150" width="600">
+    <text x="0" y="14" font-size="11" class="tm">index (customer_id, created_at), in its sorted order:</text>
+    <g font-size="11" text-anchor="middle">
+      <rect x="0" y="22" width="64" height="34" class="fs" stroke="currentColor" stroke-opacity=".3"/><text x="32" y="36">4241</text><text x="32" y="50" class="tm">Jan</text>
+      <rect x="66" y="22" width="64" height="34" class="fs" stroke="currentColor" stroke-opacity=".3"/><text x="98" y="36">4241</text><text x="98" y="50" class="tm">Aug</text>
+      <rect x="132" y="22" width="64" height="34" class="fb sb"/><text x="164" y="36">4242</text><text x="164" y="50" class="tm">Feb</text>
+      <rect x="198" y="22" width="64" height="34" class="fb sb"/><text x="230" y="36">4242</text><text x="230" y="50" class="tm">May</text>
+      <rect x="264" y="22" width="64" height="34" class="fb sb"/><text x="296" y="36">4242</text><text x="296" y="50" class="tm">Dec</text>
+      <rect x="330" y="22" width="64" height="34" class="fs" stroke="currentColor" stroke-opacity=".3"/><text x="362" y="36">4243</text><text x="362" y="50" class="tm">Jan</text>
+      <rect x="396" y="22" width="64" height="34" class="fs" stroke="currentColor" stroke-opacity=".3"/><text x="428" y="36">4243</text><text x="428" y="50" class="tm">Jun</text>
+      <rect x="462" y="22" width="64" height="34" class="fs" stroke="currentColor" stroke-opacity=".3"/><text x="494" y="36">4244</text><text x="494" y="50" class="tm">Mar</text>
+      <rect x="528" y="22" width="64" height="34" class="fs" stroke="currentColor" stroke-opacity=".3"/><text x="560" y="36">4244</text><text x="560" y="50" class="tm">Dec</text>
+    </g>
+    <text x="230" y="74" text-anchor="middle" font-size="11" class="tb">customer_id = 4242 → one contiguous slice, already in date order ✓</text>
+    <g font-size="11" text-anchor="middle">
+      <rect x="0" y="86" width="64" height="34" class="fr sr"/><text x="32" y="100">4241</text><text x="32" y="114">Jan</text>
+      <rect x="66" y="86" width="64" height="34" class="fs" stroke="currentColor" stroke-opacity=".3"/><text x="98" y="100">4241</text><text x="98" y="114" class="tm">Aug</text>
+      <rect x="132" y="86" width="64" height="34" class="fs" stroke="currentColor" stroke-opacity=".3"/><text x="164" y="100">4242</text><text x="164" y="114" class="tm">Feb</text>
+      <rect x="198" y="86" width="64" height="34" class="fs" stroke="currentColor" stroke-opacity=".3"/><text x="230" y="100">4242</text><text x="230" y="114" class="tm">May</text>
+      <rect x="264" y="86" width="64" height="34" class="fs" stroke="currentColor" stroke-opacity=".3"/><text x="296" y="100">4242</text><text x="296" y="114" class="tm">Dec</text>
+      <rect x="330" y="86" width="64" height="34" class="fr sr"/><text x="362" y="100">4243</text><text x="362" y="114">Jan</text>
+      <rect x="396" y="86" width="64" height="34" class="fs" stroke="currentColor" stroke-opacity=".3"/><text x="428" y="100">4243</text><text x="428" y="114" class="tm">Jun</text>
+      <rect x="462" y="86" width="64" height="34" class="fs" stroke="currentColor" stroke-opacity=".3"/><text x="494" y="100">4244</text><text x="494" y="114" class="tm">Mar</text>
+      <rect x="528" y="86" width="64" height="34" class="fs" stroke="currentColor" stroke-opacity=".3"/><text x="560" y="100">4244</text><text x="560" y="114" class="tm">Dec</text>
+    </g>
+    <text x="300" y="140" text-anchor="middle" font-size="11" class="tr">created_at in Jan alone → matches scattered everywhere → can't seek ✗</text>
+  </svg><figcaption>The second column is only sorted <em>within</em> each value of the first. That is the leftmost-prefix rule.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A phone book sorted by (last name, first name). "Sharma, Asha" is instant. "All Sharmas" is instant. "Everyone named Asha" means reading the whole book: first name is only sorted <em>within</em> each last name.</p>
   </div>
@@ -8043,7 +8824,20 @@ Execution Time: 0.243 ms</div>
   </div>
 
   <h3>Covering indexes and index-only scans</h3>
-  <p>Normally the index finds row locations, then the database visits the table ("heap") for other columns. A <strong>covering index</strong> stores every column the query needs, so the table visit is skipped: an <strong>Index Only Scan</strong>.</p>
+  <p>A <strong>covering index</strong> stores every column the query needs, so the table ("heap") visit is skipped.</p>
+  <figure class="viz"><svg viewBox="0 0 600 150" width="600">
+    <defs><marker id="so-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <text x="0" y="16" font-weight="bold">Index Scan</text>
+    <rect x="110" y="2" width="130" height="40" rx="6" class="fb sb"/><text x="175" y="20" text-anchor="middle">index leaf</text><text x="175" y="35" text-anchor="middle" font-size="10" class="tm">customer_id → ctid</text>
+    <line x1="240" y1="22" x2="318" y2="22" stroke="currentColor" marker-end="url(#so-ar2)"/><text x="279" y="16" text-anchor="middle" font-size="10" class="tm">heap fetch</text>
+    <rect x="320" y="2" width="130" height="40" rx="6" class="fg sg"/><text x="385" y="20" text-anchor="middle">table (heap)</text><text x="385" y="35" text-anchor="middle" font-size="10" class="tm">created_at, amount</text>
+    <line x1="450" y1="22" x2="488" y2="22" stroke="currentColor" marker-end="url(#so-ar2)"/><text x="494" y="26">25 pages</text>
+    <text x="0" y="96" font-weight="bold">Index Only</text>
+    <rect x="110" y="72" width="210" height="40" rx="6" class="fb sb"/><text x="215" y="90" text-anchor="middle">index leaf + INCLUDE</text><text x="215" y="105" text-anchor="middle" font-size="10" class="tm">customer_id | created_at, amount</text>
+    <line x1="320" y1="92" x2="488" y2="92" stroke="currentColor" marker-end="url(#so-ar2)"/><text x="494" y="96" class="tg">5 pages</text>
+    <rect x="350" y="118" width="110" height="26" rx="6" fill="none" stroke="currentColor" stroke-dasharray="4 3" opacity=".5"/><text x="405" y="135" text-anchor="middle" font-size="10" class="tm">heap skipped</text>
+    <text x="110" y="135" font-size="10" class="tm">visibility map says "all visible"</text>
+  </svg><figcaption>Covering index: every needed column is in the leaf, so the table is never read (Heap Fetches: 0).</figcaption></figure>
   <div class="fx" data-lang="sql">CREATE INDEX idx_orders_cust_cov ON big_orders (customer_id) INCLUDE (created_at, amount);
 EXPLAIN (ANALYZE, BUFFERS) SELECT created_at, amount FROM big_orders WHERE customer_id = 4242;</div>
   <div class="fx" data-lang="text">Index Only Scan using idx_orders_cust_cov on big_orders  (actual time=0.097..0.112 rows=22 loops=1)
@@ -8090,7 +8884,7 @@ SELECT * FROM big_customers WHERE lower(email) = 'user4242@mail.com';
   </div>
 
   <h2 id="so-cost"><span class="num">06</span>The Cost of Indexes</h2>
-  <p>Every index is a second copy of some data that must be kept in sync on every write.</p>
+  <p>Every index is a second copy of data, updated on every write.</p>
   <table class="tbl out"><caption>Result: inserting 500k rows</caption>
     <tr><th>table</th><th>indexes</th><th>time</th></tr>
     <tr><td>ins_noidx</td><td>0</td><td>0.49 s</td></tr>
@@ -8163,7 +8957,20 @@ ANALYZE events;
 
   <h2 id="so-patterns"><span class="num">09</span>Pagination &amp; N+1</h2>
   <h3>OFFSET vs keyset pagination</h3>
-  <p><code>OFFSET n</code> still reads and throws away n rows, so deep pages get slower and slower. <strong>Keyset</strong> (seek) pagination remembers the last key seen and jumps straight to it via the index.</p>
+  <p><strong>Keyset</strong> (seek) pagination remembers the last key shown and seeks to it via the index.</p>
+  <figure class="viz"><svg viewBox="0 0 600 136" width="600">
+    <defs><marker id="so-ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <text x="0" y="16" font-weight="bold">OFFSET</text>
+    <rect x="80" y="4" width="340" height="18" class="fr sr"/><text x="250" y="17" text-anchor="middle" font-size="11">read 1,500,000 rows, throw away</text>
+    <rect x="420" y="4" width="12" height="18" class="fb sb"/><text x="442" y="17" font-size="11">20 kept · 266 ms</text>
+    <text x="250" y="52" text-anchor="middle" font-size="10" class="tm">index seek: order_id &gt; 1500000</text>
+    <path d="M86,80 C190,56 320,56 416,80" fill="none" stroke="currentColor" marker-end="url(#so-ar3)"/>
+    <text x="0" y="96" font-weight="bold">Keyset</text>
+    <rect x="80" y="84" width="340" height="18" fill="none" stroke="currentColor" stroke-opacity=".3"/>
+    <rect x="420" y="84" width="12" height="18" class="fb sb"/><text x="442" y="97" font-size="11" class="tg">20 read · 0.03 ms</text>
+    <line x1="80" y1="116" x2="432" y2="116" stroke="currentColor" opacity=".4"/>
+    <text x="80" y="131" font-size="10" class="tm">order_id 1</text><text x="432" y="131" font-size="10" class="tm" text-anchor="end">1,500,020</text>
+  </svg><figcaption>OFFSET pays for every skipped row; keyset jumps straight to the bookmark.</figcaption></figure>
   <div class="fx" data-lang="sql">-- Page 75,001: OFFSET
 SELECT * FROM big_orders ORDER BY order_id LIMIT 20 OFFSET 1500000;
 -- Index Scan ... (actual rows=1500020)   Execution Time: 265.637 ms
@@ -8179,7 +8986,7 @@ SELECT * FROM big_orders WHERE order_id &gt; 1500000 ORDER BY order_id LIMIT 20;
   </div>
 
   <h3>The N+1 query problem</h3>
-  <p>One query fetches N parents, then a loop runs <strong>one more query per parent</strong>. Each query is fast; N network round trips are not.</p>
+  <div class="flow"><span>1 query: N parents</span><span>loop: +1 query each</span><span>N round trips</span></div>
   <div class="fx" data-lang="python"># N+1: 1 query + 100,000 more, one per customer
 for cid in pd.read_sql("SELECT customer_id FROM big_customers", conn).customer_id:
     orders = pd.read_sql(f"SELECT * FROM big_orders WHERE customer_id = {cid}", conn)
@@ -8213,21 +9020,7 @@ CREATE TABLE events_2025_06 PARTITION OF events
     <p>In a column store, <code>SELECT *</code> is the expensive habit. BigQuery bills by bytes scanned, so name only the columns you need and filter on the partition column.</p>
   </div>
 
-  <h2 id="so-rev"><span class="num">11</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Cost = pages read.</strong> Seq Scan reads all; an index reads a few.</li>
-    <li><strong>B-tree</strong>: sorted, balanced, 3–4 levels for millions of rows; serves =, ranges, ORDER BY, prefix LIKE.</li>
-    <li><strong>Composite</strong>: leftmost-prefix rule; equality columns first, range last.</li>
-    <li><strong>Covering</strong> (<code>INCLUDE</code>) → Index Only Scan; needs a vacuumed table.</li>
-    <li><strong>Partial</strong> for hot slices; <strong>expression</strong> index must match the query's expression.</li>
-    <li><strong>GIN</strong> for JSONB/arrays/text, <strong>GiST</strong> for geo/ranges, <strong>BRIN</strong> for huge time-ordered tables.</li>
-    <li>Indexes cost <strong>write speed and space</strong>; drop unused ones.</li>
-    <li><strong>Sargable</strong>: keep the column bare: no functions, leading %, type mismatches; handle OR.</li>
-    <li>Read plans inside-out; <strong>estimate vs actual</strong> gap → <code>ANALYZE</code>. Low selectivity → Seq Scan is correct.</li>
-    <li><strong>Keyset</strong> beats OFFSET; batch instead of <strong>N+1</strong>; partition by date; column stores for analytics.</li>
-  </ol></div>
-
-  <h2 id="so-qa"><span class="num">12</span>Questions &amp; Answers</h2>
+  <h2 id="so-qa"><span class="num">11</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>A query filtering on an indexed column does a Seq Scan. How do you diagnose it?</summary><div class="qa-body">Run <code>EXPLAIN ANALYZE</code>. (1) Is the predicate sargable? Look for functions, casts like <code>(col)::numeric</code>, leading <code>%</code>. (2) Compare estimated vs actual rows; if far off, run <code>ANALYZE</code>. (3) Is the filter unselective (e.g. 90% of rows)? Then the Seq Scan is the right choice. (4) Is the table tiny?</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Design the index for: <code>SELECT order_id, amount FROM orders WHERE customer_id = ? AND status = 'delivered' ORDER BY created_at DESC LIMIT 10</code>.</summary><div class="qa-body"><code>CREATE INDEX ON orders (customer_id, status, created_at DESC) INCLUDE (amount);</code> Equality columns first, then the sort column, so the index returns rows already ordered and stops after 10. <code>INCLUDE amount</code> (order_id too, if not the key) allows an Index Only Scan.</div></details>
@@ -8878,6 +9671,102 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Transactions &amp; Concurrency</h1>
   <p class="lead">How a database keeps data correct when things fail halfway and when many users change it at once. Every timeline below was run with two real PostgreSQL 16 sessions.</p>
 
+  <h2 id="st-map" class="open"><span class="num">★</span>Mind Map</h2>
+<div class="mindmap">
+  <div class="mm-center">Transactions &amp; Concurrency</div>
+  <div class="mm-branches">
+    <div class="mm-branch">
+      <div class="mm-title">Transaction</div>
+      <ul>
+        <li><b>Transaction</b> — statements that succeed or fail as one unit</li>
+        <li><b>Syntax</b> — <code>BEGIN; … COMMIT;</code> or <code>ROLLBACK;</code></li>
+        <li><b>SAVEPOINT</b> — <code>ROLLBACK TO SAVEPOINT s</code> undoes back to it, keeps earlier work</li>
+        <li>⚠ <b>Aborted state</b> — after an error Postgres ignores all until ROLLBACK; COMMIT then rolls back</li>
+        <li>⚠ <b>Autocommit</b> — no BEGIN = each statement alone; psycopg is the reverse: needs <code>conn.commit()</code></li>
+        <li>💡 shopping cart: pay for all or put everything back</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">ACID</div>
+      <ul>
+        <li><b>Atomicity</b> — all or none; via WAL. 💡 vending machine returns the coin</li>
+        <li><b>Consistency</b> — constraints true after every commit (CHECK, FK)</li>
+        <li><b>Isolation</b> — no one sees half-done work; via MVCC + locks</li>
+        <li><b>Durability</b> — committed survives crash; WAL flushed before COMMIT returns</li>
+        <li>⚠ <b>ACID "C" ≠ CAP "C"</b> — constraints vs latest-write on every replica</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Anomalies</div>
+      <ul>
+        <li><b>Dirty read</b> — see uncommitted data (never in Postgres)</li>
+        <li><b>Non-repeatable read</b> — same <em>row</em> read twice, new value (UPDATE between)</li>
+        <li><b>Phantom</b> — same <em>filter</em>, new set of rows (INSERT/DELETE between)</li>
+        <li><b>Lost update</b> — read-compute-write races; one write overwrites the other
+          <ul><li>fix: <code>SET stock = stock - 1</code>, FOR UPDATE, version column</li></ul></li>
+        <li><b>Write skew</b> — both read, write <em>different</em> rows, rule broken (no doctor on call)</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Isolation levels</div>
+      <ul>
+        <li><b>READ COMMITTED</b> — PG default; each <em>statement</em> sees latest commits</li>
+        <li><b>REPEATABLE READ</b> — snapshot for whole txn; blocks phantoms (PG) and lost update (error); allows write skew</li>
+        <li><b>SERIALIZABLE</b> — as if one at a time; aborts a txn on danger</li>
+        <li>⚠ <b>Retry on 40001</b> — serialization failure is by design</li>
+        <li><b>READ UNCOMMITTED</b> — PG treats as READ COMMITTED</li>
+        <li>⚠ <b>Defaults differ</b> — MySQL InnoDB = REPEATABLE READ</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">MVCC</div>
+      <ul>
+        <li><b>MVCC</b> — UPDATE writes a new row version; old one expires</li>
+        <li><b>xmin / ctid</b> — creating txn / physical spot; both change on UPDATE</li>
+        <li><b>Benefit</b> — readers never block writers, writers never block readers</li>
+        <li><b>Writers still block writers</b> on the same row</li>
+        <li><b>VACUUM</b> — removes dead versions; autovacuum in background</li>
+        <li>⚠ <b>Idle in transaction</b> — old snapshot stops VACUUM → bloat</li>
+        <li>💡 Wikipedia page history</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Locks &amp; deadlocks</div>
+      <ul>
+        <li><b>Row lock</b> — taken by UPDATE/DELETE, held until commit</li>
+        <li><b>SELECT … FOR UPDATE</b> — lock while reading, decide, then write</li>
+        <li><b>SKIP LOCKED</b> — job queues: each worker grabs different rows</li>
+        <li><b>Deadlock</b> — A waits for B, B waits for A; PG kills one after 1 s</li>
+        <li><b>Prevent</b> — lock in a fixed order (lower id first), short txns, retry</li>
+        <li>💡 two cars on a one-lane bridge</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Optimistic vs pessimistic</div>
+      <ul>
+        <li><b>Pessimistic</b> — lock first (<code>FOR UPDATE</code>); for frequent conflicts (stock, seats)</li>
+        <li><b>Optimistic</b> — no lock; <code>UPDATE … WHERE version = :v</code></li>
+        <li><b>UPDATE 0</b> — someone changed it: reload and retry</li>
+        <li><b>Across HTTP requests</b> — only optimistic works (can't hold a lock while user types)</li>
+        <li>💡 library book taken home vs Google Docs "file changed"</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Scaling</div>
+      <ul>
+        <li><b>Order</b> — tune → bigger box → pooling → replicas → partition → shard</li>
+        <li><b>PgBouncer</b> — 2,000 clients share ~50 real connections</li>
+        <li><b>Read replicas</b> — stream WAL, serve reads; writes stay on primary</li>
+        <li>⚠ <b>Replication lag</b> — stale read after write → read-your-writes from primary</li>
+        <li><b>Partitioning</b> — split table on one server</li>
+        <li><b>Sharding</b> — split across servers; loses cross-shard joins/txns/FKs
+          <ul><li>shard key: in most queries, spreads load (customer_id, not date)</li></ul></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -8889,8 +9778,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="st-locks"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Locks &amp; Deadlocks</span><span class="rm-sub">FOR UPDATE, SKIP LOCKED</span></div></div>
       <div class="rm-item rm-done" data-target="st-optim"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Optimistic vs Pessimistic</span><span class="rm-sub">Check later or lock now</span></div></div>
       <div class="rm-item rm-done" data-target="st-scale"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Scaling a SQL Database</span><span class="rm-sub">Replicas, pooling, sharding</span></div></div>
-      <div class="rm-item rm-done" data-target="st-rev"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="st-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="st-qa"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
@@ -8946,7 +9834,7 @@ COMMIT;</div>
   </div>
 
   <h2 id="st-anom"><span class="num">03</span>Concurrency Anomalies</h2>
-  <p>Running transactions one at a time would be safe but slow. Running them in parallel without isolation causes these bugs. Session B was a real second connection (via <code>dblink</code>).</p>
+  <p>Parallel transactions without isolation cause these five bugs. Session B was a real second connection (via <code>dblink</code>).</p>
 
   <p><strong>1. Dirty read</strong>: reading another transaction's <em>uncommitted</em> change, which may be rolled back.</p>
   <table class="tbl">
@@ -8977,6 +9865,19 @@ COMMIT;</div>
   <p>At REPEATABLE READ: 3 then 3. (Orders 104 and 105 were pending at the start.)</p>
 
   <p><strong>4. Lost update</strong>: two transactions read, compute, and write the same row; one write silently overwrites the other.</p>
+  <figure class="viz"><svg viewBox="0 0 600 170" width="600">
+    <defs><marker id="st-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <text x="0" y="34" font-weight="bold">A</text><text x="0" y="94" font-weight="bold">B</text>
+    <line x1="30" y1="30" x2="590" y2="30" stroke="currentColor" opacity=".3"/>
+    <line x1="30" y1="90" x2="590" y2="90" stroke="currentColor" opacity=".3"/>
+    <rect x="40" y="16" width="110" height="28" rx="5" class="fb sb"/><text x="95" y="35" text-anchor="middle">read → 10</text>
+    <rect x="170" y="76" width="110" height="28" rx="5" class="fb sb"/><text x="225" y="95" text-anchor="middle">read → 10</text>
+    <rect x="300" y="16" width="130" height="28" rx="5" class="ft st"/><text x="365" y="35" text-anchor="middle">write 9 ✓</text>
+    <rect x="450" y="76" width="130" height="28" rx="5" class="fr sr"/><text x="515" y="95" text-anchor="middle">write 9 ✓</text>
+    <text x="40" y="132" class="tm" font-size="11">stock in table:</text>
+    <text x="150" y="132">10</text><text x="365" y="132" text-anchor="middle">9</text><text x="515" y="132" text-anchor="middle" class="tr">9 (should be 8)</text>
+    <line x1="30" y1="150" x2="590" y2="150" stroke="currentColor" marker-end="url(#st-ar)"/><text x="590" y="166" text-anchor="end" font-size="10" class="tm">time</text>
+  </svg><figcaption>Both read 10 before either wrote, so B's write silently erases A's sale.</figcaption></figure>
   <table class="tbl">
     <tr><th>#</th><th>Session A</th><th>Session B</th></tr>
     <tr><td>1</td><td><code>SELECT stock … product_id = 13</code> → 10</td><td></td></tr>
@@ -9027,12 +9928,29 @@ COMMIT;   -- may fail with 40001: catch it and rerun the whole transaction</div>
 UPDATE accounts SET balance = balance - 100 WHERE acct_id = 1;
 SELECT ctid, xmin, acct_id, balance FROM accounts WHERE acct_id = 1;</div>
   <table class="tbl out"><caption>Result (before → after)</caption><tr><th>ctid (physical spot)</th><th>xmin (creating txn)</th><th>acct_id</th><th>balance</th></tr><tr><td>(0,14)</td><td>881</td><td>1</td><td>800</td></tr><tr><td>(0,3)</td><td>882</td><td>1</td><td>700</td></tr></table>
-  <p>Same logical row, new physical location, new creating transaction. The old version stays until no snapshot needs it.</p>
-  <ul>
-    <li><strong>Readers don't block writers, writers don't block readers.</strong> A long report reads old versions while updates continue.</li>
-    <li><strong>Writers still block writers</strong> on the same row (section 06).</li>
-    <li><strong>VACUUM</strong> removes dead versions (autovacuum does it in the background). Without it, tables bloat.</li>
-  </ul>
+  <figure class="viz"><svg viewBox="0 0 600 170" width="600">
+    <defs><marker id="st-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="158" y="10" width="236" height="56" rx="6" class="fs" stroke="currentColor" stroke-dasharray="4 3" stroke-opacity=".5"/>
+    <text x="276" y="30" text-anchor="middle">v1 · balance 800</text>
+    <text x="276" y="48" text-anchor="middle" font-size="10" class="tm">ctid (0,14) · xmin 881 · xmax 882</text>
+    <text x="276" y="61" text-anchor="middle" font-size="10" class="tr">dead after 882 commits</text>
+    <rect x="158" y="98" width="236" height="56" rx="6" class="fg sg"/>
+    <text x="276" y="118" text-anchor="middle">v2 · balance 700</text>
+    <text x="276" y="136" text-anchor="middle" font-size="10" class="tm">ctid (0,3) · xmin 882 · live</text>
+    <line x1="276" y1="66" x2="276" y2="96" stroke="currentColor" marker-end="url(#st-ar2)"/><text x="284" y="86" font-size="10" class="tm">UPDATE (txn 882)</text>
+    <rect x="0" y="22" width="130" height="34" rx="6" class="fb sb"/><text x="65" y="36" text-anchor="middle" font-size="11">old snapshot</text><text x="65" y="50" text-anchor="middle" font-size="10" class="tm">long report</text>
+    <line x1="130" y1="39" x2="156" y2="39" stroke="currentColor" marker-end="url(#st-ar2)"/>
+    <rect x="0" y="110" width="130" height="34" rx="6" class="fb sb"/><text x="65" y="124" text-anchor="middle" font-size="11">new snapshot</text><text x="65" y="138" text-anchor="middle" font-size="10" class="tm">started after 882</text>
+    <line x1="130" y1="127" x2="156" y2="127" stroke="currentColor" marker-end="url(#st-ar2)"/>
+    <rect x="432" y="22" width="160" height="34" rx="6" class="fv"/><text x="512" y="43" text-anchor="middle" font-size="11">VACUUM removes v1</text>
+    <line x1="430" y1="39" x2="396" y2="39" stroke="currentColor" marker-end="url(#st-ar2)"/>
+    <text x="512" y="74" text-anchor="middle" font-size="10" class="tm">only once no snapshot</text><text x="512" y="87" text-anchor="middle" font-size="10" class="tm">can still see it</text>
+  </svg><figcaption>One logical row, two physical versions. Each transaction reads the version its snapshot allows, so nobody waits.</figcaption></figure>
+  <div class="cards">
+    <div><b>Readers ↔ writers</b><p>Never block each other.</p></div>
+    <div><b>Writer ↔ writer</b><p>Same row still waits (next section).</p></div>
+    <div><b>VACUUM</b><p>Clears dead versions; without it, bloat.</p></div>
+  </div>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Wikipedia page history. Editing creates a new revision; someone reading an old revision isn't interrupted. Old revisions are eventually archived (VACUUM).</p>
   </div>
@@ -9060,7 +9978,19 @@ UPDATE jobs SET status = 'running' WHERE job_id IN (1, 2);
 COMMIT;</div>
 
   <h3>Deadlocks</h3>
-  <p>A <strong>deadlock</strong>: A holds lock 1 and waits for lock 2; B holds lock 2 and waits for lock 1. Neither can move. Postgres checks after <code>deadlock_timeout</code> (1 s) and kills one.</p>
+  <p>A <strong>deadlock</strong>: each session holds a lock the other needs. Postgres checks after <code>deadlock_timeout</code> (1 s) and kills one.</p>
+  <figure class="viz"><svg viewBox="0 0 600 170" width="600">
+    <defs><marker id="st-ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="40" y="60" width="130" height="44" rx="8" class="fb sb"/><text x="105" y="87" text-anchor="middle" font-weight="bold">Session A</text>
+    <rect x="430" y="60" width="130" height="44" rx="8" class="fb sb"/><text x="495" y="87" text-anchor="middle" font-weight="bold">Session B</text>
+    <rect x="240" y="8" width="120" height="36" rx="6" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="300" y="31" text-anchor="middle">acct 1</text>
+    <rect x="240" y="122" width="120" height="36" rx="6" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="300" y="145" text-anchor="middle">acct 2</text>
+    <line x1="170" y1="66" x2="238" y2="30" class="sg" stroke-width="2.5"/><text x="150" y="40" font-size="11" class="tg">holds</text>
+    <line x1="170" y1="98" x2="238" y2="136" class="sr" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#st-ar3)"/><text x="150" y="134" font-size="11" class="tr">waits</text>
+    <line x1="430" y1="98" x2="362" y2="136" class="sg" stroke-width="2.5"/><text x="420" y="134" font-size="11" class="tg">holds</text>
+    <line x1="430" y1="66" x2="362" y2="30" class="sr" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#st-ar3)"/><text x="420" y="40" font-size="11" class="tr">waits</text>
+    <text x="300" y="87" text-anchor="middle" font-size="11" class="tr">cycle → PG kills one</text>
+  </svg><figcaption>A wait-for cycle. Locking rows in one fixed order (acct 1 before acct 2) makes the cycle impossible.</figcaption></figure>
   <table class="tbl">
     <tr><th>#</th><th>Session A</th><th>Session B</th></tr>
     <tr><td>1</td><td><code>UPDATE accounts … WHERE acct_id = 1;</code></td><td><code>UPDATE accounts … WHERE acct_id = 2;</code></td></tr>
@@ -9098,11 +10028,24 @@ UPDATE products SET price = 160, version = version + 1 WHERE product_id = 12 AND
 
   <h2 id="st-scale"><span class="num">08</span>Scaling a SQL Database</h2>
   <div class="flow"><span>Tune queries &amp; indexes</span><span>Bigger machine</span><span>Connection pooling</span><span>Read replicas</span><span>Partitioning</span><span>Sharding</span></div>
-  <p>Go left to right: each step adds more complexity than the last.</p>
+  <p>Left to right, each step adds complexity. <strong>Vertical scaling</strong> (bigger box) needs no code changes but has a ceiling and stays a single point of failure.</p>
+  <figure class="viz"><svg viewBox="0 0 600 160" width="600">
+    <defs><marker id="st-ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="0" y="56" width="100" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="50" y="75" text-anchor="middle">2,000</text><text x="50" y="91" text-anchor="middle" font-size="10" class="tm">app clients</text>
+    <line x1="100" y1="78" x2="138" y2="78" stroke="currentColor" marker-end="url(#st-ar4)"/>
+    <rect x="140" y="56" width="110" height="44" rx="6" class="fv"/><text x="195" y="75" text-anchor="middle">PgBouncer</text><text x="195" y="91" text-anchor="middle" font-size="10" class="tm">~50 real conns</text>
+    <line x1="250" y1="70" x2="308" y2="34" stroke="currentColor" marker-end="url(#st-ar4)"/><text x="262" y="40" font-size="10" class="tm">writes</text>
+    <line x1="250" y1="88" x2="308" y2="122" stroke="currentColor" marker-end="url(#st-ar4)"/><text x="262" y="124" font-size="10" class="tm">reads</text>
+    <rect x="310" y="12" width="120" height="44" rx="6" class="fb sb"/><text x="370" y="38" text-anchor="middle" font-weight="bold">Primary</text>
+    <rect x="310" y="100" width="120" height="44" rx="6" class="ft st"/><text x="370" y="126" text-anchor="middle">Replica 1</text>
+    <rect x="470" y="100" width="120" height="44" rx="6" class="ft st"/><text x="530" y="126" text-anchor="middle">Replica 2</text>
+    <line x1="370" y1="56" x2="370" y2="98" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#st-ar4)"/>
+    <line x1="420" y1="56" x2="500" y2="98" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#st-ar4)"/>
+    <text x="445" y="32" font-size="10" class="tm">WAL stream (async)</text><text x="445" y="46" font-size="10" class="tr">lag: ms … s</text>
+  </svg><figcaption>Pooling caps connections; replicas scale reads only. Every write still lands on one primary.</figcaption></figure>
   <ul>
-    <li><strong>Vertical scaling</strong>: more CPU, RAM, faster disk. Zero code changes, but there's a ceiling and one machine is still a single point of failure.</li>
-    <li><strong>Connection pooling</strong> (PgBouncer): each Postgres connection is a process using several MB. A pooler lets 2,000 app clients share ~50 real connections.</li>
-    <li><strong>Read replicas</strong>: copies that receive the primary's WAL and serve reads. Writes still go to one primary.</li>
+    <li><strong>Pooling</strong>: each Postgres connection is a process using several MB.</li>
+    <li><strong>Read replicas</strong>: receive the primary's WAL and serve reads only.</li>
   </ul>
   <div class="callout trap"><span class="label">Trap: replication lag</span>
     <p>Replicas are usually async, milliseconds to seconds behind. A user saves their profile (primary), refreshes (replica), and sees the old value. Fix: read-your-writes, i.e. route that user's reads to the primary for a few seconds after a write, or for that page.</p>
@@ -9118,21 +10061,7 @@ UPDATE products SET price = 160, version = version + 1 WHERE product_id = 12 AND
     <p>Pick the key most queries filter on and that spreads load evenly, e.g. <code>customer_id</code>. A bad key (e.g. <code>country</code>, or the date for new writes) creates a hot shard. Tools like Citus or Vitess handle routing.</p>
   </div>
 
-  <h2 id="st-rev"><span class="num">09</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Transaction</strong>: all-or-nothing unit; <code>BEGIN / COMMIT / ROLLBACK / SAVEPOINT</code>.</li>
-    <li><strong>ACID</strong>: atomic (WAL), consistent (constraints), isolated (MVCC + locks), durable (WAL flush).</li>
-    <li>After an error, Postgres ignores everything until <code>ROLLBACK</code>.</li>
-    <li>Anomalies: <strong>dirty, non-repeatable, phantom, lost update, write skew</strong>.</li>
-    <li>Postgres default <strong>READ COMMITTED</strong>; never dirty reads.</li>
-    <li><strong>REPEATABLE READ</strong> = snapshot isolation; stops lost updates with an error, not write skew.</li>
-    <li><strong>SERIALIZABLE</strong> stops everything but aborts some transactions: <strong>retry on 40001</strong>.</li>
-    <li><strong>MVCC</strong>: new row versions; readers and writers don't block; VACUUM cleans up.</li>
-    <li><code>FOR UPDATE</code> locks rows; <code>SKIP LOCKED</code> for queues; consistent lock order prevents deadlocks.</li>
-    <li>Scale: tune → bigger box → PgBouncer → replicas (lag!) → partition → shard.</li>
-  </ol></div>
-
-  <h2 id="st-qa"><span class="num">10</span>Questions &amp; Answers</h2>
+  <h2 id="st-qa"><span class="num">09</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>Explain ACID with a money transfer.</summary><div class="qa-body">Atomicity: debit and credit both happen or neither. Consistency: <code>CHECK (balance &gt;= 0)</code> and FKs hold after commit. Isolation: a concurrent report never sees money in neither account. Durability: once "transfer complete" is returned, a crash can't undo it (WAL flushed to disk).</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What's the output? <code>BEGIN; INSERT INTO t VALUES (1); SELECT 1/0; INSERT INTO t VALUES (2); COMMIT;</code> then <code>SELECT count(*) FROM t</code> (t was empty).</summary><div class="qa-body">0. After the division-by-zero error the transaction is aborted: the second INSERT is rejected ("current transaction is aborted"), and <code>COMMIT</code> on an aborted transaction performs a <code>ROLLBACK</code>. Row 1 is undone too.</div></details>

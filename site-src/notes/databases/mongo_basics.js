@@ -4,6 +4,98 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Documents &amp; CRUD</h1>
   <p class="lead">MongoDB stores data as nested JSON-like documents instead of rows. This page models the same shop as documents and shows how to insert, query, update and delete them, with every result shown.</p>
 
+  <h2 id="mb-map" class="open"><span class="num">★</span>Mind Map</h2>
+<div class="mindmap">
+  <div class="mm-center">MongoDB: Documents &amp; CRUD</div>
+  <div class="mm-branches">
+    <div class="mm-branch">
+      <div class="mm-title">What &amp; why</div>
+      <ul>
+        <li><b>Document database</b> — records are nested JSON-like objects, no fixed columns</li>
+        <li><b>Why</b> — nested data in one object; maps 1:1 to code dicts; no migrations</li>
+        <li><b>Scale-out</b> — self-contained docs shard across machines</li>
+        <li>💡 SQL = linked spreadsheets; Mongo = folder of self-contained forms</li>
+        <li><b>Design rule</b> — model around the queries you'll run; unplanned queries hurt</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Documents &amp; collections</div>
+      <ul>
+        <li><b>Collection</b> ≈ table; docs may differ in shape</li>
+        <li><b>BSON</b> — binary JSON + dates, int64, Decimal128, ObjectId; fast to skip fields</li>
+        <li><b>_id</b> — required, unique, always indexed</li>
+        <li><b>ObjectId</b> — 12 bytes: 4 timestamp + 5 random + 3 counter; ~time-sortable, <code>getTimestamp()</code></li>
+        <li>⚠ <b>16 MB</b> doc cap — no ever-growing arrays</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">SQL ↔ Mongo</div>
+      <ul>
+        <li><b>table / row / column</b> → collection / document / field</li>
+        <li><b>JOIN</b> → embedding or <code>$lookup</code></li>
+        <li><b>GROUP BY</b> → <code>$group</code> in a pipeline</li>
+        <li><b>Schema</b> → optional <code>$jsonSchema</code> validation</li>
+        <li><b>Good fit</b> — catalogs, profiles, content, events, IoT</li>
+        <li><b>Poor fit</b> — multi-entity transactions (ledgers), ad-hoc joins/analytics</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Insert</div>
+      <ul>
+        <li><b>insertOne / insertMany</b> — batch = one round trip; collection auto-created</li>
+        <li><b>Duplicate _id</b> → <code>E11000 duplicate key error</code></li>
+        <li><b>Ordered</b> by default: stops at first error; <code>{ ordered: false }</code> continues</li>
+        <li><b>Missing field</b> = document version of NULL (Dia has no city)</li>
+        <li><b>Copy into order</b> — product name/price snapshot at purchase time</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Find &amp; filter</div>
+      <ul>
+        <li><b>find(filter, projection)</b> — <code>{}</code> = all; <code>{ name: 1, _id: 0 }</code></li>
+        <li><b>Operators</b> — <code>$eq $ne $gt $gte $lt $lte $in $nin $or $and $not $exists $regex</code></li>
+        <li><b>Fields listed together</b> = implicit AND</li>
+        <li>⚠ <b><code>{ city: null }</code></b> matches null <em>and</em> missing; <code>$exists: false</code> = missing only</li>
+        <li><b>sort → skip → limit</b> applied in that order regardless of chaining</li>
+        <li><b>Cursor</b> — lazy, fetched in batches</li>
+        <li>⚠ <b>Deep skip</b> walks docs; use <code>{ _id: { $gt: last } }</code></li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Nested &amp; arrays</div>
+      <ul>
+        <li><b>Dot notation</b> — <code>"items.product"</code>; on arrays matches <em>any</em> element</li>
+        <li><b>Position</b> — <code>"items.0.product"</code></li>
+        <li>⚠ <b>Multiple conditions</b> may hit different elements → use <code>$elemMatch</code></li>
+        <li><b>$size</b> — exact length only; <b>$all</b> — contains all values</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Update &amp; delete</div>
+      <ul>
+        <li><b>updateOne / updateMany</b> + operators: <code>$set $unset $inc $push $addToSet $pull</code></li>
+        <li><b>$push</b> allows dups; <b>$addToSet</b> only if absent</li>
+        <li><b>Upsert</b> — <code>{ upsert: true }</code>: update or insert; <code>$setOnInsert</code> for insert-only fields</li>
+        <li>⚠ <b>Replacement</b> — doc without <code>$</code> ops wipes other fields (<code>replaceOne</code>)</li>
+        <li><b>Atomic</b> — any single-document write, incl. nested arrays</li>
+        <li><b>deleteMany({})</b> keeps indexes; <b>drop()</b> removes them</li>
+        <li>⚠ <b>No FKs</b> — deletes don't cascade; clean references yourself</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">From Python</div>
+      <ul>
+        <li><b>pymongo</b> — dicts, snake_case: <code>count_documents</code>, <code>update_one</code></li>
+        <li><b>Flat → DataFrame</b> — <code>pd.DataFrame(list(cursor))</code></li>
+        <li><b>Nested → rows</b> — <code>pd.json_normalize(docs, record_path="items", meta=[…])</code></li>
+        <li><b>Filter/project server-side</b>; aggregate in Mongo for big jobs; <code>mongomock</code> for tests</li>
+        <li>⚠ <b>ObjectId</b> — string won't match; use <code>ObjectId("…")</code></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -15,8 +107,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="mb-nested"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Nested Fields &amp; Arrays</span><span class="rm-sub">Dot notation, $elemMatch</span></div></div>
       <div class="rm-item rm-done" data-target="mb-update"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Update &amp; Delete</span><span class="rm-sub">$set, $push, upsert, the trap</span></div></div>
       <div class="rm-item rm-done" data-target="mb-py"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">From Python</span><span class="rm-sub">pymongo to pandas</span></div></div>
-      <div class="rm-item rm-done" data-target="mb-rev"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="mb-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="mb-qa"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
@@ -24,14 +115,31 @@ Object.assign(TOPIC_CONTENT, {
   <div class="callout def"><span class="label">Definition</span>
     <p>MongoDB is a <strong>document database</strong>: each record is a JSON-like object that can hold nested objects and arrays. No fixed columns, no JOINs needed for data that belongs together.</p>
   </div>
-  <p>Why it exists:</p>
-  <ul>
-    <li><strong>Nested data fits naturally.</strong> An order with its line items is one object, not rows spread across two tables.</li>
-    <li><strong>Developer speed.</strong> Documents map 1:1 to objects in code (a Python dict). Adding a field needs no migration.</li>
-    <li><strong>Horizontal scale.</strong> Self-contained documents can be split across many machines (sharding) without cross-machine joins.</li>
-  </ul>
+  <figure class="viz"><svg viewBox="0 0 600 200" width="600">
+    <text x="0" y="14" font-weight="bold">SQL: linked sheets</text>
+    <g font-size="11">
+      <rect x="0" y="26" width="120" height="44" rx="5" class="fb sb"/><text x="60" y="44" text-anchor="middle">orders</text><text x="60" y="60" text-anchor="middle" class="tm">100, cust 1</text>
+      <rect x="0" y="86" width="120" height="58" rx="5" class="ft st"/><text x="60" y="102" text-anchor="middle">order_items</text><text x="60" y="118" text-anchor="middle" class="tm">100, prod 10</text><text x="60" y="134" text-anchor="middle" class="tm">100, prod 13</text>
+      <rect x="150" y="86" width="110" height="58" rx="5" class="fg sg"/><text x="205" y="102" text-anchor="middle">products</text><text x="205" y="118" text-anchor="middle" class="tm">10 Laptop</text><text x="205" y="134" text-anchor="middle" class="tm">13 Lamp</text>
+    </g>
+    <g stroke="currentColor" opacity=".6"><line x1="60" y1="70" x2="60" y2="86"/><line x1="120" y1="115" x2="150" y2="115"/></g>
+    <text x="0" y="168" font-size="11" class="tm">3 tables, 2 joins to rebuild one order</text>
+    <line x1="290" y1="10" x2="290" y2="190" stroke="currentColor" opacity=".2"/>
+    <text x="320" y="14" font-weight="bold">MongoDB: one document</text>
+    <rect x="320" y="26" width="270" height="146" rx="6" class="fb sb"/>
+    <g font-size="11"><text x="332" y="46">_id: 100, customer_id: 1</text><text x="332" y="64">status: "delivered"</text><text x="332" y="82">items: [</text></g>
+    <rect x="344" y="90" width="234" height="30" rx="4" class="ft st"/><text x="352" y="109" font-size="11">Laptop · Electronics · 1 · 800</text>
+    <rect x="344" y="126" width="234" height="30" rx="4" class="ft st"/><text x="352" y="145" font-size="11">Lamp · Furniture · 2 · 40</text>
+    <text x="332" y="168" font-size="11">]</text>
+    <text x="320" y="190" font-size="11" class="tm">one read, one atomic write</text>
+  </svg><figcaption>The same order. Items (and product details) live inside the order document instead of in joined tables.</figcaption></figure>
+  <div class="cards">
+    <div><b>Nested fits</b><p>An order and its items are one object.</p></div>
+    <div><b>Dev speed</b><p>Doc = Python dict. New field, no migration.</p></div>
+    <div><b>Scale-out</b><p>Self-contained docs shard without cross-machine joins.</p></div>
+  </div>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>SQL is a set of <strong>linked spreadsheets</strong>: customers in one, orders in another, items in a third, tied by ID columns. MongoDB is a <strong>folder of self-contained forms</strong>: each order form lists its items right on it. Reading one form is easy; answering "total Lamps sold across all forms" means flipping through every form.</p>
+    <p>SQL = <strong>linked spreadsheets</strong> tied by ID columns. MongoDB = a <strong>folder of self-contained forms</strong>. Reading one form is easy; "total Lamps sold" means flipping through every form.</p>
   </div>
 
   <h2 id="mb-doc"><span class="num">02</span>Documents &amp; Collections</h2>
@@ -40,8 +148,14 @@ Object.assign(TOPIC_CONTENT, {
     <li><strong>Collection</strong>: a group of documents, like a table. Documents in it <em>may</em> have different shapes.</li>
     <li><strong>BSON</strong> (Binary JSON): the on-disk format. Adds types JSON lacks: dates, 64-bit ints, Decimal128, ObjectId, binary.</li>
     <li><strong>_id</strong>: the required primary key of every document. Unique within the collection and always indexed. If you don't supply it, the driver generates an ObjectId.</li>
-    <li><strong>ObjectId</strong>: a 12-byte value: 4-byte timestamp + 5 random bytes + 3-byte counter. Roughly sortable by creation time, and you can read the time back with <code>getTimestamp()</code>.</li>
+    <li><strong>ObjectId</strong>: the default <code>_id</code>; read its time back with <code>getTimestamp()</code>.</li>
   </ul>
+  <figure class="viz"><svg viewBox="0 0 600 80" width="600">
+    <rect x="0" y="10" width="192" height="34" class="fb sb"/><text x="96" y="32" text-anchor="middle">4 B · timestamp (s)</text>
+    <rect x="192" y="10" width="240" height="34" class="fv"/><text x="312" y="32" text-anchor="middle">5 B · random</text>
+    <rect x="432" y="10" width="144" height="34" class="ft st"/><text x="504" y="32" text-anchor="middle">3 B · counter</text>
+    <text x="0" y="66" font-size="11" class="tm">time comes first → sort by _id ≈ sort by creation; made client-side, no central counter</text>
+  </svg><figcaption>ObjectId: 12 bytes, generated by the driver.</figcaption></figure>
   <div class="fx" data-lang="js">// one order document: the items live inside it
 {
   _id: 100,
@@ -168,9 +282,15 @@ db.orders.find({ "items.0.product": "Laptop" }, { _id: 1 })   // 100  (index 0 =
 
 db.orders.find({ items: { $elemMatch: { qty: { $gte: 2 }, price: { $gte: 500 } } } }, { _id: 1 })
 // 103</div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Without <code>$elemMatch</code>, each condition may be satisfied by a <strong>different</strong> element. Order 100 matched because the Lamp has qty 2 and the Laptop has price 800. <code>$elemMatch</code> forces both conditions onto the same element.</p>
-  </div>
+  <figure class="viz"><svg viewBox="0 0 600 160" width="600">
+    <text x="0" y="14" font-size="11" class="tm">order 100 items</text>
+    <rect x="0" y="22" width="170" height="30" rx="5" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="10" y="42" font-size="11">Laptop  qty 1  <tspan class="tg">price 800</tspan></text>
+    <rect x="0" y="58" width="170" height="30" rx="5" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="10" y="78" font-size="11">Lamp  <tspan class="tg">qty 2</tspan>  price 40</text>
+    <text x="200" y="42" font-size="11">without $elemMatch:</text><text x="200" y="58" font-size="11" class="tm">qty ≥ 2 → Lamp ✓, price ≥ 500 → Laptop ✓</text><text x="200" y="76" font-size="11" class="tr">→ order 100 matches (wrong)</text>
+    <text x="0" y="114" font-size="11" class="tm">order 103 items</text>
+    <rect x="0" y="122" width="170" height="30" rx="5" class="fg sg"/><text x="10" y="142" font-size="11">Phone <tspan class="tg">qty 2  price 500</tspan></text>
+    <text x="200" y="124" font-size="11">with $elemMatch: both on the <tspan class="tb">same</tspan> element</text><text x="200" y="142" font-size="11" class="tg">→ only order 103 matches</text>
+  </svg><figcaption>Dot-notation conditions are checked against the array separately; $elemMatch ties them to one element.</figcaption></figure>
   <table class="tbl">
     <tr><th>Operator</th><th>Meaning</th><th>Result on shop</th></tr>
     <tr><td><code>{ items: { $size: 2 } }</code></td><td>Array has exactly 2 elements (no ranges)</td><td>100, 103</td></tr>
@@ -211,6 +331,16 @@ db.orders.updateMany({ status: "delivered" }, { $set: { reviewed: false } })
 // upsertedId: 5 → new doc { _id: 5, name: 'Esha', city: 'Pune' }</div>
   <p>The new document combines the filter's equality fields (<code>_id: 5</code>) with the update. Use <code>$setOnInsert</code> for fields that should be written only on insert (e.g. <code>created_at</code>).</p>
   <h3>The replacement trap</h3>
+  <figure class="viz"><svg viewBox="0 0 600 128" width="600">
+    <defs><marker id="mb-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="0" y="34" width="170" height="54" rx="6" class="fs" stroke="currentColor" stroke-opacity=".4"/>
+    <g font-size="11"><text x="10" y="52">_id: 2, name: "Ben"</text><text x="10" y="68">city: "Delhi"</text><text x="10" y="82">signup_date: …</text></g>
+    <line x1="170" y1="52" x2="248" y2="28" stroke="currentColor" marker-end="url(#mb-ar)"/><line x1="170" y1="72" x2="248" y2="96" stroke="currentColor" marker-end="url(#mb-ar)"/>
+    <text x="176" y="26" font-size="10" class="tg">$set city</text><text x="172" y="120" font-size="10" class="tr">replaceOne</text>
+    <rect x="250" y="0" width="200" height="58" rx="6" class="fg sg"/><g font-size="11"><text x="260" y="17">_id: 2, name: "Ben"</text><text x="260" y="33">city: "Pune"</text><text x="260" y="49" class="tm">signup_date: … kept</text></g>
+    <rect x="250" y="70" width="200" height="40" rx="6" class="fr sr"/><g font-size="11"><text x="260" y="88">_id: 2, city: "Pune"</text><text x="260" y="103" class="tr">name, signup_date gone</text></g>
+    <text x="465" y="34" font-size="11" class="tg">partial change ✓</text><text x="465" y="94" font-size="11" class="tr">whole doc swapped ✗</text>
+  </svg><figcaption>No $ operator = replacement. Everything except _id is overwritten.</figcaption></figure>
   <div class="fx" data-lang="js">db.customers.replaceOne({ _id: 2 }, { city: "Pune" })
 db.customers.findOne({ _id: 2 })   // { _id: 2, city: 'Pune' }   ← name and signup_date gone</div>
   <div class="callout trap"><span class="label">Trap</span>
@@ -271,21 +401,7 @@ items = pd.json_normalize(docs, record_path="items", meta=["_id", "customer_id"]
     <p>ObjectIds come back as <code>bson.ObjectId</code>, not strings. Look up with <code>{"_id": ObjectId("...")}</code>; a plain string matches nothing.</p>
   </div>
 
-  <h2 id="mb-rev"><span class="num">09</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Document</strong> = nested JSON-like record (BSON on disk, 16 MB max); <strong>collection</strong> = group of documents.</li>
-    <li>Every document has a unique, indexed <strong>_id</strong>; default is a 12-byte <strong>ObjectId</strong> starting with a timestamp.</li>
-    <li>Pick MongoDB for data read as one unit, varying shapes and scale-out; avoid it for multi-entity transactions and ad-hoc joins.</li>
-    <li><code>find(filter, projection)</code>; operators <code>$gt $in $or $exists $regex</code>; <code>_id</code> shows unless <code>_id: 0</code>.</li>
-    <li><code>{ field: null }</code> matches null <strong>and</strong> missing.</li>
-    <li>Dot notation matches <em>any</em> array element; use <strong>$elemMatch</strong> when several conditions must hit the same element.</li>
-    <li><code>$set $inc $push $addToSet $pull</code>; <code>updateMany</code> for all matches; <code>upsert: true</code> inserts if nothing matches.</li>
-    <li>An update without <code>$</code> operators is a <strong>replacement</strong>: other fields vanish.</li>
-    <li>Single-document writes are atomic; no foreign keys, so deletes don't cascade.</li>
-    <li>pymongo + <code>pd.json_normalize(record_path=...)</code> flattens nested arrays.</li>
-  </ol></div>
-
-  <h2 id="mb-qa"><span class="num">10</span>Questions &amp; Answers</h2>
+  <h2 id="mb-qa"><span class="num">09</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>What is BSON and why doesn't MongoDB just store JSON?</summary><div class="qa-body">BSON is binary-encoded JSON. It adds types JSON lacks (dates, int32/int64, Decimal128, ObjectId, binary) and stores lengths, so the server can skip over fields quickly without parsing text.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What is inside an ObjectId, and what is one useful consequence?</summary><div class="qa-body">4-byte timestamp (seconds), 5 random bytes, 3-byte counter. Because it starts with time, sorting by <code>_id</code> roughly sorts by insertion time, and you can get the creation time without a separate field. It's generated client-side, so no central counter is needed.</div></details>

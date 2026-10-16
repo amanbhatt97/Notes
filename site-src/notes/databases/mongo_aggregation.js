@@ -4,6 +4,101 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Aggregation Pipeline</h1>
   <p class="lead">The aggregation pipeline is MongoDB's GROUP BY, JOIN and window functions in one tool. Learn the stages, map them to SQL, and write the classic analytics queries on the shop orders.</p>
 
+  <h2 id="ma-map" class="open"><span class="num">★</span>Mind Map</h2>
+<div class="mindmap">
+  <div class="mm-center">Aggregation Pipeline</div>
+  <div class="mm-branches">
+    <div class="mm-branch">
+      <div class="mm-title">The idea</div>
+      <ul>
+        <li><b>Pipeline</b> — array of stages; docs flow through in written order</li>
+        <li><b>Why</b> — find() only filters/projects; totals, groups, joins need a pipeline</li>
+        <li><b><code>"$field"</code></b> = field value; <b><code>"$$var"</code></b> = variable (inside <code>$map</code>)</li>
+        <li><b>Stages</b> can repeat, any order; order changes meaning and speed</li>
+        <li>⚠ <b>No $sort</b> → output order not guaranteed</li>
+        <li>💡 assembly line: each station sees only what the last one handed over</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Filter &amp; reshape</div>
+      <ul>
+        <li><b>$match</b> — find() filter syntax; put it first</li>
+        <li><b>$project</b> — keep/drop/rename/compute; unlisted fields dropped</li>
+        <li><b>$addFields</b> (= <code>$set</code>) — add fields, keep the rest</li>
+        <li><b>Array math</b> — <code>$sum: { $map: { input: "$items", as: "i", in: … } }</code></li>
+        <li><b>Expressions</b> — <code>$filter $cond $ifNull $dateToString $size</code></li>
+        <li>⚠ <b>$project { total: 1 }</b> drops every other field</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">$group</div>
+      <ul>
+        <li><b>_id</b> = group key; <code>_id: null</code> = one group; compound <code>{ a: "$a", b: "$b" }</code></li>
+        <li><b>Accumulators</b> — <code>$sum: 1</code> (COUNT), <code>$sum $avg $min $max</code></li>
+        <li><b>$push</b> = ARRAY_AGG; <b>$addToSet</b> = distinct, unordered</li>
+        <li><b>$first / $last</b> — only meaningful after <code>$sort</code></li>
+        <li><b>HAVING</b> = <code>$match</code> after <code>$group</code></li>
+        <li>⚠ After group only <code>_id</code> + accumulators exist</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">$unwind</div>
+      <ul>
+        <li><b>What</b> — one doc with n-element array → n docs, one element each</li>
+        <li><b>Why</b> — group by something inside an array (category)</li>
+        <li>⚠ <b>Empty/missing arrays dropped</b> — <code>preserveNullAndEmptyArrays: true</code></li>
+        <li>⚠ <b>Fan-out</b> — <code>$sum: 1</code> now counts items, not orders</li>
+        <li>⚠ <b>Group by array field without unwind</b> → key is the whole array, no error</li>
+        <li>💡 photocopy the form once per line item</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">$lookup (join)</div>
+      <ul>
+        <li><b>Left outer join</b> into an array: <code>{ from, localField, foreignField, as }</code></li>
+        <li><b>No match</b> → <code>[]</code> (Dia: 0 orders)</li>
+        <li><b>+ $unwind</b> → one row per pair, drops unmatched (inner join)</li>
+        <li><b>Pipeline form</b> — <code>{ from, let, pipeline: [...], as }</code> for extra conditions</li>
+        <li><b>Cost</b> — a query per input doc; index <code>foreignField</code>; group first</li>
+        <li><b>Hot path?</b> schema smell → extended reference (copy the name)</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">SQL → stage</div>
+      <ul>
+        <li><b>WHERE</b> → $match · <b>SELECT</b> → $project / $addFields</li>
+        <li><b>GROUP BY</b> → $group · <b>HAVING</b> → $match after</li>
+        <li><b>JOIN</b> → $lookup (+ $unwind) · <b>UNION ALL</b> → $unionWith</li>
+        <li><b>ORDER/LIMIT/OFFSET</b> → $sort / $limit / $skip · <b>COUNT</b> → $count</li>
+        <li><b>OVER()</b> → $setWindowFields · <b>CREATE TABLE AS</b> → $out / $merge</li>
+        <li><b>Key difference</b> — runs exactly in written order</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Advanced stages</div>
+      <ul>
+        <li><b>$facet</b> — several sub-pipelines, one pass (results + filter counts)</li>
+        <li><b>$bucket</b> — histogram; <code>_id</code> = lower bound, upper exclusive, <code>default</code></li>
+        <li><b>$setWindowFields</b> (5.0+) — <code>partitionBy</code>, <code>sortBy</code>, <code>window: { documents: ["unbounded","current"] }</code></li>
+        <li><b>Ranking</b> — <code>$rank: {}</code></li>
+        <li><b>Dates</b> — <code>$dateToString "%Y-%m"</code>, <code>$year/$month</code>, <code>$dateTrunc</code></li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Performance</div>
+      <ul>
+        <li><b>$match + $sort first</b> — only leading stages use indexes</li>
+        <li><b>$sort + $limit</b> adjacent → top-k, keeps k docs</li>
+        <li><b>100 MB per blocking stage</b> ($group, $sort); <code>allowDiskUse</code> spills (default 6.0+)</li>
+        <li><b>$unwind multiplies</b> — 1M orders × 5 items = 5M docs</li>
+        <li><b>16 MB</b> per output doc ($facet, big $push)</li>
+        <li><b>explain("executionStats")</b> — IXSCAN good, COLLSCAN bad</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -16,8 +111,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="ma-work"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Worked Examples</span><span class="rm-sub">Revenue, top product, months</span></div></div>
       <div class="rm-item rm-done" data-target="ma-adv"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">$facet, $bucket, Windows</span><span class="rm-sub">Multi-view and running totals</span></div></div>
       <div class="rm-item rm-done" data-target="ma-perf"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Performance Rules</span><span class="rm-sub">Indexes, 100 MB, $lookup cost</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-rev"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 9 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Write-the-pipeline drills</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Write-the-pipeline drills</span></div></div>
     </div>
   </div>
 
@@ -27,9 +121,28 @@ Object.assign(TOPIC_CONTENT, {
   </div>
   <p><code>find()</code> can only filter and project. Totals, groupings, joins and reshaping need a pipeline.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>An <strong>assembly line</strong>. Station 1 throws out rejects ($match), station 2 cuts parts apart ($unwind), station 3 sorts them into bins and counts ($group), station 4 lines up the bins ($sort). Each station only sees what the previous one handed over.</p>
+    <p>An <strong>assembly line</strong>: throw out rejects ($match), cut parts apart ($unwind), bin and count ($group), line up the bins ($sort). Each station sees only what the last one handed over.</p>
   </div>
-  <div class="flow"><span>orders</span><span>$match</span><span>$unwind</span><span>$group</span><span>$sort</span><span>result</span></div>
+  <figure class="viz"><svg viewBox="0 0 600 150" width="600">
+    <defs><marker id="ma-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <g text-anchor="middle">
+      <rect x="0" y="20" width="96" height="56" rx="6" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="48" y="44" font-weight="bold">orders</text><text x="48" y="62" font-size="11" class="tm">collection</text>
+      <rect x="124" y="20" width="96" height="56" rx="6" class="fb sb"/><text x="172" y="44">$match</text><text x="172" y="62" font-size="10" class="tm">≠ cancelled</text>
+      <rect x="248" y="20" width="96" height="56" rx="6" class="ft st"/><text x="296" y="44">$unwind</text><text x="296" y="62" font-size="10" class="tm">$items</text>
+      <rect x="372" y="20" width="96" height="56" rx="6" class="fv"/><text x="420" y="44">$group</text><text x="420" y="62" font-size="10" class="tm">by category</text>
+      <rect x="496" y="20" width="96" height="56" rx="6" class="fg sg"/><text x="544" y="44">$sort</text><text x="544" y="62" font-size="10" class="tm">revenue -1</text>
+    </g>
+    <g stroke="currentColor"><line x1="96" y1="48" x2="122" y2="48" marker-end="url(#ma-ar)"/><line x1="220" y1="48" x2="246" y2="48" marker-end="url(#ma-ar)"/><line x1="344" y1="48" x2="370" y2="48" marker-end="url(#ma-ar)"/><line x1="468" y1="48" x2="494" y2="48" marker-end="url(#ma-ar)"/></g>
+    <g text-anchor="middle" font-size="11"><text x="48" y="100">5 docs</text><text x="172" y="100">4 orders</text><text x="296" y="100" class="tr">6 items</text><text x="420" y="100">2 groups</text><text x="544" y="100">2 sorted</text></g>
+    <g class="tb">
+      <rect x="28" y="110" width="8" height="10"/><rect x="38" y="110" width="8" height="10"/><rect x="48" y="110" width="8" height="10"/><rect x="58" y="110" width="8" height="10"/><rect x="68" y="110" width="8" height="10"/>
+      <rect x="156" y="110" width="8" height="10"/><rect x="166" y="110" width="8" height="10"/><rect x="176" y="110" width="8" height="10"/><rect x="186" y="110" width="8" height="10"/>
+      <rect x="270" y="110" width="8" height="10"/><rect x="280" y="110" width="8" height="10"/><rect x="290" y="110" width="8" height="10"/><rect x="300" y="110" width="8" height="10"/><rect x="310" y="110" width="8" height="10"/><rect x="320" y="110" width="8" height="10"/>
+      <rect x="410" y="110" width="8" height="10"/><rect x="420" y="110" width="8" height="10"/>
+      <rect x="534" y="110" width="8" height="10"/><rect x="544" y="110" width="8" height="10"/>
+    </g>
+    <text x="0" y="144" font-size="10" class="tm">indexes help only at the start (reading the collection); later stages work on in-memory docs</text>
+  </svg><figcaption>Revenue per category: document count at each station. $unwind grows the stream; $group shrinks it.</figcaption></figure>
   <div class="fx" data-lang="js">db.orders.aggregate([
   { $match: { status: "delivered" } },
   { $group: { _id: "$customer_id", orders: { $sum: 1 } } }
@@ -44,11 +157,11 @@ Object.assign(TOPIC_CONTENT, {
   <p>The data (same as <em>Documents &amp; CRUD</em>): orders 100–104, each with an embedded <code>items</code> array of <code>{product, category, qty, price}</code>.</p>
 
   <h2 id="ma-basic"><span class="num">02</span>Filter &amp; Reshape</h2>
-  <ul>
-    <li><strong>$match</strong>: same filter syntax as <code>find()</code>. Put it first.</li>
-    <li><strong>$project</strong>: keep, drop, rename or compute fields. Unlisted fields are dropped (except <code>_id</code>).</li>
-    <li><strong>$addFields</strong> (alias <code>$set</code>): add computed fields, keep everything else.</li>
-  </ul>
+  <div class="cards">
+    <div><b>$match</b><p>find() filter syntax. Put it first.</p></div>
+    <div><b>$project</b><p>Keep, drop, rename, compute. Unlisted fields dropped (not <code>_id</code>).</p></div>
+    <div><b>$addFields</b><p>Alias <code>$set</code>. Add fields, keep the rest.</p></div>
+  </div>
   <p>Order total = sum of qty × price over the items array, without unwinding:</p>
   <div class="fx" data-lang="js">db.orders.aggregate([
   { $addFields: {
@@ -105,7 +218,20 @@ Object.assign(TOPIC_CONTENT, {
   </div>
 
   <h2 id="ma-unwind"><span class="num">04</span>$unwind</h2>
-  <p><code>$unwind</code> turns one document with an n-element array into n documents, each holding one element. It's how you group <em>by something inside an array</em>, such as category.</p>
+  <p><code>$unwind</code> turns one document with an n-element array into n documents. It's how you group <em>by something inside an array</em>, such as category.</p>
+  <figure class="viz"><svg viewBox="0 0 600 130" width="600">
+    <defs><marker id="ma-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="0" y="20" width="220" height="90" rx="6" class="fb sb"/>
+    <text x="10" y="40" font-size="11">_id 100 · customer 1</text><text x="10" y="58" font-size="11">items: [</text>
+    <rect x="20" y="64" width="90" height="24" rx="4" class="ft st"/><text x="65" y="80" text-anchor="middle" font-size="11">Laptop</text>
+    <rect x="118" y="64" width="90" height="24" rx="4" class="fv"/><text x="163" y="80" text-anchor="middle" font-size="11">Lamp</text>
+    <text x="10" y="104" font-size="11">]</text>
+    <line x1="222" y1="65" x2="290" y2="65" stroke="currentColor" marker-end="url(#ma-ar2)"/><text x="256" y="58" text-anchor="middle" font-size="10" class="tm">$unwind</text>
+    <rect x="300" y="8" width="290" height="50" rx="6" class="fb sb"/><text x="310" y="28" font-size="11">_id 100 · customer 1</text>
+    <rect x="310" y="34" width="190" height="20" rx="4" class="ft st"/><text x="318" y="48" font-size="11">items: Laptop (object)</text>
+    <rect x="300" y="70" width="290" height="50" rx="6" class="fb sb"/><text x="310" y="90" font-size="11">_id 100 · customer 1</text>
+    <rect x="310" y="96" width="190" height="20" rx="4" class="fv"/><text x="318" y="110" font-size="11">items: Lamp (object)</text>
+  </svg><figcaption>One document per array element; parent fields are copied onto each. Same _id twice.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Photocopying an order form once per line item, then cutting each copy so it shows only one item. Each slip still carries the order number and customer.</p>
   </div>
@@ -126,7 +252,22 @@ db.orders.aggregate([ { $match: { _id: 100 } }, { $unwind: "$items" } ])
   </div>
 
   <h2 id="ma-lookup"><span class="num">05</span>$lookup</h2>
-  <p><code>$lookup</code> pulls matching documents from another collection into an <strong>array field</strong>. It's a left outer join: no match gives an empty array.</p>
+  <p><code>$lookup</code> pulls matching documents from another collection into an <strong>array field</strong>.</p>
+  <figure class="viz"><svg viewBox="0 0 600 150" width="600">
+    <text x="0" y="14" font-size="11" class="tm">customers</text><text x="200" y="14" font-size="11" class="tm">+ as: "orders" (array from orders)</text>
+    <g font-size="11">
+      <rect x="0" y="22" width="120" height="26" rx="4" class="fb sb"/><text x="10" y="40">1 Asha</text>
+      <rect x="0" y="54" width="120" height="26" rx="4" class="fb sb"/><text x="10" y="72">2 Ben</text>
+      <rect x="0" y="86" width="120" height="26" rx="4" class="fb sb"/><text x="10" y="104">3 Chen</text>
+      <rect x="0" y="118" width="120" height="26" rx="4" class="fb sb"/><text x="10" y="136">4 Dia</text>
+      <rect x="200" y="22" width="70" height="26" rx="4" class="ft st"/><text x="235" y="40" text-anchor="middle">100</text><rect x="276" y="22" width="70" height="26" rx="4" class="ft st"/><text x="311" y="40" text-anchor="middle">101</text>
+      <rect x="200" y="54" width="70" height="26" rx="4" class="ft st"/><text x="235" y="72" text-anchor="middle">102</text>
+      <rect x="200" y="86" width="70" height="26" rx="4" class="ft st"/><text x="235" y="104" text-anchor="middle">103</text><rect x="276" y="86" width="70" height="26" rx="4" class="ft st"/><text x="311" y="104" text-anchor="middle">104</text>
+      <rect x="200" y="118" width="70" height="26" rx="4" fill="none" stroke="currentColor" stroke-dasharray="4 3" opacity=".6"/><text x="235" y="136" text-anchor="middle">[ ]</text>
+      <text x="420" y="40" class="tm">$size → 2</text><text x="420" y="72" class="tm">$size → 1</text><text x="420" y="104" class="tm">$size → 2</text><text x="420" y="136" class="tr">$size → 0 (kept)</text>
+    </g>
+    <g stroke="currentColor" opacity=".5"><line x1="120" y1="35" x2="198" y2="35"/><line x1="120" y1="67" x2="198" y2="67"/><line x1="120" y1="99" x2="198" y2="99"/><line x1="120" y1="131" x2="198" y2="131"/></g>
+  </svg><figcaption>$lookup keeps every left document and attaches matches as an array. Dia gets an empty one: a left outer join.</figcaption></figure>
   <div class="fx" data-lang="js">db.customers.aggregate([
   { $lookup: { from: "orders", localField: "_id",
                foreignField: "customer_id", as: "orders" } },
@@ -274,20 +415,7 @@ GROUP BY c.customer_id, c.name;</div>
     <p>Putting <code>$match: { status: "delivered" }</code> <em>after</em> <code>$unwind</code> gives the same answer but filters 5× more documents and loses the index. The optimizer can move some matches earlier, but don't rely on it.</p>
   </div>
 
-  <h2 id="ma-rev"><span class="num">10</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li>Pipeline = array of stages; documents flow through in written order.</li>
-    <li><code>"$field"</code> reads a field; <code>"$$var"</code> reads a variable (e.g. inside <code>$map</code>).</li>
-    <li><strong>$group</strong>: <code>_id</code> is the key; other fields must be accumulators (<code>$sum $avg $max $push $addToSet</code>).</li>
-    <li>WHERE → <code>$match</code> before group; HAVING → <code>$match</code> after group.</li>
-    <li><strong>$unwind</strong> = one doc per array element; drops empty/missing arrays unless <code>preserveNullAndEmptyArrays</code>.</li>
-    <li>Grouping by an array field without <code>$unwind</code> groups by the whole array.</li>
-    <li><strong>$lookup</strong> = left join into an array; costly, index <code>foreignField</code>, group before joining.</li>
-    <li><code>$facet</code> = many views in one pass; <code>$bucket</code> = histogram; <code>$setWindowFields</code> = window functions.</li>
-    <li>Index use only at the start; 100 MB per blocking stage, <code>allowDiskUse</code> to spill.</li>
-  </ol></div>
-
-  <h2 id="ma-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <h2 id="ma-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>When do you need <code>aggregate()</code> instead of <code>find()</code>?</summary><div class="qa-body">Whenever you compute across documents (counts, sums per group), reshape or compute new fields beyond simple projection, join collections, flatten arrays, or use window functions. <code>find()</code> only filters, projects, sorts and pages.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Write the pipeline: number of orders per status, most common first.</summary><div class="qa-body"><code>[ { $group: { _id: "$status", n: { $sum: 1 } } }, { $sort: { n: -1 } } ]</code> → delivered 3, then cancelled 1 and pending 1 (tie order not guaranteed; add <code>_id: 1</code> to the sort).</div></details>

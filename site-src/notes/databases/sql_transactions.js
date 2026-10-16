@@ -4,6 +4,102 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Transactions &amp; Concurrency</h1>
   <p class="lead">How a database keeps data correct when things fail halfway and when many users change it at once. Every timeline below was run with two real PostgreSQL 16 sessions.</p>
 
+  <h2 id="st-map" class="open"><span class="num">★</span>Mind Map</h2>
+<div class="mindmap">
+  <div class="mm-center">Transactions &amp; Concurrency</div>
+  <div class="mm-branches">
+    <div class="mm-branch">
+      <div class="mm-title">Transaction</div>
+      <ul>
+        <li><b>Transaction</b> — statements that succeed or fail as one unit</li>
+        <li><b>Syntax</b> — <code>BEGIN; … COMMIT;</code> or <code>ROLLBACK;</code></li>
+        <li><b>SAVEPOINT</b> — <code>ROLLBACK TO SAVEPOINT s</code> undoes back to it, keeps earlier work</li>
+        <li>⚠ <b>Aborted state</b> — after an error Postgres ignores all until ROLLBACK; COMMIT then rolls back</li>
+        <li>⚠ <b>Autocommit</b> — no BEGIN = each statement alone; psycopg is the reverse: needs <code>conn.commit()</code></li>
+        <li>💡 shopping cart: pay for all or put everything back</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">ACID</div>
+      <ul>
+        <li><b>Atomicity</b> — all or none; via WAL. 💡 vending machine returns the coin</li>
+        <li><b>Consistency</b> — constraints true after every commit (CHECK, FK)</li>
+        <li><b>Isolation</b> — no one sees half-done work; via MVCC + locks</li>
+        <li><b>Durability</b> — committed survives crash; WAL flushed before COMMIT returns</li>
+        <li>⚠ <b>ACID "C" ≠ CAP "C"</b> — constraints vs latest-write on every replica</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Anomalies</div>
+      <ul>
+        <li><b>Dirty read</b> — see uncommitted data (never in Postgres)</li>
+        <li><b>Non-repeatable read</b> — same <em>row</em> read twice, new value (UPDATE between)</li>
+        <li><b>Phantom</b> — same <em>filter</em>, new set of rows (INSERT/DELETE between)</li>
+        <li><b>Lost update</b> — read-compute-write races; one write overwrites the other
+          <ul><li>fix: <code>SET stock = stock - 1</code>, FOR UPDATE, version column</li></ul></li>
+        <li><b>Write skew</b> — both read, write <em>different</em> rows, rule broken (no doctor on call)</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Isolation levels</div>
+      <ul>
+        <li><b>READ COMMITTED</b> — PG default; each <em>statement</em> sees latest commits</li>
+        <li><b>REPEATABLE READ</b> — snapshot for whole txn; blocks phantoms (PG) and lost update (error); allows write skew</li>
+        <li><b>SERIALIZABLE</b> — as if one at a time; aborts a txn on danger</li>
+        <li>⚠ <b>Retry on 40001</b> — serialization failure is by design</li>
+        <li><b>READ UNCOMMITTED</b> — PG treats as READ COMMITTED</li>
+        <li>⚠ <b>Defaults differ</b> — MySQL InnoDB = REPEATABLE READ</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">MVCC</div>
+      <ul>
+        <li><b>MVCC</b> — UPDATE writes a new row version; old one expires</li>
+        <li><b>xmin / ctid</b> — creating txn / physical spot; both change on UPDATE</li>
+        <li><b>Benefit</b> — readers never block writers, writers never block readers</li>
+        <li><b>Writers still block writers</b> on the same row</li>
+        <li><b>VACUUM</b> — removes dead versions; autovacuum in background</li>
+        <li>⚠ <b>Idle in transaction</b> — old snapshot stops VACUUM → bloat</li>
+        <li>💡 Wikipedia page history</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Locks &amp; deadlocks</div>
+      <ul>
+        <li><b>Row lock</b> — taken by UPDATE/DELETE, held until commit</li>
+        <li><b>SELECT … FOR UPDATE</b> — lock while reading, decide, then write</li>
+        <li><b>SKIP LOCKED</b> — job queues: each worker grabs different rows</li>
+        <li><b>Deadlock</b> — A waits for B, B waits for A; PG kills one after 1 s</li>
+        <li><b>Prevent</b> — lock in a fixed order (lower id first), short txns, retry</li>
+        <li>💡 two cars on a one-lane bridge</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Optimistic vs pessimistic</div>
+      <ul>
+        <li><b>Pessimistic</b> — lock first (<code>FOR UPDATE</code>); for frequent conflicts (stock, seats)</li>
+        <li><b>Optimistic</b> — no lock; <code>UPDATE … WHERE version = :v</code></li>
+        <li><b>UPDATE 0</b> — someone changed it: reload and retry</li>
+        <li><b>Across HTTP requests</b> — only optimistic works (can't hold a lock while user types)</li>
+        <li>💡 library book taken home vs Google Docs "file changed"</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Scaling</div>
+      <ul>
+        <li><b>Order</b> — tune → bigger box → pooling → replicas → partition → shard</li>
+        <li><b>PgBouncer</b> — 2,000 clients share ~50 real connections</li>
+        <li><b>Read replicas</b> — stream WAL, serve reads; writes stay on primary</li>
+        <li>⚠ <b>Replication lag</b> — stale read after write → read-your-writes from primary</li>
+        <li><b>Partitioning</b> — split table on one server</li>
+        <li><b>Sharding</b> — split across servers; loses cross-shard joins/txns/FKs
+          <ul><li>shard key: in most queries, spreads load (customer_id, not date)</li></ul></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -15,8 +111,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="st-locks"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Locks &amp; Deadlocks</span><span class="rm-sub">FOR UPDATE, SKIP LOCKED</span></div></div>
       <div class="rm-item rm-done" data-target="st-optim"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Optimistic vs Pessimistic</span><span class="rm-sub">Check later or lock now</span></div></div>
       <div class="rm-item rm-done" data-target="st-scale"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Scaling a SQL Database</span><span class="rm-sub">Replicas, pooling, sharding</span></div></div>
-      <div class="rm-item rm-done" data-target="st-rev"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="st-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="st-qa"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
@@ -72,7 +167,7 @@ COMMIT;</div>
   </div>
 
   <h2 id="st-anom"><span class="num">03</span>Concurrency Anomalies</h2>
-  <p>Running transactions one at a time would be safe but slow. Running them in parallel without isolation causes these bugs. Session B was a real second connection (via <code>dblink</code>).</p>
+  <p>Parallel transactions without isolation cause these five bugs. Session B was a real second connection (via <code>dblink</code>).</p>
 
   <p><strong>1. Dirty read</strong>: reading another transaction's <em>uncommitted</em> change, which may be rolled back.</p>
   <table class="tbl">
@@ -103,6 +198,19 @@ COMMIT;</div>
   <p>At REPEATABLE READ: 3 then 3. (Orders 104 and 105 were pending at the start.)</p>
 
   <p><strong>4. Lost update</strong>: two transactions read, compute, and write the same row; one write silently overwrites the other.</p>
+  <figure class="viz"><svg viewBox="0 0 600 170" width="600">
+    <defs><marker id="st-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <text x="0" y="34" font-weight="bold">A</text><text x="0" y="94" font-weight="bold">B</text>
+    <line x1="30" y1="30" x2="590" y2="30" stroke="currentColor" opacity=".3"/>
+    <line x1="30" y1="90" x2="590" y2="90" stroke="currentColor" opacity=".3"/>
+    <rect x="40" y="16" width="110" height="28" rx="5" class="fb sb"/><text x="95" y="35" text-anchor="middle">read → 10</text>
+    <rect x="170" y="76" width="110" height="28" rx="5" class="fb sb"/><text x="225" y="95" text-anchor="middle">read → 10</text>
+    <rect x="300" y="16" width="130" height="28" rx="5" class="ft st"/><text x="365" y="35" text-anchor="middle">write 9 ✓</text>
+    <rect x="450" y="76" width="130" height="28" rx="5" class="fr sr"/><text x="515" y="95" text-anchor="middle">write 9 ✓</text>
+    <text x="40" y="132" class="tm" font-size="11">stock in table:</text>
+    <text x="150" y="132">10</text><text x="365" y="132" text-anchor="middle">9</text><text x="515" y="132" text-anchor="middle" class="tr">9 (should be 8)</text>
+    <line x1="30" y1="150" x2="590" y2="150" stroke="currentColor" marker-end="url(#st-ar)"/><text x="590" y="166" text-anchor="end" font-size="10" class="tm">time</text>
+  </svg><figcaption>Both read 10 before either wrote, so B's write silently erases A's sale.</figcaption></figure>
   <table class="tbl">
     <tr><th>#</th><th>Session A</th><th>Session B</th></tr>
     <tr><td>1</td><td><code>SELECT stock … product_id = 13</code> → 10</td><td></td></tr>
@@ -153,12 +261,29 @@ COMMIT;   -- may fail with 40001: catch it and rerun the whole transaction</div>
 UPDATE accounts SET balance = balance - 100 WHERE acct_id = 1;
 SELECT ctid, xmin, acct_id, balance FROM accounts WHERE acct_id = 1;</div>
   <table class="tbl out"><caption>Result (before → after)</caption><tr><th>ctid (physical spot)</th><th>xmin (creating txn)</th><th>acct_id</th><th>balance</th></tr><tr><td>(0,14)</td><td>881</td><td>1</td><td>800</td></tr><tr><td>(0,3)</td><td>882</td><td>1</td><td>700</td></tr></table>
-  <p>Same logical row, new physical location, new creating transaction. The old version stays until no snapshot needs it.</p>
-  <ul>
-    <li><strong>Readers don't block writers, writers don't block readers.</strong> A long report reads old versions while updates continue.</li>
-    <li><strong>Writers still block writers</strong> on the same row (section 06).</li>
-    <li><strong>VACUUM</strong> removes dead versions (autovacuum does it in the background). Without it, tables bloat.</li>
-  </ul>
+  <figure class="viz"><svg viewBox="0 0 600 170" width="600">
+    <defs><marker id="st-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="158" y="10" width="236" height="56" rx="6" class="fs" stroke="currentColor" stroke-dasharray="4 3" stroke-opacity=".5"/>
+    <text x="276" y="30" text-anchor="middle">v1 · balance 800</text>
+    <text x="276" y="48" text-anchor="middle" font-size="10" class="tm">ctid (0,14) · xmin 881 · xmax 882</text>
+    <text x="276" y="61" text-anchor="middle" font-size="10" class="tr">dead after 882 commits</text>
+    <rect x="158" y="98" width="236" height="56" rx="6" class="fg sg"/>
+    <text x="276" y="118" text-anchor="middle">v2 · balance 700</text>
+    <text x="276" y="136" text-anchor="middle" font-size="10" class="tm">ctid (0,3) · xmin 882 · live</text>
+    <line x1="276" y1="66" x2="276" y2="96" stroke="currentColor" marker-end="url(#st-ar2)"/><text x="284" y="86" font-size="10" class="tm">UPDATE (txn 882)</text>
+    <rect x="0" y="22" width="130" height="34" rx="6" class="fb sb"/><text x="65" y="36" text-anchor="middle" font-size="11">old snapshot</text><text x="65" y="50" text-anchor="middle" font-size="10" class="tm">long report</text>
+    <line x1="130" y1="39" x2="156" y2="39" stroke="currentColor" marker-end="url(#st-ar2)"/>
+    <rect x="0" y="110" width="130" height="34" rx="6" class="fb sb"/><text x="65" y="124" text-anchor="middle" font-size="11">new snapshot</text><text x="65" y="138" text-anchor="middle" font-size="10" class="tm">started after 882</text>
+    <line x1="130" y1="127" x2="156" y2="127" stroke="currentColor" marker-end="url(#st-ar2)"/>
+    <rect x="432" y="22" width="160" height="34" rx="6" class="fv"/><text x="512" y="43" text-anchor="middle" font-size="11">VACUUM removes v1</text>
+    <line x1="430" y1="39" x2="396" y2="39" stroke="currentColor" marker-end="url(#st-ar2)"/>
+    <text x="512" y="74" text-anchor="middle" font-size="10" class="tm">only once no snapshot</text><text x="512" y="87" text-anchor="middle" font-size="10" class="tm">can still see it</text>
+  </svg><figcaption>One logical row, two physical versions. Each transaction reads the version its snapshot allows, so nobody waits.</figcaption></figure>
+  <div class="cards">
+    <div><b>Readers ↔ writers</b><p>Never block each other.</p></div>
+    <div><b>Writer ↔ writer</b><p>Same row still waits (next section).</p></div>
+    <div><b>VACUUM</b><p>Clears dead versions; without it, bloat.</p></div>
+  </div>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Wikipedia page history. Editing creates a new revision; someone reading an old revision isn't interrupted. Old revisions are eventually archived (VACUUM).</p>
   </div>
@@ -186,7 +311,19 @@ UPDATE jobs SET status = 'running' WHERE job_id IN (1, 2);
 COMMIT;</div>
 
   <h3>Deadlocks</h3>
-  <p>A <strong>deadlock</strong>: A holds lock 1 and waits for lock 2; B holds lock 2 and waits for lock 1. Neither can move. Postgres checks after <code>deadlock_timeout</code> (1 s) and kills one.</p>
+  <p>A <strong>deadlock</strong>: each session holds a lock the other needs. Postgres checks after <code>deadlock_timeout</code> (1 s) and kills one.</p>
+  <figure class="viz"><svg viewBox="0 0 600 170" width="600">
+    <defs><marker id="st-ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="40" y="60" width="130" height="44" rx="8" class="fb sb"/><text x="105" y="87" text-anchor="middle" font-weight="bold">Session A</text>
+    <rect x="430" y="60" width="130" height="44" rx="8" class="fb sb"/><text x="495" y="87" text-anchor="middle" font-weight="bold">Session B</text>
+    <rect x="240" y="8" width="120" height="36" rx="6" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="300" y="31" text-anchor="middle">acct 1</text>
+    <rect x="240" y="122" width="120" height="36" rx="6" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="300" y="145" text-anchor="middle">acct 2</text>
+    <line x1="170" y1="66" x2="238" y2="30" class="sg" stroke-width="2.5"/><text x="150" y="40" font-size="11" class="tg">holds</text>
+    <line x1="170" y1="98" x2="238" y2="136" class="sr" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#st-ar3)"/><text x="150" y="134" font-size="11" class="tr">waits</text>
+    <line x1="430" y1="98" x2="362" y2="136" class="sg" stroke-width="2.5"/><text x="420" y="134" font-size="11" class="tg">holds</text>
+    <line x1="430" y1="66" x2="362" y2="30" class="sr" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#st-ar3)"/><text x="420" y="40" font-size="11" class="tr">waits</text>
+    <text x="300" y="87" text-anchor="middle" font-size="11" class="tr">cycle → PG kills one</text>
+  </svg><figcaption>A wait-for cycle. Locking rows in one fixed order (acct 1 before acct 2) makes the cycle impossible.</figcaption></figure>
   <table class="tbl">
     <tr><th>#</th><th>Session A</th><th>Session B</th></tr>
     <tr><td>1</td><td><code>UPDATE accounts … WHERE acct_id = 1;</code></td><td><code>UPDATE accounts … WHERE acct_id = 2;</code></td></tr>
@@ -224,11 +361,24 @@ UPDATE products SET price = 160, version = version + 1 WHERE product_id = 12 AND
 
   <h2 id="st-scale"><span class="num">08</span>Scaling a SQL Database</h2>
   <div class="flow"><span>Tune queries &amp; indexes</span><span>Bigger machine</span><span>Connection pooling</span><span>Read replicas</span><span>Partitioning</span><span>Sharding</span></div>
-  <p>Go left to right: each step adds more complexity than the last.</p>
+  <p>Left to right, each step adds complexity. <strong>Vertical scaling</strong> (bigger box) needs no code changes but has a ceiling and stays a single point of failure.</p>
+  <figure class="viz"><svg viewBox="0 0 600 160" width="600">
+    <defs><marker id="st-ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="0" y="56" width="100" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="50" y="75" text-anchor="middle">2,000</text><text x="50" y="91" text-anchor="middle" font-size="10" class="tm">app clients</text>
+    <line x1="100" y1="78" x2="138" y2="78" stroke="currentColor" marker-end="url(#st-ar4)"/>
+    <rect x="140" y="56" width="110" height="44" rx="6" class="fv"/><text x="195" y="75" text-anchor="middle">PgBouncer</text><text x="195" y="91" text-anchor="middle" font-size="10" class="tm">~50 real conns</text>
+    <line x1="250" y1="70" x2="308" y2="34" stroke="currentColor" marker-end="url(#st-ar4)"/><text x="262" y="40" font-size="10" class="tm">writes</text>
+    <line x1="250" y1="88" x2="308" y2="122" stroke="currentColor" marker-end="url(#st-ar4)"/><text x="262" y="124" font-size="10" class="tm">reads</text>
+    <rect x="310" y="12" width="120" height="44" rx="6" class="fb sb"/><text x="370" y="38" text-anchor="middle" font-weight="bold">Primary</text>
+    <rect x="310" y="100" width="120" height="44" rx="6" class="ft st"/><text x="370" y="126" text-anchor="middle">Replica 1</text>
+    <rect x="470" y="100" width="120" height="44" rx="6" class="ft st"/><text x="530" y="126" text-anchor="middle">Replica 2</text>
+    <line x1="370" y1="56" x2="370" y2="98" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#st-ar4)"/>
+    <line x1="420" y1="56" x2="500" y2="98" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#st-ar4)"/>
+    <text x="445" y="32" font-size="10" class="tm">WAL stream (async)</text><text x="445" y="46" font-size="10" class="tr">lag: ms … s</text>
+  </svg><figcaption>Pooling caps connections; replicas scale reads only. Every write still lands on one primary.</figcaption></figure>
   <ul>
-    <li><strong>Vertical scaling</strong>: more CPU, RAM, faster disk. Zero code changes, but there's a ceiling and one machine is still a single point of failure.</li>
-    <li><strong>Connection pooling</strong> (PgBouncer): each Postgres connection is a process using several MB. A pooler lets 2,000 app clients share ~50 real connections.</li>
-    <li><strong>Read replicas</strong>: copies that receive the primary's WAL and serve reads. Writes still go to one primary.</li>
+    <li><strong>Pooling</strong>: each Postgres connection is a process using several MB.</li>
+    <li><strong>Read replicas</strong>: receive the primary's WAL and serve reads only.</li>
   </ul>
   <div class="callout trap"><span class="label">Trap: replication lag</span>
     <p>Replicas are usually async, milliseconds to seconds behind. A user saves their profile (primary), refreshes (replica), and sees the old value. Fix: read-your-writes, i.e. route that user's reads to the primary for a few seconds after a write, or for that page.</p>
@@ -244,21 +394,7 @@ UPDATE products SET price = 160, version = version + 1 WHERE product_id = 12 AND
     <p>Pick the key most queries filter on and that spreads load evenly, e.g. <code>customer_id</code>. A bad key (e.g. <code>country</code>, or the date for new writes) creates a hot shard. Tools like Citus or Vitess handle routing.</p>
   </div>
 
-  <h2 id="st-rev"><span class="num">09</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Transaction</strong>: all-or-nothing unit; <code>BEGIN / COMMIT / ROLLBACK / SAVEPOINT</code>.</li>
-    <li><strong>ACID</strong>: atomic (WAL), consistent (constraints), isolated (MVCC + locks), durable (WAL flush).</li>
-    <li>After an error, Postgres ignores everything until <code>ROLLBACK</code>.</li>
-    <li>Anomalies: <strong>dirty, non-repeatable, phantom, lost update, write skew</strong>.</li>
-    <li>Postgres default <strong>READ COMMITTED</strong>; never dirty reads.</li>
-    <li><strong>REPEATABLE READ</strong> = snapshot isolation; stops lost updates with an error, not write skew.</li>
-    <li><strong>SERIALIZABLE</strong> stops everything but aborts some transactions: <strong>retry on 40001</strong>.</li>
-    <li><strong>MVCC</strong>: new row versions; readers and writers don't block; VACUUM cleans up.</li>
-    <li><code>FOR UPDATE</code> locks rows; <code>SKIP LOCKED</code> for queues; consistent lock order prevents deadlocks.</li>
-    <li>Scale: tune → bigger box → PgBouncer → replicas (lag!) → partition → shard.</li>
-  </ol></div>
-
-  <h2 id="st-qa"><span class="num">10</span>Questions &amp; Answers</h2>
+  <h2 id="st-qa"><span class="num">09</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>Explain ACID with a money transfer.</summary><div class="qa-body">Atomicity: debit and credit both happen or neither. Consistency: <code>CHECK (balance &gt;= 0)</code> and FKs hold after commit. Isolation: a concurrent report never sees money in neither account. Durability: once "transfer complete" is returned, a crash can't undo it (WAL flushed to disk).</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What's the output? <code>BEGIN; INSERT INTO t VALUES (1); SELECT 1/0; INSERT INTO t VALUES (2); COMMIT;</code> then <code>SELECT count(*) FROM t</code> (t was empty).</summary><div class="qa-body">0. After the division-by-zero error the transaction is aborted: the second INSERT is rejected ("current transaction is aborted"), and <code>COMMIT</code> on an aborted transaction performs a <code>ROLLBACK</code>. Row 1 is undone too.</div></details>

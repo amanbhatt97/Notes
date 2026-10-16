@@ -4,6 +4,110 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Practice Q&amp;A</h1>
   <p class="lead">Interview-style SQL problems on the <code>shop</code> database, each with a working query, its real output and the idea behind it. Try each one before opening it.</p>
 
+  <h2 id="si-map" class="open"><span class="num">★</span>Mind Map</h2>
+<div class="mindmap">
+  <div class="mm-center">SQL interview patterns</div>
+  <div class="mm-branches">
+    <div class="mm-branch">
+      <div class="mm-title">Approach (every question)</div>
+      <ul>
+        <li><b>Grain</b> — what is one output row? include zero rows? cancelled orders?</li>
+        <li><b>Tables + keys</b> — order-level × item-level join multiplies rows</li>
+        <li><b>CTEs</b> — one idea each: filter → aggregate → rank → pick</li>
+        <li><b>Edge cases</b> — ties, NULLs, duplicates, empty groups, ÷0, date boundaries</li>
+        <li><b>Say assumptions out loud</b> — revenue = qty × unit_price, excl. cancelled</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Top-N / Nth per group</div>
+      <ul>
+        <li><b>Rank in CTE, filter outside</b> — window results can't go in WHERE
+          <ul><li><code>rank() OVER (PARTITION BY g ORDER BY x DESC) AS rk</code> … <code>WHERE rk = 1</code></li></ul></li>
+        <li><b>Nth distinct value</b> — <code>dense_rank() … WHERE rk = N</code></li>
+        <li><b>2nd highest</b> — <code>max(s) WHERE s &lt; (SELECT max(s) …)</code></li>
+        <li><b>Latest per group</b> — <code>row_number() … rn = 1</code> + tie-breaker; or <code>DISTINCT ON</code></li>
+        <li>⚠ <b>LIMIT 1 OFFSET N-1</b> — counts tied rows separately</li>
+        <li><b>Ties?</b> ROW_NUMBER exactly N · RANK/DENSE_RANK keep ties</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Existence &amp; anti-join</div>
+      <ul>
+        <li><b>"Never did X"</b> — <code>WHERE NOT EXISTS (SELECT 1 … = c.id)</code></li>
+        <li><b>Or</b> — <code>LEFT JOIN o … WHERE o.id IS NULL</code></li>
+        <li>⚠ <b>NOT IN (subquery)</b> — one NULL → zero rows</li>
+        <li><b>"Bought both X and Y"</b> — <code>WHERE cat IN (X, Y) … HAVING count(DISTINCT cat) = 2</code></li>
+        <li><b>Self-join</b> — employee vs manager: <code>JOIN employees m ON m.emp_id = e.manager_id</code></li>
+        <li><b>Unique pairs</b> — <code>a.id &lt; b.id</code> (not <code>&lt;&gt;</code>)</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Keep zeros &amp; gaps</div>
+      <ul>
+        <li><b>LEFT JOIN from the "all" table</b> + <code>coalesce(sum(x), 0)</code></li>
+        <li>⚠ <b>Right-table filter in WHERE</b> → becomes inner join; put it in <code>ON</code></li>
+        <li><b>Missing periods</b> — <code>generate_series(start, end, '1 month')</code> LEFT JOIN data</li>
+        <li><b>Count right side</b> — <code>count(o.order_id)</code>, not <code>count(*)</code></li>
+        <li><b>Empty input</b> — COUNT → 0, SUM/AVG/MAX → NULL</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Fan-out &amp; duplicates</div>
+      <ul>
+        <li><b>Fan-out</b> — joining 1-per-order to 1-per-item repeats orders</li>
+        <li><b>Fix</b> — <code>count(DISTINCT o.order_id)</code> or aggregate in a CTE first</li>
+        <li><b>Find dups</b> — <code>GROUP BY key HAVING count(*) &gt; 1</code></li>
+        <li><b>Delete dups</b> — <code>row_number() OVER (PARTITION BY key ORDER BY id)</code>, delete <code>rn &gt; 1</code>
+          <ul><li>then add UNIQUE so it can't recur</li></ul></li>
+        <li>⚠ <b>JOIN for "who ordered"</b> → one row per order; use EXISTS</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Ratios, pivots, stats</div>
+      <ul>
+        <li><b>Share of total</b> — <code>100.0 * sum(x) / sum(sum(x)) OVER ()</code></li>
+        <li><b>Rate</b> — <code>avg((status = 'cancelled')::int)</code></li>
+        <li>⚠ <b>Integer ÷</b> — 1/5 = 0; cast or use <code>100.0</code></li>
+        <li><b>Pivot</b> — <code>sum(CASE WHEN cat = 'X' THEN v ELSE 0 END)</code> per column; PG <code>FILTER (WHERE …)</code></li>
+        <li><b>Median</b> — <code>percentile_cont(0.5) WITHIN GROUP (ORDER BY t)</code>; aggregate to grain first</li>
+        <li><b>Correlated subquery</b> — above own-category average</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Time series</div>
+      <ul>
+        <li><b>Previous row</b> — <code>lag(x) OVER (PARTITION BY u ORDER BY d)</code>; <code>lead</code> = next</li>
+        <li><b>Growth %</b> — <code>(x - lag) / nullif(lag, 0)</code>; fill gaps first</li>
+        <li><b>Running total</b> — <code>sum(x) OVER (ORDER BY d)</code>; ROWS frame for strict rows</li>
+        <li><b>Streaks</b> — <code>d - row_number() OVER (…)</code> constant per run; DISTINCT first</li>
+        <li><b>Retention</b> — first day per user → EXISTS activity in days 1–7 → group by cohort week</li>
+        <li><b>Recursive</b> — anchor <code>UNION ALL</code> step joining back (org chart)</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">NULL &amp; boundary traps</div>
+      <ul>
+        <li><b><code>NULL &lt;&gt; 'x'</code></b> is NULL → row dropped; use <code>IS DISTINCT FROM</code></li>
+        <li><b><code>count(col)</code></b> skips NULLs; <code>count(*)</code> doesn't</li>
+        <li><b>BETWEEN on timestamps</b> — end date = midnight; use <code>&gt;= start AND &lt; end + 1 day</code></li>
+        <li><b>UNION</b> dedups (slower); <b>UNION ALL</b> keeps all</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Rapid-fire facts</div>
+      <ul>
+        <li><b>Logical order</b> — FROM → WHERE → GROUP BY → HAVING → SELECT → DISTINCT → ORDER BY → LIMIT</li>
+        <li><b>WHERE vs HAVING</b> — rows before grouping vs groups after</li>
+        <li><b>DELETE / TRUNCATE / DROP</b> — rows (logged) / all rows fast / table</li>
+        <li><b>PK vs UNIQUE</b> — one, NOT NULL, identity vs many, NULLs allowed</li>
+        <li><b>Clustered index</b> — table stored in key order; PG heaps: all non-clustered</li>
+        <li><b>CHAR vs VARCHAR</b> — padded fixed vs variable; PG text = varchar</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -15,18 +119,17 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="si-date"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Dates &amp; Time</span><span class="rm-sub">Growth, streaks, retention</span></div></div>
       <div class="rm-item rm-done" data-target="si-null"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Tricky NULL &amp; Edge Cases</span><span class="rm-sub">Where correct-looking SQL lies</span></div></div>
       <div class="rm-item rm-done" data-target="si-rapid"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Conceptual Rapid-Fire</span><span class="rm-sub">Ten classic one-liners</span></div></div>
-      <div class="rm-item rm-done" data-target="si-rev"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">8 reusable patterns</span></div></div>
     </div>
   </div>
 
   <h2 id="si-how"><span class="num">01</span>How to Approach a Question</h2>
   <div class="flow"><span>Clarify the grain</span><span>Find the tables</span><span>Build step by step (CTEs)</span><span>Check edge cases</span></div>
-  <ol>
-    <li><strong>Clarify the grain</strong>: what is one output row? "Revenue per customer" = one row per customer, <em>including</em> those with zero? Ask. Also define terms: does revenue include cancelled orders?</li>
-    <li><strong>Find the tables</strong>: which tables hold the facts, and what is each table's key? Joining a 1-row-per-order table to a 1-row-per-item table multiplies rows.</li>
-    <li><strong>Build step by step</strong>: one CTE per idea (filter → aggregate → rank → pick). Run each piece; say it out loud.</li>
-    <li><strong>Check edge cases</strong>: ties, NULLs, duplicates, empty groups, division by zero, date boundaries.</li>
-  </ol>
+  <div class="cards">
+    <div><b>1 · Grain</b><p>One output row = ? Include zero rows? Does revenue count cancelled orders? Ask.</p></div>
+    <div><b>2 · Tables</b><p>Which hold the facts, and each one's key? Order × item joins multiply rows.</p></div>
+    <div><b>3 · CTEs</b><p>One idea each: filter → aggregate → rank → pick. Say each out loud.</p></div>
+    <div><b>4 · Edges</b><p>Ties, NULLs, duplicates, empty groups, ÷0, date boundaries.</p></div>
+  </div>
   <div class="callout intu"><span class="label">Convention on this page</span>
     <p>Revenue = <code>qty * unit_price</code> from <code>order_items</code>, excluding cancelled orders, unless the question says otherwise. Stating this out loud is itself a point scored.</p>
   </div>
@@ -138,7 +241,22 @@ JOIN orders o       USING (customer_id)
 JOIN order_items oi USING (order_id)
 GROUP BY c.customer_id, c.name ORDER BY c.name;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>wrong_orders</th><th>orders</th><th>items</th></tr><tr><td>Asha</td><td>3</td><td>2</td><td>4</td></tr><tr><td>Ben</td><td>1</td><td>1</td><td>1</td></tr><tr><td>Chen</td><td>3</td><td>2</td><td>6</td></tr></table>
-  <p><strong>Fan-out</strong>: after joining items, each order appears once per line, so <code>count(*)</code> counts lines. Use <code>COUNT(DISTINCT)</code>, or aggregate items per order in a CTE before joining.</p></div></details>
+  <p><strong>Fan-out</strong>: after joining items, each order appears once per line, so <code>count(*)</code> counts lines. Use <code>COUNT(DISTINCT)</code>, or aggregate items per order in a CTE before joining.</p>
+  <figure class="viz"><svg viewBox="0 0 600 150" width="600">
+    <defs><marker id="si-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <text x="0" y="14" font-size="11" class="tm">Asha's orders (2 rows)</text>
+    <rect x="0" y="24" width="120" height="30" rx="5" class="fb sb"/><text x="60" y="44" text-anchor="middle">order 100</text>
+    <rect x="0" y="84" width="120" height="30" rx="5" class="ft st"/><text x="60" y="104" text-anchor="middle">order 101</text>
+    <text x="200" y="14" font-size="11" class="tm">after JOIN order_items (3 rows)</text>
+    <rect x="200" y="24" width="190" height="26" rx="5" class="fb sb"/><text x="295" y="42" text-anchor="middle">100 · Laptop ×1</text>
+    <rect x="200" y="56" width="190" height="26" rx="5" class="fb sb"/><text x="295" y="74" text-anchor="middle">100 · Lamp ×2</text>
+    <rect x="200" y="88" width="190" height="26" rx="5" class="ft st"/><text x="295" y="106" text-anchor="middle">101 · Phone ×1</text>
+    <g stroke="currentColor"><line x1="120" y1="39" x2="198" y2="37" marker-end="url(#si-ar)"/><line x1="120" y1="39" x2="198" y2="69" marker-end="url(#si-ar)"/><line x1="120" y1="99" x2="198" y2="101" marker-end="url(#si-ar)"/></g>
+    <text x="410" y="42" class="tr">count(*) = 3 ✗</text>
+    <text x="410" y="74" class="tg">count(DISTINCT) = 2</text>
+    <text x="410" y="106">sum(qty) = 4 ✓</text>
+    <text x="0" y="140" font-size="11" class="tm">order 100 now appears twice: anything counted per order is inflated</text>
+  </svg><figcaption>Fan-out: a 1-row-per-order table joined to a 1-row-per-item table repeats each order once per line.</figcaption></figure></div></details>
 
   <details class="qa"><summary><span class="qmark">Q</span>List pairs of customers who live in the same city, each pair once.</summary><div class="qa-body">
   <div class="fx" data-lang="sql">SELECT a.name AS customer_1, b.name AS customer_2, a.city
@@ -308,7 +426,19 @@ SELECT user_id, min(login_date) AS streak_start, max(login_date) AS streak_end, 
 FROM g GROUP BY user_id, grp
 HAVING count(*) &gt;= 3 ORDER BY user_id;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>user_id</th><th>streak_start</th><th>streak_end</th><th>days</th></tr><tr><td>1</td><td>2024-07-01</td><td>2024-07-03</td><td>3</td></tr><tr><td>2</td><td>2024-07-08</td><td>2024-07-11</td><td>4</td></tr></table>
-  <p><strong>Gaps and islands</strong>: within a consecutive run, date and row number both rise by 1, so <code>date − row_number</code> is constant and labels the run. <code>DISTINCT</code> first: user 1's double login on 07-02 would break the trick.</p></div></details>
+  <figure class="viz"><svg viewBox="0 0 600 140" width="600">
+    <g font-size="11" class="tm"><text x="0" y="24">login_date</text><text x="0" y="56">row_number</text><text x="0" y="88">date − rn</text></g>
+    <g text-anchor="middle">
+      <rect x="100" y="8" width="84" height="88" rx="5" class="fb sb"/><rect x="190" y="8" width="84" height="88" rx="5" class="fb sb"/><rect x="280" y="8" width="84" height="88" rx="5" class="fb sb"/>
+      <rect x="410" y="8" width="84" height="88" rx="5" class="ft st"/><rect x="500" y="8" width="84" height="88" rx="5" class="ft st"/>
+      <text x="142" y="24">07-01</text><text x="232" y="24">07-02</text><text x="322" y="24">07-03</text><text x="452" y="24">07-05</text><text x="542" y="24">07-06</text>
+      <text x="142" y="56">1</text><text x="232" y="56">2</text><text x="322" y="56">3</text><text x="452" y="56">4</text><text x="542" y="56">5</text>
+      <text x="142" y="88" class="tb">06-30</text><text x="232" y="88" class="tb">06-30</text><text x="322" y="88" class="tb">06-30</text><text x="452" y="88" class="tg">07-01</text><text x="542" y="88" class="tg">07-01</text>
+      <text x="232" y="118" class="tb">island 1: 3 days ✓</text><text x="497" y="118" class="tg">island 2: 2 days</text>
+      <text x="387" y="56" class="tr">gap</text>
+    </g>
+  </svg><figcaption>User 1: both columns rise by 1 inside a run, so their difference is a constant label. The gap (07-04) bumps the label.</figcaption></figure>
+  <p><strong>Gaps and islands</strong>: <code>date − row_number</code> labels each run. <code>DISTINCT</code> first: user 1's double login on 07-02 would break the trick.</p></div></details>
 
   <details class="qa"><summary><span class="qmark">Q</span>7-day retention by weekly cohort: what % of users came back within 7 days of their first login?</summary><div class="qa-body">
   <div class="fx" data-lang="sql">WITH firsts AS (
@@ -331,7 +461,8 @@ FROM flagged GROUP BY 1 ORDER BY 1;</div>
   <div class="fx" data-lang="sql">SELECT name FROM employees
 WHERE emp_id NOT IN (SELECT manager_id FROM employees);</div>
   <table class="tbl out"><caption>Result (0 rows)</caption><tr><th>name</th></tr></table>
-  <p>Ravi's <code>manager_id</code> is NULL. <code>x NOT IN (1, 4, NULL)</code> means <code>x &lt;&gt; 1 AND x &lt;&gt; 4 AND x &lt;&gt; NULL</code>; the last part is UNKNOWN, so no row passes.</p>
+  <p>Ravi's <code>manager_id</code> is NULL, so the list is (1, 1, 1, 4, NULL):</p>
+  <div class="flow"><span>2 NOT IN (1, 4, NULL)</span><span>2 &lt;&gt; 1 AND 2 &lt;&gt; 4 AND 2 &lt;&gt; NULL</span><span>TRUE AND TRUE AND UNKNOWN</span><span>UNKNOWN → row dropped</span></div>
   <div class="fx" data-lang="sql">SELECT name FROM employees e
 WHERE NOT EXISTS (SELECT 1 FROM employees r WHERE r.manager_id = e.emp_id)
 ORDER BY e.emp_id;</div>
@@ -394,19 +525,8 @@ FROM customers;</div>
   <details class="qa"><summary><span class="qmark">Q</span>CHAR vs VARCHAR?</summary><div class="qa-body"><code>CHAR(n)</code> is fixed length, padded with spaces; <code>VARCHAR(n)</code> stores only what you give, up to n. Use CHAR only for truly fixed codes (country 'IN'). In PostgreSQL, <code>text</code> and <code>varchar</code> perform the same; CHAR is never faster.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Clustered vs non-clustered index?</summary><div class="qa-body">A <strong>clustered</strong> index <em>is</em> the table: rows are stored in key order, so only one per table (SQL Server, MySQL InnoDB's primary key). A <strong>non-clustered</strong> index is a separate structure pointing to the rows; you can have many. PostgreSQL tables are heaps, so every index is non-clustered (<code>CLUSTER</code> reorders once, not maintained).</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Primary key vs unique key?</summary><div class="qa-body">Both enforce uniqueness with an index. A primary key is one per table, implies NOT NULL, and is the row's identity that foreign keys point to. A table can have many unique keys, and they allow NULLs (in PostgreSQL, multiple NULLs, since NULL ≠ NULL).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>In what order does SQL evaluate a query? Can you use a SELECT alias in WHERE?</summary><div class="qa-body">Logically: <code>FROM/JOIN → WHERE → GROUP BY → HAVING → SELECT → DISTINCT → ORDER BY → LIMIT</code>. So a SELECT alias doesn't exist yet in <code>WHERE</code> (error), but works in <code>ORDER BY</code>. Window functions run at the SELECT stage, which is why you filter them in an outer query.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>In what order does SQL evaluate a query? Can you use a SELECT alias in WHERE?</summary><div class="qa-body"><div class="flow"><span>FROM / JOIN</span><span>WHERE</span><span>GROUP BY</span><span>HAVING</span><span>SELECT</span><span>DISTINCT</span><span>ORDER BY</span><span>LIMIT</span></div>So a SELECT alias doesn't exist yet in <code>WHERE</code> (error), but works in <code>ORDER BY</code>. Window functions run at the SELECT stage, which is why you filter them in an outer query.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>IN vs EXISTS vs JOIN for "customers who ordered"?</summary><div class="qa-body">All give Asha, Ben, Chen, and modern planners often produce the same plan. <code>EXISTS</code> stops at the first match and is NULL-safe in the negated form. A plain <code>JOIN</code> returns a customer once <em>per order</em>, so it needs <code>DISTINCT</code>: a classic duplicate bug.</div></details>
 
-  <h2 id="si-rev"><span class="num">09</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Top-N per group</strong>: rank in a CTE (<code>ROW_NUMBER</code> / <code>DENSE_RANK</code> <code>PARTITION BY</code>), filter outside.</li>
-    <li><strong>Anti-join</strong> ("never did X"): <code>NOT EXISTS</code> or <code>LEFT JOIN … IS NULL</code>, never <code>NOT IN</code> on a nullable column.</li>
-    <li><strong>Keep zero rows</strong>: LEFT JOIN, filters on the right table in <code>ON</code>, <code>COALESCE(SUM, 0)</code>.</li>
-    <li><strong>Avoid fan-out</strong>: aggregate each table to the target grain before joining, or <code>COUNT(DISTINCT)</code>.</li>
-    <li><strong>Share of total</strong>: <code>x / SUM(x) OVER ()</code>, times <code>100.0</code>.</li>
-    <li><strong>Change over time</strong>: <code>LAG</code> for previous period, <code>SUM() OVER (ORDER BY)</code> for running totals; fill gaps with <code>generate_series</code>.</li>
-    <li><strong>Pivot</strong>: <code>SUM(CASE WHEN … THEN x ELSE 0 END)</code> per column.</li>
-    <li><strong>Streaks</strong>: <code>date − ROW_NUMBER()</code> labels each consecutive run (gaps and islands).</li>
-  </ol></div>
 </main>`
 });

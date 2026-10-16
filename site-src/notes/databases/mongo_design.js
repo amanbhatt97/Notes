@@ -4,6 +4,106 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Schema Design, Indexes &amp; Scaling</h1>
   <p class="lead">In MongoDB, the shape of your documents decides your performance. This page covers how to model data, which indexes to build, and how replica sets and sharding keep it available and scalable.</p>
 
+  <h2 id="md-map" class="open"><span class="num">★</span>Mind Map</h2>
+<div class="mindmap">
+  <div class="mm-center">Mongo Schema, Indexes &amp; Scaling</div>
+  <div class="mm-branches">
+    <div class="mm-branch">
+      <div class="mm-title">Embed vs reference</div>
+      <ul>
+        <li><b>Core rule</b> — accessed together → stored together; model around queries</li>
+        <li><b>Embed</b> — 1:few, always read with parent, snapshots (items, price at purchase)</li>
+        <li><b>Reference</b> — store the other <code>_id</code>; nothing enforces it</li>
+        <li><b>1:many</b> → reference or embed a subset; <b>1:squillions</b> → child holds parent id</li>
+        <li><b>M:N</b> → array of ids on one/both sides</li>
+        <li>⚠ <b>Unbounded arrays</b> — 16 MB cap, growing rewrites, huge indexes</li>
+        <li>💡 recipe card lists ingredients, says "see aisle 4" for prices</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Design patterns</div>
+      <ul>
+        <li><b>Extended reference</b> — copy the few fields you always show (customer name) → no $lookup</li>
+        <li><b>Subset</b> — embed 10 newest reviews; rest in own collection</li>
+        <li><b>Computed</b> — store <code>total</code>, update on write</li>
+        <li><b>Bucket</b> — one doc per sensor per hour; time-series collections do it for you</li>
+        <li><b>Outlier</b> — design for typical; flag <code>has_overflow</code> for the huge one</li>
+        <li><b>Trade-off</b> — duplicated fields: fast reads, many-doc updates; duplicate rarely-changing data</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Schema validation</div>
+      <ul>
+        <li><b>Why</b> — typo <code>stauts</code> silently creates a new field</li>
+        <li><b>$jsonSchema</b> — <code>required</code>, <code>bsonType</code>, <code>enum</code>, <code>minimum</code>, <code>minItems</code></li>
+        <li><b>validationAction</b> — <code>"error"</code> rejects, <code>"warn"</code> logs</li>
+        <li>⚠ mongosh <code>1</code> is a double → use <code>"number"</code>, not <code>"int"</code></li>
+        <li>⚠ Existing docs not re-checked</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Indexes</div>
+      <ul>
+        <li><b>Single / compound</b> — compound used by a <em>prefix</em> of its fields</li>
+        <li><b>ESR</b> — Equality, then Sort, then Range: no in-memory sort</li>
+        <li><b>Multikey</b> — on arrays, entry per element; max one array field per compound</li>
+        <li><b>TTL</b> — <code>expireAfterSeconds</code>; deleter runs ~every 60 s</li>
+        <li><b>Unique</b> — missing field = null; only one doc may lack it (use partial)</li>
+        <li><b>Text</b> — one per collection; Atlas Search for real search</li>
+        <li>⚠ <b>Cost</b> — slower writes, RAM; drop unused (<code>$indexStats</code>); no boolean-only index</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">explain()</div>
+      <ul>
+        <li><b>explain("executionStats")</b></li>
+        <li><b>IXSCAN</b> (+FETCH) good · <b>COLLSCAN</b> = every doc</li>
+        <li><b>totalDocsExamined ≈ nReturned</b> — good selectivity</li>
+        <li><b>SORT stage</b> = in-memory sort → fix index order (ESR)</li>
+        <li><b>Docs examined 0</b> = covered query</li>
+        <li>⚠ <code>/lamp/i</code>, <code>$ne</code>, <code>$nin</code> can't use indexes well</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Replica sets</div>
+      <ul>
+        <li><b>Primary</b> takes writes; <b>secondaries</b> copy its oplog</li>
+        <li><b>Failover</b> — ~10 s no heartbeat → election; drivers retry</li>
+        <li><b>Odd voters</b> (3) so a majority exists</li>
+        <li><b>w: 1</b> fast, may roll back · <b>w: "majority"</b> survives failover (default 5.0+) · <b>j: true</b> journaled</li>
+        <li><b>readPreference</b> — primary (default) vs secondary/nearest (stale)</li>
+        <li>⚠ <b>Read-your-writes</b> — read primary or causally consistent session</li>
+        <li><b>Gives</b> availability + read scale, not write scale</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Sharding</div>
+      <ul>
+        <li><b>What</b> — split a collection across replica sets by a shard key; scales writes + storage</li>
+        <li><b>Parts</b> — mongos router, config servers, shards; chunks moved by balancer</li>
+        <li><b>Targeted</b> (key in query) vs <b>scatter-gather</b> (all shards)</li>
+        <li><b>Ranged</b> — good range queries, hot shard on monotonic keys · <b>Hashed</b> — even, ranges scatter</li>
+        <li><b>Good key</b> — high cardinality, even frequency, not monotonic, in most queries</li>
+        <li>⚠ <b>ObjectId / date</b> ranged key → all inserts on one shard; use <code>{ customer_id, order_date }</code></li>
+        <li><b>Resharding</b> (5.0+) copies everything; shard only when needed</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Transactions &amp; vs JSONB</div>
+      <ul>
+        <li><b>Single doc</b> — always atomic</li>
+        <li><b>Multi-doc</b> — 4.0 replica sets, 4.2 sharded; <code>startTransaction / commitTransaction</code></li>
+        <li><b>Cost</b> — latency, cache pressure, 60 s limit, ~1,000 docs, 2PC across shards</li>
+        <li><b>TransientTransactionError</b> → retry (<code>withTransaction</code>)</li>
+        <li><b>Many txns?</b> schema fights workload, or it's relational</li>
+        <li><b>PG + JSONB</b> — mostly relational + flexible attrs, one DB; GIN index</li>
+        <li><b>MongoDB</b> — docs are the model, built-in write scale-out, in-place partial updates</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -16,8 +116,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="md-shard"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Sharding</span><span class="rm-sub">Choosing the shard key</span></div></div>
       <div class="rm-item rm-done" data-target="md-txn"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Transactions</span><span class="rm-sub">Possible, but not free</span></div></div>
       <div class="rm-item rm-done" data-target="md-pg"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">MongoDB vs JSONB</span><span class="rm-sub">Do you need Mongo at all?</span></div></div>
-      <div class="rm-item rm-done" data-target="md-rev"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="md-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="md-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
@@ -30,8 +129,27 @@ Object.assign(TOPIC_CONTENT, {
     <li><strong>Reference</strong>: store the other document's <code>_id</code> (order holds <code>customer_id</code>). Like a foreign key, but nothing enforces it.</li>
   </ul>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A recipe card lists its ingredients right on the card (embed). It doesn't copy the whole supermarket's price list; it just says "see aisle 4" (reference).</p>
+    <p>A recipe card lists its ingredients right on the card (embed). For prices it just says "see aisle 4" (reference).</p>
   </div>
+  <figure class="viz"><svg viewBox="0 0 600 170" width="600">
+    <defs><marker id="md-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="0" y="20" width="200" height="130" rx="6" class="fb sb"/>
+    <text x="10" y="40" font-weight="bold">order 100</text><text x="10" y="58" font-size="11">customer_id: 1</text>
+    <rect x="10" y="70" width="180" height="70" rx="4" class="ft st"/>
+    <text x="20" y="88" font-size="11">items (embedded)</text><text x="20" y="106" font-size="11" class="tm">Laptop · 1 · 800</text><text x="20" y="124" font-size="11" class="tm">Lamp · 2 · 40</text>
+    <text x="100" y="166" text-anchor="middle" font-size="10" class="tg">1:few, read together, snapshot</text>
+    <rect x="260" y="20" width="140" height="56" rx="6" class="fv"/><text x="330" y="44" text-anchor="middle" font-weight="bold">customer 1</text><text x="330" y="62" text-anchor="middle" font-size="11" class="tm">Asha, Mumbai</text>
+    <path d="M110,58 C160,58 200,48 258,48" fill="none" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#md-ar)"/>
+    <text x="214" y="38" text-anchor="middle" font-size="10" class="tm">reference</text>
+    <g font-size="11">
+      <rect x="440" y="10" width="150" height="24" rx="4" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="450" y="26">click · cust 1</text>
+      <rect x="440" y="40" width="150" height="24" rx="4" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="450" y="56">click · cust 1</text>
+      <rect x="440" y="70" width="150" height="24" rx="4" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="450" y="86">click · cust 1</text>
+      <text x="515" y="112" text-anchor="middle" class="tm">… millions</text>
+    </g>
+    <g stroke="currentColor" stroke-dasharray="4 3"><line x1="440" y1="22" x2="402" y2="40" marker-end="url(#md-ar)"/><line x1="440" y1="82" x2="402" y2="62" marker-end="url(#md-ar)"/></g>
+    <text x="330" y="132" text-anchor="middle" font-size="10" class="tm">1:squillions: the child points at</text><text x="330" y="146" text-anchor="middle" font-size="10" class="tm">the parent, never an array in it</text>
+  </svg><figcaption>Embed what is small and read together; reference what is shared, big, or unbounded.</figcaption></figure>
   <table class="tbl">
     <tr><th>Situation</th><th>Choose</th><th>Shop example</th></tr>
     <tr><td><strong>1 : few</strong>, always read with the parent</td><td>Embed</td><td>Items in an order; addresses in a customer</td></tr>
@@ -133,11 +251,23 @@ db.orders.createIndex({ status: 1, customer_id: 1, order_date: 1 })</div>
   </div>
 
   <h2 id="md-repl"><span class="num">06</span>Replica Sets</h2>
-  <p>A <strong>replica set</strong> is a group of servers holding the same data: one <strong>primary</strong> takes all writes; <strong>secondaries</strong> copy its operation log (oplog) and can serve reads.</p>
-  <div class="flow"><span>App writes</span><span>Primary</span><span>Oplog</span><span>Secondary 1, 2</span></div>
+  <p>A <strong>replica set</strong>: servers holding the same data. One <strong>primary</strong> takes all writes; <strong>secondaries</strong> copy its operation log (oplog) and can serve reads.</p>
+  <figure class="viz"><svg viewBox="0 0 600 170" width="600">
+    <defs><marker id="md-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="0" y="60" width="90" height="40" rx="6" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="45" y="85" text-anchor="middle">App</text>
+    <line x1="90" y1="80" x2="168" y2="80" stroke="currentColor" marker-end="url(#md-ar2)"/><text x="129" y="72" text-anchor="middle" font-size="10" class="tm">writes</text>
+    <rect x="170" y="54" width="130" height="52" rx="8" class="fb sb"/><text x="235" y="76" text-anchor="middle" font-weight="bold">Primary</text><text x="235" y="94" text-anchor="middle" font-size="10" class="tm">oplog</text>
+    <rect x="370" y="8" width="130" height="44" rx="8" class="ft st"/><text x="435" y="35" text-anchor="middle">Secondary 1</text>
+    <rect x="370" y="108" width="130" height="44" rx="8" class="ft st"/><text x="435" y="135" text-anchor="middle">Secondary 2</text>
+    <line x1="300" y1="68" x2="368" y2="34" stroke="currentColor" marker-end="url(#md-ar2)"/><line x1="300" y1="92" x2="368" y2="126" stroke="currentColor" marker-end="url(#md-ar2)"/>
+    <text x="228" y="42" font-size="10" class="tm">copy oplog</text>
+    <line x1="435" y1="52" x2="435" y2="106" class="sr" stroke-dasharray="3 3"/><text x="443" y="76" font-size="10" class="tr">primary lost</text><text x="443" y="90" font-size="10" class="tr">~10 s → elect</text>
+    <text x="100" y="134" font-size="10" class="tg">w: "majority" = ack after 2 of 3</text>
+    <text x="100" y="150" font-size="10" class="tm">w: 1 = ack after primary only</text>
+  </svg><figcaption>3 voters: one primary takes writes, two secondaries replay its oplog and can take over.</figcaption></figure>
   <ul>
-    <li><strong>Automatic failover</strong>: if the primary is unreachable for ~10 s, secondaries hold an election and one becomes primary. Drivers retry and reconnect.</li>
-    <li>Use an <strong>odd number</strong> of voters (usually 3) so a majority can always be formed.</li>
+    <li><strong>Automatic failover</strong>: drivers retry and reconnect to the new primary.</li>
+    <li><strong>Odd number</strong> of voters (usually 3) so a majority can always form.</li>
   </ul>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>One head chef (primary) decides every dish; sous-chefs copy their notebook. If the head chef collapses, the kitchen votes a sous-chef in. A dish the head chef wrote but no one copied yet may be lost.</p>
@@ -158,11 +288,22 @@ db.orders.createIndex({ status: 1, customer_id: 1, order_date: 1 })</div>
 
   <h2 id="md-shard"><span class="num">07</span>Sharding</h2>
   <p><strong>Sharding</strong> splits one collection across several replica sets (shards) by a <strong>shard key</strong>. It scales writes and storage beyond one machine.</p>
-  <div class="flow"><span>App</span><span>mongos router</span><span>config servers (key ranges)</span><span>Shard A / B / C</span></div>
-  <ul>
-    <li>Data is split into <strong>chunks</strong> (key ranges); a balancer moves chunks to even out shards.</li>
-    <li>A query that includes the shard key is <strong>targeted</strong> to one shard. Without it, it's <strong>scatter-gather</strong>: sent to every shard.</li>
-  </ul>
+  <figure class="viz"><svg viewBox="0 0 600 190" width="600">
+    <defs><marker id="md-ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="0" y="16" width="80" height="36" rx="6" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="40" y="39" text-anchor="middle">App</text>
+    <line x1="80" y1="34" x2="198" y2="34" stroke="currentColor" marker-end="url(#md-ar3)"/>
+    <rect x="200" y="12" width="140" height="44" rx="8" class="fb sb"/><text x="270" y="38" text-anchor="middle" font-weight="bold">mongos</text>
+    <rect x="400" y="12" width="190" height="44" rx="8" class="fv"/><text x="495" y="31" text-anchor="middle">config servers</text><text x="495" y="47" text-anchor="middle" font-size="10" class="tm">which chunk lives where</text>
+    <line x1="340" y1="34" x2="398" y2="34" stroke="currentColor" stroke-dasharray="3 3"/>
+    <rect x="10" y="120" width="170" height="54" rx="8" class="ft st"/><text x="95" y="142" text-anchor="middle">Shard A</text><text x="95" y="162" text-anchor="middle" font-size="10" class="tm">cust 1–33k</text>
+    <rect x="215" y="120" width="170" height="54" rx="8" class="ft st"/><text x="300" y="142" text-anchor="middle">Shard B</text><text x="300" y="162" text-anchor="middle" font-size="10" class="tm">cust 33k–66k</text>
+    <rect x="420" y="120" width="170" height="54" rx="8" class="ft st"/><text x="505" y="142" text-anchor="middle">Shard C</text><text x="505" y="162" text-anchor="middle" font-size="10" class="tm">cust 66k–100k</text>
+    <line x1="250" y1="56" x2="110" y2="118" class="sg" stroke-width="2" marker-end="url(#md-ar3)"/>
+    <text x="170" y="76" text-anchor="end" font-size="10" class="tg">customer_id: 42 → targeted</text>
+    <g class="sr" stroke-dasharray="4 3"><line x1="300" y1="56" x2="300" y2="118" marker-end="url(#md-ar3)"/><line x1="310" y1="56" x2="490" y2="118" marker-end="url(#md-ar3)"/></g>
+    <text x="410" y="84" font-size="10" class="tr">no key → scatter-gather</text>
+  </svg><figcaption>Each shard is itself a replica set. Queries carrying the shard key go to one shard; others go to all.</figcaption></figure>
+  <p>Data is split into <strong>chunks</strong> (key ranges); a balancer moves chunks to even out shards.</p>
   <table class="tbl">
     <tr><th></th><th>Ranged key</th><th>Hashed key</th></tr>
     <tr><td>Placement</td><td>Nearby values on the same shard</td><td>Hash of the value spreads docs randomly</td></tr>
@@ -171,8 +312,18 @@ db.orders.createIndex({ status: 1, customer_id: 1, order_date: 1 })</div>
   </table>
   <p>A good shard key has <strong>high cardinality</strong> (many distinct values), <strong>even frequency</strong> (no single value dominates), is <strong>not monotonic</strong>, and appears in most queries.</p>
   <div class="callout trap"><span class="label">Trap: monotonically increasing keys</span>
-    <p>Sharding on <code>order_date</code> or an ObjectId: every new insert has the largest value, so all writes go to the one shard owning the top range. That shard is <strong>hot</strong>; the rest sit idle. Use a hashed key or a compound key like <code>{ customer_id: 1, order_date: 1 }</code>.</p>
+    <p>Sharding on <code>order_date</code> or an ObjectId sends every insert to the shard owning the top range. Use a hashed key or a compound key like <code>{ customer_id: 1, order_date: 1 }</code>.</p>
   </div>
+  <figure class="viz"><svg viewBox="0 0 600 120" width="600">
+    <text x="0" y="14" font-size="11" font-weight="bold">ranged on order_date / ObjectId</text>
+    <g><rect x="0" y="62" width="50" height="8" class="fs"/><rect x="60" y="62" width="50" height="8" class="fs"/><rect x="120" y="22" width="50" height="48" class="fr sr"/></g>
+    <g font-size="10" class="tm" text-anchor="middle"><text x="25" y="86">A</text><text x="85" y="86">B</text><text x="145" y="86">C</text></g>
+    <text x="0" y="106" font-size="10" class="tr">every new insert has the max key → one hot shard</text>
+    <text x="330" y="14" font-size="11" font-weight="bold">hashed / { customer_id, order_date }</text>
+    <g><rect x="330" y="38" width="50" height="32" class="fg sg"/><rect x="390" y="40" width="50" height="30" class="fg sg"/><rect x="450" y="36" width="50" height="34" class="fg sg"/></g>
+    <g font-size="10" class="tm" text-anchor="middle"><text x="355" y="86">A</text><text x="415" y="86">B</text><text x="475" y="86">C</text></g>
+    <text x="330" y="106" font-size="10" class="tg">writes spread evenly</text>
+  </svg><figcaption>Insert load per shard. A monotonic key funnels all writes into the shard owning the top range.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Filing cabinets split by surname letter. Splitting by "date joined" means every new file goes in the last cabinet, and one clerk does all the work.</p>
   </div>
@@ -213,21 +364,7 @@ WHERE doc -&gt; 'items' @&gt; '[{"product": "Lamp"}]';   -- GIN-indexable contai
     <tr><td>One database for the team to run, already on Postgres</td><td>PostgreSQL + JSONB</td></tr>
   </table>
 
-  <h2 id="md-rev"><span class="num">10</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Accessed together → stored together.</strong> Model around queries.</li>
-    <li>Embed 1:few and snapshots; reference 1:many read separately and 1:squillions. Never unbounded arrays (16 MB cap).</li>
-    <li>Patterns: extended reference, subset, computed, bucket, outlier.</li>
-    <li><code>$jsonSchema</code> validator enforces required fields, types and enums on write.</li>
-    <li>Compound index field order: <strong>Equality, Sort, Range</strong>; queries use a prefix.</li>
-    <li>Multikey = index on array; TTL auto-expires; unique enforces no duplicates.</li>
-    <li><code>explain("executionStats")</code>: want IXSCAN, docs examined ≈ returned, no in-memory SORT.</li>
-    <li>Replica set = primary + secondaries, auto failover; <code>w: "majority"</code> survives it; secondary reads can be stale.</li>
-    <li>Shard key: high cardinality, even, non-monotonic, in queries; hashed for even writes, ranged for range queries.</li>
-    <li>Multi-doc transactions work but cost; prefer single-document atomicity.</li>
-  </ol></div>
-
-  <h2 id="md-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <h2 id="md-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>Should a customer's orders be embedded in the customer document?</summary><div class="qa-body">No. Orders grow without bound (16 MB limit, ever-larger rewrites) and are often queried on their own. Store orders separately with <code>customer_id</code>. Embed the order's items in the order instead: few, always read together, a snapshot in time.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>An order page always shows the customer's name. How do you avoid a <code>$lookup</code> on every view?</summary><div class="qa-body">Extended reference: store <code>customer: { _id: 1, name: "Asha" }</code> in the order. If the name changes, update the copies with <code>updateMany</code>; acceptable because names rarely change.</div></details>

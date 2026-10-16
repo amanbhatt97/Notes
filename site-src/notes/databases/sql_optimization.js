@@ -4,6 +4,106 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Indexes &amp; Performance</h1>
   <p class="lead">Why a query is slow, how an index makes it fast, and how to read the plan that proves it. Every plan below is real PostgreSQL 16 output on a 2-million-row table.</p>
 
+  <h2 id="so-map" class="open"><span class="num">★</span>Mind Map</h2>
+<div class="mindmap">
+  <div class="mm-center">Indexes &amp; Performance</div>
+  <div class="mm-branches">
+    <div class="mm-branch">
+      <div class="mm-title">Why queries are slow</div>
+      <ul>
+        <li><b>Cost = pages read</b> (8 KB each), not rows returned</li>
+        <li><b>Seq Scan</b> — read every page, test every row; 2M rows = 16,576 pages, 116 ms</li>
+        <li><b>Index</b> — sorted values + pointers to rows; 💡 the index at the back of a textbook</li>
+        <li><b>With index</b> — 25 pages, 0.24 ms (~480× faster)</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">B-tree (default index)</div>
+      <ul>
+        <li><b>Sorted + balanced</b> — every leaf same depth, every lookup same cost</li>
+        <li><b>O(log n)</b> — hundreds of keys/page → 3–4 levels for millions of rows</li>
+        <li><b>Linked leaves</b> — ranges, <code>ORDER BY</code>, prefix <code>LIKE 'abc%'</code> walk along</li>
+        <li><b>Serves</b> — <code>= &lt; &gt; BETWEEN</code>, sort, min/max</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">EXPLAIN</div>
+      <ul>
+        <li><b>EXPLAIN</b> — the chosen plan + estimates only</li>
+        <li><b>EXPLAIN ANALYZE</b> — actually runs it: real time, rows, loops</li>
+        <li><b>BUFFERS</b> — pages touched (hit = cache, read = disk)</li>
+        <li>⚠ <b>Runs writes</b> — wrap UPDATE/DELETE in <code>BEGIN … ROLLBACK</code></li>
+        <li><b>Read inside-out</b> — most-indented node runs first</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Designing the index</div>
+      <ul>
+        <li><b>Composite (a, b)</b> — sorted by a, then b within ties; 💡 phone book (last, first)</li>
+        <li><b>Leftmost prefix</b> — serves a, a+b; not b alone
+          <ul><li>(a, b) makes (a) redundant; (b) is not</li></ul></li>
+        <li><b>Column order</b> — equality columns first, range column last</li>
+        <li><b>Covering</b> — <code>INCLUDE (cols)</code> → Index Only Scan, no heap visit
+          <ul><li>⚠ needs a vacuumed table, else Heap Fetches stay high</li></ul></li>
+        <li><b>Partial</b> — <code>... WHERE status = 'pending'</code>: 3 MB vs 43 MB</li>
+        <li><b>Expression</b> — <code>ON (lower(email))</code>; query must use the same expression</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Other index types</div>
+      <ul>
+        <li><b>Hash</b> — only <code>=</code>; rarely beats B-tree</li>
+        <li><b>GIN</b> — inverted: JSONB, arrays, full-text, trigrams (<code>@&gt;</code>, <code>@@</code>)</li>
+        <li><b>GiST</b> — overlap / nearest: geo, ranges, bookings</li>
+        <li><b>BRIN</b> — min/max per block range; 24 kB vs 43 MB on time-ordered data
+          <ul><li>💡 date labels on archive boxes; useless if rows are shuffled</li></ul></li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Cost of indexes</div>
+      <ul>
+        <li><b>Slower writes</b> — 500k inserts: 0.49 s (0 idx) → 9.45 s (6 idx)</li>
+        <li><b>Space</b> — 6 indexes ≈ 210 MB on a 130 MB table</li>
+        <li><b>Unused</b> — <code>pg_stat_user_indexes</code> where <code>idx_scan = 0</code> → drop</li>
+        <li><b>Rule</b> — index hot filters/joins/sorts; bulk load → drop, load, rebuild</li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Sargability</div>
+      <ul>
+        <li><b>Sargable</b> — index usable; keep the column <em>bare</em>, work on the constant</li>
+        <li>⚠ <b>Function</b> — <code>date(ts) = d</code> → <code>ts &gt;= d AND ts &lt; d+1</code> (172 → 0.4 ms)</li>
+        <li>⚠ <b>Leading %</b> — <code>LIKE '%x'</code> → anchor start or trigram GIN</li>
+        <li>⚠ <b>Implicit cast</b> — <code>int_col = 4242.0</code> casts every row</li>
+        <li>⚠ <b>OR</b> — one unindexed branch → Seq Scan; index both (BitmapOr) or UNION</li>
+        <li>⚠ <b>Collation</b> — prefix LIKE needs "C" or <code>text_pattern_ops</code></li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">Reading a plan</div>
+      <ul>
+        <li><b>Scans</b> — Seq, Index, Index Only, Bitmap Heap (medium counts, AND/OR of indexes)</li>
+        <li><b>Joins</b> — Nested Loop (small outer + indexed inner), Hash (big equality), Merge (both sorted)</li>
+        <li><b>Debug</b> — find node where estimate vs actual differ ≥ 10× → <code>ANALYZE</code></li>
+        <li><b>Index ignored</b> — low selectivity (90% rows), stale stats, non-sargable, tiny table</li>
+        <li><b>Correlated cols</b> — <code>CREATE STATISTICS</code></li>
+      </ul>
+    </div>
+    <div class="mm-branch">
+      <div class="mm-title">App patterns &amp; scale</div>
+      <ul>
+        <li><b>OFFSET</b> — reads + discards n rows (266 ms deep)</li>
+        <li><b>Keyset</b> — <code>WHERE id &gt; :last ORDER BY id LIMIT 20</code> (0.03 ms); 💡 bookmark
+          <ul><li>tie-breaker: <code>(ts, id) &gt; (:ts, :id)</code>; no "jump to page 500"</li></ul></li>
+        <li><b>N+1</b> — 1 query + 1 per parent; fix: JOIN / <code>ANY(:ids)</code> / eager loading</li>
+        <li><b>Partitioning</b> — split by date; pruning + cheap <code>DROP</code> retention; hurts without key</li>
+        <li><b>Column store</b> — reads only needed columns (OLAP); ⚠ <code>SELECT *</code> costs bytes</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -17,8 +117,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="so-plan"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Reading a Plan</span><span class="rm-sub">Nodes, estimates, ignored indexes</span></div></div>
       <div class="rm-item rm-done" data-target="so-patterns"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Pagination &amp; N+1</span><span class="rm-sub">Two app-side performance killers</span></div></div>
       <div class="rm-item rm-done" data-target="so-scale"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Partitioning &amp; Column Stores</span><span class="rm-sub">When the table gets huge</span></div></div>
-      <div class="rm-item rm-done" data-target="so-rev"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="so-qa"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="so-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
@@ -32,24 +131,45 @@ SELECT g AS order_id,
             WHEN random() &lt; 0.7  THEN 'pending' ELSE 'cancelled' END AS status,
        round((random()*1000)::numeric, 2)             AS amount
 FROM generate_series(1, 2000000) g;               -- 130 MB, 16,576 pages</div>
-  <p>Without an index, "find customer 4242's orders" is a <strong>full table scan</strong> (Seq Scan): read every 8 KB page, test every row, keep 22 of 2,000,000. Cost is mostly <strong>pages read</strong>, not rows returned.</p>
+  <div class="flow"><span>No index</span><span>Seq Scan: read all 16,576 pages</span><span>test 2M rows</span><span>keep 22</span></div>
+  <p>Cost is <strong>pages read</strong>, not rows returned.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Finding "photosynthesis" in a textbook with no index: you read all 600 pages. The index at the back says "p. 212", and you read one page. A database index is exactly that: a sorted list of values with pointers to where the rows live.</p>
+    <p>A textbook with no index: read all 600 pages. The index says "p. 212": read one. A database index is that sorted list of values with pointers to rows.</p>
   </div>
 
   <h2 id="so-btree"><span class="num">02</span>How a B-tree Index Works</h2>
-  <p>A <strong>B-tree</strong>, the default index, keeps column values <strong>sorted</strong> in a short, wide, <strong>balanced</strong> tree of pages. Leaves point to row locations.</p>
-  <div class="fx" data-lang="text">                  [ 30000 | 60000 ]                   root: 1 page
-           /              |               &#92;
-   [10k|20k]         [40k|50k]          [70k|85k]      internal pages
-      ...           /    |    &#92;            ...
-            [4200..4250] ⇄ [4251..4300] ⇄ ...          leaves, linked in order
-             4242 → (page 812, row 5)                  pointer into the table</div>
-  <ul>
-    <li><strong>Lookup</strong>: go root → leaf, one page per level. Each page holds hundreds of keys, so 2M rows need only 3–4 levels: <strong>O(log n)</strong>.</li>
-    <li><strong>Balanced</strong>: every leaf is the same depth, so every lookup costs the same.</li>
-    <li><strong>Sorted + linked leaves</strong>: ranges (<code>BETWEEN</code>, <code>&gt;</code>), <code>ORDER BY</code> and prefix <code>LIKE 'abc%'</code> just walk along the leaves.</li>
-  </ul>
+  <p>A <strong>B-tree</strong> (the default index) keeps values <strong>sorted</strong> in a short, wide, <strong>balanced</strong> tree of pages.</p>
+  <figure class="viz"><svg viewBox="0 0 600 236" width="600">
+    <defs><marker id="so-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <g stroke="currentColor" fill="none" opacity=".45">
+      <line x1="300" y1="38" x2="360" y2="70"/><line x1="300" y1="38" x2="525" y2="70"/>
+      <line x1="135" y1="98" x2="290" y2="130"/><line x1="135" y1="98" x2="405" y2="130"/>
+      <line x1="360" y1="98" x2="520" y2="130"/>
+    </g>
+    <g stroke-width="2" class="sb" fill="none"><line x1="300" y1="38" x2="135" y2="70"/><line x1="135" y1="98" x2="60" y2="130"/><line x1="135" y1="98" x2="175" y2="130"/></g>
+    <rect x="240" y="10" width="120" height="28" rx="5" class="fb sb"/><text x="300" y="29" text-anchor="middle">30k | 60k</text>
+    <rect x="80" y="70" width="110" height="28" rx="5" class="fb sb"/><text x="135" y="89" text-anchor="middle">10k | 20k</text>
+    <rect x="305" y="70" width="110" height="28" rx="5" class="fs"/><text x="360" y="89" text-anchor="middle">40k | 50k</text>
+    <rect x="470" y="70" width="110" height="28" rx="5" class="fs"/><text x="525" y="89" text-anchor="middle">70k | 85k</text>
+    <rect x="10" y="130" width="100" height="28" rx="5" class="fs"/><text x="60" y="149" text-anchor="middle">1‥4199</text>
+    <rect x="125" y="130" width="100" height="28" rx="5" class="ft st"/><text x="175" y="149" text-anchor="middle" font-weight="bold">4200‥4250</text>
+    <rect x="240" y="130" width="100" height="28" rx="5" class="fs"/><text x="290" y="149" text-anchor="middle">4251‥4300</text>
+    <rect x="355" y="130" width="100" height="28" rx="5" class="fs"/><text x="405" y="149" text-anchor="middle">…</text>
+    <rect x="470" y="130" width="100" height="28" rx="5" class="fs"/><text x="520" y="149" text-anchor="middle">85k‥2M</text>
+    <g stroke="currentColor" opacity=".6"><line x1="110" y1="144" x2="125" y2="144"/><line x1="225" y1="144" x2="240" y2="144"/><line x1="340" y1="144" x2="355" y2="144"/><line x1="455" y1="144" x2="470" y2="144"/></g>
+    <line x1="175" y1="158" x2="175" y2="190" stroke="currentColor" marker-end="url(#so-ar)"/>
+    <text x="183" y="179" font-size="11" class="tb">4242 → ctid</text>
+    <rect x="95" y="192" width="200" height="30" rx="5" class="fg sg"/><text x="195" y="212" text-anchor="middle">table page 812, row 5</text>
+    <text x="372" y="29" font-size="11" class="tm">root: 1 page</text>
+    <text x="196" y="89" font-size="11" class="tm">internal</text>
+    <text x="330" y="182" font-size="11" class="tm">leaves: sorted, linked ⇄</text>
+    <text x="330" y="198" font-size="11" class="tm">→ ranges &amp; ORDER BY walk along</text>
+  </svg><figcaption>Looking up 4242: one page per level (blue path), then one jump into the table. 2M rows = 3–4 levels.</figcaption></figure>
+  <div class="cards">
+    <div><b>O(log n) lookup</b><p>Hundreds of keys per page → 3–4 levels.</p></div>
+    <div><b>Balanced</b><p>Every leaf same depth → same cost.</p></div>
+    <div><b>Linked leaves</b><p><code>BETWEEN</code>, <code>ORDER BY</code>, <code>LIKE 'abc%'</code> walk along.</p></div>
+  </div>
 
   <h2 id="so-before"><span class="num">03</span>Before / After: EXPLAIN ANALYZE</h2>
   <p><code>EXPLAIN</code> shows the plan the optimizer chose. <code>EXPLAIN ANALYZE</code> also <em>runs</em> it and adds real times and row counts. <code>BUFFERS</code> adds pages touched.</p>
@@ -77,7 +197,34 @@ Execution Time: 0.243 ms</div>
 
   <h2 id="so-design"><span class="num">04</span>Designing the Right Index</h2>
   <h3>Composite indexes and the leftmost-prefix rule</h3>
-  <p>A <strong>composite index</strong> sorts by several columns: first by column 1, then by column 2 within ties.</p>
+  <p>A <strong>composite index</strong> sorts by column 1, then by column 2 within ties.</p>
+  <figure class="viz"><svg viewBox="0 0 600 150" width="600">
+    <text x="0" y="14" font-size="11" class="tm">index (customer_id, created_at), in its sorted order:</text>
+    <g font-size="11" text-anchor="middle">
+      <rect x="0" y="22" width="64" height="34" class="fs" stroke="currentColor" stroke-opacity=".3"/><text x="32" y="36">4241</text><text x="32" y="50" class="tm">Jan</text>
+      <rect x="66" y="22" width="64" height="34" class="fs" stroke="currentColor" stroke-opacity=".3"/><text x="98" y="36">4241</text><text x="98" y="50" class="tm">Aug</text>
+      <rect x="132" y="22" width="64" height="34" class="fb sb"/><text x="164" y="36">4242</text><text x="164" y="50" class="tm">Feb</text>
+      <rect x="198" y="22" width="64" height="34" class="fb sb"/><text x="230" y="36">4242</text><text x="230" y="50" class="tm">May</text>
+      <rect x="264" y="22" width="64" height="34" class="fb sb"/><text x="296" y="36">4242</text><text x="296" y="50" class="tm">Dec</text>
+      <rect x="330" y="22" width="64" height="34" class="fs" stroke="currentColor" stroke-opacity=".3"/><text x="362" y="36">4243</text><text x="362" y="50" class="tm">Jan</text>
+      <rect x="396" y="22" width="64" height="34" class="fs" stroke="currentColor" stroke-opacity=".3"/><text x="428" y="36">4243</text><text x="428" y="50" class="tm">Jun</text>
+      <rect x="462" y="22" width="64" height="34" class="fs" stroke="currentColor" stroke-opacity=".3"/><text x="494" y="36">4244</text><text x="494" y="50" class="tm">Mar</text>
+      <rect x="528" y="22" width="64" height="34" class="fs" stroke="currentColor" stroke-opacity=".3"/><text x="560" y="36">4244</text><text x="560" y="50" class="tm">Dec</text>
+    </g>
+    <text x="230" y="74" text-anchor="middle" font-size="11" class="tb">customer_id = 4242 → one contiguous slice, already in date order ✓</text>
+    <g font-size="11" text-anchor="middle">
+      <rect x="0" y="86" width="64" height="34" class="fr sr"/><text x="32" y="100">4241</text><text x="32" y="114">Jan</text>
+      <rect x="66" y="86" width="64" height="34" class="fs" stroke="currentColor" stroke-opacity=".3"/><text x="98" y="100">4241</text><text x="98" y="114" class="tm">Aug</text>
+      <rect x="132" y="86" width="64" height="34" class="fs" stroke="currentColor" stroke-opacity=".3"/><text x="164" y="100">4242</text><text x="164" y="114" class="tm">Feb</text>
+      <rect x="198" y="86" width="64" height="34" class="fs" stroke="currentColor" stroke-opacity=".3"/><text x="230" y="100">4242</text><text x="230" y="114" class="tm">May</text>
+      <rect x="264" y="86" width="64" height="34" class="fs" stroke="currentColor" stroke-opacity=".3"/><text x="296" y="100">4242</text><text x="296" y="114" class="tm">Dec</text>
+      <rect x="330" y="86" width="64" height="34" class="fr sr"/><text x="362" y="100">4243</text><text x="362" y="114">Jan</text>
+      <rect x="396" y="86" width="64" height="34" class="fs" stroke="currentColor" stroke-opacity=".3"/><text x="428" y="100">4243</text><text x="428" y="114" class="tm">Jun</text>
+      <rect x="462" y="86" width="64" height="34" class="fs" stroke="currentColor" stroke-opacity=".3"/><text x="494" y="100">4244</text><text x="494" y="114" class="tm">Mar</text>
+      <rect x="528" y="86" width="64" height="34" class="fs" stroke="currentColor" stroke-opacity=".3"/><text x="560" y="100">4244</text><text x="560" y="114" class="tm">Dec</text>
+    </g>
+    <text x="300" y="140" text-anchor="middle" font-size="11" class="tr">created_at in Jan alone → matches scattered everywhere → can't seek ✗</text>
+  </svg><figcaption>The second column is only sorted <em>within</em> each value of the first. That is the leftmost-prefix rule.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A phone book sorted by (last name, first name). "Sharma, Asha" is instant. "All Sharmas" is instant. "Everyone named Asha" means reading the whole book: first name is only sorted <em>within</em> each last name.</p>
   </div>
@@ -96,7 +243,20 @@ Execution Time: 0.243 ms</div>
   </div>
 
   <h3>Covering indexes and index-only scans</h3>
-  <p>Normally the index finds row locations, then the database visits the table ("heap") for other columns. A <strong>covering index</strong> stores every column the query needs, so the table visit is skipped: an <strong>Index Only Scan</strong>.</p>
+  <p>A <strong>covering index</strong> stores every column the query needs, so the table ("heap") visit is skipped.</p>
+  <figure class="viz"><svg viewBox="0 0 600 150" width="600">
+    <defs><marker id="so-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <text x="0" y="16" font-weight="bold">Index Scan</text>
+    <rect x="110" y="2" width="130" height="40" rx="6" class="fb sb"/><text x="175" y="20" text-anchor="middle">index leaf</text><text x="175" y="35" text-anchor="middle" font-size="10" class="tm">customer_id → ctid</text>
+    <line x1="240" y1="22" x2="318" y2="22" stroke="currentColor" marker-end="url(#so-ar2)"/><text x="279" y="16" text-anchor="middle" font-size="10" class="tm">heap fetch</text>
+    <rect x="320" y="2" width="130" height="40" rx="6" class="fg sg"/><text x="385" y="20" text-anchor="middle">table (heap)</text><text x="385" y="35" text-anchor="middle" font-size="10" class="tm">created_at, amount</text>
+    <line x1="450" y1="22" x2="488" y2="22" stroke="currentColor" marker-end="url(#so-ar2)"/><text x="494" y="26">25 pages</text>
+    <text x="0" y="96" font-weight="bold">Index Only</text>
+    <rect x="110" y="72" width="210" height="40" rx="6" class="fb sb"/><text x="215" y="90" text-anchor="middle">index leaf + INCLUDE</text><text x="215" y="105" text-anchor="middle" font-size="10" class="tm">customer_id | created_at, amount</text>
+    <line x1="320" y1="92" x2="488" y2="92" stroke="currentColor" marker-end="url(#so-ar2)"/><text x="494" y="96" class="tg">5 pages</text>
+    <rect x="350" y="118" width="110" height="26" rx="6" fill="none" stroke="currentColor" stroke-dasharray="4 3" opacity=".5"/><text x="405" y="135" text-anchor="middle" font-size="10" class="tm">heap skipped</text>
+    <text x="110" y="135" font-size="10" class="tm">visibility map says "all visible"</text>
+  </svg><figcaption>Covering index: every needed column is in the leaf, so the table is never read (Heap Fetches: 0).</figcaption></figure>
   <div class="fx" data-lang="sql">CREATE INDEX idx_orders_cust_cov ON big_orders (customer_id) INCLUDE (created_at, amount);
 EXPLAIN (ANALYZE, BUFFERS) SELECT created_at, amount FROM big_orders WHERE customer_id = 4242;</div>
   <div class="fx" data-lang="text">Index Only Scan using idx_orders_cust_cov on big_orders  (actual time=0.097..0.112 rows=22 loops=1)
@@ -143,7 +303,7 @@ SELECT * FROM big_customers WHERE lower(email) = 'user4242@mail.com';
   </div>
 
   <h2 id="so-cost"><span class="num">06</span>The Cost of Indexes</h2>
-  <p>Every index is a second copy of some data that must be kept in sync on every write.</p>
+  <p>Every index is a second copy of data, updated on every write.</p>
   <table class="tbl out"><caption>Result: inserting 500k rows</caption>
     <tr><th>table</th><th>indexes</th><th>time</th></tr>
     <tr><td>ins_noidx</td><td>0</td><td>0.49 s</td></tr>
@@ -216,7 +376,20 @@ ANALYZE events;
 
   <h2 id="so-patterns"><span class="num">09</span>Pagination &amp; N+1</h2>
   <h3>OFFSET vs keyset pagination</h3>
-  <p><code>OFFSET n</code> still reads and throws away n rows, so deep pages get slower and slower. <strong>Keyset</strong> (seek) pagination remembers the last key seen and jumps straight to it via the index.</p>
+  <p><strong>Keyset</strong> (seek) pagination remembers the last key shown and seeks to it via the index.</p>
+  <figure class="viz"><svg viewBox="0 0 600 136" width="600">
+    <defs><marker id="so-ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <text x="0" y="16" font-weight="bold">OFFSET</text>
+    <rect x="80" y="4" width="340" height="18" class="fr sr"/><text x="250" y="17" text-anchor="middle" font-size="11">read 1,500,000 rows, throw away</text>
+    <rect x="420" y="4" width="12" height="18" class="fb sb"/><text x="442" y="17" font-size="11">20 kept · 266 ms</text>
+    <text x="250" y="52" text-anchor="middle" font-size="10" class="tm">index seek: order_id &gt; 1500000</text>
+    <path d="M86,80 C190,56 320,56 416,80" fill="none" stroke="currentColor" marker-end="url(#so-ar3)"/>
+    <text x="0" y="96" font-weight="bold">Keyset</text>
+    <rect x="80" y="84" width="340" height="18" fill="none" stroke="currentColor" stroke-opacity=".3"/>
+    <rect x="420" y="84" width="12" height="18" class="fb sb"/><text x="442" y="97" font-size="11" class="tg">20 read · 0.03 ms</text>
+    <line x1="80" y1="116" x2="432" y2="116" stroke="currentColor" opacity=".4"/>
+    <text x="80" y="131" font-size="10" class="tm">order_id 1</text><text x="432" y="131" font-size="10" class="tm" text-anchor="end">1,500,020</text>
+  </svg><figcaption>OFFSET pays for every skipped row; keyset jumps straight to the bookmark.</figcaption></figure>
   <div class="fx" data-lang="sql">-- Page 75,001: OFFSET
 SELECT * FROM big_orders ORDER BY order_id LIMIT 20 OFFSET 1500000;
 -- Index Scan ... (actual rows=1500020)   Execution Time: 265.637 ms
@@ -232,7 +405,7 @@ SELECT * FROM big_orders WHERE order_id &gt; 1500000 ORDER BY order_id LIMIT 20;
   </div>
 
   <h3>The N+1 query problem</h3>
-  <p>One query fetches N parents, then a loop runs <strong>one more query per parent</strong>. Each query is fast; N network round trips are not.</p>
+  <div class="flow"><span>1 query: N parents</span><span>loop: +1 query each</span><span>N round trips</span></div>
   <div class="fx" data-lang="python"># N+1: 1 query + 100,000 more, one per customer
 for cid in pd.read_sql("SELECT customer_id FROM big_customers", conn).customer_id:
     orders = pd.read_sql(f"SELECT * FROM big_orders WHERE customer_id = {cid}", conn)
@@ -266,21 +439,7 @@ CREATE TABLE events_2025_06 PARTITION OF events
     <p>In a column store, <code>SELECT *</code> is the expensive habit. BigQuery bills by bytes scanned, so name only the columns you need and filter on the partition column.</p>
   </div>
 
-  <h2 id="so-rev"><span class="num">11</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Cost = pages read.</strong> Seq Scan reads all; an index reads a few.</li>
-    <li><strong>B-tree</strong>: sorted, balanced, 3–4 levels for millions of rows; serves =, ranges, ORDER BY, prefix LIKE.</li>
-    <li><strong>Composite</strong>: leftmost-prefix rule; equality columns first, range last.</li>
-    <li><strong>Covering</strong> (<code>INCLUDE</code>) → Index Only Scan; needs a vacuumed table.</li>
-    <li><strong>Partial</strong> for hot slices; <strong>expression</strong> index must match the query's expression.</li>
-    <li><strong>GIN</strong> for JSONB/arrays/text, <strong>GiST</strong> for geo/ranges, <strong>BRIN</strong> for huge time-ordered tables.</li>
-    <li>Indexes cost <strong>write speed and space</strong>; drop unused ones.</li>
-    <li><strong>Sargable</strong>: keep the column bare: no functions, leading %, type mismatches; handle OR.</li>
-    <li>Read plans inside-out; <strong>estimate vs actual</strong> gap → <code>ANALYZE</code>. Low selectivity → Seq Scan is correct.</li>
-    <li><strong>Keyset</strong> beats OFFSET; batch instead of <strong>N+1</strong>; partition by date; column stores for analytics.</li>
-  </ol></div>
-
-  <h2 id="so-qa"><span class="num">12</span>Questions &amp; Answers</h2>
+  <h2 id="so-qa"><span class="num">11</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>A query filtering on an indexed column does a Seq Scan. How do you diagnose it?</summary><div class="qa-body">Run <code>EXPLAIN ANALYZE</code>. (1) Is the predicate sargable? Look for functions, casts like <code>(col)::numeric</code>, leading <code>%</code>. (2) Compare estimated vs actual rows; if far off, run <code>ANALYZE</code>. (3) Is the filter unselective (e.g. 90% of rows)? Then the Seq Scan is the right choice. (4) Is the table tiny?</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Design the index for: <code>SELECT order_id, amount FROM orders WHERE customer_id = ? AND status = 'delivered' ORDER BY created_at DESC LIMIT 10</code>.</summary><div class="qa-body"><code>CREATE INDEX ON orders (customer_id, status, created_at DESC) INCLUDE (amount);</code> Equality columns first, then the sort column, so the index returns rows already ordered and stops after 10. <code>INCLUDE amount</code> (order_id too, if not the key) allows an Index Only Scan.</div></details>
