@@ -75,8 +75,7 @@ const CATEGORIES = [
     {"key": "ml_dimred",         "label": "07 · Dimensionality Reduction"},
     {"key": "ml_evaluation",     "label": "08 · Model Evaluation"},
     {"key": "ml_timeseries",     "label": "09 · Time Series Forecasting"},
-    {"key": "ml_recsys",         "label": "10 · Recommendation Systems"},
-    {"key": "ml_fundamentals",   "label": "── Foundations (deep dive)"}
+    {"key": "ml_recsys",         "label": "10 · Recommendation Systems"}
   ] },
   { key: "dl", label: "Deep Learning", emoji: "\ud83e\udde0", topics: [
     {"key": "dl_foundations", "label": "01 · NN Foundations"},
