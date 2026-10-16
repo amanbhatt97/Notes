@@ -7,9 +7,24 @@ const CATEGORIES = [
     {"key": "py_concurrency", "label": "Concurrency & Async"},
     {"key": "py_testing", "label": "Testing & Debugging"}
   ] },
-  { key: "softeng", label: "Software Engineering", emoji: "\u2699\ufe0f", topics: [] },
-  { key: "dataanalysis", label: "Data Analysis Stack", emoji: "\ud83d\udcca", topics: [] },
-  { key: "apis", label: "APIs & Backend", emoji: "\ud83c\udf10", topics: [] },
+  { key: "softeng", label: "Software Engineering", emoji: "\u2699\ufe0f", topics: [
+    {"key": "se_git", "label": "01 · Git & GitHub"},
+    {"key": "se_linux", "label": "02 · Linux & Terminal"},
+    {"key": "se_docker", "label": "03 · Docker"}
+  ] },
+  { key: "dataanalysis", label: "Data Analysis Stack", emoji: "\ud83d\udcca", topics: [
+    {"key": "da_numpy", "label": "01 · NumPy"},
+    {"key": "da_pandas", "label": "02 · Pandas"},
+    {"key": "da_viz", "label": "03 · Matplotlib & Seaborn"},
+    {"key": "da_plotly_streamlit", "label": "04 · Plotly & Streamlit"}
+  ] },
+  { key: "apis", label: "APIs & Backend", emoji: "\ud83c\udf10", topics: [
+    {"key": "api_fundamentals", "label": "01 · HTTP & REST Fundamentals"},
+    {"key": "api_auth", "label": "02 · Authentication & Security"},
+    {"key": "api_flask", "label": "03 · Flask"},
+    {"key": "api_fastapi", "label": "04 · FastAPI"},
+    {"key": "api_production", "label": "05 · Production Backend"}
+  ] },
   { key: "databases", label: "Databases", emoji: "\ud83d\uddc4\ufe0f", topics: [
     {"key": "db_intro", "label": "What is a Database"},
     {"key": "db_types", "label": "Types of Databases"},
@@ -30,7 +45,21 @@ const CATEGORIES = [
       {"key": "mongo_design",      "label": "03 · Schema Design, Indexes & Scaling"}
     ]}
   ] },
-  { key: "mathstats", label: "Mathematics & Statistics", emoji: "\u03a3", topics: [] },
+  { key: "mathstats", label: "Mathematics & Statistics", emoji: "\u03a3", topics: [
+    {"key": "grp_stats", "label": "Statistics", "children": [
+      {"key": "st_descriptive", "label": "01 · Descriptive Statistics"},
+      {"key": "st_probability", "label": "02 · Probability"},
+      {"key": "st_distributions", "label": "03 · Probability Distributions"},
+      {"key": "st_hypothesis", "label": "04 · Hypothesis Testing"},
+      {"key": "st_correlation", "label": "05 · Correlation & Relationships"},
+      {"key": "st_abtesting", "label": "06 · A/B Testing"}
+    ]},
+    {"key": "grp_math", "label": "Mathematics for ML", "children": [
+      {"key": "m_linalg", "label": "07 · Linear Algebra"},
+      {"key": "m_calculus", "label": "08 · Calculus"},
+      {"key": "m_optimization", "label": "09 · Optimization"}
+    ]}
+  ] },
   { key: "ml", label: "Machine Learning", emoji: "\ud83e\udd16", topics: [
     {"key": "ml_intro",          "label": "01 · ML Basics"},
     {"key": "ml_core",           "label": "02 · Core Concepts"},
@@ -40,18 +69,35 @@ const CATEGORIES = [
     {"key": "ml_clustering",     "label": "06 · Clustering"},
     {"key": "ml_dimred",         "label": "07 · Dimensionality Reduction"},
     {"key": "ml_evaluation",     "label": "08 · Model Evaluation"},
+    {"key": "ml_timeseries",     "label": "09 · Time Series Forecasting"},
+    {"key": "ml_recsys",         "label": "10 · Recommendation Systems"},
     {"key": "ml_fundamentals",   "label": "── Foundations (deep dive)"}
   ] },
   { key: "dl", label: "Deep Learning", emoji: "\ud83e\udde0", topics: [
     {"key": "dl_foundations", "label": "01 · NN Foundations"},
     {"key": "dl_pytorch",     "label": "02 · PyTorch"},
+    {"key": "dl_keras",       "label": "02b · TensorFlow & Keras"},
     {"key": "dl_cnns",        "label": "03 · CNNs"},
     {"key": "dl_rnns",        "label": "04 · RNNs & Sequential"},
     {"key": "dl_attention",   "label": "05 · Attention Mechanisms"}
   ] },
-  { key: "mlops", label: "MLOps & Deployment", emoji: "\ud83d\ude80", topics: [] },
-  { key: "dataeng", label: "Data Engineering", emoji: "\ud83d\udd27", topics: [] },
-  { key: "systemdesign", label: "ML System Design", emoji: "\ud83c\udfd7\ufe0f", topics: [] },
+  { key: "mlops", label: "MLOps & Deployment", emoji: "\ud83d\ude80", topics: [
+    {"key": "mlops_lifecycle", "label": "01 · The ML Lifecycle"},
+    {"key": "mlops_mlflow", "label": "02 · MLflow & Experiment Tracking"},
+    {"key": "mlops_deploy", "label": "03 · Deployment Strategies"}
+  ] },
+  { key: "dataeng", label: "Data Engineering", emoji: "\ud83d\udd27", topics: [
+    {"key": "de_etl", "label": "01 · ETL & Orchestration"},
+    {"key": "de_spark", "label": "02 · Apache Spark"},
+    {"key": "de_kafka", "label": "03 · Kafka & Streaming"}
+  ] },
+  { key: "systemdesign", label: "ML System Design", emoji: "\ud83c\udfd7\ufe0f", topics: [
+    {"key": "sd_framework", "label": "01 · How to Approach ML System Design"},
+    {"key": "sd_serving", "label": "02 · Feature Stores & Online/Offline Serving"},
+    {"key": "sd_monitoring", "label": "03 · Monitoring, Drift & Retraining"},
+    {"key": "sd_experiments", "label": "04 · Shadow, Canary & A/B Infrastructure"},
+    {"key": "sd_cases", "label": "05 · Case Studies"}
+  ] },
   { key: "genai", label: "Generative AI", emoji: "\u2728", topics: [
     {"key": "genai_roadmap", "label": "Start Here: The Learning Path"},
     {"key": "grp_genai_found", "label": "1 · Foundations", "children": [
@@ -82,6 +128,17 @@ const CATEGORIES = [
       {"key": "finetuning", "label": "15 · Fine-Tuning"}
     ]},
     {"key": "agent_capstone", "label": "16 · Capstone: Ship an Agent"}
+  ] },
+  { key: "projects", label: "Projects", emoji: "\ud83d\udee0\ufe0f", topics: [
+    {"key": "proj_guide", "label": "How to Build & Present a Project"},
+    {"key": "proj_beginner", "label": "01 · Beginner Projects"},
+    {"key": "proj_intermediate", "label": "02 · Intermediate Projects"},
+    {"key": "proj_advanced", "label": "03 · Advanced Projects"}
+  ] },
+  { key: "interview", label: "Interview Preparation", emoji: "\ud83c\udfaf", topics: [
+    {"key": "iv_sql", "label": "01 · SQL Interviews"},
+    {"key": "iv_ml", "label": "02 · ML Interviews"},
+    {"key": "iv_storytelling", "label": "03 · Project Storytelling"}
   ] },
   { key: "dsa", label: "Data Structures & Algos", emoji: "\ud83c\udf33", topics: [
     {"key": "dsa_problems",   "label": "🟢 Problem Tracker", "badge": "265"},

@@ -1308,3 +1308,15 @@ span.note-nav-btn{visibility:hidden}
 .note-nav-btn.next{text-align:right;margin-left:auto}
 .note-nav-btn:hover{border-color:var(--blue);background:var(--blue-dim)}
 .note-nav-btn small{font-size:10.5px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em}
+
+/* Inline diagrams: <figure class="viz"><svg …>…</svg><figcaption>…</figcaption></figure>
+   SVGs use currentColor / CSS vars so they follow the light & dark themes. */
+.viz{margin:16px 0;padding:14px;background:var(--s1);border:1px solid var(--border);
+  border-radius:var(--r);color:var(--ink2);text-align:center;overflow-x:auto}
+.viz svg{max-width:100%;height:auto;font-family:var(--mono,monospace);font-size:12px}
+.viz svg text{fill:currentColor}
+.viz figcaption{font-size:12px;color:var(--ink3);margin-top:8px}
+.viz .fb{fill:var(--blue-dim)}.viz .ft{fill:var(--teal-dim)}.viz .fg{fill:var(--green-dim)}
+.viz .fr{fill:var(--red-dim)}.viz .fv{fill:var(--violet-dim)}.viz .fs{fill:var(--s2)}
+.viz .sb{stroke:var(--blue)}.viz .st{stroke:var(--teal)}.viz .sg{stroke:var(--green)}.viz .sr{stroke:var(--red)}
+.viz .tb{fill:var(--blue)}.viz .tr{fill:var(--red)}.viz .tg{fill:var(--green)}.viz .tm{fill:var(--ink3)}
