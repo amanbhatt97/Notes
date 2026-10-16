@@ -4,6 +4,112 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Capstone: Ship an Agent</h1>
   <p class="lead">The last note: one project that uses every stage of the path. You need tool calling (05), embeddings and RAG (06–07), agent design (08–09), evals (13) and guardrails and deployment (14). We build an HR/IT helpdesk agent for a small company, from spec to HTTP API, and test it offline.</p>
 
+  <h2 id="cap-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Capstone: HR/IT Helpdesk Agent</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Spec first</div>
+        <ul>
+          <li><b>Users</b> — Acme employees via SSO</li>
+          <li><b>Jobs</b> — cited policy answers · my leave balance · open IT ticket</li>
+          <li><b>Out of scope</b> — "I don't know" + point to HR; no salaries, no others' records</li>
+          <li><b>Risky action</b> — ticket = write → explicit approval</li>
+          <li><b>Success</b> — ≥90% evals pass · 100% cited · 0 unapproved writes · all injections pass · p95 + cost budget</li>
+          <li><b>Agent?</b> — partly: model picks retrieval/lookup/action; one agent, not several</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Architecture</div>
+        <ul>
+          <li><b>Offline</b> — docs → chunk by heading → embed → vector store</li>
+          <li><b>Online</b> — <code>/chat</code> + identity → memory → loop → tools → citation check</li>
+          <li><b>Approve</b> — <code>/approve/{id}</code> → owner check → ticket</li>
+          <li><b>Files</b> — <code>kb.py</code> · <code>tools.py</code> · <code>agent.py</code> · <code>evals.py</code> · <code>app.py</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Ingest &amp; index</div>
+        <ul>
+          <li><b>Chunk on <code>##</code></b> — one topic per chunk; pack ≤400 chars by sentence</li>
+          <li><b>Heading prefix</b> — "Leave policy &gt; Annual leave: …" helps retrieval + citations</li>
+          <li><b>Toy embedder</b> = hashed bag-of-words; matches shared words only</li>
+          <li>⚠ <b>Lexical miss</b> — "home desk" ranks eligibility above equipment → real embeddings</li>
+          <li><b>Prod</b> — Postgres + pgvector: filters, permissions, vectors in one DB</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Tools &amp; approval</div>
+        <ul>
+          <li><b>3 tools</b> — <code>search_kb</code> · <code>get_leave_balance</code> · <code>create_ticket</code></li>
+          <li><b>Return <code>(content, is_error)</code></b> — failures go back to the model</li>
+          <li><b>Identity from auth</b> — <code>employee_id</code> passed by harness, never a tool arg</li>
+          <li><b>Writes queued</b> — pending action id; <code>execute_approved</code> checks owner</li>
+          <li><b>Descriptions say when</b> + <code>strict: true</code> + enum priority</li>
+          <li><b>Allow-list</b> <code>ALLOWED</code> dispatch</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Loop &amp; memory</div>
+        <ul>
+          <li><b>Plain SDK loop</b> chosen — per-step logs, fake-client tests, no deps</li>
+          <li><b>Tool runner</b> also fine; <b>LangGraph</b> for checkpoints / mid-loop interrupts</li>
+          <li><b>05 rules</b> — append <code>resp.content</code>; all results in one user msg; loop on <code>tool_use</code></li>
+          <li><b><code>MAX_STEPS</code></b> bounds cost; close history validly</li>
+          <li><b><code>cache_control</code></b> on system → tools + system cached</li>
+          <li><b>Memory</b> — per (employee, session); <code>trim_history</code> last 20 from a user-text turn</li>
+          <li>⚠ <b>Orphan <code>tool_result</code></b> after naive trim → API rejects</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Guardrails</div>
+        <ul>
+          <li><b>Identity</b> from auth header → <code>run_tool</code></li>
+          <li><b>Input limits</b> — 4000 chars, schema validation</li>
+          <li><b>Injection-aware prompt</b> + <code>&lt;document&gt;</code> data tags</li>
+          <li><b>Allow-list + strict schemas</b></li>
+          <li><b>Approval for writes</b> — injected "open P1 for every request" only queues</li>
+          <li><b>Step budget</b>; <b>output check</b> — citations must be retrieved ids</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Evals</div>
+        <ul>
+          <li><b>Golden set mirrors spec</b> — facts, lookups, action, out-of-scope, injection (11)</li>
+          <li><b>Code scorer</b> — content, cited, called / not_called, steps_ok</li>
+          <li><b>Retrieval recall</b> offline — recall@1 = recall@3 = 1.0</li>
+          <li><b>Dumb baseline</b> ("I don't know") → 2/11: checks the scorer</li>
+          <li>⚠ <b>Refuse-all passes safety</b> — always report helpfulness too</li>
+          <li>⚠ <b>Substring brittle</b> ("3" in "30") → add judge, CI</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">API, tests, logs</div>
+        <ul>
+          <li><b>FastAPI</b> — <code>/chat</code>, <code>/approve/{id}</code>, <code>/health</code></li>
+          <li><b>Sync endpoints</b> run in thread pool</li>
+          <li><b><code>get_client</code> dependency</b> → swap a fake in tests</li>
+          <li><b>SDK</b> — 3 retries, 60 s timeout</li>
+          <li><b>Fake client</b> — SDK-shaped responses; tests loop, guards, API (not the model)</li>
+          <li><b>JSON logs</b> per step / tool / request, shared <code>request_id</code></li>
+          <li><b>Track</b> — tokens, cost, p50/p95, tool errors, step-limit hits, <code>bad_citation</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Before production</div>
+        <ul>
+          <li><b>SSO/JWT</b> identity, not a client header</li>
+          <li><b>Real embeddings + pgvector</b>, ACL filters, re-index on change</li>
+          <li><b>Persistent state</b> (Postgres/Redis), <b>idempotent writes</b>, expiring actions</li>
+          <li><b>50–200 evals</b> + judge in CI; <b>red-team</b>; rate limits; cost alerts</li>
+          <li><b>Streaming</b>, timeouts, fallback model; <b>async</b> + workers</li>
+          <li><b>Feedback + privacy review</b></li>
+          <li><b>Next projects</b> — notes Q&amp;A · SQL analyst · inbox triage · MCP toolbox · multi-agent report</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -16,8 +122,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="cap-eval"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Evals</span><span class="rm-sub">11 cases and a scorer</span></div></div>
       <div class="rm-item rm-done" data-target="cap-api"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">API, Tests &amp; Logs</span><span class="rm-sub">FastAPI plus offline tests</span></div></div>
       <div class="rm-item rm-done" data-target="cap-prod"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Before Production &amp; Next</span><span class="rm-sub">Checklist and 5 projects</span></div></div>
-      <div class="rm-item rm-done" data-target="cap-rev"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">The whole path in 9 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="cap-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">System-design style</span></div></div>
+      <div class="rm-item rm-done" data-target="cap-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">System-design style</span></div></div>
     </div>
   </div>
 
@@ -36,11 +141,34 @@ Object.assign(TOPIC_CONTENT, {
   </div>
 
   <h2 id="cap-arch"><span class="num">02</span>Architecture</h2>
-  <p><strong>Offline</strong> (when docs change):</p>
-  <div class="flow"><span>Markdown docs</span><span>Chunk by heading</span><span>Embed</span><span>Vector store</span></div>
-  <p><strong>Online</strong> (each request):</p>
-  <div class="flow"><span>POST /chat + identity</span><span>Load session memory</span><span>Agent loop (Claude)</span><span>search_kb · get_leave_balance · create_ticket</span><span>Citation check</span><span>Answer + pending actions</span></div>
-  <div class="flow"><span>POST /approve/{id}</span><span>Owner check</span><span>Create ticket</span></div>
+  <figure class="viz"><svg viewBox="0 0 640 275" width="640">
+    <defs><marker id="cap-ah1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <text x="10" y="16" class="tm" font-size="11">OFFLINE · when docs change</text><text x="10" y="90" class="tm" font-size="11">ONLINE · each request</text>
+    <rect x="10" y="26" width="100" height="32" rx="5" class="fs" stroke="currentColor"/><text x="60" y="47" text-anchor="middle">docs .md</text>
+    <rect x="140" y="26" width="120" height="32" rx="5" class="fs" stroke="currentColor"/><text x="200" y="47" text-anchor="middle">chunk by ##</text>
+    <rect x="290" y="26" width="90" height="32" rx="5" class="fs" stroke="currentColor"/><text x="335" y="47" text-anchor="middle">embed</text>
+    <rect x="470" y="26" width="150" height="32" rx="5" class="ft st"/><text x="545" y="47" text-anchor="middle">vector store</text>
+    <rect x="10" y="100" width="90" height="162" rx="6" class="fs" stroke="currentColor"/><text x="55" y="176" text-anchor="middle">employee</text><text x="55" y="192" text-anchor="middle">UI</text>
+    <rect x="125" y="100" width="130" height="40" rx="5" class="fb sb"/><text x="190" y="117" text-anchor="middle">POST /chat</text><text x="190" y="133" text-anchor="middle" class="tm" font-size="11">+ identity</text>
+    <rect x="285" y="100" width="120" height="40" rx="5" class="fv"/><text x="345" y="117" text-anchor="middle">agent loop</text><text x="345" y="133" text-anchor="middle" class="tm" font-size="11">Claude</text>
+    <rect x="285" y="162" width="120" height="30" rx="5" class="fs" stroke="currentColor"/><text x="345" y="182" text-anchor="middle" font-size="11">session memory</text>
+    <rect x="470" y="100" width="150" height="30" rx="5" class="fg sg"/><text x="545" y="120" text-anchor="middle">search_kb</text>
+    <rect x="470" y="140" width="150" height="30" rx="5" class="fg sg"/><text x="545" y="160" text-anchor="middle" font-size="11">get_leave_balance</text>
+    <rect x="470" y="180" width="150" height="30" rx="5" class="fr sr"/><text x="545" y="200" text-anchor="middle">create_ticket</text>
+    <rect x="125" y="232" width="130" height="30" rx="5" class="fb sb"/><text x="190" y="252" text-anchor="middle">POST /approve</text>
+    <rect x="285" y="232" width="120" height="30" rx="5" class="fs" stroke="currentColor"/><text x="345" y="252" text-anchor="middle">owner check</text>
+    <rect x="470" y="232" width="150" height="30" rx="5" class="ft st"/><text x="545" y="252" text-anchor="middle" font-size="11">pending → ticket</text>
+    <g fill="none" stroke="currentColor">
+      <line x1="111" y1="42" x2="137" y2="42" marker-end="url(#cap-ah1)"/><line x1="261" y1="42" x2="287" y2="42" marker-end="url(#cap-ah1)"/><line x1="381" y1="42" x2="467" y2="42" marker-end="url(#cap-ah1)"/>
+      <line x1="101" y1="120" x2="122" y2="120" marker-end="url(#cap-ah1)"/><line x1="257" y1="120" x2="282" y2="120" marker-start="url(#cap-ah1)" marker-end="url(#cap-ah1)"/>
+      <line x1="345" y1="141" x2="345" y2="160"/>
+      <line x1="406" y1="118" x2="467" y2="115" marker-end="url(#cap-ah1)"/><line x1="406" y1="124" x2="467" y2="155" marker-end="url(#cap-ah1)"/><line x1="406" y1="130" x2="467" y2="195" marker-end="url(#cap-ah1)"/>
+      <line x1="545" y1="99" x2="545" y2="61" marker-end="url(#cap-ah1)"/><line x1="545" y1="211" x2="545" y2="229" marker-end="url(#cap-ah1)"/>
+      <line x1="101" y1="247" x2="122" y2="247" marker-end="url(#cap-ah1)"/><line x1="256" y1="247" x2="282" y2="247" marker-end="url(#cap-ah1)"/><line x1="406" y1="247" x2="467" y2="247" marker-end="url(#cap-ah1)"/>
+    </g>
+    <text x="270" y="95" text-anchor="middle" class="tm" font-size="11">citation check</text>
+    <text x="552" y="225" class="tr" font-size="11">queued</text>
+  </svg><figcaption>Index offline; per request the loop picks tools. The only write is queued, and executes on a second, owner-checked request.</figcaption></figure>
   <table class="tbl">
     <tr><th>File</th><th>Job</th><th>Path note</th></tr>
     <tr><td><code>kb.py</code></td><td>Docs, chunker, embedder, vector store</td><td>06, 07</td></tr>
@@ -157,6 +285,26 @@ ORDER BY embedding &lt;=&gt; $1 LIMIT 3;</div>
 
   <h2 id="cap-tools"><span class="num">04</span>Tools</h2>
   <p>Three tools: one retriever, one read action, one write action. Each tool returns <code>(content, is_error)</code>, so failures go back to the model as <code>is_error</code> results instead of crashing the loop.</p>
+  <figure class="viz"><svg viewBox="0 0 630 235" width="630">
+    <defs><marker id="cap-ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <g text-anchor="middle" font-size="11.5">
+      <rect x="10" y="8" width="100" height="26" rx="5" class="fs" stroke="currentColor"/><text x="60" y="26">employee UI</text>
+      <rect x="140" y="8" width="100" height="26" rx="5" class="fb sb"/><text x="190" y="26">/chat</text>
+      <rect x="270" y="8" width="100" height="26" rx="5" class="fv"/><text x="320" y="26">agent</text>
+      <rect x="395" y="8" width="110" height="26" rx="5" class="ft st"/><text x="450" y="26">pending queue</text>
+      <rect x="520" y="8" width="100" height="26" rx="5" class="fb sb"/><text x="570" y="26">/approve</text>
+    </g>
+    <g stroke="currentColor" stroke-dasharray="2 4" opacity="0.5"><line x1="60" y1="34" x2="60" y2="220"/><line x1="190" y1="34" x2="190" y2="220"/><line x1="320" y1="34" x2="320" y2="220"/><line x1="450" y1="34" x2="450" y2="220"/><line x1="570" y1="34" x2="570" y2="220"/></g>
+    <g fill="none" stroke="currentColor">
+      <line x1="60" y1="62" x2="187" y2="62" marker-end="url(#cap-ah2)"/><line x1="190" y1="86" x2="317" y2="86" marker-end="url(#cap-ah2)"/>
+      <line x1="320" y1="110" x2="447" y2="110" marker-end="url(#cap-ah2)"/><line x1="450" y1="132" x2="323" y2="132" stroke-dasharray="4 3" marker-end="url(#cap-ah2)"/>
+      <line x1="320" y1="156" x2="63" y2="156" stroke-dasharray="4 3" marker-end="url(#cap-ah2)"/>
+      <line x1="60" y1="184" x2="567" y2="184" marker-end="url(#cap-ah2)"/><line x1="570" y1="206" x2="453" y2="206" marker-end="url(#cap-ah2)"/>
+    </g>
+    <g text-anchor="middle" font-size="11"><text x="125" y="57">"broken screen"</text><text x="255" y="81">run loop</text><text x="385" y="105">create_ticket</text><text x="385" y="127">id 91c0</text>
+      <text x="190" y="151">reply + pending id</text><text x="315" y="179" class="tg">user clicks Approve</text><text x="510" y="201">owner? run</text></g>
+    <text x="450" y="228" text-anchor="middle" class="tg" font-size="11">IT-1001</text>
+  </svg><figcaption>Two HTTP requests. The model can only queue a write; a human click plus an owner check makes it real.</figcaption></figure>
   <div class="fx" data-lang="py"># tools.py: schemas, implementations, allow-list, approval queue
 import json, uuid
 from kb import build_store
@@ -319,6 +467,20 @@ def trim_history(messages, max_messages=20):
     <li><strong>Short-term:</strong> the session's message list, stored per <code>(employee, session)</code>. <code>trim_history</code> keeps the last 20 messages and always starts at a real user question, never at an orphan <code>tool_result</code>.</li>
     <li><strong>Long-term:</strong> not needed for this spec. If users want preferences remembered, store a few facts per employee and add them to the system prompt (08 · memory types).</li>
   </ul>
+  <figure class="viz"><svg viewBox="0 0 620 115" width="620">
+    <g font-size="11" text-anchor="middle">
+      <rect x="10" y="40" width="95" height="30" rx="4" class="fb sb"/><text x="57" y="59">user: q1</text>
+      <rect x="110" y="40" width="95" height="30" rx="4" class="fv"/><text x="157" y="59">asst: tool</text>
+      <rect x="210" y="40" width="95" height="30" rx="4" class="fs" stroke="currentColor"/><text x="257" y="59">user: result</text>
+      <rect x="310" y="40" width="95" height="30" rx="4" class="fv"/><text x="357" y="59">asst: a</text>
+      <rect x="410" y="40" width="95" height="30" rx="4" class="fb sb"/><text x="457" y="59">user: q2</text>
+      <rect x="510" y="40" width="95" height="30" rx="4" class="fv"/><text x="557" y="59">asst: a2</text>
+    </g>
+    <path d="M210,36 v-6 h395 v6" fill="none" stroke="currentColor"/><text x="407" y="22" text-anchor="middle" class="tm">last 4 messages</text>
+    <g class="sr" stroke-width="2"><line x1="212" y1="42" x2="303" y2="68"/><line x1="303" y1="42" x2="212" y2="68"/><line x1="312" y1="42" x2="403" y2="68"/><line x1="403" y1="42" x2="312" y2="68"/></g>
+    <path d="M410,76 v6 h195 v-6" fill="none" class="sg"/>
+    <text x="307" y="98" text-anchor="middle" class="tr" font-size="11">skipped: orphan tool_result</text><text x="507" y="98" text-anchor="middle" class="tg" font-size="11">kept</text>
+  </svg><figcaption><code>trim_history(max_messages=4)</code>: take the tail, then drop turns until it starts at a plain user question.</figcaption></figure>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Trimming by cutting at any index can leave a <code>tool_result</code> whose <code>tool_use</code> was cut away. The API rejects that. Always trim at a user-text boundary.</p>
   </div>
@@ -569,20 +731,7 @@ def test_ticket_needs_approval_by_owner():
     <li><strong>Multi-agent research report:</strong> lead + parallel researchers + writer + critic, with tracing, a cost budget, and a head-to-head eval vs a single agent. (multi-agent, observability)</li>
   </ol>
 
-  <h2 id="cap-rev"><span class="num">10</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Spec first:</strong> jobs, out-of-scope, risky actions, numeric success criteria.</li>
-    <li><strong>Index offline:</strong> chunk by structure, prefix headings, embed, store (pgvector in prod).</li>
-    <li><strong>Tools:</strong> clear "when to call" descriptions, strict schemas, errors returned as <code>is_error</code>.</li>
-    <li><strong>Loop:</strong> append assistant content, return all tool results in one turn, cap steps.</li>
-    <li><strong>Memory:</strong> per-session history, trimmed at user-text boundaries.</li>
-    <li><strong>Guardrails:</strong> identity from auth, data marking, allow-list, approval for writes, output checks.</li>
-    <li><strong>Evals:</strong> golden set mirrors the spec; measure retrieval separately; pair safety with helpfulness.</li>
-    <li><strong>API:</strong> FastAPI, injectable client, two-step approval, offline tests with a fake client.</li>
-    <li><strong>Observe:</strong> JSON logs with request ids, tokens, latency, tool errors.</li>
-  </ol></div>
-
-  <h2 id="cap-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <h2 id="cap-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>Design an internal docs Q&amp;A bot that can also take actions. Walk through the components.</summary><div class="qa-body">Spec and success metrics → offline ingestion (chunk, embed, vector store) → tools (retriever, read actions, write actions behind approval) → a bounded tool loop with a grounded, injection-aware system prompt → session memory → guardrails → eval set run in CI → API with auth → logging and tracing.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Why is <code>employee_id</code> not a tool parameter?</summary><div class="qa-body">Anything the model fills in can be steered by the user or by injected text. Identity must come from authentication. The harness passes it to tools, so "show me E200's balance" can't work.</div></details>

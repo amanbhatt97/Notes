@@ -4,6 +4,109 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Multi-Agent Systems &amp; MCP</h1>
   <p class="lead">You can build one agent (09) and wire it as a graph (11). This note covers splitting work across several agents, and MCP, the standard plug that connects any agent to any tool. Next: proving it works (13 · Evaluation) and shipping it safely (14).</p>
 
+  <h2 id="mm-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Multi-Agent Systems &amp; MCP</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">When multi-agent helps</div>
+        <ul>
+          <li><b>Multi-agent</b> — several LLM agents, each with own prompt, tools, context</li>
+          <li><b>Default = one agent</b> — or a fixed workflow (08)</li>
+          <li><b>Cost</b> — chat 1× · one agent ≈4× · multi-agent ≈15× tokens</li>
+          <li><b>Split only for</b>
+            <ul><li>breadth: independent sub-tasks that would overflow one context</li><li>separation: different tools/permissions walled off</li><li>ownership: different teams / services</li></ul>
+          </li>
+          <li><b>Real benefit: context isolation</b> — workers read 50 pages, return 150 words</li>
+          <li>💡 manager + analysts: manager reads three memos, not 300 pages</li>
+          <li>⚠ <b>Org-chart agents</b> (planner/coder/tester) — role-play adds hops, not IQ</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Orchestrator-workers</div>
+        <ul>
+          <li><b>Lead</b> plans, delegates, merges; <b>workers</b> get fresh contexts</li>
+          <li><b>Sub-agent = a tool</b> — <code>delegate(task)</code>; lead doesn't know it's an agent</li>
+          <li><b>Parallel</b> — several <code>tool_use</code> blocks in one turn → thread pool; all results in ONE user msg</li>
+          <li><b>Cheaper workers</b> — Sonnet workers, Opus lead</li>
+          <li><b>Task brief</b> = worker's whole world: goal, scope, output format, what to skip</li>
+          <li>⚠ <b>Vague delegation</b> → duplicate/missed work; give distinct scopes</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Supervisor (LangGraph)</div>
+        <ul>
+          <li><b>Supervisor node</b> picks next worker; worker returns to supervisor</li>
+          <li><b>Routing</b> — <code>with_structured_output(Route, method="json_schema")</code></li>
+          <li><b><code>Command(goto=...)</code></b> — node chooses next node; no conditional-edge fn</li>
+          <li><b>Workers return only final message</b> — isolation again</li>
+          <li><b>Helper pkg</b> — <code>langgraph-supervisor</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Handoffs (swarm)</div>
+        <ul>
+          <li><b>Handoff</b> — pass the whole conversation; new agent talks to user</li>
+          <li>💡 call-centre transfer: reception is gone after the transfer</li>
+          <li><b>Mechanic</b> — <code>transfer_to_X</code> tool switches <code>active</code> → new system prompt</li>
+          <li><b>Same tool list every call</b> + harness allow-list → valid history, warm cache</li>
+          <li><b>Persist <code>active</code></b> with the session for the next user turn</li>
+          <li>⚠ <b>Ping-pong</b> transfers — cap steps; say when NOT to transfer</li>
+          <li><b>Supervisor vs handoff</b> — manager keeps control vs control moves for good</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Critics, debate &amp; failures</div>
+        <ul>
+          <li><b>Critic</b> — drafts graded vs criteria, loop (evaluator-optimizer)</li>
+          <li><b>Debate</b> — independent answers, revise, judge picks; costly</li>
+          <li><b>Hierarchical</b> — supervisors of supervisors; very large tasks only</li>
+          <li>⚠ <b>Same-model critic</b> just agrees — give it tests, rubric, sources or another model</li>
+          <li><b>Failures → fixes</b>
+            <ul><li>lossy handoff → self-contained briefs</li><li>duplicate work → distinct scopes</li><li>conflicts → don't split coupled work</li><li>runaway cost → step caps, budgets, timeouts</li><li>compounding errors → cite + verify in code</li></ul>
+          </li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">MCP concepts</div>
+        <ul>
+          <li><b>MCP</b> — open standard plugging AI apps into tools/data</li>
+          <li><b>N×M → N+M</b> — 5 apps × 20 systems = 100 → 25 integrations</li>
+          <li>💡 USB-C for AI tools (but servers can inject text!)</li>
+          <li><b>Host</b> (app, LLM, consent) → <b>client</b> (1 per server) → <b>server</b></li>
+          <li><b>JSON-RPC 2.0</b> — <code>initialize</code> → <code>tools/list</code>, <code>tools/call</code> → shutdown</li>
+          <li><b>Server primitives</b> — tools (model picks), resources (app, by URI), prompts (user)</li>
+          <li><b>Client primitives</b> — sampling, elicitation, roots</li>
+          <li><b>Transports</b> — stdio (local subprocess) · Streamable HTTP (remote, OAuth); HTTP+SSE deprecated</li>
+          <li>⚠ <b>Not a security layer</b> — tool poisoning; trust sources, least privilege</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">MCP build &amp; connect</div>
+        <ul>
+          <li><b>SDK</b> — <code>pip install "mcp[cli]"</code>; 2.x <code>MCPServer</code>, 1.x <code>FastMCP</code></li>
+          <li><b>Decorators</b> — <code>@mcp.tool()</code>, <code>@mcp.resource("kb://...")</code>, <code>@mcp.prompt()</code></li>
+          <li><b>Schema</b> from type hints, description from docstring</li>
+          <li><b>Run</b> — <code>mcp.run()</code> stdio; <code>transport="streamable-http"</code> → <code>/mcp</code></li>
+          <li><b>Hosts</b>
+            <ul><li>existing: Claude Desktop config / <code>claude mcp add</code></li><li>your app: <code>ClientSession</code> + <code>async_mcp_tool</code> + tool runner</li><li>remote: API MCP connector (<code>mcp_servers</code>, beta)</li></ul>
+          </li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">A2A &amp; the build</div>
+        <ul>
+          <li><b>A2A</b> — agent ↔ opaque agent across teams/companies</li>
+          <li><b>Agent Card</b> — JSON at well-known URL: skills, endpoint, auth</li>
+          <li><b>Task lifecycle</b> — submitted → working → input-required → completed/failed</li>
+          <li><b>MCP vs A2A</b> — tools you control vs another agent's service</li>
+          <li><b>Build</b> — parallel researchers (tools, JSON findings) → writer (no tools) → citation check</li>
+          <li><b>Lessons</b> — structured handoff, least privilege, verify in code</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -16,8 +119,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="mm-mcpsrv"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">MCP: Build &amp; Connect</span><span class="rm-sub">A real server in 25 lines</span></div></div>
       <div class="rm-item rm-done" data-target="mm-a2a"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">A2A in Brief</span><span class="rm-sub">Agents talking to agents</span></div></div>
       <div class="rm-item rm-done" data-target="mm-build"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Build it</span><span class="rm-sub">Researcher + writer team</span></div></div>
-      <div class="rm-item rm-done" data-target="mm-rev"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 9 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="mm-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="mm-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
@@ -25,7 +127,11 @@ Object.assign(TOPIC_CONTENT, {
   <div class="callout def"><span class="label">Definition</span>
     <p>A <strong>multi-agent system</strong> is several LLM agents, each with its own prompt, tools and context window, cooperating on one task. Your code (or one agent) decides who works when.</p>
   </div>
-  <p>Be honest about the cost first. Every agent re-reads its own instructions and context, so tokens multiply. Anthropic reported its multi-agent research system used about <strong>15× the tokens of a chat</strong> (a single agent: about 4×).</p>
+  <figure class="viz"><svg viewBox="0 0 520 120" width="520">
+    <text x="8" y="31">chat</text><rect x="100" y="16" width="25" height="22" class="fs" stroke="currentColor"/><text x="131" y="31">1×</text>
+    <text x="8" y="65">one agent</text><rect x="100" y="50" width="100" height="22" class="fb sb"/><text x="206" y="65">≈4×</text>
+    <text x="8" y="99">multi-agent</text><rect x="100" y="84" width="375" height="22" class="fr sr"/><text x="481" y="99">≈15×</text>
+  </svg><figcaption>Tokens per task (Anthropic's research system). Every agent re-reads its own instructions and context, so cost multiplies.</figcaption></figure>
   <table class="tbl">
     <tr><th>What you add</th><th>What it costs</th></tr>
     <tr><td>More agents</td><td>More tokens, more latency, more prompts to maintain</td></tr>
@@ -33,7 +139,7 @@ Object.assign(TOPIC_CONTENT, {
     <tr><td>More moving parts</td><td>Harder to debug: which agent made the bad call?</td></tr>
   </table>
   <h3>The one real benefit: context isolation</h3>
-  <p>A worker can read 50 pages in <em>its own</em> context window and return a 150-word summary. The lead agent never sees the 50 pages. That keeps the lead's context small and focused, and lets workers run in parallel.</p>
+  <p>A worker reads 50 pages in <em>its own</em> context and returns 150 words. The lead stays small and focused; workers run in parallel (picture in 02).</p>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A manager sends three analysts to research three markets. Each reads hundreds of pages; the manager reads three one-page memos. It breaks when the tasks are tightly linked: three people writing three chapters of one plot, without talking, produce a mess.</p>
   </div>
@@ -51,8 +157,21 @@ Object.assign(TOPIC_CONTENT, {
   </div>
 
   <h2 id="mm-orch"><span class="num">02</span>Orchestrator-Workers</h2>
-  <p>A <strong>lead</strong> agent breaks the goal into sub-tasks and delegates each to a <strong>worker</strong> with a fresh context. The cleanest way: expose "call a worker" to the lead as an ordinary <strong>tool</strong>. The lead never knows the tool is another agent.</p>
-  <div class="flow"><span>Goal</span><span>Lead plans</span><span>delegate() × N (parallel)</span><span>Workers return summaries</span><span>Lead merges</span></div>
+  <figure class="viz"><svg viewBox="0 0 560 215" width="560">
+    <defs><marker id="ma-ah1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="190" y="8" width="180" height="46" rx="6" class="fv"/><text x="280" y="27" text-anchor="middle">Lead (Opus)</text><text x="280" y="45" text-anchor="middle" class="tm">plans · merges</text>
+    <g fill="none" stroke="currentColor">
+      <line x1="240" y1="54" x2="85" y2="112" marker-end="url(#ma-ah1)"/><line x1="115" y1="112" x2="258" y2="56" stroke-dasharray="4 3" marker-end="url(#ma-ah1)"/>
+      <line x1="272" y1="54" x2="272" y2="112" marker-end="url(#ma-ah1)"/><line x1="290" y1="112" x2="290" y2="56" stroke-dasharray="4 3" marker-end="url(#ma-ah1)"/>
+      <line x1="320" y1="54" x2="445" y2="112" marker-end="url(#ma-ah1)"/><line x1="475" y1="112" x2="338" y2="56" stroke-dasharray="4 3" marker-end="url(#ma-ah1)"/>
+    </g>
+    <rect x="10" y="114" width="160" height="54" rx="6" class="fb sb"/><text x="90" y="136" text-anchor="middle">Worker 1</text><text x="90" y="156" text-anchor="middle" class="tm">reads 50 pages</text>
+    <rect x="200" y="114" width="160" height="54" rx="6" class="fb sb"/><text x="280" y="136" text-anchor="middle">Worker 2</text><text x="280" y="156" text-anchor="middle" class="tm">reads 40 pages</text>
+    <rect x="390" y="114" width="160" height="54" rx="6" class="fb sb"/><text x="470" y="136" text-anchor="middle">Worker 3</text><text x="470" y="156" text-anchor="middle" class="tm">reads 60 pages</text>
+    <line x1="20" y1="196" x2="50" y2="196" stroke="currentColor"/><text x="56" y="200">delegate(task)</text>
+    <line x1="230" y1="196" x2="260" y2="196" stroke="currentColor" stroke-dasharray="4 3"/><text x="266" y="200">≤150-word summary</text>
+  </svg><figcaption>One lead, many fresh contexts. Raw pages stay with the workers; only summaries travel up.</figcaption></figure>
+  <p>Expose "call a worker" to the lead as an ordinary <strong>tool</strong>. The lead never knows the tool is another agent.</p>
   <div class="fx" data-lang="py">import anthropic
 from concurrent.futures import ThreadPoolExecutor
 
@@ -230,16 +349,50 @@ def chat(messages, active="triage", max_steps=10):
   <div class="callout def"><span class="label">Definition</span>
     <p>The <strong>Model Context Protocol (MCP)</strong> is an open standard for connecting AI applications to tools and data. A tool is written once as an <strong>MCP server</strong>; any MCP-capable app can use it.</p>
   </div>
-  <p>Without it, every app writes its own connector for every system: 5 apps × 20 systems = <strong>100 integrations</strong>. With MCP each app speaks MCP once and each system ships one server: 5 + 20 = <strong>25</strong>. That's N×M → N+M.</p>
+  <figure class="viz"><svg viewBox="0 0 560 190" width="560">
+    <text x="10" y="18">Without MCP: 3×4 = 12</text><text x="300" y="18">With MCP: 3+4 = 7</text>
+    <g stroke="currentColor" opacity="0.55">
+      <line x1="70" y1="56" x2="200" y2="46"/><line x1="70" y1="56" x2="200" y2="86"/><line x1="70" y1="56" x2="200" y2="126"/><line x1="70" y1="56" x2="200" y2="166"/>
+      <line x1="70" y1="106" x2="200" y2="46"/><line x1="70" y1="106" x2="200" y2="86"/><line x1="70" y1="106" x2="200" y2="126"/><line x1="70" y1="106" x2="200" y2="166"/>
+      <line x1="70" y1="156" x2="200" y2="46"/><line x1="70" y1="156" x2="200" y2="86"/><line x1="70" y1="156" x2="200" y2="126"/><line x1="70" y1="156" x2="200" y2="166"/>
+      <line x1="360" y1="56" x2="400" y2="106"/><line x1="360" y1="106" x2="400" y2="106"/><line x1="360" y1="156" x2="400" y2="106"/>
+      <line x1="448" y1="106" x2="490" y2="46"/><line x1="448" y1="106" x2="490" y2="86"/><line x1="448" y1="106" x2="490" y2="126"/><line x1="448" y1="106" x2="490" y2="166"/>
+    </g>
+    <g class="fb sb"><rect x="20" y="45" width="50" height="22" rx="4"/><rect x="20" y="95" width="50" height="22" rx="4"/><rect x="20" y="145" width="50" height="22" rx="4"/>
+      <rect x="310" y="45" width="50" height="22" rx="4"/><rect x="310" y="95" width="50" height="22" rx="4"/><rect x="310" y="145" width="50" height="22" rx="4"/></g>
+    <g class="fg sg"><rect x="200" y="35" width="50" height="22" rx="4"/><rect x="200" y="75" width="50" height="22" rx="4"/><rect x="200" y="115" width="50" height="22" rx="4"/><rect x="200" y="155" width="50" height="22" rx="4"/>
+      <rect x="490" y="35" width="50" height="22" rx="4"/><rect x="490" y="75" width="50" height="22" rx="4"/><rect x="490" y="115" width="50" height="22" rx="4"/><rect x="490" y="155" width="50" height="22" rx="4"/></g>
+    <circle cx="424" cy="106" r="24" class="fv"/><text x="424" y="110" text-anchor="middle">MCP</text>
+    <g text-anchor="middle"><text x="45" y="60">app</text><text x="45" y="110">app</text><text x="45" y="160">app</text><text x="335" y="60">app</text><text x="335" y="110">app</text><text x="335" y="160">app</text>
+      <text x="225" y="50">tool</text><text x="225" y="90">tool</text><text x="225" y="130">tool</text><text x="225" y="170">tool</text><text x="515" y="50">tool</text><text x="515" y="90">tool</text><text x="515" y="130">tool</text><text x="515" y="170">tool</text></g>
+  </svg><figcaption>Every line is a connector someone must write. At 5 apps × 20 systems: 100 vs 25.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>USB-C. Laptops don't need a special port per device; devices don't need a cable per laptop. Where it breaks: a USB device can't trick your laptop with words, but an MCP server's tool descriptions go straight into the model's prompt.</p>
   </div>
   <h3>Architecture</h3>
-  <div class="flow"><span>Host (Claude Desktop, Claude Code, your app)</span><span>MCP client (one per server)</span><span>MCP server</span><span>GitHub / DB / files / API</span></div>
+  <figure class="viz"><svg viewBox="0 0 600 200" width="600">
+    <defs><marker id="ma-ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="10" y="10" width="222" height="180" rx="8" class="fs" stroke="currentColor"/>
+    <text x="22" y="30">Host</text><text x="22" y="48" class="tm">app · LLM · user consent</text>
+    <rect x="22" y="66" width="70" height="108" rx="6" class="fv"/><text x="57" y="124" text-anchor="middle">LLM</text>
+    <rect x="114" y="76" width="106" height="34" rx="6" class="fb sb"/><text x="167" y="97" text-anchor="middle">client 1</text>
+    <rect x="114" y="132" width="106" height="34" rx="6" class="fb sb"/><text x="167" y="153" text-anchor="middle">client 2</text>
+    <rect x="290" y="76" width="140" height="34" rx="6" class="ft st"/><text x="360" y="97" text-anchor="middle">server: github</text>
+    <rect x="290" y="132" width="140" height="34" rx="6" class="ft st"/><text x="360" y="153" text-anchor="middle">server: kb</text>
+    <rect x="480" y="76" width="110" height="34" rx="6" class="fg sg"/><text x="535" y="97" text-anchor="middle">GitHub API</text>
+    <rect x="480" y="132" width="110" height="34" rx="6" class="fg sg"/><text x="535" y="153" text-anchor="middle">files / DB</text>
+    <g stroke="currentColor" fill="none">
+      <line x1="94" y1="93" x2="112" y2="93"/><line x1="94" y1="149" x2="112" y2="149"/>
+      <line x1="224" y1="93" x2="286" y2="93" marker-start="url(#ma-ah2)" marker-end="url(#ma-ah2)"/>
+      <line x1="224" y1="149" x2="286" y2="149" marker-start="url(#ma-ah2)" marker-end="url(#ma-ah2)"/>
+      <line x1="432" y1="93" x2="476" y2="93" marker-end="url(#ma-ah2)"/><line x1="432" y1="149" x2="476" y2="149" marker-end="url(#ma-ah2)"/>
+    </g>
+    <text x="255" y="60" text-anchor="middle" class="tb">JSON-RPC</text>
+    <text x="255" y="86" text-anchor="middle" class="tm" font-size="11">HTTP</text><text x="255" y="142" text-anchor="middle" class="tm" font-size="11">stdio</text>
+  </svg><figcaption>One client per server inside the host. The server talks to the real system and never needs to know which LLM is used.</figcaption></figure>
   <ul>
-    <li><strong>Host</strong>: the AI application the user runs. It owns the LLM, the UI and user consent.</li>
-    <li><strong>Client</strong>: a connector inside the host; one client holds one connection to one server.</li>
-    <li><strong>Server</strong>: a small program exposing capabilities. It does not need to know which LLM is used.</li>
+    <li><strong>Host</strong> (Claude Desktop, Claude Code, your app): owns the LLM, UI and user consent.</li>
+    <li><strong>Client</strong>: one connection to one server. <strong>Server</strong>: small program exposing capabilities.</li>
     <li>Messages are <strong>JSON-RPC 2.0</strong>. Lifecycle: <code>initialize</code> (agree protocol version and capabilities) → requests like <code>tools/list</code>, <code>tools/call</code> → shutdown.</li>
   </ul>
   <h3>Primitives</h3>
@@ -453,20 +606,7 @@ if __name__ == "__main__":
     <p>(1) Let a lead agent write the sub-questions via a <code>delegate</code> tool (section 02). (2) Add a critic that checks the brief against the findings. (3) Swap <code>search_notes</code> for an MCP server. Then measure: is the brief better than one agent with the same tool, and at what token cost?</p>
   </div>
 
-  <h2 id="mm-rev"><span class="num">10</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Default:</strong> one agent. Multi-agent costs several times the tokens and adds failure points.</li>
-    <li><strong>Split only for</strong> independent breadth, permission separation, or separate ownership.</li>
-    <li><strong>Real benefit:</strong> context isolation; workers read a lot, return a little, in parallel.</li>
-    <li><strong>Orchestrator-workers:</strong> sub-agent = a tool; parallel tool calls = parallel workers.</li>
-    <li><strong>Supervisor (LangGraph):</strong> router node + worker nodes, <code>Command(goto=...)</code>.</li>
-    <li><strong>Handoff:</strong> a transfer tool switches the active agent; cap steps to avoid ping-pong.</li>
-    <li><strong>MCP:</strong> host → client → server over JSON-RPC; N×M integrations become N+M.</li>
-    <li><strong>MCP primitives:</strong> tools (model), resources (app), prompts (user); plus sampling, elicitation, roots. Transports: stdio (local), Streamable HTTP (remote).</li>
-    <li><strong>A2A:</strong> agent-to-agent across owners: Agent Cards, tasks, artifacts.</li>
-  </ol></div>
-
-  <h2 id="mm-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <h2 id="mm-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>Your manager wants a "planner, coder, tester, reviewer" multi-agent system for a coding assistant. What do you say?</summary><div class="qa-body">Start with one agent that can plan, edit and run tests. Coding sub-tasks share a lot of context and depend on each other, so splitting them loses information and multiplies tokens. Add a separate agent only for a measured gap, e.g. an isolated reviewer with fresh context, and compare against the single-agent baseline on an eval set.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>When does a multi-agent design clearly beat a single agent?</summary><div class="qa-body">Breadth-first tasks with independent parts and lots of raw material, like researching ten companies. Workers explore in parallel in their own context windows and return summaries, so the lead stays focused. It also helps when parts need different permissions, or are owned by different teams.</div></details>

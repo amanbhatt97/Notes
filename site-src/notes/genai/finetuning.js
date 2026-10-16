@@ -4,6 +4,107 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Fine-Tuning</h1>
   <p class="lead">How to change a model's <em>behaviour</em> by training it on your own examples, and how to do it on one GPU with LoRA and QLoRA. You need the training stages from 03 · How LLMs Work and the RAG pipeline from 07. This is the last stage before the capstone: it tells you when to customise a model, and when not to.</p>
 
+  <h2 id="ft-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Fine-Tuning</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Prompt, RAG or fine-tune?</div>
+        <ul>
+          <li><b>Fine-tuning</b> — keep training on your examples → default behaviour changes</li>
+          <li><b>Ladder</b> — prompt → RAG → fine-tune → pre-train; each rung ~10–100× cost</li>
+          <li><b>FT changes how, RAG changes what</b> — facts → RAG; style/format/narrow skill → FT</li>
+          <li><b>Tell-tale</b> — prompts keep growing and it still drifts = behaviour gap</li>
+          <li>💡 new employee: instructions · reference binder · training course · raising from birth</li>
+          <li>⚠ <b>FT to teach facts</b> — unreliable, frozen; use RAG (often both)</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Where it fits</div>
+        <ul>
+          <li><b>Pre-train</b> → BASE (autocomplete) → <b>SFT</b> → INSTRUCT → <b>RLHF/DPO</b> → CHAT</li>
+          <li><b>Post-training</b> = stages 2 + 3; you run 2, sometimes 3</li>
+          <li><b>Instruction tuning</b> — many tasks (FLAN, Alpaca); labs do it</li>
+          <li><b>Task fine-tuning</b> — one narrow task; you do it</li>
+          <li>⚠ <b>Base vs Instruct</b> — start from <code>-Instruct</code> for chat tasks</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">SFT &amp; data</div>
+        <ul>
+          <li><b>SFT</b> — (input, ideal output) pairs, next-token loss</li>
+          <li><b>Loss on response tokens only</b> — prompt masked</li>
+          <li><b>Format</b> — JSONL <code>{"messages": [...]}</code>; trainer applies chat template</li>
+          <li><b>How many</b> — format 100–500 · style 500–2k · reasoning 5k+</li>
+          <li><b>Quality &gt; quantity</b>; consistent, representative, no PII</li>
+          <li>⚠ <b>Contamination</b> — freeze eval set FIRST</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">LoRA</div>
+        <ul>
+          <li><b>Problem</b> — full FT ≈ 16 B/param → 7B ≈ 112 GB; GPU has 24</li>
+          <li><b>Insight</b> — weight updates have low intrinsic rank</li>
+          <li><b>Formula</b> — <code>h = Wx + (α/r)·BAx</code>; B d×r, A r×k, r ≪ d</li>
+          <li><b>Count</b> — 4096², r=8: 16.8M → 65,536 (256× fewer)</li>
+          <li><b>Init</b> — A random, B = 0 → starts as the base model</li>
+          <li><b>Knobs</b> — r 8–16; α = 2r; attention + MLP projections; LR 1e-4–2e-4</li>
+          <li><b>Merge</b> (zero latency) or <b>swap</b> adapters per customer</li>
+          <li>💡 Photoshop adjustment layer · ⚠ still forgets if over-trained</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Quantization &amp; QLoRA</div>
+        <ul>
+          <li><b>Bytes/param</b> — FP32 4 · BF16 2 · INT8 1 · INT4 0.5 (7B: 28/14/7/3.5 GB)</li>
+          <li><b>Absmax</b> — divide by max |w|, round; one scale per block</li>
+          <li><b>Real run</b> — int8 1.0% err · int4 17.5% · int4 blocks of 64 11.2%</li>
+          <li><b>QLoRA</b> = NF4 frozen base + LoRA in BF16
+            <ul><li>NF4: levels at equal probability (dense near 0)</li><li>double quantization of scales (~0.37 bit/param)</li><li>paged optimizers absorb spikes</li></ul>
+          </li>
+          <li><b>Memory 7B</b> — LoRA ≈ 18 GB · QLoRA ≈ 8 GB</li>
+          <li><b>Tools</b> — bitsandbytes (train) · GPTQ/AWQ (GPU serve) · GGUF (CPU/Ollama)</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Other PEFT</div>
+        <ul>
+          <li><b>PEFT</b> — train a small add-on, not all weights</li>
+          <li><b>Adapters</b> — bottleneck MLPs; add latency</li>
+          <li><b>Prefix / prompt tuning</b> — soft virtual tokens; unstable / big-model only</li>
+          <li><b>IA³</b> — rescaling vectors, ~0.01% params</li>
+          <li><b>DoRA</b> — magnitude + direction; <code>use_dora=True</code></li>
+          <li><b>LoRA won</b> — merges (0 latency), stable, small swappable adapters</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">RLHF &amp; DPO</div>
+        <ul>
+          <li><b>Alignment</b> — learn which valid answer people prefer</li>
+          <li><b>Why</b> — "A &gt; B" is easier than writing the perfect answer</li>
+          <li><b>RLHF</b> — rank pairs → reward model → PPO</li>
+          <li><b>KL leash</b> — <code>reward − β·KL(policy ‖ SFT)</code>; stops reward hacking</li>
+          <li><b>DPO</b> — one loss on (prompt, chosen, rejected) vs frozen reference; no RM, no RL</li>
+          <li><b>DPO knobs</b> — β 0.1, LR ~5e-7, start from SFT model</li>
+          <li><b>Names</b> — RLAIF, Constitutional AI, ORPO/KTO, RLVR/GRPO (reasoning models)</li>
+          <li>⚠ RLHF = supervised RM + real RL step</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Evaluate &amp; failures</div>
+        <ul>
+          <li><b>Levels</b> — loss/perplexity · task metric · judge/human</li>
+          <li><b>SQL</b> — execution accuracy (compare rows), not string match</li>
+          <li><b>Report 3 numbers</b> — base, fine-tuned, general benchmark (MMLU)</li>
+          <li><b>Forgetting</b> → lower LR, fewer epochs, LoRA, mix 5–20% general data</li>
+          <li><b>Overfitting</b> (eval loss ↑) → diverse data, early stop, smaller r</li>
+          <li><b>Alignment tax</b>, <b>instability</b> (NaN) → aligned start, clipping, lower LR</li>
+          <li>⚠ old TRL args — use <code>processing_class=</code>, <code>SFTConfig(max_length=)</code></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -16,8 +117,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="ft-align"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">RLHF &amp; DPO</span><span class="rm-sub">Learning from preferences</span></div></div>
       <div class="rm-item rm-done" data-target="ft-eval"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Evaluating &amp; Failure Modes</span><span class="rm-sub">Did it really get better?</span></div></div>
       <div class="rm-item rm-done" data-target="ft-build"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Build It</span><span class="rm-sub">LoRA from scratch + a QLoRA run</span></div></div>
-      <div class="rm-item rm-done" data-target="ft-rev"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">The page in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="ft-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="ft-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
@@ -44,9 +144,13 @@ Object.assign(TOPIC_CONTENT, {
     <p>Answers: (a) RAG; fine-tuning does not reliably teach facts. (b) Prompting first, fine-tune only if that won't hold. (c) Both: fine-tune the voice, RAG the facts. Most real products combine them.</p>
   </div>
   <p>In one line: <strong>fine-tuning changes how it behaves; RAG changes what it knows</strong>. RAG stays fresh and cites sources; a fine-tune is frozen at training time.</p>
-  <div class="callout intu"><span class="label">Golden rule</span>
-    <p>Climb the ladder from the bottom. Each rung costs roughly 10–100× more than the one below. Move up only when you can show, with an eval, that the cheaper rung failed.</p>
-  </div>
+  <figure class="viz"><svg viewBox="0 0 600 170" width="600">
+    <rect x="10" y="120" width="140" height="40" class="fg sg"/><text x="80" y="136" text-anchor="middle">Prompting</text><text x="80" y="152" text-anchor="middle" class="tm" font-size="11">$0 · minutes</text>
+    <rect x="155" y="90" width="140" height="70" class="fb sb"/><text x="225" y="106" text-anchor="middle">RAG</text><text x="225" y="122" text-anchor="middle" class="tm" font-size="11">index · hours</text>
+    <rect x="300" y="60" width="140" height="100" class="fv" stroke="currentColor"/><text x="370" y="76" text-anchor="middle">Fine-tune</text><text x="370" y="92" text-anchor="middle" class="tm" font-size="11">$100s–10Ks · days</text>
+    <rect x="445" y="30" width="145" height="130" class="fr sr"/><text x="517" y="46" text-anchor="middle">Pre-train</text><text x="517" y="62" text-anchor="middle" class="tm" font-size="11">$millions · months</text>
+    <text x="10" y="40" class="tm">each rung ≈ 10–100× the one below</text>
+  </svg><figcaption>Golden rule: climb from the bottom. Move up only when an eval shows the cheaper rung failed.</figcaption></figure>
 
   <h2 id="ft-stages"><span class="num">02</span>Where Fine-Tuning Fits</h2>
   <p>A chat model is built in three stages (overview in 03 · How LLMs Work). "Fine-tuning" means stages 2 and 3, together called <strong>post-training</strong>.</p>
@@ -87,8 +191,21 @@ Object.assign(TOPIC_CONTENT, {
 
   <h2 id="ft-lora"><span class="num">04</span>LoRA</h2>
   <p><strong>LoRA</strong> (Low-Rank Adaptation): freeze the model and train a tiny add-on update for each chosen weight matrix.</p>
-  <p><strong>The problem.</strong> Full fine-tuning updates every weight. Standard mixed-precision training with Adam costs ~16 bytes per parameter (weights, gradients, fp32 master copy, two Adam states). A 7B model needs ~112 GB before activations. A consumer GPU has 24 GB.</p>
-  <p><strong>The insight.</strong> The change fine-tuning makes to a weight matrix has <strong>low intrinsic rank</strong>: it lives in a few directions. So write the update as a product of two thin matrices.</p>
+  <ul>
+    <li><strong>Problem:</strong> full fine-tuning with Adam ≈ 16 bytes/param (weights, grads, fp32 master, two Adam states). 7B → ~112 GB; a consumer GPU has 24 GB.</li>
+    <li><strong>Insight:</strong> the update to a weight matrix has <strong>low intrinsic rank</strong> (a few directions), so write it as two thin matrices.</li>
+  </ul>
+  <figure class="viz"><svg viewBox="0 0 600 210" width="600">
+    <rect x="20" y="30" width="120" height="120" class="fs" stroke="currentColor"/><text x="80" y="86" text-anchor="middle">W</text><text x="80" y="106" text-anchor="middle" class="tm" font-size="11">d×k · frozen</text>
+    <text x="162" y="96" text-anchor="middle">+</text>
+    <rect x="185" y="30" width="20" height="120" class="fg sg"/><text x="195" y="94" text-anchor="middle">B</text><text x="195" y="22" text-anchor="middle" class="tm" font-size="11">B=0</text><text x="195" y="168" text-anchor="middle" class="tm" font-size="11">d×r</text>
+    <text x="218" y="45" text-anchor="middle">·</text>
+    <rect x="230" y="30" width="120" height="20" class="fg sg"/><text x="290" y="45" text-anchor="middle">A</text><text x="290" y="68" text-anchor="middle" class="tm" font-size="11">r×k · random</text>
+    <text x="370" y="96" text-anchor="middle">=</text>
+    <rect x="390" y="30" width="120" height="120" class="fb sb" stroke-dasharray="4 3"/><text x="450" y="86" text-anchor="middle">ΔW = BA</text><text x="450" y="106" text-anchor="middle" class="tm" font-size="11">rank ≤ r</text>
+    <text x="522" y="84" font-size="11">merge →</text><text x="522" y="102" font-size="11">W + BA</text>
+    <text x="20" y="196">W: 16,777,216</text><text x="230" y="196" class="tg">A+B at r=8: 65,536 (256× fewer)</text>
+  </svg><figcaption>Only the thin green matrices train. Their product has W's shape, so it adds to (or merges into) W. Numbers for 4096×4096.</figcaption></figure>
   <div class="callout def"><span class="label">The math</span>
     <p>For a frozen weight <code>W</code> (d × k): <code>h = W x + (α / r) · B A x</code>, with <code>B</code> d × r, <code>A</code> r × k, and rank <code>r ≪ d</code>. Only <code>A</code> and <code>B</code> train. <code>ΔW = BA</code> has the same shape as <code>W</code>.</p>
     <p>For a 4096 × 4096 projection with r = 8: full = 16,777,216 params; LoRA = 8 × (4096 + 4096) = 65,536. <strong>256× fewer.</strong></p>
@@ -152,12 +269,23 @@ print(f"int4, blocks of 64: mean relative error {np.abs(w - w_hat).mean() / np.a
   <p>Int4 has only 16 levels, so smarter placement matters: smaller blocks, and levels where the weights actually are. Per-weight error also overstates model damage; real methods are judged on task accuracy.</p>
   <h3>QLoRA = 4-bit frozen base + LoRA adapters</h3>
   <ul>
-    <li><strong>NF4</strong> (NormalFloat-4): weights are roughly Gaussian, so the 16 levels are spaced by equal <em>probability</em>, not equal value. More levels near zero, where most weights sit.</li>
+    <li><strong>NF4</strong> (NormalFloat-4, picture below): weights are roughly Gaussian, so the 16 levels are spaced by equal <em>probability</em>, not equal value. More levels near zero, where most weights sit.</li>
     <li><strong>Double quantization</strong>: the per-block scales are quantized too, saving ~0.37 bits/param.</li>
     <li><strong>Paged optimizers</strong>: optimizer states spill to CPU memory on spikes instead of crashing.</li>
     <li>Base weights are de-quantized to BF16 on the fly for each matmul; adapters train in BF16.</li>
   </ul>
-  <p>Memory for a 7B fine-tune: LoRA on a BF16 base ≈ 14 GB weights + ~4 GB adapters/optimizer/activations ≈ 18 GB (tight on 24 GB). QLoRA ≈ 4 + 4 ≈ <strong>8 GB</strong>.</p>
+  <figure class="viz"><svg viewBox="0 0 600 175" width="600">
+    <path d="M130,119 L138,119 L145,118 L152,118 L160,117 L168,116 L175,115 L182,113 L190,112 L198,110 L205,107 L212,104 L220,101 L228,98 L235,94 L242,89 L250,84 L258,79 L265,74 L272,68 L280,62 L288,57 L295,51 L302,46 L310,41 L318,36 L325,32 L332,29 L340,27 L348,25 L355,25 L362,25 L370,27 L378,29 L385,32 L392,36 L400,41 L408,46 L415,51 L422,57 L430,62 L438,68 L445,74 L452,79 L460,84 L468,89 L475,94 L482,98 L490,101 L498,104 L505,107 L512,110 L520,112 L528,113 L535,115 L542,116 L550,117 L558,118 L565,118 L572,119 L580,119" class="fb sb"/>
+    <text x="8" y="60" class="tm">weights</text><text x="8" y="76" class="tm">≈ Gaussian</text>
+    <text x="8" y="140">absmax int4</text><g class="sr" stroke-width="2"><line x1="130" y1="128" x2="130" y2="142"/><line x1="162" y1="128" x2="162" y2="142"/><line x1="194" y1="128" x2="194" y2="142"/><line x1="226" y1="128" x2="226" y2="142"/><line x1="259" y1="128" x2="259" y2="142"/><line x1="291" y1="128" x2="291" y2="142"/><line x1="323" y1="128" x2="323" y2="142"/><line x1="355" y1="128" x2="355" y2="142"/><line x1="387" y1="128" x2="387" y2="142"/><line x1="419" y1="128" x2="419" y2="142"/><line x1="451" y1="128" x2="451" y2="142"/><line x1="484" y1="128" x2="484" y2="142"/><line x1="516" y1="128" x2="516" y2="142"/><line x1="548" y1="128" x2="548" y2="142"/><line x1="580" y1="128" x2="580" y2="142"/></g>
+    <text x="8" y="164">NF4</text><g class="sg" stroke-width="2"><line x1="130" y1="152" x2="130" y2="166"/><line x1="197" y1="152" x2="197" y2="166"/><line x1="234" y1="152" x2="234" y2="166"/><line x1="262" y1="152" x2="262" y2="166"/><line x1="286" y1="152" x2="286" y2="166"/><line x1="307" y1="152" x2="307" y2="166"/><line x1="327" y1="152" x2="327" y2="166"/><line x1="346" y1="152" x2="346" y2="166"/><line x1="364" y1="152" x2="364" y2="166"/><line x1="383" y1="152" x2="383" y2="166"/><line x1="403" y1="152" x2="403" y2="166"/><line x1="424" y1="152" x2="424" y2="166"/><line x1="448" y1="152" x2="448" y2="166"/><line x1="476" y1="152" x2="476" y2="166"/><line x1="513" y1="152" x2="513" y2="166"/><line x1="580" y1="152" x2="580" y2="166"/></g>
+  </svg><figcaption>Each tick is one storable level. Equal spacing wastes levels in the empty tails; NF4 packs them where the weights are.</figcaption></figure>
+  <figure class="viz"><svg viewBox="0 0 600 140" width="600">
+    <text x="8" y="49">full FT (Adam)</text><rect x="150" y="36" width="381" height="18" class="fr sr"/><text x="537" y="49">112 GB</text>
+    <text x="8" y="84">LoRA, BF16 base</text><rect x="150" y="71" width="48" height="18" class="fb sb"/><rect x="198" y="71" width="14" height="18" class="fv"/><text x="246" y="84">≈18 GB</text>
+    <text x="8" y="119">QLoRA, NF4 base</text><rect x="150" y="106" width="14" height="18" class="fb sb"/><rect x="164" y="106" width="14" height="18" class="fv"/><text x="246" y="119">≈8 GB</text>
+    <line x1="232" y1="24" x2="232" y2="132" class="sr" stroke-dasharray="4 3"/><text x="232" y="18" text-anchor="middle" class="tr">24 GB GPU</text>
+  </svg><figcaption>7B fine-tune memory. Blue = base weights (14 GB BF16 vs ~4 GB NF4), violet ≈ 4 GB adapters + optimizer + activations.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy: a zipped encyclopedia</span>
     <p>Keep the giant book you only <em>read</em> compressed on a small shelf. Write your own notes, the part you <em>change</em>, on full-size paper. Compress what is frozen; keep precision where you learn.</p>
   </div>
@@ -187,7 +315,7 @@ print(f"int4, blocks of 64: mean relative error {np.abs(w - w_hat).mean() / np.a
 
   <h2 id="ft-align"><span class="num">07</span>RLHF &amp; DPO</h2>
   <p><strong>Alignment</strong> teaches the model which of several valid answers people <em>prefer</em>: more helpful, honest, on-tone, safe.</p>
-  <p>SFT needs one gold answer per prompt. But for most prompts many answers are valid, and judging "A is better than B" is far easier than writing the perfect answer. Fuzzy qualities like tone are almost impossible to capture with one target.</p>
+  <p>SFT needs one gold answer per prompt, but many answers are valid, and "A is better than B" is far easier to judge than writing the perfect answer, especially for fuzzy qualities like tone.</p>
   <div class="callout anlg"><span class="label">Analogy: a cooking student</span>
     <p>SFT: "make exactly this recipe". Alignment: cook two versions, taste both, "this one's better", again and again. The student never sees a perfect recipe but builds <em>taste</em>.</p>
   </div>
@@ -368,21 +496,7 @@ merged.save_pretrained("merged-model")</div>
     <p>Old tutorials pass <code>tokenizer=</code> and <code>max_seq_length=</code> to <code>SFTTrainer</code>. Current TRL uses <code>processing_class=</code> and <code>SFTConfig(max_length=…)</code>.</p>
   </div>
 
-  <h2 id="ft-rev"><span class="num">10</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Ladder:</strong> prompt → RAG → fine-tune → pre-train; climb only when an eval proves the lower rung failed.</li>
-    <li><strong>Fine-tuning changes how; RAG changes what.</strong> Facts → RAG. Style, format, narrow skill → fine-tune. Often both.</li>
-    <li><strong>SFT:</strong> next-token loss on response tokens only; quality and consistency beat volume.</li>
-    <li><strong>Eval set first</strong>, frozen, never seen while making training data.</li>
-    <li><strong>LoRA:</strong> <code>h = Wx + (α/r)·BAx</code>, W frozen, B starts at 0; 4096² at r = 8 → 65,536 params (256× fewer).</li>
-    <li><strong>r</strong> = capacity (start 8–16); <strong>α = 2r</strong> keeps the scale fixed; target attention + MLP.</li>
-    <li><strong>Merge</strong> for zero-overhead serving, or <strong>swap</strong> adapters on one base.</li>
-    <li><strong>QLoRA</strong> = NF4 frozen base + double quantization + paged optimizer + BF16 LoRA → 7B on one 24 GB GPU.</li>
-    <li><strong>bitsandbytes</strong> for training; <strong>GPTQ / AWQ</strong> for GPU serving; <strong>GGUF</strong> for CPU / Ollama.</li>
-    <li><strong>RLHF</strong> = preferences → reward model → PPO with KL. <strong>DPO</strong> = one loss on chosen/rejected vs a frozen reference.</li>
-  </ol></div>
-
-  <h2 id="ft-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <h2 id="ft-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>When do you fine-tune instead of using RAG or better prompts?</summary><div class="qa-body">Prompt first (free, fixes behaviour and format). RAG if the gap is knowledge: private, recent, or needs citations. Fine-tune when the behaviour must change reliably and prompting can't hold it: a strict output format, a house style, a narrow skill at scale, or to shrink a huge prompt. Combine fine-tuning (how) with RAG (what) when you need both.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Explain LoRA and why it works.</summary><div class="qa-body">Freeze W and learn the update as a low-rank product: <code>h = Wx + (α/r)·BAx</code>, B is d × r, A is r × k, r ≪ d. It works because task-specific weight updates have low intrinsic rank, so a few directions capture most of the change. Memory falls sharply (no gradients or optimizer states for W), and the update can be merged into W for free inference.</div></details>

@@ -4,6 +4,119 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Evaluation &amp; Observability</h1>
   <p class="lead">You can now build prompts, RAG pipelines and agents (notes 04–12). This note shows how to <em>prove</em> they work: golden datasets, code and LLM graders, RAG and agent metrics, regression tests in CI, and tracing in production. Note 14 then uses these numbers to make cost and safety decisions.</p>
 
+  <h2 id="ev-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">LLM Evaluation &amp; Observability</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Why evals first</div>
+        <ul>
+          <li><b>Eval</b> = inputs + run the app + grader → comparable number</li>
+          <li><b>Why</b> — outputs are non-deterministic, free-form; unit tests don't fit</li>
+          <li>⚠ <b>Vibes-driven dev</b> — try 3 examples, ship, silently break others</li>
+          <li>💡 driving test on a fixed route, same checklist for every driver</li>
+          <li><b>Loop</b> — change → run suite → compare baseline → ship/revert → add failures</li>
+          <li><b>Offline</b> (fixed set, pre-ship) vs <b>online</b> (graders on live sample)</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Golden dataset</div>
+        <ul>
+          <li><b>Golden set</b> — versioned cases: input + what "good" means</li>
+          <li><b>Sources</b> — prod logs &gt; bug reports &gt; experts &gt; LLM-synthesized</li>
+          <li><b>Size</b> — 15–100 cases to start</li>
+          <li><b>Noise floor</b> ≈ <code>1/sqrt(n × reps)</code>; 25×2 ≈ ±14 pts</li>
+          <li><b>Include negatives</b> — "no", "I don't know", refusals</li>
+          <li><b>Tags</b> show where scores move; <b>held-out split</b> if you tune on it</li>
+          <li>⚠ <b>Gold written by the old model</b> → rewards imitation; human-verify</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Graders</div>
+        <ul>
+          <li><b>Code</b> — exact, contains, regex, JSON schema, tests; free, deterministic</li>
+          <li><b>LLM judge</b> — open-ended text; costs tokens; must be validated</li>
+          <li><b>Human</b> — ground truth for taste; slow, small set</li>
+          <li><b>Rule</b> — cheapest grader that truly measures the property</li>
+          <li><b>Atomic checks</b> — correct / formatted / concise as separate metrics</li>
+          <li>⚠ <b>Too-rigid</b> — "4" vs "4.0": normalize; confirm a wrong answer fails</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">LLM-as-judge</div>
+        <ul>
+          <li><b>Pointwise</b> — output + rubric → pass/fail / score</li>
+          <li><b>Pairwise</b> — A vs B → better; more reliable for v1 vs v2</li>
+          <li><b>Rubric</b> = checkable claims, not "rate 1–5"</li>
+          <li><b>Biases → fixes</b>
+            <ul><li>position → randomize / both orders</li><li>verbosity → "don't reward length"</li><li>self-preference → different judge model</li><li>label deference → hide which is reference</li></ul>
+          </li>
+          <li><b>Schema</b> — <code>reasoning</code> before <code>verdict</code>; <code>output_config.format</code></li>
+          <li><b>Candidate = untrusted data</b> in tags (injection)</li>
+          <li><b>Models</b> — Haiku per PR, Sonnet/Opus for subtle criteria</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Validate the judge</div>
+        <ul>
+          <li><b>Process</b> — humans label 30–100 blind → judge labels same → compare</li>
+          <li><b>Agreement</b> — inflated when most labels are "pass"</li>
+          <li><b>Cohen's κ</b> = <code>(po − pe)/(1 − pe)</code>; &gt;0.8 strong, 0.55 moderate</li>
+          <li><b>Fail recall</b> — share of bad answers caught; low = lenient judge</li>
+          <li><b>Target</b> ~90% agreement on clear cases; read every disagreement</li>
+          <li>⚠ <b>Validating on rubric-writing examples</b> = training accuracy; hold out</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">RAG metrics</div>
+        <ul>
+          <li><b>Two failure points</b> — retrieval vs generation; measure separately</li>
+          <li><b>Recall@k</b> — gold chunks in top k (fix first)</li>
+          <li><b>Precision@k</b> — relevant share of k; <b>MRR</b> = 1/rank of first hit; <b>nDCG</b> graded ranks</li>
+          <li><b>Faithfulness</b> — supported claims / total claims (hallucination)</li>
+          <li><b>Answer relevance</b> — addresses the question?</li>
+          <li><b>Context precision / recall</b> — chunks relevant? contain everything needed?</li>
+          <li><b>RAGAS</b> packages these — judges underneath, validate them</li>
+          <li>⚠ faithful 0.95 + correct 0.40 → retrieval bug</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Agent evals</div>
+        <ul>
+          <li><b>Task success</b> — end state in a sandbox (rows, files, calls)</li>
+          <li><b>Tool-call accuracy</b> — right tool, valid args, no forbidden calls</li>
+          <li><b>Trajectory</b> — loops? asked before deleting? (judge or rules)</li>
+          <li><b>Efficiency</b> — steps, tokens, cost, latency from <code>usage</code></li>
+          <li><b>Grade outcomes, not paths</b>; <b>stub side effects</b></li>
+          <li><b>pass@k</b> (≥1 of k) vs <b>pass^k</b> (all k) — users feel pass^k</li>
+          <li>⚠ <b>Grading the narration</b> ("refund issued!") — check the table</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">CI regression gate</div>
+        <ul>
+          <li><b>Tiered</b> — code graders every PR; judge suite nightly / pre-release</li>
+          <li><b>Baseline + tolerance</b> — fail only beyond the noise floor</li>
+          <li><b>Pin</b> model, prompt, judge + rubric versions (changed judge = changed ruler)</li>
+          <li><b>Record cost</b> per case, judge separately</li>
+          <li>⚠ <b>Flaky gate</b> inside the noise → people ignore CI</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Tracing &amp; observability</div>
+        <ul>
+          <li><b>Trace</b> = one request; <b>spans</b> = model call, retrieval, tool call</li>
+          <li>💡 flight recorder: read after an incident</li>
+          <li><b>Log</b> — IDs, model + prompt version, redacted I/O, chunk IDs, tool calls, <code>usage</code> incl. cache, latency/TTFT, <code>stop_reason</code>, errors, feedback</li>
+          <li><b>Tools</b> — LangSmith, Langfuse, Phoenix; <b>OpenTelemetry</b> GenAI conventions</li>
+          <li><b>Online evals</b> — cheap checks on all, judge on 1–5%</li>
+          <li><b>Close the loop</b> — bad traces → new golden cases</li>
+          <li>⚠ <b>Raw PII in logs</b> — redact, set retention</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -17,8 +130,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="ev-ci"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Regression Tests in CI</span><span class="rm-sub">Block the PR that breaks quality</span></div></div>
       <div class="rm-item rm-done" data-target="ev-obs"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Tracing &amp; Observability</span><span class="rm-sub">What to log in production</span></div></div>
       <div class="rm-item rm-done" data-target="ev-build"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Build It: Eval Harness</span><span class="rm-sub">JSONL, graders, judge, CI</span></div></div>
-      <div class="rm-item rm-done" data-target="ev-rev"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="ev-qa"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="ev-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
@@ -26,11 +138,24 @@ Object.assign(TOPIC_CONTENT, {
   <div class="callout def"><span class="label">Definition</span>
     <p>An <strong>eval</strong> is three things: a set of inputs, a way to run your app on each, and a way to grade each output. The result is a number you can compare across versions.</p>
   </div>
-  <p>LLM output is non-deterministic and free-form, so normal unit tests don't fit. Without evals you change a prompt, try three examples by hand, and ship. That is "vibes-driven development": every fix silently breaks something you didn't re-check.</p>
+  <p>LLM output is non-deterministic and free-form, so unit tests don't fit. Without evals you try three examples and ship ("vibes-driven development"); every fix silently breaks something else.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A driving test on a fixed route. Every candidate (prompt version, model) drives the same streets, and the examiner uses the same checklist. Only then can you say one driver is better. Where it breaks: real roads (production traffic) drift, so the route needs updating.</p>
   </div>
-  <div class="flow"><span>Change prompt / model / tool</span><span>Run eval suite</span><span>Compare to baseline</span><span>Ship or revert</span><span>Add new failures to the set</span></div>
+  <figure class="viz"><svg viewBox="0 0 560 205" width="560">
+    <defs><marker id="ev-ah1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="195" y="10" width="170" height="34" rx="6" class="fb sb"/><text x="280" y="31" text-anchor="middle">change prompt/model</text>
+    <rect x="380" y="72" width="170" height="34" rx="6" class="fv"/><text x="465" y="93" text-anchor="middle">run eval suite</text>
+    <rect x="320" y="160" width="170" height="34" rx="6" class="fs" stroke="currentColor"/><text x="405" y="181" text-anchor="middle">compare to baseline</text>
+    <rect x="70" y="160" width="170" height="34" rx="6" class="fg sg"/><text x="155" y="181" text-anchor="middle">ship or revert</text>
+    <rect x="10" y="72" width="170" height="34" rx="6" class="fr sr"/><text x="95" y="93" text-anchor="middle">add new failures</text>
+    <g fill="none" stroke="currentColor">
+      <path d="M367,27 Q450,30 462,68" marker-end="url(#ev-ah1)"/><path d="M462,108 Q455,140 425,157" marker-end="url(#ev-ah1)"/>
+      <line x1="318" y1="177" x2="244" y2="177" marker-end="url(#ev-ah1)"/><path d="M120,158 Q100,135 97,110" marker-end="url(#ev-ah1)"/>
+      <path d="M97,70 Q110,30 191,27" marker-end="url(#ev-ah1)"/>
+    </g>
+    <text x="280" y="98" text-anchor="middle" class="tm">same cases,</text><text x="280" y="116" text-anchor="middle" class="tm">same graders</text>
+  </svg><figcaption>Every change runs the same fixed test; every production failure becomes a new case.</figcaption></figure>
   <ul>
     <li><strong>Offline evals</strong>: a fixed dataset, run before shipping. Answers "is v2 better than v1?"</li>
     <li><strong>Online evals</strong>: graders run on a sample of live traffic. Answers "is it still working today?"</li>
@@ -84,7 +209,21 @@ Object.assign(TOPIC_CONTENT, {
     <li><strong>Pointwise</strong>: one output + rubric → pass/fail or a score. Gives an absolute number.</li>
     <li><strong>Pairwise</strong>: two outputs → which is better (or tie). More reliable for "is v2 better than v1?" because judges compare better than they score on a scale.</li>
   </ul>
-  <p>A good rubric is a list of <strong>checkable claims</strong>, not "rate helpfulness 1–5". Example: "apologises once; offers a concrete next step; does not blame the customer; under 120 words."</p>
+  <figure class="viz"><svg viewBox="0 0 600 200" width="600">
+    <defs><marker id="ev-ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="10" y="20" width="140" height="30" rx="5" class="fs" stroke="currentColor"/><text x="80" y="40" text-anchor="middle">question</text>
+    <rect x="10" y="70" width="140" height="30" rx="5" class="fb sb"/><text x="80" y="90" text-anchor="middle">candidate reply</text>
+    <rect x="10" y="120" width="140" height="30" rx="5" class="fg sg"/><text x="80" y="140" text-anchor="middle">rubric</text>
+    <g fill="none" stroke="currentColor"><line x1="152" y1="35" x2="216" y2="75" marker-end="url(#ev-ah2)"/><line x1="152" y1="85" x2="216" y2="85" marker-end="url(#ev-ah2)"/><line x1="152" y1="135" x2="216" y2="95" marker-end="url(#ev-ah2)"/>
+      <line x1="372" y1="85" x2="406" y2="85" marker-end="url(#ev-ah2)"/><line x1="500" y1="127" x2="500" y2="148" stroke-dasharray="4 3" marker-start="url(#ev-ah2)" marker-end="url(#ev-ah2)"/></g>
+    <rect x="220" y="55" width="150" height="60" rx="6" class="fv"/><text x="295" y="80" text-anchor="middle">LLM judge</text><text x="295" y="100" text-anchor="middle" class="tm">≠ model tested</text>
+    <rect x="410" y="45" width="180" height="80" rx="6" class="fs" stroke="currentColor"/>
+    <text x="420" y="74" font-size="11">{"reasoning": "…",</text><text x="420" y="94" font-size="11"> "verdict": "fail"}</text><text x="420" y="114" font-size="11" class="tm">schema-enforced</text>
+    <rect x="410" y="150" width="180" height="34" rx="6" class="ft st"/><text x="500" y="171" text-anchor="middle">human labels</text>
+    <text x="400" y="164" text-anchor="end" class="tm">agreement · κ · fail recall</text>
+    <text x="80" y="175" text-anchor="middle" class="tr" font-size="11">reply = untrusted data</text>
+  </svg><figcaption>Rubric of checkable claims in, reasoning-then-verdict out; the judge is trusted only after it agrees with humans.</figcaption></figure>
+  <p>A good rubric is a list of <strong>checkable claims</strong>, not "rate helpfulness 1–5": "apologises once; offers a concrete next step; does not blame the customer; under 120 words."</p>
   <table class="tbl">
     <tr><th>Judge bias</th><th>What happens</th><th>Fix</th></tr>
     <tr><td>Position bias</td><td>Prefers whichever answer is shown first</td><td>Randomize A/B per case, or judge both orders</td></tr>
@@ -138,7 +277,19 @@ print(f"fail recall {tp}/{tp + fn}  (bad answers the judge caught)")</div>
   </div>
 
   <h2 id="ev-rag"><span class="num">06</span>RAG Metrics</h2>
-  <p>A RAG answer can fail in two places: retrieval fetched the wrong chunks, or generation misused the right ones. Measure them <strong>separately</strong>, or you can't tell which to fix.</p>
+  <figure class="viz"><svg viewBox="0 0 600 140" width="600">
+    <defs><marker id="ev-ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <text x="175" y="22" text-anchor="middle" class="tr">✗ wrong chunks</text><text x="425" y="22" text-anchor="middle" class="tr">✗ misuses them</text>
+    <rect x="10" y="36" width="80" height="34" rx="5" class="fs" stroke="currentColor"/><text x="50" y="57" text-anchor="middle">query</text>
+    <rect x="120" y="36" width="110" height="34" rx="5" class="fb sb"/><text x="175" y="57" text-anchor="middle">retriever</text>
+    <rect x="260" y="36" width="80" height="34" rx="5" class="fs" stroke="currentColor"/><text x="300" y="57" text-anchor="middle">chunks</text>
+    <rect x="370" y="36" width="110" height="34" rx="5" class="fv"/><text x="425" y="57" text-anchor="middle">LLM</text>
+    <rect x="510" y="36" width="80" height="34" rx="5" class="fg sg"/><text x="550" y="57" text-anchor="middle">answer</text>
+    <g fill="none" stroke="currentColor"><line x1="91" y1="53" x2="117" y2="53" marker-end="url(#ev-ah3)"/><line x1="231" y1="53" x2="257" y2="53" marker-end="url(#ev-ah3)"/><line x1="341" y1="53" x2="367" y2="53" marker-end="url(#ev-ah3)"/><line x1="481" y1="53" x2="507" y2="53" marker-end="url(#ev-ah3)"/>
+      <path d="M120,80 v6 h220 v-6"/><path d="M370,80 v6 h220 v-6"/></g>
+    <text x="230" y="106" text-anchor="middle" class="tb">retrieval metrics</text><text x="230" y="125" text-anchor="middle" class="tm">recall@k · precision@k · MRR</text>
+    <text x="480" y="106" text-anchor="middle" class="tb">generation metrics</text><text x="480" y="125" text-anchor="middle" class="tm">faithfulness · relevance</text>
+  </svg><figcaption>Two places to fail, two sets of metrics. Score them separately or you can't tell which half to fix.</figcaption></figure>
   <h3>Retrieval metrics (need gold chunk IDs per question)</h3>
   <div class="fx" data-lang="py">def recall_at_k(retrieved, relevant, k):
     return len(set(retrieved[:k]) &amp; relevant) / len(relevant)
@@ -209,7 +360,16 @@ print(f"recall@3={recall_at_k(retrieved, relevant, 3):.2f}",
   </div>
 
   <h2 id="ev-obs"><span class="num">09</span>Tracing &amp; Observability</h2>
-  <p><strong>Observability</strong> means you can answer "why did this request go wrong?" from logs alone. For LLM apps the unit is a <strong>trace</strong>: one user request, made of <strong>spans</strong> (each model call, retrieval, tool call) with timing and inputs/outputs.</p>
+  <p><strong>Observability</strong>: answer "why did this request go wrong?" from logs alone. Unit = a <strong>trace</strong> (one request) made of <strong>spans</strong> (each model call, retrieval, tool call).</p>
+  <figure class="viz"><svg viewBox="0 0 600 180" width="600">
+    <text x="8" y="33">POST /ask</text><rect x="130" y="20" width="450" height="18" class="fs" stroke="currentColor"/><text x="355" y="33" text-anchor="middle" font-size="11">trace 7f3a · 2.4 s</text>
+    <text x="8" y="61">retrieve</text><rect x="139" y="48" width="57" height="18" class="ft st"/><text x="202" y="61" font-size="11" class="tm">chunk ids d2,d4</text>
+    <text x="8" y="89">llm call 1</text><rect x="196" y="76" width="159" height="18" class="fv"/><text x="275" y="89" text-anchor="middle" font-size="11">1.2k in · 90 out</text>
+    <text x="8" y="117">tool: order</text><rect x="355" y="104" width="56" height="18" class="fg sg"/><text x="417" y="117" font-size="11" class="tm">is_error=false</text>
+    <text x="8" y="145">llm call 2</text><rect x="411" y="132" width="160" height="18" class="fv"/><text x="491" y="145" text-anchor="middle" font-size="11">stop: end_turn</text>
+    <line x1="130" y1="162" x2="580" y2="162" stroke="currentColor"/>
+    <g font-size="11" class="tm" text-anchor="middle"><text x="130" y="176">0</text><text x="242" y="176">0.6</text><text x="355" y="176">1.2</text><text x="467" y="176">1.8</text><text x="572" y="176">2.4 s</text></g>
+  </svg><figcaption>A trace as a waterfall: which step was slow, what each model call saw, and how it ended.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A flight recorder. You don't read it every flight, but after an incident it shows every input and decision in order.</p>
   </div>
@@ -372,21 +532,7 @@ def test_no_regression():
   <table class="tbl out"><caption>Output of python -m pytest -q test_eval.py</caption><tr><th>stdout</th></tr><tr><td><code>1 passed in 0.07s</code></td></tr></table>
   <p>Nightly, a second job runs the full suite (judge included) with the API key from CI secrets.</p>
 
-  <h2 id="ev-rev"><span class="num">11</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Eval</strong> = inputs + a way to run the app + a grader. Output: a comparable number.</li>
-    <li><strong>Golden set</strong>: 15–100 real, tagged cases with positives and negatives; versioned in the repo.</li>
-    <li><strong>Noise floor</strong> ≈ <code>1/sqrt(n × reps)</code>; a change smaller than that is not a result.</li>
-    <li><strong>Grader choice</strong>: code when the output is constrained; LLM judge for free text; humans for ground truth.</li>
-    <li><strong>Judge rubric</strong> = checkable claims, reasoning before verdict, structured output, candidate as untrusted data.</li>
-    <li><strong>Judge biases</strong>: position, verbosity, self-preference, label deference.</li>
-    <li><strong>Validate the judge</strong> on held-out human labels: agreement, Cohen's kappa, and recall on failures.</li>
-    <li><strong>RAG</strong>: retrieval (recall@k, MRR) separately from generation (faithfulness, answer relevance).</li>
-    <li><strong>Agents</strong>: grade the end state in a sandbox; then tool-call accuracy, trajectory, cost.</li>
-    <li><strong>CI</strong>: code graders per PR, judge suite nightly, fail on drop beyond tolerance; trace every request in prod.</li>
-  </ol></div>
-
-  <h2 id="ev-qa"><span class="num">12</span>Questions &amp; Answers</h2>
+  <h2 id="ev-qa"><span class="num">11</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>v2 scores 78% vs v1's 74% on 25 cases. Ship it?</summary><div class="qa-body">Not on that evidence. The noise floor is about <code>1/sqrt(25)</code> = ±20 points (±14 with 2 reps). A 4-point gap is inside the noise. Run more reps or cases, use a paired comparison on the same cases, or a pairwise judge, before calling it a win.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>When would you use a code grader vs an LLM judge?</summary><div class="qa-body">Code grader when the output space is constrained: a label, number, JSON schema, required phrases, tests passing. It's free and deterministic. LLM judge when many phrasings are valid (summaries, support replies) and the criteria need judgment. Prefer code wherever it truly measures the property.</div></details>
