@@ -36,7 +36,13 @@ function saveState() {
 }
 
 // ── Sidebar ──────────────────────────────────────────────────────────────────
-let sbOpen = window.innerWidth > 800;
+let sbOpen = window.innerWidth > 800 && !appState.sbCollapsed;
+if (window.innerWidth > 800 && !sbOpen) {
+  document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('sidebar').classList.add('hidden');
+    document.body.classList.add('sb-collapsed');
+  });
+}
 
 // Topics can nest: an entry with `children` is a collapsible group (folder),
 // any other non-divider entry is a leaf note. These helpers walk that tree.
@@ -192,6 +198,10 @@ function toggleSidebar() {
     ov.classList.toggle('show', sbOpen);
   } else {
     sb.classList.toggle('hidden', !sbOpen);
+    // Collapse the logo block with the sidebar so the page uses the full width
+    document.body.classList.toggle('sb-collapsed', !sbOpen);
+    appState.sbCollapsed = !sbOpen;
+    saveState();
   }
 }
 

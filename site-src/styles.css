@@ -127,7 +127,7 @@ body::before{
   opacity:.55;
 }
 .tb-logo{
-  width:var(--sb-w);flex-shrink:0;
+  width:var(--sb-w);flex-shrink:0;transition:width .22s ease;overflow:hidden;
   display:flex;align-items:center;gap:9px;
   padding:0 16px;border-right:1px solid var(--border);
   height:100%;
@@ -773,7 +773,7 @@ body::before{
 }
 
 /* Body */
-.syl-body { padding: 1.75rem 2rem 5rem; max-width: 1000px; }
+.syl-body { padding: 1.75rem 2rem 5rem; }
 .syl-toolbar {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 1.1rem; padding-bottom: .8rem;
@@ -1382,3 +1382,9 @@ span.note-nav-btn{visibility:hidden}
 .study-undo{border:1px solid var(--border);border-radius:8px;padding:9px 12px;font:inherit;font-size:12.5px;
   cursor:pointer;background:none;color:var(--ink3)}
 .study-undo:hover{color:var(--red);border-color:var(--red)}
+
+/* Sidebar collapsed (desktop): the logo block shrinks to its icon with it */
+body.sb-collapsed .tb-logo{width:60px;gap:0}
+.tb-logo-icon{flex-shrink:0}
+body.sb-collapsed .tb-logo-text{opacity:0;width:0;overflow:hidden}
+.tb-logo-text{transition:opacity .15s ease;white-space:nowrap}
