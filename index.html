@@ -1398,6 +1398,20 @@ body.sb-collapsed .tb-logo{width:60px;gap:0}
 body.sb-collapsed .tb-logo-text{opacity:0;width:0;overflow:hidden}
 .tb-logo-text{transition:opacity .15s ease;white-space:nowrap}
 
+/* Centred reading column: on wide screens (e.g. sidebar hidden) content keeps a
+   readable width and sits in the middle; the bars align with the same column. */
+:root{--col:1180px}
+.topic-content{max-width:var(--col);margin:0 auto}
+.topic-bar{padding-left:max(56px,calc((100% - var(--col))/2 + 56px));
+  padding-right:max(56px,calc((100% - var(--col))/2 + 56px))}
+.syl-body{max-width:var(--col);margin:0 auto}
+.syl-hero{padding-left:max(2.5rem,calc((100% - var(--col))/2 + 2rem));
+  padding-right:max(2.5rem,calc((100% - var(--col))/2 + 2rem))}
+@media(max-width:800px){
+  .topic-bar{padding-left:20px;padding-right:20px}
+  .syl-hero{padding-left:1.25rem;padding-right:1.25rem}
+}
+
 </style>
 </head>
 <body>
