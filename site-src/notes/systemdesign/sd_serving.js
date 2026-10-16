@@ -2,7 +2,7 @@
 Object.assign(TOPIC_CONTENT, {
   "sd_serving": `<main>
   <h1>Feature Stores &amp; Online/Offline Serving</h1>
-  <p class="lead">How predictions actually reach users: precomputed or on request, within a latency budget, with the same features in training and serving. This is the "system" half of every ML design interview.</p>
+  <p class="lead">A trained model is a file on a disk. Serving is how that file answers 17,000 requests a second, in under 200 ms, using the same facts it learnt from. This note covers the two ways to serve (precompute vs on request), how to split a time budget, where features live, and the one join mistake that makes every model look great offline and fail live. This is the "system" half of every ML design interview.</p>
 
   <h2 id="ss-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -16,11 +16,13 @@ Object.assign(TOPIC_CONTENT, {
           <li><b>Batch fits</b> — emails, churn scores, forecasts</li>
           <li><b>Online fits</b> — search, fraud, feed ranking</li>
           <li><b>Hybrid</b> — batch embeddings/candidates + online ranking</li>
+          <li>💡 tiffin packed in the morning vs cooked when you sit down</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Latency budget</div>
         <ul>
+          <li><b>Latency</b> — time from request to answer; <b>p99</b> — 99 of 100 finish within it</li>
           <li><b>Budget p99</b>, not mean; slice per stage + headroom</li>
           <li><b>Fan-out</b> — 20 calls at p99 → 1 − 0.99²⁰ ≈ 18% hit a slow one</li>
           <li><b>Fallback</b> — cached / popular list on timeout</li>
@@ -30,6 +32,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="mm-branch">
         <div class="mm-title">Feature store</div>
         <ul>
+          <li><b>Feature</b> — one fact as a number ("orders in 30 days = 4")</li>
           <li><b>Offline store</b> — full timestamped history for training (Parquet, BQ)</li>
           <li><b>Online store</b> — latest value per key, ms (Redis, DynamoDB)</li>
           <li><b>Registry</b> — one definition, reuse, lineage</li>
@@ -43,6 +46,7 @@ Object.assign(TOPIC_CONTENT, {
         <ul>
           <li><b>PIT join</b> — last feature value ≤ label time (<code>merge_asof</code>)</li>
           <li>⚠ joining latest values leaks the future: great offline, bad live</li>
+          <li><b>Skew</b> — training features ≠ serving features</li>
           <li><b>Skew causes</b> — two code paths, freshness gap, defaults, leakage</li>
           <li><b>Fix</b> — one definition; log served features and train on them</li>
         </ul>
@@ -89,46 +93,89 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="ss-modes"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Batch vs Real-Time</span><span class="rm-sub">Precompute or compute now</span></div></div>
-      <div class="rm-item rm-done" data-target="ss-budget"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Latency Budgets</span><span class="rm-sub">Slicing 200 ms</span></div></div>
-      <div class="rm-item rm-done" data-target="ss-fs"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Feature Stores</span><span class="rm-sub">Offline, online, registry</span></div></div>
-      <div class="rm-item rm-done" data-target="ss-pit"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Point-in-Time &amp; Skew</span><span class="rm-sub">No future, no mismatch</span></div></div>
-      <div class="rm-item rm-done" data-target="ss-cache"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Precompute &amp; Cache</span><span class="rm-sub">Move work off the path</span></div></div>
-      <div class="rm-item rm-done" data-target="ss-patterns"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Serving Patterns</span><span class="rm-sub">Embedded, server, sidecar</span></div></div>
-      <div class="rm-item rm-done" data-target="ss-scale"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Scaling Inference</span><span class="rm-sub">Batching, GPUs, autoscale</span></div></div>
-      <div class="rm-item rm-done" data-target="ss-twostage"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Retrieval → Ranking</span><span class="rm-sub">The two-stage funnel</span></div></div>
-      <div class="rm-item rm-done" data-target="ss-build"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Hands-on: Feast</span><span class="rm-sub">A real local feature store</span></div></div>
-      <div class="rm-item rm-done" data-target="ss-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="ss-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">What Serving Means</span><span class="rm-sub">From a file to 17k answers a second</span></div></div>
+      <div class="rm-item rm-done" data-target="ss-modes"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Batch vs Real-Time</span><span class="rm-sub">Precompute or compute now</span></div></div>
+      <div class="rm-item rm-done" data-target="ss-budget"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Latency Budgets</span><span class="rm-sub">Slicing 200 ms</span></div></div>
+      <div class="rm-item rm-done" data-target="ss-fs"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Feature Stores</span><span class="rm-sub">Offline, online, registry</span></div></div>
+      <div class="rm-item rm-done" data-target="ss-pit"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Point-in-Time &amp; Skew</span><span class="rm-sub">No future, no mismatch</span></div></div>
+      <div class="rm-item rm-done" data-target="ss-cache"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Precompute &amp; Cache</span><span class="rm-sub">Move work off the path</span></div></div>
+      <div class="rm-item rm-done" data-target="ss-patterns"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Serving Patterns</span><span class="rm-sub">Embedded, server, sidecar</span></div></div>
+      <div class="rm-item rm-done" data-target="ss-scale"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Scaling Inference</span><span class="rm-sub">Batching, GPUs, autoscale</span></div></div>
+      <div class="rm-item rm-done" data-target="ss-twostage"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Retrieval → Ranking</span><span class="rm-sub">The two-stage funnel</span></div></div>
+      <div class="rm-item rm-done" data-target="ss-build"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Hands-on: Feast</span><span class="rm-sub">A real local feature store</span></div></div>
+      <div class="rm-item rm-done" data-target="ss-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
-  <h2 id="ss-modes"><span class="num">01</span>Batch vs Real-Time</h2>
+  <h2 id="ss-why"><span class="num">01</span>What Serving Means</h2>
+  <p>You trained a model that predicts which customers of a kirana delivery app will stop ordering ("churn"). It sits in a file, <code>model.pkl</code>. Now the marketing team wants to use it. Two very different requests arrive:</p>
+  <ul>
+    <li><strong>Request A:</strong> "Every morning, give me a list of the 10,000 customers most likely to leave, so we can send them a coupon."</li>
+    <li><strong>Request B:</strong> "When a customer opens the app, show a coupon banner if they are likely to leave. The screen must load in 200 ms."</li>
+  </ul>
+  <p>Request A can run once a night, take an hour, and write a list to a table. Request B must answer in a fraction of a second, for one customer, thousands of times a second. Getting a model's answers to the people who need them, in time, is called <strong>serving</strong>. Request A is <strong>batch</strong> serving, request B is <strong>real-time</strong> (online) serving.</p>
+  <p>A few words that come up all through this note:</p>
+  <ul>
+    <li><strong>Latency</strong> — the waiting time from asking to getting the answer. Measured in milliseconds (ms); 1,000 ms = 1 second.</li>
+    <li><strong>Feature</strong> — one fact about the customer turned into a number, like "orders in the last 30 days = 4". The model needs the same features at serving time that it saw in training.</li>
+    <li><strong>Key-value store</strong> — a very fast table: give it a key (customer id), get back a value (their score) in about 1 ms. Redis is the common one.</li>
+    <li><strong>Request path</strong> — all the work done while the user waits. Everything on it adds to latency.</li>
+  </ul>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A tiffin service. Batch serving is packing 500 tiffins in the morning: slow once, then handing each out takes a second. Real-time serving is a dhaba cooking each order when you sit down: fresh and made for you, but the cook must be fast and the kitchen big enough for the dinner rush.</p>
+  </div>
+
+  <h2 id="ss-modes"><span class="num">02</span>Batch vs Real-Time</h2>
+  <p>Batch: a scheduled job scores everyone at once and saves the scores. The app only looks them up. Real-time: nothing is saved in advance; when the request comes, the app fetches features, runs the model, and replies.</p>
   <figure class="viz"><svg viewBox="0 0 740 168" width="740" role="img"><defs><marker id="ss-m1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs><text x="10" y="16" text-anchor="start" class="tb" font-weight="600">Batch: precompute for everyone</text><rect x="10" y="24" width="155" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity=".55"/><text x="87.5" y="43" text-anchor="middle" font-weight="600">Scheduler</text><text x="87.5" y="57" text-anchor="middle" class="tm">nightly</text><rect x="199" y="24" width="155" height="44" rx="6" class="fv" stroke="currentColor" stroke-opacity=".55"/><text x="276.5" y="43" text-anchor="middle" font-weight="600">Batch job</text><text x="276.5" y="57" text-anchor="middle" class="tm">score all users</text><rect x="388" y="24" width="155" height="44" rx="6" class="ft" stroke="currentColor" stroke-opacity=".55"/><text x="465.5" y="43" text-anchor="middle" font-weight="600">Key-value store</text><text x="465.5" y="57" text-anchor="middle" class="tm">predictions</text><rect x="577" y="24" width="155" height="44" rx="6" class="fg" stroke="currentColor" stroke-opacity=".55"/><text x="654.5" y="43" text-anchor="middle" font-weight="600">App lookup</text><text x="654.5" y="57" text-anchor="middle" class="tm">~5 ms</text><line x1="167" y1="46" x2="196" y2="46" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m1)"/><line x1="356" y1="46" x2="385" y2="46" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m1)"/><line x1="545" y1="46" x2="574" y2="46" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m1)"/><text x="10" y="100" text-anchor="start" class="tb" font-weight="600">Real-time: compute per request</text><rect x="10" y="108" width="155" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity=".55"/><text x="87.5" y="134" text-anchor="middle" font-weight="600">User request</text><rect x="199" y="108" width="155" height="44" rx="6" class="ft" stroke="currentColor" stroke-opacity=".55"/><text x="276.5" y="127" text-anchor="middle" font-weight="600">Feature fetch</text><text x="276.5" y="141" text-anchor="middle" class="tm">online store</text><rect x="388" y="108" width="155" height="44" rx="6" class="fv" stroke="currentColor" stroke-opacity=".55"/><text x="465.5" y="127" text-anchor="middle" font-weight="600">Model server</text><text x="465.5" y="141" text-anchor="middle" class="tm">predict</text><rect x="577" y="108" width="155" height="44" rx="6" class="fg" stroke="currentColor" stroke-opacity=".55"/><text x="654.5" y="127" text-anchor="middle" font-weight="600">Response</text><text x="654.5" y="141" text-anchor="middle" class="tm">~50 ms</text><line x1="167" y1="130" x2="196" y2="130" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m1)"/><line x1="356" y1="130" x2="385" y2="130" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m1)"/><line x1="545" y1="130" x2="574" y2="130" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m1)"/></svg><figcaption>Batch moves the model off the request path. Real-time pays latency to use fresh context.</figcaption></figure>
+  <p>Count the work on the request path. In the top row the user's request touches only the key-value store. In the bottom row it waits for a feature fetch and a model call too. That is why batch lookups take ~5 ms and real-time takes ~50 ms.</p>
   <table class="tbl">
     <tr><th></th><th>Batch (offline)</th><th>Real-time (online)</th></tr>
-    <tr><td>When computed</td><td>On a schedule, for all entities</td><td>Per request</td></tr>
+    <tr><td>When computed</td><td>On a schedule, for all entities (users, items)</td><td>Per request</td></tr>
     <tr><td>Freshness</td><td>Hours old</td><td>Uses this session, query, transaction</td></tr>
     <tr><td>Latency at read</td><td>~ms (key lookup)</td><td>Model + feature time</td></tr>
-    <tr><td>Cost</td><td>Wasted on users who never come</td><td>Pay per request; needs autoscaling</td></tr>
+    <tr><td>Cost</td><td>Wasted on users who never come</td><td>Pay per request; needs autoscaling (adding servers when traffic grows)</td></tr>
     <tr><td>Fits</td><td>Daily emails, churn scores, forecasts</td><td>Search, fraud, feed ranking</td></tr>
   </table>
+  <p>How to choose: ask whether the answer depends on something that only exists at the moment of the request. A fraud check needs <em>this</em> UPI payment's amount and merchant, so it must be real-time. A "we miss you" email needs nothing new, so batch is enough.</p>
   <div class="callout intu"><span class="label">Hybrid is the norm</span>
     <p>Precompute the slow parts (user embeddings, candidate lists) in batch. Do the cheap, context-aware part (ranking with session features) online.</p>
   </div>
 
-  <h2 id="ss-budget"><span class="num">02</span>Latency Budgets</h2>
+  <h2 id="ss-budget"><span class="num">03</span>Latency Budgets</h2>
+  <p>Product says the Swiggy home feed must load in 200 ms. But building a feed is five or six steps: fetch features, find candidates, rank them, tidy the list, send the response. If each team takes "as long as it needs", the total blows past 200 ms. So you give each step a fixed slice of the 200 ms in advance. That is a <strong>latency budget</strong>.</p>
   <figure class="viz"><svg viewBox="0 0 720 120" width="720" role="img"><defs><marker id="ss-m2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs><text x="10" y="18" text-anchor="middle" class="tm">0</text><rect x="10" y="26" width="105" height="34" rx="2" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="62.5" y="48" text-anchor="middle" font-weight="600">30</text><text x="115" y="18" text-anchor="middle" class="tm">30</text><text x="62.5" y="80" text-anchor="middle">Network</text><rect x="115" y="26" width="70" height="34" rx="2" class="ft" stroke="currentColor" stroke-opacity=".4"/><text x="150" y="48" text-anchor="middle" font-weight="600">20</text><text x="185" y="18" text-anchor="middle" class="tm">50</text><text x="150" y="98" text-anchor="middle">Features</text><rect x="185" y="26" width="105" height="34" rx="2" class="fb" stroke="currentColor" stroke-opacity=".4"/><text x="237.5" y="48" text-anchor="middle" font-weight="600">30</text><text x="290" y="18" text-anchor="middle" class="tm">80</text><text x="237.5" y="80" text-anchor="middle">Retrieval</text><rect x="290" y="26" width="210" height="34" rx="2" class="fv" stroke="currentColor" stroke-opacity=".4"/><text x="395" y="48" text-anchor="middle" font-weight="600">60</text><text x="500" y="18" text-anchor="middle" class="tm">140</text><text x="395" y="98" text-anchor="middle">Ranking model</text><rect x="500" y="26" width="52.5" height="34" rx="2" class="fb" stroke="currentColor" stroke-opacity=".4"/><text x="526.25" y="48" text-anchor="middle" font-weight="600">15</text><text x="552.5" y="18" text-anchor="middle" class="tm">155</text><text x="526.25" y="80" text-anchor="middle">Re-rank</text><rect x="552.5" y="26" width="35" height="34" rx="2" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="570" y="48" text-anchor="middle" font-weight="600">10</text><text x="587.5" y="18" text-anchor="middle" class="tm">165</text><text x="570" y="98" text-anchor="middle">Serialize</text><rect x="587.5" y="26" width="122.5" height="34" rx="2" class="fg" stroke="currentColor" stroke-opacity=".4"/><text x="648.75" y="48" text-anchor="middle" font-weight="600">35</text><text x="710" y="18" text-anchor="middle" class="tm">200</text><text x="648.75" y="80" text-anchor="middle">Headroom</text></svg><figcaption>A 200 ms p99 budget (ms). Every stage gets a slice; the model gets the biggest, and headroom absorbs spikes.</figcaption></figure>
+  <p>Add the bars left to right: 30 + 20 + 30 + 60 + 15 + 10 = 165 ms. The last 35 ms is <strong>headroom</strong>, spare time for a bad day. The model gets the biggest slice because it does the most work.</p>
+  <p>Which number do you budget? Not the average. If the average is 100 ms but 1 in 100 requests takes 2 seconds, those users leave. So you budget the <strong>p99</strong>: the time within which 99 of 100 requests finish. (p50 is the median; p99 is the slow tail.)</p>
+  <p>The tail gets worse when one request calls many services. Suppose each of 20 feature lookups is slow 1% of the time. The request is slow if <em>any</em> one is slow:</p>
+  <div class="fx" data-lang="py"># One page load calls 1, 5, 20 or 50 services in parallel.
+# Each call is slow 1% of the time (that is what "p99" means).
+for n in [1, 5, 20, 50]:
+    p_all_fast = 0.99 ** n
+    print(f"{n:>2} calls -> {1 - p_all_fast:5.1%} of page loads hit at least one slow call")</div>
+  <div class="fx" data-lang="text"> 1 calls ->  1.0% of page loads hit at least one slow call
+ 5 calls ->  4.9% of page loads hit at least one slow call
+20 calls -> 18.2% of page loads hit at least one slow call
+50 calls -> 39.5% of page loads hit at least one slow call</div>
+  <p>Twenty calls that are each "99% fine" give a page that is slow for 18% of users. This is called <strong>fan-out</strong>: one request fanning out into many.</p>
   <ul>
     <li>Budget the <strong>p99</strong> (slowest 1%), not the average. Heavy users often hit the tail.</li>
-    <li>Fan-out multiplies tail risk: 50 parallel feature calls each 1% slow → ~40% of requests hit a slow one.</li>
-    <li>Always define a <strong>fallback</strong> (cached list, popular items) when a stage times out.</li>
+    <li>Fan-out multiplies tail risk: 50 parallel feature calls each 1% slow → ~40% of requests hit a slow one. Fix: fetch many features in one call, or set a timeout and use a default value.</li>
+    <li>Always define a <strong>fallback</strong> (cached list, popular items) when a stage times out. A slightly worse feed beats a blank screen.</li>
   </ul>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A relay race with a fixed finish time. If one runner is slow, the others can't recover it, so each leg gets a strict slice.</p>
   </div>
 
-  <h2 id="ss-fs"><span class="num">03</span>Feature Stores</h2>
+  <h2 id="ss-fs"><span class="num">04</span>Feature Stores</h2>
+  <p>Back to the churn model. It uses the feature "orders in the last 30 days". Two teams need that number:</p>
+  <ul>
+    <li>The <strong>training</strong> job needs it for every customer, for every day in the last year, to build training rows. That is millions of rows, read once a week.</li>
+    <li>The <strong>app</strong> needs it for one customer, right now, in 1 ms.</li>
+  </ul>
+  <p>Without planning, each team writes its own code. The data scientist writes SQL that counts orders by calendar month; the backend engineer writes Java that counts the last 30 × 24 hours. The numbers differ, and the model is quietly wrong in production. A <strong>feature store</strong> fixes this: the feature is defined once, computed once, and stored in two shapes, one for training and one for serving.</p>
   <figure class="viz"><svg viewBox="0 0 740 236" width="740" role="img"><defs><marker id="ss-m3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs><rect x="190" y="4" width="350" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity=".55"/><text x="365" y="22" text-anchor="middle" font-weight="600">Registry: one feature definition for both paths</text><rect x="10" y="60" width="140" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity=".55"/><text x="80" y="79" text-anchor="middle" font-weight="600">Warehouse</text><text x="80" y="93" text-anchor="middle" class="tm">batch tables</text><rect x="10" y="160" width="140" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity=".55"/><text x="80" y="179" text-anchor="middle" font-weight="600">Event stream</text><text x="80" y="193" text-anchor="middle" class="tm">Kafka</text><rect x="190" y="110" width="140" height="44" rx="6" class="fv" stroke="currentColor" stroke-opacity=".55"/><text x="260" y="129" text-anchor="middle" font-weight="600">Feature</text><text x="260" y="143" text-anchor="middle" class="tm">pipelines</text><rect x="380" y="60" width="160" height="44" rx="6" class="fb" stroke="currentColor" stroke-opacity=".55"/><text x="460" y="79" text-anchor="middle" font-weight="600">Offline store</text><text x="460" y="93" text-anchor="middle" class="tm">full history</text><rect x="380" y="160" width="160" height="44" rx="6" class="ft" stroke="currentColor" stroke-opacity=".55"/><text x="460" y="179" text-anchor="middle" font-weight="600">Online store</text><text x="460" y="193" text-anchor="middle" class="tm">latest values</text><rect x="585" y="60" width="145" height="44" rx="6" class="fb" stroke="currentColor" stroke-opacity=".55"/><text x="657.5" y="79" text-anchor="middle" font-weight="600">Training sets</text><text x="657.5" y="93" text-anchor="middle" class="tm">point-in-time</text><rect x="585" y="160" width="145" height="44" rx="6" class="fg" stroke="currentColor" stroke-opacity=".55"/><text x="657.5" y="179" text-anchor="middle" font-weight="600">Online serving</text><text x="657.5" y="193" text-anchor="middle" class="tm">&lt;10 ms lookup</text><line x1="152" y1="82" x2="188" y2="124" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m3)"/><line x1="152" y1="182" x2="188" y2="142" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m3)"/><line x1="332" y1="124" x2="378" y2="86" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m3)"/><line x1="332" y1="142" x2="378" y2="178" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m3)"/><line x1="460" y1="106" x2="460" y2="157" stroke="currentColor" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#ss-m3)"/><text x="468" y="136" text-anchor="start" class="tm">materialize</text><line x1="542" y1="82" x2="582" y2="82" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m3)"/><line x1="542" y1="182" x2="582" y2="182" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m3)"/></svg><figcaption>Same definitions feed a history store (for training) and a fast latest-value store (for serving).</figcaption></figure>
+  <p>Follow the arrows: raw data on the left is turned into features in the middle, then written to the top (full history, for training) and the bottom (latest value, for serving). The registry on top is the single definition both paths use.</p>
   <div class="callout def"><span class="label">Definition</span>
     <p>A feature store is one place to define, compute, store and serve features, so training and serving read the same values.</p>
   </div>
@@ -137,6 +184,14 @@ Object.assign(TOPIC_CONTENT, {
     <div><b>Online store</b><p>Latest value per entity. Small and fast.</p><small>Redis, DynamoDB, Bigtable</small></div>
     <div><b>Registry</b><p>Feature definitions, owners, versions.</p><small>Reuse across teams</small></div>
     <div><b>Materialization</b><p>Job that copies fresh values offline → online.</p><small>Batch or streaming</small></div>
+  </div>
+  <p>Tiny example of the two shapes for customer u1:</p>
+  <table class="tbl">
+    <tr><th>Offline store (history)</th><th>Online store (latest)</th></tr>
+    <tr><td>u1, 25 Feb, orders_30d = 4<br>u1, 05 Mar, orders_30d = 2<br>u1, 12 Mar, orders_30d = 0</td><td>u1 → orders_30d = 0</td></tr>
+  </table>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A school's marks. The office keeps every term's full register (offline store) for report cards and analysis. The notice board shows only the latest result per student (online store) so anyone can check it in a second. Both come from the same exam sheets (registry).</p>
   </div>
   <table class="tbl">
     <tr><th></th><th>Feast</th><th>Tecton</th></tr>
@@ -148,9 +203,12 @@ Object.assign(TOPIC_CONTENT, {
     <p>A feature store is not required for every design. For one batch model it is overhead. Bring it up when many models share features or real-time features are needed.</p>
   </div>
 
-  <h2 id="ss-pit"><span class="num">04</span>Point-in-Time &amp; Skew</h2>
+  <h2 id="ss-pit"><span class="num">05</span>Point-in-Time &amp; Skew</h2>
+  <p>You are building training rows for the churn model. For customer u1 you know she churned on 10 March. You want her "orders in last 30 days" feature for that row. The easy thing is to grab her current value from the table: 0. But 0 was computed on 12 March, after she had already left. Of course a churned customer has 0 orders. The model learns "orders = 0 means churn", scores brilliantly on this data, and is useless live, because at prediction time the future is not available.</p>
+  <p>Using information from after the label time is called <strong>leakage</strong>. The fix is a <strong>point-in-time join</strong>: for each label, take the feature value as it was at that moment, never a later one.</p>
   <figure class="viz"><svg viewBox="0 0 660 150" width="660" role="img"><defs><marker id="ss-m4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs><path d="M40,80 H630" stroke="currentColor" fill="none" stroke-width="1.4" marker-end="url(#ss-m4)"/><text x="80" y="98" text-anchor="middle" class="tm">Feb 25</text><text x="230" y="98" text-anchor="middle" class="tm">Mar 01</text><text x="350" y="98" text-anchor="middle" class="tm">Mar 05</text><text x="500" y="98" text-anchor="middle" class="tm">Mar 10</text><text x="560" y="98" text-anchor="middle" class="tm">Mar 12</text><path d="M500,30 V88" class="sr" fill="none" stroke-width="1.4" stroke-dasharray="5 4"/><text x="500" y="24" text-anchor="middle" class="tr" font-weight="600">label time: churned=1</text><circle cx="80" cy="80" r="7" class="fs" stroke="currentColor"/><text x="80" y="64" text-anchor="middle" font-weight="600">orders_30d=4</text><circle cx="350" cy="80" r="7" class="fg" stroke="currentColor"/><text x="350" y="64" text-anchor="middle" font-weight="600">orders_30d=2</text><circle cx="560" cy="80" r="7" class="fr" stroke="currentColor"/><text x="560" y="64" text-anchor="middle" font-weight="600">orders_30d=0</text><text x="350" y="122" text-anchor="middle" class="tg">use: last value at or before label</text><text x="540" y="140" text-anchor="middle" class="tr">leak: computed after label</text></svg><figcaption>Point-in-time join: for each label, take the feature value as it was then, never a later one.</figcaption></figure>
-  <p>Joining labels to the <em>latest</em> feature value leaks the future. The model looks great offline and fails live.</p>
+  <p>The red dashed line is the label time. The green dot (2, from 5 March) is the last value before it, so that is the right one. The red dot (0, from 12 March) is after it: using it is leakage.</p>
+  <p>In pandas this is <code>merge_asof</code> with <code>direction="backward"</code>: for each label, look backward in time for the nearest feature row.</p>
   <div class="fx" data-lang="py">import pandas as pd
 # Label events: did the user churn after this timestamp?
 labels = pd.DataFrame({
@@ -181,6 +239,7 @@ print(pit)</div>
 2   u1 2024-03-10        1         2.0</div>
   <p>The naive join gave u1 <code>orders_30d=0</code> on both rows, a value computed after both labels. The as-of join uses 4 and 2; u2 gets NaN because no value existed yet.</p>
   <h3>Training-serving skew</h3>
+  <p><strong>Skew</strong> means the features the model sees live are not the same as the features it trained on. Leakage is one cause. There are more, and all of them give the same symptom: good offline numbers, bad live results.</p>
   <table class="tbl">
     <tr><th>Cause</th><th>Example</th><th>Fix</th></tr>
     <tr><td>Two code paths</td><td>SQL in training, Java at serving, round differently</td><td>One definition, shared library or feature store</td></tr>
@@ -192,20 +251,29 @@ print(pit)</div>
     <p>"Log and wait": log the exact features used at prediction time, join labels later. Training data then matches serving by construction.</p>
   </div>
 
-  <h2 id="ss-cache"><span class="num">05</span>Precompute &amp; Cache</h2>
+  <h2 id="ss-cache"><span class="num">06</span>Precompute &amp; Cache</h2>
+  <p>The fastest work is work you did earlier. If a number does not change between requests, compute it once in the background and just look it up on the request path. This is <strong>precomputing</strong>. A <strong>cache</strong> is the same idea for whole answers: keep the last response and reuse it for a while.</p>
   <table class="tbl">
     <tr><th>What</th><th>Where</th><th>Refresh</th></tr>
-    <tr><td>Item embeddings + ANN index</td><td>In-memory index on retrieval servers</td><td>Daily / hourly rebuild</td></tr>
+    <tr><td>Item embeddings (each item as a list of numbers) + ANN index (fast "find similar" search)</td><td>In-memory index on retrieval servers</td><td>Daily / hourly rebuild</td></tr>
     <tr><td>User embeddings, aggregates</td><td>Online store</td><td>Batch daily, stream for counters</td></tr>
     <tr><td>Full predictions (e.g. "similar items")</td><td>Key-value store</td><td>Daily</td></tr>
-    <tr><td>Response for identical requests</td><td>Cache with TTL (time to live)</td><td>Minutes</td></tr>
+    <tr><td>Response for identical requests</td><td>Cache with TTL (time to live: how long before it expires)</td><td>Minutes</td></tr>
   </table>
+  <p>Example: "Customers who bought this also bought" on a product page changes slowly, so compute it nightly for every product and store the list. The page then does one lookup instead of running a model.</p>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Caching a response without the model version in the key. After a new model ships, users keep getting the old model's answers until the cache expires.</p>
+  </div>
 
-  <h2 id="ss-patterns"><span class="num">06</span>Serving Patterns</h2>
+  <h2 id="ss-patterns"><span class="num">07</span>Serving Patterns</h2>
+  <p>Where does the model file actually run? Inside the app's own program, or in a separate service the app calls over the network? There are four common set-ups.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Where does a shop keep its accountant? In the same room (embedded: fastest, but one accountant per shop). In a separate firm every shop calls (model server: shared, scales alone, but a phone call away). In the next cabin (sidecar: close, but hired separately). Or a visiting accountant who does all the books once a month (batch job).</p>
+  </div>
   <div class="cards">
     <div><b>Embedded</b><p>Model loaded inside the app process.</p><small>Lowest latency; redeploy app to update model</small></div>
     <div><b>Model server</b><p>Separate service behind an API (REST/gRPC).</p><small>Triton, TorchServe, TF Serving, KServe, BentoML</small></div>
-    <div><b>Sidecar</b><p>Model container next to the app in the same pod, via localhost.</p><small>Independent deploys, no network hop</small></div>
+    <div><b>Sidecar</b><p>Model container next to the app in the same pod (same machine), via localhost.</p><small>Independent deploys, no network hop</small></div>
     <div><b>Batch job</b><p>Spark / Ray scores a table on a schedule.</p><small>Writes to a key-value store</small></div>
   </div>
   <table class="tbl">
@@ -216,25 +284,29 @@ print(pit)</div>
     <tr><td>Use when</td><td>Tiny model, mobile/edge</td><td>Big models, many callers</td><td>Per-service model, tight latency</td></tr>
   </table>
 
-  <h2 id="ss-scale"><span class="num">07</span>Scaling Inference</h2>
+  <h2 id="ss-scale"><span class="num">08</span>Scaling Inference</h2>
+  <p>Inference means running the model to get a prediction. At 17,000 requests a second, one server is not enough and a GPU costs lakhs a month. The levers below either do more work per rupee or avoid work altogether.</p>
+  <p>The most important one is <strong>dynamic batching</strong>. A GPU is like a bus: it costs almost the same to carry 1 passenger or 32. So the server waits a few milliseconds, collects 32 requests, and runs them as one call.</p>
   <div class="flow"><span>Requests</span><span>Queue (wait ≤ 5 ms)</span><span>Batch of 32</span><span>One GPU call</span><span>Split responses</span></div>
   <table class="tbl">
     <tr><th>Lever</th><th>Gain</th><th>Cost</th></tr>
-    <tr><td><strong>Dynamic batching</strong></td><td>GPU throughput up many times</td><td>Adds a few ms of queueing</td></tr>
+    <tr><td><strong>Dynamic batching</strong></td><td>GPU throughput (answers per second) up many times</td><td>Adds a few ms of queueing</td></tr>
     <tr><td><strong>GPU vs CPU</strong></td><td>Large DNNs, embeddings</td><td>Expensive; GBMs usually fine on CPU</td></tr>
-    <tr><td><strong>Quantization / distillation</strong></td><td>Smaller, faster model</td><td>Small accuracy loss; re-validate</td></tr>
-    <tr><td><strong>Horizontal autoscaling</strong></td><td>Follow traffic (scale on QPS, GPU use, queue depth)</td><td>Cold start of new pods; keep warm minimum</td></tr>
+    <tr><td><strong>Quantization / distillation</strong></td><td>Smaller, faster model (fewer bits per number / a small model trained to copy the big one)</td><td>Small accuracy loss; re-validate</td></tr>
+    <tr><td><strong>Horizontal autoscaling</strong></td><td>Add servers to follow traffic (scale on QPS, GPU use, queue depth)</td><td>Cold start of new pods; keep warm minimum</td></tr>
     <tr><td><strong>Cascades</strong></td><td>Cheap model first, heavy model only on hard cases</td><td>Two models to maintain</td></tr>
   </table>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Autoscaling on CPU for a GPU service. Scale on request queue length or latency; CPU may stay low while the GPU is saturated.</p>
   </div>
 
-  <h2 id="ss-twostage"><span class="num">08</span>Retrieval → Ranking</h2>
+  <h2 id="ss-twostage"><span class="num">09</span>Retrieval → Ranking</h2>
+  <p>Flipkart has 10 million products. A good ranking model takes about 1 ms per product. Scoring all of them for one home page would take 10,000 seconds. So no system scores everything. Instead a very cheap step first picks ~1,000 products that might fit (<strong>retrieval</strong>), then the expensive model scores only those (<strong>ranking</strong>), then a few rules tidy the final 20 (<strong>re-ranking</strong>).</p>
   <figure class="viz"><svg viewBox="0 0 680 200" width="680" role="img"><defs><marker id="ss-m5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs><rect x="20" y="8" width="360" height="36" rx="4" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="200" y="31" text-anchor="middle" font-weight="600">10M items</text><text x="410" y="24" text-anchor="start" font-weight="600">Corpus</text><text x="410" y="39" text-anchor="start" class="tm">everything you could show</text><rect x="65" y="55" width="270" height="36" rx="4" class="fb" stroke="currentColor" stroke-opacity=".4"/><text x="200" y="78" text-anchor="middle" font-weight="600">~1,000</text><text x="410" y="71" text-anchor="start" font-weight="600">Retrieval</text><text x="410" y="86" text-anchor="start" class="tm">ANN / rules, cheap, ~10 ms</text><rect x="110" y="102" width="180" height="36" rx="4" class="fv" stroke="currentColor" stroke-opacity=".4"/><text x="200" y="125" text-anchor="middle" font-weight="600">~100</text><text x="410" y="118" text-anchor="start" font-weight="600">Ranking</text><text x="410" y="133" text-anchor="start" class="tm">heavy model, rich features</text><rect x="150" y="149" width="100" height="36" rx="4" class="fg" stroke="currentColor" stroke-opacity=".4"/><text x="200" y="172" text-anchor="middle" font-weight="600">20 shown</text><text x="410" y="165" text-anchor="start" font-weight="600">Re-rank</text><text x="410" y="180" text-anchor="start" class="tm">diversity, business rules</text></svg><figcaption>Each stage shrinks the set so the next, more expensive model can afford to look closely.</figcaption></figure>
+  <p>Each box is narrower than the one above: 10M → 1,000 → 100 → 20. The text on the right tells you what each stage is allowed to cost.</p>
   <table class="tbl">
     <tr><th>Stage</th><th>Optimise for</th><th>Typical model</th></tr>
-    <tr><td>Retrieval</td><td>Recall: don't miss good items</td><td>Two-tower embeddings + ANN, co-visitation, popularity</td></tr>
+    <tr><td>Retrieval</td><td>Recall: don't miss good items</td><td>Two-tower embeddings + ANN, co-visitation ("viewed together"), popularity</td></tr>
     <tr><td>Ranking</td><td>Precision at the top (NDCG)</td><td>GBM or deep ranker with cross features</td></tr>
     <tr><td>Re-ranking</td><td>Business goals</td><td>Rules: diversity, freshness, dedupe, ads slots</td></tr>
   </table>
@@ -242,8 +314,8 @@ print(pit)</div>
     <p>Hiring. CV screening (fast, broad) → interviews (slow, careful) → final offer (budget, team fit). You can't interview all 10,000 applicants.</p>
   </div>
 
-  <h2 id="ss-build"><span class="num">09</span>Hands-on: Feast</h2>
-  <p>A local Feast store (file offline store, SQLite online store): one point-in-time training set, one online lookup.</p>
+  <h2 id="ss-build"><span class="num">10</span>Hands-on: Feast</h2>
+  <p>A local Feast store (file offline store, SQLite online store): one point-in-time training set, one online lookup. Same churn data as section 05, now through a real feature store.</p>
   <div class="fx" data-lang="py">import os, pandas as pd
 from datetime import timedelta
 from feast import ValueType, Entity, FeatureView, Field, FileSource, FeatureStore
@@ -290,8 +362,9 @@ user_stats:
     <li>User 2's training row was dropped: no feature existed before its label. Always check row counts after a join.</li>
   </ul>
 
-  <h2 id="ss-qa"><span class="num">10</span>Questions &amp; Answers</h2>
+  <h2 id="ss-qa"><span class="num">11</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between p50 and p99 latency, and which do you budget?</summary><div class="qa-body">p50 is the median: half of requests finish faster. p99 is the time within which 99% finish; the other 1% are slower. Budget p99, because the slow tail is what users notice and heavy users hit it most.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Your churn model scores 0.92 AUC offline but performs poorly live. What do you check first?</summary><div class="qa-body">Leakage via non-point-in-time joins (features computed after the label), then training-serving skew: compare the distribution of logged online features against training features for the same users.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Why have two stores instead of one?</summary><div class="qa-body">Training needs every historical value to rebuild the past (large, scan-friendly, columnar). Serving needs one latest value per key in ~1 ms (small, key-value, in memory). No single store is good and cheap at both.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Daily "recommended for you" email to 20M users. Batch or real-time?</summary><div class="qa-body">Batch. The send happens once a day, there is no request context, and scoring everyone in a Spark/Ray job is cheaper than standing up a low-latency service.</div></details>

@@ -2,7 +2,7 @@
 Object.assign(TOPIC_CONTENT, {
   "dl_pytorch": `<main>
   <h1>PyTorch</h1>
-  <p class="lead">The framework most DL research, LLM and Hugging Face work runs on. This page builds one small classifier end to end (tensors → autograd → Dataset → nn.Module → training loop → eval → checkpoint → transfer learning) with real output from PyTorch 2.14 on CPU. Theory behind each step: NN Foundations.</p>
+  <p class="lead">The framework most deep learning research, LLM and Hugging Face work runs on. This page builds one small classifier end to end (tensors → autograd → Dataset → nn.Module → training loop → eval → checkpoint → transfer learning), with real output from PyTorch 2.14 on CPU. Theory behind each step: NN Foundations.</p>
 
   <h2 id="dp2-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -11,10 +11,10 @@ Object.assign(TOPIC_CONTENT, {
       <div class="mm-branch">
         <div class="mm-title">Tensors</div>
         <ul>
-          <li><b>Tensor</b> — n-d array + <b>shape</b>, <b>dtype</b>, <b>device</b>; 💡 NumPy array that can live on a GPU and remember its history</li>
+          <li><b>Tensor</b> — n-d array + <b>shape</b>, <b>dtype</b>, <b>device</b>; 💡 a NumPy array that can sit on a GPU and remember how it was made</li>
           <li><b>Defaults</b> — floats → float32, ints → int64</li>
           <li><b>Image batch</b> — (N, C, H, W), e.g. (32, 3, 28, 28)</li>
-          <li><b>reshape</b> always works; <b>view</b> needs contiguous memory (fails after <code>.T</code>)</li>
+          <li><b>reshape</b> always works; <b>view</b> needs memory in order (fails after <code>.T</code>)</li>
           <li><b>unsqueeze/squeeze</b> add/remove size-1 dims; broadcasting like NumPy</li>
           <li>⚠ <code>torch.from_numpy</code> shares memory; <code>torch.tensor</code> copies</li>
         </ul>
@@ -22,21 +22,22 @@ Object.assign(TOPIC_CONTENT, {
       <div class="mm-branch">
         <div class="mm-title">Autograd</div>
         <ul>
-          <li><b>requires_grad=True</b> — record every op into a graph (<code>grad_fn</code>)</li>
-          <li><b>Dynamic graph</b> — rebuilt each forward; plain Python if/for work</li>
+          <li><b>requires_grad=True</b> — record every operation into a graph (<code>grad_fn</code>)</li>
+          <li><b>Dynamic graph</b> — rebuilt each forward pass; normal Python if/for work</li>
           <li><b>backward()</b> — fills <code>.grad</code> of leaf tensors</li>
-          <li>⚠ <b>Grads accumulate</b> — 8 then 16; zero them every step</li>
+          <li>⚠ <b>Grads add up</b> — 8 then 16; zero them every step</li>
           <li><b>detach()</b> cuts one tensor out; <b>no_grad()</b> records nothing</li>
+          <li>💡 Like a bill that lists every item, so you can trace the total back</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Data</div>
         <ul>
           <li><b>Dataset</b> — <code>__len__</code> + <code>__getitem__(i)</code> → one (x, y)</li>
-          <li><b>DataLoader</b> — batching, <code>shuffle=True</code> (train), <code>num_workers</code>, <code>pin_memory</code></li>
+          <li><b>DataLoader</b> — makes batches, <code>shuffle=True</code> (train), <code>num_workers</code>, <code>pin_memory</code></li>
           <li><b>random_split</b> — train/val split of a Dataset</li>
           <li>⚠ <code>num_workers&gt;0</code> in notebooks/Windows → needs <code>if __name__ == "__main__"</code> or hangs</li>
-          <li>💡 Dataset = warehouse shelf; DataLoader = forklift bringing pallets</li>
+          <li>💡 Dataset = godown shelf; DataLoader = the loaders who pack and bring boxes of 64</li>
         </ul>
       </div>
       <div class="mm-branch">
@@ -44,49 +45,52 @@ Object.assign(TOPIC_CONTENT, {
         <ul>
           <li><b>__init__</b> — <code>super().__init__()</code> first, then assign layers as attributes</li>
           <li><b>forward(x)</b> — the computation; call <code>model(x)</code>, not <code>model.forward(x)</code></li>
-          <li><b>Free stuff</b> — <code>.parameters()</code>, <code>.to(device)</code>, <code>.train()/.eval()</code>, <code>state_dict()</code></li>
-          <li>⚠ Layers in a Python list are invisible → <code>nn.ModuleList</code></li>
-          <li><b>Return logits</b>; loss applies softmax</li>
+          <li><b>You get for free</b> — <code>.parameters()</code>, <code>.to(device)</code>, <code>.train()/.eval()</code>, <code>state_dict()</code></li>
+          <li>⚠ Layers in a plain Python list are not tracked → <code>nn.ModuleList</code></li>
+          <li><b>Return logits</b>; the loss applies softmax</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Training loop</div>
         <ul>
           <li><b>Order</b> — zero_grad → forward → loss → backward → (clip) → step → (scheduler)</li>
-          <li><b>Log</b> <code>loss.item()</code>, never <code>loss</code> (keeps graph alive)</li>
+          <li><b>Log</b> <code>loss.item()</code>, never <code>loss</code> (keeps the graph in memory)</li>
           <li><b>No zero_grad</b> — acc 0.995 → 0.855 in our run</li>
           <li><b>lr 1.0</b> — epoch-1 loss 32; <b>lr 1e-4</b> — 0.85 acc after 20 epochs</li>
-          <li><b>Sanity</b> — step-0 loss ≈ ln(classes); overfit one batch first</li>
+          <li><b>Quick checks</b> — step-0 loss ≈ ln(classes); overfit one batch first</li>
+          <li>💡 Practice cycle: attempt → check answer → see mistake → correct → next</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Device &amp; eval</div>
         <ul>
-          <li><b>device</b> = <code>"cuda" if torch.cuda.is_available() else "cpu"</code>; move model once, every batch</li>
+          <li><b>device</b> = <code>"cuda" if torch.cuda.is_available() else "cpu"</code>; move the model once, every batch each time</li>
           <li>⚠ Mismatch → "Expected all tensors to be on the same device"</li>
           <li><b>AMP</b> — <code>torch.autocast</code> fp16/bf16 + <code>GradScaler</code> (fp16 only)</li>
           <li><b>model.eval()</b> — dropout off, BN uses running stats</li>
           <li><b>torch.no_grad()</b> / <code>inference_mode()</code> — no graph, less memory</li>
-          <li>⚠ They are independent; validation needs both</li>
+          <li>⚠ They are separate switches; validation needs both</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Checkpoints</div>
         <ul>
-          <li><b>Save state_dict</b> — dict name → tensor; not the pickled model</li>
+          <li><b>Save state_dict</b> — dict of name → tensor; not the pickled model</li>
+          <li>💡 Like a game save point: weights + optimizer + epoch</li>
           <li><b>Resume</b> — also save optimizer, scheduler, epoch</li>
           <li><b>Load</b> — build model → <code>load_state_dict(torch.load(p, map_location=device))</code> → <code>eval()</code></li>
-          <li><b>weights_only=True</b> default since 2.6 → safe unpickling</li>
+          <li><b>weights_only=True</b> default since 2.6 → safe loading</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Transfer learning</div>
         <ul>
-          <li><b>Feature extraction</b> — freeze backbone, train new head (small/similar data)</li>
+          <li><b>Feature extraction</b> — freeze the backbone, train a new head (small/similar data)</li>
           <li><b>Fine-tune</b> — unfreeze top blocks; low lr (1e-5–1e-4) for backbone, high for head</li>
           <li><b>Freeze</b> — <code>p.requires_grad = False</code>; pass only trainable params to optimizer</li>
           <li><b>strict=False</b> loading → reports missing/unexpected keys</li>
-          <li>⚠ Too high lr on pretrained layers = catastrophic forgetting</li>
+          <li>⚠ Too high lr on pretrained layers wipes what they knew (catastrophic forgetting)</li>
+          <li>💡 A cook trained in North Indian food learning Chinese: keeps knife skills, learns new recipes</li>
         </ul>
       </div>
     </div>
@@ -110,6 +114,7 @@ Object.assign(TOPIC_CONTENT, {
   </div>
 
   <h2 id="dp2-ten"><span class="num">01</span>Tensors</h2>
+  <p>A <strong>tensor</strong> is PyTorch's array: like a NumPy array, but it can run on a GPU and track gradients. Inputs, weights and outputs are all tensors.</p>
   <figure class="viz"><svg viewBox="0 0 560 150" width="560">
     <rect x="20" y="60" width="26" height="26" class="fb sb"/><text x="14" y="115">scalar</text><text x="18" y="132" class="tm">()</text>
     <g class="fb sb"><rect x="90" y="30" width="26" height="26"/><rect x="90" y="56" width="26" height="26"/><rect x="90" y="82" width="26" height="26"/></g><text x="80" y="128">vector</text><text x="88" y="144" class="tm">(3,)</text>
@@ -119,7 +124,7 @@ Object.assign(TOPIC_CONTENT, {
     <text x="410" y="40">shape</text><text x="470" y="40" class="tm">sizes</text>
     <text x="410" y="70">dtype</text><text x="470" y="70" class="tm">float32…</text>
     <text x="410" y="100">device</text><text x="470" y="100" class="tm">cpu / cuda</text>
-  </svg><figcaption>Everything (inputs, weights, gradients) is a tensor. Three attributes define it; most bugs are a mismatch in one of them.</figcaption></figure>
+  </svg><figcaption>Everything (inputs, weights, gradients) is a tensor. Three attributes describe it; most bugs are a mismatch in one of them.</figcaption></figure>
   <div class="fx" data-lang="py">import torch, numpy as np
 torch.manual_seed(0)
 x = torch.tensor([[1., 2., 3.], [4., 5., 6.]])
@@ -141,7 +146,7 @@ tensor([[11., 22., 33.],
 tensor([[14., 32.],
         [32., 77.]])
 tensor([5., 7., 9.]) tensor([2., 5.])</div>
-  <p>Two classic gotchas, <code>view</code> vs <code>reshape</code> and NumPy memory sharing:</p>
+  <p>Two common surprises: <code>view</code> vs <code>reshape</code>, and NumPy memory sharing:</p>
   <div class="fx" data-lang="py">t = x.T
 print(t.is_contiguous())
 try:
@@ -162,6 +167,10 @@ tensor([99.,  2.,  3.], dtype=torch.float64)</div>
   <div class="callout trap"><span class="label">Trap</span><p>NumPy arrays are float64; models are float32. Mixing them gives "expected scalar type Float but found Double". Convert with <code>torch.tensor(arr, dtype=torch.float32)</code>. Labels for <code>CrossEntropyLoss</code> must be int64 (<code>torch.long</code>).</p></div>
 
   <h2 id="dp2-ag"><span class="num">02</span>Autograd</h2>
+  <p><strong>Autograd</strong> computes gradients for you. As you run the forward pass, it writes down every operation; <code>backward()</code> then replays that list in reverse with the chain rule. No hand-written derivatives.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A shop bill that lists every item and tax line. From the total you can trace back exactly how much each item added. Autograd keeps that bill for every number.</p>
+  </div>
   <figure class="viz"><svg viewBox="0 0 560 190" width="560">
     <defs><marker id="dp2-ah1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
     <marker id="dp2-ah1r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="tr"/></marker></defs>
@@ -179,7 +188,7 @@ tensor([99.,  2.,  3.], dtype=torch.float64)</div>
     <line x1="480" y1="93" x2="498" y2="93" stroke="currentColor" marker-end="url(#dp2-ah1)"/>
     <text x="20" y="20" class="tr">w.grad = x = 3</text><text x="20" y="180" class="tr">x.grad = w + 2x = 8</text>
     <text x="225" y="180" class="tm">blue: leaves (.grad) · violet: ops (grad_fn)</text>
-  </svg><figcaption>The forward pass of y = w·x + x² records this graph. <code>y.backward()</code> walks it right to left with the chain rule.</figcaption></figure>
+  </svg><figcaption>Running y = w·x + x² records this graph. <code>y.backward()</code> walks it right to left with the chain rule.</figcaption></figure>
   <div class="fx" data-lang="py">x = torch.tensor(3.0, requires_grad=True)
 w = torch.tensor(2.0, requires_grad=True)
 y = w * x + x ** 2
@@ -204,12 +213,13 @@ tensor(0.)
 False
 False None</div>
   <ul>
-    <li><strong>Dynamic ("define-by-run"):</strong> the graph is rebuilt every forward pass, so Python <code>if</code>/<code>for</code> and variable shapes just work.</li>
-    <li><strong>Accumulation is deliberate:</strong> it enables gradient accumulation (several small batches, one step). For normal training, zero every step.</li>
+    <li><strong>Dynamic ("define-by-run"):</strong> the graph is rebuilt every forward pass, so Python <code>if</code>/<code>for</code> and changing shapes just work.</li>
+    <li><strong>Adding up is on purpose:</strong> it allows gradient accumulation (several small batches, one step). For normal training, zero every step.</li>
     <li><strong>Graph freed after backward:</strong> a second <code>backward()</code> through the same graph errors unless <code>retain_graph=True</code>.</li>
   </ul>
 
   <h2 id="dp2-data"><span class="num">03</span>Dataset &amp; DataLoader</h2>
+  <p>Data rarely fits in GPU memory at once, and training wants small shuffled batches. A <strong>Dataset</strong> says how to get one example; a <strong>DataLoader</strong> turns it into a stream of batches.</p>
   <figure class="viz"><svg viewBox="0 0 560 140" width="560">
     <defs><marker id="dp2-ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <rect x="10" y="30" width="130" height="80" rx="6" class="fb sb"/><text x="22" y="52">Dataset</text><text x="22" y="72" class="tm">__len__ → 1000</text><text x="22" y="90" class="tm">[i] → (x, y)</text>
@@ -221,8 +231,8 @@ False None</div>
     <g class="fg sg"><rect x="458" y="30" width="80" height="18"/><rect x="458" y="54" width="80" height="18"/><rect x="458" y="78" width="80" height="18"/></g>
     <text x="462" y="44" font-size="11">x (64, 2)</text><text x="462" y="68" font-size="11">y (64,)</text><text x="470" y="92" font-size="11">…13</text>
     <text x="182" y="130" class="tm">DataLoader (workers load in parallel)</text>
-  </svg><figcaption>A Dataset knows how to fetch one example; the DataLoader shuffles indices, fetches, and stacks them into batch tensors.</figcaption></figure>
-  <p>Our running example: 1000 points in two interleaving "moons", a non-linear 2-class problem.</p>
+  </svg><figcaption>A Dataset knows how to fetch one example; the DataLoader shuffles the order, fetches, and stacks them into batch tensors.</figcaption></figure>
+  <p>Example used on this page: 1000 points in two curved "moons" that hook into each other, a 2-class problem no straight line can split.</p>
   <div class="fx" data-lang="py">import math, os, torch.nn as nn, torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader, random_split
 torch.manual_seed(42)
@@ -251,14 +261,15 @@ print(len(ds), ds[0], xb.shape, yb.shape, len(train_dl))</div>
   <div class="fx" data-lang="text">1000 (tensor([1.7338, 0.0874]), tensor(1)) torch.Size([64, 2]) torch.Size([64]) 13</div>
   <table class="tbl">
     <tr><th>DataLoader arg</th><th>Typical</th><th>Why</th></tr>
-    <tr><td><code>shuffle</code></td><td>True train, False val</td><td>Avoid order effects; val order irrelevant</td></tr>
+    <tr><td><code>shuffle</code></td><td>True train, False val</td><td>Avoid learning the order; val order doesn't matter</td></tr>
     <tr><td><code>num_workers</code></td><td>4–8 (Linux), 0 in notebooks</td><td>Load next batches in parallel so the GPU never waits</td></tr>
     <tr><td><code>pin_memory</code></td><td>True with CUDA</td><td>Faster host → GPU copies</td></tr>
     <tr><td><code>drop_last</code></td><td>True if BatchNorm</td><td>A last batch of 1 breaks BN statistics</td></tr>
   </table>
-  <div class="callout anlg"><span class="label">Analogy</span><p>The Dataset is a warehouse shelf (fetch item i); the DataLoader is the forklift crew that grabs random items, packs pallets of 64 and keeps them coming while the GPU works.</p></div>
+  <div class="callout anlg"><span class="label">Analogy</span><p>The Dataset is a godown shelf (fetch item i). The DataLoader is the team of loaders that picks random items, packs boxes of 64, and keeps them coming while the GPU works.</p></div>
 
   <h2 id="dp2-mod"><span class="num">04</span>nn.Module: Custom Models</h2>
+  <p>Every PyTorch model is a class that extends <strong>nn.Module</strong>. You list the layers in <code>__init__</code> and write the maths in <code>forward</code>. In return PyTorch tracks all weights, moves them to GPU, saves them, and switches train/eval mode for you.</p>
   <div class="fx" data-lang="py">class MLP(nn.Module):
     def __init__(self, d_in=2, hidden=32, n_classes=2, p=0.1):
         super().__init__()                    # must come first
@@ -283,15 +294,19 @@ print("params:", sum(p.numel() for p in model.parameters()))</div>
   (head): Linear(in_features=32, out_features=2, bias=True)
 )
 params: 1218</div>
-  <p>Params: 2·32+32 + 32·32+32 + 32·2+2 = 96 + 1056 + 66 = 1218. Splitting into <code>body</code> and <code>head</code> pays off later for transfer learning.</p>
+  <p>Params: 2·32+32 + 32·32+32 + 32·2+2 = 96 + 1056 + 66 = 1218. Splitting into <code>body</code> and <code>head</code> helps later for transfer learning.</p>
   <div class="cards">
     <div><b>Registered automatically</b><p>Any <code>nn.Module</code> or <code>nn.Parameter</code> assigned to <code>self</code>.</p><small>tracked by .parameters(), .to(), state_dict</small></div>
     <div><b>Not registered</b><p>Layers in a plain list/dict, plain tensors.</p><small>use nn.ModuleList / register_buffer</small></div>
     <div><b>nn.functional</b><p>Stateless ops (<code>F.relu</code>) inside forward.</p><small>no weights to track</small></div>
   </div>
-  <div class="callout trap"><span class="label">Trap</span><p>Call <code>model(x)</code>, not <code>model.forward(x)</code>: <code>__call__</code> runs hooks too. And don't add softmax at the end when using <code>CrossEntropyLoss</code>; return logits.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Call <code>model(x)</code>, not <code>model.forward(x)</code>: <code>__call__</code> also runs hooks. And don't add softmax at the end when using <code>CrossEntropyLoss</code>; return logits.</p></div>
 
   <h2 id="dp2-loop"><span class="num">05</span>The Training Loop</h2>
+  <p>Unlike Keras, PyTorch has no <code>fit()</code>: you write the loop. That means more lines, but full control over every step.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Practising sums: rub the slate clean (zero_grad), try a sum (forward), check against the answer (loss), see where you went wrong (backward), fix your method (step). Repeat for the next sum.</p>
+  </div>
   <figure class="viz"><svg viewBox="0 0 560 155" width="560">
     <defs><marker id="dp2-ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <rect x="10" y="50" width="96" height="40" rx="8" class="fs" stroke="currentColor"/><text x="20" y="75">zero_grad</text>
@@ -303,7 +318,7 @@ params: 1218</div>
     <path d="M503,90 L503,125 L58,125 L58,92" fill="none" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#dp2-ah3)"/>
     <text x="210" y="145" class="tm">next batch</text>
     <text x="14" y="40" class="tm" font-size="11">clear .grad</text><text x="126" y="40" class="tm" font-size="11">model(x)</text><text x="238" y="40" class="tm" font-size="11">loss_fn(out, y)</text><text x="350" y="40" class="tm" font-size="11">fill .grad</text><text x="462" y="40" class="tm" font-size="11">w −= lr·grad</text>
-  </svg><figcaption>Five calls per batch, always in this order. Gradient clipping slots between backward and step.</figcaption></figure>
+  </svg><figcaption>Five calls per batch, always in this order. Gradient clipping goes between backward and step.</figcaption></figure>
   <div class="fx" data-lang="py">loss_fn = nn.CrossEntropyLoss()
 opt = torch.optim.Adam(model.parameters(), lr=1e-2)
 
@@ -343,10 +358,14 @@ epoch  5  train 0.1869  val 0.1092  acc 0.965
 epoch 10  train 0.1193  val 0.0454  acc 0.995
 epoch 15  train 0.0959  val 0.0355  acc 0.985
 epoch 20  train 0.0917  val 0.0343  acc 0.995</div>
-  <p>Val loss below train loss is normal here: train loss is averaged over the epoch while weights improve, and dropout is on during training only.</p>
-  <div class="callout trap"><span class="label">Trap</span><p><code>total += loss</code> (without <code>.item()</code>) keeps every batch's graph alive: memory grows each step until OOM. Same for appending tensors to a list for logging; detach or <code>.item()</code> them.</p></div>
+  <p>Val loss below train loss is normal here: train loss is averaged over the epoch while weights are still improving, and dropout is on only during training.</p>
+  <div class="callout trap"><span class="label">Trap</span><p><code>total += loss</code> (without <code>.item()</code>) keeps every batch's graph in memory: memory grows each step until out-of-memory. Same for appending tensors to a list for logging; use <code>.item()</code> or detach them.</p></div>
 
   <h2 id="dp2-dev"><span class="num">06</span>GPU &amp; Device Handling</h2>
+  <p>A GPU does matrix maths far faster than a CPU, but it has its own memory. Every tensor in one calculation must sit on the same device.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>The cook (GPU) and the ingredients must be in the same kitchen. If the onions are still at home (CPU), cooking stops with an error.</p>
+  </div>
   <div class="flow"><span>pick device once</span><span>model.to(device)</span><span>each batch .to(device)</span><span>results .cpu() for NumPy</span></div>
   <div class="fx" data-lang="py">device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device, torch.cuda.is_available())
@@ -368,7 +387,7 @@ torch.Size([3, 2])
 torch.bfloat16 torch.float32
 TypeError: Got unsupported ScalarType BFloat16
 (3, 2)</div>
-  <p>This machine has no GPU, so the CUDA path below was <strong>not run here</strong>. Mixed precision on GPU (current API, <code>torch.cuda.amp</code> is deprecated):</p>
+  <p>This machine has no GPU, so the CUDA code below was <strong>not run here</strong>. <strong>Mixed precision</strong> = do most maths in 16-bit to save memory and time, keep weights in 32-bit. Current API (<code>torch.cuda.amp</code> is deprecated):</p>
   <div class="fx" data-lang="py">scaler = torch.amp.GradScaler("cuda")         # only needed for float16, not bf16
 for x, y in train_dl:
     x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
@@ -381,16 +400,20 @@ for x, y in train_dl:
     scaler.step(opt); scaler.update()</div>
   <table class="tbl">
     <tr><th>CUDA OOM? Try in order</th><th>Effect</th></tr>
-    <tr><td>Halve <code>batch_size</code></td><td>Biggest lever on activation memory</td></tr>
+    <tr><td>Halve <code>batch_size</code></td><td>Biggest saving on activation memory</td></tr>
     <tr><td>Mixed precision (bf16/fp16)</td><td>~½ activation memory, faster on Tensor Cores</td></tr>
     <tr><td><code>torch.no_grad()</code> in validation</td><td>No graph stored</td></tr>
-    <tr><td><code>loss.item()</code> when logging</td><td>No graphs kept alive</td></tr>
+    <tr><td><code>loss.item()</code> when logging</td><td>No graphs kept in memory</td></tr>
     <tr><td>Gradient checkpointing (<code>torch.utils.checkpoint</code>)</td><td>Recompute activations in backward: less memory, more compute</td></tr>
     <tr><td>Gradient accumulation</td><td>Small batches, step every k → same effective batch</td></tr>
   </table>
-  <div class="callout trap"><span class="label">Trap</span><p>Model on GPU, batch on CPU → "Expected all tensors to be on the same device". Never hard-code <code>.cuda()</code>; use the <code>device</code> variable so code runs anywhere. <code>.numpy()</code> needs a CPU tensor without grad (and not bf16).</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Model on GPU, batch on CPU → "Expected all tensors to be on the same device". Never hard-code <code>.cuda()</code>; use the <code>device</code> variable so the code runs anywhere. <code>.numpy()</code> needs a CPU tensor without grad (and not bf16).</p></div>
 
   <h2 id="dp2-eval"><span class="num">07</span>eval() and no_grad()</h2>
+  <p>Two different switches people often mix up. <code>model.eval()</code> changes how some layers behave. <code>torch.no_grad()</code> stops autograd from recording, to save memory.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p><code>eval()</code> = exam day: no more random practice drills (dropout off). <code>no_grad()</code> = not writing rough notes, since you won't review them. You want both on exam day.</p>
+  </div>
   <table class="tbl">
     <tr><th></th><th><code>model.eval()</code></th><th><code>torch.no_grad()</code></th></tr>
     <tr><td>Changes</td><td>Layer behaviour: dropout off, BatchNorm uses running stats</td><td>Autograd: no graph recorded</td></tr>
@@ -407,9 +430,10 @@ with torch.no_grad():
     print("eval mode: ", [round(model(x0)[0, 1].item(), 3) for _ in range(3)])</div>
   <div class="fx" data-lang="text">train mode: [-8.736, -8.442, -9.247]
 eval mode:  [-8.327, -8.327, -8.327]</div>
-  <p><code>no_grad</code> alone did not stop the randomness: only <code>eval()</code> turns dropout off. Validation needs both. <code>torch.inference_mode()</code> is a stricter, slightly faster <code>no_grad</code> for pure serving.</p>
+  <p><code>no_grad</code> alone did not stop the randomness: only <code>eval()</code> turns dropout off. Validation needs both. <code>torch.inference_mode()</code> is a stricter, slightly faster <code>no_grad</code> for serving only.</p>
 
   <h2 id="dp2-ckpt"><span class="num">08</span>Checkpointing</h2>
+  <p>A <strong>checkpoint</strong> saves the model's weights (and optionally the optimizer) to disk, so you can serve the model later or resume after a crash. Like a save point in a video game.</p>
   <div class="fx" data-lang="py">print(list(model.state_dict().keys()))
 ck = torch.load("ckpt.pt", map_location=device)        # weights_only=True by default
 fresh = MLP().to(device)                                 # rebuild the architecture
@@ -427,10 +451,14 @@ True tensor([[1., 0.]])</div>
     <div><b>Full checkpoint</b><p>model + optimizer + scheduler state + epoch (+ scaler, RNG)</p><small>to resume training exactly</small></div>
     <div><b>Whole model</b><p><code>torch.save(model, p)</code> pickles the class path</p><small>breaks on refactor; avoid</small></div>
   </div>
-  <p>Resume: load all states, then <code>start_epoch = ck["epoch"] + 1</code>. Without the optimizer state, Adam restarts its moment estimates and training jolts.</p>
-  <div class="callout trap"><span class="label">Trap</span><p>A model saved from <code>nn.DataParallel</code>/DDP has keys prefixed <code>module.</code>; strip them or save <code>model.module.state_dict()</code>. Loading GPU tensors on a CPU box needs <code>map_location</code>.</p></div>
+  <p>Resume: load all states, then <code>start_epoch = ck["epoch"] + 1</code>. Without the optimizer state, Adam forgets its running averages and training jumps.</p>
+  <div class="callout trap"><span class="label">Trap</span><p>A model saved from <code>nn.DataParallel</code>/DDP has keys starting with <code>module.</code>; strip them or save <code>model.module.state_dict()</code>. Loading GPU tensors on a CPU machine needs <code>map_location</code>.</p></div>
 
   <h2 id="dp2-tl"><span class="num">09</span>Transfer Learning</h2>
+  <p><strong>Transfer learning</strong> = start from a model already trained on a big dataset and adapt it to your task. Training from scratch needs lots of data and GPU time; reused features (edges, shapes, word meanings) give a strong start with little data.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A cook trained in North Indian food joins a Chinese restaurant. Knife skills and heat control carry over (frozen backbone); only the recipes are new (new head).</p>
+  </div>
   <figure class="viz"><svg viewBox="0 0 560 150" width="560">
     <defs><marker id="dp2-ah4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <rect x="10" y="40" width="300" height="56" rx="8" class="fs" stroke="currentColor" stroke-dasharray="5 3"/>
@@ -438,8 +466,8 @@ True tensor([[1., 0.]])</div>
     <line x1="310" y1="68" x2="350" y2="68" stroke="currentColor" marker-end="url(#dp2-ah4)"/>
     <rect x="352" y="40" width="190" height="56" rx="8" class="fg sg"/><text x="364" y="64">new head (3 classes)</text><text x="364" y="84" class="tm">trainable · lr 1e-2</text>
     <text x="10" y="125" class="tm">phase 2: unfreeze the top block with a tiny lr (1e-4) → fine-tuning</text>
-  </svg><figcaption>Reuse features learned on a big dataset; only the small task-specific head starts from scratch.</figcaption></figure>
-  <p>Here our trained moons body plays the "pretrained backbone" for a new 3-class task:</p>
+  </svg><figcaption>Reuse features learned on a big dataset; only the small head for your task starts from scratch.</figcaption></figure>
+  <p>Example: our trained moons body acts as the "pretrained backbone" for a new 3-class task:</p>
   <div class="fx" data-lang="py">torch.save(model.state_dict(), "moons_body.pt")
 new = MLP(n_classes=3)
 body_only = {k: v for k, v in torch.load("moons_body.pt").items() if k.startswith("body")}
@@ -474,7 +502,7 @@ optimizer = torch.optim.AdamW(model.fc.parameters(), lr=1e-3)</div>
   <div class="callout trap"><span class="label">Trap</span><p>Frozen BatchNorm layers still update running stats in <code>train()</code> mode; put them in <code>eval()</code> if the backbone should stay fixed. Use the pretrained model's own input normalization (e.g. ImageNet mean/std).</p></div>
 
   <h2 id="dp2-lab"><span class="num">10</span>Hands-on: Break the Loop</h2>
-  <p>Same moons run (seed 42, 20 epochs), changing one thing at a time. Real results:</p>
+  <p>Same moons run (seed 42, 20 epochs), changing one thing at a time:</p>
   <table class="tbl out"><caption>Result (epoch 1 → epoch 20)</caption>
     <tr><th>Change</th><th>Train loss ep1</th><th>Val acc ep5</th><th>Val acc ep20</th></tr>
     <tr><td>Baseline (Adam lr 1e-2)</td><td>0.503</td><td>0.965</td><td>0.995</td></tr>
@@ -483,24 +511,24 @@ optimizer = torch.optim.AdamW(model.fc.parameters(), lr=1e-3)</div>
     <tr><td>lr = 1e-4</td><td>0.713</td><td>0.640</td><td>0.850</td></tr>
   </table>
   <ul>
-    <li><strong>No zero_grad:</strong> gradients pile up, steps grow huge and stale; training thrashes (acc fell to 0.465 mid-run).</li>
+    <li><strong>No zero_grad:</strong> gradients pile up, steps become huge and out of date; training swings wildly (acc fell to 0.465 mid-run).</li>
     <li><strong>lr too high:</strong> first-epoch loss explodes; it recovers only partly. <strong>Too low:</strong> still learning after 20 epochs.</li>
-    <li><strong>Try next:</strong> forget <code>model.eval()</code> in <code>evaluate()</code> and watch val acc jitter; overfit one batch of 64 to ~0 loss as a sanity check before any long run.</li>
+    <li><strong>Try next:</strong> remove <code>model.eval()</code> from <code>evaluate()</code> and watch val acc jump around; overfit one batch of 64 to ~0 loss as a quick check before any long run.</li>
   </ul>
 
   <h2 id="dp2-qa"><span class="num">11</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>Write the five lines inside a training step, in order.</summary><div class="qa-body"><code>opt.zero_grad()</code> → <code>out = model(x)</code> → <code>loss = loss_fn(out, y)</code> → <code>loss.backward()</code> → <code>opt.step()</code>. Clip between backward and step; <code>scheduler.step()</code> after (per epoch or per step depending on scheduler).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why call <code>optimizer.zero_grad()</code>? When would you skip it on purpose?</summary><div class="qa-body"><code>backward()</code> adds into <code>.grad</code>. Without zeroing, each step uses the sum of all past gradients (our run: acc 0.995 → 0.855). Skip deliberately for gradient accumulation: k small batches, then one step, to emulate a k× larger batch (divide loss by k).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Difference between <code>model.eval()</code> and <code>torch.no_grad()</code>?</summary><div class="qa-body"><code>eval()</code> changes layer behaviour (dropout off, BatchNorm running stats). <code>no_grad()</code> stops graph recording (memory/speed). Independent: our model under <code>no_grad</code> in train mode still gave 3 different outputs. Use both for validation/inference.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Write the five lines inside a training step, in order.</summary><div class="qa-body"><code>opt.zero_grad()</code> → <code>out = model(x)</code> → <code>loss = loss_fn(out, y)</code> → <code>loss.backward()</code> → <code>opt.step()</code>. Clip between backward and step; <code>scheduler.step()</code> after (per epoch or per step, depending on the scheduler).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why call <code>optimizer.zero_grad()</code>? When would you skip it on purpose?</summary><div class="qa-body"><code>backward()</code> adds into <code>.grad</code>. Without zeroing, each step uses the sum of all past gradients (our run: acc 0.995 → 0.855). Skip it on purpose for gradient accumulation: k small batches, then one step, to act like a k× bigger batch (divide the loss by k).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Difference between <code>model.eval()</code> and <code>torch.no_grad()</code>?</summary><div class="qa-body"><code>eval()</code> changes layer behaviour (dropout off, BatchNorm uses running stats). <code>no_grad()</code> stops graph recording (saves memory and time). They are separate: our model under <code>no_grad</code> in train mode still gave 3 different outputs. Use both for validation and inference.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What's the output? <code>x = torch.tensor(3., requires_grad=True); y = x**2; y.backward(); y = x**2; y.backward(); print(x.grad)</code></summary><div class="qa-body"><code>tensor(12.)</code>: 6 + 6, gradients accumulate.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why save the <code>state_dict</code> instead of the whole model?</summary><div class="qa-body"><code>torch.save(model)</code> pickles a reference to the class and module path; renaming or refactoring breaks loading, and unpickling arbitrary objects is unsafe. A state_dict is just name → tensor: portable, loadable with <code>weights_only=True</code>. Rebuild the class, then <code>load_state_dict</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What goes into a checkpoint for resuming training?</summary><div class="qa-body">Model state_dict, optimizer state_dict (Adam moments), scheduler state, epoch/step, best metric, GradScaler state if AMP, ideally RNG states. Missing optimizer state makes training jump after resume.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why save the <code>state_dict</code> instead of the whole model?</summary><div class="qa-body"><code>torch.save(model)</code> pickles a pointer to the class and file path; renaming or moving code breaks loading, and unpickling unknown objects is unsafe. A state_dict is just name → tensor: portable, loadable with <code>weights_only=True</code>. Rebuild the class, then <code>load_state_dict</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What goes into a checkpoint for resuming training?</summary><div class="qa-body">Model state_dict, optimizer state_dict (Adam's running averages), scheduler state, epoch/step, best metric, GradScaler state if using AMP, ideally random-number states. Without the optimizer state, training jumps after resuming.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Your model is on the GPU and you get "Expected all tensors to be on the same device". Fix?</summary><div class="qa-body">Some tensor (batch, label, or a tensor created inside <code>forward</code>) is on CPU. Move batches with <code>.to(device)</code>; create new tensors with <code>device=x.device</code>; register constants as buffers so <code>model.to()</code> moves them.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Memory grows every iteration until CUDA OOM. Likely causes?</summary><div class="qa-body">Accumulating <code>loss</code> instead of <code>loss.item()</code>; storing outputs with graphs for logging; validation without <code>no_grad()</code>. Then: smaller batch, mixed precision, gradient checkpointing, accumulation.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you freeze a pretrained backbone and train only a new head?</summary><div class="qa-body">Set <code>requires_grad=False</code> on backbone params, replace the final layer (new layers are trainable by default), give the optimizer only trainable params. Later unfreeze top blocks with param groups: low lr (1e-5–1e-4) for backbone, higher for head.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span><code>view</code> vs <code>reshape</code>?</summary><div class="qa-body"><code>view</code> never copies and needs a compatible (contiguous) memory layout; it errors after <code>.T</code>/<code>permute</code>. <code>reshape</code> returns a view when it can and copies otherwise. Use <code>reshape</code> unless you need the no-copy guarantee.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does a Dataset need, and what does the DataLoader add?</summary><div class="qa-body">Dataset: <code>__len__</code> and <code>__getitem__(i)</code> returning one example. DataLoader: batching (collate), shuffling, parallel workers, pinned memory, <code>drop_last</code>. Heavy per-item work belongs in <code>__getitem__</code> so workers parallelize it.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why does a fresh 2-class model start near loss 0.69, and why is that useful?</summary><div class="qa-body">Random logits ≈ uniform probabilities → CE = ln 2 ≈ 0.693 (ln C for C classes). If step-0 loss is far off, labels, the loss function or init are wrong; catch it before a long run.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Memory grows every iteration until CUDA OOM. Likely causes?</summary><div class="qa-body">Adding up <code>loss</code> instead of <code>loss.item()</code>; storing outputs with graphs for logging; validation without <code>no_grad()</code>. After fixing those: smaller batch, mixed precision, gradient checkpointing, accumulation.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you freeze a pretrained backbone and train only a new head?</summary><div class="qa-body">Set <code>requires_grad=False</code> on backbone params, replace the final layer (new layers are trainable by default), and give the optimizer only trainable params. Later unfreeze top blocks with param groups: low lr (1e-5–1e-4) for the backbone, higher for the head.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span><code>view</code> vs <code>reshape</code>?</summary><div class="qa-body"><code>view</code> never copies and needs memory laid out in order (contiguous); it errors after <code>.T</code>/<code>permute</code>. <code>reshape</code> gives a view when it can and copies otherwise. Use <code>reshape</code> unless you need the no-copy guarantee.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does a Dataset need, and what does the DataLoader add?</summary><div class="qa-body">Dataset: <code>__len__</code> and <code>__getitem__(i)</code> returning one example. DataLoader: batching (collate), shuffling, parallel workers, pinned memory, <code>drop_last</code>. Put heavy per-item work in <code>__getitem__</code> so workers run it in parallel.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does a fresh 2-class model start near loss 0.69, and why is that useful?</summary><div class="qa-body">Random logits ≈ equal probabilities → CE = ln 2 ≈ 0.693 (ln C for C classes). If step-0 loss is far off, the labels, the loss function or init are wrong; catch it before a long run.</div></details>
 </main>`
 });

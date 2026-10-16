@@ -116,7 +116,9 @@ Object.assign(TOPIC_CONTENT, {
   </div>
 
   <h2 id="st-what"><span class="num">01</span>What a Transaction Is</h2>
-  <p>A <strong>transaction</strong> is a group of statements that succeed or fail as one unit. Classic case: moving ₹200 from Asha to Ben is <em>two</em> updates. If only the debit happens, ₹200 vanishes.</p>
+  <p>You send ₹200 to a friend on UPI. Your balance drops. Then the network dies before the friend's balance rises. Where did the ₹200 go? Every payment app, every ticket booking, every shop that lets many people buy at once has this problem. This note is about the two tools a database uses to stop it: <strong>transactions</strong> (a group of changes treated as one) and <strong>concurrency control</strong> (rules for many users changing data at the same time).</p>
+  <p>You will meet this in real jobs (double-booked seats, stock going negative, a report showing wrong totals) and in interviews ("explain ACID", "what is a deadlock?").</p>
+  <p>Why the problem exists: a transfer is <em>two</em> updates in the database. Subtract from Asha. Add to Ben. If only the first one happens, ₹200 vanishes. The fix: tell the database "these statements belong together; do all of them or none of them". That group is a <strong>transaction</strong>. You open it with <code>BEGIN</code>, and close it with <code>COMMIT</code> (keep everything) or <code>ROLLBACK</code> (undo everything).</p>
   <div class="fx" data-lang="sql">CREATE TABLE accounts (acct_id int PRIMARY KEY, owner text,
                        balance numeric CHECK (balance &gt;= 0));
 INSERT INTO accounts VALUES (1, 'Asha', 1000), (2, 'Ben', 500);
@@ -126,7 +128,8 @@ UPDATE accounts SET balance = balance - 200 WHERE acct_id = 1;
 UPDATE accounts SET balance = balance + 200 WHERE acct_id = 2;
 COMMIT;                                   -- both changes become permanent together</div>
   <table class="tbl out"><caption>Result</caption><tr><th>acct_id</th><th>owner</th><th>balance</th></tr><tr><td>1</td><td>Asha</td><td>800</td></tr><tr><td>2</td><td>Ben</td><td>700</td></tr></table>
-  <p>Now a transfer of ₹5000, which Asha can't afford:</p>
+  <p>Step by step: Asha had 1000, Ben 500. Inside the transaction Asha becomes 800 and Ben 700. At <code>COMMIT</code> both new values are saved at once. Nobody could ever see "Asha 800, Ben 500".</p>
+  <p>Now a transfer of ₹5000, which Asha can't afford. The <code>CHECK (balance &gt;= 0)</code> rule on the table stops her balance going negative:</p>
   <div class="fx" data-lang="sql">BEGIN;
 UPDATE accounts SET balance = balance + 5000 WHERE acct_id = 2;   -- UPDATE 1 (Ben credited!)
 UPDATE accounts SET balance = balance - 5000 WHERE acct_id = 1;
@@ -134,10 +137,11 @@ UPDATE accounts SET balance = balance - 5000 WHERE acct_id = 1;
 SELECT * FROM accounts;
 -- ERROR:  current transaction is aborted, commands ignored until end of transaction block
 ROLLBACK;                                 -- Ben's credit is undone: still 800 / 700</div>
+  <p>Notice two things. Ben was credited first and that worked. Then Asha's update failed. From that moment the transaction is in an <strong>aborted</strong> state: Postgres refuses every further command until you say <code>ROLLBACK</code>. After the rollback, Ben's +5000 is gone too. Nothing half-done remains.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A shopping cart. You add items (statements), then either pay for everything (<code>COMMIT</code>) or walk away and every item goes back on the shelf (<code>ROLLBACK</code>). Nobody else sees your cart's contents until you pay.</p>
   </div>
-  <p><strong>SAVEPOINT</strong> is a checkpoint inside a transaction: undo back to it without losing earlier work.</p>
+  <p>Sometimes you want to undo only the last step, not the whole cart. A <strong>SAVEPOINT</strong> is a checkpoint inside a transaction, like a save point in a video game: after a mistake you go back to it, not to the start. Below, the order row is kept while a bad item line is thrown away:</p>
   <div class="fx" data-lang="sql">BEGIN;
 INSERT INTO orders VALUES (105, 4, '2024-08-01', 'pending');   -- Dia's first order
 SAVEPOINT before_items;
@@ -152,6 +156,7 @@ COMMIT;</div>
   </div>
 
   <h2 id="st-acid"><span class="num">02</span>ACID</h2>
+  <p>What exactly does a database promise about a transaction? Four things. Together they are called <strong>ACID</strong>, one letter per promise. Every interviewer asks this, so learn it with the money transfer:</p>
   <table class="tbl">
     <tr><th>Letter</th><th>Meaning</th><th>Failure it prevents</th><th>Analogy</th></tr>
     <tr><td><strong>Atomicity</strong></td><td>All statements apply, or none do</td><td>Debit happens, server crashes, credit never does</td><td>A vending machine: no snack, coin returned</td></tr>
@@ -159,15 +164,22 @@ COMMIT;</div>
     <tr><td><strong>Isolation</strong></td><td>Concurrent transactions don't see each other's half-done work</td><td>A report counts money mid-transfer, in neither account</td><td>Changing rooms: others see you before or after, never mid-change</td></tr>
     <tr><td><strong>Durability</strong></td><td>Once committed, it survives crashes</td><td>"Payment successful" shown, then lost in a power cut</td><td>A signed receipt: the shop can't later claim you didn't pay</td></tr>
   </table>
+  <p>How the database keeps these promises:</p>
   <ul>
-    <li><strong>How</strong>: atomicity and durability come from the <strong>WAL</strong> (write-ahead log: changes logged and flushed before commit returns). Consistency comes from constraints. Isolation comes from MVCC and locks (below).</li>
+    <li><strong>Atomicity and Durability</strong> come from the <strong>WAL</strong> (write-ahead log). Before changing the real table, Postgres first writes "I am about to change X to Y" into a log file on disk. Only when that log is safely on disk does <code>COMMIT</code> return. After a crash it reads the log: finished transactions are redone, unfinished ones are undone. Like a shopkeeper who writes a sale in the register <em>before</em> handing over the goods.</li>
+    <li><strong>Consistency</strong> comes from constraints (<code>CHECK</code>, <code>FOREIGN KEY</code>, <code>UNIQUE</code>): rules the database checks before letting a change in.</li>
+    <li><strong>Isolation</strong> comes from MVCC and locks, explained in sections 05 and 06.</li>
   </ul>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>The "C" in ACID (constraints hold) is not the "C" in CAP (every replica returns the latest write). Interviewers like to check you know the difference.</p>
+    <p>The "C" in ACID (constraints hold) is not the "C" in CAP (every replica returns the latest write). CAP is a theorem about databases spread over many machines; same letter, different meaning. Interviewers like to check you know the difference.</p>
   </div>
 
   <h2 id="st-anom"><span class="num">03</span>Concurrency Anomalies</h2>
-  <p>Parallel transactions without isolation cause these five bugs. Session B was a real second connection (via <code>dblink</code>).</p>
+  <p>So far one user. Now picture a shop at 8 pm on sale day: hundreds of people reading and changing the same tables at the same moment. A <strong>session</strong> is one user's connection to the database. When two sessions touch the same data at the same time, strange things can happen. Each strange thing has a name. These names are called <strong>anomalies</strong> (anomaly = something that should not happen).</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Two people editing the same Google Sheet. One reads a cell, the other changes it, the first one still has the old number in their head. Every anomaly below is a version of that.</p>
+  </div>
+  <p>The tables below show two sessions, A and B, in time order (row 1 first). Session B was a real second connection (via <code>dblink</code>). Five bugs:</p>
 
   <p><strong>1. Dirty read</strong>: reading another transaction's <em>uncommitted</em> change, which may be rolled back.</p>
   <table class="tbl">
@@ -177,7 +189,7 @@ COMMIT;</div>
     <tr><td>3</td><td><code>SELECT balance … acct_id = 1</code> → <strong>800</strong></td><td></td></tr>
     <tr><td>4</td><td></td><td><code>ROLLBACK;</code></td></tr>
   </table>
-  <p>Postgres never shows uncommitted data, even at READ UNCOMMITTED. A DB that allowed dirty reads would have returned 0, a value that never officially existed.</p>
+  <p>Walk through it. B sets Asha's balance to 0 but has not committed. A reads at step 3 and sees 800, the real committed value. Then B changes its mind and rolls back. Postgres never shows uncommitted data, even at READ UNCOMMITTED. A DB that allowed dirty reads would have returned 0 at step 3, a value that never officially existed, like reading a draft message that was later deleted.</p>
 
   <p><strong>2. Non-repeatable read</strong>: the same row read twice in one transaction gives different values.</p>
   <table class="tbl">
@@ -186,7 +198,7 @@ COMMIT;</div>
     <tr><td>2</td><td></td><td><code>UPDATE accounts SET balance = balance - 100 WHERE acct_id = 1;</code> (commits)</td></tr>
     <tr><td>3</td><td><code>SELECT balance … acct_id = 1</code> → <strong>700</strong></td><td></td></tr>
   </table>
-  <p>At REPEATABLE READ, the same steps gave 700 then 700: A keeps its snapshot.</p>
+  <p>A asked the same question twice inside one transaction and got two answers, because B's change was committed in between. That is fine for a quick lookup, but wrong for a report that must add up. At REPEATABLE READ, the same steps gave 700 then 700: A keeps its <strong>snapshot</strong> (a frozen picture of the data as it was when A started).</p>
 
   <p><strong>3. Phantom read</strong>: the same <em>filter</em> returns a different set of rows because another transaction inserted or deleted matching rows.</p>
   <table class="tbl">
@@ -195,9 +207,9 @@ COMMIT;</div>
     <tr><td>2</td><td></td><td><code>INSERT INTO orders VALUES (106, 2, '2024-08-02', 'pending');</code></td></tr>
     <tr><td>3</td><td>same count → <strong>3</strong></td><td></td></tr>
   </table>
-  <p>At REPEATABLE READ: 3 then 3. (Orders 104 and 105 were pending at the start.)</p>
+  <p>The difference from bug 2: no existing row changed. A <em>new</em> row appeared, like a ghost ("phantom"), so the count went from 2 to 3. At REPEATABLE READ: 3 then 3. (Orders 104 and 105 were pending at the start.)</p>
 
-  <p><strong>4. Lost update</strong>: two transactions read, compute, and write the same row; one write silently overwrites the other.</p>
+  <p><strong>4. Lost update</strong>: two transactions read, compute, and write the same row; one write silently overwrites the other. This is the most common real-world bug. Picture 10 lamps in stock and two customers buying at the same second. Each app server reads "10", calculates 10 − 1 = 9, and writes 9. Two lamps sold, stock says 9.</p>
   <figure class="viz"><svg viewBox="0 0 600 170" width="600">
     <defs><marker id="st-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <text x="0" y="34" font-weight="bold">A</text><text x="0" y="94" font-weight="bold">B</text>
@@ -220,10 +232,10 @@ COMMIT;</div>
     <tr><td>5</td><td colspan="2">Two Lamps sold, final stock <strong>9</strong> (should be 8)</td></tr>
   </table>
   <div class="callout intu"><span class="label">Fixes</span>
-    <p>(1) Do the math in SQL: <code>SET stock = stock - 1</code>, an atomic read-modify-write. (2) Lock first: <code>SELECT … FOR UPDATE</code>. (3) Version column (section 07). (4) REPEATABLE READ: B's write failed with <code>ERROR: could not serialize access due to concurrent update</code>.</p>
+    <p>(1) Do the math in SQL: <code>SET stock = stock - 1</code>. Now the database reads and subtracts in one step, and the second UPDATE waits for the first, so 10 → 9 → 8. (2) Lock first: <code>SELECT … FOR UPDATE</code> (section 06). (3) Version column (section 07). (4) REPEATABLE READ: B's write failed with <code>ERROR: could not serialize access due to concurrent update</code>, so the app knows to retry.</p>
   </div>
 
-  <p><strong>5. Write skew</strong>: two transactions read the same data, then update <em>different</em> rows, together breaking a rule neither broke alone. Rule: at least one doctor on call.</p>
+  <p><strong>5. Write skew</strong>: two transactions read the same data, then update <em>different</em> rows, together breaking a rule neither broke alone. The hospital rule: at least one doctor must be on call. Ravi and Sara are both on call. Both check "is there another doctor on call? yes", and both go off duty at the same time.</p>
   <table class="tbl">
     <tr><th>#</th><th>Session A (REPEATABLE READ)</th><th>Session B (REPEATABLE READ)</th></tr>
     <tr><td>1</td><td><code>SELECT count(*) FROM on_call WHERE on_call</code> → 2</td><td><code>SELECT count(*) …</code> → 2</td></tr>
@@ -234,7 +246,11 @@ COMMIT;</div>
   <p>Same steps at SERIALIZABLE: B's <code>COMMIT</code> failed with <code>could not serialize access due to read/write dependencies among transactions … HINT: The transaction might succeed if retried.</code> Sara stayed on call.</p>
 
   <h2 id="st-iso"><span class="num">04</span>Isolation Levels</h2>
-  <p>An <strong>isolation level</strong> is how much a transaction is shielded from concurrent ones. Higher = fewer anomalies, more blocking or retries.</p>
+  <p>Stopping every anomaly costs speed: sessions must wait for each other or get cancelled and retried. So the database lets you choose how much protection each transaction gets. That setting is the <strong>isolation level</strong>. Higher level = fewer anomalies, but more waiting or retries.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Studying in a room. READ COMMITTED: the door is open, people walk through, you notice changes. REPEATABLE READ: you shut the door and work from the photo you took when you entered. SERIALIZABLE: only one person is allowed in the room at a time (or it looks that way).</p>
+  </div>
+  <p>Read the table row by row: which bugs from section 03 can still happen at each level?</p>
   <table class="tbl">
     <tr><th>Level (PostgreSQL)</th><th>Dirty read</th><th>Non-repeatable</th><th>Phantom</th><th>Lost update</th><th>Write skew</th></tr>
     <tr><td>READ UNCOMMITTED*</td><td>No</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
@@ -246,7 +262,7 @@ COMMIT;</div>
     <li>*Postgres treats READ UNCOMMITTED as READ COMMITTED: <strong>no dirty reads, ever</strong>.</li>
     <li><strong>READ COMMITTED</strong>: each <em>statement</em> sees data committed before it started.</li>
     <li><strong>REPEATABLE READ</strong> = <strong>snapshot isolation</strong>: the whole <em>transaction</em> sees one snapshot from its first query. Stricter than the SQL standard, which allows phantoms here.</li>
-    <li><strong>SERIALIZABLE</strong>: result equals <em>some</em> one-at-a-time order. Postgres doesn't block more; it watches for dangerous patterns and aborts one transaction. <strong>Your code must retry</strong> on SQLSTATE <code>40001</code>.</li>
+    <li><strong>SERIALIZABLE</strong>: the result is the same as if the transactions had run one after another in <em>some</em> order. Postgres doesn't make sessions wait more; it watches for dangerous patterns and aborts one transaction. <strong>Your code must retry</strong> on SQLSTATE <code>40001</code> (the error code for "serialization failure").</li>
   </ul>
   <div class="fx" data-lang="sql">BEGIN ISOLATION LEVEL SERIALIZABLE;
 -- ... reads and writes ...
@@ -256,7 +272,9 @@ COMMIT;   -- may fail with 40001: catch it and rerun the whole transaction</div>
   </div>
 
   <h2 id="st-mvcc"><span class="num">05</span>MVCC</h2>
-  <p><strong>MVCC</strong> (multi-version concurrency control): an UPDATE doesn't overwrite a row; it writes a <strong>new version</strong> and marks the old one expired. Each transaction sees the versions that match its snapshot.</p>
+  <p>How can session A keep seeing balance 800 while B has already changed it to 700? If there were only one copy of the row, that would be impossible. The trick: Postgres keeps <em>both</em> copies for a while.</p>
+  <p>An UPDATE doesn't overwrite a row. It writes a <strong>new version</strong> of the row and marks the old one as expired. Each transaction sees the versions that match its snapshot. This is <strong>MVCC</strong> (multi-version concurrency control: "many versions, so nobody has to wait").</p>
+  <p>You can see the versions yourself. Every row has two hidden columns: <code>ctid</code> (where the row physically sits: page, slot) and <code>xmin</code> (the id of the transaction that created this version). Both change after an UPDATE, which proves a new copy was written:</p>
   <div class="fx" data-lang="sql">SELECT ctid, xmin, acct_id, balance FROM accounts WHERE acct_id = 1;
 UPDATE accounts SET balance = balance - 100 WHERE acct_id = 1;
 SELECT ctid, xmin, acct_id, balance FROM accounts WHERE acct_id = 1;</div>
@@ -292,7 +310,11 @@ SELECT ctid, xmin, acct_id, balance FROM accounts WHERE acct_id = 1;</div>
   </div>
 
   <h2 id="st-locks"><span class="num">06</span>Locks &amp; Deadlocks</h2>
-  <p>Every UPDATE/DELETE takes a <strong>row lock</strong>, held until commit or rollback. A second writer on the same row waits. <code>SELECT … FOR UPDATE</code> takes that lock while reading, to reserve the row before deciding.</p>
+  <p>MVCC lets readers and writers ignore each other. But two <em>writers</em> on the same row cannot both win. Someone has to wait. The waiting is done with a <strong>lock</strong>: a "this row is mine until I finish" flag.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A trial room in a clothes shop. You lock the door while changing. Others wait outside. When you leave (COMMIT or ROLLBACK), the next person goes in.</p>
+  </div>
+  <p>Every UPDATE/DELETE takes a <strong>row lock</strong>, held until commit or rollback. A second writer on the same row waits. Sometimes you want the lock <em>before</em> writing: read the stock, think, then update. <code>SELECT … FOR UPDATE</code> takes the lock while reading, to reserve the row before deciding. Watch session B wait at step 2:</p>
   <table class="tbl">
     <tr><th>#</th><th>Session A</th><th>Session B</th></tr>
     <tr><td>1</td><td><code>BEGIN; SELECT balance FROM accounts WHERE acct_id = 1 FOR UPDATE;</code> → 800</td><td></td></tr>
@@ -302,7 +324,7 @@ SELECT ctid, xmin, acct_id, balance FROM accounts WHERE acct_id = 1;</div>
   </table>
 
   <h3>SKIP LOCKED: job queues</h3>
-  <p>Many workers pulling from one <code>jobs</code> table would all wait on the same first row. <code>SKIP LOCKED</code> tells each to skip rows someone else holds.</p>
+  <p>A <strong>job queue</strong> is a table of tasks to do (send this email, resize this image). Many worker programs pull from it. With plain <code>FOR UPDATE</code> they would all wait on the same first row, one behind the other. <code>SKIP LOCKED</code> tells each worker to skip rows someone else holds and take the next free ones, like people at a buffet skipping the dish someone is already serving from.</p>
   <div class="fx" data-lang="sql">BEGIN;
 SELECT job_id FROM jobs WHERE status = 'queued'
 ORDER BY job_id LIMIT 2
@@ -311,7 +333,7 @@ UPDATE jobs SET status = 'running' WHERE job_id IN (1, 2);
 COMMIT;</div>
 
   <h3>Deadlocks</h3>
-  <p>A <strong>deadlock</strong>: each session holds a lock the other needs. Postgres checks after <code>deadlock_timeout</code> (1 s) and kills one.</p>
+  <p>Locks create a new danger. A transfers money from account 1 to 2, so it locks row 1 first. At the same moment B transfers from 2 to 1 and locks row 2 first. Now A wants row 2 (B has it) and B wants row 1 (A has it). Both wait forever. That is a <strong>deadlock</strong>: each session holds a lock the other needs. Postgres checks after <code>deadlock_timeout</code> (1 s) and kills one so the other can finish.</p>
   <figure class="viz"><svg viewBox="0 0 600 170" width="600">
     <defs><marker id="st-ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <rect x="40" y="60" width="130" height="44" rx="8" class="fb sb"/><text x="105" y="87" text-anchor="middle" font-weight="bold">Session A</text>
@@ -340,6 +362,7 @@ COMMIT;</div>
   </ul>
 
   <h2 id="st-optim"><span class="num">07</span>Optimistic vs Pessimistic Locking</h2>
+  <p>Two admins open the same product in an edit form. Both change the price. Both click Save. Whose price wins, and does the other one even find out? There are two ways to handle "someone else may be editing this too":</p>
   <ul>
     <li><strong>Pessimistic</strong>: assume conflict; lock first (<code>FOR UPDATE</code>), others wait.</li>
     <li><strong>Optimistic</strong>: assume no conflict; don't lock. At write time, check nothing changed since you read, using a <code>version</code> column.</li>
@@ -348,7 +371,7 @@ COMMIT;</div>
 -- Two admins both loaded version 1 and edit the price:
 UPDATE products SET price = 140, version = version + 1 WHERE product_id = 12 AND version = 1;  -- UPDATE 1
 UPDATE products SET price = 160, version = version + 1 WHERE product_id = 12 AND version = 1;  -- UPDATE 0</div>
-  <p><code>UPDATE 0</code> tells the second admin "someone changed this; reload and retry". Final row: price 140, version 2.</p>
+  <p>Walk through it. Both admins loaded the row when <code>version</code> was 1. The first UPDATE finds version 1, changes the price to 140 and bumps the version to 2. The second UPDATE looks for version 1, finds version 2, and matches nothing: <code>UPDATE 0</code>. That tells the second admin "someone changed this; reload and retry". Final row: price 140, version 2. No lock was ever held while the admins were typing.</p>
   <table class="tbl">
     <tr><th></th><th>Pessimistic</th><th>Optimistic</th></tr>
     <tr><td>Best when</td><td>Conflicts are frequent (hot inventory row, seat booking)</td><td>Conflicts are rare (profile edits, admin forms)</td></tr>
@@ -360,6 +383,7 @@ UPDATE products SET price = 160, version = version + 1 WHERE product_id = 12 AND
   </div>
 
   <h2 id="st-scale"><span class="num">08</span>Scaling a SQL Database</h2>
+  <p>Your app grows from 100 users to 10 million. One database server starts to struggle. <strong>Scaling</strong> means handling more load. The options, from cheapest to hardest:</p>
   <div class="flow"><span>Tune queries &amp; indexes</span><span>Bigger machine</span><span>Connection pooling</span><span>Read replicas</span><span>Partitioning</span><span>Sharding</span></div>
   <p>Left to right, each step adds complexity. <strong>Vertical scaling</strong> (bigger box) needs no code changes but has a ceiling and stays a single point of failure.</p>
   <figure class="viz"><svg viewBox="0 0 600 160" width="600">
@@ -377,12 +401,13 @@ UPDATE products SET price = 160, version = version + 1 WHERE product_id = 12 AND
     <text x="445" y="32" font-size="10" class="tm">WAL stream (async)</text><text x="445" y="46" font-size="10" class="tr">lag: ms … s</text>
   </svg><figcaption>Pooling caps connections; replicas scale reads only. Every write still lands on one primary.</figcaption></figure>
   <ul>
-    <li><strong>Pooling</strong>: each Postgres connection is a process using several MB.</li>
-    <li><strong>Read replicas</strong>: receive the primary's WAL and serve reads only.</li>
+    <li><strong>Connection pooling</strong>: each Postgres connection is a separate process using several MB of memory, so 2,000 app connections would crush the server. A <strong>pooler</strong> (like PgBouncer) sits in front and lets the 2,000 clients share ~50 real connections, like a few counters serving a long queue.</li>
+    <li><strong>Read replicas</strong>: extra copies of the database. They receive the primary's WAL (the change log from section 02) and replay it, so they hold the same data a moment later. They serve reads only; every write still goes to the one <strong>primary</strong>.</li>
   </ul>
   <div class="callout trap"><span class="label">Trap: replication lag</span>
     <p>Replicas are usually async, milliseconds to seconds behind. A user saves their profile (primary), refreshes (replica), and sees the old value. Fix: read-your-writes, i.e. route that user's reads to the primary for a few seconds after a write, or for that page.</p>
   </div>
+  <p>When even the writes are too many for one machine, the data itself must be split:</p>
   <table class="tbl">
     <tr><th></th><th>Partitioning</th><th>Sharding</th></tr>
     <tr><td>What</td><td>Split a table into pieces <em>on one server</em></td><td>Split data across <em>many servers</em>, each owning a key range or hash</td></tr>
@@ -396,6 +421,7 @@ UPDATE products SET price = 160, version = version + 1 WHERE product_id = 12 AND
 
   <h2 id="st-qa"><span class="num">09</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>In one line each: what do BEGIN, COMMIT and ROLLBACK do?</summary><div class="qa-body"><code>BEGIN</code> starts a transaction (a group of statements treated as one). <code>COMMIT</code> makes all its changes permanent together. <code>ROLLBACK</code> undoes all of them as if they never happened.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Explain ACID with a money transfer.</summary><div class="qa-body">Atomicity: debit and credit both happen or neither. Consistency: <code>CHECK (balance &gt;= 0)</code> and FKs hold after commit. Isolation: a concurrent report never sees money in neither account. Durability: once "transfer complete" is returned, a crash can't undo it (WAL flushed to disk).</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What's the output? <code>BEGIN; INSERT INTO t VALUES (1); SELECT 1/0; INSERT INTO t VALUES (2); COMMIT;</code> then <code>SELECT count(*) FROM t</code> (t was empty).</summary><div class="qa-body">0. After the division-by-zero error the transaction is aborted: the second INSERT is rejected ("current transaction is aborted"), and <code>COMMIT</code> on an aborted transaction performs a <code>ROLLBACK</code>. Row 1 is undone too.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Non-repeatable read vs phantom read?</summary><div class="qa-body">Non-repeatable: the <em>same row</em> changes value between two reads (an UPDATE committed in between). Phantom: the <em>same filter</em> returns different rows (an INSERT/DELETE committed in between). Row locks can stop the first; the second needs predicate or snapshot protection.</div></details>

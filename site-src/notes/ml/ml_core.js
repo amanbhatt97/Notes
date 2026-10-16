@@ -2,7 +2,7 @@
 Object.assign(TOPIC_CONTENT, {
   "ml_core": `<main>
   <h1>Core Concepts</h1>
-  <p class="lead">The ideas behind every model you will train: the bias–variance trade-off, over- and underfitting, regularisation, cross-validation, data leakage, and the preprocessing (features, scaling, encoding) that scikit-learn Pipelines keep leak-free. Builds on ML Basics.</p>
+  <p class="lead">The ideas behind every model you train: bias vs variance, over- and underfitting, regularisation, cross-validation, data leakage, and data prep (features, scaling, encoding) kept safe inside scikit-learn Pipelines. Builds on ML Basics.</p>
 
   <h2 id="mc-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -12,75 +12,82 @@ Object.assign(TOPIC_CONTENT, {
         <div class="mm-title">Bias–variance</div>
         <ul>
           <li><b>E[(y − f̂)²] = Bias² + Variance + σ²</b></li>
-          <li><b>Bias</b> — avg prediction vs truth over many training sets; systematic, stays with more data</li>
-          <li><b>Variance</b> — how much f̂ changes between training sets; σ² irreducible</li>
-          <li>Complexity ↑ → bias ↓, variance ↑ → U-shaped test error (deg 15: variance 5.09)</li>
-          <li>💡 Archery: tight cluster off-centre = bias; scattered around centre = variance</li>
+          <li><b>Bias</b> — the average model is off from the truth; more data doesn't fix it</li>
+          <li><b>Variance</b> — the model changes a lot when the training sample changes</li>
+          <li><b>σ²</b> — noise; no model can remove it</li>
+          <li>More complex → bias ↓, variance ↑ → test error is a U (deg 15: variance 5.09)</li>
+          <li>💡 Archer: tight group off-centre = bias; scattered around centre = variance</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Under / overfitting</div>
         <ul>
-          <li><b>Underfit</b> — train high, val high, small gap → more features/complexity, less λ</li>
-          <li><b>Overfit</b> — train low, val high, big gap → more data, more λ, simpler, early stop</li>
-          <li>Poly demo: deg 1 val 0.323 · deg 4 0.139 · deg 15 train 0.056 / val 10.2</li>
+          <li><b>Underfit</b> — train bad, val bad, small gap → more features, more complex, less λ</li>
+          <li><b>Overfit</b> — train great, val bad, big gap → more data, more λ, simpler, early stop</li>
+          <li>Demo: deg 1 val 0.323 · deg 4 val 0.139 · deg 15 train 0.056 / val 10.2</li>
+          <li>💡 Overfit = student who mugged up last year's answers</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Regularisation</div>
         <ul>
-          <li><b>L2 / Ridge</b> — +λΣw²; shrinks all, none to 0; stable with correlated features</li>
-          <li><b>L1 / Lasso</b> — +λΣ|w|; exact zeros = feature selection (5/50 kept in demo)</li>
-          <li><b>Why zeros</b> — L1 ball is a diamond with corners on axes; contours hit corners</li>
-          <li><b>Elastic Net</b> — both · ⚠ Lasso keeps one of correlated twins arbitrarily; tune α by CV</li>
+          <li><b>Idea</b> — add a fine for big weights so the model stays simple</li>
+          <li><b>L2 / Ridge</b> — +λΣw²; shrinks all, none to 0; stable with twin features</li>
+          <li><b>L1 / Lasso</b> — +λΣ|w|; makes exact zeros = picks features (5/50 kept in demo)</li>
+          <li><b>Why zeros</b> — L1 region is a diamond; loss contours touch it at a corner (on an axis)</li>
+          <li><b>Elastic Net</b> — both · ⚠ scale first; Lasso keeps one twin at random; tune α by CV</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Cross-validation</div>
         <ul>
-          <li><b>K-fold</b> — K fits, each row validated once; mean ± std</li>
+          <li><b>K-fold</b> — K fits, each row is validation once; report mean ± std</li>
           <li><b>Stratified</b> — same class ratio per fold (sorted labels: [10,0,0,0,0] vs [2,2,2,2,2])</li>
           <li><b>TimeSeriesSplit</b> — train always before val</li>
-          <li><b>GroupKFold</b> — same patient/user never in both sides</li>
-          <li><b>Nested</b> — inner tunes, outer scores; noise data: 0.58 non-nested vs 0.50 nested</li>
-          <li>⚠ Best GridSearch score is optimistic; report nested CV or an untouched test set</li>
+          <li><b>GroupKFold</b> — one patient/user never on both sides</li>
+          <li><b>Nested</b> — inner loop tunes, outer loop scores; noise: 0.58 vs honest 0.50</li>
+          <li>⚠ Best GridSearch score is too rosy; report nested CV or an untouched test set</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Data leakage</div>
         <ul>
+          <li><b>Leakage</b> — info not available at prediction time sneaks into training</li>
           <li><b>Contamination</b> — scaler/selector/imputer fit on all rows (noise: 0.85 vs 0.48)</li>
-          <li><b>Target leakage</b> — post-event feature (refund_issued: 0.978 vs 0.822)</li>
-          <li><b>Temporal</b> — shuffled time split, future aggregates; <b>group</b> — same entity both sides</li>
-          <li><b>Target encoding w/o CV</b> — noise AUC 0.777 vs 0.495 cross-fitted</li>
+          <li><b>Target leakage</b> — feature known only after the event (refund_issued: 0.978 vs 0.822)</li>
+          <li><b>Temporal</b> — shuffled time split, future averages · <b>group</b> — same person both sides</li>
+          <li><b>Target encoding without CV</b> — noise AUC 0.777 vs 0.495 cross-fitted</li>
+          <li>💡 Exam paper leaked before the exam · Ask: "would I know this at prediction time?"</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Features &amp; scaling</div>
         <ul>
-          <li><b>FE</b> — date parts, ratios, log1p, bins, group aggregates, interactions, lags, missing flags</li>
-          <li><b>Standard</b> — (x − μ)/σ; <b>MinMax</b> — [0, 1]; <b>Robust</b> — median/IQR, outlier-proof</li>
+          <li><b>FE</b> — date parts, ratios, log1p, bins, per-user averages, interactions, lags, missing flags</li>
+          <li><b>Standard</b> — (x − μ)/σ · <b>MinMax</b> — to [0, 1] · <b>Robust</b> — median/IQR, ignores outliers</li>
           <li><b>Power/Quantile</b> — fix skew for linear models</li>
           <li><b>Need scaling</b> — KNN, SVM, KMeans, PCA, regularised linear, neural nets (KNN 0.691 → 0.949)</li>
           <li><b>No scaling</b> — trees, forests, boosting (0.888 both ways)</li>
+          <li>💡 Rupees vs room count: without scaling, rupees shout over rooms</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Encoding</div>
         <ul>
-          <li><b>One-hot</b> — nominal, low cardinality; <code>handle_unknown="ignore"</code></li>
-          <li><b>Ordinal</b> — ordered categories (S &lt; M &lt; L); fine for trees</li>
+          <li><b>One-hot</b> — one 0/1 column per category; few categories; <code>handle_unknown="ignore"</code></li>
+          <li><b>Ordinal</b> — ordered categories (S &lt; M &lt; L) → 0, 1, 2; fine for trees</li>
           <li><b>LabelEncoder</b> — for y only, not features</li>
-          <li><b>High cardinality</b> — <code>min_frequency</code> (994 → 121 cols), target encoding (cross-fitted), hashing, embeddings, native categorical in LightGBM/CatBoost</li>
+          <li><b>Many categories</b> — <code>min_frequency</code> (994 → 121 cols), target encoding (cross-fitted), hashing, embeddings, native in LightGBM/CatBoost</li>
           <li>⚠ Ordinal codes in a linear model invent a fake order</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Pipelines</div>
         <ul>
-          <li><b>Pipeline</b> — chain steps; <code>fit</code> learns each step on training data only</li>
+          <li><b>Pipeline</b> — chain of steps; <code>fit</code> learns every step from training rows only</li>
           <li><b>ColumnTransformer</b> — different prep per column group (num: impute+scale, cat: one-hot)</li>
-          <li><b>Why</b> — no leakage in CV, one object to tune (<code>step__param</code>) and ship</li>
+          <li><b>Why</b> — no leakage in CV, tune all in one place (<code>step__param</code>), ship one object</li>
+          <li>💡 A recipe card used the same way in kitchen and restaurant</li>
         </ul>
       </div>
     </div>
@@ -116,7 +123,7 @@ Object.assign(TOPIC_CONTENT, {
     <text x="70" y="192" class="tm">underfit</text><text x="520" y="192" text-anchor="end" class="tm">overfit</text>
   </svg><figcaption>As complexity grows, bias falls and variance rises. Test error is their sum (plus noise), so it is U-shaped.</figcaption></figure>
   <div class="callout def"><span class="label">Definition</span>
-    <p><code>E[(y − f̂(x))²] = Bias[f̂(x)]² + Var[f̂(x)] + σ²</code>. <strong>Bias</strong> = E[f̂(x)] − f(x): how far the <em>average</em> model (over many training sets) is from the truth. <strong>Variance</strong> = how much f̂ changes from one training set to another. σ² is noise no model removes.</p>
+    <p><code>E[(y − f̂(x))²] = Bias[f̂(x)]² + Var[f̂(x)] + σ²</code>. Train the same model on many different samples. <strong>Bias</strong> = how far the <em>average</em> of those models is from the truth. <strong>Variance</strong> = how much the models differ from each other. σ² = noise no model can remove. It matters because the fix for each is opposite: bias needs a richer model, variance needs a simpler one or more data.</p>
   </div>
   <figure class="viz"><svg viewBox="0 0 560 138" width="560">
     <g fill="none" stroke="currentColor" opacity="0.5">
@@ -130,11 +137,11 @@ Object.assign(TOPIC_CONTENT, {
     <g class="fb sb"><circle cx="370" cy="38" r="3.5"/><circle cx="375" cy="42" r="3.5"/><circle cx="368" cy="44" r="3.5"/><circle cx="377" cy="36" r="3.5"/><circle cx="372" cy="47" r="3.5"/></g>
     <g class="fr sr"><circle cx="512" cy="36" r="3.5"/><circle cx="525" cy="62" r="3.5"/><circle cx="498" cy="30" r="3.5"/><circle cx="520" cy="45" r="3.5"/><circle cx="505" cy="52" r="3.5"/></g>
     <g text-anchor="middle"><text x="70" y="116" class="tg">low bias</text><text x="70" y="130" class="tg">low var</text><text x="210" y="116">low bias</text><text x="210" y="130" class="tr">high var</text><text x="350" y="116" class="tr">high bias</text><text x="350" y="130">low var</text><text x="490" y="116" class="tr">high bias</text><text x="490" y="130" class="tr">high var</text></g>
-  </svg><figcaption>Each dot = a model trained on a different sample. Bias = where the cluster sits; variance = its spread.</figcaption></figure>
+  </svg><figcaption>Each dot = a model trained on a different sample. Bias = where the group sits. Variance = how spread out it is.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>An archer: arrows tightly grouped but off-centre = bias (a bent sight). Arrows centred on average but scattered = variance (shaky hands).</p>
+    <p>An archer. Arrows close together but off-centre = bias (the sight is bent). Arrows centred on average but scattered = variance (shaky hands). Fixing the hands won't fix the sight.</p>
   </div>
-  <p>Measure it for real: train the same model on 200 fresh samples of 30 noisy points from <code>sin(2πx)</code> (σ² = 0.09).</p>
+  <p>Example: train the same model on 200 fresh samples of 30 noisy points from <code>sin(2πx)</code> (σ² = 0.09), and measure both parts.</p>
   <div class="fx" data-lang="py">import numpy as np
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import PolynomialFeatures, StandardScaler
@@ -156,9 +163,13 @@ for d in [1, 4, 15]:
   <div class="fx" data-lang="text">degree  1: bias^2=0.153  variance=0.020  + noise 0.090
 degree  4: bias^2=0.003  variance=0.019  + noise 0.090
 degree 15: bias^2=0.005  variance=5.094  + noise 0.090</div>
-  <p>A line is consistently wrong (bias). Degree 15 is right on average but wildly different per sample (variance). Degree 4 wins.</p>
+  <p>A straight line is wrong in the same way every time (bias). Degree 15 is right on average but changes wildly per sample (variance). Degree 4 wins.</p>
 
   <h2 id="mc-fit"><span class="num">02</span>Under- &amp; Overfitting</h2>
+  <p><strong>Underfitting</strong>: the model is too simple to catch the pattern. <strong>Overfitting</strong>: it learns the noise of the training rows too, so it fails on new rows. You spot both by comparing train and validation error.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Underfit = a student who read only chapter headings: fails practice and exam. Overfit = a student who mugged up last year's paper word for word: 100% on that paper, fails when questions change.</p>
+  </div>
   <div class="fx" data-lang="py">from sklearn.metrics import mean_squared_error as mse
 rng = np.random.default_rng(1)
 def sample(n):
@@ -178,10 +189,14 @@ degree 15: train MSE=0.056  val MSE=10.165</div>
     <div><b>Overfitting (high variance)</b><p>Train low, val much higher.</p><small>Fix: more data, more regularisation, simpler model, early stopping, bagging</small></div>
   </div>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>Diagnose first: more data can't fix bias (a line stays a line). Degree 15 had the <em>best</em> training error and the worst validation error.</p>
+    <p>Find the problem before fixing it. More data can't fix bias (a line stays a line). Degree 15 had the <em>best</em> training error and the worst validation error.</p>
   </div>
 
   <h2 id="mc-reg"><span class="num">03</span>Regularisation</h2>
+  <p><strong>Regularisation</strong> adds a fine for big weights to the loss: <code>loss + λ·penalty(w)</code>. Big weights let a model bend to every noisy point, so the fine keeps it calm. λ sets how strict the fine is.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A monthly budget. Ridge = every expense gets cut a little. Lasso = you cancel some subscriptions fully and keep only the few that matter.</p>
+  </div>
   <figure class="viz"><svg viewBox="0 0 560 225" width="560">
     <g stroke="currentColor" opacity="0.4"><line x1="50" y1="130" x2="230" y2="130"/><line x1="130" y1="30" x2="130" y2="195"/><line x1="330" y1="130" x2="510" y2="130"/><line x1="410" y1="30" x2="410" y2="195"/></g>
     <polygon points="130,80 180,130 130,180 80,130" class="fb sb"/>
@@ -194,13 +209,13 @@ degree 15: train MSE=0.056  val MSE=10.165</div>
     <text x="212" y="42" class="tr">OLS</text><text x="492" y="42" class="tr">OLS</text>
     <text x="235" y="134" class="tm">w₁</text><text x="136" y="196" class="tm">w₂</text>
     <text x="130" y="218" text-anchor="middle">L1 / Lasso: diamond</text><text x="410" y="218" text-anchor="middle">L2 / Ridge: circle</text>
-  </svg><figcaption>Loss contours (red) expand from the unregularised optimum until they touch the allowed region (blue). The diamond is touched at a corner, where a weight is exactly 0.</figcaption></figure>
+  </svg><figcaption>Red rings grow out from the best unpenalised weights until they touch the allowed zone (blue). The diamond gets touched at a corner, where one weight is exactly 0.</figcaption></figure>
   <table class="tbl">
     <tr><th></th><th>L2 Ridge</th><th>L1 Lasso</th><th>Elastic Net</th></tr>
     <tr><td>Penalty</td><td>λΣw²</td><td>λΣ|w|</td><td>λ₁Σ|w| + λ₂Σw²</td></tr>
-    <tr><td>Penalty gradient</td><td>2λw: shrinks big weights most</td><td>λ·sign(w): constant push to 0</td><td>Both</td></tr>
+    <tr><td>Penalty gradient</td><td>2λw: shrinks big weights most</td><td>λ·sign(w): same push to 0 for all</td><td>Both</td></tr>
     <tr><td>Exact zeros?</td><td>No</td><td>Yes → feature selection</td><td>Yes</td></tr>
-    <tr><td>Correlated features</td><td>Shares weight, stable</td><td>Keeps one arbitrarily</td><td>Groups them</td></tr>
+    <tr><td>Correlated features</td><td>Shares weight, stable</td><td>Keeps one at random</td><td>Keeps them together</td></tr>
     <tr><td>Use when</td><td>Most features matter a bit</td><td>Few features matter</td><td>Many, correlated, some useless</td></tr>
   </table>
   <div class="fx" data-lang="py">from sklearn.datasets import make_regression
@@ -216,10 +231,14 @@ Ridge            non-zero coefs=50/50  max|w|=57.2
 Lasso            non-zero coefs= 5/50  max|w|=61.3
 LassoCV best alpha=1.53, kept 6/50</div>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>Regularisation penalises weight size, so unscaled features are penalised unfairly: scale first. In sklearn <code>alpha</code> = λ (bigger = stronger) but LogisticRegression/SVC use <code>C</code> = 1/λ (bigger = weaker).</p>
+    <p>The fine is on weight size, so unscaled features get fined unfairly: scale first. In sklearn <code>alpha</code> = λ (bigger = stronger), but LogisticRegression/SVC use <code>C</code> = 1/λ (bigger = weaker).</p>
   </div>
 
   <h2 id="mc-cv"><span class="num">04</span>Cross-Validation</h2>
+  <p><strong>Cross-validation (CV)</strong>: split the data into K parts, train on K−1, test on the one left out, and rotate. One validation split can be lucky or unlucky; K splits give an average and a spread.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Judging a batsman on one match is luck. Judging him on 5 matches against 5 teams is fair. Each fold is one match.</p>
+  </div>
   <figure class="viz"><svg viewBox="0 0 560 160" width="560">
     <text x="20" y="16">5-fold CV</text><text x="300" y="16">TimeSeriesSplit</text>
     <rect x="20" y="26" width="240" height="18" class="fb sb"/><rect x="20" y="26" width="48" height="18" class="fg sg"/>
@@ -233,7 +252,7 @@ LassoCV best alpha=1.53, kept 6/50</div>
     <g stroke="currentColor" stroke-opacity="0.35"><line x1="68" y1="26" x2="68" y2="140"/><line x1="116" y1="26" x2="116" y2="140"/><line x1="164" y1="26" x2="164" y2="140"/><line x1="212" y1="26" x2="212" y2="140"/></g>
     <text x="300" y="116" class="tm">time →  train grows,</text><text x="300" y="132" class="tm">validation is always later</text>
     <rect x="300" y="142" width="12" height="10" class="fb sb"/><text x="316" y="151" class="tm">train</text><rect x="370" y="142" width="12" height="10" class="fg sg"/><text x="386" y="151" class="tm">validate</text>
-  </svg><figcaption>K-fold: every row is validated exactly once; report mean ± std. Time series: never train on the future.</figcaption></figure>
+  </svg><figcaption>K-fold: every row is in validation exactly once; report mean ± std. Time series: never train on the future.</figcaption></figure>
   <div class="fx" data-lang="py">from sklearn.model_selection import KFold, StratifiedKFold, TimeSeriesSplit
 y = np.array([1]*10 + [0]*90)                  # 10% positives, sorted (as exports often are)
 X = np.zeros((100, 1))
@@ -246,7 +265,7 @@ StratifiedKFold    positives per val fold: [2, 2, 2, 2, 2]
 train 0 - 2 | val 3 - 5
 train 0 - 5 | val 6 - 8
 train 0 - 8 | val 9 - 11</div>
-  <p><code>KFold</code>: regression / balanced data. <code>StratifiedKFold</code>: classification (the default in <code>cross_val_score</code>). <code>TimeSeriesSplit</code>: ordered data. <code>GroupKFold</code>: several rows per patient or user, kept on one side.</p>
+  <p><code>KFold</code>: regression or balanced data. <code>StratifiedKFold</code>: classification (default in <code>cross_val_score</code>). <code>TimeSeriesSplit</code>: data in time order. <code>GroupKFold</code>: many rows per patient or user, kept on one side.</p>
   <h3>Nested CV: honest score while tuning</h3>
   <div class="fx" data-lang="py">from sklearn.model_selection import GridSearchCV, cross_val_score
 from sklearn.svm import SVC
@@ -260,11 +279,14 @@ print("non-nested best CV score:", round(gs.best_score_, 3))
 print("nested CV score:         ", round(cross_val_score(GridSearchCV(SVC(), grid, cv=inner), X, y, cv=outer).mean(), 3))</div>
   <div class="fx" data-lang="text">non-nested best CV score: 0.58
 nested CV score:          0.5</div>
-  <p>Picking the best of 144 tries on the same folds finds lucky noise (0.58). The outer loop never influenced tuning, so it reports the truth (0.50).</p>
+  <p>Picking the best of 144 tries on the same folds finds lucky noise (0.58). In nested CV the outer folds never touch tuning, so they report the truth (0.50). Like 144 students sitting the same paper: the topper's mark is partly luck.</p>
 
   <h2 id="mc-leak"><span class="num">05</span>Data Leakage</h2>
   <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Leakage</strong>: information that won't exist at prediction time gets into training. Validation looks great; production collapses. Confidently wrong models.</p>
+    <p><strong>Leakage</strong>: information that won't exist at prediction time gets into training. Validation looks great; in production the model falls apart.</p>
+  </div>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>The exam paper leaked a day early. Everyone scores 95%, but the marks say nothing about what they know.</p>
   </div>
   <table class="tbl">
     <tr><th>Type</th><th>Example</th><th>Fix</th></tr>
@@ -292,7 +314,7 @@ pipe = make_pipeline(SelectKBest(f_classif, k=20), LogisticRegression())
 print("pipeline CV accuracy:", cross_val_score(pipe, X, y, cv=5).mean().round(3))</div>
   <div class="fx" data-lang="text">leaky CV accuracy: 0.85
 pipeline CV accuracy: 0.48</div>
-  <p>Pure noise scored 85% because the selector had already seen the validation labels. Target leakage looks the same:</p>
+  <p>Pure noise scored 85% because the selector had already seen the validation labels. Target leakage gives the same fake boost:</p>
   <div class="fx" data-lang="py">import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 # df: 2,000 synthetic customers (tenure, tickets, churn ~15–20%); setup omitted
@@ -305,11 +327,14 @@ print("always 'no churn' acc =", round(1 - df.churn.mean(), 3))</div>
 tenure+tickets                 test acc=0.822
 always 'no churn' acc = 0.846</div>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>Red flags: a too-good score, one feature dominating importance, a big validation → production drop. Ask of every column: "would I know this at prediction time?"</p>
+    <p>Warning signs: a score that is too good, one feature with almost all the importance, a big drop from validation to production. Ask of every column: "would I know this at prediction time?"</p>
   </div>
 
   <h2 id="mc-fe"><span class="num">06</span>Feature Engineering</h2>
-  <p>Turn raw columns into signals. Usually the highest-leverage work: simple model + good features beats complex model + raw ones.</p>
+  <p><strong>Feature engineering</strong> = making new columns from raw ones so the pattern is easier to see. Usually the biggest win: a simple model with good features beats a complex model with raw ones.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A kirana owner doesn't look at each bill. He thinks "night orders", "this customer usually spends ₹100", "this is 75% of his salary". Those summaries are features.</p>
+  </div>
   <div class="fx" data-lang="py">tx = pd.DataFrame({
     "user": ["a", "a", "b", "b", "b"],
     "ts": pd.to_datetime(["2024-05-03 09:10", "2024-05-04 23:50", "2024-05-04 13:00",
@@ -338,10 +363,11 @@ print(tx.drop(columns=["ts", "income"]).to_string(index=False))</div>
     <tr><td>Interactions; missing-value flags</td><td>Effects combine (price × discount); "missing" is itself informative</td></tr>
   </table>
   <div class="callout trap"><span class="label">Trap</span>
-    <p><code>user_avg_amt</code> above averages over <em>all</em> of user b's rows, including later ones. For a fraud model scoring the 02:15 transaction that is future data: compute aggregates from past rows only (expanding / shifted windows).</p>
+    <p><code>user_avg_amt</code> above averages <em>all</em> of user b's rows, including later ones. For a fraud model scoring the 02:15 payment, that uses the future. Build averages from past rows only (expanding / shifted windows).</p>
   </div>
 
   <h2 id="mc-scale"><span class="num">07</span>Feature Scaling</h2>
+  <p><strong>Scaling</strong> puts features on a similar range. Models that use distances or penalties see raw size: income in lakhs swamps "number of rooms". Scaling gives each feature a fair voice.</p>
   <div class="fx" data-lang="py">from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
 x = np.array([[20], [25], [30], [35], [500]])        # incomes in k; one CEO
 for s in [StandardScaler(), MinMaxScaler(), RobustScaler()]:
@@ -351,10 +377,10 @@ MinMaxScaler    [0.   0.01 0.02 0.03 1.  ]
 RobustScaler    [-1.  -0.5  0.   0.5 47. ]</div>
   <table class="tbl">
     <tr><th>Scaler</th><th>Formula</th><th>Use / avoid</th></tr>
-    <tr><td><strong>StandardScaler</strong></td><td>(x − mean) / std</td><td>Default for roughly bell-shaped data; one outlier inflates std</td></tr>
-    <tr><td><strong>MinMaxScaler</strong></td><td>(x − min) / (max − min)</td><td>Bounded, clean features, pixel values; one outlier squashes the rest near 0</td></tr>
+    <tr><td><strong>StandardScaler</strong></td><td>(x − mean) / std</td><td>Default for bell-shaped data; one outlier blows up std</td></tr>
+    <tr><td><strong>MinMaxScaler</strong></td><td>(x − min) / (max − min)</td><td>Clean, bounded data like pixels; one outlier squashes the rest near 0</td></tr>
     <tr><td><strong>RobustScaler</strong></td><td>(x − median) / IQR</td><td>Outliers present: normal rows keep their spread</td></tr>
-    <tr><td><strong>Power / Quantile</strong></td><td>Yeo-Johnson; rank → normal</td><td>Skewed or heavy-tailed features into linear models (quantile loses outlier size)</td></tr>
+    <tr><td><strong>Power / Quantile</strong></td><td>Yeo-Johnson; rank → normal</td><td>Skewed features for linear models (quantile forgets how big outliers were)</td></tr>
   </table>
   <div class="fx" data-lang="py">from sklearn.datasets import load_wine
 from sklearn.neighbors import KNeighborsClassifier
@@ -370,11 +396,12 @@ KNN scaled   CV acc=0.949
 Tree raw     CV acc=0.888
 Tree scaled  CV acc=0.888</div>
   <div class="cards">
-    <div><b>Needs scaling</b><p>KNN, SVM, KMeans, PCA, regularised linear/logistic, neural nets</p><small>Distances, penalties, gradient descent see raw magnitudes (rupees swamp room counts)</small></div>
-    <div><b>Doesn't care</b><p>Decision trees, random forests, gradient boosting, Naive Bayes</p><small>Splits are thresholds; monotone rescaling changes nothing</small></div>
+    <div><b>Needs scaling</b><p>KNN, SVM, KMeans, PCA, regularised linear/logistic, neural nets</p><small>Distances, penalties and gradient descent see raw size (rupees swamp room counts)</small></div>
+    <div><b>Doesn't care</b><p>Decision trees, random forests, gradient boosting, Naive Bayes</p><small>A split is "x &gt; threshold"; stretching x moves the threshold, not the split</small></div>
   </div>
 
   <h2 id="mc-enc"><span class="num">08</span>Categorical Encoding</h2>
+  <p>Models need numbers, but columns like city or job are words. <strong>Encoding</strong> turns categories into numbers without inventing false meaning. Example: one-hot turns city = Pune into <code>[Delhi 0, Mumbai 0, Pune 1]</code>.</p>
   <table class="tbl">
     <tr><th>Encoding</th><th>For</th><th>Watch out</th></tr>
     <tr><td><strong>One-hot</strong></td><td>Nominal, few categories; any model</td><td>Column explosion; <code>handle_unknown="ignore"</code> maps an unseen city to all zeros</td></tr>
@@ -399,13 +426,13 @@ print("TargetEncoder pipe AUC:", cross_val_score(pipe, X, y, cv=5, scoring="roc_
 one-hot, min_frequency=8: 121
 naive target-mean AUC: 0.777
 TargetEncoder pipe AUC: 0.495</div>
-  <p>With ~5 rows per zip, each row's own label drives its zip's mean, so noise looks predictive (0.777). sklearn's <code>TargetEncoder</code> encodes each row using other folds only.</p>
+  <p>With ~5 rows per zip, each row's own label pulls its zip's mean, so noise looks useful (0.777). sklearn's <code>TargetEncoder</code> encodes each row using other folds only, so the trick disappears (0.495).</p>
 
   <h2 id="mc-pipe"><span class="num">09</span>Pipelines &amp; ColumnTransformer</h2>
   <div class="flow"><span>Wrong: fit scaler on ALL rows</span><span>split</span><span>train</span><span>val score inflated</span></div>
   <div class="flow"><span>Right: split</span><span>fit scaler + model on train fold</span><span>transform val with train stats</span><span>honest score</span></div>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A recipe card: every step, in order, learned from training ingredients only. The same card is used at serve time, so training and production can't drift apart.</p>
+    <p>A recipe card: every step, in order, worked out from training ingredients only. The same card is used when serving, so training and production can't go out of sync.</p>
   </div>
   <div class="fx" data-lang="py">from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
@@ -427,24 +454,24 @@ print("P(default) for a new applicant:", model.predict_proba(new)[0, 1].round(3)
  'cat__city_Pune' 'cat__job_salaried' 'cat__job_self' 'cat__job_student']
 P(default) for a new applicant: 0.971</div>
   <ul>
-    <li><strong>Leak-proof CV</strong>: <code>cross_val_score(model, …)</code> refits imputer medians, scaler stats and categories on each training fold.</li>
+    <li><strong>Leak-proof CV</strong>: <code>cross_val_score(model, …)</code> re-learns medians, scaler stats and categories on each training fold.</li>
     <li><strong>Tuning</strong>: grid keys reach inside with double underscores, e.g. <code>{"clf__C": [0.1, 1, 10]}</code>.</li>
-    <li><strong>Serving</strong>: one object handles NaN income and unseen "Goa"; <code>joblib.dump</code> it. Unlisted columns are dropped unless <code>remainder="passthrough"</code>.</li>
+    <li><strong>Serving</strong>: one object handles NaN income and the unseen city "Goa"; save it with <code>joblib.dump</code>. Columns not listed are dropped unless <code>remainder="passthrough"</code>.</li>
   </ul>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>Calling <code>fit_transform</code> on the test set refits the preprocessing on test data. Only ever <code>transform</code> (or <code>predict</code>) new data with a fitted pipeline.</p>
+    <p><code>fit_transform</code> on the test set re-learns the prep from test data. On new data, only call <code>transform</code> (or <code>predict</code>) on a fitted pipeline.</p>
   </div>
 
   <h2 id="mc-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>Explain the bias–variance trade-off with its decomposition.</summary><div class="qa-body">Expected squared error = Bias² + Variance + σ². Bias: gap between the average prediction over many training sets and the truth (a line fit to a sine curve). Variance: how much predictions move between training sets (a degree-15 polynomial). σ²: irreducible noise. More flexibility lowers bias and raises variance, so test error is U-shaped.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Train error 0.02, validation error 0.25. What's wrong and what do you try?</summary><div class="qa-body">High variance (overfitting): large train–val gap. Try more data, stronger regularisation, a simpler model / fewer features, early stopping, bagging. If both errors were high and close, it would be bias: add features or complexity instead.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why does L1 give exact zeros but L2 doesn't?</summary><div class="qa-body">As constrained optimisation, L1 limits weights to a diamond whose corners lie on the axes; elliptical loss contours usually first touch it at a corner, where some weights are 0. The L2 ball is round, so the touching point is almost never on an axis. With two near-duplicate features Lasso keeps one arbitrarily; Ridge shares weight stably; Elastic Net groups them.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>When do you use stratified, time-series, group and nested CV?</summary><div class="qa-body">Stratified: classification, especially imbalanced, so each fold has positives. TimeSeriesSplit: ordered data; train always precedes validation. GroupKFold: multiple rows per entity. Nested: you tune hyperparameters and need an unbiased estimate without a separate test set; inner loop tunes, outer loop scores.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>You tuned 144 hyperparameter combos with 5-fold CV and report the best CV score. Problem?</summary><div class="qa-body">It's optimistically biased: you selected the max over many noisy estimates on the same folds. On pure noise this gave 0.58 instead of 0.50. Use nested CV or report on an untouched test set.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>StandardScaler fit on all 1,000 rows, then 5-fold CV. Leakage? How bad?</summary><div class="qa-body">Yes, technically: validation folds influenced mean/std. For a plain scaler the inflation is usually small. For data-hungry steps (feature selection, target encoding, oversampling) it is huge: 0.85 vs 0.48 on noise. Same fix for all: put them in a Pipeline.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Which models need feature scaling and which don't?</summary><div class="qa-body">Need: anything using distances, dot products, penalties or gradient descent: KNN (0.691 → 0.949 on wine), SVM, KMeans, PCA, regularised linear/logistic, neural nets. Don't: tree models (threshold splits are scale-invariant: 0.888 both ways), Naive Bayes.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you encode a column with 50,000 merchant IDs?</summary><div class="qa-body">Not plain one-hot. Options: cross-fitted target encoding, frequency encoding, one-hot with <code>min_frequency</code>/<code>max_categories</code> grouping rare ones into "infrequent", feature hashing, learned embeddings, or native categorical handling (CatBoost, LightGBM). Always handle unseen IDs.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why use a Pipeline with ColumnTransformer rather than preprocessing manually?</summary><div class="qa-body">Leak-proof CV (every step refit per fold), joint tuning of preprocessing and model, and one serving artefact that applies identical steps to new rows. Manual steps drift between training and production.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain the bias–variance trade-off with its decomposition.</summary><div class="qa-body">Expected squared error = Bias² + Variance + σ². Bias: gap between the average prediction (over many training sets) and the truth, e.g. a line fit to a sine curve. Variance: how much predictions jump between training sets, e.g. a degree-15 polynomial. σ²: noise nobody can remove. More flexibility lowers bias and raises variance, so test error is U-shaped.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Train error 0.02, validation error 0.25. What's wrong and what do you try?</summary><div class="qa-body">High variance (overfitting): big train–val gap. Try more data, stronger regularisation, a simpler model or fewer features, early stopping, bagging. If both errors were high and close, it would be bias: add features or complexity instead.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does L1 give exact zeros but L2 doesn't?</summary><div class="qa-body">Think of the penalty as a fence on the weights. L1's fence is a diamond with corners on the axes; the loss rings usually touch it first at a corner, where some weights are 0. L2's fence is round, so the touch point is almost never on an axis. With two near-twin features, Lasso keeps one at random, Ridge shares weight, Elastic Net keeps both together.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When do you use stratified, time-series, group and nested CV?</summary><div class="qa-body">Stratified: classification, especially imbalanced, so every fold has positives. TimeSeriesSplit: data in time order; train always before validation. GroupKFold: many rows per person or entity. Nested: you tune and also need an honest score without a separate test set; inner loop tunes, outer loop scores.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>You tuned 144 hyperparameter combos with 5-fold CV and report the best CV score. Problem?</summary><div class="qa-body">It is too rosy: you picked the max of many noisy scores on the same folds. On pure noise this gave 0.58 instead of 0.50. Use nested CV or report on an untouched test set.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>StandardScaler fit on all 1,000 rows, then 5-fold CV. Leakage? How bad?</summary><div class="qa-body">Yes, technically: validation folds affected the mean/std. For a plain scaler the boost is usually small. For steps that look at labels (feature selection, target encoding, oversampling) it is huge: 0.85 vs 0.48 on noise. Same fix for all: put them in a Pipeline.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Which models need feature scaling and which don't?</summary><div class="qa-body">Need: anything using distances, dot products, penalties or gradient descent: KNN (0.691 → 0.949 on wine), SVM, KMeans, PCA, regularised linear/logistic, neural nets. Don't: tree models (a threshold split doesn't care about scale: 0.888 both ways), Naive Bayes.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you encode a column with 50,000 merchant IDs?</summary><div class="qa-body">Not plain one-hot (50,000 columns). Options: cross-fitted target encoding, frequency encoding, one-hot with <code>min_frequency</code>/<code>max_categories</code> to group rare ones as "infrequent", feature hashing, learned embeddings, or native category support (CatBoost, LightGBM). Always handle unseen IDs.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why use a Pipeline with ColumnTransformer rather than preprocessing manually?</summary><div class="qa-body">Leak-proof CV (every step re-learned per fold), tuning prep and model together, and one object to ship that applies the same steps to new rows. Manual steps slowly go out of sync between training and production.</div></details>
 </main>`
 });

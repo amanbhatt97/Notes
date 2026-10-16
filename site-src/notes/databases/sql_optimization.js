@@ -122,7 +122,26 @@ Object.assign(TOPIC_CONTENT, {
   </div>
 
   <h2 id="so-slow"><span class="num">01</span>Why Queries Are Slow</h2>
-  <p>The <code>shop</code> tables are too small to be slow, so this page uses a copy with 2M orders and 100k customers:</p>
+  <p>You open Swiggy and tap "My orders". The app asks its database: "give me every order of customer 4242". The company has 2 million orders. How does the database find your 22 orders in a blink? This page answers that question.</p>
+  <p>The topic is called <strong>query performance</strong> (making queries fast), and the main tool is the <strong>index</strong>. You will meet it in real jobs (a dashboard that takes a minute to load, an API that times out) and in almost every SQL interview ("why is this query slow?").</p>
+
+  <h3>How a table sits on disk</h3>
+  <p>The database does not keep rows loose. It packs them into fixed blocks called <strong>pages</strong>. Each page is 8 KB, like one page of a shop register. To look at even one row, the database must read the whole page that holds it.</p>
+  <p>So the real cost of a query is <strong>how many pages it reads</strong>. Not how many rows it gives back.</p>
+  <p>Tiny example on our <code>shop</code> database. The <code>orders</code> table has 5 rows, so all of them fit on one page. Find customer 3's orders:</p>
+  <div class="fx" data-lang="sql">EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM orders WHERE customer_id = 3;</div>
+  <div class="fx" data-lang="text">Seq Scan on orders  (cost=0.00..24.12 rows=6 width=44) (actual time=0.004..0.005 rows=2 loops=1)
+   Filter: (customer_id = 3)
+   Rows Removed by Filter: 3
+   Buffers: shared hit=1
+ Planning Time: 0.028 ms
+ Execution Time: 0.013 ms</div>
+  <ul>
+    <li><strong>Seq Scan</strong> (sequential scan) — read every row from first to last, and test each one.</li>
+    <li><strong>Rows Removed by Filter: 3</strong> — it checked all 5 rows, threw away 3, kept 2 (orders 103 and 104).</li>
+    <li><strong>Buffers: shared hit=1</strong> — it read 1 page. For 5 rows, reading everything is perfectly fine.</li>
+  </ul>
+  <p>Now make the table big. The <code>shop</code> tables are too small to be slow, so the rest of this page uses a copy with 2M orders and 100k customers:</p>
   <div class="fx" data-lang="sql">CREATE TABLE big_orders AS
 SELECT g AS order_id,
        (random()*99999)::int + 1                      AS customer_id,
@@ -132,13 +151,21 @@ SELECT g AS order_id,
        round((random()*1000)::numeric, 2)             AS amount
 FROM generate_series(1, 2000000) g;               -- 130 MB, 16,576 pages</div>
   <div class="flow"><span>No index</span><span>Seq Scan: read all 16,576 pages</span><span>test 2M rows</span><span>keep 22</span></div>
-  <p>Cost is <strong>pages read</strong>, not rows returned.</p>
+  <p>The same Seq Scan now reads all 16,576 pages and tests 2 million rows to keep 22. It takes about 116 ms. That sounds small, but 1,000 users tapping "My orders" every second would need 116 seconds of work per second. The server falls over.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A textbook with no index: read all 600 pages. The index says "p. 212": read one. A database index is that sorted list of values with pointers to rows.</p>
+    <p>A textbook with no index: to find "photosynthesis" you read all 600 pages. The index at the back says "p. 212": you read one. A database index is that sorted list of values with pointers to rows.</p>
   </div>
+  <p>So an <strong>index</strong> is a separate, sorted list of one column's values, where each value carries the address of its row. The database searches the small sorted list instead of the whole table.</p>
 
   <h2 id="so-btree"><span class="num">02</span>How a B-tree Index Works</h2>
-  <p>A <strong>B-tree</strong> (the default index) keeps values <strong>sorted</strong> in a short, wide, <strong>balanced</strong> tree of pages.</p>
+  <p>Play a game. A friend thinks of a number from 1 to 1,000. You may only ask "is it bigger than X?". If you always ask about the middle, you need about 10 questions, not 1,000. Halving works only because the numbers are <em>in order</em>.</p>
+  <p>An index uses the same trick. It keeps values sorted, so the database can jump instead of reading everything. The most common kind is the <strong>B-tree</strong> ("balanced tree"). It is built from pages, stacked like this:</p>
+  <ul>
+    <li><strong>Root</strong> — one page at the top. It works like a signboard: "below 30k go left, 30k–60k go middle, above 60k go right".</li>
+    <li><strong>Internal pages</strong> — more signboards, each narrowing the range.</li>
+    <li><strong>Leaves</strong> — the bottom pages. They hold every value in sorted order. Each value carries a <strong>pointer</strong>: the row's address in the table (Postgres calls it <code>ctid</code>, meaning page number + slot).</li>
+  </ul>
+  <p>Walk through <code>customer_id = 4242</code>. The root says 4242 is below 30k: go left. The next page says it is below 10k: go left. The leaf "4200‥4250" holds 4242, with the pointer "table page 812, row 5". Three page reads, then one jump into the table.</p>
   <figure class="viz"><svg viewBox="0 0 600 236" width="600">
     <defs><marker id="so-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <g stroke="currentColor" fill="none" opacity=".45">
@@ -165,20 +192,45 @@ FROM generate_series(1, 2000000) g;               -- 130 MB, 16,576 pages</div>
     <text x="330" y="182" font-size="11" class="tm">leaves: sorted, linked ⇄</text>
     <text x="330" y="198" font-size="11" class="tm">→ ranges &amp; ORDER BY walk along</text>
   </svg><figcaption>Looking up 4242: one page per level (blue path), then one jump into the table. 2M rows = 3–4 levels.</figcaption></figure>
+  <p>Follow the thick blue path from the top box down to the green box. That is the whole search.</p>
+  <p><strong>Why only 3–4 levels for millions of rows?</strong> One page holds a few hundred keys. Say 300. One level can point to 300 values. Two levels: 300 × 300 = 90,000. Three levels: 27 million. Each new level multiplies the reach by 300. Programmers write this slow growth as <strong>O(log n)</strong>: "the steps grow very slowly as rows grow".</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A dictionary. The guide words at the top of each page ("mango – market") let you skip whole pages. You never read word by word. The B-tree has guide pages above guide pages.</p>
+  </div>
+  <p>Three properties make it the default index:</p>
   <div class="cards">
     <div><b>O(log n) lookup</b><p>Hundreds of keys per page → 3–4 levels.</p></div>
     <div><b>Balanced</b><p>Every leaf same depth → same cost.</p></div>
     <div><b>Linked leaves</b><p><code>BETWEEN</code>, <code>ORDER BY</code>, <code>LIKE 'abc%'</code> walk along.</p></div>
   </div>
+  <p><strong>Balanced</strong> means every leaf is at the same depth, so no lookup is unlucky. <strong>Linked leaves</strong> means each leaf points to the next one. For "customers 4200 to 4300", the database finds 4200 once, then simply walks right until it passes 4300.</p>
 
   <h2 id="so-before"><span class="num">03</span>Before / After: EXPLAIN ANALYZE</h2>
-  <p><code>EXPLAIN</code> shows the plan the optimizer chose. <code>EXPLAIN ANALYZE</code> also <em>runs</em> it and adds real times and row counts. <code>BUFFERS</code> adds pages touched.</p>
+  <p>Before a query runs, a part of the database called the <strong>planner</strong> (or optimizer) decides <em>how</em> to run it. Read the whole table? Use an index? Which table first? It is like Google Maps choosing a route before you start driving. The chosen route is the <strong>query plan</strong>.</p>
+  <p>You need to see the plan, because an index you created is useless if the planner doesn't use it. <code>EXPLAIN</code> shows the plan the planner chose. <code>EXPLAIN ANALYZE</code> also <em>runs</em> it and adds real times and row counts. <code>BUFFERS</code> adds pages touched.</p>
+  <p>Tiny example on <code>shop</code>. Every <code>PRIMARY KEY</code> gets a B-tree index automatically, so a lookup by <code>customer_id</code> can use one:</p>
+  <div class="fx" data-lang="sql">EXPLAIN ANALYZE SELECT * FROM customers WHERE customer_id = 2;</div>
+  <div class="fx" data-lang="text">Index Scan using customers_pkey on customers  (cost=0.15..8.17 rows=1 width=72) (actual time=0.011..0.011 rows=1 loops=1)
+   Index Cond: (customer_id = 2)
+ Planning Time: 0.090 ms
+ Execution Time: 0.024 ms</div>
+  <table class="tbl">
+    <tr><th>Part</th><th>Meaning in plain words</th></tr>
+    <tr><td><code>Index Scan using customers_pkey</code></td><td>Walk the primary-key index, then fetch the row from the table</td></tr>
+    <tr><td><code>cost=0.15..8.17</code></td><td>Planner's guess of effort, in its own units: before the first row .. for all rows</td></tr>
+    <tr><td><code>rows=1</code> (first bracket)</td><td>Planner's <em>guess</em> of how many rows come out</td></tr>
+    <tr><td><code>actual time=0.011..0.011 rows=1</code></td><td>What really happened: milliseconds to first row .. last row, and real row count</td></tr>
+    <tr><td><code>loops=1</code></td><td>How many times this step ran</td></tr>
+    <tr><td><code>Index Cond</code></td><td>The condition the index answered</td></tr>
+  </table>
+  <p>Now the big table, first without an index on <code>customer_id</code>:</p>
   <div class="fx" data-lang="sql">EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM big_orders WHERE customer_id = 4242;</div>
   <div class="fx" data-lang="text">Seq Scan on big_orders  (cost=0.00..41576.00 rows=21 width=31) (actual time=0.079..116.108 rows=22 loops=1)
   Filter: (customer_id = 4242)
   Rows Removed by Filter: 1999978
   Buffers: shared hit=2464 read=14112          -- all 16,576 pages
 Execution Time: 116.132 ms</div>
+  <p>Read it: <code>Rows Removed by Filter: 1999978</code> means it tested 2 million rows to keep 22. <code>read=14112</code> means 14,112 pages came from disk. Now add the index and run the same query again:</p>
   <div class="fx" data-lang="sql">CREATE INDEX idx_orders_customer ON big_orders (customer_id);   -- 15 MB</div>
   <div class="fx" data-lang="text">Bitmap Heap Scan on big_orders  (cost=4.59..86.61 rows=21 width=31) (actual time=0.070..0.219 rows=22 loops=1)
   Recheck Cond: (customer_id = 4242)
@@ -186,6 +238,7 @@ Execution Time: 116.132 ms</div>
   -&gt;  Bitmap Index Scan on idx_orders_customer  (actual time=0.055..0.055 rows=22 loops=1)
         Index Cond: (customer_id = 4242)
 Execution Time: 0.243 ms</div>
+  <p>Read it from the most indented line upward. <strong>Bitmap Index Scan</strong> searches the index and collects the 22 row addresses. <strong>Bitmap Heap Scan</strong> then reads only the table pages that hold them. ("Bitmap" here is a checklist of which table pages to visit, so each page is read once. "Heap" is the main table storage.)</p>
   <table class="tbl">
     <tr><th></th><th>No index</th><th>With index</th></tr>
     <tr><td>Pages read</td><td>16,576</td><td>25</td></tr>
@@ -196,8 +249,10 @@ Execution Time: 0.243 ms</div>
   </div>
 
   <h2 id="so-design"><span class="num">04</span>Designing the Right Index</h2>
+  <p>One plain index on one column is a start. Real queries ask more: two filters, a sort, only a slice of rows, or a changed value like <code>lower(email)</code>. This section shows how to shape the index to fit the query.</p>
   <h3>Composite indexes and the leftmost-prefix rule</h3>
-  <p>A <strong>composite index</strong> sorts by column 1, then by column 2 within ties.</p>
+  <p>The app screen says: "customer 4242's orders since January, newest first". That filters on two columns. One index can hold both.</p>
+  <p>A <strong>composite index</strong> (an index on two or more columns) sorts by column 1, then by column 2 within ties. Look at the picture: all 4242 rows sit together, and inside that group the dates are in order.</p>
   <figure class="viz"><svg viewBox="0 0 600 150" width="600">
     <text x="0" y="14" font-size="11" class="tm">index (customer_id, created_at), in its sorted order:</text>
     <g font-size="11" text-anchor="middle">
@@ -243,7 +298,11 @@ Execution Time: 0.243 ms</div>
   </div>
 
   <h3>Covering indexes and index-only scans</h3>
-  <p>A <strong>covering index</strong> stores every column the query needs, so the table ("heap") visit is skipped.</p>
+  <p>A normal index lookup is two trips. Trip 1: the index gives the row's address. Trip 2: go to the table (the "heap") and fetch the other columns. With 22 rows spread over 22 pages, trip 2 is most of the work.</p>
+  <p>If the index already holds every column the query asks for, trip 2 is skipped. That is a <strong>covering index</strong>, and the plan step is called an <strong>Index Only Scan</strong>.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A library catalogue card that also prints the book's price and year. If that is all you wanted, you never walk to the shelf.</p>
+  </div>
   <figure class="viz"><svg viewBox="0 0 600 150" width="600">
     <defs><marker id="so-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <text x="0" y="16" font-weight="bold">Index Scan</text>
@@ -265,14 +324,15 @@ EXPLAIN (ANALYZE, BUFFERS) SELECT created_at, amount FROM big_orders WHERE custo
   Buffers: shared hit=1 read=4                 -- 5 pages vs 25 before</div>
   <p><code>INCLUDE</code> columns ride along in the leaves, unsorted, so they're cheaper than extra key columns.</p>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>"Index Only" still checks visibility. On a table not recently vacuumed, you'll see <code>Heap Fetches: 300000</code> and lose the benefit. <code>VACUUM</code> updates the visibility map that makes heap skips possible.</p>
+    <p>"Index Only" still checks visibility: is this row version visible to my transaction? The <strong>visibility map</strong> is a tiny note per page saying "every row here is visible to everyone". On a table not recently vacuumed, you'll see <code>Heap Fetches: 300000</code> and lose the benefit. <code>VACUUM</code> (Postgres's clean-up job) updates the visibility map that makes heap skips possible.</p>
   </div>
 
   <h3>Partial and expression indexes</h3>
-  <ul>
-    <li><strong>Partial index</strong>: index only rows matching a <code>WHERE</code>. Small and fast when queries always target a slice.</li>
-    <li><strong>Expression index</strong>: index a computed value, e.g. <code>lower(email)</code>. The query must use the <em>same</em> expression.</li>
-  </ul>
+  <p><strong>Partial index</strong>. The delivery team's screen only ever shows <em>pending</em> orders, which are 7% of rows. Why index the other 93%? A partial index keeps only rows matching a <code>WHERE</code>. It is smaller, so it is faster and cheaper.</p>
+  <p><strong>Expression index</strong>. Users type emails in any case: "Asha@Mail.com" or "asha@mail.com". So the query says <code>WHERE lower(email) = …</code>. A plain index on <code>email</code> stores the original text, so it can't answer a question about <code>lower(email)</code>. An expression index stores the computed value itself. The query must use the <em>same</em> expression.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Partial index: a teacher's separate list of only the students with pending fees, instead of searching the full class register. Expression index: a phone contacts list sorted by nickname, not by the full official name.</p>
+  </div>
   <div class="fx" data-lang="sql">-- Ops dashboard only ever looks at pending orders (7% of rows)
 CREATE INDEX idx_orders_pending ON big_orders (created_at) WHERE status = 'pending';
 -- 3 MB, vs 43 MB for a full index on created_at
@@ -284,6 +344,10 @@ SELECT * FROM big_customers WHERE lower(email) = 'user4242@mail.com';
 -- Seq Scan 27.7 ms (even with a plain index on email) → Index Scan 0.039 ms</div>
 
   <h2 id="so-types"><span class="num">05</span>Other Index Types</h2>
+  <p>A B-tree needs values that can be put in one line, smallest to biggest. Some data does not fit a line: a list of tags on a product, a JSON document, a shop's location on a map, a long article. Questions on such data sound different: "which products have the tag <em>sale</em>?", "which shops are within 5 km?". Other index types answer those.</p>
+  <div class="callout anlg"><span class="label">Analogy: GIN</span>
+    <p>The index at the back of a textbook: each <em>word</em> points to every page where it appears. GIN ("generalized inverted index") does that for each tag, JSON key or word, so "which rows contain X?" is fast.</p>
+  </div>
   <table class="tbl">
     <tr><th>Type</th><th>Good for</th><th>Example</th></tr>
     <tr><td><strong>B-tree</strong> (default)</td><td>=, &lt;, &gt;, BETWEEN, ORDER BY, prefix LIKE</td><td>Almost everything</td></tr>
@@ -303,7 +367,11 @@ SELECT * FROM big_customers WHERE lower(email) = 'user4242@mail.com';
   </div>
 
   <h2 id="so-cost"><span class="num">06</span>The Cost of Indexes</h2>
-  <p>Every index is a second copy of data, updated on every write.</p>
+  <p>If indexes make reads fast, why not index every column? Because nothing is free.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A kirana shopkeeper writes each sale in his main register. To answer questions faster, he also keeps a notebook per customer and a notebook per product. Lookups become quick, but every sale now means writing in three books. And the books take shelf space.</p>
+  </div>
+  <p>Every index is a second copy of data, updated on every write. Real numbers:</p>
   <table class="tbl out"><caption>Result: inserting 500k rows</caption>
     <tr><th>table</th><th>indexes</th><th>time</th></tr>
     <tr><td>ins_noidx</td><td>0</td><td>0.49 s</td></tr>
@@ -319,7 +387,13 @@ SELECT * FROM big_customers WHERE lower(email) = 'user4242@mail.com';
   </div>
 
   <h2 id="so-sarg"><span class="num">07</span>Sargability</h2>
-  <p>A predicate is <strong>sargable</strong> (Search-ARGument-able) if the index can be used for it. The rule: <strong>leave the indexed column bare</strong>; do the work on the constant side.</p>
+  <p>You created the index. The query still does a Seq Scan. The most common reason: the <code>WHERE</code> clause changes the column before comparing it.</p>
+  <p>The index is sorted by the <em>stored</em> value of <code>created_at</code>, like 2025-06-01 14:32. Ask <code>date(created_at) = '2025-06-01'</code> and the database must first compute <code>date()</code> for every row, then compare. The sorted order of the stored values doesn't help with that, so it reads all rows.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A dictionary is sorted by the word. "Find words starting with <em>ma</em>" is quick. "Find words whose <em>last</em> letter is <em>a</em>" means reading the whole book, even though it's the same dictionary.</p>
+  </div>
+  <p>The fix is to ask the same question in a different shape. Instead of "is the date part equal to 1 June?", ask "is the timestamp from 1 June 00:00 up to (not including) 2 June 00:00?". Same rows. But now the bare column is compared with two fixed values, so the B-tree can jump straight there. On our data: 172 ms → 0.40 ms.</p>
+  <p>A condition the index can be used for is called <strong>sargable</strong> (Search-ARGument-able). The rule: <strong>leave the indexed column bare</strong>; do the work on the constant side.</p>
   <table class="tbl">
     <tr><th>Problem</th><th>Non-sargable</th><th>Rewrite</th><th>Real result</th></tr>
     <tr><td>Function on column</td><td><code>date(created_at) = '2025-06-01'</code></td><td><code>created_at &gt;= '2025-06-01' AND created_at &lt; '2025-06-02'</code></td><td>172 ms → 0.40 ms</td></tr>
@@ -328,7 +402,8 @@ SELECT * FROM big_customers WHERE lower(email) = 'user4242@mail.com';
     <tr><td>OR across columns</td><td><code>customer_id = 4242 OR amount &gt; 999.9</code></td><td>Index both (BitmapOr) or split into <code>UNION</code></td><td>205 ms → 0.65 ms</td></tr>
   </table>
   <ul>
-    <li><strong>Implicit cast</strong>: the plan showed <code>Filter: ((customer_id)::numeric = 4242.0)</code>. The <em>column</em> was cast, row by row.</li>
+    <li><strong>Leading wildcard</strong>: <code>%</code> means "anything". A pattern that <em>starts</em> with <code>%</code> has no fixed start to jump to, like the "last letter" dictionary question.</li>
+    <li><strong>Implicit cast</strong> (the database quietly converting one type to another): the plan showed <code>Filter: ((customer_id)::numeric = 4242.0)</code>. The <em>column</em> was cast, row by row.</li>
     <li><strong>OR</strong>: one unindexed branch forces a Seq Scan. With both indexed, Postgres merges them (<code>BitmapOr</code>); other engines may need a <code>UNION</code>.</li>
   </ul>
   <div class="callout trap"><span class="label">Trap</span>
@@ -336,7 +411,25 @@ SELECT * FROM big_customers WHERE lower(email) = 'user4242@mail.com';
   </div>
 
   <h2 id="so-plan"><span class="num">08</span>Reading a Plan</h2>
-  <p>Read a plan tree <strong>inside-out</strong> (most indented runs first). Each node: <code>(cost=… rows=estimate)</code> then <code>(actual time=first..last ms rows=actual loops=n)</code>.</p>
+  <p>Big queries have plans with many steps. Each step is called a <strong>node</strong>. Nodes form a tree: a node takes rows from the nodes indented below it, does its work, and passes rows up. So read a plan tree <strong>inside-out</strong> (most indented runs first).</p>
+  <figure class="viz"><svg viewBox="0 0 600 214" width="600">
+    <defs><marker id="so-ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <g stroke="currentColor" fill="none" marker-end="url(#so-ar4)">
+      <line x1="300" y1="64" x2="300" y2="40"/><line x1="150" y1="120" x2="262" y2="96"/>
+      <line x1="430" y1="120" x2="338" y2="96"/><line x1="430" y1="176" x2="430" y2="152"/>
+    </g>
+    <rect x="200" y="8" width="200" height="30" rx="5" class="fv"/><text x="300" y="28" text-anchor="middle">⑤ HashAggregate</text>
+    <rect x="200" y="64" width="200" height="30" rx="5" class="fb sb"/><text x="300" y="84" text-anchor="middle">④ Hash Join</text>
+    <rect x="30" y="120" width="240" height="30" rx="5" class="ft st"/><text x="150" y="140" text-anchor="middle">③ Bitmap Heap Scan (orders)</text>
+    <rect x="330" y="120" width="200" height="30" rx="5" class="fg sg"/><text x="430" y="140" text-anchor="middle">② Hash (build lookup)</text>
+    <rect x="330" y="176" width="200" height="30" rx="5" class="fs"/><text x="430" y="196" text-anchor="middle">① Seq Scan (customers)</text>
+    <text x="420" y="28" font-size="11" class="tm">group by city, count</text>
+    <text x="420" y="84" font-size="11" class="tm">match orders to customers</text>
+    <text x="30" y="172" font-size="11" class="tm">orders since 1 Dec</text>
+    <text x="30" y="200" font-size="11" class="tm">rows flow upward ↑</text>
+  </svg><figcaption>The plan below as a tree. Numbers show the order of work: bottom first, top last.</figcaption></figure>
+  <p>Follow the circled numbers. Customers are read and loaded into a lookup table (①②), orders since December stream in (③), each is matched to its customer (④), then rows are grouped by city (⑤).</p>
+  <p>Each node shows <code>(cost=… rows=estimate)</code> then <code>(actual time=first..last ms rows=actual loops=n)</code>. The common node types:</p>
   <table class="tbl">
     <tr><th>Node</th><th>What it does</th><th>When chosen</th></tr>
     <tr><td><strong>Seq Scan</strong></td><td>Reads every page</td><td>No usable index, or most rows needed</td></tr>
@@ -357,12 +450,13 @@ WHERE o.created_at &gt;= '2025-12-01' GROUP BY c.city;</div>
         -&gt;  Hash  (actual ... rows=100000)  Memory Usage: 5321kB
               -&gt;  Seq Scan on big_customers c  (actual ... rows=100000)
 Execution Time: 57.920 ms</div>
-  <p>Estimate 43,786 vs actual 42,213: close, so the plan can be trusted.</p>
+  <p>Estimate 43,786 vs actual 42,213: close, so the plan can be trusted. The planner picks a route based on its row guesses. A good guess gives a good route. A wildly wrong guess (like a cab app thinking a road is empty when it is jammed) gives a bad route.</p>
 
   <h3>Why the planner ignores your index</h3>
   <ul>
-    <li><strong>Low selectivity</strong> (the filter keeps a big share of rows). <code>status = 'delivered'</code> matches 90% of rows, so the planner chose a Seq Scan despite an index. Even 3% (<code>cancelled</code>) touched 16,180 of 16,576 pages, because matches are spread everywhere.</li>
-    <li><strong>Stale statistics</strong>: the planner estimates rows from stats sampled by <code>ANALYZE</code>. If data changed since, estimates are wrong.</li>
+    <li><strong>Tiny table</strong>: one page is cheaper to read whole than index + table. The 5-row <code>shop.orders</code> is like this.</li>
+    <li><strong>Low selectivity</strong> (the filter keeps a big share of rows). If you need 90% of a book, read it cover to cover; don't flip to the index for every line. <code>status = 'delivered'</code> matches 90% of rows, so the planner chose a Seq Scan despite an index. Even 3% (<code>cancelled</code>) touched 16,180 of 16,576 pages, because matches are spread everywhere.</li>
+    <li><strong>Stale statistics</strong>: <strong>statistics</strong> are a small summary the database keeps per column (common values, number of distinct values). The planner estimates rows from stats sampled by <code>ANALYZE</code>. If data changed since, estimates are wrong.</li>
     <li><strong>Non-sargable predicate</strong> or type mismatch (section 07).</li>
   </ul>
   <div class="fx" data-lang="sql">-- events: 1M 'view' rows, ANALYZE, then 300k 'purchase' rows added (autovacuum off)
@@ -375,8 +469,11 @@ ANALYZE events;
   </div>
 
   <h2 id="so-patterns"><span class="num">09</span>Pagination &amp; N+1</h2>
+  <p>Two slow patterns come from the app code, not from the index. Both are common in interviews.</p>
   <h3>OFFSET vs keyset pagination</h3>
-  <p><strong>Keyset</strong> (seek) pagination remembers the last key shown and seeks to it via the index.</p>
+  <p>Flipkart shows search results 20 at a time. That is <strong>pagination</strong> (showing results page by page). The usual SQL is <code>LIMIT 20 OFFSET 40</code>: skip 40 rows, show the next 20. That is page 3.</p>
+  <p>The catch: to skip 40 rows, the database still has to <em>produce</em> those 40 rows and throw them away. On page 75,001 it produces 1.5 million rows to throw away. Deep pages get slower and slower.</p>
+  <p><strong>Keyset</strong> (seek) pagination remembers the last key shown and seeks to it via the index. "Last order shown was 1,500,000; give me the next 20 after it." The B-tree jumps to 1,500,000 in 3–4 page reads.</p>
   <figure class="viz"><svg viewBox="0 0 600 136" width="600">
     <defs><marker id="so-ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <text x="0" y="16" font-weight="bold">OFFSET</text>
@@ -405,6 +502,10 @@ SELECT * FROM big_orders WHERE order_id &gt; 1500000 ORDER BY order_id LIMIT 20;
   </div>
 
   <h3>The N+1 query problem</h3>
+  <p>Your Python code first asks for the list of customers (1 query). Then, inside a loop, it asks for each customer's orders, one query per customer (N queries). Total: N+1 queries. Each query is a round trip over the network, and each trip has a fixed cost even if the answer is tiny.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>You need 10 items from the kirana shop. N+1 is walking to the shop 10 times, one item per trip. The fix is one trip with the full list.</p>
+  </div>
   <div class="flow"><span>1 query: N parents</span><span>loop: +1 query each</span><span>N round trips</span></div>
   <div class="fx" data-lang="python"># N+1: 1 query + 100,000 more, one per customer
 for cid in pd.read_sql("SELECT customer_id FROM big_customers", conn).customer_id:
@@ -415,7 +516,11 @@ df = pd.read_sql("SELECT customer_id, count(*) AS n FROM big_orders GROUP BY cus
   <p>ORMs (Django, SQLAlchemy) cause it silently through lazy loading: <code>for c in customers: c.orders</code>. Fix with eager loading (<code>select_related</code>, <code>prefetch_related</code>, <code>joinedload</code>) or an <code>IN (…)</code> batch.</p>
 
   <h2 id="so-scale"><span class="num">10</span>Partitioning &amp; Column Stores</h2>
+  <p>Indexes help find a few rows. When a table grows to billions of rows (app events, payment logs), two more ideas help: cut the table into parts, or store it by column.</p>
   <h3>Partitioning</h3>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A school keeps one attendance register per month, not one giant register. To check June, open only the June register. To throw away 2023 records, remove the old registers; no need to erase line by line.</p>
+  </div>
   <p><strong>Partitioning</strong> splits one logical table into child tables by a key, usually date. Queries filtering on that key skip the other partitions (<strong>partition pruning</strong>).</p>
   <div class="fx" data-lang="sql">CREATE TABLE events (event_id bigint, created_at timestamp, payload jsonb)
   PARTITION BY RANGE (created_at);
@@ -428,6 +533,7 @@ CREATE TABLE events_2025_06 PARTITION OF events
   </ul>
 
   <h3>Row store vs column store</h3>
+  <p>Two kinds of work hit databases. <strong>OLTP</strong> (online transaction processing): an app doing many tiny reads and writes, like "place this order". <strong>OLAP</strong> (online analytical processing): reports over millions of rows, like "total sales per month". They want data laid out differently.</p>
   <div class="cards">
     <div><b>Row store</b><p>Each row's columns stored together on a page. Fetching one whole order is one page.</p><small>OLTP: PostgreSQL, MySQL</small></div>
     <div><b>Column store</b><p>Each column stored separately and compressed. <code>SUM(amount)</code> reads only the amount column.</p><small>OLAP: BigQuery, Snowflake, Redshift, ClickHouse, Parquet files</small></div>
@@ -441,6 +547,8 @@ CREATE TABLE events_2025_06 PARTITION OF events
 
   <h2 id="so-qa"><span class="num">11</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>In two lines: what is an index, and what does it cost?</summary><div class="qa-body">A separate sorted copy of one or more columns, each value pointing to its row, so the database can jump instead of reading every page. It costs disk space and slows every INSERT/UPDATE/DELETE, because the index must be updated too.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>The 5-row <code>shop.orders</code> query used a Seq Scan. Is that a problem?</summary><div class="qa-body">No. The whole table is one page (<code>Buffers: shared hit=1</code>). Reading one page is the cheapest possible plan; an index would add work. Indexes matter when tables have thousands of pages.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>A query filtering on an indexed column does a Seq Scan. How do you diagnose it?</summary><div class="qa-body">Run <code>EXPLAIN ANALYZE</code>. (1) Is the predicate sargable? Look for functions, casts like <code>(col)::numeric</code>, leading <code>%</code>. (2) Compare estimated vs actual rows; if far off, run <code>ANALYZE</code>. (3) Is the filter unselective (e.g. 90% of rows)? Then the Seq Scan is the right choice. (4) Is the table tiny?</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Design the index for: <code>SELECT order_id, amount FROM orders WHERE customer_id = ? AND status = 'delivered' ORDER BY created_at DESC LIMIT 10</code>.</summary><div class="qa-body"><code>CREATE INDEX ON orders (customer_id, status, created_at DESC) INCLUDE (amount);</code> Equality columns first, then the sort column, so the index returns rows already ordered and stops after 10. <code>INCLUDE amount</code> (order_id too, if not the key) allows an Index Only Scan.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Index on <code>(last_name, first_name)</code>. Which use it: (a) last_name = 'Rao' (b) first_name = 'Asha' (c) both (d) last_name LIKE 'R%'?</summary><div class="qa-body">(a), (c) and (d) can use it (leftmost prefix; (d) is a range on the first column, given a suitable collation or <code>text_pattern_ops</code>). (b) can't seek, because first names are only sorted within each last name.</div></details>

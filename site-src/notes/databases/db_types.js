@@ -2,7 +2,7 @@
 Object.assign(TOPIC_CONTENT, {
   "db_types": `<main>
   <h1>Types of Databases</h1>
-  <p class="lead">Each database family stores data in a different shape, and the shape decides what is fast and what is painful. Know the shapes, the trade-offs (ACID, CAP, row vs column) and how to pick one for a workload.</p>
+  <p class="lead">There is no single "best" database. Each family stores data in a different shape, and the shape decides which questions are fast and which are painful. This page walks through every family with the same shop data, then the trade-offs (ACID, CAP, row vs column) and how to pick one. In a job you will meet five or six of these in one company; in interviews "which database would you use and why" is a standard question.</p>
 
   <h2 id="dt-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -103,6 +103,8 @@ Object.assign(TOPIC_CONTENT, {
   </div>
 
   <h2 id="dt-rel"><span class="num">01</span>Relational</h2>
+  <p>Think of how a school office keeps records. One register lists students (roll number, name, class). Another lists fee payments (roll number, date, amount). The payment register never repeats a student's name; it just writes the roll number. To see "who paid on 5 June?" the clerk looks up the roll number in the student register.</p>
+  <p>That is the relational model. Data sits in <strong>tables</strong> with fixed columns. Tables point to each other with ids (called <strong>keys</strong>). A <strong>JOIN</strong> is the lookup that combines them when you ask a question. The same order 100 looks very different in the four main families:</p>
   <figure class="viz"><svg viewBox="0 0 600 215" width="600">
     <defs><marker id="dt-ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <g font-size="10">
@@ -133,14 +135,16 @@ Object.assign(TOPIC_CONTENT, {
     <text x="527" y="190" text-anchor="middle" class="tm">follow edges</text>
     </g>
   </svg><figcaption>The same shop data in four shapes. The shape decides which questions are cheap.</figcaption></figure>
-  <p><strong>Tables</strong> with fixed columns, linked by <strong>keys</strong>, combined with JOINs at query time. Each fact lives once: order 100 stores only <code>customer_id = 1</code>.</p>
+  <p>Look at the left-most picture: order 100 holds only the number 1, and the arrow leads to Asha. Each fact lives once; order 100 stores only <code>customer_id = 1</code>. To show the order with the customer's name, you JOIN the two tables on that number:</p>
   <div class="fx" data-lang="sql">SELECT o.order_id, o.customer_id, c.name, c.city, o.status
 FROM orders o JOIN customers c ON c.customer_id = o.customer_id
 WHERE o.order_id = 100;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>order_id</th><th>customer_id</th><th>name</th><th>city</th><th>status</th></tr><tr><td>100</td><td>1</td><td>Asha</td><td>Mumbai</td><td>delivered</td></tr></table>
+  <p>Read the query like this: take <code>orders</code> (short name <code>o</code>), attach the matching row of <code>customers</code> (short name <code>c</code>) where the customer ids are equal, keep only order 100. If Asha moves to Pune, you change one row in <code>customers</code> and every order shows the new city.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A set of linked spreadsheets with strict rules. Each fact is written once; other sheets refer to it by id instead of copying it.</p>
   </div>
+  <p>Two more words you will hear with relational databases. <strong>ACID</strong> is a set of four safety promises about transactions (explained fully in section 06). <strong>Constraints</strong> are rules the database checks on every write, like "price must be above 0".</p>
   <ul>
     <li><strong>Great at:</strong> ad-hoc queries, JOINs, strong transactions, data integrity (constraints).</li>
     <li><strong>Bad at:</strong> scaling writes across many machines; data whose shape changes every week.</li>
@@ -149,7 +153,8 @@ WHERE o.order_id = 100;</div>
 
   <h2 id="dt-doc"><span class="num">02</span>Document &amp; Key-Value</h2>
   <h3>Document</h3>
-  <p>Each record is a self-contained <strong>JSON-like document</strong>. Fields can differ between documents and can nest.</p>
+  <p>Now think of a product catalogue on Flipkart. A phone has RAM, battery and screen size. A shirt has size, fabric and colour. A fixed table would need a column for every possible property, mostly empty. It is more natural to keep each product as one small file with whatever fields it needs.</p>
+  <p>That is a document database. Each record is a self-contained <strong>JSON-like document</strong> (JSON = text with named fields in curly braces, the format web apps already speak). Fields can differ between documents and can nest, meaning a field can hold a list or another set of fields inside it.</p>
   <div class="fx" data-lang="js">// one order, with its items embedded (no JOIN needed to read it)
 { "_id": 100, "customer": { "id": 1, "name": "Asha" },
   "status": "delivered",
@@ -163,8 +168,13 @@ WHERE o.order_id = 100;</div>
     <li><strong>Bad at:</strong> many-to-many relationships and cross-document analytics. Duplicated data (Asha's name in every order) goes stale.</li>
     <li><strong>Products:</strong> MongoDB, Couchbase, Firestore, Amazon DocumentDB. PostgreSQL <code>JSONB</code> covers many of the same cases.</li>
   </ul>
+  <p>PostgreSQL can store a document inside a normal table column too. The column type is <code>JSONB</code>, and you reach inside with arrows (<code>-&gt;</code> steps into a field, <code>-&gt;&gt;</code> pulls the value out as text):</p>
+  <div class="fx" data-lang="sql">SELECT '{"name":"Lamp","specs":{"watt":9,"colour":"white"}}'::jsonb -&gt; 'specs' -&gt;&gt; 'watt' AS watt;</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>watt</th></tr><tr><td>9</td></tr></table>
+  <p>So "we need flexible fields" alone is not a reason to leave PostgreSQL.</p>
   <h3>Key-value (and in-memory)</h3>
-  <p>A giant <strong>dictionary</strong>: you give a key, you get a value. The database doesn't look inside the value.</p>
+  <p>A cloakroom at a wedding hall: you hand in your bag, you get token 42. Later you show token 42 and get your bag back in a second. The attendant never looks inside the bag.</p>
+  <p>A key-value store works the same way. It is a giant <strong>dictionary</strong>: you give a key (the token), you get a value (the bag). The database doesn't look inside the value, so it can be anything: a number, a JSON blob, a list. In the example below, <code>SET</code> stores a value under a key, <code>EX 1800</code> makes it expire after 1800 seconds, <code>GET</code> reads it, <code>INCR</code> adds 1 to a counter.</p>
   <div class="fx" data-lang="text">SET session:8f3a  "{user_id: 1, cart: [10, 13]}"   EX 1800
 GET session:8f3a
 INCR page_views:product:10</div>
@@ -176,13 +186,15 @@ INCR page_views:product:10</div>
     <li><strong>Bad at:</strong> any query not by key (filter, range, JOIN, aggregate).</li>
     <li><strong>Products:</strong> Redis, Memcached, Amazon DynamoDB, etcd.</li>
   </ul>
+  <p>Why is this useful? Every time you open Swiggy, the app must know "is this person logged in, and what is in their cart?" That lookup happens on every tap, for crores of users. A key-value store answers it in under a millisecond because it does one thing: find the key.</p>
   <div class="callout intu"><span class="label">In-memory is a property, not a family</span>
-    <p><strong>In-memory</strong> = data in RAM, microsecond reads. Redis can persist (snapshots, append-only log), but a crash can lose the last writes: use it as a cache, not the source of truth.</p>
+    <p><strong>In-memory</strong> = data kept in RAM (the computer's fast, temporary memory) instead of disk, so reads take microseconds. Redis can persist (save snapshots to disk, or append every write to a log), but a crash can still lose the last writes: use it as a <strong>cache</strong> (a fast copy of data that lives properly elsewhere), not the source of truth.</p>
   </div>
 
   <h2 id="dt-wide"><span class="num">03</span>Wide-Column &amp; Graph</h2>
   <h3>Wide-column</h3>
-  <p>Rows are grouped by a <strong>partition key</strong> and sorted by a <strong>clustering key</strong> inside each partition. Built for huge, constant write volume across many machines.</p>
+  <p>Picture a weather station network: 10,000 sensors, each sending a temperature reading every second. That is 10,000 writes per second, forever, and no single machine can keep up. The data must be spread across many machines, and each reading must land on the right one without any lookup.</p>
+  <p>A wide-column store solves this with two keys. The <strong>partition key</strong> decides which machine (and which bucket on it) a row goes to; all rows with the same partition key sit together. The <strong>clustering key</strong> sorts rows inside that bucket. In the example below, one bucket per sensor per day, rows sorted by time. "Give me sensor s-7's readings for 1 May" is then one bucket read, in order.</p>
   <div class="fx" data-lang="sql">-- Cassandra CQL: one partition per sensor per day, rows sorted by time
 CREATE TABLE readings (
   sensor_id text, day date, ts timestamp, temp float,
@@ -198,7 +210,8 @@ CREATE TABLE readings (
     <p>"Wide-column" is <em>not</em> "columnar". Cassandra stores rows grouped by key (good for writes). Columnar warehouses store each column separately (good for scans). Interviewers love this mix-up.</p>
   </div>
   <h3>Graph</h3>
-  <p>Data is <strong>nodes</strong> (things) and <strong>edges</strong> (relationships), and both can have properties. Following an edge is a pointer hop, not a JOIN.</p>
+  <p>"Which of my friends' friends also like cricket?" On Instagram or LinkedIn this is a normal question. In tables, each hop ("friend of") is another JOIN of the same table with itself. Three hops means three self-joins over crores of rows, and it gets slow fast.</p>
+  <p>A graph database stores the question's shape directly. Data is <strong>nodes</strong> (things: Asha, Lamp) and <strong>edges</strong> (relationships: BOUGHT), and both can carry properties (qty: 2). Following an edge is a pointer hop, not a JOIN: from Asha's node, the database already holds the addresses of everything she bought. The query language below (Cypher) draws the pattern with arrows:</p>
   <div class="fx" data-lang="text">(:Customer {name:'Asha'})-[:BOUGHT {qty:2}]-&gt;(:Product {name:'Lamp'})
 
 // Cypher: people who bought what Asha bought (2 hops)
@@ -214,8 +227,9 @@ RETURN DISTINCT other.name</div>
   </ul>
 
   <h2 id="dt-special"><span class="num">04</span>Time-Series, Search, Vector</h2>
+  <p>The three families below each do one job extremely well. They almost always sit <em>next to</em> a main database, holding a copy of the data in a shape built for that one job.</p>
   <h3>Time-series</h3>
-  <p>Records are <strong>(timestamp, tags, values)</strong>, appended in time order and almost never updated.</p>
+  <p>A fitness band records your heart rate every second. You never go back and edit yesterday's 10:03:17 reading; you only add new ones and ask questions like "average per minute over the last hour". Records are <strong>(timestamp, tags, values)</strong>, appended in time order and almost never updated. The line below is one reading: measurement <code>cpu</code>, tags that say which machine, value 63.2, and the time in nanoseconds.</p>
   <div class="fx" data-lang="text">cpu,host=web-1,region=ap-south usage=63.2 1714557600000000000</div>
   <ul>
     <li><strong>Great at:</strong> high-rate appends, time-bucket aggregates (avg per minute), automatic downsampling and retention ("drop raw data after 30 days").</li>
@@ -223,7 +237,8 @@ RETURN DISTINCT other.name</div>
     <li><strong>Products:</strong> TimescaleDB (a PostgreSQL extension), InfluxDB, Prometheus, QuestDB.</li>
   </ul>
   <h3>Search engine</h3>
-  <p>Stores documents plus an <strong>inverted index</strong>: a map from each word to the documents containing it. Results are ranked by relevance (BM25).</p>
+  <p>Type "desk lamp" into a shopping site's search box. A normal table lookup would have to read every product description and check for both words, every time. Too slow for lakhs of products.</p>
+  <p>A search engine prepares for this in advance. It stores documents plus an <strong>inverted index</strong>: a map from each word to the documents containing it. "Inverted" because a normal index goes document → words, and this goes word → documents. Results are ranked by relevance using a scoring formula (BM25: rarer matching words count more, and shorter documents with many matches score higher).</p>
   <div class="fx" data-lang="text">"lamp"  -&gt; [doc 13, doc 57, doc 902]
 "desk"  -&gt; [doc 12, doc 57]
 query "desk lamp" -&gt; doc 57 ranks first (matches both)</div>
@@ -236,11 +251,12 @@ query "desk lamp" -&gt; doc 57 ranks first (matches both)</div>
     <li><strong>Products:</strong> Elasticsearch, OpenSearch, Solr; Algolia, Typesense for app search.</li>
   </ul>
   <h3>Vector</h3>
-  <p>Stores <strong>embeddings</strong> (lists of numbers that capture meaning) and finds the nearest ones to a query vector.</p>
+  <p>A search engine finds documents with the <em>same words</em>. It can't tell that "table light" and "desk lamp" mean nearly the same thing. For that you need a way to compare <em>meaning</em>.</p>
+  <p>An <strong>embedding</strong> is a list of numbers (often 768 or 1536 of them) produced by an ML model, placed so that texts with similar meaning get lists that are close together. A vector database stores these lists and, given a query's list, finds the nearest ones. "Nearest" is a distance in that many-dimensional space, the same idea as distance between two points on a map, just with more coordinates.</p>
   <div class="fx" data-lang="js">{ "id": "prod-13", "embedding": [0.12, -0.53, 0.88, ...],   // e.g. 768 numbers
   "metadata": { "name": "Lamp", "category": "Furniture" } }</div>
   <ul>
-    <li><strong>Great at:</strong> semantic search, RAG retrieval for LLMs, "similar items", de-duplication. Uses <strong>ANN</strong> (approximate nearest neighbour) indexes like HNSW, trading a little recall for huge speed.</li>
+    <li><strong>Great at:</strong> semantic search (search by meaning), RAG retrieval for LLMs (fetching the right passages to show a chatbot), "similar items", de-duplication. Checking the distance to every stored vector would be too slow, so it uses <strong>ANN</strong> (approximate nearest neighbour) indexes like HNSW: they find <em>almost</em> the closest matches, trading a little recall (a few true matches missed) for huge speed.</li>
     <li><strong>Bad at:</strong> exact filters and transactions (most add metadata filtering, with varying quality).</li>
     <li><strong>Products:</strong> Pinecone, Weaviate, Milvus, Qdrant, Chroma; <code>pgvector</code> in PostgreSQL.</li>
   </ul>
@@ -249,7 +265,13 @@ query "desk lamp" -&gt; doc 57 ranks first (matches both)</div>
   </div>
 
   <h2 id="dt-col"><span class="num">05</span>Row vs Column Stores</h2>
-  <p>Same <code>orders</code> table, two disk layouts. Query: <em>count orders by status</em>.</p>
+  <p>A table is two-dimensional, but a disk is one long line of bytes. So the database must choose: write the table to disk row after row, or column after column? This choice alone explains why a data warehouse can sum 2 billion numbers in seconds while PostgreSQL struggles.</p>
+  <p>Tiny worked example. The <code>orders</code> table has 5 rows and 4 columns, so 20 values. Query: <em>count orders by status</em>. It needs only the <code>status</code> column, 5 values.</p>
+  <ul>
+    <li><strong>Row store</strong>: the 5 status values are spread out, one inside each row. To reach them the disk reads all 20 values.</li>
+    <li><strong>Column store</strong>: the 5 status values sit together. The disk reads exactly those 5.</li>
+  </ul>
+  <p>On 5 rows nobody notices. On 2 billion rows with 40 columns, the row store reads 40 times more data than needed.</p>
   <figure class="viz"><svg viewBox="0 0 600 210" width="600">
     <g font-size="10">
       <rect x="40" y="6" width="12" height="12" class="fb"/><text x="57" y="16">order_id</text>
@@ -277,6 +299,7 @@ query "desk lamp" -&gt; doc 57 ranks first (matches both)</div>
     <path d="M430,186 L430,192 L555,192 L555,186" fill="none" class="sg" stroke-width="2"/>
     <text x="492" y="206" text-anchor="middle" class="tg">reads only 5</text>
   </svg><figcaption>Row store keeps a row's values together (cheap to fetch one order); column store keeps a column together (cheap to scan one field).</figcaption></figure>
+  <p>In the picture, each small box is one value and the green boxes are <code>status</code>. Count how many boxes the red bracket covers versus the green one. The second win of column stores is <strong>compression</strong>: a column of statuses is mostly "delivered, delivered, delivered…", which can be stored as "delivered × 3" instead of three copies.</p>
   <table class="tbl">
     <tr><th></th><th>Row store</th><th>Column store</th></tr>
     <tr><td>Fast for</td><td>Fetch or update one whole row (OLTP)</td><td>Aggregate a few columns over billions of rows (OLAP)</td></tr>
@@ -287,12 +310,13 @@ query "desk lamp" -&gt; doc 57 ranks first (matches both)</div>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A row store is a stack of filled-in forms: great for pulling one person's form. A column store is one list per question: great for "average age", useless for "show me Asha's whole form" quickly.</p>
   </div>
-  <p><strong>Analytical warehouses</strong> (BigQuery, Snowflake, Redshift, ClickHouse, DuckDB locally) = column store + massively parallel execution. Your main workplace; a bad app backend (slow single-row writes, seconds of latency, cost per query).</p>
+  <p><strong>Analytical warehouses</strong> (BigQuery, Snowflake, Redshift, ClickHouse, DuckDB locally) = column store + massively parallel execution (hundreds of machines each scanning a slice). As a data scientist this is your main workplace. It is a bad app backend: slow single-row writes, seconds of latency (waiting time per query), and a cost per query.</p>
   <div class="callout trap"><span class="label">Trap</span>
     <p><code>SELECT *</code> on a column store reads every column and, on BigQuery, you pay per byte scanned. Select only the columns you need.</p>
   </div>
 
   <h2 id="dt-acid"><span class="num">06</span>ACID, BASE &amp; CAP</h2>
+  <p>You send ₹500 to a friend on UPI. Two things must change: your balance goes down by 500, their balance goes up by 500. If the app crashes after the first step, ₹500 has vanished. A <strong>transaction</strong> groups the two steps into one unit so that can't happen. ACID is the list of promises a database makes about transactions, one per letter.</p>
   <h3>ACID vs BASE</h3>
   <table class="tbl">
     <tr><th>ACID (relational default)</th><th>Meaning</th></tr>
@@ -301,12 +325,14 @@ query "desk lamp" -&gt; doc 57 ranks first (matches both)</div>
     <tr><td><strong>Isolation</strong></td><td>Concurrent transactions don't see each other's half-done work</td></tr>
     <tr><td><strong>Durability</strong></td><td>Once committed, it survives a crash</td></tr>
   </table>
-  <p><strong>BASE</strong> (many distributed NoSQL systems): <strong>B</strong>asically <strong>A</strong>vailable, <strong>S</strong>oft state, <strong>E</strong>ventually consistent. Replicas may briefly disagree but converge if writes stop.</p>
+  <p>In UPI words: Atomicity = both balance changes happen or neither. Consistency = no balance goes below zero. Isolation = two transfers at the same moment don't see each other's half-done work. Durability = once "success" is shown, a power cut can't undo it.</p>
+  <p>Many big NoSQL systems keep several copies of the data on different machines (<strong>replicas</strong>) and relax these promises for speed. That style is called <strong>BASE</strong>: <strong>B</strong>asically <strong>A</strong>vailable (it always answers), <strong>S</strong>oft state (a value may be mid-update), <strong>E</strong>ventually consistent (replicas may briefly disagree but converge if writes stop).</p>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>ACID is a bank transfer: money never vanishes mid-way. BASE is a social "like" counter: if your friend sees 99 likes and you see 100 for a second, nobody is harmed.</p>
   </div>
   <h3>CAP theorem in plain terms</h3>
-  <p>Replicas copy data across machines. When the network between them breaks (a <strong>partition</strong>, P), each must choose:</p>
+  <p>A shop has two branches that share one stock register by phone. One Lamp is left. The phone line goes dead. A customer walks into branch A and asks "do you have a Lamp?" Branch A has two choices: say "I can't confirm right now, please wait" (correct but unhelpful), or say "yes" from its last known count (helpful but maybe wrong, because branch B may have just sold it).</p>
+  <p>That is the whole CAP theorem. Replicas copy data across machines. When the network between them breaks (a <strong>partition</strong>, P), each must choose between <strong>C</strong>onsistency (every answer is correct) and <strong>A</strong>vailability (every request gets an answer):</p>
   <figure class="viz"><svg viewBox="0 0 600 215" width="600">
     <defs><marker id="dt-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <text x="300" y="16" text-anchor="middle" font-size="11" class="tm">A client asks Replica A: "is the Lamp in stock?"</text>
@@ -335,6 +361,7 @@ query "desk lamp" -&gt; doc 57 ranks first (matches both)</div>
   </div>
 
   <h2 id="dt-choose"><span class="num">07</span>How to Choose</h2>
+  <p>Match the workload (what the data looks like and how it is asked for) to the family whose shape makes that cheap. The table collects everything above into one lookup:</p>
   <table class="tbl">
     <tr><th>Workload</th><th>Pick</th><th>Why</th></tr>
     <tr><td>Orders, payments, users, inventory</td><td>Relational (PostgreSQL)</td><td>Transactions, constraints, JOINs</td></tr>
@@ -354,7 +381,7 @@ query "desk lamp" -&gt; doc 57 ranks first (matches both)</div>
   </div>
 
   <h2 id="dt-poly"><span class="num">08</span>Polyglot &amp; Managed Cloud</h2>
-  <p><strong>Polyglot persistence</strong>: one product uses several databases, each for the job it does best. One system (usually the relational DB) stays the <strong>source of truth</strong>; the rest are fed from it.</p>
+  <p>"Polyglot" means "speaking many languages". <strong>Polyglot persistence</strong>: one product uses several databases, each for the job it does best. One system (usually the relational DB) stays the <strong>source of truth</strong>, the one copy that is always right; the rest are fed from it. <strong>CDC</strong> (change data capture) is the feed: it reads every change from the main database's log and streams it to the others.</p>
   <div class="flow"><span>PostgreSQL (orders = truth)</span><span>CDC stream (Debezium/Kafka)</span><span>Elasticsearch · Redis · Warehouse · Vector DB</span></div>
   <table class="tbl">
     <tr><th>E-commerce + ML feature</th><th>Database</th></tr>

@@ -2,7 +2,7 @@
 Object.assign(TOPIC_CONTENT, {
   "ml_timeseries": `<main>
   <h1>Time Series Forecasting</h1>
-  <p class="lead">How to predict the next values of a series that moves over time: demand, traffic, revenue, sensor readings. It builds on regression and cross-validation, but changes the rules: order matters and the future must never leak into training.</p>
+  <p class="lead">How to predict the next values of something measured over time: demand, traffic, revenue, sensor readings. It builds on regression and cross-validation, with two new rules: order matters, and the future must never leak into training.</p>
 
   <h2 id="ts-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -11,66 +11,67 @@ Object.assign(TOPIC_CONTENT, {
       <div class="mm-branch">
         <div class="mm-title">Why it's different</div>
         <ul>
-          <li><b>Order matters</b> — rows are time-ordered; never shuffle</li>
-          <li><b>Autocorrelation</b> — today correlates with yesterday; not i.i.d.</li>
-          <li><b>Leakage</b> — future info in training; scores look great, prod fails</li>
-          <li>⚠ <b>Quiet leaks</b> — unshifted rolling means, scaler fit on all data, late-arriving features</li>
-          <li>💡 Grading a forecaster who has tomorrow's paper</li>
+          <li><b>Order matters</b> — rows are in time order; never shuffle</li>
+          <li><b>Autocorrelation</b> — today is linked to yesterday; rows are not independent</li>
+          <li><b>Leakage</b> — future info gets into training; scores look great, live fails</li>
+          <li>⚠ <b>Quiet leaks</b> — rolling mean that includes today, scaler fit on all data, late-arriving features</li>
+          <li>💡 Grading a weather forecaster who already has tomorrow's paper</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Components</div>
         <ul>
-          <li><b>Trend</b> — long-run direction</li>
-          <li><b>Seasonality</b> — fixed-period repeat (12 for monthly-yearly, 7 for daily-weekly)</li>
-          <li><b>Cycle</b> — rises/falls with no fixed period</li>
+          <li><b>Trend</b> — long-run direction (up/down)</li>
+          <li><b>Seasonality</b> — repeats on a fixed period (12 for monthly data, 7 for daily data)</li>
+          <li><b>Cycle</b> — ups and downs with no fixed period</li>
           <li><b>Noise</b> — leftover randomness</li>
-          <li><b>Additive</b> y = T+S+R (constant swing) vs <b>multiplicative</b> T×S×R (swing grows) → log it</li>
-          <li><b>Tools</b> — <code>seasonal_decompose</code>, <b>STL</b> (robust, preferred)</li>
-          <li>⚠ Centred trend uses future values: for understanding, not features</li>
+          <li><b>Additive</b> y = T+S+R (same-size swing) vs <b>multiplicative</b> T×S×R (swing grows) → take log</li>
+          <li><b>Tools</b> — <code>seasonal_decompose</code>, <b>STL</b> (handles outliers, preferred)</li>
+          <li>⚠ Centred trend uses future values: use it to understand, not as a feature</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Stationarity</div>
         <ul>
-          <li><b>Stationary</b> — constant mean, variance, autocorrelation</li>
-          <li><b>Why</b> — ARIMA learns fixed rules; rules must not drift</li>
-          <li><b>ADF</b> — H₀ unit root (non-stationary); p &lt; 0.05 → stationary</li>
+          <li><b>Stationary</b> — mean, spread and autocorrelation stay the same over time</li>
+          <li><b>Why</b> — ARIMA learns fixed rules; those rules must not change</li>
+          <li><b>ADF</b> — H₀ = non-stationary; p &lt; 0.05 → stationary</li>
           <li><b>KPSS</b> — opposite H₀ (stationary); use both if unsure</li>
           <li><b>Differencing</b> — <code>y.diff()</code> removes trend (d); <code>diff(12)</code> removes season (D)</li>
-          <li>Example: raw p=0.92 → diff(1) p=0.000</li>
-          <li>⚠ <b>Over-differencing</b> — MA coef ≈ −1 is the hint</li>
+          <li>Example: raw p=0.92 → after diff(1) p=0.000</li>
+          <li>⚠ <b>Over-differencing</b> — MA coefficient ≈ −1 is the hint</li>
+          <li>💡 Cricket: compare run rate per over, not the total score, which keeps rising</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">ACF / PACF</div>
         <ul>
-          <li><b>ACF</b> — correlation with lag k</li>
-          <li><b>PACF</b> — lag-k correlation after removing shorter lags</li>
-          <li><b>AR(p)</b> — PACF cuts off at p, ACF decays</li>
-          <li><b>MA(q)</b> — ACF cuts off at q, PACF decays</li>
-          <li><b>Spike at s, 2s</b> — seasonal term; slow ACF decay → difference more</li>
-          <li>Example: ACF spikes at 1 and 12 → SARIMA(0,1,1)(0,1,1,12) "airline model"</li>
+          <li><b>ACF</b> — correlation of the series with itself k steps back</li>
+          <li><b>PACF</b> — same, after removing the steps in between</li>
+          <li><b>AR(p)</b> — PACF stops after p, ACF fades slowly</li>
+          <li><b>MA(q)</b> — ACF stops after q, PACF fades slowly</li>
+          <li><b>Spike at s, 2s</b> — seasonal term; ACF fades very slowly → difference more</li>
+          <li>Example: ACF spikes at 1 and 12 → SARIMA(0,1,1)(0,1,1,12), the "airline model"</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Classical models</div>
         <ul>
-          <li><b>Baselines</b> — naive (last value), seasonal naive (last year), moving average; must beat these</li>
+          <li><b>Baselines</b> — naive (last value), seasonal naive (same month last year), moving average; must beat these</li>
           <li><b>ARIMA(p,d,q)</b> — p past values, d differences, q past errors</li>
-          <li><b>SARIMA</b> — + (P,D,Q,s) seasonal; <b>SARIMAX</b> — + exogenous regressors</li>
-          <li><b>Order choice</b> — ACF/PACF reading or lowest AIC (<code>auto_arima</code>)</li>
-          <li><b>Prophet</b> — curve-fit trend + seasonalities + holidays; needs <code>ds</code>, <code>y</code></li>
-          <li>Prophet good: daily business data, holidays, gaps; weak: short-term dynamics</li>
+          <li><b>SARIMA</b> — + (P,D,Q,s) seasonal part · <b>SARIMAX</b> — + outside inputs (price, holidays)</li>
+          <li><b>Choosing orders</b> — read ACF/PACF or take lowest AIC (<code>auto_arima</code>)</li>
+          <li><b>Prophet</b> — fits trend + seasonality + holidays as a curve over time; needs <code>ds</code>, <code>y</code></li>
+          <li>Prophet good: daily business data, holidays, gaps · weak: short-term ups and downs</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">ML approach</div>
         <ul>
-          <li><b>Features</b> — lags, shifted rolling stats, calendar, known-future exog</li>
-          <li><b>Rule</b> — lag ≥ horizon, or forecast recursively</li>
-          <li><b>Strategies</b> — recursive (errors compound), direct (one model per h), lags ≥ horizon</li>
-          <li>⚠ <b>Trees can't extrapolate</b> — predict y − lag (or ratio), add back</li>
+          <li><b>Features</b> — lags, shifted rolling stats, calendar, inputs known in advance</li>
+          <li><b>Rule</b> — lag ≥ horizon, or forecast step by step</li>
+          <li><b>Strategies</b> — recursive (errors pile up), direct (one model per step ahead), lags ≥ horizon</li>
+          <li>⚠ <b>Trees can't extrapolate</b> — predict y − lag (or a ratio), then add back</li>
           <li><b>Global model</b> — one LightGBM over many series wins at scale (M5)</li>
         </ul>
       </div>
@@ -78,7 +79,7 @@ Object.assign(TOPIC_CONTENT, {
         <div class="mm-title">Validation</div>
         <ul>
           <li><b>Expanding window</b> — <code>TimeSeriesSplit(n_splits, test_size)</code>; train always before test</li>
-          <li><b>Sliding window</b> — <code>max_train_size</code> when old data is stale</li>
+          <li><b>Sliding window</b> — <code>max_train_size</code> when old data is out of date</li>
           <li><b>Gap</b> — <code>gap=</code> when features arrive late</li>
           <li>⚠ Random K-fold = training on the future</li>
         </ul>
@@ -86,11 +87,11 @@ Object.assign(TOPIC_CONTENT, {
       <div class="mm-branch">
         <div class="mm-title">Metrics</div>
         <ul>
-          <li><b>MAE</b> — mean |e|, same units; <b>RMSE</b> — punishes big misses</li>
-          <li><b>MAPE</b> — mean |e/actual|; ⚠ explodes near 0, favours under-forecasts</li>
-          <li><b>sMAPE</b> — bounded 0–200%; <b>WAPE</b> — Σ|e| / Σ|a|</li>
-          <li><b>MASE</b> — MAE ÷ seasonal-naive MAE; &lt; 1 beats baseline; scale-free</li>
-          <li><b>Asymmetric cost</b> — quantile (pinball) loss, forecast P90</li>
+          <li><b>MAE</b> — mean |e|, same units · <b>RMSE</b> — punishes big misses</li>
+          <li><b>MAPE</b> — mean |e/actual|; ⚠ blows up near 0, favours low forecasts</li>
+          <li><b>sMAPE</b> — 0–200% · <b>WAPE</b> — Σ|e| / Σ|a|</li>
+          <li><b>MASE</b> — MAE ÷ seasonal-naive MAE; &lt; 1 beats the baseline; no units</li>
+          <li><b>Uneven costs</b> — quantile (pinball) loss, forecast P90</li>
           <li>Demo: SARIMA MASE 0.40, Prophet 0.35, seasonal naive 1.13</li>
         </ul>
       </div>
@@ -116,18 +117,18 @@ Object.assign(TOPIC_CONTENT, {
   <h2 id="ts-diff"><span class="num">01</span>Why Time Series Is Different</h2>
   <table class="tbl">
     <tr><th></th><th>Ordinary tabular ML</th><th>Time series</th></tr>
-    <tr><td>Row order</td><td>Irrelevant; shuffle freely</td><td>The order <em>is</em> the information</td></tr>
+    <tr><td>Row order</td><td>Doesn't matter; shuffle freely</td><td>The order <em>is</em> the information</td></tr>
     <tr><td>Rows independent?</td><td>Assumed (i.i.d.)</td><td>No: today depends on yesterday (<strong>autocorrelation</strong>)</td></tr>
     <tr><td>Validation</td><td>Random K-fold</td><td>Train on past, test on future only</td></tr>
     <tr><td>Biggest risk</td><td>Overfitting</td><td><strong>Leakage</strong>: future info sneaks into training</td></tr>
   </table>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Grading a weather forecaster with tomorrow's newspaper already on their desk. Any score they get is fake.</p>
+    <p>Grading a weather forecaster who has tomorrow's newspaper on the desk. Any score they get is fake.</p>
   </div>
   <div class="callout trap"><span class="label">Trap: quiet leakage</span>
-    <p>Not just random splits. A rolling mean that includes today, scaling fit on the whole series, or a feature only known after the fact (final monthly revenue) all leak.</p>
+    <p>Random splits are not the only leak. A rolling mean that includes today, a scaler fit on the whole series, or a feature known only later (final monthly revenue) all leak too.</p>
   </div>
-  <p>Running example for this page: 10 years of synthetic monthly sales (trend 0.8/month, yearly cycle ±15, noise σ=4).</p>
+  <p>Example used on this page: 10 years of made-up monthly sales (grows 0.8/month, yearly wave ±15, noise σ=4).</p>
   <div class="fx" data-lang="py">import numpy as np, pandas as pd
 rng = np.random.default_rng(42)
 t = np.arange(120)
@@ -141,6 +142,10 @@ print(y.head(3).round(1))</div>
 Freq: MS, Name: sales, dtype: float64</div>
 
   <h2 id="ts-decomp"><span class="num">02</span>Components &amp; Decomposition</h2>
+  <p><strong>Decomposition</strong> splits a series into a slow trend, a repeating season, and leftover noise. Seeing the parts tells you which model and which features you need.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>An ice-cream shop's sales. Trend: the town grows every year. Season: every summer is high, every winter low. Noise: a random rainy Sunday.</p>
+  </div>
   <figure class="viz"><svg viewBox="0 0 560 300" width="560">
 <text x="4" y="40">observed</text>
 <line x1="90" y1="70" x2="550" y2="70" stroke="currentColor" opacity=".2"/>
@@ -157,9 +162,9 @@ Freq: MS, Name: sales, dtype: float64</div>
 </svg><figcaption>First 6 years of the series split into its parts. Observed = trend + seasonal + residual.</figcaption></figure>
   <div class="cards">
     <div><b>Trend</b><p>Long-run direction.</p><small>Growing user base</small></div>
-    <div><b>Seasonality</b><p>A pattern that repeats with a fixed period.</p><small>December spike, weekend dip</small></div>
+    <div><b>Seasonality</b><p>Repeats on a fixed period.</p><small>Diwali spike, weekend dip</small></div>
     <div><b>Cycle</b><p>Rises and falls with <em>no</em> fixed period.</p><small>Business cycles, recessions</small></div>
-    <div><b>Noise</b><p>What's left; unpredictable.</p><small>Should look like random scatter</small></div>
+    <div><b>Noise</b><p>What's left; can't be predicted.</p><small>Should look like random scatter</small></div>
   </div>
   <div class="fx" data-lang="py">from statsmodels.tsa.seasonal import seasonal_decompose
 dec = seasonal_decompose(y, model="additive", period=12)
@@ -172,22 +177,35 @@ pd.DataFrame({"trend": dec.trend, "seasonal": dec.seasonal,
     <tr><td>2015-09-01</td><td>106.4</td><td>-13.2</td><td>0.1</td></tr>
   </table>
   <ul>
-    <li><strong>Additive</strong> (y = T + S + R): seasonal swing has constant size.</li>
-    <li><strong>Multiplicative</strong> (y = T × S × R): swing grows with the level. Log-transform turns it additive.</li>
-    <li><strong>STL</strong> (<code>statsmodels.tsa.seasonal.STL</code>): robust to outliers, lets seasonality drift. Prefer it in practice.</li>
+    <li><strong>Additive</strong> (y = T + S + R): the seasonal swing stays the same size.</li>
+    <li><strong>Multiplicative</strong> (y = T × S × R): the swing grows as the level grows. Taking log makes it additive.</li>
+    <li><strong>STL</strong> (<code>statsmodels.tsa.seasonal.STL</code>): handles outliers and lets seasonality slowly change. Prefer it in practice.</li>
   </ul>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>The centred moving-average trend uses 6 future months, so its first and last 6 values are NaN. Decomposition is for <em>understanding</em>, not a leak-free feature.</p>
+    <p>The centred moving-average trend uses 6 future months, so its first and last 6 values are NaN. Use decomposition to <em>understand</em> the data, not as a feature.</p>
   </div>
 
   <h2 id="ts-stat"><span class="num">03</span>Stationarity &amp; Differencing</h2>
   <div class="cards">
-    <div><b>Stationary</b><p>Mean, variance and autocorrelation don't change over time.</p><small>White noise, daily returns</small></div>
-    <div><b>Non-stationary</b><p>Has trend, seasonality or changing variance.</p><small>Prices, sales, population</small></div>
+    <div><b>Stationary</b><p>Mean, spread and autocorrelation don't change over time.</p><small>White noise, daily returns</small></div>
+    <div><b>Non-stationary</b><p>Has trend, seasonality or changing spread.</p><small>Prices, sales, population</small></div>
   </div>
-  <p>ARIMA-style models assume stationarity: the past only teaches you the future if the rules stay the same.</p>
+  <figure class="viz"><svg viewBox="0 0 520 120" width="520">
+    <text x="10" y="14">non-stationary (trend)</text>
+    <line x1="10" y1="100" x2="240" y2="100" stroke="currentColor" opacity="0.4"/>
+    <polyline points="10,92 30,88 50,90 70,80 90,82 110,70 130,72 150,60 170,62 190,48 210,50 230,36" fill="none" class="sr" stroke-width="2"/>
+    <line x1="10" y1="96" x2="230" y2="40" class="sr" stroke-dasharray="4 3" opacity="0.6"/>
+    <text x="270" y="14">after diff(1): stationary</text>
+    <line x1="270" y1="64" x2="500" y2="64" class="sg" stroke-dasharray="4 3"/>
+    <polyline points="270,62 290,70 310,56 330,72 350,58 370,66 390,54 410,70 430,60 450,68 470,56 490,66" fill="none" class="sg" stroke-width="2"/>
+    <text x="385" y="100" text-anchor="middle" class="tm">mean stays flat, swing same size</text>
+  </svg><figcaption>Left: the average keeps rising, so old data describes a different level. Right: the month-to-month change wobbles around one fixed mean.</figcaption></figure>
+  <p>ARIMA-type models assume stationarity: the past can teach the future only if the rules stay the same. <strong>Differencing</strong> (today − yesterday) is the usual fix.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>In a T20 match the total score always climbs, so "120" means nothing alone. Runs per over moves up and down around a steady level. Differencing turns the total into runs per over.</p>
+  </div>
   <div class="flow"><span>Raw series</span><span>Log (fix growing variance)</span><span>diff(1) (remove trend)</span><span>diff(12) (remove season)</span><span>ADF test</span></div>
-  <p><strong>ADF test</strong> (Augmented Dickey-Fuller): H₀ = "series has a unit root" (non-stationary). Small p-value → reject → stationary.</p>
+  <p><strong>ADF test</strong> (Augmented Dickey-Fuller): H₀ = "series has a unit root", meaning non-stationary. Small p-value → reject H₀ → stationary.</p>
   <div class="fx" data-lang="py">from statsmodels.tsa.stattools import adfuller
 for name, s in [("raw", y), ("diff(1)", y.diff().dropna()),
                 ("diff(1)+diff(12)", y.diff().diff(12).dropna())]:
@@ -196,16 +214,20 @@ for name, s in [("raw", y), ("diff(1)", y.diff().dropna()),
   <div class="fx" data-lang="text">raw                ADF=  -0.31  p=0.9248
 diff(1)            ADF=  -7.54  p=0.0000
 diff(1)+diff(12)   ADF=  -5.03  p=0.0000</div>
-  <p>Raw: can't reject (p=0.92), so non-stationary. One difference fixes it. The number of differences becomes <code>d</code>; seasonal differences become <code>D</code>.</p>
+  <p>Raw: p=0.92, can't reject, so non-stationary. One difference fixes it. The number of differences is <code>d</code>; seasonal differences are <code>D</code>.</p>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>Over-differencing adds noise. Hint: an MA coefficient near −1 (we get −0.985 below). KPSS test has the opposite H₀ (stationary); use both when unsure.</p>
+    <p>Differencing too many times adds noise. Hint: an MA coefficient near −1 (we get −0.985 below). The KPSS test has the opposite H₀ (stationary); use both when unsure.</p>
   </div>
 
   <h2 id="ts-acf"><span class="num">04</span>ACF &amp; PACF</h2>
   <ul>
     <li><strong>ACF</strong> (autocorrelation function): correlation of the series with itself k steps back.</li>
-    <li><strong>PACF</strong> (partial ACF): the same, after removing the effect of the lags in between.</li>
+    <li><strong>PACF</strong> (partial ACF): the same, after removing the effect of the steps in between.</li>
   </ul>
+  <p>They tell you how far back the memory goes, which sets the p and q of ARIMA.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Your mood today is linked to yesterday's and, through yesterday, to the day before. ACF counts both links. PACF asks: does the day before yesterday matter <em>directly</em>, once yesterday is known?</p>
+  </div>
   <figure class="viz"><svg viewBox="0 0 560 170" width="560">
 <rect x="40" y="67" width="510" height="27" class="fs"/>
 <line x1="40" y1="80" x2="550" y2="80" stroke="currentColor"/>
@@ -253,17 +275,18 @@ print("PACF", np.round(pacf(d, nlags=13)[1:], 2))</div>
   0.19]
 PACF [-0.53 -0.31 -0.21 -0.3  -0.13 -0.05 -0.26 -0.21 -0.29 -0.25  0.19 -0.22
  -0.33]</div>
-  <p>ACF cuts off after lag 1 plus a spike at 12; PACF decays. Reading: MA(1) and seasonal MA(1), i.e. SARIMA(0,1,1)(0,1,1,12), the classic "airline model". Plot with <code>plot_acf</code> / <code>plot_pacf</code> from <code>statsmodels.graphics.tsaplots</code>.</p>
+  <p>ACF stops after lag 1, plus a spike at 12; PACF fades slowly. Reading: MA(1) and seasonal MA(1), so SARIMA(0,1,1)(0,1,1,12), the classic "airline model". Plot with <code>plot_acf</code> / <code>plot_pacf</code> from <code>statsmodels.graphics.tsaplots</code>.</p>
 
   <h2 id="ts-models"><span class="num">05</span>Baselines, ARIMA, Prophet</h2>
   <h3>Baselines first, always</h3>
   <div class="cards">
     <div><b>Naive</b><p>Forecast = last value.</p><small>Strong for random walks (stock prices)</small></div>
     <div><b>Seasonal naive</b><p>Forecast = value one season ago.</p><small>"Same month last year"</small></div>
-    <div><b>Moving average</b><p>Forecast = mean of last k values.</p><small>Smooths noise, lags trends</small></div>
+    <div><b>Moving average</b><p>Forecast = mean of last k values.</p><small>Smooths noise, slow to follow trends</small></div>
   </div>
-  <p>A fancy model that can't beat seasonal naive isn't worth shipping.</p>
+  <p>A fancy model that can't beat seasonal naive is not worth shipping.</p>
   <h3>ARIMA(p, d, q) and SARIMA</h3>
+  <p><strong>ARIMA</strong> predicts the next value from recent values and recent mistakes, after differencing. Example: "next month = this month + 0.6 × last month's change − 0.3 × last month's error".</p>
   <table class="tbl">
     <tr><th>Letter</th><th>Part</th><th>Meaning</th></tr>
     <tr><td><strong>p</strong></td><td>AR (autoregressive)</td><td>How many past <em>values</em> feed the prediction</td></tr>
@@ -284,9 +307,9 @@ dtype: float64
 2024-01-01        175.1        188.4
 2024-02-01        186.6        199.8
 2024-03-01        194.2        207.5</div>
-  <p>You get prediction intervals for free. Choose orders by ACF/PACF reading, or by lowest AIC (<code>pmdarima.auto_arima</code> automates it). Add external regressors (price, holidays) through <code>exog</code>: that's the X in SARIMAX.</p>
+  <p>You get prediction intervals for free. Pick orders from ACF/PACF, or by lowest AIC (<code>pmdarima.auto_arima</code> does this). Add outside inputs (price, holidays) through <code>exog</code>: that is the X in SARIMAX.</p>
   <h3>Prophet</h3>
-  <p>Meta's library: fits y = trend + yearly/weekly seasonality + holidays as a curve over time, not over lags.</p>
+  <p>Meta's library. It fits y = trend + yearly/weekly seasonality + holidays as a smooth curve over the calendar. It does not use lags.</p>
   <div class="fx" data-lang="py">from prophet import Prophet
 df = train.reset_index(); df.columns = ["ds", "y"]     # Prophet needs these names
 p = Prophet(yearly_seasonality=True, weekly_seasonality=False,
@@ -294,12 +317,15 @@ p = Prophet(yearly_seasonality=True, weekly_seasonality=False,
 future = p.make_future_dataframe(periods=12, freq="MS")
 fc = p.predict(future)[["ds", "yhat", "yhat_lower", "yhat_upper"]]</div>
   <ul>
-    <li><strong>Good at</strong>: daily business data, multiple seasonalities, holidays, missing days, changepoints in trend. Easy for analysts.</li>
-    <li><strong>Weak at</strong>: short-term dynamics (no lags), noisy data. Often beaten by a tuned GBM or even seasonal naive.</li>
+    <li><strong>Good at</strong>: daily business data, several seasonalities, holidays, missing days, sudden changes in trend. Easy for analysts.</li>
+    <li><strong>Weak at</strong>: short-term ups and downs (no lags), noisy data. Often beaten by a tuned GBM or even seasonal naive.</li>
   </ul>
 
   <h2 id="ts-ml"><span class="num">06</span>ML with Lag Features</h2>
-  <p>Turn the series into a regular table: each row is a time point; columns are things known <em>before</em> that time.</p>
+  <p>Turn the series into a normal table: each row is a time point; columns are things known <em>before</em> that time. Then any regressor (LightGBM, XGBoost) can learn it.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A kirana owner ordering milk for next Monday looks at last Monday, the Monday before, and whether there is a festival. Those are lag and calendar features.</p>
+  </div>
   <table class="tbl">
     <tr><th>Feature type</th><th>Example</th><th>Leak check</th></tr>
     <tr><td>Lags</td><td><code>y.shift(12)</code>, <code>y.shift(13)</code></td><td>Lag ≥ forecast horizon</td></tr>
@@ -317,17 +343,17 @@ g = lgb.LGBMRegressor(n_estimators=200, learning_rate=0.05, min_child_samples=5,
 # Trees can't extrapolate a trend, so predict the year-over-year change instead
 g.fit(Xtr, (y - y.shift(12)).loc[Xtr.index])
 pred = g.predict(Xte) + Xte["lag12"].values</div>
-  <p>Result on the holdout (full table in Build It): predicting raw y gives MAE 6.06; predicting the change gives 4.42.</p>
+  <p>On the holdout (full table in Build It): predicting raw y gives MAE 6.06; predicting the change gives 4.42.</p>
   <div class="callout trap"><span class="label">Trap: trees can't extrapolate</span>
-    <p>A tree predicts averages of training leaves, so it never exceeds the highest y it has seen. With a trend, model the difference or ratio and add it back.</p>
+    <p>A tree predicts averages of training rows, so it never goes above the highest y it has seen. With a trend, predict the change or ratio, then add it back.</p>
   </div>
   <div class="cards">
-    <div><b>Recursive</b><p>One 1-step model; feed predictions back as lags.</p><small>Errors compound</small></div>
-    <div><b>Direct</b><p>One model per horizon h.</p><small>More models, no compounding</small></div>
+    <div><b>Recursive</b><p>One 1-step model; feed its predictions back as lags.</p><small>Errors pile up</small></div>
+    <div><b>Direct</b><p>One model per step ahead h.</p><small>More models, errors don't pile up</small></div>
     <div><b>Lags ≥ horizon</b><p>One model, only lags you'll have.</p><small>What we did above</small></div>
   </div>
   <div class="callout intu"><span class="label">Industry note</span>
-    <p>For many related series (sales per store × item), a single global LightGBM across all series usually wins. That's how the M5 forecasting competition was won.</p>
+    <p>For many related series (sales per store × item), one shared LightGBM across all series usually wins. That is how the M5 forecasting competition was won.</p>
   </div>
 
   <h2 id="ts-cv"><span class="num">07</span>Time-Series Cross-Validation</h2>
@@ -340,7 +366,7 @@ pred = g.predict(Xte) + Xte["lag12"].values</div>
 <text x="0" y="38">fold 0</text><text x="0" y="66">fold 1</text><text x="0" y="94">fold 2</text><text x="0" y="122">fold 3</text>
 <rect x="60" y="136" width="12" height="10" class="fb sb"/><text x="78" y="145" class="tm">train</text>
 <rect x="130" y="136" width="12" height="10" class="fr sr"/><text x="148" y="145" class="tm">test (12 months)</text>
-</svg><figcaption>Expanding window: training always ends before the test block starts. Each fold moves the cut-off forward.</figcaption></figure>
+</svg><figcaption>Expanding window: training always ends before the test block starts. Each fold moves the cut-off forward, like re-running last year's forecast every month.</figcaption></figure>
   <div class="fx" data-lang="py">from sklearn.model_selection import TimeSeriesSplit
 for i, (tr, te) in enumerate(TimeSeriesSplit(n_splits=4, test_size=12).split(y)):
     print(f"fold {i}: train 0-{tr[-1]}  ({len(tr)})   test {te[0]}-{te[-1]}")</div>
@@ -350,20 +376,20 @@ fold 2: train 0-95  (96)   test 96-107
 fold 3: train 0-107  (108)   test 108-119</div>
   <ul>
     <li><strong>Expanding window</strong>: train grows. Default choice.</li>
-    <li><strong>Sliding window</strong> (<code>max_train_size=</code>): fixed-length train. Use when old data no longer reflects today.</li>
+    <li><strong>Sliding window</strong> (<code>max_train_size=</code>): train length fixed. Use when old data no longer looks like today.</li>
     <li><strong>Gap</strong> (<code>gap=</code>): skip rows between train and test when features take time to arrive.</li>
   </ul>
   <div class="callout trap"><span class="label">Trap: shuffled K-fold</span>
-    <p>Shuffled KFold put row 2 in the test set while training on rows up to 118. The model "remembers" the future, so CV scores look great and production fails.</p>
+    <p>Shuffled KFold put row 2 in the test set while training on rows up to 118. The model has seen the future, so CV scores look great and production fails.</p>
   </div>
 
   <h2 id="ts-metrics"><span class="num">08</span>Forecast Metrics</h2>
   <table class="tbl">
     <tr><th>Metric</th><th>Formula idea</th><th>Use when</th><th>Watch out</th></tr>
-    <tr><td><strong>MAE</strong></td><td>mean |error|</td><td>Same units as y, easy to explain</td><td>Scale-dependent</td></tr>
-    <tr><td><strong>RMSE</strong></td><td>√ mean error²</td><td>Big misses are costly</td><td>Dominated by outliers</td></tr>
-    <tr><td><strong>MAPE</strong></td><td>mean |error / actual| × 100</td><td>Business wants "% off"</td><td>Explodes near 0; favours under-forecasts</td></tr>
-    <tr><td><strong>sMAPE</strong></td><td>|error| / mean(|actual|, |forecast|)</td><td>Bounded % (0–200)</td><td>Still odd near 0</td></tr>
+    <tr><td><strong>MAE</strong></td><td>mean |error|</td><td>Same units as y, easy to explain</td><td>Can't compare series of different size</td></tr>
+    <tr><td><strong>RMSE</strong></td><td>√ mean error²</td><td>Big misses are costly</td><td>Outliers dominate</td></tr>
+    <tr><td><strong>MAPE</strong></td><td>mean |error / actual| × 100</td><td>Business wants "% off"</td><td>Blows up near 0; favours low forecasts</td></tr>
+    <tr><td><strong>sMAPE</strong></td><td>|error| / mean(|actual|, |forecast|)</td><td>% capped at 0–200</td><td>Still odd near 0</td></tr>
     <tr><td><strong>MASE</strong></td><td>MAE ÷ MAE of seasonal naive (on train)</td><td>Comparing across series</td><td>&lt; 1 means you beat the baseline</td></tr>
   </table>
   <div class="fx" data-lang="py">a = np.array([100, 2, 50]); f = np.array([90, 6, 55])
@@ -373,14 +399,14 @@ print("sMAPE:", round(100*np.mean(2*np.abs(a-f)/(np.abs(a)+np.abs(f))), 1))</div
   <div class="fx" data-lang="text">abs errors: [10  4  5]  APE%: [ 10. 200.  10.]  MAPE: 73.3
 sMAPE: 40.0</div>
   <div class="callout trap"><span class="label">Trap: MAPE</span>
-    <p>Being 4 units off on a day that sold 2 dominates the score. Also, under-forecasting maxes out at 100% but over-forecasting is unbounded, so minimising MAPE pushes forecasts low.</p>
+    <p>Being 4 units off on a day that sold 2 swamps the score. Also, a low forecast can be at most 100% off, but a high one has no limit, so chasing low MAPE pushes forecasts down.</p>
   </div>
   <div class="callout intu"><span class="label">Pick the metric from the cost</span>
-    <p>Stock-outs cost more than overstock? Use a quantile (pinball) loss and forecast the 90th percentile, not the mean.</p>
+    <p>Running out of stock costs more than extra stock? Use a quantile (pinball) loss and forecast the 90th percentile, not the mean.</p>
   </div>
 
   <h2 id="ts-build"><span class="num">09</span>Build It: The Leaderboard</h2>
-  <p>Every model above, trained on 108 months, scored on the held-out final 12. All numbers are real.</p>
+  <p>Every model above, trained on 108 months, scored on the last 12 months kept aside.</p>
   <div class="fx" data-lang="py">def mae(a, f):  return np.mean(np.abs(a - f))
 def rmse(a, f): return np.sqrt(np.mean((a - f)**2))
 def mape(a, f): return 100*np.mean(np.abs((a - f)/a))
@@ -402,20 +428,20 @@ res = {"naive (last value)": np.repeat(train.iloc[-1], 12),
     <tr><td>LightGBM (predict y − lag12)</td><td>4.42</td><td>6.02</td><td>2.32</td><td>0.46</td></tr>
   </table>
   <ul>
-    <li>Seasonal naive misses the trend (one year of growth ≈ 9.6), so MASE &gt; 1 on the holdout.</li>
-    <li>Prophet and SARIMA win here because the data <em>is</em> smooth trend + sine. Real, messy, multi-series data often flips this.</li>
+    <li>Seasonal naive misses one year of growth (≈ 9.6), so MASE &gt; 1 on the holdout.</li>
+    <li>Prophet and SARIMA win here because the data <em>is</em> a smooth trend + sine wave. Real, messy, many-series data often flips this.</li>
   </ul>
 
   <h2 id="ts-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>Why can't you use random K-fold cross-validation on time series?</summary><div class="qa-body">Rows are correlated in time, so a shuffled split trains on points right after (and before) each test point. The model effectively sees the future, giving optimistic scores that collapse in production. Use expanding-window splits where training always ends before testing begins.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is stationarity and why does ARIMA need it?</summary><div class="qa-body">A stationary series has constant mean, variance and autocorrelation over time. ARIMA learns fixed coefficients linking past to present; that only generalises if the relationship doesn't change. The "I" in ARIMA handles non-stationarity by differencing first.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why can't you use random K-fold cross-validation on time series?</summary><div class="qa-body">Rows are linked in time, so a shuffled split trains on points just after (and before) each test point. The model sees the future, so scores look great and fall apart in production. Use expanding-window splits where training always ends before testing starts.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is stationarity and why does ARIMA need it?</summary><div class="qa-body">A stationary series keeps the same mean, spread and autocorrelation over time. ARIMA learns fixed coefficients linking past to present; that only works on the future if the link doesn't change. The "I" in ARIMA handles non-stationary data by differencing first.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Explain p, d and q in ARIMA(2,1,0).</summary><div class="qa-body">d = 1: difference once. p = 2: predict the differenced value from its previous two values (AR terms). q = 0: no past forecast errors (MA terms) used.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>The PACF has significant spikes at lags 1 and 2 then drops to zero; the ACF decays slowly. Which model?</summary><div class="qa-body">AR(2). PACF cutting off after lag p is the AR signature; the slowly decaying ACF confirms it.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Your LightGBM forecast flatlines below recent values on a growing series. Why, and the fix?</summary><div class="qa-body">Trees can't predict outside the target range they were trained on, so they can't extrapolate a trend. Predict the change (y − lag, or a ratio) or detrend first, then add the trend back. Or blend with a linear/statistical model.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>You forecast 7 days ahead. Can you use lag_1 as a feature?</summary><div class="qa-body">Only with recursive forecasting (feeding your own predictions back in), where errors compound. Otherwise use lags ≥ 7, or train a separate direct model per horizon. Using true lag_1 when evaluating day 7 is leakage.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Actuals = [100, 2, 50], forecast = [90, 6, 55]. What's the MAPE, and what's wrong with it?</summary><div class="qa-body">APEs are 10%, 200%, 10%, so MAPE = 73.3%. One tiny-volume day dominates even though it was only 4 units off. Use MAE, a weighted MAPE (sum|e| / sum|a|), or MASE instead.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does MASE = 1.13 mean?</summary><div class="qa-body">The model's MAE is 13% worse than the seasonal-naive forecast's in-sample MAE. Under 1 beats the baseline. It is scale-free, so you can average it across thousands of series.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Name three ways a time-series feature pipeline can leak, other than random splits.</summary><div class="qa-body">(1) Rolling features not shifted, so they include the current target. (2) Scaler or imputer fit on the full series, including the test period. (3) Features revised or published after the prediction time (final revenue, late-arriving data). Also target encoding computed over all time.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Your LightGBM forecast flatlines below recent values on a growing series. Why, and the fix?</summary><div class="qa-body">Trees can't predict outside the range of y they were trained on, so they can't follow a trend upward. Predict the change (y − lag, or a ratio) or remove the trend first, then add it back. Or blend with a linear/statistical model.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>You forecast 7 days ahead. Can you use lag_1 as a feature?</summary><div class="qa-body">Only with recursive forecasting (feeding your own predictions back in), where errors pile up. Otherwise use lags ≥ 7, or train a separate direct model per step ahead. Using the true lag_1 when scoring day 7 is leakage.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Actuals = [100, 2, 50], forecast = [90, 6, 55]. What's the MAPE, and what's wrong with it?</summary><div class="qa-body">Percentage errors are 10%, 200%, 10%, so MAPE = 73.3%. One tiny day swamps it even though it was only 4 units off. Use MAE, WAPE (sum|e| / sum|a|), or MASE instead.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does MASE = 1.13 mean?</summary><div class="qa-body">The model's MAE is 13% worse than the seasonal-naive forecast's in-sample MAE. Under 1 beats the baseline. It has no units, so you can average it across thousands of series.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Name three ways a time-series feature pipeline can leak, other than random splits.</summary><div class="qa-body">(1) Rolling features not shifted, so they include today's target. (2) Scaler or imputer fit on the full series, including the test period. (3) Features revised or published after prediction time (final revenue, late data). Also target encoding computed over all time.</div></details>
 </main>`
 });

@@ -2,7 +2,7 @@
 Object.assign(TOPIC_CONTENT, {
   "ml_evaluation": `<main>
   <h1>Model Evaluation</h1>
-  <p class="lead">How to tell whether a model is actually good: the confusion matrix and the metrics built on it, ROC vs PR curves on imbalanced data, log loss and calibration, threshold tuning, regression metrics, and turning business costs into a metric. Builds on ML Basics and Core Concepts.</p>
+  <p class="lead">How to tell if a model is really good: the confusion matrix and its metrics, ROC vs PR curves when one class is rare, log loss and calibration, choosing a threshold, regression metrics, and turning business costs into a metric. Builds on ML Basics and Core Concepts.</p>
 
   <h2 id="me-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -12,71 +12,73 @@ Object.assign(TOPIC_CONTENT, {
         <div class="mm-title">Confusion matrix</div>
         <ul>
           <li><b>TP / FP / FN / TN</b> — rows = actual, columns = predicted</li>
-          <li><b>FP</b> = false alarm (Type I); <b>FN</b> = miss (Type II)</li>
-          <li><b>Accuracy</b> = (TP+TN)/all — ⚠ useless when imbalanced</li>
-          <li>Demo 2.5% positives: always-negative = 97.5% acc, 0 recall</li>
+          <li><b>FP</b> = false alarm (Type I) · <b>FN</b> = miss (Type II)</li>
+          <li><b>Accuracy</b> = (TP+TN)/all — ⚠ useless when one class is rare</li>
+          <li>Demo, 2.5% fraud: "always legit" = 97.5% accuracy, catches 0 frauds</li>
           <li>sklearn: <code>confusion_matrix(y, pred).ravel()</code> → tn, fp, fn, tp</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Precision · recall · F1</div>
         <ul>
-          <li><b>Precision</b> = TP/(TP+FP) — "when I alarm, am I right?"</li>
+          <li><b>Precision</b> = TP/(TP+FP) — "when I raise an alarm, am I right?"</li>
           <li><b>Recall / TPR / sensitivity</b> = TP/(TP+FN) — "how many did I catch?"</li>
-          <li><b>Specificity</b> = TN/(TN+FP); <b>FPR</b> = 1 − specificity</li>
-          <li><b>F1</b> = harmonic mean; <b>Fβ</b>: β &gt; 1 favours recall (F2), β &lt; 1 precision</li>
-          <li>Favour precision: spam filter, recommendations. Favour recall: cancer, fraud, failures</li>
-          <li>💡 Fishing net: recall = share of fish caught, precision = share of the catch that is fish</li>
+          <li><b>Specificity</b> = TN/(TN+FP) · <b>FPR</b> = 1 − specificity</li>
+          <li><b>F1</b> = harmonic mean of P and R · <b>Fβ</b>: β &gt; 1 favours recall (F2)</li>
+          <li>Precision first: spam filter, recommendations. Recall first: cancer, fraud, machine failure</li>
+          <li>💡 Fishing net: recall = share of fish caught; precision = share of catch that is fish</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">ROC vs PR</div>
         <ul>
-          <li><b>ROC</b> — TPR vs FPR over all thresholds; <b>AUC</b> = P(random pos scored above random neg)</li>
-          <li><b>PR curve</b> — precision vs recall; <b>AP</b> summarises it</li>
-          <li>Random: ROC-AUC 0.5; AP = prevalence</li>
-          <li>ROC ignores prevalence: AUC 0.83–0.84 at 50% and 2.5% positives; AP 0.878 → 0.576</li>
+          <li><b>ROC</b> — TPR vs FPR as the threshold slides · <b>AUC</b> = chance a random positive scores above a random negative</li>
+          <li><b>PR curve</b> — precision vs recall · <b>AP</b> = its summary</li>
+          <li>Random model: ROC-AUC 0.5; AP = positive rate</li>
+          <li>ROC ignores how rare positives are: AUC ~0.83 at 50% and 2.5% positives; AP 0.878 → 0.576</li>
           <li>⚠ Rare positives: FPR 2.5% yet 62% of alerts false → use PR / AP when positives &lt; ~10%</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Log loss &amp; calibration</div>
         <ul>
-          <li><b>Log loss</b> = −mean(y log p + (1−y) log(1−p)); p=0.9→0.105, p=0.01→4.6</li>
-          <li>Punishes confident mistakes; the training loss of logistic regression and nets</li>
-          <li><b>Calibrated</b> — "0.8" happens 80% of the time; check with <code>calibration_curve</code></li>
-          <li><b>Brier</b> = mean((p − y)²), lower better</li>
-          <li>LogReg ≈ calibrated; Naive Bayes overconfident; RF under-confident (pulled to middle)</li>
+          <li><b>Log loss</b> = −mean(y log p + (1−y) log(1−p)); p=0.9 → 0.105, p=0.01 → 4.6</li>
+          <li>Punishes sure-but-wrong answers; training loss of logistic regression and nets</li>
+          <li><b>Calibrated</b> — "0.8" comes true 80% of the time; check with <code>calibration_curve</code></li>
+          <li><b>Brier</b> = mean((p − y)²), lower is better</li>
+          <li>LogReg ≈ calibrated · Naive Bayes overconfident · RF under-confident</li>
           <li>Fix: <code>CalibratedClassifierCV</code> sigmoid (Platt) or isotonic (more data)</li>
+          <li>💡 A weather app whose "70% rain" days really rain 7 times in 10</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Threshold tuning</div>
         <ul>
           <li>0.5 is a default, not a decision; tune on validation, never test</li>
-          <li><b>Constraint</b> — "recall ≥ 0.6, best precision" via <code>precision_recall_curve</code></li>
-          <li><b>Cost</b> — min(C_FN·FN + C_FP·FP); calibrated theory t* = C_FP/(C_FP + C_FN)</li>
+          <li><b>Rule-based</b> — "recall ≥ 0.6, best precision" via <code>precision_recall_curve</code></li>
+          <li><b>Cost-based</b> — min(C_FN·FN + C_FP·FP); theory t* = C_FP/(C_FP + C_FN)</li>
           <li>Demo: FN 500, FP 20 → cost 80,620 at 0.5 vs 53,960 at 0.08</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Regression metrics</div>
         <ul>
-          <li><b>MAE</b> — avg miss in units; robust</li>
-          <li><b>RMSE</b> — punishes big misses; RMSE ≫ MAE means a few huge errors</li>
-          <li><b>R²</b> = 1 − SS_res/SS_tot; 0 = predict the mean; can go negative (−2.0 demo)</li>
-          <li><b>MAPE</b> — % error, ⚠ explodes near y = 0 (4.6% → 15.2% from one 0.5 value)</li>
-          <li><b>sMAPE</b> (bounded 0–200%), <b>WAPE</b> = Σ|e|/Σ|y| (volume-weighted, safe)</li>
+          <li><b>MAE</b> — average miss, in units; calm with outliers</li>
+          <li><b>RMSE</b> — punishes big misses; RMSE ≫ MAE → a few huge errors</li>
+          <li><b>R²</b> = 1 − SS_res/SS_tot; 0 = same as predicting the mean; can go negative (−2.0 demo)</li>
+          <li><b>MAPE</b> — % error · ⚠ blows up near y = 0 (4.6% → 15.2% from one 0.5 value)</li>
+          <li><b>sMAPE</b> (0–200%) · <b>WAPE</b> = Σ|e|/Σ|y| (weighted by volume, safe)</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Business metrics</div>
         <ul>
-          <li>ML metrics are proxies; write down what each FP and FN costs</li>
-          <li>Fraud AUC treats a ₹100 and a ₹10 lakh miss equally → value-weight errors</li>
-          <li>Load-forecast MAPE weights 2 am like 6 pm peak → weight by impact</li>
-          <li>Recommender CTR ≠ satisfaction → track retention</li>
-          <li>Offline metric picks candidates; the A/B test decides</li>
+          <li>ML metrics are stand-ins; write down what each FP and FN costs</li>
+          <li>Fraud AUC treats a ₹100 miss like a ₹10 lakh miss → weight by value</li>
+          <li>Load MAPE weights 2 am like the 6 pm peak → weight by impact</li>
+          <li>Recommender CTR ≠ happy users → track retention</li>
+          <li>Offline metric shortlists; the A/B test decides</li>
+          <li>💡 Smoke alarm: nobody tunes it for accuracy</li>
         </ul>
       </div>
     </div>
@@ -97,6 +99,10 @@ Object.assign(TOPIC_CONTENT, {
   </div>
 
   <h2 id="me-cm"><span class="num">01</span>Confusion Matrix</h2>
+  <p>A <strong>confusion matrix</strong> is a 2×2 count of right and wrong answers, split by type. One accuracy number hides <em>which</em> mistakes happen; this table shows them.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Airport metal detector. Beeps on a belt buckle = false positive. Stays silent on a knife = false negative. Both are "wrong", but one is far worse.</p>
+  </div>
   <figure class="viz"><svg viewBox="0 0 560 230" width="560">
     <text x="280" y="16" text-anchor="middle" class="tm">predicted</text>
     <text x="220" y="34" text-anchor="middle">0 (legit)</text><text x="340" y="34" text-anchor="middle">1 (fraud)</text>
@@ -110,7 +116,7 @@ Object.assign(TOPIC_CONTENT, {
     <text x="412" y="142" class="tb">recall = 88 / 249</text><text x="412" y="158" class="tb">= 0.353</text>
     <text x="160" y="204" class="tb">precision = 88 / (88 + 6) = 0.936</text>
     <text x="160" y="222" class="tm">accuracy = (9,745 + 88) / 10,000 = 0.983</text>
-  </svg><figcaption>Logistic regression on 10,000 test rows with 2.5% fraud, threshold 0.5. High accuracy, yet 161 of 249 frauds slip through.</figcaption></figure>
+  </svg><figcaption>Logistic regression on 10,000 test rows, 2.5% fraud, threshold 0.5. Accuracy is high, yet 161 of 249 frauds slip through.</figcaption></figure>
   <div class="fx" data-lang="py">from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
@@ -137,7 +143,7 @@ TN FP FN TP = 9745 6 161 88
 acc=0.983 precision=0.936 recall=0.353 F1=0.513 F2=0.404
 ROC-AUC=0.837  PR-AUC(AP)=0.576</div>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>A model that never predicts fraud scores 97.5% accuracy here. With any imbalance, report the confusion matrix, precision/recall (or F1/Fβ) and PR-AUC, never accuracy alone.</p>
+    <p>A model that never says "fraud" gets 97.5% accuracy here. When classes are uneven, report the confusion matrix, precision/recall (or F1/Fβ) and PR-AUC, never accuracy alone.</p>
   </div>
 
   <h2 id="me-prf"><span class="num">02</span>Precision, Recall, F1</h2>
@@ -146,21 +152,32 @@ ROC-AUC=0.837  PR-AUC(AP)=0.576</div>
     <tr><td><strong>Precision</strong></td><td>TP / (TP + FP)</td><td>When I flag, how often am I right?</td><td>0.936</td></tr>
     <tr><td><strong>Recall</strong> (TPR, sensitivity)</td><td>TP / (TP + FN)</td><td>Of all real positives, how many did I catch?</td><td>0.353</td></tr>
     <tr><td><strong>Specificity</strong> (TNR)</td><td>TN / (TN + FP)</td><td>Of real negatives, how many did I clear?</td><td>0.999</td></tr>
-    <tr><td><strong>F1</strong></td><td>2PR / (P + R)</td><td>Balance of both (harmonic mean punishes the weak one)</td><td>0.513</td></tr>
+    <tr><td><strong>F1</strong></td><td>2PR / (P + R)</td><td>Balance of both (harmonic mean drags towards the weaker one)</td><td>0.513</td></tr>
     <tr><td><strong>Fβ</strong></td><td>(1+β²)PR / (β²P + R)</td><td>β = 2: recall counts 4× as much (F2)</td><td>0.404</td></tr>
   </table>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A fishing net. Recall: what share of the fish in the lake you caught. Precision: what share of your catch is fish rather than boots. A bigger net raises recall and drags in more boots.</p>
+    <p>A fishing net. Recall: what share of the fish in the lake you caught. Precision: what share of your catch is fish, not old slippers. A bigger net raises recall but pulls in more slippers.</p>
   </div>
   <div class="cards">
     <div><b>Favour precision</b><p>False positives are expensive.</p><small>Spam filter (losing a real email), recommendations, auto-blocking accounts</small></div>
     <div><b>Favour recall</b><p>False negatives are expensive.</p><small>Cancer screening, fraud, equipment failure, safety alerts</small></div>
   </div>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>F1 assumes both errors cost the same. They almost never do: use Fβ or, better, an explicit cost (section 07). Multi-class: say whether you report <code>macro</code> (each class equal) or <code>weighted</code> (by support) averages.</p>
+    <p>F1 assumes both mistakes cost the same. They almost never do: use Fβ or, better, real costs (section 07). Multi-class: say whether you report <code>macro</code> (each class equal) or <code>weighted</code> (by class size) averages.</p>
   </div>
 
   <h2 id="me-roc"><span class="num">03</span>ROC-AUC vs PR Curve</h2>
+  <p>A model gives each row a score. Any threshold turns scores into yes/no. Instead of judging one threshold, slide it from high to low and record what happens. That trail is the curve.</p>
+  <figure class="viz"><svg viewBox="0 0 520 150" width="520">
+    <line x1="20" y1="115" x2="500" y2="115" stroke="currentColor" opacity="0.5"/>
+    <path d="M30 115 Q 150 -10 270 115" class="fs" stroke="currentColor" fill-opacity="0.5"/>
+    <path d="M200 115 Q 320 10 440 115" class="fr sr" fill-opacity="0.35"/>
+    <text x="150" y="70" text-anchor="middle">negatives</text><text x="350" y="70" text-anchor="middle" class="tr">positives</text>
+    <line x1="290" y1="20" x2="290" y2="120" class="sg" stroke-width="2"/>
+    <text x="296" y="30" class="tg">threshold t</text>
+    <text x="300" y="104" class="tr">TP</text><text x="262" y="104" class="tm">FP</text>
+    <text x="20" y="138" class="tm">low score</text><text x="500" y="138" text-anchor="end" class="tm">high score →</text>
+  </svg><figcaption>Right of the green line = flagged. Slide it left: more TP (recall ↑) but more FP. ROC plots TPR vs FPR for every position. Less overlap = bigger AUC.</figcaption></figure>
   <figure class="viz"><svg viewBox="0 0 560 230" width="560">
     <g stroke="currentColor" opacity="0.5"><line x1="40" y1="180" x2="240" y2="180"/><line x1="40" y1="180" x2="40" y2="30"/><line x1="330" y1="180" x2="530" y2="180"/><line x1="330" y1="180" x2="330" y2="30"/></g>
     <line x1="40" y1="180" x2="240" y2="30" stroke="currentColor" stroke-dasharray="4 3" opacity="0.6"/>
@@ -173,9 +190,12 @@ ROC-AUC=0.837  PR-AUC(AP)=0.576</div>
     <text x="140" y="198" text-anchor="middle" class="tm">false positive rate</text><text x="430" y="198" text-anchor="middle" class="tm">recall</text>
     <text x="150" y="150" class="tm">random = 0.5</text><text x="360" y="170" class="tm">random = 0.025</text>
     <text x="22" y="105" class="tm" transform="rotate(-90 22 105)">recall (TPR)</text><text x="312" y="105" class="tm" transform="rotate(-90 312 105)">precision</text>
-  </svg><figcaption>Same model, same point (green): ROC calls it a 2.5% false-positive rate; PR shows 62% of alerts are false.</figcaption></figure>
+  </svg><figcaption>Same model, same point (green). ROC says "only 2.5% false-positive rate". PR shows 62% of alerts are false.</figcaption></figure>
   <div class="callout def"><span class="label">Definition</span>
-    <p><strong>ROC-AUC</strong>: area under TPR vs FPR across all thresholds = probability a random positive gets a higher score than a random negative. <strong>PR curve</strong>: precision vs recall; <strong>average precision (AP)</strong> summarises it. A random model scores ROC-AUC 0.5 but AP = the positive rate.</p>
+    <p><strong>ROC-AUC</strong>: area under the TPR-vs-FPR curve. In plain words: pick one random positive and one random negative; AUC is the chance the positive gets the higher score. <strong>PR curve</strong>: precision vs recall; <strong>average precision (AP)</strong> is its summary. A random model gets ROC-AUC 0.5, but AP = the positive rate.</p>
+  </div>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>ROC-AUC is like a teacher ranking students before results. AUC 0.8 = in 80% of (pass, fail) pairs, she ranked the passing student higher.</p>
   </div>
   <div class="fx" data-lang="py">rng = np.random.default_rng(0)
 pos, neg = np.where(y_te == 1)[0], np.where(y_te == 0)[0]
@@ -186,17 +206,18 @@ for n_neg in [len(pos), 10 * len(pos), len(neg)]:      # same model, same positi
   <div class="fx" data-lang="text">pos rate 50.0%: ROC-AUC=0.826  AP=0.878  random AP≈0.500
 pos rate  9.1%: ROC-AUC=0.837  AP=0.677  random AP≈0.091
 pos rate  2.5%: ROC-AUC=0.837  AP=0.576  random AP≈0.025</div>
-  <p>ROC-AUC barely moves as negatives pile up, because FPR divides by the huge TN count. Precision feels every extra false alarm.</p>
+  <p>ROC-AUC hardly moves as negatives pile up, because FPR divides by the huge TN count. Precision feels every extra false alarm.</p>
   <table class="tbl">
     <tr><th>Use</th><th>When</th></tr>
-    <tr><td><strong>ROC-AUC</strong></td><td>Roughly balanced classes; you care about ranking both classes; comparing across datasets with different prevalence</td></tr>
-    <tr><td><strong>PR-AUC / AP</strong></td><td>Positives rare (&lt; ~10%: fraud, disease, defects) and you act on the flagged positives</td></tr>
+    <tr><td><strong>ROC-AUC</strong></td><td>Classes roughly balanced; you care about ranking both; comparing datasets with different positive rates</td></tr>
+    <tr><td><strong>PR-AUC / AP</strong></td><td>Positives rare (&lt; ~10%: fraud, disease, defects) and you act on the flagged ones</td></tr>
   </table>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>Both are threshold-free ranking scores: neither tells you how the model performs at the threshold you deploy. Compare AP to its baseline (the prevalence), not to 0.5.</p>
+    <p>Both only judge ranking. Neither tells you how the model does at the threshold you actually use. Compare AP to its baseline (the positive rate), not to 0.5.</p>
   </div>
 
   <h2 id="me-ll"><span class="num">04</span>Log Loss &amp; Calibration</h2>
+  <p>Accuracy only checks the final yes/no. <strong>Log loss</strong> checks the probability itself: how sure you were, and whether you were right.</p>
   <div class="fx" data-lang="py">from sklearn.metrics import log_loss
 for q in [0.9, 0.5, 0.1, 0.01]:
     print(f"true=1, p={q:&lt;4}: loss={-np.log(q):.3f}")
@@ -207,9 +228,12 @@ true=1, p=0.1 : loss=2.303
 true=1, p=0.01: loss=4.605
 log_loss of all four: 1.927</div>
   <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Log loss</strong> = −mean(y·log p + (1−y)·log(1−p)). It rewards confident correct answers and brutally punishes confident wrong ones. 0.693 = always saying 0.5. It is the training loss of logistic regression and most neural classifiers.</p>
+    <p><strong>Log loss</strong> = −mean(y·log p + (1−y)·log(1−p)). Sure and right = tiny loss. Sure and wrong = huge loss. 0.693 = always saying 0.5. It is the training loss of logistic regression and most neural classifiers.</p>
   </div>
-  <p><strong>Calibration</strong>: among cases scored 0.8, about 80% should be positive. A model can rank perfectly (high AUC) with dishonest probabilities.</p>
+  <p><strong>Calibration</strong>: of all cases scored 0.8, about 80% should really be positive. A model can rank perfectly (high AUC) and still give wrong probabilities.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A weather app. If its "70% rain" days get rain 7 times out of 10, it is calibrated. If they get rain 9 times out of 10, the ranking of days may be fine but the number lies.</p>
+  </div>
   <div class="fx" data-lang="py">from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.calibration import CalibratedClassifierCV, calibration_curve
@@ -230,15 +254,19 @@ RandomForest  AUC=0.992 logloss=0.145 Brier=0.027  pred→actual: 0.03→0.01 0.
 NB + isotonic AUC=0.944 logloss=0.296 Brier=0.092  pred→actual: 0.03→0.04 0.32→0.34 0.52→0.50 0.71→0.69 0.93→0.92</div>
   <ul>
     <li><strong>Naive Bayes</strong>: overconfident (says 0.97, right 90%). Isotonic calibration fixes it: log loss 0.377 → 0.296, same AUC.</li>
-    <li><strong>Random forest</strong>: under-confident; averaging trees pulls scores toward the middle (says 0.29, truly 0.12). Still the best ranker here.</li>
-    <li><strong>Brier score</strong> = mean((p − y)²): lower is better; mixes calibration and discrimination.</li>
+    <li><strong>Random forest</strong>: under-confident; averaging many trees pulls scores to the middle (says 0.29, truly 0.12). Still the best ranker here.</li>
+    <li><strong>Brier score</strong> = mean((p − y)²): lower is better; mixes calibration and ranking.</li>
     <li><strong>Fix</strong>: <code>CalibratedClassifierCV(method="sigmoid")</code> (Platt, small data) or <code>"isotonic"</code> (flexible, needs more data), fit on data the model didn't train on.</li>
   </ul>
   <div class="callout intu"><span class="label">Key insight</span>
-    <p>Calibration matters when probabilities feed decisions: expected-value maths, risk scores, cost-based thresholds. Calibration never changes AUC; it only fixes the numbers.</p>
+    <p>Calibration matters when the probability itself is used: expected-loss maths, risk scores, cost-based thresholds. It never changes AUC; it only fixes the numbers.</p>
   </div>
 
   <h2 id="me-thr"><span class="num">05</span>Threshold Tuning</h2>
+  <p>The model gives a probability. The <strong>threshold</strong> turns it into an action ("block if p ≥ t"). 0.5 is only a default; the right t depends on what each mistake costs.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A bank guard deciding whom to check. Check everyone: no fraud gets in, but huge queues. Check no one: no queue, lots of fraud. The threshold is where you draw the line.</p>
+  </div>
   <div class="flow"><span>Model scores p</span><span>Pick threshold t on validation</span><span>p ≥ t → act</span><span>Re-check as data drifts</span></div>
   <div class="fx" data-lang="py">from sklearn.metrics import precision_recall_curve
 prec, rec, thr = precision_recall_curve(y_te, p)     # p, y_te from the fraud model (section 01)
@@ -261,14 +289,18 @@ print({t: f"{cost(t):,}" for t in [0.04, 0.08, 0.2]})</div>
 cost @0.50 = 80,620   best t=0.08 cost = 53,960   theory t*=20/(20+500)=0.038
 {0.04: '58,780', 0.08: '53,960', 0.2: '61,260'}</div>
   <ul>
-    <li>Lowering the threshold from 0.5 to 0.08 cuts total cost by a third.</li>
-    <li>The theory threshold <code>C_FP / (C_FP + C_FN)</code> assumes perfectly calibrated probabilities; the empirical search lands nearby (0.04–0.08 are close in cost).</li>
+    <li>Moving the threshold from 0.5 to 0.08 cuts total cost by a third.</li>
+    <li>The formula <code>C_FP / (C_FP + C_FN)</code> assumes perfect probabilities; the search lands nearby (0.04–0.08 cost about the same).</li>
   </ul>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>Choose the threshold on validation data (or out-of-fold predictions), then confirm once on test. Tuning it on test is just another way to leak. sklearn 1.5+ also has <code>TunedThresholdClassifierCV</code> to do this inside CV.</p>
+    <p>Choose the threshold on validation data (or out-of-fold predictions), then confirm once on test. Tuning it on test is just another leak. sklearn 1.5+ has <code>TunedThresholdClassifierCV</code> to do this inside CV.</p>
   </div>
 
   <h2 id="me-reg"><span class="num">06</span>Regression Metrics</h2>
+  <p>For numbers, the question is "how far off, on average?" Each metric answers it differently: in units (MAE), with extra fine for big misses (RMSE), against a simple guess (R²), or in percent (MAPE, WAPE).</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A tiffin service guessing daily orders. MAE: "we are off by about 5 tiffins a day". RMSE: one day off by 60 hurts far more than ten days off by 6. MAPE: "off by 5%", fine until a holiday with 1 order.</p>
+  </div>
   <div class="fx" data-lang="py">from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score, mean_absolute_percentage_error
 def report(name, y, yhat):
     mae = mean_absolute_error(y, yhat); rmse = np.sqrt(mean_squared_error(y, yhat))
@@ -288,18 +320,19 @@ predict mean MAE= 10.6 RMSE= 12.5 R2= 0.000 MAPE=   9.9% sMAPE=  9.8% WAPE=  9.8
 near-zero y  MAE=  4.4 RMSE=  4.7 R2= 0.983 MAPE=  15.2% sMAPE= 11.5% WAPE=  4.6%</div>
   <table class="tbl">
     <tr><th>Metric</th><th>Formula</th><th>Use when</th><th>Watch out</th></tr>
-    <tr><td><strong>MAE</strong></td><td>mean|y − ŷ|</td><td>Errors cost linearly; outliers are noise; easy to explain</td><td>Optimum is the median</td></tr>
-    <tr><td><strong>RMSE</strong></td><td>√mean(y − ŷ)²</td><td>Big misses are disproportionately bad; matches MSE training</td><td>One miss doubled it (4.9 → 21.7)</td></tr>
-    <tr><td><strong>R²</strong></td><td>1 − SS_res / SS_tot</td><td>Share of variance explained; compare models on one dataset</td><td>Negative = worse than predicting the mean</td></tr>
-    <tr><td><strong>MAPE</strong></td><td>mean|e / y| × 100</td><td>Scale-free % to compare series of different size</td><td>Explodes near y = 0; undefined at 0; favours under-forecasts</td></tr>
-    <tr><td><strong>sMAPE</strong></td><td>mean 2|e| / (|y| + |ŷ|)</td><td>MAPE near small values</td><td>Bounded 0–200%, still odd near 0</td></tr>
-    <tr><td><strong>WAPE</strong></td><td>Σ|e| / Σ|y|</td><td>Demand / load forecasting; volume-weighted %</td><td>Hides errors on small items</td></tr>
+    <tr><td><strong>MAE</strong></td><td>mean|y − ŷ|</td><td>Each unit of error costs the same; outliers are noise; easy to explain</td><td>Best constant is the median</td></tr>
+    <tr><td><strong>RMSE</strong></td><td>√mean(y − ŷ)²</td><td>Big misses are much worse; matches MSE training</td><td>One miss made it 4× (4.9 → 21.7)</td></tr>
+    <tr><td><strong>R²</strong></td><td>1 − SS_res / SS_tot</td><td>Share of variation explained; compare models on one dataset</td><td>Negative = worse than predicting the mean</td></tr>
+    <tr><td><strong>MAPE</strong></td><td>mean|e / y| × 100</td><td>% error, to compare series of different sizes</td><td>Blows up near y = 0; undefined at 0; favours under-forecasts</td></tr>
+    <tr><td><strong>sMAPE</strong></td><td>mean 2|e| / (|y| + |ŷ|)</td><td>MAPE when values get small</td><td>Capped at 200%, still odd near 0</td></tr>
+    <tr><td><strong>WAPE</strong></td><td>Σ|e| / Σ|y|</td><td>Demand / load forecasting; % weighted by volume</td><td>Hides errors on small items</td></tr>
   </table>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>One overnight reading of 0.5 MW predicted as 1.0 MW is a 100% error and tripled MAPE (4.6% → 15.2%) while MAE barely moved. Use WAPE, sMAPE, or exclude values below a documented floor. If RMSE ≫ MAE, a few big misses dominate: inspect them.</p>
+    <p>One night reading of 0.5 MW predicted as 1.0 MW is a 100% error. It tripled MAPE (4.6% → 15.2%) while MAE hardly moved. Use WAPE, sMAPE, or skip values below a written-down floor. If RMSE ≫ MAE, a few big misses dominate: look at them.</p>
   </div>
 
   <h2 id="me-biz"><span class="num">07</span>Metrics from Business Costs</h2>
+  <p>ML metrics are stand-ins. What the business feels is money, time or trust lost per mistake. Write those costs down first, then pick the metric that follows them.</p>
   <div class="flow"><span>Decision the model drives</span><span>Cost of FP, FN (or of error size)</span><span>Offline metric that tracks that cost</span><span>Threshold / model choice</span><span>A/B test the business KPI</span></div>
   <table class="tbl">
     <tr><th></th><th>Predicted legit</th><th>Predicted fraud</th></tr>
@@ -314,24 +347,24 @@ near-zero y  MAE=  4.4 RMSE=  4.7 R2= 0.983 MAPE=  15.2% sMAPE= 11.5% WAPE=  4.6
     <tr><td>Churn model on F1</td><td>Ignores that a retention offer costs money</td><td>Profit curve: (saved value − offer cost) per threshold</td></tr>
   </table>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A smoke alarm: a false alarm costs a minute of annoyance, a missed fire costs the house. Nobody tunes it for "accuracy".</p>
+    <p>A smoke alarm. A false alarm costs a minute of irritation; a missed fire costs the house. Nobody tunes it for "accuracy".</p>
   </div>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>A better offline metric can still lose online (proxy ≠ goal, feedback loops, shifted data). Offline metrics choose candidates; the A/B test on the business KPI decides.</p>
+    <p>A better offline score can still lose live (stand-in ≠ goal, feedback loops, changed data). Offline metrics shortlist models; the A/B test on the business number decides.</p>
   </div>
 
   <h2 id="me-qa"><span class="num">08</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>Your fraud model has 98.3% accuracy. Good?</summary><div class="qa-body">Unknown until you see the baseline and the confusion matrix. With 2.5% fraud, predicting "legit" always gives 97.5%. Our model at 0.5 caught only 88 of 249 frauds (recall 0.353). Report precision, recall, PR-AUC and the cost at the chosen threshold.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Your fraud model has 98.3% accuracy. Good?</summary><div class="qa-body">Can't say until you see the baseline and confusion matrix. With 2.5% fraud, always saying "legit" gives 97.5%. Our model at 0.5 caught only 88 of 249 frauds (recall 0.353). Report precision, recall, PR-AUC and the cost at the chosen threshold.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>TP = 88, FP = 6, FN = 161, TN = 9,745. Compute precision, recall, F1.</summary><div class="qa-body">Precision = 88/94 = 0.936. Recall = 88/249 = 0.353. F1 = 2·0.936·0.353/(0.936+0.353) = 0.513.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>When do you prefer PR-AUC over ROC-AUC?</summary><div class="qa-body">When positives are rare (under ~10%) and you act on the flagged cases. FPR = FP/(FP+TN) stays tiny because TN is huge: at FPR 2.5% our model's alerts were 62% false. ROC-AUC stayed ≈ 0.83 from 50% to 2.5% prevalence while AP fell 0.878 → 0.576. Compare AP against the prevalence baseline.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does ROC-AUC = 0.8 mean in plain words?</summary><div class="qa-body">Pick one random positive and one random negative: 80% of the time the model scores the positive higher. It's a ranking measure, independent of the threshold and of probability calibration.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why is log loss used instead of accuracy for probabilistic models?</summary><div class="qa-body">It uses the probability, not just the hard label, and is smooth, so it can be optimised and it rewards honest confidence. A confident wrong prediction (p = 0.01 for a positive) costs 4.6 vs 0.105 for p = 0.9. It is minimised by calibrated probabilities.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is calibration and how do you fix a badly calibrated model?</summary><div class="qa-body">Predicted probabilities match observed frequencies. Check with <code>calibration_curve</code> / reliability plot and Brier score. Fix post hoc with <code>CalibratedClassifierCV</code>: sigmoid (Platt) for small data, isotonic for more data, on held-out folds. Naive Bayes tends to be overconfident, random forests under-confident, logistic regression is usually close.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When do you prefer PR-AUC over ROC-AUC?</summary><div class="qa-body">When positives are rare (under ~10%) and you act on the flagged cases. FPR = FP/(FP+TN) stays tiny because TN is huge: at FPR 2.5% our alerts were 62% false. ROC-AUC stayed ≈ 0.83 from 50% to 2.5% positives while AP fell 0.878 → 0.576. Compare AP with the positive rate.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does ROC-AUC = 0.8 mean in plain words?</summary><div class="qa-body">Pick one random positive and one random negative: 80% of the time the model scores the positive higher. It only measures ranking; it doesn't depend on the threshold or on calibration.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why is log loss used instead of accuracy for probabilistic models?</summary><div class="qa-body">It uses the probability, not just the yes/no, and it is smooth, so gradient descent can use it. It rewards honest confidence: a sure-but-wrong p = 0.01 for a positive costs 4.6 vs 0.105 for p = 0.9. Its best value comes from calibrated probabilities.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is calibration and how do you fix a badly calibrated model?</summary><div class="qa-body">Predicted probabilities match how often things really happen. Check with <code>calibration_curve</code> (reliability plot) and Brier score. Fix after training with <code>CalibratedClassifierCV</code>: sigmoid (Platt) for small data, isotonic for more data, on held-out folds. Naive Bayes is usually overconfident, random forests under-confident, logistic regression close.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>A missed fraud costs 500, a false alarm 20. How do you set the threshold?</summary><div class="qa-body">Minimise 500·FN + 20·FP over thresholds on validation predictions. With calibrated probabilities the optimum is t* = 20/(20+500) ≈ 0.04. In our demo the search found 0.08, cutting cost from 80,620 (at 0.5) to 53,960.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>RMSE vs MAE: which, and what does a big gap between them tell you?</summary><div class="qa-body">MAE when errors cost linearly or outliers are noise; RMSE when large misses are disproportionately costly or to match an MSE-trained model. RMSE ≫ MAE means a few large errors dominate (one 60-unit miss took RMSE 4.9 → 21.7 while MAE went 4.9 → 11.8).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Can R² be negative? What does it mean?</summary><div class="qa-body">Yes, on data the model wasn't fit on. R² = 1 − SS_res/SS_tot, so negative means its squared error exceeds that of predicting the mean. One big miss gave R² = −2.02 in the demo.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why is MAPE dangerous for electricity load or sales forecasting?</summary><div class="qa-body">It divides by the actual: near-zero actuals (night load, slow items) create huge percentages and dominate the average (one 0.5 MW reading took MAPE from 4.6% to 15.2%). It's undefined at 0 and penalises over-forecasts more than under-forecasts. Use WAPE, sMAPE or a documented exclusion floor.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Your model wins offline but the business KPI doesn't move. Why?</summary><div class="qa-body">The offline metric is a proxy that doesn't track value (AUC ignores fraud amount, CTR ignores satisfaction), the threshold wasn't tuned to costs, the evaluation split leaked or doesn't match production data, or the probabilities are uncalibrated for downstream decisions. Define costs first and validate with an A/B test.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>RMSE vs MAE: which, and what does a big gap between them tell you?</summary><div class="qa-body">MAE when every unit of error costs the same or outliers are noise. RMSE when big misses hurt much more, or to match an MSE-trained model. RMSE ≫ MAE means a few big errors dominate (one 60-unit miss took RMSE 4.9 → 21.7, MAE only 4.9 → 11.8).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Can R² be negative? What does it mean?</summary><div class="qa-body">Yes, on data the model wasn't trained on. R² = 1 − SS_res/SS_tot, so negative means the model is worse than just predicting the mean. One big miss gave R² = −2.02 in the demo.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why is MAPE dangerous for electricity load or sales forecasting?</summary><div class="qa-body">It divides by the actual value. Near-zero actuals (night load, slow items) give huge percentages that swamp the average (one 0.5 MW reading took MAPE from 4.6% to 15.2%). It is undefined at 0 and punishes over-forecasts more than under-forecasts. Use WAPE, sMAPE or a written-down floor.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Your model wins offline but the business KPI doesn't move. Why?</summary><div class="qa-body">The offline metric doesn't follow real value (AUC ignores fraud amount, CTR ignores satisfaction); the threshold wasn't set by cost; the evaluation split leaked or doesn't match live data; or probabilities are uncalibrated for later decisions. Define costs first and confirm with an A/B test.</div></details>
 </main>`
 });

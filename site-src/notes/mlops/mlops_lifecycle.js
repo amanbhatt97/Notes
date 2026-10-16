@@ -2,7 +2,7 @@
 Object.assign(TOPIC_CONTENT, {
   "mlops_lifecycle": `<main>
   <h1>The ML Lifecycle</h1>
-  <p class="lead">Building a model is 10% of the work; the other 90% is getting it to production and keeping it right. This page shows the loop every production model lives in and the habits (versioning, reproducibility, drift checks) that keep it honest.</p>
+  <p class="lead">Training a model in a notebook is only the first step. After that, the model has to run every day for real users, stay correct when the world changes, and be rebuilt when it gets worse. This page shows that full journey, called the ML lifecycle, and the habits that keep it safe: versioning, reproducibility, drift checks and retraining. MLOps is the name for these habits and tools.</p>
 
   <h2 id="ml-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -12,8 +12,8 @@ Object.assign(TOPIC_CONTENT, {
         <div class="mm-title">The loop</div>
         <ul>
           <li><b>Stages</b> — data + versioning → experiment → train → evaluate → deploy → monitor → retrain</li>
-          <li><b>Evaluation gate</b> — candidate must beat baseline and current champion before deploy</li>
-          <li><b>Train from scripts</b> — not notebooks, so pipelines can rerun it</li>
+          <li><b>Evaluation gate</b> — new model must beat the baseline and the live model (champion) before deploy</li>
+          <li><b>Train from scripts</b> — not notebooks, so a pipeline can rerun it</li>
           <li>💡 A model is a car, not a painting: needs fuel (data), servicing (retrain), dashboard (monitoring)</li>
           <li><b>~10% modelling</b> — the rest is data, serving, monitoring, upkeep</li>
         </ul>
@@ -23,7 +23,7 @@ Object.assign(TOPIC_CONTENT, {
         <ul>
           <li><b>Three things change</b> — code (Git), data (DVC/snapshots), model (registry)</li>
           <li><b>Extra tests</b> — data validation, model quality, slices, fairness</li>
-          <li><b>Silent failure</b> — models get quietly worse, no crash</li>
+          <li><b>Silent failure</b> — models get quietly worse, no crash, no error</li>
           <li><b>CT</b> — continuous training added to CI/CD</li>
           <li>⚠ <b>Same code ≠ same model</b> — new data gives new weights; version all three</li>
         </ul>
@@ -31,6 +31,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="mm-branch">
         <div class="mm-title">Reproducibility</div>
         <ul>
+          <li><b>Meaning</b> — anyone can rebuild the exact same model later</li>
           <li><b>Recipe</b> — Git SHA + data hash + locked env + params + seed = same model</li>
           <li><b>Seeds</b> — <code>random_state</code>, <code>np.random.seed</code>, <code>torch.manual_seed</code></li>
           <li><b>Env</b> — pinned requirements / lockfile / Docker image</li>
@@ -42,7 +43,8 @@ Object.assign(TOPIC_CONTENT, {
       <div class="mm-branch">
         <div class="mm-title">DVC</div>
         <ul>
-          <li><b>What</b> — Git for big data: pointer in Git, bytes in a remote</li>
+          <li><b>What</b> — Git for big data: small pointer in Git, real bytes in a remote</li>
+          <li>💡 Cloakroom token: you keep the token, the bag stays in the cloakroom</li>
           <li><b><code>dvc add file</code></b> — writes <code>file.dvc</code> (md5, size) + gitignores the file</li>
           <li><b><code>dvc push / pull</code></b> — sync bytes with S3/GCS/folder remote</li>
           <li><b><code>dvc status</code></b> — shows data changed since last add</li>
@@ -53,9 +55,9 @@ Object.assign(TOPIC_CONTENT, {
       <div class="mm-branch">
         <div class="mm-title">Drift</div>
         <ul>
-          <li><b>Data drift</b> — P(X) changes; e.g. younger users; detect with PSI/KS, no labels</li>
-          <li><b>Concept drift</b> — P(y|X) changes; same input, new right answer; needs labels</li>
-          <li><b>Model drift / decay</b> — the symptom: live metric falls</li>
+          <li><b>Data drift</b> — inputs look different, P(X) changes; e.g. younger users; PSI/KS, no labels needed</li>
+          <li><b>Concept drift</b> — same input, new right answer, P(y|X) changes; needs labels</li>
+          <li><b>Model drift / decay</b> — the symptom: live score falls</li>
           <li><b>Delayed labels</b> — use proxies: input drift, prediction drift, data quality</li>
           <li>⚠ <b>Drift ≠ harm</b> — decide on live metrics; check for upstream pipeline bugs first</li>
           <li>Deep dive: ML System Design → Monitoring, Drift &amp; Retraining</li>
@@ -102,6 +104,17 @@ Object.assign(TOPIC_CONTENT, {
   </div>
 
   <h2 id="ml-loop"><span class="num">01</span>The Lifecycle Loop</h2>
+  <p>Picture this. You work at a food delivery app. You build a model that guesses which customers will stop ordering next month (this is called <strong>churn</strong>). On your laptop it scores 92%. Your manager is happy.</p>
+  <p>Now the real questions start. Who runs it every day on lakhs of new customers? What if the app changes and the data looks different? What if the model slowly becomes wrong and nobody notices? How do you replace it with a better one without breaking the app?</p>
+  <p>Answering these questions is most of the work in an ML job. The model in the notebook is maybe 10% of it.</p>
+  <div class="callout def"><span class="label">Definition</span>
+    <p>The <strong>ML lifecycle</strong> is the full set of steps a model goes through: from collecting data, to training, to serving real users, to watching it, and back to training again. <strong>MLOps</strong> (ML + Operations) is the set of habits and tools that run this loop safely.</p>
+  </div>
+  <p>You will meet this in every ML job, and in almost every interview as: "How would you take this model to production?"</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A model is a car, not a painting. A painting is done once it is hung on the wall. A car needs fuel (fresh data), servicing (retraining) and a dashboard (monitoring) for as long as it is on the road.</p>
+  </div>
+  <p>The picture below shows the seven stages. Follow the arrows clockwise, then notice the dashed arrow on the left: it sends you back to the start.</p>
   <figure class="viz"><svg viewBox="0 0 600 200" width="600">
     <defs><marker id="ml-ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs>
     <rect x="10" y="20" width="130" height="40" rx="6" class="fb sb"/><text x="75" y="44" text-anchor="middle">Data + versioning</text>
@@ -120,26 +133,33 @@ Object.assign(TOPIC_CONTENT, {
     <text x="85" y="98" class="tm" font-size="11">drift / schedule</text>
     <text x="300" y="192" text-anchor="middle" class="tm" font-size="11">the loop never ends: production feedback becomes new data</text>
   </svg><figcaption>Notice the dashed arrow: monitoring feeds retraining, which restarts the loop.</figcaption></figure>
+  <p>The same seven stages, walked through with the churn model. A few words first: an <strong>artifact</strong> is any saved file a step produces (a dataset, a model file). A <strong>baseline</strong> is a very simple model you must beat. The <strong>champion</strong> is the model that is live right now.</p>
   <table class="tbl">
-    <tr><th>Stage</th><th>Output (the thing handed on)</th><th>Typical tools</th></tr>
-    <tr><td>Data collection &amp; versioning</td><td>A dataset with an ID / hash</td><td>SQL, Airflow, DVC, Delta Lake</td></tr>
-    <tr><td>Experimentation</td><td>Chosen features, model family, params</td><td>Notebooks, MLflow tracking</td></tr>
-    <tr><td>Training</td><td>A model artifact from a <em>script</em>, not a notebook</td><td>Pipelines, GPUs, SageMaker jobs</td></tr>
-    <tr><td>Evaluation</td><td>Metrics vs baseline + pass/fail gate</td><td>Holdout sets, slice metrics</td></tr>
-    <tr><td>Deployment</td><td>Model behind an API or batch job</td><td>Registry, Docker, K8s, endpoints</td></tr>
-    <tr><td>Monitoring</td><td>Alerts on errors, latency, drift, metrics</td><td>Prometheus, Evidently, dashboards</td></tr>
-    <tr><td>Retraining</td><td>New candidate model → back to evaluation</td><td>Scheduled or triggered pipelines</td></tr>
+    <tr><th>Stage</th><th>In the churn example</th><th>Output (the thing handed on)</th><th>Typical tools</th></tr>
+    <tr><td>Data collection &amp; versioning</td><td>Pull last 6 months of orders; save a frozen copy called "orders_v3"</td><td>A dataset with an ID / hash</td><td>SQL, Airflow, DVC, Delta Lake</td></tr>
+    <tr><td>Experimentation</td><td>Try "days since last order" as a feature; try trees vs logistic regression</td><td>Chosen features, model family, params</td><td>Notebooks, MLflow tracking</td></tr>
+    <tr><td>Training</td><td><code>python train.py --data orders_v3</code></td><td>A model artifact from a <em>script</em>, not a notebook</td><td>Pipelines, GPUs, SageMaker jobs</td></tr>
+    <tr><td>Evaluation</td><td>New model F1 0.81; baseline 0.60; live model 0.78 → passes</td><td>Metrics vs baseline + pass/fail gate</td><td>Holdout sets, slice metrics</td></tr>
+    <tr><td>Deployment</td><td>The app's marketing system calls the model each night</td><td>Model behind an API or batch job</td><td>Registry, Docker, K8s, endpoints</td></tr>
+    <tr><td>Monitoring</td><td>A dashboard shows scores, errors and input changes every day</td><td>Alerts on errors, latency, drift, metrics</td><td>Prometheus, Evidently, dashboards</td></tr>
+    <tr><td>Retraining</td><td>Two months later the score drops to 0.70; train again on fresh data</td><td>New candidate model → back to evaluation</td><td>Scheduled or triggered pipelines</td></tr>
   </table>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A model is a car, not a painting. Shipping it is the start: it needs fuel (fresh data), servicing (retraining) and a dashboard (monitoring).</p>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Thinking the job ends at "deployment". A model that nobody watches will get worse without any error message. The monitoring and retraining half of the loop is what interviewers want to hear about.</p>
   </div>
 
   <h2 id="ml-devops"><span class="num">02</span>Why Not Just DevOps?</h2>
+  <p>Start with normal software, like a calculator app. Once the code is correct, 2 + 2 gives 4 forever. The only way its behaviour changes is if someone changes the code.</p>
+  <p><strong>DevOps</strong> is the set of habits for shipping such software: keep code in Git, test every change automatically, and release automatically. The automatic test-and-release line is called <strong>CI/CD</strong>. CI (continuous integration) means every change is tested by a machine. CD (continuous delivery) means changes that pass are shipped by a machine.</p>
+  <p>ML breaks the calculator's promise. A model's behaviour comes from <em>data</em>, not only from code. Run the same training script on January data and on June data, and you get two different models. Nobody touched the code.</p>
+  <p>So in ML, three things can change, and each needs its own version history:</p>
   <div class="cards">
     <div><b>Code changes</b><p>New feature logic, bug fix, library upgrade.</p><small>Versioned by: Git</small></div>
     <div><b>Data changes</b><p>New rows daily, schema tweaks, the world shifts.</p><small>Versioned by: DVC, Delta, snapshots</small></div>
     <div><b>Model changes</b><p>Retrained weights, new params, even with the same code.</p><small>Versioned by: model registry</small></div>
   </div>
+  <p>A <strong>model registry</strong> is a shelf of saved models with version numbers, like v1, v2, v3. The <em>MLflow</em> note shows one.</p>
+  <p>The second big difference is how things fail. A broken calculator crashes or shows an error: loud. A broken model still returns answers. They are just worse. Nothing turns red. This is called a <strong>silent failure</strong>.</p>
   <table class="tbl">
     <tr><th></th><th>DevOps (normal software)</th><th>MLOps</th></tr>
     <tr><td>Behaviour set by</td><td>Code only</td><td>Code + data + params</td></tr>
@@ -148,13 +168,28 @@ Object.assign(TOPIC_CONTENT, {
     <tr><td>After release</td><td>Stays correct until code changes</td><td>Decays as the world drifts</td></tr>
     <tr><td>Pipelines</td><td>CI/CD</td><td>CI/CD + <strong>CT</strong> (continuous training)</td></tr>
   </table>
+  <p><strong>CT (continuous training)</strong> means a pipeline retrains the model on new data automatically, the same way CI tests code automatically.</p>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>"Same code, so same model" is false. Rerun the same script on next month's data and you get a different model. Version all three.</p>
+    <p>"Same code, so same model" is false. Rerun the same script on next month's data and you get a different model. Version all three: code, data and model.</p>
   </div>
 
   <h2 id="ml-repro"><span class="num">03</span>Reproducibility</h2>
-  <p>Reproducible = anyone can rebuild the exact model from its recorded inputs. Needed for debugging, audits and fair comparisons.</p>
-  <div class="flow"><span>Code (Git SHA)</span><span>Data (DVC hash)</span><span>Env (lockfile / Docker)</span><span>Params + seed</span><span>Same model</span></div>
+  <p>Think of making chai. If you don't write down how much sugar and how long you boiled it, tomorrow's chai tastes different, and you can't say why.</p>
+  <p>Models are the same. Months later someone asks: "Why did the model reject this loan?" or "Your new model is 2% better. Is it really better, or just luck?" To answer, you must be able to rebuild the exact old model.</p>
+  <div class="callout def"><span class="label">Definition</span>
+    <p>A model is <strong>reproducible</strong> if anyone can rebuild the exact same model later from the inputs you recorded. You need this for debugging, for audits (banks must explain decisions) and for fair comparisons.</p>
+  </div>
+  <p>The first hidden ingredient is randomness. Many steps use random numbers: shuffling the data, splitting train and test, starting the model's weights. A computer's "random" numbers come from a formula that begins at a starting number called the <strong>seed</strong>. Same seed, same sequence of "random" numbers. Here are dice rolls with and without a seed:</p>
+  <div class="fx" data-lang="py">import random
+print("roll 1:", [random.randint(1, 6) for _ in range(5)])
+print("roll 2:", [random.randint(1, 6) for _ in range(5)])
+random.seed(7); print("seed 7:", [random.randint(1, 6) for _ in range(5)])
+random.seed(7); print("seed 7:", [random.randint(1, 6) for _ in range(5)])</div>
+  <div class="fx" data-lang="text">roll 1: [5, 1, 3, 3, 1]
+roll 2: [1, 5, 6, 6, 2]
+seed 7: [3, 2, 4, 6, 1]
+seed 7: [3, 2, 4, 6, 1]</div>
+  <p>Without a seed, each run differs. With <code>seed(7)</code>, both runs give exactly the same rolls. Now the same idea with a real model. The code trains a random forest on a cancer dataset three times without a seed, then three times with <code>random_state=42</code> (scikit-learn's name for the seed):</p>
   <div class="fx" data-lang="py">from sklearn.datasets import load_breast_cancer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
@@ -168,7 +203,15 @@ print("no seed :", [round(score(None), 4) for _ in range(3)])
 print("seed=42 :", [round(score(42), 4) for _ in range(3)])</div>
   <div class="fx" data-lang="text">no seed : [0.993, 0.965, 0.965]
 seed=42 : [0.965, 0.965, 0.965]</div>
-  <p>Without a seed, accuracy jumps 0.965 → 0.993 from pure luck. That "improvement" is noise, not a better model.</p>
+  <p>Without a seed, accuracy jumps 0.965 → 0.993 from pure luck. That "improvement" is noise, not a better model. With the seed, every run gives 0.965.</p>
+  <p>Randomness is only one ingredient. The full recipe has five parts. Write all five down for every model:</p>
+  <div class="flow"><span>Code (Git SHA)</span><span>Data (DVC hash)</span><span>Env (lockfile / Docker)</span><span>Params + seed</span><span>Same model</span></div>
+  <ul>
+    <li><strong>Git SHA</strong> — the ID of one exact Git commit, like <code>a3f9c1e</code>.</li>
+    <li><strong>Hash</strong> — a fingerprint of a file. Change one byte, and the fingerprint changes completely.</li>
+    <li><strong>Environment</strong> — the exact Python and library versions. A <strong>lockfile</strong> lists them; a <strong>Docker image</strong> packs them into one box.</li>
+    <li><strong>Params</strong> — the settings you chose, like number of trees.</li>
+  </ul>
   <table class="tbl">
     <tr><th>Source of randomness / drift</th><th>Pin it with</th></tr>
     <tr><td>Splits, init, sampling</td><td><code>random_state</code>, <code>np.random.seed</code>, <code>torch.manual_seed</code></td></tr>
@@ -176,12 +219,21 @@ seed=42 : [0.965, 0.965, 0.965]</div>
     <tr><td>Data</td><td>DVC hash, table snapshot, or dated partition</td></tr>
     <tr><td>GPU non-determinism</td><td><code>torch.use_deterministic_algorithms(True)</code> (slower)</td></tr>
   </table>
+  <p>The last row: GPUs add numbers in parallel, in a slightly different order each time, so tiny differences creep in. PyTorch can force a fixed order, at some cost in speed.</p>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>Pointing training at "the live table" makes it unreproducible: rerun next week and the rows differ. Train on a snapshot and log its ID.</p>
+    <p>Pointing training at "the live table" makes it unreproducible: rerun next week and the rows differ. Train on a snapshot (a frozen copy) and log its ID.</p>
   </div>
 
   <h2 id="ml-dvc"><span class="num">04</span>Hands-on: DVC</h2>
-  <p><strong>DVC</strong> (Data Version Control) puts a tiny pointer file in Git and stores the real data in a remote (S3, GCS, a folder).</p>
+  <p>Git is great at saving versions of code. But try putting a 50 GB CSV in Git. Every clone downloads all of it, every version is stored again, and GitHub refuses files above 100 MB. Git was built for small text files.</p>
+  <p>Still, you need to know <em>which exact data</em> trained each model. The fix: let Git store a tiny note that names the data, and keep the heavy file somewhere cheap.</p>
+  <div class="callout def"><span class="label">Definition</span>
+    <p><strong>DVC</strong> (Data Version Control) puts a tiny pointer file in Git and stores the real data in a <strong>remote</strong>: cloud storage like S3 or GCS, or just a shared folder.</p>
+  </div>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>The cloakroom at a wedding hall. You hand over your heavy bag and get a small token. You carry only the token. The token names exactly one bag, and handing it back gets you that bag. The <code>.dvc</code> file is the token; the remote is the cloakroom.</p>
+  </div>
+  <p>In the picture, the big file splits two ways: its fingerprint goes into Git, and its bytes go into storage.</p>
   <figure class="viz"><svg viewBox="0 0 560 130" width="560">
     <defs><marker id="ml-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs>
     <rect x="10" y="40" width="140" height="50" rx="6" class="fs" stroke="currentColor"/><text x="80" y="62" text-anchor="middle">train.csv</text><text x="80" y="78" text-anchor="middle" class="tm" font-size="11">23 KB … 50 GB</text>
@@ -191,6 +243,14 @@ seed=42 : [0.965, 0.965, 0.965]</div>
     <rect x="420" y="40" width="130" height="50" rx="6" class="fg sg"/><text x="485" y="62" text-anchor="middle">git commit</text><text x="485" y="78" text-anchor="middle" class="tm" font-size="11">code + data pointer</text>
     <line x1="360" y1="32" x2="418" y2="58" stroke="currentColor" marker-end="url(#ml-ar2)"/>
   </svg><figcaption>Git holds a 5-line pointer; the heavy file lives in the DVC remote. Checking out a commit restores the matching data.</figcaption></figure>
+  <p>Here is a real session. Read it as a story in five steps:</p>
+  <ol>
+    <li><code>dvc add</code> — DVC fingerprints the file (an <strong>md5</strong> hash), writes the small <code>.dvc</code> token, and tells Git to ignore the big file.</li>
+    <li><code>git commit</code> — Git saves the token as "data v1".</li>
+    <li><code>dvc push</code> — the real bytes go to the remote.</li>
+    <li>The data changes; <code>dvc status</code> notices the fingerprint no longer matches.</li>
+    <li>Going back: take the old token from Git, then <code>dvc checkout</code> fetches the matching bytes.</li>
+  </ol>
   <div class="fx" data-lang="text">$ git init &amp;&amp; dvc init
 $ dvc add data/train.csv
 To track the changes with git, run:
@@ -222,11 +282,35 @@ $ git checkout HEAD~1 -- data/train.csv.dvc &amp;&amp; dvc checkout   # back to 
 M       data/train.csv
 $ wc -l data/train.csv
 1001 data/train.csv            # header + 1000 rows: v1 restored</div>
+  <p>The last line proves it: the extra row added in v2 is gone. We are back to exactly the v1 data.</p>
   <div class="callout intu"><span class="label">Key insight</span>
     <p>A Git commit now pins code <em>and</em> data together. "Which data trained model v7?" becomes a <code>git log</code> question.</p>
   </div>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Committing the <code>.dvc</code> token but forgetting <code>dvc push</code>. Your teammate pulls the token, runs <code>dvc pull</code>, and finds no bytes in the remote. Push data whenever you push code.</p>
+  </div>
 
   <h2 id="ml-drift"><span class="num">05</span>Data, Concept, Model Drift</h2>
+  <p>A kirana shop owner knows his regular customers well. He knows who buys milk daily and who buys rice monthly. Then a college opens nearby. Suddenly most customers are students. His guesses about what people will buy start going wrong. He did nothing wrong. The world around him changed.</p>
+  <p>A model is in the same position. It learnt patterns from past data. When the present stops looking like the past, its answers get worse. This slow change is called <strong>drift</strong>.</p>
+  <p>A tiny example. A loan model was trained on customers with these ages. This month's customers look like this:</p>
+  <div class="fx" data-lang="py">train_ages = [34, 41, 29, 52, 38, 45, 31, 48]   # customers when the model was trained
+live_ages  = [22, 19, 27, 24, 35, 21, 23, 30]   # customers this month
+avg = lambda xs: sum(xs) / len(xs)
+young = lambda xs: sum(a &lt; 25 for a in xs) / len(xs)
+print("average age  train:", avg(train_ages), " live:", avg(live_ages))
+print("share under 25 train:", young(train_ages), " live:", young(live_ages))</div>
+  <div class="fx" data-lang="text">average age  train: 39.75  live: 25.125
+share under 25 train: 0.0  live: 0.625</div>
+  <p>The model never saw a customer under 25. Now 62.5% of customers are under 25. Its answers for them are guesses. Notice: we spotted this without knowing who actually repaid. We only compared the inputs.</p>
+  <p>There are three kinds of drift. Two are causes, one is the result:</p>
+  <ul>
+    <li><strong>Data drift</strong> — the inputs look different. (The college students. The younger loan customers.)</li>
+    <li><strong>Concept drift</strong> — the inputs look the same, but the right answer changed. During COVID, "buys flour in bulk" stopped meaning "runs a bakery"; everyone was baking at home.</li>
+    <li><strong>Model drift</strong> (or decay) — the result: the model's live score falls.</li>
+  </ul>
+  <p>Books write these with probability notation. <strong>P(X)</strong> means "how the inputs are spread out" (for example, how many customers are in each age group). <strong>P(y|X)</strong> means "for a given input, what answer is right". Data drift changes P(X). Concept drift changes P(y|X).</p>
+  <p>In the picture, look at the left: the red curve (live data) has moved right of the blue curve (training data). On the right, the dots have not moved, but the line that separates the two classes has tilted.</p>
   <figure class="viz"><svg viewBox="0 0 580 150" width="580">
     <text x="140" y="16" text-anchor="middle">Data drift: P(X) moves</text>
     <line x1="20" y1="120" x2="270" y2="120" stroke="currentColor"/>
@@ -242,6 +326,7 @@ $ wc -l data/train.csv
     <line x1="400" y1="28" x2="500" y2="120" class="sr" stroke-width="2" stroke-dasharray="5 3"/>
     <text x="440" y="140" text-anchor="middle" class="tm" font-size="11">same inputs, new right answer (old line vs new)</text>
   </svg><figcaption>Left: inputs look different. Right: inputs look the same, but the rule mapping them to labels changed.</figcaption></figure>
+  <p>Two more words for the table. A <strong>label</strong> is the true answer (did this customer really churn?). <strong>PSI</strong> (population stability index) and the <strong>KS test</strong> are two standard ways to put a number on "how much did this column's spread change?"</p>
   <table class="tbl">
     <tr><th></th><th>Data drift (covariate shift)</th><th>Concept drift</th><th>Model drift (decay)</th></tr>
     <tr><td>What changed</td><td>Input distribution P(X)</td><td>Relationship P(y|X)</td><td>The <em>outcome</em>: model performance drops</td></tr>
@@ -250,12 +335,17 @@ $ wc -l data/train.csv
     <tr><td>Needs labels?</td><td>No</td><td>Yes</td><td>Yes</td></tr>
     <tr><td>Fix</td><td>Retrain on recent data; maybe reweight</td><td>Retrain with new labels; rethink features</td><td>Find the cause (one of the left two, or a bug)</td></tr>
   </table>
+  <p>Labels often arrive late. You learn whether a customer churned only after 90 days. Until then, watch <strong>proxies</strong>: signals you can see today, such as input drift, a sudden change in how many customers the model flags, or data-quality problems like empty columns.</p>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Data drift does not always hurt; concept drift can happen with zero data drift. Alert on drift, but decide on live metrics. A broken upstream pipeline (nulls, unit change) looks like drift too; check that first.</p>
   </div>
   <p>Detection math (PSI, KS), dashboards and alerting are covered in depth in <em>ML System Design → Monitoring, Drift &amp; Retraining</em>.</p>
 
   <h2 id="ml-retrain"><span class="num">06</span>Retraining Triggers</h2>
+  <p>You service a scooter in two ways. Either every 3,000 km, whatever happens, or right away when a warning light comes on. Models are retrained the same two ways.</p>
+  <div class="callout def"><span class="label">Definition</span>
+    <p>A <strong>retraining trigger</strong> is the rule that decides when to train the model again.</p>
+  </div>
   <div class="cards">
     <div><b>Scheduled</b><p>Every night / week / month.</p><small>Simple, predictable; may waste compute or react late</small></div>
     <div><b>Performance drop</b><p>Live metric falls below a threshold.</p><small>Best signal; needs labels (often delayed)</small></div>
@@ -263,24 +353,35 @@ $ wc -l data/train.csv
     <div><b>New data volume</b><p>N new labelled rows collected.</p><small>Good when labels arrive in bursts</small></div>
     <div><b>Event</b><p>New product, market or policy launch.</p><small>Manual, known in advance</small></div>
   </div>
+  <p>Most teams combine them: a schedule as the floor (say, monthly) plus triggers for urgent drops. A worked example with the churn model:</p>
+  <ol>
+    <li>At launch, live F1 is 0.82. The team sets an alarm at 0.78.</li>
+    <li>In week 6, F1 falls to 0.76. The performance trigger fires.</li>
+    <li>The pipeline retrains on the latest frozen snapshot. The new candidate scores 0.81 on the test set.</li>
+    <li>The live model (champion) scores 0.76 on the same test set. The candidate wins.</li>
+    <li>The candidate goes to a small share of users first (a <strong>canary</strong>, see <em>Deployment Strategies</em>), then to everyone.</li>
+  </ol>
   <div class="flow"><span>Trigger fires</span><span>Pipeline retrains on fresh snapshot</span><span>Eval vs current champion</span><span>Better? → register + deploy</span><span>Worse? → keep old, alert human</span></div>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Never auto-deploy a retrained model without a gate. If the new data was corrupt, automation ships a broken model at 3 a.m.</p>
   </div>
 
   <h2 id="ml-mature"><span class="num">07</span>MLOps Maturity Levels</h2>
-  <p>Google's widely quoted scale. Most companies sit at level 0 or 1.</p>
+  <p>Think of making rotis. Level 0: one person rolls each roti by hand. Level 1: a roti machine makes them every day without help. Level 2: even changes to the machine are tested and installed automatically. Teams move through the same stages with their models.</p>
+  <p>This scale comes from Google and is widely quoted. Most companies sit at level 0 or 1.</p>
   <table class="tbl">
     <tr><th>Level</th><th>What it looks like</th><th>Release speed</th><th>Main risk</th></tr>
     <tr><td><strong>0 · Manual</strong></td><td>Notebook → pickle → engineer rewrites it for prod</td><td>Months, a few times a year</td><td>Training/serving skew, no monitoring</td></tr>
     <tr><td><strong>1 · Pipeline automation</strong></td><td>Training is an automated pipeline; continuous training (CT) on new data; registry + monitoring</td><td>Retrains daily/weekly</td><td>Pipeline code itself changed by hand</td></tr>
     <tr><td><strong>2 · CI/CD automation</strong></td><td>Pipeline code is tested and deployed by CI/CD too; many models, many teams</td><td>Hours to days</td><td>Platform complexity, cost</td></tr>
   </table>
+  <p><strong>Training/serving skew</strong> means the model sees features made one way in training and another way when live. Example: the notebook computed "average order value" in rupees, but the engineer's rewrite used paise. Same model, wrong inputs.</p>
   <div class="callout intu"><span class="label">Interview tip</span>
     <p>Level 0 → 1 is the big win: the same code trains in dev and prod, so "it worked in my notebook" stops being a problem.</p>
   </div>
 
   <h2 id="ml-roles"><span class="num">08</span>Roles &amp; Handoffs</h2>
+  <p>A restaurant has a supplier who brings clean vegetables, a chef who invents the recipe, a kitchen manager who cooks it 500 times a day, a team that keeps the stoves working, and an owner who decides the menu. An ML team splits work the same way.</p>
   <div class="flow"><span>Data engineer</span><span>Data scientist</span><span>ML engineer</span><span>Platform / DevOps</span><span>Product &amp; business</span></div>
   <table class="tbl">
     <tr><th>Role</th><th>Owns</th><th>Hands off</th></tr>
@@ -290,12 +391,15 @@ $ wc -l data/train.csv
     <tr><td>Platform / DevOps</td><td>Clusters, CI/CD, infra, security, cost</td><td>Self-serve tools (K8s, MLflow, feature store)</td></tr>
     <tr><td>Product / business</td><td>Success metric, guardrails, A/B decisions</td><td>Go / no-go; new requirements</td></tr>
   </table>
+  <p>Each arrow in the flow is a <strong>handoff</strong>: one person passes work to the next. Bad handoffs cause most production problems.</p>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>The classic failure is the notebook "thrown over the wall". The fix is a shared contract: a registry entry with code SHA, data version, signature and metrics, not a <code>.pkl</code> in Slack.</p>
+    <p>The classic failure is the notebook "thrown over the wall". The fix is a shared contract: a registry entry with code SHA, data version, signature (the expected input columns and types) and metrics, not a <code>.pkl</code> in Slack.</p>
   </div>
 
   <h2 id="ml-qa"><span class="num">09</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>In one or two lines, what is the ML lifecycle?</summary><div class="qa-body">The repeating loop a model lives in: data → experiment → train → evaluate → deploy → monitor → retrain, and back to data. It never ends, because the world keeps changing and the model must be checked and refreshed.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does setting a random seed do, and why does it matter?</summary><div class="qa-body">It fixes the starting point of the random number generator, so splits, shuffles and weight starts come out the same every run. Without it, two runs of the same code can differ (0.965 vs 0.993 in our demo), and you can't tell a real improvement from luck.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Why does ML need MLOps rather than plain DevOps?</summary><div class="qa-body">Behaviour depends on data and trained weights, not just code. So you must version data and models, test data and model quality (not only code), monitor for silent degradation, and retrain continuously (CT). Normal software doesn't decay when the world changes; models do.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Your colleague retrained with the same code and got different accuracy. List the likely causes.</summary><div class="qa-body">Unset random seeds (split, init, sampling); different data (live table changed); different library versions; GPU non-determinism; different hardware/thread counts. Fix: seeds, data snapshot or DVC hash, locked environment or Docker image, and log all of it with the run.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What does DVC store in Git, and where does the data go?</summary><div class="qa-body">Git stores a small <code>.dvc</code> file with the data's md5 hash, size and path. The bytes go to the DVC cache and a remote (S3, GCS, Azure, SSH, a folder) via <code>dvc push</code>. Checking out an old commit and running <code>dvc checkout</code> restores the matching data.</div></details>

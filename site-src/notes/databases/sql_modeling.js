@@ -117,7 +117,8 @@ Object.assign(TOPIC_CONTENT, {
   </div>
 
   <h2 id="sm-why"><span class="num">01</span>Why Modeling Matters</h2>
-  <p><strong>Data modeling</strong> = deciding the tables, their columns, keys and links, so every fact is stored <em>once</em> in the right place.</p>
+  <p>A friend starts a small online shop and keeps everything in one Excel sheet: one row per item sold, with the customer's name, city, the product, its category, quantity and price. It works for a week. Then Asha moves to Pune, and her city must be corrected in 3 rows. A new customer signs up but hasn't bought anything, so there is no row to put her in. The sheet is starting to lie.</p>
+  <p><strong>Data modeling</strong> is deciding the tables, their columns, keys and links, so every fact is stored <em>once</em> in the right place. You will meet it whenever you build a new feature ("where do reviews go?"), in every analytics job (warehouse design), and in interviews ("design a schema for X").</p>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A kitchen. Spices on one shelf, plates in one cupboard. If you keep a jar of salt next to every dish instead, refilling "the salt" means hunting down every jar, and you will miss one.</p>
   </div>
@@ -131,7 +132,7 @@ JOIN order_items oi USING (order_id)
 JOIN products p    USING (product_id);
 SELECT * FROM orders_flat ORDER BY order_id, product;</div>
   <table class="tbl out"><caption>orders_flat</caption><tr><th>order_id</th><th>order_date</th><th>cust_name</th><th>cust_city</th><th>product</th><th>category</th><th>qty</th><th>unit_price</th></tr><tr><td>100</td><td>2024-05-01</td><td>Asha</td><td>Mumbai</td><td>Lamp</td><td>Furniture</td><td>2</td><td>40.00</td></tr><tr><td>100</td><td>2024-05-01</td><td>Asha</td><td>Mumbai</td><td>Laptop</td><td>Electronics</td><td>1</td><td>800.00</td></tr><tr><td>101</td><td>2024-05-20</td><td>Asha</td><td>Mumbai</td><td>Phone</td><td>Electronics</td><td>1</td><td>500.00</td></tr><tr><td>102</td><td>2024-06-02</td><td>Ben</td><td>Delhi</td><td>Desk</td><td>Furniture</td><td>1</td><td>150.00</td></tr><tr><td>103</td><td>2024-06-15</td><td>Chen</td><td>Mumbai</td><td>Desk</td><td>Furniture</td><td>1</td><td>150.00</td></tr><tr><td>103</td><td>2024-06-15</td><td>Chen</td><td>Mumbai</td><td>Phone</td><td>Electronics</td><td>2</td><td>500.00</td></tr><tr><td>104</td><td>2024-07-01</td><td>Chen</td><td>Mumbai</td><td>Lamp</td><td>Furniture</td><td>3</td><td>40.00</td></tr></table>
-  <p>Asha's city is stored 3 times, "Electronics" 3 times. That repetition causes three <strong>anomalies</strong> (ways data goes wrong on change):</p>
+  <p>Look at the <code>cust_city</code> column: "Mumbai" is written next to Asha 3 times. "Electronics" is written 3 times too. Each is one fact stored many times. That repetition causes three <strong>anomalies</strong> (ways data goes wrong when it changes). Each one below is run for real:</p>
   <ul>
     <li><strong>Update anomaly</strong>: Asha moves to Pune. Update one row, forget the others, and she now lives in two cities.</li>
   </ul>
@@ -145,8 +146,9 @@ SELECT DISTINCT cust_name, cust_city FROM orders_flat WHERE cust_name = 'Asha';<
   <div class="fx" data-lang="sql">DELETE FROM orders_flat WHERE order_id = 102;
 SELECT count(*) AS ben_rows FROM orders_flat WHERE cust_name = 'Ben';</div>
   <table class="tbl out"><caption>Result</caption><tr><th>ben_rows</th></tr><tr><td>0</td></tr></table>
+  <p>The UPDATE touched only order 100's row, so the database now says Asha lives in Mumbai <em>and</em> Pune. The DELETE removed Ben's only order, and Ben went with it: zero rows mention him now.</p>
   <div class="callout intu"><span class="label">Key insight</span>
-    <p>One cause: <strong>one table describing several things</strong>. Fix: one table per thing.</p>
+    <p>One cause: <strong>one table describing several things</strong> (customers, products and orders all mixed). Fix: one table per thing. The rest of the note is about how to do that split properly, and when to undo it on purpose.</p>
   </div>
 
   <h2 id="sm-er"><span class="num">02</span>Entities &amp; Relationships</h2>

@@ -2,7 +2,7 @@
 Object.assign(TOPIC_CONTENT, {
   "mlops_mlflow": `<main>
   <h1>MLflow &amp; Experiment Tracking</h1>
-  <p class="lead">Every model you train should leave a receipt: what data, which params, what score, which file. MLflow is the most common open-source tool for writing those receipts and for promoting the winning model to production. Everything below was run locally with MLflow 3.17 and scikit-learn 1.9.</p>
+  <p class="lead">Every model you train should leave a receipt: what data, which settings, what score, which file. MLflow is the most common open-source tool for writing those receipts, for picking the winner, and for moving the winner to production without renaming files by hand. Everything below was run locally with MLflow 3.17 and scikit-learn 1.9. Builds on <em>The ML Lifecycle</em>.</p>
 
   <h2 id="mf-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -15,12 +15,13 @@ Object.assign(TOPIC_CONTENT, {
           <li><b>Compare</b> — rank many runs by a metric instead of a spreadsheet</li>
           <li><b>Lineage</b> — which run produced the production model</li>
           <li>💡 A chemist's lab notebook: ingredients, conditions, results, sample jar</li>
+          <li>⚠ <b><code>model_final_v3_REAL.pkl</code></b> — the problem tracking fixes</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Data model</div>
         <ul>
-          <li><b>Experiment</b> — named group of runs; <code>set_experiment("cancer-rf")</code></li>
+          <li><b>Experiment</b> — named folder of runs; <code>set_experiment("cancer-rf")</code></li>
           <li><b>Run</b> — one training execution; <code>with mlflow.start_run():</code></li>
           <li><b>Param</b> — input setting, logged once, stored as string</li>
           <li><b>Metric</b> — number, can be per step: <code>log_metric("loss", v, step=e)</code></li>
@@ -54,8 +55,8 @@ Object.assign(TOPIC_CONTENT, {
         <div class="mm-title">Model registry</div>
         <ul>
           <li><b>Registered model</b> — one name per use case</li>
-          <li><b>Version</b> — immutable, auto-numbered, linked to run</li>
-          <li><b>Alias</b> — movable pointer: <code>@champion</code>, <code>@challenger</code></li>
+          <li><b>Version</b> — immutable (never changes), auto-numbered, linked to run</li>
+          <li><b>Alias</b> — movable name tag: <code>@champion</code>, <code>@challenger</code></li>
           <li><b>Register</b> — <code>mlflow.register_model("models:/&lt;model_id&gt;", "name")</code></li>
           <li><b>Promote / rollback</b> — <code>client.set_registered_model_alias(name, "champion", v)</code></li>
           <li>⚠ <b>Stages deprecated</b> (since 2.9) — Staging/Production replaced by aliases + tags</li>
@@ -102,6 +103,16 @@ Object.assign(TOPIC_CONTENT, {
   </div>
 
   <h2 id="mf-why"><span class="num">01</span>Why Track Experiments</h2>
+  <p>You are tuning a model for a week. Monday: 50 trees, score 0.91. Tuesday: 200 trees and a new feature, 0.93. Wednesday: you removed the feature, changed the data file, and got 0.94. Or was it 0.92? By Friday your folder looks like this:</p>
+  <div class="fx" data-lang="text">model.pkl
+model_v2.pkl
+model_final.pkl
+model_final_v3_REAL.pkl
+scores.xlsx        # half the rows say "forgot to note the params"</div>
+  <p>Your manager asks: "Which one is best, and what data did it use?" You cannot answer with confidence. Every trained model needs a receipt that is written automatically, at the moment of training, so nothing depends on memory.</p>
+  <div class="callout def"><span class="label">Definition</span>
+    <p><strong>Experiment tracking</strong> means recording, for every training run, the inputs (settings, data version, code version), the results (scores) and the outputs (the model file) in one searchable place. <strong>MLflow</strong> is an open-source tool that does this, and also stores and serves the models.</p>
+  </div>
   <table class="tbl">
     <tr><th>Without tracking</th><th>With tracking</th></tr>
     <tr><td><code>model_final_v3_REAL.pkl</code></td><td>Model version 3, linked to its run</td></tr>
@@ -110,10 +121,40 @@ Object.assign(TOPIC_CONTENT, {
     <tr><td>Can't rebuild last month's winner</td><td>Rebuild from the run's recorded inputs</td></tr>
   </table>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A lab notebook for a chemist. Each experiment gets a page: ingredients (params), conditions (data, env), results (metrics) and the sample jar (artifacts).</p>
+    <p>A lab notebook for a chemist. Each experiment gets a page: ingredients (params), conditions (data, env), results (metrics) and the sample jar (artifacts). Nobody trusts a chemist who says "I think I used 5 grams".</p>
   </div>
+  <p>Where you meet it: almost every ML team uses MLflow or a similar tool (Weights &amp; Biases, Neptune). Interviewers ask "how do you track experiments?" and "how do you roll back a model?"</p>
 
   <h2 id="mf-concepts"><span class="num">02</span>Runs, Params, Metrics, Artifacts</h2>
+  <p>MLflow has a handful of nouns. Start with the smallest example, then the picture.</p>
+  <ul>
+    <li>A <strong>run</strong> is one execution of training. One run, one receipt.</li>
+    <li>A <strong>param</strong> (parameter) is a setting you chose before training, like the learning rate. Logged once.</li>
+    <li>A <strong>metric</strong> is a number the training produced, like loss or accuracy. It can be logged many times, once per step, which gives a curve.</li>
+    <li>An <strong>artifact</strong> is any file the run produced: a plot, a CSV, the model itself.</li>
+    <li>A <strong>tag</strong> is a small note on the run, like who ran it or which data version.</li>
+    <li>An <strong>experiment</strong> is a named folder that groups runs for one problem.</li>
+  </ul>
+  <p>A tiny run with one param and a loss that goes down over three epochs:</p>
+  <div class="fx" data-lang="py">import mlflow
+mlflow.set_tracking_uri("sqlite:///tiny.db")    # where receipts are stored: a local file DB
+mlflow.set_experiment("tiny-demo")
+
+with mlflow.start_run(run_name="first-run") as run:
+    mlflow.log_param("learning_rate", 0.1)
+    for epoch, loss in enumerate([0.9, 0.6, 0.45]):
+        mlflow.log_metric("loss", loss, step=epoch)
+
+r = mlflow.get_run(run.info.run_id)
+print("params :", r.data.params)
+print("metrics:", r.data.metrics)
+hist = mlflow.MlflowClient().get_metric_history(run.info.run_id, "loss")
+print("history:", [(m.step, m.value) for m in hist])</div>
+  <div class="fx" data-lang="text">params : {'learning_rate': '0.1'}
+metrics: {'loss': 0.45}
+history: [(0, 0.9), (1, 0.6), (2, 0.45)]</div>
+  <p>Three things to notice. The param came back as the string <code>'0.1'</code>, not the number 0.1 (this matters later). <code>r.data.metrics</code> shows only the latest loss. The full curve is still there, through <code>get_metric_history</code>.</p>
+  <p>The picture shows how the nouns nest: one experiment holds many runs, and each run records four kinds of things.</p>
   <figure class="viz"><svg viewBox="0 0 600 170" width="600">
     <rect x="10" y="60" width="120" height="44" rx="6" class="fv" stroke="currentColor"/><text x="70" y="80" text-anchor="middle">Experiment</text><text x="70" y="96" text-anchor="middle" class="tm" font-size="11">cancer-rf</text>
     <rect x="170" y="15" width="110" height="34" rx="6" class="fb sb"/><text x="225" y="36" text-anchor="middle">run rf_10_2</text>
@@ -137,6 +178,7 @@ Object.assign(TOPIC_CONTENT, {
   </table>
 
   <h2 id="mf-log"><span class="num">03</span>Logging Three Runs</h2>
+  <p>Now a real case. We want to know how many trees a random forest needs for a cancer dataset. We try three settings. Each setting is one run inside one experiment. The <code>with</code> block opens the run; everything logged inside belongs to it; leaving the block closes it.</p>
   <div class="fx" data-lang="py">import mlflow, mlflow.sklearn
 from sklearn.datasets import load_breast_cancer
 from sklearn.ensemble import RandomForestClassifier
@@ -159,12 +201,13 @@ for n, depth in [(10, 2), (100, 5), (300, None)]:
                             "f1": f1_score(y_te, pred)})
         mlflow.sklearn.log_model(model, name="model", input_example=X_te.head(2),
                                  skops_trusted_types=["sklearn.tree._tree.Tree"])</div>
-  <p><code>input_example</code> lets MLflow infer a <strong>signature</strong> (expected column names and types), which the server later enforces.</p>
+  <p>Line by line: <code>log_params</code> writes the two settings. <code>log_metrics</code> writes the two scores on the <em>test</em> rows. <code>log_model</code> saves the trained model as an artifact. <code>input_example</code> hands MLflow two real rows so it can record the <strong>signature</strong>: the expected column names and types. The server later refuses requests that don't match it.</p>
   <div class="callout trap"><span class="label">Trap (MLflow 3.x)</span>
     <p>Recent MLflow saves sklearn models in the safer <strong>skops</strong> format, not pickle. Without <code>skops_trusted_types</code> this run failed: <em>"The saved sklearn model references untrusted types … ['sklearn.tree._tree.Tree']"</em>. Only trust types you reviewed. Why pickle is dangerous: see <em>Deployment Strategies → Packaging</em>.</p>
   </div>
 
   <h2 id="mf-auto"><span class="num">04</span>Autologging</h2>
+  <p>Typing <code>log_param</code> for every setting is boring, and you will forget some. <strong>Autologging</strong> is one line that tells MLflow to watch the library (here scikit-learn) and record everything itself: every param including the defaults you never typed, training metrics, and the model.</p>
   <div class="fx" data-lang="py">mlflow.sklearn.autolog()          # or mlflow.autolog() for every supported library
 with mlflow.start_run(run_name="logreg_autolog") as run:
     make_pipeline(StandardScaler(), LogisticRegression(C=0.5)).fit(X, y)
@@ -175,12 +218,13 @@ print(len(r.data.params), "params, e.g.", {k: r.data.params[k] for k in
 print("metrics:", sorted(r.data.metrics))</div>
   <div class="fx" data-lang="text">23 params, e.g. {'logisticregression__C': '0.5', 'logisticregression__max_iter': '100'}
 metrics: ['training_accuracy_score', 'training_f1_score', 'training_log_loss', 'training_precision_score', 'training_recall_score', 'training_roc_auc', 'training_score']</div>
-  <p>It captured every param, including defaults you never typed, plus the model. Works for sklearn, XGBoost, LightGBM, PyTorch Lightning, Keras, transformers.</p>
+  <p>We typed one setting (<code>C=0.5</code>); it captured 23, including <code>max_iter=100</code> which we never wrote. Works for sklearn, XGBoost, LightGBM, PyTorch Lightning, Keras, transformers.</p>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>Every autologged metric starts with <code>training_</code>: scores on data the model has seen. Log your own validation/test metrics; never compare runs on training scores.</p>
+    <p>Every autologged metric starts with <code>training_</code>: scores on data the model has already seen, like marking a student on the exact questions they practised. Log your own validation/test metrics; never compare runs on training scores.</p>
   </div>
 
   <h2 id="mf-compare"><span class="num">05</span>Comparing Runs</h2>
+  <p>Three runs are logged. Which is best? Instead of opening each receipt, ask MLflow for a table. <code>search_runs</code> returns a pandas DataFrame, so you can sort and filter like any table.</p>
   <div class="fx" data-lang="py">runs = mlflow.search_runs(experiment_names=["cancer-rf"],
                           filter_string="attributes.run_name LIKE 'rf_%'",
                           order_by=["metrics.f1 DESC", "params.n_estimators ASC"])
@@ -190,12 +234,20 @@ print(runs[["tags.mlflow.runName", "params.n_estimators",
            rf_100_5                 100                5             0.965      0.9721
         rf_300_None                 300             None             0.965      0.9721
             rf_10_2                  10                2             0.951      0.9605</div>
-  <p>Two runs tie on F1. The tie-breaker prefers fewer trees: same quality, 3× cheaper to serve. The UI (<code>mlflow ui</code>) shows the same table plus parallel-coordinate and metric-curve plots.</p>
+  <p><code>filter_string</code> keeps only runs whose name starts with <code>rf_</code>. <code>order_by</code> sorts by F1 (highest first) and, when F1 ties, by fewer trees first. Two runs tie on F1 0.9721. The tie-breaker prefers 100 trees over 300: same quality, 3× cheaper to serve. The UI (<code>mlflow ui</code>) shows the same table plus parallel-coordinate and metric-curve plots.</p>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>Params are stored as <strong>strings</strong>. Sorting works here only because 100 and 300 have the same number of digits; "1000" would sort before "300".</p>
+    <p>Params are stored as <strong>strings</strong>. Sorting works here only because 100 and 300 have the same number of digits. As text, "1000" sorts before "300", because "1" comes before "3".</p>
   </div>
 
   <h2 id="mf-reg"><span class="num">06</span>Model Registry</h2>
+  <p>You picked the winner. Now the app must use it, and next month a newer winner must replace it, and if that one misbehaves you must go back fast. Doing this by copying files around is how outages happen.</p>
+  <div class="callout def"><span class="label">Definition</span>
+    <p>The <strong>model registry</strong> is a shelf of saved models under one name per use case, with auto-numbered <strong>versions</strong> (1, 2, 3 …) that never change, and movable name tags called <strong>aliases</strong> (like <code>@champion</code>) that point at one version.</p>
+  </div>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A cricket team sheet. Players (versions) stay who they are. The captain's armband (alias) moves between players. Fans and commentators just say "the captain", and the right person is always meant. Rollback is handing the armband back.</p>
+  </div>
+  <p>In the picture, the serving code only ever asks for <code>@champion</code>. Moving that tag from version 2 back to version 1 is the rollback.</p>
   <figure class="viz"><svg viewBox="0 0 600 150" width="600">
     <defs><marker id="mf-ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs>
     <text x="10" y="20">registered model: cancer-classifier</text>
@@ -213,6 +265,7 @@ print(runs[["tags.mlflow.runName", "params.n_estimators",
     <div><b>Alias</b><p>Movable label pointing to one version.</p><small>@champion, @challenger</small></div>
     <div><b>Tags</b><p>Key-value notes on a version.</p><small>validated=true, owner=risk-team</small></div>
   </div>
+  <p>Registering the best run: find it, find the model it logged, put that model on the shelf, and hang the <code>champion</code> tag on it.</p>
   <div class="fx" data-lang="py">best = mlflow.search_runs(experiment_names=["cancer-rf"],
                           order_by=["metrics.f1 DESC", "params.n_estimators ASC"],
                           max_results=1).iloc[0]
@@ -242,11 +295,13 @@ Created version '2' of model 'cancer-classifier'.
 version 1 aliases ['previous']
 version 2 aliases ['champion']
 after rollback, champion -&gt; 1</div>
+  <p>Nothing was copied or deleted. Version 2 still exists for later study; only the tag moved.</p>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Older tutorials use <strong>stages</strong> (None → Staging → Production → Archived) and <code>transition_model_version_stage</code>. Stages are deprecated since MLflow 2.9; use aliases plus tags. Interviewers may still say "stages", so know both.</p>
   </div>
 
   <h2 id="mf-serve"><span class="num">07</span>Loading &amp; Serving</h2>
+  <p>The app needs predictions. Two ways: load the model inside your own Python code, or run MLflow's built-in web server and send it HTTP requests. Both ask the registry for <code>@champion</code>, so they always get the current winner.</p>
   <div class="flow"><span>models:/name@champion</span><span>Registry resolves version</span><span>Download artifact</span><span>pyfunc.predict()</span></div>
   <div class="fx" data-lang="py">model = mlflow.pyfunc.load_model("models:/cancer-classifier@champion")
 X, y = load_breast_cancer(return_X_y=True, as_frame=True)
@@ -254,8 +309,9 @@ print("pred:", model.predict(X.iloc[[0, 1, 19, 20]]))
 print("true:", y.iloc[[0, 1, 19, 20]].values)</div>
   <div class="fx" data-lang="text">pred: [0 0 1 1]
 true: [0 0 1 1]</div>
-  <p><strong>pyfunc</strong> is MLflow's generic wrapper: sklearn, XGBoost or PyTorch all expose the same <code>.predict()</code>. Other URI forms: <code>models:/name/2</code> (a version), <code>runs:/&lt;run_id&gt;/model</code>.</p>
+  <p><strong>pyfunc</strong> ("Python function") is MLflow's generic wrapper: sklearn, XGBoost or PyTorch models all come back with the same <code>.predict()</code>, so the serving code never cares which library trained the model. Other URI forms: <code>models:/name/2</code> (a fixed version), <code>runs:/&lt;run_id&gt;/model</code> (straight from a run).</p>
   <h3>A REST endpoint in one command</h3>
+  <p>A <strong>REST endpoint</strong> is a web address that accepts a request and returns an answer, the way a payment app talks to a bank. <code>mlflow models serve</code> starts one for the chosen model. <code>curl</code> is a command-line tool that sends HTTP requests; here it sends two rows and gets two predictions.</p>
   <div class="fx" data-lang="text">$ export MLFLOW_TRACKING_URI=sqlite:///mlflow.db
 $ mlflow models serve -m "models:/cancer-classifier@champion" -p 5055 --env-manager local
 
@@ -265,8 +321,9 @@ $ curl -X POST localhost:5055/invocations -H 'Content-Type: application/json' -d
 # send only one column -&gt; signature enforcement rejects it
 {"error_code": "INVALID_PARAMETER_VALUE", ... "Model is missing inputs ['mean texture', 'mean perimeter', ...]",
  "error_class": "SCHEMA_ENFORCEMENT_FAILED"}</div>
-  <p><code>req.json</code> is <code>{"dataframe_split": {"columns": [...30 names], "data": [[...], [...]]}}</code>. <code>mlflow models build-docker</code> wraps the same server into an image.</p>
+  <p><code>req.json</code> is <code>{"dataframe_split": {"columns": [...30 names], "data": [[...], [...]]}}</code>. The second request sent only one of the 30 columns; the signature recorded in Section 03 caught it and refused, instead of returning a wrong answer. <code>mlflow models build-docker</code> wraps the same server into a Docker image.</p>
   <h3>What a logged model contains (MLmodel file, trimmed)</h3>
+  <p>A logged model is a folder, not a single file. Its <code>MLmodel</code> file is the label on the box: which libraries can load it (<strong>flavors</strong>), which Python packages it needs, the signature, and the run it came from.</p>
   <div class="fx" data-lang="text">flavors:
   python_function:
     env: {conda: conda.yaml, virtualenv: python_env.yaml}
@@ -287,6 +344,8 @@ signature:
   </div>
 
   <h2 id="mf-setup"><span class="num">08</span>Server Setup &amp; Projects</h2>
+  <p>So far the receipts lived in a file on one laptop (<code>sqlite:///mlflow.db</code>). A team of twenty needs one shared place. That is the <strong>tracking server</strong>: everyone's code points at it with <code>MLFLOW_TRACKING_URI</code>, and the same <code>log_*</code> calls now write there.</p>
+  <p>The server keeps two kinds of things in two places. Small facts (params, metrics, run names) go into a normal database, the <strong>backend store</strong>. Big files (models, plots) go into cloud object storage, the <strong>artifact store</strong>. The picture shows the split.</p>
   <figure class="viz"><svg viewBox="0 0 600 130" width="600">
     <defs><marker id="mf-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs>
     <rect x="10" y="45" width="130" height="40" rx="6" class="fb sb"/><text x="75" y="69" text-anchor="middle">training code</text>
@@ -298,8 +357,9 @@ signature:
   <div class="fx" data-lang="text">mlflow server --backend-store-uri postgresql://user:pw@db/mlflow \\
               --artifacts-destination s3://ml-artifacts --host 0.0.0.0 --port 5000
 # clients:  export MLFLOW_TRACKING_URI=http://mlflow.internal:5000</div>
-  <p>Not run here (needs Postgres + S3). Managed options: Databricks, SageMaker managed MLflow, Azure ML.</p>
+  <p>Not run here (needs Postgres + S3). Managed options, where someone else runs the server for you: Databricks, SageMaker managed MLflow, Azure ML.</p>
   <h3>MLflow Projects (brief)</h3>
+  <p>A Project is a small text file that says "here is how to run my training": which environment, which script, which arguments. Anyone can then rerun it with one command.</p>
   <div class="fx" data-lang="text"># MLproject  (file at repo root)
 name: cancer-rf
 python_env: python_env.yaml
@@ -311,7 +371,7 @@ entry_points:
     command: "python train.py --n {n_estimators} --depth {max_depth}"
 
 $ mlflow run . -P n_estimators=300            # or a Git URL</div>
-  <p>A Project packages code + env + entry point so anyone can rerun it. Many teams now use Docker or a pipeline tool (Airflow, Kubeflow) for this instead.</p>
+  <p>Many teams now use Docker or a pipeline tool (Airflow, Kubeflow) for this instead.</p>
 
   <h2 id="mf-build"><span class="num">09</span>Build It</h2>
   <ol>
@@ -325,6 +385,7 @@ $ mlflow run . -P n_estimators=300            # or a Git URL</div>
   <h2 id="mf-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>What problems does experiment tracking solve?</summary><div class="qa-body">Reproducibility (rebuild any model from logged params, code version and data version), comparison (rank hundreds of runs by a metric), collaboration (one shared history instead of personal spreadsheets) and lineage (which run produced the model in production).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Param vs metric: what is the difference?</summary><div class="qa-body">A param is a setting you choose before training (trees, learning rate), logged once and stored as a string. A metric is a number the training produces (loss, F1), stored as a float and loggable many times with a <code>step</code>, which gives a curve.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>You compare runs using autologged metrics and pick the top one. What's wrong?</summary><div class="qa-body">Autolog's sklearn metrics are computed on the training data (<code>training_accuracy_score</code> etc.), so the "best" run is probably the most overfit. Log validation or test metrics yourself, or use <code>mlflow.evaluate</code> / <code>mlflow.models.evaluate</code> on a holdout set.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Two runs tie on the main metric. How do you choose?</summary><div class="qa-body">Prefer the cheaper or simpler model (fewer trees, lower latency, smaller artifact), then check secondary metrics, per-slice performance and stability across seeds or CV folds. In our run, rf_100_5 matched rf_300_None on F1 with a third of the trees.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Version vs alias in the registry?</summary><div class="qa-body">A version is an immutable snapshot of one model, auto-numbered and linked to the run that produced it. An alias (e.g. <code>@champion</code>) is a movable pointer to one version. Serving loads <code>models:/name@champion</code>, so promoting or rolling back is just moving the alias, with no code change.</div></details>
