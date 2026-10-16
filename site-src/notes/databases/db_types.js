@@ -4,6 +4,89 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Types of Databases</h1>
   <p class="lead">Each database family stores data in a different shape, and the shape decides what is fast and what is painful. Know the shapes, the trade-offs (ACID, CAP, row vs column) and how to pick one for a workload.</p>
 
+  <h2 id="dt-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Types of Databases</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Relational (the default)</div>
+        <ul>
+          <li><b>Model</b> — tables, fixed columns, linked by keys, JOIN at query time</li>
+          <li><b>Each fact once</b> — order stores <code>customer_id</code>, name lives in <code>customers</code></li>
+          <li><b>Great</b> — ad-hoc queries, JOINs, ACID, constraints</li>
+          <li><b>Weak</b> — scaling writes across machines; shape that changes weekly</li>
+          <li><b>Products</b> — PostgreSQL, MySQL, SQLite; NewSQL: CockroachDB, Spanner</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Document &amp; Key-value</div>
+        <ul>
+          <li><b>Document</b> — one nested JSON per record; whole object in one read (MongoDB, JSONB)</li>
+          <li>⚠ weak at many-to-many + cross-document analytics; duplicated data goes stale</li>
+          <li>💡 <b>Filing cabinet</b> — one folder per order</li>
+          <li><b>Key-value</b> — giant dictionary, value is opaque (Redis, DynamoDB)</li>
+          <li><b>Uses</b> — cache, sessions, rate limits, counters, online features</li>
+          <li>💡 <b>Coat check</b> — ticket → coat instantly; "red coats?" = check every hook</li>
+          <li>⚠ <b>In-memory</b> is a property: Redis can lose last writes → cache, not truth</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Wide-column &amp; Graph</div>
+        <ul>
+          <li><b>Wide-column</b> — partition key groups rows, clustering key sorts them (Cassandra)</li>
+          <li><b>Design</b> — one table per query; millions of writes/s; no JOINs</li>
+          <li>⚠ <b>Wide-column ≠ columnar</b> — rows by key (writes) vs columns apart (scans)</li>
+          <li><b>Graph</b> — nodes + edges with properties; hop = pointer, not JOIN (Neo4j)</li>
+          <li><b>Graph uses</b> — fraud rings, friends-of-friends, recommendations</li>
+          <li>💡 <b>Detective corkboard</b> — follow the string</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Specialists</div>
+        <ul>
+          <li><b>Time-series</b> — (time, tags, values), append-only, buckets, retention (TimescaleDB, InfluxDB)</li>
+          <li><b>Search</b> — inverted index word → docs, BM25 ranking (Elasticsearch)</li>
+          <li>⚠ search engine is fed from main DB; not the source of truth</li>
+          <li><b>Vector</b> — embeddings + ANN index (HNSW): trade a little recall for speed</li>
+          <li><b>Default</b> — pgvector under a few million vectors; Pinecone/Qdrant at scale</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Row vs Column store</div>
+        <ul>
+          <li><b>Row store</b> — whole rows together; fetch/update one row cheaply (OLTP)</li>
+          <li><b>Column store</b> — each column together; <code>SUM(amount)</code> reads one column (OLAP)</li>
+          <li><b>Compression</b> — high in columns (run-length, dictionary)</li>
+          <li><b>Warehouses</b> — BigQuery, Snowflake, Redshift, ClickHouse, DuckDB</li>
+          <li>💡 forms stack vs one list per question</li>
+          <li>⚠ <code>SELECT *</code> on BigQuery reads every column, billed per byte</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">ACID, BASE, CAP</div>
+        <ul>
+          <li><b>ACID</b> — Atomic (all or none), Consistent (rules hold), Isolated, Durable</li>
+          <li><b>BASE</b> — Basically Available, Soft state, Eventually consistent</li>
+          <li>💡 bank transfer (ACID) vs like counter (BASE)</li>
+          <li><b>CAP</b> — during a network partition choose Consistency (refuse) or Availability (maybe stale)</li>
+          <li>⚠ not "pick 2 of 3": healthy network → both; daily trade = latency vs consistency (PACELC)</li>
+          <li><b>CP</b> — HBase, etcd, Spanner · <b>AP</b> — Cassandra, DynamoDB · single node: CAP n/a</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Choosing + polyglot</div>
+        <ul>
+          <li><b>Ask</b> — transactions? query pattern? volume? shape fixed? team knows X?</li>
+          <li><b>Map</b> — orders → Postgres, cache → Redis, events → Cassandra, fraud → Neo4j, search → ES, RAG → vector, BI → warehouse</li>
+          <li><b>Polyglot</b> — one source of truth, specialists fed via CDC</li>
+          <li>⚠ <b>Dual writes</b> drift when one fails → write once, propagate via CDC</li>
+          <li><b>Cloud</b> — RDS/Aurora, DynamoDB, ElastiCache, Redshift · Cloud SQL, Spanner, BigQuery · Snowflake</li>
+          <li><b>Interview line</b> — "Default to Postgres; add a specialist for a named workload."</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -15,14 +98,42 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="dt-acid"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">ACID, BASE &amp; CAP</span><span class="rm-sub">The guarantees you trade</span></div></div>
       <div class="rm-item rm-done" data-target="dt-choose"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">How to Choose</span><span class="rm-sub">Workload → database</span></div></div>
       <div class="rm-item rm-done" data-target="dt-poly"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Polyglot &amp; Managed Cloud</span><span class="rm-sub">Many DBs, one product</span></div></div>
-      <div class="rm-item rm-done" data-target="dt-rev"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="dt-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="dt-qa"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
   <h2 id="dt-rel"><span class="num">01</span>Relational</h2>
-  <p>Data lives in <strong>tables</strong> with fixed columns. Tables link through <strong>keys</strong>, and you combine them with JOINs at query time.</p>
-  <p>One record is one row. Order 100 stores only <code>customer_id = 1</code>; Asha's name lives once, in <code>customers</code>.</p>
+  <figure class="viz"><svg viewBox="0 0 600 215" width="600">
+    <defs><marker id="dt-ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <g font-size="10">
+    <text x="75" y="18" text-anchor="middle" font-weight="bold" font-size="12" class="tb">Relational</text>
+    <text x="15" y="42" class="tm">orders</text><text x="88" y="42" class="tm">customers</text>
+    <rect x="15" y="50" width="56" height="20" rx="3" class="fb"/><text x="22" y="64">100 │ 1</text>
+    <rect x="15" y="74" width="56" height="20" rx="3" class="fb"/><text x="22" y="88">102 │ 2</text>
+    <rect x="88" y="50" width="56" height="20" rx="3" class="ft"/><text x="94" y="64">1 Asha</text>
+    <rect x="88" y="74" width="56" height="20" rx="3" class="ft"/><text x="94" y="88">2 Ben</text>
+    <g stroke="currentColor" marker-end="url(#dt-ar1)"><line x1="71" y1="60" x2="86" y2="60"/><line x1="71" y1="84" x2="86" y2="84"/></g>
+    <text x="232" y="18" text-anchor="middle" font-weight="bold" font-size="12" class="tb">Document</text>
+    <rect x="165" y="35" width="135" height="100" rx="6" class="fs"/>
+    <text x="173" y="54">{ _id: 100,</text><text x="173" y="70">  cust: {name:</text><text x="173" y="86">    "Asha"},</text><text x="173" y="102">  items: [Laptop,</text><text x="173" y="118">    Lamp] }</text>
+    <text x="380" y="18" text-anchor="middle" font-weight="bold" font-size="12" class="tb">Key-value</text>
+    <rect x="315" y="40" width="58" height="22" rx="3" class="fv"/><text x="321" y="55">s:8f3a</text><rect x="390" y="40" width="55" height="22" rx="3" class="fs"/><text x="396" y="55">{cart}</text>
+    <rect x="315" y="72" width="58" height="22" rx="3" class="fv"/><text x="321" y="87">views</text><rect x="390" y="72" width="55" height="22" rx="3" class="fs"/><text x="396" y="87">42</text>
+    <rect x="315" y="104" width="58" height="22" rx="3" class="fv"/><text x="321" y="119">rate:1</text><rect x="390" y="104" width="55" height="22" rx="3" class="fs"/><text x="396" y="119">7</text>
+    <g stroke="currentColor" marker-end="url(#dt-ar1)"><line x1="373" y1="51" x2="388" y2="51"/><line x1="373" y1="83" x2="388" y2="83"/><line x1="373" y1="115" x2="388" y2="115"/></g>
+    <text x="527" y="18" text-anchor="middle" font-weight="bold" font-size="12" class="tb">Graph</text>
+    <g stroke="currentColor" marker-end="url(#dt-ar1)"><line x1="502" y1="60" x2="545" y2="88"/><line x1="502" y1="138" x2="545" y2="112"/></g>
+    <circle cx="485" cy="52" r="20" class="fb"/><text x="485" y="56" text-anchor="middle">Asha</text>
+    <circle cx="485" cy="145" r="20" class="fb"/><text x="485" y="149" text-anchor="middle">Chen</text>
+    <circle cx="565" cy="100" r="22" class="fg"/><text x="565" y="104" text-anchor="middle">Lamp</text>
+    <text x="530" y="66" class="tm" font-size="9">BOUGHT</text>
+    <text x="75" y="190" text-anchor="middle" class="tm">JOIN on keys</text>
+    <text x="232" y="190" text-anchor="middle" class="tm">whole object, 1 read</text>
+    <text x="380" y="190" text-anchor="middle" class="tm">get by key only</text>
+    <text x="527" y="190" text-anchor="middle" class="tm">follow edges</text>
+    </g>
+  </svg><figcaption>The same shop data in four shapes. The shape decides which questions are cheap.</figcaption></figure>
+  <p><strong>Tables</strong> with fixed columns, linked by <strong>keys</strong>, combined with JOINs at query time. Each fact lives once: order 100 stores only <code>customer_id = 1</code>.</p>
   <div class="fx" data-lang="sql">SELECT o.order_id, o.customer_id, c.name, c.city, o.status
 FROM orders o JOIN customers c ON c.customer_id = o.customer_id
 WHERE o.order_id = 100;</div>
@@ -66,7 +177,7 @@ INCR page_views:product:10</div>
     <li><strong>Products:</strong> Redis, Memcached, Amazon DynamoDB, etcd.</li>
   </ul>
   <div class="callout intu"><span class="label">In-memory is a property, not a family</span>
-    <p><strong>In-memory</strong> means data is kept in RAM, so reads take microseconds. Redis is an in-memory key-value store. It can persist to disk (snapshots or an append-only log), but a crash can lose the last moments of writes, so treat it as a cache, not the source of truth.</p>
+    <p><strong>In-memory</strong> = data in RAM, microsecond reads. Redis can persist (snapshots, append-only log), but a crash can lose the last writes: use it as a cache, not the source of truth.</p>
   </div>
 
   <h2 id="dt-wide"><span class="num">03</span>Wide-Column &amp; Graph</h2>
@@ -138,11 +249,34 @@ query "desk lamp" -&gt; doc 57 ranks first (matches both)</div>
   </div>
 
   <h2 id="dt-col"><span class="num">05</span>Row vs Column Stores</h2>
-  <p>The same table can be laid out on disk two ways. The layout decides which queries are cheap.</p>
-  <div class="fx" data-lang="text">Row store (PostgreSQL, MySQL)       Column store (BigQuery, Snowflake, Redshift)
-[100, 1, 2024-05-01, delivered]     order_id:    100, 101, 102, 103, 104
-[101, 1, 2024-05-20, delivered]     customer_id: 1, 1, 2, 3, 3
-[102, 2, 2024-06-02, cancelled]     status:      delivered, delivered, cancelled, ...</div>
+  <p>Same <code>orders</code> table, two disk layouts. Query: <em>count orders by status</em>.</p>
+  <figure class="viz"><svg viewBox="0 0 600 210" width="600">
+    <g font-size="10">
+      <rect x="40" y="6" width="12" height="12" class="fb"/><text x="57" y="16">order_id</text>
+      <rect x="150" y="6" width="12" height="12" class="ft"/><text x="167" y="16">customer_id</text>
+      <rect x="280" y="6" width="12" height="12" class="fv"/><text x="297" y="16">order_date</text>
+      <rect x="400" y="6" width="12" height="12" class="fg"/><text x="417" y="16">status</text>
+    </g>
+    <text x="40" y="44" font-weight="bold">Row store <tspan class="tm" font-weight="normal">(PostgreSQL): row after row</tspan></text>
+    <g stroke="currentColor" stroke-opacity="0.35">
+      <rect x="40" y="52" width="25" height="28" class="fb"/><rect x="65" y="52" width="25" height="28" class="ft"/><rect x="90" y="52" width="25" height="28" class="fv"/><rect x="115" y="52" width="25" height="28" class="fg sg" stroke-opacity="1" stroke-width="2"/>
+      <rect x="145" y="52" width="25" height="28" class="fb"/><rect x="170" y="52" width="25" height="28" class="ft"/><rect x="195" y="52" width="25" height="28" class="fv"/><rect x="220" y="52" width="25" height="28" class="fg sg" stroke-opacity="1" stroke-width="2"/>
+      <rect x="250" y="52" width="25" height="28" class="fb"/><rect x="275" y="52" width="25" height="28" class="ft"/><rect x="300" y="52" width="25" height="28" class="fv"/><rect x="325" y="52" width="25" height="28" class="fg sg" stroke-opacity="1" stroke-width="2"/>
+      <rect x="355" y="52" width="25" height="28" class="fb"/><rect x="380" y="52" width="25" height="28" class="ft"/><rect x="405" y="52" width="25" height="28" class="fv"/><rect x="430" y="52" width="25" height="28" class="fg sg" stroke-opacity="1" stroke-width="2"/>
+      <rect x="460" y="52" width="25" height="28" class="fb"/><rect x="485" y="52" width="25" height="28" class="ft"/><rect x="510" y="52" width="25" height="28" class="fv"/><rect x="535" y="52" width="25" height="28" class="fg sg" stroke-opacity="1" stroke-width="2"/>
+    </g>
+    <path d="M40,88 L40,94 L560,94 L560,88" fill="none" class="sr" stroke-width="2"/>
+    <text x="300" y="110" text-anchor="middle" class="tr">reads all 20 values to get 5 statuses</text>
+    <text x="40" y="142" font-weight="bold">Column store <tspan class="tm" font-weight="normal">(BigQuery): column after column</tspan></text>
+    <g stroke="currentColor" stroke-opacity="0.35">
+      <rect x="40" y="150" width="25" height="28" class="fb"/><rect x="65" y="150" width="25" height="28" class="fb"/><rect x="90" y="150" width="25" height="28" class="fb"/><rect x="115" y="150" width="25" height="28" class="fb"/><rect x="140" y="150" width="25" height="28" class="fb"/>
+      <rect x="170" y="150" width="25" height="28" class="ft"/><rect x="195" y="150" width="25" height="28" class="ft"/><rect x="220" y="150" width="25" height="28" class="ft"/><rect x="245" y="150" width="25" height="28" class="ft"/><rect x="270" y="150" width="25" height="28" class="ft"/>
+      <rect x="300" y="150" width="25" height="28" class="fv"/><rect x="325" y="150" width="25" height="28" class="fv"/><rect x="350" y="150" width="25" height="28" class="fv"/><rect x="375" y="150" width="25" height="28" class="fv"/><rect x="400" y="150" width="25" height="28" class="fv"/>
+      <rect x="430" y="150" width="25" height="28" class="fg sg" stroke-opacity="1" stroke-width="2"/><rect x="455" y="150" width="25" height="28" class="fg sg" stroke-opacity="1" stroke-width="2"/><rect x="480" y="150" width="25" height="28" class="fg sg" stroke-opacity="1" stroke-width="2"/><rect x="505" y="150" width="25" height="28" class="fg sg" stroke-opacity="1" stroke-width="2"/><rect x="530" y="150" width="25" height="28" class="fg sg" stroke-opacity="1" stroke-width="2"/>
+    </g>
+    <path d="M430,186 L430,192 L555,192 L555,186" fill="none" class="sg" stroke-width="2"/>
+    <text x="492" y="206" text-anchor="middle" class="tg">reads only 5</text>
+  </svg><figcaption>Row store keeps a row's values together (cheap to fetch one order); column store keeps a column together (cheap to scan one field).</figcaption></figure>
   <table class="tbl">
     <tr><th></th><th>Row store</th><th>Column store</th></tr>
     <tr><td>Fast for</td><td>Fetch or update one whole row (OLTP)</td><td>Aggregate a few columns over billions of rows (OLAP)</td></tr>
@@ -153,7 +287,7 @@ query "desk lamp" -&gt; doc 57 ranks first (matches both)</div>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A row store is a stack of filled-in forms: great for pulling one person's form. A column store is one list per question: great for "average age", useless for "show me Asha's whole form" quickly.</p>
   </div>
-  <p><strong>Columnar / analytical warehouses</strong> (BigQuery, Snowflake, Redshift, ClickHouse, DuckDB locally) are column stores with massively parallel execution. They are the data scientist's main workplace: great for joins and aggregates over history, bad as an app backend (slow single-row writes, seconds of latency, cost per query).</p>
+  <p><strong>Analytical warehouses</strong> (BigQuery, Snowflake, Redshift, ClickHouse, DuckDB locally) = column store + massively parallel execution. Your main workplace; a bad app backend (slow single-row writes, seconds of latency, cost per query).</p>
   <div class="callout trap"><span class="label">Trap</span>
     <p><code>SELECT *</code> on a column store reads every column and, on BigQuery, you pay per byte scanned. Select only the columns you need.</p>
   </div>
@@ -172,12 +306,25 @@ query "desk lamp" -&gt; doc 57 ranks first (matches both)</div>
     <p>ACID is a bank transfer: money never vanishes mid-way. BASE is a social "like" counter: if your friend sees 99 likes and you see 100 for a second, nobody is harmed.</p>
   </div>
   <h3>CAP theorem in plain terms</h3>
-  <p>A distributed database copies data across machines. When the network between them breaks (a <strong>partition</strong>), each machine must choose:</p>
-  <ul>
-    <li><strong>C</strong>onsistency: refuse to answer rather than risk returning stale data, or</li>
-    <li><strong>A</strong>vailability: answer anyway, possibly with stale data.</li>
-  </ul>
-  <p>You can't have both while partitioned (<strong>P</strong>). Banks choose C; shopping carts and feeds usually choose A.</p>
+  <p>Replicas copy data across machines. When the network between them breaks (a <strong>partition</strong>, P), each must choose:</p>
+  <figure class="viz"><svg viewBox="0 0 600 215" width="600">
+    <defs><marker id="dt-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <text x="300" y="16" text-anchor="middle" font-size="11" class="tm">A client asks Replica A: "is the Lamp in stock?"</text>
+    <rect x="60" y="30" width="170" height="54" rx="8" class="fb sb"/>
+    <text x="145" y="52" text-anchor="middle" font-weight="bold">Replica A</text><text x="145" y="70" text-anchor="middle" font-size="10" class="tm">thinks stock = 1</text>
+    <rect x="370" y="30" width="170" height="54" rx="8" class="fb sb"/>
+    <text x="455" y="52" text-anchor="middle" font-weight="bold">Replica B</text><text x="455" y="70" text-anchor="middle" font-size="10" class="tm">just sold it: stock = 0</text>
+    <line x1="230" y1="57" x2="370" y2="57" stroke="currentColor" stroke-dasharray="5 4"/>
+    <circle cx="300" cy="57" r="13" class="fr sr"/><text x="300" y="62" text-anchor="middle" font-weight="bold" class="tr">✗</text>
+    <text x="300" y="98" text-anchor="middle" font-size="10" class="tr">network partition</text>
+    <g stroke="currentColor" marker-end="url(#dt-ar2)"><line x1="120" y1="84" x2="120" y2="128"/><line x1="170" y1="84" x2="380" y2="128"/></g>
+    <rect x="20" y="130" width="260" height="60" rx="8" class="fg sg"/>
+    <text x="150" y="152" text-anchor="middle" font-weight="bold">Choose C: refuse</text>
+    <text x="150" y="172" text-anchor="middle" font-size="10" class="tm">"try later": correct, unavailable</text>
+    <rect x="320" y="130" width="260" height="60" rx="8" class="fv"/>
+    <text x="450" y="152" text-anchor="middle" font-weight="bold">Choose A: answer "yes"</text>
+    <text x="450" y="172" text-anchor="middle" font-size="10" class="tm">available, but stale (wrong)</text>
+  </svg><figcaption>While partitioned you cannot be both correct and always answering. Banks choose C; carts and feeds usually choose A.</figcaption></figure>
   <div class="callout trap"><span class="label">Trap: "pick 2 of 3"</span>
     <p>CAP only bites <em>during a partition</em>. When the network is healthy you get C and A. The everyday trade-off is latency vs consistency (the <strong>PACELC</strong> extension: "Else, Latency or Consistency"). Many systems are tunable per query: Cassandra and DynamoDB let you choose consistency levels.</p>
   </div>
@@ -236,22 +383,7 @@ query "desk lamp" -&gt; doc 57 ranks first (matches both)</div>
     <li><strong>DynamoDB</strong>: serverless key-value/document store; single-digit-ms at any scale, but you must design around access patterns (partition + sort key).</li>
     <li><strong>Redshift</strong>: columnar warehouse on clusters (now also serverless). <strong>BigQuery</strong>: serverless; pay per bytes scanned or reserved slots. <strong>Snowflake</strong>: runs on any cloud; storage and compute ("warehouses") scale and bill separately.</li>
   </ul>
-
-  <h2 id="dt-rev"><span class="num">09</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Relational</strong>: tables + keys + JOINs + ACID. The default.</li>
-    <li><strong>Document</strong>: nested JSON per record; flexible, weak at cross-record joins.</li>
-    <li><strong>Key-value</strong>: dictionary lookup by key; Redis is also <strong>in-memory</strong>, so use it as a cache.</li>
-    <li><strong>Wide-column</strong> (Cassandra): partition key + clustering key; huge writes; one table per query.</li>
-    <li><strong>Graph</strong>: nodes + edges; multi-hop questions. <strong>Time-series</strong>: append + time buckets + retention.</li>
-    <li><strong>Search</strong>: inverted index + relevance. <strong>Vector</strong>: embeddings + ANN (HNSW).</li>
-    <li><strong>Row store</strong> = OLTP (whole rows); <strong>column store</strong> = OLAP (few columns, many rows, compressed).</li>
-    <li><strong>ACID</strong> = correct now; <strong>BASE</strong> = available, eventually consistent.</li>
-    <li><strong>CAP</strong>: only during a network partition do you choose consistency or availability.</li>
-    <li><strong>Polyglot</strong>: one source of truth, specialists fed via CDC.</li>
-  </ol></div>
-
-  <h2 id="dt-qa"><span class="num">10</span>Questions &amp; Answers</h2>
+  <h2 id="dt-qa"><span class="num">09</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>Explain the CAP theorem. Does it mean every database picks two of three?</summary><div class="qa-body">When a network partition splits replicas, each side must either reject requests (consistency) or answer with possibly stale data (availability). Partitions can't be ruled out, so the real choice is C or A <em>during a partition</em>. When the network is healthy, a system can be both; the day-to-day trade-off is latency vs consistency (PACELC).</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What's the difference between a wide-column store and a columnar warehouse?</summary><div class="qa-body">Wide-column (Cassandra, Bigtable) groups rows by partition key; it's built for fast writes and key lookups. Columnar (BigQuery, Redshift) stores each column contiguously; it's built for scanning and aggregating a few columns over billions of rows. Similar names, opposite workloads.</div></details>

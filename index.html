@@ -5424,6 +5424,88 @@ Object.assign(TOPIC_CONTENT, {
   <h1>What is a Database</h1>
   <p class="lead">Before writing SQL, you need to know what a database actually does for you: what problems it solves, and what happens between your query and the disk.</p>
 
+  <h2 id="di-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">What is a Database</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Three words</div>
+        <ul>
+          <li><b>Data</b> — raw facts ("Asha bought a Laptop for 800")</li>
+          <li><b>Database</b> — organised collection of data, quick to find and change</li>
+          <li><b>DBMS</b> — software that stores, protects, serves it (PostgreSQL, MySQL, MongoDB)</li>
+          <li>💡 <b>Library</b> — books = data, shelves = database, librarian = DBMS</li>
+          <li><b>Path</b> — app → SQL query → DBMS → files; you never touch files</li>
+          <li>⚠ <b>Trap</b> — "PostgreSQL is a database": precisely, a DBMS managing many databases</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Why not Excel / CSV</div>
+        <ul>
+          <li><b>Concurrency</b> — transactions + locks stop overwrites</li>
+          <li><b>Integrity</b> — types and constraints reject "abc" in price</li>
+          <li><b>Crash safety</b> — WAL restores a consistent state</li>
+          <li><b>Scale</b> — billions of rows, reads only needed pages</li>
+          <li><b>Querying</b> — one declarative query vs manual VLOOKUPs</li>
+          <li><b>Security</b> — per-user, per-table permissions</li>
+          <li><b>Last concert seat</b> — two buyers, one transaction wins, other fails cleanly</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Inside: query path</div>
+        <ul>
+          <li><b>Parser</b> — grammar + do table/columns exist?</li>
+          <li><b>Optimizer</b> — picks cheapest plan: scan vs index, join order</li>
+          <li><b>Executor</b> — runs the plan</li>
+          <li><b>Buffer cache</b> — hot pages in RAM (~1000× faster than disk)</li>
+          <li><b>Pages</b> — fixed 8 KB blocks; DBMS reads pages, never single rows</li>
+          <li><b>Declarative</b> — you say <em>what</em>, optimizer decides <em>how</em></li>
+          <li>💡 <b>Restaurant</b> — you order, chef picks method; counter = cache, store room = disk</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Index &amp; WAL</div>
+        <ul>
+          <li><b>Index</b> — sorted lookup (B-tree), like a book's index; avoids full scans</li>
+          <li><b>WAL</b> — write-ahead log: append change to log, flush, then apply to table</li>
+          <li><b>Recovery</b> — replay committed log entries, discard uncommitted</li>
+          <li>💡 <b>Receipt book</b> — write the sale before moving stock</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Schema &amp; data shapes</div>
+        <ul>
+          <li><b>Schema</b> — blueprint: tables, columns, types, rules</li>
+          <li><b>Structured</b> — fixed columns → SQL tables (orders, payments)</li>
+          <li><b>Semi-structured</b> — varying, nested fields → JSON, MongoDB, JSONB</li>
+          <li><b>Unstructured</b> — blobs → S3; embeddings → vector DB</li>
+          <li><b>Schema-on-write</b> — checked at insert; clean data, migrations to change</li>
+          <li><b>Schema-on-read</b> — checked by reader; flexible, every reader handles mess</li>
+          <li>⚠ <b>"Schemaless"</b> — schema just moved into application code</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">SQL vs NoSQL</div>
+        <ul>
+          <li><b>SQL</b> — tables + keys + JOINs, fixed schema, strong ACID, scales up + replicas</li>
+          <li><b>NoSQL</b> — documents, key-value, graph, wide-column; flexible; scales out</li>
+          <li><b>Relationships</b> — SQL joins at query time; NoSQL embeds/duplicates</li>
+          <li><b>Rule</b> — default PostgreSQL; NoSQL only for a named reason (write volume, varied shape, cache, graph)</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Data stack</div>
+        <ul>
+          <li><b>Flow</b> — App DB → ETL/CDC → warehouse → dashboards &amp; ML</li>
+          <li><b>OLTP</b> — many tiny reads/writes ("place order"), row store</li>
+          <li><b>OLAP</b> — few huge scans ("revenue by month, 3 yrs"), column store</li>
+          <li><b>Supporting</b> — Redis cache, Elasticsearch text, vector DB (RAG), feature store</li>
+          <li>⚠ <b>Trap</b> — heavy analytics on production OLTP slows the live app</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -5433,22 +5515,21 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="di-schema"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Schema &amp; Data Shapes</span><span class="rm-sub">Structured, semi-, unstructured</span></div></div>
       <div class="rm-item rm-done" data-target="di-sqlnosql"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">SQL vs NoSQL</span><span class="rm-sub">The two big families</span></div></div>
       <div class="rm-item rm-done" data-target="di-stack"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Databases in a Data Stack</span><span class="rm-sub">Where each one sits</span></div></div>
-      <div class="rm-item rm-done" data-target="di-rev"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 8 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="di-qa"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="di-qa"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
   <h2 id="di-core"><span class="num">01</span>Data, Database, DBMS</h2>
-  <ul>
-    <li><strong>Data</strong>: raw facts. <em>"Asha ordered a Laptop on 1 May for ₹800."</em></li>
-    <li><strong>Database</strong>: an organised collection of that data, stored so it can be found and changed quickly.</li>
-    <li><strong>DBMS</strong> (Database Management System): the software that stores, protects and serves the database. PostgreSQL, MySQL and MongoDB are DBMSs.</li>
-  </ul>
+  <div class="cards">
+    <div><b>Data</b><p>Raw facts.</p><small>"Asha ordered a Laptop on 1 May for ₹800."</small></div>
+    <div><b>Database</b><p>An organised collection of data, quick to find and change.</p><small>Your <code>shop</code> tables</small></div>
+    <div><b>DBMS</b><p>Database Management System: the software that stores, protects and serves it.</p><small>PostgreSQL, MySQL, MongoDB</small></div>
+  </div>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A library. The <strong>books</strong> are data. The <strong>shelves and catalogue</strong> are the database. The <strong>librarian</strong> is the DBMS: you ask for something, and they know where it is, stop two people taking the last copy, and keep records if the lights go out.</p>
+    <p>A library. <strong>Books</strong> = data, <strong>shelves + catalogue</strong> = database, <strong>librarian</strong> = DBMS: finds things, stops two people taking the last copy, keeps records if the lights go out.</p>
   </div>
   <div class="flow"><span>Your app / notebook</span><span>Query (SQL)</span><span>DBMS</span><span>Files on disk</span></div>
-  <p>You never touch the files directly. You <em>ask</em>, and the DBMS decides how to get the answer. That separation is the whole point.</p>
+  <p>You never touch the files. You <em>ask</em>; the DBMS decides how.</p>
   <div class="callout trap"><span class="label">Trap</span>
     <p>People say "database" for all three. In an interview, "PostgreSQL is a database" is fine casually, but precisely it's a <strong>DBMS</strong> that manages many databases.</p>
   </div>
@@ -5464,30 +5545,75 @@ Object.assign(TOPIC_CONTENT, {
     <tr><td><strong>Querying</strong></td><td>Manual filters and VLOOKUPs</td><td>One declarative query, optimised for you</td></tr>
     <tr><td><strong>Security</strong></td><td>Whoever has the file sees everything</td><td>Per-user, per-table permissions</td></tr>
   </table>
-  <div class="callout intu"><span class="label">Example: the last concert seat</span>
-    <p>Two fans click "Buy" on the last seat at the same millisecond. With a file, both reads say "1 seat left" and both purchases succeed. A database runs the two purchases as <strong>transactions</strong>: one wins, and the other sees 0 seats and fails cleanly.</p>
-  </div>
+  <p><strong>Example: the last concert seat.</strong> Fans A and B click "Buy" in the same millisecond.</p>
+  <figure class="viz"><svg viewBox="0 0 600 180" width="600">
+    <text x="145" y="20" text-anchor="middle" font-weight="bold" class="tr">CSV file</text>
+    <rect x="15" y="34" width="260" height="20" rx="4" class="fb"/><text x="25" y="48">A: read seats = 1</text>
+    <rect x="15" y="60" width="260" height="20" rx="4" class="fv"/><text x="25" y="74">B: read seats = 1</text>
+    <rect x="15" y="86" width="260" height="20" rx="4" class="fb"/><text x="25" y="100">A: buy, write seats = 0</text>
+    <rect x="15" y="112" width="260" height="20" rx="4" class="fv"/><text x="25" y="126">B: buy, write seats = 0</text>
+    <text x="145" y="160" text-anchor="middle" font-weight="bold" class="tr">2 tickets sold, 1 seat ✗</text>
+    <line x1="300" y1="10" x2="300" y2="170" stroke="currentColor" stroke-dasharray="4 4" opacity="0.4"/>
+    <text x="455" y="20" text-anchor="middle" font-weight="bold" class="tg">Database transactions</text>
+    <rect x="325" y="34" width="260" height="20" rx="4" class="fb"/><text x="335" y="48">A: BEGIN, lock the row</text>
+    <rect x="325" y="60" width="260" height="20" rx="4" class="fv"/><text x="335" y="74">B: waits for the lock…</text>
+    <rect x="325" y="86" width="260" height="20" rx="4" class="fb"/><text x="335" y="100">A: seats = 0, COMMIT</text>
+    <rect x="325" y="112" width="260" height="20" rx="4" class="fv"/><text x="335" y="126">B: reads 0, fails cleanly</text>
+    <text x="455" y="160" text-anchor="middle" font-weight="bold" class="tg">1 ticket sold, 1 seat ✓</text>
+  </svg><figcaption>Time runs downward. A file lets both reads see "1 seat"; a transaction makes B wait, then see the truth.</figcaption></figure>
 
   <h2 id="di-inside"><span class="num">03</span>Inside a Database</h2>
   <p>What happens when you run <code>SELECT name FROM customers WHERE city = 'Mumbai'</code>:</p>
-  <div class="flow"><span>Parser</span><span>Planner / Optimizer</span><span>Executor</span><span>Buffer cache</span><span>Disk pages</span></div>
-  <ul>
-    <li><strong>Parser</strong>: checks the grammar and that the table and columns exist.</li>
-    <li><strong>Optimizer</strong>: picks the cheapest way to get the answer: scan everything, or use an index? Which join order? This is why SQL is <em>declarative</em>: you say <em>what</em>, it decides <em>how</em>.</li>
-    <li><strong>Executor</strong>: runs the chosen plan.</li>
-    <li><strong>Buffer cache</strong>: recently used data kept in RAM, because memory is ~1000× faster than disk.</li>
-    <li><strong>Pages</strong>: data lives on disk in fixed blocks (8 KB in PostgreSQL). The DBMS reads whole pages, never single rows.</li>
-  </ul>
+  <figure class="viz"><svg viewBox="0 0 600 240" width="600">
+    <defs><marker id="di-ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="10" y="30" width="115" height="52" rx="8" class="fs"/>
+    <text x="67" y="52" text-anchor="middle" font-weight="bold">Query</text><text x="67" y="70" text-anchor="middle" font-size="10" class="tm">SELECT … WHERE</text>
+    <rect x="160" y="30" width="115" height="52" rx="8" class="fb sb"/>
+    <text x="217" y="52" text-anchor="middle" font-weight="bold">Parser</text><text x="217" y="70" text-anchor="middle" font-size="10" class="tm">grammar + names</text>
+    <rect x="310" y="30" width="115" height="52" rx="8" class="fv"/>
+    <text x="367" y="52" text-anchor="middle" font-weight="bold">Optimizer</text><text x="367" y="70" text-anchor="middle" font-size="10" class="tm">scan or index?</text>
+    <rect x="460" y="30" width="125" height="52" rx="8" class="ft st"/>
+    <text x="522" y="52" text-anchor="middle" font-weight="bold">Executor</text><text x="522" y="70" text-anchor="middle" font-size="10" class="tm">runs the plan</text>
+    <g stroke="currentColor" marker-end="url(#di-ar1)">
+      <line x1="125" y1="56" x2="158" y2="56"/><line x1="275" y1="56" x2="308" y2="56"/><line x1="425" y1="56" x2="458" y2="56"/>
+      <line x1="522" y1="82" x2="522" y2="138"/><line x1="290" y1="168" x2="418" y2="168"/>
+    </g>
+    <rect x="420" y="140" width="165" height="56" rx="8" class="fg sg"/>
+    <text x="502" y="163" text-anchor="middle" font-weight="bold">Buffer cache</text><text x="502" y="182" text-anchor="middle" font-size="10" class="tm">hot pages in RAM</text>
+    <rect x="40" y="140" width="250" height="56" rx="8" class="fs"/>
+    <text x="165" y="160" text-anchor="middle" font-weight="bold">Disk</text>
+    <g class="fb"><rect x="70" y="170" width="30" height="16" rx="2"/><rect x="106" y="170" width="30" height="16" rx="2"/><rect x="142" y="170" width="30" height="16" rx="2"/><rect x="178" y="170" width="30" height="16" rx="2"/><rect x="214" y="170" width="30" height="16" rx="2"/></g>
+    <text x="354" y="160" text-anchor="middle" font-size="10" class="tm">cache miss</text>
+    <text x="165" y="218" text-anchor="middle" font-size="10" class="tm">8 KB pages: read whole, never one row</text>
+    <text x="502" y="218" text-anchor="middle" font-size="10" class="tm">~1000× faster than disk</text>
+  </svg><figcaption>The optimizer picks the plan; the executor reads pages from RAM if cached, otherwise fetches 8 KB pages from disk.</figcaption></figure>
+  <p>This is what <strong>declarative</strong> means: you say <em>what</em>, the optimizer decides <em>how</em> (scan or index, join order).</p>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Ordering at a restaurant. You say <em>what</em> you want (the query). The chef (optimizer) decides <em>how</em>: which pan, what order. Ingredients already on the counter (the cache) are fast. A trip to the store room (disk) is slow.</p>
+    <p>A restaurant. You order (query); the chef (optimizer) picks pan and order. Ingredients on the counter (cache) are fast; the store room (disk) is slow.</p>
   </div>
   <h3>Two structures worth knowing now</h3>
-  <ul>
-    <li><strong>Index</strong>: a sorted lookup structure (usually a B-tree), like a book's index. It finds rows without reading the whole table. Covered in <em>Indexes &amp; Performance</em>.</li>
-    <li><strong>Write-Ahead Log (WAL)</strong>: every change is first appended to a log, then applied to the table. After a crash, the DBMS replays the log, so committed data is never lost.</li>
-  </ul>
+  <p><strong>Index</strong>: a sorted lookup (usually a B-tree), like a book's index; finds rows without a full scan. See <em>Indexes &amp; Performance</em>.</p>
+  <p><strong>Write-Ahead Log (WAL)</strong>: log first, table later.</p>
+  <figure class="viz"><svg viewBox="0 0 600 170" width="600">
+    <defs><marker id="di-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="10" y="25" width="120" height="50" rx="8" class="fs"/>
+    <text x="70" y="46" text-anchor="middle" font-weight="bold">1. UPDATE</text><text x="70" y="63" text-anchor="middle" font-size="10" class="tm">change arrives</text>
+    <rect x="170" y="25" width="150" height="50" rx="8" class="fv"/>
+    <text x="245" y="46" text-anchor="middle" font-weight="bold">2. WAL</text><text x="245" y="63" text-anchor="middle" font-size="10" class="tm">append + flush</text>
+    <rect x="360" y="25" width="110" height="50" rx="8" class="fg sg"/>
+    <text x="415" y="46" text-anchor="middle" font-weight="bold">3. COMMIT</text><text x="415" y="63" text-anchor="middle" font-size="10" class="tm">"saved" to you</text>
+    <rect x="360" y="105" width="225" height="44" rx="8" class="ft"/>
+    <text x="472" y="124" text-anchor="middle" font-weight="bold">4. Table pages</text><text x="472" y="140" text-anchor="middle" font-size="10" class="tm">updated later, in batches</text>
+    <g stroke="currentColor" marker-end="url(#di-ar2)">
+      <line x1="130" y1="50" x2="168" y2="50"/><line x1="320" y1="50" x2="358" y2="50"/>
+      <path d="M245,75 L245,127 L358,127" fill="none" stroke-dasharray="4 3"/>
+    </g>
+    <text x="20" y="115" font-size="11" class="tr">⚡ crash?</text>
+    <text x="20" y="133" font-size="10" class="tm">replay WAL: redo committed,</text>
+    <text x="20" y="148" font-size="10" class="tm">drop uncommitted</text>
+  </svg><figcaption>The commit is confirmed once the log is on disk, so a crash can never lose committed data.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy: WAL</span>
-    <p>A shopkeeper writes every sale in a receipt book <em>before</em> moving stock. If the shelves get knocked over, the receipt book tells you exactly what state they should be in.</p>
+    <p>A shopkeeper writes each sale in a receipt book <em>before</em> moving stock. If the shelves fall, the book says what they should hold.</p>
   </div>
 
   <h2 id="di-schema"><span class="num">04</span>Schema &amp; Data Shapes</h2>
@@ -5523,29 +5649,36 @@ Object.assign(TOPIC_CONTENT, {
 
   <h2 id="di-stack"><span class="num">06</span>Databases in a Data Stack</h2>
   <p>Real companies run several databases, each doing one job well.</p>
-  <div class="flow"><span>App DB (PostgreSQL)</span><span>ETL / CDC pipeline</span><span>Warehouse (BigQuery, Snowflake)</span><span>Dashboards &amp; ML training</span></div>
-  <ul>
-    <li><strong>OLTP</strong> (online transaction processing): the app's database. Many tiny reads and writes, such as "place this order". Needs to be fast and correct.</li>
-    <li><strong>OLAP</strong> (online analytical processing): the warehouse. Few, huge queries, such as "revenue by month for 3 years". Needs to scan fast.</li>
-    <li><strong>Supporting cast</strong>: Redis (cache), Elasticsearch (text search), a vector DB (embeddings for RAG), a feature store (ML features).</li>
-  </ul>
-  <div class="callout intu"><span class="label">Why a data scientist cares</span>
-    <p>You will mostly <em>query</em> the warehouse. Running a heavy analytical query on the production OLTP database can slow the live app. That's why the copy to a warehouse exists.</p>
+  <figure class="viz"><svg viewBox="0 0 600 200" width="600">
+    <defs><marker id="di-ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="10" y="20" width="130" height="54" rx="8" class="fb sb"/>
+    <text x="75" y="42" text-anchor="middle" font-weight="bold">App DB</text><text x="75" y="60" text-anchor="middle" font-size="10" class="tm">OLTP · PostgreSQL</text>
+    <rect x="175" y="20" width="105" height="54" rx="8" class="fs"/>
+    <text x="227" y="42" text-anchor="middle" font-weight="bold">CDC / ETL</text><text x="227" y="60" text-anchor="middle" font-size="10" class="tm">copy changes</text>
+    <rect x="315" y="20" width="140" height="54" rx="8" class="fv"/>
+    <text x="385" y="42" text-anchor="middle" font-weight="bold">Warehouse</text><text x="385" y="60" text-anchor="middle" font-size="10" class="tm">OLAP · BigQuery</text>
+    <rect x="490" y="20" width="100" height="54" rx="8" class="fg sg"/>
+    <text x="540" y="42" text-anchor="middle" font-weight="bold">BI + ML</text><text x="540" y="60" text-anchor="middle" font-size="10" class="tm">you query here</text>
+    <g stroke="currentColor" marker-end="url(#di-ar3)">
+      <line x1="140" y1="47" x2="173" y2="47"/><line x1="280" y1="47" x2="313" y2="47"/><line x1="455" y1="47" x2="488" y2="47"/>
+      <line x1="70" y1="125" x2="70" y2="143"/><line x1="215" y1="125" x2="215" y2="143"/><line x1="360" y1="125" x2="360" y2="143"/><line x1="510" y1="125" x2="510" y2="143"/>
+    </g>
+    <path d="M227,74 L227,125 M70,125 L510,125" stroke="currentColor" fill="none"/>
+    <rect x="10" y="145" width="120" height="40" rx="8" class="ft"/><text x="70" y="170" text-anchor="middle">Redis cache</text>
+    <rect x="150" y="145" width="130" height="40" rx="8" class="ft"/><text x="215" y="170" text-anchor="middle">Search (ES)</text>
+    <rect x="300" y="145" width="120" height="40" rx="8" class="ft"/><text x="360" y="170" text-anchor="middle">Vector DB</text>
+    <rect x="440" y="145" width="145" height="40" rx="8" class="ft"/><text x="512" y="170" text-anchor="middle">Feature store</text>
+  </svg><figcaption>The app DB is the source of truth; everything else is a copy shaped for one job.</figcaption></figure>
+  <table class="tbl">
+    <tr><th></th><th>OLTP (online transaction processing)</th><th>OLAP (online analytical processing)</th></tr>
+    <tr><td>Typical query</td><td>"Place this order": tiny, thousands per second</td><td>"Revenue by month for 3 years": huge, few</td></tr>
+    <tr><td>Needs</td><td>Fast and correct per row</td><td>Fast scans over history</td></tr>
+    <tr><td>Storage</td><td>Row store</td><td>Column store</td></tr>
+  </table>
+  <div class="callout trap"><span class="label">Why a data scientist cares</span>
+    <p>You mostly query the warehouse. Heavy analytics on the production OLTP database slows the live app.</p>
   </div>
-
-  <h2 id="di-rev"><span class="num">07</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>DBMS</strong> = the software (PostgreSQL); <strong>database</strong> = the organised data it manages.</li>
-    <li>Databases beat files on <strong>concurrency, integrity, crash safety, scale, querying, security</strong>.</li>
-    <li>Query path: <strong>parse → optimize → execute → cache → disk pages</strong>.</li>
-    <li>SQL is <strong>declarative</strong>: you state the result; the optimizer chooses the method.</li>
-    <li><strong>WAL</strong>: log first, apply later, so a crash never loses committed data.</li>
-    <li><strong>Schema</strong> = blueprint. SQL checks it on write; NoSQL checks it on read (in your code).</li>
-    <li><strong>OLTP</strong> = many small transactions; <strong>OLAP</strong> = few big analytical scans.</li>
-    <li>Default to PostgreSQL; pick NoSQL for a named reason.</li>
-  </ol></div>
-
-  <h2 id="di-qa"><span class="num">08</span>Questions &amp; Answers</h2>
+  <h2 id="di-qa"><span class="num">07</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>What's the difference between a database and a DBMS?</summary><div class="qa-body">The database is the organised data. The DBMS is the software that stores it, runs queries, enforces rules, handles concurrent users and recovers from crashes. PostgreSQL is a DBMS; your <code>shop</code> data is a database inside it.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Your team keeps sales data in a shared Excel file. Give three concrete reasons to move it to a database.</summary><div class="qa-body">(1) Simultaneous edits overwrite each other; transactions fix that. (2) Nothing stops a typo like "12O" in a price column; types and constraints do. (3) It won't scale past ~1M rows, while a DBMS handles billions and reads only what it needs. Also: crash recovery and per-user permissions.</div></details>
@@ -5565,6 +5698,89 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Types of Databases</h1>
   <p class="lead">Each database family stores data in a different shape, and the shape decides what is fast and what is painful. Know the shapes, the trade-offs (ACID, CAP, row vs column) and how to pick one for a workload.</p>
 
+  <h2 id="dt-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Types of Databases</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Relational (the default)</div>
+        <ul>
+          <li><b>Model</b> — tables, fixed columns, linked by keys, JOIN at query time</li>
+          <li><b>Each fact once</b> — order stores <code>customer_id</code>, name lives in <code>customers</code></li>
+          <li><b>Great</b> — ad-hoc queries, JOINs, ACID, constraints</li>
+          <li><b>Weak</b> — scaling writes across machines; shape that changes weekly</li>
+          <li><b>Products</b> — PostgreSQL, MySQL, SQLite; NewSQL: CockroachDB, Spanner</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Document &amp; Key-value</div>
+        <ul>
+          <li><b>Document</b> — one nested JSON per record; whole object in one read (MongoDB, JSONB)</li>
+          <li>⚠ weak at many-to-many + cross-document analytics; duplicated data goes stale</li>
+          <li>💡 <b>Filing cabinet</b> — one folder per order</li>
+          <li><b>Key-value</b> — giant dictionary, value is opaque (Redis, DynamoDB)</li>
+          <li><b>Uses</b> — cache, sessions, rate limits, counters, online features</li>
+          <li>💡 <b>Coat check</b> — ticket → coat instantly; "red coats?" = check every hook</li>
+          <li>⚠ <b>In-memory</b> is a property: Redis can lose last writes → cache, not truth</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Wide-column &amp; Graph</div>
+        <ul>
+          <li><b>Wide-column</b> — partition key groups rows, clustering key sorts them (Cassandra)</li>
+          <li><b>Design</b> — one table per query; millions of writes/s; no JOINs</li>
+          <li>⚠ <b>Wide-column ≠ columnar</b> — rows by key (writes) vs columns apart (scans)</li>
+          <li><b>Graph</b> — nodes + edges with properties; hop = pointer, not JOIN (Neo4j)</li>
+          <li><b>Graph uses</b> — fraud rings, friends-of-friends, recommendations</li>
+          <li>💡 <b>Detective corkboard</b> — follow the string</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Specialists</div>
+        <ul>
+          <li><b>Time-series</b> — (time, tags, values), append-only, buckets, retention (TimescaleDB, InfluxDB)</li>
+          <li><b>Search</b> — inverted index word → docs, BM25 ranking (Elasticsearch)</li>
+          <li>⚠ search engine is fed from main DB; not the source of truth</li>
+          <li><b>Vector</b> — embeddings + ANN index (HNSW): trade a little recall for speed</li>
+          <li><b>Default</b> — pgvector under a few million vectors; Pinecone/Qdrant at scale</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Row vs Column store</div>
+        <ul>
+          <li><b>Row store</b> — whole rows together; fetch/update one row cheaply (OLTP)</li>
+          <li><b>Column store</b> — each column together; <code>SUM(amount)</code> reads one column (OLAP)</li>
+          <li><b>Compression</b> — high in columns (run-length, dictionary)</li>
+          <li><b>Warehouses</b> — BigQuery, Snowflake, Redshift, ClickHouse, DuckDB</li>
+          <li>💡 forms stack vs one list per question</li>
+          <li>⚠ <code>SELECT *</code> on BigQuery reads every column, billed per byte</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">ACID, BASE, CAP</div>
+        <ul>
+          <li><b>ACID</b> — Atomic (all or none), Consistent (rules hold), Isolated, Durable</li>
+          <li><b>BASE</b> — Basically Available, Soft state, Eventually consistent</li>
+          <li>💡 bank transfer (ACID) vs like counter (BASE)</li>
+          <li><b>CAP</b> — during a network partition choose Consistency (refuse) or Availability (maybe stale)</li>
+          <li>⚠ not "pick 2 of 3": healthy network → both; daily trade = latency vs consistency (PACELC)</li>
+          <li><b>CP</b> — HBase, etcd, Spanner · <b>AP</b> — Cassandra, DynamoDB · single node: CAP n/a</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Choosing + polyglot</div>
+        <ul>
+          <li><b>Ask</b> — transactions? query pattern? volume? shape fixed? team knows X?</li>
+          <li><b>Map</b> — orders → Postgres, cache → Redis, events → Cassandra, fraud → Neo4j, search → ES, RAG → vector, BI → warehouse</li>
+          <li><b>Polyglot</b> — one source of truth, specialists fed via CDC</li>
+          <li>⚠ <b>Dual writes</b> drift when one fails → write once, propagate via CDC</li>
+          <li><b>Cloud</b> — RDS/Aurora, DynamoDB, ElastiCache, Redshift · Cloud SQL, Spanner, BigQuery · Snowflake</li>
+          <li><b>Interview line</b> — "Default to Postgres; add a specialist for a named workload."</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -5576,14 +5792,42 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="dt-acid"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">ACID, BASE &amp; CAP</span><span class="rm-sub">The guarantees you trade</span></div></div>
       <div class="rm-item rm-done" data-target="dt-choose"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">How to Choose</span><span class="rm-sub">Workload → database</span></div></div>
       <div class="rm-item rm-done" data-target="dt-poly"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Polyglot &amp; Managed Cloud</span><span class="rm-sub">Many DBs, one product</span></div></div>
-      <div class="rm-item rm-done" data-target="dt-rev"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="dt-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="dt-qa"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
   <h2 id="dt-rel"><span class="num">01</span>Relational</h2>
-  <p>Data lives in <strong>tables</strong> with fixed columns. Tables link through <strong>keys</strong>, and you combine them with JOINs at query time.</p>
-  <p>One record is one row. Order 100 stores only <code>customer_id = 1</code>; Asha's name lives once, in <code>customers</code>.</p>
+  <figure class="viz"><svg viewBox="0 0 600 215" width="600">
+    <defs><marker id="dt-ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <g font-size="10">
+    <text x="75" y="18" text-anchor="middle" font-weight="bold" font-size="12" class="tb">Relational</text>
+    <text x="15" y="42" class="tm">orders</text><text x="88" y="42" class="tm">customers</text>
+    <rect x="15" y="50" width="56" height="20" rx="3" class="fb"/><text x="22" y="64">100 │ 1</text>
+    <rect x="15" y="74" width="56" height="20" rx="3" class="fb"/><text x="22" y="88">102 │ 2</text>
+    <rect x="88" y="50" width="56" height="20" rx="3" class="ft"/><text x="94" y="64">1 Asha</text>
+    <rect x="88" y="74" width="56" height="20" rx="3" class="ft"/><text x="94" y="88">2 Ben</text>
+    <g stroke="currentColor" marker-end="url(#dt-ar1)"><line x1="71" y1="60" x2="86" y2="60"/><line x1="71" y1="84" x2="86" y2="84"/></g>
+    <text x="232" y="18" text-anchor="middle" font-weight="bold" font-size="12" class="tb">Document</text>
+    <rect x="165" y="35" width="135" height="100" rx="6" class="fs"/>
+    <text x="173" y="54">{ _id: 100,</text><text x="173" y="70">  cust: {name:</text><text x="173" y="86">    "Asha"},</text><text x="173" y="102">  items: [Laptop,</text><text x="173" y="118">    Lamp] }</text>
+    <text x="380" y="18" text-anchor="middle" font-weight="bold" font-size="12" class="tb">Key-value</text>
+    <rect x="315" y="40" width="58" height="22" rx="3" class="fv"/><text x="321" y="55">s:8f3a</text><rect x="390" y="40" width="55" height="22" rx="3" class="fs"/><text x="396" y="55">{cart}</text>
+    <rect x="315" y="72" width="58" height="22" rx="3" class="fv"/><text x="321" y="87">views</text><rect x="390" y="72" width="55" height="22" rx="3" class="fs"/><text x="396" y="87">42</text>
+    <rect x="315" y="104" width="58" height="22" rx="3" class="fv"/><text x="321" y="119">rate:1</text><rect x="390" y="104" width="55" height="22" rx="3" class="fs"/><text x="396" y="119">7</text>
+    <g stroke="currentColor" marker-end="url(#dt-ar1)"><line x1="373" y1="51" x2="388" y2="51"/><line x1="373" y1="83" x2="388" y2="83"/><line x1="373" y1="115" x2="388" y2="115"/></g>
+    <text x="527" y="18" text-anchor="middle" font-weight="bold" font-size="12" class="tb">Graph</text>
+    <g stroke="currentColor" marker-end="url(#dt-ar1)"><line x1="502" y1="60" x2="545" y2="88"/><line x1="502" y1="138" x2="545" y2="112"/></g>
+    <circle cx="485" cy="52" r="20" class="fb"/><text x="485" y="56" text-anchor="middle">Asha</text>
+    <circle cx="485" cy="145" r="20" class="fb"/><text x="485" y="149" text-anchor="middle">Chen</text>
+    <circle cx="565" cy="100" r="22" class="fg"/><text x="565" y="104" text-anchor="middle">Lamp</text>
+    <text x="530" y="66" class="tm" font-size="9">BOUGHT</text>
+    <text x="75" y="190" text-anchor="middle" class="tm">JOIN on keys</text>
+    <text x="232" y="190" text-anchor="middle" class="tm">whole object, 1 read</text>
+    <text x="380" y="190" text-anchor="middle" class="tm">get by key only</text>
+    <text x="527" y="190" text-anchor="middle" class="tm">follow edges</text>
+    </g>
+  </svg><figcaption>The same shop data in four shapes. The shape decides which questions are cheap.</figcaption></figure>
+  <p><strong>Tables</strong> with fixed columns, linked by <strong>keys</strong>, combined with JOINs at query time. Each fact lives once: order 100 stores only <code>customer_id = 1</code>.</p>
   <div class="fx" data-lang="sql">SELECT o.order_id, o.customer_id, c.name, c.city, o.status
 FROM orders o JOIN customers c ON c.customer_id = o.customer_id
 WHERE o.order_id = 100;</div>
@@ -5627,7 +5871,7 @@ INCR page_views:product:10</div>
     <li><strong>Products:</strong> Redis, Memcached, Amazon DynamoDB, etcd.</li>
   </ul>
   <div class="callout intu"><span class="label">In-memory is a property, not a family</span>
-    <p><strong>In-memory</strong> means data is kept in RAM, so reads take microseconds. Redis is an in-memory key-value store. It can persist to disk (snapshots or an append-only log), but a crash can lose the last moments of writes, so treat it as a cache, not the source of truth.</p>
+    <p><strong>In-memory</strong> = data in RAM, microsecond reads. Redis can persist (snapshots, append-only log), but a crash can lose the last writes: use it as a cache, not the source of truth.</p>
   </div>
 
   <h2 id="dt-wide"><span class="num">03</span>Wide-Column &amp; Graph</h2>
@@ -5699,11 +5943,34 @@ query "desk lamp" -&gt; doc 57 ranks first (matches both)</div>
   </div>
 
   <h2 id="dt-col"><span class="num">05</span>Row vs Column Stores</h2>
-  <p>The same table can be laid out on disk two ways. The layout decides which queries are cheap.</p>
-  <div class="fx" data-lang="text">Row store (PostgreSQL, MySQL)       Column store (BigQuery, Snowflake, Redshift)
-[100, 1, 2024-05-01, delivered]     order_id:    100, 101, 102, 103, 104
-[101, 1, 2024-05-20, delivered]     customer_id: 1, 1, 2, 3, 3
-[102, 2, 2024-06-02, cancelled]     status:      delivered, delivered, cancelled, ...</div>
+  <p>Same <code>orders</code> table, two disk layouts. Query: <em>count orders by status</em>.</p>
+  <figure class="viz"><svg viewBox="0 0 600 210" width="600">
+    <g font-size="10">
+      <rect x="40" y="6" width="12" height="12" class="fb"/><text x="57" y="16">order_id</text>
+      <rect x="150" y="6" width="12" height="12" class="ft"/><text x="167" y="16">customer_id</text>
+      <rect x="280" y="6" width="12" height="12" class="fv"/><text x="297" y="16">order_date</text>
+      <rect x="400" y="6" width="12" height="12" class="fg"/><text x="417" y="16">status</text>
+    </g>
+    <text x="40" y="44" font-weight="bold">Row store <tspan class="tm" font-weight="normal">(PostgreSQL): row after row</tspan></text>
+    <g stroke="currentColor" stroke-opacity="0.35">
+      <rect x="40" y="52" width="25" height="28" class="fb"/><rect x="65" y="52" width="25" height="28" class="ft"/><rect x="90" y="52" width="25" height="28" class="fv"/><rect x="115" y="52" width="25" height="28" class="fg sg" stroke-opacity="1" stroke-width="2"/>
+      <rect x="145" y="52" width="25" height="28" class="fb"/><rect x="170" y="52" width="25" height="28" class="ft"/><rect x="195" y="52" width="25" height="28" class="fv"/><rect x="220" y="52" width="25" height="28" class="fg sg" stroke-opacity="1" stroke-width="2"/>
+      <rect x="250" y="52" width="25" height="28" class="fb"/><rect x="275" y="52" width="25" height="28" class="ft"/><rect x="300" y="52" width="25" height="28" class="fv"/><rect x="325" y="52" width="25" height="28" class="fg sg" stroke-opacity="1" stroke-width="2"/>
+      <rect x="355" y="52" width="25" height="28" class="fb"/><rect x="380" y="52" width="25" height="28" class="ft"/><rect x="405" y="52" width="25" height="28" class="fv"/><rect x="430" y="52" width="25" height="28" class="fg sg" stroke-opacity="1" stroke-width="2"/>
+      <rect x="460" y="52" width="25" height="28" class="fb"/><rect x="485" y="52" width="25" height="28" class="ft"/><rect x="510" y="52" width="25" height="28" class="fv"/><rect x="535" y="52" width="25" height="28" class="fg sg" stroke-opacity="1" stroke-width="2"/>
+    </g>
+    <path d="M40,88 L40,94 L560,94 L560,88" fill="none" class="sr" stroke-width="2"/>
+    <text x="300" y="110" text-anchor="middle" class="tr">reads all 20 values to get 5 statuses</text>
+    <text x="40" y="142" font-weight="bold">Column store <tspan class="tm" font-weight="normal">(BigQuery): column after column</tspan></text>
+    <g stroke="currentColor" stroke-opacity="0.35">
+      <rect x="40" y="150" width="25" height="28" class="fb"/><rect x="65" y="150" width="25" height="28" class="fb"/><rect x="90" y="150" width="25" height="28" class="fb"/><rect x="115" y="150" width="25" height="28" class="fb"/><rect x="140" y="150" width="25" height="28" class="fb"/>
+      <rect x="170" y="150" width="25" height="28" class="ft"/><rect x="195" y="150" width="25" height="28" class="ft"/><rect x="220" y="150" width="25" height="28" class="ft"/><rect x="245" y="150" width="25" height="28" class="ft"/><rect x="270" y="150" width="25" height="28" class="ft"/>
+      <rect x="300" y="150" width="25" height="28" class="fv"/><rect x="325" y="150" width="25" height="28" class="fv"/><rect x="350" y="150" width="25" height="28" class="fv"/><rect x="375" y="150" width="25" height="28" class="fv"/><rect x="400" y="150" width="25" height="28" class="fv"/>
+      <rect x="430" y="150" width="25" height="28" class="fg sg" stroke-opacity="1" stroke-width="2"/><rect x="455" y="150" width="25" height="28" class="fg sg" stroke-opacity="1" stroke-width="2"/><rect x="480" y="150" width="25" height="28" class="fg sg" stroke-opacity="1" stroke-width="2"/><rect x="505" y="150" width="25" height="28" class="fg sg" stroke-opacity="1" stroke-width="2"/><rect x="530" y="150" width="25" height="28" class="fg sg" stroke-opacity="1" stroke-width="2"/>
+    </g>
+    <path d="M430,186 L430,192 L555,192 L555,186" fill="none" class="sg" stroke-width="2"/>
+    <text x="492" y="206" text-anchor="middle" class="tg">reads only 5</text>
+  </svg><figcaption>Row store keeps a row's values together (cheap to fetch one order); column store keeps a column together (cheap to scan one field).</figcaption></figure>
   <table class="tbl">
     <tr><th></th><th>Row store</th><th>Column store</th></tr>
     <tr><td>Fast for</td><td>Fetch or update one whole row (OLTP)</td><td>Aggregate a few columns over billions of rows (OLAP)</td></tr>
@@ -5714,7 +5981,7 @@ query "desk lamp" -&gt; doc 57 ranks first (matches both)</div>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A row store is a stack of filled-in forms: great for pulling one person's form. A column store is one list per question: great for "average age", useless for "show me Asha's whole form" quickly.</p>
   </div>
-  <p><strong>Columnar / analytical warehouses</strong> (BigQuery, Snowflake, Redshift, ClickHouse, DuckDB locally) are column stores with massively parallel execution. They are the data scientist's main workplace: great for joins and aggregates over history, bad as an app backend (slow single-row writes, seconds of latency, cost per query).</p>
+  <p><strong>Analytical warehouses</strong> (BigQuery, Snowflake, Redshift, ClickHouse, DuckDB locally) = column store + massively parallel execution. Your main workplace; a bad app backend (slow single-row writes, seconds of latency, cost per query).</p>
   <div class="callout trap"><span class="label">Trap</span>
     <p><code>SELECT *</code> on a column store reads every column and, on BigQuery, you pay per byte scanned. Select only the columns you need.</p>
   </div>
@@ -5733,12 +6000,25 @@ query "desk lamp" -&gt; doc 57 ranks first (matches both)</div>
     <p>ACID is a bank transfer: money never vanishes mid-way. BASE is a social "like" counter: if your friend sees 99 likes and you see 100 for a second, nobody is harmed.</p>
   </div>
   <h3>CAP theorem in plain terms</h3>
-  <p>A distributed database copies data across machines. When the network between them breaks (a <strong>partition</strong>), each machine must choose:</p>
-  <ul>
-    <li><strong>C</strong>onsistency: refuse to answer rather than risk returning stale data, or</li>
-    <li><strong>A</strong>vailability: answer anyway, possibly with stale data.</li>
-  </ul>
-  <p>You can't have both while partitioned (<strong>P</strong>). Banks choose C; shopping carts and feeds usually choose A.</p>
+  <p>Replicas copy data across machines. When the network between them breaks (a <strong>partition</strong>, P), each must choose:</p>
+  <figure class="viz"><svg viewBox="0 0 600 215" width="600">
+    <defs><marker id="dt-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <text x="300" y="16" text-anchor="middle" font-size="11" class="tm">A client asks Replica A: "is the Lamp in stock?"</text>
+    <rect x="60" y="30" width="170" height="54" rx="8" class="fb sb"/>
+    <text x="145" y="52" text-anchor="middle" font-weight="bold">Replica A</text><text x="145" y="70" text-anchor="middle" font-size="10" class="tm">thinks stock = 1</text>
+    <rect x="370" y="30" width="170" height="54" rx="8" class="fb sb"/>
+    <text x="455" y="52" text-anchor="middle" font-weight="bold">Replica B</text><text x="455" y="70" text-anchor="middle" font-size="10" class="tm">just sold it: stock = 0</text>
+    <line x1="230" y1="57" x2="370" y2="57" stroke="currentColor" stroke-dasharray="5 4"/>
+    <circle cx="300" cy="57" r="13" class="fr sr"/><text x="300" y="62" text-anchor="middle" font-weight="bold" class="tr">✗</text>
+    <text x="300" y="98" text-anchor="middle" font-size="10" class="tr">network partition</text>
+    <g stroke="currentColor" marker-end="url(#dt-ar2)"><line x1="120" y1="84" x2="120" y2="128"/><line x1="170" y1="84" x2="380" y2="128"/></g>
+    <rect x="20" y="130" width="260" height="60" rx="8" class="fg sg"/>
+    <text x="150" y="152" text-anchor="middle" font-weight="bold">Choose C: refuse</text>
+    <text x="150" y="172" text-anchor="middle" font-size="10" class="tm">"try later": correct, unavailable</text>
+    <rect x="320" y="130" width="260" height="60" rx="8" class="fv"/>
+    <text x="450" y="152" text-anchor="middle" font-weight="bold">Choose A: answer "yes"</text>
+    <text x="450" y="172" text-anchor="middle" font-size="10" class="tm">available, but stale (wrong)</text>
+  </svg><figcaption>While partitioned you cannot be both correct and always answering. Banks choose C; carts and feeds usually choose A.</figcaption></figure>
   <div class="callout trap"><span class="label">Trap: "pick 2 of 3"</span>
     <p>CAP only bites <em>during a partition</em>. When the network is healthy you get C and A. The everyday trade-off is latency vs consistency (the <strong>PACELC</strong> extension: "Else, Latency or Consistency"). Many systems are tunable per query: Cassandra and DynamoDB let you choose consistency levels.</p>
   </div>
@@ -5797,22 +6077,7 @@ query "desk lamp" -&gt; doc 57 ranks first (matches both)</div>
     <li><strong>DynamoDB</strong>: serverless key-value/document store; single-digit-ms at any scale, but you must design around access patterns (partition + sort key).</li>
     <li><strong>Redshift</strong>: columnar warehouse on clusters (now also serverless). <strong>BigQuery</strong>: serverless; pay per bytes scanned or reserved slots. <strong>Snowflake</strong>: runs on any cloud; storage and compute ("warehouses") scale and bill separately.</li>
   </ul>
-
-  <h2 id="dt-rev"><span class="num">09</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Relational</strong>: tables + keys + JOINs + ACID. The default.</li>
-    <li><strong>Document</strong>: nested JSON per record; flexible, weak at cross-record joins.</li>
-    <li><strong>Key-value</strong>: dictionary lookup by key; Redis is also <strong>in-memory</strong>, so use it as a cache.</li>
-    <li><strong>Wide-column</strong> (Cassandra): partition key + clustering key; huge writes; one table per query.</li>
-    <li><strong>Graph</strong>: nodes + edges; multi-hop questions. <strong>Time-series</strong>: append + time buckets + retention.</li>
-    <li><strong>Search</strong>: inverted index + relevance. <strong>Vector</strong>: embeddings + ANN (HNSW).</li>
-    <li><strong>Row store</strong> = OLTP (whole rows); <strong>column store</strong> = OLAP (few columns, many rows, compressed).</li>
-    <li><strong>ACID</strong> = correct now; <strong>BASE</strong> = available, eventually consistent.</li>
-    <li><strong>CAP</strong>: only during a network partition do you choose consistency or availability.</li>
-    <li><strong>Polyglot</strong>: one source of truth, specialists fed via CDC.</li>
-  </ol></div>
-
-  <h2 id="dt-qa"><span class="num">10</span>Questions &amp; Answers</h2>
+  <h2 id="dt-qa"><span class="num">09</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>Explain the CAP theorem. Does it mean every database picks two of three?</summary><div class="qa-body">When a network partition splits replicas, each side must either reject requests (consistency) or answer with possibly stale data (availability). Partitions can't be ruled out, so the real choice is C or A <em>during a partition</em>. When the network is healthy, a system can be both; the day-to-day trade-off is latency vs consistency (PACELC).</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What's the difference between a wide-column store and a columnar warehouse?</summary><div class="qa-body">Wide-column (Cassandra, Bigtable) groups rows by partition key; it's built for fast writes and key lookups. Columnar (BigQuery, Redshift) stores each column contiguously; it's built for scanning and aggregating a few columns over billions of rows. Similar names, opposite workloads.</div></details>
@@ -7072,6 +7337,98 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Querying Basics</h1>
   <p class="lead">Reading, filtering, grouping and changing data with one table at a time. Most interview SQL is these pieces combined, plus the NULL and ordering rules that trip people up.</p>
 
+  <h2 id="sf-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Querying Basics</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">SELECT &amp; expressions</div>
+        <ul>
+          <li><b>FROM</b> names the table; <b>SELECT</b> picks/computes columns</li>
+          <li><b>Alias</b> — <code>price * 1.18 AS price_with_gst</code>; table alias <code>FROM customers c</code></li>
+          <li><b>Cast</b> — <code>'42'::int</code> or <code>CAST(x AS int)</code></li>
+          <li>⚠ <b>Integer division</b> — 3 / 5 = 0; use <code>::numeric</code> or <code>1.0 *</code></li>
+          <li>⚠ avoid <code>SELECT *</code> in real code</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">WHERE filters</div>
+        <ul>
+          <li><b>Keeps only TRUE</b> rows; AND / OR / NOT, bracket mixes</li>
+          <li><b>IN</b> — many ORs · <b>BETWEEN</b> — inclusive both ends</li>
+          <li><b>LIKE</b> — <code>%</code> any run, <code>_</code> one char · <b>ILIKE</b> case-insensitive (PG)</li>
+          <li>⚠ <b>Timestamp BETWEEN</b> drops the last day → half-open <code>&gt;= start AND &lt; next</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Logical order</div>
+        <ul>
+          <li><b>FROM → WHERE → GROUP BY → HAVING → SELECT → DISTINCT → ORDER BY → LIMIT</b></li>
+          <li>⚠ alias in WHERE fails (SELECT not run yet); fine in ORDER BY</li>
+          <li>⚠ aggregates in WHERE fail → HAVING</li>
+          <li><b>LIMIT last</b> — after sorting, so "top N" is defined</li>
+          <li><b>Logical ≠ physical</b> — optimizer may reorder, result must match</li>
+          <li>💡 cook: fetch, discard, bowl, drop small bowls, plate + name, arrange, serve</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">NULL &amp; 3-valued logic</div>
+        <ul>
+          <li><b>NULL</b> = unknown, not 0 or ''; comparisons → UNKNOWN; WHERE drops it</li>
+          <li>⚠ <code>city = NULL</code> → 0 rows; <code>city &lt;&gt; 'Mumbai'</code> drops Dia</li>
+          <li><b>IS NULL</b> only correct test · <b>COALESCE</b> default · <b>NULLIF(y,0)</b> avoid ÷0</li>
+          <li><b>IS DISTINCT FROM</b> — NULL-safe ≠</li>
+          <li><b>Truth</b> — FALSE AND U = F; TRUE OR U = T; else UNKNOWN</li>
+          <li>⚠ NULL spreads: <code>'a' || NULL</code> = NULL; <code>CONCAT</code> skips NULLs</li>
+          <li>💡 sealed envelope — only ask "is it sealed?"</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Sort, page, DISTINCT</div>
+        <ul>
+          <li><b>No ORDER BY = no guaranteed order</b></li>
+          <li><b>NULLs</b> — last in ASC, first in DESC (PG); <code>NULLS LAST</code> to override</li>
+          <li><b>LIMIT n OFFSET k</b>; ⚠ large OFFSET still reads skipped rows</li>
+          <li>⚠ ties (Sara = Tom) → add tiebreaker or <code>DENSE_RANK</code></li>
+          <li><b>DISTINCT</b> — whole row; NULLs count as one</li>
+          <li>⚠ DISTINCT to hide duplicates usually masks a join fan-out</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Aggregates &amp; GROUP BY</div>
+        <ul>
+          <li><b>COUNT, SUM, AVG, MIN, MAX</b> — many rows → one value</li>
+          <li><b>COUNT(*)</b> rows · <b>COUNT(col)</b> non-NULL · <b>COUNT(DISTINCT col)</b> unique (4 / 3 / 2)</li>
+          <li><b>NULLs ignored</b> except COUNT(*); AVG divides by non-NULL count</li>
+          <li>⚠ zero rows: COUNT = 0, SUM/AVG/MAX = NULL</li>
+          <li><b>WHERE</b> rows before grouping · <b>HAVING</b> groups after</li>
+          <li>⚠ every SELECT column must be a GROUP BY key or aggregate</li>
+          <li>💡 receipts into piles, one summary line per pile</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">CASE &amp; pivots</div>
+        <ul>
+          <li><b>CASE WHEN … THEN … ELSE … END</b> — first match wins; no ELSE → NULL</li>
+          <li><b>Conditional aggregation</b> — <code>SUM(CASE WHEN s='delivered' THEN 1 ELSE 0 END)</code></li>
+          <li><b>FILTER</b> — <code>COUNT(*) FILTER (WHERE status='cancelled')</code></li>
+          <li><b>Rate</b> — <code>AVG(CASE WHEN cond THEN 1.0 ELSE 0 END)</code> + GROUP BY</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Dates, strings, writes</div>
+        <ul>
+          <li><b>DATE_TRUNC('month', d)</b>, <b>EXTRACT(DOW …)</b> (0 = Sun), <code>+ INTERVAL '30 days'</code>, date − date = days</li>
+          <li><b>||</b> concat, LOWER/UPPER/TRIM/LENGTH; <code>GROUP BY 1</code> = first column</li>
+          <li>⚠ function on column in WHERE blocks index → use range</li>
+          <li><b>INSERT / UPDATE / DELETE … RETURNING</b></li>
+          <li><b>UPSERT</b> — <code>ON CONFLICT (id) DO UPDATE SET p = EXCLUDED.p</code> / DO NOTHING</li>
+          <li>⚠ UPDATE without WHERE hits every row → SELECT first, BEGIN … ROLLBACK</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -7084,8 +7441,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="sf-case"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">CASE &amp; Conditional Aggregation</span><span class="rm-sub">Pivot counts in one pass</span></div></div>
       <div class="rm-item rm-done" data-target="sf-func"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Dates &amp; Strings</span><span class="rm-sub">DATE_TRUNC, intervals, ||</span></div></div>
       <div class="rm-item rm-done" data-target="sf-write"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Writing Data</span><span class="rm-sub">INSERT, UPDATE, UPSERT</span></div></div>
-      <div class="rm-item rm-done" data-target="sf-rev"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="sf-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Predict the output</span></div></div>
+      <div class="rm-item rm-done" data-target="sf-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Predict the output</span></div></div>
     </div>
   </div>
 
@@ -7094,11 +7450,11 @@ Object.assign(TOPIC_CONTENT, {
   <div class="fx" data-lang="sql">SELECT name, price, price * 1.18 AS price_with_gst
 FROM products;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>price</th><th>price_with_gst</th></tr><tr><td>Laptop</td><td>800.00</td><td>944.0000</td></tr><tr><td>Phone</td><td>500.00</td><td>590.0000</td></tr><tr><td>Desk</td><td>150.00</td><td>177.0000</td></tr><tr><td>Lamp</td><td>40.00</td><td>47.2000</td></tr></table>
-  <ul>
-    <li><strong>Table alias</strong>: <code>FROM customers AS c</code> lets you write <code>c.city</code>. Essential once you join tables.</li>
-    <li><strong>Casting</strong> converts a type: <code>'42'::int</code> (Postgres shorthand) or standard <code>CAST(price AS int)</code>.</li>
-    <li>Avoid <code>SELECT *</code> in real code: it breaks when columns change and reads more data than needed.</li>
-  </ul>
+  <table class="tbl">
+    <tr><td><strong>Table alias</strong></td><td><code>FROM customers AS c</code> → <code>c.city</code>; essential for joins</td></tr>
+    <tr><td><strong>Cast</strong></td><td><code>'42'::int</code> (Postgres) or <code>CAST(price AS int)</code></td></tr>
+    <tr><td><strong>Avoid <code>SELECT *</code></strong></td><td>Breaks when columns change; reads more than needed</td></tr>
+  </table>
   <h3>The integer division trap</h3>
   <p>Integer ÷ integer gives an integer; the fraction is thrown away.</p>
   <div class="fx" data-lang="sql">SELECT COUNT(*) FILTER (WHERE status = 'delivered') / COUNT(*) AS wrong,
@@ -7124,22 +7480,32 @@ FROM orders
 WHERE order_date BETWEEN '2024-05-01' AND '2024-06-02';</div>
   <table class="tbl out"><caption>Result</caption><tr><th>order_id</th><th>order_date</th></tr><tr><td>100</td><td>2024-05-01</td></tr><tr><td>101</td><td>2024-05-20</td></tr><tr><td>102</td><td>2024-06-02</td></tr></table>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>On a <em>timestamp</em> column, <code>BETWEEN '2024-06-01' AND '2024-06-30'</code> stops at midnight on the 30th and drops that whole day. Use a half-open range: <code>ts &gt;= '2024-06-01' AND ts &lt; '2024-07-01'</code>.</p>
+    <p>On a <em>timestamp</em> column, <code>BETWEEN '2024-06-01' AND '2024-06-30'</code> stops at midnight on the 30th. Use a half-open range.</p>
   </div>
+  <figure class="viz"><svg viewBox="0 0 600 140" width="600">
+    <line x1="40" y1="50" x2="570" y2="50" stroke="currentColor"/>
+    <g stroke="currentColor"><line x1="60" y1="44" x2="60" y2="56"/><line x1="440" y1="44" x2="440" y2="56"/><line x1="520" y1="44" x2="520" y2="56"/></g>
+    <g font-size="10" text-anchor="middle" class="tm"><text x="60" y="38">Jun 1 00:00</text><text x="425" y="38">Jun 30 00:00</text><text x="530" y="38">Jul 1 00:00</text></g>
+    <circle cx="475" cy="50" r="6" class="fr sr"/><text x="475" y="16" text-anchor="middle" font-size="10" class="tr">order at Jun 30 10:00</text>
+    <rect x="60" y="66" width="380" height="24" rx="4" class="fr sr"/><text x="70" y="82" font-size="10">BETWEEN '2024-06-01' AND '2024-06-30'</text>
+    <text x="450" y="82" font-size="10" class="tr">✗ misses it</text>
+    <rect x="60" y="100" width="460" height="24" rx="4" class="fg sg"/><text x="70" y="116" font-size="10">ts &gt;= '2024-06-01' AND ts &lt; '2024-07-01'</text>
+    <text x="528" y="116" font-size="10" class="tg">✓</text>
+  </svg><figcaption>On timestamps, '2024-06-30' means midnight at the start of the 30th, so BETWEEN loses almost the whole last day.</figcaption></figure>
 
   <h2 id="sf-exec"><span class="num">03</span>Logical Execution Order</h2>
   <p>You <em>write</em> SELECT first, but the database <em>evaluates</em> clauses in this order:</p>
-  <div class="flow"><span>FROM / JOIN</span><span>WHERE</span><span>GROUP BY</span><span>HAVING</span><span>SELECT</span><span>DISTINCT</span><span>ORDER BY</span><span>LIMIT</span></div>
+  <figure class="viz"><svg viewBox="0 0 600 205" width="600">
+    <text x="38" y="20" text-anchor="middle" font-size="10" class="tm">1</text><rect x="5" y="26" width="66" height="34" rx="6" class="fb"/><text x="38" y="47" text-anchor="middle" font-size="10" font-weight="bold">FROM</text><line x1="71" y1="43" x2="79" y2="43" stroke="currentColor"/><text x="112" y="20" text-anchor="middle" font-size="10" class="tm">2</text><rect x="79" y="26" width="66" height="34" rx="6" class="fb"/><text x="112" y="47" text-anchor="middle" font-size="10" font-weight="bold">WHERE</text><line x1="145" y1="43" x2="153" y2="43" stroke="currentColor"/><text x="186" y="20" text-anchor="middle" font-size="10" class="tm">3</text><rect x="153" y="26" width="66" height="34" rx="6" class="ft"/><text x="186" y="47" text-anchor="middle" font-size="10" font-weight="bold">GROUP BY</text><line x1="219" y1="43" x2="227" y2="43" stroke="currentColor"/><text x="260" y="20" text-anchor="middle" font-size="10" class="tm">4</text><rect x="227" y="26" width="66" height="34" rx="6" class="ft"/><text x="260" y="47" text-anchor="middle" font-size="10" font-weight="bold">HAVING</text><line x1="293" y1="43" x2="301" y2="43" stroke="currentColor"/><text x="334" y="20" text-anchor="middle" font-size="10" class="tm">5</text><rect x="301" y="26" width="66" height="34" rx="6" class="fg"/><text x="334" y="47" text-anchor="middle" font-size="10" font-weight="bold">SELECT</text><line x1="367" y1="43" x2="375" y2="43" stroke="currentColor"/><text x="408" y="20" text-anchor="middle" font-size="10" class="tm">6</text><rect x="375" y="26" width="66" height="34" rx="6" class="fs"/><text x="408" y="47" text-anchor="middle" font-size="10" font-weight="bold">DISTINCT</text><line x1="441" y1="43" x2="449" y2="43" stroke="currentColor"/><text x="482" y="20" text-anchor="middle" font-size="10" class="tm">7</text><rect x="449" y="26" width="66" height="34" rx="6" class="fs"/><text x="482" y="47" text-anchor="middle" font-size="10" font-weight="bold">ORDER BY</text><line x1="515" y1="43" x2="523" y2="43" stroke="currentColor"/><text x="556" y="20" text-anchor="middle" font-size="10" class="tm">8</text><rect x="523" y="26" width="66" height="34" rx="6" class="fs"/><text x="556" y="47" text-anchor="middle" font-size="10" font-weight="bold">LIMIT</text>
+    <rect x="5" y="80" width="140" height="24" rx="5" class="fb sb"/><text x="13" y="96" font-size="10">raw rows only</text>
+    <rect x="153" y="112" width="436" height="24" rx="5" class="ft st"/><text x="161" y="128" font-size="10">groups + aggregates exist: HAVING, SELECT, ORDER BY can use them</text>
+    <rect x="301" y="144" width="288" height="24" rx="5" class="fg sg"/><text x="309" y="160" font-size="10">SELECT aliases exist: ORDER BY can use</text>
+    <text x="5" y="192" font-size="11" class="tr">✗ WHERE doubled &gt; 500 · ✗ WHERE COUNT(*) &gt; 1</text>
+    <text x="589" y="192" font-size="11" text-anchor="end" class="tg">✓ ORDER BY doubled</text>
+  </svg><figcaption>Each bar shows what exists from that step onward. WHERE runs at step 2, before groups or aliases are born.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Cooking: fetch ingredients (FROM), throw out bad ones (WHERE), sort into bowls (GROUP BY), drop small bowls (HAVING), plate up and name the dish (SELECT), then arrange plates (ORDER BY) and serve the first few (LIMIT). You can't refer to a dish's name before it's plated.</p>
+    <p>Cooking: fetch (FROM), discard bad (WHERE), sort into bowls (GROUP BY), drop small bowls (HAVING), plate and name (SELECT), arrange (ORDER BY), serve a few (LIMIT). You can't use a dish's name before it's plated.</p>
   </div>
-  <p>This one list explains most "why does this error?" questions:</p>
-  <ul>
-    <li><strong>Aliases fail in WHERE</strong>: the alias is created in SELECT, which runs later.</li>
-    <li><strong>Aliases work in ORDER BY</strong>: it runs after SELECT.</li>
-    <li><strong>Aggregates fail in WHERE</strong>: groups don't exist yet. Filter groups in HAVING.</li>
-    <li><strong>LIMIT applies last</strong>, after sorting, so "top 2" is well defined.</li>
-  </ul>
   <div class="fx" data-lang="sql">SELECT name, price * 2 AS doubled FROM products WHERE doubled &gt; 500;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>ERROR</th></tr><tr><td>column "doubled" does not exist</td></tr></table>
   <div class="fx" data-lang="sql">SELECT name, price * 2 AS doubled FROM products ORDER BY doubled DESC;</div>
@@ -7170,7 +7536,11 @@ SELECT name FROM customers WHERE city &lt;&gt; 'Mumbai'; -- Dia missing!</div>
   <div class="fx" data-lang="sql">SELECT TRUE AND NULL AS t_and_n, FALSE AND NULL AS f_and_n,
        TRUE OR NULL AS t_or_n, NOT NULL::boolean AS not_n;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>t_and_n</th><th>f_and_n</th><th>t_or_n</th><th>not_n</th></tr><tr><td>NULL</td><td>f</td><td>t</td><td>NULL</td></tr></table>
-  <p>Rule: if the known side already decides the answer (FALSE AND …, TRUE OR …), you get that answer. Otherwise UNKNOWN.</p>
+  <figure class="viz"><svg viewBox="0 0 600 175" width="600">
+    <text x="300" y="16" text-anchor="middle" font-size="11" class="tm">T = TRUE, F = FALSE, U = UNKNOWN (NULL)</text>
+    <text x="37.0" y="51.0" text-anchor="middle" font-weight="bold">AND</text><text x="71.0" y="51.0" text-anchor="middle" font-weight="bold" class="tm">T</text><text x="37.0" y="85.0" text-anchor="middle" font-weight="bold" class="tm">T</text><text x="105.0" y="51.0" text-anchor="middle" font-weight="bold" class="tm">F</text><text x="37.0" y="119.0" text-anchor="middle" font-weight="bold" class="tm">F</text><text x="139.0" y="51.0" text-anchor="middle" font-weight="bold" class="tm">U</text><text x="37.0" y="153.0" text-anchor="middle" font-weight="bold" class="tm">U</text><rect x="55" y="65" width="32" height="32" rx="4" class="fg"/><text x="71.0" y="85.0" text-anchor="middle">T</text><rect x="89" y="65" width="32" height="32" rx="4" class="fr"/><text x="105.0" y="85.0" text-anchor="middle">F</text><rect x="123" y="65" width="32" height="32" rx="4" class="fs"/><text x="139.0" y="85.0" text-anchor="middle">U</text><rect x="55" y="99" width="32" height="32" rx="4" class="fr"/><text x="71.0" y="119.0" text-anchor="middle">F</text><rect x="89" y="99" width="32" height="32" rx="4" class="fr"/><text x="105.0" y="119.0" text-anchor="middle">F</text><rect x="123" y="99" width="32" height="32" rx="4" class="fr"/><text x="139.0" y="119.0" text-anchor="middle">F</text><rect x="55" y="133" width="32" height="32" rx="4" class="fs"/><text x="71.0" y="153.0" text-anchor="middle">U</text><rect x="89" y="133" width="32" height="32" rx="4" class="fr"/><text x="105.0" y="153.0" text-anchor="middle">F</text><rect x="123" y="133" width="32" height="32" rx="4" class="fs"/><text x="139.0" y="153.0" text-anchor="middle">U</text><text x="237.0" y="51.0" text-anchor="middle" font-weight="bold">OR</text><text x="271.0" y="51.0" text-anchor="middle" font-weight="bold" class="tm">T</text><text x="237.0" y="85.0" text-anchor="middle" font-weight="bold" class="tm">T</text><text x="305.0" y="51.0" text-anchor="middle" font-weight="bold" class="tm">F</text><text x="237.0" y="119.0" text-anchor="middle" font-weight="bold" class="tm">F</text><text x="339.0" y="51.0" text-anchor="middle" font-weight="bold" class="tm">U</text><text x="237.0" y="153.0" text-anchor="middle" font-weight="bold" class="tm">U</text><rect x="255" y="65" width="32" height="32" rx="4" class="fg"/><text x="271.0" y="85.0" text-anchor="middle">T</text><rect x="289" y="65" width="32" height="32" rx="4" class="fg"/><text x="305.0" y="85.0" text-anchor="middle">T</text><rect x="323" y="65" width="32" height="32" rx="4" class="fg"/><text x="339.0" y="85.0" text-anchor="middle">T</text><rect x="255" y="99" width="32" height="32" rx="4" class="fg"/><text x="271.0" y="119.0" text-anchor="middle">T</text><rect x="289" y="99" width="32" height="32" rx="4" class="fr"/><text x="305.0" y="119.0" text-anchor="middle">F</text><rect x="323" y="99" width="32" height="32" rx="4" class="fs"/><text x="339.0" y="119.0" text-anchor="middle">U</text><rect x="255" y="133" width="32" height="32" rx="4" class="fg"/><text x="271.0" y="153.0" text-anchor="middle">T</text><rect x="289" y="133" width="32" height="32" rx="4" class="fs"/><text x="305.0" y="153.0" text-anchor="middle">U</text><rect x="323" y="133" width="32" height="32" rx="4" class="fs"/><text x="339.0" y="153.0" text-anchor="middle">U</text><text x="457.0" y="51.0" text-anchor="middle" font-weight="bold" class="tm">x</text><text x="491.0" y="51.0" text-anchor="middle" font-weight="bold">NOT</text><text x="457.0" y="85.0" text-anchor="middle" font-weight="bold" class="tm">T</text><rect x="475" y="65" width="32" height="32" rx="4" class="fr"/><text x="491.0" y="85.0" text-anchor="middle">F</text><text x="457.0" y="119.0" text-anchor="middle" font-weight="bold" class="tm">F</text><rect x="475" y="99" width="32" height="32" rx="4" class="fg"/><text x="491.0" y="119.0" text-anchor="middle">T</text><text x="457.0" y="153.0" text-anchor="middle" font-weight="bold" class="tm">U</text><rect x="475" y="133" width="32" height="32" rx="4" class="fs"/><text x="491.0" y="153.0" text-anchor="middle">U</text>
+  </svg><figcaption>Green = TRUE, red = FALSE, grey = UNKNOWN. Only a known side that already decides the answer escapes UNKNOWN.</figcaption></figure>
+  <p>Rule: FALSE AND anything = FALSE; TRUE OR anything = TRUE; otherwise UNKNOWN.</p>
   <div class="callout trap"><span class="label">Trap</span>
     <p><code>'Asha' || NULL</code> is NULL, and <code>price + NULL</code> is NULL. NULL spreads through expressions. Wrap nullable inputs in <code>COALESCE</code>, or use <code>CONCAT()</code>, which skips NULLs.</p>
   </div>
@@ -7214,6 +7584,26 @@ FROM customers;</div>
   </ul>
   <h3>WHERE vs HAVING</h3>
   <p><code>WHERE</code> filters <strong>rows</strong> before grouping. <code>HAVING</code> filters <strong>groups</strong> after aggregation.</p>
+  <figure class="viz"><svg viewBox="0 0 600 190" width="600">
+    <defs><marker id="sf-ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <g font-size="10">
+    <text x="70" y="14" text-anchor="middle" font-weight="bold">orders</text>
+    <rect x="15" y="22" width="110" height="22" rx="3" class="fb"/><text x="22" y="37">100 · c1 · deliv</text>
+    <rect x="15" y="48" width="110" height="22" rx="3" class="fb"/><text x="22" y="63">101 · c1 · deliv</text>
+    <rect x="15" y="74" width="110" height="22" rx="3" class="fr sr" stroke-dasharray="3 3"/><text x="22" y="89" class="tm">102 · c2 · cancel</text>
+    <rect x="15" y="100" width="110" height="22" rx="3" class="fv"/><text x="22" y="115">103 · c3 · deliv</text>
+    <rect x="15" y="126" width="110" height="22" rx="3" class="fv"/><text x="22" y="141">104 · c3 · pend</text>
+    <text x="70" y="170" text-anchor="middle" class="tr">WHERE drops 102</text>
+    <g stroke="currentColor" marker-end="url(#sf-ar1)"><line x1="130" y1="46" x2="208" y2="56"/><line x1="130" y1="124" x2="208" y2="116"/><line x1="340" y1="56" x2="418" y2="56"/><line x1="340" y1="116" x2="418" y2="116"/></g>
+    <text x="275" y="14" text-anchor="middle" font-weight="bold">GROUP BY customer_id</text>
+    <rect x="210" y="30" width="130" height="54" rx="6" class="fb sb"/><text x="275" y="52" text-anchor="middle">pile c1</text><text x="275" y="70" text-anchor="middle" class="tm">2 rows</text>
+    <rect x="210" y="92" width="130" height="54" rx="6" class="fv"/><text x="275" y="114" text-anchor="middle">pile c3</text><text x="275" y="132" text-anchor="middle" class="tm">2 rows</text>
+    <text x="500" y="14" text-anchor="middle" font-weight="bold">HAVING COUNT(*) &gt;= 2</text>
+    <rect x="420" y="42" width="160" height="28" rx="4" class="fg sg"/><text x="500" y="60" text-anchor="middle">c1 → n_orders 2</text>
+    <rect x="420" y="102" width="160" height="28" rx="4" class="fg sg"/><text x="500" y="120" text-anchor="middle">c3 → n_orders 2</text>
+    <text x="500" y="170" text-anchor="middle" class="tm">one output row per pile</text>
+    </g>
+  </svg><figcaption>WHERE removes rows, GROUP BY makes piles, HAVING keeps or drops whole piles. This is the query below.</figcaption></figure>
   <div class="fx" data-lang="sql">SELECT customer_id, COUNT(*) AS n_orders
 FROM orders
 WHERE status &lt;&gt; 'cancelled'      -- row filter
@@ -7288,22 +7678,7 @@ RETURNING *;</div>
   <div class="callout trap"><span class="label">Trap: UPDATE without WHERE</span>
     <p><code>UPDATE customers SET city = 'Delhi'</code> ran and reported <code>UPDATE 4</code>: every customer now lives in Delhi. Write the WHERE first, test it as a SELECT, and run risky writes inside <code>BEGIN; … ROLLBACK;</code> until the row count looks right.</p>
   </div>
-
-  <h2 id="sf-rev"><span class="num">10</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Order of evaluation:</strong> FROM → WHERE → GROUP BY → HAVING → SELECT → DISTINCT → ORDER BY → LIMIT.</li>
-    <li><strong>Aliases:</strong> not visible in WHERE/HAVING; fine in ORDER BY.</li>
-    <li><strong>Integer division:</strong> 3/5 = 0. Cast with <code>::numeric</code>.</li>
-    <li><strong>NULL:</strong> any comparison gives UNKNOWN; WHERE drops it. Test with <code>IS NULL</code>.</li>
-    <li><strong>NULL helpers:</strong> COALESCE (default), NULLIF (avoid ÷0), IS DISTINCT FROM (NULL-safe ≠).</li>
-    <li><strong>COUNT(*)</strong> counts rows; <strong>COUNT(col)</strong> skips NULLs; other aggregates ignore NULLs too.</li>
-    <li><strong>WHERE</strong> filters rows before grouping; <strong>HAVING</strong> filters groups after.</li>
-    <li><strong>No ORDER BY = no guaranteed order.</strong> Add a tiebreaker before LIMIT.</li>
-    <li><strong>Conditional aggregation:</strong> <code>SUM(CASE …)</code> or <code>COUNT(*) FILTER (WHERE …)</code>.</li>
-    <li><strong>Writes:</strong> RETURNING shows affected rows; ON CONFLICT = upsert; never UPDATE/DELETE without a tested WHERE.</li>
-  </ol></div>
-
-  <h2 id="sf-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <h2 id="sf-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>What does <code>SELECT name FROM customers WHERE city = 'Mumbai' OR city &lt;&gt; 'Mumbai'</code> return?</summary><div class="qa-body">Asha, Ben, Chen. Not Dia: for her city is NULL, so both sides are UNKNOWN and <code>UNKNOWN OR UNKNOWN</code> is UNKNOWN. "Everything" in SQL never includes NULLs unless you add <code>OR city IS NULL</code>.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Predict: <code>SELECT COUNT(*), COUNT(city), COUNT(DISTINCT city) FROM customers;</code></summary><div class="qa-body">4, 3, 2. Four rows; three non-NULL cities (Dia skipped); two unique values, Mumbai and Delhi.</div></details>
@@ -7869,6 +8244,95 @@ Object.assign(TOPIC_CONTENT, {
   <h1>JOINs</h1>
   <p class="lead">Joins stitch related tables back together. Getting the right <em>rows</em> is easy; getting the right <em>row count</em> (no lost customers, no doubled revenue) is what interviews actually test.</p>
 
+  <h2 id="sj-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">JOINs</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Mental model</div>
+        <ul>
+          <li><b>Step 1</b> — every pair (left × right)</li>
+          <li><b>Step 2</b> — keep pairs where ON is TRUE</li>
+          <li><b>Step 3</b> — outer joins add unmatched rows, padded with NULL</li>
+          <li><b>Row count</b> — key with 2 left × 3 right matches → 6 rows</li>
+          <li>💡 dance hall: matching tickets dance; LEFT keeps wallflowers with an empty chair</li>
+          <li>⚠ Venn diagrams mislead: joins return pairs, counts can grow</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Join types</div>
+        <ul>
+          <li><b>INNER</b> — matches only (Dia gone, 5 rows)</li>
+          <li><b>LEFT</b> — all left + NULLs (Dia kept, 6 rows)</li>
+          <li><b>RIGHT</b> — LEFT with tables swapped; rarely written</li>
+          <li><b>FULL</b> — both sides; reconcile actuals vs targets, <code>COALESCE(a.k, t.k)</code></li>
+          <li><b>CROSS</b> — m × n, no ON; build full grids then LEFT JOIN facts</li>
+          <li>⚠ missing ON / <code>FROM a, b</code> → accidental cross join</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">SELF join</div>
+        <ul>
+          <li><b>Same table, two aliases</b> — <code>employees e JOIN employees m ON m.emp_id = e.manager_id</code></li>
+          <li><b>LEFT</b> keeps the root (Ravi, manager NULL)</li>
+          <li><b>Unique pairs</b> — <code>a.emp_id &lt; b.emp_id</code> (no self/mirror pairs)</li>
+          <li><b>Uses</b> — hierarchies, same-salary pairs, earns-more-than-manager</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Semi &amp; anti joins</div>
+        <ul>
+          <li><b>Semi</b> — "has any": <code>EXISTS</code>, one row per left row</li>
+          <li><b>Anti</b> — "has none": <code>NOT EXISTS</code> or <code>LEFT JOIN … WHERE r.key IS NULL</code></li>
+          <li>⚠ INNER JOIN for "who ordered" repeats Asha/Chen</li>
+          <li>⚠ <b>NOT IN + NULL</b> → 0 rows (x &lt;&gt; NULL is UNKNOWN)</li>
+          <li><b>Fix</b> — NOT EXISTS, or <code>IS NOT NULL</code> inside subquery; IN is safe</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">ON vs WHERE (LEFT JOIN)</div>
+        <ul>
+          <li><b>ON</b> — decides which right rows match; left rows kept</li>
+          <li><b>WHERE</b> — filters after join, incl. NULL-padded rows</li>
+          <li>⚠ <code>WHERE o.status = 'delivered'</code> silently turns LEFT into INNER</li>
+          <li><b>Rule</b> — right-table filters in ON, left-table filters in WHERE</li>
+          <li>⚠ <code>COUNT(*)</code> gives Dia 1 → use <code>COUNT(o.order_id)</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Fan-out</div>
+        <ul>
+          <li><b>Cause</b> — parent joined to two independent 1:N children</li>
+          <li><b>Effect</b> — Asha 3 items × 3 visits = 9 rows → revenue 4140 not 1380</li>
+          <li><b>Fix</b> — aggregate each child per key in CTEs, then join</li>
+          <li>⚠ <code>SUM(DISTINCT)</code> is wrong when real values repeat</li>
+          <li><b>Check</b> — compare COUNT(*) before/after each join</li>
+          <li>💡 two guest lists stapled: every A next to every B</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Multi-table &amp; non-equi</div>
+        <ul>
+          <li><b>Chain</b> — customers → orders → order_items → products</li>
+          <li>⚠ <b>LEFT then INNER</b> drops Dia → keep later joins LEFT</li>
+          <li><b>Non-equi</b> — <code>ON salary BETWEEN lo AND hi</code> (bands, ranges)</li>
+          <li>⚠ overlapping bands match twice; no hash join → slow</li>
+          <li>⚠ <b>NATURAL JOIN</b> matches every same-named column; prefer <code>USING</code>/<code>ON</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Algorithms &amp; counts</div>
+        <ul>
+          <li><b>Nested loop</b> — small outer + index on inner; any condition</li>
+          <li><b>Hash</b> — build on small side, probe with big; equality only; needs memory</li>
+          <li><b>Merge</b> — both sorted, zipper walk; equality/range</li>
+          <li><b>Puzzle</b> a = 1,1,2,NULL · b = 1,1,3,NULL → INNER 4, LEFT 6, RIGHT 6, FULL 8, CROSS 16</li>
+          <li><b>Bounds</b> — INNER ≤ m×n; LEFT ≥ m; FULL ≥ max(m, n); NULL never matches NULL</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -7881,22 +8345,36 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="sj-multi"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Multi-table &amp; Non-equi</span><span class="rm-sub">Chains and range joins</span></div></div>
       <div class="rm-item rm-done" data-target="sj-algo"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">How the Engine Joins</span><span class="rm-sub">Nested loop, hash, merge</span></div></div>
       <div class="rm-item rm-done" data-target="sj-puzzle"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Row-Count Puzzle</span><span class="rm-sub">Duplicates and NULL keys</span></div></div>
-      <div class="rm-item rm-done" data-target="sj-rev"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 9 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="sj-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="sj-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
   <h2 id="sj-model"><span class="num">01</span>Why Joins &amp; the Mental Model</h2>
-  <p>Good schemas store each fact once: customer details in <code>customers</code>, orders in <code>orders</code>, linked by <code>customer_id</code>. A <strong>join</strong> combines rows from two tables at query time, so you can ask "which customer placed order 103?".</p>
+  <p>Each fact is stored once (customers, orders), linked by <code>customer_id</code>. A <strong>join</strong> recombines them at query time: "which customer placed order 103?".</p>
   <div class="callout def"><span class="label">Mental model</span>
     <p><strong>1.</strong> Take every pair of rows (left × right). <strong>2.</strong> Keep the pairs where the <code>ON</code> condition is TRUE. <strong>3.</strong> Outer joins then add back unmatched rows, padded with NULLs.</p>
   </div>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A dance hall. Every customer meets every order (the pairs). Only pairs where the customer ID on the ticket matches get to dance (ON). A LEFT JOIN also lets customers with no partner stay on the floor, dancing with an empty chair (NULL).</p>
+    <p>A dance hall. Everyone meets everyone; only matching tickets dance (ON). LEFT JOIN lets partnerless customers stay, dancing with an empty chair (NULL).</p>
   </div>
-  <p>Real engines never build all pairs; that's just the meaning. The model instantly answers row-count questions: a key that matches 2 rows on one side and 3 on the other gives 6 rows.</p>
+  <figure class="viz"><svg viewBox="0 0 600 205" width="600">
+    <text x="100" y="18" text-anchor="middle" font-weight="bold">customers</text>
+    <text x="475" y="12" text-anchor="middle" font-weight="bold">orders</text>
+    <text x="280" y="12" text-anchor="middle" font-size="10" class="tm">ON o.customer_id = c.customer_id</text>
+    <rect x="40" y="30" width="120" height="30" rx="5" class="fb sb"/><text x="100" y="50" text-anchor="middle">Asha</text><rect x="40" y="75" width="120" height="30" rx="5" class="fb sb"/><text x="100" y="95" text-anchor="middle">Ben</text><rect x="40" y="120" width="120" height="30" rx="5" class="fb sb"/><text x="100" y="140" text-anchor="middle">Chen</text><rect x="40" y="165" width="120" height="30" rx="5" class="fb sb"/><text x="100" y="185" text-anchor="middle">Dia</text><rect x="400" y="20" width="150" height="28" rx="5" class="ft"/><text x="475" y="39" text-anchor="middle">100 · c1</text><rect x="400" y="55" width="150" height="28" rx="5" class="ft"/><text x="475" y="74" text-anchor="middle">101 · c1</text><rect x="400" y="90" width="150" height="28" rx="5" class="ft"/><text x="475" y="109" text-anchor="middle">102 · c2</text><rect x="400" y="125" width="150" height="28" rx="5" class="ft"/><text x="475" y="144" text-anchor="middle">103 · c3</text><rect x="400" y="160" width="150" height="28" rx="5" class="ft"/><text x="475" y="179" text-anchor="middle">104 · c3</text><g stroke="currentColor"><line x1="160" y1="45" x2="400" y2="34"/><line x1="160" y1="45" x2="400" y2="69"/><line x1="160" y1="90" x2="400" y2="104"/><line x1="160" y1="135" x2="400" y2="139"/><line x1="160" y1="135" x2="400" y2="174"/></g>
+    <line x1="160" y1="180" x2="230" y2="184" stroke="currentColor" stroke-dasharray="4 3"/>
+    <rect x="230" y="172" width="70" height="24" rx="5" fill="none" stroke="currentColor" stroke-dasharray="4 3"/><text x="265" y="189" text-anchor="middle" class="tm">NULL</text>
+    <text x="308" y="189" font-size="10" class="tm">LEFT only</text>
+  </svg><figcaption>Each line is one output row: 5 matched pairs (INNER). LEFT adds Dia with a NULL partner: 6 rows.</figcaption></figure>
+  <p>Engines never build all pairs; it's just the meaning. It answers row counts instantly: 2 matches × 3 matches = 6 rows.</p>
 
   <h2 id="sj-types"><span class="num">02</span>INNER, LEFT, RIGHT, FULL</h2>
+  <figure class="viz"><svg viewBox="0 0 600 182" width="600">
+    <g font-size="10">
+    <text x="300" y="14" text-anchor="middle" class="tm">left = months with sales (May, Jun, Jul) · right = months with targets (Jun, Jul, Aug)</text>
+    <text x="72" y="36" text-anchor="middle" font-weight="bold" class="tb">INNER</text><rect x="10" y="46" width="60" height="22" rx="3" class="fb"/><text x="40" y="61" text-anchor="middle">Jun</text><rect x="74" y="46" width="60" height="22" rx="3" class="fg"/><text x="104" y="61" text-anchor="middle">Jun</text><rect x="10" y="72" width="60" height="22" rx="3" class="fb"/><text x="40" y="87" text-anchor="middle">Jul</text><rect x="74" y="72" width="60" height="22" rx="3" class="fg"/><text x="104" y="87" text-anchor="middle">Jul</text><text x="72" y="172" text-anchor="middle" class="tm">2 rows</text><text x="222" y="36" text-anchor="middle" font-weight="bold" class="tb">LEFT</text><rect x="160" y="46" width="60" height="22" rx="3" class="fb"/><text x="190" y="61" text-anchor="middle">May</text><rect x="224" y="46" width="60" height="22" rx="3" class="fs"/><text x="254" y="61" text-anchor="middle" class="tm">NULL</text><rect x="160" y="72" width="60" height="22" rx="3" class="fb"/><text x="190" y="87" text-anchor="middle">Jun</text><rect x="224" y="72" width="60" height="22" rx="3" class="fg"/><text x="254" y="87" text-anchor="middle">Jun</text><rect x="160" y="98" width="60" height="22" rx="3" class="fb"/><text x="190" y="113" text-anchor="middle">Jul</text><rect x="224" y="98" width="60" height="22" rx="3" class="fg"/><text x="254" y="113" text-anchor="middle">Jul</text><text x="222" y="172" text-anchor="middle" class="tm">3 rows</text><text x="372" y="36" text-anchor="middle" font-weight="bold" class="tb">RIGHT</text><rect x="310" y="46" width="60" height="22" rx="3" class="fb"/><text x="340" y="61" text-anchor="middle">Jun</text><rect x="374" y="46" width="60" height="22" rx="3" class="fg"/><text x="404" y="61" text-anchor="middle">Jun</text><rect x="310" y="72" width="60" height="22" rx="3" class="fb"/><text x="340" y="87" text-anchor="middle">Jul</text><rect x="374" y="72" width="60" height="22" rx="3" class="fg"/><text x="404" y="87" text-anchor="middle">Jul</text><rect x="310" y="98" width="60" height="22" rx="3" class="fs"/><text x="340" y="113" text-anchor="middle" class="tm">NULL</text><rect x="374" y="98" width="60" height="22" rx="3" class="fg"/><text x="404" y="113" text-anchor="middle">Aug</text><text x="372" y="172" text-anchor="middle" class="tm">3 rows</text><text x="522" y="36" text-anchor="middle" font-weight="bold" class="tb">FULL</text><rect x="460" y="46" width="60" height="22" rx="3" class="fb"/><text x="490" y="61" text-anchor="middle">May</text><rect x="524" y="46" width="60" height="22" rx="3" class="fs"/><text x="554" y="61" text-anchor="middle" class="tm">NULL</text><rect x="460" y="72" width="60" height="22" rx="3" class="fb"/><text x="490" y="87" text-anchor="middle">Jun</text><rect x="524" y="72" width="60" height="22" rx="3" class="fg"/><text x="554" y="87" text-anchor="middle">Jun</text><rect x="460" y="98" width="60" height="22" rx="3" class="fb"/><text x="490" y="113" text-anchor="middle">Jul</text><rect x="524" y="98" width="60" height="22" rx="3" class="fg"/><text x="554" y="113" text-anchor="middle">Jul</text><rect x="460" y="124" width="60" height="22" rx="3" class="fs"/><text x="490" y="139" text-anchor="middle" class="tm">NULL</text><rect x="524" y="124" width="60" height="22" rx="3" class="fg"/><text x="554" y="139" text-anchor="middle">Aug</text><text x="522" y="172" text-anchor="middle" class="tm">4 rows</text>
+    </g>
+  </svg><figcaption>Matched pairs always survive; outer joins add the unmatched side, filling the other side with NULL.</figcaption></figure>
   <table class="tbl">
     <tr><th>Join</th><th>Keeps</th><th>Typical use</th></tr>
     <tr><td><code>INNER JOIN</code> (or just <code>JOIN</code>)</td><td>Only matching pairs</td><td>Orders with their customer</td></tr>
@@ -7925,7 +8403,7 @@ ORDER BY 1;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>month</th><th>revenue</th><th>target</th></tr><tr><td>2024-05-01</td><td>1380.00</td><td>NULL</td></tr><tr><td>2024-06-01</td><td>1300.00</td><td>1500</td></tr><tr><td>2024-07-01</td><td>120.00</td><td>500</td></tr><tr><td>2024-08-01</td><td>NULL</td><td>800</td></tr></table>
   <p>May had sales but no target; August has a target but no sales. <code>COALESCE</code> merges the key, which is NULL on whichever side is missing.</p>
   <div class="callout trap"><span class="label">Why Venn diagrams mislead</span>
-    <p>Venn circles suggest a join returns "a subset of rows". It doesn't: it returns <em>pairs</em>, and row counts can grow (one customer × two orders = two rows). Venns also can't show CROSS joins, duplicates or NULL padding. Think "pairs + padding", not "overlapping circles".</p>
+    <p>Venns suggest "a subset of rows". Joins return <em>pairs</em>, so counts can grow (one customer × two orders = two rows), and Venns can't show CROSS, duplicates or NULL padding. Think "pairs + padding".</p>
   </div>
 
   <h2 id="sj-cross"><span class="num">03</span>CROSS &amp; SELF Joins</h2>
@@ -7979,10 +8457,7 @@ WHERE NOT EXISTS (SELECT 1 FROM employees r WHERE r.manager_id = e.emp_id);</div
 
   <h2 id="sj-onwhere"><span class="num">05</span>ON vs WHERE in a LEFT JOIN</h2>
   <p>For INNER joins, a condition in ON or WHERE gives the same result. For LEFT joins it doesn't:</p>
-  <ul>
-    <li><strong>ON</strong> decides which right rows <em>match</em>. Unmatched left rows are still kept.</li>
-    <li><strong>WHERE</strong> runs <em>after</em> the join and filters the final rows, including the NULL-padded ones.</li>
-  </ul>
+  <div class="flow"><span>ON: which right rows match (left rows always kept)</span><span>NULL padding added</span><span>WHERE: filters final rows, padded ones too</span></div>
   <div class="fx" data-lang="sql">-- Goal: every customer with their delivered orders
 SELECT c.name, o.order_id, o.status
 FROM customers c
@@ -8016,7 +8491,20 @@ LEFT JOIN visits v       ON v.customer_id = c.customer_id
 GROUP BY c.customer_id, c.name
 ORDER BY c.customer_id;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>revenue</th><th>visits</th></tr><tr><td>Asha</td><td>4140.00</td><td>9</td></tr><tr><td>Ben</td><td>150.00</td><td>0</td></tr><tr><td>Chen</td><td>1270.00</td><td>3</td></tr><tr><td>Dia</td><td>NULL</td><td>0</td></tr></table>
-  <p>Asha's real revenue is 1380 with 3 visits. Her 3 item rows × 3 visits = 9 rows, so revenue is tripled and visits counted 9 times. No error, just wrong numbers.</p>
+  <p>Asha's real revenue is 1380 with 3 visits. No error, just wrong numbers:</p>
+  <figure class="viz"><svg viewBox="0 0 600 190" width="600">
+    <g font-size="10">
+    <text x="165" y="18" text-anchor="middle" font-weight="bold" font-size="12" class="tr">Join both children directly</text>
+    <rect x="15" y="36" width="105" height="26" rx="4" class="fb"/><text x="67" y="53" text-anchor="middle">Laptop 800</text><rect x="15" y="80" width="105" height="26" rx="4" class="fb"/><text x="67" y="97" text-anchor="middle">Lamp 2×40</text><rect x="15" y="124" width="105" height="26" rx="4" class="fb"/><text x="67" y="141" text-anchor="middle">Phone 500</text><rect x="225" y="36" width="90" height="26" rx="4" class="fv"/><text x="270" y="53" text-anchor="middle">visit 1</text><rect x="225" y="80" width="90" height="26" rx="4" class="fv"/><text x="270" y="97" text-anchor="middle">visit 2</text><rect x="225" y="124" width="90" height="26" rx="4" class="fv"/><text x="270" y="141" text-anchor="middle">visit 3</text><g class="sr" stroke-opacity="0.8"><line x1="120" y1="49" x2="225" y2="49"/><line x1="120" y1="49" x2="225" y2="93"/><line x1="120" y1="49" x2="225" y2="137"/><line x1="120" y1="93" x2="225" y2="49"/><line x1="120" y1="93" x2="225" y2="93"/><line x1="120" y1="93" x2="225" y2="137"/><line x1="120" y1="137" x2="225" y2="49"/><line x1="120" y1="137" x2="225" y2="93"/><line x1="120" y1="137" x2="225" y2="137"/></g>
+    <text x="165" y="176" text-anchor="middle" font-size="11" class="tr">3 × 3 = 9 rows → revenue 4140 ✗</text>
+    <line x1="340" y1="10" x2="340" y2="180" stroke="currentColor" stroke-dasharray="4 4" opacity="0.4"/>
+    <text x="470" y="18" text-anchor="middle" font-weight="bold" font-size="12" class="tg">Aggregate first</text>
+    <rect x="360" y="76" width="100" height="34" rx="6" class="fb sb"/><text x="410" y="97" text-anchor="middle">rev 1380</text>
+    <rect x="490" y="76" width="100" height="34" rx="6" class="fv"/><text x="540" y="97" text-anchor="middle">visits 3</text>
+    <line x1="460" y1="93" x2="490" y2="93" class="sg" stroke-width="2"/>
+    <text x="470" y="176" text-anchor="middle" font-size="11" class="tg">1 × 1 = 1 row ✓</text>
+    </g>
+  </svg><figcaption>Asha's 3 item rows each pair with all 3 visits. Pre-aggregating each child to one row per customer removes the multiplication.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Two guest lists stapled together: every name on list A gets written next to every name on list B. Count either list afterwards and you've counted it many times over.</p>
   </div>
@@ -8067,6 +8555,39 @@ ORDER BY e.salary DESC;</div>
 
   <h2 id="sj-algo"><span class="num">08</span>How the Engine Joins</h2>
   <p>The optimizer picks one of three physical algorithms. You see the choice in <code>EXPLAIN</code>.</p>
+  <figure class="viz"><svg viewBox="0 0 600 175" width="600">
+    <defs><marker id="sj-ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <g font-size="10">
+    <text x="100" y="18" text-anchor="middle" font-weight="bold" font-size="12" class="tb">Nested loop</text>
+    <rect x="15" y="40" width="50" height="24" rx="3" class="fb"/><rect x="15" y="74" width="50" height="24" rx="3" class="fb"/><rect x="15" y="108" width="50" height="24" rx="3" class="fb"/>
+    <text x="40" y="146" text-anchor="middle" class="tm">outer</text>
+    <circle cx="150" cy="55" r="12" class="fg sg"/><circle cx="125" cy="100" r="10" class="fg"/><circle cx="175" cy="100" r="10" class="fg"/>
+    <g stroke="currentColor"><line x1="143" y1="65" x2="129" y2="91"/><line x1="157" y1="65" x2="171" y2="91"/></g>
+    <g stroke="currentColor" marker-end="url(#sj-ar1)" opacity="0.7"><line x1="65" y1="52" x2="136" y2="55"/><line x1="65" y1="86" x2="137" y2="60"/><line x1="65" y1="120" x2="139" y2="63"/></g>
+    <text x="150" y="146" text-anchor="middle" class="tm">index</text>
+    <text x="100" y="166" text-anchor="middle">each outer row: 1 lookup</text>
+    <text x="300" y="18" text-anchor="middle" font-weight="bold" font-size="12" class="tb">Hash join</text>
+    <rect x="215" y="50" width="40" height="22" rx="3" class="fb"/><rect x="215" y="82" width="40" height="22" rx="3" class="fb"/>
+    <text x="235" y="122" text-anchor="middle" class="tm">small</text>
+    <rect x="280" y="40" width="40" height="22" rx="3" class="fg sg"/><text x="300" y="55" text-anchor="middle">#0</text>
+    <rect x="280" y="68" width="40" height="22" rx="3" class="fg sg"/><text x="300" y="83" text-anchor="middle">#1</text>
+    <rect x="280" y="96" width="40" height="22" rx="3" class="fg sg"/><text x="300" y="111" text-anchor="middle">#2</text>
+    <rect x="345" y="36" width="40" height="18" rx="3" class="fv"/><rect x="345" y="60" width="40" height="18" rx="3" class="fv"/><rect x="345" y="84" width="40" height="18" rx="3" class="fv"/><rect x="345" y="108" width="40" height="18" rx="3" class="fv"/>
+    <text x="365" y="140" text-anchor="middle" class="tm">big</text>
+    <g stroke="currentColor" marker-end="url(#sj-ar1)"><line x1="255" y1="61" x2="278" y2="55"/><line x1="255" y1="93" x2="278" y2="105"/><line x1="345" y1="69" x2="322" y2="79"/></g>
+    <text x="300" y="166" text-anchor="middle">build small, probe big</text>
+    <text x="500" y="18" text-anchor="middle" font-weight="bold" font-size="12" class="tb">Merge join</text>
+    <rect x="425" y="40" width="40" height="22" rx="3" class="fb"/><text x="445" y="55" text-anchor="middle">1</text>
+    <rect x="425" y="70" width="40" height="22" rx="3" class="fb"/><text x="445" y="85" text-anchor="middle">2</text>
+    <rect x="425" y="100" width="40" height="22" rx="3" class="fb"/><text x="445" y="115" text-anchor="middle">4</text>
+    <rect x="535" y="40" width="40" height="22" rx="3" class="fv"/><text x="555" y="55" text-anchor="middle">1</text>
+    <rect x="535" y="70" width="40" height="22" rx="3" class="fv"/><text x="555" y="85" text-anchor="middle">3</text>
+    <rect x="535" y="100" width="40" height="22" rx="3" class="fv"/><text x="555" y="115" text-anchor="middle">4</text>
+    <g class="sg" stroke-width="2"><line x1="465" y1="51" x2="535" y2="51"/><line x1="465" y1="111" x2="535" y2="111"/></g>
+    <g stroke="currentColor" marker-end="url(#sj-ar1)"><line x1="415" y1="40" x2="415" y2="125"/><line x1="585" y1="40" x2="585" y2="125"/></g>
+    <text x="500" y="166" text-anchor="middle">walk two sorted lists</text>
+    </g>
+  </svg><figcaption>Nested loop: small outer + index. Hash: equality on big unsorted inputs. Merge: inputs already sorted by the key.</figcaption></figure>
   <table class="tbl">
     <tr><th>Algorithm</th><th>How it works</th><th>Best when</th><th>Cost</th></tr>
     <tr><td><strong>Nested loop</strong></td><td>For each outer row, look up matches in the inner side (ideally via an index)</td><td>Outer side is small; inner has an index; any condition (incl. non-equi)</td><td>outer × lookup</td></tr>
@@ -8098,21 +8619,7 @@ ORDER BY e.salary DESC;</div>
   <div class="callout intu"><span class="label">Bounds to remember</span>
     <p>INNER ≤ m × n. LEFT ≥ m (rows of the left table). FULL ≥ max(m, n). If a join returns more rows than its "one" side, a key isn't as unique as you thought.</p>
   </div>
-
-  <h2 id="sj-rev"><span class="num">10</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Model:</strong> all pairs → keep where ON is TRUE → outer joins add unmatched rows with NULLs.</li>
-    <li><strong>INNER</strong> = matches only; <strong>LEFT</strong> keeps all left; <strong>FULL</strong> keeps both; <strong>CROSS</strong> = m × n.</li>
-    <li><strong>SELF join</strong>: same table, two aliases. Use <code>a.id &lt; b.id</code> for unique pairs.</li>
-    <li><strong>Semi/anti</strong>: EXISTS / NOT EXISTS. They never duplicate rows.</li>
-    <li><strong>NOT IN</strong> with a NULL in the list returns nothing. Prefer NOT EXISTS.</li>
-    <li><strong>LEFT JOIN filters</strong> on the right table go in ON; in WHERE they make it INNER.</li>
-    <li><strong>COUNT(right.col)</strong>, not COUNT(*), after a LEFT JOIN.</li>
-    <li><strong>Fan-out:</strong> two one-to-many joins multiply. Aggregate each child first, then join.</li>
-    <li><strong>Algorithms:</strong> nested loop (small + index), hash (big, equality), merge (sorted).</li>
-  </ol></div>
-
-  <h2 id="sj-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <h2 id="sj-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>How many rows does <code>customers LEFT JOIN orders</code> return in shop, and why not 4?</summary><div class="qa-body">6. Asha and Chen have 2 orders each, Ben 1, and Dia gets one NULL-padded row: 2 + 1 + 2 + 1. A LEFT JOIN guarantees <em>at least</em> one row per left row, not exactly one.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Find customers who have never ordered. Give two correct ways and one wrong way.</summary><div class="qa-body">Correct: <code>WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.customer_id)</code>, or <code>LEFT JOIN orders o … WHERE o.order_id IS NULL</code>. Both return Dia. Risky: <code>WHERE customer_id NOT IN (SELECT customer_id FROM orders)</code>. It works here only because orders.customer_id is NOT NULL; one NULL would empty the result.</div></details>
@@ -9045,6 +9552,99 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Relational Model &amp; PostgreSQL</h1>
   <p class="lead">The foundation for every SQL page: how tables, keys and relationships fit together, the shared <code>shop</code> dataset, and the PostgreSQL types, constraints and tools you'll use daily.</p>
 
+  <h2 id="sr-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Relational Model &amp; PostgreSQL</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Relational model</div>
+        <ul>
+          <li><b>Relation</b> — a table: set of rows with the same columns</li>
+          <li><b>Row / tuple</b> — one fact; <b>column / attribute</b> — typed property (domain)</li>
+          <li>⚠ <b>Rows are unordered</b> — no <code>ORDER BY</code> = no guaranteed order</li>
+          <li><b>One big sheet</b> → 3 anomalies
+            <ul><li>update: Asha moves, edit 3 rows</li><li>insert: Dia (no orders) can't exist</li><li>delete: drop order 102, Ben vanishes</li></ul></li>
+          <li><b>Fix</b> — each fact once, linked by keys; JOIN rebuilds the wide view (normalization)</li>
+          <li>💡 <b>Phone contacts</b> — number stored once, chats refer to it</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Keys</div>
+        <ul>
+          <li><b>PK</b> — unique + NOT NULL, one per table</li>
+          <li><b>Candidate</b> — any minimal unique set; non-chosen ones get UNIQUE</li>
+          <li><b>Composite</b> — 2+ columns: <code>order_items(order_id, product_id)</code></li>
+          <li><b>FK</b> — must match a parent PK/UNIQUE value</li>
+          <li><b>Natural vs surrogate</b> — email vs generated id</li>
+          <li>⚠ natural keys change → surrogate PK + UNIQUE on natural key</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Relationships</div>
+        <ul>
+          <li><b>1:N</b> — FK on the many side (<code>orders.customer_id</code>)</li>
+          <li><b>1:1</b> — FK + UNIQUE (or shared PK)</li>
+          <li><b>M:N</b> — junction table with two FKs (<code>order_items</code>)</li>
+          <li><b>Pair facts</b> live in the junction: qty, <code>unit_price</code> (price paid at sale)</li>
+          <li><b>Self-reference</b> — <code>employees.manager_id → emp_id</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Shop dataset quirks</div>
+        <ul>
+          <li><b>Chain</b> — customers → orders → order_items ← products; employees self-FK</li>
+          <li><b>Dia</b> — no orders + NULL city → LEFT JOIN, NULL tests</li>
+          <li><b>Sara = Tom</b> salary tie → RANK vs ROW_NUMBER</li>
+          <li><b>Order 102</b> cancelled → filtering</li>
+          <li><b>Lamp</b> in two orders → join fan-out</li>
+          <li><b>Ravi</b> no manager → hierarchy root</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">SQL sub-languages</div>
+        <ul>
+          <li><b>DDL</b> — CREATE, ALTER, DROP, TRUNCATE (schema)</li>
+          <li><b>DML</b> — INSERT, UPDATE, DELETE, MERGE (rows)</li>
+          <li><b>DQL</b> — SELECT · <b>DCL</b> — GRANT, REVOKE</li>
+          <li><b>TCL</b> — BEGIN, COMMIT, ROLLBACK, SAVEPOINT</li>
+          <li>⚠ Postgres DDL is transactional (rollback-able); MySQL/Oracle auto-commit DDL</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">PostgreSQL &amp; types</div>
+        <ul>
+          <li><b>Why</b> — open source, standard SQL, extensions (PostGIS, pgvector, TimescaleDB), JSONB</li>
+          <li><b>Others</b> — MySQL (web), SQLite (a file), SQL Server (T-SQL), Oracle, BigQuery/Snowflake (analytics)</li>
+          <li><b>Ids</b> — <code>BIGINT GENERATED ALWAYS AS IDENTITY</code></li>
+          <li>⚠ <b>Money</b> → <code>NUMERIC</code>; float: 0.1 + 0.2 = 0.30000000000000004</li>
+          <li>⚠ <b>Events</b> → <code>TIMESTAMPTZ</code> (absolute instant, stored UTC); TIMESTAMP = zone-less wall clock</li>
+          <li><b>Strings</b> → <code>TEXT</code>; <code>VARCHAR(n)</code> only for a real limit; avoid CHAR(n)</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Constraints</div>
+        <ul>
+          <li><b>NOT NULL, UNIQUE, CHECK, PK, FK, DEFAULT</b> — enforced on every write</li>
+          <li>💡 app validation = sign; constraint = bouncer at every door</li>
+          <li><b>ON DELETE</b> — NO ACTION/RESTRICT refuse · CASCADE deletes children · SET NULL unlinks</li>
+          <li>⚠ UNIQUE allows many NULLs (PG15+: <code>NULLS NOT DISTINCT</code>)</li>
+          <li>⚠ identity ids have gaps (failed inserts burn values)</li>
+          <li>⚠ FK columns aren't auto-indexed — add indexes</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">psql &amp; Python</div>
+        <ul>
+          <li><b>psql</b> — <code>&#92;dt</code> tables, <code>&#92;d t</code> describe, <code>&#92;x</code> expanded</li>
+          <li><b>psycopg 3</b> — <code>conn.execute(sql, (val,))</code> with <code>%s</code> placeholders</li>
+          <li><b>pandas</b> — <code>pd.read_sql(text(...), engine, params=...)</code>; NUMERIC → float64</li>
+          <li>⚠ <b>SQL injection</b> — <code>x' OR '1'='1</code> leaks all rows; f-strings unsafe too</li>
+          <li><b>Fix</b> — bound parameters for values; allow-list / <code>sql.Identifier</code> for names</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -9056,8 +9656,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="sr-types"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Data Types &amp; Traps</span><span class="rm-sub">Money, time zones, strings</span></div></div>
       <div class="rm-item rm-done" data-target="sr-cons"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Constraints</span><span class="rm-sub">Rules the DB enforces</span></div></div>
       <div class="rm-item rm-done" data-target="sr-tools"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">psql &amp; Python</span><span class="rm-sub">Querying safely from code</span></div></div>
-      <div class="rm-item rm-done" data-target="sr-rev"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="sr-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="sr-qa"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
@@ -9078,12 +9677,12 @@ WHERE c.customer_id = 1
 ORDER BY o.order_id, p.name;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>order_id</th><th>customer</th><th>city</th><th>product</th><th>qty</th><th>unit_price</th></tr><tr><td>100</td><td>Asha</td><td>Mumbai</td><td>Lamp</td><td>2</td><td>40.00</td></tr><tr><td>100</td><td>Asha</td><td>Mumbai</td><td>Laptop</td><td>1</td><td>800.00</td></tr><tr><td>101</td><td>Asha</td><td>Mumbai</td><td>Phone</td><td>1</td><td>500.00</td></tr></table>
   <p>Stored like this, it suffers three <strong>anomalies</strong>:</p>
-  <ul>
-    <li><strong>Update</strong>: Asha moves city, so you must edit 3 rows. Miss one and the data contradicts itself.</li>
-    <li><strong>Insert</strong>: Dia has no orders, so she can't exist in an order sheet.</li>
-    <li><strong>Delete</strong>: delete Ben's only order (102) and Ben disappears.</li>
-  </ul>
-  <p>Separate tables store each fact <strong>once</strong>, linked by keys; JOINs rebuild the wide view on demand (this is <em>normalization</em>, see Data Modeling).</p>
+  <div class="cards">
+    <div><b>Update</b><p>Asha moves city: edit 3 rows. Miss one and the data contradicts itself.</p></div>
+    <div><b>Insert</b><p>Dia has no orders, so she can't exist in an order sheet.</p></div>
+    <div><b>Delete</b><p>Delete Ben's only order (102) and Ben disappears.</p></div>
+  </div>
+  <p>Fix: store each fact <strong>once</strong>, link by keys, JOIN to rebuild the wide view (<em>normalization</em>, see Data Modeling).</p>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Your phone's contacts. A number is stored once; chats refer to the contact. Change it once and every chat updates.</p>
   </div>
@@ -9101,6 +9700,35 @@ ORDER BY o.order_id, p.name;</div>
     <p>Emails change; real-world codes get reused or mistyped. Use a surrogate PK plus UNIQUE on the natural key: stable joins <em>and</em> no duplicates.</p>
   </div>
   <h3>The three relationship shapes</h3>
+  <figure class="viz"><svg viewBox="0 0 600 175" width="600">
+    <g font-size="10">
+    <text x="95" y="14" text-anchor="middle" font-weight="bold" font-size="12" class="tb">1 : N</text>
+    <rect x="10" y="62" width="60" height="28" rx="4" class="fb sb"/><text x="40" y="80" text-anchor="middle">Asha</text>
+    <rect x="120" y="32" width="60" height="26" rx="4" class="ft"/><text x="150" y="49" text-anchor="middle">ord 100</text>
+    <rect x="120" y="94" width="60" height="26" rx="4" class="ft"/><text x="150" y="111" text-anchor="middle">ord 101</text>
+    <g stroke="currentColor"><line x1="70" y1="76" x2="120" y2="45"/><line x1="70" y1="76" x2="120" y2="107"/></g>
+    <text x="300" y="14" text-anchor="middle" font-weight="bold" font-size="12" class="tb">1 : 1</text>
+    <rect x="215" y="62" width="60" height="28" rx="4" class="fb sb"/><text x="245" y="80" text-anchor="middle">Asha</text>
+    <rect x="325" y="62" width="60" height="28" rx="4" class="ft"/><text x="355" y="80" text-anchor="middle">profile</text>
+    <line x1="275" y1="76" x2="325" y2="76" stroke="currentColor"/>
+    <text x="505" y="14" text-anchor="middle" font-weight="bold" font-size="12" class="tb">M : N</text>
+    <rect x="410" y="38" width="40" height="24" rx="4" class="fb sb"/><text x="430" y="54" text-anchor="middle">100</text>
+    <rect x="410" y="98" width="40" height="24" rx="4" class="fb sb"/><text x="430" y="114" text-anchor="middle">103</text>
+    <rect x="470" y="26" width="64" height="20" rx="3" class="fv"/><text x="502" y="40" text-anchor="middle">100│10</text>
+    <rect x="470" y="54" width="64" height="20" rx="3" class="fv"/><text x="502" y="68" text-anchor="middle">100│13</text>
+    <rect x="470" y="86" width="64" height="20" rx="3" class="fv"/><text x="502" y="100" text-anchor="middle">103│11</text>
+    <rect x="470" y="114" width="64" height="20" rx="3" class="fv"/><text x="502" y="128" text-anchor="middle">103│12</text>
+    <rect x="550" y="26" width="46" height="20" rx="3" class="fg"/><text x="573" y="40" text-anchor="middle">Laptop</text>
+    <rect x="550" y="54" width="46" height="20" rx="3" class="fg"/><text x="573" y="68" text-anchor="middle">Lamp</text>
+    <rect x="550" y="86" width="46" height="20" rx="3" class="fg"/><text x="573" y="100" text-anchor="middle">Phone</text>
+    <rect x="550" y="114" width="46" height="20" rx="3" class="fg"/><text x="573" y="128" text-anchor="middle">Desk</text>
+    <g stroke="currentColor"><line x1="450" y1="50" x2="470" y2="36"/><line x1="450" y1="50" x2="470" y2="64"/><line x1="450" y1="110" x2="470" y2="96"/><line x1="450" y1="110" x2="470" y2="124"/>
+    <line x1="534" y1="36" x2="550" y2="36"/><line x1="534" y1="64" x2="550" y2="64"/><line x1="534" y1="96" x2="550" y2="96"/><line x1="534" y1="124" x2="550" y2="124"/></g>
+    <text x="95" y="160" text-anchor="middle" class="tm">FK on the "many" side</text>
+    <text x="300" y="160" text-anchor="middle" class="tm">FK + UNIQUE</text>
+    <text x="505" y="160" text-anchor="middle" class="tm">junction: order_items</text>
+    </g>
+  </svg><figcaption>M:N can't be one FK; the junction table holds one row per (order, product) pair.</figcaption></figure>
   <table class="tbl">
     <tr><th>Shape</th><th>How it's built</th><th>Example</th></tr>
     <tr><td><strong>1:N</strong></td><td>FK on the "many" side</td><td>One customer → many orders (<code>orders.customer_id</code>)</td></tr>
@@ -9119,8 +9747,30 @@ ORDER BY 1;</div>
 
   <h2 id="sr-shop"><span class="num">03</span>The Shop Dataset</h2>
   <p>This is <strong>the dataset every SQL page uses</strong>. Learn its quirks once.</p>
-  <div class="flow"><span>customers</span><span>orders (customer_id)</span><span>order_items (order_id, product_id)</span><span>products</span></div>
-  <p>Plus <code>employees</code>, whose <code>manager_id</code> points back to <code>employees.emp_id</code> (a <strong>self-referencing</strong> FK, used for self-joins and hierarchies).</p>
+  <figure class="viz"><svg viewBox="0 0 600 245" width="600">
+    <defs><marker id="sr-ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <g font-size="10">
+      <rect x="5" y="20" width="115" height="92" rx="6" class="fs"/><rect x="5" y="20" width="115" height="20" rx="6" class="fb"/>
+      <text x="62" y="34" text-anchor="middle" font-weight="bold" font-size="11">customers</text>
+      <text x="12" y="56" class="tb">PK customer_id</text><text x="12" y="72">name</text><text x="12" y="88">city</text><text x="12" y="104">signup_date</text>
+      <rect x="160" y="20" width="120" height="92" rx="6" class="fs"/><rect x="160" y="20" width="120" height="20" rx="6" class="fb"/>
+      <text x="220" y="34" text-anchor="middle" font-weight="bold" font-size="11">orders</text>
+      <text x="167" y="56" class="tb">PK order_id</text><text x="167" y="72" class="tg">FK customer_id</text><text x="167" y="88">order_date</text><text x="167" y="104">status</text>
+      <rect x="320" y="20" width="135" height="92" rx="6" class="fs"/><rect x="320" y="20" width="135" height="20" rx="6" class="fv"/>
+      <text x="387" y="34" text-anchor="middle" font-weight="bold" font-size="11">order_items</text>
+      <text x="327" y="56" class="tg">PK,FK order_id</text><text x="327" y="72" class="tg">PK,FK product_id</text><text x="327" y="88">qty</text><text x="327" y="104">unit_price</text>
+      <rect x="495" y="20" width="100" height="92" rx="6" class="fs"/><rect x="495" y="20" width="100" height="20" rx="6" class="fb"/>
+      <text x="545" y="34" text-anchor="middle" font-weight="bold" font-size="11">products</text>
+      <text x="501" y="56" class="tb">PK product_id</text><text x="501" y="72">name</text><text x="501" y="88">category</text><text x="501" y="104">price</text>
+      <g stroke="currentColor" fill="none"><path d="M160,68 L140,68 L140,52 L120,52"/><line x1="320" y1="52" x2="280" y2="52"/><path d="M455,68 L475,68 L475,52 L495,52"/></g>
+      <g font-size="11" font-weight="bold" class="tr"><text x="124" y="48">1</text><text x="150" y="64">N</text><text x="284" y="48">1</text><text x="310" y="48">N</text><text x="461" y="64">N</text><text x="485" y="48">1</text></g>
+      <rect x="200" y="140" width="150" height="92" rx="6" class="fs"/><rect x="200" y="140" width="150" height="20" rx="6" class="ft"/>
+      <text x="275" y="154" text-anchor="middle" font-weight="bold" font-size="11">employees</text>
+      <text x="207" y="176" class="tb">PK emp_id</text><text x="207" y="192">name, dept</text><text x="207" y="208">salary</text><text x="207" y="224" class="tg">FK manager_id</text>
+      <path d="M350,220 C405,220 405,172 352,172" fill="none" stroke="currentColor" marker-end="url(#sr-ar1)"/>
+      <text x="410" y="200" class="tm">self-referencing FK</text>
+    </g>
+  </svg><figcaption>Read "1 … N" as "one customer has many orders". order_items is the M:N bridge; employees points at itself.</figcaption></figure>
   <table class="tbl"><caption>customers</caption><tr><th>customer_id</th><th>name</th><th>city</th><th>signup_date</th></tr><tr><td>1</td><td>Asha</td><td>Mumbai</td><td>2024-01-05</td></tr><tr><td>2</td><td>Ben</td><td>Delhi</td><td>2024-02-10</td></tr><tr><td>3</td><td>Chen</td><td>Mumbai</td><td>2024-03-15</td></tr><tr><td>4</td><td>Dia</td><td>NULL</td><td>2024-04-20</td></tr></table>
   <table class="tbl"><caption>products</caption><tr><th>product_id</th><th>name</th><th>category</th><th>price</th></tr><tr><td>10</td><td>Laptop</td><td>Electronics</td><td>800.00</td></tr><tr><td>11</td><td>Phone</td><td>Electronics</td><td>500.00</td></tr><tr><td>12</td><td>Desk</td><td>Furniture</td><td>150.00</td></tr><tr><td>13</td><td>Lamp</td><td>Furniture</td><td>40.00</td></tr></table>
   <table class="tbl"><caption>orders</caption><tr><th>order_id</th><th>customer_id</th><th>order_date</th><th>status</th></tr><tr><td>100</td><td>1</td><td>2024-05-01</td><td>delivered</td></tr><tr><td>101</td><td>1</td><td>2024-05-20</td><td>delivered</td></tr><tr><td>102</td><td>2</td><td>2024-06-02</td><td>cancelled</td></tr><tr><td>103</td><td>3</td><td>2024-06-15</td><td>delivered</td></tr><tr><td>104</td><td>3</td><td>2024-07-01</td><td>pending</td></tr></table>
@@ -9165,13 +9815,8 @@ DELETE FROM orders WHERE order_id = 104;
   </div>
 
   <h2 id="sr-pg"><span class="num">05</span>Why PostgreSQL</h2>
-  <p>PostgreSQL ("Postgres") is an open-source relational DBMS and the sensible default for new projects.</p>
-  <ul>
-    <li><strong>Open source</strong>, no lock-in; every cloud offers it managed.</li>
-    <li><strong>Standards-compliant</strong>: window functions, CTEs, <code>MERGE</code>, <code>FILTER</code>, full ACID with transactional DDL.</li>
-    <li><strong>Extensions</strong>: PostGIS (maps/geo), pgvector (embeddings), TimescaleDB (time-series), pg_stat_statements (query stats).</li>
-    <li><strong>JSONB</strong>: indexed binary JSON, so one DB can hold both tables and documents.</li>
-  </ul>
+  <p>PostgreSQL ("Postgres"): open-source relational DBMS, the sensible default.</p>
+  <div class="flow"><span>Open source, managed on every cloud</span><span>Standard SQL + ACID + transactional DDL</span><span>Extensions: PostGIS, pgvector, TimescaleDB</span><span>JSONB: tables + documents</span></div>
   <div class="cards">
     <div><b>PostgreSQL</b><p>Feature-rich, strict, extensible. The default choice.</p><small>Instagram, Reddit, most startups</small></div>
     <div><b>MySQL</b><p>Simple, fast reads, huge web ecosystem. Historically looser with types.</p><small>WordPress, early Facebook, Shopify</small></div>
@@ -9241,6 +9886,27 @@ INSERT INTO reviews (customer_id, product_id, rating) VALUES (1, 10, 5);  -- INS
     <tr><td><code>DELETE FROM customers WHERE customer_id = 1</code></td><td>update or delete on table "customers" violates foreign key constraint "orders_customer_id_fkey" on table "orders"</td></tr>
   </table>
   <h3>ON DELETE behaviour</h3>
+  <figure class="viz"><svg viewBox="0 0 600 160" width="600">
+    <g font-size="10">
+    <text x="100" y="16" text-anchor="middle" font-weight="bold" font-size="12">RESTRICT / NO ACTION</text>
+    <rect x="55" y="30" width="90" height="28" rx="4" class="fb sb"/><text x="100" y="48" text-anchor="middle">customer 1</text>
+    <rect x="15" y="90" width="80" height="26" rx="4" class="ft"/><text x="55" y="107" text-anchor="middle">order 100</text>
+    <rect x="105" y="90" width="80" height="26" rx="4" class="ft"/><text x="145" y="107" text-anchor="middle">order 101</text>
+    <g stroke="currentColor"><line x1="100" y1="58" x2="55" y2="90"/><line x1="100" y1="58" x2="145" y2="90"/></g>
+    <text x="100" y="145" text-anchor="middle" class="tr">✗ DELETE refused</text>
+    <text x="300" y="16" text-anchor="middle" font-weight="bold" font-size="12">CASCADE</text>
+    <rect x="255" y="30" width="90" height="28" rx="4" class="fr sr" stroke-dasharray="4 3"/><text x="300" y="48" text-anchor="middle" class="tm">deleted</text>
+    <rect x="215" y="90" width="80" height="26" rx="4" class="fr sr" stroke-dasharray="4 3"/><text x="255" y="107" text-anchor="middle" class="tm">deleted</text>
+    <rect x="305" y="90" width="80" height="26" rx="4" class="fr sr" stroke-dasharray="4 3"/><text x="345" y="107" text-anchor="middle" class="tm">deleted</text>
+    <g stroke="currentColor" stroke-dasharray="3 3" opacity="0.5"><line x1="300" y1="58" x2="255" y2="90"/><line x1="300" y1="58" x2="345" y2="90"/></g>
+    <text x="300" y="145" text-anchor="middle" class="tm">children deleted too</text>
+    <text x="500" y="16" text-anchor="middle" font-weight="bold" font-size="12">SET NULL</text>
+    <rect x="455" y="30" width="90" height="28" rx="4" class="fr sr" stroke-dasharray="4 3"/><text x="500" y="48" text-anchor="middle" class="tm">deleted</text>
+    <rect x="415" y="90" width="80" height="26" rx="4" class="ft"/><text x="455" y="107" text-anchor="middle">fk = NULL</text>
+    <rect x="505" y="90" width="80" height="26" rx="4" class="ft"/><text x="545" y="107" text-anchor="middle">fk = NULL</text>
+    <text x="500" y="145" text-anchor="middle" class="tm">children kept, unlinked</text>
+    </g>
+  </svg><figcaption>What happens to child rows when you <code>DELETE</code> the parent row they point at.</figcaption></figure>
   <table class="tbl">
     <tr><th>Option</th><th>When the parent row is deleted</th><th>Use for</th></tr>
     <tr><td><code>NO ACTION</code> (default) / <code>RESTRICT</code></td><td>Delete is refused while children exist</td><td>Orders, payments: history must survive</td></tr>
@@ -9320,22 +9986,7 @@ print(df)
   <div class="callout trap"><span class="label">Trap</span>
     <p>f-strings and <code>%</code> formatting are as unsafe as <code>+</code>. Parameters replace only <em>values</em>; user-chosen column names need an allow-list or <code>psycopg.sql.Identifier</code>.</p>
   </div>
-
-  <h2 id="sr-rev"><span class="num">09</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Relation</strong> = table; <strong>row</strong> = one fact; <strong>column</strong> has a type/domain. Rows are unordered.</li>
-    <li>One big sheet causes <strong>update, insert and delete anomalies</strong>; separate tables store each fact once.</li>
-    <li><strong>PK</strong> unique + not null; <strong>FK</strong> must match a parent key; <strong>composite</strong> = multi-column.</li>
-    <li>Prefer a <strong>surrogate PK</strong> plus UNIQUE on the natural key.</li>
-    <li><strong>1:N</strong> = FK on the many side; <strong>1:1</strong> = FK + UNIQUE; <strong>M:N</strong> = junction table (order_items).</li>
-    <li><strong>DDL</strong> schema, <strong>DML</strong> rows, <strong>DQL</strong> SELECT, <strong>DCL</strong> grants, <strong>TCL</strong> transactions.</li>
-    <li>Postgres: open source, standard, extensions (PostGIS, pgvector), JSONB, transactional DDL.</li>
-    <li>Money → <strong>NUMERIC</strong>; events → <strong>TIMESTAMPTZ</strong>; strings → <strong>TEXT</strong>.</li>
-    <li>ON DELETE: default refuses, <strong>CASCADE</strong> deletes children, <strong>SET NULL</strong> unlinks.</li>
-    <li>From Python, always use <strong>parameters</strong>, never string-built SQL.</li>
-  </ol></div>
-
-  <h2 id="sr-qa"><span class="num">10</span>Questions &amp; Answers</h2>
+  <h2 id="sr-qa"><span class="num">09</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>Primary key vs UNIQUE constraint?</summary><div class="qa-body">Both block duplicates and create an index. One PK per table, always NOT NULL, the usual FK target. Many UNIQUE constraints allowed, and they accept NULLs.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>How do you model students and courses, where each student takes many courses?</summary><div class="qa-body">M:N, so a junction table: <code>enrollments(student_id FK, course_id FK, grade, PRIMARY KEY (student_id, course_id))</code>. Facts about the pair (grade, enrol date) live in the junction table. In shop, <code>order_items</code> is exactly this for orders ↔ products.</div></details>
@@ -9357,6 +10008,99 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Subqueries, CTEs &amp; Views</h1>
   <p class="lead">How to build a query out of smaller queries: nest them (subqueries), name them (CTEs), loop them (recursive CTEs) or save them (views). This is how real analytical SQL is written, and interviewers test the edge cases.</p>
 
+  <h2 id="sq-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Subqueries, CTEs &amp; Views</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Subqueries by position</div>
+        <ul>
+          <li><b>Subquery</b> — a SELECT inside another statement, in brackets</li>
+          <li><b>SELECT</b> → scalar (1 value): <code>(SELECT AVG(price) FROM products)</code></li>
+          <li>⚠ scalar returning 2 rows = error; 0 rows = NULL silently</li>
+          <li><b>WHERE … IN</b> → a list of values</li>
+          <li><b>FROM</b> → derived table, needs an alias; aggregate twice (avg order value 560)</li>
+          <li>⚠ "average X per Y" → aggregate to Y first</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Correlated subqueries</div>
+        <ul>
+          <li><b>Correlated</b> — references outer column; logically re-run per outer row</li>
+          <li><b>Use</b> — each row vs its own group: salary &gt; own dept avg (Ravi, Uma)</li>
+          <li><b>Cost</b> — outer rows × inner work; scalar form usually runs per row</li>
+          <li><b>Faster</b> — join a pre-aggregated CTE or <code>AVG() OVER (PARTITION BY dept)</code></li>
+          <li>💡 teacher marks each student against that student's class average</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">EXISTS vs IN vs JOIN</div>
+        <ul>
+          <li><b>JOIN</b> — returns other table's columns; duplicates per match (Asha ×2)</li>
+          <li><b>IN / EXISTS</b> — filter only, no duplicates; planned as a semi-join</li>
+          <li>⚠ <b>NOT IN + one NULL</b> → 0 rows; use <b>NOT EXISTS</b></li>
+          <li><b>Speed</b> — usually same plan in Postgres; choose for correctness</li>
+          <li><b>Rule</b> — need columns: JOIN · filter: EXISTS/IN · anti: NOT EXISTS</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">CTEs (WITH)</div>
+        <ul>
+          <li><b>CTE</b> — named temporary result: <code>WITH t AS (…) SELECT … FROM t</code></li>
+          <li><b>Why</b> — top-down steps, later steps reuse earlier ones, recursion</li>
+          <li><b>PG ≤ 11</b> — always materialised (optimisation fence)</li>
+          <li><b>PG 12+</b> — used once → inlined; used 2+ times → materialised</li>
+          <li><b>Override</b> — <code>AS MATERIALIZED</code> / <code>AS NOT MATERIALIZED</code></li>
+          <li>💡 a recipe: dough, sauce, combine</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Recursive CTEs</div>
+        <ul>
+          <li><b>Shape</b> — anchor <code>UNION ALL</code> step that joins to previous rows</li>
+          <li><b>Stops</b> when a step returns no new rows</li>
+          <li><b>Hierarchy</b> — Vik → Uma → Ravi (levels 1, 2, 3)</li>
+          <li><b>Calendar</b> — generate months, LEFT JOIN data, <code>COUNT(o.id)</code> → zeros show</li>
+          <li><b>PG shortcut</b> — <code>generate_series(start, end, '1 month')</code></li>
+          <li>⚠ no stop / cycles → infinite; use WHERE, visited array or <code>CYCLE</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">LATERAL</div>
+        <ul>
+          <li><b>LATERAL</b> — FROM-subquery that sees earlier tables; per-row for-each loop</li>
+          <li><b>Top-N per group</b> — <code>ORDER BY … LIMIT N</code> inside</li>
+          <li>⚠ CROSS JOIN LATERAL drops Dia → <code>LEFT JOIN LATERAL (…) ON true</code></li>
+          <li><b>vs ROW_NUMBER</b> — LATERAL + index = tiny lookups; window scans all once</li>
+          <li>SQL Server name: <code>CROSS APPLY</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Set operations</div>
+        <ul>
+          <li><b>Stack vertically</b> (joins combine horizontally)</li>
+          <li><b>UNION</b> dedupes · <b>UNION ALL</b> keeps all, fastest</li>
+          <li><b>INTERSECT</b> in both · <b>EXCEPT</b> first minus second (Oracle: MINUS)</li>
+          <li><b>Rules</b> — same column count, compatible types, by position; names from first; one ORDER BY at end</li>
+          <li>⚠ default UNION ALL; UNION silently merges real duplicates</li>
+          <li>Set ops treat NULLs as equal (EXCEPT is NULL-safe)</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Views, MVs, functions</div>
+        <ul>
+          <li><b>View</b> — saved query, always fresh, no speed gain; hide complexity, restrict columns</li>
+          <li><b>Materialized view</b> — saved result, fast, stale until <code>REFRESH</code></li>
+          <li>⚠ plain REFRESH blocks reads; <code>CONCURRENTLY</code> needs unique index; no auto refresh</li>
+          <li>💡 bookmarked search vs printed report</li>
+          <li><b>Function</b> — returns value/table, usable in queries, can't COMMIT</li>
+          <li><b>Procedure</b> — <code>CALL</code>, can COMMIT mid-way (ETL)</li>
+          <li>⚠ function per row = hidden correlated subquery</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -9369,13 +10113,27 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="sq-set"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Set Operations</span><span class="rm-sub">UNION, INTERSECT, EXCEPT</span></div></div>
       <div class="rm-item rm-done" data-target="sq-view"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Views &amp; Materialized Views</span><span class="rm-sub">Saved queries vs saved results</span></div></div>
       <div class="rm-item rm-done" data-target="sq-func"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Functions &amp; Procedures</span><span class="rm-sub">Logic inside the DB</span></div></div>
-      <div class="rm-item rm-done" data-target="sq-rev"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="sq-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="sq-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
   <h2 id="sq-where"><span class="num">01</span>Subqueries by Position</h2>
-  <p>A <strong>subquery</strong> is a <code>SELECT</code> inside another statement, in brackets. Where it sits decides the shape it must return: one value in <code>SELECT</code>, a list in <code>WHERE … IN</code>, a whole table (with an alias) in <code>FROM</code>.</p>
+  <p>A <strong>subquery</strong> is a <code>SELECT</code> inside another statement, in brackets.</p>
+  <figure class="viz"><svg viewBox="0 0 600 175" width="600">
+    <g font-size="11">
+    <rect x="10" y="10" width="580" height="34" rx="6" class="fs"/>
+    <text x="22" y="32">SELECT name, <tspan class="tb">(scalar)</tspan>  FROM <tspan class="tg">(derived table) t</tspan>  WHERE id IN <tspan class="tr">(list)</tspan></text>
+    <text x="100" y="72" text-anchor="middle" font-weight="bold" class="tb">in SELECT</text>
+    <rect x="87" y="84" width="24" height="16" rx="2" class="fb sb"/>
+    <text x="100" y="150" text-anchor="middle" font-size="10" class="tm">1 row × 1 col</text>
+    <text x="300" y="72" text-anchor="middle" font-weight="bold" class="tg">in FROM</text>
+    <rect x="248" y="84" width="24" height="16" rx="2" class="fg"/><rect x="274" y="84" width="24" height="16" rx="2" class="fg"/><rect x="300" y="84" width="24" height="16" rx="2" class="fg"/><rect x="326" y="84" width="24" height="16" rx="2" class="fg"/><rect x="248" y="102" width="24" height="16" rx="2" class="fg"/><rect x="274" y="102" width="24" height="16" rx="2" class="fg"/><rect x="300" y="102" width="24" height="16" rx="2" class="fg"/><rect x="326" y="102" width="24" height="16" rx="2" class="fg"/><rect x="248" y="120" width="24" height="16" rx="2" class="fg"/><rect x="274" y="120" width="24" height="16" rx="2" class="fg"/><rect x="300" y="120" width="24" height="16" rx="2" class="fg"/><rect x="326" y="120" width="24" height="16" rx="2" class="fg"/>
+    <text x="300" y="150" text-anchor="middle" font-size="10" class="tm">any table, needs alias</text>
+    <text x="500" y="72" text-anchor="middle" font-weight="bold" class="tr">in WHERE … IN</text>
+    <rect x="487" y="84" width="24" height="16" rx="2" class="fr"/><rect x="487" y="102" width="24" height="16" rx="2" class="fr"/><rect x="487" y="120" width="24" height="16" rx="2" class="fr"/>
+    <text x="500" y="150" text-anchor="middle" font-size="10" class="tm">1 column, many rows</text>
+    </g>
+  </svg><figcaption>The slot decides the shape a subquery must return.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Asking a colleague mid-task: "What's the average price?" (scalar). "Which customers had deliveries?" (a list). "Give me a summary sheet" (a derived table).</p>
   </div>
@@ -9402,14 +10160,21 @@ FROM (SELECT order_id, SUM(qty * unit_price) AS order_total
   </div>
 
   <h2 id="sq-corr"><span class="num">02</span>Correlated Subqueries</h2>
-  <p>A <strong>correlated subquery</strong> references a column from the outer query, so it is logically re-run for every outer row.</p>
-  <p>Use it when each row needs its <em>own</em> comparison: "earns more than <em>their</em> department's average".</p>
+  <p>A <strong>correlated subquery</strong> references an outer column, so it logically re-runs per outer row. Use it when each row needs its <em>own</em> comparison: "earns more than <em>their</em> department's average".</p>
   <div class="fx" data-lang="sql">SELECT e.name, e.dept, e.salary
 FROM employees e
 WHERE e.salary &gt; (SELECT AVG(salary) FROM employees x
                   WHERE x.dept = e.dept);   -- e.dept comes from outside</div>
   <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>dept</th><th>salary</th></tr><tr><td>Ravi</td><td>Eng</td><td>120000</td></tr><tr><td>Uma</td><td>Sales</td><td>70000</td></tr></table>
-  <p>Eng's average is 103,333, so Sara and Tom (95,000) drop out. Sales' is 67,500.</p>
+  <figure class="viz"><svg viewBox="0 0 600 190" width="600">
+    <g font-size="10">
+    <text x="85" y="14" text-anchor="middle" font-weight="bold">outer row e</text>
+    <text x="395" y="14" text-anchor="middle" font-weight="bold">inner query, per row</text>
+    <rect x="10" y="22" width="150" height="24" rx="4" class="fb"/><text x="18" y="38">Ravi · 120,000</text><line x1="160" y1="34" x2="318" y2="50" stroke="currentColor" opacity="0.6"/><text x="530" y="38" class="tg">✓ kept</text><rect x="10" y="54" width="150" height="24" rx="4" class="fb"/><text x="18" y="70">Sara · 95,000</text><line x1="160" y1="66" x2="318" y2="50" stroke="currentColor" opacity="0.6"/><text x="530" y="70" class="tr">✗ dropped</text><rect x="10" y="86" width="150" height="24" rx="4" class="fb"/><text x="18" y="102">Tom · 95,000</text><line x1="160" y1="98" x2="318" y2="50" stroke="currentColor" opacity="0.6"/><text x="530" y="102" class="tr">✗ dropped</text><rect x="10" y="118" width="150" height="24" rx="4" class="fv"/><text x="18" y="134">Uma · 70,000</text><line x1="160" y1="130" x2="318" y2="140" stroke="currentColor" opacity="0.6"/><text x="530" y="134" class="tg">✓ kept</text><rect x="10" y="150" width="150" height="24" rx="4" class="fv"/><text x="18" y="166">Vik · 65,000</text><line x1="160" y1="162" x2="318" y2="140" stroke="currentColor" opacity="0.6"/><text x="530" y="166" class="tr">✗ dropped</text>
+    <rect x="320" y="30" width="190" height="40" rx="6" class="fb sb"/><text x="415" y="47" text-anchor="middle">AVG where dept = 'Eng'</text><text x="415" y="62" text-anchor="middle" font-weight="bold">103,333</text>
+    <rect x="320" y="120" width="190" height="40" rx="6" class="fv"/><text x="415" y="137" text-anchor="middle">AVG where dept = 'Sales'</text><text x="415" y="152" text-anchor="middle" font-weight="bold">67,500</text>
+    </g>
+  </svg><figcaption>Each outer row plugs its own <code>e.dept</code> into the inner query and is compared with that result.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A teacher marking each student against <em>that student's</em> class average: one lookup per student. A non-correlated subquery is one school-wide average, computed once.</p>
   </div>
@@ -9450,8 +10215,7 @@ ORDER BY e.emp_id;                                         -- correct</div>
   </div>
 
   <h2 id="sq-cte"><span class="num">04</span>CTEs (WITH)</h2>
-  <p>A <strong>CTE</strong> (Common Table Expression) is a named, temporary result defined with <code>WITH</code> and used by the query that follows.</p>
-  <p>Nested subqueries read inside-out and can't be reused. CTEs read top-down, one step per name, and each later step can use earlier ones.</p>
+  <p>A <strong>CTE</strong> (Common Table Expression): a named temporary result, defined with <code>WITH</code>. Nested subqueries read inside-out; CTEs read top-down and later steps reuse earlier ones.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A recipe. "Make the dough. Make the sauce. Combine." Nested subqueries are the same recipe written as one sentence with brackets.</p>
   </div>
@@ -9487,7 +10251,26 @@ WITH t AS (SELECT * FROM orders) SELECT * FROM t WHERE order_id = 100;</div>
 
   <h2 id="sq-rec"><span class="num">05</span>Recursive CTEs</h2>
   <p>A <strong>recursive CTE</strong> refers to itself, so it can walk a hierarchy or generate rows until a condition stops it.</p>
-  <div class="flow"><span>Anchor: starting rows</span><span>Recursive step: join to previous rows</span><span>Repeat until no new rows</span><span>UNION ALL of everything</span></div>
+  <figure class="viz"><svg viewBox="0 0 600 190" width="600">
+    <defs><marker id="sq-ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <g font-size="10">
+    <text x="65" y="16" text-anchor="middle" class="tm">anchor</text>
+    <rect x="15" y="26" width="100" height="44" rx="6" class="fb sb"/><text x="65" y="44" text-anchor="middle" font-weight="bold">Vik</text><text x="65" y="60" text-anchor="middle" class="tm">level 1, mgr 4</text>
+    <text x="205" y="16" text-anchor="middle" class="tm">step 1</text>
+    <rect x="155" y="26" width="100" height="44" rx="6" class="fv"/><text x="205" y="44" text-anchor="middle" font-weight="bold">Uma</text><text x="205" y="60" text-anchor="middle" class="tm">level 2, mgr 1</text>
+    <text x="345" y="16" text-anchor="middle" class="tm">step 2</text>
+    <rect x="295" y="26" width="100" height="44" rx="6" class="fv"/><text x="345" y="44" text-anchor="middle" font-weight="bold">Ravi</text><text x="345" y="60" text-anchor="middle" class="tm">level 3, no mgr</text>
+    <text x="485" y="16" text-anchor="middle" class="tm">step 3</text>
+    <rect x="435" y="26" width="100" height="44" rx="6" fill="none" stroke="currentColor" stroke-dasharray="4 3"/><text x="485" y="44" text-anchor="middle" class="tr">0 rows</text><text x="485" y="60" text-anchor="middle" class="tm">→ stop</text>
+    <g stroke="currentColor" marker-end="url(#sq-ar1)"><line x1="115" y1="48" x2="153" y2="48"/><line x1="255" y1="48" x2="293" y2="48"/><line x1="395" y1="48" x2="433" y2="48"/></g>
+    <text x="300" y="94" text-anchor="middle" class="tm">each step joins employees to the rows found by the previous step: e.emp_id = c.manager_id</text>
+    <text x="65" y="122" text-anchor="middle" font-weight="bold">UNION ALL</text>
+    <rect x="130" y="108" width="130" height="22" rx="3" class="fb"/><text x="140" y="123">Vik · 1</text>
+    <rect x="130" y="132" width="130" height="22" rx="3" class="fv"/><text x="140" y="147">Uma · 2</text>
+    <rect x="130" y="156" width="130" height="22" rx="3" class="fv"/><text x="140" y="171">Ravi · 3</text>
+    <text x="280" y="147" class="tm">= final result</text>
+    </g>
+  </svg><figcaption>Anchor gives the first rows; the step repeats on the newest rows until it finds none; all rounds are stacked.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Climbing a ladder of "who's your boss?" Ask Vik, get Uma. Ask Uma, get Ravi. Ask Ravi, nobody: stop.</p>
   </div>
@@ -9538,6 +10321,17 @@ ORDER BY c.name, t.order_date DESC;</div>
 
   <h2 id="sq-set"><span class="num">07</span>Set Operations</h2>
   <p>Set operations stack the results of two queries <em>vertically</em>. Joins combine tables <em>horizontally</em>.</p>
+  <figure class="viz"><svg viewBox="0 0 600 175" width="600">
+    <g font-size="11">
+    <text x="15" y="24">A (delivered)</text><rect x="140" y="8" width="26" height="24" rx="4" class="fb sb"/><text x="153" y="24" text-anchor="middle">1</text><rect x="170" y="8" width="26" height="24" rx="4" class="fb sb"/><text x="183" y="24" text-anchor="middle">1</text><rect x="200" y="8" width="26" height="24" rx="4" class="fb sb"/><text x="213" y="24" text-anchor="middle">3</text>
+    <text x="320" y="24">B (pending)</text><rect x="430" y="8" width="26" height="24" rx="4" class="fv"/><text x="443" y="24" text-anchor="middle">3</text>
+    <line x1="10" y1="44" x2="590" y2="44" stroke="currentColor" opacity="0.3"/>
+    <text x="15" y="76" font-weight="bold">A UNION ALL B</text><rect x="160" y="60" width="26" height="24" rx="4" class="fg"/><text x="173" y="76" text-anchor="middle">1</text><rect x="190" y="60" width="26" height="24" rx="4" class="fg"/><text x="203" y="76" text-anchor="middle">1</text><rect x="220" y="60" width="26" height="24" rx="4" class="fg"/><text x="233" y="76" text-anchor="middle">3</text><rect x="250" y="60" width="26" height="24" rx="4" class="fg"/><text x="263" y="76" text-anchor="middle">3</text><text x="300" y="76" class="tm">stack, keep all</text>
+    <text x="15" y="106" font-weight="bold">A UNION B</text><rect x="160" y="90" width="26" height="24" rx="4" class="fg"/><text x="173" y="106" text-anchor="middle">1</text><rect x="190" y="90" width="26" height="24" rx="4" class="fg"/><text x="203" y="106" text-anchor="middle">3</text><text x="300" y="106" class="tm">stack, then dedupe</text>
+    <text x="15" y="136" font-weight="bold">A INTERSECT B</text><rect x="160" y="120" width="26" height="24" rx="4" class="fg"/><text x="173" y="136" text-anchor="middle">3</text><text x="300" y="136" class="tm">in both</text>
+    <text x="15" y="166" font-weight="bold">A EXCEPT B</text><rect x="160" y="150" width="26" height="24" rx="4" class="fg"/><text x="173" y="166" text-anchor="middle">1</text><text x="300" y="166" class="tm">in A, not in B</text>
+    </g>
+  </svg><figcaption>customer_ids from delivered (A) and pending (B) orders. Only UNION ALL keeps duplicates.</figcaption></figure>
   <table class="tbl">
     <tr><th>Operator</th><th>Returns</th><th>Duplicates</th></tr>
     <tr><td><code>UNION</code></td><td>Rows in either</td><td>Removed (costs a sort/hash)</td></tr>
@@ -9564,10 +10358,10 @@ SELECT customer_id FROM orders;                            -- 4 (Dia)</div>
   </div>
 
   <h2 id="sq-view"><span class="num">08</span>Views &amp; Materialized Views</h2>
-  <ul>
-    <li><strong>View</strong>: a saved <em>query</em> with a name. No data stored; it re-runs every time, so it's always fresh.</li>
-    <li><strong>Materialized view</strong>: a saved <em>result</em>. Fast to read, but stale until you refresh it.</li>
-  </ul>
+  <div class="cards">
+    <div><b>View</b><p>A saved <em>query</em>. No data stored; re-runs each time, always fresh.</p></div>
+    <div><b>Materialized view</b><p>A saved <em>result</em>. Fast to read, stale until refreshed.</p></div>
+  </div>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A view is a bookmarked search: click it and the search runs again. A materialized view is a printed report: instant to read, but it shows yesterday's numbers until you reprint.</p>
   </div>
@@ -9602,10 +10396,10 @@ SELECT * FROM daily_revenue WHERE order_date = '2024-07-01';  -- 920.00</div>
 
   <h2 id="sq-func"><span class="num">09</span>Functions &amp; Stored Procedures</h2>
   <p>Named, reusable logic stored <em>in</em> the database.</p>
-  <ul>
-    <li><strong>Function</strong>: returns a value or table; callable inside a query. Can't commit transactions.</li>
-    <li><strong>Procedure</strong> (<code>CALL proc()</code>, Postgres 11+): no return value needed; can <code>COMMIT</code> mid-way. Used for batch jobs and ETL steps.</li>
-  </ul>
+  <div class="cards">
+    <div><b>Function</b><p>Returns a value or table; callable inside a query. Can't commit.</p></div>
+    <div><b>Procedure</b><p><code>CALL proc()</code> (PG 11+); can <code>COMMIT</code> mid-way.</p><small>Batch jobs, ETL steps</small></div>
+  </div>
   <div class="fx" data-lang="sql">CREATE FUNCTION customer_spend(cid int) RETURNS numeric
 LANGUAGE sql STABLE AS $$
   SELECT COALESCE(SUM(oi.qty * oi.unit_price), 0)
@@ -9618,22 +10412,7 @@ SELECT name, customer_spend(customer_id) AS spend FROM customers;</div>
   <div class="callout intu"><span class="label">Trade-off</span>
     <p>Pros: logic next to the data, one round trip. Cons: harder to version and test, ties you to one DBMS. A function called per row is a hidden correlated subquery.</p>
   </div>
-
-  <h2 id="sq-rev"><span class="num">10</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Scalar subquery</strong>: one value; more than one row is an error, zero rows is NULL.</li>
-    <li><strong>Derived table</strong> (subquery in FROM): needs an alias; use it to aggregate twice.</li>
-    <li><strong>Correlated</strong> subquery references the outer row: logically runs per row; rewrite with a join or window when slow.</li>
-    <li><strong>JOIN</strong> fans out duplicates; <strong>IN/EXISTS</strong> don't. Postgres plans IN/EXISTS as a semi-join.</li>
-    <li><strong>NOT IN</strong> + one NULL = zero rows. Use <strong>NOT EXISTS</strong>.</li>
-    <li><strong>CTEs</strong> name steps top-down; Postgres 12+ inlines single-use CTEs, materialises multi-use ones.</li>
-    <li><strong>Recursive CTE</strong> = anchor UNION ALL step; for hierarchies and calendars; always ensure it terminates.</li>
-    <li><strong>LATERAL</strong> = per-row subquery; the go-to for top-N per group with LIMIT. LEFT JOIN LATERAL … ON true keeps empties.</li>
-    <li><strong>UNION</strong> dedupes (slower), <strong>UNION ALL</strong> keeps all; same column count, compatible types, by position.</li>
-    <li><strong>View</strong> = saved query (fresh); <strong>materialized view</strong> = saved result (fast, stale until REFRESH).</li>
-  </ol></div>
-
-  <h2 id="sq-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <h2 id="sq-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>What's the difference between a correlated and a non-correlated subquery?</summary><div class="qa-body">Non-correlated runs once, independently (<code>SELECT AVG(price) FROM products</code>). Correlated references an outer column (<code>WHERE x.dept = e.dept</code>), so it's logically evaluated per outer row. Correlated can be slow on large tables unless the optimizer turns it into a join.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Write the query: employees who earn more than their department's average.</summary><div class="qa-body"><div class="fx" data-lang="sql">SELECT name, dept, salary FROM employees e
@@ -10091,6 +10870,98 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Window Functions</h1>
   <p class="lead">Window functions compute across a group of rows without collapsing them: rankings, running totals, previous-row comparisons. They are the most interview-tested SQL topic; most "hard" SQL questions are a window function plus a CTE.</p>
 
+  <h2 id="sw-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Window Functions</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">What &amp; why</div>
+        <ul>
+          <li><b>Window function</b> — value from related rows, attached to <em>each</em> row</li>
+          <li><b>vs GROUP BY</b> — GROUP BY collapses (2 rows); window keeps all 5</li>
+          <li><b>Example</b> — <code>AVG(salary) OVER (PARTITION BY dept)</code> next to each salary</li>
+          <li>💡 report card with "class average" in the corner</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Anatomy</div>
+        <ul>
+          <li><b>Syntax</b> — <code>f() OVER (PARTITION BY … ORDER BY … frame)</code></li>
+          <li><b>OVER ()</b> — whole result is the window</li>
+          <li><b>PARTITION BY</b> — groups without collapsing</li>
+          <li><b>ORDER BY</b> — needed for rank/LAG; makes SUM/AVG running</li>
+          <li><b>Order</b> — after WHERE, GROUP BY, HAVING; before ORDER BY/LIMIT</li>
+          <li><code>SUM(SUM(x)) OVER ()</code> is legal; <code>WINDOW w AS (…)</code> reuses a spec</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Ranking &amp; top-N</div>
+        <ul>
+          <li><b>ROW_NUMBER</b> — 1,2,3,4 unique; "exactly N", dedupe</li>
+          <li><b>RANK</b> — 1,2,2,4 skips after ties</li>
+          <li><b>DENSE_RANK</b> — 1,2,2,3; "Nth highest value"</li>
+          <li>⚠ ROW_NUMBER on ties is arbitrary → add tiebreaker (<code>, emp_id</code>)</li>
+          <li><b>Top-N per group</b> — rank with PARTITION BY in CTE, filter <code>rnk &lt;= N</code></li>
+          <li>💡 tie for silver: RANK → next is 4th, DENSE_RANK → bronze</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">LAG / LEAD &amp; running</div>
+        <ul>
+          <li><b>LAG(col, n, default)</b> — n rows back · <b>LEAD</b> — n rows ahead</li>
+          <li><b>Gap</b> — <code>d - LAG(d) OVER (PARTITION BY cust ORDER BY d)</code> (Asha 19 days)</li>
+          <li>⚠ forget PARTITION BY → compares different customers; first row NULL</li>
+          <li><b>Running total</b> — <code>SUM(x) OVER (ORDER BY d)</code></li>
+          <li><b>Moving avg</b> — <code>ROWS BETWEEN 1 PRECEDING AND CURRENT ROW</code></li>
+          <li><b>% of total</b> — <code>100.0 * x / SUM(x) OVER (PARTITION BY g)</code></li>
+          <li><b>MoM growth</b> — <code>(rev - LAG(rev)) / NULLIF(LAG(rev), 0)</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Frames</div>
+        <ul>
+          <li><b>Frame</b> — rows the aggregate sees: <code>ROWS|RANGE BETWEEN start AND end</code></li>
+          <li><b>ROWS</b> — physical rows · <b>RANGE</b> — values; peers (ties) included together</li>
+          <li><b>Default</b> — no ORDER BY: whole partition; with ORDER BY: <code>RANGE UNBOUNDED PRECEDING → CURRENT ROW</code></li>
+          <li>⚠ Sara's running sum includes Tom (325000 not 230000) → ROWS + tiebreaker</li>
+          <li>⚠ <b>LAST_VALUE</b> = "last so far" → frame to <code>UNBOUNDED FOLLOWING</code></li>
+          <li>⚠ <code>ROWS 6 PRECEDING</code> ≠ 7 days when dates have gaps</li>
+          <li>💡 queue: ROWS = 2 people ahead; RANGE = everyone who came that minute</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Distribution</div>
+        <ul>
+          <li><b>NTILE(n)</b> — n near-equal buckets; early buckets get extras</li>
+          <li><b>PERCENT_RANK</b> — (rank − 1)/(n − 1), 0 → 1</li>
+          <li><b>CUME_DIST</b> — fraction of rows ≤ value, 1/n → 1</li>
+          <li>⚠ NTILE splits by count; ties can straddle buckets</li>
+          <li><b>Median</b> — <code>PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY x)</code> (aggregate)</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Filtering on windows</div>
+        <ul>
+          <li>⚠ <b>Not in WHERE</b> — "window functions are not allowed in WHERE"</li>
+          <li><b>Fix</b> — compute in CTE/subquery, filter outside</li>
+          <li><b>QUALIFY</b> — Snowflake, BigQuery, Databricks, DuckDB (not Postgres)</li>
+          <li>⚠ WHERE before LAG changes what LAG sees (previous delivered vs previous)</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Classic patterns</div>
+        <ul>
+          <li><b>Gaps &amp; islands</b> — <code>date − ROW_NUMBER()</code> constant within a streak</li>
+          <li>then <code>GROUP BY user, grp</code> → MIN, MAX, COUNT = streak</li>
+          <li>⚠ duplicate days break it → <code>SELECT DISTINCT</code> first</li>
+          <li><b>Sessions</b> — flag gap &gt; 30 min with LAG, running SUM of flags = session id</li>
+          <li><b>Recipe</b> — "flag group starts, running-sum the flags"</li>
+          <li><b>Dedupe / latest</b> — <code>ROW_NUMBER() … = 1</code></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -10103,14 +10974,27 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="sw-dist"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">NTILE &amp; Distribution</span><span class="rm-sub">Buckets and percentiles</span></div></div>
       <div class="rm-item rm-done" data-target="sw-where"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Filtering on a Window</span><span class="rm-sub">Why not WHERE; QUALIFY</span></div></div>
       <div class="rm-item rm-done" data-target="sw-pat"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Classic Patterns</span><span class="rm-sub">Gaps &amp; islands, sessions</span></div></div>
-      <div class="rm-item rm-done" data-target="sw-rev"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="sw-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Write-the-query drills</span></div></div>
+      <div class="rm-item rm-done" data-target="sw-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Write-the-query drills</span></div></div>
     </div>
   </div>
 
   <h2 id="sw-why"><span class="num">01</span>The Problem Windows Solve</h2>
-  <p>A <strong>window function</strong> computes a value from a set of related rows (the "window") and attaches it to <em>each</em> row.</p>
-  <p><code>GROUP BY</code> collapses each group into one row, so you lose the detail. To show each employee next to their department's average, you'd need a join back. A window does it in one pass.</p>
+  <p>A <strong>window function</strong> computes a value from related rows (the "window") and attaches it to <em>each</em> row. GROUP BY would collapse the rows and need a join back.</p>
+  <figure class="viz"><svg viewBox="0 0 600 190" width="600">
+    <defs><marker id="sw-ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <g font-size="10">
+    <text x="145" y="16" text-anchor="middle" font-weight="bold" font-size="12">GROUP BY dept</text>
+    <rect x="10" y="30" width="130" height="23" rx="3" class="fb"/><text x="17" y="46">Ravi · 120000</text><rect x="10" y="57" width="130" height="23" rx="3" class="fb"/><text x="17" y="73">Sara · 95000</text><rect x="10" y="84" width="130" height="23" rx="3" class="fb"/><text x="17" y="100">Tom · 95000</text><rect x="10" y="111" width="130" height="23" rx="3" class="fv"/><text x="17" y="127">Uma · 70000</text><rect x="10" y="138" width="130" height="23" rx="3" class="fv"/><text x="17" y="154">Vik · 65000</text>
+    <g stroke="currentColor" marker-end="url(#sw-ar1)" opacity="0.7"><line x1="140" y1="41" x2="183" y2="66"/><line x1="140" y1="68" x2="183" y2="68"/><line x1="140" y1="95" x2="183" y2="70"/><line x1="140" y1="122" x2="183" y2="136"/><line x1="140" y1="149" x2="183" y2="140"/></g>
+    <rect x="185" y="55" width="110" height="26" rx="4" class="fb sb"/><text x="240" y="72" text-anchor="middle">Eng 103333</text>
+    <rect x="185" y="125" width="110" height="26" rx="4" class="fv"/><text x="240" y="142" text-anchor="middle">Sales 67500</text>
+    <text x="145" y="182" text-anchor="middle" class="tm">5 rows → 2 rows: detail lost</text>
+    <line x1="305" y1="10" x2="305" y2="185" stroke="currentColor" stroke-dasharray="4 4" opacity="0.4"/>
+    <text x="450" y="16" text-anchor="middle" font-weight="bold" font-size="12">AVG() OVER (PARTITION BY dept)</text>
+    <rect x="320" y="30" width="130" height="23" rx="3" class="fb"/><text x="327" y="46">Ravi · 120000</text><rect x="458" y="30" width="120" height="23" rx="3" class="fg sg"/><text x="518" y="46" text-anchor="middle">avg 103333</text><rect x="320" y="57" width="130" height="23" rx="3" class="fb"/><text x="327" y="73">Sara · 95000</text><rect x="458" y="57" width="120" height="23" rx="3" class="fg sg"/><text x="518" y="73" text-anchor="middle">avg 103333</text><rect x="320" y="84" width="130" height="23" rx="3" class="fb"/><text x="327" y="100">Tom · 95000</text><rect x="458" y="84" width="120" height="23" rx="3" class="fg sg"/><text x="518" y="100" text-anchor="middle">avg 103333</text><rect x="320" y="111" width="130" height="23" rx="3" class="fv"/><text x="327" y="127">Uma · 70000</text><rect x="458" y="111" width="120" height="23" rx="3" class="fg sg"/><text x="518" y="127" text-anchor="middle">avg 67500</text><rect x="320" y="138" width="130" height="23" rx="3" class="fv"/><text x="327" y="154">Vik · 65000</text><rect x="458" y="138" width="120" height="23" rx="3" class="fg sg"/><text x="518" y="154" text-anchor="middle">avg 67500</text>
+    <text x="450" y="182" text-anchor="middle" class="tm">5 rows → 5 rows + group value</text>
+    </g>
+  </svg><figcaption>Same groups, same average. GROUP BY collapses them; a window writes the group value onto every row.</figcaption></figure>
   <div class="fx" data-lang="sql">SELECT dept, AVG(salary)::int AS dept_avg
 FROM employees GROUP BY dept;      -- 2 rows: Eng 103333, Sales 67500</div>
   <div class="fx" data-lang="sql">SELECT name, dept, salary,
@@ -10193,6 +11077,19 @@ SELECT order_date, revenue,
         ROWS BETWEEN 1 PRECEDING AND CURRENT ROW), 2) AS moving_avg_2
 FROM daily;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>order_date</th><th>revenue</th><th>running_total</th><th>change</th><th>moving_avg_2</th></tr><tr><td>2024-05-01</td><td>880.00</td><td>880.00</td><td></td><td>880.00</td></tr><tr><td>2024-05-20</td><td>500.00</td><td>1380.00</td><td>-380.00</td><td>690.00</td></tr><tr><td>2024-06-15</td><td>1150.00</td><td>2530.00</td><td>650.00</td><td>825.00</td></tr><tr><td>2024-07-01</td><td>120.00</td><td>2650.00</td><td>-1030.00</td><td>635.00</td></tr></table>
+  <figure class="viz"><svg viewBox="0 0 600 185" width="600">
+    <g font-size="10">
+    <text x="402" y="18" text-anchor="middle" class="tg">current row</text>
+    <text x="10" y="52" class="tm">daily revenue</text>
+    <rect x="120" y="28" width="105" height="40" rx="5" class="fs"/><text x="172" y="44" text-anchor="middle">05-01</text><text x="172" y="60" text-anchor="middle" font-weight="bold">880</text><rect x="235" y="28" width="105" height="40" rx="5" class="fs"/><text x="287" y="44" text-anchor="middle">05-20</text><text x="287" y="60" text-anchor="middle" font-weight="bold">500</text><rect x="350" y="28" width="105" height="40" rx="5" class="fg sg" stroke-width="2"/><text x="402" y="44" text-anchor="middle">06-15</text><text x="402" y="60" text-anchor="middle" font-weight="bold">1150</text><rect x="465" y="28" width="105" height="40" rx="5" class="fs"/><text x="517" y="44" text-anchor="middle">07-01</text><text x="517" y="60" text-anchor="middle" font-weight="bold">120</text>
+    <text x="10" y="99">OVER ()</text>
+    <rect x="120" y="86" width="450" height="20" rx="4" class="fb sb"/><text x="345" y="100" text-anchor="middle">whole partition → SUM = 2650</text>
+    <text x="10" y="129">ORDER BY date</text>
+    <rect x="120" y="116" width="335" height="20" rx="4" class="ft st"/><text x="287" y="130" text-anchor="middle">start … current → SUM = 2530</text>
+    <text x="10" y="159">1 PRECEDING</text>
+    <rect x="235" y="146" width="220" height="20" rx="4" class="fv"/><text x="345" y="160" text-anchor="middle">prev + current → AVG = 825</text>
+    </g>
+  </svg><figcaption>For the 06-15 row: the frame decides which rows the aggregate sees. Values match the query above.</figcaption></figure>
   <div class="callout trap"><span class="label">Trap</span>
     <p><code>ROWS 6 PRECEDING</code> means 6 rows, not 6 days: missing days stretch the window (see the last Q&amp;A).</p>
   </div>
@@ -10206,10 +11103,10 @@ FROM employees ORDER BY dept, salary DESC;</div>
 
   <h2 id="sw-frame"><span class="num">06</span>Frames: ROWS vs RANGE</h2>
   <p>A <strong>frame</strong> is the subset of the partition an aggregate sees for the current row: <code>{ROWS | RANGE} BETWEEN start AND end</code>, using <code>UNBOUNDED PRECEDING</code>, <code>n PRECEDING</code>, <code>CURRENT ROW</code>, <code>n FOLLOWING</code>, <code>UNBOUNDED FOLLOWING</code>.</p>
-  <ul>
-    <li><strong>ROWS</strong>: counts physical rows. Ties are separate rows.</li>
-    <li><strong>RANGE</strong>: works on values. All rows with the same ORDER BY value (<em>peers</em>) are included together.</li>
-  </ul>
+  <table class="tbl">
+    <tr><td><strong>ROWS</strong></td><td>Counts physical rows; ties are separate rows</td></tr>
+    <tr><td><strong>RANGE</strong></td><td>Works on values; rows with the same ORDER BY value (<em>peers</em>) come together</td></tr>
+  </table>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A queue. ROWS: "you and the 2 people ahead". RANGE: "everyone who arrived at your minute or earlier", so ties come along.</p>
   </div>
@@ -10224,7 +11121,18 @@ FROM employees ORDER BY dept, salary DESC;</div>
        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS rows_sum
 FROM employees ORDER BY salary, name;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>salary</th><th>range_default</th><th>rows_sum</th></tr><tr><td>Vik</td><td>65000</td><td>65000</td><td>65000</td></tr><tr><td>Uma</td><td>70000</td><td>135000</td><td>135000</td></tr><tr><td>Sara</td><td>95000</td><td><strong>325000</strong></td><td>230000</td></tr><tr><td>Tom</td><td>95000</td><td>325000</td><td>325000</td></tr><tr><td>Ravi</td><td>120000</td><td>445000</td><td>445000</td></tr></table>
-  <p>Under the default RANGE frame, Sara's total already includes her peer Tom. For a row-by-row total, use ROWS plus a unique tie-breaker.</p>
+  <figure class="viz"><svg viewBox="0 0 600 150" width="600">
+    <g font-size="10">
+    <text x="206" y="18" text-anchor="middle" class="tg">current row</text><text x="482" y="18" text-anchor="middle" class="tm">peer (same salary)</text>
+    <text x="10" y="52" class="tm">ORDER BY salary</text>
+    <rect x="120" y="28" width="86" height="40" rx="5" class="fs"/><text x="163" y="44" text-anchor="middle">Vik</text><text x="163" y="60" text-anchor="middle" font-weight="bold">65000</text><rect x="212" y="28" width="86" height="40" rx="5" class="fs"/><text x="255" y="44" text-anchor="middle">Uma</text><text x="255" y="60" text-anchor="middle" font-weight="bold">70000</text><rect x="304" y="28" width="86" height="40" rx="5" class="fg sg"/><text x="347" y="44" text-anchor="middle">Sara</text><text x="347" y="60" text-anchor="middle" font-weight="bold">95000</text><rect x="396" y="28" width="86" height="40" rx="5" class="fv"/><text x="439" y="44" text-anchor="middle">Tom</text><text x="439" y="60" text-anchor="middle" font-weight="bold">95000</text><rect x="488" y="28" width="86" height="40" rx="5" class="fs"/><text x="531" y="44" text-anchor="middle">Ravi</text><text x="531" y="60" text-anchor="middle" font-weight="bold">120000</text>
+    <text x="10" y="99">ROWS</text>
+    <rect x="120" y="86" width="270" height="20" rx="4" class="ft st"/><text x="255" y="100" text-anchor="middle">up to this row → 230000</text>
+    <text x="10" y="129">RANGE (default)</text>
+    <rect x="120" y="116" width="362" height="20" rx="4" class="fr sr"/><text x="301" y="130" text-anchor="middle">up to this value, incl. Tom → 325000</text>
+    </g>
+  </svg><figcaption>RANGE treats Sara and Tom as one step because their ORDER BY values tie.</figcaption></figure>
+  <p>For a row-by-row total, use ROWS plus a unique tie-breaker.</p>
   <h3>The LAST_VALUE trap</h3>
   <div class="fx" data-lang="sql">SELECT name, dept, salary,
   FIRST_VALUE(name) OVER w AS top_paid,
@@ -10285,6 +11193,18 @@ INSERT INTO clicks VALUES
  (1,'2024-06-01 11:00'),(1,'2024-06-01 11:05'),(2,'2024-06-01 10:00');</div>
   <h3>Gaps and islands (consecutive days)</h3>
   <p>Goal: find streaks of consecutive login days. Trick: <strong>date − ROW_NUMBER</strong> is constant within a streak, because both rise by 1 each day. A gap breaks it.</p>
+  <figure class="viz"><svg viewBox="0 0 600 160" width="600">
+    <g font-size="10">
+    <text x="10" y="40" class="tm">user 1 logins</text>
+    <text x="10" y="76" class="tm">ROW_NUMBER</text>
+    <text x="10" y="104" class="tm">date − rn</text>
+    <rect x="130" y="22" width="68" height="28" rx="4" class="fb"/><text x="164" y="40" text-anchor="middle">Jun 1</text><text x="164" y="76" text-anchor="middle">1</text><text x="164" y="104" text-anchor="middle" font-weight="bold" class="tb">05-31</text><rect x="205" y="22" width="68" height="28" rx="4" class="fb"/><text x="239" y="40" text-anchor="middle">Jun 2</text><text x="239" y="76" text-anchor="middle">2</text><text x="239" y="104" text-anchor="middle" font-weight="bold" class="tb">05-31</text><rect x="280" y="22" width="68" height="28" rx="4" class="fb"/><text x="314" y="40" text-anchor="middle">Jun 3</text><text x="314" y="76" text-anchor="middle">3</text><text x="314" y="104" text-anchor="middle" font-weight="bold" class="tb">05-31</text><rect x="355" y="22" width="68" height="28" rx="4" fill="none" stroke="currentColor" stroke-dasharray="4 3"/><text x="389" y="40" text-anchor="middle" class="tm">Jun 4</text><text x="389" y="76" text-anchor="middle" class="tr">gap</text><rect x="430" y="22" width="68" height="28" rx="4" class="fv"/><text x="464" y="40" text-anchor="middle">Jun 5</text><text x="464" y="76" text-anchor="middle">4</text><text x="464" y="104" text-anchor="middle" font-weight="bold" class="tg">06-01</text><rect x="505" y="22" width="68" height="28" rx="4" class="fv"/><text x="539" y="40" text-anchor="middle">Jun 6</text><text x="539" y="76" text-anchor="middle">5</text><text x="539" y="104" text-anchor="middle" font-weight="bold" class="tg">06-01</text>
+    <path d="M130,118 L130,124 L353,124 L353,118" fill="none" class="sb" stroke-width="2"/>
+    <text x="241" y="142" text-anchor="middle" class="tb">island 1: 3 days</text>
+    <path d="M430,118 L430,124 L573,124 L573,118" fill="none" class="sg" stroke-width="2"/>
+    <text x="501" y="142" text-anchor="middle" class="tg">island 2: 2 days</text>
+    </g>
+  </svg><figcaption>Date and row number both rise by 1 per consecutive day, so their difference stays constant until a gap shifts it.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Two people walking up stairs side by side, one step per day. While neither skips, the gap between them stays the same. When one skips a day, the gap changes: a new island.</p>
   </div>
@@ -10320,22 +11240,7 @@ FROM flagged;</div>
   <div class="callout intu"><span class="label">The general recipe</span>
     <p>"Flag where a new group starts (LAG), then running-SUM the flags to get a group id" solves streaks, sessions, status changes and many "consecutive" problems.</p>
   </div>
-
-  <h2 id="sw-rev"><span class="num">10</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Window</strong> = aggregate/rank over related rows, without collapsing them.</li>
-    <li><code>OVER (PARTITION BY … ORDER BY … frame)</code>; empty <code>OVER ()</code> = whole result.</li>
-    <li>Ties: <strong>ROW_NUMBER</strong> 1,2,3 · <strong>RANK</strong> 1,2,2,4 · <strong>DENSE_RANK</strong> 1,2,2,3.</li>
-    <li><strong>Top-N per group</strong>: rank in a CTE with PARTITION BY, filter outside.</li>
-    <li><strong>LAG/LEAD</strong> = previous/next row; partition by entity; first row is NULL.</li>
-    <li><code>SUM() OVER (ORDER BY …)</code> = running total; <code>SUM() OVER ()</code> = grand total for % of total.</li>
-    <li>Default frame with ORDER BY = <strong>RANGE … CURRENT ROW</strong>: includes peers; breaks LAST_VALUE.</li>
-    <li><strong>ROWS</strong> counts rows, <strong>RANGE</strong> uses values; ROWS 6 PRECEDING ≠ 7 days if dates have gaps.</li>
-    <li>Windows run after WHERE: filter via CTE/subquery, or <strong>QUALIFY</strong> in Snowflake/BigQuery.</li>
-    <li>Islands: <strong>date − ROW_NUMBER</strong>. Sessions: <strong>LAG flag + running SUM</strong>.</li>
-  </ol></div>
-
-  <h2 id="sw-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <h2 id="sw-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
 
   <details class="qa"><summary><span class="qmark">Q</span>Predict the output: ROW_NUMBER, RANK and DENSE_RANK of salary DESC for Uma.</summary><div class="qa-body">ROW_NUMBER 4, RANK 4, DENSE_RANK 3. Sara and Tom tie at 95,000 for 2nd; RANK skips 3, DENSE_RANK doesn't.</div></details>

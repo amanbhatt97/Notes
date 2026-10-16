@@ -4,6 +4,95 @@ Object.assign(TOPIC_CONTENT, {
   <h1>JOINs</h1>
   <p class="lead">Joins stitch related tables back together. Getting the right <em>rows</em> is easy; getting the right <em>row count</em> (no lost customers, no doubled revenue) is what interviews actually test.</p>
 
+  <h2 id="sj-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">JOINs</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Mental model</div>
+        <ul>
+          <li><b>Step 1</b> — every pair (left × right)</li>
+          <li><b>Step 2</b> — keep pairs where ON is TRUE</li>
+          <li><b>Step 3</b> — outer joins add unmatched rows, padded with NULL</li>
+          <li><b>Row count</b> — key with 2 left × 3 right matches → 6 rows</li>
+          <li>💡 dance hall: matching tickets dance; LEFT keeps wallflowers with an empty chair</li>
+          <li>⚠ Venn diagrams mislead: joins return pairs, counts can grow</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Join types</div>
+        <ul>
+          <li><b>INNER</b> — matches only (Dia gone, 5 rows)</li>
+          <li><b>LEFT</b> — all left + NULLs (Dia kept, 6 rows)</li>
+          <li><b>RIGHT</b> — LEFT with tables swapped; rarely written</li>
+          <li><b>FULL</b> — both sides; reconcile actuals vs targets, <code>COALESCE(a.k, t.k)</code></li>
+          <li><b>CROSS</b> — m × n, no ON; build full grids then LEFT JOIN facts</li>
+          <li>⚠ missing ON / <code>FROM a, b</code> → accidental cross join</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">SELF join</div>
+        <ul>
+          <li><b>Same table, two aliases</b> — <code>employees e JOIN employees m ON m.emp_id = e.manager_id</code></li>
+          <li><b>LEFT</b> keeps the root (Ravi, manager NULL)</li>
+          <li><b>Unique pairs</b> — <code>a.emp_id &lt; b.emp_id</code> (no self/mirror pairs)</li>
+          <li><b>Uses</b> — hierarchies, same-salary pairs, earns-more-than-manager</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Semi &amp; anti joins</div>
+        <ul>
+          <li><b>Semi</b> — "has any": <code>EXISTS</code>, one row per left row</li>
+          <li><b>Anti</b> — "has none": <code>NOT EXISTS</code> or <code>LEFT JOIN … WHERE r.key IS NULL</code></li>
+          <li>⚠ INNER JOIN for "who ordered" repeats Asha/Chen</li>
+          <li>⚠ <b>NOT IN + NULL</b> → 0 rows (x &lt;&gt; NULL is UNKNOWN)</li>
+          <li><b>Fix</b> — NOT EXISTS, or <code>IS NOT NULL</code> inside subquery; IN is safe</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">ON vs WHERE (LEFT JOIN)</div>
+        <ul>
+          <li><b>ON</b> — decides which right rows match; left rows kept</li>
+          <li><b>WHERE</b> — filters after join, incl. NULL-padded rows</li>
+          <li>⚠ <code>WHERE o.status = 'delivered'</code> silently turns LEFT into INNER</li>
+          <li><b>Rule</b> — right-table filters in ON, left-table filters in WHERE</li>
+          <li>⚠ <code>COUNT(*)</code> gives Dia 1 → use <code>COUNT(o.order_id)</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Fan-out</div>
+        <ul>
+          <li><b>Cause</b> — parent joined to two independent 1:N children</li>
+          <li><b>Effect</b> — Asha 3 items × 3 visits = 9 rows → revenue 4140 not 1380</li>
+          <li><b>Fix</b> — aggregate each child per key in CTEs, then join</li>
+          <li>⚠ <code>SUM(DISTINCT)</code> is wrong when real values repeat</li>
+          <li><b>Check</b> — compare COUNT(*) before/after each join</li>
+          <li>💡 two guest lists stapled: every A next to every B</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Multi-table &amp; non-equi</div>
+        <ul>
+          <li><b>Chain</b> — customers → orders → order_items → products</li>
+          <li>⚠ <b>LEFT then INNER</b> drops Dia → keep later joins LEFT</li>
+          <li><b>Non-equi</b> — <code>ON salary BETWEEN lo AND hi</code> (bands, ranges)</li>
+          <li>⚠ overlapping bands match twice; no hash join → slow</li>
+          <li>⚠ <b>NATURAL JOIN</b> matches every same-named column; prefer <code>USING</code>/<code>ON</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Algorithms &amp; counts</div>
+        <ul>
+          <li><b>Nested loop</b> — small outer + index on inner; any condition</li>
+          <li><b>Hash</b> — build on small side, probe with big; equality only; needs memory</li>
+          <li><b>Merge</b> — both sorted, zipper walk; equality/range</li>
+          <li><b>Puzzle</b> a = 1,1,2,NULL · b = 1,1,3,NULL → INNER 4, LEFT 6, RIGHT 6, FULL 8, CROSS 16</li>
+          <li><b>Bounds</b> — INNER ≤ m×n; LEFT ≥ m; FULL ≥ max(m, n); NULL never matches NULL</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -16,22 +105,36 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="sj-multi"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Multi-table &amp; Non-equi</span><span class="rm-sub">Chains and range joins</span></div></div>
       <div class="rm-item rm-done" data-target="sj-algo"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">How the Engine Joins</span><span class="rm-sub">Nested loop, hash, merge</span></div></div>
       <div class="rm-item rm-done" data-target="sj-puzzle"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Row-Count Puzzle</span><span class="rm-sub">Duplicates and NULL keys</span></div></div>
-      <div class="rm-item rm-done" data-target="sj-rev"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 9 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="sj-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="sj-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
   <h2 id="sj-model"><span class="num">01</span>Why Joins &amp; the Mental Model</h2>
-  <p>Good schemas store each fact once: customer details in <code>customers</code>, orders in <code>orders</code>, linked by <code>customer_id</code>. A <strong>join</strong> combines rows from two tables at query time, so you can ask "which customer placed order 103?".</p>
+  <p>Each fact is stored once (customers, orders), linked by <code>customer_id</code>. A <strong>join</strong> recombines them at query time: "which customer placed order 103?".</p>
   <div class="callout def"><span class="label">Mental model</span>
     <p><strong>1.</strong> Take every pair of rows (left × right). <strong>2.</strong> Keep the pairs where the <code>ON</code> condition is TRUE. <strong>3.</strong> Outer joins then add back unmatched rows, padded with NULLs.</p>
   </div>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A dance hall. Every customer meets every order (the pairs). Only pairs where the customer ID on the ticket matches get to dance (ON). A LEFT JOIN also lets customers with no partner stay on the floor, dancing with an empty chair (NULL).</p>
+    <p>A dance hall. Everyone meets everyone; only matching tickets dance (ON). LEFT JOIN lets partnerless customers stay, dancing with an empty chair (NULL).</p>
   </div>
-  <p>Real engines never build all pairs; that's just the meaning. The model instantly answers row-count questions: a key that matches 2 rows on one side and 3 on the other gives 6 rows.</p>
+  <figure class="viz"><svg viewBox="0 0 600 205" width="600">
+    <text x="100" y="18" text-anchor="middle" font-weight="bold">customers</text>
+    <text x="475" y="12" text-anchor="middle" font-weight="bold">orders</text>
+    <text x="280" y="12" text-anchor="middle" font-size="10" class="tm">ON o.customer_id = c.customer_id</text>
+    <rect x="40" y="30" width="120" height="30" rx="5" class="fb sb"/><text x="100" y="50" text-anchor="middle">Asha</text><rect x="40" y="75" width="120" height="30" rx="5" class="fb sb"/><text x="100" y="95" text-anchor="middle">Ben</text><rect x="40" y="120" width="120" height="30" rx="5" class="fb sb"/><text x="100" y="140" text-anchor="middle">Chen</text><rect x="40" y="165" width="120" height="30" rx="5" class="fb sb"/><text x="100" y="185" text-anchor="middle">Dia</text><rect x="400" y="20" width="150" height="28" rx="5" class="ft"/><text x="475" y="39" text-anchor="middle">100 · c1</text><rect x="400" y="55" width="150" height="28" rx="5" class="ft"/><text x="475" y="74" text-anchor="middle">101 · c1</text><rect x="400" y="90" width="150" height="28" rx="5" class="ft"/><text x="475" y="109" text-anchor="middle">102 · c2</text><rect x="400" y="125" width="150" height="28" rx="5" class="ft"/><text x="475" y="144" text-anchor="middle">103 · c3</text><rect x="400" y="160" width="150" height="28" rx="5" class="ft"/><text x="475" y="179" text-anchor="middle">104 · c3</text><g stroke="currentColor"><line x1="160" y1="45" x2="400" y2="34"/><line x1="160" y1="45" x2="400" y2="69"/><line x1="160" y1="90" x2="400" y2="104"/><line x1="160" y1="135" x2="400" y2="139"/><line x1="160" y1="135" x2="400" y2="174"/></g>
+    <line x1="160" y1="180" x2="230" y2="184" stroke="currentColor" stroke-dasharray="4 3"/>
+    <rect x="230" y="172" width="70" height="24" rx="5" fill="none" stroke="currentColor" stroke-dasharray="4 3"/><text x="265" y="189" text-anchor="middle" class="tm">NULL</text>
+    <text x="308" y="189" font-size="10" class="tm">LEFT only</text>
+  </svg><figcaption>Each line is one output row: 5 matched pairs (INNER). LEFT adds Dia with a NULL partner: 6 rows.</figcaption></figure>
+  <p>Engines never build all pairs; it's just the meaning. It answers row counts instantly: 2 matches × 3 matches = 6 rows.</p>
 
   <h2 id="sj-types"><span class="num">02</span>INNER, LEFT, RIGHT, FULL</h2>
+  <figure class="viz"><svg viewBox="0 0 600 182" width="600">
+    <g font-size="10">
+    <text x="300" y="14" text-anchor="middle" class="tm">left = months with sales (May, Jun, Jul) · right = months with targets (Jun, Jul, Aug)</text>
+    <text x="72" y="36" text-anchor="middle" font-weight="bold" class="tb">INNER</text><rect x="10" y="46" width="60" height="22" rx="3" class="fb"/><text x="40" y="61" text-anchor="middle">Jun</text><rect x="74" y="46" width="60" height="22" rx="3" class="fg"/><text x="104" y="61" text-anchor="middle">Jun</text><rect x="10" y="72" width="60" height="22" rx="3" class="fb"/><text x="40" y="87" text-anchor="middle">Jul</text><rect x="74" y="72" width="60" height="22" rx="3" class="fg"/><text x="104" y="87" text-anchor="middle">Jul</text><text x="72" y="172" text-anchor="middle" class="tm">2 rows</text><text x="222" y="36" text-anchor="middle" font-weight="bold" class="tb">LEFT</text><rect x="160" y="46" width="60" height="22" rx="3" class="fb"/><text x="190" y="61" text-anchor="middle">May</text><rect x="224" y="46" width="60" height="22" rx="3" class="fs"/><text x="254" y="61" text-anchor="middle" class="tm">NULL</text><rect x="160" y="72" width="60" height="22" rx="3" class="fb"/><text x="190" y="87" text-anchor="middle">Jun</text><rect x="224" y="72" width="60" height="22" rx="3" class="fg"/><text x="254" y="87" text-anchor="middle">Jun</text><rect x="160" y="98" width="60" height="22" rx="3" class="fb"/><text x="190" y="113" text-anchor="middle">Jul</text><rect x="224" y="98" width="60" height="22" rx="3" class="fg"/><text x="254" y="113" text-anchor="middle">Jul</text><text x="222" y="172" text-anchor="middle" class="tm">3 rows</text><text x="372" y="36" text-anchor="middle" font-weight="bold" class="tb">RIGHT</text><rect x="310" y="46" width="60" height="22" rx="3" class="fb"/><text x="340" y="61" text-anchor="middle">Jun</text><rect x="374" y="46" width="60" height="22" rx="3" class="fg"/><text x="404" y="61" text-anchor="middle">Jun</text><rect x="310" y="72" width="60" height="22" rx="3" class="fb"/><text x="340" y="87" text-anchor="middle">Jul</text><rect x="374" y="72" width="60" height="22" rx="3" class="fg"/><text x="404" y="87" text-anchor="middle">Jul</text><rect x="310" y="98" width="60" height="22" rx="3" class="fs"/><text x="340" y="113" text-anchor="middle" class="tm">NULL</text><rect x="374" y="98" width="60" height="22" rx="3" class="fg"/><text x="404" y="113" text-anchor="middle">Aug</text><text x="372" y="172" text-anchor="middle" class="tm">3 rows</text><text x="522" y="36" text-anchor="middle" font-weight="bold" class="tb">FULL</text><rect x="460" y="46" width="60" height="22" rx="3" class="fb"/><text x="490" y="61" text-anchor="middle">May</text><rect x="524" y="46" width="60" height="22" rx="3" class="fs"/><text x="554" y="61" text-anchor="middle" class="tm">NULL</text><rect x="460" y="72" width="60" height="22" rx="3" class="fb"/><text x="490" y="87" text-anchor="middle">Jun</text><rect x="524" y="72" width="60" height="22" rx="3" class="fg"/><text x="554" y="87" text-anchor="middle">Jun</text><rect x="460" y="98" width="60" height="22" rx="3" class="fb"/><text x="490" y="113" text-anchor="middle">Jul</text><rect x="524" y="98" width="60" height="22" rx="3" class="fg"/><text x="554" y="113" text-anchor="middle">Jul</text><rect x="460" y="124" width="60" height="22" rx="3" class="fs"/><text x="490" y="139" text-anchor="middle" class="tm">NULL</text><rect x="524" y="124" width="60" height="22" rx="3" class="fg"/><text x="554" y="139" text-anchor="middle">Aug</text><text x="522" y="172" text-anchor="middle" class="tm">4 rows</text>
+    </g>
+  </svg><figcaption>Matched pairs always survive; outer joins add the unmatched side, filling the other side with NULL.</figcaption></figure>
   <table class="tbl">
     <tr><th>Join</th><th>Keeps</th><th>Typical use</th></tr>
     <tr><td><code>INNER JOIN</code> (or just <code>JOIN</code>)</td><td>Only matching pairs</td><td>Orders with their customer</td></tr>
@@ -60,7 +163,7 @@ ORDER BY 1;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>month</th><th>revenue</th><th>target</th></tr><tr><td>2024-05-01</td><td>1380.00</td><td>NULL</td></tr><tr><td>2024-06-01</td><td>1300.00</td><td>1500</td></tr><tr><td>2024-07-01</td><td>120.00</td><td>500</td></tr><tr><td>2024-08-01</td><td>NULL</td><td>800</td></tr></table>
   <p>May had sales but no target; August has a target but no sales. <code>COALESCE</code> merges the key, which is NULL on whichever side is missing.</p>
   <div class="callout trap"><span class="label">Why Venn diagrams mislead</span>
-    <p>Venn circles suggest a join returns "a subset of rows". It doesn't: it returns <em>pairs</em>, and row counts can grow (one customer × two orders = two rows). Venns also can't show CROSS joins, duplicates or NULL padding. Think "pairs + padding", not "overlapping circles".</p>
+    <p>Venns suggest "a subset of rows". Joins return <em>pairs</em>, so counts can grow (one customer × two orders = two rows), and Venns can't show CROSS, duplicates or NULL padding. Think "pairs + padding".</p>
   </div>
 
   <h2 id="sj-cross"><span class="num">03</span>CROSS &amp; SELF Joins</h2>
@@ -114,10 +217,7 @@ WHERE NOT EXISTS (SELECT 1 FROM employees r WHERE r.manager_id = e.emp_id);</div
 
   <h2 id="sj-onwhere"><span class="num">05</span>ON vs WHERE in a LEFT JOIN</h2>
   <p>For INNER joins, a condition in ON or WHERE gives the same result. For LEFT joins it doesn't:</p>
-  <ul>
-    <li><strong>ON</strong> decides which right rows <em>match</em>. Unmatched left rows are still kept.</li>
-    <li><strong>WHERE</strong> runs <em>after</em> the join and filters the final rows, including the NULL-padded ones.</li>
-  </ul>
+  <div class="flow"><span>ON: which right rows match (left rows always kept)</span><span>NULL padding added</span><span>WHERE: filters final rows, padded ones too</span></div>
   <div class="fx" data-lang="sql">-- Goal: every customer with their delivered orders
 SELECT c.name, o.order_id, o.status
 FROM customers c
@@ -151,7 +251,20 @@ LEFT JOIN visits v       ON v.customer_id = c.customer_id
 GROUP BY c.customer_id, c.name
 ORDER BY c.customer_id;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>revenue</th><th>visits</th></tr><tr><td>Asha</td><td>4140.00</td><td>9</td></tr><tr><td>Ben</td><td>150.00</td><td>0</td></tr><tr><td>Chen</td><td>1270.00</td><td>3</td></tr><tr><td>Dia</td><td>NULL</td><td>0</td></tr></table>
-  <p>Asha's real revenue is 1380 with 3 visits. Her 3 item rows × 3 visits = 9 rows, so revenue is tripled and visits counted 9 times. No error, just wrong numbers.</p>
+  <p>Asha's real revenue is 1380 with 3 visits. No error, just wrong numbers:</p>
+  <figure class="viz"><svg viewBox="0 0 600 190" width="600">
+    <g font-size="10">
+    <text x="165" y="18" text-anchor="middle" font-weight="bold" font-size="12" class="tr">Join both children directly</text>
+    <rect x="15" y="36" width="105" height="26" rx="4" class="fb"/><text x="67" y="53" text-anchor="middle">Laptop 800</text><rect x="15" y="80" width="105" height="26" rx="4" class="fb"/><text x="67" y="97" text-anchor="middle">Lamp 2×40</text><rect x="15" y="124" width="105" height="26" rx="4" class="fb"/><text x="67" y="141" text-anchor="middle">Phone 500</text><rect x="225" y="36" width="90" height="26" rx="4" class="fv"/><text x="270" y="53" text-anchor="middle">visit 1</text><rect x="225" y="80" width="90" height="26" rx="4" class="fv"/><text x="270" y="97" text-anchor="middle">visit 2</text><rect x="225" y="124" width="90" height="26" rx="4" class="fv"/><text x="270" y="141" text-anchor="middle">visit 3</text><g class="sr" stroke-opacity="0.8"><line x1="120" y1="49" x2="225" y2="49"/><line x1="120" y1="49" x2="225" y2="93"/><line x1="120" y1="49" x2="225" y2="137"/><line x1="120" y1="93" x2="225" y2="49"/><line x1="120" y1="93" x2="225" y2="93"/><line x1="120" y1="93" x2="225" y2="137"/><line x1="120" y1="137" x2="225" y2="49"/><line x1="120" y1="137" x2="225" y2="93"/><line x1="120" y1="137" x2="225" y2="137"/></g>
+    <text x="165" y="176" text-anchor="middle" font-size="11" class="tr">3 × 3 = 9 rows → revenue 4140 ✗</text>
+    <line x1="340" y1="10" x2="340" y2="180" stroke="currentColor" stroke-dasharray="4 4" opacity="0.4"/>
+    <text x="470" y="18" text-anchor="middle" font-weight="bold" font-size="12" class="tg">Aggregate first</text>
+    <rect x="360" y="76" width="100" height="34" rx="6" class="fb sb"/><text x="410" y="97" text-anchor="middle">rev 1380</text>
+    <rect x="490" y="76" width="100" height="34" rx="6" class="fv"/><text x="540" y="97" text-anchor="middle">visits 3</text>
+    <line x1="460" y1="93" x2="490" y2="93" class="sg" stroke-width="2"/>
+    <text x="470" y="176" text-anchor="middle" font-size="11" class="tg">1 × 1 = 1 row ✓</text>
+    </g>
+  </svg><figcaption>Asha's 3 item rows each pair with all 3 visits. Pre-aggregating each child to one row per customer removes the multiplication.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Two guest lists stapled together: every name on list A gets written next to every name on list B. Count either list afterwards and you've counted it many times over.</p>
   </div>
@@ -202,6 +315,39 @@ ORDER BY e.salary DESC;</div>
 
   <h2 id="sj-algo"><span class="num">08</span>How the Engine Joins</h2>
   <p>The optimizer picks one of three physical algorithms. You see the choice in <code>EXPLAIN</code>.</p>
+  <figure class="viz"><svg viewBox="0 0 600 175" width="600">
+    <defs><marker id="sj-ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <g font-size="10">
+    <text x="100" y="18" text-anchor="middle" font-weight="bold" font-size="12" class="tb">Nested loop</text>
+    <rect x="15" y="40" width="50" height="24" rx="3" class="fb"/><rect x="15" y="74" width="50" height="24" rx="3" class="fb"/><rect x="15" y="108" width="50" height="24" rx="3" class="fb"/>
+    <text x="40" y="146" text-anchor="middle" class="tm">outer</text>
+    <circle cx="150" cy="55" r="12" class="fg sg"/><circle cx="125" cy="100" r="10" class="fg"/><circle cx="175" cy="100" r="10" class="fg"/>
+    <g stroke="currentColor"><line x1="143" y1="65" x2="129" y2="91"/><line x1="157" y1="65" x2="171" y2="91"/></g>
+    <g stroke="currentColor" marker-end="url(#sj-ar1)" opacity="0.7"><line x1="65" y1="52" x2="136" y2="55"/><line x1="65" y1="86" x2="137" y2="60"/><line x1="65" y1="120" x2="139" y2="63"/></g>
+    <text x="150" y="146" text-anchor="middle" class="tm">index</text>
+    <text x="100" y="166" text-anchor="middle">each outer row: 1 lookup</text>
+    <text x="300" y="18" text-anchor="middle" font-weight="bold" font-size="12" class="tb">Hash join</text>
+    <rect x="215" y="50" width="40" height="22" rx="3" class="fb"/><rect x="215" y="82" width="40" height="22" rx="3" class="fb"/>
+    <text x="235" y="122" text-anchor="middle" class="tm">small</text>
+    <rect x="280" y="40" width="40" height="22" rx="3" class="fg sg"/><text x="300" y="55" text-anchor="middle">#0</text>
+    <rect x="280" y="68" width="40" height="22" rx="3" class="fg sg"/><text x="300" y="83" text-anchor="middle">#1</text>
+    <rect x="280" y="96" width="40" height="22" rx="3" class="fg sg"/><text x="300" y="111" text-anchor="middle">#2</text>
+    <rect x="345" y="36" width="40" height="18" rx="3" class="fv"/><rect x="345" y="60" width="40" height="18" rx="3" class="fv"/><rect x="345" y="84" width="40" height="18" rx="3" class="fv"/><rect x="345" y="108" width="40" height="18" rx="3" class="fv"/>
+    <text x="365" y="140" text-anchor="middle" class="tm">big</text>
+    <g stroke="currentColor" marker-end="url(#sj-ar1)"><line x1="255" y1="61" x2="278" y2="55"/><line x1="255" y1="93" x2="278" y2="105"/><line x1="345" y1="69" x2="322" y2="79"/></g>
+    <text x="300" y="166" text-anchor="middle">build small, probe big</text>
+    <text x="500" y="18" text-anchor="middle" font-weight="bold" font-size="12" class="tb">Merge join</text>
+    <rect x="425" y="40" width="40" height="22" rx="3" class="fb"/><text x="445" y="55" text-anchor="middle">1</text>
+    <rect x="425" y="70" width="40" height="22" rx="3" class="fb"/><text x="445" y="85" text-anchor="middle">2</text>
+    <rect x="425" y="100" width="40" height="22" rx="3" class="fb"/><text x="445" y="115" text-anchor="middle">4</text>
+    <rect x="535" y="40" width="40" height="22" rx="3" class="fv"/><text x="555" y="55" text-anchor="middle">1</text>
+    <rect x="535" y="70" width="40" height="22" rx="3" class="fv"/><text x="555" y="85" text-anchor="middle">3</text>
+    <rect x="535" y="100" width="40" height="22" rx="3" class="fv"/><text x="555" y="115" text-anchor="middle">4</text>
+    <g class="sg" stroke-width="2"><line x1="465" y1="51" x2="535" y2="51"/><line x1="465" y1="111" x2="535" y2="111"/></g>
+    <g stroke="currentColor" marker-end="url(#sj-ar1)"><line x1="415" y1="40" x2="415" y2="125"/><line x1="585" y1="40" x2="585" y2="125"/></g>
+    <text x="500" y="166" text-anchor="middle">walk two sorted lists</text>
+    </g>
+  </svg><figcaption>Nested loop: small outer + index. Hash: equality on big unsorted inputs. Merge: inputs already sorted by the key.</figcaption></figure>
   <table class="tbl">
     <tr><th>Algorithm</th><th>How it works</th><th>Best when</th><th>Cost</th></tr>
     <tr><td><strong>Nested loop</strong></td><td>For each outer row, look up matches in the inner side (ideally via an index)</td><td>Outer side is small; inner has an index; any condition (incl. non-equi)</td><td>outer × lookup</td></tr>
@@ -233,21 +379,7 @@ ORDER BY e.salary DESC;</div>
   <div class="callout intu"><span class="label">Bounds to remember</span>
     <p>INNER ≤ m × n. LEFT ≥ m (rows of the left table). FULL ≥ max(m, n). If a join returns more rows than its "one" side, a key isn't as unique as you thought.</p>
   </div>
-
-  <h2 id="sj-rev"><span class="num">10</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Model:</strong> all pairs → keep where ON is TRUE → outer joins add unmatched rows with NULLs.</li>
-    <li><strong>INNER</strong> = matches only; <strong>LEFT</strong> keeps all left; <strong>FULL</strong> keeps both; <strong>CROSS</strong> = m × n.</li>
-    <li><strong>SELF join</strong>: same table, two aliases. Use <code>a.id &lt; b.id</code> for unique pairs.</li>
-    <li><strong>Semi/anti</strong>: EXISTS / NOT EXISTS. They never duplicate rows.</li>
-    <li><strong>NOT IN</strong> with a NULL in the list returns nothing. Prefer NOT EXISTS.</li>
-    <li><strong>LEFT JOIN filters</strong> on the right table go in ON; in WHERE they make it INNER.</li>
-    <li><strong>COUNT(right.col)</strong>, not COUNT(*), after a LEFT JOIN.</li>
-    <li><strong>Fan-out:</strong> two one-to-many joins multiply. Aggregate each child first, then join.</li>
-    <li><strong>Algorithms:</strong> nested loop (small + index), hash (big, equality), merge (sorted).</li>
-  </ol></div>
-
-  <h2 id="sj-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <h2 id="sj-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>How many rows does <code>customers LEFT JOIN orders</code> return in shop, and why not 4?</summary><div class="qa-body">6. Asha and Chen have 2 orders each, Ben 1, and Dia gets one NULL-padded row: 2 + 1 + 2 + 1. A LEFT JOIN guarantees <em>at least</em> one row per left row, not exactly one.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Find customers who have never ordered. Give two correct ways and one wrong way.</summary><div class="qa-body">Correct: <code>WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.customer_id)</code>, or <code>LEFT JOIN orders o … WHERE o.order_id IS NULL</code>. Both return Dia. Risky: <code>WHERE customer_id NOT IN (SELECT customer_id FROM orders)</code>. It works here only because orders.customer_id is NOT NULL; one NULL would empty the result.</div></details>

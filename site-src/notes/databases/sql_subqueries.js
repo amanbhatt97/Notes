@@ -4,6 +4,99 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Subqueries, CTEs &amp; Views</h1>
   <p class="lead">How to build a query out of smaller queries: nest them (subqueries), name them (CTEs), loop them (recursive CTEs) or save them (views). This is how real analytical SQL is written, and interviewers test the edge cases.</p>
 
+  <h2 id="sq-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Subqueries, CTEs &amp; Views</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Subqueries by position</div>
+        <ul>
+          <li><b>Subquery</b> — a SELECT inside another statement, in brackets</li>
+          <li><b>SELECT</b> → scalar (1 value): <code>(SELECT AVG(price) FROM products)</code></li>
+          <li>⚠ scalar returning 2 rows = error; 0 rows = NULL silently</li>
+          <li><b>WHERE … IN</b> → a list of values</li>
+          <li><b>FROM</b> → derived table, needs an alias; aggregate twice (avg order value 560)</li>
+          <li>⚠ "average X per Y" → aggregate to Y first</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Correlated subqueries</div>
+        <ul>
+          <li><b>Correlated</b> — references outer column; logically re-run per outer row</li>
+          <li><b>Use</b> — each row vs its own group: salary &gt; own dept avg (Ravi, Uma)</li>
+          <li><b>Cost</b> — outer rows × inner work; scalar form usually runs per row</li>
+          <li><b>Faster</b> — join a pre-aggregated CTE or <code>AVG() OVER (PARTITION BY dept)</code></li>
+          <li>💡 teacher marks each student against that student's class average</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">EXISTS vs IN vs JOIN</div>
+        <ul>
+          <li><b>JOIN</b> — returns other table's columns; duplicates per match (Asha ×2)</li>
+          <li><b>IN / EXISTS</b> — filter only, no duplicates; planned as a semi-join</li>
+          <li>⚠ <b>NOT IN + one NULL</b> → 0 rows; use <b>NOT EXISTS</b></li>
+          <li><b>Speed</b> — usually same plan in Postgres; choose for correctness</li>
+          <li><b>Rule</b> — need columns: JOIN · filter: EXISTS/IN · anti: NOT EXISTS</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">CTEs (WITH)</div>
+        <ul>
+          <li><b>CTE</b> — named temporary result: <code>WITH t AS (…) SELECT … FROM t</code></li>
+          <li><b>Why</b> — top-down steps, later steps reuse earlier ones, recursion</li>
+          <li><b>PG ≤ 11</b> — always materialised (optimisation fence)</li>
+          <li><b>PG 12+</b> — used once → inlined; used 2+ times → materialised</li>
+          <li><b>Override</b> — <code>AS MATERIALIZED</code> / <code>AS NOT MATERIALIZED</code></li>
+          <li>💡 a recipe: dough, sauce, combine</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Recursive CTEs</div>
+        <ul>
+          <li><b>Shape</b> — anchor <code>UNION ALL</code> step that joins to previous rows</li>
+          <li><b>Stops</b> when a step returns no new rows</li>
+          <li><b>Hierarchy</b> — Vik → Uma → Ravi (levels 1, 2, 3)</li>
+          <li><b>Calendar</b> — generate months, LEFT JOIN data, <code>COUNT(o.id)</code> → zeros show</li>
+          <li><b>PG shortcut</b> — <code>generate_series(start, end, '1 month')</code></li>
+          <li>⚠ no stop / cycles → infinite; use WHERE, visited array or <code>CYCLE</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">LATERAL</div>
+        <ul>
+          <li><b>LATERAL</b> — FROM-subquery that sees earlier tables; per-row for-each loop</li>
+          <li><b>Top-N per group</b> — <code>ORDER BY … LIMIT N</code> inside</li>
+          <li>⚠ CROSS JOIN LATERAL drops Dia → <code>LEFT JOIN LATERAL (…) ON true</code></li>
+          <li><b>vs ROW_NUMBER</b> — LATERAL + index = tiny lookups; window scans all once</li>
+          <li>SQL Server name: <code>CROSS APPLY</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Set operations</div>
+        <ul>
+          <li><b>Stack vertically</b> (joins combine horizontally)</li>
+          <li><b>UNION</b> dedupes · <b>UNION ALL</b> keeps all, fastest</li>
+          <li><b>INTERSECT</b> in both · <b>EXCEPT</b> first minus second (Oracle: MINUS)</li>
+          <li><b>Rules</b> — same column count, compatible types, by position; names from first; one ORDER BY at end</li>
+          <li>⚠ default UNION ALL; UNION silently merges real duplicates</li>
+          <li>Set ops treat NULLs as equal (EXCEPT is NULL-safe)</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Views, MVs, functions</div>
+        <ul>
+          <li><b>View</b> — saved query, always fresh, no speed gain; hide complexity, restrict columns</li>
+          <li><b>Materialized view</b> — saved result, fast, stale until <code>REFRESH</code></li>
+          <li>⚠ plain REFRESH blocks reads; <code>CONCURRENTLY</code> needs unique index; no auto refresh</li>
+          <li>💡 bookmarked search vs printed report</li>
+          <li><b>Function</b> — returns value/table, usable in queries, can't COMMIT</li>
+          <li><b>Procedure</b> — <code>CALL</code>, can COMMIT mid-way (ETL)</li>
+          <li>⚠ function per row = hidden correlated subquery</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -16,13 +109,27 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="sq-set"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Set Operations</span><span class="rm-sub">UNION, INTERSECT, EXCEPT</span></div></div>
       <div class="rm-item rm-done" data-target="sq-view"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Views &amp; Materialized Views</span><span class="rm-sub">Saved queries vs saved results</span></div></div>
       <div class="rm-item rm-done" data-target="sq-func"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Functions &amp; Procedures</span><span class="rm-sub">Logic inside the DB</span></div></div>
-      <div class="rm-item rm-done" data-target="sq-rev"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="sq-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="sq-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
   <h2 id="sq-where"><span class="num">01</span>Subqueries by Position</h2>
-  <p>A <strong>subquery</strong> is a <code>SELECT</code> inside another statement, in brackets. Where it sits decides the shape it must return: one value in <code>SELECT</code>, a list in <code>WHERE … IN</code>, a whole table (with an alias) in <code>FROM</code>.</p>
+  <p>A <strong>subquery</strong> is a <code>SELECT</code> inside another statement, in brackets.</p>
+  <figure class="viz"><svg viewBox="0 0 600 175" width="600">
+    <g font-size="11">
+    <rect x="10" y="10" width="580" height="34" rx="6" class="fs"/>
+    <text x="22" y="32">SELECT name, <tspan class="tb">(scalar)</tspan>  FROM <tspan class="tg">(derived table) t</tspan>  WHERE id IN <tspan class="tr">(list)</tspan></text>
+    <text x="100" y="72" text-anchor="middle" font-weight="bold" class="tb">in SELECT</text>
+    <rect x="87" y="84" width="24" height="16" rx="2" class="fb sb"/>
+    <text x="100" y="150" text-anchor="middle" font-size="10" class="tm">1 row × 1 col</text>
+    <text x="300" y="72" text-anchor="middle" font-weight="bold" class="tg">in FROM</text>
+    <rect x="248" y="84" width="24" height="16" rx="2" class="fg"/><rect x="274" y="84" width="24" height="16" rx="2" class="fg"/><rect x="300" y="84" width="24" height="16" rx="2" class="fg"/><rect x="326" y="84" width="24" height="16" rx="2" class="fg"/><rect x="248" y="102" width="24" height="16" rx="2" class="fg"/><rect x="274" y="102" width="24" height="16" rx="2" class="fg"/><rect x="300" y="102" width="24" height="16" rx="2" class="fg"/><rect x="326" y="102" width="24" height="16" rx="2" class="fg"/><rect x="248" y="120" width="24" height="16" rx="2" class="fg"/><rect x="274" y="120" width="24" height="16" rx="2" class="fg"/><rect x="300" y="120" width="24" height="16" rx="2" class="fg"/><rect x="326" y="120" width="24" height="16" rx="2" class="fg"/>
+    <text x="300" y="150" text-anchor="middle" font-size="10" class="tm">any table, needs alias</text>
+    <text x="500" y="72" text-anchor="middle" font-weight="bold" class="tr">in WHERE … IN</text>
+    <rect x="487" y="84" width="24" height="16" rx="2" class="fr"/><rect x="487" y="102" width="24" height="16" rx="2" class="fr"/><rect x="487" y="120" width="24" height="16" rx="2" class="fr"/>
+    <text x="500" y="150" text-anchor="middle" font-size="10" class="tm">1 column, many rows</text>
+    </g>
+  </svg><figcaption>The slot decides the shape a subquery must return.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Asking a colleague mid-task: "What's the average price?" (scalar). "Which customers had deliveries?" (a list). "Give me a summary sheet" (a derived table).</p>
   </div>
@@ -49,14 +156,21 @@ FROM (SELECT order_id, SUM(qty * unit_price) AS order_total
   </div>
 
   <h2 id="sq-corr"><span class="num">02</span>Correlated Subqueries</h2>
-  <p>A <strong>correlated subquery</strong> references a column from the outer query, so it is logically re-run for every outer row.</p>
-  <p>Use it when each row needs its <em>own</em> comparison: "earns more than <em>their</em> department's average".</p>
+  <p>A <strong>correlated subquery</strong> references an outer column, so it logically re-runs per outer row. Use it when each row needs its <em>own</em> comparison: "earns more than <em>their</em> department's average".</p>
   <div class="fx" data-lang="sql">SELECT e.name, e.dept, e.salary
 FROM employees e
 WHERE e.salary &gt; (SELECT AVG(salary) FROM employees x
                   WHERE x.dept = e.dept);   -- e.dept comes from outside</div>
   <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>dept</th><th>salary</th></tr><tr><td>Ravi</td><td>Eng</td><td>120000</td></tr><tr><td>Uma</td><td>Sales</td><td>70000</td></tr></table>
-  <p>Eng's average is 103,333, so Sara and Tom (95,000) drop out. Sales' is 67,500.</p>
+  <figure class="viz"><svg viewBox="0 0 600 190" width="600">
+    <g font-size="10">
+    <text x="85" y="14" text-anchor="middle" font-weight="bold">outer row e</text>
+    <text x="395" y="14" text-anchor="middle" font-weight="bold">inner query, per row</text>
+    <rect x="10" y="22" width="150" height="24" rx="4" class="fb"/><text x="18" y="38">Ravi · 120,000</text><line x1="160" y1="34" x2="318" y2="50" stroke="currentColor" opacity="0.6"/><text x="530" y="38" class="tg">✓ kept</text><rect x="10" y="54" width="150" height="24" rx="4" class="fb"/><text x="18" y="70">Sara · 95,000</text><line x1="160" y1="66" x2="318" y2="50" stroke="currentColor" opacity="0.6"/><text x="530" y="70" class="tr">✗ dropped</text><rect x="10" y="86" width="150" height="24" rx="4" class="fb"/><text x="18" y="102">Tom · 95,000</text><line x1="160" y1="98" x2="318" y2="50" stroke="currentColor" opacity="0.6"/><text x="530" y="102" class="tr">✗ dropped</text><rect x="10" y="118" width="150" height="24" rx="4" class="fv"/><text x="18" y="134">Uma · 70,000</text><line x1="160" y1="130" x2="318" y2="140" stroke="currentColor" opacity="0.6"/><text x="530" y="134" class="tg">✓ kept</text><rect x="10" y="150" width="150" height="24" rx="4" class="fv"/><text x="18" y="166">Vik · 65,000</text><line x1="160" y1="162" x2="318" y2="140" stroke="currentColor" opacity="0.6"/><text x="530" y="166" class="tr">✗ dropped</text>
+    <rect x="320" y="30" width="190" height="40" rx="6" class="fb sb"/><text x="415" y="47" text-anchor="middle">AVG where dept = 'Eng'</text><text x="415" y="62" text-anchor="middle" font-weight="bold">103,333</text>
+    <rect x="320" y="120" width="190" height="40" rx="6" class="fv"/><text x="415" y="137" text-anchor="middle">AVG where dept = 'Sales'</text><text x="415" y="152" text-anchor="middle" font-weight="bold">67,500</text>
+    </g>
+  </svg><figcaption>Each outer row plugs its own <code>e.dept</code> into the inner query and is compared with that result.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A teacher marking each student against <em>that student's</em> class average: one lookup per student. A non-correlated subquery is one school-wide average, computed once.</p>
   </div>
@@ -97,8 +211,7 @@ ORDER BY e.emp_id;                                         -- correct</div>
   </div>
 
   <h2 id="sq-cte"><span class="num">04</span>CTEs (WITH)</h2>
-  <p>A <strong>CTE</strong> (Common Table Expression) is a named, temporary result defined with <code>WITH</code> and used by the query that follows.</p>
-  <p>Nested subqueries read inside-out and can't be reused. CTEs read top-down, one step per name, and each later step can use earlier ones.</p>
+  <p>A <strong>CTE</strong> (Common Table Expression): a named temporary result, defined with <code>WITH</code>. Nested subqueries read inside-out; CTEs read top-down and later steps reuse earlier ones.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A recipe. "Make the dough. Make the sauce. Combine." Nested subqueries are the same recipe written as one sentence with brackets.</p>
   </div>
@@ -134,7 +247,26 @@ WITH t AS (SELECT * FROM orders) SELECT * FROM t WHERE order_id = 100;</div>
 
   <h2 id="sq-rec"><span class="num">05</span>Recursive CTEs</h2>
   <p>A <strong>recursive CTE</strong> refers to itself, so it can walk a hierarchy or generate rows until a condition stops it.</p>
-  <div class="flow"><span>Anchor: starting rows</span><span>Recursive step: join to previous rows</span><span>Repeat until no new rows</span><span>UNION ALL of everything</span></div>
+  <figure class="viz"><svg viewBox="0 0 600 190" width="600">
+    <defs><marker id="sq-ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <g font-size="10">
+    <text x="65" y="16" text-anchor="middle" class="tm">anchor</text>
+    <rect x="15" y="26" width="100" height="44" rx="6" class="fb sb"/><text x="65" y="44" text-anchor="middle" font-weight="bold">Vik</text><text x="65" y="60" text-anchor="middle" class="tm">level 1, mgr 4</text>
+    <text x="205" y="16" text-anchor="middle" class="tm">step 1</text>
+    <rect x="155" y="26" width="100" height="44" rx="6" class="fv"/><text x="205" y="44" text-anchor="middle" font-weight="bold">Uma</text><text x="205" y="60" text-anchor="middle" class="tm">level 2, mgr 1</text>
+    <text x="345" y="16" text-anchor="middle" class="tm">step 2</text>
+    <rect x="295" y="26" width="100" height="44" rx="6" class="fv"/><text x="345" y="44" text-anchor="middle" font-weight="bold">Ravi</text><text x="345" y="60" text-anchor="middle" class="tm">level 3, no mgr</text>
+    <text x="485" y="16" text-anchor="middle" class="tm">step 3</text>
+    <rect x="435" y="26" width="100" height="44" rx="6" fill="none" stroke="currentColor" stroke-dasharray="4 3"/><text x="485" y="44" text-anchor="middle" class="tr">0 rows</text><text x="485" y="60" text-anchor="middle" class="tm">→ stop</text>
+    <g stroke="currentColor" marker-end="url(#sq-ar1)"><line x1="115" y1="48" x2="153" y2="48"/><line x1="255" y1="48" x2="293" y2="48"/><line x1="395" y1="48" x2="433" y2="48"/></g>
+    <text x="300" y="94" text-anchor="middle" class="tm">each step joins employees to the rows found by the previous step: e.emp_id = c.manager_id</text>
+    <text x="65" y="122" text-anchor="middle" font-weight="bold">UNION ALL</text>
+    <rect x="130" y="108" width="130" height="22" rx="3" class="fb"/><text x="140" y="123">Vik · 1</text>
+    <rect x="130" y="132" width="130" height="22" rx="3" class="fv"/><text x="140" y="147">Uma · 2</text>
+    <rect x="130" y="156" width="130" height="22" rx="3" class="fv"/><text x="140" y="171">Ravi · 3</text>
+    <text x="280" y="147" class="tm">= final result</text>
+    </g>
+  </svg><figcaption>Anchor gives the first rows; the step repeats on the newest rows until it finds none; all rounds are stacked.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Climbing a ladder of "who's your boss?" Ask Vik, get Uma. Ask Uma, get Ravi. Ask Ravi, nobody: stop.</p>
   </div>
@@ -185,6 +317,17 @@ ORDER BY c.name, t.order_date DESC;</div>
 
   <h2 id="sq-set"><span class="num">07</span>Set Operations</h2>
   <p>Set operations stack the results of two queries <em>vertically</em>. Joins combine tables <em>horizontally</em>.</p>
+  <figure class="viz"><svg viewBox="0 0 600 175" width="600">
+    <g font-size="11">
+    <text x="15" y="24">A (delivered)</text><rect x="140" y="8" width="26" height="24" rx="4" class="fb sb"/><text x="153" y="24" text-anchor="middle">1</text><rect x="170" y="8" width="26" height="24" rx="4" class="fb sb"/><text x="183" y="24" text-anchor="middle">1</text><rect x="200" y="8" width="26" height="24" rx="4" class="fb sb"/><text x="213" y="24" text-anchor="middle">3</text>
+    <text x="320" y="24">B (pending)</text><rect x="430" y="8" width="26" height="24" rx="4" class="fv"/><text x="443" y="24" text-anchor="middle">3</text>
+    <line x1="10" y1="44" x2="590" y2="44" stroke="currentColor" opacity="0.3"/>
+    <text x="15" y="76" font-weight="bold">A UNION ALL B</text><rect x="160" y="60" width="26" height="24" rx="4" class="fg"/><text x="173" y="76" text-anchor="middle">1</text><rect x="190" y="60" width="26" height="24" rx="4" class="fg"/><text x="203" y="76" text-anchor="middle">1</text><rect x="220" y="60" width="26" height="24" rx="4" class="fg"/><text x="233" y="76" text-anchor="middle">3</text><rect x="250" y="60" width="26" height="24" rx="4" class="fg"/><text x="263" y="76" text-anchor="middle">3</text><text x="300" y="76" class="tm">stack, keep all</text>
+    <text x="15" y="106" font-weight="bold">A UNION B</text><rect x="160" y="90" width="26" height="24" rx="4" class="fg"/><text x="173" y="106" text-anchor="middle">1</text><rect x="190" y="90" width="26" height="24" rx="4" class="fg"/><text x="203" y="106" text-anchor="middle">3</text><text x="300" y="106" class="tm">stack, then dedupe</text>
+    <text x="15" y="136" font-weight="bold">A INTERSECT B</text><rect x="160" y="120" width="26" height="24" rx="4" class="fg"/><text x="173" y="136" text-anchor="middle">3</text><text x="300" y="136" class="tm">in both</text>
+    <text x="15" y="166" font-weight="bold">A EXCEPT B</text><rect x="160" y="150" width="26" height="24" rx="4" class="fg"/><text x="173" y="166" text-anchor="middle">1</text><text x="300" y="166" class="tm">in A, not in B</text>
+    </g>
+  </svg><figcaption>customer_ids from delivered (A) and pending (B) orders. Only UNION ALL keeps duplicates.</figcaption></figure>
   <table class="tbl">
     <tr><th>Operator</th><th>Returns</th><th>Duplicates</th></tr>
     <tr><td><code>UNION</code></td><td>Rows in either</td><td>Removed (costs a sort/hash)</td></tr>
@@ -211,10 +354,10 @@ SELECT customer_id FROM orders;                            -- 4 (Dia)</div>
   </div>
 
   <h2 id="sq-view"><span class="num">08</span>Views &amp; Materialized Views</h2>
-  <ul>
-    <li><strong>View</strong>: a saved <em>query</em> with a name. No data stored; it re-runs every time, so it's always fresh.</li>
-    <li><strong>Materialized view</strong>: a saved <em>result</em>. Fast to read, but stale until you refresh it.</li>
-  </ul>
+  <div class="cards">
+    <div><b>View</b><p>A saved <em>query</em>. No data stored; re-runs each time, always fresh.</p></div>
+    <div><b>Materialized view</b><p>A saved <em>result</em>. Fast to read, stale until refreshed.</p></div>
+  </div>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A view is a bookmarked search: click it and the search runs again. A materialized view is a printed report: instant to read, but it shows yesterday's numbers until you reprint.</p>
   </div>
@@ -249,10 +392,10 @@ SELECT * FROM daily_revenue WHERE order_date = '2024-07-01';  -- 920.00</div>
 
   <h2 id="sq-func"><span class="num">09</span>Functions &amp; Stored Procedures</h2>
   <p>Named, reusable logic stored <em>in</em> the database.</p>
-  <ul>
-    <li><strong>Function</strong>: returns a value or table; callable inside a query. Can't commit transactions.</li>
-    <li><strong>Procedure</strong> (<code>CALL proc()</code>, Postgres 11+): no return value needed; can <code>COMMIT</code> mid-way. Used for batch jobs and ETL steps.</li>
-  </ul>
+  <div class="cards">
+    <div><b>Function</b><p>Returns a value or table; callable inside a query. Can't commit.</p></div>
+    <div><b>Procedure</b><p><code>CALL proc()</code> (PG 11+); can <code>COMMIT</code> mid-way.</p><small>Batch jobs, ETL steps</small></div>
+  </div>
   <div class="fx" data-lang="sql">CREATE FUNCTION customer_spend(cid int) RETURNS numeric
 LANGUAGE sql STABLE AS $$
   SELECT COALESCE(SUM(oi.qty * oi.unit_price), 0)
@@ -265,22 +408,7 @@ SELECT name, customer_spend(customer_id) AS spend FROM customers;</div>
   <div class="callout intu"><span class="label">Trade-off</span>
     <p>Pros: logic next to the data, one round trip. Cons: harder to version and test, ties you to one DBMS. A function called per row is a hidden correlated subquery.</p>
   </div>
-
-  <h2 id="sq-rev"><span class="num">10</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Scalar subquery</strong>: one value; more than one row is an error, zero rows is NULL.</li>
-    <li><strong>Derived table</strong> (subquery in FROM): needs an alias; use it to aggregate twice.</li>
-    <li><strong>Correlated</strong> subquery references the outer row: logically runs per row; rewrite with a join or window when slow.</li>
-    <li><strong>JOIN</strong> fans out duplicates; <strong>IN/EXISTS</strong> don't. Postgres plans IN/EXISTS as a semi-join.</li>
-    <li><strong>NOT IN</strong> + one NULL = zero rows. Use <strong>NOT EXISTS</strong>.</li>
-    <li><strong>CTEs</strong> name steps top-down; Postgres 12+ inlines single-use CTEs, materialises multi-use ones.</li>
-    <li><strong>Recursive CTE</strong> = anchor UNION ALL step; for hierarchies and calendars; always ensure it terminates.</li>
-    <li><strong>LATERAL</strong> = per-row subquery; the go-to for top-N per group with LIMIT. LEFT JOIN LATERAL … ON true keeps empties.</li>
-    <li><strong>UNION</strong> dedupes (slower), <strong>UNION ALL</strong> keeps all; same column count, compatible types, by position.</li>
-    <li><strong>View</strong> = saved query (fresh); <strong>materialized view</strong> = saved result (fast, stale until REFRESH).</li>
-  </ol></div>
-
-  <h2 id="sq-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <h2 id="sq-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>What's the difference between a correlated and a non-correlated subquery?</summary><div class="qa-body">Non-correlated runs once, independently (<code>SELECT AVG(price) FROM products</code>). Correlated references an outer column (<code>WHERE x.dept = e.dept</code>), so it's logically evaluated per outer row. Correlated can be slow on large tables unless the optimizer turns it into a join.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Write the query: employees who earn more than their department's average.</summary><div class="qa-body"><div class="fx" data-lang="sql">SELECT name, dept, salary FROM employees e

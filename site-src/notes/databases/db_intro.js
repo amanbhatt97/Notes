@@ -4,6 +4,88 @@ Object.assign(TOPIC_CONTENT, {
   <h1>What is a Database</h1>
   <p class="lead">Before writing SQL, you need to know what a database actually does for you: what problems it solves, and what happens between your query and the disk.</p>
 
+  <h2 id="di-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">What is a Database</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Three words</div>
+        <ul>
+          <li><b>Data</b> — raw facts ("Asha bought a Laptop for 800")</li>
+          <li><b>Database</b> — organised collection of data, quick to find and change</li>
+          <li><b>DBMS</b> — software that stores, protects, serves it (PostgreSQL, MySQL, MongoDB)</li>
+          <li>💡 <b>Library</b> — books = data, shelves = database, librarian = DBMS</li>
+          <li><b>Path</b> — app → SQL query → DBMS → files; you never touch files</li>
+          <li>⚠ <b>Trap</b> — "PostgreSQL is a database": precisely, a DBMS managing many databases</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Why not Excel / CSV</div>
+        <ul>
+          <li><b>Concurrency</b> — transactions + locks stop overwrites</li>
+          <li><b>Integrity</b> — types and constraints reject "abc" in price</li>
+          <li><b>Crash safety</b> — WAL restores a consistent state</li>
+          <li><b>Scale</b> — billions of rows, reads only needed pages</li>
+          <li><b>Querying</b> — one declarative query vs manual VLOOKUPs</li>
+          <li><b>Security</b> — per-user, per-table permissions</li>
+          <li><b>Last concert seat</b> — two buyers, one transaction wins, other fails cleanly</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Inside: query path</div>
+        <ul>
+          <li><b>Parser</b> — grammar + do table/columns exist?</li>
+          <li><b>Optimizer</b> — picks cheapest plan: scan vs index, join order</li>
+          <li><b>Executor</b> — runs the plan</li>
+          <li><b>Buffer cache</b> — hot pages in RAM (~1000× faster than disk)</li>
+          <li><b>Pages</b> — fixed 8 KB blocks; DBMS reads pages, never single rows</li>
+          <li><b>Declarative</b> — you say <em>what</em>, optimizer decides <em>how</em></li>
+          <li>💡 <b>Restaurant</b> — you order, chef picks method; counter = cache, store room = disk</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Index &amp; WAL</div>
+        <ul>
+          <li><b>Index</b> — sorted lookup (B-tree), like a book's index; avoids full scans</li>
+          <li><b>WAL</b> — write-ahead log: append change to log, flush, then apply to table</li>
+          <li><b>Recovery</b> — replay committed log entries, discard uncommitted</li>
+          <li>💡 <b>Receipt book</b> — write the sale before moving stock</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Schema &amp; data shapes</div>
+        <ul>
+          <li><b>Schema</b> — blueprint: tables, columns, types, rules</li>
+          <li><b>Structured</b> — fixed columns → SQL tables (orders, payments)</li>
+          <li><b>Semi-structured</b> — varying, nested fields → JSON, MongoDB, JSONB</li>
+          <li><b>Unstructured</b> — blobs → S3; embeddings → vector DB</li>
+          <li><b>Schema-on-write</b> — checked at insert; clean data, migrations to change</li>
+          <li><b>Schema-on-read</b> — checked by reader; flexible, every reader handles mess</li>
+          <li>⚠ <b>"Schemaless"</b> — schema just moved into application code</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">SQL vs NoSQL</div>
+        <ul>
+          <li><b>SQL</b> — tables + keys + JOINs, fixed schema, strong ACID, scales up + replicas</li>
+          <li><b>NoSQL</b> — documents, key-value, graph, wide-column; flexible; scales out</li>
+          <li><b>Relationships</b> — SQL joins at query time; NoSQL embeds/duplicates</li>
+          <li><b>Rule</b> — default PostgreSQL; NoSQL only for a named reason (write volume, varied shape, cache, graph)</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Data stack</div>
+        <ul>
+          <li><b>Flow</b> — App DB → ETL/CDC → warehouse → dashboards &amp; ML</li>
+          <li><b>OLTP</b> — many tiny reads/writes ("place order"), row store</li>
+          <li><b>OLAP</b> — few huge scans ("revenue by month, 3 yrs"), column store</li>
+          <li><b>Supporting</b> — Redis cache, Elasticsearch text, vector DB (RAG), feature store</li>
+          <li>⚠ <b>Trap</b> — heavy analytics on production OLTP slows the live app</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -13,22 +95,21 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="di-schema"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Schema &amp; Data Shapes</span><span class="rm-sub">Structured, semi-, unstructured</span></div></div>
       <div class="rm-item rm-done" data-target="di-sqlnosql"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">SQL vs NoSQL</span><span class="rm-sub">The two big families</span></div></div>
       <div class="rm-item rm-done" data-target="di-stack"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Databases in a Data Stack</span><span class="rm-sub">Where each one sits</span></div></div>
-      <div class="rm-item rm-done" data-target="di-rev"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 8 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="di-qa"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="di-qa"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
   <h2 id="di-core"><span class="num">01</span>Data, Database, DBMS</h2>
-  <ul>
-    <li><strong>Data</strong>: raw facts. <em>"Asha ordered a Laptop on 1 May for ₹800."</em></li>
-    <li><strong>Database</strong>: an organised collection of that data, stored so it can be found and changed quickly.</li>
-    <li><strong>DBMS</strong> (Database Management System): the software that stores, protects and serves the database. PostgreSQL, MySQL and MongoDB are DBMSs.</li>
-  </ul>
+  <div class="cards">
+    <div><b>Data</b><p>Raw facts.</p><small>"Asha ordered a Laptop on 1 May for ₹800."</small></div>
+    <div><b>Database</b><p>An organised collection of data, quick to find and change.</p><small>Your <code>shop</code> tables</small></div>
+    <div><b>DBMS</b><p>Database Management System: the software that stores, protects and serves it.</p><small>PostgreSQL, MySQL, MongoDB</small></div>
+  </div>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A library. The <strong>books</strong> are data. The <strong>shelves and catalogue</strong> are the database. The <strong>librarian</strong> is the DBMS: you ask for something, and they know where it is, stop two people taking the last copy, and keep records if the lights go out.</p>
+    <p>A library. <strong>Books</strong> = data, <strong>shelves + catalogue</strong> = database, <strong>librarian</strong> = DBMS: finds things, stops two people taking the last copy, keeps records if the lights go out.</p>
   </div>
   <div class="flow"><span>Your app / notebook</span><span>Query (SQL)</span><span>DBMS</span><span>Files on disk</span></div>
-  <p>You never touch the files directly. You <em>ask</em>, and the DBMS decides how to get the answer. That separation is the whole point.</p>
+  <p>You never touch the files. You <em>ask</em>; the DBMS decides how.</p>
   <div class="callout trap"><span class="label">Trap</span>
     <p>People say "database" for all three. In an interview, "PostgreSQL is a database" is fine casually, but precisely it's a <strong>DBMS</strong> that manages many databases.</p>
   </div>
@@ -44,30 +125,75 @@ Object.assign(TOPIC_CONTENT, {
     <tr><td><strong>Querying</strong></td><td>Manual filters and VLOOKUPs</td><td>One declarative query, optimised for you</td></tr>
     <tr><td><strong>Security</strong></td><td>Whoever has the file sees everything</td><td>Per-user, per-table permissions</td></tr>
   </table>
-  <div class="callout intu"><span class="label">Example: the last concert seat</span>
-    <p>Two fans click "Buy" on the last seat at the same millisecond. With a file, both reads say "1 seat left" and both purchases succeed. A database runs the two purchases as <strong>transactions</strong>: one wins, and the other sees 0 seats and fails cleanly.</p>
-  </div>
+  <p><strong>Example: the last concert seat.</strong> Fans A and B click "Buy" in the same millisecond.</p>
+  <figure class="viz"><svg viewBox="0 0 600 180" width="600">
+    <text x="145" y="20" text-anchor="middle" font-weight="bold" class="tr">CSV file</text>
+    <rect x="15" y="34" width="260" height="20" rx="4" class="fb"/><text x="25" y="48">A: read seats = 1</text>
+    <rect x="15" y="60" width="260" height="20" rx="4" class="fv"/><text x="25" y="74">B: read seats = 1</text>
+    <rect x="15" y="86" width="260" height="20" rx="4" class="fb"/><text x="25" y="100">A: buy, write seats = 0</text>
+    <rect x="15" y="112" width="260" height="20" rx="4" class="fv"/><text x="25" y="126">B: buy, write seats = 0</text>
+    <text x="145" y="160" text-anchor="middle" font-weight="bold" class="tr">2 tickets sold, 1 seat ✗</text>
+    <line x1="300" y1="10" x2="300" y2="170" stroke="currentColor" stroke-dasharray="4 4" opacity="0.4"/>
+    <text x="455" y="20" text-anchor="middle" font-weight="bold" class="tg">Database transactions</text>
+    <rect x="325" y="34" width="260" height="20" rx="4" class="fb"/><text x="335" y="48">A: BEGIN, lock the row</text>
+    <rect x="325" y="60" width="260" height="20" rx="4" class="fv"/><text x="335" y="74">B: waits for the lock…</text>
+    <rect x="325" y="86" width="260" height="20" rx="4" class="fb"/><text x="335" y="100">A: seats = 0, COMMIT</text>
+    <rect x="325" y="112" width="260" height="20" rx="4" class="fv"/><text x="335" y="126">B: reads 0, fails cleanly</text>
+    <text x="455" y="160" text-anchor="middle" font-weight="bold" class="tg">1 ticket sold, 1 seat ✓</text>
+  </svg><figcaption>Time runs downward. A file lets both reads see "1 seat"; a transaction makes B wait, then see the truth.</figcaption></figure>
 
   <h2 id="di-inside"><span class="num">03</span>Inside a Database</h2>
   <p>What happens when you run <code>SELECT name FROM customers WHERE city = 'Mumbai'</code>:</p>
-  <div class="flow"><span>Parser</span><span>Planner / Optimizer</span><span>Executor</span><span>Buffer cache</span><span>Disk pages</span></div>
-  <ul>
-    <li><strong>Parser</strong>: checks the grammar and that the table and columns exist.</li>
-    <li><strong>Optimizer</strong>: picks the cheapest way to get the answer: scan everything, or use an index? Which join order? This is why SQL is <em>declarative</em>: you say <em>what</em>, it decides <em>how</em>.</li>
-    <li><strong>Executor</strong>: runs the chosen plan.</li>
-    <li><strong>Buffer cache</strong>: recently used data kept in RAM, because memory is ~1000× faster than disk.</li>
-    <li><strong>Pages</strong>: data lives on disk in fixed blocks (8 KB in PostgreSQL). The DBMS reads whole pages, never single rows.</li>
-  </ul>
+  <figure class="viz"><svg viewBox="0 0 600 240" width="600">
+    <defs><marker id="di-ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="10" y="30" width="115" height="52" rx="8" class="fs"/>
+    <text x="67" y="52" text-anchor="middle" font-weight="bold">Query</text><text x="67" y="70" text-anchor="middle" font-size="10" class="tm">SELECT … WHERE</text>
+    <rect x="160" y="30" width="115" height="52" rx="8" class="fb sb"/>
+    <text x="217" y="52" text-anchor="middle" font-weight="bold">Parser</text><text x="217" y="70" text-anchor="middle" font-size="10" class="tm">grammar + names</text>
+    <rect x="310" y="30" width="115" height="52" rx="8" class="fv"/>
+    <text x="367" y="52" text-anchor="middle" font-weight="bold">Optimizer</text><text x="367" y="70" text-anchor="middle" font-size="10" class="tm">scan or index?</text>
+    <rect x="460" y="30" width="125" height="52" rx="8" class="ft st"/>
+    <text x="522" y="52" text-anchor="middle" font-weight="bold">Executor</text><text x="522" y="70" text-anchor="middle" font-size="10" class="tm">runs the plan</text>
+    <g stroke="currentColor" marker-end="url(#di-ar1)">
+      <line x1="125" y1="56" x2="158" y2="56"/><line x1="275" y1="56" x2="308" y2="56"/><line x1="425" y1="56" x2="458" y2="56"/>
+      <line x1="522" y1="82" x2="522" y2="138"/><line x1="290" y1="168" x2="418" y2="168"/>
+    </g>
+    <rect x="420" y="140" width="165" height="56" rx="8" class="fg sg"/>
+    <text x="502" y="163" text-anchor="middle" font-weight="bold">Buffer cache</text><text x="502" y="182" text-anchor="middle" font-size="10" class="tm">hot pages in RAM</text>
+    <rect x="40" y="140" width="250" height="56" rx="8" class="fs"/>
+    <text x="165" y="160" text-anchor="middle" font-weight="bold">Disk</text>
+    <g class="fb"><rect x="70" y="170" width="30" height="16" rx="2"/><rect x="106" y="170" width="30" height="16" rx="2"/><rect x="142" y="170" width="30" height="16" rx="2"/><rect x="178" y="170" width="30" height="16" rx="2"/><rect x="214" y="170" width="30" height="16" rx="2"/></g>
+    <text x="354" y="160" text-anchor="middle" font-size="10" class="tm">cache miss</text>
+    <text x="165" y="218" text-anchor="middle" font-size="10" class="tm">8 KB pages: read whole, never one row</text>
+    <text x="502" y="218" text-anchor="middle" font-size="10" class="tm">~1000× faster than disk</text>
+  </svg><figcaption>The optimizer picks the plan; the executor reads pages from RAM if cached, otherwise fetches 8 KB pages from disk.</figcaption></figure>
+  <p>This is what <strong>declarative</strong> means: you say <em>what</em>, the optimizer decides <em>how</em> (scan or index, join order).</p>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Ordering at a restaurant. You say <em>what</em> you want (the query). The chef (optimizer) decides <em>how</em>: which pan, what order. Ingredients already on the counter (the cache) are fast. A trip to the store room (disk) is slow.</p>
+    <p>A restaurant. You order (query); the chef (optimizer) picks pan and order. Ingredients on the counter (cache) are fast; the store room (disk) is slow.</p>
   </div>
   <h3>Two structures worth knowing now</h3>
-  <ul>
-    <li><strong>Index</strong>: a sorted lookup structure (usually a B-tree), like a book's index. It finds rows without reading the whole table. Covered in <em>Indexes &amp; Performance</em>.</li>
-    <li><strong>Write-Ahead Log (WAL)</strong>: every change is first appended to a log, then applied to the table. After a crash, the DBMS replays the log, so committed data is never lost.</li>
-  </ul>
+  <p><strong>Index</strong>: a sorted lookup (usually a B-tree), like a book's index; finds rows without a full scan. See <em>Indexes &amp; Performance</em>.</p>
+  <p><strong>Write-Ahead Log (WAL)</strong>: log first, table later.</p>
+  <figure class="viz"><svg viewBox="0 0 600 170" width="600">
+    <defs><marker id="di-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="10" y="25" width="120" height="50" rx="8" class="fs"/>
+    <text x="70" y="46" text-anchor="middle" font-weight="bold">1. UPDATE</text><text x="70" y="63" text-anchor="middle" font-size="10" class="tm">change arrives</text>
+    <rect x="170" y="25" width="150" height="50" rx="8" class="fv"/>
+    <text x="245" y="46" text-anchor="middle" font-weight="bold">2. WAL</text><text x="245" y="63" text-anchor="middle" font-size="10" class="tm">append + flush</text>
+    <rect x="360" y="25" width="110" height="50" rx="8" class="fg sg"/>
+    <text x="415" y="46" text-anchor="middle" font-weight="bold">3. COMMIT</text><text x="415" y="63" text-anchor="middle" font-size="10" class="tm">"saved" to you</text>
+    <rect x="360" y="105" width="225" height="44" rx="8" class="ft"/>
+    <text x="472" y="124" text-anchor="middle" font-weight="bold">4. Table pages</text><text x="472" y="140" text-anchor="middle" font-size="10" class="tm">updated later, in batches</text>
+    <g stroke="currentColor" marker-end="url(#di-ar2)">
+      <line x1="130" y1="50" x2="168" y2="50"/><line x1="320" y1="50" x2="358" y2="50"/>
+      <path d="M245,75 L245,127 L358,127" fill="none" stroke-dasharray="4 3"/>
+    </g>
+    <text x="20" y="115" font-size="11" class="tr">⚡ crash?</text>
+    <text x="20" y="133" font-size="10" class="tm">replay WAL: redo committed,</text>
+    <text x="20" y="148" font-size="10" class="tm">drop uncommitted</text>
+  </svg><figcaption>The commit is confirmed once the log is on disk, so a crash can never lose committed data.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy: WAL</span>
-    <p>A shopkeeper writes every sale in a receipt book <em>before</em> moving stock. If the shelves get knocked over, the receipt book tells you exactly what state they should be in.</p>
+    <p>A shopkeeper writes each sale in a receipt book <em>before</em> moving stock. If the shelves fall, the book says what they should hold.</p>
   </div>
 
   <h2 id="di-schema"><span class="num">04</span>Schema &amp; Data Shapes</h2>
@@ -103,29 +229,36 @@ Object.assign(TOPIC_CONTENT, {
 
   <h2 id="di-stack"><span class="num">06</span>Databases in a Data Stack</h2>
   <p>Real companies run several databases, each doing one job well.</p>
-  <div class="flow"><span>App DB (PostgreSQL)</span><span>ETL / CDC pipeline</span><span>Warehouse (BigQuery, Snowflake)</span><span>Dashboards &amp; ML training</span></div>
-  <ul>
-    <li><strong>OLTP</strong> (online transaction processing): the app's database. Many tiny reads and writes, such as "place this order". Needs to be fast and correct.</li>
-    <li><strong>OLAP</strong> (online analytical processing): the warehouse. Few, huge queries, such as "revenue by month for 3 years". Needs to scan fast.</li>
-    <li><strong>Supporting cast</strong>: Redis (cache), Elasticsearch (text search), a vector DB (embeddings for RAG), a feature store (ML features).</li>
-  </ul>
-  <div class="callout intu"><span class="label">Why a data scientist cares</span>
-    <p>You will mostly <em>query</em> the warehouse. Running a heavy analytical query on the production OLTP database can slow the live app. That's why the copy to a warehouse exists.</p>
+  <figure class="viz"><svg viewBox="0 0 600 200" width="600">
+    <defs><marker id="di-ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="10" y="20" width="130" height="54" rx="8" class="fb sb"/>
+    <text x="75" y="42" text-anchor="middle" font-weight="bold">App DB</text><text x="75" y="60" text-anchor="middle" font-size="10" class="tm">OLTP · PostgreSQL</text>
+    <rect x="175" y="20" width="105" height="54" rx="8" class="fs"/>
+    <text x="227" y="42" text-anchor="middle" font-weight="bold">CDC / ETL</text><text x="227" y="60" text-anchor="middle" font-size="10" class="tm">copy changes</text>
+    <rect x="315" y="20" width="140" height="54" rx="8" class="fv"/>
+    <text x="385" y="42" text-anchor="middle" font-weight="bold">Warehouse</text><text x="385" y="60" text-anchor="middle" font-size="10" class="tm">OLAP · BigQuery</text>
+    <rect x="490" y="20" width="100" height="54" rx="8" class="fg sg"/>
+    <text x="540" y="42" text-anchor="middle" font-weight="bold">BI + ML</text><text x="540" y="60" text-anchor="middle" font-size="10" class="tm">you query here</text>
+    <g stroke="currentColor" marker-end="url(#di-ar3)">
+      <line x1="140" y1="47" x2="173" y2="47"/><line x1="280" y1="47" x2="313" y2="47"/><line x1="455" y1="47" x2="488" y2="47"/>
+      <line x1="70" y1="125" x2="70" y2="143"/><line x1="215" y1="125" x2="215" y2="143"/><line x1="360" y1="125" x2="360" y2="143"/><line x1="510" y1="125" x2="510" y2="143"/>
+    </g>
+    <path d="M227,74 L227,125 M70,125 L510,125" stroke="currentColor" fill="none"/>
+    <rect x="10" y="145" width="120" height="40" rx="8" class="ft"/><text x="70" y="170" text-anchor="middle">Redis cache</text>
+    <rect x="150" y="145" width="130" height="40" rx="8" class="ft"/><text x="215" y="170" text-anchor="middle">Search (ES)</text>
+    <rect x="300" y="145" width="120" height="40" rx="8" class="ft"/><text x="360" y="170" text-anchor="middle">Vector DB</text>
+    <rect x="440" y="145" width="145" height="40" rx="8" class="ft"/><text x="512" y="170" text-anchor="middle">Feature store</text>
+  </svg><figcaption>The app DB is the source of truth; everything else is a copy shaped for one job.</figcaption></figure>
+  <table class="tbl">
+    <tr><th></th><th>OLTP (online transaction processing)</th><th>OLAP (online analytical processing)</th></tr>
+    <tr><td>Typical query</td><td>"Place this order": tiny, thousands per second</td><td>"Revenue by month for 3 years": huge, few</td></tr>
+    <tr><td>Needs</td><td>Fast and correct per row</td><td>Fast scans over history</td></tr>
+    <tr><td>Storage</td><td>Row store</td><td>Column store</td></tr>
+  </table>
+  <div class="callout trap"><span class="label">Why a data scientist cares</span>
+    <p>You mostly query the warehouse. Heavy analytics on the production OLTP database slows the live app.</p>
   </div>
-
-  <h2 id="di-rev"><span class="num">07</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>DBMS</strong> = the software (PostgreSQL); <strong>database</strong> = the organised data it manages.</li>
-    <li>Databases beat files on <strong>concurrency, integrity, crash safety, scale, querying, security</strong>.</li>
-    <li>Query path: <strong>parse → optimize → execute → cache → disk pages</strong>.</li>
-    <li>SQL is <strong>declarative</strong>: you state the result; the optimizer chooses the method.</li>
-    <li><strong>WAL</strong>: log first, apply later, so a crash never loses committed data.</li>
-    <li><strong>Schema</strong> = blueprint. SQL checks it on write; NoSQL checks it on read (in your code).</li>
-    <li><strong>OLTP</strong> = many small transactions; <strong>OLAP</strong> = few big analytical scans.</li>
-    <li>Default to PostgreSQL; pick NoSQL for a named reason.</li>
-  </ol></div>
-
-  <h2 id="di-qa"><span class="num">08</span>Questions &amp; Answers</h2>
+  <h2 id="di-qa"><span class="num">07</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>What's the difference between a database and a DBMS?</summary><div class="qa-body">The database is the organised data. The DBMS is the software that stores it, runs queries, enforces rules, handles concurrent users and recovers from crashes. PostgreSQL is a DBMS; your <code>shop</code> data is a database inside it.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Your team keeps sales data in a shared Excel file. Give three concrete reasons to move it to a database.</summary><div class="qa-body">(1) Simultaneous edits overwrite each other; transactions fix that. (2) Nothing stops a typo like "12O" in a price column; types and constraints do. (3) It won't scale past ~1M rows, while a DBMS handles billions and reads only what it needs. Also: crash recovery and per-user permissions.</div></details>

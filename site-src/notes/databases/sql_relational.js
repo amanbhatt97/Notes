@@ -4,6 +4,99 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Relational Model &amp; PostgreSQL</h1>
   <p class="lead">The foundation for every SQL page: how tables, keys and relationships fit together, the shared <code>shop</code> dataset, and the PostgreSQL types, constraints and tools you'll use daily.</p>
 
+  <h2 id="sr-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Relational Model &amp; PostgreSQL</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Relational model</div>
+        <ul>
+          <li><b>Relation</b> — a table: set of rows with the same columns</li>
+          <li><b>Row / tuple</b> — one fact; <b>column / attribute</b> — typed property (domain)</li>
+          <li>⚠ <b>Rows are unordered</b> — no <code>ORDER BY</code> = no guaranteed order</li>
+          <li><b>One big sheet</b> → 3 anomalies
+            <ul><li>update: Asha moves, edit 3 rows</li><li>insert: Dia (no orders) can't exist</li><li>delete: drop order 102, Ben vanishes</li></ul></li>
+          <li><b>Fix</b> — each fact once, linked by keys; JOIN rebuilds the wide view (normalization)</li>
+          <li>💡 <b>Phone contacts</b> — number stored once, chats refer to it</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Keys</div>
+        <ul>
+          <li><b>PK</b> — unique + NOT NULL, one per table</li>
+          <li><b>Candidate</b> — any minimal unique set; non-chosen ones get UNIQUE</li>
+          <li><b>Composite</b> — 2+ columns: <code>order_items(order_id, product_id)</code></li>
+          <li><b>FK</b> — must match a parent PK/UNIQUE value</li>
+          <li><b>Natural vs surrogate</b> — email vs generated id</li>
+          <li>⚠ natural keys change → surrogate PK + UNIQUE on natural key</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Relationships</div>
+        <ul>
+          <li><b>1:N</b> — FK on the many side (<code>orders.customer_id</code>)</li>
+          <li><b>1:1</b> — FK + UNIQUE (or shared PK)</li>
+          <li><b>M:N</b> — junction table with two FKs (<code>order_items</code>)</li>
+          <li><b>Pair facts</b> live in the junction: qty, <code>unit_price</code> (price paid at sale)</li>
+          <li><b>Self-reference</b> — <code>employees.manager_id → emp_id</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Shop dataset quirks</div>
+        <ul>
+          <li><b>Chain</b> — customers → orders → order_items ← products; employees self-FK</li>
+          <li><b>Dia</b> — no orders + NULL city → LEFT JOIN, NULL tests</li>
+          <li><b>Sara = Tom</b> salary tie → RANK vs ROW_NUMBER</li>
+          <li><b>Order 102</b> cancelled → filtering</li>
+          <li><b>Lamp</b> in two orders → join fan-out</li>
+          <li><b>Ravi</b> no manager → hierarchy root</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">SQL sub-languages</div>
+        <ul>
+          <li><b>DDL</b> — CREATE, ALTER, DROP, TRUNCATE (schema)</li>
+          <li><b>DML</b> — INSERT, UPDATE, DELETE, MERGE (rows)</li>
+          <li><b>DQL</b> — SELECT · <b>DCL</b> — GRANT, REVOKE</li>
+          <li><b>TCL</b> — BEGIN, COMMIT, ROLLBACK, SAVEPOINT</li>
+          <li>⚠ Postgres DDL is transactional (rollback-able); MySQL/Oracle auto-commit DDL</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">PostgreSQL &amp; types</div>
+        <ul>
+          <li><b>Why</b> — open source, standard SQL, extensions (PostGIS, pgvector, TimescaleDB), JSONB</li>
+          <li><b>Others</b> — MySQL (web), SQLite (a file), SQL Server (T-SQL), Oracle, BigQuery/Snowflake (analytics)</li>
+          <li><b>Ids</b> — <code>BIGINT GENERATED ALWAYS AS IDENTITY</code></li>
+          <li>⚠ <b>Money</b> → <code>NUMERIC</code>; float: 0.1 + 0.2 = 0.30000000000000004</li>
+          <li>⚠ <b>Events</b> → <code>TIMESTAMPTZ</code> (absolute instant, stored UTC); TIMESTAMP = zone-less wall clock</li>
+          <li><b>Strings</b> → <code>TEXT</code>; <code>VARCHAR(n)</code> only for a real limit; avoid CHAR(n)</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Constraints</div>
+        <ul>
+          <li><b>NOT NULL, UNIQUE, CHECK, PK, FK, DEFAULT</b> — enforced on every write</li>
+          <li>💡 app validation = sign; constraint = bouncer at every door</li>
+          <li><b>ON DELETE</b> — NO ACTION/RESTRICT refuse · CASCADE deletes children · SET NULL unlinks</li>
+          <li>⚠ UNIQUE allows many NULLs (PG15+: <code>NULLS NOT DISTINCT</code>)</li>
+          <li>⚠ identity ids have gaps (failed inserts burn values)</li>
+          <li>⚠ FK columns aren't auto-indexed — add indexes</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">psql &amp; Python</div>
+        <ul>
+          <li><b>psql</b> — <code>&#92;dt</code> tables, <code>&#92;d t</code> describe, <code>&#92;x</code> expanded</li>
+          <li><b>psycopg 3</b> — <code>conn.execute(sql, (val,))</code> with <code>%s</code> placeholders</li>
+          <li><b>pandas</b> — <code>pd.read_sql(text(...), engine, params=...)</code>; NUMERIC → float64</li>
+          <li>⚠ <b>SQL injection</b> — <code>x' OR '1'='1</code> leaks all rows; f-strings unsafe too</li>
+          <li><b>Fix</b> — bound parameters for values; allow-list / <code>sql.Identifier</code> for names</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -15,8 +108,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="sr-types"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Data Types &amp; Traps</span><span class="rm-sub">Money, time zones, strings</span></div></div>
       <div class="rm-item rm-done" data-target="sr-cons"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Constraints</span><span class="rm-sub">Rules the DB enforces</span></div></div>
       <div class="rm-item rm-done" data-target="sr-tools"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">psql &amp; Python</span><span class="rm-sub">Querying safely from code</span></div></div>
-      <div class="rm-item rm-done" data-target="sr-rev"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="sr-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="sr-qa"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
@@ -37,12 +129,12 @@ WHERE c.customer_id = 1
 ORDER BY o.order_id, p.name;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>order_id</th><th>customer</th><th>city</th><th>product</th><th>qty</th><th>unit_price</th></tr><tr><td>100</td><td>Asha</td><td>Mumbai</td><td>Lamp</td><td>2</td><td>40.00</td></tr><tr><td>100</td><td>Asha</td><td>Mumbai</td><td>Laptop</td><td>1</td><td>800.00</td></tr><tr><td>101</td><td>Asha</td><td>Mumbai</td><td>Phone</td><td>1</td><td>500.00</td></tr></table>
   <p>Stored like this, it suffers three <strong>anomalies</strong>:</p>
-  <ul>
-    <li><strong>Update</strong>: Asha moves city, so you must edit 3 rows. Miss one and the data contradicts itself.</li>
-    <li><strong>Insert</strong>: Dia has no orders, so she can't exist in an order sheet.</li>
-    <li><strong>Delete</strong>: delete Ben's only order (102) and Ben disappears.</li>
-  </ul>
-  <p>Separate tables store each fact <strong>once</strong>, linked by keys; JOINs rebuild the wide view on demand (this is <em>normalization</em>, see Data Modeling).</p>
+  <div class="cards">
+    <div><b>Update</b><p>Asha moves city: edit 3 rows. Miss one and the data contradicts itself.</p></div>
+    <div><b>Insert</b><p>Dia has no orders, so she can't exist in an order sheet.</p></div>
+    <div><b>Delete</b><p>Delete Ben's only order (102) and Ben disappears.</p></div>
+  </div>
+  <p>Fix: store each fact <strong>once</strong>, link by keys, JOIN to rebuild the wide view (<em>normalization</em>, see Data Modeling).</p>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Your phone's contacts. A number is stored once; chats refer to the contact. Change it once and every chat updates.</p>
   </div>
@@ -60,6 +152,35 @@ ORDER BY o.order_id, p.name;</div>
     <p>Emails change; real-world codes get reused or mistyped. Use a surrogate PK plus UNIQUE on the natural key: stable joins <em>and</em> no duplicates.</p>
   </div>
   <h3>The three relationship shapes</h3>
+  <figure class="viz"><svg viewBox="0 0 600 175" width="600">
+    <g font-size="10">
+    <text x="95" y="14" text-anchor="middle" font-weight="bold" font-size="12" class="tb">1 : N</text>
+    <rect x="10" y="62" width="60" height="28" rx="4" class="fb sb"/><text x="40" y="80" text-anchor="middle">Asha</text>
+    <rect x="120" y="32" width="60" height="26" rx="4" class="ft"/><text x="150" y="49" text-anchor="middle">ord 100</text>
+    <rect x="120" y="94" width="60" height="26" rx="4" class="ft"/><text x="150" y="111" text-anchor="middle">ord 101</text>
+    <g stroke="currentColor"><line x1="70" y1="76" x2="120" y2="45"/><line x1="70" y1="76" x2="120" y2="107"/></g>
+    <text x="300" y="14" text-anchor="middle" font-weight="bold" font-size="12" class="tb">1 : 1</text>
+    <rect x="215" y="62" width="60" height="28" rx="4" class="fb sb"/><text x="245" y="80" text-anchor="middle">Asha</text>
+    <rect x="325" y="62" width="60" height="28" rx="4" class="ft"/><text x="355" y="80" text-anchor="middle">profile</text>
+    <line x1="275" y1="76" x2="325" y2="76" stroke="currentColor"/>
+    <text x="505" y="14" text-anchor="middle" font-weight="bold" font-size="12" class="tb">M : N</text>
+    <rect x="410" y="38" width="40" height="24" rx="4" class="fb sb"/><text x="430" y="54" text-anchor="middle">100</text>
+    <rect x="410" y="98" width="40" height="24" rx="4" class="fb sb"/><text x="430" y="114" text-anchor="middle">103</text>
+    <rect x="470" y="26" width="64" height="20" rx="3" class="fv"/><text x="502" y="40" text-anchor="middle">100│10</text>
+    <rect x="470" y="54" width="64" height="20" rx="3" class="fv"/><text x="502" y="68" text-anchor="middle">100│13</text>
+    <rect x="470" y="86" width="64" height="20" rx="3" class="fv"/><text x="502" y="100" text-anchor="middle">103│11</text>
+    <rect x="470" y="114" width="64" height="20" rx="3" class="fv"/><text x="502" y="128" text-anchor="middle">103│12</text>
+    <rect x="550" y="26" width="46" height="20" rx="3" class="fg"/><text x="573" y="40" text-anchor="middle">Laptop</text>
+    <rect x="550" y="54" width="46" height="20" rx="3" class="fg"/><text x="573" y="68" text-anchor="middle">Lamp</text>
+    <rect x="550" y="86" width="46" height="20" rx="3" class="fg"/><text x="573" y="100" text-anchor="middle">Phone</text>
+    <rect x="550" y="114" width="46" height="20" rx="3" class="fg"/><text x="573" y="128" text-anchor="middle">Desk</text>
+    <g stroke="currentColor"><line x1="450" y1="50" x2="470" y2="36"/><line x1="450" y1="50" x2="470" y2="64"/><line x1="450" y1="110" x2="470" y2="96"/><line x1="450" y1="110" x2="470" y2="124"/>
+    <line x1="534" y1="36" x2="550" y2="36"/><line x1="534" y1="64" x2="550" y2="64"/><line x1="534" y1="96" x2="550" y2="96"/><line x1="534" y1="124" x2="550" y2="124"/></g>
+    <text x="95" y="160" text-anchor="middle" class="tm">FK on the "many" side</text>
+    <text x="300" y="160" text-anchor="middle" class="tm">FK + UNIQUE</text>
+    <text x="505" y="160" text-anchor="middle" class="tm">junction: order_items</text>
+    </g>
+  </svg><figcaption>M:N can't be one FK; the junction table holds one row per (order, product) pair.</figcaption></figure>
   <table class="tbl">
     <tr><th>Shape</th><th>How it's built</th><th>Example</th></tr>
     <tr><td><strong>1:N</strong></td><td>FK on the "many" side</td><td>One customer → many orders (<code>orders.customer_id</code>)</td></tr>
@@ -78,8 +199,30 @@ ORDER BY 1;</div>
 
   <h2 id="sr-shop"><span class="num">03</span>The Shop Dataset</h2>
   <p>This is <strong>the dataset every SQL page uses</strong>. Learn its quirks once.</p>
-  <div class="flow"><span>customers</span><span>orders (customer_id)</span><span>order_items (order_id, product_id)</span><span>products</span></div>
-  <p>Plus <code>employees</code>, whose <code>manager_id</code> points back to <code>employees.emp_id</code> (a <strong>self-referencing</strong> FK, used for self-joins and hierarchies).</p>
+  <figure class="viz"><svg viewBox="0 0 600 245" width="600">
+    <defs><marker id="sr-ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <g font-size="10">
+      <rect x="5" y="20" width="115" height="92" rx="6" class="fs"/><rect x="5" y="20" width="115" height="20" rx="6" class="fb"/>
+      <text x="62" y="34" text-anchor="middle" font-weight="bold" font-size="11">customers</text>
+      <text x="12" y="56" class="tb">PK customer_id</text><text x="12" y="72">name</text><text x="12" y="88">city</text><text x="12" y="104">signup_date</text>
+      <rect x="160" y="20" width="120" height="92" rx="6" class="fs"/><rect x="160" y="20" width="120" height="20" rx="6" class="fb"/>
+      <text x="220" y="34" text-anchor="middle" font-weight="bold" font-size="11">orders</text>
+      <text x="167" y="56" class="tb">PK order_id</text><text x="167" y="72" class="tg">FK customer_id</text><text x="167" y="88">order_date</text><text x="167" y="104">status</text>
+      <rect x="320" y="20" width="135" height="92" rx="6" class="fs"/><rect x="320" y="20" width="135" height="20" rx="6" class="fv"/>
+      <text x="387" y="34" text-anchor="middle" font-weight="bold" font-size="11">order_items</text>
+      <text x="327" y="56" class="tg">PK,FK order_id</text><text x="327" y="72" class="tg">PK,FK product_id</text><text x="327" y="88">qty</text><text x="327" y="104">unit_price</text>
+      <rect x="495" y="20" width="100" height="92" rx="6" class="fs"/><rect x="495" y="20" width="100" height="20" rx="6" class="fb"/>
+      <text x="545" y="34" text-anchor="middle" font-weight="bold" font-size="11">products</text>
+      <text x="501" y="56" class="tb">PK product_id</text><text x="501" y="72">name</text><text x="501" y="88">category</text><text x="501" y="104">price</text>
+      <g stroke="currentColor" fill="none"><path d="M160,68 L140,68 L140,52 L120,52"/><line x1="320" y1="52" x2="280" y2="52"/><path d="M455,68 L475,68 L475,52 L495,52"/></g>
+      <g font-size="11" font-weight="bold" class="tr"><text x="124" y="48">1</text><text x="150" y="64">N</text><text x="284" y="48">1</text><text x="310" y="48">N</text><text x="461" y="64">N</text><text x="485" y="48">1</text></g>
+      <rect x="200" y="140" width="150" height="92" rx="6" class="fs"/><rect x="200" y="140" width="150" height="20" rx="6" class="ft"/>
+      <text x="275" y="154" text-anchor="middle" font-weight="bold" font-size="11">employees</text>
+      <text x="207" y="176" class="tb">PK emp_id</text><text x="207" y="192">name, dept</text><text x="207" y="208">salary</text><text x="207" y="224" class="tg">FK manager_id</text>
+      <path d="M350,220 C405,220 405,172 352,172" fill="none" stroke="currentColor" marker-end="url(#sr-ar1)"/>
+      <text x="410" y="200" class="tm">self-referencing FK</text>
+    </g>
+  </svg><figcaption>Read "1 … N" as "one customer has many orders". order_items is the M:N bridge; employees points at itself.</figcaption></figure>
   <table class="tbl"><caption>customers</caption><tr><th>customer_id</th><th>name</th><th>city</th><th>signup_date</th></tr><tr><td>1</td><td>Asha</td><td>Mumbai</td><td>2024-01-05</td></tr><tr><td>2</td><td>Ben</td><td>Delhi</td><td>2024-02-10</td></tr><tr><td>3</td><td>Chen</td><td>Mumbai</td><td>2024-03-15</td></tr><tr><td>4</td><td>Dia</td><td>NULL</td><td>2024-04-20</td></tr></table>
   <table class="tbl"><caption>products</caption><tr><th>product_id</th><th>name</th><th>category</th><th>price</th></tr><tr><td>10</td><td>Laptop</td><td>Electronics</td><td>800.00</td></tr><tr><td>11</td><td>Phone</td><td>Electronics</td><td>500.00</td></tr><tr><td>12</td><td>Desk</td><td>Furniture</td><td>150.00</td></tr><tr><td>13</td><td>Lamp</td><td>Furniture</td><td>40.00</td></tr></table>
   <table class="tbl"><caption>orders</caption><tr><th>order_id</th><th>customer_id</th><th>order_date</th><th>status</th></tr><tr><td>100</td><td>1</td><td>2024-05-01</td><td>delivered</td></tr><tr><td>101</td><td>1</td><td>2024-05-20</td><td>delivered</td></tr><tr><td>102</td><td>2</td><td>2024-06-02</td><td>cancelled</td></tr><tr><td>103</td><td>3</td><td>2024-06-15</td><td>delivered</td></tr><tr><td>104</td><td>3</td><td>2024-07-01</td><td>pending</td></tr></table>
@@ -124,13 +267,8 @@ DELETE FROM orders WHERE order_id = 104;
   </div>
 
   <h2 id="sr-pg"><span class="num">05</span>Why PostgreSQL</h2>
-  <p>PostgreSQL ("Postgres") is an open-source relational DBMS and the sensible default for new projects.</p>
-  <ul>
-    <li><strong>Open source</strong>, no lock-in; every cloud offers it managed.</li>
-    <li><strong>Standards-compliant</strong>: window functions, CTEs, <code>MERGE</code>, <code>FILTER</code>, full ACID with transactional DDL.</li>
-    <li><strong>Extensions</strong>: PostGIS (maps/geo), pgvector (embeddings), TimescaleDB (time-series), pg_stat_statements (query stats).</li>
-    <li><strong>JSONB</strong>: indexed binary JSON, so one DB can hold both tables and documents.</li>
-  </ul>
+  <p>PostgreSQL ("Postgres"): open-source relational DBMS, the sensible default.</p>
+  <div class="flow"><span>Open source, managed on every cloud</span><span>Standard SQL + ACID + transactional DDL</span><span>Extensions: PostGIS, pgvector, TimescaleDB</span><span>JSONB: tables + documents</span></div>
   <div class="cards">
     <div><b>PostgreSQL</b><p>Feature-rich, strict, extensible. The default choice.</p><small>Instagram, Reddit, most startups</small></div>
     <div><b>MySQL</b><p>Simple, fast reads, huge web ecosystem. Historically looser with types.</p><small>WordPress, early Facebook, Shopify</small></div>
@@ -200,6 +338,27 @@ INSERT INTO reviews (customer_id, product_id, rating) VALUES (1, 10, 5);  -- INS
     <tr><td><code>DELETE FROM customers WHERE customer_id = 1</code></td><td>update or delete on table "customers" violates foreign key constraint "orders_customer_id_fkey" on table "orders"</td></tr>
   </table>
   <h3>ON DELETE behaviour</h3>
+  <figure class="viz"><svg viewBox="0 0 600 160" width="600">
+    <g font-size="10">
+    <text x="100" y="16" text-anchor="middle" font-weight="bold" font-size="12">RESTRICT / NO ACTION</text>
+    <rect x="55" y="30" width="90" height="28" rx="4" class="fb sb"/><text x="100" y="48" text-anchor="middle">customer 1</text>
+    <rect x="15" y="90" width="80" height="26" rx="4" class="ft"/><text x="55" y="107" text-anchor="middle">order 100</text>
+    <rect x="105" y="90" width="80" height="26" rx="4" class="ft"/><text x="145" y="107" text-anchor="middle">order 101</text>
+    <g stroke="currentColor"><line x1="100" y1="58" x2="55" y2="90"/><line x1="100" y1="58" x2="145" y2="90"/></g>
+    <text x="100" y="145" text-anchor="middle" class="tr">✗ DELETE refused</text>
+    <text x="300" y="16" text-anchor="middle" font-weight="bold" font-size="12">CASCADE</text>
+    <rect x="255" y="30" width="90" height="28" rx="4" class="fr sr" stroke-dasharray="4 3"/><text x="300" y="48" text-anchor="middle" class="tm">deleted</text>
+    <rect x="215" y="90" width="80" height="26" rx="4" class="fr sr" stroke-dasharray="4 3"/><text x="255" y="107" text-anchor="middle" class="tm">deleted</text>
+    <rect x="305" y="90" width="80" height="26" rx="4" class="fr sr" stroke-dasharray="4 3"/><text x="345" y="107" text-anchor="middle" class="tm">deleted</text>
+    <g stroke="currentColor" stroke-dasharray="3 3" opacity="0.5"><line x1="300" y1="58" x2="255" y2="90"/><line x1="300" y1="58" x2="345" y2="90"/></g>
+    <text x="300" y="145" text-anchor="middle" class="tm">children deleted too</text>
+    <text x="500" y="16" text-anchor="middle" font-weight="bold" font-size="12">SET NULL</text>
+    <rect x="455" y="30" width="90" height="28" rx="4" class="fr sr" stroke-dasharray="4 3"/><text x="500" y="48" text-anchor="middle" class="tm">deleted</text>
+    <rect x="415" y="90" width="80" height="26" rx="4" class="ft"/><text x="455" y="107" text-anchor="middle">fk = NULL</text>
+    <rect x="505" y="90" width="80" height="26" rx="4" class="ft"/><text x="545" y="107" text-anchor="middle">fk = NULL</text>
+    <text x="500" y="145" text-anchor="middle" class="tm">children kept, unlinked</text>
+    </g>
+  </svg><figcaption>What happens to child rows when you <code>DELETE</code> the parent row they point at.</figcaption></figure>
   <table class="tbl">
     <tr><th>Option</th><th>When the parent row is deleted</th><th>Use for</th></tr>
     <tr><td><code>NO ACTION</code> (default) / <code>RESTRICT</code></td><td>Delete is refused while children exist</td><td>Orders, payments: history must survive</td></tr>
@@ -279,22 +438,7 @@ print(df)
   <div class="callout trap"><span class="label">Trap</span>
     <p>f-strings and <code>%</code> formatting are as unsafe as <code>+</code>. Parameters replace only <em>values</em>; user-chosen column names need an allow-list or <code>psycopg.sql.Identifier</code>.</p>
   </div>
-
-  <h2 id="sr-rev"><span class="num">09</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Relation</strong> = table; <strong>row</strong> = one fact; <strong>column</strong> has a type/domain. Rows are unordered.</li>
-    <li>One big sheet causes <strong>update, insert and delete anomalies</strong>; separate tables store each fact once.</li>
-    <li><strong>PK</strong> unique + not null; <strong>FK</strong> must match a parent key; <strong>composite</strong> = multi-column.</li>
-    <li>Prefer a <strong>surrogate PK</strong> plus UNIQUE on the natural key.</li>
-    <li><strong>1:N</strong> = FK on the many side; <strong>1:1</strong> = FK + UNIQUE; <strong>M:N</strong> = junction table (order_items).</li>
-    <li><strong>DDL</strong> schema, <strong>DML</strong> rows, <strong>DQL</strong> SELECT, <strong>DCL</strong> grants, <strong>TCL</strong> transactions.</li>
-    <li>Postgres: open source, standard, extensions (PostGIS, pgvector), JSONB, transactional DDL.</li>
-    <li>Money → <strong>NUMERIC</strong>; events → <strong>TIMESTAMPTZ</strong>; strings → <strong>TEXT</strong>.</li>
-    <li>ON DELETE: default refuses, <strong>CASCADE</strong> deletes children, <strong>SET NULL</strong> unlinks.</li>
-    <li>From Python, always use <strong>parameters</strong>, never string-built SQL.</li>
-  </ol></div>
-
-  <h2 id="sr-qa"><span class="num">10</span>Questions &amp; Answers</h2>
+  <h2 id="sr-qa"><span class="num">09</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>Primary key vs UNIQUE constraint?</summary><div class="qa-body">Both block duplicates and create an index. One PK per table, always NOT NULL, the usual FK target. Many UNIQUE constraints allowed, and they accept NULLs.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>How do you model students and courses, where each student takes many courses?</summary><div class="qa-body">M:N, so a junction table: <code>enrollments(student_id FK, course_id FK, grade, PRIMARY KEY (student_id, course_id))</code>. Facts about the pair (grade, enrol date) live in the junction table. In shop, <code>order_items</code> is exactly this for orders ↔ products.</div></details>

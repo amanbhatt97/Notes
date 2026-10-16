@@ -4,6 +4,98 @@ Object.assign(TOPIC_CONTENT, {
   <h1>Querying Basics</h1>
   <p class="lead">Reading, filtering, grouping and changing data with one table at a time. Most interview SQL is these pieces combined, plus the NULL and ordering rules that trip people up.</p>
 
+  <h2 id="sf-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Querying Basics</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">SELECT &amp; expressions</div>
+        <ul>
+          <li><b>FROM</b> names the table; <b>SELECT</b> picks/computes columns</li>
+          <li><b>Alias</b> — <code>price * 1.18 AS price_with_gst</code>; table alias <code>FROM customers c</code></li>
+          <li><b>Cast</b> — <code>'42'::int</code> or <code>CAST(x AS int)</code></li>
+          <li>⚠ <b>Integer division</b> — 3 / 5 = 0; use <code>::numeric</code> or <code>1.0 *</code></li>
+          <li>⚠ avoid <code>SELECT *</code> in real code</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">WHERE filters</div>
+        <ul>
+          <li><b>Keeps only TRUE</b> rows; AND / OR / NOT, bracket mixes</li>
+          <li><b>IN</b> — many ORs · <b>BETWEEN</b> — inclusive both ends</li>
+          <li><b>LIKE</b> — <code>%</code> any run, <code>_</code> one char · <b>ILIKE</b> case-insensitive (PG)</li>
+          <li>⚠ <b>Timestamp BETWEEN</b> drops the last day → half-open <code>&gt;= start AND &lt; next</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Logical order</div>
+        <ul>
+          <li><b>FROM → WHERE → GROUP BY → HAVING → SELECT → DISTINCT → ORDER BY → LIMIT</b></li>
+          <li>⚠ alias in WHERE fails (SELECT not run yet); fine in ORDER BY</li>
+          <li>⚠ aggregates in WHERE fail → HAVING</li>
+          <li><b>LIMIT last</b> — after sorting, so "top N" is defined</li>
+          <li><b>Logical ≠ physical</b> — optimizer may reorder, result must match</li>
+          <li>💡 cook: fetch, discard, bowl, drop small bowls, plate + name, arrange, serve</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">NULL &amp; 3-valued logic</div>
+        <ul>
+          <li><b>NULL</b> = unknown, not 0 or ''; comparisons → UNKNOWN; WHERE drops it</li>
+          <li>⚠ <code>city = NULL</code> → 0 rows; <code>city &lt;&gt; 'Mumbai'</code> drops Dia</li>
+          <li><b>IS NULL</b> only correct test · <b>COALESCE</b> default · <b>NULLIF(y,0)</b> avoid ÷0</li>
+          <li><b>IS DISTINCT FROM</b> — NULL-safe ≠</li>
+          <li><b>Truth</b> — FALSE AND U = F; TRUE OR U = T; else UNKNOWN</li>
+          <li>⚠ NULL spreads: <code>'a' || NULL</code> = NULL; <code>CONCAT</code> skips NULLs</li>
+          <li>💡 sealed envelope — only ask "is it sealed?"</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Sort, page, DISTINCT</div>
+        <ul>
+          <li><b>No ORDER BY = no guaranteed order</b></li>
+          <li><b>NULLs</b> — last in ASC, first in DESC (PG); <code>NULLS LAST</code> to override</li>
+          <li><b>LIMIT n OFFSET k</b>; ⚠ large OFFSET still reads skipped rows</li>
+          <li>⚠ ties (Sara = Tom) → add tiebreaker or <code>DENSE_RANK</code></li>
+          <li><b>DISTINCT</b> — whole row; NULLs count as one</li>
+          <li>⚠ DISTINCT to hide duplicates usually masks a join fan-out</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Aggregates &amp; GROUP BY</div>
+        <ul>
+          <li><b>COUNT, SUM, AVG, MIN, MAX</b> — many rows → one value</li>
+          <li><b>COUNT(*)</b> rows · <b>COUNT(col)</b> non-NULL · <b>COUNT(DISTINCT col)</b> unique (4 / 3 / 2)</li>
+          <li><b>NULLs ignored</b> except COUNT(*); AVG divides by non-NULL count</li>
+          <li>⚠ zero rows: COUNT = 0, SUM/AVG/MAX = NULL</li>
+          <li><b>WHERE</b> rows before grouping · <b>HAVING</b> groups after</li>
+          <li>⚠ every SELECT column must be a GROUP BY key or aggregate</li>
+          <li>💡 receipts into piles, one summary line per pile</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">CASE &amp; pivots</div>
+        <ul>
+          <li><b>CASE WHEN … THEN … ELSE … END</b> — first match wins; no ELSE → NULL</li>
+          <li><b>Conditional aggregation</b> — <code>SUM(CASE WHEN s='delivered' THEN 1 ELSE 0 END)</code></li>
+          <li><b>FILTER</b> — <code>COUNT(*) FILTER (WHERE status='cancelled')</code></li>
+          <li><b>Rate</b> — <code>AVG(CASE WHEN cond THEN 1.0 ELSE 0 END)</code> + GROUP BY</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Dates, strings, writes</div>
+        <ul>
+          <li><b>DATE_TRUNC('month', d)</b>, <b>EXTRACT(DOW …)</b> (0 = Sun), <code>+ INTERVAL '30 days'</code>, date − date = days</li>
+          <li><b>||</b> concat, LOWER/UPPER/TRIM/LENGTH; <code>GROUP BY 1</code> = first column</li>
+          <li>⚠ function on column in WHERE blocks index → use range</li>
+          <li><b>INSERT / UPDATE / DELETE … RETURNING</b></li>
+          <li><b>UPSERT</b> — <code>ON CONFLICT (id) DO UPDATE SET p = EXCLUDED.p</code> / DO NOTHING</li>
+          <li>⚠ UPDATE without WHERE hits every row → SELECT first, BEGIN … ROLLBACK</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
@@ -16,8 +108,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="sf-case"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">CASE &amp; Conditional Aggregation</span><span class="rm-sub">Pivot counts in one pass</span></div></div>
       <div class="rm-item rm-done" data-target="sf-func"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Dates &amp; Strings</span><span class="rm-sub">DATE_TRUNC, intervals, ||</span></div></div>
       <div class="rm-item rm-done" data-target="sf-write"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Writing Data</span><span class="rm-sub">INSERT, UPDATE, UPSERT</span></div></div>
-      <div class="rm-item rm-done" data-target="sf-rev"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Quick Revision</span><span class="rm-sub">Everything in 10 lines</span></div></div>
-      <div class="rm-item rm-done" data-target="sf-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Predict the output</span></div></div>
+      <div class="rm-item rm-done" data-target="sf-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Predict the output</span></div></div>
     </div>
   </div>
 
@@ -26,11 +117,11 @@ Object.assign(TOPIC_CONTENT, {
   <div class="fx" data-lang="sql">SELECT name, price, price * 1.18 AS price_with_gst
 FROM products;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>price</th><th>price_with_gst</th></tr><tr><td>Laptop</td><td>800.00</td><td>944.0000</td></tr><tr><td>Phone</td><td>500.00</td><td>590.0000</td></tr><tr><td>Desk</td><td>150.00</td><td>177.0000</td></tr><tr><td>Lamp</td><td>40.00</td><td>47.2000</td></tr></table>
-  <ul>
-    <li><strong>Table alias</strong>: <code>FROM customers AS c</code> lets you write <code>c.city</code>. Essential once you join tables.</li>
-    <li><strong>Casting</strong> converts a type: <code>'42'::int</code> (Postgres shorthand) or standard <code>CAST(price AS int)</code>.</li>
-    <li>Avoid <code>SELECT *</code> in real code: it breaks when columns change and reads more data than needed.</li>
-  </ul>
+  <table class="tbl">
+    <tr><td><strong>Table alias</strong></td><td><code>FROM customers AS c</code> → <code>c.city</code>; essential for joins</td></tr>
+    <tr><td><strong>Cast</strong></td><td><code>'42'::int</code> (Postgres) or <code>CAST(price AS int)</code></td></tr>
+    <tr><td><strong>Avoid <code>SELECT *</code></strong></td><td>Breaks when columns change; reads more than needed</td></tr>
+  </table>
   <h3>The integer division trap</h3>
   <p>Integer ÷ integer gives an integer; the fraction is thrown away.</p>
   <div class="fx" data-lang="sql">SELECT COUNT(*) FILTER (WHERE status = 'delivered') / COUNT(*) AS wrong,
@@ -56,22 +147,32 @@ FROM orders
 WHERE order_date BETWEEN '2024-05-01' AND '2024-06-02';</div>
   <table class="tbl out"><caption>Result</caption><tr><th>order_id</th><th>order_date</th></tr><tr><td>100</td><td>2024-05-01</td></tr><tr><td>101</td><td>2024-05-20</td></tr><tr><td>102</td><td>2024-06-02</td></tr></table>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>On a <em>timestamp</em> column, <code>BETWEEN '2024-06-01' AND '2024-06-30'</code> stops at midnight on the 30th and drops that whole day. Use a half-open range: <code>ts &gt;= '2024-06-01' AND ts &lt; '2024-07-01'</code>.</p>
+    <p>On a <em>timestamp</em> column, <code>BETWEEN '2024-06-01' AND '2024-06-30'</code> stops at midnight on the 30th. Use a half-open range.</p>
   </div>
+  <figure class="viz"><svg viewBox="0 0 600 140" width="600">
+    <line x1="40" y1="50" x2="570" y2="50" stroke="currentColor"/>
+    <g stroke="currentColor"><line x1="60" y1="44" x2="60" y2="56"/><line x1="440" y1="44" x2="440" y2="56"/><line x1="520" y1="44" x2="520" y2="56"/></g>
+    <g font-size="10" text-anchor="middle" class="tm"><text x="60" y="38">Jun 1 00:00</text><text x="425" y="38">Jun 30 00:00</text><text x="530" y="38">Jul 1 00:00</text></g>
+    <circle cx="475" cy="50" r="6" class="fr sr"/><text x="475" y="16" text-anchor="middle" font-size="10" class="tr">order at Jun 30 10:00</text>
+    <rect x="60" y="66" width="380" height="24" rx="4" class="fr sr"/><text x="70" y="82" font-size="10">BETWEEN '2024-06-01' AND '2024-06-30'</text>
+    <text x="450" y="82" font-size="10" class="tr">✗ misses it</text>
+    <rect x="60" y="100" width="460" height="24" rx="4" class="fg sg"/><text x="70" y="116" font-size="10">ts &gt;= '2024-06-01' AND ts &lt; '2024-07-01'</text>
+    <text x="528" y="116" font-size="10" class="tg">✓</text>
+  </svg><figcaption>On timestamps, '2024-06-30' means midnight at the start of the 30th, so BETWEEN loses almost the whole last day.</figcaption></figure>
 
   <h2 id="sf-exec"><span class="num">03</span>Logical Execution Order</h2>
   <p>You <em>write</em> SELECT first, but the database <em>evaluates</em> clauses in this order:</p>
-  <div class="flow"><span>FROM / JOIN</span><span>WHERE</span><span>GROUP BY</span><span>HAVING</span><span>SELECT</span><span>DISTINCT</span><span>ORDER BY</span><span>LIMIT</span></div>
+  <figure class="viz"><svg viewBox="0 0 600 205" width="600">
+    <text x="38" y="20" text-anchor="middle" font-size="10" class="tm">1</text><rect x="5" y="26" width="66" height="34" rx="6" class="fb"/><text x="38" y="47" text-anchor="middle" font-size="10" font-weight="bold">FROM</text><line x1="71" y1="43" x2="79" y2="43" stroke="currentColor"/><text x="112" y="20" text-anchor="middle" font-size="10" class="tm">2</text><rect x="79" y="26" width="66" height="34" rx="6" class="fb"/><text x="112" y="47" text-anchor="middle" font-size="10" font-weight="bold">WHERE</text><line x1="145" y1="43" x2="153" y2="43" stroke="currentColor"/><text x="186" y="20" text-anchor="middle" font-size="10" class="tm">3</text><rect x="153" y="26" width="66" height="34" rx="6" class="ft"/><text x="186" y="47" text-anchor="middle" font-size="10" font-weight="bold">GROUP BY</text><line x1="219" y1="43" x2="227" y2="43" stroke="currentColor"/><text x="260" y="20" text-anchor="middle" font-size="10" class="tm">4</text><rect x="227" y="26" width="66" height="34" rx="6" class="ft"/><text x="260" y="47" text-anchor="middle" font-size="10" font-weight="bold">HAVING</text><line x1="293" y1="43" x2="301" y2="43" stroke="currentColor"/><text x="334" y="20" text-anchor="middle" font-size="10" class="tm">5</text><rect x="301" y="26" width="66" height="34" rx="6" class="fg"/><text x="334" y="47" text-anchor="middle" font-size="10" font-weight="bold">SELECT</text><line x1="367" y1="43" x2="375" y2="43" stroke="currentColor"/><text x="408" y="20" text-anchor="middle" font-size="10" class="tm">6</text><rect x="375" y="26" width="66" height="34" rx="6" class="fs"/><text x="408" y="47" text-anchor="middle" font-size="10" font-weight="bold">DISTINCT</text><line x1="441" y1="43" x2="449" y2="43" stroke="currentColor"/><text x="482" y="20" text-anchor="middle" font-size="10" class="tm">7</text><rect x="449" y="26" width="66" height="34" rx="6" class="fs"/><text x="482" y="47" text-anchor="middle" font-size="10" font-weight="bold">ORDER BY</text><line x1="515" y1="43" x2="523" y2="43" stroke="currentColor"/><text x="556" y="20" text-anchor="middle" font-size="10" class="tm">8</text><rect x="523" y="26" width="66" height="34" rx="6" class="fs"/><text x="556" y="47" text-anchor="middle" font-size="10" font-weight="bold">LIMIT</text>
+    <rect x="5" y="80" width="140" height="24" rx="5" class="fb sb"/><text x="13" y="96" font-size="10">raw rows only</text>
+    <rect x="153" y="112" width="436" height="24" rx="5" class="ft st"/><text x="161" y="128" font-size="10">groups + aggregates exist: HAVING, SELECT, ORDER BY can use them</text>
+    <rect x="301" y="144" width="288" height="24" rx="5" class="fg sg"/><text x="309" y="160" font-size="10">SELECT aliases exist: ORDER BY can use</text>
+    <text x="5" y="192" font-size="11" class="tr">✗ WHERE doubled &gt; 500 · ✗ WHERE COUNT(*) &gt; 1</text>
+    <text x="589" y="192" font-size="11" text-anchor="end" class="tg">✓ ORDER BY doubled</text>
+  </svg><figcaption>Each bar shows what exists from that step onward. WHERE runs at step 2, before groups or aliases are born.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Cooking: fetch ingredients (FROM), throw out bad ones (WHERE), sort into bowls (GROUP BY), drop small bowls (HAVING), plate up and name the dish (SELECT), then arrange plates (ORDER BY) and serve the first few (LIMIT). You can't refer to a dish's name before it's plated.</p>
+    <p>Cooking: fetch (FROM), discard bad (WHERE), sort into bowls (GROUP BY), drop small bowls (HAVING), plate and name (SELECT), arrange (ORDER BY), serve a few (LIMIT). You can't use a dish's name before it's plated.</p>
   </div>
-  <p>This one list explains most "why does this error?" questions:</p>
-  <ul>
-    <li><strong>Aliases fail in WHERE</strong>: the alias is created in SELECT, which runs later.</li>
-    <li><strong>Aliases work in ORDER BY</strong>: it runs after SELECT.</li>
-    <li><strong>Aggregates fail in WHERE</strong>: groups don't exist yet. Filter groups in HAVING.</li>
-    <li><strong>LIMIT applies last</strong>, after sorting, so "top 2" is well defined.</li>
-  </ul>
   <div class="fx" data-lang="sql">SELECT name, price * 2 AS doubled FROM products WHERE doubled &gt; 500;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>ERROR</th></tr><tr><td>column "doubled" does not exist</td></tr></table>
   <div class="fx" data-lang="sql">SELECT name, price * 2 AS doubled FROM products ORDER BY doubled DESC;</div>
@@ -102,7 +203,11 @@ SELECT name FROM customers WHERE city &lt;&gt; 'Mumbai'; -- Dia missing!</div>
   <div class="fx" data-lang="sql">SELECT TRUE AND NULL AS t_and_n, FALSE AND NULL AS f_and_n,
        TRUE OR NULL AS t_or_n, NOT NULL::boolean AS not_n;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>t_and_n</th><th>f_and_n</th><th>t_or_n</th><th>not_n</th></tr><tr><td>NULL</td><td>f</td><td>t</td><td>NULL</td></tr></table>
-  <p>Rule: if the known side already decides the answer (FALSE AND …, TRUE OR …), you get that answer. Otherwise UNKNOWN.</p>
+  <figure class="viz"><svg viewBox="0 0 600 175" width="600">
+    <text x="300" y="16" text-anchor="middle" font-size="11" class="tm">T = TRUE, F = FALSE, U = UNKNOWN (NULL)</text>
+    <text x="37.0" y="51.0" text-anchor="middle" font-weight="bold">AND</text><text x="71.0" y="51.0" text-anchor="middle" font-weight="bold" class="tm">T</text><text x="37.0" y="85.0" text-anchor="middle" font-weight="bold" class="tm">T</text><text x="105.0" y="51.0" text-anchor="middle" font-weight="bold" class="tm">F</text><text x="37.0" y="119.0" text-anchor="middle" font-weight="bold" class="tm">F</text><text x="139.0" y="51.0" text-anchor="middle" font-weight="bold" class="tm">U</text><text x="37.0" y="153.0" text-anchor="middle" font-weight="bold" class="tm">U</text><rect x="55" y="65" width="32" height="32" rx="4" class="fg"/><text x="71.0" y="85.0" text-anchor="middle">T</text><rect x="89" y="65" width="32" height="32" rx="4" class="fr"/><text x="105.0" y="85.0" text-anchor="middle">F</text><rect x="123" y="65" width="32" height="32" rx="4" class="fs"/><text x="139.0" y="85.0" text-anchor="middle">U</text><rect x="55" y="99" width="32" height="32" rx="4" class="fr"/><text x="71.0" y="119.0" text-anchor="middle">F</text><rect x="89" y="99" width="32" height="32" rx="4" class="fr"/><text x="105.0" y="119.0" text-anchor="middle">F</text><rect x="123" y="99" width="32" height="32" rx="4" class="fr"/><text x="139.0" y="119.0" text-anchor="middle">F</text><rect x="55" y="133" width="32" height="32" rx="4" class="fs"/><text x="71.0" y="153.0" text-anchor="middle">U</text><rect x="89" y="133" width="32" height="32" rx="4" class="fr"/><text x="105.0" y="153.0" text-anchor="middle">F</text><rect x="123" y="133" width="32" height="32" rx="4" class="fs"/><text x="139.0" y="153.0" text-anchor="middle">U</text><text x="237.0" y="51.0" text-anchor="middle" font-weight="bold">OR</text><text x="271.0" y="51.0" text-anchor="middle" font-weight="bold" class="tm">T</text><text x="237.0" y="85.0" text-anchor="middle" font-weight="bold" class="tm">T</text><text x="305.0" y="51.0" text-anchor="middle" font-weight="bold" class="tm">F</text><text x="237.0" y="119.0" text-anchor="middle" font-weight="bold" class="tm">F</text><text x="339.0" y="51.0" text-anchor="middle" font-weight="bold" class="tm">U</text><text x="237.0" y="153.0" text-anchor="middle" font-weight="bold" class="tm">U</text><rect x="255" y="65" width="32" height="32" rx="4" class="fg"/><text x="271.0" y="85.0" text-anchor="middle">T</text><rect x="289" y="65" width="32" height="32" rx="4" class="fg"/><text x="305.0" y="85.0" text-anchor="middle">T</text><rect x="323" y="65" width="32" height="32" rx="4" class="fg"/><text x="339.0" y="85.0" text-anchor="middle">T</text><rect x="255" y="99" width="32" height="32" rx="4" class="fg"/><text x="271.0" y="119.0" text-anchor="middle">T</text><rect x="289" y="99" width="32" height="32" rx="4" class="fr"/><text x="305.0" y="119.0" text-anchor="middle">F</text><rect x="323" y="99" width="32" height="32" rx="4" class="fs"/><text x="339.0" y="119.0" text-anchor="middle">U</text><rect x="255" y="133" width="32" height="32" rx="4" class="fg"/><text x="271.0" y="153.0" text-anchor="middle">T</text><rect x="289" y="133" width="32" height="32" rx="4" class="fs"/><text x="305.0" y="153.0" text-anchor="middle">U</text><rect x="323" y="133" width="32" height="32" rx="4" class="fs"/><text x="339.0" y="153.0" text-anchor="middle">U</text><text x="457.0" y="51.0" text-anchor="middle" font-weight="bold" class="tm">x</text><text x="491.0" y="51.0" text-anchor="middle" font-weight="bold">NOT</text><text x="457.0" y="85.0" text-anchor="middle" font-weight="bold" class="tm">T</text><rect x="475" y="65" width="32" height="32" rx="4" class="fr"/><text x="491.0" y="85.0" text-anchor="middle">F</text><text x="457.0" y="119.0" text-anchor="middle" font-weight="bold" class="tm">F</text><rect x="475" y="99" width="32" height="32" rx="4" class="fg"/><text x="491.0" y="119.0" text-anchor="middle">T</text><text x="457.0" y="153.0" text-anchor="middle" font-weight="bold" class="tm">U</text><rect x="475" y="133" width="32" height="32" rx="4" class="fs"/><text x="491.0" y="153.0" text-anchor="middle">U</text>
+  </svg><figcaption>Green = TRUE, red = FALSE, grey = UNKNOWN. Only a known side that already decides the answer escapes UNKNOWN.</figcaption></figure>
+  <p>Rule: FALSE AND anything = FALSE; TRUE OR anything = TRUE; otherwise UNKNOWN.</p>
   <div class="callout trap"><span class="label">Trap</span>
     <p><code>'Asha' || NULL</code> is NULL, and <code>price + NULL</code> is NULL. NULL spreads through expressions. Wrap nullable inputs in <code>COALESCE</code>, or use <code>CONCAT()</code>, which skips NULLs.</p>
   </div>
@@ -146,6 +251,26 @@ FROM customers;</div>
   </ul>
   <h3>WHERE vs HAVING</h3>
   <p><code>WHERE</code> filters <strong>rows</strong> before grouping. <code>HAVING</code> filters <strong>groups</strong> after aggregation.</p>
+  <figure class="viz"><svg viewBox="0 0 600 190" width="600">
+    <defs><marker id="sf-ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <g font-size="10">
+    <text x="70" y="14" text-anchor="middle" font-weight="bold">orders</text>
+    <rect x="15" y="22" width="110" height="22" rx="3" class="fb"/><text x="22" y="37">100 · c1 · deliv</text>
+    <rect x="15" y="48" width="110" height="22" rx="3" class="fb"/><text x="22" y="63">101 · c1 · deliv</text>
+    <rect x="15" y="74" width="110" height="22" rx="3" class="fr sr" stroke-dasharray="3 3"/><text x="22" y="89" class="tm">102 · c2 · cancel</text>
+    <rect x="15" y="100" width="110" height="22" rx="3" class="fv"/><text x="22" y="115">103 · c3 · deliv</text>
+    <rect x="15" y="126" width="110" height="22" rx="3" class="fv"/><text x="22" y="141">104 · c3 · pend</text>
+    <text x="70" y="170" text-anchor="middle" class="tr">WHERE drops 102</text>
+    <g stroke="currentColor" marker-end="url(#sf-ar1)"><line x1="130" y1="46" x2="208" y2="56"/><line x1="130" y1="124" x2="208" y2="116"/><line x1="340" y1="56" x2="418" y2="56"/><line x1="340" y1="116" x2="418" y2="116"/></g>
+    <text x="275" y="14" text-anchor="middle" font-weight="bold">GROUP BY customer_id</text>
+    <rect x="210" y="30" width="130" height="54" rx="6" class="fb sb"/><text x="275" y="52" text-anchor="middle">pile c1</text><text x="275" y="70" text-anchor="middle" class="tm">2 rows</text>
+    <rect x="210" y="92" width="130" height="54" rx="6" class="fv"/><text x="275" y="114" text-anchor="middle">pile c3</text><text x="275" y="132" text-anchor="middle" class="tm">2 rows</text>
+    <text x="500" y="14" text-anchor="middle" font-weight="bold">HAVING COUNT(*) &gt;= 2</text>
+    <rect x="420" y="42" width="160" height="28" rx="4" class="fg sg"/><text x="500" y="60" text-anchor="middle">c1 → n_orders 2</text>
+    <rect x="420" y="102" width="160" height="28" rx="4" class="fg sg"/><text x="500" y="120" text-anchor="middle">c3 → n_orders 2</text>
+    <text x="500" y="170" text-anchor="middle" class="tm">one output row per pile</text>
+    </g>
+  </svg><figcaption>WHERE removes rows, GROUP BY makes piles, HAVING keeps or drops whole piles. This is the query below.</figcaption></figure>
   <div class="fx" data-lang="sql">SELECT customer_id, COUNT(*) AS n_orders
 FROM orders
 WHERE status &lt;&gt; 'cancelled'      -- row filter
@@ -220,22 +345,7 @@ RETURNING *;</div>
   <div class="callout trap"><span class="label">Trap: UPDATE without WHERE</span>
     <p><code>UPDATE customers SET city = 'Delhi'</code> ran and reported <code>UPDATE 4</code>: every customer now lives in Delhi. Write the WHERE first, test it as a SELECT, and run risky writes inside <code>BEGIN; … ROLLBACK;</code> until the row count looks right.</p>
   </div>
-
-  <h2 id="sf-rev"><span class="num">10</span>Quick Revision</h2>
-  <div class="panel"><ol>
-    <li><strong>Order of evaluation:</strong> FROM → WHERE → GROUP BY → HAVING → SELECT → DISTINCT → ORDER BY → LIMIT.</li>
-    <li><strong>Aliases:</strong> not visible in WHERE/HAVING; fine in ORDER BY.</li>
-    <li><strong>Integer division:</strong> 3/5 = 0. Cast with <code>::numeric</code>.</li>
-    <li><strong>NULL:</strong> any comparison gives UNKNOWN; WHERE drops it. Test with <code>IS NULL</code>.</li>
-    <li><strong>NULL helpers:</strong> COALESCE (default), NULLIF (avoid ÷0), IS DISTINCT FROM (NULL-safe ≠).</li>
-    <li><strong>COUNT(*)</strong> counts rows; <strong>COUNT(col)</strong> skips NULLs; other aggregates ignore NULLs too.</li>
-    <li><strong>WHERE</strong> filters rows before grouping; <strong>HAVING</strong> filters groups after.</li>
-    <li><strong>No ORDER BY = no guaranteed order.</strong> Add a tiebreaker before LIMIT.</li>
-    <li><strong>Conditional aggregation:</strong> <code>SUM(CASE …)</code> or <code>COUNT(*) FILTER (WHERE …)</code>.</li>
-    <li><strong>Writes:</strong> RETURNING shows affected rows; ON CONFLICT = upsert; never UPDATE/DELETE without a tested WHERE.</li>
-  </ol></div>
-
-  <h2 id="sf-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <h2 id="sf-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>What does <code>SELECT name FROM customers WHERE city = 'Mumbai' OR city &lt;&gt; 'Mumbai'</code> return?</summary><div class="qa-body">Asha, Ben, Chen. Not Dia: for her city is NULL, so both sides are UNKNOWN and <code>UNKNOWN OR UNKNOWN</code> is UNKNOWN. "Everything" in SQL never includes NULLs unless you add <code>OR city IS NULL</code>.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Predict: <code>SELECT COUNT(*), COUNT(city), COUNT(DISTINCT city) FROM customers;</code></summary><div class="qa-body">4, 3, 2. Four rows; three non-NULL cities (Dia skipped); two unique values, Mumbai and Delhi.</div></details>
