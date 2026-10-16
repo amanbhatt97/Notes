@@ -6066,6 +6066,365 @@ SELECT user_id, MAX(days) AS longest_streak FROM s GROUP BY user_id;</div>User 1
 });
 
 
+// dl/dl_keras.js — TensorFlow & Keras
+Object.assign(TOPIC_CONTENT, {
+  "dl_keras": `<main>
+  <h1>TensorFlow &amp; Keras</h1>
+  <p class="lead">The other big deep-learning stack. You'll meet it in existing production systems, TF Serving / TFLite deployments and many tutorials. This page maps it onto what you know from PyTorch and runs a real model end to end: build, train with callbacks, save, serve.</p>
+
+  <h2 id="tk-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">TensorFlow &amp; Keras</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Where it fits</div>
+        <ul>
+          <li><b>TensorFlow</b> — engine: tensors, autodiff, graphs, devices, Serving/TFLite/TF.js</li>
+          <li><b>Keras 3</b> — high-level API; backends TF, JAX or PyTorch (<code>import keras</code>)</li>
+          <li><b>Meet it in</b> — legacy industry models, mobile/edge, TFX/Vertex pipelines</li>
+          <li><b>PyTorch instead</b> — research, LLMs, Hugging Face</li>
+          <li>⚠ Keras 2 tutorials: <code>tf.keras</code>, .h5, <code>save("dir")</code> — outdated</li>
+          <li>💡 Keras = automatic gearbox; PyTorch = manual</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Tensors</div>
+        <ul>
+          <li><b>tf.constant</b> — immutable n-d array; <code>.numpy()</code> converts back</li>
+          <li><b>tf.Variable</b> — mutable; holds weights</li>
+          <li><b>GradientTape</b> — records ops; <code>tape.gradient(loss, w)</code> ≈ <code>backward()</code></li>
+          <li><b>@tf.function</b> — compiles Python to a fast graph</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Training workflow</div>
+        <ul>
+          <li><b>Sequential</b> — plain stack, one in, one out</li>
+          <li><b>compile</b> — optimizer, loss, metrics (no training)</li>
+          <li><b>fit</b> — epochs, batch_size, validation_split / validation_data, callbacks → History</li>
+          <li><b>evaluate</b> / <b>predict</b> — test metrics / outputs</li>
+          <li><b>Loss pairing</b> — sigmoid + binary CE; softmax + sparse_ (int) or categorical (one-hot) CE</li>
+          <li>⚠ No final activation → <code>from_logits=True</code></li>
+          <li><b>Normalization layer</b> — <code>adapt(X_train)</code>; scaling ships inside the model</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Callbacks</div>
+        <ul>
+          <li><b>EarlyStopping</b> — stop after <code>patience</code> epochs without val improvement</li>
+          <li>⚠ Set <code>restore_best_weights=True</code> or you keep the last (overfit) weights</li>
+          <li><b>ModelCheckpoint</b> — save best/each epoch; survive crashes</li>
+          <li><b>ReduceLROnPlateau</b> — multiply LR by factor on stall</li>
+          <li>Demo: 200 asked → stopped 86, restored 76; LR 1e-3 → 1.25e-4</li>
+          <li>⚠ <code>validation_split</code> takes the last rows, unshuffled</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Functional API</div>
+        <ul>
+          <li><b>How</b> — <code>keras.Input</code> → call layers on tensors → <code>keras.Model(inputs, outputs)</code></li>
+          <li><b>Use for</b> — multi-input, multi-output, skip connections, shared layers</li>
+          <li><b>Example</b> — numeric + store_id Embedding → Concat → Dense → buy</li>
+          <li><b>Subclassing</b> — <code>call()</code> for dynamic logic; harder to serialize</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">tf.data</div>
+        <ul>
+          <li><b>Pipeline</b> — from_tensor_slices / TFRecord → map → shuffle → batch → prefetch(AUTOTUNE)</li>
+          <li><b>Why</b> — stream larger-than-RAM data; overlap CPU prep with GPU training</li>
+          <li><b>Multi-input</b> — dict keys match Input names</li>
+          <li>⚠ Shuffle before batch; don't pass batch_size to fit with a Dataset</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Save &amp; serve</div>
+        <ul>
+          <li><b>.keras</b> — <code>model.save</code> / <code>load_model</code>; config + weights + optimizer</li>
+          <li><b>Weights</b> — <code>save_weights("x.weights.h5")</code></li>
+          <li><b>SavedModel</b> — <code>model.export("dir/1")</code>; graph for Serving/TFLite</li>
+          <li><b>TF Serving</b> — Docker; REST :8501 <code>/v1/models/NAME:predict</code>, gRPC :8500</li>
+          <li><b>Versions</b> — new numbered folder → hot-swap, no restart</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">PyTorch ↔ Keras</div>
+        <ul>
+          <li><b>Linear</b> ↔ <b>Dense</b> (input size inferred); <b>Module.forward</b> ↔ <b>Model.call</b></li>
+          <li><b>Manual loop</b> ↔ <b>fit()</b>; <b>backward()</b> ↔ <b>GradientTape</b></li>
+          <li><b>DataLoader</b> ↔ <b>tf.data</b>; <b>state_dict</b> ↔ <b>.keras</b></li>
+          <li>⚠ NCHW vs NHWC; CrossEntropyLoss takes logits; BN momentum 0.1 ≈ 0.9</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="roadmap-wrap">
+    <h2 class="roadmap-title">What we'll cover</h2>
+    <div class="roadmap-grid">
+      <div class="rm-item rm-done" data-target="tk-where"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Where TF/Keras Fits</span><span class="rm-sub">vs PyTorch, Keras 3</span></div></div>
+      <div class="rm-item rm-done" data-target="tk-tensor"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Tensors in 60 Seconds</span><span class="rm-sub">constant, Variable, GradientTape</span></div></div>
+      <div class="rm-item rm-done" data-target="tk-seq"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Sequential API &amp; the Training Loop</span><span class="rm-sub">compile, fit, evaluate, predict</span></div></div>
+      <div class="rm-item rm-done" data-target="tk-cb"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Callbacks</span><span class="rm-sub">Early stop, checkpoint, LR decay</span></div></div>
+      <div class="rm-item rm-done" data-target="tk-func"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Functional API</span><span class="rm-sub">Multi-input models</span></div></div>
+      <div class="rm-item rm-done" data-target="tk-data"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">tf.data Pipelines</span><span class="rm-sub">Shuffle, batch, prefetch</span></div></div>
+      <div class="rm-item rm-done" data-target="tk-save"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Saving &amp; TF Serving</span><span class="rm-sub">.keras, SavedModel, REST</span></div></div>
+      <div class="rm-item rm-done" data-target="tk-pt"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">PyTorch ↔ Keras Cheat Sheet</span><span class="rm-sub">Translate in both directions</span></div></div>
+      <div class="rm-item rm-done" data-target="tk-qa"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+    </div>
+  </div>
+
+  <h2 id="tk-where"><span class="num">01</span>Where TF/Keras Fits</h2>
+  <div class="cards">
+    <div><b>TensorFlow</b><p>Google's engine: tensors, autodiff, graph compilation, devices.</p><small>Plus TF Serving, TFLite, TF.js</small></div>
+    <div><b>Keras</b><p>The high-level API: layers, models, <code>fit()</code>.</p><small>Keras 3 runs on TF, JAX or PyTorch</small></div>
+    <div><b>PyTorch</b><p>Meta's framework; dominant in research and LLMs.</p><small>Hugging Face, most new papers</small></div>
+  </div>
+  <table class="tbl">
+    <tr><th>You'll likely meet TF/Keras when…</th><th>You'll likely meet PyTorch when…</th></tr>
+    <tr><td>Maintaining models built 2017–2022 in industry</td><td>Fine-tuning LLMs / transformers</td></tr>
+    <tr><td>Deploying to mobile/edge (TFLite) or browser (TF.js)</td><td>Reading or reproducing recent research</td></tr>
+    <tr><td>The stack already runs TF Serving, TFX or Vertex AI pipelines</td><td>You need custom training loops quickly</td></tr>
+    <tr><td>You want <code>fit()</code> in three lines for a tabular/vision baseline</td><td>Most new open-source model code</td></tr>
+  </table>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Keras is an automatic car: <code>compile</code> + <code>fit</code> handle the gears. PyTorch is a manual: you write the loop, but you control every shift. Keras still lets you drop to manual (<code>GradientTape</code>).</p>
+  </div>
+  <div class="callout trap"><span class="label">Trap: Keras 2 vs 3</span>
+    <p>Old tutorials use <code>tf.keras</code>, <code>.h5</code> files and <code>model.save("dir")</code>. Keras 3 (TF ≥ 2.16) uses <code>import keras</code>, the <code>.keras</code> format, and <code>model.export()</code> for SavedModel.</p>
+  </div>
+
+  <h2 id="tk-tensor"><span class="num">02</span>Tensors in 60 Seconds</h2>
+  <p>Same idea as NumPy arrays / torch tensors: typed n-d arrays that can live on a GPU and track gradients.</p>
+  <div class="fx" data-lang="py">import tensorflow as tf, keras
+print(tf.__version__, keras.__version__, keras.backend.backend())
+x = tf.constant([[1., 2.], [3., 4.]])            # immutable tensor
+print(x.shape, x.dtype)
+print((x @ tf.transpose(x)).numpy())             # .numpy() back to NumPy
+w = tf.Variable(3.0)                             # mutable: weights live here
+with tf.GradientTape() as tape:                  # records ops for autodiff
+    loss = (w * 2.0 - 4.0) ** 2
+print("dloss/dw =", tape.gradient(loss, w).numpy())</div>
+  <div class="fx" data-lang="text">2.21.0 3.15.1 tensorflow
+(2, 2) &lt;dtype: 'float32'&gt;
+[[ 5. 11.]
+ [11. 25.]]
+dloss/dw = 8.0</div>
+  <p>Check: d/dw (2w − 4)² = 4(2w − 4) = 8 at w = 3. <code>GradientTape</code> ≈ PyTorch's <code>loss.backward()</code>; <code>@tf.function</code> compiles Python into a fast graph.</p>
+
+  <h2 id="tk-seq"><span class="num">03</span>Sequential API &amp; the Training Loop</h2>
+  <div class="flow"><span>Define layers</span><span>compile (optimizer, loss, metrics)</span><span>fit</span><span>evaluate</span><span>predict</span></div>
+  <p>Sequential = a plain stack, one input, one output. Real data: scikit-learn's breast-cancer set (569 tumours, 30 features, malignant vs benign).</p>
+  <div class="fx" data-lang="py">import numpy as np, keras
+from keras import layers
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+keras.utils.set_random_seed(0)
+X, y = load_breast_cancer(return_X_y=True)
+X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.2, random_state=0, stratify=y)
+
+norm = layers.Normalization()
+norm.adapt(X_tr)                     # learns mean/std from TRAIN only; saved inside the model
+
+model = keras.Sequential([
+    keras.Input(shape=(30,)),
+    norm,
+    layers.Dense(16, activation="relu"),
+    layers.Dropout(0.2),
+    layers.Dense(1, activation="sigmoid"),
+])
+model.compile(optimizer=keras.optimizers.Adam(1e-3),
+              loss="binary_crossentropy",
+              metrics=["accuracy", keras.metrics.AUC(name="auc")])
+model.summary()</div>
+  <div class="fx" data-lang="text">┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓
+┃ Layer (type)                    ┃ Output Shape           ┃       Param # ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩
+│ normalization (Normalization)   │ (None, 30)             │            61 │
+│ dense (Dense)                   │ (None, 16)             │           496 │
+│ dropout (Dropout)               │ (None, 16)             │             0 │
+│ dense_1 (Dense)                 │ (None, 1)              │            17 │
+└─────────────────────────────────┴────────────────────────┴───────────────┘
+ Total params: 574 (2.25 KB)
+ Trainable params: 513 (2.00 KB)
+ Non-trainable params: 61 (248.00 B)</div>
+  <ul>
+    <li><code>None</code> = batch dimension, any size.</li>
+    <li>Dense(16): 30 × 16 weights + 16 biases = 496. Normalization's 61 = 30 means + 30 variances + a count; not trainable.</li>
+  </ul>
+  <table class="tbl">
+    <tr><th>Task</th><th>Last layer</th><th>Loss</th></tr>
+    <tr><td>Binary</td><td>Dense(1, sigmoid)</td><td><code>binary_crossentropy</code></td></tr>
+    <tr><td>Multi-class, int labels</td><td>Dense(C, softmax)</td><td><code>sparse_categorical_crossentropy</code></td></tr>
+    <tr><td>Multi-class, one-hot</td><td>Dense(C, softmax)</td><td><code>categorical_crossentropy</code></td></tr>
+    <tr><td>Regression</td><td>Dense(1), no activation</td><td><code>mse</code> / <code>mae</code></td></tr>
+  </table>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Integer labels with <code>categorical_crossentropy</code> throws a shape error or trains wrong. Int labels → <code>sparse_</code>. If the last layer has no softmax, pass <code>from_logits=True</code>.</p>
+  </div>
+
+  <h2 id="tk-cb"><span class="num">04</span>Callbacks</h2>
+  <p>Hooks <code>fit()</code> calls at the end of each epoch/batch. The three you'll use on every project:</p>
+  <div class="fx" data-lang="py">callbacks = [
+    keras.callbacks.EarlyStopping(monitor="val_loss", patience=10, restore_best_weights=True),
+    keras.callbacks.ModelCheckpoint("best.keras", monitor="val_loss", save_best_only=True),
+    keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=4, min_lr=1e-5),
+]
+hist = model.fit(X_tr, y_tr, validation_split=0.2, epochs=200, batch_size=32,
+                 callbacks=callbacks, verbose=0)
+h = hist.history                                   # dict of per-epoch lists
+print("epochs run:", len(h["loss"]), " best epoch:", int(np.argmin(h["val_loss"])) + 1)
+print("final lr:", float(model.optimizer.learning_rate.numpy()))
+print(model.evaluate(X_te, y_te, verbose=0, return_dict=True))
+print(model.predict(X_te[:3], verbose=0).round(3).ravel(), y_te[:3])</div>
+  <div class="fx" data-lang="text">epochs run: 86  best epoch: 76
+final lr: 0.0001250000059371814
+{'accuracy': 0.9736841917037964, 'auc': 0.989914059638977, 'loss': 0.10996349155902863}
+[0.006 0.    0.   ] [0 0 0]</div>
+  <figure class="viz"><svg viewBox="0 0 560 210" width="560">
+<line x1="50" y1="170" x2="540" y2="170" stroke="currentColor"/><line x1="50" y1="20" x2="50" y2="170" stroke="currentColor"/>
+<text x="44" y="24" text-anchor="end" class="tm">0.6</text><text x="44" y="174" text-anchor="end" class="tm">0</text>
+<polyline points="50,25 56,58 62,82 67,95 73,106 79,112 85,119 90,119 96,124 102,120 108,130 113,132 119,133 125,136 131,138 136,137 142,141 148,139 154,142 160,142 165,144 171,145 177,144 183,146 188,146 194,147 200,149 206,148 211,146 217,150 223,149 229,150 234,148 240,151 246,152 252,154 258,153 263,152 269,152 275,154 281,154 286,153 292,154 298,153 304,154 309,157 315,153 321,154 327,154 332,155 338,157 344,156 350,156 356,156 361,156 367,157 373,157 379,155 384,156 390,158 396,158 402,158 407,158 413,156 419,157 425,158 430,158 436,158 442,159 448,156 454,160 459,159 465,157 471,156 477,160 482,159 488,159 494,159 500,159 505,160 511,158 517,159 523,158 528,160 534,159 540,157" fill="none" class="sb" stroke-width="2"/>
+<polyline points="50,52 56,78 62,93 67,103 73,110 79,116 85,120 90,123 96,126 102,129 108,131 113,133 119,134 125,136 131,137 136,138 142,139 148,140 154,141 160,142 165,143 171,143 177,144 183,144 188,145 194,145 200,146 206,146 211,147 217,147 223,148 229,148 234,149 240,149 246,149 252,149 258,150 263,150 269,150 275,151 281,151 286,151 292,151 298,151 304,152 309,152 315,152 321,152 327,153 332,153 338,153 344,153 350,153 356,153 361,153 367,153 373,154 379,154 384,154 390,154 396,154 402,154 407,154 413,154 419,154 425,154 430,154 436,154 442,154 448,154 454,154 459,154 465,154 471,155 477,155 482,155 488,155 494,155 500,155 505,155 511,155 517,155 523,155 528,155 534,155 540,155" fill="none" class="sr" stroke-width="2"/>
+<line x1="482" y1="20" x2="482" y2="170" stroke="currentColor" stroke-dasharray="4 3"/>
+<text x="478" y="30" text-anchor="end" class="tg">best val_loss (epoch 76) restored</text>
+<text x="520" y="60" text-anchor="end" class="tm">stopped at 86 (patience 10)</text>
+<text x="50" y="200" class="tm">epoch 1</text><text x="540" y="200" text-anchor="end" class="tm">epoch 86</text>
+<text x="200" y="200" class="tb">— train loss</text><text x="320" y="200" class="tr">— val loss</text>
+</svg><figcaption>Real history of this run. Asked for 200 epochs; stopped at 86 and rolled back to epoch 76's weights.</figcaption></figure>
+  <div class="cards">
+    <div><b>EarlyStopping</b><p>Stop when val metric stops improving for <code>patience</code> epochs.</p><small>Set <code>restore_best_weights=True</code></small></div>
+    <div><b>ModelCheckpoint</b><p>Save the model (or best one) to disk during training.</p><small>Survives crashes and preemption</small></div>
+    <div><b>ReduceLROnPlateau</b><p>Halve the learning rate when progress stalls.</p><small>Here 1e-3 → 1.25e-4 (3 halvings)</small></div>
+  </div>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p><code>validation_split</code> takes the <em>last</em> 20% of rows without shuffling. If data is sorted (by label or time), validation is skewed. Shuffle first or pass <code>validation_data=</code>.</p>
+  </div>
+
+  <h2 id="tk-func"><span class="num">05</span>Functional API</h2>
+  <figure class="viz"><svg viewBox="0 0 560 170" width="560">
+<defs><marker id="tk-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="tm"/></marker></defs>
+<rect x="5" y="20" width="120" height="36" class="fb sb"/><text x="65" y="43" text-anchor="middle">numeric (5)</text>
+<rect x="5" y="104" width="120" height="36" class="fb sb"/><text x="65" y="127" text-anchor="middle">store_id (1)</text>
+<rect x="150" y="104" width="110" height="36" class="fv"/><text x="205" y="127" text-anchor="middle">Embedding → 4</text>
+<rect x="290" y="62" width="100" height="36" class="ft st"/><text x="340" y="85" text-anchor="middle">Concat (9)</text>
+<rect x="415" y="62" width="70" height="36" class="fs" stroke="currentColor"/><text x="450" y="85" text-anchor="middle">Dense 16</text>
+<rect x="505" y="62" width="50" height="36" class="fg sg"/><text x="530" y="85" text-anchor="middle">buy</text>
+<path d="M127,38 L270,38 L288,70" fill="none" stroke="currentColor" marker-end="url(#tk-ar)"/>
+<line x1="127" y1="122" x2="147" y2="122" stroke="currentColor" marker-end="url(#tk-ar)"/>
+<path d="M262,122 L272,122 L288,92" fill="none" stroke="currentColor" marker-end="url(#tk-ar)"/>
+<line x1="392" y1="80" x2="412" y2="80" stroke="currentColor" marker-end="url(#tk-ar)"/>
+<line x1="487" y1="80" x2="502" y2="80" stroke="currentColor" marker-end="url(#tk-ar)"/>
+<text x="5" y="165" class="tm">a graph: branches, merges, many inputs/outputs</text>
+</svg><figcaption>Two inputs of different types, merged. Sequential can't express this.</figcaption></figure>
+  <p>Call layers like functions on tensors, then wrap inputs and outputs in <code>keras.Model</code>. Toy task: will a user buy? 5 numeric features plus a store id (50 stores, each with a hidden effect).</p>
+  <div class="fx" data-lang="py">num_in   = keras.Input(shape=(5,), name="numeric")
+store_in = keras.Input(shape=(1,), dtype="int32", name="store_id")
+s = layers.Embedding(input_dim=50, output_dim=4)(store_in)   # (None, 1, 4)
+s = layers.Flatten()(s)                                       # (None, 4)
+h = layers.Concatenate()([num_in, s])                         # (None, 9)
+h = layers.Dense(16, activation="relu")(h)
+out = layers.Dense(1, activation="sigmoid", name="buy")(h)
+model = keras.Model(inputs=[num_in, store_in], outputs=out)
+model.compile("adam", "binary_crossentropy", metrics=[keras.metrics.AUC(name="auc")])</div>
+  <div class="fx" data-lang="text">Total params: 377 (1.47 KB)      # Embedding 50×4=200, Dense 9×16+16=160, buy 17</div>
+  <div class="cards">
+    <div><b>Sequential</b><p>Single stack.</p><small>MLPs, simple CNNs</small></div>
+    <div><b>Functional</b><p>Any DAG of layers.</p><small>Multi-input, skip connections, multi-task heads</small></div>
+    <div><b>Subclassing</b><p><code>class M(keras.Model)</code> with <code>call()</code>.</p><small>Dynamic logic; PyTorch-like; harder to inspect/serialize</small></div>
+  </div>
+
+  <h2 id="tk-data"><span class="num">06</span>tf.data Pipelines</h2>
+  <div class="flow"><span>Source (arrays, files, TFRecord)</span><span>map (parse, augment)</span><span>shuffle</span><span>batch</span><span>prefetch</span><span>model.fit</span></div>
+  <p>Streams data that doesn't fit in RAM, and prepares the next batch on CPU while the GPU trains on the current one.</p>
+  <div class="fx" data-lang="py">import tensorflow as tf
+ds = tf.data.Dataset.from_tensor_slices(
+        ({"numeric": num, "store_id": store[:, None]}, y))   # keys = Input names
+train_ds = ds.take(3200).shuffle(3200, seed=0).batch(64).prefetch(tf.data.AUTOTUNE)
+val_ds   = ds.skip(3200).batch(256).prefetch(tf.data.AUTOTUNE)
+hist = model.fit(train_ds, validation_data=val_ds, epochs=15, verbose=0)
+print(f"val_auc after 1 epoch {hist.history['val_auc'][0]:.3f}, "
+      f"after 15: {hist.history['val_auc'][-1]:.3f}")</div>
+  <div class="fx" data-lang="text">val_auc after 1 epoch 0.572, after 15: 0.862
+AUC using x0 - 0.5*x1 only: 0.676          # same val rows, numeric signal alone</div>
+  <p>The store embedding learned the hidden per-store effect: 0.676 → 0.862.</p>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Shuffle <em>before</em> batch (else you shuffle whole batches), and give shuffle a buffer ≈ dataset size. With a Dataset, <code>fit(shuffle=True)</code> is ignored, and <code>batch_size</code> must not be passed.</p>
+  </div>
+
+  <h2 id="tk-save"><span class="num">07</span>Saving &amp; TF Serving</h2>
+  <table class="tbl">
+    <tr><th>Format</th><th>How</th><th>Use for</th></tr>
+    <tr><td><strong>.keras</strong> (zip: config + weights)</td><td><code>model.save("m.keras")</code> / <code>keras.models.load_model</code></td><td>Resume training, share in Python</td></tr>
+    <tr><td><strong>Weights only</strong></td><td><code>save_weights("m.weights.h5")</code></td><td>Same code rebuilds the architecture</td></tr>
+    <tr><td><strong>SavedModel</strong> (graph + weights)</td><td><code>model.export("dir/1")</code></td><td>TF Serving, TFLite, other languages; no Python needed</td></tr>
+    <tr><td>.h5 (legacy)</td><td>old <code>tf.keras</code></td><td>Reading old projects only</td></tr>
+  </table>
+  <div class="fx" data-lang="py">model.save("cancer.keras")
+loaded = keras.models.load_model("cancer.keras")
+print("same predictions:", np.allclose(loaded.predict(X_te, verbose=0),
+                                       model.predict(X_te, verbose=0)))
+model.export("export/cancer/1")      # version folder "1" is what TF Serving expects</div>
+  <div class="fx" data-lang="text">same predictions: True
+Saved artifact at 'export/cancer/1'. The following endpoints are available:
+* Endpoint 'serve'
+  args_0 (POSITIONAL_ONLY): TensorSpec(shape=(None, 30), dtype=tf.float32, name='keras_tensor')
+Output Type:
+  TensorSpec(shape=(None, 1), dtype=tf.float32, name=None)</div>
+  <h3>TF Serving: a model server with no Python code</h3>
+  <div class="flow"><span>export/cancer/1/</span><span>tensorflow/serving container</span><span>REST :8501 / gRPC :8500</span><span>Client POST JSON</span></div>
+  <div class="fx" data-lang="text">docker run -d --rm -p 8501:8501 \\
+  -v "$PWD/export/cancer:/models/cancer" -e MODEL_NAME=cancer tensorflow/serving
+
+curl -s localhost:8501/v1/models/cancer                  # health / version status
+curl -s -X POST localhost:8501/v1/models/cancer:predict \\
+     -d @req.json                                        # {"instances": [[30 floats], ...]}</div>
+  <div class="fx" data-lang="text">{"model_version_status": [{"version": "1", "state": "AVAILABLE", ...}]}
+{
+    "predictions": [[0.00606069528], [2.95291786e-12], [0.000421408302]
+    ]
+}</div>
+  <p>Same three probabilities as <code>model.predict</code> above. Drop a folder <code>2/</code> next to <code>1/</code> and the server hot-swaps to the new version with no restart.</p>
+  <div class="callout intu"><span class="label">Why it matters</span>
+    <p>Preprocessing (the Normalization layer) lives inside the exported graph, so the server receives raw features. No training/serving skew from re-implementing scaling in the API.</p>
+  </div>
+
+  <h2 id="tk-pt"><span class="num">08</span>PyTorch ↔ Keras Cheat Sheet</h2>
+  <table class="tbl">
+    <tr><th>Concept</th><th>PyTorch</th><th>Keras 3 / TF</th></tr>
+    <tr><td>Fully connected</td><td><code>nn.Linear(in, out)</code></td><td><code>layers.Dense(out)</code> (input size inferred)</td></tr>
+    <tr><td>Conv / pooling</td><td><code>nn.Conv2d</code>, <code>nn.MaxPool2d</code></td><td><code>layers.Conv2D</code>, <code>layers.MaxPooling2D</code></td></tr>
+    <tr><td>Image layout</td><td>NCHW (channels first)</td><td>NHWC (channels last)</td></tr>
+    <tr><td>Embedding / dropout / BN</td><td><code>nn.Embedding</code>, <code>nn.Dropout</code>, <code>nn.BatchNorm1d</code></td><td><code>layers.Embedding</code>, <code>layers.Dropout</code>, <code>layers.BatchNormalization</code></td></tr>
+    <tr><td>Model class</td><td><code>nn.Module</code> + <code>forward()</code></td><td><code>keras.Model</code> + <code>call()</code>, or Sequential/Functional</td></tr>
+    <tr><td>Training loop</td><td>Write it: zero_grad, backward, step</td><td><code>model.fit()</code> (custom: <code>GradientTape</code>)</td></tr>
+    <tr><td>Autodiff</td><td><code>loss.backward()</code></td><td><code>tape.gradient(loss, vars)</code></td></tr>
+    <tr><td>Train / eval mode</td><td><code>model.train()</code> / <code>model.eval()</code></td><td>Automatic in fit/predict; <code>training=True</code> when calling manually</td></tr>
+    <tr><td>Data</td><td><code>Dataset</code> + <code>DataLoader</code></td><td><code>tf.data.Dataset</code> (or a PyDataset)</td></tr>
+    <tr><td>Loss with logits</td><td><code>nn.CrossEntropyLoss</code> (expects logits)</td><td><code>SparseCategoricalCrossentropy(from_logits=True)</code></td></tr>
+    <tr><td>Save</td><td><code>torch.save(model.state_dict())</code></td><td><code>model.save("m.keras")</code></td></tr>
+    <tr><td>Export / serve</td><td>TorchScript / ONNX → TorchServe, Triton</td><td>SavedModel → TF Serving; TFLite for mobile</td></tr>
+    <tr><td>Device</td><td><code>.to("cuda")</code> explicit</td><td>Uses the GPU automatically if visible</td></tr>
+  </table>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>PyTorch's <code>CrossEntropyLoss</code> applies softmax itself; Keras losses expect probabilities unless <code>from_logits=True</code>. Porting a model and adding/removing a softmax silently breaks training.</p>
+  </div>
+
+  <h2 id="tk-qa"><span class="num">09</span>Questions &amp; Answers</h2>
+  <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>What's the relationship between TensorFlow and Keras today?</summary><div class="qa-body">TensorFlow is the low-level engine (tensors, autodiff, graphs, devices, serving). Keras is the high-level model API. Since Keras 3 it's a separate multi-backend library that can run on TensorFlow, JAX or PyTorch; <code>tf.keras</code> is the older bundled version.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When must you use the Functional API instead of Sequential?</summary><div class="qa-body">Whenever the model isn't a single straight stack: multiple inputs (numeric + text + IDs), multiple outputs (multi-task heads), skip/residual connections, or shared layers.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Labels are integers 0–9 and the last layer is Dense(10) with no activation. Which loss?</summary><div class="qa-body"><code>keras.losses.SparseCategoricalCrossentropy(from_logits=True)</code>. Sparse because labels are integers; from_logits because there's no softmax.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Training ran 86 of 200 epochs with EarlyStopping(patience=10). Which weights does the model have?</summary><div class="qa-body">With <code>restore_best_weights=True</code>, the weights from the best val_loss epoch (76 here). Without it, the weights from the last epoch (86), which are slightly overfit. A common interview gotcha.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why would you add a Normalization layer inside the model instead of using StandardScaler?</summary><div class="qa-body">The fitted mean/std are saved with the model, so the exported SavedModel accepts raw features. Serving code can't forget or mis-implement the scaling, which prevents training/serving skew.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>.keras file vs SavedModel: which for what?</summary><div class="qa-body"><code>.keras</code>: the full Keras model (architecture, weights, optimizer state) to reload in Python and keep training. SavedModel via <code>model.export()</code>: a language-neutral graph for inference with TF Serving, TFLite conversion, or other runtimes.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How does TF Serving roll out a new model version?</summary><div class="qa-body">It watches the model base path. Exporting to a new numbered folder (e.g. <code>2/</code>) makes it load that version and switch traffic to it, by default serving the latest, with no restart. Clients can also request a specific version in the URL.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>You're porting a PyTorch CNN to Keras. Name two things that commonly break.</summary><div class="qa-body">(1) Tensor layout: PyTorch is NCHW, Keras defaults to NHWC, so reshape inputs and transpose conv weights. (2) Softmax/logits: PyTorch's CrossEntropyLoss takes logits; in Keras set <code>from_logits=True</code> or add softmax. Also BatchNorm momentum is defined differently (PyTorch 0.1 ≈ Keras 0.9).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When would you write a custom training loop with GradientTape instead of fit()?</summary><div class="qa-body">GANs (two optimizers alternating), unusual losses needing intermediate outputs, gradient manipulation (clipping per group, accumulation), or research ideas. Alternative: override <code>train_step</code> in a Model subclass and keep fit()'s callbacks and logging.</div></details>
+</main>`
+});
+
+
 // notes/genai/agent_build.js — Build an Agent from Scratch
 Object.assign(TOPIC_CONTENT, {
   "agent_build": `<main>
@@ -12335,6 +12694,818 @@ LIMIT 2;</div>
   <details class="qa"><summary><span class="qmark">Q</span>pgvector, Qdrant or Pinecone for a production RAG app?</summary><div class="qa-body">Already on Postgres at modest scale → pgvector: no new system, JOINs with business data. Heavy, selective metadata filters and self-hosting → Qdrant. No one to run infrastructure → Pinecone (managed), accepting higher cost at high QPS. Benchmark on your own data either way.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>You upgraded the embedding model and retrieval got worse, with no errors. What happened?</summary><div class="qa-body">Queries are embedded with the new model but the index holds old-model vectors. The spaces don't align, so similarity is meaningless. Re-embed the whole corpus (often as a new index, then switch over) and store model name/version with the index.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What does this return? <code>SELECT body FROM docs ORDER BY embedding &lt;=&gt; q DESC LIMIT 1;</code></summary><div class="qa-body">The <em>least</em> similar document. <code>&lt;=&gt;</code> is cosine distance (1 − cosine), so smaller means closer. Drop <code>DESC</code>. To display similarity, select <code>1 - (embedding &lt;=&gt; q)</code>.</div></details>
+</main>`
+});
+
+
+// ml/ml_recsys.js — Recommendation Systems
+Object.assign(TOPIC_CONTENT, {
+  "ml_recsys": `<main>
+  <h1>Recommendation Systems</h1>
+  <p class="lead">How Netflix, Amazon and Spotify pick what to show you: from similarity-based filtering to matrix factorization and two-stage ranking, plus how to evaluate them. Builds on vectors, cosine similarity and classification.</p>
+
+  <h2 id="rs-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Recommendation Systems</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Problem &amp; feedback</div>
+        <ul>
+          <li><b>Goal</b> — rank a huge catalog into few slots that move a business metric</li>
+          <li><b>Proxy vs true</b> — optimise clicks/ratings; business wants watch time, revenue, retention</li>
+          <li><b>Explicit</b> — ratings, likes; scarce, clear negatives</li>
+          <li><b>Implicit</b> — clicks, views, purchases; plentiful, no true negatives</li>
+          <li>⚠ No click ≠ dislike; use shown-not-clicked or low-confidence negatives</li>
+          <li>💡 A bookshop clerk: your history + similar books + people like you</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Content-based</div>
+        <ul>
+          <li><b>How</b> — user profile = mean of liked item features; cosine to every item</li>
+          <li><b>Features</b> — genre, tags, text/image embeddings</li>
+          <li><b>Pros</b> — handles new items, explainable, no other users needed</li>
+          <li><b>Cons</b> — over-specialised, no serendipity, needs good features</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Collaborative filtering</div>
+        <ul>
+          <li><b>Idea</b> — users who agreed before agree again; only the interaction matrix</li>
+          <li><b>User-user</b> — similar users' ratings; tastes drift, slow at scale</li>
+          <li><b>Item-item</b> — similar items to what you rated; stable, precomputable (Amazon)</li>
+          <li><b>Predict</b> — μᵤ + Σ sim·(r − μᵤ) / Σ|sim| over top-k neighbours</li>
+          <li>⚠ <b>Mean-centre first</b> — raw cosine all positive; toy: 2.22 → 4.0</li>
+          <li>⚠ Sparse overlap gives fake sim = 1; require min overlap / shrink</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Matrix factorization</div>
+        <ul>
+          <li><b>R ≈ P·Qᵀ</b> — users × k and items × k latent factors</li>
+          <li><b>Loss</b> — squared error on observed cells + λ(‖P‖² + ‖Q‖²)</li>
+          <li><b>SGD</b> — per-rating gradient step (Funk SVD, Netflix Prize)</li>
+          <li><b>ALS</b> — fix Q, ridge-solve P; fix P, solve Q; parallel (Spark)</li>
+          <li><b>Biases</b> — add global + user + item bias terms</li>
+          <li><b>Two-tower</b> — neural MF from features; gives cold items a vector</li>
+          <li>💡 Hidden sliders ("how sci-fi") learned unprompted</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Cold start</div>
+        <ul>
+          <li><b>New user</b> — popularity, onboarding quiz, context (geo, device), fast updates</li>
+          <li><b>New item</b> — content features / two-tower embedding, exploration slots</li>
+          <li><b>New system</b> — rules + popularity; log impressions from day one</li>
+          <li><b>Hybrid</b> — content for cold, CF for warm, popularity as fallback</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Two-stage system</div>
+        <ul>
+          <li><b>Retrieval</b> — millions → ~1,000; recall; two-tower + ANN (FAISS), CF, trending</li>
+          <li><b>Ranking</b> — ~1,000 → 50; precision; GBM/DNN with rich + cross features</li>
+          <li><b>Re-rank</b> — diversity, freshness, dedupe, business rules</li>
+          <li><b>LTR</b> — pointwise (logloss), pairwise (BPR, RankNet), listwise (LambdaMART)</li>
+          <li>💡 Recruiter skim → interviews → final panel</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Evaluation</div>
+        <ul>
+          <li><b>Split</b> — by time; hold out later interactions</li>
+          <li><b>P@k</b> — hits/k; <b>R@k</b> — hits/|relevant|</li>
+          <li><b>AP@k</b> — mean precision at each hit; <b>MAP</b> = mean over users</li>
+          <li><b>NDCG</b> — Σ rel/log₂(rank+1) ÷ ideal; graded relevance</li>
+          <li><b>Coverage</b> — share of catalog recommended; <b>diversity</b> — dissimilarity within a list</li>
+          <li>Toy: hits at ranks 1,3 of {A,C,F} → P@5 0.40, R@5 0.67, AP 0.556</li>
+          <li>⚠ Offline ≠ online; A/B test decides</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Bias &amp; feedback loops</div>
+        <ul>
+          <li><b>Popularity bias</b> — popular items over-shown, long tail starved</li>
+          <li><b>Feedback loop</b> — model trains on its own exposure; rich get richer</li>
+          <li><b>Fixes</b> — exploration (ε-greedy, bandits), rank by rate not count, IPS weighting, diversity re-rank, log impressions</li>
+          <li>Sim: greedy popularity found 0/5 best items; CTR + 10% explore found 3/5</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="roadmap-wrap">
+    <h2 class="roadmap-title">What we'll cover</h2>
+    <div class="roadmap-grid">
+      <div class="rm-item rm-done" data-target="rs-problem"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">The Problem &amp; Feedback</span><span class="rm-sub">Business goal, explicit vs implicit</span></div></div>
+      <div class="rm-item rm-done" data-target="rs-content"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Content-Based Filtering</span><span class="rm-sub">Items like ones you liked</span></div></div>
+      <div class="rm-item rm-done" data-target="rs-cf"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Collaborative Filtering</span><span class="rm-sub">User-user and item-item</span></div></div>
+      <div class="rm-item rm-done" data-target="rs-mf"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Matrix Factorization</span><span class="rm-sub">ALS in 15 lines of numpy</span></div></div>
+      <div class="rm-item rm-done" data-target="rs-cold"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Cold Start</span><span class="rm-sub">New users, new items</span></div></div>
+      <div class="rm-item rm-done" data-target="rs-stage"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Two-Stage Ranking Systems</span><span class="rm-sub">Retrieval → ranking → re-rank</span></div></div>
+      <div class="rm-item rm-done" data-target="rs-eval"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Evaluation</span><span class="rm-sub">P@k, R@k, MAP, NDCG, coverage</span></div></div>
+      <div class="rm-item rm-done" data-target="rs-bias"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Popularity Bias &amp; Feedback Loops</span><span class="rm-sub">The rich get richer</span></div></div>
+      <div class="rm-item rm-done" data-target="rs-qa"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+    </div>
+  </div>
+
+  <h2 id="rs-problem"><span class="num">01</span>The Problem &amp; Feedback</h2>
+  <div class="flow"><span>Huge catalog</span><span>Limited screen slots</span><span>Pick the few most likely to engage</span><span>Business metric moves</span></div>
+  <p>A recommender predicts, for a user, which items they'll engage with, then ranks them. Offline you optimise a proxy (clicks, ratings); the business cares about watch time, revenue, retention.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A good bookshop clerk. They remember what you bought (history), know which books go together (similarity), and notice what people like you enjoyed (collaboration).</p>
+  </div>
+  <table class="tbl">
+    <tr><th></th><th>Explicit feedback</th><th>Implicit feedback</th></tr>
+    <tr><td>What</td><td>Ratings, likes, thumbs</td><td>Clicks, views, watch time, purchases</td></tr>
+    <tr><td>Volume</td><td>Scarce (few users rate)</td><td>Abundant</td></tr>
+    <tr><td>Negatives</td><td>Clear (1 star)</td><td><strong>Missing</strong>: no click ≠ dislike; maybe never seen</td></tr>
+    <tr><td>Typical task</td><td>Predict the rating (regression)</td><td>Rank items / predict interaction (classification)</td></tr>
+  </table>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Treating every unclicked item as a negative. Most were never shown. Sample negatives from items the user was actually exposed to, or weight them low (as implicit ALS does with confidence weights).</p>
+  </div>
+
+  <h2 id="rs-content"><span class="num">02</span>Content-Based Filtering</h2>
+  <div class="flow"><span>Item features (genre, text, embeddings)</span><span>User profile = average of liked items</span><span>Cosine(profile, each item)</span><span>Top-k</span></div>
+  <div class="cards">
+    <div><b>Strengths</b><p>Works for brand-new items with features. Explainable: "because you watched X".</p><small>No other users needed</small></div>
+    <div><b>Weaknesses</b><p>Over-specialised: sci-fi fans only get sci-fi. Needs good features.</p><small>No serendipity</small></div>
+  </div>
+  <p>Modern versions embed item text or images with a pretrained model and use nearest-neighbour search on the vectors.</p>
+
+  <h2 id="rs-cf"><span class="num">03</span>Collaborative Filtering</h2>
+  <p>Use only the user × item interaction matrix: "people who agreed with you before will agree again". No item features needed.</p>
+  <table class="tbl out"><caption>Toy ratings matrix R (· = not rated)</caption>
+    <tr><th></th><th>Inception</th><th>Interstellar</th><th>Notebook</th><th>Titanic</th><th>Toy Story</th></tr>
+    <tr><td>Asha</td><td>5</td><td>4</td><td>1</td><td>·</td><td>2</td></tr>
+    <tr><td>Ben</td><td>4</td><td><strong>?</strong></td><td>1</td><td>1</td><td>·</td></tr>
+    <tr><td>Chen</td><td>1</td><td>1</td><td>5</td><td>4</td><td>·</td></tr>
+    <tr><td>Dia</td><td>·</td><td>2</td><td>4</td><td>5</td><td>3</td></tr>
+  </table>
+  <div class="cards">
+    <div><b>User-user</b><p>Find users similar to Ben; average their ratings of the item.</p><small>Users change taste; many users → slow</small></div>
+    <div><b>Item-item</b><p>Find items similar to the target among what Ben rated; weight his ratings.</p><small>Amazon's classic; item similarities are stable, precomputable</small></div>
+  </div>
+  <h3>Item-item, raw cosine</h3>
+  <div class="fx" data-lang="py">import numpy as np
+R = np.array([[5,4,1,0,2],
+              [4,0,1,1,0],
+              [1,1,5,4,0],
+              [0,2,4,5,3]], float)          # rows = users, cols = items, 0 = missing
+def cos(a, b): return a @ b / (np.linalg.norm(a) * np.linalg.norm(b))
+S = np.array([[cos(R[:, i], R[:, j]) for j in range(5)] for i in range(5)])
+rated = np.where(R[1] &gt; 0)[0]               # what Ben rated
+w = S[1, rated]                              # their similarity to Interstellar
+print(w.round(2), "pred =", round(w @ R[1, rated] / w.sum(), 2))</div>
+  <div class="fx" data-lang="text">[0.71 0.57 0.47] pred = 2.22</div>
+  <p>Ben loves Inception and dislikes the romances, so 2.22 is wrong. Raw ratings are all positive, so every cosine is positive and the disliked items still vote.</p>
+  <h3>Fix: mean-centre first (adjusted cosine)</h3>
+  <div class="fx" data-lang="py">mask = R &gt; 0
+mu = R.sum(1) / mask.sum(1)                       # each user's average rating
+C = np.where(mask, R - mu[:, None], 0)            # "above/below my usual"
+S = np.array([[cos(C[:, i], C[:, j]) for j in range(5)] for i in range(5)])
+w = S[1, rated]
+pos = w &gt; 0                                       # keep similar neighbours only
+pred = mu[1] + w[pos] @ C[1, rated][pos] / np.abs(w[pos]).sum()
+print(mu.round(2), w.round(2), round(pred, 2))</div>
+  <div class="fx" data-lang="text">[3.   2.   2.75 3.5 ] [ 0.61 -0.83 -0.81] 4.0</div>
+  <table class="tbl out"><caption>Adjusted item-item similarity (selected)</caption>
+    <tr><th></th><th>Inception</th><th>Interstellar</th><th>Notebook</th><th>Titanic</th></tr>
+    <tr><td>Inception</td><td>1.00</td><td>0.61</td><td>-0.93</td><td>-0.57</td></tr>
+    <tr><td>Interstellar</td><td>0.61</td><td>1.00</td><td>-0.83</td><td>-0.81</td></tr>
+    <tr><td>Notebook</td><td>-0.93</td><td>-0.83</td><td>1.00</td><td>0.65</td></tr>
+  </table>
+  <p>Now sci-fi vs romance is negative, and Ben gets 4.0 for Interstellar. User-user cosine on the same matrix: Asha–Ben 0.73, Chen–Dia 0.87 (the two taste clusters).</p>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Neighbourhood CF on sparse data: two users who share one rated item can get similarity 1.0. Require a minimum overlap or shrink similarities toward 0.</p>
+  </div>
+
+  <h2 id="rs-mf"><span class="num">04</span>Matrix Factorization</h2>
+  <figure class="viz"><svg viewBox="0 0 560 170" width="560">
+<rect x="20" y="30" width="150" height="120" class="fs" stroke="currentColor"/>
+<text x="95" y="20" text-anchor="middle">R  (users × items)</text>
+<text x="95" y="95" text-anchor="middle" class="tm">4 × 5, sparse</text>
+<text x="200" y="95" text-anchor="middle">≈</text>
+<rect x="230" y="30" width="50" height="120" class="fb sb"/>
+<text x="255" y="20" text-anchor="middle" class="tb">P</text>
+<text x="255" y="95" text-anchor="middle">4×2</text>
+<text x="300" y="95" text-anchor="middle">×</text>
+<rect x="320" y="60" width="150" height="50" class="ft st"/>
+<text x="395" y="50" text-anchor="middle">Qᵀ</text>
+<text x="395" y="90" text-anchor="middle">2×5</text>
+<text x="20" y="166" class="tm">rating(u,i) ≈ P[u] · Q[i]  (user vector · item vector)</text>
+<text x="490" y="80" class="tm">k = 2</text><text x="490" y="96" class="tm">latent</text><text x="490" y="112" class="tm">factors</text>
+</svg><figcaption>Compress the sparse matrix into two thin dense ones. Their product fills in the blanks.</figcaption></figure>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Describe every film by a few sliders ("how sci-fi", "how romantic") and every user by how much they like each slider. Nobody names the sliders; training discovers them.</p>
+  </div>
+  <p>Loss: squared error on <em>observed</em> cells only, plus L2 regularisation (λ). Two ways to minimise it:</p>
+  <div class="cards">
+    <div><b>SGD</b><p>Loop over observed ratings, nudge P[u] and Q[i] along the gradient.</p><small>Funk SVD (Netflix Prize)</small></div>
+    <div><b>ALS</b><p>Fix Q, solve P exactly (ridge regression); fix P, solve Q; repeat.</p><small>Parallel; Spark MLlib, implicit-feedback ALS</small></div>
+  </div>
+  <div class="fx" data-lang="py">M = R &gt; 0                          # observed mask
+k, lam = 2, 0.1
+rng = np.random.default_rng(0)
+P = rng.normal(0, 0.5, (4, k))     # user factors
+Q = rng.normal(0, 0.5, (5, k))     # item factors
+I = np.eye(k)
+for it in range(15):
+    for u in range(4):             # fix Q -&gt; ridge solve for each user
+        Qu = Q[M[u]]
+        P[u] = np.linalg.solve(Qu.T @ Qu + lam*I, Qu.T @ R[u, M[u]])
+    for i in range(5):             # fix P -&gt; ridge solve for each item
+        Pi = P[M[:, i]]
+        Q[i] = np.linalg.solve(Pi.T @ Pi + lam*I, Pi.T @ R[M[:, i], i])
+    if it in (0, 1, 4, 14):
+        print(f"iter {it+1:2d}  train RMSE {np.sqrt(np.mean((R - P @ Q.T)[M]**2)):.3f}")</div>
+  <div class="fx" data-lang="text">iter  1  train RMSE 0.439
+iter  2  train RMSE 0.284
+iter  5  train RMSE 0.253
+iter 15  train RMSE 0.251</div>
+  <table class="tbl out"><caption>P @ Q.T  (bold = filled-in blanks)</caption>
+    <tr><th></th><th>Inception</th><th>Interstellar</th><th>Notebook</th><th>Titanic</th><th>Toy Story</th></tr>
+    <tr><td>Asha</td><td>5.0</td><td>3.9</td><td>1.0</td><td><strong>1.5</strong></td><td>2.0</td></tr>
+    <tr><td>Ben</td><td>3.9</td><td><strong>3.1</strong></td><td>0.8</td><td>1.2</td><td><strong>1.6</strong></td></tr>
+    <tr><td>Chen</td><td>1.0</td><td>1.0</td><td>4.5</td><td>4.4</td><td><strong>2.6</strong></td></tr>
+    <tr><td>Dia</td><td><strong>2.4</strong></td><td>2.0</td><td>4.5</td><td>4.5</td><td>3.0</td></tr>
+  </table>
+  <p>Learned item factors: Inception [-0.15, -1.56], Notebook [-1.50, 0.05]. One axis became "sci-fi", the other "romance", unprompted.</p>
+  <div class="callout intu"><span class="label">Production upgrades</span>
+    <p>Add user and item <strong>biases</strong> (some users rate high; some films are loved by all). Two-tower neural nets generalise MF: each tower turns features into the vector, so new items get a vector too.</p>
+  </div>
+
+  <h2 id="rs-cold"><span class="num">05</span>Cold Start</h2>
+  <p>CF needs history. A new user or item has none, so its row/column is empty.</p>
+  <table class="tbl">
+    <tr><th>Case</th><th>Strategies</th></tr>
+    <tr><td><strong>New user</strong></td><td>Popular / trending items; onboarding quiz ("pick 3 genres"); context (location, device, referrer); update quickly from first clicks</td></tr>
+    <tr><td><strong>New item</strong></td><td>Content features → content-based or two-tower item vector; boost exposure with exploration slots; borrow from similar items' embeddings</td></tr>
+    <tr><td><strong>New system</strong></td><td>Start with rules and popularity, log impressions from day one, add CF when data arrives</td></tr>
+  </table>
+  <div class="callout intu"><span class="label">Hybrid is the default</span>
+    <p>Real systems blend: content features for cold items, CF for warm ones, popularity as the fallback.</p>
+  </div>
+
+  <h2 id="rs-stage"><span class="num">06</span>Two-Stage Ranking Systems</h2>
+  <figure class="viz"><svg viewBox="0 0 560 150" width="560">
+<defs><marker id="rs-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="tm"/></marker></defs>
+<rect x="5" y="20" width="110" height="110" class="fs" stroke="currentColor"/>
+<text x="60" y="65" text-anchor="middle">Catalog</text><text x="60" y="85" text-anchor="middle" class="tm">10M items</text>
+<rect x="150" y="35" width="110" height="80" class="fb sb"/>
+<text x="205" y="60" text-anchor="middle">Retrieval</text><text x="205" y="78" text-anchor="middle" class="tm">ANN, CF, rules</text><text x="205" y="96" text-anchor="middle" class="tm">→ ~1,000</text>
+<rect x="295" y="48" width="110" height="54" class="fv"/>
+<text x="350" y="70" text-anchor="middle">Ranking</text><text x="350" y="88" text-anchor="middle" class="tm">GBM / DNN → 50</text>
+<rect x="440" y="58" width="110" height="34" class="fg sg"/>
+<text x="495" y="79" text-anchor="middle">Re-rank → 10</text>
+<line x1="117" y1="75" x2="147" y2="75" stroke="currentColor" marker-end="url(#rs-ar2)"/>
+<line x1="262" y1="75" x2="292" y2="75" stroke="currentColor" marker-end="url(#rs-ar2)"/>
+<line x1="407" y1="75" x2="437" y2="75" stroke="currentColor" marker-end="url(#rs-ar2)"/>
+<text x="150" y="145" class="tm">cheap, high recall</text><text x="350" y="145" class="tm">costly, high precision</text>
+</svg><figcaption>Each stage sees fewer items but spends more compute per item. Budget: ~100 ms total.</figcaption></figure>
+  <table class="tbl">
+    <tr><th>Stage</th><th>Goal</th><th>Typical tools</th></tr>
+    <tr><td>Retrieval / candidate generation</td><td>Don't miss good items (recall)</td><td>Two-tower embeddings + approximate nearest-neighbour (FAISS), item-item CF, "trending", "continue watching"</td></tr>
+    <tr><td>Ranking</td><td>Order candidates precisely</td><td>LightGBM or deep model with user, item, context and cross features; predicts P(click), watch time</td></tr>
+    <tr><td>Re-ranking</td><td>Business rules</td><td>Diversity, freshness, dedupe, remove already-bought, sponsored slots, fairness</td></tr>
+  </table>
+  <h3>Learning to rank</h3>
+  <div class="cards">
+    <div><b>Pointwise</b><p>Predict a score per item (logloss on click).</p><small>Simplest; most common</small></div>
+    <div><b>Pairwise</b><p>Learn "A above B" for pairs.</p><small>RankNet, BPR</small></div>
+    <div><b>Listwise</b><p>Optimise the whole list's metric, e.g. NDCG.</p><small>LambdaMART (LGBMRanker)</small></div>
+  </div>
+
+  <h2 id="rs-eval"><span class="num">07</span>Evaluation</h2>
+  <p>Hold out each user's <em>later</em> interactions (time split), recommend top-k, and compare with what they actually engaged with.</p>
+  <table class="tbl">
+    <tr><th>Metric</th><th>Question it answers</th><th>Order-aware?</th></tr>
+    <tr><td><strong>Precision@k</strong></td><td>What fraction of my k recs were relevant?</td><td>No</td></tr>
+    <tr><td><strong>Recall@k</strong></td><td>What fraction of the relevant items did I find?</td><td>No</td></tr>
+    <tr><td><strong>AP@k / MAP</strong></td><td>Average precision at each hit; MAP = mean over users</td><td>Yes</td></tr>
+    <tr><td><strong>NDCG@k</strong></td><td>Hits discounted by 1/log₂(rank+1), divided by the ideal</td><td>Yes; supports graded relevance</td></tr>
+    <tr><td><strong>Coverage</strong></td><td>Share of catalog ever recommended</td><td>Beyond-accuracy</td></tr>
+    <tr><td><strong>Diversity</strong></td><td>How different are items within one list?</td><td>Beyond-accuracy</td></tr>
+  </table>
+  <div class="fx" data-lang="py">def precision_at_k(rec, rel, k): return len(set(rec[:k]) &amp; rel) / k
+def recall_at_k(rec, rel, k):    return len(set(rec[:k]) &amp; rel) / len(rel)
+def ap_at_k(rec, rel, k):
+    hits, s = 0, 0.0
+    for i, item in enumerate(rec[:k], 1):
+        if item in rel: hits += 1; s += hits / i      # precision at each hit
+    return s / min(len(rel), k)
+def ndcg_at_k(rec, rel, k):
+    dcg  = sum(1/np.log2(i+1) for i, item in enumerate(rec[:k], 1) if item in rel)
+    idcg = sum(1/np.log2(i+1) for i in range(1, min(len(rel), k)+1))
+    return dcg / idcg
+
+recs  = {"u1": ["A","B","C","D","E"], "u2": ["B","F","A","G","H"]}
+truth = {"u1": {"A","C","F"},          "u2": {"G"}}
+for u in recs:
+    r, t = recs[u], truth[u]
+    print(u, f"P@5={precision_at_k(r,t,5):.2f} R@5={recall_at_k(r,t,5):.2f} "
+             f"AP@5={ap_at_k(r,t,5):.3f} NDCG@5={ndcg_at_k(r,t,5):.3f}")
+print("MAP@5 =", round(np.mean([ap_at_k(recs[u], truth[u], 5) for u in recs]), 3))
+
+shown = set(sum(recs.values(), []))                 # catalog = A..J (10 items)
+print(f"coverage = {len(shown)}/10 = {len(shown)/10:.0%}")
+genre = {"A":"scifi","B":"scifi","C":"scifi","D":"drama","E":"scifi",
+         "F":"comedy","G":"drama","H":"comedy"}
+def ild(lst):                                       # share of pairs with different genres
+    pairs = [(a, b) for i, a in enumerate(lst) for b in lst[i+1:]]
+    return np.mean([genre[a] != genre[b] for a, b in pairs])
+for u in recs: print(u, "diversity =", round(ild(recs[u]), 2))</div>
+  <div class="fx" data-lang="text">u1 P@5=0.40 R@5=0.67 AP@5=0.556 NDCG@5=0.704
+u2 P@5=0.20 R@5=1.00 AP@5=0.250 NDCG@5=0.431
+MAP@5 = 0.403
+coverage = 8/10 = 80%
+u1 diversity = 0.4
+u2 diversity = 0.8</div>
+  <ul>
+    <li>u1 AP: hits at ranks 1 and 3 → (1/1 + 2/3) / 3 = 0.556.</li>
+    <li>u2 has perfect recall but its only hit sits at rank 4, so NDCG and AP punish it.</li>
+    <li>Coverage: 8 of 10 catalog items appeared in someone's list. Diversity: share of item pairs in a list with different genres.</li>
+  </ul>
+  <div class="callout trap"><span class="label">Trap: offline ≠ online</span>
+    <p>Logged data only contains what the old system showed. Offline wins often don't survive; the final judge is an A/B test on the business metric.</p>
+  </div>
+
+  <h2 id="rs-bias"><span class="num">08</span>Popularity Bias &amp; Feedback Loops</h2>
+  <figure class="viz"><svg viewBox="0 0 560 145" width="560">
+<defs><marker id="rs-ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="tm"/></marker></defs>
+<rect x="10" y="40" width="120" height="40" class="fb sb"/><text x="70" y="65" text-anchor="middle">Recommend</text>
+<rect x="160" y="40" width="120" height="40" class="ft st"/><text x="220" y="65" text-anchor="middle">Users click</text>
+<rect x="310" y="40" width="120" height="40" class="fv"/><text x="370" y="65" text-anchor="middle">Log as training</text>
+<rect x="440" y="40" width="110" height="40" class="fr sr"/><text x="495" y="65" text-anchor="middle">Retrain</text>
+<line x1="132" y1="60" x2="157" y2="60" stroke="currentColor" marker-end="url(#rs-ar3)"/>
+<line x1="282" y1="60" x2="307" y2="60" stroke="currentColor" marker-end="url(#rs-ar3)"/>
+<line x1="432" y1="60" x2="437" y2="60" stroke="currentColor" marker-end="url(#rs-ar3)"/>
+<path d="M495,82 Q495,118 280,118 Q70,118 70,84" fill="none" stroke="currentColor" marker-end="url(#rs-ar3)"/>
+<text x="280" y="138" text-anchor="middle" class="tm">unshown items get no clicks → never learned → never shown</text>
+</svg><figcaption>The model trains on data its own past choices created. Popular items get more exposure, so more clicks, so more exposure.</figcaption></figure>
+  <p>Simulation: 50 items with hidden true click rates; each round shows 5. Compare a "most clicked" policy with smoothed CTR plus 10% random exploration.</p>
+  <div class="fx" data-lang="py">def simulate(score, eps, rounds=3000, n=50, seed=1):
+    rng = np.random.default_rng(seed)
+    appeal = rng.uniform(0.05, 0.3, n)              # true click probability (unknown)
+    clicks, shows = np.zeros(n), np.zeros(n)
+    for _ in range(rounds):
+        if rng.random() &lt; eps: slate = rng.choice(n, 5, replace=False)          # explore
+        else: slate = np.argsort(-score(clicks, shows) + rng.random(n)*1e-9)[:5]  # exploit
+        shows[slate] += 1
+        clicks[slate] += rng.random(5) &lt; appeal[slate]
+    top5 = np.argsort(-score(clicks, shows))[:5]
+    return (shows &gt; 0).sum(), len(set(top5) &amp; set(np.argsort(-appeal)[:5]))
+popularity = lambda c, s: c                      # "most clicked"
+ctr        = lambda c, s: (c + 1) / (s + 5)      # smoothed click rate
+for name, f, eps in [("popularity, no explore", popularity, 0.0),
+                     ("smoothed CTR, 10% explore", ctr, 0.1)]:
+    seen, hit = simulate(f, eps)
+    print(f"{name:26s} items ever shown={seen:2d}/50  true top-5 found={hit}/5")</div>
+  <div class="fx" data-lang="text">popularity, no explore     items ever shown=16/50  true top-5 found=0/5
+smoothed CTR, 10% explore  items ever shown=50/50  true top-5 found=3/5</div>
+  <p>The greedy popularity loop locked onto early winners and never found a single truly-best item.</p>
+  <ul>
+    <li><strong>Exploration</strong>: ε-greedy slots, Thompson sampling / bandits.</li>
+    <li><strong>Normalise by exposure</strong>: rank by rate, not raw count; inverse propensity weighting in training.</li>
+    <li><strong>Re-rank for diversity / long tail</strong>; track coverage and novelty on dashboards.</li>
+    <li><strong>Log impressions</strong>, not just clicks, so you know what was seen and ignored.</li>
+  </ul>
+
+  <h2 id="rs-qa"><span class="num">09</span>Questions &amp; Answers</h2>
+  <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>Content-based vs collaborative filtering: when does each win?</summary><div class="qa-body">Content-based wins for new items with good features and when you need explanations. CF wins when there's rich interaction history: it finds non-obvious links ("people who buy X also buy Y") without any features. Most systems are hybrids.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why is item-item CF usually preferred over user-user at scale?</summary><div class="qa-body">There are usually fewer items than users, item similarities change slowly so they can be precomputed offline, and each item has many ratings so its similarities are more reliable. User tastes drift, and user vectors are sparse.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why mean-centre ratings before computing cosine similarity?</summary><div class="qa-body">Raw ratings are all positive, so every cosine is positive and disliked items still pull predictions toward themselves. Centring by each user's mean turns ratings into "above/below my usual", giving negative similarities for opposite tastes. In the toy example the prediction went from 2.22 to 4.0.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain matrix factorization in two sentences, and what ALS does.</summary><div class="qa-body">Approximate the sparse user×item matrix as the product of a user-factor matrix and an item-factor matrix, so each rating ≈ dot product of two k-dim vectors; train on observed cells with L2. ALS alternates: fix item factors and solve each user exactly as ridge regression, then fix users and solve items, repeating until convergence.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you handle a brand-new item with no interactions?</summary><div class="qa-body">Use its content (text, image, category) to get an embedding via a content model or a two-tower item tower, place it among similar items, and give it guaranteed exploration impressions so it collects data fast. Then let CF take over.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why do large recommenders use a retrieval stage and a ranking stage?</summary><div class="qa-body">Scoring millions of items with a heavy model per request is too slow. Retrieval cheaply narrows to ~hundreds with high recall (embeddings + ANN, CF, heuristics); the ranking model then spends rich features and compute on just those, optimising precision within the latency budget.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Recs = [A,B,C,D,E], relevant = {A,C,F}. Compute P@5, R@5 and AP@5.</summary><div class="qa-body">Hits: A (rank 1), C (rank 3). P@5 = 2/5 = 0.40. R@5 = 2/3 = 0.67. AP@5 = (1/1 + 2/3) / 3 = 0.556 (divide by min(|relevant|, k) = 3).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Your new model wins offline on NDCG but loses the A/B test. Possible reasons?</summary><div class="qa-body">Offline data is biased by the old policy's exposure; the proxy (click) doesn't match the business metric (retention, revenue); position bias in logs; less diversity causing fatigue; leakage in the offline split (random instead of time-based).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a feedback loop in recommenders and how do you mitigate it?</summary><div class="qa-body">The model trains on interactions its own recommendations caused, so shown items gain clicks and unshown items are never learned: popularity snowballs. Mitigate with exploration (ε-greedy, bandits), exposure-normalised targets or inverse propensity weighting, diversity re-ranking, and logging impressions.</div></details>
+</main>`
+});
+
+
+// ml/ml_timeseries.js — Time Series Forecasting
+Object.assign(TOPIC_CONTENT, {
+  "ml_timeseries": `<main>
+  <h1>Time Series Forecasting</h1>
+  <p class="lead">How to predict the next values of a series that moves over time: demand, traffic, revenue, sensor readings. It builds on regression and cross-validation, but changes the rules: order matters and the future must never leak into training.</p>
+
+  <h2 id="ts-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Time Series Forecasting</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Why it's different</div>
+        <ul>
+          <li><b>Order matters</b> — rows are time-ordered; never shuffle</li>
+          <li><b>Autocorrelation</b> — today correlates with yesterday; not i.i.d.</li>
+          <li><b>Leakage</b> — future info in training; scores look great, prod fails</li>
+          <li>⚠ <b>Quiet leaks</b> — unshifted rolling means, scaler fit on all data, late-arriving features</li>
+          <li>💡 Grading a forecaster who has tomorrow's paper</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Components</div>
+        <ul>
+          <li><b>Trend</b> — long-run direction</li>
+          <li><b>Seasonality</b> — fixed-period repeat (12 for monthly-yearly, 7 for daily-weekly)</li>
+          <li><b>Cycle</b> — rises/falls with no fixed period</li>
+          <li><b>Noise</b> — leftover randomness</li>
+          <li><b>Additive</b> y = T+S+R (constant swing) vs <b>multiplicative</b> T×S×R (swing grows) → log it</li>
+          <li><b>Tools</b> — <code>seasonal_decompose</code>, <b>STL</b> (robust, preferred)</li>
+          <li>⚠ Centred trend uses future values: for understanding, not features</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Stationarity</div>
+        <ul>
+          <li><b>Stationary</b> — constant mean, variance, autocorrelation</li>
+          <li><b>Why</b> — ARIMA learns fixed rules; rules must not drift</li>
+          <li><b>ADF</b> — H₀ unit root (non-stationary); p &lt; 0.05 → stationary</li>
+          <li><b>KPSS</b> — opposite H₀ (stationary); use both if unsure</li>
+          <li><b>Differencing</b> — <code>y.diff()</code> removes trend (d); <code>diff(12)</code> removes season (D)</li>
+          <li>Example: raw p=0.92 → diff(1) p=0.000</li>
+          <li>⚠ <b>Over-differencing</b> — MA coef ≈ −1 is the hint</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">ACF / PACF</div>
+        <ul>
+          <li><b>ACF</b> — correlation with lag k</li>
+          <li><b>PACF</b> — lag-k correlation after removing shorter lags</li>
+          <li><b>AR(p)</b> — PACF cuts off at p, ACF decays</li>
+          <li><b>MA(q)</b> — ACF cuts off at q, PACF decays</li>
+          <li><b>Spike at s, 2s</b> — seasonal term; slow ACF decay → difference more</li>
+          <li>Example: ACF spikes at 1 and 12 → SARIMA(0,1,1)(0,1,1,12) "airline model"</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Classical models</div>
+        <ul>
+          <li><b>Baselines</b> — naive (last value), seasonal naive (last year), moving average; must beat these</li>
+          <li><b>ARIMA(p,d,q)</b> — p past values, d differences, q past errors</li>
+          <li><b>SARIMA</b> — + (P,D,Q,s) seasonal; <b>SARIMAX</b> — + exogenous regressors</li>
+          <li><b>Order choice</b> — ACF/PACF reading or lowest AIC (<code>auto_arima</code>)</li>
+          <li><b>Prophet</b> — curve-fit trend + seasonalities + holidays; needs <code>ds</code>, <code>y</code></li>
+          <li>Prophet good: daily business data, holidays, gaps; weak: short-term dynamics</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">ML approach</div>
+        <ul>
+          <li><b>Features</b> — lags, shifted rolling stats, calendar, known-future exog</li>
+          <li><b>Rule</b> — lag ≥ horizon, or forecast recursively</li>
+          <li><b>Strategies</b> — recursive (errors compound), direct (one model per h), lags ≥ horizon</li>
+          <li>⚠ <b>Trees can't extrapolate</b> — predict y − lag (or ratio), add back</li>
+          <li><b>Global model</b> — one LightGBM over many series wins at scale (M5)</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Validation</div>
+        <ul>
+          <li><b>Expanding window</b> — <code>TimeSeriesSplit(n_splits, test_size)</code>; train always before test</li>
+          <li><b>Sliding window</b> — <code>max_train_size</code> when old data is stale</li>
+          <li><b>Gap</b> — <code>gap=</code> when features arrive late</li>
+          <li>⚠ Random K-fold = training on the future</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Metrics</div>
+        <ul>
+          <li><b>MAE</b> — mean |e|, same units; <b>RMSE</b> — punishes big misses</li>
+          <li><b>MAPE</b> — mean |e/actual|; ⚠ explodes near 0, favours under-forecasts</li>
+          <li><b>sMAPE</b> — bounded 0–200%; <b>WAPE</b> — Σ|e| / Σ|a|</li>
+          <li><b>MASE</b> — MAE ÷ seasonal-naive MAE; &lt; 1 beats baseline; scale-free</li>
+          <li><b>Asymmetric cost</b> — quantile (pinball) loss, forecast P90</li>
+          <li>Demo: SARIMA MASE 0.40, Prophet 0.35, seasonal naive 1.13</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="roadmap-wrap">
+    <h2 class="roadmap-title">What we'll cover</h2>
+    <div class="roadmap-grid">
+      <div class="rm-item rm-done" data-target="ts-diff"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Why Time Series Is Different</span><span class="rm-sub">Order, autocorrelation, leakage</span></div></div>
+      <div class="rm-item rm-done" data-target="ts-decomp"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Components &amp; Decomposition</span><span class="rm-sub">Trend + season + noise</span></div></div>
+      <div class="rm-item rm-done" data-target="ts-stat"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Stationarity &amp; Differencing</span><span class="rm-sub">ADF test, d and D</span></div></div>
+      <div class="rm-item rm-done" data-target="ts-acf"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">ACF &amp; PACF</span><span class="rm-sub">Reading the correlograms</span></div></div>
+      <div class="rm-item rm-done" data-target="ts-models"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Baselines, ARIMA, Prophet</span><span class="rm-sub">Classical forecasters</span></div></div>
+      <div class="rm-item rm-done" data-target="ts-ml"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">ML with Lag Features</span><span class="rm-sub">Gradient boosting for forecasting</span></div></div>
+      <div class="rm-item rm-done" data-target="ts-cv"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Time-Series Cross-Validation</span><span class="rm-sub">Expanding window, never shuffle</span></div></div>
+      <div class="rm-item rm-done" data-target="ts-metrics"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Forecast Metrics</span><span class="rm-sub">MAE, RMSE, MAPE trap, MASE</span></div></div>
+      <div class="rm-item rm-done" data-target="ts-build"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Build It: The Leaderboard</span><span class="rm-sub">Seven models, one holdout</span></div></div>
+      <div class="rm-item rm-done" data-target="ts-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+    </div>
+  </div>
+
+  <h2 id="ts-diff"><span class="num">01</span>Why Time Series Is Different</h2>
+  <table class="tbl">
+    <tr><th></th><th>Ordinary tabular ML</th><th>Time series</th></tr>
+    <tr><td>Row order</td><td>Irrelevant; shuffle freely</td><td>The order <em>is</em> the information</td></tr>
+    <tr><td>Rows independent?</td><td>Assumed (i.i.d.)</td><td>No: today depends on yesterday (<strong>autocorrelation</strong>)</td></tr>
+    <tr><td>Validation</td><td>Random K-fold</td><td>Train on past, test on future only</td></tr>
+    <tr><td>Biggest risk</td><td>Overfitting</td><td><strong>Leakage</strong>: future info sneaks into training</td></tr>
+  </table>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Grading a weather forecaster with tomorrow's newspaper already on their desk. Any score they get is fake.</p>
+  </div>
+  <div class="callout trap"><span class="label">Trap: quiet leakage</span>
+    <p>Not just random splits. A rolling mean that includes today, scaling fit on the whole series, or a feature only known after the fact (final monthly revenue) all leak.</p>
+  </div>
+  <p>Running example for this page: 10 years of synthetic monthly sales (trend 0.8/month, yearly cycle ±15, noise σ=4).</p>
+  <div class="fx" data-lang="py">import numpy as np, pandas as pd
+rng = np.random.default_rng(42)
+t = np.arange(120)
+idx = pd.date_range("2015-01-01", periods=120, freq="MS")   # month starts
+y = pd.Series(100 + 0.8*t + 15*np.sin(2*np.pi*t/12) + rng.normal(0, 4, 120),
+              index=idx, name="sales")
+print(y.head(3).round(1))</div>
+  <div class="fx" data-lang="text">2015-01-01    101.2
+2015-02-01    104.1
+2015-03-01    117.6
+Freq: MS, Name: sales, dtype: float64</div>
+
+  <h2 id="ts-decomp"><span class="num">02</span>Components &amp; Decomposition</h2>
+  <figure class="viz"><svg viewBox="0 0 560 300" width="560">
+<text x="4" y="40">observed</text>
+<line x1="90" y1="70" x2="550" y2="70" stroke="currentColor" opacity=".2"/>
+<polyline points="90,56 96,54 103,45 109,42 116,51 122,53 129,53 135,59 142,62 148,65 155,58 161,54 168,50 174,42 181,39 187,41 194,38 200,45 207,45 213,52 220,56 226,58 233,51 239,50 245,45 252,39 258,32 265,31 271,31 278,35 284,35 291,46 297,50 304,52 310,46 317,40 323,37 330,34 336,29 343,23 349,24 356,28 362,36 369,38 375,41 382,42 388,38 395,36 401,29 407,24 414,19 420,17 427,23 433,23 440,28 446,34 453,36 459,32 466,36 472,27 479,28 485,19 492,13 498,10 505,10 511,14 518,21 524,26 531,26 537,30 544,31 550,26" fill="none" class="sb" stroke-width="1.6"/>
+<text x="4" y="112">trend</text>
+<line x1="90" y1="142" x2="550" y2="142" stroke="currentColor" opacity=".2"/>
+<polyline points="129,137 135,136 142,135 148,134 155,133 161,132 168,131 174,130 181,129 187,128 194,127 200,126 207,126 213,125 220,125 226,124 233,123 239,121 245,120 252,119 258,118 265,118 271,117 278,116 284,115 291,114 297,114 304,113 310,112 317,111 323,111 330,110 336,109 343,108 349,107 356,106 362,105 369,104 375,103 382,102 388,101 395,101 401,100 407,100 414,99 420,98 427,97 433,97 440,96 446,96 453,95 459,94 466,93 472,91 479,90 485,90 492,88 498,88 505,87 511,87 518,86 524,85 531,84 537,83 544,83 550,82" fill="none" class="st" stroke-width="1.6"/>
+<text x="4" y="184">seasonal</text>
+<line x1="90" y1="214" x2="550" y2="214" stroke="currentColor" opacity=".2"/>
+<polyline points="90,185 96,170 103,158 109,154 116,159 122,168 129,179 135,196 142,205 148,209 155,205 161,195 168,185 174,170 181,158 187,154 194,159 200,168 207,179 213,196 220,205 226,209 233,205 239,195 245,185 252,170 258,158 265,154 271,159 278,168 284,179 291,196 297,205 304,209 310,205 317,195 323,185 330,170 336,158 343,154 349,159 356,168 362,179 369,196 375,205 382,209 388,205 395,195 401,185 407,170 414,158 420,154 427,159 433,168 440,179 446,196 453,205 459,209 466,205 472,195 479,185 485,170 492,158 498,154 505,159 511,168 518,179 524,196 531,205 537,209 544,205 550,195" fill="none" class="sg" stroke-width="1.6"/>
+<text x="4" y="256">residual</text>
+<line x1="90" y1="286" x2="550" y2="286" stroke="currentColor" opacity=".2"/>
+<polyline points="129,257 135,259 142,256 148,267 155,239 161,245 168,250 174,237 181,254 187,276 194,254 200,277 207,249 213,256 220,258 226,265 233,235 239,261 245,260 252,264 258,254 265,257 271,253 278,255 284,231 291,266 297,267 304,270 310,247 317,241 323,253 330,267 336,273 343,251 349,247 356,252 362,275 369,254 375,258 382,256 388,244 395,255 401,240 407,253 414,255 420,250 427,281 433,264 440,268 446,262 453,257 459,226 466,266 472,241 479,278 485,260 492,259 498,252 505,245 511,244 518,265 524,261 531,241 537,256 544,274 550,272" fill="none" class="sr" stroke-width="1.6"/>
+</svg><figcaption>First 6 years of the series split into its parts. Observed = trend + seasonal + residual.</figcaption></figure>
+  <div class="cards">
+    <div><b>Trend</b><p>Long-run direction.</p><small>Growing user base</small></div>
+    <div><b>Seasonality</b><p>A pattern that repeats with a fixed period.</p><small>December spike, weekend dip</small></div>
+    <div><b>Cycle</b><p>Rises and falls with <em>no</em> fixed period.</p><small>Business cycles, recessions</small></div>
+    <div><b>Noise</b><p>What's left; unpredictable.</p><small>Should look like random scatter</small></div>
+  </div>
+  <div class="fx" data-lang="py">from statsmodels.tsa.seasonal import seasonal_decompose
+dec = seasonal_decompose(y, model="additive", period=12)
+pd.DataFrame({"trend": dec.trend, "seasonal": dec.seasonal,
+              "resid": dec.resid}).iloc[6:9].round(1)</div>
+  <table class="tbl out"><caption>Result</caption>
+    <tr><th></th><th>trend</th><th>seasonal</th><th>resid</th></tr>
+    <tr><td>2015-07-01</td><td>104.2</td><td>1.4</td><td>-0.3</td></tr>
+    <tr><td>2015-08-01</td><td>105.3</td><td>-7.9</td><td>-0.6</td></tr>
+    <tr><td>2015-09-01</td><td>106.4</td><td>-13.2</td><td>0.1</td></tr>
+  </table>
+  <ul>
+    <li><strong>Additive</strong> (y = T + S + R): seasonal swing has constant size.</li>
+    <li><strong>Multiplicative</strong> (y = T × S × R): swing grows with the level. Log-transform turns it additive.</li>
+    <li><strong>STL</strong> (<code>statsmodels.tsa.seasonal.STL</code>): robust to outliers, lets seasonality drift. Prefer it in practice.</li>
+  </ul>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>The centred moving-average trend uses 6 future months, so its first and last 6 values are NaN. Decomposition is for <em>understanding</em>, not a leak-free feature.</p>
+  </div>
+
+  <h2 id="ts-stat"><span class="num">03</span>Stationarity &amp; Differencing</h2>
+  <div class="cards">
+    <div><b>Stationary</b><p>Mean, variance and autocorrelation don't change over time.</p><small>White noise, daily returns</small></div>
+    <div><b>Non-stationary</b><p>Has trend, seasonality or changing variance.</p><small>Prices, sales, population</small></div>
+  </div>
+  <p>ARIMA-style models assume stationarity: the past only teaches you the future if the rules stay the same.</p>
+  <div class="flow"><span>Raw series</span><span>Log (fix growing variance)</span><span>diff(1) (remove trend)</span><span>diff(12) (remove season)</span><span>ADF test</span></div>
+  <p><strong>ADF test</strong> (Augmented Dickey-Fuller): H₀ = "series has a unit root" (non-stationary). Small p-value → reject → stationary.</p>
+  <div class="fx" data-lang="py">from statsmodels.tsa.stattools import adfuller
+for name, s in [("raw", y), ("diff(1)", y.diff().dropna()),
+                ("diff(1)+diff(12)", y.diff().diff(12).dropna())]:
+    stat, p, *_ = adfuller(s)
+    print(f"{name:18s} ADF={stat:7.2f}  p={p:.4f}")</div>
+  <div class="fx" data-lang="text">raw                ADF=  -0.31  p=0.9248
+diff(1)            ADF=  -7.54  p=0.0000
+diff(1)+diff(12)   ADF=  -5.03  p=0.0000</div>
+  <p>Raw: can't reject (p=0.92), so non-stationary. One difference fixes it. The number of differences becomes <code>d</code>; seasonal differences become <code>D</code>.</p>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Over-differencing adds noise. Hint: an MA coefficient near −1 (we get −0.985 below). KPSS test has the opposite H₀ (stationary); use both when unsure.</p>
+  </div>
+
+  <h2 id="ts-acf"><span class="num">04</span>ACF &amp; PACF</h2>
+  <ul>
+    <li><strong>ACF</strong> (autocorrelation function): correlation of the series with itself k steps back.</li>
+    <li><strong>PACF</strong> (partial ACF): the same, after removing the effect of the lags in between.</li>
+  </ul>
+  <figure class="viz"><svg viewBox="0 0 560 170" width="560">
+<rect x="40" y="67" width="510" height="27" class="fs"/>
+<line x1="40" y1="80" x2="550" y2="80" stroke="currentColor"/>
+<rect x="69" y="80" width="14" height="37" class="fr sr"/>
+<text x="76" y="165" text-anchor="middle" class="tm">1</text>
+<rect x="105" y="76" width="14" height="4" class="fb sb"/>
+<text x="112" y="165" text-anchor="middle" class="tm">2</text>
+<rect x="141" y="80" width="14" height="1" class="fb sb"/>
+<text x="148" y="165" text-anchor="middle" class="tm">3</text>
+<rect x="177" y="80" width="14" height="6" class="fb sb"/>
+<text x="184" y="165" text-anchor="middle" class="tm">4</text>
+<rect x="213" y="70" width="14" height="10" class="fb sb"/>
+<text x="220" y="165" text-anchor="middle" class="tm">5</text>
+<rect x="249" y="80" width="14" height="3" class="fb sb"/>
+<text x="256" y="165" text-anchor="middle" class="tm">6</text>
+<rect x="285" y="80" width="14" height="9" class="fb sb"/>
+<text x="292" y="165" text-anchor="middle" class="tm">7</text>
+<rect x="321" y="72" width="14" height="8" class="fb sb"/>
+<text x="328" y="165" text-anchor="middle" class="tm">8</text>
+<rect x="357" y="80" width="14" height="6" class="fb sb"/>
+<text x="364" y="165" text-anchor="middle" class="tm">9</text>
+<rect x="393" y="73" width="14" height="7" class="fb sb"/>
+<text x="400" y="165" text-anchor="middle" class="tm">10</text>
+<rect x="429" y="69" width="14" height="11" class="fb sb"/>
+<text x="436" y="165" text-anchor="middle" class="tm">11</text>
+<rect x="465" y="80" width="14" height="26" class="fr sr"/>
+<text x="472" y="165" text-anchor="middle" class="tm">12</text>
+<rect x="501" y="67" width="14" height="13" class="fr sr"/>
+<text x="508" y="165" text-anchor="middle" class="tm">13</text>
+<text x="40" y="14" class="tm">ACF of the differenced series (shaded = 95% noise band)</text>
+<text x="76" y="150" class="tr">lag 1: -0.52</text><text x="430" y="150" class="tr">lag 12: -0.37</text>
+</svg><figcaption>Real ACF of y.diff().diff(12). Spikes outside the band are significant: lag 1 and lag 12.</figcaption></figure>
+  <table class="tbl">
+    <tr><th>Pattern</th><th>ACF</th><th>PACF</th><th>Suggests</th></tr>
+    <tr><td>AR(p)</td><td>Decays slowly</td><td><strong>Cuts off</strong> after lag p</td><td>p = last PACF spike</td></tr>
+    <tr><td>MA(q)</td><td><strong>Cuts off</strong> after lag q</td><td>Decays slowly</td><td>q = last ACF spike</td></tr>
+    <tr><td>Spike at lag 12, 24…</td><td colspan="2">Seasonal term (monthly data)</td><td>P or Q = 1</td></tr>
+    <tr><td>ACF barely decays</td><td colspan="2">Still non-stationary</td><td>Difference again</td></tr>
+  </table>
+  <div class="fx" data-lang="py">from statsmodels.tsa.stattools import acf, pacf
+d = y.diff().diff(12).dropna()
+print("ACF ", np.round(acf(d, nlags=13)[1:], 2))
+print("PACF", np.round(pacf(d, nlags=13)[1:], 2))</div>
+  <div class="fx" data-lang="text">ACF  [-0.52  0.05 -0.01 -0.09  0.14 -0.04 -0.13  0.12 -0.09  0.1   0.15 -0.37
+  0.19]
+PACF [-0.53 -0.31 -0.21 -0.3  -0.13 -0.05 -0.26 -0.21 -0.29 -0.25  0.19 -0.22
+ -0.33]</div>
+  <p>ACF cuts off after lag 1 plus a spike at 12; PACF decays. Reading: MA(1) and seasonal MA(1), i.e. SARIMA(0,1,1)(0,1,1,12), the classic "airline model". Plot with <code>plot_acf</code> / <code>plot_pacf</code> from <code>statsmodels.graphics.tsaplots</code>.</p>
+
+  <h2 id="ts-models"><span class="num">05</span>Baselines, ARIMA, Prophet</h2>
+  <h3>Baselines first, always</h3>
+  <div class="cards">
+    <div><b>Naive</b><p>Forecast = last value.</p><small>Strong for random walks (stock prices)</small></div>
+    <div><b>Seasonal naive</b><p>Forecast = value one season ago.</p><small>"Same month last year"</small></div>
+    <div><b>Moving average</b><p>Forecast = mean of last k values.</p><small>Smooths noise, lags trends</small></div>
+  </div>
+  <p>A fancy model that can't beat seasonal naive isn't worth shipping.</p>
+  <h3>ARIMA(p, d, q) and SARIMA</h3>
+  <table class="tbl">
+    <tr><th>Letter</th><th>Part</th><th>Meaning</th></tr>
+    <tr><td><strong>p</strong></td><td>AR (autoregressive)</td><td>How many past <em>values</em> feed the prediction</td></tr>
+    <tr><td><strong>d</strong></td><td>I (integrated)</td><td>How many times to difference</td></tr>
+    <tr><td><strong>q</strong></td><td>MA (moving average)</td><td>How many past <em>forecast errors</em> feed the prediction</td></tr>
+    <tr><td><strong>(P,D,Q,s)</strong></td><td>Seasonal part</td><td>Same three, at lags of s (12 = monthly-yearly)</td></tr>
+  </table>
+  <div class="fx" data-lang="py">from statsmodels.tsa.statespace.sarimax import SARIMAX
+train, test = y[:-12], y[-12:]                      # hold out the last year
+m = SARIMAX(train, order=(0,1,1), seasonal_order=(0,1,1,12)).fit(disp=False)
+print(m.params.round(3))
+print(m.get_forecast(12).conf_int().iloc[:3].round(1))</div>
+  <div class="fx" data-lang="text">ma.L1       -0.985
+ma.S.L12    -0.617
+sigma2      11.427
+dtype: float64
+            lower sales  upper sales
+2024-01-01        175.1        188.4
+2024-02-01        186.6        199.8
+2024-03-01        194.2        207.5</div>
+  <p>You get prediction intervals for free. Choose orders by ACF/PACF reading, or by lowest AIC (<code>pmdarima.auto_arima</code> automates it). Add external regressors (price, holidays) through <code>exog</code>: that's the X in SARIMAX.</p>
+  <h3>Prophet</h3>
+  <p>Meta's library: fits y = trend + yearly/weekly seasonality + holidays as a curve over time, not over lags.</p>
+  <div class="fx" data-lang="py">from prophet import Prophet
+df = train.reset_index(); df.columns = ["ds", "y"]     # Prophet needs these names
+p = Prophet(yearly_seasonality=True, weekly_seasonality=False,
+            daily_seasonality=False).fit(df)
+future = p.make_future_dataframe(periods=12, freq="MS")
+fc = p.predict(future)[["ds", "yhat", "yhat_lower", "yhat_upper"]]</div>
+  <ul>
+    <li><strong>Good at</strong>: daily business data, multiple seasonalities, holidays, missing days, changepoints in trend. Easy for analysts.</li>
+    <li><strong>Weak at</strong>: short-term dynamics (no lags), noisy data. Often beaten by a tuned GBM or even seasonal naive.</li>
+  </ul>
+
+  <h2 id="ts-ml"><span class="num">06</span>ML with Lag Features</h2>
+  <p>Turn the series into a regular table: each row is a time point; columns are things known <em>before</em> that time.</p>
+  <table class="tbl">
+    <tr><th>Feature type</th><th>Example</th><th>Leak check</th></tr>
+    <tr><td>Lags</td><td><code>y.shift(12)</code>, <code>y.shift(13)</code></td><td>Lag ≥ forecast horizon</td></tr>
+    <tr><td>Rolling stats</td><td><code>y.shift(12).rolling(3).mean()</code></td><td>Shift <em>before</em> rolling</td></tr>
+    <tr><td>Calendar</td><td>month, day-of-week, holiday flag</td><td>Always safe</td></tr>
+    <tr><td>Known-future exog</td><td>planned promo, price</td><td>Only if known at forecast time</td></tr>
+  </table>
+  <div class="fx" data-lang="py">import lightgbm as lgb
+X = pd.DataFrame({"lag12": y.shift(12), "lag13": y.shift(13), "lag24": y.shift(24),
+                  "roll3_lag12": y.shift(12).rolling(3).mean(),
+                  "month": y.index.month})
+Xtr, Xte = X[:-12].dropna(), X[-12:]
+g = lgb.LGBMRegressor(n_estimators=200, learning_rate=0.05, min_child_samples=5,
+                      verbose=-1, random_state=0)
+# Trees can't extrapolate a trend, so predict the year-over-year change instead
+g.fit(Xtr, (y - y.shift(12)).loc[Xtr.index])
+pred = g.predict(Xte) + Xte["lag12"].values</div>
+  <p>Result on the holdout (full table in Build It): predicting raw y gives MAE 6.06; predicting the change gives 4.42.</p>
+  <div class="callout trap"><span class="label">Trap: trees can't extrapolate</span>
+    <p>A tree predicts averages of training leaves, so it never exceeds the highest y it has seen. With a trend, model the difference or ratio and add it back.</p>
+  </div>
+  <div class="cards">
+    <div><b>Recursive</b><p>One 1-step model; feed predictions back as lags.</p><small>Errors compound</small></div>
+    <div><b>Direct</b><p>One model per horizon h.</p><small>More models, no compounding</small></div>
+    <div><b>Lags ≥ horizon</b><p>One model, only lags you'll have.</p><small>What we did above</small></div>
+  </div>
+  <div class="callout intu"><span class="label">Industry note</span>
+    <p>For many related series (sales per store × item), a single global LightGBM across all series usually wins. That's how the M5 forecasting competition was won.</p>
+  </div>
+
+  <h2 id="ts-cv"><span class="num">07</span>Time-Series Cross-Validation</h2>
+  <figure class="viz"><svg viewBox="0 0 560 150" width="560">
+<text x="0" y="14" class="tm">time →</text>
+<rect x="60" y="24" width="240" height="20" class="fb sb"/><rect x="300" y="24" width="40" height="20" class="fr sr"/>
+<rect x="60" y="52" width="280" height="20" class="fb sb"/><rect x="340" y="52" width="40" height="20" class="fr sr"/>
+<rect x="60" y="80" width="320" height="20" class="fb sb"/><rect x="380" y="80" width="40" height="20" class="fr sr"/>
+<rect x="60" y="108" width="360" height="20" class="fb sb"/><rect x="420" y="108" width="40" height="20" class="fr sr"/>
+<text x="0" y="38">fold 0</text><text x="0" y="66">fold 1</text><text x="0" y="94">fold 2</text><text x="0" y="122">fold 3</text>
+<rect x="60" y="136" width="12" height="10" class="fb sb"/><text x="78" y="145" class="tm">train</text>
+<rect x="130" y="136" width="12" height="10" class="fr sr"/><text x="148" y="145" class="tm">test (12 months)</text>
+</svg><figcaption>Expanding window: training always ends before the test block starts. Each fold moves the cut-off forward.</figcaption></figure>
+  <div class="fx" data-lang="py">from sklearn.model_selection import TimeSeriesSplit
+for i, (tr, te) in enumerate(TimeSeriesSplit(n_splits=4, test_size=12).split(y)):
+    print(f"fold {i}: train 0-{tr[-1]}  ({len(tr)})   test {te[0]}-{te[-1]}")</div>
+  <div class="fx" data-lang="text">fold 0: train 0-71  (72)   test 72-83
+fold 1: train 0-83  (84)   test 84-95
+fold 2: train 0-95  (96)   test 96-107
+fold 3: train 0-107  (108)   test 108-119</div>
+  <ul>
+    <li><strong>Expanding window</strong>: train grows. Default choice.</li>
+    <li><strong>Sliding window</strong> (<code>max_train_size=</code>): fixed-length train. Use when old data no longer reflects today.</li>
+    <li><strong>Gap</strong> (<code>gap=</code>): skip rows between train and test when features take time to arrive.</li>
+  </ul>
+  <div class="callout trap"><span class="label">Trap: shuffled K-fold</span>
+    <p>Shuffled KFold put row 2 in the test set while training on rows up to 118. The model "remembers" the future, so CV scores look great and production fails.</p>
+  </div>
+
+  <h2 id="ts-metrics"><span class="num">08</span>Forecast Metrics</h2>
+  <table class="tbl">
+    <tr><th>Metric</th><th>Formula idea</th><th>Use when</th><th>Watch out</th></tr>
+    <tr><td><strong>MAE</strong></td><td>mean |error|</td><td>Same units as y, easy to explain</td><td>Scale-dependent</td></tr>
+    <tr><td><strong>RMSE</strong></td><td>√ mean error²</td><td>Big misses are costly</td><td>Dominated by outliers</td></tr>
+    <tr><td><strong>MAPE</strong></td><td>mean |error / actual| × 100</td><td>Business wants "% off"</td><td>Explodes near 0; favours under-forecasts</td></tr>
+    <tr><td><strong>sMAPE</strong></td><td>|error| / mean(|actual|, |forecast|)</td><td>Bounded % (0–200)</td><td>Still odd near 0</td></tr>
+    <tr><td><strong>MASE</strong></td><td>MAE ÷ MAE of seasonal naive (on train)</td><td>Comparing across series</td><td>&lt; 1 means you beat the baseline</td></tr>
+  </table>
+  <div class="fx" data-lang="py">a = np.array([100, 2, 50]); f = np.array([90, 6, 55])
+print("abs errors:", np.abs(a-f), " APE%:", np.round(100*np.abs(a-f)/a, 1),
+      " MAPE:", round(100*np.mean(np.abs(a-f)/a), 1))
+print("sMAPE:", round(100*np.mean(2*np.abs(a-f)/(np.abs(a)+np.abs(f))), 1))</div>
+  <div class="fx" data-lang="text">abs errors: [10  4  5]  APE%: [ 10. 200.  10.]  MAPE: 73.3
+sMAPE: 40.0</div>
+  <div class="callout trap"><span class="label">Trap: MAPE</span>
+    <p>Being 4 units off on a day that sold 2 dominates the score. Also, under-forecasting maxes out at 100% but over-forecasting is unbounded, so minimising MAPE pushes forecasts low.</p>
+  </div>
+  <div class="callout intu"><span class="label">Pick the metric from the cost</span>
+    <p>Stock-outs cost more than overstock? Use a quantile (pinball) loss and forecast the 90th percentile, not the mean.</p>
+  </div>
+
+  <h2 id="ts-build"><span class="num">09</span>Build It: The Leaderboard</h2>
+  <p>Every model above, trained on 108 months, scored on the held-out final 12. All numbers are real.</p>
+  <div class="fx" data-lang="py">def mae(a, f):  return np.mean(np.abs(a - f))
+def rmse(a, f): return np.sqrt(np.mean((a - f)**2))
+def mape(a, f): return 100*np.mean(np.abs((a - f)/a))
+def mase(a, f, tr, m=12):           # scale = in-sample seasonal-naive MAE
+    return mae(a, f) / np.mean(np.abs(tr.values[m:] - tr.values[:-m]))
+
+res = {"naive (last value)": np.repeat(train.iloc[-1], 12),
+       "seasonal naive":     train.iloc[-12:].values,
+       "moving avg (3)":     np.repeat(train.iloc[-3:].mean(), 12)}
+# + SARIMA, Prophet and LightGBM forecasts from sections 05 and 06</div>
+  <table class="tbl out"><caption>Result (12-month holdout)</caption>
+    <tr><th>model</th><th>MAE</th><th>RMSE</th><th>MAPE%</th><th>MASE</th></tr>
+    <tr><td>naive (last value)</td><td>13.69</td><td>15.89</td><td>7.03</td><td>1.44</td></tr>
+    <tr><td>seasonal naive</td><td>10.78</td><td>11.92</td><td>5.67</td><td>1.13</td></tr>
+    <tr><td>moving avg (3)</td><td>19.46</td><td>21.06</td><td>10.06</td><td>2.04</td></tr>
+    <tr><td>SARIMA(0,1,1)(0,1,1,12)</td><td>3.79</td><td>4.96</td><td>2.00</td><td>0.40</td></tr>
+    <tr><td>Prophet</td><td>3.29</td><td>3.94</td><td>1.73</td><td>0.35</td></tr>
+    <tr><td>LightGBM (predict y)</td><td>6.06</td><td>7.71</td><td>3.13</td><td>0.64</td></tr>
+    <tr><td>LightGBM (predict y − lag12)</td><td>4.42</td><td>6.02</td><td>2.32</td><td>0.46</td></tr>
+  </table>
+  <ul>
+    <li>Seasonal naive misses the trend (one year of growth ≈ 9.6), so MASE &gt; 1 on the holdout.</li>
+    <li>Prophet and SARIMA win here because the data <em>is</em> smooth trend + sine. Real, messy, multi-series data often flips this.</li>
+  </ul>
+
+  <h2 id="ts-qa"><span class="num">10</span>Questions &amp; Answers</h2>
+  <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>Why can't you use random K-fold cross-validation on time series?</summary><div class="qa-body">Rows are correlated in time, so a shuffled split trains on points right after (and before) each test point. The model effectively sees the future, giving optimistic scores that collapse in production. Use expanding-window splits where training always ends before testing begins.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is stationarity and why does ARIMA need it?</summary><div class="qa-body">A stationary series has constant mean, variance and autocorrelation over time. ARIMA learns fixed coefficients linking past to present; that only generalises if the relationship doesn't change. The "I" in ARIMA handles non-stationarity by differencing first.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain p, d and q in ARIMA(2,1,0).</summary><div class="qa-body">d = 1: difference once. p = 2: predict the differenced value from its previous two values (AR terms). q = 0: no past forecast errors (MA terms) used.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>The PACF has significant spikes at lags 1 and 2 then drops to zero; the ACF decays slowly. Which model?</summary><div class="qa-body">AR(2). PACF cutting off after lag p is the AR signature; the slowly decaying ACF confirms it.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Your LightGBM forecast flatlines below recent values on a growing series. Why, and the fix?</summary><div class="qa-body">Trees can't predict outside the target range they were trained on, so they can't extrapolate a trend. Predict the change (y − lag, or a ratio) or detrend first, then add the trend back. Or blend with a linear/statistical model.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>You forecast 7 days ahead. Can you use lag_1 as a feature?</summary><div class="qa-body">Only with recursive forecasting (feeding your own predictions back in), where errors compound. Otherwise use lags ≥ 7, or train a separate direct model per horizon. Using true lag_1 when evaluating day 7 is leakage.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Actuals = [100, 2, 50], forecast = [90, 6, 55]. What's the MAPE, and what's wrong with it?</summary><div class="qa-body">APEs are 10%, 200%, 10%, so MAPE = 73.3%. One tiny-volume day dominates even though it was only 4 units off. Use MAE, a weighted MAPE (sum|e| / sum|a|), or MASE instead.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does MASE = 1.13 mean?</summary><div class="qa-body">The model's MAE is 13% worse than the seasonal-naive forecast's in-sample MAE. Under 1 beats the baseline. It is scale-free, so you can average it across thousands of series.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Name three ways a time-series feature pipeline can leak, other than random splits.</summary><div class="qa-body">(1) Rolling features not shifted, so they include the current target. (2) Scaler or imputer fit on the full series, including the test period. (3) Features revised or published after the prediction time (final revenue, late-arriving data). Also target encoding computed over all time.</div></details>
 </main>`
 });
 
