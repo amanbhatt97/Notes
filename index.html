@@ -1499,12 +1499,17 @@ body.sb-collapsed .tb-logo-text{opacity:0;width:0;overflow:hidden}
 <script>
 const CATEGORIES = [
   { key: "python", label: "Python Programming", emoji: "\ud83d\udc0d", topics: [
-    {"key": "py_fundamentals", "label": "Python Fundamentals"},
-    {"key": "py_ds", "label": "Data Structures"},
-    {"key": "py_oop", "label": "OOP"},
-    {"key": "py_advanced", "label": "Advanced Python"},
-    {"key": "py_concurrency", "label": "Concurrency & Async"},
-    {"key": "py_testing", "label": "Testing & Debugging"}
+    {"key": "grp_py_fund", "label": "Fundamentals", "children": [
+      {"key": "py_fundamentals", "label": "01 · Python Fundamentals"},
+      {"key": "py_ds",           "label": "02 · Data Structures"},
+      {"key": "py_io",           "label": "03 · Exceptions, Files & Packages"}
+    ]},
+    {"key": "grp_py_adv", "label": "Advanced Python", "children": [
+      {"key": "py_oop",         "label": "04 · OOP"},
+      {"key": "py_advanced",    "label": "05 · Iterators, Generators, Decorators"},
+      {"key": "py_concurrency", "label": "06 · Concurrency & Async"},
+      {"key": "py_testing",     "label": "07 · Testing & Debugging"}
+    ]}
   ] },
   { key: "softeng", label: "Software Engineering", emoji: "\u2699\ufe0f", topics: [
     {"key": "se_git", "label": "01 · Git & GitHub"},
@@ -1575,10 +1580,10 @@ const CATEGORIES = [
   { key: "dl", label: "Deep Learning", emoji: "\ud83e\udde0", topics: [
     {"key": "dl_foundations", "label": "01 · NN Foundations"},
     {"key": "dl_pytorch",     "label": "02 · PyTorch"},
-    {"key": "dl_keras",       "label": "02b · TensorFlow & Keras"},
-    {"key": "dl_cnns",        "label": "03 · CNNs"},
-    {"key": "dl_rnns",        "label": "04 · RNNs & Sequential"},
-    {"key": "dl_attention",   "label": "05 · Attention Mechanisms"}
+    {"key": "dl_keras",       "label": "03 · TensorFlow & Keras"},
+    {"key": "dl_cnns",        "label": "04 · CNNs"},
+    {"key": "dl_rnns",        "label": "05 · RNNs & Sequential"},
+    {"key": "dl_attention",   "label": "06 · Attention Mechanisms"}
   ] },
   { key: "mlops", label: "MLOps & Deployment", emoji: "\ud83d\ude80", topics: [
     {"key": "mlops_lifecycle", "label": "01 · The ML Lifecycle"},
