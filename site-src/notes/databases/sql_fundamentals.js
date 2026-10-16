@@ -2,7 +2,7 @@
 Object.assign(TOPIC_CONTENT, {
   "sql_fundamentals": `<main>
   <h1>Querying Basics</h1>
-  <p class="lead">Reading, filtering, grouping and changing data with one table at a time. Most interview SQL is these pieces combined, plus the NULL and ordering rules that trip people up.</p>
+  <p class="lead">This is where you start writing SQL: asking one table for some columns, keeping only the rows you want, sorting, counting and summing, and changing data. Every real query, however long, is built from these pieces. Most interview SQL is these pieces combined, plus the NULL and ordering rules that trip people up. All examples run on the <code>shop</code> tables from the previous page.</p>
 
   <h2 id="sf-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -123,7 +123,10 @@ FROM products;</div>
     <tr><td><strong>Avoid <code>SELECT *</code></strong></td><td>Breaks when columns change; reads more than needed</td></tr>
   </table>
   <h3>The integer division trap</h3>
-  <p>Integer ÷ integer gives an integer; the fraction is thrown away.</p>
+  <p>Ask a calculator for 7 ÷ 2 and you get 3.5. Ask SQL and you get 3. When both numbers are whole numbers (integers), SQL gives a whole-number answer and throws the fraction away. Make either side a decimal and the fraction comes back:</p>
+  <div class="fx" data-lang="sql">SELECT 7 / 2 AS int_div, 7 / 2.0 AS dec_div;</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>int_div</th><th>dec_div</th></tr><tr><td>3</td><td>3.5000000000000000</td></tr></table>
+  <p>This bites hardest in rates. "3 delivered out of 5 orders" is 3 / 5, both integers, so SQL says 0:</p>
   <div class="fx" data-lang="sql">SELECT COUNT(*) FILTER (WHERE status = 'delivered') / COUNT(*) AS wrong,
        COUNT(*) FILTER (WHERE status = 'delivered')::numeric / COUNT(*) AS right_rate
 FROM orders;</div>
@@ -133,7 +136,12 @@ FROM orders;</div>
   </div>
 
   <h2 id="sf-where"><span class="num">02</span>Filtering with WHERE</h2>
-  <p><code>WHERE</code> keeps only rows whose condition is <strong>true</strong>. Combine conditions with <code>AND</code>, <code>OR</code>, <code>NOT</code>; use brackets when mixing them.</p>
+  <p>Usually you don't want every row. "Customers in Mumbai", "orders from May", "products under ₹100". <code>WHERE</code> adds that condition: the database checks it for each row and keeps only rows where it is <strong>true</strong>. Combine conditions with <code>AND</code>, <code>OR</code>, <code>NOT</code>; use brackets when mixing them, because <code>AND</code> binds tighter than <code>OR</code>.</p>
+  <div class="fx" data-lang="sql">SELECT name, price FROM products WHERE product_id IN (10, 13);</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>price</th></tr><tr><td>Laptop</td><td>800.00</td></tr><tr><td>Lamp</td><td>40.00</td></tr></table>
+  <div class="fx" data-lang="sql">SELECT name FROM products WHERE name LIKE 'L%';</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>name</th></tr><tr><td>Lamp</td></tr><tr><td>Laptop</td></tr></table>
+  <p><code>IN (10, 13)</code> is a short way to write <code>product_id = 10 OR product_id = 13</code>. <code>LIKE 'L%'</code> means "starts with L, then anything". The full set of comparison tools:</p>
   <table class="tbl">
     <tr><th>Operator</th><th>Example</th><th>Meaning</th></tr>
     <tr><td><code>=</code>, <code>&lt;&gt;</code></td><td><code>price &lt;&gt; 40</code></td><td>Equal / not equal (<code>!=</code> also works)</td></tr>
@@ -147,7 +155,7 @@ FROM orders
 WHERE order_date BETWEEN '2024-05-01' AND '2024-06-02';</div>
   <table class="tbl out"><caption>Result</caption><tr><th>order_id</th><th>order_date</th></tr><tr><td>100</td><td>2024-05-01</td></tr><tr><td>101</td><td>2024-05-20</td></tr><tr><td>102</td><td>2024-06-02</td></tr></table>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>On a <em>timestamp</em> column, <code>BETWEEN '2024-06-01' AND '2024-06-30'</code> stops at midnight on the 30th. Use a half-open range.</p>
+    <p>On a <em>timestamp</em> column (date plus time), <code>BETWEEN '2024-06-01' AND '2024-06-30'</code> stops at midnight at the <em>start</em> of the 30th, so the whole of 30 June is missed. Use a half-open range: include the start, stop <em>before</em> the next period (<code>&gt;= '2024-06-01' AND &lt; '2024-07-01'</code>).</p>
   </div>
   <figure class="viz"><svg viewBox="0 0 600 140" width="600">
     <line x1="40" y1="50" x2="570" y2="50" stroke="currentColor"/>
@@ -161,7 +169,7 @@ WHERE order_date BETWEEN '2024-05-01' AND '2024-06-02';</div>
   </svg><figcaption>On timestamps, '2024-06-30' means midnight at the start of the 30th, so BETWEEN loses almost the whole last day.</figcaption></figure>
 
   <h2 id="sf-exec"><span class="num">03</span>Logical Execution Order</h2>
-  <p>You <em>write</em> SELECT first, but the database <em>evaluates</em> clauses in this order:</p>
+  <p>Here is something that confuses everyone at first. You write <code>SELECT</code> as the first word, but the database does not <em>start</em> with it. It first finds the table, then filters rows, then groups, and only then works out the SELECT columns. Knowing this order explains most "why doesn't this work?" errors. The database <em>evaluates</em> clauses in this order:</p>
   <figure class="viz"><svg viewBox="0 0 600 205" width="600">
     <text x="38" y="20" text-anchor="middle" font-size="10" class="tm">1</text><rect x="5" y="26" width="66" height="34" rx="6" class="fb"/><text x="38" y="47" text-anchor="middle" font-size="10" font-weight="bold">FROM</text><line x1="71" y1="43" x2="79" y2="43" stroke="currentColor"/><text x="112" y="20" text-anchor="middle" font-size="10" class="tm">2</text><rect x="79" y="26" width="66" height="34" rx="6" class="fb"/><text x="112" y="47" text-anchor="middle" font-size="10" font-weight="bold">WHERE</text><line x1="145" y1="43" x2="153" y2="43" stroke="currentColor"/><text x="186" y="20" text-anchor="middle" font-size="10" class="tm">3</text><rect x="153" y="26" width="66" height="34" rx="6" class="ft"/><text x="186" y="47" text-anchor="middle" font-size="10" font-weight="bold">GROUP BY</text><line x1="219" y1="43" x2="227" y2="43" stroke="currentColor"/><text x="260" y="20" text-anchor="middle" font-size="10" class="tm">4</text><rect x="227" y="26" width="66" height="34" rx="6" class="ft"/><text x="260" y="47" text-anchor="middle" font-size="10" font-weight="bold">HAVING</text><line x1="293" y1="43" x2="301" y2="43" stroke="currentColor"/><text x="334" y="20" text-anchor="middle" font-size="10" class="tm">5</text><rect x="301" y="26" width="66" height="34" rx="6" class="fg"/><text x="334" y="47" text-anchor="middle" font-size="10" font-weight="bold">SELECT</text><line x1="367" y1="43" x2="375" y2="43" stroke="currentColor"/><text x="408" y="20" text-anchor="middle" font-size="10" class="tm">6</text><rect x="375" y="26" width="66" height="34" rx="6" class="fs"/><text x="408" y="47" text-anchor="middle" font-size="10" font-weight="bold">DISTINCT</text><line x1="441" y1="43" x2="449" y2="43" stroke="currentColor"/><text x="482" y="20" text-anchor="middle" font-size="10" class="tm">7</text><rect x="449" y="26" width="66" height="34" rx="6" class="fs"/><text x="482" y="47" text-anchor="middle" font-size="10" font-weight="bold">ORDER BY</text><line x1="515" y1="43" x2="523" y2="43" stroke="currentColor"/><text x="556" y="20" text-anchor="middle" font-size="10" class="tm">8</text><rect x="523" y="26" width="66" height="34" rx="6" class="fs"/><text x="556" y="47" text-anchor="middle" font-size="10" font-weight="bold">LIMIT</text>
     <rect x="5" y="80" width="140" height="24" rx="5" class="fb sb"/><text x="13" y="96" font-size="10">raw rows only</text>
@@ -173,8 +181,10 @@ WHERE order_date BETWEEN '2024-05-01' AND '2024-06-02';</div>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Cooking: fetch (FROM), discard bad (WHERE), sort into bowls (GROUP BY), drop small bowls (HAVING), plate and name (SELECT), arrange (ORDER BY), serve a few (LIMIT). You can't use a dish's name before it's plated.</p>
   </div>
+  <p>Try it. The alias <code>doubled</code> is created at step 5 (SELECT). WHERE runs at step 2, when <code>doubled</code> doesn't exist yet, so this fails:</p>
   <div class="fx" data-lang="sql">SELECT name, price * 2 AS doubled FROM products WHERE doubled &gt; 500;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>ERROR</th></tr><tr><td>column "doubled" does not exist</td></tr></table>
+  <p>ORDER BY runs at step 7, after SELECT, so the same alias works there:</p>
   <div class="fx" data-lang="sql">SELECT name, price * 2 AS doubled FROM products ORDER BY doubled DESC;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>doubled</th></tr><tr><td>Laptop</td><td>1600.00</td></tr><tr><td>Phone</td><td>1000.00</td></tr><tr><td>Desk</td><td>300.00</td></tr><tr><td>Lamp</td><td>80.00</td></tr></table>
   <div class="callout intu"><span class="label">Logical, not physical</span>
@@ -182,10 +192,14 @@ WHERE order_date BETWEEN '2024-05-01' AND '2024-06-02';</div>
   </div>
 
   <h2 id="sf-null"><span class="num">04</span>NULL &amp; Three-Valued Logic</h2>
-  <p><strong>NULL</strong> means "unknown / missing", not zero or empty string. Any comparison with NULL gives <strong>UNKNOWN</strong>, and WHERE keeps only TRUE.</p>
+  <p>Dia signed up but never filled in her city. What should the <code>city</code> cell hold? Not "Mumbai", not an empty string (that would mean "her city is called nothing"), not 0. It holds <strong>NULL</strong>, which means "unknown / missing". NULL is not a value; it is the absence of one.</p>
+  <p>This changes how comparisons work. "Is Dia's city Mumbai?" You don't know, so the answer is neither true nor false. SQL calls this third answer <strong>UNKNOWN</strong>. Any comparison with NULL gives UNKNOWN, and WHERE keeps only rows where the condition is TRUE, so UNKNOWN rows are dropped. The only question you can ask is "is it missing?":</p>
+  <div class="fx" data-lang="sql">SELECT name FROM customers WHERE city IS NULL;</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>name</th></tr><tr><td>Dia</td></tr></table>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A sealed envelope. Is Dia's city "Mumbai"? You can't say yes or no. Is it equal to another sealed envelope? Also unknown. You can only ask "is the envelope sealed?" (<code>IS NULL</code>).</p>
   </div>
+  <p>Now the two classic mistakes. <code>= NULL</code> is always UNKNOWN (unknown equals unknown? nobody knows), so it never matches anything. And "not Mumbai" quietly loses Dia:</p>
   <div class="fx" data-lang="sql">SELECT name FROM customers WHERE city = NULL;     -- 0 rows, always
 SELECT name FROM customers WHERE city &lt;&gt; 'Mumbai'; -- Dia missing!</div>
   <table class="tbl out"><caption>Result (second query)</caption><tr><th>name</th></tr><tr><td>Ben</td></tr></table>
@@ -200,6 +214,7 @@ SELECT name FROM customers WHERE city &lt;&gt; 'Mumbai'; -- Dia missing!</div>
   <div class="fx" data-lang="sql">SELECT name FROM customers WHERE city IS DISTINCT FROM 'Mumbai';</div>
   <table class="tbl out"><caption>Result</caption><tr><th>name</th></tr><tr><td>Ben</td></tr><tr><td>Dia</td></tr></table>
   <h3>Truth table worth memorising</h3>
+  <p>What happens when UNKNOWN meets AND / OR? Think of it as a sealed envelope. "TRUE AND envelope": the answer depends on the envelope, so UNKNOWN. "FALSE AND envelope": already false whatever is inside, so FALSE. "TRUE OR envelope": already true, so TRUE. The query confirms it:</p>
   <div class="fx" data-lang="sql">SELECT TRUE AND NULL AS t_and_n, FALSE AND NULL AS f_and_n,
        TRUE OR NULL AS t_or_n, NOT NULL::boolean AS not_n;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>t_and_n</th><th>f_and_n</th><th>t_or_n</th><th>not_n</th></tr><tr><td>NULL</td><td>f</td><td>t</td><td>NULL</td></tr></table>
@@ -213,7 +228,10 @@ SELECT name FROM customers WHERE city &lt;&gt; 'Mumbai'; -- Dia missing!</div>
   </div>
 
   <h2 id="sf-sort"><span class="num">05</span>Sorting, Paging, DISTINCT</h2>
-  <p><code>ORDER BY</code> sorts the final rows. Without it, row order is <strong>not guaranteed</strong>, even if it looks stable.</p>
+  <p>A table is a bag of rows with no built-in order. If you want "cheapest first" or "newest first", you must say so. <code>ORDER BY</code> sorts the final rows; <code>ASC</code> (ascending, small to big) is the default, <code>DESC</code> flips it. Without ORDER BY, row order is <strong>not guaranteed</strong>, even if it looks stable today.</p>
+  <div class="fx" data-lang="sql">SELECT name, price FROM products ORDER BY price DESC LIMIT 2;</div>
+  <table class="tbl out"><caption>Result: the two most expensive products</caption><tr><th>name</th><th>price</th></tr><tr><td>Laptop</td><td>800.00</td></tr><tr><td>Phone</td><td>500.00</td></tr></table>
+  <p><code>LIMIT 2</code> keeps only the first two rows <em>after</em> sorting, which is how every "top N" question is answered. Two details about sorting:</p>
   <ul>
     <li>Postgres puts NULLs <strong>last in ASC</strong> and <strong>first in DESC</strong>. Override with <code>NULLS FIRST / NULLS LAST</code>.</li>
     <li>Sort by several keys: <code>ORDER BY n DESC, name</code>. The second key breaks ties.</li>
@@ -222,13 +240,14 @@ SELECT name FROM customers WHERE city &lt;&gt; 'Mumbai'; -- Dia missing!</div>
   <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>city</th></tr><tr><td>Asha</td><td>Mumbai</td></tr><tr><td>Chen</td><td>Mumbai</td></tr><tr><td>Ben</td><td>Delhi</td></tr><tr><td>Dia</td><td>NULL</td></tr></table>
   <p>Without <code>NULLS LAST</code>, Dia comes first in a DESC sort.</p>
   <h3>LIMIT / OFFSET</h3>
+  <p><code>OFFSET k</code> skips the first k rows before LIMIT counts. Together they make pages: page 1 is <code>LIMIT 10</code>, page 2 is <code>LIMIT 10 OFFSET 10</code>, like scrolling through search results.</p>
   <div class="fx" data-lang="sql">SELECT name, price FROM products ORDER BY price DESC LIMIT 2 OFFSET 1;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>price</th></tr><tr><td>Phone</td><td>500.00</td></tr><tr><td>Desk</td><td>150.00</td></tr></table>
   <div class="callout trap"><span class="label">Trap</span>
     <p><code>ORDER BY salary DESC LIMIT 2</code> returns Ravi and <em>one of</em> Sara/Tom (they tie at 95000). Which one is arbitrary. Add a tiebreaker, or use <code>DENSE_RANK()</code> if ties must be kept. Large OFFSETs are also slow: the DB still reads and discards the skipped rows.</p>
   </div>
   <h3>DISTINCT</h3>
-  <p>Removes duplicate rows from the result. It applies to the <em>whole row</em>, not one column. All NULLs count as one value here.</p>
+  <p>"Which cities do our customers live in?" A plain <code>SELECT city</code> lists Mumbai twice, once for Asha and once for Chen. <code>DISTINCT</code> removes duplicate rows from the result. It applies to the <em>whole row</em>, not one column: <code>SELECT DISTINCT city, name</code> would keep both Mumbai rows because the names differ. All NULLs count as one value here.</p>
   <div class="fx" data-lang="sql">SELECT DISTINCT city FROM customers ORDER BY city;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>city</th></tr><tr><td>Delhi</td></tr><tr><td>Mumbai</td></tr><tr><td>NULL</td></tr></table>
   <div class="callout trap"><span class="label">Trap</span>
@@ -236,11 +255,19 @@ SELECT name FROM customers WHERE city &lt;&gt; 'Mumbai'; -- Dia missing!</div>
   </div>
 
   <h2 id="sf-agg"><span class="num">06</span>Aggregates &amp; GROUP BY</h2>
-  <p>An <strong>aggregate</strong> squashes many rows into one value: <code>COUNT</code>, <code>SUM</code>, <code>AVG</code>, <code>MIN</code>, <code>MAX</code>. <code>GROUP BY</code> makes one output row per distinct key.</p>
+  <p>So far every query returned rows as they are. Most business questions want a <em>summary</em> instead: how many orders, total sales, average price. An <strong>aggregate</strong> function squashes many rows into one value: <code>COUNT</code>, <code>SUM</code>, <code>AVG</code>, <code>MIN</code>, <code>MAX</code>.</p>
+  <p>Then the question becomes "total sales <em>per category</em>". That needs the rows sorted into piles first, one pile per category, with one summary line per pile. <code>GROUP BY</code> makes the piles: one output row per distinct value of the key.</p>
+  <div class="fx" data-lang="sql">SELECT category, COUNT(*) AS n, SUM(price) AS total
+FROM products
+GROUP BY category
+ORDER BY category;</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>category</th><th>n</th><th>total</th></tr><tr><td>Electronics</td><td>2</td><td>1300.00</td></tr><tr><td>Furniture</td><td>2</td><td>190.00</td></tr></table>
+  <p>By hand: Electronics pile = Laptop 800 + Phone 500 → 2 items, 1300. Furniture pile = Desk 150 + Lamp 40 → 2 items, 190. Four rows in, two rows out.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Sorting receipts into one pile per customer, then writing one summary line per pile. Anything on that line must be either the pile label (the GROUP BY key) or a summary (an aggregate).</p>
   </div>
   <h3>The three COUNTs</h3>
+  <p>COUNT looks like one function but answers three different questions depending on what you put in the brackets. Dia's NULL city is what separates them:</p>
   <div class="fx" data-lang="sql">SELECT COUNT(*) AS all_rows, COUNT(city) AS with_city, COUNT(DISTINCT city) AS cities
 FROM customers;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>all_rows</th><th>with_city</th><th>cities</th></tr><tr><td>4</td><td>3</td><td>2</td></tr></table>
@@ -250,7 +277,7 @@ FROM customers;</div>
     <li>On zero rows, <code>COUNT</code> returns 0 but <code>SUM/AVG/MAX</code> return NULL.</li>
   </ul>
   <h3>WHERE vs HAVING</h3>
-  <p><code>WHERE</code> filters <strong>rows</strong> before grouping. <code>HAVING</code> filters <strong>groups</strong> after aggregation.</p>
+  <p>"Customers with 2 or more non-cancelled orders." Two filters hide in that sentence. "Non-cancelled" is about individual rows: throw out order 102 before making piles. "2 or more" is about a whole pile: you can only check it after counting. SQL gives each its own clause. <code>WHERE</code> filters <strong>rows</strong> before grouping. <code>HAVING</code> filters <strong>groups</strong> after aggregation.</p>
   <figure class="viz"><svg viewBox="0 0 600 190" width="600">
     <defs><marker id="sf-ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <g font-size="10">
@@ -283,14 +310,14 @@ ORDER BY customer_id;</div>
   </div>
 
   <h2 id="sf-case"><span class="num">07</span>CASE &amp; Conditional Aggregation</h2>
-  <p><code>CASE</code> is SQL's if/else. It returns the first matching branch; no match and no ELSE gives NULL.</p>
+  <p>A marksheet shows marks, but the report says "Grade A / B / C". Someone had to apply a rule: 90 and above is A, 75 and above is B, otherwise C. <code>CASE</code> is that rule in SQL, its if/else. It checks the <code>WHEN</code> conditions top to bottom and returns the first one that matches; no match and no <code>ELSE</code> gives NULL. Here products get a price band:</p>
   <div class="fx" data-lang="sql">SELECT name, price,
   CASE WHEN price &gt;= 500 THEN 'high'
        WHEN price &gt;= 100 THEN 'mid'
        ELSE 'low' END AS band
 FROM products;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>price</th><th>band</th></tr><tr><td>Laptop</td><td>800.00</td><td>high</td></tr><tr><td>Phone</td><td>500.00</td><td>high</td></tr><tr><td>Desk</td><td>150.00</td><td>mid</td></tr><tr><td>Lamp</td><td>40.00</td><td>low</td></tr></table>
-  <p><strong>Conditional aggregation</strong> puts CASE inside an aggregate, so one scan produces several counts side by side. Postgres's <code>FILTER (WHERE …)</code> is a cleaner way to write the same thing.</p>
+  <p>Now a trick that interviewers love. "How many orders are delivered, how many cancelled, and what is the delivery rate?" You could run three queries. Or put a CASE <em>inside</em> an aggregate: <code>CASE WHEN status = 'delivered' THEN 1 ELSE 0 END</code> turns each row into a 1 or a 0, and <code>SUM</code> of those is the delivered count. <code>AVG</code> of those 1s and 0s is the fraction delivered. This is <strong>conditional aggregation</strong>: one scan produces several counts side by side. Postgres's <code>FILTER (WHERE …)</code> is a cleaner way to write the same thing.</p>
   <div class="fx" data-lang="sql">SELECT COUNT(*) AS total,
   SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END) AS delivered,
   COUNT(*) FILTER (WHERE status = 'cancelled') AS cancelled,
@@ -302,6 +329,7 @@ FROM orders;</div>
   </div>
 
   <h2 id="sf-func"><span class="num">08</span>Dates &amp; Strings</h2>
+  <p>"Orders per month" is the most common report there is. But <code>order_date</code> holds full dates: 2024-05-01, 2024-05-20. To group them you first need to turn both into "May 2024". <code>DATE_TRUNC('month', d)</code> does that: it rounds a date down to the first of its month. Dates and text come with a small toolbox of such functions:</p>
   <table class="tbl">
     <tr><th>Function</th><th>Does</th><th>Example → result</th></tr>
     <tr><td><code>DATE_TRUNC('month', d)</code></td><td>Round down to period start</td><td>2024-05-20 → 2024-05-01</td></tr>
@@ -322,6 +350,7 @@ ORDER BY 1;</div>
   </div>
 
   <h2 id="sf-write"><span class="num">09</span>Writing Data</h2>
+  <p>Everything so far only read data. Three statements change it: <code>INSERT</code> adds rows, <code>UPDATE</code> changes values in existing rows, <code>DELETE</code> removes rows. UPDATE and DELETE take a WHERE just like SELECT, and that WHERE decides which rows are touched. The examples below ran on a copy of <code>shop</code>, so the real dataset is unchanged.</p>
   <table class="tbl">
     <tr><th>Statement</th><th>Does</th></tr>
     <tr><td><code>INSERT INTO t (cols) VALUES (…), (…)</code></td><td>Adds rows; name the columns explicitly</td></tr>
@@ -329,13 +358,14 @@ ORDER BY 1;</div>
     <tr><td><code>DELETE FROM t WHERE …</code></td><td>Removes matching rows</td></tr>
     <tr><td><code>… RETURNING cols</code></td><td>Postgres: send back the affected rows, no second SELECT needed</td></tr>
   </table>
+  <p>Raise all furniture prices by 10% and show what changed in the same statement:</p>
   <div class="fx" data-lang="sql">UPDATE products SET price = price * 1.10
 WHERE category = 'Furniture'
 RETURNING product_id, name, price;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>product_id</th><th>name</th><th>price</th></tr><tr><td>12</td><td>Desk</td><td>165.00</td></tr><tr><td>13</td><td>Lamp</td><td>44.00</td></tr></table>
   <p>Deleting order 102 directly fails: <em>"violates foreign key constraint … Key (order_id)=(102) is still referenced from table order_items"</em>. Delete the child rows first (or define <code>ON DELETE CASCADE</code>).</p>
   <h3>UPSERT: insert, or update if it exists</h3>
-  <p>A plain INSERT of an existing key fails with "duplicate key value violates unique constraint". <code>ON CONFLICT</code> says what to do instead. <code>EXCLUDED</code> is the row you tried to insert.</p>
+  <p>A supplier sends you tonight's price list. Some products are new (insert them), some already exist (update their price). You don't want to check each one first. <strong>Upsert</strong> = "update or insert" in one statement. A plain INSERT of an existing key fails with "duplicate key value violates unique constraint". <code>ON CONFLICT</code> says what to do instead. <code>EXCLUDED</code> is the row you tried to insert.</p>
   <div class="fx" data-lang="sql">INSERT INTO products (product_id, name, category, price)
 VALUES (13, 'Lamp', 'Furniture', 45), (14, 'Chair', 'Furniture', 90)
 ON CONFLICT (product_id) DO UPDATE SET price = EXCLUDED.price
@@ -347,6 +377,7 @@ RETURNING *;</div>
   </div>
   <h2 id="sf-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>Write a query: names and prices of products cheaper than ₹200, cheapest first.</summary><div class="qa-body"><code>SELECT name, price FROM products WHERE price &lt; 200 ORDER BY price;</code> gives Lamp 40.00, Desk 150.00. FROM picks the table, WHERE keeps rows under 200, ORDER BY sorts ascending (the default).</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What does <code>SELECT name FROM customers WHERE city = 'Mumbai' OR city &lt;&gt; 'Mumbai'</code> return?</summary><div class="qa-body">Asha, Ben, Chen. Not Dia: for her city is NULL, so both sides are UNKNOWN and <code>UNKNOWN OR UNKNOWN</code> is UNKNOWN. "Everything" in SQL never includes NULLs unless you add <code>OR city IS NULL</code>.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Predict: <code>SELECT COUNT(*), COUNT(city), COUNT(DISTINCT city) FROM customers;</code></summary><div class="qa-body">4, 3, 2. Four rows; three non-NULL cities (Dia skipped); two unique values, Mumbai and Delhi.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Why does <code>WHERE doubled &gt; 500</code> fail when <code>doubled</code> is a SELECT alias, but <code>ORDER BY doubled</code> works?</summary><div class="qa-body">WHERE is evaluated before SELECT, so the alias doesn't exist yet. ORDER BY runs after SELECT. Fix: repeat the expression (<code>WHERE price * 2 &gt; 500</code>) or wrap the query in a subquery/CTE.</div></details>

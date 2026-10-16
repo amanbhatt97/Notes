@@ -2,7 +2,7 @@
 Object.assign(TOPIC_CONTENT, {
   "api_flask": `<main>
   <h1>Flask</h1>
-  <p class="lead">Flask is the smallest useful Python web framework: a few decorators turn functions into URLs. Most legacy ML services and many internal tools run on it. This page builds a real model-serving app, tests it, and shows where Flask's synchronous design runs out. Builds on <em>HTTP &amp; REST Fundamentals</em>.</p>
+  <p class="lead">You have a trained model saved in a file. Your teammate wants to send it some numbers and get a prediction back, from any language, from any machine. Flask is the smallest Python library that makes this possible: a few lines turn an ordinary Python function into a web address (URL) anyone can call. This page builds a real model-serving app from nothing, tests it, and shows where Flask runs out of steam. Builds on <em>HTTP &amp; REST Fundamentals</em> (server, request, JSON, status codes).</p>
 
   <h2 id="fl-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -11,9 +11,10 @@ Object.assign(TOPIC_CONTENT, {
       <div class="mm-branch">
         <div class="mm-title">App &amp; routing</div>
         <ul>
-          <li><b>App</b> — <code>app = Flask(__name__)</code></li>
-          <li><b>Route</b> — <code>@app.get("/hello/&lt;name&gt;")</code>; converters <code>&lt;int:id&gt;</code></li>
-          <li><b>WSGI</b> — sync standard: one request per worker thread</li>
+          <li><b>App</b> — <code>app = Flask(__name__)</code>; the object that receives every request</li>
+          <li><b>Route</b> — <code>@app.get("/hello/&lt;name&gt;")</code>: URL → function; converters <code>&lt;int:id&gt;</code></li>
+          <li><b>View function</b> — the Python function a route points to</li>
+          <li><b>WSGI</b> — sync standard: one request per worker at a time</li>
           <li><b>Run</b> — dev <code>flask run</code>; prod <code>gunicorn -w 4 app:app</code></li>
           <li>⚠ <code>debug=True</code> in prod = remote code execution</li>
         </ul>
@@ -21,7 +22,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="mm-branch">
         <div class="mm-title">Requests &amp; responses</div>
         <ul>
-          <li><b>Inputs</b> — path args, <code>request.args</code>, <code>request.get_json()</code>, <code>request.headers</code>, <code>request.files</code></li>
+          <li><b>Inputs</b> — path args, <code>request.args</code> (query), <code>request.get_json()</code> (body), <code>request.headers</code>, <code>request.files</code></li>
           <li><b>Return</b> dict → JSON; <code>jsonify(x), 201, headers</code></li>
           <li>⚠ No validation built in; <code>get_json(silent=True)</code> + manual checks</li>
         </ul>
@@ -29,8 +30,8 @@ Object.assign(TOPIC_CONTENT, {
       <div class="mm-branch">
         <div class="mm-title">Hooks &amp; errors</div>
         <ul>
-          <li><b>before_request</b> — timer, auth, request id; may short-circuit</li>
-          <li><b>after_request</b> — add headers, log</li>
+          <li><b>before_request</b> — runs before every view: timer, auth, request id; may short-circuit</li>
+          <li><b>after_request</b> — runs after every view: add headers, log</li>
           <li><b>g</b> — per-request scratchpad</li>
           <li><b>@app.errorhandler(Exc/404)</b> — JSON errors, not HTML 500</li>
           <li>💡 airport security in, customs out</li>
@@ -41,7 +42,7 @@ Object.assign(TOPIC_CONTENT, {
         <ul>
           <li><b>Blueprint</b> — route group + URL prefix (<code>/api/v1</code>)</li>
           <li><b>App factory</b> — <code>create_app()</code> for config + tests</li>
-          <li><b>Jinja2</b> — <code>{{ var }}</code>, <code>{% for %}</code>; auto-escapes (no XSS)</li>
+          <li><b>Jinja2</b> — HTML template: <code>{{ var }}</code>, <code>{% for %}</code>; auto-escapes (no XSS)</li>
           <li><b>Flask-RESTful</b> — class per resource, methods = verbs (legacy)</li>
         </ul>
       </div>
@@ -58,7 +59,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="mm-branch">
         <div class="mm-title">Testing</div>
         <ul>
-          <li><b>app.test_client()</b> — in-process, no server</li>
+          <li><b>app.test_client()</b> — in-process, no server, no port</li>
           <li><code>client.post(url, json=...)</code> → <code>r.status_code</code>, <code>r.json</code></li>
           <li>Test health, known prediction, bad inputs → 422, headers</li>
         </ul>
@@ -78,9 +79,9 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="fl-app"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">App &amp; Routing</span><span class="rm-sub">Decorators map URLs to functions</span></div></div>
+      <div class="rm-item rm-done" data-target="fl-app"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">App &amp; Routing</span><span class="rm-sub">A function becomes a URL</span></div></div>
       <div class="rm-item rm-done" data-target="fl-req"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Requests &amp; JSON</span><span class="rm-sub">Reading input, returning output</span></div></div>
-      <div class="rm-item rm-done" data-target="fl-mw"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Hooks &amp; Errors</span><span class="rm-sub">Middleware and error handlers</span></div></div>
+      <div class="rm-item rm-done" data-target="fl-mw"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Hooks &amp; Errors</span><span class="rm-sub">Code that wraps every request</span></div></div>
       <div class="rm-item rm-done" data-target="fl-bp"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Blueprints &amp; Templates</span><span class="rm-sub">Structure and Jinja2</span></div></div>
       <div class="rm-item rm-done" data-target="fl-ml"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Serving a Model</span><span class="rm-sub">Train → joblib → /predict</span></div></div>
       <div class="rm-item rm-done" data-target="fl-test"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Testing</span><span class="rm-sub">The test client + pytest</span></div></div>
@@ -90,22 +91,50 @@ Object.assign(TOPIC_CONTENT, {
   </div>
 
   <h2 id="fl-app"><span class="num">01</span>App &amp; Routing</h2>
-  <div class="flow"><span>HTTP request</span><span>WSGI server (gunicorn)</span><span>Flask app</span><span>URL map → view function</span><span>Response</span></div>
-  <div class="fx" data-lang="py">from flask import Flask
-app = Flask(__name__)
+  <p>A web server has one job: wait for a request, look at its path (like <code>/hello/Asha</code>), run the right piece of code, send the answer back. Writing that waiting-and-sorting logic yourself is boring and easy to get wrong. Flask does it for you. You only write the "right piece of code" part, as normal Python functions, and tell Flask which path belongs to which function.</p>
+  <p>Here is a complete, working server. Two functions, two addresses:</p>
+  <div class="fx" data-lang="py"># hello.py
+from flask import Flask, request
+app = Flask(__name__)                 # the app: one object that receives every request
 
-@app.get("/hello/&lt;name&gt;")            # path parameter
-def hello(name):
-    return {"msg": f"Hi {name}"}        # dict → JSON response, 200</div>
+@app.get("/")                         # route: "when someone GETs /, run home()"
+def home():
+    return "Welcome to the shop"
+
+@app.get("/hello/&lt;name&gt;")            # &lt;name&gt; is a placeholder: whatever is in the URL
+def hello(name):                      # ...arrives here as the argument
+    times = request.args.get("times", default=1, type=int)
+    return {"msg": f"Hi {name}", "times": times}      # dict → JSON response, 200</div>
+  <div class="fx" data-lang="text">$ flask --app hello run --port 5052      # start it; it now waits for requests
+$ curl localhost:5052/
+Welcome to the shop
+$ curl localhost:5052/hello/Asha
+{"msg":"Hi Asha","times":1}
+$ curl 'localhost:5052/hello/Asha?times=3'
+{"msg":"Hi Asha","times":3}
+$ curl -i localhost:5052/bye
+HTTP/1.1 404 NOT FOUND</div>
+  <p>What each part does:</p>
+  <ul>
+    <li><code>app = Flask(__name__)</code> creates the application. Every request goes to this object first.</li>
+    <li><code>@app.get("/hello/&lt;name&gt;")</code> is a <strong>route</strong>: it links a URL pattern to the function below it. The function is called a <strong>view function</strong>. The <code>@</code> line is a Python <em>decorator</em>: a label that registers the function with Flask.</li>
+    <li><code>&lt;name&gt;</code> is a <strong>path parameter</strong>: a changing part of the URL that Flask hands to your function.</li>
+    <li>Return a string and Flask sends text. Return a dict and Flask turns it into JSON with status 200.</li>
+    <li>No route matches <code>/bye</code>, so Flask answers 404 on its own.</li>
+  </ul>
+  <div class="callout anlg"><span class="label">Analogy</span><p>A hospital reception. Each patient (request) says which department they need (the path). Reception (Flask) sends them to the right doctor (your function). You only write the doctors; Flask runs the reception.</p></div>
+  <div class="flow"><span>HTTP request</span><span>WSGI server (gunicorn)</span><span>Flask app</span><span>URL map → view function</span><span>Response</span></div>
+  <p>Two more details you will use daily:</p>
   <ul>
     <li><code>@app.get</code> / <code>@app.post</code> are shortcuts for <code>@app.route(path, methods=[...])</code>.</li>
-    <li>Converters type the path: <code>&lt;int:pid&gt;</code> turns <code>/products/abc</code> into an automatic 404.</li>
-    <li>Run in dev with <code>flask --app app run</code>; in production with <code>gunicorn -w 4 app:app</code>.</li>
+    <li>Converters type the path: <code>&lt;int:pid&gt;</code> accepts <code>/products/11</code> and turns <code>/products/abc</code> into an automatic 404, before your code runs.</li>
   </ul>
-  <div class="callout def"><span class="label">Definition</span><p><strong>WSGI</strong> (Web Server Gateway Interface): the Python standard for how a server hands one request to a synchronous function and gets one response back.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p><code>flask run</code> / <code>app.run(debug=True)</code> is a development server. Debug mode exposes an interactive console that can run code on your machine. Never in production.</p></div>
+  <p>Flask itself does not open the network port. A separate program, the <strong>WSGI server</strong>, does that and hands each request to Flask. In development, <code>flask run</code> starts a small built-in one. In production you use <code>gunicorn -w 4 app:app</code> (4 worker processes).</p>
+  <div class="callout def"><span class="label">Definition</span><p><strong>WSGI</strong> (Web Server Gateway Interface): the Python standard for how a server hands one request to a synchronous function and gets one response back. "Synchronous" means the worker does nothing else until that function returns.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p><code>flask run</code> / <code>app.run(debug=True)</code> is a development server. Debug mode exposes an interactive console in the browser that can run Python on your machine. Never in production.</p></div>
 
   <h2 id="fl-req"><span class="num">02</span>Requests &amp; JSON</h2>
+  <p>A request can carry information in several places: in the path (<code>/hello/Asha</code>), after the <code>?</code> (<code>?times=2</code>, the <strong>query string</strong>), in the body (JSON for a model's features), in headers, or as an uploaded file. Flask's <code>request</code> object gives you each one:</p>
   <table class="tbl">
     <tr><th>Input</th><th>Example</th><th>Read with</th></tr>
     <tr><td>Path</td><td><code>/hello/Asha</code></td><td>function argument <code>name</code></td></tr>
@@ -114,15 +143,19 @@ def hello(name):
     <tr><td>Form / files</td><td>HTML form, upload</td><td><code>request.form</code>, <code>request.files</code></td></tr>
     <tr><td>Headers</td><td><code>X-Request-ID</code></td><td><code>request.headers.get(...)</code></td></tr>
   </table>
+  <p>Everything in a URL arrives as text. <code>type=int</code> converts <code>"2"</code> to <code>2</code> for you, and <code>default=1</code> covers the case where the client sent nothing.</p>
+  <p>Going out, what you <code>return</code> decides the response:</p>
   <table class="tbl">
     <tr><th>Return</th><th>Becomes</th></tr>
     <tr><td><code>{"a": 1}</code> or <code>jsonify(a=1)</code></td><td>200, <code>application/json</code></td></tr>
     <tr><td><code>jsonify(x), 201, {"Location": "/x/1"}</code></td><td>Custom status and headers</td></tr>
     <tr><td><code>"text"</code></td><td>200, <code>text/html</code></td></tr>
   </table>
-  <div class="callout trap"><span class="label">Trap</span><p><code>request.get_json()</code> raises 400 on broken JSON or a wrong <code>Content-Type</code>. Use <code>get_json(silent=True)</code> and validate yourself. Flask does no type checking: <code>"features": "abc"</code> reaches your code untouched.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p><code>request.get_json()</code> raises 400 on broken JSON or a wrong <code>Content-Type</code>. Use <code>get_json(silent=True)</code> (returns <code>None</code> instead of crashing) and validate yourself. Flask does no type checking: <code>"features": "abc"</code> reaches your code untouched, so your code must check it.</p></div>
 
   <h2 id="fl-mw"><span class="num">03</span>Hooks &amp; Errors</h2>
+  <p>Some things must happen on <em>every</em> request: start a timer, check who is calling, stamp a request id for the logs. Copying those lines into all 30 view functions is a mess. Flask gives you two <strong>hooks</strong>: a function that runs before every view, and one that runs after.</p>
+  <div class="callout anlg"><span class="label">Analogy</span><p>Hooks are airport security on the way in and customs on the way out: every passenger passes through, whatever their flight. The flight itself (your view function) stays simple.</p></div>
   <figure class="viz"><svg viewBox="0 0 600 150" width="600">
     <defs><marker id="fl-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs>
     <rect x="5" y="30" width="105" height="44" rx="6" class="fs"/><text x="57" y="57" text-anchor="middle">request</text>
@@ -137,7 +170,7 @@ def hello(name):
     <rect x="270" y="105" width="125" height="36" rx="6" class="fr sr"/><text x="332" y="128" text-anchor="middle">errorhandler</text>
     <line x1="332" y1="74" x2="332" y2="103" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#fl-ar)"/><text x="345" y="94" font-size="11" class="tr">raise</text>
     <path d="M395,123 L465,123 L465,76" fill="none" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#fl-ar)"/>
-  </svg><figcaption>Hooks wrap every request; an exception jumps to the matching error handler, which still returns a normal response.</figcaption></figure>
+  </svg><figcaption>Follow the arrows left to right: every request passes the blue hooks on both sides of the view. If the view raises an error, the red handler builds the response instead.</figcaption></figure>
   <div class="fx" data-lang="py"># ---------- middleware: hooks around every request ----------
 @app.before_request
 def start_timer():
@@ -162,14 +195,20 @@ def bad_input(e):
 @app.errorhandler(404)
 def not_found(e):
     return jsonify(error="not_found", path=request.path), 404</div>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Hooks are airport security on the way in and customs on the way out: every passenger passes through, whatever their flight.</p></div>
-  <p><code>g</code> is a per-request scratchpad: the timer set in <code>before_request</code> is read in <code>after_request</code>. Returning a response from <code>before_request</code> short-circuits the view (handy for auth).</p>
+  <ul>
+    <li><code>g</code> is a per-request scratchpad (a small bag that lives for one request only). The timer set in <code>before_request</code> is read in <code>after_request</code>.</li>
+    <li>A <strong>request id</strong> is a short random tag. If the caller sent one, reuse it; otherwise make one. It lets you find all log lines for one request later.</li>
+    <li>Returning a response from <code>before_request</code> stops the view from running (handy for "not logged in → 401").</li>
+    <li>An <strong>error handler</strong> catches an exception type (or a status code) and turns it into a tidy JSON reply. Without it, Flask returns an HTML error page, which an app can't read.</li>
+  </ul>
+  <p>The <code>BadInput</code> pattern is worth copying: your view just <code>raise BadInput("...")</code> and the handler turns it into a 422 (valid request, invalid values).</p>
 
   <h2 id="fl-bp"><span class="num">04</span>Blueprints &amp; Templates</h2>
+  <p>A real app has 40 routes: model endpoints, admin pages, login. One file with 40 functions is painful. A <strong>Blueprint</strong> is a folder for routes: you define a group in its own file, give it a shared URL prefix like <code>/api/v1</code>, and plug it into the app.</p>
   <div class="cards">
     <div><b>Blueprint</b><p>A mini-app: a group of routes with a shared URL prefix, registered on the main app.</p><small><code>/api/v1/*</code>, <code>/admin/*</code>, <code>/auth/*</code></small></div>
-    <div><b>App factory</b><p><code>create_app(config)</code> builds and returns the app, so tests can make a fresh one.</p><small>Standard in larger projects</small></div>
-    <div><b>Jinja2 template</b><p>HTML with <code>{{ var }}</code> and <code>{% for %}</code>. Values are auto-escaped.</p><small>Admin pages, model demo forms</small></div>
+    <div><b>App factory</b><p><code>create_app(config)</code> builds and returns the app, so tests can make a fresh one with test settings.</p><small>Standard in larger projects</small></div>
+    <div><b>Jinja2 template</b><p>HTML with holes: <code>{{ var }}</code> fills a value, <code>{% for %}</code> repeats. Values are auto-escaped.</p><small>Admin pages, model demo forms</small></div>
   </div>
   <div class="fx" data-lang="py"># ---------- a blueprint groups related routes ----------
 ml = Blueprint("ml", __name__, url_prefix="/api/v1")
@@ -186,7 +225,8 @@ def hello(name):
 &lt;h1&gt;Hi Asha! Hi Asha! &lt;/h1&gt;
 $ curl 'localhost:5002/hello/&lt;script&gt;'
 &lt;h1&gt;Hi &amp;lt;script&amp;gt;! &lt;/h1&gt;      ← auto-escaped: no XSS</div>
-  <p><strong>Flask-RESTful</strong> is an older extension where one class is one resource and its methods are the verbs. Still seen in legacy code:</p>
+  <p>Look at the second call. Someone put <code>&lt;script&gt;</code> (a browser code tag) in the URL. Jinja2 replaced the angle brackets with harmless text, so the browser shows it instead of running it. That attack, sneaking code into a page through user input, is called <strong>XSS</strong>, and auto-escaping is the defence.</p>
+  <p><strong>Flask-RESTful</strong> is an older extension where one class is one resource and its methods are the HTTP verbs. Still seen in legacy code:</p>
   <div class="fx" data-lang="py">from flask import Flask
 from flask_restful import Api, Resource
 
@@ -208,8 +248,10 @@ print(c.get("/models/churn").status_code, c.get("/models/churn").json)
 print(c.delete("/models/churn").status_code, c.get("/models/churn").status_code)</div>
   <div class="fx" data-lang="text">200 {'version': 3}
 204 404</div>
+  <p>GET found the model (200). DELETE removed it (204, empty body). The next GET can't find it (404).</p>
 
   <h2 id="fl-ml"><span class="num">05</span>Serving a Model</h2>
+  <p>Training takes minutes or hours and happens once. Predicting takes milliseconds and happens thousands of times. So they are two separate programs, joined by one file: the saved model. The training script writes it; the API reads it at startup and uses it for every request.</p>
   <figure class="viz"><svg viewBox="0 0 600 120" width="600">
     <defs><marker id="fl-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs>
     <text x="110" y="16" text-anchor="middle" class="tm" font-size="12">offline, once</text>
@@ -225,7 +267,8 @@ print(c.delete("/models/churn").status_code, c.get("/models/churn").status_code)
     <line x1="490" y1="50" x2="508" y2="50" stroke="currentColor" marker-end="url(#fl-ar2)"/>
     <line x1="252" y1="22" x2="252" y2="110" stroke="currentColor" stroke-dasharray="3 3"/>
     <text x="320" y="100" text-anchor="middle" font-size="12" class="tr">load once, never per request</text>
-  </svg><figcaption>Training and serving are separate programs joined by one artifact file.</figcaption></figure>
+  </svg><figcaption>Left of the dotted line happens once on your laptop or a training job. Right of it happens on every request.</figcaption></figure>
+  <p><strong>Step 1: train and save.</strong> The iris dataset (flower measurements → species) is small and built into scikit-learn, so it's perfect for a demo. <code>joblib</code> saves Python objects to a file.</p>
   <div class="fx" data-lang="py">import joblib
 from sklearn.datasets import load_iris
 from sklearn.linear_model import LogisticRegression
@@ -238,6 +281,8 @@ joblib.dump({"model": model, "classes": ["setosa", "versicolor", "virginica"],
              "version": "iris-lr-1"}, "model.joblib")
 print("train acc:", round(model.score(X, y), 3))</div>
   <div class="fx" data-lang="text">train acc: 0.973</div>
+  <p>The saved file holds three things: the pipeline (scaler + model together), the class names, and a version string. All three are needed by the API.</p>
+  <p><strong>Step 2: the API.</strong> Load the file once at the top of the module. Then <code>/predict</code> checks the input, runs the model, and returns JSON.</p>
   <div class="fx" data-lang="py">import time, uuid, logging
 import joblib, numpy as np
 from flask import Flask, Blueprint, jsonify, request, g, render_template_string
@@ -283,15 +328,17 @@ $ curl -X POST localhost:5002/api/v1/predict -H 'Content-Type: application/json'
 $ curl localhost:5002/api/v1/nope
 {"error":"not_found","path":"/api/v1/nope"}
  [404]</div>
+  <p>Follow one good request through the code: the body <code>{"features": [6.7, 3.0, 5.2, 2.3]}</code> is read, checked (a list of 4), turned into a NumPy array, scored with <code>predict_proba</code> (probability per class), and the most likely class is returned with its probability. <code>X-Request-ID</code> in the response came from the <code>after_request</code> hook.</p>
   <ul>
     <li>Save the <strong>whole pipeline</strong> (scaler + model), plus class names and a version, so serving can't skip preprocessing.</li>
-    <li><code>float(proba[i])</code>: NumPy floats aren't JSON-serializable.</li>
+    <li><code>float(proba[i])</code>: NumPy floats aren't JSON-serializable (see the fundamentals page).</li>
+    <li><code>/health</code> is a tiny endpoint that says "I'm alive and this is my model version". Monitoring tools call it every few seconds.</li>
   </ul>
-  <div class="callout trap"><span class="label">Trap: pickle / joblib</span><p>Loading a pickle runs arbitrary code, so only load files you produced. Also pin the scikit-learn version: a model pickled on one version may fail or misbehave on another.</p></div>
-  <div class="callout trap"><span class="label">Trap: training–serving skew</span><p>If the API does its own feature engineering (different scaling, different category order), predictions silently degrade. Ship preprocessing inside the saved pipeline.</p></div>
+  <div class="callout trap"><span class="label">Trap: pickle / joblib</span><p>Loading a pickle (Python's saved-object format; joblib uses it) runs arbitrary code hidden in the file, so only load files you produced. Also pin the scikit-learn version: a model pickled on one version may fail or misbehave on another.</p></div>
+  <div class="callout trap"><span class="label">Trap: training–serving skew</span><p>If the API does its own feature engineering (different scaling, different category order) from what training did, predictions silently degrade. Ship preprocessing inside the saved pipeline so both sides use exactly the same steps.</p></div>
 
   <h2 id="fl-test"><span class="num">06</span>Testing</h2>
-  <p>The test client calls the app in-process: no server, no port, milliseconds per test.</p>
+  <p>You could test by starting the server and firing curl commands by hand. That is slow and you'll forget cases. Flask's <strong>test client</strong> calls your app directly inside the test process: no server, no port, milliseconds per test. <code>pytest</code> is the standard tool that runs every function named <code>test_*</code> and reports pass/fail.</p>
   <div class="fx" data-lang="py">import pytest
 from app import app
 
@@ -320,10 +367,16 @@ def test_request_id_echoed(client):
   <div class="fx" data-lang="text">$ pytest -q test_app.py
 ......                                                                   [100%]
 6 passed in 1.05s</div>
-  <div class="callout intu"><span class="label">What to test in an ML API</span><p>Health, one known-good prediction, schema of the response, every class of bad input (422 not 500), and headers your infra depends on.</p></div>
+  <ul>
+    <li>A <code>fixture</code> is a reusable setup: here it builds the client each test needs.</li>
+    <li><code>parametrize</code> runs one test function once per bad input (that's why 4 functions gave 6 dots).</li>
+    <li><code>assert</code> checks a condition; if it is false the test fails and pytest shows why.</li>
+  </ul>
+  <div class="callout intu"><span class="label">What to test in an ML API</span><p>Health, one known-good prediction, shape of the response, every class of bad input (422 not 500), and headers your infra depends on.</p></div>
 
   <h2 id="fl-sync"><span class="num">07</span>Sync / WSGI Limits</h2>
-  <p>A sync worker handles one request at a time. While a view waits on a DB or remote call, that worker is idle but busy.</p>
+  <p>A WSGI worker handles one request at a time, start to finish. If the view waits 1 second for a database, the worker just sits there for that second. Three requests arrive together? The third waits for the first two to finish.</p>
+  <div class="callout anlg"><span class="label">Analogy</span><p>One cashier at a kirana shop who also walks to the godown for each customer. While he is in the godown, the queue does not move. More cashiers (workers or threads) are the only fix.</p></div>
   <div class="fx" data-lang="py">import time
 from flask import Flask
 app = Flask(__name__)
@@ -343,7 +396,8 @@ def slow():
     <line x1="140" y1="110" x2="580" y2="110" stroke="currentColor"/>
     <text x="140" y="126" font-size="11" text-anchor="middle">0 s</text><text x="280" y="126" font-size="11" text-anchor="middle">1 s</text><text x="420" y="126" font-size="11" text-anchor="middle">2 s</text><text x="560" y="126" font-size="11" text-anchor="middle">3 s</text>
     <text x="300" y="146" font-size="12" text-anchor="middle" class="tm">each colour = one request waiting on I/O</text>
-  </svg><figcaption>Sync requests queue behind each other; extra workers or threads are the only way to overlap waiting.</figcaption></figure>
+  </svg><figcaption>Top row: the three requests run one after another (3 s). Bottom row: three threads wait at the same time (1 s).</figcaption></figure>
+  <p>"I/O" means input/output: waiting on a disk, a database or another server. A <strong>thread</strong> is a second lane inside one process; a <strong>worker</strong> is a whole separate process. Both let waiting overlap. FastAPI (next page) takes a different route: one process that juggles thousands of waits with <code>async</code>.</p>
   <table class="tbl">
     <tr><th></th><th>Flask (WSGI)</th><th>FastAPI (ASGI)</th></tr>
     <tr><td>Concurrency model</td><td>Processes × threads</td><td>Async event loop (+ threadpool for <code>def</code>)</td></tr>
@@ -357,6 +411,7 @@ def slow():
 
   <h2 id="fl-qa"><span class="num">08</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>What does <code>@app.get("/hello/&lt;name&gt;")</code> do?</summary><div class="qa-body">It registers a route: when a GET request arrives with a path matching <code>/hello/anything</code>, Flask calls the function below it and passes the URL piece as <code>name</code>. The function's return value (dict → JSON, string → text) becomes the response.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Where should you load the model, and why?</summary><div class="qa-body">Once, at module import / app startup (a global or app config), not inside the view. Loading per request adds hundreds of ms to seconds of disk I/O and deserialization each call and multiplies memory spikes. Each gunicorn worker process holds its own copy.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What happens if a view raises an unhandled exception?</summary><div class="qa-body">Flask returns a 500 with an HTML error page (or the debugger in debug mode). Register <code>@app.errorhandler(Exception)</code> or specific handlers to log it and return a JSON error, and raise your own exception types for client errors so they map to 4xx.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What's the output: 3 concurrent requests to a view that sleeps 1 s, served by <code>gunicorn -w 1</code>?</summary><div class="qa-body">About 3 seconds total: the single sync worker handles them one after another (measured: 3.14 s). With <code>--threads 3</code> or <code>-w 3</code> it drops to ~1 s (measured: 1.20 s).</div></details>

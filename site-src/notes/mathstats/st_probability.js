@@ -101,23 +101,32 @@ Object.assign(TOPIC_CONTENT, {
   </div>
 
   <h2 id="spr-space"><span class="num">01</span>Sample Spaces, Events &amp; Rules</h2>
+  <p>Will it rain today? Will this customer pay back the loan? Will the delivery reach in 30 minutes? Nobody knows for sure, but "I don't know" is useless for decisions. <strong>Probability</strong> is the way to say "how likely" with a number between 0 (impossible) and 1 (certain). Every spam filter, every "90% chance of rain", every credit score and every A/B test is built from the few rules on this page.</p>
+  <p>Start with one die. The list of everything that can happen is the <strong>sample space</strong>: {1, 2, 3, 4, 5, 6}. Something you care about, like "an even number", is an <strong>event</strong>: {2, 4, 6}. When every outcome is equally likely, the probability of an event is simply (outcomes you want) ÷ (all outcomes): 3 / 6 = 0.5.</p>
   <div class="cards">
     <div><b>Sample space S</b><p>Every possible outcome.</p><small>Die: {1,2,3,4,5,6}</small></div>
     <div><b>Event A</b><p>A subset of outcomes you care about.</p><small>"Even" = {2,4,6}</small></div>
     <div><b>P(A)</b><p>Favourable ÷ total, if outcomes are equally likely.</p><small>P(even) = 3/6 = 0.5</small></div>
   </div>
+  <p>Three rules cover almost every question. Take a deck of 52 cards: 13 hearts, 4 kings, and one card (the king of hearts) that is both.</p>
   <figure class="viz"><svg viewBox="0 0 560 190" width="560"><rect x="10" y="10" width="540" height="170" fill="none" stroke="currentColor" stroke-opacity=".4"/><text x="20" y="28" class="tm">S = 52 cards</text><circle cx="230" cy="90" r="62" class="fb sb"/><circle cx="320" cy="90" r="62" class="ft st"/><text x="195" y="92" text-anchor="end">Hearts 13</text><text x="355" y="92" text-anchor="start">Kings 4</text><text x="275" y="86" text-anchor="middle" font-weight="bold">K♥</text><text x="275" y="102" text-anchor="middle" font-size="10">1</text><text x="275" y="176" text-anchor="middle">P(H ∪ K) = 13/52 + 4/52 − 1/52 = 16/52</text></svg><figcaption>Add the two circles, then subtract the overlap you counted twice.</figcaption></figure>
+  <p>Count the cards in the two circles. Hearts: 13. Kings: 4. Add them and you get 17, but the king of hearts was counted twice, once in each circle. Subtract it once: 16. That is the addition rule.</p>
   <table class="tbl">
     <tr><th>Rule</th><th>Formula</th><th>In words</th><th>Worked example</th></tr>
-    <tr><td><strong>Complement</strong></td><td><code>P(not A) = 1 − P(A)</code></td><td>Often easier to count "none"</td><td>P(at least one 6 in 4 rolls) = 1 − (5/6)⁴ = 0.518</td></tr>
-    <tr><td><strong>Addition</strong></td><td><code>P(A∪B) = P(A) + P(B) − P(A∩B)</code></td><td>"Or": add, remove double count</td><td>Heart or King = 16/52 = 0.308</td></tr>
-    <tr><td><strong>Multiplication</strong></td><td><code>P(A∩B) = P(A) · P(B|A)</code></td><td>"And": first, then second given first</td><td>Two aces, no replacement = 4/52 × 3/51 = 0.0045</td></tr>
+    <tr><td><strong>Complement</strong></td><td><code>P(not A) = 1 − P(A)</code></td><td>"At least one" is easier as 1 − "none"</td><td>P(at least one 6 in 4 rolls) = 1 − (5/6)⁴ = 1 − 0.482 = 0.518</td></tr>
+    <tr><td><strong>Addition</strong></td><td><code>P(A∪B) = P(A) + P(B) − P(A∩B)</code></td><td>"A or B": add, then remove the double count</td><td>Heart or King = 13/52 + 4/52 − 1/52 = 16/52 = 0.308</td></tr>
+    <tr><td><strong>Multiplication</strong></td><td><code>P(A∩B) = P(A) · P(B|A)</code></td><td>"A and B": chance of A, times chance of B once A has happened</td><td>Two aces in a row, no putting back = 4/52 × 3/51 = 0.0045</td></tr>
   </table>
+  <p>Symbols: ∪ means "or" (either one), ∩ means "and" (both), and "|" means "given that" (the thing on the right has already happened). In the two-aces example, after the first ace is drawn only 3 aces and 51 cards remain, so the second chance is 3/51, not 4/52.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>The complement rule is like checking whether any shop in the market is open: instead of checking "shop 1 open or shop 2 open or …", check the one case "all closed" and subtract from 1.</p>
+  </div>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>Adding without subtracting the overlap only works for <strong>mutually exclusive</strong> events (can't both happen). Mutually exclusive is not the same as independent: exclusive events are strongly <em>dependent</em>.</p>
+    <p>Adding without subtracting the overlap only works for <strong>mutually exclusive</strong> events (they can't both happen, like "rolled a 2" and "rolled a 5"). Mutually exclusive is not the same as independent (next sections): if a 2 came up, the chance of a 5 dropped to zero, so exclusive events are strongly <em>dependent</em>.</p>
   </div>
 
   <h2 id="spr-cond"><span class="num">02</span>Joint, Marginal &amp; Conditional</h2>
+  <p>A shop's website had 1,000 visitors last week. Some came by mobile, some by desktop; some bought, most did not. Put the counts in a table and every probability question about these two things is just "which cell, divided by which total".</p>
   <table class="tbl out"><caption>1,000 visitors: device × purchase (counts)</caption>
     <tr><th></th><th>buy</th><th>no buy</th><th>total</th></tr>
     <tr><th>mobile</th><td>30</td><td>570</td><td>600</td></tr>
@@ -125,11 +134,14 @@ Object.assign(TOPIC_CONTENT, {
     <tr><th>total</th><td>70</td><td>930</td><td>1000</td></tr>
   </table>
   <div class="cards">
-    <div><b>Joint</b><p>P(mobile ∩ buy): one cell ÷ grand total.</p><small>30 / 1000 = 0.03</small></div>
-    <div><b>Marginal</b><p>P(buy): a row/column total ÷ grand total.</p><small>70 / 1000 = 0.07</small></div>
-    <div><b>Conditional</b><p>P(buy | mobile): zoom into one row.</p><small>30 / 600 = 0.05</small></div>
+    <div><b>Joint</b><p>P(mobile ∩ buy): "mobile <em>and</em> bought". One cell ÷ grand total.</p><small>30 / 1000 = 0.03</small></div>
+    <div><b>Marginal</b><p>P(buy): "bought, any device". A row or column total ÷ grand total.</p><small>70 / 1000 = 0.07</small></div>
+    <div><b>Conditional</b><p>P(buy | mobile): "bought, <em>given</em> they were on mobile". Zoom into the mobile row only.</p><small>30 / 600 = 0.05</small></div>
   </div>
-  <p>Conditional formula: <code>P(A|B) = P(A∩B) / P(B)</code>. Read "|" as "given that". Check: 0.03 / 0.6 = 0.05.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>"Marginal" is the number written in the margin of the table (the totals). "Conditional" is putting on blinkers: you only look at one row, and ask what share of <em>that row</em> bought.</p>
+  </div>
+  <p>Formula: <code>P(A|B) = P(A∩B) / P(B)</code>. In words: the share of both-happening, out of the share where B happened. Check with the table: P(buy ∩ mobile) = 0.03, P(mobile) = 0.6, so 0.03 / 0.6 = 0.05. Same answer as counting 30 out of 600.</p>
   <div class="fx" data-lang="py">import pandas as pd
 df = pd.DataFrame({"buy": [30, 40], "no_buy": [570, 360]}, index=["mobile", "desktop"])
 joint = df / df.values.sum()
@@ -142,25 +154,29 @@ desktop  0.04    0.36
 P(buy) = 0.07
 P(buy|mobile) = 0.05</div>
   <div class="callout trap"><span class="label">Trap: P(A|B) ≠ P(B|A)</span>
-    <p>P(buy | mobile) = 30/600 = 5%, but P(mobile | buy) = 30/70 = 43%. Swapping them is the "prosecutor's fallacy", and Bayes is the fix.</p>
+    <p>P(buy | mobile) = 30/600 = 5%: of mobile visitors, 5% buy. P(mobile | buy) = 30/70 = 43%: of buyers, 43% were on mobile. Same cell, different totals, very different numbers. Swapping them is a famous mistake (the "prosecutor's fallacy": "the evidence is 99% likely if guilty" is not "99% likely guilty"). Bayes' theorem, two sections down, is the correct way to flip them.</p>
   </div>
 
   <h2 id="spr-indep"><span class="num">03</span>Independence</h2>
+  <p>Does knowing one thing change your guess about another? If a coin shows heads, does that change the chance the next flip is heads? No. If it rained today, does that change the chance of umbrella sales? Yes. Two events are <strong>independent</strong> when knowing one tells you nothing about the other.</p>
   <div class="flow"><span>Is P(A|B) = P(A)?</span><span>Yes → independent</span><span>P(A∩B) = P(A)·P(B)</span></div>
-  <p>Independent = knowing B doesn't change your belief about A. Check the table: P(buy) · P(mobile) = 0.07 × 0.6 = 0.042, but the actual joint is 0.03. Device and buying are <strong>dependent</strong> (desktop converts 2× better).</p>
+  <p>The test, in words: the conditional probability equals the plain probability. An equivalent shortcut: for independent events, "both happen" is just the two probabilities multiplied. Check the visitor table: if device and buying were independent, P(mobile ∩ buy) would be P(mobile) × P(buy) = 0.6 × 0.07 = 0.042. The real cell is 0.03. Not equal, so device and buying are <strong>dependent</strong>: desktop visitors convert at 10% (40/400), mobile at 5%, twice the gap.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Two coin flips are independent: the coin has no memory. Rain and umbrella sales are not: seeing one tells you a lot about the other.</p>
   </div>
   <div class="callout trap"><span class="label">Trap: gambler's fallacy</span>
-    <p>After 5 heads, P(heads) on the next fair flip is still 0.5. Naive Bayes also <em>assumes</em> words are independent given the class; it's wrong but often works.</p>
+    <p>After 5 heads in a row, people feel tails is "due". It isn't: P(heads) on the next fair flip is still 0.5. Related: Naive Bayes (a spam-filter model) <em>assumes</em> words in an email are independent given the class; that is false, but the model often works anyway.</p>
   </div>
 
   <h2 id="spr-bayes"><span class="num">04</span>Bayes' Theorem</h2>
+  <p>You get a positive result on a medical test. The test is "95% accurate". Are you 95% likely to be sick? Almost everyone says yes. The real answer is about 16%, and the reason is the most important idea on this page.</p>
+  <p>The problem is the flip from section 02. The test's accuracy tells you P(positive | sick). You want P(sick | positive). <strong>Bayes' theorem</strong> is the rule for flipping a conditional probability around, and it needs one extra piece of information: how common the disease is to begin with (the <strong>prior</strong>, or base rate).</p>
   <div class="flow"><span>Prior P(A)</span><span>× Likelihood P(B|A)</span><span>÷ Evidence P(B)</span><span>= Posterior P(A|B)</span></div>
-  <p><code>P(A|B) = P(B|A) · P(A) / P(B)</code>. In words: update your old belief by how well it explains the new evidence.</p>
+  <p>Formula: <code>P(A|B) = P(B|A) · P(A) / P(B)</code>. The words: <em>prior</em> is what you believed before seeing the evidence; <em>likelihood</em> is how likely the evidence is if A is true; <em>evidence</em> is how likely that evidence is overall; <em>posterior</em> is your updated belief. The simplest way to actually do it is to count people, not percentages.</p>
   <h3>Medical test (base-rate fallacy)</h3>
-  <p>Disease prevalence 1%. Test sensitivity 95% (catches sick people), specificity 95% (clears healthy people). You test positive. Chance you're sick?</p>
+  <p>Disease prevalence 1% (1 in 100 people has it). Sensitivity 95%: of sick people, the test catches 95%. Specificity 95%: of healthy people, the test correctly clears 95%, so it wrongly flags 5%. Imagine 10,000 people walk in.</p>
   <figure class="viz"><svg viewBox="0 0 580 210" width="580"><defs><marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><rect x="220" y="8" width="140" height="26" rx="5" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="290.0" y="25" text-anchor="middle">10,000 people</text><line x1="260" y1="34" x2="130" y2="68" stroke="currentColor" stroke-opacity=".6" marker-end="url(#ab)"/><text x="150" y="52" font-size="10" class="tm">1% sick</text><line x1="320" y1="34" x2="440" y2="68" stroke="currentColor" stroke-opacity=".6" marker-end="url(#ab)"/><text x="395" y="52" font-size="10" class="tm">99% healthy</text><rect x="70" y="70" width="120" height="26" rx="5" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="130.0" y="87" text-anchor="middle">100 sick</text><rect x="380" y="70" width="140" height="26" rx="5" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="450.0" y="87" text-anchor="middle">9,900 healthy</text><line x1="110" y1="96" x2="60" y2="136" stroke="currentColor" stroke-opacity=".6" marker-end="url(#ab)"/><text x="58" y="118" font-size="10" class="tm">95%</text><line x1="150" y1="96" x2="190" y2="136" stroke="currentColor" stroke-opacity=".6" marker-end="url(#ab)"/><text x="178" y="118" font-size="10" class="tm">5%</text><line x1="420" y1="96" x2="380" y2="136" stroke="currentColor" stroke-opacity=".6" marker-end="url(#ab)"/><text x="346" y="118" font-size="10" class="tm">5% FP</text><line x1="480" y1="96" x2="520" y2="136" stroke="currentColor" stroke-opacity=".6" marker-end="url(#ab)"/><text x="510" y="118" font-size="10" class="tm">95%</text><rect x="10" y="138" width="95" height="26" rx="5" class="fg sg" stroke="currentColor" stroke-opacity=".4"/><text x="57.5" y="155" text-anchor="middle">95 test +</text><rect x="150" y="138" width="90" height="26" rx="5" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="195.0" y="155" text-anchor="middle">5 test −</text><rect x="330" y="138" width="110" height="26" rx="5" class="fr sr" stroke="currentColor" stroke-opacity=".4"/><text x="385.0" y="155" text-anchor="middle">495 test +</text><rect x="470" y="138" width="105" height="26" rx="5" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="522.5" y="155" text-anchor="middle">9,405 test −</text><text x="290" y="196" text-anchor="middle" font-weight="bold">P(sick | +) = 95 / (95 + 495) = 16.1%</text></svg><figcaption>Count people, not percentages. False positives from the huge healthy group swamp the true positives.</figcaption></figure>
+  <p>Follow the tree. 100 are sick; the test catches 95 of them. 9,900 are healthy; the test wrongly flags 5% of them, which is 495 people. So 95 + 495 = 590 people test positive, and only 95 of them are actually sick: 95 / 590 = 16%. The healthy crowd is so big that even a small error rate produces more false alarms than true catches.</p>
   <div class="fx" data-lang="py">prev, sens, spec = 0.01, 0.95, 0.95
 p_pos = sens*prev + (1-spec)*(1-prev)          # total probability of "+"
 post = sens*prev / p_pos
@@ -170,20 +186,27 @@ p2 = sens*post + (1-spec)*(1-post)
 print("after 2nd +:", round(sens*post / p2, 4))</div>
   <div class="fx" data-lang="text">P(+) = 0.059  P(sick|+) = 0.161
 after 2nd +: 0.7848</div>
+  <p>What the code does: <code>p_pos</code> is the evidence, built by adding the two ways to test positive (sick and caught, healthy and wrongly flagged). This "add up every route" step is called the law of total probability. Then the second block runs Bayes again with 16% as the new prior: a second positive test lifts the belief to 78%. Each piece of evidence updates the last belief; that is Bayesian thinking.</p>
   <div class="callout intu"><span class="label">Key insight</span>
-    <p>Most people guess 95%. The rare base rate (1%) dominates. Same reason a fraud model with 99% accuracy still flags mostly legit transactions when fraud is 0.1%.</p>
+    <p>Most people guess 95%. The rare base rate (1%) dominates. Same reason a fraud model with 99% accuracy still flags mostly honest transactions when fraud is 0.1%: the honest pile is a thousand times bigger.</p>
   </div>
   <h3>Spam filter</h3>
-  <p>40% of mail is spam. "free" appears in 25% of spam and 2% of normal mail. An email contains "free".</p>
+  <p>40% of mail is spam. The word "free" appears in 25% of spam and in 2% of normal mail. An email contains "free". What is the chance it is spam?</p>
   <div class="fx" data-lang="py">ps, pw_s, pw_h = 0.4, 0.25, 0.02
 print("P(spam|free) =", round(pw_s*ps / (pw_s*ps + pw_h*(1-ps)), 4))</div>
   <div class="fx" data-lang="text">P(spam|free) = 0.8929</div>
-  <p>By hand: 0.25 × 0.4 = 0.10 vs 0.02 × 0.6 = 0.012 → 0.10 / 0.112 = 89%. Naive Bayes multiplies one such ratio per word.</p>
+  <p>By hand, per 1,000 emails: 400 spam, of which 100 say "free"; 600 normal, of which 12 say "free". Of the 112 emails saying "free", 100 are spam: 100 / 112 = 89%. A Naive Bayes spam filter multiplies one such ratio per word.</p>
 
   <h2 id="spr-rv"><span class="num">05</span>Random Variables, Expectation &amp; Variance</h2>
+  <p>So far events were yes/no. Usually you care about a <em>number</em> that depends on chance: the die's face, today's number of orders, tomorrow's rainfall. A number attached to a random outcome is called a <strong>random variable</strong> (written X).</p>
+  <p>Two questions about any random variable: what do I get on average, and how much does it swing? The average is the <strong>expected value</strong> E[X]: each possible value, weighted by its probability, added up. The swing is the <strong>variance</strong>: the average squared gap from E[X], exactly as in descriptive statistics but using probabilities as weights.</p>
+  <table class="tbl out"><caption>Fair die by hand: each face has probability 1/6</caption>
+    <tr><th>E[X]</th><td>(1 + 2 + 3 + 4 + 5 + 6) × 1/6 = 21/6 = <strong>3.5</strong></td></tr>
+    <tr><th>Var(X)</th><td>gaps from 3.5 squared: 6.25, 2.25, 0.25, 0.25, 2.25, 6.25 → sum 17.5, × 1/6 = <strong>2.917</strong></td></tr>
+  </table>
   <div class="cards">
     <div><b>Random variable X</b><p>A number attached to each outcome.</p><small>X = die face; X = clicks today</small></div>
-    <div><b>E[X]</b><p><code>Σ x·P(x)</code>: the long-run average.</p><small>Die: 3.5 (never actually rolled!)</small></div>
+    <div><b>E[X]</b><p><code>Σ x·P(x)</code>: the long-run average.</p><small>Die: 3.5 (a value you never actually roll)</small></div>
     <div><b>Var(X)</b><p><code>E[(X − E[X])²]</code>: average squared surprise.</p><small>Die: 35/12 = 2.917</small></div>
   </div>
   <div class="fx" data-lang="py">import numpy as np
@@ -191,18 +214,23 @@ x = np.arange(1, 7); p = np.ones(6) / 6
 E = (x * p).sum(); Var = ((x - E)**2 * p).sum()
 print("E =", E, " Var =", round(Var, 4))</div>
   <div class="fx" data-lang="text">E = 3.5  Var = 2.9167</div>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>E[X] is what you'd earn per game if you played a million times and split the total equally. A lottery ticket costs 10 rupees and pays 1 crore with chance 1 in 10 crore: E = 1 crore × (1/10 crore) − 10 = 0.1 − 10 = −9.9 rupees per ticket. The lottery owner relies on this.</p>
+  </div>
   <table class="tbl">
     <tr><th>Property</th><th>Rule</th><th>Use</th></tr>
-    <tr><td>Linearity</td><td><code>E[aX + bY] = aE[X] + bE[Y]</code>, always</td><td>Expected revenue = Σ price × P(buy)</td></tr>
-    <tr><td>Scaling</td><td><code>Var(aX + b) = a² Var(X)</code></td><td>Shifting doesn't change spread</td></tr>
-    <tr><td>Sum</td><td><code>Var(X + Y) = Var X + Var Y</code> <em>if independent</em></td><td>Variance of a mean = σ²/n</td></tr>
+    <tr><td>Linearity</td><td><code>E[aX + bY] = aE[X] + bE[Y]</code>, always, even if X and Y are related</td><td>Expected revenue = Σ price × P(buy)</td></tr>
+    <tr><td>Scaling</td><td><code>Var(aX + b) = a² Var(X)</code></td><td>Adding a constant b shifts values but not their spread; multiplying by a stretches spread by a²</td></tr>
+    <tr><td>Sum</td><td><code>Var(X + Y) = Var X + Var Y</code> <em>only if independent</em></td><td>Variance of a mean of n draws = σ²/n</td></tr>
   </table>
   <div class="callout intu"><span class="label">Interview use</span>
-    <p>"A game pays $10 on a 6, costs $2. Play?" E = 10 × 1/6 − 2 = −$0.33 per game. No.</p>
+    <p>"A game pays $10 on a 6, costs $2. Play?" E = 10 × 1/6 − 2 = 1.67 − 2 = −$0.33 per game. No.</p>
   </div>
 
   <h2 id="spr-lln"><span class="num">06</span>Law of Large Numbers &amp; Central Limit Theorem</h2>
+  <p>Flip a coin 10 times and you might get 7 heads (70%). Flip it 10,000 times and you will get very close to 50%. Averages settle down as you collect more data. That simple fact has a name, the <strong>law of large numbers</strong> (LLN), and it is why casinos, insurers and A/B tests all work: one customer is unpredictable, a million customers are not.</p>
   <figure class="viz"><svg viewBox="0 0 560 180" width="560"><line x1="30" y1="152" x2="530" y2="152" stroke="currentColor" stroke-opacity=".5"/><text x="30" y="167" text-anchor="middle" font-size="11">1</text><text x="155" y="167" text-anchor="middle" font-size="11">10</text><text x="280" y="167" text-anchor="middle" font-size="11">100</text><text x="405" y="167" text-anchor="middle" font-size="11">1,000</text><text x="530" y="167" text-anchor="middle" font-size="11">10,000</text><text x="530" y="147" text-anchor="end" font-size="11" class="tm">flips (log scale)</text><line x1="30" y1="83" x2="530" y2="83" class="sr" stroke-width="1" stroke-dasharray="4 3"/><path d="M30.0,152.0 L67.6,83.0 L89.6,60.0 L105.3,48.5 L117.4,69.2 L127.3,83.0 L135.6,73.1 L142.9,65.8 L149.3,75.3 L155.0,83.0 L160.2,76.7 L164.9,83.0 L169.2,88.3 L177.0,87.6 L180.5,91.6 L186.9,83.0 L192.6,89.9 L197.8,83.0 L204.7,74.7 L208.9,80.4 L214.6,83.0 L221.4,87.1 L226.0,88.6 L231.6,91.4 L237.8,95.0 L243.4,92.5 L249.5,89.1 L254.9,90.7 L260.6,90.9 L265.8,87.5 L271.8,87.8 L277.2,83.7 L282.6,81.0 L288.5,81.2 L294.2,80.9 L299.8,80.1 L305.2,79.1 L311.0,79.5 L316.5,80.2 L322.1,79.5 L327.8,82.1 L333.3,83.3 L338.9,81.6 L344.6,79.9 L350.3,79.0 L355.8,81.6 L361.4,80.2 L367.0,80.9 L372.7,83.0 L378.3,82.3 L383.9,83.6 L389.5,85.0 L395.1,84.5 L400.8,85.2 L406.4,84.5 L412.0,84.2 L417.6,84.4 L423.3,83.6 L428.9,83.2 L434.5,82.9 L440.1,81.6 L445.7,82.0 L451.3,82.2 L457.0,81.9 L462.6,82.4 L468.2,82.2 L473.8,82.4 L479.4,82.7 L485.1,83.2 L490.7,83.3 L496.3,83.4 L501.9,83.5 L507.5,83.5 L513.1,83.1 L518.8,83.3 L524.4,82.8 L530.0,83.0" fill="none" class="sb" stroke-width="2"/><text x="36.2" y="25" text-anchor="start" font-size="11" class="tb">running share of heads</text><text x="523.8" y="76.1" text-anchor="end" font-size="11" class="tr">true p = 0.5</text></svg><figcaption>Early on the average swings wildly. With more flips it settles on 0.5. That's the law of large numbers.</figcaption></figure>
+  <p>Look at the blue line: early on the running share of heads swings wildly (after one flip it is 0 or 1). As the flips pile up it hugs the red line at 0.5 and stops moving.</p>
   <div class="fx" data-lang="py">rng = np.random.default_rng(1)
 flips = rng.integers(0, 2, 10_000)
 running = np.cumsum(flips) / np.arange(1, 10_001)
@@ -212,8 +240,29 @@ for n in [10, 100, 1000, 10000]:
 100 0.5
 1000 0.491
 10000 0.5003</div>
-  <p><strong>LLN</strong>: the sample average converges to the true mean as n grows. It's why casinos and insurers win reliably.</p>
+  <p><code>np.cumsum</code> keeps a running total of heads; dividing by the flip count gives the running average. LLN in one line: the sample average goes to the true mean as n grows.</p>
+  <h3>Central limit theorem: the shape of an average</h3>
+  <p>LLN says <em>where</em> an average ends up. The second question is <em>how</em> it wobbles on the way: if you repeat "take 30 values and average them" many times, what shape do those averages make? Start small. One die is flat: every face has chance 1/6. Now average two dice. There is only one way to get an average of 1 (both show 1) but six ways to get 3.5 (1+6, 2+5, 3+4, 4+3, 5+2, 6+1).</p>
+  <div class="fx" data-lang="py">from itertools import product
+means = np.array([np.mean(r) for r in product(range(1, 7), repeat=2)])   # all 36 pairs
+vals, counts = np.unique(means, return_counts=True)
+for v, c in zip(vals, counts):
+    print(f"{v:3.1f} {'#' * c}")</div>
+  <div class="fx" data-lang="text">1.0 #
+1.5 ##
+2.0 ###
+2.5 ####
+3.0 #####
+3.5 ######
+4.0 #####
+4.5 ####
+5.0 ###
+5.5 ##
+6.0 #</div>
+  <figure class="viz"><svg viewBox="0 0 560 170" width="560"><line x1="30" y1="140" x2="550" y2="140" stroke="currentColor" stroke-opacity=".5"/><rect x="40" y="124" width="30" height="16" class="fb sb"/><text x="55.0" y="120" text-anchor="middle" font-size="10">1/36</text><text x="55.0" y="155" text-anchor="middle" font-size="11">1</text><rect x="86" y="108" width="30" height="32" class="fb sb"/><text x="101.0" y="104" text-anchor="middle" font-size="10">2/36</text><text x="101.0" y="155" text-anchor="middle" font-size="11">1.5</text><rect x="132" y="92" width="30" height="48" class="fb sb"/><text x="147.0" y="88" text-anchor="middle" font-size="10">3/36</text><text x="147.0" y="155" text-anchor="middle" font-size="11">2</text><rect x="178" y="76" width="30" height="64" class="fb sb"/><text x="193.0" y="72" text-anchor="middle" font-size="10">4/36</text><text x="193.0" y="155" text-anchor="middle" font-size="11">2.5</text><rect x="224" y="60" width="30" height="80" class="fb sb"/><text x="239.0" y="56" text-anchor="middle" font-size="10">5/36</text><text x="239.0" y="155" text-anchor="middle" font-size="11">3</text><rect x="270" y="44" width="30" height="96" class="fb sb"/><text x="285.0" y="40" text-anchor="middle" font-size="10">6/36</text><text x="285.0" y="155" text-anchor="middle" font-size="11">3.5</text><rect x="316" y="60" width="30" height="80" class="fb sb"/><text x="331.0" y="56" text-anchor="middle" font-size="10">5/36</text><text x="331.0" y="155" text-anchor="middle" font-size="11">4</text><rect x="362" y="76" width="30" height="64" class="fb sb"/><text x="377.0" y="72" text-anchor="middle" font-size="10">4/36</text><text x="377.0" y="155" text-anchor="middle" font-size="11">4.5</text><rect x="408" y="92" width="30" height="48" class="fb sb"/><text x="423.0" y="88" text-anchor="middle" font-size="10">3/36</text><text x="423.0" y="155" text-anchor="middle" font-size="11">5</text><rect x="454" y="108" width="30" height="32" class="fb sb"/><text x="469.0" y="104" text-anchor="middle" font-size="10">2/36</text><text x="469.0" y="155" text-anchor="middle" font-size="11">5.5</text><rect x="500" y="124" width="30" height="16" class="fb sb"/><text x="515.0" y="120" text-anchor="middle" font-size="10">1/36</text><text x="515.0" y="155" text-anchor="middle" font-size="11">6</text><text x="550" y="170" text-anchor="end" font-size="11" class="tm">average of 2 dice</text></svg><figcaption>One die is flat: every face 1/6. The average of just two dice already piles up in the middle. More dice, taller and narrower hump.</figcaption></figure>
+  <p>A flat start became a triangle after averaging just two values. Average 30 values and the triangle smooths into the famous bell curve. This is the <strong>central limit theorem</strong> (CLT): averages of enough independent draws are bell-shaped (normal), no matter what shape the raw values had. The demo below starts from very lopsided raw data.</p>
   <figure class="viz"><svg viewBox="0 0 560 200" width="560"><line x1="30" y1="172" x2="548" y2="172" stroke="currentColor" stroke-opacity=".5"/><text x="30" y="187" text-anchor="middle" font-size="11">0</text><text x="104" y="187" text-anchor="middle" font-size="11">0.5</text><text x="178" y="187" text-anchor="middle" font-size="11">1</text><text x="252" y="187" text-anchor="middle" font-size="11">1.5</text><text x="326" y="187" text-anchor="middle" font-size="11">2</text><text x="400" y="187" text-anchor="middle" font-size="11">2.5</text><text x="474" y="187" text-anchor="middle" font-size="11">3</text><text x="548" y="187" text-anchor="middle" font-size="11">3.5</text><path d="M30,172 L30,108.8 L51.6,117.4 L73.2,124.8 L94.8,131.2 L116.3,136.7 L137.9,141.5 L159.5,145.7 L181.1,149.2 L202.7,152.3 L224.2,155 L245.8,157.3 L267.4,159.3 L289,161 L310.6,162.5 L332.2,163.8 L353.8,164.9 L375.3,165.9 L396.9,166.7 L418.5,167.4 L440.1,168 L461.7,168.6 L483.2,169 L504.8,169.4 L526.4,169.8 L548,170.1 L548,172 Z" class="ft" stroke="none"/><path d="M30,108.8 L51.6,117.4 L73.2,124.8 L94.8,131.2 L116.3,136.7 L137.9,141.5 L159.5,145.7 L181.1,149.2 L202.7,152.3 L224.2,155 L245.8,157.3 L267.4,159.3 L289,161 L310.6,162.5 L332.2,163.8 L353.8,164.9 L375.3,165.9 L396.9,166.7 L418.5,167.4 L440.1,168 L461.7,168.6 L483.2,169 L504.8,169.4 L526.4,169.8 L548,170.1" fill="none" class="st" stroke-width="2" stroke-dasharray="5 3"/><path d="M81.8,172V171.9H92.9V172M92.9,172V171.7H104V172M104,172V169.4H115.1V172M115.1,172V159.9H126.2V172M126.2,172V138.9H137.3V172M137.3,172V105.5H148.4V172M148.4,172V70.7H159.5V172M159.5,172V38.1H170.6V172M170.6,172V36H181.7V172M181.7,172V49.5H192.8V172M192.8,172V80.2H203.9V172M203.9,172V107.9H215V172M215,172V134.4H226.1V172M226.1,172V151.6H237.2V172M237.2,172V161.6H248.3V172M248.3,172V166.4H259.4V172M259.4,172V168.8H270.5V172M270.5,172V171.2H281.6V172M281.6,172V171.8H292.7V172" class="fb sb"/><path d="M74.4,171.9 L79.4,171.8 L84.5,171.7 L89.5,171.4 L94.6,170.8 L99.6,169.9 L104.7,168.5 L109.7,166.3 L114.8,163.1 L119.8,158.4 L124.9,152 L129.9,143.7 L134.9,133.2 L140,120.7 L145,106.4 L150.1,91 L155.1,75.5 L160.2,60.9 L165.2,48.5 L170.3,39.4 L175.3,34.6 L180.4,34.4 L185.4,39 L190.4,47.8 L195.5,60 L200.5,74.5 L205.6,90 L210.6,105.4 L215.7,119.7 L220.7,132.4 L225.8,143 L230.8,151.5 L235.9,158 L240.9,162.8 L245.9,166.1 L251,168.4 L256,169.9 L261.1,170.8 L266.1,171.3 L271.2,171.6 L276.2,171.8 L281.3,171.9 L286.3,172 L291.4,172 L296.4,172" fill="none" class="sr" stroke-width="1.8"/><text x="311.2" y="137.2" text-anchor="start" font-size="11" class="tm">raw data: exponential (skewed)</text><text x="289" y="45.6" text-anchor="start" font-size="11" class="tb">means of n=30: bell-shaped</text><text x="289" y="61.4" text-anchor="start" font-size="11" class="tr">red = Normal(1, 1/√30)</text></svg><figcaption>Each bar = how often a 30-sample average landed there. Skewed raw data, yet the averages form a normal curve.</figcaption></figure>
+  <p>The teal shape is the raw data: strongly lopsided. Each blue bar counts how often a 30-value average landed there, and the bars trace the red bell curve almost perfectly.</p>
   <div class="fx" data-lang="py">from scipy import stats
 rng = np.random.default_rng(0)
 raw = rng.exponential(1, 300_000)
@@ -224,17 +273,21 @@ print("std of means:", round(means.std(), 4), " theory σ/√n:", round(1/np.sqr
   <div class="fx" data-lang="text">raw   skew: 2.02
 means skew: 0.38
 std of means: 0.1828  theory σ/√n: 0.1826</div>
-  <p><strong>CLT</strong>: averages of n independent draws are ≈ Normal(μ, σ/√n), whatever the original shape. Skew shrinks by √n (2.0 → 0.38 here), so n ≈ 30 is enough for mild skew.</p>
+  <p>Two things to notice. The lopsidedness (skew) dropped from 2.0 to 0.38 just by averaging 30 values. And the spread of the averages is σ/√n: the raw std (σ = 1) divided by √30 = 5.48, which is 0.1826, matching the simulation. That σ/√n is called the <strong>standard error</strong>: how much an average of n values typically wobbles from the truth.</p>
+  <div class="callout def"><span class="label">CLT in one line</span>
+    <p>Averages of n independent draws are approximately Normal with mean μ (the true mean) and spread σ/√n, whatever the original shape. Skew shrinks by about √n, so n ≈ 30 is enough for mild skew; very lopsided data needs more.</p>
+  </div>
   <div class="callout intu"><span class="label">Why it matters</span>
-    <p>It's why t-tests, confidence intervals and A/B tests work on non-normal metrics like revenue: they test the <em>mean</em>, and the mean is normal. σ/√n is the <strong>standard error</strong>: 4× the data halves the noise.</p>
+    <p>It's why t-tests, confidence intervals and A/B tests work on non-normal metrics like revenue: they test the <em>mean</em>, and the mean is normal. And since the error is σ/√n, 4× the data halves the noise.</p>
   </div>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>CLT is about the distribution of the <em>mean</em>, not the data. The raw data stays skewed. Very heavy tails (e.g. Cauchy) or tiny n break it.</p>
+    <p>CLT is about the distribution of the <em>mean</em>, not the data. The raw data stays skewed; only the averages become bell-shaped. Extremely heavy tails (e.g. Cauchy, which has no finite variance) or tiny n break it.</p>
   </div>
 
   <h2 id="spr-puzzles"><span class="num">07</span>Classic Interview Puzzles</h2>
+  <p>Interviewers use these because the right answer feels wrong. Each one is just the rules above, plus a simulation when you are unsure.</p>
   <h3>Birthday problem</h3>
-  <p>How many people until a shared birthday is more likely than not? Use the complement: P(all different) = 365/365 × 364/365 × … .</p>
+  <p>In a room of 23 people, is it more likely than not that two share a birthday? Most people say no, 23 is far below 365. Use the complement: find P(all 23 birthdays different), then subtract from 1. The first person can have any birthday (365/365). The second must avoid one day (364/365). The third must avoid two (363/365), and so on; multiply all 23 fractions.</p>
   <div class="fx" data-lang="py">from math import prod
 for n in [23, 50, 70]:
     print(n, "exact:", round(1 - prod((365-i)/365 for i in range(n)), 4))
@@ -246,8 +299,9 @@ print("simulated, n=23:", shared.mean())</div>
 50 exact: 0.9704
 70 exact: 0.9992
 simulated, n=23: 0.50699</div>
-  <p>Only 23. Intuition fails because there are 23 × 22 / 2 = 253 <em>pairs</em>, not 23 chances.</p>
+  <p>Just 23 people gives a 50.7% chance; the simulation (100,000 random rooms) agrees. Intuition fails because there are 23 × 22 / 2 = 253 <em>pairs</em> of people, and any pair can match, not just one.</p>
   <h3>Monty Hall</h3>
+  <p>Three doors: one hides a car, two hide goats. You pick door 1. The host, who knows where the car is, opens another door and shows a goat. He offers you a switch. Should you?</p>
   <div class="flow"><span>Pick door 1</span><span>Host opens a goat door (he knows)</span><span>Stay or switch?</span></div>
   <div class="fx" data-lang="py">rng = np.random.default_rng(0)
 n = 100_000
@@ -257,15 +311,16 @@ print("stay wins  :", (pick == car).mean())
 print("switch wins:", (pick != car).mean())   # switching wins whenever first pick was wrong</div>
   <div class="fx" data-lang="text">stay wins  : 0.33168
 switch wins: 0.66832</div>
+  <p>Switch: it wins 2/3 of the time. Your first pick is right only 1/3 of the time. Whenever it was wrong (2/3 of the time), the host's reveal leaves the car behind the other closed door, so switching takes it.</p>
   <div class="callout anlg"><span class="label">Intuition</span>
     <p>Imagine 100 doors; you pick one and the host opens 98 goats. Your door kept its 1/100 chance; the one he carefully avoided holds the other 99/100.</p>
   </div>
   <table class="tbl">
     <tr><th>Puzzle</th><th>Answer</th><th>Trick</th></tr>
     <tr><td>P(at least one 6 in 4 rolls)</td><td>1 − (5/6)⁴ = 0.518</td><td>Complement</td></tr>
-    <tr><td>Two children, at least one boy. P(two boys)?</td><td>1/3</td><td>List {BB, BG, GB}</td></tr>
-    <tr><td>Expected flips until first head</td><td>2</td><td>Geometric: 1/p</td></tr>
-    <tr><td>Expected rolls to see all 6 faces</td><td>6(1 + 1/2 + … + 1/6) = 14.7</td><td>Coupon collector, linearity</td></tr>
+    <tr><td>Two children, at least one boy. P(two boys)?</td><td>1/3</td><td>List the equally likely cases {BB, BG, GB}; GG is ruled out</td></tr>
+    <tr><td>Expected flips until first head</td><td>2</td><td>Geometric: 1/p, with p = 0.5</td></tr>
+    <tr><td>Expected rolls to see all 6 faces</td><td>6(1 + 1/2 + … + 1/6) = 14.7</td><td>Coupon collector: add the expected wait for each new face</td></tr>
   </table>
 
   <h2 id="spr-qa"><span class="num">08</span>Questions &amp; Answers</h2>

@@ -37,7 +37,7 @@ Object.assign(TOPIC_CONTENT, {
           <li><b>O(n)</b> — touch each item once: sum, max, one loop</li>
           <li><b>O(n log n)</b> — good sorting: <code>sorted()</code>, merge sort</li>
           <li><b>O(n²)</b> — every pair: nested loops, bubble sort</li>
-          <li><b>O(2ⁿ)</b> — every subset (pick / skip each item); n = 22 already took 3.7 s</li>
+          <li><b>O(2ⁿ)</b> — every subset (pick / skip each item); n = 22 already took 4.6 s</li>
           <li>Rule of thumb for 1 second: n ≤ 10⁷ for O(n), 10⁴ for O(n²), 22 for O(2ⁿ)</li>
         </ul>
       </div>
@@ -82,14 +82,14 @@ Object.assign(TOPIC_CONTENT, {
           <li><b>Load</b> — table grows when 2/3 full, so chains stay short</li>
           <li>⚠ Keys must be hashable: <code>list</code> as key → <code>TypeError</code>; use <code>tuple</code></li>
           <li>dict keeps insertion order (3.7+); set does not promise any order</li>
-          <li>Real run: 1000 lookups — list 437 ms, set 0.3 ms</li>
+          <li>Real run: 1000 lookups — list 503 ms, set 0.2 ms</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Traps &amp; interview habit</div>
         <ul>
           <li>⚠ <code>s = s + ch</code> in a loop — can become O(n²); use <code>"".join(parts)</code></li>
-          <li>⚠ <code>list.insert(0, x)</code> in a loop — O(n²); 1 lakh inserts took 1.26 s vs 3 ms for append</li>
+          <li>⚠ <code>list.insert(0, x)</code> in a loop — O(n²); 1 lakh inserts took 1.2 s vs 3 ms for append</li>
           <li>⚠ "One loop so O(n)" — look inside the loop body first</li>
           <li><b>3 steps</b> — count loops → check the body → state time AND space</li>
           <li>Always say both: "O(n) time, O(n) space because of the set"</li>
@@ -286,7 +286,7 @@ for n in [1_000, 10_000, 100_000]:
    1000    0.002    0.002    0.006        0.08       23.2
   10000    0.003    0.003    0.040        1.28     2163.6
  100000    0.006    0.006    1.408       22.42    skipped</div>
-  <p>O(1) and O(log n) do not move. O(n) grows 10×. O(n log n) grows a little more than 10×. O(n²) grows 100× (22 ms → 2.2 s), and at n = 1 lakh it would need about 4 minutes, so it was skipped. O(2ⁿ) is in a class of its own:</p>
+  <p>O(1) and O(log n) do not move. O(n) grows 10×. O(n log n) grows a little more than 10×. O(n²) grows 100× (23 ms → 2.2 s), and at n = 1 lakh it would need about 4 minutes, so it was skipped. O(2ⁿ) is in a class of its own:</p>
 <div class="fx" data-lang="py">import time
 def all_subsets(items):                 # O(2^n): every pick / skip choice
     out = [[]]
@@ -631,7 +631,7 @@ common_fast  answer=True       1.6 ms</div>
   <details class="qa"><summary><span class="qmark">Q</span>Give an example of O(log n) and explain where the log comes from.</summary><div class="qa-body">Binary search on a sorted list. Each step throws away half the remaining items, so after k steps only n / 2ᵏ remain; it ends when that reaches 1, i.e. k = log₂ n. 10 lakh items need about 20 steps.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>A function has a single for-loop. Can it still be O(n²)?</summary><div class="qa-body">Yes, if the loop body does O(n) work: <code>x in some_list</code>, <code>list.insert(0, x)</code>, <code>pop(0)</code>, a slice, or <code>sort()</code>. The body cost multiplies the loop count.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Why is list.append O(1) if resizing copies the whole list?</summary><div class="qa-body">Resizes are rare and get rarer: the block grows by a factor, so n appends cause only about log n resizes and the total copy work is O(n). Spread over n appends that is O(1) each, called amortized O(1). The run above showed 86 resizes in 10 lakh appends.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why is x in list O(n) but x in set O(1)?</summary><div class="qa-body">A list has no idea where x could be, so it checks slot by slot. A set computes hash(x), takes it modulo the table size, and jumps to that bucket; only collisions cause a few extra probes. 1000 lookups took 437 ms with a list and 0.3 ms with a set.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why is x in list O(n) but x in set O(1)?</summary><div class="qa-body">A list has no idea where x could be, so it checks slot by slot. A set computes hash(x), takes it modulo the table size, and jumps to that bucket; only collisions cause a few extra probes. 1000 lookups took 503 ms with a list and 0.2 ms with a set.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>When is a dict lookup O(n)?</summary><div class="qa-body">Only when almost every key lands in the same bucket, e.g. a custom class whose <code>__hash__</code> returns a constant, or a deliberate attack with crafted keys. With normal keys say "O(1) average".</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Why can't a list be a dict key?</summary><div class="qa-body">The bucket is chosen from the hash of the key. A list can change after insertion, so its hash would change and the entry would be lost. Python forbids it (<code>TypeError: unhashable type</code>). A tuple of the same values works because it cannot change.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What is the space complexity of a recursive function that goes n levels deep?</summary><div class="qa-body">O(n): every paused call keeps a frame on the call stack. Python's default limit is 1000 frames, so deep recursion raises <code>RecursionError</code>; convert to a loop or use an explicit stack.</div></details>

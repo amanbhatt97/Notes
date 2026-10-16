@@ -2,7 +2,7 @@
 Object.assign(TOPIC_CONTENT, {
   "mlops_deploy": `<main>
   <h1>Deployment Strategies</h1>
-  <p class="lead">A model earns money only once it answers real requests. This page covers how predictions are served (batch, online, streaming), where they run (Docker, Kubernetes, SageMaker), how new versions ship safely (CI/CD, canary, shadow, rollback) and how models are packaged. It builds on <em>The ML Lifecycle</em> and <em>MLflow</em>.</p>
+  <p class="lead">A trained model sitting in a file helps nobody. It earns its keep only when the app can ask it questions and get answers. "Deployment" is everything needed for that: how predictions are made (batch, online, streaming), where the model runs (Docker, Kubernetes, SageMaker), how a new version replaces the old one without breaking the app (CI/CD, canary, shadow, rollback), and how the model file itself is packaged safely. Builds on <em>The ML Lifecycle</em> and <em>MLflow</em>.</p>
 
   <h2 id="dp-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -11,8 +11,8 @@ Object.assign(TOPIC_CONTENT, {
       <div class="mm-branch">
         <div class="mm-title">Inference modes</div>
         <ul>
-          <li><b>Batch</b> — scheduled job scores a table; hours; cheap; churn, weekly recs</li>
-          <li><b>Online</b> — API per request; ms; always-on; checkout, search</li>
+          <li><b>Batch</b> — scheduled job scores a whole table; hours; cheap; churn, weekly recs</li>
+          <li><b>Online</b> — API answers one request; ms; always-on; checkout, search</li>
           <li><b>Streaming</b> — consumer on Kafka; seconds; fraud on card swipes</li>
           <li><b>Hybrid</b> — precompute heavy parts in batch, score online</li>
           <li><b>Rule</b> — batch unless the input only exists at request time</li>
@@ -21,7 +21,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="mm-branch">
         <div class="mm-title">FastAPI + Docker</div>
         <ul>
-          <li><b>Pydantic</b> — validates input; bad shape → 422</li>
+          <li><b>Pydantic</b> — validates input shape; bad shape → 422</li>
           <li><b>Load at startup</b> — never per request</li>
           <li><b><code>/health</code></b> — for readiness probes and load balancers</li>
           <li><b>Docker image</b> — freezes code + model + deps; pin the tag</li>
@@ -109,6 +109,15 @@ Object.assign(TOPIC_CONTENT, {
   </div>
 
   <h2 id="dp-modes"><span class="num">01</span>Batch vs Online vs Streaming</h2>
+  <p>You built a model that predicts which customers will stop ordering. The marketing team wants to email those customers every Monday. Do you need the model to answer in milliseconds? No. A job that runs Sunday night and writes a list is enough.</p>
+  <p>Now a different model: "Is this UPI payment fraud?" The answer must come <em>while</em> the payment is happening, in under a second, for one payment at a time. Same idea of "a model answering", very different setup.</p>
+  <p>Asking a model for an answer is called <strong>inference</strong>. The first question in deployment is <em>when</em> the answer must exist. There are three patterns:</p>
+  <ul>
+    <li><strong>Batch</strong> — a scheduled job scores a whole table at once and saves the results. The app reads them later.</li>
+    <li><strong>Online</strong> (real-time) — the model sits behind an <strong>API</strong> (a web address that takes a request and returns an answer) and answers one request at a time, in milliseconds.</li>
+    <li><strong>Streaming</strong> — events (clicks, card swipes) flow through a pipe like Kafka; the model scores each event as it arrives, within seconds.</li>
+  </ul>
+  <p>In the picture, read each row left to right: what triggers the prediction, what the model sees, and where the answer goes.</p>
   <figure class="viz"><svg viewBox="0 0 600 170" width="600">
     <defs><marker id="dp-ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs>
     <g stroke="currentColor" fill="none" marker-end="url(#dp-ar1)">
@@ -121,6 +130,7 @@ Object.assign(TOPIC_CONTENT, {
     <text x="10" y="144">Streaming</text><rect x="200" y="122" width="140" height="36" rx="6" class="ft st"/><text x="270" y="145" text-anchor="middle">consumer on Kafka</text><rect x="400" y="122" width="190" height="36" rx="6" class="fs" stroke="currentColor"/><text x="495" y="145" text-anchor="middle">event → score → topic</text>
     <text x="70" y="52" class="tm" font-size="11">schedule</text><text x="70" y="107" class="tm" font-size="11">user request</text><text x="70" y="162" class="tm" font-size="11">event arrives</text>
   </svg><figcaption>Same model, three ways to call it. The question is when the prediction must exist.</figcaption></figure>
+  <p><strong>Latency</strong> in the table means "how long until the answer arrives". <strong>Fresh features</strong> means "does the model see this minute's data, or last night's?"</p>
   <table class="tbl">
     <tr><th></th><th>Batch</th><th>Online (real-time)</th><th>Streaming</th></tr>
     <tr><td>Latency</td><td>Hours</td><td>Milliseconds</td><td>Seconds</td></tr>
@@ -130,11 +140,15 @@ Object.assign(TOPIC_CONTENT, {
     <tr><td>Use when</td><td>Churn scores, weekly recs, lead scoring</td><td>Search ranking, credit decision at checkout</td><td>Fraud on card swipes, IoT anomalies</td></tr>
     <tr><td>Tools</td><td>Spark, Airflow, SageMaker Batch Transform</td><td>FastAPI, Triton, SageMaker endpoint</td><td>Kafka + Flink / Spark Streaming</td></tr>
   </table>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Batch is the newspaper: printed once at night, read in the morning. Online is a phone call: you ask, you get an answer now. Streaming is a live cricket score ticker: every ball is processed as it happens.</p>
+  </div>
   <div class="callout intu"><span class="label">Rule of thumb</span>
-    <p>Start with batch if the business can wait. It is cheaper, simpler to debug and easy to rerun. Go online only when the input is unknown until the request arrives.</p>
+    <p>Start with batch if the business can wait. It is cheaper, simpler to debug and easy to rerun. Go online only when the input is unknown until the request arrives (a search query, a cart at checkout).</p>
   </div>
 
   <h2 id="dp-api"><span class="num">02</span>FastAPI + Docker</h2>
+  <p>For online inference the model must become a small web server: a program that waits for requests, runs <code>predict()</code>, and sends back JSON (a simple text format for data, like <code>{"label": 1}</code>). <strong>FastAPI</strong> is the most common Python library for writing such a server. Twenty lines are enough.</p>
   <div class="flow"><span>Client JSON</span><span>FastAPI validates (Pydantic)</span><span>Model loaded at startup</span><span>predict()</span><span>JSON response</span></div>
   <div class="fx" data-lang="py">import numpy as np, onnxruntime as ort
 from fastapi import FastAPI
@@ -155,17 +169,33 @@ def predict(p: Patient):
     x = np.array([p.features], dtype=np.float32)
     label, probs = sess.run(None, {"X": x})
     return {"label": int(label[0]), "p_benign": round(float(probs[0][1]), 4)}</div>
+  <p>What each part does:</p>
+  <ul>
+    <li><code>sess = ort.InferenceSession(...)</code> runs once when the server starts, so the model is already in memory when requests come. (ONNX is a safe model format; Section 08 explains it.)</li>
+    <li><code>class Patient(BaseModel)</code> is a <strong>Pydantic</strong> model: it describes what a valid request looks like. Here: a list of exactly 30 numbers. FastAPI checks every request against it before your code runs.</li>
+    <li><code>/health</code> is a tiny address that just says "I am alive". Other systems ping it to know whether to send traffic.</li>
+    <li><code>/predict</code> takes the validated request, calls the model, and returns the label and probability.</li>
+  </ul>
   <div class="fx" data-lang="text"># tested with fastapi.testclient.TestClient
 GET  /health                     -&gt; {'status': 'ok', 'model_version': '1'}
 POST /predict  (row 0)           -&gt; {'label': 0, 'p_benign': 0.0}
 POST /predict  (row 20)          -&gt; {'label': 1, 'p_benign': 0.9987}
 POST /predict  [1.0, 2.0]        -&gt; 422 List should have at least 30 items after validation, not 2</div>
-  <p>Ship it as a Docker image (<code>FROM python:3.12-slim</code>, install pinned deps, copy <code>app.py</code> + <code>model.onnx</code>, <code>CMD uvicorn app:app</code>): code, model and dependencies frozen together. Details: the <em>FastAPI</em> and <em>Docker</em> notes.</p>
+  <p>The last line is the validation doing its job: a request with 2 numbers instead of 30 is refused with error code 422 and a clear message, before the model ever sees it.</p>
+  <p>The server runs on your laptop. On the production machine, Python might be a different version, a library might be missing. <strong>Docker</strong> solves this: it packs the code, the model file and every dependency into one <strong>image</strong>, a frozen box that runs the same anywhere. Ship it as a Docker image (<code>FROM python:3.12-slim</code>, install pinned deps, copy <code>app.py</code> + <code>model.onnx</code>, <code>CMD uvicorn app:app</code>). Details: the <em>FastAPI</em> and <em>Docker</em> notes.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A Docker image is a tiffin box packed at home: the food, the spoon, the napkin, all inside. Wherever you open it, lunch is exactly as packed.</p>
+  </div>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Loading the model inside the request handler adds seconds per call. Load at startup; expose <code>/health</code> so the orchestrator knows when the pod is ready.</p>
   </div>
 
   <h2 id="dp-k8s"><span class="num">03</span>Kubernetes Basics</h2>
+  <p>One Docker container on one machine can serve maybe a few hundred requests a second. What if traffic is 10× that during a sale? What if the machine dies at 2 a.m.? Someone must start more copies, spread traffic across them, and restart dead ones. <strong>Kubernetes</strong> (often written K8s) is the system that does this automatically.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A restaurant kitchen. Each chef at a station is a <strong>pod</strong>. The shift manager who always keeps 3 chefs working, and swaps them during a shift change, is the <strong>Deployment</strong>. The order counter where customers hand in orders, without knowing which chef cooks, is the <strong>Service</strong>. The rule "call in more chefs at rush hour" is the <strong>HPA</strong>.</p>
+  </div>
+  <p>In the picture, requests come from the left, the Service spreads them across three identical pods, and the HPA on the right watches CPU and adds or removes pods.</p>
   <figure class="viz"><svg viewBox="0 0 600 160" width="600">
     <defs><marker id="dp-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs>
     <rect x="10" y="60" width="90" height="40" rx="6" class="fs" stroke="currentColor"/><text x="55" y="84" text-anchor="middle">clients</text>
@@ -184,6 +214,7 @@ POST /predict  [1.0, 2.0]        -&gt; 422 List should have at least 30 items af
     <tr><td><strong>Service</strong></td><td>Stable name/IP that load-balances to healthy pods</td><td>The order counter</td></tr>
     <tr><td><strong>HPA</strong></td><td>Horizontal Pod Autoscaler: scales replicas on CPU/memory/custom metrics</td><td>Calls in more chefs at rush hour</td></tr>
   </table>
+  <p>You tell Kubernetes what you want in a YAML file (a plain text format of <code>key: value</code> lines). You never say "start a pod"; you say "I want 3 replicas of this image", and Kubernetes keeps it true. The file below has the three objects from the table, separated by <code>---</code>. Read the comments on the right.</p>
   <div class="fx" data-lang="text"># model-api.yaml  (minimal; not run here, no cluster)   kubectl apply -f model-api.yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -220,11 +251,14 @@ spec:
   metrics:
   - type: Resource
     resource: {name: cpu, target: {type: Utilization, averageUtilization: 70}}</div>
+  <p>Three lines worth a second look. <code>image: …:1.4.2</code> names an exact version of the Docker image. <code>resources.requests</code> says how much CPU and memory each pod needs (500m = half a CPU core). <code>readinessProbe</code> tells Kubernetes to ping <code>/health</code> and send traffic only when it answers OK.</p>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>HPA on CPU needs <code>resources.requests</code>; utilisation is measured against them. Big models also need a readiness probe, or traffic hits pods still loading weights.</p>
+    <p>HPA on CPU needs <code>resources.requests</code>; "70% utilisation" is measured against that number. Big models also need a readiness probe, or traffic hits pods still loading weights.</p>
   </div>
 
   <h2 id="dp-cicd"><span class="num">04</span>CI/CD for ML</h2>
+  <p>A teammate changes one feature function and pushes the code. Will the API still start? Will the model still beat the old one? Checking this by hand every time is slow and gets skipped. <strong>CI/CD</strong> is a robot that runs the checks on every change (CI, continuous integration) and ships the change if they pass (CD, continuous delivery).</p>
+  <p>Normal software tests only code. ML has to test three things, because any of them can break the model: the code, the data, and the model itself.</p>
   <div class="flow"><span>Push / PR</span><span>Code tests</span><span>Data tests</span><span>Train + model tests</span><span>Build image</span><span>Deploy to staging</span><span>Canary to prod</span></div>
   <table class="tbl">
     <tr><th>Test on</th><th>Examples</th><th>Tools</th></tr>
@@ -233,6 +267,8 @@ spec:
     <tr><td><strong>Model</strong></td><td>Beats baseline and current champion; per-slice metrics; latency; invariance (e.g. name change ≠ new prediction)</td><td>pytest + MLflow eval</td></tr>
     <tr><td><strong>Serving</strong></td><td>Container starts, <code>/health</code> ok, training/serving give same output</td><td>Docker, smoke tests</td></tr>
   </table>
+  <p>A few words from the table. <strong>Schema</strong> = the expected columns and their types. <strong>Slice</strong> = a subgroup, like "customers from Tier-2 cities"; a model can be good overall but bad on one slice. <strong>Staging</strong> = a copy of production where only the team can see the change.</p>
+  <p>The robot's instructions live in a YAML file in the repo. This one is for GitHub Actions. It runs two jobs: <code>test-train</code> on every change, and <code>deploy</code> only on the main branch, and only if the tests passed.</p>
   <div class="fx" data-lang="text"># .github/workflows/ml.yml  (example, not run here)
 name: ml-ci
 on:
@@ -260,17 +296,20 @@ jobs:
       - run: docker build -t registry.example.com/model-api:&#36;{{ github.sha }} .
       - run: docker push registry.example.com/model-api:&#36;{{ github.sha }}
       - run: kubectl set image deployment/model-api api=registry.example.com/model-api:&#36;{{ github.sha }}</div>
+  <p>Notice the image tag is <code>github.sha</code>, the exact commit ID. Any running pod can be traced back to the exact code that built it.</p>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Full training in CI is too slow. CI trains on a small sample to catch breakage; the full retrain runs in a pipeline (Airflow, Kubeflow, SageMaker Pipelines) that registers a candidate.</p>
   </div>
 
   <h2 id="dp-sm"><span class="num">05</span>AWS SageMaker</h2>
+  <p>Sections 02 to 04 build serving from parts you run yourself. Cloud providers sell the same thing ready-made: you upload a model, they run the servers, scaling and monitoring. AWS's version is <strong>SageMaker</strong>. It offers four ways to get predictions, matching the modes from Section 01.</p>
   <div class="cards">
     <div><b>Real-time endpoint</b><p>Always-on HTTPS endpoint on chosen instances; autoscaling.</p><small>Online, ms latency</small></div>
     <div><b>Serverless inference</b><p>Scales to zero; pay per request; cold starts.</p><small>Spiky, low traffic</small></div>
     <div><b>Async inference</b><p>Queue; payloads up to 1 GB, minutes to process.</p><small>Big inputs, video, long LLM jobs</small></div>
     <div><b>Batch Transform</b><p>Spins up, scores an S3 dataset, shuts down.</p><small>Offline, no endpoint</small></div>
   </div>
+  <p><strong>S3</strong> is AWS's file storage. <strong>Cold start</strong> means the first request after idle time is slow, because a machine has to wake up. The steps to an endpoint:</p>
   <div class="flow"><span>model.tar.gz on S3</span><span>Model (image + artifact)</span><span>Endpoint config (instance type, count)</span><span>Endpoint</span></div>
   <div class="fx" data-lang="py"># SageMaker Python SDK (v2-style API) — not run here, needs an AWS account + IAM role
 from sagemaker.sklearn.model import SKLearnModel
@@ -288,18 +327,26 @@ predictor = model.deploy(initial_instance_count=2, instance_type="ml.m5.large",
 transformer = model.transformer(instance_count=4, instance_type="ml.m5.xlarge",
                                 output_path="s3://my-bucket/predictions/")
 transformer.transform("s3://my-bucket/to-score/", content_type="text/csv", split_type="Line")</div>
+  <p><code>model_data</code> points at the zipped model on S3. <code>entry_point</code> is a small Python file that says how to load the model and how to predict. <code>deploy</code> starts 2 machines of type <code>ml.m5.large</code> and gives you a URL. <code>transformer.transform</code> instead scores every file under an S3 folder and shuts down.</p>
   <div class="fx" data-lang="py"># Calling an existing endpoint from any app (boto3) — not run here
 import boto3
 rt = boto3.client("sagemaker-runtime")
 resp = rt.invoke_endpoint(EndpointName="cancer-clf-v2", ContentType="text/csv",
                           Body="17.99,10.38,122.8,...")   # 30 comma-separated features
 print(resp["Body"].read().decode())</div>
-  <p>Newer SDK releases restructure deployment around <code>ModelBuilder</code>; boto3 calls stay the same. Endpoints also support blue/green updates with canary or linear traffic shifting and auto-rollback on CloudWatch alarms.</p>
+  <p>Newer SDK releases restructure deployment around <code>ModelBuilder</code>; boto3 calls stay the same. Endpoints also support blue/green updates with canary or linear traffic shifting and auto-rollback on CloudWatch alarms (Section 06 explains those words).</p>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>A real-time endpoint bills every hour it exists, even with zero traffic. Delete test endpoints; use Batch Transform or serverless when you can.</p>
+    <p>A real-time endpoint bills every hour it exists, even with zero traffic, like a hired car waiting outside all night. Delete test endpoints; use Batch Transform or serverless when you can.</p>
   </div>
 
   <h2 id="dp-roll"><span class="num">06</span>Blue-Green, Canary, Shadow</h2>
+  <p>Version 2 of the model passed every test. Now it must replace version 1, which is serving lakhs of users right now. If you stop v1 and start v2 and something is wrong, every user sees it at once. There are three safer ways to make the switch.</p>
+  <ul>
+    <li><strong>Blue-green</strong> — run both versions side by side. "Blue" is the old one, "green" the new. Flip all traffic to green in one move. If it misbehaves, flip back; blue is still warm.</li>
+    <li><strong>Canary</strong> — send a small share of users (say 5%) to v2. Watch errors and metrics. If fine, 25%, then 100%. The name comes from the canary birds miners carried: the bird fainted first if the air went bad.</li>
+    <li><strong>Shadow</strong> — v2 receives a <em>copy</em> of every request and its answers are only logged, never shown to users. Zero risk; you compare its outputs to v1 offline.</li>
+  </ul>
+  <p>In the picture, each column is one strategy. Blue boxes are the old version, green is the new, the dashed box is a version nobody sees.</p>
   <figure class="viz"><svg viewBox="0 0 600 175" width="600">
     <text x="95" y="16" text-anchor="middle">Blue-green</text>
     <text x="300" y="16" text-anchor="middle">Canary</text>
@@ -315,18 +362,37 @@ print(resp["Body"].read().decode())</div>
     <text x="505" y="140" text-anchor="middle" class="tm" font-size="11">v2 output logged only;</text><text x="505" y="155" text-anchor="middle" class="tm" font-size="11">users never see it</text>
     <line x1="200" y1="25" x2="200" y2="160" stroke="currentColor" stroke-opacity=".3"/><line x1="405" y1="25" x2="405" y2="160" stroke="currentColor" stroke-opacity=".3"/>
   </svg><figcaption>Blue-green swaps everyone at once; canary shifts gradually; shadow tests with zero user risk.</figcaption></figure>
+  <p>How does a canary decide which users get v2? A common trick: turn the user ID into a number from 0 to 99 (a <strong>hash</strong>, a fixed scrambling), and send users below the canary percentage to v2. The same user always lands in the same bucket, so they don't flip between versions on every request.</p>
+  <div class="fx" data-lang="py">import hashlib
+
+def version_for(user_id, canary_pct=5):
+    bucket = int(hashlib.md5(user_id.encode()).hexdigest(), 16) % 100   # 0..99, fixed per user
+    return "v2" if bucket &lt; canary_pct else "v1"
+
+print("user42 ->", version_for("user42"), version_for("user42"), version_for("user42"))
+users = [f"user{i}" for i in range(10_000)]
+for pct in [5, 25, 100]:
+    on_v2 = sum(version_for(u, pct) == "v2" for u in users)
+    print(f"canary {pct:&gt;3}% -> {on_v2} of 10000 users on v2")</div>
+  <div class="fx" data-lang="text">user42 -> v1 v1 v1
+canary   5% -> 520 of 10000 users on v2
+canary  25% -> 2501 of 10000 users on v2
+canary 100% -> 10000 of 10000 users on v2</div>
+  <p>user42 gets the same answer three times. Raising the percentage from 5 to 25 to 100 moves roughly that share of users to v2, and the users already on v2 stay there.</p>
   <table class="tbl">
     <tr><th></th><th>Blue-green</th><th>Canary</th><th>Shadow</th><th>A/B test</th></tr>
     <tr><td>Users exposed to v2</td><td>All, at once</td><td>A small, growing %</td><td>None</td><td>A fixed split (e.g. 50/50)</td></tr>
     <tr><td>Goal</td><td>Zero-downtime switch, instant rollback</td><td>Catch errors on little traffic</td><td>Compare outputs, latency on real traffic</td><td>Measure business impact</td></tr>
     <tr><td>Cost</td><td>2× infra briefly</td><td>Low</td><td>2× compute for scoring</td><td>Weeks of traffic</td></tr>
   </table>
+  <p>An <strong>A/B test</strong> looks like a canary but answers a different question: not "is v2 safe?" but "does v2 make more money?" That needs a fixed split, held for weeks, and statistics. The usual order:</p>
   <div class="flow"><span>Shadow (is it sane?)</span><span>Canary (is it safe?)</span><span>A/B (is it better?)</span><span>Full rollout</span></div>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Canary is about safety, not proof of improvement: 5% for an hour can't measure a 1% conversion lift. That needs a proper A/B test, covered in <em>ML System Design → Shadow, Canary &amp; A/B Infrastructure</em>.</p>
   </div>
 
   <h2 id="dp-ver"><span class="num">07</span>Versioning &amp; Rollback</h2>
+  <p>A user complains: "Yesterday at 3 pm your app rejected my loan." To answer, you must know which model version answered at 3 pm, which code built it, and which data trained it. That is a chain of IDs, and every link must be recorded.</p>
   <div class="flow"><span>Git SHA</span><span>Data version</span><span>Registry version 7</span><span>Image tag model-api:1.4.2</span><span>Endpoint / Deployment</span></div>
   <ul>
     <li><strong>Every prediction logs the model version</strong>, so a bad prediction can be traced to its model, code and data.</li>
@@ -334,13 +400,15 @@ print(resp["Body"].read().decode())</div>
     <li><strong>Rollback is a pointer move:</strong> registry alias back to v6, <code>kubectl rollout undo deployment/model-api</code>, or the blue environment.</li>
     <li><strong>Keep the old version warm</strong> and its features computable; a rollback that needs a retrain is not a rollback.</li>
   </ul>
+  <p><strong>Rollback</strong> means going back to the previous version, fast. Done right, it is one command that moves a pointer, not a rebuild. The three rollback moves match the three places a version can be pinned: the MLflow alias, the Kubernetes Deployment, or the blue-green router.</p>
   <div class="callout trap"><span class="label">Trap</span>
     <p>A new model that needs a new feature breaks rollback if the old feature pipeline was deleted. Version feature pipelines with the model and keep both alive during rollout.</p>
   </div>
   <p>What to watch after rollout (drift, latency, error rate, business KPIs): see <em>ML System Design → Monitoring, Drift &amp; Retraining</em>.</p>
 
   <h2 id="dp-pack"><span class="num">08</span>Model Packaging</h2>
-  <p><code>pickle</code> and <code>joblib</code> save any Python object. Loading one can run any code the file's author chose:</p>
+  <p>A trained model is a Python object in memory. To ship it, you must turn it into a file. The usual way in Python is <code>pickle</code> (and <code>joblib</code>, which is pickle with better handling of big arrays). It can save almost any object. That flexibility is the problem.</p>
+  <p>A pickle file is not just data. It is a list of instructions for rebuilding the object, and one of the allowed instructions is "call this function". So whoever wrote the file decides what runs on your machine when you load it. Five lines prove it:</p>
   <div class="fx" data-lang="py">import pickle, os
 class Evil:
     def __reduce__(self):                      # tells pickle how to "rebuild" the object
@@ -348,10 +416,14 @@ class Evil:
 open("model.pkl", "wb").write(pickle.dumps(Evil()))
 pickle.load(open("model.pkl", "rb"))           # just loading runs the command</div>
   <div class="fx" data-lang="text">PWNED: this ran during pickle.load</div>
+  <p><code>__reduce__</code> is the hook pickle calls to learn how to rebuild an object. Here it says "rebuild me by running <code>os.system(...)</code>", a shell command. Replace the echo with "delete all files" or "send the database password to this address" and you see why loading an unknown pickle is dangerous.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A pickle file is like a parcel with a note "to open, follow these steps". A safe format is a parcel that is only contents: you open it your own way, and nothing in it can give orders.</p>
+  </div>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Never unpickle a model from an untrusted source (random Hub repo, user upload). Pickles also break across library versions: a model pickled with sklearn 1.3 may fail or silently differ on 1.6.</p>
   </div>
-  <p><strong>ONNX</strong> (Open Neural Network Exchange) stores the model as a graph of standard math ops, not Python objects. Any ONNX runtime can execute it.</p>
+  <p>The safe alternative stores only the maths. <strong>ONNX</strong> (Open Neural Network Exchange) saves the model as a graph of standard operations ("multiply by this matrix, add this, apply sigmoid"), not as Python objects. Any ONNX runtime, in any language, can run that graph, and there is no place for hidden code.</p>
   <div class="fx" data-lang="py">from skl2onnx import to_onnx
 import onnxruntime as ort
 
@@ -369,6 +441,7 @@ print("all 569 agree:", (sess.run(None, {inp: X})[0] == pipe.predict(X)).all())<
 sklearn: [0 0 0 0 0]
 onnx:    [0 0 0 0 0]
 all 569 agree: True</div>
+  <p><code>to_onnx</code> converts the sklearn pipeline, using one sample row to learn the input shape. <code>[None, 30]</code> means "any number of rows, 30 columns". The last line is the check that matters: the converted model agrees with the original on all 569 rows.</p>
   <table class="tbl">
     <tr><th>Format</th><th>Safe to load?</th><th>Portable?</th><th>Use for</th></tr>
     <tr><td>pickle / joblib</td><td>No: runs code</td><td>Same Python + library versions only</td><td>Quick internal work, trusted sources</td></tr>
@@ -384,6 +457,7 @@ all 569 agree: True</div>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>Batch or online inference for a weekly "customers likely to churn" email?</summary><div class="qa-body">Batch. Predictions are needed once a week for a known customer list, so a scheduled job writes scores to a table. It's cheaper (no always-on servers), easy to rerun and debug. Online adds latency budgets and infra for no benefit.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>When must you use online inference instead of precomputing?</summary><div class="qa-body">When the input only exists at request time or the key space is too large to precompute: a search query, a cart at checkout, a transaction to approve. A hybrid is common: precompute heavy features or candidates in batch, then score online.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why load the model at startup and not inside the request handler?</summary><div class="qa-body">Loading a model from disk takes from hundreds of milliseconds to seconds. Done per request, every call pays that cost and the server's slowest responses (p99) become terrible. Load once at startup, keep it in memory, and expose <code>/health</code> so traffic arrives only after loading finishes.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What tests belong in an ML CI pipeline that normal software doesn't have?</summary><div class="qa-body">Data tests (schema, nulls, ranges, distribution vs reference), model tests (beats baseline and current champion overall and on key slices, latency/size budget, invariance and directional tests), and training/serving consistency (same input → same output in both paths).</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Canary vs shadow deployment: which first, and why?</summary><div class="qa-body">Shadow first: v2 scores a copy of real traffic with zero user impact, so you catch crashes, latency issues and odd outputs safely. Then canary: a small % of users actually get v2 while you watch error rates and metrics. Then A/B or full rollout.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>SageMaker real-time endpoint vs Batch Transform?</summary><div class="qa-body">Endpoint: always-on HTTPS service for per-request, low-latency predictions; billed per instance-hour. Batch Transform: a job that starts instances, scores a dataset in S3, writes results to S3 and shuts down; no endpoint, billed only while running. Serverless and async endpoints sit in between.</div></details>

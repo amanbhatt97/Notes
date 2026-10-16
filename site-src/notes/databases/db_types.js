@@ -397,6 +397,7 @@ query "desk lamp" -&gt; doc 57 ranks first (matches both)</div>
     <p>Writing to two databases separately from the app ("dual writes") lets them drift when one write fails. Write once to the source of truth and propagate via CDC (change data capture: streaming the DB's change log).</p>
   </div>
   <h3>Managed cloud equivalents</h3>
+  <p>"Managed" means the cloud company installs, backs up, patches and scales the database for you; you just connect to it. Job descriptions name these products, so map each one back to its family:</p>
   <table class="tbl">
     <tr><th>Type</th><th>AWS</th><th>GCP</th><th>Azure / other</th></tr>
     <tr><td>Relational</td><td>RDS (Postgres/MySQL), Aurora</td><td>Cloud SQL, AlloyDB, Spanner</td><td>Azure SQL, Azure Database for PostgreSQL</td></tr>
@@ -412,6 +413,7 @@ query "desk lamp" -&gt; doc 57 ranks first (matches both)</div>
   </ul>
   <h2 id="dt-qa"><span class="num">09</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>In one line each: which family would you use for a shopping cart, a product search box, and monthly revenue reports?</summary><div class="qa-body">Cart: key-value (Redis), lookups by user key, sub-millisecond. Search box: search engine (Elasticsearch), inverted index with ranking. Monthly reports: columnar warehouse (BigQuery/Snowflake), scans a few columns over all history.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Explain the CAP theorem. Does it mean every database picks two of three?</summary><div class="qa-body">When a network partition splits replicas, each side must either reject requests (consistency) or answer with possibly stale data (availability). Partitions can't be ruled out, so the real choice is C or A <em>during a partition</em>. When the network is healthy, a system can be both; the day-to-day trade-off is latency vs consistency (PACELC).</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What's the difference between a wide-column store and a columnar warehouse?</summary><div class="qa-body">Wide-column (Cassandra, Bigtable) groups rows by partition key; it's built for fast writes and key lookups. Columnar (BigQuery, Redshift) stores each column contiguously; it's built for scanning and aggregating a few columns over billions of rows. Similar names, opposite workloads.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Why is <code>SELECT SUM(amount) FROM sales</code> much faster in Snowflake than in PostgreSQL on 2 billion rows?</summary><div class="qa-body">Snowflake is a column store: it reads only the compressed <code>amount</code> column, skips blocks using min/max metadata, and runs in parallel across many nodes. PostgreSQL is a row store: it reads every full row from disk to get one field, on one machine (with limited parallel workers).</div></details>

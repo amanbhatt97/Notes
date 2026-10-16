@@ -2,7 +2,7 @@
 Object.assign(TOPIC_CONTENT, {
   "py_oop": `<main>
   <h1>Object-Oriented Programming</h1>
-  <p class="lead">How Python keeps data and the code that uses it together in classes. Plus the design rules (pillars, SOLID, patterns) that keep big codebases easy to change. Every sklearn estimator, PyTorch module and pipeline is built this way, and OOP comes up in almost every interview.</p>
+  <p class="lead">Object-oriented programming (OOP) is a way of organising code: you keep a piece of data and the functions that work on it together, in a <em>class</em>. This note starts from "why would I want that?", builds up classes, methods and inheritance step by step, and then covers the design rules (the four pillars, SOLID, design patterns) that keep big codebases easy to change. Every sklearn estimator, PyTorch module and pipeline is built this way, and OOP comes up in almost every interview.</p>
 
   <h2 id="po-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -112,8 +112,30 @@ Object.assign(TOPIC_CONTENT, {
     </div>
   </div>
 
+  <div class="callout intu"><span class="label">Why this note</span><p>Small scripts get by with lists, dicts and functions. Real projects have hundreds of "things" (students, orders, models) that each carry data and need the same operations. Classes give each thing a shape. You will meet them every day: <code>LogisticRegression()</code> is an object built from a class, <code>model.fit()</code> is a method, and <code>nn.Module</code> is a parent class you inherit from. Interviews ask "what is <code>self</code>?", "encapsulation vs abstraction?", "what is the MRO?". Each section below uses only what came before it.</p></div>
+
   <h2 id="po-class"><span class="num">01</span>Classes &amp; Objects</h2>
-  <p>A <strong>class</strong> groups data and the functions that work on that data. An <strong>object</strong> is one copy made from the class. Without classes, 500 patients become 2,500 loose variables with no structure.</p>
+  <p>Say you store students as dicts and keep an <code>average</code> function somewhere else. It works. But nothing ties the function to the data: anyone can pass the wrong dict, and with 20 such functions you lose track of which works on what.</p>
+  <div class="fx" data-lang="py"># without a class: data in a dict, function kept separately
+s1 = {"name": "Asha", "marks": [88, 92]}
+s2 = {"name": "Ben", "marks": [70, 65]}
+def average(student):
+    return sum(student["marks"]) / len(student["marks"])
+print(average(s1), average(s2))
+
+# with a class: data and the function live together
+class Student:
+    def __init__(self, name, marks):
+        self.name = name
+        self.marks = marks
+    def average(self):
+        return sum(self.marks) / len(self.marks)
+a = Student("Asha", [88, 92])
+print(a.name, a.average())</div>
+  <div class="fx" data-lang="text">90.0 67.5
+Asha 90.0</div>
+  <p>A <strong>class</strong> is a blueprint: it says what data each student has and what each student can do. An <strong>object</strong> (also called an <strong>instance</strong>) is one student built from that blueprint. <code>Student("Asha", [88, 92])</code> builds one. The data on an object (<code>a.name</code>) is called an <strong>attribute</strong>. A function inside a class is called a <strong>method</strong>, and you call it with a dot: <code>a.average()</code>.</p>
+  <p>Two things look strange at first. <code>__init__</code> is the method Python runs automatically when you build an object; its job is to fill in the attributes. <code>self</code> is the object being worked on. When you write <code>a.average()</code>, Python secretly passes <code>a</code> as <code>self</code>. Read <code>self.name</code> as "my name".</p>
   <figure class="viz"><svg viewBox="0 0 560 200" width="560">
     <defs><marker id="po-ah1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <rect x="20" y="50" width="190" height="96" rx="6" class="fb sb"/>
@@ -132,6 +154,7 @@ Object.assign(TOPIC_CONTENT, {
     <text x="332" y="164">name="Tommy", age=5</text>
   </svg><figcaption>One class, many objects. Each object keeps its own data. Methods and class attributes live once, on the class.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span><p>Class = the architect's drawing. Object = a house built from it. Painting one house changes neither the drawing nor the other houses.</p></div>
+  <p>One more idea in the picture: <code>species</code> is written on the class itself, not inside <code>__init__</code>. That makes it a <strong>class attribute</strong>, one value shared by every dog. <code>name</code> and <code>age</code> are <strong>instance attributes</strong>, one copy per dog.</p>
   <div class="fx" data-lang="py">class Dog:
     species = "Canis familiaris"          # class attribute: shared
     def __init__(self, name, age):        # runs automatically on Dog(...)
@@ -163,7 +186,7 @@ print(b.tricks)                     # b never learned "sit"!</div>
   <p>Fix: create it per object in <code>__init__</code> (<code>self.tricks = []</code>).</p>
 
   <h2 id="po-methods"><span class="num">02</span>Instance, Class, Static Methods</h2>
-  <p>Three kinds of method, by what they receive first. The choice says what the method is allowed to touch.</p>
+  <p>Every method so far received <code>self</code>, the object. Two more kinds exist. A <strong>class method</strong> receives the class itself (called <code>cls</code>) instead of an object; its usual job is to build objects in a different way, for example from a config dict. A <strong>static method</strong> receives nothing special; it is a plain helper function that lives inside the class because it belongs there. You mark them with <code>@classmethod</code> and <code>@staticmethod</code> above the <code>def</code>. (A line starting with <code>@</code> is a <strong>decorator</strong>, a tag that changes how the function below it behaves. The Advanced note explains how they work inside.)</p>
   <table class="tbl">
     <tr><th>Kind</th><th>First arg</th><th>Can touch</th><th>Use for</th></tr>
     <tr><td>Instance</td><td><code>self</code></td><td>object + class data</td><td>Normal behaviour (<code>fit</code>, <code>predict</code>)</td></tr>
@@ -189,9 +212,10 @@ class Bert(Model): pass
 m = Bert.from_config({"name": "bert", "lr": 2e-5})
 print(type(m).__name__, m.describe(), Model.valid_lr(5), Model.registry)</div>
   <div class="fx" data-lang="text">Bert bert lr=2e-05 False 1</div>
-  <p><code>Bert.from_config</code> returned a <strong>Bert</strong>, because <code>cls</code> is whichever class you called it on. Real examples: <code>pd.DataFrame.from_dict</code>, <code>datetime.fromisoformat</code>.</p>
+  <p>Walk through it: <code>Bert</code> is a child of <code>Model</code> (inheritance, explained fully in section 03). <code>Bert.from_config(...)</code> returned a <strong>Bert</strong>, not a Model, because <code>cls</code> is whichever class you called it on. If the method had said <code>Model(...)</code> instead of <code>cls(...)</code>, every subclass would get the wrong type back. Real examples: <code>pd.DataFrame.from_dict</code>, <code>datetime.fromisoformat</code>.</p>
 
   <h2 id="po-pillars"><span class="num">03</span>The Four Pillars</h2>
+  <p>Classes alone do not make code good. The "four pillars" are four habits that make classes worth having. Each one solves a specific pain. Read the table once now; each pillar gets its own example below.</p>
   <table class="tbl">
     <tr><th>Pillar</th><th>What</th><th>Why</th><th>Python tool</th></tr>
     <tr><td><strong>Encapsulation</strong></td><td>Hide DATA; change it only through methods</td><td>Keeps data valid (no negative balance)</td><td><code>_x</code>, <code>__x</code>, <code>@property</code></td></tr>
@@ -202,7 +226,9 @@ print(type(m).__name__, m.describe(), Model.valid_lr(5), Model.registry)</div>
   <p>These are design rules. Python does not force them on you.</p>
 
   <h3>Encapsulation</h3>
+  <p>A bank account has a balance. If any code anywhere can write <code>acc.balance = -5000</code>, the rule "no overdraft" is impossible to keep. <strong>Encapsulation</strong> means: keep the data inside, and let it change only through methods that check the rules.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>An ATM: you deposit and withdraw through buttons that follow rules. You cannot open the box and grab cash.</p></div>
+  <p>Python has two conventions. One underscore <code>_x</code> is a polite sign: "internal, please don't touch". Two underscores <code>__x</code> make Python rename the attribute to <code>_ClassName__x</code>, so outside code does not find it by accident. <code>@property</code> (section 05) lets a method look like a read-only attribute.</p>
   <div class="fx" data-lang="py">class Account:
     def __init__(self, balance):
         self.__balance = balance          # name-mangled to _Account__balance
@@ -229,7 +255,17 @@ AttributeError: property 'balance' of 'Account' object has no setter</div>
   </ul>
 
   <h3>Inheritance &amp; polymorphism</h3>
-  <p><strong>Inheritance</strong>: a child class gets all the parent's code and can change parts. <strong>Polymorphism</strong>: one call like <code>p.badge()</code> behaves differently for each type.</p>
+  <p>A Dog and a Cat both have a name and both can speak, but they speak differently. Writing two full classes repeats the shared parts. <strong>Inheritance</strong> lets a child class start as a copy of a parent and change only what differs. You write <code>class Dog(Animal)</code>; the brackets name the parent.</p>
+  <div class="fx" data-lang="py">class Animal:
+    def __init__(self, name): self.name = name
+    def speak(self): return "..."
+class Dog(Animal):                      # Dog gets __init__ for free
+    def speak(self): return "Woof"      # and changes one method
+d = Dog("Bruno")
+print(d.name, d.speak(), isinstance(d, Animal))</div>
+  <div class="fx" data-lang="text">Bruno Woof True</div>
+  <p>Dog did not write <code>__init__</code>, yet <code>d.name</code> works: Python looked in Dog, did not find <code>__init__</code>, and used Animal's. Writing a new <code>speak</code> in the child is called <strong>overriding</strong>. A Dog <em>is an</em> Animal, so <code>isinstance</code> says True.</p>
+  <p><strong>Polymorphism</strong> ("many forms") is what inheritance makes possible: one call like <code>p.badge()</code> behaves differently depending on which type of object <code>p</code> is. One loop can handle doctors, nurses and plain staff without a single <code>if</code>.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>"Show your ID" at a hospital gate. A doctor, a nurse and a visitor all respond to the same request, each with their own card.</p></div>
   <div class="fx" data-lang="py">class Staff:
     def __init__(self, name): self.name = name
@@ -254,12 +290,24 @@ Cy [staff]</div>
   <div class="callout trap"><span class="label">Trap</span><p>Override <code>__init__</code> but forget <code>super().__init__()</code> → the parent's attributes never get set: <code>AttributeError: 'Broken' object has no attribute 'name'</code>.</p></div>
 
   <h3>Abstraction</h3>
+  <p><strong>Abstraction</strong> means showing the caller a small, simple set of methods and hiding everything else. The caller learns <em>what</em> the object does, not <em>how</em>.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>Google Maps: you type a place and press Go. Routing, traffic data and servers stay hidden.</p></div>
   <p>In code: <code>model.fit(X, y)</code> hides the optimiser. ABCs (section 06) enforce it.</p>
   <div class="callout trap"><span class="label">Trap</span><p>The most-asked mix-up. <strong>Encapsulation</strong> protects data (who may change it). <strong>Abstraction</strong> simplifies the interface (what the caller needs to know).</p></div>
 
   <h2 id="po-dunder"><span class="num">04</span>Dunder Methods &amp; Operator Overloading</h2>
-  <p><strong>Dunder</strong> ("double underscore") methods are hooks Python calls behind built-in syntax. Write <code>__add__</code> and <code>+</code> works on your objects. Using them for operators is called <strong>operator overloading</strong>.</p>
+  <p>Print an object of your own class and you get something ugly: the class name and a memory address. Python does not know how to show it. Add a method called <code>__str__</code>, and <code>print</code> uses it.</p>
+  <div class="fx" data-lang="py">class Student:
+    pass
+s = Student()
+print(s)                 # no __str__: Python shows the type and an address
+class Student2:
+    def __init__(self, name): self.name = name
+    def __str__(self): return f"Student {self.name}"
+print(Student2("Asha"))</div>
+  <div class="fx" data-lang="text">&lt;__main__.Student object at 0x7f…&gt;
+Student Asha</div>
+  <p>This is the general pattern. Methods whose names start and end with two underscores are called <strong>dunder</strong> ("double underscore") methods. You have already met <code>__init__</code>. Each one is a hook that Python calls behind a piece of built-in syntax: <code>print(v)</code> calls <code>v.__str__()</code>, <code>v + w</code> calls <code>v.__add__(w)</code>, <code>len(v)</code> calls <code>v.__len__()</code>. Write the hook, and the syntax works on your objects. Giving <code>+</code> or <code>==</code> a meaning for your class is called <strong>operator overloading</strong>.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>A standard plug shape. Any appliance with the right plug fits the socket. Any class with <code>__len__</code> fits <code>len()</code>.</p></div>
   <table class="tbl">
     <tr><th>You write</th><th>Python calls</th><th>You write</th><th>Python calls</th></tr>
@@ -297,6 +345,7 @@ v + 5</div>
 True False False
 [3, 4] 4 2 {Vector(3, 4)}
 TypeError: unsupported operand type(s) for +: 'Vector' and 'int'</div>
+  <p>What each line of output shows. <code>v + w</code> ran <code>__add__</code>; <code>3 * v</code> ran <code>__rmul__</code> (the "r" is for "reflected": the number is on the left, so Python asks the Vector on the right). <code>abs(v)</code> ran <code>__abs__</code>. <code>==</code> compares the coordinates because of <code>__eq__</code>; <code>is</code> is still False because they are two objects. <code>{v, Vector(3, 4)}</code> has one item because equal vectors hash the same. <code>v + 5</code> failed cleanly: <code>__add__</code> returned <code>NotImplemented</code>, Python tried <code>int.__radd__</code>, which also said no, so it raised <code>TypeError</code>.</p>
   <ul>
     <li><code>print</code> uses <code>__str__</code>, and falls back to <code>__repr__</code>. Write <code>__repr__</code> first.</li>
     <li>Without <code>__eq__</code>, <code>==</code> checks identity: <code>Plain() == Plain()</code> → <code>False</code>.</li>
@@ -306,7 +355,7 @@ TypeError: unsupported operand type(s) for +: 'Vector' and 'int'</div>
 
   <h2 id="po-prop"><span class="num">05</span>Properties &amp; Dataclasses</h2>
   <h3>@property</h3>
-  <p>Looks like an attribute from outside; runs a method inside. Use it to check or compute values, without Java-style <code>get_x()/set_x()</code>.</p>
+  <p>You stored temperature as a plain attribute, <code>t.celsius</code>, and code all over the project reads and writes it. Now you need to reject values below absolute zero. Changing every <code>t.celsius = x</code> into <code>t.set_celsius(x)</code> would touch the whole project. A <strong>property</strong> solves this: from outside it still looks like an attribute, but inside, a method runs. The <strong>getter</strong> (under <code>@property</code>) runs on read; the <strong>setter</strong> (under <code>@celsius.setter</code>) runs on write and can check the value. A property with no setter is read-only.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>A bank cashier window. You just "hand over money", but the cashier checks the note before it goes in.</p></div>
   <div class="fx" data-lang="py">class Temperature:
     def __init__(self, c): self.celsius = c        # goes through the setter
@@ -326,7 +375,26 @@ ValueError: below absolute zero</div>
   <p>Bonus: start with a plain attribute, and switch to a property later without changing any caller.</p>
 
   <h3>@dataclass</h3>
-  <p>A <strong>dataclass</strong> is a class mainly for holding data. You list the fields; Python writes the boring methods for you.</p>
+  <p>Many classes exist only to hold a few fields: a point, a config, an experiment run. Writing <code>__init__</code>, <code>__repr__</code> and <code>__eq__</code> for each one is the same boring code every time. A <strong>dataclass</strong> writes them for you. You list the fields with their types, and put <code>@dataclass</code> above the class.</p>
+  <div class="fx" data-lang="py">from dataclasses import dataclass
+class PointPlain:                      # by hand
+    def __init__(self, x, y):
+        self.x, self.y = x, y
+    def __repr__(self):
+        return f"PointPlain(x={self.x}, y={self.y})"
+    def __eq__(self, o):
+        return (self.x, self.y) == (o.x, o.y)
+
+@dataclass
+class Point:                           # generated for you
+    x: int
+    y: int
+
+print(PointPlain(1, 2), Point(1, 2))
+print(Point(1, 2) == Point(1, 2))</div>
+  <div class="fx" data-lang="text">PointPlain(x=1, y=2) Point(x=1, y=2)
+True</div>
+  <p>Eight lines became three, with the same behaviour. Two options add more: <code>order=True</code> also writes <code>&lt;</code> and friends, so objects can be sorted; <code>frozen=True</code> makes objects unchangeable (and therefore hashable).</p>
   <div class="flow"><span>Declare typed fields</span><span>@dataclass</span><span>__init__, __repr__, __eq__ generated</span><span>+ order / frozen on request</span></div>
   <div class="callout anlg"><span class="label">Analogy</span><p>A pre-printed form. You only decide the boxes (name, roll no, marks); the printing press makes the form.</p></div>
   <div class="fx" data-lang="py">from dataclasses import dataclass, field
@@ -352,7 +420,8 @@ FrozenInstanceError: cannot assign to field 'score'</div>
   <div class="callout trap"><span class="label">Trap</span><p><code>tags: list = []</code> is rejected: <code>ValueError: mutable default &lt;class 'list'&gt; for field tags is not allowed: use default_factory</code>.</p></div>
 
   <h2 id="po-abc"><span class="num">06</span>ABCs &amp; Protocols</h2>
-  <p>Both describe a <strong>contract</strong>: "a model must have <code>fit</code> and <code>predict</code>". Why: you find a missing method when the object is created, not in production at 2 AM.</p>
+  <p>Your team writes ten model classes. Each must have <code>fit</code> and <code>predict</code>, because the training script calls both. Someone forgets <code>predict</code> in one class. Nothing complains until the script reaches that line in production at 2 AM. An <strong>interface</strong> is a written contract: "a model must have <code>fit</code> and <code>predict</code>". Python offers two ways to write one.</p>
+  <p>An <strong>ABC</strong> (abstract base class) is a parent class with methods marked <code>@abstractmethod</code>, which means "children must write this". Python refuses to build an object of any class that still has an unwritten abstract method, so the mistake shows up at once. A <strong>Protocol</strong> does not need inheritance at all: any class that happens to have the right methods counts.</p>
   <div class="cards">
     <div><b>ABC</b><p>You must inherit it. Missing abstract methods → cannot create the object.</p><small>Use: your own class family, shared helper methods. 💡 a degree from a named college</small></div>
     <div><b>Protocol</b><p>Anything with matching methods fits. Checked by mypy, no inheritance.</p><small>Use: accepting third-party objects. 💡 "can you drive? then you're a driver"</small></div>
@@ -380,7 +449,7 @@ print(Mean().fit_predict([1, 2, 3], [10, 20, 30]))</div>
   <div class="fx" data-lang="text">TypeError: Can't instantiate abstract class Model without an implementation for abstract methods 'fit', 'predict'
 TypeError: Can't instantiate abstract class Half without an implementation for abstract method 'predict'
 [20.0, 20.0, 20.0]</div>
-  <p>The error comes when the object is built, not when <code>predict</code> is first called in production.</p>
+  <p>The error comes when the object is built, not when <code>predict</code> is first called in production. The <code>...</code> in the abstract methods is just a placeholder body. <code>fit_predict</code> is a normal method with real code; every child gets it for free, and it works because the contract guarantees <code>fit</code> and <code>predict</code> exist.</p>
   <div class="fx" data-lang="py">from typing import Protocol, runtime_checkable
 
 @runtime_checkable
@@ -396,7 +465,7 @@ print(evaluate(SklearnLike(), [1, 2]), isinstance(SklearnLike(), Predictor), isi
   <div class="callout trap"><span class="label">Trap</span><p><code>isinstance</code> on a runtime-checkable Protocol only checks that method <em>names</em> exist — not arguments or return types.</p></div>
 
   <h2 id="po-comp"><span class="num">07</span>Composition vs Inheritance</h2>
-  <p><strong>Composition</strong> means building an object out of other objects it holds ("has-a"). <strong>Inheritance</strong> means becoming a special kind of another class ("is-a").</p>
+  <p>You want a Car that can run on a petrol engine or an electric motor. One tempting way is inheritance: <code>class Car(Engine)</code>. But a car is not an engine; it <em>has</em> one. And a customer might swap the engine later. <strong>Composition</strong> means building an object out of other objects it holds ("has-a"): the Car keeps an engine object inside <code>self.engine</code> and hands work to it. <strong>Inheritance</strong> means becoming a special kind of another class ("is-a").</p>
   <figure class="viz"><svg viewBox="0 0 560 190" width="560">
     <defs><marker id="po-ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="none" stroke="currentColor"/></marker>
     <marker id="po-ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
@@ -436,7 +505,8 @@ print(Car(Engine()).start(), "|", Car(Electric()).start())</div>
   <p><strong>Prefer composition.</strong> Parts can be tested and swapped on their own. You also avoid the <em>fragile base class</em> problem: a change in the parent quietly breaks every child. Use inheritance for a true is-a where you want polymorphism.</p>
 
   <h2 id="po-mro"><span class="num">08</span>MRO &amp; super()</h2>
-  <p><strong>MRO</strong> (Method Resolution Order) is the list of classes Python searches, in order, to find a method. With several parents, it decides which version wins. Python builds it with an algorithm called <strong>C3 linearisation</strong>.</p>
+  <p>Python lets a class have more than one parent: <code>class D(B, C)</code>. Now a question appears. If both B and C have a method <code>who</code>, which one does <code>D().who()</code> run? And if B and C share the same grandparent A, should A's code run once or twice?</p>
+  <p>The <strong>MRO</strong> (Method Resolution Order) answers this. It is a fixed list of classes that Python searches, in order, to find a method. The first class in the list that has the method wins. Python builds the list with an algorithm called <strong>C3 linearisation</strong>; the rules you need are in the picture: child before parents, parents left to right, each class only once.</p>
   <figure class="viz"><svg viewBox="0 0 520 210" width="520">
     <defs><marker id="po-ah4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="tr"/></marker></defs>
     <rect x="110" y="10" width="60" height="32" rx="5" class="fs" stroke="currentColor"/><text x="135" y="31">A</text>
@@ -486,7 +556,7 @@ store: written</div>
   <div class="callout trap"><span class="label">Trap</span><p>Bases in an impossible order fail when the class is created: <code>class Z(X, Y)</code> where <code>Y(X)</code> → <code>TypeError: Cannot create a consistent method resolution order (MRO) for bases X, Y</code>. Put the subclass first.</p></div>
 
   <h2 id="po-solid"><span class="num">09</span>SOLID</h2>
-  <p>Five rules that keep classes easy to change. Each row: the problem, then the fix.</p>
+  <p>A class that works today can still be a problem tomorrow: every new feature means editing it, and every edit breaks something. <strong>SOLID</strong> is a set of five rules, one per letter, for keeping classes easy to change. Each row of the table shows a problem and the fix. The two most asked in interviews, O and L, are run as code below.</p>
   <table class="tbl">
     <tr><th>Principle</th><th>Before (problem)</th><th>After (fix)</th></tr>
     <tr><td><strong>S</strong>ingle responsibility: one reason to change</td><td><code>Report</code> computes metrics, renders HTML <em>and</em> emails it</td><td><code>MetricsCalc</code>, <code>HtmlRenderer</code>, <code>Mailer</code>; Report uses all three</td></tr>
@@ -518,10 +588,11 @@ def stretch(r): r.set_w(10); return r.area()
 print(stretch(Rect(2, 5)), stretch(Square(5)))   # expected 50 both times</div>
   <div class="fx" data-lang="text">[1000, 800.0, 950]
 50 100</div>
+  <p>Open/closed in action: a new discount rule is a new class, and <code>checkout</code> is never edited. Liskov broken: <code>stretch</code> expects "set the width, keep the height", which is true for any Rect. A Square cannot keep that promise (its sides must stay equal), so it gives 100 where the caller expected 50. The child is not a safe substitute for the parent.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>Dependency inversion is a wall socket. The lamp depends on the socket standard, not on a particular power plant.</p></div>
 
   <h2 id="po-pat"><span class="num">10</span>Design Patterns</h2>
-  <p>A <strong>design pattern</strong> is a known, named solution to a common design problem. Names let a team say "use a strategy here" instead of explaining from scratch.</p>
+  <p>Some design problems come up in every project: "pick the right class from a file name", "let the user choose the algorithm", "tell several parts when something happens". A <strong>design pattern</strong> is a known, named solution to one of these. Names let a team say "use a strategy here" instead of explaining from scratch. Four you will meet in ML code:</p>
   <div class="cards">
     <div><b>Factory</b><p>Pick which class to build from input.</p><small>e.g. loader by file extension. 💡 a ticket counter: say "sleeper" or "AC", get the right ticket</small></div>
     <div><b>Strategy</b><p>Swap an algorithm at runtime.</p><small>e.g. metric, optimizer. 💡 pay by UPI, card or cash — same checkout</small></div>
@@ -577,6 +648,7 @@ True {'lr': 0.01}
   logger: epoch 2 loss 0.5
   logger: epoch 3 loss 0.25
   early-stop: hit target at epoch 3</div>
+  <p>Reading the code: the <strong>factory</strong> is a dict from extension to class, so adding a loader is one line. The <strong>strategy</strong> is just a function passed in; <code>Evaluator</code> does not care which metric it holds. The <strong>singleton</strong> uses <code>__new__</code> (the method that creates the object before <code>__init__</code>) to hand back the same object every time, which is why <code>a is b</code>. The <strong>observer</strong> keeps a list of functions and calls each one at the end of every epoch; that is exactly how training callbacks work.</p>
   <div class="callout trap"><span class="label">Trap</span><p>A singleton is global data in disguise: hard to test and reset. In Python a module is already a singleton. A <code>config.py</code> with module-level values is usually enough.</p></div>
 
   <h2 id="po-qa"><span class="num">11</span>Questions &amp; Answers</h2>

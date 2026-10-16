@@ -2,7 +2,7 @@
 Object.assign(TOPIC_CONTENT, {
   "py_ds": `<main>
   <h1>Data Structures</h1>
-  <p class="lead">Python has four built-in containers — list, tuple, set, dict — plus strings. Almost all data passes through them before numpy or pandas. The right choice can turn an O(n²) script into O(n). Knowing how copying and hashing work stops silent bugs. Builds on <em>Python Fundamentals</em> (names, mutability). Run on Python 3.13.</p>
+  <p class="lead">A data structure is a container that holds many values in one place. Python has four built-in ones — list, tuple, set, dict — plus strings for text. Almost all data passes through them before numpy or pandas. This note shows what each one is for, how to pick the right one, and the copying and hashing rules that cause silent bugs. Builds on <em>Python Fundamentals</em> (names, mutability). Run on Python 3.13.</p>
 
   <h2 id="pd-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -113,6 +113,7 @@ Object.assign(TOPIC_CONTENT, {
     </div>
   </div>
 
+  <div class="callout intu"><span class="label">Why this note</span><p>A single variable holds one value. Real data comes in groups: 300 orders, 40 students' marks, a phone book. You need containers. Each container is good at one job: a list keeps order, a set answers "have I seen this?", a dict finds a value by name. Picking the wrong one can make a script 1000× slower, and interviews ask exactly this: "why is <code>x in set</code> fast?", "shallow vs deep copy?".</p></div>
   <div class="cards">
     <div><b>list</b><p>Ordered, changeable, duplicates</p><small>💡 shopping basket</small></div>
     <div><b>tuple</b><p>Ordered, fixed, hashable</p><small>💡 sealed envelope</small></div>
@@ -121,7 +122,16 @@ Object.assign(TOPIC_CONTENT, {
   </div>
 
   <h2 id="pd-list"><span class="num">01</span>Lists &amp; Slicing</h2>
-  <p>A <strong>list</strong> is an ordered, changeable sequence. Use it when order matters and items get added or removed. A <strong>slice</strong> takes a piece of it.</p>
+  <p>A <strong>list</strong> is an ordered, changeable sequence of items, written in square brackets. "Ordered" means item 0 stays item 0 until you move it. "Changeable" means you can add, remove and replace items. Use it when order matters and the collection grows or shrinks.</p>
+  <p>Each item has a position number called its <strong>index</strong>. Counting starts at 0, not 1. Negative indices count from the end: <code>-1</code> is the last item.</p>
+  <div class="fx" data-lang="py">basket = ["rice", "dal", "oil"]
+print(basket[0], basket[-1], len(basket))   # first, last, count
+basket.append("sugar")                      # add at the end
+basket.remove("dal")                        # remove by value
+print(basket)</div>
+  <div class="fx" data-lang="text">rice oil 3
+['rice', 'oil', 'sugar']</div>
+  <p>A <strong>slice</strong> takes a piece of the list: <code>lst[start:stop]</code>. The item at <code>stop</code> is not included. In the picture, think of the index numbers as cuts between items, not as the items themselves. <code>lst[1:4]</code> is everything between cut 1 and cut 4.</p>
   <figure class="viz"><svg viewBox="0 0 470 120" width="470">
     <text x="10" y="18" class="tm">lst = [0, 1, 2, 3, 4, 5]</text>
     <g><rect x="40" y="40" width="60" height="34" class="fs" stroke="currentColor"/><rect x="100" y="40" width="60" height="34" class="fb sb"/><rect x="160" y="40" width="60" height="34" class="fb sb"/><rect x="220" y="40" width="60" height="34" class="fb sb"/><rect x="280" y="40" width="60" height="34" class="fs" stroke="currentColor"/><rect x="340" y="40" width="60" height="34" class="fs" stroke="currentColor"/></g>
@@ -144,8 +154,9 @@ print(sorted(nums), nums.pop(), nums)</div>
 [0, 'a', 'b', 'c', 3, 4, 5]
 None [5, 2, 8, 1]
 [1, 2, 5, 8] 1 [5, 2, 8]</div>
-  <div class="callout trap"><span class="label">Trap</span><p>Methods that change the list in place (<code>append</code>, <code>sort</code>, <code>reverse</code>) return <code>None</code>. So <code>nums = nums.sort()</code> wipes your list.</p></div>
-  <p>A list stores <em>references</em>, not copies. So repeating a row with <code>*</code> repeats the same row object:</p>
+  <p>Reading the output: <code>[:3]</code> means "from the start up to cut 3". <code>[-2:]</code> means "from the second-last to the end". <code>[::2]</code> means "every second item". <code>[::-1]</code> means "step backwards", which reverses. Asking for <code>lst[10:]</code> on a 6-item list gives an empty list, not an error.</p>
+  <div class="callout trap"><span class="label">Trap</span><p>Methods that change the list in place (<code>append</code>, <code>sort</code>, <code>reverse</code>) return <code>None</code>. So <code>nums = nums.sort()</code> wipes your list. <code>sorted(nums)</code> is the one that gives you a new list back.</p></div>
+  <p>A list stores <em>references</em> (name tags pointing to objects, from the Fundamentals note), not copies. So repeating a row with <code>*</code> repeats the same row object. You wanted a 3×3 grid of zeros, but you got three tags on one row, so changing "row 0" changes all three:</p>
   <div class="fx" data-lang="py">grid = [[0] * 3] * 3              # 3 refs to ONE row
 grid[0][0] = 1
 print(grid)
@@ -156,10 +167,22 @@ print(grid)</div>
 [[1, 0, 0], [0, 0, 0], [0, 0, 0]]</div>
 
   <h2 id="pd-comp"><span class="num">02</span>Comprehensions</h2>
-  <p>A <strong>comprehension</strong> builds a list (or dict, set) in one line. It does the same job as a for-loop with <code>append</code>, but shorter and faster, because the loop runs in C.</p>
+  <p>Very often you take one list and build another from it: "keep only the passing marks", "square every number". The usual way is an empty list, a loop and <code>append</code>. A <strong>comprehension</strong> does the same job in one line. Both give the same answer; the comprehension is shorter and a bit faster, because the loop runs inside Python's C code.</p>
+  <div class="fx" data-lang="py">marks = [45, 72, 88, 59, 91]
+# the long way
+passed = []
+for m in marks:
+    if m &gt;= 60:
+        passed.append(m)
+print(passed)
+# the same thing as a comprehension
+print([m for m in marks if m &gt;= 60])</div>
+  <div class="fx" data-lang="text">[72, 88, 91]
+[72, 88, 91]</div>
+  <p>Read it left to right: "take <code>m</code>, for each <code>m</code> in <code>marks</code>, if <code>m &gt;= 60</code>". The three parts always come in this order.</p>
   <div class="flow"><span>[ expression</span><span>for x in iterable</span><span>if condition ]</span></div>
   <div class="callout anlg"><span class="label">Analogy</span><p>"From the class list, take each student who scored above 60, and write their name in capitals." One sentence instead of a step-by-step register.</p></div>
-  <p>A <strong>generator</strong> <code>( )</code> gives items one at a time instead of building a full list, so it uses almost no memory.</p>
+  <p>Curly brackets build a dict or a set the same way. Round brackets build a <strong>generator</strong>: it does not build the whole list in memory, it hands out items one at a time as they are asked for. So <code>sum</code> over a million squares uses almost no memory.</p>
   <div class="fx" data-lang="py">print([x ** 2 for x in range(6) if x % 2 == 0])          # filter at the end
 print(["even" if x % 2 == 0 else "odd" for x in range(4)])  # if/else at the front
 m = [[1, 2], [3, 4]]
@@ -174,10 +197,18 @@ print(sum(g))</div>
 [[1, 3], [2, 4]]
 {'ml': 2, 'data': 4}
 333332833333500000</div>
+  <p>Line 2 shows the other place an <code>if</code> can go. <code>"even" if ... else "odd"</code> at the front chooses what to put in; an <code>if</code> at the end chooses whether to put it in at all.</p>
   <div class="callout intu"><span class="label">Key insight</span><p>Read nested comprehensions as nested loops, left to right: <code>for row in m</code> is the outer loop, <code>for x in row</code> the inner one. More than two levels → write a named function.</p></div>
 
   <h2 id="pd-copy"><span class="num">03</span>Copying: Alias, Shallow, Deep</h2>
-  <p>Three levels of "copy". An <strong>alias</strong> is just a second name. A <strong>shallow copy</strong> makes a new outer container but shares the inner objects. A <strong>deep copy</strong> copies every level. Pick wrong and editing the "copy" changes the original.</p>
+  <p>You have a config dict for an ML model and want to try a second version with a different learning rate. You "copy" the dict, change the copy, and the original changes too. This happens because there are three different things people call "copy".</p>
+  <ul>
+    <li><strong>Alias</strong> — <code>b = a</code>. No copy at all, just a second name on the same object.</li>
+    <li><strong>Shallow copy</strong> — <code>a.copy()</code>. A new outer container, but the items inside are the same objects as before.</li>
+    <li><strong>Deep copy</strong> — <code>copy.deepcopy(a)</code>. New outer container and new copies of everything inside, all the way down.</li>
+  </ul>
+  <div class="callout anlg"><span class="label">Analogy</span><p>A shallow copy photocopies the contents page of a book: a new page, but it points to the same chapters. A deep copy reprints the whole book.</p></div>
+  <p>In the picture, follow the arrows from <code>shallow</code>: its outer box is new, but the dotted red arrows go to the same inner lists as <code>orig</code>. Only <code>deep</code> has its own green inner lists.</p>
   <figure class="viz"><svg viewBox="0 0 560 190" width="560">
     <defs><marker id="pd-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <rect x="10" y="20" width="70" height="26" rx="5" class="fb sb"/><text x="18" y="38">orig</text>
@@ -218,11 +249,16 @@ print(shallow[0] is orig[0], deep[0] is orig[0])</div>
 shallow [[1, 2, 99], [3, 4]]
 deep    [[1, 2], [3, 4]]
 True False</div>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A shallow copy photocopies the contents page of a book: a new page, but it points to the same chapters. A deep copy reprints the whole book.</p></div>
+  <p>Appending 99 to the inner list showed up in <code>shallow</code>, because that inner list is shared. Appending <code>[5]</code> to the outer list did not, because the outer box was copied. A flat list of numbers or strings is safe to shallow-copy; only nested containers need a deep copy.</p>
   <div class="callout trap"><span class="label">Trap</span><p>Copy a nested config with <code>.copy()</code> or <code>{**cfg}</code>, then edit <code>cfg2["params"]["lr"]</code> — the original changes too. Use <code>copy.deepcopy</code>. (pandas <code>df.copy()</code> is deep by default for the data.)</p></div>
 
   <h2 id="pd-tup"><span class="num">04</span>Tuples &amp; Sets</h2>
-  <p>A <strong>tuple</strong> is a fixed record: coordinates, RGB, a (user, item) pair. It cannot change, so it is hashable and can be a dict key.</p>
+  <p>A <strong>tuple</strong> is a list that cannot change, written with round brackets. Use it for a fixed record where each position has a meaning: a point <code>(x, y)</code>, a colour <code>(r, g, b)</code>, a <code>(user, item)</code> pair. Because it cannot change, it is hashable, so it can be a dict key or set item. A function that returns two things really returns a tuple, and <strong>unpacking</strong> splits it into names.</p>
+  <div class="fx" data-lang="py">def min_max(nums):
+    return min(nums), max(nums)   # a tuple of two values
+lo, hi = min_max([4, 9, 1])
+print(lo, hi)</div>
+  <div class="fx" data-lang="text">1 9</div>
   <div class="fx" data-lang="py">point = (3, 4)
 x, y = point                       # unpacking
 first, *rest = (1, 2, 3, 4)
@@ -238,7 +274,15 @@ print(dist[(3, 4)])</div>
 (5,) &lt;class 'int'&gt; &lt;class 'tuple'&gt;
 3 Pt(x=3, y=4) Pt(x=0, y=4)
 p</div>
-  <p>A <strong>set</strong> keeps only unique items and answers "is x here?" in O(1). Set maths is the cleanest way to compare ID lists (train vs test users, old vs new columns).</p>
+  <p>A <code>namedtuple</code> is a tuple where each slot also has a name, so <code>p.x</code> reads better than <code>p[0]</code>. <code>_replace</code> gives a new tuple with one field changed. The comma makes a tuple, not the brackets: <code>(5)</code> is just the number 5.</p>
+  <p>A <strong>set</strong> keeps each item once and has no order. Its two jobs: remove duplicates, and answer "is x here?" very fast. An attendance list with repeats becomes the set of people present.</p>
+  <div class="fx" data-lang="py">attendance = ["Asha", "Ben", "Asha", "Chen", "Ben"]
+present = set(attendance)
+print(present, len(present))
+print("Dia" in present)</div>
+  <div class="fx" data-lang="text">{'Chen', 'Asha', 'Ben'} 3
+False</div>
+  <p>Set maths is the cleanest way to compare ID lists (train vs test users, old vs new columns).</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>Two WhatsApp groups. <code>a &amp; b</code> = people in both. <code>a | b</code> = everyone. <code>a - b</code> = only in group a. Nobody appears twice.</p></div>
   <div class="fx" data-lang="py">a = {1, 2, 3, 4}
 b = {3, 4, 5, 6}
@@ -258,8 +302,21 @@ TypeError: unhashable type: 'list'</div>
   <div class="callout trap"><span class="label">Trap</span><p><code>list(set(xs))</code> loses the original order. Use <code>dict.fromkeys</code> when order matters. Need a set inside a set, or as a key? Use <code>frozenset</code>.</p></div>
 
   <h2 id="pd-dict"><span class="num">05</span>Dicts &amp; Hashing</h2>
-  <p>A <strong>dict</strong> maps keys to values. Finding a value by key takes the same time for 10 items or 10 million. How: Python turns the key into a number (its <strong>hash</strong>), and that number picks a slot directly.</p>
+  <p>A list finds things by position. But most lookups in real life are by name: "what is Asha's phone number?". A <strong>dict</strong> (dictionary) stores pairs of <strong>key → value</strong>, and finds a value by its key. Keys must be unique; values can repeat.</p>
+  <div class="fx" data-lang="py">contacts = {"Asha": "98100", "Ben": "99200"}
+print(contacts["Asha"])          # look up by key
+contacts["Chen"] = "97300"       # add a new pair
+print(len(contacts), "Ben" in contacts)
+for name, phone in contacts.items():
+    print(name, "-&gt;", phone)</div>
+  <div class="fx" data-lang="text">98100
+3 True
+Asha -&gt; 98100
+Ben -&gt; 99200
+Chen -&gt; 97300</div>
+  <p>The special thing about a dict: finding a value by key takes the same time for 10 items or 10 million. It does not search. Python turns the key into a number, called its <strong>hash</strong>, and that number says directly which slot holds the value. Sets work the same way, which is why <code>in</code> on a set is so fast.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>A railway cloak room: the token number tells the attendant exactly which shelf your bag is on. No need to check every shelf.</p></div>
+  <p>In the picture, each key goes through <code>hash(key) % 8</code> to get a slot number from 0 to 7. Keys 17 and 9 both want slot 1. That clash is called a <strong>collision</strong>; Python just tries another slot (the dotted "probe" arrow).</p>
   <figure class="viz"><svg viewBox="0 0 520 210" width="520">
     <defs><marker id="pd-ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <text x="10" y="16" class="tm">key</text><text x="110" y="16" class="tm">hash(key) % 8</text><text x="330" y="16" class="tm">slots</text>
@@ -289,6 +346,7 @@ print({1: "int", 1.0: "float", True: "bool"})   # one key!</div>
 9 -&gt; slot 1
 True
 {1: 'bool'}</div>
+  <p>Everyday dict tools: <code>.get(key, default)</code> returns the default instead of crashing when the key is missing. <code>.pop(key)</code> removes a pair and returns its value. <code>d | other</code> merges two dicts into a new one. <code>defaultdict(list)</code> is a dict that creates an empty list for any key you touch for the first time, which makes grouping a two-line job. <code>Counter</code> counts how often each item appears.</p>
   <div class="fx" data-lang="py">d = {"name": "Asha", "age": 31}
 d["city"] = "Mumbai"
 print(d.get("salary", 0), d.pop("age"), d)
@@ -313,7 +371,7 @@ KeyError: 'salary'
   <div class="callout trap"><span class="label">Trap</span><p>String hashes change in every new Python process (<code>PYTHONHASHSEED</code>). So never use <code>hash(s)</code> for stable bucketing, like A/B groups or a train/test split. Use <code>hashlib.md5(s.encode())</code>. Also: do not add or remove keys while looping over a dict (RuntimeError).</p></div>
 
   <h2 id="pd-str"><span class="num">06</span>Strings &amp; f-strings</h2>
-  <p>A <strong>string</strong> is unchangeable text. Every method (<code>lower</code>, <code>replace</code>) returns a new string. An <strong>f-string</strong> puts values into text with formatting rules after a colon.</p>
+  <p>A <strong>string</strong> is text in quotes. It behaves like a list of characters that cannot change: you can index and slice it, but every method (<code>lower</code>, <code>replace</code>) returns a new string instead of editing the old one. <code>find</code> returns the position of a piece of text, or −1 if it is missing.</p>
   <div class="fx" data-lang="py">s = "Hello, World!"
 print(s[7:12], s[-6:], s[::-1])
 print(s.lower(), s.split(", "), s.find("World"), s.find("x"))
@@ -323,6 +381,14 @@ print("-".join(["2024", "05", "01"]))</div>
 hello, world! ['Hello', 'World!'] 7 -1
 pad| HeLLo, WorLd! True
 2024-05-01</div>
+  <p>To put values into text, use an <strong>f-string</strong>: an <code>f</code> before the quotes, and the value inside curly brackets. After a colon you can add a <strong>format spec</strong> — a short rule like "2 decimals" or "right-align in 6 spaces".</p>
+  <div class="fx" data-lang="py">name, total = "Asha", 1250.5
+print("Bill for " + name + ": " + str(total))   # the old, clumsy way
+print(f"Bill for {name}: {total}")               # f-string
+print(f"Bill for {name}: Rs {total:.2f}")        # 2 decimals</div>
+  <div class="fx" data-lang="text">Bill for Asha: 1250.5
+Bill for Asha: 1250.5
+Bill for Asha: Rs 1250.50</div>
   <table class="tbl">
     <tr><th>Spec</th><th>Code</th><th>Gives</th></tr>
     <tr><td>Decimals</td><td><code>{score:.2f}</code> / <code>{score:8.3f}</code></td><td>0.91 / width 8</td></tr>
@@ -339,6 +405,7 @@ print(f"{7:03d} {255:x} {255:b} {3.14159:e}")</div>
   <div class="fx" data-lang="text">  Asha|91.23%|1,234,567|1_234_567|   0.912|
 'Asha' score=0.91
 007 ff 11111111 3.141590e+00</div>
+  <p>One speed rule for strings. Because a string cannot change, <code>s = s + w</code> builds a brand-new string every time, copying everything so far. In a loop of 20,000 pieces that is a huge amount of copying. <code>",".join(words)</code> measures the total size once and builds the result in one go.</p>
   <div class="fx" data-lang="py">import timeit
 words = ["x"] * 20000
 def concat():
@@ -353,8 +420,13 @@ print(f"concat {timeit.timeit(concat, number=50)*20:.2f} ms, join {timeit.timeit
   <div class="callout trap"><span class="label">Trap</span><p>Strings cannot change, so <code>+</code> in a loop copies the whole string every time: O(n²). Collect pieces in a list and <code>"".join</code> once. (CPython sometimes speeds up <code>s += x</code>; do not rely on it.)</p></div>
 
   <h2 id="pd-re"><span class="num">07</span>Regex &amp; Unicode</h2>
-  <p>A <strong>regular expression</strong> (regex) describes a text pattern, like "4 digits, dash, 2 digits". Use it to find, pull out or clean text that plain <code>split</code> cannot handle — log lines, emails, phone numbers.</p>
+  <p>You have a long address text and want every PIN code in it. You do not know the exact numbers, only their shape: "6 digits in a row". A <strong>regular expression</strong> (regex) is a small language for describing the shape of text. <code>\\d</code> means "one digit" and <code>{6}</code> means "exactly 6 times".</p>
+  <div class="fx" data-lang="py">import re
+text = "Deliver to Pune 411001 or Mumbai 400001"
+print(re.findall(r"\\d{6}", text))   # every 6-digit PIN code</div>
+  <div class="fx" data-lang="text">['411001', '400001']</div>
   <div class="callout anlg"><span class="label">Analogy</span><p>Like telling someone "find every 10-digit number starting with 9" in a phone book, instead of naming each number.</p></div>
+  <p>Use regex to find, pull out or clean text that plain <code>split</code> cannot handle — log lines, emails, phone numbers. The table lists the most used tokens. A <strong>group</strong> <code>( )</code> marks the part you want to pull out.</p>
   <table class="tbl">
     <tr><th>Token</th><th>Matches</th><th>Token</th><th>Matches</th></tr>
     <tr><td><code>\\d \\w \\s</code></td><td>digit, word char, whitespace</td><td><code>+ * ?</code></td><td>1+, 0+, 0 or 1 (add <code>?</code> for lazy)</td></tr>
@@ -378,8 +450,9 @@ print(bool(email.match("a.b@x.com")), bool(email.match("bad@")))</div>
 None
 too many spaces
 True False</div>
+  <p>Reading the output: <code>findall</code> with a group returns only the group (the user numbers, not <code>user=</code>). A named group <code>(?P&lt;date&gt;...)</code> lets you ask for <code>m.group("date")</code>. <code>re.match</code> returned <code>None</code> because "ERROR" is not at the very start of the string. <code>re.sub</code> replaces every match. The <code>r</code> before the quotes makes a <strong>raw string</strong>, where a backslash is just a backslash.</p>
   <div class="callout trap"><span class="label">Trap</span><p>Always use raw strings <code>r"\\d"</code>. In a normal string, escapes like <code>"\\b"</code> become control characters. <code>re.match</code> checks only the start — use <code>search</code> to scan, <code>fullmatch</code> to validate.</p></div>
-  <p><strong>Unicode:</strong> a <code>str</code> is a sequence of characters (code points). <code>bytes</code> is what is stored on disk or sent on the network. UTF-8 uses 1 byte for English letters and up to 4 for others (Hindi, emoji).</p>
+  <p><strong>Unicode</strong> is the world list of every character, each with a number called a <strong>code point</strong> ("A" is 65, "☕" is 9749). A <code>str</code> is a sequence of these characters. A disk or network only stores bytes (numbers 0–255), so text must be turned into bytes by an <strong>encoding</strong> rule. UTF-8 is the standard rule: 1 byte for English letters and up to 4 for others (Hindi, emoji). <code>encode</code> goes str → bytes, <code>decode</code> goes bytes → str.</p>
   <div class="flow"><span>str "naïve ☕"</span><span>.encode("utf-8")</span><span>bytes b'na\\xc3\\xafve ...'</span><span>.decode("utf-8")</span><span>str again</span></div>
   <div class="fx" data-lang="py">s = "naïve ☕"
 print(len(s), len(s.encode("utf-8")), s.encode("utf-8"))
@@ -403,7 +476,7 @@ False True</div>
   <div class="callout trap"><span class="label">Trap</span><p>Garbled text like <code>cafÃ©</code> (called <em>mojibake</em>) means UTF-8 bytes were read with the wrong codec. Always pass <code>encoding="utf-8"</code> to <code>open()</code>. In NLP, NFC-normalise text before comparing or removing duplicates.</p></div>
 
   <h2 id="pd-big"><span class="num">08</span>Big-O &amp; Choosing the Right Structure</h2>
-  <p><strong>Big-O</strong> says how the work grows as data grows. O(1) = same time for any size. O(n) = double the data, double the time.</p>
+  <p>A script runs fine on 100 rows and takes an hour on 1 million. The reason is usually not the computer but the container choice. <strong>Big-O</strong> is the short way to say how the work grows as data grows. <strong>O(1)</strong> = same time for any size. <strong>O(n)</strong> = double the data, double the time. <strong>O(n²)</strong> = double the data, four times the time. <strong>O(log n)</strong> = the time barely grows (like halving a phone book to find a name).</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>Finding a student in an unsorted attendance register means reading line by line: O(n). Finding them by roll number in a numbered locker: O(1).</p></div>
   <table class="tbl">
     <tr><th>Operation</th><th>list</th><th>deque</th><th>set / dict</th></tr>
@@ -452,9 +525,21 @@ deque.popleft(): 0.009s</div>
     <tr><td>Millions of numbers, vector maths</td><td>numpy array / pandas</td></tr>
   </table>
   <div class="callout intu"><span class="label">Key insight</span><p>The most common interview speed-up: a list used for <code>in</code> checks inside a loop makes the loop O(n²). Turn it into a set once (O(n)), and the loop becomes O(n).</p></div>
+  <div class="fx" data-lang="py">import timeit
+def bad(items, seen_list):
+    return [x for x in items if x in seen_list]     # list in a loop
+def good(items, seen_list):
+    seen = set(seen_list)                           # build once
+    return [x for x in items if x in seen]
+items = list(range(20000)); seen_list = list(range(0, 20000, 2))
+print(f"list in loop: {timeit.timeit(lambda: bad(items, seen_list), number=1):.2f}s")
+print(f"set in loop:  {timeit.timeit(lambda: good(items, seen_list), number=1):.4f}s")</div>
+  <div class="fx" data-lang="text">list in loop: 0.83s
+set in loop:  0.0036s</div>
+  <p>Same answer, same code shape, one extra line. That one line is the difference between a script that finishes and one that does not.</p>
 
   <h2 id="pd-build"><span class="num">09</span>Hands-on: Log Summariser</h2>
-  <p>Regex to parse, <code>Counter</code> to count, <code>defaultdict(set)</code> to group unique messages, f-strings to print a table.</p>
+  <p>A server writes one line per event. The task: count lines per level and list each user's unique error messages. The tools: regex to split each line into parts, <code>Counter</code> to count, <code>defaultdict(set)</code> to group unique messages, f-strings to print a table.</p>
   <div class="fx" data-lang="py">from collections import Counter, defaultdict
 import re
 logs = """2024-05-01 ERROR db timeout user=42
@@ -481,6 +566,7 @@ level |  n
 ERROR |  3
 INFO  |  1
 WARN  |  1</div>
+  <p>The pattern reads: non-spaces (the date), a word (the level), some spaces, anything up to <code> user=</code> (the message), then digits (the user). <code>.groups()</code> returns those four pieces as a tuple, which is unpacked into four names.</p>
   <p><strong>Extend it:</strong> keep only the last 3 errors per user with <code>defaultdict(lambda: deque(maxlen=3))</code>.</p>
 
   <h2 id="pd-qa"><span class="num">10</span>Questions &amp; Answers</h2>

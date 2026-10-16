@@ -2,10 +2,9 @@
 Object.assign(TOPIC_CONTENT, {
   "transformers": `<main>
   <h1>Transformers</h1>
-  <p class="lead">The architecture under every modern LLM. You need <em><a class="xref" data-note="nlp">NLP Foundations</a></em> (word vectors, and why context matters). Here you take one Transformer apart: tokens, embeddings, attention, the block, and the three model families. <em><a class="xref" data-note="llm_basics">How LLMs Work</a></em> then shows how these models are trained and generate text.</p>
+  <p class="lead">The architecture under every modern LLM, from ChatGPT to Claude. You need <em><a class="xref" data-note="nlp">NLP Foundations</a></em> (word vectors, and why a word's meaning should depend on its sentence). Here you take one Transformer apart piece by piece: how text becomes tokens, how tokens become vectors, how attention lets every word look at every other word, how the pieces stack into a block, and the three model families built from those blocks. <em><a class="xref" data-note="llm_basics">How LLMs Work</a></em> then shows how these models are trained and generate text.</p>
 
-  <h2 id="tf-map" class="open"><span class="num">★</span>Mind Map</h2>
-  <div class="mindmap">
+<div class="mindmap">
   <div class="mm-center">Transformers</div>
   <div class="mm-branches">
     <div class="mm-branch">
@@ -123,8 +122,9 @@ Object.assign(TOPIC_CONTENT, {
   </div>
 
   <h2 id="tf-why"><span class="num">01</span>Why Transformers</h2>
-  <p>Before 2017, language models were <strong>RNNs</strong> (read one word, update a memory vector, repeat).</p>
-  <figure class="viz"><svg viewBox="0 0 620 150" width="620">
+  <p>Read this sentence: "The animal didn't cross the street because it was too tired." You know "it" means the animal, not the street. You know it because you can look back at any earlier word instantly. A model needs the same ability.</p>
+  <p>Before 2017, language models were <strong>RNNs</strong> (recurrent neural networks). An RNN reads one word at a time, updates a single memory vector, and moves on. By the time it reaches "it", the memory of "animal" has been overwritten eight times. Three problems followed from that design, and the Transformer fixed all three.</p>
+<figure class="viz"><svg viewBox="0 0 620 150" width="620">
     <defs><marker id="tf-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <text x="20" y="22">RNN: one step at a time</text><text x="350" y="22">Transformer: all pairs at once</text>
     <line x1="320" y1="10" x2="320" y2="140" stroke="currentColor" opacity="0.25"/>
@@ -155,6 +155,7 @@ Object.assign(TOPIC_CONTENT, {
     <circle cx="580" cy="96" r="13" class="fb sb"/><text x="580" y="100" text-anchor="middle">w5</text>
     <text x="350" y="134" class="tm">any word reaches any word in 1 step</text>
     </svg><figcaption>RNNs pass one memory vector along a chain; attention links every pair directly and in parallel (cost: n² pairs).</figcaption></figure>
+  <p>Left: the RNN chain, where each word waits for the previous one and old words fade. Right: in a Transformer every word is connected to every other word directly; the blue arcs are those connections.</p>
   <table class="tbl">
     <tr><th>RNN problem</th><th>What goes wrong</th><th>Transformer fix</th></tr>
     <tr><td><strong>Sequential</strong></td><td>Word 50 waits for word 49, so thousands of GPU cores sit idle</td><td>All positions processed in parallel</td></tr>
@@ -164,22 +165,25 @@ Object.assign(TOPIC_CONTENT, {
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>An RNN reads a book one word at a time with its eyes closed between words, summarising on a Post-it note. A Transformer lays the whole page on the table and lets every word look at every other word at once.</p>
   </div>
+  <p>The paper that introduced it was called "Attention Is All You Need" (2017), because the one mechanism that does the looking, <strong>attention</strong>, replaced recurrence completely. Section 04 opens it up.</p>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>"Every word looks at every word" costs O(n²) in sequence length n. That is why context length is expensive (more in <a class="xref" data-note="llm_basics">How LLMs Work</a>).</p>
+    <p>"Every word looks at every word" costs O(n²) in sequence length n: 10 words = 100 pairs, 1,000 words = 1,000,000 pairs. Double the text, four times the work. That is why context length is expensive (more in <a class="xref" data-note="llm_basics">How LLMs Work</a>).</p>
   </div>
 
   <h2 id="tf-tok"><span class="num">02</span>Tokenization</h2>
-  <p>A model reads numbers, not text. A <strong>tokenizer</strong> splits text into <strong>tokens</strong> and maps each to an ID from a fixed <strong>vocabulary</strong> (often 30k–200k entries).</p>
+  <p>A model reads numbers, not text. So the first job is to cut text into units and give each unit an ID number. The cutting program is the <strong>tokenizer</strong>, each unit is a <strong>token</strong>, and the fixed list of all known units is the <strong>vocabulary</strong> (often 30k–200k entries).</p>
+  <p>How big should a unit be? Each obvious choice has a problem:</p>
   <table class="tbl">
     <tr><th>Level</th><th>Problem</th></tr>
-    <tr><td>Whole words</td><td>Huge vocabulary; any unseen word becomes &lt;UNK&gt; (unknown)</td></tr>
+    <tr><td>Whole words</td><td>Huge vocabulary; any unseen word ("neuromorphic", a typo) becomes &lt;UNK&gt; (unknown)</td></tr>
     <tr><td>Characters</td><td>Tiny vocabulary, but very long sequences and little meaning per token</td></tr>
     <tr><td><strong>Subwords</strong></td><td>The middle: common words stay whole, rare words split into pieces</td></tr>
   </table>
-  <p>"unhappiness" might become <code>un</code> + <code>happi</code> + <code>ness</code>. A typo like "trnasformer" still splits into known pieces. Bytes or characters are always in the vocabulary, so nothing is ever unknown.</p>
+  <p>With subwords, "unhappiness" might become <code>un</code> + <code>happi</code> + <code>ness</code>. A typo like "trnasformer" still splits into known pieces. Single bytes or characters are always in the vocabulary, so nothing is ever unknown.</p>
   <h3>BPE (byte-pair encoding)</h3>
-  <p>Start from characters; repeatedly merge the most frequent adjacent pair into a new token. GPT-style models use byte-level BPE; BERT uses the similar WordPiece.</p>
-  <div class="fx" data-lang="py">from collections import Counter
+  <p>How does the tokenizer decide which pieces exist? <strong>BPE</strong> learns them from data with one simple rule: start with single characters, find the pair of neighbouring symbols that appears most often, glue them into one new symbol, repeat. GPT-style models use byte-level BPE; BERT uses the similar WordPiece.</p>
+  <p>A toy corpus of four words with their frequencies. Watch the merges happen:</p>
+<div class="fx" data-lang="py">from collections import Counter
 
 words = {"low": 5, "lower": 2, "newest": 6, "widest": 3}     # word: frequency
 corpus = {tuple(w): f for w, f in words.items()}              # start from characters
@@ -202,33 +206,59 @@ for step in range(4):
         new[tuple(out)] = f
     corpus = new
 print(list(corpus))</div>
-  <div class="fx" data-lang="text">merge 1: 'e' + 's' (seen 9x)
+<div class="fx" data-lang="text">merge 1: 'e' + 's' (seen 9x)
 merge 2: 'es' + 't' (seen 9x)
 merge 3: 'l' + 'o' (seen 7x)
 merge 4: 'lo' + 'w' (seen 7x)
 [('low',), ('low', 'e', 'r'), ('n', 'e', 'w', 'est'), ('w', 'i', 'd', 'est')]</div>
-  <p>Four merges learned "est" and "low". "lower" is now <code>low + e + r</code>. Real tokenizers run tens of thousands of merges.</p>
+  <p>Step by step: "e" followed by "s" appears 9 times (in "newest" 6 and "widest" 3), so it is merged first into "es". Then "es" + "t" → "est". Then "l" + "o" and "lo" + "w" build "low". After four merges, "lower" is <code>low + e + r</code>: the common piece "low" is one token, the rare ending is spelled out. Real tokenizers run tens of thousands of merges on terabytes of text.</p>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>Tokens are not words. Numbers, code, and non-English text often split into many tokens. That's why LLMs miscount letters in "strawberry": they never see individual letters.</p>
+    <p>Tokens are not words. Numbers, code, and non-English text often split into many tokens. That's why LLMs miscount letters in "strawberry": they never see individual letters, only pieces like "str" + "aw" + "berry".</p>
   </div>
 
   <h2 id="tf-emb"><span class="num">03</span>Embeddings &amp; Position</h2>
-  <p>The <strong>embedding layer</strong> is a learned table: one row per token ID, <code>d_model</code> numbers per row (768 in BERT-base). Looking up a token = picking its row.</p>
+  <p>After tokenization, "the cat sat" is just <code>[0, 1, 2]</code>. Those IDs are labels, not meaning: ID 2 is not "twice as much" as ID 1. The model needs each token as a vector of numbers it can do maths with.</p>
+  <p>The <strong>embedding layer</strong> is a learned table: one row per token ID, with <code>d_model</code> numbers per row (768 in BERT-base, several thousand in big LLMs). Looking up a token = picking its row. Nothing else.</p>
+  <div class="fx" data-lang="py">import numpy as np
+np.set_printoptions(precision=2, suppress=True)
+vocab = {"the": 0, "cat": 1, "sat": 2}
+rng = np.random.default_rng(0)
+E = rng.normal(size=(3, 4)).round(2)       # the table: 3 tokens x d_model = 4 (learned in a real model)
+ids = [vocab[w] for w in "the cat sat".split()]
+print(ids)
+print(E[ids])                               # one row per token: the input to the Transformer</div>
+  <div class="fx" data-lang="text">[0, 1, 2]
+[[ 0.13 -0.13  0.64  0.1 ]
+ [-0.54  0.36  1.3   0.95]
+ [-0.7  -1.27 -0.62  0.04]]</div>
+  <p>Three tokens in, a 3 × 4 matrix out. During training, the numbers in the table move until tokens with similar meaning have similar rows.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A token ID is a stadium seat number: it identifies, but means nothing. The embedding is a spreadsheet row whose unlabelled columns the model invents during training (maybe "is alive", "is past tense"). Similar tokens get similar rows, like Word2Vec in <a class="xref" data-note="nlp">NLP Foundations</a>.</p>
   </div>
   <h3>Positional encoding</h3>
-  <p>Attention treats its input as a <strong>set</strong>: "dog bites man" and "man bites dog" look identical. Position must be injected.</p>
+  <p>Here is a surprise. Attention (next section) treats its input as a <strong>set</strong>, a bag of vectors with no order. "dog bites man" and "man bites dog" would look identical. So the position of each token must be written into its vector before anything else happens.</p>
   <div class="flow"><span>token embedding (d_model)</span><span>+ position vector (d_model)</span><span>input to block 1</span></div>
   <ul>
-    <li><strong>Same size as the embedding</strong>, because the two are added element by element.</li>
-    <li><strong>Why not add the raw number 5?</strong> Embedding values are small (around ±1). A 5 would drown the meaning. The original sinusoidal encoding keeps values in [−1, 1].</li>
-    <li><strong>Variants</strong>: sinusoidal (original), learned per position (BERT, GPT-2), and <strong>RoPE</strong> (rotary: rotates Q and K by position angle, used by most modern LLMs like Llama).</li>
+    <li><strong>Same size as the embedding</strong>, because the two are added element by element: number 1 of the word vector plus number 1 of the position vector, and so on.</li>
+    <li><strong>Why not add the raw number 5?</strong> Embedding values are small (around ±1, as in the table above). Adding a 5 would drown the meaning. The original <strong>sinusoidal</strong> encoding uses sine and cosine waves of different speeds, so every value stays in [−1, 1] and every position still gets a unique pattern.</li>
+  </ul>
+  <div class="fx" data-lang="py">def pos_enc(pos, d=4):                      # sinusoidal, d_model = 4
+    return np.array([np.sin(pos / 10000 ** (i / d)) if i % 2 == 0
+                     else np.cos(pos / 10000 ** ((i - 1) / d)) for i in range(d)])
+for p in range(3):
+    print(p, pos_enc(p).round(2))</div>
+  <div class="fx" data-lang="text">0 [0. 1. 0. 1.]
+1 [0.84 0.54 0.01 1.  ]
+2 [ 0.91 -0.42  0.02  1.  ]</div>
+  <p>Each position gets its own small pattern, all values between −1 and 1, safe to add to the embedding row.</p>
+  <ul>
+    <li><strong>Variants</strong>: sinusoidal (original), learned per position (BERT, GPT-2: the position vectors are just another trained table), and <strong>RoPE</strong> (rotary: rotates the Q and K vectors of section 04 by an angle that depends on position, used by most modern LLMs like Llama).</li>
   </ul>
 
   <h2 id="tf-attn"><span class="num">04</span>Self-Attention</h2>
-  <p><strong>Self-attention</strong> rebuilds each token's vector as a weighted mix of all tokens' vectors, with weights based on relevance.</p>
-  <figure class="viz"><svg viewBox="0 0 531 130" width="531">
+  <p>Back to "it was too tired". The vector for "it" that came out of the embedding table is the same in every sentence. To know that "it" means the animal, the model must mix some of "animal" into the vector for "it". How much of each other word to mix in? That is exactly what attention computes.</p>
+  <p><strong>Self-attention</strong> rebuilds each token's vector as a weighted mix of all tokens' vectors, with weights based on relevance. Every token asks: "which other tokens matter for understanding me?"</p>
+<figure class="viz"><svg viewBox="0 0 531 130" width="531">
     <path d="M383,88 Q205,4 26,88" fill="none" class="sb" stroke-width="1.2" opacity="0.37"/>
     <path d="M383,88 Q228,12 73,88" fill="none" class="sr" stroke-width="5.8" opacity="0.83"/>
     <path d="M383,88 Q257,23 131,88" fill="none" class="sb" stroke-width="1.4" opacity="0.39"/>
@@ -252,7 +282,9 @@ merge 4: 'lo' + 'w' (seen 7x)
     <text x="494" y="108" text-anchor="middle" class="tr">tired</text>
     <text x="383" y="126" text-anchor="middle" class="tm">query</text>
     </svg><figcaption>Where "it" looks (illustrative weights): thick lines to "animal" and "tired", almost nothing to "street".</figcaption></figure>
-  <p>Raw vectors are noisy to compare, so each token projects itself (× a learned matrix) into three roles:</p>
+  <p>The thick red lines are big weights: "it" pulls mostly from "animal" and "tired". The thin blue lines are small weights: "street" and "the" barely count. (These weights are illustrative; real ones come from the Build It.)</p>
+  <h3>Three roles: Q, K, V</h3>
+  <p>Comparing raw embeddings directly works badly, so each token first makes three different versions of itself by multiplying with three learned matrices:</p>
   <ul>
     <li><strong>Q, query</strong> = <code>x·W_Q</code>: what am I looking for?</li>
     <li><strong>K, key</strong> = <code>x·W_K</code>: what do I offer, as a label to match against?</li>
@@ -261,8 +293,33 @@ merge 4: 'lo' + 'w' (seen 7x)
   <div class="callout anlg"><span class="label">Analogy: the library</span>
     <p>Your question is the Query. Each spine title is a Key. You read the best-matching books (Values), and your understanding is a blend weighted by how well each title matched.</p>
   </div>
-  <div class="fx" data-lang="text">Attention(Q, K, V) = softmax( Q·Kᵀ / √d_k ) · V</div>
-  <figure class="viz"><svg viewBox="0 0 640 150" width="640">
+  <figure class="viz"><svg viewBox="0 0 600 150" width="600">
+    <defs><marker id="tf-ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="10" y="50" width="110" height="36" rx="5" class="fb sb"/><text x="65" y="73" text-anchor="middle">Q of "it"</text>
+    <text x="65" y="108" text-anchor="middle" class="tm">"what am I?"</text>
+    <rect x="210" y="10" width="110" height="30" rx="5" class="fs"/><text x="265" y="30" text-anchor="middle">K "animal"</text>
+    <rect x="210" y="60" width="110" height="30" rx="5" class="fs"/><text x="265" y="80" text-anchor="middle">K "street"</text>
+    <rect x="210" y="110" width="110" height="30" rx="5" class="fs"/><text x="265" y="130" text-anchor="middle">K "tired"</text>
+    <line x1="122" y1="60" x2="206" y2="27" class="sr" stroke-width="4" marker-end="url(#tf-ah3)"/>
+    <line x1="122" y1="70" x2="206" y2="75" class="sb" stroke-width="1" opacity="0.5" marker-end="url(#tf-ah3)"/>
+    <line x1="122" y1="80" x2="206" y2="122" class="sr" stroke-width="2.5" marker-end="url(#tf-ah3)"/>
+    <text x="340" y="30" class="tr">score 5.1 → weight 0.66</text>
+    <text x="340" y="80" class="tm">score 0.3 → weight 0.01</text>
+    <text x="340" y="130" class="tr">score 4.4 → weight 0.33</text>
+    <text x="340" y="55" class="tm" font-size="11">Q·K = how well they match</text>
+    <text x="340" y="105" class="tm" font-size="11">softmax: weights sum to 1</text>
+    </svg><figcaption>One query matched against every key. Dot product gives a score; softmax turns scores into weights that sum to 1; the output is the values mixed by those weights.</figcaption></figure>
+  <p>Read it as a matching step: the query of "it" is compared with the key of every token (including itself). High match → big weight. Then the output for "it" is the sum of all value vectors, each multiplied by its weight.</p>
+  <h3>The formula</h3>
+<div class="fx" data-lang="text">Attention(Q, K, V) = softmax( Q·Kᵀ / √d_k ) · V</div>
+  <p>Every symbol in words: <code>Q·Kᵀ</code> is every query dotted with every key, giving an n × n table of match scores for n tokens. <code>√d_k</code> is the square root of the vector length, a scaling explained below. <code>softmax</code> turns each row of scores into weights that are positive and sum to 1. <code>· V</code> mixes the value vectors by those weights.</p>
+  <p>Softmax on one row of three scores, by hand: take e to the power of each score, then divide by the total.</p>
+  <div class="fx" data-lang="py">scores = np.array([2.0, 1.0, 0.0])
+e = np.exp(scores)
+print(e.round(2), (e / e.sum()).round(2))</div>
+  <div class="fx" data-lang="text">[7.39 2.72 1.  ] [0.67 0.24 0.09]</div>
+  <p>The biggest score gets most of the weight, but nothing gets zero. The three weights add up to 1.</p>
+<figure class="viz"><svg viewBox="0 0 640 150" width="640">
     <rect x="20" y="20" width="36" height="90" class="fb sb"/><text x="38" y="69" text-anchor="middle">Q</text><text x="38" y="130" text-anchor="middle" class="tm">n×d</text>
     <text x="72" y="64" text-anchor="middle">·</text>
     <rect x="88" y="47" width="90" height="36" class="fb sb"/><text x="133" y="69" text-anchor="middle">Kᵀ</text><text x="133" y="130" text-anchor="middle" class="tm">d×n</text>
@@ -275,32 +332,36 @@ merge 4: 'lo' + 'w' (seen 7x)
     <text x="570" y="64" text-anchor="middle">=</text>
     <rect x="586" y="20" width="36" height="90" class="fr sr"/><text x="604" y="69" text-anchor="middle">out</text><text x="604" y="130" text-anchor="middle" class="tm">n×d</text>
     </svg><figcaption>Shapes for n tokens: one n×n score matrix (the O(n²) part), and the output keeps the input's n×d shape.</figcaption></figure>
+  <p>Follow the shapes left to right. n tokens of width d go in; the score table in the middle is n × n (this is the O(n²) part); the output on the right has the same n × d shape as the input, which is what lets blocks stack.</p>
   <h3>Why divide by √d_k</h3>
-  <p>A dot product sums d_k terms, so its spread grows like √d_k. Big scores push softmax to ~100% on one token (<strong>saturation</strong>), and gradients vanish. Dividing restores unit scale:</p>
-  <table class="tbl out"><caption>Result (5 random keys, see Build It)</caption>
+  <p>A dot product adds up d_k separate products. The more terms you add, the wider the results spread: the spread grows like √d_k. Very big scores push softmax to put ~100% on one token (<strong>saturation</strong>), and then the training signal (gradient) through softmax vanishes. Dividing by √d_k brings the spread back to about 1:</p>
+<table class="tbl out"><caption>Result (5 random keys, see Build It)</caption>
     <tr><th>d_k</th><th>std of raw scores</th><th>max softmax weight, raw</th><th>max weight, scaled</th></tr>
     <tr><td>4</td><td>0.7</td><td>0.43</td><td>0.31</td></tr>
     <tr><td>64</td><td>7.8</td><td>1.00</td><td>0.51</td></tr>
     <tr><td>512</td><td>20.9</td><td>1.00</td><td>0.51</td></tr>
   </table>
+  <p>Read the d_k = 64 row: without scaling, the biggest weight is already 1.00 (one token takes everything). With scaling it is 0.51, a real mix.</p>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Attention weights are not a reliable explanation of <em>why</em> a model answered something. Many heads, layers and residual paths mix the signal.</p>
   </div>
 
   <h2 id="tf-mha"><span class="num">05</span>Multi-Head Attention</h2>
-  <p>One pattern captures one relationship. "it" needs several: which noun, what state, what it didn't do.</p>
+  <p>One attention pattern can capture one kind of relationship. But "it" needs several at once: which noun it refers to, what state it is in, what it did not do. One set of weights cannot do all three.</p>
+  <p>Fix: run several attention operations side by side, each with its own small W_Q, W_K, W_V, and let each learn its own pattern. Each one is a <strong>head</strong>.</p>
   <div class="flow"><span>Q, K, V (512)</span><span>split into 8 heads × 64</span><span>attention per head, in parallel</span><span>concat → 512</span><span>× W_O</span></div>
   <ul>
-    <li>Each <strong>head</strong> has its own slice and learns its own pattern (coreference, syntax, nearby words…).</li>
-    <li><strong>Same cost as one big head</strong>: 8 heads on 64 dims ≈ 1 head on 512 dims. More perspectives, no extra FLOPs.</li>
-    <li><code>W_O</code> mixes the heads' outputs back together.</li>
+    <li>Each <strong>head</strong> gets its own 64-number slice of the 512 and learns its own pattern (coreference, syntax, nearby words…).</li>
+    <li><strong>Same cost as one big head</strong>: 8 heads on 64 dims ≈ 1 head on 512 dims. More perspectives, no extra FLOPs (floating-point operations, the unit of GPU work).</li>
+    <li><code>W_O</code> is one more learned matrix that mixes the heads' outputs back together.</li>
   </ul>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Eight specialists each read the sentence looking for one thing, then pool their notes. One generalist doing all eight jobs does each one worse.</p>
   </div>
 
   <h2 id="tf-block"><span class="num">06</span>The Transformer Block</h2>
-  <figure class="viz"><svg viewBox="0 0 640 140" width="640">
+  <p>Attention is one part. A Transformer is many copies of a <strong>block</strong> stacked on top of each other (12 in BERT-base, ~100 in large LLMs). Each block has two sub-steps, attention and a small neural network, plus two helpers that make deep stacks trainable: residual connections and normalisation.</p>
+<figure class="viz"><svg viewBox="0 0 640 140" width="640">
     <defs><marker id="tf-ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <text x="35" y="99" text-anchor="middle">x</text>
     <rect x="70" y="80" width="50" height="30" rx="5" class="fs"/><text x="95" y="99" text-anchor="middle">Norm</text>
@@ -322,30 +383,38 @@ merge 4: 'lo' + 'w' (seen 7x)
     <text x="60" y="32" class="tm">residual: copy x around</text><text x="300" y="32" class="tm">residual again</text>
     <text x="185" y="132" class="tm">mixes tokens</text><text x="365" y="132" class="tm">per token, 4× wide</text>
     </svg><figcaption>Pre-norm block: each sublayer only adds a correction to x. Shape in = shape out, so blocks stack.</figcaption></figure>
+  <p>Read left to right: x goes in, gets normalised, goes through attention, and the result is <em>added</em> to the original x (the teal arrow over the top). Same again with the FFN. The output has the same shape as x, so the next block can take it.</p>
   <h3>Feed-forward network (FFN)</h3>
   <div class="flow"><span>token (d_model)</span><span>expand ~4×</span><span>GELU / SwiGLU</span><span>project back</span></div>
-  <p>Attention moves information <em>between</em> tokens; the FFN processes it <em>within</em> each token. It holds most parameters; much factual recall seems to happen there.</p>
+  <p>Attention moves information <em>between</em> tokens. The FFN then works on each token on its own: a small two-layer network that widens the vector about 4×, applies a non-linear function (GELU or SwiGLU, cousins of ReLU), and shrinks it back. It holds most of the model's parameters, and much of the factual recall ("Paris is the capital of France") seems to live there.</p>
   <h3>Residual connections</h3>
-  <p><code>output = x + Layer(x)</code>: each layer adds a correction, never replaces the input.</p>
+  <p>Each sub-step computes <code>output = x + Layer(x)</code>: it adds a correction to the input instead of replacing it. Two reasons:</p>
   <ul>
-    <li><strong>Gradient highway</strong>: without it, the training signal multiplies through every layer. At 0.9 per layer, 0.9⁹⁶ ≈ 0.00004 reaches layer 1.</li>
+    <li><strong>Gradient highway</strong>: training works by sending an error signal backwards through every layer. Without the "+ x" shortcut, the signal gets multiplied at every layer and shrinks. At 0.9 per layer across 96 layers, 0.9⁹⁶ ≈ 0.00004 reaches layer 1: nothing learns. The shortcut lets the signal pass straight through.</li>
     <li><strong>No information loss</strong>: position and token meaning from the start survive dozens of layers.</li>
   </ul>
+  <div class="fx" data-lang="py">print(0.9 ** 96)</div>
+  <div class="fx" data-lang="text">4.0483766022843375e-05</div>
   <div class="callout anlg"><span class="label">Analogy: editors</span>
     <p>Without residuals, 96 editors each rewrite the document from scratch; by editor 20 the original is gone. With residuals, each editor only writes margin notes, and the original stays underneath.</p>
   </div>
   <h3>LayerNorm</h3>
+  <p>After many additions, the numbers in a vector can drift very large or very small, which makes training unstable. <strong>LayerNorm</strong> rescales each token's vector so its numbers have mean 0 and spread 1 (then applies a learned scale and shift). One vector, before and after:</p>
+  <div class="fx" data-lang="py">x = np.array([2.0, 4.0, 6.0, 8.0])
+print(((x - x.mean()) / x.std()).round(2))</div>
+  <div class="fx" data-lang="text">[-1.34 -0.45  0.45  1.34]</div>
   <table class="tbl">
     <tr><th>What</th><th>Why</th><th>Where</th></tr>
-    <tr><td>Rescale each token vector to mean 0, variance 1 (+ learned scale, shift)</td><td>Stops values drifting huge or tiny over many layers: stable training</td><td>Original: after sublayer (post-norm). Modern LLMs: before it (<strong>pre-norm</strong>, above). RMSNorm = cheaper variant</td></tr>
+    <tr><td>Rescale each token vector to mean 0, variance 1 (+ learned scale, shift)</td><td>Stops values drifting huge or tiny over many layers: stable training</td><td>Original: after sublayer (post-norm). Modern LLMs: before it (<strong>pre-norm</strong>, above). RMSNorm = cheaper variant that skips the mean</td></tr>
   </table>
   <div class="callout intu"><span class="label">Why stack many blocks</span>
     <p>Like re-reading a hard paragraph: early layers resolve words and grammar, middle layers link ideas, later layers capture task-level meaning. Each layer refines the last one's output. Every block keeps the shape (n tokens × d_model), so they stack freely.</p>
   </div>
 
   <h2 id="tf-arch"><span class="num">07</span>Encoder, Decoder, Both</h2>
+  <p>The same block can be wired in three ways, depending on one question: may a token look at the tokens that come <em>after</em> it?</p>
   <div class="cards">
-    <div><b>Encoder-only</b><p>Bidirectional: every token sees every token. Outputs a contextual vector per token.</p><small>BERT, RoBERTa: classification, NER, embeddings for search</small></div>
+    <div><b>Encoder-only</b><p>Bidirectional: every token sees every token, both sides. Outputs a contextual vector per token.</p><small>BERT, RoBERTa: classification, NER, embeddings for search</small></div>
     <div><b>Decoder-only</b><p>Causal: each token sees only itself and earlier tokens. Generates one token at a time.</p><small>GPT, Llama, Claude: chat, code, completion</small></div>
     <div><b>Encoder-decoder</b><p>Encoder reads the source; decoder writes the target, consulting the encoder via cross-attention.</p><small>T5, BART, original Transformer: translation, summarisation</small></div>
   </div>
@@ -353,7 +422,7 @@ merge 4: 'lo' + 'w' (seen 7x)
     <p>Encoder = a judge reading the whole case file before forming a view. Decoder = an author writing left to right, unable to see the sentence not yet written. Encoder-decoder = a translator who reads the source fully, then writes while glancing back at it.</p>
   </div>
   <h3>Causal mask</h3>
-  <p>If token 3 could see token 4, next-token training would be cheating. Future scores are set to −∞ before softmax, so their weight is 0.</p>
+  <p>A decoder is trained to predict the next token. If token 3 could peek at token 4 while being trained to predict it, the task would be cheating. So before softmax, every score pointing to a future token is set to −∞. e to the power of −∞ is 0, so the future gets weight 0.</p>
   <table class="tbl">
     <tr><th>query ↓ / key →</th><th>The</th><th>cat</th><th>sat</th><th>on</th></tr>
     <tr><td>The</td><td>✓</td><td>✗</td><td>✗</td><td>✗</td></tr>
@@ -361,12 +430,14 @@ merge 4: 'lo' + 'w' (seen 7x)
     <tr><td>sat</td><td>✓</td><td>✓</td><td>✓</td><td>✗</td></tr>
     <tr><td>on</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
   </table>
+  <p>Each row is one token asking; ✓ means it may look there. "cat" may look at "The" and itself, never at "sat".</p>
   <p>Bonus: one forward pass trains on every position at once, since each row is a separate "predict the next token" example.</p>
   <h3>Cross-attention</h3>
   <div class="flow"><span>decoder: Q "what do I need now?"</span><span>encoder output: K, V "what did the source say?"</span><span>attention</span></div>
-  <p>Self-attention takes Q, K, V from one sequence; <strong>cross-attention</strong> splits them as above. So an enc-dec decoder block has three sublayers: masked self-attention, cross-attention, FFN.</p>
+  <p>Self-attention takes Q, K, V from one sequence. <strong>Cross-attention</strong> splits them: the query comes from the sentence being written, the keys and values from the sentence being read. So an enc-dec decoder block has three sublayers: masked self-attention, cross-attention, FFN.</p>
 
   <h2 id="tf-bert"><span class="num">08</span>BERT vs GPT</h2>
+  <p>The two famous 2018 models are the encoder-only and decoder-only designs, each with the training task that suits it.</p>
   <table class="tbl">
     <tr><th></th><th>BERT</th><th>GPT</th></tr>
     <tr><td>Architecture</td><td>Encoder-only</td><td>Decoder-only</td></tr>
@@ -384,8 +455,8 @@ merge 4: 'lo' + 'w' (seen 7x)
   <p>Decoder-only won for general-purpose LLMs: one simple objective, scales well, and any task can be phrased as text continuation. How that training and generation work is <em><a class="xref" data-note="llm_basics">How LLMs Work</a></em>.</p>
 
   <h2 id="tf-build"><span class="num">09</span>Build It: Attention in numpy</h2>
-  <p>Scaled dot-product attention on 3 tokens with <code>d_model = 4</code>. The embeddings are hand-made and the weight matrices random; in a real model both are learned.</p>
-  <div class="fx" data-lang="py">import numpy as np
+  <p>Scaled dot-product attention on 3 tokens with <code>d_model = 4</code>, about 20 lines. The embeddings are hand-made and the weight matrices random; in a real model both are learned. Read the comments: each line is one step of the formula from section 04.</p>
+<div class="fx" data-lang="py">import numpy as np
 np.set_printoptions(precision=2, suppress=True)
 
 def softmax(x):
@@ -418,7 +489,7 @@ causal = np.tril(np.ones((3, 3), dtype=bool))   # token i sees tokens 0..i
 _, wc = attention(Q, K, V, mask=causal)
 print("causal weights:")
 print(wc)</div>
-  <div class="fx" data-lang="text">weights (row = query token):
+<div class="fx" data-lang="text">weights (row = query token):
 [[0.65 0.09 0.25]
  [0.01 0.94 0.05]
  [0.29 0.43 0.28]]
@@ -434,7 +505,7 @@ causal weights:
   </ul>
   <h3>Extend it: two heads</h3>
   <p>Continuing the same script. (PyTorch's <code>nn.MultiheadAttention</code> does this for you; it wasn't installed here, so this stays in numpy.)</p>
-  <div class="fx" data-lang="py">def multi_head(X, n_heads, W_q, W_k, W_v, W_o):
+<div class="fx" data-lang="py">def multi_head(X, n_heads, W_q, W_k, W_v, W_o):
     d_head = X.shape[1] // n_heads
     Q, K, V = X @ W_q, X @ W_k, X @ W_v
     heads = []
@@ -447,9 +518,9 @@ causal weights:
 W = [rng.normal(size=(4, 4)) for _ in range(4)]
 Y = multi_head(X, 2, *W)
 print(Y.shape)            # same shape as X: ready for residual X + Y</div>
-  <div class="fx" data-lang="text">(3, 4)</div>
+<div class="fx" data-lang="text">(3, 4)</div>
   <h3>Check the √d_k claim yourself</h3>
-  <div class="fx" data-lang="py">rng = np.random.default_rng(0)
+<div class="fx" data-lang="py">rng = np.random.default_rng(0)
 def softmax1(x):
     e = np.exp(x - x.max()); return e / e.sum()
 for d_k in [4, 64, 512]:

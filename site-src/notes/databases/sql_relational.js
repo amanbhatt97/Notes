@@ -2,7 +2,7 @@
 Object.assign(TOPIC_CONTENT, {
   "sql_relational": `<main>
   <h1>Relational Model &amp; PostgreSQL</h1>
-  <p class="lead">The foundation for every SQL page: how tables, keys and relationships fit together, the shared <code>shop</code> dataset, and the PostgreSQL types, constraints and tools you'll use daily.</p>
+  <p class="lead">Before writing queries you need to know how data is arranged inside a relational database: why it is split into several tables, how the tables point at each other, and what rules keep the data clean. This page builds that picture with the shared <code>shop</code> dataset, then covers the PostgreSQL types, constraints and tools you'll use daily. Every later SQL page assumes this one.</p>
 
   <h2 id="sr-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -113,13 +113,15 @@ Object.assign(TOPIC_CONTENT, {
   </div>
 
   <h2 id="sr-model"><span class="num">01</span>The Relational Model</h2>
+  <p>Imagine running a small online shop with one Excel sheet. Every row is one item sold: order number, customer name, city, product, quantity, price. It works for a week. Then Asha moves from Mumbai to Pune and you have to find and fix her city on every row she ever ordered. Miss one, and your sheet now says she lives in two cities.</p>
+  <p>The relational model is the fix for this. "Relational" comes from <em>relation</em>, the maths word for a table. The vocabulary, with plain meanings:</p>
   <ul>
     <li><strong>Relation</strong> = a table: a set of rows that all have the same columns.</li>
     <li><strong>Row</strong> (tuple): one fact, e.g. one order.</li>
     <li><strong>Column</strong> (attribute): one property with a <strong>type / domain</strong> (allowed values, e.g. <code>DATE</code>).</li>
-    <li>Rows have <strong>no order</strong>: without <code>ORDER BY</code>, output order isn't guaranteed.</li>
+    <li>Rows have <strong>no order</strong>: a table is a bag of facts, not a list. Without <code>ORDER BY</code>, output order isn't guaranteed.</li>
   </ul>
-  <p>Why split data into tables? Here is the "one giant sheet" version of Asha's orders:</p>
+  <p>Why split data into tables? Here is the "one giant sheet" version of Asha's orders, rebuilt from the shop tables (the <code>JOIN … USING</code> lines stitch the tables; the <em>JOINs</em> page explains them):</p>
   <div class="fx" data-lang="sql">SELECT o.order_id, c.name AS customer, c.city, p.name AS product, oi.qty, oi.unit_price
 FROM orders o
 JOIN customers c   USING (customer_id)
@@ -128,18 +130,20 @@ JOIN products p    USING (product_id)
 WHERE c.customer_id = 1
 ORDER BY o.order_id, p.name;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>order_id</th><th>customer</th><th>city</th><th>product</th><th>qty</th><th>unit_price</th></tr><tr><td>100</td><td>Asha</td><td>Mumbai</td><td>Lamp</td><td>2</td><td>40.00</td></tr><tr><td>100</td><td>Asha</td><td>Mumbai</td><td>Laptop</td><td>1</td><td>800.00</td></tr><tr><td>101</td><td>Asha</td><td>Mumbai</td><td>Phone</td><td>1</td><td>500.00</td></tr></table>
-  <p>Stored like this, it suffers three <strong>anomalies</strong>:</p>
+  <p>Look at the result: "Asha" and "Mumbai" are written on all three rows. If this were the <em>stored</em> form, it would suffer three <strong>anomalies</strong> (ways the data can go wrong):</p>
   <div class="cards">
     <div><b>Update</b><p>Asha moves city: edit 3 rows. Miss one and the data contradicts itself.</p></div>
     <div><b>Insert</b><p>Dia has no orders, so she can't exist in an order sheet.</p></div>
     <div><b>Delete</b><p>Delete Ben's only order (102) and Ben disappears.</p></div>
   </div>
-  <p>Fix: store each fact <strong>once</strong>, link by keys, JOIN to rebuild the wide view (<em>normalization</em>, see Data Modeling).</p>
+  <p>Fix: store each fact <strong>once</strong>. Asha's city lives in one row of <code>customers</code>. Each order carries only her number, 1. When you need the wide view, a JOIN rebuilds it on the fly, as the query above did. Splitting data this way is called <em>normalization</em> (see Data Modeling).</p>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Your phone's contacts. A number is stored once; chats refer to the contact. Change it once and every chat updates.</p>
   </div>
 
   <h2 id="sr-keys"><span class="num">02</span>Keys &amp; Relationships</h2>
+  <p>If orders only store the number 1, two things must be true: every customer needs a number nobody else has, and an order must never point at a number that doesn't exist. Keys are the columns that make both true.</p>
+  <p>A <strong>primary key</strong> is the column that identifies a row, like a roll number in a class. Two students can share a name, never a roll number. A <strong>foreign key</strong> is a column in one table that holds another table's primary key value: <code>orders.customer_id</code> holds a <code>customers.customer_id</code>. "Foreign" just means "belongs to another table".</p>
   <table class="tbl">
     <tr><th>Key</th><th>Meaning</th><th>Shop example</th></tr>
     <tr><td><strong>Primary key (PK)</strong></td><td>The column(s) that uniquely identify a row. Unique and NOT NULL. One per table.</td><td><code>customers.customer_id</code></td></tr>
@@ -152,6 +156,13 @@ ORDER BY o.order_id, p.name;</div>
     <p>Emails change; real-world codes get reused or mistyped. Use a surrogate PK plus UNIQUE on the natural key: stable joins <em>and</em> no duplicates.</p>
   </div>
   <h3>The three relationship shapes</h3>
+  <p>Ask of any two tables: how many of B can one A have, and how many of A can one B have?</p>
+  <ul>
+    <li>One customer places many orders; one order belongs to one customer. <strong>One-to-many (1:N)</strong>.</li>
+    <li>One customer has one profile; one profile belongs to one customer. <strong>One-to-one (1:1)</strong>.</li>
+    <li>One order contains many products; one product appears in many orders. <strong>Many-to-many (M:N)</strong>.</li>
+  </ul>
+  <p>The first two need one foreign key column. The third can't be done with one column: where would you put it? An order can't hold a list of products in one cell, and a product can't hold a list of orders. So you create a third table that holds one row per pair.</p>
   <figure class="viz"><svg viewBox="0 0 600 175" width="600">
     <g font-size="10">
     <text x="95" y="14" text-anchor="middle" font-weight="bold" font-size="12" class="tb">1 : N</text>
@@ -187,7 +198,7 @@ ORDER BY o.order_id, p.name;</div>
     <tr><td><strong>1:1</strong></td><td>FK that is also UNIQUE (or shares the PK)</td><td><code>customer_profiles.customer_id</code> UNIQUE</td></tr>
     <tr><td><strong>M:N</strong></td><td>A <strong>junction table</strong> with two FKs</td><td>Orders ↔ products via <code>order_items</code></td></tr>
   </table>
-  <p>Neither orders nor products can hold one FK to the other, so <code>order_items</code> holds one row per (order, product) pair plus facts about the pair. Which orders contain the Lamp?</p>
+  <p>In the right-hand picture, the purple boxes are that third table, <code>order_items</code>: one row per (order, product) pair, plus facts about the pair such as quantity. To answer "which orders contain the Lamp?" you start from those pairs and follow the ids outwards:</p>
   <div class="fx" data-lang="sql">SELECT o.order_id, c.name
 FROM order_items oi
 JOIN orders o    USING (order_id)
@@ -195,10 +206,11 @@ JOIN customers c USING (customer_id)
 WHERE oi.product_id = 13
 ORDER BY 1;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>order_id</th><th>name</th></tr><tr><td>100</td><td>Asha</td></tr><tr><td>104</td><td>Chen</td></tr></table>
-  <p><code>unit_price</code> is copied into the line item on purpose: prices change, and the price paid is a fact about <em>that sale</em>.</p>
+  <p><code>unit_price</code> is copied into the line item on purpose: prices change, and the price paid is a fact about <em>that sale</em>. If the Lamp becomes ₹50 next month, Asha's old bill must still say ₹40.</p>
 
   <h2 id="sr-shop"><span class="num">03</span>The Shop Dataset</h2>
-  <p>This is <strong>the dataset every SQL page uses</strong>. Learn its quirks once.</p>
+  <p>This is <strong>the dataset every SQL page uses</strong>: a tiny online shop with four customers, four products, five orders and five employees. It is small enough to check every answer by hand, and it has a few deliberate oddities (listed at the end) that make interview traps visible. Learn its quirks once.</p>
+  <p>The diagram below is an <strong>entity-relationship diagram</strong>: one box per table, PK = primary key, FK = foreign key, and a line for each foreign key link.</p>
   <figure class="viz"><svg viewBox="0 0 600 245" width="600">
     <defs><marker id="sr-ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <g font-size="10">
@@ -233,7 +245,10 @@ ORDER BY 1;</div>
   </div>
 
   <h2 id="sr-lang"><span class="num">04</span>SQL Sub-languages</h2>
-  <p>SQL (Structured Query Language) is one language with five groups of commands.</p>
+  <p>SQL (Structured Query Language) is one language, but its commands do five different kinds of job: build the shelves, put things on them, read them, decide who may enter, and bundle changes safely. Interviewers like asking which group a command belongs to, so learn the five names.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A library. DDL builds and labels the shelves. DML puts books in, moves them, removes them. DQL is reading. DCL is the membership desk deciding who may borrow. TCL is "either all these books are issued to you, or none".</p>
+  </div>
   <table class="tbl">
     <tr><th>Group</th><th>Does</th><th>Commands</th></tr>
     <tr><td><strong>DDL</strong> Data Definition</td><td>Shapes the schema</td><td>CREATE, ALTER, DROP, TRUNCATE</td></tr>
@@ -249,6 +264,7 @@ UPDATE products SET price = 45 WHERE product_id = 13;
 -- DQL
 SELECT name, price FROM products WHERE category = 'Electronics' ORDER BY price DESC;</div>
   <table class="tbl out"><caption>Result (DQL)</caption><tr><th>name</th><th>price</th></tr><tr><td>Laptop</td><td>800.00</td></tr><tr><td>Phone</td><td>500.00</td></tr></table>
+  <p>The TCL example is worth reading slowly. <code>BEGIN</code> opens a transaction. Inside it, every price is doubled and the Laptop reads 1600. <code>ROLLBACK</code> throws the whole transaction away, so the Laptop is back at 800. (<code>COMMIT</code> would have kept it.) The example runs on a copy of <code>shop</code>.</p>
   <div class="fx" data-lang="sql">-- TCL: try a change, then undo it
 BEGIN;
 UPDATE products SET price = price * 2;                 -- UPDATE 4
@@ -267,7 +283,7 @@ DELETE FROM orders WHERE order_id = 104;
   </div>
 
   <h2 id="sr-pg"><span class="num">05</span>Why PostgreSQL</h2>
-  <p>PostgreSQL ("Postgres"): open-source relational DBMS, the sensible default.</p>
+  <p>Many companies sell or give away a relational DBMS. They all speak SQL, but each has its own <strong>dialect</strong>: small differences in functions and syntax, like Hindi spoken in Delhi versus Lucknow. These notes use PostgreSQL ("Postgres"): open-source (free, code public), and the sensible default for a new project.</p>
   <div class="flow"><span>Open source, managed on every cloud</span><span>Standard SQL + ACID + transactional DDL</span><span>Extensions: PostGIS, pgvector, TimescaleDB</span><span>JSONB: tables + documents</span></div>
   <div class="cards">
     <div><b>PostgreSQL</b><p>Feature-rich, strict, extensible. The default choice.</p><small>Instagram, Reddit, most startups</small></div>
@@ -279,6 +295,7 @@ DELETE FROM orders WHERE order_id = 104;
   </div>
 
   <h2 id="sr-types"><span class="num">06</span>Data Types &amp; Traps</h2>
+  <p>Every column has a <strong>type</strong>: the kind of value it may hold. A type does two jobs. It rejects nonsense ("abc" in a price column), and it tells the database how to store and compare the value (dates sort as dates, not as text). Choosing the wrong type is a quiet bug: the data goes in fine and the answers come out slightly wrong.</p>
   <table class="tbl">
     <tr><th>Need</th><th>Use</th><th>Note</th></tr>
     <tr><td>Whole numbers / ids</td><td><code>INTEGER</code>, <code>BIGINT</code></td><td>Ids: <code>GENERATED ALWAYS AS IDENTITY</code> (modern <code>SERIAL</code>)</td></tr>
@@ -289,13 +306,18 @@ DELETE FROM orders WHERE order_id = 104;
     <tr><td>Flags, ids, documents</td><td><code>BOOLEAN</code>, <code>UUID</code>, <code>JSONB</code>, arrays</td><td>JSONB over JSON (indexable)</td></tr>
   </table>
   <h3>Trap 1: FLOAT for money</h3>
+  <p>A computer stores a <strong>float</strong> in binary (base 2). Just as 1/3 can't be written exactly in decimal (0.3333…), 0.1 can't be written exactly in binary. The stored value is a hair off, and the error shows up when you add. <code>NUMERIC</code> stores the decimal digits as you typed them, so it is exact. (<code>::float8</code> and <code>::numeric</code> below force a value to that type.)</p>
   <div class="fx" data-lang="sql">SELECT 0.1::float8 + 0.2::float8 = 0.3 AS float_ok,
        0.1::numeric + 0.2::numeric = 0.3 AS numeric_ok,
        0.1::float8 + 0.2::float8         AS float_sum;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>float_ok</th><th>numeric_ok</th><th>float_sum</th></tr><tr><td>f</td><td>t</td><td>0.30000000000000004</td></tr></table>
-  <p>Floats are binary approximations; errors pile up in sums. Money → <code>NUMERIC</code> (or integer paise); measurements → float.</p>
+  <p>Add ten ₹0.10 coins and the gap is visible:</p>
+  <div class="fx" data-lang="sql">SELECT SUM(0.1::float8) AS float_sum, SUM(0.1::numeric) AS numeric_sum FROM generate_series(1, 10);</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>float_sum</th><th>numeric_sum</th></tr><tr><td>0.9999999999999999</td><td>1.0</td></tr></table>
+  <p>Floats are binary approximations; errors pile up in sums. Money → <code>NUMERIC</code> (or whole numbers of paise); measurements and ML scores → float, where speed matters and the last digit doesn't.</p>
   <h3>Trap 2: TIMESTAMP vs TIMESTAMPTZ</h3>
-  <p><code>TIMESTAMP</code> is a wall-clock reading with no zone. <code>TIMESTAMPTZ</code> stores an absolute instant (in UTC) and displays it in the session's time zone.</p>
+  <p>A friend in New York texts "call me at 10:00". 10:00 where? Without the time zone the message is ambiguous. Databases have the same problem.</p>
+  <p><code>TIMESTAMP</code> is a wall-clock reading with no zone: just "10:00". <code>TIMESTAMPTZ</code> (timestamp with time zone) stores an absolute instant: it converts your input to UTC (the world reference time) on the way in, and converts back to whatever zone the viewer's session uses on the way out. In the demo, the same value is inserted in a Kolkata session and read in a New York session:</p>
   <div class="fx" data-lang="sql">CREATE TABLE t (ts TIMESTAMP, tstz TIMESTAMPTZ);
 SET timezone = 'Asia/Kolkata';
 INSERT INTO t VALUES ('2024-05-01 10:00', '2024-05-01 10:00');
@@ -314,7 +336,8 @@ INSERT INTO v VALUES ('ABCD');
   <p>Default to <code>TEXT</code>; add a limit only for a real rule (3-letter currency codes). Avoid <code>CHAR(n)</code>: it pads with spaces.</p>
 
   <h2 id="sr-cons"><span class="num">07</span>Constraints</h2>
-  <p>Rules the database enforces on every write, whichever app or script sends it.</p>
+  <p>Your app checks that a rating is between 1 and 5 before saving it. Then a colleague writes a quick Python script that inserts ratings directly, and a 7 slips in. The app's check never ran, because the script didn't go through the app.</p>
+  <p>A <strong>constraint</strong> is a rule stored <em>in the table itself</em>, so the database enforces it on every write, whichever app or script sends it. The six kinds: <code>NOT NULL</code> (value required), <code>UNIQUE</code> (no repeats), <code>CHECK</code> (any condition), <code>PRIMARY KEY</code>, <code>FOREIGN KEY</code> (<code>REFERENCES</code>), and <code>DEFAULT</code> (value to use when none is given).</p>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>App validation is a "no trainers" sign; a constraint is the bouncer, who also guards the side entrance (scripts, manual fixes, other services).</p>
   </div>
@@ -328,7 +351,7 @@ INSERT INTO v VALUES ('ABCD');
   UNIQUE (customer_id, product_id)          -- one review per customer per product
 );
 INSERT INTO reviews (customer_id, product_id, rating) VALUES (1, 10, 5);  -- INSERT 0 1</div>
-  <p>Now break each rule. These are the real PostgreSQL errors:</p>
+  <p>Read the table definition line by line: <code>review_id</code> is generated automatically (an <strong>identity</strong> column, 1, 2, 3…); <code>customer_id</code> must exist in <code>customers</code> and, if that customer is deleted, the review goes too (<code>CASCADE</code>); <code>product_id</code> must exist in <code>products</code> and blocks deleting the product (<code>RESTRICT</code>); rating must be 1 to 5; <code>created_at</code> fills itself with the current time; and one customer may review one product only once. Now break each rule. These are the real PostgreSQL errors:</p>
   <table class="tbl">
     <tr><th>Statement</th><th>Error</th></tr>
     <tr><td><code>VALUES (1, 10, 4)</code> again</td><td>duplicate key value violates unique constraint "reviews_customer_id_product_id_key"</td></tr>
@@ -338,6 +361,7 @@ INSERT INTO reviews (customer_id, product_id, rating) VALUES (1, 10, 5);  -- INS
     <tr><td><code>DELETE FROM customers WHERE customer_id = 1</code></td><td>update or delete on table "customers" violates foreign key constraint "orders_customer_id_fkey" on table "orders"</td></tr>
   </table>
   <h3>ON DELETE behaviour</h3>
+  <p>The last error above raises a question. Asha has orders. If you delete Asha, what happens to orders that point at customer 1? They would point at nothing. The foreign key must say what to do, and there are three answers:</p>
   <figure class="viz"><svg viewBox="0 0 600 160" width="600">
     <g font-size="10">
     <text x="100" y="16" text-anchor="middle" font-weight="bold" font-size="12">RESTRICT / NO ACTION</text>
@@ -378,7 +402,9 @@ SELECT review_id, customer_id, product_id, rating FROM reviews ORDER BY review_i
   </div>
 
   <h2 id="sr-tools"><span class="num">08</span>psql &amp; Python</h2>
+  <p>Two ways to talk to the database. <code>psql</code> is PostgreSQL's command-line tool: you type SQL, it prints the result, good for exploring. From Python you send the same SQL through a library and get rows back as Python objects, good for notebooks and pipelines.</p>
   <h3>psql essentials</h3>
+  <p>Commands starting with a backslash are psql's own shortcuts, not SQL. The most useful one is <code>&#92;d</code>, which describes a table: its columns, types, and constraints, so you never have to guess a column name.</p>
   <table class="tbl">
     <tr><th>Command</th><th>Does</th></tr>
     <tr><td><code>psql -d shop</code></td><td>Connect to the <code>shop</code> database</td></tr>
@@ -407,6 +433,7 @@ customer_id | 2
 order_date  | 2024-06-02
 status      | cancelled</div>
   <h3>Querying from Python</h3>
+  <p>Two libraries appear below. <code>psycopg</code> is the low-level driver: it opens a connection and runs SQL, returning plain tuples. <code>pandas.read_sql</code> runs a query and hands you a DataFrame, which is what you want for analysis. In both, the value you want to filter on (3, or 100) is <em>not</em> pasted into the SQL text. It is passed separately, as a <strong>parameter</strong>, and the placeholder (<code>%s</code> or <code>:min</code>) marks where it goes. The next heading explains why that matters.</p>
   <div class="fx" data-lang="py">import psycopg                       # psycopg 3 (psycopg2 = older)
 import pandas as pd
 from sqlalchemy import create_engine, text
@@ -430,16 +457,17 @@ print(df)
 # 1    Furniture   150.0</div>
   <p><code>total</code> came back as float64: pandas converts NUMERIC to float by default.</p>
   <h3>SQL injection</h3>
-  <p>Pasting user input into the SQL string lets the input rewrite the query. A user types <code>x' OR '1'='1</code> as a name:</p>
+  <p>Your website has a search box: "find customer by name". The code builds the SQL by gluing the typed name into the string. A normal user types <code>Asha</code> and the query becomes <code>WHERE name = 'Asha'</code>. Fine. Now an attacker types something that <em>contains a quote mark and SQL</em>, so the glued string is no longer one value but new SQL that the database obediently runs. This is <strong>SQL injection</strong>, still one of the most common real-world attacks. A user types <code>x' OR '1'='1</code> as a name:</p>
   <div class="fx" data-lang="py">sql = "SELECT customer_id, name FROM customers WHERE name = '" + name + "'"   # NEVER
 # becomes: ... WHERE name = 'x' OR '1'='1'</div>
   <table class="tbl out"><caption>Result of the injected query: every customer leaks</caption><tr><th>customer_id</th><th>name</th></tr><tr><td>1</td><td>Asha</td></tr><tr><td>2</td><td>Ben</td></tr><tr><td>3</td><td>Chen</td></tr><tr><td>4</td><td>Dia</td></tr></table>
-  <p>With a parameter (<code>WHERE name = %s</code>, <code>(name,)</code>) the input is just a value, and the query returns <code>[]</code>.</p>
+  <p><code>'1'='1'</code> is always true, so the WHERE matches every row. With a parameter (<code>WHERE name = %s</code>, <code>(name,)</code>) the driver sends the typed text as a value, quotes and all. The database looks for a customer literally named <code>x' OR '1'='1</code>, finds none, and the query returns <code>[]</code>.</p>
   <div class="callout trap"><span class="label">Trap</span>
     <p>f-strings and <code>%</code> formatting are as unsafe as <code>+</code>. Parameters replace only <em>values</em>; user-chosen column names need an allow-list or <code>psycopg.sql.Identifier</code>.</p>
   </div>
   <h2 id="sr-qa"><span class="num">09</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does <code>orders</code> store <code>customer_id = 1</code> instead of the name "Asha"?</summary><div class="qa-body">So Asha's details live in exactly one place. If her city changes, one row in <code>customers</code> is updated and every order sees it. Storing the name would copy it into every order, and the copies could drift apart (the update anomaly).</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Primary key vs UNIQUE constraint?</summary><div class="qa-body">Both block duplicates and create an index. One PK per table, always NOT NULL, the usual FK target. Many UNIQUE constraints allowed, and they accept NULLs.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>How do you model students and courses, where each student takes many courses?</summary><div class="qa-body">M:N, so a junction table: <code>enrollments(student_id FK, course_id FK, grade, PRIMARY KEY (student_id, course_id))</code>. Facts about the pair (grade, enrol date) live in the junction table. In shop, <code>order_items</code> is exactly this for orders ↔ products.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Natural or surrogate key for a users table?</summary><div class="qa-body">Surrogate (<code>BIGINT IDENTITY</code> or UUID) as the PK, with <code>UNIQUE NOT NULL</code> on email. Emails change; changing a PK means updating every FK that points to it. The UNIQUE still blocks duplicate accounts.</div></details>

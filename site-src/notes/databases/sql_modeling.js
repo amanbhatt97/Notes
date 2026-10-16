@@ -152,7 +152,12 @@ SELECT count(*) AS ben_rows FROM orders_flat WHERE cust_name = 'Ben';</div>
   </div>
 
   <h2 id="sm-er"><span class="num">02</span>Entities &amp; Relationships</h2>
-  <p><strong>Nouns</strong> → tables, their facts → columns, <strong>verbs</strong> → foreign keys. <strong>Cardinality</strong> = how many on each side: 1:1, 1:N, M:N.</p>
+  <p>Describe the shop in a sentence: "A <em>customer</em> places <em>orders</em>; an <em>order</em> contains <em>products</em>." The nouns are the things: customer, order, product. Each thing becomes a table. This is called an <strong>entity</strong> (a thing we store facts about). The verbs ("places", "contains") are the links between them: <strong>relationships</strong>.</p>
+  <p>A link is built with a <strong>foreign key</strong> (FK): a column that holds another table's id. <code>orders.customer_id = 1</code> says "this order belongs to customer 1". Then ask about each link: how many on each side? One customer, many orders. That count is the <strong>cardinality</strong>: 1:1, 1:N (one-to-many), or M:N (many-to-many).</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A school. One class has many students (1:N): each student's record carries the class name. Students and clubs are M:N: a student joins many clubs, a club has many students. You can't write all club names in one cell, so the school keeps a membership register with one line per (student, club). That register is the junction table.</p>
+  </div>
+  <p>In the picture, each box is a table, and the numbers on each line show the cardinality:</p>
   <figure class="viz"><svg viewBox="0 0 600 130" width="600">
     <g text-anchor="middle">
       <rect x="0" y="40" width="120" height="40" rx="6" class="fb sb"/><text x="60" y="65" font-weight="bold">customers</text>
@@ -174,7 +179,7 @@ SELECT count(*) AS ben_rows FROM orders_flat WHERE cust_name = 'Ben';</div>
     <tr><td>employee reports to manager</td><td>1 : N, same table</td><td>Self-FK <code>employees.manager_id</code></td></tr>
   </table>
   <ul>
-    <li><strong>Rule</strong>: the FK always sits on the "many" side. M:N always needs a third table.</li>
+    <li><strong>Rule</strong>: the FK always sits on the "many" side. (An order has one customer, so <code>customer_id</code> goes in <code>orders</code>. A customer has many orders, so you can't put one <code>order_id</code> in <code>customers</code>.) M:N always needs a third table.</li>
     <li>The junction table often grows its own attributes: <code>qty</code> and <code>unit_price</code> belong to "this product in this order", not to either side.</li>
   </ul>
   <div class="callout trap"><span class="label">Trap</span>
@@ -182,7 +187,11 @@ SELECT count(*) AS ben_rows FROM orders_flat WHERE cust_name = 'Ben';</div>
   </div>
 
   <h2 id="sm-norm"><span class="num">03</span>Normalization</h2>
-  <p><strong>Normalization</strong> = splitting tables until each fact lives in one place; each normal form (NF) removes one kind of redundancy. It rests on <strong>functional dependency</strong>: A → B means knowing A fixes B (<code>product → category</code>).</p>
+  <p>Section 01 showed the disease (repeated facts) and section 02 the medicine (one table per thing). <strong>Normalization</strong> is the step-by-step recipe for applying it: split tables until each fact lives in one place. The steps are numbered <strong>normal forms</strong> (1NF, 2NF, 3NF, …). Each step removes one kind of repetition. Interviewers ask "which normal form does this table break?", so learn the steps with the example below.</p>
+  <p>One idea powers all the steps: the <strong>functional dependency</strong>. Written <code>A → B</code>, it means "if you know A, you know B". Know the product (Laptop) and you know its category (Electronics): <code>product → category</code>. Know the order id and you know its date: <code>order_id → order_date</code>. The <strong>key</strong> of a table is the column (or columns) that decides everything else in the row.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A PNR number on a train ticket decides the passenger, the train and the seat. PNR is the key. The train number alone decides the route, but not the passenger. Normalization asks, for every column: "which thing really decides this?" and moves the column to that thing's table.</p>
+  </div>
   <figure class="viz"><svg viewBox="0 0 600 220" width="600">
     <defs><marker id="sm-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <rect x="0" y="10" width="190" height="200" rx="6" class="fs" stroke="currentColor" stroke-opacity=".4"/>
@@ -199,7 +208,8 @@ SELECT count(*) AS ben_rows FROM orders_flat WHERE cust_name = 'Ben';</div>
       <rect x="270" y="162" width="320" height="36" rx="6" class="fv"/><text x="280" y="184">items (order_id, product, qty, unit_price)</text>
     </g>
   </svg><figcaption>Each colour is one dependency. Give each its own table and every fact is stored once.</figcaption></figure>
-  <p>Step by step, starting from the shop as first typed: one row per order with a list of items.</p>
+  <p>Follow the arrows: each coloured group of columns in the flat table depends on something different, so each gets its own table on the right.</p>
+  <p>Step by step, starting from the shop as a beginner would first type it: one row per order, with all the items written in one cell.</p>
   
   <div class="fx" data-lang="sql">SELECT order_id, cust_name, cust_city,
        string_agg(product || ' x' || qty, ', ' ORDER BY product) AS items
@@ -207,15 +217,17 @@ FROM orders_flat GROUP BY 1, 2, 3 ORDER BY 1;</div>
   <table class="tbl out"><caption>Unnormalized (built from an untouched orders_flat)</caption><tr><th>order_id</th><th>cust_name</th><th>cust_city</th><th>items</th></tr><tr><td>100</td><td>Asha</td><td>Mumbai</td><td>Lamp x2, Laptop x1</td></tr><tr><td>101</td><td>Asha</td><td>Mumbai</td><td>Phone x1</td></tr><tr><td>102</td><td>Ben</td><td>Delhi</td><td>Desk x1</td></tr><tr><td>103</td><td>Chen</td><td>Mumbai</td><td>Desk x1, Phone x2</td></tr><tr><td>104</td><td>Chen</td><td>Mumbai</td><td>Lamp x3</td></tr></table>
 
   <h3>1NF: atomic values</h3>
+  <p>The cell "Lamp x2, Laptop x1" holds two facts. To count lamps sold, a program must cut the text at commas and at "x". That breaks the moment someone types "Lamp ×2".</p>
   <ul>
-    <li><strong>Rule</strong>: every cell holds one value; no lists, no repeating groups (<code>item1, item2, …</code>); rows have a key.</li>
+    <li><strong>Rule</strong>: every cell holds one value ("atomic" = cannot be split further); no lists, no repeating groups (<code>item1, item2, …</code>); rows have a key.</li>
     <li><strong>Violation</strong>: <code>items</code> holds a list. "How many Lamps sold?" needs string parsing.</li>
     <li><strong>Fix</strong>: one row per item. That is exactly <code>orders_flat</code> from section 01, key = (order_id, product).</li>
   </ul>
 
   <h3>2NF: no partial dependency</h3>
+  <p>The key of <code>orders_flat</code> is two columns together: (order_id, product). Now ask each other column: "do you need <em>both</em> parts of the key, or just one?" <code>qty</code> needs both (how many of <em>this product</em> in <em>this order</em>). But <code>order_date</code> needs only order_id. And <code>category</code> needs only product. A column that depends on just a part of the key is a <strong>partial dependency</strong>. It is why the date repeats for every line of order 100.</p>
   <ul>
-    <li><strong>Rule</strong>: every non-key column depends on the <em>whole</em> key, not part of it. (Only matters for composite keys.)</li>
+    <li><strong>Rule</strong>: every non-key column depends on the <em>whole</em> key, not part of it. (Only matters when the key is more than one column.)</li>
     <li><strong>Violation</strong>: in <code>orders_flat</code>, <code>order_date, cust_name, cust_city</code> depend on <code>order_id</code> alone; <code>category</code> depends on <code>product</code> alone.</li>
     <li><strong>Fix</strong>: split by what each column depends on.</li>
   </ul>
@@ -229,6 +241,7 @@ SELECT * FROM orders_2nf ORDER BY order_id;</div>
   </div>
 
   <h3>3NF: no transitive dependency</h3>
+  <p>Look at <code>orders_2nf</code>: Asha's city still appears twice (orders 100 and 101). Why? <code>cust_city</code> doesn't really depend on the order. It depends on the customer, who depends on the order. A chain: <code>order_id → cust_name → cust_city</code>. A dependency that goes through a middle column is <strong>transitive</strong> ("passed along").</p>
   <ul>
     <li><strong>Rule</strong>: non-key columns depend on the key <em>directly</em>, not through another non-key column. ("The key, the whole key, and nothing but the key.")</li>
     <li><strong>Violation</strong>: <code>order_id → cust_name → cust_city</code>. City is a fact about the customer, so Asha's city still repeats per order.</li>
@@ -238,11 +251,13 @@ SELECT * FROM orders_2nf ORDER BY order_id;</div>
 CREATE TABLE orders_3nf    AS SELECT order_id, order_date, cust_name FROM orders_2nf;
 SELECT * FROM customers_3nf ORDER BY cust_name;</div>
   <table class="tbl out"><caption>customers_3nf</caption><tr><th>cust_name</th><th>cust_city</th></tr><tr><td>Asha</td><td>Mumbai</td></tr><tr><td>Ben</td><td>Delhi</td></tr><tr><td>Chen</td><td>Mumbai</td></tr></table>
-  <p>Add surrogate ids instead of names and you have the real <code>shop</code> schema. Dia is still missing: she can only exist because <code>customers</code> is its own table in <code>shop</code>.</p>
+  <p>Now Asha's city is written exactly once. Add <strong>surrogate ids</strong> (made-up numbers like <code>customer_id = 1</code> instead of names, which can repeat or change) and you have the real <code>shop</code> schema. Dia is still missing: she can only exist because <code>customers</code> is its own table in <code>shop</code>.</p>
+  <p>Quick self-check. Flat sheet → (1NF) one fact per cell → (2NF) move columns that depend on only part of the key → (3NF) move columns that depend on another non-key column. Most real schemas stop here.</p>
 
   <h3>BCNF: every determinant is a key</h3>
+  <p>A rare, stricter version of 3NF, asked in interviews. Two words first. A <strong>candidate key</strong> is any column set that could serve as the key (a table may have more than one: <code>customer_id</code> and <code>email</code> both identify a customer). A <strong>determinant</strong> is the left side of any dependency, the A in <code>A → B</code>.</p>
   <ul>
-    <li><strong>Rule</strong>: if A → B, then A must be a candidate key. A stricter 3NF for tables with overlapping candidate keys.</li>
+    <li><strong>Rule</strong>: if A → B, then A must be a candidate key. In words: only keys are allowed to decide other columns.</li>
     <li><strong>Violation</strong>: <code>account_reps(customer, category, rep)</code>. Each customer has one rep per category, and each rep covers one category. Key = (customer, category), but <code>rep → category</code> and rep is not a key.</li>
   </ul>
   <table class="tbl">
@@ -256,13 +271,14 @@ SELECT * FROM customers_3nf ORDER BY cust_name;</div>
     <li><strong>Fix</strong>: <code>reps(rep PK, category)</code> + <code>customer_reps(customer, rep)</code>.</li>
   </ul>
 
-  <p><strong>4NF</strong>: don't store two independent lists in one table (every phone × every address). <strong>5NF</strong>: no table that splits into 3+ pieces and rejoins losslessly. Both are rare in practice.</p>
+  <p><strong>4NF</strong>: don't store two independent lists in one table. If a customer has 2 phones and 3 addresses, one table with both columns needs 2 × 3 = 6 rows, though the phones have nothing to do with the addresses. Keep two tables. <strong>5NF</strong>: no table that splits into 3+ pieces and rejoins losslessly. Both are rare in practice.</p>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>A correct split is <strong>lossless</strong>: joining the pieces gives back exactly the original rows. If not, you split on the wrong column.</p>
+    <p>A correct split is <strong>lossless</strong>: joining the pieces gives back exactly the original rows, nothing missing and nothing extra. If not, you split on the wrong column.</p>
   </div>
 
   <h2 id="sm-denorm"><span class="num">04</span>Denormalization</h2>
-  <p><strong>Denormalization</strong> = deliberately storing a fact twice (or precomputed) to make reads faster or simpler.</p>
+  <p>The normalized shop is clean, but every screen now needs joins. "Show the order list with each order's total" means joining three tables and summing, on every page load, for every user. When reads are far more common than writes, it can be worth storing some facts twice on purpose.</p>
+  <p><strong>Denormalization</strong> is deliberately storing a fact twice (or precomputed) to make reads faster or simpler. It is normalization's opposite, done with open eyes.</p>
   <ul>
     <li><strong>When</strong>: read-heavy screens (an order list showing totals), dashboards, analytics warehouses, or when joins cost more than storage.</li>
     <li><strong>Common forms</strong>: a copied column (<code>orders.customer_city</code>), a stored total (<code>orders.total_amount</code>), a summary table or materialized view, a wide "one big table" for BI.</li>
@@ -276,7 +292,7 @@ JOIN order_items oi ON oi.order_id = o.order_id
 GROUP BY c.name;
 SELECT * FROM customer_revenue ORDER BY revenue DESC;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>revenue</th></tr><tr><td>Asha</td><td>1380.00</td></tr><tr><td>Chen</td><td>1270.00</td></tr></table>
-  <p>Reads are one table scan, but it's stale until <code>REFRESH MATERIALIZED VIEW customer_revenue;</code>.</p>
+  <p>A <strong>materialized view</strong> is a query whose answer is saved as a real table. Reads are now one small table scan, but the answer is frozen: it's stale until <code>REFRESH MATERIALIZED VIEW customer_revenue;</code>. (A plain view saves only the query and re-runs it each time.)</p>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A shop's "today's total" on a whiteboard. Fast to read, but someone must update it after every sale, or it lies.</p>
   </div>
@@ -285,6 +301,7 @@ SELECT * FROM customer_revenue ORDER BY revenue DESC;</div>
   </div>
 
   <h2 id="sm-olap"><span class="num">05</span>Star &amp; Snowflake Schemas</h2>
+  <p>The shop app needs 3NF: small safe writes, current state. The analyst asking "revenue per category per month for the last 3 years" needs something else: huge reads over history, with simple queries. So companies keep a second database for analysis, a <strong>data warehouse</strong>, with its own table shape.</p>
   <div class="cards">
     <div><b>OLTP (the app)</b><p>3NF, current state, safe small writes.</p></div>
     <div><b>OLAP (warehouse)</b><p>Star-shaped, keeps history, big simple reads.</p></div>
@@ -301,6 +318,7 @@ SELECT * FROM customer_revenue ORDER BY revenue DESC;</div>
     <rect x="430" y="166" width="160" height="48" rx="8" fill="none" stroke="currentColor" stroke-dasharray="4 3" opacity=".6"/><text x="510" y="186" text-anchor="middle" font-size="11">dim_category</text><text x="510" y="203" text-anchor="middle" font-size="10" class="tm">snowflake only</text>
     <line x1="385" y1="190" x2="428" y2="190" stroke="currentColor" stroke-dasharray="4 3" opacity=".6"/>
   </svg><figcaption>Tall fact in the middle, short wide dimensions around it. Every query: fact → join dims → filter → group.</figcaption></figure>
+  <p>That shape is a <strong>star schema</strong>: one big table of events in the middle, small lookup tables around it, like a star. Look at the picture: the middle box holds numbers, the outer boxes hold descriptions.</p>
   <ul>
     <li><strong>Fact table</strong>: one row per measurable event: numbers you add up + FKs to dimensions.</li>
     <li><strong>Dimension table</strong>: the who/what/when you filter and group by.</li>
@@ -328,26 +346,28 @@ JOIN dim_product p USING (product_key)
 WHERE f.status &lt;&gt; 'cancelled'
 GROUP BY 1, 2 ORDER BY 1, 2;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>month</th><th>category</th><th>revenue</th></tr><tr><td>2024-05</td><td>Electronics</td><td>1300.00</td></tr><tr><td>2024-05</td><td>Furniture</td><td>80.00</td></tr><tr><td>2024-06</td><td>Electronics</td><td>1000.00</td></tr><tr><td>2024-06</td><td>Furniture</td><td>150.00</td></tr><tr><td>2024-07</td><td>Furniture</td><td>120.00</td></tr></table>
+  <p>Read the query: start at the fact, join the date and product dimensions, filter, group, sum. Every warehouse query has that same shape, so analysts learn it once.</p>
   <ul>
     <li>Every query has one shape: fact → join dims → filter → group.</li>
     <li><code>order_id</code> and <code>status</code> live in the fact with no dimension table: a <strong>degenerate dimension</strong>.</li>
-    <li><strong>Additive</strong> measures (revenue, qty) sum across any dimension; balances are <strong>semi-additive</strong> (not over time); ratios are <strong>non-additive</strong> (recompute from parts).</li>
+    <li><strong>Additive</strong> measures (revenue, qty) sum across any dimension. A bank balance is <strong>semi-additive</strong>: you can add balances across accounts, but not across days (Monday's ₹100 + Tuesday's ₹100 is not ₹200). Ratios like "average price" are <strong>non-additive</strong>: recompute from the parts.</li>
   </ul>
   <h3>Snowflake schema</h3>
-  <p>A star whose dimensions are normalized further (<code>dim_product → dim_category</code>). Less repetition, more joins. Warehouses usually prefer the star: columnar compression makes the repetition cheap.</p>
+  <p>A star whose dimensions are normalized further (<code>dim_product → dim_category</code>, the dashed box in the picture). Less repetition, more joins. Warehouses usually prefer the star: they store data column by column and compress repeated values, so repetition is nearly free.</p>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Mixing grains. Putting an order-level <code>shipping_fee</code> on every order-line row makes <code>SUM(shipping_fee)</code> double-count. Different grain → different fact table.</p>
   </div>
 
   <h2 id="sm-scd"><span class="num">06</span>Slowly Changing Dimensions</h2>
-  <p>An <strong>SCD</strong> is a dimension whose attributes change occasionally (a customer's city). The question: should old facts see the old value or the new one?</p>
+  <p>Asha lived in Mumbai, bought a laptop, then moved to Pune and bought a phone. The city report asks: which city gets the laptop sale? If <code>dim_customer</code> simply overwrote her city with Pune, the laptop would move to Pune too, and last year's Mumbai report would change. History would be rewritten.</p>
+  <p>A dimension whose values change now and then is a <strong>slowly changing dimension</strong> (SCD). The question: should old facts see the old value or the new one? There are three standard answers, called types:</p>
   <table class="tbl">
     <tr><th>Type</th><th>What you do</th><th>History?</th><th>Use when</th></tr>
     <tr><td><strong>1</strong></td><td>Overwrite the value</td><td>None</td><td>Fixing typos; history doesn't matter</td></tr>
     <tr><td><strong>2</strong></td><td>Close the old row, insert a new row with validity dates</td><td>Full</td><td>Reports must reflect the value at that time</td></tr>
     <tr><td><strong>3</strong></td><td>Add a <code>previous_city</code> column</td><td>One step back</td><td>Only "before vs after" comparisons</td></tr>
   </table>
-  <p>Type 2 example: Asha moves from Mumbai to Pune on 2024-05-10.</p>
+  <p>Type 2 is the one interviewers want. The idea: never overwrite. Close the old row by giving it an end date, and add a new row for the new value. Asha then has two rows, one per "version" of her, each with the dates it was true. Example: Asha moves from Mumbai to Pune on 2024-05-10.</p>
   <figure class="viz"><svg viewBox="0 0 600 120" width="600">
     <rect x="20" y="44" width="300" height="32" class="fb sb"/><text x="170" y="65" text-anchor="middle">key 1 · Mumbai · is_current f</text>
     <rect x="322" y="44" width="268" height="32" class="fg sg"/><text x="456" y="65" text-anchor="middle">key 5 · Pune · is_current t</text>
@@ -370,7 +390,7 @@ VALUES (1, 'Asha', 'Pune', '2024-05-10', '9999-12-31', true);
 
 SELECT * FROM dim_customer_scd WHERE customer_id = 1 ORDER BY customer_key;</div>
   <table class="tbl out"><caption>Result</caption><tr><th>customer_key</th><th>customer_id</th><th>name</th><th>city</th><th>valid_from</th><th>valid_to</th><th>is_current</th></tr><tr><td>1</td><td>1</td><td>Asha</td><td>Mumbai</td><td>2024-01-05</td><td>2024-05-09</td><td>f</td></tr><tr><td>5</td><td>1</td><td>Asha</td><td>Pune</td><td>2024-05-10</td><td>9999-12-31</td><td>t</td></tr></table>
-  <p>Each order joins to the version that was valid on its date:</p>
+  <p>Read the result: row 1 is Asha-in-Mumbai, valid from signup to 9 May, no longer current. Row 5 is Asha-in-Pune, valid from 10 May "forever" (9999-12-31 is the usual way to write "no end yet"). Each order joins to the version that was valid on its date:</p>
   <div class="fx" data-lang="sql">SELECT o.order_id, o.order_date, d.city
 FROM orders o
 JOIN dim_customer_scd d
@@ -383,7 +403,8 @@ WHERE o.customer_id = 1;</div>
   </div>
 
   <h2 id="sm-json"><span class="num">07</span>JSONB vs Columns</h2>
-  <p><strong>JSONB</strong> = a PostgreSQL column type holding binary JSON. Fields can vary per row.</p>
+  <p>A laptop has RAM and screen size. A lamp has a colour. A desk has width and material. If every product attribute became a column, <code>products</code> would have 50 columns, mostly empty for each row. Normalizing into an attributes table works but makes every product page a join.</p>
+  <p>Postgres offers a middle path. <strong>JSONB</strong> is a column type holding JSON (the <code>{"key": value}</code> format used by web APIs) in a fast binary form. Each row can hold different keys. <code>attrs -&gt;&gt; 'ram_gb'</code> pulls one key out as text:</p>
   <div class="fx" data-lang="sql">ALTER TABLE products ADD COLUMN attrs jsonb;
 UPDATE products SET attrs = '{"ram_gb": 16, "screen": 14}' WHERE product_id = 10;
 UPDATE products SET attrs = '{"color": "black"}'           WHERE product_id = 13;
@@ -400,12 +421,14 @@ FROM products WHERE attrs IS NOT NULL;</div>
   </div>
 
   <h2 id="sm-conv"><span class="num">08</span>Practical Conventions</h2>
+  <p>Habits that every team expects in a real schema. None is a theory rule; each prevents a bug someone has already had.</p>
   <ul>
     <li><strong>Naming</strong>: <code>snake_case</code>, one style for table names (plural <code>orders</code> or singular), FK named after its target (<code>customer_id</code>), booleans as <code>is_</code>/<code>has_</code>, no reserved words (<code>user</code>, <code>order</code>).</li>
-    <li><strong>Surrogate keys</strong>: an <code>id</code> with no business meaning (<code>bigint GENERATED ALWAYS AS IDENTITY</code>, or UUID for distributed systems). Keep the natural key (email, SKU) as UNIQUE.</li>
+    <li><strong>Surrogate keys</strong>: an <code>id</code> with no business meaning (<code>bigint GENERATED ALWAYS AS IDENTITY</code>, or UUID for distributed systems). Why not use the email as the key? Emails change, and then every FK pointing at it must change too. Keep the natural key (email, SKU) as UNIQUE instead.</li>
     <li><strong>Audit timestamps</strong>: <code>created_at</code> and <code>updated_at</code> as <code>timestamptz</code> (stored in UTC) with defaults.</li>
-    <li><strong>Soft delete</strong>: <code>deleted_at timestamptz</code> instead of <code>DELETE</code>, so you keep history and can undo.</li>
+    <li><strong>Soft delete</strong>: <code>deleted_at timestamptz</code> instead of <code>DELETE</code>, so you keep history and can undo. Like moving a file to the Recycle Bin instead of wiping it.</li>
   </ul>
+  <p>All four habits in one real table:</p>
   <div class="fx" data-lang="sql">CREATE TABLE reviews (
   review_id   bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   customer_id int NOT NULL REFERENCES customers,
@@ -424,6 +447,7 @@ CREATE UNIQUE INDEX reviews_one_live ON reviews (customer_id, product_id) WHERE 
 
   <h2 id="sm-qa"><span class="num">09</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>In plain words: what does "A → B" (functional dependency) mean? Give a shop example.</summary><div class="qa-body">"If you know A, you know B." <code>product_id → category</code>: knowing the product is Laptop tells you the category is Electronics. Normalization moves each column into the table of whatever decides it.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Name the three anomalies of an unnormalized table, with a shop example of each.</summary><div class="qa-body">Update: Asha's city stored on every order row; changing one row leaves her in two cities. Insert: a customer like Dia can't be stored until she orders. Delete: deleting Ben's only order deletes the only record of Ben.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>A table <code>enrolments(student_id, course_id, student_name, course_title, grade)</code> with key (student_id, course_id). Which NF does it break and how do you fix it?</summary><div class="qa-body">2NF: <code>student_name</code> depends only on student_id and <code>course_title</code> only on course_id (partial dependencies). Split into <code>students(student_id, name)</code>, <code>courses(course_id, title)</code>, <code>enrolments(student_id, course_id, grade)</code>. Grade depends on both, so it stays.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What's the difference between 3NF and BCNF?</summary><div class="qa-body">3NF allows A → B where B is part of a candidate key. BCNF doesn't: every determinant must be a candidate key. They differ only with overlapping composite candidate keys, e.g. (customer, category, rep) where rep → category.</div></details>

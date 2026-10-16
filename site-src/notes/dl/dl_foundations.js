@@ -2,7 +2,7 @@
 Object.assign(TOPIC_CONTENT, {
   "dl_foundations": `<main>
   <h1>NN Foundations</h1>
-  <p class="lead">What happens inside a neural network: one neuron, the forward pass, the loss, backprop, the optimizer step, and the tricks (regularization, batch norm, good init) that let deep nets train. Every number below is from a real PyTorch run. Builds on Mathematics → Calculus (chain rule) and Mathematics → Optimization (gradient descent).</p>
+  <p class="lead">A neural network is a machine that guesses, checks how wrong it was, and fixes itself a little, millions of times. This note opens that machine: one neuron, the forward pass, the loss, backprop, the optimizer step, and the tricks (regularization, batch norm, good init) that make deep nets train. Every number below is from a real PyTorch run. Builds on Mathematics → Calculus (chain rule) and Mathematics → Optimization (gradient descent).</p>
 
   <h2 id="df-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -103,21 +103,49 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="df-perc"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">The Perceptron</span><span class="rm-sub">One neuron, one straight line</span></div></div>
-      <div class="rm-item rm-done" data-target="df-fwd"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Forward Propagation</span><span class="rm-sub">Numbers flowing through layers</span></div></div>
-      <div class="rm-item rm-done" data-target="df-act"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Activation Functions</span><span class="rm-sub">ReLU, sigmoid, tanh, softmax</span></div></div>
-      <div class="rm-item rm-done" data-target="df-loss"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Loss Functions</span><span class="rm-sub">MSE and cross-entropy</span></div></div>
-      <div class="rm-item rm-done" data-target="df-bp"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Backpropagation</span><span class="rm-sub">Chain rule on a tiny net</span></div></div>
-      <div class="rm-item rm-done" data-target="df-opt"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Optimizers</span><span class="rm-sub">SGD, momentum, RMSprop, Adam</span></div></div>
-      <div class="rm-item rm-done" data-target="df-reg"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">L1/L2 &amp; Dropout</span><span class="rm-sub">Fighting overfitting</span></div></div>
-      <div class="rm-item rm-done" data-target="df-bn"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Batch Normalization</span><span class="rm-sub">Re-centre every layer</span></div></div>
-      <div class="rm-item rm-done" data-target="df-vg"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Vanishing &amp; Exploding</span><span class="rm-sub">When gradients die or blow up</span></div></div>
-      <div class="rm-item rm-done" data-target="df-init"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Weight Initialization</span><span class="rm-sub">Zero, Xavier, He</span></div></div>
-      <div class="rm-item rm-done" data-target="df-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="df-what"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">What a Network Learns</span><span class="rm-sub">Guess, check, fix, repeat</span></div></div>
+      <div class="rm-item rm-done" data-target="df-perc"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">The Perceptron</span><span class="rm-sub">One neuron, one straight line</span></div></div>
+      <div class="rm-item rm-done" data-target="df-fwd"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Forward Propagation</span><span class="rm-sub">Numbers flowing through layers</span></div></div>
+      <div class="rm-item rm-done" data-target="df-act"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Activation Functions</span><span class="rm-sub">ReLU, sigmoid, tanh, softmax</span></div></div>
+      <div class="rm-item rm-done" data-target="df-loss"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Loss Functions</span><span class="rm-sub">MSE and cross-entropy</span></div></div>
+      <div class="rm-item rm-done" data-target="df-bp"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Backpropagation</span><span class="rm-sub">Chain rule on a tiny net</span></div></div>
+      <div class="rm-item rm-done" data-target="df-opt"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Optimizers</span><span class="rm-sub">SGD, momentum, RMSprop, Adam</span></div></div>
+      <div class="rm-item rm-done" data-target="df-reg"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">L1/L2 &amp; Dropout</span><span class="rm-sub">Fighting overfitting</span></div></div>
+      <div class="rm-item rm-done" data-target="df-bn"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Batch Normalization</span><span class="rm-sub">Re-centre every layer</span></div></div>
+      <div class="rm-item rm-done" data-target="df-vg"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Vanishing &amp; Exploding</span><span class="rm-sub">When gradients die or blow up</span></div></div>
+      <div class="rm-item rm-done" data-target="df-init"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Weight Initialization</span><span class="rm-sub">Zero, Xavier, He</span></div></div>
+      <div class="rm-item rm-done" data-target="df-qa"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
-  <h2 id="df-perc"><span class="num">01</span>The Perceptron</h2>
+  <h2 id="df-what"><span class="num">01</span>What a Network Learns</h2>
+  <p>A kirana shop sells 1 kg of sugar for ₹40, 2 kg for ₹80, 3 kg for ₹120. You are asked: what is the price per kg? You can see it is 40. A computer cannot "see" it. It has to find the number by trial and error.</p>
+  <p>That trial and error is what every neural network does, from this toy to ChatGPT. The recipe has three moves, repeated again and again:</p>
+  <div class="flow"><span>Guess a number</span><span>Measure how wrong the guess is</span><span>Nudge the number to reduce the wrongness</span><span>Repeat</span></div>
+  <p>The number being guessed is called a <strong>weight</strong> (here, the price per kg). The "how wrong" score is called the <strong>loss</strong>. The direction and size of the nudge comes from the <strong>gradient</strong> (the slope: which way does the loss go down?). The nudge size is scaled by the <strong>learning rate</strong>, a small number like 0.05. Below, the weight starts at a wrong guess of 0.5 and the true answer is 2:</p>
+  <div class="fx" data-lang="py">import torch
+x = torch.tensor([1., 2., 3.]); y = torch.tensor([2., 4., 6.])   # hidden rule: y = 2x
+w = torch.tensor(0.5, requires_grad=True)                        # first guess
+for step in range(6):
+    loss = ((w * x - y) ** 2).mean()      # 1. how wrong is the guess?
+    loss.backward()                        # 2. which way should w move, and how much?
+    print(f"step {step}: w {w.item():.3f}  loss {loss.item():.3f}  grad {w.grad.item():.3f}")
+    with torch.no_grad():
+        w -= 0.05 * w.grad                 # 3. nudge w a little the other way
+        w.grad.zero_()</div>
+  <div class="fx" data-lang="text">step 0: w 0.500  loss 10.500  grad -14.000
+step 1: w 1.200  loss 2.987  grad -7.467
+step 2: w 1.573  loss 0.850  grad -3.982
+step 3: w 1.772  loss 0.242  grad -2.124
+step 4: w 1.879  loss 0.069  grad -1.133
+step 5: w 1.935  loss 0.020  grad -0.604</div>
+  <p>Read the rows. The gradient is negative, which means "the loss goes down if w goes up". So w moves up: 0.5 → 1.2 → 1.57 → … and creeps toward 2. The loss falls from 10.5 to 0.02. Nobody told the program the answer was 2; it found it.</p>
+  <p>A real network has millions of such weights instead of one, and the guess passes through many layers instead of one multiplication. But the loop is the same. The rest of this note explains each part of that loop properly: the neuron (02), how a guess is computed (03–04), how wrongness is measured (05), how the nudge direction is found for millions of weights at once (06), smarter ways to nudge (07), and how to stop the network from memorising instead of learning (08–11).</p>
+  <div class="callout anlg"><span class="label">Analogy</span><p>Learning to bowl at a single stump. First ball: way off to the left. You do not start over; you adjust your arm a little to the right. Next ball: closer. After many balls you hit the stump. Your arm angle is the weight, the distance from the stump is the loss, and "a little to the right" is the gradient step.</p></div>
+
+  <h2 id="df-perc"><span class="num">02</span>The Perceptron</h2>
+  <p>A college gives admission if a student scores well enough overall, but it values maths twice as much as English. A student with maths 70 and English 60 gets a total of 2×70 + 1×60 = 200. If the pass mark is 180, the student is admitted. That little rule is a <strong>perceptron</strong>: the first and simplest artificial neuron.</p>
+  <p>In words: take each input, multiply it by its importance (its <strong>weight</strong>), add everything up, add a fixed adjustment (the <strong>bias</strong>, which moves the pass mark), and say 1 if the total crosses zero, else 0. That last yes/no step is the <strong>activation</strong>.</p>
   <figure class="viz"><svg viewBox="0 0 600 195" width="600">
     <defs><marker id="df-ah1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <circle cx="30" cy="40" r="16" class="fb sb"/><text x="22" y="45">x₁</text>
@@ -133,8 +161,9 @@ Object.assign(TOPIC_CONTENT, {
     <circle cx="420" cy="40" r="7" class="fg sg"/><circle cx="520" cy="140" r="7" class="fg sg"/>
     <line x1="440" y1="20" x2="540" y2="110" class="sr" stroke-dasharray="4 3"/>
     <text x="380" y="182" class="tm">XOR: no line splits red/green</text>
-  </svg><figcaption>A perceptron is a weighted sum plus a pass mark, so it can only draw one straight line. No line splits XOR's corners.</figcaption></figure>
-  <p>A <strong>perceptron</strong> is one artificial neuron: multiply inputs by weights, add them, and say 1 if the total crosses 0. It learns by nudging weights after each mistake: <code>w ← w + α(y − ŷ)x</code>. Example: AND is easy, XOR is impossible.</p>
+  </svg><figcaption>Left: inputs × weights, summed with the bias, then a yes/no step. Right: the four XOR points; try drawing one straight line that keeps red and green apart. It cannot be done.</figcaption></figure>
+  <p>How does it learn the weights? After each example, if the answer was wrong, move each weight a little toward what would have made it right: <code>w ← w + α(y − ŷ)x</code>. Here y is the correct answer, ŷ is the guess, α is the learning rate. When the guess is right, y − ŷ = 0 and nothing moves.</p>
+  <p>Test it on two tiny logic puzzles with two inputs (each 0 or 1). <strong>AND</strong> says 1 only when both inputs are 1. <strong>XOR</strong> says 1 when exactly one input is 1.</p>
   <div class="fx" data-lang="py">import torch
 def train_perceptron(X, y, epochs=10, lr=1.0):
     w = torch.zeros(2); b = 0.0
@@ -150,7 +179,8 @@ print("AND", train_perceptron(X, torch.tensor([0.,0,0,1])))
 print("XOR", train_perceptron(X, torch.tensor([0.,1,1,0]), epochs=100))</div>
   <div class="fx" data-lang="text">AND [0, 0, 0, 1]
 XOR [1, 1, 0, 0]</div>
-  <p>Add one hidden layer with a non-linearity (here tanh) and XOR is solved:</p>
+  <p>AND is learnt perfectly. XOR is wrong even after 100 rounds, and it will never be right. Why: a perceptron can only draw one straight line and call one side "yes". In the picture above, the XOR "yes" points sit on opposite corners, so no single line separates them.</p>
+  <p>The fix that started all of deep learning: put a small group of neurons in the middle (a <strong>hidden layer</strong>) and give each a bend (a non-linear activation, here tanh). The hidden neurons each draw their own line; the final neuron combines them. Now XOR is solved:</p>
   <div class="fx" data-lang="py">import torch.nn as nn, torch.nn.functional as F
 torch.manual_seed(0)
 y = torch.tensor([[0.],[1],[1],[0]])
@@ -160,13 +190,16 @@ for step in range(300):
     opt.zero_grad(); loss = F.binary_cross_entropy_with_logits(net(X), y); loss.backward(); opt.step()
 print((net(X) &gt; 0).int().flatten().tolist(), round(loss.item(), 4))</div>
   <div class="fx" data-lang="text">[0, 1, 1, 0] 0.0003</div>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A neuron is a committee vote. Each input casts a weighted vote, the bias is the chairperson's own leaning, and the activation decides if the motion passes. Hidden layers are small committees whose results feed the final vote.</p></div>
+  <p>Output [0, 1, 1, 0] is exactly XOR, and the loss is almost zero. A network with at least one hidden layer is called a <strong>multi-layer perceptron (MLP)</strong>.</p>
+  <div class="callout anlg"><span class="label">Analogy</span><p>A neuron is a committee vote. Each input casts a weighted vote, the bias is the chairperson's own leaning, and the activation decides if the motion passes. Hidden layers are small sub-committees whose results feed the final vote. One committee can only say "total above the mark or not"; several sub-committees can express "exactly one of these two".</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Adding more layers <em>without</em> a bend between them does not help at all. Two straight-line rules combined are still one straight-line rule. The next section shows this.</p></div>
 
-  <h2 id="df-fwd"><span class="num">02</span>Forward Propagation</h2>
-  <p><strong>Forward propagation</strong> = pushing the input through the layers to get a prediction. Each layer does three things: multiply by W, add b, apply the activation.</p>
+  <h2 id="df-fwd"><span class="num">03</span>Forward Propagation</h2>
+  <p><strong>Forward propagation</strong> means: put the input numbers in at the left, and let them flow through the layers to the right until a prediction comes out. Each layer does the same three things: multiply by its weights, add its biases, apply the activation. The output of one layer is the input of the next.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A factory line making a dosa: batter → spread → fill → fold. Each station changes the item and passes it on. The output of one is the input of the next.</p>
+    <p>A dosa stall: batter → spread on the tawa → add filling → fold. Each station changes the item and passes it on. The output of one station is the input of the next. Nothing goes backwards.</p>
   </div>
+  <p>A tiny example you can follow by hand: 2 inputs, a hidden layer of 3 neurons, 1 output. Input x = (1, 2).</p>
   <figure class="viz"><svg viewBox="0 0 560 220" width="560">
     <defs><marker id="df-ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <g stroke="currentColor" opacity="0.35">
@@ -183,7 +216,8 @@ print((net(X) &gt; 0).int().flatten().tolist(), round(loss.item(), 4))</div>
     <text x="268" y="40" class="tm">z=−0.5 → ReLU → 0</text>
     <text x="30" y="210" class="tm">input x</text><text x="185" y="210" class="tm">hidden a¹ = ReLU(W¹x + b¹)</text><text x="380" y="160" class="tm">ŷ = W²a¹ + b²</text>
     <line x1="440" y1="110" x2="480" y2="110" stroke="currentColor" marker-end="url(#df-ah2)"/><text x="486" y="115">loss</text>
-  </svg><figcaption>Each layer = multiply by W, add bias, activation. The grey neuron is "off": its z was negative, so ReLU gave 0.</figcaption></figure>
+  </svg><figcaption>Numbers flow left to right. The grey hidden neuron got a negative total (−0.5), so ReLU switched it off to 0; the two green ones stay on. Those three values feed the purple output neuron.</figcaption></figure>
+  <p>Check the top hidden neuron by hand. Its weights are (0.5, −0.5) and its bias is 0: z = 0.5×1 + (−0.5)×2 + 0 = −0.5. ReLU (section 04) turns any negative number into 0, so this neuron outputs 0. The middle one: 1.0×1 + 0.5×2 + 0.5 = 2.5, stays 2.5. The code does the same for all three at once, then the output layer:</p>
   <div class="fx" data-lang="py">x  = torch.tensor([1.0, 2.0])
 W1 = torch.tensor([[0.5, -0.5], [1.0, 0.5], [-1.0, 1.0]]); b1 = torch.tensor([0., 0.5, 0.])
 W2 = torch.tensor([[1.0, -1.0, 0.5]]);                     b2 = torch.tensor([0.2])
@@ -191,13 +225,16 @@ z1 = W1 @ x + b1;  a1 = torch.relu(z1);  y_hat = W2 @ a1 + b2
 print("z1", z1); print("a1", a1); print("y_hat", y_hat)</div>
   <div class="fx" data-lang="text">z1 tensor([-0.5000,  2.5000,  1.0000])
 a1 tensor([0.0000, 2.5000, 1.0000])
+y_hat tensor([0.0000, 2.5000, 1.0000])
 y_hat tensor([-1.8000])</div>
-  <div class="callout trap"><span class="label">Trap</span><p>Without activations, layers merge into one: W³(W²(W¹x)) = (W³W²W¹)x, a single linear map. A 100-layer linear net = a 1-layer one. (Checked: <code>(v @ A) @ B</code> equals <code>v @ (A @ B)</code> → <code>True</code>.)</p></div>
+  <p>Output: 1.0×0 + (−1.0)×2.5 + 0.5×1.0 + 0.2 = −1.8. That is the network's prediction for this input. In training, this prediction is compared with the correct answer to get the loss (section 05).</p>
+  <p>The formal version, one layer at a time: <strong>zˡ = Wˡ aˡ⁻¹ + bˡ</strong> and <strong>aˡ = σ(zˡ)</strong>. Here l is the layer number, aˡ⁻¹ is the previous layer's output (a⁰ is the input x), Wˡ is the weight matrix with one row per neuron, bˡ is the bias vector, and σ is the activation. W has shape (neurons out × inputs in): W1 above is 3×2. With a batch of B examples stacked as rows, PyTorch computes X Wᵀ, giving B × out.</p>
+  <div class="callout trap"><span class="label">Trap</span><p>Without activations, layers merge into one: W³(W²(W¹x)) = (W³W²W¹)x, a single multiplication. A 100-layer network with no bends is exactly as weak as a 1-layer one. (Checked: <code>(v @ A) @ B</code> equals <code>v @ (A @ B)</code> → <code>True</code>.) The bends are what let depth add power.</p></div>
 
-  <h2 id="df-act"><span class="num">03</span>Activation Functions</h2>
-  <p>An <strong>activation</strong> is a bend applied after each layer. Without it the whole net is one straight line (above). Its slope also decides how well gradients flow back.</p>
+  <h2 id="df-act"><span class="num">04</span>Activation Functions</h2>
+  <p>An <strong>activation</strong> is a simple fixed function applied to each neuron's total z after the multiply-and-add. It is the "bend" that stops layers from collapsing into one (section 03). Three things matter about any activation: what range it outputs, how steep it is (its slope), and whether the slope ever becomes 0. Slope matters because learning signals travel backwards by multiplying slopes (section 06); a slope near 0 kills the signal.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>ReLU is a one-way valve: water (signal) passes if pushed forward, nothing passes if pushed back. Sigmoid is a dimmer switch that gets stuck near fully on or fully off.</p>
+    <p>ReLU is a one-way valve: water (signal) passes if pushed forward, nothing passes if pushed back. Sigmoid is a dimmer switch that gets stuck near fully on or fully off; once stuck, turning the knob further changes almost nothing.</p>
   </div>
   <figure class="viz"><svg viewBox="0 0 580 175" width="580">
     <g><line x1="10" y1="95" x2="170" y2="95" stroke="currentColor" opacity="0.3"/><line x1="90" y1="5" x2="90" y2="140" stroke="currentColor" opacity="0.3"/>
@@ -212,7 +249,8 @@ y_hat tensor([-1.8000])</div>
       <path d="M10,95 90,95 134,7" fill="none" class="sb" stroke-width="2.5"/>
       <path d="M10,96 90,96 M90,55 170,55" fill="none" class="sr" stroke-width="1.5" stroke-dasharray="4 3"/>
       <text x="55" y="165">ReLU</text><text x="128" y="70" class="tr" font-size="11">grad 1</text><text x="20" y="112" class="tr" font-size="11">grad 0</text></g>
-  </svg><figcaption>Solid = activation, dashed red = its slope (x from −4 to 4). Sigmoid and tanh slopes go flat at both ends; ReLU's is 1 for every positive input.</figcaption></figure>
+  </svg><figcaption>Solid blue = the activation's output for inputs from −4 to 4; dashed red = its slope. Sigmoid and tanh go flat at both ends (slope near 0). ReLU's slope is exactly 1 for every positive input and 0 for negatives.</figcaption></figure>
+  <p>Feed the same five numbers (−3, −1, 0, 1, 3) through each activation and ask PyTorch for the slope at each point:</p>
   <div class="fx" data-lang="py">z = torch.tensor([-3., -1., 0., 1., 3.], requires_grad=True)
 for name, f in [("sigmoid", torch.sigmoid), ("tanh", torch.tanh), ("relu", torch.relu),
                 ("leaky", lambda t: F.leaky_relu(t, 0.01)), ("gelu", F.gelu)]:
@@ -223,33 +261,37 @@ tanh     out [-0.995, -0.762, 0.0, 0.762, 0.995]  grad [0.01, 0.42, 1.0, 0.42, 0
 relu     out [0.0, 0.0, 0.0, 1.0, 3.0]  grad [0.0, 0.0, 0.0, 1.0, 1.0]
 leaky    out [-0.03, -0.01, 0.0, 1.0, 3.0]  grad [0.01, 0.01, 0.01, 1.0, 1.0]
 gelu     out [-0.004, -0.159, 0.0, 0.841, 2.996]  grad [-0.012, -0.083, 0.5, 1.083, 1.012]</div>
+  <p>What to notice: sigmoid's slope is at most 0.25, and at z = ±3 it is already 0.045. Tanh is better (max slope 1) but also dies at the ends (0.01). ReLU keeps slope 1 for all positive inputs, which is why it became the default. Leaky ReLU keeps a tiny slope (0.01) on the negative side so a neuron is never fully dead. GELU is a smooth version of ReLU used in Transformers.</p>
   <table class="tbl">
     <tr><th>Activation</th><th>Range</th><th>Use it for</th><th>Watch out</th></tr>
-    <tr><td><strong>ReLU</strong></td><td>[0, ∞)</td><td>Default hidden layer (CNNs, MLPs)</td><td>Dying ReLU: a unit stuck at z &lt; 0 gets zero gradient forever</td></tr>
+    <tr><td><strong>ReLU</strong> max(0, z)</td><td>[0, ∞)</td><td>Default hidden layer (CNNs, MLPs)</td><td>Dying ReLU: a unit stuck at z &lt; 0 gets zero gradient forever</td></tr>
     <tr><td><strong>Leaky ReLU / ELU</strong></td><td>(−∞, ∞)</td><td>When many units die</td><td>One more setting (the slope)</td></tr>
     <tr><td><strong>GELU / SiLU</strong></td><td>≈ (−0.17, ∞)</td><td>Transformers (BERT, GPT), modern CNNs</td><td>Slightly slower</td></tr>
-    <tr><td><strong>Sigmoid</strong></td><td>(0, 1)</td><td>Yes/no or multi-label output, gates</td><td>Goes flat at the ends; not centred on 0</td></tr>
+    <tr><td><strong>Sigmoid</strong> 1/(1+e⁻ᶻ)</td><td>(0, 1)</td><td>Yes/no or multi-label output, gates</td><td>Goes flat at the ends; not centred on 0</td></tr>
     <tr><td><strong>Tanh</strong></td><td>(−1, 1)</td><td>RNN/LSTM state</td><td>Still goes flat at the ends</td></tr>
     <tr><td><strong>Softmax</strong></td><td>(0, 1), sums to 1</td><td>Multi-class output only</td><td>Never in hidden layers</td></tr>
   </table>
-  <p><strong>Softmax</strong> turns raw scores (logits) into probabilities that add up to 1: <code>pᵢ = eᶻⁱ / Σⱼ eᶻʲ</code>. Adding the same number to all logits changes nothing (libraries subtract the max to avoid overflow).</p>
+  <h3>Softmax: scores into probabilities</h3>
+  <p>A classifier with 3 classes (cat, dog, cow) ends with 3 raw scores called <strong>logits</strong>, say (2.0, 1.0, 0.1). Raw scores are hard to read: is 2.0 "very sure"? <strong>Softmax</strong> converts them into probabilities that are all positive and add up to 1, so 2.0 becomes "66% cat". The rule: raise e to each score, then divide by the sum: <code>pᵢ = eᶻⁱ / Σⱼ eᶻʲ</code>. Because of the e, bigger scores get a bigger share, and the gap grows fast.</p>
   <div class="fx" data-lang="py">logits = torch.tensor([2.0, 1.0, 0.1])
 print(torch.softmax(logits, 0).round(decimals=3), torch.softmax(logits, 0).sum().item())
 print(torch.softmax(logits + 100, 0).round(decimals=3))</div>
   <div class="fx" data-lang="text">tensor([0.6590, 0.2420, 0.0990]) 1.0000001192092896
 tensor([0.6590, 0.2420, 0.0990])</div>
+  <p>Second line: adding 100 to every score changes nothing. Only the gaps between scores matter. Libraries use this to subtract the largest score before taking e, so the numbers never overflow.</p>
+  <div class="callout trap"><span class="label">Trap</span><p>Softmax is for the output layer only. Inside the network it would force each layer's neurons to compete and sum to 1, throwing away information. Hidden layers use ReLU-type activations.</p></div>
 
-  <h2 id="df-loss"><span class="num">04</span>Loss Functions</h2>
-  <p>The <strong>loss</strong> is one number for "how wrong". Backprop needs it as the starting point. The right loss depends on the output: a number, one class, or many yes/no labels.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Cross-entropy is like negative marking in an exam. A confident wrong answer costs much more than saying "not sure".</p>
-  </div>
+  <h2 id="df-loss"><span class="num">05</span>Loss Functions</h2>
+  <p>In section 01 "how wrong" was the squared gap between guess and truth. That is one choice of <strong>loss function</strong>: a formula that turns a prediction and the correct answer into one number, where 0 means perfect and bigger means worse. Training needs this single number because the gradient (section 06) is "the slope of the loss".</p>
+  <p>Which formula to use depends on what the output is:</p>
   <div class="cards">
-    <div><b>MSE</b><p>mean (ŷ − y)². Regression. Squares big errors, so outliers dominate.</p><small>nn.MSELoss</small></div>
-    <div><b>MAE / Huber</b><p>mean |ŷ − y|, or squared near 0 + straight further out. Calm with outliers.</p><small>nn.L1Loss, nn.HuberLoss</small></div>
-    <div><b>Cross-entropy</b><p>−log p(true class). Many classes. Hits sure-but-wrong answers hard.</p><small>nn.CrossEntropyLoss (logits)</small></div>
-    <div><b>Binary CE</b><p>−[y log p + (1−y) log(1−p)]. Yes/no or multi-label.</p><small>nn.BCEWithLogitsLoss</small></div>
+    <div><b>A number</b><p>Predicting house price, temperature, delivery time. Use <strong>MSE</strong>: mean of (ŷ − y)².</p><small>nn.MSELoss</small></div>
+    <div><b>A number, but outliers exist</b><p><strong>MAE</strong> mean |ŷ − y|, or <strong>Huber</strong> (squared near 0, straight further out). Calm with outliers.</p><small>nn.L1Loss, nn.HuberLoss</small></div>
+    <div><b>One class out of many</b><p>Cat/dog/cow. Use <strong>cross-entropy</strong>: −log of the probability given to the true class.</p><small>nn.CrossEntropyLoss (takes logits)</small></div>
+    <div><b>Yes/no (or many yes/no labels)</b><p>Spam or not; a photo can be "beach" and "sunset". <strong>Binary cross-entropy</strong>: −[y log p + (1−y) log(1−p)].</p><small>nn.BCEWithLogitsLoss</small></div>
   </div>
+  <p>MSE by hand: predictions (2.5, 0, 2), truth (3, −0.5, 2). Gaps: −0.5, 0.5, 0. Squared: 0.25, 0.25, 0. Mean: 0.5/3 = 0.1667. Squaring makes a gap of 2 cost four times a gap of 1, so big mistakes dominate.</p>
+  <p>Cross-entropy by hand: the model says "cat" with probability 0.659 (from the softmax above) and the truth is cat. Loss = −log(0.659) = 0.417. If the truth had been cow (probability 0.099): −log(0.099) = 2.317. Being confidently wrong costs much more than being a bit unsure.</p>
   <div class="fx" data-lang="py">pred, target = torch.tensor([2.5, 0.0, 2.0]), torch.tensor([3.0, -0.5, 2.0])
 print("MSE", F.mse_loss(pred, target).item(), "MAE", F.l1_loss(pred, target).item())
 logits = torch.tensor([[2.0, 1.0, 0.1]])
@@ -265,11 +307,17 @@ p_true=0.9: CE=0.105
 p_true=0.5: CE=0.693
 p_true=0.1: CE=2.303
 p_true=0.01: CE=4.605</div>
-  <div class="callout intu"><span class="label">Key insight</span><p>Why CE, not MSE, for classification: with softmax/sigmoid, the CE gradient on the logits is just <code>p − y</code>, so it never goes flat. MSE through a sigmoid gets multiplied by σ′ ≤ 0.25 and learns slowly when badly wrong. A random 3-class guess gives CE = ln 3 ≈ 1.10, a quick check for the loss at step 0.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p><code>nn.CrossEntropyLoss</code> applies log-softmax itself. Feeding it softmax outputs squashes twice and trains badly. Give it raw logits and integer class labels.</p></div>
+  <p>The last four lines are the whole character of cross-entropy: 90% sure and right costs 0.105; 1% on the right answer costs 4.6, about 44 times more.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Cross-entropy is like negative marking in an entrance exam. A confident wrong answer costs much more than leaving it blank or saying "not sure". So the model learns to be sure only when it has reason to be.</p>
+  </div>
+  <div class="callout intu"><span class="label">Key insight</span><p>Why cross-entropy and not MSE for classification: with softmax or sigmoid in front, the cross-entropy gradient on the logits is simply <code>p − y</code> (predicted probability minus truth). It is large when the model is badly wrong and never goes flat. MSE through a sigmoid gets multiplied by the sigmoid's slope (≤ 0.25, near 0 at the ends), so a confidently wrong model learns very slowly. Bonus check: a model that knows nothing gives equal probabilities, so its loss is ln(number of classes): ln 3 ≈ 1.10, ln 2 ≈ 0.693. If your step-0 loss is far from that, something is wired wrong.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p><code>nn.CrossEntropyLoss</code> applies log-softmax itself. If you add a softmax layer at the end of your model and then feed it to this loss, the probabilities get squashed twice and training goes badly. Give it raw logits and integer class labels (0, 1, 2…), not one-hot vectors.</p></div>
 
-  <h2 id="df-bp"><span class="num">05</span>Backpropagation</h2>
-  <p><strong>Backpropagation</strong> finds how much each weight is to blame for the loss (its gradient). Without it, you would have to nudge each of millions of weights one by one to see the effect. Steps: (1) forward pass, save values; (2) start at the loss with slope 1; (3) at each box, multiply the incoming slope by the box's own local slope; (4) pass it back.</p>
+  <h2 id="df-bp"><span class="num">06</span>Backpropagation</h2>
+  <p>In section 01 there was one weight, and the gradient said how to nudge it. A real network has millions of weights. The slow way to find each one's gradient: change it slightly, rerun the whole network, see how the loss moves, repeat for every weight. Millions of forward passes per step. Impossible.</p>
+  <p><strong>Backpropagation</strong> gets every gradient in about the cost of one extra pass. The idea: the loss sits at the right end of a chain of simple operations. Walk the chain backwards. At each box, ask "if my output moves by 1, how much does the loss move?" and multiply by "if my input moves by 1, how much does my output move?" (the box's own slope). That product is the answer for the box's input, and it is handed to the previous box. This is the chain rule from calculus, run from right to left.</p>
+  <p>A tiny net where every step can be checked by hand: one input x = 2, true answer y = 3, two weights w₁ = 0.5 and w₂ = 1.5, biases 0. Forward: z = w₁x = 1, h = ReLU(z) = 1, ŷ = w₂h = 1.5, loss L = (ŷ − 3)² = 2.25.</p>
   <figure class="viz"><svg viewBox="0 0 600 190" width="600">
     <defs><marker id="df-ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
     <marker id="df-ah3r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="tr"/></marker></defs>
@@ -290,8 +338,15 @@ p_true=0.01: CE=4.605</div>
     <text x="10" y="168" class="tr">∂L/∂w₁ = −4.5 · x = −9</text>
     <text x="10" y="35" class="tm">x = 2, y = 3, w₁ = 0.5, b₁ = 0, w₂ = 1.5, b₂ = 0</text>
     <text x="460" y="35" class="tm">forward →</text><text x="510" y="98" class="tr">← backward</text>
-  </svg><figcaption>Black arrows carry values forward; red arrows carry gradients back. Each box multiplies the incoming gradient by its own local slope.</figcaption></figure>
-  <p>It is just the chain rule (Mathematics → Calculus) run backwards from the loss. PyTorch's autograd gives the same numbers as the hand working:</p>
+  </svg><figcaption>Black arrows carry values forward. Red arrows carry gradients back, right to left. Each box multiplies the gradient it receives by its own local slope and passes the result on.</figcaption></figure>
+  <p>Walk the red arrows. The symbol ∂L/∂ŷ reads "how much L changes when ŷ changes a little".</p>
+  <ul>
+    <li>Loss box: L = (ŷ − 3)². Slope with respect to ŷ is 2(ŷ − 3) = 2(1.5 − 3) = <strong>−3</strong>. Negative: raising ŷ would lower the loss.</li>
+    <li>Output box: ŷ = w₂h. Its slope with respect to h is w₂ = 1.5, so ∂L/∂h = −3 × 1.5 = <strong>−4.5</strong>. Its slope with respect to w₂ is h = 1, so ∂L/∂w₂ = −3 × 1 = <strong>−3</strong>. That is the first weight's gradient.</li>
+    <li>ReLU box: z was positive, so its slope is 1. ∂L/∂z = −4.5 × 1 = <strong>−4.5</strong>.</li>
+    <li>First box: z = w₁x. Slope with respect to w₁ is x = 2, so ∂L/∂w₁ = −4.5 × 2 = <strong>−9</strong>. Second weight's gradient.</li>
+  </ul>
+  <p>Both gradients are negative, so both weights should go up. PyTorch's autograd does exactly this walk and gets the same numbers:</p>
   <div class="fx" data-lang="py">x, y = torch.tensor(2.0), torch.tensor(3.0)
 w1 = torch.tensor(0.5, requires_grad=True); b1 = torch.tensor(0.0, requires_grad=True)
 w2 = torch.tensor(1.5, requires_grad=True); b2 = torch.tensor(0.0, requires_grad=True)
@@ -305,11 +360,13 @@ with torch.no_grad():
   <div class="fx" data-lang="text">z 1.0 h 1.0 y_hat 1.5 L 2.25
 dL/dw2 -3.0 dL/db2 -3.0 dL/dw1 -9.0 dL/db1 -4.5
 after one step, loss = 0.4306640625</div>
-  <p>One backward pass gives every gradient for about 2× the forward cost. Each layer needs only the gradient from above plus values saved in the forward pass. Saving those values is why training uses far more memory than inference.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A team loses a cricket match. The captain looks at which bowlers gave away runs; each bowler looks at which deliveries went wrong. Blame flows back, split by how much each part affected the result. The gradient is each weight's share of the blame.</p></div>
+  <p>One nudge of size 0.05 × gradient on each weight took the loss from 2.25 to 0.43. Notice how the gradient −3 at the loss box was reused by every box to its left; nothing was recomputed. That reuse is why one backward pass gives every gradient for roughly twice the cost of a forward pass. The price: each box must remember its forward values (z, h) until the backward pass arrives. That memory is why training needs far more RAM than just predicting.</p>
+  <div class="callout anlg"><span class="label">Analogy</span><p>A team loses a cricket match by 20 runs. The captain asks which bowlers gave away extra runs; each bowler asks which overs went wrong; each over asks which balls. Blame flows back, split at each level by how much that part affected the result. A weight's gradient is its share of the blame.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>If ReLU's input z had been negative, its slope would be 0, and every gradient to its left would be 0 too: w₁ would never learn from this example. That is the "dying ReLU" problem from section 04 seen from the backward side.</p></div>
 
-  <h2 id="df-opt"><span class="num">06</span>Optimizers</h2>
-  <p>An <strong>optimizer</strong> decides how to use the gradient to update weights. Plain gradient descent struggles in long narrow valleys; smarter optimizers remember past steps or scale each direction.</p>
+  <h2 id="df-opt"><span class="num">07</span>Optimizers</h2>
+  <p>Backprop gives the gradient. The <strong>optimizer</strong> decides what to do with it. The plain rule from section 01, "weight −= learning rate × gradient", is called <strong>SGD</strong> (stochastic gradient descent; "stochastic" because each step uses a random small batch of data, not all of it).</p>
+  <p>SGD has a weakness. Picture a loss surface shaped like a long narrow valley: steep walls on two sides, a gently sloping floor leading to the minimum. The gradient mostly points at the steep walls, so SGD bounces from wall to wall and only slowly drifts along the floor. A bigger learning rate makes it bounce harder, not move faster. The plot below is a real run on such a valley, f = ½(x² + 50y²), where y is 50 times steeper than x:</p>
   <figure class="viz"><svg viewBox="0 0 540 220" width="540">
     <ellipse cx="380" cy="110" rx="60" ry="16" fill="none" stroke="currentColor" opacity="0.25"/>
     <ellipse cx="380" cy="110" rx="170" ry="45" fill="none" stroke="currentColor" opacity="0.25"/>
@@ -320,23 +377,38 @@ after one step, loss = 0.4306640625</div>
     <polyline points="60,35 72,57 84,79 96,100 108,118 120,133 132,142 143,146 155,146 167,143 178,137 189,129 201,121 212,112 222,105 233,98 244,93 254,90 264,89 274,90 283,93 292,97 301,101 310,106 318,111 326,116 333,119 340,121 347,122 354,122 360,121" fill="none" class="sg" stroke-width="2.2"/>
     <text x="40" y="25" class="tm">start</text><text x="372" y="100" class="tg">min</text>
     <text x="20" y="212" class="tr">SGD: zig-zag</text><text x="190" y="212" class="tb">Momentum: overshoots</text><text x="400" y="212" class="tg">Adam: smooth</text>
-  </svg><figcaption>Real first 30 steps on a long narrow valley f = ½(x² + 50y²). SGD bounces between the steep walls and crawls along the flat floor.</figcaption></figure>
+  </svg><figcaption>First 30 steps of three optimizers from the same start. The grey ellipses are contour lines of the valley; the green dot is the minimum. Red SGD bounces between the walls and crawls. Blue momentum moves fast but overshoots. Green Adam glides in.</figcaption></figure>
+  <p>Two fixes, which Adam combines:</p>
+  <p><strong>Momentum</strong>: instead of using today's gradient alone, keep a running average of past gradients (a "velocity") and step along that. When gradients keep flipping sign (wall to wall), they cancel in the average. When they point the same way step after step (along the floor), they add up and the step grows. With β = 0.9, each step keeps 90% of the old velocity and adds the new gradient:</p>
+  <div class="fx" data-lang="py">for name, grads in [("zig-zag", [1, -1, 1, -1, 1, -1]), ("steady", [1, 1, 1, 1, 1, 1])]:
+    v, vs = 0.0, []
+    for g in grads:
+        v = 0.9 * v + g
+        vs.append(round(v, 2))
+    print(f"{name:8s} grads {grads}  velocity {vs}")</div>
+  <div class="fx" data-lang="text">zig-zag  grads [1, -1, 1, -1, 1, -1]  velocity [1.0, -0.1, 0.91, -0.18, 0.84, -0.25]
+steady   grads [1, 1, 1, 1, 1, 1]  velocity [1.0, 1.9, 2.71, 3.44, 4.1, 4.69]</div>
+  <p>Zig-zag gradients give a velocity that stays small; steady ones build up to almost 5× a single gradient. That is the whole trick.</p>
+  <p><strong>RMSprop</strong>: give each weight its own step size. Keep a running average of the <em>squared</em> gradient for each weight, and divide the step by its square root. A weight whose gradients are always huge (the steep wall) gets small steps; a weight with tiny gradients (the flat floor) gets its steps boosted. <strong>Adam</strong> = momentum for direction + RMSprop for per-weight step size, plus a small correction for the first few steps when the averages are still warming up.</p>
   <table class="tbl">
-    <tr><th>Optimizer</th><th>Update (g = gradient)</th><th>Fixes</th></tr>
+    <tr><th>Optimizer</th><th>Update (g = gradient, lr = learning rate)</th><th>Fixes</th></tr>
     <tr><td><strong>SGD</strong></td><td>w −= lr·g</td><td>Baseline; mini-batch noise helps find wide, flat minima</td></tr>
     <tr><td><strong>Momentum</strong></td><td>v = βv + g; w −= lr·v (β = 0.9)</td><td>Zig-zag cancels out; steady direction speeds up</td></tr>
     <tr><td><strong>RMSprop</strong></td><td>s = βs + (1−β)g²; w −= lr·g/(√s + ε)</td><td>Own step per weight: big steps where flat, small where steep</td></tr>
-    <tr><td><strong>Adam</strong></td><td>m = β₁m + (1−β₁)g; s = β₂s + (1−β₂)g²; bias-correct; w −= lr·m̂/(√ŝ + ε)</td><td>Momentum + RMSprop; lr 1e-3, β₁ 0.9, β₂ 0.999</td></tr>
+    <tr><td><strong>Adam</strong></td><td>m = β₁m + (1−β₁)g; s = β₂s + (1−β₂)g²; bias-correct; w −= lr·m̂/(√ŝ + ε)</td><td>Momentum + RMSprop; defaults lr 1e-3, β₁ 0.9, β₂ 0.999</td></tr>
     <tr><td><strong>AdamW</strong></td><td>Adam + w −= lr·λ·w applied separately</td><td>Weight decay that actually works with Adam</td></tr>
   </table>
+  <p>In the table, v is the velocity, s is the running average of g², m is the running average of g, m̂ and ŝ are the warm-up-corrected versions, ε is a tiny number (1e-8) that stops division by zero, and λ is the weight-decay strength (section 08).</p>
   <table class="tbl out"><caption>Loss after 100 steps (same run as the plot; math in Mathematics → Optimization)</caption><tr><th>SGD lr 0.035</th><th>+ momentum 0.9</th><th>RMSprop lr 0.1</th><th>Adam lr 0.3</th></tr><tr><td>0.0257</td><td>0.00109</td><td>0.000071</td><td>0.000256</td></tr></table>
-  <p>SGD's lr is limited by the steep direction (lr &gt; 2/50 blows up), so it crawls along the flat one. Adaptive methods give each direction its own step.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Walking downhill in fog. SGD: feel the slope, step. Momentum: a rolling ball that keeps its speed over small bumps. RMSprop: you remember which directions were steep and step carefully there. Adam: both.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Adam is not always best. On image CNNs, tuned SGD + momentum + cosine schedule often does better on new data. Transformers use AdamW. With Adam, prefer AdamW over <code>Adam(weight_decay=…)</code>, which mixes the decay into the adaptive scaling and weakens it.</p></div>
+  <p>SGD's learning rate cannot go above 2/50 = 0.04 here or the steep direction blows up, so it is stuck crawling along the flat one. The adaptive methods give each direction its own step and finish hundreds of times lower.</p>
+  <div class="callout anlg"><span class="label">Analogy</span><p>Walking downhill in fog. SGD: feel the slope under your feet, take one step, repeat. Momentum: a rolling ball that keeps its speed over small bumps and does not react to every pebble. RMSprop: you remember which directions were steep before and step carefully there, boldly elsewhere. Adam: both.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Adam is not always best. On image CNNs, well-tuned SGD + momentum with a cosine learning-rate schedule often generalises better (does better on new data). Transformers almost always use AdamW. With Adam, prefer AdamW over <code>Adam(weight_decay=…)</code>: the old form mixes the decay into the adaptive scaling and weakens it.</p></div>
 
-  <h2 id="df-reg"><span class="num">07</span>Regularization: L1/L2 &amp; Dropout</h2>
-  <p>Big nets can memorize training data. <strong>Regularization</strong> stops that: a little worse on training data, better on new data.</p>
-  <p><strong>L2</strong> (+λΣw², = <code>weight_decay</code>) shrinks all weights; <strong>L1</strong> (+λΣ|w|) sets useless ones to zero. Early stopping and data augmentation also regularize. Example: 8 features, only the first 3 matter (true weights 3, −2, 1.5):</p>
+  <h2 id="df-reg"><span class="num">08</span>Regularization: L1/L2 &amp; Dropout</h2>
+  <p>A student who memorises last year's question paper word for word scores 100 on that paper and fails the real exam. A big network can do the same: with millions of weights it can memorise every training example, including the noise, and then do badly on new data. This is called <strong>overfitting</strong>. <strong>Regularization</strong> is any trick that makes memorising harder, so the network is forced to learn the general pattern instead. It usually costs a little accuracy on training data and gains more on new data.</p>
+  <h3>L2 and L1: penalise big weights</h3>
+  <p>The idea: add a penalty to the loss for having large weights. The network now has two goals, fit the data and keep weights small, and λ (lambda) sets how much the second goal matters. <strong>L2</strong> adds λ × (sum of squared weights); it shrinks every weight a bit but rarely to exactly zero. In optimizers this is the <code>weight_decay</code> setting. <strong>L1</strong> adds λ × (sum of absolute weights); it pulls with the same force whether a weight is big or small, so useless weights get pushed to exactly 0. That makes L1 a built-in feature selector.</p>
+  <p>Example: 8 input features, but only the first 3 actually matter (true weights 3, −2, 1.5; the other 5 are pure noise). Train three ways:</p>
   <div class="fx" data-lang="py">torch.manual_seed(0)
 n, d = 200, 8
 X = torch.randn(n, d); w_true = torch.zeros(d); w_true[:3] = torch.tensor([3., -2., 1.5])
@@ -356,10 +428,10 @@ for name in ["none", "L2", "L1"]:
   <div class="fx" data-lang="text">none  [3.05, -1.96, 1.47, -0.05, -0.02, 0.0, -0.01, 0.0]
 L2    [2.73, -1.77, 1.34, -0.06, -0.03, 0.02, -0.01, 0.01]
 L1    [2.99, -1.91, 1.42, 0.0, 0.0, 0.0, 0.0, 0.0]</div>
-  <p>L2 shrinks everything a bit; L1 sets the 5 noise weights to exactly 0. (Plain gradient steps on |w| only shake around 0; exact zeros need the soft-threshold step.)</p>
+  <p>Compare the last five numbers in each row. No regularization leaves small junk values (−0.05, −0.02…). L2 shrinks everything a bit, including the real weights (3.05 → 2.73), but junk stays non-zero. L1 sets all 5 noise weights to exactly 0 and keeps the real ones almost intact. (Plain gradient steps on |w| only shake around 0; the exact zeros come from the soft-threshold step in the code, which is what Lasso solvers do.) Early stopping (stop training when validation loss stops improving) and data augmentation (flip, crop, add noise to training images) are other common regularizers.</p>
 
   <h3>Dropout</h3>
-  <p><strong>Dropout</strong> switches off a random share p of units at each training step. The net can't rely on any single unit, so it learns backup paths.</p>
+  <p>In a group project, if one strong student always does the work, the others learn nothing and the group fails when that student is absent. <strong>Dropout</strong> does the same to neurons: at every training step, a random share p of the neurons in a layer is switched off (output set to 0). Which ones changes every step. No neuron can rely on a specific partner always being there, so the network learns several independent ways to reach the answer.</p>
   <figure class="viz"><svg viewBox="0 0 520 150" width="520">
     <g stroke="currentColor" opacity="0.3"><line x1="40" y1="40" x2="130" y2="30"/><line x1="40" y1="40" x2="130" y2="110"/><line x1="40" y1="110" x2="130" y2="30"/><line x1="40" y1="110" x2="130" y2="110"/><line x1="140" y1="30" x2="220" y2="75"/><line x1="140" y1="110" x2="220" y2="75"/></g>
     <circle cx="35" cy="40" r="12" class="fb sb"/><circle cx="35" cy="110" r="12" class="fb sb"/>
@@ -370,22 +442,21 @@ L1    [2.99, -1.91, 1.42, 0.0, 0.0, 0.0, 0.0, 0.0]</div>
     <circle cx="35" cy="40" r="12" class="fb sb"/><circle cx="35" cy="110" r="12" class="fb sb"/>
     <circle cx="135" cy="30" r="12" class="fg sg"/><circle cx="135" cy="70" r="12" class="fg sg"/><circle cx="135" cy="110" r="12" class="fg sg"/><circle cx="225" cy="75" r="12" class="fv sb"/>
     <text x="80" y="145" class="tm">eval: all units on</text></g>
-  </svg><figcaption>No unit can depend on one partner, so the net learns several ways to reach the answer.</figcaption></figure>
+  </svg><figcaption>Left: during training the middle hidden neuron (dashed, ×) is switched off this step; next step a different one will be. Right: at test time every neuron is on.</figcaption></figure>
   <div class="fx" data-lang="py">drop = nn.Dropout(p=0.5); x = torch.ones(8)
 drop.train(); print("train:", drop(x).tolist())
 drop.eval();  print("eval: ", drop(x).tolist())</div>
   <div class="fx" data-lang="text">train: [2.0, 2.0, 0.0, 2.0, 2.0, 0.0, 2.0, 2.0]
 eval:  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]</div>
-  <p>PyTorch uses <strong>inverted dropout</strong>: units that stay on are scaled by 1/(1−p) = 2 during training, so the average stays the same and eval needs no change.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>An office where random people are on leave each day: everyone learns to cover others' work. On the big day the full team comes, which works like averaging many smaller teams (a cheap ensemble).</p></div>
+  <p>Eight inputs of 1.0 went in. In training mode two came out as 0 (dropped) and the rest as 2.0, not 1.0. Why doubled? With half the neurons off, the next layer would receive about half the usual total. Scaling the survivors by 1/(1−p) = 2 keeps the average total the same. This is called <strong>inverted dropout</strong>, and it means test time needs no adjustment: in eval mode everything passes through unchanged.</p>
+  <div class="callout anlg"><span class="label">Analogy</span><p>An office where random people are on leave each day: everyone learns to cover others' work. On the big day the full team comes. The result behaves like an average of many smaller teams, a cheap ensemble.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Dropout must be off when predicting. Forgetting <code>model.eval()</code> gives different answers for the same input every time you call the model. Typical p: 0.1–0.5 for fully connected layers; usually none inside modern CNNs, which rely on BatchNorm instead.</p></div>
 
-  <h2 id="df-bn"><span class="num">08</span>Batch Normalization</h2>
-  <p><strong>Batch normalization (BN)</strong> re-centres each layer's outputs to mean 0, std 1 over the batch. As earlier layers change, later layers get inputs on shifting scales; BN keeps them steady, so training can use a higher learning rate.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Two school boards mark out of 100 and out of 500. Before comparing students, convert both to "how far above average". BN does this at every layer, then learns its own scale (γ) and shift (β).</p>
-  </div>
+  <h2 id="df-bn"><span class="num">09</span>Batch Normalization</h2>
+  <p>Two school boards: one marks out of 100, the other out of 500. A score of 90 means very different things. Before comparing students you convert each score to "how far above the board's average, in units of its spread". That conversion is called <strong>standardising</strong>: subtract the mean, divide by the standard deviation (the typical distance from the mean).</p>
+  <p>Inside a deep network the same problem appears at every layer. Layer 5's inputs are layer 4's outputs, and as layer 4's weights change during training, the scale and centre of what layer 5 receives keep shifting. Layer 5 is chasing a moving target. <strong>Batch normalization (BN)</strong> standardises each neuron's output over the current mini-batch, so the next layer always sees inputs centred near 0 with spread near 1. Then, so the network is not stuck with that fixed scale, BN multiplies by a learnable γ and adds a learnable β.</p>
   <div class="flow"><span>z (batch)</span><span>− μ_B</span><span>÷ √(σ²_B + ε)</span><span>× γ + β</span><span>activation</span></div>
-  <p>For each feature, standardize over the mini-batch, then let the net re-scale with learnable γ (weight) and β (bias). Example: two columns with very different scales come out the same:</p>
+  <p>μ_B is the batch mean, σ²_B the batch variance (spread squared), ε a tiny number so division never hits zero. Two input columns with very different scales (1–4 and 100–400) come out identical:</p>
   <div class="fx" data-lang="py">bn = nn.BatchNorm1d(2)
 xb = torch.tensor([[1., 100.], [2., 200.], [3., 300.], [4., 400.]])
 bn.train(); out = bn(xb)
@@ -400,25 +471,31 @@ print("params:", [n for n, _ in bn.named_parameters()], " buffers:", [n for n, _
 mean tensor([0., 0.]) std tensor([1., 1.])
 running_mean tensor([ 0.2500, 25.0000]) running_var tensor([1.0700e+00, 1.6676e+03])
 params: ['weight', 'bias']  buffers: ['running_mean', 'running_var', 'num_batches_tracked']</div>
-  <p>Running stats move 10% toward each batch (momentum 0.1): 0 → 0.25 for mean 2.5. In <code>eval()</code> these running averages replace batch stats, so one sample always gives the same output.</p>
+  <p>Check column 1 by hand: mean of 1, 2, 3, 4 is 2.5; the value 1 is 1.5 below the mean; the spread is 1.118; 1.5/1.118 = 1.342. Column 2 is the same numbers times 100, so it standardises to the same result. The <code>weight</code> and <code>bias</code> parameters are γ and β.</p>
+  <p>The <code>running_mean</code> line answers an important question: at test time you may predict for one example at a time, so there is no batch to take a mean over. BN therefore keeps a running average of the means and variances it saw during training (each batch moves it 10% of the way: 0 → 0.25 toward 2.5). In <code>eval()</code> mode these saved averages are used instead of batch statistics, so one sample always gives the same output.</p>
   <ul>
-    <li><strong>Why it helps:</strong> smoother loss surface → higher lr works, less trouble from bad init, a little helpful noise. (The original "internal covariate shift" reason is debated.)</li>
-    <li><strong>Placement:</strong> Linear/Conv → BN → ReLU; the layer before can drop its bias. <strong>LayerNorm</strong> normalizes per sample instead → Transformers, RNNs, tiny batches.</li>
+    <li><strong>Why it helps:</strong> a smoother loss surface, so higher learning rates work; much less sensitivity to bad initialization; a little helpful noise from batch-to-batch variation. (The original "internal covariate shift" explanation is debated, but the benefits are real.)</li>
+    <li><strong>Placement:</strong> Linear or Conv → BN → ReLU. The layer before BN can drop its bias, since BN's β replaces it.</li>
+    <li><strong>LayerNorm</strong> standardises across the features of one example instead of across the batch. It does not depend on batch size, so it is the choice for Transformers, RNNs and tiny batches.</li>
   </ul>
-  <div class="callout trap"><span class="label">Trap</span><p>Forgetting <code>model.eval()</code> at validation: BN uses the current batch's stats and dropout stays on, so metrics are noisy and wrong. With tiny batches (1–4) batch stats are useless; use LayerNorm or GroupNorm. Dropout right before BN changes its stats between train and eval; put dropout after, or skip it (ResNets use BN without dropout).</p></div>
-
-  <h2 id="df-vg"><span class="num">09</span>Vanishing &amp; Exploding Gradients</h2>
-  <p>Backprop multiplies one factor per layer. If the factors are below 1, the gradient shrinks to almost 0 (<strong>vanishing</strong>) and early layers stop learning. Above 1, it grows to infinity (<strong>exploding</strong>) and the loss becomes NaN. Example: 0.25²⁰ ≈ 1e-12.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A photocopy of a photocopy of a photocopy: after 20 copies the page is nearly blank (vanishing). A mic placed near its own speaker: a small sound grows into a loud screech (exploding).</p>
+    <p>Every layer re-marks its outputs on a common scale ("how far above average") before handing them on, then learns its own preferred scale and offset (γ, β) on top.</p>
   </div>
+  <div class="callout trap"><span class="label">Trap</span><p>Forgetting <code>model.eval()</code> at validation: BN uses the current batch's statistics and dropout stays on, so metrics are noisy and wrong. With tiny batches (1–4) batch statistics are useless; use LayerNorm or GroupNorm. Dropout right before BN changes its statistics between train and eval; put dropout after BN, or skip it (ResNets use BN without dropout).</p></div>
+
+  <h2 id="df-vg"><span class="num">10</span>Vanishing &amp; Exploding Gradients</h2>
+  <p>Section 06 showed the backward rule: each layer multiplies the gradient it receives by its own slope and passes it on. In a 20-layer network the gradient reaching layer 1 is a product of 20 such factors. Multiply 20 numbers that are each a bit below 1 and you get almost nothing: 0.25²⁰ ≈ 1e-12. Multiply 20 numbers a bit above 1 and you get something enormous. The first is the <strong>vanishing gradient</strong> problem: early layers get no learning signal and stay frozen. The second is <strong>exploding gradients</strong>: weights jump wildly and the loss becomes NaN.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A photocopy of a photocopy of a photocopy: after 20 copies the page is nearly blank (vanishing). A mic placed near its own speaker: a small sound feeds back and grows into a loud screech (exploding).</p>
+  </div>
+  <p>Sigmoid's slope is at most 0.25 (section 04), so a deep sigmoid network is the classic vanishing case. ReLU's slope is 1, so with sensible starting weights the signal survives:</p>
   <figure class="viz"><svg viewBox="0 0 560 160" width="560">
     <text x="10" y="20" class="tm">gradient reaching layer k of a 20-layer net (log scale)</text>
     <g font-size="12"><text x="10" y="55">sigmoid</text><text x="10" y="95">tanh</text><text x="10" y="135">ReLU + He</text></g>
     <rect x="100" y="42" width="19" height="18" class="fr sr"/><text x="126" y="56" class="tr">1.2e-13 at layer 1  (layer 20: 0.36)</text>
     <rect x="100" y="82" width="211" height="18" class="ft st"/><text x="318" y="96">0.027 (layer 20: 0.10)</text>
     <rect x="100" y="122" width="222" height="18" class="fg sg"/><text x="330" y="136">0.11 (layer 20: 0.74)</text>
-  </svg><figcaption>Backprop multiplies one factor per layer. Factors below 1 (sigmoid′ ≤ 0.25) shrink the signal fast; early layers stop learning.</figcaption></figure>
+  </svg><figcaption>Bar length = size of the gradient at layer 1 (log scale, so each equal step is 10×). With sigmoid, layer 1 receives a gradient 10¹³ times smaller than layer 20: it will never learn. ReLU with He init keeps it within one order of magnitude.</figcaption></figure>
   <div class="fx" data-lang="py">def deep(act, init, depth=20):
     layers = []
     for _ in range(depth):
@@ -443,11 +520,18 @@ tanh+Xavier     layer1 grad=2.75e-02  layer20 grad=1.02e-01
 relu+He         layer1 grad=1.12e-01  layer20 grad=7.39e-01
 std=0.3 init: grad norm before clip 3.93e+09
 after clip: 1.000</div>
-  <p><strong>Vanishing</strong> (early layers frozen, loss goes flat) → ReLU family, He/Xavier init, BatchNorm/LayerNorm, residual connections, LSTM gates. <strong>Exploding</strong> (loss → inf/NaN) → <code>clip_grad_norm_</code> (shrinks the whole gradient to a max length), lower lr, proper init.</p>
-  <div class="callout trap"><span class="label">Trap</span><p>Gradient clipping goes <em>after</em> <code>loss.backward()</code> and <em>before</em> <code>optimizer.step()</code>. With mixed precision, unscale first (<code>scaler.unscale_(opt)</code>).</p></div>
+  <p>The last two lines show the exploding case: starting weights that are too large (std 0.3) give a total gradient of 4 billion. <strong>Gradient clipping</strong> is the standard fix: if the overall gradient length exceeds a limit (here 1.0), shrink the whole gradient so its length is exactly that limit. The direction is kept; only the size is capped.</p>
+  <table class="tbl">
+    <tr><th>Symptom</th><th>Problem</th><th>Fixes</th></tr>
+    <tr><td>Loss goes flat early; early layers' weights barely change</td><td>Vanishing</td><td>ReLU family, He/Xavier init (section 11), BatchNorm/LayerNorm, residual connections (CNN note), LSTM gates (RNN note)</td></tr>
+    <tr><td>Loss jumps to inf or NaN</td><td>Exploding</td><td><code>clip_grad_norm_</code>, lower learning rate, proper init</td></tr>
+  </table>
+  <div class="callout trap"><span class="label">Trap</span><p>Gradient clipping goes <em>after</em> <code>loss.backward()</code> (the gradients must exist) and <em>before</em> <code>optimizer.step()</code> (the step must use the clipped values). With mixed precision, call <code>scaler.unscale_(opt)</code> first, or you clip scaled-up numbers.</p></div>
 
-  <h2 id="df-init"><span class="num">10</span>Weight Initialization</h2>
-  <p><strong>Initialization</strong> = the starting random weights. Goal: keep the signal about the same size at every layer, so it neither fades nor blows up before training even starts. Like setting each speaker in a long chain of PA speakers to the right volume. Example: 10 ReLU layers, 512 wide:</p>
+  <h2 id="df-init"><span class="num">11</span>Weight Initialization</h2>
+  <p>Before training, every weight needs a starting value. The previous section showed that the wrong starting size makes the signal fade (std 0.01) or explode (std 0.3) before training even begins. <strong>Initialization</strong> is choosing the starting random values so that the signal stays about the same size as it passes through every layer.</p>
+  <div class="callout anlg"><span class="label">Analogy</span><p>A chain of PA speakers down a long hall, each one re-amplifying the previous. Set each volume a bit too low and the far end hears silence; a bit too high and it screeches. Initialization is setting every speaker to exactly "pass it on at the same volume".</p></div>
+  <p>Watch the spread (std) of the signal after each of 10 ReLU layers, 512 neurons wide, for four starting schemes:</p>
   <div class="fx" data-lang="py">x = torch.randn(1000, 512)
 for name, init in [("std=0.01", lambda w: nn.init.normal_(w, std=0.01)),
                    ("std=1.0",  lambda w: nn.init.normal_(w, std=1.0)),
@@ -461,13 +545,14 @@ for name, init in [("std=0.01", lambda w: nn.init.normal_(w, std=0.01)),
 std=1.0   layer1=13.2 layer5=8.36e+05 layer10=8.73e+11
 Xavier    layer1=0.585 layer5=0.141 layer10=0.0248
 He        layer1=0.827 layer5=0.798 layer10=0.794</div>
+  <p>Only He init holds steady (0.83 → 0.79). Too small shrinks to 1e-9; too big grows to 1e12; Xavier slowly fades with ReLU. The schemes differ only in the variance (spread squared) of the random starting weights, chosen from the number of inputs to the layer (fan_in) and outputs (fan_out):</p>
   <table class="tbl">
     <tr><th>Scheme</th><th>Var(w)</th><th>Pair with</th></tr>
     <tr><td><strong>Zero / constant</strong></td><td>0</td><td>Never for weights (fine for biases)</td></tr>
     <tr><td><strong>Xavier / Glorot</strong></td><td>2 / (fan_in + fan_out)</td><td>tanh, sigmoid</td></tr>
     <tr><td><strong>He / Kaiming</strong></td><td>2 / fan_in</td><td>ReLU family (ReLU zeroes half the signal, so ×2 to make up)</td></tr>
   </table>
-  <p><strong>Why not zeros or a constant:</strong> every unit in a layer computes the same thing, gets the same gradient, and stays a copy forever. After 50 SGD steps from all-0.5 weights:</p>
+  <p><strong>Why not start all weights at zero, or all at the same number?</strong> Every neuron in a layer would then compute the same output, receive the same gradient, and make the same update. They would stay identical copies forever, so a layer of 4 neurons would be no better than 1. After 50 SGD steps from all-0.5 weights:</p>
   <div class="fx" data-lang="py">net = nn.Sequential(nn.Linear(3, 4), nn.Tanh(), nn.Linear(4, 1))
 for p in net.parameters(): nn.init.constant_(p, 0.5)
 opt = torch.optim.SGD(net.parameters(), lr=0.1)
@@ -479,8 +564,8 @@ print(net[0].weight.data.round(decimals=3))</div>
         [0.4740, 0.4720, 0.4530],
         [0.4740, 0.4720, 0.4530],
         [0.4740, 0.4720, 0.4530]])</div>
-  <p>Four hidden units, but only one distinct feature. Random init makes them different from the start.</p>
-  <div class="callout trap"><span class="label">Trap</span><p><code>nn.Linear</code>'s default is <em>not</em> He init: it draws from U(±1/√fan_in), variance 1/(3·fan_in) (checked: max |w| for fan_in 256 = 0.0625). Fine for shallow nets; for deep plain ReLU stacks call <code>nn.init.kaiming_normal_</code> yourself, e.g. with <code>model.apply(init_fn)</code>.</p></div>
+  <p>Four rows, four hidden neurons, all exactly identical. Random init breaks this symmetry from the start.</p>
+  <div class="callout trap"><span class="label">Trap</span><p><code>nn.Linear</code>'s default is <em>not</em> He init: it draws from U(±1/√fan_in), variance 1/(3·fan_in) (checked: max |w| for fan_in 256 = 0.0625). Fine for shallow nets; for deep plain ReLU stacks apply <code>nn.init.kaiming_normal_</code> yourself, e.g. with <code>model.apply(init_fn)</code>:</p></div>
   <div class="fx" data-lang="py">def init_weights(m):
     if isinstance(m, nn.Linear):
         nn.init.kaiming_normal_(m.weight, nonlinearity="relu")
@@ -489,10 +574,11 @@ model = nn.Sequential(nn.Linear(256, 128), nn.ReLU(), nn.Linear(128, 10))
 model.apply(init_weights)      # visits every submodule
 print(round(model[0].weight.std().item(), 4), round((2 / 256) ** 0.5, 4))</div>
   <div class="fx" data-lang="text">0.0882 0.0884</div>
-  <p>Measured weight std matches He's √(2/256).</p>
+  <p>The measured weight std (0.0882) matches He's √(2/256) = 0.0884.</p>
 
-  <h2 id="df-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <h2 id="df-qa"><span class="num">12</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>In one line each: what are a weight, a loss, a gradient and a learning rate?</summary><div class="qa-body">Weight: a number the network adjusts to make better guesses. Loss: one number saying how wrong the current guesses are (0 = perfect). Gradient: the slope of the loss with respect to a weight, i.e. which way and how strongly to nudge it. Learning rate: the small multiplier that scales the nudge.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Why can't a single perceptron learn XOR, and what fixes it?</summary><div class="qa-body">It draws one straight line (hyperplane); XOR's classes sit on opposite corners, so no line separates them. A hidden layer with a non-linear activation moves the points into a space where a line works, e.g. a 2-4-1 tanh MLP gets [0,1,1,0].</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What is backpropagation and why is it efficient?</summary><div class="qa-body">The chain rule run from the loss back to the inputs. Each layer multiplies the incoming gradient by its local slope and passes it on, reusing work. All gradients cost about one extra forward pass, instead of one pass per weight. Price: storing the forward values in memory.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Tiny net: x=2, z=w₁x, h=ReLU(z), ŷ=w₂h, L=(ŷ−3)², w₁=0.5, w₂=1.5. What is ∂L/∂w₁?</summary><div class="qa-body">z=1, h=1, ŷ=1.5. ∂L/∂ŷ = 2(1.5−3) = −3. ∂L/∂h = −3·w₂ = −4.5. ReLU′(1)=1. ∂L/∂w₁ = −4.5·x = <strong>−9</strong>. Negative → increase w₁.</div></details>

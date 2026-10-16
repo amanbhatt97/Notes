@@ -2,7 +2,7 @@
 Object.assign(TOPIC_CONTENT, {
   "ml_trees": `<main>
   <h1>Tree-Based Models</h1>
-  <p class="lead">The strongest family of classic ML for table data (rows and columns, like an Excel sheet). A decision tree asks yes/no questions. A random forest averages hundreds of trees. Gradient boosting (XGBoost, LightGBM, CatBoost) builds trees one after another, each fixing the last one's mistakes. Every number below comes from real runs on one 20,000-row dataset.</p>
+  <p class="lead">The strongest family of classic ML for table data (rows and columns, like an Excel sheet). A decision tree asks yes/no questions. A random forest averages hundreds of trees. Gradient boosting (XGBoost, LightGBM, CatBoost) builds trees one after another, each fixing the last one's mistakes. The big runs below all use one 20,000-row dataset, so the numbers can be compared; the tiny examples use small tables you can check by hand.</p>
 
   <h2 id="mt-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -103,7 +103,42 @@ Object.assign(TOPIC_CONTENT, {
   </div>
 
   <h2 id="mt-split"><span class="num">01</span>How a Tree Splits (CART)</h2>
-  <p>A decision tree asks one yes/no question at a time until it can give an answer. Why use it: easy to read, no scaling needed, and it handles curved patterns and feature combinations on its own. How: try every feature and every cut-off, keep the question that leaves the "purest" groups, repeat inside each group. CART is the standard algorithm for this.</p>
+  <p>You decide every evening whether to go out and play cricket. Over a week, your reasons settle into questions: "Is it raining? Is there an exam tomorrow? Is it too hot?" Each question has a yes/no answer, and the answers lead you to a decision. A <strong>decision tree</strong> is exactly this: a list of yes/no questions about the columns of a table, ending in an answer. The machine learns which questions to ask, and in which order, from past rows.</p>
+  <p>Why does anyone need it? Logistic regression (from the Classification note) draws one straight line through the data. Real patterns bend: "plays if temperature is 29–39 and no exam, unless it rains". A tree handles bends and combinations of columns on its own, needs no scaling of the numbers, and you can read its rules aloud.</p>
+  <div class="fx" data-lang="py">import pandas as pd
+from sklearn.tree import DecisionTreeClassifier, export_text
+df = pd.DataFrame({
+    "raining":       [1, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+    "exam_tomorrow": [0, 0, 1, 0, 0, 1, 0, 0, 0, 0],
+    "temp_c":        [30, 31, 30, 44, 32, 33, 29, 45, 34, 29],
+    "plays":         ["no", "yes", "no", "no", "no", "no", "yes", "no", "yes", "no"]})
+X, y = df.drop(columns="plays"), df["plays"]          # X = the questions' columns, y = the answer
+tree = DecisionTreeClassifier(random_state=0).fit(X, y)
+print(export_text(tree, feature_names=list(X.columns)))
+new_day = pd.DataFrame({"raining": [0], "exam_tomorrow": [0], "temp_c": [32]})
+print(tree.predict(new_day))</div>
+  <div class="fx" data-lang="text">|--- raining &lt;= 0.50
+|   |--- temp_c &lt;= 39.00
+|   |   |--- exam_tomorrow &lt;= 0.50
+|   |   |   |--- class: yes
+|   |   |--- exam_tomorrow &gt;  0.50
+|   |   |   |--- class: no
+|   |--- temp_c &gt;  39.00
+|   |   |--- class: no
+|--- raining &gt;  0.50
+|   |--- class: no
+
+['yes']</div>
+  <p>Read it top to bottom. First question: raining? If yes (raining &gt; 0.5), the answer is "no" straight away. If not raining, next question: hotter than 39°C? And so on. The new day (no rain, no exam, 32°C) walks down the left branches and lands on "yes". The tree picked these questions itself. The rest of this section is about <em>how</em> it picks them.</p>
+  <h3>Which question comes first?</h3>
+  <p>The tree wants each question to separate the "yes" rows from the "no" rows as cleanly as possible. A group where everyone has the same answer is called <strong>pure</strong>. A group that is half and half is as mixed as it gets. The tree needs a number that says how mixed a group is, so it can compare questions. That number is called <strong>impurity</strong>.</p>
+  <p>The usual impurity score is <strong>Gini</strong>. Its meaning in words: pick two rows from the group at random; Gini is the chance they have different answers. Tiny worked example with a group of 5 rows:</p>
+  <ul>
+    <li>Group [4 yes, 1 no]: share of yes = 0.8, share of no = 0.2. Gini = 1 − (0.8² + 0.2²) = 1 − (0.64 + 0.04) = <strong>0.32</strong>.</li>
+    <li>Group [0 yes, 5 no]: Gini = 1 − (0² + 1²) = <strong>0</strong>. Pure.</li>
+    <li>Group [5 yes, 5 no]: Gini = 1 − (0.25 + 0.25) = <strong>0.5</strong>. The most mixed a two-class group can be.</li>
+  </ul>
+  <p>Now the search. Take 10 customers of a mobile company: 4 left (churned), 6 stayed. The tree tries every column and every cut-off, and for each one it computes how much the impurity falls. The question with the biggest fall wins. The picture shows one such comparison.</p>
   <figure class="viz"><svg viewBox="0 0 560 210" width="560">
 <defs><marker id="mt-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
 <rect x="40" y="10" width="270" height="50" rx="6" class="fs" stroke="currentColor"/>
@@ -123,9 +158,7 @@ Object.assign(TOPIC_CONTENT, {
 <text x="370" y="160" class="tb" font-size="13">tree picks "contract"</text>
 <text x="10" y="200" class="tm" font-size="12">Try every feature × cut-off, keep the biggest drop, repeat in each child.</text>
 </svg><figcaption>One split, worked by hand: the question that leaves the purest children wins.</figcaption></figure>
-  <div class="callout intu"><span class="label">Key formula</span>
-    <p><strong>Gini = 1 − Σpᵢ²</strong> (chance two random picks disagree). <strong>Entropy = −Σpᵢlog₂pᵢ</strong>. Gain = impurity(parent) − Σ (nₖ/n)·impurity(childₖ).</p>
-  </div>
+  <p>Look at the two children of "contract = monthly?". The left child has Gini 0.32, the right child is pure (Gini 0). The tree averages the children, giving more weight to the bigger child: here both have 5 rows, so 0.5 × 0.32 + 0.5 × 0 = 0.16. The parent was 0.48, so this question removes 0.48 − 0.16 = 0.32 of impurity. The rival question "age &lt; 30" removes only 0.013. So the tree asks about the contract first, then repeats the same search inside each child.</p>
   <div class="fx" data-lang="py">def gini(c): p = np.array(c)/sum(c); return 1 - (p**2).sum()
 def ent(c):  p = np.array(c)/sum(c); p = p[p &gt; 0]; return -(p*np.log2(p)).sum()
 parent = [4, 6]                                         # [churn, stay]
@@ -138,12 +171,20 @@ for n, (l, r) in splits.items():
   <div class="fx" data-lang="text">parent  gini 0.480  entropy 0.971
 contract = monthly   Gini gain 0.320 | info gain 0.610
 age &lt; 30             Gini gain 0.013 | info gain 0.020</div>
-  <p><strong>Impurity</strong> means how mixed a group is. Gini and entropy are two ways to measure it, and they almost always pick the same split. Gini (sklearn default) has no log, so it is a bit faster. Regression trees do the same search but reduce MSE, and each leaf predicts the average.</p>
+  <p>The code checks the picture. <code>gini(c)</code> takes the counts in a group and returns 1 − Σp². <code>ent(c)</code> is <strong>entropy</strong>, a second way to score mixing, using logs. Both rank the two questions the same way, and in practice they almost always agree. Gini is sklearn's default because it has no log, so it is a little faster.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A doctor's checklist: "Fever? → Cough? → Get a test." A good doctor asks first the question that rules out the most diseases. The tree does the same with features.</p>
+    <p>A doctor's checklist: "Fever? → Cough? → Get a test." A good doctor asks first the question that rules out the most diseases. The tree does the same: the first question is the one that separates the answers most.</p>
+  </div>
+  <div class="callout intu"><span class="label">Formal terms</span>
+    <p><strong>CART</strong> (Classification And Regression Trees) is the name of this build-by-greedy-splits method. <strong>Gini = 1 − Σpᵢ²</strong>, where pᵢ is the share of rows in class i (chance two random picks disagree). <strong>Entropy = −Σ pᵢ log₂ pᵢ</strong> (how many bits of surprise per row). <strong>Gain = impurity(parent) − Σ (nₖ/n) · impurity(childₖ)</strong>: parent's impurity minus the size-weighted impurity of the children (nₖ = rows in child k, n = rows in parent). A <strong>regression tree</strong> does the same search for a number target, but it measures mixing by MSE (mean squared error) and each leaf predicts the average of its rows.</p>
+  </div>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Every question is "one column, one cut-off", so a tree's borders are always straight lines parallel to the axes. A pattern like "price &gt; 2 × size" needs a staircase of many splits. Give the tree a column for the ratio and it gets easy.</p>
   </div>
 
   <h2 id="mt-prune"><span class="num">02</span>Overfitting &amp; Pruning</h2>
+  <p>Back to the churn customers. Nobody stops the tree, so it keeps asking questions until every leaf is pure. On 12,000 training rows it ends with 1,413 leaves. Some of those leaves hold two or three rows and a rule like "customer from Pune, aged 41, who called on a Tuesday → churns". That rule fits those three people, not a pattern. On new customers it is wrong. This is <strong>overfitting</strong>: the model memorised its training rows instead of learning what repeats.</p>
+  <p>You can see it with two scores: <strong>train accuracy</strong> (how well it does on the rows it learnt from) and <strong>validation accuracy</strong> (how well it does on rows kept aside, which it never saw). A memorising tree scores 1.000 on train and only 0.773 on validation.</p>
   <figure class="viz"><svg viewBox="0 0 560 235" width="560">
 <line x1="50" y1="200" x2="530" y2="200" stroke="currentColor"/><line x1="50" y1="15" x2="50" y2="200" stroke="currentColor"/>
 <text x="44" y="184" text-anchor="end" class="tm" font-size="11">0.6</text><text x="44" y="104" text-anchor="end" class="tm" font-size="11">0.8</text><text x="44" y="24" text-anchor="end" class="tm" font-size="11">1.0</text>
@@ -156,13 +197,11 @@ age &lt; 30             Gini gain 0.013 | info gain 0.020</div>
 <text x="398" y="40" text-anchor="end" class="tb" font-size="12">train → 1.000</text><text x="425" y="150" class="tr" font-size="12">validation 0.773</text>
 <text x="380" y="132" text-anchor="middle" class="tg" font-size="12">sweet spot 0.807</text>
 </svg><figcaption>Deeper trees keep improving on training data and start losing on validation after depth ~10.</figcaption></figure>
-  <p>With no limits, a tree keeps splitting until every leaf is pure. It remembers the training data perfectly but does badly on new data. <strong>Pruning</strong> means limiting or cutting back the tree. Two ways:</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A rule like "a customer named Ravi from Pune who called on a Tuesday will churn" fits one person, not a pattern. Deep branches make such rules; pruning removes them.</p>
-  </div>
+  <p>Blue is the train score, red is the validation score, as the tree is allowed to grow deeper. Both rise at first. After depth 10 the blue line keeps climbing but the red line turns down. The extra depth is only learning noise.</p>
+  <p>The cure is called <strong>pruning</strong>: keep the tree small. Two ways:</p>
   <div class="cards">
-    <div><b>Pre-pruning</b><p>Stop early: <code>max_depth</code>, <code>min_samples_leaf</code>, <code>min_impurity_decrease</code>.</p><small>Cheap, the usual choice</small></div>
-    <div><b>Post-pruning</b><p>Grow fully, then cut subtrees that don't pay for themselves: minimise Error + α·|leaves|.</p><small><code>ccp_alpha</code>, choose α by CV</small></div>
+    <div><b>Pre-pruning (stop early)</b><p>Set limits before training: <code>max_depth</code> (how many questions deep), <code>min_samples_leaf</code> (a leaf must hold at least this many rows), <code>min_impurity_decrease</code> (a split must remove at least this much impurity).</p><small>Cheap, the usual choice</small></div>
+    <div><b>Post-pruning (grow, then cut)</b><p>Grow the full tree, then cut back branches that do not pay for themselves. Each leaf costs a fixed penalty α; a branch stays only if it reduces error by more than its leaves cost.</p><small><code>ccp_alpha</code>; pick α by validation / CV</small></div>
   </div>
   <div class="fx" data-lang="py">for d in [1, 3, 6, 10, None]:
     t = DecisionTreeClassifier(max_depth=d, random_state=0).fit(Xtr, ytr)
@@ -179,12 +218,46 @@ ccp_alpha=0.0001 leaves= 1142  train 0.988  val 0.782
 ccp_alpha=0.0003 leaves=  280  train 0.891  val 0.815
 ccp_alpha=0.001  leaves=   58  train 0.804  val 0.788
 ccp_alpha=0.003  leaves=   26  train 0.770  val 0.765</div>
-  <div class="callout def"><span class="label">The dataset</span>
-    <p><code>make_classification(n_samples=20000, n_features=12, n_informative=6, n_redundant=2, n_clusters_per_class=3, class_sep=0.8, flip_y=0.05, random_state=7)</code> + two pure-noise columns (<code>row_noise</code>: 20,000 unique values; <code>coin_noise</code>: 0/1). Split 12,000 train / 3,000 val / 5,000 test. Logistic regression scores only 0.596: the signal is non-linear.</p>
+  <p>Each line is one tree. With <code>max_depth=1</code> (a single question) the tree is too simple: 0.60 on both sets. Depth 10 is the sweet spot at 0.807. No limit gives the memoriser. The second block uses post-pruning: <code>ccp_alpha=0.0003</code> cuts 1,413 leaves down to 280 and gives the best validation score of all, 0.815.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Preparing for an exam from last year's paper. Learning the chapters is like a depth-10 tree. Memorising that "question 7 answer is (c)" is a 1,413-leaf tree: perfect on last year's paper, useless on this year's.</p>
+  </div>
+  <div class="callout def"><span class="label">The dataset used on this page</span>
+    <p>Fake churn data from <code>make_classification(n_samples=20000, n_features=12, n_informative=6, n_redundant=2, n_clusters_per_class=3, class_sep=0.8, flip_y=0.05, random_state=7)</code> plus two pure-noise columns (<code>row_noise</code>: 20,000 unique values; <code>coin_noise</code>: 0/1). Split 12,000 train / 3,000 validation / 5,000 test. Logistic regression scores only 0.596 on it, so the pattern is not a straight line.</p>
+  </div>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>A single tree is unstable. Remove 50 rows from the training data and the best first question may change, which changes every question below it. Two trees trained on almost the same data can look completely different. The next section fixes this.</p>
   </div>
 
   <h2 id="mt-rf"><span class="num">03</span>Random Forest</h2>
-  <p>A random forest trains many trees on slightly different data and averages their answers. Why: one deep tree changes a lot if the data changes a little (high variance). Averaging many different trees cancels out their individual mistakes.</p>
+  <p>At a mela there is a jar of laddoos and a prize for the closest guess of how many are inside. One person's guess is often far off. But the average of 100 people's guesses is usually very close, because one guesses too high, another too low, and the mistakes cancel. The trick only works if the 100 people guess on their own. If they all copy one loud friend, the average is just that friend's guess.</p>
+  <div class="fx" data-lang="py">import numpy as np
+rng = np.random.default_rng(0)
+true = 500
+one = true + rng.normal(0, 100, 10_000)                          # one person's guess, 10k trials
+avg = true + rng.normal(0, 100, (10_000, 100)).mean(1)            # mean of 100 independent guesses
+friend = rng.normal(0, 100, (10_000, 1))                          # shared mistake
+copy = true + (0.8*friend + 0.2*rng.normal(0, 100, (10_000, 100))).mean(1)
+for n, g in [("one guess", one), ("avg of 100 independent", avg), ("avg of 100 copiers", copy)]:
+    print(f"{n:24s} typical error {np.abs(g - true).mean():5.1f}")</div>
+  <div class="fx" data-lang="text">one guess                typical error  80.0
+avg of 100 independent   typical error   8.0
+avg of 100 copiers       typical error  64.5</div>
+  <p>Averaging 100 independent guesses cut the error 10×. Averaging 100 copiers barely helped. A <strong>random forest</strong> applies this to trees: train many deep trees, let each one vote, and take the majority (or the average, for numbers). A single deep tree is the unreliable guesser from the last section; the forest is the crowd. To stop the trees from "copying" each other, the forest adds two kinds of randomness:</p>
+  <div class="cards">
+    <div><b>1. Different rows (bootstrap)</b><p>Each tree gets its own training set, made by picking 12,000 rows at random <em>with replacement</em> from the 12,000. Some rows appear twice, some never.</p><small>Called bagging: bootstrap + aggregating</small></div>
+    <div><b>2. Different columns per split</b><p>At every split, the tree may look at only a random handful of columns (√12 ≈ 3 here), not all 12. So the strongest column cannot sit at the top of every tree.</p><small><code>max_features="sqrt"</code></small></div>
+  </div>
+  <div class="fx" data-lang="py">rng = np.random.default_rng(3)
+rows = rng.integers(0, 10, 10)                       # draw 10 row numbers from 0..9, with replacement
+print("bootstrap rows:", sorted(rows.tolist()))
+print("never picked:  ", sorted(set(range(10)) - set(rows.tolist())))
+big = rng.integers(0, 100_000, 100_000)
+print("share of unique rows (n=100,000):", round(len(np.unique(big)) / 100_000, 3))</div>
+  <div class="fx" data-lang="text">bootstrap rows: [0, 0, 0, 1, 1, 2, 5, 8, 8, 8]
+never picked:   [3, 4, 6, 7, 9]
+share of unique rows (n=100,000): 0.631</div>
+  <p>A bootstrap sample of 10 rows picked row 0 three times and never picked rows 3, 4, 6, 7, 9. On big data about 63% of rows get into each tree and about 37% are left out. Those left-out rows are a free mini test set for that tree, called <strong>out-of-bag (OOB)</strong> rows.</p>
   <figure class="viz"><svg viewBox="0 0 560 200" width="560">
 <defs><marker id="mt-ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
 <rect x="10" y="75" width="90" height="50" rx="6" class="fs" stroke="currentColor"/><text x="55" y="97" text-anchor="middle" font-size="12">training</text><text x="55" y="113" text-anchor="middle" font-size="12">data</text>
@@ -199,12 +272,7 @@ ccp_alpha=0.003  leaves=   26  train 0.770  val 0.765</div>
 <rect x="480" y="75" width="70" height="50" rx="6" class="fg sg" fill-opacity="0.25"/><text x="515" y="97" text-anchor="middle" font-size="12">vote /</text><text x="515" y="113" text-anchor="middle" font-size="12">average</text>
 <line x1="450" y1="35" x2="478" y2="90" stroke="currentColor" marker-end="url(#mt-ah2)"/><line x1="450" y1="100" x2="478" y2="100" stroke="currentColor" marker-end="url(#mt-ah2)"/><line x1="450" y1="165" x2="478" y2="110" stroke="currentColor" marker-end="url(#mt-ah2)"/>
 </svg><figcaption>Two sources of randomness: each tree sees different rows (bootstrap) and each split sees a random few features. Different trees make different mistakes, which cancel in the vote.</figcaption></figure>
-  <div class="callout intu"><span class="label">Key formula</span>
-    <p><strong>Var(average of n trees) = ρσ² + (1 − ρ)σ²/n</strong>. Adding trees shrinks only the second term. The floor ρσ² falls only if trees are less correlated (ρ), which is what feature subsampling buys.</p>
-  </div>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Ask 100 people to guess the number of laddoos in a box, and the average is usually close. But if all 100 copy one friend's guess, the average is only as good as that friend. Random rows and random features stop the trees from "copying" each other.</p>
-  </div>
+  <p>Follow the arrows: the training data becomes 500 different bootstrap samples, each grows its own tree with its own random columns at each split, and all 500 votes are combined at the end.</p>
   <div class="fx" data-lang="py">for n, mf in [(1, None), (100, None), (100, "sqrt"), (300, "sqrt")]:
     rf = RandomForestClassifier(n_estimators=n, max_features=mf, oob_score=(n &gt; 1),
                                 n_jobs=-1, random_state=0).fit(Xtr, ytr)
@@ -213,13 +281,23 @@ ccp_alpha=0.003  leaves=   26  train 0.770  val 0.765</div>
 trees=100 max_features=None  train 1.000  val 0.879  OOB 0.861  11.7s
 trees=100 max_features=sqrt  train 1.000  val 0.880  OOB 0.858  4.3s
 trees=300 max_features=sqrt  train 1.000  val 0.879  OOB 0.864  8.4s</div>
-  <p>One tree to 100 trees: +11 points. Trying √d features per split gave the same accuracy here, 2.7× faster. It helps most when one strong feature would otherwise sit at the top of every tree. More than ~300 trees adds little. Train accuracy 1.000 is normal for a forest and is not a warning by itself.</p>
+  <p>One tree: 0.770 on validation. One hundred trees: 0.879. That is +11 points from averaging alone. Letting each split see only √d columns gave the same accuracy and ran 2.7× faster. Going from 100 to 300 trees changed nothing, which is normal: after a few hundred trees the average has settled. Train accuracy 1.000 is also normal for a forest (each deep tree memorises its own sample) and is not a warning by itself.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>The laddoo jar. 100 independent guesses beat one guess. Random rows and random columns are how the forest stops its trees from copying one another.</p>
+  </div>
+  <div class="callout intu"><span class="label">Formal terms</span>
+    <p><strong>Variance</strong> — how much a model's answer jumps around when its training data changes a little. A deep tree has high variance; averaging lowers it. The formula interviewers ask for: <strong>Var(average of n trees) = ρσ² + (1 − ρ)σ²/n</strong>. σ² is one tree's variance, n is the number of trees, ρ (rho) is the correlation between trees, meaning how much they copy each other (0 = independent, 1 = identical). More trees shrink only the second term. The first term, ρσ², is a floor that only drops if the trees are less alike. That is exactly what random columns per split buy.</p>
+  </div>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>OOB score (each tree judged on the ~37% rows it never saw) is free, but it ignores preprocessing fitted outside the forest and can be noisy on small data. Use it as a sanity check; select models on a proper validation set or CV.</p>
+    <p>The OOB score (each tree judged on the rows it never saw) is free, but it ignores any preprocessing you fitted outside the forest and it is noisy on small data. Use it as a sanity check; pick models on a proper validation set or cross-validation.</p>
   </div>
 
   <h2 id="mt-imp"><span class="num">04</span>Feature Importance</h2>
-  <p>Feature importance tells you which columns the model leans on most. Why it matters: business teams ask "what drives churn?", and you use it to drop useless columns. There are two common ways to measure it, and they can disagree badly.</p>
+  <p>After the churn model is built, the business team asks: "So what makes customers leave?" You also want to know which of your 14 columns are doing nothing, so you can drop them. <strong>Feature importance</strong> is a score per column saying how much the model leans on it. There are two common ways to compute it, and on this data they disagree badly.</p>
+  <div class="cards">
+    <div><b>Impurity importance (MDI)</b><p>Add up how much impurity each column removed across all splits in all trees. Free: it comes out of training.</p><small><code>rf.feature_importances_</code></small></div>
+    <div><b>Permutation importance</b><p>Take validation rows, shuffle one column so it becomes nonsense, and see how far the score falls. A big fall means the model really needs that column.</p><small><code>permutation_importance</code></small></div>
+  </div>
   <div class="fx" data-lang="py">from sklearn.inspection import permutation_importance
 rf = RandomForestClassifier(n_estimators=200, n_jobs=-1, random_state=0).fit(Xtr, ytr)
 perm = permutation_importance(rf, Xva, yva, n_repeats=5, random_state=0, n_jobs=-1)
@@ -234,8 +312,12 @@ df = pd.DataFrame({"impurity (MDI)": rf.feature_importances_,
     <tr><td><strong>row_noise</strong> (random, 20k values)</td><td><strong>0.036</strong></td><td>0.004</td><td>11</td><td>9</td></tr>
     <tr><td><strong>coin_noise</strong> (random, 2 values)</td><td><strong>0.005</strong></td><td>0.001</td><td>14</td><td>13</td></tr>
   </table>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Both noise columns are random garbage. Still, MDI gives the one with 20,000 values 7× the importance of the 0/1 one. More unique values means more cut-offs to try, so more chances of a lucky split on training data. Permutation importance on validation data puts both near 0. Never report raw MDI as "what drives the model" without checking.</p>
+  <p>Look at the last two rows. <code>row_noise</code> and <code>coin_noise</code> are both pure random numbers: neither can tell churners from stayers. Yet impurity importance gives <code>row_noise</code> 0.036, about the same as a weak real feature, and 7× more than <code>coin_noise</code>. Permutation importance puts both near zero, which is the truth.</p>
+  <div class="callout trap"><span class="label">Trap: the cardinality bias</span>
+    <p>A column with many distinct values (<code>row_noise</code> has 20,000) offers the tree 20,000 cut-offs to try. With that many tries, some cut-off will separate the training rows a little by pure luck, and impurity importance counts that luck as skill. A 0/1 column offers one cut-off and no luck. This is why a customer-ID-like column often shows up as "important". Never report raw impurity importance as "what drives churn" without checking it with permutation importance on validation data.</p>
+  </div>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Permutation importance is like testing a cricket team by removing one player at a time and seeing how badly the team does without him. Impurity importance is like counting how many balls each player touched during practice: a player who touched many balls may still not matter in a match.</p>
   </div>
   <table class="tbl">
     <tr><th>Method</th><th>Measures</th><th>Watch out</th></tr>
@@ -243,25 +325,20 @@ df = pd.DataFrame({"impurity (MDI)": rf.feature_importances_,
     <tr><td>Permutation</td><td>Validation score drop when a column is shuffled</td><td>Correlated features share credit (shuffle one, the twin covers)</td></tr>
     <tr><td>SHAP (TreeExplainer)</td><td>Each feature's signed contribution to each prediction; sums to prediction − baseline</td><td>Slower; explains the model, not causality</td></tr>
   </table>
+  <p>SHAP goes one step further: for a single prediction, it says how much each column pushed the answer up or down. Use it when someone asks "why did the model flag <em>this</em> customer?"</p>
 
   <h2 id="mt-boost"><span class="num">05</span>Boosting Intuition</h2>
-  <p>Boosting builds small trees one after another. Each new tree looks only at what the model still gets wrong (the residuals) and corrects part of it. Why: many weak, simple trees added this way become one very strong model.</p>
-  <figure class="viz"><svg viewBox="0 0 560 200" width="560">
-<defs><marker id="mt-ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="10" y="20" width="110" height="46" rx="6" class="fs" stroke="currentColor"/><text x="65" y="40" text-anchor="middle" font-size="12">F₀ = mean</text><text x="65" y="57" text-anchor="middle" class="tm" font-size="11">170 for all</text>
-<rect x="150" y="20" width="110" height="46" rx="6" class="ft st" fill-opacity="0.25"/><text x="205" y="40" text-anchor="middle" font-size="12">+ 0.5·tree₁</text><text x="205" y="57" text-anchor="middle" class="tm" font-size="11">size ≤ 95?</text>
-<rect x="290" y="20" width="110" height="46" rx="6" class="ft st" fill-opacity="0.25"/><text x="345" y="40" text-anchor="middle" font-size="12">+ 0.5·tree₂</text><text x="345" y="57" text-anchor="middle" class="tm" font-size="11">size ≤ 75?</text>
-<rect x="430" y="20" width="110" height="46" rx="6" class="ft st" fill-opacity="0.25"/><text x="485" y="40" text-anchor="middle" font-size="12">+ 0.5·tree₃</text><text x="485" y="57" text-anchor="middle" class="tm" font-size="11">size ≤ 115?</text>
-<line x1="120" y1="43" x2="148" y2="43" stroke="currentColor" marker-end="url(#mt-ah3)"/><line x1="260" y1="43" x2="288" y2="43" stroke="currentColor" marker-end="url(#mt-ah3)"/><line x1="400" y1="43" x2="428" y2="43" stroke="currentColor" marker-end="url(#mt-ah3)"/>
-<text x="135" y="14" text-anchor="middle" class="tm" font-size="10">fit residuals</text><text x="275" y="14" text-anchor="middle" class="tm" font-size="10">fit residuals</text><text x="415" y="14" text-anchor="middle" class="tm" font-size="10">fit residuals</text>
-<line x1="10" y1="180" x2="550" y2="180" stroke="currentColor"/>
-<rect x="40" y="90" width="50" height="90" class="fr sr" fill-opacity="0.5"/><rect x="180" y="143" width="50" height="37" class="fr sr" fill-opacity="0.5"/><rect x="320" y="165" width="50" height="15" class="fr sr" fill-opacity="0.5"/><rect x="460" y="171" width="50" height="9" class="fr sr" fill-opacity="0.5"/>
-<text x="65" y="86" text-anchor="middle" font-size="12">MSE 2450</text><text x="205" y="139" text-anchor="middle" font-size="12">1005</text><text x="345" y="161" text-anchor="middle" font-size="12">411</text><text x="485" y="167" text-anchor="middle" font-size="12">233</text>
-<text x="280" y="197" text-anchor="middle" class="tm" font-size="11">training error after each step (8 flat prices, depth-1 trees, learning rate 0.5)</text>
-</svg><figcaption>Each new small tree is trained on what the model still gets wrong; adding a shrunken copy of it chips the error down.</figcaption></figure>
-  <div class="callout intu"><span class="label">Key formula</span>
-    <p><strong>F_m(x) = F_{m−1}(x) + η · h_m(x)</strong>, where h_m is fitted to the negative gradient −∂L/∂F. For squared error that is just the residual y − F, hence "fitting residuals". Other losses (log loss, MAE, custom) give "pseudo-residuals".</p>
+  <p>A forest builds all its trees at once and averages them. <strong>Boosting</strong> builds trees one after another, and each new tree is trained on the <em>mistakes</em> the model has made so far. The idea: a very simple tree can only fix part of the error, but a chain of simple trees, each fixing what is left, adds up to a strong model.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Chasing 250 in an ODI. The openers make 120. The next pair does not start from zero; they work only on the 130 still needed. The pair after them works on whatever is still left. Each pair's job is "what remains", and all their runs add up.</p>
   </div>
+  <p>Tiny worked example. Eight flats, size in square metres and price in lakh rupees. We want to predict price from size.</p>
+  <ol>
+    <li>Start with the dumbest guess for every flat: the average price, 170. The leftover error for each flat is called its <strong>residual</strong> (actual − predicted). The flat at 50 sq m costs 100, so its residual is −70.</li>
+    <li>Train a one-question tree (a <strong>stump</strong>) to predict the residuals from size. It learns "size ≤ 95 → about −34, else → about +57".</li>
+    <li>Add <em>half</em> of the stump's answer to every prediction. Half, not all, so each step is cautious. That fraction is the <strong>learning rate</strong>.</li>
+    <li>Recompute residuals. They are smaller now. Train the next stump on them. Repeat.</li>
+  </ol>
   <div class="fx" data-lang="py">x = np.array([50, 60, 70, 80, 90, 100, 110, 120])[:, None]       # flat size (sq m)
 y = np.array([100, 120, 130, 160, 170, 210, 220, 250], float)   # price (₹ lakh)
 F = np.full(len(y), y.mean()); lr = 0.5
@@ -276,8 +353,23 @@ for m in range(1, 4):
 tree 1: split size &lt;= 95  leaf values [-34.   56.7]  MSE 1005.0
 tree 2: split size &lt;= 75  leaf values [-36.3  21.8]  MSE 410.9
 tree 3: split size &lt;= 115  leaf values [-5.8 40.8]  MSE 232.9</div>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Chasing 250 in an ODI. The openers make 120. The next pair works only on the 130 still needed, then the next pair on what is left. The learning rate is playing safe: take part of the remaining target each time instead of hitting out and getting bowled.</p>
+  <p>MSE (mean squared error, the average of residual²) goes 2450 → 1005 → 411 → 233 in three steps. Each stump splits at a different size, because it is chasing whatever error is left, not the original prices.</p>
+  <figure class="viz"><svg viewBox="0 0 560 200" width="560">
+<defs><marker id="mt-ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+<rect x="10" y="20" width="110" height="46" rx="6" class="fs" stroke="currentColor"/><text x="65" y="40" text-anchor="middle" font-size="12">F₀ = mean</text><text x="65" y="57" text-anchor="middle" class="tm" font-size="11">170 for all</text>
+<rect x="150" y="20" width="110" height="46" rx="6" class="ft st" fill-opacity="0.25"/><text x="205" y="40" text-anchor="middle" font-size="12">+ 0.5·tree₁</text><text x="205" y="57" text-anchor="middle" class="tm" font-size="11">size ≤ 95?</text>
+<rect x="290" y="20" width="110" height="46" rx="6" class="ft st" fill-opacity="0.25"/><text x="345" y="40" text-anchor="middle" font-size="12">+ 0.5·tree₂</text><text x="345" y="57" text-anchor="middle" class="tm" font-size="11">size ≤ 75?</text>
+<rect x="430" y="20" width="110" height="46" rx="6" class="ft st" fill-opacity="0.25"/><text x="485" y="40" text-anchor="middle" font-size="12">+ 0.5·tree₃</text><text x="485" y="57" text-anchor="middle" class="tm" font-size="11">size ≤ 115?</text>
+<line x1="120" y1="43" x2="148" y2="43" stroke="currentColor" marker-end="url(#mt-ah3)"/><line x1="260" y1="43" x2="288" y2="43" stroke="currentColor" marker-end="url(#mt-ah3)"/><line x1="400" y1="43" x2="428" y2="43" stroke="currentColor" marker-end="url(#mt-ah3)"/>
+<text x="135" y="14" text-anchor="middle" class="tm" font-size="10">fit residuals</text><text x="275" y="14" text-anchor="middle" class="tm" font-size="10">fit residuals</text><text x="415" y="14" text-anchor="middle" class="tm" font-size="10">fit residuals</text>
+<line x1="10" y1="180" x2="550" y2="180" stroke="currentColor"/>
+<rect x="40" y="90" width="50" height="90" class="fr sr" fill-opacity="0.5"/><rect x="180" y="143" width="50" height="37" class="fr sr" fill-opacity="0.5"/><rect x="320" y="165" width="50" height="15" class="fr sr" fill-opacity="0.5"/><rect x="460" y="171" width="50" height="9" class="fr sr" fill-opacity="0.5"/>
+<text x="65" y="86" text-anchor="middle" font-size="12">MSE 2450</text><text x="205" y="139" text-anchor="middle" font-size="12">1005</text><text x="345" y="161" text-anchor="middle" font-size="12">411</text><text x="485" y="167" text-anchor="middle" font-size="12">233</text>
+<text x="280" y="197" text-anchor="middle" class="tm" font-size="11">training error after each step (8 flat prices, depth-1 trees, learning rate 0.5)</text>
+</svg><figcaption>Each new small tree is trained on what the model still gets wrong; adding a shrunken copy of it chips the error down.</figcaption></figure>
+  <p>Top row: the model is the starting guess plus a shrunken copy of each stump. Bottom row: the red bars are the training error after each step, shrinking every time.</p>
+  <div class="callout intu"><span class="label">Formal terms</span>
+    <p><strong>F_m(x) = F_{m−1}(x) + η · h_m(x)</strong>. F_m is the whole model after m trees, F_{m−1} is the model before this step, h_m is the new small tree, η (eta) is the learning rate (0.5 above, usually 0.01–0.1). <strong>Gradient</strong> boosting means h_m is trained on the negative gradient of the loss, −∂L/∂F: "which way, and how much, should each prediction move to reduce the loss fastest?" For squared error that direction is exactly the residual y − F, which is why the demo says "fit the residuals". For other losses (log loss for classification, MAE, a custom one) the targets are called <strong>pseudo-residuals</strong>, but the loop is the same.</p>
   </div>
   <table class="tbl">
     <tr><th></th><th>Bagging (random forest)</th><th>Boosting (GBM)</th></tr>
@@ -287,9 +379,12 @@ tree 3: split size &lt;= 115  leaf values [-5.8 40.8]  MSE 232.9</div>
     <tr><td>Too many trees</td><td>Harmless, just slower</td><td>Overfits → needs early stopping</td></tr>
     <tr><td>Tuning effort</td><td>Low</td><td>Moderate–high</td></tr>
   </table>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>A forest cannot overfit by adding trees; it just averages more. Boosting can, because each new tree keeps chasing the remaining error, and after a point the remaining error is noise. Section 08 shows the fix.</p>
+  </div>
 
   <h2 id="mt-gbm"><span class="num">06</span>XGBoost, LightGBM, CatBoost</h2>
-  <p>All three are gradient boosting libraries. They use the same idea as above and add tricks for speed, regularisation and categorical columns. In practice they give similar accuracy, so knowing what each one adds matters more than picking a "winner".</p>
+  <p>These three are libraries that do the boosting loop above, fast, with extra tricks. They win most Kaggle table-data competitions and run in most banks and e-commerce companies. Their accuracy is usually close, so the useful knowledge is what each one adds and when its trick matters.</p>
   <table class="tbl">
     <tr><th></th><th>XGBoost</th><th>LightGBM</th><th>CatBoost</th></tr>
     <tr><td>Key idea</td><td>2nd-order Taylor: uses gradient g and Hessian h; L1/L2 on leaf weights</td><td>Histogram bins (≤255), GOSS (keep large-gradient rows, sample small), EFB (bundle sparse features)</td><td>Ordered boosting: a row's residual uses only models trained on rows "before" it → no target leakage</td></tr>
@@ -298,9 +393,13 @@ tree 3: split size &lt;= 115  leaf values [-5.8 40.8]  MSE 232.9</div>
     <tr><td>Strength</td><td>Mature, robust, GPU, everywhere</td><td>Fastest on large data, low memory</td><td>Great defaults, many categoricals, small data</td></tr>
     <tr><td>Watch out</td><td>Slower than LightGBM on big data</td><td>Leaf-wise overfits small data</td><td>Slower training per tree</td></tr>
   </table>
-  <div class="callout intu"><span class="label">Key formula (XGBoost leaf)</span>
-    <p><strong>w* = −G / (H + λ)</strong>, with G, H the sums of gradients and Hessians in the leaf. Split gain = ½[G_L²/(H_L+λ) + G_R²/(H_R+λ) − G²/(H+λ)] − γ. Curvature acts like a per-leaf step size; λ and γ regularise.</p>
-  </div>
+  <p>Some of those words, in plain language:</p>
+  <ul>
+    <li><strong>Histogram bins</strong> — instead of trying every one of 20,000 cut-offs on a column, group the values into 255 buckets and try only bucket edges. Much faster, almost no loss.</li>
+    <li><strong>Level-wise vs leaf-wise growth</strong> — see the picture below.</li>
+    <li><strong>Hessian / second-order</strong> — XGBoost looks not only at which way the loss slopes (gradient) but also how sharply it curves (Hessian), and takes smaller steps where it curves sharply. Better steps per tree.</li>
+    <li><strong>Target leakage in categoricals</strong> — a popular way to turn "city" into a number is "average churn rate of that city". If you compute it including the current row's own label, the feature secretly contains the answer. CatBoost's <strong>ordered</strong> statistics compute each row's number only from rows that came before it, so the row's own label never leaks in.</li>
+  </ul>
   <figure class="viz"><svg viewBox="0 0 520 140" width="520">
 <g stroke="currentColor"><line x1="120" y1="25" x2="70" y2="65"/><line x1="120" y1="25" x2="170" y2="65"/><line x1="70" y1="65" x2="45" y2="105"/><line x1="70" y1="65" x2="95" y2="105"/><line x1="170" y1="65" x2="145" y2="105"/><line x1="170" y1="65" x2="195" y2="105"/>
 <line x1="380" y1="25" x2="330" y2="55"/><line x1="380" y1="25" x2="430" y2="55"/><line x1="430" y1="55" x2="400" y2="85"/><line x1="430" y1="55" x2="460" y2="85"/><line x1="460" y1="85" x2="440" y2="115"/><line x1="460" y1="85" x2="485" y2="115"/></g>
@@ -309,6 +408,7 @@ tree 3: split size &lt;= 115  leaf values [-5.8 40.8]  MSE 232.9</div>
 <text x="120" y="134" text-anchor="middle" font-size="12">level-wise (XGBoost)</text>
 <text x="400" y="134" text-anchor="middle" font-size="12">leaf-wise (LightGBM)</text>
 </svg><figcaption>Same number of leaves; leaf-wise goes deep where the loss drops most. Lower loss per leaf, more overfitting risk on small data.</figcaption></figure>
+  <p>Both trees have seven nodes. The left one fills each level fully before going deeper. The right one keeps splitting whichever leaf reduces the loss most, so it grows deep on one side. Leaf-wise finds lower loss per leaf, but on small data it can chase noise down one branch.</p>
   <div class="fx" data-lang="py">m = xgb.XGBClassifier(n_estimators=2000, learning_rate=0.05, max_depth=6, subsample=0.8,
                       colsample_bytree=0.8, early_stopping_rounds=50, eval_metric="logloss")
 m.fit(Xtr, ytr, eval_set=[(Xva, yva)], verbose=False)
@@ -327,10 +427,16 @@ m.fit(Xtr, ytr, eval_set=(Xva, yva))</div>
     <tr><td>CatBoost (ES)</td><td>0.873</td><td><strong>0.938</strong></td><td>822</td><td>4.2 s</td></tr>
     <tr><td>CatBoost, pure defaults (500 iters)</td><td>0.873</td><td>0.937</td><td>500</td><td>2.6 s</td></tr>
   </table>
-  <p>The three libraries are within 0.003 AUC of each other, and the random forest ties them on this data. Histogram-based learners are about 6× faster than classic sklearn GBM. Good features and correct validation matter more than the library.</p>
+  <p>All three libraries land within 0.003 AUC of each other, and the random forest ties them on this data. The histogram-based learners (HistGradientBoosting, XGBoost, LightGBM) are about 6× faster than classic sklearn GradientBoosting. The lesson for real work: good features and a correct validation setup matter far more than which library you pick.</p>
+  <div class="callout intu"><span class="label">Formal terms (XGBoost leaf)</span>
+    <p><strong>w* = −G / (H + λ)</strong>: the best value for a leaf. G is the sum of gradients of the rows in the leaf (total "how far off, and which way"), H is the sum of their Hessians (total curvature), λ (lambda) is an L2 penalty that pulls leaf values toward 0. <strong>Split gain = ½[G_L²/(H_L+λ) + G_R²/(H_R+λ) − G²/(H+λ)] − γ</strong>: how much the loss improves by splitting a leaf into left (L) and right (R), minus γ (gamma), a fixed price for adding a leaf. λ and γ are the regularisation knobs.</p>
+  </div>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>LightGBM's leaf-wise growth overfits small datasets (a few thousand rows). Cap <code>num_leaves</code> (try 15–31) and raise <code>min_child_samples</code> so a leaf must hold enough rows.</p>
+  </div>
 
   <h2 id="mt-tune"><span class="num">07</span>Hyperparameters &amp; Tuning</h2>
-  <p><strong>Hyperparameters</strong> are settings you choose before training, like tree depth or learning rate. Why tune them: defaults are decent, but the right tree size and learning rate can add a few points. Tune a few knobs in a fixed order, not everything at once.</p>
+  <p>A <strong>hyperparameter</strong> is a setting you choose before training starts: how deep a tree may go, how big the learning rate is, how many trees to build. The model cannot learn these from the data. Defaults are decent, but on most problems the right tree size and learning rate add a few points of accuracy. Tune a few knobs in a fixed order; do not turn everything at once.</p>
   <table class="tbl">
     <tr><th>Knob</th><th>XGBoost / LightGBM / CatBoost</th><th>Effect</th><th>Typical</th></tr>
     <tr><td>Learning rate</td><td><code>learning_rate</code></td><td>Smaller = more trees, usually better</td><td>0.01–0.1</td></tr>
@@ -341,6 +447,7 @@ m.fit(Xtr, ytr, eval_set=(Xva, yva))</div>
     <tr><td>Regularisation</td><td><code>reg_lambda</code>, <code>reg_alpha</code>, <code>gamma</code> / <code>l2_leaf_reg</code></td><td>Shrink leaf weights; min gain to split</td><td>0–10</td></tr>
   </table>
   <div class="flow"><span>lr 0.05 + early stopping</span><span>depth / num_leaves</span><span>min_child_*</span><span>subsample / colsample</span><span>reg_lambda / alpha</span><span>lower lr, retrain</span></div>
+  <p>The two knobs that matter most are the learning rate and the tree size. The runs below change one at a time on LightGBM:</p>
   <div class="fx" data-lang="py">for lr in [0.3, 0.1, 0.03]:
     m = lgb.LGBMClassifier(n_estimators=5000, learning_rate=lr, num_leaves=31, verbose=-1)
     m.fit(Xtr, ytr, eval_set=[(Xva, yva)], callbacks=[lgb.early_stopping(100, verbose=False)])
@@ -354,15 +461,18 @@ num_leaves=4    best trees  3476  train acc 0.913  test acc 0.851
 num_leaves=15   best trees  1116  train acc 0.966  test acc 0.864
 num_leaves=63   best trees   418  train acc 0.996  test acc 0.877
 num_leaves=255  best trees   124  train acc 1.000  test acc 0.873</div>
-  <p>A smaller learning rate needs more trees: 10× smaller lr needed about 17× more trees and gave +2.3 points. Tiny trees (4 leaves) cannot capture feature combinations. Huge trees (255 leaves) memorise faster than they learn.</p>
+  <p>Learning rate: a smaller step needs more trees. Going from 0.3 to 0.03 (10× smaller) needed about 17× more trees and gained 2.3 points. Tree size: with only 4 leaves each tree can combine at most two columns, so it misses interactions and scores 0.851. With 255 leaves each tree memorises fast (train accuracy 1.000) and test accuracy slips. Around 63 leaves is the sweet spot here.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Learning rate is step size when walking down a hill in fog. Big steps get you down fast but you overshoot the bottom. Small steps take longer but land closer. Early stopping (next section) tells you when to stop walking.</p>
+  </div>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>Don't grid-search learning rate together with everything else; it interacts with all knobs. Fix it, tune the rest with random search or Optuna on a validation set (or CV), then lower it for the final model.</p>
+    <p>Do not grid-search the learning rate together with everything else; it interacts with every other knob and multiplies the search. Fix it at about 0.05, tune the rest with random search or Optuna on a validation set (or CV), then lower it for the final model.</p>
   </div>
 
   <h2 id="mt-es"><span class="num">08</span>Early Stopping</h2>
-  <p>Early stopping watches the loss on a validation set after every new tree and stops when it has not improved for N rounds. Why: boosting never stops improving on training data; after some point it is only learning noise.</p>
+  <p>Boosting never stops improving on its training rows: each new tree fixes a little more of the remaining error. After some point, the remaining error is just noise, and fixing it makes the model worse on new data. So we need a stop signal. <strong>Early stopping</strong>: after every new tree, check the loss on a validation set; if it has not improved for N trees in a row, stop and keep the best round.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Revising for boards with mock tests. After a point, mugging the same guide again raises your score on that guide but not on new papers. Stop when the mock-test score stops going up.</p>
+    <p>Revising for boards with mock tests. After a point, re-reading the same guide raises your score on that guide but not on new papers. Stop when the mock-test score stops going up.</p>
   </div>
   <figure class="viz"><svg viewBox="0 0 560 235" width="560">
 <line x1="50" y1="200" x2="515" y2="200" stroke="currentColor"/><line x1="50" y1="20" x2="50" y2="200" stroke="currentColor"/>
@@ -377,6 +487,7 @@ num_leaves=255  best trees   124  train acc 1.000  test acc 0.873</div>
 <text x="400" y="190" class="tb" font-size="12">train → 0.000</text>
 <text x="56" y="30" class="tm" font-size="11">log loss</text>
 </svg><figcaption>Training loss keeps falling; validation loss bottoms out at round 204 and then climbs as the model fits noise.</figcaption></figure>
+  <p>Blue (train loss) keeps falling to zero. Red (validation loss) bottoms out at round 204 and then climbs. The green line marks where early stopping would stop.</p>
   <div class="fx" data-lang="py">m = lgb.LGBMClassifier(n_estimators=3000, learning_rate=0.1, num_leaves=63, verbose=-1)
 m.fit(Xtr, ytr, eval_set=[(Xtr, ytr), (Xva, yva)], eval_names=["train", "val"])
 va = m.evals_result_["val"]["binary_logloss"]                    # loss per round
@@ -389,24 +500,27 @@ round  500  train logloss 0.013  val logloss 0.347
 round 1000  train logloss 0.000  val logloss 0.465
 round 3000  train logloss 0.000  val logloss 0.752
 best round (min val loss): 204</div>
+  <p>The numbers behind the picture. At round 204 the validation log loss is 0.308 (log loss — a score for predicted probabilities; lower is better). By round 3000 it is 0.752, far worse, while training loss sits at 0.000. In production you would pass <code>callbacks=[lgb.early_stopping(50)]</code>, which stops about 50 rounds after the best one.</p>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>The early-stopping set is now part of model selection. Report final performance on a separate test set (as above), or the score is optimistic. For the final fit on all data, reuse the best round count (scaled up a little for the extra rows).</p>
+    <p>The validation set used for early stopping is now part of choosing the model, so its score is a little optimistic. Report the final number on a separate test set (as section 06 does). For the final fit on all the data, reuse the best round count, scaled up a little for the extra rows.</p>
   </div>
 
   <h2 id="mt-prod"><span class="num">09</span>Production Concerns</h2>
-  <p>Real projects add a few problems that toy examples hide: rare classes (fraud is 1 in 1,000), business rules the model must respect, and costs that are not symmetric.</p>
+  <p>Real projects add problems the toy runs hide: rare classes (fraud is 1 transaction in 1,000), business rules the model must respect, and costs that are not symmetric (missing a fraud costs far more than a false alarm).</p>
   <div class="cards">
     <div><b>Class imbalance</b><p><code>scale_pos_weight = n_neg / n_pos</code> (XGBoost) or <code>class_weight</code>. Distorts probabilities; alternatively train unweighted and move the threshold using the PR curve.</p><small>Monitor AUC-PR, not accuracy</small></div>
     <div><b>Monotone constraints</b><p><code>monotone_constraints</code>: +1 / −1 per feature forces the prediction to only rise / fall with it.</p><small>Price vs demand, debt vs risk, temperature vs load</small></div>
     <div><b>Custom loss</b><p>Pass a function returning gradient and Hessian per row (XGBoost <code>obj=</code>, LightGBM <code>objective=</code>).</p><small>Asymmetric costs, MAPE-like losses</small></div>
     <div><b>Categoricals</b><p>CatBoost raw; LightGBM <code>categorical_feature</code>. Naive target encoding leaks the row's own label.</p><small>CatBoost's ordered stats avoid it</small></div>
   </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Trees cannot go beyond the range they saw. A forest trained on flat prices up to ₹1 crore never predicts ₹2 crore, because a leaf only predicts an average of training rows. For growing targets, predict the change, or add a linear part.</p>
+  <p>In plain words. <strong>Class imbalance</strong>: with 999 honest rows per fraud, a model that says "honest" to everything scores 99.9% accuracy and catches nothing. Weighting the rare class, or moving the decision threshold, fixes it; judge it with AUC-PR, not accuracy. <strong>Monotone constraints</strong>: "a bigger loan must never lower the risk score", a rule a tree would otherwise break on noisy regions. <strong>Custom loss</strong>: tell the booster that under-forecasting costs 3× more than over-forecasting, and it will aim high. <strong>Categoricals</strong>: let the library handle text columns natively instead of hand-encoding them.</p>
+  <div class="callout trap"><span class="label">Trap: trees cannot go beyond what they saw</span>
+    <p>A leaf predicts the average of its training rows. A forest trained on flat prices up to ₹1 crore can never predict ₹2 crore, no matter how big the flat. For targets that grow over time, predict the <em>change</em> (this year − last year), or add a linear model for the trend. The Time Series note shows this fix.</p>
   </div>
 
   <h2 id="mt-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>In one line each: what is a decision tree, a random forest, and gradient boosting?</summary><div class="qa-body">A decision tree is a chain of yes/no questions on the columns, learnt by picking at each step the question that separates the answers most. A random forest trains many deep trees on random rows and random columns and lets them vote, which cancels their individual mistakes. Gradient boosting trains small trees one after another, each on the errors left by the ones before, and adds a shrunken copy of each.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>A node has 4 positives and 6 negatives. What's its Gini? A split gives [4/1] and [0/5]. What's the gain?</summary><div class="qa-body">Gini = 1 − (0.4² + 0.6²) = 0.48. Children: 1 − (0.8² + 0.2²) = 0.32 and 0. Weighted = 0.5·0.32 + 0.5·0 = 0.16. Gain = 0.48 − 0.16 = 0.32.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Why does bagging reduce variance? Give the formula.</summary><div class="qa-body">Var(mean of n trees) = ρσ² + (1 − ρ)σ²/n. More trees shrink the second term; the floor ρσ² depends on correlation between trees. Bootstrap rows and random feature subsets per split lower ρ. Bias stays about the same as one deep tree, which is already low.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Impurity-based importance ranks a customer-ID-like column highly. What's going on?</summary><div class="qa-body">MDI is computed on training data and favours features with many unique values: more thresholds means more chances to find a split that looks good by luck. In our run, random noise with 20,000 values got 7× the MDI of random binary noise. Check with permutation importance on validation data (both ≈ 0) or SHAP.</div></details>

@@ -2,7 +2,7 @@
 Object.assign(TOPIC_CONTENT, {
   "py_io": `<main>
   <h1>Exceptions, Files &amp; Packages</h1>
-  <p class="lead">The plumbing of every real DS/ML project. Fail clearly when something breaks. Read and write the file formats data really comes in. Split code into importable packages, with environments anyone can rebuild. Builds on <em>Python Fundamentals</em> and <em>Data Structures</em>. Run on Python 3.13, pandas 3.0, PyYAML 6, Poetry 2.4.</p>
+  <p class="lead">This note covers the plumbing of every real DS/ML project: what to do when a step fails (exceptions), how to read and write the file formats data really comes in (text, CSV, JSON, Parquet, pickle, YAML), how to split code into files you can import (modules and packages), and how to set up a project so anyone can rebuild it (virtual environments and lock files). Builds on <em>Python Fundamentals</em> and <em>Data Structures</em>. Run on Python 3.13, pandas 3.0, PyYAML 6, Poetry 2.4.</p>
 
   <h2 id="pi-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -114,8 +114,33 @@ Object.assign(TOPIC_CONTENT, {
     </div>
   </div>
 
+  <div class="callout intu"><span class="label">Why this note</span><p>A notebook that runs once on clean data is easy. A job that runs every night on messy files is where the real work is. One bad row must not crash the job. Data arrives as CSV, JSON or Parquet and you must pick the right one. Code grows past one file. A teammate must be able to install the same packages. Interviews ask about all of these: "when does finally run?", "CSV vs Parquet?", "why a lock file?".</p></div>
+
   <h2 id="pi-try"><span class="num">01</span>try / except / else / finally</h2>
-  <p>An <strong>exception</strong> is Python's way of saying "this step failed". Without handling, one bad row stops the whole job. <code>try/except</code> lets you catch the failure, decide what to do, and still clean up.</p>
+  <p>You are adding up ages from a file. One row says "forty" instead of 40. Python cannot turn "forty" into a number, so it stops the whole program and prints a report of what went wrong. That report is called a <strong>traceback</strong>, and the failure itself is called an <strong>exception</strong>.</p>
+  <div class="fx" data-lang="py">ages = ["31", "forty", "28"]
+total = 0
+for a in ages:
+    total += int(a)        # "forty" is not a number
+print("total", total)</div>
+  <div class="fx" data-lang="text">Traceback (most recent call last):
+  File "i1.py", line 4, in &lt;module&gt;
+    total += int(a)        # "forty" is not a number
+             ~~~^^^
+ValueError: invalid literal for int() with base 10: 'forty'</div>
+  <p>Read the traceback from the bottom: the last line names the type of error (<code>ValueError</code>) and the reason. The lines above show which line of which file was running. The <code>print</code> never ran. With one bad row, you lost all 3.</p>
+  <p>A <strong>try/except</strong> block lets you say "try this; if it fails in this way, do that instead and carry on". The job finishes, and you know which value was bad.</p>
+  <div class="fx" data-lang="py">ages = ["31", "forty", "28"]
+total = 0
+for a in ages:
+    try:
+        total += int(a)
+    except ValueError:
+        print("skipping bad value:", a)
+print("total", total)</div>
+  <div class="fx" data-lang="text">skipping bad value: forty
+total 59</div>
+  <p>There are two more optional parts. <code>else</code> runs only when the try part succeeded. <code>finally</code> runs every time, whether it failed or not, even if there was a <code>return</code>. The picture shows the four parts and which paths run.</p>
   <figure class="viz"><svg viewBox="0 0 560 170" width="560">
     <defs><marker id="pi-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <rect x="10" y="62" width="90" height="40" rx="6" class="fb sb"/><text x="38" y="87">try</text>
@@ -150,6 +175,7 @@ parse('42') -&gt; 42
   except: invalid literal for int() with base 10: 'abc'
   finally: always runs
 parse('abc') -&gt; None</div>
+  <p>Follow the output for <code>"abc"</code>: <code>int("abc")</code> fails, so the <code>except</code> part runs and returns <code>None</code>. But before the function actually returns, <code>finally</code> prints its line. That is what "always runs" means.</p>
   <ul>
     <li>Keep <code>try</code> tiny: only the line that can fail. Put the follow-up work in <code>else</code>, so its bugs are not hidden by your except.</li>
     <li>Several types: <code>except (ValueError, TypeError) as e:</code>. Order from most specific to most general.</li>
@@ -157,7 +183,23 @@ parse('abc') -&gt; None</div>
   <div class="callout trap"><span class="label">Trap</span><p>A bare <code>except:</code> also catches <code>KeyboardInterrupt</code> and <code>SystemExit</code>, so Ctrl+C stops working. Catch only what you expect. Use <code>except Exception</code> only at the top level, and log it.</p></div>
 
   <h2 id="pi-raise"><span class="num">02</span>Raising &amp; Custom Exception Hierarchies</h2>
-  <p><code>raise</code> stops the function and reports a problem. A <strong>custom exception</strong> is your own error class. Why: callers can then tell "bad data" apart from "model file missing" and handle each one differently.</p>
+  <p>So far Python raised the errors. You can raise them too. If someone passes a negative age to your function, the right move is to stop at once with a clear message, instead of letting a wrong number travel through the whole pipeline. The <code>raise</code> keyword does this.</p>
+  <div class="fx" data-lang="py">def set_age(age):
+    if age &lt; 0:
+        raise ValueError(f"age cannot be negative, got {age}")
+    return age
+print(set_age(31))
+print(set_age(-4))</div>
+  <div class="fx" data-lang="text">31
+Traceback (most recent call last):
+  File "i3.py", line 6, in &lt;module&gt;
+    print(set_age(-4))
+          ~~~~~~~^^^^
+  File "i3.py", line 3, in set_age
+    raise ValueError(f"age cannot be negative, got {age}")
+ValueError: age cannot be negative, got -4</div>
+  <p>Built-in error types cover the common cases: <code>ValueError</code> for a bad value, <code>KeyError</code> for a missing dict key, <code>FileNotFoundError</code> for a missing file. For your own project you can make a <strong>custom exception</strong>: your own error class, built on <code>Exception</code>. Why: callers can then tell "bad data" apart from "model file missing" and handle each one differently.</p>
+  <p>Error types form a family tree. Catching a parent also catches all its children. In the picture, <code>except Exception</code> catches everything in the blue and green boxes, but not <code>KeyboardInterrupt</code> (Ctrl+C), which sits on a separate branch on purpose.</p>
   <figure class="viz"><svg viewBox="0 0 600 190" width="600">
     <g stroke="currentColor" opacity="0.6"><line x1="240" y1="32" x2="240" y2="52"/><line x1="100" y1="52" x2="440" y2="52"/><line x1="100" y1="52" x2="100" y2="66"/><line x1="240" y1="52" x2="240" y2="66"/><line x1="440" y1="52" x2="440" y2="66"/>
     <line x1="240" y1="90" x2="240" y2="106"/><line x1="70" y1="106" x2="480" y2="106"/><line x1="70" y1="106" x2="70" y2="118"/><line x1="200" y1="106" x2="200" y2="118"/><line x1="330" y1="106" x2="330" y2="118"/><line x1="480" y1="106" x2="480" y2="118"/>
@@ -176,7 +218,7 @@ parse('abc') -&gt; None</div>
     <rect x="475" y="158" width="120" height="24" rx="4" class="fb sb"/><text x="480" y="175">PermissionError</text>
   </svg><figcaption>Built-in tree (blue) with your own branch (green). <code>except Exception</code> skips Ctrl+C and sys.exit on purpose.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span><p>A hospital's complaint desk. "Billing problem" is a family; "wrong GST on bill" is one specific type. A clerk can handle all billing issues, or only the GST ones.</p></div>
-  <p>Make one base class per project. Callers can catch "anything from my pipeline" and still tell specific failures apart. Store details as attributes, not only in the message.</p>
+  <p>Make one base class per project. Callers can catch "anything from my pipeline" and still tell specific failures apart. Store details as attributes (like <code>self.column</code>), not only in the message, so code can read them. <code>super().__init__(msg)</code> passes the message up to <code>Exception</code>, so it prints normally.</p>
   <div class="fx" data-lang="py">class PipelineError(Exception):
     """Base for everything our pipeline raises."""
 
@@ -211,6 +253,7 @@ except PipelineError as e:
     print(type(e).__name__, "|", e, "| cause:", type(e.__cause__).__name__)</div>
   <div class="fx" data-lang="text">bad data -&gt; column 'age': must be &gt;= 0 | column: age
 PipelineError | config missing: nope.yaml | cause: FileNotFoundError</div>
+  <p>The second half shows <strong>chaining</strong>. <code>open</code> failed with a low-level <code>FileNotFoundError</code>. <code>load_config</code> wraps it in a <code>PipelineError</code> with a friendlier message, and <code>from e</code> keeps the original attached as <code>__cause__</code>, so nothing is lost when debugging.</p>
   <table class="tbl">
     <tr><th>Form</th><th>Does</th><th>Use when</th></tr>
     <tr><td><code>raise ValueError("…")</code></td><td>New exception</td><td>Input breaks a rule</td></tr>
@@ -220,7 +263,8 @@ PipelineError | config missing: nope.yaml | cause: FileNotFoundError</div>
   <div class="callout trap"><span class="label">Trap</span><p>Subclass <code>Exception</code>, not <code>BaseException</code>. And do not catch-and-return-None everywhere: silent failures become wrong numbers later. Fail early and loudly.</p></div>
 
   <h2 id="pi-log"><span class="num">03</span>Logging Exceptions with Tracebacks</h2>
-  <p><strong>Logging</strong> writes timestamped, levelled messages to a file or console. In production nobody watches the screen, so the log is the only record of what went wrong. The <strong>traceback</strong> (the list of calls that led to the error) is the most useful part.</p>
+  <p>A training job runs at 2 AM on a server. Nobody is watching the screen. When it fails, the only way to know what happened is a written record. <strong>Logging</strong> writes messages with a time stamp and a <strong>level</strong> (how serious: DEBUG, INFO, WARNING, ERROR, CRITICAL) to the console or a file. You can later turn the detail up or down without changing code, which <code>print</code> cannot do.</p>
+  <p>The most useful thing to record when something fails is the traceback (the list of calls that led to the error). <code>print(e)</code> gives only the last line of it. <code>log.exception</code> records all of it.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>A plane's black box. <code>print(e)</code> is a passenger saying "something went wrong". <code>log.exception</code> is the full recording.</p></div>
   <div class="fx" data-lang="py">import logging
 logging.basicConfig(level=logging.INFO,
@@ -249,7 +293,14 @@ ZeroDivisionError: division by zero</div>
   <p><code>log.exception</code> = <code>log.error(..., exc_info=True)</code>, and works only inside <code>except</code>. <code>print(e)</code> loses the stack, level and time. Pass values as args (<code>log.debug("x=%s", x)</code>), so formatting is skipped when that level is off.</p>
 
   <h2 id="pi-txt"><span class="num">04</span>Text Files &amp; pathlib</h2>
-  <p><code>open()</code> connects your program to a file. The <strong>mode</strong> says what you plan to do. <code>with</code> closes the file for you, even if an error happens halfway.</p>
+  <p>Everything so far lived in memory and vanished when the program ended. Files are how data stays. <code>open()</code> connects your program to a file. The <strong>mode</strong> says what you plan to do: read, write or add at the end. When you are done, the file must be closed, or writes may not be saved. The <code>with</code> block closes it for you, even if an error happens halfway.</p>
+  <div class="fx" data-lang="py">with open("hello.txt", "w", encoding="utf-8") as f:
+    f.write("namaste\\n")
+with open("hello.txt", encoding="utf-8") as f:
+    print(f.read())</div>
+  <div class="fx" data-lang="text">namaste
+</div>
+  <p><code>f</code> is the open file. <code>"\\n"</code> is the newline character, the invisible "enter" at the end of a line. The extra blank line in the output is that newline being printed.</p>
   <table class="tbl">
     <tr><th>Mode</th><th>Meaning</th><th>If file exists</th></tr>
     <tr><td><code>"r"</code></td><td>Read text (default)</td><td>Missing → FileNotFoundError</td></tr>
@@ -276,7 +327,7 @@ print(f.closed)                                # with closed it for us</div>
 'line one\\n'
 True</div>
   <div class="callout trap"><span class="label">Trap</span><p>Always pass <code>encoding="utf-8"</code>. The default depends on the OS (cp1252 on many Windows machines). And never <code>f.read()</code> a 20 GB log — loop over the file line by line.</p></div>
-  <p><strong>pathlib</strong> treats paths as objects. <code>/</code> joins them correctly on every OS, so no more <code>"data/" + name</code> string bugs.</p>
+  <p>A <strong>path</strong> is the address of a file: <code>project/data/raw/jan.csv</code>. Building it by gluing strings together breaks easily (a missing slash, or Windows using backslashes). <strong>pathlib</strong> treats a path as an object. <code>/</code> joins parts correctly on every OS, and the path knows its own name, extension and folder.</p>
   <div class="fx" data-lang="py">from pathlib import Path
 root = Path("project")
 raw = root / "data" / "raw"
@@ -292,9 +343,10 @@ print(sorted(str(f) for f in root.rglob("*.md")))</div>
 True jan.parquet
 ['feb.csv', 'jan.csv']
 ['project/data/raw/notes.md']</div>
+  <p><code>mkdir(parents=True, exist_ok=True)</code> creates the folder and any missing parent folders, and does not complain if it already exists. <code>glob("*.csv")</code> lists matching files in one folder; <code>rglob</code> also looks inside sub-folders.</p>
 
   <h2 id="pi-csv"><span class="num">05</span>CSV &amp; JSON</h2>
-  <p><strong>CSV</strong> = a table as plain text, one row per line. <strong>JSON</strong> = nested data (dicts and lists) as text. Both are easy for humans and every tool can read them, so they are used to pass data between systems.</p>
+  <p>Data has to travel between programs: from a database to your notebook, from a website to your script. Two plain-text formats do most of this work. <strong>CSV</strong> (comma-separated values) is a table: one row per line, columns split by commas. <strong>JSON</strong> is nested data, written almost like Python dicts and lists. Both are readable by humans, and every language can read them.</p>
   <div class="cards">
     <div><b>CSV</b><p>Flat table, all text</p><small>💡 a marksheet: rows and columns</small></div>
     <div><b>JSON</b><p>Nested dicts and lists</p><small>💡 a Swiggy order: items inside the order, addons inside items</small></div>
@@ -324,7 +376,16 @@ print(df.dtypes)</div>
 user        str
 clicks    int64
 dtype: object</div>
-  <p><code>newline=""</code> lets the csv module handle line endings itself (otherwise Windows gets blank rows). Use the csv module to stream small files; pandas for analysis.</p>
+  <p>Notice <code>'3'</code> in quotes: the csv module gives back every value as text, because a CSV file has no idea what type a column is. pandas looks at the values and guesses (<code>int64</code> for clicks). <code>newline=""</code> lets the csv module handle line endings itself (otherwise Windows gets blank rows). Use the csv module to stream small files; pandas for analysis.</p>
+  <p>JSON looks like Python, but it is text. <code>json.loads</code> turns the text into real dicts and lists; <code>json.dumps</code> turns them back into text. The "s" means "string". Without the "s", <code>json.load</code> and <code>json.dump</code> work with a file instead.</p>
+  <div class="fx" data-lang="py">import json
+text = '{"name": "Asha", "marks": [88, 92], "passed": true}'
+data = json.loads(text)          # text -&gt; Python objects
+print(type(data), data["marks"][0], data["passed"])
+print(json.dumps(data))          # Python objects -&gt; text</div>
+  <div class="fx" data-lang="text">&lt;class 'dict'&gt; 88 True
+{"name": "Asha", "marks": [88, 92], "passed": true}</div>
+  <p>Not every Python value has a JSON form. The code below shows what happens to tuples, number keys and dates. <code>default=str</code> tells <code>dumps</code> "if you do not know a type, turn it into a string".</p>
   <div class="fx" data-lang="py">import json
 from datetime import date
 cfg = {"model": "xgb", "lr": 0.1, "layers": [64, 32], "early_stop": True, "seed": None}
@@ -353,7 +414,7 @@ TypeError: Object of type date is not JSON serializable
   <div class="callout trap"><span class="label">Trap</span><p>JSON does not round-trip everything: tuples come back as lists and int keys as strings. Dates and numpy numbers fail unless you convert them.</p></div>
 
   <h2 id="pi-pq"><span class="num">06</span>Parquet</h2>
-  <p><strong>Parquet</strong> is a binary file format that stores data <em>column by column</em>, with types and compression. Why: ML jobs usually need a few columns out of many. CSV forces you to read every byte; Parquet reads only the columns you ask for.</p>
+  <p>A CSV of 1 million transactions has 20 columns, but today's model needs only "amount". With CSV you still read every byte of every row, then parse every text value back into a number. <strong>Parquet</strong> fixes this. It is a binary format (not text) that stores data <em>column by column</em>, remembers each column's type, and compresses it. Reading one column reads only that column's part of the file.</p>
   <figure class="viz"><svg viewBox="0 0 540 160" width="540">
     <text x="10" y="16" class="tm">CSV: row by row, all text</text>
     <g><rect x="10" y="26" width="220" height="22" class="fs" stroke="currentColor"/><text x="16" y="42">42,IN,0.37</text>
@@ -390,10 +451,11 @@ tx.parquet 3.4 MB
 (333364, 1)
 True
 read csv 0.33s, parquet 0.07s</div>
+  <p>Reading the output: the same 1 million rows take 13.7 MB as CSV and 3.4 MB as Parquet. The <code>filters</code> argument returned only the Indian rows of one column, without loading the rest. The types survived the round trip (<code>True</code>), which never happens with CSV. And the full read was about 5× faster.</p>
   <p>Rule of thumb: CSV for small hand-offs, JSON for nested/API data and configs, Parquet as the default for ML datasets, Spark and data lakes.</p>
 
   <h2 id="pi-pkl"><span class="num">07</span>Pickle &amp; YAML</h2>
-  <p><strong>pickle</strong> turns almost any Python object (a trained model, a dict of arrays) into bytes, and back. Why: so you can train once and reuse the model later without retraining.</p>
+  <p>You trained a model for two hours. Tomorrow you want to use it, not train it again. A model is a Python object, not a table, so CSV and JSON cannot hold it. <strong>pickle</strong> turns almost any Python object into bytes and back. Saving an object this way is called <strong>serialising</strong> it. The file is opened in binary mode (<code>"wb"</code>, <code>"rb"</code>) because it is not text.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>Like freezing cooked food: you can heat it up later exactly as it was. But a pickle is a parcel that runs instructions when opened — only open ones from people you trust.</p></div>
   <div class="fx" data-lang="py">import pickle
 from sklearn.linear_model import LogisticRegression
@@ -412,8 +474,9 @@ payload = pickle.dumps(Evil())
 pickle.loads(payload)                          # just LOADING runs it</div>
   <div class="fx" data-lang="text">[1]
 PWNED: ran a shell command</div>
+  <p>The first part works as expected: the saved model predicts class 1 for 2.5. The second part is the danger. A pickle file can say "to rebuild me, call this function", and <code>__reduce__</code> lets it name <em>any</em> function, here <code>os.system</code>. Just loading the file ran a shell command.</p>
   <div class="callout trap"><span class="label">Trap — security</span><p><code>pickle.load</code> can run any code. Never unpickle files from unknown sources (downloaded models, user uploads). Pickles also break across library versions. To share: <code>safetensors</code> for weights, ONNX for models, Parquet/JSON for data. <code>joblib</code> uses pickle inside, so it has the same risk.</p></div>
-  <p><strong>YAML</strong> is the usual format for config files (training params, CI, Kubernetes). It is easy to read, supports nesting and allows comments.</p>
+  <p>Settings like learning rate, number of layers and file paths should not be buried in code. They go in a <strong>config file</strong>, so you can change them without editing code. <strong>YAML</strong> is the usual format for this (training params, CI, Kubernetes). It uses indentation for nesting, like Python, and allows comments. <code>yaml.safe_load</code> turns the text into dicts and lists.</p>
   <div class="fx" data-lang="py">import yaml
 text = """
 model: xgb
@@ -441,7 +504,14 @@ ConstructorError</div>
   <div class="callout trap"><span class="label">Trap</span><p>PyYAML follows YAML 1.1: <code>NO</code> (Norway!) became <code>False</code> and <code>1.10</code> became <code>1.1</code>. Quote such values: <code>country: "NO"</code>, <code>version: "1.10"</code>. Always use <code>safe_load</code> — it refused the <code>os.system</code> tag above. Plain <code>yaml.load</code> with an unsafe loader would run it.</p></div>
 
   <h2 id="pi-mod"><span class="num">08</span>Modules &amp; Packages</h2>
-  <p>A <strong>module</strong> is one <code>.py</code> file. A <strong>package</strong> is a folder of modules. Why: one 3,000-line file is hard to read, test and reuse. Splitting lets you <code>import</code> just the piece you need.</p>
+  <p>You have used <code>import</code> already. <code>import math</code> loads a file called <code>math</code> that ships with Python, and <code>math.sqrt</code> reaches inside it. Your own <code>.py</code> files work exactly the same way.</p>
+  <div class="fx" data-lang="py">import math                 # a module that ships with Python
+print(math.sqrt(16), math.pi)
+from math import sqrt       # pull one name out
+print(sqrt(25))</div>
+  <div class="fx" data-lang="text">4.0 3.141592653589793
+5.0</div>
+  <p>A <strong>module</strong> is one <code>.py</code> file. A <strong>package</strong> is a folder of modules. Why split at all: one 3,000-line file is hard to read, test and reuse. Splitting lets you <code>import</code> just the piece you need, and lets tests import your functions without running the whole script.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>A kitchen: each drawer (module) holds one kind of tool, and the cupboard (package) holds related drawers. You open the drawer you need, not the whole kitchen.</p></div>
   <div class="fx" data-lang="text">pkg/
 ├── main.py
@@ -478,9 +548,10 @@ True __main__
 
 $ python mlkit/features/scaling.py
 ImportError: attempted relative import with no known parent package</div>
+  <p>What the output shows. Importing <code>mlkit</code> ran its <code>__init__.py</code> once (the print), which in turn imported <code>scaling</code>, which imported <code>utils</code>. The second <code>import mlkit</code> printed nothing: Python keeps loaded modules in a dict called <code>sys.modules</code> and reuses them. Inside the package, a module's <code>__name__</code> is its full dotted path. A <strong>relative import</strong> (<code>from ..utils</code>) means "go up one folder and find utils". It only works when the file is loaded as part of its package, which is why running <code>scaling.py</code> directly failed.</p>
   <div class="flow"><span>import x</span><span>in sys.modules? → reuse</span><span>else search sys.path</span><span>run file top to bottom once</span><span>cache module object</span></div>
   <p>Running a file inside a package directly breaks relative imports. Run it as a module from the project root: <code>python -m mlkit.features.scaling</code>.</p>
-  <p><strong>The <code>__main__</code> guard:</strong> <code>__name__</code> is <code>"__main__"</code> when a file is run directly, and the module's name when it is imported.</p>
+  <p><strong>The <code>__main__</code> guard.</strong> Every module has a variable <code>__name__</code>. When you run a file directly (<code>python tools.py</code>), it is <code>"__main__"</code>. When another file imports it, it is the module's name (<code>"tools"</code>). So <code>if __name__ == "__main__":</code> means "only when run directly". Put the script part (start training, print a demo) under it; keep the functions above it so they can be imported.</p>
   <div class="fx" data-lang="py"># tools.py
 def clean(s):
     return s.strip().lower()
@@ -497,7 +568,7 @@ tools loaded, __name__ = tools</div>
   <p>Since Python 3.3, a folder without <code>__init__.py</code> still imports (a "namespace package"). Still add it for normal packages: it makes the intent clear and holds the public API.</p>
 
   <h2 id="pi-env"><span class="num">09</span>Environments &amp; Dependencies</h2>
-  <p>A <strong>virtual environment</strong> (venv) is a private folder of packages for one project. Why: project A may need numpy 1.26 and project B numpy 2.3. Installed in one place, one of them breaks.</p>
+  <p>Libraries like pandas and numpy are not part of Python; you install them with <code>pip</code>. Now imagine two projects on one laptop. Project A needs numpy 1.26 and project B needs numpy 2.3. If there is only one place to install packages, one of the projects breaks. A <strong>virtual environment</strong> (venv) is a private folder of packages for one project. Each project gets its own, and nothing clashes.</p>
   <figure class="viz"><svg viewBox="0 0 540 150" width="540">
     <rect x="10" y="10" width="240" height="100" rx="8" class="fb sb"/><text x="22" y="32">project-A/.venv</text>
     <text x="22" y="56" class="tm">python 3.13</text><text x="22" y="76">numpy 1.26</text><text x="22" y="96">pandas 2.2</text>
@@ -517,8 +588,8 @@ charset-normalizer==3.5.2
 idna==3.20
 requests==2.32.3
 urllib3==2.8.0</div>
-  <p>One install pulled in four more packages that requests depends on (<em>transitive</em> dependencies). <code>pip freeze &gt; requirements.txt</code> pins them all, but with no hashes and no record of which ones you actually chose.</p>
-  <p>A <strong>lock file</strong> records the exact version and hash of every package, so every machine installs the same thing. <strong>Poetry</strong> (or <code>uv</code>) writes it for you.</p>
+  <p>Step by step: <code>python -m venv .venv</code> creates the private folder. <code>activate</code> tells the shell to use it, so <code>which python</code> now points inside <code>.venv</code>. One <code>pip install</code> of <code>requests</code> pulled in four more packages that requests itself needs; these are called <em>transitive</em> dependencies. <code>pip freeze</code> lists everything that is installed, with exact versions.</p>
+  <p>Now the teammate problem. You send your code; your teammate installs "pandas" and gets a newer version where one function changed, and the code fails. To stop this, a project keeps two lists. A short list of what <em>you</em> asked for (<code>requirements.txt</code> or <code>pyproject.toml</code>), and a <strong>lock file</strong>: the exact version and a <strong>hash</strong> (a fingerprint of the file) of every package, including the transitive ones. Installing from the lock file gives the same result on every machine. <strong>Poetry</strong> (or <code>uv</code>) writes the lock file for you.</p>
   <div class="fx" data-lang="text">$ poetry new churn                     # src/churn/__init__.py, tests/, pyproject.toml
 $ poetry add "requests@^2.32"
   - Installing charset-normalizer (3.5.2)
@@ -552,7 +623,7 @@ dev = [
   <div class="callout intu"><span class="label">Key insight</span><p>Two layers: <em>what you want</em> (loose ranges in <code>pyproject.toml</code>) and <em>what you got</em> (the exact lock). Commit both for apps and training pipelines. Libraries publish ranges only. <code>uv</code> (not run here) does the same job as Poetry, much faster, with <code>uv add</code> / <code>uv.lock</code>.</p></div>
 
   <h2 id="pi-build"><span class="num">10</span>Hands-on: A Tiny, Robust ETL</h2>
-  <p>YAML config → CSV in → check rows with a custom exception → log bad rows and keep going → Parquet out. Every idea from this note in 40 lines.</p>
+  <p>An <strong>ETL</strong> job (Extract, Transform, Load) reads raw data, cleans it and writes it somewhere useful. This one: read settings from a YAML config → read a CSV → check each row with a custom exception → log bad rows and keep going → write Parquet. Every idea from this note in 40 lines. Two of the four rows are bad on purpose.</p>
   <div class="fx" data-lang="text"># users.csv                  # config.yaml
 user,age,spend               input: users.csv
 asha,31,120.5                output: clean/users.parquet

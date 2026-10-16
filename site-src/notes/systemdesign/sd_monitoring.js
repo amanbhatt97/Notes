@@ -2,12 +2,21 @@
 Object.assign(TOPIC_CONTENT, {
   "sd_monitoring": `<main>
   <h1>Monitoring, Drift &amp; Retraining</h1>
-  <p class="lead">A model is right on launch day and slowly wrong after. This note covers what to watch, how to detect drift with numbers, what to do when labels arrive late, and when to retrain. Builds on the serving note.</p>
+  <p class="lead">A model is right on launch day and slowly wrong after, because the world keeps changing and the model does not. This note covers how to notice that (what to watch), how to measure it with numbers (drift), what to do when the true answers arrive months late, and when to train again. Builds on the serving note.</p>
 
   <h2 id="sm-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">Monitoring, Drift &amp; Retraining</div>
     <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Why monitor</div>
+        <ul>
+          <li><b>World changes, model doesn't</b> — trained on the past, used in the present</li>
+          <li><b>Silent failure</b> — server says 200 OK, predictions wrong</li>
+          <li><b>Drift</b> — the data or the rule the model learnt has moved</li>
+          <li>💡 printed city map: still looks fine, new flyover missing</li>
+        </ul>
+      </div>
       <div class="mm-branch">
         <div class="mm-title">What to monitor</div>
         <ul>
@@ -22,10 +31,10 @@ Object.assign(TOPIC_CONTENT, {
       <div class="mm-branch">
         <div class="mm-title">Drift types</div>
         <ul>
-          <li><b>Data / covariate</b> — P(x) changes (new users, inflation)</li>
-          <li><b>Concept</b> — P(y|x) changes (fraud tactics); needs labels to prove</li>
-          <li><b>Prediction</b> — P(ŷ) changes; no labels needed</li>
-          <li><b>Label / prior</b> — P(y) changes (holiday fraud rate)</li>
+          <li><b>Data / covariate</b> — P(x) changes: inputs look different (new users, inflation)</li>
+          <li><b>Concept</b> — P(y|x) changes: same input, different right answer (fraud tactics); needs labels to prove</li>
+          <li><b>Prediction</b> — P(ŷ) changes: model outputs shift; no labels needed</li>
+          <li><b>Label / prior</b> — P(y) changes: how common each answer is (holiday fraud rate)</li>
           <li>Data drift doesn't always hurt accuracy</li>
         </ul>
       </div>
@@ -34,6 +43,7 @@ Object.assign(TOPIC_CONTENT, {
         <ul>
           <li><b>PSI</b> — Σ (a−e)·ln(a/e), bins from training quantiles</li>
           <li><b>PSI rule</b> — &lt;0.1 ok · 0.1–0.25 watch · &gt;0.25 act</li>
+          <li>Toy: shares 25/25/25/25 → 10/20/30/40 gives PSI 0.228</li>
           <li><b>KS</b> — max CDF gap; ⚠ p-value tiny at large n → use statistic</li>
           <li><b>KL</b> — asymmetric, ∞ on empty bins; <b>JS</b> — symmetric, 0–1</li>
           <li><b>Chi-square</b> — categorical features</li>
@@ -84,26 +94,42 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="sm-what"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">What to Monitor</span><span class="rm-sub">Four layers</span></div></div>
-      <div class="rm-item rm-done" data-target="sm-types"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Types of Drift</span><span class="rm-sub">Data, concept, prediction</span></div></div>
-      <div class="rm-item rm-done" data-target="sm-detect"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Detecting Drift</span><span class="rm-sub">PSI, KS, KL/JS in numpy</span></div></div>
-      <div class="rm-item rm-done" data-target="sm-labels"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Delayed Labels</span><span class="rm-sub">Proxies until truth arrives</span></div></div>
-      <div class="rm-item rm-done" data-target="sm-alert"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Alerting</span><span class="rm-sub">Thresholds without noise</span></div></div>
-      <div class="rm-item rm-done" data-target="sm-loops"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Feedback Loops</span><span class="rm-sub">When the model feeds itself</span></div></div>
-      <div class="rm-item rm-done" data-target="sm-retrain"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Retraining</span><span class="rm-sub">Scheduled, triggered, continual</span></div></div>
-      <div class="rm-item rm-done" data-target="sm-build"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Hands-on: Drift Report</span><span class="rm-sub">PSI per feature</span></div></div>
-      <div class="rm-item rm-done" data-target="sm-qa"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="sm-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Why Models Go Stale</span><span class="rm-sub">The world moves, the model doesn't</span></div></div>
+      <div class="rm-item rm-done" data-target="sm-what"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">What to Monitor</span><span class="rm-sub">Four layers</span></div></div>
+      <div class="rm-item rm-done" data-target="sm-types"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Types of Drift</span><span class="rm-sub">Data, concept, prediction</span></div></div>
+      <div class="rm-item rm-done" data-target="sm-detect"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Detecting Drift</span><span class="rm-sub">PSI, KS, KL/JS in numpy</span></div></div>
+      <div class="rm-item rm-done" data-target="sm-labels"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Delayed Labels</span><span class="rm-sub">Proxies until truth arrives</span></div></div>
+      <div class="rm-item rm-done" data-target="sm-alert"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Alerting</span><span class="rm-sub">Thresholds without noise</span></div></div>
+      <div class="rm-item rm-done" data-target="sm-loops"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Feedback Loops</span><span class="rm-sub">When the model feeds itself</span></div></div>
+      <div class="rm-item rm-done" data-target="sm-retrain"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Retraining</span><span class="rm-sub">Scheduled, triggered, continual</span></div></div>
+      <div class="rm-item rm-done" data-target="sm-build"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Hands-on: Drift Report</span><span class="rm-sub">PSI per feature</span></div></div>
+      <div class="rm-item rm-done" data-target="sm-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
-  <h2 id="sm-what"><span class="num">01</span>What to Monitor</h2>
+  <h2 id="sm-why"><span class="num">01</span>Why Models Go Stale</h2>
+  <p>A bank trained a fraud model in January on last year's UPI payments. It learnt things like "a ₹40,000 payment at 2 am to a brand-new merchant is suspicious". In January it catches 90% of fraud. By June it catches 60%. Nothing in the code changed. What happened?</p>
+  <ul>
+    <li>Fraudsters noticed big night-time payments get blocked, so they now send many ₹2,000 payments in the afternoon. The <em>rule</em> the model learnt stopped being true.</li>
+    <li>The bank launched in two new states. Those customers shop differently, so the <em>inputs</em> look different from the training data.</li>
+    <li>A developer changed how the "merchant age" field is filled, and it is now empty for 30% of payments. The <em>data pipeline</em> broke.</li>
+  </ul>
+  <p>In each case the model still runs, still answers in 20 ms, still returns "200 OK". Only the answers are worse. Nobody will notice unless someone is <strong>watching the right numbers</strong>. Watching those numbers every day is <strong>monitoring</strong>. The general name for "the world moved away from what the model learnt" is <strong>drift</strong>.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A printed map of Bengaluru from 2019. It still looks perfect: clean, detailed, no errors on the page. But the new flyover and three metro stations are missing. The map did not change; the city did. A model is a map of the data at training time.</p>
+  </div>
+  <p><strong>Where you meet this.</strong> Every production model. Interviewers ask "how do you know your model is still working next month?", and in a real job the on-call engineer gets the 3 am alert.</p>
+
+  <h2 id="sm-what"><span class="num">02</span>What to Monitor</h2>
+  <p>Normal software monitoring asks "is the server up, is it fast?". That is not enough for ML, because a model can be up, fast, and wrong. So you watch four layers, from the machine up to the money.</p>
   <table class="tbl">
     <tr><th>Layer</th><th>Metrics</th><th>Catches</th><th>Labels needed?</th></tr>
-    <tr><td><strong>System</strong></td><td>p99 latency, error rate, QPS, GPU/CPU, fallback rate</td><td>Outages, slow features</td><td>No</td></tr>
-    <tr><td><strong>Data</strong></td><td>Null rate, schema, ranges, feature distributions (PSI)</td><td>Broken pipelines, drift</td><td>No</td></tr>
-    <tr><td><strong>Model</strong></td><td>Prediction distribution, AUC/precision when labels land, calibration</td><td>Decay, concept drift</td><td>Partly</td></tr>
+    <tr><td><strong>System</strong></td><td>p99 latency, error rate, QPS, GPU/CPU, fallback rate (how often the backup answer was used)</td><td>Outages, slow features</td><td>No</td></tr>
+    <tr><td><strong>Data</strong></td><td>Null rate, schema (column names and types), ranges, feature distributions (PSI)</td><td>Broken pipelines, drift</td><td>No</td></tr>
+    <tr><td><strong>Model</strong></td><td>Prediction distribution, AUC/precision when labels land, calibration (does "70% fraud" mean fraud 70% of the time?)</td><td>Decay, concept drift</td><td>Partly</td></tr>
     <tr><td><strong>Business</strong></td><td>CTR, conversion, revenue, fraud losses, complaints</td><td>What actually matters</td><td>No (but slow, noisy)</td></tr>
   </table>
+  <p>For the bank's fraud model: System = "scoring takes 20 ms, 0.1% errors". Data = "merchant_age is null for 30% of rows today, was 2% last week" (that catches the broken field). Model = "share of payments flagged as fraud doubled since Monday". Business = "fraud losses this month ₹2 crore vs ₹1 crore last month".</p>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A car dashboard. Engine light (system), fuel quality (data), speedometer accuracy (model), and whether you reach the destination on time (business).</p>
   </div>
@@ -111,26 +137,49 @@ Object.assign(TOPIC_CONTENT, {
     <p>Most ML failures are silent: the service returns 200 OK with wrong predictions. System monitoring alone will never catch them.</p>
   </div>
 
-  <h2 id="sm-types"><span class="num">02</span>Types of Drift</h2>
+  <h2 id="sm-types"><span class="num">03</span>Types of Drift</h2>
+  <p>"Drift" is one word for several different things moving. A little notation helps keep them apart. Call the inputs <strong>x</strong> (payment amount, hour, merchant), the true answer <strong>y</strong> (fraud or not), and the model's guess <strong>ŷ</strong> ("y-hat"). <strong>P(x)</strong> means "what inputs usually look like"; <strong>P(y | x)</strong> means "given these inputs, how likely is fraud", which is the rule the model tries to learn.</p>
   <figure class="viz"><svg viewBox="0 0 762 196" width="762" role="img"><defs><marker id="sm-m1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs><text x="125" y="16" text-anchor="middle" font-weight="600">Data drift: P(x) moves</text><path d="M15.0,138.9 L20.3,138.1 L25.7,136.7 L31.0,134.5 L36.3,131.2 L41.7,126.5 L47.0,120.1 L52.3,112.0 L57.7,102.3 L63.0,91.2 L68.3,79.4 L73.7,67.9 L79.0,57.8 L84.3,50.1 L89.7,45.8 L95.0,45.3 L100.3,48.7 L105.7,55.6 L111.0,65.2 L116.3,76.5 L121.7,88.3 L127.0,99.6 L132.3,109.7 L137.7,118.3 L143.0,125.0 L148.3,130.1 L153.7,133.8 L159.0,136.2 L164.3,137.8 L169.7,138.8 L175.0,139.3 L180.3,139.7 L185.7,139.8 L191.0,139.9 L196.3,140.0 L201.7,140.0 L207.0,140.0 L212.3,140.0 L217.7,140.0 L223.0,140.0" stroke="currentColor" fill="none" stroke-width="1.4"/><path d="M15.0,139.9 L20.3,139.9 L25.7,139.8 L31.0,139.6 L36.3,139.3 L41.7,138.8 L47.0,138.0 L52.3,136.9 L57.7,135.3 L63.0,133.1 L68.3,130.0 L73.7,126.1 L79.0,121.1 L84.3,115.1 L89.7,108.1 L95.0,100.4 L100.3,92.2 L105.7,84.0 L111.0,76.2 L116.3,69.5 L121.7,64.3 L127.0,61.0 L132.3,60.0 L137.7,61.3 L143.0,64.8 L148.3,70.2 L153.7,77.1 L159.0,85.0 L164.3,93.2 L169.7,101.4 L175.0,109.1 L180.3,115.9 L185.7,121.8 L191.0,126.6 L196.3,130.5 L201.7,133.4 L207.0,135.6 L212.3,137.1 L217.7,138.2 L223.0,138.9" class="st" fill="none" stroke-width="1.4"/><path d="M15,140 H230" stroke="currentColor" fill="none" stroke-width="1.4"/><text x="70" y="158" text-anchor="middle" class="tm">train</text><text x="175" y="158" text-anchor="middle" class="tb">prod</text><text x="125" y="184" text-anchor="middle" class="tm">inputs change, rule same</text><text x="375" y="16" text-anchor="middle" font-weight="600">Concept drift: P(y|x) moves</text><rect x="260" y="30" width="230" height="110" rx="2" class="fs" stroke="currentColor" stroke-opacity=".4"/><circle cx="290" cy="50" r="5" class="fg" stroke="currentColor"/><circle cx="320" cy="90" r="5" class="fg" stroke="currentColor"/><circle cx="300" cy="110" r="5" class="fg" stroke="currentColor"/><circle cx="355" cy="60" r="5" class="fr" stroke="currentColor"/><circle cx="380" cy="100" r="5" class="fr" stroke="currentColor"/><circle cx="430" cy="50" r="5" class="fr" stroke="currentColor"/><circle cx="460" cy="95" r="5" class="fr" stroke="currentColor"/><circle cx="410" cy="120" r="5" class="fr" stroke="currentColor"/><circle cx="350" cy="125" r="5" class="fg" stroke="currentColor"/><path d="M335,32 L370,138" stroke="currentColor" fill="none" stroke-width="1.4" stroke-dasharray="5 4"/><path d="M395,32 L430,138" class="sr" fill="none" stroke-width="1.4"/><text x="322" y="158" text-anchor="middle" class="tm">old boundary</text><text x="438" y="158" text-anchor="middle" class="tr">new</text><text x="375" y="184" text-anchor="middle" class="tm">same x, different right answer</text><text x="640" y="16" text-anchor="middle" font-weight="600">Prediction drift</text><rect x="550" y="132" width="16" height="8" rx="1" class="fs" stroke="currentColor" stroke-opacity=".4"/><rect x="567" y="137" width="16" height="3" rx="1" class="ft" stroke="currentColor" stroke-opacity=".4"/><rect x="588" y="110" width="16" height="30" rx="1" class="fs" stroke="currentColor" stroke-opacity=".4"/><rect x="605" y="130" width="16" height="10" rx="1" class="ft" stroke="currentColor" stroke-opacity=".4"/><rect x="626" y="80" width="16" height="60" rx="1" class="fs" stroke="currentColor" stroke-opacity=".4"/><rect x="643" y="110" width="16" height="30" rx="1" class="ft" stroke="currentColor" stroke-opacity=".4"/><rect x="664" y="110" width="16" height="30" rx="1" class="fs" stroke="currentColor" stroke-opacity=".4"/><rect x="681" y="85" width="16" height="55" rx="1" class="ft" stroke="currentColor" stroke-opacity=".4"/><rect x="702" y="130" width="16" height="10" rx="1" class="fs" stroke="currentColor" stroke-opacity=".4"/><rect x="719" y="100" width="16" height="40" rx="1" class="ft" stroke="currentColor" stroke-opacity=".4"/><path d="M540,140 H740" stroke="currentColor" fill="none" stroke-width="1.4"/><text x="640" y="158" text-anchor="middle" class="tm">score: grey train, teal prod</text><text x="640" y="184" text-anchor="middle" class="tm">outputs shift; no labels needed</text></svg><figcaption>Three different things move. Only concept drift changes the true rule, so only labels prove it.</figcaption></figure>
+  <p>Left: the hump of input values has shifted right (the new states' customers), but the rule is the same. Middle: the same dots, but the boundary between "safe" and "fraud" moved (fraudsters changed tactics). Right: only the model's output scores have shifted, which you can see without knowing any true answers.</p>
   <table class="tbl">
     <tr><th>Drift</th><th>What changes</th><th>Example</th><th>Detect with</th></tr>
-    <tr><td><strong>Data (covariate)</strong></td><td>P(x)</td><td>New market, younger users, inflation raises prices</td><td>Feature PSI / KS</td></tr>
-    <tr><td><strong>Concept</strong></td><td>P(y | x)</td><td>Fraudsters change tactics; COVID changes buying</td><td>Labelled performance</td></tr>
-    <tr><td><strong>Prediction</strong></td><td>P(ŷ)</td><td>Share of "fraud" flags doubles</td><td>Output PSI, positive rate</td></tr>
-    <tr><td><strong>Label (prior)</strong></td><td>P(y)</td><td>Fraud base rate rises in holidays</td><td>Label rate over time</td></tr>
+    <tr><td><strong>Data (covariate)</strong></td><td>P(x): the inputs</td><td>New market, younger users, inflation raises prices</td><td>Feature PSI / KS</td></tr>
+    <tr><td><strong>Concept</strong></td><td>P(y | x): the rule</td><td>Fraudsters change tactics; COVID changes buying</td><td>Labelled performance</td></tr>
+    <tr><td><strong>Prediction</strong></td><td>P(ŷ): the outputs</td><td>Share of "fraud" flags doubles</td><td>Output PSI, positive rate</td></tr>
+    <tr><td><strong>Label (prior)</strong></td><td>P(y): how common each answer is</td><td>Fraud base rate rises in holidays</td><td>Label rate over time</td></tr>
   </table>
-  <p>"Model drift" usually means performance decay from any of these. Data drift does not always hurt: if the model handles the new region well, accuracy holds.</p>
+  <p>"Model drift" usually means performance decay from any of these. Data drift does not always hurt: if the model handles the new region well, accuracy holds. Concept drift always hurts, because the rule itself changed, and you can only prove it once you have true labels.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A teacher marking exams. Data drift: this year's students are younger, but the marking scheme is the same. Concept drift: the board changed the marking scheme, so the same answer now gets a different mark. Prediction drift: the teacher is suddenly giving everyone 90+, which you can notice before any re-check.</p>
+  </div>
 
-  <h2 id="sm-detect"><span class="num">03</span>Detecting Drift</h2>
+  <h2 id="sm-detect"><span class="num">04</span>Detecting Drift</h2>
+  <p>"The inputs look different" must become a number, or a computer cannot alert on it. The idea behind every method here is the same: take the feature's values at training time, take this week's values, and measure how far apart the two piles are.</p>
+  <p>The industry favourite is <strong>PSI</strong> (population stability index). Tiny worked example. At training time, customers' order values were split evenly into four bins (25% each). This week the split is 10/20/30/40. For each bin take (this week − training) × ln(this week ÷ training), then add up:</p>
+  <div class="fx" data-lang="py">import numpy as np
+# Share of customers per order-value bin
+train = np.array([0.25, 0.25, 0.25, 0.25])   # at training time (expected, e)
+today = np.array([0.10, 0.20, 0.30, 0.40])   # this week (actual, a)
+
+parts = (today - train) * np.log(today / train)
+for i, (e, a, p) in enumerate(zip(train, today, parts), 1):
+    print(f"bin {i}: e={e:.2f} a={a:.2f}  (a-e)*ln(a/e) = {p:.3f}")
+print(f"PSI = {parts.sum():.3f}")</div>
+  <div class="fx" data-lang="text">bin 1: e=0.25 a=0.10  (a-e)*ln(a/e) = 0.137
+bin 2: e=0.25 a=0.20  (a-e)*ln(a/e) = 0.011
+bin 3: e=0.25 a=0.30  (a-e)*ln(a/e) = 0.009
+bin 4: e=0.25 a=0.40  (a-e)*ln(a/e) = 0.071
+PSI = 0.228</div>
+  <p>Every term is positive (a shrinking bin and a growing bin both add), so PSI is 0 when nothing moved and grows as the piles separate. 0.228 is in the "watch" zone of the table below. The formula written formally: <strong>PSI = Σ (a − e) · ln(a / e)</strong>, where e is the expected (training) share and a the actual (current) share in each bin.</p>
   <table class="tbl">
     <tr><th>Method</th><th>Idea</th><th>Good for</th></tr>
     <tr><td><strong>PSI</strong></td><td>Σ (a − e) · ln(a / e) over bins</td><td>Industry standard, one number per feature</td></tr>
-    <tr><td><strong>KS test</strong></td><td>Max gap between two CDFs + p-value</td><td>Continuous features</td></tr>
+    <tr><td><strong>KS test</strong></td><td>Max gap between two CDFs (running totals of "share of values below this point") + p-value</td><td>Continuous features</td></tr>
     <tr><td><strong>KL divergence</strong></td><td>Σ p · ln(p / q); asymmetric, infinite if q = 0</td><td>Theory; needs smoothing</td></tr>
     <tr><td><strong>JS divergence</strong></td><td>Symmetric, bounded KL vs the average</td><td>Dashboards (0 to 1)</td></tr>
     <tr><td><strong>Chi-square</strong></td><td>Observed vs expected counts</td><td>Categorical features</td></tr>
   </table>
+  <p>Now on realistic data: 10,000 basket values at training time, and three fresh samples with no shift, a small shift and a big shift. Bins come from training quantiles, so each training bin holds ~10% of values.</p>
   <div class="fx" data-lang="py">import numpy as np
 from scipy import stats
 from scipy.spatial.distance import jensenshannon
@@ -171,7 +220,7 @@ big        0.492    0.295  9.88e-324   0.085</div>
     <tr><td>0.1 – 0.25</td><td>Moderate: investigate</td></tr>
     <tr><td>&gt; 0.25</td><td>Major: act (check pipeline, consider retrain)</td></tr>
   </table>
-  <p>Note "small" (mean +2): PSI 0.048 says ignore, but KS p ≈ 10<sup>-42</sup> screams. With big samples, KS flags tiny shifts.</p>
+  <p>Note "small" (mean +2): PSI 0.048 says ignore, but KS p ≈ 10<sup>-42</sup> screams. A p-value answers "could this gap be chance?", and with 10,000 rows even a tiny real gap is clearly not chance. With big samples, KS flags tiny shifts.</p>
   <div class="fx" data-lang="py">import numpy as np
 from scipy import stats
 rng = np.random.default_rng(0)
@@ -182,12 +231,15 @@ for n in [500, 5_000, 500_000]:
   <div class="fx" data-lang="text">n=    500  KS p-value=0.6659
 n=  5,000  KS p-value=0.0112
 n=500,000  KS p-value=0.0000</div>
+  <p>Same half-unit shift, three sample sizes: "fine" at 500 rows, "significant" at 5,000, "certain" at 500,000. The shift did not grow; only the sample did.</p>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Alerting on KS p-values at production volumes. Every feature becomes "significant". Alert on effect size (PSI, KS statistic) instead.</p>
   </div>
 
-  <h2 id="sm-labels"><span class="num">04</span>Delayed Labels</h2>
+  <h2 id="sm-labels"><span class="num">05</span>Delayed Labels</h2>
+  <p>The honest way to know if the fraud model is still good is to compare its guesses with the truth. But the truth arrives late. A payment is confirmed as fraud only when the customer complains and the bank reverses it (a <strong>chargeback</strong>), which takes 30 to 90 days. So on any given day you have the model's guesses for the last three months and the true answers for almost none of them.</p>
   <figure class="viz"><svg viewBox="0 0 700 112" width="700" role="img"><defs><marker id="sm-m2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs><path d="M30,60 H680" stroke="currentColor" fill="none" stroke-width="1.4" marker-end="url(#sm-m2)"/><circle cx="60" cy="60" r="7" class="fb" stroke="currentColor"/><text x="60" y="42" text-anchor="middle" font-weight="600">t0: predict</text><text x="60" y="84" text-anchor="middle" class="tm">score txn</text><circle cx="220" cy="60" r="7" class="fs" stroke="currentColor"/><text x="220" y="42" text-anchor="middle" font-weight="600">+1 s</text><text x="220" y="84" text-anchor="middle" class="tm">decline / approve</text><circle cx="400" cy="60" r="7" class="ft" stroke="currentColor"/><text x="400" y="42" text-anchor="middle" font-weight="600">+1 day</text><text x="400" y="84" text-anchor="middle" class="tm">proxy: disputes opened</text><circle cx="600" cy="60" r="7" class="fr" stroke="currentColor"/><text x="600" y="42" text-anchor="middle" font-weight="600">+30–90 days</text><text x="600" y="84" text-anchor="middle" class="tm">label: chargeback</text></svg><figcaption>Fraud labels arrive months late. Proxies and drift metrics are your early warning in between.</figcaption></figure>
+  <p>Read the timeline: the decision happens in a second, the true label lands months later. In between you lean on a <strong>proxy</strong>: an early signal that usually points the same way, like a customer raising a dispute the next day.</p>
   <table class="tbl">
     <tr><th>Product</th><th>True label</th><th>Delay</th><th>Proxy to watch meanwhile</th></tr>
     <tr><td>Fraud</td><td>Chargeback</td><td>30–90 days</td><td>Disputes, analyst review rate, decline rate</td></tr>
@@ -199,48 +251,58 @@ n=500,000  KS p-value=0.0000</div>
     <p>Use input and prediction drift as early warnings, proxies for direction, and a small human-labelled sample for ground truth now.</p>
   </div>
 
-  <h2 id="sm-alert"><span class="num">05</span>Alerting</h2>
+  <h2 id="sm-alert"><span class="num">06</span>Alerting</h2>
+  <p>You have numbers now: PSI per feature, null rates, flag rate. The next question is when a number should wake someone up. Done badly, this creates a flood of alerts that everyone ignores, which is worse than no alerts.</p>
   <div class="flow"><span>Metric</span><span>Window (1 h / 1 day)</span><span>Compare to baseline</span><span>Persists N windows?</span><span>Page or ticket</span></div>
   <ul>
-    <li><strong>Baseline</strong>: training data or a recent healthy window. Seasonality: compare to the same weekday.</li>
-    <li><strong>Severity</strong>: page for system outages and null-rate spikes; ticket for slow drift.</li>
-    <li><strong>Persistence</strong>: require 2–3 consecutive breaches to cut noise.</li>
+    <li><strong>Baseline</strong>: what you compare against. Training data or a recent healthy window. Seasonality: compare Sunday to last Sunday, not to Monday.</li>
+    <li><strong>Severity</strong>: page (phone call now) for system outages and null-rate spikes; ticket (look tomorrow) for slow drift.</li>
+    <li><strong>Persistence</strong>: require 2–3 consecutive breaches to cut noise. One odd hour is not an incident.</li>
     <li><strong>Prioritise</strong>: weight drift by feature importance; a drift in a top feature matters more.</li>
   </ul>
+  <p>The maths of alert fatigue: if each check is wrong 1% of the time, and you run 100 checks a day, you get one false alarm every day on average. After a week people stop reading them.</p>
   <div class="callout trap"><span class="label">Trap</span>
     <p>100 features × daily checks at 1% false-alarm rate = one false alert per day. Teams then ignore all alerts.</p>
   </div>
 
-  <h2 id="sm-loops"><span class="num">06</span>Feedback Loops</h2>
+  <h2 id="sm-loops"><span class="num">07</span>Feedback Loops</h2>
+  <p>Here is a strange problem. Swiggy's model shows you 20 restaurants. You order from one. That order becomes tomorrow's training data. But the 980 restaurants the model did not show you got no chance to earn an order, so they never appear in the training data as "good". The model keeps picking the same 20, trains on them, and becomes even more sure of them. The model is choosing its own homework.</p>
   <figure class="viz"><svg viewBox="0 0 640 196" width="640" role="img"><defs><marker id="sm-m3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs><rect x="30" y="20" width="180" height="44" rx="6" class="fv" stroke="currentColor" stroke-opacity=".55"/><text x="120" y="46" text-anchor="middle" font-weight="600">Model ranks items</text><rect x="430" y="20" width="180" height="44" rx="6" class="fb" stroke="currentColor" stroke-opacity=".55"/><text x="520" y="46" text-anchor="middle" font-weight="600">Users see top items</text><rect x="430" y="130" width="180" height="44" rx="6" class="ft" stroke="currentColor" stroke-opacity=".55"/><text x="520" y="149" text-anchor="middle" font-weight="600">Clicks logged</text><text x="520" y="163" text-anchor="middle" class="tm">only on shown items</text><rect x="30" y="130" width="180" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity=".55"/><text x="120" y="156" text-anchor="middle" font-weight="600">Training data</text><line x1="212" y1="42" x2="427" y2="42" stroke="currentColor" stroke-width="1.4" marker-end="url(#sm-m3)"/><line x1="520" y1="66" x2="520" y2="127" stroke="currentColor" stroke-width="1.4" marker-end="url(#sm-m3)"/><line x1="428" y1="152" x2="213" y2="152" stroke="currentColor" stroke-width="1.4" marker-end="url(#sm-m3)"/><line x1="120" y1="128" x2="120" y2="67" stroke="currentColor" stroke-width="1.4" marker-end="url(#sm-m3)"/><text x="320" y="96" text-anchor="middle" class="tr" font-weight="600">degenerate loop:</text><text x="320" y="112" text-anchor="middle" class="tr">unshown items never earn data</text></svg><figcaption>The model creates its own training data. Without exploration it keeps confirming its past choices.</figcaption></figure>
-  <table class="tbl">
-    <tr><th>Loop</th><th>Effect</th><th>Mitigation</th></tr>
-    <tr><td>Recommendations</td><td>Popular gets more popular; new items starve</td><td>Exploration slots (ε-greedy, bandits), popularity debiasing</td></tr>
-    <tr><td>Fraud blocking</td><td>Blocked txns never get a label</td><td>Let a tiny random holdout through, or use analyst review</td></tr>
-    <tr><td>Predictive policing / credit</td><td>Model's decisions shape who is observed</td><td>Counterfactual evaluation, fairness audits</td></tr>
-  </table>
+  <p>Follow the arrows around the square: rank → show → log clicks on shown items only → train on those logs → rank again. Nothing outside the loop ever gets in.</p>
   <div class="callout def"><span class="label">Definition</span>
     <p>A <strong>degenerate feedback loop</strong>: the model's outputs decide its future training data, so errors and biases reinforce themselves.</p>
   </div>
+  <p>The fraud version is nastier. The model blocks a payment. Blocked payments never complete, so there is never a chargeback, so you never learn if the block was right. You cannot measure the mistakes you made on what you blocked.</p>
+  <table class="tbl">
+    <tr><th>Loop</th><th>Effect</th><th>Mitigation</th></tr>
+    <tr><td>Recommendations</td><td>Popular gets more popular; new items starve</td><td>Exploration slots (show a few random or new items on purpose: ε-greedy, bandits), popularity debiasing</td></tr>
+    <tr><td>Fraud blocking</td><td>Blocked txns never get a label</td><td>Let a tiny random holdout through, or use analyst review</td></tr>
+    <tr><td>Predictive policing / credit</td><td>Model's decisions shape who is observed</td><td>Counterfactual evaluation, fairness audits</td></tr>
+  </table>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A cricket selector who only watches the players he already picked. He never sees the others play, so he keeps picking the same team and feels more confident every season. Exploration is giving a few net-practice players a match.</p>
+  </div>
 
-  <h2 id="sm-retrain"><span class="num">07</span>Retraining</h2>
+  <h2 id="sm-retrain"><span class="num">08</span>Retraining</h2>
+  <p>Once you know the model has gone stale, the fix is to train it again on fresh data. The design questions are <em>when</em> to do that, and how to make sure the new model is really better before it replaces the old one.</p>
   <div class="cards">
     <div><b>Scheduled</b><p>Every day / week, regardless.</p><small>Simple; may waste compute or be too slow</small></div>
     <div><b>Triggered</b><p>When drift or a metric crosses a threshold.</p><small>Efficient; needs reliable monitoring</small></div>
     <div><b>Continual</b><p>Incremental updates on new data (minutes–hours).</p><small>Ads, news feeds; harder to validate</small></div>
   </div>
+  <p>Retraining is never just "run train.py again". It is a pipeline with gates, so a bad retrain cannot reach users:</p>
   <div class="flow"><span>Trigger</span><span>Pull data (point-in-time)</span><span>Validate data</span><span>Train</span><span>Evaluate vs prod model</span><span>Register</span><span>Shadow / canary</span><span>Promote</span></div>
   <ul>
     <li><strong>Data validation gate</strong>: schema, ranges, row counts; stop bad data training a bad model.</li>
-    <li><strong>Champion vs challenger</strong>: the new model must beat production on the same recent holdout.</li>
+    <li><strong>Champion vs challenger</strong>: the current model is the champion, the new one the challenger. The challenger must beat the champion on the same recent holdout (data neither trained on).</li>
     <li><strong>Window</strong>: sliding (recent N weeks, adapts fast) vs expanding (all history, stable).</li>
   </ul>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>Retraining on data that already contains the incident (e.g. a broken feature). Auto-retrain then bakes the bug into the model.</p>
+    <p>Retraining on data that already contains the incident (e.g. a broken feature). Auto-retrain then bakes the bug into the model. That is why the validation gate comes before training, not after.</p>
   </div>
 
-  <h2 id="sm-build"><span class="num">08</span>Hands-on: Drift Report</h2>
-  <p>A nightly job's core: PSI per feature (and on the model score) against a reference window, with traffic-light status.</p>
+  <h2 id="sm-build"><span class="num">09</span>Hands-on: Drift Report</h2>
+  <p>A nightly job's core: PSI per feature (and on the model score) against a reference window, with traffic-light status. The reference is a frozen sample from training time; "cur" is today's traffic.</p>
   <div class="fx" data-lang="py">import numpy as np, pandas as pd
 
 def psi(e, a, bins=10):
@@ -268,10 +330,11 @@ amount  0.344  ALERT
 score   0.135  watch
 hour    0.002     ok
 age     0.000     ok</div>
-  <p>Try it: weight each PSI by feature importance, and only alert when the status persists two nights in a row.</p>
+  <p>Reading it: prices rose (amount drifted, ALERT), which also moved the model's scores (watch). Age and hour did not move. Try it: weight each PSI by feature importance, and only alert when the status persists two nights in a row.</p>
 
-  <h2 id="sm-qa"><span class="num">09</span>Questions &amp; Answers</h2>
+  <h2 id="sm-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>Why can't ordinary server monitoring (uptime, latency) tell you a model is broken?</summary><div class="qa-body">A stale or mis-fed model still answers fast with status 200. The failure is in the content of the answers, so you need data checks (nulls, PSI), prediction-distribution checks, and delayed accuracy on top of system metrics.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Data drift vs concept drift, with an example of each?</summary><div class="qa-body">Data drift: input distribution changes, e.g. a new app version brings younger users. Concept drift: the input-to-label relationship changes, e.g. the same transaction pattern that was safe is now a fraud tactic. Only concept drift is guaranteed to break the model.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>How do you compute PSI?</summary><div class="qa-body">Bin the reference data (often 10 quantile bins), apply the same edges to current data, get proportions e and a per bin, clip zeros, and sum (a − e) · ln(a / e). It is a symmetric form of KL divergence.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Every KS test in your dashboard has p &lt; 0.001. What's wrong?</summary><div class="qa-body">Huge samples make trivial shifts significant. Use the KS statistic (effect size) or PSI with thresholds, or subsample to a fixed size before testing.</div></details>
