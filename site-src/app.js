@@ -225,6 +225,7 @@ function makeCollapsible(container) {
     .forEach(function(h2) {
       var block = document.createElement('div');
       block.className = 'section-block collapsed';
+      if (h2.classList.contains('open')) block.classList.remove('collapsed');
       var numEl = h2.querySelector('.num');
       var numText = numEl ? numEl.textContent.trim() : '';
       if (numEl) numEl.remove();
@@ -251,6 +252,8 @@ function makeCollapsible(container) {
       block.appendChild(btn);
       block.appendChild(body);
       h2.remove();
+      // The mind map is the revision view: show it expanded on arrival
+      if (body.querySelector('.mindmap')) block.classList.remove('collapsed');
     });
 
   // Step C: wire roadmap item clicks — expand section + scroll
@@ -303,13 +306,15 @@ function loadTopic(key, cat) {
   _tc.innerHTML = html;
   highlightCode(_tc);
   makeCollapsible(_tc);
+  hoistMindMap(_tc);
+  addSectionTools(_tc);
   if (foundCat) appendPrevNext(_tc, foundCat, key);
 
   if (foundCat) {
-    document.getElementById('tbCat').textContent =
-      [foundCat.label].concat(path.map(g => g.label)).join(' › ');
+    renderCrumbs(foundCat, path);
     revealInSidebar(foundCat, key);
   }
+  document.getElementById('tbTools').style.display = '';
   document.getElementById('tbName').textContent = topicLabel;
 
   // Wire Q&A reveal buttons
@@ -351,6 +356,128 @@ function appendPrevNext(container, cat, key) {
     nav.appendChild(b);
   });
   container.appendChild(nav);
+}
+
+
+// ── Page tools: breadcrumbs, expand/collapse, mind map, overviews ───────────
+// Breadcrumb levels are clickable: category and group open an overview page.
+function renderCrumbs(cat, path) {
+  var el = document.getElementById('tbCat');
+  el.innerHTML = '';
+  var levels = [{ label: cat.label, group: null }].concat(path.map(function(g) { return { label: g.label, group: g.key }; }));
+  levels.forEach(function(l, i) {
+    if (i) {
+      var sep = document.createElement('span');
+      sep.className = 'topic-bar-sep';
+      sep.textContent = '/';
+      el.appendChild(sep);
+    }
+    var b = document.createElement('button');
+    b.className = 'crumb';
+    b.textContent = l.label;
+    b.onclick = function() { showOverview(cat.key, l.group); };
+    el.appendChild(b);
+  });
+}
+
+function setAllSections(open) {
+  document.querySelectorAll('#topicContent .section-block, #topicContent .subsection-block').forEach(function(b) {
+    b.classList.toggle('collapsed', !open);
+  });
+  document.querySelectorAll('#topicContent .sec-tool').forEach(function(t) {
+    t.textContent = open ? 'Collapse parts' : 'Expand parts';
+  });
+}
+
+// Sections with sub-parts get their own expand/collapse-parts control.
+function addSectionTools(container) {
+  container.querySelectorAll('.section-block').forEach(function(block) {
+    var subs = block.querySelectorAll(':scope > .section-body > .subsection-block, :scope > .section-body .subsection-block');
+    if (subs.length < 2) return;
+    var t = document.createElement('span');
+    t.className = 'sec-tool';
+    t.textContent = 'Expand parts';
+    t.onclick = function(e) {
+      e.stopPropagation();
+      var open = t.textContent === 'Expand parts';
+      block.classList.remove('collapsed');
+      subs.forEach(function(s) { s.classList.toggle('collapsed', !open); });
+      t.textContent = open ? 'Collapse parts' : 'Expand parts';
+    };
+    block.querySelector('.section-toggle').appendChild(t);
+  });
+}
+
+// Wherever a note puts its mind map, show it first (right after the lead).
+function hoistMindMap(container) {
+  var mm = container.querySelector('.mindmap');
+  if (!mm) return;
+  var block = mm.closest('.section-block');
+  if (!block) return;
+  var anchor = container.querySelector('.roadmap-wrap') || container.querySelector('.section-block');
+  if (anchor && anchor !== block) anchor.parentNode.insertBefore(block, anchor);
+}
+
+// Chain of groups from the category root down to group `key`.
+function groupPath(list, key) {
+  for (var i = 0; i < (list || []).length; i++) {
+    var t = list[i];
+    if (!t.children) continue;
+    if (t.key === key) return [t];
+    var sub = groupPath(t.children, key);
+    if (sub) return [t].concat(sub);
+  }
+  return null;
+}
+
+function noteLead(key) {
+  var m = (TOPIC_CONTENT[key] || '').match(/<p class="lead">([\s\S]*?)<\/p>/);
+  return m ? m[1].replace(/<[^>]+>/g, '') : '';
+}
+
+// Overview page for a category or a group: its notes and sub-groups as cards.
+function showOverview(catKey, groupKey) {
+  var cat = CATEGORIES.find(function(c) { return c.key === catKey; });
+  if (!cat) return;
+  var path = groupKey ? (groupPath(cat.topics, groupKey) || []) : [];
+  var node = path.length ? path[path.length - 1] : { label: cat.label, children: cat.topics };
+  if (groupKey && !path.length) return;
+  activeTopic = null;
+  document.getElementById('homeEl').style.display = 'none';
+  var tp = document.getElementById('topicPage');
+  tp.className = 'topic-page visible';
+  var tc = document.getElementById('topicContent');
+  var html = '<h1>' + (groupKey ? node.label : cat.emoji + ' ' + cat.label) + '</h1><div class="ov-list">';
+  (node.children || []).forEach(function(t) {
+    if (t.divider) return;
+    if (t.children) {
+      var kids = flatTopics(t.children);
+      html += '<div class="ov-group"><button class="ov-group-title" data-group="' + t.key + '">' + t.label + ' <span>' + kids.length + ' notes →</span></button><div class="ov-cards">' +
+        kids.map(function(k) { return ovCard(k); }).join('') + '</div></div>';
+    } else {
+      html += ovCard(t);
+    }
+  });
+  tc.innerHTML = html + '</div>';
+  tc.querySelectorAll('[data-open]').forEach(function(b) {
+    b.onclick = function() { loadTopic(b.dataset.open, cat); };
+  });
+  tc.querySelectorAll('[data-group]').forEach(function(b) {
+    b.onclick = function() { showOverview(cat.key, b.dataset.group); };
+  });
+  renderCrumbs(cat, path);
+  document.getElementById('tbName').textContent = 'Overview';
+  document.getElementById('tbTools').style.display = 'none';
+  document.getElementById('sbHome').classList.remove('active');
+  document.querySelectorAll('.sb-topic').forEach(function(b) { b.classList.remove('active'); });
+  window.scrollTo(0, 0);
+}
+
+function ovCard(t) {
+  var ok = !!TOPIC_CONTENT[t.key];
+  return '<button class="ov-card' + (ok ? '' : ' soon') + '"' + (ok ? ' data-open="' + t.key + '"' : ' disabled') + '>' +
+    '<b>' + t.label + (appState.visited[t.key] ? ' <i class="ov-read">✓ read</i>' : '') + '</b>' +
+    '<span>' + (ok ? noteLead(t.key) : 'Coming soon') + '</span></button>';
 }
 
 // ── Home grid ─────────────────────────────────────────────────────────────────

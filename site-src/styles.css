@@ -1320,3 +1320,51 @@ span.note-nav-btn{visibility:hidden}
 .viz .fr{fill:var(--red-dim)}.viz .fv{fill:var(--violet-dim)}.viz .fs{fill:var(--s2)}
 .viz .sb{stroke:var(--blue)}.viz .st{stroke:var(--teal)}.viz .sg{stroke:var(--green)}.viz .sr{stroke:var(--red)}
 .viz .tb{fill:var(--blue)}.viz .tr{fill:var(--red)}.viz .tg{fill:var(--green)}.viz .tm{fill:var(--ink3)}
+
+/* Clickable breadcrumb + page tools */
+.topic-bar{flex-wrap:wrap}
+.crumb{border:none;background:none;padding:0;font:inherit;font-weight:500;color:var(--ink2);cursor:pointer}
+.crumb:hover{color:var(--blue);text-decoration:underline}
+.topic-bar-cat{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tb-tools{margin-left:auto;display:flex;gap:6px}
+.tb-tools button,.sec-tool{border:1px solid var(--border);background:var(--s1);color:var(--ink2);
+  border-radius:6px;padding:4px 10px;font:inherit;font-size:11.5px;cursor:pointer}
+.tb-tools button:hover,.sec-tool:hover{border-color:var(--blue);color:var(--blue)}
+.sec-tool{margin-left:auto;font-weight:500;flex-shrink:0}
+
+/* Category / group overview pages */
+.ov-list{display:flex;flex-direction:column;gap:14px;margin-top:18px}
+.ov-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;margin-top:10px}
+.ov-list > .ov-card{width:100%}
+.ov-card{display:flex;flex-direction:column;gap:5px;text-align:left;padding:13px 15px;
+  border:1px solid var(--border);border-radius:var(--r);background:var(--s1);color:var(--ink);
+  font:inherit;cursor:pointer;transition:border-color var(--t),background var(--t)}
+.ov-card:hover{border-color:var(--blue);background:var(--blue-dim)}
+.ov-card b{font-size:13.5px}
+.ov-card span{font-size:12.5px;color:var(--ink3);line-height:1.5}
+.ov-card.soon{opacity:.5;cursor:default}
+.ov-read{font-style:normal;font-size:10.5px;color:var(--green);margin-left:6px}
+.ov-group{border:1px solid var(--border);border-radius:var(--r);padding:12px 14px}
+.ov-group-title{display:flex;justify-content:space-between;width:100%;border:none;background:none;
+  font:inherit;font-weight:700;font-size:15px;color:var(--ink);cursor:pointer;padding:0}
+.ov-group-title span{font-size:12px;font-weight:500;color:var(--blue)}
+
+/* Mind map (the revision view, shown first on every note)
+   <div class="mindmap"><div class="mm-center">Topic</div><div class="mm-branches">
+     <div class="mm-branch"><div class="mm-title">Branch</div><ul><li><b>Key</b> detail</li></ul></div>…</div></div> */
+.mindmap{margin:6px 0 4px}
+.mm-center{width:max-content;max-width:100%;margin:0 auto 22px;padding:9px 20px;border-radius:999px;
+  background:var(--grad,var(--blue));color:#fff;font-weight:700;font-size:15px;position:relative;text-align:center}
+.mm-center::after{content:'';position:absolute;left:50%;top:100%;width:2px;height:14px;background:var(--border)}
+.mm-branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;
+  border-top:2px solid var(--border);padding-top:14px}
+.mm-branch{--c:var(--blue);background:var(--s1);border:1px solid var(--border);border-top:3px solid var(--c);
+  border-radius:var(--r);padding:11px 13px}
+.mm-branch:nth-child(5n+2){--c:var(--teal)}.mm-branch:nth-child(5n+3){--c:var(--green)}
+.mm-branch:nth-child(5n+4){--c:var(--violet)}.mm-branch:nth-child(5n+5){--c:var(--red)}
+.mm-title{font-weight:700;font-size:13.5px;color:var(--c);margin-bottom:6px}
+.mm-branch ul{margin:0;padding-left:16px}
+.mm-branch li{font-size:12.8px;line-height:1.5;color:var(--ink2);margin:3px 0}
+.mm-branch li b{color:var(--ink)}
+.mm-branch ul ul{padding-left:14px;margin-top:2px}
+.mm-branch ul ul li{font-size:12.3px;color:var(--ink3)}
