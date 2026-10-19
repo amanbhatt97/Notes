@@ -5,7 +5,7 @@ Object.assign(TOPIC_CONTENT, {
   <div class="where"><span>Tree-Based Models</span><span>Ensemble Methods</span><span>Bagging</span><span>Bagging &amp; Bootstrap</span></div>
   <p class="lead"><strong>Bagging</strong> (bootstrap aggregating, Breiman 1996) turns one training table into many slightly different ones by sampling rows <em>with replacement</em>, trains the same model on each, and averages their answers. This note covers the bootstrap from scratch, the famous 63.2% derivation, how members are aggregated (mean, majority, probability average), exactly why variance drops and by how much, which learners benefit (deep trees a lot, linear models and kNN almost nothing), out-of-bag (OOB) error, the variants pasting / random subspaces / random patches, sklearn's <code>BaggingClassifier</code> and <code>BaggingRegressor</code>, a from-scratch implementation, and results on the shared churn data.</p>
 
-  <h2 id="bag-where" class="open"><span class="num">↳</span>Where this fits</h2>
+  <h2 id="bag-where" class="open"><span class="num">★</span>Where this fits</h2>
   <figure class="viz"><svg viewBox="0 0 680 300" width="680">
 <defs><marker id="bag-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
 <line x1="340" y1="40" x2="340" y2="64" stroke="currentColor" stroke-opacity="0.45" marker-end="url(#bag-ar)"/>
@@ -50,14 +50,37 @@ Object.assign(TOPIC_CONTENT, {
 </svg><figcaption>Bagging is the root of the parallel branch. Random Forest and Extra Trees are bagging plus extra randomness.</figcaption></figure>
   <ul>
     <li><strong>Came from:</strong> <a class="xref" data-note="ml_ensembles">Ensemble Learning: The Idea</a>. That note proved a team beats its members only if the members make <em>different</em> mistakes (Var = ρσ² + (1 − ρ)σ²/n). It left one practical question open: we have exactly one training table, so where do different members come from?</li>
-    <li><strong>What this note adds:</strong> the bootstrap, a way to manufacture many training sets from one, and bagging, the simplest team built on it. It works best on the high-variance models of <a class="xref" data-note="ml_dtree">Decision Trees</a>.</li>
+    <li><strong>What this note adds:</strong> the bootstrap, a way to manufacture many training sets from one, and bagging, the simplest team built on it. It works best on the high-variance models of <a class="xref" data-note="ml_dtree">Decision Trees</a>. Every hand calculation uses the running example of the tree family, the captain's 14-day cricket diary.</li>
     <li><strong>Leads to:</strong> bagged trees still look alike, because the strongest column wins the top split in almost every bootstrap sample (ρ stays near 0.5). <a class="xref" data-note="ml_rf">Random Forest</a> lowers ρ with random columns per split; <a class="xref" data-note="ml_extratrees">Extra Trees</a> adds random thresholds. Bagging also never fixes bias; that is the job of <a class="xref" data-note="ml_boosting">boosting</a>.</li>
   </ul>
+
+  <h2 id="bag-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
+  <p>The whole note as one chain. Each concept answers the question above it; its weakness raises the next question. Small numbers come from the running example, the captain's 14-day cricket diary; large ones from the 20,000-customer churn table.</p>
+  <ol class="story">
+    <li><b>The bootstrap</b><span>Q: the ensemble maths needs many different training sets, but we have one diary; where do they come from? → Draw 14 days with replacement: sample 1 uses only 9 different days (D8 three times), and leaves out D1, D3, D9, D13, D14. The same trick gives error bars: the mean turnout 34 has a bootstrap standard error of 2.56. But how many days does a sample keep on average?</span></li>
+    <li><b>The 63.2% rule</b><span>Q: what share of rows lands in a sample? → A day is missed with probability (13/14)¹⁴ = 0.354, and for large n (1 − 1/n)ⁿ → 1/e = 0.368: each sample holds about 63.2% of the distinct rows. So each member sees less data. How do samples become one prediction?</span></li>
+    <li><b>The bagging algorithm</b><span>Q: how do we turn B samples into one model? → Fit the same learner on each and average (numbers) or vote (classes): three bootstrap trees ask Outlook, Humidity and Wind first and vote Yes, Yes, No on the new day → Yes; three turnout stumps average into a 3-step staircase. Why should that be better than one tree?</span></li>
+    <li><b>Why variance drops</b><span>Q: what exactly does averaging remove? → Variance, down to the floor ρσ² (bagged trees: ρ = 0.46, variance 0.089 → 0.044); bias stays. So which learners are worth bagging?</span></li>
+    <li><b>Stable vs unstable learners</b><span>Q: does bagging help every model? → Only shaky ones: deep tree +0.104, stump and logistic regression ≈ 0. On the diary the ID3 root changes between bootstrap samples (Outlook only 562 of 1,000 times): a shaky learner. How do we score a bag without a test set?</span></li>
+    <li><b>Out-of-bag error</b><span>Q: can the left-out rows test the bag for free? → Each day is predicted only by members that never saw it: 13 of 14 diary days get an OOB vote from the three stumps; at scale OOB 0.866 vs validation 0.881 with 200 trees. But resampling rows is only one way to make members differ.</span></li>
+    <li><b>Pasting, subspaces, patches</b><span>Q: what if we sample without replacement, or sample columns? → Pasting (rows, no replacement), random subspaces (columns per member: a member given only Temp and Wind can never ask Outlook), random patches (both). Per-member columns are crude; per-split columns will be the random forest.</span></li>
+    <li><b>sklearn, from scratch, results</b><span>Q: how do we use and rebuild it? → BaggingClassifier/Regressor and their bookkeeping; a 25-line version that matches sklearn's behaviour; on 20,000 customers one tree 0.778 → 200 bagged trees 0.876 (AUC 0.78 → 0.93). What still holds bagging back? The trees stay alike.</span></li>
+  </ol>
 
   <h2 id="bag-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">Bagging &amp; Bootstrap</div>
     <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Running example: the diary</div>
+        <ul>
+          <li>Sample 1: 9 of 14 days, OOB D1 D3 D9 D13 D14 · samples 2, 3: 11 and 7 days</li>
+          <li>(13/14)¹⁴ = 0.354 → 64.6% of days in a sample</li>
+          <li>Three bootstrap trees: roots Outlook, Humidity, Wind; vote Yes, Yes, No → Yes</li>
+          <li>Turnout stumps → bagged staircase 42.50 / 30.38 / 27.24</li>
+          <li>Mean turnout 34, bootstrap SE 2.56</li>
+        </ul>
+      </div>
       <div class="mm-branch">
         <div class="mm-title">Bootstrap</div>
         <ul>
@@ -120,23 +143,29 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="bag-boot"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">The Bootstrap</span><span class="rm-sub">Sampling with replacement, by hand</span></div></div>
-      <div class="rm-item rm-done" data-target="bag-632"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">The 63.2% Rule</span><span class="rm-sub">(1 − 1/n)ⁿ → 1/e, derived</span></div></div>
-      <div class="rm-item rm-done" data-target="bag-algo"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">The Bagging Algorithm</span><span class="rm-sub">Three stumps bagged by hand; aggregation</span></div></div>
-      <div class="rm-item rm-done" data-target="bag-why"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Why Variance Drops</span><span class="rm-sub">ρ measured, formula checked</span></div></div>
+      <div class="rm-item rm-done" data-target="bag-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain of questions</span></div></div>
+      <div class="rm-item rm-done" data-target="bag-boot"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">The Bootstrap</span><span class="rm-sub">Three samples of the diary by hand</span></div></div>
+      <div class="rm-item rm-done" data-target="bag-632"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">The 63.2% Rule</span><span class="rm-sub">(1 − 1/n)ⁿ → 1/e derived</span></div></div>
+      <div class="rm-item rm-done" data-target="bag-algo"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">The Bagging Algorithm</span><span class="rm-sub">Stumps and trees on the diary</span></div></div>
+      <div class="rm-item rm-done" data-target="bag-why"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Why Variance Drops</span><span class="rm-sub">ρσ² floor measured; bias unchanged</span></div></div>
       <div class="rm-item rm-done" data-target="bag-stable"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Stable vs Unstable Learners</span><span class="rm-sub">Who gains from bagging</span></div></div>
-      <div class="rm-item rm-done" data-target="bag-oob"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Out-of-Bag Error</span><span class="rm-sub">A free test set inside the training data</span></div></div>
-      <div class="rm-item rm-done" data-target="bag-var"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Pasting, Subspaces, Patches</span><span class="rm-sub">Other ways to sample</span></div></div>
-      <div class="rm-item rm-done" data-target="bag-sk"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">sklearn Bagging API</span><span class="rm-sub">Every parameter, regression too</span></div></div>
-      <div class="rm-item rm-done" data-target="bag-scratch"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Bagging From Scratch</span><span class="rm-sub">40 lines, with OOB</span></div></div>
-      <div class="rm-item rm-done" data-target="bag-res"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Results on the Churn Data</span><span class="rm-sub">Accuracy, AUC, time</span></div></div>
-      <div class="rm-item rm-done" data-target="bag-cmp"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Comparisons</span><span class="rm-sub">vs tree, RF, Extra Trees, boosting</span></div></div>
-      <div class="rm-item rm-done" data-target="bag-traps"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Where bagging goes wrong</span></div></div>
-      <div class="rm-item rm-done" data-target="bag-qa"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview and connection checks</span></div></div>
+      <div class="rm-item rm-done" data-target="bag-oob"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Out-of-Bag Error</span><span class="rm-sub">Free validation, by hand and at scale</span></div></div>
+      <div class="rm-item rm-done" data-target="bag-var"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Pasting, Subspaces, Patches</span><span class="rm-sub">Other ways to slice the table</span></div></div>
+      <div class="rm-item rm-done" data-target="bag-sk"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">sklearn's Bagging</span><span class="rm-sub">Parameters and bookkeeping</span></div></div>
+      <div class="rm-item rm-done" data-target="bag-scratch"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">From Scratch</span><span class="rm-sub">25 lines vs sklearn</span></div></div>
+      <div class="rm-item rm-done" data-target="bag-res"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Results at Scale</span><span class="rm-sub">20,000 customers</span></div></div>
+      <div class="rm-item rm-done" data-target="bag-connect"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One picture, one table</span></div></div>
+      <div class="rm-item rm-done" data-target="bag-cmp"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Comparisons</span><span class="rm-sub">Tree, bagging, RF, ET, boosting</span></div></div>
+      <div class="rm-item rm-done" data-target="bag-traps"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Stable models, OOB, time order</span></div></div>
+      <div class="rm-item rm-done" data-target="bag-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note on one page</span></div></div>
+      <div class="rm-item rm-done" data-target="bag-qa"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
     </div>
   </div>
 
   <h2 id="bag-boot"><span class="num">01</span>The Bootstrap</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>The ensemble note proved that a team gains only when its members make different mistakes. Every member trained on the same 14 diary days learns almost the same tree. How can one table produce many different training sets?</p>
+  </div>
   <h3>The need</h3>
   <p>The ensemble maths says: average many models that make different mistakes. The ideal would be to collect 100 fresh training sets from the real world and train one model on each. We cannot; we have one table. The <strong>bootstrap</strong> fakes it: it treats our table as a stand-in for the world and draws new "training sets" from it.</p>
   <h3>Plain words and an analogy</h3>
@@ -144,67 +173,99 @@ Object.assign(TOPIC_CONTENT, {
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A school lucky draw where every chit is put back into the box after it is read out. Draw 6 times from 6 chits: some names come up twice, some never. Do it again and you get a different list. Each list is a slightly different "class" made from the same students.</p>
   </div>
-  <h3>Worked by hand: 6 rows, 3 samples</h3>
-  <p>Our table has 6 rows, A to F. Each draw picks one of the 6 with probability 1/6. The code makes three samples (sorted so they are easy to read) and counts how often each row appears.</p>
+  <h3>Worked by hand: three samples of the diary</h3>
+  <p>The running example is the captain's 14-day cricket diary from <a class="xref" data-note="ml_dtree">Decision Trees</a> (Outlook, Temp, Humidity, Wind → played or not; plus the humidity reading HumPct and the turnout, the number of club members who came). In code it lives in <code>play.py</code>:</p>
+  <div class="fx" data-lang="py">import pandas as pd
+rows = [  # Outlook,   Temp,  Humidity, Wind,    Play, HumPct, TempC, Turnout
+    ("Sunny",    "Hot",  "High",   "Weak",   "No",  85,  29, 24),
+    ("Sunny",    "Hot",  "High",   "Strong", "No",  90,  27, 20),
+    ("Overcast", "Hot",  "High",   "Weak",   "Yes", 86,  28, 36),
+    ("Rain",     "Mild", "High",   "Weak",   "Yes", 96,  21, 32),
+    ("Rain",     "Cool", "Normal", "Weak",   "Yes", 80,  20, 44),
+    ("Rain",     "Cool", "Normal", "Strong", "No",  70,  18, 22),
+    ("Overcast", "Cool", "Normal", "Strong", "Yes", 65,  18, 42),
+    ("Sunny",    "Mild", "High",   "Weak",   "No",  95,  22, 26),
+    ("Sunny",    "Cool", "Normal", "Weak",   "Yes", 70,  21, 40),
+    ("Rain",     "Mild", "Normal", "Weak",   "Yes", 80,  24, 46),
+    ("Sunny",    "Mild", "Normal", "Strong", "Yes", 70,  24, 38),
+    ("Overcast", "Mild", "High",   "Strong", "Yes", 90,  22, 38),
+    ("Overcast", "Hot",  "Normal", "Weak",   "Yes", 75,  27, 48),
+    ("Rain",     "Mild", "High",   "Strong", "No",  91,  22, 20)]
+df = pd.DataFrame(rows, columns=["Outlook", "Temp", "Humidity", "Wind", "Play", "HumPct", "TempC", "Turnout"])
+df.index = [f"D{i}" for i in range(1, 15)]</div>
+  <p>One bootstrap sample of the diary: pick one of the 14 days at random (each with probability 1/14), copy it, put it back, and repeat 14 times. The code makes three samples and counts how often each day appears.</p>
   <div class="fx" data-lang="py">import numpy as np
-rng = np.random.default_rng(42)
-rows = ["A", "B", "C", "D", "E", "F"]                      # a 6-row training table
+from play import df
+days = list(df.index)                                     # D1 ... D14
+rng = np.random.default_rng(171)
 for b in range(3):
-    pick = rng.integers(0, 6, 6)                          # 6 draws, each from all 6 rows (replacement)
-    sample = [rows[i] for i in pick]
-    counts = {r: sample.count(r) for r in rows}
-    oob = [r for r in rows if counts[r] == 0]
-    print(f"sample {b+1}: {' '.join(sorted(sample))}   counts {counts}   left out (OOB): {oob}")</div>
-  <div class="fx" data-lang="text">sample 1: A C C D E F   counts {'A': 1, 'B': 0, 'C': 2, 'D': 1, 'E': 1, 'F': 1}   left out (OOB): ['B']
-sample 2: A A B D E F   counts {'A': 2, 'B': 1, 'C': 0, 'D': 1, 'E': 1, 'F': 1}   left out (OOB): ['C']
-sample 3: A D E E E E   counts {'A': 1, 'B': 0, 'C': 0, 'D': 1, 'E': 4, 'F': 0}   left out (OOB): ['B', 'C', 'F']</div>
+    pick = rng.integers(0, 14, 14)                        # 14 draws, each from all 14 days (replacement)
+    sample = [days[i] for i in pick]
+    counts = {d: sample.count(d) for d in days}
+    oob = [d for d in days if counts[d] == 0]
+    print(f"sample {b+1}: {len(set(sample))} different days; counts {[counts[d] for d in days]}; out-of-bag {oob}")</div>
+  <div class="fx" data-lang="text">sample 1: 9 different days; counts [0, 1, 0, 1, 1, 1, 2, 3, 0, 1, 2, 2, 0, 0]; out-of-bag ['D1', 'D3', 'D9', 'D13', 'D14']
+sample 2: 11 different days; counts [1, 0, 0, 2, 2, 0, 1, 2, 1, 1, 1, 1, 1, 1]; out-of-bag ['D2', 'D3', 'D6']
+sample 3: 7 different days; counts [2, 1, 2, 0, 0, 0, 0, 0, 1, 1, 0, 0, 2, 5]; out-of-bag ['D4', 'D5', 'D6', 'D7', 'D8', 'D11', 'D12']</div>
   <table class="tbl">
-    <tr><th>Row</th><th>Sample 1</th><th>Sample 2</th><th>Sample 3</th></tr>
-    <tr><td>A</td><td>1</td><td>2</td><td>1</td></tr>
-    <tr><td>B</td><td><b>0</b></td><td>1</td><td><b>0</b></td></tr>
-    <tr><td>C</td><td>2</td><td><b>0</b></td><td><b>0</b></td></tr>
-    <tr><td>D</td><td>1</td><td>1</td><td>1</td></tr>
-    <tr><td>E</td><td>1</td><td>1</td><td>4</td></tr>
-    <tr><td>F</td><td>1</td><td>1</td><td><b>0</b></td></tr>
-    <tr><td>unique rows used</td><td>5 of 6</td><td>5 of 6</td><td>3 of 6</td></tr>
+    <tr><th>Day</th><th>Sample 1</th><th>Sample 2</th><th>Sample 3</th></tr>
+    <tr><td>D1</td><td><b>0</b></td><td>1</td><td>2</td></tr>
+    <tr><td>D2</td><td>1</td><td><b>0</b></td><td>1</td></tr>
+    <tr><td>D3</td><td><b>0</b></td><td><b>0</b></td><td>2</td></tr>
+    <tr><td>D4</td><td>1</td><td>2</td><td><b>0</b></td></tr>
+    <tr><td>D5</td><td>1</td><td>2</td><td><b>0</b></td></tr>
+    <tr><td>D6</td><td>1</td><td><b>0</b></td><td><b>0</b></td></tr>
+    <tr><td>D7</td><td>2</td><td>1</td><td><b>0</b></td></tr>
+    <tr><td>D8</td><td>3</td><td>2</td><td><b>0</b></td></tr>
+    <tr><td>D9</td><td><b>0</b></td><td>1</td><td>1</td></tr>
+    <tr><td>D10</td><td>1</td><td>1</td><td>1</td></tr>
+    <tr><td>D11</td><td>2</td><td>1</td><td><b>0</b></td></tr>
+    <tr><td>D12</td><td>2</td><td>1</td><td><b>0</b></td></tr>
+    <tr><td>D13</td><td><b>0</b></td><td>1</td><td>2</td></tr>
+    <tr><td>D14</td><td><b>0</b></td><td>1</td><td>5</td></tr>
+    <tr><td>different days used</td><td>9 of 14</td><td>11 of 14</td><td>7 of 14</td></tr>
   </table>
-  <p>Each column adds up to 6 (same size as the original). Sample 3 is extreme: row E four times, and B, C, F missing. A model trained on sample 3 will lean heavily on E. That is the point: each sample pushes its model in a slightly different direction. The rows with a 0 are that sample's <strong>out-of-bag</strong> rows (section 06).</p>
+  <p>Each column adds up to 14 (same size as the diary). Sample 3 is extreme: D14 (a rainy, windy, humid day with no match) five times, and seven days missing. A tree trained on sample 3 will lean heavily on D14; a tree trained on sample 1 never sees D1, D3, D9, D13 or D14. That is the point: each sample pushes its model in a slightly different direction. The days with a 0 are that sample's <strong>out-of-bag</strong> days (section 06).</p>
   <h3>Where the idea came from: error bars without formulas</h3>
-  <p>Bradley Efron invented the bootstrap in 1979 for a statistics problem: "how uncertain is my estimate?" Take 8 food-delivery times. Their mean is 29.5 minutes. How much would that mean move if we had a different 8 orders? Resample the 8 times with replacement 10,000 times, compute each mean, and look at how much the means spread.</p>
+  <p>Bradley Efron invented the bootstrap in 1979 for a statistics problem: "how uncertain is my estimate?" Take the diary's 14 turnouts. Their mean is 34 members. How much would that mean move if the captain had recorded a different 14 evenings? Resample the 14 turnouts with replacement 10,000 times, compute each mean, and look at how much the means spread.</p>
   <div class="fx" data-lang="py">import numpy as np
+from play import df
+y = df.Turnout.values                                     # members who came, D1..D14
+print("mean turnout:", y.mean())
 rng = np.random.default_rng(0)
-times = np.array([22, 25, 31, 28, 35, 24, 41, 30])          # 8 delivery times (minutes)
-print("sample mean:", times.mean())
-means = [rng.choice(times, size=len(times), replace=True).mean() for _ in range(10_000)]
+means = [rng.choice(y, size=len(y), replace=True).mean() for _ in range(10_000)]
 print(f"bootstrap SE of the mean: {np.std(means):.2f}")
-print(f"textbook SE s/sqrt(n):    {times.std() / np.sqrt(len(times)):.2f}")
+print(f"textbook SE s/sqrt(n):    {y.std() / np.sqrt(len(y)):.2f}")
 print("95% bootstrap interval:", np.percentile(means, [2.5, 97.5]).round(1))</div>
-  <div class="fx" data-lang="text">sample mean: 29.5
-bootstrap SE of the mean: 2.05
-textbook SE s/sqrt(n):    2.07
-95% bootstrap interval: [25.6 33.8]</div>
-  <p>The bootstrap spread of the mean, 2.05 minutes, matches the textbook standard error s/√n = 2.07 (see <a class="xref" data-note="st_descriptive">Descriptive Statistics</a>). The trick works for any statistic, even ones with no textbook formula (a median, a model's accuracy). Breiman's insight in 1996 was to use the same resampling not to measure the wobble of an estimate but to <em>average it away</em>.</p>
+  <div class="fx" data-lang="text">mean turnout: 34.0
+bootstrap SE of the mean: 2.56
+textbook SE s/sqrt(n):    2.56
+95% bootstrap interval: [29.  38.9]</div>
+  <p>The bootstrap spread of the mean, 2.56 members, matches the textbook standard error s/√n = 2.56 (see <a class="xref" data-note="st_descriptive">Descriptive Statistics</a>), and the middle 95% of the resampled means runs from 29.0 to 38.9. The trick works for any statistic, even ones with no textbook formula (a median, a model's accuracy). Breiman's insight in 1996 was to use the same resampling not to measure the wobble of an estimate but to <em>average it away</em>.</p>
   <div class="callout def"><span class="label">Definition</span>
     <p>A <strong>bootstrap sample</strong> of a dataset with n rows is n rows drawn uniformly at random <strong>with replacement</strong>. The empirical distribution of the data (each row has probability 1/n) stands in for the unknown real distribution.</p>
   </div>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Sampling <em>without</em> replacement n rows out of n just shuffles the table: every sample is identical as a set. Diversity needs replacement, or a smaller sample size (that variant is called pasting, section 07).</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> We saw samples keep 5, 5 and 3 of 6 rows. How many rows does a bootstrap sample keep on average, and what does that mean for each model?</div>
+  <div class="bridge"><b>What this still can't tell us → next: The 63.2% Rule.</b> We saw samples keep 9, 11 and 7 of the 14 days. How many rows does a bootstrap sample keep on average, and what does that mean for each model?</div>
 
   <h2 id="bag-632"><span class="num">02</span>The 63.2% Rule</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Our three diary samples kept 9, 11 and 7 of the 14 days. Is that luck, or is there a rule for how much of the data one bootstrap sample contains, and what does it mean for each member?</p>
+  </div>
   <h3>Derivation step by step</h3>
   <ol>
     <li>Fix one row, say row A. In a single draw, the chance of picking A is 1/n, so the chance of <em>not</em> picking it is 1 − 1/n.</li>
     <li>The n draws are independent, so the chance that A is missed in all n draws is (1 − 1/n) × (1 − 1/n) × … (n times) = <strong>(1 − 1/n)ⁿ</strong>.</li>
-    <li>For n = 6: (5/6)⁶ = 15,625/46,656 = 0.335. About a third of rows are missed. Our three samples missed 1, 1 and 3 rows; the average 5/3 ≈ 1.67 out of 6 = 0.28, close for such a tiny test.</li>
+    <li>For the diary, n = 14: (13/14)¹⁴ = 0.354. About a third of the days are missed. Our three samples missed 5, 3 and 7 days; the average 5 out of 14 = 0.357, right on target.</li>
     <li>For large n: take the log. ln[(1 − 1/n)ⁿ] = n · ln(1 − 1/n). For small x, ln(1 − x) ≈ −x (the first term of its Taylor series, see <a class="xref" data-note="m_calculus">Calculus</a>). So n · ln(1 − 1/n) ≈ n · (−1/n) = −1, and (1 − 1/n)ⁿ → e⁻¹ = 1/e ≈ <strong>0.368</strong>.</li>
     <li>So each row is in a given bootstrap sample with probability 1 − 1/e ≈ <strong>0.632</strong>, and the expected number of unique rows is n(1 − (1 − 1/n)ⁿ) ≈ 0.632n.</li>
   </ol>
   <div class="fx" data-lang="py">import numpy as np
 from math import exp, factorial
 print("     n   P(row never picked) = (1-1/n)^n   expected share in sample")
-for n in [2, 3, 5, 10, 100, 1000, 100_000]:
+for n in [2, 3, 5, 10, 14, 100, 1000, 100_000]:
     out = (1 - 1/n) ** n
     print(f"{n:6d}   {out:.4f}                           {1 - out:.4f}")
 print(f"limit 1/e = {exp(-1):.4f},  1 - 1/e = {1 - exp(-1):.4f}")
@@ -218,6 +279,7 @@ for k in range(4):
      3   0.2963                           0.7037
      5   0.3277                           0.6723
     10   0.3487                           0.6513
+    14   0.3543                           0.6457
    100   0.3660                           0.6340
   1000   0.3677                           0.6323
 100000   0.3679                           0.6321
@@ -226,7 +288,7 @@ rows drawn 0 times: 0.368   Poisson(1) says 0.368
 rows drawn 1 times: 0.369   Poisson(1) says 0.368
 rows drawn 2 times: 0.184   Poisson(1) says 0.184
 rows drawn 3 times: 0.060   Poisson(1) says 0.061</div>
-  <p>The table converges fast: by n = 100 the share is already 0.634, and it never goes below 0.632. The second part counts how many times each row was drawn in one big sample. The counts follow a <strong>Poisson distribution with mean 1</strong>: P(k) = e⁻¹/k!. 36.8% of rows are drawn 0 times, 36.8% once, 18.4% twice, 6.1% three times. The sample still has n rows because the duplicates make up for the missing ones.</p>
+  <p>The table converges fast: the diary's n = 14 gives 0.646, by n = 100 the share is already 0.634, and it never goes below 0.632. The second part counts how many times each row was drawn in one big sample. The counts follow a <strong>Poisson distribution with mean 1</strong>: P(k) = e⁻¹/k!. 36.8% of rows are drawn 0 times, 36.8% once, 18.4% twice, 6.1% three times. The sample still has n rows because the duplicates make up for the missing ones.</p>
   <div class="callout def"><span class="label">Formula</span>
     <p><strong>P(row out of a bootstrap sample) = (1 − 1/n)ⁿ → 1/e ≈ 0.368</strong>; P(in) → 1 − 1/e ≈ 0.632. Times a row is drawn ~ Binomial(n, 1/n) → Poisson(1).</p>
   </div>
@@ -236,8 +298,12 @@ rows drawn 3 times: 0.060   Poisson(1) says 0.061</div>
   <div class="callout trap"><span class="label">Trap</span>
     <p>"63.2%" is about <em>unique</em> rows. The bootstrap sample still has n rows, not 0.632n. If you set <code>max_samples=0.632</code> thinking you are copying bagging, you get a smaller sample with even fewer unique rows (about 47%).</p>
   </div>
+  <div class="bridge"><b>What this still can't tell us → next: The Bagging Algorithm.</b> We know how to make samples and how much each holds. How do many samples turn into one prediction?</div>
 
   <h2 id="bag-algo"><span class="num">03</span>The Bagging Algorithm</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>We can now manufacture many different diaries from one. How do the models trained on them combine into a single prediction, for a number like the turnout and for a class like Play?</p>
+  </div>
   <figure class="viz"><svg viewBox="0 0 640 210" width="640">
 <defs><marker id="bag-al" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
 <rect x="10" y="80" width="95" height="50" rx="7" class="fs" stroke="currentColor"/><text x="57" y="102" text-anchor="middle" font-size="12">training data</text><text x="57" y="118" text-anchor="middle" class="tm" font-size="11">n rows</text>
@@ -256,105 +322,109 @@ rows drawn 3 times: 0.060   Poisson(1) says 0.061</div>
   <div class="callout def"><span class="label">Algorithm (bagging)</span>
     <p>Input: training set of n rows, a base algorithm, number of members B. <strong>For b = 1 … B</strong>: draw a bootstrap sample D_b (n rows with replacement); train h_b on D_b. <strong>Predict</strong>: regression f̂(x) = (1/B) Σ h_b(x); classification by majority vote of h_b(x), or by averaging class probabilities and taking the largest.</p>
   </div>
-  <h3>Worked by hand: bagging three regression stumps</h3>
-  <p>Six flats: size x (in hundreds of sq ft) and rent y (in thousands): x = 1…6, y = 2, 3, 5, 6, 8, 9. The base model is a <strong>stump</strong>: one cut, predict the mean on each side; the cut is the midpoint that gives the smallest sum of squared errors (SSE), exactly as in <a class="xref" data-note="ml_dtree">Decision Trees</a>. We use three fixed bootstrap samples (row numbers chosen in advance so you can follow along).</p>
-  <p>Bootstrap 1 = x {1, 1, 2, 4, 5, 6}, y {2, 2, 3, 6, 8, 9}. Try the cut at 3.0 (between x = 2 and 4): left y {2, 2, 3}, mean 2.33, SSE (0.33² + 0.33² + 0.67²) = 0.67; right y {6, 8, 9}, mean 7.67, SSE (1.67² + 0.33² + 1.33²) = 4.67; total 5.33. The other cuts give 21.0, 11.25 and 28.8, so stump 1 = "x ≤ 3 → 2.33 else 7.67". The code does the same for all three samples.</p>
+  <h3>Worked by hand: bagging three turnout stumps</h3>
+  <p>Predict the turnout (members who came) from the humidity reading HumPct. The base model is a <strong>stump</strong>: one cut, predict the mean on each side; the cut is the midpoint that gives the smallest sum of squared errors (SSE), exactly as in <a class="xref" data-note="ml_dtree">Decision Trees</a>. We use the three bootstrap samples of section 01.</p>
+  <p>Sample 3 by hand. Its 14 rows are D1 ×2, D2, D3 ×2, D9, D10, D13 ×2, D14 ×5. Try the cut at 82.5. Left (humidity ≤ 80): D9 40, D10 46, D13 48, D13 48: mean 182/4 = 45.5, SSE 30.25 + 0.25 + 6.25 + 6.25 = 43. Right: D1 24, 24, D2 20, D3 36, 36, D14 20 ×5: mean 240/10 = 24, SSE 0 + 0 + 16 + 144 + 144 + 5 × 16 = 384. Total 427, the smallest of all cuts, so stump 3 = "HumPct ≤ 82.5 → 45.5 else 24.0". The code does the same for all three samples and averages them.</p>
   <div class="fx" data-lang="py">import numpy as np
-x = np.array([1, 2, 3, 4, 5, 6])
-y = np.array([2, 3, 5, 6, 8, 9])
-samples = [[0, 0, 1, 3, 4, 5], [1, 2, 2, 3, 5, 5], [0, 2, 3, 3, 4, 4]]   # row indices (0-based) of 3 bootstraps
+from play import df
+x = df.HumPct.values                                      # humidity, %
+y = df.Turnout.values.astype(float)                       # members who came
+rng = np.random.default_rng(171)
+samples = [rng.integers(0, 14, 14) for _ in range(3)]     # the same three bootstrap samples
 
 def best_stump(xs, ys):
     best = None
-    for t in (np.unique(xs)[:-1] + np.unique(xs)[1:]) / 2:          # midpoints between distinct x
+    v = np.unique(xs)
+    for t in (v[:-1] + v[1:]) / 2:                        # midpoints between distinct humidity values
         L, R = ys[xs &lt;= t], ys[xs &gt; t]
         sse = ((L - L.mean())**2).sum() + ((R - R.mean())**2).sum()
-        print(f"     cut {t}: left mean {L.mean():.2f}, right mean {R.mean():.2f}, SSE {sse:.2f}")
         if best is None or sse &lt; best[0]:
             best = (sse, t, L.mean(), R.mean())
     return best[1:]
 
-stumps = []
-for b, idx in enumerate(samples):
-    print(f"bootstrap {b+1}: x = {x[idx].tolist()}  y = {y[idx].tolist()}")
-    t, l, r = best_stump(x[idx], y[idx])
-    stumps.append((t, l, r))
-    print(f"  -&gt; stump {b+1}: if x &lt;= {t} predict {l:.2f} else {r:.2f}")
-P = np.array([[l if xi &lt;= t else r for xi in x] for t, l, r in stumps])
-print("x:            ", x.tolist())
-for b in range(3):
-    print(f"stump {b+1}:      ", P[b].round(2).tolist())
-print("bagged (mean):", P.mean(0).round(2).tolist())
-# out-of-bag: each row is predicted only by the stumps whose sample did not contain it
+stumps = [best_stump(x[idx], y[idx]) for idx in samples]
+for b, (t, l, r) in enumerate(stumps):
+    print(f"stump {b+1}: if HumPct &lt;= {t} predict {l:.2f} else {r:.2f}")
+P = np.array([[l if xi &lt;= t else r for xi in x] for t, l, r in stumps])      # 3 x 14 predictions
+bag = P.mean(0)
+for h in [70, 85, 90]:
+    i = list(x).index(h)
+    print(f"humidity {h}: stumps {P[:, i].round(2).tolist()} -&gt; bagged {bag[i]:.2f}")
 sq = []
-for i in range(6):
+for i, day in enumerate(df.index):                        # out-of-bag: only stumps that never saw the day
     who = [b for b in range(3) if i not in samples[b]]
     if who:
-        p = P[who, i].mean(); sq.append((p - y[i])**2)
-        print(f"row x={x[i]}: OOB for stumps {[w+1 for w in who]} -&gt; pred {p:.2f}, y {y[i]}, sq err {(p - y[i])**2:.2f}")
-    else:
-        print(f"row x={x[i]}: in every sample, no OOB prediction")
-print(f"OOB MSE = {np.mean(sq):.2f}")
-t, l, r = best_stump(x, y)                                           # one stump on all 6 rows
-print(f"single stump on all rows: if x &lt;= {t} predict {l:.2f} else {r:.2f}")</div>
-  <div class="fx" data-lang="text">bootstrap 1: x = [1, 1, 2, 4, 5, 6]  y = [2, 2, 3, 6, 8, 9]
-     cut 1.5: left mean 2.00, right mean 6.50, SSE 21.00
-     cut 3.0: left mean 2.33, right mean 7.67, SSE 5.33
-     cut 4.5: left mean 3.25, right mean 8.50, SSE 11.25
-     cut 5.5: left mean 4.20, right mean 9.00, SSE 28.80
-  -&gt; stump 1: if x &lt;= 3.0 predict 2.33 else 7.67
-bootstrap 2: x = [2, 3, 3, 4, 6, 6]  y = [3, 5, 5, 6, 9, 9]
-     cut 2.5: left mean 3.00, right mean 6.80, SSE 16.80
-     cut 3.5: left mean 4.33, right mean 8.00, SSE 8.67
-     cut 5.0: left mean 4.75, right mean 9.00, SSE 4.75
-  -&gt; stump 2: if x &lt;= 5.0 predict 4.75 else 9.00
-bootstrap 3: x = [1, 3, 4, 4, 5, 5]  y = [2, 5, 6, 6, 8, 8]
-     cut 2.0: left mean 2.00, right mean 6.60, SSE 7.20
-     cut 3.5: left mean 3.50, right mean 7.00, SSE 8.50
-     cut 4.5: left mean 4.75, right mean 8.00, SSE 10.75
-  -&gt; stump 3: if x &lt;= 2.0 predict 2.00 else 6.60
-x:             [1, 2, 3, 4, 5, 6]
-stump 1:       [2.33, 2.33, 2.33, 7.67, 7.67, 7.67]
-stump 2:       [4.75, 4.75, 4.75, 4.75, 4.75, 9.0]
-stump 3:       [2.0, 2.0, 6.6, 6.6, 6.6, 6.6]
-bagged (mean): [3.03, 3.03, 4.56, 6.34, 6.34, 7.76]
-row x=1: OOB for stumps [2] -&gt; pred 4.75, y 2, sq err 7.56
-row x=2: OOB for stumps [3] -&gt; pred 2.00, y 3, sq err 1.00
-row x=3: OOB for stumps [1] -&gt; pred 2.33, y 5, sq err 7.11
-row x=4: in every sample, no OOB prediction
-row x=5: OOB for stumps [2] -&gt; pred 4.75, y 8, sq err 10.56
-row x=6: OOB for stumps [3] -&gt; pred 6.60, y 9, sq err 5.76
-OOB MSE = 6.40
-     cut 1.5: left mean 2.00, right mean 6.20, SSE 22.80
-     cut 2.5: left mean 2.50, right mean 7.00, SSE 10.50
-     cut 3.5: left mean 3.33, right mean 7.67, SSE 9.33
-     cut 4.5: left mean 4.00, right mean 8.50, SSE 10.50
-     cut 5.5: left mean 4.80, right mean 9.00, SSE 22.80
-single stump on all rows: if x &lt;= 3.5 predict 3.33 else 7.67</div>
+        sq.append((P[who, i].mean() - y[i])**2)
+print(f"days with an OOB prediction: {len(sq)} of 14;  OOB MSE = {np.mean(sq):.1f}")
+t, l, r = best_stump(x, y)
+print(f"single stump on all 14 days: if HumPct &lt;= {t} predict {l:.2f} else {r:.2f}")</div>
+  <div class="fx" data-lang="text">stump 1: if HumPct &lt;= 85.0 predict 38.86 else 29.43
+stump 2: if HumPct &lt;= 82.5 predict 43.14 else 28.29
+stump 3: if HumPct &lt;= 82.5 predict 45.50 else 24.00
+humidity 70: stumps [38.86, 43.14, 45.5] -&gt; bagged 42.50
+humidity 85: stumps [38.86, 28.29, 24.0] -&gt; bagged 30.38
+humidity 90: stumps [29.43, 28.29, 24.0] -&gt; bagged 27.24
+days with an OOB prediction: 13 of 14;  OOB MSE = 103.6
+single stump on all 14 days: if HumPct &lt;= 82.5 predict 40.00 else 28.00</div>
   <table class="tbl">
-    <tr><th>x</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th></tr>
-    <tr><td>true y</td><td>2</td><td>3</td><td>5</td><td>6</td><td>8</td><td>9</td></tr>
-    <tr><td>stump 1 (cut 3.0)</td><td>2.33</td><td>2.33</td><td>2.33</td><td>7.67</td><td>7.67</td><td>7.67</td></tr>
-    <tr><td>stump 2 (cut 5.0)</td><td>4.75</td><td>4.75</td><td>4.75</td><td>4.75</td><td>4.75</td><td>9.00</td></tr>
-    <tr><td>stump 3 (cut 2.0)</td><td>2.00</td><td>2.00</td><td>6.60</td><td>6.60</td><td>6.60</td><td>6.60</td></tr>
-    <tr><td><b>bagged = mean</b></td><td><b>3.03</b></td><td><b>3.03</b></td><td><b>4.56</b></td><td><b>6.34</b></td><td><b>6.34</b></td><td><b>7.76</b></td></tr>
-    <tr><td>single stump, all rows (cut 3.5)</td><td>3.33</td><td>3.33</td><td>3.33</td><td>7.67</td><td>7.67</td><td>7.67</td></tr>
+    <tr><th>Humidity</th><th>≤ 82.5 (e.g. 70)</th><th>85</th><th>≥ 86 (e.g. 90)</th></tr>
+    <tr><td>stump 1 (cut 85.0)</td><td>38.86</td><td>38.86</td><td>29.43</td></tr>
+    <tr><td>stump 2 (cut 82.5)</td><td>43.14</td><td>28.29</td><td>28.29</td></tr>
+    <tr><td>stump 3 (cut 82.5)</td><td>45.50</td><td>24.00</td><td>24.00</td></tr>
+    <tr><td><b>bagged = mean</b></td><td><b>42.50</b></td><td><b>30.38</b></td><td><b>27.24</b></td></tr>
+    <tr><td>single stump, all 14 days (cut 82.5)</td><td>40.00</td><td>28.00</td><td>28.00</td></tr>
   </table>
-  <p>Check one column by hand: at x = 3, (2.33 + 4.75 + 6.60)/3 = 13.68/3 = 4.56. Because each bootstrap sample put its cut in a different place (3.0, 5.0, 2.0), the average is a <strong>4-step staircase</strong> that climbs with x, while a single stump can only ever give 2 levels. Averaging models that disagree about <em>where</em> to cut produces a smoother answer than any one of them.</p>
+  <p>Check one column by hand: at 85% humidity, (38.86 + 28.29 + 24.00)/3 = 91.15/3 = 30.38. Sample 1 happened to contain no day between 80 and 90, so its cut landed at 85.0 instead of 82.5; that one disagreement about <em>where</em> to cut gives the bag a third level, a small staircase step where a single stump can only ever give 2 levels. Averaging models that disagree produces a smoother answer than any one of them.</p>
+  <h3>Worked: bagging three trees to classify a day</h3>
+  <p>The same three samples, now with the full ID3 tree of the Decision Trees note on the four weather columns, each asked about the new day (Sunny, Mild, Normal humidity, Strong wind).</p>
+  <div class="fx" data-lang="py">import numpy as np, pandas as pd
+from play import df
+def H(y):
+    p = y.value_counts(normalize=True).values
+    return float(-(p * np.log2(p)).sum()) + 0.0
+def id3(d, attrs):                                        # the ID3 tree of the Decision Trees note
+    if d.Play.nunique() == 1 or not attrs:
+        return d.Play.mode()[0]
+    gain = {a: H(d.Play) - sum(len(g) / len(d) * H(g.Play) for _, g in d.groupby(a)) for a in attrs}
+    best = max(gain, key=gain.get)
+    return (best, d.Play.mode()[0], {v: id3(g, [a for a in attrs if a != best]) for v, g in d.groupby(best)})
+def predict(t, row):
+    while isinstance(t, tuple):
+        t = t[2].get(row[t[0]], t[1])
+    return t
+cats = ["Outlook", "Temp", "Humidity", "Wind"]
+new = {"Outlook": "Sunny", "Temp": "Mild", "Humidity": "Normal", "Wind": "Strong"}
+rng = np.random.default_rng(171)
+votes = []
+for b in range(3):
+    d = df.iloc[rng.integers(0, 14, 14)]                  # bootstrap sample of the diary
+    t = id3(d, cats)
+    gains = {a: round(H(d.Play) - sum(len(g) / len(d) * H(g.Play) for _, g in d.groupby(a)), 3) for a in cats}
+    votes.append(predict(t, new))
+    print(f"tree {b+1}: {(d.Play == 'Yes').sum()} Yes / {(d.Play == 'No').sum()} No rows, IG {gains} -&gt; root {t[0]}, new day: {votes[-1]}")
+print("majority vote:", max(set(votes), key=votes.count))</div>
+  <div class="fx" data-lang="text">tree 1: 9 Yes / 5 No rows, IG {'Outlook': 0.315, 'Temp': 0.118, 'Humidity': 0.152, 'Wind': 0.048} -&gt; root Outlook, new day: Yes
+tree 2: 10 Yes / 4 No rows, IG {'Outlook': 0.238, 'Temp': 0.175, 'Humidity': 0.371, 'Wind': 0.002} -&gt; root Humidity, new day: Yes
+tree 3: 6 Yes / 8 No rows, IG {'Outlook': 0.475, 'Temp': 0.214, 'Humidity': 0.47, 'Wind': 0.522} -&gt; root Wind, new day: No
+majority vote: Yes</div>
+  <p>Three samples, three different root questions. Sample 1 still prefers Outlook (IG 0.315), sample 2 holds D4 and D5 twice and no D6, so Humidity wins (0.371), and sample 3, flooded with five copies of D14 (strong wind, no match), puts Wind at the root (0.522). Trees 1 and 2 say "Yes" for the new day; tree 3, which barely saw a sunny normal-humidity day, says "No". The majority says Yes, the same answer as the tree grown on all 14 days, but now reached by a committee whose members each saw a different diary.</p>
   <h3>Aggregation rules</h3>
   <table class="tbl">
     <tr><th>Task</th><th>Rule</th><th>Example (3 members)</th></tr>
-    <tr><td>Regression</td><td>Mean of the numbers (median is a robust alternative)</td><td>4.75, 2.33, 6.60 → 4.56</td></tr>
-    <tr><td>Classification, hard</td><td>Majority of predicted labels</td><td>churn, stay, stay → stay</td></tr>
-    <tr><td>Classification, soft</td><td>Average class probabilities, take the largest</td><td>P(churn) 0.9, 0.4, 0.45 → 0.583 → churn</td></tr>
+    <tr><td>Regression</td><td>Mean of the numbers (median is a robust alternative)</td><td>38.86, 28.29, 24.00 → 30.38</td></tr>
+    <tr><td>Classification, hard</td><td>Majority of predicted labels</td><td>Yes, Yes, No → Yes</td></tr>
+    <tr><td>Classification, soft</td><td>Average class probabilities, take the largest</td><td>P(Yes) 1, 1, 0 → 0.667 → Yes</td></tr>
   </table>
-  <p>The two classification rules can disagree (the last two rows above describe the same three members). sklearn's <code>BaggingClassifier</code> uses the <strong>soft</strong> rule whenever the base model has <code>predict_proba</code> (trees do), and falls back to hard voting otherwise. For a fully grown tree each leaf is pure, so its "probabilities" are 0 or 1 and the two rules almost coincide; they differ more for pruned trees or other models.</p>
+  <p>The two classification rules can disagree (see the D1 example in <a class="xref" data-note="ml_ensembles">Ensemble Learning</a>: hard No, soft 0.526 Yes). sklearn's <code>BaggingClassifier</code> uses the <strong>soft</strong> rule whenever the base model has <code>predict_proba</code> (trees do), and falls back to hard voting otherwise. For a fully grown tree each leaf is pure, so its "probabilities" are 0 or 1 and the two rules almost coincide; they differ more for pruned trees or other models.</p>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Averaging the <em>labels</em> 0/1 of regression-style members and rounding is hard voting, not soft. Soft voting needs real probabilities from each member.</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> The staircase looked smoother, but we have not shown how much bagging helps, or why it helps some models more than others. The variance formula from the ensemble note gives a precise answer, and we can measure every piece of it.</div>
+  <div class="bridge"><b>What this still can't tell us → next: Why Variance Drops.</b> The staircase looked smoother, but we have not shown how much bagging helps, or why it helps some models more than others. The variance formula from the ensemble note gives a precise answer, and we can measure every piece of it.</div>
 
   <h2 id="bag-why"><span class="num">04</span>Why Variance Drops (and Bias Does Not)</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Averaging three diary stumps gave a smoother staircase and three trees outvoted the odd one. How much does bagging actually reduce the error, which part of it (bias or variance), and what stops it from going further?</p>
+  </div>
   <h3>The formula, applied to bagging</h3>
   <p>From <a class="xref" data-note="ml_ensembles">Ensemble Learning</a>: the variance of an average of B members, each with variance σ² and pairwise correlation ρ, is <strong>ρσ² + (1 − ρ)σ²/B</strong>. For bagging, σ² is the variance of one bagged tree (across possible training sets <em>and</em> bootstrap draws), and ρ measures how similar two trees from the same bag are: both were drawn from the same training set, so ρ &gt; 0 always.</p>
   <p>The code measures σ² and ρ directly. It draws 200 training sets (150 noisy points from y = sin x), bags 25 deep trees on each, records every tree's predictions at 50 points, and then compares the formula with the actual variance of the bagged average.</p>
@@ -491,6 +561,7 @@ print("bagged   MSE vs truth:", round(float(np.mean((bag - np.sin(g.ravel()))**2
   <div class="fx" data-lang="text">one tree MSE vs truth: 0.0593
 bagged   MSE vs truth: 0.028</div>
   <p>On this training set the single tree's mean squared distance from the true curve is 0.059; the bagged average's is 0.028, about half. The picture shows why: the single tree chases every noisy dot; each bagged tree chases a <em>different</em> subset of dots (each saw a different 63%), so where they disagree their jumps partly cancel and the average leans toward what they share, the real curve. It is not perfectly smooth (every member is still a deep tree), but the error from the truth is halved.</p>
+  <p>The diary shows the same mechanism in miniature: over 1,000 bootstrap samples of the 14 days, the ID3 tree's root is Outlook 562 times, Humidity 248, Wind 96 and Temp 94. Different roots mean different trees, so their average wobbles less than any one of them. But 562 of 1,000 is still a majority asking the same first question: the trees remain correlated, which is the ρ in the formula.</p>
   <h3>And bias?</h3>
   <p>Each bagged member has the bias of the base model trained on ≈ 63% of the unique rows, which is about the same as (or slightly larger than) the bias of the base model on all rows. Averaging does not change the average prediction, so <strong>bagging keeps the bias of its base model</strong>. In the bias-variance experiment in the ensemble note, bagging 50 deep trees moved bias² 0.0014 → 0.0010 (unchanged within noise) and variance 0.0897 → 0.0432.</p>
   <div class="callout def"><span class="label">In one line</span>
@@ -499,10 +570,14 @@ bagged   MSE vs truth: 0.028</div>
   <div class="callout trap"><span class="label">Trap</span>
     <p>"Bagging prevents overfitting" is half true. It reduces the <em>variance</em> part of overfitting. Each member is still a fully grown tree with train accuracy near 1.0, and the bag's train accuracy is also near 1.0; judge it only on held-out or OOB data.</p>
   </div>
+  <div class="bridge"><b>What this still can't tell us → next: Stable vs Unstable Learners.</b> Bagging removes variance and nothing else. So it can only help models that have variance to remove. Which ones are those?</div>
 
   <h2 id="bag-stable"><span class="num">05</span>Stable vs Unstable Learners</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Bagging cut a deep tree's variance in half and left its bias alone. Does every model gain like that, or only certain kinds? What makes a learner worth bagging?</p>
+  </div>
   <h3>The idea</h3>
-  <p>Breiman's rule: bagging helps <strong>unstable</strong> learners, those whose output changes a lot when the training set changes a little (large σ², ρ well below 1). It barely helps <strong>stable</strong> learners, whose output hardly moves (small σ², ρ ≈ 1).</p>
+  <p>On the diary we already saw the symptom of an unstable learner: three bootstrap samples gave three different root questions (Outlook, Humidity, Wind). Breiman's rule: bagging helps <strong>unstable</strong> learners, those whose output changes a lot when the training set changes a little (large σ², ρ well below 1). It barely helps <strong>stable</strong> learners, whose output hardly moves (small σ², ρ ≈ 1).</p>
   <table class="tbl">
     <tr><th>Unstable (bagging helps)</th><th>Stable (bagging does little)</th></tr>
     <tr><td>Fully grown decision trees, neural networks, subset selection in regression</td><td>Linear / logistic regression, kNN with large k, naive Bayes, SVM with wide margin, stumps</td></tr>
@@ -559,23 +634,53 @@ logistic regression    alone 0.581   bagged x50 0.579   gain -0.002</div>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Bagging a model to "fix underfitting". If the base model is too simple (stump, linear), bagging cannot add flexibility. Use a more flexible base, or boosting.</p>
   </div>
+  <div class="bridge"><b>What this still can't tell us → next: Out-of-Bag Error.</b> We know which learners to bag. But how do we score a bag honestly, without setting aside rows we would rather train on?</div>
 
   <h2 id="bag-oob"><span class="num">06</span>Out-of-Bag Error</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Every bootstrap sample of the diary left out some days: sample 1 never saw D1, D3, D9, D13 or D14. Can those left-out days test the bag for free, and how trustworthy is that test?</p>
+  </div>
   <h3>The idea</h3>
   <p>Every member skipped about 37% of the rows. For each training row, collect predictions only from the members that did <em>not</em> train on it, combine them, and compare with the true label. Averaged over rows, that is the <strong>out-of-bag (OOB) error</strong>: an honest estimate of test error, computed without setting aside any data.</p>
-  <h3>Worked by hand: the three stumps</h3>
-  <p>Go back to the three stumps of section 03. Bootstrap 1 used rows x = {1, 2, 4, 5, 6} (missed 3); bootstrap 2 used {2, 3, 4, 6} (missed 1, 5); bootstrap 3 used {1, 3, 4, 5} (missed 2, 6).</p>
+  <h3>Worked by hand: the three turnout stumps</h3>
+  <p>Go back to the three stumps of section 03. Sample 1 missed D1, D3, D9, D13, D14; sample 2 missed D2, D3, D6; sample 3 missed D4, D5, D6, D7, D8, D11, D12. Each day is predicted only by the stumps that never saw it.</p>
   <table class="tbl">
-    <tr><th>Row x</th><th>true y</th><th>Members that never saw it</th><th>OOB prediction</th><th>Squared error</th></tr>
-    <tr><td>1</td><td>2</td><td>stump 2</td><td>4.75</td><td>(4.75 − 2)² = 7.56</td></tr>
-    <tr><td>2</td><td>3</td><td>stump 3</td><td>2.00</td><td>(2 − 3)² = 1.00</td></tr>
-    <tr><td>3</td><td>5</td><td>stump 1</td><td>2.33</td><td>(2.33 − 5)² = 7.11</td></tr>
-    <tr><td>4</td><td>6</td><td>none (in every sample)</td><td>—</td><td>skipped</td></tr>
-    <tr><td>5</td><td>8</td><td>stump 2</td><td>4.75</td><td>10.56</td></tr>
-    <tr><td>6</td><td>9</td><td>stump 3</td><td>6.60</td><td>5.76</td></tr>
+    <tr><th>Day</th><th>HumPct</th><th>true turnout</th><th>Members that never saw it</th><th>OOB prediction</th><th>Squared error</th></tr>
+    <tr><td>D1</td><td>85</td><td>24</td><td>stump 1</td><td>38.86</td><td>220.7</td></tr>
+    <tr><td>D2</td><td>90</td><td>20</td><td>stump 2</td><td>28.29</td><td>68.7</td></tr>
+    <tr><td>D3</td><td>86</td><td>36</td><td>stump 1, 2</td><td>28.86</td><td>51.0</td></tr>
+    <tr><td>D4</td><td>96</td><td>32</td><td>stump 3</td><td>24.00</td><td>64.0</td></tr>
+    <tr><td>D5</td><td>80</td><td>44</td><td>stump 3</td><td>45.50</td><td>2.2</td></tr>
+    <tr><td>D6</td><td>70</td><td>22</td><td>stump 2, 3</td><td>44.32</td><td>498.2</td></tr>
+    <tr><td>D7</td><td>65</td><td>42</td><td>stump 3</td><td>45.50</td><td>12.2</td></tr>
+    <tr><td>D8</td><td>95</td><td>26</td><td>stump 3</td><td>24.00</td><td>4.0</td></tr>
+    <tr><td>D9</td><td>70</td><td>40</td><td>stump 1</td><td>38.86</td><td>1.3</td></tr>
+    <tr><td>D10</td><td>80</td><td>46</td><td>none (in every sample)</td><td>—</td><td>skipped</td></tr>
+    <tr><td>D11</td><td>70</td><td>38</td><td>stump 3</td><td>45.50</td><td>56.2</td></tr>
+    <tr><td>D12</td><td>90</td><td>38</td><td>stump 3</td><td>24.00</td><td>196.0</td></tr>
+    <tr><td>D13</td><td>75</td><td>48</td><td>stump 1</td><td>38.86</td><td>83.6</td></tr>
+    <tr><td>D14</td><td>91</td><td>20</td><td>stump 1</td><td>29.43</td><td>88.9</td></tr>
   </table>
-  <p>OOB MSE = (7.56 + 1.00 + 7.11 + 10.56 + 5.76)/5 = 31.99/5 = <strong>6.40</strong>, matching the last line of the stump code's output. Two lessons from this tiny case: row 4 got no OOB prediction at all (it was in all three samples), and each OOB prediction came from only one stump, not from the full bag of three. With few members, OOB judges a weaker model than the one you will use.</p>
-  <h3>On the churn data</h3>
+  <p>OOB MSE = (sum of the 13 squared errors) / 13 = 1347 / 13 = <strong>103.6</strong>, matching the stump code's output. Three lessons from this tiny case. D10 got no OOB prediction at all (it was in all three samples). Every OOB prediction came from only one or two stumps, not from the full bag of three. And the estimate, 103.6, is even worse than always predicting the mean turnout (MSE 91.4): D6, a 22-member day at 70% humidity, is judged by two stumps that both expect more than 43. With few members and few rows, OOB judges a weaker model than the one you will use, and it is noisy.</p>
+  <p>The same check with sklearn on the diary's Play label, one-hot weather columns:</p>
+  <div class="fx" data-lang="py">import pandas as pd, warnings
+from sklearn.ensemble import BaggingClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.model_selection import cross_val_score, LeaveOneOut
+from play import df
+warnings.filterwarnings("ignore")
+X = pd.get_dummies(df[["Outlook", "Temp", "Humidity", "Wind"]]).astype(int); y = df.Play
+loo = cross_val_score(DecisionTreeClassifier(random_state=0), X, y, cv=LeaveOneOut()).mean()
+print(f"one tree, leave-one-day-out accuracy: {loo:.3f}")
+for B in [10, 100, 500]:
+    bag = BaggingClassifier(DecisionTreeClassifier(), n_estimators=B, oob_score=True, random_state=0).fit(X, y)
+    print(f"bag of {B:3d} trees: OOB accuracy {bag.oob_score_:.3f}   training accuracy {bag.score(X, y):.3f}")</div>
+  <div class="fx" data-lang="text">one tree, leave-one-day-out accuracy: 0.571
+bag of  10 trees: OOB accuracy 0.500   training accuracy 1.000
+bag of 100 trees: OOB accuracy 0.571   training accuracy 1.000
+bag of 500 trees: OOB accuracy 0.643   training accuracy 1.000</div>
+  <p>A single sklearn tree (binary splits on the one-hot columns) scored by leaving one day out at a time is right on 8 of 14 days (0.571; the multiway ID3 tree of the Decision Trees note gets 11 of 14, another sign of how noisy 14 rows are). A bag's OOB accuracy climbs as members are added (0.500 with 10 trees, 0.643 with 500), while its training accuracy is a useless 1.000 throughout. On 14 rows each of these numbers moves 7 points per day, so read them as a demonstration of the mechanics; the churn data below gives the reliable picture.</p>
+  <h3>The same idea at scale: the churn data</h3>
   <div class="fx" data-lang="py">import warnings
 from sklearn.ensemble import BaggingClassifier
 warnings.filterwarnings("ignore")                         # tiny bags warn that some rows have no OOB vote
@@ -601,10 +706,13 @@ trees 200: OOB acc 0.866  val acc 0.881  rows with an OOB vote 100.0%
   <div class="callout trap"><span class="label">Trap</span>
     <p>OOB is not a replacement for a proper test set when you tune many settings: if you pick the configuration with the best OOB score out of 50, that score is optimistic. And any preprocessing fitted on all rows before bagging (scaling, target encoding, feature selection) has seen the OOB rows, which leaks into the estimate.</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> Bootstrapping rows is one way to make members differ. What about sampling without replacement, or sampling columns instead of rows?</div>
+  <div class="bridge"><b>What this still can't tell us → next: Pasting, Random Subspaces, Random Patches.</b> Bootstrapping rows is one way to make members differ. What about sampling without replacement, or sampling columns instead of rows?</div>
 
   <h2 id="bag-var"><span class="num">07</span>Pasting, Random Subspaces, Random Patches</h2>
-  <p>Bagging is one point in a family of "train each member on a random slice of the table" methods. They differ in what is sampled and how.</p>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>The bootstrap makes members differ by resampling rows with replacement. Could we instead sample rows without replacement, or give each member a random set of columns, and what does each choice do to diversity and accuracy?</p>
+  </div>
+  <p>Bagging is one point in a family of "train each member on a random slice of the table" methods. They differ in what is sampled and how. On the diary: <strong>pasting</strong> would give each member, say, 7 of the 14 days without repeats; a <strong>random subspace</strong> member might get only the columns Temp and Wind for its whole life, so it can never ask about Outlook or Humidity (its root would be Wind, IG 0.048, a weak tree); <strong>random patches</strong> does both.</p>
   <table class="tbl">
     <tr><th>Variant</th><th>Rows</th><th>Columns</th><th>sklearn settings</th><th>Origin</th></tr>
     <tr><td><b>Bagging</b></td><td>n with replacement</td><td>all</td><td><code>bootstrap=True, max_samples=1.0</code></td><td>Breiman 1996</td></tr>
@@ -639,8 +747,12 @@ random patches (50% + 50%)    one tree 0.666  trees agree 59.1%  ensemble val 0.
   <div class="callout trap"><span class="label">Trap</span>
     <p>With <code>bootstrap=False</code> and <code>max_samples=1.0</code> and all columns, every member sees the identical table: no diversity, the "ensemble" is one tree repeated (only tie-breaking differs).</p>
   </div>
+  <div class="bridge"><b>What this still can't tell us → next: sklearn's BaggingClassifier &amp; BaggingRegressor.</b> We know the family of variants. How are they all expressed as parameters of one sklearn class, and what does it keep after fitting?</div>
 
   <h2 id="bag-sk"><span class="num">08</span>sklearn's BaggingClassifier &amp; BaggingRegressor</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Bootstrap, aggregation, OOB, pasting, subspaces, patches: how do all of these map onto the parameters and fitted attributes of sklearn's bagging classes?</p>
+  </div>
   <table class="tbl">
     <tr><th>Parameter</th><th>Default</th><th>What it does</th><th>Effect / advice</th></tr>
     <tr><td><code>estimator</code></td><td>DecisionTree</td><td>The base model to copy (any sklearn estimator)</td><td>Use an unstable, low-bias model; deep tree is the default</td></tr>
@@ -690,8 +802,12 @@ bagging 100 trees  test MSE 3.29  test R^2 0.872  OOB R^2 0.867</div>
   <div class="callout trap"><span class="label">Trap</span>
     <p>In sklearn ≥ 1.2 the parameter is <code>estimator=</code>; older code uses <code>base_estimator=</code>, which was removed in 1.4. Passing the base model positionally, <code>BaggingClassifier(DecisionTreeClassifier())</code>, works in every version.</p>
   </div>
+  <div class="bridge"><b>What this still can't tell us → next: Bagging From Scratch.</b> The library hides four simple steps. Writing them ourselves is the best test that we understand them.</div>
 
   <h2 id="bag-scratch"><span class="num">09</span>Bagging From Scratch</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>sklearn's BaggingClassifier has a dozen parameters. Underneath, is it really just bootstrap, fit, remember, average? Can we write it in a few lines and get the same behaviour?</p>
+  </div>
   <p>The whole algorithm is four steps: bootstrap, fit, remember which rows each member saw (for OOB), and average probabilities. Here it is, using sklearn's tree as the base model.</p>
   <div class="fx" data-lang="py">class MyBagging:
     def __init__(self, n_estimators=50, seed=0):
@@ -731,8 +847,12 @@ print(f"the two bags give the same label on {same:.1%} of validation rows")</div
 sklearn:      val 0.881  OOB 0.860
 the two bags give the same label on 96.7% of validation rows</div>
   <p>The from-scratch bag scores 0.875 on validation with OOB 0.862; sklearn's scores 0.881 with OOB 0.860. The two use different random numbers, so their bootstrap samples and trees differ and the numbers are not identical, but they agree on 96.7% of validation labels and both OOB estimates sit at 0.86. Two details worth copying: the OOB bookkeeping is just a boolean "this member saw row i" mask per member, and the prediction averages <code>predict_proba</code> (soft voting), exactly as sklearn does for trees.</p>
+  <div class="bridge"><b>What this still can't tell us → next: Results at Scale.</b> Our bag and sklearn's agree. How much does bagging actually buy over one tree on realistic data, as members are added?</div>
 
-  <h2 id="bag-res"><span class="num">10</span>Results on the Churn Data</h2>
+  <h2 id="bag-res"><span class="num">10</span>Results at Scale</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>On the 14-day diary every accuracy moves 7 points per day, so it cannot measure the gain. On 20,000 customers, how much better is a bag than one tree, and how many members are enough?</p>
+  </div>
   <div class="fx" data-lang="py">from sklearn.ensemble import BaggingClassifier
 from sklearn.metrics import roc_auc_score
 single = DecisionTreeClassifier(random_state=0).fit(Xtr, ytr)
@@ -750,9 +870,58 @@ bagging 200 trees      test acc 0.876  AUC 0.934</div>
   <div class="callout intu"><span class="label">Speed</span>
     <p>The members are independent, so <code>n_jobs=-1</code> spreads them over all CPU cores and on an idle 4-core machine training is close to 4× faster. Prediction is parallel too. Each bagged deep tree tries all 14 columns at every split, which is why a 300-tree Random Forest (which tries √14 ≈ 3) trains several times faster than 100 bagged trees in the ensemble note's comparison.</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> Bagged trees are still correlated at ρ ≈ 0.46, because the strongest column wins the top split in almost every bootstrap sample. <a class="xref" data-note="ml_rf">Random Forest</a> attacks that floor directly by hiding random columns at every split.</div>
+  <div class="bridge"><b>What this still can't tell us → next: How It All Connects.</b> Bagged trees are still correlated at ρ ≈ 0.46, because the strongest column wins the top split in almost every bootstrap sample. <a class="xref" data-note="ml_rf">Random Forest</a> attacks that floor directly by hiding random columns at every split.</div>
 
-  <h2 id="bag-cmp"><span class="num">11</span>Comparisons</h2>
+  <h2 id="bag-connect"><span class="num">11</span>How It All Connects</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Bootstrap, 63.2%, aggregation, ρσ², stable vs unstable, out-of-bag, pasting and subspaces: separate facts, or one mechanism in which each piece follows from the previous one?</p>
+  </div>
+  <figure class="viz"><svg viewBox="0 0 760 310" width="760">
+<defs><marker id="bag-ca" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+<rect x="10" y="10" width="170" height="44" rx="7" class="fv" stroke="currentColor" stroke-opacity="0.35"/><text x="95" y="29" text-anchor="middle" font-size="11.5" font-weight="700">one diary (14 days)</text><text x="95" y="45" text-anchor="middle" class="tm" font-size="10">one tree, shaky</text>
+<line x1="180" y1="32" x2="208" y2="32" stroke="currentColor" marker-end="url(#bag-ca)"/>
+<rect x="210" y="10" width="200" height="44" rx="7" class="fb sb"/><text x="310" y="29" text-anchor="middle" font-size="11.5" font-weight="700">bootstrap samples</text><text x="310" y="45" text-anchor="middle" class="tm" font-size="10">9, 11, 7 different days</text>
+<line x1="410" y1="32" x2="438" y2="32" stroke="currentColor" marker-end="url(#bag-ca)"/>
+<rect x="440" y="10" width="140" height="44" rx="7" class="fb sb"/><text x="510" y="29" text-anchor="middle" font-size="11.5" font-weight="700">63.2% rule</text><text x="510" y="45" text-anchor="middle" class="tm" font-size="10">(13/14)¹⁴ = 0.354</text>
+<line x1="580" y1="32" x2="608" y2="32" stroke="currentColor" marker-end="url(#bag-ca)"/>
+<rect x="610" y="10" width="140" height="44" rx="7" class="fb sb"/><text x="680" y="29" text-anchor="middle" font-size="11.5" font-weight="700">out-of-bag days</text><text x="680" y="45" text-anchor="middle" class="tm" font-size="10">≈ 37% per member</text>
+<line x1="310" y1="54" x2="310" y2="90" stroke="currentColor" marker-end="url(#bag-ca)"/>
+<rect x="190" y="92" width="240" height="44" rx="7" class="fg sg"/><text x="310" y="111" text-anchor="middle" font-size="11.5" font-weight="700">fit B members, combine</text><text x="310" y="127" text-anchor="middle" class="tm" font-size="10">votes Yes, Yes, No → Yes</text>
+<line x1="680" y1="54" x2="680" y2="172" stroke="currentColor" marker-end="url(#bag-ca)"/>
+<line x1="430" y1="114" x2="600" y2="190" stroke="currentColor" marker-end="url(#bag-ca)"/>
+<rect x="600" y="174" width="150" height="44" rx="7" class="fg sg"/><text x="675" y="193" text-anchor="middle" font-size="11.5" font-weight="700">OOB score</text><text x="675" y="209" text-anchor="middle" class="tm" font-size="10">13 of 14 days voted</text>
+<line x1="310" y1="136" x2="310" y2="172" stroke="currentColor" marker-end="url(#bag-ca)"/>
+<rect x="190" y="174" width="240" height="44" rx="7" class="fb sb"/><text x="310" y="193" text-anchor="middle" font-size="11.5" font-weight="700">Var = ρσ² + (1−ρ)σ²/B</text><text x="310" y="209" text-anchor="middle" class="tm" font-size="10">variance halves; bias stays</text>
+<line x1="250" y1="218" x2="110" y2="254" stroke="currentColor" marker-end="url(#bag-ca)"/>
+<line x1="370" y1="218" x2="480" y2="254" stroke="currentColor" marker-end="url(#bag-ca)"/>
+<rect x="10" y="256" width="200" height="44" rx="7" class="ft st"/><text x="110" y="275" text-anchor="middle" font-size="11.5" font-weight="700">unstable learners gain</text><text x="110" y="291" text-anchor="middle" class="tm" font-size="10">deep tree +0.104; stump 0</text>
+<rect x="360" y="256" width="240" height="44" rx="7" class="fr sr"/><text x="480" y="275" text-anchor="middle" font-size="11.5" font-weight="700">floor ρσ²: trees alike</text><text x="480" y="291" text-anchor="middle" class="tm" font-size="10">Outlook root in 562 / 1,000</text>
+<line x1="600" y1="278" x2="628" y2="278" stroke="currentColor" marker-end="url(#bag-ca)"/>
+<rect x="630" y="256" width="120" height="44" rx="7" class="fv" stroke="currentColor" stroke-opacity="0.35"/><text x="690" y="275" text-anchor="middle" font-size="11.5" font-weight="700">→ RF, ET</text><text x="690" y="291" text-anchor="middle" class="tm" font-size="10">lower ρ</text>
+<rect x="10" y="92" width="170" height="44" rx="7" fill="none" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.5"/><text x="95" y="111" text-anchor="middle" font-size="11" font-weight="700">variants</text><text x="95" y="127" text-anchor="middle" class="tm" font-size="10">pasting · subspaces</text>
+<line x1="180" y1="114" x2="188" y2="114" stroke="currentColor" stroke-dasharray="3 3"/>
+</svg><figcaption>The bootstrap turns one diary into many. Each sample holds about 63% of the rows, so every member has out-of-bag rows that score the bag for free. Fitting and combining members cuts variance down to the floor ρσ²; only unstable learners have variance to cut; and the trees stay alike because the strongest column wins most roots, which is the problem the random forest attacks.</figcaption></figure>
+  <table class="tbl"><caption>Every concept on the same 14 days (and at scale)</caption>
+    <tr><th>Concept</th><th>Built from</th><th>Answers</th><th>On the diary / at scale</th><th>Use when</th></tr>
+    <tr><td>Bootstrap sample</td><td>n draws with replacement from n rows</td><td>where do different training sets come from?</td><td>samples use 9, 11, 7 of 14 days; SE of mean turnout 2.56</td><td>any resampling; error bars</td></tr>
+    <tr><td>63.2% rule</td><td>(1 − 1/n)ⁿ → 1/e</td><td>how much of the data does a member see?</td><td>(13/14)¹⁴ = 0.354 left out; 7,570 of 12,000 churn rows</td><td>reasoning about member strength, OOB</td></tr>
+    <tr><td>Aggregation</td><td>mean (numbers), vote or average probability (classes)</td><td>how do members become one model?</td><td>stumps 38.86, 28.29, 24.00 → 30.38; trees Yes, Yes, No → Yes</td><td>always</td></tr>
+    <tr><td>Variance reduction</td><td>Var = ρσ² + (1 − ρ)σ²/B</td><td>what does averaging remove?</td><td>sin data: 0.0894 → 0.0435, floor 0.0416 (ρ = 0.46)</td><td>explaining the gain and its limit</td></tr>
+    <tr><td>Bias unchanged</td><td>average of the members' averages</td><td>what does averaging not remove?</td><td>bagged stumps keep bias² 0.063</td><td>choosing deep members</td></tr>
+    <tr><td>Stable vs unstable</td><td>σ² and ρ of the learner</td><td>which learners gain?</td><td>diary roots vary (Outlook 562 / 1,000); churn deep tree +0.104, LR −0.002</td><td>bag deep trees, kNN with small subsamples</td></tr>
+    <tr><td>Out-of-bag error</td><td>left-out rows + only the members that missed them</td><td>how to test without a hold-out?</td><td>13 of 14 days get a vote; churn OOB 0.866 vs val 0.881</td><td>quick checks, choosing B</td></tr>
+    <tr><td>Pasting, subspaces, patches</td><td>sample rows without replacement, or columns per member</td><td>other ways to diversify?</td><td>a Temp+Wind member can never ask Outlook</td><td>huge data (pasting), many noisy columns (subspaces)</td></tr>
+    <tr><td>Result</td><td>all of the above</td><td>how much better than one tree?</td><td>churn 0.778 → 0.876, AUC 0.78 → 0.93</td><td>any unstable model; for trees prefer RF</td></tr>
+  </table>
+  <div class="callout intu"><span class="label">Key insight</span>
+    <p>One sentence holds the note: <strong>bagging fakes many training sets by resampling the one you have, trains a shaky model on each, and averages away the shakiness, leaving bias untouched and stopping at the floor set by how alike the members still are.</strong> The out-of-bag rows are a free by-product of the resampling. The floor is the random forest's starting point.</p>
+  </div>
+  <div class="bridge"><b>What this still can't tell us → next: Comparisons.</b> Side by side with a single tree, the random forest, Extra Trees and boosting, where does plain bagging stand?</div>
+
+  <h2 id="bag-cmp"><span class="num">12</span>Comparisons</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Bagging is the root of the parallel branch. Row by row (rows per member, columns per split, thresholds, what it reduces), how does it differ from its parent and its siblings?</p>
+  </div>
   <table class="tbl">
     <tr><th></th><th>Single deep tree</th><th>Bagging</th><th><a class="xref" data-note="ml_rf">Random Forest</a></th><th><a class="xref" data-note="ml_extratrees">Extra Trees</a></th><th><a class="xref" data-note="ml_boosting">Boosting</a></th></tr>
     <tr><td>Rows per member</td><td>all</td><td>bootstrap</td><td>bootstrap</td><td>all (default)</td><td>all or subsample</td></tr>
@@ -764,8 +933,12 @@ bagging 200 trees      test acc 0.876  AUC 0.934</div>
     <tr><td>Churn test acc</td><td>0.778</td><td>≈ 0.87–0.88</td><td>≈ 0.88</td><td>≈ 0.87–0.88</td><td>≈ 0.86–0.88</td></tr>
   </table>
   <p>Bagging's unique strength in this table is the "any base model" row: it can wrap any unstable learner, not just trees. For trees specifically, Random Forest is almost always at least as good and faster.</p>
+  <div class="bridge"><b>What this still can't tell us → next: Common Mistakes.</b> The table shows where bagging stands. Which mistakes do people make when they use it?</div>
 
-  <h2 id="bag-traps"><span class="num">12</span>Common Mistakes</h2>
+  <h2 id="bag-traps"><span class="num">13</span>Common Mistakes</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Which bagging mistakes cost the most in practice and in interviews, and which section of this note prevents each one?</p>
+  </div>
   <div class="callout trap"><span class="label">Trap: bagging a stable model</span>
     <p>Logistic regression, large-k kNN, naive Bayes, stumps: gains near zero (−0.002 to +0.008 above). Bag deep trees or other unstable learners.</p>
   </div>
@@ -784,8 +957,55 @@ bagging 200 trees      test acc 0.876  AUC 0.934</div>
   <div class="callout trap"><span class="label">Trap: expecting extrapolation</span>
     <p>An average of trees can only predict values between the training targets. Bagging does not fix a tree's flat prediction beyond the training range.</p>
   </div>
+  <div class="bridge"><b>What this still can't tell us → next: Revision Sheet.</b> Everything in this note, condensed to one page for revision.</div>
 
-  <h2 id="bag-qa"><span class="num">13</span>Questions &amp; Answers</h2>
+  <h2 id="bag-rev"><span class="num">R</span>Revision Sheet</h2>
+  <p>The whole note on one sheet. Running example: the captain's 14-day cricket diary (Outlook, Temp, Humidity, Wind → Play, 9 Yes / 5 No; HumPct; Turnout, mean 34). Bootstrap samples drawn with <code>np.random.default_rng(171)</code>. Large-scale numbers: the 20,000-customer churn table.</p>
+  <h3>The question ladder</h3>
+  <table class="tbl">
+    <tr><th>Concept</th><th>Question</th><th>Answer (diary / scale)</th><th>Weakness → next</th></tr>
+    <tr><td>Bootstrap</td><td>many training sets from one?</td><td>samples with 9, 11, 7 of 14 days</td><td>how much does a sample hold? → 63.2%</td></tr>
+    <tr><td>63.2% rule</td><td>share of rows in a sample?</td><td>(13/14)¹⁴ = 0.354 out; limit 1/e</td><td>how to combine? → algorithm</td></tr>
+    <tr><td>Bagging algorithm</td><td>samples → one model?</td><td>votes Yes, Yes, No → Yes; stumps → 42.50 / 30.38 / 27.24</td><td>why better? → variance</td></tr>
+    <tr><td>Variance drops</td><td>what is removed?</td><td>ρ = 0.46; 0.089 → 0.044; bias stays</td><td>who gains? → stable vs unstable</td></tr>
+    <tr><td>Stable vs unstable</td><td>which learners?</td><td>deep tree +0.104; stump, LR ≈ 0</td><td>how to score for free? → OOB</td></tr>
+    <tr><td>Out-of-bag</td><td>free test?</td><td>13 of 14 days voted; OOB MSE 103.6 with 3 stumps; churn 0.866 vs 0.881</td><td>other slicings? → variants</td></tr>
+    <tr><td>Variants</td><td>sample differently?</td><td>pasting, subspaces, patches</td><td>per-member columns crude → random forest</td></tr>
+    <tr><td>Results</td><td>gain at scale?</td><td>0.778 → 0.876; AUC 0.78 → 0.93</td><td>trees still alike → random forest</td></tr>
+  </table>
+  <h3>Formulas</h3>
+  <table class="tbl">
+    <tr><th>Name</th><th>Formula</th><th>Symbols</th></tr>
+    <tr><td>Bootstrap sample</td><td>n row indices drawn uniformly with replacement</td><td>n rows in the training set</td></tr>
+    <tr><td>Left out of a sample</td><td>P = (1 − 1/n)ⁿ → e⁻¹ ≈ 0.368</td><td>n = 14: 0.354; in-sample share 0.632</td></tr>
+    <tr><td>Times a row is drawn</td><td>Binomial(n, 1/n) → Poisson(1): P(k) = e⁻¹/k!</td><td>0×: 36.8%, 1×: 36.8%, 2×: 18.4%</td></tr>
+    <tr><td>Bagged regression</td><td>f̂(x) = (1/B) Σ_b h_b(x)</td><td>B members h_b, each fit on bootstrap sample b</td></tr>
+    <tr><td>Bagged classification</td><td>majority of h_b(x), or argmax of averaged probabilities</td><td>sklearn averages probabilities when available</td></tr>
+    <tr><td>Variance of the bag</td><td>ρσ² + (1 − ρ)σ²/B</td><td>σ² one member's variance, ρ correlation of two members</td></tr>
+    <tr><td>OOB prediction</td><td>aggregate of h_b(xᵢ) over b with i ∉ sample b</td><td>≈ 0.368·B members per row</td></tr>
+    <tr><td>Bootstrap standard error</td><td>std of the statistic over resamples</td><td>mean turnout: 2.56 (= s/√n)</td></tr>
+  </table>
+  <h3>When to use, when not</h3>
+  <div class="cards">
+    <div><b>Use bagging</b><p>An unstable, low-bias base model (deep tree, small-subsample kNN, small neural net) that you want to stabilise; any base model, not only trees.</p><small>n_estimators 100–300, oob_score=True</small></div>
+    <div><b>Prefer a random forest</b><p>When the base model is a tree: per-split column sampling lowers ρ and trains faster.</p><small>Next note</small></div>
+    <div><b>Avoid</b><p>Stable or high-bias models (linear, large-k kNN, stumps), time-ordered or grouped rows with row-level bootstrap.</p><small>Boost biased models instead</small></div>
+    <div><b>OOB</b><p>Quick, free estimate and a way to choose B; pessimistic with few members.</p><small>Confirm with CV / a test set</small></div>
+  </div>
+  <div class="callout trap"><span class="label">Key traps</span>
+    <p>Bagging a stable model; pruning members hard (adds bias bagging cannot remove); calling bagging a random forest; trusting OOB with few members or after leaky preprocessing; bootstrapping time-ordered or grouped rows; expecting extrapolation.</p>
+  </div>
+  <h3>Five rapid-fire checks</h3>
+  <table class="tbl">
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>n = 10 rows: chance a row is out of one bootstrap sample?</td><td>(0.9)¹⁰ = 0.349</td></tr>
+    <tr><td>Three turnout stumps say 38.86, 28.29, 24.00. Bagged prediction?</td><td>91.15 / 3 = 30.38</td></tr>
+    <tr><td>ρ = 0.46, σ² = 0.0894, B = 25: variance of the bag?</td><td>0.46 × 0.0894 + 0.54 × 0.0894 / 25 = 0.0411 + 0.0019 ≈ 0.043</td></tr>
+    <tr><td>Why does bagging a stump give no gain?</td><td>Every bootstrap stump makes nearly the same cut (ρ ≈ 1) and its error is bias, which averaging keeps</td></tr>
+    <tr><td>Why is OOB pessimistic with 5 members?</td><td>Each row is voted on by only about 2 members (0.368 × 5), a much weaker model than the full bag</td></tr>
+  </table>
+
+  <h2 id="bag-qa"><span class="num">14</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>What is a bootstrap sample, and why must it be drawn with replacement?</summary><div class="qa-body">n rows drawn uniformly at random with replacement from an n-row table. With replacement, some rows repeat and others are left out, so each sample is a different dataset. Without replacement and the same size, every sample is the same set of rows.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Derive the 63.2%.</summary><div class="qa-body">P(a row is missed in one draw) = 1 − 1/n; in n independent draws (1 − 1/n)ⁿ. Since n·ln(1 − 1/n) → −1, (1 − 1/n)ⁿ → 1/e ≈ 0.368. So a row is in the sample with probability ≈ 0.632, and a sample contains ≈ 63.2% unique rows.</div></details>
@@ -800,6 +1020,9 @@ bagging 200 trees      test acc 0.876  AUC 0.934</div>
   <details class="qa"><summary><span class="qmark">Q</span>How did the bootstrap originally get used, before bagging?</summary><div class="qa-body">Efron (1979) used it to estimate the uncertainty of a statistic: resample the data many times, recompute the statistic, and use the spread as its standard error or confidence interval. For 8 delivery times the bootstrap SE of the mean was 2.05 vs the textbook 2.07.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Connection: why is bagging a natural fit for decision trees specifically?</summary><div class="qa-body">Fully grown trees have very low bias and very high variance, and small data changes reshuffle their top splits (see <a class="xref" data-note="ml_dtree">Decision Trees</a>), so bootstrap samples produce genuinely different trees (low ρ relative to e.g. linear models). That is exactly the profile averaging fixes.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Connection: the bias-variance experiment showed bagged stumps and boosted stumps. Explain the difference.</summary><div class="qa-body">Bagged stumps: average of near-identical one-cut models, bias² stayed 0.063. Boosted stumps: each stump fits what the sum still gets wrong, so the sum can draw a curve, bias² fell to 0.0012. Averaging fixes variance; adding sequentially fixes bias. See <a class="xref" data-note="ml_boosting">How Boosting Works</a>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does bagging need the bootstrap? What breaks if every member trains on the full diary?</summary><div class="qa-body">Every member would learn the same tree (Outlook at the root, the same five rules); ρ = 1, so the formula gives Var = σ², no gain at all, and no row would ever be out of bag, so there is no OOB score. The bootstrap gives samples like 9, 11 and 7 of the 14 days, which grow trees with different roots (Outlook, Humidity, Wind) whose mistakes partly cancel.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How are the 63.2% rule and the out-of-bag error connected?</summary><div class="qa-body">Because each sample misses about 36.8% of rows ((13/14)¹⁴ = 35.4% of the diary), every row is missed by about 37% of the members. Those members never saw it, so their combined vote is an honest prediction for that row. The same fact explains OOB's pessimism: it judges each row with only about 37% of the bag.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>On the diary, Outlook is the root of 562 of 1,000 bootstrap trees. What does that number mean for bagging, and which note fixes it?</summary><div class="qa-body">The bagged trees are correlated: most of them ask the same first question and therefore share much of their structure and their mistakes, so ρ stays high and the variance stops at the floor ρσ² (ρ ≈ 0.46 on the sine data). <a class="xref" data-note="ml_rf">Random Forest</a> lets each split see only a random subset of columns; with 2 of 4, Outlook can win the root only when it is drawn, and it does so in 375 of 1,000 trees.</div></details>
 </main>
 `
 });

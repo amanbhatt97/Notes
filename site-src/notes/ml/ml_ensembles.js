@@ -5,7 +5,7 @@ Object.assign(TOPIC_CONTENT, {
   <div class="where"><span>Tree-Based Models</span><span>Ensemble Methods</span><span>Ensemble Learning: The Idea</span></div>
   <p class="lead">An <strong>ensemble</strong> is a team of models whose answers are combined into one answer. This note is the theory behind every team in the tree family: why a team of mediocre models can beat its best member, the exact maths of when that works (Condorcet's jury theorem, the ρσ² + (1 − ρ)σ²/n formula, the ambiguity decomposition), what kind of error each team design removes (bias or variance), where the "differences" between members come from, the four designs (bagging, boosting, stacking, voting), and when a team is not worth its cost. Everything is worked by hand on small numbers first, then checked in code on the shared 20,000-row churn dataset.</p>
 
-  <h2 id="ens-where" class="open"><span class="num">↳</span>Where this fits</h2>
+  <h2 id="ens-where" class="open"><span class="num">★</span>Where this fits</h2>
   <figure class="viz"><svg viewBox="0 0 680 300" width="680">
 <defs><marker id="ens-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
 <line x1="340" y1="40" x2="340" y2="64" stroke="currentColor" stroke-opacity="0.45" marker-end="url(#ens-ar)"/>
@@ -49,16 +49,39 @@ Object.assign(TOPIC_CONTENT, {
 <text x="421" y="86" class="tg" font-size="11" font-weight="700">◀ you are here</text>
 </svg><figcaption>The tree-model family. This note (green) is the parent of the three ensemble branches: bagging (parallel), boosting (sequential) and stacking / voting (blend).</figcaption></figure>
   <ul>
-    <li><strong>Came from:</strong> <a class="xref" data-note="ml_dtree">Decision Trees</a>. A fully grown tree has low bias but <em>high variance</em>: train it on a slightly different sample and you get a very different tree. Pruning lowers the variance, but only by adding bias. One tree is stuck between "too simple" and "too shaky".</li>
+    <li><strong>Came from:</strong> <a class="xref" data-note="ml_dtree">Decision Trees</a>. A fully grown tree has low bias but <em>high variance</em>: train it on a slightly different sample and you get a very different tree. Pruning lowers the variance, but only by adding bias. One tree is stuck between "too simple" and "too shaky". On the captain's 14-day cricket diary (the running example of the whole tree family), removing a single day, D3, changes the root question from Outlook to Humidity.</li>
     <li><strong>What this note adds:</strong> a way out of that trade-off. Do not try to build one perfect model. Build many imperfect ones that make <em>different</em> mistakes and combine them. This note gives the reasons, the maths and the limits.</li>
     <li><strong>Leads to:</strong> the three ways of building the team. <a class="xref" data-note="ml_bagging">Bagging &amp; Bootstrap</a> (then <a class="xref" data-note="ml_rf">Random Forest</a> and <a class="xref" data-note="ml_extratrees">Extra Trees</a>) attacks variance with parallel members. <a class="xref" data-note="ml_boosting">How Boosting Works</a> attacks bias with sequential members. <a class="xref" data-note="ml_stacking">Stacking &amp; Voting</a> blends different kinds of models. The map of the whole family is in <a class="xref" data-note="ml_trees">The Tree Family</a>.</li>
   </ul>
   <p>Background that helps: bias and variance from <a class="xref" data-note="ml_core">Core Concepts</a>; variance and correlation from <a class="xref" data-note="st_descriptive">Descriptive Statistics</a>; independence and the binomial from <a class="xref" data-note="st_probability">Probability</a>.</p>
 
+  <h2 id="ens-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
+  <p>The whole note as one chain. Each concept answers the question above it; its weakness raises the next question. Small numbers come from the running example, the captain's 14-day cricket diary; large ones from the 20,000-customer churn table.</p>
+  <ol class="story">
+    <li><b>One model is not enough</b><span>Q: why not just use one good tree? → Because it changes its mind: grow the diary tree 14 times, each time without one day, and 3 of the 14 trees ask Humidity first instead of Outlook; at scale, five trees on slightly different samples disagree on half the customers, yet their vote scores 0.840 against about 0.78 each. Why does a vote win, and by how much?</span></li>
+    <li><b>The maths of voting</b><span>Q: how often is a majority of voters right? → Add up the binomial: three independent 70%-right voters make a 78.4%-right team, and with p &gt; 0.5 the team tends to 100% (Condorcet). But only if the voters are independent: when they copy a leader, 25 voters fall back to 0.70. What about averages of numbers?</span></li>
+    <li><b>The maths of averaging</b><span>Q: how much does averaging n numeric predictions reduce the wobble? → Var = ρσ² + (1 − ρ)σ²/n: with ρ = 0.3, 25 members leave 0.328 of one member's variance, and no number of members goes below the floor ρσ². The 14 leave-one-day-out diary trees agree on 94% of possible days: ρ is near 1. And averaging says nothing about bias.</span></li>
+    <li><b>Bias &amp; variance per team design</b><span>Q: which error does each design remove? → Averaging keeps bias and cuts variance (bagged deep trees: variance 0.090 → 0.043); adding up small models cuts bias (boosted stumps: bias² 0.063 → 0.001). But both formulas say the gain depends on how different the members are. How exactly?</span></li>
+    <li><b>Diversity</b><span>Q: exactly how much do the members' differences buy? → Team error = average member error − ambiguity. Three one-question trees guess D3's turnout as 28, 41 and 37 (truth 36): their own errors average 30, their disagreement 29.6, so the team misses by only 0.44 squared. Where do differences come from, and how are teams organised?</span></li>
+    <li><b>The taxonomy</b><span>Q: what are the standard designs? → Bagging (parallel, same algorithm), boosting (sequential, fix the team's errors), voting (fixed rule over different models), stacking (a learnt combiner); hard vs soft voting can disagree (for D1: two stumps say No, one says Yes at 0.75, average 0.526). Do they behave as promised on real data?</span></li>
+    <li><b>Every design at scale</b><span>Q: how do the designs compare on 20,000 customers? → One tree 0.778; bagging and forest 0.870–0.877; booster 0.862; a plain vote 0.866 and a stack 0.877 do not beat the forest. So when do ensembles not help?</span></li>
+    <li><b>When ensembles fail</b><span>Q: when is a team useless or harmful? → Stable or high-bias members (bagged logistic regression 0.596 → 0.594), correlated members, a strong member averaged with weak ones (0.862 → 0.824). And even when they help, what do they cost?</span></li>
+    <li><b>The costs</b><span>Q: what do we pay? → n× training, latency (forest 48 ms vs tree 1 ms per request), memory (69 MB vs 0.03 MB) and readability. With all the pieces in place: how do they connect, and which branch should we study next?</span></li>
+  </ol>
+
   <h2 id="ens-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">Ensemble Learning</div>
     <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Running example: the diary</div>
+        <ul>
+          <li>14 leave-one-day-out trees: root Outlook 11, Humidity 3; agree on 94% of possible days</li>
+          <li>New day (Rain, Mild, Normal, Strong): 13 trees say No, 1 says Yes</li>
+          <li>D3 turnout 36: stumps guess 28, 41, 37 → team 35.33; 30 − 29.56 = 0.44</li>
+          <li>D1: stumps P(Yes) 0.40, 0.43, 0.75 → hard No, soft 0.526 Yes (truth No)</li>
+        </ul>
+      </div>
       <div class="mm-branch">
         <div class="mm-title">The idea</div>
         <ul>
@@ -132,24 +155,65 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="ens-need"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">One Model Is Not Enough</span><span class="rm-sub">Shaky trees, and a team that beats them</span></div></div>
-      <div class="rm-item rm-done" data-target="ens-vote"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">The Maths of Voting</span><span class="rm-sub">3 voters by hand, Condorcet's jury theorem</span></div></div>
-      <div class="rm-item rm-done" data-target="ens-avg"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">The Maths of Averaging</span><span class="rm-sub">ρσ² + (1 − ρ)σ²/n, derived and tested</span></div></div>
-      <div class="rm-item rm-done" data-target="ens-bv"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Bias &amp; Variance per Ensemble Type</span><span class="rm-sub">What averaging fixes, what adding fixes</span></div></div>
-      <div class="rm-item rm-done" data-target="ens-div"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Diversity</span><span class="rm-sub">Ambiguity decomposition, sources, measuring it</span></div></div>
+      <div class="rm-item rm-done" data-target="ens-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain of questions</span></div></div>
+      <div class="rm-item rm-done" data-target="ens-need"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">One Model Is Not Enough</span><span class="rm-sub">The diary tree changes its mind</span></div></div>
+      <div class="rm-item rm-done" data-target="ens-vote"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">The Maths of Voting</span><span class="rm-sub">Binomial, Condorcet, copying</span></div></div>
+      <div class="rm-item rm-done" data-target="ens-avg"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">The Maths of Averaging</span><span class="rm-sub">ρσ² + (1 − ρ)σ²/n derived</span></div></div>
+      <div class="rm-item rm-done" data-target="ens-bv"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Bias &amp; Variance per Type</span><span class="rm-sub">What averaging and adding do</span></div></div>
+      <div class="rm-item rm-done" data-target="ens-div"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Diversity</span><span class="rm-sub">Ambiguity on D3's turnout</span></div></div>
       <div class="rm-item rm-done" data-target="ens-tax"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">The Taxonomy</span><span class="rm-sub">Bagging, boosting, voting, stacking</span></div></div>
-      <div class="rm-item rm-done" data-target="ens-run"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Every Design on One Dataset</span><span class="rm-sub">Churn data, accuracy and time</span></div></div>
-      <div class="rm-item rm-done" data-target="ens-fail"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">When Ensembles Do Not Help</span><span class="rm-sub">Stable members, weak members, shared bias</span></div></div>
-      <div class="rm-item rm-done" data-target="ens-cost"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">The Costs</span><span class="rm-sub">Latency, size, readability, upkeep</span></div></div>
-      <div class="rm-item rm-done" data-target="ens-cmp"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Comparison Tables</span><span class="rm-sub">The designs side by side</span></div></div>
-      <div class="rm-item rm-done" data-target="ens-traps"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Where teams go wrong</span></div></div>
-      <div class="rm-item rm-done" data-target="ens-qa"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview and connection checks</span></div></div>
+      <div class="rm-item rm-done" data-target="ens-run"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Every Design at Scale</span><span class="rm-sub">Same churn data, same test rows</span></div></div>
+      <div class="rm-item rm-done" data-target="ens-fail"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">When Ensembles Do Not Help</span><span class="rm-sub">Stable, biased, correlated, weak</span></div></div>
+      <div class="rm-item rm-done" data-target="ens-cost"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">The Costs</span><span class="rm-sub">Latency, size, readability</span></div></div>
+      <div class="rm-item rm-done" data-target="ens-connect"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One picture, one table</span></div></div>
+      <div class="rm-item rm-done" data-target="ens-cmp"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Comparison Tables</span><span class="rm-sub">Four designs; single vs ensemble</span></div></div>
+      <div class="rm-item rm-done" data-target="ens-traps"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Diversity, weak members, cost</span></div></div>
+      <div class="rm-item rm-done" data-target="ens-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note on one page</span></div></div>
+      <div class="rm-item rm-done" data-target="ens-qa"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
     </div>
   </div>
 
   <h2 id="ens-need"><span class="num">01</span>One Model Is Not Enough</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>The previous note ended with a tree that fits the diary perfectly, and a warning: remove one day and the tree changes. If one tree is that shaky, should we pick a better tree, or use many trees at once?</p>
+  </div>
   <h3>The need: a tree that changes its mind</h3>
-  <p>In <a class="xref" data-note="ml_dtree">Decision Trees</a> we grew one tree on 12,000 customers and it scored about 0.78 on new customers. The bigger problem was hidden: grow the tree again on a slightly different sample and it asks different questions. The code below plays that out. Five data scientists each get a different random 80% of the same training rows and each grows a full tree.</p>
+  <p>Start with the running example from <a class="xref" data-note="ml_dtree">Decision Trees</a>: the captain's 14-day cricket diary (Outlook, Temp, Humidity, Wind → played or not; 9 Yes, 5 No). Grow the ID3 tree 14 times, each time leaving out one day, as if the captain had lost one page of the diary. Then ask all 14 trees about the same new day.</p>
+  <div class="fx" data-lang="py">import itertools
+import numpy as np, pandas as pd
+from play import df
+
+def H(y):
+    p = y.value_counts(normalize=True).values
+    return float(-(p * np.log2(p)).sum()) + 0.0
+def id3(d, attrs):                                   # the ID3 tree of the Decision Trees note
+    if d.Play.nunique() == 1 or not attrs:
+        return d.Play.mode()[0]
+    gain = {a: H(d.Play) - sum(len(g) / len(d) * H(g.Play) for _, g in d.groupby(a)) for a in attrs}
+    best = max(gain, key=gain.get)
+    kids = {v: id3(g, [a for a in attrs if a != best]) for v, g in d.groupby(best)}
+    return (best, d.Play.mode()[0], kids)
+def predict(t, row):
+    while isinstance(t, tuple):
+        t = t[2].get(row[t[0]], t[1])                # unseen value -&gt; majority of that node
+    return t
+
+cats = ["Outlook", "Temp", "Humidity", "Wind"]
+trees = {day: id3(df.drop(day), cats) for day in df.index}    # 14 trees, each without one day
+print("root question:", pd.Series({d: t[0] for d, t in trees.items()}).value_counts().to_dict())
+grid = pd.DataFrame(list(itertools.product(*[sorted(df[c].unique()) for c in cats])), columns=cats)
+P = np.array([[predict(t, r) for _, r in grid.iterrows()] for t in trees.values()])   # 14 x 36
+agree = np.mean([np.mean(P[i] == P[j]) for i, j in itertools.combinations(range(14), 2)])
+print(f"two of these trees agree on {agree:.0%} of the 36 possible days, on average")
+day = {"Outlook": "Rain", "Temp": "Mild", "Humidity": "Normal", "Wind": "Strong"}
+votes = pd.Series([predict(t, day) for t in trees.values()], index=trees).value_counts().to_dict()
+print("new day (Rain, Mild, Normal, Strong):", votes)</div>
+  <div class="fx" data-lang="text">root question: {'Outlook': 11, 'Humidity': 3}
+two of these trees agree on 94% of the 36 possible days, on average
+new day (Rain, Mild, Normal, Strong): {'No': 13, 'Yes': 1}</div>
+  <p>Read it line by line. Eleven trees ask Outlook first, three ask Humidity first (the trees without D3, D6 or D12, as the Decision Trees note found). On the new rainy, normal-humidity, windy day, 13 trees say "No" (rain with strong wind) but the tree grown without D6 says "Yes": D6 was the only rainy, normal-humidity, windy day in the diary, so without it that tree never learnt the rule. One lost page changed the answer. A vote of all 14 trees still says "No": the shaky tree is simply outvoted. Notice also the second line: two of these trees agree on 94% of all 36 possible days. They share 13 of their 14 training days, so they are nearly copies; a vote among near-copies cannot gain much. Keep that in mind for section 05.</p>
+  <h3>The same idea at scale</h3>
+  <p>In <a class="xref" data-note="ml_dtree">Decision Trees</a> we also grew one tree on 12,000 customers and it scored about 0.78 on new customers. The bigger problem was hidden: grow the tree again on a slightly different sample and it asks different questions. The code below plays that out. Five data scientists each get a different random 80% of the same training rows and each grows a full tree.</p>
   <div class="callout def"><span class="label">The shared dataset</span>
     <p>All churn code in the tree-family notes uses the same synthetic customer table, so numbers can be compared across notes: 20,000 rows, 12 columns from <code>make_classification</code> (6 carry signal) plus two pure-noise columns (<code>row_noise</code>, <code>coin_noise</code>); 12,000 train / 3,000 validation / 5,000 test; label 1 = churned. Every churn block below starts from this setup.</p>
   </div>
@@ -186,7 +250,7 @@ tree 4: 1st q 'f5 &lt;= 0.05'  2nd q 'f6 &lt;= -1.13'  leaves 1153  val 0.791
 tree 5: 1st q 'f5 &lt;= -0.09'  2nd q 'f6 &lt;= -1.13'  leaves 1172  val 0.779
 rows where the 5 trees do not all agree: 50.0%
 majority vote of the 5 trees: val 0.840</div>
-  <p>Read it line by line. All five trees ask about <code>f5</code> first, but at different cut-offs (0.31 down to −0.09). Because the first cut moved, different rows reach the second question, so the second question changes (<code>f3</code> in some trees, <code>f6</code> in others), and everything below changes too. Each tree scores about 0.78. Yet on half of the validation customers the five trees do <em>not</em> all agree, and when they simply vote, accuracy jumps to <strong>0.840</strong>, higher than every single member.</p>
+  <p>Read it line by line. As on the diary, the trees differ: all five ask about <code>f5</code> first, but at different cut-offs (0.31 down to −0.09). Because the first cut moved, different rows reach the second question, so the second question changes (<code>f3</code> in some trees, <code>f6</code> in others), and everything below changes too. Each tree scores about 0.78. Yet on half of the validation customers the five trees do <em>not</em> all agree, and when they simply vote, accuracy jumps to <strong>0.840</strong>, higher than every single member.</p>
   <h3>Plain words</h3>
   <p>A model whose answers change a lot when the training data changes a little has <strong>high variance</strong>. That is bad for one model. But it has a bright side: the mistakes are partly random, and random mistakes made by different models land on different customers. When the models vote, each one's private mistakes are outvoted by the others. That is the entire idea of ensemble learning.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
@@ -198,9 +262,12 @@ majority vote of the 5 trees: val 0.840</div>
   <div class="callout trap"><span class="label">Trap</span>
     <p>"More models is always better" is false. Five copies of the same tree vote exactly like one tree (section 05 shows it: 0.773 → 0.773). The gain comes from <em>differences</em> between members, not from their number.</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> We saw a team win once. We need to know <em>why</em> it wins, by how much, and under which conditions. The cleanest place to start is a vote between a few yes/no voters, which we can work out with pencil and paper.</div>
+  <div class="bridge"><b>What this still can't tell us → next: The Maths of Voting.</b> We saw a team win once. We need to know <em>why</em> it wins, by how much, and under which conditions. The cleanest place to start is a vote between a few yes/no voters, which we can work out with pencil and paper.</div>
 
   <h2 id="ens-vote"><span class="num">02</span>The Maths of Voting</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>A vote of shaky trees beat every single tree, on the diary and on 20,000 customers. Is that luck? If each member is right with some probability p, how often is the majority right, and what does the answer depend on?</p>
+  </div>
   <h3>Three voters, worked by hand</h3>
   <p>Take three classifiers. Each is right on a given customer with probability p = 0.7, and (for now) their mistakes are <strong>independent</strong>: whether one is wrong tells you nothing about the others. The team answers by majority: it is right when at least 2 of the 3 are right. List all 2³ = 8 possible outcomes (R = right, W = wrong). The probability of an outcome is the product of its parts, because the voters are independent.</p>
   <table class="tbl">
@@ -214,7 +281,7 @@ majority vote of the 5 trees: val 0.840</div>
     <tr><td>W</td><td>W</td><td>R</td><td>0.063</td><td>no</td></tr>
     <tr><td>W</td><td>W</td><td>W</td><td>0.3 × 0.3 × 0.3 = 0.027</td><td>no</td></tr>
   </table>
-  <p>Add the "yes" rows: 0.343 + 3 × 0.147 = 0.343 + 0.441 = <strong>0.784</strong>. Three 70% voters make a 78.4% team. In formula form: P(majority right) = p³ + 3p²(1 − p). The code enumerates the same 8 rows.</p>
+  <p>Add the "yes" rows: 0.343 + 3 × 0.147 = 0.343 + 0.441 = <strong>0.784</strong>. Three 70% voters make a 78.4% team. (On the diary, the leave-one-day-out trees are right on 11 of the 14 days they did not see, about 79%, a similar strength; but, as section 01 showed, they are far from independent.) In formula form: P(majority right) = p³ + 3p²(1 − p). The code enumerates the same 8 rows.</p>
   <div class="fx" data-lang="py">from itertools import product
 p = 0.70                                    # each voter is right 70% of the time
 total = 0.0
@@ -286,9 +353,12 @@ copy prob 1.0: each voter right 0.701  majority of 25 right 0.701</div>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Do not quote "Condorcet says 101 models give 100% accuracy". The theorem's two assumptions, independent errors and p &gt; 0.5 on <em>every</em> case, never hold for real models. Real errors are correlated, and some customers are hard for every model (p &lt; 0.5 on those rows), so the majority stays wrong on them however many members you add.</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> Voting is about yes/no answers. Many ensembles average <em>numbers</em> instead: house prices, or probabilities. We need the same "how much does the team gain" answer for averages, including what happens when members are correlated.</div>
+  <div class="bridge"><b>What this still can't tell us → next: The Maths of Averaging.</b> Voting is about yes/no answers. Many ensembles average <em>numbers</em> instead: house prices, or probabilities. We need the same "how much does the team gain" answer for averages, including what happens when members are correlated.</div>
 
   <h2 id="ens-avg"><span class="num">03</span>The Maths of Averaging</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Voting counts yes/no answers. Many ensembles average numbers instead: a turnout, a price, a probability. How much does averaging n predictions shrink their wobble, and what happens when the members are alike, like our 14 near-copy diary trees?</p>
+  </div>
   <h3>The laddoo jar</h3>
   <p>At a mela there is a jar of laddoos and a prize for the closest guess. The true count is 500. One person's guess is off by about 100 either way. The simulation compares one guess, the average of 100 people who guess on their own, and the average of 100 people who mostly copy one loud friend (80% of each guess is the friend's mistake).</p>
   <div class="fx" data-lang="py">import numpy as np
@@ -347,15 +417,19 @@ for rho in [0.0, 0.3, 0.7]:
  0.7   5   0.761      0.760
  0.7  25   0.717      0.712</div>
   <p>Simulated and formula agree to the second decimal in every row. Look at ρ = 0.7: going from 5 to 25 models only moves 0.761 to 0.717. When members are alike, extra members are almost useless; the way forward is to make them less alike. That is exactly what <a class="xref" data-note="ml_rf">Random Forest</a> (random columns per split) and <a class="xref" data-note="ml_extratrees">Extra Trees</a> (random cut-offs) do: they lower ρ, even if each tree gets a little worse.</p>
+  <p>Back to the diary: the 14 leave-one-day-out trees agree on 94% of all possible days, so ρ is close to 1 and averaging them would leave almost all of one tree's variance in place. Leaving out one day is too small a change. <a class="xref" data-note="ml_bagging">Bagging</a> makes bigger, random changes (a bootstrap sample of the diary uses only about 9 of the 14 days), which is how it gets ρ down.</p>
   <div class="callout intu"><span class="label">Key insight</span>
     <p>Two levers, two terms. <strong>n</strong> (more members) only attacks (1 − ρ)σ²/n, and that term is already small after a few dozen members. <strong>ρ</strong> (less alike members) attacks the floor. This is why "add more trees" stops helping after a few hundred, while "make trees more different" can still help.</p>
   </div>
   <div class="callout trap"><span class="label">Trap</span>
     <p>The formula is about <em>variance</em>, the wobble of the prediction around its own average. It says nothing about <em>bias</em>, the gap between that average and the truth. If all members are off by +20 laddoos on average, the team is off by +20 too. The next section measures both.</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> Averaging shrinks variance and leaves bias alone. But boosting does not average; it adds models one after another. Does that change which error is removed? We need to measure bias and variance for each team design on the same problem.</div>
+  <div class="bridge"><b>What this still can't tell us → next: Bias &amp; Variance per Type.</b> Averaging shrinks variance and leaves bias alone. But boosting does not average; it adds models one after another. Does that change which error is removed? We need to measure bias and variance for each team design on the same problem.</div>
 
   <h2 id="ens-bv"><span class="num">04</span>Bias &amp; Variance per Ensemble Type</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Averaging shrinks variance and leaves bias where it is. Boosting adds models instead of averaging them. So which part of the error, bias or variance, does each team design actually remove?</p>
+  </div>
   <h3>A quick refresher</h3>
   <p>For a regression model f̂ trained on a random training set, the expected squared error at a point splits into three parts (see <a class="xref" data-note="ml_core">Core Concepts</a>):</p>
   <div class="callout def"><span class="label">Decomposition</span>
@@ -409,33 +483,43 @@ boosting 200 stumps    bias^2 0.0012  variance 0.0121  bias^2+var 0.0133</div>
   <div class="callout trap"><span class="label">Trap</span>
     <p>"Boosting reduces bias, so it cannot overfit" is wrong. Every boosting round adds flexibility; with enough rounds a booster memorises noise and its variance climbs. That is why boosters need a learning rate and early stopping (<a class="xref" data-note="ml_gbm">Gradient Boosting</a>).</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> Both formulas so far say the gain depends on how <em>different</em> the members are. We need an exact statement of that trade-off (accuracy of members vs their disagreement), and practical ways to create and measure the differences.</div>
+  <div class="bridge"><b>What this still can't tell us → next: Diversity.</b> Both formulas so far say the gain depends on how <em>different</em> the members are. We need an exact statement of that trade-off (accuracy of members vs their disagreement), and practical ways to create and measure the differences.</div>
 
   <h2 id="ens-div"><span class="num">05</span>Diversity: Where the Gain Comes From</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Both formulas say the gain depends on how different the members are. Is there an exact identity linking team error, member error and disagreement, and where do the differences come from when there is only one training table?</p>
+  </div>
   <h3>The ambiguity decomposition, worked by hand</h3>
-  <p>For averaging ensembles under squared error, there is an exact identity (Krogh &amp; Vedelsby, 1995). Three models guess a house price whose truth is y = 10 (lakh rupees): f₁ = 8, f₂ = 11, f₃ = 14. The team's guess is the average f̄ = (8 + 11 + 14)/3 = 11.</p>
+  <p>For averaging ensembles under squared error there is an exact identity (Krogh &amp; Vedelsby, 1995). Take three one-question regression trees on the diary's turnout column (members who came to the ground), each predicting the mean turnout of its leaf: a Humidity stump (High days average 28), an Outlook stump (Overcast days average 41) and a Wind stump (Weak-wind days average 37). Ask all three about D3 (Overcast, Hot, High humidity, Weak wind), when y = 36 members came. The team's guess is the average f̄ = (28 + 41 + 37)/3 = 106/3 = 35.33.</p>
   <table class="tbl">
     <tr><th>Model</th><th>Guess fᵢ</th><th>Own error (fᵢ − y)²</th><th>Disagreement with team (fᵢ − f̄)²</th></tr>
-    <tr><td>1</td><td>8</td><td>(8 − 10)² = 4</td><td>(8 − 11)² = 9</td></tr>
-    <tr><td>2</td><td>11</td><td>(11 − 10)² = 1</td><td>(11 − 11)² = 0</td></tr>
-    <tr><td>3</td><td>14</td><td>(14 − 10)² = 16</td><td>(14 − 11)² = 9</td></tr>
-    <tr><td><b>Average</b></td><td>f̄ = 11</td><td>21/3 = <b>7</b></td><td>18/3 = <b>6</b> (ambiguity)</td></tr>
+    <tr><td>Humidity stump</td><td>28</td><td>(28 − 36)² = 64</td><td>(28 − 35.33)² = 53.78</td></tr>
+    <tr><td>Outlook stump</td><td>41</td><td>(41 − 36)² = 25</td><td>(41 − 35.33)² = 32.11</td></tr>
+    <tr><td>Wind stump</td><td>37</td><td>(37 − 36)² = 1</td><td>(37 − 35.33)² = 2.78</td></tr>
+    <tr><td><b>Average</b></td><td>f̄ = 35.33</td><td>90/3 = <b>30</b></td><td>88.67/3 = <b>29.56</b> (ambiguity)</td></tr>
   </table>
-  <p>Team error: (11 − 10)² = 1. And 7 − 6 = 1. Not a coincidence:</p>
+  <p>Team error: (35.33 − 36)² = 0.44. And 30 − 29.56 = 0.44. Not a coincidence:</p>
   <div class="callout def"><span class="label">Ambiguity decomposition</span>
     <p><strong>(f̄ − y)² = average of (fᵢ − y)² − average of (fᵢ − f̄)²</strong>. Team error = average member error − average disagreement ("ambiguity"). Proof: write fᵢ − y = (fᵢ − f̄) + (f̄ − y), square, and average over i. The cross term is 2(f̄ − y) × average(fᵢ − f̄) = 0, because deviations from an average always sum to zero.</p>
   </div>
   <div class="fx" data-lang="py">import numpy as np
-y = 10.0
-preds = np.array([8.0, 11.0, 14.0])                      # three models' guesses for one house
-ens = preds.mean()
-ens_err = (ens - y) ** 2
-avg_err = np.mean((preds - y) ** 2)                      # average error of the members
-ambiguity = np.mean((preds - ens) ** 2)                  # how much members disagree with the team
-print(f"ensemble {ens}, ensemble error {ens_err}")
-print(f"avg member error {avg_err:.3f} - ambiguity {ambiguity:.3f} = {avg_err - ambiguity:.3f}")</div>
-  <div class="fx" data-lang="text">ensemble 11.0, ensemble error 1.0
-avg member error 7.000 - ambiguity 6.000 = 1.000</div>
+from play import df
+day = "D3"                                            # Overcast, Hot, High humidity, Weak wind
+y = df.Turnout[day]                                   # 36 members came
+guess = {}
+for col in ["Humidity", "Outlook", "Wind"]:           # three one-question regression trees (stumps)
+    leaf_mean = df.groupby(col).Turnout.mean()        # each leaf predicts its mean turnout
+    guess[col] = float(leaf_mean[df.loc[day, col]])
+f = np.array(list(guess.values()))
+fbar = f.mean()
+print("member guesses:", {k: round(v, 2) for k, v in guess.items()}, " truth", y)
+print(f"team guess {fbar:.2f}, team error {(fbar - y) ** 2:.3f}")
+own = ((f - y) ** 2).mean(); amb = ((f - fbar) ** 2).mean()
+print(f"avg member error {own:.3f} - ambiguity {amb:.3f} = {own - amb:.3f}")</div>
+  <div class="fx" data-lang="text">member guesses: {'Humidity': 28.0, 'Outlook': 41.0, 'Wind': 37.0}  truth 36
+team guess 35.33, team error 0.444
+avg member error 30.000 - ambiguity 29.556 = 0.444</div>
+  <p>The three stumps are individually poor (the Humidity stump misses by 8 members), but they miss in <em>different directions</em>: one too low, one too high. Almost all of their average error (30) is disagreement (29.56), and the disagreement is exactly what averaging removes. Had all three guessed 28, the ambiguity would be 0 and the team would miss by the full 64.</p>
   <p>Two things follow. First, since ambiguity is never negative, an averaged team is <strong>never worse than its average member</strong>. Second, there is a tug of war: you want members that are individually accurate (small first term) and that disagree a lot (big second term). Making members more random usually raises disagreement but also raises their own error. Every bagging-family method is a different bet on that trade-off.</p>
   <div class="callout trap"><span class="label">Trap</span>
     <p>"Never worse than the <em>average</em> member" is not "never worse than the <em>best</em> member". If one member is far better than the rest, the average of the team can be worse than that one member. Section 08 shows it on real data.</p>
@@ -496,9 +580,12 @@ for name, team in teams.items():
   <div class="callout intu"><span class="label">Key insight</span>
     <p>Good diversity = members that are each about equally good and wrong on different rows. Bootstrap trees are the textbook case. A heterogeneous team only helps when its members are of similar strength, or when the combiner learns to trust the strong ones (that is what stacking adds).</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> We now know what makes a team work. Next: the standard designs people actually use, organised into one map, so each later note has a clear place.</div>
+  <div class="bridge"><b>What this still can't tell us → next: The Taxonomy of Ensembles.</b> We now know what makes a team work. Next: the standard designs people actually use, organised into one map, so each later note has a clear place.</div>
 
   <h2 id="ens-tax"><span class="num">06</span>The Taxonomy of Ensembles</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>We know what makes a team work: good members, different mistakes. What are the standard ways of building such a team, and how do they combine the members' answers?</p>
+  </div>
   <h3>Four designs</h3>
   <figure class="viz"><svg viewBox="0 0 680 250" width="680">
 <defs><marker id="ens-tx" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
@@ -544,18 +631,34 @@ for name, team in teams.items():
     <p><strong>Homogeneous ensemble</strong>: all members use the same algorithm; diversity comes from data, features or randomness (bagging, RF, boosting). <strong>Heterogeneous ensemble</strong>: members use different algorithms; diversity comes from their different ways of seeing the data (voting, stacking). <strong>Parallel</strong> designs train members independently (easy to spread over CPU cores); <strong>sequential</strong> designs need member m − 1 before member m.</p>
   </div>
   <h3>Hard vs soft voting in one example</h3>
-  <p>Three classifiers give P(churn) = 0.9, 0.4 and 0.45 for one customer.</p>
+  <p>Three one-question trees on the diary (Outlook, Humidity, Wind stumps); each leaf's P(Yes) is the share of played days in it. Ask them about D1 (Sunny, Hot, High humidity, Weak wind).</p>
+  <div class="fx" data-lang="py">from play import df
+day = df.loc["D1"]                                     # Sunny, Hot, High humidity, Weak wind
+p = {}
+for col in ["Outlook", "Humidity", "Wind"]:            # three stumps; a leaf's P(Yes) = share of Yes in it
+    p[col] = float((df[df[col] == day[col]].Play == "Yes").mean())
+labels = {c: "Yes" if v &gt; 0.5 else "No" for c, v in p.items()}
+print("P(Yes):", {c: round(v, 3) for c, v in p.items()}, " labels:", labels)
+hard = max(["Yes", "No"], key=list(labels.values()).count)
+soft = sum(p.values()) / 3
+print("hard vote:", hard, f"| soft vote: average P(Yes) = {soft:.3f} -&gt;", "Yes" if soft &gt; 0.5 else "No",
+      "| truth:", day.Play)</div>
+  <div class="fx" data-lang="text">P(Yes): {'Outlook': 0.4, 'Humidity': 0.429, 'Wind': 0.75}  labels: {'Outlook': 'No', 'Humidity': 'No', 'Wind': 'Yes'}
+hard vote: No | soft vote: average P(Yes) = 0.526 -&gt; Yes | truth: No</div>
   <ul>
-    <li><strong>Hard voting</strong> counts labels: 0.9 → yes, 0.4 → no, 0.45 → no. Two "no" beat one "yes": predict <em>stay</em>.</li>
-    <li><strong>Soft voting</strong> averages probabilities: (0.9 + 0.4 + 0.45)/3 = 0.583 &gt; 0.5: predict <em>churn</em>.</li>
+    <li><strong>Hard voting</strong> counts labels: Sunny days played 2 of 5 (0.40 → No), High-humidity days 3 of 7 (0.43 → No), Weak-wind days 6 of 8 (0.75 → Yes). Two "No" beat one "Yes": predict <em>No</em>.</li>
+    <li><strong>Soft voting</strong> averages probabilities: (0.40 + 0.43 + 0.75)/3 = 0.526 &gt; 0.5: predict <em>Yes</em>.</li>
   </ul>
-  <p>They disagree because hard voting throws away confidence: the two "no" voters were barely sure (0.4, 0.45), the "yes" voter was very sure (0.9). Soft voting usually wins when the members' probabilities are sensible. Weighted versions, worked tables and the full sklearn API are in <a class="xref" data-note="ml_stacking">Stacking &amp; Voting</a>.</p>
+  <p>They disagree because hard voting throws away confidence: the two "No" voters were barely sure, the "Yes" voter was fairly sure. Here the truth is No, so the hard vote happened to be right: soft voting trusts confidence, which helps only when the confidence is earned (the Wind stump's 0.75 ignores that D1 was sunny and humid). With well-calibrated members soft voting usually wins. Weighted versions, worked tables and the full sklearn API are in <a class="xref" data-note="ml_stacking">Stacking &amp; Voting</a>.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>Bagging is a panel of judges who each watched a different recording of the match and then average their scores. Boosting is a relay of tutors: each one teaches only the chapters the student still fails. Voting is a show of hands among different experts. Stacking is a head judge who has learnt from past cases which expert to trust for what.</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> A map is useful only if the designs really behave as described. Let us run one member of each family on the same churn data and compare accuracy and training time.</div>
+  <div class="bridge"><b>What this still can't tell us → next: Every Design at Scale.</b> A map is useful only if the designs really behave as described. Let us run one member of each family on the same churn data and compare accuracy and training time.</div>
 
-  <h2 id="ens-run"><span class="num">07</span>Every Design on One Dataset</h2>
+  <h2 id="ens-run"><span class="num">07</span>Every Design at Scale</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>The diary is perfect for following the mechanics by hand, but with 14 days one prediction moves accuracy by 7 points. Do the four designs behave as the map promises on realistic data, with the same rows and the same test set?</p>
+  </div>
   <p>One single tree, two parallel bagging-family teams, one boosting team, and two blends of different algorithms (a random forest, a booster and a k-nearest-neighbours model). Same rows, same test set.</p>
   <div class="fx" data-lang="py">from sklearn.ensemble import (BaggingClassifier, HistGradientBoostingClassifier,
                               VotingClassifier, StackingClassifier)
@@ -588,9 +691,12 @@ stack rf+hgb+knn -&gt; LR (meta)        test acc 0.877   fit 114.6s</div>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Times here come from a shared 4-core machine and change from run to run; compare them as "seconds vs minutes", not to the decimal. And never pick an ensemble on test accuracy: choose on validation or cross-validation, then report test once (<a class="xref" data-note="ml_evaluation">Model Evaluation</a>).</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> Ensembles won here. But the theory also predicted cases where they should <em>not</em> help. A careful engineer must know those cases before spending the extra compute.</div>
+  <div class="bridge"><b>What this still can't tell us → next: When Ensembles Do Not Help.</b> Ensembles won here. But the theory also predicted cases where they should <em>not</em> help. A careful engineer must know those cases before spending the extra compute.</div>
 
   <h2 id="ens-fail"><span class="num">08</span>When Ensembles Do Not Help</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Every ensemble beat the single tree at scale. But the formulas also predicted cases where a team gains nothing, or loses. Which cases, and how do we recognise them before spending the compute?</p>
+  </div>
   <p>Each failure below follows directly from a formula earlier in the note.</p>
   <div class="fx" data-lang="py">from sklearn.ensemble import BaggingClassifier, HistGradientBoostingClassifier, VotingClassifier
 from sklearn.linear_model import LogisticRegression
@@ -630,8 +736,12 @@ boosting alone 0.862   soft vote boosting+NB+LR 0.824
   <div class="callout trap"><span class="label">Trap</span>
     <p>An ensemble cannot rescue a broken pipeline. If there is leakage, a wrong label, or a feature that will not exist at prediction time, every member learns the same broken signal, and the ensemble is confidently wrong.</p>
   </div>
+  <div class="bridge"><b>What this still can't tell us → next: The Costs.</b> Even when an ensemble helps, it is never free. What do we pay in training time, prediction latency, memory and readability?</div>
 
   <h2 id="ens-cost"><span class="num">09</span>The Costs</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>An ensemble of n models is usually more accurate. What does it cost to train, store and run, and when is that price too high?</p>
+  </div>
   <p>An ensemble of n models costs about n times as much to train, store and run, and it can no longer be read like one tree. The code measures prediction latency for one customer at a time (what an online API sees) and the saved model size.</p>
   <div class="fx" data-lang="py">import pickle
 from sklearn.ensemble import HistGradientBoostingClassifier, StackingClassifier
@@ -670,8 +780,55 @@ stack rf+hgb+knn     1-row latency   41.4 ms   saved size 140.61 MB</div>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Judging a model only by an offline accuracy table. A +0.3% accuracy gain that triples latency, or needs five models retrained every week, is often a bad trade in production. Write down the latency and size budget before you start blending.</p>
   </div>
+  <div class="bridge"><b>What this still can't tell us → next: How It All Connects.</b> We have the reasons, the maths, the designs, the failures and the costs. One picture and one table should now show how they connect, and which note to read next.</div>
 
-  <h2 id="ens-cmp"><span class="num">10</span>Comparison Tables</h2>
+  <h2 id="ens-connect"><span class="num">10</span>How It All Connects</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Condorcet, ρσ², bias and variance, ambiguity, diversity sources, four designs, failures and costs: are these separate facts, or one argument in which each step follows from the previous one?</p>
+  </div>
+  <figure class="viz"><svg viewBox="0 0 760 360" width="760">
+<defs><marker id="ens-ca" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+<rect x="10" y="10" width="200" height="44" rx="7" class="fr sr"/><text x="110" y="29" text-anchor="middle" font-size="11.5" font-weight="700">one shaky tree</text><text x="110" y="45" text-anchor="middle" class="tm" font-size="10">14 diary trees: roots 11 / 3</text>
+<line x1="210" y1="32" x2="248" y2="32" stroke="currentColor" marker-end="url(#ens-ca)"/>
+<rect x="250" y="10" width="240" height="44" rx="7" class="fv" stroke="currentColor" stroke-opacity="0.35"/><text x="370" y="29" text-anchor="middle" font-size="11.5" font-weight="700">combine many: vote / average</text><text x="370" y="45" text-anchor="middle" class="tm" font-size="10">new day: 13 No vs 1 Yes</text>
+<line x1="320" y1="54" x2="140" y2="90" stroke="currentColor" marker-end="url(#ens-ca)"/>
+<line x1="420" y1="54" x2="600" y2="90" stroke="currentColor" marker-end="url(#ens-ca)"/>
+<rect x="10" y="92" width="260" height="44" rx="7" class="fb sb"/><text x="140" y="111" text-anchor="middle" font-size="11.5" font-weight="700">voting maths (binomial)</text><text x="140" y="127" text-anchor="middle" class="tm" font-size="10">3 voters at 0.7 → 0.784</text>
+<rect x="470" y="92" width="280" height="44" rx="7" class="fb sb"/><text x="610" y="111" text-anchor="middle" font-size="11.5" font-weight="700">averaging maths</text><text x="610" y="127" text-anchor="middle" class="tm" font-size="10">Var = ρσ² + (1−ρ)σ²/n</text>
+<line x1="140" y1="136" x2="330" y2="172" stroke="currentColor" marker-end="url(#ens-ca)"/>
+<line x1="610" y1="136" x2="430" y2="172" stroke="currentColor" marker-end="url(#ens-ca)"/>
+<rect x="230" y="174" width="300" height="44" rx="7" class="fg sg"/><text x="380" y="193" text-anchor="middle" font-size="11.5" font-weight="700">needs good AND different members</text><text x="380" y="209" text-anchor="middle" class="tm" font-size="10">ambiguity: 30 − 29.56 = 0.44 on D3</text>
+<line x1="280" y1="218" x2="105" y2="254" stroke="currentColor" marker-end="url(#ens-ca)"/>
+<line x1="350" y1="218" x2="295" y2="254" stroke="currentColor" marker-end="url(#ens-ca)"/>
+<line x1="410" y1="218" x2="475" y2="254" stroke="currentColor" marker-end="url(#ens-ca)"/>
+<line x1="480" y1="218" x2="660" y2="254" stroke="currentColor" marker-end="url(#ens-ca)"/>
+<rect x="10" y="256" width="180" height="44" rx="7" class="fb sb"/><text x="100" y="275" text-anchor="middle" font-size="11.5" font-weight="700">bagging → RF → ET</text><text x="100" y="291" text-anchor="middle" class="tm" font-size="10">parallel · cuts variance</text>
+<rect x="200" y="256" width="180" height="44" rx="7" class="ft st"/><text x="290" y="275" text-anchor="middle" font-size="11.5" font-weight="700">boosting</text><text x="290" y="291" text-anchor="middle" class="tm" font-size="10">sequential · cuts bias</text>
+<rect x="390" y="256" width="170" height="44" rx="7" class="fg sg"/><text x="475" y="275" text-anchor="middle" font-size="11.5" font-weight="700">voting</text><text x="475" y="291" text-anchor="middle" class="tm" font-size="10">D1: hard No, soft 0.526</text>
+<rect x="570" y="256" width="180" height="44" rx="7" class="fg sg"/><text x="660" y="275" text-anchor="middle" font-size="11.5" font-weight="700">stacking</text><text x="660" y="291" text-anchor="middle" class="tm" font-size="10">learnt combiner (OOF)</text>
+<rect x="10" y="314" width="740" height="38" rx="7" fill="none" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.5"/><text x="380" y="331" text-anchor="middle" font-size="11" font-weight="700">limits: stable, biased, correlated or weak members · costs: n× time, latency, size</text><text x="380" y="346" text-anchor="middle" class="tm" font-size="10">bagged logistic regression 0.596 → 0.594 · forest 48 ms and 69 MB vs tree 1 ms and 0.03 MB</text>
+</svg><figcaption>One shaky tree motivates combining many. Two pieces of maths (voting for labels, averaging for numbers) say the same thing: the team gains only if members are good and different. The four designs are four ways of getting that diversity; the dashed bar holds the limits and costs that apply to all of them. Grey numbers are the diary (top) and the churn data (bottom).</figcaption></figure>
+  <table class="tbl"><caption>Every concept, what it is built from, and its value on the running example</caption>
+    <tr><th>Concept</th><th>Built from</th><th>Answers</th><th>On the diary / at scale</th><th>Use when</th></tr>
+    <tr><td>Instability of one tree</td><td>the same algorithm on slightly different data</td><td>why combine at all?</td><td>leave-one-day-out roots: Outlook 11, Humidity 3; new day 13 No / 1 Yes</td><td>diagnosing high variance</td></tr>
+    <tr><td>Majority vote maths</td><td>binomial sum over independent voters</td><td>how often is a vote right?</td><td>3 voters at 0.7 → 0.784; copying → 0.70</td><td>class labels</td></tr>
+    <tr><td>Variance of an average</td><td>variances and covariances of members</td><td>how much wobble remains?</td><td>ρ = 0.3, n = 25 → 0.328; diary trees agree 94% (ρ near 1)</td><td>numbers and probabilities</td></tr>
+    <tr><td>Bias vs variance per design</td><td>averaging keeps bias; adding lowers it</td><td>which error does each design remove?</td><td>bagged deep trees variance 0.090 → 0.043; boosted stumps bias² 0.063 → 0.001</td><td>choosing members (deep vs shallow)</td></tr>
+    <tr><td>Ambiguity decomposition</td><td>team error = avg member error − disagreement</td><td>exactly how much does diversity buy?</td><td>D3 turnout: 30 − 29.56 = 0.44</td><td>reasoning about any averaged team</td></tr>
+    <tr><td>Diversity sources</td><td>rows, columns, randomness, algorithms, reweighting</td><td>where do differences come from?</td><td>bootstrap trees: error correlation 0.24 vs 1.00 for copies</td><td>designing the team</td></tr>
+    <tr><td>Hard vs soft voting</td><td>labels vs averaged probabilities</td><td>how to combine classifiers?</td><td>D1: hard No, soft 0.526 → Yes (truth No)</td><td>soft when probabilities are calibrated</td></tr>
+    <tr><td>Bagging, boosting, voting, stacking</td><td>diversity source + combination rule</td><td>which design?</td><td>churn: forest 0.877, booster 0.862, vote 0.866, stack 0.877</td><td>see the comparison tables</td></tr>
+    <tr><td>Failure cases and costs</td><td>the same formulas, read backwards</td><td>when not to ensemble?</td><td>bagged LR 0.596 → 0.594; forest 69 MB vs tree 0.03 MB</td><td>before spending compute</td></tr>
+  </table>
+  <div class="callout intu"><span class="label">Key insight</span>
+    <p>One sentence holds the note: <strong>a team beats its members only by the amount its members disagree, so every ensemble method is a way to make good models disagree, and a rule for combining them.</strong> Bagging gets disagreement from different rows, random forests and Extra Trees add random columns and cut-offs, boosting builds each member on the others' errors, and voting and stacking use different algorithms.</p>
+  </div>
+  <div class="bridge"><b>What this still can't tell us → next: Comparison Tables.</b> The picture shows how the ideas connect. Side by side, how do the four designs differ on members, training, diversity, combination and typical gain?</div>
+
+  <h2 id="ens-cmp"><span class="num">11</span>Comparison Tables</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>We have the four designs and the argument that links them. In one table, how do they differ, and how does any ensemble compare with the single tree it started from?</p>
+  </div>
   <h3>The four designs</h3>
   <table class="tbl">
     <tr><th></th><th>Bagging (RF, ET)</th><th>Boosting (AdaBoost, GBM, XGB, LGBM, CatBoost)</th><th>Voting</th><th>Stacking</th></tr>
@@ -693,8 +850,12 @@ stack rf+hgb+knn     1-row latency   41.4 ms   saved size 140.61 MB</div>
     <tr><td>Train / predict cost</td><td>1×</td><td>n× (parallel helps bagging)</td></tr>
     <tr><td>When to pick</td><td>Explanation is the product; tiny latency budget</td><td>Accuracy matters; a few ms per prediction is fine</td></tr>
   </table>
+  <div class="bridge"><b>What this still can't tell us → next: Common Mistakes.</b> The tables summarise the designs. Which mistakes do people make most often when building teams?</div>
 
-  <h2 id="ens-traps"><span class="num">11</span>Common Mistakes</h2>
+  <h2 id="ens-traps"><span class="num">12</span>Common Mistakes</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Which ensemble mistakes cost the most in practice and in interviews, and which formula in this note explains each one?</p>
+  </div>
   <div class="callout trap"><span class="label">Trap: diversity forgotten</span>
     <p>Training ten copies of the same model on the same rows with the same settings. Their votes are identical. Diversity must come from somewhere: rows, columns, randomness, or algorithms.</p>
   </div>
@@ -716,8 +877,54 @@ stack rf+hgb+knn     1-row latency   41.4 ms   saved size 140.61 MB</div>
   <div class="callout trap"><span class="label">Trap: ignoring cost</span>
     <p>Shipping a 5-model stack for +0.002 AUC into a 10 ms latency budget. Measure latency and size as part of model selection.</p>
   </div>
+  <div class="bridge"><b>What this still can't tell us → next: Revision Sheet.</b> Everything in this note, condensed to one page for revision.</div>
 
-  <h2 id="ens-qa"><span class="num">12</span>Questions &amp; Answers</h2>
+  <h2 id="ens-rev"><span class="num">R</span>Revision Sheet</h2>
+  <p>The whole note on one sheet. Running example: the captain's 14-day cricket diary (Outlook, Temp, Humidity, Wind → Play, 9 Yes / 5 No; Turnout = members who came, mean 34). Large-scale numbers: the 20,000-customer churn table.</p>
+  <h3>The question ladder</h3>
+  <table class="tbl">
+    <tr><th>Concept</th><th>Question</th><th>Answer (diary / scale)</th><th>Weakness → next</th></tr>
+    <tr><td>One tree is shaky</td><td>why combine?</td><td>14 leave-one-out trees: roots 11/3; 5 churn trees vote 0.840 vs 0.78</td><td>why does the vote win? → voting maths</td></tr>
+    <tr><td>Voting maths</td><td>how often is the majority right?</td><td>3 × 0.7 → 0.784; Condorcet</td><td>needs independence; numbers? → averaging</td></tr>
+    <tr><td>Averaging maths</td><td>how much wobble remains?</td><td>ρσ² + (1 − ρ)σ²/n</td><td>silent on bias → bias/variance</td></tr>
+    <tr><td>Bias &amp; variance</td><td>which error does each design remove?</td><td>bagging: variance; boosting: bias</td><td>how does difference enter? → diversity</td></tr>
+    <tr><td>Diversity</td><td>exactly how much do differences buy?</td><td>D3: 30 − 29.56 = 0.44</td><td>which designs? → taxonomy</td></tr>
+    <tr><td>Taxonomy</td><td>standard designs?</td><td>bagging, boosting, voting, stacking; D1 hard No vs soft Yes</td><td>do they work? → at scale</td></tr>
+    <tr><td>At scale</td><td>how do they compare?</td><td>tree 0.778 → ensembles 0.86–0.88</td><td>when do they fail? → failures</td></tr>
+    <tr><td>Failures &amp; costs</td><td>when not, and at what price?</td><td>bagged LR no gain; forest 48 ms, 69 MB</td><td>→ bagging, boosting, stacking notes</td></tr>
+  </table>
+  <h3>Formulas</h3>
+  <table class="tbl">
+    <tr><th>Name</th><th>Formula</th><th>Symbols</th></tr>
+    <tr><td>Majority of n voters right</td><td>Σ<sub>k ≥ (n+1)/2</sub> C(n, k) pᵏ (1 − p)ⁿ⁻ᵏ</td><td>n voters (odd), each right with probability p, independent. n = 3, p = 0.7: p³ + 3p²(1 − p) = 0.784</td></tr>
+    <tr><td>Condorcet</td><td>p &gt; 0.5 ⇒ P(majority right) → 1 as n → ∞; p &lt; 0.5 ⇒ → 0</td><td>needs independence and the same p on every case</td></tr>
+    <tr><td>Variance of an average</td><td>Var(X̄) = ρσ² + (1 − ρ)σ²/n</td><td>σ² one member's variance, ρ pairwise correlation, n members; floor ρσ²</td></tr>
+    <tr><td>Bias of an average</td><td>E[f̄] − truth = average member bias</td><td>averaging never changes bias</td></tr>
+    <tr><td>Error decomposition</td><td>E[(y − f̂)²] = bias² + variance + noise</td><td>noise cannot be removed by any model</td></tr>
+    <tr><td>Ambiguity</td><td>(f̄ − y)² = mean (fᵢ − y)² − mean (fᵢ − f̄)²</td><td>fᵢ member predictions, f̄ their average; D3: 0.44 = 30 − 29.56</td></tr>
+    <tr><td>Soft vote</td><td>ŷ = argmax_c Σ wₘ Pₘ(c | x) / Σ wₘ</td><td>Pₘ member probabilities, wₘ weights (default 1); D1: 0.526</td></tr>
+  </table>
+  <h3>When to use, when not</h3>
+  <div class="cards">
+    <div><b>Bagging-type</b><p>Members are deep, low-bias, shaky trees; you want stability with little tuning.</p><small>Random forest is the default</small></div>
+    <div><b>Boosting-type</b><p>Members are shallow, high-bias trees; you want the best accuracy and can tune and early-stop.</p><small>XGBoost, LightGBM, CatBoost</small></div>
+    <div><b>Voting / stacking</b><p>You already have strong, different models of similar strength.</p><small>Out-of-fold predictions for stacking</small></div>
+    <div><b>No ensemble</b><p>Stable or high-bias members to bag, a much stronger single member, tiny data, or a tight latency budget.</p><small>Fix features or data instead</small></div>
+  </div>
+  <div class="callout trap"><span class="label">Key traps</span>
+    <p>Members without diversity (copies vote like one); bagging stable or biased learners; averaging in a much weaker model; quoting Condorcet literally; hard voting when probabilities are good (or soft voting when they are not); choosing the blend on the test set; ignoring latency and size.</p>
+  </div>
+  <h3>Five rapid-fire checks</h3>
+  <table class="tbl">
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>Three independent voters, each right 0.6. Majority right?</td><td>0.6³ + 3 × 0.6² × 0.4 = 0.216 + 0.432 = 0.648</td></tr>
+    <tr><td>σ² = 1, ρ = 0.5, n = 10: variance of the average? With n → ∞?</td><td>0.5 + 0.05 = 0.55; floor 0.5</td></tr>
+    <tr><td>Guesses 28, 41, 37, truth 36: team error and ambiguity?</td><td>team 35.33, error 0.44; ambiguity 29.56 (avg member error 30)</td></tr>
+    <tr><td>Bag stumps or boost them?</td><td>Boost: stumps are high-bias, and averaging cannot remove bias</td></tr>
+    <tr><td>Why do the 14 leave-one-day-out diary trees make a weak team?</td><td>They agree on 94% of possible days (ρ near 1): no diversity to average away</td></tr>
+  </table>
+
+  <h2 id="ens-qa"><span class="num">13</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>What is an ensemble, and what two conditions make it better than its members?</summary><div class="qa-body">Several base models plus a rule that combines their outputs. It beats its members when (1) each member is better than chance and reasonably accurate, and (2) the members make different (weakly correlated) mistakes, so the errors cancel in the vote or average.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Three independent classifiers are each 70% accurate. What is the majority vote's accuracy? Show the working.</summary><div class="qa-body">P(all 3 right) = 0.7³ = 0.343. P(exactly 2 right) = 3 × 0.7² × 0.3 = 0.441. Sum = 0.784. In general P(majority right) = Σ<sub>k ≥ (n+1)/2</sub> C(n,k) pᵏ(1−p)ⁿ⁻ᵏ.</div></details>
@@ -734,6 +941,9 @@ stack rf+hgb+knn     1-row latency   41.4 ms   saved size 140.61 MB</div>
   <details class="qa"><summary><span class="qmark">Q</span>Connection: how do Random Forest and Extra Trees relate to the ρσ² formula?</summary><div class="qa-body">Bagged trees are correlated because the strongest feature dominates every tree, so the floor ρσ² stays high. Random Forest lowers ρ by giving each split only a random subset of features; Extra Trees lowers it further with random thresholds. Each tree gets a little worse (σ² and bias up slightly) but the team improves because ρ falls.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Connection: why does boosting need early stopping but bagging does not?</summary><div class="qa-body">Bagging averages independent members; adding more only reduces the (1−ρ)σ²/n term, so the error curve flattens and never turns up. Boosting adds members that fit the remaining errors, so after the signal is used up they start fitting noise and validation error rises. See <a class="xref" data-note="ml_gbm">Gradient Boosting</a>.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What are the costs of an ensemble, and how can you reduce them?</summary><div class="qa-body">n× training (×k for stacking), n× prediction latency, larger model files, lost readability, more maintenance. Reduce with fewer members, shallower trees, histogram boosters, parallel training, pruning useless members, or distilling the ensemble into a single model.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does an ensemble need diversity, and what breaks if you skip it? Use the diary.</summary><div class="qa-body">The ambiguity identity says team error = average member error − average disagreement. With no disagreement the team is exactly as good as its average member. The 14 leave-one-day-out diary trees agree on 94% of possible days, so their vote barely differs from one tree; the three diary stumps on D3 disagree a lot (ambiguity 29.56 out of 30), so their average misses by only 0.44.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How does the variance formula ρσ² + (1 − ρ)σ²/n explain the order of the next three notes (bagging, random forest, Extra Trees)?</summary><div class="qa-body">More members only shrink the second term; the floor ρσ² needs less correlated members. Bagging makes members differ by resampling rows; the random forest lowers ρ further by restricting each split to random columns (on the diary, Outlook then wins the root far less often); Extra Trees lowers it again with random cut-offs. Each note is one more way to lower ρ.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What breaks if you average a strong model with weak ones, and which later idea fixes it?</summary><div class="qa-body">The ambiguity identity only guarantees "no worse than the average member", so weak members can drag the team below the best member: booster alone 0.862, soft vote with naive Bayes and logistic regression 0.824. Weighting members by validation score, or a stacking meta-model trained on out-of-fold predictions (<a class="xref" data-note="ml_stacking">Stacking &amp; Voting</a>), learns to trust the strong member.</div></details>
 </main>
 `
 });

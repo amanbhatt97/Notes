@@ -5,7 +5,7 @@ Object.assign(TOPIC_CONTENT, {
   <div class="where"><span>Tree-Based Models</span><span>Ensemble Methods</span><span>Stacking &amp; Voting</span></div>
   <p class="lead">Bagging copies one algorithm in parallel; boosting chains one algorithm in sequence. The third branch of the ensemble family combines <strong>different</strong> models that are each already good: a random forest, a gradient booster, a k-nearest-neighbours model. <strong>Voting</strong> combines them with a fixed rule (hard, soft or weighted). <strong>Stacking</strong> trains a second model, the meta-learner, to learn the best combination, and must use <strong>out-of-fold</strong> predictions to do it without leaking the answers. This note works every rule by hand, shows the leak and its fix with numbers, rebuilds sklearn's <code>StackingClassifier</code> from scratch to the last decimal, compares stacking with blending and multi-level stacks, and is honest about when the gains are too small to be worth it.</p>
 
-  <h2 id="stk-where" class="open"><span class="num">↳</span>Where this fits</h2>
+  <h2 id="stk-where" class="open"><span class="num">★</span>Where this fits</h2>
   <figure class="viz"><svg viewBox="0 0 680 300" width="680">
 <defs><marker id="stk-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
 <line x1="340" y1="40" x2="340" y2="64" stroke="currentColor" stroke-opacity="0.45" marker-end="url(#stk-ar)"/>
@@ -50,9 +50,21 @@ Object.assign(TOPIC_CONTENT, {
 </svg><figcaption>Stacking &amp; Voting is the third child of Ensemble Learning. Its members are usually finished models from the other two branches (a forest, a booster) plus models from outside the tree family.</figcaption></figure>
   <ul>
     <li><strong>Came from:</strong> <a class="xref" data-note="ml_ensembles">Ensemble Learning: The Idea</a>, which showed that a team gains most when its members are good and make <em>different</em> mistakes, and that plain averaging can be dragged down by a weak member. From the two other branches we now have strong members: <a class="xref" data-note="ml_rf">Random Forest</a> (parallel deep trees) and <a class="xref" data-note="ml_gbm">Gradient Boosting</a> / <a class="xref" data-note="ml_lightgbm">LightGBM</a> (sequential small trees). They were built in opposite ways, so they should disagree on some rows.</li>
-    <li><strong>What this note adds:</strong> two ways to combine finished, different models: a fixed vote, and a learnt combiner trained on honest (out-of-fold) predictions.</li>
+    <li><strong>What this note adds:</strong> two ways to combine finished, different models: a fixed vote, and a learnt combiner trained on honest (out-of-fold) predictions. The mechanics are worked by hand on the running example of the tree family, the captain's 14-day cricket diary; the gains are measured on the 20,000-customer churn table.</li>
     <li><strong>Leads to:</strong> once you have a strong model or blend, you need to explain it (<a class="xref" data-note="ml_tree_explain">Feature Importance &amp; SHAP</a>) and to tune and ship it (<a class="xref" data-note="ml_tree_tuning">Tuning &amp; Production</a>), where the extra cost of a stack must be justified. The out-of-fold idea is the same one behind cross-validation in <a class="xref" data-note="ml_evaluation">Model Evaluation</a>.</li>
   </ul>
+
+  <h2 id="stk-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
+  <p>The whole note as one chain. Each concept answers the question above it; its weakness raises the next question. Small numbers come from the running example, the captain's 14-day cricket diary; large ones from the 20,000-customer churn table.</p>
+  <ol class="story">
+    <li><b>Voting: hard, soft, weighted</b><span>Q: we have several finished, different models; what is the simplest way to use them together? → Let them vote. Three one-question trees on the diary are right on 10, 10 and 9 of 14 days; their hard vote 11, soft vote 10, and a vote that trusts the Outlook tree twice 12. But we picked that weight by hand. Can the weights be learnt?</span></li>
+    <li><b>Stacking: learn the combiner</b><span>Q: can a model learn how much to trust each member? → Yes: a meta-learner (usually logistic regression) trained on the members' predictions. But trained on which predictions?</span></li>
+    <li><b>The leak in naive stacking</b><span>Q: what goes wrong with predictions on the rows the members trained on? → They are too good: a 1-nearest-neighbour model is right on all 14 diary days it memorised, so the meta-learner learns to trust it blindly; at scale a stack trusting 1-NN falls from 0.863 to 0.739. How do we get honest predictions for every row?</span></li>
+    <li><b>Out-of-fold predictions</b><span>Q: how can every row get a prediction from a model that never saw it? → Cross-validation: hold out 2 diary days at a time, train on the other 12: 1-NN is then right on only 4 of 14. The meta-learner learns from those honest numbers; sklearn's StackingClassifier is exactly this. But k + 1 fits per member is expensive.</span></li>
+    <li><b>Blending</b><span>Q: is there a cheaper version? → One holdout split instead of k folds: 1 fit per member, but the meta-learner sees only the holdout rows (churn: 0.869 vs 0.877). How does sklearn package all this?</span></li>
+    <li><b>sklearn, multi-level stacks</b><span>Q: how do we build it, and does stacking stacks help? → StackingClassifier/Regressor (cv, stack_method, passthrough); a second level gained nothing on churn (AUC 0.9368 vs 0.9370). So when is any of this worth it?</span></li>
+    <li><b>When the gains are small</b><span>Q: when does a blend actually pay? → Only when members are both good and different: forest, Extra Trees and booster correlate 0.95–0.98 on churn, so every blend ties with the forest, while a ridge + forest + kNN regression stack beats its best member (R² 0.887 vs 0.875). Then: explain and ship whichever model wins.</span></li>
+  </ol>
 
   <h2 id="stk-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -64,7 +76,8 @@ Object.assign(TOPIC_CONTENT, {
           <li><b>Hard</b> — majority of predicted labels</li>
           <li><b>Soft</b> — average probabilities, then threshold</li>
           <li><b>Weighted</b> — trust some members more (weights chosen on validation)</li>
-          <li>Hard ignores confidence: 0.9 vs 0.4 + 0.45 → hard "no", soft 0.583 "yes"</li>
+          <li>Hard ignores confidence: diary D1, stumps 0.40, 0.43, 0.75 → hard No, soft 0.526 Yes (truth No)</li>
+          <li>Diary: stumps 10, 10, 9 of 14 → hard 11, soft 10, weighted (2,1,1) 12</li>
           <li>⚠ A weight ≥ sum of the others = one model decides alone</li>
         </ul>
       </div>
@@ -80,7 +93,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="mm-branch">
         <div class="mm-title">The leak</div>
         <ul>
-          <li>In-sample predictions are too good (1-NN: 100%, RF train AUC 1.000)</li>
+          <li>In-sample predictions are too good (diary 1-NN: 14/14 in-sample, 4/14 out of fold; RF train AUC 1.000)</li>
           <li>Meta-model learns "trust the overfitter" → worse on new data</li>
           <li><b>Fix: out-of-fold predictions</b> — each row predicted by a model that never saw it</li>
           <li>Test time: refit level 0 on all rows (sklearn) or average fold models</li>
@@ -119,77 +132,97 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="stk-vote"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Voting: Hard, Soft, Weighted</span><span class="rm-sub">Five customers by hand, then churn</span></div></div>
-      <div class="rm-item rm-done" data-target="stk-idea"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Stacking: Learn the Combiner</span><span class="rm-sub">Level-0 models and a meta-learner</span></div></div>
-      <div class="rm-item rm-done" data-target="stk-leak"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">The Leak in Naive Stacking</span><span class="rm-sub">Why in-sample predictions lie</span></div></div>
-      <div class="rm-item rm-done" data-target="stk-oof"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Out-of-Fold Predictions</span><span class="rm-sub">By hand, diagram, from scratch = sklearn</span></div></div>
-      <div class="rm-item rm-done" data-target="stk-blend"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Blending vs Stacking</span><span class="rm-sub">One holdout vs k folds</span></div></div>
-      <div class="rm-item rm-done" data-target="stk-sk"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">sklearn Stacking API</span><span class="rm-sub">Parameters, passthrough, regression</span></div></div>
+      <div class="rm-item rm-done" data-target="stk-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain of questions</span></div></div>
+      <div class="rm-item rm-done" data-target="stk-vote"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Voting: Hard, Soft, Weighted</span><span class="rm-sub">Three diary stumps vote</span></div></div>
+      <div class="rm-item rm-done" data-target="stk-idea"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Stacking: Learn the Combiner</span><span class="rm-sub">Level 0, level 1</span></div></div>
+      <div class="rm-item rm-done" data-target="stk-leak"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">The Leak in Naive Stacking</span><span class="rm-sub">A model that remembers</span></div></div>
+      <div class="rm-item rm-done" data-target="stk-oof"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Out-of-Fold Predictions</span><span class="rm-sub">7 folds of the diary by hand</span></div></div>
+      <div class="rm-item rm-done" data-target="stk-blend"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Blending vs Stacking</span><span class="rm-sub">Holdout vs k folds</span></div></div>
+      <div class="rm-item rm-done" data-target="stk-sk"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">sklearn's Stacking</span><span class="rm-sub">Parameters and a regression stack</span></div></div>
       <div class="rm-item rm-done" data-target="stk-multi"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Multi-Level Stacking</span><span class="rm-sub">Stacks of stacks</span></div></div>
-      <div class="rm-item rm-done" data-target="stk-gain"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">When the Gains Are Small</span><span class="rm-sub">Correlation, weak members, costs</span></div></div>
-      <div class="rm-item rm-done" data-target="stk-cmp"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Comparisons</span><span class="rm-sub">Voting vs stacking vs blending vs one model</span></div></div>
-      <div class="rm-item rm-done" data-target="stk-traps"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Leaks and wasted effort</span></div></div>
-      <div class="rm-item rm-done" data-target="stk-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview and connection checks</span></div></div>
+      <div class="rm-item rm-done" data-target="stk-gain"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">When the Gains Are Small</span><span class="rm-sub">Correlated members, costs</span></div></div>
+      <div class="rm-item rm-done" data-target="stk-connect"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One picture, one table</span></div></div>
+      <div class="rm-item rm-done" data-target="stk-cmp"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Comparisons</span><span class="rm-sub">Single model, votes, stack, blend</span></div></div>
+      <div class="rm-item rm-done" data-target="stk-traps"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Leaks, weak members, near-duplicates</span></div></div>
+      <div class="rm-item rm-done" data-target="stk-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note on one page</span></div></div>
+      <div class="rm-item rm-done" data-target="stk-qa"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
     </div>
   </div>
 
   <h2 id="stk-vote"><span class="num">01</span>Voting: Hard, Soft, Weighted</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>The bagging and boosting branches each build one kind of model. Suppose we already have several finished models of different kinds, each right on some days the others miss. What is the simplest way to combine them, and can the rules for combining disagree?</p>
+  </div>
   <h3>The need</h3>
   <p>You have trained three good but different churn models. Each one is right on some customers the others miss. The simplest way to use all three is to let them vote. There are three standard voting rules, and they can give different answers on the same customer.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
     <p>A hiring panel of three interviewers. <strong>Hard voting</strong>: each says "hire" or "no hire", majority wins. <strong>Soft voting</strong>: each gives a score from 0 to 1, the average decides. <strong>Weighted voting</strong>: the senior interviewer, who has been right more often, counts double.</p>
   </div>
-  <h3>Worked by hand: five customers, three models</h3>
-  <p>Models A, B and C give P(churn) for five customers. A model's own label is "churn" (1) when its probability is ≥ 0.5.</p>
+  <h3>Worked by hand: three diary stumps vote</h3>
+  <p>The running example is the captain's 14-day cricket diary (<code>play.py</code>):</p>
+  <div class="fx" data-lang="py">import pandas as pd
+rows = [  # Outlook,   Temp,  Humidity, Wind,    Play, HumPct, TempC, Turnout
+    ("Sunny",    "Hot",  "High",   "Weak",   "No",  85,  29, 24),
+    ("Sunny",    "Hot",  "High",   "Strong", "No",  90,  27, 20),
+    ("Overcast", "Hot",  "High",   "Weak",   "Yes", 86,  28, 36),
+    ("Rain",     "Mild", "High",   "Weak",   "Yes", 96,  21, 32),
+    ("Rain",     "Cool", "Normal", "Weak",   "Yes", 80,  20, 44),
+    ("Rain",     "Cool", "Normal", "Strong", "No",  70,  18, 22),
+    ("Overcast", "Cool", "Normal", "Strong", "Yes", 65,  18, 42),
+    ("Sunny",    "Mild", "High",   "Weak",   "No",  95,  22, 26),
+    ("Sunny",    "Cool", "Normal", "Weak",   "Yes", 70,  21, 40),
+    ("Rain",     "Mild", "Normal", "Weak",   "Yes", 80,  24, 46),
+    ("Sunny",    "Mild", "Normal", "Strong", "Yes", 70,  24, 38),
+    ("Overcast", "Mild", "High",   "Strong", "Yes", 90,  22, 38),
+    ("Overcast", "Hot",  "Normal", "Weak",   "Yes", 75,  27, 48),
+    ("Rain",     "Mild", "High",   "Strong", "No",  91,  22, 20)]
+df = pd.DataFrame(rows, columns=["Outlook", "Temp", "Humidity", "Wind", "Play", "HumPct", "TempC", "Turnout"])
+df.index = [f"D{i}" for i in range(1, 15)]</div>
+  <p>Three members, each a one-question tree (a stump) on a different column: Outlook, Humidity, Wind. A stump's P(Yes) for a day is the share of played days in its leaf: Outlook gives Sunny 2/5 = 0.4, Overcast 1.0, Rain 0.6; Humidity gives High 3/7 = 0.43, Normal 6/7 = 0.86; Wind gives Weak 6/8 = 0.75, Strong 3/6 = 0.5. A member's own label is Yes when its P(Yes) is above 0.5. (The stumps are scored on the days they learnt from, so read this as mechanics, not as an accuracy contest.)</p>
   <table class="tbl">
-    <tr><th>Customer</th><th>P_A</th><th>P_B</th><th>P_C</th><th>Labels A, B, C</th><th>Hard vote</th><th>Soft: average P</th><th>Weighted soft (1, 1, 2)</th><th>Truth</th></tr>
-    <tr><td>1</td><td>0.90</td><td>0.80</td><td>0.70</td><td>1, 1, 1</td><td>1</td><td>2.40/3 = 0.800 → 1</td><td>(0.9 + 0.8 + 1.4)/4 = 0.775 → 1</td><td>1</td></tr>
-    <tr><td>2</td><td>0.60</td><td>0.55</td><td>0.10</td><td>1, 1, 0</td><td>1</td><td>1.25/3 = 0.417 → 0</td><td>(0.6 + 0.55 + 0.2)/4 = 0.337 → 0</td><td>0</td></tr>
-    <tr><td>3</td><td>0.45</td><td>0.40</td><td>0.95</td><td>0, 0, 1</td><td>0</td><td>1.80/3 = 0.600 → 1</td><td>(0.45 + 0.4 + 1.9)/4 = 0.688 → 1</td><td>1</td></tr>
-    <tr><td>4</td><td>0.20</td><td>0.30</td><td>0.60</td><td>0, 0, 1</td><td>0</td><td>1.10/3 = 0.367 → 0</td><td>(0.2 + 0.3 + 1.2)/4 = 0.425 → 0</td><td>0</td></tr>
-    <tr><td>5</td><td>0.51</td><td>0.30</td><td>0.45</td><td>1, 0, 0</td><td>0</td><td>1.26/3 = 0.420 → 0</td><td>(0.51 + 0.3 + 0.9)/4 = 0.427 → 0</td><td>0</td></tr>
+    <tr><th>Day</th><th>P Outlook</th><th>P Humidity</th><th>P Wind</th><th>Labels</th><th>Hard vote</th><th>Soft: average P</th><th>Weighted soft (2, 1, 1)</th><th>Truth</th></tr>
+    <tr><td>D1</td><td>0.40</td><td>0.43</td><td>0.75</td><td>No, No, Yes</td><td>No</td><td>1.58/3 = 0.526 → Yes</td><td>(0.8 + 0.43 + 0.75)/4 = 0.495 → No</td><td>No</td></tr>
+    <tr><td>D3</td><td>1.00</td><td>0.43</td><td>0.75</td><td>Yes, No, Yes</td><td>Yes</td><td>0.726 → Yes</td><td>0.795 → Yes</td><td>Yes</td></tr>
+    <tr><td>D6</td><td>0.60</td><td>0.86</td><td>0.50</td><td>Yes, Yes, No</td><td>Yes</td><td>0.652 → Yes</td><td>0.639 → Yes</td><td>No</td></tr>
+    <tr><td>D11</td><td>0.40</td><td>0.86</td><td>0.50</td><td>No, Yes, No</td><td>No</td><td>0.586 → Yes</td><td>0.539 → Yes</td><td>Yes</td></tr>
+    <tr><td>D12</td><td>1.00</td><td>0.43</td><td>0.50</td><td>Yes, No, No</td><td>No</td><td>0.643 → Yes</td><td>0.732 → Yes</td><td>Yes</td></tr>
+    <tr><td>D14</td><td>0.60</td><td>0.43</td><td>0.50</td><td>Yes, No, No</td><td>No</td><td>0.510 → Yes</td><td>0.532 → Yes</td><td>No</td></tr>
   </table>
-  <p>Customers 2 and 3 are where the rules part ways. On customer 2, A and B both say "churn", but only just (0.60, 0.55), while C is confident it is "stay" (0.10). Hard voting counts two weak yeses against one strong no and says churn: wrong. Soft voting averages to 0.417 and says stay: right. Customer 3 is the mirror image. The code checks the table and scores every rule, including a <strong>weighted hard</strong> vote where C's label counts 3 times.</p>
+  <p>D11 and D12 are where soft voting wins: two members say a weak or neutral "No" (0.40, 0.50) and one says a confident "Yes" (0.86 or 1.00); counting labels says No, averaging says Yes, and the truth is Yes. D1 and D14 are the mirror image: the average creeps just over 0.5 (0.526, 0.510) although the truth is No, and the hard vote is right. The weighted vote trusts the Outlook stump twice as much and gets D1 back. The code checks the table and scores every rule over all 14 days.</p>
   <div class="fx" data-lang="py">import numpy as np
-P = np.array([[0.90, 0.80, 0.70],      # rows = 5 customers, columns = models A, B, C
-              [0.60, 0.55, 0.10],      # P(churn) from each model
-              [0.45, 0.40, 0.95],
-              [0.20, 0.30, 0.60],
-              [0.51, 0.30, 0.45]])
-y = np.array([1, 0, 1, 0, 0])
-labels = (P &gt;= 0.5).astype(int)                       # each model's own yes/no
-hard = (labels.sum(1) &gt;= 2).astype(int)               # majority of 3 labels
-soft_p = P.mean(1)                                    # average probability
-soft = (soft_p &gt;= 0.5).astype(int)
-w = np.array([1, 1, 2])                               # trust model C twice as much
-wsoft_p = P @ w / w.sum()
-wsoft = (wsoft_p &gt;= 0.5).astype(int)
-wh = np.array([1, 1, 3])                              # weighted HARD vote: C's label counts 3 times
-whard = ((labels @ wh) &gt; wh.sum() / 2).astype(int)
-for i in range(5):
-    print(f"cust {i+1}: labels {labels[i].tolist()} -&gt; hard {hard[i]} | avg p {soft_p[i]:.3f} -&gt; soft {soft[i]}"
-          f" | weighted p {wsoft_p[i]:.3f} -&gt; {wsoft[i]} | truth {y[i]}")
-for name, pred in [("model A", labels[:, 0]), ("model B", labels[:, 1]), ("model C", labels[:, 2]),
-                   ("hard vote", hard), ("soft vote", soft), ("weighted soft", wsoft),
-                   ("weighted hard", whard)]:
-    print(f"{name:13s} right on {np.sum(pred == y)}/5")</div>
-  <div class="fx" data-lang="text">cust 1: labels [1, 1, 1] -&gt; hard 1 | avg p 0.800 -&gt; soft 1 | weighted p 0.775 -&gt; 1 | truth 1
-cust 2: labels [1, 1, 0] -&gt; hard 1 | avg p 0.417 -&gt; soft 0 | weighted p 0.337 -&gt; 0 | truth 0
-cust 3: labels [0, 0, 1] -&gt; hard 0 | avg p 0.600 -&gt; soft 1 | weighted p 0.688 -&gt; 1 | truth 1
-cust 4: labels [0, 0, 1] -&gt; hard 0 | avg p 0.367 -&gt; soft 0 | weighted p 0.425 -&gt; 0 | truth 0
-cust 5: labels [1, 0, 0] -&gt; hard 0 | avg p 0.420 -&gt; soft 0 | weighted p 0.427 -&gt; 0 | truth 0
-model A       right on 2/5
-model B       right on 3/5
-model C       right on 4/5
-hard vote     right on 3/5
-soft vote     right on 5/5
-weighted soft right on 5/5
-weighted hard right on 4/5</div>
-  <p>Hard voting (3/5) is no better than model B alone. Soft and weighted soft voting get all 5 right, better than every member. The weighted hard vote with weights (1, 1, 3) gives 4/5, exactly model C's score, because C's weight 3 is more than A + B = 2: C wins every vote alone, and the "ensemble" is just model C.</p>
+from play import df
+y = (df.Play == "Yes").astype(int).values
+P = np.column_stack([df[c].map((df.Play == "Yes").groupby(df[c]).mean()).values      # stump: P(Yes) of the leaf
+                     for c in ["Outlook", "Humidity", "Wind"]])                      # 14 days x 3 models
+labels = (P &gt; 0.5).astype(int)                         # each model's own yes/no (0.5 counts as No)
+hard = (labels.sum(1) &gt;= 2).astype(int)                # majority of 3 labels
+soft = (P.mean(1) &gt; 0.5).astype(int)                   # average probability
+w = np.array([2, 1, 1])                                # trust the Outlook stump twice as much
+wsoft = (P @ w / w.sum() &gt; 0.5).astype(int)
+for d in ["D1", "D3", "D6", "D11", "D12", "D14"]:
+    i = df.index.get_loc(d)
+    print(f"{d:3s} P(Yes) {P[i].round(2).tolist()} -&gt; hard {hard[i]} | avg {P[i].mean():.3f} -&gt; soft {soft[i]}"
+          f" | weighted {P[i] @ w / 4:.3f} -&gt; {wsoft[i]} | truth {y[i]}")
+for name, pred in [("Outlook stump", labels[:, 0]), ("Humidity stump", labels[:, 1]), ("Wind stump", labels[:, 2]),
+                   ("hard vote", hard), ("soft vote", soft), ("weighted soft (2,1,1)", wsoft)]:
+    print(f"{name:22s} right on {np.sum(pred == y)}/14")</div>
+  <div class="fx" data-lang="text">D1  P(Yes) [0.4, 0.43, 0.75] -&gt; hard 0 | avg 0.526 -&gt; soft 1 | weighted 0.495 -&gt; 0 | truth 0
+D3  P(Yes) [1.0, 0.43, 0.75] -&gt; hard 1 | avg 0.726 -&gt; soft 1 | weighted 0.795 -&gt; 1 | truth 1
+D6  P(Yes) [0.6, 0.86, 0.5] -&gt; hard 1 | avg 0.652 -&gt; soft 1 | weighted 0.639 -&gt; 1 | truth 0
+D11 P(Yes) [0.4, 0.86, 0.5] -&gt; hard 0 | avg 0.586 -&gt; soft 1 | weighted 0.539 -&gt; 1 | truth 1
+D12 P(Yes) [1.0, 0.43, 0.5] -&gt; hard 0 | avg 0.643 -&gt; soft 1 | weighted 0.732 -&gt; 1 | truth 1
+D14 P(Yes) [0.6, 0.43, 0.5] -&gt; hard 0 | avg 0.510 -&gt; soft 1 | weighted 0.532 -&gt; 1 | truth 0
+Outlook stump          right on 10/14
+Humidity stump         right on 10/14
+Wind stump             right on 9/14
+hard vote              right on 11/14
+soft vote              right on 10/14
+weighted soft (2,1,1)  right on 12/14</div>
+  <p>Each member alone is right on 9 or 10 days. The hard vote (11) and the weighted soft vote (12) beat every member; the plain soft vote (10) only ties the best one, because the Wind stump's flat 0.5 and 0.75 pull several averages just over the line. Which rule is best depends on how trustworthy each member's probabilities are, and the weights (2, 1, 1) were picked by hand after looking at the answers: exactly the step stacking automates.</p>
   <div class="callout def"><span class="label">Definitions</span>
     <p>With members h₁…h_M, weights w₁…w_M (default all 1), and classes c: <strong>hard voting</strong> ŷ = argmax_c Σ_m w_m · [h_m(x) = c]; <strong>soft voting</strong> ŷ = argmax_c Σ_m w_m · P_m(c | x) / Σ w_m. For regression, <strong>averaging</strong> ŷ = Σ w_m h_m(x) / Σ w_m.</p>
   </div>
-  <h3>On the churn data</h3>
+  <h3>The same idea at scale: the churn data</h3>
   <p>Members: a random forest, a histogram gradient booster and a 15-nearest-neighbours model (with scaling). Weights for the weighted vote are chosen by trying every combination of 0–3 on the <em>validation</em> set, then the final comparison is on the untouched test set.</p>
   <div class="fx" data-lang="py">import numpy as np, pandas as pd, time
 from sklearn.datasets import make_classification
@@ -245,9 +278,12 @@ TEST weighted soft  acc 0.877  AUC 0.9364</div>
   <div class="callout trap"><span class="label">Trap</span>
     <p><code>VotingClassifier(voting="hard")</code> has no <code>predict_proba</code>, so no ROC-AUC, no threshold tuning, no calibration. Use soft voting when you need probabilities.</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> We chose the weights by a grid search on validation. That is a crude form of learning. Why not let a model learn the best way to combine the members, maybe even "trust kNN more when the forest is unsure"? That is stacking.</div>
+  <div class="bridge"><b>What this still can't tell us → next: Stacking: Learn the Combiner.</b> We chose the weights by a grid search on validation. That is a crude form of learning. Why not let a model learn the best way to combine the members, maybe even "trust kNN more when the forest is unsure"? That is stacking.</div>
 
   <h2 id="stk-idea"><span class="num">02</span>Stacking: Learn the Combiner</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>On the diary we found good weights for the vote only by trying them after seeing the answers. Can a model learn how much to trust each member, and even correct their probabilities?</p>
+  </div>
   <h3>Plain words</h3>
   <p><strong>Stacking</strong> (stacked generalisation, Wolpert 1992) builds a two-level model. Level 0: several different <strong>base models</strong>. Level 1: a <strong>meta-learner</strong> whose input columns are the base models' predictions and whose target is the true label. The meta-learner learns how much to trust each base model, and can learn a better calibrated probability than any of them.</p>
   <figure class="viz"><svg viewBox="0 0 640 230" width="640">
@@ -269,7 +305,7 @@ TEST weighted soft  acc 0.877  AUC 0.9364</div>
 </svg><figcaption>Stacking. Level-0 models turn each row into a few predictions; the level-1 meta-learner is trained on that small new table with the true labels as target.</figcaption></figure>
   <h3>What the meta-learner can learn that a vote cannot</h3>
   <ul>
-    <li><strong>Weights</strong>: down-weight a weak or redundant member automatically (a vote needs you to pick weights by hand).</li>
+    <li><strong>Weights</strong>: down-weight a weak or redundant member automatically (a vote needs you to pick weights by hand, like our (2, 1, 1) for the diary stumps).</li>
     <li><strong>Scale and calibration</strong>: a logistic meta-learner maps a weighted sum of members' probabilities through a sigmoid, so it can stretch or shrink over- or under-confident members.</li>
     <li><strong>Interactions</strong> (only with a flexible meta-learner): "when the forest is unsure, trust the booster". A logistic meta-learner cannot do this; a small tree-based one can, at a higher risk of overfitting.</li>
   </ul>
@@ -279,13 +315,16 @@ TEST weighted soft  acc 0.877  AUC 0.9364</div>
   <div class="callout intu"><span class="label">Choosing the meta-learner</span>
     <p>Keep it <strong>simple and regularised</strong>: logistic regression (classification) or ridge / non-negative linear regression (regression). Its input has only M columns, all strongly correlated (every member predicts the same target), so a flexible meta-learner easily overfits. A tree-based meta-learner is worth trying only when you have many rows and you also pass through original features.</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> We have not said where the meta-learner's training rows come from. The obvious choice, the base models' predictions on their own training rows, is wrong in a way that silently ruins the stack.</div>
+  <div class="bridge"><b>What this still can't tell us → next: The Leak in Naive Stacking.</b> We have not said where the meta-learner's training rows come from. The obvious choice, the base models' predictions on their own training rows, is wrong in a way that silently ruins the stack.</div>
 
   <h2 id="stk-leak"><span class="num">03</span>The Leak in Naive Stacking</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>The meta-learner needs a training table: one row per training example, one column per member's prediction. The obvious choice is each member's prediction on its own training rows. What is wrong with that, and how badly can it go?</p>
+  </div>
   <h3>By hand: a model that remembers</h3>
-  <p>Six customers on one feature x with labels y: x = 1, 2, 4, 5, 7, 8 and y = 0, 0, 1, 0, 1, 1. The base model is 1-nearest-neighbour: predict the label of the closest training point. Ask it to predict its <em>own</em> training rows: every row's nearest neighbour is itself (distance 0), so it repeats the true label every time. Accuracy 100%. That number says nothing about new customers; it only says the model memorised.</p>
-  <p>If the meta-learner is trained on such in-sample predictions, it sees a column that is <em>always</em> right and learns "copy this column". On new data that column is no longer always right, but the meta-learner trusts it completely.</p>
-  <h3>On the churn data</h3>
+  <p>Take the diary's two numeric columns, humidity HumPct and temperature TempC, and a 1-nearest-neighbour model: predict the label of the closest training day. Ask it to predict its <em>own</em> training days: every day's nearest neighbour is itself (distance 0, and no two days share both readings), so it repeats the true label every time. Right on 14 of 14. That number says nothing about new days; it only says the model memorised.</p>
+  <p>If the meta-learner is trained on such in-sample predictions, it sees a column that is <em>always</em> right and learns "copy this column". On new data that column is no longer always right (section 04 shows 1-NN is right on only 4 of 14 diary days it did not see), but the meta-learner trusts it completely.</p>
+  <h3>The same idea at scale: the churn data</h3>
   <p>The code builds the level-1 table two ways: from in-sample predictions (each base model predicts the rows it trained on) and from out-of-fold predictions (explained in the next section), fits a logistic meta-learner on each, and tests both on the same test set.</p>
   <div class="fx" data-lang="py">from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.neighbors import KNeighborsClassifier
@@ -339,9 +378,12 @@ meta trained on out-of-fold       weights [6.63, 0.29]  TEST acc 0.863  AUC 0.92
   <div class="callout trap"><span class="label">Trap</span>
     <p>The leak is silent: no error, and the stack still looks reasonable. The only sign is that the meta-learner's weight on the most overfit member (here the deep forest) is huge and the stack fails to beat its best member. Always build the level-1 table from out-of-fold predictions.</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> We need, for every training row, a prediction from a model that has not seen that row, while still using all rows for training. Cross-validation already solves exactly this problem.</div>
+  <div class="bridge"><b>What this still can't tell us → next: Out-of-Fold Predictions.</b> We need, for every training row, a prediction from a model that has not seen that row, while still using all rows for training. Cross-validation already solves exactly this problem.</div>
 
   <h2 id="stk-oof"><span class="num">04</span>Out-of-Fold Predictions</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>We need, for every training row, a prediction from a model that has not seen that row, while still using all rows for training. On the diary, what does that look like fold by fold, and what does it reveal about 1-NN?</p>
+  </div>
   <h3>The idea</h3>
   <p>Split the training rows into k folds. For each fold, train a copy of the base model on the other k − 1 folds and predict the held-out fold. After k rounds, every row has exactly one prediction, made by a model that never saw it: the <strong>out-of-fold (OOF)</strong> predictions. Their quality matches what the model will show on new data.</p>
   <figure class="viz"><svg viewBox="0 0 650 200" width="650">
@@ -356,37 +398,33 @@ meta trained on out-of-fold       weights [6.63, 0.29]  TEST acc 0.863  AUC 0.92
 <text x="125" y="185" text-anchor="middle">from r1</text><text x="215" y="185" text-anchor="middle">from r2</text><text x="305" y="185" text-anchor="middle">from r3</text><text x="395" y="185" text-anchor="middle">from r4</text><text x="485" y="185" text-anchor="middle">from r5</text>
 <text x="542" y="50" class="tb">blue: train</text><text x="542" y="66" class="tr">red: predict</text>
 </g></svg><figcaption>Each round trains on four folds (blue) and predicts the fifth (red). Stitching the five red pieces together gives one honest prediction per training row (green). Repeat for every base model to get the level-1 table.</figcaption></figure>
-  <h3>By hand: the six customers, 3 folds</h3>
-  <p>Folds (by row): {x = 1, 5}, {x = 2, 7}, {x = 4, 8}. For each fold, 1-NN is trained on the other four points.</p>
-  <table class="tbl">
-    <tr><th>Fold held out</th><th>Train on x (y)</th><th>Predict</th><th>Nearest neighbour</th><th>OOF prediction</th><th>Truth</th></tr>
-    <tr><td>1</td><td>2(0), 4(1), 7(1), 8(1)</td><td>x = 1</td><td>2 (dist 1)</td><td>0</td><td>0 ✓</td></tr>
-    <tr><td>1</td><td></td><td>x = 5</td><td>4 (dist 1) beats 7 (dist 2)</td><td>1</td><td>0 ✗</td></tr>
-    <tr><td>2</td><td>1(0), 4(1), 5(0), 8(1)</td><td>x = 2</td><td>1 (dist 1)</td><td>0</td><td>0 ✓</td></tr>
-    <tr><td>2</td><td></td><td>x = 7</td><td>8 (dist 1)</td><td>1</td><td>1 ✓</td></tr>
-    <tr><td>3</td><td>1(0), 2(0), 5(0), 7(1)</td><td>x = 4</td><td>5 (dist 1)</td><td>0</td><td>1 ✗</td></tr>
-    <tr><td>3</td><td></td><td>x = 8</td><td>7 (dist 1)</td><td>1</td><td>1 ✓</td></tr>
-  </table>
-  <p>OOF accuracy 4/6 = 0.667, versus the in-sample 100%. The OOF column tells the meta-learner the truth: "this model is right about two-thirds of the time". The code reproduces both numbers.</p>
+  <h3>By hand: the diary, 7 folds of 2 days</h3>
+  <p>Folds: {D1, D2}, {D3, D4}, …, {D13, D14}. For each fold, 1-NN is trained on the other 12 days (humidity and temperature) and predicts the two held-out days. Distances are ordinary straight-line distances, for example D6 (70%, 18 °C) to D9 (70%, 21 °C) = 3, to D7 (65%, 18 °C) = 5, so D6's nearest neighbour is D9.</p>
   <div class="fx" data-lang="py">import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
-x = np.array([[1], [2], [4], [5], [7], [8]])
-y = np.array([0, 0, 1, 0, 1, 1])
-folds = [[0, 3], [1, 4], [2, 5]]                      # 3 folds of 2 rows each
-inside = KNeighborsClassifier(1).fit(x, y).predict(x)  # 1-NN predicting its own training rows
-print("in-sample 1-NN preds:", inside.tolist(), " accuracy", np.mean(inside == y))
-oof = np.empty(6, dtype=int)
-for k, hold in enumerate(folds):
-    train = [i for i in range(6) if i not in hold]
-    m = KNeighborsClassifier(1).fit(x[train], y[train])
-    oof[hold] = m.predict(x[hold])
-    print(f"fold {k+1}: train on x={x[train].ravel().tolist()} -&gt; predict x={x[hold].ravel().tolist()}: {oof[hold].tolist()}")
-print("out-of-fold preds:   ", oof.tolist(), " accuracy", round(np.mean(oof == y), 3))</div>
-  <div class="fx" data-lang="text">in-sample 1-NN preds: [0, 0, 1, 0, 1, 1]  accuracy 1.0
-fold 1: train on x=[2, 4, 7, 8] -&gt; predict x=[1, 5]: [0, 1]
-fold 2: train on x=[1, 4, 5, 8] -&gt; predict x=[2, 7]: [0, 1]
-fold 3: train on x=[1, 2, 5, 7] -&gt; predict x=[4, 8]: [0, 1]
-out-of-fold preds:    [0, 0, 0, 1, 1, 1]  accuracy 0.667</div>
+from play import df
+X = df[["HumPct", "TempC"]].values; y = df.Play.values; days = df.index
+inside = KNeighborsClassifier(1).fit(X, y).predict(X)            # 1-NN predicting its own training days
+print("in-sample 1-NN right on", (inside == y).sum(), "of 14")
+oof = np.empty(14, dtype=object)
+for k in range(7):                                                # 7 folds of 2 consecutive days
+    hold = [2 * k, 2 * k + 1]; train = [i for i in range(14) if i not in hold]
+    m = KNeighborsClassifier(1).fit(X[train], y[train])
+    oof[hold] = m.predict(X[hold])
+    nb = m.kneighbors(X[hold], return_distance=False)[:, 0]
+    print(f"fold {k+1}: hold out {days[hold[0]]}, {days[hold[1]]} -&gt; nearest {days[train][nb[0]]}, {days[train][nb[1]]}"
+          f" -&gt; predict {oof[hold[0]]}, {oof[hold[1]]} (truth {y[hold[0]]}, {y[hold[1]]})")
+print("out-of-fold 1-NN right on", (oof == y).sum(), "of 14")</div>
+  <div class="fx" data-lang="text">in-sample 1-NN right on 14 of 14
+fold 1: hold out D1, D2 -&gt; nearest D3, D3 -&gt; predict Yes, Yes (truth No, No)
+fold 2: hold out D3, D4 -&gt; nearest D1, D8 -&gt; predict No, No (truth Yes, Yes)
+fold 3: hold out D5, D6 -&gt; nearest D10, D9 -&gt; predict Yes, Yes (truth Yes, No)
+fold 4: hold out D7, D8 -&gt; nearest D6, D4 -&gt; predict No, Yes (truth Yes, No)
+fold 5: hold out D9, D10 -&gt; nearest D6, D5 -&gt; predict No, Yes (truth Yes, Yes)
+fold 6: hold out D11, D12 -&gt; nearest D9, D14 -&gt; predict Yes, No (truth Yes, Yes)
+fold 7: hold out D13, D14 -&gt; nearest D10, D12 -&gt; predict Yes, Yes (truth Yes, No)
+out-of-fold 1-NN right on 4 of 14</div>
+  <p>Out of fold, 1-NN is right on only <strong>4 of 14</strong> days, against 14 of 14 in-sample. The OOF column tells the meta-learner the truth: "this model is mostly wrong on days it has not seen". Notice fold 1: D1 and D2 (sunny, hot, humid, no match) both find D3 nearest (86%, 28 °C), an overcast day when they played, so both get "Yes". Humidity and temperature alone do not separate the diary well; the in-sample 14/14 hid that completely. (With 14 days this is a demonstration of the mechanics; the churn runs give the reliable numbers.)</p>
   <h3>What happens at prediction time</h3>
   <p>The meta-learner was trained on OOF predictions, each made by a model trained on (k − 1)/k of the rows. For new rows there are two common options:</p>
   <ul>
@@ -438,9 +476,13 @@ test acc  mine 0.877   sklearn 0.877</div>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Fitting a scaler, encoder or feature selector on all rows before computing OOF predictions leaks again. Put preprocessing inside each base model's <code>Pipeline</code>, as done for kNN above, so it is refitted within every fold. For time series, folds must respect time order (train on the past, predict the future).</p>
   </div>
+  <div class="bridge"><b>What this still can't tell us → next: Blending vs Stacking.</b> Stacking with k folds fits every member k + 1 times. Is there a cheaper way to get honest predictions for the meta-learner, and what does it cost in accuracy?</div>
 
   <h2 id="stk-blend"><span class="num">05</span>Blending vs Stacking</h2>
-  <p><strong>Blending</strong> (from the Netflix Prize) is the quick version: split the training rows once into a base part (e.g. 75%) and a holdout part (25%). Train base models on the base part, predict the holdout, and train the meta-learner on those holdout predictions only.</p>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Out-of-fold stacking is honest but fits every member k + 1 times. Can one holdout split do the same job more cheaply, and what does it give up?</p>
+  </div>
+  <p><strong>Blending</strong> (from the Netflix Prize) is the quick version (on the diary it would mean, say, training the members on D1–D10 and the meta-learner on their predictions for D11–D14 only): split the training rows once into a base part (e.g. 75%) and a holdout part (25%). Train base models on the base part, predict the holdout, and train the meta-learner on those holdout predictions only.</p>
   <div class="fx" data-lang="py">from sklearn.base import clone
 from sklearn.ensemble import HistGradientBoostingClassifier, StackingClassifier
 from sklearn.neighbors import KNeighborsClassifier
@@ -479,8 +521,12 @@ stacking  meta rows 12000  weights [6.1, 2.31, -0.11]  TEST acc 0.877  AUC 0.937
     <tr><td>Leak risk</td><td>Low, easy to reason about</td><td>Low if folds and pipelines are correct</td></tr>
     <tr><td>Best when</td><td>Lots of data, quick experiments, many members</td><td>Moderate data, every row counts</td></tr>
   </table>
+  <div class="bridge"><b>What this still can't tell us → next: sklearn's StackingClassifier &amp; StackingRegressor.</b> We can build both versions by hand. How does sklearn package stacking, and what can its options do?</div>
 
   <h2 id="stk-sk"><span class="num">06</span>sklearn's StackingClassifier &amp; StackingRegressor</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>We wrote stacking ourselves. Which sklearn parameters control the folds, the inputs of the meta-learner and whether it also sees the raw features, and does a stack beat its members on a regression problem?</p>
+  </div>
   <table class="tbl">
     <tr><th>Parameter</th><th>Default</th><th>What it does</th></tr>
     <tr><td><code>estimators</code></td><td>required</td><td>List of (name, model) base models</td></tr>
@@ -533,8 +579,12 @@ stack  test R^2 0.887  meta weights [-0.09, 0.89, 0.39]</div>
   <div class="callout trap"><span class="label">Trap</span>
     <p><code>cv="prefit"</code> tells sklearn the members are already trained and it should just use their predictions on the data you pass to <code>fit</code>. If that data is the same data the members were trained on, you have rebuilt the naive leak of section 03. Use it only with a separate holdout (which makes it blending).</p>
   </div>
+  <div class="bridge"><b>What this still can't tell us → next: Multi-Level Stacking.</b> One meta-learner learns how to combine the members. Would a stack of stacks learn even more?</div>
 
   <h2 id="stk-multi"><span class="num">07</span>Multi-Level Stacking</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>If one meta-learner helps, could several meta-learners, combined by a final one, help more? What does a second level cost and gain?</p>
+  </div>
   <p>The meta-learner can itself be a stack: level-0 models feed several level-1 models, whose OOF predictions feed a final level-2 model. Kaggle winners have used three or more levels with dozens of models. In sklearn you nest a <code>StackingClassifier</code> as the <code>final_estimator</code>.</p>
   <div class="fx" data-lang="py">from sklearn.ensemble import (HistGradientBoostingClassifier, ExtraTreesClassifier, StackingClassifier)
 from sklearn.neighbors import KNeighborsClassifier
@@ -559,8 +609,12 @@ two levels (-&gt; LR+ET -&gt; LR)  TEST acc 0.876  AUC 0.9368  fit 45s</div>
   <div class="callout intu"><span class="label">Why extra levels rarely pay</span>
     <p>Each level sees fewer, more correlated columns (all predicting the same target), and needs its own round of OOF predictions (k + 1 fits for every model at every level), so training time and the risk of leaking between levels both grow. The information has mostly been squeezed out at level 1; deeper levels mostly fit noise. In competitions, 0.0005 AUC can decide the ranking; in production it rarely justifies the cost.</p>
   </div>
+  <div class="bridge"><b>What this still can't tell us → next: When the Gains Are Small.</b> Extra levels did not help. More generally: when does any blend gain, and when is it a waste of compute and maintenance?</div>
 
   <h2 id="stk-gain"><span class="num">08</span>When the Gains Are Small</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>On churn, every vote and stack so far tied with the forest. Is that bad luck, or is there a measurable reason that predicts when a blend can gain?</p>
+  </div>
   <p>A blend helps only where members disagree. The first table shows how alike five candidate members are (correlation of their OOF churn probabilities). Then three teams are compared: two very alike members, three diverse strong members, and the same three plus a weak one.</p>
   <div class="fx" data-lang="py">from sklearn.ensemble import (HistGradientBoostingClassifier, ExtraTreesClassifier,
                               VotingClassifier, StackingClassifier)
@@ -626,8 +680,53 @@ rf+hgb+knn+lr (+weak)  best member 0.877  soft vote 0.861  stacking 0.878  meta 
   <div class="callout trap"><span class="label">Trap</span>
     <p>Deciding the stack "won" from a +0.002 test difference on 5,000 rows. That is about the size of the noise from one random split. Confirm with repeated CV or a paired comparison on several splits before paying the production cost.</p>
   </div>
+  <div class="bridge"><b>What this still can't tell us → next: How It All Connects.</b> We have voting, stacking, its leak and fix, blending and the limits. One picture and one table should show how each piece follows from the previous one.</div>
 
-  <h2 id="stk-cmp"><span class="num">09</span>Comparisons</h2>
+  <h2 id="stk-connect"><span class="num">09</span>How It All Connects</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Hard, soft and weighted votes, meta-learners, the leak, out-of-fold predictions, blending, extra levels and correlation tables: separate tricks, or one line of reasoning in which each step fixes the previous step's problem?</p>
+  </div>
+  <figure class="viz"><svg viewBox="0 0 760 300" width="760">
+<defs><marker id="stk-ca" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+<rect x="10" y="10" width="220" height="44" rx="7" class="fv" stroke="currentColor" stroke-opacity="0.35"/><text x="120" y="29" text-anchor="middle" font-size="11.5" font-weight="700">finished, different members</text><text x="120" y="45" text-anchor="middle" class="tm" font-size="10">3 diary stumps: 10, 10, 9 of 14</text>
+<line x1="230" y1="32" x2="268" y2="32" stroke="currentColor" marker-end="url(#stk-ca)"/>
+<rect x="270" y="10" width="220" height="44" rx="7" class="fb sb"/><text x="380" y="29" text-anchor="middle" font-size="11.5" font-weight="700">voting: hard / soft</text><text x="380" y="45" text-anchor="middle" class="tm" font-size="10">11 and 10 of 14</text>
+<line x1="490" y1="32" x2="528" y2="32" stroke="currentColor" marker-end="url(#stk-ca)"/>
+<rect x="530" y="10" width="220" height="44" rx="7" class="fb sb"/><text x="640" y="29" text-anchor="middle" font-size="11.5" font-weight="700">weights by hand</text><text x="640" y="45" text-anchor="middle" class="tm" font-size="10">(2, 1, 1): 12 of 14</text>
+<line x1="640" y1="54" x2="640" y2="90" stroke="currentColor" marker-end="url(#stk-ca)"/>
+<rect x="490" y="92" width="260" height="44" rx="7" class="fg sg"/><text x="620" y="111" text-anchor="middle" font-size="11.5" font-weight="700">stacking: learn the combiner</text><text x="620" y="127" text-anchor="middle" class="tm" font-size="10">meta-learner on predictions</text>
+<line x1="490" y1="114" x2="452" y2="114" stroke="currentColor" marker-end="url(#stk-ca)"/>
+<rect x="190" y="92" width="260" height="44" rx="7" class="fr sr"/><text x="320" y="111" text-anchor="middle" font-size="11.5" font-weight="700">leak: in-sample predictions</text><text x="320" y="127" text-anchor="middle" class="tm" font-size="10">1-NN 14 of 14 on its own days</text>
+<line x1="320" y1="136" x2="320" y2="172" stroke="currentColor" marker-end="url(#stk-ca)"/>
+<rect x="190" y="174" width="260" height="44" rx="7" class="fg sg"/><text x="320" y="193" text-anchor="middle" font-size="11.5" font-weight="700">out-of-fold predictions</text><text x="320" y="209" text-anchor="middle" class="tm" font-size="10">7 folds: 1-NN 4 of 14</text>
+<line x1="190" y1="196" x2="152" y2="196" stroke="currentColor" marker-end="url(#stk-ca)"/>
+<rect x="10" y="174" width="140" height="44" rx="7" class="ft st"/><text x="80" y="193" text-anchor="middle" font-size="11.5" font-weight="700">blending</text><text x="80" y="209" text-anchor="middle" class="tm" font-size="10">one holdout</text>
+<line x1="450" y1="196" x2="488" y2="196" stroke="currentColor" marker-end="url(#stk-ca)"/>
+<rect x="490" y="174" width="260" height="44" rx="7" class="ft st"/><text x="620" y="193" text-anchor="middle" font-size="11.5" font-weight="700">StackingClassifier (cv = k)</text><text x="620" y="209" text-anchor="middle" class="tm" font-size="10">identical to the hand version</text>
+<line x1="620" y1="218" x2="620" y2="246" stroke="currentColor" marker-end="url(#stk-ca)"/>
+<rect x="190" y="248" width="560" height="44" rx="7" class="fr sr"/><text x="470" y="267" text-anchor="middle" font-size="11.5" font-weight="700">gains need members that are good AND different</text><text x="470" y="283" text-anchor="middle" class="tm" font-size="10">churn: rf/et/hgb correlate 0.95–0.98 → ties; regression stack 0.887 vs 0.875</text>
+</svg><figcaption>Voting combines finished members with a fixed rule; picking weights by hand leads to stacking, which learns them. Learning them from in-sample predictions leaks, so the meta-learner is trained on out-of-fold predictions (or, more cheaply, on a holdout: blending). Whatever the combiner, it can only gain where members are both good and different.</figcaption></figure>
+  <table class="tbl"><caption>Every concept, what it is built from, and its value on the diary (or at scale)</caption>
+    <tr><th>Concept</th><th>Built from</th><th>Answers</th><th>On the diary / at scale</th><th>Use when</th></tr>
+    <tr><td>Hard vote</td><td>majority of member labels</td><td>simplest combination?</td><td>stumps 10, 10, 9 → 11 of 14</td><td>no probabilities available</td></tr>
+    <tr><td>Soft vote</td><td>mean of member probabilities</td><td>use confidence?</td><td>10 of 14; D11, D12 fixed, D1, D14 broken</td><td>calibrated members of similar strength</td></tr>
+    <tr><td>Weighted vote</td><td>weights × probabilities</td><td>trust some members more?</td><td>(2, 1, 1): 12 of 14</td><td>weights chosen on validation</td></tr>
+    <tr><td>Stacking</td><td>meta-learner on member predictions</td><td>learn the weights?</td><td>churn: weights 6.1 / 2.3 / −0.1</td><td>several strong, different members</td></tr>
+    <tr><td>The leak</td><td>predictions on rows the member trained on</td><td>why not in-sample?</td><td>1-NN 14/14 in-sample; churn stack 0.739</td><td>never</td></tr>
+    <tr><td>Out-of-fold predictions</td><td>k-fold cross-validation</td><td>honest inputs for the meta-learner?</td><td>1-NN 4/14 out of fold</td><td>always for stacking</td></tr>
+    <tr><td>Blending</td><td>one holdout split</td><td>cheaper?</td><td>churn 0.869 vs stacking 0.877</td><td>lots of data, quick experiments</td></tr>
+    <tr><td>Multi-level</td><td>a stack as the meta-learner</td><td>more levels?</td><td>AUC 0.9368 vs 0.9370</td><td>competitions only</td></tr>
+    <tr><td>Correlation of members</td><td>correlation of OOF predictions</td><td>will a blend gain?</td><td>rf/et/hgb 0.95–0.98 → no gain</td><td>before building any blend</td></tr>
+  </table>
+  <div class="callout intu"><span class="label">Key insight</span>
+    <p>One sentence holds the note: <strong>a combiner can only be as good as the honesty of the predictions it learns from and the disagreement among the members it combines.</strong> Out-of-fold predictions secure the first; choosing members from different families (forest, booster, linear, kNN) supplies the second.</p>
+  </div>
+  <div class="bridge"><b>What this still can't tell us → next: Comparisons.</b> Side by side, how do the best single model, the votes, stacking and blending differ in what they learn, cost and risk?</div>
+
+  <h2 id="stk-cmp"><span class="num">10</span>Comparisons</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>We have five ways to finish a project: the best single model, a hard vote, a soft or weighted vote, a stack, a blend. In one table, how do they differ?</p>
+  </div>
   <table class="tbl">
     <tr><th></th><th>Best single model</th><th>Hard voting</th><th>Soft / weighted voting</th><th>Stacking</th><th>Blending</th></tr>
     <tr><td>Combiner</td><td>—</td><td>Majority of labels</td><td>(Weighted) mean of probabilities</td><td>Meta-model on OOF predictions</td><td>Meta-model on holdout predictions</td></tr>
@@ -638,8 +737,12 @@ rf+hgb+knn+lr (+weak)  best member 0.877  soft vote 0.861  stacking 0.878  meta 
     <tr><td>Robust to a weak member</td><td>—</td><td>Partly</td><td>No (unless weighted)</td><td>Yes</td><td>Yes</td></tr>
   </table>
   <p>Relation to the other branches: <a class="xref" data-note="ml_bagging">Bagging</a> is soft voting over bootstrap copies of one algorithm with equal weights; <a class="xref" data-note="ml_boosting">boosting</a> learns its member weights, but sequentially and on the training rows; stacking learns the weights of finished, different models on out-of-fold rows.</p>
+  <div class="bridge"><b>What this still can't tell us → next: Common Mistakes.</b> The table summarises the options. Which mistakes do people make most often when they blend?</div>
 
-  <h2 id="stk-traps"><span class="num">10</span>Common Mistakes</h2>
+  <h2 id="stk-traps"><span class="num">11</span>Common Mistakes</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Which stacking and voting mistakes cost the most in practice and in interviews, and which section of this note prevents each one?</p>
+  </div>
   <div class="callout trap"><span class="label">Trap: training the meta-learner on in-sample predictions</span>
     <p>The leak of section 03. Use OOF predictions (<code>StackingClassifier</code> or <code>cross_val_predict</code>).</p>
   </div>
@@ -658,8 +761,52 @@ rf+hgb+knn+lr (+weak)  best member 0.877  soft vote 0.861  stacking 0.878  meta 
   <div class="callout trap"><span class="label">Trap: hard voting when you need probabilities</span>
     <p>No predict_proba, no AUC, no threshold tuning. Use soft voting or stacking.</p>
   </div>
+  <div class="bridge"><b>What this still can't tell us → next: Revision Sheet.</b> Everything in this note, condensed to one page for revision.</div>
 
-  <h2 id="stk-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <h2 id="stk-rev"><span class="num">R</span>Revision Sheet</h2>
+  <p>The whole note on one sheet. Running example: the captain's 14-day cricket diary (Outlook, Humidity, Wind stumps; 1-NN on HumPct and TempC). Large-scale numbers: the 20,000-customer churn table.</p>
+  <h3>The question ladder</h3>
+  <table class="tbl">
+    <tr><th>Concept</th><th>Question</th><th>Answer (diary / scale)</th><th>Weakness → next</th></tr>
+    <tr><td>Voting</td><td>simplest way to combine?</td><td>hard 11, soft 10, weighted 12 of 14</td><td>weights picked by hand → stacking</td></tr>
+    <tr><td>Stacking</td><td>learn the weights?</td><td>meta-learner on member predictions</td><td>which predictions? → the leak</td></tr>
+    <tr><td>The leak</td><td>in-sample predictions?</td><td>1-NN 14/14; churn stack 0.739</td><td>need honest predictions → OOF</td></tr>
+    <tr><td>Out-of-fold</td><td>honest prediction for every row?</td><td>1-NN 4/14 out of fold</td><td>k + 1 fits → blending</td></tr>
+    <tr><td>Blending</td><td>cheaper?</td><td>churn 0.869 vs 0.877</td><td>packaging → sklearn</td></tr>
+    <tr><td>sklearn, multi-level</td><td>build it; more levels?</td><td>2nd level: AUC 0.9368 vs 0.9370</td><td>when worth it? → gains</td></tr>
+    <tr><td>When gains are small</td><td>when does a blend pay?</td><td>members correlate 0.95–0.98 → ties</td><td>→ explain and ship the winner</td></tr>
+  </table>
+  <h3>Formulas</h3>
+  <table class="tbl">
+    <tr><th>Name</th><th>Formula</th><th>Symbols</th></tr>
+    <tr><td>Hard vote</td><td>ŷ = argmax_c Σ_m w_m · [h_m(x) = c]</td><td>h_m member labels, w_m weights (default 1)</td></tr>
+    <tr><td>Soft vote</td><td>ŷ = argmax_c Σ_m w_m P_m(c | x) / Σ w_m</td><td>P_m member probabilities; D1: 1.58/3 = 0.526</td></tr>
+    <tr><td>Weighted soft (diary)</td><td>(2·P_Outlook + P_Humidity + P_Wind) / 4</td><td>D1: (0.8 + 0.43 + 0.75)/4 = 0.495</td></tr>
+    <tr><td>Stacking</td><td>ŷ(x) = g(f₁(x), …, f_M(x))</td><td>f_m base models refitted on all rows; g meta-learner trained on OOF predictions</td></tr>
+    <tr><td>Out-of-fold prediction</td><td>z_im = f_m^(−k(i))(x_i)</td><td>f_m^(−k) member m trained without fold k; k(i) the fold of row i</td></tr>
+    <tr><td>Cost</td><td>(k + 1) fits per member + 1 meta fit; blending: 1 fit per member</td><td>k folds</td></tr>
+  </table>
+  <h3>When to use, when not</h3>
+  <div class="cards">
+    <div><b>Soft / weighted vote</b><p>A few calibrated members of similar strength; quick and transparent.</p><small>Choose weights on validation</small></div>
+    <div><b>Stacking</b><p>Several strong members from different families; every row counts.</p><small>Logistic / ridge meta-learner, OOF</small></div>
+    <div><b>Blending</b><p>Large data, many candidate members, quick experiments.</p><small>Holdout of 20–25%</small></div>
+    <div><b>Neither</b><p>Members alike, one member dominates, small data, tight latency or maintenance budget.</p><small>Ship the best single model</small></div>
+  </div>
+  <div class="callout trap"><span class="label">Key traps</span>
+    <p>In-sample predictions for the meta-learner; preprocessing outside the folds; tuning weights or the meta-learner on test; a flexible meta-learner on a few correlated columns; stacking near-duplicates; hard voting when probabilities are needed; claiming a win from a +0.002 difference.</p>
+  </div>
+  <h3>Five rapid-fire checks</h3>
+  <table class="tbl">
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>P(Yes) 0.40, 0.86, 0.50 (D11). Hard and soft vote?</td><td>Hard: one Yes of three → No. Soft: 1.76/3 = 0.586 → Yes</td></tr>
+    <tr><td>Why is 1-NN 14/14 on its own training days?</td><td>Each day's nearest neighbour is itself (distance 0)</td></tr>
+    <tr><td>How many fits per member for 5-fold stacking?</td><td>6 (5 fold models + 1 refit on all rows)</td></tr>
+    <tr><td>Blending vs stacking in one line?</td><td>Blending trains the meta-learner on one holdout; stacking on out-of-fold predictions for all rows</td></tr>
+    <tr><td>Members correlate 0.98. Will stacking help?</td><td>Hardly: nothing to cancel; it will tie the best member</td></tr>
+  </table>
+
+  <h2 id="stk-qa"><span class="num">12</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>Hard vs soft voting: define both and give a case where they disagree.</summary><div class="qa-body">Hard: majority of predicted labels. Soft: average of predicted probabilities, then threshold / argmax. P = 0.60, 0.55, 0.10: hard says churn (2 of 3), soft averages 0.417 and says stay. Soft uses confidence, so it is usually better when probabilities are reasonable.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>With weights (1, 1, 3) in a three-model hard vote, what happens?</summary><div class="qa-body">The third model's weight (3) exceeds the other two combined (2), so it wins every vote alone; the ensemble equals that model. Weights must be chosen so no member can dictate, unless that is the intention.</div></details>
@@ -675,6 +822,9 @@ rf+hgb+knn+lr (+weak)  best member 0.877  soft vote 0.861  stacking 0.878  meta 
   <details class="qa"><summary><span class="qmark">Q</span>Connection: how is stacking related to cross-validation?</summary><div class="qa-body">OOF predictions are exactly the predictions cross-validation makes on each held-out fold; stacking reuses them as features. The same rules apply: no preprocessing fitted outside the folds, stratified folds for classification, time-ordered folds for time series (<a class="xref" data-note="ml_evaluation">Model Evaluation</a>).</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Connection: why does a random forest + gradient boosting blend usually beat two random forests?</summary><div class="qa-body">From <a class="xref" data-note="ml_ensembles">Ensemble Learning</a>: the gain depends on the error correlation ρ. Two forests are built the same way and make nearly the same mistakes (ρ near 1); a forest (parallel deep trees, variance reduction) and a booster (sequential shallow trees, bias reduction) err on different rows, so blending them removes more error.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Your stack beats the best single model by 0.002 AUC on the test set. Ship it?</summary><div class="qa-body">Not on that alone. Check that the difference is beyond split noise (repeated CV / several seeds), then weigh it against k + 1× training, the summed latency, a larger artefact and more pipelines to maintain. Often the single booster wins on total value.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does stacking need out-of-fold predictions? What breaks without them, on the diary?</summary><div class="qa-body">A member's predictions on its own training rows show how well it memorised, not how well it predicts. 1-NN on the diary's humidity and temperature is right on 14 of 14 of its own days but on only 4 of 14 out of fold; a meta-learner trained on the in-sample column would give 1-NN the biggest weight. At scale exactly this collapses a stack from 0.863 to 0.739.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How are voting, bagging and stacking related?</summary><div class="qa-body">Bagging is an equal-weight soft vote over bootstrap copies of one algorithm (<a class="xref" data-note="ml_bagging">Bagging</a>). Voting does the same over different, finished algorithms, with optional hand-picked weights (the diary's (2, 1, 1)). Stacking replaces the hand-picked weights with a model that learns them from out-of-fold predictions. All three rely on the ambiguity identity of <a class="xref" data-note="ml_ensembles">Ensemble Learning</a>: the team gains only by its members' disagreement.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>On the diary, why does the plain soft vote (10 of 14) do worse than the hard vote (11 of 14)?</summary><div class="qa-body">Soft voting trusts the members' probabilities, and the Wind stump's are poor: it says 0.75 for every weak-wind day and 0.5 for every strong-wind day regardless of the weather. On D1 and D14 those values nudge the average just over 0.5 (0.526, 0.510) although no match was played. Down-weighting Wind (weights 2, 1, 1) fixes D1 and gives 12 of 14; learning such weights from honest predictions is what stacking does.</div></details>
 </main>
 `
 });
