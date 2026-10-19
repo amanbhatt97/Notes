@@ -39,7 +39,12 @@ const CATEGORIES = [
         {"key": "py_multiprocessing", "label": "Processes: multiprocessing"},
         {"key": "py_asyncio",         "label": "asyncio"}
       ]},
-      {"key": "py_testing",     "label": "Testing & Debugging"}
+      {"key": "grp_py_test", "label": "Testing & Debugging", "children": [
+        {"key": "py_testing",   "label": "The Map: Making Code Trustworthy"},
+        {"key": "py_pytest",    "label": "Testing with pytest"},
+        {"key": "py_mocking",   "label": "Mocks & Test Doubles"},
+        {"key": "py_debugging", "label": "Debugging, Profiling & Logging"}
+      ]}
     ]}
   ] },
   { key: "softeng", label: "Software Engineering", emoji: "\u2699\ufe0f", tag: "Foundation", blurb: "Git \u00b7 Linux \u00b7 Docker", hue: 28, topics: [
