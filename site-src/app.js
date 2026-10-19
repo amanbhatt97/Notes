@@ -306,6 +306,7 @@ function showHome() {
   document.getElementById('topicPage').classList.remove('visible');
   activeTopic = null;
   document.getElementById('sbHome').classList.add('active');
+  document.getElementById('sbRevision').classList.remove('active');
   document.querySelectorAll('.sb-topic').forEach(b => b.classList.remove('active'));
   buildHomeGrid();
   buildRoadmapGrid();
@@ -360,6 +361,7 @@ function loadTopic(key, cat) {
 
   // Update sidebar
   document.getElementById('sbHome').classList.remove('active');
+  document.getElementById('sbRevision').classList.remove('active');
   document.querySelectorAll('.sb-cat, .sb-group').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.sb-topic').forEach(b => {
     b.classList.toggle('active', b.dataset.key === key);
@@ -560,6 +562,7 @@ function showOverview(catKey, groupKey) {
   if (cur) cur.classList.add('active');
   document.getElementById('tbTools').style.display = 'none';
   document.getElementById('sbHome').classList.remove('active');
+  document.getElementById('sbRevision').classList.remove('active');
   document.querySelectorAll('.sb-topic').forEach(function(b) { b.classList.remove('active'); });
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
@@ -906,6 +909,121 @@ function performSearch(query) {
       (m.snippet ? '<div class="sr-snippet">' + m.snippet + '</div>' : '') +
       '</div>';
   }).join('');
+}
+
+// ── Revision mode ────────────────────────────────────────────────────────────
+// One track at a time: every note's mind map, its one-line summary, and links
+// back into the full note (whole note, or straight to a section).
+if (!appState.revised) appState.revised = {};
+function reviseCount(key) { return (appState.revised[key] || []).length; }
+
+// Open a note with one section expanded and scrolled into view.
+function openSection(key, sectionId) {
+  loadTopic(key);
+  var body = document.getElementById(sectionId);
+  if (!body) return;
+  var block = body.closest('.section-block');
+  if (block) block.classList.remove('collapsed');
+  setTimeout(function() { body.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
+}
+
+function showRevision(catKey) {
+  var cat = CATEGORIES.find(function(c) { return c.key === catKey; }) ||
+            CATEGORIES.find(function(c) { return c.key === appState.revTrack; }) || CATEGORIES[0];
+  appState.revTrack = cat.key;
+  saveState();
+  activeTopic = null;
+  document.getElementById('homeEl').style.display = 'none';
+  var tp = document.getElementById('topicPage');
+  tp.className = 'topic-page visible';
+  setAccent(tp, cat);
+
+  var tabs = CATEGORIES.map(function(c) {
+    var ks = flatTopics(c.topics).filter(function(t) { return TOPIC_CONTENT[t.key] && TOPIC_CONTENT[t.key].indexOf('class="mindmap"') >= 0; });
+    var r = ks.filter(function(t) { return reviseCount(t.key); }).length;
+    return '<button class="rev-tab' + (c.key === cat.key ? ' on' : '') + '" data-rev="' + c.key + '" style="--h:' + (c.hue != null ? c.hue : 245) + '">' +
+      c.emoji + ' ' + c.label + ' <small>' + r + '/' + ks.length + '</small></button>';
+  }).join('');
+
+  var html = '<h1>⚡ Revision</h1>' +
+    '<p class="lead">Short on time? Each card is one note squeezed into a mind map. Read the map; if a point does not come back to you, ' +
+    'use <b>Jump to</b> to open that exact section, or <b>Open full note</b> for the whole topic. Tick <b>Revised</b> when done.</p>' +
+    '<div class="rev-tabs">' + tabs + '</div>';
+
+  // Walk the track in sidebar order, printing group names as headings
+  var n = 0;
+  function walk(list, groupLabel) {
+    list.forEach(function(t) {
+      if (t.divider) return;
+      if (t.children) { html += '<h3 class="rev-group">' + t.label + '</h3>'; walk(t.children, t.label); return; }
+      var src = TOPIC_CONTENT[t.key];
+      if (!src) return;
+      var doc = new DOMParser().parseFromString(src, 'text/html');
+      var mm = doc.querySelector('.mindmap');
+      if (!mm) return;
+      n++;
+      var jumps = Array.prototype.map.call(doc.querySelectorAll('.rm-item[data-target]'), function(r) {
+        var l = r.querySelector('.rm-label');
+        return '<button class="rev-jump" data-note="' + t.key + '" data-sec="' + r.dataset.target + '">' + (l ? l.textContent : r.textContent) + '</button>';
+      }).join('');
+      html += '<article class="rev-card" id="rev-' + t.key + '">' +
+        '<header class="rev-head"><span class="rev-num">' + String(n).padStart(2, '0') + '</span>' +
+          '<div class="rev-title"><b>' + t.label + '</b><span>' + noteLead(t.key) + '</span></div></header>' +
+        mm.outerHTML +
+        (jumps ? '<div class="rev-jumps"><span>Jump to</span>' + jumps + '</div>' : '') +
+        '<footer class="rev-foot"><button class="rev-open" data-open="' + t.key + '">Open full note →</button>' +
+          '<span class="rev-mark" data-key="' + t.key + '"></span></footer>' +
+      '</article>';
+    });
+  }
+  walk(cat.topics, null);
+  if (!n) html += '<p>No revision cards in this track yet.</p>';
+
+  var tc = document.getElementById('topicContent');
+  tc.innerHTML = html;
+  tc.querySelectorAll('[data-rev]').forEach(function(b) { b.onclick = function() { showRevision(b.dataset.rev); }; });
+  tc.querySelectorAll('.rev-open').forEach(function(b) { b.onclick = function() { loadTopic(b.dataset.open, cat); }; });
+  tc.querySelectorAll('.rev-jump').forEach(function(b) { b.onclick = function() { openSection(b.dataset.note, b.dataset.sec); }; });
+  tc.querySelectorAll('.rev-mark').forEach(function(m) {
+    var key = m.dataset.key;
+    function render() {
+      var log = appState.revised[key] || [];
+      m.innerHTML = (log.length ? '<i>Revised ×' + log.length + ' · last ' +
+          new Date(log[log.length - 1]).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + '</i>' : '') +
+        '<button class="rev-done' + (log.length ? ' on' : '') + '">✓ ' + (log.length ? 'Revised again' : 'Mark revised') + '</button>';
+      m.querySelector('.rev-done').onclick = function() {
+        (appState.revised[key] = appState.revised[key] || []).push(new Date().toISOString());
+        saveState(); render();
+        var tab = tc.querySelector('.rev-tab.on small');
+        if (tab) tab.textContent = tab.textContent.replace(/^\d+/, function() {
+          return flatTopics(cat.topics).filter(function(t) { return reviseCount(t.key); }).length;
+        });
+      };
+    }
+    render();
+  });
+
+  var el = document.getElementById('tbCat');
+  el.innerHTML = '<button class="crumb">⚡ Revision</button>';
+  el.querySelector('.crumb').onclick = function() { showRevision(cat.key); };
+  document.getElementById('tbName').textContent = cat.label;
+  document.getElementById('tbTools').style.display = 'none';
+  document.getElementById('sbHome').classList.remove('active');
+  document.getElementById('sbRevision').classList.add('active');
+  document.querySelectorAll('.sb-topic, .sb-cat, .sb-group').forEach(function(b) { b.classList.remove('active'); });
+  window.scrollTo({ top: 0, behavior: 'instant' });
+  var on = tc.querySelector('.rev-tab.on');
+  if (on) on.parentNode.scrollLeft = on.offsetLeft - on.parentNode.offsetLeft - 16;
+  if (window.innerWidth <= 800 && sbOpen) toggleSidebar();
+}
+
+// From a note: open its track in Revision and scroll to its card.
+function reviseCurrent() {
+  var key = activeTopic;
+  var cat = CATEGORIES.find(function(c) { return topicPath(c.topics, key); });
+  showRevision(cat && cat.key);
+  var card = document.getElementById('rev-' + key);
+  if (card) setTimeout(function() { card.scrollIntoView({ behavior: 'smooth', block: 'start' }); card.classList.add('flash'); }, 60);
 }
 
 // ── Reading progress + back to top ───────────────────────────────────────────

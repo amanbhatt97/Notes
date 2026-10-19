@@ -52,6 +52,9 @@
       <button class="sb-home active" id="sbHome" onclick="showHome()">
         <span class="sb-home-icon">🏠</span> Home
       </button>
+      <button class="sb-home sb-rev" id="sbRevision" onclick="showRevision()">
+        <span class="sb-home-icon">⚡</span> Revision <span class="sb-rev-tag">quick</span>
+      </button>
       <div class="sb-divider"></div>
       <div id="sbNav"></div>
     </div>
@@ -78,6 +81,7 @@
         <p class="hero-sub">From your first Python script to production ML systems. Plain-language explanations, diagrams, tested code and interview Q&amp;A for every topic.</p>
         <div class="hero-cta">
           <button class="btn-primary" id="heroContinue">Start learning →</button>
+          <button class="btn-ghost btn-rev" onclick="showRevision()">⚡ Quick revision</button>
           <button class="btn-ghost" onclick="document.getElementById('tracks').scrollIntoView({behavior:'smooth'})">Browse tracks</button>
           <span class="kbd-hint"><kbd>/</kbd> to search</span>
         </div>
@@ -123,6 +127,7 @@
         <span class="topic-bar-sep">/</span>
         <span class="topic-bar-name" id="tbName"></span>
         <span class="tb-tools" id="tbTools">
+          <button class="tb-rev" onclick="reviseCurrent()" title="See this note as a revision card">⚡ Revision card</button>
           <button onclick="setAllSections(true)" title="Expand every section">Expand all</button>
           <button onclick="setAllSections(false)" title="Collapse every section">Collapse all</button>
         </span>

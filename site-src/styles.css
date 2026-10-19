@@ -1170,3 +1170,52 @@ kbd{font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:6px;bor
   .hero-aurora i,.grad-text,.pulse,.cursor{animation:none !important}
   .hero-term{transform:none}
 }
+
+/* ── Revision mode ────────────────────────────────── */
+.sb-rev{position:relative}
+.sb-rev-tag{margin-left:auto;font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  padding:1px 7px;border-radius:999px;color:#fff;background:linear-gradient(135deg,#F59E0B,#F43F5E)}
+.btn-rev{border-color:rgba(245,158,11,.45)}
+.btn-rev:hover{border-color:#F59E0B}
+.tb-tools .tb-rev{border-color:rgba(245,158,11,.45);color:var(--amber)}
+.tb-tools .tb-rev:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-dim)}
+.rev-tabs{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 12px;margin:0 0 18px;scrollbar-width:thin}
+.rev-tab{--acc:hsl(var(--h) 85% 64%);flex-shrink:0;font:inherit;font-size:12.5px;font-weight:600;color:var(--ink2);cursor:pointer;
+  padding:7px 13px;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);transition:all .15s;white-space:nowrap}
+[data-theme="light"] .rev-tab{--acc:hsl(var(--h) 72% 42%)}
+.rev-tab small{font-family:var(--mono);font-size:10.5px;color:var(--ink3);margin-left:4px}
+.rev-tab:hover{border-color:var(--acc);color:var(--ink)}
+.rev-tab.on{color:#fff;border-color:transparent;background:linear-gradient(135deg,hsl(var(--h) 75% 50%),hsl(calc(var(--h) + 45) 75% 50%));
+  box-shadow:0 8px 20px -10px hsl(var(--h) 80% 50%)}
+.rev-tab.on small{color:rgba(255,255,255,.8)}
+.topic-content h3.rev-group{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin:30px 0 10px}
+.rev-card{border:1px solid var(--border);border-radius:18px;padding:18px 20px;margin:0 0 16px;background:var(--bg-card);
+  box-shadow:var(--shadow-sm);scroll-margin-top:calc(var(--bar-h) + 70px);transition:border-color .3s,box-shadow .3s}
+.rev-card:hover{border-color:var(--acc-gl)}
+.rev-card.flash{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-dim)}
+.rev-head{display:flex;gap:14px;align-items:flex-start;margin-bottom:16px}
+.rev-num{flex-shrink:0;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-family:var(--mono);
+  font-size:12px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--acc),var(--acc2))}
+.rev-title{display:flex;flex-direction:column;gap:3px;min-width:0}
+.rev-title b{font-family:var(--disp);font-size:18px;letter-spacing:-.02em;color:var(--ink)}
+.rev-title span{font-size:13px;line-height:1.55;color:var(--ink3)}
+.rev-jumps{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:16px;padding-top:14px;border-top:1px dashed var(--border)}
+.rev-jumps > span{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-right:4px}
+.rev-jump{font:inherit;font-size:12px;color:var(--ink2);cursor:pointer;padding:4px 10px;border-radius:8px;
+  border:1px solid var(--border);background:var(--s1);transition:all .15s}
+.rev-jump:hover{color:var(--acc);border-color:var(--acc);background:var(--acc-dim)}
+.rev-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:14px}
+.rev-open{font:inherit;font-size:13px;font-weight:600;cursor:pointer;color:var(--acc);background:var(--acc-dim);
+  border:1px solid var(--acc-gl);border-radius:10px;padding:8px 14px;transition:all .15s}
+.rev-open:hover{background:var(--acc);color:#fff}
+.rev-mark{display:flex;align-items:center;gap:10px}
+.rev-mark i{font-style:normal;font-size:11.5px;color:var(--green)}
+.rev-done{font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;border-radius:10px;padding:8px 14px;
+  color:var(--ink2);background:none;border:1px solid var(--border);transition:all .15s}
+.rev-done:hover,.rev-done.on{color:var(--green);border-color:var(--green);background:var(--green-dim)}
+@media(max-width:800px){
+  .rev-card{padding:14px}
+  .tb-tools{width:100%;margin-left:0}
+}
+.rev-card .mm-center{display:none}
+.rev-card .mm-branches{border-top:none;padding-top:0}
