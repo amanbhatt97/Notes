@@ -2,7 +2,12 @@ const CATEGORIES = [
   { key: "python", label: "Python Programming", emoji: "\ud83d\udc0d", tag: "Foundation", blurb: "Clean, idiomatic, production-level Python", hue: 200, topics: [
     {"key": "grp_py_fund", "label": "Fundamentals", "children": [
       {"key": "py_fundamentals", "label": "Python Fundamentals"},
-      {"key": "py_ds",           "label": "Data Structures"},
+      {"key": "grp_py_ds", "label": "Collections", "children": [
+        {"key": "py_ds",           "label": "The Map: Python Collections"},
+        {"key": "py_lists_tuples", "label": "Lists & Tuples"},
+        {"key": "py_dicts_sets",   "label": "Dicts & Sets"},
+        {"key": "py_strings",      "label": "Strings"}
+      ]},
       {"key": "py_io",           "label": "Exceptions, Files & Packages"}
     ]},
     {"key": "grp_py_adv", "label": "Advanced Python", "children": [
