@@ -1,102 +1,109 @@
-// notes/python/py_fundamentals.js — Python Fundamentals
+// notes/python/py_fundamentals.js — Python Basics: the Map
 Object.assign(TOPIC_CONTENT, {
   "py_fundamentals": `<main>
-  <h1>Python Fundamentals</h1>
-  <p class="lead">This note covers the basic rules that every Python program follows: how variables work, which values can change, the main data types, operators, if/for/while, functions, and where a name is visible. Every "strange" Python bug in an interview or at work comes back to one of these rules. Code here was run on Python 3.13.</p>
+<h1>Python Basics: the Map</h1>
+  <div class="where"><span>Python</span><span>Fundamentals</span><span>Python Basics: the Map</span></div>
+  <p class="lead">If you are learning Python for the first time, the basics can look like a pile of unrelated rules: types, variables, operators, if, for, while, functions, scope. They are not unrelated. Every program is built in four layers, and each layer exists because the one below it cannot do something you need: <strong>values</strong> (the data) → <strong>names</strong> (to keep and reuse values) → <strong>decisions and repetition</strong> (to choose and repeat) → <strong>functions</strong> (to name and reuse whole steps). This map shows the layers, the three concept notes that teach them, the order to read them in, and the one running example they all share: the bill at Chai Corner, a small chai stall. Code here was run on Python 3.13.</p>
+
+  <h2 id="pf-fits" class="open"><span class="num">★</span>Where this fits</h2>
+  <figure class="viz"><svg viewBox="0 0 680 250" width="680">
+<defs><marker id="pf-a0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+<rect x="240" y="8" width="200" height="44" rx="8" class="fg sg" stroke-width="3"/><text x="340" y="28" text-anchor="middle" font-size="12.5" font-weight="700">Python Basics: the Map</text><text x="340" y="44" text-anchor="middle" class="tg" font-size="10.5">YOU ARE HERE</text>
+<line x1="290" y1="52" x2="110" y2="84" stroke="currentColor" marker-end="url(#pf-a0)"/><line x1="340" y1="52" x2="340" y2="84" stroke="currentColor" marker-end="url(#pf-a0)"/><line x1="390" y1="52" x2="570" y2="84" stroke="currentColor" marker-end="url(#pf-a0)"/>
+<rect x="20" y="86" width="180" height="44" rx="8" class="fb sb"/><text x="110" y="105" text-anchor="middle" font-size="12">Values, Types &amp; Variables</text><text x="110" y="121" text-anchor="middle" class="tm" font-size="10">values + names</text>
+<line x1="200" y1="108" x2="248" y2="108" stroke="currentColor" marker-end="url(#pf-a0)"/>
+<rect x="250" y="86" width="180" height="44" rx="8" class="fb sb"/><text x="340" y="105" text-anchor="middle" font-size="12">Decisions &amp; Loops</text><text x="340" y="121" text-anchor="middle" class="tm" font-size="10">choose + repeat</text>
+<line x1="430" y1="108" x2="478" y2="108" stroke="currentColor" marker-end="url(#pf-a0)"/>
+<rect x="480" y="86" width="180" height="44" rx="8" class="fb sb"/><text x="570" y="105" text-anchor="middle" font-size="12">Functions</text><text x="570" y="121" text-anchor="middle" class="tm" font-size="10">name + reuse</text>
+<line x1="570" y1="130" x2="570" y2="160" stroke="currentColor" marker-end="url(#pf-a0)"/>
+<rect x="20" y="162" width="200" height="34" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="120" y="184" text-anchor="middle" font-size="11">Data Structures</text>
+<rect x="240" y="162" width="200" height="34" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="340" y="184" text-anchor="middle" font-size="11">Exceptions, Files &amp; Packages</text>
+<rect x="460" y="162" width="200" height="34" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="560" y="184" text-anchor="middle" font-size="11">OOP</text>
+<rect x="20" y="208" width="200" height="34" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="120" y="230" text-anchor="middle" font-size="11">Iterators &amp; Generators</text>
+<rect x="240" y="208" width="200" height="34" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="340" y="230" text-anchor="middle" font-size="11">Decorators</text>
+<rect x="460" y="208" width="200" height="34" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="560" y="230" text-anchor="middle" font-size="11">Context Managers</text>
+</svg><figcaption>This map opens the Python track. Its three concept notes form one chain; everything below them builds on all three.</figcaption></figure>
+  <ol class="story">
+    <li><b>Came from: nothing</b><span>This is the first note of the Python track. You only need to be able to run <code>python3</code> (section 05 shows how). No earlier programming is assumed.</span></li>
+    <li><b>This note adds: the map</b><span>How a program is built in four layers, which note teaches each layer, the order to read them, and the shared running example (three orders at Chai Corner) that every note computes on.</span></li>
+    <li><b>Leads to: <a class="xref" data-note="py_values">Values, Types &amp; Variables</a></b><span>Then <a class="xref" data-note="py_control">Decisions &amp; Loops</a> and <a class="xref" data-note="py_functions">Functions</a>. After the basics: <a class="xref" data-note="py_ds">Data Structures</a>, <a class="xref" data-note="py_io">Exceptions, Files &amp; Packages</a>, <a class="xref" data-note="py_oop">OOP</a>, <a class="xref" data-note="py_iterators">Iterators &amp; Generators</a>, <a class="xref" data-note="py_decorators">Decorators</a> and <a class="xref" data-note="py_context">Context Managers</a>.</span></li>
+  </ol>
+
+  <h2 id="pf-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
+  <p>The whole of Python Basics as one chain. Each concept answers the question above it; its weakness raises the next question. The note that teaches it is in brackets.</p>
+  <ol class="story">
+    <li><b>Values and types</b><span>Q: how does a computer hold "₹30" or "samosa"? → As objects with a type: <code>30</code> (int), <code>"samosa"</code> (str), <code>True</code> (bool), <code>None</code>. The type decides what you can do: <code>30 * 3</code> is 90 but <code>"30" * 3</code> is "303030". But a value typed once is lost after its line… (<a class="xref" data-note="py_values">Values</a>)</span></li>
+    <li><b>Names (variables)</b><span>Q: how do we keep a value and reuse it? → <code>price_chai = 30</code> sticks a label on the object. Labels, not boxes: two names can share one list, so a change through one shows through the other. (<a class="xref" data-note="py_values">Values</a>)</span></li>
+    <li><b>Mutability and conversion</b><span>Q: which objects can change, and how do we get the right type? → Lists change in place, ints and strings never do; <code>int("2")</code> converts, with traps (<code>int("3.5")</code>, 0.1 + 0.2, <code>round(52.5) = 52</code>). (<a class="xref" data-note="py_values">Values</a>)</span></li>
+    <li><b>Operators and expressions</b><span>Q: how do we compute new values? → <code>2 * 30 + 3 * 15 + 1 * 90</code> = 195; comparisons give bools; <code>and</code>/<code>or</code> stop early. The whole bill is one expression: ₹184. But it cannot choose a discount honestly, and every order needs a new expression… (<a class="xref" data-note="py_values">Values</a>)</span></li>
+    <li><b>Decisions</b><span>Q: how does a program run lines only when a rule holds? → <code>if subtotal &gt;= 150:</code> … <code>else:</code> …. But one decision still handles only one fixed order… (<a class="xref" data-note="py_control">Decisions &amp; Loops</a>)</span></li>
+    <li><b>Loops</b><span>Q: how do we do the same step for every line and every table? → <code>for item, qty, price in order</code>: 60 → 105 → 195; a loop over tables bills everyone: ₹184, ₹74, ₹52. But the billing code is one long script; using it elsewhere means copying it… (<a class="xref" data-note="py_control">Decisions &amp; Loops</a>)</span></li>
+    <li><b>Functions</b><span>Q: how do we write a step once and use it anywhere? → <code>def bill(lines): … return …</code>; <code>bill(asha)</code> = 184. Parameters bring inputs, return gives the answer, scope keeps names private. (<a class="xref" data-note="py_functions">Functions</a>)</span></li>
+    <li><b>Functions as values</b><span>Q: how can one <code>bill</code> work with any discount rule? → Functions are objects: pass a rule in, return a new function, wrap one in another. This opens the advanced notes. (<a class="xref" data-note="py_functions">Functions</a> → <a class="xref" data-note="py_decorators">Decorators</a>)</span></li>
+    <li><b>Beyond the basics</b><span>Q: how do we organise many values, handle bad input and files, and model things like an Order? → <a class="xref" data-note="py_ds">Data Structures</a>, <a class="xref" data-note="py_io">Exceptions, Files &amp; Packages</a>, <a class="xref" data-note="py_oop">OOP</a>.</span></li>
+  </ol>
 
   <h2 id="pf-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
-    <div class="mm-center">Python Fundamentals</div>
+    <div class="mm-center">Python Basics</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">Names &amp; references</div>
+        <div class="mm-title">Layer 1: values</div>
         <ul>
-          <li><b>Variable</b> — a name tag stuck on an object, not a box that holds a value</li>
-          <li>💡 like a luggage tag: two tags can hang on one bag</li>
-          <li><b>b = a</b> — copies the tag, not the object; both names share one object</li>
-          <li><b>id(x)</b> — the object's identity (memory address in CPython)</li>
-          <li><b>==</b> same value (calls <code>__eq__</code>); <b>is</b> same object (same id)</li>
-          <li><b>Mutate vs rebind</b> — <code>a.append()</code> changes the shared object; <code>a = [...]</code> moves only the tag <code>a</code></li>
-          <li>⚠ <b>Small-int cache</b> (−5…256) makes <code>is</code> look like <code>==</code>. Never rely on it. Use <code>is</code> only for <code>None</code>/<code>True</code>/<code>False</code></li>
+          <li>Every value is an <b>object</b>: type + identity + value</li>
+          <li><b>int</b>, <b>float</b>, <b>bool</b>, <b>str</b>, <b>None</b></li>
+          <li>Operators build new values: 2×30 + 3×15 + 90 = 195</li>
+          <li>⚠ 0.1 + 0.2 ≠ 0.3; <code>round(52.5) = 52</code>; <code>-7 // 2 = -4</code></li>
+          <li>Note: <a class="xref" data-note="py_values">Values, Types &amp; Variables</a></li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Mutable vs immutable</div>
+        <div class="mm-title">Layer 2: names</div>
         <ul>
-          <li><b>Immutable</b> — int, float, bool, str, bytes, tuple, frozenset; a "change" makes a new object</li>
-          <li><b>Mutable</b> — list, dict, set, bytearray; changed in place, id stays the same</li>
-          <li>💡 sealed envelope vs open notebook</li>
-          <li><b>Why it matters</b> — sharing bugs; only immutables can be dict keys; safe to pass around</li>
-          <li><b>Real copy</b> — <code>lst.copy()</code> gives a second list; <code>b = a</code> does not</li>
-          <li><b>+=</b> — new object for str/tuple, same object for list</li>
-          <li>⚠ <b>Tuple of lists</b> — tuple is fixed but the list inside can change; <code>t[0] += [5]</code> changes it AND raises</li>
+          <li><code>price = 30</code>: a label on an object, not a box</li>
+          <li><code>b = a</code> shares, never copies</li>
+          <li>Mutable (list, dict, set) vs immutable (int, str, tuple)</li>
+          <li><code>==</code> same value, <code>is</code> same object</li>
+          <li>Note: <a class="xref" data-note="py_values">Values, Types &amp; Variables</a></li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Core types</div>
+        <div class="mm-title">Layer 3: choose &amp; repeat</div>
         <ul>
-          <li><b>int</b> — any size, never overflows (but slower than numpy int64)</li>
-          <li><b>float</b> — 64-bit binary number; ⚠ <code>0.1 + 0.2 != 0.3</code> → use <code>math.isclose</code>, <code>Decimal</code> for money</li>
-          <li><b>bool</b> — a kind of int: <code>True + True == 2</code>, so <code>sum(mask)</code> counts Trues</li>
-          <li><b>round()</b> — halves go to the even number: <code>round(2.5) == 2</code></li>
-          <li><b>str</b> = text (Unicode); <b>bytes</b> = raw 0–255 values; <code>encode</code>/<code>decode</code> between them</li>
-          <li><b>Conversion</b> — <code>int(3.9)</code> → 3 (cuts, no rounding); ⚠ <code>int("3.9")</code> errors; ⚠ <code>bool("False")</code> is True</li>
-          <li><b>Falsy</b> — 0, 0.0, "", [], {}, set(), None, False</li>
+          <li><code>if / elif / else</code>: first True branch runs</li>
+          <li><code>while</code>: repeat while true; <code>for</code>: once per item</li>
+          <li><code>break</code>, <code>continue</code>, loop-<code>else</code>; <code>enumerate</code>, <code>zip</code></li>
+          <li>Patterns: accumulate, count, find, filter, best-so-far</li>
+          <li>Note: <a class="xref" data-note="py_control">Decisions &amp; Loops</a></li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Operators</div>
+        <div class="mm-title">Layer 4: functions</div>
         <ul>
-          <li><b>/</b> always gives float; <b>//</b> rounds down toward −∞: <code>-7 // 2 == -4</code>; <b>%</b> = remainder</li>
-          <li><b>Chaining</b> — <code>1 &lt; x &lt; 10</code> works like maths</li>
-          <li><b>and/or</b> stop early and return one of the operands: <code>0 or "default"</code> → "default"</li>
-          <li><b>in</b> — slow O(n) on a list, fast O(1) on set/dict</li>
-          <li><b>Bitwise</b> &amp; | ^ ~ &lt;&lt; &gt;&gt;; <code>~x == -(x+1)</code></li>
-          <li>⚠ numpy/pandas filters need <code>&amp;</code> + brackets, not <code>and</code></li>
-          <li><b>Walrus :=</b> — assign and use a value in one expression</li>
+          <li><code>def</code> names a block; <code>return</code> gives a value (else None)</li>
+          <li>Parameters: positional, keyword, defaults, *args, **kwargs</li>
+          <li>Scope LEGB; closures; recursion; lambda</li>
+          <li>Functions are values → decorators</li>
+          <li>Note: <a class="xref" data-note="py_functions">Functions</a></li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Control flow</div>
+        <div class="mm-title">The running example</div>
         <ul>
-          <li><b>if/elif/else</b> — first true branch runs, rest skipped</li>
-          <li><b>Ternary</b> — <code>"pass" if s &gt;= 60 else "fail"</code></li>
-          <li><b>for</b> works on anything iterable; use <code>enumerate</code>, <code>zip</code>, <code>.items()</code></li>
-          <li><b>loop-else</b> — else runs only if no <code>break</code> happened; read it as "nobreak"</li>
-          <li><b>match/case</b> (3.10+) — matches the shape of data: literals, <code>|</code>, dict/list shapes, <code>*rest</code>, <code>if</code> guards, <code>_</code></li>
-          <li>⚠ a bare name in <code>case x:</code> catches everything; compare constants with dotted names</li>
+          <li>Chai Corner: chai 30, samosa 15, vada pav 20, cold coffee 90</li>
+          <li>Rules: 10% off at ₹150+, then 5% GST, round to rupees</li>
+          <li>Asha 195 → ₹184 · Ben 70 → ₹74 · Chen 50 → ₹52</li>
+          <li>Day total ₹310</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Functions &amp; params</div>
+        <div class="mm-title">How to study</div>
         <ul>
-          <li><b>Order</b> — <code>def f(pos_only, /, normal, *args, kw_only, **kwargs)</code></li>
-          <li><b>*args</b> → tuple of extras; <b>**kwargs</b> → dict of extras; <code>f(*lst, **d)</code> unpacks</li>
-          <li><b>Keyword-only</b> (after <code>*</code>) — forces clear calls: <code>fit(X, epochs=5)</code></li>
-          <li>⚠ <b>Mutable default</b> — <code>def f(x=[])</code> is built once and shared by every call → use <code>None</code></li>
-          <li><b>First-class</b> — functions are objects: pass them, return them, store them</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Recursion &amp; lambda</div>
-        <ul>
-          <li><b>Recursion</b> — base case + a smaller call; default limit 1000 → <code>RecursionError</code></li>
-          <li>💡 asking "what is my position?" down a queue</li>
-          <li><b>No tail-call optimisation</b> — very deep recursion → write a loop</li>
-          <li><b>@lru_cache</b> — remember answers so repeated sub-problems run once (fib)</li>
-          <li><b>lambda</b> — one-line function with no name; for <code>key=</code>, <code>map</code></li>
-          <li>⚠ <b>Late binding</b> — <code>[lambda: i for i in ...]</code> all see the last i; fix <code>lambda i=i: i</code></li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Scope (LEGB)</div>
-        <ul>
-          <li><b>Lookup</b> — Local → Enclosing → Global → Built-in; first match wins</li>
-          <li><b>Assignment</b> anywhere in a function makes the name local for the whole function</li>
-          <li>⚠ <code>count += 1</code> on a global → <code>UnboundLocalError</code></li>
-          <li><b>global</b> rebinds a module name; <b>nonlocal</b> rebinds the outer function's name</li>
-          <li><b>Closure</b> — inner function remembers outer variables (counters, decorators)</li>
-          <li>💡 looking for keys: your room, then the house, then the street</li>
+          <li>Read in order: Values → Decisions &amp; Loops → Functions</li>
+          <li>Predict every output before reading it</li>
+          <li>Type and run the code; change one number</li>
+          <li>Read tracebacks from the bottom line up</li>
+          <li>Use each note's Revision Sheet to revise</li>
         </ul>
       </div>
     </div>
@@ -105,587 +112,344 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="pf-names"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Names &amp; References</span><span class="rm-sub">Labels, id(), is vs ==</span></div></div>
-      <div class="rm-item rm-done" data-target="pf-mut"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Mutable vs Immutable</span><span class="rm-sub">Change in place or copy</span></div></div>
-      <div class="rm-item rm-done" data-target="pf-types"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Core Types</span><span class="rm-sub">Numbers, bools, str, bytes</span></div></div>
-      <div class="rm-item rm-done" data-target="pf-ops"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Operators</span><span class="rm-sub">Floor, short-circuit, bits</span></div></div>
-      <div class="rm-item rm-done" data-target="pf-flow"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Control Flow</span><span class="rm-sub">loop-else, match/case</span></div></div>
-      <div class="rm-item rm-done" data-target="pf-func"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Function Parameters</span><span class="rm-sub">*args, kw-only, defaults</span></div></div>
-      <div class="rm-item rm-done" data-target="pf-rec"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Recursion &amp; Lambda</span><span class="rm-sub">Base cases, late binding</span></div></div>
-      <div class="rm-item rm-done" data-target="pf-scope"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Scope: LEGB</span><span class="rm-sub">global, nonlocal, closures</span></div></div>
-      <div class="rm-item rm-done" data-target="pf-build"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Hands-on</span><span class="rm-sub">An event router</span></div></div>
-      <div class="rm-item rm-done" data-target="pf-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="pf-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The basics as one chain</span></div></div>
+      <div class="rm-item rm-done" data-target="pf-bill"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">One Bill for the Whole Group</span><span class="rm-sub">Chai Corner's three orders</span></div></div>
+      <div class="rm-item rm-done" data-target="pf-layers"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Four Layers of a Program</span><span class="rm-sub">The bill, built up</span></div></div>
+      <div class="rm-item rm-done" data-target="pf-family"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">The Family Tree</span><span class="rm-sub">Which note builds on which</span></div></div>
+      <div class="rm-item rm-done" data-target="pf-guide"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Reading Guide</span><span class="rm-sub">Order, and how to study</span></div></div>
+      <div class="rm-item rm-done" data-target="pf-run"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Running Code &amp; Reading Errors</span><span class="rm-sub">python3, the REPL, tracebacks</span></div></div>
+      <div class="rm-item rm-done" data-target="pf-connect"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One diagram, one table</span></div></div>
+      <div class="rm-item rm-done" data-target="pf-traps"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">The top beginner bugs</span></div></div>
+      <div class="rm-item rm-done" data-target="pf-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">All of the basics in 10 minutes</span></div></div>
+      <div class="rm-item rm-done" data-target="pf-qa"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
     </div>
   </div>
 
-  <div class="callout intu"><span class="label">Why this note</span><p>Python is the main language of data science. pandas, numpy, scikit-learn and PyTorch are all Python. Interviews often start with short "what does this print?" questions about these basics. At work, the same basics explain bugs like "my list changed by itself" or "my function remembers old values". Each section below uses only ideas from the sections before it.</p></div>
-
-  <h2 id="pf-names"><span class="num">01</span>Names &amp; References</h2>
-  <p>In school maths, <code>x = 5</code> means "x is 5". Many people imagine a variable as a box with the value inside. In Python that picture is wrong, and it causes real bugs.</p>
-  <p>In Python, every value (a number, a list, a piece of text) is an <strong>object</strong> — a thing stored somewhere in memory. A variable is only a <strong>name</strong> that points to an object. The name does not hold the value. It is a label stuck on it.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A variable is a luggage tag, not the suitcase. Two tags can hang on one suitcase. Moving a tag to another bag does not move the suitcase.</p></div>
-  <p>Start with numbers. <code>y = x</code> makes <code>y</code> point to the same object as <code>x</code>. Then <code>x = 6</code> moves only the tag <code>x</code> to a new object. <code>y</code> still points at 5.</p>
-  <div class="fx" data-lang="py">x = 5
-y = x          # y points to the same 5
-x = 6          # x now points to a new object 6
-print(x, y)</div>
-  <div class="fx" data-lang="text">6 5</div>
-  <p>With a list, something new can happen. You can change the list itself (add an item) without moving any tag. This is called <strong>mutating</strong> it. Moving a tag to a different object is called <strong>rebinding</strong>. Look at the picture: on the left, both tags point to one list, so a change shows through both names. On the right, <code>a</code> was moved to a new list, and <code>b</code> stayed.</p>
-  <figure class="viz"><svg viewBox="0 0 560 170" width="560">
-    <defs><marker id="pf-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
-    <text x="10" y="18" class="tm">after b = a ; a.append(4)</text>
-    <rect x="20" y="40" width="40" height="26" rx="5" class="fb sb"/><text x="35" y="58">a</text>
-    <rect x="20" y="96" width="40" height="26" rx="5" class="fb sb"/><text x="35" y="114">b</text>
-    <rect x="130" y="62" width="120" height="36" rx="6" class="fg sg"/><text x="142" y="85">[1, 2, 3, 4]</text>
-    <line x1="60" y1="53" x2="128" y2="74" stroke="currentColor" marker-end="url(#pf-ah)"/>
-    <line x1="60" y1="109" x2="128" y2="88" stroke="currentColor" marker-end="url(#pf-ah)"/>
-    <text x="300" y="18" class="tm">after a = [99]  (rebind)</text>
-    <rect x="300" y="40" width="40" height="26" rx="5" class="fb sb"/><text x="315" y="58">a</text>
-    <rect x="300" y="96" width="40" height="26" rx="5" class="fb sb"/><text x="315" y="114">b</text>
-    <rect x="420" y="30" width="80" height="34" rx="6" class="fv"/><text x="440" y="52">[99]</text>
-    <rect x="410" y="96" width="120" height="34" rx="6" class="fg sg"/><text x="422" y="118">[1, 2, 3, 4]</text>
-    <line x1="340" y1="53" x2="418" y2="48" stroke="currentColor" marker-end="url(#pf-ah)"/>
-    <line x1="340" y1="109" x2="408" y2="112" stroke="currentColor" marker-end="url(#pf-ah)"/>
-    <text x="20" y="160" class="tg">mutation: both names see it</text>
-    <text x="300" y="160" class="tb">rebinding: only a moves</text>
-  </svg><figcaption>Assignment never copies. It sticks one more name tag on the same object.</figcaption></figure>
-  <p>The code below does exactly what the picture shows. <code>id(x)</code> gives a number that identifies the object (in CPython, the normal Python, it is the memory address). Same id means same object.</p>
-  <div class="fx" data-lang="py">a = [1, 2, 3]
-b = a                  # second name, same object
-print(a is b, id(a) == id(b))
-a.append(4)            # mutate: both names see it
-print(b)
-a = [99]               # rebind: only a moves
-print(b)
-c = [1, 2, 3, 4]
-print(b == c, b is c)  # equal values, different objects</div>
-  <div class="fx" data-lang="text">True True
-[1, 2, 3, 4]
-[1, 2, 3, 4]
-True False</div>
-  <p>The last line shows two different questions you can ask about two names. <code>==</code> asks "do they hold the same value?" (it calls the object's <code>__eq__</code> method — the method that defines "equal"). <code>is</code> asks "are they the very same object?". Two identical-looking marksheets are <code>==</code>. Only your own marksheet <code>is</code> your marksheet.</p>
-  <table class="tbl">
-    <tr><th>Check</th><th>Asks</th><th>Use for</th></tr>
-    <tr><td><code>a == b</code></td><td>Same value? (calls <code>__eq__</code>)</td><td>Almost everything</td></tr>
-    <tr><td><code>a is b</code></td><td>Same object? (same <code>id</code>)</td><td><code>x is None</code>, sentinels</td></tr>
-  </table>
-  <div class="fx" data-lang="py">x = int("1000"); y = int("1000")
-print(x == y, x is y)          # 1000 not cached
-s = int("7"); t = int("7")
-print(s is t)                  # -5..256 cached: implementation detail</div>
-  <div class="fx" data-lang="text">True False
-True</div>
-  <div class="callout trap"><span class="label">Trap</span><p>CPython keeps one shared copy of small ints (−5…256) and some strings. So <code>is</code> sometimes "works" for values by luck. Use <code>==</code> for values. Use <code>is</code> only for <code>None</code>, <code>True</code>, <code>False</code>.</p></div>
-
-  <h2 id="pf-mut"><span class="num">02</span>Mutable vs Immutable</h2>
-  <p>Section 01 showed that a list can be changed in place. Can a number or a string be changed in place too? No. Python splits objects into two kinds.</p>
-  <ul>
-    <li><strong>Mutable</strong> — "can change". The same object can be edited in place. Lists, dicts and sets are mutable.</li>
-    <li><strong>Immutable</strong> — "can never change". Any "change" builds a brand-new object. Numbers, strings and tuples are immutable.</li>
-  </ul>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Immutable is a sealed envelope: to change the letter, you make a new envelope. Mutable is an open notebook: same notebook, new pages.</p></div>
-  <p>A small kirana example. You and your brother share one shopping list. If he adds "ghee" to it, you see "ghee" too, because there is only one list. If you want your own list, make a real copy with <code>.copy()</code>.</p>
-  <div class="fx" data-lang="py">cart = ["rice", "dal"]
-my_cart = cart            # same list, two names
-my_cart.append("ghee")
-print(cart)
-copy_cart = cart.copy()   # a real second list
-copy_cart.append("salt")
-print(cart, copy_cart)</div>
-  <div class="fx" data-lang="text">['rice', 'dal', 'ghee']
-['rice', 'dal', 'ghee'] ['rice', 'dal', 'ghee', 'salt']</div>
-  <p>Strings are immutable, so string methods never change the string. They return a new one. If you do not save it, it is lost.</p>
-  <div class="fx" data-lang="py">name = "ravi"
-name.upper()          # makes a NEW string, nobody keeps it
-print(name)
-name = name.upper()   # keep the new string
-print(name)</div>
-  <div class="fx" data-lang="text">ravi
-RAVI</div>
-  <p>The picture shows the difference. For the string, <code>+=</code> built a new object and moved the tag. For the list, <code>+=</code> edited the same object.</p>
-  <figure class="viz"><svg viewBox="0 0 560 150" width="560">
-    <defs><marker id="pf-ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
-    <text x="10" y="18" class="tr">immutable: s += "!"</text>
-    <rect x="10" y="40" width="34" height="24" rx="5" class="fb sb"/><text x="22" y="57">s</text>
-    <rect x="110" y="30" width="110" height="30" rx="6" class="fs" stroke="currentColor" stroke-dasharray="4 3"/><text x="122" y="50" class="tm">"hi" id=A</text>
-    <rect x="110" y="80" width="110" height="30" rx="6" class="fg sg"/><text x="122" y="100">"hi!" id=B</text>
-    <line x1="44" y1="54" x2="108" y2="90" stroke="currentColor" marker-end="url(#pf-ah2)"/>
-    <text x="10" y="135" class="tm">new object, tag moved</text>
-    <text x="300" y="18" class="tg">mutable: L += [2]</text>
-    <rect x="300" y="55" width="34" height="24" rx="5" class="fb sb"/><text x="312" y="72">L</text>
-    <rect x="400" y="50" width="130" height="34" rx="6" class="fg sg"/><text x="412" y="72">[1, 2] id=C</text>
-    <line x1="334" y1="67" x2="398" y2="67" stroke="currentColor" marker-end="url(#pf-ah2)"/>
-    <text x="300" y="135" class="tm">same object, contents changed</text>
-  </svg><figcaption>Immutable "changes" create a new object. Mutable changes edit the same one.</figcaption></figure>
-  <p>Why does Python need both kinds? Lists must change cheaply, or every append would copy the whole list. Dict keys must never change, or the dict would lose track of where it stored them. An object that can be a dict key is called <strong>hashable</strong> — Python can compute a fixed "address number" (a hash) for it. Immutable objects are hashable; lists and dicts are not.</p>
-  <div class="cards">
-    <div><b>Immutable</b><p>int, float, bool, str, bytes, tuple, frozenset</p><small>Hashable → dict keys, set items; safe to share</small></div>
-    <div><b>Mutable</b><p>list, dict, set, bytearray, most class objects</p><small>Edited in place → watch for shared names</small></div>
+  <h2 id="pf-bill"><span class="num">01</span>One Bill for the Whole Group</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>"Learn variables, then operators, then loops, then functions" gives you a list of topics but not a reason for any of them. What single, concrete job can every one of these topics be measured against, so that each new idea visibly helps finish it?</p>
   </div>
-  <div class="callout pred"><span class="label">Predict the output</span><p>A tuple holds a list. Can you change it?</p></div>
-  <div class="fx" data-lang="py">t = ([1], 2)
-t[0].append(9)          # the list inside is mutable
-print(t)
-try:
-    t[0] += [5]         # list.__iadd__ runs, THEN tuple item assignment fails
-except TypeError as e:
-    print("TypeError:", e)
-print(t)</div>
-  <div class="fx" data-lang="text">([1, 9], 2)
-TypeError: 'tuple' object does not support item assignment
-([1, 9, 5], 2)</div>
-  <p>What happened in the last two lines: <code>t[0] += [5]</code> is two steps. Step 1, the list adds 5 to itself (this works). Step 2, Python tries to put the list back into slot 0 of the tuple (this fails, because tuples cannot change). So you get an error and a changed list.</p>
-  <div class="callout trap"><span class="label">Trap</span><p>Immutability is only one level deep. The tuple cannot swap its items, but a list inside it can still change. Such a tuple also cannot be a dict key.</p></div>
-
-  <h2 id="pf-types"><span class="num">03</span>Core Types &amp; Conversion</h2>
-  <p>A <strong>type</strong> tells Python what kind of value something is, and so what you can do with it. You can add two numbers. You can make text uppercase. You cannot make a number uppercase. <code>type(x)</code> tells you the type.</p>
-  <div class="fx" data-lang="py">print(type(5), type(5.0), type("5"), type(True), type(None))
-marks = "87"
-print(marks + "3", int(marks) + 3)</div>
-  <div class="fx" data-lang="text">&lt;class 'int'&gt; &lt;class 'float'&gt; &lt;class 'str'&gt; &lt;class 'bool'&gt; &lt;class 'NoneType'&gt;
-873 90</div>
-  <p>The second line is a common first bug. Data read from a form or a file comes as text. <code>"87" + "3"</code> joins text and gives <code>"873"</code>. Convert to <code>int</code> first to do maths.</p>
-  <table class="tbl">
-    <tr><th>Type</th><th>What it is</th><th>Gotcha</th></tr>
-    <tr><td><code>int</code></td><td>Whole number of any size</td><td>No overflow, but ~50× slower than numpy int64</td></tr>
-    <tr><td><code>float</code></td><td>64-bit binary fraction (IEEE 754)</td><td>0.1 has no exact binary form</td></tr>
-    <tr><td><code>bool</code></td><td>A kind of int (True = 1)</td><td><code>sum(mask)</code> counts Trues</td></tr>
-    <tr><td><code>str</code></td><td>Unchangeable sequence of Unicode characters</td><td><code>len</code> counts characters, not bytes</td></tr>
-    <tr><td><code>bytes</code></td><td>Unchangeable sequence of 0–255 values</td><td>Files, network, hashing; <code>str.encode()</code></td></tr>
+  <h3>The running example</h3>
+  <p>Chai Corner is a small stall with a four-item menu and two rules. Every note in Python Basics computes on exactly these numbers.</p>
+  <table class="tbl out"><caption>Chai Corner menu (₹)</caption>
+    <tr><th>Item</th><td>masala chai</td><td>samosa</td><td>vada pav</td><td>cold coffee</td></tr>
+    <tr><th>Price</th><td>30</td><td>15</td><td>20</td><td>90</td></tr>
   </table>
-  <p><strong>Why floats look wrong.</strong> A float is a number with a decimal point. The computer stores it in base 2 (only 0s and 1s). Most decimals like 0.1 cannot be written exactly in base 2, so a tiny error appears at the end.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Write 1/3 in decimal: 0.3333… You must stop somewhere, so 1/3 + 1/3 + 1/3 gives 0.9999, not 1. Computers have the same problem with 0.1 in binary.</p></div>
-  <div class="fx" data-lang="py">print(0.1 + 0.2)
-print(0.1 + 0.2 == 0.3)
-import math
-from decimal import Decimal
-print(math.isclose(0.1 + 0.2, 0.3))
-print(Decimal("0.1") + Decimal("0.2"))
-print(2 ** 100)                  # ints never overflow
-print(True + True, isinstance(True, int))
-print(round(2.5), round(3.5))    # banker's rounding</div>
-  <div class="fx" data-lang="text">0.30000000000000004
-False
-True
-0.3
-1267650600228229401496703205376
-2 True
-2 4</div>
-  <p>Line by line: <code>math.isclose</code> asks "are these nearly equal?", which is the right question for floats. <code>Decimal</code> stores numbers in base 10, like we write them, so 0.1 + 0.2 is exactly 0.3. <code>True + True</code> is 2 because a bool is secretly the int 1 or 0. <code>round</code> uses <strong>banker's rounding</strong>: an exact half goes to the nearest even number, so over many numbers the rounding errors cancel.</p>
-  <div class="callout trap"><span class="label">Trap</span><p>Never compare floats with <code>==</code>. Use <code>math.isclose</code> / <code>np.isclose</code>. For money (like a UPI balance) use <code>Decimal</code> built from strings. <code>round()</code> sends halves to the even number.</p></div>
-  <p><strong>str vs bytes.</strong> <code>str</code> is text for humans, like "café". But files and the network only carry raw numbers 0–255, called <code>bytes</code>. <strong>Encoding</strong> is the rule that turns text into bytes; UTF-8 is the common one. <code>encode</code> turns text into bytes; <code>decode</code> turns bytes back. The "é" needs two bytes in UTF-8, so the text has 4 characters but 5 bytes.</p>
-  <div class="fx" data-lang="py">s = "café"
-b = s.encode("utf-8")
-print(len(s), len(b), b)
-print(b.decode("utf-8"))
-print(int("42"), int(3.9), int(-3.9), float("1e-3"))
-print(bool("False"), bool(""), bool([]), bool(0.0))
-print(str(42) + "!", list("abc"), tuple([1, 2]))
-try:
-    int("3.9")
-except ValueError as e:
-    print("ValueError:", e)</div>
-  <div class="fx" data-lang="text">4 5 b'caf\\xc3\\xa9'
-café
-42 3 -3 0.001
-True False False False
-42! ['a', 'b', 'c'] (1, 2)
-ValueError: invalid literal for int() with base 10: '3.9'</div>
-  <ul>
-    <li><code>int()</code> cuts toward zero. It does not round. So <code>int(3.9)</code> is 3 and <code>int(-3.9)</code> is -3.</li>
-    <li><strong>Truthy / falsy</strong>: every value counts as True or False in an <code>if</code>. Empty or zero things are <strong>falsy</strong>: 0, 0.0, "", [], {}, set(), None, False. Everything else is <strong>truthy</strong>.</li>
-    <li><code>bool(x)</code> only checks "empty or not". Any non-empty string is True, even <code>"False"</code>. Read flags with <code>s.lower() in {"1", "true", "yes"}</code>.</li>
-  </ul>
-
-  <h2 id="pf-ops"><span class="num">04</span>Operators</h2>
-  <p>An <strong>operator</strong> is a symbol that does a job on values: <code>+</code> adds, <code>&lt;</code> compares, <code>and</code> combines conditions. Most work like school maths. The surprises are in division, <code>and</code>/<code>or</code>, and arrays.</p>
-  <p><strong>Three kinds of division.</strong> You have 17 laddoos and 5 kids. <code>/</code> gives the exact share (3.4). <code>//</code> gives whole laddoos per kid (3) — this is <strong>floor division</strong>, it rounds down. <code>%</code> gives the laddoos left over (2) — this is the <strong>remainder</strong> or <strong>modulo</strong>.</p>
-  <div class="fx" data-lang="py">laddoos, kids = 17, 5
-print(laddoos / kids)    # exact share
-print(laddoos // kids)   # whole laddoos each
-print(laddoos % kids)    # left over</div>
-  <div class="fx" data-lang="text">3.4
-3
-2</div>
-  <table class="tbl">
-    <tr><th>Kind</th><th>Operators</th><th>Remember</th></tr>
-    <tr><td>Arithmetic</td><td><code>+ - * / // % **</code></td><td><code>/</code> → float; <code>//</code> rounds down toward −∞</td></tr>
-    <tr><td>Comparison</td><td><code>== != &lt; &lt;= &gt; &gt;=</code></td><td>Chains: <code>1 &lt; x &lt; 10</code></td></tr>
-    <tr><td>Logical</td><td><code>and or not</code></td><td>Stop early, return an operand</td></tr>
-    <tr><td>Membership</td><td><code>in, not in</code></td><td>list O(n), set/dict O(1)</td></tr>
-    <tr><td>Identity</td><td><code>is, is not</code></td><td>Same object</td></tr>
-    <tr><td>Bitwise</td><td><code>&amp; | ^ ~ &lt;&lt; &gt;&gt;</code></td><td>Flags, masks; <code>~x = -(x+1)</code></td></tr>
-    <tr><td>Assignment</td><td><code>= += -= *= :=</code></td><td>Walrus assigns inside an expression</td></tr>
+  <p>Rules: a subtotal of ₹150 or more gets <b>10% off</b>; then <b>5% GST</b> is added; the bill is rounded to whole rupees. Three tables order:</p>
+  <table class="tbl"><caption>The three bills, by hand</caption>
+    <tr><th>Table</th><th>Order</th><th>Subtotal</th><th>Discount</th><th>After discount</th><th>+ 5% GST</th><th>Bill</th></tr>
+    <tr><td>Asha</td><td>2 masala chai, 3 samosa, 1 cold coffee</td><td>60 + 45 + 90 = 195</td><td>19.5</td><td>175.5</td><td>184.275</td><td><b>₹184</b></td></tr>
+    <tr><td>Ben</td><td>1 masala chai, 2 vada pav</td><td>30 + 40 = 70</td><td>0</td><td>70</td><td>73.5</td><td><b>₹74</b></td></tr>
+    <tr><td>Chen</td><td>2 samosa, 1 vada pav</td><td>30 + 20 = 50</td><td>0</td><td>50</td><td>52.5</td><td><b>₹52</b> (not 53: see <a class="xref" data-note="py_values">Values</a>)</td></tr>
+    <tr><td colspan="6">Day total</td><td><b>₹310</b></td></tr>
   </table>
-  <p>Two words in the table need meaning. <strong>O(n)</strong> means "time grows with the number of items": <code>in</code> on a list checks items one by one. <strong>O(1)</strong> means "same time no matter how many items": a set or dict jumps straight to the answer. <strong>Bitwise</strong> operators work on the 0s and 1s of a number, one position at a time.</p>
-  <p><strong>Short-circuit.</strong> <code>and</code>/<code>or</code> stop as soon as the answer is known. They return the value they stopped at, which is not always True/False.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p><code>or</code> is like asking friends for a pen: the first one who has it ends the search. <code>and</code> is like a checklist at a gate: the first failed check stops you.</p></div>
-  <div class="fx" data-lang="py">print(7 / 2, 7 // 2, -7 // 2, -7 % 2, 2 ** 10)
-print(1 &lt; 5 &lt; 10, 3 == 3.0)
-print(0 or "default", 5 and "yes", 5 or "never", [] and 1/0)
-print(3 in [1, 2, 3], "py" in "python", "a" in {"a": 1})
-print(5 &amp; 3, 5 | 3, 5 ^ 3, ~5, 5 &lt;&lt; 1, 5 &gt;&gt; 1)
-print(bin(5), bin(3), bin(5 &amp; 3))
-data = [3, 8, 1, 9]
-if (n := len(data)) &gt; 3:
-    print(f"{n} items")</div>
-  <div class="fx" data-lang="text">3.5 3 -4 1 1024
-True True
-default yes 5 []
-True True True
-1 7 6 -6 10 2
-0b101 0b11 0b1
-4 items</div>
+  <p>Look at the steps you did by hand: you <em>looked up values</em> (prices), <em>remembered</em> intermediate results (195, 175.5), <em>decided</em> whether a discount applies, <em>repeated</em> the same steps for every line and every table, and you would like to <em>give the whole procedure a name</em> ("bill it") so you never have to think it through again. Those five verbs are the whole of Python Basics.</p>
+  <h3>The finished program</h3>
+  <p>Here is the complete till program you will be able to write, and fully explain, after the three concept notes. The comments say which note teaches each part. Do not worry about understanding it yet; just notice that it is short and that it reproduces the hand-made table.</p>
+  <div class="fx" data-lang="py"># ---- values and names  (Values, Types &amp; Variables)
+GST = 0.05
+asha = [("masala chai", 2, 30), ("samosa", 3, 15), ("cold coffee", 1, 90)]
+ben = [("masala chai", 1, 30), ("vada pav", 2, 20)]
+chen = [("samosa", 2, 15), ("vada pav", 1, 20)]
+
+# ---- functions  (Functions)
+def subtotal(lines):
+    total = 0
+    for item, qty, price in lines:                  # repetition  (Decisions &amp; Loops)
+        total += qty * price
+    return total
+
+def bill(lines):
+    sub = subtotal(lines)
+    discount = sub * 0.10 if sub &gt;= 150 else 0      # a decision  (Decisions &amp; Loops)
+    after = sub - discount
+    return round(after + after * GST)
+
+# ---- the program itself
+day_total = 0
+for name, lines in [("Asha", asha), ("Ben", ben), ("Chen", chen)]:
+    amount = bill(lines)
+    day_total += amount
+    print(f"{name:5} subtotal {subtotal(lines):3}  bill {amount}")
+print("day total:", day_total)</div>
+  <div class="fx" data-lang="text">Asha  subtotal 195  bill 184
+Ben   subtotal  70  bill 74
+Chen  subtotal  50  bill 52
+day total: 310</div>
+  <p>₹184, ₹74, ₹52, day total ₹310: the same as by hand. Each line of this program uses one of the four layers described next.</p>
+  <div class="callout def"><span class="label">Definition</span>
+    <p>A <strong>program</strong> is a list of instructions that Python runs top to bottom, one statement at a time, unless a decision, loop or function call changes the order. A <strong>running example</strong> is one small problem that every note in a group solves, so that each new concept can be seen adding something to the same result.</p>
+  </div>
+  <div class="callout trap"><span class="label">Trap</span><p>Do not try to learn Python by memorising syntax lists. Without a job to do, rules like "<code>//</code> rounds toward minus infinity" or "defaults are evaluated once" have nothing to stick to. Attach each rule to the bill: where would it change ₹184?</p></div>
+  <div class="bridge"><b>What this still can't tell us → next: Four Layers of a Program.</b> We have the finished program, but jumping straight to it hides why each piece is there. What does the bill look like with only values, then with names, then with decisions and loops, then with functions?</div>
+
+  <h2 id="pf-layers"><span class="num">02</span>Four Layers of a Program</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Why do we need variables if we have values, loops if we have variables, functions if we have loops? Each layer must be <em>forced</em> by something the previous layer cannot do. What exactly does each layer fail at?</p>
+  </div>
+  <div class="callout anlg"><span class="label">Analogy</span><p>Learning a stall's work: first you learn the goods and their prices (values). Then you keep a notepad of running totals (names). Then you learn the rules and the routine, "if big order, discount", "for each item on the slip, add it" (decisions and loops). Finally the routine becomes a named job you can hand to anyone: "do the billing for table 3" (functions).</p></div>
+  <h3>Layer 1: values and operators</h3>
+  <p>Python as a calculator. Values (30, 15, 90) and operators (<code>*</code>, <code>+</code>) produce a new value.</p>
+  <div class="fx" data-lang="py">print(2 * 30 + 3 * 15 + 1 * 90)</div>
+  <div class="fx" data-lang="text">195</div>
+  <p><b>Can:</b> compute Asha's subtotal. <b>Cannot:</b> remember it. The 195 is printed and gone; to discount it we must retype the whole expression.</p>
+  <h3>Layer 2: names</h3>
+  <p>Give values names, and results can be kept and reused.</p>
+  <div class="fx" data-lang="py">chai, samosa, coffee = 30, 15, 90
+subtotal_asha = 2 * chai + 3 * samosa + 1 * coffee
+after = subtotal_asha - subtotal_asha * 0.10
+print(subtotal_asha, after, round(after * 1.05))</div>
+  <div class="fx" data-lang="text">195 175.5 184</div>
+  <p><b>Can:</b> build the bill step by step: 195 → 175.5 → 184. <b>Cannot:</b> choose. The discount line always runs (wrong for Ben), and Asha's order is typed into the code, so Ben and Chen each need a copy.</p>
+  <h3>Layer 3: decisions and loops</h3>
+  <p>An <code>if</code> applies the discount only when the rule holds; a <code>for</code> loop does the same steps for every line, and an outer loop for every table.</p>
+  <div class="fx" data-lang="py">for name, lines in [("Asha", asha), ("Ben", ben), ("Chen", chen)]:
+    sub = 0
+    for item, qty, price in lines:
+        sub += qty * price
+    if sub &gt;= 150:
+        sub = sub - sub * 0.10
+    print(name, round(sub * 1.05))</div>
+  <div class="fx" data-lang="text">Asha 184
+Ben 74
+Chen 52</div>
+  <p><b>Can:</b> bill every table correctly with one block. <b>Cannot:</b> be used from anywhere else. A refund screen or a daily report that needs "the bill for this order" must copy the block, and every copy must be kept in step with every rule change.</p>
+  <h3>Layer 4: functions</h3>
+  <p>Give the block a name and an input. Now "bill an order" is one call, usable anywhere, and each rule lives in exactly one place. (<code>bill</code> here is the one defined in the finished program above.)</p>
+  <div class="fx" data-lang="py">print(bill(asha), bill(ben), bill(chen))
+print(bill([("cold coffee", 4, 90)]))       # any new order, one call</div>
+  <div class="fx" data-lang="text">184 74 52
+340</div>
+  <p>A brand-new order (4 cold coffees: 360 → 324 → 340.2 → ₹340) needs no new code at all.</p>
+  <table class="tbl"><caption>What each layer adds, and the weakness that forces the next</caption>
+    <tr><th>Layer</th><th>New idea</th><th>On the bill</th><th>Still can't…</th><th>Taught in</th></tr>
+    <tr><td>1. Values</td><td>objects, types, operators</td><td>195 printed</td><td>remember a result</td><td><a class="xref" data-note="py_values">Values, Types &amp; Variables</a></td></tr>
+    <tr><td>2. Names</td><td>variables (labels), mutability, conversion</td><td>195 → 175.5 → 184</td><td>choose; handle other orders</td><td><a class="xref" data-note="py_values">Values, Types &amp; Variables</a></td></tr>
+    <tr><td>3. Control flow</td><td>if/elif/else, while, for</td><td>184, 74, 52 in one block</td><td>be reused elsewhere</td><td><a class="xref" data-note="py_control">Decisions &amp; Loops</a></td></tr>
+    <tr><td>4. Functions</td><td>def, return, parameters, scope</td><td><code>bill(any_order)</code></td><td>(organise data and errors: next notes)</td><td><a class="xref" data-note="py_functions">Functions</a></td></tr>
+  </table>
+  <div class="callout def"><span class="label">Definition</span>
+    <p>The four layers: <strong>expressions</strong> (values combined by operators into new values); <strong>assignment</strong> (binding names to values); <strong>control flow</strong> (statements that choose or repeat which statements run); <strong>abstraction</strong> (functions that name a block of statements and parameterise its inputs). Each layer is built only from the layers below it.</p>
+  </div>
+  <div class="callout trap"><span class="label">Trap</span><p>Skipping a layer makes the next one confusing. Most "functions are hard" problems are really layer-2 problems: not knowing that a name is a label (so a function's list parameter is the caller's list), or that <code>print</code> is not <code>return</code>.</p></div>
+  <div class="bridge"><b>What this still can't tell us → next: The Family Tree.</b> We know the four layers and the three notes that teach them. Where do the other Python notes (data structures, files, OOP, generators, decorators) attach, and which of the basics does each one need?</div>
+
+  <h2 id="pf-family"><span class="num">03</span>The Family Tree</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>The Python track has many notes. If you open OOP or Decorators too early, they will feel like magic. Which notes depend on which, so that you always read a note only after the ideas it stands on?</p>
+  </div>
+  <figure class="viz"><svg viewBox="0 0 680 300" width="680">
+<defs><marker id="pf-a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+<rect x="20" y="10" width="190" height="44" rx="7" class="fb sb"/><text x="115" y="29" text-anchor="middle" font-size="12" font-weight="700">Values, Types &amp; Variables</text><text x="115" y="45" text-anchor="middle" class="tm" font-size="10">objects, names, operators</text>
+<line x1="210" y1="32" x2="243" y2="32" stroke="currentColor" marker-end="url(#pf-a3)"/>
+<rect x="245" y="10" width="190" height="44" rx="7" class="fb sb"/><text x="340" y="29" text-anchor="middle" font-size="12" font-weight="700">Decisions &amp; Loops</text><text x="340" y="45" text-anchor="middle" class="tm" font-size="10">if, while, for</text>
+<line x1="435" y1="32" x2="468" y2="32" stroke="currentColor" marker-end="url(#pf-a3)"/>
+<rect x="470" y="10" width="190" height="44" rx="7" class="fb sb"/><text x="565" y="29" text-anchor="middle" font-size="12" font-weight="700">Functions</text><text x="565" y="45" text-anchor="middle" class="tm" font-size="10">def, scope, first-class</text>
+<line x1="115" y1="54" x2="115" y2="96" stroke="currentColor" marker-end="url(#pf-a3)"/><line x1="340" y1="54" x2="140" y2="96" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#pf-a3)"/>
+<line x1="565" y1="54" x2="340" y2="96" stroke="currentColor" marker-end="url(#pf-a3)"/><line x1="565" y1="54" x2="565" y2="96" stroke="currentColor" marker-end="url(#pf-a3)"/>
+<rect x="20" y="98" width="190" height="44" rx="7" class="ft st"/><text x="115" y="117" text-anchor="middle" font-size="12" font-weight="700">Data Structures</text><text x="115" y="133" text-anchor="middle" class="tm" font-size="10">list, tuple, set, dict, str</text>
+<rect x="245" y="98" width="190" height="44" rx="7" class="ft st"/><text x="340" y="117" text-anchor="middle" font-size="12" font-weight="700">Exceptions, Files &amp; Packages</text><text x="340" y="133" text-anchor="middle" class="tm" font-size="10">try/except, I/O, modules</text>
+<rect x="470" y="98" width="190" height="44" rx="7" class="ft st"/><text x="565" y="117" text-anchor="middle" font-size="12" font-weight="700">OOP</text><text x="565" y="133" text-anchor="middle" class="tm" font-size="10">classes = data + functions</text>
+<line x1="115" y1="142" x2="115" y2="184" stroke="currentColor" marker-end="url(#pf-a3)"/><line x1="565" y1="142" x2="360" y2="184" stroke="currentColor" marker-end="url(#pf-a3)"/><line x1="340" y1="142" x2="565" y2="184" stroke="currentColor" marker-end="url(#pf-a3)"/><line x1="565" y1="142" x2="565" y2="184" stroke="currentColor" marker-end="url(#pf-a3)"/>
+<rect x="20" y="186" width="190" height="44" rx="7" class="fg sg"/><text x="115" y="205" text-anchor="middle" font-size="12" font-weight="700">Iterators &amp; Generators</text><text x="115" y="221" text-anchor="middle" class="tm" font-size="10">what for really does</text>
+<rect x="245" y="186" width="190" height="44" rx="7" class="fg sg"/><text x="340" y="205" text-anchor="middle" font-size="12" font-weight="700">Decorators</text><text x="340" y="221" text-anchor="middle" class="tm" font-size="10">functions wrapping functions</text>
+<rect x="470" y="186" width="190" height="44" rx="7" class="fg sg"/><text x="565" y="205" text-anchor="middle" font-size="12" font-weight="700">Context Managers</text><text x="565" y="221" text-anchor="middle" class="tm" font-size="10">with: setup + guaranteed cleanup</text>
+<line x1="340" y1="230" x2="340" y2="254" stroke="currentColor" marker-end="url(#pf-a3)"/>
+<rect x="160" y="256" width="360" height="36" rx="7" class="fv" stroke="currentColor" stroke-opacity="0.3"/><text x="340" y="279" text-anchor="middle" font-size="11.5">then: Concurrency &amp; Async · Testing &amp; Debugging</text>
+</svg><figcaption>Top row: Python Basics, read left to right. Middle row: the core library of the language. Bottom row: the advanced mechanisms, each grown from one basic idea (for loops → iterators; functions as values → decorators; try/finally + classes → context managers).</figcaption></figure>
+  <table class="tbl"><caption>Every Python note, what it answers, and which basics it stands on</caption>
+    <tr><th>Note</th><th>The question it answers</th><th>Needs from the basics</th><th>On Chai Corner</th></tr>
+    <tr><td><a class="xref" data-note="py_values">Values, Types &amp; Variables</a></td><td>What is data, and how do names hold it?</td><td>—</td><td>prices, 195 as one expression, ₹184</td></tr>
+    <tr><td><a class="xref" data-note="py_control">Decisions &amp; Loops</a></td><td>How does a program choose and repeat?</td><td>values, bools, truthiness</td><td>discount rule; every line, every table</td></tr>
+    <tr><td><a class="xref" data-note="py_functions">Functions</a></td><td>How do we name and reuse steps?</td><td>names, mutability, control flow</td><td>subtotal, discount, with_tax, bill</td></tr>
+    <tr><td><a class="xref" data-note="py_ds">Data Structures</a></td><td>How do we organise many values?</td><td>mutability, hashing, loops</td><td>the menu as a dict, orders as lists</td></tr>
+    <tr><td><a class="xref" data-note="py_io">Exceptions, Files &amp; Packages</a></td><td>What if input is bad; how do we read files and split code into modules?</td><td>functions, types</td><td>quantity "3" from a form; the till log file</td></tr>
+    <tr><td><a class="xref" data-note="py_oop">OOP</a></td><td>How do we bundle data with the functions that use it?</td><td>functions, scope, names</td><td>an <code>Order</code> class with <code>.bill()</code></td></tr>
+    <tr><td><a class="xref" data-note="py_iterators">Iterators &amp; Generators</a></td><td>What does <code>for</code> really do; how do we stream data lazily?</td><td>for loops, functions</td><td>reading a long till log line by line</td></tr>
+    <tr><td><a class="xref" data-note="py_decorators">Decorators</a></td><td>How do we add behaviour to many functions at once?</td><td>functions as values, closures, *args/**kwargs</td><td>logging every bill call</td></tr>
+    <tr><td><a class="xref" data-note="py_context">Context Managers</a></td><td>How do we guarantee cleanup (close the file, release the lock)?</td><td>functions, exceptions, classes</td><td><code>with open("till.log")</code></td></tr>
+  </table>
+  <div class="callout def"><span class="label">Definition</span>
+    <p>A note <strong>depends on</strong> another when its explanations use that note's ideas without re-teaching them. Python Basics (values → control flow → functions) is the root every other note depends on.</p>
+  </div>
+  <div class="callout trap"><span class="label">Trap</span><p>The older combined note <a class="xref" data-note="py_advanced">Iterators, Generators, Decorators</a> covers advanced topics in one place; read it only after Functions, or it will look like magic syntax.</p></div>
+  <div class="bridge"><b>What this still can't tell us → next: Reading Guide.</b> The tree shows dependencies. What should you look for in each basics note, and how should you study so the ideas stick?</div>
+
+  <h2 id="pf-guide"><span class="num">04</span>Reading Guide</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Knowing the order is not enough; three long notes can still blur together. What is the one thing to take from each, and what is a study routine that works for first-time learners?</p>
+  </div>
+  <h3>1. Values, Types &amp; Variables</h3>
+  <p>Read it for one picture: <strong>a name is a label stuck on an object</strong>. Every "my list changed by itself" bug, every <code>is</code> vs <code>==</code> question, and later the mutable-default trap in Functions come from this picture. Then learn the five types, conversion traps (floats, rounding, truthiness) and operators. You are done when you can compute Asha's ₹184 as one expression and explain why <code>round(52.5)</code> gives 52. <a class="xref" data-note="py_values">Open the note</a>.</p>
+  <h3>2. Decisions &amp; Loops</h3>
+  <p>Read it for one idea: <strong>a condition, checked once (if) or again and again (while, for)</strong>. Trace every loop table by hand before running the code. You are done when one block of code bills all three tables (₹184, ₹74, ₹52) and you can explain why removing items from a list while looping over it skips one. <a class="xref" data-note="py_control">Open the note</a>.</p>
+  <h3>3. Functions</h3>
+  <p>Read it for one idea: <strong>a function is an object holding a block of code with its own private names</strong>. Parameters, return, scope, recursion, lambda and decorators all follow. You are done when <code>bill(lines, discount_rule)</code> works with any rule and you can trace the call stack of a recursive total. <a class="xref" data-note="py_functions">Open the note</a>.</p>
+  <h3>How to study each note</h3>
+  <div class="flow"><span>read the question opener</span><span>predict the output</span><span>trace the table by hand</span><span>run the code</span><span>change one number</span><span>revision sheet</span></div>
   <ul>
-    <li><code>-7 // 2</code> is -4, not -3. "Round down" means toward minus infinity, and -4 is below -3.5.</li>
-    <li><code>[] and 1/0</code> never divides. <code>[]</code> is falsy, so <code>and</code> stops there and returns it. <code>"a" in dict</code> checks keys only.</li>
-    <li><code>5 &amp; 3</code>: 5 is <code>101</code> in binary, 3 is <code>011</code>. Keep only positions where both are 1 → <code>001</code> = 1.</li>
-    <li><code>:=</code> is the <strong>walrus operator</strong>. It saves a value into a name and uses it in the same line. Here <code>n</code> gets the length and is compared with 3.</li>
+    <li><b>Predict before you read the output.</b> Being wrong and then seeing why is how the rule sticks.</li>
+    <li><b>Run everything yourself.</b> Type it (not copy-paste) into a file or the REPL (section 05). Typing makes you notice colons, indentation and brackets.</li>
+    <li><b>Change one thing.</b> Make Ben's order cross ₹150, or set GST to 12%, and predict the new bill first.</li>
+    <li><b>Revise with the Revision Sheet</b> at the end of each note, a day later and a week later.</li>
   </ul>
-  <p>In data work you filter arrays: "ages above 18 and below 65". A numpy array holds many values, so each comparison gives many True/False values, one per element. <code>and</code> wants a single True/False, so it fails. Use <code>&amp;</code>, which works element by element.</p>
-  <div class="fx" data-lang="py">import numpy as np
-age = np.array([15, 25, 40, 70])
-print((age &gt; 18) &amp; (age &lt; 65))
-age &gt; 18 and age &lt; 65</div>
-  <div class="fx" data-lang="text">[False  True  True False]
-Traceback (most recent call last): ...
-ValueError: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()</div>
-  <div class="callout trap"><span class="label">Trap</span><p><code>and</code> needs one True/False, but an array has many. In numpy and pandas use <code>&amp;</code> <code>|</code> <code>~</code> for element-wise logic. Put brackets around each condition, because <code>&amp;</code> runs before <code>&gt;</code>.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Reading code is not the same as being able to write it. After each note, close it and write the bill program for that layer from memory.</p></div>
+  <div class="bridge"><b>What this still can't tell us → next: Running Code and Reading Errors.</b> All of this assumes you can run Python and understand what it says when something goes wrong. How?</div>
 
-  <h2 id="pf-flow"><span class="num">05</span>Control Flow</h2>
-  <p>A program normally runs top to bottom, line by line. <strong>Control flow</strong> is how you change that: skip lines (<code>if</code>), repeat lines (<code>for</code>, <code>while</code>), or stop early (<code>break</code>). Python uses indentation (the spaces at the start of a line) to show which lines belong inside an <code>if</code> or a loop.</p>
-  <div class="flow"><span>if / elif / else</span><span>for x in iterable</span><span>while cond</span><span>break / continue</span><span>loop-else</span><span>match / case</span></div>
-  <p>The basics in one example. <code>if/elif/else</code> picks the first true branch. <code>for</code> walks over items. <code>enumerate</code> also gives the position. <code>zip</code> walks two lists side by side. <code>while</code> repeats as long as a condition is true. An <strong>iterable</strong> is anything you can loop over: a list, a string, a dict, a file.</p>
-  <div class="fx" data-lang="py">marks = 72
-if marks &gt;= 90:
-    grade = "A"
-elif marks &gt;= 60:
-    grade = "B"
-else:
-    grade = "C"
-print(grade)
-
-names = ["Asha", "Ben"]
-scores = [88, 75]
-for i, n in enumerate(names):
-    print(i, n)
-for n, s in zip(names, scores):
-    print(n, s)
-
-balance = 100
-while balance &gt;= 30:
-    balance -= 30        # buy a 30-rupee samosa plate
-print("left:", balance)</div>
-  <div class="fx" data-lang="text">B
-0 Asha
-1 Ben
-Asha 88
-Ben 75
-left: 10</div>
-  <p><code>break</code> leaves the loop at once. <code>continue</code> skips to the next round. Python has one rare extra: a loop can have an <code>else</code>.</p>
-  <p><strong>loop-else</strong> runs only when the loop finishes without <code>break</code>. It removes the need for a <code>found = False</code> flag in search code.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>You search your school bag for a pen. Found it → stop (break). Checked every pocket and nothing → "else: borrow one".</p></div>
-  <figure class="viz"><svg viewBox="0 0 520 150" width="520">
-    <defs><marker id="pf-ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
-    <rect x="10" y="55" width="124" height="36" rx="6" class="fb sb"/><text x="20" y="77">for x in items</text>
-    <rect x="190" y="10" width="130" height="36" rx="6" class="fr sr"/><text x="204" y="32">hit break</text>
-    <rect x="190" y="100" width="130" height="36" rx="6" class="fg sg"/><text x="200" y="122">ran to the end</text>
-    <rect x="390" y="10" width="120" height="36" rx="6" class="fs" stroke="currentColor"/><text x="402" y="32">skip else</text>
-    <rect x="390" y="100" width="120" height="36" rx="6" class="fg sg"/><text x="402" y="122">run else:</text>
-    <line x1="134" y1="68" x2="188" y2="32" stroke="currentColor" marker-end="url(#pf-ah3)"/>
-    <line x1="134" y1="80" x2="188" y2="116" stroke="currentColor" marker-end="url(#pf-ah3)"/>
-    <line x1="320" y1="28" x2="388" y2="28" stroke="currentColor" marker-end="url(#pf-ah3)"/>
-    <line x1="320" y1="118" x2="388" y2="118" stroke="currentColor" marker-end="url(#pf-ah3)"/>
-  </svg><figcaption>The loop's else means "no break happened". Read it as "nobreak".</figcaption></figure>
-  <div class="fx" data-lang="py">def find(items, target):
-    for i, x in enumerate(items):
-        if x == target:
-            print("found at", i)
-            break
-    else:                      # runs only if no break
-        print("not found")
-find([4, 7, 9], 7)
-find([4, 7, 9], 5)</div>
-  <div class="fx" data-lang="text">found at 1
-not found</div>
-  <p><strong>match/case</strong> (Python 3.10+) is a smarter <code>if/elif</code>. It checks the <em>shape</em> of data, not only its value: "is this a dict with an <code>action</code> key?", "is this a list of two items?". It also pulls pieces out into names in the same step. Each <code>case</code> is a <strong>pattern</strong> — a template the data must fit. The first pattern that fits wins. <code>_</code> fits anything, so it is the default.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A post office sorting counter: "is it a parcel with a PIN code? a letter? anything else?" Each packet goes to the first slot it fits, and the clerk reads the PIN off it.</p></div>
-  <div class="fx" data-lang="py">def handle(cmd):
-    match cmd:
-        case "quit" | "exit":                          # OR of literals
-            return "bye"
-        case {"action": "train", "epochs": int(n)} if n &gt; 0:   # dict shape + type + guard
-            return f"train {n} epochs"
-        case [x, y]:                                   # any 2-item sequence
-            return f"point {x},{y}"
-        case [first, *rest]:
-            return f"first={first} rest={rest}"
-        case _:                                        # default
-            return "unknown"
-for c in ["exit", {"action": "train", "epochs": 5}, (3, 4), [1, 2, 3], 42]:
-    print(handle(c))</div>
-  <div class="fx" data-lang="text">bye
-train 5 epochs
-point 3,4
-first=1 rest=[2, 3]
-unknown</div>
-  <p>Reading the patterns: <code>|</code> means "or". <code>int(n)</code> means "must be an int; call it n". <code>if n &gt; 0</code> after a pattern is a <strong>guard</strong> — an extra condition. <code>*rest</code> collects all remaining items into a list.</p>
-  <div class="callout trap"><span class="label">Trap</span><p><code>case LIMIT:</code> with a bare name does not compare with <code>LIMIT</code>. It catches the value into a new variable and always matches. Compare constants with dotted names (<code>case Color.RED:</code>) or a guard. Dict patterns match if the listed keys exist (extra keys are fine). Strings never match list patterns.</p></div>
-
-  <h2 id="pf-func"><span class="num">06</span>Function Parameters</h2>
-  <p>A <strong>function</strong> is a named, reusable block of code. You write it once with <code>def</code> and call it many times. The names in brackets in the <code>def</code> line are <strong>parameters</strong> — the inputs it expects. The actual values you pass in a call are <strong>arguments</strong>. A parameter can have a <strong>default</strong> — a value used when the caller gives nothing.</p>
-  <p>You can pass an argument in two ways. <strong>By position</strong>: first value to first parameter. <strong>By keyword</strong>: write the name, so order does not matter.</p>
-  <div class="fx" data-lang="py">def greet(name, greeting="Namaste"):
-    return f"{greeting}, {name}!"
-print(greet("Asha"))                       # by position, default used
-print(greet("Ben", "Hello"))               # by position
-print(greet(greeting="Vanakkam", name="Chen"))  # by name, any order</div>
-  <div class="fx" data-lang="text">Namaste, Asha!
-Hello, Ben!
-Vanakkam, Chen!</div>
-  <p>Python also lets you control <em>how</em> callers may pass each value. Good choices make calls hard to get wrong. The picture shows all five kinds of parameters, in the only order Python allows.</p>
-  <figure class="viz"><svg viewBox="0 0 600 110" width="600">
-    <text x="10" y="20">def f(a, /, b, *args, key, **kwargs)</text>
-    <rect x="10" y="38" width="90" height="34" rx="5" class="fv"/><text x="20" y="60">a</text>
-    <rect x="105" y="38" width="110" height="34" rx="5" class="fb sb"/><text x="115" y="60">b</text>
-    <rect x="220" y="38" width="110" height="34" rx="5" class="ft st"/><text x="230" y="60">*args</text>
-    <rect x="335" y="38" width="120" height="34" rx="5" class="fg sg"/><text x="345" y="60">key</text>
-    <rect x="460" y="38" width="130" height="34" rx="5" class="fs" stroke="currentColor"/><text x="470" y="60">**kwargs</text>
-    <text x="10" y="92" class="tm">positional</text><text x="10" y="105" class="tm">only</text>
-    <text x="105" y="92" class="tm">positional</text><text x="105" y="105" class="tm">or keyword</text>
-    <text x="220" y="92" class="tm">extra args</text><text x="220" y="105" class="tm">→ tuple</text>
-    <text x="335" y="92" class="tm">keyword-only</text><text x="335" y="105" class="tm">(after *)</text>
-    <text x="460" y="92" class="tm">extra kwargs</text><text x="460" y="105" class="tm">→ dict</text>
-  </svg><figcaption>Parameters always come in this left-to-right order. / and * are markers, not parameters.</figcaption></figure>
+  <h2 id="pf-run"><span class="num">05</span>Running Code and Reading Errors</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Where do you actually type Python, and what do you do when it answers with a wall of red text? A beginner who cannot read an error message is stuck at the first typo.</p>
+  </div>
+  <h3>Two ways to run Python</h3>
   <ul>
-    <li><strong>Positional-only</strong> (before <code>/</code>) — must be passed by position.</li>
-    <li><strong>Normal</strong> — position or keyword, caller's choice.</li>
-    <li><strong>*args</strong> — collects any extra positional values into a tuple.</li>
-    <li><strong>Keyword-only</strong> (after <code>*</code> or <code>*args</code>) — must be passed by name.</li>
-    <li><strong>**kwargs</strong> — collects any extra <code>name=value</code> pairs into a dict.</li>
+    <li><b>A script</b>: save code in a file such as <code>till.py</code> and run <code>python3 till.py</code> in a terminal. Python runs the file top to bottom, once. Use this for anything longer than a few lines.</li>
+    <li><b>The REPL</b> (Read-Eval-Print Loop): type <code>python3</code> alone. You get a <code>&gt;&gt;&gt;</code> prompt; each line you type runs immediately, and the value of an expression is shown automatically (<code>&gt;&gt;&gt; 2 * 30</code> shows <code>60</code>). Perfect for trying one idea. In a script, you need <code>print()</code> to see anything.</li>
   </ul>
-  <div class="callout anlg"><span class="label">Analogy</span><p>An exam form: some boxes are filled in fixed order (roll number, name), some must be labelled ("Category: ___"), and a "remarks" box takes anything extra. <code>*args</code> and <code>**kwargs</code> are the remarks box.</p></div>
-  <div class="fx" data-lang="py">def f(a, b=2, *args, scale=1.0, **kwargs):
-    print(a, b, args, scale, kwargs)
-f(1)
-f(1, 3, 4, 5, scale=0.5, lr=0.01)
+  <p>Jupyter notebooks (common in data science) are a REPL in a browser, split into cells. The code in these notes runs the same in all three.</p>
+  <h3>Three rules of Python's shape</h3>
+  <ul>
+    <li><b>Statements run top to bottom</b>, one after another, unless control flow changes the order.</li>
+    <li><b>Indentation is syntax.</b> The lines indented under an <code>if</code>, <code>for</code> or <code>def</code> (4 spaces) form its block. Wrong indentation is an error, or worse, a silently different program.</li>
+    <li><b>Comments</b> start with <code>#</code> and are ignored by Python. Write them for the reader: why, not what.</li>
+  </ul>
+  <h3>Reading a traceback</h3>
+  <p>When something goes wrong at run time, Python stops and prints a <strong>traceback</strong>: the chain of calls that led to the error. Here a form sent Asha's samosa quantity as the text "3" instead of the number 3. The script <code>till.py</code>:</p>
+  <div class="fx" data-lang="py">def subtotal(lines):
+    total = 0
+    for item, qty, price in lines:
+        total += qty * price
+    return total
 
-def fit(X, /, *, epochs=10):       # X positional-only, epochs keyword-only
-    return f"{len(X)} rows, {epochs} epochs"
-print(fit([1, 2, 3], epochs=5))
-try:
-    fit([1, 2, 3], 5)              # positional epochs not allowed
-except TypeError as e:
-    print("TypeError:", e)
+order = [("samosa", "3", 15)]     # qty arrived as TEXT from a form
+print(subtotal(order))</div>
+  <p>Running <code>python3 till.py</code> prints (folder path shortened to the file name):</p>
+  <div class="fx" data-lang="text">Traceback (most recent call last):
+  File "till.py", line 8, in &lt;module&gt;
+    print(subtotal(order))
+          ~~~~~~~~^^^^^^^
+  File "till.py", line 4, in subtotal
+    total += qty * price
+TypeError: unsupported operand type(s) for +=: 'int' and 'str'</div>
+  <table class="tbl"><caption>How to read it: bottom line first</caption>
+    <tr><th>Read</th><th>Line</th><th>Tells you</th></tr>
+    <tr><td>1st</td><td><code>TypeError: unsupported operand type(s) for +=: 'int' and 'str'</code></td><td><b>What</b> went wrong: adding a str to an int. <code>"3" * 15</code> was text repeated ("333…"), then <code>0 += "333…"</code> failed</td></tr>
+    <tr><td>2nd</td><td><code>File "till.py", line 4, in subtotal</code> / <code>total += qty * price</code></td><td><b>Where</b> it happened: the innermost call, the exact line</td></tr>
+    <tr><td>3rd</td><td><code>File "till.py", line 8, in &lt;module&gt;</code> / <code>print(subtotal(order))</code></td><td><b>How we got there</b>: the top level of the file called subtotal</td></tr>
+  </table>
+  <p>The fix belongs where the bad value entered (convert the form's text with <code>int()</code>), not where it exploded. Type errors like this are explained in <a class="xref" data-note="py_values">Values, Types &amp; Variables</a>; catching errors with <code>try/except</code> is in <a class="xref" data-note="py_io">Exceptions, Files &amp; Packages</a>.</p>
+  <div class="callout def"><span class="label">Definition</span>
+    <p>A <strong>script</strong> is a .py file run with <code>python3 file.py</code>; the <strong>REPL</strong> runs one statement at a time and echoes expression values. A <strong>traceback</strong> lists the active calls at the moment of an uncaught exception, outermost first, ending with the exception type and message.</p>
+  </div>
+  <div class="callout trap"><span class="label">Trap</span><p>Beginners read tracebacks top-down and give up. Read the last line first (what), then the frame just above it (where), then go up only if you need to know how you got there. And a <code>SyntaxError</code> or <code>IndentationError</code> appears before anything runs: the line it names, or the line just before it, has a typo.</p></div>
+  <div class="bridge"><b>What this still can't tell us → next: How It All Connects.</b> One picture and one table to hold the whole of Python Basics together.</div>
 
-nums = [1, 2, 3]
-cfg = {"scale": 2.0, "lr": 0.1}
-f(*nums, **cfg)                    # unpack at the call site</div>
-  <div class="fx" data-lang="text">1 2 () 1.0 {}
-1 3 (4, 5) 0.5 {'lr': 0.01}
-3 rows, 5 epochs
-TypeError: fit() takes 1 positional argument but 2 were given
-1 2 (3,) 2.0 {'lr': 0.1}</div>
-  <p>In the second call, 1 and 3 fill <code>a</code> and <code>b</code>. The extra 4 and 5 go into <code>args</code>. <code>lr=0.01</code> has no matching parameter, so it goes into <code>kwargs</code>. In the last call, <code>*nums</code> spreads the list out as separate values, and <code>**cfg</code> spreads the dict out as <code>name=value</code> pairs. This is called <strong>unpacking</strong>.</p>
-  <p>Keyword-only params make calls easy to read: <code>train(model, epochs=5)</code> instead of a mystery <code>5</code>. That is why sklearn uses them.</p>
-  <div class="callout pred"><span class="label">Predict the output</span><p>What do the two calls print?</p></div>
-  <div class="fx" data-lang="py">def add_item(item, lst=[]):        # default built ONCE, at def time
-    lst.append(item)
-    return lst
-print(add_item(1), add_item(2))
-print(add_item.__defaults__)
+  <h2 id="pf-connect"><span class="num">06</span>How It All Connects</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Across three notes there are dozens of concepts. How is each one built from the ones before, which question does each answer, and what does each contribute to ₹184?</p>
+  </div>
+  <figure class="viz"><svg viewBox="0 0 680 290" width="680">
+<defs><marker id="pf-a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+<rect x="10" y="10" width="150" height="50" rx="7" class="fb sb"/><text x="85" y="30" text-anchor="middle" font-size="12" font-weight="700">values · types</text><text x="85" y="47" text-anchor="middle" class="tm" font-size="10">30, "samosa", True</text>
+<line x1="160" y1="35" x2="183" y2="35" stroke="currentColor" marker-end="url(#pf-a9)"/>
+<rect x="185" y="10" width="150" height="50" rx="7" class="fb sb"/><text x="260" y="30" text-anchor="middle" font-size="12" font-weight="700">operators</text><text x="260" y="47" text-anchor="middle" class="tm" font-size="10">2*30 + 3*15 + 90 = 195</text>
+<line x1="335" y1="35" x2="358" y2="35" stroke="currentColor" marker-end="url(#pf-a9)"/>
+<rect x="360" y="10" width="150" height="50" rx="7" class="fb sb"/><text x="435" y="30" text-anchor="middle" font-size="12" font-weight="700">names</text><text x="435" y="47" text-anchor="middle" class="tm" font-size="10">subtotal → 195</text>
+<line x1="510" y1="35" x2="533" y2="35" stroke="currentColor" marker-end="url(#pf-a9)"/>
+<rect x="535" y="10" width="135" height="50" rx="7" class="fr sr"/><text x="602" y="30" text-anchor="middle" font-size="11.5" font-weight="700">mutability</text><text x="602" y="47" text-anchor="middle" class="tm" font-size="10">shared lists</text>
+<line x1="260" y1="60" x2="200" y2="100" stroke="currentColor" marker-end="url(#pf-a9)"/><line x1="435" y1="60" x2="470" y2="100" stroke="currentColor" marker-end="url(#pf-a9)"/>
+<rect x="80" y="102" width="230" height="50" rx="7" class="ft st"/><text x="195" y="122" text-anchor="middle" font-size="12" font-weight="700">decisions: if / elif / else</text><text x="195" y="139" text-anchor="middle" class="tm" font-size="10">195 ≥ 150 → 10% off</text>
+<rect x="360" y="102" width="230" height="50" rx="7" class="ft st"/><text x="475" y="122" text-anchor="middle" font-size="12" font-weight="700">loops: while · for</text><text x="475" y="139" text-anchor="middle" class="tm" font-size="10">60 → 105 → 195; every table</text>
+<line x1="195" y1="152" x2="300" y2="190" stroke="currentColor" marker-end="url(#pf-a9)"/><line x1="475" y1="152" x2="380" y2="190" stroke="currentColor" marker-end="url(#pf-a9)"/><line x1="602" y1="60" x2="602" y2="190" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#pf-a9)"/>
+<rect x="200" y="192" width="280" height="50" rx="7" class="fg sg"/><text x="340" y="212" text-anchor="middle" font-size="12" font-weight="700">functions: def · return · scope</text><text x="340" y="229" text-anchor="middle" class="tm" font-size="10">bill(asha) = 184 · bill(ben) = 74 · bill(chen) = 52</text>
+<rect x="500" y="192" width="170" height="50" rx="7" class="fr sr"/><text x="585" y="212" text-anchor="middle" font-size="11.5" font-weight="700">mutable default trap</text><text x="585" y="229" text-anchor="middle" class="tm" font-size="10">labels + defaults</text>
+<line x1="340" y1="242" x2="340" y2="258" stroke="currentColor" marker-end="url(#pf-a9)"/>
+<rect x="150" y="260" width="380" height="28" rx="7" class="fv" stroke="currentColor" stroke-opacity="0.3"/><text x="340" y="279" text-anchor="middle" font-size="11">functions as values → decorators · OOP · iterators</text>
+</svg><figcaption>Values are combined by operators and kept by names; conditions on them drive decisions and loops; functions wrap all of that into named, reusable steps. Mutability (dashed) is the thread that causes the classic bugs at every layer.</figcaption></figure>
+  <table class="tbl"><caption>The basics on Chai Corner</caption>
+    <tr><th>Concept</th><th>Built from</th><th>Answers</th><th>On the running example</th><th>Note</th></tr>
+    <tr><td>Value / type</td><td>—</td><td>what is data?</td><td>30 (int), "samosa" (str)</td><td><a class="xref" data-note="py_values">Values</a></td></tr>
+    <tr><td>Operator</td><td>values, types</td><td>how to compute?</td><td>2×30 + 3×15 + 90 = 195</td><td><a class="xref" data-note="py_values">Values</a></td></tr>
+    <tr><td>Name</td><td>objects</td><td>how to keep a value?</td><td>subtotal → 195; after → 175.5</td><td><a class="xref" data-note="py_values">Values</a></td></tr>
+    <tr><td>Conversion</td><td>types</td><td>how to get the right type?</td><td>round(184.275) = 184; round(52.5) = 52</td><td><a class="xref" data-note="py_values">Values</a></td></tr>
+    <tr><td>Decision</td><td>bool conditions</td><td>run only when…?</td><td>195 ≥ 150 → 19.5 off</td><td><a class="xref" data-note="py_control">Decisions &amp; Loops</a></td></tr>
+    <tr><td>Loop</td><td>conditions, iterables</td><td>repeat for each…?</td><td>60 → 105 → 195; 184, 74, 52</td><td><a class="xref" data-note="py_control">Decisions &amp; Loops</a></td></tr>
+    <tr><td>Function</td><td>all of the above</td><td>name and reuse a step?</td><td>bill(asha) = 184</td><td><a class="xref" data-note="py_functions">Functions</a></td></tr>
+    <tr><td>Scope</td><td>names + functions</td><td>whose name is this?</td><td>GST global, total local</td><td><a class="xref" data-note="py_functions">Functions</a></td></tr>
+    <tr><td>Function as value</td><td>functions are objects</td><td>one bill, many rules?</td><td>festival 20% → ₹164</td><td><a class="xref" data-note="py_functions">Functions</a></td></tr>
+  </table>
+  <div class="callout intu"><span class="label">Key insight</span>
+    <p>One sentence holds Python Basics: <strong>programs are values held by names, transformed by operators, steered by conditions, and packaged into functions.</strong> Each layer is useless without the one below and limited without the one above.</p>
+  </div>
+  <div class="bridge"><b>What this still can't tell us → next: Common Mistakes.</b> The map is complete. Before starting, it helps to know the handful of bugs that trip up almost every beginner.</div>
 
-def add_item_ok(item, lst=None):   # None sentinel
-    if lst is None:
-        lst = []                   # fresh list per call
-    lst.append(item)
-    return lst
-print(add_item_ok(1), add_item_ok(2))</div>
-  <div class="fx" data-lang="text">[1, 2] [1, 2]
-([1, 2],)
-[1] [2]</div>
-  <div class="callout trap"><span class="label">Trap</span><p>Default values are built once, when <code>def</code> runs, and stored on the function. So a list default is one shared list for every call. Both prints show <code>[1, 2]</code> because both calls return that same list. Use <code>None</code> and create the list inside. A value like <code>None</code> used to mean "nothing was passed" is called a <strong>sentinel</strong>.</p></div>
-  <p>One more idea: functions are <strong>first-class</strong> objects. Like a list or a number, a function can be stored in a variable, put in a dict, passed into another function, or returned. You will see this in <code>sorted(key=...)</code> below and in the hands-on router.</p>
+  <h2 id="pf-traps"><span class="num">07</span>Common Mistakes</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Which beginner bugs appear across all three basics notes, and where is each one explained?</p>
+  </div>
+  <table class="tbl">
+    <tr><th>Mistake</th><th>Symptom on Chai Corner</th><th>Fix</th><th>Explained in</th></tr>
+    <tr><td>Text from input used as a number</td><td>"2" + "3" = "23"; TypeError in subtotal</td><td><code>int(text)</code> at once</td><td><a class="xref" data-note="py_values">Values</a></td></tr>
+    <tr><td><code>b = a</code> as a "copy"</td><td>Kitchen's slip changes with the waiter's</td><td><code>a.copy()</code></td><td><a class="xref" data-note="py_values">Values</a></td></tr>
+    <tr><td>Floats for money, <code>==</code> on floats</td><td>0.1 + 0.2 ≠ 0.3; 52.5 rounds to 52</td><td>Decimal, isclose</td><td><a class="xref" data-note="py_values">Values</a></td></tr>
+    <tr><td>Loose condition first</td><td>₹320 order gets 10%, not 15%</td><td>Strictest first</td><td><a class="xref" data-note="py_control">Decisions &amp; Loops</a></td></tr>
+    <tr><td>Changing a list while looping over it</td><td>One sold-out samosa stays</td><td>Build a new list</td><td><a class="xref" data-note="py_control">Decisions &amp; Loops</a></td></tr>
+    <tr><td>Off-by-one with range</td><td>Table 10 never billed</td><td><code>range(1, 11)</code></td><td><a class="xref" data-note="py_control">Decisions &amp; Loops</a></td></tr>
+    <tr><td>print instead of return</td><td><code>bill(...)</code> gives None</td><td><code>return</code></td><td><a class="xref" data-note="py_functions">Functions</a></td></tr>
+    <tr><td>Mutable default</td><td>Ben's order holds Asha's chai</td><td><code>order=None</code></td><td><a class="xref" data-note="py_functions">Functions</a></td></tr>
+    <tr><td>Assigning a global inside a function</td><td>UnboundLocalError on a bill counter</td><td>Return values; <code>global</code></td><td><a class="xref" data-note="py_functions">Functions</a></td></tr>
+  </table>
+  <div class="bridge"><b>What this still can't tell us → next: Revision Sheet.</b> The whole of Python Basics, condensed to one page for revision.</div>
 
-  <h2 id="pf-rec"><span class="num">07</span>Recursion &amp; Lambda</h2>
-  <p>Some problems contain smaller copies of themselves. A folder contains folders. A family tree contains smaller family trees. A <strong>recursive</strong> function solves such a problem by calling itself on the smaller copy. It must stop at a <strong>base case</strong> — a case small enough to answer directly. Without a base case it would call itself forever.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>In a long queue you ask "what is my position?" to the person ahead. They ask the person ahead of them, and so on. The first person says "1" (base case). Each answer comes back +1.</p></div>
-  <p>A tiny example: a countdown. <code>countdown(3)</code> prints 3 and hands the smaller job <code>countdown(2)</code> to itself. At 0 it stops.</p>
-  <div class="fx" data-lang="py">def countdown(n):
-    if n == 0:            # base case: stop here
-        print("Go!")
-        return
-    print(n)
-    countdown(n - 1)      # smaller problem
-countdown(3)</div>
-  <div class="fx" data-lang="text">3
-2
-1
-Go!</div>
-  <p>Factorial is the classic example: 3! = 3 × 2 × 1. The picture shows how Python handles <code>fact(3)</code>. Calls go down, each one waiting for the answer from below. The base case answers 1, and the answers come back up, getting multiplied on the way.</p>
-  <figure class="viz"><svg viewBox="0 0 520 190" width="520">
-    <defs><marker id="pf-ah4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
-    <text x="10" y="16" class="tm">calls go down</text>
-    <text x="380" y="16" class="tm">answers come up</text>
-    <rect x="120" y="26" width="200" height="30" rx="6" class="fb sb"/><text x="132" y="46">fact(3) = 3 * fact(2)</text>
-    <rect x="120" y="74" width="200" height="30" rx="6" class="fb sb"/><text x="132" y="94">fact(2) = 2 * fact(1)</text>
-    <rect x="120" y="122" width="200" height="30" rx="6" class="fg sg"/><text x="132" y="142">fact(1) = 1  (base)</text>
-    <line x1="160" y1="56" x2="160" y2="72" stroke="currentColor" marker-end="url(#pf-ah4)"/>
-    <line x1="160" y1="104" x2="160" y2="120" stroke="currentColor" marker-end="url(#pf-ah4)"/>
-    <line x1="290" y1="120" x2="290" y2="106" stroke="currentColor" marker-end="url(#pf-ah4)"/>
-    <line x1="290" y1="72" x2="290" y2="58" stroke="currentColor" marker-end="url(#pf-ah4)"/>
-    <text x="340" y="142" class="tg">returns 1</text>
-    <text x="340" y="94" class="tg">returns 2*1 = 2</text>
-    <text x="340" y="46" class="tg">returns 3*2 = 6</text>
-    <text x="60" y="178" class="tm">each waiting call uses memory: too deep → RecursionError</text>
-  </svg><figcaption>Each call waits for the one below it. The base case starts the answers coming back.</figcaption></figure>
-  <div class="flow"><span>fact(3)</span><span>3 * fact(2)</span><span>2 * fact(1)</span><span>base: 1</span><span>unwind → 6</span></div>
-  <p>Every waiting call takes some memory (a "frame" on the <strong>call stack</strong> — the pile of calls not yet finished). Python stops you at about 1000 waiting calls, to protect itself.</p>
-  <div class="fx" data-lang="py">import sys
-from functools import lru_cache
-def fact(n):
-    return 1 if n &lt;= 1 else n * fact(n - 1)   # base case + smaller step
-print(fact(5))
-print(sys.getrecursionlimit())
-try:
-    fact(5000)
-except RecursionError as e:
-    print("RecursionError:", e)
+  <h2 id="pf-rev"><span class="num">R</span>Revision Sheet</h2>
+  <p>Python Basics on one sheet. Running example: Chai Corner (chai 30, samosa 15, vada pav 20, cold coffee 90; 10% off at ₹150+, then 5% GST, round to rupees). Each concept note has its own, more detailed Revision Sheet.</p>
+  <h3>The four layers</h3>
+  <table class="tbl">
+    <tr><th>Layer</th><th>Question it answers</th><th>Key ideas</th><th>On the bill</th><th>Weakness → next</th></tr>
+    <tr><td>Values</td><td>what is data?</td><td>objects (type, id, value); int, float, bool, str, None; operators</td><td>195</td><td>can't remember results</td></tr>
+    <tr><td>Names</td><td>how to keep values?</td><td>labels not boxes; mutable vs immutable; conversion; <code>is</code> vs <code>==</code></td><td>195 → 175.5 → 184</td><td>can't choose or handle other orders</td></tr>
+    <tr><td>Control flow</td><td>how to choose and repeat?</td><td>if/elif/else; while; for, range; break, continue, else; patterns</td><td>184, 74, 52</td><td>can't reuse the block</td></tr>
+    <tr><td>Functions</td><td>how to name and reuse steps?</td><td>def, return, parameters, defaults, *args/**kwargs, LEGB, recursion, lambda, first-class</td><td>bill(any order)</td><td>→ data structures, errors, OOP</td></tr>
+  </table>
+  <h3>The running example's numbers</h3>
+  <table class="tbl">
+    <tr><th>Table</th><th>Subtotal</th><th>Discount</th><th>After</th><th>With GST</th><th>Bill</th></tr>
+    <tr><td>Asha</td><td>195</td><td>19.5</td><td>175.5</td><td>184.275</td><td>184</td></tr>
+    <tr><td>Ben</td><td>70</td><td>0</td><td>70</td><td>73.5</td><td>74</td></tr>
+    <tr><td>Chen</td><td>50</td><td>0</td><td>50</td><td>52.5</td><td>52 (half to even)</td></tr>
+    <tr><td colspan="5">Day total</td><td>310</td></tr>
+  </table>
+  <h3>Reading order and one idea per note</h3>
+  <div class="cards">
+    <div><b>1. Values, Types &amp; Variables</b><p>A name is a label on an object; the type decides what operators do.</p><small><a class="xref" data-note="py_values">open</a></small></div>
+    <div><b>2. Decisions &amp; Loops</b><p>A condition checked once (if) or repeatedly (while, for).</p><small><a class="xref" data-note="py_control">open</a></small></div>
+    <div><b>3. Functions</b><p>An object holding a block of code with its own private names.</p><small><a class="xref" data-note="py_functions">open</a></small></div>
+    <div><b>Then</b><p>Data Structures, Exceptions &amp; Files, OOP, Iterators, Decorators, Context Managers.</p><small>each builds on all three</small></div>
+  </div>
+  <div class="callout trap"><span class="label">Key traps</span>
+    <p>Text is not a number; <code>b = a</code> does not copy; floats are inexact and <code>round</code> goes half-to-even; the first True branch wins; never change a list while looping over it; <code>range</code> excludes stop; print is not return; mutable defaults are shared; assigning a name in a function makes it local. Read tracebacks from the bottom.</p>
+  </div>
+  <h3>Five rapid-fire checks</h3>
+  <table class="tbl">
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>Which layer would you need to bill a 4th table without writing new code?</td><td>Functions (call <code>bill(new_order)</code>); with only loops you would add it to the list, with only names you would copy code</td></tr>
+    <tr><td>What does <code>print(2 * 30 + 3 * 15 + 1 * 90)</code> show?</td><td>195</td></tr>
+    <tr><td>Why does Chen pay ₹52 and not ₹53?</td><td><code>round(52.5)</code> rounds half to even</td></tr>
+    <tr><td>In a traceback, which line do you read first?</td><td>The last one: exception type and message</td></tr>
+    <tr><td>Which note explains why a function's default list is shared between calls?</td><td>Functions (defaults built once), using the label picture from Values</td></tr>
+  </table>
 
-@lru_cache(maxsize=None)            # memoise: each n computed once
-def fib(n):
-    return n if n &lt; 2 else fib(n - 1) + fib(n - 2)
-print(fib(80))</div>
-  <div class="fx" data-lang="text">120
-1000
-RecursionError: maximum recursion depth exceeded
-23416728348467685</div>
-  <p>The last part uses <code>@lru_cache</code>. Plain <code>fib(n)</code> asks for <code>fib(n-1)</code> and <code>fib(n-2)</code>, and those ask again, so the same small values get computed millions of times. <code>@lru_cache</code> saves each answer the first time and reuses it. Saving answers to reuse later is called <strong>memoisation</strong>. With it, <code>fib(80)</code> is instant.</p>
-  <div class="callout trap"><span class="label">Trap</span><p>Python keeps every call open in memory and has no tail-call optimisation (some languages reuse the frame for a final self-call; Python does not). For depth in the thousands, use a loop or your own stack (a list). Do not just raise the limit.</p></div>
-  <p>A <strong>lambda</strong> is a one-line function with no name. <code>lambda p: p[1]</code> means "take p, give back p[1]". It is handy when a function wants another small function as input, like <code>sorted(key=...)</code>. Use <code>def</code> for anything you would name or test.</p>
-  <div class="fx" data-lang="py">people = [("Asha", 31), ("Ben", 25), ("Chen", 40)]
-print(sorted(people, key=lambda p: p[1]))
-print(list(map(lambda x: x * 2, [1, 2, 3])))
-fs = [lambda: i for i in range(3)]
-print([g() for g in fs])                    # late binding
-fs = [lambda i=i: i for i in range(3)]      # default freezes current i
-print([g() for g in fs])</div>
-  <div class="fx" data-lang="text">[('Ben', 25), ('Asha', 31), ('Chen', 40)]
-[2, 4, 6]
-[2, 2, 2]
-[0, 1, 2]</div>
-  <div class="callout trap"><span class="label">Trap</span><p>A lambda reads outside variables when it is <em>called</em>, not when it is made. This is called <strong>late binding</strong>. All three lambdas read <code>i</code> after the loop ended, so all see 2. <code>i=i</code> freezes the value at creation, because defaults are built at creation time (section 06).</p></div>
-
-  <h2 id="pf-scope"><span class="num">08</span>Scope: the LEGB Rule</h2>
-  <p>Two functions in a big project might both use a variable called <code>total</code>. If they shared it, one would overwrite the other. So Python gives each function its own private names. <strong>Scope</strong> is the area of code where a name can be seen.</p>
-  <p>A name created inside a function is <strong>local</strong>: it exists only while that function runs. A name created at the top of the file is <strong>global</strong>: every function can read it.</p>
-  <div class="fx" data-lang="py">rate = 18                 # global
-def price_with_gst(price):
-    tax = price * rate / 100   # tax is local; rate is read from global
-    return price + tax
-print(price_with_gst(100))
-try:
-    print(tax)
-except NameError as e:
-    print("NameError:", e)</div>
-  <div class="fx" data-lang="text">118.0
-NameError: name 'tax' is not defined</div>
-  <p>When Python meets a name, it searches four places, from inside to outside, and uses the first match. The first letters spell <strong>LEGB</strong>: Local, Enclosing (an outer function, if this function is inside another), Global, Built-in (names Python gives you, like <code>len</code> and <code>print</code>).</p>
-  <figure class="viz"><svg viewBox="0 0 440 190" width="440">
-    <rect x="5" y="5" width="430" height="180" rx="10" class="fs" stroke="currentColor"/><text x="15" y="24">B  built-in: len, print, sum</text>
-    <rect x="25" y="34" width="390" height="140" rx="10" class="fv"/><text x="35" y="53">G  module globals: x = "global"</text>
-    <rect x="45" y="63" width="350" height="100" rx="10" class="ft st"/><text x="55" y="82">E  outer(): x = "enclosing"</text>
-    <rect x="65" y="92" width="310" height="60" rx="10" class="fb sb"/><text x="75" y="113">L  inner(): looks here first</text>
-    <text x="75" y="136">miss → go one box out</text>
-  </svg><figcaption>Lookup walks outward: Local → Enclosing → Global → Built-in. First match wins.</figcaption></figure>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Looking for your keys: your room first, then the house, then the street, then lost-and-found.</p></div>
-  <p>Reading an outer name is free. <em>Changing</em> what an outer name points to needs permission: <code>global x</code> for a top-of-file name, <code>nonlocal x</code> for an outer function's name. A <strong>closure</strong> is an inner function that remembers variables from the outer function, even after the outer one has returned. <code>nonlocal</code> lets it change them.</p>
-  <div class="fx" data-lang="py">x = "global"
-def outer():
-    x = "enclosing"
-    def inner():
-        nonlocal x                 # rebind outer's x
-        x = "changed by inner"
-    inner()
-    print(x)
-outer()
-print(x)
-
-count = 0
-def bump():
-    count += 1                     # assignment makes count LOCAL
-try:
-    bump()
-except UnboundLocalError as e:
-    print("UnboundLocalError:", e)
-
-def bump_ok():
-    global count
-    count += 1
-bump_ok(); print(count)
-
-def make_counter():                # closure: step remembers n
-    n = 0
-    def step():
-        nonlocal n
-        n += 1
-        return n
-    return step
-c = make_counter()
-print(c(), c(), c())</div>
-  <div class="fx" data-lang="text">changed by inner
-global
-UnboundLocalError: cannot access local variable 'count' where it is not associated with a value
-1
-1 2 3</div>
-  <p>The counter is the key example. <code>make_counter</code> finished long ago, but <code>step</code> still remembers its own <code>n</code> and adds 1 each call. Decorators (in the Advanced note) are built on this.</p>
-  <div class="callout trap"><span class="label">Trap</span><p>Python fixes scope before running. If a function assigns to a name anywhere, that name is local in the whole function. Reading a global is fine. Rebinding it needs <code>global</code>. Changing it in place (<code>items.append</code>) needs nothing. Returning values is better than <code>global</code>.</p></div>
-
-  <h2 id="pf-build"><span class="num">09</span>Hands-on: An Event Router</h2>
-  <p>An app receives "events" — small dicts like a click or a key press — and must decide what to do with each. This router uses ideas from every section: a <code>None</code> default, a keyword-only flag, <code>**kwargs</code>, lambdas and <code>match</code> guards. Predict each line, then run it.</p>
-  <div class="fx" data-lang="py">def route(event, handlers=None, *, verbose=False, **meta):
-    handlers = handlers if handlers is not None else {}
-    match event:
-        case {"type": "click", "x": int(x), "y": int(y)}:
-            out = f"click at ({x},{y})"
-        case {"type": "key", "key": str(k)} if len(k) == 1:
-            out = f"key {k!r}"
-        case {"type": t}:
-            out = handlers.get(t, lambda: f"no handler for {t}")()
-        case _:
-            out = "malformed"
-    if verbose:
-        out += f" {meta}"
-    return out
-
-print(route({"type": "click", "x": 3, "y": 4}))
-print(route({"type": "key", "key": "q"}, verbose=True, user="asha"))
-print(route({"type": "scroll"}, {"scroll": lambda: "scrolled"}))
-print(route({"type": "resize"}))
-print(route([1, 2]))</div>
-  <div class="fx" data-lang="text">click at (3,4)
-key 'q' {'user': 'asha'}
-scrolled
-no handler for resize
-malformed</div>
-  <p>Line 3 finds a handler function in the dict and calls it. Line 4 finds none, so <code>.get</code> returns the default lambda, which is then called. Line 5 is a list, not a dict, so only <code>_</code> fits.</p>
-  <p><strong>Extend it:</strong> add a <code>"batch"</code> case that matches <code>{"type": "batch", "events": [*evs]}</code> and routes each event recursively.</p>
-
-  <h2 id="pf-qa"><span class="num">10</span>Questions &amp; Answers</h2>
+  <h2 id="pf-qa"><span class="num">08</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between <code>is</code> and <code>==</code>?</summary><div class="qa-body"><code>==</code> compares values (calls <code>__eq__</code>). <code>is</code> checks if both names point to the same object (same <code>id</code>). <code>[1,2] == [1,2]</code> is True; <code>[1,2] is [1,2]</code> is False. Use <code>is</code> for <code>None</code>, because a class can change what <code>==</code> means.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Mutable vs immutable: examples, and why it matters.</summary><div class="qa-body">Mutable (list, dict, set) change in place and keep their id. Immutable (int, float, str, tuple) make a new object on every "change". It matters for: (1) sharing — two names on one mutable object see each other's edits; (2) hashing — only immutables can be dict keys / set items; (3) safety — immutables are safe to pass around and across threads.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>After <code>a = [1]; b = a; b.append(2)</code>, what is <code>a</code>? How do you avoid it?</summary><div class="qa-body"><code>[1, 2]</code>. <code>b = a</code> only adds a second name to the same list. To get an independent list, copy it: <code>b = a.copy()</code> (or <code>list(a)</code>, <code>a[:]</code>).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Explain the mutable default argument trap and its fix.</summary><div class="qa-body">Defaults are built once, when <code>def</code> runs, and stored in <code>f.__defaults__</code>. <code>def f(lst=[])</code> shares one list across all calls, so appends pile up. Fix: <code>lst=None</code>, then <code>if lst is None: lst = []</code> inside.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What's the output? <code>print(0.1 + 0.2 == 0.3, round(2.5), -7 // 2)</code></summary><div class="qa-body"><code>False 2 -4</code>. Floats are binary approximations. <code>round</code> sends halves to the even number. <code>//</code> rounds down toward −∞.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does short-circuit evaluation return, and where is it useful?</summary><div class="qa-body"><code>A and B</code> returns A if A is falsy, else B. <code>A or B</code> returns A if A is truthy, else B. The right side may never run. Uses: <code>name = given or "default"</code>, <code>obj and obj.method()</code>, skipping a costly check. Careful: <code>x or default</code> also replaces valid falsy values like 0.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>When does the <code>else</code> of a <code>for</code> loop run?</summary><div class="qa-body">Only when the loop ends without <code>break</code> (also when the iterable is empty). Typical use: search — <code>break</code> when found, <code>else</code> handles "not found" without a flag variable.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What do <code>*args</code> and <code>**kwargs</code> become inside the function?</summary><div class="qa-body"><code>args</code> is a tuple of extra positional arguments. <code>kwargs</code> is a dict of extra keyword arguments. At a call, <code>f(*lst)</code> and <code>f(**d)</code> unpack. The names are just habit; the stars matter. Order: <code>a, /, b, *args, kw, **kwargs</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why would you make a parameter keyword-only?</summary><div class="qa-body">Clear and safe calls: callers must write <code>fit(X, epochs=5)</code>, so arguments cannot be swapped by position. You can also reorder or add parameters later without breaking old calls. Put a bare <code>*</code> before them.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Explain LEGB, <code>global</code> and <code>nonlocal</code>.</summary><div class="qa-body">Lookup order: Local → Enclosing function → Global (module) → Built-in; first match wins. Assigning to a name makes it local to the function. <code>global x</code> lets a function rebind the module-level x. <code>nonlocal x</code> rebinds the nearest outer function's x (used in closures).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why does <code>count += 1</code> inside a function raise <code>UnboundLocalError</code> when <code>count</code> is global?</summary><div class="qa-body">The assignment makes <code>count</code> local for the whole function, decided before the code runs. So the read on the right side finds a local with no value yet. Fix with <code>global count</code>, or better, pass it in and return the new value.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What's the output? <code>fs = [lambda: i for i in range(3)]; print([f() for f in fs])</code></summary><div class="qa-body"><code>[2, 2, 2]</code>. Each lambda reads <code>i</code> when called, after the loop finished. Fix: <code>lambda i=i: i</code> or <code>functools.partial</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Your recursive tree walk crashes with <code>RecursionError</code> on deep data. Options?</summary><div class="qa-body">Python's default depth limit is about 1000, with no tail-call optimisation. Best fix: rewrite as a loop with your own stack (a list). Raising <code>sys.setrecursionlimit</code> is a stopgap and can crash Python. If sub-problems repeat, add <code>@lru_cache</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why does <code>df[df.a &gt; 1 and df.b &lt; 5]</code> fail?</summary><div class="qa-body"><code>and</code> needs one True/False for the whole Series, which is unclear → ValueError. Use element-wise <code>(df.a &gt; 1) &amp; (df.b &lt; 5)</code>. Brackets are needed because <code>&amp;</code> runs before comparisons.</div></details>
-</main>`
+  <details class="qa"><summary><span class="qmark">Q</span>What are the four layers of a program, in order?</summary><div class="qa-body">Values (data and operators), names (variables that keep values), control flow (decisions and loops), and functions (named, reusable blocks). Each is built from the ones below it.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why do we need variables if we can write expressions?</summary><div class="qa-body">An expression's result is gone after its line. Names keep results so the next step can use them (195 → 175.5 → 184) and let one value (the price of chai) be written once and changed in one place.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why do we need loops if we have variables?</summary><div class="qa-body">With only names, the order is typed into the code: each order, and each line of an order, needs its own code. A loop does the same step for every item of any order and every table, with one block.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why do we need functions if we have loops?</summary><div class="qa-body">A loop runs a block in one place. To use the same block elsewhere (a refund screen, a report) you would copy it, and every rule change would have to be made in every copy. A function gives the block a name and inputs, so it lives in one place and can be called from anywhere.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between running a script and using the REPL?</summary><div class="qa-body">A script (<code>python3 till.py</code>) runs a whole file once and shows only what you print. The REPL runs one statement at a time and echoes each expression's value, which is ideal for experiments.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you read a Python traceback?</summary><div class="qa-body">Bottom line first: the exception type and message say what went wrong. The frame just above says where (file, line, function, the code). Frames further up show the chain of calls that led there. Fix the cause where the bad value entered, not just where it exploded.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>In which order should you read the Python notes, and why?</summary><div class="qa-body">Values, Types &amp; Variables → Decisions &amp; Loops → Functions, then Data Structures, Exceptions/Files/Packages and OOP, then Iterators, Decorators and Context Managers. Each later note uses earlier ideas without re-teaching them (decorators need closures and *args/**kwargs from Functions, which need the label picture from Values).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: how does "a name is a label" show up in all three basics notes?</summary><div class="qa-body">Values: <code>b = a</code> shares a list, and <code>is</code> vs <code>==</code> exist. Decisions &amp; Loops: the loop variable is just a label moved to each item, and it still labels the last item after the loop. Functions: a parameter is a new label on the caller's object (so a function can change the caller's list), and a mutable default is one object labelled again on every call.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks in the bill if you skip each layer?</summary><div class="qa-body">Skip names: every step retypes the previous expression. Skip decisions: the discount either always or never applies (or you hack it with True = 1). Skip loops: every order needs hand-written code. Skip functions: the billing logic is copied, and copies drift apart (Asha taxed at 5%, Ben at 12%).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: which basic idea does each advanced note grow from?</summary><div class="qa-body">Iterators &amp; Generators grow from the for loop (what "the next item" means). Decorators grow from functions as values plus closures. Context Managers grow from functions, exceptions and classes (guaranteed cleanup). OOP grows from functions plus data (methods are functions attached to objects).</div></details>
+</main>
+`
 });
