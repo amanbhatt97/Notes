@@ -1,76 +1,122 @@
-// ml/ml_regression.js — Regression
+// notes/ml/ml_regression.js — Linear Regression
 Object.assign(TOPIC_CONTENT, {
   "ml_regression": `<main>
-  <h1>Regression</h1>
-  <p class="lead">Regression predicts a number: marks from study hours, a flat's rent from its size, tomorrow's electricity demand. This note builds the best-fit line by hand on six students before any library, then shows how to score it (R², RMSE), how the one-line normal equation and gradient descent find the same answer, how to check the line with residual plots, and how ridge, lasso and elastic net keep weights sane when features are correlated or useless. Logistic regression (see <a class="xref" data-note="ml_classification">Classification</a>) and neural network layers reuse every idea here.</p>
+  <h1>Linear Regression</h1>
+  <div class="where"><span>Machine Learning</span><span>Regression</span><span>Linear Regression</span></div>
+  <p class="lead">Linear regression predicts a number (a salary, a rent, a delivery time) as a weighted sum of input columns plus a constant. This note builds it completely: the least-squares line is derived with calculus and solved by hand on 5 employees, extended to many columns with matrices (the normal equation solved by hand as a 2×2 system), reached again by gradient descent, interpreted in plain words, scored with R² and RMSE, read line by line in a statsmodels summary where every number is recomputed by hand, extended to text categories with dummy variables, given prediction intervals, and finally rebuilt from scratch to match scikit-learn to 12 decimal places. It opens the Regression group: every other note in the group checks, bends or tames this one model.</p>
 
-  <h2 id="mr-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="lr-fit" class="open"><span class="num">★</span>Where this fits</h2>
+  <ol class="story">
+    <li><b>Came from: <a class="xref" data-note="ml_loss_gd">Loss Functions &amp; Gradient Descent</a> and <a class="xref" data-note="ml_core">Bias, Variance &amp; Generalization</a></b><span>The Foundations notes said what a model, a loss and a train/test split are, but they used models as black boxes. The open question: what is the simplest real model that turns columns into a number, and how exactly are its weights found?</span></li>
+    <li><b>This note adds: the weighted-sum model and its exact solution</b><span>ŷ = b + w₁x₁ + … + w_dx_d, fitted by minimising the sum of squared errors. One closed-form answer (the normal equation), one iterative answer (gradient descent), and the statistics that say how sure we are about each weight (standard errors, t, p, confidence and prediction intervals).</span></li>
+    <li><b>Leads to: the rest of the Regression group</b><span><a class="xref" data-note="ml_reg_diag">Assumptions &amp; Diagnostics</a> checks when those statistics can be trusted. <a class="xref" data-note="ml_polyreg">Polynomial &amp; Basis Functions</a> bends the straight line. <a class="xref" data-note="ml_ridge_lasso">Ridge, Lasso &amp; Elastic Net</a> keeps weights sane when columns are many or correlated. Outside the group, <a class="xref" data-note="ml_classification">Logistic Regression</a> reuses the same weighted sum for yes/no targets, and <a class="xref" data-note="ml_reg_metrics">Regression Metrics</a> scores any regression model in depth.</span></li>
+  </ol>
+  <figure class="viz"><svg viewBox="0 0 680 330" width="680">
+<defs><marker id="lr-fa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+<rect x="190" y="8" width="300" height="44" rx="8" class="fs" stroke="currentColor"/>
+<text x="340" y="27" text-anchor="middle" font-size="13">Foundations</text><text x="340" y="43" text-anchor="middle" class="tm" font-size="11">loss &amp; gradient descent · splits · bias-variance</text>
+<line x1="340" y1="52" x2="340" y2="82" stroke="currentColor" marker-end="url(#lr-fa)"/>
+<rect x="20" y="86" width="640" height="150" rx="12" fill="none" stroke="currentColor" stroke-dasharray="5 4" stroke-opacity="0.5"/>
+<text x="34" y="104" class="tm" font-size="11.5">REGRESSION GROUP</text>
+<rect x="250" y="96" width="180" height="50" rx="8" class="fb sb" stroke-width="3"/>
+<text x="340" y="117" text-anchor="middle" font-size="14" font-weight="700">Linear Regression</text><text x="340" y="136" text-anchor="middle" class="tb" font-size="11">YOU ARE HERE</text>
+<line x1="300" y1="146" x2="130" y2="178" stroke="currentColor" marker-end="url(#lr-fa)"/>
+<line x1="340" y1="146" x2="340" y2="178" stroke="currentColor" marker-end="url(#lr-fa)"/>
+<line x1="380" y1="146" x2="550" y2="178" stroke="currentColor" marker-end="url(#lr-fa)"/>
+<rect x="40" y="180" width="180" height="46" rx="8" class="ft st"/>
+<text x="130" y="199" text-anchor="middle" font-size="12.5">Assumptions &amp; Diagnostics</text><text x="130" y="216" text-anchor="middle" class="tm" font-size="11">can we trust it?</text>
+<rect x="250" y="180" width="180" height="46" rx="8" class="ft st"/>
+<text x="340" y="199" text-anchor="middle" font-size="12.5">Polynomial &amp; Basis</text><text x="340" y="216" text-anchor="middle" class="tm" font-size="11">bend the line</text>
+<rect x="460" y="180" width="180" height="46" rx="8" class="ft st"/>
+<text x="550" y="199" text-anchor="middle" font-size="12.5">Ridge, Lasso &amp; Elastic Net</text><text x="550" y="216" text-anchor="middle" class="tm" font-size="11">tame the weights</text>
+<line x1="430" y1="203" x2="458" y2="203" stroke="currentColor" stroke-dasharray="3 3" marker-end="url(#lr-fa)"/>
+<line x1="340" y1="236" x2="130" y2="268" stroke="currentColor" marker-end="url(#lr-fa)"/>
+<line x1="340" y1="236" x2="340" y2="268" stroke="currentColor" marker-end="url(#lr-fa)"/>
+<line x1="340" y1="236" x2="550" y2="268" stroke="currentColor" marker-end="url(#lr-fa)"/>
+<rect x="40" y="270" width="180" height="46" rx="8" class="fg sg"/>
+<text x="130" y="289" text-anchor="middle" font-size="12.5">Logistic Regression</text><text x="130" y="306" text-anchor="middle" class="tm" font-size="11">same sum, yes/no target</text>
+<rect x="250" y="270" width="180" height="46" rx="8" class="fg sg"/>
+<text x="340" y="289" text-anchor="middle" font-size="12.5">Regression Metrics</text><text x="340" y="306" text-anchor="middle" class="tm" font-size="11">score any regressor</text>
+<rect x="460" y="270" width="180" height="46" rx="8" class="fg sg"/>
+<text x="550" y="289" text-anchor="middle" font-size="12.5">Trees &amp; boosting</text><text x="550" y="306" text-anchor="middle" class="tm" font-size="11">when straight lines fail</text>
+</svg><figcaption>The Regression group. Linear regression is the root; the three sibling notes each fix one of its limits (trust, shape, weight size). Green boxes are where its ideas are reused next.</figcaption></figure>
+  <h3>How the four Regression notes connect</h3>
+  <table class="tbl">
+    <tr><th>Note</th><th>Question it answers</th><th>Uses from this note</th></tr>
+    <tr><td><strong>Linear Regression</strong> (this)</td><td>How do we fit a weighted sum to numbers, and how sure are we about each weight?</td><td>–</td></tr>
+    <tr><td><a class="xref" data-note="ml_reg_diag">Assumptions &amp; Diagnostics</a></td><td>When are the standard errors, p-values and intervals from this note correct? What breaks them, how to detect and fix it?</td><td>residuals, the hat matrix, the summary table</td></tr>
+    <tr><td><a class="xref" data-note="ml_polyreg">Polynomial &amp; Basis Functions</a></td><td>The truth is curved. How do we keep the same machinery but fit curves?</td><td>"linear in the weights", the normal equation</td></tr>
+    <tr><td><a class="xref" data-note="ml_ridge_lasso">Ridge, Lasso &amp; Elastic Net</a></td><td>Many or correlated columns make weights explode. How do we shrink them?</td><td>the normal equation (XᵀX + λI)⁻¹Xᵀy, interpretation</td></tr>
+  </table>
+  <p>Suggested order: this note, then Assumptions &amp; Diagnostics, then Polynomial, then Ridge/Lasso. The maths you need is only "slope of a curve is zero at its lowest point" (<a class="xref" data-note="m_calculus">Calculus</a>) and matrix multiplication (<a class="xref" data-note="m_linalg">Linear Algebra</a>); both are re-explained where used.</p>
+
+  <h2 id="lr-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
-    <div class="mm-center">Regression</div>
+    <div class="mm-center">Linear Regression</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">OLS line</div>
+        <div class="mm-title">Model &amp; loss</div>
         <ul>
-          <li><b>Model</b> — ŷ = w₀ + w₁x₁ + … + w_dx_d = Xw</li>
-          <li><b>Residual</b> — y − ŷ; vertical gap from point to line</li>
-          <li><b>Loss</b> — minimise Σ(y − ŷ)², the sum of squared residuals (SSE)</li>
-          <li><b>One feature</b> — slope = Σ(dx·dy) / Σdx², intercept = ȳ − slope·x̄</li>
-          <li>Toy: 6 students → slope 73/17.5 = 4.17, intercept 47.4</li>
-          <li>💡 A stick tied to every point by rubber bands</li>
-          <li>⚠ Squares make one far outlier pull the line hard</li>
+          <li><b>Model</b> — ŷ = b + w₁x₁ + … + w_dx_d = Xw (X has a column of 1s)</li>
+          <li><b>Truth</b> — y = Xw + ε; ε = noise the columns cannot explain</li>
+          <li><b>Residual</b> — eᵢ = yᵢ − ŷᵢ (vertical gap)</li>
+          <li><b>Least squares</b> — minimise SSE = Σeᵢ²: smooth bowl, one bottom, big misses cost more</li>
+          <li>💡 A stick held by rubber bands to every point</li>
+          <li>⚠ "Linear" = linear in the <em>weights</em>; x² columns are allowed</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Scoring</div>
+        <div class="mm-title">One feature by hand</div>
         <ul>
-          <li><b>R²</b> — 1 − SS_res/SS_tot; share of spread explained (toy 0.970)</li>
-          <li><b>RMSE</b> — √mean(res²), in y's units (toy 1.26 marks)</li>
-          <li><b>MAE</b> — mean |res|; less outlier-sensitive (toy 1.09)</li>
-          <li>R² &lt; 0 on test = worse than predicting the mean</li>
-          <li>⚠ Score on test data, not training data</li>
+          <li>∂SSE/∂b = 0 → b = ȳ − w·x̄ (line passes through the means)</li>
+          <li>∂SSE/∂w = 0 → w = S_xy / S_xx = Σ(x−x̄)(y−ȳ) / Σ(x−x̄)²</li>
+          <li>5 employees: S_xy = 14, S_xx = 10 → w = 1.4, b = 1.4</li>
+          <li>Residuals 0.2, 0.8, −1.6, 0, 0.6 → sum 0, SSE 3.6</li>
+          <li>w = r · s_y / s_x; with one feature R² = r²</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Normal equation &amp; GD</div>
+        <div class="mm-title">Matrices</div>
         <ul>
-          <li><b>w = (XᵀX)⁻¹Xᵀy</b> — set gradient to zero, solve</li>
-          <li>Toy: XᵀX = [[6,21],[21,91]], Xᵀy = [372,1375]</li>
-          <li><b>Geometry</b> — ŷ is the projection of y; Xᵀ(y − ŷ) = 0</li>
-          <li><b>Gradient descent</b> — step downhill; toy reaches 47.40 / 4.17 by step 500</li>
-          <li><b>Use GD</b> — huge d, data that doesn't fit in memory</li>
-          <li>⚠ Use solve / lstsq, never inv()</li>
+          <li><b>Normal equation</b> XᵀXw = Xᵀy → w = (XᵀX)⁻¹Xᵀy</li>
+          <li>Toy: [[5, 15], [15, 55]] w = [28, 98]; det 50 → w = [1.4, 1.4]</li>
+          <li><b>Geometry</b>: ŷ = Hy is the projection of y; Xᵀe = 0</li>
+          <li>Two features: exp alone 1.69, holding certs fixed 1.00</li>
+          <li>Cost O(nd² + d³); use lstsq/solve, never inv()</li>
+          <li><b>GD</b>: w ← w − η·∇MSE; same answer; needs scaled features</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Assumptions (LINE)</div>
+        <div class="mm-title">Interpretation</div>
         <ul>
-          <li><b>L</b>inearity — curve in residual plot; biased weights</li>
-          <li><b>I</b>ndependence — time series; Durbin–Watson ≈ 2 good</li>
-          <li><b>N</b>ormal errors — only for p-values / CIs</li>
-          <li><b>E</b>qual variance — fan shape; Breusch–Pagan; log(y)</li>
-          <li><b>Multicollinearity</b> — VIF &gt; 10; unstable signs</li>
-          <li>⚠ y = x² fit by a line: R² 0.963, residuals +,−,−,−,+</li>
+          <li>wⱼ = change in ŷ per +1 unit of xⱼ, <b>holding the others fixed</b></li>
+          <li>Units: size per sq ft 0.0196 = per 100 sq ft 1.96</li>
+          <li>Standardised coef = per 1 SD (compare importance)</li>
+          <li>log(y) model: +1 unit → about 100·w % change</li>
+          <li>Dummies: coef = gap vs the reference category</li>
+          <li>⚠ Association, not causation</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Ridge / Lasso / ENet</div>
+        <div class="mm-title">Inference (statsmodels)</div>
         <ul>
-          <li><b>Ridge (L2)</b> — RSS + α·Σw²; shrinks, never 0; toy w = 73/(17.5+α)</li>
-          <li><b>Lasso (L1)</b> — RSS + α·Σ|w|; exact zeros; toy w = 0 once α ≥ 12.17</li>
-          <li><b>Elastic Net</b> — mix; sparse and keeps correlated groups</li>
-          <li><b>Twins</b> — OLS [−3.8, 6.8], Ridge [1.5, 1.5], Lasso [2.9, 0.0]</li>
-          <li><b>Why zeros</b> — diamond corners; L1 pull is constant, L2 pull fades</li>
-          <li>⚠ Standardise first; tune α with CV</li>
+          <li>s² = SSE / (n − p) = 3.6 / 3 = 1.2</li>
+          <li>Cov(ŵ) = s²(XᵀX)⁻¹ → se(w) = 0.346, se(b) = 1.149</li>
+          <li>t = coef / se = 4.04; p = 0.027 (df 3)</li>
+          <li>95% CI = coef ± t₀.₉₇₅·se = [0.30, 2.50]</li>
+          <li>F = 16.33 = t²; adj R² 0.793; AIC 16.55</li>
+          <li>Prediction interval ⊃ CI of the mean (adds one person's noise)</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Polynomial &amp; payoff</div>
+        <div class="mm-title">In practice</div>
         <ul>
-          <li><b>Idea</b> — add x², x³ columns; still linear in w</li>
-          <li><b>Overfit</b> — degree 15: train 0.12, test 0.55 (degree 3: 0.33)</li>
-          <li><b>Explosion</b> — 10 inputs → 65 / 285 / 3002 features (degree 2/3/5)</li>
-          <li><b>200 noise columns</b> — OLS R² −0.26, Ridge 0.37, Lasso 0.49 (6 kept)</li>
-          <li>💡 Degree 15 = mugging last year's paper word by word</li>
+          <li><b>R²</b> = 1 − SSE/SST = 0.845; <b>RMSE</b> = √(SSE/n) = 0.85</li>
+          <li><code>LinearRegression</code>: coef_, intercept_, rank_, singular_</li>
+          <li>Categories → k − 1 dummies (drop one; else dummy trap, rank 3 of 4)</li>
+          <li>Rent demo: numbers only R² 0.672 → + city 0.884</li>
+          <li>From scratch = sklearn to 1e-12</li>
+          <li>⚠ Score on test data; plot residuals; don't extrapolate</li>
         </ul>
       </div>
     </div>
@@ -79,537 +125,899 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="mr-ols"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">The Best-Fit Line by Hand</span><span class="rm-sub">Residuals, squared loss, 6 students</span></div></div>
-      <div class="rm-item rm-done" data-target="mr-score"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">How Good Is the Line?</span><span class="rm-sub">R², RMSE, MAE</span></div></div>
-      <div class="rm-item rm-done" data-target="mr-normal"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Normal Equation &amp; Gradient Descent</span><span class="rm-sub">One formula vs walking downhill</span></div></div>
-      <div class="rm-item rm-done" data-target="mr-diag"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Assumptions &amp; Diagnostics</span><span class="rm-sub">Reading residual plots</span></div></div>
-      <div class="rm-item rm-done" data-target="mr-reg"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Ridge, Lasso, Elastic Net</span><span class="rm-sub">Shrinkage by hand, then real data</span></div></div>
-      <div class="rm-item rm-done" data-target="mr-l1"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Why L1 Gives Zeros</span><span class="rm-sub">Diamond vs circle, fee vs tax</span></div></div>
-      <div class="rm-item rm-done" data-target="mr-poly"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Polynomial Regression</span><span class="rm-sub">Curves and overfitting</span></div></div>
-      <div class="rm-item rm-done" data-target="mr-build"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Hands-on</span><span class="rm-sub">When regularisation pays</span></div></div>
-      <div class="rm-item rm-done" data-target="mr-traps"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Leaks, inv(), unscaled penalties</span></div></div>
-      <div class="rm-item rm-done" data-target="mr-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="lr-problem"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">The Regression Problem</span><span class="rm-sub">Predicting a number; notation</span></div></div>
+      <div class="rm-item rm-done" data-target="lr-line"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">The Line y = wx + b</span><span class="rm-sub">Slope, intercept, residuals</span></div></div>
+      <div class="rm-item rm-done" data-target="lr-ls"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Least Squares Derived</span><span class="rm-sub">Calculus, then 5 points by hand</span></div></div>
+      <div class="rm-item rm-done" data-target="lr-matrix"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Matrix Form &amp; Normal Equation</span><span class="rm-sub">2×2 by hand, two features</span></div></div>
+      <div class="rm-item rm-done" data-target="lr-geom"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Geometry &amp; Properties</span><span class="rm-sub">Projection, Gauss–Markov, MLE</span></div></div>
+      <div class="rm-item rm-done" data-target="lr-gd"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Gradient Descent Alternative</span><span class="rm-sub">Two steps by hand; when to use</span></div></div>
+      <div class="rm-item rm-done" data-target="lr-interp"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Interpreting Coefficients</span><span class="rm-sub">Units, holding fixed, logs</span></div></div>
+      <div class="rm-item rm-done" data-target="lr-score"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">R² and RMSE</span><span class="rm-sub">How good is the line?</span></div></div>
+      <div class="rm-item rm-done" data-target="lr-sm"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">The statsmodels Summary</span><span class="rm-sub">Every line recomputed by hand</span></div></div>
+      <div class="rm-item rm-done" data-target="lr-cat"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Categorical Predictors</span><span class="rm-sub">Dummies and the dummy trap</span></div></div>
+      <div class="rm-item rm-done" data-target="lr-pi"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Prediction Intervals</span><span class="rm-sub">CI of the mean vs one new case</span></div></div>
+      <div class="rm-item rm-done" data-target="lr-sk"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">scikit-learn in Practice</span><span class="rm-sub">LinearRegression end to end</span></div></div>
+      <div class="rm-item rm-done" data-target="lr-scratch"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">From Scratch</span><span class="rm-sub">Three solvers matched to sklearn</span></div></div>
+      <div class="rm-item rm-done" data-target="lr-when"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">Strengths, Limits &amp; Comparisons</span><span class="rm-sub">vs siblings and other models</span></div></div>
+      <div class="rm-item rm-done" data-target="lr-traps"><span class="rm-num">15</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Traps in interviews and code</span></div></div>
+      <div class="rm-item rm-done" data-target="lr-qa"><span class="rm-num">16</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
     </div>
   </div>
 
-  <h2 id="mr-ols"><span class="num">01</span>The Best-Fit Line by Hand</h2>
-  <p>Six students tell you how many hours they studied and the marks they got. A seventh student says "I will study 7 hours. What will I get?" You could eyeball the scatter and guess. But two people eyeballing will draw two different lines, and neither can say why theirs is better. We need a rule that picks <em>one</em> line and can defend it.</p>
-  <p>The rule: for every student, measure how far the line's guess is from the real mark. That gap is the <strong>residual</strong> (real minus predicted). Square each gap so negatives don't cancel positives, add them up, and pick the line that makes this total as small as possible. That is <strong>ordinary least squares</strong>, OLS for short.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Tie each point to a long bamboo stick with a rubber band. Let go. The stick wobbles and settles where the total pull of all the bands is least. A point far away stretches its band a lot and pulls the stick hard. That is also why one outlier can tilt an OLS line.</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 520 250" width="520">
-<line x1="50" y1="225" x2="505" y2="225" stroke="currentColor"/><line x1="50" y1="5" x2="50" y2="225" stroke="currentColor"/>
-<text x="40" y="211" text-anchor="end" class="tm" font-size="11">50</text><text x="40" y="131" text-anchor="end" class="tm" font-size="11">60</text><text x="40" y="51" text-anchor="end" class="tm" font-size="11">70</text>
-<text x="95" y="242" text-anchor="middle" class="tm" font-size="11">1</text><text x="165" y="242" text-anchor="middle" class="tm" font-size="11">2</text><text x="235" y="242" text-anchor="middle" class="tm" font-size="11">3</text><text x="305" y="242" text-anchor="middle" class="tm" font-size="11">4</text><text x="375" y="242" text-anchor="middle" class="tm" font-size="11">5</text><text x="445" y="242" text-anchor="middle" class="tm" font-size="11">6</text>
-<line x1="60" y1="211" x2="480" y2="11" class="sb" stroke-width="2"/>
-<line x1="95" y1="191" x2="95" y2="194" class="sr" stroke-width="2" stroke-dasharray="3 2"/>
-<line x1="165" y1="167" x2="165" y2="161" class="sr" stroke-width="2" stroke-dasharray="3 2"/>
-<line x1="235" y1="119" x2="235" y2="128" class="sr" stroke-width="2" stroke-dasharray="3 2"/>
-<line x1="305" y1="111" x2="305" y2="94" class="sr" stroke-width="2" stroke-dasharray="3 2"/>
-<line x1="375" y1="47" x2="375" y2="61" class="sr" stroke-width="2" stroke-dasharray="3 2"/>
-<line x1="445" y1="31" x2="445" y2="28" class="sr" stroke-width="2" stroke-dasharray="3 2"/>
-<circle cx="95" cy="191" r="4.5" class="ft st"/><circle cx="165" cy="167" r="4.5" class="ft st"/><circle cx="235" cy="119" r="4.5" class="ft st"/><circle cx="305" cy="111" r="4.5" class="ft st"/><circle cx="375" cy="47" r="4.5" class="ft st"/><circle cx="445" cy="31" r="4.5" class="ft st"/>
-<text x="70" y="25" class="tb" font-size="13">ŷ = 47.4 + 4.17·hours</text>
-<text x="318" y="108" class="tr" font-size="12">residual −2.09</text>
-<text x="500" y="218" text-anchor="end" class="tm" font-size="11">hours studied</text>
-<text x="58" y="12" class="tm" font-size="11">marks</text>
-</svg><figcaption>The six students. OLS picks the line that makes the sum of the squared red gaps as small as possible.</figcaption></figure>
-  <h3>Worked example: fit the line with a pencil</h3>
-  <p>For one feature there is a short recipe. Take each point's distance from the average: dx = x − x̄ and dy = y − ȳ. The slope is Σ(dx·dy) / Σ(dx²). The intercept makes the line pass through the average point: intercept = ȳ − slope·x̄.</p>
-  <table class="tbl out"><caption>x̄ = 3.5 hours, ȳ = 62 marks</caption>
-    <tr><th>hours x</th><th>marks y</th><th>dx</th><th>dy</th><th>dx·dy</th><th>dx²</th></tr>
-    <tr><td>1</td><td>52</td><td>−2.5</td><td>−10</td><td>25</td><td>6.25</td></tr>
-    <tr><td>2</td><td>55</td><td>−1.5</td><td>−7</td><td>10.5</td><td>2.25</td></tr>
-    <tr><td>3</td><td>61</td><td>−0.5</td><td>−1</td><td>0.5</td><td>0.25</td></tr>
-    <tr><td>4</td><td>62</td><td>0.5</td><td>0</td><td>0</td><td>0.25</td></tr>
-    <tr><td>5</td><td>70</td><td>1.5</td><td>8</td><td>12</td><td>2.25</td></tr>
-    <tr><td>6</td><td>72</td><td>2.5</td><td>10</td><td>25</td><td>6.25</td></tr>
-    <tr><td colspan="4"><strong>sum</strong></td><td><strong>73</strong></td><td><strong>17.5</strong></td></tr>
+  <h2 id="lr-problem"><span class="num">01</span>The Regression Problem</h2>
+  <h3>The need</h3>
+  <p>An HR analyst has the salaries of 5 people in one team and their years of experience. A new person with 6 years of experience is about to join. What salary band should HR expect? A food-delivery app wants to promise a delivery time before the rider even starts. A landlord wants to price a flat from its size, distance to the metro and the city. In each case the answer is a <strong>number on a continuous scale</strong>, and we have past examples with the answer known. That is a <strong>regression</strong> problem (the word is historical; Francis Galton used it in the 1880s for children's heights "regressing" toward the average).</p>
+  <table class="tbl">
+    <tr><th>Task</th><th>Target y (a number)</th><th>Features x</th></tr>
+    <tr><td>Salary band</td><td>salary, lakh ₹ per year</td><td>experience, certifications</td></tr>
+    <tr><td>Rent pricing</td><td>monthly rent, ₹ thousand</td><td>size, distance to metro, building age, city</td></tr>
+    <tr><td>Delivery ETA</td><td>minutes</td><td>distance, time of day, restaurant prep time</td></tr>
+    <tr><td>Demand planning</td><td>units sold tomorrow</td><td>price, day of week, promotions</td></tr>
   </table>
-  <p>Slope = 73 / 17.5 = <strong>4.171</strong> marks per hour. Intercept = 62 − 4.171 × 3.5 = <strong>47.4</strong>. Is this really the smallest? Try two other lines: 45 + 5x gives a squared-error total of 23.0, and 50 + 4x gives 34.0. Our line gives 9.49. Nothing beats it. The script below does the same arithmetic in NumPy, so you can check every number in the table.</p>
-  <div class="fx" data-lang="py">import numpy as np
-hours = np.array([1, 2, 3, 4, 5, 6])
-marks = np.array([52, 55, 61, 62, 70, 72])
-dx = hours - hours.mean()
-dy = marks - marks.mean()
-slope = (dx * dy).sum() / (dx ** 2).sum()
-intercept = marks.mean() - slope * hours.mean()
-print("sum dx*dy:", (dx * dy).sum(), " sum dx^2:", (dx ** 2).sum())
-print(f"slope {slope:.4f}  intercept {intercept:.4f}")
-res = marks - (intercept + slope * hours)
-print("residuals:", res.round(2))
-for a, b in [(47.4, 4.1714), (45, 5), (50, 4)]:
-    print(f"line {a}+{b}x  SSE={((marks - (a + b*hours))**2).sum():.2f}")</div>
-  <div class="fx" data-lang="text">sum dx*dy: 73.0  sum dx^2: 17.5
-slope 4.1714  intercept 47.4000
-residuals: [ 0.43 -0.74  1.09 -2.09  1.74 -0.43]
-line 47.4+4.1714x  SSE=9.49
-line 45+5x  SSE=23.00
-line 50+4x  SSE=34.00</div>
-  <p><code>dx</code> and <code>dy</code> are the two middle columns of the table. The <code>slope</code> line is the recipe. The final loop scores three candidate lines by their SSE (sum of squared errors); the OLS line wins. Now the same fit with scikit-learn, the library you will use at work:</p>
-  <div class="fx" data-lang="py">from sklearn.linear_model import LinearRegression
-X = np.array([[1], [2], [3], [4], [5], [6]])      # hours, as a 2-D table: 6 rows, 1 column
-y = np.array([52, 55, 61, 62, 70, 72])            # marks
-m = LinearRegression().fit(X, y)
-print(f"slope {m.coef_[0]:.3f}  intercept {m.intercept_:.3f}")
-res = y - m.predict(X)
-print("residuals:", res.round(2), " sum:", round(res.sum(), 10))
-print("predict 7 hours:", m.predict([[7]]).round(1))</div>
-  <div class="fx" data-lang="text">slope 4.171  intercept 47.400
-residuals: [ 0.43 -0.74  1.09 -2.09  1.74 -0.43]  sum: 0.0
-predict 7 hours: [76.6]</div>
-  <p>Same numbers. Note <code>X</code> is a 2-D table (<code>[[1],[2],…]</code>), because sklearn always expects rows × features, even for one feature. <code>coef_</code> holds the slopes, <code>intercept_</code> the constant. The residuals add up to exactly 0: that always happens when the model has an intercept.</p>
+  <p>If the target were a category (spam / not spam, which of 3 plans a customer picks) it would be <strong>classification</strong>, covered from <a class="xref" data-note="ml_classification">Logistic Regression</a> onward. Many models do both; linear regression is the simplest model for numbers, and nearly every other model is compared against it as a <strong>baseline</strong>.</p>
+  <h3>Notation used in this note</h3>
+  <table class="tbl">
+    <tr><th>Symbol</th><th>Meaning</th><th>In the 5-employee example</th></tr>
+    <tr><td>n</td><td>number of rows (examples)</td><td>5</td></tr>
+    <tr><td>d</td><td>number of feature columns</td><td>1 (experience)</td></tr>
+    <tr><td>xᵢ, yᵢ</td><td>features and target of row i</td><td>x₃ = 3 years, y₃ = 4 lakh</td></tr>
+    <tr><td>ŷᵢ</td><td>the model's prediction for row i ("y-hat")</td><td>ŷ₃ = 5.6</td></tr>
+    <tr><td>w, b</td><td>weight (slope) and bias (intercept); together the <strong>parameters</strong></td><td>w = 1.4, b = 1.4</td></tr>
+    <tr><td>eᵢ = yᵢ − ŷᵢ</td><td>residual: how far the prediction missed</td><td>e₃ = −1.6</td></tr>
+    <tr><td>x̄, ȳ</td><td>averages of x and y</td><td>3 and 5.6</td></tr>
+    <tr><td>X</td><td>the n × (d+1) data table with a leading column of 1s</td><td>5 × 2</td></tr>
+  </table>
+  <h3>The assumed story behind the data</h3>
+  <p>Linear regression assumes the world produces data like this: <strong>y = b + w₁x₁ + … + w_dx_d + ε</strong>. The weighted sum is the part of y the features explain; ε (epsilon) is everything else: luck, negotiation skill, columns we did not record. ε is not a mistake of the model; it is noise the model can never predict. Our job is to estimate the unknown true weights from data, and to say how uncertain those estimates are.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>A chai stall's daily sales = 200 cups + 15 cups per degree of cold below 20 °C + a random amount (a cricket match nearby, a festival). The "200 + 15 per degree" is the line; the random amount is ε. Looking at a month of data, you try to recover 200 and 15.</p>
+  </div>
   <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Ordinary least squares (OLS)</strong> fits ŷ = w₀ + w₁x₁ + … + w_dx_d by choosing the weights w that minimise <code>Σ(yᵢ − ŷᵢ)²</code>. The w's are called <strong>coefficients</strong> (or weights); w₀ is the <strong>intercept</strong>. Squaring makes the loss smooth with a single lowest point and punishes large misses more than small ones.</p>
+    <p><strong>Linear regression</strong> models a numeric target as ŷ = b + Σⱼ wⱼxⱼ, a constant plus a weighted sum of features. "Linear" means linear <em>in the parameters</em> w and b: each parameter multiplies something and the results are added. The features themselves may be x², log x or x₁·x₂.</p>
   </div>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>Squaring means a miss of 10 costs 100, while ten misses of 1 cost 10. One bad data entry (marks typed as 720) will drag the whole line. Plot the data first; for heavy outliers use MAE-based or Huber regression (<code>HuberRegressor</code>).</p>
+    <p>"Linear regression can only fit straight lines" is false. ŷ = b + w₁x + w₂x² is still linear regression (linear in w₁, w₂), and it fits a parabola. What it cannot do is something like ŷ = b·e^(wx) where a parameter sits inside a non-linear function. See <a class="xref" data-note="ml_polyreg">Polynomial &amp; Basis Functions</a>.</p>
   </div>
-  <p>Where it matters: linear regression is the first baseline for any numeric target (price, demand, delivery time), and interviewers love asking you to derive the slope or explain a coefficient in plain words: "each extra hour adds about 4.2 marks".</p>
+  <div class="bridge"><b>What's still missing?</b> We know the shape of the model. Before finding the best weights we should be fluent with what one weight and one intercept actually do to a line, and how to measure a miss.</div>
 
-  <h2 id="mr-score"><span class="num">02</span>How Good Is the Line?</h2>
-  <p>You have a line. Your manager asks "is it any good?" Saying "the residuals look small" is not an answer. Small compared to what? A miss of 2 marks is great if marks range 0–100, terrible if they range 60–64. We need numbers that compare the line's errors against something.</p>
-  <p>Three numbers do most of the work. <strong>RMSE</strong> (root mean squared error) is the typical miss, in the same units as y. <strong>MAE</strong> (mean absolute error) is the average miss, ignoring sign. <strong>R²</strong> compares your line with the laziest possible model, "always predict the average", and says what share of the spread your line explains.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A weather app says tomorrow will be 31°C. RMSE is "on average we are off by about 1.3 degrees". R² is "we are much better than just saying the monthly average every day". You want both: the size of the miss, and the improvement over a lazy guess.</p>
-  </div>
-  <h3>Worked example on the six students</h3>
+  <h2 id="lr-line"><span class="num">02</span>The Line y = wx + b</h2>
+  <h3>Slope and intercept in plain words</h3>
+  <p>With one feature the model is a straight line ŷ = wx + b. The <strong>slope w</strong> says how much ŷ rises when x rises by 1 unit. The <strong>intercept b</strong> is the value of ŷ when x = 0, the height where the line crosses the y-axis.</p>
+  <table class="tbl">
+    <tr><th>Line</th><th>At x = 0</th><th>At x = 1</th><th>At x = 5</th><th>Reading</th></tr>
+    <tr><td>ŷ = 1.4x + 1.4</td><td>1.4</td><td>2.8</td><td>8.4</td><td>starts at 1.4 lakh, +1.4 lakh per year</td></tr>
+    <tr><td>ŷ = 2x + 0</td><td>0</td><td>2</td><td>10</td><td>through the origin, steeper</td></tr>
+    <tr><td>ŷ = 0x + 5.6</td><td>5.6</td><td>5.6</td><td>5.6</td><td>flat: predicts the average for everyone</td></tr>
+    <tr><td>ŷ = −0.5x + 9</td><td>9</td><td>8.5</td><td>6.5</td><td>falls 0.5 per unit</td></tr>
+  </table>
+  <p>The flat line at ȳ (third row) is the laziest possible model: it ignores x. Every regression model will be measured against it (that is exactly what R² does in section 08).</p>
+  <h3>Our data: 5 employees</h3>
+  <table class="tbl"><caption>Team A</caption>
+    <tr><th>Person</th><th>Experience x (years)</th><th>Salary y (lakh ₹/yr)</th></tr>
+    <tr><td>P1</td><td>1</td><td>3</td></tr>
+    <tr><td>P2</td><td>2</td><td>5</td></tr>
+    <tr><td>P3</td><td>3</td><td>4</td></tr>
+    <tr><td>P4</td><td>4</td><td>7</td></tr>
+    <tr><td>P5</td><td>5</td><td>9</td></tr>
+  </table>
+  <figure class="viz"><svg viewBox="0 0 520 270" width="520">
+<line x1="60" y1="230" x2="500" y2="230" stroke="currentColor"/><line x1="60" y1="20" x2="60" y2="230" stroke="currentColor"/>
+<text x="52" y="234" text-anchor="end" class="tm" font-size="11">0</text><text x="52" y="134" text-anchor="end" class="tm" font-size="11">5</text><text x="52" y="34" text-anchor="end" class="tm" font-size="11">10</text>
+<text x="130" y="246" text-anchor="middle" class="tm" font-size="11">1</text><text x="200" y="246" text-anchor="middle" class="tm" font-size="11">2</text><text x="270" y="246" text-anchor="middle" class="tm" font-size="11">3</text><text x="340" y="246" text-anchor="middle" class="tm" font-size="11">4</text><text x="410" y="246" text-anchor="middle" class="tm" font-size="11">5</text><text x="480" y="246" text-anchor="middle" class="tm" font-size="11">6</text>
+<text x="280" y="264" text-anchor="middle" class="tm" font-size="11.5">experience (years)</text><text x="66" y="16" class="tm" font-size="11.5">salary (lakh)</text>
+<line x1="60" y1="118" x2="480" y2="118" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.5"/><text x="486" y="122" class="tm" font-size="11">ȳ = 5.6</text>
+<line x1="60" y1="202" x2="480" y2="34" class="sb" stroke-width="2.2"/>
+<line x1="130" y1="170" x2="130" y2="174" class="sr" stroke-width="2.5"/>
+<line x1="200" y1="130" x2="200" y2="146" class="sr" stroke-width="2.5"/>
+<line x1="270" y1="150" x2="270" y2="118" class="sr" stroke-width="2.5"/>
+<line x1="410" y1="50" x2="410" y2="62" class="sr" stroke-width="2.5"/>
+<circle cx="130" cy="170" r="5" class="ft st"/><circle cx="200" cy="130" r="5" class="ft st"/><circle cx="270" cy="150" r="5" class="ft st"/><circle cx="340" cy="90" r="5" class="ft st"/><circle cx="410" cy="50" r="5" class="ft st"/>
+<text x="210" y="142" class="tr" font-size="11">e₂ = +0.8</text><text x="278" y="140" class="tr" font-size="11">e₃ = −1.6</text>
+<text x="300" y="60" class="tb" font-size="12.5">ŷ = 1.4 + 1.4x</text>
+<circle cx="270" cy="118" r="4" class="fg sg"/><text x="230" y="110" class="tg" font-size="11">(x̄, ȳ)</text>
+</svg><figcaption>The 5 employees, the least-squares line we will derive, and the residuals (red, vertical). The line passes through the point of averages (3, 5.6).</figcaption></figure>
+  <h3>Residuals: measuring a miss</h3>
+  <p>For any candidate line, each person gets a residual eᵢ = yᵢ − ŷᵢ: positive when the person earns more than the line predicts (point above the line), negative when less. We measure the gap <strong>vertically</strong>, because the job is predicting y from x; errors in y are what we pay for.</p>
+  <p>To turn 5 residuals into one score we cannot just add them: +2 and −2 would cancel and a terrible line would look perfect. Two fixes: add absolute values Σ|eᵢ|, or add squares Σeᵢ². Least squares uses squares, for three reasons:</p>
   <ol>
-    <li><strong>SS_tot</strong> (total spread): square each dy from the table and add: 100 + 49 + 1 + 0 + 64 + 100 = <strong>314</strong>. This is the error of the lazy "always say 62" model.</li>
-    <li><strong>SS_res</strong> (what is left): square each residual and add: 0.43² + 0.74² + 1.09² + 2.09² + 1.74² + 0.43² = <strong>9.49</strong>.</li>
-    <li><strong>R²</strong> = 1 − 9.49 / 314 = <strong>0.970</strong>. The line removes 97% of the squared error of the lazy guess.</li>
-    <li><strong>RMSE</strong> = √(9.49 / 6) = <strong>1.26</strong> marks. <strong>MAE</strong> = (0.43 + 0.74 + 1.09 + 2.09 + 1.74 + 0.43) / 6 = <strong>1.09</strong> marks.</li>
+    <li><strong>Smooth</strong>: e² has a derivative everywhere (|e| has a kink at 0), so calculus gives an exact formula.</li>
+    <li><strong>One bottom</strong>: the total is a bowl in the weights (convex), so there is exactly one best line (when columns are not duplicates).</li>
+    <li><strong>Statistics</strong>: if the noise ε is normally distributed, least squares is the maximum-likelihood estimate (section 05), and it gives the mean of y for each x.</li>
   </ol>
-  <p>The code below asks sklearn's metric functions for the same three numbers, so you can check the hand arithmetic.</p>
-  <div class="fx" data-lang="py">from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-p = m.predict(X)
-print(f"RMSE {mean_squared_error(y, p) ** 0.5:.2f}  MAE {mean_absolute_error(y, p):.2f}  R2 {r2_score(y, p):.3f}")</div>
-  <div class="fx" data-lang="text">RMSE 1.26  MAE 1.09  R2 0.970</div>
-  <p><code>mean_squared_error</code> returns MSE, so we take <code>** 0.5</code> to get RMSE back into marks. <code>r2_score(y, p)</code> is the same as <code>m.score(X, y)</code> for a regressor. All three match the pencil numbers.</p>
+  <p>The cost: a miss of 10 costs 100 while ten misses of 1 cost only 10, so one wild point pulls the line hard. <a class="xref" data-note="ml_loss_gd">Loss Functions</a> compares squared, absolute and Huber loss in detail.</p>
   <div class="callout def"><span class="label">Definition</span>
-    <p><strong>R² = 1 − SS_res / SS_tot</strong>, the coefficient of determination. 1 = perfect, 0 = no better than the mean, negative = worse than the mean (possible on test data). <strong>RMSE</strong> = √mean(residual²): punishes big misses. <strong>MAE</strong> = mean |residual|: treats all misses equally, so it is less swayed by outliers.</p>
+    <p><strong>Residual</strong> eᵢ = yᵢ − ŷᵢ. <strong>Sum of squared errors</strong> SSE (also RSS, residual sum of squares) = Σᵢ eᵢ². <strong>Ordinary least squares (OLS)</strong> chooses the parameters that make SSE as small as possible.</p>
   </div>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>These scores on the <em>training</em> data are optimistic: the line was chosen to make them good. Always report them on a held-out test set or with cross-validation (see <a class="xref" data-note="ml_evaluation">Model Evaluation</a>). And a high R² does not prove the line is the right shape: section 04 shows a wrong model with R² 0.96.</p>
+    <p>Residual (yᵢ − ŷᵢ, observed, from our fitted line) and error (εᵢ, unobservable, from the true line) are different things. Residuals are our <em>estimates</em> of the errors; the diagnostics note studies residuals because errors cannot be seen.</p>
   </div>
-  <p>Interview angle: "R² went up when I added a random column. Why?" Training R² can never go down when you add features, because the old solution is still available. That is why people use adjusted R² or, better, test-set scores.</p>
+  <div class="bridge"><b>What's still missing?</b> We can score any line. Now we need the rule that finds the line with the smallest SSE, not by trying lines, but with a formula.</div>
 
-  <h2 id="mr-normal"><span class="num">03</span>Normal Equation &amp; Gradient Descent</h2>
-  <p>The pencil recipe works for one feature. Real data has 10, 100 or 10,000 features (size, floor, age of building, distance to metro…). We need a method that finds all the weights at once. There are two: solve one matrix equation (the <strong>normal equation</strong>), or start with a guess and walk downhill step by step (<strong>gradient descent</strong>). Both reach the same line.</p>
-  <p>The normal equation comes from one fact: at the lowest point of a bowl, the ground is flat. Write the loss for all weights, take its slope (gradient) with respect to each weight, set every slope to zero, and solve. The answer is w = (XᵀX)⁻¹Xᵀy, where X is the data table with an extra column of 1s for the intercept.</p>
-  <div class="flow"><span>Loss ‖y − Xw‖²</span><span>Gradient −2Xᵀ(y − Xw)</span><span>Set to 0: XᵀXw = Xᵀy</span><span>w = (XᵀX)⁻¹Xᵀy</span></div>
+  <h2 id="lr-ls"><span class="num">03</span>Least Squares Derived (and Solved by Hand)</h2>
+  <h3>The idea: the bottom of a bowl is flat</h3>
+  <p>SSE depends on two numbers, w and b. Picture a bowl: each position on the floor is a (w, b) pair, the height is the SSE of that line. At the lowest point the bowl is flat in every direction, so the slope (derivative) with respect to b is 0 and the slope with respect to w is 0. Two equations, two unknowns: solve them.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Finding the lowest point of a valley. The normal equation is having the full contour map and reading the bottom off it in one go. Gradient descent is walking blindfolded: feel which way the ground slopes under your feet and take a step downhill, again and again.</p>
+    <p>A marble dropped into a round steel katori rolls and stops at the bottom, where the surface is level. Setting the derivatives to zero is "finding where the floor is level".</p>
   </div>
-  <h3>Worked example: the normal equation on six students</h3>
-  <p>X has two columns: all 1s, and the hours. Then XᵀX is a 2×2 table of sums: [[n, Σx], [Σx, Σx²]] = [[6, 21], [21, 91]]. Xᵀy is [Σy, Σxy] = [372, 1375]. Solve the two equations 6w₀ + 21w₁ = 372 and 21w₀ + 91w₁ = 1375. The determinant is 6·91 − 21·21 = 105, so w₁ = (6·1375 − 21·372) / 105 = 438/105 = <strong>4.171</strong> and w₀ = (91·372 − 21·1375) / 105 = 4977/105 = <strong>47.4</strong>. Same line as before. In code:</p>
-  <div class="fx" data-lang="py">Xb = np.c_[np.ones(len(X)), X]                 # add the 1s column for the intercept
-XtX = Xb.T @ Xb
-Xty = Xb.T @ y
-print("XtX =", XtX.tolist(), " Xty =", Xty.tolist())
-w = np.linalg.solve(XtX, Xty)                  # solve, don't invert
-print("normal eq:", w.round(3))
-w2, *_ = np.linalg.lstsq(Xb, y, rcond=None)    # SVD-based, safest
-print("lstsq    :", w2.round(3))
-print("X^T residual:", (Xb.T @ (y - Xb @ w)).round(10) + 0.0)</div>
-  <div class="fx" data-lang="text">XtX = [[6.0, 21.0], [21.0, 91.0]]  Xty = [372.0, 1375.0]
-normal eq: [47.4    4.171]
-lstsq    : [47.4    4.171]
-X^T residual: [0. 0.]</div>
-  <p><code>np.c_</code> glues a column of 1s to the left of X. <code>@</code> is matrix multiply. <code>np.linalg.solve</code> solves XᵀXw = Xᵀy without ever forming an inverse, and <code>lstsq</code> uses SVD, which also copes with duplicate columns. The last line checks the key property: Xᵀ(y − ŷ) = 0, the residuals are at right angles to every column of X.</p>
-  <figure class="viz"><svg viewBox="0 0 440 200" width="440">
-<defs><marker id="mr-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<path d="M30 150 L250 175 L410 130 L190 105 Z" class="fs" stroke="currentColor"/>
-<text x="30" y="194" class="tm" font-size="12">plane = span of X's columns</text>
-<line x1="120" y1="140" x2="250" y2="30" stroke="currentColor" stroke-width="2" marker-end="url(#mr-ah)"/>
-<text x="258" y="28" font-size="13">y</text>
-<line x1="120" y1="140" x2="250" y2="135" class="sb" stroke-width="2" marker-end="url(#mr-ah)"/>
-<text x="256" y="150" class="tb" font-size="13">ŷ = Xw</text>
-<line x1="250" y1="35" x2="250" y2="130" class="sr" stroke-width="2" stroke-dasharray="4 3"/>
-<text x="258" y="88" class="tr" font-size="12">residual y − ŷ ⟂ plane</text>
-<path d="M250 122 h-8 v9" fill="none" stroke="currentColor"/>
-</svg><figcaption>ŷ is the shadow of y on the space your features can reach; the residual sticks straight out of it. That right angle is the equation Xᵀ(y − ŷ) = 0.</figcaption></figure>
-  <h3>Worked example: gradient descent on the same data</h3>
-  <p>Start with w₀ = 0, w₁ = 0 (a flat line at zero marks). Each step: compute the errors, compute how the MSE changes if each weight moves a little (the gradient), and move each weight a small amount (the <strong>learning rate</strong>, 0.05 here) in the downhill direction.</p>
-  <div class="fx" data-lang="py">x = np.array([1, 2, 3, 4, 5, 6.]); yv = np.array([52, 55, 61, 62, 70, 72.])
-w0, w1, lr = 0.0, 0.0, 0.05                # start from a flat line at 0
-for step in range(1, 1001):
-    err = (w0 + w1 * x) - yv               # prediction minus truth, per row
-    g0 = 2 * err.mean()                    # slope of MSE w.r.t. w0
-    g1 = 2 * (err * x).mean()              # slope of MSE w.r.t. w1
-    w0 -= lr * g0                          # step downhill
-    w1 -= lr * g1
-    if step in (1, 2, 10, 100, 500, 1000):
-        mse = (((w0 + w1 * x) - yv) ** 2).mean()
-        print(f"step {step:4d}  w0={w0:6.2f}  w1={w1:5.2f}  MSE={mse:8.2f}")</div>
-  <div class="fx" data-lang="text">step    1  w0=  6.20  w1=22.92  MSE= 1622.22
-step    2  w0=  3.76  w1= 8.91  MSE=  799.67
-step   10  w0= 10.76  w1=12.64  MSE=  259.74
-step  100  w0= 40.42  w1= 5.80  MSE=   10.96
-step  500  w0= 47.40  w1= 4.17  MSE=    1.58
-step 1000  w0= 47.40  w1= 4.17  MSE=    1.58</div>
-  <p>Step 1 overshoots the slope to 22.9 (every guess was far too low, so the gradient is huge). It then zig-zags and settles. By step 500 it has the exact OLS answer, and MSE 1.58 is SSE 9.49 ÷ 6. <code>g0</code> and <code>g1</code> are the two partial derivatives; the <code>-=</code> lines are the "step downhill".</p>
+  <h3>Step 1: the derivative with respect to b</h3>
+  <p>SSE(w, b) = Σ (yᵢ − wxᵢ − b)². Differentiate each square with the chain rule (the derivative of u² is 2u · u′, and the derivative of (yᵢ − wxᵢ − b) with respect to b is −1):</p>
+  <p>∂SSE/∂b = Σ 2(yᵢ − wxᵢ − b)(−1) = −2 Σ (yᵢ − wxᵢ − b).</p>
+  <p>Set it to 0 and divide by −2n: (1/n)Σyᵢ − w(1/n)Σxᵢ − b = 0, that is <strong>b = ȳ − w·x̄</strong>.</p>
+  <p>Plain words: the best line always passes through the point of averages (x̄, ȳ). Also, since Σ(yᵢ − ŷᵢ) = 0 at the solution, <strong>the residuals of any OLS fit with an intercept add up to exactly zero</strong>.</p>
+  <h3>Step 2: the derivative with respect to w</h3>
+  <p>The derivative of (yᵢ − wxᵢ − b) with respect to w is −xᵢ, so ∂SSE/∂w = −2 Σ xᵢ(yᵢ − wxᵢ − b). Set it to 0 and substitute b = ȳ − w x̄:</p>
+  <p>Σ xᵢ(yᵢ − ȳ − w(xᵢ − x̄)) = 0 → Σ xᵢ(yᵢ − ȳ) = w Σ xᵢ(xᵢ − x̄).</p>
+  <p>Because Σ(xᵢ − x̄) = 0, we may replace the leading xᵢ by (xᵢ − x̄) on both sides without changing the sums (we are only subtracting x̄ · 0). That gives the famous formula:</p>
+  <div class="callout def"><span class="label">Definition</span>
+    <p><strong>Least-squares line, one feature:</strong><br>w = S_xy / S_xx = Σ(xᵢ − x̄)(yᵢ − ȳ) / Σ(xᵢ − x̄)²,  b = ȳ − w·x̄.<br>S_xy measures how x and y move together (it is n times the covariance); S_xx measures how spread out x is (n times the variance). So w = cov(x, y) / var(x).</p>
+  </div>
+  <p>Is it a minimum, not a maximum? The second derivatives are ∂²SSE/∂b² = 2n &gt; 0 and ∂²SSE/∂w² = 2Σxᵢ² &gt; 0, and the bowl is convex (shown with matrices in section 04), so the flat point is the bottom.</p>
+  <h3>Worked by hand on the 5 employees</h3>
+  <p>x̄ = (1+2+3+4+5)/5 = 3. ȳ = (3+5+4+7+9)/5 = 28/5 = 5.6.</p>
+  <table class="tbl out"><caption>The two sums we need</caption>
+    <tr><th>x</th><th>y</th><th>dx = x − 3</th><th>dy = y − 5.6</th><th>dx · dy</th><th>dx²</th></tr>
+    <tr><td>1</td><td>3</td><td>−2</td><td>−2.6</td><td>5.2</td><td>4</td></tr>
+    <tr><td>2</td><td>5</td><td>−1</td><td>−0.6</td><td>0.6</td><td>1</td></tr>
+    <tr><td>3</td><td>4</td><td>0</td><td>−1.6</td><td>0</td><td>0</td></tr>
+    <tr><td>4</td><td>7</td><td>1</td><td>1.4</td><td>1.4</td><td>1</td></tr>
+    <tr><td>5</td><td>9</td><td>2</td><td>3.4</td><td>6.8</td><td>4</td></tr>
+    <tr><td colspan="4"><strong>sums</strong></td><td><strong>S_xy = 14</strong></td><td><strong>S_xx = 10</strong></td></tr>
+  </table>
+  <p>w = 14 / 10 = <strong>1.4</strong> lakh per year of experience. b = 5.6 − 1.4 × 3 = <strong>1.4</strong> lakh. The line is ŷ = 1.4 + 1.4x.</p>
+  <table class="tbl out"><caption>Predictions and residuals</caption>
+    <tr><th>x</th><th>y</th><th>ŷ = 1.4 + 1.4x</th><th>e = y − ŷ</th><th>e²</th></tr>
+    <tr><td>1</td><td>3</td><td>2.8</td><td>0.2</td><td>0.04</td></tr>
+    <tr><td>2</td><td>5</td><td>4.2</td><td>0.8</td><td>0.64</td></tr>
+    <tr><td>3</td><td>4</td><td>5.6</td><td>−1.6</td><td>2.56</td></tr>
+    <tr><td>4</td><td>7</td><td>7.0</td><td>0</td><td>0</td></tr>
+    <tr><td>5</td><td>9</td><td>8.4</td><td>0.6</td><td>0.36</td></tr>
+    <tr><td colspan="3"><strong>sums</strong></td><td><strong>0</strong></td><td><strong>SSE = 3.6</strong></td></tr>
+  </table>
+  <p>The residuals add to 0, as step 1 promised. Is 3.6 really the smallest? The code checks the arithmetic and tries three other lines.</p>
+  <div class="fx" data-lang="py">import numpy as np
+x = np.array([1, 2, 3, 4, 5], dtype=float)     # years of experience
+y = np.array([3, 5, 4, 7, 9], dtype=float)     # salary, lakh per year
+dx, dy = x - x.mean(), y - y.mean()
+w = (dx * dy).sum() / (dx ** 2).sum()          # slope
+b = y.mean() - w * x.mean()                    # intercept
+print("x_bar", x.mean(), " y_bar", y.mean())
+print("S_xy", (dx * dy).sum(), " S_xx", (dx ** 2).sum())
+print(f"slope w = {w:.3f}   intercept b = {b:.3f}")
+res = y - (b + w * x)
+print("residuals", res.round(2) + 0.0, " sum", round(res.sum(), 10) + 0.0)
+print("SSE", round((res ** 2).sum(), 3))
+for bb, ww in [(1.4, 1.4), (1.0, 1.5), (2.0, 1.2), (0.0, 1.8)]:
+    print(f"line {bb} + {ww}x   SSE = {((y - (bb + ww * x)) ** 2).sum():.2f}")</div>
+  <div class="fx" data-lang="text">x_bar 3.0  y_bar 5.6
+S_xy 14.0  S_xx 10.0
+slope w = 1.400   intercept b = 1.400
+residuals [ 0.2  0.8 -1.6  0.   0.6]  sum 0.0
+SSE 3.6
+line 1.4 + 1.4x   SSE = 3.60
+line 1.0 + 1.5x   SSE = 3.75
+line 2.0 + 1.2x   SSE = 4.00
+line 0.0 + 1.8x   SSE = 5.40</div>
+  <p><code>dx</code> and <code>dy</code> are the middle columns of the table; the next two lines are the two formulas. Every other line has a bigger SSE (3.75, 4.00, 5.40). <code>+ 0.0</code> only turns a printed "-0." into "0.".</p>
+  <h3>Seeing the bowl</h3>
+  <p>Fix b at its best value for each w (b = ȳ − w·x̄) and look at SSE as w changes. Expanding the square gives SSE(w) = 3.6 + S_xx·(w − 1.4)² = 3.6 + 10(w − 1.4)²: a parabola whose bottom is at w = 1.4.</p>
+  <div class="fx" data-lang="py"># SSE as a function of the slope, with the intercept always set to y_bar - w*x_bar
+for ww in [0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0]:
+    bb = y.mean() - ww * x.mean()
+    print(f"w={ww:.1f}  b={bb:.1f}  SSE={((y - (bb + ww * x)) ** 2).sum():.2f}")</div>
+  <div class="fx" data-lang="text">w=0.8  b=3.2  SSE=7.20
+w=1.0  b=2.6  SSE=5.20
+w=1.2  b=2.0  SSE=4.00
+w=1.4  b=1.4  SSE=3.60
+w=1.6  b=0.8  SSE=4.00
+w=1.8  b=0.2  SSE=5.20
+w=2.0  b=-0.4  SSE=7.20</div>
+  <figure class="viz"><svg viewBox="0 0 520 260" width="520">
+<line x1="50" y1="220" x2="480" y2="220" stroke="currentColor"/><line x1="50" y1="30" x2="50" y2="220" stroke="currentColor"/>
+<text x="42" y="224" text-anchor="end" class="tm" font-size="11">0</text><text x="42" y="130" text-anchor="end" class="tm" font-size="11">5</text><text x="42" y="44" text-anchor="end" class="tm" font-size="11">10</text>
+<text x="110" y="236" text-anchor="middle" class="tm" font-size="11">0.8</text><text x="160" y="236" text-anchor="middle" class="tm" font-size="11">1.0</text><text x="210" y="236" text-anchor="middle" class="tm" font-size="11">1.2</text><text x="260" y="236" text-anchor="middle" class="tm" font-size="11">1.4</text><text x="310" y="236" text-anchor="middle" class="tm" font-size="11">1.6</text><text x="360" y="236" text-anchor="middle" class="tm" font-size="11">1.8</text><text x="410" y="236" text-anchor="middle" class="tm" font-size="11">2.0</text>
+<text x="265" y="254" text-anchor="middle" class="tm" font-size="11.5">slope w (with b = ȳ − w·x̄)</text><text x="56" y="24" class="tm" font-size="11.5">SSE</text>
+<polyline points="60,40 73,54 85,67 98,79 110,90 122,101 135,110 148,119 160,126 172,133 185,139 197,144 210,148 222,151 235,153 248,155 260,155 273,155 285,153 298,151 310,148 322,144 335,139 348,133 360,126 372,119 385,110 398,101 410,90 423,79 435,67 447,54 460,40" fill="none" class="sb" stroke-width="2.5"/>
+<circle cx="110" cy="90" r="4" class="ft st"/><circle cx="160" cy="126" r="4" class="ft st"/><circle cx="210" cy="148" r="4" class="ft st"/><circle cx="310" cy="148" r="4" class="ft st"/><circle cx="360" cy="126" r="4" class="ft st"/><circle cx="410" cy="90" r="4" class="ft st"/>
+<circle cx="260" cy="155" r="6" class="fg sg"/><text x="260" y="178" text-anchor="middle" class="tg" font-size="12">minimum: w = 1.4, SSE = 3.6</text>
+<line x1="80" y1="58" x2="140" y2="122" class="sr" stroke-width="1.5" stroke-dasharray="4 3"/><text x="146" y="70" class="tr" font-size="11">steep slope far away: big gradient</text>
+<line x1="225" y1="155" x2="295" y2="155" class="sg" stroke-width="1.5" stroke-dasharray="4 3"/><text x="300" y="196" class="tg" font-size="11">flat at the bottom: derivative = 0</text>
+</svg><figcaption>SSE against the slope. A symmetric bowl (parabola), lowest at w = 1.4. Setting the derivative to zero picks out exactly this point; gradient descent (section 06) walks down the same bowl.</figcaption></figure>
+  <div class="callout intu"><span class="label">Key insight</span>
+    <p>The slope formula S_xy / S_xx is "how much x and y move together, divided by how much x moves on its own". If y tends to be above its average exactly when x is above its average, S_xy is large and positive, so the slope is steep and positive.</p>
+  </div>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Regressing y on x and x on y gives two <em>different</em> lines (the second minimises horizontal gaps). Slope of y on x = S_xy / S_xx = 1.4; slope of x on y = S_xy / S_yy = 14 / 23.2 = 0.603, which is not 1 / 1.4 = 0.714. Decide which variable you are predicting.</p>
+  </div>
+  <div class="bridge"><b>What's still missing?</b> Real problems have many features: experience <em>and</em> certifications, size <em>and</em> distance <em>and</em> age. Writing a separate derivative for each weight gets messy fast. Matrices let us write all of them in one line.</div>
+
+  <h2 id="lr-matrix"><span class="num">04</span>Matrix Form &amp; the Normal Equation</h2>
+  <h3>All rows at once</h3>
+  <p>Stack the rows. Put a column of 1s in front of the features (it multiplies the intercept), and stack all parameters in one vector w = [b, w₁, …, w_d]. Then all n predictions are a single matrix product ŷ = Xw:</p>
   <table class="tbl">
-    <tr><th>Situation</th><th>Use</th><th>Why</th></tr>
-    <tr><td>Up to ~10k features, fits in memory</td><td>Closed form (SVD / <code>lstsq</code>), i.e. <code>LinearRegression</code></td><td>Exact, no learning rate; cost O(nd² + d³)</td></tr>
-    <tr><td>Huge d or data won't fit in memory</td><td>Mini-batch gradient descent, <code>SGDRegressor</code></td><td>O(nd) per pass, can stream</td></tr>
-    <tr><td>Duplicate / perfectly collinear features</td><td>Ridge or drop one</td><td>XᵀX is singular; (XᵀX + αI) is not</td></tr>
+    <tr><th>X (5 × 2)</th><th>w (2 × 1)</th><th>ŷ = Xw</th></tr>
+    <tr><td>[1, 1]<br>[1, 2]<br>[1, 3]<br>[1, 4]<br>[1, 5]</td><td>[b]<br>[w]</td><td>b + 1w<br>b + 2w<br>b + 3w<br>b + 4w<br>b + 5w</td></tr>
   </table>
+  <p>The loss is the squared length of the residual vector: SSE = ‖y − Xw‖² = (y − Xw)ᵀ(y − Xw).</p>
+  <h3>Deriving the normal equation</h3>
+  <p>Multiply out: SSE = yᵀy − 2wᵀXᵀy + wᵀXᵀXw. Two matrix-calculus facts (each is the many-variable version of d(ax)/dx = a and d(ax²)/dx = 2ax): the gradient of wᵀa is a, and the gradient of wᵀAw is 2Aw when A is symmetric. So</p>
+  <p>∇SSE = −2Xᵀy + 2XᵀXw. Set it to the zero vector:</p>
+  <div class="flow"><span>Loss ‖y − Xw‖²</span><span>Gradient −2Xᵀ(y − Xw)</span><span>Set = 0</span><span>XᵀX w = Xᵀy</span><span>w = (XᵀX)⁻¹Xᵀy</span></div>
+  <p>The middle equation XᵀXw = Xᵀy is the <strong>normal equation</strong> (one equation per parameter). Its second derivative (Hessian) is 2XᵀX, which is positive semi-definite (vᵀXᵀXv = ‖Xv‖² ≥ 0 for every v), so the loss is a convex bowl and the solution is the minimum. If no column is a combination of the others, XᵀX is invertible and the answer is unique.</p>
+  <h3>The 2×2 case by hand</h3>
+  <p>XᵀX is a table of sums: [[n, Σx], [Σx, Σx²]]. Xᵀy = [Σy, Σxy]. For our 5 employees: n = 5, Σx = 15, Σx² = 1+4+9+16+25 = 55, Σy = 28, Σxy = 3 + 10 + 12 + 28 + 45 = 98.</p>
+  <p>So the normal equation is two ordinary equations:</p>
+  <ul>
+    <li>5b + 15w = 28</li>
+    <li>15b + 55w = 98</li>
+  </ul>
+  <p><strong>Solve with the 2×2 inverse.</strong> For A = [[a, c], [c, d]], A⁻¹ = (1/(ad − c²))·[[d, −c], [−c, a]]. Here the determinant is 5·55 − 15·15 = 275 − 225 = <strong>50</strong>, so (XᵀX)⁻¹ = (1/50)[[55, −15], [−15, 5]] = [[1.1, −0.3], [−0.3, 0.1]].</p>
+  <p>w = (XᵀX)⁻¹Xᵀy: b = 1.1·28 − 0.3·98 = 30.8 − 29.4 = <strong>1.4</strong>; w = −0.3·28 + 0.1·98 = −8.4 + 9.8 = <strong>1.4</strong>. The same line as the one-feature formula, as it must be. Keep the inverse [[1.1, −0.3], [−0.3, 0.1]]: it reappears in section 09 as the source of the standard errors.</p>
+  <div class="fx" data-lang="py">X = np.c_[np.ones(5), x]                        # column of 1s (intercept) + experience
+XtX, Xty = X.T @ X, X.T @ y
+print("X^T X =", XtX.tolist())
+print("X^T y =", Xty.tolist())
+print("det   =", round(np.linalg.det(XtX), 6))
+w_solve = np.linalg.solve(XtX, Xty)             # solves (X^T X) w = X^T y
+w_lstsq, *_ = np.linalg.lstsq(X, y, rcond=None) # SVD-based least squares
+print("solve :", w_solve.round(4))
+print("lstsq :", w_lstsq.round(4))
+r = y - X @ w_solve
+print("X^T r =", (X.T @ r).round(10) + 0.0, "  (residuals are orthogonal to every column)")</div>
+  <div class="fx" data-lang="text">X^T X = [[5.0, 15.0], [15.0, 55.0]]
+X^T y = [28.0, 98.0]
+det   = 50.0
+solve : [1.4 1.4]
+lstsq : [1.4 1.4]
+X^T r = [0. 0.]   (residuals are orthogonal to every column)</div>
+  <p><code>np.c_</code> glues a column of 1s to x. <code>solve</code> solves the linear system directly (no inverse is formed), and <code>lstsq</code> uses the SVD, which also copes with duplicated columns. The last line checks Xᵀe = 0: this is just the normal equation rewritten as Xᵀ(y − Xw) = 0.</p>
+  <h3>Multiple regression by hand: two features</h3>
+  <p>Team B has 6 people. Besides experience we now know how many professional certifications each holds.</p>
+  <table class="tbl"><caption>Team B</caption>
+    <tr><th>Person</th><th>exp x₁</th><th>cert x₂</th><th>salary y</th><th>d₁ = x₁ − 3.5</th><th>d₂ = x₂ − 1</th><th>dy = y − 7.5</th></tr>
+    <tr><td>Q1</td><td>1</td><td>0</td><td>3</td><td>−2.5</td><td>−1</td><td>−4.5</td></tr>
+    <tr><td>Q2</td><td>2</td><td>1</td><td>6.5</td><td>−1.5</td><td>0</td><td>−1</td></tr>
+    <tr><td>Q3</td><td>3</td><td>0</td><td>4.5</td><td>−0.5</td><td>−1</td><td>−3</td></tr>
+    <tr><td>Q4</td><td>4</td><td>2</td><td>9.5</td><td>0.5</td><td>1</td><td>2</td></tr>
+    <tr><td>Q5</td><td>5</td><td>1</td><td>9.5</td><td>1.5</td><td>0</td><td>2</td></tr>
+    <tr><td>Q6</td><td>6</td><td>2</td><td>12</td><td>2.5</td><td>1</td><td>4.5</td></tr>
+  </table>
+  <p>A shortcut that keeps the arithmetic small: <strong>centre</strong> every column (subtract its mean). The intercept then drops out of the system and comes back at the end as b = ȳ − w₁x̄₁ − w₂x̄₂. The centred normal equation is a 2×2 system of sums of products:</p>
+  <ul>
+    <li>S₁₁ = Σd₁² = 6.25 + 2.25 + 0.25 + 0.25 + 2.25 + 6.25 = <strong>17.5</strong></li>
+    <li>S₁₂ = Σd₁d₂ = 2.5 + 0 + 0.5 + 0.5 + 0 + 2.5 = <strong>6</strong></li>
+    <li>S₂₂ = Σd₂² = 1 + 0 + 1 + 1 + 0 + 1 = <strong>4</strong></li>
+    <li>S₁y = Σd₁·dy = 11.25 + 1.5 + 1.5 + 1 + 3 + 11.25 = <strong>29.5</strong></li>
+    <li>S₂y = Σd₂·dy = 4.5 + 0 + 3 + 2 + 0 + 4.5 = <strong>14</strong></li>
+  </ul>
+  <p>Equations: 17.5w₁ + 6w₂ = 29.5 and 6w₁ + 4w₂ = 14. Determinant 17.5·4 − 6·6 = 70 − 36 = 34. Cramer's rule: w₁ = (29.5·4 − 6·14)/34 = (118 − 84)/34 = <strong>1.0</strong>; w₂ = (17.5·14 − 6·29.5)/34 = (245 − 177)/34 = <strong>2.0</strong>. Intercept b = 7.5 − 1.0·3.5 − 2.0·1 = <strong>2.0</strong>.</p>
+  <p>Model: <strong>salary = 2 + 1.0·experience + 2.0·certifications</strong>.</p>
+  <div class="fx" data-lang="py">exp  = np.array([1, 2, 3, 4, 5, 6], dtype=float)          # years of experience
+cert = np.array([0, 1, 0, 2, 1, 2], dtype=float)          # certifications held
+sal  = np.array([3, 6.5, 4.5, 9.5, 9.5, 12])              # salary, lakh per year
+d1, d2, dyy = exp - exp.mean(), cert - cert.mean(), sal - sal.mean()
+A = np.array([[d1 @ d1, d1 @ d2], [d1 @ d2, d2 @ d2]])    # centred X^T X (2x2)
+c = np.array([d1 @ dyy, d2 @ dyy])                        # centred X^T y
+print("centred X^T X =", A.tolist(), "  centred X^T y =", c.tolist())
+w12 = np.linalg.solve(A, c)
+w0 = sal.mean() - w12 @ [exp.mean(), cert.mean()]
+print("w_exp, w_cert =", w12.round(4), "  intercept =", round(w0, 4))
+X3 = np.c_[np.ones(6), exp, cert]                         # full design matrix with 1s
+print("full normal equation:", np.linalg.solve(X3.T @ X3, X3.T @ sal).round(4))
+print("experience ALONE slope:", round((d1 @ dyy) / (d1 @ d1), 4))
+print("corr(exp, cert) =", round(np.corrcoef(exp, cert)[0, 1], 3))</div>
+  <div class="fx" data-lang="text">centred X^T X = [[17.5, 6.0], [6.0, 4.0]]   centred X^T y = [29.5, 14.0]
+w_exp, w_cert = [1. 2.]   intercept = 2.0
+full normal equation: [2. 1. 2.]
+experience ALONE slope: 1.6857
+corr(exp, cert) = 0.717</div>
+  <p>The centred 2×2 system and the full 3×3 normal equation (with the 1s column) agree. Now the important line: <strong>experience alone</strong> gives a slope of 29.5/17.5 = 1.686, but with certifications in the model it is 1.0. Why? Experienced people in this team also hold more certifications (correlation 0.717). Alone, experience gets credit for both. Section 07 explains the exact formula: 1.686 = 1.0 + 2.0 × (6/17.5).</p>
   <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Normal equation</strong>: XᵀXw = Xᵀy, whose solution w = (XᵀX)⁻¹Xᵀy is the OLS weight vector. <strong>Gradient descent</strong>: repeat w ← w − η·∇Loss(w), where η is the learning rate. For OLS the loss is a convex bowl, so GD with a small enough η reaches the same answer.</p>
+    <p><strong>Normal equation:</strong> XᵀXw = Xᵀy, with solution ŵ = (XᵀX)⁻¹Xᵀy when XᵀX is invertible (X has full column rank). X includes a leading column of 1s, so ŵ[0] is the intercept. Computing it costs about O(nd²) to form XᵀX plus O(d³) to solve.</p>
   </div>
   <div class="callout trap"><span class="label">Trap</span>
-    <p><code>np.linalg.inv(X.T @ X)</code> silently returns garbage when XᵀX is nearly singular (two almost identical columns). Use <code>np.linalg.lstsq</code> or <code>solve</code>; sklearn's <code>LinearRegression</code> already does. For GD: too large a learning rate and the loss blows up; unscaled features make GD crawl.</p>
+    <p>Never compute <code>np.linalg.inv(X.T @ X) @ X.T @ y</code> in real code. Explicit inverses lose accuracy when columns are nearly duplicates (XᵀX nearly singular). Use <code>np.linalg.lstsq</code> (SVD) or <code>solve</code>; sklearn's <code>LinearRegression</code> already uses an SVD-based least-squares solver.</p>
   </div>
+  <div class="bridge"><b>What's still missing?</b> We have a formula. Why does it work? A picture of what XᵀXw = Xᵀy means, and a few facts about OLS that interviews love (why it is "best", why it equals maximum likelihood).</div>
 
-  <h2 id="mr-diag"><span class="num">04</span>Assumptions &amp; Diagnostics</h2>
-  <p>OLS will always give you a line, even when a line is the wrong shape. And if you report p-values or confidence intervals (as analysts do in statsmodels), those numbers are only correct when certain conditions hold. So after fitting, you check. The main tool is the <strong>residual plot</strong>: predictions on the x-axis, residuals on the y-axis. A good model leaves only random noise behind, a shapeless band around zero.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A doctor does not stop at one number on a blood report. R² is that one number. The residual plot is the full report: it shows <em>what kind</em> of problem is there, and so what medicine to give.</p>
-  </div>
-  <h3>Worked example: a line through a curve</h3>
-  <p>Take five points that are truly curved: x = 1, 2, 3, 4, 5 and y = x² = 1, 4, 9, 16, 25. Fit a straight line with the pencil recipe: x̄ = 3, ȳ = 11, Σdx·dy = 60, Σdx² = 10, so slope = 6 and intercept = 11 − 18 = −7.</p>
-  <table class="tbl out"><caption>Line ŷ = −7 + 6x on a curve</caption>
-    <tr><th>x</th><th>y</th><th>ŷ</th><th>residual</th></tr>
-    <tr><td>1</td><td>1</td><td>−1</td><td>+2</td></tr>
-    <tr><td>2</td><td>4</td><td>5</td><td>−1</td></tr>
-    <tr><td>3</td><td>9</td><td>11</td><td>−2</td></tr>
-    <tr><td>4</td><td>16</td><td>17</td><td>−1</td></tr>
-    <tr><td>5</td><td>25</td><td>23</td><td>+2</td></tr>
-  </table>
-  <p>R² = 1 − 14/374 = 0.963. Looks excellent. But the residuals go +, −, −, −, +: a smile. Random noise would never line up like that. The pattern says "you are missing an x² term". Random-looking residuals are the goal; any shape is a message.</p>
-  <figure class="viz"><svg viewBox="0 0 570 150" width="570">
-<line x1="10" y1="75" x2="130" y2="75" stroke="currentColor" stroke-dasharray="3 3"/><line x1="150" y1="75" x2="270" y2="75" stroke="currentColor" stroke-dasharray="3 3"/><line x1="290" y1="75" x2="410" y2="75" stroke="currentColor" stroke-dasharray="3 3"/><line x1="430" y1="75" x2="550" y2="75" stroke="currentColor" stroke-dasharray="3 3"/>
-<path d="M114 77h0M101 78h0M71 61h0M50 67h0M105 74h0M19 74h0M108 63h0M70 116h0M119 62h0M68 68h0M87 87h0M114 106h0M75 93h0M42 71h0M17 72h0M20 91h0M98 83h0M121 62h0M12 79h0M79 61h0M104 69h0M125 73h0M65 79h0M81 87h0M21 67h0M56 95h0M60 57h0M41 83h0M73 68h0M80 72h0M25 65h0M120 76h0M16 85h0M13 68h0M128 53h0M94 71h0M39 83h0M46 95h0M25 81h0M122 79h0M57 64h0M74 70h0M75 83h0M122 83h0M57 64h0M51 56h0M44 56h0M30 77h0M98 89h0M84 61h0M88 87h0M12 78h0M73 85h0M117 95h0M13 67h0M54 92h0M116 70h0M117 78h0M81 86h0M122 62h0" class="sb" stroke-width="4" stroke-linecap="round"/>
-<path d="M251 83h0M262 49h0M200 98h0M261 49h0M265 51h0M166 59h0M267 50h0M230 85h0M260 60h0M224 94h0M201 109h0M177 70h0M170 75h0M238 84h0M183 80h0M262 50h0M203 93h0M228 92h0M194 100h0M184 93h0M238 85h0M238 77h0M150 42h0M262 54h0M213 100h0M201 93h0M225 97h0M203 97h0M219 96h0M159 54h0M249 77h0M257 66h0M160 50h0M186 90h0M173 76h0M177 81h0M231 81h0M216 100h0M221 95h0M172 66h0M194 87h0M263 57h0M182 79h0M151 45h0M256 66h0M213 101h0M158 46h0M165 58h0M255 56h0M226 87h0M181 79h0M246 72h0M231 76h0M215 98h0M179 79h0M245 86h0M152 45h0M270 35h0M157 50h0M237 95h0" class="sb" stroke-width="4" stroke-linecap="round"/>
-<path d="M402 64h0M307 66h0M401 83h0M359 78h0M308 79h0M388 63h0M312 76h0M298 77h0M394 70h0M397 67h0M322 76h0M359 73h0M408 102h0M402 67h0M328 79h0M294 73h0M297 72h0M351 70h0M378 76h0M299 77h0M295 75h0M322 82h0M322 66h0M402 54h0M348 73h0M376 91h0M317 74h0M300 74h0M368 76h0M301 69h0M390 85h0M334 73h0M389 46h0M331 76h0M388 35h0M405 92h0M406 60h0M368 74h0M353 69h0M345 75h0M404 76h0M358 80h0M319 62h0M353 76h0M378 70h0M397 73h0M291 75h0M295 72h0M389 52h0M378 75h0M296 76h0M310 86h0M391 75h0M402 60h0M371 63h0M383 92h0M355 68h0M341 72h0M321 81h0M300 72h0" class="sb" stroke-width="4" stroke-linecap="round"/>
-<path d="M430 69h0M432 72h0M434 79h0M436 82h0M438 72h0M440 59h0M442 64h0M444 52h0M446 67h0M448 58h0M450 74h0M452 72h0M454 94h0M456 103h0M458 79h0M460 61h0M462 71h0M464 65h0M466 64h0M469 64h0M470 74h0M472 73h0M475 60h0M476 81h0M478 83h0M481 76h0M482 98h0M485 104h0M487 107h0M488 95h0M491 92h0M493 70h0M495 87h0M497 86h0M499 84h0M501 71h0M503 83h0M505 77h0M507 73h0M509 72h0M511 81h0M513 75h0M515 70h0M517 73h0M519 81h0M521 68h0M523 64h0M525 62h0M527 59h0M529 47h0M531 66h0M534 70h0M536 65h0M537 69h0M540 52h0M542 77h0M543 83h0M546 90h0M548 84h0M550 68h0" class="sb" stroke-width="4" stroke-linecap="round"/>
-<text x="70" y="18" text-anchor="middle" class="tg" font-size="13">healthy</text><text x="210" y="18" text-anchor="middle" class="tr" font-size="13">curve</text><text x="350" y="18" text-anchor="middle" class="tr" font-size="13">fan</text><text x="490" y="18" text-anchor="middle" class="tr" font-size="13">snake</text>
-<text x="70" y="140" text-anchor="middle" class="tm" font-size="11">random band</text><text x="210" y="140" text-anchor="middle" class="tm" font-size="11">missing x² term</text><text x="350" y="140" text-anchor="middle" class="tm" font-size="11">variance grows</text><text x="490" y="140" text-anchor="middle" class="tm" font-size="11">residuals vs time</text>
-</svg><figcaption>Residuals (y-axis) vs fitted values from four simulated datasets. Only the first is a model you can trust.</figcaption></figure>
+  <h2 id="lr-geom"><span class="num">05</span>Geometry &amp; Properties of OLS</h2>
+  <h3>Projection: the shadow of y</h3>
+  <p>Think of y as one arrow in n-dimensional space (one coordinate per row). Every possible prediction Xw is a combination of X's columns, so all of them lie on a flat sheet (the <strong>column space</strong> of X). The closest point on that sheet to y is found by dropping a perpendicular: the shadow. That shadow is ŷ, and the perpendicular is the residual vector e. "Perpendicular to every column" is exactly Xᵀe = 0, the normal equation. (The word "normal" means perpendicular.)</p>
+  <figure class="viz"><svg viewBox="0 0 460 210" width="460">
+<defs><marker id="lr-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+<path d="M30 150 L250 175 L420 130 L200 105 Z" class="fs" stroke="currentColor"/>
+<text x="30" y="198" class="tm" font-size="12">sheet = all possible Xw (column space of X)</text>
+<line x1="120" y1="140" x2="260" y2="30" stroke="currentColor" stroke-width="2" marker-end="url(#lr-ah)"/>
+<text x="266" y="28" font-size="13">y (actual salaries)</text>
+<line x1="120" y1="140" x2="260" y2="135" class="sb" stroke-width="2" marker-end="url(#lr-ah)"/>
+<text x="266" y="150" class="tb" font-size="13">ŷ = Xŵ = Hy</text>
+<line x1="260" y1="35" x2="260" y2="130" class="sr" stroke-width="2" stroke-dasharray="4 3"/>
+<text x="268" y="88" class="tr" font-size="12">e = y − ŷ, perpendicular</text>
+<path d="M260 122 h-8 v9" fill="none" stroke="currentColor"/>
+</svg><figcaption>OLS finds the point of the sheet closest to y. The residual sticks out at a right angle: Xᵀe = 0.</figcaption></figure>
+  <p>Substituting ŵ gives ŷ = X(XᵀX)⁻¹Xᵀy = <strong>Hy</strong>. H is the <strong>hat matrix</strong> ("it puts the hat on y"). Its diagonal entries hᵢᵢ, called <strong>leverages</strong>, say how much row i's own y pulls its own prediction; <a class="xref" data-note="ml_reg_diag">Assumptions &amp; Diagnostics</a> uses them to find influential points.</p>
+  <h3>Facts that follow (all true for every OLS fit with an intercept)</h3>
   <table class="tbl">
-    <tr><th>Assumption</th><th>If violated</th><th>Check</th><th>Fix</th></tr>
-    <tr><td><strong>L</strong>inearity</td><td>Biased coefficients, systematic misses</td><td>Curve in residual plot</td><td>Add x², log, splines; or trees</td></tr>
-    <tr><td><strong>I</strong>ndependent errors</td><td>Coefficients fine, standard errors too small → fake significance</td><td>Durbin–Watson (≈ 2 good, ≪ 2 bad)</td><td>Lag features, time-series model, Newey–West SEs</td></tr>
-    <tr><td><strong>N</strong>ormal errors</td><td>Only p-values / CIs off (small n)</td><td>Q-Q plot</td><td>Usually ignore for large n</td></tr>
-    <tr><td><strong>E</strong>qual variance</td><td>Unbiased but standard errors wrong</td><td>Fan shape; Breusch–Pagan p &lt; 0.05</td><td>log(y), weighted least squares, robust SEs</td></tr>
-    <tr><td>No multicollinearity</td><td>Coefficients swing, signs flip</td><td>VIF &gt; 10</td><td>Ridge, drop or combine features</td></tr>
+    <tr><th>Fact</th><th>Why</th><th>Check on the 5 employees</th></tr>
+    <tr><td>Residuals sum to 0</td><td>e ⟂ the 1s column</td><td>0.2 + 0.8 − 1.6 + 0 + 0.6 = 0</td></tr>
+    <tr><td>Residuals uncorrelated with each feature</td><td>e ⟂ every column</td><td>Σxe = 0.2 + 1.6 − 4.8 + 0 + 3.0 = 0</td></tr>
+    <tr><td>Residuals uncorrelated with ŷ</td><td>ŷ is a combination of columns</td><td>Σŷe = 0.56 + 3.36 − 8.96 + 0 + 5.04 = 0</td></tr>
+    <tr><td>Line passes through (x̄, ȳ)</td><td>b = ȳ − wx̄</td><td>1.4 + 1.4·3 = 5.6</td></tr>
+    <tr><td>mean(ŷ) = mean(y)</td><td>residuals sum to 0</td><td>(2.8+4.2+5.6+7+8.4)/5 = 5.6</td></tr>
+    <tr><td>SST = SSR + SSE</td><td>Pythagoras on the right angle</td><td>23.2 = 19.6 + 3.6</td></tr>
   </table>
-  <p>The script below builds four fake datasets, one per picture, fits OLS with statsmodels and prints one test number for each problem. It also measures the <strong>VIF</strong> (variance inflation factor: how much a feature is explained by the other features) for two near-copies and one independent column.</p>
-  <div class="fx" data-lang="py">import statsmodels.api as sm
-from statsmodels.stats.stattools import durbin_watson
-from statsmodels.stats.diagnostic import het_breuschpagan
-from statsmodels.stats.outliers_influence import variance_inflation_factor
-rng = np.random.default_rng(0); n = 200
-x = rng.uniform(1, 10, n)
-e = rng.normal(0, 1, n); ar1 = np.zeros(n)
-for t in range(1, n): ar1[t] = 0.9*ar1[t-1] + e[t]          # each error carries 90% of the last one
-cases = {"good":     3 + 2*x + rng.normal(0, 1, n),
-         "curved":   3 + 0.5*x**2 + rng.normal(0, 1, n),
-         "fan":      3 + 2*x + rng.normal(0, 0.4*x, n),       # noise grows with x
-         "autocorr": 3 + 2*np.sort(x) + ar1}
-for name, y in cases.items():
-    xx = np.sort(x) if name == "autocorr" else x
-    X = sm.add_constant(xx); fit = sm.OLS(y, X).fit(); r = fit.resid
-    curv = np.corrcoef(r, (xx - xx.mean())**2)[0, 1]
-    print(f"{name:9s} R2={fit.rsquared:.3f}  DW={durbin_watson(r):.2f}  "
-          f"BP p={het_breuschpagan(r, X)[1]:.3f}  corr(res,x^2)={curv:+.2f}")
-x1 = rng.normal(size=n); x2 = x1 + rng.normal(0, 0.1, n); x3 = rng.normal(size=n)
-Xv = sm.add_constant(np.c_[x1, x2, x3])
-print("VIF:", [float(round(variance_inflation_factor(Xv, i), 1)) for i in range(1, 4)])</div>
-  <div class="fx" data-lang="text">good      R2=0.968  DW=2.15  BP p=0.505  corr(res,x^2)=+0.05
-curved    R2=0.956  DW=1.96  BP p=0.067  corr(res,x^2)=+0.93
-fan       R2=0.846  DW=1.94  BP p=0.000  corr(res,x^2)=-0.01
-autocorr  R2=0.897  DW=0.33  BP p=0.272  corr(res,x^2)=+0.30
-VIF: [90.0, 89.9, 1.0]</div>
-  <p>Read it row by row. "good" passes everything. "curved" has residuals that correlate 0.93 with x²: the smile again. "fan" fails Breusch–Pagan (p = 0.000): the noise grows with x. "autocorr" has Durbin–Watson 0.33, far below 2: each error follows the last. The VIF line shows the two near-copies (about 90) next to a clean column (1.0).</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>The <strong>LINE</strong> assumptions: <strong>L</strong>inear relationship, <strong>I</strong>ndependent errors, <strong>N</strong>ormally distributed errors, <strong>E</strong>qual error variance (homoscedasticity; its failure is heteroscedasticity). Only linearity affects whether the coefficients are right; the others affect standard errors and p-values.</p>
+  <p>Because these hold by construction, they are <em>not</em> evidence that the model is good. A residual plot of a wrong model still has residuals that average to zero.</p>
+  <h3>Why OLS is "best": Gauss–Markov (brief)</h3>
+  <p>If the true model is linear, the errors have mean 0, the same variance for every row, and are uncorrelated with each other, then the OLS weights are <strong>BLUE</strong>: the Best (lowest variance) Linear Unbiased Estimator. "Unbiased" means that over many datasets the estimates average to the true weights. "Best" means no other unbiased estimator that is a linear function of y wobbles less. Normality of errors is <em>not</em> needed for this. Which assumptions buy what, and what to do when they fail, is the whole of <a class="xref" data-note="ml_reg_diag">Assumptions &amp; Diagnostics</a>.</p>
+  <h3>Least squares = maximum likelihood under normal noise (brief)</h3>
+  <p>Assume εᵢ ~ Normal(0, σ²). The probability density of seeing yᵢ is (1/√(2πσ²))·exp(−(yᵢ − xᵢᵀw)² / (2σ²)). Multiply over rows and take logs:</p>
+  <p>log L(w, σ²) = −(n/2)·log(2πσ²) − (1/(2σ²))·Σ(yᵢ − xᵢᵀw)².</p>
+  <p>The only part that depends on w is −SSE/(2σ²). Maximising the likelihood is therefore the same as minimising SSE. The best σ² is SSE/n, and plugging it back gives log L = −(n/2)(log 2π + log(SSE/n) + 1). For our data: −2.5 × (1.8379 + log 0.72 + 1) = −2.5 × 2.5094 = <strong>−6.273</strong>, the "Log-Likelihood" line of the statsmodels summary in section 09. (<a class="xref" data-note="st_probability">Probability</a> covers likelihood.)</p>
+  <div class="callout intu"><span class="label">Key insight</span>
+    <p>Three views give the same answer: calculus (flat bottom of the SSE bowl), geometry (perpendicular projection), statistics (maximum likelihood with Gaussian noise). Ridge and lasso add a penalty to the first view; logistic regression changes the likelihood in the third.</p>
   </div>
   <div class="callout trap"><span class="label">Trap</span>
-    <p>The curved model has R² 0.956 and is still wrong. A high R² never proves the shape is right. Always look at the residual plot. Interviewers often ask "R² is 0.95, are we done?" The answer is "not until I've seen the residuals".</p>
+    <p>"BLUE" does not mean "best model". A biased estimator such as ridge can have lower total error (bias² + variance) than OLS, which is why <a class="xref" data-note="ml_ridge_lasso">Ridge, Lasso &amp; Elastic Net</a> often predicts better. Gauss–Markov only ranks <em>unbiased linear</em> estimators.</p>
   </div>
+  <div class="bridge"><b>What's still missing?</b> The normal equation needs XᵀX in memory and a d × d solve. With millions of rows streaming in, or a model too big for a closed form, we need a way to find the same weights step by step.</div>
 
-  <h2 id="mr-reg"><span class="num">05</span>Ridge, Lasso, Elastic Net</h2>
-  <p>Real datasets have problems the six students did not. Two columns may measure almost the same thing (two cholesterol readings, temperature from two sensors). Many columns may be pure noise. OLS then does strange things: it gives huge weights with opposite signs that cancel each other, and the weights change wildly if you add or remove a few rows. Predictions on new data get worse.</p>
-  <p>The fix is <strong>regularisation</strong>: add a penalty for big weights to the loss. Now the model must balance "fit the data" against "keep the weights small". It only gives a feature a large weight if the feature really earns it. <strong>Ridge</strong> charges the sum of squared weights. <strong>Lasso</strong> charges the sum of absolute weights. <strong>Elastic Net</strong> charges a mix. The knob α (alpha) sets how strong the penalty is.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>You get fixed pocket money to spend on features. Ridge spreads it a little over every feature. Lasso spends it only on the few that matter most and gives the rest nothing. α is how tight the budget is.</p>
-  </div>
-  <h3>Worked example: shrink one weight by hand</h3>
-  <p>With one feature and centred data, ridge has a tiny formula: w = Σ(dx·dy) / (Σdx² + α). For the students that is 73 / (17.5 + α). Lasso (in sklearn's scaling) has another: w = max(73 − 6α, 0) / 17.5, where 6 is the number of rows. It subtracts a fixed amount, and once that amount is bigger than 73 the weight is exactly 0.</p>
-  <table class="tbl out"><caption>Slope for marks vs hours as α grows</caption>
-    <tr><th>α</th><th>Ridge 73 / (17.5 + α)</th><th>α</th><th>Lasso max(73 − 6α, 0) / 17.5</th></tr>
-    <tr><td>0</td><td>4.171 (plain OLS)</td><td>0.5</td><td>4.000</td></tr>
-    <tr><td>1</td><td>3.946</td><td>5</td><td>2.457</td></tr>
-    <tr><td>17.5</td><td>2.086 (halved)</td><td>12.17</td><td><strong>0.000</strong></td></tr>
-    <tr><td>100</td><td>0.621 (small, never 0)</td><td>13</td><td><strong>0.000</strong></td></tr>
+  <h2 id="lr-gd"><span class="num">06</span>Gradient Descent: the Iterative Alternative</h2>
+  <h3>The idea</h3>
+  <p>Instead of jumping to the bottom of the bowl with a formula, start anywhere and repeatedly take a small step downhill. "Downhill" is the negative gradient; the step size is the <strong>learning rate</strong> η. The full theory (learning-rate effects, mini-batches, momentum) is in <a class="xref" data-note="ml_loss_gd">Loss Functions &amp; Gradient Descent</a>; here we apply it to our line.</p>
+  <p>Use the mean squared error MSE = SSE / n (dividing by n keeps step sizes independent of dataset size). Its gradients are</p>
+  <ul>
+    <li>∂MSE/∂b = −(2/n) Σ eᵢ</li>
+    <li>∂MSE/∂w = −(2/n) Σ xᵢ eᵢ, where eᵢ = yᵢ − (b + wxᵢ).</li>
+  </ul>
+  <p>Update: b ← b − η·∂MSE/∂b, w ← w − η·∂MSE/∂w.</p>
+  <h3>Two steps by hand (η = 0.05, start b = 0, w = 0)</h3>
+  <p><strong>Step 1.</strong> The line predicts 0 for everyone, so the residuals are just y: 3, 5, 4, 7, 9. Σe = 28 and Σxe = 98 (that is Σxy).</p>
+  <ul>
+    <li>∂b = −(2/5)·28 = −11.2; ∂w = −(2/5)·98 = −39.2</li>
+    <li>b = 0 − 0.05·(−11.2) = <strong>0.56</strong>; w = 0 − 0.05·(−39.2) = <strong>1.96</strong></li>
+  </ul>
+  <p><strong>Step 2.</strong> Predictions 0.56 + 1.96x = 2.52, 4.48, 6.44, 8.40, 10.36. Residuals 0.48, 0.52, −2.44, −1.40, −1.36.</p>
+  <table class="tbl out"><caption>Step 2 sums</caption>
+    <tr><th>x</th><th>e</th><th>x·e</th></tr>
+    <tr><td>1</td><td>0.48</td><td>0.48</td></tr>
+    <tr><td>2</td><td>0.52</td><td>1.04</td></tr>
+    <tr><td>3</td><td>−2.44</td><td>−7.32</td></tr>
+    <tr><td>4</td><td>−1.40</td><td>−5.60</td></tr>
+    <tr><td>5</td><td>−1.36</td><td>−6.80</td></tr>
+    <tr><td><strong>sum</strong></td><td><strong>−4.20</strong></td><td><strong>−18.20</strong></td></tr>
   </table>
-  <p>The script checks every cell of that table against sklearn's <code>Ridge</code> and <code>Lasso</code>:</p>
-  <div class="fx" data-lang="py">from sklearn.linear_model import Ridge, Lasso
-X = np.array([[1], [2], [3], [4], [5], [6]]); y = np.array([52, 55, 61, 62, 70, 72])   # the six students
-sxy, sxx, n = 73.0, 17.5, 6                 # from the hand calculation (centred sums)
-for a in [0, 1, 17.5, 100]:
-    hand = sxy / (sxx + a)
-    skl = Ridge(alpha=a).fit(X, y).coef_[0] if a else hand
-    print(f"ridge alpha={a:&lt;5} hand w={hand:.3f}  sklearn w={skl:.3f}")
-for a in [0.5, 5, 12.17, 13]:
-    hand = max(sxy - n * a, 0) / sxx       # soft threshold
-    skl = Lasso(alpha=a).fit(X, y).coef_[0]
-    print(f"lasso alpha={a:&lt;5} hand w={hand:.3f}  sklearn w={skl:.3f}")</div>
-  <div class="fx" data-lang="text">ridge alpha=0     hand w=4.171  sklearn w=4.171
-ridge alpha=1     hand w=3.946  sklearn w=3.946
-ridge alpha=17.5  hand w=2.086  sklearn w=2.086
-ridge alpha=100   hand w=0.621  sklearn w=0.621
-lasso alpha=0.5   hand w=4.000  sklearn w=4.000
-lasso alpha=5     hand w=2.457  sklearn w=2.457
-lasso alpha=12.17 hand w=0.000  sklearn w=0.000
-lasso alpha=13    hand w=0.000  sklearn w=0.000</div>
-  <p>Hand and library agree. The pattern is the whole story: ridge <em>divides</em> (the weight shrinks but never reaches 0), lasso <em>subtracts</em> (the weight hits 0 and stays there). <code>max(..., 0)</code> is called soft thresholding.</p>
-  <h3>On real data: the diabetes dataset</h3>
-  <p>442 patients, 10 measurements (age, BMI, blood pressure, six blood tests s1–s6), target = disease progression after a year. s1 and s2 are two cholesterol readings with correlation 0.9. The code standardises every column, fits four models, and prints each weight per one standard deviation of its feature.</p>
+  <ul>
+    <li>∂b = −(2/5)(−4.2) = 1.68; ∂w = −(2/5)(−18.2) = 7.28</li>
+    <li>b = 0.56 − 0.05·1.68 = <strong>0.476</strong>; w = 1.96 − 0.05·7.28 = <strong>1.596</strong></li>
+  </ul>
+  <p>Step 1 overshot the slope (1.96 &gt; 1.4) because every prediction was far too low; step 2 pulled it back. The code continues for 2,000 steps.</p>
+  <div class="fx" data-lang="py">w, b, lr = 0.0, 0.0, 0.05                     # start from the flat line y = 0
+for step in range(1, 2001):
+    err = y - (b + w * x)                     # residual for each of the 5 people
+    gb = -2 * err.mean()                      # d MSE / d b
+    gw = -2 * (err * x).mean()                # d MSE / d w
+    b, w = b - lr * gb, w - lr * gw           # step downhill
+    if step in (1, 2, 3, 10, 100, 1000, 2000):
+        mse = ((y - (b + w * x)) ** 2).mean()
+        print(f"step {step:4d}  grad_b={gb:7.3f} grad_w={gw:7.3f}  b={b:.3f} w={w:.3f}  MSE={mse:.3f}")</div>
+  <div class="fx" data-lang="text">step    1  grad_b=-11.200 grad_w=-39.200  b=0.560 w=1.960  MSE=2.053
+step    2  grad_b=  1.680 grad_w=  7.280  b=0.476 w=1.596  MSE=0.910
+step    3  grad_b= -0.672 grad_w= -1.232  b=0.510 w=1.658  MSE=0.867
+step   10  grad_b= -0.273 grad_w=  0.076  b=0.607 w=1.620  MSE=0.834
+step  100  grad_b= -0.059 grad_w=  0.016  b=1.229 w=1.447  MSE=0.725
+step 1000  grad_b= -0.000 grad_w=  0.000  b=1.400 w=1.400  MSE=0.720
+step 2000  grad_b= -0.000 grad_w=  0.000  b=1.400 w=1.400  MSE=0.720</div>
+  <p>Steps 1 and 2 match the hand table. The slope is found quickly, but the intercept crawls (0.607 at step 10, 1.229 at step 100) because x is not centred: changing b and changing w have tangled effects, and the bowl is a long narrow valley. After about 1,000 steps both reach 1.400, and MSE 0.72 = SSE 3.6 / 5. Centring or standardising x makes the valley round and GD much faster; section 13 shows the effect on a real dataset.</p>
+  <h3>Closed form or iterative?</h3>
+  <table class="tbl">
+    <tr><th></th><th>Normal equation / SVD</th><th>Gradient descent</th></tr>
+    <tr><td>Answer</td><td>exact, in one shot</td><td>approximate; improves with iterations</td></tr>
+    <tr><td>Cost</td><td>O(nd² + d³)</td><td>O(nd) per pass over the data</td></tr>
+    <tr><td>Hyperparameters</td><td>none</td><td>learning rate, iterations (and batch size)</td></tr>
+    <tr><td>Feature scaling</td><td>not needed</td><td>needed for speed</td></tr>
+    <tr><td>Data bigger than memory / streaming</td><td>hard</td><td>natural (mini-batch, <code>SGDRegressor</code>)</td></tr>
+    <tr><td>Generalises to other losses</td><td>only squared loss (and ridge)</td><td>any differentiable loss: logistic, Huber, neural nets</td></tr>
+    <tr><td>sklearn</td><td><code>LinearRegression</code></td><td><code>SGDRegressor</code></td></tr>
+  </table>
+  <div class="callout def"><span class="label">Definition</span>
+    <p><strong>Batch gradient descent for linear regression:</strong> repeat w ← w − η·(2/n)·Xᵀ(Xw − y). Because the MSE is convex, any small enough η (below 2 / largest eigenvalue of (2/n)XᵀX) converges to the OLS solution.</p>
+  </div>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Too large a learning rate makes the loss grow every step (try η = 0.2 on this data and w swings to ±∞). Too small and it "converges" to a wrong answer only because you stopped early. Always plot the loss per iteration, and scale the features.</p>
+  </div>
+  <div class="bridge"><b>What's still missing?</b> We can find the weights three ways. But what does a weight of 1.0 <em>mean</em>, and why did experience drop from 1.69 to 1.0 when certifications were added?</div>
+
+  <h2 id="lr-interp"><span class="num">07</span>Interpreting Coefficients</h2>
+  <h3>The rule</h3>
+  <p>A coefficient wⱼ is the change in the prediction when xⱼ increases by one unit <strong>and every other feature in the model stays the same</strong>. Its units are (units of y) per (unit of xⱼ).</p>
+  <ul>
+    <li>Team A: w = 1.4 → "each extra year of experience is associated with 1.4 lakh more salary".</li>
+    <li>Team B: w_exp = 1.0 → "comparing two people with the <em>same number of certifications</em>, one extra year is associated with 1.0 lakh more". w_cert = 2.0 → "same experience, one more certification: 2.0 lakh more".</li>
+    <li>The intercept is the prediction when every feature is 0. b = 2.0 means "0 years, 0 certificates: 2 lakh". Often x = 0 is outside the data (a 0 sq ft flat), and the intercept is then just a mathematical anchor, not something to interpret.</li>
+  </ul>
+  <h3>Why "holding others fixed" changes the number: the omitted-variable formula</h3>
+  <p>When x₂ is left out, x₁'s simple slope absorbs part of x₂'s effect:</p>
+  <p><strong>simple slope of x₁ = w₁ + w₂ · δ</strong>, where δ = S₁₂ / S₁₁ is the slope from regressing x₂ on x₁ ("how many extra certificates come with one extra year").</p>
+  <p>Team B by hand: δ = 6 / 17.5 = 0.343 certificates per year. Simple slope = 1.0 + 2.0 × 0.343 = 1.0 + 0.686 = <strong>1.686</strong>, exactly the "experience ALONE" number the code printed. The extra 0.686 lakh is really the value of the certificates that tend to come with experience. This is <strong>omitted-variable bias</strong>; <a class="xref" data-note="ml_reg_diag">Assumptions &amp; Diagnostics</a> covers when it makes coefficients misleading.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Ice-cream sales and drowning deaths rise together. Regress drownings on ice-cream alone and ice-cream gets a positive coefficient. Add temperature and ice-cream's coefficient drops to about zero: "holding temperature fixed", ice-cream has nothing to do with drowning.</p>
+  </div>
+  <h3>Units change the number, not the model</h3>
+  <p>The rent data below has 300 simulated flats. Rent is in ₹ thousand per month, size in sq ft, distance to metro in km, building age in years. (Simulated so we know the truth: rent = 5 + 0.02·size − 1.5·metro − 0.1·age + city effect + noise with SD 3.)</p>
   <div class="fx" data-lang="py">import pandas as pd
-from sklearn.datasets import load_diabetes
-from sklearn.preprocessing import StandardScaler
+from rent import df                     # 300 simulated flats (size, metro, age, city, rent)
+print(df.head(4)); print(df.shape)</div>
+  <div class="fx" data-lang="text">     size  metro  age    city  rent
+0  1150.0    3.9   21  Mumbai  27.7
+1  1477.0    1.3   25  Mumbai  39.5
+2  1331.0    4.6   28  Mumbai  32.2
+3   670.0    4.6   22  Mumbai  16.0
+(300, 5)</div>
+  <p>Fit with size in sq ft vs size in hundreds of sq ft, and distance in km vs metres:</p>
+  <div class="fx" data-lang="py">from sklearn.linear_model import LinearRegression
+num = ["size", "metro", "age"]
+d2 = df.assign(size_100=df["size"] / 100, metro_m=df["metro"] * 1000)    # same data, new units
+for cols in (["size", "metro", "age"], ["size_100", "metro_m", "age"]):
+    m = LinearRegression().fit(d2[cols], d2["rent"])
+    print({k: round(float(v), 5) for k, v in zip(cols, m.coef_)}, " R2", round(m.score(d2[cols], d2["rent"]), 4))
+z = (df[num] - df[num].mean()) / df[num].std(ddof=0)                     # standardise
+mz = LinearRegression().fit(z, df["rent"])
+print("per 1 SD:", {k: round(float(v), 2) for k, v in zip(num, mz.coef_)}, " SDs:", df[num].std(ddof=0).round(2).to_dict())</div>
+  <div class="fx" data-lang="text">{'size': 0.01955, 'metro': -1.64226, 'age': -0.03496}  R2 0.6601
+{'size_100': 1.95474, 'metro_m': -0.00164, 'age': -0.03496}  R2 0.6601
+per 1 SD: {'size': 6.8, 'metro': -2.64, 'age': -0.29}  SDs: {'size': 348.12, 'metro': 1.61, 'age': 8.39}</div>
+  <p>The size coefficient goes from 0.01955 (per sq ft) to 1.95474 (per 100 sq ft): exactly 100×. Metro goes from −1.642 per km to −0.00164 per metre. R² is identical: predictions do not change, only the units of the weights do. So <strong>a big coefficient does not mean an important feature</strong>. To compare importance, standardise first (each feature to mean 0, SD 1). Then each weight means "change in rent per one standard deviation of the feature": size 6.8, metro −2.64, age −0.29. Size matters most, age least. Check by hand: 0.01955 × 348.12 = 6.81 ✓.</p>
+  <h3>Log transforms: percentage interpretations</h3>
+  <table class="tbl">
+    <tr><th>Model</th><th>Reading of w</th><th>Example</th></tr>
+    <tr><td>y = b + w·x</td><td>+1 unit of x → +w units of y</td><td>w = 1.4: +1 year → +1.4 lakh</td></tr>
+    <tr><td>log y = b + w·x</td><td>+1 unit of x → y multiplied by e^w, about +100·w %</td><td>w = 0.05: e^0.05 = 1.051 → +5.1% salary per year</td></tr>
+    <tr><td>y = b + w·log x</td><td>+1% in x → +w/100 units of y</td><td>w = 30: 1% bigger flat → +0.3 thousand rent</td></tr>
+    <tr><td>log y = b + w·log x</td><td>+1% in x → about +w % in y (elasticity)</td><td>w = −1.2: price +1% → demand −1.2%</td></tr>
+  </table>
+  <p>The "about" matters for big w: w = 0.5 in a log-y model means ×e^0.5 = ×1.649, a 64.9% rise, not 50%.</p>
+  <div class="callout def"><span class="label">Definition</span>
+    <p>In ŷ = b + Σwⱼxⱼ, <strong>wⱼ = ∂ŷ/∂xⱼ</strong>: the partial effect of xⱼ with all other included features held constant. A <strong>standardised coefficient</strong> is wⱼ·sd(xⱼ) (or wⱼ·sd(xⱼ)/sd(y)), the effect of a one-SD change.</p>
+  </div>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Coefficients describe association in <em>this</em> data, not cause and effect. "Holding others fixed" may also be impossible: you cannot raise x while holding x² fixed in a polynomial model, or raise "size" while holding "number of rooms" fixed when they move together. And when features are strongly correlated the individual coefficients become unstable (see VIF in <a class="xref" data-note="ml_reg_diag">Assumptions &amp; Diagnostics</a>).</p>
+  </div>
+  <div class="bridge"><b>What's still missing?</b> We can read the weights. Is the line any good overall? We need a number for how well it fits.</div>
+
+  <h2 id="lr-score"><span class="num">08</span>R² and RMSE (Brief)</h2>
+  <h3>Comparing against the lazy model</h3>
+  <p>Split the spread of y into two parts. <strong>SST</strong> (total sum of squares) = Σ(yᵢ − ȳ)² is the SSE of the flat line at ȳ, the lazy model. <strong>SSE</strong> is what our line leaves unexplained. <strong>SSR</strong> = Σ(ŷᵢ − ȳ)² is what the line explains. For OLS with an intercept, SST = SSR + SSE (the right angle of section 05).</p>
+  <ul>
+    <li>SST = 2.6² + 0.6² + 1.6² + 1.4² + 3.4² = 6.76 + 0.36 + 2.56 + 1.96 + 11.56 = <strong>23.2</strong></li>
+    <li>SSE = <strong>3.6</strong> (section 03); SSR = 23.2 − 3.6 = <strong>19.6</strong></li>
+    <li><strong>R² = 1 − SSE/SST</strong> = 1 − 3.6/23.2 = <strong>0.845</strong>: the line removes 84.5% of the squared error of always guessing 5.6.</li>
+    <li><strong>RMSE</strong> = √(SSE/n) = √0.72 = <strong>0.849</strong> lakh: the typical miss, in salary units.</li>
+    <li><strong>MAE</strong> = mean |e| = (0.2 + 0.8 + 1.6 + 0 + 0.6)/5 = <strong>0.64</strong> lakh.</li>
+  </ul>
+  <p>With one feature, R² equals the squared correlation r², and the slope equals r · s_y / s_x. Here r = S_xy / √(S_xx·S_yy) = 14 / √(10 × 23.2) = 14 / 15.23 = 0.919, r² = 0.845.</p>
+  <div class="fx" data-lang="py">from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+pred5 = 1.4 + 1.4 * x
+print(f"R2   {r2_score(y, pred5):.4f}")
+print(f"RMSE {mean_squared_error(y, pred5) ** 0.5:.4f}   MAE {mean_absolute_error(y, pred5):.2f}")
+print(f"corr(x, y) = {np.corrcoef(x, y)[0, 1]:.4f}  squared = {np.corrcoef(x, y)[0, 1] ** 2:.4f}")
+print(f"r * sy/sx  = {np.corrcoef(x, y)[0, 1] * y.std() / x.std():.4f}  (the slope)")</div>
+  <div class="fx" data-lang="text">R2   0.8448
+RMSE 0.8485   MAE 0.64
+corr(x, y) = 0.9191  squared = 0.8448
+r * sy/sx  = 1.4000  (the slope)</div>
+  <div class="callout def"><span class="label">Definition</span>
+    <p><strong>R²</strong> (coefficient of determination) = 1 − SSE/SST: 1 is perfect, 0 is no better than the mean, negative (possible on test data) is worse than the mean. <strong>RMSE</strong> = √(Σe²/n), in y's units. <strong>Adjusted R²</strong> = 1 − (1 − R²)(n − 1)/(n − p) penalises extra parameters (p counts the intercept).</p>
+  </div>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Training R² never decreases when you add a feature, even a column of random numbers, because the old solution is still available (set the new weight to 0). Judge models on held-out data (<a class="xref" data-note="ml_splits">Train/Val/Test &amp; Cross-Validation</a>), and see <a class="xref" data-note="ml_reg_metrics">Regression Metrics</a> for MAE, MAPE, RMSLE and when each fits the business.</p>
+  </div>
+  <div class="bridge"><b>What's still missing?</b> R² describes the fit. An analyst also wants to know: is the experience effect real or could it be luck with 5 people? How precise is the 1.4? That is what a statsmodels summary answers.</div>
+
+  <h2 id="lr-sm"><span class="num">09</span>The statsmodels Summary, Line by Line</h2>
+  <h3>The need</h3>
+  <p>sklearn gives coefficients and predictions. Analysts, economists and anyone writing "experience has a significant effect" need <strong>uncertainty</strong>: standard errors, p-values and confidence intervals. statsmodels prints all of it in one table. Here it is for the 5 employees, and then we will rebuild every number by hand.</p>
+  <div class="fx" data-lang="py">import warnings
+import statsmodels.api as sm
+warnings.filterwarnings("ignore")                   # n=5 is too small for the normality tests; silence their warnings
+ols = sm.OLS(y, sm.add_constant(x)).fit()             # add_constant = the column of 1s
+print(ols.summary(xname=["const", "experience"], yname="salary"))</div>
+  <div class="fx" data-lang="text">                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:                 salary   R-squared:                       0.845
+Model:                            OLS   Adj. R-squared:                  0.793
+Method:                 Least Squares   F-statistic:                     16.33
+Date:                Mon, 19 Oct 2026   Prob (F-statistic):             0.0273
+Time:                        11:24:22   Log-Likelihood:                -6.2734
+No. Observations:                   5   AIC:                             16.55
+Df Residuals:                       3   BIC:                             15.77
+Df Model:                           1                                         
+Covariance Type:            nonrobust                                         
+==============================================================================
+                 coef    std err          t      P&gt;|t|      [0.025      0.975]
+------------------------------------------------------------------------------
+const          1.4000      1.149      1.219      0.310      -2.256       5.056
+experience     1.4000      0.346      4.041      0.027       0.298       2.502
+==============================================================================
+Omnibus:                          nan   Durbin-Watson:                   2.511
+Prob(Omnibus):                    nan   Jarque-Bera (JB):                1.023
+Skew:                          -1.100   Prob(JB):                        0.600
+Kurtosis:                       2.737   Cond. No.                         8.37
+==============================================================================
+
+Notes:
+[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.</div>
+  <h3>The top-left block: the setup</h3>
+  <table class="tbl">
+    <tr><th>Line</th><th>Value</th><th>Meaning</th></tr>
+    <tr><td>Dep. Variable</td><td>salary</td><td>the target y</td></tr>
+    <tr><td>Model / Method</td><td>OLS / Least Squares</td><td>ordinary least squares</td></tr>
+    <tr><td>No. Observations</td><td>5</td><td>n</td></tr>
+    <tr><td>Df Residuals</td><td>3</td><td>n − p = 5 − 2: rows left after estimating 2 parameters. Used for s² and the t-distribution.</td></tr>
+    <tr><td>Df Model</td><td>1</td><td>number of features (p − 1, not counting the intercept)</td></tr>
+    <tr><td>Covariance Type</td><td>nonrobust</td><td>classic standard errors that assume constant error variance; "HC3" etc. are the robust versions (<a class="xref" data-note="ml_reg_diag">Diagnostics</a>)</td></tr>
+  </table>
+  <h3>The top-right block: overall fit</h3>
+  <p>All from SST = 23.2, SSR = 19.6, SSE = 3.6, n = 5, p = 2.</p>
+  <ul>
+    <li><strong>R-squared 0.845</strong> = 1 − 3.6/23.2.</li>
+    <li><strong>Adj. R-squared 0.793</strong> = 1 − (1 − 0.845)·(5 − 1)/(5 − 2) = 1 − 0.155 × 1.333 = 0.793. Lower than R² because a parameter was spent.</li>
+    <li><strong>F-statistic 16.33</strong> = (SSR / Df Model) / (SSE / Df Residuals) = (19.6/1) / (3.6/3) = 19.6 / 1.2 = 16.33. It tests "all slopes are 0" (the model is no better than the mean). With one feature F = t² of the slope: 4.041² = 16.33.</li>
+    <li><strong>Prob (F-statistic) 0.0273</strong>: chance of an F this large if every true slope were 0. From the F(1, 3) distribution.</li>
+    <li><strong>Log-Likelihood −6.2734</strong>: from section 05, −(n/2)(log 2π + log(SSE/n) + 1).</li>
+    <li><strong>AIC 16.55</strong> = −2·logL + 2p = 12.547 + 4. <strong>BIC 15.77</strong> = −2·logL + p·ln n = 12.547 + 2 × 1.609. Lower is better when comparing models on the same y; BIC punishes extra parameters more when n &gt; 7.</li>
+  </ul>
+  <h3>The coefficient table, by hand</h3>
+  <p><strong>1. Estimate the noise.</strong> s² = SSE / (n − p) = 3.6 / 3 = <strong>1.2</strong>, so s = 1.095 lakh. We divide by n − p, not n, because two parameters were fitted to these same 5 points, which makes residuals slightly smaller than the true errors; dividing by 3 corrects that (it makes s² unbiased).</p>
+  <p><strong>2. Standard errors.</strong> The covariance matrix of the estimates is Cov(ŵ) = s²(XᵀX)⁻¹. From section 04, (XᵀX)⁻¹ = [[1.1, −0.3], [−0.3, 0.1]], so Cov = 1.2 × that = [[1.32, −0.36], [−0.36, 0.12]]. The square roots of the diagonal are the standard errors:</p>
+  <ul>
+    <li>se(b) = √1.32 = <strong>1.149</strong> (also = s·√(1/n + x̄²/S_xx) = 1.095·√(0.2 + 0.9))</li>
+    <li>se(w) = √0.12 = <strong>0.346</strong> (also = s / √S_xx = 1.095 / √10)</li>
+  </ul>
+  <p>A standard error is the typical amount the estimate would change if we collected a fresh sample of 5 people. se(w) shrinks with more rows, more spread in x (bigger S_xx) and less noise (smaller s).</p>
+  <p><strong>3. t-statistic</strong> = coef / se: t(w) = 1.4 / 0.346 = <strong>4.041</strong>; t(b) = 1.4 / 1.149 = <strong>1.219</strong>. "How many standard errors away from zero is the estimate?"</p>
+  <p><strong>4. P&gt;|t|</strong>: if the true coefficient were 0, the chance of a t at least this far from 0, using a t-distribution with 3 degrees of freedom. 0.027 for the slope (below 0.05: "significant at 5%"), 0.310 for the intercept (cannot tell it from 0). See <a class="xref" data-note="st_hypothesis">Hypothesis Testing</a> for what a p-value is and is not.</p>
+  <p><strong>5. 95% confidence interval</strong> = coef ± t₀.₉₇₅,₃ × se. With 3 degrees of freedom t₀.₉₇₅ = 3.182 (much wider than the normal 1.96 because n is tiny). Slope: 1.4 ± 3.182 × 0.346 = 1.4 ± 1.102 = <strong>[0.298, 2.502]</strong>. Intercept: 1.4 ± 3.656 = <strong>[−2.256, 5.056]</strong>.</p>
+  <div class="fx" data-lang="py">from scipy import stats
+n, p = 5, 2                                    # rows, fitted parameters (b and w)
+sse = (res ** 2).sum(); sxx = (dx ** 2).sum()
+s2 = sse / (n - p)                             # estimated error variance sigma-hat^2
+se_w = np.sqrt(s2 / sxx)
+se_b = np.sqrt(s2 * (1 / n + x.mean() ** 2 / sxx))
+t_w, t_b = 1.4 / se_w, 1.4 / se_b
+p_w = 2 * stats.t.sf(abs(t_w), df=n - p)       # two-sided p-value
+p_b = 2 * stats.t.sf(abs(t_b), df=n - p)
+tcrit = stats.t.ppf(0.975, df=n - p)
+print(f"s^2={s2:.3f}  s={np.sqrt(s2):.4f}  t_crit(0.975, df=3)={tcrit:.3f}")
+print(f"w: se={se_w:.4f}  t={t_w:.3f}  p={p_w:.4f}  CI=[{1.4 - tcrit*se_w:.3f}, {1.4 + tcrit*se_w:.3f}]")
+print(f"b: se={se_b:.4f}  t={t_b:.3f}  p={p_b:.4f}  CI=[{1.4 - tcrit*se_b:.3f}, {1.4 + tcrit*se_b:.3f}]")
+sst = (dy ** 2).sum(); ssr = sst - sse
+F = (ssr / (p - 1)) / (sse / (n - p))
+print(f"SST={sst:.1f} SSR={ssr:.1f} SSE={sse:.1f}  R2={1 - sse/sst:.4f}  adjR2={1 - (1 - (1 - sse/sst)) * (n - 1)/(n - p):.4f}")
+print(f"F={F:.3f} (= t_w^2 = {t_w**2:.3f})  Prob(F)={stats.f.sf(F, p - 1, n - p):.4f}")
+ll = -n / 2 * (np.log(2 * np.pi) + np.log(sse / n) + 1)
+print(f"log-likelihood={ll:.4f}  AIC={-2*ll + 2*p:.3f}  BIC={-2*ll + p*np.log(n):.3f}")</div>
+  <div class="fx" data-lang="text">s^2=1.200  s=1.0954  t_crit(0.975, df=3)=3.182
+w: se=0.3464  t=4.041  p=0.0273  CI=[0.298, 2.502]
+b: se=1.1489  t=1.219  p=0.3101  CI=[-2.256, 5.056]
+SST=23.2 SSR=19.6 SSE=3.6  R2=0.8448  adjR2=0.7931
+F=16.333 (= t_w^2 = 16.333)  Prob(F)=0.0273
+log-likelihood=-6.2734  AIC=16.547  BIC=15.766</div>
+  <p>Every number matches the summary. The <code>stats.t</code> calls replace the printed t-table you would use in an exam.</p>
+  <h3>The bottom block: residual checks</h3>
+  <table class="tbl">
+    <tr><th>Line</th><th>Here</th><th>Meaning (details in <a class="xref" data-note="ml_reg_diag">Diagnostics</a>)</th></tr>
+    <tr><td>Omnibus / Prob(Omnibus)</td><td>nan</td><td>a normality test of residuals that needs at least 8 rows</td></tr>
+    <tr><td>Skew</td><td>−1.100</td><td>asymmetry of residuals (0 for normal); the −1.6 makes a left tail</td></tr>
+    <tr><td>Kurtosis</td><td>2.737</td><td>tail heaviness (3 for normal)</td></tr>
+    <tr><td>Jarque–Bera / Prob(JB)</td><td>1.023 / 0.600</td><td>JB = (n/6)(skew² + (kurt − 3)²/4) = (5/6)(1.21 + 0.017) = 1.023; p = 0.6, no evidence against normality</td></tr>
+    <tr><td>Durbin–Watson</td><td>2.511</td><td>Σ(eₜ − eₜ₋₁)² / Σe² = (0.36 + 5.76 + 2.56 + 0.36)/3.6 = 9.04/3.6; near 2 = no autocorrelation</td></tr>
+    <tr><td>Cond. No.</td><td>8.37</td><td>√(largest/smallest eigenvalue of XᵀX) = √(59.16/0.845); large values (&gt; 30 on standardised data, or the summary's warning) flag multicollinearity</td></tr>
+  </table>
+  <div class="callout def"><span class="label">Definition</span>
+    <p>Under the classic assumptions, <strong>Cov(ŵ) = σ²(XᵀX)⁻¹</strong>, estimated with s² = SSE/(n − p). <strong>se(ŵⱼ)</strong> = √[s²(XᵀX)⁻¹]ⱼⱼ; <strong>t = ŵⱼ / se</strong> follows a t-distribution with n − p degrees of freedom when the true wⱼ = 0 and errors are normal; <strong>CI = ŵⱼ ± t_{1−α/2, n−p} · se</strong>.</p>
+  </div>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>These standard errors are only right if the errors are independent with constant variance. A fan-shaped residual plot or time-ordered data can make the p-values far too small. "p = 0.027" also does not mean "97.3% chance the effect is real", and with large n tiny useless effects become "significant". Always read the size of the coefficient and its interval, not just the star.</p>
+  </div>
+  <div class="bridge"><b>What's still missing?</b> All our features have been numbers. City, department, fuel type are text. How does a weighted sum use them?</div>
+
+  <h2 id="lr-cat"><span class="num">10</span>Categorical Predictors &amp; Dummy Variables</h2>
+  <h3>The need</h3>
+  <p>Rent depends heavily on the city, but "Mumbai" cannot be multiplied by a weight. Coding Delhi = 1, Mumbai = 2, Pune = 3 would force Pune's effect to be exactly "Mumbai's effect plus the same step again", an order and spacing that do not exist. The fix: one 0/1 <strong>dummy</strong> column per category, minus one.</p>
+  <h3>By hand: 6 flats, 3 cities</h3>
+  <table class="tbl">
+    <tr><th>Flat</th><th>City</th><th>Rent</th><th>is_Mumbai</th><th>is_Pune</th></tr>
+    <tr><td>1</td><td>Delhi</td><td>20</td><td>0</td><td>0</td></tr>
+    <tr><td>2</td><td>Delhi</td><td>22</td><td>0</td><td>0</td></tr>
+    <tr><td>3</td><td>Mumbai</td><td>30</td><td>1</td><td>0</td></tr>
+    <tr><td>4</td><td>Mumbai</td><td>32</td><td>1</td><td>0</td></tr>
+    <tr><td>5</td><td>Pune</td><td>15</td><td>0</td><td>1</td></tr>
+    <tr><td>6</td><td>Pune</td><td>17</td><td>0</td><td>1</td></tr>
+  </table>
+  <p>Model: rent = b + w_M·is_Mumbai + w_P·is_Pune. Delhi (both dummies 0) is the <strong>reference category</strong>. Each city's prediction is one number, so least squares makes it that city's mean:</p>
+  <ul>
+    <li>Delhi: ŷ = b → b = mean(20, 22) = <strong>21</strong></li>
+    <li>Mumbai: ŷ = b + w_M = mean(30, 32) = 31 → w_M = <strong>+10</strong></li>
+    <li>Pune: ŷ = b + w_P = mean(15, 17) = 16 → w_P = <strong>−5</strong></li>
+  </ul>
+  <p>Reading: "a Mumbai flat rents for 10 thousand more than a comparable Delhi flat; Pune for 5 thousand less". Every dummy coefficient is a difference <em>from the reference</em>.</p>
+  <div class="fx" data-lang="py">flats = pd.DataFrame({"city": ["Delhi", "Delhi", "Mumbai", "Mumbai", "Pune", "Pune"],
+                      "rent": [20, 22, 30, 32, 15, 17]})
+print(flats.groupby("city")["rent"].mean())
+D = pd.get_dummies(flats["city"], drop_first=True, dtype=float)   # Delhi becomes the reference
+print(D.assign(rent=flats["rent"]))
+m = LinearRegression().fit(D, flats["rent"])
+print("intercept:", round(m.intercept_, 3), " coefs:", {k: round(float(v), 3) for k, v in zip(D.columns, m.coef_)})</div>
+  <div class="fx" data-lang="text">city
+Delhi     21.0
+Mumbai    31.0
+Pune      16.0
+Name: rent, dtype: float64
+   Mumbai  Pune  rent
+0     0.0   0.0    20
+1     0.0   0.0    22
+2     1.0   0.0    30
+3     1.0   0.0    32
+4     0.0   1.0    15
+5     0.0   1.0    17
+intercept: 21.0  coefs: {'Mumbai': 10.0, 'Pune': -5.0}</div>
+  <p><code>pd.get_dummies(..., drop_first=True)</code> drops the first category alphabetically (Delhi) to make it the reference. The coefficients are the hand values.</p>
+  <h3>The dummy-variable trap</h3>
+  <p>Why drop one? If we keep all three dummies plus the intercept, is_Delhi + is_Mumbai + is_Pune = 1 on every row, which is exactly the intercept column. One column is a sum of others (perfect multicollinearity), XᵀX has determinant 0, and there are infinitely many equally good weight vectors.</p>
+  <div class="fx" data-lang="py">D_all = pd.get_dummies(flats["city"], dtype=float)              # all 3 dummies, no drop
+X_trap = np.c_[np.ones(6), D_all]                               # intercept + Delhi + Mumbai + Pune
+print("columns: 1, Delhi, Mumbai, Pune -&gt; Delhi+Mumbai+Pune =", D_all.sum(axis=1).tolist())
+print("rank of X:", np.linalg.matrix_rank(X_trap), "of", X_trap.shape[1], " det(X^T X):", round(np.linalg.det(X_trap.T @ X_trap), 6) + 0.0)
+for shift in [0, 10]:                                           # two DIFFERENT weight vectors ...
+    wv = np.array([21 - shift, 0 + shift, 10 + shift, -5 + shift])
+    print(f"weights {wv.tolist()}  predictions {(X_trap @ wv).tolist()}")   # ... same predictions</div>
+  <div class="fx" data-lang="text">columns: 1, Delhi, Mumbai, Pune -&gt; Delhi+Mumbai+Pune = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+rank of X: 3 of 4  det(X^T X): 0.0
+weights [21, 0, 10, -5]  predictions [21.0, 21.0, 31.0, 31.0, 16.0, 16.0]
+weights [11, 10, 20, 5]  predictions [21.0, 21.0, 31.0, 31.0, 16.0, 16.0]</div>
+  <p>The design matrix has 4 columns but rank 3. Two very different weight vectors, [21, 0, 10, −5] and [11, 10, 20, 5], give identical predictions: you can move any amount between the intercept and all three dummies. Predictions are fine; the coefficients mean nothing. sklearn would silently return one of them, so drop one category (or drop the intercept, or use ridge).</p>
+  <h3>With other features: statsmodels formulas</h3>
+  <p>In a formula, <code>C(city)</code> creates the dummies and picks a reference automatically. On the 300 simulated flats:</p>
+  <div class="fx" data-lang="py">import statsmodels.formula.api as smf
+full = smf.ols("rent ~ size + metro + age + C(city)", data=df).fit()
+print(full.summary().tables[1])
+print(f"R2={full.rsquared:.3f}  adjR2={full.rsquared_adj:.3f}  resid std={np.sqrt(full.scale):.2f}")</div>
+  <div class="fx" data-lang="text">=====================================================================================
+                        coef    std err          t      P&gt;|t|      [0.025      0.975]
+-------------------------------------------------------------------------------------
+Intercept             4.3287      0.750      5.769      0.000       2.852       5.805
+C(city)[T.Mumbai]     7.7519      0.418     18.541      0.000       6.929       8.575
+C(city)[T.Pune]      -2.7021      0.418     -6.465      0.000      -3.525      -1.879
+size                  0.0206      0.000     41.811      0.000       0.020       0.022
+metro                -1.5513      0.106    -14.618      0.000      -1.760      -1.342
+age                  -0.0899      0.020     -4.403      0.000      -0.130      -0.050
+=====================================================================================
+R2=0.894  adjR2=0.893  resid std=2.95</div>
+  <p>Read the rows: <code>C(city)[T.Mumbai]</code> = 7.75 means "Mumbai rents about ₹7,750 more than Delhi for the same size, metro distance and age" (true value 8); <code>T.Pune</code> −2.70 (true −3). The numeric slopes are close to the truth too (0.0206 vs 0.02, −1.55 vs −1.5, −0.090 vs −0.1), and adding city raised R² to 0.894 with a residual SD of 2.95, close to the true noise of 3.</p>
+  <div class="callout def"><span class="label">Definition</span>
+    <p><strong>Dummy (one-hot) coding with a reference:</strong> a categorical feature with k levels becomes k − 1 indicator columns. Each coefficient is the difference in mean outcome between that level and the reference level, holding other features fixed. Interactions such as <code>size:C(city)</code> let the slope differ by city (see <a class="xref" data-note="ml_polyreg">Polynomial &amp; Basis Functions</a>).</p>
+  </div>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>(1) The coefficients depend on which level is the reference; change it and every dummy coefficient changes (predictions do not). (2) A category seen only in test data breaks the encoder; use <code>OneHotEncoder(handle_unknown="ignore")</code>. (3) Hundreds of levels (pin codes) make hundreds of columns; consider target encoding (<a class="xref" data-note="ml_features">Feature Engineering</a>) or regularisation.</p>
+  </div>
+  <div class="bridge"><b>What's still missing?</b> We can predict a number for a new flat or a new employee. How wide should the band around that number be?</div>
+
+  <h2 id="lr-pi"><span class="num">11</span>Prediction Intervals (Brief)</h2>
+  <h3>Two different questions</h3>
+  <ol>
+    <li><strong>Confidence interval for the mean:</strong> "What is the average salary of <em>all</em> 6-year employees?" Uncertainty comes only from not knowing the true line.</li>
+    <li><strong>Prediction interval:</strong> "What will <em>this one</em> new 6-year employee earn?" Uncertainty about the line <em>plus</em> that person's own noise ε.</li>
+  </ol>
+  <p>Formulas for one feature at a new point x₀:</p>
+  <ul>
+    <li>se_mean = s · √(1/n + (x₀ − x̄)²/S_xx)</li>
+    <li>se_pred = s · √(1 + 1/n + (x₀ − x̄)²/S_xx) (the extra "1" is the new person's noise)</li>
+    <li>interval = ŷ₀ ± t_{0.975, n−p} · se</li>
+  </ul>
+  <p><strong>By hand at x₀ = 6:</strong> ŷ₀ = 1.4 + 1.4 × 6 = 9.8. (x₀ − x̄)²/S_xx = 9/10 = 0.9. se_mean = 1.095·√(0.2 + 0.9) = 1.095 × 1.049 = 1.149. se_pred = 1.095·√(2.1) = 1.095 × 1.449 = 1.587. With t = 3.182: CI = 9.8 ± 3.656 = <strong>[6.14, 13.46]</strong>; PI = 9.8 ± 5.05 = <strong>[4.75, 14.85]</strong>.</p>
+  <div class="fx" data-lang="py">x0 = 6.0                                                   # a 6-year employee
+yhat0 = 1.4 + 1.4 * x0
+s = np.sqrt(s2)
+se_mean = s * np.sqrt(1 / n + (x0 - x.mean()) ** 2 / sxx)  # uncertainty of the LINE at x0
+se_pred = s * np.sqrt(1 + 1 / n + (x0 - x.mean()) ** 2 / sxx)  # + one person's own noise
+print(f"yhat={yhat0:.2f}  se_mean={se_mean:.4f}  se_pred={se_pred:.4f}")
+print(f"95% CI for the mean : [{yhat0 - tcrit*se_mean:.3f}, {yhat0 + tcrit*se_mean:.3f}]")
+print(f"95% prediction int. : [{yhat0 - tcrit*se_pred:.3f}, {yhat0 + tcrit*se_pred:.3f}]")
+frame = ols.get_prediction(np.array([[1.0, x0]])).summary_frame(alpha=0.05)
+print(frame.round(3).to_string(index=False))</div>
+  <div class="fx" data-lang="text">yhat=9.80  se_mean=1.1489  se_pred=1.5875
+95% CI for the mean : [6.144, 13.456]
+95% prediction int. : [4.748, 14.852]
+ mean  mean_se  mean_ci_lower  mean_ci_upper  obs_ci_lower  obs_ci_upper
+  9.8    1.149          6.144         13.456         4.748        14.852</div>
+  <p><code>get_prediction</code> returns both: <code>mean_ci_*</code> is the confidence interval, <code>obs_ci_*</code> the prediction interval. With only 5 people, a 6-year hire could plausibly earn anywhere from 4.7 to 14.9 lakh. With 300 flats the line is known precisely (mean_se 0.38), but individual flats still vary:</p>
+  <div class="fx" data-lang="py">pf = full.get_prediction(pd.DataFrame({"size": [1000], "metro": [1.0], "age": [10], "city": ["Pune"]}))
+print(pf.summary_frame(alpha=0.05).round(2).to_string(index=False))</div>
+  <div class="fx" data-lang="text"> mean  mean_se  mean_ci_lower  mean_ci_upper  obs_ci_lower  obs_ci_upper
+ 19.8     0.38          19.04          20.55         13.94         25.65</div>
+  <p>The CI for the average 1000 sq ft Pune flat is narrow (19.0 to 20.6) while the PI for one such flat is wide (13.9 to 25.7). More data shrinks the CI toward 0 width; the PI can never be narrower than about ±1.96 × noise SD (±5.8 here), however much data you collect.</p>
+  <div class="callout def"><span class="label">Definition</span>
+    <p>A 95% <strong>prediction interval</strong> is a range that, under the model's assumptions (including normal, constant-variance errors), contains a <em>new observation</em> 95% of the time. It is always wider than the confidence interval for the mean at the same x₀. Both widen as x₀ moves away from x̄.</p>
+  </div>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Reporting the confidence interval when the business asked "how much will this flat rent for?" understates the risk badly (±0.8 vs ±5.9 above). Prediction intervals also rely on normal, constant-variance errors far more than coefficient tests do; check with <a class="xref" data-note="ml_reg_diag">Diagnostics</a>, or use quantile regression / conformal prediction when they fail.</p>
+  </div>
+  <div class="bridge"><b>What's still missing?</b> statsmodels is for inference. For a prediction pipeline (train/test split, encoders, deployment) the everyday tool is scikit-learn.</div>
+
+  <h2 id="lr-sk"><span class="num">12</span>scikit-learn in Practice</h2>
+  <h3>LinearRegression: what it has</h3>
+  <table class="tbl">
+    <tr><th>Item</th><th>Meaning</th></tr>
+    <tr><td><code>fit_intercept=True</code></td><td>learn b. Set False only if the data are already centred or a column of 1s is in X.</td></tr>
+    <tr><td><code>positive=False</code></td><td>True forces every coefficient ≥ 0 (non-negative least squares), e.g. for mixing proportions.</td></tr>
+    <tr><td><code>copy_X</code>, <code>n_jobs</code></td><td>memory and parallelism details; results are identical.</td></tr>
+    <tr><td><code>coef_</code>, <code>intercept_</code></td><td>the weights and b.</td></tr>
+    <tr><td><code>rank_</code>, <code>singular_</code></td><td>rank of X and its singular values: a rank below the number of columns means a redundant column; a tiny last singular value means near-collinearity.</td></tr>
+    <tr><td><code>score(X, y)</code></td><td>R² on the given data.</td></tr>
+  </table>
+  <p>No p-values, no standard errors: sklearn is built for prediction. For inference use statsmodels. For ridge/lasso use <code>Ridge</code>, <code>Lasso</code> (<a class="xref" data-note="ml_ridge_lasso">Ridge, Lasso &amp; Elastic Net</a>); for very large data <code>SGDRegressor</code>.</p>
+  <h3>End to end on the rent data</h3>
+  <p>The plan: split 75/25 before anything else; fit numbers only; then add the city with a <code>OneHotEncoder(drop="first")</code> inside a <code>ColumnTransformer</code> so the encoder is learnt from the training rows only (<a class="xref" data-note="ml_pipelines">Pipelines &amp; Data Leakage</a>); compare test scores; predict a new flat.</p>
+  <div class="fx" data-lang="py">from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import r2_score, mean_squared_error
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder
 from sklearn.pipeline import make_pipeline
-from sklearn.model_selection import cross_val_score
-from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
-X, y = load_diabetes(return_X_y=True, as_frame=True)          # 442 patients, 10 features
-models = {"OLS": LinearRegression(), "Ridge a=10": Ridge(alpha=10),
-          "Lasso a=1": Lasso(alpha=1), "ENet a=1 r=.5": ElasticNet(alpha=1, l1_ratio=0.5)}
-coefs, cv = {}, {}
-for name, m in models.items():
-    pipe = make_pipeline(StandardScaler(), m)
-    coefs[name] = pipe.fit(X, y)[-1].coef_
-    cv[name] = cross_val_score(pipe, X, y, cv=5).mean()
-print(pd.DataFrame(coefs, index=X.columns).round(1) + 0.0)
-print("5-fold CV R2:", {k: round(float(v), 3) for k, v in cv.items()})</div>
-  <table class="tbl out"><caption>Coefficients per 1 SD of each feature (real output)</caption>
-    <tr><th>feature</th><th>OLS</th><th>Ridge α=10</th><th>Lasso α=1</th><th>ENet α=1, r=.5</th></tr>
-    <tr><td>age</td><td>−0.5</td><td>−0.3</td><td><strong>0.0</strong></td><td>0.6</td></tr>
-    <tr><td>sex</td><td>−11.4</td><td>−10.9</td><td>−9.3</td><td>−5.7</td></tr>
-    <tr><td>bmi</td><td>24.7</td><td>24.6</td><td>24.8</td><td>18.1</td></tr>
-    <tr><td>bp</td><td>15.4</td><td>15.1</td><td>14.1</td><td>11.4</td></tr>
-    <tr><td>s1</td><td><strong>−37.7</strong></td><td>−11.3</td><td>−4.8</td><td>−0.2</td></tr>
-    <tr><td>s2</td><td><strong>22.7</strong></td><td>1.8</td><td><strong>0.0</strong></td><td>−2.4</td></tr>
-    <tr><td>s3</td><td>4.8</td><td>−6.6</td><td>−10.6</td><td>−8.2</td></tr>
-    <tr><td>s4</td><td>8.4</td><td>5.6</td><td><strong>0.0</strong></td><td>5.3</td></tr>
-    <tr><td>s5</td><td>35.7</td><td>25.3</td><td>24.4</td><td>15.4</td></tr>
-    <tr><td>s6</td><td>3.2</td><td>3.5</td><td>2.6</td><td>5.1</td></tr>
-    <tr><td><em>5-fold CV R²</em></td><td>0.482</td><td>0.481</td><td>0.482</td><td>0.458</td></tr>
+num = ["size", "metro", "age"]
+train, test = train_test_split(df, test_size=0.25, random_state=0)
+
+lin = LinearRegression().fit(train[num], train["rent"])          # numbers only
+print("intercept_:", round(lin.intercept_, 3))
+print("coef_     :", {k: round(float(v), 4) for k, v in zip(num, lin.coef_)})
+print("rank_:", lin.rank_, "  singular_:", lin.singular_.round(1))
+
+prep = ColumnTransformer([("city", OneHotEncoder(drop="first"), ["city"])],
+                         remainder="passthrough")                 # dummies + numeric columns
+pipe = make_pipeline(prep, LinearRegression()).fit(train[num + ["city"]], train["rent"])
+print("features:", list(pipe[0].get_feature_names_out()))
+print("coefs   :", pipe[-1].coef_.round(4))
+for name, model, cols in [("numbers only", lin, num), ("with city", pipe, num + ["city"])]:
+    p = model.predict(test[cols])
+    print(f"{name:13s} test R2 {r2_score(test['rent'], p):.3f}  RMSE {mean_squared_error(test['rent'], p) ** 0.5:.2f}")
+new = pd.DataFrame({"size": [1000], "metro": [1.0], "age": [10], "city": ["Pune"]})
+print("predict a 1000 sq ft Pune flat, 1 km, 10 yrs:", pipe.predict(new).round(2))</div>
+  <div class="fx" data-lang="text">intercept_: 6.657
+coef_     : {'size': 0.0195, 'metro': -1.716, 'age': -0.0234}
+rank_: 3   singular_: [5230.8  127.4   24.2]
+features: ['city__city_Mumbai', 'city__city_Pune', 'remainder__size', 'remainder__metro', 'remainder__age']
+coefs   : [ 8.1419 -2.6899  0.0206 -1.6357 -0.0975]
+numbers only  test R2 0.672  RMSE 5.06
+with city     test R2 0.884  RMSE 3.01
+predict a 1000 sq ft Pune flat, 1 km, 10 yrs: [19.96]</div>
+  <p>Numbers only: test R² 0.672, RMSE 5.06. Adding the city dummies: R² 0.884, RMSE 3.01 (close to the noise floor of 3). The city coefficients (8.14 and −2.69) and numeric slopes match the statsmodels fit and the truth closely. <code>rank_</code> 3 with three healthy singular values says no column is redundant (the first singular value is large only because size is in sq ft, with values in the hundreds). The new 1000 sq ft Pune flat: 19.96, close to the statsmodels mean of 19.8 (which was fitted on all 300 flats).</p>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>When using <code>remainder="passthrough"</code>, pass only the feature columns. Passing the whole DataFrame would pass the target <code>rent</code> through as a feature: a perfect, useless model (test R² 1.0) and a classic leak.</p>
+  </div>
+  <div class="bridge"><b>What's still missing?</b> Libraries hide the mechanics. Writing the model ourselves and matching sklearn proves we understand every line.</div>
+
+  <h2 id="lr-scratch"><span class="num">13</span>From Scratch, Matching scikit-learn</h2>
+  <p>The class below has three solvers. <code>normal</code> solves XᵀXw = Xᵀy (section 04). <code>lstsq</code> uses the SVD. <code>gd</code> runs batch gradient descent (section 06) on standardised features, then converts the weights back to original units: if z = (x − μ)/σ, then w_x = w_z / σ and b = b_z − Σ μⱼ w_xⱼ. The test is sklearn's diabetes data (442 patients, 10 features, target = disease progression after one year).</p>
+  <div class="fx" data-lang="py">from sklearn.datasets import load_diabetes
+
+class MyLinearRegression:
+    """Ordinary least squares, three ways: normal equation, lstsq (SVD), gradient descent."""
+    def __init__(self, method="lstsq", lr=0.1, n_iter=20000):
+        self.method, self.lr, self.n_iter = method, lr, n_iter
+
+    def fit(self, X, y):
+        X, y = np.asarray(X, float), np.asarray(y, float)
+        Xb = np.c_[np.ones(len(X)), X]                       # prepend the 1s column
+        if self.method == "normal":
+            w = np.linalg.solve(Xb.T @ Xb, Xb.T @ y)          # (X^T X) w = X^T y
+        elif self.method == "lstsq":
+            w = np.linalg.lstsq(Xb, y, rcond=None)[0]         # SVD, safest
+        else:                                                 # batch gradient descent on MSE
+            mu, sd = X.mean(0), X.std(0)                      # GD needs scaled features
+            Zb = np.c_[np.ones(len(X)), (X - mu) / sd]
+            w = np.zeros(Zb.shape[1])
+            for _ in range(self.n_iter):
+                w -= self.lr * (2 / len(y)) * Zb.T @ (Zb @ w - y)
+            w[1:] = w[1:] / sd                                # undo the scaling
+            w[0] = w[0] - mu @ w[1:]
+        self.intercept_, self.coef_ = w[0], w[1:]
+        return self
+
+    def predict(self, X):
+        return np.asarray(X, float) @ self.coef_ + self.intercept_
+
+    def score(self, X, y):                                    # R^2, like sklearn
+        r = y - self.predict(X)
+        return 1 - (r @ r) / ((y - y.mean()) @ (y - y.mean()))
+
+Xd, yd = load_diabetes(return_X_y=True)                       # 442 patients, 10 features
+ref = LinearRegression().fit(Xd, yd)
+for method in ["normal", "lstsq", "gd"]:
+    mine = MyLinearRegression(method).fit(Xd, yd)
+    gap = np.abs(mine.coef_ - ref.coef_).max()
+    print(f"{method:6s} intercept {mine.intercept_:.3f}  max |coef - sklearn| = {gap:.2e}  R2 {mine.score(Xd, yd):.4f}")
+print("sklearn intercept", round(ref.intercept_, 3), " R2", round(ref.score(Xd, yd), 4))</div>
+  <div class="fx" data-lang="text">normal intercept 152.133  max |coef - sklearn| = 1.59e-12  R2 0.5177
+lstsq  intercept 152.133  max |coef - sklearn| = 1.48e-12  R2 0.5177
+gd     intercept 152.133  max |coef - sklearn| = 3.81e-11  R2 0.5177
+sklearn intercept 152.133  R2 0.5177</div>
+  <p>All three agree with sklearn to about 10⁻¹¹ (floating-point noise). The scaling inside <code>gd</code> is not decoration: in the diabetes data every feature has a standard deviation of about 0.048, so without scaling the gradient steps are tiny. In a run without the two scaling lines, 20,000 steps at η = 0.1 still left coefficients wrong by up to 705 and R² at 0.5145 instead of 0.5177.</p>
+  <div class="callout intu"><span class="label">Key insight</span>
+    <p>The whole of linear regression fits in about 15 lines: add a 1s column, solve one linear system, and compute R² as 1 − SSE/SST. Everything else in this group (diagnostics, polynomial features, penalties) changes what goes into X or adds one term to the loss.</p>
+  </div>
+
+  <h2 id="lr-when"><span class="num">14</span>Strengths, Limits &amp; Comparisons</h2>
+  <div class="cards">
+    <div><b>Strengths</b><p>Fast exact solution; no hyperparameters; coefficients you can explain to a manager; standard errors and intervals; works well with few rows; extrapolates a trend (sometimes wisely, sometimes dangerously).</p><small>The default baseline for any numeric target</small></div>
+    <div><b>Limits</b><p>Only additive, straight-line effects unless you engineer features; sensitive to outliers (squared loss); unstable with correlated features; needs encoding of categories; statistics need assumptions.</p><small>See the three sibling notes for fixes</small></div>
+    <div><b>Use it when</b><p>You need interpretability or inference, have modest data, effects are roughly linear, or you want a baseline before trees and boosting.</p><small>Then check residuals</small></div>
+  </div>
+  <table class="tbl"><caption>Linear regression vs its siblings and other models</caption>
+    <tr><th></th><th>Linear (OLS)</th><th>Polynomial / basis</th><th>Ridge / Lasso</th><th>Decision tree / GBM</th><th>KNN regression</th></tr>
+    <tr><td>Shape it can fit</td><td>flat plane</td><td>smooth curves</td><td>flat plane</td><td>steps, interactions</td><td>any local shape</td></tr>
+    <tr><td>Hyperparameters</td><td>none</td><td>degree / knots</td><td>α (and l1_ratio)</td><td>depth, learning rate, …</td><td>k, distance</td></tr>
+    <tr><td>Many / correlated features</td><td>unstable</td><td>worse (more columns)</td><td>designed for it</td><td>fine</td><td>curse of dimensionality</td></tr>
+    <tr><td>Scaling needed</td><td>no (yes for GD)</td><td>yes</td><td>yes</td><td>no</td><td>yes</td></tr>
+    <tr><td>Interpretability</td><td>excellent</td><td>moderate</td><td>good (lasso selects)</td><td>tree: good; GBM: via SHAP</td><td>low</td></tr>
+    <tr><td>p-values / intervals</td><td>yes (statsmodels)</td><td>yes</td><td>not standard</td><td>no</td><td>no</td></tr>
+    <tr><td>Extrapolation</td><td>continues the line</td><td>explodes</td><td>continues the line</td><td>flat beyond data</td><td>flat beyond data</td></tr>
+    <tr><td>Note</td><td>this one</td><td><a class="xref" data-note="ml_polyreg">Polynomial</a></td><td><a class="xref" data-note="ml_ridge_lasso">Ridge/Lasso</a></td><td><a class="xref" data-note="ml_dtree">Decision Trees</a>, <a class="xref" data-note="ml_gbm">GBM</a></td><td><a class="xref" data-note="ml_knn">KNN</a></td></tr>
   </table>
-  <p>OLS gives the cholesterol twins s1/s2 big opposite weights (−37.7 and +22.7) that mostly cancel. Ridge brings them to −11.3 / +1.8. Lasso sets s2, age and s4 to exactly 0, and the CV score does not drop: those columns were not pulling their weight. <code>pipe.fit(X, y)[-1]</code> picks the last step of the pipeline (the model) so we can read its <code>coef_</code>. Raising α makes lasso keep fewer columns:</p>
-  <div class="fx" data-lang="py">for a in [0.1, 1, 5, 10, 20]:
-    c = make_pipeline(StandardScaler(), Lasso(alpha=a)).fit(X, y)[-1].coef_
-    print(f"lasso alpha={a:&lt;4} nonzero={int((c != 0).sum())}  kept={list(X.columns[c != 0])}")</div>
-  <div class="fx" data-lang="text">lasso alpha=0.1  nonzero=9  kept=['age', 'sex', 'bmi', 'bp', 's1', 's2', 's4', 's5', 's6']
-lasso alpha=1    nonzero=7  kept=['sex', 'bmi', 'bp', 's1', 's3', 's5', 's6']
-lasso alpha=5    nonzero=5  kept=['sex', 'bmi', 'bp', 's3', 's5']
-lasso alpha=10   nonzero=4  kept=['bmi', 'bp', 's3', 's5']
-lasso alpha=20   nonzero=3  kept=['bmi', 'bp', 's5']</div>
-  <p>bmi, bp and s5 survive even α = 20: they are the strongest signals.</p>
-  <h3>Correlated twins: who gets the weight?</h3>
-  <p>Two temperature sensors that read almost the same value (correlation 0.9999). The target truly depends on temperature with total effect 3 per degree. We refit each model on three random resamples of the rows (bootstrap) to see how stable the weights are.</p>
-  <div class="fx" data-lang="py">rng = np.random.default_rng(1)
-temp_a = rng.normal(25, 5, 100)                  # sensor A, degrees C
-temp_b = temp_a + rng.normal(0, 0.05, 100)       # sensor B: a near-copy of A
-yt = 3 * temp_a + rng.normal(0, 3, 100)          # true total effect: 3 per degree
-Xt = np.c_[temp_a, temp_b]
-models = {"OLS": LinearRegression(), "Ridge": Ridge(alpha=10),
-          "Lasso": Lasso(alpha=1), "ENet": ElasticNet(alpha=1, l1_ratio=0.5)}
-for name, m in models.items():
-    row = []
-    for b in range(3):                           # 3 bootstrap resamples of the rows
-        idx = rng.integers(0, 100, 100)
-        w = m.fit(Xt[idx], yt[idx]).coef_
-        row.append(f"[{w[0]:5.1f}, {w[1]:5.1f}]")
-    print(f"{name:6s}", "  ".join(row))</div>
-  <div class="fx" data-lang="text">OLS    [ -3.8,   6.8]  [ -3.7,   6.7]  [ -0.4,   3.4]
-Ridge  [  1.5,   1.5]  [  1.6,   1.4]  [  1.6,   1.4]
-Lasso  [  2.9,   0.0]  [  3.0,   0.0]  [  2.9,   0.0]
-ENet   [  1.5,   1.5]  [  1.5,   1.5]  [  1.4,   1.4]</div>
-  <p>Each pair always adds to about 3, the true effect. But OLS splits it wildly, with a negative weight on one sensor. Ridge and Elastic Net share it fairly. Lasso gives everything to one twin; which twin wins depends on tiny noise.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Ridge (L2)</strong>: minimise RSS + α·Σw². <strong>Lasso (L1)</strong>: minimise RSS + α·Σ|w| (sklearn scales RSS by 1/(2n)). <strong>Elastic Net</strong>: α·[r·Σ|w| + (1−r)/2·Σw²], with r = <code>l1_ratio</code> (0 = ridge, 1 = lasso). α → 0 gives OLS; α → ∞ makes every weight 0, so the model predicts the mean. You trade a little bias for much less variance.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Always standardise before ridge or lasso. The penalty treats a weight on "income in rupees" and "age in years" the same way, so units change the answer. Put the scaler inside a <code>Pipeline</code> so cross-validation does not leak. And never pick α by eye: use <code>RidgeCV</code>, <code>LassoCV</code>, <code>ElasticNetCV</code>.</p>
-  </div>
-
-  <h2 id="mr-l1"><span class="num">06</span>Why L1 Gives Zeros</h2>
-  <p>The table in section 05 showed it with numbers: ridge divides the weight, so it shrinks but never reaches 0; lasso subtracts, so it hits 0. This matters in practice. Lasso can switch features fully off, which makes it a built-in feature selector: give it 200 columns and it may hand back 6. Ridge cannot do that. Interviewers ask "why" almost every time lasso comes up, so it pays to understand it two ways: with a picture and with the pull on each weight.</p>
-  <p>The picture: think of the penalty as a budget fence around the origin. Ridge's fence (w₁² + w₂² ≤ t) is a circle. Lasso's fence (|w₁| + |w₂| ≤ t) is a diamond with sharp corners sitting on the axes. The loss is a set of oval rings around the OLS answer. Grow the rings until they first touch the fence. A round fence is touched at a generic spot, where both weights are non-zero. A diamond is usually touched at a corner, and at a corner one weight is exactly 0.</p>
-  <figure class="viz"><svg viewBox="0 -8 540 240" width="540">
-<line x1="20" y1="120" x2="240" y2="120" stroke="currentColor"/><line x1="130" y1="20" x2="130" y2="210" stroke="currentColor"/>
-<text x="236" y="136" class="tm" font-size="12">w₁</text><text x="136" y="206" class="tm" font-size="12">w₂</text>
-<path d="M130 70 L180 120 L130 170 L80 120 Z" class="fb sb" fill-opacity="0.35"/>
-<ellipse cx="165" cy="40" rx="60" ry="36.9" fill="none" class="sr" stroke-width="2"/>
-<ellipse cx="165" cy="40" rx="30" ry="18.5" fill="none" class="sr" stroke-dasharray="3 3"/>
-<circle cx="165" cy="40" r="3" class="fr"/><text x="172" y="36" class="tr" font-size="11">OLS ŵ</text>
-<circle cx="130" cy="70" r="5" class="fg sg"/><text x="118" y="70" text-anchor="end" class="tg" font-size="12">w₁ = 0 here</text>
-<text x="130" y="226" text-anchor="middle" font-size="13">L1: |w₁| + |w₂| ≤ t</text>
-<line x1="300" y1="120" x2="520" y2="120" stroke="currentColor"/><line x1="410" y1="20" x2="410" y2="210" stroke="currentColor"/>
-<text x="516" y="136" class="tm" font-size="12">w₁</text><text x="416" y="206" class="tm" font-size="12">w₂</text>
-<circle cx="410" cy="120" r="50" class="ft st" fill-opacity="0.35"/>
-<ellipse cx="445" cy="40" rx="60" ry="35" fill="none" class="sr" stroke-width="2"/>
-<ellipse cx="445" cy="40" rx="30" ry="17.5" fill="none" class="sr" stroke-dasharray="3 3"/>
-<circle cx="445" cy="40" r="3" class="fr"/><text x="452" y="36" class="tr" font-size="11">OLS ŵ</text>
-<circle cx="430" cy="74" r="5" class="fg sg"/><text x="440" y="90" class="tg" font-size="12">both ≠ 0</text>
-<text x="410" y="226" text-anchor="middle" font-size="13">L2: w₁² + w₂² ≤ t</text>
-</svg><figcaption>Loss contours (red) grow from the OLS solution until they first touch the allowed region. The diamond is usually hit at a corner, where a weight is exactly 0.</figcaption></figure>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>L2 is like a percentage tax: someone earning ₹100 pays ₹10, someone earning ₹10 pays ₹1. Small earners shrink but are never wiped out. L1 is like a fixed fee of ₹500: anyone earning less than ₹500 is left with nothing.</p>
-  </div>
-  <h3>Worked example: the pull on one weight</h3>
-  <p>During training, the penalty pulls each weight toward 0. The L2 pull is the slope of αw², which is 2αw: proportional to the weight. The L1 pull is the slope of α|w|, which is α: the same size no matter how small w is. Take α = 1:</p>
-  <table class="tbl out"><caption>Penalty pull on a weight, α = 1</caption>
-    <tr><th>current w</th><th>L2 pull 2αw</th><th>L1 pull α</th></tr>
-    <tr><td>4</td><td>8</td><td>1</td></tr>
-    <tr><td>1</td><td>2</td><td>1</td></tr>
-    <tr><td>0.25</td><td>0.5</td><td>1</td></tr>
-    <tr><td>0.01</td><td>0.02 (almost nothing)</td><td>1 (still full strength)</td></tr>
+  <table class="tbl"><caption>Linear vs logistic regression</caption>
+    <tr><th></th><th>Linear regression</th><th>Logistic regression</th></tr>
+    <tr><td>Target</td><td>any real number</td><td>0/1 (or classes)</td></tr>
+    <tr><td>Output</td><td>ŷ = Xw</td><td>p = sigmoid(Xw)</td></tr>
+    <tr><td>Loss</td><td>squared error (Gaussian likelihood)</td><td>log-loss (Bernoulli likelihood)</td></tr>
+    <tr><td>Closed form</td><td>yes</td><td>no: iterative solvers</td></tr>
+    <tr><td>Coefficient reading</td><td>+w units of y</td><td>+w in log-odds (odds × e^w)</td></tr>
   </table>
-  <p>For big weights, L2 pulls harder. For small weights, the L2 pull fades away, so a weak weight settles at some small non-zero number. The L1 pull stays at full strength all the way down. If the data's push on a weight is weaker than α, nothing can hold it up and it lands on exactly 0. That is the "subtract 6α" in the lasso formula from section 05: once 6α ≥ 73, the slope is gone.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Sparsity</strong>: a weight vector with many exact zeros. L1 regularisation produces sparse solutions; L2 does not. Lasso's update for a single weight is the <strong>soft-threshold</strong> operator: w = sign(ρ)·max(|ρ| − λ, 0) / Σx².</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Lasso's selection is unstable with correlated features: of two twins it keeps one, and which one can flip between runs (the [2.9, 0.0] row above). Do not tell a stakeholder "s2 doesn't matter" because lasso zeroed it. Use Elastic Net to keep groups together, or check stability over bootstrap resamples.</p>
-  </div>
 
-  <h2 id="mr-poly"><span class="num">07</span>Polynomial Regression &amp; Overfitting</h2>
-  <p>Many relationships are curved. Fuel use rises faster at high speed. Ice-cream sales rise with temperature, then fall in a heatwave. A straight line cannot follow a curve, however you tilt it; the residual smile in section 04 was exactly that failure.</p>
-  <p>The trick is to keep using linear regression but give it new columns: x², x³, or products like x₁·x₂. The model is still "weights times columns, added up", so all the OLS machinery still works. Only the columns are curved. This is <strong>polynomial regression</strong>. The danger is that with enough columns the curve can bend to pass through every noisy point, which looks perfect on training data and is useless on new data.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Degree 15 is a student who memorises last year's question paper word by word. Full marks on that paper, poor marks on a new one. Degree 3 is the student who learnt the concept.</p>
+  <h2 id="lr-traps"><span class="num">15</span>Common Mistakes</h2>
+  <div class="callout trap"><span class="label">Trap: judging by training R²</span>
+    <p>Training R² can only go up as columns are added. Report test or cross-validated scores; use adjusted R², AIC or BIC when comparing nested models on the same data.</p>
   </div>
-  <h3>Worked example: fix the curved data from section 04</h3>
-  <p>Back to x = 1…5, y = x². Add a column x² next to x. Now the table has two columns: x = [1, 2, 3, 4, 5] and x² = [1, 4, 9, 16, 25]. Linear regression must find y = w₀ + w₁·x + w₂·x². By eye: w₀ = 0, w₁ = 0, w₂ = 1 fits every point exactly. Let sklearn confirm:</p>
-  <div class="fx" data-lang="py">from sklearn.preprocessing import PolynomialFeatures
-x5 = np.array([[1], [2], [3], [4], [5]]); y5 = np.array([1, 4, 9, 16, 25])
-Xp = PolynomialFeatures(degree=2, include_bias=False).fit_transform(x5)
-print(Xp)
-m = LinearRegression().fit(Xp, y5)
-print("weights", m.coef_.round(3) + 0.0, "intercept", round(m.intercept_, 3) + 0.0)
-print("predict x=6:", m.predict([[6, 36]]).round(2))</div>
-  <div class="fx" data-lang="text">[[ 1.  1.]
- [ 2.  4.]
- [ 3.  9.]
- [ 4. 16.]
- [ 5. 25.]]
-weights [0. 1.] intercept 0.0
-predict x=6: [36.]</div>
-  <p><code>PolynomialFeatures(degree=2)</code> built the x and x² columns. The fitted weights are 0 on x and 1 on x²: the exact curve, and the residuals that formed a smile are now all 0. It predicts 36 for x = 6, which is right.</p>
-  <h3>Too much of a good thing</h3>
-  <p>Now 20 noisy points from a sine wave, and four degrees. We measure RMSE on the 20 training points and on 1,000 fresh test points.</p>
-  <figure class="viz"><svg viewBox="0 0 540 230" width="540">
-<defs><clipPath id="mr-clip"><rect x="20" y="5" width="500" height="200"/></clipPath></defs>
-<line x1="30" y1="110" x2="510" y2="110" stroke="currentColor" stroke-dasharray="2 4"/>
-<polyline clip-path="url(#mr-clip)" points="30,82 37,83 44,84 51,85 58,86 65,87 72,88 79,89 86,90 93,91 100,93 107,94 113,95 120,96 127,97 134,98 141,99 148,100 155,101 162,102 169,103 176,104 183,105 190,106 197,107 204,109 211,110 218,111 225,112 232,113 239,114 246,115 253,116 260,117 267,118 273,119 280,120 287,121 294,122 301,123 308,124 315,126 322,127 329,128 336,129 343,130 350,131 357,132 364,133 371,134 378,135 385,136 392,137 399,138 406,139 413,140 420,141 427,143 433,144 440,145 447,146 454,147 461,148 468,149 475,150 482,151 489,152 496,153 503,154 510,155" fill="none" class="sb" stroke-width="2"/>
-<polyline clip-path="url(#mr-clip)" points="30,109 37,101 44,93 51,87 58,81 65,75 72,71 79,67 86,64 93,61 100,59 107,57 113,56 120,55 127,55 134,56 141,56 148,57 155,59 162,61 169,63 176,65 183,68 190,71 197,75 204,78 211,82 218,86 225,90 232,94 239,98 246,102 253,107 260,111 267,115 273,120 280,124 287,128 294,132 301,136 308,140 315,144 322,147 329,150 336,153 343,156 350,159 357,161 364,162 371,164 378,165 385,166 392,166 399,166 406,165 413,164 420,162 427,160 433,157 440,154 447,150 454,145 461,139 468,133 475,127 482,119 489,111 496,102 503,92 510,81" fill="none" class="sg" stroke-width="2"/>
-<polyline clip-path="url(#mr-clip)" points="30,105 37,101 44,96 51,92 58,86 65,81 72,75 79,69 86,63 93,58 100,54 107,50 113,47 120,46 127,45 134,46 141,48 148,51 155,54 162,58 169,63 176,68 183,73 190,77 197,82 204,86 211,90 218,94 225,97 232,100 239,102 246,105 253,108 260,111 267,114 273,118 280,122 287,126 294,131 301,136 308,142 315,147 322,152 329,157 336,161 343,164 350,166 357,167 364,166 371,165 378,163 385,160 392,158 399,156 406,154 413,154 420,154 427,156 433,158 440,160 447,159 454,154 461,143 468,125 475,98 482,64 489,28 496,3 503,10 510,85" fill="none" class="sr" stroke-width="2"/>
-<path d="M30 112h0M38 82h0M46 109h0M50 90h0M114 46h0M159 54h0M174 70h0M233 100h0M290 132h0M291 121h0M321 161h0M336 155h0M380 167h0M380 156h0M420 157h0M422 154h0M442 164h0M444 154h0M468 126h0M510 85h0" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
-<text x="40" y="226" class="tb" font-size="12">degree 1 (underfit)</text><text x="200" y="226" class="tg" font-size="12">degree 3 (good)</text><text x="340" y="226" class="tr" font-size="12">degree 15 (chases noise)</text>
-</svg><figcaption>20 noisy points from a sine wave. Degree 15 bends to hit points, especially at the edges.</figcaption></figure>
-  <div class="fx" data-lang="py">from sklearn.metrics import mean_squared_error
-rng = np.random.default_rng(0)
-x = np.sort(rng.uniform(0, 1, 20)); x[[0, -1]] = 0, 1          # 20 training points
-ys = np.sin(2*np.pi*x) + rng.normal(0, 0.3, 20)
-xt = rng.uniform(0, 1, 1000); yt = np.sin(2*np.pi*xt) + rng.normal(0, 0.3, 1000)   # test
-def rmse(m, a, b): return mean_squared_error(b, m.predict(a[:, None])) ** 0.5
-for d in [1, 3, 9, 15]:
-    m = make_pipeline(PolynomialFeatures(d), StandardScaler(), LinearRegression()).fit(x[:, None], ys)
-    print(f"degree {d:2d}         train RMSE {rmse(m, x, ys):.2f}  test RMSE {rmse(m, xt, yt):.2f}")
-m = make_pipeline(PolynomialFeatures(15), StandardScaler(), Ridge(alpha=0.1)).fit(x[:, None], ys)
-print(f"degree 15 + Ridge train RMSE {rmse(m, x, ys):.2f}  test RMSE {rmse(m, xt, yt):.2f}")
-print("features from 10 inputs, degree 2/3/5:",
-      [PolynomialFeatures(d, include_bias=False).fit(np.zeros((1, 10))).n_output_features_ for d in (2, 3, 5)])</div>
-  <div class="fx" data-lang="text">degree  1         train RMSE 0.53  test RMSE 0.58
-degree  3         train RMSE 0.16  test RMSE 0.33
-degree  9         train RMSE 0.15  test RMSE 0.34
-degree 15         train RMSE 0.12  test RMSE 0.55
-degree 15 + Ridge train RMSE 0.25  test RMSE 0.37
-features from 10 inputs, degree 2/3/5: [65, 285, 3002]</div>
-  <p>Train error keeps falling as degree rises (0.53 → 0.12). Test error falls, then climbs back (0.33 → 0.55): the U-shape of overfitting. Adding <code>Ridge</code> to degree 15 pulls test RMSE back to 0.37. The last line shows the column explosion: 10 inputs at degree 3 already make 285 columns. <code>x[:, None]</code> turns the 1-D array into the 2-D table sklearn wants.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Polynomial regression</strong>: linear regression on polynomial features (x, x², …, and cross terms). It is still a <em>linear model</em> because it is linear in the weights. <strong>Overfitting</strong>: low training error, high test error, because the model learned noise.</p>
+  <div class="callout trap"><span class="label">Trap: reading coefficient size as importance</span>
+    <p>Size per sq ft was 0.0196 and per 100 sq ft 1.95: same model. Compare standardised coefficients, or better, permutation importance on test data.</p>
   </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>High-degree polynomials explode outside the training range and near its edges. Keep degree ≤ 2–3, always regularise, scale after <code>PolynomialFeatures</code> (x¹⁵ is tiny or huge), and prefer trees or splines for complex shapes.</p>
+  <div class="callout trap"><span class="label">Trap: forgetting "holding the others fixed"</span>
+    <p>Experience was worth 1.69 lakh alone and 1.0 with certifications. A coefficient's meaning depends on which other columns are in the model; adding or dropping a correlated column changes it.</p>
   </div>
-
-  <h2 id="mr-build"><span class="num">08</span>Hands-on: When Regularisation Pays</h2>
-  <p>On the clean diabetes data, OLS, ridge and lasso all scored the same CV R² (≈ 0.48). So is regularisation just theory? No. It pays when you have many columns compared to rows, or many useless columns, which is normal at work: a feature store hands you 200 columns and most are noise for your target. Here we simulate that by adding 200 columns of pure random numbers to the 10 real ones, then compare four models on a held-out test set.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A cricket selector watching 210 players, of whom 10 can actually play. OLS picks everyone and gives each a role. Ridge picks everyone but gives the dud players tiny roles. Lasso sends most of them home.</p>
-  </div>
-  <p>What to expect, step by step: (1) split 442 rows into 331 train and 111 test; (2) OLS must fit 210 weights from 331 rows, so it will memorise noise; (3) the CV versions pick their own α on the training rows only; (4) we count how many weights each model left non-zero.</p>
-  <div class="fx" data-lang="py">from sklearn.model_selection import train_test_split
-from sklearn.linear_model import RidgeCV, LassoCV, ElasticNetCV
-from sklearn.metrics import r2_score
-models = {"OLS": LinearRegression(),
-          "RidgeCV": RidgeCV(alphas=np.logspace(-3, 3, 13)),
-          "LassoCV": LassoCV(cv=5, random_state=0),
-          "ElasticCV": ElasticNetCV(l1_ratio=[.2, .5, .8, 1], cv=5, random_state=0)}
-rng = np.random.default_rng(0)
-Xn = np.c_[X.values, rng.normal(size=(len(X), 200))]          # 10 real + 200 noise
-Xtr, Xte, ytr, yte = train_test_split(Xn, y, test_size=0.25, random_state=42)
-for name, m in models.items():
-    p = make_pipeline(StandardScaler(), m).fit(Xtr, ytr)
-    print(f"{name:10s} test R2 {r2_score(yte, p.predict(Xte)):.3f}  "
-          f"nonzero coefs {int((p[-1].coef_ != 0).sum())}/210")
-print("ElasticNetCV picked l1_ratio =", p[-1].l1_ratio_)
-lasso = make_pipeline(StandardScaler(), LassoCV(cv=5, random_state=0)).fit(Xtr, ytr)[-1]
-print("Lasso kept columns:", np.flatnonzero(lasso.coef_).tolist())</div>
-  <div class="fx" data-lang="text">OLS        test R2 -0.258  nonzero coefs 210/210
-RidgeCV    test R2 0.366  nonzero coefs 210/210
-LassoCV    test R2 0.485  nonzero coefs 6/210
-ElasticCV  test R2 0.485  nonzero coefs 6/210
-ElasticNetCV picked l1_ratio = 1.0
-Lasso kept columns: [2, 3, 6, 8, 132, 140]</div>
-  <p>OLS scores −0.258 on test: worse than predicting the average for everyone. Ridge recovers to 0.366 but still carries 210 weights. Lasso keeps 6 columns and scores 0.485, the same as the 10-real-feature models score without any noise (0.485–0.487 when rerun on the real columns only). The kept columns 2, 3, 6, 8 are bmi, bp, s3, s5, the strongest real signals; two noise columns (132, 140) slipped in by chance. ElasticNetCV chose <code>l1_ratio=1.0</code>, pure lasso, because sparsity is what this data needs. <code>np.flatnonzero</code> lists the indexes of non-zero weights.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>RidgeCV / LassoCV / ElasticNetCV</strong>: models that try a grid of α (and <code>l1_ratio</code>) values with internal cross-validation on the training data, then refit with the best one. The chosen value is stored in <code>alpha_</code> (and <code>l1_ratio_</code>).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"Lasso picked these features, so they cause the outcome" is wrong twice: lasso can admit noise columns (132 and 140 here) and can drop a real feature that has a correlated twin. Treat lasso's selection as a shortlist to investigate, not a finding.</p>
-  </div>
-
-  <h2 id="mr-traps"><span class="num">09</span>Common Mistakes</h2>
-  <div class="callout trap"><span class="label">Trap: judging the model by training R²</span>
-    <p>Training R² never goes down when you add columns. The 210-column OLS above looks great on train and scores −0.258 on test. Report test or cross-validated scores.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: trusting R² without the residual plot</span>
-    <p>y = x² fit by a straight line scored R² 0.963 with residuals +, −, −, −, +. A pattern in residuals means the form is wrong, whatever R² says.</p>
+  <div class="callout trap"><span class="label">Trap: all k dummies plus an intercept</span>
+    <p>The dummy trap makes XᵀX singular (rank 3 of 4) and coefficients arbitrary. Drop one level, and remember the coefficients are differences from that reference.</p>
   </div>
   <div class="callout trap"><span class="label">Trap: inverting XᵀX</span>
-    <p><code>np.linalg.inv</code> on a near-singular matrix returns huge, meaningless weights. Use <code>lstsq</code>, <code>solve</code> or just <code>LinearRegression</code>; for collinear features use ridge.</p>
+    <p>Use <code>lstsq</code>, <code>solve</code> or <code>LinearRegression</code>, never <code>inv</code>. With near-duplicate columns, consider ridge.</p>
   </div>
-  <div class="callout trap"><span class="label">Trap: regularising unscaled features</span>
-    <p>Ridge and lasso penalise raw weight sizes, so units change which features get shrunk. Scale first, inside a <code>Pipeline</code>, so each CV fold fits its own scaler.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: reading coefficients as causes</span>
-    <p>"s1 has weight −37.7, so cholesterol protects you" is wrong: it is cancelling its twin s2. Coefficients of correlated features are unstable and only mean "holding the others fixed", which may be impossible in real life.</p>
+  <div class="callout trap"><span class="label">Trap: confidence interval instead of prediction interval</span>
+    <p>For "what will this one case be", use the prediction interval (±5.9 thousand rent), not the CI of the mean (±0.8).</p>
   </div>
   <div class="callout trap"><span class="label">Trap: extrapolating</span>
-    <p>The student line predicts 76.6 marks for 7 hours, and would predict 130 marks for 20 hours. A model is only trustworthy inside the range of data it saw, especially polynomial fits.</p>
+    <p>The salary line predicts 29.4 lakh at 20 years from data on 1–5 years. The model only knows the range it saw.</p>
+  </div>
+  <div class="callout trap"><span class="label">Trap: skipping the residual plot</span>
+    <p>A curved truth fit by a line can still have R² above 0.95. Plot residuals vs fitted values every time (<a class="xref" data-note="ml_reg_diag">Assumptions &amp; Diagnostics</a>).</p>
+  </div>
+  <div class="callout trap"><span class="label">Trap: "significant" = "important" or "causal"</span>
+    <p>A p-value says the estimate is unlikely to be exactly 0 by luck under the assumptions. It says nothing about size, business value, or causation.</p>
   </div>
 
-  <h2 id="mr-qa"><span class="num">10</span>Questions &amp; Answers</h2>
+  <h2 id="lr-qa"><span class="num">16</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>Fit a line by hand to (1,2), (2,4), (3,5). What are the slope and intercept?</summary><div class="qa-body">x̄ = 2, ȳ = 11/3. dx = −1, 0, 1; dy = −5/3, 1/3, 4/3. Σdx·dy = 5/3 + 0 + 4/3 = 3, Σdx² = 2, so slope = 1.5. Intercept = 11/3 − 1.5·2 = 2/3 ≈ 0.667. Line: ŷ = 0.667 + 1.5x.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is the normal equation, and when would you not use it?</summary><div class="qa-body">w = (XᵀX)⁻¹Xᵀy, from setting the gradient of the squared loss to zero. Avoid it when d is very large (O(d³) solve), when data doesn't fit in memory (use mini-batch GD), or when XᵀX is singular from perfectly correlated features (use ridge: (XᵀX + αI)⁻¹Xᵀy). In code use an SVD-based solver (<code>lstsq</code>), not an explicit inverse.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>R² is 0.97, RMSE is 1.26. Explain both to a manager.</summary><div class="qa-body">RMSE: "our predictions are typically off by about 1.3 marks." R²: "the model removes 97% of the error you'd make by guessing the class average for everyone." Then add: "measured on held-out data", or it means little.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why are OLS residuals always uncorrelated with the fitted values?</summary><div class="qa-body">ŷ is the orthogonal projection of y onto the column space of X, so Xᵀ(y − ŷ) = 0. The residual vector is perpendicular to every column and hence to ŷ = Xw. It's a consequence of the fit, not evidence the model is good.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>List the OLS assumptions. Which violation matters most in practice?</summary><div class="qa-body">LINE: linearity, independent errors, normal errors, equal variance (plus no severe multicollinearity). Linearity violations bias the coefficients. Independence violations (time series) leave coefficients unbiased but shrink standard errors, so everything looks significant: check Durbin–Watson. Normality matters least.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Your residual plot fans out as fitted values grow. What is it and what do you do?</summary><div class="qa-body">Heteroscedasticity. Estimates stay unbiased but standard errors are wrong. Fixes: log-transform a right-skewed target, weighted least squares, or robust (HC) standard errors. Confirm with Breusch–Pagan (p was 0.000 in the fan example).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Ridge vs lasso vs elastic net: how do you choose?</summary><div class="qa-body">Ridge: most features matter, some are correlated, you want stable coefficients. Lasso: you suspect many features are useless and want automatic selection. Elastic net: many correlated features and you still want sparsity; it keeps correlated groups together. Always tune α (and l1_ratio) with CV.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why does L1 produce exact zeros but L2 doesn't?</summary><div class="qa-body">Geometry: the L1 ball is a diamond with corners on the axes, and expanding loss contours usually touch it at a corner, where some weights are 0. Pull: L1's pull is a constant α down to zero, L2's pull 2αw fades as w shrinks. Formula: ridge divides (73/(17.5+α)), lasso subtracts (max(73 − 6α, 0)/17.5).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Two features are 0.9999 correlated. What happens to OLS, ridge and lasso coefficients?</summary><div class="qa-body">OLS: unstable, large opposite-signed weights that change with every resample ([−3.8, 6.8] then [−0.4, 3.4]). Ridge: splits the effect evenly ([1.5, 1.5]). Lasso: gives it all to one ([2.9, 0.0]) and which one is arbitrary. Elastic net behaves like ridge on the pair.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why must you scale features before ridge or lasso but not for plain OLS?</summary><div class="qa-body">OLS predictions are unchanged by rescaling a feature (its weight just rescales). The penalty sums raw weights, so a feature measured in small units needs a big weight and gets punished more. Standardising puts every weight on the same footing.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Is polynomial regression a linear model? How many features does degree 3 on 10 inputs create?</summary><div class="qa-body">Yes: it's linear in the weights; only the features are non-linear. PolynomialFeatures(3, include_bias=False) on 10 inputs gives 285 columns, so pair it with ridge or prefer trees.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Derive the least-squares slope and intercept for one feature.</summary><div class="qa-body">SSE = Σ(yᵢ − wxᵢ − b)². ∂/∂b = −2Σ(yᵢ − wxᵢ − b) = 0 gives b = ȳ − wx̄. ∂/∂w = −2Σxᵢ(yᵢ − wxᵢ − b) = 0; substituting b and using Σ(xᵢ − x̄) = 0 gives w = Σ(xᵢ − x̄)(yᵢ − ȳ)/Σ(xᵢ − x̄)² = S_xy/S_xx = cov(x, y)/var(x). The second derivatives are positive, so it is a minimum.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Fit a line by hand to (1, 2), (2, 4), (3, 5).</summary><div class="qa-body">x̄ = 2, ȳ = 11/3. dx = −1, 0, 1; dy = −5/3, 1/3, 4/3. S_xy = 5/3 + 0 + 4/3 = 3, S_xx = 2, so w = 1.5 and b = 11/3 − 3 = 2/3 ≈ 0.667. Residuals: 2 − 2.167 = −0.167, 4 − 3.667 = 0.333, 5 − 5.167 = −0.167; they sum to 0.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Derive the normal equation. When is the solution unique?</summary><div class="qa-body">SSE = ‖y − Xw‖² = yᵀy − 2wᵀXᵀy + wᵀXᵀXw; gradient −2Xᵀy + 2XᵀXw = 0 gives XᵀXw = Xᵀy, so w = (XᵀX)⁻¹Xᵀy. It is unique when X has full column rank (no column is a combination of others), which makes XᵀX invertible and the loss strictly convex. Duplicated columns or all k dummies with an intercept break this.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain the geometry of OLS.</summary><div class="qa-body">ŷ = Xw lies in the column space of X; OLS picks the point closest to y, the orthogonal projection ŷ = Hy with H = X(XᵀX)⁻¹Xᵀ. The residual is perpendicular to every column (Xᵀe = 0), which is the normal equation. Pythagoras gives SST = SSR + SSE when there is an intercept.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Normal equation or gradient descent: which and when?</summary><div class="qa-body">Closed form (via SVD/solve) is exact with no tuning, cost O(nd² + d³): best up to thousands of features and data in memory. Gradient descent costs O(nd) per pass, streams data, works for any differentiable loss, but needs a learning rate, iterations and scaled features. sklearn: LinearRegression vs SGDRegressor.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>A coefficient on experience is 1.69 alone but 1.0 when certifications are added. Explain.</summary><div class="qa-body">Coefficients are partial effects, holding the other columns fixed. Experience and certifications are correlated (0.72). Alone, experience absorbs certifications' effect: simple slope = w₁ + w₂·δ = 1.0 + 2.0 × (6/17.5) = 1.686, where δ is the slope of certifications on experience. This is omitted-variable bias.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How are the standard errors in a regression summary computed?</summary><div class="qa-body">s² = SSE/(n − p) estimates the noise variance (dividing by n − p because p parameters were fitted). Cov(ŵ) = s²(XᵀX)⁻¹, and the standard errors are the square roots of its diagonal. One feature: se(w) = s/√S_xx. On the 5 employees: s² = 1.2, (XᵀX)⁻¹ diag = 1.1 and 0.1, se = 1.149 and 0.346.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What do t, P&gt;|t| and the confidence interval in the coefficient table mean?</summary><div class="qa-body">t = coefficient / standard error: how many SEs from zero. P&gt;|t| is the probability of a t at least that extreme if the true coefficient were 0 (t-distribution, n − p df). The 95% CI is coef ± t₀.₉₇₅ × se, the range of true values compatible with the data. Slope 1.4, se 0.346, t 4.04, p 0.027, CI [0.30, 2.50].</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>R² vs adjusted R²: why both?</summary><div class="qa-body">R² = 1 − SSE/SST never decreases when features are added. Adjusted R² = 1 − (1 − R²)(n − 1)/(n − p) charges for each parameter, so it can fall when a useless feature is added. Neither replaces a held-out test score.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you include a categorical feature with 3 levels? What is the dummy trap?</summary><div class="qa-body">Create k − 1 = 2 indicator columns; the dropped level is the reference and each coefficient is the mean difference from it (Delhi 21, Mumbai +10, Pune −5). Including all k dummies plus an intercept makes the dummies sum to the intercept column: perfect multicollinearity, singular XᵀX, infinitely many solutions with identical predictions.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Confidence interval vs prediction interval?</summary><div class="qa-body">The CI covers the mean response at x₀ (uncertainty in the line: s√(1/n + (x₀ − x̄)²/S_xx)). The PI covers a single new observation, adding the noise term: s√(1 + 1/n + …). The PI is always wider and does not shrink to zero with more data. At x₀ = 6: CI [6.14, 13.46], PI [4.75, 14.85].</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why is OLS the same as maximum likelihood?</summary><div class="qa-body">If yᵢ = xᵢᵀw + εᵢ with εᵢ ~ N(0, σ²) independent, the log-likelihood is −(n/2)log(2πσ²) − SSE/(2σ²). For any σ², it is maximised by minimising SSE. That is why statsmodels can print a log-likelihood, AIC and BIC for OLS.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does Gauss–Markov say and not say?</summary><div class="qa-body">With a correct linear model, zero-mean, equal-variance, uncorrelated errors, OLS is the Best Linear Unbiased Estimator (lowest variance among linear unbiased estimators). It does not need normality, and it does not say OLS has the lowest total error: biased methods like ridge can beat it on test error.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: how does logistic regression reuse this note?</summary><div class="qa-body">It keeps the weighted sum z = Xw but passes it through a sigmoid to get a probability, and replaces the Gaussian likelihood (squared loss) with a Bernoulli likelihood (log-loss). There is no closed form, so it is fitted iteratively, like section 06. Coefficients become changes in log-odds. See Logistic Regression.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: what do the three sibling notes fix?</summary><div class="qa-body">Assumptions &amp; Diagnostics: whether the standard errors, p-values and intervals here can be trusted (residual plots, VIF, Cook's distance). Polynomial &amp; Basis Functions: the straight-line limit, by adding x², splines etc. while staying linear in the weights. Ridge, Lasso &amp; Elastic Net: unstable weights with many or correlated columns, by adding a penalty: (XᵀX + λI)⁻¹Xᵀy.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What's the output? <code>LinearRegression().fit([[1],[2],[3]], [2,4,6]).coef_</code></summary><div class="qa-body"><code>array([2.])</code> with intercept ≈ 0: the points lie exactly on y = 2x, so every residual is 0 and R² = 1.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Training R² is 0.99 and test R² is negative. What happened?</summary><div class="qa-body">Overfitting: too many features (or polynomial terms) for the rows, so the model fits noise. Negative R² means worse than predicting the mean, as with OLS on 210 features / 331 rows (−0.258). Fix with regularisation (lasso recovered 0.485), fewer features, or more data.</div></details>
-</main>`
+</main>
+`
 });
