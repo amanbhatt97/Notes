@@ -66,10 +66,27 @@ const CATEGORIES = [
     ]}
   ] },
   { key: "ml", label: "Machine Learning", emoji: "\ud83e\udd16", tag: "Core", blurb: "Regression \u00b7 Trees \u00b7 Clustering \u00b7 Evaluation", hue: 145, topics: [
-    {"key": "ml_intro",          "label": "ML Basics"},
-    {"key": "ml_core",           "label": "Core Concepts"},
-    {"key": "ml_regression",     "label": "Regression"},
-    {"key": "ml_classification", "label": "Classification"},
+    {"key": "grp_ml_found", "label": "Foundations", "children": [
+      {"key": "ml_intro", "label": "What is Machine Learning"},
+      {"key": "ml_splits", "label": "Train/Val/Test & Cross-Validation"},
+      {"key": "ml_core", "label": "Bias, Variance & Generalization"},
+      {"key": "ml_loss_gd", "label": "Loss Functions & Gradient Descent"},
+      {"key": "ml_regularization", "label": "Regularization"},
+      {"key": "ml_features", "label": "Feature Engineering"},
+      {"key": "ml_pipelines", "label": "Pipelines & Data Leakage"}
+    ]},
+    {"key": "grp_ml_reg", "label": "Regression", "children": [
+      {"key": "ml_regression", "label": "Linear Regression"},
+      {"key": "ml_reg_diag", "label": "Assumptions & Diagnostics"},
+      {"key": "ml_polyreg", "label": "Polynomial & Basis Functions"},
+      {"key": "ml_ridge_lasso", "label": "Ridge, Lasso & Elastic Net"}
+    ]},
+    {"key": "grp_ml_cls", "label": "Classification", "children": [
+      {"key": "ml_classification", "label": "Logistic Regression"},
+      {"key": "ml_naivebayes", "label": "Naive Bayes"},
+      {"key": "ml_knn", "label": "K-Nearest Neighbors"},
+      {"key": "ml_svm", "label": "Support Vector Machines"}
+    ]},
     {"key": "grp_ml_trees", "label": "Tree-Based Models", "children": [
       {"key": "ml_trees",          "label": "The Tree Family: Map & How to Choose"},
       {"key": "ml_dtree",          "label": "Decision Trees"},
@@ -93,11 +110,37 @@ const CATEGORIES = [
       {"key": "ml_tree_explain",   "label": "Feature Importance & SHAP"},
       {"key": "ml_tree_tuning",    "label": "Tuning & Production"}
     ]},
-    {"key": "ml_clustering",     "label": "Clustering"},
-    {"key": "ml_dimred",         "label": "Dimensionality Reduction"},
-    {"key": "ml_evaluation",     "label": "Model Evaluation"},
-    {"key": "ml_timeseries",     "label": "Time Series Forecasting"},
-    {"key": "ml_recsys",         "label": "Recommendation Systems"}
+    {"key": "grp_ml_eval", "label": "Model Evaluation", "children": [
+      {"key": "ml_evaluation", "label": "Classification Metrics"},
+      {"key": "ml_reg_metrics", "label": "Regression Metrics"},
+      {"key": "ml_calibration", "label": "Thresholds & Calibration"}
+    ]},
+    {"key": "grp_ml_clu", "label": "Clustering", "children": [
+      {"key": "ml_clustering", "label": "Clustering: The Idea & Distances"},
+      {"key": "ml_kmeans", "label": "K-Means"},
+      {"key": "ml_hierarchical", "label": "Hierarchical Clustering"},
+      {"key": "ml_dbscan", "label": "DBSCAN & HDBSCAN"},
+      {"key": "ml_gmm", "label": "Gaussian Mixture Models"},
+      {"key": "ml_cluster_eval", "label": "Evaluating Clusters"}
+    ]},
+    {"key": "grp_ml_dr", "label": "Dimensionality Reduction", "children": [
+      {"key": "ml_dimred", "label": "Curse of Dimensionality & Feature Selection"},
+      {"key": "ml_pca", "label": "PCA"},
+      {"key": "ml_tsne", "label": "t-SNE"},
+      {"key": "ml_umap", "label": "UMAP"}
+    ]},
+    {"key": "grp_ml_ts", "label": "Time Series", "children": [
+      {"key": "ml_timeseries", "label": "Time Series Basics"},
+      {"key": "ml_arima", "label": "ARIMA Family"},
+      {"key": "ml_ets_prophet", "label": "Exponential Smoothing & Prophet"},
+      {"key": "ml_ts_ml", "label": "ML Forecasting"}
+    ]},
+    {"key": "grp_ml_rs", "label": "Recommendation Systems", "children": [
+      {"key": "ml_recsys", "label": "Recommender Basics & Content-Based"},
+      {"key": "ml_cf", "label": "Collaborative Filtering"},
+      {"key": "ml_mf", "label": "Matrix Factorization"},
+      {"key": "ml_rs_ranking", "label": "Ranking, Evaluation & Cold Start"}
+    ]}
   ] },
   { key: "dl", label: "Deep Learning", emoji: "\ud83e\udde0", tag: "Core", blurb: "PyTorch \u00b7 CNNs \u00b7 RNNs \u00b7 Attention", hue: 325, topics: [
     {"key": "dl_foundations", "label": "NN Foundations"},

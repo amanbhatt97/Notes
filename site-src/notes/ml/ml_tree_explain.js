@@ -6,51 +6,51 @@ Object.assign(TOPIC_CONTENT, {
   <p class="lead">A random forest of 300 trees or a booster of 500 trees cannot be read aloud the way one small tree can. This note gives the "why" back. It covers every standard way to ask a tree model what it is looking at: impurity importance (MDI), permutation importance, drop-column importance, partial dependence and ICE curves, and SHAP values, which come from a 1950s idea in game theory. Every formula is worked by hand on tiny tables first, then checked against the libraries, then run on the same 20,000-row churn dataset used across this group. You will also see where each method lies to you: many-valued columns, twin columns, and the big one, explanation is not causation.</p>
 
   <h2 id="mte-fits" class="open"><span class="num">↖</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 600 316" width="600">
+  <figure class="viz"><svg viewBox="0 0 600 324" width="600">
 <line x1="300" y1="28" x2="300" y2="42" stroke="currentColor" stroke-opacity="0.45"/>
 <line x1="300" y1="70" x2="300" y2="84" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="300" y1="112" x2="95" y2="132" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="300" y1="112" x2="300" y2="132" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="300" y1="112" x2="505" y2="132" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="95" y1="160" x2="60" y2="180" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="110.0" y1="194" x2="117.5" y2="194" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="300" y1="160" x2="250" y2="180" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="295.0" y1="194" x2="300.0" y2="194" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="355" y1="208" x2="255" y2="228" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="355" y1="208" x2="355" y2="228" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="355" y1="208" x2="455" y2="228" stroke="currentColor" stroke-opacity="0.45"/>
-<rect x="70" y="270" width="460" height="44" rx="8" fill="none" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.45"/>
-<text x="300" y="284" text-anchor="middle" class="tm" font-size="10">used by every model above</text>
+<line x1="300" y1="112" x2="116" y2="132" stroke="currentColor" stroke-opacity="0.45"/>
+<line x1="300" y1="112" x2="330" y2="132" stroke="currentColor" stroke-opacity="0.45"/>
+<line x1="300" y1="112" x2="530" y2="132" stroke="currentColor" stroke-opacity="0.45"/>
+<line x1="116" y1="160" x2="62" y2="180" stroke="currentColor" stroke-opacity="0.45"/>
+<line x1="114.0" y1="194" x2="122.0" y2="194" stroke="currentColor" stroke-opacity="0.45"/>
+<line x1="330" y1="160" x2="272" y2="180" stroke="currentColor" stroke-opacity="0.45"/>
+<line x1="317.0" y1="194" x2="324.0" y2="194" stroke="currentColor" stroke-opacity="0.45"/>
+<line x1="392" y1="208" x2="300" y2="228" stroke="currentColor" stroke-opacity="0.45"/>
+<line x1="392" y1="208" x2="395" y2="228" stroke="currentColor" stroke-opacity="0.45"/>
+<line x1="392" y1="208" x2="490" y2="228" stroke="currentColor" stroke-opacity="0.45"/>
+<rect x="70" y="263" width="460" height="58" rx="8" fill="none" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.45"/>
+<text x="300" y="277" text-anchor="middle" class="tm" font-size="10">used by every model above</text>
 <rect x="225.0" y="0" width="150" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
 <text x="300" y="18" text-anchor="middle" font-size="11">Map &amp; How to Choose</text>
 <rect x="235.0" y="42" width="130" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
 <text x="300" y="60" text-anchor="middle" font-size="11">Decision Trees</text>
 <rect x="225.0" y="84" width="150" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
 <text x="300" y="102" text-anchor="middle" font-size="11">Ensemble Learning</text>
-<rect x="35.0" y="132" width="120" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="95" y="150" text-anchor="middle" font-size="11">Bagging</text>
-<rect x="235.0" y="132" width="130" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="300" y="150" text-anchor="middle" font-size="11">How Boosting Works</text>
-<rect x="440.0" y="132" width="130" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="505" y="150" text-anchor="middle" font-size="11">Stacking &amp; Voting</text>
-<rect x="10.0" y="180" width="100" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="60" y="198" text-anchor="middle" font-size="11">Random Forest</text>
-<rect x="117.5" y="180" width="95" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="165" y="198" text-anchor="middle" font-size="11">Extra Trees</text>
-<rect x="205.0" y="180" width="90" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="250" y="198" text-anchor="middle" font-size="11">AdaBoost</text>
-<rect x="300.0" y="180" width="110" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="355" y="198" text-anchor="middle" font-size="11">Gradient Boosting</text>
-<rect x="212.5" y="228" width="85" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="255" y="246" text-anchor="middle" font-size="11">XGBoost</text>
-<rect x="312.5" y="228" width="85" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="355" y="246" text-anchor="middle" font-size="11">LightGBM</text>
-<rect x="412.5" y="228" width="85" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="455" y="246" text-anchor="middle" font-size="11">CatBoost</text>
-<rect x="90.0" y="278" width="190" height="28" rx="6" class="fg sg" stroke-width="2.5"/>
-<text x="185" y="296" text-anchor="middle" font-size="11" font-weight="700">Feature Importance &amp; SHAP</text>
-<rect x="320.0" y="278" width="190" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="415" y="296" text-anchor="middle" font-size="11">Tuning &amp; Production</text>
+<rect x="61.0" y="132" width="110" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="116" y="150" text-anchor="middle" font-size="11">Bagging</text>
+<rect x="262.0" y="132" width="136" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="330" y="150" text-anchor="middle" font-size="11">How Boosting Works</text>
+<rect x="465.0" y="132" width="130" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="530" y="150" text-anchor="middle" font-size="11">Stacking &amp; Voting</text>
+<rect x="10.0" y="180" width="104" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="62" y="198" text-anchor="middle" font-size="11">Random Forest</text>
+<rect x="122.0" y="180" width="96" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="170" y="198" text-anchor="middle" font-size="11">Extra Trees</text>
+<rect x="227.0" y="180" width="90" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="272" y="198" text-anchor="middle" font-size="11">AdaBoost</text>
+<rect x="324.0" y="180" width="136" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="392" y="198" text-anchor="middle" font-size="11">Gradient Boosting</text>
+<rect x="257.5" y="228" width="85" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="300" y="246" text-anchor="middle" font-size="11">XGBoost</text>
+<rect x="352.5" y="228" width="85" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="395" y="246" text-anchor="middle" font-size="11">LightGBM</text>
+<rect x="447.5" y="228" width="85" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="490" y="246" text-anchor="middle" font-size="11">CatBoost</text>
+<rect x="90.0" y="286" width="200" height="28" rx="6" class="fg sg" stroke-width="2.5"/>
+<text x="190" y="304" text-anchor="middle" font-size="11" font-weight="700">Feature Importance &amp; SHAP</text>
+<rect x="320.0" y="286" width="200" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="420" y="304" text-anchor="middle" font-size="11">Tuning &amp; Production</text>
 </svg><figcaption>The Tree-Based Models group. This note (green) sits in the bar at the bottom: it is a tool you use on any model above it, from a single decision tree to a stacked ensemble.</figcaption></figure>
   <ul>
     <li><strong>Came from:</strong> <a class="xref" data-note="ml_dtree">Decision Trees</a> gave us a model you can read: "if tenure ≤ 11.5 then churn". Then <a class="xref" data-note="ml_rf">Random Forest</a>, <a class="xref" data-note="ml_gbm">Gradient Boosting</a>, <a class="xref" data-note="ml_xgboost">XGBoost</a>, <a class="xref" data-note="ml_lightgbm">LightGBM</a> and <a class="xref" data-note="ml_catboost">CatBoost</a> bought accuracy by combining hundreds of trees. The price: nobody can read 300 trees. The decision tree note showed a short version of MDI importance; this note finishes the job.</li>
@@ -491,7 +491,7 @@ else:                score = 30 if bill &gt; 1000 else 10</div>
     <tr><td>3</td><td>50</td><td>80</td><td>50</td><td>50</td><td><b>57.5</b></td></tr>
   </table>
   <p>The PDP reads: "with 0–1 complaints the average score is 20; with 2+ it jumps to 57.5". Each column of the table is one ICE curve. They all jump at complaints = 2, but by different amounts: b2 jumps by 50 (30 → 80), b1 and b3 by 40, b4 by only 20. The jump depends on the customer's tenure and bill. When ICE curves are not parallel, the column <strong>interacts</strong> with others, and the single PDP line (+37.5) hides that.</p>
-  <figure class="viz"><svg viewBox="0 0 560 250" width="560">
+  <figure class="viz"><svg viewBox="0 0 620 250" width="620">
 <line x1="60" y1="210" x2="520" y2="210" stroke="currentColor"/><line x1="60" y1="20" x2="60" y2="210" stroke="currentColor"/>
 <text x="54" y="214" text-anchor="end" class="tm" font-size="11">0</text><text x="54" y="164" text-anchor="end" class="tm" font-size="11">25</text><text x="54" y="114" text-anchor="end" class="tm" font-size="11">50</text><text x="54" y="64" text-anchor="end" class="tm" font-size="11">75</text>
 <text x="90" y="228" text-anchor="middle" class="tm" font-size="11">0</text><text x="230" y="228" text-anchor="middle" class="tm" font-size="11">1</text><text x="370" y="228" text-anchor="middle" class="tm" font-size="11">2</text><text x="510" y="228" text-anchor="middle" class="tm" font-size="11">3</text>
@@ -890,7 +890,7 @@ KernelSHAP, 1 row, probability units: 3.0s; sum +0.489 + base 0.492 = 0.980</div
 <text x="140" y="124" text-anchor="end" font-size="11">f9 = 0.781</text><rect x="373.5" y="114" width="48.7" height="16" class="fr"/><text x="427" y="126" class="tr" font-size="11">+0.487</text>
 <text x="140" y="154" text-anchor="end" font-size="11">f5 = −0.284</text><rect x="422.1" y="144" width="46.9" height="16" class="fr"/><text x="474" y="156" class="tr" font-size="11">+0.469</text>
 <text x="140" y="184" text-anchor="end" font-size="11">f4 = 0.722</text><rect x="469.1" y="174" width="27.5" height="16" class="fr"/><text x="501" y="186" class="tr" font-size="11">+0.275</text>
-<text x="140" y="214" text-anchor="end" font-size="11">9 other columns</text><rect x="496.5" y="204" width="43.2" height="16" class="fr"/><text x="512" y="232" class="tr" font-size="11">+0.432</text>
+<text x="140" y="214" text-anchor="end" font-size="11">9 other columns</text><rect x="496.5" y="204" width="43.2" height="16" class="fr"/><text x="490" y="216" text-anchor="end" class="tr" font-size="11">+0.432</text>
 <line x1="539.7" y1="20" x2="539.7" y2="240" class="sb" stroke-dasharray="4 3" stroke-width="1.5"/>
 <text x="535" y="16" text-anchor="end" class="tb" font-size="11">f(x) = 3.897 log-odds → P = 0.980</text>
 </svg><figcaption>A waterfall plot for customer 0, drawn from the printed numbers. Each bar starts where the previous one ended; red bars push towards churn (a blue bar would push away). The last bar ends exactly at the model's raw score.</figcaption></figure>

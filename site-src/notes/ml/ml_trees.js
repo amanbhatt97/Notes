@@ -6,51 +6,51 @@ Object.assign(TOPIC_CONTENT, {
   <p class="lead">Start here. This is the opening note of the Tree-Based Models group, and its job is to give you the whole map before you walk the roads. Tree models are the strongest family of classic machine learning for table data (rows and columns, like an Excel sheet): the decision tree, bagging, random forest, Extra Trees, AdaBoost, gradient boosting, XGBoost, LightGBM, CatBoost, and stacking. They are not fourteen unrelated algorithms. They are one family, and every member was invented to fix a weakness of the one before it. This page shows the family tree, tells that story, gives a one-paragraph summary of every note in reading order, runs every member on the same dataset, compares them side by side, and ends with a guide for choosing one. Each child note then teaches its model completely, from the formula worked by hand to production code.</p>
 
   <h2 id="mt-fits" class="open"><span class="num">↖</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 600 316" width="600">
+  <figure class="viz"><svg viewBox="0 0 600 324" width="600">
 <line x1="300" y1="28" x2="300" y2="42" stroke="currentColor" stroke-opacity="0.45"/>
 <line x1="300" y1="70" x2="300" y2="84" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="300" y1="112" x2="95" y2="132" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="300" y1="112" x2="300" y2="132" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="300" y1="112" x2="505" y2="132" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="95" y1="160" x2="60" y2="180" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="110.0" y1="194" x2="117.5" y2="194" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="300" y1="160" x2="250" y2="180" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="295.0" y1="194" x2="300.0" y2="194" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="355" y1="208" x2="255" y2="228" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="355" y1="208" x2="355" y2="228" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="355" y1="208" x2="455" y2="228" stroke="currentColor" stroke-opacity="0.45"/>
-<rect x="70" y="270" width="460" height="44" rx="8" fill="none" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.45"/>
-<text x="300" y="284" text-anchor="middle" class="tm" font-size="10">used by every model above</text>
+<line x1="300" y1="112" x2="116" y2="132" stroke="currentColor" stroke-opacity="0.45"/>
+<line x1="300" y1="112" x2="330" y2="132" stroke="currentColor" stroke-opacity="0.45"/>
+<line x1="300" y1="112" x2="530" y2="132" stroke="currentColor" stroke-opacity="0.45"/>
+<line x1="116" y1="160" x2="62" y2="180" stroke="currentColor" stroke-opacity="0.45"/>
+<line x1="114.0" y1="194" x2="122.0" y2="194" stroke="currentColor" stroke-opacity="0.45"/>
+<line x1="330" y1="160" x2="272" y2="180" stroke="currentColor" stroke-opacity="0.45"/>
+<line x1="317.0" y1="194" x2="324.0" y2="194" stroke="currentColor" stroke-opacity="0.45"/>
+<line x1="392" y1="208" x2="300" y2="228" stroke="currentColor" stroke-opacity="0.45"/>
+<line x1="392" y1="208" x2="395" y2="228" stroke="currentColor" stroke-opacity="0.45"/>
+<line x1="392" y1="208" x2="490" y2="228" stroke="currentColor" stroke-opacity="0.45"/>
+<rect x="70" y="263" width="460" height="58" rx="8" fill="none" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.45"/>
+<text x="300" y="277" text-anchor="middle" class="tm" font-size="10">used by every model above</text>
 <rect x="225.0" y="0" width="150" height="28" rx="6" class="fg sg" stroke-width="2.5"/>
 <text x="300" y="18" text-anchor="middle" font-size="11" font-weight="700">Map &amp; How to Choose</text>
 <rect x="235.0" y="42" width="130" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
 <text x="300" y="60" text-anchor="middle" font-size="11">Decision Trees</text>
 <rect x="225.0" y="84" width="150" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
 <text x="300" y="102" text-anchor="middle" font-size="11">Ensemble Learning</text>
-<rect x="35.0" y="132" width="120" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="95" y="150" text-anchor="middle" font-size="11">Bagging</text>
-<rect x="235.0" y="132" width="130" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="300" y="150" text-anchor="middle" font-size="11">How Boosting Works</text>
-<rect x="440.0" y="132" width="130" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="505" y="150" text-anchor="middle" font-size="11">Stacking &amp; Voting</text>
-<rect x="10.0" y="180" width="100" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="60" y="198" text-anchor="middle" font-size="11">Random Forest</text>
-<rect x="117.5" y="180" width="95" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="165" y="198" text-anchor="middle" font-size="11">Extra Trees</text>
-<rect x="205.0" y="180" width="90" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="250" y="198" text-anchor="middle" font-size="11">AdaBoost</text>
-<rect x="300.0" y="180" width="110" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="355" y="198" text-anchor="middle" font-size="11">Gradient Boosting</text>
-<rect x="212.5" y="228" width="85" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="255" y="246" text-anchor="middle" font-size="11">XGBoost</text>
-<rect x="312.5" y="228" width="85" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="355" y="246" text-anchor="middle" font-size="11">LightGBM</text>
-<rect x="412.5" y="228" width="85" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="455" y="246" text-anchor="middle" font-size="11">CatBoost</text>
-<rect x="90.0" y="278" width="190" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="185" y="296" text-anchor="middle" font-size="11">Feature Importance &amp; SHAP</text>
-<rect x="320.0" y="278" width="190" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="415" y="296" text-anchor="middle" font-size="11">Tuning &amp; Production</text>
+<rect x="61.0" y="132" width="110" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="116" y="150" text-anchor="middle" font-size="11">Bagging</text>
+<rect x="262.0" y="132" width="136" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="330" y="150" text-anchor="middle" font-size="11">How Boosting Works</text>
+<rect x="465.0" y="132" width="130" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="530" y="150" text-anchor="middle" font-size="11">Stacking &amp; Voting</text>
+<rect x="10.0" y="180" width="104" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="62" y="198" text-anchor="middle" font-size="11">Random Forest</text>
+<rect x="122.0" y="180" width="96" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="170" y="198" text-anchor="middle" font-size="11">Extra Trees</text>
+<rect x="227.0" y="180" width="90" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="272" y="198" text-anchor="middle" font-size="11">AdaBoost</text>
+<rect x="324.0" y="180" width="136" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="392" y="198" text-anchor="middle" font-size="11">Gradient Boosting</text>
+<rect x="257.5" y="228" width="85" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="300" y="246" text-anchor="middle" font-size="11">XGBoost</text>
+<rect x="352.5" y="228" width="85" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="395" y="246" text-anchor="middle" font-size="11">LightGBM</text>
+<rect x="447.5" y="228" width="85" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="490" y="246" text-anchor="middle" font-size="11">CatBoost</text>
+<rect x="90.0" y="286" width="200" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="190" y="304" text-anchor="middle" font-size="11">Feature Importance &amp; SHAP</text>
+<rect x="320.0" y="286" width="200" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="420" y="304" text-anchor="middle" font-size="11">Tuning &amp; Production</text>
 </svg><figcaption>The Tree-Based Models group as it appears in the sidebar. You are on the top node (green): the map of everything below it.</figcaption></figure>
   <ul>
     <li><strong>Came from:</strong> <a class="xref" data-note="ml_regression">Regression</a> and <a class="xref" data-note="ml_classification">Classification</a> taught linear and logistic regression. They draw one straight line (or flat surface) through the data, need scaled numbers, and miss patterns like "churns only if tenure is short <em>and</em> complaints are high" unless you build that column by hand. <a class="xref" data-note="ml_core">Core Concepts</a> gave you overfitting, train / validation / test and the bias-variance trade-off, which is the language this whole group speaks.</li>
@@ -144,77 +144,76 @@ Object.assign(TOPIC_CONTENT, {
   <p>Here is the whole group on one picture. Every box is one note in the sidebar. Read it top-down: that is also roughly the order in which the ideas were invented (1984 CART → 1996 bagging → 1997 AdaBoost → 2001 random forest and gradient boosting → 2006 Extra Trees → 2014–2017 XGBoost, LightGBM, CatBoost), because each was built to fix a problem in the one above.</p>
   <figure class="viz"><svg viewBox="0 0 760 640" width="760">
 <defs><marker id="mt-fa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="275" y="8" width="210" height="44" rx="8" class="fs" stroke="currentColor"/>
+<rect x="255" y="8" width="250" height="44" rx="8" class="fs" stroke="currentColor"/>
 <text x="380" y="27" text-anchor="middle" font-size="14" font-weight="700">Decision Trees</text>
-<text x="380" y="44" text-anchor="middle" class="tm" font-size="11">entropy · Gini · CART · pruning</text>
+<text x="380" y="44" text-anchor="middle" class="tm" font-size="10">entropy · Gini · CART · pruning</text>
 <line x1="380" y1="52" x2="380" y2="98" stroke="currentColor" marker-end="url(#mt-fa)"/>
-<text x="392" y="70" class="tr" font-size="11">weakness: high variance</text>
-<text x="392" y="85" class="tm" font-size="11">fix: combine many models</text>
-<rect x="265" y="100" width="230" height="44" rx="8" class="fv" stroke="currentColor"/>
+<text x="392" y="70" class="tr" font-size="10">weakness: high variance</text>
+<text x="392" y="85" class="tm" font-size="10">fix: combine many models</text>
+<rect x="245" y="100" width="270" height="44" rx="8" class="fv" stroke="currentColor"/>
 <text x="380" y="119" text-anchor="middle" font-size="14" font-weight="700">Ensemble Learning: The Idea</text>
-<text x="380" y="136" text-anchor="middle" class="tm" font-size="11">Var = ρσ² + (1−ρ)σ²/n · Condorcet</text>
+<text x="380" y="136" text-anchor="middle" class="tm" font-size="10">Var = ρσ² + (1−ρ)σ²/n · Condorcet</text>
 <line x1="310" y1="144" x2="140" y2="208" stroke="currentColor" marker-end="url(#mt-fa)"/>
 <line x1="390" y1="144" x2="420" y2="208" stroke="currentColor" marker-end="url(#mt-fa)"/>
 <line x1="460" y1="144" x2="655" y2="208" stroke="currentColor" marker-end="url(#mt-fa)"/>
-<text x="200" y="168" text-anchor="end" class="tm" font-size="11">in parallel → cuts variance</text>
-<text x="408" y="192" text-anchor="end" class="tm" font-size="11">in sequence → cuts bias</text>
-<text x="590" y="166" class="tm" font-size="11">blend different models</text>
+<text x="200" y="168" text-anchor="end" class="tm" font-size="10">in parallel → cuts variance</text>
+<text x="408" y="192" text-anchor="end" class="tm" font-size="10">in sequence → cuts bias</text>
+<text x="590" y="166" class="tm" font-size="10">blend different models</text>
 <rect x="55" y="210" width="170" height="44" rx="8" class="fb sb" fill-opacity="0.25"/>
 <text x="140" y="229" text-anchor="middle" font-size="14" font-weight="700">Bagging &amp; Bootstrap</text>
-<text x="140" y="246" text-anchor="middle" class="tm" font-size="11">resample rows · OOB · 63.2%</text>
+<text x="140" y="246" text-anchor="middle" class="tm" font-size="10">resample rows · OOB · 63.2%</text>
 <rect x="335" y="210" width="170" height="44" rx="8" class="ft st" fill-opacity="0.25"/>
 <text x="420" y="229" text-anchor="middle" font-size="14" font-weight="700">How Boosting Works</text>
-<text x="420" y="246" text-anchor="middle" class="tm" font-size="11">F_m = F_m−1 + ν·h_m</text>
+<text x="420" y="246" text-anchor="middle" class="tm" font-size="10">F_m = F_m−1 + ν·h_m</text>
 <rect x="580" y="210" width="170" height="44" rx="8" class="fg sg" fill-opacity="0.25"/>
 <text x="665" y="229" text-anchor="middle" font-size="14" font-weight="700">Stacking &amp; Voting</text>
-<text x="665" y="246" text-anchor="middle" class="tm" font-size="11">meta-model on OOF preds</text>
+<text x="665" y="246" text-anchor="middle" class="tm" font-size="10">meta-model on OOF preds</text>
 <line x1="140" y1="254" x2="140" y2="300" stroke="currentColor" marker-end="url(#mt-fa)"/>
-<text x="150" y="276" class="tm" font-size="11">+ random features</text>
-<text x="150" y="290" class="tm" font-size="11">at every split</text>
+<text x="150" y="276" class="tm" font-size="10">+ random features</text>
+<text x="150" y="290" class="tm" font-size="10">at every split</text>
 <rect x="65" y="302" width="150" height="44" rx="8" class="fb sb" fill-opacity="0.25"/>
 <text x="140" y="321" text-anchor="middle" font-size="14" font-weight="700">Random Forest</text>
-<text x="140" y="338" text-anchor="middle" class="tm" font-size="11">lower ρ between trees</text>
+<text x="140" y="338" text-anchor="middle" class="tm" font-size="10">lower ρ between trees</text>
 <line x1="140" y1="346" x2="140" y2="392" stroke="currentColor" marker-end="url(#mt-fa)"/>
-<text x="150" y="368" class="tm" font-size="11">+ random thresholds,</text>
-<text x="150" y="382" class="tm" font-size="11">no bootstrap</text>
+<text x="150" y="368" class="tm" font-size="10">+ random cut-offs,</text>
+<text x="150" y="382" class="tm" font-size="10">no bootstrap</text>
 <rect x="65" y="394" width="150" height="44" rx="8" class="fb sb" fill-opacity="0.25"/>
 <text x="140" y="413" text-anchor="middle" font-size="14" font-weight="700">Extra Trees</text>
-<text x="140" y="430" text-anchor="middle" class="tm" font-size="11">even more random, faster</text>
+<text x="140" y="430" text-anchor="middle" class="tm" font-size="10">even more random, faster</text>
 <line x1="420" y1="254" x2="420" y2="300" stroke="currentColor" marker-end="url(#mt-fa)"/>
-<text x="430" y="276" class="tm" font-size="11">first answer:</text>
-<text x="430" y="290" class="tm" font-size="11">reweight wrong rows</text>
+<text x="430" y="276" class="tm" font-size="10">first answer:</text>
+<text x="430" y="290" class="tm" font-size="10">reweight wrong rows</text>
 <rect x="345" y="302" width="150" height="44" rx="8" class="ft st" fill-opacity="0.25"/>
 <text x="420" y="321" text-anchor="middle" font-size="14" font-weight="700">AdaBoost</text>
-<text x="420" y="338" text-anchor="middle" class="tm" font-size="11">α = ½ ln((1−ε)/ε)</text>
+<text x="420" y="338" text-anchor="middle" class="tm" font-size="10">α = ½ ln((1−ε)/ε)</text>
 <line x1="420" y1="346" x2="420" y2="392" stroke="currentColor" marker-end="url(#mt-fa)"/>
-<text x="430" y="368" class="tm" font-size="11">generalised: fit the</text>
-<text x="430" y="382" class="tm" font-size="11">gradient of any loss</text>
+<text x="430" y="368" class="tm" font-size="10">generalised: fit the</text>
+<text x="430" y="382" class="tm" font-size="10">gradient of any loss</text>
 <rect x="335" y="394" width="170" height="44" rx="8" class="ft st" fill-opacity="0.25"/>
 <text x="420" y="413" text-anchor="middle" font-size="14" font-weight="700">Gradient Boosting</text>
-<text x="420" y="430" text-anchor="middle" class="tm" font-size="11">pseudo-residuals −∂L/∂F</text>
+<text x="420" y="430" text-anchor="middle" class="tm" font-size="10">pseudo-residuals −∂L/∂F</text>
 <line x1="395" y1="438" x2="268" y2="490" stroke="currentColor" marker-end="url(#mt-fa)"/>
 <line x1="420" y1="438" x2="420" y2="490" stroke="currentColor" marker-end="url(#mt-fa)"/>
 <line x1="445" y1="438" x2="572" y2="490" stroke="currentColor" marker-end="url(#mt-fa)"/>
-<text x="318" y="458" text-anchor="end" class="tm" font-size="11">engineered GBM:</text>
-<text x="318" y="472" text-anchor="end" class="tm" font-size="11">same idea, faster, safer</text>
+<text x="318" y="458" text-anchor="end" class="tm" font-size="10">engineered GBM:</text>
+<text x="318" y="472" text-anchor="end" class="tm" font-size="10">same idea, faster, safer</text>
 <rect x="190" y="492" width="156" height="44" rx="8" class="ft st" fill-opacity="0.25"/>
 <text x="268" y="511" text-anchor="middle" font-size="14" font-weight="700">XGBoost</text>
-<text x="268" y="528" text-anchor="middle" class="tm" font-size="11">w* = −G/(H+λ) · γ</text>
+<text x="268" y="528" text-anchor="middle" class="tm" font-size="10">w* = −G/(H+λ) · γ</text>
 <rect x="348" y="492" width="144" height="44" rx="8" class="ft st" fill-opacity="0.25"/>
 <text x="420" y="511" text-anchor="middle" font-size="14" font-weight="700">LightGBM</text>
-<text x="420" y="528" text-anchor="middle" class="tm" font-size="11">histograms · leaf-wise</text>
+<text x="420" y="528" text-anchor="middle" class="tm" font-size="10">histograms · leaf-wise</text>
 <rect x="494" y="492" width="156" height="44" rx="8" class="ft st" fill-opacity="0.25"/>
 <text x="572" y="511" text-anchor="middle" font-size="14" font-weight="700">CatBoost</text>
-<text x="572" y="528" text-anchor="middle" class="tm" font-size="11">ordered TS · oblivious</text>
+<text x="572" y="528" text-anchor="middle" class="tm" font-size="10">ordered TS · oblivious</text>
 <path d="M215 330 C 280 360, 300 395, 335 410" fill="none" stroke="currentColor" stroke-dasharray="4 3" stroke-opacity="0.7" marker-end="url(#mt-fa)"/>
-<text x="292" y="358" class="tm" font-size="10.5">borrows row/column</text>
-<text x="292" y="371" class="tm" font-size="10.5">subsampling</text>
+<text x="296" y="360" class="tm" font-size="10">borrows row/column</text>
+<text x="296" y="373" class="tm" font-size="10">subsampling</text>
 <path d="M665 254 L665 470 L652 500" fill="none" stroke="currentColor" stroke-dasharray="4 3" stroke-opacity="0.7"/>
-<text x="657" y="300" text-anchor="end" class="tm" font-size="10.5">its members can be</text>
-<text x="657" y="313" text-anchor="end" class="tm" font-size="10.5">any model here,</text>
-<text x="657" y="326" text-anchor="end" class="tm" font-size="10.5">e.g. RF + LightGBM</text>
+<text x="657" y="448" text-anchor="end" class="tm" font-size="10">blends any models,</text>
+<text x="657" y="461" text-anchor="end" class="tm" font-size="10">e.g. RF + LightGBM</text>
 <rect x="20" y="566" width="720" height="66" rx="8" fill="none" stroke="currentColor" stroke-dasharray="5 4" stroke-opacity="0.6"/>
-<text x="380" y="582" text-anchor="middle" class="tm" font-size="11">tools that apply to every model above</text>
+<text x="380" y="582" text-anchor="middle" class="tm" font-size="10">tools that apply to every model above</text>
 <rect x="110" y="590" width="250" height="34" rx="7" class="fs" stroke="currentColor"/>
 <text x="235" y="612" text-anchor="middle" font-size="13" font-weight="700">Feature Importance &amp; SHAP</text>
 <rect x="400" y="590" width="250" height="34" rx="7" class="fs" stroke="currentColor"/>
@@ -523,7 +522,7 @@ LightGBM            predicts [154.0, 292.0, 292.0, 292.0]   distinct outputs on 
     <li><a class="xref" data-note="ml_timeseries">Time Series Forecasting</a> — one LightGBM over many series with lag features, and the extrapolation fix.</li>
     <li><a class="xref" data-note="ml_recsys">Recommendation Systems</a> — the ranking stage is often a LightGBM or XGBoost ranker.</li>
     <li><a class="xref" data-note="mlops_mlflow">MLflow &amp; Experiment Tracking</a> — logging tuning runs; autologging for XGBoost and LightGBM.</li>
-    <li><a class="xref" data-note="sd_monitoring">Monitoring</a> — drift and performance tracking for deployed tree models.</li>
+    <li><a class="xref" data-note="sd_monitoring">Monitoring, Drift &amp; Retraining</a> — drift and performance tracking for deployed tree models.</li>
     <li><a class="xref" data-note="sd_cases">Case Studies</a> — system-design answers that use a global LightGBM, and why "I'd use XGBoost" is not a design.</li>
   </ul>
 
