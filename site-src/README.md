@@ -24,12 +24,8 @@ site-src/
     data.js            ← CATEGORIES + ROADMAP_PHASES + SYLLABUS (the roadmap data)
     app.js             ← all functions + the boot sequence
     notes/
-        python.js      ← TOPIC_CONTENT entries for the Python phase
-        ml.js          ← Machine Learning notes
-        dl.js          ← Deep Learning notes
-        genai.js       ← Generative AI notes
-        dsa.js         ← DSA notes
-        databases/     ← Databases notes, one file per note (db_intro.js, sql_joins.js, mongo_basics.js, …)
+        <phase>/<key>.js  ← one note per file, e.g. python/py_oop.js, dsa/dsa_graphs.js
+        dsa.js            ← the DSA Problem Tracker (dsa_problems)
     README.md          ← this file
 ```
 

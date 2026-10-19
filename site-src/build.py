@@ -34,7 +34,7 @@ def main():
 
     # 4. Notes — TOPIC_CONTENT must be declared before the per-phase files assign into it.
     #    Load phase files in a stable order.
-    note_order = ['python', 'ml', 'dl', 'genai', 'dsa']
+    note_order = ['dsa']
     note_files = []
     for name in note_order:
         p = os.path.join('notes', f'{name}.js')
