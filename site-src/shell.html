@@ -38,6 +38,9 @@
   </div>
 </header>
 
+<div class="read-progress" id="readProgress"></div>
+<button class="to-top" id="toTop" title="Back to top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
 <div class="sb-overlay" id="sbOverlay" onclick="toggleSidebar()"></div>
 
 <!-- APP -->
@@ -66,18 +69,44 @@
     <!-- HOME -->
     <div id="homeEl" style="display:none">
 
-  <div class="syl-hero">
-    <div class="syl-hero-glow"></div>
-    <div class="syl-hero-inner">
-      <div class="syl-hero-badge">Complete Curriculum</div>
-      <h1 class="syl-hero-title">Data Science &amp; ML<br><span>Engineering Roadmap</span></h1>
-      <p class="syl-hero-sub">13 phases · 100+ topics · 780+ concepts · Python to production ML</p>
+  <section class="hero">
+    <div class="hero-aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="hero-inner">
+      <div class="hero-copy">
+        <div class="hero-badge"><span class="pulse"></span>Beginner-first · Interview-ready</div>
+        <h1 class="hero-title">Data Science &amp; ML<br><span class="grad-text">Engineering Notes</span></h1>
+        <p class="hero-sub">From your first Python script to production ML systems. Plain-language explanations, diagrams, tested code and interview Q&amp;A for every topic.</p>
+        <div class="hero-cta">
+          <button class="btn-primary" id="heroContinue">Start learning →</button>
+          <button class="btn-ghost" onclick="document.getElementById('tracks').scrollIntoView({behavior:'smooth'})">Browse tracks</button>
+          <span class="kbd-hint"><kbd>/</kbd> to search</span>
+        </div>
+        <div class="hero-stats" id="heroStats"></div>
+      </div>
+      <div class="hero-term" aria-hidden="true">
+        <div class="term-bar"><i></i><i></i><i></i><span>study.py</span></div>
+<pre class="term-body"><span class="k">from</span> notes <span class="k">import</span> python, ml, genai, dsa
+
+<span class="k">for</span> track <span class="k">in</span> roadmap:
+    learn(track.idea)      <span class="c"># plain words first</span>
+    draw(track.diagram)    <span class="c"># then the picture</span>
+    run(track.code)        <span class="c"># tested, not guessed</span>
+    practise(track.qa)     <span class="c"># interview checks</span>
+
+<span class="o">print</span>(<span class="g">"offer.accepted"</span>)<span class="cursor"></span></pre>
+      </div>
     </div>
-  </div>
+  </section>
 
   <div class="syl-body">
-    <div class="syl-toolbar">
-      <span class="syl-toolbar-label">Full Syllabus</span>
+    <div class="home-head" id="tracks">
+      <div><span class="eyebrow">Learning tracks</span><h2>Pick a track</h2></div>
+      <span class="home-head-note" id="tracksNote"></span>
+    </div>
+    <div class="track-grid" id="trackGrid"></div>
+
+    <div class="home-head">
+      <div><span class="eyebrow">Full syllabus</span><h2>Everything, topic by topic</h2></div>
       <span class="syl-expand" id="expandAllBtn">Expand all</span>
     </div>
     <div id="phaseTree"></div>

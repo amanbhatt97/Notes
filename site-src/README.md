@@ -42,6 +42,9 @@ site-src/
   so it shows up in the home-page roadmap.
 - **Sidebar tree** → in `CATEGORIES` (`data.js`), a topic with a `children` array is a
   collapsible folder, e.g. Databases → SQL → JOINs. Folders can nest; leaves are notes.
+- **Track card & colour** → each category in `CATEGORIES` has `tag` (e.g. "Core"),
+  `blurb` (one line on its home-page card) and `hue` (0–360). The hue tints the track's
+  card, its sidebar icon and every note page inside it.
 - **Code blocks** → write plain, HTML-escaped code in `<div class="fx" data-lang="sql">…</div>`
   (or `data-lang="js"`); `app.js` colours it when the note opens.
 - **Change the roadmap / syllabus** → edit `data.js`.

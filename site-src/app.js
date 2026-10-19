@@ -152,6 +152,7 @@ function buildSidebar() {
     const btn = document.createElement('button');
     btn.className = 'sb-cat' + (isOpen ? ' open' : '');
     btn.dataset.catKey = cat.key;
+    if (cat.hue != null) btn.style.setProperty('--h', cat.hue);
 
     btn.innerHTML =
       '<div class="sb-cat-icon">' + cat.emoji + '</div>' +
@@ -308,6 +309,8 @@ function showHome() {
   document.querySelectorAll('.sb-topic').forEach(b => b.classList.remove('active'));
   buildHomeGrid();
   buildRoadmapGrid();
+  window.scrollTo({ top: 0, behavior: 'instant' });
+  onScroll();
   if (window.innerWidth <= 800 && sbOpen) toggleSidebar();
 }
 
@@ -316,6 +319,8 @@ function loadTopic(key, cat) {
   if (!html) return;
 
   activeTopic = key;
+  appState.lastNote = key;
+  saveState();
 
   // Find category + group path for breadcrumb
   if (typeof cat === 'string') cat = CATEGORIES.find(c => c.key === cat);
@@ -327,6 +332,7 @@ function loadTopic(key, cat) {
   document.getElementById('homeEl').style.display = 'none';
   const tp = document.getElementById('topicPage');
   tp.className = 'topic-page visible';
+  setAccent(tp, foundCat);
   const _tc = document.getElementById('topicContent');
   _tc.innerHTML = html;
   highlightCode(_tc);
@@ -350,7 +356,7 @@ function loadTopic(key, cat) {
   // Wire Q&A reveal buttons
   wireRevealAll();
 
-  window.scrollTo(0,0);
+  window.scrollTo({ top: 0, behavior: 'instant' });
 
   // Update sidebar
   document.getElementById('sbHome').classList.remove('active');
@@ -526,6 +532,7 @@ function showOverview(catKey, groupKey) {
   document.getElementById('homeEl').style.display = 'none';
   var tp = document.getElementById('topicPage');
   tp.className = 'topic-page visible';
+  setAccent(tp, cat);
   var tc = document.getElementById('topicContent');
   var html = '<h1>' + (groupKey ? node.label : cat.emoji + ' ' + cat.label) + '</h1><div class="ov-list">';
   (node.children || []).forEach(function(t) {
@@ -554,7 +561,7 @@ function showOverview(catKey, groupKey) {
   document.getElementById('tbTools').style.display = 'none';
   document.getElementById('sbHome').classList.remove('active');
   document.querySelectorAll('.sb-topic').forEach(function(b) { b.classList.remove('active'); });
-  window.scrollTo(0, 0);
+  window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
 function ovCard(t) {
@@ -565,7 +572,72 @@ function ovCard(t) {
 }
 
 // ── Home grid ─────────────────────────────────────────────────────────────────
-function buildHomeGrid() { buildPhaseTree(); }
+// Each track (category) carries a hue in data.js; pages and cards read it as --h.
+function setAccent(el, cat) {
+  if (cat && cat.hue != null) el.style.setProperty('--h', cat.hue);
+  else el.style.removeProperty('--h');
+}
+
+function buildHomeGrid() {
+  buildHero();
+  buildTrackGrid();
+  buildPhaseTree();
+}
+
+function buildHero() {
+  var notes = 0, done = 0;
+  CATEGORIES.forEach(function(c) {
+    flatTopics(c.topics).forEach(function(t) {
+      if (!TOPIC_CONTENT[t.key]) return;
+      notes++;
+      if (studyCount(t.key)) done++;
+    });
+  });
+  var stats = document.getElementById('heroStats');
+  if (stats) stats.innerHTML = [
+    [CATEGORIES.length, 'tracks'],
+    [notes, 'notes'],
+    [done, 'studied'],
+    [notes ? Math.round(done / notes * 100) + '%' : '0%', 'complete']
+  ].map(function(x) { return '<div class="hs"><b>' + x[0] + '</b><span>' + x[1] + '</span></div>'; }).join('');
+
+  var btn = document.getElementById('heroContinue');
+  if (!btn) return;
+  var last = appState.lastNote && TOPIC_CONTENT[appState.lastNote] ? appState.lastNote : null;
+  var first = flatTopics(CATEGORIES[0].topics)[0];
+  var target = last || first.key;
+  var leaf = null;
+  CATEGORIES.some(function(c) { leaf = flatTopics(c.topics).find(function(t) { return t.key === target; }); return leaf; });
+  btn.innerHTML = (last ? 'Continue: ' : 'Start with ') + '<b>' + (leaf ? leaf.label : target) + '</b> →';
+  btn.onclick = function() { loadTopic(target); };
+}
+
+function buildTrackGrid() {
+  var grid = document.getElementById('trackGrid');
+  if (!grid) return;
+  var total = 0;
+  grid.innerHTML = CATEGORIES.map(function(c, i) {
+    var leaves = flatTopics(c.topics).filter(function(t) { return TOPIC_CONTENT[t.key]; });
+    var done = leaves.filter(function(t) { return studyCount(t.key); }).length;
+    total += leaves.length;
+    var pct = leaves.length ? Math.round(done / leaves.length * 100) : 0;
+    return '<button class="track" data-cat="' + c.key + '" style="--h:' + (c.hue != null ? c.hue : 240) + '">' +
+      '<span class="track-top"><span class="track-ico">' + c.emoji + '</span>' +
+        '<span class="track-num">' + String(i + 1).padStart(2, '0') + '</span></span>' +
+      '<span class="track-tag">' + (c.tag || '') + '</span>' +
+      '<span class="track-name">' + c.label + '</span>' +
+      '<span class="track-blurb">' + (c.blurb || '') + '</span>' +
+      '<span class="track-foot"><span>' + leaves.length + ' notes</span>' +
+        '<span>' + (done ? done + ' studied' : 'Not started') + '</span></span>' +
+      '<span class="track-bar"><i style="width:' + pct + '%"></i></span>' +
+    '</button>';
+  }).join('');
+  grid.querySelectorAll('.track').forEach(function(b) {
+    b.onclick = function() { showOverview(b.dataset.cat); };
+  });
+  var note = document.getElementById('tracksNote');
+  if (note) note.textContent = CATEGORIES.length + ' tracks · ' + total + ' notes';
+}
 function buildRoadmapGrid() {}
 
 function buildPhaseTree() {
@@ -720,10 +792,30 @@ function highlightSource(src, lang) {
   return out;
 }
 
+var LANG_NAMES = { py: 'python', python: 'python', sql: 'sql', js: 'javascript', javascript: 'javascript', mongo: 'mongo shell', bash: 'shell', sh: 'shell' };
+
 function highlightCode(container) {
   container.querySelectorAll('.fx[data-lang]').forEach(function(el) {
     var lang = { python: 'py', javascript: 'js', mongo: 'js' }[el.dataset.lang] || el.dataset.lang;
     el.innerHTML = highlightSource(el.textContent, lang);
+  });
+  // Wrap every code block in a frame with its language and a copy button
+  container.querySelectorAll('.fx').forEach(function(el) {
+    if (el.parentNode.classList.contains('code-frame')) return;
+    var frame = document.createElement('div');
+    frame.className = 'code-frame';
+    var bar = document.createElement('div');
+    bar.className = 'code-bar';
+    bar.innerHTML = '<span class="code-dots"><i></i><i></i><i></i></span><span class="code-lang">' +
+      (LANG_NAMES[el.dataset.lang] || el.dataset.lang || 'code') + '</span><button class="code-copy">Copy</button>';
+    bar.querySelector('.code-copy').onclick = function() {
+      var b = this;
+      var done = function() { b.textContent = 'Copied ✓'; b.classList.add('ok'); setTimeout(function() { b.textContent = 'Copy'; b.classList.remove('ok'); }, 1400); };
+      if (navigator.clipboard) navigator.clipboard.writeText(el.textContent).then(done, function() {});
+    };
+    el.parentNode.insertBefore(frame, el);
+    frame.appendChild(bar);
+    frame.appendChild(el);
   });
 }
 
@@ -815,6 +907,18 @@ function performSearch(query) {
       '</div>';
   }).join('');
 }
+
+// ── Reading progress + back to top ───────────────────────────────────────────
+function onScroll() {
+  var reading = document.getElementById('topicPage').classList.contains('visible');
+  var d = document.documentElement;
+  var max = d.scrollHeight - d.clientHeight;
+  var bar = document.getElementById('readProgress');
+  if (bar) bar.style.transform = 'scaleX(' + (reading && max > 0 ? Math.min(1, window.scrollY / max) : 0) + ')';
+  var top = document.getElementById('toTop');
+  if (top) top.classList.toggle('show', window.scrollY > 600);
+}
+window.addEventListener('scroll', onScroll, { passive: true });
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
