@@ -3,7 +3,7 @@ Object.assign(TOPIC_CONTENT, {
   "ml_xgboost": `<main>
   <h1>XGBoost</h1>
   <div class="where"><span>Tree-Based Models</span><span>Ensemble Methods</span><span>Boosting</span><span>XGBoost</span></div>
-  <p class="lead">XGBoost ("eXtreme Gradient Boosting", Tianqi Chen &amp; Carlos Guestrin, 2014–2016) is gradient boosting rebuilt with better maths and better engineering. The maths: it looks at the <strong>slope and the curvature</strong> of the loss (gradient g and Hessian h), and it puts <strong>penalties inside the tree-building itself</strong>, which gives two clean formulas: the best leaf value w* = −G/(H+λ) and the split gain. The engineering: fast split search with histograms, a learned direction for missing values, row and column sampling, and parallel, cache-aware code. This note derives every formula, works them by hand on an 8-customer table, rebuilds XGBoost from scratch so that it matches the library to 7 decimal places, and then covers every knob you will touch in practice. You should have read <a class="xref" data-note="ml_gbm">Gradient Boosting</a> first.</p>
+  <p class="lead">XGBoost ("eXtreme Gradient Boosting", Tianqi Chen &amp; Carlos Guestrin, 2014–2016) is gradient boosting rebuilt with better maths and better engineering. The maths: it looks at the <strong>slope and the curvature</strong> of the loss (gradient g and Hessian h), and it puts <strong>penalties inside the tree-building itself</strong>, which gives two clean formulas: the best leaf value w* = −G/(H+λ) and the split gain. The engineering: fast split search with histograms, a learned direction for missing values, row and column sampling, and parallel, cache-aware code. This note derives every formula, works them by hand on the running example of the whole tree group (the captain's 14-day cricket diary: will we play today?), rebuilds XGBoost from scratch so that it matches the library to 7 decimal places, and then covers every knob you will touch in practice. You should have read <a class="xref" data-note="ml_gbm">Gradient Boosting</a> first.</p>
 
   <h2 id="xgb-fit" class="open"><span class="num">★</span>Where This Fits</h2>
   <figure class="viz"><svg viewBox="0 0 680 226" width="680"><defs><marker id="xgb-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><line x1="122" y1="113" x2="148" y2="113" stroke="currentColor" marker-end="url(#xgb-ar)"/><line x1="262" y1="113" x2="288" y2="113" stroke="currentColor" marker-end="url(#xgb-ar)"/><line x1="430" y1="113" x2="518" y2="35" stroke="currentColor" marker-end="url(#xgb-ar)"/><line x1="430" y1="113" x2="518" y2="113" stroke="currentColor" marker-end="url(#xgb-ar)"/><line x1="430" y1="113" x2="518" y2="191" stroke="currentColor" marker-end="url(#xgb-ar)"/><line x1="595" y1="56" x2="595" y2="90" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#xgb-ar)"/><line x1="595" y1="134" x2="595" y2="168" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#xgb-ar)"/><rect x="10" y="92" width="112" height="42" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="66" y="110" text-anchor="middle" font-size="13" font-weight="600">Boosting</text><text x="66" y="126" text-anchor="middle" class="tm" font-size="10.5">the idea</text><rect x="150" y="92" width="112" height="42" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="206" y="110" text-anchor="middle" font-size="13" font-weight="600">AdaBoost</text><text x="206" y="126" text-anchor="middle" class="tm" font-size="10.5">reweight rows</text><rect x="290" y="92" width="140" height="42" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="360" y="110" text-anchor="middle" font-size="13" font-weight="600">Gradient Boosting</text><text x="360" y="126" text-anchor="middle" class="tm" font-size="10.5">fit the gradient</text><rect x="520" y="14" width="150" height="42" rx="7" class="fg sg" stroke-width="2.5"/><text x="595" y="32" text-anchor="middle" font-size="13" font-weight="600">XGBoost</text><text x="595" y="48" text-anchor="middle" class="tm" font-size="10.5">Newton steps + penalties</text><rect x="520" y="92" width="150" height="42" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="595" y="110" text-anchor="middle" font-size="13" font-weight="600">LightGBM</text><text x="595" y="126" text-anchor="middle" class="tm" font-size="10.5">bins, leaf-wise, GOSS, EFB</text><rect x="520" y="170" width="150" height="42" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="595" y="188" text-anchor="middle" font-size="13" font-weight="600">CatBoost</text><text x="595" y="204" text-anchor="middle" class="tm" font-size="10.5">ordered TS, symmetric</text><text x="602" y="77" class="tm" font-size="10">faster</text><text x="602" y="155" class="tm" font-size="10">categories</text><text x="340" y="160" text-anchor="middle" class="tm" font-size="11">same loop: F = F + η·tree</text><text x="340" y="176" text-anchor="middle" class="tm" font-size="11">fit to g (and h)</text></svg><figcaption>The boosting branch of the family. XGBoost (green) is the first of the three "industrial" gradient boosting libraries. LightGBM and CatBoost came three years later and each fixed something XGBoost left open.</figcaption></figure>
@@ -11,7 +11,25 @@ Object.assign(TOPIC_CONTENT, {
   <p><strong>What XGBoost adds.</strong> A <strong>regularised objective</strong> (loss + γ·leaves + ½λ·Σw²), a <strong>second-order (Newton) approximation</strong> of it that gives exact formulas for leaf values and split quality, <strong>sparsity-aware splits</strong> that learn where missing values should go, <strong>approximate / histogram split finding</strong> and a <strong>system design</strong> (column blocks, parallel split search, out-of-core, GPU) that made it 10× faster than the libraries of its time. From 2015 to about 2017 it won most Kaggle competitions on table data.</p>
   <p><strong>Leads to.</strong> <a class="xref" data-note="ml_lightgbm">LightGBM</a> keeps XGBoost's exact maths (same g, h, λ, gain formula) but makes it much faster with histograms, leaf-wise growth, GOSS and EFB. <a class="xref" data-note="ml_catboost">CatBoost</a> also keeps the maths but fixes the target leakage of categorical encodings and of boosting itself. How to tune all three is in <a class="xref" data-note="ml_tree_tuning">Tuning &amp; Production</a>; how to explain them is in <a class="xref" data-note="ml_tree_explain">Feature Importance &amp; SHAP</a>.</p>
 
-  <h2 id="xgb-map" class="open"><span class="num">★</span>Mind Map</h2>
+    <h2 id="xgb-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
+  <p>The whole note as one chain. Each idea answers the question above it; its weakness raises the next question. Numbers are from the running example: predicting Play / No play on the 14 days of the captain's cricket diary from the humidity reading HumPct.</p>
+  <ol class="story">
+    <li><b>What XGBoost adds</b><span>Q: gradient boosting works; why rebuild it? → It ignored the loss's curvature, had no penalty inside the tree, and was slow and helpless with missing values on big data. First: how do we put a price on a complex tree?</span></li>
+    <li><b>The regularised objective</b><span>Q: what exactly should a tree minimise? → loss + γ·(leaves) + ½λ·Σw². On diary turnout with the split "Overcast?", leaf values sum/(n + λ) score 527.96, better than plain means (533.22). But for log-loss there is no neat formula for the best leaves…</span></li>
+    <li><b>Second-order Taylor: g and h</b><span>Q: how do we handle any loss the same way? → Replace it by a parabola: g = p − y, h = p(1 − p). At the start every diary day has g = ±0.5, h = 0.25. Now: what is the best value for a leaf?</span></li>
+    <li><b>Best leaf value &amp; structure score</b><span>Q: for a fixed tree shape, what should each leaf hold? → w* = −G/(H + λ): the normal-humidity leaf gets 2.5/2.75 = 0.909. But which shape?</span></li>
+    <li><b>The split gain</b><span>Q: which split is best? → Gain = ½[G_L²/(H_L+λ) + G_R²/(H_R+λ) − G²/(H+λ)] − γ: HumPct &lt; 82.5 scores 0.737, and three weak cuts score below 0. Do the numbers really match the library?</span></li>
+    <li><b>Three rounds by hand</b><span>Q: does the library do exactly this? → Yes: leaves 0.2727 / −0.0545, then 0.2236 / −0.0442, gain printed 1.4747 (= 2 × 0.737). D5's P(play) 0.50 → 0.57 → 0.62 → 0.66. How do the brakes change these numbers?</span></li>
+    <li><b>The brakes: λ, α, γ, min_child_weight</b><span>Q: what does each penalty do? → λ = 10 shrinks the leaves to 0.064 / −0.013; α = 1 zeroes the weak leaf; γ = 1.5 or min_child_weight = 2 remove the split. Can we write all of it ourselves?</span></li>
+    <li><b>From scratch</b><span>Q: is anything hidden? → 70 lines match the library to 1e-6 on 600 churn rows. But sorting every column at every node is too slow for millions of rows…</span></li>
+    <li><b>Finding splits fast</b><span>Q: how to search cut-offs cheaply? → Hessian-weighted quantiles and histograms (256 bins): same AUC, 4× faster on churn. But what if a value is missing?</span></li>
+    <li><b>Missing values: the default direction</b><span>Q: where should a day with no humidity reading go? → Try both sides, keep the larger gain: two missing no-play days go right (gain 2.765 vs 0.583). What other brakes are there?</span></li>
+    <li><b>Shrinkage &amp; subsampling</b><span>Q: how to stop a team of strong trees overfitting? → η, row and column sampling. Why is the library itself so fast?</span></li>
+    <li><b>The system</b><span>Q: where does the speed come from? → Parallel split search, column blocks, cache prefetching, out-of-core, GPU. Which knobs matter?</span></li>
+    <li><b>Key parameters, early stopping, the two APIs</b><span>Q: how do I use it well? → A handful of knobs, early stopping for the number of trees, and the same Booster behind both APIs. How does it compare with its family?</span></li>
+  </ol>
+
+<h2 id="xgb-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">XGBoost</div>
     <div class="mm-branches">
@@ -22,6 +40,7 @@ Object.assign(TOPIC_CONTENT, {
           <li><b>Adds</b> — Hessian, penalties in the tree, missing-value directions, fast split search, parallel code</li>
           <li><b>A tree as a function</b> — f(x) = w<sub>q(x)</sub>: q sends x to a leaf, w is that leaf's number</li>
           <li>💡 A coach who knows not just which way the player is wrong (g) but how sensitive he is to correction (h)</li>
+          <li><b>Diary</b>: HumPct &lt; 82.5, gain 0.737 (printed 1.4747), leaves 0.2727 / −0.0545</li>
         </ul>
       </div>
       <div class="mm-branch">
@@ -82,28 +101,34 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="xgb-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">What XGBoost Adds</span><span class="rm-sub">The need, the history, the five changes</span></div></div>
-      <div class="rm-item rm-done" data-target="xgb-obj"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">The Regularised Objective</span><span class="rm-sub">Loss + γT + ½λΣw², worked</span></div></div>
-      <div class="rm-item rm-done" data-target="xgb-taylor"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Second-Order Taylor: g and h</span><span class="rm-sub">Slope and curvature, derived</span></div></div>
-      <div class="rm-item rm-done" data-target="xgb-leaf"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Best Leaf Value &amp; Structure Score</span><span class="rm-sub">w* = −G/(H+λ)</span></div></div>
-      <div class="rm-item rm-done" data-target="xgb-gain"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">The Split Gain Formula</span><span class="rm-sub">Before minus after, minus γ</span></div></div>
-      <div class="rm-item rm-done" data-target="xgb-hand"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Three Rounds by Hand</span><span class="rm-sub">8 customers, checked against the library</span></div></div>
-      <div class="rm-item rm-done" data-target="xgb-reg"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">The Brakes: λ, α, γ, min_child_weight</span><span class="rm-sub">By hand, then on 20,000 rows</span></div></div>
-      <div class="rm-item rm-done" data-target="xgb-scratch"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">XGBoost From Scratch</span><span class="rm-sub">80 lines that match the library</span></div></div>
-      <div class="rm-item rm-done" data-target="xgb-split"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Finding Splits Fast</span><span class="rm-sub">Exact, weighted quantile sketch, histograms</span></div></div>
-      <div class="rm-item rm-done" data-target="xgb-missing"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Missing Values</span><span class="rm-sub">Sparsity-aware default direction</span></div></div>
-      <div class="rm-item rm-done" data-target="xgb-sample"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Shrinkage &amp; Subsampling</span><span class="rm-sub">η, subsample, colsample_*</span></div></div>
-      <div class="rm-item rm-done" data-target="xgb-system"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Why It Is Fast</span><span class="rm-sub">Parallel blocks, cache, out-of-core, GPU</span></div></div>
-      <div class="rm-item rm-done" data-target="xgb-params"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Key Parameters</span><span class="rm-sub">Every knob, its effect, scale_pos_weight</span></div></div>
-      <div class="rm-item rm-done" data-target="xgb-es"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">Early Stopping</span><span class="rm-sub">best_iteration, iteration_range</span></div></div>
-      <div class="rm-item rm-done" data-target="xgb-api"><span class="rm-num">15</span><div class="rm-text"><span class="rm-label">Native vs sklearn API</span><span class="rm-sub">DMatrix, xgb.cv, save/load</span></div></div>
+      <div class="rm-item rm-done" data-target="xgb-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain</span></div></div>
+      <div class="rm-item rm-done" data-target="xgb-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">What XGBoost Adds</span><span class="rm-sub">Five changes, and the diary</span></div></div>
+      <div class="rm-item rm-done" data-target="xgb-obj"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">The Regularised Objective</span><span class="rm-sub">Loss + γT + ½λΣw²</span></div></div>
+      <div class="rm-item rm-done" data-target="xgb-taylor"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Second-Order Taylor</span><span class="rm-sub">g and h for any loss</span></div></div>
+      <div class="rm-item rm-done" data-target="xgb-leaf"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Best Leaf &amp; Structure Score</span><span class="rm-sub">w* = −G/(H+λ)</span></div></div>
+      <div class="rm-item rm-done" data-target="xgb-gain"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">The Split Gain</span><span class="rm-sub">One formula for split quality</span></div></div>
+      <div class="rm-item rm-done" data-target="xgb-hand"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Three Rounds by Hand</span><span class="rm-sub">14 days, checked against the library</span></div></div>
+      <div class="rm-item rm-done" data-target="xgb-reg"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">The Brakes</span><span class="rm-sub">λ, α, γ, min_child_weight</span></div></div>
+      <div class="rm-item rm-done" data-target="xgb-scratch"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">XGBoost From Scratch</span><span class="rm-sub">Matches the library</span></div></div>
+      <div class="rm-item rm-done" data-target="xgb-split"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Finding Splits Fast</span><span class="rm-sub">Exact, approx, hist</span></div></div>
+      <div class="rm-item rm-done" data-target="xgb-missing"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Missing Values</span><span class="rm-sub">The learned default direction</span></div></div>
+      <div class="rm-item rm-done" data-target="xgb-sample"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Shrinkage &amp; Subsampling</span><span class="rm-sub">η, rows, columns</span></div></div>
+      <div class="rm-item rm-done" data-target="xgb-system"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Why It Is Fast</span><span class="rm-sub">Blocks, cache, GPU</span></div></div>
+      <div class="rm-item rm-done" data-target="xgb-params"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Key Parameters</span><span class="rm-sub">Defaults, ranges, imbalance</span></div></div>
+      <div class="rm-item rm-done" data-target="xgb-es"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">Early Stopping</span><span class="rm-sub">Let validation pick the trees</span></div></div>
+      <div class="rm-item rm-done" data-target="xgb-api"><span class="rm-num">15</span><div class="rm-text"><span class="rm-label">Native vs sklearn API</span><span class="rm-sub">Same engine, two doors</span></div></div>
       <div class="rm-item rm-done" data-target="xgb-cmp"><span class="rm-num">16</span><div class="rm-text"><span class="rm-label">Compared With Its Family</span><span class="rm-sub">GBM, LightGBM, CatBoost, RF</span></div></div>
-      <div class="rm-item rm-done" data-target="xgb-traps"><span class="rm-num">17</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">What goes wrong in real use</span></div></div>
-      <div class="rm-item rm-done" data-target="xgb-qa"><span class="rm-num">18</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="xgb-connect"><span class="rm-num">17</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">Everything from g, h and λ</span></div></div>
+      <div class="rm-item rm-done" data-target="xgb-traps"><span class="rm-num">18</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">What goes wrong in practice</span></div></div>
+      <div class="rm-item rm-done" data-target="xgb-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note in 10 minutes</span></div></div>
+      <div class="rm-item rm-done" data-target="xgb-qa"><span class="rm-num">19</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
     </div>
   </div>
 
   <h2 id="xgb-why"><span class="num">01</span>What XGBoost Adds</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p><a class="xref" data-note="ml_gbm">Gradient Boosting</a> gave a loop that works for any loss. Why did anyone need to rebuild it, and what exactly did the rebuild change?</p>
+  </div>
   <h3>The need</h3>
   <p>Picture a telecom company with 20 million customers and 300 columns per customer, many of them empty (a customer who never called support has no "last call date"). Every night it must retrain a churn model. Plain gradient boosting from <a class="xref" data-note="ml_gbm">Gradient Boosting</a> gets the maths right, but: it tries every cut-off of every column for every node (hours of work), it cannot handle the empty cells, and its only protection against overfitting is "use small trees, a small learning rate, and not too many of them". XGBoost was written for exactly this situation: big, sparse, messy table data that must be trained quickly and must not overfit.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
@@ -119,19 +144,30 @@ Object.assign(TOPIC_CONTENT, {
     <tr><td>5</td><td>System design</td><td>Parallel split search, cache-friendly memory layout, out-of-core, GPU, distributed</td><td>Single-threaded, in-memory only</td><td>12</td></tr>
   </table>
   <p>Shrinkage (η) and row sampling were already in Friedman's gradient boosting; XGBoost kept them and added column sampling, borrowed from <a class="xref" data-note="ml_rf">Random Forest</a> (section 11).</p>
+  <h3>The running example</h3>
+  <p>Every note in the tree group follows the same small table: a college cricket captain's diary of 14 days. Here we use two of its columns: the humidity reading <strong>HumPct</strong> and whether the match was played (<strong>Play</strong>, 1 = yes). One numeric feature keeps every split search small enough to do by hand.</p>
+  <table class="tbl">
+    <tr><th>day</th><td>D1</td><td>D2</td><td>D3</td><td>D4</td><td>D5</td><td>D6</td><td>D7</td><td>D8</td><td>D9</td><td>D10</td><td>D11</td><td>D12</td><td>D13</td><td>D14</td></tr>
+    <tr><th>HumPct</th><td>85</td><td>90</td><td>86</td><td>96</td><td>80</td><td>70</td><td>65</td><td>95</td><td>70</td><td>80</td><td>70</td><td>90</td><td>75</td><td>91</td></tr>
+    <tr><th>Play y</th><td>0</td><td>0</td><td>1</td><td>1</td><td>1</td><td>0</td><td>1</td><td>0</td><td>1</td><td>1</td><td>1</td><td>1</td><td>1</td><td>0</td></tr>
+  </table>
+  <p>Humid days are mostly not played, dry days mostly are, with exceptions (D6 at 70% was not played; D4 at 96% was). The big churn table of the group (20,000 rows) appears only as "the same idea at scale".</p>
   <div class="callout def"><span class="label">Definition</span>
     <p><strong>XGBoost</strong> is a gradient tree boosting system. Its model is an additive sum of K regression trees, ŷ = Σ<sub>k</sub> f<sub>k</sub>(x), trained one tree at a time. Each new tree minimises a second-order Taylor approximation of a regularised objective, with split finding that is exact, quantile-sketch based, or histogram based, and handles missing values by learning a default direction at every split.</p>
   </div>
   <div class="callout trap"><span class="label">Trap</span>
     <p>"XGBoost is a different algorithm from gradient boosting." It is not. It is gradient boosting with a Newton step, penalties and very good engineering. If an interviewer asks "how does XGBoost differ from GBM?", list the five changes above; do not say "it uses a different kind of tree" (it uses ordinary binary regression trees).</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> "Loss + a price for complex trees" is a nice sentence. We need it as a formula we can compute, because the formulas for the leaf values and the split gain all come out of it.</div>
+  <div class="bridge"><b>What this still can't tell us → next: The regularised objective.</b> "Loss + a price for complex trees" is a nice sentence. We need it as a formula we can compute, because the leaf values and the split gain both come out of it.</div>
 
   <h2 id="xgb-obj"><span class="num">02</span>The Regularised Objective</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Plain gradient boosting has no penalty inside the tree: its only brakes are depth, learning rate and the number of trees. How do we write "fit the data, but pay for every leaf and every big leaf value" as one number to minimise?</p>
+  </div>
   <h3>A tree written as a function</h3>
   <p>To put a penalty on a tree we must first describe a tree with numbers. Any regression tree does two things to a row x: it sends x down to one leaf, and it outputs that leaf's number. Write the first step as q(x) ("which leaf?", an integer from 1 to T, where T is the number of leaves) and the leaf numbers as a list w = (w<sub>1</sub>, …, w<sub>T</sub>). Then the tree is simply</p>
   <p style="text-align:center"><strong>f(x) = w<sub>q(x)</sub></strong></p>
-  <p>Example: a tree "calls &lt; 5.5 ? leaf 1 : leaf 2" with w = (−0.2, 0.26). A customer with 3 calls has q = 1, so f = −0.2. The structure q says <em>how</em> rows are grouped; the weights w say <em>what</em> each group predicts. XGBoost will optimise them separately: w by a formula, q by a greedy search.</p>
+  <p>Example: the diary's first XGBoost tree (section 06) is "HumPct &lt; 82.5 ? leaf 1 : leaf 2" with w = (0.27, −0.05). D5 (80%) has q = 1, so f = 0.27; D8 (95%) has q = 2, f = −0.05. The structure q says <em>how</em> rows are grouped; the weights w say <em>what</em> each group predicts. XGBoost will optimise them separately: w by a formula, q by a greedy search.</p>
   <h3>The objective</h3>
   <p>For classification the trees add up to a raw score F (log-odds), and p = sigmoid(F). After building t trees, the quantity XGBoost minimises is</p>
   <p style="text-align:center"><strong>Obj = Σ<sub>i</sub> l(y<sub>i</sub>, ŷ<sub>i</sub>) + Σ<sub>k</sub> Ω(f<sub>k</sub>),  with Ω(f) = γ·T + ½·λ·Σ<sub>j</sub> w<sub>j</sub>² + α·Σ<sub>j</sub> |w<sub>j</sub>|</strong></p>
@@ -141,24 +177,46 @@ Object.assign(TOPIC_CONTENT, {
     <li><strong>½·λ·Σw²</strong> (lambda, L2): big leaf values are expensive. Same idea as <a class="xref" data-note="ml_regression">ridge regression</a>, but on leaf values instead of coefficients.</li>
     <li><strong>α·Σ|w|</strong> (alpha, L1): like lasso; pushes small leaf values to exactly 0. Off by default (α = 0).</li>
   </ul>
-  <h3>Worked: the same data, two trees, two objectives</h3>
-  <p>Four rows, squared error l = ½(y − ŷ)², targets y = (1, 1, 5, 5), starting prediction 0. Take λ = 1, γ = 1. Compare a 1-leaf tree with a 2-leaf tree.</p>
+  <h3>Worked: the diary, one split, three ways to fill the leaves</h3>
+  <p>Squared error l = ½(y − ŷ)² on the diary's Turnout, after the start value 34, so the tree must fit the 14 residuals (sum 0). Use the split "Overcast?" (4 overcast days with residual sum +28, 10 others with −28), λ = 1, γ = 1, and compare three trees:</p>
+  <div class="fx" data-lang="py">import numpy as np
+from play import df
+r = df.Turnout.values - df.Turnout.mean()             # residuals after the start value 39.79
+over = (df.Outlook == "Overcast").values               # the split "Overcast?"
+lam, gam = 1.0, 1.0
+def obj(w_over, w_rest, leaves):
+    pred = np.where(over, w_over, w_rest) if leaves == 2 else np.full(14, w_over)
+    loss = 0.5 * np.sum((r - pred) ** 2)
+    pen = gam * leaves + 0.5 * lam * (w_over ** 2 + (w_rest ** 2 if leaves == 2 else 0))
+    return loss, pen, loss + pen
+G_o, n_o, G_r, n_r = r[over].sum(), over.sum(), r[~over].sum(), (~over).sum()
+for name, args in [("1 leaf, w = sum/(n+lambda)", (r.sum() / (14 + lam), 0, 1)),
+                   ("2 leaves, plain means", (G_o / n_o, G_r / n_r, 2)),
+                   ("2 leaves, sum/(n+lambda)", (G_o / (n_o + lam), G_r / (n_r + lam), 2))]:
+    loss, pen, tot = obj(*args)
+    print(f"{name:27s} w = ({args[0]:+.3f}, {args[1]:+.3f})  loss {loss:7.2f}  penalty {pen:6.2f}  Obj {tot:7.2f}")</div>
+  <div class="fx" data-lang="text">1 leaf, w = sum/(n+lambda)  w = (+0.000, +0.000)  loss  640.00  penalty   1.00  Obj  641.00
+2 leaves, plain means       w = (+7.000, -2.800)  loss  502.80  penalty  30.42  Obj  533.22
+2 leaves, sum/(n+lambda)    w = (+5.600, -2.545)  loss  507.04  penalty  20.92  Obj  527.96</div>
   <table class="tbl">
-    <tr><th>Tree</th><th>Leaf values w</th><th>Predictions</th><th>Loss Σ½(y−ŷ)²</th><th>γT</th><th>½λΣw²</th><th>Obj</th></tr>
-    <tr><td>1 leaf (best value 12/(4+1))</td><td>(2.4)</td><td>2.4, 2.4, 2.4, 2.4</td><td>½(1.96+1.96+6.76+6.76) = 8.72</td><td>1</td><td>½·5.76 = 2.88</td><td><strong>12.60</strong></td></tr>
-    <tr><td>2 leaves</td><td>(1, 5)</td><td>1, 1, 5, 5</td><td>0</td><td>2</td><td>½(1+25) = 13</td><td><strong>15</strong></td></tr>
-    <tr><td>2 leaves, shrunk</td><td>(0.67, 3.33)</td><td>0.67, 0.67, 3.33, 3.33</td><td>½(0.11+0.11+2.78+2.78) = 2.89</td><td>2</td><td>½(0.44+11.1) = 5.78</td><td><strong>10.67</strong></td></tr>
+    <tr><th>Tree</th><th>Leaf values w</th><th>Loss Σ½(r − w)²</th><th>γT + ½λΣw²</th><th>Obj</th></tr>
+    <tr><td>1 leaf</td><td>0 (= 0/(14 + 1))</td><td>640.00</td><td>1 + 0 = 1.00</td><td>641.00</td></tr>
+    <tr><td>2 leaves, plain means</td><td>28/4 = 7, −28/10 = −2.8</td><td>502.80</td><td>2 + ½(49 + 7.84) = 30.42</td><td>533.22</td></tr>
+    <tr><td>2 leaves, sum/(n + λ)</td><td>28/5 = 5.6, −28/11 = −2.545</td><td>507.04</td><td>2 + ½(31.36 + 6.48) = 20.92</td><td><strong>527.96</strong></td></tr>
   </table>
-  <p>The perfect-fit tree (loss 0) is <em>not</em> the best: its big leaf values cost 13. The best of the three is the 2-leaf tree with <em>shrunk</em> values, 0.67 and 3.33. Where do those numbers come from? Each leaf holds 2 rows with sum of targets 2 and 10; the shrunk values are 2/(2+1) and 10/(2+1): "sum / (count + λ)". Section 04 derives that this is the exact optimum, for any loss.</p>
+  <p>The split is worth it (533 or 528 versus 641). But the best-fitting leaves, the plain means, are <em>not</em> the best: their large values cost more penalty than they save in loss. Shrinking each leaf to "sum / (count + λ)" (the 4-day overcast leaf most, 28/5 instead of 28/4) gives the lowest objective. Section 04 derives that this is the exact optimum, for any loss.</p>
   <div class="callout def"><span class="label">Definition</span>
     <p><strong>Regularised objective</strong>: Obj = Σ<sub>i</sub> l(y<sub>i</sub>, ŷ<sub>i</sub>) + Σ<sub>k</sub> [γT<sub>k</sub> + ½λ‖w<sub>k</sub>‖² + α‖w<sub>k</sub>‖<sub>1</sub>]. The loss rewards fit; Ω charges for the number of leaves and the size of leaf values. In the library: <code>gamma</code> (alias <code>min_split_loss</code>, default 0), <code>lambda</code> (<code>reg_lambda</code>, default 1), <code>alpha</code> (<code>reg_alpha</code>, default 0).</p>
   </div>
   <div class="callout trap"><span class="label">Trap</span>
     <p>λ = 1 is ON by default. So XGBoost's leaf values are never the plain averages that sklearn's GradientBoosting would produce, even with every other setting equal. If you compare the two libraries leaf by leaf, set <code>reg_lambda=0</code> first.</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> For squared error we could find the best leaf values directly. For log loss there is no neat closed form: p = sigmoid(F) sits inside a logarithm. We need a trick that turns <em>every</em> loss into something as easy as squared error. That trick is the Taylor expansion.</div>
+  <div class="bridge"><b>What this still can't tell us → next: Second-order Taylor: g and h.</b> For squared error we could find the best leaf values directly. For log-loss (Play / No play) there is no neat closed form: p = sigmoid(F) sits inside a logarithm. We need a trick that makes every loss as easy as squared error.</div>
 
   <h2 id="xgb-taylor"><span class="num">03</span>Second-Order Taylor: g and h</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>The regularised objective is easy to minimise for squared error. For log-loss, p = sigmoid(F) sits inside a logarithm and there is no closed form. How can one tree-building routine handle every loss?</p>
+  </div>
   <h3>The idea in plain words</h3>
   <p>When we add tree number t, every row's score moves from its current value F<sub>i</sub> by a small step f<sub>i</sub> = f<sub>t</sub>(x<sub>i</sub>). Near the current point, <em>any</em> smooth curve looks like a parabola. So replace the true loss by the parabola that touches it at F<sub>i</sub>: same height, same slope, same bend. A parabola is easy to minimise. (Taylor series and second derivatives are in <a class="xref" data-note="m_calculus">Calculus</a>; Newton's method in <a class="xref" data-note="m_optimization">Optimization</a>.)</p>
   <p style="text-align:center"><strong>l(y, F + f) ≈ l(y, F) + g·f + ½·h·f²</strong>,  g = ∂l/∂F (slope), h = ∂²l/∂F² (curvature)</p>
@@ -179,7 +237,7 @@ Object.assign(TOPIC_CONTENT, {
     <tr><td>B</td><td>1</td><td>0.90</td><td>−0.10</td><td>0.090</td><td>Nearly right: small push</td></tr>
     <tr><td>C</td><td>0</td><td>0.99</td><td>+0.99</td><td>0.0099</td><td>Confidently wrong: big g, tiny h</td></tr>
   </table>
-  <p>Row C is the interesting one. Its Newton step −g/h = −0.99/0.0099 = −100 would be huge: the loss is almost a straight line there, so the parabola thinks the minimum is far away. This is why XGBoost needs λ in the denominator and offers <code>max_delta_step</code> (section 13) to cap such steps.</p>
+  <p>On the diary, the first tree starts from p = 0.5 for every day (XGBoost's <code>base_score=0.5</code>), so every played day has g = −0.5, every unplayed day g = +0.5, and every day h = 0.25 (section 06). Row C is the interesting one. Its Newton step −g/h = −0.99/0.0099 = −100 would be huge: the loss is almost a straight line there, so the parabola thinks the minimum is far away. This is why XGBoost needs λ in the denominator and offers <code>max_delta_step</code> (section 13) to cap such steps.</p>
   <p>The code checks the two formulas against slopes measured numerically, and shows how close the parabola is for small and large steps.</p>
   <div class="fx" data-lang="py">import numpy as np
 def logloss(y, F):                       # F = raw score (log-odds); p = sigmoid(F)
@@ -214,9 +272,12 @@ step f=2.0:  true loss 0.0868   2nd-order Taylor 0.1909</div>
   <div class="callout trap"><span class="label">Trap</span>
     <p>A custom loss must be convex enough that h &gt; 0. If h ≤ 0 (for example, a loss that is flat or bends downward), w* = −G/(H+λ) can blow up or point the wrong way. Absolute error has h = 0 almost everywhere; that is why XGBoost's <code>reg:absoluteerror</code> uses a special leaf-refresh step, and why Huber (<code>reg:pseudohubererror</code>) is often preferred.</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> We have a simple objective made of g's and h's. Now we can ask: if the tree's shape is fixed, what is the best number for each leaf?</div>
+  <div class="bridge"><b>What this still can't tell us → next: Best leaf value &amp; structure score.</b> We have an objective made only of g's and h's. If the tree's shape is fixed, what is the best number for each leaf?</div>
 
   <h2 id="xgb-leaf"><span class="num">04</span>Best Leaf Value &amp; Structure Score</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>The objective is now a sum of simple parabolas in g and h. If we already know which days fall into which leaf, what number should each leaf hold, and how good is that whole shape?</p>
+  </div>
   <h3>Grouping rows by leaf</h3>
   <p>Every row in leaf j gets the same output w<sub>j</sub>. So group the sum by leaf. Let I<sub>j</sub> be the rows in leaf j, and define the two leaf totals</p>
   <p style="text-align:center"><strong>G<sub>j</sub> = Σ<sub>i∈I<sub>j</sub></sub> g<sub>i</sub>,   H<sub>j</sub> = Σ<sub>i∈I<sub>j</sub></sub> h<sub>i</sub></strong></p>
@@ -241,6 +302,7 @@ step f=2.0:  true loss 0.0868   2nd-order Taylor 0.1909</div>
     <tr><td>Large</td><td>200</td><td>average 5</td><td>−1000</td><td>200</td><td>5.00</td><td>4.98</td><td>4.76</td></tr>
   </table>
   <p>Both leaves have mean residual 5. With λ = 10 the 2-row leaf predicts only 0.83, the 200-row leaf still 4.76. The penalty acts like "add λ imaginary rows with residual 0 to each leaf". A pattern seen in two customers is not trusted; one seen in two hundred is.</p>
+  <p>On the diary's first tree (section 06) the normal-humidity leaf holds 7 days, 6 played: G = 6 × (−0.5) + 0.5 = −2.5, H = 7 × 0.25 = 1.75. With λ = 0, w* = 2.5/1.75 = 1.43; with the default λ = 1, w* = 2.5/2.75 = 0.909. Seven days at h = 0.25 are only 1.75 "Hessian rows", so even λ = 1 pulls the leaf a lot.</p>
   <h3>With L1 (α)</h3>
   <p>Adding α|w| makes each leaf's parabola have a kink at 0. The minimum is the "soft-thresholded" value:</p>
   <p style="text-align:center"><strong>w* = −sign(G)·max(|G| − α, 0) / (H + λ)</strong></p>
@@ -251,9 +313,12 @@ step f=2.0:  true loss 0.0868   2nd-order Taylor 0.1909</div>
   <div class="callout trap"><span class="label">Trap</span>
     <p>The leaf values you see in <code>get_dump()</code> or <code>trees_to_dataframe()</code> are η·w*, not w*. With η = 0.3, a printed leaf of −0.2 means w* = −0.667. Forgetting this makes hand checks look wrong by a factor of 3.</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> We can score a tree once its shape is known. But there are astronomically many shapes. We need a way to grow the shape one split at a time, with a number that says how good each candidate split is.</div>
+  <div class="bridge"><b>What this still can't tell us → next: The split gain.</b> We can score a tree once its shape is known. But there are astronomically many shapes. We need a number that says how good each candidate split is, so the shape can be grown one split at a time.</div>
 
   <h2 id="xgb-gain"><span class="num">05</span>The Split Gain Formula</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Section 04 scores a finished shape. To grow a tree we must compare candidate splits one at a time: how much does splitting one leaf into two improve the structure score?</p>
+  </div>
   <p>Take one leaf with totals G, H. A candidate split sends its rows into a left part (G<sub>L</sub>, H<sub>L</sub>) and a right part (G<sub>R</sub>, H<sub>R</sub>), with G = G<sub>L</sub> + G<sub>R</sub> and H = H<sub>L</sub> + H<sub>R</sub>. Everything else in the tree stays the same, so compare only this leaf's piece of the structure score:</p>
   <ul>
     <li>Before (one leaf): −½·G²/(H+λ) + γ</li>
@@ -263,7 +328,7 @@ step f=2.0:  true loss 0.0868   2nd-order Taylor 0.1909</div>
   <p style="text-align:center"><strong>Gain = ½ [ G<sub>L</sub>²/(H<sub>L</sub>+λ) + G<sub>R</sub>²/(H<sub>R</sub>+λ) − (G<sub>L</sub>+G<sub>R</sub>)²/(H<sub>L</sub>+H<sub>R</sub>+λ) ] − γ</strong></p>
   <p>In words: "score of left child + score of right child − score of the parent, minus the price of one extra leaf". Split only if Gain &gt; 0. Among all candidate splits (every column, every cut-off) pick the one with the largest gain.</p>
   <div class="callout intu"><span class="label">Key insight</span>
-    <p>Because G<sup>2</sup> is convex, splitting never lowers the bracket when λ = 0: a split that separates rows pushing "up" from rows pushing "down" gains a lot, a split that leaves both sides mixed gains almost nothing. With λ &gt; 0 the bracket can become <em>negative</em> for weak splits on few rows, so λ also acts as a split filter, not only as a leaf shrinker. γ then sets a fixed minimum.</p>
+    <p>Because G<sup>2</sup> is convex, splitting never lowers the bracket when λ = 0: a split that separates rows pushing "up" from rows pushing "down" gains a lot, a split that leaves both sides mixed gains almost nothing. With λ &gt; 0 the bracket can become <em>negative</em> for weak splits on few rows, so λ also acts as a split filter, not only as a leaf shrinker. γ then sets a fixed minimum. The diary shows it: at the first tree, with λ = 1, the cuts HumPct &lt; 67.5, &lt; 72.5 and &lt; 95.5 have <em>negative</em> gain (−0.080, −0.052, −0.080): they peel off one to four days and the penalty on those small leaves outweighs what they explain (section 06).</p>
   </div>
   <p>Compare with the criterion of a single CART tree: CART maximises variance reduction (or Gini decrease) and then puts the mean in each leaf. XGBoost's gain is the <em>same objective</em> that also chooses the leaf values, so split choice and leaf values are consistent, and both include the penalties. Classic gradient boosting (sklearn) chooses splits with a squared-error criterion on g only (first order) and uses h only afterwards for the leaf values.</p>
   <div class="callout def"><span class="label">Definition</span>
@@ -272,103 +337,108 @@ step f=2.0:  true loss 0.0868   2nd-order Taylor 0.1909</div>
   <div class="callout trap"><span class="label">Trap</span>
     <p>The library's code drops the ½. The "gain" printed by <code>get_dump(with_stats=True)</code> and by <code>importance_type="gain"</code> is G<sub>L</sub>²/(H<sub>L</sub>+λ) + G<sub>R</sub>²/(H<sub>R</sub>+λ) − G²/(H+λ), twice the paper's bracket, and <code>gamma</code> is compared with <em>that</em> number. So in practice "a split survives if 2 × (paper gain without γ) ≥ gamma". The next section shows it.</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> Formulas are convincing only when the numbers come out right. Let us build XGBoost's first three trees by hand on a tiny table and check every number against the library.</div>
+  <div class="bridge"><b>What this still can't tell us → next: Three rounds by hand.</b> Formulas are convincing only when the numbers come out right. Build XGBoost's first three trees on the diary by hand and check every number against the library.</div>
 
-  <h2 id="xgb-hand"><span class="num">06</span>Three Rounds by Hand</h2>
+  <h2 id="xgb-hand"><span class="num">06</span>Three Rounds by Hand on the Diary</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>We have g, h, w* and the gain formula. Do they really produce the trees the library builds, number for number, on the diary?</p>
+  </div>
   <h3>The data</h3>
-  <p>Eight customers. One feature: support calls last month. Target: churned (1) or stayed (0). Customer 3 is the odd one: few calls, but churned anyway.</p>
+  <p>The 14 diary days sorted by humidity, with Play:</p>
   <table class="tbl">
-    <tr><th>Customer</th><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td></tr>
-    <tr><th>calls</th><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td></tr>
-    <tr><th>churn y</th><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>1</td><td>1</td><td>1</td></tr>
+    <tr><th>HumPct</th><td>65</td><td>70</td><td>70</td><td>70</td><td>75</td><td>80</td><td>80</td><td>85</td><td>86</td><td>90</td><td>90</td><td>91</td><td>95</td><td>96</td></tr>
+    <tr><th>day</th><td>D7</td><td>D6</td><td>D9</td><td>D11</td><td>D13</td><td>D5</td><td>D10</td><td>D1</td><td>D3</td><td>D2</td><td>D12</td><td>D14</td><td>D8</td><td>D4</td></tr>
+    <tr><th>Play y</th><td>1</td><td>0</td><td>1</td><td>1</td><td>1</td><td>1</td><td>1</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>1</td></tr>
   </table>
-  <p>Settings: log loss, starting probability 0.5 (<code>base_score=0.5</code>, so starting log-odds F = 0), λ = 1, γ = 0, η = 0.3, depth-1 trees (one split each), <code>min_child_weight=0</code> so that any split is allowed.</p>
-  <h3>Round 1, step 1: g and h for every row</h3>
-  <p>Every p is 0.5. So g = 0.5 − y is +0.5 for stayers and −0.5 for churners, and h = 0.5 × 0.5 = 0.25 for everyone.</p>
-  <table class="tbl">
-    <tr><th>Customer</th><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><th>Total</th></tr>
-    <tr><th>g</th><td>+0.5</td><td>+0.5</td><td>−0.5</td><td>+0.5</td><td>+0.5</td><td>−0.5</td><td>−0.5</td><td>−0.5</td><td>G = 0</td></tr>
-    <tr><th>h</th><td>0.25</td><td>0.25</td><td>0.25</td><td>0.25</td><td>0.25</td><td>0.25</td><td>0.25</td><td>0.25</td><td>H = 2</td></tr>
-  </table>
+  <p>Settings: log loss, starting probability 0.5 (<code>base_score=0.5</code>, so starting log-odds F = 0), λ = 1, γ = 0, η = 0.3, depth-1 trees (one split each), <code>min_child_weight=0</code> so that any split is allowed, <code>tree_method="exact"</code>.</p>
+  <h3>Round 1, step 1: g and h for every day</h3>
+  <p>Every p is 0.5. So g = 0.5 − y is −0.5 for the 9 played days and +0.5 for the 5 others, and h = 0.5 × 0.5 = 0.25 for everyone. Totals: G = 9 × (−0.5) + 5 × 0.5 = −2.0, H = 14 × 0.25 = 3.5. Parent term G²/(H + λ) = 4/4.5 = 0.889.</p>
   <h3>Round 1, step 2: gain of every cut-off</h3>
-  <p>Candidate cut-offs are the midpoints 1.5, 2.5, …, 7.5. The parent term is G²/(H+λ) = 0/3 = 0. For each cut, add up g and h on the left, the rest is on the right:</p>
+  <p>The 10 distinct humidity values give 9 midpoints. For each, add up g and h on the left (HumPct below the cut), the rest is on the right:</p>
   <table class="tbl">
-    <tr><th>Cut</th><th>Left rows</th><th>G<sub>L</sub>, H<sub>L</sub></th><th>G<sub>L</sub>²/(H<sub>L</sub>+1)</th><th>G<sub>R</sub>, H<sub>R</sub></th><th>G<sub>R</sub>²/(H<sub>R</sub>+1)</th><th>Gain = ½(sum − 0)</th></tr>
-    <tr><td>1.5</td><td>1</td><td>0.5, 0.25</td><td>0.25/1.25 = 0.200</td><td>−0.5, 1.75</td><td>0.25/2.75 = 0.091</td><td>0.145</td></tr>
-    <tr><td>2.5</td><td>1–2</td><td>1.0, 0.50</td><td>1/1.5 = 0.667</td><td>−1.0, 1.50</td><td>1/2.5 = 0.400</td><td>0.533</td></tr>
-    <tr><td>3.5</td><td>1–3</td><td>0.5, 0.75</td><td>0.25/1.75 = 0.143</td><td>−0.5, 1.25</td><td>0.25/2.25 = 0.111</td><td>0.127</td></tr>
-    <tr><td>4.5</td><td>1–4</td><td>1.0, 1.00</td><td>1/2 = 0.500</td><td>−1.0, 1.00</td><td>1/2 = 0.500</td><td>0.500</td></tr>
-    <tr><td><strong>5.5</strong></td><td>1–5</td><td>1.5, 1.25</td><td>2.25/2.25 = 1.000</td><td>−1.5, 0.75</td><td>2.25/1.75 = 1.286</td><td><strong>1.143</strong></td></tr>
-    <tr><td>6.5</td><td>1–6</td><td>1.0, 1.50</td><td>1/2.5 = 0.400</td><td>−1.0, 0.50</td><td>1/1.5 = 0.667</td><td>0.533</td></tr>
-    <tr><td>7.5</td><td>1–7</td><td>0.5, 1.75</td><td>0.25/2.75 = 0.091</td><td>−0.5, 0.25</td><td>0.25/1.25 = 0.200</td><td>0.145</td></tr>
+    <tr><th>Cut</th><th>Left days</th><th>G<sub>L</sub>, H<sub>L</sub></th><th>G<sub>L</sub>²/(H<sub>L</sub>+1)</th><th>G<sub>R</sub>, H<sub>R</sub></th><th>G<sub>R</sub>²/(H<sub>R</sub>+1)</th><th>Gain = ½(sum − 0.889)</th></tr>
+    <tr><td>67.5</td><td>1</td><td>−0.5, 0.25</td><td>0.200</td><td>−1.5, 3.25</td><td>0.529</td><td>−0.080</td></tr>
+    <tr><td>72.5</td><td>4</td><td>−1.0, 1.00</td><td>0.500</td><td>−1.0, 2.50</td><td>0.286</td><td>−0.052</td></tr>
+    <tr><td>77.5</td><td>5</td><td>−1.5, 1.25</td><td>1.000</td><td>−0.5, 2.25</td><td>0.077</td><td>0.094</td></tr>
+    <tr><td><strong>82.5</strong></td><td>7</td><td>−2.5, 1.75</td><td>6.25/2.75 = 2.273</td><td>+0.5, 1.75</td><td>0.25/2.75 = 0.091</td><td><strong>0.737</strong></td></tr>
+    <tr><td>85.5</td><td>8</td><td>−2.0, 2.00</td><td>1.333</td><td>0.0, 1.50</td><td>0.000</td><td>0.222</td></tr>
+    <tr><td>88</td><td>9</td><td>−2.5, 2.25</td><td>1.923</td><td>+0.5, 1.25</td><td>0.111</td><td>0.573</td></tr>
+    <tr><td>90.5</td><td>11</td><td>−2.5, 2.75</td><td>1.667</td><td>+0.5, 0.75</td><td>0.143</td><td>0.460</td></tr>
+    <tr><td>93</td><td>12</td><td>−2.0, 3.00</td><td>1.000</td><td>0.0, 0.50</td><td>0.000</td><td>0.056</td></tr>
+    <tr><td>95.5</td><td>13</td><td>−1.5, 3.25</td><td>0.529</td><td>−0.5, 0.25</td><td>0.200</td><td>−0.080</td></tr>
   </table>
-  <p>Best cut: <strong>calls &lt; 5.5</strong>, gain 1.143. It puts four stayers and the odd churner on the left and three churners on the right. The cut at 2.5 (two pure stayers on the left) loses because its children are smaller and λ = 1 hurts small groups more.</p>
+  <p>Best cut: <strong>HumPct &lt; 82.5</strong>, gain 0.737: it is exactly the diary's High / Normal humidity line. On the left, 7 normal days with 6 played; on the right, 7 humid days with only 3 played. The cut at 88 is second: it also moves D1 (85%, not played) and D3 (86%, played) to the left, which cancel out but enlarge the leaf.</p>
   <h3>Round 1, step 3: leaf values</h3>
   <ul>
-    <li>Left: w* = −G<sub>L</sub>/(H<sub>L</sub>+λ) = −1.5/2.25 = −0.667; stored as η·w* = 0.3 × −0.667 = <strong>−0.200</strong></li>
-    <li>Right: w* = 1.5/1.75 = 0.857; stored as 0.3 × 0.857 = <strong>0.257</strong></li>
+    <li>Left: w* = −G<sub>L</sub>/(H<sub>L</sub>+λ) = 2.5/2.75 = 0.909; stored as η·w* = 0.3 × 0.909 = <strong>0.2727</strong></li>
+    <li>Right: w* = −0.5/2.75 = −0.182; stored as 0.3 × −0.182 = <strong>−0.0545</strong></li>
   </ul>
   <p>Now the library, with exactly these settings:</p>
   <div class="fx" data-lang="py">import numpy as np, xgboost as xgb
-calls = np.arange(1, 9).reshape(-1, 1).astype(float)    # support calls last month
-churn = np.array([0, 0, 1, 0, 0, 1, 1, 1])
+from play import df
+hum = df.HumPct.values.reshape(-1, 1).astype(float)  # one feature: humidity reading in %
+play = (df.Play == "Yes").astype(int).values
 params = {"objective": "binary:logistic", "base_score": 0.5, "eta": 0.3, "max_depth": 1,
           "lambda": 1, "min_child_weight": 0, "tree_method": "exact"}
-bst = xgb.train(params, xgb.DMatrix(calls, label=churn), num_boost_round=1)
+bst = xgb.train(params, xgb.DMatrix(hum, label=play), num_boost_round=1)
 print(bst.get_dump(with_stats=True)[0])</div>
-  <div class="fx" data-lang="text">0:[f0&lt;5.5] yes=1,no=2,missing=1,gain=2.28571415,cover=2
-	1:leaf=-0.200000018,cover=1.25
-	2:leaf=0.257142872,cover=0.75</div>
-  <p>Every number matches. The split is <code>f0&lt;5.5</code>. The leaves are −0.2 and 0.257. <code>cover</code> is H: 1.25 on the left (5 rows × 0.25), 0.75 on the right. And <code>gain=2.2857</code> is exactly 2 × 1.143: the library's gain without the ½, as the trap in section 05 said.</p>
+  <div class="fx" data-lang="text">0:[f0&lt;82.5] yes=1,no=2,missing=1,gain=1.47474742,cover=3.5
+	1:leaf=0.272727281,cover=1.75
+	2:leaf=-0.0545454584,cover=1.75</div>
+  <p>Every number matches. The split is <code>f0&lt;82.5</code>. The leaves are 0.2727 and −0.0545. <code>cover</code> is H: 1.75 on each side (7 days × 0.25). And <code>gain=1.4747</code> is exactly 2 × 0.737: the library's gain without the ½, as the trap in section 05 said.</p>
   <h3>Rounds 2 and 3</h3>
-  <p>After tree 1 the left customers have F = −0.2, so p = σ(−0.2) = 0.4502; the right customers have F = 0.257, p = 0.5639. The g's and h's change:</p>
+  <p>After tree 1 the normal-humidity days have F = 0.2727, so p = σ(0.2727) = 0.5678; the humid days have F = −0.0545, p = 0.4864. The g's and h's change:</p>
   <table class="tbl">
-    <tr><th>Customer</th><td>1, 2, 4, 5 (y=0, left)</td><td>3 (y=1, left)</td><td>6, 7, 8 (y=1, right)</td></tr>
-    <tr><th>p</th><td>0.4502</td><td>0.4502</td><td>0.5639</td></tr>
-    <tr><th>g = p − y</th><td>+0.4502</td><td>−0.5498</td><td>−0.4361</td></tr>
-    <tr><th>h = p(1−p)</th><td>0.2475</td><td>0.2475</td><td>0.2459</td></tr>
+    <tr><th>Days</th><td>6 played, normal humidity</td><td>D6 (not played, normal)</td><td>3 played, humid</td><td>4 not played, humid</td></tr>
+    <tr><th>p</th><td>0.5678</td><td>0.5678</td><td>0.4864</td><td>0.4864</td></tr>
+    <tr><th>g = p − y</th><td>−0.4322</td><td>+0.5678</td><td>−0.5136</td><td>+0.4864</td></tr>
+    <tr><th>h = p(1−p)</th><td>0.2454</td><td>0.2454</td><td>0.2498</td><td>0.2498</td></tr>
   </table>
-  <p>Cut 5.5 again: G<sub>L</sub> = 4(0.4502) − 0.5498 = 1.2510, H<sub>L</sub> = 5(0.2475) = 1.2376; G<sub>R</sub> = 3(−0.4361) = −1.3083, H<sub>R</sub> = 0.7377. Left leaf: −1.2510/2.2376 = −0.559 → stored −0.168. Right leaf: 1.3083/1.7377 = 0.753 → stored 0.226. The corrections are smaller than in round 1 because the rows are already partly right. Round 3 repeats this. The library's three trees and the running predictions:</p>
+  <p>Cut 82.5 again: G<sub>L</sub> = 6(−0.4322) + 0.5678 = −2.0254, H<sub>L</sub> = 7(0.2454) = 1.7178; G<sub>R</sub> = 3(−0.5136) + 4(0.4864) = 0.4048, H<sub>R</sub> = 7(0.2498) = 1.7487. Left leaf: 2.0254/2.7178 = 0.745 → stored 0.2236. Right leaf: −0.4048/2.7487 = −0.147 → stored −0.0442. The corrections are smaller than in round 1 because the days are already partly right. Round 3 repeats this. The library's three trees and the running predictions:</p>
   <div class="fx" data-lang="py">import numpy as np, xgboost as xgb
-calls = np.arange(1, 9).reshape(-1, 1).astype(float)
-churn = np.array([0, 0, 1, 0, 0, 1, 1, 1])
+from play import df
+hum = df.HumPct.values.reshape(-1, 1).astype(float)
+play = (df.Play == "Yes").astype(int).values
 params = {"objective": "binary:logistic", "base_score": 0.5, "eta": 0.3, "max_depth": 1,
           "lambda": 1, "min_child_weight": 0, "tree_method": "exact"}
-d = xgb.DMatrix(calls, label=churn)
+d = xgb.DMatrix(hum, label=play)
 bst = xgb.train(params, d, num_boost_round=3)
 for i, t in enumerate(bst.get_dump()):
     print(f"tree {i + 1}:", t.replace("\\n", " ").replace("\\t", ""))
+rows = [4, 5, 7]                                      # D5 (80%, played), D6 (70%, not), D8 (95%, not)
 for r in [1, 2, 3]:
     F = bst.predict(d, output_margin=True, iteration_range=(0, r))
-    print(f"after {r} tree(s): log-odds {np.round(F[[0, 7]], 4)}  p {np.round(1 / (1 + np.exp(-F[[0, 7]])), 4)}  (rows 1 and 8)")</div>
-  <div class="fx" data-lang="text">tree 1: 0:[f0&lt;5.5] yes=1,no=2,missing=1 1:leaf=-0.200000018 2:leaf=0.257142872 
-tree 2: 0:[f0&lt;5.5] yes=1,no=2,missing=1 1:leaf=-0.167702854 2:leaf=0.225845173 
-tree 3: 0:[f0&lt;5.5] yes=1,no=2,missing=1 1:leaf=-0.142005175 2:leaf=0.20106025 
-after 1 tree(s): log-odds [-0.2     0.2571]  p [0.4502 0.5639]  (rows 1 and 8)
-after 2 tree(s): log-odds [-0.3677  0.483 ]  p [0.4091 0.6185]  (rows 1 and 8)
-after 3 tree(s): log-odds [-0.5097  0.684 ]  p [0.3753 0.6646]  (rows 1 and 8)</div>
-  <p>Tree 2's leaves are −0.1677 and 0.2258, exactly our hand values. Customer 1's churn probability falls 0.50 → 0.45 → 0.41 → 0.38; customer 8's rises 0.50 → 0.56 → 0.62 → 0.66. Each tree is a smaller correction than the one before. Customer 3 (the odd churner) stays on the left side and keeps p ≈ 0.38: with one feature and depth-1 trees nothing can isolate him, and with λ = 1 a 1-row leaf would be shrunk heavily anyway. That is the regularisation doing its job: one odd customer is treated as noise.</p>
+    print(f"after {r} tree(s): log-odds {np.round(F[rows], 4)}  p {np.round(1 / (1 + np.exp(-F[rows])), 4)}  (D5, D6, D8)")</div>
+  <div class="fx" data-lang="text">tree 1: 0:[f0&lt;82.5] yes=1,no=2,missing=1 1:leaf=0.272727281 2:leaf=-0.0545454584 
+tree 2: 0:[f0&lt;82.5] yes=1,no=2,missing=1 1:leaf=0.223594904 2:leaf=-0.0441557281 
+tree 3: 0:[f0&lt;82.5] yes=1,no=2,missing=1 1:leaf=0.18690747 2:leaf=-0.0357731394 
+after 1 tree(s): log-odds [ 0.2727  0.2727 -0.0545]  p [0.5678 0.5678 0.4864]  (D5, D6, D8)
+after 2 tree(s): log-odds [ 0.4963  0.4963 -0.0987]  p [0.6216 0.6216 0.4753]  (D5, D6, D8)
+after 3 tree(s): log-odds [ 0.6832  0.6832 -0.1345]  p [0.6645 0.6645 0.4664]  (D5, D6, D8)</div>
+  <p>Tree 2's leaves are 0.2236 and −0.0442, exactly our hand values. D5's probability of play rises 0.50 → 0.57 → 0.62 → 0.66; D8's falls 0.50 → 0.49 → 0.48 → 0.47. Each tree is a smaller correction than the one before. D6 (70%, not played) sits on the dry side and keeps getting the same rising probability as D5: with one feature and depth-1 trees nothing can separate it, and with λ = 1 a one-day leaf would be shrunk heavily anyway. That is the regularisation doing its job: one odd day is treated as noise. (What really separates D6 is the wind, a different column: the decision tree in <a class="xref" data-note="ml_dtree">Decision Trees</a> finds it.)</p>
   <div class="callout intu"><span class="label">Key insight</span>
     <p>The whole algorithm is visible in this example: compute g and h, sum them per candidate child, score with G²/(H+λ), pick the best cut, set leaves to −G/(H+λ) times η, update F, repeat. Everything else in XGBoost is about doing this faster or more safely.</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> The toy run used λ = 1 and γ = 0, and switched off <code>min_child_weight</code>. Each of the brakes changes these numbers in a way we can predict by hand.</div>
+  <div class="bridge"><b>What this still can't tell us → next: The brakes.</b> The run used λ = 1 and γ = 0, and switched off min_child_weight. Each of the brakes changes these numbers in a way we can predict by hand.</div>
 
   <h2 id="xgb-reg"><span class="num">07</span>The Brakes: λ, α, γ, min_child_weight</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>The hand trace used λ = 1, γ = 0 and min_child_weight = 0. What exactly does each brake do to the diary's first tree, and can we predict it before running the library?</p>
+  </div>
   <h3>Predict first, then check</h3>
-  <p>Same 8 customers, one tree, changing one setting at a time. Predictions from the formulas (stored leaf = 0.3 × w*):</p>
+  <p>The diary, one tree, changing one setting at a time. Totals from section 06: left G = −2.5, H = 1.75; right G = +0.5, H = 1.75; whole node G = −2.0, H = 3.5; library gain 1.4747. Predictions from the formulas (stored leaf = 0.3 × w*):</p>
   <table class="tbl">
     <tr><th>Setting</th><th>Hand calculation</th><th>Predicted leaves</th></tr>
-    <tr><td>λ = 0</td><td>−1.5/1.25 = −1.2; 1.5/0.75 = 2.0</td><td>−0.36, 0.60</td></tr>
-    <tr><td>λ = 10</td><td>−1.5/11.25 = −0.133; 1.5/10.75 = 0.140</td><td>−0.040, 0.042</td></tr>
-    <tr><td>α = 1</td><td>−(1.5 − 1)/2.25 = −0.222; (1.5 − 1)/1.75 = 0.286</td><td>−0.067, 0.086</td></tr>
-    <tr><td>γ = 2.2</td><td>library gain 2.286 ≥ 2.2 → keep the split</td><td>−0.200, 0.257</td></tr>
-    <tr><td>γ = 2.4</td><td>2.286 &lt; 2.4 → prune; root leaf = −0/3 = 0</td><td>single leaf 0</td></tr>
-    <tr><td>min_child_weight = 1</td><td>each child needs H ≥ 1, i.e. ≥ 4 rows of h = 0.25 → only cut 4.5 allowed; G<sub>L</sub> = 1, H<sub>L</sub> = 1 → −1/2</td><td>cut 4.5, leaves −0.15, 0.15</td></tr>
+    <tr><td>λ = 0</td><td>2.5/1.75 = 1.429; −0.5/1.75 = −0.286</td><td>0.429, −0.086</td></tr>
+    <tr><td>λ = 10</td><td>2.5/11.75 = 0.213; −0.5/11.75 = −0.043</td><td>0.064, −0.013</td></tr>
+    <tr><td>α = 1</td><td>(2.5 − 1)/2.75 = 0.545; right |G| = 0.5 &lt; 1 → exactly 0</td><td>0.164, 0</td></tr>
+    <tr><td>γ = 1.4</td><td>library gain 1.475 ≥ 1.4 → keep the split</td><td>0.273, −0.055</td></tr>
+    <tr><td>γ = 1.5</td><td>1.475 &lt; 1.5 → prune; root leaf = 2/(3.5 + 1) = 0.444</td><td>single leaf 0.133</td></tr>
+    <tr><td>min_child_weight = 2</td><td>each child needs H ≥ 2, i.e. ≥ 8 days of h = 0.25; 8 + 8 &gt; 14, so no cut is allowed</td><td>single leaf 0.133</td></tr>
   </table>
   <div class="fx" data-lang="py">import numpy as np, xgboost as xgb
-calls = np.arange(1, 9).reshape(-1, 1).astype(float)
-churn = np.array([0, 0, 1, 0, 0, 1, 1, 1])
-d = xgb.DMatrix(calls, label=churn)
+from play import df
+d = xgb.DMatrix(df.HumPct.values.reshape(-1, 1).astype(float), label=(df.Play == "Yes").astype(int))
 base = {"objective": "binary:logistic", "base_score": 0.5, "eta": 0.3, "max_depth": 1,
         "lambda": 1, "min_child_weight": 0, "tree_method": "exact"}
 def show(label, **change):
@@ -378,17 +448,17 @@ show("default (lambda=1)")
 show("lambda=0", **{"lambda": 0})
 show("lambda=10", **{"lambda": 10})
 show("alpha=1", alpha=1)
-show("gamma=2.2", gamma=2.2)
-show("gamma=2.4", gamma=2.4)
-show("min_child_weight=1", min_child_weight=1)</div>
-  <div class="fx" data-lang="text">default (lambda=1)     0:[f0&lt;5.5] yes=1,no=2,missing=1 1:leaf=-0.200000018 2:leaf=0.257142872
-lambda=0               0:[f0&lt;5.5] yes=1,no=2,missing=1 1:leaf=-0.360000014 2:leaf=0.600000024
-lambda=10              0:[f0&lt;5.5] yes=1,no=2,missing=1 1:leaf=-0.0400000028 2:leaf=0.0418604687
-alpha=1                0:[f0&lt;5.5] yes=1,no=2,missing=1 1:leaf=-0.0666666701 2:leaf=0.0857142955
-gamma=2.2              0:[f0&lt;5.5] yes=1,no=2,missing=1 1:leaf=-0.200000018 2:leaf=0.257142872
-gamma=2.4              0:leaf=-0
-min_child_weight=1     0:[f0&lt;4.5] yes=1,no=2,missing=1 1:leaf=-0.150000006 2:leaf=0.150000006</div>
-  <p>All six predictions are right. Note what each brake does differently: λ shrinks the values (and with larger λ would eventually block the split), α subtracts a fixed amount from each leaf's pull, γ removes whole splits, and <code>min_child_weight</code> changes <em>which</em> split is chosen by forbidding small children.</p>
+show("gamma=1.4", gamma=1.4)
+show("gamma=1.5", gamma=1.5)
+show("min_child_weight=2", min_child_weight=2)</div>
+  <div class="fx" data-lang="text">default (lambda=1)     0:[f0&lt;82.5] yes=1,no=2,missing=1 1:leaf=0.272727281 2:leaf=-0.0545454584
+lambda=0               0:[f0&lt;82.5] yes=1,no=2,missing=1 1:leaf=0.428571463 2:leaf=-0.0857142955
+lambda=10              0:[f0&lt;82.5] yes=1,no=2,missing=1 1:leaf=0.0638297945 2:leaf=-0.012765958
+alpha=1                0:[f0&lt;82.5] yes=1,no=2,missing=1 1:leaf=0.163636371 2:leaf=-0
+gamma=1.4              0:[f0&lt;82.5] yes=1,no=2,missing=1 1:leaf=0.272727281 2:leaf=-0.0545454584
+gamma=1.5              0:leaf=0.13333334
+min_child_weight=2     0:leaf=0.13333334</div>
+  <p>All six predictions are right. Note what each brake does differently: λ shrinks the values (and with larger λ would eventually block the split), α subtracts a fixed amount from each leaf's pull and sets the weak humid-day leaf to exactly 0, γ removes whole splits, and <code>min_child_weight</code> changes <em>which</em> splits are allowed by forbidding small children (here, all of them).</p>
   <h3>min_child_weight is a Hessian sum, not a row count</h3>
   <p>For squared error h = 1, so "minimum Hessian" equals "minimum rows". For log loss h = p(1−p) ≤ 0.25. With the default <code>min_child_weight=1</code>:</p>
   <table class="tbl">
@@ -401,7 +471,7 @@ min_child_weight=1     0:[f0&lt;4.5] yes=1,no=2,missing=1 1:leaf=-0.150000006 2:
   <h3>γ prunes after growing</h3>
   <p>XGBoost grows each tree to <code>max_depth</code> with every split whose gain is positive, and then walks back from the leaves upward, removing any split whose gain is below γ <em>and</em> whose children are both leaves. A weak split high up survives if a strong split sits below it. This is better than stopping early: a split with a small gain can open the door to a very good split one level deeper (the classic XOR case).</p>
   <h3>On the 20,000-row churn data</h3>
-  <p>The shared dataset of this tree family: 20,000 customers, 12 informative / redundant / noise features f0–f11, two pure-noise columns, train 12,000 / validation 3,000 / test 5,000. Each run below starts from <code>max_depth=6, learning_rate=0.1</code>, uses early stopping on the validation set, and changes one knob.</p>
+  <p>The same knobs at scale. The shared dataset of this tree family: 20,000 customers, 12 informative / redundant / noise features f0–f11, two pure-noise columns, train 12,000 / validation 3,000 / test 5,000. Each run below starts from <code>max_depth=6, learning_rate=0.1</code>, uses early stopping on the validation set, and changes one knob.</p>
   <div class="fx" data-lang="py">import xgboost as xgb
 from sklearn.metrics import roc_auc_score
 base = dict(n_estimators=3000, learning_rate=0.1, max_depth=6, early_stopping_rounds=50,
@@ -444,9 +514,12 @@ for kw in [{}, {"max_depth": 3}, {"max_depth": 10}, {"min_child_weight": 10}, {"
   <div class="callout trap"><span class="label">Trap</span>
     <p>γ has the same units as the gain, and the gain scales with the data: double the rows and every G²/(H+λ) roughly doubles. A γ that is tiny on 10,000 rows can be meaningless on 10 million. Tune γ on the data size you will train on, and look at the gains in <code>trees_to_dataframe()</code> to see what range is sensible.</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> We have checked single formulas. The real test of understanding is to write the whole algorithm, many rounds and deeper trees, and get the same predictions as the library.</div>
+  <div class="bridge"><b>What this still can't tell us → next: XGBoost from scratch.</b> We have checked single formulas on 14 days. The real test of understanding is to write the whole algorithm, many rounds and deeper trees, and get the same predictions as the library on real-sized data.</div>
 
   <h2 id="xgb-scratch"><span class="num">08</span>XGBoost From Scratch</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Every formula matched the library on the diary's one-split trees. Is that the whole algorithm, with deeper trees, many columns and γ-pruning, or is something hidden?</p>
+  </div>
   <p>The plan, matching XGBoost's <code>tree_method="exact"</code>:</p>
   <div class="flow"><span>F = 0 for every row</span><span>g = p − y, h = p(1−p)</span><span>grow a tree: at each node try every column and cut, score with G²/(H+λ)</span><span>prune splits with gain &lt; γ</span><span>F += η·w*</span><span>repeat</span></div>
   <p>The only trick for speed is in the split search: sort the node's rows by a column once, then a running sum (<code>cumsum</code>) of g and h gives G<sub>L</sub>, H<sub>L</sub> for every cut-off at once. Read <code>_grow</code> first; it is sections 04 and 05 in code.</p>
@@ -534,9 +607,12 @@ first tree, root split  mine: f5 &lt; 0.1967 | xgboost: 0:[f5&lt;0.196703881] ye
   <div class="callout trap"><span class="label">Trap</span>
     <p>Three details make or break a from-scratch match: (1) the threshold is the midpoint between two neighbouring distinct values, and the test is <code>x &lt; threshold</code>; (2) <code>base_score</code> must be fixed (XGBoost 2+ otherwise estimates it from the data); (3) γ is applied as post-pruning on the un-halved gain, not as a stopping rule during growth.</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> Our <code>_grow</code> sorts every column at every node: fine for 600 rows, hopeless for 20 million. XGBoost's answer is to try only a few hundred well-chosen cut-offs.</div>
+  <div class="bridge"><b>What this still can't tell us → next: Finding splits fast.</b> Our _grow sorts every column at every node: fine for 600 rows (or 14 days), hopeless for 20 million. XGBoost's answer is to try only a few hundred well-chosen cut-offs.</div>
 
   <h2 id="xgb-split"><span class="num">09</span>Finding Splits Fast</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>The exact search tries every distinct value: 9 cut-offs for the diary's humidity, millions for a big column. Can we try far fewer cut-offs and lose almost nothing?</p>
+  </div>
   <h3>Exact greedy</h3>
   <p>The exact algorithm is what we just wrote: for every node, for every column, go through the rows in sorted order and evaluate every cut. XGBoost avoids re-sorting by storing each column <em>pre-sorted once</em> in a "block" (section 12), so one pass over all non-missing entries finds the best split of every node at one depth. Cost per tree ≈ O(depth · nnz), nnz = number of non-missing entries. It is still a full pass over every distinct value, and the whole table must sit in memory.</p>
   <h3>Approximate: candidate cut-offs from quantiles</h3>
@@ -544,7 +620,7 @@ first tree, root split  mine: f5 &lt; 0.1967 | xgboost: 0:[f5&lt;0.196703881] ye
   <p style="text-align:center">g·f + ½h·f² = ½·h·(f − (−g/h))² − g²/(2h)</p>
   <p>The last term does not depend on f. So minimising Σ[g<sub>i</sub>f + ½h<sub>i</sub>f²] is the same as a <strong>weighted least-squares</strong> fit to targets −g<sub>i</sub>/h<sub>i</sub> with <strong>weights h<sub>i</sub></strong>. A row with tiny h (a confidently predicted row) barely affects the objective, so the candidate cut-offs should be spread by h-weight, not by count. That is the <strong>weighted quantile sketch</strong>: rank function r(z) = Σ<sub>x&lt;z</sub>h / Σh, and candidates are chosen so neighbouring candidates differ in rank by at most ε (≈ 1/ε candidates; <code>sketch_eps</code>).</p>
   <h3>Worked: weighted vs plain quartiles</h3>
-  <p>Eight rows of one column, already sorted, with the model's current churn probability. Rows 4–7 are confidently predicted, so their h is tiny.</p>
+  <p>On the diary the effect is invisible: after three trees every probability is still between 0.47 and 0.66, so every h is between 0.22 and 0.25 and weighted ranks are almost the plain ranks. It matters once the model is confident about some rows. Eight rows of one column, already sorted, with the model's current churn probability. Rows 4–7 are confidently predicted, so their h is tiny.</p>
   <div class="fx" data-lang="py">import numpy as np
 x = np.array([10, 20, 30, 40, 50, 60, 70, 80])           # one feature, already sorted
 p = np.array([0.50, 0.45, 0.55, 0.97, 0.98, 0.02, 0.03, 0.50])   # current predicted churn prob
@@ -590,9 +666,12 @@ tree_method=hist   {'max_bin': 16}   test AUC 0.9322   fit 2.90s</div>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Do not expect <code>exact</code> to be more accurate. Bucketing acts as a mild regulariser, and on most data <code>hist</code> with 256 bins is as accurate and many times faster. Use <code>exact</code> only for small data where you want to reproduce textbook numbers (as in this note).</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> All split search above assumed every row has a value. Real tables have holes, and one-hot or text features are mostly zeros.</div>
+  <div class="bridge"><b>What this still can't tell us → next: Missing values.</b> All split search above assumed every row has a value. Real tables have holes, and one-hot or text features are mostly zeros. Where should a day with no humidity reading go?</div>
 
   <h2 id="xgb-missing"><span class="num">10</span>Missing Values: The Default Direction</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Suppose the hygrometer broke on two days. Every split on humidity must still send those days somewhere. Should we fill in a guess, or can the tree learn where they belong?</p>
+  </div>
   <h3>The idea</h3>
   <p>When a row's value for the split column is missing, which child should it go to? XGBoost does not guess and does not ask you to impute. At every split it <strong>learns</strong> a default direction from the training data: it tries sending all missing rows left, then all right, and keeps whichever gives the larger gain. Rows with a missing value at prediction time follow that stored direction.</p>
   <h3>The algorithm (sparsity-aware split finding)</h3>
@@ -603,31 +682,32 @@ tree_method=hist   {'max_bin': 16}   test AUC 0.9322   fit 2.90s</div>
     <li>Keep the better of the two, with its direction.</li>
   </ol>
   <p>The scans touch only non-missing entries, so on a table that is 95% empty the work is 20× smaller. The paper reports a 50× speed-up on sparse data compared with a naive version.</p>
-  <h3>Worked: two customers with unknown call counts</h3>
-  <p>Add customers 9 and 10 to our table: calls unknown (NaN), both churned. Now G = 1.5 − 1.5 − 1.0 = −1.0 and H = 10 × 0.25 = 2.5, parent term G²/(H+λ) = 1/3.5 = 0.286. At the cut 5.5 (library gain, no ½):</p>
+  <h3>Worked: two days with no humidity reading</h3>
+  <p>Add two days D15 and D16 to the diary: humidity unknown (NaN), and no match on either. Now G = −2.0 + 2 × 0.5 = −1.0 and H = 16 × 0.25 = 4.0, parent term G²/(H+λ) = 1/5 = 0.2. At the cut 82.5 (library gain, no ½):</p>
   <table class="tbl">
-    <tr><th>Missing go</th><th>Left G<sub>L</sub>, H<sub>L</sub></th><th>Right G<sub>R</sub>, H<sub>R</sub></th><th>G<sub>L</sub>²/(H<sub>L</sub>+1) + G<sub>R</sub>²/(H<sub>R</sub>+1) − 0.286</th></tr>
-    <tr><td>left</td><td>0.5, 1.75</td><td>−1.5, 0.75</td><td>0.091 + 1.286 − 0.286 = 1.091</td></tr>
-    <tr><td><strong>right</strong></td><td>1.5, 1.25</td><td>−2.5, 1.25</td><td>1.000 + 2.778 − 0.286 = <strong>3.492</strong></td></tr>
+    <tr><th>Missing go</th><th>Left G<sub>L</sub>, H<sub>L</sub></th><th>Right G<sub>R</sub>, H<sub>R</sub></th><th>G<sub>L</sub>²/(H<sub>L</sub>+1) + G<sub>R</sub>²/(H<sub>R</sub>+1) − 0.2</th></tr>
+    <tr><td>left (with the dry days)</td><td>−1.5, 2.25</td><td>+0.5, 1.75</td><td>0.692 + 0.091 − 0.2 = 0.583</td></tr>
+    <tr><td><strong>right (with the humid days)</strong></td><td>−2.5, 1.75</td><td>+1.5, 2.25</td><td>2.273 + 0.692 − 0.2 = <strong>2.765</strong></td></tr>
   </table>
-  <p>Missing → right wins: the unknown-call customers churned, like the high-call customers on the right. Right leaf: 0.3 × 2.5/2.25 = 0.333.</p>
+  <p>Missing → right wins: the two unknown days were not played, like most humid days. Right leaf: 0.3 × (−1.5/3.25) = −0.138.</p>
   <div class="fx" data-lang="py">import numpy as np, xgboost as xgb
-calls = np.array([1, 2, 3, 4, 5, 6, 7, 8, np.nan, np.nan]).reshape(-1, 1)   # last 2: calls not recorded
-churn = np.array([0, 0, 1, 0, 0, 1, 1, 1, 1, 1])
+from play import df
+hum = np.append(df.HumPct.values.astype(float), [np.nan, np.nan]).reshape(-1, 1)   # D15, D16: reading lost
+play = np.append((df.Play == "Yes").astype(int).values, [0, 0])                       # both: no match
 params = {"objective": "binary:logistic", "base_score": 0.5, "eta": 0.3, "max_depth": 1,
           "lambda": 1, "min_child_weight": 0, "tree_method": "exact"}
-bst = xgb.train(params, xgb.DMatrix(calls, label=churn), num_boost_round=1)
+bst = xgb.train(params, xgb.DMatrix(hum, label=play), num_boost_round=1)
 print(bst.get_dump(with_stats=True)[0])
-new = xgb.DMatrix(np.array([[2.0], [np.nan]]))
-print("prediction for calls=2 and calls=NaN:", np.round(bst.predict(new, output_margin=True), 4))</div>
-  <div class="fx" data-lang="text">0:[f0&lt;5.5] yes=1,no=2,missing=2,gain=3.49206352,cover=2.5
-	1:leaf=-0.200000018,cover=1.25
-	2:leaf=0.333333373,cover=1.25
+new = xgb.DMatrix(np.array([[np.nan]]))
+print("a new day with no humidity reading gets", bst.predict(new, output_margin=True))</div>
+  <div class="fx" data-lang="text">0:[f0&lt;82.5] yes=1,no=2,missing=2,gain=2.76503491,cover=4
+	1:leaf=0.272727281,cover=1.75
+	2:leaf=-0.138461545,cover=2.25
 
-prediction for calls=2 and calls=NaN: [-0.2     0.3333]</div>
-  <p><code>missing=2</code> means "missing values go to node 2", the right child. Gain 3.492 and leaf 0.333 match the table. A new customer with NaN calls gets 0.333, the churn side.</p>
+a new day with no humidity reading gets [-0.13846155]</div>
+  <p><code>missing=2</code> means "missing values go to node 2", the right child. Gain 2.765 and leaf −0.138 match the table. A new day with no reading gets −0.138, the no-play side.</p>
   <h3>When missingness carries signal</h3>
-  <p>On the churn data, make column f1 go missing for 40% of churners but only 10% of stayers (for example, churners stop using the app that records it). Compare native NaN handling with the usual fixes:</p>
+  <p>At scale, on the churn data, make column f1 go missing for 40% of churners but only 10% of stayers (for example, churners stop using the app that records it). Compare native NaN handling with the usual fixes:</p>
   <div class="fx" data-lang="py">import xgboost as xgb
 from sklearn.metrics import roc_auc_score
 rng = np.random.default_rng(1)
@@ -673,13 +753,16 @@ scipy sparse -&gt; 0:[f0&lt;12.000001] yes=1,no=2,missing=2 1:leaf=0.300000012 2
   <div class="callout trap"><span class="label">Trap</span>
     <p>If a column had no missing values in training but has them in production, the default direction was never learned from data (XGBoost picks a fixed side). Predictions for those rows are then arbitrary. Monitor missing rates between training and serving.</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> Better splits and good missing-value handling make each tree strong. A team of strong trees can still overfit as a group. The oldest brakes in boosting are making each tree's contribution small and each tree's view of the data partial.</div>
+  <div class="bridge"><b>What this still can't tell us → next: Shrinkage &amp; subsampling.</b> Better splits and good missing-value handling make each tree strong. A team of strong trees can still overfit as a group. The oldest brakes in boosting are making each tree's contribution small and each tree's view of the data partial.</div>
 
   <h2 id="xgb-sample"><span class="num">11</span>Shrinkage &amp; Subsampling</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>The penalties act inside each tree. A team of well-regularised trees can still overfit as a group. What brakes act on the team?</p>
+  </div>
   <h3>Shrinkage (η, <code>learning_rate</code>)</h3>
   <p>Every new tree is multiplied by η before it is added: F ← F + η·f. With η = 0.3 (default) each tree corrects 30% of what it could. Why not 100%? Because each tree is fitted to the current g's, which contain noise; a smaller step means later trees get a chance to correct this tree's mistakes, and the final model is an average of many small, slightly different corrections. The price: more trees. Rule of thumb: halve η, roughly double the trees; the result is usually a little better. Combine with early stopping (section 14).</p>
   <h3>Row subsampling (<code>subsample</code>)</h3>
-  <p>Each tree is built on a random fraction of rows, drawn without replacement (Friedman's stochastic gradient boosting). The trees become less alike and each is cheaper. Typical 0.5–0.9.</p>
+  <p>Each tree is built on a random fraction of rows, drawn without replacement (Friedman's stochastic gradient boosting). The trees become less alike and each is cheaper. Typical 0.5–0.9. On the diary, <code>subsample=0.5</code> would build each tree on 7 random days.</p>
   <h3>Column subsampling (<code>colsample_bytree</code>, <code>colsample_bylevel</code>, <code>colsample_bynode</code>)</h3>
   <p>Borrowed from <a class="xref" data-note="ml_rf">Random Forest</a>. A random fraction of columns is allowed per tree, then per depth level (a fraction of the tree's columns), then per split (a fraction of the level's columns). They multiply: 0.8 × 0.8 × 0.8 leaves about half the columns for each split. The paper found column sampling prevents overfitting even better than row sampling, and it speeds up training.</p>
   <table class="tbl">
@@ -694,9 +777,12 @@ scipy sparse -&gt; 0:[f0&lt;12.000001] yes=1,no=2,missing=2 1:leaf=0.300000012 2
   <div class="callout trap"><span class="label">Trap</span>
     <p>Comparing settings at a fixed number of trees is unfair: a model with η = 0.05 and 300 trees is simply unfinished. Always compare with early stopping, which gives each setting the number of trees it needs.</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> Most of XGBoost's fame came from speed. The algorithm sections explained <em>what</em> is computed; the system design explains why it runs fast on one laptop, on a GPU, and on a cluster.</div>
+  <div class="bridge"><b>What this still can't tell us → next: Why it is fast.</b> The algorithm sections explained what is computed. XGBoost's fame came from speed: why does it run fast on one laptop, on a GPU, and on a cluster?</div>
 
   <h2 id="xgb-system"><span class="num">12</span>Why It Is Fast: The System</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Boosting is sequential: tree t needs trees 1 to t−1. So where does XGBoost find parallelism, and what else makes it fast?</p>
+  </div>
   <h3>Where the parallelism is</h3>
   <p>Boosting is sequential: tree t needs the predictions of trees 1…t−1. So XGBoost cannot build trees in parallel. It parallelises <strong>inside</strong> one tree: the best split for each column (or each block of rows, for histograms) is searched by a different thread, and the results are combined. With <code>n_jobs</code> threads, split finding runs up to n_jobs times faster.</p>
   <h3>Column blocks</h3>
@@ -712,9 +798,12 @@ scipy sparse -&gt; 0:[f0&lt;12.000001] yes=1,no=2,missing=2 1:leaf=0.300000012 2
   <div class="callout trap"><span class="label">Trap</span>
     <p>"XGBoost trains trees in parallel like a random forest." No: trees are sequential; parallelism is per split search. That is why more cores help less for small data (little work per split) and why <code>n_estimators</code> drives training time linearly.</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> We have met most knobs one at a time. Here they all are on one page, with defaults and effects, plus the one for rare classes.</div>
+  <div class="bridge"><b>What this still can't tell us → next: Key parameters.</b> We have met most knobs one at a time. Which ones matter, with what defaults and ranges, and what about rare classes?</div>
 
   <h2 id="xgb-params"><span class="num">13</span>Key Parameters</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>We have met λ, α, γ, min_child_weight, η, sampling and tree_method one at a time. On one page: which knobs exist, what are their defaults, and when do you move them?</p>
+  </div>
   <table class="tbl">
     <tr><th>Native name (sklearn name)</th><th>Default</th><th>What it does</th><th>Raise it when…</th><th>Typical range</th></tr>
     <tr><td><code>eta</code> (<code>learning_rate</code>)</td><td>0.3</td><td>Shrinks every tree</td><td>— lower it for the final model</td><td>0.01–0.3</td></tr>
@@ -762,9 +851,12 @@ scale_pos_weight= 17.2  AUC 0.839  recall@0.5 0.64  precision@0.5 0.25  mean pre
   <div class="callout trap"><span class="label">Trap</span>
     <p>After <code>scale_pos_weight</code> the output is no longer a calibrated probability. If you need real probabilities (pricing, expected loss), either leave it at 1 and move the decision threshold, or recalibrate afterwards (<a class="xref" data-note="ml_tree_tuning">Tuning &amp; Production</a> covers calibration).</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> Of all the knobs, the number of trees is the one you should never tune by hand. Early stopping chooses it.</div>
+  <div class="bridge"><b>What this still can't tell us → next: Early stopping.</b> Of all the knobs, the number of trees is the one you should never tune by hand. How does XGBoost choose it?</div>
 
   <h2 id="xgb-es"><span class="num">14</span>Early Stopping</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Training loss falls with every tree, so it cannot tell us when to stop. How does XGBoost pick the number of trees, and how do you read its log?</p>
+  </div>
   <p>Boosting keeps lowering the training loss forever, but the validation loss stops improving and then rises (the overfitting curve in <a class="xref" data-note="ml_gbm">Gradient Boosting</a>). Early stopping evaluates a metric on a validation set after every tree and stops when it has not improved for N rounds; the model remembers the best round. Here in the native API, printing every 100 rounds:</p>
   <div class="fx" data-lang="py">import xgboost as xgb
 dtr = xgb.DMatrix(Xtr, label=ytr)                 # native API: data goes in a DMatrix
@@ -797,9 +889,12 @@ test acc using best 282 trees: 0.8700 | using all 332: 0.8708</div>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Never early-stop on the test set. The stopping point is chosen to look good on whatever set you give it, so that set's score is optimistic. Use a separate validation set (or <code>xgb.cv</code>) and keep the test set for the final number.</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> We used two different ways of calling XGBoost in this note. They are the same engine; knowing both, and how to go from one to the other, avoids a lot of confusion.</div>
+  <div class="bridge"><b>What this still can't tell us → next: Native vs sklearn API.</b> We used two different ways of calling XGBoost in this note. Are they the same engine, and when should you use which?</div>
 
   <h2 id="xgb-api"><span class="num">15</span>Native vs sklearn API</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>This note used xgb.train with a DMatrix and also XGBClassifier. Are they different models? How do names, early stopping and saving differ between them?</p>
+  </div>
   <table class="tbl">
     <tr><th></th><th>Native API</th><th>scikit-learn API</th></tr>
     <tr><td>Data</td><td><code>xgb.DMatrix(X, label=y)</code> (also <code>QuantileDMatrix</code> for hist, less memory)</td><td>numpy / pandas / sparse directly</td></tr>
@@ -845,9 +940,12 @@ top-3 by gain: [('f8', 6.5), ('f4', 5.8), ('f5', 5.8)]</div>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Save with <code>save_model("model.json")</code> (or <code>.ubj</code>), not pickle. JSON models load in any XGBoost version, language (R, Java, C) and platform; a pickle may fail to load after an upgrade. Also save the column order: the model stores feature names, but a numpy input with columns in a different order is silently wrong.</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> XGBoost is one member of a family. Where exactly does it sit next to its parent and its younger siblings?</div>
+  <div class="bridge"><b>What this still can't tell us → next: Compared with its family.</b> XGBoost is one member of a family. Where exactly does it sit next to its parent and its younger siblings?</div>
 
   <h2 id="xgb-cmp"><span class="num">16</span>Compared With Its Family</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>XGBoost sits between classic gradient boosting and the newer LightGBM and CatBoost. What does each of them do differently, and how does XGBoost compare with a random forest?</p>
+  </div>
   <table class="tbl">
     <tr><th></th><th>sklearn GradientBoosting</th><th>XGBoost</th><th><a class="xref" data-note="ml_lightgbm">LightGBM</a></th><th><a class="xref" data-note="ml_catboost">CatBoost</a></th></tr>
     <tr><td>Year</td><td>2001 (Friedman)</td><td>2014 / paper 2016</td><td>2017</td><td>2017 / 2018</td></tr>
@@ -871,8 +969,49 @@ top-3 by gain: [('f8', 6.5), ('f4', 5.8), ('f5', 5.8)]</div>
   <div class="callout intu"><span class="label">Key insight</span>
     <p>All three boosting libraries share XGBoost's maths: the g/h gain, w* = −G/(H+λ), learned missing directions. If you understand this note, LightGBM and CatBoost are "the same machine with a different engine (LightGBM) or different safety rules (CatBoost)".</p>
   </div>
+  <div class="bridge"><b>What this still can't tell us → next: How it all connects.</b> We have met the objective, g and h, w*, the gain, the brakes, fast split search, missing values and the system. How do they hang together?</div>
 
-  <h2 id="xgb-traps"><span class="num">17</span>Common Mistakes</h2>
+    <h2 id="xgb-connect"><span class="num">17</span>How It All Connects</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Objective, Taylor expansion, g and h, w*, structure score, gain, λ, α, γ, min_child_weight, sketches, histograms, default directions: a long list, or one formula seen from many sides?</p>
+  </div>
+  <figure class="viz"><svg viewBox="0 0 680 330" width="680">
+<defs><marker id="xgb-c9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+<rect x="200" y="8" width="280" height="44" rx="7" class="fg sg" stroke-width="2"/><text x="340" y="27" text-anchor="middle" font-size="12" font-weight="700">Obj = Σ loss + γT + ½λΣw²</text><text x="340" y="43" text-anchor="middle" class="tm" font-size="10">diary turnout: 641.00 → 533.22 → 527.96</text>
+<line x1="340" y1="52" x2="340" y2="80" stroke="currentColor" marker-end="url(#xgb-c9)"/>
+<rect x="200" y="82" width="280" height="44" rx="7" class="fb sb"/><text x="340" y="101" text-anchor="middle" font-size="11.5" font-weight="700">Taylor: g = p − y, h = p(1 − p)</text><text x="340" y="117" text-anchor="middle" class="tm" font-size="10">start: g = ±0.5, h = 0.25 per day</text>
+<line x1="290" y1="126" x2="130" y2="156" stroke="currentColor" marker-end="url(#xgb-c9)"/><line x1="390" y1="126" x2="550" y2="156" stroke="currentColor" marker-end="url(#xgb-c9)"/>
+<rect x="10" y="158" width="240" height="46" rx="7" class="ft st"/><text x="130" y="177" text-anchor="middle" font-size="11.5" font-weight="700">leaf: w* = −G/(H + λ)</text><text x="130" y="194" text-anchor="middle" class="tm" font-size="10">2.5/2.75 = 0.909 → stored 0.2727</text>
+<rect x="430" y="158" width="240" height="46" rx="7" class="ft st"/><text x="550" y="177" text-anchor="middle" font-size="11.5" font-weight="700">gain from G²/(H + λ)</text><text x="550" y="194" text-anchor="middle" class="tm" font-size="10">HumPct &lt; 82.5: 0.737 (lib 1.4747)</text>
+<line x1="250" y1="181" x2="428" y2="181" stroke="currentColor" stroke-dasharray="4 3"/><text x="340" y="174" text-anchor="middle" class="tm" font-size="9.5">same formula</text>
+<line x1="130" y1="204" x2="130" y2="236" stroke="currentColor" marker-end="url(#xgb-c9)"/><line x1="550" y1="204" x2="550" y2="236" stroke="currentColor" marker-end="url(#xgb-c9)"/><line x1="550" y1="204" x2="340" y2="236" stroke="currentColor" marker-end="url(#xgb-c9)"/>
+<rect x="10" y="238" width="240" height="46" rx="7" class="fr sr"/><text x="130" y="257" text-anchor="middle" font-size="11" font-weight="700">brakes: λ, α, γ, min_child_weight</text><text x="130" y="274" text-anchor="middle" class="tm" font-size="10">α = 1 zeroes the humid leaf</text>
+<rect x="260" y="238" width="160" height="46" rx="7" class="fv" stroke="currentColor" stroke-opacity="0.3"/><text x="340" y="257" text-anchor="middle" font-size="11" font-weight="700">missing: try both sides</text><text x="340" y="274" text-anchor="middle" class="tm" font-size="10">2.765 vs 0.583</text>
+<rect x="430" y="238" width="240" height="46" rx="7" class="fv" stroke="currentColor" stroke-opacity="0.3"/><text x="550" y="257" text-anchor="middle" font-size="11" font-weight="700">fast search: sketch, histograms</text><text x="550" y="274" text-anchor="middle" class="tm" font-size="10">candidates spread by h</text>
+<text x="340" y="310" text-anchor="middle" class="tm" font-size="10.5">around it: η, subsampling, early stopping (from Gradient Boosting) and the system (blocks, threads, GPU)</text>
+</svg><figcaption>XGBoost is one objective worked out: the Taylor expansion turns any loss into per-row g and h; minimising per leaf gives w*; the same expression scores splits; the penalties are terms of the objective; missing-value handling and fast split search are ways of evaluating that gain cheaply.</figcaption></figure>
+  <table class="tbl"><caption>Every concept on the same diary (Play from HumPct, λ = 1, η = 0.3, first tree)</caption>
+    <tr><th>Concept</th><th>Built from</th><th>Answers which question</th><th>On the diary</th><th>When to use / watch</th></tr>
+    <tr><td>Regularised objective</td><td>loss + γT + ½λΣw² (+ α|w|)</td><td>what should a tree minimise?</td><td>turnout, Overcast?: shrunk leaves 527.96 &lt; means 533.22</td><td>λ = 1 is on by default</td></tr>
+    <tr><td>g, h</td><td>1st and 2nd derivative of the loss</td><td>how to treat every loss alike?</td><td>g = ±0.5, h = 0.25 at p = 0.5</td><td>custom loss: supply g, h with h &gt; 0</td></tr>
+    <tr><td>G, H</td><td>sums of g, h in a leaf</td><td>what does a group of rows want?</td><td>normal leaf G = −2.5, H = 1.75</td><td>cover = H in the dump</td></tr>
+    <tr><td>w* = −G/(H + λ)</td><td>minimum of each leaf's parabola</td><td>what should a leaf hold?</td><td>0.909 (λ = 1), 1.429 (λ = 0)</td><td>stored as η·w*</td></tr>
+    <tr><td>Structure score</td><td>−½ΣG²/(H + λ) + γT</td><td>how good is a shape?</td><td>parent 0.889 (= G²/(H + λ))</td><td>replaces Gini / variance</td></tr>
+    <tr><td>Gain</td><td>children − parent − γ</td><td>which split?</td><td>&lt; 82.5: 0.737; &lt; 67.5: −0.080</td><td>library prints 2 × (without γ)</td></tr>
+    <tr><td>λ / α / γ / min_child_weight</td><td>terms and limits of the objective</td><td>how to stop overfitting inside a tree?</td><td>λ 10: 0.064; α 1: 0; γ 1.5: no split; mcw 2: no split</td><td>γ and mcw scale with data size</td></tr>
+    <tr><td>Weighted sketch / hist</td><td>h-weighted quantiles, bins</td><td>how to search fast?</td><td>9 exact cut-offs (tiny); bins matter at scale</td><td>hist is the default</td></tr>
+    <tr><td>Default direction</td><td>gain with missing left vs right</td><td>where do missing values go?</td><td>two NaN no-play days → right (2.765)</td><td>monitor missing rates in production</td></tr>
+    <tr><td>η, subsample, colsample, early stopping</td><td>from gradient boosting / forests</td><td>how to stop the team overfitting?</td><td>η = 0.3: leaves × 0.3</td><td>lower η + early stopping for the final model</td></tr>
+  </table>
+  <div class="callout intu"><span class="label">Key insight</span>
+    <p>One sentence holds the note: <strong>XGBoost approximates any loss by a parabola in each row (g, h), and from the penalised sum of those parabolas gets both the best leaf value −G/(H + λ) and the split gain.</strong> Every brake is a term of that objective or a limit on G and H, and every engineering trick is a faster way to evaluate the same gain. LightGBM and CatBoost keep this formula and change the engine around it.</p>
+  </div>
+  <div class="bridge"><b>What this still can't tell us → next: Common mistakes.</b> Knowing how the parts fit, which mistakes do people actually make with XGBoost?</div>
+
+<h2 id="xgb-traps"><span class="num">18</span>Common Mistakes</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>We know XGBoost's maths and its knobs. Which mistakes cost people the most in practice?</p>
+  </div>
   <div class="callout trap"><span class="label">Trap: tuning n_estimators by grid search</span>
     <p>Use a large number and early stopping. Grid-searching the number of trees wastes time and still lands between grid points.</p>
   </div>
@@ -900,8 +1039,59 @@ top-3 by gain: [('f8', 6.5), ('f4', 5.8), ('f5', 5.8)]</div>
   <div class="callout trap"><span class="label">Trap: extrapolation</span>
     <p>Like every tree model, XGBoost predicts a constant beyond the range of the training data. A price model trained on prices up to ₹10 lakh will not predict ₹20 lakh. Add a linear model or engineer relative features for trends.</p>
   </div>
+  <div class="bridge"><b>What this still can't tell us → next: Revision sheet.</b> The whole note on one page, for revising.</div>
 
-  <h2 id="xgb-qa"><span class="num">18</span>Questions &amp; Answers</h2>
+    <h2 id="xgb-rev"><span class="num">R</span>Revision Sheet</h2>
+  <p>The whole note on one sheet. Running example: the captain's cricket diary, 14 days; HumPct (65–96) and Play (9 yes, 5 no). Settings for the hand trace: log loss, base_score 0.5, λ = 1, γ = 0, η = 0.3, depth 1, min_child_weight 0, exact.</p>
+  <h3>The question ladder</h3>
+  <table class="tbl">
+    <tr><th>Concept</th><th>Question it answers</th><th>Answer on the diary</th><th>Weakness → next</th></tr>
+    <tr><td>Regularised objective</td><td>what should a tree minimise?</td><td>sum/(n + λ) leaves: 527.96 &lt; 533.22</td><td>no closed form for log-loss</td></tr>
+    <tr><td>g, h</td><td>any loss alike?</td><td>g = ±0.5, h = 0.25</td><td>best leaf?</td></tr>
+    <tr><td>w*</td><td>best leaf value?</td><td>2.5/2.75 = 0.909 → 0.2727</td><td>which shape?</td></tr>
+    <tr><td>Gain</td><td>best split?</td><td>&lt; 82.5: 0.737 (lib 1.4747); weak cuts negative</td><td>does it match?</td></tr>
+    <tr><td>Hand rounds</td><td>library = formulas?</td><td>0.2727 / −0.0545; 0.2236 / −0.0442</td><td>effect of brakes?</td></tr>
+    <tr><td>Brakes</td><td>what does each do?</td><td>λ 10 shrinks; α 1 zeroes; γ 1.5 / mcw 2 prune</td><td>whole algorithm?</td></tr>
+    <tr><td>From scratch</td><td>anything hidden?</td><td>churn: 7.85e-07 difference</td><td>too slow for big data</td></tr>
+    <tr><td>Fast split search</td><td>fewer cut-offs?</td><td>hist: same AUC, 4× faster (churn)</td><td>missing values</td></tr>
+    <tr><td>Default direction</td><td>where do NaN go?</td><td>right: 2.765 vs 0.583</td><td>team overfitting</td></tr>
+    <tr><td>η, sampling, early stopping, system</td><td>team brakes, speed, rounds</td><td>η scales every leaf</td><td>→ LightGBM, CatBoost</td></tr>
+  </table>
+  <h3>Formulas</h3>
+  <table class="tbl">
+    <tr><th>Name</th><th>Formula</th><th>Symbols</th><th>Diary value</th></tr>
+    <tr><td>Objective</td><td>Σᵢ l(yᵢ, ŷᵢ) + Σₖ [γT + ½λΣw² + αΣ|w|]</td><td>T leaves, w leaf values</td><td>—</td></tr>
+    <tr><td>Taylor</td><td>l(y, F + f) ≈ l + g·f + ½h·f²</td><td>g slope, h curvature</td><td>—</td></tr>
+    <tr><td>Log-loss g, h</td><td>g = p − y, h = p(1 − p)</td><td>p = σ(F)</td><td>±0.5, 0.25</td></tr>
+    <tr><td>Squared g, h</td><td>g = ŷ − y, h = 1</td><td>—</td><td>—</td></tr>
+    <tr><td>Leaf weight</td><td>w* = −G/(H + λ)</td><td>G, H sums in the leaf</td><td>0.909</td></tr>
+    <tr><td>With L1</td><td>w* = −sign(G)·max(|G| − α, 0)/(H + λ)</td><td>α L1 penalty</td><td>α = 1: 0.545 and 0</td></tr>
+    <tr><td>Structure score</td><td>−½ Σⱼ Gⱼ²/(Hⱼ + λ) + γT</td><td>lower is better</td><td>—</td></tr>
+    <tr><td>Gain</td><td>½[G_L²/(H_L+λ) + G_R²/(H_R+λ) − G²/(H+λ)] − γ</td><td>library: no ½</td><td>0.737 (1.4747)</td></tr>
+    <tr><td>Stored leaf</td><td>η · w*</td><td>η learning rate</td><td>0.3 × 0.909 = 0.2727</td></tr>
+    <tr><td>Sketch rank</td><td>r(z) = Σ_{x&lt;z} h / Σ h</td><td>candidates spaced by h-weight</td><td>—</td></tr>
+  </table>
+  <h3>When to use, when not</h3>
+  <div class="cards">
+    <div><b>Use XGBoost</b><p>Tabular data, any differentiable loss, missing values, need for regularisation and control; very mature, portable model files.</p><small>hist, η 0.05–0.1, early stopping</small></div>
+    <div><b>Prefer LightGBM</b><p>Very large data where training speed matters most.</p><small>Same maths, faster engine</small></div>
+    <div><b>Prefer CatBoost</b><p>Many categorical columns, little tuning time.</p><small>Ordered target statistics</small></div>
+    <div><b>Careful</b><p>Tiny data (leaves get shrunk hard: λ = 1 on 7 days of h = 0.25), extrapolation, scale_pos_weight then probabilities.</p><small>Calibrate / move threshold</small></div>
+  </div>
+  <div class="callout trap"><span class="label">Key traps</span>
+    <p>Grid-searching n_estimators instead of early stopping; shipping η = 0.3; reading min_child_weight as a row count; integer-coding categories; early stopping on the test set; trusting probabilities after scale_pos_weight; zeros in sparse input become missing; comparing gain across models; expecting extrapolation; forgetting the stored leaf is η·w* and the printed gain has no ½.</p>
+  </div>
+  <h3>Five rapid-fire checks</h3>
+  <table class="tbl">
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>G = −2.5, H = 1.75, λ = 1, η = 0.3. Stored leaf?</td><td>0.3 × 2.5/2.75 = 0.2727</td></tr>
+    <tr><td>g and h for log-loss at p = 0.5, y = 1?</td><td>g = −0.5, h = 0.25</td></tr>
+    <tr><td>The dump says gain = 1.4747. Paper gain?</td><td>0.737 (half, before γ)</td></tr>
+    <tr><td>min_child_weight = 2 with h = 0.25: smallest child?</td><td>8 rows (so no split on 14 diary days)</td></tr>
+    <tr><td>How does XGBoost choose where missing values go?</td><td>Tries both sides at every split, keeps the larger gain</td></tr>
+  </table>
+
+<h2 id="xgb-qa"><span class="num">19</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>What is XGBoost's objective function?</summary><div class="qa-body">Σ<sub>i</sub> l(y<sub>i</sub>, ŷ<sub>i</sub>) + Σ<sub>k</sub> Ω(f<sub>k</sub>) with Ω(f) = γT + ½λΣw<sub>j</sub>² (+ αΣ|w<sub>j</sub>|). Loss rewards fit; γ charges per leaf, λ and α charge for large leaf values.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Derive the optimal leaf weight.</summary><div class="qa-body">Second-order Taylor: Obj ≈ Σ[g<sub>i</sub>f + ½h<sub>i</sub>f²] + Ω. Group rows by leaf: Σ<sub>j</sub>[G<sub>j</sub>w<sub>j</sub> + ½(H<sub>j</sub>+λ)w<sub>j</sub>²] + γT. Each leaf is a parabola; derivative zero gives w<sub>j</sub>* = −G<sub>j</sub>/(H<sub>j</sub>+λ). Plugging back gives the structure score −½ΣG<sub>j</sub>²/(H<sub>j</sub>+λ) + γT.</div></details>
@@ -918,6 +1108,9 @@ top-3 by gain: [('f8', 6.5), ('f4', 5.8), ('f5', 5.8)]</div>
   <details class="qa"><summary><span class="qmark">Q</span>Connection: what did XGBoost add to Gradient Boosting, and what did LightGBM and CatBoost then add to XGBoost?</summary><div class="qa-body">XGBoost: Newton step in split finding, regularised objective (λ, α, γ), learned missing directions, approximate/hist split finding, parallel/out-of-core system. LightGBM: much more speed (histograms everywhere, leaf-wise growth, GOSS row sampling, EFB feature bundling, native categoricals). CatBoost: ordered target statistics and ordered boosting to remove target leakage, symmetric trees, strong defaults for categorical data.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Connection: how is XGBoost's leaf formula related to ridge regression and to Random Forest?</summary><div class="qa-body">λ in w* = −G/(H+λ) is exactly ridge's L2 shrinkage, applied to leaf values ("add λ imaginary rows with zero residual"). Column subsampling (colsample_*) is Random Forest's trick, used to decorrelate boosted trees.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Your XGBoost model has train AUC 0.999 and validation AUC 0.80. What do you change, in what order?</summary><div class="qa-body">Make sure early stopping is on. Then reduce complexity: lower max_depth (or max_leaves), raise min_child_weight, add subsample/colsample around 0.7–0.8, raise lambda, try gamma; lower learning rate with more rounds. Also check for leakage features: a 0.999 train score often means a column that contains the answer.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does XGBoost need both g and h, when Gradient Boosting only fitted g?</summary><div class="qa-body">Gradient boosting grows each tree with a squared-error criterion on the gradients and uses the curvature only afterwards (Newton leaf values). XGBoost puts h into the split gain too, so the split choice and the leaf values come from the same objective and both respect the loss's curvature and the penalties. On the diary at p = 0.5 every h is 0.25, so the two agree; they differ when rows have very different confidence.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks if you set λ = 0 and min_child_weight = 0 on small data?</summary><div class="qa-body">Nothing pulls small leaves toward 0, and leaves of one or two rows are allowed. On the diary, λ = 0 makes the first tree's dry-day leaf 1.43 instead of 0.91 (stored 0.43 vs 0.27), and cuts that peel off a single day, which have negative gain with λ = 1, become worth taking. The model chases individual days like D6: overfitting by memorisation.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: how does the missing-value rule use the same gain formula as ordinary splits?</summary><div class="qa-body">It does not need a new criterion: for each candidate cut it evaluates the usual gain twice, once with all missing rows added to the left (G_L, H_L include them) and once to the right, and keeps the better. On the diary with two NaN no-play days: 0.583 (left) vs 2.765 (right), so missing goes right with the humid days.</div></details>
 </main>
 `
 });

@@ -3,7 +3,7 @@ Object.assign(TOPIC_CONTENT, {
   "ml_boosting": `<main>
 <h1>How Boosting Works</h1>
   <div class="where"><span>Tree-Based Models</span><span>Ensemble Methods</span><span>Boosting</span><span>How Boosting Works</span></div>
-  <p class="lead">Boosting builds a team of weak models <strong>one after another</strong>, where each new member is trained to fix what the team so far still gets wrong, and the members' outputs are <strong>added up</strong>. Bagging and random forests average independent models and so cut variance; boosting attacks the other half of the error, <strong>bias</strong>. This note is the idea behind every booster: weak learners, the additive model F_m = F_{m−1} + ν·h_m, forward stagewise fitting, shrinkage, why boosting can overfit and why it hates noisy labels, how it differs from bagging, and the family of algorithms (AdaBoost → Gradient Boosting → XGBoost / LightGBM / CatBoost / HistGradientBoosting) with what each one changed.</p>
+  <p class="lead">Boosting builds a team of weak models <strong>one after another</strong>, where each new member is trained to fix what the team so far still gets wrong, and the members' outputs are <strong>added up</strong>. Bagging and random forests average independent models and so cut variance; boosting attacks the other half of the error, <strong>bias</strong>. This note follows one running example from start to finish, the captain's 14-day cricket diary shared by the whole Tree-Based Models group, and it is the idea behind every booster: weak learners, the additive model F_m = F_{m−1} + ν·h_m, forward stagewise fitting, shrinkage, why boosting can overfit and why it hates noisy labels, how it differs from bagging, and the family of algorithms (AdaBoost → Gradient Boosting → XGBoost / LightGBM / CatBoost / HistGradientBoosting) with what each one changed.</p>
 
   <h2 id="bst-where" class="open"><span class="num">★</span>Where this fits</h2>
   <figure class="viz"><svg viewBox="0 0 760 372" width="760"><defs><marker id="bst-wa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs><line x1="380" y1="38" x2="380" y2="60" stroke="currentColor" stroke-opacity="0.55" marker-end="url(#bst-wa)"/><line x1="380" y1="92" x2="110" y2="120" stroke="currentColor" stroke-opacity="0.55" marker-end="url(#bst-wa)"/><text x="239" y="111" text-anchor="end" class="tm" font-size="11">parallel</text><line x1="380" y1="92" x2="400" y2="120" stroke="currentColor" stroke-opacity="0.55" marker-end="url(#bst-wa)"/><text x="396" y="111" text-anchor="start" class="tm" font-size="11">sequential</text><line x1="380" y1="92" x2="670" y2="120" stroke="currentColor" stroke-opacity="0.55" marker-end="url(#bst-wa)"/><text x="531" y="111" text-anchor="start" class="tm" font-size="11">blend</text><line x1="110" y1="152" x2="110" y2="178" stroke="currentColor" stroke-opacity="0.55" marker-end="url(#bst-wa)"/><line x1="110" y1="210" x2="110" y2="236" stroke="currentColor" stroke-opacity="0.55" marker-end="url(#bst-wa)"/><line x1="400" y1="152" x2="400" y2="178" stroke="currentColor" stroke-opacity="0.55" marker-end="url(#bst-wa)"/><line x1="400" y1="210" x2="400" y2="236" stroke="currentColor" stroke-opacity="0.55" marker-end="url(#bst-wa)"/><line x1="400" y1="268" x2="270" y2="298" stroke="currentColor" stroke-opacity="0.55" marker-end="url(#bst-wa)"/><line x1="400" y1="268" x2="400" y2="298" stroke="currentColor" stroke-opacity="0.55" marker-end="url(#bst-wa)"/><line x1="400" y1="268" x2="530" y2="298" stroke="currentColor" stroke-opacity="0.55" marker-end="url(#bst-wa)"/><rect x="305" y="8" width="150" height="30" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.45"/><text x="380" y="27" text-anchor="middle" font-size="12.5">Decision Trees</text><rect x="300" y="62" width="160" height="30" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.45"/><text x="380" y="81" text-anchor="middle" font-size="12.5">Ensemble Learning</text><rect x="45" y="122" width="130" height="30" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.45"/><text x="110" y="141" text-anchor="middle" font-size="12.5">Bagging</text><rect x="315" y="122" width="170" height="30" rx="7" class="fg sg" stroke-width="2.5"/><text x="400" y="141" text-anchor="middle" font-size="12.5" font-weight="700">How Boosting Works</text><rect x="595" y="122" width="150" height="30" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.45"/><text x="670" y="141" text-anchor="middle" font-size="12.5">Stacking &amp; Voting</text><rect x="45" y="180" width="130" height="30" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.45"/><text x="110" y="199" text-anchor="middle" font-size="12.5">Random Forest</text><rect x="45" y="238" width="130" height="30" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.45"/><text x="110" y="257" text-anchor="middle" font-size="12.5">Extra Trees</text><rect x="330" y="180" width="140" height="30" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.45"/><text x="400" y="199" text-anchor="middle" font-size="12.5">AdaBoost</text><rect x="320" y="238" width="160" height="30" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.45"/><text x="400" y="257" text-anchor="middle" font-size="12.5">Gradient Boosting</text><rect x="215" y="300" width="110" height="30" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.45"/><text x="270" y="319" text-anchor="middle" font-size="12.5">XGBoost</text><rect x="345" y="300" width="110" height="30" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.45"/><text x="400" y="319" text-anchor="middle" font-size="12.5">LightGBM</text><rect x="475" y="300" width="110" height="30" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.45"/><text x="530" y="319" text-anchor="middle" font-size="12.5">CatBoost</text><rect x="20" y="344" width="720" height="24" rx="6" fill="none" stroke="currentColor" stroke-dasharray="5 4" stroke-opacity="0.5"/><text x="380" y="360" text-anchor="middle" class="tm" font-size="11.5">used by every model above: Feature Importance &amp; SHAP · Tuning &amp; Production</text></svg><figcaption>The tree-based family. "How Boosting Works" (green) is the root of the boosting branch: every booster below it is one way of carrying out this note's plan.</figcaption></figure>
@@ -14,7 +14,21 @@ Object.assign(TOPIC_CONTENT, {
   </ol>
   <p>Before this note you should know: bias and variance and overfitting (<a class="xref" data-note="ml_core">Core Concepts</a>), decision and regression trees (<a class="xref" data-note="ml_dtree">Decision Trees</a>), and why ensembles help (<a class="xref" data-note="ml_ensembles">Ensemble Learning</a>).</p>
 
-  <h2 id="bst-map" class="open"><span class="num">★</span>Mind Map</h2>
+    <h2 id="bst-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
+  <p>The whole note as one chain. Each idea answers the question above it; its weakness raises the next question. The numbers are from the running example: predicting how many club members turn up (Turnout) on the 14 days of the captain's cricket diary.</p>
+  <ol class="story">
+    <li><b>Bias: the error averaging can't fix</b><span>Q: bagging cut variance; can averaging also fix a model that is too simple? → No. One stump leaves MSE 55.43; averaging 200 bagged stumps still leaves 43.60, because each bagged stump can still only ask one question. We need a way to make the team <em>say more</em> than one member can.</span></li>
+    <li><b>Weak learners</b><span>Q: what should the team be built from? → Models only slightly better than guessing, like a one-question stump: the best one ("Humidity high?") removes 39% of the error, the others 1–21%. But how can many weak models become strong?</span></li>
+    <li><b>Sequential correction (fit the residuals)</b><span>Q: how does each new member know what is left to do? → Train it on the residuals y − F, what the team still gets wrong: rounds ask Humidity high?, then Overcast?, then Wind strong?; MSE 91.43 → 55.43 → 35.83 → 20.87. But what exactly is this loop optimising, and how big should each step be?</span></li>
+    <li><b>The additive model &amp; forward stagewise fitting</b><span>Q: what is the model, written down? → F_m = F_{m−1} + ν·h_m, built greedily one term at a time; for squared error the best step size is exactly 1 (β = 504/504). But a full step commits fully to each tree's noise…</span></li>
+    <li><b>Shrinkage (learning rate ν)</b><span>Q: how much of each tree should we keep? → Only a fraction ν: with ν = 0.1 the diary is still at 29.65 after 30 rounds, but on 20,000 churn rows the best validation loss improves from 0.429 (ν = 1) to 0.320 (ν = 0.1). Smaller steps need more rounds; how many?</span></li>
+    <li><b>Bias, variance &amp; the number of rounds</b><span>Q: when should boosting stop? → Rounds lower bias until a floor (stumps stop at 20.62 on the diary; depth-2 trees reach 2.48), then start fitting noise: validation loss is U-shaped, so early stopping chooses the rounds. But what if the "errors" it chases are mistakes in the data?</span></li>
+    <li><b>Noise &amp; outliers</b><span>Q: what does boosting do with a wrong label or a typo? → Chases it: D6's turnout typed as 83 instead of 22 holds 61% of the squared error and drags six honest days' predictions up by 8.7 players. Robust losses, small ν and early stopping limit the damage. So when is bagging the safer team?</span></li>
+    <li><b>Boosting vs bagging</b><span>Q: which way of building a team, when? → Bagging: independent deep trees, averaged, cuts variance, robust. Boosting: dependent shallow trees, added, cuts bias, needs a stopping rule. Then: how did real algorithms aim the next tree?</span></li>
+    <li><b>The boosting family</b><span>Q: how exactly is the next tree pointed at the errors? → By row weights (AdaBoost), by gradients of any loss (Gradient Boosting), by gradients + curvature + penalties (XGBoost), made fast (LightGBM) and safe for categories (CatBoost). Each one is the next note.</span></li>
+  </ol>
+
+<h2 id="bst-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">How Boosting Works</div>
     <div class="mm-branches">
@@ -25,6 +39,7 @@ Object.assign(TOPIC_CONTENT, {
           <li><b>Boosting cuts bias</b>: each model fixes the team's leftover error</li>
           <li><b>Sequential</b> — model m sees the errors of models 1…m−1</li>
           <li>💡 A run chase: each batting pair plays for the runs still needed</li>
+          <li><b>Diary</b>: turnout MSE 91.43 → 55.43 → 35.83 → 20.87 (Humidity high?, Overcast?, Wind strong?)</li>
         </ul>
       </div>
       <div class="mm-branch">
@@ -85,23 +100,59 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="bst-need"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">The Error Averaging Can't Fix</span><span class="rm-sub">Bias, and a team that learns in turns</span></div></div>
-      <div class="rm-item rm-done" data-target="bst-weak"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Weak Learners</span><span class="rm-sub">What "weak" means and why it is enough</span></div></div>
-      <div class="rm-item rm-done" data-target="bst-seq"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Sequential Correction by Hand</span><span class="rm-sub">6 rows, 3 rounds</span></div></div>
-      <div class="rm-item rm-done" data-target="bst-add"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">The Additive Model</span><span class="rm-sub">Forward stagewise additive modelling</span></div></div>
+      <div class="rm-item rm-done" data-target="bst-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain</span></div></div>
+      <div class="rm-item rm-done" data-target="bst-need"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">The Error Averaging Can't Fix</span><span class="rm-sub">Bias, and the cricket diary</span></div></div>
+      <div class="rm-item rm-done" data-target="bst-weak"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Weak Learners</span><span class="rm-sub">Five one-question stumps</span></div></div>
+      <div class="rm-item rm-done" data-target="bst-seq"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Sequential Correction by Hand</span><span class="rm-sub">14 days, 3 rounds</span></div></div>
+      <div class="rm-item rm-done" data-target="bst-add"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">The Additive Model</span><span class="rm-sub">Forward stagewise, β = 1</span></div></div>
       <div class="rm-item rm-done" data-target="bst-shrink"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Shrinkage</span><span class="rm-sub">The learning rate ν</span></div></div>
-      <div class="rm-item rm-done" data-target="bst-bv"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Bias, Variance &amp; Too Many Rounds</span><span class="rm-sub">Why boosting can overfit</span></div></div>
-      <div class="rm-item rm-done" data-target="bst-noise"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Noise &amp; Outliers</span><span class="rm-sub">Boosting's blind spot</span></div></div>
+      <div class="rm-item rm-done" data-target="bst-bv"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Bias, Variance &amp; Too Many Rounds</span><span class="rm-sub">Floors and U-curves</span></div></div>
+      <div class="rm-item rm-done" data-target="bst-noise"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Noise &amp; Outliers</span><span class="rm-sub">One typo, 61% of the error</span></div></div>
       <div class="rm-item rm-done" data-target="bst-vs"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Boosting vs Bagging</span><span class="rm-sub">Side by side</span></div></div>
       <div class="rm-item rm-done" data-target="bst-family"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">The Boosting Family</span><span class="rm-sub">What each algorithm changed</span></div></div>
-      <div class="rm-item rm-done" data-target="bst-traps"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">What goes wrong in practice</span></div></div>
-      <div class="rm-item rm-done" data-target="bst-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="bst-connect"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One loop, many variants</span></div></div>
+      <div class="rm-item rm-done" data-target="bst-traps"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">What goes wrong in practice</span></div></div>
+      <div class="rm-item rm-done" data-target="bst-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note in 10 minutes</span></div></div>
+      <div class="rm-item rm-done" data-target="bst-qa"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
     </div>
   </div>
 
   <h2 id="bst-need"><span class="num">01</span>The Error Averaging Can't Fix</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Bagging and random forests showed that averaging many trees cancels their <em>random</em> mistakes. But suppose every tree makes the <em>same</em> mistake because it is too simple to see the pattern. Can averaging fix that? And if not, what kind of team can?</p>
+  </div>
   <p><strong>Recall the two kinds of error</strong> (<a class="xref" data-note="ml_core">Core Concepts</a>). <strong>Variance</strong>: the model changes a lot when the training rows change, so its mistakes are partly random. <strong>Bias</strong>: the model is too simple for the pattern, so it makes the <em>same</em> mistake whatever rows it sees. Averaging n models leaves the expected prediction unchanged (the average of things that all lean left still leans left), so it can only shrink variance. That is the whole job of bagging and random forests, and why they use deep trees: deep trees have low bias and high variance, and averaging removes the variance.</p>
-  <p>Now take models with <strong>high bias</strong>, like stumps (one-question trees). Averaging 200 of them, each trained on a bootstrap sample, gives… roughly one stump. Boosting 200 of them is a different story. A curve y = 3·sin(x) plus noise, and then the churn data. The churn data is the synthetic dataset shared by all the tree notes (20,000 fake mobile customers, 1 = churned, 12,000 train / 3,000 validation / 5,000 test); every churn block in this note starts from this setup:</p>
+  <h3>The running example: the captain's cricket diary</h3>
+  <p>Every note in the Tree-Based Models group follows one small table: a college cricket captain's diary of 14 evenings, D1 to D14 (Quinlan's classic PlayTennis table, renamed). For each day he wrote down the outlook, the humidity and the wind, whether the match was played, and how many club members came to the ground (<strong>Turnout</strong>). Earlier notes grew a decision tree on the same diary to predict Play / No play. Here we predict the turnout number, because boosting is easiest to see on a number. Our weak model is a <strong>stump</strong>: a tree that asks one yes/no question, such as "Humidity high?", and predicts one number for "yes" and one for "no". In this note a stump may ask the five yes/no questions that the diary's word columns allow (Overcast? Sunny? Rain? Humidity high? Wind strong?); the numeric columns (humidity %, temperature) return in the later notes.</p>
+<div class="fx" data-lang="py">import numpy as np, pandas as pd
+from play import df                       # the captain's 14-day cricket diary
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import BaggingRegressor, GradientBoostingRegressor
+print(df[["Outlook", "Humidity", "Wind", "Turnout"]].T.to_string())
+X = pd.get_dummies(df[["Outlook", "Humidity", "Wind"]]).astype(int)   # yes/no columns
+y = df.Turnout.values.astype(float)
+print(f"mean turnout {y.mean():.2f}, MSE of always guessing it {y.var():.2f}")
+models = {
+  "1 stump":                    DecisionTreeRegressor(max_depth=1),
+  "bagging, 200 stumps":        BaggingRegressor(DecisionTreeRegressor(max_depth=1), n_estimators=200, random_state=0),
+  "boosting, 300 stumps":       GradientBoostingRegressor(max_depth=1, n_estimators=300, learning_rate=0.1),
+  "boosting, 300 depth-2 trees": GradientBoostingRegressor(max_depth=2, n_estimators=300, learning_rate=0.1)}
+for name, m in models.items():
+    m.fit(X, y)
+    print(f"{name:28s} training MSE {np.mean((m.predict(X) - y) ** 2):6.2f}")</div>
+  <div class="fx" data-lang="text">             D1      D2        D3    D4      D5      D6        D7     D8      D9     D10     D11       D12       D13     D14
+Outlook   Sunny   Sunny  Overcast  Rain    Rain    Rain  Overcast  Sunny   Sunny    Rain   Sunny  Overcast  Overcast    Rain
+Humidity   High    High      High  High  Normal  Normal    Normal   High  Normal  Normal  Normal      High    Normal    High
+Wind       Weak  Strong      Weak  Weak    Weak  Strong    Strong   Weak    Weak    Weak  Strong    Strong      Weak  Strong
+Turnout      24      20        36    32      44      22        42     26      40      46      38        38        48      20
+mean turnout 34.00, MSE of always guessing it 91.43
+1 stump                      training MSE  55.43
+bagging, 200 stumps          training MSE  43.60
+boosting, 300 stumps         training MSE  20.62
+boosting, 300 depth-2 trees  training MSE   2.48</div>
+  <p>Read the four errors from top to bottom. We look at <em>training</em> error on purpose: bias is the error a model makes even on data it has seen, because it is too simple. Always guessing the mean turnout (34) leaves an MSE of 91.43. One stump: 55.43. Averaging 200 bagged stumps: 43.60, better, because different bootstrap samples pick different questions, but each member is still one question and the average of one-question answers can only blur them. Boosting 300 stumps: 20.62. Boosting 300 depth-2 trees: 2.48. Bagging made the stump <em>steadier</em>; boosting made the team <em>able to say more</em> than any member.</p>
+  <h3>The same idea at scale</h3>
+  <p>Fourteen days are enough to see the mechanics but too few to judge accuracy on new days, so the claims about unseen data use bigger data. Take models with <strong>high bias</strong>, like stumps (one-question trees). Averaging 200 of them, each trained on a bootstrap sample, gives… roughly one stump. Boosting 200 of them is a different story. A curve y = 3·sin(x) plus noise, and then the churn data. The churn data is the synthetic dataset shared by all the tree notes (20,000 fake mobile customers, 1 = churned, 12,000 train / 3,000 validation / 5,000 test); every churn block in this note starts from this setup:</p>
   <div class="fx" data-lang="py">import numpy as np, pandas as pd, time
 from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split
@@ -156,10 +207,19 @@ churn       boosting, 300 depth-3  train acc 0.873   val acc 0.827</div>
   <div class="callout def"><span class="label">Definition</span>
     <p><strong>Boosting</strong> is a family of ensemble methods that build a strong predictor as a weighted sum of weak learners trained <strong>sequentially</strong>, where each learner is fitted to emphasise the examples (or the part of the target) that the current ensemble predicts worst. It mainly reduces bias.</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> "Weak learner" carries the whole idea. How weak is allowed, and why would a pile of weak models ever become strong?</div>
+  <div class="bridge"><b>What this still can't tell us → next: Weak learners.</b> Boosting builds its team out of deliberately weak models such as the one-question stump. How weak is allowed, and why should a pile of weak models ever become strong?</div>
 
   <h2 id="bst-weak"><span class="num">02</span>Weak Learners</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Section 01 said boosting works with models too simple to do anything alone. What exactly counts as "weak", how weak is too weak, and why should adding up weak models ever give a strong one?</p>
+  </div>
   <p><strong>Plain words.</strong> A weak learner is a model that is only slightly better than guessing, but reliably so: whatever weighting of the rows you hand it, it can find something a bit better than a coin flip. For two classes that means weighted error below 0.5. A <strong>stump</strong> is the classic example. It is fast to train, has almost no variance, and on its own is useless for anything complicated.</p>
+  <p><strong>On the diary.</strong> A stump on our 14 days can ask one of five questions. Before any question, the squared error around the mean is 14 × 91.43 = 1280. After each question (each side predicted by its own mean), it is:</p>
+  <table class="tbl">
+    <tr><th>question</th><th>Overcast?</th><th>Sunny?</th><th>Rain?</th><th>Humidity high?</th><th>Wind strong?</th></tr>
+    <tr><th>squared error left</th><td>1005.6</td><td>1129.4</td><td>1268.8</td><td><b>776.0</b></td><td>1112.0</td></tr>
+  </table>
+  <p>The best question, "Humidity high?", removes (1280 − 776) / 1280 = 39% of the error; "Overcast?" 21%, "Rain?" only 1%. That is a weak learner: better than guessing the mean, far from good.</p>
   <p><strong>The question that started boosting.</strong> In 1988 Kearns and Valiant asked: if you can always get slightly-better-than-chance models, can you always get a model that is as accurate as you like? In 1990 Schapire proved yes, with a construction: train learner 1; train learner 2 on a sample where half the rows are ones learner 1 got wrong; train learner 3 on rows where 1 and 2 disagree; take the majority vote. The intuition, if the three learners' mistakes were independent, is the jury arithmetic of <a class="xref" data-note="ml_ensembles">Ensemble Learning</a>: a majority of 3 is wrong only when at least 2 are wrong, probability 3e²(1−e) + e³ = 3e² − 2e³.</p>
   <table class="tbl">
     <tr><th>level</th><th>error of each voter</th><th>majority-of-3 error = 3e² − 2e³</th></tr>
@@ -185,67 +245,104 @@ churn       boosting, 300 depth-3  train acc 0.873   val acc 0.827</div>
   <div class="callout trap"><span class="label">Trap</span>
     <p>"Boosting needs weak learners, so the base model should be as weak as possible." Too weak is also a problem: stumps cannot model interactions at all (section 01: 0.652 vs 0.827 with depth 3 on churn). "Weak" means "simple enough not to fit everything in one go", not "one split".</p>
   </div>
+  <div class="bridge"><b>What this still can't tell us → next: Sequential correction.</b> We have our weak learners. How does each new one find out what the team still gets wrong, so that it adds something new instead of repeating the first?</div>
 
   <h2 id="bst-seq"><span class="num">03</span>Sequential Correction by Hand</h2>
-  <p>The simplest boosting there is: squared error, stumps, and each stump fitted to the current residuals (what the team still gets wrong). Six employees, x = years of experience, y = salary in lakh:</p>
-  <table class="tbl">
-    <tr><th>x</th><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td></tr>
-    <tr><th>y</th><td>3</td><td>4</td><td>6</td><td>8</td><td>12</td><td>15</td></tr>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>A single stump removes at most 39% of the error, and averaging one-question stumps only blurs them. How can a second stump find out what the first one missed, so that it adds something new instead of repeating it?</p>
+  </div>
+  <p>The simplest boosting there is: squared error, stumps, and each stump fitted to the current <strong>residuals</strong>, residual = true value − current prediction, i.e. what the team still gets wrong. On the diary:</p>
+  <p><strong>Start.</strong> The best single guess under squared error is the mean: F₀ = 476 / 14 = 34 players for every day. Residuals y − F₀: D1 −10, D2 −14, D3 +2, D4 −2, D5 +10, D6 −12, D7 +8, D8 −8, D9 +6, D10 +12, D11 +4, D12 +4, D13 +14, D14 −14. MSE 91.43.</p>
+  <p><strong>Round 1.</strong> Try the five questions on these residuals (table in section 02). "Humidity high?" wins. Its yes-days are D1, D2, D3, D4, D8, D12, D14: mean residual (−10 − 14 + 2 − 2 − 8 + 4 − 14) / 7 = −42 / 7 = <b>−6</b>. The residuals sum to 0, so the seven normal-humidity days have mean +42 / 7 = <b>+6</b>. Add the stump in full (ν = 1): F₁ = 34 − 6 = 28 on humid days and 34 + 6 = 40 on the rest. MSE 55.43.</p>
+  <p><strong>Round 2.</strong> The next stump looks at the <em>new</em> residuals y − F₁, not at y. "Humidity high?" is now useless: both of its sides already have mean residual 0, so it would add nothing. The best question is "Overcast?": the overcast days D3, D7, D12, D13 now have residuals +8, +2, +10, +8 (sum 28, mean <b>+7</b>), the other ten −28 / 10 = <b>−2.8</b>. MSE 35.83.</p>
+  <p><strong>Round 3.</strong> On the residuals after round 2 the best question is "Wind strong?": −4.47 on windy days, +3.35 on calm days. MSE 20.87.</p>
+  <table class="tbl"><caption>The team's prediction for each day after each round (ν = 1)</caption>
+    <tr><th>day</th><th>Outlook</th><th>Humidity</th><th>Wind</th><th>Turnout y</th><th>F₀</th><th>F₁ (+Humidity?)</th><th>F₂ (+Overcast?)</th><th>F₃ (+Wind?)</th></tr>
+    <tr><td>D1</td><td>Sunny</td><td>High</td><td>Weak</td><td>24</td><td>34</td><td>28.0</td><td>25.2</td><td>28.5</td></tr>
+    <tr><td>D2</td><td>Sunny</td><td>High</td><td>Strong</td><td>20</td><td>34</td><td>28.0</td><td>25.2</td><td>20.7</td></tr>
+    <tr><td>D3</td><td>Overcast</td><td>High</td><td>Weak</td><td>36</td><td>34</td><td>28.0</td><td>35.0</td><td>38.4</td></tr>
+    <tr><td>D4</td><td>Rain</td><td>High</td><td>Weak</td><td>32</td><td>34</td><td>28.0</td><td>25.2</td><td>28.5</td></tr>
+    <tr><td>D5</td><td>Rain</td><td>Normal</td><td>Weak</td><td>44</td><td>34</td><td>40.0</td><td>37.2</td><td>40.6</td></tr>
+    <tr><td>D6</td><td>Rain</td><td>Normal</td><td>Strong</td><td>22</td><td>34</td><td>40.0</td><td>37.2</td><td>32.7</td></tr>
+    <tr><td>D7</td><td>Overcast</td><td>Normal</td><td>Strong</td><td>42</td><td>34</td><td>40.0</td><td>47.0</td><td>42.5</td></tr>
+    <tr><td>D8</td><td>Sunny</td><td>High</td><td>Weak</td><td>26</td><td>34</td><td>28.0</td><td>25.2</td><td>28.5</td></tr>
+    <tr><td>D9</td><td>Sunny</td><td>Normal</td><td>Weak</td><td>40</td><td>34</td><td>40.0</td><td>37.2</td><td>40.6</td></tr>
+    <tr><td>D10</td><td>Rain</td><td>Normal</td><td>Weak</td><td>46</td><td>34</td><td>40.0</td><td>37.2</td><td>40.6</td></tr>
+    <tr><td>D11</td><td>Sunny</td><td>Normal</td><td>Strong</td><td>38</td><td>34</td><td>40.0</td><td>37.2</td><td>32.7</td></tr>
+    <tr><td>D12</td><td>Overcast</td><td>High</td><td>Strong</td><td>38</td><td>34</td><td>28.0</td><td>35.0</td><td>30.5</td></tr>
+    <tr><td>D13</td><td>Overcast</td><td>Normal</td><td>Weak</td><td>48</td><td>34</td><td>40.0</td><td>47.0</td><td>50.4</td></tr>
+    <tr><td>D14</td><td>Rain</td><td>High</td><td>Strong</td><td>20</td><td>34</td><td>28.0</td><td>25.2</td><td>20.7</td></tr>
+    <tr><th colspan="5">MSE</th><th>91.43</th><th>55.43</th><th>35.83</th><th>20.87</th></tr>
   </table>
-  <p><strong>Start</strong>: the best single guess under squared error is the mean, F₀ = 48/6 = 8. Residuals y − F₀ = −5, −4, −2, 0, +4, +7. MSE = 110/6 = 18.33.</p>
-  <p><strong>Round 1</strong>: the stump that best predicts those residuals splits at x ≤ 4.5 (left mean (−5−4−2+0)/4 = −2.75, right mean (4+7)/2 = +5.5). Add it in full (ν = 1): F₁ = 5.25, 5.25, 5.25, 5.25, 13.5, 13.5. New residuals −2.25, −1.25, 0.75, 2.75, −1.5, 1.5. MSE 3.21.</p>
-  <p><strong>Round 2</strong>: the next stump looks at <em>those</em> residuals, not at y. Best split x ≤ 2.5 (left mean −1.75, right mean +0.875). F₂ = 3.5, 3.5, 6.125, 6.125, 14.375, 14.375. MSE 1.68.</p>
-  <p><strong>Round 3</strong>: residuals −0.5, 0.5, −0.125, 1.875, −2.375, 0.625. Best split x ≤ 4.5 again, but now with the <em>opposite sign</em> (+0.44 left, −0.88 right): round 1 overshot rows 5–6 (13.5 vs a true 12) and this round pulls them back.</p>
-  <div class="fx" data-lang="py">import numpy as np
-x = np.array([1, 2, 3, 4, 5, 6], float)          # years of experience
-y = np.array([3, 4, 6, 8, 12, 15], float)        # salary (lakh)
+  <p>Follow one day. D13 (overcast, normal humidity, calm) started at 34, got +6 for "not humid", +7 for "overcast", +3.35 for "calm": 50.4. The true turnout was 48, so the team now over-shoots D13 and a later round will pull it back. Every prediction is just the starting mean plus one number from each round.</p>
+  <p>The code does exactly this for 30 rounds, and repeats it with smaller steps (ν = 0.5 and 0.1; section 05 reads those blocks):</p>
+<div class="fx" data-lang="py">import numpy as np
+from play import df
+Q = {"Overcast?": df.Outlook == "Overcast", "Sunny?": df.Outlook == "Sunny", "Rain?": df.Outlook == "Rain",
+     "Humidity high?": df.Humidity == "High", "Wind strong?": df.Wind == "Strong"}
+Q = {k: v.values for k, v in Q.items()}               # the five yes/no questions a stump can ask
+y = df.Turnout.values.astype(float)
+
 def best_stump(r):
-    best = None
-    for t in [1.5, 2.5, 3.5, 4.5, 5.5]:
-        L, R = r[x &lt;= t], r[x &gt; t]
-        sse = ((L - L.mean())**2).sum() + ((R - R.mean())**2).sum()
-        if best is None or sse &lt; best[0]:
-            best = (sse, t, L.mean(), R.mean())
-    _, t, a, b = best
-    return t, a, b
+    """Try all five questions; keep the one whose two leaf means leave the smallest squared error."""
+    sse = {k: ((r[q] - r[q].mean()) ** 2).sum() + ((r[~q] - r[~q].mean()) ** 2).sum() for k, q in Q.items()}
+    k = min(sse, key=sse.get)
+    return k, Q[k], r[Q[k]].mean(), r[~Q[k]].mean(), sse
+
 for nu in [1.0, 0.5, 0.1]:
-    F = np.full(6, y.mean())
-    print(f"nu = {nu}:  start F0 = {y.mean()}  MSE {np.mean((y-F)**2):.2f}")
+    F = np.full(14, y.mean())                          # F0 = mean turnout
+    print(f"nu = {nu}:  F0 = {y.mean():.2f}  MSE {np.mean((y - F) ** 2):.2f}")
     for m in range(1, 31):
-        t, a, b = best_stump(y - F)
-        F = F + nu * np.where(x &lt;= t, a, b)
+        r = y - F                                      # residuals: what the team still gets wrong
+        k, q, yes, no, sse = best_stump(r)
+        if nu == 1.0 and m == 1:
+            print("   round-1 SSE per question:", {a: round(float(b), 1) for a, b in sse.items()})
+            h = np.where(q, yes, no)
+            print(f"   line search beta = sum(r*h)/sum(h*h) = {np.sum(r * h):.2f}/{np.sum(h * h):.2f} = {np.sum(r * h) / np.sum(h * h):.3f}")
+        F = F + nu * np.where(q, yes, no)
         if m &lt;= 3 or m in (10, 30):
-            print(f"   round {m:2d}: stump x &lt;= {t} -&gt; ({a:+.2f}, {b:+.2f})   F = {np.round(F, 2).tolist()}   MSE {np.mean((y-F)**2):.3f}")</div>
-  <div class="fx" data-lang="text">nu = 1.0:  start F0 = 8.0  MSE 18.33
-   round  1: stump x &lt;= 4.5 -&gt; (-2.75, +5.50)   F = [5.25, 5.25, 5.25, 5.25, 13.5, 13.5]   MSE 3.208
-   round  2: stump x &lt;= 2.5 -&gt; (-1.75, +0.88)   F = [3.5, 3.5, 6.12, 6.12, 14.38, 14.38]   MSE 1.677
-   round  3: stump x &lt;= 4.5 -&gt; (+0.44, -0.88)   F = [3.94, 3.94, 6.56, 6.56, 13.5, 13.5]   MSE 1.294
-   round 10: stump x &lt;= 4.5 -&gt; (+0.16, -0.32)   F = [3.07, 3.91, 6.53, 7.49, 12.32, 14.68]   MSE 0.128
-   round 30: stump x &lt;= 4.5 -&gt; (+0.01, -0.03)   F = [3.02, 3.96, 6.06, 7.96, 12.03, 14.97]   MSE 0.002
-nu = 0.5:  start F0 = 8.0  MSE 18.33
-   round  1: stump x &lt;= 4.5 -&gt; (-2.75, +5.50)   F = [6.62, 6.62, 6.62, 6.62, 10.75, 10.75]   MSE 6.990
-   round  2: stump x &lt;= 3.5 -&gt; (-2.29, +2.29)   F = [5.48, 5.48, 5.48, 7.77, 11.9, 11.9]   MSE 3.051
-   round  3: stump x &lt;= 2.5 -&gt; (-1.98, +0.99)   F = [4.49, 4.49, 5.97, 8.27, 12.39, 12.39]   MSE 1.582
-   round 10: stump x &lt;= 5.5 -&gt; (-0.04, +0.19)   F = [3.14, 3.99, 5.75, 8.05, 12.17, 14.9]   MSE 0.020
-   round 30: stump x &lt;= 2.5 -&gt; (-0.03, +0.01)   F = [3.02, 4.0, 5.93, 8.01, 12.06, 14.97]   MSE 0.002
-nu = 0.1:  start F0 = 8.0  MSE 18.33
-   round  1: stump x &lt;= 4.5 -&gt; (-2.75, +5.50)   F = [7.72, 7.72, 7.72, 7.72, 8.55, 8.55]   MSE 15.460
-   round  2: stump x &lt;= 4.5 -&gt; (-2.47, +4.95)   F = [7.48, 7.48, 7.48, 7.48, 9.04, 9.04]   MSE 13.132
-   round  3: stump x &lt;= 4.5 -&gt; (-2.23, +4.46)   F = [7.25, 7.25, 7.25, 7.25, 9.49, 9.49]   MSE 11.246
-   round 10: stump x &lt;= 5.5 -&gt; (-0.79, +3.96)   F = [5.82, 5.82, 6.22, 7.74, 10.96, 11.44]   MSE 4.198
-   round 30: stump x &lt;= 4.5 -&gt; (-0.34, +0.69)   F = [3.98, 4.27, 6.05, 7.93, 11.76, 14.0]   MSE 0.350</div>
-  <p>Look at the ν = 1 block: rounds 1–3 match the hand numbers above, and by round 30 the six salaries are fitted almost exactly (MSE 0.002). Three things to see in this tiny example:</p>
+            print(f"   round {m:2d}: {k:15s} yes {yes:+6.2f}  no {no:+6.2f}   MSE {np.mean((y - F) ** 2):6.2f}")
+            if nu == 1.0 and m &lt;= 3:
+                print("      F =", " ".join(f"{v:.1f}" for v in F))</div>
+  <div class="fx" data-lang="text">nu = 1.0:  F0 = 34.00  MSE 91.43
+   round-1 SSE per question: {'Overcast?': 1005.6, 'Sunny?': 1129.4, 'Rain?': 1268.8, 'Humidity high?': 776.0, 'Wind strong?': 1112.0}
+   line search beta = sum(r*h)/sum(h*h) = 504.00/504.00 = 1.000
+   round  1: Humidity high?  yes  -6.00  no  +6.00   MSE  55.43
+      F = 28.0 28.0 28.0 28.0 40.0 40.0 40.0 28.0 40.0 40.0 40.0 28.0 40.0 28.0
+   round  2: Overcast?       yes  +7.00  no  -2.80   MSE  35.83
+      F = 25.2 25.2 35.0 25.2 37.2 37.2 47.0 25.2 37.2 37.2 37.2 35.0 47.0 25.2
+   round  3: Wind strong?    yes  -4.47  no  +3.35   MSE  20.87
+      F = 28.5 20.7 38.4 28.5 40.6 32.7 42.5 28.5 40.6 40.6 32.7 30.5 50.4 20.7
+   round 10: Sunny?          yes  +0.02  no  -0.01   MSE  20.62
+   round 30: Sunny?          yes  +0.00  no  +0.00   MSE  20.62
+nu = 0.5:  F0 = 34.00  MSE 91.43
+   round  1: Humidity high?  yes  -6.00  no  +6.00   MSE  64.43
+   round  2: Overcast?       yes  +7.00  no  -2.80   MSE  49.73
+   round  3: Wind strong?    yes  -4.23  no  +3.17   MSE  39.65
+   round 10: Humidity high?  yes  -0.75  no  +0.75   MSE  21.69
+   round 30: Sunny?          yes  -0.02  no  +0.01   MSE  20.62
+nu = 0.1:  F0 = 34.00  MSE 91.43
+   round  1: Humidity high?  yes  -6.00  no  +6.00   MSE  84.59
+   round  2: Humidity high?  yes  -5.40  no  +5.40   MSE  79.05
+   round  3: Humidity high?  yes  -4.86  no  +4.86   MSE  74.56
+   round 10: Humidity high?  yes  -3.54  no  +3.54   MSE  53.99
+   round 30: Wind strong?    yes  -2.11  no  +1.58   MSE  29.65</div>
+  <p>The ν = 1 block matches the hand numbers: rounds 1–3 ask Humidity high?, Overcast?, Wind strong?, and MSE goes 91.43 → 55.43 → 35.83 → 20.87. Four things to see in this tiny example:</p>
   <ul>
-    <li><strong>Each model works on the remainder</strong>: round 2 splits at 2.5, not at 4.5, because the 4.5-pattern has already been taken out of the residuals.</li>
-    <li><strong>Full steps overshoot</strong>: with ν = 1, round 3 has to undo part of round 1. That is the motivation for shrinkage (section 05), shown in the other two blocks.</li>
-    <li><strong>It will fit anything eventually</strong>: with enough rounds the training error goes to 0, including any noise in y. That is why the number of rounds must be controlled (section 06).</li>
+    <li><strong>Each model works on the remainder</strong>: round 2 does not ask "Humidity high?" again, because that pattern has already been taken out of the residuals.</li>
+    <li><strong>The team learns what no member knows</strong>: three different one-question stumps, each adding a little, describe the effect of humidity, outlook and wind together.</li>
+    <li><strong>The gains shrink</strong>: −36.0, −19.6, −15.0, then by round 10 almost nothing (20.62). With one-question stumps the team hits a floor of 20.62 (section 06 explains why); deeper trees keep going (2.48 in section 01).</li>
+    <li><strong>With deep enough trees it will fit anything</strong>, including any noise or typo in the diary. That is why the number of rounds must be controlled (section 06) and why noise is dangerous (section 07).</li>
   </ul>
   <div class="callout intu"><span class="label">Classification version</span>
-    <p>For classes there is no "residual" to subtract, so the first successful booster did something else: it kept a <strong>weight</strong> on every row and raised the weights of rows the team misclassified, so the next stump had to care about them. Ten rows, three stumps, every weight by hand: <a class="xref" data-note="ml_adaboost">AdaBoost</a>. Gradient boosting later unified both views: the "residual" becomes the gradient of a loss, which works for classes too (<a class="xref" data-note="ml_gbm">Gradient Boosting</a>).</p>
+    <p>For classes there is no "residual" to subtract, so the first successful booster did something else: it kept a <strong>weight</strong> on every row and raised the weights of rows the team misclassified, so the next stump had to care about them. The same 14 diary days predicting Play / No play, three stumps, every weight by hand: <a class="xref" data-note="ml_adaboost">AdaBoost</a>. Gradient boosting later unified both views: the "residual" becomes the gradient of a loss, which works for classes too (<a class="xref" data-note="ml_gbm">Gradient Boosting</a>).</p>
   </div>
-  <div class="bridge"><b>What's still missing?</b> We have a loop that works. To reason about it (which loss is it minimising? why add instead of average? what is the "right" size for each step?) we need to write the model down.</div>
+  <div class="bridge"><b>What this still can't tell us → next: The additive model.</b> We have a loop that works on the diary. To reason about it (which loss is it minimising? why add instead of average? what is the right size for each step?) we need to write the model down.</div>
 
   <h2 id="bst-add"><span class="num">04</span>The Additive Model &amp; Forward Stagewise Fitting</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Section 03 gave a loop that works: start at the mean, then keep adding a stump fitted to the residuals. But what is this loop actually minimising, why does it add instead of average, and is adding each stump in full the right step size?</p>
+  </div>
   <p>After M rounds the model is a sum:</p>
   <p style="text-align:center"><strong>F_M(x) = F₀ + ν·h₁(x) + ν·h₂(x) + … + ν·h_M(x),&nbsp;&nbsp;&nbsp; or step by step: F_m(x) = F_{m−1}(x) + ν·h_m(x)</strong></p>
   <p>F₀ is a constant start (mean, median, log-odds…), each h_m is a weak learner, and ν is the learning rate. For regression F is the prediction; for classification it is a score (log-odds), turned into a probability with the sigmoid. Compare it with linear regression: ŷ = b₀ + Σ βⱼxⱼ is a weighted sum of the <em>given</em> features; a boosted model is a weighted sum of <em>learned</em> features, each one a small tree chosen from the huge set of all possible trees. That is why it is called an <strong>additive model</strong> (or a basis expansion).</p>
@@ -265,7 +362,7 @@ nu = 0.1:  start F0 = 8.0  MSE 18.33
     <tr><td>any twice-differentiable loss + penalty</td><td>2nd-order Taylor expansion; leaf weight −G/(H+λ)</td><td><a class="xref" data-note="ml_xgboost">XGBoost</a> and later libraries</td></tr>
   </table>
   <h3>Worked: the line search for squared error gives β = 1</h3>
-  <p>For squared loss, once h is fixed, the best multiplier is β = Σrᵢhᵢ / Σhᵢ² (the slope of a line through the origin fitted to residuals r against h). Round 1 of section 03: r = (−5, −4, −2, 0, 4, 7), h = (−2.75, −2.75, −2.75, −2.75, 5.5, 5.5). Σrh = (−5−4−2+0)(−2.75) + (4+7)(5.5) = 30.25 + 60.5 = 90.75. Σh² = 4·7.5625 + 2·30.25 = 30.25 + 60.5 = 90.75. So β = 1: a regression tree whose leaves are mean residuals is already the best step size. The code confirms it on random data, and shows that this hand-written FSAM is exactly sklearn's <code>GradientBoostingRegressor</code>:</p>
+  <p>For squared loss, once h is fixed, the best multiplier is β = Σrᵢhᵢ / Σhᵢ² (the slope of a line through the origin fitted to residuals r against h). Round 1 of section 03 on the diary: r = y − 34 (the 14 residuals), h = −6 on the 7 humid days and +6 on the other 7. On the humid days Σrh = (−6) × (sum of their residuals, −42) = 252; on the others Σrh = 6 × 42 = 252; total Σrh = 504. Σh² = 14 × 6² = 504 (the code printed 504.00 / 504.00). So β = 1: a regression tree whose leaves are mean residuals is already the best step size. The code confirms it on random data, and shows that this hand-written FSAM is exactly sklearn's <code>GradientBoostingRegressor</code>:</p>
   <div class="fx" data-lang="py">import numpy as np
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import GradientBoostingRegressor
@@ -298,17 +395,21 @@ max |ours - sklearn GradientBoostingRegressor| = 8.88e-15</div>
   <div class="callout intu"><span class="label">Key insight</span>
     <p>Bagging: F = (1/M)·Σ h_m with each h_m trained independently on the same target. Boosting: F = F₀ + ν·Σ h_m with each h_m trained on what the previous sum gets wrong. Same "sum of trees" shape, opposite philosophy: averaging independent guesses vs adding corrections.</p>
   </div>
+  <div class="bridge"><b>What this still can't tell us → next: Shrinkage.</b> Forward stagewise fitting says the best step for squared error is a full one (β = 1). But that step is computed on 14 noisy days; adding every tree at full strength commits fully to its noise. Should we take the whole step?</div>
 
   <h2 id="bst-shrink"><span class="num">05</span>Shrinkage (the Learning Rate ν)</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Each tree is fitted to the residuals of a small, noisy sample, and section 04 adds it at full strength. Is a full step really best, or should each tree count for only a fraction of what it suggests?</p>
+  </div>
   <p><strong>The need.</strong> Each weak learner is fitted to residuals of a finite, noisy sample, so its exact numbers are partly luck. Adding it at full strength (ν = 1) commits fully to that luck, and as section 03 showed, later rounds then spend effort undoing earlier overshoots. Friedman's fix: add only a fraction ν of each learner.</p>
-  <p>Look at the three blocks in the section 03 output again:</p>
+  <p>Read the three blocks of the section 03 output (training MSE on the diary):</p>
   <table class="tbl">
     <tr><th>ν</th><th>MSE after 1 round</th><th>after 3</th><th>after 10</th><th>after 30</th></tr>
-    <tr><td>1.0</td><td>3.208</td><td>1.294</td><td>0.128</td><td>0.002</td></tr>
-    <tr><td>0.5</td><td>6.990</td><td>1.582</td><td>0.020</td><td>0.002</td></tr>
-    <tr><td>0.1</td><td>15.460</td><td>11.246</td><td>4.198</td><td>0.350</td></tr>
+    <tr><td>1.0</td><td>55.43</td><td>20.87</td><td>20.62</td><td>20.62</td></tr>
+    <tr><td>0.5</td><td>64.43</td><td>39.65</td><td>21.69</td><td>20.62</td></tr>
+    <tr><td>0.1</td><td>84.59</td><td>74.56</td><td>53.99</td><td>29.65</td></tr>
   </table>
-  <p>Smaller ν moves slower per round. ν = 0.5 starts behind ν = 1 but is ahead by round 10, because it wastes no rounds on undoing overshoots. ν = 0.1 is still far behind after 30 rounds. On training data, small steps just look slow. The real benefit shows on <em>unseen</em> data. Churn, HistGradientBoosting, 3,000 rounds at four learning rates:</p>
+  <p>Smaller ν moves slower per round. Look at the ν = 0.1 block: rounds 1, 2 and 3 <em>all</em> ask "Humidity high?" (−6.00, −5.40, −4.86 for humid days), because each round keeps only a tenth of the humidity pattern, so the same question stays the most useful until its pattern is used up. After 30 rounds ν = 0.1 is still at 29.65 while the others have reached the floor 20.62. On training data, small steps just look slow. The real benefit shows on <em>unseen</em> data. Churn, HistGradientBoosting, 3,000 rounds at four learning rates:</p>
   <div class="fx" data-lang="py">from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.metrics import log_loss
 for lr in [1.0, 0.3, 0.1, 0.03]:
@@ -350,9 +451,16 @@ lr=0.03  best val log-loss 0.320 at round 1340   at round 3000: train 0.021 val 
   <div class="callout trap"><span class="label">Trap</span>
     <p>Treating ν and the number of rounds as independent knobs. Lowering ν without raising the rounds just gives an underfit model. Fix ν (0.05–0.1 is a common start) and let early stopping choose the rounds.</p>
   </div>
+  <div class="bridge"><b>What this still can't tell us → next: Bias, variance &amp; the number of rounds.</b> Smaller steps need more rounds (≈ 1/ν). So how many rounds? Does adding rounds ever stop helping, or start hurting?</div>
 
   <h2 id="bst-bv"><span class="num">06</span>Bias, Variance &amp; Too Many Rounds</h2>
-  <p>Round by round, boosting lowers bias: the model can express more and more shapes. But every round also fits a bit of the sample's noise, so variance creeps up. Early on the bias drop wins; later the noise wins. The lr = 0.1 curve from the run above:</p>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Section 05 showed that the learning rate and the number of rounds trade against each other. But how many rounds should we run? Is there a point where more rounds stop helping, or start to hurt?</p>
+  </div>
+  <h3>On the diary: a bias floor</h3>
+  <p>In section 03 the stumps stopped at MSE 20.62 whatever ν and however many rounds. A sum of stumps gives each answer of each question its own number and adds them up: turnout = mean + (humidity effect) + (outlook effect) + (wind effect). It can never say "rainy <em>and</em> windy → about 21 players (D6 22, D14 20), but overcast <em>and</em> windy → about 40 (D7 42, D12 38)": the wind matters a lot on rainy days and hardly at all on overcast ones. That missing interaction is <strong>bias</strong>: something the model family cannot express however long you train. Depth-2 trees can ask two questions in a row, so boosting them reaches 2.48 (section 01). Deeper base trees lower bias.</p>
+  <h3>The other half: variance</h3>
+  <p>Fourteen days cannot show what happens on <em>new</em> days, so we use the churn data again. Round by round, boosting lowers bias: the model can express more and more shapes. But every round also fits a bit of the sample's noise, so variance creeps up. Early on the bias drop wins; later the noise wins. The lr = 0.1 curve from the run above:</p>
   <figure class="viz"><svg viewBox="0 0 640 300" width="640"><line x1="60" y1="250" x2="620" y2="250" stroke="currentColor"/><line x1="60" y1="20" x2="60" y2="250" stroke="currentColor"/><line x1="60.0" y1="250" x2="60.0" y2="255" stroke="currentColor"/><text x="60.0" y="268" text-anchor="middle" class="tm" font-size="11">1</text><line x1="221.1" y1="250" x2="221.1" y2="255" stroke="currentColor"/><text x="221.1" y="268" text-anchor="middle" class="tm" font-size="11">10</text><line x1="382.1" y1="250" x2="382.1" y2="255" stroke="currentColor"/><text x="382.1" y="268" text-anchor="middle" class="tm" font-size="11">100</text><line x1="543.2" y1="250" x2="543.2" y2="255" stroke="currentColor"/><text x="543.2" y="268" text-anchor="middle" class="tm" font-size="11">1000</text><line x1="55" y1="217.1" x2="620" y2="217.1" stroke="currentColor" stroke-opacity="0.12"/><text x="52" y="221.1" text-anchor="end" class="tm" font-size="11">0.1</text><line x1="55" y1="184.3" x2="620" y2="184.3" stroke="currentColor" stroke-opacity="0.12"/><text x="52" y="188.3" text-anchor="end" class="tm" font-size="11">0.2</text><line x1="55" y1="151.4" x2="620" y2="151.4" stroke="currentColor" stroke-opacity="0.12"/><text x="52" y="155.4" text-anchor="end" class="tm" font-size="11">0.3</text><line x1="55" y1="118.6" x2="620" y2="118.6" stroke="currentColor" stroke-opacity="0.12"/><text x="52" y="122.6" text-anchor="end" class="tm" font-size="11">0.4</text><line x1="55" y1="85.7" x2="620" y2="85.7" stroke="currentColor" stroke-opacity="0.12"/><text x="52" y="89.7" text-anchor="end" class="tm" font-size="11">0.5</text><line x1="55" y1="52.9" x2="620" y2="52.9" stroke="currentColor" stroke-opacity="0.12"/><text x="52" y="56.9" text-anchor="end" class="tm" font-size="11">0.6</text><line x1="55" y1="20.0" x2="620" y2="20.0" stroke="currentColor" stroke-opacity="0.12"/><text x="52" y="24.0" text-anchor="end" class="tm" font-size="11">0.7</text><text x="340.0" y="292" text-anchor="middle" class="tm" font-size="11.5">boosting rounds (log scale)</text><text x="14" y="135.0" text-anchor="middle" class="tm" font-size="11.5" transform="rotate(-90 14 135.0)">log-loss</text><polyline points="60.0,33.3 108.5,42.6 136.8,50.8 157.0,58.3 172.6,64.7 185.3,70.7 196.1,75.6 205.4,80.1 213.7,84.6 221.1,88.4 227.7,91.9 233.8,95.2 239.4,98.4 244.6,101.0 249.4,103.6 253.9,105.7 258.2,108.3 262.2,110.4 265.9,112.8 269.5,114.7 272.9,116.7 276.2,118.5 279.3,120.2 282.3,121.6 285.1,123.2 287.9,124.4 293.1,126.7 295.5,127.9 300.2,130.6 302.4,131.2 306.6,133.2 310.6,135.1 314.4,136.2 316.2,136.9 321.4,138.7 324.7,139.9 327.8,141.2 330.8,142.3 335.0,144.4 337.7,145.5 341.6,147.4 345.2,148.6 348.7,150.1 352.0,151.8 356.2,153.5 359.1,154.6 362.9,156.2 366.5,157.7 369.9,159.1 373.2,160.9 377.0,162.6 380.7,164.2 384.2,165.8 387.5,167.1 391.3,168.7 394.9,170.5 398.3,172.1 401.5,174.1 405.1,176.2 408.6,178.1 412.3,180.1 415.8,181.8 419.2,183.9 422.8,186.1 426.3,188.3 429.9,190.7 433.3,192.7 436.9,194.7 440.4,196.7 443.9,198.8 447.3,200.9 451.1,203.3 454.4,205.0 458.0,207.2 461.5,209.1 465.0,211.1 468.5,212.9 472.1,214.8 475.7,217.1 479.1,218.8 482.6,220.9 486.2,222.8 489.8,224.6 493.3,226.4 496.7,228.4 500.2,230.1 503.7,231.8 507.3,233.5 510.8,235.0 514.3,236.6 517.9,237.9 521.3,239.3 524.9,240.6 528.4,241.7 532.0,242.7 535.5,243.7 539.0,244.5 542.5,245.2 546.0,246.0 549.6,246.7 553.1,247.3 556.6,247.7 560.2,248.2 563.6,248.5 567.2,248.8 570.7,249.0 574.2,249.2 577.7,249.4 581.3,249.6 584.8,249.7 588.3,249.8 591.8,249.8 595.4,249.9 598.9,249.9 602.4,249.9 605.9,250.0 609.4,250.0 613.0,250.0 616.5,250.0 620.0,250.0" fill="none" class="st" stroke-width="2"/><line x1="74" y1="221" x2="96" y2="221" class="st" stroke-width="2.5"/><text x="102" y="225" font-size="11.5">training log-loss</text><polyline points="60.0,33.1 108.5,42.4 136.8,50.8 157.0,58.1 172.6,64.6 185.3,70.1 196.1,74.6 205.4,78.5 213.7,82.9 221.1,86.4 227.7,89.7 233.8,92.8 239.4,95.5 244.6,97.8 249.4,100.2 253.9,102.2 258.2,104.6 262.2,106.4 265.9,108.5 269.5,110.2 272.9,111.9 276.2,113.3 279.3,114.7 282.3,115.7 285.1,117.1 287.9,117.8 293.1,119.5 295.5,120.5 300.2,122.5 302.4,123.0 306.6,124.3 310.6,125.5 314.4,125.8 316.2,126.1 321.4,127.2 324.7,127.4 327.8,128.2 330.8,128.6 335.0,130.1 337.7,130.8 341.6,132.0 345.2,132.2 348.7,132.5 352.0,133.2 356.2,133.9 359.1,134.4 362.9,135.1 366.5,135.2 369.9,135.5 373.2,136.6 377.0,137.1 380.7,137.5 384.2,137.8 387.5,137.7 391.3,137.9 394.9,138.4 398.3,138.7 401.5,139.2 405.1,139.8 408.6,140.2 412.3,140.5 415.8,140.7 419.2,141.3 422.8,142.0 426.3,142.7 429.9,143.0 433.3,143.1 436.9,143.1 440.4,143.4 443.9,143.9 447.3,144.2 451.1,144.4 454.4,144.2 458.0,144.2 461.5,144.3 465.0,144.5 468.5,144.4 472.1,144.3 475.7,144.7 479.1,144.3 482.6,144.4 486.2,144.5 489.8,144.3 493.3,144.2 496.7,143.6 500.2,143.4 503.7,142.5 507.3,142.3 510.8,141.4 514.3,140.8 517.9,140.3 521.3,139.7 524.9,138.4 528.4,137.1 532.0,135.6 535.5,134.4 539.0,133.3 542.5,131.8 546.0,130.4 549.6,128.3 553.1,126.4 556.6,124.0 560.2,121.7 563.6,119.4 567.2,117.0 570.7,113.6 574.2,111.3 577.7,107.8 581.3,104.5 584.8,100.9 588.3,97.0 591.8,92.8 595.4,87.3 598.9,81.9 602.4,77.9 605.9,71.9 609.4,65.9 613.0,59.8 616.5,53.9 620.0,47.0" fill="none" class="sr" stroke-width="2"/><line x1="74" y1="238" x2="96" y2="238" class="sr" stroke-width="2.5"/><text x="102" y="242" font-size="11.5">validation log-loss</text><line x1="474.2" y1="20" x2="474.2" y2="250" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.6"/><text x="469.2" y="32" text-anchor="end" class="tm" font-size="11">best: round 373</text></svg><figcaption>HistGradientBoosting on the churn data, learning rate 0.1. Training loss keeps falling towards 0; validation loss bottoms out at round 373 and then climbs: the extra rounds are fitting noise.</figcaption></figure>
   <p>This is the most important practical difference from a random forest. A forest averages: more trees can only make the average more stable, so you cannot overfit by adding trees. Boosting adds: more rounds keep fitting whatever is left, and after a point what is left is noise. <strong>Every boosted model needs a stopping rule</strong>: hold out validation data and stop when its loss has not improved for k rounds (early stopping; details in <a class="xref" data-note="ml_gbm">Gradient Boosting</a> and <a class="xref" data-note="ml_tree_tuning">Tuning &amp; Production</a>).</p>
   <table class="tbl">
@@ -366,13 +474,38 @@ lr=0.03  best val log-loss 0.320 at round 1340   at round 3000: train 0.021 val 
   <div class="callout intu"><span class="label">The AdaBoost puzzle</span>
     <p>Early experiments found AdaBoost's test error kept falling even after its training error reached zero, which seemed to say "boosting does not overfit". The margin explanation (Schapire et al., 1998): extra rounds keep pushing training rows further from the decision boundary. It holds on clean data; with noisy labels AdaBoost does overfit. See <a class="xref" data-note="ml_adaboost">AdaBoost</a>.</p>
   </div>
+  <div class="bridge"><b>What this still can't tell us → next: Noise &amp; outliers.</b> Early stopping guards against fitting random noise in general. But what if particular rows are simply wrong, a mistyped turnout or a flipped label? Boosting chases whatever is still "wrong"…</div>
 
   <h2 id="bst-noise"><span class="num">07</span>Noise &amp; Outliers: Boosting's Blind Spot</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Boosting's whole strategy is to focus on what the team still gets wrong. What happens when what is "wrong" is the data itself: a typo in the diary or a mislabeled customer?</p>
+  </div>
   <p><strong>Why.</strong> Boosting's strength is that it focuses on what the team gets wrong. A mislabeled row (a customer marked as churned who did not) is something the team <em>should</em> get "wrong", forever. Boosting does not know that; it sees a hard row and keeps pushing:</p>
   <ul>
     <li>In <strong>AdaBoost</strong> a misclassified row's weight is multiplied by e^{α} every round it stays wrong. With α ≈ 0.42 that is ×1.53 per round before normalising. After 10 rounds of staying wrong its weight has been multiplied by e^{4.2} ≈ 67, while a row that stayed right has been multiplied by e^{−4.2} ≈ 0.015: the wrong row now counts about 4,400 times as much.</li>
     <li>In <strong>squared-error boosting</strong> an outlier with residual 100 gets a target 100 times bigger than a normal row's residual of 1, so trees spend leaves on it.</li>
   </ul>
+  <h3>On the diary: one typo</h3>
+  <p>Suppose the captain wrote 83 instead of 22 for D6. Compare the very first round on the clean and the mistyped diary:</p>
+<div class="fx" data-lang="py">import numpy as np
+from play import df
+Q = {"Overcast?": df.Outlook == "Overcast", "Sunny?": df.Outlook == "Sunny", "Rain?": df.Outlook == "Rain",
+     "Humidity high?": df.Humidity == "High", "Wind strong?": df.Wind == "Strong"}
+Q = {k: v.values for k, v in Q.items()}
+y = df.Turnout.values.astype(float)
+y_typo = y.copy(); y_typo[5] = 83                      # D6: 23 players written down as 83
+for name, yy in [("clean diary", y), ("D6 typed as 83", y_typo)]:
+    r = yy - yy.mean()
+    sse = {k: ((r[q] - r[q].mean()) ** 2).sum() + ((r[~q] - r[~q].mean()) ** 2).sum() for k, q in Q.items()}
+    k = min(sse, key=sse.get); q = Q[k]
+    print(f"{name:15s} F0 {yy.mean():5.2f}  D6 residual {r[5]:+6.2f}  share of total squared residual {r[5]**2 / (r**2).sum():.0%}")
+    print(f"{'':15s} round-1 stump: {k} yes {r[q].mean():+.2f} no {r[~q].mean():+.2f}")</div>
+  <div class="fx" data-lang="text">clean diary     F0 34.00  D6 residual -12.00  share of total squared residual 11%
+                round-1 stump: Humidity high? yes -6.00 no +6.00
+D6 typed as 83  F0 38.36  D6 residual +44.64  share of total squared residual 61%
+                round-1 stump: Humidity high? yes -10.36 no +10.36</div>
+  <p>D6's residual jumps from −12 to +44.64, and that one day now holds 61% of the total squared residual (11% before; a fair share would be 1/14 = 7%). Round 1 still asks "Humidity high?", but its answers are inflated: the start moves from 34 to 38.36 and the normal-humidity leaf from +6 to +10.36, so the six honest normal-humidity days are now predicted 48.7 instead of 40, 8.7 players too many, all because of one wrong number. Every later round keeps chasing whatever of the typo is left.</p>
+  <h3>At scale: flipped labels</h3>
   <p>Experiment: flip 20% of the churn <em>training</em> labels at random (validation stays clean) and watch validation accuracy as rounds are added, next to a random forest:</p>
   <div class="fx" data-lang="py">from sklearn.ensemble import HistGradientBoostingClassifier, AdaBoostClassifier
 rng2 = np.random.default_rng(3)
@@ -392,8 +525,12 @@ for name, yy in [("clean labels", ytr), ("20% flipped", yn)]:
   <div class="callout trap"><span class="label">Trap</span>
     <p>Reading "boosting is the most accurate tabular model" as "always use boosting". On noisy labels or tiny datasets the extra flexibility hurts, and a forest (or a regularised linear model) can win. Compare on validation data.</p>
   </div>
+  <div class="bridge"><b>What this still can't tell us → next: Boosting vs bagging.</b> We have now seen boosting's strength (it removes bias) and its weaknesses (it needs a stopping rule and it chases noise). Side by side with bagging, when should you choose which?</div>
 
   <h2 id="bst-vs"><span class="num">08</span>Boosting vs Bagging</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>We now have two ways to build a team of trees: average independent ones (bagging) or add dependent ones (boosting). Side by side, which error does each cut, what does each cost, and when should you choose which?</p>
+  </div>
   <table class="tbl">
     <tr><th></th><th>Bagging / Random Forest</th><th>Boosting</th></tr>
     <tr><td>How models are trained</td><td>in parallel, independently</td><td>in sequence, each depends on the previous ones</td></tr>
@@ -406,12 +543,17 @@ for name, yy in [("clean labels", ytr), ("20% flipped", yn)]:
     <tr><td>Tuning effort</td><td>low; defaults work</td><td>higher: ν, rounds, depth, subsampling</td></tr>
     <tr><td>Parallelism</td><td>trees in parallel</td><td>rounds in sequence (split search in parallel)</td></tr>
     <tr><td>Built-in validation</td><td>out-of-bag error</td><td>early stopping on a validation slice</td></tr>
+    <tr><td>Diary turnout (training MSE)</td><td>200 bagged stumps 43.60 (one stump 55.43)</td><td>300 boosted stumps 20.62; depth-2 trees 2.48</td></tr>
     <tr><td>Churn (this data)</td><td>RF ≈ 0.88 val accuracy</td><td>0.83–0.87 depending on settings</td></tr>
     <tr><td>Examples</td><td>BaggingClassifier, RandomForest, ExtraTrees</td><td>AdaBoost, GradientBoosting, XGBoost, LightGBM, CatBoost</td></tr>
   </table>
   <p>The two ideas also combine: stochastic gradient boosting and XGBoost/LightGBM's row and column subsampling put bagging-style randomness inside boosting; a random forest can be the first stage of a stacked model (<a class="xref" data-note="ml_stacking">Stacking &amp; Voting</a>).</p>
+  <div class="bridge"><b>What this still can't tell us → next: The boosting family.</b> "Aim the next tree at the errors" is a plan, not an algorithm. How exactly do the real algorithms point each new tree at what is left?</div>
 
   <h2 id="bst-family"><span class="num">09</span>The Boosting Family: What Each One Changed</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Every booster follows the plan of this note: add small trees one after another, each aimed at what is left. But "aimed at what is left" can be done in several ways. Which algorithm chose which way, and what limit of the one before did it fix?</p>
+  </div>
   <figure class="viz"><svg viewBox="0 0 760 326" width="760"><line x1="70" y1="24" x2="70" y2="296" stroke="currentColor" stroke-opacity="0.4" stroke-width="2"/><text x="56" y="28" text-anchor="end" class="tm" font-size="12">1990</text><circle cx="70" cy="24" r="6" class="ft st" stroke-width="2"/><text x="86" y="28" font-size="12.5" font-weight="700">Boosting is possible</text><text x="262" y="28" class="tm" font-size="11.5">Schapire: any weak learner can be boosted into a strong one (theory)</text><text x="56" y="62" text-anchor="end" class="tm" font-size="12">1995</text><circle cx="70" cy="58" r="6" class="ft st" stroke-width="2"/><text x="86" y="62" font-size="12.5" font-weight="700">AdaBoost</text><text x="262" y="62" class="tm" font-size="11.5">Freund &amp; Schapire: re-weight the wrong rows; first practical booster</text><text x="56" y="96" text-anchor="end" class="tm" font-size="12">2000</text><circle cx="70" cy="92" r="6" class="ft st" stroke-width="2"/><text x="86" y="96" font-size="12.5" font-weight="700">Statistical view</text><text x="262" y="96" class="tm" font-size="11.5">Friedman, Hastie, Tibshirani: AdaBoost = stagewise exp. loss</text><text x="56" y="130" text-anchor="end" class="tm" font-size="12">2001</text><circle cx="70" cy="126" r="6" class="ft st" stroke-width="2"/><text x="86" y="130" font-size="12.5" font-weight="700">Gradient Boosting</text><text x="262" y="130" class="tm" font-size="11.5">Friedman: any differentiable loss; trees fit the negative gradient</text><text x="56" y="164" text-anchor="end" class="tm" font-size="12">2002</text><circle cx="70" cy="160" r="6" class="ft st" stroke-width="2"/><text x="86" y="164" font-size="12.5" font-weight="700">Stochastic GB</text><text x="262" y="164" class="tm" font-size="11.5">Friedman: each tree on a random half of the rows</text><text x="56" y="198" text-anchor="end" class="tm" font-size="12">2014</text><circle cx="70" cy="194" r="6" class="ft st" stroke-width="2"/><text x="86" y="198" font-size="12.5" font-weight="700">XGBoost</text><text x="262" y="198" class="tm" font-size="11.5">Chen &amp; Guestrin: 2nd-order steps, leaf penalties, missing values, speed</text><text x="56" y="232" text-anchor="end" class="tm" font-size="12">2017</text><circle cx="70" cy="228" r="6" class="ft st" stroke-width="2"/><text x="86" y="232" font-size="12.5" font-weight="700">LightGBM</text><text x="262" y="232" class="tm" font-size="11.5">Microsoft: histogram bins, leaf-wise trees, GOSS, EFB</text><text x="56" y="266" text-anchor="end" class="tm" font-size="12">2017</text><circle cx="70" cy="262" r="6" class="ft st" stroke-width="2"/><text x="86" y="266" font-size="12.5" font-weight="700">CatBoost</text><text x="262" y="266" class="tm" font-size="11.5">Yandex: ordered boosting, leak-free categorical encoding</text><text x="56" y="300" text-anchor="end" class="tm" font-size="12">2019</text><circle cx="70" cy="296" r="6" class="ft st" stroke-width="2"/><text x="86" y="300" font-size="12.5" font-weight="700">HistGradientBoosting</text><text x="262" y="300" class="tm" font-size="11.5">sklearn: LightGBM-style boosting built in</text></svg><figcaption>Thirty years of boosting: each step kept the "add small models in sequence" plan and fixed a limit of the one before.</figcaption></figure>
   <table class="tbl">
     <tr><th>algorithm</th><th>how the next tree is aimed at the errors</th><th>main change vs the one before</th><th>its remaining weakness</th></tr>
@@ -423,6 +565,16 @@ for name, yy in [("clean labels", ytr), ("20% flipped", yn)]:
     <tr><td><a class="xref" data-note="ml_catboost">CatBoost</a> (2017)</td><td>ordered boosting; symmetric (oblivious) trees</td><td>leak-free ordered target statistics for categories; strong defaults</td><td>slower per tree to train</td></tr>
     <tr><td>HistGradientBoosting (2019)</td><td>LightGBM-style histograms in sklearn</td><td>fast, NaN + categories, early stopping built into sklearn</td><td>fewer knobs than the big libraries</td></tr>
   </table>
+  <h3>What each one would do with the diary</h3>
+  <table class="tbl">
+    <tr><th>algorithm</th><th>on the 14 diary days</th></tr>
+    <tr><td><a class="xref" data-note="ml_adaboost">AdaBoost</a></td><td>Predicts Play / No play. Every day starts with weight 1/14; days the stump gets wrong are made heavier, so the next stump must care about them.</td></tr>
+    <tr><td><a class="xref" data-note="ml_gbm">Gradient Boosting</a></td><td>Exactly section 03 for turnout (residual = negative gradient of squared error); for Play it fits y − p, the gap between the label and the predicted probability; with absolute or Huber loss D6's typo would count for much less.</td></tr>
+    <tr><td><a class="xref" data-note="ml_xgboost">XGBoost</a></td><td>Each day gets a gradient g and a curvature h; a leaf's value is −G/(H + λ), so a leaf holding few days is pulled toward 0.</td></tr>
+    <tr><td><a class="xref" data-note="ml_lightgbm">LightGBM</a></td><td>Puts the humidity reading into a handful of bins before searching splits, and notices that the three Outlook columns are never 1 together, so it bundles them into one.</td></tr>
+    <tr><td><a class="xref" data-note="ml_catboost">CatBoost</a></td><td>Turns Outlook into a number using only the days <em>before</em> each day, so no day sees its own label.</td></tr>
+  </table>
+  <h3>At scale: all of them on the churn data</h3>
   <p>All of them on the churn data with similar settings (500 trees, no early stopping, so the numbers compare the engines, not tuning):</p>
   <div class="fx" data-lang="py">import xgboost as xgb, lightgbm as lgb
 from catboost import CatBoostClassifier
@@ -443,8 +595,57 @@ LightGBM (500)               test acc 0.872     1.1s
 CatBoost (500)               test acc 0.875     2.8s</div>
   <p>Read the two columns separately. <strong>Accuracy</strong>: every booster lands between 0.844 and 0.875; the gradient-based ones beat AdaBoost, and the differences among the modern libraries are small at default-ish settings. <strong>Time</strong> (single thread): AdaBoost and the classic GradientBoosting need 36–41 s because they try every cut-off of every column; the histogram-based engines (HistGradientBoosting, XGBoost, LightGBM) need 1–1.5 s for 500 trees, and CatBoost 2.8 s. That 25–35× speed-up, not a new idea about accuracy, is why the libraries took over: it makes early stopping, cross-validation and tuning affordable. (For reference, a 300-tree random forest scores about 0.88 on this data.)</p>
   <p>Reading order from here: <a class="xref" data-note="ml_adaboost">AdaBoost</a> (re-weighting, the exponential-loss view, a full hand trace), then <a class="xref" data-note="ml_gbm">Gradient Boosting</a> (pseudo-residuals, losses, line search, learning rate, early stopping), then the three libraries.</p>
+  <div class="bridge"><b>What this still can't tell us → next: How it all connects.</b> We have met bias, weak learners, residuals, the additive model, shrinkage, rounds, noise and a family of algorithms. How do they hang together as one system?</div>
 
-  <h2 id="bst-traps"><span class="num">10</span>Common Mistakes</h2>
+    <h2 id="bst-connect"><span class="num">10</span>How It All Connects</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Bias, stumps, residuals, F_m = F_{m−1} + ν·h_m, shrinkage, early stopping, robust losses, AdaBoost, GBM, XGBoost: a list of separate facts, or one idea grown step by step?</p>
+  </div>
+  <figure class="viz"><svg viewBox="0 0 680 330" width="680">
+<defs><marker id="bst-c9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+<rect x="10" y="10" width="190" height="46" rx="7" class="fr sr"/><text x="105" y="29" text-anchor="middle" font-size="11.5" font-weight="700">bias: averaging can't fix it</text><text x="105" y="46" text-anchor="middle" class="tm" font-size="10">bagged stumps 43.60</text>
+<line x1="200" y1="33" x2="238" y2="33" stroke="currentColor" marker-end="url(#bst-c9)"/>
+<rect x="240" y="10" width="180" height="46" rx="7" class="fb sb"/><text x="330" y="29" text-anchor="middle" font-size="11.5" font-weight="700">weak learner (stump)</text><text x="330" y="46" text-anchor="middle" class="tm" font-size="10">Humidity high? removes 39%</text>
+<line x1="420" y1="33" x2="458" y2="33" stroke="currentColor" marker-end="url(#bst-c9)"/>
+<rect x="460" y="10" width="210" height="46" rx="7" class="fb sb"/><text x="565" y="29" text-anchor="middle" font-size="11.5" font-weight="700">fit the residuals y − F</text><text x="565" y="46" text-anchor="middle" class="tm" font-size="10">91.43 → 55.43 → 35.83 → 20.87</text>
+<line x1="565" y1="56" x2="565" y2="88" stroke="currentColor" marker-end="url(#bst-c9)"/>
+<rect x="400" y="90" width="270" height="46" rx="7" class="ft st"/><text x="535" y="109" text-anchor="middle" font-size="11.5" font-weight="700">additive model F_m = F_{m−1} + ν·h_m</text><text x="535" y="126" text-anchor="middle" class="tm" font-size="10">forward stagewise; β = 1 for squared error</text>
+<line x1="400" y1="113" x2="332" y2="113" stroke="currentColor" marker-end="url(#bst-c9)"/>
+<rect x="130" y="90" width="200" height="46" rx="7" class="ft st"/><text x="230" y="109" text-anchor="middle" font-size="11.5" font-weight="700">shrinkage ν</text><text x="230" y="126" text-anchor="middle" class="tm" font-size="10">0.1: slower, better (0.320 vs 0.429)</text>
+<line x1="230" y1="136" x2="230" y2="168" stroke="currentColor" marker-end="url(#bst-c9)"/>
+<rect x="110" y="170" width="240" height="46" rx="7" class="fg sg"/><text x="230" y="189" text-anchor="middle" font-size="11.5" font-weight="700">rounds → early stopping</text><text x="230" y="206" text-anchor="middle" class="tm" font-size="10">validation loss U-shaped</text>
+<line x1="535" y1="136" x2="535" y2="168" stroke="currentColor" marker-end="url(#bst-c9)"/>
+<rect x="400" y="170" width="270" height="46" rx="7" class="fg sg"/><text x="535" y="189" text-anchor="middle" font-size="11.5" font-weight="700">tree depth = interactions</text><text x="535" y="206" text-anchor="middle" class="tm" font-size="10">stump floor 20.62; depth 2 → 2.48</text>
+<line x1="350" y1="193" x2="398" y2="193" stroke="currentColor" stroke-dasharray="4 3"/>
+<rect x="10" y="240" width="300" height="38" rx="7" class="fr sr"/><text x="160" y="264" text-anchor="middle" font-size="11">chases noise: D6 typo = 61% of the error</text>
+<line x1="230" y1="216" x2="200" y2="238" stroke="currentColor" marker-end="url(#bst-c9)"/>
+<rect x="330" y="240" width="340" height="38" rx="7" class="fv" stroke="currentColor" stroke-opacity="0.3"/><text x="500" y="264" text-anchor="middle" font-size="11">how to aim h_m: weights · gradients · g + h · bins · ordering</text>
+<line x1="535" y1="216" x2="500" y2="238" stroke="currentColor" marker-end="url(#bst-c9)"/>
+<text x="340" y="304" text-anchor="middle" class="tm" font-size="10.5">AdaBoost → Gradient Boosting → XGBoost → LightGBM → CatBoost: each keeps the loop and changes how h_m is aimed or found</text>
+<text x="340" y="322" text-anchor="middle" class="tm" font-size="10.5">robust losses, small ν, subsampling and early stopping answer the red boxes</text>
+</svg><figcaption>One loop runs through the whole note: start at a constant, fit a weak tree to what is still wrong, add a shrunken copy, repeat, stop on validation data. Its weaknesses (bias floor of stumps, fitting noise) and its open choice (how to aim the next tree) produce everything else.</figcaption></figure>
+  <table class="tbl"><caption>Every concept on the same 14 diary days (turnout, squared error)</caption>
+    <tr><th>Concept</th><th>Built from</th><th>Answers which question</th><th>On the diary</th><th>When to use / watch</th></tr>
+    <tr><td>Bias</td><td>training error of the best model in a family</td><td>can averaging fix a too-simple model?</td><td>1 stump 55.43; 200 bagged stumps 43.60</td><td>diagnose: high training error → more capacity, not more averaging</td></tr>
+    <tr><td>Weak learner (stump)</td><td>one yes/no question, two leaf means</td><td>what is the team made of?</td><td>best question Humidity high?: 1280 → 776 (−39%)</td><td>stumps for readability; depth 3–8 / 31 leaves in practice</td></tr>
+    <tr><td>F₀</td><td>argmin of the loss over a constant</td><td>where does the team start?</td><td>mean turnout 34</td><td>mean (squared), median (absolute), log-odds (log-loss)</td></tr>
+    <tr><td>Residual</td><td>y − F_{m−1}</td><td>what is still wrong?</td><td>D6: −12 after F₀</td><td>the target of every new tree (squared error)</td></tr>
+    <tr><td>Sequential correction</td><td>stump fitted to residuals, added</td><td>how does each member add something new?</td><td>Humidity high?, Overcast?, Wind strong?: 91.43 → 20.87</td><td>always: the core loop</td></tr>
+    <tr><td>Additive model / FSAM</td><td>sum of frozen terms, greedy</td><td>what is being optimised?</td><td>β = 504 / 504 = 1</td><td>explains AdaBoost (exp. loss) and GBM (any loss)</td></tr>
+    <tr><td>Shrinkage ν</td><td>fraction of each tree kept</td><td>how big a step?</td><td>ν = 0.1: 29.65 after 30 rounds (ν = 1: 20.62)</td><td>0.05–0.1 with early stopping</td></tr>
+    <tr><td>Depth / interactions</td><td>questions per tree</td><td>why does it stop improving?</td><td>stump floor 20.62; depth 2 → 2.48</td><td>raise depth when training error stalls</td></tr>
+    <tr><td>Early stopping</td><td>validation loss per round</td><td>how many rounds?</td><td>(churn: best at round 373 for ν = 0.1)</td><td>every boosted model</td></tr>
+    <tr><td>Robust loss</td><td>loss that grows slowly for big errors</td><td>what about typos and wrong labels?</td><td>D6 typed 83: 61% of squared error, honest days +8.7</td><td>noisy targets: Huber / absolute; log-loss not exponential</td></tr>
+  </table>
+  <div class="callout intu"><span class="label">Key insight</span>
+    <p>One sentence holds the note: <strong>boosting is greedy, one-tree-at-a-time minimisation of a loss, where each new weak tree is fitted to what the current sum still gets wrong and added with a small step.</strong> Fitting the remainder is why it removes bias (the team can say what no member can); adding small steps is why it needs a learning rate and a stopping rule; chasing the remainder is why it is sensitive to noise. The algorithms in the family differ only in how they find and aim each new tree.</p>
+  </div>
+  <div class="bridge"><b>What this still can't tell us → next: Common mistakes.</b> Knowing how the parts fit, what goes wrong when people use boosting in practice?</div>
+
+<h2 id="bst-traps"><span class="num">11</span>Common Mistakes</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>We know how boosting works and how its parts connect. Which mistakes cost people the most when they actually use it?</p>
+  </div>
   <div class="callout trap"><span class="label">Trap: "more trees is always better"</span>
     <p>True for a random forest, false for boosting. Use early stopping on a validation set.</p>
   </div>
@@ -466,8 +667,66 @@ CatBoost (500)               test acc 0.875     2.8s</div>
   <div class="callout trap"><span class="label">Trap: "boosting is sequential, so it can't use many cores"</span>
     <p>The rounds are sequential, but inside each round the split search over features and bins is parallel. That is how XGBoost and LightGBM are fast.</p>
   </div>
+  <div class="bridge"><b>What this still can't tell us → next: Revision sheet.</b> The whole note on one page, for revising.</div>
 
-  <h2 id="bst-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+    <h2 id="bst-rev"><span class="num">R</span>Revision Sheet</h2>
+  <p>The whole note on one sheet. Running example: the captain's cricket diary of 14 days (D1–D14) with Outlook, Humidity, Wind and Turnout (players who came): 24, 20, 36, 32, 44, 22, 42, 26, 40, 46, 38, 38, 48, 20; mean 34. Weak learner = a stump asking one of five yes/no questions (Overcast? Sunny? Rain? Humidity high? Wind strong?).</p>
+  <h3>The question ladder</h3>
+  <table class="tbl">
+    <tr><th>Concept</th><th>Question it answers</th><th>Answer on the diary</th><th>Weakness → next</th></tr>
+    <tr><td>Bias</td><td>can averaging fix a too-simple model?</td><td>no: 1 stump 55.43, 200 bagged stumps 43.60</td><td>need members that work on what is left</td></tr>
+    <tr><td>Weak learner</td><td>what do we build from?</td><td>stump; best "Humidity high?" removes 39%</td><td>how to combine many?</td></tr>
+    <tr><td>Residual fitting</td><td>how does each member add something new?</td><td>Humidity high?, Overcast?, Wind strong?: 91.43 → 55.43 → 35.83 → 20.87</td><td>what is it optimising? step size?</td></tr>
+    <tr><td>Additive model / FSAM</td><td>what is the model?</td><td>F_m = F_{m−1} + ν·h_m; β = 1</td><td>full steps commit to noise</td></tr>
+    <tr><td>Shrinkage ν</td><td>how big a step?</td><td>ν = 0.1: 29.65 after 30 rounds; churn val 0.320 vs 0.429</td><td>how many rounds?</td></tr>
+    <tr><td>Rounds &amp; early stopping</td><td>when to stop?</td><td>stump floor 20.62, depth 2 → 2.48; churn val loss U-shaped</td><td>chases bad data</td></tr>
+    <tr><td>Noise &amp; outliers</td><td>what about wrong labels/typos?</td><td>D6 = 83: 61% of squared error, six honest days +8.7</td><td>when is bagging safer?</td></tr>
+    <tr><td>Boosting vs bagging</td><td>which team, when?</td><td>bagging: variance, robust; boosting: bias, needs stopping</td><td>how to aim the next tree?</td></tr>
+    <tr><td>The family</td><td>how is h_m aimed?</td><td>weights / gradients / g + h / histograms / ordered statistics</td><td>→ next notes</td></tr>
+  </table>
+  <h3>Definitions</h3>
+  <ul>
+    <li><strong>Boosting</strong>: an ensemble built sequentially; each weak learner is trained on what the current ensemble gets wrong; outputs are added with weights. Reduces bias mainly.</li>
+    <li><strong>Weak learner</strong>: error ≤ ½ − γ on any weighting of the rows (an edge γ &gt; 0 over guessing). Usually a shallow tree.</li>
+    <li><strong>Residual</strong>: y − F_{m−1}(x), the part of the target the team has not explained yet (= negative gradient of ½(y − F)²).</li>
+    <li><strong>Forward stagewise additive modelling</strong>: add one term at a time to minimise the loss, never re-fit old terms.</li>
+    <li><strong>Shrinkage / learning rate ν</strong>: keep only the fraction ν of each new learner.</li>
+    <li><strong>Early stopping</strong>: stop adding rounds when validation loss has not improved for k rounds; keep the best round.</li>
+  </ul>
+  <h3>Formulas</h3>
+  <table class="tbl">
+    <tr><th>Name</th><th>Formula</th><th>Symbols</th><th>Diary value</th></tr>
+    <tr><td>Start</td><td>F₀ = argmin_c Σ L(yᵢ, c)</td><td>c a constant; squared error → mean</td><td>34</td></tr>
+    <tr><td>Residual</td><td>rᵢ = yᵢ − F_{m−1}(xᵢ)</td><td>yᵢ true value, F_{m−1} current team</td><td>D6: −12</td></tr>
+    <tr><td>Stump leaf</td><td>mean of the residuals on that side</td><td>one value for "yes", one for "no"</td><td>Humidity high?: −6 / +6</td></tr>
+    <tr><td>Update</td><td>F_m(x) = F_{m−1}(x) + ν·h_m(x)</td><td>h_m new tree, ν learning rate</td><td>D13: 34 + 6 + 7 + 3.35 = 50.4</td></tr>
+    <tr><td>Whole model</td><td>F_M(x) = F₀ + Σₘ ν·h_m(x)</td><td>M number of rounds</td><td>—</td></tr>
+    <tr><td>FSAM step</td><td>(β_m, h_m) = argmin Σᵢ L(yᵢ, F_{m−1}(xᵢ) + β·h(xᵢ))</td><td>β step size for tree h</td><td>—</td></tr>
+    <tr><td>Line search (squared)</td><td>β = Σ rᵢhᵢ / Σ hᵢ²</td><td>slope of r on h through 0</td><td>504 / 504 = 1</td></tr>
+    <tr><td>Majority of 3</td><td>3e² − 2e³</td><td>e error of each independent voter</td><td>0.3 → 0.216</td></tr>
+    <tr><td>Rounds vs ν</td><td>best M ≈ c / ν</td><td>halve ν ≈ double M</td><td>churn: 373 at 0.1, 1,340 at 0.03</td></tr>
+  </table>
+  <h3>When to use, when not</h3>
+  <div class="cards">
+    <div><b>Use boosting</b><p>Tabular data where accuracy matters and you can hold out validation data for early stopping; clean-ish labels; you can afford some tuning.</p><small>Modern library, ν 0.05–0.1, depth 3–8, early stopping</small></div>
+    <div><b>Prefer bagging / forest</b><p>Very noisy labels, tiny data, no time to tune, or you want a model that cannot be broken by "too many trees".</p><small>Compare both on the same folds</small></div>
+    <div><b>Stumps</b><p>When you want an additive, readable model (one curve per feature). They cannot learn interactions: the diary stalls at 20.62.</p><small>Depth 2+ for interactions</small></div>
+    <div><b>Robust loss</b><p>Targets with outliers or typos (D6 = 83). Huber / absolute for regression; log-loss rather than exponential for classes.</p><small>Plus small ν and subsampling</small></div>
+  </div>
+  <div class="callout trap"><span class="label">Key traps</span>
+    <p>"More trees is always better" (only for forests); full-depth base trees; changing ν without changing the rounds; exponential/squared loss on noisy labels; boosting linear models to get curves; early stopping on the test set; thinking boosting cannot use many cores (rounds are sequential, split search is parallel).</p>
+  </div>
+  <h3>Five rapid-fire checks</h3>
+  <table class="tbl">
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>Humid days have residuals −10, −14, +2, −2, −8, +4, −14 after F₀ = 34. What does round 1's stump add for them?</td><td>Their mean, −6 (and +6 for the seven other days)</td></tr>
+    <tr><td>Why does round 2 not ask "Humidity high?" again?</td><td>Its pattern is already removed: both sides have mean residual 0</td></tr>
+    <tr><td>Why can 300 boosted stumps not go below 20.62 on the diary?</td><td>A sum of stumps is additive; it cannot express interactions such as "rainy and windy"</td></tr>
+    <tr><td>You halve ν from 0.1 to 0.05. What happens to the best number of rounds?</td><td>Roughly doubles</td></tr>
+    <tr><td>Bagging reduces ___, boosting reduces ___.</td><td>Variance; bias</td></tr>
+  </table>
+
+<h2 id="bst-qa"><span class="num">12</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
   <details class="qa"><summary><span class="qmark">Q</span>What is boosting, in two sentences?</summary><div class="qa-body">An ensemble built sequentially: each new weak model is trained to fix the errors the current ensemble still makes, and the models' outputs are added with a small weight. It mainly reduces bias, turning weak learners into a strong one.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Bagging reduces variance and boosting reduces bias. Explain why.</summary><div class="qa-body">Averaging models leaves the expected prediction unchanged and only cancels random, model-to-model fluctuation, i.e. variance; it needs low-bias members (deep trees). Boosting changes the target of each new model to the remaining error, so the sum can express patterns no single member can, i.e. it removes bias; it uses high-bias, low-variance members (shallow trees). On churn, 300 bagged stumps = 0.596 (same as one stump), 300 boosted stumps = 0.652.</div></details>
@@ -482,6 +741,10 @@ CatBoost (500)               test acc 0.875     2.8s</div>
   <details class="qa"><summary><span class="qmark">Q</span>Connection: what did XGBoost, LightGBM and CatBoost each add?</summary><div class="qa-body">XGBoost: second-order (gradient + Hessian) objective with leaf penalties, sparsity-aware missing values, fast parallel/histogram splits. LightGBM: histogram binning, leaf-wise growth, GOSS sampling and EFB bundling for speed. CatBoost: ordered boosting and ordered target statistics to use categorical features without target leakage, plus symmetric trees.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Your data has 30% label noise and 2,000 rows. Boosting or random forest?</summary><div class="qa-body">Start with a random forest: it is robust to noisy labels, needs little tuning and cannot overfit by adding trees. If you try boosting, use log-loss, a small learning rate, shallow trees, subsampling and early stopping, and compare both on the same validation folds.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Is a boosted model of stumps interpretable?</summary><div class="qa-body">More than deep boosting: a sum of stumps is an additive model, so each feature's effect can be drawn as one curve (summing all stumps on that feature). With deeper trees, interactions appear and you need tools like SHAP (<a class="xref" data-note="ml_tree_explain">Feature Importance &amp; SHAP</a>).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does boosting need weak learners, and what breaks if you skip that and boost a fully grown tree?</summary><div class="qa-body">The first fully grown tree fits the training rows as closely as it can (on the diary a full tree leaves training MSE 0.29 instead of a stump's 55.43; only days with identical weather but different turnout, D1/D8 and D5/D10, stay unexplained), so the residuals are mostly 0 and later rounds have nothing to learn: the "ensemble" is one overfit tree. Weak learners leave a remainder, so many small corrections can add up, and the stopping rule decides how far to go.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: shrinkage and early stopping are always used together. What breaks if you use only one?</summary><div class="qa-body">Shrinkage alone: a small ν with a fixed, too small number of rounds underfits (the diary at ν = 0.1 is still at 29.65 after 30 rounds); with too many rounds it eventually overfits anyway. Early stopping alone with ν = 1: it stops early, but each round took a full noisy step, so the best point is worse (churn best val log-loss 0.429 vs 0.320). ν sets how carefully you walk; early stopping says when to stop walking.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: on the diary the stumps' rounds ask Humidity high?, then Overcast?, then Wind strong?. Why a different question each time, and what does that tell you about residuals?</summary><div class="qa-body">After round 1 the residuals on humid and normal-humidity days each average 0, so "Humidity high?" can explain nothing more. The residuals contain only what the team has not yet explained, so the best next question is always about something new. That is the whole idea of sequential correction, and it is why gradient boosting generalises the residual to the negative gradient of any loss.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: how is the squared-error residual related to AdaBoost's row weights?</summary><div class="qa-body">Both are ways of telling the next learner what is still wrong. Squared error changes the <em>target</em> (fit y − F); AdaBoost keeps the labels and changes the <em>weights</em> (e^{−yF}, so misclassified rows weigh more). Both come from forward stagewise fitting of an additive model, with squared and exponential loss respectively; gradient boosting covers both as "fit the negative gradient".</div></details>
 </main>
 `
 });
