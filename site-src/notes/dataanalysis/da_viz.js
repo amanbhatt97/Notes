@@ -2,7 +2,7 @@
 Object.assign(TOPIC_CONTENT, {
   "da_viz": `<main>
   <h1>Matplotlib &amp; Seaborn</h1>
-  <p class="lead">Charts are how analysis reaches people. Learn which chart answers which question, Matplotlib's figure/axes model, Seaborn's one-line statistical plots, and how to make a chart that states its point. All plots use the same <code>orders</code> + <code>customers</code> data as the NumPy and Pandas notes.</p>
+  <p class="lead">A table of numbers rarely convinces anyone; a good chart does it in five seconds. This note teaches which chart answers which question, how Matplotlib is organised (Figure and Axes), the four core plots, how to make a chart readable, Seaborn's one-line statistical plots, and how to make a chart that states its point. Small examples use a chai stall's week of sales so you can check every number by hand; then the same tools run on the <code>orders</code> + <code>customers</code> data from the <a class="xref" data-note="da_numpy">NumPy</a> and <a class="xref" data-note="da_pandas">Pandas</a> notes. Tested on Matplotlib 3.11 and Seaborn 0.13.</p>
 
   <h2 id="dv-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -11,46 +11,60 @@ Object.assign(TOPIC_CONTENT, {
       <div class="mm-branch">
         <div class="mm-title">Choose the Chart</div>
         <ul>
+          <li><b>Start from the question</b>, not the data type</li>
           <li><b>Trend over time</b> — line</li>
           <li><b>Compare categories</b> — sorted bar (horizontal for long names)</li>
           <li><b>Distribution</b> — hist / KDE / ECDF; across groups — box / violin</li>
           <li><b>Relationship</b> — scatter (+ <code>regplot</code>); many pairs — heatmap / pairplot</li>
           <li><b>Part of whole</b> — stacked bar; <b>one number</b> — just the number</li>
+          <li>💡 Pick the vehicle for the trip: auto, bus, truck</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Figure &amp; Axes</div>
         <ul>
-          <li><b>Figure</b> — the canvas; <b>Axes</b> — one plot with its own axis, title, legend</li>
+          <li><b>Figure</b> — the canvas/file; <b>Axes</b> — one plot with its own x/y axis, title, legend</li>
           <li><b>OO API</b> — <code>fig, ax = plt.subplots()</code>; then <code>ax.plot / ax.set_title</code></li>
-          <li><b>pyplot</b> — <code>plt.plot</code> acts on the "current" Axes; breaks with many panels</li>
-          <li>⚠ <b>Axes ≠ axis</b>; <code>subplots(2,2)</code> returns a 2-D array (<code>axes[0,1]</code>, <code>axes.flat</code>)</li>
-          <li>💡 Figure = frame, Axes = photos inside it</li>
+          <li><b>pyplot</b> — <code>plt.plot</code> acts on the "current" (last created) Axes</li>
+          <li>⚠ <b>Axes ≠ axis</b>; <code>subplots(2,2)</code> returns a 2-D array (<code>axes[0,1]</code>, <code>axes.flat</code>); <code>(1,1)</code> returns one Axes</li>
+          <li>💡 Figure = photo frame, Axes = photos inside it</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Matplotlib Basics</div>
+        <div class="mm-title">Core plots</div>
         <ul>
-          <li><b>Plots</b> — <code>plot, scatter, hist, bar/barh</code></li>
-          <li><b>Customise</b> — <code>ax.set(title, xlabel, ylim)</code>, <code>set_xscale("log")</code>, <code>annotate</code>, <code>axhline</code></li>
+          <li><code>plot</code> line · <code>barh</code> bar · <code>hist</code> histogram · <code>scatter</code></li>
+          <li><b>hist</b> returns <code>(counts, edges, bars)</code>; bins are [left, right)</li>
+          <li><b>Sort bars</b> by value; biggest on top</li>
+          <li><b>Scatter</b> + correlation: colder days, more chai (r = −0.96)</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Customise</div>
+        <ul>
+          <li><code>ax.set(title, xlabel, ylim)</code>; <code>set_xscale("log")</code> for skewed data</li>
+          <li><b>Formatter</b> — <code>StrMethodFormatter("₹{x:,.0f}")</code></li>
+          <li><code>annotate</code>, <code>axhline</code>, remove top/right spines</li>
           <li><b>Layout</b> — <code>layout="constrained"</code>, <code>sharey=True</code></li>
-          <li><b>Save</b> — <code>fig.savefig(p, dpi=200, bbox_inches="tight")</code>; SVG/PDF for print</li>
+          <li><b>Save</b> — pixels = inches × dpi; <code>bbox_inches="tight"</code>; SVG/PDF for print</li>
           <li>⚠ <b>plt.close(fig)</b> in loops, or memory grows</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Seaborn</div>
         <ul>
+          <li><b>Tidy (long) data</b> — one row per observation; <code>melt</code> wide tables</li>
           <li><b>Pattern</b> — <code>data=df, x="col", y="col", hue="group"</code></li>
           <li><b>Axes-level</b> — histplot, boxplot, heatmap, regplot (take <code>ax=</code>)</li>
-          <li><b>Figure-level</b> — displot, catplot, relplot, lmplot, pairplot (facet with <code>col=</code>)</li>
+          <li><b>Figure-level</b> — displot, catplot, relplot, lmplot, pairplot → FacetGrid (<code>col=</code>)</li>
+          <li><b>barplot</b> — the MEAN ± 95% CI, not the total; <b>countplot</b> — counts</li>
           <li><b>heatmap</b> — <code>annot=True, cmap="RdBu_r", center=0, vmin=-1, vmax=1</code></li>
-          <li><b>barplot</b> — mean ± 95% CI; <b>countplot</b> — counts</li>
-          <li>⚠ <b>common_norm=False</b> when group sizes differ</li>
+          <li>⚠ <b>common_norm=False</b> when group sizes differ (80 vs 20 → areas 0.8/0.2)</li>
+          <li>⚠ <b>Always pass <code>ax=</code></b> — otherwise it draws on the last chart</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Data Findings</div>
+        <div class="mm-title">Data Findings (orders)</div>
         <ul>
           <li><b>Revenue</b> — corr with price 0.87, with qty 0.30, discount ~0</li>
           <li><b>Price</b> — right-skewed: median ₹1,620, p90 ₹9,135 → log scale</li>
@@ -62,7 +76,7 @@ Object.assign(TOPIC_CONTENT, {
         <div class="mm-title">Communicate</div>
         <ul>
           <li><b>Title = the insight</b> — "Electronics = 64% of revenue"</li>
-          <li><b>Emphasis</b> — one accent colour, grey the rest; label directly</li>
+          <li><b>Emphasis</b> — one accent colour, grey the rest; label bars directly (<code>bar_label</code>)</li>
           <li><b>Bars start at 0</b>; lines may zoom</li>
           <li>⚠ <b>Pie</b> — only 2–3 very different parts; else sorted bar</li>
           <li>⚠ <b>Dual y-axes</b> — invented correlation; use stacked panels or index to 100</li>
@@ -77,16 +91,29 @@ Object.assign(TOPIC_CONTENT, {
     <div class="roadmap-grid">
       <div class="rm-item rm-done" data-target="dv-choose"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Choosing the Chart</span><span class="rm-sub">Question → chart type</span></div></div>
       <div class="rm-item rm-done" data-target="dv-model"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Figure &amp; Axes Model</span><span class="rm-sub">Always use the OO API</span></div></div>
-      <div class="rm-item rm-done" data-target="dv-basic"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Core Plots &amp; Subplots</span><span class="rm-sub">line, scatter, hist, bar</span></div></div>
+      <div class="rm-item rm-done" data-target="dv-basic"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Core Plots &amp; Subplots</span><span class="rm-sub">line, bar, hist, scatter</span></div></div>
       <div class="rm-item rm-done" data-target="dv-custom"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Customization</span><span class="rm-sub">Labels, scales, saving</span></div></div>
-      <div class="rm-item rm-done" data-target="dv-sns"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Seaborn</span><span class="rm-sub">Heatmap, pairplot, dist, cat, reg</span></div></div>
+      <div class="rm-item rm-done" data-target="dv-sns"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Seaborn</span><span class="rm-sub">Tidy data, heatmap, dist, cat</span></div></div>
       <div class="rm-item rm-done" data-target="dv-comm"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Charts That Communicate</span><span class="rm-sub">Insight titles, no pies</span></div></div>
       <div class="rm-item rm-done" data-target="dv-build"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Hands-on</span><span class="rm-sub">One-page EDA figure</span></div></div>
-      <div class="rm-item rm-done" data-target="dv-qa"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="dv-traps"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Silent chart bugs</span></div></div>
+      <div class="rm-item rm-done" data-target="dv-qa"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
     </div>
   </div>
 
   <h2 id="dv-choose"><span class="num">01</span>Choosing the Chart</h2>
+  <p>You have finished an analysis. Your manager has two minutes. If you show a pie chart of seven categories, she will squint at slices that look the same and leave without the answer. If you show a sorted bar chart, she sees the winner in one glance. The data was the same; only the chart changed. Picking the chart is the first decision, and beginners usually make it from habit ("I always do a bar chart") instead of from the question.</p>
+  <p>The rule is short: <strong>start from the question you are answering, not from the data you have.</strong> There are only five common questions: how does it change over time, which category is biggest, how are the values spread out, do two numbers move together, and what share is each part of the whole. Each question has one or two charts that answer it well.</p>
+  <div class="callout anlg"><span class="label">Analogy</span>
+    <p>Choosing a vehicle. Two people to the station: an auto. A school trip of forty: a bus. Shifting a fridge: a tempo. Nobody asks "which vehicle do I like?"; they ask "what am I carrying?". A chart is a vehicle for one specific question.</p>
+  </div>
+  <p><strong>Worked example.</strong> A chai stall owner gives you one week of data: cups sold per day, revenue per item, the bill of each customer, and the day's temperature. Four questions, four charts:</p>
+  <figure class="viz"><svg viewBox="0 0 600 170" width="600">
+    <g><rect x="5" y="20" width="140" height="110" class="fs" stroke="currentColor"/><path d="M15 115 L35 108 L55 110 L75 100 L95 92 L115 60 L135 50" class="sb" stroke-width="2" fill="none"/><text x="75" y="150" text-anchor="middle">Line</text><text x="75" y="165" text-anchor="middle" class="tm">cups per day</text></g>
+    <g><rect x="155" y="20" width="140" height="110" class="fs" stroke="currentColor"/><rect x="165" y="30" width="30" height="16" class="fs" stroke="currentColor"/><rect x="165" y="52" width="45" height="16" class="fs" stroke="currentColor"/><rect x="165" y="74" width="80" height="16" class="fs" stroke="currentColor"/><rect x="165" y="96" width="120" height="16" class="fb sb"/><text x="225" y="150" text-anchor="middle">Sorted bar</text><text x="225" y="165" text-anchor="middle" class="tm">revenue per item</text></g>
+    <g><rect x="305" y="20" width="140" height="110" class="fs" stroke="currentColor"/><rect x="315" y="40" width="20" height="80" class="ft st"/><rect x="337" y="97" width="20" height="23" class="ft st"/><rect x="359" y="114" width="20" height="6" class="ft st"/><rect x="425" y="114" width="15" height="6" class="ft st"/><text x="375" y="150" text-anchor="middle">Histogram</text><text x="375" y="165" text-anchor="middle" class="tm">bill sizes</text></g>
+    <g><rect x="455" y="20" width="140" height="110" class="fs" stroke="currentColor"/><circle cx="475" cy="110" r="4" class="fg sg"/><circle cx="490" cy="104" r="4" class="fg sg"/><circle cx="500" cy="106" r="4" class="fg sg"/><circle cx="525" cy="96" r="4" class="fg sg"/><circle cx="545" cy="88" r="4" class="fg sg"/><circle cx="565" cy="55" r="4" class="fg sg"/><circle cx="580" cy="45" r="4" class="fg sg"/><text x="525" y="150" text-anchor="middle">Scatter</text><text x="525" y="165" text-anchor="middle" class="tm">temperature vs cups</text></g>
+  </svg><figcaption>Four questions about one chai stall: change over time (line), which item earns most (sorted bar), how big bills usually are (histogram), does cold weather sell more chai (scatter).</figcaption></figure>
   <table class="tbl">
     <tr><th>Question you're answering</th><th>Chart</th><th>Seaborn / Matplotlib</th><th>Avoid</th></tr>
     <tr><td>How does it change over time?</td><td>Line</td><td><code>ax.plot</code>, <code>sns.lineplot</code></td><td>Bars for 50+ time points</td></tr>
@@ -98,9 +125,14 @@ Object.assign(TOPIC_CONTENT, {
     <tr><td>Part of a whole</td><td>Stacked bar, or just the % in text</td><td><code>df.plot.bar(stacked=True)</code></td><td>Pie with 6+ slices</td></tr>
     <tr><td>One headline number</td><td>Big number, no chart</td><td>text</td><td>A one-bar chart</td></tr>
   </table>
-  <div class="callout intu"><span class="label">Key insight</span><p>Start from the question, not the data type. "Which category earns most?" is a sorted bar; "is price skewed?" is a histogram.</p></div>
+  <div class="callout def"><span class="label">Definition</span><p>A <strong>distribution</strong> is how the values of one column are spread: where most of them sit, how wide the spread is, whether there are a few huge ones. <strong>KDE</strong> (kernel density estimate) is a smooth curve version of a histogram. <strong>ECDF</strong> (empirical cumulative distribution) shows, for each value, the share of data at or below it.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>A line chart joins points in order, so it implies the x-axis has an order (time, size). Joining categories like "Pune, Delhi, Chennai" with a line invents a trend between cities. Use bars for categories.</p></div>
+  <p>In interviews this shows up as "how would you visualise X?". The best answers name the question first ("you want to compare segments, so…") and then the chart.</p>
 
   <h2 id="dv-model"><span class="num">02</span>Figure &amp; Axes Model</h2>
+  <p>Most Matplotlib confusion comes from not knowing which object you are talking to. Beginners copy <code>plt.plot(...)</code>, <code>plt.title(...)</code> from the internet. That works for one chart. The day you need two charts side by side, titles land on the wrong chart and labels vanish, because <code>plt.*</code> silently picks "whichever chart was touched last".</p>
+  <p>Matplotlib has two main objects. The <strong>Figure</strong> is the whole picture, the thing saved to a PNG. An <strong>Axes</strong> is one plot inside it, with its own x-axis, y-axis, title and legend. One Figure can hold many Axes. Everything drawn (lines, bars, text) is an <strong>Artist</strong> that belongs to one Axes.</p>
+  <div class="callout anlg"><span class="label">Analogy</span><p>A photo frame with several photos inside. The frame is the Figure: you hang (save) the frame. Each photo is an Axes: it has its own caption. <code>plt.title</code> is like saying "write this caption on whichever photo I touched last", which goes wrong once there are several photos.</p></div>
   <figure class="viz"><svg viewBox="0 0 600 190" width="600">
     <rect x="10" y="10" width="580" height="170" class="fs" stroke="currentColor"/><text x="20" y="28">Figure (the whole canvas, saved to PNG)</text>
     <rect x="30" y="40" width="260" height="128" class="fb sb"/><text x="40" y="58">Axes [0]  (one plot)</text>
@@ -110,16 +142,95 @@ Object.assign(TOPIC_CONTENT, {
     <text x="150" y="164" class="tm">xaxis</text><text x="36" y="110" class="tm">yaxis</text>
     <text x="330" y="84">ax.set_title(...)</text><text x="330" y="104">ax.set_xlabel(...)</text><text x="330" y="124">ax.legend()</text><text x="330" y="144" class="tm">Line2D, Text = Artists</text>
   </svg><figcaption>A Figure holds one or more Axes; each Axes is a plot with its own x/y axis, title and legend.</figcaption></figure>
+  <p>The safe style is the <strong>object-oriented (OO) API</strong>: ask for both objects by name, then call methods on the one you mean. This code draws the chai stall's week as a line and saves it:</p>
   <div class="fx" data-lang="py">import matplotlib.pyplot as plt
-fig, ax = plt.subplots(figsize=(8, 4))     # object-oriented (OO) API: explicit handles
-ax.plot(monthly.index, monthly.values)
-ax.set_title("..."); fig.savefig("chart.png", dpi=150, bbox_inches="tight")
 
-plt.plot(x, y); plt.title("...")           # pyplot state machine: acts on the "current" axes</div>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Figure = the picture frame; Axes = each photo inside it. <code>plt.*</code> edits "whichever photo you touched last", which breaks once you have several.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>"Axes" (a plot) is not "axis" (the x or y line). Pandas <code>df.plot()</code> and every Seaborn axes-level function return an Axes and accept <code>ax=</code>.</p></div>
+days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+cups = [120, 135, 128, 150, 170, 240, 260]
+
+fig, ax = plt.subplots(figsize=(6, 3))       # one Figure, one Axes
+ax.plot(days, cups, marker="o")
+ax.set_title("Weekend sales nearly double")
+ax.set_ylabel("cups of chai")
+print(type(fig).__name__, type(ax).__name__)
+print(len(ax.lines), ax.get_title())
+fig.savefig("week.png", dpi=100)
+print(fig.get_size_inches(), "-&gt;", plt.imread("week.png").shape)</div>
+  <div class="fx" data-lang="text">Figure Axes
+1 Weekend sales nearly double
+[6. 3.] -&gt; (300, 600, 4)</div>
+  <p><code>plt.subplots</code> returns the two handles. <code>ax.plot</code> added one line Artist to that Axes (<code>len(ax.lines)</code> is 1), and <code>ax.set_title</code> wrote on that Axes only. The saved image is 300 × 600 pixels with 4 colour channels: <code>figsize</code> is in inches, and pixels = inches × dpi (dots per inch), so 6 × 100 = 600 wide.</p>
+  <p>Now several Axes, and what pyplot does behind your back:</p>
+  <div class="fx" data-lang="py">fig, axes = plt.subplots(2, 2, figsize=(8, 5))
+print(type(axes).__name__, axes.shape)
+print(axes[0, 1] is axes.flat[1])
+fig1, ax1 = plt.subplots(1, 1)
+print(type(ax1).__name__)
+
+# pyplot draws on the "current" Axes: the last one created
+plt.plot([1, 2, 3])
+print(plt.gca() is ax1, len(ax1.lines), len(axes[1, 1].lines))</div>
+  <div class="fx" data-lang="text">ndarray (2, 2)
+True
+Axes
+True 1 0</div>
+  <p>A 2 × 2 grid comes back as a 2-D NumPy array: pick one with <code>axes[row, col]</code>, or loop over all four with <code>axes.flat</code>. <code>plt.gca()</code> ("get current axes") is <code>ax1</code>, the most recent one, so <code>plt.plot</code> drew there, not on the grid. In a notebook that is how a line ends up on the wrong chart.</p>
+  <div class="callout def"><span class="label">Definition</span><p><strong>pyplot</strong> (<code>plt</code>) is Matplotlib's quick, state-based interface: it remembers a "current" Figure and Axes. The <strong>OO API</strong> calls methods on explicit <code>fig</code> and <code>ax</code> objects. Pandas <code>df.plot()</code> and every Seaborn axes-level function return an Axes and accept <code>ax=</code>, so they slot into the OO style.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>"Axes" (a whole plot) is not "axis" (the x or y line). And <code>plt.subplots(1, 1)</code> returns a single Axes, not an array: <code>axes[0]</code> then fails. Use <code>squeeze=False</code> if your code must always get an array.</p></div>
 
   <h2 id="dv-basic"><span class="num">03</span>Core Plots &amp; Subplots</h2>
+  <p>Four plotting methods cover most daily work: <code>plot</code> (line), <code>bar</code>/<code>barh</code> (bars), <code>hist</code> (histogram) and <code>scatter</code>. The chai stall answers its four questions in one 2 × 2 figure. Before the code, trace the histogram by hand, because it is the one beginners misread. Twenty customers paid these bills (₹): 20, 20, 30, 40, 20, 50, 60, 20, 30, 120, 40, 20, 30, 250, 20, 40, 30, 60, 20, 80. A histogram cuts the number line into <strong>bins</strong> and counts how many values fall in each:</p>
+  <table class="tbl out"><caption>Counting bills into bins of ₹50</caption>
+    <tr><th>bin</th><th>values in it</th><th>count</th></tr>
+    <tr><td>0 – 50</td><td>20 ×7, 30 ×4, 40 ×3</td><td>14</td></tr>
+    <tr><td>50 – 100</td><td>50, 60, 60, 80</td><td>4</td></tr>
+    <tr><td>100 – 150</td><td>120</td><td>1</td></tr>
+    <tr><td>150 – 200</td><td>none</td><td>0</td></tr>
+    <tr><td>200 – 250</td><td>none</td><td>0</td></tr>
+    <tr><td>250 – 300</td><td>250</td><td>1</td></tr>
+  </table>
+  <p>Note that 50 went into the 50–100 bin: each bin includes its left edge and excludes its right edge (except the last bin, which includes both). The code draws all four charts and prints what Matplotlib computed:</p>
+  <div class="fx" data-lang="py">import numpy as np
+days  = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+cups  = [120, 135, 128, 150, 170, 240, 260]
+temp  = [31, 29, 30, 26, 24, 21, 20]                       # °C that day
+items = {"Samosa": 4200, "Chai": 11530, "Biscuit": 1350, "Bun": 2100}   # ₹ this week
+bills = [20, 20, 30, 40, 20, 50, 60, 20, 30, 120, 40, 20, 30, 250, 20, 40, 30, 60, 20, 80]
+
+fig, axes = plt.subplots(2, 2, figsize=(9, 6), layout="constrained")
+
+ax = axes[0, 0]                                   # 1. line: change over time
+ax.plot(days, cups, marker="o")
+ax.set_title("Cups sold per day")
+
+ax = axes[0, 1]                                   # 2. bar: compare categories
+names = sorted(items, key=items.get)              # smallest first, so biggest is on top
+ax.barh(names, [items[n] for n in names])
+ax.set_title("Revenue by item (₹)")
+
+ax = axes[1, 0]                                   # 3. histogram: distribution
+counts, edges, _ = ax.hist(bills, bins=[0, 50, 100, 150, 200, 250, 300])
+ax.set_title("Bill size per customer (₹)")
+
+ax = axes[1, 1]                                   # 4. scatter: relationship
+ax.scatter(temp, cups)
+ax.set_xlabel("temperature °C"); ax.set_ylabel("cups")
+ax.set_title("Colder days, more chai")
+
+fig.savefig("grid_small.png", dpi=80)
+print("bar order:", names)
+print("hist counts:", counts.astype(int).tolist())
+print("hist edges:", edges.astype(int).tolist())
+print("scatter points:", len(axes[1, 1].collections[0].get_offsets()))
+print("corr(temp, cups):", round(np.corrcoef(temp, cups)[0, 1], 2))</div>
+  <div class="fx" data-lang="text">bar order: ['Biscuit', 'Bun', 'Samosa', 'Chai']
+hist counts: [14, 4, 1, 0, 0, 1]
+hist edges: [0, 50, 100, 150, 200, 250, 300]
+scatter points: 7
+corr(temp, cups): -0.96</div>
+  <p>Point by point: <code>layout="constrained"</code> spaces the four panels so titles don't overlap. <code>sorted(items, key=items.get)</code> orders bar names by value; <code>barh</code> draws the first name at the bottom, so Chai, the biggest, ends on top. <code>ax.hist</code> returns the counts it drew, and they match the hand table: [14, 4, 1, 0, 0, 1]. The scatter has 7 points, one per day, falling from left to right; the correlation of −0.96 (close to −1) confirms the eye: as temperature drops, cups rise.</p>
+  <h3>The same four plots on the real orders data</h3>
+  <p>Here the tools run on the 1,000-row <code>orders</code> table. Two extra ideas appear: <code>resample("ME")</code> turns daily rows into month-end totals for the line, and a log scale on the scatter. The bar chart greys all bars but one (section 06 explains why).</p>
   <div class="fx" data-lang="py">o = pd.read_csv("orders.csv", parse_dates=["order_date"])
 monthly = o.set_index("order_date").revenue.resample("ME").sum() / 1e5   # ₹ lakh
 bycat = o.groupby("category").revenue.sum().sort_values() / 1e5
@@ -143,12 +254,60 @@ for a in axes.flat:
 fig.savefig("grid.png", dpi=72)</div>
   <figure class="viz"><img src="data:image/png;base64,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" alt="Four-panel figure: monthly revenue line, log-log scatter of price vs revenue with four bands, right-skewed price histogram, horizontal bar with Electronics highlighted" style="max-width:100%;height:auto;background:#fff;border-radius:6px"><figcaption>The real output. Each title states the finding; the bar chart greys out everything but the point.</figcaption></figure>
   <ul>
-    <li><strong>Scatter</strong>: the four parallel bands are qty = 1, 2, 3, 4. Log scales turn the multiplication into straight lines.</li>
-    <li><strong>Histogram</strong>: right-skewed. Median ₹1,620, but 90th percentile ₹9,135, so the mean misleads.</li>
+    <li><strong>Scatter</strong>: the four parallel bands are qty = 1, 2, 3, 4. On log scales, "revenue = price × qty" becomes "log revenue = log price + log qty", so each qty is a straight line shifted up.</li>
+    <li><strong>Histogram</strong>: right-skewed (a long tail of expensive items to the right). Median ₹1,620, but 90th percentile ₹9,135, so the mean is pulled up and misleads.</li>
   </ul>
-  <div class="callout trap"><span class="label">Trap</span><p><code>plt.subplots(2, 2)</code> returns a 2-D array of Axes: index with <code>axes[0, 1]</code>, loop with <code>axes.flat</code>. With <code>(1, 1)</code> you get a single Axes, not an array.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>The number of bins changes the story. 5 bins can hide two humps; 200 bins on 1,000 rows is noise. Try a few values (or Seaborn's automatic choice) and never trust one histogram blindly.</p></div>
 
   <h2 id="dv-custom"><span class="num">04</span>Customization</h2>
+  <p>A default chart is correct but rarely readable. The y-axis says "2000" when the reader thinks in "₹2,000"; the scale starts at 1,700 and makes a 10% change look like 300%; the most important point has no label; the saved PNG is blurry on a projector. Customization is not decoration: it is removing every reason the reader could misread the chart.</p>
+  <div class="callout anlg"><span class="label">Analogy</span><p>A shop signboard. The same name painted in tiny grey letters, or in big clear letters with the phone number and an arrow to the entrance. Same shop; only one gets customers.</p></div>
+  <p>The code below takes the stall's daily revenue and adds, one by one: a title that states the finding, a y-axis that starts at 0, rupee tick labels, a target line, and an arrow on Sunday.</p>
+  <div class="fx" data-lang="py">import matplotlib.ticker as mtick
+
+days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+revenue = [1800, 2025, 1920, 2250, 2550, 3600, 3900]        # ₹ per day
+
+fig, ax = plt.subplots(figsize=(6, 3.5), layout="constrained")
+ax.plot(days, revenue, marker="o", color="#2a6fdb")
+ax.set(title="Weekend revenue is double a weekday",       # title = the finding
+       ylabel="revenue", ylim=(0, 4500))                   # start at 0: honest scale
+ax.yaxis.set_major_formatter(mtick.StrMethodFormatter("₹{x:,.0f}"))
+ax.axhline(2500, ls="--", color="grey")                    # reference line
+ax.annotate("Sunday ₹3,900", xy=(6, 3900), xytext=(3.2, 4100),
+            arrowprops=dict(arrowstyle="-&gt;"))
+ax.spines[["top", "right"]].set_visible(False)             # remove clutter
+
+fig.canvas.draw()                                          # compute tick labels
+print([t.get_text() for t in ax.get_yticklabels()])
+print([float(v) for v in ax.get_ylim()], len(ax.lines), len(ax.texts))
+for dpi in (100, 200):
+    fig.savefig(f"rev_{dpi}.png", dpi=dpi)
+    print(dpi, plt.imread(f"rev_{dpi}.png").shape[:2])
+plt.close(fig)
+print(plt.fignum_exists(fig.number))</div>
+  <div class="fx" data-lang="text">['₹0', '₹500', '₹1,000', '₹1,500', '₹2,000', '₹2,500', '₹3,000', '₹3,500', '₹4,000', '₹4,500']
+[0.0, 4500.0] 2 1
+100 (350, 600)
+200 (700, 1200)
+False</div>
+  <p>What happened: <code>ax.set(...)</code> sets several properties in one call. <code>StrMethodFormatter("₹{x:,.0f}")</code> is a Python format string applied to every tick: comma separators, no decimals, a rupee sign; the printed tick labels prove it. <code>len(ax.lines)</code> is 2 because <code>axhline</code> is also a line. <code>xy=(6, 3900)</code> in <code>annotate</code> means "point at category position 6 (Sunday), value 3900"; <code>xytext</code> is where the label sits. Doubling <code>dpi</code> doubled the pixel size. After <code>plt.close(fig)</code> the figure no longer exists, so its memory is freed.</p>
+  <h3>Log scale for skewed data</h3>
+  <p>Prices are usually <strong>skewed</strong>: many cheap items, a few very expensive ones. On a normal axis the expensive ones squash everything else into one bar. A <strong>log scale</strong> spaces 10, 100, 1,000, 10,000 equally, so each "×10" step gets the same room.</p>
+  <div class="fx" data-lang="py">prices = np.array([40, 90, 150, 300, 500, 800, 1500, 4000, 12000, 60000])   # ₹, one shop's items
+print("mean", prices.mean(), "median", np.median(prices))
+fig, (a1, a2) = plt.subplots(1, 2, figsize=(8, 3))
+a1.hist(prices, bins=10)
+a2.hist(prices, bins=np.logspace(1, 5, 9))       # bins equally spaced on a log scale
+a2.set_xscale("log")
+print(a1.get_xscale(), a2.get_xscale())
+print("linear-bin counts:", [int(p.get_height()) for p in a1.patches])
+print("log-bin counts:   ", [int(p.get_height()) for p in a2.patches])</div>
+  <div class="fx" data-lang="text">mean 7938.0 median 650.0
+linear log
+linear-bin counts: [8, 1, 0, 0, 0, 0, 0, 0, 0, 1]
+log-bin counts:    [0, 2, 2, 2, 1, 1, 1, 1]</div>
+  <p>On the linear axis, 8 of 10 items fall in the first bin: the chart says only "most are cheap". With log bins (<code>np.logspace(1, 5, 9)</code> = 9 edges from 10¹ to 10⁵) the items spread out and you can read the shape. The mean (₹7,938) is twelve times the median (₹650) because of one ₹60,000 item: report the median for skewed data.</p>
   <table class="tbl">
     <tr><th>Goal</th><th>Code</th></tr>
     <tr><td>Title, labels, limits</td><td><code>ax.set(title="...", xlabel="...", ylim=(0, None))</code></td></tr>
@@ -162,21 +321,102 @@ fig.savefig("grid.png", dpi=72)</div>
     <tr><td>Global style</td><td><code>plt.style.use("seaborn-v0_8-whitegrid")</code>, <code>plt.rcParams["font.size"] = 11</code></td></tr>
     <tr><td>Export</td><td><code>fig.savefig("x.png", dpi=200, bbox_inches="tight")</code>; SVG/PDF for print</td></tr>
   </table>
-  <div class="callout trap"><span class="label">Trap</span><p>In scripts and loops, call <code>plt.close(fig)</code> after saving. Otherwise every figure stays in memory and Matplotlib warns after 20.</p></div>
+  <div class="callout def"><span class="label">Definition</span><p><strong>Spines</strong> are the four border lines of an Axes. <strong>Ticks</strong> are the small marks with labels along an axis; a <strong>formatter</strong> decides the label text. <strong>dpi</strong> = dots (pixels) per inch when saving. <code>bbox_inches="tight"</code> trims empty margins and stops labels being cut off.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>In scripts and loops, call <code>plt.close(fig)</code> after saving. Otherwise every figure stays in memory; after 20 open figures Matplotlib warns, and a batch job making 500 charts can run out of memory.</p></div>
 
   <h2 id="dv-sns"><span class="num">05</span>Seaborn</h2>
-  <p>Seaborn = Matplotlib + tidy DataFrames + statistics. Pass <code>data=</code>, column names, and <code>hue</code> for colour by group.</p>
+  <p>With plain Matplotlib, "one line per city, coloured, with a legend" means a loop: filter each city, call <code>plot</code>, pass a label, call <code>legend</code>. "Average per group with error bars" means computing the means and intervals yourself. Seaborn does both in one call. It sits on top of Matplotlib, takes a pandas DataFrame plus column names, and does the grouping and statistics for you.</p>
+  <p>The one requirement: data must be <strong>tidy</strong> (also called <strong>long</strong>): one row per observation, one column per variable. Spreadsheets are usually <strong>wide</strong>: one column per city. <code>melt</code> turns wide into long.</p>
+  <div class="callout anlg"><span class="label">Analogy</span><p>A school register in wide form has one column per subject. To ask "average by subject", you would rather have one row per (student, subject, marks). Seaborn wants that second shape: then "colour by subject" is just <code>hue="subject"</code>.</p></div>
+  <p>Two chai stalls, three days, wide → long, then a coloured line chart, a bar chart, and a faceted histogram:</p>
+  <div class="fx" data-lang="py">import pandas as pd
+import seaborn as sns
+
+# wide: one column per stall (how people type it in Excel)
+wide = pd.DataFrame({"day": ["Mon", "Tue", "Wed"],
+                     "Pune": [120, 135, 128], "Delhi": [90, 80, 110]})
+# long ("tidy"): one row per observation, a column says which stall
+long = wide.melt(id_vars="day", var_name="stall", value_name="cups")
+print(long)
+
+fig, ax = plt.subplots()
+sns.lineplot(data=long, x="day", y="cups", hue="stall", marker="o", ax=ax)
+print(type(ax).__name__, [t.get_text() for t in ax.get_legend().get_texts()])
+plt.close(fig)
+
+fig, ax = plt.subplots()
+sns.barplot(data=long, x="stall", y="cups", errorbar=None, ax=ax)  # bar = MEAN per stall
+print("bar heights:", [float(round(p.get_height(), 2)) for p in ax.patches])
+print(long.groupby("stall", sort=False).cups.mean().round(2).to_dict())
+plt.close(fig)
+
+g = sns.displot(data=long, x="cups", col="stall", bins=3)          # figure-level
+print(type(g).__name__, g.axes.shape)
+plt.close(g.figure)</div>
+  <div class="fx" data-lang="text">   day  stall  cups
+0  Mon   Pune   120
+1  Tue   Pune   135
+2  Wed   Pune   128
+3  Mon  Delhi    90
+4  Tue  Delhi    80
+5  Wed  Delhi   110
+Axes ['Pune', 'Delhi']
+bar heights: [127.67, 93.33]
+{'Pune': 127.67, 'Delhi': 93.33}
+FacetGrid (1, 2)</div>
+  <p><code>melt(id_vars="day")</code> keeps <code>day</code> and stacks the other columns: 2 stalls × 3 days = 6 rows. Each axes-level call gets its own <code>ax=</code>, so nothing lands on an old chart. <code>hue="stall"</code> gave one coloured line per stall and built the legend automatically. <code>barplot</code> drew the <strong>mean</strong> per stall (127.67 = (120+135+128)/3), which the groupby confirms; by default it also adds a 95% confidence interval bar, turned off here with <code>errorbar=None</code>. <code>displot</code> with <code>col="stall"</code> made one panel per stall and returned a <code>FacetGrid</code>, not an Axes.</p>
   <div class="cards">
     <div><b>Axes-level</b><p><code>histplot</code>, <code>boxplot</code>, <code>scatterplot</code>, <code>heatmap</code>, <code>regplot</code>. Draw on one <code>ax=</code>.</p><small>Fits in your subplot grid</small></div>
     <div><b>Figure-level</b><p><code>displot</code>, <code>catplot</code>, <code>relplot</code>, <code>lmplot</code>, <code>pairplot</code>. Own their figure; facet with <code>col=</code>/<code>row=</code>.</p><small>Returns a FacetGrid, not an Axes</small></div>
   </div>
-  <h3>Heatmap</h3>
-  <div class="fx" data-lang="py">import seaborn as sns
-corr = o[["qty", "unit_price", "discount_pct", "revenue"]].corr().round(2)
-sns.heatmap(corr, annot=True, fmt=".2f", cmap="RdBu_r", vmin=-1, vmax=1, center=0)</div>
-  <figure class="viz"><svg viewBox="0 0 380 180" width="380"><text x="102" y="42" text-anchor="end">qty</text><text x="141" y="172" text-anchor="middle">qty</text><rect x="110" y="20" width="60" height="32" class="fb sb"/><text x="140" y="41" text-anchor="middle">1.00</text><rect x="172" y="20" width="60" height="32" class="fs"/><text x="202" y="41" text-anchor="middle">-0.03</text><rect x="234" y="20" width="60" height="32" class="fs"/><text x="264" y="41" text-anchor="middle">0.03</text><rect x="296" y="20" width="60" height="32" class="fb"/><text x="326" y="41" text-anchor="middle">0.30</text><text x="102" y="76" text-anchor="end">price</text><text x="203" y="172" text-anchor="middle">price</text><rect x="110" y="54" width="60" height="32" class="fs"/><text x="140" y="75" text-anchor="middle">-0.03</text><rect x="172" y="54" width="60" height="32" class="fb sb"/><text x="202" y="75" text-anchor="middle">1.00</text><rect x="234" y="54" width="60" height="32" class="fs"/><text x="264" y="75" text-anchor="middle">0.04</text><rect x="296" y="54" width="60" height="32" class="fb sb"/><text x="326" y="75" text-anchor="middle">0.87</text><text x="102" y="110" text-anchor="end">discount</text><text x="265" y="172" text-anchor="middle">discount</text><rect x="110" y="88" width="60" height="32" class="fs"/><text x="140" y="109" text-anchor="middle">0.03</text><rect x="172" y="88" width="60" height="32" class="fs"/><text x="202" y="109" text-anchor="middle">0.04</text><rect x="234" y="88" width="60" height="32" class="fb sb"/><text x="264" y="109" text-anchor="middle">1.00</text><rect x="296" y="88" width="60" height="32" class="fs"/><text x="326" y="109" text-anchor="middle">0.02</text><text x="102" y="144" text-anchor="end">revenue</text><text x="327" y="172" text-anchor="middle">revenue</text><rect x="110" y="122" width="60" height="32" class="fb"/><text x="140" y="143" text-anchor="middle">0.30</text><rect x="172" y="122" width="60" height="32" class="fb sb"/><text x="202" y="143" text-anchor="middle">0.87</text><rect x="234" y="122" width="60" height="32" class="fs"/><text x="264" y="143" text-anchor="middle">0.02</text><rect x="296" y="122" width="60" height="32" class="fb sb"/><text x="326" y="143" text-anchor="middle">1.00</text></svg><figcaption>Real values. Revenue follows price (0.87), barely qty (0.30); discount is unrelated to anything.</figcaption></figure>
-  <div class="callout trap"><span class="label">Trap</span><p>Use a diverging map centred at 0 (<code>center=0</code>, fixed <code>vmin/vmax</code>) for correlations. A default sequential map makes -0.03 and 0.03 look meaningfully different.</p></div>
-  <h3>Distribution, categorical, regression, pairplot</h3>
+  <h3>Heatmap of correlations</h3>
+  <p>With four or more numeric columns, twelve scatter plots are too many. A correlation <strong>heatmap</strong> shows every pair's correlation (−1 to +1) as a coloured cell with the number written in it. On a 200-row synthetic shop table built like the orders data (revenue = price × qty × (1 − discount)):</p>
+  <div class="fx" data-lang="py">rng = np.random.default_rng(1)
+n = 200
+price = rng.lognormal(6, 1, n).round()                # skewed, like real prices
+qty = rng.integers(1, 5, n)
+discount = rng.choice([0, 5, 10, 20], n)
+df = pd.DataFrame({"price": price, "qty": qty, "discount": discount,
+                   "revenue": price * qty * (1 - discount / 100)})
+corr = df.corr().round(2)
+print(corr)
+fig, ax = plt.subplots(figsize=(5, 4))
+sns.heatmap(corr, annot=True, fmt=".2f", cmap="RdBu_r", vmin=-1, vmax=1, center=0, ax=ax)
+print(len(ax.texts), "numbers written on the cells")
+plt.close(fig)</div>
+  <div class="fx" data-lang="text">          price   qty  discount  revenue
+price      1.00 -0.02     -0.03     0.88
+qty       -0.02  1.00      0.00     0.27
+discount  -0.03  0.00      1.00    -0.06
+revenue    0.88  0.27     -0.06     1.00
+16 numbers written on the cells</div>
+  <p><code>annot=True</code> wrote all 16 numbers. <code>cmap="RdBu_r"</code> is a <strong>diverging</strong> colour map (red one way, blue the other, white in the middle), and <code>center=0, vmin=-1, vmax=1</code> pins white to zero. Revenue follows price (0.88) far more than quantity (0.27), because prices vary 100-fold while qty only runs 1–4. The real orders data gives almost the same picture:</p>
+  <figure class="viz"><svg viewBox="0 0 380 180" width="380"><text x="102" y="42" text-anchor="end">qty</text><text x="141" y="172" text-anchor="middle">qty</text><rect x="110" y="20" width="60" height="32" class="fb sb"/><text x="140" y="41" text-anchor="middle">1.00</text><rect x="172" y="20" width="60" height="32" class="fs"/><text x="202" y="41" text-anchor="middle">-0.03</text><rect x="234" y="20" width="60" height="32" class="fs"/><text x="264" y="41" text-anchor="middle">0.03</text><rect x="296" y="20" width="60" height="32" class="fb"/><text x="326" y="41" text-anchor="middle">0.30</text><text x="102" y="76" text-anchor="end">price</text><text x="203" y="172" text-anchor="middle">price</text><rect x="110" y="54" width="60" height="32" class="fs"/><text x="140" y="75" text-anchor="middle">-0.03</text><rect x="172" y="54" width="60" height="32" class="fb sb"/><text x="202" y="75" text-anchor="middle">1.00</text><rect x="234" y="54" width="60" height="32" class="fs"/><text x="264" y="75" text-anchor="middle">0.04</text><rect x="296" y="54" width="60" height="32" class="fb sb"/><text x="326" y="75" text-anchor="middle">0.87</text><text x="102" y="110" text-anchor="end">discount</text><text x="265" y="172" text-anchor="middle">discount</text><rect x="110" y="88" width="60" height="32" class="fs"/><text x="140" y="109" text-anchor="middle">0.03</text><rect x="172" y="88" width="60" height="32" class="fs"/><text x="202" y="109" text-anchor="middle">0.04</text><rect x="234" y="88" width="60" height="32" class="fb sb"/><text x="264" y="109" text-anchor="middle">1.00</text><rect x="296" y="88" width="60" height="32" class="fs"/><text x="326" y="109" text-anchor="middle">0.02</text><text x="102" y="144" text-anchor="end">revenue</text><text x="327" y="172" text-anchor="middle">revenue</text><rect x="110" y="122" width="60" height="32" class="fb"/><text x="140" y="143" text-anchor="middle">0.30</text><rect x="172" y="122" width="60" height="32" class="fb sb"/><text x="202" y="143" text-anchor="middle">0.87</text><rect x="234" y="122" width="60" height="32" class="fs"/><text x="264" y="143" text-anchor="middle">0.02</text><rect x="296" y="122" width="60" height="32" class="fb sb"/><text x="326" y="143" text-anchor="middle">1.00</text></svg><figcaption>The orders data: revenue follows price (0.87), barely qty (0.30); discount is unrelated to anything.</figcaption></figure>
+  <h3>Comparing groups of different sizes: common_norm</h3>
+  <p>Suppose 80 regular customers and 20 VIPs. You overlay their bill histograms as densities to compare shapes. By default Seaborn scales all groups together, so the VIP curve gets only 20% of the total area and looks flat, as if VIPs were rare at every price. That is a question about group size, not shape.</p>
+  <div class="fx" data-lang="py">rng = np.random.default_rng(7)
+bills = pd.DataFrame({
+    "segment": ["regular"] * 80 + ["vip"] * 20,
+    "amount": np.r_[rng.normal(300, 60, 80), rng.normal(320, 60, 20)].round()})
+print(bills.segment.value_counts().to_dict())
+
+for common in (True, False):
+    fig, ax = plt.subplots()
+    sns.histplot(data=bills, x="amount", hue="segment", stat="density",
+                 common_norm=common, bins=8, ax=ax)
+    # area under one group's bars = sum of height x width
+    for name, bars in zip(["vip", "regular"], ax.containers):   # drawn last-hue-first
+        area = sum(p.get_height() * p.get_width() for p in bars)
+        print(f"common_norm={common}: {name:7} area {area:.2f}")
+    plt.close(fig)</div>
+  <div class="fx" data-lang="text">{'regular': 80, 'vip': 20}
+common_norm=True: vip     area 0.20
+common_norm=True: regular area 0.80
+common_norm=False: vip     area 1.00
+common_norm=False: regular area 1.00</div>
+  <p>With <code>common_norm=True</code> the two areas add to 1 and split 80/20 like the group sizes. With <code>common_norm=False</code> each group is scaled to area 1 on its own, so the shapes can be compared fairly. <code>ax.containers</code> holds one group of bars per hue level.</p>
+  <h3>The gallery on the orders data</h3>
+  <p>The same one-line pattern (<code>data=</code>, column names, <code>hue=</code>) covers every statistical plot. On the merged orders + customers table:</p>
   <div class="fx" data-lang="py">c = pd.read_csv("customers.csv"); o = o.merge(c, on="customer_id")   # adds segment
 sns.histplot(data=o, x="unit_price", hue="segment", log_scale=True,
              element="step", stat="density", common_norm=False)
@@ -189,17 +429,38 @@ sns.countplot(data=o, x="status", hue="segment")
 sns.regplot(data=o, x="unit_price", y="revenue", scatter_kws=dict(s=8, alpha=.3))
 sns.lmplot(data=o, x="unit_price", y="revenue", col="segment", height=3)   # one panel per segment
 sns.pairplot(o[["qty", "unit_price", "revenue", "category"]], hue="category", corner=True)</div>
-  <table class="tbl"><caption>What those plots show (numbers from the data)</caption>
+  <table class="tbl"><caption>What those plots show (numbers from the orders data)</caption>
     <tr><th>Plot</th><th>What you see</th></tr>
     <tr><td>boxplot by category</td><td>Five non-overlapping boxes. Medians: Books ₹410, Beauty ₹740, Fashion ₹1,475, Home ₹2,330, Electronics ₹8,915.</td></tr>
     <tr><td>hist / kde / ecdf by segment</td><td>Curves nearly on top of each other: VIPs don't buy pricier items. Median revenue: new 3,440, regular 3,980, vip 3,670.</td></tr>
     <tr><td>barplot (mean ± 95% CI)</td><td>Electronics mean 22,859 towers over Books 1,084; CI bars show how sure each mean is.</td></tr>
     <tr><td>pairplot</td><td>Grid of scatters with histograms on the diagonal. Colour separates categories by price cleanly.</td></tr>
   </table>
-  <div class="callout trap"><span class="label">Trap</span><p><code>common_norm=False</code> matters when groups differ in size (489 new vs 108 VIP). Otherwise each curve is scaled by its group's share and small groups look flat.</p></div>
+  <div class="callout def"><span class="label">Definition</span><p>A <strong>box plot</strong> draws the median (middle line), the box from the 25th to the 75th percentile (the <strong>IQR</strong>, interquartile range), whiskers to the furthest points within 1.5 × IQR, and dots for outliers beyond. A <strong>violin</strong> adds the smooth density shape. A <strong>95% confidence interval</strong> (CI) is a range that, over repeated samples, would contain the true mean 95% of the time.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p><code>sns.barplot</code> shows the mean, not the total. If you want "revenue per category", aggregate first (<code>groupby().sum()</code>) and plot that, or pass <code>estimator="sum"</code>. Many dashboards show averages labelled as totals because of this.</p></div>
 
   <h2 id="dv-comm"><span class="num">06</span>Charts That Communicate</h2>
+  <p>A chart in a report or slide has one job: make the reader leave with one finding. Default charts fail at that: five bright colours compete, the title says "Revenue by category" (the reader can see that), and the legend sits far from the bars. The reader has to work out the point. Most will not.</p>
+  <p>The fix is a short routine: decide the one finding, write it as the title, colour only the thing that proves it, grey everything else, and label values directly on the chart.</p>
+  <div class="callout anlg"><span class="label">Analogy</span><p>A cricket commentator does not read out the scorecard. He says "India need 12 off the last over", and the camera zooms on the batsman. The scorecard is still available, but the message comes first.</p></div>
   <div class="flow"><span>Question</span><span>One finding</span><span>Title states it</span><span>Highlight it, grey the rest</span><span>Cut the junk</span></div>
+  <p>The code builds the orders category chart that way: sorted bars, one accent colour, value labels on the bars, no x-axis (the labels make it unnecessary).</p>
+  <div class="fx" data-lang="py">share = {"Electronics": 64.0, "Home": 15.8, "Fashion": 14.6, "Beauty": 4.2, "Books": 2.0}
+names = sorted(share, key=share.get)                     # ascending: biggest ends on top
+colors = ["#2a6fdb" if n == "Electronics" else "#b0b7c3" for n in names]
+
+fig, ax = plt.subplots(figsize=(6, 3), layout="constrained")
+bars = ax.barh(names, [share[n] for n in names], color=colors)
+ax.bar_label(bars, fmt="%.1f%%", padding=3)              # label bars directly
+ax.set_title("Electronics = 64% of revenue", loc="left")
+ax.set_xticks([]); ax.spines[["top", "right", "bottom"]].set_visible(False)
+print(names)
+print(colors)
+print([t.get_text() for t in ax.texts if t.get_text()])</div>
+  <div class="fx" data-lang="text">['Books', 'Beauty', 'Fashion', 'Home', 'Electronics']
+['#b0b7c3', '#b0b7c3', '#b0b7c3', '#b0b7c3', '#2a6fdb']
+['2.0%', '4.2%', '14.6%', '15.8%', '64.0%']</div>
+  <p>The list comprehension gives grey to every bar except Electronics. <code>bar_label</code> writes each value at the end of its bar (<code>"%.1f%%"</code> = one decimal plus a percent sign), so the reader never looks back and forth to an axis. <code>loc="left"</code> aligns the title with the bars, where the eye starts.</p>
   <table class="tbl">
     <tr><th>Weak</th><th>Strong</th></tr>
     <tr><td>"Revenue by category"</td><td>"Electronics = 64% of revenue"</td></tr>
@@ -208,6 +469,7 @@ sns.pairplot(o[["qty", "unit_price", "revenue", "category"]], hue="category", co
     <tr><td>Legend far away</td><td>Label lines directly at their ends</td></tr>
     <tr><td>Truncated bar axis (starts at 90)</td><td>Bars start at 0 (lines may zoom in)</td></tr>
   </table>
+  <p>Why do bars need 0 but lines don't? A bar's <em>length</em> is the value, so cutting the bottom off makes 95 look twice as big as 92. A line shows <em>change</em>, read from its slope, so zooming in to see the change is fair if the axis is labelled. And why not a pie? Look at the same numbers both ways:</p>
   <figure class="viz"><svg viewBox="0 0 600 160" width="600">
     <g transform="translate(10,0)"><path d="M90 75L90.0 15.0A60 60 0 1 1 45.0 114.7z" class="fb" stroke="currentColor"/><path d="M90 75L45.0 114.7A60 60 0 0 1 32.2 59.0z" class="ft" stroke="currentColor"/><path d="M90 75L32.2 59.0A60 60 0 0 1 67.6 19.4z" class="fg" stroke="currentColor"/><path d="M90 75L67.6 19.4A60 60 0 0 1 82.9 15.4z" class="fv" stroke="currentColor"/><path d="M90 75L82.9 15.4A60 60 0 0 1 90.4 15.0z" class="fr" stroke="currentColor"/></g>
     <text x="10" y="155" class="tr">Home vs Fashion: which is bigger?</text>
@@ -226,9 +488,15 @@ sns.pairplot(o[["qty", "unit_price", "revenue", "category"]], hue="category", co
     <div><b>Rainbow colormaps</b><p>Jet has false edges and fails for colour-blind readers.</p><small>Use: viridis (sequential), RdBu (diverging)</small></div>
     <div><b>3-D effects</b><p>Perspective distorts bar heights and slice sizes.</p><small>Use: flat 2-D</small></div>
   </div>
+  <div class="callout def"><span class="label">Definition</span><p>A <strong>sequential</strong> colour map goes light → dark for values from low to high (counts, revenue). A <strong>diverging</strong> map has a meaningful middle (0, target) and two directions. A <strong>categorical</strong> palette uses distinct colours for unordered groups; keep it to about six.</p></div>
 
   <h2 id="dv-build"><span class="num">07</span>Hands-on: One-page EDA Figure</h2>
-  <div class="fx" data-lang="py">def eda_page(df, num, cat, path):
+  <p>Every new dataset raises the same three questions about a numeric column: how is it distributed, how does it differ across a category, and how does it relate to the other numbers. <strong>EDA</strong> (exploratory data analysis) is this first look. Writing the same three plots by hand for each project is slow, so wrap them in a function that takes the DataFrame and column names and saves one page. This is the kind of helper data scientists keep in a personal <code>utils.py</code>.</p>
+  <div class="callout anlg"><span class="label">Analogy</span><p>A doctor's routine check-up: pulse, blood pressure, temperature, every patient, same order. The routine catches the obvious problems before any special test.</p></div>
+  <p>The function puts three Axes side by side and hands each to a Seaborn axes-level function with <code>ax=</code>. It sorts the box-plot categories by median, writes findings into the titles, saves, closes, and returns the order so we can check it. Tested here on a 300-row synthetic table with three categories:</p>
+  <div class="fx" data-lang="py">import os
+
+def eda_page(df, num, cat, path):
     """Distribution of num, num by cat, and correlations in one figure."""
     fig, axes = plt.subplots(1, 3, figsize=(14, 4), layout="constrained")
     sns.histplot(data=df, x=num, log_scale=True, ax=axes[0])
@@ -237,22 +505,57 @@ sns.pairplot(o[["qty", "unit_price", "revenue", "category"]], hue="category", co
     sns.heatmap(df.select_dtypes("number").corr(), annot=True, fmt=".2f",
                 cmap="RdBu_r", center=0, vmin=-1, vmax=1, ax=axes[2])
     axes[0].set_title(f"{num}: median {df[num].median():,.0f}")
-    fig.savefig(path, dpi=120); plt.close(fig)
+    axes[1].set_title(f"{order[-1]} has the highest median {num}")
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
+    return list(order)
 
-eda_page(o, "unit_price", "category", "eda.png")</div>
-  <p>Try: change the titles to state one finding each, then highlight the top category in the boxplot.</p>
+rng = np.random.default_rng(3)
+cats = rng.choice(["Books", "Fashion", "Electronics"], 300, p=[.4, .4, .2])
+base = pd.Series(cats).map({"Books": 300, "Fashion": 1200, "Electronics": 9000}).to_numpy()
+df = pd.DataFrame({"category": cats,
+                   "unit_price": (base * rng.lognormal(0, .5, 300)).round(),
+                   "qty": rng.integers(1, 5, 300)})
+df["revenue"] = df.unit_price * df.qty
 
-  <h2 id="dv-qa"><span class="num">08</span>Questions &amp; Answers</h2>
+open_before = len(plt.get_fignums())
+order = eda_page(df, "unit_price", "category", "eda.png")
+print("box order:", order)
+print("median:", f"{df.unit_price.median():,.0f}")
+print("saved:", os.path.exists("eda.png"), plt.imread("eda.png").shape[:2])
+print("figures left open by eda_page:", len(plt.get_fignums()) - open_before)</div>
+  <div class="fx" data-lang="text">box order: ['Books', 'Fashion', 'Electronics']
+median: 1,057
+saved: True (480, 1680)
+figures left open by eda_page: 0</div>
+  <p>Read the important lines. <code>df.groupby(cat)[num].median().sort_values().index</code> gives the categories cheapest first; passing it as <code>order=</code> makes the boxes climb left to right, so the ranking is visible at a glance. <code>select_dtypes("number")</code> keeps only numeric columns for the correlation. The saved image is 480 × 1680 pixels (4 × 14 inches at 120 dpi), and <code>plt.close(fig)</code> means the function leaves no figure open, so the function is safe inside a loop over 50 columns. On the real data call <code>eda_page(o, "unit_price", "category", "eda.png")</code>.</p>
+  <p>Try: add a fourth panel with <code>sns.countplot</code> of the category, or highlight the top category's box in an accent colour.</p>
+
+  <h2 id="dv-traps"><span class="num">08</span>Common Mistakes</h2>
+  <div class="callout trap"><span class="label">Trap: mixing plt.* and ax.*</span><p>With several Axes, <code>plt.title</code> writes on the last-created one. Pick the OO style and use <code>ax.set_title</code> everywhere.</p></div>
+  <div class="callout trap"><span class="label">Trap: indexing subplots</span><p><code>subplots(2, 2)</code> → 2-D array, use <code>axes[r, c]</code>; <code>subplots(1, 3)</code> → 1-D array, <code>axes[i]</code>; <code>subplots()</code> → a single Axes.</p></div>
+  <div class="callout trap"><span class="label">Trap: Seaborn drawing on an old chart</span><p>Without <code>ax=</code>, an axes-level function draws on the current Axes, which in a notebook may be the last chart you made. When testing this note's code in one session, a histogram landed on an earlier heatmap and gave wrong numbers. Always create <code>fig, ax = plt.subplots()</code> and pass <code>ax=ax</code>.</p></div>
+  <div class="callout trap"><span class="label">Trap: barplot means</span><p><code>sns.barplot</code> plots the mean per group with a CI, not the sum. Aggregate first or set <code>estimator="sum"</code>.</p></div>
+  <div class="callout trap"><span class="label">Trap: bar axis not at zero</span><p>A bar chart whose axis starts at 90 makes 95 look twice 92. Bars start at 0; only line charts may zoom.</p></div>
+  <div class="callout trap"><span class="label">Trap: linear axis on skewed data</span><p>One ₹60,000 item squashes everything into one bar. Use a log scale and report the median.</p></div>
+  <div class="callout trap"><span class="label">Trap: common_norm with unequal groups</span><p>Density curves of an 80-row and a 20-row group: the small one looks flat. Use <code>common_norm=False</code> to compare shapes.</p></div>
+  <div class="callout trap"><span class="label">Trap: wide data into Seaborn</span><p><code>hue=</code> needs a column that names the group. Wide tables (one column per city) must be <code>melt</code>ed first.</p></div>
+  <div class="callout trap"><span class="label">Trap: cut-off labels and memory leaks</span><p>Save with <code>bbox_inches="tight"</code> and build with <code>layout="constrained"</code>. Close every figure in loops with <code>plt.close(fig)</code>.</p></div>
+
+  <h2 id="dv-qa"><span class="num">09</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>Difference between Figure and Axes? Why prefer the OO API?</summary><div class="qa-body">Figure is the whole canvas; Axes is one plot inside it. The OO API (<code>fig, ax = plt.subplots()</code>) gives explicit handles, so multi-panel figures and functions that take <code>ax=</code> behave predictably. pyplot calls act on an implicit "current" Axes.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Difference between Figure and Axes? Why prefer the OO API?</summary><div class="qa-body">Figure is the whole canvas (what gets saved); Axes is one plot inside it with its own axis, title and legend. The OO API (<code>fig, ax = plt.subplots()</code>) gives explicit handles, so multi-panel figures and functions that take <code>ax=</code> behave predictably. pyplot calls act on an implicit "current" Axes (the last created), which goes wrong with several panels.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>You want to show that unit price is right-skewed. Which plot and settings?</summary><div class="qa-body">Histogram or ECDF, ideally with a log x-axis (<code>sns.histplot(x="unit_price", log_scale=True)</code>). Report median and percentiles, not the mean: median ₹1,620 vs 90th percentile ₹9,135.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Box plot vs violin plot vs bar of means?</summary><div class="qa-body">Bar of means hides spread and outliers. Box shows median, IQR and outliers. Violin adds the density shape (e.g. bimodality) but is harder for non-technical readers. Use box by default; strip/swarm overlays when n is small.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Box plot vs violin plot vs bar of means?</summary><div class="qa-body">Bar of means hides spread and outliers. Box shows median, IQR and outliers. Violin adds the density shape (e.g. two humps) but is harder for non-technical readers. Use box by default; strip/swarm overlays when n is small.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>When is a pie chart acceptable?</summary><div class="qa-body">Two or three parts with clearly different sizes, when "part of a whole" is the message. Otherwise a sorted bar: lengths on a shared baseline are compared far more accurately than angles.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Your manager wants revenue and order count on one chart with two y-axes. What do you propose?</summary><div class="qa-body">Two vertically stacked panels sharing the x-axis (<code>plt.subplots(2, 1, sharex=True)</code>), or index both series to 100 at the start and plot on one axis. Dual axes let the scale choice invent correlations.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span><code>sns.histplot</code> vs <code>sns.displot</code>?</summary><div class="qa-body"><code>histplot</code> is axes-level: draws on an <code>ax</code> you give it. <code>displot</code> is figure-level: creates its own FacetGrid and can facet with <code>col=</code>/<code>row=</code>, but can't go into an existing subplot.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Your manager wants revenue and order count on one chart with two y-axes. What do you propose?</summary><div class="qa-body">Two vertically stacked panels sharing the x-axis (<code>plt.subplots(2, 1, sharex=True)</code>), or index both series to 100 at the start and plot on one axis. With dual axes, the choice of the two scales decides whether the lines appear to move together, so the chart can invent a correlation.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span><code>sns.histplot</code> vs <code>sns.displot</code>?</summary><div class="qa-body"><code>histplot</code> is axes-level: draws on an <code>ax</code> you give it and returns an Axes. <code>displot</code> is figure-level: creates its own FacetGrid and can facet with <code>col=</code>/<code>row=</code>, but can't go into an existing subplot.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does <code>sns.barplot(data=df, x="city", y="revenue")</code> plot?</summary><div class="qa-body">The mean revenue per city, with a 95% confidence interval as an error bar (computed by bootstrapping). Not the total. For totals, aggregate first or pass <code>estimator="sum"</code>; for row counts use <code>countplot</code>.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Your saved PNG has cut-off labels. Fix?</summary><div class="qa-body"><code>fig.savefig(path, bbox_inches="tight")</code> and create the figure with <code>layout="constrained"</code> (or call <code>fig.tight_layout()</code>). Rotate long tick labels or switch to a horizontal bar.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>A scatter of 1M points is a solid blob. Options?</summary><div class="qa-body">Smaller markers with low <code>alpha</code>; sample; <code>ax.hexbin</code> or <code>sns.histplot(x=, y=)</code> (2-D histogram); <code>kdeplot</code> contours; or Datashader for huge data.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What makes a chart title good?</summary><div class="qa-body">It states the takeaway the reader should leave with: "Electronics = 64% of revenue", not "Revenue by category". The axis labels already say what is plotted.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Which colormap for a correlation matrix, and which for a count heatmap?</summary><div class="qa-body">Correlation (has a meaningful zero, signed): diverging, e.g. <code>RdBu_r</code> with <code>center=0</code>. Counts (0 to max): sequential single-hue, e.g. <code>viridis</code> or <code>Blues</code>. Never jet/rainbow.</div></details>
-</main>`
+  <details class="qa"><summary><span class="qmark">Q</span>How do you make a 1,200 × 600 pixel PNG?</summary><div class="qa-body">Pixels = inches × dpi. <code>figsize=(6, 3)</code> saved with <code>dpi=200</code>, or <code>figsize=(12, 6)</code> with <code>dpi=100</code>. The first has larger text relative to the image, since fonts are sized in points (1/72 inch).</div></details>
+</main>
+`
 });
