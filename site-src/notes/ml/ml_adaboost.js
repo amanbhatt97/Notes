@@ -612,8 +612,12 @@ for noise in [0.0, 0.1, 0.2]:
               f"but hold {w[flip].sum():.0%} of AdaBoost's total weight")
         top = np.argsort(w)[::-1][:100]
         print(f"  of the 100 heaviest rows, {flip[top].sum()} are flipped labels")</div>
-  <div class="fx" data-lang="text">x</div>
-  <p>x</p>
+  <div class="fx" data-lang="text">extra noise 0%:  AdaBoost 0.828   GBM (log-loss) 0.872   RF 0.879
+extra noise 10%:  AdaBoost 0.814   GBM (log-loss) 0.847   RF 0.874
+extra noise 20%:  AdaBoost 0.772   GBM (log-loss) 0.812   RF 0.850
+  after 300 rounds: flipped rows are 20% of rows but hold 28% of AdaBoost's total weight
+  of the 100 heaviest rows, 88 are flipped labels</div>
+  <p>All three get worse with noisier training labels. Both boosters lose about 0.06 at 20% flipped labels (AdaBoost 0.828 → 0.772, gradient boosting with log-loss 0.872 → 0.812, both run for a fixed 300 rounds with no early stopping), while the random forest loses only 0.029 (0.879 → 0.850). AdaBoost is the weakest at every noise level and ends 0.078 behind the forest. The last two lines show <em>why</em> AdaBoost suffers: after 300 rounds the flipped rows (20% of the data) hold 28% of the total weight, and of the 100 heaviest rows, 88 are flipped labels. The algorithm is spending its attention on exactly the rows it should ignore.</p>
   <div class="callout intu"><span class="label">The margin puzzle (and its limit)</span>
     <p>On clean data, AdaBoost's test error often keeps falling even after its training error hits zero, which seemed to contradict "more rounds = more overfitting". Schapire, Freund, Bartlett and Lee (1998) explained it with <strong>margins</strong>: extra rounds keep pushing y·F(x) further from 0 for the training rows, which makes the classifier more confident and more stable. But with label noise the noisy rows can only get positive margins by bending the model around them, and then extra rounds do overfit. Always check validation error, not training error, to choose the number of rounds.</p>
   </div>
@@ -647,16 +651,16 @@ for depth, n, lr in [(1, 500, 1.0), (1, 500, 0.5), (3, 500, 0.5), (6, 300, 0.5),
     print(f"depth={depth} lr={lr:3.1f}  val acc after 10/50/{n} rounds: "
           f"{curve[9]:.3f} {curve[49]:.3f} {curve[-1]:.3f}  best {max(curve):.3f} at round {int(np.argmax(curve))+1}"
           f"  train {ada.score(Xtr, ytr):.3f}  {time.time()-t0:.0f}s")</div>
-  <div class="fx" data-lang="text">depth=1 lr=1.0  val acc after 10/50/500 rounds: 0.617 0.646 0.652  best 0.652 at round 289  train 0.668  16s
-depth=1 lr=0.5  val acc after 10/50/500 rounds: 0.615 0.627 0.647  best 0.651 at round 437  train 0.663  36s
-depth=3 lr=0.5  val acc after 10/50/500 rounds: 0.744 0.785 0.791  best 0.793 at round 436  train 0.812  379s
-depth=6 lr=0.5  val acc after 10/50/300 rounds: 0.818 0.838 0.851  best 0.854 at round 98  train 0.916  618s
-depth=6 lr=0.1  val acc after 10/50/300 rounds: 0.803 0.821 0.829  best 0.831 at round 274  train 0.852  551s</div>
+  <div class="fx" data-lang="text">depth=1 lr=1.0  val acc after 10/50/500 rounds: 0.617 0.646 0.652  best 0.652 at round 289  train 0.668  14s
+depth=1 lr=0.5  val acc after 10/50/500 rounds: 0.615 0.627 0.647  best 0.651 at round 437  train 0.663  13s
+depth=3 lr=0.5  val acc after 10/50/500 rounds: 0.744 0.785 0.791  best 0.793 at round 436  train 0.812  33s
+depth=6 lr=0.5  val acc after 10/50/300 rounds: 0.818 0.838 0.851  best 0.854 at round 98  train 0.916  39s
+depth=6 lr=0.1  val acc after 10/50/300 rounds: 0.803 0.821 0.829  best 0.831 at round 274  train 0.852  42s</div>
   <p>How to read it (each line: validation accuracy after 10, 50 and all rounds, the best round, training accuracy, fit time):</p>
   <ul>
     <li><strong>Base-tree depth matters most.</strong> Stumps plateau at about 0.65 however many rounds you add (500 rounds: 0.652). Depth 3 reaches 0.79, depth 6 reaches 0.85. The churn pattern is made of interactions, and only deeper trees can express them.</li>
     <li><strong>Learning rate trades speed for smoothness.</strong> With depth 6, lr 0.5 peaks at round 98 (0.854) and then drifts slightly down (0.851 at 300) while training accuracy climbs to 0.916: mild overfitting. lr 0.1 is still improving at round 274 (0.831): it simply needs more rounds.</li>
-    <li><strong>It is slow.</strong> Each round is a full weighted tree fit, one after another on one core; the depth-6 runs take minutes, where the gradient-boosting libraries in <a class="xref" data-note="ml_boosting">How Boosting Works</a> need seconds for similar accuracy.</li>
+    <li><strong>It is slow.</strong> Each round is a full weighted tree fit, one after another on one core; the depth-6 runs take about 40 seconds, where the histogram-based gradient-boosting libraries in <a class="xref" data-note="ml_boosting">How Boosting Works</a> fit 500 trees in 1–2 seconds with higher accuracy.</li>
   </ul>
   <p>A sensible AdaBoost recipe: depth 2–6 trees, learning_rate 0.1–0.5, a few hundred rounds, and choose the round count with <code>staged_score</code> on validation data (as above), not on the test set.</p>
 

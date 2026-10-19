@@ -101,7 +101,20 @@ Object.assign(TOPIC_CONTENT, {
 
   <h2 id="bst-need"><span class="num">01</span>The Error Averaging Can't Fix</h2>
   <p><strong>Recall the two kinds of error</strong> (<a class="xref" data-note="ml_core">Core Concepts</a>). <strong>Variance</strong>: the model changes a lot when the training rows change, so its mistakes are partly random. <strong>Bias</strong>: the model is too simple for the pattern, so it makes the <em>same</em> mistake whatever rows it sees. Averaging n models leaves the expected prediction unchanged (the average of things that all lean left still leans left), so it can only shrink variance. That is the whole job of bagging and random forests, and why they use deep trees: deep trees have low bias and high variance, and averaging removes the variance.</p>
-  <p>Now take models with <strong>high bias</strong>, like stumps (one-question trees). Averaging 200 of them, each trained on a bootstrap sample, gives… roughly one stump. Boosting 200 of them is a different story. A curve y = 3·sin(x) plus noise, and then the churn data (20,000 fake customers; full setup in section 06):</p>
+  <p>Now take models with <strong>high bias</strong>, like stumps (one-question trees). Averaging 200 of them, each trained on a bootstrap sample, gives… roughly one stump. Boosting 200 of them is a different story. A curve y = 3·sin(x) plus noise, and then the churn data. The churn data is the synthetic dataset shared by all the tree notes (20,000 fake mobile customers, 1 = churned, 12,000 train / 3,000 validation / 5,000 test); every churn block in this note starts from this setup:</p>
+  <div class="fx" data-lang="py">import numpy as np, pandas as pd, time
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
+from sklearn.ensemble import RandomForestClassifier
+X, y = make_classification(n_samples=20000, n_features=12, n_informative=6, n_redundant=2,
+                           n_clusters_per_class=3, class_sep=0.8, flip_y=0.05, random_state=7)
+X = pd.DataFrame(X, columns=[f"f{i}" for i in range(12)])
+rng = np.random.default_rng(0)
+X["row_noise"] = rng.random(20000)               # pure noise, 20,000 different values
+X["coin_noise"] = rng.integers(0, 2, 20000)      # pure noise, only 0 or 1
+Xtmp, Xte, ytmp, yte = train_test_split(X, y, test_size=5000, stratify=y, random_state=0)
+Xtr, Xva, ytr, yva = train_test_split(Xtmp, ytmp, test_size=3000, stratify=ytmp, random_state=0)</div>
   <div class="fx" data-lang="py">from sklearn.ensemble import BaggingRegressor, BaggingClassifier, GradientBoostingRegressor, GradientBoostingClassifier
 # 1. a curve that one question cannot draw
 rng1 = np.random.default_rng(0)
@@ -203,7 +216,24 @@ for nu in [1.0, 0.5, 0.1]:
         F = F + nu * np.where(x &lt;= t, a, b)
         if m &lt;= 3 or m in (10, 30):
             print(f"   round {m:2d}: stump x &lt;= {t} -&gt; ({a:+.2f}, {b:+.2f})   F = {np.round(F, 2).tolist()}   MSE {np.mean((y-F)**2):.3f}")</div>
-  <div class="fx" data-lang="text">x</div>
+  <div class="fx" data-lang="text">nu = 1.0:  start F0 = 8.0  MSE 18.33
+   round  1: stump x &lt;= 4.5 -&gt; (-2.75, +5.50)   F = [5.25, 5.25, 5.25, 5.25, 13.5, 13.5]   MSE 3.208
+   round  2: stump x &lt;= 2.5 -&gt; (-1.75, +0.88)   F = [3.5, 3.5, 6.12, 6.12, 14.38, 14.38]   MSE 1.677
+   round  3: stump x &lt;= 4.5 -&gt; (+0.44, -0.88)   F = [3.94, 3.94, 6.56, 6.56, 13.5, 13.5]   MSE 1.294
+   round 10: stump x &lt;= 4.5 -&gt; (+0.16, -0.32)   F = [3.07, 3.91, 6.53, 7.49, 12.32, 14.68]   MSE 0.128
+   round 30: stump x &lt;= 4.5 -&gt; (+0.01, -0.03)   F = [3.02, 3.96, 6.06, 7.96, 12.03, 14.97]   MSE 0.002
+nu = 0.5:  start F0 = 8.0  MSE 18.33
+   round  1: stump x &lt;= 4.5 -&gt; (-2.75, +5.50)   F = [6.62, 6.62, 6.62, 6.62, 10.75, 10.75]   MSE 6.990
+   round  2: stump x &lt;= 3.5 -&gt; (-2.29, +2.29)   F = [5.48, 5.48, 5.48, 7.77, 11.9, 11.9]   MSE 3.051
+   round  3: stump x &lt;= 2.5 -&gt; (-1.98, +0.99)   F = [4.49, 4.49, 5.97, 8.27, 12.39, 12.39]   MSE 1.582
+   round 10: stump x &lt;= 5.5 -&gt; (-0.04, +0.19)   F = [3.14, 3.99, 5.75, 8.05, 12.17, 14.9]   MSE 0.020
+   round 30: stump x &lt;= 2.5 -&gt; (-0.03, +0.01)   F = [3.02, 4.0, 5.93, 8.01, 12.06, 14.97]   MSE 0.002
+nu = 0.1:  start F0 = 8.0  MSE 18.33
+   round  1: stump x &lt;= 4.5 -&gt; (-2.75, +5.50)   F = [7.72, 7.72, 7.72, 7.72, 8.55, 8.55]   MSE 15.460
+   round  2: stump x &lt;= 4.5 -&gt; (-2.47, +4.95)   F = [7.48, 7.48, 7.48, 7.48, 9.04, 9.04]   MSE 13.132
+   round  3: stump x &lt;= 4.5 -&gt; (-2.23, +4.46)   F = [7.25, 7.25, 7.25, 7.25, 9.49, 9.49]   MSE 11.246
+   round 10: stump x &lt;= 5.5 -&gt; (-0.79, +3.96)   F = [5.82, 5.82, 6.22, 7.74, 10.96, 11.44]   MSE 4.198
+   round 30: stump x &lt;= 4.5 -&gt; (-0.34, +0.69)   F = [3.98, 4.27, 6.05, 7.93, 11.76, 14.0]   MSE 0.350</div>
   <p>Look at the ν = 1 block: rounds 1–3 match the hand numbers above, and by round 30 the six salaries are fitted almost exactly (MSE 0.002). Three things to see in this tiny example:</p>
   <ul>
     <li><strong>Each model works on the remainder</strong>: round 2 splits at 2.5, not at 4.5, because the 4.5-pattern has already been taken out of the residuals.</li>
@@ -261,7 +291,10 @@ y = X[:, 0] * np.sin(X[:, 1]) + X[:, 2] + rng.normal(0, 0.5, 500)
 model = forward_stagewise(X, y)
 sk = GradientBoostingRegressor(n_estimators=100, learning_rate=0.1, max_depth=2, random_state=0).fit(X, y)
 print(f"max |ours - sklearn GradientBoostingRegressor| = {np.abs(model(X) - sk.predict(X)).max():.2e}")</div>
-  <div class="fx" data-lang="text">x</div>
+  <div class="fx" data-lang="text">  round 1: line-search beta = 1.000000   train MSE 21.7193
+  round 2: line-search beta = 1.000000   train MSE 20.3672
+  round 3: line-search beta = 1.000000   train MSE 19.2431
+max |ours - sklearn GradientBoostingRegressor| = 8.88e-15</div>
   <div class="callout intu"><span class="label">Key insight</span>
     <p>Bagging: F = (1/M)·Σ h_m with each h_m trained independently on the same target. Boosting: F = F₀ + ν·Σ h_m with each h_m trained on what the previous sum gets wrong. Same "sum of trees" shape, opposite philosophy: averaging independent guesses vs adding corrections.</p>
   </div>
@@ -291,8 +324,26 @@ for lr in [1.0, 0.3, 0.1, 0.03]:
         for r in [1, 10, 50, 100, b + 1, 500, 1000, 3000]:
             print(f"     round {r:4d}: train log-loss {tr[r-1]:.3f}   val log-loss {va[r-1]:.3f}")
         np.save("b3_curve.npy", np.vstack([tr, va]))</div>
-  <div class="fx" data-lang="text">x</div>
-  <p>x</p>
+  <div class="fx" data-lang="text">lr=1.00  best val log-loss 0.429 at round   10   at round 3000: train 11.765 val 12.099   49s
+lr=0.30  best val log-loss 0.345 at round   47   at round 3000: train 0.000 val 0.873   52s
+lr=0.10  best val log-loss 0.320 at round  373   at round 3000: train 0.000 val 0.618   28s
+     round    1: train log-loss 0.659   val log-loss 0.660
+     round   10: train log-loss 0.492   val log-loss 0.498
+     round   50: train log-loss 0.324   val log-loss 0.367
+     round  100: train log-loss 0.259   val log-loss 0.342
+     round  373: train log-loss 0.103   val log-loss 0.320
+     round  500: train log-loss 0.069   val log-loss 0.322
+     round 1000: train log-loss 0.014   val log-loss 0.360
+     round 3000: train log-loss 0.000   val log-loss 0.618
+lr=0.03  best val log-loss 0.320 at round 1340   at round 3000: train 0.021 val 0.349   28s</div>
+  <table class="tbl">
+    <tr><th>ν</th><th>best validation log-loss</th><th>at round</th><th>validation log-loss at round 3000</th></tr>
+    <tr><td>1.0</td><td>0.429</td><td>10</td><td>12.10 (blown up)</td></tr>
+    <tr><td>0.3</td><td>0.345</td><td>47</td><td>0.873</td></tr>
+    <tr><td>0.1</td><td>0.320</td><td>373</td><td>0.618</td></tr>
+    <tr><td>0.03</td><td>0.320</td><td>1,340</td><td>0.349</td></tr>
+  </table>
+  <p>Three lessons. (1) Full steps are clearly worse: ν = 1 bottoms out at 0.429 after only 10 rounds and then falls apart; by round 3,000 its predictions are so extreme that the log-loss is 12. (2) Smaller steps reach a <em>better</em> best (0.345 → 0.320), and the number of rounds needed grows roughly like 1/ν (373 rounds at 0.1, 1,340 at 0.03). (3) Below about 0.1 the best score stops improving (0.320 both times) while the cost keeps growing: ν = 0.03 needs 3.6 times as many rounds for the same result.</p>
   <div class="callout def"><span class="label">Definition</span>
     <p><strong>Shrinkage</strong>: F_m = F_{m−1} + ν·h_m with 0 &lt; ν ≤ 1. Empirically, smaller ν improves generalisation at the cost of more rounds; the best number of rounds grows roughly like 1/ν. With very small ν and stagewise steps, boosting traces a path similar to L1-regularised (lasso) fitting over the space of trees, which is one explanation of why it acts as a regulariser.</p>
   </div>
@@ -302,7 +353,7 @@ for lr in [1.0, 0.3, 0.1, 0.03]:
 
   <h2 id="bst-bv"><span class="num">06</span>Bias, Variance &amp; Too Many Rounds</h2>
   <p>Round by round, boosting lowers bias: the model can express more and more shapes. But every round also fits a bit of the sample's noise, so variance creeps up. Early on the bias drop wins; later the noise wins. The lr = 0.1 curve from the run above:</p>
-  
+  <figure class="viz"><svg viewBox="0 0 640 300" width="640"><line x1="60" y1="250" x2="620" y2="250" stroke="currentColor"/><line x1="60" y1="20" x2="60" y2="250" stroke="currentColor"/><line x1="60.0" y1="250" x2="60.0" y2="255" stroke="currentColor"/><text x="60.0" y="268" text-anchor="middle" class="tm" font-size="11">1</text><line x1="221.1" y1="250" x2="221.1" y2="255" stroke="currentColor"/><text x="221.1" y="268" text-anchor="middle" class="tm" font-size="11">10</text><line x1="382.1" y1="250" x2="382.1" y2="255" stroke="currentColor"/><text x="382.1" y="268" text-anchor="middle" class="tm" font-size="11">100</text><line x1="543.2" y1="250" x2="543.2" y2="255" stroke="currentColor"/><text x="543.2" y="268" text-anchor="middle" class="tm" font-size="11">1000</text><line x1="55" y1="217.1" x2="620" y2="217.1" stroke="currentColor" stroke-opacity="0.12"/><text x="52" y="221.1" text-anchor="end" class="tm" font-size="11">0.1</text><line x1="55" y1="184.3" x2="620" y2="184.3" stroke="currentColor" stroke-opacity="0.12"/><text x="52" y="188.3" text-anchor="end" class="tm" font-size="11">0.2</text><line x1="55" y1="151.4" x2="620" y2="151.4" stroke="currentColor" stroke-opacity="0.12"/><text x="52" y="155.4" text-anchor="end" class="tm" font-size="11">0.3</text><line x1="55" y1="118.6" x2="620" y2="118.6" stroke="currentColor" stroke-opacity="0.12"/><text x="52" y="122.6" text-anchor="end" class="tm" font-size="11">0.4</text><line x1="55" y1="85.7" x2="620" y2="85.7" stroke="currentColor" stroke-opacity="0.12"/><text x="52" y="89.7" text-anchor="end" class="tm" font-size="11">0.5</text><line x1="55" y1="52.9" x2="620" y2="52.9" stroke="currentColor" stroke-opacity="0.12"/><text x="52" y="56.9" text-anchor="end" class="tm" font-size="11">0.6</text><line x1="55" y1="20.0" x2="620" y2="20.0" stroke="currentColor" stroke-opacity="0.12"/><text x="52" y="24.0" text-anchor="end" class="tm" font-size="11">0.7</text><text x="340.0" y="292" text-anchor="middle" class="tm" font-size="11.5">boosting rounds (log scale)</text><text x="14" y="135.0" text-anchor="middle" class="tm" font-size="11.5" transform="rotate(-90 14 135.0)">log-loss</text><polyline points="60.0,33.3 108.5,42.6 136.8,50.8 157.0,58.3 172.6,64.7 185.3,70.7 196.1,75.6 205.4,80.1 213.7,84.6 221.1,88.4 227.7,91.9 233.8,95.2 239.4,98.4 244.6,101.0 249.4,103.6 253.9,105.7 258.2,108.3 262.2,110.4 265.9,112.8 269.5,114.7 272.9,116.7 276.2,118.5 279.3,120.2 282.3,121.6 285.1,123.2 287.9,124.4 293.1,126.7 295.5,127.9 300.2,130.6 302.4,131.2 306.6,133.2 310.6,135.1 314.4,136.2 316.2,136.9 321.4,138.7 324.7,139.9 327.8,141.2 330.8,142.3 335.0,144.4 337.7,145.5 341.6,147.4 345.2,148.6 348.7,150.1 352.0,151.8 356.2,153.5 359.1,154.6 362.9,156.2 366.5,157.7 369.9,159.1 373.2,160.9 377.0,162.6 380.7,164.2 384.2,165.8 387.5,167.1 391.3,168.7 394.9,170.5 398.3,172.1 401.5,174.1 405.1,176.2 408.6,178.1 412.3,180.1 415.8,181.8 419.2,183.9 422.8,186.1 426.3,188.3 429.9,190.7 433.3,192.7 436.9,194.7 440.4,196.7 443.9,198.8 447.3,200.9 451.1,203.3 454.4,205.0 458.0,207.2 461.5,209.1 465.0,211.1 468.5,212.9 472.1,214.8 475.7,217.1 479.1,218.8 482.6,220.9 486.2,222.8 489.8,224.6 493.3,226.4 496.7,228.4 500.2,230.1 503.7,231.8 507.3,233.5 510.8,235.0 514.3,236.6 517.9,237.9 521.3,239.3 524.9,240.6 528.4,241.7 532.0,242.7 535.5,243.7 539.0,244.5 542.5,245.2 546.0,246.0 549.6,246.7 553.1,247.3 556.6,247.7 560.2,248.2 563.6,248.5 567.2,248.8 570.7,249.0 574.2,249.2 577.7,249.4 581.3,249.6 584.8,249.7 588.3,249.8 591.8,249.8 595.4,249.9 598.9,249.9 602.4,249.9 605.9,250.0 609.4,250.0 613.0,250.0 616.5,250.0 620.0,250.0" fill="none" class="st" stroke-width="2"/><line x1="74" y1="221" x2="96" y2="221" class="st" stroke-width="2.5"/><text x="102" y="225" font-size="11.5">training log-loss</text><polyline points="60.0,33.1 108.5,42.4 136.8,50.8 157.0,58.1 172.6,64.6 185.3,70.1 196.1,74.6 205.4,78.5 213.7,82.9 221.1,86.4 227.7,89.7 233.8,92.8 239.4,95.5 244.6,97.8 249.4,100.2 253.9,102.2 258.2,104.6 262.2,106.4 265.9,108.5 269.5,110.2 272.9,111.9 276.2,113.3 279.3,114.7 282.3,115.7 285.1,117.1 287.9,117.8 293.1,119.5 295.5,120.5 300.2,122.5 302.4,123.0 306.6,124.3 310.6,125.5 314.4,125.8 316.2,126.1 321.4,127.2 324.7,127.4 327.8,128.2 330.8,128.6 335.0,130.1 337.7,130.8 341.6,132.0 345.2,132.2 348.7,132.5 352.0,133.2 356.2,133.9 359.1,134.4 362.9,135.1 366.5,135.2 369.9,135.5 373.2,136.6 377.0,137.1 380.7,137.5 384.2,137.8 387.5,137.7 391.3,137.9 394.9,138.4 398.3,138.7 401.5,139.2 405.1,139.8 408.6,140.2 412.3,140.5 415.8,140.7 419.2,141.3 422.8,142.0 426.3,142.7 429.9,143.0 433.3,143.1 436.9,143.1 440.4,143.4 443.9,143.9 447.3,144.2 451.1,144.4 454.4,144.2 458.0,144.2 461.5,144.3 465.0,144.5 468.5,144.4 472.1,144.3 475.7,144.7 479.1,144.3 482.6,144.4 486.2,144.5 489.8,144.3 493.3,144.2 496.7,143.6 500.2,143.4 503.7,142.5 507.3,142.3 510.8,141.4 514.3,140.8 517.9,140.3 521.3,139.7 524.9,138.4 528.4,137.1 532.0,135.6 535.5,134.4 539.0,133.3 542.5,131.8 546.0,130.4 549.6,128.3 553.1,126.4 556.6,124.0 560.2,121.7 563.6,119.4 567.2,117.0 570.7,113.6 574.2,111.3 577.7,107.8 581.3,104.5 584.8,100.9 588.3,97.0 591.8,92.8 595.4,87.3 598.9,81.9 602.4,77.9 605.9,71.9 609.4,65.9 613.0,59.8 616.5,53.9 620.0,47.0" fill="none" class="sr" stroke-width="2"/><line x1="74" y1="238" x2="96" y2="238" class="sr" stroke-width="2.5"/><text x="102" y="242" font-size="11.5">validation log-loss</text><line x1="474.2" y1="20" x2="474.2" y2="250" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.6"/><text x="469.2" y="32" text-anchor="end" class="tm" font-size="11">best: round 373</text></svg><figcaption>HistGradientBoosting on the churn data, learning rate 0.1. Training loss keeps falling towards 0; validation loss bottoms out at round 373 and then climbs: the extra rounds are fitting noise.</figcaption></figure>
   <p>This is the most important practical difference from a random forest. A forest averages: more trees can only make the average more stable, so you cannot overfit by adding trees. Boosting adds: more rounds keep fitting whatever is left, and after a point what is left is noise. <strong>Every boosted model needs a stopping rule</strong>: hold out validation data and stop when its loss has not improved for k rounds (early stopping; details in <a class="xref" data-note="ml_gbm">Gradient Boosting</a> and <a class="xref" data-note="ml_tree_tuning">Tuning &amp; Production</a>).</p>
   <table class="tbl">
     <tr><th>knob</th><th>bias</th><th>variance</th></tr>
@@ -334,8 +385,9 @@ for name, yy in [("clean labels", ytr), ("20% flipped", yn)]:
     rf = RandomForestClassifier(n_estimators=300, n_jobs=-1, random_state=0).fit(Xtr, yy)
     print(f"{name:13s} boosting val acc @50 {acc[49]:.3f}  @200 {acc[199]:.3f}  @1000 {acc[-1]:.3f}"
           f"  (best {max(acc):.3f} @ {int(np.argmax(acc))+1})   random forest {rf.score(Xva, yva):.3f}")</div>
-  <div class="fx" data-lang="text">x</div>
-  <p>x</p>
+  <div class="fx" data-lang="text">clean labels  boosting val acc @50 0.857  @200 0.869  @1000 0.875  (best 0.876 @ 446)   random forest 0.879
+20% flipped   boosting val acc @50 0.831  @200 0.825  @1000 0.797  (best 0.834 @ 83)   random forest 0.853</div>
+  <p>With clean labels, boosting keeps improving to 0.876 around round 446 and holds there (0.875 at 1,000). With 20% flipped labels it peaks early (0.834 at round 83) and then gets steadily <em>worse</em> as it fits more of the wrong labels: 0.825 at 200 rounds, 0.797 at 1,000. The random forest barely notices the noise (0.879 → 0.853) and has no round count to get wrong. Note this booster uses log-loss, the gentler loss; with AdaBoost's exponential loss the damage is larger (see <a class="xref" data-note="ml_adaboost">AdaBoost</a>).</p>
   <p><strong>Remedies</strong>: a loss that grows slowly for big mistakes (log-loss instead of exponential for classification; Huber or absolute instead of squared for regression), a small learning rate with early stopping, row subsampling, minimum leaf sizes, and cleaning labels. When labels are very noisy, a random forest is often the safer choice.</p>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Reading "boosting is the most accurate tabular model" as "always use boosting". On noisy labels or tiny datasets the extra flexibility hurts, and a forest (or a regularised linear model) can win. Compare on validation data.</p>
@@ -380,11 +432,16 @@ def show(name, m, t0):
 t0 = time.time(); show("AdaBoost (depth 6, 300)", AdaBoostClassifier(DecisionTreeClassifier(max_depth=6), n_estimators=300, learning_rate=0.5, random_state=0).fit(Xtr, ytr), t0)
 t0 = time.time(); show("GradientBoosting (500)", GradientBoostingClassifier(n_estimators=500, max_depth=5, random_state=0).fit(Xtr, ytr), t0)
 t0 = time.time(); show("HistGradientBoosting (500)", HistGradientBoostingClassifier(max_iter=500, early_stopping=False, random_state=0).fit(Xtr, ytr), t0)
-t0 = time.time(); show("XGBoost (500)", xgb.XGBClassifier(n_estimators=500, learning_rate=0.1, max_depth=6, n_jobs=4).fit(Xtr, ytr), t0)
-t0 = time.time(); show("LightGBM (500)", lgb.LGBMClassifier(n_estimators=500, learning_rate=0.1, verbose=-1, n_jobs=4).fit(Xtr, ytr), t0)
-t0 = time.time(); show("CatBoost (500)", CatBoostClassifier(iterations=500, learning_rate=0.1, verbose=False, thread_count=4).fit(Xtr, ytr), t0)</div>
-  <div class="fx" data-lang="text">x</div>
-  <p>x</p>
+t0 = time.time(); show("XGBoost (500)", xgb.XGBClassifier(n_estimators=500, learning_rate=0.1, max_depth=6, n_jobs=1).fit(Xtr, ytr), t0)
+t0 = time.time(); show("LightGBM (500)", lgb.LGBMClassifier(n_estimators=500, learning_rate=0.1, verbose=-1, n_jobs=1).fit(Xtr, ytr), t0)
+t0 = time.time(); show("CatBoost (500)", CatBoostClassifier(iterations=500, learning_rate=0.1, verbose=False, thread_count=1).fit(Xtr, ytr), t0)</div>
+  <div class="fx" data-lang="text">AdaBoost (depth 6, 300)      test acc 0.844    36.1s
+GradientBoosting (500)       test acc 0.855    41.0s
+HistGradientBoosting (500)   test acc 0.873     1.5s
+XGBoost (500)                test acc 0.866     1.5s
+LightGBM (500)               test acc 0.872     1.1s
+CatBoost (500)               test acc 0.875     2.8s</div>
+  <p>Read the two columns separately. <strong>Accuracy</strong>: every booster lands between 0.844 and 0.875; the gradient-based ones beat AdaBoost, and the differences among the modern libraries are small at default-ish settings. <strong>Time</strong> (single thread): AdaBoost and the classic GradientBoosting need 36–41 s because they try every cut-off of every column; the histogram-based engines (HistGradientBoosting, XGBoost, LightGBM) need 1–1.5 s for 500 trees, and CatBoost 2.8 s. That 25–35× speed-up, not a new idea about accuracy, is why the libraries took over: it makes early stopping, cross-validation and tuning affordable. (For reference, a 300-tree random forest scores about 0.88 on this data.)</p>
   <p>Reading order from here: <a class="xref" data-note="ml_adaboost">AdaBoost</a> (re-weighting, the exponential-loss view, a full hand trace), then <a class="xref" data-note="ml_gbm">Gradient Boosting</a> (pseudo-residuals, losses, line search, learning rate, early stopping), then the three libraries.</p>
 
   <h2 id="bst-traps"><span class="num">10</span>Common Mistakes</h2>
