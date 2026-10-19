@@ -1,93 +1,128 @@
-// notes/dataanalysis/da_pandas.js — Pandas
+// notes/dataanalysis/da_pandas.js — Pandas: the map
 Object.assign(TOPIC_CONTENT, {
   "da_pandas": `<main>
-  <h1>Pandas</h1>
-  <p class="lead">Pandas is the Python library for tables: load a file, filter rows, group and total, join two tables, reshape. It is Excel and SQL inside Python, and it is the first tool a data scientist opens every day. Examples start with a 4-row kirana shop register, then move to the same 1,000-row online-shop <code>orders</code> table (seed 42) plus a 200-row <code>customers</code> table used across this phase, on pandas 3.0.</p>
+<h1>Pandas: the map</h1>
+  <div class="where"><span>Data Analysis</span><span>Pandas</span><span>Pandas: the map</span></div>
+  <p class="lead">Start here. Pandas is the Python library for tables: load a file, pick rows, fix messy values, total by group, join tables, reshape them, work with dates, and do it fast. Those are not ten unrelated tricks. Each one exists because the step before it left a question unanswered. This page tells that story as one chain of needs, follows one running example through all of it (one week of orders at Biteful, a small food-delivery company in Pune and Mumbai: 12 raw order rows, a restaurants table and a customers table), compares pandas with the tools you already know, and lays out the reading order of the four notes that teach it in depth. It ends with a revision sheet. Every output on this page comes from a real run on pandas 3.0.5 (Python 3.13).</p>
 
-  <h2 id="dp-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="pdm-fits" class="open"><span class="num">★</span>Where this fits</h2>
+  <figure class="viz"><svg viewBox="0 0 640 262" width="640">
+<defs><marker id="pdm-ga" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+<rect x="100" y="6" width="440" height="36" rx="8" fill="none" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.5"/>
+<text x="320" y="22" text-anchor="middle" class="tm" font-size="10">came from</text>
+<text x="320" y="36" text-anchor="middle" font-size="11">Python Collections (dicts, lists) · Files · NumPy arrays</text>
+<line x1="320" y1="42" x2="320" y2="60" stroke="currentColor" marker-end="url(#pdm-ga)"/>
+<line x1="320" y1="102" x2="83" y2="130" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#pdm-ga)"/>
+<line x1="320" y1="102" x2="241" y2="130" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#pdm-ga)"/>
+<line x1="320" y1="102" x2="399" y2="130" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#pdm-ga)"/>
+<line x1="320" y1="102" x2="557" y2="130" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#pdm-ga)"/>
+<line x1="158" y1="152" x2="164" y2="152" stroke="currentColor" stroke-dasharray="3 3" marker-end="url(#pdm-ga)"/>
+<line x1="316" y1="152" x2="322" y2="152" stroke="currentColor" stroke-dasharray="3 3" marker-end="url(#pdm-ga)"/>
+<line x1="474" y1="152" x2="480" y2="152" stroke="currentColor" stroke-dasharray="3 3" marker-end="url(#pdm-ga)"/>
+<rect x="200" y="62" width="240" height="40" rx="8" class="fg sg" stroke-width="2.5"/>
+<text x="320" y="79" text-anchor="middle" font-size="12" font-weight="700">Pandas: the map</text>
+<text x="320" y="94" text-anchor="middle" class="tg" font-size="10">YOU ARE HERE · why each tool, in what order</text>
+<rect x="8" y="132" width="150" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="83" y="149" text-anchor="middle" font-size="12" font-weight="400">Basics &amp; Selection</text>
+<text x="83" y="164" text-anchor="middle" class="tm" font-size="10">table · index · pick</text>
+<rect x="166" y="132" width="150" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="241" y="149" text-anchor="middle" font-size="12" font-weight="400">Cleaning</text>
+<text x="241" y="164" text-anchor="middle" class="tm" font-size="10">NaN · types · text</text>
+<rect x="324" y="132" width="150" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="399" y="149" text-anchor="middle" font-size="12" font-weight="400">GroupBy &amp; Merge</text>
+<text x="399" y="164" text-anchor="middle" class="tm" font-size="10">summarise · combine · reshape</text>
+<rect x="482" y="132" width="150" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
+<text x="557" y="149" text-anchor="middle" font-size="12" font-weight="400">Time &amp; Speed</text>
+<text x="557" y="164" text-anchor="middle" class="tm" font-size="10">dates · windows · fast</text>
+<line x1="320" y1="172" x2="320" y2="208" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#pdm-ga)"/>
+<rect x="40" y="210" width="560" height="44" rx="8" fill="none" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.5"/>
+<text x="320" y="227" text-anchor="middle" class="tm" font-size="10">leads to</text>
+<text x="320" y="245" text-anchor="middle" font-size="11">Visualisation · SQL joins &amp; windows · Feature Engineering · Time Series · Spark</text>
+</svg><figcaption>The Pandas group. Read the map first, then left to right: each note answers a question the one before could not. Dotted arrows show the reading order.</figcaption></figure>
+  <ol class="story">
+    <li><b>Came from: <a class="xref" data-note="py_ds">Python Collections</a>, <a class="xref" data-note="py_files">Files</a> and <a class="xref" data-note="da_numpy">NumPy</a></b><span>A list of dicts can hold our orders, and a loop can total them, but every new question needs a new loop. A file gives us the data as text. NumPy gives fast maths on whole arrays, but one array holds one type and rows have no names. Left open: how do we work with a <em>table</em> whose columns have different types (names, times, money) as easily as NumPy works with numbers?</span></li>
+    <li><b>This note adds: the map of pandas</b><span>Why each part of pandas exists (the need chain), what pandas adds on top of lists, dicts and NumPy, how the four child notes divide the work, and the order to read them. Nothing is taught in full here; each child note does that.</span></li>
+    <li><b>Leads to: the four child notes, then beyond</b><span><a class="xref" data-note="da_pd_basics">Series, DataFrames &amp; Selection</a> → <a class="xref" data-note="da_pd_cleaning">Cleaning &amp; Missing Data</a> → <a class="xref" data-note="da_pd_groupby">GroupBy, Merge &amp; Reshape</a> → <a class="xref" data-note="da_pd_time">Time Series &amp; Performance</a>. After the group: <a class="xref" data-note="st_descriptive">Descriptive Statistics</a> (what to compute on a clean table), <a class="xref" data-note="da_viz">Visualisation</a>, <a class="xref" data-note="sql_joins">SQL JOINs</a> and <a class="xref" data-note="sql_windows">Window Functions</a> (the same ideas in a database), <a class="xref" data-note="ml_features">Feature Engineering</a>, <a class="xref" data-note="ml_timeseries">Time Series Basics</a>, and <a class="xref" data-note="de_spark">Apache Spark</a> when one machine is not enough.</span></li>
+  </ol>
+
+  <h2 id="pdm-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
+  <p>The whole group as one chain of needs. Each step answers the question above it; its weakness raises the next question. Numbers come from the running example (section 01). If you can retell this list in your own words, you know how pandas fits together.</p>
+  <ol class="story">
+    <li><b>A table of mixed columns</b><span>Q: how do we hold "order 101, Asha, Dosa Hut, Pune, 2 March 12:10, ₹240, 32 minutes" for every order? → A list of dicts works, but "Pune revenue" needs a hand-written loop, and so does every other question. NumPy is fast, but one array has one type… <a class="xref" data-note="da_pd_basics">Basics</a></span></li>
+    <li><b>Series &amp; DataFrame, with an index</b><span>Q: how do we get NumPy speed on columns of different types, and keep track of which value belongs to which row? → A <strong>Series</strong> is one labelled column; a <strong>DataFrame</strong> is Series sharing one row index. <code>read_csv</code> gives 12 rows × 7 columns, each column with its own dtype. But a table is only useful if we can ask for part of it… <a class="xref" data-note="da_pd_basics">Basics</a></span></li>
+    <li><b>Pick rows and columns</b><span>Q: "orders above ₹500, show who and how much"? → <code>loc</code> (by label), <code>iloc</code> (by position) and boolean masks: orders 103, 109, 111. But "Pune orders" misses order 104, because its city is typed " pune"… <a class="xref" data-note="da_pd_basics">Basics</a></span></li>
+    <li><b>Fix messy data</b><span>Q: how do we trust the table? → Find blanks (<code>isna</code>), decide drop or fill, remove the duplicate row (12 → 11), fix types ("28 min" → 28), tidy text (" pune" → Pune), flag the impossible 240-minute delivery. Now the numbers are right, but they are still one row per order… <a class="xref" data-note="da_pd_cleaning">Cleaning</a></span></li>
+    <li><b>Summarise by group</b><span>Q: revenue per city? → <code>groupby</code>: split, apply, combine. Mumbai ₹2,060 from 5 orders (one amount unknown), Pune ₹1,870 from 6. But cuisine is not in the orders table at all… <a class="xref" data-note="da_pd_groupby">GroupBy</a></span></li>
+    <li><b>Combine tables</b><span>Q: revenue per cuisine? → <code>merge</code> orders with restaurants: Biryani ₹1,430, Pizza ₹1,220… and one order (Momo Magic) has no restaurant row. A duplicate key would silently double rows (the fan-out trap). The result is long; the manager wants a grid… <a class="xref" data-note="da_pd_groupby">Merge</a></span></li>
+    <li><b>Reshape</b><span>Q: days down the side, cities across? → <code>pivot_table</code> (long → wide) and <code>melt</code> (wide → long). Monday: Mumbai 450, Pune 760. But "is revenue going up?" is a question about time, not about categories… <a class="xref" data-note="da_pd_groupby">Reshape</a></span></li>
+    <li><b>Time-indexed data</b><span>Q: daily revenue, its 3-day average, change from yesterday? → A <code>DatetimeIndex</code> with <code>resample</code>, <code>rolling</code>, <code>shift</code>: 1210, 690, 180, 860, 990; 3-day average 693.3 on Wednesday. On 11 rows everything is instant; on 1,000,000 rows the wrong habits take seconds and gigabytes… <a class="xref" data-note="da_pd_time">Time Series</a></span></li>
+    <li><b>Make it fast</b><span>Q: how do we keep it quick and small at scale? → Vectorise instead of looping (over 1,000× faster than <code>iterrows</code> on 100,000 rows), use <code>category</code> and smaller dtypes (75.5 MB → 28.0 MB on a million orders), chain methods, and know when to hand over to DuckDB, Polars or Spark. <a class="xref" data-note="da_pd_time">Performance</a></span></li>
+  </ol>
+
+  <h2 id="pdm-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">Pandas</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">Core &amp; I/O</div>
+        <div class="mm-title">Basics &amp; Selection</div>
         <ul>
-          <li><b>Series</b> — one column: values + index; <b>DataFrame</b> — the whole table, columns share one index</li>
-          <li><b>Inspect</b> — <code>shape, dtypes, info(), describe(), head()</code></li>
-          <li><b>Parquet</b> — columnar, compressed, typed; read 2 cols in 8 ms vs CSV 259 ms</li>
-          <li><b>CSV</b> — <code>parse_dates</code>, <code>usecols</code>, <code>dtype</code>, <code>chunksize</code> for huge files</li>
-          <li>⚠ <b>CSV loses types</b> — dates return as strings</li>
-          <li>💡 DataFrame = a shop register: each column one kind of fact, each row one sale</li>
+          <li><b>Series</b> = values + index; <b>DataFrame</b> = Series sharing an index</li>
+          <li>Arithmetic aligns by <b>label</b>, not position</li>
+          <li>One dtype per column; <code>read_csv</code>, Parquet keeps types</li>
+          <li><code>loc</code> labels (end included) · <code>iloc</code> positions (end excluded) · masks · <code>query</code></li>
+          <li>⚠ chained assignment never writes (Copy-on-Write, pandas 3)</li>
+          <li>💡 a register where every column is one kind of fact</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Selection</div>
+        <div class="mm-title">Cleaning</div>
         <ul>
-          <li><b>loc</b> — by label/mask, end inclusive; <b>iloc</b> — by position, end exclusive</li>
-          <li><b>Mask</b> — <code>df[(df.a &gt; 1) &amp; (df.b == "x")]</code>; <code>isin</code>, <code>between</code></li>
-          <li><b>query</b> — <code>df.query("status == 'returned' and qty &gt;= 4")</code></li>
-          <li>⚠ <b>loc[0:2] = 3 rows, iloc[0:2] = 2</b></li>
+          <li>Missing: NaN / None / <code>pd.NA</code>; find with <code>isna</code></li>
+          <li><code>dropna</code> vs <code>fillna</code> vs <code>interpolate</code>: decide by meaning</li>
+          <li><code>drop_duplicates</code>; <code>to_numeric(errors="coerce")</code>; <code>to_datetime(format=…)</code></li>
+          <li><code>.str</code> methods; <code>category</code>; outliers by IQR</li>
+          <li>Biteful: 12 rows → 11; " pune" → Pune; "28 min" → 28</li>
+          <li>⚠ NaN == NaN is False; filling invents data</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">GroupBy</div>
+        <div class="mm-title">GroupBy, Merge, Reshape</div>
         <ul>
-          <li><b>Split → apply → combine</b> — sort rows into piles, total each pile, list the totals</li>
-          <li><b>Named agg</b> — <code>agg(revenue=("revenue", "sum"), n=("order_id", "count"))</code></li>
-          <li><b>agg</b> = GROUP BY (1 row/group); <b>transform</b> = window (every row); <b>filter</b> = HAVING</li>
-          <li><b>Crosstab</b> — <code>groupby([a, b]).size().unstack(fill_value=0)</code></li>
-          <li>⚠ <b>count skips NaN, size doesn't</b>; NaN keys dropped unless <code>dropna=False</code></li>
+          <li>Split → apply → combine; <code>agg</code> / <code>transform</code> / <code>filter</code></li>
+          <li>Mumbai 2060 (size 5, count 4), Pune 1870</li>
+          <li><code>merge(how=inner/left/right/outer)</code>, <code>validate=</code></li>
+          <li>⚠ fan-out: a duplicate key multiplies rows (11 → 14)</li>
+          <li><code>pivot_table</code> ↔ <code>melt</code>; <code>stack</code>/<code>unstack</code>; <code>crosstab</code></li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Merge &amp; Join</div>
+        <div class="mm-title">Time &amp; Performance</div>
         <ul>
-          <li><b>merge(how=inner/left/right/outer)</b> — SQL joins on columns</li>
-          <li><b>join</b> — on index; <b>concat</b> — stack rows (UNION ALL)</li>
-          <li><b>indicator=True</b> — <code>_merge</code> column; anti-join = <code>left_only</code></li>
-          <li>⚠ <b>Fan-out</b> — duplicate keys multiply rows: 356 → 570, revenue doubled</li>
-          <li><b>Guard</b> — <code>validate="many_to_one"</code>, compare <code>len()</code> before/after, same key dtypes</li>
+          <li><code>DatetimeIndex</code>; <code>.dt</code>; <code>loc["2026-03-03"]</code></li>
+          <li><code>resample</code> (buckets) vs <code>rolling</code> (sliding) vs <code>expanding</code> (growing)</li>
+          <li><code>shift</code> / <code>diff</code> / <code>pct_change</code>; rank and cumsum per group</li>
+          <li>Vectorise: ~2 ms vs 2–3 s <code>iterrows</code> (100k rows)</li>
+          <li><code>category</code> + downcast: 75.5 → 28.0 MB</li>
+          <li>Too big? DuckDB, Polars, Spark</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Missing &amp; Reshape</div>
+        <div class="mm-title">The running example</div>
         <ul>
-          <li><b>NaN</b> — "not a number", the empty cell marker</li>
-          <li><b>Find</b> — <code>isna().sum()</code>, <code>value_counts(dropna=False)</code></li>
-          <li><b>Fill</b> — <code>fillna(0)</code>, group median via <code>transform</code>, or drop</li>
-          <li>⚠ <b>NaN ≠ NaN</b>; one NaN turns int → float (use <code>"Int64"</code>); mean skips NaN</li>
-          <li><b>pivot_table</b> — long → wide, aggregates (default mean!), <code>margins=True</code></li>
-          <li><b>melt</b> — wide → long (tidy) for groupby, Seaborn, Plotly</li>
+          <li>Biteful, 2–6 March 2026, Pune and Mumbai</li>
+          <li><code>orders</code>: 12 raw rows (1 duplicate, messy city, "28 min", "unknown", a 240, a blank amount)</li>
+          <li><code>restaurants</code>: 5 rows (Tandoor Tales has no orders; Momo Magic is missing)</li>
+          <li><code>customers</code>: 6 rows (Gita never ordered; Farah has no profile)</li>
+          <li>Generated 200k–1M rows: "the same idea at scale"</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Windows &amp; Time</div>
+        <div class="mm-title">Reading order</div>
         <ul>
-          <li><b>rolling(4).mean()</b> — moving average; first 3 NaN (<code>min_periods</code>)</li>
-          <li><b>expanding().sum()</b> — running total; <b>shift(1)</b> — lag; <b>pct_change</b> — growth</li>
-          <li><b>rank(method="dense")</b> per group — top-N per category</li>
-          <li><b>cumcount() + 1</b> — nth order; <b>diff()</b> — days between orders</li>
-          <li><b>resample("W"/"ME")</b> — needs datetime index; <code>.dt</code> accessor; <code>loc["2024-03"]</code></li>
-          <li>⚠ <b>Sort by time first</b> — shift/diff follow row order</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Performance &amp; CoW</div>
-        <ul>
-          <li><b>apply(axis=1)</b> — Python per row: 1,792 ms vs vectorized 1.2 ms</li>
-          <li><b>Fast tools</b> — <code>map(dict)</code>, <code>.str</code>, <code>np.where</code>, <code>np.select</code>, <code>pd.cut</code></li>
-          <li>⚠ <b>Chained assignment</b> — <code>df[mask]["c"] = v</code> edits a temp; use <code>df.loc[mask, "c"] = v</code></li>
-          <li><b>pandas 3 Copy-on-Write</b> — every subset behaves as a copy, copied lazily on write</li>
-          <li><b>pandas &lt; 3</b> — SettingWithCopyWarning; <code>.copy()</code> the subset</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Memory</div>
-        <ul>
-          <li><b>Measure</b> — <code>memory_usage(deep=True)</code></li>
-          <li><b>category</b> — few unique strings → int codes: 14.8 MB → 1.0 MB</li>
-          <li><b>Downcast</b> — <code>pd.to_numeric(s, downcast="unsigned")</code>: int64 → uint8</li>
-          <li><b>Result</b> — 1M orders 87.7 MB → 28.0 MB; groupby 39 → 24 ms</li>
-          <li>⚠ <b>float32</b> — ~7 digits; keep money sums float64; category only for low cardinality</li>
+          <li>This map → Basics → Cleaning → GroupBy → Time</li>
+          <li>Each note starts with the question the last one left open</li>
+          <li>After: Descriptive Stats, Visualisation, SQL, Features, Spark</li>
+          <li>⚠ do not skip Cleaning: every later total depends on it</li>
         </ul>
       </div>
     </div>
@@ -96,432 +131,307 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="dp-core"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Series, DataFrame &amp; I/O</span><span class="rm-sub">A table in Python; Parquet vs CSV</span></div></div>
-      <div class="rm-item rm-done" data-target="dp-sel"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Selecting Data</span><span class="rm-sub">loc, iloc, masks, query</span></div></div>
-      <div class="rm-item rm-done" data-target="dp-gb"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">GroupBy &amp; Aggregation</span><span class="rm-sub">Split, apply, combine</span></div></div>
-      <div class="rm-item rm-done" data-target="dp-merge"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Merge &amp; Join</span><span class="rm-sub">SQL joins, fan-out trap</span></div></div>
-      <div class="rm-item rm-done" data-target="dp-na"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Missing Values</span><span class="rm-sub">Count, fill, beware means</span></div></div>
-      <div class="rm-item rm-done" data-target="dp-reshape"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">pivot_table &amp; melt</span><span class="rm-sub">Wide ↔ long</span></div></div>
-      <div class="rm-item rm-done" data-target="dp-win"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Windows &amp; Time Series</span><span class="rm-sub">rolling, shift, rank, resample</span></div></div>
-      <div class="rm-item rm-done" data-target="dp-perf"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">apply vs Vectorization</span><span class="rm-sub">1,500x on 100k rows</span></div></div>
-      <div class="rm-item rm-done" data-target="dp-cow"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Chained Assignment &amp; CoW</span><span class="rm-sub">Why your edit vanished</span></div></div>
-      <div class="rm-item rm-done" data-target="dp-mem"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Memory Optimization</span><span class="rm-sub">87.7 MB → 28.0 MB</span></div></div>
-      <div class="rm-item rm-done" data-target="dp-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Classic pandas tasks</span></div></div>
+      <div class="rm-item rm-done" data-target="pdm-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The group as one chain</span></div></div>
+      <div class="rm-item rm-done" data-target="pdm-week"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">One Week at Biteful</span><span class="rm-sub">The running example</span></div></div>
+      <div class="rm-item rm-done" data-target="pdm-chain"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">The Need Chain</span><span class="rm-sub">Eight steps, one script</span></div></div>
+      <div class="rm-item rm-done" data-target="pdm-vs"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Pandas vs What You Know</span><span class="rm-sub">Lists, NumPy, SQL, Excel</span></div></div>
+      <div class="rm-item rm-done" data-target="pdm-read"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Reading Order</span><span class="rm-sub">The four notes and after</span></div></div>
+      <div class="rm-item rm-done" data-target="pdm-connect"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One picture, one table</span></div></div>
+      <div class="rm-item rm-done" data-target="pdm-traps"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">The ones that cost hours</span></div></div>
+      <div class="rm-item rm-done" data-target="pdm-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The group in 10 minutes</span></div></div>
+      <div class="rm-item rm-done" data-target="pdm-qa"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
     </div>
   </div>
 
-  <h2 id="dp-core"><span class="num">01</span>Series, DataFrame &amp; I/O</h2>
-  <p>A kirana shop keeps a register: one line per sale, with the item, the city branch, the quantity and the price. In pandas that register is a <strong>DataFrame</strong>: a table with named columns and numbered rows. Each single column is a <strong>Series</strong>.</p>
-  <div class="fx" data-lang="py">import pandas as pd, numpy as np
-t = pd.DataFrame({"item":  ["Maggi", "Parle-G", "Dettol", "Maggi"],
-                  "city":  ["Pune", "Pune", "Delhi", "Delhi"],
-                  "qty":   [2, 5, 1, 3],
-                  "price": [14, 10, 45, 14]})
-t["amount"] = t.qty * t.price          # a new column, computed for every row at once
-print(t)
-print(t["amount"])                     # one column = a Series
-print(t["amount"].sum(), t["amount"].mean())</div>
-  <div class="fx" data-lang="text">      item   city  qty  price  amount
-0    Maggi   Pune    2     14      28
-1  Parle-G   Pune    5     10      50
-2   Dettol  Delhi    1     45      45
-3    Maggi  Delhi    3     14      42
-0    28
-1    50
-2    45
-3    42
-Name: amount, dtype: int64
-165 41.25</div>
-  <p>The numbers 0 to 3 on the left are the <strong>index</strong>: a label for each row. <code>t.qty * t.price</code> multiplies the whole column in one step, exactly like a NumPy array (every column is a NumPy array underneath). A Series carries its index along, so <code>t["amount"]</code> still knows which amount belongs to row 2.</p>
-  <figure class="viz"><svg viewBox="0 0 600 150" width="600">
-    <rect x="10" y="30" width="60" height="100" class="fs" stroke="currentColor"/><text x="20" y="22" class="tm">index</text>
-    <text x="30" y="56">0</text><text x="30" y="82">1</text><text x="30" y="108">2</text>
-    <rect x="70" y="30" width="110" height="100" class="fb sb"/><rect x="180" y="30" width="110" height="100" class="ft st"/><rect x="290" y="30" width="110" height="100" class="fg sg"/>
-    <text x="80" y="22">order_id</text><text x="190" y="22">category</text><text x="300" y="22">revenue</text>
-    <text x="80" y="56">1001</text><text x="190" y="56">Fashion</text><text x="300" y="56">5240.0</text>
-    <text x="80" y="82">1002</text><text x="190" y="82">Beauty</text><text x="300" y="82">2880.0</text>
-    <text x="80" y="108">1003</text><text x="190" y="108">Books</text><text x="300" y="108">880.0</text>
-    <text x="420" y="56">each column = a Series</text><text x="420" y="76">(1-D array + index)</text><text x="420" y="104" class="tm">int64 · str · float64</text>
-    <text x="10" y="146" class="tm">DataFrame = dict of Series sharing one index; one dtype per column</text>
-  </svg><figcaption>Columns are NumPy/Arrow arrays; the index labels rows and drives alignment.</figcaption></figure>
-  <p>This is the bigger <code>orders</code> table. Notice each column has its own <strong>dtype</strong> (data type): whole numbers, text, decimals. One column, one type. That is what makes pandas fast.</p>
-  <p>Real data comes from files. <code>read_csv</code> loads a CSV (comma-separated text) into a DataFrame. Then look at it before doing anything else:</p>
-  <div class="fx" data-lang="py">import pandas as pd, numpy as np
-o = pd.read_csv("orders.csv", parse_dates=["order_date"])
-c = pd.read_csv("customers.csv")          # customer_id, city, segment
-o.shape, o.dtypes                         # (1000, 9); order_date datetime64, category str ...
-o.describe(); o.info(); o.head()
-s = pd.Series([120, 80, 45], index=["Mumbai", "Delhi", "Pune"])
-s["Delhi"], s.iloc[0]                     # (80, 120)  label vs position</div>
-  <p><code>shape</code> is (rows, columns). <code>head()</code> shows the first 5 rows. <code>info()</code> lists each column's type and how many values are filled. <code>describe()</code> gives count, mean, min, max for number columns. <code>parse_dates</code> tells pandas that <code>order_date</code> is a date, not plain text. The last two lines show the index can be words too: <code>s["Delhi"]</code> finds by label, <code>s.iloc[0]</code> by position.</p>
-  <h3>Which file format?</h3>
-  <p>CSV is easy to open anywhere, but it is just text. Pandas must read every character and guess each column's type. <strong>Parquet</strong> is a binary format that stores each column separately, compressed, with its type saved. Measured on a 200,000-row table:</p>
-  <table class="tbl"><caption>Same 200k-row table on disk (real measurement)</caption>
-    <tr><th>Format</th><th>Size</th><th>Read all</th><th>Read 2 columns</th><th>Keeps dtypes?</th></tr>
-    <tr><td>CSV</td><td>11.4 MB</td><td>259 ms</td><td>259 ms (must parse all)</td><td>No: dates come back as str</td></tr>
-    <tr><td>Parquet</td><td>0.2 MB</td><td>191 ms</td><td><strong>8 ms</strong></td><td>Yes: schema stored</td></tr>
-    <tr><td>Excel</td><td>45.7 KB for 1k rows</td><td colspan="2">slowest; use for humans only</td><td>Partly</td></tr>
+  <h2 id="pdm-week"><span class="num">01</span>One Week at Biteful</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>In <a class="xref" data-note="py_ds">Python Collections</a> one morning of six orders fitted in a list of tuples. A real business exports thousands of rows from its app every day, as a file, with mistakes in it. What does such a table look like, and what will we want to ask of it?</p>
+  </div>
+  <h3>The running example</h3>
+  <p>Biteful is a small food-delivery company in Pune and Mumbai. Its app exports one row per order. Below is the export for Monday 2 to Friday 6 March 2026: 12 rows, small enough to check every number by hand, and messy in the ways real exports are messy. The same three tables are used in every note of this group, so you can watch the same numbers come back, each time computed by a new tool.</p>
+  <table class="tbl"><caption>orders (raw export, 12 rows)</caption>
+    <tr><th>order_id</th><th>customer</th><th>restaurant</th><th>city</th><th>order_time</th><th>amount ₹</th><th>delivery_minutes</th></tr>
+    <tr><td>101</td><td>Asha</td><td>Dosa Hut</td><td>Pune</td><td>2026-03-02 12:10</td><td>240</td><td>32</td></tr>
+    <tr><td>102</td><td>Ben</td><td>Biryani Bros</td><td>Mumbai</td><td>2026-03-02 13:05</td><td>450</td><td>41</td></tr>
+    <tr><td>103</td><td>Chen</td><td>Pizza Point</td><td>Pune</td><td>2026-03-02 20:30</td><td>520</td><td>38</td></tr>
+    <tr><td>104</td><td>Asha</td><td>Biryani Bros</td><td><b>" pune"</b></td><td>2026-03-03 13:15</td><td>380</td><td><b>(blank)</b></td></tr>
+    <tr><td>105</td><td>Dia</td><td>Green Bowl</td><td><b>MUMBAI</b></td><td>2026-03-03 19:45</td><td>310</td><td><b>28 min</b></td></tr>
+    <tr><td>105</td><td>Dia</td><td>Green Bowl</td><td>MUMBAI</td><td>2026-03-03 19:45</td><td>310</td><td>28 min <b>(duplicate row)</b></td></tr>
+    <tr><td>106</td><td>Ben</td><td>Dosa Hut</td><td>Pune</td><td>2026-03-04 12:40</td><td>180</td><td>25</td></tr>
+    <tr><td>107</td><td>Esha</td><td>Pizza Point</td><td>Mumbai</td><td>2026-03-04 21:10</td><td><b>(blank)</b></td><td>45</td></tr>
+    <tr><td>108</td><td>Chen</td><td>Momo Magic</td><td>Pune</td><td>2026-03-05 18:20</td><td>260</td><td><b>240</b></td></tr>
+    <tr><td>109</td><td>Farah</td><td>Biryani Bros</td><td>Mumbai</td><td>2026-03-05 20:05</td><td>600</td><td>52</td></tr>
+    <tr><td>110</td><td>Asha</td><td>Green Bowl</td><td>Pune</td><td>2026-03-06 13:00</td><td>290</td><td><b>unknown</b></td></tr>
+    <tr><td>111</td><td>Dia</td><td>Pizza Point</td><td>Mumbai</td><td>2026-03-06 20:50</td><td>700</td><td>35</td></tr>
   </table>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A CSV is a register written as one long paragraph: to find the price column you must read every line. Parquet is a register with each column on its own sheet: to read prices you pick up one sheet.</p></div>
-  <p>Parquet is <strong>columnar</strong> (stored column by column) and compressed. It reads only the columns you ask for and keeps types. (This test table repeats rows, so compression is unusually high.)</p>
-  <div class="fx" data-lang="py">o.to_parquet("orders.parquet")                      # needs pyarrow
-pd.read_parquet("orders.parquet", columns=["category", "revenue"])
-o.to_excel("orders.xlsx", index=False)              # needs openpyxl
-pd.read_csv("big.csv", usecols=["category", "revenue"], chunksize=100_000)   # stream huge CSVs</div>
-  <p><code>usecols</code> loads only the columns you name. <code>chunksize</code> reads a huge CSV in pieces of 100,000 rows so it never has to fit in memory at once.</p>
-
-  <h2 id="dp-sel"><span class="num">02</span>Selecting Data</h2>
-  <p>"Show me the second sale." "Show me sales of 3 or more." Picking rows and columns is the most common pandas action, and there are two ways to point at a row: by its <strong>label</strong> (the index value) or by its <strong>position</strong> (0th, 1st, 2nd). <code>loc</code> uses labels; <code>iloc</code> ("integer location") uses positions.</p>
-  <div class="fx" data-lang="py">print(t.loc[1, "item"], t.iloc[1, 0])                    # label 1 / position 1, column "item" / column 0
-print(t.loc[0:2, "item"].tolist(), t.iloc[0:2, 0].tolist())</div>
-  <div class="fx" data-lang="text">Parle-G Parle-G
-['Maggi', 'Parle-G', 'Dettol'] ['Maggi', 'Parle-G']</div>
-  <p>In a fresh table labels and positions are the same numbers, so both give Parle-G. The slice shows the one real difference: <code>loc[0:2]</code> includes label 2 (3 rows), <code>iloc[0:2]</code> stops before position 2 (2 rows), like normal Python slicing.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>In a train coach, <code>loc</code> is the seat number printed on the ticket (a label). <code>iloc</code> is "the 3rd seat from the door" (a position). After some seats are removed, the printed numbers stay but the counting changes.</p></div>
-  <p>To filter by a condition, compare a column and put the result in brackets. This is a <strong>boolean mask</strong>: a True/False per row, and only True rows come through.</p>
-  <div class="fx" data-lang="py">print(t[t.qty &gt;= 3])
-print(t[(t.city == "Pune") &amp; (t.qty &gt;= 3)])     # two conditions: parentheses + &amp;</div>
-  <div class="fx" data-lang="text">      item   city  qty  price  amount
-1  Parle-G   Pune    5     10      50
-3    Maggi  Delhi    3     14      42
-      item  city  qty  price  amount
-1  Parle-G  Pune    5     10      50</div>
-  <p>The index labels 1 and 3 stayed with their rows. That is the point of labels: a row keeps its name no matter how you filter.</p>
-  <table class="tbl">
-    <tr><th>Tool</th><th>Selects by</th><th>Example</th><th>Slice end</th></tr>
-    <tr><td><code>loc</code></td><td>labels / boolean mask</td><td><code>o.loc[0:2, ["order_id", "revenue"]]</code></td><td>included (3 rows)</td></tr>
-    <tr><td><code>iloc</code></td><td>integer positions</td><td><code>o.iloc[0:2, [0, 3]]</code></td><td>excluded (2 rows)</td></tr>
-    <tr><td><code>[]</code></td><td>columns, or a mask</td><td><code>o["revenue"]</code>, <code>o[o.qty &gt; 2]</code></td><td>-</td></tr>
-    <tr><td><code>query</code></td><td>a string expression</td><td><code>o.query("status == 'returned' and qty &gt;= 4")</code></td><td>-</td></tr>
+  <table class="tbl"><caption>The two lookup tables</caption>
+    <tr><th>restaurants (restaurant, cuisine, rating)</th><th>customers (customer, plan, signup_date as typed)</th></tr>
+    <tr><td>Dosa Hut, South Indian, 4.4 · Biryani Bros, Biryani, 4.1 · Pizza Point, Pizza, 3.9 · Green Bowl, Salads, 4.6 · Tandoor Tales, North Indian, 4.2</td><td>Asha, gold, 04/01/2025 · Ben, free, 13/06/2025 · Chen, gold, 22/11/2024 · Dia, free, unknown · Esha, free, 09/02/2026 · Gita, gold, 30/12/2025</td></tr>
   </table>
-  <p>The same on the orders table. "Electronics orders worth more than ₹60,000, show four columns":</p>
-  <div class="fx" data-lang="py">o.loc[(o.category == "Electronics") &amp; (o.revenue &gt; 60000),
-      ["order_id", "qty", "unit_price", "revenue"]]</div>
-  <table class="tbl out"><caption>Result</caption><tr><th></th><th>order_id</th><th>qty</th><th>unit_price</th><th>revenue</th></tr>
-    <tr><td>639</td><td>1640</td><td>4</td><td>19530.0</td><td>78120.0</td></tr>
-    <tr><td>651</td><td>1652</td><td>4</td><td>16760.0</td><td>67040.0</td></tr></table>
-  <div class="fx" data-lang="py">o.query("status == 'returned' and qty &gt;= 4").shape   # (10, 9)
-o[o.category.isin(["Books", "Beauty"])].shape            # (304, 9)</div>
-  <p><code>query</code> lets you write the condition as plain text, with <code>and</code> instead of <code>&amp;</code>. <code>isin</code> checks membership in a list: "is the category one of these?"</p>
-  <div class="callout trap"><span class="label">Trap</span><p><code>loc[0:2]</code> returns 3 rows, <code>iloc[0:2]</code> returns 2. After filtering or sorting, labels and positions no longer match, so pick on purpose. Python's <code>and</code>/<code>or</code> do not work on columns; use <code>&amp;</code>/<code>|</code> with parentheses.</p></div>
-
-  <h2 id="dp-gb"><span class="num">03</span>GroupBy &amp; Aggregation</h2>
-  <p>"How much did each city branch sell?" By hand you would sort the register pages into a Pune pile and a Delhi pile, total each pile, and write the two totals. That is exactly what <code>groupby</code> does, in three steps:</p>
-  <div class="flow"><span>Split rows by key</span><span>Apply agg to each group</span><span>Combine into one table</span></div>
-  <div class="fx" data-lang="py">print(t.groupby("city").amount.sum())
-print(t.groupby("item").agg(n=("qty", "sum"), money=("amount", "sum")))</div>
-  <div class="fx" data-lang="text">city
-Delhi    87
-Pune     78
-Name: amount, dtype: int64
-         n  money
-item
-Dettol   1     45
-Maggi    5     70
-Parle-G  5     50
-</div>
-  <p>Delhi: 45 + 42 = 87. Pune: 28 + 50 = 78. One row per group. An <strong>aggregation</strong> (agg) is any function that turns many values into one: sum, mean, count, max. The second form, <code>agg(new_name=(column, function))</code>, is called <strong>named aggregation</strong>: you choose the output column names.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A school marksheet grouped by class: pile up each class's sheets, compute the class average, write one line per class.</p></div>
-  <p>On the orders table, per category and only for delivered orders:</p>
-  <div class="fx" data-lang="py">(o[o.status == "delivered"]
-   .groupby("category")
-   .agg(orders=("order_id", "count"),        # named aggregation: new_col=(column, func)
-        revenue=("revenue", "sum"),
-        avg_price=("unit_price", "mean"),
-        max_qty=("qty", "max"))
-   .sort_values("revenue", ascending=False).round(0))</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>category</th><th>orders</th><th>revenue</th><th>avg_price</th><th>max_qty</th></tr>
-    <tr><td>Electronics</td><td>185</td><td>4258540.0</td><td>9302.0</td><td>4</td></tr>
-    <tr><td>Home</td><td>164</td><td>1067810.0</td><td>2558.0</td><td>4</td></tr>
-    <tr><td>Fashion</td><td>249</td><td>948710.0</td><td>1565.0</td><td>4</td></tr>
-    <tr><td>Beauty</td><td>142</td><td>281120.0</td><td>758.0</td><td>4</td></tr>
-    <tr><td>Books</td><td>124</td><td>136080.0</td><td>422.0</td><td>4</td></tr></table>
-  <p>Grouping by two keys gives one row per pair. <code>size()</code> counts rows; <code>unstack</code> turns the second key into columns, making a <strong>crosstab</strong> (a count grid):</p>
-  <div class="fx" data-lang="py">o.groupby(["category", "status"]).size().unstack(fill_value=0)   # a crosstab</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>category</th><th>cancelled</th><th>delivered</th><th>returned</th></tr>
-    <tr><td>Beauty</td><td>14</td><td>142</td><td>6</td></tr><tr><td>Books</td><td>10</td><td>124</td><td>8</td></tr>
-    <tr><td>Electronics</td><td>22</td><td>185</td><td>7</td></tr><tr><td>Fashion</td><td>22</td><td>249</td><td>21</td></tr>
-    <tr><td>Home</td><td>13</td><td>164</td><td>13</td></tr></table>
-  <h3>agg vs transform</h3>
-  <p><code>agg</code> shrinks the table to one row per group. Sometimes you want the group's total written <em>next to every row</em>, for example "what share of its city's sales is this sale?" That is <code>transform</code>: it computes per group but returns a value for every original row.</p>
-  <div class="fx" data-lang="py">t["city_total"] = t.groupby("city").amount.transform("sum")
-t["share"] = (t.amount / t.city_total).round(2)
-print(t)</div>
-  <div class="fx" data-lang="text">      item   city  qty  price  amount  city_total  share
-0    Maggi   Pune    2     14      28          78   0.36
-1  Parle-G   Pune    5     10      50          78   0.64
-2   Dettol  Delhi    1     45      45          87   0.52
-3    Maggi  Delhi    3     14      42          87   0.48</div>
-  <p>Both Pune rows got 78, both Delhi rows got 87; the table kept all 4 rows. (If you know SQL: this is a window function.)</p>
-  <table class="tbl">
-    <tr><th>Method</th><th>Output shape</th><th>SQL analogy</th></tr>
-    <tr><td><code>agg</code></td><td>one row per group</td><td><code>GROUP BY</code></td></tr>
-    <tr><td><code>transform</code></td><td>same rows as input</td><td>window function <code>OVER (PARTITION BY)</code></td></tr>
-    <tr><td><code>filter</code></td><td>original rows of groups that pass</td><td><code>HAVING</code></td></tr>
-  </table>
-  <div class="callout trap"><span class="label">Trap</span><p><code>count</code> skips empty (NaN) cells, <code>size</code> counts every row. Group keys that are NaN are dropped unless <code>dropna=False</code>, so a whole "unknown" group can silently vanish.</p></div>
-
-  <h2 id="dp-merge"><span class="num">04</span>Merge &amp; Join</h2>
-  <p>The register says which item sold, but the shelf location lives in a different list. To see both together you must join the two tables on the column they share (<code>item</code>). This is <code>merge</code>, and the shared column is the <strong>key</strong>.</p>
-  <div class="fx" data-lang="py">stock = pd.DataFrame({"item": ["Maggi", "Parle-G", "Lays"], "shelf": ["A1", "B2", "C3"]})
-print(t[["item", "qty"]].merge(stock, on="item", how="inner"))
-print(t[["item", "qty"]].merge(stock, on="item", how="left"))</div>
-  <div class="fx" data-lang="text">      item  qty shelf
-0    Maggi    2    A1
-1  Parle-G    5    B2
-2    Maggi    3    A1
-      item  qty shelf
-0    Maggi    2    A1
-1  Parle-G    5    B2
-2   Dettol    1   NaN
-3    Maggi    3    A1</div>
-  <p><code>how</code> decides what happens to rows without a partner. <strong>inner</strong> keeps only matches: Dettol (not in stock list) and Lays (never sold) are dropped. <strong>left</strong> keeps every row from the left table and writes NaN where nothing matched, so Dettol stays with an empty shelf.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Matching a class attendance list with the fee-paid list by roll number. Inner join: students on both lists. Left join: everyone on the attendance list, with a blank where no fee record exists.</p></div>
-  <table class="tbl">
-    <tr><th>pandas</th><th>SQL</th><th>Keeps</th></tr>
-    <tr><td><code>o.merge(c, on="customer_id", how="inner")</code></td><td><code>INNER JOIN</code></td><td>matches only</td></tr>
-    <tr><td><code>how="left"</code></td><td><code>LEFT JOIN</code></td><td>all orders, NaN if no customer</td></tr>
-    <tr><td><code>how="outer"</code>, <code>indicator=True</code></td><td><code>FULL OUTER JOIN</code></td><td>everything, plus a <code>_merge</code> column</td></tr>
-    <tr><td><code>pd.concat([a, b])</code></td><td><code>UNION ALL</code></td><td>stacks rows</td></tr>
-  </table>
-  <p>On the real data: attach each order's customer (and so their city), then total revenue per city.</p>
-  <div class="fx" data-lang="py">m = o.merge(c, on="customer_id", how="left", validate="many_to_one")
-m.groupby("city").revenue.sum().sort_values(ascending=False).head(3)
-# Mumbai 2302120.0 · Delhi 1826970.0 · Bengaluru 1603830.0</div>
-  <h3>The fan-out trap</h3>
-  <p>What if the stock list has Maggi twice (two shelves)? Each Maggi sale matches both lines, so the sale appears twice:</p>
-  <div class="fx" data-lang="py">stock2 = pd.DataFrame({"item": ["Maggi", "Maggi", "Parle-G"], "shelf": ["A1", "A9", "B2"]})
-m2 = t[["item", "qty"]].merge(stock2, on="item")
-print(m2); print(len(t), "-&gt;", len(m2), "qty sum", t.qty.sum(), "-&gt;", m2.qty.sum())</div>
-  <div class="fx" data-lang="text">      item  qty shelf
-0    Maggi    2    A1
-1    Maggi    2    A9
-2  Parle-G    5    B2
-3    Maggi    3    A1
-4    Maggi    3    A9
-4 -&gt; 5 qty sum 11 -&gt; 15</div>
-  <p>Four sales became five rows, and the total quantity jumped from 11 to 15 without anyone selling anything. This is <strong>fan-out</strong>: a duplicate key on the lookup side multiplies rows. On a big table nobody notices, and every total afterwards is wrong.</p>
-  <figure class="viz"><svg viewBox="0 0 600 130" width="600">
-    <defs><marker id="dp-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-    <rect x="10" y="30" width="170" height="26" class="fb sb"/><text x="16" y="48">1004 Electronics</text>
-    <rect x="230" y="14" width="160" height="26" class="ft st"/><text x="236" y="32">Electronics Diwali</text>
-    <rect x="230" y="46" width="160" height="26" class="ft st"/><text x="236" y="64">Electronics BlackFri</text>
-    <path d="M180 40 L228 28" stroke="currentColor" marker-end="url(#dp-ar)"/><path d="M180 46 L228 58" stroke="currentColor" marker-end="url(#dp-ar)"/>
-    <rect x="420" y="14" width="170" height="26" class="fr sr"/><text x="428" y="32">1004 ... Diwali</text>
-    <rect x="420" y="46" width="170" height="26" class="fr sr"/><text x="428" y="64">1004 ... BlackFri</text>
-    <text x="10" y="100">1 order × 2 promo rows = 2 output rows → revenue counted twice</text>
-    <text x="10" y="120" class="tm">356 rows in → 570 rows out; Electronics revenue 4.89M → 9.78M</text>
-  </svg><figcaption>Fan-out: a duplicate key on the "one" side multiplies rows and silently inflates sums.</figcaption></figure>
-  <p>Same thing on the orders data: one Electronics order meets two promo rows and comes out twice. The guard is <code>validate="many_to_one"</code>: "many orders may share one category, but each category must appear once on the right". Pandas then refuses instead of doubling:</p>
-  <div class="fx" data-lang="py">promos = pd.DataFrame({"category": ["Electronics", "Electronics", "Books"],
-                       "promo": ["Diwali", "BlackFri", "BookWeek"]})
-o.merge(promos, on="category", validate="many_to_one")</div>
-  <div class="fx" data-lang="text">MergeError: Merge keys are not unique in right dataset; not a many-to-one merge</div>
-  <div class="callout trap"><span class="label">Trap</span><p>Always compare <code>len()</code> before and after a merge, or pass <code>validate=</code>. Also check the key columns have the same dtype: an int <code>customer_id</code> never matches a str <code>"30"</code>, so you get all NaN and no error.</p></div>
-
-  <h2 id="dp-na"><span class="num">05</span>Missing Values</h2>
-  <p>Real registers have blanks: a discount nobody wrote down, a phone number not given. Pandas marks a blank cell as <strong>NaN</strong> ("not a number"). Three facts about NaN cause most bugs, so test them on a 3-value column with one blank:</p>
-  <div class="fx" data-lang="py">s = pd.Series([80, None, 60])
-print(s.dtype, s.mean(), s.fillna(0).mean(), s.isna().sum())
-print(np.nan == np.nan)</div>
-  <div class="fx" data-lang="text">float64 70.0 46.666666666666664 1
-False</div>
+  <p>The mess is deliberate, and each piece is fixed in a specific note: a duplicate row (order 105 twice), the same city spelt three ways, a blank amount (order 107: the order happened but the amount was not logged), delivery minutes typed as text ("28 min", "unknown"), an impossible 240-minute delivery, a restaurant with no row in the restaurants table (Momo Magic), a restaurant with no orders (Tandoor Tales), a customer who never ordered (Gita), a customer with no profile (Farah), and dates typed day-first.</p>
+  <h3>The owner's questions</h3>
   <ul>
-    <li>The column became <code>float64</code> even though you typed whole numbers: NaN is a float, so one blank changes the whole column's type.</li>
-    <li><code>mean()</code> quietly skipped the blank: (80 + 60) / 2 = 70. Fill the blank with 0 and the mean drops to 46.7. Same data, two different "averages". You must decide which one is true.</li>
-    <li><code>NaN == NaN</code> is False, so you can never find blanks with <code>==</code>. Use <code>isna()</code>.</li>
+    <li>How many orders, and which were above ₹500? (<strong>a table you can select from</strong>)</li>
+    <li>Can I trust these numbers? (<strong>cleaning</strong>)</li>
+    <li>Which city earns more? Which cuisine? (<strong>groupby</strong> and <strong>merge</strong>)</li>
+    <li>Show me a grid of days × cities. (<strong>reshape</strong>)</li>
+    <li>Is revenue going up or down this week? (<strong>time series</strong>)</li>
+    <li>Will all this still work on the full year, a million rows? (<strong>performance</strong>)</li>
   </ul>
-  <p>On the orders table, 56 of 1,000 discounts are blank:</p>
-  <div class="fx" data-lang="py">o.isna().sum()[lambda s: s &gt; 0]          # discount_pct    56
-o.discount_pct.value_counts(dropna=False)   # 0.0: 478, 5.0: 239, 10.0: 144, 20.0: 83, NaN: 56
-o.discount_pct.mean()                       # 4.55   (NaN skipped)
-o.discount_pct.fillna(0).mean()             # 4.295  (NaN treated as 0)
-# fill with each category's median (no leakage across groups)
-o["discount_pct"] = o.discount_pct.fillna(o.groupby("category").discount_pct.transform("median"))</div>
-  <p>The last line fills each blank with the <strong>median</strong> (middle value) of its own category, using <code>transform</code> from section 03. A Books order gets the typical Books discount, not the overall one.</p>
-  <table class="tbl">
-    <tr><th>Fact</th><th>Consequence</th></tr>
-    <tr><td><code>np.nan == np.nan</code> is False</td><td>Test with <code>isna()</code>, never <code>== np.nan</code></td></tr>
-    <tr><td><code>pd.Series([1, None, 3])</code> is float64</td><td>One NaN turns an int column into float (use <code>"Int64"</code> to avoid)</td></tr>
-    <tr><td><code>pd.Series([np.nan]).sum()</code> is 0.0</td><td>Sums hide missing data; means change silently</td></tr>
+  <h3>The tables as code</h3>
+  <p>All four notes start from these same lines. <code>RAW</code> is the CSV text exactly as the app exported it; the two lookup tables are small enough to type as dicts of lists:</p>
+  <div class="fx" data-lang="py">import io
+import numpy as np
+import pandas as pd
+pd.set_option("display.width", 120, "display.max_columns", None)
+RAW = """order_id,customer,restaurant,city,order_time,amount,delivery_minutes
+101,Asha,Dosa Hut,Pune,2026-03-02 12:10,240,32
+102,Ben,Biryani Bros,Mumbai,2026-03-02 13:05,450,41
+103,Chen,Pizza Point,Pune,2026-03-02 20:30,520,38
+104,Asha,Biryani Bros, pune,2026-03-03 13:15,380,
+105,Dia,Green Bowl,MUMBAI,2026-03-03 19:45,310,28 min
+105,Dia,Green Bowl,MUMBAI,2026-03-03 19:45,310,28 min
+106,Ben,Dosa Hut,Pune,2026-03-04 12:40,180,25
+107,Esha,Pizza Point,Mumbai,2026-03-04 21:10,,45
+108,Chen,Momo Magic,Pune,2026-03-05 18:20,260,240
+109,Farah,Biryani Bros,Mumbai,2026-03-05 20:05,600,52
+110,Asha,Green Bowl,Pune,2026-03-06 13:00,290,unknown
+111,Dia,Pizza Point,Mumbai,2026-03-06 20:50,700,35
+"""
+restaurants = pd.DataFrame({
+    "restaurant": ["Dosa Hut", "Biryani Bros", "Pizza Point", "Green Bowl", "Tandoor Tales"],
+    "cuisine":    ["South Indian", "Biryani", "Pizza", "Salads", "North Indian"],
+    "rating":     [4.4, 4.1, 3.9, 4.6, 4.2],
+})
+customers = pd.DataFrame({
+    "customer":    ["Asha", "Ben", "Chen", "Dia", "Esha", "Gita"],
+    "plan":        ["gold", "free", "gold", "free", "free", "gold"],
+    "signup_date": ["04/01/2025", "13/06/2025", "22/11/2024", "unknown", "09/02/2026", "30/12/2025"],
+})</div>
+  <div class="callout anlg"><span class="label">Analogy</span><p>A DataFrame is the order register at a restaurant counter: every line is one order (a row), every column is one kind of fact (who, where, when, how much), and the line numbers on the left (the index) let you point at a line without reading it.</p></div>
+  <div class="callout def"><span class="label">Definition</span><p><strong>Pandas</strong> is a Python library for labelled, column-typed tables. Its two objects are the <strong>Series</strong> (a one-dimensional array with an index of labels) and the <strong>DataFrame</strong> (a two-dimensional table: columns are Series that share one row index). Each column is stored as one typed array (NumPy or Arrow) underneath.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Do not trust a table because it loaded without an error. This file loads cleanly and still has a duplicate, three spellings of two cities and numbers stored as text. The second note exists because loading is not the same as being right.</p></div>
+  <div class="bridge"><b>What this still can't tell us → next: The Need Chain.</b> We have the data and the questions. Which pandas tool answers which question, and why do they come in this order?</div>
+
+  <h2 id="pdm-chain"><span class="num">02</span>The Need Chain: Eight Steps, One Script</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Pandas has hundreds of functions. Learners often meet them as a list to memorise. The better question is: which problem does each group of functions solve that the previous one could not? Walk the chain on the Biteful data, one short step at a time. Do not worry about every detail of the code; each line is taught in a child note.</p>
+  </div>
+  <h3>Step 1: a table of mixed columns → DataFrame with an index</h3>
+  <div class="fx" data-lang="py">orders = pd.read_csv(io.StringIO(RAW), parse_dates=["order_time"])     # 1 a table with an index
+print(orders.shape, "| amount is", orders["amount"].dtype, "| delivery_minutes is", orders["delivery_minutes"].dtype)</div>
+  <div class="fx" data-lang="text">(12, 7) | amount is float64 | delivery_minutes is str</div>
+  <p>One call turns the CSV text into a table of 12 rows and 7 columns, each column with its own type. Already two warnings: <code>amount</code> is <code>float64</code> (decimals) although we typed whole rupees, because one amount is blank, and <code>delivery_minutes</code> is <code>str</code> (text), because of "28 min" and "unknown". <em>New need:</em> ask for part of the table. → <a class="xref" data-note="da_pd_basics">Basics</a></p>
+  <h3>Step 2: pick rows and columns → loc, iloc, masks</h3>
+  <div class="fx" data-lang="py">print(orders.loc[orders["amount"] &gt; 500, ["order_id", "customer", "amount"]])   # 2 pick rows/columns</div>
+  <div class="fx" data-lang="text">    order_id customer  amount
+2        103     Chen   520.0
+9        109    Farah   600.0
+11       111      Dia   700.0</div>
+  <p><code>orders["amount"] &gt; 500</code> makes a True/False per row (a <strong>mask</strong>); <code>loc</code> keeps the True rows and the named columns. Three orders: 103, 109, 111. The numbers on the left are the index labels, still attached to their rows. <em>New weakness:</em> try the same with <code>city == "Pune"</code> and order 104 (" pune") is silently missed. → <a class="xref" data-note="da_pd_basics">Basics</a></p>
+  <h3>Step 3: fix messy data → cleaning</h3>
+  <div class="fx" data-lang="py">clean = orders.drop_duplicates().assign(                                # 3 fix messy data
+    city=lambda d: d["city"].str.strip().str.title(),
+    delivery_minutes=lambda d: pd.to_numeric(d["delivery_minutes"].str.extract(r"(\\d+)", expand=False)))
+clean.loc[clean["delivery_minutes"] &gt; 120, "delivery_minutes"] = np.nan
+print(len(orders), "-&gt;", len(clean), "rows | cities:", sorted(clean["city"].unique()))</div>
+  <div class="fx" data-lang="text">12 -&gt; 11 rows | cities: ['Mumbai', 'Pune']</div>
+  <p>Drop the exact duplicate (12 → 11 rows), trim and capitalise the city (" pune" and "MUMBAI" become Pune and Mumbai, so 2 cities instead of 4 spellings), pull the digits out of "28 min" and turn them into numbers ("unknown" becomes missing), and blank the impossible 240-minute delivery. The blank amount of order 107 is left blank on purpose: the order is real, its amount is unknown, and inventing one would invent revenue. → <a class="xref" data-note="da_pd_cleaning">Cleaning</a></p>
+  <h3>Step 4: summarise by group → groupby</h3>
+  <div class="fx" data-lang="py">print(clean.groupby("city")["amount"].agg(["size", "count", "sum"]))   # 4 summarise by group</div>
+  <div class="fx" data-lang="text">        size  count     sum
+city                       
+Mumbai     5      4  2060.0
+Pune       6      6  1870.0</div>
+  <p>Split the rows into a Mumbai pile and a Pune pile, total each, and combine the totals into one small table. Mumbai: 450 + 310 + 600 + 700 = 2060 from 5 orders, but only 4 amounts are known (<code>size</code> counts rows, <code>count</code> counts known values). Pune: 240 + 520 + 380 + 180 + 260 + 290 = 1870. <em>New weakness:</em> "per cuisine" is impossible, because cuisine lives in another table. → <a class="xref" data-note="da_pd_groupby">GroupBy</a></p>
+  <h3>Step 5: combine tables → merge</h3>
+  <div class="fx" data-lang="py">m = clean.merge(restaurants, on="restaurant", how="left", validate="many_to_one")   # 5 combine tables
+print(m.groupby("cuisine", dropna=False)["amount"].sum().sort_values(ascending=False))</div>
+  <div class="fx" data-lang="text">cuisine
+Biryani         1430.0
+Pizza           1220.0
+Salads           600.0
+South Indian     420.0
+NaN              260.0
+Name: amount, dtype: float64</div>
+  <p>A left merge looks up each order's restaurant in the restaurants table and copies its cuisine onto the order. Biryani: 450 + 380 + 600 = 1430. Momo Magic has no restaurant row, so its ₹260 lands under NaN (unknown cuisine); that is a real finding about the data, not a bug. <code>validate="many_to_one"</code> makes pandas refuse if a restaurant were listed twice (the fan-out trap). → <a class="xref" data-note="da_pd_groupby">Merge</a></p>
+  <h3>Step 6: reshape → pivot_table and melt</h3>
+  <div class="fx" data-lang="py">print(clean.pivot_table(index=clean["order_time"].dt.strftime("%m-%d %a"),          # 6 reshape
+                        columns="city", values="amount", aggfunc="sum", fill_value=0))</div>
+  <div class="fx" data-lang="text">city        Mumbai   Pune
+order_time               
+03-02 Mon    450.0  760.0
+03-03 Tue    310.0  380.0
+03-04 Wed      0.0  180.0
+03-05 Thu    600.0  260.0
+03-06 Fri    700.0  290.0</div>
+  <p>Days down the side, cities across, revenue in the cells: Monday Pune = 240 + 520 = 760. Wednesday Mumbai shows 0.0 although Esha did order: her amount is unknown, and a sum of nothing is 0. Grids like this hide gaps, which is why the groupby note shows <code>size</code> next to <code>sum</code>. → <a class="xref" data-note="da_pd_groupby">Reshape</a></p>
+  <h3>Step 7: time-indexed data → resample and rolling</h3>
+  <div class="fx" data-lang="py">daily = clean.set_index("order_time")["amount"].resample("D").sum()                  # 7 time-indexed
+print(pd.DataFrame({"revenue": daily, "3-day avg": daily.rolling(3).mean().round(1)}))</div>
+  <div class="fx" data-lang="text">            revenue  3-day avg
+order_time                    
+2026-03-02   1210.0        NaN
+2026-03-03    690.0        NaN
+2026-03-04    180.0      693.3
+2026-03-05    860.0      576.7
+2026-03-06    990.0      676.7</div>
+  <p>With the order time as the index, <code>resample("D")</code> makes one bucket per calendar day (1210 = 240 + 450 + 520 on Monday), and <code>rolling(3)</code> averages each day with the two before it: (1210 + 690 + 180) / 3 = 693.3. The first two days have no full 3-day window, so NaN. → <a class="xref" data-note="da_pd_time">Time Series</a></p>
+  <h3>Step 8: make it fast → vectorise, smaller types</h3>
+  <div class="fx" data-lang="py">fee = clean["amount"] + np.where(clean["city"] == "Pune", 30, 40)                    # 8 fast: no loops
+print(fee.tolist())</div>
+  <div class="fx" data-lang="text">[270.0, 490.0, 550.0, 410.0, 350.0, 210.0, nan, 290.0, 640.0, 320.0, 740.0]</div>
+  <p>A delivery fee of ₹30 in Pune and ₹40 in Mumbai, added to all 11 orders in one expression with no Python loop. On 11 rows any method is instant. On 100,000 rows this vectorised line takes about 2 ms, where a row-by-row <code>iterrows</code> loop takes 2–3 s, and on a million orders the right dtypes cut memory from 75.5 MB to 28.0 MB (both measured in <a class="xref" data-note="da_pd_time">Time Series &amp; Performance</a>).</p>
+  <div class="flow"><span>table + index</span><span>pick</span><span>fix</span><span>group</span><span>combine</span><span>reshape</span><span>time</span><span>fast</span></div>
+  <div class="callout anlg"><span class="label">Analogy</span><p>An accountant with a box of receipts: first lay them out in a ledger (DataFrame), find the ones you need (select), throw out the duplicates and fix the smudged ones (clean), total them by branch (group), staple on the supplier details (merge), draw the monthly summary grid (reshape), plot the weekly trend (time), and finally hire a faster clerk when the box becomes a warehouse (performance).</p></div>
+  <div class="callout def"><span class="label">Definition</span><p>The chain in one line each. <strong>DataFrame</strong>: labelled, column-typed table. <strong>Selection</strong>: <code>loc</code> by label, <code>iloc</code> by position, masks by condition. <strong>Cleaning</strong>: making missing values, duplicates, types and text trustworthy. <strong>GroupBy</strong>: split-apply-combine. <strong>Merge</strong>: SQL-style join on key columns. <strong>Reshape</strong>: long ↔ wide. <strong>Time series</strong>: data indexed by timestamps, with buckets and windows. <strong>Performance</strong>: vectorised column operations and compact dtypes.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>The order matters. Grouping before cleaning gives four "cities" (Pune, Mumbai, MUMBAI, " pune") and counts the duplicate twice; merging before checking keys can double revenue. Most wrong pandas answers come from doing a later step before an earlier one.</p></div>
+  <div class="bridge"><b>What this still can't tell us → next: Pandas vs What You Know.</b> We used pandas without saying what it adds to lists, dicts, NumPy, SQL and Excel. Knowing that tells you when to reach for it, and when not to.</div>
+
+  <h2 id="pdm-vs"><span class="num">03</span>Pandas vs What You Know</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>You already know several ways to hold a table: a list of dicts, a NumPy array, a SQL table, a spreadsheet. What exactly does pandas add, and where is each of the others still the better tool?</p>
+  </div>
+  <table class="tbl"><caption>The same Biteful orders in five tools</caption>
+    <tr><th></th><th>list of dicts</th><th>NumPy array</th><th>pandas DataFrame</th><th>SQL table</th><th>Excel sheet</th></tr>
+    <tr><td>Mixed column types</td><td>yes</td><td>no (one dtype)</td><td>yes, one dtype per column</td><td>yes</td><td>yes (per cell)</td></tr>
+    <tr><td>Row labels / index</td><td>no</td><td>positions only</td><td>yes, drives alignment</td><td>primary key</td><td>row numbers</td></tr>
+    <tr><td>Speed of column maths</td><td>slow (Python loop)</td><td>fast (C)</td><td>fast (NumPy/Arrow)</td><td>fast (engine)</td><td>slow-ish</td></tr>
+    <tr><td>Missing values</td><td>None, by hand</td><td>NaN for floats only</td><td>NaN / NA everywhere, skipped by sums</td><td>NULL</td><td>blank cell</td></tr>
+    <tr><td>Group, join, pivot</td><td>hand-written loops</td><td>no</td><td>built in</td><td>GROUP BY, JOIN</td><td>pivot tables, VLOOKUP</td></tr>
+    <tr><td>Size limit</td><td>RAM, inefficiently</td><td>RAM</td><td>RAM (needs 2–5× the data size)</td><td>disk</td><td>about 1M rows</td></tr>
+    <tr><td>Best for</td><td>JSON, small records</td><td>pure numbers, maths</td><td>analysis in Python up to a few GB</td><td>shared, persistent data</td><td>people looking at data</td></tr>
   </table>
-  <div class="callout intu"><span class="label">Key insight</span><p>"Missing" usually means something. A NaN discount may mean "no promo" (fill 0) or "logging failed" (impute or drop). Ask before filling. For ML, work out fill values on the training data only, or the test score is cheating.</p></div>
-
-  <h2 id="dp-reshape"><span class="num">06</span>pivot_table &amp; melt</h2>
-  <p>The register has one row per sale: this is called <strong>long</strong> format. The shop owner wants a summary grid: cities down the side, items across the top, total amount in each cell. That grid is <strong>wide</strong> format, and <code>pivot_table</code> builds it:</p>
-  <div class="fx" data-lang="py">w = t.pivot_table(index="city", columns="item", values="amount", aggfunc="sum", fill_value=0)
-print(w)
-print(w.reset_index().melt(id_vars="city", var_name="item", value_name="amount"))</div>
-  <div class="fx" data-lang="text">item   Dettol  Maggi  Parle-G
-city
-Delhi      45     42        0
-Pune        0     28       50
-    city     item  amount
-0  Delhi   Dettol      45
-1   Pune   Dettol       0
-2  Delhi    Maggi      42
-3   Pune    Maggi      28
-4  Delhi  Parle-G       0
-5   Pune  Parle-G      50</div>
-  <p>The four arguments: <code>index</code> goes down the side, <code>columns</code> across the top, <code>values</code> fills the cells, <code>aggfunc</code> says how to combine when several rows land in one cell. <code>melt</code> is the reverse: it unrolls the grid back into one row per (city, item) pair. Wide is for people to read; long is what groupby and plotting libraries want.</p>
-  <figure class="viz"><svg viewBox="0 0 600 120" width="600">
-    <defs><marker id="dp-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-    <text x="10" y="16" class="tm">long (tidy): one row per fact</text>
-    <rect x="10" y="24" width="180" height="84" class="fb sb"/>
-    <text x="18" y="42">q  category  revenue</text><text x="18" y="62">1  Beauty     74000</text><text x="18" y="82">1  Books      49000</text><text x="18" y="102">2  Beauty     94000</text>
-    <path d="M200 50 L300 50" stroke="currentColor" marker-end="url(#dp-ar2)"/><text x="212" y="42">pivot_table</text>
-    <path d="M300 84 L200 84" stroke="currentColor" marker-end="url(#dp-ar2)"/><text x="230" y="102">melt</text>
-    <text x="310" y="16" class="tm">wide: one column per category</text>
-    <rect x="310" y="24" width="270" height="64" class="ft st"/>
-    <text x="318" y="42">q  Beauty  Books  Electronics ...</text><text x="318" y="62">1  74000   49000  1147000</text><text x="318" y="82">2  94000   31000  1119000</text>
-  </svg><figcaption>Wide is for reading and reports; long is what groupby, Seaborn and Plotly want.</figcaption></figure>
-  <p>The same two shapes on the orders data, by quarter. Monthly revenue per category, with <code>margins=True</code> adding an "All" total column:</p>
-  <div class="fx" data-lang="py">o["month"] = o.order_date.dt.to_period("M")
-o.pivot_table(index="month", columns="category", values="revenue",
-              aggfunc="sum", margins=True).head(3).round(0)</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>month</th><th>Beauty</th><th>Books</th><th>Electronics</th><th>Fashion</th><th>Home</th><th>All</th></tr>
-    <tr><td>2024-01</td><td>33560.0</td><td>12480.0</td><td>432880.0</td><td>55200.0</td><td>90810.0</td><td>624930.0</td></tr>
-    <tr><td>2024-02</td><td>11670.0</td><td>15700.0</td><td>285230.0</td><td>92850.0</td><td>107460.0</td><td>512910.0</td></tr>
-    <tr><td>2024-03</td><td>28370.0</td><td>20670.0</td><td>428830.0</td><td>89370.0</td><td>105300.0</td><td>672540.0</td></tr></table>
-  <div class="fx" data-lang="py">wide = o.pivot_table(index=o.order_date.dt.quarter.rename("q"), columns="category",
-                     values="revenue", aggfunc="sum")
-wide.reset_index().melt(id_vars="q", var_name="category", value_name="revenue")   # (20, 3)</div>
-  <div class="callout trap"><span class="label">Trap</span><p>Plain <code>pivot</code> fails if two rows land in the same cell. <code>pivot_table</code> combines them, but its default <code>aggfunc</code> is <strong>mean</strong>, not sum. Forgetting <code>aggfunc="sum"</code> gives averages where you expected totals.</p></div>
-
-  <h2 id="dp-win"><span class="num">07</span>Windows &amp; Time Series</h2>
-  <p>Daily sales go up and down. To see the real trend you smooth them: the average of the last 3 days, today's sales versus yesterday's, the running total so far. Each of these looks at a small <strong>window</strong> of nearby rows. Five days of sales make it clear:</p>
-  <div class="fx" data-lang="py">r = pd.Series([10, 20, 30, 40, 50], index=pd.date_range("2024-01-01", periods=5, freq="D"), name="sales")
-pd.DataFrame({"sales": r, "ma3": r.rolling(3).mean(), "prev": r.shift(1),
-              "cum": r.cumsum(), "growth": r.pct_change().round(2)})</div>
-  <div class="fx" data-lang="text">            sales   ma3  prev  cum  growth
-2024-01-01     10   NaN   NaN   10     NaN
-2024-01-02     20   NaN  10.0   30    1.00
-2024-01-03     30  20.0  20.0   60    0.50
-2024-01-04     40  30.0  30.0  100    0.33
-2024-01-05     50  40.0  40.0  150    0.25</div>
+  <p>Three ideas in that table carry the whole group:</p>
   <ul>
-    <li><code>rolling(3).mean()</code>: average of this row and the 2 before. Day 3: (10+20+30)/3 = 20. Days 1 and 2 have no full window, so NaN.</li>
-    <li><code>shift(1)</code>: yesterday's value moved down one row (a <strong>lag</strong>).</li>
-    <li><code>cumsum()</code>: running total.</li>
-    <li><code>pct_change()</code>: growth versus the previous row. Day 2: (20−10)/10 = 1.00, which is +100%.</li>
+    <li><strong>One type per column.</strong> Because a column is one typed array, pandas can run maths on the whole column at C speed, like NumPy. That is why <code>amount</code> must be numbers, not text, and why cleaning comes before analysis.</li>
+    <li><strong>The index.</strong> Rows have labels that survive filtering and sorting, and arithmetic between two Series matches labels, not positions. That is why <code>loc</code> and <code>iloc</code> differ, and why <code>groupby</code> results come back indexed by the group key.</li>
+    <li><strong>Vectorised operations.</strong> You describe what happens to a column, not to each row. That is why <code>apply</code> with a Python function is slow and why the performance section is mostly "remove the loop".</li>
   </ul>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A moving average is a cricket batsman's "average of the last 3 innings": the window slides forward one match at a time, so one bad day does not swing it.</p></div>
-  <p>The orders table has one row per order, not per week. <code>resample("W")</code> groups a date index into weeks (like groupby, but by time). Then the same window tools:</p>
-  <div class="fx" data-lang="py">w = o.set_index("order_date").revenue.resample("W").sum()     # weekly revenue
-pd.DataFrame({"rev": w,
-              "ma4": w.rolling(4).mean().round(0),     # 4-week moving average
-              "cum": w.expanding().sum(),              # running total
-              "prev": w.shift(1),                      # last week (lag)
-              "wow_pct": (w.pct_change() * 100).round(1)}).head(5)</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>order_date</th><th>rev</th><th>ma4</th><th>cum</th><th>prev</th><th>wow_pct</th></tr>
-    <tr><td>2024-01-07</td><td>88560.0</td><td>NaN</td><td>88560.0</td><td>NaN</td><td>NaN</td></tr>
-    <tr><td>2024-01-14</td><td>218250.0</td><td>NaN</td><td>306810.0</td><td>88560.0</td><td>146.4</td></tr>
-    <tr><td>2024-01-21</td><td>178730.0</td><td>NaN</td><td>485540.0</td><td>218250.0</td><td>-18.1</td></tr>
-    <tr><td>2024-01-28</td><td>109060.0</td><td>148650.0</td><td>594600.0</td><td>178730.0</td><td>-39.0</td></tr>
-    <tr><td>2024-02-04</td><td>101110.0</td><td>151788.0</td><td>695710.0</td><td>109060.0</td><td>-7.3</td></tr></table>
-  <p>First 3 <code>ma4</code> values are NaN: the 4-week window isn't full yet (<code>min_periods=1</code> would average whatever is available). <code>expanding()</code> is a window that starts at the first row and only grows.</p>
-  <div class="fx" data-lang="py">o.set_index("order_date").resample("ME").agg(orders=("order_id", "count"),
-                                             revenue=("revenue", "sum"))   # 2024-01-31: 78, 624930.0
-o.set_index("order_date").loc["2024-03-01":"2024-03-03"]   # date-string slicing (inclusive)
-o.order_date.dt.day_name().value_counts().head(1)          # Friday 163</div>
-  <p><code>"ME"</code> means month-end. With a date index you can slice by writing dates as text. The <code>.dt</code> accessor pulls parts out of a date column: day name, month, year.</p>
-  <h3>Windows inside groups</h3>
-  <p>"Rank each order within its category" and "how many days since this customer's previous order" are windows per group: <code>groupby</code> plus a window method.</p>
-  <div class="fx" data-lang="py">o["cat_avg"]     = o.groupby("category").revenue.transform("mean").round(0)
-o["vs_cat"]      = (o.revenue / o.cat_avg).round(2)
-o["rank_in_cat"] = o.groupby("category").revenue.rank(method="dense", ascending=False)
-o[o.rank_in_cat &lt;= 2]       # top-2 orders per category (SQL: DENSE_RANK() OVER ...)
+  <div class="callout anlg"><span class="label">Analogy</span><p>A list of dicts is a stack of index cards: flexible but slow to total. A NumPy array is a calculator tape: fast but numbers only. Pandas is a ledger with typed columns and numbered lines. SQL is the company's filing room. Excel is the whiteboard in the meeting room.</p></div>
+  <div class="callout def"><span class="label">Definition</span><p><strong>dtype</strong>: the data type of a column (<code>int64</code>, <code>float64</code>, <code>str</code>, <code>datetime64</code>, <code>category</code>, <code>bool</code>). <strong>Index</strong>: the row labels of a Series or DataFrame. <strong>Vectorised</strong>: one operation applied to a whole array at once, executed in compiled code instead of a Python loop.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Pandas is not a database. It holds everything in memory, keeps nothing after the program ends unless you write a file, and is single-machine. For data shared by many people use SQL; for data bigger than memory use DuckDB, Polars or Spark (<a class="xref" data-note="da_pd_time">Time Series &amp; Performance</a>, section on scaling out).</p></div>
+  <div class="bridge"><b>What this still can't tell us → next: Reading Order.</b> The map is drawn. Where do we go to learn each part completely, and in which order?</div>
 
-c = o.sort_values("order_date")
-c["nth_order"]       = c.groupby("customer_id").cumcount() + 1
-c["days_since_prev"] = c.groupby("customer_id").order_date.diff().dt.days</div>
-  <table class="tbl out"><caption>Customer 30</caption><tr><th>order_id</th><th>order_date</th><th>nth_order</th><th>days_since_prev</th></tr>
-    <tr><td>1004</td><td>2024-01-02</td><td>1</td><td>NaN</td></tr><tr><td>1086</td><td>2024-02-03</td><td>2</td><td>32.0</td></tr>
-    <tr><td>1101</td><td>2024-02-08</td><td>3</td><td>5.0</td></tr><tr><td>1249</td><td>2024-04-03</td><td>4</td><td>55.0</td></tr></table>
-  <p><code>cumcount()</code> numbers rows inside each group from 0, so +1 gives "1st, 2nd, 3rd order". <code>diff()</code> subtracts the previous row inside the group: 3 Feb minus 2 Jan is 32 days. <code>rank(method="dense")</code> gives ties the same rank with no gaps after them.</p>
-  <div class="callout trap"><span class="label">Trap</span><p><code>shift</code>, <code>diff</code> and <code>cumcount</code> follow row order, not time. Sort by date first, or "previous order" means "previous row in the file".</p></div>
+  <h2 id="pdm-read"><span class="num">04</span>Reading Order: The Four Notes and After</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Each step of the chain has far more to it than one line of code: alignment rules, copy rules, missing-value rules, join rules. Which note teaches what, and why in this order?</p>
+  </div>
+  <h3>1. Series, DataFrames &amp; Selection</h3>
+  <p><a class="xref" data-note="da_pd_basics">Basics</a> starts from the list of dicts and shows why a table object is needed. It teaches the Series as a labelled array (adding two Series with different indexes, traced), DataFrame anatomy and dtypes, reading CSV and Parquet (measured: Parquet reads 2 columns of 200,000 rows ten or more times faster), <code>head</code>/<code>info</code>/<code>describe</code>, <code>[]</code> vs <code>loc</code> vs <code>iloc</code> traced, masks and <code>query</code>, the chained-assignment trap and Copy-on-Write, <code>assign</code>, and <code>apply</code> vs vectorised.</p>
+  <h3>2. Cleaning &amp; Missing Data</h3>
+  <p><a class="xref" data-note="da_pd_cleaning">Cleaning</a> takes the raw export and fixes it step by step: NaN vs None vs NA, <code>isna</code>, when to drop, fill or interpolate (with the cost of each on our totals), duplicates, <code>to_numeric(errors="coerce")</code> and <code>to_datetime(format=…)</code>, <code>.str</code> methods, categoricals, outliers by IQR (link <a class="xref" data-note="st_descriptive">Descriptive Statistics</a>), and a reusable cleaning function run on 200,000 messy rows.</p>
+  <h3>3. GroupBy, Merge &amp; Reshape</h3>
+  <p><a class="xref" data-note="da_pd_groupby">GroupBy</a> traces split-apply-combine by hand on the 11 clean rows, contrasts <code>agg</code>, <code>transform</code> and <code>filter</code>, uses named aggregations, traces every join type with the restaurants and customers tables, shows the fan-out trap (11 → 14 rows, revenue 3930 → 5150) and <code>validate=</code>, then <code>concat</code>, <code>pivot_table</code> vs <code>pivot</code> vs <code>melt</code> vs <code>stack</code>/<code>unstack</code>, and <code>crosstab</code>. Links to <a class="xref" data-note="sql_joins">SQL JOINs</a>.</p>
+  <h3>4. Time Series &amp; Performance</h3>
+  <p><a class="xref" data-note="da_pd_time">Time Series &amp; Performance</a> makes the order time the index: <code>resample</code> vs <code>rolling</code> vs <code>expanding</code>, <code>shift</code>/<code>diff</code>/<code>pct_change</code>, time zones, rank and running totals per group (link <a class="xref" data-note="sql_windows">Window Functions</a>), then speed and memory on a million generated orders, measured: dtypes and <code>category</code>, vectorisation vs <code>apply</code> vs <code>iterrows</code>, method chaining, and when to move to Polars, DuckDB or Spark.</p>
+  <h3>After the group</h3>
+  <ul>
+    <li><a class="xref" data-note="st_descriptive">Descriptive Statistics</a>: what the numbers you can now compute (means, medians, spreads, IQR) actually tell you.</li>
+    <li><a class="xref" data-note="da_viz">Visualisation</a>: plotting the grouped and time-indexed tables you built.</li>
+    <li><a class="xref" data-note="sql_joins">SQL JOINs</a> and <a class="xref" data-note="sql_windows">Window Functions</a>: the same merge, group and window ideas inside a database.</li>
+    <li><a class="xref" data-note="ml_features">Feature Engineering</a> and <a class="xref" data-note="ml_timeseries">Time Series Basics</a>: cleaning and lag features become model inputs.</li>
+    <li><a class="xref" data-note="de_spark">Apache Spark</a>: DataFrames spread over many machines when one is not enough.</li>
+  </ul>
+  <div class="callout anlg"><span class="label">Analogy</span><p>Learning pandas in this order is like learning to cook: first know your ingredients and knives (basics), then wash and cut (cleaning), then combine and season (group, merge, reshape), and only then learn timing and doing it for a hundred guests (time and performance).</p></div>
+  <div class="callout def"><span class="label">Definition</span><p><strong>Reading order</strong>: da_pandas (this map) → da_pd_basics → da_pd_cleaning → da_pd_groupby → da_pd_time. Each note's first section names what it needs from the one before.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Jumping straight to groupby and merge without the basics leaves "index" and "alignment" as magic words, and every surprising NaN after a merge or a Series addition looks like a bug. Skipping cleaning gives confident, wrong totals.</p></div>
+  <div class="bridge"><b>What this still can't tell us → next: How It All Connects.</b> One picture and one table to hold the whole group together.</div>
 
-  <h2 id="dp-perf"><span class="num">08</span>apply vs Vectorization</h2>
-  <p>Net revenue is <code>qty × price × (1 − discount/100)</code>. Beginners write a function and <code>apply</code> it to each row. It works, but it is a Python loop in disguise: pandas builds a small Series for every single row. The vectorized version does the maths on whole columns at once, like NumPy. On 100,000 rows:</p>
-  <div class="fx" data-lang="py"># net revenue on 100,000 rows (discount_pct already filled)
-big.apply(lambda r: r.qty * r.unit_price * (1 - r.discount_pct / 100), axis=1)  # 1791.9 ms
-big.qty * big.unit_price * (1 - big.discount_pct / 100)                        #    1.2 ms</div>
-  <p>Same answer (<code>np.allclose</code> → True), about 1,500 times faster. Rule: if you can write it as column maths, never write <code>apply(axis=1)</code>. For the usual "but I need an if/else" cases, there is a fast tool:</p>
-  <table class="tbl">
-    <tr><th>Need</th><th>Fast tool</th></tr>
-    <tr><td>Map values via a dict</td><td><code>o.status.map({"delivered": 1, "cancelled": 0, "returned": 0})</code></td></tr>
-    <tr><td>Text ops</td><td><code>o.category.str.upper().str[:3]</code> → FAS, BEA, BOO</td></tr>
-    <tr><td>If / else</td><td><code>np.where(cond, a, b)</code>; many branches: <code>np.select([c1, c2], ["big", "mid"], default="small")</code></td></tr>
-    <tr><td>Binning</td><td><code>pd.cut(o.revenue, [0, 1000, 10000, np.inf], labels=["small", "mid", "large"])</code> → mid 669, large 205, small 126</td></tr>
+  <h2 id="pdm-connect"><span class="num">05</span>How It All Connects</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Eight steps, four notes. Which step is built on which, and which answers which of the owner's questions?</p>
+  </div>
+  <figure class="viz"><svg viewBox="0 0 660 300" width="660">
+<defs><marker id="pdm-a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+<rect x="230" y="8" width="200" height="40" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="330" y="26" text-anchor="middle" font-size="11.5" font-weight="700">typed columns + an index</text><text x="330" y="41" text-anchor="middle" class="tm" font-size="10">Series · DataFrame (Basics)</text>
+<line x1="330" y1="48" x2="330" y2="68" stroke="currentColor" marker-end="url(#pdm-a9)"/>
+<rect x="60" y="70" width="250" height="40" rx="7" class="fb sb"/><text x="185" y="88" text-anchor="middle" font-size="11.5" font-weight="700">select: loc · iloc · masks</text><text x="185" y="103" text-anchor="middle" class="tm" font-size="10">needs the index (Basics)</text>
+<rect x="350" y="70" width="250" height="40" rx="7" class="fb sb"/><text x="475" y="88" text-anchor="middle" font-size="11.5" font-weight="700">clean: NaN · types · text · dups</text><text x="475" y="103" text-anchor="middle" class="tm" font-size="10">needs dtypes + masks (Cleaning)</text>
+<line x1="310" y1="90" x2="348" y2="90" stroke="currentColor" marker-end="url(#pdm-a9)"/>
+<line x1="475" y1="110" x2="475" y2="134" stroke="currentColor" marker-end="url(#pdm-a9)"/>
+<rect x="40" y="136" width="180" height="40" rx="7" class="ft st"/><text x="130" y="154" text-anchor="middle" font-size="11.5" font-weight="700">groupby</text><text x="130" y="169" text-anchor="middle" class="tm" font-size="10">split-apply-combine</text>
+<rect x="240" y="136" width="180" height="40" rx="7" class="ft st"/><text x="330" y="154" text-anchor="middle" font-size="11.5" font-weight="700">merge / concat</text><text x="330" y="169" text-anchor="middle" class="tm" font-size="10">keys must be clean + unique</text>
+<rect x="440" y="136" width="180" height="40" rx="7" class="ft st"/><text x="530" y="154" text-anchor="middle" font-size="11.5" font-weight="700">reshape</text><text x="530" y="169" text-anchor="middle" class="tm" font-size="10">pivot_table = group + unstack</text>
+<line x1="420" y1="120" x2="140" y2="134" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#pdm-a9)"/><line x1="440" y1="120" x2="335" y2="134" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#pdm-a9)"/>
+<line x1="220" y1="156" x2="238" y2="156" stroke="currentColor" stroke-dasharray="3 3" marker-end="url(#pdm-a9)"/><line x1="420" y1="156" x2="438" y2="156" stroke="currentColor" stroke-dasharray="3 3" marker-end="url(#pdm-a9)"/>
+<rect x="110" y="208" width="200" height="40" rx="7" class="fg sg"/><text x="210" y="226" text-anchor="middle" font-size="11.5" font-weight="700">time: resample · rolling · shift</text><text x="210" y="241" text-anchor="middle" class="tm" font-size="10">groupby by time + windows</text>
+<rect x="350" y="208" width="200" height="40" rx="7" class="fg sg"/><text x="450" y="226" text-anchor="middle" font-size="11.5" font-weight="700">performance</text><text x="450" y="241" text-anchor="middle" class="tm" font-size="10">vectorise · dtypes · category</text>
+<line x1="130" y1="176" x2="190" y2="206" stroke="currentColor" marker-end="url(#pdm-a9)"/><line x1="530" y1="176" x2="470" y2="206" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#pdm-a9)"/>
+<line x1="310" y1="228" x2="348" y2="228" stroke="currentColor" stroke-dasharray="3 3" marker-end="url(#pdm-a9)"/>
+<text x="330" y="280" text-anchor="middle" class="tm" font-size="10.5">every arrow is a dependency: a later tool gives wrong answers if the earlier step was skipped</text>
+</svg><figcaption>The group as a dependency picture. Typed columns and the index make selection possible; selection and dtypes make cleaning possible; clean keys make grouping, merging and reshaping correct; grouping by time plus sliding windows is time-series work; and the dtypes chosen during cleaning decide how fast and small everything is.</figcaption></figure>
+  <table class="tbl"><caption>Every step on one week at Biteful</caption>
+    <tr><th>Step</th><th>Built from</th><th>Answers which question</th><th>Value on the running example</th><th>When to use</th></tr>
+    <tr><td>DataFrame + index</td><td>NumPy arrays + labels</td><td>hold a mixed table?</td><td>12 rows × 7 columns; amount float64, minutes str</td><td>always, first</td></tr>
+    <tr><td>Selection</td><td>index + boolean masks</td><td>which rows, which columns?</td><td>amount &gt; 500 → 103, 109, 111</td><td>every question</td></tr>
+    <tr><td>Cleaning</td><td>masks + dtypes + .str</td><td>can I trust it?</td><td>12 → 11 rows; 4 city spellings → 2; 240 min removed</td><td>before any total</td></tr>
+    <tr><td>GroupBy</td><td>clean keys + aggregations</td><td>total per category?</td><td>Mumbai 2060 (5 orders, 4 amounts), Pune 1870</td><td>summaries, KPIs</td></tr>
+    <tr><td>Merge</td><td>clean, unique keys</td><td>facts from another table?</td><td>Biryani 1430, Pizza 1220; Momo Magic → NaN</td><td>lookups, enrichment</td></tr>
+    <tr><td>Reshape</td><td>groupby + unstack</td><td>a grid for people?</td><td>Mon: Mumbai 450, Pune 760</td><td>reports, plotting</td></tr>
+    <tr><td>Time series</td><td>DatetimeIndex + groupby + windows</td><td>trend, change, smoothing?</td><td>daily 1210, 690, 180, 860, 990; 3-day avg 693.3</td><td>anything over time</td></tr>
+    <tr><td>Performance</td><td>vectorised ops + compact dtypes</td><td>will it scale?</td><td>2 ms vs 2–3 s; 75.5 → 28.0 MB on 1M rows</td><td>large data, repeated jobs</td></tr>
   </table>
-  <p><strong>Binning</strong> means putting numbers into buckets. <code>pd.cut</code> with edges 0, 10, 100, 1000, ∞ turns 5, 50, 500, 5000 into tiny, small, mid, big:</p>
-  <div class="fx" data-lang="py">pd.cut(pd.Series([5, 50, 500, 5000]), [0, 10, 100, 1000, np.inf], labels=["tiny", "small", "mid", "big"]).tolist()</div>
-  <div class="fx" data-lang="text">['tiny', 'small', 'mid', 'big']</div>
+  <div class="callout intu"><span class="label">Key insight</span><p>One sentence holds the group: <strong>a DataFrame is typed columns sharing an index, and every pandas tool is either choosing rows by that index, making the columns' types and values trustworthy, or turning many rows into fewer rows by a key (a group, another table, a time bucket).</strong></p></div>
+  <div class="bridge"><b>What this still can't tell us → next: Common Mistakes.</b> The usual ways people get wrong answers from pandas, and the note that fixes each.</div>
 
-  <h2 id="dp-cow"><span class="num">09</span>Chained Assignment &amp; Copy-on-Write</h2>
-  <p>You want to set quantity to 0 for all Books orders. The natural-looking line <code>df[df.category == "Books"]["qty"] = 0</code> runs without error and changes nothing. Why? It is two separate steps: the first bracket makes a <em>new temporary table</em> of Books rows; the second bracket writes 0 into that temporary table, which is then thrown away.</p>
-  <figure class="viz"><svg viewBox="0 0 600 110" width="600">
-    <defs><marker id="dp-ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-    <rect x="10" y="20" width="90" height="34" class="fb sb"/><text x="36" y="42">df</text>
-    <path d="M100 37 L170 37" stroke="currentColor" marker-end="url(#dp-ar3)"/><text x="104" y="30" class="tm">[mask]</text>
-    <rect x="172" y="20" width="140" height="34" class="fr sr"/><text x="180" y="42">temporary copy</text>
-    <path d="M312 37 L380 37" stroke="currentColor" marker-end="url(#dp-ar3)"/><text x="318" y="30" class="tm">["qty"]=0</text>
-    <text x="386" y="42">edits the copy only</text>
-    <rect x="10" y="66" width="90" height="34" class="fg sg"/><text x="36" y="88">df</text>
-    <path d="M100 83 L170 83" stroke="currentColor" marker-end="url(#dp-ar3)"/><text x="178" y="88">.loc[mask, "qty"] = 0 → one step, edits df</text>
-  </svg><figcaption>Two brackets = two operations; the write lands on the intermediate object.</figcaption></figure>
-  <p>Top row: the write lands on the red temporary copy. Bottom row: <code>.loc[rows, column] = value</code> is one operation on <code>df</code> itself, so it works. Writing with two brackets in a row is called <strong>chained assignment</strong>.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Photocopying the Books page of the register, correcting the photocopy, and throwing it in the bin. The original register never changed.</p></div>
-  <div class="fx" data-lang="py">df[df.category == "Books"]["qty"] = 0     # ChainedAssignmentError warning, df unchanged (0 rows set)
-df.loc[df.category == "Books", "qty"] = 0 # correct: 142 rows set
+  <h2 id="pdm-traps"><span class="num">06</span>Common Mistakes</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Which mistakes cost the most time or give confidently wrong numbers, and how do you recognise each one?</p>
+  </div>
+  <div class="callout trap"><span class="label">Trap: analysing before cleaning</span><p>Grouping on raw city text gives Pune, Mumbai, MUMBAI and " pune" as four groups; the duplicate order is counted twice. Clean first (<a class="xref" data-note="da_pd_cleaning">Cleaning</a>).</p></div>
+  <div class="callout trap"><span class="label">Trap: loc vs iloc confusion</span><p><code>loc[102:104]</code> includes 104 (labels, end included); <code>iloc[1:3]</code> excludes position 3. After a sort or filter, labels and positions no longer match (<a class="xref" data-note="da_pd_basics">Basics</a>).</p></div>
+  <div class="callout trap"><span class="label">Trap: chained assignment</span><p><code>df[mask]["col"] = v</code> writes into a temporary copy and changes nothing. Use <code>df.loc[mask, "col"] = v</code> (<a class="xref" data-note="da_pd_basics">Basics</a>).</p></div>
+  <div class="callout trap"><span class="label">Trap: silently filling missing values</span><p><code>fillna(0)</code> on order 107's amount drags the mean from 393.0 to 357.3; filling with the restaurant median invents ₹610 of revenue (<a class="xref" data-note="da_pd_cleaning">Cleaning</a>).</p></div>
+  <div class="callout trap"><span class="label">Trap: merge fan-out</span><p>A restaurant listed twice turns 11 orders into 14 rows and revenue 3930 into 5150. Pass <code>validate=</code> and compare <code>len()</code> before and after (<a class="xref" data-note="da_pd_groupby">GroupBy, Merge &amp; Reshape</a>).</p></div>
+  <div class="callout trap"><span class="label">Trap: pivot_table's default is the mean</span><p>Forget <code>aggfunc="sum"</code> and you get averages where you expected totals (<a class="xref" data-note="da_pd_groupby">GroupBy, Merge &amp; Reshape</a>).</p></div>
+  <div class="callout trap"><span class="label">Trap: windows on unsorted rows</span><p><code>shift</code>, <code>diff</code>, <code>rolling</code> and <code>cumcount</code> follow row order, not time. Sort by time first (<a class="xref" data-note="da_pd_time">Time Series &amp; Performance</a>).</p></div>
+  <div class="callout trap"><span class="label">Trap: row loops</span><p><code>iterrows</code> and <code>apply(axis=1)</code> run Python once per row; on 100,000 rows that is seconds instead of milliseconds (<a class="xref" data-note="da_pd_time">Time Series &amp; Performance</a>).</p></div>
+  <div class="bridge"><b>What this still can't tell us → next: Revision Sheet.</b> The whole group on one page.</div>
 
-books = o[o.category == "Books"]
-books["qty"] = 0                          # pandas 3: modifies books only; o is untouched</div>
-  <p>The last two lines are the other side of the same question: if you save a filtered subset in a variable and edit it, does the original change? In pandas 3 the answer is always no, thanks to <strong>Copy-on-Write</strong> (CoW): every subset behaves like its own copy, and pandas only actually copies the data at the moment you write to it. Older pandas was unpredictable: the subset was sometimes a view (shared), sometimes a copy, and it warned with <code>SettingWithCopyWarning</code>.</p>
+  <h2 id="pdm-rev"><span class="num">R</span>Revision Sheet</h2>
+  <p>The whole group on one sheet. Running example: Biteful, a food-delivery company, orders from Monday 2 to Friday 6 March 2026 in Pune and Mumbai. Raw export: 12 rows (order 105 duplicated), columns order_id, customer, restaurant, city, order_time, amount, delivery_minutes. After cleaning: 11 orders, amounts 240, 450, 520, 380, 310, 180, (blank), 260, 600, 290, 700 (total 3930). Plus a restaurants table (5 rows, cuisine and rating) and a customers table (6 rows, plan and signup date).</p>
+  <h3>The need chain</h3>
   <table class="tbl">
-    <tr><th>pandas &lt; 3</th><th>pandas 3 (Copy-on-Write always on)</th></tr>
-    <tr><td><code>SettingWithCopyWarning</code>; result could be a view or copy, so edits sometimes leaked into the parent</td><td>Every derived object <em>behaves</em> as a copy; data is copied lazily only when written</td></tr>
-    <tr><td>Defensive <code>.copy()</code> everywhere</td><td>No warning for <code>books["qty"] = 0</code>; chained assignment never works and warns</td></tr>
+    <tr><th>Step</th><th>Question it answers</th><th>On our data</th><th>Weakness → next</th><th>Note</th></tr>
+    <tr><td>DataFrame + index</td><td>hold a mixed table?</td><td>12 × 7; amount float64, minutes str</td><td>we need parts of it</td><td>Basics</td></tr>
+    <tr><td>Selection</td><td>which rows/columns?</td><td>&gt; ₹500: 103, 109, 111</td><td>" pune" is missed</td><td>Basics</td></tr>
+    <tr><td>Cleaning</td><td>can I trust it?</td><td>11 rows, 2 cities, 240 min removed</td><td>still one row per order</td><td>Cleaning</td></tr>
+    <tr><td>GroupBy</td><td>total per group?</td><td>Mumbai 2060, Pune 1870</td><td>cuisine is in another table</td><td>GroupBy</td></tr>
+    <tr><td>Merge</td><td>facts from another table?</td><td>Biryani 1430; Momo Magic NaN</td><td>result is long</td><td>GroupBy</td></tr>
+    <tr><td>Reshape</td><td>a grid?</td><td>Mon: Mumbai 450, Pune 760</td><td>time is not a category</td><td>GroupBy</td></tr>
+    <tr><td>Time series</td><td>trend and change?</td><td>daily 1210 … 990; 3-day avg 693.3</td><td>slow and big at scale</td><td>Time</td></tr>
+    <tr><td>Performance</td><td>will it scale?</td><td>2 ms vs 2–3 s; 75.5 → 28.0 MB</td><td>beyond RAM → DuckDB/Polars/Spark</td><td>Time</td></tr>
   </table>
-  <div class="callout trap"><span class="label">Trap</span><p>On pandas 2.x without CoW, <code>books["qty"] = 0</code> warns and the parent may or may not change. Interviewers still ask: answer "use <code>.loc</code> in one step, or <code>.copy()</code> the subset".</p></div>
+  <h3>The three ideas under everything</h3>
+  <div class="cards">
+    <div><b>Typed columns</b><p>Each column is one array with one dtype. Text where numbers belong ("28 min") blocks maths, so fix types first.</p><small>Check with <code>info()</code> / <code>dtypes</code></small></div>
+    <div><b>The index</b><p>Row labels survive filtering and drive alignment: Series arithmetic, <code>loc</code>, groupby results and joins all match by label.</p><small><code>loc</code> = label, <code>iloc</code> = position</small></div>
+    <div><b>Vectorised</b><p>Say what happens to a whole column. Python loops over rows are the slow path.</p><small>Avoid <code>iterrows</code>, <code>apply(axis=1)</code></small></div>
+  </div>
+  <div class="callout trap"><span class="label">Key traps</span><p>Analysing before cleaning; <code>loc</code> end included vs <code>iloc</code> end excluded; chained assignment; filling missing values without asking what they mean; merge fan-out; <code>pivot_table</code> defaulting to mean; windows on unsorted rows; row loops.</p></div>
+  <h3>Five rapid-fire checks</h3>
+  <table class="tbl">
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>Why is <code>amount</code> float64 when every amount is a whole number?</td><td>One amount is blank; NaN is a float, so the whole column becomes float</td></tr>
+    <tr><td>Mumbai has 5 orders but <code>count</code> says 4. Why?</td><td><code>count</code> skips the unknown amount of order 107; <code>size</code> counts rows</td></tr>
+    <tr><td>Revenue doubled after a merge. First suspect?</td><td>Fan-out: a duplicate key in the lookup table; check with <code>validate="many_to_one"</code></td></tr>
+    <tr><td>3-day rolling mean on Wednesday?</td><td>(1210 + 690 + 180) / 3 = 693.3</td></tr>
+    <tr><td>Reading order of the group?</td><td>This map → Basics → Cleaning → GroupBy, Merge &amp; Reshape → Time Series &amp; Performance</td></tr>
+  </table>
 
-  <h2 id="dp-mem"><span class="num">10</span>Memory Optimization</h2>
-  <p>A status column holds one of three words: delivered, cancelled, returned. Stored as text, 10 lakh rows means 10 lakh copies of those words. Stored as a <strong>category</strong>, pandas keeps the three words once and a tiny number (0, 1, 2) per row. Measured on 1,000,000 identical strings:</p>
-  <div class="fx" data-lang="py">s1 = pd.Series(["delivered"] * 1_000_000)
-print(round(s1.memory_usage(deep=True) / 1e6, 1), round(s1.astype("category").memory_usage(deep=True) / 1e6, 1))</div>
-  <div class="fx" data-lang="text">17.0 1.0</div>
-  <p>17 MB down to 1 MB. The same idea for numbers: <code>qty</code> is never above 4, so it does not need <code>int64</code> (8 bytes, up to 9 quintillion). <code>uint8</code> (1 byte, 0 to 255) is enough. Shrinking a column to a smaller type is called <strong>downcasting</strong>.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Category is like a UPI contact list: you save "Raju Kirana" once and then just tap the saved name instead of typing it every time.</p></div>
-  <figure class="viz"><svg viewBox="0 0 600 150" width="600">
-    <text x="10" y="16" class="tm">1,000,000 orders, memory_usage(deep=True), MB</text>
-    <text x="10" y="44">before</text><rect x="70" y="30" width="438" height="22" class="fr sr"/><text x="514" y="46">87.7</text>
-    <text x="10" y="80">after</text><rect x="70" y="66" width="140" height="22" class="fg sg"/><text x="216" y="82">28.0</text>
-    <text x="10" y="116" class="tm">status: str 16.9 → category 1.0 · qty: int64 8.0 → uint8 1.0</text>
-    <text x="10" y="136" class="tm">customer_id: int64 8.0 → uint8 1.0 · prices: float64 8.0 → float32 4.0</text>
-  </svg><figcaption>3.1x smaller; groupby on category also got faster (39.2 ms → 23.9 ms).</figcaption></figure>
-  <div class="fx" data-lang="py">for col in ["category", "status"]:                 # few unique values -&gt; category
-    big[col] = big[col].astype("category")         # stores int8 codes + 5 labels
-for col in ["qty", "customer_id", "order_id"]:
-    big[col] = pd.to_numeric(big[col], downcast="unsigned")   # uint8 / uint32
-big[["unit_price", "revenue", "discount_pct"]] = big[["unit_price", "revenue", "discount_pct"]].astype("float32")
-big.memory_usage(deep=True).sum() / 1e6            # 87.7 -&gt; 28.0</div>
-  <p><code>pd.to_numeric(..., downcast="unsigned")</code> picks the smallest unsigned (no negatives) type that fits the column's values. One string column, 1M rows: <code>object</code> 55.8 MB, pandas 3 <code>str</code> (Arrow) 14.8 MB, <code>category</code> 1.0 MB.</p>
-  <div class="callout trap"><span class="label">Trap</span><p><code>category</code> only helps with low <strong>cardinality</strong> (few unique values). A column of 1M unique order IDs as category is bigger, not smaller. <code>float32</code> keeps only about 7 digits, so a crore-rupee total loses paise: keep money sums in float64 or integer paise.</p></div>
-
-  <h2 id="dp-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <h2 id="pdm-qa"><span class="num">07</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>In one line each: what is a Series, a DataFrame, and the index?</summary><div class="qa-body">A Series is one column: values plus an index. A DataFrame is a table of Series that share one index. The index is the row labels, which stay attached to rows through filtering and drive alignment in joins and arithmetic.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Top-2 orders by revenue within each category.</summary><div class="qa-body"><code>o.sort_values("revenue", ascending=False).groupby("category").head(2)</code>, or rank with <code>groupby().revenue.rank(method="dense", ascending=False) &lt;= 2</code> if ties should both be kept. <code>nlargest</code> per group also works.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Add a column with each row's share of its category's total revenue.</summary><div class="qa-body"><code>o["share"] = o.revenue / o.groupby("category").revenue.transform("sum")</code>. <code>transform</code> returns a value per row, aligned to the original index.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Month-over-month revenue growth.</summary><div class="qa-body"><code>m = o.set_index("order_date").revenue.resample("ME").sum(); m.pct_change()</code>. Jan → Feb: 624930 → 512910, about -17.9%.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>After merging orders (1,000 rows) with a lookup table, you have 1,214 rows. What happened?</summary><div class="qa-body">Fan-out: some keys appear more than once in the lookup table. Find them with <code>lookup[lookup.key.duplicated(keep=False)]</code>, dedupe, and add <code>validate="many_to_one"</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Find customers who never ordered.</summary><div class="qa-body">Anti-join: <code>c[~c.customer_id.isin(o.customer_id)]</code>, or <code>c.merge(o, how="left", indicator=True).query("_merge == 'left_only'")</code>. (In our data every customer ordered, so it's empty.)</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Days between each customer's consecutive orders.</summary><div class="qa-body"><code>o.sort_values("order_date").groupby("customer_id").order_date.diff().dt.days</code>. Customer 30: NaN, 32, 5, 55. Sorting first is essential.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What's the output? <code>pd.Series([1, None, 3]).dtype</code> and <code>.sum()</code></summary><div class="qa-body"><code>float64</code> (None became NaN, which needs float) and <code>4.0</code>, because sum skips NaN. Use <code>dtype="Int64"</code> for nullable integers.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why did <code>df[df.x &gt; 0]["y"] = 1</code> not change <code>df</code>?</summary><div class="qa-body">It's chained: the first <code>[]</code> creates a new object and the assignment edits that. Write <code>df.loc[df.x &gt; 0, "y"] = 1</code>. Pandas 3 warns with ChainedAssignmentError; older versions raise SettingWithCopyWarning.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span><code>merge</code> vs <code>join</code> vs <code>concat</code>?</summary><div class="qa-body"><code>merge</code>: SQL-style join on columns. <code>join</code>: shortcut joining on the index (default left). <code>concat</code>: stacks frames along an axis, aligning on labels, like <code>UNION ALL</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>A 5 GB CSV doesn't fit in RAM. Options?</summary><div class="qa-body"><code>usecols</code> + explicit <code>dtype</code> (category, downcasts); <code>chunksize</code> to aggregate in pieces; convert once to Parquet and read only needed columns; or use Polars / DuckDB, which stream and run multi-threaded.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Rolling 7-day average revenue per category.</summary><div class="qa-body"><code>d = o.groupby(["category", pd.Grouper(key="order_date", freq="D")]).revenue.sum()</code> then <code>d.groupby(level=0).rolling(7, min_periods=1).mean().droplevel(0)</code> (rolling repeats the group key level). Or with a datetime index: <code>.rolling("7D")</code> for calendar windows with gaps.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Remove duplicate customers, keeping their latest signup row.</summary><div class="qa-body"><code>df.sort_values("signup_date").drop_duplicates("customer_id", keep="last")</code>. Check first with <code>df.customer_id.duplicated().sum()</code>.</div></details>
-</main>`
+  <details class="qa"><summary><span class="qmark">Q</span>In one line each: Series, DataFrame, index.</summary><div class="qa-body">A Series is one column: values plus an index of labels. A DataFrame is a table of Series sharing one index. The index is the row labels, which stay attached through filtering and decide how arithmetic, joins and groupby results line up.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does pandas add on top of NumPy?</summary><div class="qa-body">Different types per column, row and column labels with label-based alignment, missing-value handling everywhere, and built-in group/join/reshape/time tools. The fast maths itself still comes from NumPy-style arrays (or Arrow) underneath.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Name the eight steps of the need chain.</summary><div class="qa-body">Table with an index → select → clean → group → merge → reshape → time series → performance. Each answers the question the previous step left open.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: why must cleaning come before groupby?</summary><div class="qa-body">groupby splits rows by the exact key value. " pune", "Pune" and "MUMBAI" are different values, so they become separate groups, and the duplicate order is counted twice. The totals are confidently wrong until the keys are clean.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does merge need the index and dtype ideas from Basics?</summary><div class="qa-body">A merge matches key values exactly, like Series alignment matches labels. If the keys differ in type (an <code>int</code> order_id vs a <code>str</code> "101") pandas refuses; if they differ in spelling the rows silently find no partner and get NaN.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: in what sense is resample a groupby?</summary><div class="qa-body">resample splits rows into time buckets (one per day, week, month), applies an aggregation to each bucket and combines the results: split-apply-combine where the key is a time interval. rolling is different: overlapping windows, one result per row.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks if you skip performance and loop over rows?</summary><div class="qa-body">Nothing on 11 rows, everything on a million: a row loop that takes 2–3 s on 100,000 rows takes roughly half a minute on a million, every time it runs, and wide <code>object</code> strings can need several times the memory of <code>category</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When should you not use pandas?</summary><div class="qa-body">When data is bigger than memory (use DuckDB, Polars streaming, or Spark), when many users must share and update it (a database), for pure numeric arrays where NumPy is simpler, and for tiny configs or JSON records where a dict is enough.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What changed in pandas 3 that a beginner notices?</summary><div class="qa-body">Copy-on-Write is always on, so a subset always behaves like a copy and chained assignment never writes (it warns). Text columns get the new <code>str</code> dtype (Arrow-backed when pyarrow is installed) instead of <code>object</code>. Both are shown, run on 3.0.5, in <a class="xref" data-note="da_pd_basics">Basics</a>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>The Biteful owner asks "which cuisine earns most?". Which steps of the chain do you need?</summary><div class="qa-body">Load (table), clean (dedupe, fix the city and types), merge with restaurants (cuisine lives there, with <code>validate="many_to_one"</code>), then groupby cuisine and sum: Biryani ₹1,430 first, with ₹260 of Momo Magic under an unknown cuisine to report, not hide.</div></details>
+</main>
+`
 });
