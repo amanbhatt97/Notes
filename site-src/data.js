@@ -70,7 +70,29 @@ const CATEGORIES = [
     {"key": "ml_core",           "label": "Core Concepts"},
     {"key": "ml_regression",     "label": "Regression"},
     {"key": "ml_classification", "label": "Classification"},
-    {"key": "ml_trees",          "label": "Tree-Based Models"},
+    {"key": "grp_ml_trees", "label": "Tree-Based Models", "children": [
+      {"key": "ml_trees",          "label": "The Tree Family: Map & How to Choose"},
+      {"key": "ml_dtree",          "label": "Decision Trees"},
+      {"key": "grp_ml_ens", "label": "Ensemble Methods", "children": [
+        {"key": "ml_ensembles",    "label": "Ensemble Learning: The Idea"},
+        {"key": "grp_ml_bag", "label": "Bagging", "children": [
+          {"key": "ml_bagging",    "label": "Bagging & Bootstrap"},
+          {"key": "ml_rf",         "label": "Random Forest"},
+          {"key": "ml_extratrees", "label": "Extra Trees"}
+        ]},
+        {"key": "grp_ml_boost", "label": "Boosting", "children": [
+          {"key": "ml_boosting",   "label": "How Boosting Works"},
+          {"key": "ml_adaboost",   "label": "AdaBoost"},
+          {"key": "ml_gbm",        "label": "Gradient Boosting"},
+          {"key": "ml_xgboost",    "label": "XGBoost"},
+          {"key": "ml_lightgbm",   "label": "LightGBM"},
+          {"key": "ml_catboost",   "label": "CatBoost"}
+        ]},
+        {"key": "ml_stacking",     "label": "Stacking & Voting"}
+      ]},
+      {"key": "ml_tree_explain",   "label": "Feature Importance & SHAP"},
+      {"key": "ml_tree_tuning",    "label": "Tuning & Production"}
+    ]},
     {"key": "ml_clustering",     "label": "Clustering"},
     {"key": "ml_dimred",         "label": "Dimensionality Reduction"},
     {"key": "ml_evaluation",     "label": "Model Evaluation"},
