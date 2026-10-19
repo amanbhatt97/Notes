@@ -16,7 +16,12 @@ const CATEGORIES = [
       {"key": "py_io",           "label": "Exceptions, Files & Packages"}
     ]},
     {"key": "grp_py_adv", "label": "Advanced Python", "children": [
-      {"key": "py_oop",         "label": "OOP"},
+      {"key": "grp_py_oop", "label": "Object-Oriented Python", "children": [
+        {"key": "py_oop",         "label": "The Map: Object-Oriented Python"},
+        {"key": "py_classes",     "label": "Classes & Objects"},
+        {"key": "py_inheritance", "label": "Inheritance, Polymorphism & Design"},
+        {"key": "py_dunder",      "label": "Dunder Methods & the Data Model"}
+      ]},
       {"key": "grp_py_func", "label": "Iterators, Decorators & Context Managers", "children": [
         {"key": "py_advanced",    "label": "The Map: Advanced Functions"},
         {"key": "py_iterators",   "label": "Iterators & Generators"},

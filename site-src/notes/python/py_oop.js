@@ -1,95 +1,102 @@
-// notes/python/py_oop.js — OOP
+// notes/python/py_oop.js — Object-Oriented Python: the map
 Object.assign(TOPIC_CONTENT, {
   "py_oop": `<main>
-  <h1>Object-Oriented Programming</h1>
-  <p class="lead">Object-oriented programming (OOP) is a way of organising code: you keep a piece of data and the functions that work on it together, in a <em>class</em>. This note starts from "why would I want that?", builds up classes, methods and inheritance step by step, and then covers the design rules (the four pillars, SOLID, design patterns) that keep big codebases easy to change. Every sklearn estimator, PyTorch module and pipeline is built this way, and OOP comes up in almost every interview.</p>
+<h1>Object-Oriented Python: the map</h1>
+  <div class="where"><span>Python</span><span>Object-Oriented Python</span><span>Object-Oriented Python: the map</span></div>
+  <p class="lead">Start here. Object-oriented programming (OOP) is a way of organising code in which a piece of data and the functions allowed to change it live together, in a <em>class</em>. Its many terms (class, object, <code>self</code>, encapsulation, inheritance, polymorphism, duck typing, dunder methods, ABCs, composition, SOLID) are not a list to memorise: each one exists because the one before it left a problem unsolved. This page tells that story as a chain of needs, introduces the one running example every note of the group uses (<strong>PocketBank</strong>, a tiny wallet app with two customers, Asha and Ben), shows the group's map and reading order, and ends with a revision sheet. The three notes after it teach each part completely. Every sklearn estimator (<code>model.fit()</code>), PyTorch module (<code>class Net(nn.Module)</code>) and FastAPI model is built this way, and OOP questions come up in almost every Python interview.</p>
 
-  <h2 id="po-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="oo-fits" class="open"><span class="num">★</span>Where this fits</h2>
+  <figure class="viz"><svg viewBox="0 0 640 170" width="640">
+    <defs><marker id="oo-a0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="200" y="6" width="240" height="30" rx="6" class="fg sg" stroke-width="2.5"/><text x="320" y="26" text-anchor="middle" font-size="12" font-weight="700">Object-Oriented Python: the map</text>
+    <line x1="320" y1="36" x2="115" y2="66" stroke="currentColor" stroke-opacity="0.45"/>
+    <line x1="320" y1="36" x2="320" y2="66" stroke="currentColor" stroke-opacity="0.45"/>
+    <line x1="320" y1="36" x2="525" y2="66" stroke="currentColor" stroke-opacity="0.45"/>
+    <rect x="15" y="66" width="200" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="115" y="85" text-anchor="middle" font-size="12">1. Classes &amp; Objects</text><text x="115" y="101" text-anchor="middle" class="tm" font-size="10">bundle + protect</text>
+    <rect x="220" y="66" width="200" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="320" y="85" text-anchor="middle" font-size="12">2. Inheritance, Polymorphism</text><text x="320" y="101" text-anchor="middle" class="tm" font-size="10">reuse, many forms, design</text>
+    <rect x="425" y="66" width="200" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="525" y="85" text-anchor="middle" font-size="12">3. Dunder Methods</text><text x="525" y="101" text-anchor="middle" class="tm" font-size="10">act like built-in types</text>
+    <line x1="215" y1="88" x2="218" y2="88" stroke="currentColor" marker-end="url(#oo-a0)"/>
+    <line x1="420" y1="88" x2="423" y2="88" stroke="currentColor" marker-end="url(#oo-a0)"/>
+    <text x="320" y="150" text-anchor="middle" class="tm" font-size="11">one running example in all four notes: PocketBank (Asha ₹120, Ben ₹50)</text>
+  </svg><figcaption>The Object-Oriented Python group as it appears in the sidebar. You are on the green node: the map of the three notes below it, read in order 1 → 2 → 3.</figcaption></figure>
+  <ol class="story">
+    <li><b>Came from: <a class="xref" data-note="py_fundamentals">Python Fundamentals</a>, <a class="xref" data-note="py_functions">Functions</a> and <a class="xref" data-note="py_ds">Data Structures</a></b><span>You can store records in dicts and lists and write functions that work on them. That is enough for scripts. It stops being enough when a program has many kinds of records, each with rules that must never be broken (section 01 shows exactly how it breaks).</span></li>
+    <li><b>This note adds: the map</b><span>The chain of needs that produces every OOP concept, the shared running example, the group's family tree, a reading guide, the "four pillars" placed on the map, and a revision sheet for the whole group. No concept is taught in depth here; each has its note.</span></li>
+    <li><b>Leads to: <a class="xref" data-note="py_classes">Classes &amp; Objects</a></b><span>The first note to read. After the group: <a class="xref" data-note="py_iterators">Iterators &amp; Generators</a>, <a class="xref" data-note="py_decorators">Decorators</a> and <a class="xref" data-note="py_context">Context Managers</a> build on the dunder methods and classes learnt here, and <a class="xref" data-note="py_testing">Testing</a> relies on dependency injection and good <code>__repr__</code>/<code>__eq__</code>.</span></li>
+  </ol>
+
+  <h2 id="oo-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
+  <p>The whole group as one chain of needs. Each concept answers the question above it; its weakness raises the next question. Read it top to bottom once, slowly: if you can retell it in your own words, you know how every OOP term relates to every other. Numbers come from PocketBank (section 02).</p>
+  <ol class="story">
+    <li><b>Data and functions drift apart</b><span>Q: what goes wrong with dicts plus loose functions? → Nothing ties the rules to the data: <code>asha["balance"] -= 500</code> skips the "no overdraft" check (Asha at −380), and a typo key <code>"balnce"</code> is silently created. We need the data and its rules in one place…</span></li>
+    <li><b>Class &amp; object</b><span>Q: how do we bundle data with the functions that change it? → A class is a blueprint; each object (Asha's account, Ben's account) has its own data, and methods travel with it: <code>asha.deposit(50)</code> is really <code>Account.deposit(asha, 50)</code>. But anyone can still write <code>asha.balance = -500</code>… <a class="xref" data-note="py_classes">Classes &amp; Objects</a></span></li>
+    <li><b>Encapsulation</b><span>Q: how do we protect the rule "balance never below 0" (an invariant)? → Keep the data internal (<code>_balance</code>, <code>__balance</code>) and expose it through methods and read-only properties: assigning <code>asha.balance</code> raises AttributeError. But PocketBank needs savings and current accounts, almost the same as Account… <a class="xref" data-note="py_classes">Classes &amp; Objects</a></span></li>
+    <li><b>Inheritance</b><span>Q: how do we reuse Account and specialise only the differences? → <code>class SavingsAccount(Account)</code> inherits everything and overrides or extends a few methods with <code>super()</code>; Asha earns 1% (120 → 121.2), Ben may go overdrawn (−30). But code that processes "all accounts" now seems to need an if per type… <a class="xref" data-note="py_inheritance">Inheritance, Polymorphism &amp; Design</a></span></li>
+    <li><b>Polymorphism &amp; duck typing</b><span>Q: can one piece of code handle every type? → One interface, many forms: <code>acc.month_end()</code> runs the right version for each object (Asha +1.2, Ben −10). Python does not even require a common parent: anything with <code>month_end</code> works (a gift card). But our Money values still cannot <code>+</code>, <code>==</code> or print… <a class="xref" data-note="py_inheritance">Inheritance, Polymorphism &amp; Design</a></span></li>
+    <li><b>Dunder methods</b><span>Q: how do our objects behave like built-in values? → Python's syntax calls special methods on the type: <code>len(x)</code> → <code>type(x).__len__(x)</code>, <code>a + b</code> → <code>__add__</code>. A Money type with <code>__add__</code>, <code>__eq__</code>, <code>__hash__</code>, <code>__lt__</code>, <code>__repr__</code> makes ₹0.10 + ₹0.20 == ₹0.30 exactly. But as the code grows, how do we keep the design itself healthy? <a class="xref" data-note="py_dunder">Dunder Methods &amp; the Data Model</a></span></li>
+    <li><b>Contracts &amp; design</b><span>Q: how do we stop a new account type forgetting a method, avoid a class for every combination of features, and keep code changeable? → ABCs make an interface a contract (a missing method blocks creation); composition (an account <em>has</em> an interest policy) replaces 8 combination classes; SOLID's five rules and patterns like strategy and factory name the good habits. <a class="xref" data-note="py_inheritance">Inheritance, Polymorphism &amp; Design</a></span></li>
+  </ol>
+  <div class="callout anlg"><span class="label">Analogy</span><p>Running a bank branch. First, customer files lie loose next to a rule book anyone may ignore (dicts + functions). Then each customer gets a passbook that only the cashier may write in, following the rules (class, encapsulation). New products are variations of the basic account (inheritance), and the month-end batch job treats them all the same way (polymorphism). The branch's money behaves like real money: it adds up, compares and prints properly (dunder methods). Finally head office writes a launch checklist for new products and attaches add-on cards instead of inventing a product for every combination (ABCs, composition, SOLID).</p></div>
+
+  <h2 id="oo-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
-    <div class="mm-center">Python OOP</div>
+    <div class="mm-center">Object-Oriented Python</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">Class &amp; object</div>
+        <div class="mm-title">Why OOP</div>
         <ul>
-          <li><b>Class</b> — the blueprint; <b>object</b> — one thing built from it, with its own data</li>
-          <li>💡 architect's drawing vs the houses built from it</li>
-          <li><b>__init__</b> — fills a new object's attributes; Python calls it on <code>Dog("Bruno")</code></li>
-          <li><b>self</b> — means "my"; <code>bruno.bark()</code> is really <code>Dog.bark(bruno)</code></li>
-          <li><b>Instance attr</b> — per object (<code>obj.__dict__</code>); <b>class attr</b> — shared by all</li>
-          <li><b>Lookup</b> — object → class → parents (MRO)</li>
-          <li>⚠ A list as class attr (<code>tricks = []</code>) is shared by all objects; create it in __init__</li>
+          <li>Data and its rules drift apart in dicts + functions</li>
+          <li>OOP bundles them; the rest of OOP protects, reuses and polishes the bundle</li>
+          <li>Not always needed: a 20-line script is fine with functions</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Method kinds</div>
+        <div class="mm-title">1. Classes &amp; Objects</div>
         <ul>
-          <li><b>Instance</b> — gets <code>self</code>; reads/changes the object's data</li>
-          <li><b>@classmethod</b> — gets <code>cls</code>; other ways to build objects (<code>from_config</code>), works for subclasses</li>
-          <li><b>@staticmethod</b> — gets nothing; a helper that belongs with the class</li>
-          <li>⚠ Writing the class name inside a factory breaks subclasses; use <code>cls(...)</code></li>
+          <li>Class = blueprint, object = instance; <code>obj.m()</code> → <code>Class.m(obj)</code></li>
+          <li><code>__init__</code> fills a new object; instance vs class attributes</li>
+          <li>Instance / <code>@classmethod</code> / <code>@staticmethod</code></li>
+          <li>Encapsulation: <code>_x</code>, <code>__x</code> (mangled), <code>@property</code>; <code>@dataclass</code></li>
+          <li>⚠ mutable class attribute shared by all objects</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">2. Inheritance &amp; design</div>
+        <ul>
+          <li><code>class Child(Parent)</code>, override, <code>super()</code></li>
+          <li>Polymorphism, duck typing, Protocols</li>
+          <li>ABCs: <code>@abstractmethod</code> contracts</li>
+          <li>MRO by C3: child first, parents left → right, each once</li>
+          <li>Composition over inheritance; SOLID; strategy, factory, observer</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">3. Dunder methods</div>
+        <ul>
+          <li><code>len(x)</code> → <code>type(x).__len__(x)</code></li>
+          <li><code>__repr__</code>/<code>__str__</code>, <code>__eq__</code>/<code>__hash__</code>, ordering, arithmetic + <code>__radd__</code></li>
+          <li>Containers: <code>__len__ __getitem__ __contains__ __iter__</code></li>
+          <li><code>__call__</code>; <code>__enter__</code>/<code>__exit__</code></li>
+          <li>⚠ defining <code>__eq__</code> removes <code>__hash__</code></li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Four pillars</div>
         <ul>
-          <li><b>Encapsulation</b> — hide DATA behind methods/properties; <code>_x</code> = "internal", <code>__x</code> = renamed</li>
-          <li><b>Abstraction</b> — hide COMPLEXITY; show a small interface (ABC)</li>
-          <li><b>Inheritance</b> — "is-a" reuse; always call <code>super().__init__()</code></li>
-          <li><b>Polymorphism</b> — same call, different behaviour per type (dynamic dispatch, duck typing)</li>
-          <li>⚠ Encapsulation ≠ abstraction: protect data vs simplify the interface</li>
-          <li><b>Name mangling</b> — <code>__bal</code> → <code>_Account__bal</code>; stops subclass clashes, not a security lock</li>
+          <li><b>Encapsulation</b> — protect data (note 1)</li>
+          <li><b>Abstraction</b> — small interface, hide how (note 2, ABCs)</li>
+          <li><b>Inheritance</b> — is-a reuse (note 2)</li>
+          <li><b>Polymorphism</b> — one call, many behaviours (note 2, and note 3 at language level)</li>
+          <li>⚠ encapsulation ≠ abstraction</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Dunder methods</div>
+        <div class="mm-title">Running example</div>
         <ul>
-          <li><b>Dunder</b> = "double underscore" hooks Python calls for built-in syntax</li>
-          <li><b>__repr__</b> for developers (ideally rebuilds the object); <b>__str__</b> for users; write __repr__ first</li>
-          <li><b>Operators</b> — <code>__add__ __mul__ __rmul__ __eq__ __lt__</code></li>
-          <li><b>Containers</b> — <code>__len__ __getitem__ __contains__ __iter__</code></li>
-          <li><b>__call__</b> — use an object like a function (PyTorch <code>model(x)</code>)</li>
-          <li>Return <code>NotImplemented</code> for unknown types → Python tries the other side</li>
-          <li>⚠ Defining <code>__eq__</code> sets <code>__hash__ = None</code> → can't go in a set unless you add __hash__</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Properties &amp; dataclasses</div>
-        <ul>
-          <li><b>@property</b> — looks like an attribute, runs a method (validate, compute)</li>
-          <li>No setter → read-only attribute</li>
-          <li><b>@dataclass</b> — writes <code>__init__ __repr__ __eq__</code> for you; <code>order=True</code>, <code>frozen=True</code></li>
-          <li>⚠ List default → <code>field(default_factory=list)</code></li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Interfaces</div>
-        <ul>
-          <li><b>ABC + @abstractmethod</b> — must inherit; can't create an object until all methods are written</li>
-          <li><b>Protocol</b> — any class with the right methods fits, no inheritance (typed duck typing)</li>
-          <li><code>@runtime_checkable</code> — allows isinstance (checks method names only)</li>
-          <li>💡 ABC = a degree from a named college; Protocol = "can you drive? then you're a driver"</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Composition &amp; MRO</div>
-        <ul>
-          <li><b>Inheritance</b> = is-a; <b>composition</b> = has-a (a Car has an Engine)</li>
-          <li>Prefer composition: loose links, swap parts at runtime, no fragile parent</li>
-          <li><b>MRO</b> — order Python searches for a method (C3): child first, bases left→right, each once</li>
-          <li>Diamond <code>D(B, C)</code> → D, B, C, A, object; check <code>D.__mro__</code></li>
-          <li><b>super()</b> = next class in the MRO, not "my parent" (this is how mixins work)</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">SOLID &amp; patterns</div>
-        <ul>
-          <li><b>S</b> one reason to change · <b>O</b> add new code, don't edit old · <b>L</b> child usable wherever parent is</li>
-          <li><b>I</b> small interfaces · <b>D</b> depend on abstractions, pass dependencies in</li>
-          <li>⚠ LSP classic: Square(Rect) breaks <code>set_w</code> expectations</li>
-          <li><b>Factory</b> — pick the class from input (<code>make_loader("x.csv")</code>)</li>
-          <li><b>Strategy</b> — swap the algorithm (metric, optimizer)</li>
-          <li><b>Singleton</b> — only one object (config); in Python a module is usually enough</li>
-          <li><b>Observer</b> — subscribers get told when events happen (training callbacks)</li>
+          <li><b>PocketBank</b>: Asha opens ₹100, +50, −30 → ₹120; Ben ₹50, withdraw 80 refused</li>
+          <li>Savings 1%: 120 → 121.2; Current overdraft: Ben −30, fee 10 → −40</li>
+          <li>Money in paise: ₹0.10 + ₹0.20 == ₹0.30</li>
+          <li>Statement: 3 rows, balance ₹120.00</li>
         </ul>
       </div>
     </div>
@@ -98,574 +105,299 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="po-class"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Classes &amp; Objects</span><span class="rm-sub">Blueprint, __init__, self</span></div></div>
-      <div class="rm-item rm-done" data-target="po-methods"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Instance, Class, Static Methods</span><span class="rm-sub">self vs cls vs nothing</span></div></div>
-      <div class="rm-item rm-done" data-target="po-pillars"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">The Four Pillars</span><span class="rm-sub">What each hides or reuses</span></div></div>
-      <div class="rm-item rm-done" data-target="po-dunder"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Dunder Methods &amp; Operators</span><span class="rm-sub">Make objects act built-in</span></div></div>
-      <div class="rm-item rm-done" data-target="po-prop"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Properties &amp; Dataclasses</span><span class="rm-sub">Less boilerplate, safe attributes</span></div></div>
-      <div class="rm-item rm-done" data-target="po-abc"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">ABCs &amp; Protocols</span><span class="rm-sub">Contracts for subclasses</span></div></div>
-      <div class="rm-item rm-done" data-target="po-comp"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Composition vs Inheritance</span><span class="rm-sub">has-a beats is-a</span></div></div>
-      <div class="rm-item rm-done" data-target="po-mro"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">MRO &amp; super()</span><span class="rm-sub">The diamond, solved</span></div></div>
-      <div class="rm-item rm-done" data-target="po-solid"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">SOLID</span><span class="rm-sub">Five rules, before → after</span></div></div>
-      <div class="rm-item rm-done" data-target="po-pat"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Design Patterns</span><span class="rm-sub">Factory, strategy, singleton, observer</span></div></div>
-      <div class="rm-item rm-done" data-target="po-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="oo-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The group as one chain of needs</span></div></div>
+      <div class="rm-item rm-done" data-target="oo-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Data and Functions Drift Apart</span><span class="rm-sub">The problem OOP solves</span></div></div>
+      <div class="rm-item rm-done" data-target="oo-example"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">One Running Example: PocketBank</span><span class="rm-sub">The story every note uses</span></div></div>
+      <div class="rm-item rm-done" data-target="oo-family"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">The Group Map</span><span class="rm-sub">Concepts, notes, arrows</span></div></div>
+      <div class="rm-item rm-done" data-target="oo-guide"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Reading Guide</span><span class="rm-sub">What each note gives you</span></div></div>
+      <div class="rm-item rm-done" data-target="oo-pillars"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">The Four Pillars, Placed</span><span class="rm-sub">And OOP in the libraries you use</span></div></div>
+      <div class="rm-item rm-done" data-target="oo-connect"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One table for the group</span></div></div>
+      <div class="rm-item rm-done" data-target="oo-traps"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Across the group</span></div></div>
+      <div class="rm-item rm-done" data-target="oo-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole group on one page</span></div></div>
+      <div class="rm-item rm-done" data-target="oo-qa"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Connection questions</span></div></div>
     </div>
   </div>
 
-  <div class="callout intu"><span class="label">Why this note</span><p>Small scripts get by with lists, dicts and functions. Real projects have hundreds of "things" (students, orders, models) that each carry data and need the same operations. Classes give each thing a shape. You will meet them every day: <code>LogisticRegression()</code> is an object built from a class, <code>model.fit()</code> is a method, and <code>nn.Module</code> is a parent class you inherit from. Interviews ask "what is <code>self</code>?", "encapsulation vs abstraction?", "what is the MRO?". Each section below uses only what came before it.</p></div>
+  <h2 id="oo-why"><span class="num">01</span>The Problem: Data and Functions Drift Apart</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>With dicts, lists and functions (<a class="xref" data-note="py_functions">Functions</a>, <a class="xref" data-note="py_dicts_sets">Dicts &amp; Sets</a>) you can already write a small banking script. So why does Python have classes at all? What exactly goes wrong without them?</p></div>
+  <p>Here is a wallet app written with only what you know: each account is a dict, and the rules are functions. The bank's one rule: <em>a balance never goes below zero</em>.</p>
+  <div class="fx" data-lang="py"># PocketBank without classes: data in dicts, rules in loose functions
+asha = {"owner": "Asha", "balance": 100}
+ben = {"owner": "Ben", "balance": 50}
 
-  <h2 id="po-class"><span class="num">01</span>Classes &amp; Objects</h2>
-  <p>Say you store students as dicts and keep an <code>average</code> function somewhere else. It works. But nothing ties the function to the data: anyone can pass the wrong dict, and with 20 such functions you lose track of which works on what.</p>
-  <div class="fx" data-lang="py"># without a class: data in a dict, function kept separately
-s1 = {"name": "Asha", "marks": [88, 92]}
-s2 = {"name": "Ben", "marks": [70, 65]}
-def average(student):
-    return sum(student["marks"]) / len(student["marks"])
-print(average(s1), average(s2))
+def deposit(acc, amount):
+    acc["balance"] += amount
 
-# with a class: data and the function live together
-class Student:
-    def __init__(self, name, marks):
-        self.name = name
-        self.marks = marks
-    def average(self):
-        return sum(self.marks) / len(self.marks)
-a = Student("Asha", [88, 92])
-print(a.name, a.average())</div>
-  <div class="fx" data-lang="text">90.0 67.5
-Asha 90.0</div>
-  <p>A <strong>class</strong> is a blueprint: it says what data each student has and what each student can do. An <strong>object</strong> (also called an <strong>instance</strong>) is one student built from that blueprint. <code>Student("Asha", [88, 92])</code> builds one. The data on an object (<code>a.name</code>) is called an <strong>attribute</strong>. A function inside a class is called a <strong>method</strong>, and you call it with a dot: <code>a.average()</code>.</p>
-  <p>Two things look strange at first. <code>__init__</code> is the method Python runs automatically when you build an object; its job is to fill in the attributes. <code>self</code> is the object being worked on. When you write <code>a.average()</code>, Python secretly passes <code>a</code> as <code>self</code>. Read <code>self.name</code> as "my name".</p>
-  <figure class="viz"><svg viewBox="0 0 560 200" width="560">
-    <defs><marker id="po-ah1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
-    <rect x="20" y="50" width="190" height="96" rx="6" class="fb sb"/>
-    <text x="32" y="72" font-weight="bold">class Dog</text>
-    <text x="32" y="94">species = "Canis..."</text>
-    <text x="32" y="112">bark(self)</text>
-    <text x="32" y="134" class="tm">shared by all</text>
-    <line x1="212" y1="80" x2="318" y2="45" stroke="currentColor" marker-end="url(#po-ah1)"/>
-    <line x1="212" y1="118" x2="318" y2="150" stroke="currentColor" marker-end="url(#po-ah1)"/>
-    <text x="226" y="100" class="tm">Dog(...)</text>
-    <rect x="320" y="14" width="220" height="62" rx="6" class="fg sg"/>
-    <text x="332" y="36" font-weight="bold">bruno</text>
-    <text x="332" y="58">name="Bruno", age=3</text>
-    <rect x="320" y="120" width="220" height="62" rx="6" class="fg sg"/>
-    <text x="332" y="142" font-weight="bold">tommy</text>
-    <text x="332" y="164">name="Tommy", age=5</text>
-  </svg><figcaption>One class, many objects. Each object keeps its own data. Methods and class attributes live once, on the class.</figcaption></figure>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Class = the architect's drawing. Object = a house built from it. Painting one house changes neither the drawing nor the other houses.</p></div>
-  <p>One more idea in the picture: <code>species</code> is written on the class itself, not inside <code>__init__</code>. That makes it a <strong>class attribute</strong>, one value shared by every dog. <code>name</code> and <code>age</code> are <strong>instance attributes</strong>, one copy per dog.</p>
-  <div class="fx" data-lang="py">class Dog:
-    species = "Canis familiaris"          # class attribute: shared
-    def __init__(self, name, age):        # runs automatically on Dog(...)
-        self.name = name                  # instance attributes: per object
-        self.age = age
-    def bark(self):
-        return f"{self.name} says Woof"
+def withdraw(acc, amount):
+    if amount &gt; acc["balance"]:
+        raise ValueError("insufficient funds")
+    acc["balance"] -= amount
 
-bruno, tommy = Dog("Bruno", 3), Dog("Tommy", 5)
-print(bruno.bark(), "|", Dog.bark(tommy))   # self is just the first argument
-print(bruno is tommy, bruno.species is tommy.species)
-print(bruno.__dict__)</div>
-  <div class="fx" data-lang="text">Bruno says Woof | Tommy says Woof
-False True
-{'name': 'Bruno', 'age': 3}</div>
-  <ul>
-    <li><code>__init__</code> only fills attributes. The object already exists (made by <code>__new__</code>).</li>
-    <li><code>self</code> is Python's "my": <code>bruno.bark()</code> becomes <code>Dog.bark(bruno)</code>.</li>
-    <li>Attribute lookup goes <strong>object's __dict__ → class → parent classes</strong>. That is why <code>bruno.species</code> works.</li>
-  </ul>
-  <div class="callout trap"><span class="label">Trap</span><p>A list (or dict) set as a class attribute is shared by every object.</p></div>
-  <div class="fx" data-lang="py">class Bad:
-    tricks = []                     # one list for ALL dogs
-    def add(self, t): self.tricks.append(t)
-a, b = Bad(), Bad()
-a.add("sit")
-print(b.tricks)                     # b never learned "sit"!</div>
-  <div class="fx" data-lang="text">['sit']</div>
-  <p>Fix: create it per object in <code>__init__</code> (<code>self.tricks = []</code>).</p>
+deposit(asha, 50)
+withdraw(asha, 30)
+print("Asha, through the rules:", asha["balance"])
+try:
+    withdraw(ben, 80)
+except ValueError as e:
+    print("Ben, through the rules: ", e)
 
-  <h2 id="po-methods"><span class="num">02</span>Instance, Class, Static Methods</h2>
-  <p>Every method so far received <code>self</code>, the object. Two more kinds exist. A <strong>class method</strong> receives the class itself (called <code>cls</code>) instead of an object; its usual job is to build objects in a different way, for example from a config dict. A <strong>static method</strong> receives nothing special; it is a plain helper function that lives inside the class because it belongs there. You mark them with <code>@classmethod</code> and <code>@staticmethod</code> above the <code>def</code>. (A line starting with <code>@</code> is a <strong>decorator</strong>, a tag that changes how the function below it behaves. The Advanced note explains how they work inside.)</p>
-  <table class="tbl">
-    <tr><th>Kind</th><th>First arg</th><th>Can touch</th><th>Use for</th></tr>
-    <tr><td>Instance</td><td><code>self</code></td><td>object + class data</td><td>Normal behaviour (<code>fit</code>, <code>predict</code>)</td></tr>
-    <tr><td><code>@classmethod</code></td><td><code>cls</code></td><td>class data</td><td>Other ways to build objects, registries</td></tr>
-    <tr><td><code>@staticmethod</code></td><td>none</td><td>only its args</td><td>Helper that belongs with the class</td></tr>
+asha["balance"] -= 500            # nothing forces anyone to use withdraw()
+ben["balnce"] = 0                 # a typo silently creates a new key
+print("Asha, rules skipped:    ", asha["balance"])
+print("Ben, after a typo:      ", ben)
+print("balance of 0.1 + 0.2:   ", 0.1 + 0.2)</div>
+  <div class="fx" data-lang="text">Asha, through the rules: 120
+Ben, through the rules:  insufficient funds
+Asha, rules skipped:     -380
+Ben, after a typo:       {'owner': 'Ben', 'balance': 50, 'balnce': 0}
+balance of 0.1 + 0.2:    0.30000000000000004</div>
+  <p>Read the output top to bottom. Used through the functions, everything is right: Asha reaches 120 and Ben's overdraft is refused. Then two ordinary lines break the bank with no error at all. A direct write skips the rule and puts Asha at −380. A typo creates a new key, so Ben's dict carries junk and his real balance is unchanged. Finally, the balance is a float, and floats cannot even add 0.1 and 0.2 exactly. Three separate problems, one cause: <strong>the data and the rules for it are separate things that merely happen to be used together.</strong></p>
+  <p>In plain words, <strong>object-oriented programming</strong> is the answer "put them together": design a new type (a <strong>class</strong>) whose values (<strong>objects</strong>) carry both their data and the only functions allowed to change it (<strong>methods</strong>). Every other OOP idea in this group is a refinement of that one move: protecting the bundle (encapsulation), reusing it (inheritance), handling many kinds of bundle with one piece of code (polymorphism), making it behave like a built-in value (dunder methods), and keeping many bundles well-designed (ABCs, composition, SOLID).</p>
+  <div class="callout anlg"><span class="label">Analogy</span><p>Loose customer files on a desk next to a rule book, versus a passbook that only the cashier may write in. The passbook is the data; the cashier, who always follows the rule book, is the methods; the counter between you and the passbook is encapsulation.</p></div>
+  <div class="callout def"><span class="label">Definition</span><p><strong>Object-oriented programming</strong>: organising a program around objects, each combining state (attributes) and behaviour (methods), created from classes. In Python everything is already an object (<code>int</code>, <code>list</code>, functions); OOP lets you define your own types alongside them.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>OOP is a tool, not a goal. A 30-line script that reads a file and prints a total does not need a class. Reach for classes when data has rules that must hold, when many functions share the same data, or when you need several variants of one kind of thing.</p></div>
+  <div class="bridge"><b>What this still can't tell us → next: One Running Example.</b> The problem is clear. To see each OOP idea fix one part of it, we need one small story that every note of the group follows, with numbers we can check at every step.</div>
+
+  <h2 id="oo-example"><span class="num">02</span>One Running Example: PocketBank</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>OOP concepts are hard to relate when each is shown on a different toy (dogs, shapes, vehicles). Is there one small story, small enough to trace by hand, on which every concept of the group can be shown changing the same numbers?</p></div>
+  <p><strong>PocketBank</strong> is a tiny wallet app. Every note of the group uses it, with the same people and the same numbers, so you can watch each new idea fix one more problem.</p>
+  <table class="tbl"><caption>The PocketBank cast</caption>
+    <tr><th>Who / what</th><th>Story</th><th>Used in</th></tr>
+    <tr><td>Asha</td><td>opens with ₹100, deposits ₹50, withdraws ₹30 → <b>₹120</b>; later a savings account at 1% a month → ₹121.20; upgrades to 2% → ₹123.62</td><td>all notes</td></tr>
+    <tr><td>Ben</td><td>opens with ₹50; withdrawing ₹80 is <b>refused</b> by a plain account; a current account with ₹100 overdraft allows it → −₹30; month-end fee ₹10 → −₹40</td><td>all notes</td></tr>
+    <tr><td>Chitra, Dev</td><td>a plain account (₹70) and a student / fixed-deposit customer, for edge cases</td><td>Classes, Inheritance</td></tr>
+    <tr><td>GiftCard GC-7</td><td>₹25, loses ₹1 a month; not an account, but works in the same loop</td><td>Inheritance (duck typing)</td></tr>
+    <tr><td>Money</td><td>exact amounts in paise: ₹0.10 + ₹0.20 == ₹0.30; ten ₹0.10 credits = ₹1.00</td><td>Dunder Methods</td></tr>
+    <tr><td>Statement</td><td>Asha's 3 transactions (open 100, deposit 50, withdraw 30), balance ₹120.00</td><td>Classes (dataclass), Dunder Methods</td></tr>
   </table>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A school. Instance method = a student checking <em>their own</em> marks. Class method = the office making a new admission from a form. Static method = the calculator kept in the office — it belongs there but knows nothing about any student.</p></div>
-  <div class="fx" data-lang="py">class Model:
-    registry = 0
-    def __init__(self, name, lr=1e-3):
-        self.name, self.lr = name, lr
-        Model.registry += 1
-    def describe(self):                 # instance method
-        return f"{self.name} lr={self.lr}"
-    @classmethod
-    def from_config(cls, cfg):          # alternative constructor
-        return cls(cfg["name"], cfg.get("lr", 1e-3))
-    @staticmethod
-    def valid_lr(lr):                   # pure helper
-        return 0 &lt; lr &lt; 1
+  <p>Where the group ends up, as a preview. You are not expected to follow every line yet; each comment names the note that teaches it.</p>
+  <div class="fx" data-lang="py"># A preview of where the group ends up. Each line is taught in one of the three notes.
+from abc import ABC, abstractmethod
+from functools import total_ordering
 
-class Bert(Model): pass
-m = Bert.from_config({"name": "bert", "lr": 2e-5})
-print(type(m).__name__, m.describe(), Model.valid_lr(5), Model.registry)</div>
-  <div class="fx" data-lang="text">Bert bert lr=2e-05 False 1</div>
-  <p>Walk through it: <code>Bert</code> is a child of <code>Model</code> (inheritance, explained fully in section 03). <code>Bert.from_config(...)</code> returned a <strong>Bert</strong>, not a Model, because <code>cls</code> is whichever class you called it on. If the method had said <code>Model(...)</code> instead of <code>cls(...)</code>, every subclass would get the wrong type back. Real examples: <code>pd.DataFrame.from_dict</code>, <code>datetime.fromisoformat</code>.</p>
+@total_ordering
+class Money:                                   # Dunder Methods: a value type
+    def __init__(self, paise): self.paise = paise
+    def __repr__(self): return f"₹{self.paise / 100:.2f}"
+    def __eq__(self, o): return isinstance(o, Money) and self.paise == o.paise
+    def __hash__(self): return hash(self.paise)
+    def __lt__(self, o): return self.paise &lt; o.paise
+    def __add__(self, o): return Money(self.paise + o.paise)
+    def __radd__(self, o): return self if o == 0 else NotImplemented
+    def __mul__(self, k): return Money(round(self.paise * k))
 
-  <h2 id="po-pillars"><span class="num">03</span>The Four Pillars</h2>
-  <p>Classes alone do not make code good. The "four pillars" are four habits that make classes worth having. Each one solves a specific pain. Read the table once now; each pillar gets its own example below.</p>
-  <table class="tbl">
-    <tr><th>Pillar</th><th>What</th><th>Why</th><th>Python tool</th></tr>
-    <tr><td><strong>Encapsulation</strong></td><td>Hide DATA; change it only through methods</td><td>Keeps data valid (no negative balance)</td><td><code>_x</code>, <code>__x</code>, <code>@property</code></td></tr>
-    <tr><td><strong>Abstraction</strong></td><td>Hide COMPLEXITY behind a small interface</td><td>Caller knows <em>what</em>, not <em>how</em></td><td>ABC, <code>@abstractmethod</code></td></tr>
-    <tr><td><strong>Inheritance</strong></td><td>Child reuses parent code (is-a)</td><td>Write shared logic once</td><td><code>class Child(Parent)</code>, <code>super()</code></td></tr>
-    <tr><td><strong>Polymorphism</strong></td><td>Same call, behaviour depends on type</td><td>No <code>if isinstance</code> chains</td><td>Overriding, duck typing</td></tr>
-  </table>
-  <p>These are design rules. Python does not force them on you.</p>
-
-  <h3>Encapsulation</h3>
-  <p>A bank account has a balance. If any code anywhere can write <code>acc.balance = -5000</code>, the rule "no overdraft" is impossible to keep. <strong>Encapsulation</strong> means: keep the data inside, and let it change only through methods that check the rules.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>An ATM: you deposit and withdraw through buttons that follow rules. You cannot open the box and grab cash.</p></div>
-  <p>Python has two conventions. One underscore <code>_x</code> is a polite sign: "internal, please don't touch". Two underscores <code>__x</code> make Python rename the attribute to <code>_ClassName__x</code>, so outside code does not find it by accident. <code>@property</code> (section 05) lets a method look like a read-only attribute.</p>
-  <div class="fx" data-lang="py">class Account:
-    def __init__(self, balance):
-        self.__balance = balance          # name-mangled to _Account__balance
-    def withdraw(self, amt):
-        if amt &gt; self.__balance:
-            raise ValueError("insufficient funds")
-        self.__balance -= amt
+class Account(ABC):                            # Classes &amp; Objects + an ABC contract
+    def __init__(self, owner, rupees):
+        self.owner, self._balance = owner, Money(rupees * 100)   # protected data
     @property
-    def balance(self):                    # read-only view
-        return self.__balance
-
-acc = Account(100); acc.withdraw(30)
-print(acc.balance)
-acc.__balance                 # AttributeError
-print(acc._Account__balance)  # mangled name still reachable
-acc.balance = 1_000_000       # AttributeError: no setter</div>
-  <div class="fx" data-lang="text">70
-AttributeError: 'Account' object has no attribute '__balance'
-70
-AttributeError: property 'balance' of 'Account' object has no setter</div>
-  <ul>
-    <li><code>_x</code>: a convention meaning "internal, don't touch". <code>__x</code>: renamed to <code>_Class__x</code>, so subclasses cannot clash with it.</li>
-    <li>Python has no true private. Renaming stops accidents, not determined access.</li>
-  </ul>
-
-  <h3>Inheritance &amp; polymorphism</h3>
-  <p>A Dog and a Cat both have a name and both can speak, but they speak differently. Writing two full classes repeats the shared parts. <strong>Inheritance</strong> lets a child class start as a copy of a parent and change only what differs. You write <code>class Dog(Animal)</code>; the brackets name the parent.</p>
-  <div class="fx" data-lang="py">class Animal:
-    def __init__(self, name): self.name = name
-    def speak(self): return "..."
-class Dog(Animal):                      # Dog gets __init__ for free
-    def speak(self): return "Woof"      # and changes one method
-d = Dog("Bruno")
-print(d.name, d.speak(), isinstance(d, Animal))</div>
-  <div class="fx" data-lang="text">Bruno Woof True</div>
-  <p>Dog did not write <code>__init__</code>, yet <code>d.name</code> works: Python looked in Dog, did not find <code>__init__</code>, and used Animal's. Writing a new <code>speak</code> in the child is called <strong>overriding</strong>. A Dog <em>is an</em> Animal, so <code>isinstance</code> says True.</p>
-  <p><strong>Polymorphism</strong> ("many forms") is what inheritance makes possible: one call like <code>p.badge()</code> behaves differently depending on which type of object <code>p</code> is. One loop can handle doctors, nurses and plain staff without a single <code>if</code>.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>"Show your ID" at a hospital gate. A doctor, a nurse and a visitor all respond to the same request, each with their own card.</p></div>
-  <div class="fx" data-lang="py">class Staff:
-    def __init__(self, name): self.name = name
-    def role(self): return "staff"
-    def badge(self): return f"{self.name} [{self.role()}]"   # calls the override!
-
-class Doctor(Staff):                      # Doctor IS-A Staff
-    def __init__(self, name, spec):
-        super().__init__(name)            # let the parent set self.name
-        self.spec = spec
-    def role(self): return f"doctor/{self.spec}"
-
-class Nurse(Staff):
-    def role(self): return "nurse"
-
-for p in [Doctor("Alice", "cardio"), Nurse("Bob"), Staff("Cy")]:
-    print(p.badge())                      # one loop, three behaviours</div>
-  <div class="fx" data-lang="text">Alice [doctor/cardio]
-Bob [nurse]
-Cy [staff]</div>
-  <p>Python picks <code>role()</code> from the object's real type at runtime. This is <strong>dynamic dispatch</strong>. <strong>Duck typing</strong> goes further: any object with a <code>badge()</code> method works in that loop, related or not.</p>
-  <div class="callout trap"><span class="label">Trap</span><p>Override <code>__init__</code> but forget <code>super().__init__()</code> → the parent's attributes never get set: <code>AttributeError: 'Broken' object has no attribute 'name'</code>.</p></div>
-
-  <h3>Abstraction</h3>
-  <p><strong>Abstraction</strong> means showing the caller a small, simple set of methods and hiding everything else. The caller learns <em>what</em> the object does, not <em>how</em>.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Google Maps: you type a place and press Go. Routing, traffic data and servers stay hidden.</p></div>
-  <p>In code: <code>model.fit(X, y)</code> hides the optimiser. ABCs (section 06) enforce it.</p>
-  <div class="callout trap"><span class="label">Trap</span><p>The most-asked mix-up. <strong>Encapsulation</strong> protects data (who may change it). <strong>Abstraction</strong> simplifies the interface (what the caller needs to know).</p></div>
-
-  <h2 id="po-dunder"><span class="num">04</span>Dunder Methods &amp; Operator Overloading</h2>
-  <p>Print an object of your own class and you get something ugly: the class name and a memory address. Python does not know how to show it. Add a method called <code>__str__</code>, and <code>print</code> uses it.</p>
-  <div class="fx" data-lang="py">class Student:
-    pass
-s = Student()
-print(s)                 # no __str__: Python shows the type and an address
-class Student2:
-    def __init__(self, name): self.name = name
-    def __str__(self): return f"Student {self.name}"
-print(Student2("Asha"))</div>
-  <div class="fx" data-lang="text">&lt;__main__.Student object at 0x7f…&gt;
-Student Asha</div>
-  <p>This is the general pattern. Methods whose names start and end with two underscores are called <strong>dunder</strong> ("double underscore") methods. You have already met <code>__init__</code>. Each one is a hook that Python calls behind a piece of built-in syntax: <code>print(v)</code> calls <code>v.__str__()</code>, <code>v + w</code> calls <code>v.__add__(w)</code>, <code>len(v)</code> calls <code>v.__len__()</code>. Write the hook, and the syntax works on your objects. Giving <code>+</code> or <code>==</code> a meaning for your class is called <strong>operator overloading</strong>.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A standard plug shape. Any appliance with the right plug fits the socket. Any class with <code>__len__</code> fits <code>len()</code>.</p></div>
-  <table class="tbl">
-    <tr><th>You write</th><th>Python calls</th><th>You write</th><th>Python calls</th></tr>
-    <tr><td><code>print(v)</code></td><td><code>__str__</code></td><td><code>repr(v)</code> / shell</td><td><code>__repr__</code></td></tr>
-    <tr><td><code>v + w</code></td><td><code>__add__</code></td><td><code>3 * v</code></td><td><code>__rmul__</code></td></tr>
-    <tr><td><code>v == w</code></td><td><code>__eq__</code></td><td><code>v &lt; w</code></td><td><code>__lt__</code></td></tr>
-    <tr><td><code>len(v)</code></td><td><code>__len__</code></td><td><code>v[0]</code></td><td><code>__getitem__</code></td></tr>
-    <tr><td><code>x in v</code></td><td><code>__contains__</code></td><td><code>for x in v</code></td><td><code>__iter__</code></td></tr>
-    <tr><td><code>bool(v)</code></td><td><code>__bool__</code></td><td><code>v(x)</code></td><td><code>__call__</code></td></tr>
-    <tr><td><code>with v:</code></td><td><code>__enter__/__exit__</code></td><td><code>{v}</code>, dict key</td><td><code>__hash__</code></td></tr>
-  </table>
-  <div class="fx" data-lang="py">class Vector:
-    def __init__(self, x, y): self.x, self.y = x, y
-    def __repr__(self): return f"Vector({self.x}, {self.y})"   # for devs
-    def __str__(self):  return f"({self.x}, {self.y})"         # for users
-    def __add__(self, o):
-        if not isinstance(o, Vector): return NotImplemented     # let Python try o.__radd__
-        return Vector(self.x + o.x, self.y + o.y)
-    def __mul__(self, k):  return Vector(self.x * k, self.y * k)
-    __rmul__ = __mul__                       # makes 3 * v work
-    def __eq__(self, o):
-        return isinstance(o, Vector) and (self.x, self.y) == (o.x, o.y)
-    def __hash__(self): return hash((self.x, self.y))
-    def __abs__(self):  return (self.x**2 + self.y**2) ** 0.5
-    def __bool__(self): return bool(self.x or self.y)
-    def __len__(self): return 2
-    def __getitem__(self, i): return (self.x, self.y)[i]       # also makes it iterable
-
-v, w = Vector(3, 4), Vector(1, 2)
-print(v + w, repr(v + w), 3 * v, abs(v))
-print(v == Vector(3, 4), v is Vector(3, 4), bool(Vector(0, 0)))
-print(list(v), v[1], len(v), {v, Vector(3, 4)})
-v + 5</div>
-  <div class="fx" data-lang="text">(4, 6) Vector(4, 6) (9, 12) 5.0
-True False False
-[3, 4] 4 2 {Vector(3, 4)}
-TypeError: unsupported operand type(s) for +: 'Vector' and 'int'</div>
-  <p>What each line of output shows. <code>v + w</code> ran <code>__add__</code>; <code>3 * v</code> ran <code>__rmul__</code> (the "r" is for "reflected": the number is on the left, so Python asks the Vector on the right). <code>abs(v)</code> ran <code>__abs__</code>. <code>==</code> compares the coordinates because of <code>__eq__</code>; <code>is</code> is still False because they are two objects. <code>{v, Vector(3, 4)}</code> has one item because equal vectors hash the same. <code>v + 5</code> failed cleanly: <code>__add__</code> returned <code>NotImplemented</code>, Python tried <code>int.__radd__</code>, which also said no, so it raised <code>TypeError</code>.</p>
-  <ul>
-    <li><code>print</code> uses <code>__str__</code>, and falls back to <code>__repr__</code>. Write <code>__repr__</code> first.</li>
-    <li>Without <code>__eq__</code>, <code>==</code> checks identity: <code>Plain() == Plain()</code> → <code>False</code>.</li>
-    <li><code>__call__</code> is why PyTorch's <code>model(x)</code> runs <code>forward</code> plus hooks.</li>
-  </ul>
-  <div class="callout trap"><span class="label">Trap</span><p>Defining <code>__eq__</code> quietly sets <code>__hash__ = None</code>. Putting the object in a set then fails: <code>TypeError: unhashable type: 'NoHash'</code>. Add <code>__hash__</code> over the same unchanging fields.</p></div>
-
-  <h2 id="po-prop"><span class="num">05</span>Properties &amp; Dataclasses</h2>
-  <h3>@property</h3>
-  <p>You stored temperature as a plain attribute, <code>t.celsius</code>, and code all over the project reads and writes it. Now you need to reject values below absolute zero. Changing every <code>t.celsius = x</code> into <code>t.set_celsius(x)</code> would touch the whole project. A <strong>property</strong> solves this: from outside it still looks like an attribute, but inside, a method runs. The <strong>getter</strong> (under <code>@property</code>) runs on read; the <strong>setter</strong> (under <code>@celsius.setter</code>) runs on write and can check the value. A property with no setter is read-only.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A bank cashier window. You just "hand over money", but the cashier checks the note before it goes in.</p></div>
-  <div class="fx" data-lang="py">class Temperature:
-    def __init__(self, c): self.celsius = c        # goes through the setter
-    @property
-    def celsius(self): return self._c
-    @celsius.setter
-    def celsius(self, v):
-        if v &lt; -273.15: raise ValueError("below absolute zero")
-        self._c = v
-    @property
-    def fahrenheit(self): return self._c * 9 / 5 + 32   # computed, read-only
-
-t = Temperature(25); print(t.celsius, t.fahrenheit)
-t.celsius = -300</div>
-  <div class="fx" data-lang="text">25 77.0
-ValueError: below absolute zero</div>
-  <p>Bonus: start with a plain attribute, and switch to a property later without changing any caller.</p>
-
-  <h3>@dataclass</h3>
-  <p>Many classes exist only to hold a few fields: a point, a config, an experiment run. Writing <code>__init__</code>, <code>__repr__</code> and <code>__eq__</code> for each one is the same boring code every time. A <strong>dataclass</strong> writes them for you. You list the fields with their types, and put <code>@dataclass</code> above the class.</p>
-  <div class="fx" data-lang="py">from dataclasses import dataclass
-class PointPlain:                      # by hand
-    def __init__(self, x, y):
-        self.x, self.y = x, y
-    def __repr__(self):
-        return f"PointPlain(x={self.x}, y={self.y})"
-    def __eq__(self, o):
-        return (self.x, self.y) == (o.x, o.y)
-
-@dataclass
-class Point:                           # generated for you
-    x: int
-    y: int
-
-print(PointPlain(1, 2), Point(1, 2))
-print(Point(1, 2) == Point(1, 2))</div>
-  <div class="fx" data-lang="text">PointPlain(x=1, y=2) Point(x=1, y=2)
-True</div>
-  <p>Eight lines became three, with the same behaviour. Two options add more: <code>order=True</code> also writes <code>&lt;</code> and friends, so objects can be sorted; <code>frozen=True</code> makes objects unchangeable (and therefore hashable).</p>
-  <div class="flow"><span>Declare typed fields</span><span>@dataclass</span><span>__init__, __repr__, __eq__ generated</span><span>+ order / frozen on request</span></div>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A pre-printed form. You only decide the boxes (name, roll no, marks); the printing press makes the form.</p></div>
-  <div class="fx" data-lang="py">from dataclasses import dataclass, field
-
-@dataclass(order=True, frozen=True)
-class Run:
-    score: float
-    name: str = field(compare=False)
-    tags: list = field(default_factory=list, compare=False)
-
-r1, r2 = Run(0.91, "xgb"), Run(0.87, "rf")
-print(r1)
-print(r1 &gt; r2, sorted([r1, r2])[0].name, r1 == Run(0.91, "other"))
-r1.score = 1.0</div>
-  <div class="fx" data-lang="text">Run(score=0.91, name='xgb', tags=[])
-True rf True
-FrozenInstanceError: cannot assign to field 'score'</div>
-  <ul>
-    <li><code>order=True</code> compares fields as a tuple (here only <code>score</code>, since the others have <code>compare=False</code>).</li>
-    <li><code>frozen=True</code>: cannot change and is hashable. Good for configs and dict keys.</li>
-    <li>Need type checking at runtime (APIs, configs)? Use <strong>pydantic</strong>; dataclasses do not check types.</li>
-  </ul>
-  <div class="callout trap"><span class="label">Trap</span><p><code>tags: list = []</code> is rejected: <code>ValueError: mutable default &lt;class 'list'&gt; for field tags is not allowed: use default_factory</code>.</p></div>
-
-  <h2 id="po-abc"><span class="num">06</span>ABCs &amp; Protocols</h2>
-  <p>Your team writes ten model classes. Each must have <code>fit</code> and <code>predict</code>, because the training script calls both. Someone forgets <code>predict</code> in one class. Nothing complains until the script reaches that line in production at 2 AM. An <strong>interface</strong> is a written contract: "a model must have <code>fit</code> and <code>predict</code>". Python offers two ways to write one.</p>
-  <p>An <strong>ABC</strong> (abstract base class) is a parent class with methods marked <code>@abstractmethod</code>, which means "children must write this". Python refuses to build an object of any class that still has an unwritten abstract method, so the mistake shows up at once. A <strong>Protocol</strong> does not need inheritance at all: any class that happens to have the right methods counts.</p>
-  <div class="cards">
-    <div><b>ABC</b><p>You must inherit it. Missing abstract methods → cannot create the object.</p><small>Use: your own class family, shared helper methods. 💡 a degree from a named college</small></div>
-    <div><b>Protocol</b><p>Anything with matching methods fits. Checked by mypy, no inheritance.</p><small>Use: accepting third-party objects. 💡 "can you drive? then you're a driver"</small></div>
-  </div>
-  <div class="fx" data-lang="py">from abc import ABC, abstractmethod
-
-class Model(ABC):
+    def balance(self): return self._balance                     # read-only view
+    def deposit(self, m): self._balance = self._balance + m
     @abstractmethod
-    def fit(self, X, y): ...
-    @abstractmethod
-    def predict(self, X): ...
-    def fit_predict(self, X, y):          # concrete, shared by all subclasses
-        return self.fit(X, y).predict(X)
+    def month_end(self): ...                                     # every type must say how
 
-class Half(Model):
-    def fit(self, X, y): return self      # forgot predict
+class SavingsAccount(Account):                 # Inheritance + polymorphism
+    def month_end(self): self.deposit(self._balance * 0.01)
 
-class Mean(Model):
-    def fit(self, X, y): self.m = sum(y) / len(y); return self
-    def predict(self, X): return [self.m] * len(X)
+class CurrentAccount(Account):
+    def month_end(self): pass
 
-Model()
-Half()
-print(Mean().fit_predict([1, 2, 3], [10, 20, 30]))</div>
-  <div class="fx" data-lang="text">TypeError: Can't instantiate abstract class Model without an implementation for abstract methods 'fit', 'predict'
-TypeError: Can't instantiate abstract class Half without an implementation for abstract method 'predict'
-[20.0, 20.0, 20.0]</div>
-  <p>The error comes when the object is built, not when <code>predict</code> is first called in production. The <code>...</code> in the abstract methods is just a placeholder body. <code>fit_predict</code> is a normal method with real code; every child gets it for free, and it works because the contract guarantees <code>fit</code> and <code>predict</code> exist.</p>
-  <div class="fx" data-lang="py">from typing import Protocol, runtime_checkable
-
-@runtime_checkable
-class Predictor(Protocol):
-    def predict(self, X): ...
-
-class SklearnLike:                         # does NOT inherit Predictor
-    def predict(self, X): return [0] * len(X)
-
-def evaluate(m: Predictor, X): return m.predict(X)
-print(evaluate(SklearnLike(), [1, 2]), isinstance(SklearnLike(), Predictor), isinstance(3, Predictor))</div>
-  <div class="fx" data-lang="text">[0, 0] True False</div>
-  <div class="callout trap"><span class="label">Trap</span><p><code>isinstance</code> on a runtime-checkable Protocol only checks that method <em>names</em> exist — not arguments or return types.</p></div>
-
-  <h2 id="po-comp"><span class="num">07</span>Composition vs Inheritance</h2>
-  <p>You want a Car that can run on a petrol engine or an electric motor. One tempting way is inheritance: <code>class Car(Engine)</code>. But a car is not an engine; it <em>has</em> one. And a customer might swap the engine later. <strong>Composition</strong> means building an object out of other objects it holds ("has-a"): the Car keeps an engine object inside <code>self.engine</code> and hands work to it. <strong>Inheritance</strong> means becoming a special kind of another class ("is-a").</p>
-  <figure class="viz"><svg viewBox="0 0 560 190" width="560">
-    <defs><marker id="po-ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="none" stroke="currentColor"/></marker>
-    <marker id="po-ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
-    <text x="70" y="20" class="tb" font-weight="bold">Inheritance: is-a</text>
-    <rect x="80" y="34" width="100" height="32" rx="5" class="fb sb"/><text x="108" y="55">Staff</text>
-    <rect x="20" y="124" width="100" height="32" rx="5" class="fb sb"/><text x="45" y="145">Doctor</text>
-    <rect x="140" y="124" width="100" height="32" rx="5" class="fb sb"/><text x="168" y="145">Nurse</text>
-    <line x1="70" y1="122" x2="115" y2="70" stroke="currentColor" marker-end="url(#po-ah2)"/>
-    <line x1="190" y1="122" x2="145" y2="70" stroke="currentColor" marker-end="url(#po-ah2)"/>
-    <line x1="280" y1="10" x2="280" y2="180" stroke="currentColor" opacity="0.3"/>
-    <text x="330" y="20" class="tg" font-weight="bold">Composition: has-a</text>
-    <rect x="310" y="70" width="90" height="40" rx="5" class="fg sg"/><text x="340" y="95">Car</text>
-    <line x1="402" y1="90" x2="448" y2="60" stroke="currentColor" marker-end="url(#po-ah3)"/>
-    <line x1="402" y1="90" x2="448" y2="130" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#po-ah3)"/>
-    <rect x="450" y="42" width="100" height="32" rx="5" class="ft st"/><text x="466" y="63">Engine</text>
-    <rect x="450" y="114" width="100" height="32" rx="5" class="ft st"/><text x="462" y="135">Electric</text>
-    <text x="400" y="172" class="tm">swap part at runtime</text>
-  </svg><figcaption>Inheritance fixes the link when the class is written. Composition plugs in a part you can replace.</figcaption></figure>
-  <table class="tbl">
-    <tr><th>Ask</th><th>Answer</th><th>Use</th></tr>
-    <tr><td>Is a Doctor a Staff member?</td><td>yes</td><td>Inheritance</td></tr>
-    <tr><td>Is a Car an Engine?</td><td>no, it <em>has</em> one</td><td>Composition</td></tr>
-    <tr><td>Does a Pipeline have steps?</td><td>yes</td><td>Composition (sklearn <code>Pipeline</code>)</td></tr>
+asha, ben = SavingsAccount("Asha", 120), CurrentAccount("Ben", 50)
+for acc in (asha, ben):
+    acc.month_end()                            # one call, two behaviours
+print(asha.balance, ben.balance)
+print(Money(10) + Money(20) == Money(30), sum([Money(10)] * 10))
+try:
+    asha.balance = Money(10**9)
+except AttributeError as e:
+    print("AttributeError:", e)
+try:
+    Account("Eve", 1)
+except TypeError as e:
+    print("TypeError:", e)</div>
+  <div class="fx" data-lang="text">₹121.20 ₹50.00
+True ₹1.00
+AttributeError: property 'balance' of 'SavingsAccount' object has no setter
+TypeError: Can't instantiate abstract class Account without an implementation for abstract method 'month_end'</div>
+  <p>After the code. Polymorphism: one loop, Asha earned 1% (₹121.20) and Ben's current account did nothing. Dunder methods: Money adds exactly, and <code>sum</code> of ten ₹0.10 credits is ₹1.00. Encapsulation: the balance is a read-only property, so the −380 accident of section 01 is impossible. ABC: a generic <code>Account</code> cannot be created, because it does not say what happens at month end.</p>
+  <table class="tbl"><caption>What each note does to PocketBank</caption>
+    <tr><th>Note</th><th>Problem on PocketBank</th><th>Fix</th><th>The number</th></tr>
+    <tr><td><a class="xref" data-note="py_classes">Classes &amp; Objects</a></td><td>rules skipped, typo keys, shared history list</td><td>Account class, <code>__init__</code>, properties, dataclasses</td><td>Asha 120 with history open/deposit/withdraw; Ben's 80 refused</td></tr>
+    <tr><td><a class="xref" data-note="py_inheritance">Inheritance, Polymorphism &amp; Design</a></td><td>savings vs current; month-end ifs; 8 combination classes</td><td>subclasses, polymorphism, ABCs, composition</td><td>month end +1.2, −10, +0; 1% → 2%: 121.2 → 123.62</td></tr>
+    <tr><td><a class="xref" data-note="py_dunder">Dunder Methods &amp; the Data Model</a></td><td>floats drift; objects don't print, compare or add</td><td>Money and Statement with dunder methods</td><td>₹0.30 exact; Statement len 3, balance ₹120.00</td></tr>
   </table>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A mobile phone with a SIM slot. Change from Jio to Airtel by swapping the SIM — you do not buy a new phone.</p></div>
-  <div class="fx" data-lang="py">class Engine:
-    def start(self): return "petrol engine on"
-class Electric:
-    def start(self): return "electric motor on"
+  <div class="callout def"><span class="label">Definition</span><p>An <strong>invariant</strong> is a rule about an object's data that must hold at every moment. PocketBank's is "balance ≥ 0" (or ≥ −overdraft limit for a current account). Most OOP machinery exists to make invariants impossible to break by accident.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Do not skip ahead to SOLID or design patterns before classes and inheritance feel natural. The ladder is ordered by need: each rung only makes sense once you have felt the problem of the one before.</p></div>
+  <div class="bridge"><b>What this still can't tell us → next: The Group Map.</b> We have the problem and the story. Which concept lives in which note, and how do the arrows between them run?</div>
 
-class Car:
-    def __init__(self, engine): self.engine = engine   # has-a, injected
-    def start(self): return "car: " + self.engine.start()   # delegate
+  <h2 id="oo-family"><span class="num">03</span>The Group Map</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>Seven ideas, three notes. Which ideas are taught where, which ones depend on which, and where do the arrows cross between notes?</p></div>
+  <figure class="viz"><svg viewBox="0 0 700 300" width="700">
+    <defs><marker id="oo-a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+    <rect x="10" y="10" width="220" height="280" rx="10" fill="none" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.45"/><text x="120" y="28" text-anchor="middle" class="tb" font-size="11" font-weight="700">1. Classes &amp; Objects</text>
+    <rect x="240" y="10" width="220" height="280" rx="10" fill="none" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.45"/><text x="350" y="28" text-anchor="middle" class="tb" font-size="11" font-weight="700">2. Inheritance &amp; Design</text>
+    <rect x="470" y="10" width="220" height="280" rx="10" fill="none" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.45"/><text x="580" y="28" text-anchor="middle" class="tb" font-size="11" font-weight="700">3. Dunder Methods</text>
+    <rect x="30" y="44" width="180" height="40" rx="7" class="fr sr"/><text x="120" y="68" text-anchor="middle" font-size="11">dict + functions drift</text>
+    <line x1="120" y1="84" x2="120" y2="102" stroke="currentColor" marker-end="url(#oo-a1)"/>
+    <rect x="30" y="104" width="180" height="40" rx="7" class="fb sb"/><text x="120" y="122" text-anchor="middle" font-size="11">class, object, self</text><text x="120" y="137" text-anchor="middle" class="tm" font-size="9.5">__init__, attributes</text>
+    <line x1="120" y1="144" x2="120" y2="162" stroke="currentColor" marker-end="url(#oo-a1)"/>
+    <rect x="30" y="164" width="180" height="40" rx="7" class="fb sb"/><text x="120" y="182" text-anchor="middle" font-size="11">3 kinds of methods</text><text x="120" y="197" text-anchor="middle" class="tm" font-size="9.5">classmethod, staticmethod</text>
+    <line x1="120" y1="204" x2="120" y2="222" stroke="currentColor" marker-end="url(#oo-a1)"/>
+    <rect x="30" y="224" width="180" height="50" rx="7" class="ft st"/><text x="120" y="244" text-anchor="middle" font-size="11">encapsulation</text><text x="120" y="260" text-anchor="middle" class="tm" font-size="9.5">_ / __, @property, dataclass</text>
+    <line x1="210" y1="124" x2="258" y2="64" stroke="currentColor" marker-end="url(#oo-a1)"/>
+    <rect x="260" y="44" width="180" height="40" rx="7" class="fb sb"/><text x="350" y="62" text-anchor="middle" font-size="11">inheritance, super()</text><text x="350" y="77" text-anchor="middle" class="tm" font-size="9.5">Savings, Current</text>
+    <line x1="350" y1="84" x2="350" y2="102" stroke="currentColor" marker-end="url(#oo-a1)"/>
+    <rect x="260" y="104" width="180" height="40" rx="7" class="fb sb"/><text x="350" y="122" text-anchor="middle" font-size="11">polymorphism</text><text x="350" y="137" text-anchor="middle" class="tm" font-size="9.5">duck typing, Protocol</text>
+    <line x1="350" y1="144" x2="350" y2="162" stroke="currentColor" marker-end="url(#oo-a1)"/>
+    <rect x="260" y="164" width="180" height="40" rx="7" class="fv" stroke="currentColor" stroke-opacity="0.4"/><text x="350" y="182" text-anchor="middle" font-size="11">ABCs, MRO, mixins</text><text x="350" y="197" text-anchor="middle" class="tm" font-size="9.5">contracts, C3</text>
+    <line x1="350" y1="204" x2="350" y2="222" stroke="currentColor" marker-end="url(#oo-a1)"/>
+    <rect x="260" y="224" width="180" height="50" rx="7" class="ft st"/><text x="350" y="244" text-anchor="middle" font-size="11">composition, SOLID</text><text x="350" y="260" text-anchor="middle" class="tm" font-size="9.5">strategy, factory, observer</text>
+    <line x1="440" y1="124" x2="488" y2="64" stroke="currentColor" marker-end="url(#oo-a1)"/>
+    <rect x="490" y="44" width="180" height="40" rx="7" class="fb sb"/><text x="580" y="62" text-anchor="middle" font-size="11">data model lookup</text><text x="580" y="77" text-anchor="middle" class="tm" font-size="9.5">type(x).__len__(x)</text>
+    <line x1="580" y1="84" x2="580" y2="102" stroke="currentColor" marker-end="url(#oo-a1)"/>
+    <rect x="490" y="104" width="180" height="40" rx="7" class="fb sb"/><text x="580" y="122" text-anchor="middle" font-size="11">repr, eq, hash, order</text><text x="580" y="137" text-anchor="middle" class="tm" font-size="9.5">Money as a value</text>
+    <line x1="580" y1="144" x2="580" y2="162" stroke="currentColor" marker-end="url(#oo-a1)"/>
+    <rect x="490" y="164" width="180" height="40" rx="7" class="fb sb"/><text x="580" y="182" text-anchor="middle" font-size="11">arithmetic operators</text><text x="580" y="197" text-anchor="middle" class="tm" font-size="9.5">__add__, __radd__</text>
+    <line x1="580" y1="204" x2="580" y2="222" stroke="currentColor" marker-end="url(#oo-a1)"/>
+    <rect x="490" y="224" width="180" height="50" rx="7" class="fg sg"/><text x="580" y="244" text-anchor="middle" font-size="11">containers, call, with</text><text x="580" y="260" text-anchor="middle" class="tm" font-size="9.5">Statement, fee rule, Atomic</text>
+  </svg><figcaption>Each dashed box is one note; arrows inside a box are the order of its sections. The two long arrows are the hand-overs: classes and attributes make inheritance possible; polymorphism (duck typing) is what the data model applies to all of Python's syntax.</figcaption></figure>
+  <p>Read the picture left to right. Note 1 ends with a protected, well-shaped class. Note 2 takes that class and asks how many classes share and vary code. Note 3 takes the idea of duck typing from note 2, "Python only cares which methods exist", and shows that the whole language works that way: <code>+</code>, <code>len</code>, <code>for</code> and <code>with</code> are polymorphic calls to dunder methods.</p>
+  <div class="callout def"><span class="label">Definition</span><p>The three hand-overs to remember: <strong>class → inheritance</strong> (a class can be the parent of another), <strong>inheritance → polymorphism</strong> (overridden methods make one call behave many ways), <strong>polymorphism → data model</strong> (syntax is a polymorphic call to <code>type(x).__op__</code>).</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>The map is not a ranking. Dunder methods are not "more advanced" than SOLID; <code>__repr__</code> and <code>__eq__</code> are needed in your first week of real code. Read the notes in order, but expect to come back to each.</p></div>
+  <div class="bridge"><b>What this still can't tell us → next: Reading Guide.</b> The picture shows where each concept lives. What will each note let you do, and how long is it?</div>
 
-print(Car(Engine()).start(), "|", Car(Electric()).start())</div>
-  <div class="fx" data-lang="text">car: petrol engine on | car: electric motor on</div>
-  <p><strong>Prefer composition.</strong> Parts can be tested and swapped on their own. You also avoid the <em>fragile base class</em> problem: a change in the parent quietly breaks every child. Use inheritance for a true is-a where you want polymorphism.</p>
-
-  <h2 id="po-mro"><span class="num">08</span>MRO &amp; super()</h2>
-  <p>Python lets a class have more than one parent: <code>class D(B, C)</code>. Now a question appears. If both B and C have a method <code>who</code>, which one does <code>D().who()</code> run? And if B and C share the same grandparent A, should A's code run once or twice?</p>
-  <p>The <strong>MRO</strong> (Method Resolution Order) answers this. It is a fixed list of classes that Python searches, in order, to find a method. The first class in the list that has the method wins. Python builds the list with an algorithm called <strong>C3 linearisation</strong>; the rules you need are in the picture: child before parents, parents left to right, each class only once.</p>
-  <figure class="viz"><svg viewBox="0 0 520 210" width="520">
-    <defs><marker id="po-ah4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="tr"/></marker></defs>
-    <rect x="110" y="10" width="60" height="32" rx="5" class="fs" stroke="currentColor"/><text x="135" y="31">A</text>
-    <rect x="30" y="85" width="60" height="32" rx="5" class="fb sb"/><text x="55" y="106">B</text>
-    <rect x="190" y="85" width="60" height="32" rx="5" class="fb sb"/><text x="215" y="106">C</text>
-    <rect x="110" y="160" width="60" height="32" rx="5" class="fg sg"/><text x="135" y="181">D</text>
-    <line x1="70" y1="85" x2="125" y2="42" stroke="currentColor" opacity="0.5"/>
-    <line x1="210" y1="85" x2="155" y2="42" stroke="currentColor" opacity="0.5"/>
-    <line x1="125" y1="160" x2="70" y2="117" stroke="currentColor" opacity="0.5"/>
-    <line x1="155" y1="160" x2="210" y2="117" stroke="currentColor" opacity="0.5"/>
-    <path d="M108,170 C40,165 20,140 40,120" fill="none" class="sr" stroke-width="2" marker-end="url(#po-ah4)"/>
-    <path d="M92,100 C130,90 150,92 186,100" fill="none" class="sr" stroke-width="2" marker-end="url(#po-ah4)"/>
-    <path d="M240,84 C250,50 200,30 174,28" fill="none" class="sr" stroke-width="2" marker-end="url(#po-ah4)"/>
-    <text x="16" y="160" class="tr">1</text><text x="132" y="86" class="tr">2</text><text x="248" y="56" class="tr">3</text>
-    <text x="290" y="60">class D(B, C)</text>
-    <text x="290" y="90" class="tr">D → B → C → A → object</text>
-    <text x="290" y="120" class="tm">child before parents,</text>
-    <text x="290" y="138" class="tm">bases left to right,</text>
-    <text x="290" y="156" class="tm">each class once (A last)</text>
-  </svg><figcaption>The diamond: B and C share parent A. C3 visits C before A, so A's method runs only once.</figcaption></figure>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A relay race with a fixed running order. <code>super()</code> means "pass the baton to the next runner in the order", not "to my own parent".</p></div>
-  <div class="fx" data-lang="py">class A:
-    def who(self): return "A"
-class B(A):
-    def who(self): return "B&gt;" + super().who()
-class C(A):
-    def who(self): return "C&gt;" + super().who()
-class D(B, C):
-    def who(self): return "D&gt;" + super().who()
-
-print(D().who())
-print([k.__name__ for k in D.__mro__])</div>
-  <div class="fx" data-lang="text">D&gt;B&gt;C&gt;A
-['D', 'B', 'C', 'A', 'object']</div>
-  <div class="callout intu"><span class="label">Key insight</span><p><code>super()</code> means "next class in <em>this object's</em> MRO", not "my parent". Inside B, <code>super()</code> called <strong>C</strong>, a class B never mentions. That is what lets mixins work together.</p></div>
-  <p>A <strong>mixin</strong> is a small class that adds one feature (like logging) to any class it is mixed into.</p>
-  <div class="fx" data-lang="py">class LogMixin:
-    def save(self):
-        print("log: saving", type(self).__name__)
-        super().save()                 # continues to Store
-class Store:
-    def save(self): print("store: written")
-class Report(LogMixin, Store): pass
-Report().save()</div>
-  <div class="fx" data-lang="text">log: saving Report
-store: written</div>
-  <div class="callout trap"><span class="label">Trap</span><p>Bases in an impossible order fail when the class is created: <code>class Z(X, Y)</code> where <code>Y(X)</code> → <code>TypeError: Cannot create a consistent method resolution order (MRO) for bases X, Y</code>. Put the subclass first.</p></div>
-
-  <h2 id="po-solid"><span class="num">09</span>SOLID</h2>
-  <p>A class that works today can still be a problem tomorrow: every new feature means editing it, and every edit breaks something. <strong>SOLID</strong> is a set of five rules, one per letter, for keeping classes easy to change. Each row of the table shows a problem and the fix. The two most asked in interviews, O and L, are run as code below.</p>
-  <table class="tbl">
-    <tr><th>Principle</th><th>Before (problem)</th><th>After (fix)</th></tr>
-    <tr><td><strong>S</strong>ingle responsibility: one reason to change</td><td><code>Report</code> computes metrics, renders HTML <em>and</em> emails it</td><td><code>MetricsCalc</code>, <code>HtmlRenderer</code>, <code>Mailer</code>; Report uses all three</td></tr>
-    <tr><td><strong>O</strong>pen/closed: add new code, don't edit old code</td><td><code>if kind == "festive": ... elif kind == "member": ...</code> grows forever</td><td>One <code>Discount</code> subclass per rule; <code>checkout</code> never changes</td></tr>
-    <tr><td><strong>L</strong>iskov substitution: a child works wherever the parent does</td><td><code>Square(Rect)</code> also changes height in <code>set_w</code></td><td>Don't inherit; both implement a <code>Shape.area()</code> interface</td></tr>
-    <tr><td><strong>I</strong>nterface segregation: no forced unused methods</td><td><code>Model</code> ABC demands <code>fit, predict, predict_proba, explain</code>; regressors fake <code>predict_proba</code></td><td>Small ABCs/Protocols: <code>Predictor</code>, <code>ProbaPredictor</code>, <code>Explainer</code></td></tr>
-    <tr><td><strong>D</strong>ependency inversion: depend on abstractions</td><td><code>self.db = PostgresClient()</code> inside <code>Trainer</code></td><td><code>Trainer(store: Storage)</code>, passed in; tests pass a fake</td></tr>
-  </table>
-  <h3>O and L, run</h3>
-  <div class="fx" data-lang="py"># O: add a rule = add a class; checkout() is closed for modification
-class Discount:
-    def apply(self, p): return p
-class Festive(Discount):
-    def apply(self, p): return p * 0.8
-class Member(Discount):
-    def apply(self, p): return p - 50
-def checkout(price, d: Discount): return d.apply(price)
-print([checkout(1000, d) for d in (Discount(), Festive(), Member())])
-
-# L violated: caller expects area = new width * old height
-class Rect:
-    def __init__(self, w, h): self.w, self.h = w, h
-    def set_w(self, w): self.w = w
-    def area(self): return self.w * self.h
-class Square(Rect):
-    def __init__(self, s): super().__init__(s, s)
-    def set_w(self, w): self.w = self.h = w
-def stretch(r): r.set_w(10); return r.area()
-print(stretch(Rect(2, 5)), stretch(Square(5)))   # expected 50 both times</div>
-  <div class="fx" data-lang="text">[1000, 800.0, 950]
-50 100</div>
-  <p>Open/closed in action: a new discount rule is a new class, and <code>checkout</code> is never edited. Liskov broken: <code>stretch</code> expects "set the width, keep the height", which is true for any Rect. A Square cannot keep that promise (its sides must stay equal), so it gives 100 where the caller expected 50. The child is not a safe substitute for the parent.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Dependency inversion is a wall socket. The lamp depends on the socket standard, not on a particular power plant.</p></div>
-
-  <h2 id="po-pat"><span class="num">10</span>Design Patterns</h2>
-  <p>Some design problems come up in every project: "pick the right class from a file name", "let the user choose the algorithm", "tell several parts when something happens". A <strong>design pattern</strong> is a known, named solution to one of these. Names let a team say "use a strategy here" instead of explaining from scratch. Four you will meet in ML code:</p>
+  <h2 id="oo-guide"><span class="num">04</span>Reading Guide</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>In what order should the notes be read, and what should you be able to do after each one?</p></div>
   <div class="cards">
-    <div><b>Factory</b><p>Pick which class to build from input.</p><small>e.g. loader by file extension. 💡 a ticket counter: say "sleeper" or "AC", get the right ticket</small></div>
-    <div><b>Strategy</b><p>Swap an algorithm at runtime.</p><small>e.g. metric, optimizer. 💡 pay by UPI, card or cash — same checkout</small></div>
-    <div><b>Singleton</b><p>Exactly one shared object.</p><small>e.g. config, connection pool. 💡 one principal per school</small></div>
-    <div><b>Observer</b><p>Tell all subscribers when something happens.</p><small>e.g. Keras/Lightning callbacks. 💡 YouTube bell icon</small></div>
+    <div><b>1. <a class="xref" data-note="py_classes">Classes &amp; Objects</a></b><p>From dict to class; what <code>self</code> really is (<code>asha.deposit(50)</code> → <code>Account.deposit(asha, 50)</code>); <code>__init__</code> traced from <code>{}</code>; instance vs class attributes and the shared-list trap; instance, class and static methods; encapsulation with <code>_</code> and <code>__</code>; <code>@property</code> with validation; dataclasses.</p><small>After it: write a class with a protected invariant and explain every line.</small></div>
+    <div><b>2. <a class="xref" data-note="py_inheritance">Inheritance, Polymorphism &amp; Design</a></b><p>Subclassing; overriding and <code>super()</code> traced; polymorphism and the template method; duck typing and Protocols; ABCs; mixins and the MRO worked by hand with C3; composition with a worked refactor; SOLID each on PocketBank; strategy, factory, observer, singleton.</p><small>After it: design a small class family and defend each choice.</small></div>
+    <div><b>3. <a class="xref" data-note="py_dunder">Dunder Methods &amp; the Data Model</a></b><p>How syntax becomes <code>type(x).__op__(x)</code>; <code>__repr__</code>/<code>__str__</code>; <code>__eq__</code>/<code>__hash__</code> and why one removes the other; ordering with <code>total_ordering</code>; arithmetic, <code>NotImplemented</code> and <code>__radd__</code>; the container protocol; <code>__call__</code>; <code>__enter__</code>/<code>__exit__</code>.</p><small>After it: make your own type work with <code>print</code>, <code>==</code>, sets, <code>sorted</code>, <code>sum</code>, <code>len</code>, <code>for</code>.</small></div>
   </div>
-  <div class="fx" data-lang="py"># Factory
-class CSVLoader:
-    def load(self, p): return f"csv rows from {p}"
-class ParquetLoader:
-    def load(self, p): return f"parquet columns from {p}"
-LOADERS = {"csv": CSVLoader, "parquet": ParquetLoader}
-def make_loader(path):
-    ext = path.rsplit(".", 1)[-1]
-    try: return LOADERS[ext]()
-    except KeyError: raise ValueError(f"no loader for .{ext}")
-print(make_loader("sales.parquet").load("sales.parquet"))
+  <p>Order matters: note 2 starts from the Account built at the end of note 1, and note 3 extends Money with <code>class Money(Money)</code> (inheritance from note 2) and stores rows in a dataclass (note 1). After the group, continue with <a class="xref" data-note="py_iterators">Iterators &amp; Generators</a> (the full story of <code>__iter__</code>), <a class="xref" data-note="py_decorators">Decorators</a> (how <code>@property</code>, <code>@classmethod</code> and <code>@dataclass</code> work inside) and <a class="xref" data-note="py_context">Context Managers</a> (<code>with</code> in depth).</p>
+  <div class="callout trap"><span class="label">Trap</span><p>Reading without running teaches little. Each note's code blocks are complete; type them, change a number, and predict the output before you run it.</p></div>
+  <div class="bridge"><b>What this still can't tell us → next: The Four Pillars, Placed.</b> Interviews and textbooks talk about "the four pillars of OOP". Where does each sit on our map, and how do they show up in libraries you already use?</div>
 
-# Strategy: in Python a plain function is often the strategy object
-def mse(y, p): return sum((a - b) ** 2 for a, b in zip(y, p)) / len(y)
-def mae(y, p): return sum(abs(a - b) for a, b in zip(y, p)) / len(y)
-class Evaluator:
-    def __init__(self, metric): self.metric = metric
-    def score(self, y, p): return round(self.metric(y, p), 3)
-print(Evaluator(mse).score([3, 5, 2], [2, 5, 4]), Evaluator(mae).score([3, 5, 2], [2, 5, 4]))
+  <h2 id="oo-pillars"><span class="num">05</span>The Four Pillars, Placed on the Map</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>"Encapsulation, abstraction, inheritance, polymorphism" is the most common OOP interview opener. How does each pillar map onto the needs in our ladder, and which pair do people confuse?</p></div>
+  <table class="tbl">
+    <tr><th>Pillar</th><th>Plain words</th><th>Need it answers on PocketBank</th><th>Python tools</th><th>Taught in</th></tr>
+    <tr><td><b>Encapsulation</b></td><td>hide the DATA; change it only through methods</td><td>no one can set <code>asha.balance = -500</code></td><td><code>_x</code>, <code>__x</code>, <code>@property</code></td><td><a class="xref" data-note="py_classes">Classes &amp; Objects</a></td></tr>
+    <tr><td><b>Abstraction</b></td><td>hide the COMPLEXITY; show a small interface</td><td>month-end job needs only <code>interest()</code> and <code>fee()</code></td><td>ABC, <code>@abstractmethod</code>, Protocol</td><td><a class="xref" data-note="py_inheritance">Inheritance</a></td></tr>
+    <tr><td><b>Inheritance</b></td><td>a child reuses a parent's code (is-a)</td><td>SavingsAccount reuses deposit/withdraw</td><td><code>class Child(Parent)</code>, <code>super()</code></td><td><a class="xref" data-note="py_inheritance">Inheritance</a></td></tr>
+    <tr><td><b>Polymorphism</b></td><td>same call, behaviour depends on the type</td><td>one month-end loop for every account type</td><td>overriding, duck typing, dunder methods</td><td><a class="xref" data-note="py_inheritance">Inheritance</a>, <a class="xref" data-note="py_dunder">Dunder Methods</a></td></tr>
+  </table>
+  <p>The pillars are design habits, not Python rules: Python lets you ignore all four. And modern Python adds two habits the pillars leave out: <strong>composition</strong> (prefer has-a over is-a) and <strong>value semantics through dunder methods</strong> (make your types behave like built-ins).</p>
+  <h3>You already use OOP every day</h3>
+  <table class="tbl">
+    <tr><th>Library code</th><th>OOP idea</th></tr>
+    <tr><td><code>model = LogisticRegression(C=1.0)</code>; <code>model.fit(X, y)</code></td><td>object built from a class; a method changes its state (learnt coefficients)</td></tr>
+    <tr><td>every sklearn estimator has <code>fit</code>/<code>predict</code></td><td>polymorphism and duck typing: <code>cross_val_score</code> accepts any of them</td></tr>
+    <tr><td><code>Pipeline([("scale", StandardScaler()), ("clf", SVC())])</code></td><td>composition: a pipeline has steps</td></tr>
+    <tr><td><code>class Net(nn.Module)</code> with <code>forward</code>; called as <code>net(x)</code></td><td>inheritance + template method; <code>__call__</code></td></tr>
+    <tr><td><code>df["col"]</code>, <code>len(df)</code>, <code>df1 + df2</code></td><td>dunder methods: <code>__getitem__</code>, <code>__len__</code>, <code>__add__</code></td></tr>
+    <tr><td><code>with open(path) as f:</code></td><td><code>__enter__</code>/<code>__exit__</code></td></tr>
+  </table>
+  <div class="callout def"><span class="label">Definition</span><p>The <strong>four pillars of OOP</strong>: encapsulation (bundling state with behaviour and restricting direct access), abstraction (exposing essential operations, hiding implementation), inheritance (deriving new classes from existing ones), polymorphism (one interface, many implementations).</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>The most-asked mix-up: <strong>encapsulation</strong> protects data (who may change it), <strong>abstraction</strong> simplifies the interface (what a caller must know). A class can have one without the other.</p></div>
+  <div class="bridge"><b>What this still can't tell us → next: How It All Connects.</b> One table should now hold the whole group: each concept, what it is built from, which question it answers and its value on PocketBank.</div>
 
-# Singleton via __new__
-class Config:
-    _instance = None
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance.settings = {}
-        return cls._instance
-a, b = Config(), Config()
-a.settings["lr"] = 0.01
-print(a is b, b.settings)
+  <h2 id="oo-connect"><span class="num">06</span>How It All Connects</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>Can every OOP concept in the group be placed in one table, each built from the previous ones and each with a number on PocketBank?</p></div>
+  <figure class="viz"><svg viewBox="0 0 700 120" width="700">
+    <defs><marker id="oo-a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+    <rect x="5" y="20" width="90" height="56" rx="7" class="fr sr"/><text x="50" y="44" text-anchor="middle" font-size="10.5" font-weight="700">drift</text><text x="50" y="60" text-anchor="middle" class="tm" font-size="9.5">Asha −380</text>
+    <line x1="95" y1="48" x2="103" y2="48" stroke="currentColor" marker-end="url(#oo-a2)"/>
+    <rect x="105" y="20" width="90" height="56" rx="7" class="fb sb"/><text x="150" y="44" text-anchor="middle" font-size="10.5" font-weight="700">class/object</text><text x="150" y="60" text-anchor="middle" class="tm" font-size="9.5">Asha 120</text>
+    <line x1="195" y1="48" x2="203" y2="48" stroke="currentColor" marker-end="url(#oo-a2)"/>
+    <rect x="205" y="20" width="90" height="56" rx="7" class="fb sb"/><text x="250" y="44" text-anchor="middle" font-size="10.5" font-weight="700">encapsulate</text><text x="250" y="60" text-anchor="middle" class="tm" font-size="9.5">read-only</text>
+    <line x1="295" y1="48" x2="303" y2="48" stroke="currentColor" marker-end="url(#oo-a2)"/>
+    <rect x="305" y="20" width="90" height="56" rx="7" class="ft st"/><text x="350" y="44" text-anchor="middle" font-size="10.5" font-weight="700">inherit</text><text x="350" y="60" text-anchor="middle" class="tm" font-size="9.5">121.2, −30</text>
+    <line x1="395" y1="48" x2="403" y2="48" stroke="currentColor" marker-end="url(#oo-a2)"/>
+    <rect x="405" y="20" width="90" height="56" rx="7" class="ft st"/><text x="450" y="44" text-anchor="middle" font-size="10.5" font-weight="700">polymorph</text><text x="450" y="60" text-anchor="middle" class="tm" font-size="9.5">+1.2, −10</text>
+    <line x1="495" y1="48" x2="503" y2="48" stroke="currentColor" marker-end="url(#oo-a2)"/>
+    <rect x="505" y="20" width="90" height="56" rx="7" class="fv" stroke="currentColor" stroke-opacity="0.4"/><text x="550" y="44" text-anchor="middle" font-size="10.5" font-weight="700">dunder</text><text x="550" y="60" text-anchor="middle" class="tm" font-size="9.5">₹0.30 exact</text>
+    <line x1="595" y1="48" x2="603" y2="48" stroke="currentColor" marker-end="url(#oo-a2)"/>
+    <rect x="605" y="20" width="90" height="56" rx="7" class="fg sg"/><text x="650" y="44" text-anchor="middle" font-size="10.5" font-weight="700">design</text><text x="650" y="60" text-anchor="middle" class="tm" font-size="9.5">ABC, compose</text>
+    <text x="350" y="104" text-anchor="middle" class="tm" font-size="10.5">each box fixes the weakness of the box to its left; the grey number is PocketBank after that fix</text>
+  </svg><figcaption>The need chain of the group in one line.</figcaption></figure>
+  <table class="tbl"><caption>The whole group on one table</caption>
+    <tr><th>Concept</th><th>Built from</th><th>Answers which question</th><th>Value on PocketBank</th><th>When to use</th></tr>
+    <tr><td>Class &amp; object</td><td>a type definition + calls to it</td><td>how to keep data and rules together?</td><td>asha 120, ben 50; ben's 80 refused</td><td>data with rules or behaviour</td></tr>
+    <tr><td><code>self</code>, <code>__init__</code></td><td>bound methods; <code>__new__</code> + initialiser</td><td>which object? how is it filled?</td><td><code>Account.deposit(asha, 50)</code>; <code>{}</code> → owner, balance</td><td>every class</td></tr>
+    <tr><td>Instance vs class attributes</td><td>object dict, class dict, lookup order</td><td>per object or shared?</td><td>class-level history leaked Asha's deposit to Ben</td><td>class attrs for constants</td></tr>
+    <tr><td>Encapsulation &amp; properties</td><td>methods + <code>_</code>/<code>__</code> + <code>@property</code></td><td>how to protect the invariant?</td><td><code>asha.balance = …</code> → AttributeError</td><td>any invariant</td></tr>
+    <tr><td>Inheritance &amp; <code>super()</code></td><td>classes + lookup through parents</td><td>reuse and specialise?</td><td>Savings 120 → 121.2; Current −30</td><td>a true is-a</td></tr>
+    <tr><td>Polymorphism &amp; duck typing</td><td>overriding + dynamic dispatch</td><td>one code path for many types?</td><td>month end +1.2, −10, +0; GiftCard 25 → 24</td><td>replace isinstance chains</td></tr>
+    <tr><td>ABCs &amp; MRO</td><td>inheritance + abstract methods; C3</td><td>enforce the interface? order with several parents?</td><td>FixedDeposit without <code>fee</code> refused; Premium → Overdraft → Rewards → Account</td><td>own class families; mixins</td></tr>
+    <tr><td>Composition, SOLID, patterns</td><td>objects holding objects</td><td>combine and swap behaviours; keep code changeable?</td><td>8 classes avoided; 1% → 2% on one object: 123.62</td><td>default design choice</td></tr>
+    <tr><td>Dunder methods</td><td>polymorphism applied to syntax: <code>type(x).__op__(x)</code></td><td>behave like built-in values?</td><td>₹0.10 + ₹0.20 == ₹0.30; Statement len 3, ₹120.00</td><td>value types, containers</td></tr>
+  </table>
+  <div class="callout intu"><span class="label">Key insight</span><p>One sentence holds the group: <strong>a class bundles data with the only methods allowed to change it; encapsulation protects that bundle, inheritance reuses it, polymorphism lets one piece of code use every variant, dunder methods let the bundle plug into Python's own syntax, and ABCs, composition and SOLID keep many such bundles well-designed.</strong></p></div>
+  <div class="bridge"><b>What this still can't tell us → next: Common Mistakes.</b> The mistakes that appear most often across the whole group.</div>
 
-# Observer
-class Trainer:
-    def __init__(self): self._subs = []
-    def subscribe(self, fn): self._subs.append(fn)
-    def end_epoch(self, epoch, loss):
-        for fn in self._subs: fn(epoch, loss)
-t = Trainer()
-t.subscribe(lambda e, l: print(f"  logger: epoch {e} loss {l}"))
-t.subscribe(lambda e, l: l &lt; 0.3 and print(f"  early-stop: hit target at epoch {e}"))
-for e, l in enumerate([0.9, 0.5, 0.25], 1): t.end_epoch(e, l)</div>
-  <div class="fx" data-lang="text">parquet columns from sales.parquet
-1.667 1.0
-True {'lr': 0.01}
-  logger: epoch 1 loss 0.9
-  logger: epoch 2 loss 0.5
-  logger: epoch 3 loss 0.25
-  early-stop: hit target at epoch 3</div>
-  <p>Reading the code: the <strong>factory</strong> is a dict from extension to class, so adding a loader is one line. The <strong>strategy</strong> is just a function passed in; <code>Evaluator</code> does not care which metric it holds. The <strong>singleton</strong> uses <code>__new__</code> (the method that creates the object before <code>__init__</code>) to hand back the same object every time, which is why <code>a is b</code>. The <strong>observer</strong> keeps a list of functions and calls each one at the end of every epoch; that is exactly how training callbacks work.</p>
-  <div class="callout trap"><span class="label">Trap</span><p>A singleton is global data in disguise: hard to test and reset. In Python a module is already a singleton. A <code>config.py</code> with module-level values is usually enough.</p></div>
+  <h2 id="oo-traps"><span class="num">07</span>Common Mistakes</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>Across all three notes, which mistakes are made most often, and where is each one explained?</p></div>
+  <div class="callout trap"><span class="label">Trap: mutable class attributes</span><p><code>history = []</code> in the class body is shared by every object. Create it in <code>__init__</code>. (<a class="xref" data-note="py_classes">Classes &amp; Objects</a>)</p></div>
+  <div class="callout trap"><span class="label">Trap: treating <code>__x</code> as security</span><p>It is renamed to <code>_Class__x</code>, not hidden. (<a class="xref" data-note="py_classes">Classes &amp; Objects</a>)</p></div>
+  <div class="callout trap"><span class="label">Trap: forgetting <code>super().__init__()</code></span><p>The parent's attributes never get set; the error appears later. (<a class="xref" data-note="py_inheritance">Inheritance</a>)</p></div>
+  <div class="callout trap"><span class="label">Trap: inheritance for has-a, and children that break promises</span><p>An account is not a list; a fixed deposit that refuses <code>withdraw</code> is not a safe Account. Use composition. (<a class="xref" data-note="py_inheritance">Inheritance</a>)</p></div>
+  <div class="callout trap"><span class="label">Trap: <code>__eq__</code> without <code>__hash__</code></span><p>Objects become unhashable. Hash the same fields, on immutable objects. (<a class="xref" data-note="py_dunder">Dunder Methods</a>)</p></div>
+  <div class="callout trap"><span class="label">Trap: floats for money</span><p>0.1 + 0.2 != 0.3. Store integer paise (or <code>Decimal</code>) in a value type. (<a class="xref" data-note="py_dunder">Dunder Methods</a>)</p></div>
+  <div class="callout trap"><span class="label">Trap: a class for everything</span><p>Classes with one method and no state are usually just functions. OOP is a tool for data with rules.</p></div>
+  <div class="bridge"><b>What this still can't tell us → next: Revision Sheet.</b> The whole group, condensed to one page.</div>
 
-  <h2 id="po-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <h2 id="oo-rev"><span class="num">R</span>Revision Sheet</h2>
+  <p>The whole Object-Oriented Python group on one sheet. Running example: <strong>PocketBank</strong>. Asha: ₹100 + 50 − 30 = ₹120; savings 1% → ₹121.20. Ben: ₹50; withdrawing 80 is refused by a plain account; a current account (overdraft 100) goes to −₹30, fee ₹10 → −₹40. Money in paise: ₹0.10 + ₹0.20 == ₹0.30.</p>
+  <h3>The need chain</h3>
+  <table class="tbl">
+    <tr><th>Step</th><th>Question</th><th>Answer on PocketBank</th><th>Weakness → next</th></tr>
+    <tr><td>Dicts + functions</td><td>store accounts and rules?</td><td>works through the functions (120)</td><td>rules skipped (−380), typo keys</td></tr>
+    <tr><td>Class &amp; object</td><td>bundle data with rules?</td><td><code>Account</code>; <code>asha.deposit(50)</code> = <code>Account.deposit(asha, 50)</code></td><td>attributes still writable</td></tr>
+    <tr><td>Encapsulation</td><td>protect the invariant?</td><td><code>_balance</code> + read-only <code>balance</code> property</td><td>need variants of Account</td></tr>
+    <tr><td>Inheritance</td><td>reuse and specialise?</td><td>SavingsAccount 121.2, CurrentAccount −30</td><td>ifs per type in callers</td></tr>
+    <tr><td>Polymorphism</td><td>one code path, many types?</td><td>month end +1.2, −10, +0; GiftCard via duck typing</td><td>values don't add or compare</td></tr>
+    <tr><td>Dunder methods</td><td>act like built-ins?</td><td>Money exact; Statement len 3, ₹120.00</td><td>design at scale?</td></tr>
+    <tr><td>Contracts &amp; design</td><td>enforce and keep changeable?</td><td>ABC refuses incomplete types; policies replace 8 classes</td><td>(the group is complete)</td></tr>
+  </table>
+  <h3>The core rules</h3>
+  <table class="tbl">
+    <tr><th>Rule</th><th>Form</th><th>Meaning</th></tr>
+    <tr><td>Method call</td><td><code>obj.m(a)</code> ≡ <code>type(obj).m(obj, a)</code></td><td><code>self</code> is the object</td></tr>
+    <tr><td>Creation</td><td><code>C(a)</code>: <code>__new__</code> then <code>__init__</code></td><td>make empty, then fill</td></tr>
+    <tr><td>Lookup</td><td>instance → class → parents in <code>__mro__</code></td><td>writes go to the instance</td></tr>
+    <tr><td>MRO</td><td>C3: child first, parents left to right, each once</td><td><code>super()</code> = next in the MRO</td></tr>
+    <tr><td>Syntax</td><td><code>len(x)</code> ≡ <code>type(x).__len__(x)</code></td><td>dunders on the class</td></tr>
+    <tr><td>Hashing</td><td><code>a == b</code> ⇒ <code>hash(a) == hash(b)</code></td><td><code>__eq__</code> alone removes <code>__hash__</code></td></tr>
+  </table>
+  <h3>When to use what</h3>
+  <div class="cards">
+    <div><b>Functions only</b><p>Short scripts, stateless transformations.</p><small>Move to a class when data gains rules</small></div>
+    <div><b>Class + properties</b><p>Data with an invariant (an account).</p><small>@dataclass for plain records</small></div>
+    <div><b>Inheritance</b><p>A true is-a that keeps every promise of the parent.</p><small>Shallow; never for has-a</small></div>
+    <div><b>Composition</b><p>Combine or swap behaviours (policies, notifiers).</p><small>The default choice</small></div>
+    <div><b>ABC / Protocol</b><p>Enforce an interface for your classes / accept any matching object.</p><small>Runtime Protocol checks names only</small></div>
+    <div><b>Dunder methods</b><p>Value types and containers that should feel built-in.</p><small>Always <code>__repr__</code></small></div>
+  </div>
+  <div class="callout trap"><span class="label">Key traps</span><p>Mutable class attributes; <code>__x</code> is not security; forgetting <code>super().__init__()</code>; inheriting for has-a; children breaking parent promises (LSP); <code>__eq__</code> without <code>__hash__</code>; floats for money; encapsulation ≠ abstraction; classes where a function would do.</p></div>
+  <h3>Five rapid-fire checks</h3>
+  <table class="tbl">
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>What does Python run for <code>asha.deposit(50)</code>?</td><td><code>Account.deposit(asha, 50)</code>.</td></tr>
+    <tr><td>Which pillar stops <code>asha.balance = -500</code>, and with which tool?</td><td>Encapsulation: data in <code>_balance</code>, exposed by a read-only <code>@property</code>.</td></tr>
+    <tr><td>Why can one loop run month end for savings, current and gift cards?</td><td>Polymorphism: each has <code>month_end</code>; Python dispatches on the object's type and needs no common parent (duck typing).</td></tr>
+    <tr><td>Why is <code>Money(10) + Money(20) == Money(30)</code> True but <code>0.1 + 0.2 == 0.3</code> False?</td><td>Money stores whole paise (exact ints) and defines <code>__add__</code> and <code>__eq__</code>; floats are binary approximations.</td></tr>
+    <tr><td>Inheritance or composition for "account with a cashback feature"?</td><td>Composition: the account has a cashback policy; avoids a class per combination and allows swapping.</td></tr>
+  </table>
+
+  <h2 id="oo-qa"><span class="num">08</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>Encapsulation vs abstraction?</summary><div class="qa-body">Encapsulation hides <strong>data</strong>: it changes only through controlled methods/properties (<code>__balance</code> + <code>withdraw</code>). Abstraction hides <strong>complexity</strong>: callers see a small interface (<code>fit/predict</code>, ABC), not how it works inside.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Instance vs class vs static method: when do you use each?</summary><div class="qa-body">Instance (<code>self</code>) for behaviour that uses the object's data. Classmethod (<code>cls</code>) for other constructors like <code>from_config</code>; it returns the right subclass. Staticmethod for a helper that needs neither, kept in the class for tidiness.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why must a child call <code>super().__init__()</code>?</summary><div class="qa-body">Overriding <code>__init__</code> replaces the parent's. Without the call, the attributes the parent sets never exist, and the first method using them raises <code>AttributeError</code>. With multiple inheritance it also keeps the MRO chain going.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is name mangling, and is it security?</summary><div class="qa-body"><code>self.__x</code> in class <code>Account</code> is stored as <code>_Account__x</code>. Purpose: stop subclasses from overwriting the parent's attribute by accident. Not security: <code>obj._Account__x</code> still works.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What's the output?<br><code>class A: x = []</code>; <code>a, b = A(), A()</code>; <code>a.x.append(1)</code>; <code>a.y = 2</code>; <code>print(b.x, hasattr(b, "y"))</code></summary><div class="qa-body"><code>[1] False</code>. <code>x</code> is one list on the class, shared by both. <code>a.y = 2</code> creates an attribute on <code>a</code> only.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span><code>__str__</code> vs <code>__repr__</code>?</summary><div class="qa-body"><code>__repr__</code>: exact, for developers, ideally able to rebuild the object (<code>Vector(3, 4)</code>); used in the shell and inside lists. <code>__str__</code>: friendly, for users; used by <code>print</code>. <code>print</code> falls back to <code>__repr__</code>, so write that one first.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>You defined <code>__eq__</code> and now <code>{obj}</code> raises TypeError. Why?</summary><div class="qa-body">Defining <code>__eq__</code> sets <code>__hash__ = None</code>. Equal objects must have equal hashes, and the default identity hash would break that rule. Add <code>__hash__</code> over the same unchanging fields, or use <code>@dataclass(frozen=True)</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why return <code>NotImplemented</code> from <code>__add__</code> instead of raising?</summary><div class="qa-body">It tells Python "I don't know this type", so Python tries the other operand's reflected method (<code>other.__radd__</code>). Only if both say no does it raise <code>TypeError</code>. Raising yourself blocks that fallback.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What's the MRO of <code>class D(B, C)</code> where B and C inherit A? What does <code>super()</code> in B call?</summary><div class="qa-body">D → B → C → A → object (C3 linearisation). For a D object, <code>super()</code> inside B calls <strong>C</strong>, the next class in D's MRO, not A. So A's method runs once.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Composition vs inheritance: which do you prefer?</summary><div class="qa-body">Composition by default: has-a, loose links, parts you can swap and test (sklearn <code>Pipeline</code> holds steps). Inheritance only for a real is-a where polymorphism helps. Deep class trees suffer from the fragile base class problem.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>ABC vs Protocol?</summary><div class="qa-body">ABC: classes must inherit it, and missing abstract methods block object creation. Protocol: any class with matching methods satisfies it for type checkers; no inheritance needed. Use Protocol to accept third-party objects.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Give an LSP violation and its fix.</summary><div class="qa-body"><code>Square(Rect)</code>: <code>set_w(10)</code> also changes height, so code expecting area = 10 × old height gets 100 instead of 50. Fix: don't inherit; both implement a common <code>Shape</code> interface with <code>area()</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Which patterns hide inside ML libraries?</summary><div class="qa-body">Strategy: pass <code>scoring="f1"</code> or an optimizer object. Observer: Keras/Lightning callbacks. Factory: <code>AutoModel.from_pretrained(name)</code> picks the class. Template method: <code>nn.Module</code> calls your <code>forward</code>. Composite: <code>Pipeline</code>/<code>Sequential</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>When would you use <code>@property</code>?</summary><div class="qa-body">To check a value on assignment (temperature ≥ −273.15), to compute a derived value (<code>fahrenheit</code>), or to make an attribute read-only. Callers keep plain attribute syntax, so you can add it later without breaking them.</div></details>
-</main>`
+  <details class="qa"><summary><span class="qmark">Q</span>Tell the OOP story in five sentences, from dicts to SOLID.</summary><div class="qa-body">Dicts plus functions let data and its rules drift apart, so a class bundles them and each object carries its own data. Encapsulation keeps the data changeable only through methods that keep the invariant. Inheritance reuses a class for variants, and polymorphism lets one piece of code handle every variant (in Python, anything with the right methods). Dunder methods extend that polymorphism to Python's syntax, so our objects print, compare and add like built-ins. ABCs, composition and SOLID keep a growing set of classes enforceable and easy to change.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Name the four pillars and give a PocketBank example of each.</summary><div class="qa-body">Encapsulation: <code>_balance</code> behind a read-only property. Abstraction: the month-end job needs only <code>interest()</code> and <code>fee()</code>, enforced by an ABC. Inheritance: <code>SavingsAccount(Account)</code>. Polymorphism: <code>acc.month_end()</code> gives +1.2 for Asha and −10 for Ben.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Encapsulation vs abstraction?</summary><div class="qa-body">Encapsulation hides data and controls who changes it. Abstraction hides complexity behind a small interface and controls what callers need to know. One protects state, the other simplifies use.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When would you not use a class?</summary><div class="qa-body">When there is no state with rules: a stateless transformation is a function; a bag of fields is a dataclass or a dict; a single-method class with only <code>__init__</code> is usually a function or a closure.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does polymorphism need inheritance in Java but not in Python?</summary><div class="qa-body">Java checks types when compiling, so a variable of type Account accepts only Accounts and their subclasses. Python looks up the method on the object's type when the call runs, so any object with the method works (duck typing). Inheritance in Python is for sharing code; ABCs and Protocols add checking back when you want it.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: how is <code>len(x)</code> related to <code>asha.deposit(50)</code>?</summary><div class="qa-body">Both find a function on the type and pass the object in: <code>asha.deposit(50)</code> → <code>Account.deposit(asha, 50)</code>, <code>len(x)</code> → <code>type(x).__len__(x)</code>. The data model is the method-call rule from Classes &amp; Objects applied to Python's syntax.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks if you skip encapsulation but use inheritance heavily?</summary><div class="qa-body">Children and outside code reach into the parent's raw data, so the parent can no longer change how it stores things without breaking them (fragile base class), and any caller can still break the invariant (Asha at −380). Encapsulation is what makes a class safe to build on.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: why is composition introduced after inheritance rather than instead of it?</summary><div class="qa-body">Its value is only visible once inheritance's limits are felt: one class per combination (8 for three features), behaviour fixed when the object is created, parents that cannot change without breaking children. Composition answers those exact problems, while inheritance remains right for a true is-a.</div></details>
+</main>
+`
 });
