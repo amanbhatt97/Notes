@@ -52,6 +52,10 @@ def main():
     for p in note_files:
         notes_js += '\n' + read(p) + '\n'
 
+    # 4b. DSA Problem Tracker data: _index.js declares PROBLEMS, each topic file pushes into it
+    for p in sorted(glob.glob(os.path.join(HERE, 'problems', '*.js'))):
+        notes_js += '\n' + read(os.path.relpath(p, HERE)) + '\n'
+
     # 5. App logic
     app = read('app.js')
 
