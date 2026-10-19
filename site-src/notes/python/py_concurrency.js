@@ -1,88 +1,105 @@
-// notes/python/py_concurrency.js — Concurrency & Async
+// notes/python/py_concurrency.js — Concurrency in Python: the map
 Object.assign(TOPIC_CONTENT, {
   "py_concurrency": `<main>
-  <h1>Concurrency &amp; Async</h1>
-  <p class="lead">How to make Python do several things at once, and which of its three tools to pick: <strong>threads</strong> for waiting, <strong>processes</strong> for computing, <strong>asyncio</strong> for thousands of waits. You need this for API-heavy data collection, parallel feature extraction and model-serving code, and interviewers love "what is the GIL?". Every idea starts from the slow version, explains what is really happening, then measures the fix. Builds on functions, <a class="xref" data-note="py_advanced">generators and context managers</a>.</p>
+<h1>Concurrency in Python: the map</h1>
+  <div class="where"><span>Python</span><span>Advanced Python</span><span>Concurrency</span><span>Concurrency in Python: the map</span></div>
+  <p class="lead">Start here. Threads, the GIL, processes and asyncio are usually taught as four separate toolboxes, each with its own vocabulary. They are not separate. They are three answers to one question, <strong>"my program is slow: what is it doing while it is slow?"</strong>, and the answer depends on whether the program is <em>waiting</em> or <em>computing</em>. This short note gives you the whole picture before the details: why concurrency exists, the difference between concurrency and parallelism, how to diagnose your own code, what each tool is good and bad at (measured, not claimed), a decision table, and the reading order for the three child notes. One running example, a small food-delivery app called QuickBite, is introduced here and reused in every note of the group.</p>
 
-  <h2 id="pc-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="cc-fits" class="open"><span class="num">★</span>Where this fits</h2>
+  <figure class="viz"><svg viewBox="0 0 640 160" width="640">
+    <defs><marker id="cc-a0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="200" y="8" width="240" height="32" rx="6" class="fg sg" stroke-width="2.5"/><text x="320" y="29" text-anchor="middle" font-size="12" font-weight="700">Concurrency in Python: the map</text>
+    <line x1="320" y1="40" x2="110" y2="72" stroke="currentColor" stroke-opacity="0.45"/>
+    <line x1="320" y1="40" x2="320" y2="72" stroke="currentColor" stroke-opacity="0.45"/>
+    <line x1="320" y1="40" x2="530" y2="72" stroke="currentColor" stroke-opacity="0.45"/>
+    <rect x="20" y="72" width="180" height="34" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="110" y="94" text-anchor="middle" font-size="12">1 · Threads &amp; the GIL</text>
+    <rect x="230" y="72" width="180" height="34" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="320" y="94" text-anchor="middle" font-size="12">2 · Processes</text>
+    <rect x="440" y="72" width="180" height="34" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="530" y="94" text-anchor="middle" font-size="12">3 · asyncio</text>
+    <line x1="200" y1="89" x2="226" y2="89" stroke="currentColor" marker-end="url(#cc-a0)"/>
+    <line x1="410" y1="89" x2="436" y2="89" stroke="currentColor" marker-end="url(#cc-a0)"/>
+    <text x="110" y="125" text-anchor="middle" class="tm" font-size="11">waiting, shared memory</text>
+    <text x="320" y="125" text-anchor="middle" class="tm" font-size="11">computing, many cores</text>
+    <text x="530" y="125" text-anchor="middle" class="tm" font-size="11">many waits, one thread</text>
+    <text x="320" y="150" text-anchor="middle" class="tm" font-size="11">read left to right: each note starts from the weakness of the one before</text>
+  </svg><figcaption>The Concurrency group. You are on the green map note. The three child notes are read left to right: threads first (the simplest way to overlap waiting), then processes (what threads cannot do), then asyncio (doing what threads do with less cost).</figcaption></figure>
+  <ol class="story">
+    <li><b>Came from: <a class="xref" data-note="py_fundamentals">Python Fundamentals</a> and the <a class="xref" data-note="py_advanced">Advanced Python Functions</a> group</b><span>You can write functions, loops and classes, and you have met generators (functions that pause at <code>yield</code>, <a class="xref" data-note="py_iterators">Iterators &amp; Generators</a>), decorators (<a class="xref" data-note="py_decorators">Closures &amp; Decorators</a>) and <code>with</code> blocks (<a class="xref" data-note="py_context">Context Managers</a>). Left open: every program so far did one thing at a time, from top to bottom. When one line waits two seconds for a server, the whole program waits.</span></li>
+    <li><b>This note adds: the map</b><span>Why concurrency exists, the words you need (concurrency, parallelism, I/O-bound, CPU-bound, thread, process, GIL, event loop), a way to diagnose your own code, all three tools measured on one example, a decision table and the reading order. No tool is taught in depth here.</span></li>
+    <li><b>Leads to: <a class="xref" data-note="py_threading">Threads &amp; the GIL</a></b><span>Then <a class="xref" data-note="py_multiprocessing">Processes</a> and <a class="xref" data-note="py_asyncio">asyncio</a>. After the group: <a class="xref" data-note="api_fastapi">FastAPI</a> (its endpoints are <code>async def</code> coroutines), <a class="xref" data-note="de_kafka">Kafka &amp; Streaming</a> (consumers that wait on a stream) and <a class="xref" data-note="py_testing">Testing &amp; Debugging</a> (profiling before you parallelise, testing async code).</span></li>
+  </ol>
+
+  <h2 id="cc-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
+  <p>The whole group as one chain. Each idea answers the question above it, and its weakness raises the next question. The link at the end of each line is the note that teaches it. Numbers come from the running example (section 01): QuickBite fetches 20 menus (0.2 s each, 100 dishes in total) and plans routes for 4 riders (costs 40, 36, 35, 36).</p>
+  <ol class="story">
+    <li><b>A program that waits</b><span>Q: why does fetching 20 menus take 4 seconds? → Each request waits 0.2 s for a server, and a normal program waits for each one before sending the next: 20 × 0.2 = 4.0 s, with the CPU idle almost the whole time. Can we use that idle time?</span></li>
+    <li><b>Concurrency</b><span>Q: can we do other work while one request waits? → Yes: keep several tasks in progress and switch to whichever can move. One cook, many pans. But what if the work is not waiting but calculating?</span></li>
+    <li><b>Parallelism</b><span>Q: how do we speed up pure calculation, like the route plans? → Run pieces at literally the same instant on several CPU cores. Many cooks. So which kind of help does <em>my</em> code need?</span></li>
+    <li><b>I/O-bound vs CPU-bound</b><span>Q: how do I tell? → Compare CPU time with wall-clock time. Menus: CPU 0% of 4.0 s (waiting, I/O-bound). Routes: CPU 98% (computing, CPU-bound). Now: which tool gives concurrency most simply? <a class="xref" data-note="py_threading">Threads &amp; the GIL</a></span></li>
+    <li><b>Threads</b><span>Q: how do we overlap the 20 waits? → 20 threads: 4.0 s → 0.2 s. But 4 threads planning routes are no faster than 1. Why? <a class="xref" data-note="py_threading">Threads &amp; the GIL</a></span></li>
+    <li><b>The GIL</b><span>Q: why don't threads help calculation? → CPython lets only one thread run Python code at a time (the Global Interpreter Lock). Waiting releases it, calculating holds it. And sharing memory brings race conditions and locks. How do we compute on 4 cores? <a class="xref" data-note="py_threading">Threads &amp; the GIL</a></span></li>
+    <li><b>Processes</b><span>Q: how do we get real parallelism? → Separate Python programs, each with its own GIL: routes 1.5 s → 0.5 s. But each process costs start-up time, memory and copying (pickling) of data. Is there a cheaper way to handle many waits? <a class="xref" data-note="py_multiprocessing">Processes</a></span></li>
+    <li><b>asyncio</b><span>Q: can one thread juggle all the waits? → Yes, if every function says where it waits (<code>await</code>): an event loop switches between them. 20 menus in 0.2 s, no locks. But one blocking call freezes everything… <a class="xref" data-note="py_asyncio">asyncio</a></span></li>
+    <li><b>Combining them</b><span>Q: the real app both waits and computes: now what? → asyncio for the waiting, a process pool for the computing, joined by <code>run_in_executor</code>: both jobs in about 0.7 s instead of about 5.5 s. <a class="xref" data-note="py_asyncio">asyncio</a></span></li>
+  </ol>
+
+  <h2 id="cc-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
-    <div class="mm-center">Concurrency &amp; Async</div>
+    <div class="mm-center">Concurrency in Python</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">Pick the tool</div>
+        <div class="mm-title">The need</div>
         <ul>
-          <li><b>First ask</b> — is the code mostly <b>waiting</b> (I/O) or <b>computing</b> (CPU)?</li>
-          <li><b>I/O-bound</b> (API calls, DB, files) → threads or asyncio</li>
-          <li><b>CPU-bound</b> (pure-Python loops, parsing) → processes</li>
-          <li><b>Thousands of connections</b> → asyncio</li>
-          <li><b>numpy / pandas / torch</b> → C code already releases the GIL; vectorise first</li>
-          <li><b>Concurrency</b> = juggling tasks; <b>parallelism</b> = truly at the same instant</li>
-          <li>💡 one cook juggling dishes vs four cooks</li>
+          <li>Programs spend time <b>waiting</b> (network, disk, DB) or <b>computing</b></li>
+          <li>Sequential: waits add up (20 × 0.2 s = 4.0 s)</li>
+          <li><b>Concurrency</b> — many tasks in progress, switching (one cook, many pans)</li>
+          <li><b>Parallelism</b> — tasks at the same instant on several cores (many cooks)</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">GIL</div>
+        <div class="mm-title">Diagnose first</div>
         <ul>
-          <li><b>Global Interpreter Lock</b> — only one thread runs Python code at a time (CPython)</li>
-          <li><b>Why</b> — protects reference counts; keeps single-thread code fast</li>
-          <li><b>Released</b> during I/O waits, <code>time.sleep</code>, heavy C code (numpy)</li>
-          <li><b>Effect</b> — 2 CPU threads: 1.07 s vs 1.01 s; 2 waiting threads: 0.50 s vs 1.00 s</li>
-          <li>💡 one microphone on stage</li>
-          <li><b>Free-threaded build</b> (3.13t+) removes it; opt-in</li>
+          <li><b>I/O-bound</b> — mostly waiting; CPU time ≪ wall time</li>
+          <li><b>CPU-bound</b> — mostly computing; CPU time ≈ wall time</li>
+          <li>Measure: <code>time.process_time()</code> vs <code>time.perf_counter()</code></li>
+          <li>Profile before parallelising</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Threads</div>
         <ul>
-          <li><code>Thread(target=f, args=...)</code>, <code>.start()</code>, <code>.join()</code></li>
-          <li><b>Shared memory</b> → easy sharing, but races</li>
-          <li><b>Race condition</b> — read-modify-write interleaves → lost updates (578k of 800k)</li>
-          <li><b>Lock</b> — <code>with lock:</code> one thread at a time in that block</li>
-          <li><b>RLock</b> · <b>Semaphore(n)</b> max n inside · <b>Event</b> · <b>Condition</b> · <b>Queue</b></li>
-          <li><b>Deadlock</b> — A holds L1 wants L2, B holds L2 wants L1 → hang</li>
-          <li>⚠ Fix: one lock order everywhere; <code>acquire(timeout=)</code>; prefer queues</li>
-          <li><b>ThreadPoolExecutor</b> — <code>map</code> (input order) / <code>submit</code> + <code>as_completed</code> (finish order)</li>
+          <li>Several lines of execution in one process; shared memory</li>
+          <li>Great for waiting: menus 4.0 s → 0.2 s</li>
+          <li><b>GIL</b>: one thread runs Python at a time → no help for computing</li>
+          <li>Shared data → races → <code>Lock</code>, <code>Queue</code></li>
+          <li><code>ThreadPoolExecutor</code></li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Processes</div>
         <ul>
-          <li><b>Own interpreter, own GIL, own memory</b> → true CPU parallelism</li>
-          <li><b>Cost</b> — slower start, more RAM, args/results are pickled</li>
-          <li><b>ProcessPoolExecutor</b> — default choice; <code>chunksize</code> for many small tasks</li>
-          <li><b>Sharing</b> — Queue (poison pill <code>None</code>), Pipe, Value/Array, SharedMemory</li>
-          <li>⚠ Globals are NOT shared: child +100, parent still 0</li>
-          <li>⚠ Guard with <code>if __name__ == "__main__":</code>; workers must be top-level functions</li>
+          <li>Separate interpreters: own GIL, own memory</li>
+          <li>Real parallelism: routes 1.5 s → 0.5 s on 4 cores</li>
+          <li>Cost: start-up, RAM, pickling data both ways</li>
+          <li><code>ProcessPoolExecutor</code>, <code>if __name__ == "__main__":</code></li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">asyncio</div>
         <ul>
-          <li><b>Coroutine</b> — <code>async def</code>; calling it runs nothing</li>
-          <li><b>await</b> — "pause me here, run others until this is ready"</li>
-          <li><b>Event loop</b> — one thread; resumes tasks when their I/O is ready</li>
-          <li><b>gather</b> — run many, results in input order; <code>return_exceptions=True</code></li>
-          <li><b>create_task</b> — start now, await later; <b>TaskGroup</b> cancels siblings on error</li>
-          <li>⚠ <code>time.sleep</code> / <code>requests</code> / heavy CPU inside async blocks everything → <code>to_thread</code></li>
-          <li>💡 one chef chops veg while the pasta boils</li>
+          <li>One thread, an <b>event loop</b>, many coroutines</li>
+          <li><code>async def</code> / <code>await</code> mark the pause points</li>
+          <li>Cooperative: a task switches only at <code>await</code></li>
+          <li>Thousands of waits cheaply; never block the loop</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Async HTTP</div>
+        <div class="mm-title">Pick a tool</div>
         <ul>
-          <li><b>httpx.AsyncClient</b> / <b>aiohttp.ClientSession</b> — one shared client (connection pool)</li>
-          <li><b>Semaphore(10)</b> — cap requests in flight</li>
-          <li><b>Timeouts</b> — <code>async with asyncio.timeout(s)</code> (3.11+)</li>
-          <li><b>raise_for_status()</b> — 4xx/5xx become exceptions</li>
-          <li>50 calls × 200 ms, 10 at a time → 1.09 s instead of 10 s</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Measured here</div>
-        <ul>
-          <li><b>20 HTTP calls × 200 ms</b>: sequential 4.05 s · threads 0.23 s · asyncio 0.30 s · processes 1.46 s</li>
-          <li><b>CPU × 4</b>: threads ≈ asyncio ≈ sequential (2.2–2.5 s); processes 1.05 s</li>
-          <li><b>Rule</b> — measure; start-up and pickling can erase gains on small jobs</li>
+          <li>Waiting, normal libraries → <b>threads</b></li>
+          <li>Waiting, very many, async libraries → <b>asyncio</b></li>
+          <li>Computing in pure Python → <b>processes</b></li>
+          <li>Computing in numpy/pandas → vectorise first</li>
+          <li>Both → asyncio + process pool</li>
         </ul>
       </div>
     </div>
@@ -91,686 +108,469 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="pc-pick"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Pick the Right Tool</span><span class="rm-sub">Waiting vs computing</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-gil"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">The GIL</span><span class="rm-sub">One microphone, many singers</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-thr"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Threading</span><span class="rm-sub">Races, locks, deadlocks, pools</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-mp"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Multiprocessing</span><span class="rm-sub">Pools, queues, pipes, shared memory</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-aio"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">asyncio</span><span class="rm-sub">Event loop, await, gather, tasks</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-http"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Async HTTP</span><span class="rm-sub">httpx against a local server</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-bench"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Timing Showdown</span><span class="rm-sub">Four models, two workloads</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-build"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Build It</span><span class="rm-sub">Parallel scraper + featuriser</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-traps"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Blocking the loop, unlocked state</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="cc-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The group as one chain</span></div></div>
+      <div class="rm-item rm-done" data-target="cc-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Why Programs Wait</span><span class="rm-sub">QuickBite, one thing at a time</span></div></div>
+      <div class="rm-item rm-done" data-target="cc-cvp"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Concurrency vs Parallelism</span><span class="rm-sub">One cook or many cooks</span></div></div>
+      <div class="rm-item rm-done" data-target="cc-diag"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">I/O-bound or CPU-bound?</span><span class="rm-sub">Diagnose before you choose</span></div></div>
+      <div class="rm-item rm-done" data-target="cc-tools"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Three Tools, One Showdown</span><span class="rm-sub">Threads, processes, asyncio measured</span></div></div>
+      <div class="rm-item rm-done" data-target="cc-app"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">The Whole App, Fixed</span><span class="rm-sub">Each job with its own tool</span></div></div>
+      <div class="rm-item rm-done" data-target="cc-decide"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Decision Table</span><span class="rm-sub">Which tool for which job</span></div></div>
+      <div class="rm-item rm-done" data-target="cc-order"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Reading Order</span><span class="rm-sub">What each note answers</span></div></div>
+      <div class="rm-item rm-done" data-target="cc-connect"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One table for the group</span></div></div>
+      <div class="rm-item rm-done" data-target="cc-traps"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">One per tool</span></div></div>
+      <div class="rm-item rm-done" data-target="cc-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The group on one page</span></div></div>
+      <div class="rm-item rm-done" data-target="cc-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Connection questions</span></div></div>
     </div>
   </div>
 
-  <h2 id="pc-pick"><span class="num">01</span>Pick the Right Tool</h2>
-  <p>You need to download 200 web pages (or call an API for 200 user IDs). Each request takes half a second. Written as a normal loop, that is 100 seconds. But look at what the program is doing during those 100 seconds: almost nothing. It sends a request, then sits idle until the server answers. The CPU is free nearly the whole time. It would be much faster to send all the requests, then collect the answers as they arrive.</p>
-  <p>Now a different job: tokenise one million documents. Here the CPU is busy every moment. There is no idle time to fill. The only way to go faster is to use more CPU cores at the same time.</p>
-  <p>These two cases need different tools, so the first question is always: <strong>is my code mostly waiting, or mostly computing?</strong> Waiting on the network, disk or a database is called <strong>I/O-bound</strong> (I/O = input/output). Busy calculating is called <strong>CPU-bound</strong>.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A home kitchen. Making tea for four is mostly waiting for the water to boil: one person can put four pans on four burners and wait for all of them at once. That is I/O-bound work, and one cook juggling is enough. Chopping vegetables for a wedding is non-stop hand work: one cook juggling does not help, you need more cooks with more knives. That is CPU-bound work.</p></div>
-  <p>The code below "downloads" 4 pages where each download is just a 0.5-second wait, first one by one, then with 4 threads (helpers that can wait at the same time; section 03 explains them).</p>
+  <h2 id="cc-why"><span class="num">01</span>Why Programs Wait</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Every program you have written runs one line at a time and finishes each line before starting the next. That has always been fine. So when does "one thing at a time" become a problem, and what is the program actually doing while it is slow?</p>
+  </div>
+  <h3>The running example: QuickBite</h3>
+  <p>QuickBite is a small food-delivery app (made up for these notes). Every evening at 6 pm it does two jobs:</p>
+  <ul>
+    <li><strong>Job 1, fetch menus.</strong> Ask each of its 20 partner restaurants (R01 to R20) for tonight's menu. Each request goes over the network, and each restaurant's server takes 0.2 s to answer. The program does almost no work itself; it <em>waits</em>.</li>
+    <li><strong>Job 2, plan routes.</strong> Each of its 4 riders has 9 drop-off points. For each rider, find the order of visiting the points that walks the fewest city blocks. The program tries every possible order (9! = 362,880 of them). Nothing to wait for; it <em>computes</em>.</li>
+  </ul>
+  <p>To keep everything runnable on any laptop without the internet, the network is simulated: <code>fetch_menu</code> just sleeps 0.2 s, which is exactly what a real request looks like from your program's point of view (the program sits idle until the answer arrives). Save this file as <code>quickbite.py</code>; every note in the group imports from it.</p>
+  <div class="fx" data-lang="py">"""quickbite.py: the running example shared by all four Concurrency notes."""
+import asyncio, time, itertools
+
+RESTAURANTS = [f"R{i:02d}" for i in range(1, 21)]   # 20 restaurants: R01 ... R20
+LATENCY = 0.2                                      # every menu request waits 0.2 s
+
+def fetch_menu(rid):
+    """I/O-bound: pretend network call. 0.2 s of pure waiting, then a small menu."""
+    time.sleep(LATENCY)                            # the restaurant's server is "thinking"
+    return {"id": rid, "dishes": 3 + int(rid[1:]) % 5}
+
+async def fetch_menu_async(rid):
+    """The same request written for asyncio: the wait is an await, not a sleep."""
+    await asyncio.sleep(LATENCY)                   # pause here; the event loop runs others
+    return {"id": rid, "dishes": 3 + int(rid[1:]) % 5}
+
+def dist(a, b):
+    """Blocks walked between two points on the city grid (Manhattan distance)."""
+    return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+def route_cost(stops, depot=(0, 0)):
+    """CPU-bound: try every order of the stops, return the shortest total distance."""
+    best = None
+    for order in itertools.permutations(stops):
+        cost, here = 0, depot
+        for stop in order:
+            cost += dist(here, stop)
+            here = stop
+        if best is None or cost &lt; best:
+            best = cost
+    return best
+
+def make_rider(seed, n=9):
+    """One rider's batch of n drop-off points, generated the same way every run."""
+    return [((seed * 7 + i * 5) % 11, (seed * 3 + i * 7) % 13) for i in range(n)]
+
+RIDERS = [make_rider(s) for s in range(1, 5)]      # 4 riders, 9 stops each</div>
+  <p>Read it from the top. <code>RESTAURANTS</code> is the list <code>["R01", …, "R20"]</code>. <code>fetch_menu("R07")</code> waits 0.2 s and returns a dict like <code>{"id": "R07", "dishes": 5}</code>; the number of dishes is a made-up rule (3 + the restaurant number mod 5) so that we can check every answer by hand. <code>fetch_menu_async</code> is the same request written for asyncio; ignore it until the asyncio note. <code>dist</code> counts city blocks between two grid points: |x₁ − x₂| + |y₁ − y₂|. <code>route_cost</code> tries every order of the stops (<code>itertools.permutations</code>), adds up the blocks walked from the depot at (0, 0), and keeps the smallest total. <code>RIDERS</code> holds 4 lists of 9 points each.</p>
+  <h3>Checking the numbers by hand</h3>
+  <p>Dishes: R01 has 3 + 1 = 4, R02 has 5, R03 has 6, R04 has 7, R05 has 3 + 0 = 3, and the pattern 4, 5, 6, 7, 3 repeats four times across 20 restaurants, so the total is 4 × (4 + 5 + 6 + 7 + 3) = 4 × 25 = <strong>100 dishes</strong>. Every correct way of fetching the menus, however clever, must give 100.</p>
+  <p>Routes: try a tiny rider with three stops A (2, 1), B (5, 3), C (1, 4), starting at the depot D (0, 0). The distances are D→A = 2 + 1 = 3, D→B = 8, D→C = 5, A→B = 3 + 2 = 5, A→C = 1 + 3 = 4, B→C = 4 + 1 = 5. All 3! = 6 orders:</p>
+  <table class="tbl"><caption>route_cost by hand: try every order, keep the smallest</caption>
+    <tr><th>Order</th><th>Blocks walked</th><th>Total</th></tr>
+    <tr><td>A → B → C</td><td>3 + 5 + 5</td><td>13</td></tr>
+    <tr><td><strong>A → C → B</strong></td><td>3 + 4 + 5</td><td><strong>12</strong> (best)</td></tr>
+    <tr><td>B → A → C</td><td>8 + 5 + 4</td><td>17</td></tr>
+    <tr><td>B → C → A</td><td>8 + 5 + 4</td><td>17</td></tr>
+    <tr><td>C → A → B</td><td>5 + 4 + 5</td><td>14</td></tr>
+    <tr><td>C → B → A</td><td>5 + 5 + 5</td><td>15</td></tr>
+  </table>
+  <p>Three stops need 6 orders; nine stops need 362,880 orders, each with 9 additions. That is pure calculation, which is why job 2 is our CPU-heavy job. The code confirms the hand numbers:</p>
+  <div class="fx" data-lang="py">from quickbite import RESTAURANTS, RIDERS, route_cost, dist
+
+print(len(RESTAURANTS), "restaurants:", RESTAURANTS[0], RESTAURANTS[1], "...", RESTAURANTS[-1])
+print("dishes per menu:", [3 + int(r[1:]) % 5 for r in RESTAURANTS[:5]], "... total", sum(3 + int(r[1:]) % 5 for r in RESTAURANTS))
+A, B, C = (2, 1), (5, 3), (1, 4)
+print("depot-&gt;A", dist((0, 0), A), " A-&gt;C", dist(A, C), " C-&gt;B", dist(C, B))
+print("cheapest route through A, B, C:", route_cost([A, B, C]))
+print("rider 1 has", len(RIDERS[0]), "stops:", RIDERS[0][:3], "...")</div>
+  <div class="fx" data-lang="text">20 restaurants: R01 R02 ... R20
+dishes per menu: [4, 5, 6, 7, 3] ... total 100
+depot-&gt;A 3  A-&gt;C 4  C-&gt;B 5
+cheapest route through A, B, C: 12
+rider 1 has 9 stops: [(7, 3), (1, 10), (6, 4)] ...</div>
+  <h3>The obvious first attempt: one thing at a time</h3>
+  <p>Here is how anyone would first write the 6 pm run: a list comprehension for each job, timed with <code>time.perf_counter()</code> (a stopwatch: read it before and after, subtract).</p>
   <div class="fx" data-lang="py">import time
-from concurrent.futures import ThreadPoolExecutor
-
-def download(i):                 # pretend network call: 0.5 s of pure waiting
-    time.sleep(0.5)
-    return f"page{i}"
+from quickbite import RESTAURANTS, RIDERS, fetch_menu, route_cost
 
 t = time.perf_counter()
-pages = [download(i) for i in range(4)]
-print(pages, f"one by one: {time.perf_counter() - t:.1f}s")
+menus = [fetch_menu(r) for r in RESTAURANTS]          # job 1: 20 menus, one after another
+t_menus = time.perf_counter() - t
+print(f"menus : {len(menus)} fetched, {sum(m['dishes'] for m in menus)} dishes, {t_menus:.2f}s")
 
 t = time.perf_counter()
-with ThreadPoolExecutor(max_workers=4) as ex:
-    pages = list(ex.map(download, range(4)))
-print(pages, f"4 threads:  {time.perf_counter() - t:.1f}s")</div>
-  <div class="fx" data-lang="text">['page0', 'page1', 'page2', 'page3'] one by one: 2.0s
-['page0', 'page1', 'page2', 'page3'] 4 threads:  0.5s</div>
-  <p>Same results, same order, four times faster. One by one: 0.5 + 0.5 + 0.5 + 0.5 = 2 s. With threads, all four waits happened during the same half second. <code>ex.map(download, range(4))</code> is like the built-in <code>map</code>, except each call runs in a pool thread. The picture below shows the same idea for three calls.</p>
-  <figure class="viz"><svg viewBox="0 0 560 180" width="560">
-    <text x="10" y="20" class="tm">3 API calls: short compute (blue) + long network wait (grey)</text>
-    <text x="10" y="52">Sequential</text>
-    <rect x="110" y="40" width="10" height="16" class="fb sb"/><rect x="120" y="40" width="90" height="16" class="fs"/>
-    <rect x="210" y="40" width="10" height="16" class="fb sb"/><rect x="220" y="40" width="90" height="16" class="fs"/>
-    <rect x="310" y="40" width="10" height="16" class="fb sb"/><rect x="320" y="40" width="90" height="16" class="fs"/>
-    <text x="418" y="53" class="tr">waits in series</text>
-    <text x="10" y="94">Threads</text>
-    <rect x="110" y="74" width="10" height="10" class="fb sb"/><rect x="120" y="74" width="90" height="10" class="fs"/>
-    <rect x="114" y="86" width="10" height="10" class="fb sb"/><rect x="124" y="86" width="90" height="10" class="fs"/>
-    <rect x="118" y="98" width="10" height="10" class="fb sb"/><rect x="128" y="98" width="90" height="10" class="fs"/>
-    <text x="228" y="95" class="tg">3 OS threads wait together</text>
-    <text x="10" y="142">asyncio</text>
-    <rect x="110" y="130" width="10" height="16" class="fb sb"/><rect x="120" y="130" width="10" height="16" class="fb sb"/><rect x="130" y="130" width="10" height="16" class="fb sb"/>
-    <rect x="140" y="130" width="80" height="16" class="fs"/>
-    <text x="228" y="143" class="tg">1 thread: start all, waits overlap</text>
-    <line x1="110" y1="165" x2="550" y2="165" stroke="currentColor" opacity="0.4"/><text x="520" y="178" class="tm">time</text>
-  </svg><figcaption>Time runs left to right. Blue = the CPU actually working, grey = waiting for the network. One by one, the grey bars line up end to end. With threads or asyncio, the grey bars overlap, so the total is roughly one wait.</figcaption></figure>
-  <table class="tbl">
-    <tr><th>Your code mostly…</th><th>Example</th><th>Use</th><th>Why</th></tr>
-    <tr><td>Waits on network/disk, tens of tasks</td><td>Call a REST API for 200 user IDs</td><td><strong>ThreadPoolExecutor</strong></td><td>Waiting threads don't block each other; works with normal libraries (requests, boto3)</td></tr>
-    <tr><td>Waits, thousands of tasks</td><td>Crawl 10k URLs, websocket server</td><td><strong>asyncio</strong></td><td>A task costs ~KB, a thread ~MB; no locks needed</td></tr>
-    <tr><td>Computes in pure Python</td><td>Tokenise 1M docs, parse logs</td><td><strong>ProcessPoolExecutor</strong></td><td>Each process has its own GIL → really uses every core</td></tr>
-    <tr><td>Computes in numpy/torch</td><td>Matrix ops, model forward pass</td><td>Vectorise first</td><td>C code already runs fast and often uses many cores</td></tr>
+costs = [route_cost(stops) for stops in RIDERS]       # job 2: 4 riders' best routes
+t_routes = time.perf_counter() - t
+print(f"routes: costs {costs}, {t_routes:.2f}s")
+print(f"total : {t_menus + t_routes:.2f}s")</div>
+  <div class="fx" data-lang="text">menus : 20 fetched, 100 dishes, 4.00s
+routes: costs [40, 36, 35, 36], 1.48s
+total : 5.49s</div>
+  <p>The menus took 4.00 s, exactly 20 × 0.2 s: the program sent request 1, waited 0.2 s, sent request 2, waited 0.2 s, and so on. The routes took about 1.5 s of real calculation. Together, roughly 5.5 s (your times will differ a little; the 4.00 s will not, because it is pure waiting).</p>
+  <figure class="viz"><svg viewBox="0 0 600 110" width="600">
+    <text x="10" y="18" class="tm">Sequential menus: 20 waits laid end to end (first 8 shown)</text>
+    <rect x="20" y="30" width="4" height="22" class="fb sb"/><rect x="24" y="30" width="60" height="22" class="fs"/>
+    <rect x="84" y="30" width="4" height="22" class="fb sb"/><rect x="88" y="30" width="60" height="22" class="fs"/>
+    <rect x="148" y="30" width="4" height="22" class="fb sb"/><rect x="152" y="30" width="60" height="22" class="fs"/>
+    <rect x="212" y="30" width="4" height="22" class="fb sb"/><rect x="216" y="30" width="60" height="22" class="fs"/>
+    <rect x="276" y="30" width="4" height="22" class="fb sb"/><rect x="280" y="30" width="60" height="22" class="fs"/>
+    <rect x="340" y="30" width="4" height="22" class="fb sb"/><rect x="344" y="30" width="60" height="22" class="fs"/>
+    <rect x="404" y="30" width="4" height="22" class="fb sb"/><rect x="408" y="30" width="60" height="22" class="fs"/>
+    <rect x="468" y="30" width="4" height="22" class="fb sb"/><rect x="472" y="30" width="60" height="22" class="fs"/>
+    <text x="545" y="46" class="tm">… ×20</text>
+    <text x="54" y="70" text-anchor="middle" class="tm" font-size="10">R01</text><text x="118" y="70" text-anchor="middle" class="tm" font-size="10">R02</text><text x="182" y="70" text-anchor="middle" class="tm" font-size="10">R03</text>
+    <rect x="20" y="86" width="10" height="10" class="fb sb"/><text x="36" y="95" class="tm">CPU working (tiny)</text>
+    <rect x="170" y="86" width="10" height="10" class="fs"/><text x="186" y="95" class="tm">waiting for the server, CPU idle</text>
+  </svg><figcaption>Time runs left to right. Each request is a sliver of real work (blue) followed by a long wait (grey). In a sequential program the grey bars line up one after another, so the total is the sum of all the waits.</figcaption></figure>
+  <div class="callout anlg"><span class="label">Analogy</span><p>A cook making 20 cups of tea one at a time: put a pan on, stare at it until it boils, pour, then start the next pan. The cook is busy for a few seconds per cup and idle for minutes. Nobody cooks like that: you put several pans on and do something else while they heat.</p></div>
+  <div class="callout def"><span class="label">Definition</span><p><strong>Sequential execution</strong>: one task runs to the end before the next starts; total time = sum of every task's time. <strong>Wall-clock time</strong>: real time from start to finish, what a stopwatch shows (<code>time.perf_counter()</code>). <strong>Latency</strong>: how long one request takes to be answered (0.2 s here).</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>"The program is slow, so the computer must be working hard." Often the opposite: during those 4 seconds the CPU did almost nothing. Before reaching for any tool, find out <em>what</em> the slow part is doing (section 03 shows how).</p></div>
+  <div class="bridge"><b>What this still can't tell us → next: Concurrency vs Parallelism.</b> We see two kinds of slowness: idle waiting and busy computing. What exactly are the two ways of "doing several things at once", and which one fits which kind?</div>
+
+  <h2 id="cc-cvp"><span class="num">02</span>Concurrency vs Parallelism</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>"Doing several things at once" sounds like one idea. Is it? Does a single CPU core help with the menus? Does it help with the routes?</p>
+  </div>
+  <p>There are two different meanings, and mixing them up is the root of most confusion in this topic.</p>
+  <ul>
+    <li><strong>Concurrency</strong> means several tasks are <em>in progress</em> at the same time. They do not have to run at the same instant. One worker starts task 1, and while task 1 is waiting, starts task 2, then task 3, then comes back to task 1 when its answer arrives. Concurrency is about <em>structure</em>: not being stuck behind a wait.</li>
+    <li><strong>Parallelism</strong> means several tasks are <em>executing at the same instant</em>, on different CPU cores. Parallelism is about <em>hardware</em>: more hands working.</li>
+  </ul>
+  <div class="callout anlg"><span class="label">Analogy</span><p>A kitchen. <strong>Concurrency</strong>: one cook puts four pans on four burners and moves between them, stirring whichever needs it. Only one pair of hands, but nothing waits for anything else to boil. <strong>Parallelism</strong>: four cooks each chopping vegetables at the same time. Boiling water (waiting) only needs one cook who does not stand still; chopping (computing) only speeds up with more cooks.</p></div>
+  <figure class="viz"><svg viewBox="0 0 620 210" width="620">
+    <text x="10" y="18" class="tm">Three requests (blue = work, grey = waiting) and two calculations (green)</text>
+    <text x="10" y="50">Sequential</text>
+    <rect x="130" y="38" width="8" height="16" class="fb sb"/><rect x="138" y="38" width="80" height="16" class="fs"/>
+    <rect x="218" y="38" width="8" height="16" class="fb sb"/><rect x="226" y="38" width="80" height="16" class="fs"/>
+    <rect x="306" y="38" width="8" height="16" class="fb sb"/><rect x="314" y="38" width="80" height="16" class="fs"/>
+    <text x="402" y="51" class="tr">waits add up</text>
+    <text x="10" y="96">Concurrent</text><text x="10" y="110" class="tm">(1 core)</text>
+    <rect x="130" y="76" width="8" height="12" class="fb sb"/><rect x="138" y="76" width="80" height="12" class="fs"/>
+    <rect x="138" y="91" width="8" height="12" class="fb sb"/><rect x="146" y="91" width="80" height="12" class="fs"/>
+    <rect x="146" y="106" width="8" height="12" class="fb sb"/><rect x="154" y="106" width="80" height="12" class="fs"/>
+    <text x="244" y="100" class="tg">waits overlap: total ≈ one wait</text>
+    <text x="10" y="150">Concurrent</text><text x="10" y="164" class="tm">CPU work, 1 core</text>
+    <rect x="130" y="140" width="70" height="14" class="fg sg"/><rect x="200" y="140" width="70" height="14" class="ft st"/>
+    <text x="280" y="152" class="tr">switching does not help: total = sum</text>
+    <text x="10" y="192">Parallel</text><text x="10" y="205" class="tm">CPU work, 2 cores</text>
+    <rect x="130" y="180" width="70" height="10" class="fg sg"/><rect x="130" y="193" width="70" height="10" class="ft st"/>
+    <text x="210" y="195" class="tg">two cores at once: total ≈ one job</text>
+  </svg><figcaption>Top two rows: waiting work. Overlapping the waits (concurrency) wins, even on one core, because waiting does not need a core. Bottom two rows: computing work. Switching between two calculations on one core gains nothing; only running them on two cores at once (parallelism) halves the time.</figcaption></figure>
+  <table class="tbl"><caption>On the running example</caption>
+    <tr><th></th><th>Menus (waiting)</th><th>Routes (computing)</th></tr>
+    <tr><td>Sequential</td><td>20 × 0.2 = 4.0 s</td><td>≈ 1.5 s (sum of 4 riders)</td></tr>
+    <tr><td>Concurrency (1 core, switch while waiting)</td><td>≈ 0.2 s: all 20 waits overlap</td><td>≈ 1.5 s: nothing to overlap</td></tr>
+    <tr><td>Parallelism (4 cores)</td><td>helps, but overkill: you do not need 4 cores to wait</td><td>≈ 1.5 / 4 ≈ 0.4 s at best</td></tr>
   </table>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Concurrency</strong>: making progress on several tasks by switching between them (one cook, many pans). <strong>Parallelism</strong>: running them at literally the same instant on different CPU cores (many cooks). Threads and asyncio give concurrency in Python; processes give parallelism.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Reaching for concurrency before checking. If one slow SQL query takes 90% of the time, running ten copies in parallel just loads the database ten times harder. Time the parts first (see profiling in <a class="xref" data-note="py_testing">Testing &amp; Debugging</a>).</p></div>
+  <div class="callout def"><span class="label">Definition</span><p><strong>Concurrency</strong>: structuring a program so several tasks make progress in overlapping time periods, switching between them. <strong>Parallelism</strong>: executing several tasks simultaneously on multiple CPU cores. Parallelism is one way to get concurrency, but concurrency does not need parallelism. In Python: <strong>threads and asyncio give concurrency</strong>; <strong>processes give parallelism</strong> (the next notes explain why threads do not).</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Treating the two words as synonyms. "I made it concurrent, why isn't my calculation faster?" Because concurrency only hides <em>waiting</em>. A calculation has nothing to hide.</p></div>
+  <div class="bridge"><b>What this still can't tell us → next: I/O-bound or CPU-bound?</b> Waiting work wants concurrency; computing work wants parallelism. For QuickBite we know which job is which because we wrote it. How do you find out for code you did not write?</div>
 
-  <h2 id="pc-gil"><span class="num">02</span>The GIL</h2>
-  <p>A natural idea: "my laptop has 4 cores, so 4 threads will make my number-crunching loop 4 times faster". In Python (the normal CPython interpreter) this does not happen. Two threads doing pure-Python calculation take about as long as doing the two jobs one after the other. The reason is the GIL.</p>
-  <p>Python keeps a count on every object of how many things point at it, and frees the object when the count hits zero. If two threads changed the same count at the same moment, the count could go wrong and memory could be freed while still in use. The simple solution CPython chose: one big lock, the <strong>Global Interpreter Lock</strong>. A thread must hold it to run Python code. So at any instant only one thread runs Python code, even on a 16-core machine.</p>
-  <p>The good news: a thread <em>gives the lock away</em> whenever it starts waiting (for the network, a file, <code>time.sleep</code>) and whenever it enters heavy C code that doesn't touch Python objects (most numpy, pandas and PyTorch work). So waiting threads overlap perfectly; computing threads take turns.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A singing competition with one microphone. Only the singer holding the mic can sing, however many singers are on stage. When a singer goes backstage for water (waiting for I/O), they hand the mic to someone else, so backstage breaks overlap with singing. numpy is a singer who brought their own speaker: they can perform without the shared mic.</p></div>
-  <figure class="viz"><svg viewBox="0 0 560 150" width="560">
-    <text x="10" y="18" class="tm">CPU-bound: threads take turns</text>
-    <text x="10" y="45">T1</text><text x="10" y="75">T2</text>
-    <rect x="40" y="33" width="50" height="16" class="fb sb"/><rect x="90" y="33" width="50" height="16" fill="none" stroke="currentColor" opacity="0.4"/>
-    <rect x="140" y="33" width="50" height="16" class="fb sb"/><rect x="190" y="33" width="50" height="16" fill="none" stroke="currentColor" opacity="0.4"/>
-    <rect x="40" y="63" width="50" height="16" fill="none" stroke="currentColor" opacity="0.4"/><rect x="90" y="63" width="50" height="16" class="ft st"/>
-    <rect x="140" y="63" width="50" height="16" fill="none" stroke="currentColor" opacity="0.4"/><rect x="190" y="63" width="50" height="16" class="ft st"/>
-    <text x="40" y="105" class="tr">total = T1 + T2 → no speed-up</text>
-    <text x="300" y="18" class="tm">I/O-bound: wait without the GIL</text>
-    <text x="300" y="45">T1</text><text x="300" y="75">T2</text>
-    <rect x="330" y="33" width="25" height="16" class="fb sb"/><rect x="355" y="33" width="150" height="16" class="fs"/>
-    <rect x="355" y="63" width="25" height="16" class="ft st"/><rect x="380" y="63" width="150" height="16" class="fs"/>
-    <text x="330" y="105" class="tg">T2 runs while T1 waits → overlap</text>
-    <rect x="40" y="122" width="12" height="12" class="fb sb"/><text x="58" y="132" class="tm">holds GIL</text>
-    <rect x="140" y="122" width="12" height="12" fill="none" stroke="currentColor" opacity="0.4"/><text x="158" y="132" class="tm">wants GIL</text>
-    <rect x="320" y="122" width="12" height="12" class="fs"/><text x="338" y="132" class="tm">I/O wait (GIL free)</text>
-  </svg><figcaption>Left: two computing threads. Only one holds the lock (filled box) while the other waits for it (empty box), so they alternate and the total time is the sum. Right: two waiting threads. Each holds the lock only briefly, then waits without it (grey), so the waits overlap.</figcaption></figure>
-  <p>The code measures both cases with two threads: a pure-Python countdown (computing) and a sleep (waiting).</p>
-  <div class="fx" data-lang="py">import threading, time
+  <h2 id="cc-diag"><span class="num">03</span>I/O-bound or CPU-bound?</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Given a slow function, how do we tell whether it is mostly waiting or mostly computing, without guessing?</p>
+  </div>
+  <p>Use two clocks. <code>time.perf_counter()</code> measures <strong>wall time</strong>, real seconds passing. <code>time.process_time()</code> measures <strong>CPU time</strong>, the seconds the CPU actually spent running <em>this</em> program (sleeping and waiting do not count). The ratio CPU / wall tells you what the program was doing.</p>
+  <div class="fx" data-lang="py">import time
+from quickbite import RESTAURANTS, RIDERS, fetch_menu, route_cost
 
-def count(n):                     # pure-Python CPU work: holds the GIL
-    while n: n -= 1
+def profile(label, job):
+    wall0, cpu0 = time.perf_counter(), time.process_time()
+    job()
+    wall = time.perf_counter() - wall0               # clock on the wall
+    cpu = time.process_time() - cpu0                 # time the CPU actually worked for us
+    print(f"{label:&lt;7} wall {wall:.2f}s  cpu {cpu:.2f}s  cpu/wall = {cpu / wall:.0%}")
 
-def nap(secs):                    # waiting: releases the GIL
-    time.sleep(secs)
+profile("menus", lambda: [fetch_menu(r) for r in RESTAURANTS])
+profile("routes", lambda: [route_cost(s) for s in RIDERS])</div>
+  <div class="fx" data-lang="text">menus   wall 4.00s  cpu 0.00s  cpu/wall = 0%
+routes  wall 1.63s  cpu 1.60s  cpu/wall = 98%</div>
+  <p>The menus took 4 s of wall time but essentially 0 s of CPU: 0%, the program was asleep the whole time, waiting. The routes used about 98% of the wall time as CPU: it was calculating every moment. (The <code>lambda: …</code> wraps each job so <code>profile</code> can call it between the two clock readings.)</p>
+  <table class="tbl"><caption>Reading the ratio</caption>
+    <tr><th>CPU / wall</th><th>Name</th><th>What the program does</th><th>Typical examples</th><th>What helps</th></tr>
+    <tr><td>near 0%</td><td><strong>I/O-bound</strong></td><td>waits for input/output: network, disk, database</td><td>calling APIs, downloading files, SQL queries, reading S3</td><td>concurrency: threads or asyncio</td></tr>
+    <tr><td>near 100%</td><td><strong>CPU-bound</strong></td><td>calculates non-stop</td><td>pure-Python loops, parsing, feature engineering in Python, brute-force search</td><td>parallelism: processes (or faster code: numpy)</td></tr>
+    <tr><td>in between</td><td>mixed</td><td>both</td><td>download then parse</td><td>split the stages, give each its own tool (section 05)</td></tr>
+  </table>
+  <div class="callout anlg"><span class="label">Analogy</span><p>A doctor checking why a patient is tired: is it lack of sleep (waiting) or overwork (computing)? A watch (wall time) and a step counter (CPU time) together answer it; either alone does not.</p></div>
+  <div class="callout def"><span class="label">Definition</span><p><strong>I/O-bound</strong>: the running time is dominated by waiting for input/output; a faster CPU would barely help. <strong>CPU-bound</strong>: the running time is dominated by computation; a faster CPU (or more cores) helps directly. I/O = input/output.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Skipping this step. If 90% of your time is one slow SQL query, running ten copies at once only loads the database ten times harder. Profile first (<code>cProfile</code>, covered in <a class="xref" data-note="py_testing">Testing &amp; Debugging</a>), then pick the tool for the slow part.</p></div>
+  <div class="bridge"><b>What this still can't tell us → next: Three Tools, One Showdown.</b> We can now label each job. What does Python actually offer for each label, and how much does each tool really help on our two jobs?</div>
 
-def two_threads(fn, arg):
-    ts = [threading.Thread(target=fn, args=(arg,)) for _ in range(2)]
+  <h2 id="cc-tools"><span class="num">04</span>Three Tools, One Showdown</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Python has three tools: threads, processes and asyncio. What is each in one sentence, and how does each do on the menus (waiting) and the routes (computing)?</p>
+  </div>
+  <h3>The three tools in plain words</h3>
+  <div class="cards">
+    <div><b>Threads</b><p>Several lines of execution inside one running program, sharing its memory. The operating system switches between them. While one thread waits for a server, another runs.</p><small>cooks sharing one kitchen</small></div>
+    <div><b>Processes</b><p>Several separate copies of the Python program, each with its own memory and its own interpreter, which the operating system can run on different cores at the same instant.</p><small>separate kitchens</small></div>
+    <div><b>asyncio</b><p>One thread running an <em>event loop</em> that juggles many tasks. Each task says where it will wait (<code>await</code>); at that point the loop runs another task.</p><small>one waiter, many tables</small></div>
+  </div>
+  <h3>The showdown</h3>
+  <p>The script below runs both jobs four ways: sequential, a thread pool, a process pool (4 processes, the number of cores on this machine), and asyncio. Do not try to understand every line yet; each child note builds its part from scratch. Look at the shape: the same work, handed to different "executors". The answers (100 dishes; costs 40, 36, 35, 36) must be identical every time.</p>
+  <div class="fx" data-lang="py">import asyncio, time
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from quickbite import RESTAURANTS, RIDERS, fetch_menu, fetch_menu_async, route_cost
+
+async def route_cost_async(stops):                    # a coroutine that never awaits
+    return route_cost(stops)
+
+def timed(label, fn):
     t = time.perf_counter()
-    for th in ts: th.start()
-    for th in ts: th.join()
-    return time.perf_counter() - t
-
-t = time.perf_counter(); count(20_000_000); count(20_000_000)
-print(f"CPU,  one after other: {time.perf_counter() - t:.2f}s")
-print(f"CPU,  two threads:     {two_threads(count, 20_000_000):.2f}s")
-t = time.perf_counter(); nap(0.5); nap(0.5)
-print(f"wait, one after other: {time.perf_counter() - t:.2f}s")
-print(f"wait, two threads:     {two_threads(nap, 0.5):.2f}s")</div>
-  <div class="fx" data-lang="text">CPU,  one after other: 1.01s
-CPU,  two threads:     1.07s
-wait, one after other: 1.00s
-wait, two threads:     0.50s</div>
-  <p>Exactly the picture. Two counting threads took 1.07 s, slightly <em>slower</em> than doing it one after the other (1.01 s), because they also pay for handing the lock back and forth. Two sleeping threads took 0.50 s, half the sequential time, because sleeping releases the GIL.</p>
-  <div class="callout def"><span class="label">Definition</span><p>The <strong>GIL</strong> (Global Interpreter Lock) is a mutex (a lock that one thread holds at a time) in CPython that allows only one thread to execute Python bytecode at a time. It protects the interpreter's internal state, mainly <strong>reference counts</strong>, the per-object counters that decide when memory is freed.</p></div>
-  <ul>
-    <li><strong>Released</strong> during socket/file I/O, <code>time.sleep</code>, and most numpy/pandas/torch heavy kernels.</li>
-    <li><strong>Not released</strong> during pure-Python loops, so 4 computing threads ≈ 1 thread (measured again in section 07).</li>
-    <li><strong>Free-threaded Python</strong> (<code>python3.13t</code>, officially supported from 3.14) removes the GIL, but it is a separate opt-in build and some C extensions still lag.</li>
-  </ul>
-  <div class="callout trap"><span class="label">Trap</span><p>"The GIL makes my code thread-safe." No. It guards the interpreter's internals, not your logic. Python can switch threads between any two steps of your code, so updating your own shared variable can still go wrong (next section).</p></div>
-
-  <h2 id="pc-thr"><span class="num">03</span>Threading</h2>
-  <p>A <strong>thread</strong> is a separate line of execution inside your program. All threads share the same memory (the same variables), and the operating system switches between them. You give a thread a function to run, start it, and later wait for it to finish.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Several cooks in one kitchen sharing one fridge and one counter. Very easy to share ingredients, because everything is right there. But if two cooks grab the same bowl at the same moment, things spill.</p></div>
-  <div class="fx" data-lang="py">import threading, time
-
-def worker(name, secs):
-    print(f"{name} start")
-    time.sleep(secs)              # waiting: other threads can run
-    print(f"{name} done after {secs}s")
-
-t0 = time.perf_counter()
-a = threading.Thread(target=worker, args=("A", 0.3))
-b = threading.Thread(target=worker, args=("B", 0.1))
-a.start(); b.start()              # both begin now
-print("main: threads started")
-a.join(); b.join()                # wait for both to finish
-print(f"main: all done in {time.perf_counter() - t0:.1f}s")</div>
-  <div class="fx" data-lang="text">A start
-B start
-main: threads started
-B done after 0.1s
-A done after 0.3s
-main: all done in 0.3s</div>
-  <p><code>Thread(target=worker, args=(...))</code> creates the thread; note <code>target=worker</code> without brackets, because we pass the function, not its result. <code>start()</code> begins running it in the background and returns at once, which is why "main: threads started" is printed while A and B are still sleeping. B finished first because it slept less. <code>join()</code> makes the main program wait until that thread is done. The total is 0.3 s, the longest single wait, not 0.4 s. Run it a few times and the first three lines can come out in a different order (once they even merged on one line): the operating system decides who runs when. That unpredictability is the root of the next problem.</p>
-  <h3>Race condition, seen for real</h3>
-  <p>Four threads each add 1 to a shared <code>counter</code> 200,000 times. The answer should be 800,000. "Add 1" is really three steps: <em>read</em> the current value, <em>compute</em> value + 1, <em>write</em> it back. If Python switches threads between the read and the write, two threads can read the same old value and both write the same new value. One addition is lost.</p>
-  <table class="tbl out"><caption>How one update gets lost (counter starts at 5)</caption>
-    <tr><th>Step</th><th>Thread 1</th><th>Thread 2</th><th>counter</th></tr>
-    <tr><td>1</td><td>reads 5</td><td></td><td>5</td></tr>
-    <tr><td>2</td><td>(switched out)</td><td>reads 5</td><td>5</td></tr>
-    <tr><td>3</td><td></td><td>writes 5 + 1 = 6</td><td>6</td></tr>
-    <tr><td>4</td><td>writes 5 + 1 = 6</td><td></td><td>6 (should be 7)</td></tr>
-  </table>
-  <p>A <strong>lock</strong> fixes it. <code>with lock:</code> means "only one thread may be inside this block at a time; others wait at the door". The code runs the unsafe version three times and the locked version once.</p>
-  <div class="fx" data-lang="py">import threading
-
-def add_one(x):                  # any function call between read and write
-    return x + 1
-
-counter = 0
-def unsafe(n):
-    global counter
-    for _ in range(n):
-        counter = add_one(counter)   # READ counter ... call ... WRITE counter
-
-lock = threading.Lock()
-def safe(n):
-    global counter
-    for _ in range(n):
-        with lock:
-            counter = add_one(counter)
-
-def run(fn, n=200_000, k=4):
-    global counter
-    counter = 0
-    ts = [threading.Thread(target=fn, args=(n,)) for _ in range(k)]
-    for t in ts: t.start()
-    for t in ts: t.join()
-    return counter
-
-for _ in range(3):
-    print("unsafe   :", run(unsafe), "/ 800000")
-print("with lock:", run(safe), "/ 800000")</div>
-  <div class="fx" data-lang="text">unsafe   : 664024 / 800000
-unsafe   : 577640 / 800000
-unsafe   : 659364 / 800000
-with lock: 800000 / 800000</div>
-  <figure class="viz"><svg viewBox="0 0 520 120" width="520">
-    <text x="10" y="20">T1</text><text x="10" y="70">T2</text>
-    <rect x="40" y="6" width="110" height="22" rx="4" class="fb sb"/><text x="48" y="22">read 5</text>
-    <rect x="260" y="6" width="110" height="22" rx="4" class="fb sb"/><text x="268" y="22">write 6</text>
-    <rect x="150" y="56" width="110" height="22" rx="4" class="ft st"/><text x="158" y="72">read 5</text>
-    <rect x="370" y="56" width="110" height="22" rx="4" class="ft st"/><text x="378" y="72">write 6</text>
-    <text x="40" y="108" class="tr">two increments, counter only +1 → one update lost</text>
-  </svg><figcaption>The table above as a timeline. T2 reads before T1 has written, so both write 6.</figcaption></figure>
-  <p>The unsafe runs lost between 136,000 and 222,000 updates, and the number was <em>different every time</em>. That is what makes races nasty: they may pass on your laptop and fail in production. With the lock, read-compute-write became one indivisible step and the answer was exactly right. (On Python 3.13 a bare <code>counter += 1</code> loop happened to give the right total, because CPython only switches threads at certain points. That is luck, not a guarantee: always lock shared data you change.)</p>
-  <div class="callout def"><span class="label">Definition</span><p>A <strong>race condition</strong> is a bug where the result depends on the timing of threads. The code that touches shared data is the <strong>critical section</strong>; a <strong>lock</strong> (mutex) ensures only one thread is in it at a time. An operation that cannot be interrupted halfway is <strong>atomic</strong>.</p></div>
-  <h3>Other sync tools</h3>
-  <table class="tbl">
-    <tr><th>Primitive</th><th>What it does</th><th>Use for</th></tr>
-    <tr><td><code>Lock</code></td><td>One thread at a time</td><td>Protect a shared counter/dict</td></tr>
-    <tr><td><code>RLock</code></td><td>Same thread can re-acquire</td><td>Recursive methods that lock</td></tr>
-    <tr><td><code>Semaphore(n)</code></td><td>At most n threads inside</td><td>API rate / connection limits</td></tr>
-    <tr><td><code>Event</code></td><td><code>set()</code> / <code>wait()</code> flag</td><td>"Model loaded, start serving"</td></tr>
-    <tr><td><code>Condition</code></td><td>Wait until notified</td><td>Hand-rolled producer/consumer</td></tr>
-    <tr><td><code>queue.Queue</code></td><td>Thread-safe FIFO</td><td>Usually better than raw locks</td></tr>
-  </table>
-  <p>A <strong>semaphore</strong> is a lock with n keys instead of one. Below, 10 worker threads run 12 "API calls", but the semaphore allows only 3 inside at once (say the API permits 3 parallel requests). The code also tracks the peak number inside.</p>
-  <div class="fx" data-lang="py">import threading, time
-from concurrent.futures import ThreadPoolExecutor
-
-sem = threading.Semaphore(3)          # at most 3 threads inside at once
-inside = 0; peak = 0; count_lock = threading.Lock()
-
-def call_api(i):
-    global inside, peak
-    with sem:                         # wait here if 3 are already inside
-        with count_lock:
-            inside += 1; peak = max(peak, inside)
-        time.sleep(0.1)               # the "API call"
-        with count_lock:
-            inside -= 1
-    return i
-
-t = time.perf_counter()
-with ThreadPoolExecutor(max_workers=10) as ex:
-    out = list(ex.map(call_api, range(12)))
-print("results:", out[:5], "... peak concurrent:", peak, f"time: {time.perf_counter() - t:.2f}s")</div>
-  <div class="fx" data-lang="text">results: [0, 1, 2, 3, 4] ... peak concurrent: 3 time: 0.41s</div>
-  <p>Never more than 3 inside. 12 calls, 3 at a time, 0.1 s each → 4 rounds ≈ 0.4 s. (<code>count_lock</code> protects our own <code>inside</code> counter, a race we just learned about.)</p>
-  <h3>Deadlock</h3>
-  <p>Locks bring their own problem. Thread A takes Lock 1 and then wants Lock 2. At the same moment Thread B takes Lock 2 and then wants Lock 1. Each waits for the other to let go. Neither ever does. There is no error message: the program just hangs.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Two cars meet on a narrow one-lane bridge from opposite ends. Each driver waits for the other to reverse. Nobody does, and both wait forever. The fix is a traffic rule everyone follows: always enter from the north side first (one fixed lock order).</p></div>
-  <figure class="viz"><svg viewBox="0 0 440 130" width="440">
-    <defs><marker id="pc-ah1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
-    <rect x="20" y="20" width="110" height="34" rx="6" class="fb sb"/><text x="40" y="42">Thread A</text>
-    <rect x="310" y="20" width="110" height="34" rx="6" class="ft st"/><text x="330" y="42">Thread B</text>
-    <rect x="20" y="86" width="110" height="30" rx="6" class="fs"/><text x="50" y="106">Lock 1</text>
-    <rect x="310" y="86" width="110" height="30" rx="6" class="fs"/><text x="340" y="106">Lock 2</text>
-    <line x1="75" y1="86" x2="75" y2="56" stroke="currentColor" stroke-width="2" marker-end="url(#pc-ah1)"/><text x="82" y="76" class="tm">holds</text>
-    <line x1="365" y1="86" x2="365" y2="56" stroke="currentColor" stroke-width="2" marker-end="url(#pc-ah1)"/><text x="372" y="76" class="tm">holds</text>
-    <line x1="130" y1="44" x2="308" y2="98" class="sr" stroke-width="2" stroke-dasharray="5 3" marker-end="url(#pc-ah1)"/>
-    <line x1="310" y1="44" x2="132" y2="98" class="sr" stroke-width="2" stroke-dasharray="5 3" marker-end="url(#pc-ah1)"/>
-    <text x="220" y="118" class="tr" text-anchor="middle">wants</text>
-  </svg><figcaption>Solid arrows: each thread holds the lock below it. Dashed red arrows: each wants the lock the other holds. The circle can never break by itself.</figcaption></figure>
-  <p>The code creates exactly this situation, but uses <code>acquire(timeout=1)</code> instead of a plain <code>with</code>, so one thread gives up after a second instead of hanging. Then it repeats with both threads taking the locks in the same order.</p>
-  <div class="fx" data-lang="py">import threading, time
-lock1, lock2 = threading.Lock(), threading.Lock()
-
-def worker(name, first, second):
-    with first:
-        time.sleep(0.1)                       # let the other thread grab its lock
-        if second.acquire(timeout=1):         # a plain 'with second:' would hang forever
-            second.release(); print(name, "done")
-        else:
-            print(name, "gave up: deadlock")
-
-a = threading.Thread(target=worker, args=("A", lock1, lock2))
-b = threading.Thread(target=worker, args=("B", lock2, lock1))   # opposite order!
-a.start(); b.start(); a.join(); b.join()
-
-b = threading.Thread(target=worker, args=("B-fixed", lock1, lock2))  # same order
-a = threading.Thread(target=worker, args=("A", lock1, lock2))
-a.start(); b.start(); a.join(); b.join()</div>
-  <div class="fx" data-lang="text">A gave up: deadlock
-B done
-A done
-B-fixed done</div>
-  <p>First pair: A held Lock 1, B held Lock 2, both wanted the other. After 1 s, A's timeout fired; A gave up and released Lock 1, which let B finish. (On another run it may be B that gives up; timing decides.) Second pair: both take Lock 1 first, so whoever gets it second simply waits its turn, and no circle can form.</p>
-  <div class="callout trap"><span class="label">Trap</span><p>Deadlock fixes, best first: one lock order everywhere → <code>acquire(timeout=...)</code> → never hold a lock while doing slow I/O → replace shared state with a <code>queue.Queue</code> so threads pass messages instead of sharing variables.</p></div>
-  <h3>ThreadPoolExecutor: the everyday API</h3>
-  <p>Creating and joining threads by hand is fiddly. <code>concurrent.futures.ThreadPoolExecutor</code> keeps a pool of worker threads and hands them jobs. <code>submit(fn, args)</code> starts one job and returns a <strong>Future</strong>, a receipt you can later exchange for the result (or the error). <code>as_completed</code> gives the receipts back in the order the jobs finish.</p>
-  <div class="fx" data-lang="py">from concurrent.futures import ThreadPoolExecutor, as_completed
-import time
-
-def download(name, secs):
-    time.sleep(secs)
-    if name == "c.csv": raise ValueError("404 not found")
-    return f"{name} ok"
-
-jobs = {"a.csv": 0.3, "b.csv": 0.1, "c.csv": 0.2}
-with ThreadPoolExecutor(max_workers=3) as ex:
-    futures = {ex.submit(download, n, s): n for n, s in jobs.items()}
-    for fut in as_completed(futures):          # yields in finish order
-        try:
-            print(fut.result())
-        except Exception as e:
-            print(futures[fut], "failed:", e)</div>
-  <div class="fx" data-lang="text">b.csv ok
-c.csv failed: 404 not found
-a.csv ok</div>
-  <p>We submitted a, b, c, but got results b (0.1 s), c (0.2 s), a (0.3 s): finish order. <code>fut.result()</code> returns the value, or re-raises the error that happened inside the thread, so each failure is handled on its own without losing the others. The <code>futures</code> dict maps each receipt back to its file name for the error message. Leaving the <code>with</code> block waits for all workers.</p>
-  <ul>
-    <li><code>ex.map(fn, items)</code> → results in <em>input</em> order; the first exception re-raises when you reach it.</li>
-    <li><code>submit</code> + <code>as_completed</code> → results in <em>finish</em> order; handle each error separately.</li>
-  </ul>
-
-  <h2 id="pc-mp"><span class="num">04</span>Multiprocessing</h2>
-  <p>Threads cannot speed up pure-Python computing because of the GIL. The way around it is to run several separate Python programs. A <strong>process</strong> is a running program with its own memory. Each new Python process has its own interpreter and therefore its own GIL, so four processes really can compute on four cores at the same time.</p>
-  <p>The price: processes share nothing by default. Data sent to a worker process (the function's arguments) and data coming back (the result) must be packed into bytes and unpacked on the other side. This packing is called <strong>pickling</strong> (Python's <code>pickle</code> format). Starting a process also takes much longer than starting a thread.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Threads are cooks in one kitchen sharing a fridge: fast to share, but they bump into each other. Processes are separate kitchens in different buildings: no collisions at all, but every ingredient has to be packed and sent by courier (pickling), and setting up a new kitchen takes time.</p></div>
-  <figure class="viz"><svg viewBox="0 0 600 190" width="600">
-    <defs><marker id="pc-ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
-    <rect x="10" y="60" width="180" height="70" rx="8" class="fb sb"/><text x="22" y="82">Main process</text><text x="22" y="100" class="tm">interpreter + GIL</text><text x="22" y="116" class="tm">own memory</text>
-    <rect x="420" y="10" width="170" height="62" rx="8" class="ft st"/><text x="432" y="32">Worker 1 · core 1</text><text x="432" y="52" class="tm">own GIL + memory</text>
-    <rect x="420" y="118" width="170" height="62" rx="8" class="ft st"/><text x="432" y="140">Worker 2 · core 2</text><text x="432" y="160" class="tm">own GIL + memory</text>
-    <line x1="190" y1="70" x2="416" y2="38" stroke="currentColor" stroke-width="1.5" marker-end="url(#pc-ah2)"/>
-    <line x1="190" y1="120" x2="416" y2="152" stroke="currentColor" stroke-width="1.5" marker-end="url(#pc-ah2)"/>
-    <text x="200" y="28" class="tm">Queue/Pipe: pickled</text>
-    <rect x="245" y="75" width="140" height="42" rx="6" class="fv"/><text x="257" y="93">SharedMemory</text><text x="257" y="110" class="tm">no copy</text>
-    <line x1="385" y1="96" x2="420" y2="66" stroke="currentColor" stroke-dasharray="3 3"/><line x1="385" y1="96" x2="420" y2="124" stroke="currentColor" stroke-dasharray="3 3"/>
-  </svg><figcaption>Three separate programs, each with its own GIL and memory. Data crosses between them as pickled messages (solid arrows), or, for big arrays, by all of them attaching to one shared memory block (dashed lines).</figcaption></figure>
-  <p><code>ProcessPoolExecutor</code> has the same interface as the thread pool. The code computes three sums in worker processes and checks they really ran in a different process (<code>os.getpid()</code> returns the current process's ID number).</p>
-  <div class="fx" data-lang="py">from concurrent.futures import ProcessPoolExecutor
-import os
-
-def heavy(n):                                   # top-level: must be picklable
-    return n, sum(i * i for i in range(n)), os.getpid()
-
-if __name__ == "__main__":                      # required: children re-import this file
-    print("parent pid:", os.getpid())
-    with ProcessPoolExecutor(max_workers=2) as ex:
-        for n, total, pid in ex.map(heavy, [10, 100, 1000], chunksize=1):
-            print(n, total, "computed in a different process:", pid != os.getpid())</div>
-  <div class="fx" data-lang="text">parent pid: 31082
-10 285 computed in a different process: True
-100 328350 computed in a different process: True
-1000 332833500 computed in a different process: True</div>
-  <p>Two details are required, not optional. <code>heavy</code> is defined at the top level of the file, because the worker has to find it by name after unpickling; a lambda or a function defined inside another function cannot be sent. And all the pool code sits under <code>if __name__ == "__main__":</code>. On macOS and Windows each worker starts by importing your file; without the guard, every worker would run the pool-creating code again and try to start its own workers. <code>chunksize</code> sends several items per message, which matters when you have thousands of tiny tasks.</p>
-  <p>Because memory is separate, changing a global variable in a child does not change the parent's copy:</p>
-  <div class="fx" data-lang="py">import multiprocessing as mp
-counter = 0
-def bump():
-    global counter
-    counter += 100
-    print("child sees", counter)
-if __name__ == "__main__":
-    p = mp.Process(target=bump); p.start(); p.join()
-    print("parent sees", counter)</div>
-  <div class="fx" data-lang="text">child sees 100
-parent sees 0</div>
-  <h3>Talking between processes</h3>
-  <p>So how do processes share results? Four standard channels, all in one script below: a <strong>Queue</strong> (a thread- and process-safe line of messages; we stop the workers by sending <code>None</code>, a "poison pill"), a <strong>Pipe</strong> (a two-ended connection between exactly two processes), <strong>SharedMemory</strong> (one block of memory that several processes attach to by name, so a big numpy array is never copied), and a <strong>Value</strong> (a single shared number with its own lock).</p>
-  <div class="fx" data-lang="py">import multiprocessing as mp
-from multiprocessing import shared_memory
-import numpy as np
-
-def worker(tasks, results):
-    while (n := tasks.get()) is not None:      # None = poison pill
-        results.put((n, sum(i * i for i in range(n))))
-
-def child(conn):
-    msg = conn.recv()                          # Pipe: two-way, two endpoints
-    conn.send(msg.upper()); conn.close()
-
-def double_in_place(name, shape):
-    shm = shared_memory.SharedMemory(name=name)            # attach by name
-    arr = np.ndarray(shape, dtype=np.float64, buffer=shm.buf)
-    arr *= 2                                               # no copy, no pickling
-    shm.close()
-
-def bump(v):
-    for _ in range(10_000):
-        with v.get_lock(): v.value += 1      # += on a Value is NOT atomic
+    result = fn()
+    print(f"  {label:&lt;10} {time.perf_counter() - t:5.2f}s   {result}")
 
 if __name__ == "__main__":
-    # 1) Queue: producer/consumer with poison pills
-    tasks, results = mp.Queue(), mp.Queue()
-    procs = [mp.Process(target=worker, args=(tasks, results)) for _ in range(2)]
-    for p in procs: p.start()
-    for n in (10, 100, 1000): tasks.put(n)
-    for _ in procs: tasks.put(None)
-    print("queue:", sorted(results.get() for _ in range(3)))
-    for p in procs: p.join()
+    print("MENUS (I/O-bound): 20 requests x 0.2 s -&gt; total dishes")
+    timed("sequential", lambda: sum(fetch_menu(r)["dishes"] for r in RESTAURANTS))
+    with ThreadPoolExecutor(max_workers=20) as ex:
+        timed("threads", lambda: sum(m["dishes"] for m in ex.map(fetch_menu, RESTAURANTS)))
+    with ProcessPoolExecutor(max_workers=4) as ex:
+        timed("processes", lambda: sum(m["dishes"] for m in ex.map(fetch_menu, RESTAURANTS)))
+    async def all_menus():
+        return sum(m["dishes"] for m in await asyncio.gather(*map(fetch_menu_async, RESTAURANTS)))
+    timed("asyncio", lambda: asyncio.run(all_menus()))
 
-    # 2) Pipe
-    parent, kid = mp.Pipe()
-    p = mp.Process(target=child, args=(kid,)); p.start()
-    parent.send("hello"); print("pipe:", parent.recv()); p.join()
-
-    # 3) Shared memory: one buffer, visible to both processes
-    shm = shared_memory.SharedMemory(create=True, size=4 * 8)
-    arr = np.ndarray((4,), dtype=np.float64, buffer=shm.buf)
-    arr[:] = [1, 2, 3, 4]
-    p = mp.Process(target=double_in_place, args=(shm.name, arr.shape)); p.start(); p.join()
-    print("shared memory after child:", arr)
-    del arr
-    shm.close(); shm.unlink()                               # free it (once!)
-
-    # 4) Value: shared counter, needs its lock
-    v = mp.Value("i", 0)
-    ps = [mp.Process(target=bump, args=(v,)) for _ in range(4)]
-    for p in ps: p.start()
-    for p in ps: p.join()
-    print("Value:", v.value)
-    print("start method:", mp.get_start_method())</div>
-  <div class="fx" data-lang="text">queue: [(10, 285), (100, 328350), (1000, 332833500)]
-pipe: HELLO
-shared memory after child: [2. 4. 6. 8.]
-Value: 40000
-start method: fork</div>
-  <p>Reading the results. Queue: two workers took jobs from <code>tasks</code> until each received a <code>None</code>, and put answers on <code>results</code>; we sort because the finish order varies. Pipe: the child received "hello" and sent back "HELLO". Shared memory: the child doubled the array <em>in place</em> and the parent saw <code>[2, 4, 6, 8]</code> without anything being copied; <code>close()</code> detaches each process, and <code>unlink()</code> frees the block once at the end (we <code>del arr</code> first because the array still points into it). Value: four processes added 10,000 each and got exactly 40,000 because each <code>+=</code> took the Value's lock.</p>
-  <table class="tbl">
-    <tr><th>Channel</th><th>Shape</th><th>Cost</th><th>Pick when</th></tr>
-    <tr><td><code>Queue</code></td><td>Many producers ↔ many consumers</td><td>Pickle each item</td><td>Work queues, results</td></tr>
-    <tr><td><code>Pipe</code></td><td>Exactly two ends</td><td>Pickle, a bit faster</td><td>Parent ↔ one child</td></tr>
-    <tr><td><code>Value</code> / <code>Array</code></td><td>Typed C number/array</td><td>No pickle; lock it</td><td>Shared counters, flags</td></tr>
-    <tr><td><code>SharedMemory</code></td><td>Raw buffer, attach by name</td><td>Zero-copy</td><td>Big numpy arrays read by many workers</td></tr>
-  </table>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Process</strong>: an independent running program with its own memory. <strong>IPC</strong> (inter-process communication): any channel for passing data between processes. <strong>Pickling</strong>: serialising Python objects to bytes. <strong>Start method</strong>: how a child is created: <code>fork</code> (copy the parent; Linux default up to 3.13), <code>spawn</code> (fresh interpreter; macOS/Windows), <code>forkserver</code> (Linux default from 3.14).</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Sending a 1 GB DataFrame to each worker. Pickling it can cost more than the work itself, and every worker holds a copy. Send file paths or row ranges and let each worker load its own piece, or use shared memory.</p></div>
-
-  <h2 id="pc-aio"><span class="num">05</span>asyncio</h2>
-  <p>Threads handle waiting well, but each thread costs memory (often ~1 MB of stack) and the operating system's time to switch. For 10,000 open connections (a chat server, crawling a large site) that becomes heavy, and you still need locks for shared data. <strong>asyncio</strong> handles many waits with a single thread and no operating-system switching at all.</p>
-  <p>The idea: you write functions that say exactly where they will wait. At each such point the function voluntarily steps aside, and a scheduler called the <strong>event loop</strong> runs some other function that is ready. When the thing being waited for (a network reply, a timer) is ready, the loop resumes the first function where it stopped. This is the "pausing" of <a class="xref" data-note="py_advanced">generators</a>, applied to waiting.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>One chef, many dishes. She puts the pasta on to boil (starts a wait), and instead of staring at the pot she chops vegetables for the next dish. When the timer rings she comes back to the pasta. One person, many dishes in progress, nothing burnt. But if she stands staring at the pot (a blocking call), every dish stalls.</p></div>
-  <p>Three keywords. <code>async def</code> defines a <strong>coroutine function</strong>; calling it does not run it, it returns a <strong>coroutine</strong> object (like calling a generator function). <code>await x</code> means "pause me here until x is done; meanwhile run others". <code>asyncio.run(main())</code> starts the event loop and runs <code>main</code> until it finishes.</p>
-  <figure class="viz"><svg viewBox="0 0 590 200" width="590">
-    <defs><marker id="pc-ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
-    <rect x="10" y="20" width="180" height="50" rx="8" class="fb sb"/><text x="24" y="42">Ready queue</text><text x="24" y="60" class="tm">tasks able to run</text>
-    <rect x="390" y="20" width="190" height="50" rx="8" class="fg sg"/><text x="402" y="42">Run one task</text><text x="402" y="60" class="tm">until it hits await</text>
-    <rect x="170" y="135" width="250" height="50" rx="8" class="fs"/><text x="184" y="157">Waiting</text><text x="184" y="175" class="tm">sockets, timers (epoll)</text>
-    <line x1="190" y1="45" x2="386" y2="45" stroke="currentColor" stroke-width="1.5" marker-end="url(#pc-ah3)"/><text x="245" y="38" class="tm">pick next</text>
-    <line x1="480" y1="70" x2="400" y2="132" stroke="currentColor" stroke-width="1.5" marker-end="url(#pc-ah3)"/><text x="455" y="112" class="tm">await I/O</text>
-    <line x1="200" y1="133" x2="110" y2="73" stroke="currentColor" stroke-width="1.5" marker-end="url(#pc-ah3)"/><text x="10" y="140" class="tm">I/O ready</text><text x="10" y="156" class="tm">→ wake</text>
-  </svg><figcaption>The event loop goes round this circle forever on one thread. Take a ready task (top left), run it until it reaches an await (top right), park it in Waiting (bottom), and when its network reply or timer is ready, move it back to Ready.</figcaption></figure>
-  <p>The code brews tea and coffee (each a 1-second wait) three ways: awaiting one after the other, running both with <code>gather</code>, and starting a task in the background with <code>create_task</code>. Each line prints the time since the start.</p>
-  <div class="fx" data-lang="py">import asyncio, time
-
-async def brew(name, secs):
-    print(f"{time.perf_counter()-T0:.1f}s start {name}")
-    await asyncio.sleep(secs)            # pause here; loop runs others
-    print(f"{time.perf_counter()-T0:.1f}s done  {name}")
-    return name
-
-async def main():
-    c = brew("x", 1)
-    print(type(c).__name__)              # calling it does NOT run it
-    c.close()
-
-    t = time.perf_counter()
-    await brew("tea", 1); await brew("coffee", 1)          # one after another
-    print(f"awaited in turn: {time.perf_counter()-t:.1f}s")
-
-    t = time.perf_counter()
-    res = await asyncio.gather(brew("tea", 1), brew("coffee", 1))
-    print(res, f"gather: {time.perf_counter()-t:.1f}s")
-
-    task = asyncio.create_task(brew("toast", 0.5))         # scheduled, runs at next await
-    print("doing other work while toast runs")
-    print(await task)
-
-T0 = time.perf_counter()
-asyncio.run(main())</div>
-  <div class="fx" data-lang="text">coroutine
-0.0s start tea
-1.0s done  tea
-1.0s start coffee
-2.0s done  coffee
-awaited in turn: 2.0s
-2.0s start tea
-2.0s start coffee
-3.0s done  tea
-3.0s done  coffee
-['tea', 'coffee'] gather: 1.0s
-doing other work while toast runs
-3.0s start toast
-3.5s done  toast
-toast</div>
-  <p>Step by step. <code>brew("x", 1)</code> printed nothing and gave a <code>coroutine</code> object (we close it to avoid a "never awaited" warning). <code>await brew("tea", 1); await brew("coffee", 1)</code> took 2 s: <code>await</code> waits for that one coroutine to finish before the next line, so this is still sequential. <code>gather</code> wrapped both as tasks and started them together: both "start" lines at 2.0 s, both "done" at 3.0 s, total 1 s, results in the order given. <code>create_task</code> scheduled toast but it did not start until <code>main</code> reached its next <code>await</code>; that is why "doing other work" printed first.</p>
-  <table class="tbl">
-    <tr><th>Tool</th><th>Does</th></tr>
-    <tr><td><code>asyncio.run(main())</code></td><td>Create loop, run until done, close. Once per program.</td></tr>
-    <tr><td><code>await coro</code></td><td>Run it and wait; sequential if you await one by one</td></tr>
-    <tr><td><code>gather(*coros)</code></td><td>Run together; results in input order</td></tr>
-    <tr><td><code>create_task(coro)</code></td><td>Schedule now, collect later (keep a reference!)</td></tr>
-    <tr><td><code>async with asyncio.TaskGroup()</code></td><td>3.11+: one failure cancels the rest</td></tr>
-    <tr><td><code>async for</code> / async generator</td><td>Stream rows/pages lazily from an async source</td></tr>
-  </table>
-  <p>A <code>TaskGroup</code> is the safe way to run a group of tasks: if one fails, the others are cancelled and the error is reported, so nothing keeps running in the background unnoticed.</p>
-  <div class="fx" data-lang="py">async def job(name, secs, fail=False):
-    try:
-        await asyncio.sleep(secs)
-        if fail:
-            raise ValueError(f"{name} broke")
-        print(name, "finished")
-        return name
-    except asyncio.CancelledError:
-        print(name, "cancelled")
-        raise
-
-async def main():
-    try:
-        async with asyncio.TaskGroup() as tg:          # Python 3.11+
-            tg.create_task(job("a", 0.1))
-            tg.create_task(job("b", 0.2, fail=True))
-            tg.create_task(job("c", 1.0))
-    except* ValueError as eg:
-        print("TaskGroup error:", [str(e) for e in eg.exceptions])
-
-asyncio.run(main())</div>
-  <div class="fx" data-lang="text">a finished
-c cancelled
-TaskGroup error: ['b broke']</div>
-  <p>a finished at 0.1 s. b failed at 0.2 s, so the group cancelled c (still sleeping) and raised the error as an <code>ExceptionGroup</code>; <code>except*</code> is the syntax that catches errors from such a group.</p>
-  <h3>The blocking-call trap</h3>
-  <p>asyncio only works if every wait is an <code>await</code>. A normal blocking call, like <code>time.sleep</code> or <code>requests.get</code>, holds the one and only thread, so the loop cannot run anything else. The code compares the right way, the wrong way, and the fix: <code>asyncio.to_thread</code> runs a blocking function in a helper thread and gives you something you can await.</p>
-  <div class="fx" data-lang="py">async def ok(i):
-    await asyncio.sleep(0.5); return i
-
-async def blocking(i):
-    time.sleep(0.5); return i            # BUG: blocks the whole loop
-
-async def main():
-    for fn in (ok, blocking):
-        t = time.perf_counter()
-        await asyncio.gather(*(fn(i) for i in range(4)))
-        print(f"{fn.__name__:&lt;9} 4 tasks: {time.perf_counter()-t:.1f}s")
-
-    t = time.perf_counter()               # fix: push blocking code to a thread
-    await asyncio.gather(*(asyncio.to_thread(time.sleep, 0.5) for _ in range(4)))
-    print(f"to_thread 4 tasks: {time.perf_counter()-t:.1f}s")
-
-asyncio.run(main())</div>
-  <div class="fx" data-lang="text">ok        4 tasks: 0.5s
-blocking  4 tasks: 2.0s
-to_thread 4 tasks: 0.5s</div>
-  <p>Four <code>ok</code> tasks overlapped: 0.5 s. Four <code>blocking</code> tasks ran one after another: 2.0 s, even though they were "gathered", because <code>time.sleep</code> never let the loop switch. With <code>to_thread</code> the sleeps moved off the loop's thread and overlapped again.</p>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Coroutine</strong>: the object returned by calling an <code>async def</code> function; it runs only when awaited or wrapped in a <strong>task</strong>. <strong>Event loop</strong>: the single-threaded scheduler that runs tasks until they await and resumes them when ready. This is <strong>cooperative multitasking</strong>: tasks must give up control themselves (threads are switched by the OS, which is <strong>preemptive</strong>).</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Inside <code>async def</code>, any call that does not await blocks every task: <code>time.sleep</code>, <code>requests.get</code>, a normal database driver, a big pandas job. Use async libraries (httpx, aiohttp, asyncpg), <code>asyncio.to_thread</code>, or <code>loop.run_in_executor(ProcessPoolExecutor())</code> for CPU work.</p></div>
-
-  <h2 id="pc-http"><span class="num">06</span>Async HTTP Against a Local Server</h2>
-  <p>The classic real use: call an API for 50 IDs. Doing it right needs three things beyond <code>gather</code>. One shared <strong>client</strong>, so connections are reused instead of opening a new one per request (a <strong>connection pool</strong>). A <strong>semaphore</strong> to limit how many requests are in flight, because APIs block you if you fire 10,000 at once. And error handling so one bad ID doesn't kill the batch.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A bank with 10 counters and 50 customers. The semaphore is the token machine: at most 10 customers are served at once, the rest wait their turn. The shared client is keeping the counters open all day instead of setting up a new counter for each customer.</p></div>
-  <div class="flow"><span>50 coroutines</span><span>Semaphore(10)</span><span>one AsyncClient pool</span><span>local API, 200 ms each</span><span>gather results</span></div>
-  <p>To test without the internet, first a tiny local server (aiohttp) where every request takes 200 ms:</p>
-  <div class="fx" data-lang="py"># server.py: a tiny local API; every request takes 200 ms
-import asyncio
-from aiohttp import web
-
-async def item(request):
-    await asyncio.sleep(0.2)
-    return web.json_response({"id": int(request.match_info["i"])})
-
-app = web.Application()
-app.add_routes([web.get("/item/{i}", item)])
-web.run_app(app, port=8765, print=None)</div>
-  <p>Then the client: 50 requests through one <code>httpx.AsyncClient</code>, at most 10 at a time; a batch with one bad ID; and a timeout.</p>
-  <div class="fx" data-lang="py">import asyncio, time
-import httpx
-
-URL = "http://127.0.0.1:8765/item/{}"
-sem = asyncio.Semaphore(10)                  # at most 10 requests in flight
-
-async def fetch(client, i):
-    async with sem:
-        r = await client.get(URL.format(i), timeout=5)
-        r.raise_for_status()
-        return r.json()["id"]
-
-async def main():
-    async with httpx.AsyncClient() as client:      # one pooled client, reused
-        t = time.perf_counter()
-        ids = await asyncio.gather(*(fetch(client, i) for i in range(50)))
-        print(len(ids), "items", ids[:5], f"in {time.perf_counter()-t:.2f}s")
-
-        bad = await asyncio.gather(fetch(client, 1), fetch(client, "x"),
-                                   return_exceptions=True)
-        print([type(x).__name__ if isinstance(x, Exception) else x for x in bad])
-
-        try:
-            async with asyncio.timeout(0.1):          # Python 3.11+
-                await fetch(client, 2)
-        except TimeoutError:
-            print("timed out after 0.1s")
-
-asyncio.run(main())</div>
-  <div class="fx" data-lang="text">50 items [0, 1, 2, 3, 4] in 1.09s
-[1, 'HTTPStatusError']
-timed out after 0.1s</div>
-  <p>Trace: 50 requests × 0.2 s would be 10 s one by one. With 10 allowed at once there are 5 "rounds" of 0.2 s = 1 s, and we measured 1.09 s. In the second batch, <code>"x"</code> made the server fail (it cannot turn "x" into an int) and return HTTP 500; <code>raise_for_status()</code> turned that into an <code>HTTPStatusError</code>, and <code>return_exceptions=True</code> put the error into the results list instead of throwing away the good result. The last request needed 0.2 s but was given 0.1 s, so <code>asyncio.timeout</code> cancelled it.</p>
-  <p>aiohttp's client does the same: <code>async with aiohttp.ClientSession() as s:</code> then <code>async with s.get(url) as r: await r.json()</code>.</p>
-  <div class="callout trap"><span class="label">Trap</span><p>Creating a new client per request throws away connection pooling (a new TCP and TLS handshake every time). Create one client and share it. And without a semaphore, 10,000 gathered requests hit the API at once and you get rate-limited or banned.</p></div>
-
-  <h2 id="pc-bench"><span class="num">07</span>Timing Showdown</h2>
-  <p>Now all four approaches on two jobs, on the same 4-core machine. The I/O job is 20 calls to the local 200 ms server. The CPU job is four pure-Python sums of 10 million squares. Here is the shape of the benchmark (each line is timed separately):</p>
-  <div class="fx" data-lang="py">client = httpx.Client()       # one reusable connection pool (thread-safe)
-def fetch(i):                 # I/O-bound: mostly waiting on the network
-    return client.get(URL.format(i)).json()["id"]
-
-def crunch(n):                # CPU-bound: pure-Python arithmetic
-    return sum(i * i for i in range(n))
-CPU_JOBS = [10_000_000] * 4
-
-# timed:  [fetch(i) for i in range(20)]                     sequential
-#         ThreadPoolExecutor(20).map(fetch, range(20))       threads
-#         ProcessPoolExecutor(4).map(fetch_own, range(20))   processes (own client each)
-#         asyncio.gather of 20 AsyncClient.get calls         asyncio
-# and the same four for crunch over CPU_JOBS (async version: coroutines that never await)</div>
-  <div class="fx" data-lang="text">I/O task: 20 HTTP calls, 200 ms each
-sequential   4.05 s
-threads      0.23 s
-processes    1.46 s
-asyncio      0.30 s
-CPU task: 4 x sum of 10M squares (4 cores)
-sequential   2.50 s
-threads      2.44 s
-processes    1.05 s
-asyncio      2.25 s</div>
-  <figure class="viz"><svg viewBox="0 0 480 228" width="480">
-    <text x="10" y="18" class="tm">I/O: 20 HTTP calls × 200 ms</text>
-    <text x="10" y="40">sequential</text><rect x="110" y="28" width="300" height="15" class="fs"/><text x="416" y="40">4.05 s</text>
-    <text x="10" y="60">threads</text><rect x="110" y="48" width="17" height="15" class="fb sb"/><text x="133" y="60">0.23 s</text>
-    <text x="10" y="80">processes</text><rect x="110" y="68" width="108" height="15" class="fv"/><text x="224" y="80">1.46 s</text>
-    <text x="10" y="100">asyncio</text><rect x="110" y="88" width="22" height="15" class="ft st"/><text x="138" y="100">0.30 s</text>
-    <text x="10" y="130" class="tm">CPU: 4 × sum of 10M squares</text>
-    <text x="10" y="152">sequential</text><rect x="110" y="140" width="185" height="15" class="fs"/><text x="301" y="152">2.50 s</text>
-    <text x="10" y="172">threads</text><rect x="110" y="160" width="181" height="15" class="fb sb"/><text x="297" y="172">2.44 s</text>
-    <text x="10" y="192">processes</text><rect x="110" y="180" width="78" height="15" class="fv"/><text x="194" y="192">1.05 s</text>
-    <text x="10" y="212">asyncio</text><rect x="110" y="200" width="167" height="15" class="ft st"/><text x="283" y="212">2.25 s</text>
-  </svg><figcaption>Bar length = wall-clock seconds, same scale in both halves (shorter is better). Top: waiting work, where threads and asyncio win. Bottom: computing work, where only processes help.</figcaption></figure>
+    print("ROUTES (CPU-bound): 4 riders x 9 stops -&gt; best costs")
+    timed("sequential", lambda: [route_cost(s) for s in RIDERS])
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        timed("threads", lambda: list(ex.map(route_cost, RIDERS)))
+    with ProcessPoolExecutor(max_workers=4) as ex:
+        timed("processes", lambda: list(ex.map(route_cost, RIDERS)))
+    async def all_routes():
+        return list(await asyncio.gather(*map(route_cost_async, RIDERS)))
+    timed("asyncio", lambda: asyncio.run(all_routes()))</div>
+  <div class="fx" data-lang="text">MENUS (I/O-bound): 20 requests x 0.2 s -&gt; total dishes
+  sequential  4.00s   100
+  threads     0.20s   100
+  processes   1.02s   100
+  asyncio     0.20s   100
+ROUTES (CPU-bound): 4 riders x 9 stops -&gt; best costs
+  sequential  1.49s   [40, 36, 35, 36]
+  threads     1.84s   [40, 36, 35, 36]
+  processes   0.52s   [40, 36, 35, 36]
+  asyncio     1.62s   [40, 36, 35, 36]</div>
+  <figure class="viz"><svg viewBox="0 0 520 240" width="520">
+    <text x="10" y="18" class="tm">MENUS: 20 requests × 0.2 s (waiting)</text>
+    <text x="10" y="40">sequential</text><rect x="110" y="28" width="300" height="15" class="fs"/><text x="416" y="40">4.00 s</text>
+    <text x="10" y="60">threads</text><rect x="110" y="48" width="15" height="15" class="fb sb"/><text x="131" y="60">0.20 s</text>
+    <text x="10" y="80">processes</text><rect x="110" y="68" width="77" height="15" class="fv"/><text x="193" y="80">1.02 s</text>
+    <text x="10" y="100">asyncio</text><rect x="110" y="88" width="15" height="15" class="ft st"/><text x="131" y="100">0.20 s</text>
+    <text x="10" y="135" class="tm">ROUTES: 4 riders × 9 stops (computing)</text>
+    <text x="10" y="157">sequential</text><rect x="110" y="145" width="112" height="15" class="fs"/><text x="228" y="157">1.49 s</text>
+    <text x="10" y="177">threads</text><rect x="110" y="165" width="138" height="15" class="fb sb"/><text x="254" y="177">1.84 s</text>
+    <text x="10" y="197">processes</text><rect x="110" y="185" width="39" height="15" class="fv"/><text x="155" y="197">0.52 s</text>
+    <text x="10" y="217">asyncio</text><rect x="110" y="205" width="122" height="15" class="ft st"/><text x="238" y="217">1.62 s</text>
+  </svg><figcaption>Bar length = wall-clock seconds, same scale in both halves; shorter is better. Top: for waiting, threads and asyncio win by a factor of 20. Bottom: for computing, only processes help (about 3× here).</figcaption></figure>
+  <p>Reading the numbers (they vary a little from run to run; the ratios are what matter):</p>
   <ul>
-    <li><strong>I/O:</strong> threads and asyncio overlap the 200 ms waits: 13–18× faster than sequential. Processes help less: only 4 workers (so 5 rounds of waits), and each pays process start-up and opens its own connection.</li>
-    <li><strong>CPU:</strong> threads and asyncio give nothing. The GIL lets only one thread compute, and the coroutines never <code>await</code>, so they just run one after another.</li>
-    <li><strong>Processes on CPU:</strong> 1.05 s vs 2.50 s, a 2.4× win. Not the full 4× because this machine was busy with other work during the run (load average ≈ 6); on idle cores expect close to 4×.</li>
+    <li><strong>Menus, threads and asyncio: 4.00 s → 0.20 s</strong>, 20× faster. All 20 waits happened during the same 0.2 s. That is concurrency.</li>
+    <li><strong>Menus, processes: 1.02 s.</strong> Better than sequential but 5× worse than threads: with 4 processes only 4 requests wait at once, so 20 requests take 5 rounds of 0.2 s = 1.0 s. Buying 4 cores to wait is wasteful.</li>
+    <li><strong>Routes, threads and asyncio: no faster than sequential</strong> (even slightly slower). Threads are blocked by the GIL: CPython lets only one thread run Python code at a time. The asyncio coroutines never <code>await</code>, so they simply run one after another.</li>
+    <li><strong>Routes, processes: 1.49 s → 0.52 s</strong>, about 3× on 4 cores. Each process has its own interpreter and its own GIL. Not a full 4× because starting the processes and sending data to them costs time.</li>
   </ul>
-  <div class="callout intu"><span class="label">Key insight</span><p>The table in section 01 in numbers: waiting → threads or asyncio; computing → processes. And always measure, because start-up, pickling and machine load change the picture for small jobs.</p></div>
+  <div class="callout anlg"><span class="label">Analogy</span><p>Hiring for a restaurant. To take 20 phone orders where each caller takes a while to decide (waiting), one attentive person with many phone lines (asyncio) or a few receptionists (threads) is enough. To chop 4 crates of vegetables (computing), you need 4 cooks with 4 knives (processes); 4 receptionists sharing one knife (threads with the GIL) chop no faster than one.</p></div>
+  <div class="callout def"><span class="label">Definition</span><p><strong>Thread</strong>: an independent line of execution inside a process; threads share the process's memory. <strong>Process</strong>: a running program with its own memory space; Python processes each have their own interpreter. <strong>GIL</strong> (Global Interpreter Lock): CPython's lock that allows one thread at a time to run Python bytecode. <strong>Event loop</strong>: asyncio's scheduler, which runs coroutines on one thread and switches between them at each <code>await</code>.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Generalising one benchmark. Process start-up, data copying and machine load all change the picture: on a tiny job, processes can be <em>slower</em> than a plain loop (measured in <a class="xref" data-note="py_multiprocessing">Processes</a>). Always time your own case.</p></div>
+  <div class="bridge"><b>What this still can't tell us → next: The Whole App, Fixed.</b> Each tool won one job and lost the other. The real 6 pm run has both jobs. Can we use two tools at once?</div>
 
-  <h2 id="pc-build"><span class="num">08</span>Build It</h2>
-  <p>Fetch 200 records from the local server, then compute an expensive pure-Python feature for each. Stage 1 is waiting work, stage 2 is computing work, so each gets its own tool.</p>
-  <div class="flow"><span>asyncio + httpx (Semaphore 20)</span><span>list of JSON records</span><span>ProcessPoolExecutor.map(featurise, chunksize=20)</span><span>DataFrame</span></div>
-  <ol>
-    <li>Run <code>server.py</code>; write <code>fetch_all(ids)</code> with one <code>AsyncClient</code>, a semaphore and <code>return_exceptions=True</code>. Log and drop failures.</li>
-    <li>Write a top-level <code>featurise(record)</code> (e.g. the <code>crunch</code> loop). Map it over a process pool under <code>if __name__ == "__main__":</code>.</li>
-    <li>Time each stage sequentially vs concurrently and check the results are identical.</li>
-    <li>Stretch: replace the pool map with <code>await loop.run_in_executor(pool, featurise, rec)</code> so fetching and featurising overlap.</li>
-  </ol>
+  <h2 id="cc-app"><span class="num">05</span>The Whole App, Fixed</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>What does QuickBite's 6 pm run look like when the waiting job and the computing job each get the right tool, and both run at the same time?</p>
+  </div>
+  <p>Here is the finished program. asyncio fetches the 20 menus on one thread, while a pool of 4 processes plans the 4 routes. <code>loop.run_in_executor(pool, route_cost, stops)</code> is the bridge: it hands a normal function to the process pool and gives back something asyncio can <code>await</code>. The <a class="xref" data-note="py_asyncio">asyncio</a> note builds this line by line.</p>
+  <div class="fx" data-lang="py">import asyncio, time
+from concurrent.futures import ProcessPoolExecutor
+from quickbite import RESTAURANTS, RIDERS, fetch_menu_async, route_cost
 
-  <h2 id="pc-traps"><span class="num">09</span>Common Mistakes</h2>
-  <div class="callout trap"><span class="label">Trap: threads for CPU-bound Python</span>
-    <p>Four threads running a pure-Python loop take as long as one (or longer). Use processes, or vectorise with numpy.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: shared data without a lock</span>
-    <p><code>counter = counter + 1</code>, <code>d[k] = d.get(k, 0) + 1</code>, <code>if x not in seen: seen.append(x)</code> from several threads all lose updates sometimes. Wrap them in <code>with lock:</code> or give each thread its own data and merge at the end.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: locks taken in different orders</span>
-    <p>Deadlock: the program hangs with no error. Pick one global order, use timeouts, or use queues.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: missing <code>__main__</code> guard / unpicklable worker</span>
-    <p>On macOS/Windows, pool code at the top level re-runs in every child. Lambdas and nested functions cannot be sent to worker processes. Use top-level functions under <code>if __name__ == "__main__":</code>.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: expecting a child process to change your globals</span>
-    <p>Each process has its own memory. Return results, or use a Queue / Value / SharedMemory.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: blocking the event loop</span>
-    <p><code>time.sleep</code>, <code>requests.get</code> or heavy pandas inside <code>async def</code> freezes every task. Use async libraries or <code>asyncio.to_thread</code>.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: awaiting one by one and calling it concurrent</span>
-    <p><code>for u in urls: await fetch(u)</code> is sequential. Use <code>gather</code> or a <code>TaskGroup</code>. And a <code>create_task</code> result with no reference kept can be garbage-collected mid-run.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: no limit on concurrency</span>
-    <p>Gathering 10,000 requests at once gets you rate-limited, or exhausts sockets. Use a Semaphore and one shared client.</p>
-  </div>
+async def main(pool):
+    loop = asyncio.get_running_loop()
+    route_jobs = [loop.run_in_executor(pool, route_cost, s) for s in RIDERS]   # computing: processes
+    menus = await asyncio.gather(*(fetch_menu_async(r) for r in RESTAURANTS))   # waiting: one thread
+    costs = await asyncio.gather(*route_jobs)
+    return sum(m["dishes"] for m in menus), costs
 
-  <h2 id="pc-qa"><span class="num">10</span>Questions &amp; Answers</h2>
+if __name__ == "__main__":
+    t = time.perf_counter()
+    with ProcessPoolExecutor(max_workers=4) as pool:
+        dishes, costs = asyncio.run(main(pool))
+    print(f"{dishes} dishes, route costs {costs}, both jobs in {time.perf_counter() - t:.2f}s")</div>
+  <div class="fx" data-lang="text">100 dishes, route costs [40, 36, 35, 36], both jobs in 0.67s</div>
+  <p>About 0.7 s instead of about 5.5 s, with the same 100 dishes and the same four route costs. The route jobs were handed to the processes first, then the menus were fetched while the processes worked; the program finished when the slower of the two (the routes) was done.</p>
+  <div class="flow"><span>20 menu requests</span><span>asyncio, 1 thread, ≈ 0.2 s</span><span>4 route plans</span><span>4 processes, ≈ 0.5 s</span><span>both overlap → ≈ 0.7 s</span></div>
+  <div class="callout anlg"><span class="label">Analogy</span><p>The restaurant at opening time: the front-of-house person takes all the phone orders (asyncio handling the waits) while the four cooks in the back chop at the same time (processes doing the computing). Nobody waits for anybody.</p></div>
+  <div class="callout def"><span class="label">Definition</span><p>The general pattern: <strong>split the program into its waiting stages and its computing stages, give waiting stages concurrency (threads or asyncio) and computing stages parallelism (processes), and connect them</strong> with an executor (<code>run_in_executor</code>) or a queue.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Putting <code>route_cost(...)</code> directly inside an <code>async def</code>. It would run on the event loop's only thread and freeze all 20 menu requests until it finished. Heavy computing must leave the loop (measured in <a class="xref" data-note="py_asyncio">asyncio</a>, "Never Block the Loop").</p></div>
+  <div class="bridge"><b>What this still can't tell us → next: Decision Table.</b> QuickBite's two jobs are clean examples. Real jobs come in more shapes: 10,000 connections, numpy work, a library with no async version. Which tool for which?</div>
+
+  <h2 id="cc-decide"><span class="num">06</span>Decision Table</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Given any slow piece of code, which tool should we reach for first?</p>
+  </div>
+  <figure class="viz"><svg viewBox="0 0 640 230" width="640">
+    <defs><marker id="cc-a6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="230" y="8" width="180" height="34" rx="6" class="fb sb"/><text x="320" y="30" text-anchor="middle" font-size="12">Is it slow? Profile it.</text>
+    <line x1="320" y1="42" x2="320" y2="62" stroke="currentColor" marker-end="url(#cc-a6)"/>
+    <rect x="200" y="64" width="240" height="34" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="320" y="86" text-anchor="middle" font-size="12">CPU time / wall time?</text>
+    <line x1="260" y1="98" x2="150" y2="128" stroke="currentColor" marker-end="url(#cc-a6)"/><text x="160" y="112" class="tm">low: waiting</text>
+    <line x1="380" y1="98" x2="490" y2="128" stroke="currentColor" marker-end="url(#cc-a6)"/><text x="440" y="112" class="tm">high: computing</text>
+    <rect x="40" y="130" width="220" height="34" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="150" y="152" text-anchor="middle" font-size="12">async library? thousands of waits?</text>
+    <rect x="380" y="130" width="220" height="34" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="490" y="152" text-anchor="middle" font-size="12">pure Python or numpy?</text>
+    <line x1="100" y1="164" x2="70" y2="190" stroke="currentColor" marker-end="url(#cc-a6)"/><line x1="200" y1="164" x2="230" y2="190" stroke="currentColor" marker-end="url(#cc-a6)"/>
+    <line x1="440" y1="164" x2="420" y2="190" stroke="currentColor" marker-end="url(#cc-a6)"/><line x1="540" y1="164" x2="560" y2="190" stroke="currentColor" marker-end="url(#cc-a6)"/>
+    <rect x="10" y="192" width="120" height="30" rx="6" class="fb sb"/><text x="70" y="212" text-anchor="middle" font-size="12">no: threads</text>
+    <rect x="170" y="192" width="120" height="30" rx="6" class="ft st"/><text x="230" y="212" text-anchor="middle" font-size="12">yes: asyncio</text>
+    <rect x="350" y="192" width="140" height="30" rx="6" class="fv"/><text x="420" y="212" text-anchor="middle" font-size="12">pure: processes</text>
+    <rect x="510" y="192" width="120" height="30" rx="6" class="fg sg"/><text x="570" y="212" text-anchor="middle" font-size="12">numpy: vectorise</text>
+  </svg><figcaption>The decision in three questions: is it really slow (profile), is it waiting or computing (the CPU/wall ratio), and then one practical question on each side.</figcaption></figure>
+  <table class="tbl">
+    <tr><th>Your code mostly…</th><th>Example</th><th>Use</th><th>Why</th><th>QuickBite evidence</th></tr>
+    <tr><td>waits; tens to hundreds of tasks; normal (blocking) libraries</td><td>call a REST API for 200 user IDs with <code>requests</code>, boto3, a DB driver</td><td><strong>ThreadPoolExecutor</strong></td><td>waiting threads release the GIL; works with any library</td><td>menus 4.00 → 0.20 s</td></tr>
+    <tr><td>waits; thousands of tasks; async libraries exist</td><td>crawl 10,000 URLs, a websocket/chat server, an async web API</td><td><strong>asyncio</strong></td><td>a task costs a few KB, a thread far more; no locks needed</td><td>menus 4.00 → 0.20 s on one thread</td></tr>
+    <tr><td>computes in pure Python</td><td>route search, tokenising text, parsing logs, simulations</td><td><strong>ProcessPoolExecutor</strong></td><td>each process has its own GIL → every core works</td><td>routes 1.49 → 0.52 s</td></tr>
+    <tr><td>computes in numpy / pandas / PyTorch</td><td>matrix maths, groupby, a model's forward pass</td><td><strong>vectorise first</strong></td><td>the C code is already fast, releases the GIL, and often uses many cores</td><td>(numpy beat 4 processes ≈ 20× in <a class="xref" data-note="py_multiprocessing">Processes</a>)</td></tr>
+    <tr><td>both waits and computes</td><td>fetch then featurise</td><td><strong>asyncio (or threads) + a process pool</strong></td><td>each stage gets its own tool</td><td>whole run ≈ 5.5 → 0.7 s</td></tr>
+    <tr><td>tiny, fast tasks</td><td>adding up a list</td><td><strong>nothing</strong></td><td>the overhead of any tool exceeds the gain</td><td>(5000 tiny jobs: processes 1 s vs loop 0.01 s)</td></tr>
+  </table>
+  <div class="callout anlg"><span class="label">Analogy</span><p>Choosing transport: walking (plain loop) for the corner shop, a bicycle (threads) for short trips around town, a bus (asyncio) when you have to move very many people along the same route cheaply, and four trucks (processes) for heavy loads. Taking four trucks to the corner shop is slower than walking.</p></div>
+  <div class="callout def"><span class="label">Definition</span><p>Rule of thumb: <strong>waiting → concurrency (threads; asyncio when there are very many waits and async libraries), computing → parallelism (processes) or faster code (numpy)</strong>. And measure, because overhead can erase the gain on small jobs.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Choosing asyncio because it is fashionable when the code uses <code>requests</code>, <code>psycopg2</code> or another blocking library. Every blocking call inside <code>async def</code> freezes the loop, so you get the complexity of asyncio and the speed of a plain loop. Use threads, or switch to async libraries end to end.</p></div>
+  <div class="bridge"><b>What this still can't tell us → next: Reading Order.</b> We know which tool to pick. Now we need to learn to use each one well, in an order where each note builds on the one before.</div>
+
+  <h2 id="cc-order"><span class="num">07</span>Reading Order: What Each Note Answers</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>In which order should the three tools be learned, and what exactly will each note teach?</p>
+  </div>
+  <h3>1. <a class="xref" data-note="py_threading">Threads &amp; the GIL</a></h3>
+  <p>First, because threads are the most direct way to overlap waits and they introduce the problems every other tool reacts to. You will start and join threads with a timeline traced by hand, fetch the 20 menus in 0.2 s, measure that 4 threads do not speed up the routes, and learn why (the GIL, with reference counts shown for real). Then the price of shared memory: a race condition reproduced (800,000 updates, but only 440,000 to 730,000 counted, different every run), explained with <code>dis</code>, and fixed with <code>Lock</code>; <code>RLock</code>, a deadlock traced and fixed, <code>Semaphore</code>, <code>Event</code>, a <code>queue.Queue</code> producer–consumer, and <code>ThreadPoolExecutor</code>. Free-threaded Python 3.13t is covered briefly and honestly.</p>
+  <h3>2. <a class="xref" data-note="py_multiprocessing">Processes</a></h3>
+  <p>Second, because it answers the question threads leave open: how to use all cores. You will plan the routes in about a third of the time, see that processes do not share variables, learn why arguments must be picklable and why <code>if __name__ == "__main__":</code> is required (watching child processes re-run your file), measure what starting processes and copying data cost (and how <code>chunksize</code> fixes the tiny-task disaster), pass messages with <code>Queue</code> and <code>Pipe</code>, share memory with <code>Value</code>, <code>Array</code> and <code>shared_memory</code>, and learn when not to use processes at all.</p>
+  <h3>3. <a class="xref" data-note="py_asyncio">asyncio</a></h3>
+  <p>Last, because it builds on both: it does what threads do (overlap waits) without threads, and it hands CPU work to the processes. You will see that <code>async def</code> returns a coroutine object (driven by hand with <code>send</code>, exactly like a generator), why awaiting one by one is still sequential, <code>create_task</code> vs <code>await</code> on a traced timeline, <code>gather</code>, <code>TaskGroup</code>, timeouts and cancellation, <code>async with</code> and <code>async for</code>, the "never block the loop" rule measured, <code>to_thread</code> and <code>run_in_executor</code>, and real async HTTP against a local server with httpx and aiohttp.</p>
+  <div class="callout anlg"><span class="label">Analogy</span><p>Learning to run a kitchen: first hire helpers who share the kitchen (threads) and learn the rules that stop them colliding; then open more kitchens (processes) when one is not enough; finally train one very efficient waiter (asyncio) who coordinates everyone.</p></div>
+  <div class="callout def"><span class="label">Definition</span><p>The dependency chain: <strong>threads</strong> introduce concurrency, shared state and locks → <strong>processes</strong> remove the GIL limit by removing shared state → <strong>asyncio</strong> keeps concurrency but replaces OS threads with cooperative tasks on one thread, and borrows threads/processes for anything that blocks.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Starting with asyncio because "it's the modern way". Without knowing what threads do and what blocking means, the most common asyncio bug (a blocking call inside <code>async def</code>) makes no sense.</p></div>
+  <div class="bridge"><b>What this still can't tell us → next: How It All Connects.</b> One table that places every concept of the group on the running example.</div>
+
+  <h2 id="cc-connect"><span class="num">08</span>How It All Connects</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Can the whole group be held in one picture: what each concept is built from, which question it answers, and what it gave on QuickBite?</p>
+  </div>
+  <figure class="viz"><svg viewBox="0 0 680 270" width="680">
+    <defs><marker id="cc-a8" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="250" y="8" width="180" height="36" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="340" y="24" text-anchor="middle" font-size="12">slow program</text><text x="340" y="38" text-anchor="middle" class="tm" font-size="10">CPU / wall ratio?</text>
+    <line x1="300" y1="44" x2="160" y2="72" stroke="currentColor" marker-end="url(#cc-a8)"/>
+    <line x1="380" y1="44" x2="520" y2="72" stroke="currentColor" marker-end="url(#cc-a8)"/>
+    <rect x="70" y="74" width="180" height="36" rx="6" class="fb sb"/><text x="160" y="90" text-anchor="middle" font-size="12">I/O-bound</text><text x="160" y="104" text-anchor="middle" class="tm" font-size="10">needs concurrency</text>
+    <rect x="430" y="74" width="180" height="36" rx="6" class="fv"/><text x="520" y="90" text-anchor="middle" font-size="12">CPU-bound</text><text x="520" y="104" text-anchor="middle" class="tm" font-size="10">needs parallelism</text>
+    <line x1="130" y1="110" x2="90" y2="140" stroke="currentColor" marker-end="url(#cc-a8)"/>
+    <line x1="190" y1="110" x2="270" y2="140" stroke="currentColor" marker-end="url(#cc-a8)"/>
+    <line x1="520" y1="110" x2="520" y2="140" stroke="currentColor" marker-end="url(#cc-a8)"/>
+    <rect x="10" y="142" width="160" height="40" rx="6" class="fb sb"/><text x="90" y="160" text-anchor="middle" font-size="12">threads</text><text x="90" y="175" text-anchor="middle" class="tm" font-size="10">menus 4.00 → 0.20 s</text>
+    <rect x="200" y="142" width="160" height="40" rx="6" class="ft st"/><text x="280" y="160" text-anchor="middle" font-size="12">asyncio</text><text x="280" y="175" text-anchor="middle" class="tm" font-size="10">menus 0.20 s, 1 thread</text>
+    <rect x="440" y="142" width="160" height="40" rx="6" class="fv"/><text x="520" y="160" text-anchor="middle" font-size="12">processes</text><text x="520" y="175" text-anchor="middle" class="tm" font-size="10">routes 1.49 → 0.52 s</text>
+    <line x1="170" y1="162" x2="436" y2="162" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#cc-a8)"/><text x="380" y="135" class="tr" font-size="10">GIL blocks threads on CPU work</text>
+    <line x1="90" y1="182" x2="90" y2="212" stroke="currentColor" marker-end="url(#cc-a8)"/>
+    <rect x="10" y="214" width="160" height="36" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="90" y="230" text-anchor="middle" font-size="11">shared memory → races</text><text x="90" y="244" text-anchor="middle" class="tm" font-size="10">Lock, Queue</text>
+    <line x1="280" y1="182" x2="330" y2="212" stroke="currentColor" marker-end="url(#cc-a8)"/>
+    <line x1="520" y1="182" x2="440" y2="212" stroke="currentColor" marker-end="url(#cc-a8)"/>
+    <rect x="250" y="214" width="250" height="36" rx="6" class="fg sg"/><text x="375" y="230" text-anchor="middle" font-size="12">asyncio + process pool</text><text x="375" y="244" text-anchor="middle" class="tm" font-size="10">run_in_executor: whole run ≈ 0.7 s</text>
+  </svg><figcaption>The group as one picture. The diagnosis splits slow programs into waiting and computing. Waiting gets threads or asyncio; computing gets processes, because the GIL stops threads (dashed arrow). Threads' shared memory brings races and locks. The finished app joins asyncio and a process pool.</figcaption></figure>
+  <table class="tbl"><caption>Every concept of the group on QuickBite</caption>
+    <tr><th>Concept</th><th>Built from</th><th>Answers which question</th><th>On the running example</th><th>When to use</th></tr>
+    <tr><td>Sequential baseline</td><td>a plain loop</td><td>how slow is it, and is it correct?</td><td>menus 4.00 s, routes ≈ 1.5 s; 100 dishes; 40, 36, 35, 36</td><td>always first</td></tr>
+    <tr><td>I/O vs CPU diagnosis</td><td>wall clock + CPU clock</td><td>waiting or computing?</td><td>menus CPU 0%, routes CPU 98%</td><td>before choosing any tool</td></tr>
+    <tr><td>Concurrency</td><td>switching between tasks</td><td>can waits overlap?</td><td>20 waits in one 0.2 s window</td><td>I/O-bound work</td></tr>
+    <tr><td>Parallelism</td><td>several cores</td><td>can calculations run at once?</td><td>4 routes on 4 cores</td><td>CPU-bound work</td></tr>
+    <tr><td>Threads</td><td>OS threads in one process, shared memory</td><td>simplest concurrency?</td><td>menus 0.20 s; routes no faster</td><td>waiting with blocking libraries</td></tr>
+    <tr><td>GIL</td><td>one lock around the interpreter</td><td>why don't threads compute in parallel?</td><td>4 threads on routes 1.84 s vs 1.49 s</td><td>(a limit to know, not a tool)</td></tr>
+    <tr><td>Locks &amp; queues</td><td>threads + shared data</td><td>how do threads share safely?</td><td>800,000 updates only correct with a lock</td><td>whenever threads change shared data</td></tr>
+    <tr><td>Processes</td><td>separate interpreters, own GIL each</td><td>real parallelism?</td><td>routes 0.52 s; menus 1.02 s (wasteful)</td><td>pure-Python computing</td></tr>
+    <tr><td>asyncio</td><td>coroutines (generator-like pausing) + event loop</td><td>many waits, one thread?</td><td>menus 0.20 s on one thread</td><td>very many waits, async libraries</td></tr>
+    <tr><td>Executor bridge</td><td>asyncio + a pool</td><td>a program that waits and computes?</td><td>both jobs ≈ 0.7 s</td><td>mixed pipelines</td></tr>
+  </table>
+  <div class="callout intu"><span class="label">Key insight</span><p>One sentence holds the group: <strong>first ask whether the slow part is waiting or computing; waiting is hidden by concurrency (threads, or asyncio's single-threaded event loop), computing is shortened only by parallelism (processes, because the GIL lets one thread run Python at a time), and real programs combine them.</strong></p></div>
+  <div class="bridge"><b>What this still can't tell us → next: Common Mistakes.</b> One typical trap per tool, so you recognise them before meeting them in the child notes.</div>
+
+  <h2 id="cc-traps"><span class="num">09</span>Common Mistakes Across the Group</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Which single mistake is most typical for each tool, and where is it explained?</p>
+  </div>
+  <table class="tbl">
+    <tr><th>Tool</th><th>Typical mistake</th><th>Symptom</th><th>Details</th></tr>
+    <tr><td>Any</td><td>parallelising before profiling</td><td>no speed-up, or a database melts</td><td>section 03 here</td></tr>
+    <tr><td>Threads</td><td>threads for pure-Python calculation</td><td>4 threads as slow as 1 (the GIL)</td><td><a class="xref" data-note="py_threading">Threads &amp; the GIL</a> §03</td></tr>
+    <tr><td>Threads</td><td>changing shared data without a lock</td><td>wrong totals that differ every run</td><td><a class="xref" data-note="py_threading">Threads &amp; the GIL</a> §04</td></tr>
+    <tr><td>Processes</td><td>no <code>if __name__ == "__main__":</code>, or a lambda as the worker</td><td><code>RuntimeError</code> / <code>PicklingError</code></td><td><a class="xref" data-note="py_multiprocessing">Processes</a> §04</td></tr>
+    <tr><td>Processes</td><td>thousands of tiny tasks, or huge arguments</td><td>slower than a plain loop</td><td><a class="xref" data-note="py_multiprocessing">Processes</a> §05</td></tr>
+    <tr><td>asyncio</td><td><code>time.sleep</code> / <code>requests.get</code> / heavy maths inside <code>async def</code></td><td>"concurrent" code runs one task at a time</td><td><a class="xref" data-note="py_asyncio">asyncio</a> §08</td></tr>
+    <tr><td>asyncio</td><td>awaiting one by one in a loop</td><td>20 menus still take 4 s</td><td><a class="xref" data-note="py_asyncio">asyncio</a> §03</td></tr>
+  </table>
+  <div class="bridge"><b>What this still can't tell us → next: the child notes.</b> This map only names the ideas. Start with <a class="xref" data-note="py_threading">Threads &amp; the GIL</a>, where the first thread is started and traced on the QuickBite menus.</div>
+
+  <h2 id="cc-rev"><span class="num">R</span>Revision Sheet</h2>
+  <p>The group on one page. Running example: QuickBite fetches 20 menus (0.2 s each; dishes 4, 5, 6, 7, 3 repeating → 100) and plans 4 riders' routes (9 stops each, try all 9! orders; costs 40, 36, 35, 36). Hand example: stops A (2, 1), B (5, 3), C (1, 4) from (0, 0) → best order A → C → B = 3 + 4 + 5 = 12.</p>
+  <h3>The ladder in one line each</h3>
+  <table class="tbl">
+    <tr><th>Concept</th><th>Question it answers</th><th>Answer in one line</th></tr>
+    <tr><td>Sequential</td><td>why is it slow?</td><td>waits add up: 20 × 0.2 s = 4.0 s with the CPU idle</td></tr>
+    <tr><td>Concurrency</td><td>can we use the waiting time?</td><td>keep many tasks in progress and switch: waits overlap</td></tr>
+    <tr><td>Parallelism</td><td>can we compute faster?</td><td>run on several cores at the same instant</td></tr>
+    <tr><td>I/O- vs CPU-bound</td><td>which does my code need?</td><td>CPU time / wall time: ≈ 0% waiting, ≈ 100% computing</td></tr>
+    <tr><td>Threads</td><td>simplest concurrency?</td><td>shared-memory workers; menus 4.0 → 0.2 s</td></tr>
+    <tr><td>GIL</td><td>why no speed-up on routes?</td><td>one thread runs Python at a time; released while waiting</td></tr>
+    <tr><td>Processes</td><td>how to use all cores?</td><td>separate interpreters with their own GIL; routes ≈ 3× faster; cost: start-up, pickling</td></tr>
+    <tr><td>asyncio</td><td>many waits, one thread?</td><td>coroutines + event loop; switch only at <code>await</code>; never block</td></tr>
+    <tr><td>Combination</td><td>a program that does both?</td><td>asyncio for I/O + process pool for CPU via <code>run_in_executor</code></td></tr>
+  </table>
+  <h3>Measured on this machine (4 cores; ratios matter, not exact times)</h3>
+  <table class="tbl">
+    <tr><th>Job</th><th>Sequential</th><th>Threads</th><th>Processes (4)</th><th>asyncio</th></tr>
+    <tr><td>Menus (waiting)</td><td>4.00 s</td><td>0.20 s</td><td>1.02 s</td><td>0.20 s</td></tr>
+    <tr><td>Routes (computing)</td><td>1.49 s</td><td>1.84 s</td><td>0.52 s</td><td>1.62 s</td></tr>
+  </table>
+  <h3>Which tool when</h3>
+  <div class="cards">
+    <div><b>Waiting, normal libraries</b><p><code>ThreadPoolExecutor</code>. Lock any shared data you change.</p><small>APIs with requests, boto3, DB drivers</small></div>
+    <div><b>Waiting, thousands, async libraries</b><p>asyncio with <code>gather</code>/<code>TaskGroup</code>, a semaphore, one shared client.</p><small>crawlers, websockets, FastAPI</small></div>
+    <div><b>Computing, pure Python</b><p><code>ProcessPoolExecutor</code> under <code>if __name__ == "__main__":</code>, top-level functions, big chunks.</p><small>route search, parsing</small></div>
+    <div><b>Computing, numpy/pandas</b><p>Vectorise first; the C code is already fast and releases the GIL.</p><small>do not wrap numpy in processes by reflex</small></div>
+  </div>
+  <div class="callout trap"><span class="label">Key traps</span>
+    <p>Not profiling first; threads for CPU work; shared data without a lock; missing <code>__main__</code> guard or unpicklable worker; tiny tasks or huge arguments sent to processes; blocking calls inside <code>async def</code>; awaiting one by one and calling it concurrent.</p>
+  </div>
+  <h3>Five rapid-fire checks</h3>
+  <table class="tbl">
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>20 requests × 0.2 s, sequential vs 20 threads?</td><td>4.0 s vs ≈ 0.2 s</td></tr>
+    <tr><td>Concurrency or parallelism: one cook, four pans?</td><td>Concurrency</td></tr>
+    <tr><td>A function has CPU time 0.1 s and wall time 5 s. Which tool?</td><td>I/O-bound → threads or asyncio</td></tr>
+    <tr><td>Why are 4 threads no faster at route planning?</td><td>The GIL: only one thread runs Python bytecode at a time</td></tr>
+    <tr><td>Total dishes over the 20 QuickBite menus?</td><td>4 × (4 + 5 + 6 + 7 + 3) = 100</td></tr>
+  </table>
+
+  <h2 id="cc-qa"><span class="num">10</span>Questions &amp; Answers</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>What is the GIL and when does it matter?</summary><div class="qa-body">A CPython lock that allows one thread to execute Python bytecode at a time; it protects reference counting. It matters for CPU-bound pure-Python threads (no speed-up: 2 threads 1.07 s vs 1.01 s). It doesn't matter much for I/O-bound threads (released while waiting) or numpy-heavy code (C releases it). For CPU parallelism use processes.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Threading vs multiprocessing vs asyncio: when do you use each?</summary><div class="qa-body">Threads: I/O-bound work with normal blocking libraries, tens to hundreds of tasks. Processes: CPU-bound pure-Python work; costs memory, start-up and pickling. asyncio: very many concurrent I/O waits (thousands of sockets) with async libraries; one thread, no locks, but the whole call path must be async.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Concurrency vs parallelism?</summary><div class="qa-body">Concurrency: several tasks in progress, switching between them (one cook, many pans; threads/asyncio). Parallelism: several tasks executing at the same instant on different cores (several cooks; processes). Concurrency helps waiting work; parallelism helps computing work.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is a race condition and how do you prevent it?</summary><div class="qa-body">The result depends on thread timing: two threads read 5, both write 6, one increment lost. Prevent with a <code>Lock</code> around the read-modify-write (<code>with lock:</code> releases even on exceptions), or avoid sharing: give each thread its own data and combine via a <code>queue.Queue</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is a deadlock and how do you prevent it?</summary><div class="qa-body">A circular wait: A holds L1 and wants L2, B holds L2 and wants L1, so both wait forever. Prevent with a single global lock order, <code>acquire(timeout=...)</code>, not holding locks during slow I/O, or queues instead of raw locks.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is a coroutine and how does <code>await</code> work?</summary><div class="qa-body">The object returned by calling an <code>async def</code> function; it does nothing until awaited or scheduled as a task. At <code>await</code> it suspends and hands control to the event loop, which runs other ready tasks and resumes it when the awaited thing completes. The switching is cooperative: code that never awaits blocks everything.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What's the total time? <code>await f(); await g()</code> vs <code>await asyncio.gather(f(), g())</code>, each sleeping 1 s.</summary><div class="qa-body">~2 s vs ~1 s. Awaiting one after another is sequential; <code>gather</code> runs them concurrently (measured: 2.0 s vs 1.0 s).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Your async service got slow. You find <code>requests.get</code> inside an <code>async def</code>. Why is that a problem?</summary><div class="qa-body"><code>requests</code> blocks the thread, and the event loop runs on that thread, so every other task freezes for the duration. Switch to <code>httpx.AsyncClient</code>/<code>aiohttp</code>, or wrap the call in <code>await asyncio.to_thread(requests.get, url)</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why might a ProcessPoolExecutor be <em>slower</em> than a plain loop?</summary><div class="qa-body">Overhead: starting processes, pickling arguments and results, and tiny tasks that each pay a round-trip. Fix with bigger tasks or <code>chunksize</code>, send paths not DataFrames, use shared memory, and check that cores are actually free.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why do I need <code>if __name__ == "__main__":</code> with multiprocessing?</summary><div class="qa-body">With the spawn/forkserver start methods each child imports your main module. Unguarded top-level code would run again in every child, starting more processes. The guard makes pool creation run only in the parent.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you share a large numpy array with worker processes without copying it?</summary><div class="qa-body"><code>multiprocessing.shared_memory.SharedMemory</code>: create a buffer, wrap it with <code>np.ndarray(shape, dtype, buffer=shm.buf)</code>, pass <code>shm.name</code> to workers, who attach by name. Call <code>close()</code> in every process and <code>unlink()</code> once at the end. Writers still need coordination.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you stop 10,000 async requests from overwhelming an API?</summary><div class="qa-body">Wrap each request in <code>async with asyncio.Semaphore(n)</code> so at most n are in flight, reuse one client for connection pooling, set timeouts, and use <code>return_exceptions=True</code> (or a TaskGroup with retries) so one failure doesn't lose the batch.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span><code>executor.map</code> vs <code>submit</code> + <code>as_completed</code>?</summary><div class="qa-body"><code>map</code> returns results in input order and re-raises the first exception when you reach it. <code>submit</code> returns Futures; <code>as_completed</code> yields them as they finish, so you can process fast results first and handle each failure separately.</div></details>
-</main>`
+  <details class="qa"><summary><span class="qmark">Q</span>Concurrency vs parallelism: what is the difference, with an example of each?</summary><div class="qa-body">Concurrency: several tasks in progress, switching between them (one cook with four pans; 20 menu requests waiting together on one thread). Parallelism: several tasks executing at the same instant on different cores (four cooks; 4 route plans on 4 cores). Concurrency hides waiting; only parallelism speeds up computing.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you tell whether code is I/O-bound or CPU-bound?</summary><div class="qa-body">Measure wall time (<code>time.perf_counter</code>) and CPU time (<code>time.process_time</code>) around it, or profile it. CPU / wall near 0% means it is waiting (I/O-bound); near 100% means it is computing (CPU-bound). The QuickBite menus were 0%, the routes 98%.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Threading vs multiprocessing vs asyncio: when each?</summary><div class="qa-body">Threads: I/O-bound work with normal blocking libraries, tens to hundreds of tasks. Processes: CPU-bound pure-Python work; costs start-up, memory and pickling. asyncio: very many concurrent waits with async libraries; one thread, no locks, but every call in the path must cooperate (never block).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does the GIL make processes necessary?</summary><div class="qa-body">The GIL allows only one thread per interpreter to run Python bytecode at a time, so threads cannot calculate in parallel. A process is a separate interpreter with its own GIL, so 4 processes can run Python on 4 cores at once. Without the GIL (free-threaded builds), threads could do it, which is why that work matters.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: why are processes a poor choice for the menus even though they "run in parallel"?</summary><div class="qa-body">Waiting does not need a core. With 4 processes only 4 requests wait at a time, so 20 requests take 5 rounds (1.02 s), and you pay process start-up and pickling. Threads or asyncio let all 20 wait together in 0.2 s for almost no cost.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: what does asyncio borrow from generators?</summary><div class="qa-body">The ability to pause a function in the middle and resume it later with its local variables intact. A coroutine is driven with <code>send()</code> and finishes with <code>StopIteration</code>, just like a generator; <code>await</code> is the pause point, as <code>yield</code> is for generators. The event loop is the code that calls <code>send</code> for you.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks if you skip the diagnosis step?</summary><div class="qa-body">You may pick the wrong tool: threads for a calculation (no gain, extra race risk), processes for waiting (5× worse than threads on the menus), or any tool for a job dominated by one slow query (the database gets hammered, the program gets no faster).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why did the combined app take about 0.7 s and not 0.2 s?</summary><div class="qa-body">The two jobs overlapped, so the total is set by the slower one: the routes need about 0.5 s on 4 processes (plus start-up), while the menus finished at about 0.2 s. Overlapping removed the menu time entirely, not the route time.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Where will you meet these tools in data and ML work?</summary><div class="qa-body">Threads: parallel S3/API downloads, PyTorch <code>DataLoader</code> prefetching. Processes: <code>DataLoader(num_workers=…)</code>, scikit-learn's <code>n_jobs</code>, parallel feature engineering. asyncio: <a class="xref" data-note="api_fastapi">FastAPI</a> endpoints, async database drivers, streaming consumers such as aiokafka for <a class="xref" data-note="de_kafka">Kafka</a>, calling LLM APIs for many prompts at once.</div></details>
+</main>
+`
 });
