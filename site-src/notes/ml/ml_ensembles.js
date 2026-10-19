@@ -503,14 +503,14 @@ for name, team in teams.items():
   <figure class="viz"><svg viewBox="0 0 680 250" width="680">
 <defs><marker id="ens-tx" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
 <text x="85" y="18" text-anchor="middle" font-weight="700" font-size="13">Bagging</text>
-<text x="85" y="33" text-anchor="middle" class="tm" font-size="11">parallel · same algorithm</text>
+<text x="85" y="33" text-anchor="middle" class="tm" font-size="10">parallel · 1 algorithm</text>
 <rect x="20" y="45" width="40" height="26" rx="5" class="fb sb" fill-opacity="0.3"/><rect x="65" y="45" width="40" height="26" rx="5" class="fb sb" fill-opacity="0.3"/><rect x="110" y="45" width="40" height="26" rx="5" class="fb sb" fill-opacity="0.3"/>
 <text x="40" y="62" text-anchor="middle" font-size="10">h₁</text><text x="85" y="62" text-anchor="middle" font-size="10">h₂</text><text x="130" y="62" text-anchor="middle" font-size="10">h₃</text>
 <line x1="40" y1="71" x2="80" y2="118" stroke="currentColor" marker-end="url(#ens-tx)"/><line x1="85" y1="71" x2="85" y2="118" stroke="currentColor" marker-end="url(#ens-tx)"/><line x1="130" y1="71" x2="90" y2="118" stroke="currentColor" marker-end="url(#ens-tx)"/>
 <rect x="45" y="120" width="80" height="28" rx="6" class="fg sg" fill-opacity="0.3"/><text x="85" y="138" text-anchor="middle" font-size="11">average / vote</text>
 <text x="85" y="172" text-anchor="middle" class="tb" font-size="11">each on a bootstrap</text><text x="85" y="186" text-anchor="middle" class="tb" font-size="11">sample · cuts variance</text>
 <text x="255" y="18" text-anchor="middle" font-weight="700" font-size="13">Boosting</text>
-<text x="255" y="33" text-anchor="middle" class="tm" font-size="11">sequential · same algorithm</text>
+<text x="255" y="33" text-anchor="middle" class="tm" font-size="10">sequential · 1 algo</text>
 <rect x="190" y="45" width="40" height="26" rx="5" class="ft st" fill-opacity="0.3"/><rect x="235" y="45" width="40" height="26" rx="5" class="ft st" fill-opacity="0.3"/><rect x="280" y="45" width="40" height="26" rx="5" class="ft st" fill-opacity="0.3"/>
 <text x="210" y="62" text-anchor="middle" font-size="10">h₁</text><text x="255" y="62" text-anchor="middle" font-size="10">h₂</text><text x="300" y="62" text-anchor="middle" font-size="10">h₃</text>
 <line x1="230" y1="58" x2="234" y2="58" stroke="currentColor" marker-end="url(#ens-tx)"/><line x1="275" y1="58" x2="279" y2="58" stroke="currentColor" marker-end="url(#ens-tx)"/>
@@ -518,14 +518,14 @@ for name, team in teams.items():
 <rect x="205" y="120" width="100" height="28" rx="6" class="fg sg" fill-opacity="0.3"/><text x="255" y="138" text-anchor="middle" font-size="11">weighted sum</text>
 <text x="255" y="172" text-anchor="middle" class="tb" font-size="11">each fixes the team's</text><text x="255" y="186" text-anchor="middle" class="tb" font-size="11">errors · cuts bias</text>
 <text x="425" y="18" text-anchor="middle" font-weight="700" font-size="13">Voting</text>
-<text x="425" y="33" text-anchor="middle" class="tm" font-size="11">parallel · different algorithms</text>
+<text x="425" y="33" text-anchor="middle" class="tm" font-size="10">parallel · mixed</text>
 <rect x="360" y="45" width="40" height="26" rx="5" class="fb sb" fill-opacity="0.3"/><rect x="405" y="45" width="40" height="26" rx="5" class="ft st" fill-opacity="0.3"/><rect x="450" y="45" width="40" height="26" rx="5" class="fv" stroke="currentColor"/>
 <text x="380" y="62" text-anchor="middle" font-size="10">RF</text><text x="425" y="62" text-anchor="middle" font-size="10">GBM</text><text x="470" y="62" text-anchor="middle" font-size="10">kNN</text>
 <line x1="380" y1="71" x2="420" y2="118" stroke="currentColor" marker-end="url(#ens-tx)"/><line x1="425" y1="71" x2="425" y2="118" stroke="currentColor" marker-end="url(#ens-tx)"/><line x1="470" y1="71" x2="430" y2="118" stroke="currentColor" marker-end="url(#ens-tx)"/>
 <rect x="375" y="120" width="100" height="28" rx="6" class="fg sg" fill-opacity="0.3"/><text x="425" y="138" text-anchor="middle" font-size="11">fixed rule</text>
 <text x="425" y="172" text-anchor="middle" class="tb" font-size="11">hard / soft / weighted</text><text x="425" y="186" text-anchor="middle" class="tb" font-size="11">no learning in combiner</text>
 <text x="595" y="18" text-anchor="middle" font-weight="700" font-size="13">Stacking</text>
-<text x="595" y="33" text-anchor="middle" class="tm" font-size="11">parallel + a meta-model</text>
+<text x="595" y="33" text-anchor="middle" class="tm" font-size="10">parallel + meta</text>
 <rect x="530" y="45" width="40" height="26" rx="5" class="fb sb" fill-opacity="0.3"/><rect x="575" y="45" width="40" height="26" rx="5" class="ft st" fill-opacity="0.3"/><rect x="620" y="45" width="40" height="26" rx="5" class="fv" stroke="currentColor"/>
 <text x="550" y="62" text-anchor="middle" font-size="10">RF</text><text x="595" y="62" text-anchor="middle" font-size="10">GBM</text><text x="640" y="62" text-anchor="middle" font-size="10">kNN</text>
 <line x1="550" y1="71" x2="590" y2="118" stroke="currentColor" marker-end="url(#ens-tx)"/><line x1="595" y1="71" x2="595" y2="118" stroke="currentColor" marker-end="url(#ens-tx)"/><line x1="640" y1="71" x2="600" y2="118" stroke="currentColor" marker-end="url(#ens-tx)"/>
@@ -578,13 +578,13 @@ models = {
 for name, m in models.items():
     t0 = time.time(); m.fit(Xtr, ytr); sec = time.time() - t0
     print(f"{name:36s} test acc {m.score(Xte, yte):.3f}   fit {sec:5.1f}s")</div>
-  <div class="fx" data-lang="text">single deep tree      (none)         test acc 0.778   fit   2.3s
-bagging 100 trees     (parallel)     test acc 0.870   fit 106.6s
-random forest 300     (parallel)     test acc 0.877   fit  59.1s
-hist grad. boosting   (sequential)   test acc 0.862   fit   7.6s
-soft vote rf+hgb+knn  (voting)       test acc 0.866   fit  56.8s
-stack rf+hgb+knn -&gt; LR (meta)        test acc 0.877   fit 356.9s</div>
-  <p>Every ensemble beats the single tree (0.778) by 8–10 points. The two parallel bagging-family teams lead (0.870, 0.877); the default histogram booster is close (0.862; tuned boosters reach the same level, see <a class="xref" data-note="ml_lightgbm">LightGBM</a>). The two heterogeneous blends show the subtle part: the soft vote (0.866) is <em>worse</em> than the forest alone, because the weaker kNN member drags the plain average down, while the stack (0.877) learns to lean on the forest and matches it, but does not beat it. Note the fit times: the stack retrains every member 5 + 1 times. These times came from a heavily shared machine (other jobs were running), so they are inflated; read only the order of magnitude.</p>
+  <div class="fx" data-lang="text">single deep tree      (none)         test acc 0.778   fit   0.6s
+bagging 100 trees     (parallel)     test acc 0.870   fit  52.0s
+random forest 300     (parallel)     test acc 0.877   fit  21.3s
+hist grad. boosting   (sequential)   test acc 0.862   fit   0.9s
+soft vote rf+hgb+knn  (voting)       test acc 0.866   fit  21.3s
+stack rf+hgb+knn -&gt; LR (meta)        test acc 0.877   fit 114.6s</div>
+  <p>Every ensemble beats the single tree (0.778) by 8–10 points. The two parallel bagging-family teams lead (0.870, 0.877); the default histogram booster is close (0.862; tuned boosters reach the same level, see <a class="xref" data-note="ml_lightgbm">LightGBM</a>). The two heterogeneous blends show the subtle part: the soft vote (0.866) is <em>worse</em> than the forest alone, because the weaker kNN member drags the plain average down, while the stack (0.877) learns to lean on the forest and matches it, but does not beat it. Note the fit times: the stack (115 s) retrains every member 5 + 1 times, about 5× the forest. These times come from a shared 4-core machine with other jobs running, so read only the order of magnitude.</p>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Times here come from a shared 4-core machine and change from run to run; compare them as "seconds vs minutes", not to the decimal. And never pick an ensemble on test accuracy: choose on validation or cross-validation, then report test once (<a class="xref" data-note="ml_evaluation">Model Evaluation</a>).</p>
   </div>
@@ -654,11 +654,11 @@ for name, m in models.items():
         t0 = time.perf_counter(); m.predict_proba(one); t.append(time.perf_counter() - t0)
     size = len(pickle.dumps(m)) / 1e6
     print(f"{name:20s} 1-row latency {np.median(t)*1000:6.1f} ms   saved size {size:6.2f} MB")</div>
-  <div class="fx" data-lang="text">single tree          1-row latency    0.6 ms   saved size   0.03 MB
-random forest 300    1-row latency  120.7 ms   saved size  69.08 MB
-hist grad. boosting  1-row latency    1.7 ms   saved size   0.39 MB
-stack rf+hgb+knn     1-row latency  274.9 ms   saved size 140.61 MB</div>
-  <p>The ensemble prices are steep. One depth-8 tree answers in 0.6 ms and saves to 0.03 MB. The 300-tree forest takes about 120 ms per single-row request (sklearn walks the trees one by one in Python-level loops, and this machine was heavily loaded, so absolute numbers are inflated) and needs 69 MB, because each fully grown tree stores thousands of nodes. The histogram booster is the efficient ensemble: 1.7 ms and 0.39 MB, since its trees are small. The stack carries a forest, a booster, a kNN model (which stores all 12,000 training rows) and a meta-model: 275 ms and 141 MB, for no accuracy gain over the forest on this data (section 07).</p>
+  <div class="fx" data-lang="text">single tree          1-row latency    1.2 ms   saved size   0.03 MB
+random forest 300    1-row latency   48.2 ms   saved size  69.08 MB
+hist grad. boosting  1-row latency    1.5 ms   saved size   0.39 MB
+stack rf+hgb+knn     1-row latency   41.4 ms   saved size 140.61 MB</div>
+  <p>The ensemble prices are steep. One depth-8 tree answers in about 1 ms and saves to 0.03 MB. The 300-tree forest takes about 48 ms per single-row request (sklearn walks the 300 trees one after another, with Python overhead per tree) and needs 69 MB, because each fully grown tree stores thousands of nodes. The histogram booster is the efficient ensemble: 1.5 ms and 0.39 MB, since its trees are small. The stack carries a forest, a booster, a kNN model (which stores all 12,000 training rows) and a meta-model: 141 MB, and a latency dominated by its forest (41 ms here; single-request timings on a shared machine jump by ±50%, so 41 vs 48 is noise). All that for no accuracy gain over the forest on this data (section 07).</p>
   <div class="cards">
     <div><b>Training time</b><p>n members (× k folds for stacking). Parallel designs spread over cores (<code>n_jobs=-1</code>); boosting rounds cannot.</p><small>Bagging / RF parallel; boosting sequential</small></div>
     <div><b>Latency</b><p>Every request runs every member. A 300-tree forest walks 300 root-to-leaf paths.</p><small>Matters for real-time APIs</small></div>

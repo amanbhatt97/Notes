@@ -46,7 +46,7 @@ Object.assign(TOPIC_CONTENT, {
 <text x="410" y="272" text-anchor="middle" font-size="12" font-weight="400">LightGBM</text>
 <rect x="468" y="252" width="104" height="32" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.35"/>
 <text x="520" y="272" text-anchor="middle" font-size="12" font-weight="400">CatBoost</text>
-<text x="191" y="210" class="tg" font-size="11" font-weight="700">◀ you are here</text>
+<text x="110" y="237" text-anchor="middle" class="tg" font-size="11" font-weight="700">▲ you are here</text>
 </svg><figcaption>Bagging is the root of the parallel branch. Random Forest and Extra Trees are bagging plus extra randomness.</figcaption></figure>
   <ul>
     <li><strong>Came from:</strong> <a class="xref" data-note="ml_ensembles">Ensemble Learning: The Idea</a>. That note proved a team beats its members only if the members make <em>different</em> mistakes (Var = ρσ² + (1 − ρ)σ²/n). It left one practical question open: we have exactly one training table, so where do different members come from?</li>
@@ -239,19 +239,19 @@ rows drawn 3 times: 0.060   Poisson(1) says 0.061</div>
 
   <h2 id="bag-algo"><span class="num">03</span>The Bagging Algorithm</h2>
   <figure class="viz"><svg viewBox="0 0 640 210" width="640">
-<defs><marker id="bag-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+<defs><marker id="bag-al" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
 <rect x="10" y="80" width="95" height="50" rx="7" class="fs" stroke="currentColor"/><text x="57" y="102" text-anchor="middle" font-size="12">training data</text><text x="57" y="118" text-anchor="middle" class="tm" font-size="11">n rows</text>
 <rect x="160" y="14" width="120" height="38" rx="6" class="fb sb" fill-opacity="0.3"/><text x="220" y="37" text-anchor="middle" font-size="12">bootstrap 1</text>
 <rect x="160" y="86" width="120" height="38" rx="6" class="fb sb" fill-opacity="0.3"/><text x="220" y="109" text-anchor="middle" font-size="12">bootstrap 2</text>
 <rect x="160" y="158" width="120" height="38" rx="6" class="fb sb" fill-opacity="0.3"/><text x="220" y="181" text-anchor="middle" font-size="12">bootstrap B</text>
-<line x1="105" y1="95" x2="158" y2="35" stroke="currentColor" marker-end="url(#bag-ar)"/><line x1="105" y1="105" x2="158" y2="105" stroke="currentColor" marker-end="url(#bag-ar)"/><line x1="105" y1="115" x2="158" y2="175" stroke="currentColor" marker-end="url(#bag-ar)"/>
+<line x1="105" y1="95" x2="158" y2="35" stroke="currentColor" marker-end="url(#bag-al)"/><line x1="105" y1="105" x2="158" y2="105" stroke="currentColor" marker-end="url(#bag-al)"/><line x1="105" y1="115" x2="158" y2="175" stroke="currentColor" marker-end="url(#bag-al)"/>
 <rect x="320" y="14" width="110" height="38" rx="6" class="ft st" fill-opacity="0.3"/><text x="375" y="37" text-anchor="middle" font-size="12">model h₁</text>
 <rect x="320" y="86" width="110" height="38" rx="6" class="ft st" fill-opacity="0.3"/><text x="375" y="109" text-anchor="middle" font-size="12">model h₂</text>
 <rect x="320" y="158" width="110" height="38" rx="6" class="ft st" fill-opacity="0.3"/><text x="375" y="181" text-anchor="middle" font-size="12">model h_B</text>
-<line x1="280" y1="33" x2="318" y2="33" stroke="currentColor" marker-end="url(#bag-ar)"/><line x1="280" y1="105" x2="318" y2="105" stroke="currentColor" marker-end="url(#bag-ar)"/><line x1="280" y1="177" x2="318" y2="177" stroke="currentColor" marker-end="url(#bag-ar)"/>
+<line x1="280" y1="33" x2="318" y2="33" stroke="currentColor" marker-end="url(#bag-al)"/><line x1="280" y1="105" x2="318" y2="105" stroke="currentColor" marker-end="url(#bag-al)"/><line x1="280" y1="177" x2="318" y2="177" stroke="currentColor" marker-end="url(#bag-al)"/>
 <text x="220" y="140" text-anchor="middle" class="tm" font-size="16">⋮</text><text x="375" y="140" text-anchor="middle" class="tm" font-size="16">⋮</text>
 <rect x="470" y="78" width="160" height="54" rx="7" class="fg sg" fill-opacity="0.3"/><text x="550" y="100" text-anchor="middle" font-size="12">aggregate</text><text x="550" y="118" text-anchor="middle" class="tm" font-size="11">mean · vote · avg prob</text>
-<line x1="430" y1="33" x2="468" y2="92" stroke="currentColor" marker-end="url(#bag-ar)"/><line x1="430" y1="105" x2="468" y2="105" stroke="currentColor" marker-end="url(#bag-ar)"/><line x1="430" y1="177" x2="468" y2="120" stroke="currentColor" marker-end="url(#bag-ar)"/>
+<line x1="430" y1="33" x2="468" y2="92" stroke="currentColor" marker-end="url(#bag-al)"/><line x1="430" y1="105" x2="468" y2="105" stroke="currentColor" marker-end="url(#bag-al)"/><line x1="430" y1="177" x2="468" y2="120" stroke="currentColor" marker-end="url(#bag-al)"/>
 </svg><figcaption>Bagging: B bootstrap samples, the same algorithm trained on each (independently, so in parallel), and one combined answer.</figcaption></figure>
   <div class="callout def"><span class="label">Algorithm (bagging)</span>
     <p>Input: training set of n rows, a base algorithm, number of members B. <strong>For b = 1 … B</strong>: draw a bootstrap sample D_b (n rows with replacement); train h_b on D_b. <strong>Predict</strong>: regression f̂(x) = (1/B) Σ h_b(x); classification by majority vote of h_b(x), or by averaging class probabilities and taking the largest.</p>
@@ -459,7 +459,7 @@ floor as B -&gt; infinity: rho*sigma^2 = 0.0416</div>
 <text x="360" y="43" class="tb" font-size="12">blue: bagging, 200 trees</text>
 <text x="360" y="59" class="tm" font-size="12">dashed: true curve sin(x)</text>
 <text x="30" y="224" class="tm" font-size="11">x from 0 to 6 · 60 noisy training points</text>
-</svg><figcaption>One deep tree (red) jumps to every noisy point. The average of 200 bagged trees (blue) is a much smoother staircase that stays close to the true curve. Drawn from a real run.</figcaption></figure>
+</svg><figcaption>One deep tree (red) jumps to every noisy point. The average of 200 bagged trees (blue) still bends toward the data, but its jumps are smaller and it stays closer to the true curve (dashed): mean squared distance from the truth 0.059 for the tree, 0.028 for the bag. Drawn from a real run.</figcaption></figure>
   <div class="fx" data-lang="py">import numpy as np
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import BaggingRegressor
@@ -484,13 +484,13 @@ s.append(f'&lt;text x="{W-200}" y="{T+12}" class="tr" font-size="12"&gt;red: one
 s.append(f'&lt;text x="{W-200}" y="{T+28}" class="tb" font-size="12"&gt;blue: bagging, 200 trees&lt;/text&gt;')
 s.append(f'&lt;text x="{W-200}" y="{T+44}" class="tm" font-size="12"&gt;dashed: true curve sin(x)&lt;/text&gt;')
 s.append(f'&lt;text x="{L}" y="{H-6}" class="tm" font-size="11"&gt;x from 0 to 6 · 60 noisy training points&lt;/text&gt;')
-s.append('&lt;/svg&gt;&lt;figcaption&gt;One deep tree (red) jumps to every noisy point. The average of 200 bagged trees (blue) is a much smoother staircase that stays close to the true curve. Drawn from a real run.&lt;/figcaption&gt;&lt;/figure&gt;')
+s.append('&lt;/svg&gt;&lt;figcaption&gt;One deep tree (red) jumps to every noisy point. The average of 200 bagged trees (blue) still bends toward the data, but its jumps are smaller and it stays closer to the true curve (dashed). Drawn from a real run.&lt;/figcaption&gt;&lt;/figure&gt;')
 open("d_svg.svg", "w").write("\\n".join(s))
 print("one tree MSE vs truth:", round(float(np.mean((one - np.sin(g.ravel()))**2)), 4))
 print("bagged   MSE vs truth:", round(float(np.mean((bag - np.sin(g.ravel()))**2)), 4))</div>
   <div class="fx" data-lang="text">one tree MSE vs truth: 0.0593
 bagged   MSE vs truth: 0.028</div>
-  <p>On this training set the single tree's mean squared distance from the true curve is 0.059; the bagged average's is 0.028, about half. The picture shows why: the single tree chases every noisy dot; the bagged trees chase <em>different</em> dots (each saw a different 63%), and their average follows what they agree on, the real curve.</p>
+  <p>On this training set the single tree's mean squared distance from the true curve is 0.059; the bagged average's is 0.028, about half. The picture shows why: the single tree chases every noisy dot; each bagged tree chases a <em>different</em> subset of dots (each saw a different 63%), so where they disagree their jumps partly cancel and the average leans toward what they share, the real curve. It is not perfectly smooth (every member is still a deep tree), but the error from the truth is halved.</p>
   <h3>And bias?</h3>
   <p>Each bagged member has the bias of the base model trained on ≈ 63% of the unique rows, which is about the same as (or slightly larger than) the bias of the base model on all rows. Averaging does not change the average prediction, so <strong>bagging keeps the bias of its base model</strong>. In the bias-variance experiment in the ensemble note, bagging 50 deep trees moved bias² 0.0014 → 0.0010 (unchanged within noise) and variance 0.0897 → 0.0432.</p>
   <div class="callout def"><span class="label">In one line</span>
@@ -507,7 +507,21 @@ bagged   MSE vs truth: 0.028</div>
     <tr><th>Unstable (bagging helps)</th><th>Stable (bagging does little)</th></tr>
     <tr><td>Fully grown decision trees, neural networks, subset selection in regression</td><td>Linear / logistic regression, kNN with large k, naive Bayes, SVM with wide margin, stumps</td></tr>
   </table>
-  <p>Test it on the churn data: the same 50-member bag around six different base models.</p>
+  <p>Test it on the churn data. This is the shared customer table used across the tree-family notes (20,000 rows, 12 <code>make_classification</code> columns plus two pure-noise columns; 12,000 train / 3,000 validation / 5,000 test). Every churn block below starts from this setup.</p>
+  <div class="fx" data-lang="py">import numpy as np, pandas as pd, time
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
+from sklearn.ensemble import RandomForestClassifier
+X, y = make_classification(n_samples=20000, n_features=12, n_informative=6, n_redundant=2,
+                           n_clusters_per_class=3, class_sep=0.8, flip_y=0.05, random_state=7)
+X = pd.DataFrame(X, columns=[f"f{i}" for i in range(12)])
+rng = np.random.default_rng(0)
+X["row_noise"] = rng.random(20000)               # pure noise, 20,000 different values
+X["coin_noise"] = rng.integers(0, 2, 20000)      # pure noise, only 0 or 1
+Xtmp, Xte, ytmp, yte = train_test_split(X, y, test_size=5000, stratify=y, random_state=0)
+Xtr, Xva, ytr, yva = train_test_split(Xtmp, ytmp, test_size=3000, stratify=ytmp, random_state=0)</div>
+  <p>Now the same 50-member bag around six different base models.</p>
   <div class="fx" data-lang="py">from sklearn.ensemble import BaggingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
@@ -614,11 +628,11 @@ for name, (ms, bs, mf, bf) in variants.items():
     one = np.mean(P == yva, axis=1).mean()
     agree = np.mean([np.mean(P[i] == P[j]) for i in range(30) for j in range(i)])
     print(f"{name:29s} one tree {one:.3f}  trees agree {agree:.1%}  ensemble val {m.score(Xva, yva):.3f}  fit {sec:4.1f}s")</div>
-  <div class="fx" data-lang="text">bagging (rows w/ repl.)       one tree 0.769  trees agree 73.3%  ensemble val 0.881  fit 66.4s
-pasting (50% rows, no repl.)  one tree 0.768  trees agree 73.3%  ensemble val 0.875  fit 32.3s
-random subspaces (50% cols)   one tree 0.676  trees agree 60.4%  ensemble val 0.861  fit 42.0s
-random patches (50% + 50%)    one tree 0.666  trees agree 59.1%  ensemble val 0.858  fit 19.9s</div>
-  <p>Line by line. <strong>Pasting</strong> with half the rows: each tree is as good as a bagged tree (0.768 vs 0.769, because a bootstrap sample also holds only 63% unique rows), the trees agree just as often, the ensemble is a little lower (0.875 vs 0.881) and training is about twice as fast (half the rows per tree). <strong>Random subspaces</strong>: a tree that sees only 7 of the 14 columns often misses the strongest ones, so a single tree drops to 0.676; the trees agree far less (60%), but on this data the loss of accuracy per tree outweighs the gain in diversity (0.861). <strong>Random patches</strong> combines both: fastest, most diverse, slightly weakest here. Which wins depends on the data: with many noisy or redundant columns, column sampling often wins; with a few strong columns (as here) it hurts. Fit times come from a heavily shared machine; compare them only with each other.</p>
+  <div class="fx" data-lang="text">bagging (rows w/ repl.)       one tree 0.769  trees agree 73.3%  ensemble val 0.881  fit 13.2s
+pasting (50% rows, no repl.)  one tree 0.768  trees agree 73.3%  ensemble val 0.875  fit  9.4s
+random subspaces (50% cols)   one tree 0.676  trees agree 60.4%  ensemble val 0.861  fit 10.5s
+random patches (50% + 50%)    one tree 0.666  trees agree 59.1%  ensemble val 0.858  fit  5.7s</div>
+  <p>Line by line. <strong>Pasting</strong> with half the rows: each tree is as good as a bagged tree (0.768 vs 0.769, because a bootstrap sample also holds only 63% unique rows), the trees agree just as often, the ensemble is a little lower (0.875 vs 0.881) and training is faster (13.2 s → 9.4 s: half the rows per tree). <strong>Random subspaces</strong>: a tree that sees only 7 of the 14 columns often misses the strongest ones, so a single tree drops to 0.676; the trees agree far less (60%), but on this data the loss of accuracy per tree outweighs the gain in diversity (0.861). <strong>Random patches</strong> combines both: fastest (5.7 s), most diverse, slightly weakest here. Which wins depends on the data: with many noisy or redundant columns, column sampling often wins; with a few strong columns (as here) it hurts. Fit times come from a shared machine; compare them only with each other.</p>
   <div class="callout intu"><span class="label">Where Random Forest fits</span>
     <p>Random subspaces pick columns once <em>per member</em>. <a class="xref" data-note="ml_rf">Random Forest</a> picks a fresh random subset of columns at <em>every split</em> of every tree, on top of bootstrap rows. Per-split sampling lets every column still be used somewhere in each tree, while still breaking the dominance of the strongest column. That turns out to be the better trade-off, which is why RF, not random subspaces, became the default.</p>
   </div>
