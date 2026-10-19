@@ -411,7 +411,7 @@ from sklearn.model_selection import train_test_split
 X = np.array([[2, 3], [3, 2], [2, 2], [9, 8], [8, 9], [9, 9]])
 km = KMeans(n_clusters=2, n_init=10, random_state=0).fit(X)
 print("cluster of each customer:", km.labels_)
-print("cluster centres:\n", km.cluster_centers_.round(2))
+print("cluster centres:\\n", km.cluster_centers_.round(2))
 
 # Semi-supervised: digits, only 50 of 1,347 training images keep their label
 Xd, yd = load_digits(return_X_y=True)
@@ -610,7 +610,7 @@ for name, m in models.items():
 best = models["logreg"].fit(X_tr, y_tr)
 pred = best.predict(X_test)
 print("TEST accuracy", round(accuracy_score(y_test, pred), 3), " recall", round(recall_score(y_test, pred), 3))
-print("confusion matrix [[TN FP] [FN TP]]:\n", confusion_matrix(y_test, pred))
+print("confusion matrix [[TN FP] [FN TP]]:\\n", confusion_matrix(y_test, pred))
 print("P(malignant), first 3 test rows:", best.predict_proba(X_test.iloc[:3])[:, 1].round(3))
 
 # 5. What did it learn? (coefficients on standardised features)
