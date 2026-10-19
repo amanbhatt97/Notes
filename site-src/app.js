@@ -33,6 +33,14 @@ applyTheme(appState.theme || 'dark');
 // ── Persist ──────────────────────────────────────────────────────────────────
 function saveState() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(appState)); } catch(e) {}
+  if (typeof syncSoon === 'function') syncSoon();
+}
+
+// Every change to progress is stamped, so syncing devices can tell which side is newer
+// (including an undo, which must not come back from another device).
+function markChanged(kind, id) {
+  appState.mtime = appState.mtime || {};
+  appState.mtime[kind + ':' + id] = Date.now();
 }
 
 // ── Sidebar ──────────────────────────────────────────────────────────────────
@@ -403,12 +411,14 @@ function appendStudyBox(container, key) {
       '</div>';
     box.querySelector('.study-btn').onclick = function() {
       (appState.studied[key] = appState.studied[key] || []).push(new Date().toISOString());
+      markChanged('studied', key);
       saveState(); render(); refreshTopicMark(key);
     };
     var u = box.querySelector('.study-undo');
     if (u) u.onclick = function() {
       appState.studied[key].pop();
       if (!appState.studied[key].length) delete appState.studied[key];
+      markChanged('studied', key);
       saveState(); render(); refreshTopicMark(key);
     };
   }
@@ -963,8 +973,8 @@ function showRevision(catKey) {
       var src = TOPIC_CONTENT[t.key];
       if (!src) return;
       var doc = new DOMParser().parseFromString(src, 'text/html');
-      var mm = doc.querySelector('.mindmap');
-      if (!mm) return;
+      var body = revisionBody(doc);
+      if (!body) return;
       n++;
       var jumps = Array.prototype.map.call(doc.querySelectorAll('.rm-item[data-target]'), function(r) {
         var l = r.querySelector('.rm-label');
@@ -973,7 +983,7 @@ function showRevision(catKey) {
       html += '<article class="rev-card" id="rev-' + t.key + '">' +
         '<header class="rev-head"><span class="rev-num">' + String(n).padStart(2, '0') + '</span>' +
           '<div class="rev-title"><b>' + t.label + '</b><span>' + noteLead(t.key) + '</span></div></header>' +
-        mm.outerHTML +
+        body +
         (jumps ? '<div class="rev-jumps"><span>Jump to</span>' + jumps + '</div>' : '') +
         '<footer class="rev-foot"><button class="rev-open" data-open="' + t.key + '">Open full note →</button>' +
           '<span class="rev-mark" data-key="' + t.key + '"></span></footer>' +
@@ -997,6 +1007,7 @@ function showRevision(catKey) {
         '<button class="rev-done' + (log.length ? ' on' : '') + '">✓ ' + (log.length ? 'Revised again' : 'Mark revised') + '</button>';
       m.querySelector('.rev-done').onclick = function() {
         (appState.revised[key] = appState.revised[key] || []).push(new Date().toISOString());
+        markChanged('revised', key);
         saveState(); render();
         var tab = tc.querySelector('.rev-tab.on small');
         if (tab) tab.textContent = tab.textContent.replace(/^\d+/, function() {
@@ -1019,6 +1030,44 @@ function showRevision(catKey) {
   var on = tc.querySelector('.rev-tab.on');
   if (on) on.parentNode.scrollLeft = on.offsetLeft - on.parentNode.offsetLeft - 16;
   if (window.innerWidth <= 800 && sbOpen) toggleSidebar();
+}
+
+// What a revision card shows. Notes with a written "Revision Sheet" section show it in
+// full (plus the mind map, folded). Older notes get a sheet assembled from their own
+// mind map, definitions, traps and comparison tables, so revision is never just keywords.
+function revisionBody(doc) {
+  var h2s = Array.prototype.slice.call(doc.querySelectorAll('h2'));
+  function sectionOf(h) {
+    var out = '', el = h.nextElementSibling;
+    while (el && el.tagName !== 'H2') { out += el.outerHTML; el = el.nextElementSibling; }
+    return out;
+  }
+  var mm = doc.querySelector('.mindmap');
+  var mmFold = mm ? '<details class="rev-fold"><summary>Mind map</summary>' + mm.outerHTML + '</details>' : '';
+  var sheet = h2s.find(function(h) { return /revision sheet/i.test(h.textContent) || /-rev$/.test(h.id || ''); });
+  if (sheet) return '<div class="rev-sheet">' + sectionOf(sheet) + '</div>' + mmFold;
+
+  var parts = [];
+  if (mm) parts.push(mm.outerHTML);
+  function pick(sel, title) {
+    var items = Array.prototype.map.call(doc.querySelectorAll(sel), function(x) { return x.outerHTML; });
+    if (items.length) parts.push('<h4 class="rev-h">' + title + '</h4>' + items.join(''));
+  }
+  pick('.callout.def', 'Definitions');
+  pick('.callout.intu', 'Key insights');
+  pick('.callout.trap', 'Watch out');
+  var tables = [];
+  h2s.forEach(function(h) {
+    if (!/compar|vs\b|which|when|summary|cheat|choos/i.test(h.textContent)) return;
+    var el = h.nextElementSibling;
+    while (el && el.tagName !== 'H2') {
+      if (el.matches && el.matches('table.tbl:not(.out)')) tables.push(el.outerHTML);
+      if (el.querySelectorAll) el.querySelectorAll('table.tbl:not(.out)').forEach(function(t) { tables.push(t.outerHTML); });
+      el = el.nextElementSibling;
+    }
+  });
+  if (tables.length) parts.push('<h4 class="rev-h">Comparisons</h4>' + tables.join(''));
+  return parts.length ? '<div class="rev-sheet rev-auto">' + parts.join('') + '</div>' : '';
 }
 
 // From a note: open its track in Revision and scroll to its card.
@@ -1248,6 +1297,7 @@ function probWireBody(root, row) {
     b.onclick = function() {
       var e = appState.prob[num] = appState.prob[num] || { log: [] };
       e.log.push({ d: new Date().toISOString(), how: b.dataset.how });
+      markChanged('prob', num);
       saveState(); renderTracker(root);
     };
   });
@@ -1256,6 +1306,7 @@ function probWireBody(root, row) {
     var e = appState.prob[num];
     e.log.pop();
     if (!e.log.length) delete appState.prob[num];
+    markChanged('prob', num);
     saveState(); renderTracker(root);
   };
   row.querySelectorAll('[data-goto]').forEach(function(b) { b.onclick = function() { probGoto(root, +b.dataset.goto); }; });
@@ -1317,11 +1368,173 @@ function probImport(file, root) {
           var set = {}; (mine || []).concat(theirs || []).forEach(function(d) { set[d] = 1; });
           appState[k][id] = Object.keys(set).sort();
         }
+        markChanged(k, id);
       });
     });
     saveState(); renderTracker(root);
   }).catch(function() { alert('That file could not be read as tracker progress.'); });
 }
+
+
+// ── Cloud sync (private GitHub Gist) ─────────────────────────────────────────
+// The site is static, so progress lives in the browser. To follow you across
+// browsers and devices it is mirrored to one private gist in your GitHub account,
+// using a token with only the "gist" permission, pasted once per browser.
+var SYNC_TOKEN_KEY = 'dsml_sync_token', SYNC_GIST_KEY = 'dsml_sync_gist', SYNC_FILE = 'dsml-notes-progress.json';
+var SYNC_KINDS = ['studied', 'revised', 'prob'];
+var syncTimer = null, syncBusy = false, syncState = 'off';
+
+function syncToken() { try { return localStorage.getItem(SYNC_TOKEN_KEY) || ''; } catch (e) { return ''; } }
+function syncApi(path, opts) {
+  opts = opts || {};
+  opts.headers = Object.assign({ 'Authorization': 'Bearer ' + syncToken(), 'Accept': 'application/vnd.github+json' }, opts.headers || {});
+  return fetch('https://api.github.com' + path, opts).then(function(r) {
+    if (!r.ok) throw new Error('GitHub ' + r.status);
+    return r.json();
+  });
+}
+function syncPayload() {
+  var out = { app: 'dsml-notes', version: 1, mtime: appState.mtime || {} };
+  SYNC_KINDS.forEach(function(k) { out[k] = appState[k] || {}; });
+  return out;
+}
+
+// Per item, the side changed more recently wins; items never stamped are combined.
+function syncMerge(remote) {
+  if (!remote) return false;
+  var lm = appState.mtime = appState.mtime || {}, rm = remote.mtime || {}, changed = false;
+  SYNC_KINDS.forEach(function(k) {
+    var mine = appState[k] = appState[k] || {}, theirs = remote[k] || {};
+    var ids = {};
+    Object.keys(mine).concat(Object.keys(theirs)).forEach(function(i) { ids[i] = 1; });
+    Object.keys(rm).concat(Object.keys(lm)).forEach(function(m) { if (m.indexOf(k + ':') === 0) ids[m.slice(k.length + 1)] = 1; });
+    Object.keys(ids).forEach(function(id) {
+      var tl = lm[k + ':' + id] || 0, tr = rm[k + ':' + id] || 0;
+      var a = mine[id], b = theirs[id];
+      var before = JSON.stringify(a);
+      if (tr > tl) {
+        if (b === undefined) delete mine[id]; else mine[id] = b;
+        lm[k + ':' + id] = tr;
+      } else if (tr === tl && b !== undefined) {
+        if (a === undefined) mine[id] = b;
+        else if (k === 'prob') {
+          var seen = {}, log = [];
+          (a.log || []).concat(b.log || []).forEach(function(e) { if (!seen[e.d + e.how]) { seen[e.d + e.how] = 1; log.push(e); } });
+          log.sort(function(x, y) { return x.d < y.d ? -1 : 1; });
+          mine[id] = { log: log };
+        } else {
+          var set = {}; a.concat(b).forEach(function(d) { set[d] = 1; });
+          mine[id] = Object.keys(set).sort();
+        }
+      }
+      if (JSON.stringify(mine[id]) !== before) changed = true;
+    });
+  });
+  return changed;
+}
+
+function syncFindGist() {
+  var known = '';
+  try { known = localStorage.getItem(SYNC_GIST_KEY) || ''; } catch (e) {}
+  if (known) return Promise.resolve(known);
+  return syncApi('/gists?per_page=100').then(function(list) {
+    var g = list.find(function(x) { return x.files && x.files[SYNC_FILE]; });
+    if (g) return g.id;
+    return syncApi('/gists', { method: 'POST', body: JSON.stringify({
+      description: 'DS·ML Notes progress (synced by the notes site)', public: false,
+      files: (function() { var f = {}; f[SYNC_FILE] = { content: JSON.stringify(syncPayload()) }; return f; })()
+    }) }).then(function(g2) { return g2.id; });
+  }).then(function(id) { try { localStorage.setItem(SYNC_GIST_KEY, id); } catch (e) {} return id; });
+}
+
+// Pull, merge, push. Runs on load, after changes (debounced) and when the tab regains focus.
+function syncNow() {
+  if (!syncToken() || syncBusy) return Promise.resolve();
+  syncBusy = true; syncSetState('busy');
+  var gid;
+  return syncFindGist().then(function(id) {
+    gid = id;
+    return syncApi('/gists/' + id);
+  }).then(function(g) {
+    var f = g.files && g.files[SYNC_FILE], remote = null;
+    try { remote = f ? JSON.parse(f.content) : null; } catch (e) {}
+    var changed = syncMerge(remote);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(appState)); } catch (e) {}
+    if (changed) syncRefreshViews();
+    var files = {}; files[SYNC_FILE] = { content: JSON.stringify(syncPayload()) };
+    return syncApi('/gists/' + gid, { method: 'PATCH', body: JSON.stringify({ files: files }) });
+  }).then(function() {
+    appState.lastSync = new Date().toISOString();
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(appState)); } catch (e) {}
+    syncSetState('ok');
+  }).catch(function(err) {
+    if (/404/.test(err.message)) { try { localStorage.removeItem(SYNC_GIST_KEY); } catch (e) {} }
+    syncSetState('error', err.message);
+  }).then(function() { syncBusy = false; });
+}
+function syncSoon() {
+  if (!syncToken()) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncNow, 2500);
+}
+function syncRefreshViews() {
+  updateProgress();
+  document.querySelectorAll('.sb-topic[data-key]').forEach(function(b) { refreshTopicMark(b.dataset.key); });
+  var probApp = document.getElementById('probApp');
+  if (probApp) renderTracker(probApp);
+  else if (!activeTopic && document.getElementById('homeEl').style.display !== 'none') buildHomeGrid();
+}
+function syncSetState(st, msg) {
+  syncState = st;
+  var b = document.getElementById('syncBtn');
+  if (!b) return;
+  b.dataset.state = st;
+  b.title = st === 'ok' ? 'Progress synced ' + new Date().toLocaleTimeString() :
+            st === 'busy' ? 'Syncing…' : st === 'error' ? 'Sync failed: ' + msg + ' (click to fix)' : 'Sync progress across devices';
+}
+
+function syncDialog() {
+  var on = !!syncToken();
+  var d = document.createElement('div');
+  d.className = 'overlay';
+  d.innerHTML = '<div class="modal sync-modal"><h3>☁ Sync progress across browsers</h3>' +
+    '<p>Your "studied", "revised" and problem-solve counts are saved in this browser. To see them everywhere, they are copied to one <b>private gist</b> in your GitHub account.</p>' +
+    (on ? '<p class="sync-on">✓ Sync is on in this browser.' + (appState.lastSync ? ' Last synced ' + new Date(appState.lastSync).toLocaleString() + '.' : '') + '</p>' :
+      '<ol><li>Open <a href="https://github.com/settings/tokens/new?scopes=gist&description=DS-ML%20Notes%20sync" target="_blank" rel="noopener">GitHub → new token</a> (classic). Only the <b>gist</b> box is ticked; pick an expiry (or "No expiration").</li>' +
+      '<li>Generate, copy the token, paste it below. Do the same once in every browser you use (same token is fine).</li></ol>' +
+      '<input id="syncTok" type="password" placeholder="ghp_… paste token" autocomplete="off">') +
+    '<p class="sync-note">The token stays in this browser only and can do nothing except read and write your gists.</p>' +
+    '<div class="sync-actions">' + (on ? '<button id="syncGo">Sync now</button><button id="syncOff" class="ghost">Turn off here</button>' : '<button id="syncGo">Connect & sync</button>') +
+    '<button id="syncClose" class="ghost">Close</button></div><p id="syncMsg"></p></div>';
+  document.body.appendChild(d);
+  var msg = d.querySelector('#syncMsg');
+  function close() { d.remove(); }
+  d.onclick = function(e) { if (e.target === d) close(); };
+  d.querySelector('#syncClose').onclick = close;
+  var off = d.querySelector('#syncOff');
+  if (off) off.onclick = function() {
+    try { localStorage.removeItem(SYNC_TOKEN_KEY); localStorage.removeItem(SYNC_GIST_KEY); } catch (e) {}
+    syncSetState('off'); close();
+  };
+  d.querySelector('#syncGo').onclick = function() {
+    var t = d.querySelector('#syncTok');
+    if (t) {
+      if (!t.value.trim()) { msg.textContent = 'Paste the token first.'; return; }
+      try { localStorage.setItem(SYNC_TOKEN_KEY, t.value.trim()); } catch (e) {}
+    }
+    msg.textContent = 'Syncing…';
+    syncNow().then(function() {
+      msg.textContent = syncState === 'ok' ? '✓ Synced. Your progress is now the same on every browser you connect.' :
+        'Could not sync. Check the token has the "gist" permission and has not expired.';
+      if (syncState === 'ok') setTimeout(close, 1500);
+    });
+  };
+}
+document.addEventListener('DOMContentLoaded', function() {
+  syncSetState(syncToken() ? 'busy' : 'off');
+  if (syncToken()) syncNow();
+  window.addEventListener('focus', function() { if (syncToken()) syncNow(); });
+});
 
 // ── Reading progress + back to top ───────────────────────────────────────────
 function onScroll() {

@@ -1349,3 +1349,34 @@ ol.story li span{display:block;font-size:13.5px;line-height:1.55;color:var(--ink
   color:var(--ink2);border:1px dashed var(--acc-gl);background:linear-gradient(90deg,var(--acc-dim),transparent 80%)}
 .bridge::before{content:'➜';position:absolute;left:16px;top:12px;font-size:16px;color:var(--acc)}
 .bridge b{color:var(--ink)}
+
+/* ── Cloud sync ───────────────────────────────────── */
+.sync-btn{width:34px;height:30px;border-radius:999px;border:1px solid var(--border);background:var(--s2);color:var(--ink3);
+  cursor:pointer;font-size:15px;position:relative;transition:all .15s}
+.sync-btn:hover{border-color:var(--blue);color:var(--blue)}
+.sync-btn::after{content:'';position:absolute;right:3px;top:3px;width:8px;height:8px;border-radius:50%;background:var(--ink3);opacity:.6}
+.sync-btn[data-state="ok"]{color:var(--green)}
+.sync-btn[data-state="ok"]::after{background:var(--green);opacity:1}
+.sync-btn[data-state="busy"]::after{background:var(--amber);opacity:1;animation:blink 1s steps(1) infinite}
+.sync-btn[data-state="error"]{color:var(--red)}
+.sync-btn[data-state="error"]::after{background:var(--red);opacity:1}
+.sync-modal{max-width:520px}
+.sync-modal p,.sync-modal li{font-size:13.5px;color:var(--ink2);line-height:1.6;margin-bottom:8px}
+.sync-modal ol{padding-left:20px;margin-bottom:10px}
+.sync-modal a{color:var(--blue)}
+.sync-modal input{width:100%;font:inherit;font-size:13px;padding:9px 12px;border-radius:9px;border:1px solid var(--border);
+  background:var(--s1);color:var(--ink);margin:4px 0 8px}
+.sync-note{font-size:12px !important;color:var(--ink3) !important}
+.sync-on{color:var(--green) !important;font-weight:600}
+.sync-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.sync-actions button{font:inherit;font-size:13px;font-weight:600;cursor:pointer;border-radius:9px;padding:8px 14px;border:none;
+  color:#fff;background:linear-gradient(135deg,#6366F1,#06B6D4)}
+.sync-actions button.ghost{background:none;border:1px solid var(--border);color:var(--ink2)}
+#syncMsg{font-size:12.5px;margin-top:8px}
+.rev-sheet{margin-top:6px}
+.rev-sheet h3{font-family:var(--disp);font-size:15px;color:var(--ink);margin:18px 0 8px}
+.rev-sheet p,.rev-sheet li{font-size:14px;color:var(--ink2);line-height:1.65}
+.rev-h{font-family:var(--disp);font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--acc);margin:20px 0 8px}
+.rev-fold{margin-top:12px;border:1px dashed var(--border);border-radius:12px;padding:6px 12px}
+.rev-fold summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--ink2)}
+.rev-card .rev-auto .mm-center{display:none}
