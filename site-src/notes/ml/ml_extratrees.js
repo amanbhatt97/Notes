@@ -435,7 +435,7 @@ for mf in ["sqrt", 0.3, 0.6, None]:
 churn + 50 junk, extra trees max_features=0.3   accuracy 0.831
 churn + 50 junk, extra trees max_features=0.6   accuracy 0.851
 churn + 50 junk, extra trees max_features=None  accuracy 0.856</div>
-  <p>With all 64 columns as candidates, Extra Trees scores 0.856 on the junk-laden data, as well as it did without any junk (0.853), because the best of 64 random cuts is almost always on a useful column. @@RFJUNK@@</p>
+  <p>With all 64 columns as candidates, Extra Trees scores 0.856 on the junk-laden data, as well as it did without any junk (0.853), because the best of 64 random cuts is almost always on a useful column. For fairness, the same change helps the forest less: a random forest with all 64 columns per split (that is, bagging) scored 0.836 in the same 3-fold run (code: the block above with <code>RandomForestClassifier</code> and <code>max_features</code> in ["sqrt", None] → 0.807, 0.836). Tuned, Extra Trees wins here too.</p>
   <table class="tbl">
     <tr><th>Situation</th><th>Lean towards</th><th>Why</th></tr>
     <tr><td>Smooth target, numeric columns, regression</td><td>Extra Trees</td><td>Random cuts average into smooth functions; lower variance (friedman1 +0.015 R²)</td></tr>

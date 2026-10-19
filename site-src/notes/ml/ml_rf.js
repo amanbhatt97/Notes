@@ -383,15 +383,15 @@ for kw in [{}, {"max_depth": 4}, {"max_depth": 8}, {"max_depth": 16},
            {"min_samples_leaf": 5}, {"min_samples_leaf": 20},
            {"max_samples": 0.2}, {"max_samples": 0.5}]:
     run(**kw)</div>
-  <div class="fx" data-lang="text">{}                               leaves/tree   1438  train 1.000  OOB 0.864  val 0.881  2.2s
-{'max_depth': 4}                 leaves/tree     16  train 0.761  OOB 0.742  val 0.759  0.9s
-{'max_depth': 8}                 leaves/tree    150  train 0.867  OOB 0.821  val 0.839  1.4s
-{'max_depth': 16}                leaves/tree   1031  train 0.989  OOB 0.860  val 0.874  2.1s
-{'min_samples_leaf': 5}          leaves/tree    780  train 0.963  OOB 0.857  val 0.873  2.9s
-{'min_samples_leaf': 20}         leaves/tree    276  train 0.897  OOB 0.840  val 0.858  1.7s
-{'max_samples': 0.2}             leaves/tree    448  train 0.929  OOB 0.846  val 0.862  1.1s
-{'max_samples': 0.5}             leaves/tree    923  train 0.987  OOB 0.858  val 0.874  1.4s</div>
-  <p>Three lessons. <strong>(1) Deep trees are the right default.</strong> Every limit lowered accuracy here: depth 4 trees (16 leaves) give 0.759, barely better than one tree, because averaging cannot remove the bias of shallow trees. <strong>(2) Limits buy size.</strong> <code>max_depth=16</code> keeps 0.874 with 28% fewer leaves; <code>min_samples_leaf=5</code> halves the leaves for −0.008. In production that may be a good trade (section 10). <strong>(3) max_samples is a speed knob.</strong> Training each tree on 20% of rows is about twice as fast and costs 0.019. Times are wall-clock on a shared 4-core machine; trust the ratios, not the seconds.</p>
+  <div class="fx" data-lang="text">{}                               leaves/tree   1438  train 1.000  OOB 0.864  val 0.881  13.3s
+{'max_depth': 4}                 leaves/tree     16  train 0.761  OOB 0.742  val 0.759  5.2s
+{'max_depth': 8}                 leaves/tree    150  train 0.867  OOB 0.821  val 0.839  8.7s
+{'max_depth': 16}                leaves/tree   1031  train 0.989  OOB 0.860  val 0.874  12.0s
+{'min_samples_leaf': 5}          leaves/tree    780  train 0.963  OOB 0.857  val 0.873  9.1s
+{'min_samples_leaf': 20}         leaves/tree    276  train 0.897  OOB 0.840  val 0.858  9.1s
+{'max_samples': 0.2}             leaves/tree    448  train 0.929  OOB 0.846  val 0.862  4.4s
+{'max_samples': 0.5}             leaves/tree    923  train 0.987  OOB 0.858  val 0.874  7.4s</div>
+  <p>Three lessons. <strong>(1) Deep trees are the right default.</strong> Every limit lowered accuracy here: depth 4 trees (16 leaves) give 0.759, barely better than one tree, because averaging cannot remove the bias of shallow trees. <strong>(2) Limits buy size.</strong> <code>max_depth=16</code> keeps 0.874 with 28% fewer leaves; <code>min_samples_leaf=5</code> halves the leaves for −0.008. In production that may be a good trade (section 10). <strong>(3) max_samples is a speed knob.</strong> Training each tree on 20% of rows is about three times as fast (4.4 s vs 13.3 s) and costs 0.019. Times are wall-clock on a shared 4-core machine; trust the ratios, not the seconds.</p>
   <h3>bootstrap=False</h3>
   <div class="fx" data-lang="py">for bs in [True, False]:
     rf = RandomForestClassifier(n_estimators=200, bootstrap=bs, n_jobs=-1, random_state=0).fit(Xtr, ytr)
@@ -638,9 +638,9 @@ for kw in [{}, {"min_samples_leaf": 5}, {"max_depth": 10}]:
     t0 = time.time(); rf.predict(Xte); batch = (time.time() - t0) / len(Xte) * 1e6
     print(f"{str(kw):22s} nodes {nodes:7d}  avg depth {depth:4.1f}  pickle {mb:5.1f} MB  "
           f"val {rf.score(Xva, yva):.3f}  predict {batch:4.0f} us/row (1 core, batch)")</div>
-  <div class="fx" data-lang="text">{}                     nodes  862330  avg depth 28.5  pickle  69.1 MB  val 0.879  predict  110 us/row (1 core, batch)
-{'min_samples_leaf': 5} nodes  467444  avg depth 24.3  pickle  37.5 MB  val 0.872  predict  116 us/row (1 core, batch)
-{'max_depth': 10}      nodes  192976  avg depth 10.0  pickle  15.5 MB  val 0.855  predict   73 us/row (1 core, batch)</div>
+  <div class="fx" data-lang="text">{}                     nodes  862330  avg depth 28.5  pickle  69.1 MB  val 0.879  predict  135 us/row (1 core, batch)
+{'min_samples_leaf': 5} nodes  467444  avg depth 24.3  pickle  37.5 MB  val 0.872  predict   92 us/row (1 core, batch)
+{'max_depth': 10}      nodes  192976  avg depth 10.0  pickle  15.5 MB  val 0.855  predict   70 us/row (1 core, batch)</div>
   <p>A default 300-tree forest on just 12,000 rows is 862,330 nodes and a 69 MB file; trees are 28 levels deep on average. <code>min_samples_leaf=5</code> halves the size for −0.007 accuracy; <code>max_depth=10</code> cuts it 4.5× and speeds prediction, for −0.024. Size grows roughly linearly with the number of training rows, so a forest on 10 million rows can be gigabytes. Timings are from a busy shared machine: compare them with each other, not with your laptop.</p>
   <div class="callout trap"><span class="label">Trap</span>
     <p>Forests that are fine in a notebook can fail in production because of size (slow to load, too big for a container) and latency (a single-row prediction walks every tree). Cap depth or leaf size, reduce trees to where OOB flattens, or distil into a boosted model. See <a class="xref" data-note="ml_tree_tuning">Tuning &amp; Production</a>.</p>
@@ -686,8 +686,8 @@ print(f"from scratch: val {np.mean(mine.predict(Xva) == yva):.3f}  OOB {mine.oob
 print(f"sklearn     : val {sk.score(Xva, yva):.3f}  OOB {sk.oob_score_:.3f}  {s2:.1f}s")
 agree = np.mean(mine.predict(Xva) == sk.predict(Xva))
 print(f"the two forests give the same answer on {agree:.1%} of validation rows")</div>
-  <div class="fx" data-lang="text">from scratch: val 0.876  OOB 0.861  27.0s
-sklearn     : val 0.881  OOB 0.864  20.4s
+  <div class="fx" data-lang="text">from scratch: val 0.876  OOB 0.861  25.5s
+sklearn     : val 0.881  OOB 0.864  17.7s
 the two forests give the same answer on 97.3% of validation rows</div>
   <p>Our 30-line forest scores 0.876 on validation (sklearn 0.881) with OOB 0.861 (sklearn 0.864), and the two agree on 97.3% of customers. They cannot match exactly, because the random draws differ; the remaining gap is the size of the run-to-run noise of a forest (try a few seeds of either). Walking through the code: <code>rng.integers(0, n, n)</code> is the bootstrap; <code>np.setdiff1d</code> finds the rows a tree never saw and adds that tree's probabilities to those rows only; <code>predict_proba</code> is the soft vote of section 03. sklearn is faster mainly because its loops are in Cython and it reuses sorted data.</p>
   <div class="bridge"><b>What's still missing?</b> Time to step back and put the forest next to its parent (one tree) and its sibling (bagging), measured the same way.</div>
