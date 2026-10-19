@@ -344,14 +344,18 @@ function loadTopic(key, cat) {
     x.setAttribute('href', '#');
     x.onclick = function(e) { e.preventDefault(); loadTopic(x.dataset.note); };
   });
-  appendStudyBox(_tc, key);
+  var probApp = _tc.querySelector('#probApp');
+  if (probApp) renderTracker(probApp);
+  else appendStudyBox(_tc, key);
   if (foundCat) appendPrevNext(_tc, foundCat, key);
 
   if (foundCat) {
     renderCrumbs(foundCat, path);
     revealInSidebar(foundCat, key);
   }
-  document.getElementById('tbTools').style.display = '';
+  // Page tools only where they apply: none on the tracker, no revision card without a mind map
+  document.getElementById('tbTools').style.display = probApp ? 'none' : '';
+  document.querySelector('.tb-rev').style.display = html.indexOf('class="mindmap"') >= 0 ? '' : 'none';
   document.getElementById('tbName').textContent = topicLabel;
 
   // Wire Q&A reveal buttons
@@ -1024,6 +1028,299 @@ function reviseCurrent() {
   showRevision(cat && cat.key);
   var card = document.getElementById('rev-' + key);
   if (card) setTimeout(function() { card.scrollIntoView({ behavior: 'smooth', block: 'start' }); card.classList.add('flash'); }, 60);
+}
+
+// ── DSA Problem Tracker ──────────────────────────────────────────────────────
+// Problems come from problems/*.js. Every solve is logged with a date and how it
+// went, so the page can count solves per problem and bring them back for revision.
+if (!appState.prob) appState.prob = {};
+var trk = { view: 'path', open: {}, q: '', level: 0, topic: '', status: '', core: false };
+
+var SOLVE_KINDS = {
+  alone:    { label: 'Solved on my own',     short: 'own' },
+  hints:    { label: 'Solved with hints',    short: 'hints' },
+  solution: { label: 'Needed the solution',  short: 'solution' },
+  attempt:  { label: 'Tried, got stuck',     short: 'stuck' }
+};
+// Days until a solved problem comes back, indexed by how many times it was solved on your own
+var REVISE_GAPS = [2, 4, 10, 25, 60];
+
+function probLog(num) { return (appState.prob[num] && appState.prob[num].log) || []; }
+function probStats(num) {
+  var log = probLog(num), solves = log.filter(function(e) { return e.how !== 'attempt'; });
+  var alone = solves.filter(function(e) { return e.how === 'alone'; }).length;
+  var last = solves.length ? new Date(solves[solves.length - 1].d) : null;
+  var due = null;
+  if (last) due = new Date(last.getTime() + REVISE_GAPS[Math.min(alone, REVISE_GAPS.length - 1)] * 864e5);
+  var status = !log.length ? 'new' : !solves.length ? 'stuck' : alone >= 3 ? 'mastered' : 'solved';
+  return { log: log, solves: solves.length, alone: alone, last: last, due: due,
+           isDue: !!due && due <= new Date(), status: status };
+}
+function probTopicIdx(key) { return PROBLEM_TOPICS.findIndex(function(t) { return t.key === key; }); }
+function probByNum(num) { return PROBLEMS.find(function(p) { return p.num === num; }); }
+function probEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function probDate(d) { return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }); }
+
+// The guided path: all level-1 problems (in topic order), then level 2, and so on.
+function probPathOrder() {
+  return PROBLEMS.slice().sort(function(a, b) {
+    return a.level - b.level || probTopicIdx(a.topic) - probTopicIdx(b.topic) || a.order - b.order;
+  });
+}
+// Next problem: first unsolved one on the path whose "solve first" problems are done.
+function probNext() {
+  return probPathOrder().find(function(p) {
+    if (probStats(p.num).solves) return false;
+    return (p.pre || []).every(function(n) { return !probByNum(n) || probStats(n).solves; });
+  });
+}
+
+function renderTracker(root) {
+  if (typeof PROBLEMS === 'undefined' || !PROBLEMS.length) { root.innerHTML = '<p>No problems loaded.</p>'; return; }
+  var all = PROBLEMS.map(function(p) { return probStats(p.num); });
+  var solved = all.filter(function(s) { return s.solves; }).length;
+  var due = PROBLEMS.filter(function(p) { return probStats(p.num).isDue; });
+  var totalSolves = all.reduce(function(a, s) { return a + s.solves; }, 0);
+  var next = probNext();
+
+  var levels = PROBLEM_LEVELS.map(function(L) {
+    var ps = PROBLEMS.filter(function(p) { return p.level === L.n; });
+    var d = ps.filter(function(p) { return probStats(p.num).solves; }).length;
+    return '<button class="pl-level lv' + L.n + (trk.level === L.n ? ' on' : '') + '" data-lv="' + L.n + '" title="' + probEsc(L.desc) + '">' +
+      '<span class="pl-lv-top"><b>L' + L.n + '</b> ' + L.name + '</span>' +
+      '<span class="pl-lv-bar"><i style="width:' + (ps.length ? d / ps.length * 100 : 0) + '%"></i></span>' +
+      '<span class="pl-lv-n">' + d + ' / ' + ps.length + '</span></button>';
+  }).join('');
+
+  var html =
+    '<div class="pt-stats">' +
+      '<div class="hs"><b>' + solved + '</b><span>of ' + PROBLEMS.length + ' solved</span></div>' +
+      '<div class="hs"><b>' + totalSolves + '</b><span>total solves</span></div>' +
+      '<div class="hs"><b>' + all.filter(function(s) { return s.status === 'mastered'; }).length + '</b><span>mastered</span></div>' +
+      '<div class="hs' + (due.length ? ' hot' : '') + '"><b>' + due.length + '</b><span>due to revise</span></div>' +
+    '</div>' +
+    '<div class="pl-levels">' + levels + '</div>' +
+    (next ? '<div class="pt-next"><div><span class="eyebrow">Up next on your path</span>' +
+      '<b>' + probEsc(next.title) + '</b><small>L' + next.level + ' ' + PROBLEM_LEVELS[next.level - 1].name + ' · ' +
+      probEsc(PROBLEM_TOPICS[probTopicIdx(next.topic)].label) + ' · ' + probEsc(next.pattern) + '</small></div>' +
+      '<button class="btn-primary" data-goto="' + next.num + '">Open it →</button></div>' : '') +
+    '<div class="pt-tabs">' +
+      [['path', 'Guided path'], ['topic', 'By topic'], ['revise', 'Revise (' + due.length + ')'], ['all', 'All problems']].map(function(t) {
+        return '<button class="pt-tab' + (trk.view === t[0] ? ' on' : '') + '" data-view="' + t[0] + '">' + t[1] + '</button>';
+      }).join('') +
+    '</div>' +
+    '<div class="pt-filters">' +
+      '<input type="search" id="ptQ" placeholder="Search title, pattern, number…" value="' + probEsc(trk.q) + '">' +
+      '<select id="ptTopic"><option value="">All topics</option>' + PROBLEM_TOPICS.map(function(t) {
+        return '<option value="' + t.key + '"' + (trk.topic === t.key ? ' selected' : '') + '>' + probEsc(t.label) + '</option>'; }).join('') + '</select>' +
+      '<select id="ptStatus">' + [['', 'Any status'], ['new', 'Not started'], ['stuck', 'Tried, stuck'], ['solved', 'Solved'], ['mastered', 'Mastered (3× on own)']].map(function(o) {
+        return '<option value="' + o[0] + '"' + (trk.status === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' +
+      '<label class="pt-core"><input type="checkbox" id="ptCore"' + (trk.core ? ' checked' : '') + '> Core only</label>' +
+      (trk.level ? '<button class="pt-clear" data-lv="' + trk.level + '">L' + trk.level + ' ✕</button>' : '') +
+    '</div>' +
+    '<div id="ptList"></div>' +
+    '<div class="pt-io"><button id="ptExport">Export progress</button><label>Import progress<input type="file" id="ptImport" accept=".json" hidden></label>' +
+      '<span>Progress is saved in this browser. Export it now and then as a backup.</span></div>';
+  root.innerHTML = html;
+
+  root.querySelectorAll('[data-view]').forEach(function(b) { b.onclick = function() { trk.view = b.dataset.view; renderTracker(root); }; });
+  root.querySelectorAll('[data-lv]').forEach(function(b) { b.onclick = function() { var n = +b.dataset.lv; trk.level = trk.level === n ? 0 : n; renderTracker(root); }; });
+  root.querySelectorAll('[data-goto]').forEach(function(b) { b.onclick = function() { probGoto(root, +b.dataset.goto); }; });
+  var q = root.querySelector('#ptQ');
+  q.oninput = function() { trk.q = q.value; renderProbList(root); };
+  root.querySelector('#ptTopic').onchange = function() { trk.topic = this.value; renderProbList(root); };
+  root.querySelector('#ptStatus').onchange = function() { trk.status = this.value; renderProbList(root); };
+  root.querySelector('#ptCore').onchange = function() { trk.core = this.checked; renderProbList(root); };
+  root.querySelector('#ptExport').onclick = probExport;
+  root.querySelector('#ptImport').onchange = function() { probImport(this.files[0], root); };
+  renderProbList(root);
+}
+
+function probMatches(p) {
+  var st = probStats(p.num), q = trk.q.trim().toLowerCase();
+  if (trk.level && p.level !== trk.level) return false;
+  if (trk.topic && p.topic !== trk.topic) return false;
+  if (trk.core && !p.core) return false;
+  if (trk.status && st.status !== trk.status && !(trk.status === 'solved' && st.status === 'mastered')) return false;
+  if (q && (p.title + ' ' + p.pattern + ' ' + p.num).toLowerCase().indexOf(q) < 0) return false;
+  return true;
+}
+
+function renderProbList(root) {
+  var list = root.querySelector('#ptList'), groups = [];
+  var ps = PROBLEMS.filter(probMatches);
+  if (trk.view === 'path') {
+    var ordered = probPathOrder().filter(probMatches);
+    PROBLEM_LEVELS.forEach(function(L) {
+      var g = ordered.filter(function(p) { return p.level === L.n; });
+      if (g.length) groups.push({ title: 'Level ' + L.n + ' · ' + L.name, sub: L.desc, lv: L.n, items: g });
+    });
+  } else if (trk.view === 'topic') {
+    PROBLEM_TOPICS.forEach(function(t) {
+      var g = ps.filter(function(p) { return p.topic === t.key; }).sort(function(a, b) { return a.order - b.order; });
+      if (g.length) groups.push({ title: t.label, note: t.note, items: g, topic: t.key });
+    });
+  } else if (trk.view === 'revise') {
+    var d = ps.filter(function(p) { return probStats(p.num).isDue; })
+      .sort(function(a, b) { return probStats(a.num).due - probStats(b.num).due; });
+    groups.push({ title: 'Due for revision', sub: 'Solve these again from scratch. Each solve on your own pushes the next revision further away (2, 4, 10, 25, 60 days).', items: d,
+      empty: 'Nothing is due. Problems you solve come back here after a few days.' });
+  } else {
+    groups.push({ title: ps.length + ' problems', items: ps.slice().sort(function(a, b) { return a.level - b.level || a.num - b.num; }) });
+  }
+  if (!groups.length) { list.innerHTML = '<p class="pt-empty">No problems match these filters.</p>'; return; }
+  list.innerHTML = groups.map(function(g) {
+    var done = g.items.filter(function(p) { return probStats(p.num).solves; }).length;
+    return '<section class="pt-group' + (g.lv ? ' lv' + g.lv : '') + '">' +
+      '<header><div><h3>' + probEsc(g.title) + '</h3>' + (g.sub ? '<p>' + probEsc(g.sub) + '</p>' : '') + '</div>' +
+      (g.items.length ? '<span class="pt-gcount">' + done + ' / ' + g.items.length + '</span>' : '') +
+      (g.note ? '<button class="pt-note" data-note="' + g.note + '">Read the note →</button>' : '') + '</header>' +
+      (g.items.length ? g.items.map(probRow).join('') : '<p class="pt-empty">' + (g.empty || 'None.') + '</p>') + '</section>';
+  }).join('');
+  list.querySelectorAll('.pt-note').forEach(function(b) { b.onclick = function() { loadTopic(b.dataset.note); }; });
+  list.querySelectorAll('.pr-head').forEach(function(h) {
+    h.onclick = function(e) {
+      if (e.target.closest('a')) return;
+      var num = +h.parentNode.dataset.num;
+      trk.open[num] = !trk.open[num];
+      probRefreshRow(root, num);
+    };
+  });
+  list.querySelectorAll('.pr[data-num]').forEach(function(r) { if (trk.open[+r.dataset.num]) probWireBody(root, r); });
+}
+
+function probRow(p) {
+  var st = probStats(p.num), t = PROBLEM_TOPICS[probTopicIdx(p.topic)];
+  var count = st.solves ? '<span class="pr-count" title="' + st.alone + ' on your own">×' + st.solves + '</span>' : '';
+  var when = st.due ? (st.isDue ? '<span class="pr-due on">revise now</span>' : '<span class="pr-due">revise ' + probDate(st.due) + '</span>') : '';
+  return '<div class="pr st-' + st.status + (trk.open[p.num] ? ' open' : '') + '" data-num="' + p.num + '">' +
+    '<div class="pr-head">' +
+      '<span class="pr-dot" title="' + st.status + '"></span>' +
+      '<span class="pr-lv lv' + p.level + '">L' + p.level + '</span>' +
+      '<span class="pr-title"><b>' + probEsc(p.title) + '</b><small>#' + p.num + ' · ' + probEsc(p.pattern) +
+        (trk.view !== 'topic' && t ? ' · ' + probEsc(t.label) : '') + '</small></span>' +
+      (p.core ? '<span class="pr-core" title="Core: must-do">★</span>' : '') +
+      when + count +
+      '<span class="pr-lc lc-' + p.lc.toLowerCase() + '">' + p.lc + '</span>' +
+      '<a class="pr-link" href="https://leetcode.com/problems/' + p.slug + '/" target="_blank" rel="noopener" title="Open on LeetCode">LeetCode ↗</a>' +
+      '<span class="pr-chev">▸</span>' +
+    '</div>' +
+    (trk.open[p.num] ? probBody(p, st) : '') +
+  '</div>';
+}
+
+function probBody(p, st) {
+  var pre = (p.pre || []).map(function(n) {
+    var q = probByNum(n);
+    if (!q) return '';
+    return '<button class="pr-pre' + (probStats(n).solves ? ' done' : '') + '" data-goto="' + n + '">' + (probStats(n).solves ? '✓ ' : '') + probEsc(q.title) + ' (L' + q.level + ')</button>';
+  }).join('');
+  var learn = p.learn && p.learn[0] ? '<button class="pr-learn" data-note="' + p.learn[0] + '" data-sec="' + (p.learn[1] || '') + '">📖 Learn the pattern first</button>' : '';
+  var hints = (p.hints || []).map(function(h, i) {
+    return '<details class="pr-hint"><summary>Hint ' + (i + 1) + '</summary><p>' + probEsc(h) + '</p></details>';
+  }).join('');
+  var steps = (p.steps || []).length ? '<details class="pr-hint"><summary>Approach</summary><ol>' + p.steps.map(function(x) { return '<li>' + probEsc(x) + '</li>'; }).join('') + '</ol>' +
+    '<p class="pr-cx">Time <b>' + probEsc(p.time) + '</b> · Space <b>' + probEsc(p.space) + '</b></p>' +
+    (p.trap ? '<p class="pr-trap">⚠ ' + probEsc(p.trap) + '</p>' : '') + '</details>' : '';
+  var code = p.code ? '<details class="pr-hint pr-sol"><summary>Solution (try the hints first)</summary><div class="code-frame"><div class="code-bar"><span class="code-dots"><i></i><i></i><i></i></span><span class="code-lang">python</span></div>' +
+    '<div class="fx" data-lang="py">' + highlightSource(p.code, 'py') + '</div></div></details>' : '';
+  var log = st.log.slice().reverse().slice(0, 8).map(function(e) {
+    return '<li class="how-' + e.how + '">' + probDate(new Date(e.d)) + ' · ' + SOLVE_KINDS[e.how].label + '</li>';
+  }).join('');
+  return '<div class="pr-body">' +
+    '<p class="pr-teach">' + probEsc(p.teaches) + '</p>' +
+    (pre ? '<div class="pr-row"><span>Solve first</span>' + pre + '</div>' : '') +
+    (learn ? '<div class="pr-row">' + learn + '</div>' : '') +
+    '<div class="pr-hints">' + hints + steps + code + '</div>' +
+    '<div class="pr-logbox">' +
+      '<div class="pr-logbtns"><span>Log this attempt:</span>' +
+        Object.keys(SOLVE_KINDS).map(function(k) { return '<button class="pr-log how-' + k + '" data-how="' + k + '">' + SOLVE_KINDS[k].label + '</button>'; }).join('') +
+        (st.log.length ? '<button class="pr-undo">Undo last</button>' : '') + '</div>' +
+      (st.log.length ? '<div class="pr-hist"><b>Solved ' + st.solves + (st.solves === 1 ? ' time' : ' times') + ' (' + st.alone + ' on your own)</b>' +
+        (st.due ? '<span> · next revision ' + probDate(st.due) + '</span>' : '') + '<ul>' + log + '</ul></div>' : '') +
+    '</div>' +
+  '</div>';
+}
+
+function probWireBody(root, row) {
+  var num = +row.dataset.num;
+  row.querySelectorAll('.pr-log').forEach(function(b) {
+    b.onclick = function() {
+      var e = appState.prob[num] = appState.prob[num] || { log: [] };
+      e.log.push({ d: new Date().toISOString(), how: b.dataset.how });
+      saveState(); renderTracker(root);
+    };
+  });
+  var u = row.querySelector('.pr-undo');
+  if (u) u.onclick = function() {
+    var e = appState.prob[num];
+    e.log.pop();
+    if (!e.log.length) delete appState.prob[num];
+    saveState(); renderTracker(root);
+  };
+  row.querySelectorAll('[data-goto]').forEach(function(b) { b.onclick = function() { probGoto(root, +b.dataset.goto); }; });
+  var l = row.querySelector('.pr-learn');
+  if (l) l.onclick = function() { l.dataset.sec ? openSection(l.dataset.note, l.dataset.sec) : loadTopic(l.dataset.note); };
+}
+
+function probRefreshRow(root, num) {
+  var old = root.querySelector('.pr[data-num="' + num + '"]');
+  if (!old) return;
+  var tmp = document.createElement('div');
+  tmp.innerHTML = probRow(probByNum(num));
+  var row = tmp.firstChild;
+  old.replaceWith(row);
+  row.querySelector('.pr-head').onclick = function(e) {
+    if (e.target.closest('a')) return;
+    trk.open[num] = !trk.open[num];
+    probRefreshRow(root, num);
+  };
+  if (trk.open[num]) probWireBody(root, row);
+}
+
+// Jump to one problem: clear filters that would hide it, open it and scroll to it.
+function probGoto(root, num) {
+  var p = probByNum(num);
+  if (!p) return;
+  trk.open[num] = true;
+  if (!probMatches(p) || trk.view === 'revise') { trk.q = ''; trk.level = 0; trk.topic = ''; trk.status = ''; trk.core = false; trk.view = 'path'; }
+  renderTracker(root);
+  var row = root.querySelector('.pr[data-num="' + num + '"]');
+  if (row) setTimeout(function() { row.scrollIntoView({ behavior: 'smooth', block: 'center' }); row.classList.add('flash'); }, 60);
+}
+
+function probExport() {
+  var blob = new Blob([JSON.stringify({ app: 'dsml-notes', prob: appState.prob, studied: appState.studied, revised: appState.revised }, null, 1)], { type: 'application/json' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'dsa-progress-' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+  setTimeout(function() { URL.revokeObjectURL(a.href); }, 1000);
+}
+
+// Import merges logs instead of replacing them, so nothing recorded on this device is lost.
+function probImport(file, root) {
+  if (!file) return;
+  file.text().then(function(txt) {
+    var data = JSON.parse(txt);
+    ['prob', 'studied', 'revised'].forEach(function(k) {
+      if (!data[k]) return;
+      appState[k] = appState[k] || {};
+      Object.keys(data[k]).forEach(function(id) {
+        var mine = appState[k][id], theirs = data[k][id];
+        if (k === 'prob') {
+          var seen = {}, merged = [];
+          ((mine && mine.log) || []).concat(theirs.log || []).forEach(function(e) { if (!seen[e.d + e.how]) { seen[e.d + e.how] = 1; merged.push(e); } });
+          merged.sort(function(a, b) { return a.d < b.d ? -1 : 1; });
+          appState[k][id] = { log: merged };
+        } else {
+          var set = {}; (mine || []).concat(theirs || []).forEach(function(d) { set[d] = 1; });
+          appState[k][id] = Object.keys(set).sort();
+        }
+      });
+    });
+    saveState(); renderTracker(root);
+  }).catch(function() { alert('That file could not be read as tracker progress.'); });
 }
 
 // ── Reading progress + back to top ───────────────────────────────────────────
