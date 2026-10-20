@@ -363,7 +363,7 @@ function loadTopic(key, cat) {
   }
   // Page tools only where they apply: none on the tracker, no revision card without a mind map
   document.getElementById('tbTools').style.display = probApp ? 'none' : '';
-  document.querySelector('.tb-rev').style.display = html.indexOf('class="mindmap"') >= 0 ? '' : 'none';
+  document.querySelector('.tb-rev').style.display = (html.indexOf('class="mindmap"') >= 0 || /<h2[^>]*id="[^"]*-rev"/.test(html)) ? '' : 'none';
   document.getElementById('tbName').textContent = topicLabel;
 
   // Wire Q&A reveal buttons
