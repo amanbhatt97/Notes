@@ -208,9 +208,9 @@ const CATEGORIES = [
   ] },
   { key: "systemdesign", label: "ML System Design", emoji: "\ud83c\udfd7\ufe0f", tag: "Senior", blurb: "Serving \u00b7 Monitoring \u00b7 Experiments \u00b7 Cases", hue: 230, topics: [
     {"key": "sd_framework", "label": "How to Approach ML System Design"},
-    {"key": "sd_serving", "label": "Feature Stores & Online/Offline Serving"},
+    {"key": "sd_serving", "label": "Serving: Features, Latency, Shadow & Canary"},
     {"key": "sd_monitoring", "label": "Monitoring, Drift & Retraining"},
-    {"key": "sd_experiments", "label": "Shadow, Canary & A/B Infrastructure"},
+    {"key": "sd_experiments", "label": "Online Experiments & A/B Infrastructure"},
     {"key": "sd_cases", "label": "Case Studies"}
   ] },
   { key: "genai", label: "Generative AI", emoji: "\u2728", tag: "Advanced", blurb: "Transformers \u00b7 RAG \u00b7 LangGraph \u00b7 Agents", hue: 290, topics: [
