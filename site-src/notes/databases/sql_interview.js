@@ -1,101 +1,91 @@
-// notes/databases/sql_interview.js — Practice Q&A
+// notes/databases/sql_interview.js — SQL Interview Practice
 Object.assign(TOPIC_CONTENT, {
   "sql_interview": `<main>
-  <h1>Practice Q&amp;A</h1>
-  <p class="lead">Interview-style SQL problems on the small <code>shop</code> database. For every problem you first see how to think about it, then the query is built one step at a time with the real table each step produces, and only then the final query. Every query here was run on PostgreSQL 16 and the tables are its real output. Try each problem yourself before opening it. Builds on <a class="xref" data-note="sql_joins">Joins</a>, <a class="xref" data-note="sql_subqueries">Subqueries &amp; CTEs</a> and <a class="xref" data-note="sql_windows">Window Functions</a>.</p>
+  <h1>SQL Interview Practice</h1>
+  <div class="where"><span>Databases</span><span>SQL</span><span>Interview Practice</span></div>
+  <p class="lead">The classic SQL interview problems (Nth highest, top-N per group, date spines, pivots, year-over-year, funnels, retention cohorts, streaks) solved as a <em>chain of patterns</em>, each reusing the ones before it and the earlier notes of this track. Every problem follows the same recipe: the question, which earlier concept it needs (linked), the approach in plain words, a hand trace on the data, the query, the real result, and the wrong answers people actually give (also run, so you see them fail). One running example throughout: <strong>Biteful</strong> (7 customers, 5 restaurants, 10 orders, 15 order lines from <a class="xref" data-note="sql_joins">JOINs</a>), plus two small tables for time-based questions: <code>events</code> (what customers did in the app, 1–8 March 2026) and <code>monthly_revenue</code> (the finance team's monthly totals). All results are real PostgreSQL 16 output.</p>
+
+  <h2 id="si-fit" class="open"><span class="num">★</span>Where this fits</h2>
+  <figure class="viz"><svg viewBox="0 0 660 150" width="660">
+<defs><marker id="si-a0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+<rect x="10" y="20" width="100" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="60" y="41" text-anchor="middle" font-size="12">Fundamentals</text><text x="60" y="58" text-anchor="middle" class="tm" font-size="10">GROUP BY, NULL</text>
+<line x1="110" y1="45" x2="126" y2="45" stroke="currentColor" marker-end="url(#si-a0)"/>
+<rect x="128" y="20" width="90" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="173" y="41" text-anchor="middle" font-size="12">JOINs</text><text x="173" y="58" text-anchor="middle" class="tm" font-size="10">fan-out</text>
+<line x1="218" y1="45" x2="234" y2="45" stroke="currentColor" marker-end="url(#si-a0)"/>
+<rect x="236" y="20" width="100" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="286" y="41" text-anchor="middle" font-size="12">Subqueries</text><text x="286" y="58" text-anchor="middle" class="tm" font-size="10">CTEs</text>
+<line x1="336" y1="45" x2="352" y2="45" stroke="currentColor" marker-end="url(#si-a0)"/>
+<rect x="354" y="20" width="90" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="399" y="41" text-anchor="middle" font-size="12">Windows</text><text x="399" y="58" text-anchor="middle" class="tm" font-size="10">rank, lag</text>
+<line x1="444" y1="45" x2="460" y2="45" stroke="currentColor" marker-end="url(#si-a0)"/>
+<rect x="462" y="20" width="90" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="507" y="41" text-anchor="middle" font-size="12">Modeling</text><text x="507" y="58" text-anchor="middle" class="tm" font-size="10">grain</text>
+<line x1="552" y1="45" x2="568" y2="45" stroke="currentColor" marker-end="url(#si-a0)"/>
+<rect x="570" y="20" width="80" height="50" rx="8" class="fg sg" stroke-width="3"/><text x="610" y="41" text-anchor="middle" font-size="12" font-weight="700">Interview</text><text x="610" y="59" text-anchor="middle" class="tg" font-size="10">YOU ARE HERE</text>
+<text x="10" y="105" class="tm" font-size="10.5">Nothing new in syntax: every problem here is a combination of tools from the earlier notes.</text>
+<text x="10" y="123" class="tm" font-size="10.5">What is new is recognising which pattern a question is, and the traps each pattern hides.</text>
+</svg><figcaption>The last note of the SQL group: practice that reuses everything.</figcaption></figure>
+  <ol class="story">
+    <li><b>Came from: every SQL note</b><span><a class="xref" data-note="sql_fundamentals">SQL Fundamentals</a> (GROUP BY, HAVING, NULL logic), <a class="xref" data-note="sql_joins">JOINs</a> (LEFT JOIN, anti-joins, fan-out), <a class="xref" data-note="sql_subqueries">Subqueries &amp; CTEs</a> (step-by-step queries, recursion), <a class="xref" data-note="sql_windows">Window Functions</a> (ranking, LAG, running totals), <a class="xref" data-note="sql_modeling">Data Modeling</a> (grain).</span></li>
+    <li><b>This note adds: patterns</b><span>Eight problem patterns that make up most interview rounds and most real analytics work, each built from the previous one, plus a bank of shorter practice questions and conceptual rapid-fire.</span></li>
+    <li><b>Leads to: real work</b><span>The same patterns run on millions of rows; <a class="xref" data-note="sql_optimization">Indexes &amp; Performance</a> is how they stay fast, and the analytics notes (<a class="xref" data-note="da_pandas">pandas</a>, <a class="xref" data-note="st_abtesting">A/B testing</a>) consume their output.</span></li>
+  </ol>
+
+  <h2 id="si-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
+  <p>The note as one chain: each pattern answers a question the previous pattern could not, and reuses its tools.</p>
+  <ol class="story">
+    <li><b>Approach</b><span>Q: how do I start any problem? → fix the grain, find the tables, build in CTE steps, check edges. But the simplest ranking question already has a trap…</span></li>
+    <li><b>Nth highest</b><span>Q: what is the 6th highest order amount? → DENSE_RANK over the whole table (ties count once): 260. But "highest" usually means highest <em>within each group</em>…</span></li>
+    <li><b>Top-N per group</b><span>Q: the best-selling dish at each restaurant? → aggregate, then RANK with PARTITION BY, keep rank 1: Biryani Bros has a tie. Rankings and counts per day, though, silently drop days with no rows…</span></li>
+    <li><b>Date spine</b><span>Q: orders per day including days with none? → generate every day, LEFT JOIN the facts: 6 and 7 March show 0. Reports also want categories as columns, not rows…</span></li>
+    <li><b>Pivoting</b><span>Q: one row per restaurant, one column per status? → conditional aggregation (FILTER), with the spine idea for Momo Magic's zeros. Comparing columns across years is the next step…</span></li>
+    <li><b>Year-over-year</b><span>Q: each month vs the same month last year? → join the table to itself on month − 1 year (LAG(12) breaks on the missing June). Comparing whole periods is easy; following each <em>user</em> through steps is harder…</span></li>
+    <li><b>Funnels</b><span>Q: how many sessions go open → menu → cart → checkout? → one row per session, earliest time per step, steps must happen in order: 26 → 16 → 12 → 10. A funnel looks within a session; retention looks across days…</span></li>
+    <li><b>Retention and cohorts</b><span>Q: what share of users come back within 3 days of their first visit, by first-visit day? → first event per user (the cohort), then "any later event within the window". Coming back once is not the same as coming back every day…</span></li>
+    <li><b>Streaks</b><span>Q: longest run of consecutive days each customer opened the app? → gaps and islands: day − row_number is constant inside a run: Farah 7, Asha 4.</span></li>
+  </ol>
 
   <h2 id="si-map" class="open"><span class="num">★</span>Mind Map</h2>
 <div class="mindmap">
-  <div class="mm-center">SQL interview patterns</div>
+  <div class="mm-center">SQL Interview Patterns</div>
   <div class="mm-branches">
     <div class="mm-branch">
-      <div class="mm-title">Approach (every question)</div>
+      <div class="mm-title">Approach</div>
       <ul>
-        <li><b>Grain</b> — what is one output row? include zero rows? cancelled orders?</li>
-        <li><b>Tables + keys</b> — order-level × item-level join multiplies rows</li>
-        <li><b>Build in steps</b> — run each CTE alone, look at its table, then add the next</li>
-        <li><b>CTEs</b> — one idea each: filter → aggregate → rank → pick</li>
-        <li><b>Edge cases</b> — ties, NULLs, duplicates, empty groups, ÷0, date boundaries</li>
-        <li><b>Say assumptions out loud</b> — revenue = qty × unit_price, excl. cancelled</li>
-        <li>💡 CTE = a kitchen prep bowl: chop, label the bowl, use it in the next step</li>
+        <li><b>Grain</b> — what is one output row?</li>
+        <li><b>CTE steps</b> — filter → aggregate → rank → pick</li>
+        <li><b>Edges</b> — ties, NULLs, empty groups, dates</li>
+        <li>💡 cook in separate bowls, then layer</li>
       </ul>
     </div>
     <div class="mm-branch">
-      <div class="mm-title">Group &amp; filter</div>
+      <div class="mm-title">Ranking</div>
       <ul>
-        <li><b>"per X"</b> → <code>GROUP BY x</code>; group by the id, not only the name</li>
-        <li><b>WHERE</b> filters rows before grouping; <b>HAVING</b> filters groups after</li>
-        <li><b>Share of total</b> — <code>100.0 * sum(x) / sum(sum(x)) OVER ()</code></li>
-        <li><b>Pivot</b> — <code>sum(CASE WHEN cat = 'X' THEN v ELSE 0 END)</code> per column; PG <code>FILTER (WHERE …)</code></li>
-        <li><b>Median</b> — <code>percentile_cont(0.5) WITHIN GROUP (ORDER BY t)</code>; aggregate to grain first</li>
-        <li>💡 GROUP BY = sorting bills into one tray per customer</li>
+        <li><b>Nth highest</b> — DENSE_RANK; ⚠ OFFSET counts ties twice</li>
+        <li><b>Top-N per group</b> — RANK() OVER (PARTITION BY …); filter outside</li>
+        <li>⚠ ROW_NUMBER drops ties</li>
       </ul>
     </div>
     <div class="mm-branch">
-      <div class="mm-title">Top-N / Nth per group</div>
+      <div class="mm-title">Shaping</div>
       <ul>
-        <li><b>Rank in CTE, filter outside</b> — window results can't go in WHERE
-          <ul><li><code>rank() OVER (PARTITION BY g ORDER BY x DESC) AS rk</code> … <code>WHERE rk = 1</code></li></ul></li>
-        <li><b>Nth distinct value</b> — <code>dense_rank() … WHERE rk = N</code></li>
-        <li><b>2nd highest</b> — <code>max(s) WHERE s &lt; (SELECT max(s) …)</code></li>
-        <li><b>Latest per group</b> — <code>row_number() … rn = 1</code> + tie-breaker; or <code>DISTINCT ON</code></li>
-        <li>⚠ <b>LIMIT 1 OFFSET N-1</b> — counts tied rows separately</li>
-        <li><b>Ties?</b> ROW_NUMBER exactly N · RANK 1,2,2,4 · DENSE_RANK 1,2,2,3</li>
+        <li><b>Date spine</b> — generate_series + LEFT JOIN; COUNT(right col)</li>
+        <li><b>Pivot</b> — count(*) FILTER (WHERE …) per column</li>
+        <li>⚠ COUNT(CASE … ELSE 0) counts everything</li>
       </ul>
     </div>
     <div class="mm-branch">
-      <div class="mm-title">Joins: existence, zeros, pairs</div>
+      <div class="mm-title">Time comparisons</div>
       <ul>
-        <li><b>"Never did X"</b> — <code>WHERE NOT EXISTS (SELECT 1 … = c.id)</code> or LEFT JOIN … <code>IS NULL</code></li>
-        <li>⚠ <b>NOT IN (subquery)</b> — one NULL → zero rows</li>
-        <li><b>Keep zeros</b> — LEFT JOIN from the "all" table + <code>coalesce(sum(x), 0)</code></li>
-        <li>⚠ <b>Right-table filter in WHERE</b> → becomes inner join; put it in <code>ON</code></li>
-        <li><b>"Bought both X and Y"</b> — <code>WHERE cat IN (X, Y) … HAVING count(DISTINCT cat) = 2</code></li>
-        <li><b>Self-join</b> — employee vs manager: <code>JOIN employees m ON m.emp_id = e.manager_id</code></li>
-        <li><b>Unique pairs</b> — <code>a.id &lt; b.id</code> (not <code>&lt;&gt;</code>)</li>
+        <li><b>YoY</b> — self-join on month − 1 year</li>
+        <li>⚠ LAG(12) with a missing month</li>
+        <li>⚠ partial month vs full month</li>
       </ul>
     </div>
     <div class="mm-branch">
-      <div class="mm-title">Fan-out &amp; duplicates</div>
+      <div class="mm-title">User journeys</div>
       <ul>
-        <li><b>Fan-out</b> — joining 1-per-order to 1-per-item repeats orders</li>
-        <li><b>Fix</b> — <code>count(DISTINCT o.order_id)</code> or aggregate in a CTE first</li>
-        <li><b>Find dups</b> — <code>GROUP BY key HAVING count(*) &gt; 1</code></li>
-        <li><b>Delete dups</b> — <code>row_number() OVER (PARTITION BY key ORDER BY id)</code>, delete <code>rn &gt; 1</code>; then add UNIQUE</li>
-        <li><b>Recursive CTE</b> — anchor <code>UNION ALL</code> step joining back (org chart)</li>
-      </ul>
-    </div>
-    <div class="mm-branch">
-      <div class="mm-title">Time series</div>
-      <ul>
-        <li><b>Previous row</b> — <code>lag(x) OVER (PARTITION BY u ORDER BY d)</code>; <code>lead</code> = next</li>
-        <li><b>Growth %</b> — <code>(x - lag) / nullif(lag, 0)</code>; fill gaps first</li>
-        <li><b>Missing months</b> — <code>generate_series</code> calendar LEFT JOIN data, <code>count(o.id)</code></li>
-        <li><b>Running total</b> — <code>sum(x) OVER (ORDER BY d)</code>; ROWS frame for strict rows</li>
-        <li><b>Streaks</b> — <code>d - row_number()</code> constant per run; DISTINCT first</li>
-        <li><b>Retention</b> — first day per user → EXISTS activity in days 1–7 → group by cohort week</li>
-      </ul>
-    </div>
-    <div class="mm-branch">
-      <div class="mm-title">NULL &amp; boundary traps</div>
-      <ul>
-        <li><b><code>NULL &lt;&gt; 'x'</code></b> is NULL → row dropped; use <code>IS DISTINCT FROM</code></li>
-        <li><b><code>count(col)</code></b> skips NULLs; <code>count(*)</code> doesn't</li>
-        <li><b>Empty input</b> — COUNT → 0, SUM/AVG/MAX → NULL</li>
-        <li><b>Integer ÷</b> — 1/5 = 0; cast or use <code>100.0</code></li>
-        <li><b>BETWEEN on timestamps</b> — end date = midnight; use <code>&gt;= start AND &lt; end + 1 day</code></li>
-        <li>💡 NULL = a blank box on a form: "not filled in", not zero</li>
-      </ul>
-    </div>
-    <div class="mm-branch">
-      <div class="mm-title">Rapid-fire facts</div>
-      <ul>
-        <li><b>Logical order</b> — FROM → WHERE → GROUP BY → HAVING → SELECT → DISTINCT → ORDER BY → LIMIT</li>
-        <li><b>UNION</b> dedups (slower); <b>UNION ALL</b> keeps all</li>
-        <li><b>DELETE / TRUNCATE / DROP</b> — rows (logged) / all rows fast / table</li>
-        <li><b>PK vs UNIQUE</b> — one, NOT NULL, identity vs many, NULLs allowed</li>
-        <li><b>Clustered index</b> — table stored in key order; PG heaps: all non-clustered</li>
-        <li><b>CHAR vs VARCHAR</b> — padded fixed vs variable; PG text = varchar</li>
+        <li><b>Funnel</b> — per session, min time per step, in order</li>
+        <li><b>Retention</b> — cohort = first event; return within window</li>
+        <li><b>Streak</b> — day − row_number = island id</li>
+        <li>⚠ count events vs sessions vs users</li>
       </ul>
     </div>
   </div>
@@ -104,726 +94,639 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="si-how"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">How to Approach a Question</span><span class="rm-sub">The shop data, grain, building in steps</span></div></div>
-      <div class="rm-item rm-done" data-target="si-agg"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Basics &amp; Aggregation</span><span class="rm-sub">HAVING, Nth salary, share, pivot, median</span></div></div>
-      <div class="rm-item rm-done" data-target="si-join"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Joins</span><span class="rm-sub">Self, anti, outer, fan-out, pairs</span></div></div>
-      <div class="rm-item rm-done" data-target="si-cte"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Subqueries &amp; CTEs</span><span class="rm-sub">Top-N, duplicates, recursion</span></div></div>
-      <div class="rm-item rm-done" data-target="si-win"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Window Functions</span><span class="rm-sub">Latest, running, ranked, previous</span></div></div>
-      <div class="rm-item rm-done" data-target="si-date"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Dates &amp; Time</span><span class="rm-sub">Growth, gaps, streaks, retention</span></div></div>
-      <div class="rm-item rm-done" data-target="si-null"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Tricky NULL &amp; Edge Cases</span><span class="rm-sub">Where correct-looking SQL lies</span></div></div>
-      <div class="rm-item rm-done" data-target="si-traps"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">The ten bugs interviewers look for</span></div></div>
-      <div class="rm-item rm-done" data-target="si-rapid"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Conceptual Rapid-Fire</span><span class="rm-sub">Ten classic one-liners</span></div></div>
+      <div class="rm-item rm-done" data-target="si-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">Patterns as one chain</span></div></div>
+      <div class="rm-item rm-done" data-target="si-how"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">How to Approach</span><span class="rm-sub">Grain, steps, edges</span></div></div>
+      <div class="rm-item rm-done" data-target="si-nth"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Nth Highest</span><span class="rm-sub">Ties count once</span></div></div>
+      <div class="rm-item rm-done" data-target="si-topn"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Top-N per Group</span><span class="rm-sub">PARTITION BY + rank</span></div></div>
+      <div class="rm-item rm-done" data-target="si-spine"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Date Spines</span><span class="rm-sub">Days with zero</span></div></div>
+      <div class="rm-item rm-done" data-target="si-pivot"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Pivoting</span><span class="rm-sub">Rows to columns</span></div></div>
+      <div class="rm-item rm-done" data-target="si-yoy"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Year-over-Year</span><span class="rm-sub">Self-join on shifted month</span></div></div>
+      <div class="rm-item rm-done" data-target="si-funnel"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Funnels</span><span class="rm-sub">Steps in order</span></div></div>
+      <div class="rm-item rm-done" data-target="si-ret"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Retention &amp; Cohorts</span><span class="rm-sub">Did they come back?</span></div></div>
+      <div class="rm-item rm-done" data-target="si-streak"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Streaks</span><span class="rm-sub">Gaps and islands</span></div></div>
+      <div class="rm-item rm-done" data-target="si-more"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">More Practice</span><span class="rm-sub">15 shorter problems</span></div></div>
+      <div class="rm-item rm-done" data-target="si-traps"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">The usual suspects</span></div></div>
+      <div class="rm-item rm-done" data-target="si-rapid"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Conceptual Rapid-Fire</span><span class="rm-sub">Explain the difference</span></div></div>
+      <div class="rm-item rm-done" data-target="si-connect"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">Patterns from tools</span></div></div>
+      <div class="rm-item rm-done" data-target="si-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">Every pattern in 15 minutes</span></div></div>
+      <div class="rm-item rm-done" data-target="si-qa"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Connection questions</span></div></div>
     </div>
   </div>
 
   <h2 id="si-how"><span class="num">01</span>How to Approach a Question</h2>
-  <p>An interviewer shares a screen with a few tables and says "find the customers who ordered more than once". You have ten minutes and a blank editor. Most people panic and try to write the whole query in one go. Then a join doubles some rows, a filter drops a customer, and they cannot see why, because they never looked at the rows in between.</p>
-  <p>The fix is simple: never write the full query first. Turn the English sentence into small steps. Run step 1 alone and look at the table it gives. Only when that table is right, add step 2 on top of it. Each answer on this page is built exactly this way, with the real table after every step, so you can check your own thinking against it.</p>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>We know every SQL tool from the earlier notes, but an interviewer's question arrives as an English sentence and a blank editor, with ten minutes on the clock. How do we turn the sentence into a query without a join doubling rows or a filter silently dropping someone?</p>
+  </div>
+  <p>Most people try to write the whole query in one go. Then a join doubles some rows, a filter drops a customer, and they can't see why, because they never looked at the rows in between. The fix: never write the full query first. Turn the sentence into small steps, run step 1 alone, look at its rows, and only then add step 2.</p>
   <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Making biryani. You don't throw raw rice, raw chicken and spices into one pot. You marinate the chicken in one bowl, half-boil the rice in another, fry the onions in a third, then layer them. If the dish tastes wrong, you can taste each bowl and find the problem. A <strong>CTE</strong> (Common Table Expression, written <code>WITH name AS (…)</code>) is one of those labelled bowls: a small named result you build once and use in the next step.</p>
+    <p>Making biryani. You marinate the chicken in one bowl, half-boil the rice in another, fry the onions in a third, then layer them. If the dish tastes wrong, you taste each bowl. A <strong>CTE</strong> (<code>WITH name AS (…)</code>, from <a class="xref" data-note="sql_subqueries">Subqueries &amp; CTEs</a>) is one labelled bowl.</p>
   </div>
   <div class="flow"><span>1 · Clarify the grain</span><span>2 · Find the tables</span><span>3 · Build step by step (CTEs)</span><span>4 · Check edge cases</span></div>
   <div class="cards">
-    <div><b>1 · Grain</b><p><strong>Grain</strong> = what one output row stands for: one customer? one month? Should customers with zero orders appear? Do cancelled orders count? Ask before writing.</p></div>
-    <div><b>2 · Tables</b><p>Which tables hold the facts, and what is each one's key (the column that makes a row unique)? Joining a one-row-per-order table to a one-row-per-item table multiplies rows.</p></div>
-    <div><b>3 · Steps</b><p>One idea per CTE: filter → aggregate → rank → pick. Say each step out loud while typing. Run it, look at the rows.</p></div>
-    <div><b>4 · Edges</b><p>Ties, NULLs (blank values), duplicates, empty groups, divide by zero, date boundaries. Test the query in your head on each.</p></div>
+    <div><b>1 · Grain</b><p>What does one output row stand for: a customer? a day? a session? Should customers with zero orders appear? Do cancelled orders count? Ask before writing.</p></div>
+    <div><b>2 · Tables</b><p>Which tables hold the facts, and what is each one's grain and key? Joining orders (one row per order) to order_items (one per line) repeats orders (<a class="xref" data-note="sql_joins">JOINs</a> §08).</p></div>
+    <div><b>3 · Steps</b><p>One idea per CTE: filter → aggregate → rank → pick. Run each step and look at its rows.</p></div>
+    <div><b>4 · Edges</b><p>Ties, NULLs, duplicates, empty groups, division by zero, date boundaries, incomplete periods.</p></div>
   </div>
-  <h3>The shop database</h3>
-  <p>Every problem uses these five tiny tables. They are small on purpose: you can check every answer by hand. Read them once now; you will come back to them often.</p>
-  <table class="tbl out"><caption>customers: one row per customer (Dia&#x27;s city is unknown)</caption><tr><th>customer_id</th><th>name</th><th>city</th><th>signup_date</th></tr><tr><td>1</td><td>Asha</td><td>Mumbai</td><td>2024-01-05</td></tr><tr><td>2</td><td>Ben</td><td>Delhi</td><td>2024-02-10</td></tr><tr><td>3</td><td>Chen</td><td>Mumbai</td><td>2024-03-15</td></tr><tr><td>4</td><td>Dia</td><td>NULL</td><td>2024-04-20</td></tr></table>
-  <table class="tbl out"><caption>products</caption><tr><th>product_id</th><th>name</th><th>category</th><th>price</th></tr><tr><td>10</td><td>Laptop</td><td>Electronics</td><td>800.00</td></tr><tr><td>11</td><td>Phone</td><td>Electronics</td><td>500.00</td></tr><tr><td>12</td><td>Desk</td><td>Furniture</td><td>150.00</td></tr><tr><td>13</td><td>Lamp</td><td>Furniture</td><td>40.00</td></tr></table>
-  <table class="tbl out"><caption>orders: one row per order (102 is cancelled)</caption><tr><th>order_id</th><th>customer_id</th><th>order_date</th><th>status</th></tr><tr><td>100</td><td>1</td><td>2024-05-01</td><td>delivered</td></tr><tr><td>101</td><td>1</td><td>2024-05-20</td><td>delivered</td></tr><tr><td>102</td><td>2</td><td>2024-06-02</td><td>cancelled</td></tr><tr><td>103</td><td>3</td><td>2024-06-15</td><td>delivered</td></tr><tr><td>104</td><td>3</td><td>2024-07-01</td><td>pending</td></tr></table>
-  <table class="tbl out"><caption>order_items: one row per product line inside an order</caption><tr><th>order_id</th><th>product_id</th><th>qty</th><th>unit_price</th></tr><tr><td>100</td><td>10</td><td>1</td><td>800.00</td></tr><tr><td>100</td><td>13</td><td>2</td><td>40.00</td></tr><tr><td>101</td><td>11</td><td>1</td><td>500.00</td></tr><tr><td>102</td><td>12</td><td>1</td><td>150.00</td></tr><tr><td>103</td><td>11</td><td>2</td><td>500.00</td></tr><tr><td>103</td><td>12</td><td>1</td><td>150.00</td></tr><tr><td>104</td><td>13</td><td>3</td><td>40.00</td></tr></table>
-  <table class="tbl out"><caption>employees: manager_id points to another employee&#x27;s emp_id</caption><tr><th>emp_id</th><th>name</th><th>dept</th><th>salary</th><th>manager_id</th></tr><tr><td>1</td><td>Ravi</td><td>Eng</td><td>120000</td><td>NULL</td></tr><tr><td>2</td><td>Sara</td><td>Eng</td><td>95000</td><td>1</td></tr><tr><td>3</td><td>Tom</td><td>Eng</td><td>95000</td><td>1</td></tr><tr><td>4</td><td>Uma</td><td>Sales</td><td>70000</td><td>1</td></tr><tr><td>5</td><td>Vik</td><td>Sales</td><td>65000</td><td>4</td></tr></table>
-  <p>Notice the shape. <code>orders</code> has one row per order, but <code>order_items</code> has one row per line, so order 100 (a Laptop and two Lamps) has two lines. Dia has no orders. Ravi has no manager (NULL). Each of these details is the trap in at least one question below.</p>
+  <h3>The running example</h3>
+  <p>The four Biteful tables from the earlier notes (customers, restaurants, orders, order_items; Gita and Momo Magic have no orders, Esha's city is NULL, orders 105 and 107 are cancelled, 110 is pending). The orders, the one table most problems start from:</p>
+  <div class="fx" data-lang="sql">SELECT o.order_id, c.name AS customer, r.name AS restaurant,
+       to_char(o.ordered_at, 'Mon DD HH24:MI') AS ordered_at, o.status, o.amount
+FROM orders o JOIN customers c USING (customer_id) JOIN restaurants r USING (restaurant_id)
+ORDER BY o.order_id;</div>
+  <table class="tbl out"><caption>orders (10 rows, times in Asia/Kolkata)</caption><tr><th>order_id</th><th>customer</th><th>restaurant</th><th>ordered_at</th><th>status</th><th>amount</th></tr><tr><td>101</td><td>Asha</td><td>Dosa Hut</td><td>Mar 02 12:10</td><td>delivered</td><td>240.00</td></tr><tr><td>102</td><td>Ben</td><td>Biryani Bros</td><td>Mar 02 13:05</td><td>delivered</td><td>450.00</td></tr><tr><td>103</td><td>Chen</td><td>Pizza Point</td><td>Mar 02 20:30</td><td>delivered</td><td>520.00</td></tr><tr><td>104</td><td>Asha</td><td>Pizza Point</td><td>Mar 03 13:15</td><td>delivered</td><td>380.00</td></tr><tr><td>105</td><td>Dia</td><td>Green Bowl</td><td>Mar 03 19:45</td><td>cancelled</td><td>310.00</td></tr><tr><td>106</td><td>Ben</td><td>Biryani Bros</td><td>Mar 04 12:40</td><td>delivered</td><td>180.00</td></tr><tr><td>107</td><td>Esha</td><td>Pizza Point</td><td>Mar 04 21:10</td><td>cancelled</td><td>260.00</td></tr><tr><td>108</td><td>Chen</td><td>Dosa Hut</td><td>Mar 05 18:20</td><td>delivered</td><td>260.00</td></tr><tr><td>109</td><td>Farah</td><td>Biryani Bros</td><td>Mar 05 20:05</td><td>delivered</td><td>600.00</td></tr><tr><td>110</td><td>Asha</td><td>Dosa Hut</td><td>Mar 08 20:50</td><td>pending</td><td>310.00</td></tr></table>
+  <p>Two extra tables for the time-based patterns. <code>events</code> logs what each customer did in the app: one <code>app_open</code> per day they opened it, then <code>view_menu</code>, one <code>add_to_cart</code> per item and <code>checkout</code> when they ordered (the 10 checkouts are exactly the 10 orders above). <code>monthly_revenue</code> holds the finance team's monthly totals since launch: no row for June 2025 (deliveries were paused), and March 2026 is month-to-date (1–8 March).</p>
+  <div class="fx" data-lang="sql">SELECT event, count(*) AS events, count(DISTINCT customer_id) AS customers FROM events GROUP BY event ORDER BY events DESC;
+SELECT c.name, string_agg(extract(day FROM e.event_at)::text, ', ' ORDER BY e.event_at) AS march_days
+FROM events e JOIN customers c USING (customer_id) WHERE e.event = 'app_open'
+GROUP BY c.customer_id, c.name ORDER BY c.customer_id;
+SELECT to_char(month, 'YYYY-MM') AS month, revenue FROM monthly_revenue ORDER BY month;</div>
+  <table class="tbl out"><caption>events: 69 rows; counts by type</caption><tr><th>event</th><th>events</th><th>customers</th></tr><tr><td>app_open</td><td>26</td><td>7</td></tr><tr><td>add_to_cart</td><td>17</td><td>7</td></tr><tr><td>view_menu</td><td>16</td><td>7</td></tr><tr><td>checkout</td><td>10</td><td>6</td></tr></table>
+  <table class="tbl out"><caption>Which days each customer opened the app</caption><tr><th>name</th><th>march_days</th></tr><tr><td>Asha</td><td>1, 2, 3, 4, 6, 7, 8</td></tr><tr><td>Ben</td><td>2, 3, 4, 6, 7</td></tr><tr><td>Chen</td><td>2, 5</td></tr><tr><td>Dia</td><td>3, 5</td></tr><tr><td>Esha</td><td>4</td></tr><tr><td>Farah</td><td>2, 3, 4, 5, 6, 7, 8</td></tr><tr><td>Gita</td><td>4, 5</td></tr></table>
+  <table class="tbl out"><caption>monthly_revenue (14 rows)</caption><tr><th>month</th><th>revenue</th></tr><tr><td>2025-01</td><td>31000.00</td></tr><tr><td>2025-02</td><td>29500.00</td></tr><tr><td>2025-03</td><td>34000.00</td></tr><tr><td>2025-04</td><td>36500.00</td></tr><tr><td>2025-05</td><td>38000.00</td></tr><tr><td>2025-07</td><td>41000.00</td></tr><tr><td>2025-08</td><td>43500.00</td></tr><tr><td>2025-09</td><td>42000.00</td></tr><tr><td>2025-10</td><td>47000.00</td></tr><tr><td>2025-11</td><td>49500.00</td></tr><tr><td>2025-12</td><td>52000.00</td></tr><tr><td>2026-01</td><td>40300.00</td></tr><tr><td>2026-02</td><td>41300.00</td></tr><tr><td>2026-03</td><td>2630.00</td></tr></table>
   <h3>A CTE in one minute</h3>
-  <p>Before the problems, here is the CTE syntax on a tiny example, so it is not new later. We want products that cost more than 100, and from those, only the names.</p>
-  <div class="fx" data-lang="sql">WITH pricey AS (                       -- step 1: a named bowl of rows
-  SELECT * FROM products WHERE price &gt; 100)
-SELECT name FROM pricey ORDER BY name; -- step 2: use the bowl like a table</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>name</th></tr><tr><td>Desk</td></tr><tr><td>Laptop</td></tr><tr><td>Phone</td></tr></table>
-  <p><code>WITH pricey AS (…)</code> runs the inner query and names its result <code>pricey</code>. The final <code>SELECT</code> reads <code>pricey</code> exactly like a real table. You can chain several: <code>WITH a AS (…), b AS (SELECT … FROM a) SELECT … FROM b</code>. While building, run each bowl alone (just its inner SELECT) to see its rows.</p>
+  <p>Delivered orders above ₹400, names only:</p>
+  <div class="fx" data-lang="sql">WITH big_delivered AS (                         -- step 1: a named bowl of rows
+  SELECT * FROM orders WHERE status = 'delivered' AND amount &gt; 400)
+SELECT order_id, amount FROM big_delivered ORDER BY amount DESC;   -- step 2: use it like a table</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>order_id</th><th>amount</th></tr><tr><td>109</td><td>600.00</td></tr><tr><td>103</td><td>520.00</td></tr><tr><td>102</td><td>450.00</td></tr></table>
   <div class="callout def"><span class="label">Definition</span>
-    <p><strong>CTE</strong>: a temporary named result defined with <code>WITH</code>, visible only inside that one statement. <strong>Grain</strong>: what one row of a table or result represents. <strong>Revenue</strong> on this page = <code>qty * unit_price</code> from <code>order_items</code>, excluding cancelled orders, unless the question says otherwise. Stating this out loud in an interview is itself a point scored.</p>
+    <p><strong>Grain</strong>: what one row of a table or result represents. <strong>CTE</strong>: a named result defined with <code>WITH</code>, visible only inside that statement. In this note "revenue" means <code>orders.amount</code> of non-cancelled orders unless a question says otherwise; saying such assumptions out loud is part of the answer.</p>
   </div>
-  <p>Why it matters: SQL rounds appear in almost every data analyst, data scientist and backend interview, usually as 3–5 problems in 45 minutes. The same patterns (top-N per group, anti-join, running total, retention) are what you will write every week at work on real tables with millions of rows, where a silent row-doubling bug becomes a wrong number in a board report.</p>
-  <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-
-  <h2 id="si-agg"><span class="num">02</span>Basics &amp; Aggregation</h2>
-  <p>Most questions start with "per something": per customer, per category, per month. That phrase means <code>GROUP BY</code>. Grouping collapses many rows into one row per group, and an <strong>aggregate</strong> function (<code>count</code>, <code>sum</code>, <code>avg</code>, <code>max</code>) squashes each group's values into one number.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A kirana shop owner has a pile of bills at night. She sorts them into one tray per customer (GROUP BY customer), then counts the bills in each tray (count). <code>WHERE</code> is throwing away torn bills <em>before</em> sorting. <code>HAVING</code> is throwing away whole trays <em>after</em> counting, for example "trays with only one bill".</p>
+  <div class="callout trap"><span class="label">Trap</span>
+    <p>Starting to type before agreeing the grain. "Orders per day" could mean placed orders or delivered ones, by order time or delivery time, in which time zone. Two minutes of questions save ten minutes of rewriting.</p>
   </div>
+  <div class="bridge"><b>What this still can't tell us → next: Nth highest.</b> We have a method. The simplest classic question, "the Nth highest value", already tests whether you think about ties.</div>
 
-  <details class="qa"><summary><span class="qmark">Q</span>Which customers placed more than one order?</summary><div class="qa-body">
-  <p><strong>How to think:</strong> the grain is "one row per customer". We need each customer's name (in <code>customers</code>) and their orders (in <code>orders</code>), so first join the two. Then count per customer. "More than one" is a test on the count, and a count only exists after grouping, so that test must go in <code>HAVING</code>.</p>
-  <p><strong>Step 1, join:</strong> put the customer's name on each order row and look at it.</p>
-  <div class="fx" data-lang="sql">SELECT c.customer_id, c.name, o.order_id
-FROM customers c JOIN orders o USING (customer_id)
-ORDER BY c.customer_id, o.order_id;</div>
-  <table class="tbl out"><caption>After the join: one row per order</caption><tr><th>customer_id</th><th>name</th><th>order_id</th></tr><tr><td>1</td><td>Asha</td><td>100</td></tr><tr><td>1</td><td>Asha</td><td>101</td></tr><tr><td>2</td><td>Ben</td><td>102</td></tr><tr><td>3</td><td>Chen</td><td>103</td></tr><tr><td>3</td><td>Chen</td><td>104</td></tr></table>
-  <p><code>USING (customer_id)</code> means "join where the two tables' <code>customer_id</code> columns are equal". Dia has no orders, so the (inner) join drops her. Asha and Chen appear twice.</p>
-  <p><strong>Step 2, group and count:</strong> add <code>GROUP BY c.customer_id, c.name</code> and select <code>count(*)</code> (the final query below, without its <code>HAVING</code> line).</p>
-  <table class="tbl out"><caption>One row per customer</caption><tr><th>name</th><th>orders</th></tr><tr><td>Asha</td><td>2</td></tr><tr><td>Ben</td><td>1</td></tr><tr><td>Chen</td><td>2</td></tr></table>
-  <p><strong>Step 3, keep groups with count &gt; 1.</strong> Final query:</p>
-  <div class="fx" data-lang="sql">SELECT c.name, count(*) AS orders
-FROM customers c JOIN orders o USING (customer_id)
-GROUP BY c.customer_id, c.name
-HAVING count(*) &gt; 1
-ORDER BY c.name;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>orders</th></tr><tr><td>Asha</td><td>2</td></tr><tr><td>Chen</td><td>2</td></tr></table>
-  <p>Ben's group had count 1, so <code>HAVING</code> removed it. We group by <code>customer_id</code> as well as <code>name</code> so that two different customers who share a name are not merged into one.</p>
-  <div class="callout trap"><span class="label">Trap</span><p><code>WHERE count(*) &gt; 1</code> is an error: <code>WHERE</code> runs before grouping, when no count exists yet.</p></div></div></details>
-
-  <details class="qa"><summary><span class="qmark">Q</span>Find the second-highest salary.</summary><div class="qa-body">
-  <p><strong>How to think:</strong> "second highest" = "the highest among the salaries that are below the top one". So find the top first, then look below it. This wording also handles ties: if two people share the top salary, "below the top" still skips both.</p>
-  <p><strong>Step 1, the top salary:</strong></p>
-  <div class="fx" data-lang="sql">SELECT max(salary) AS top FROM employees;</div>
-  <table class="tbl out"><caption>Step 1</caption><tr><th>top</th></tr><tr><td>120000</td></tr></table>
-  <p><strong>Step 2, every salary below it:</strong></p>
-  <div class="fx" data-lang="sql">SELECT name, salary FROM employees
-WHERE salary &lt; (SELECT max(salary) FROM employees)
-ORDER BY salary DESC;</div>
-  <table class="tbl out"><caption>Step 2: salaries under 120000</caption><tr><th>name</th><th>salary</th></tr><tr><td>Sara</td><td>95000</td></tr><tr><td>Tom</td><td>95000</td></tr><tr><td>Uma</td><td>70000</td></tr><tr><td>Vik</td><td>65000</td></tr></table>
-  <p>The part in brackets is a <strong>subquery</strong>: a query inside a query. It returns one number (120000), so it can sit where a number is expected.</p>
-  <p><strong>Step 3, the max of what is left.</strong> Final query:</p>
-  <div class="fx" data-lang="sql">SELECT max(salary) AS second_highest
-FROM employees
-WHERE salary &lt; (SELECT max(salary) FROM employees);</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>second_highest</th></tr><tr><td>95000</td></tr></table>
-  <p>If every employee had the same salary, step 2 would find no rows and <code>max</code> of nothing is NULL. So the query returns one row with NULL, which is exactly what LeetCode's "Second Highest Salary" expects.</p></div></details>
-
-  <details class="qa"><summary><span class="qmark">Q</span>Find who earns the 3rd-highest salary, handling ties.</summary><div class="qa-body">
-  <p><strong>How to think:</strong> nesting <code>max(… &lt; max(…))</code> three deep gets ugly. Better: give every employee a rank by salary, where equal salaries share a rank, then pick rank 3. A rank is a <strong>window function</strong>: it adds a column to every row without collapsing rows (section 05 explains more).</p>
-  <p><strong>Step 1, rank everyone:</strong> we compute all three ranking functions side by side so you can see how they differ on the Sara–Tom tie.</p>
-  <div class="fx" data-lang="sql">SELECT name, salary,
-       row_number() OVER (ORDER BY salary DESC) AS rn,
-       rank()       OVER (ORDER BY salary DESC) AS rnk,
-       dense_rank() OVER (ORDER BY salary DESC) AS drk
-FROM employees ORDER BY salary DESC, name;</div>
-  <table class="tbl out"><caption>Step 1: three ways to number rows</caption><tr><th>name</th><th>salary</th><th>rn</th><th>rnk</th><th>drk</th></tr><tr><td>Ravi</td><td>120000</td><td>1</td><td>1</td><td>1</td></tr><tr><td>Sara</td><td>95000</td><td>2</td><td>2</td><td>2</td></tr><tr><td>Tom</td><td>95000</td><td>3</td><td>2</td><td>2</td></tr><tr><td>Uma</td><td>70000</td><td>4</td><td>4</td><td>3</td></tr><tr><td>Vik</td><td>65000</td><td>5</td><td>5</td><td>4</td></tr></table>
-  <p><code>dense_rank</code> gives ties the same number and leaves no gap, so Uma is 3: she has the third different salary. <code>rank</code> would call her 4 (it skips 3 after the tie), and <code>row_number</code> would put Tom at 3.</p>
-  <p><strong>Step 2, keep rank 3.</strong> A window result cannot be used in <code>WHERE</code> of the same query (it is computed after <code>WHERE</code>), so wrap step 1 in a CTE:</p>
-  <div class="fx" data-lang="sql">WITH r AS (
-  SELECT name, salary, dense_rank() OVER (ORDER BY salary DESC) AS rk
-  FROM employees)
-SELECT name, salary FROM r WHERE rk = 3;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>salary</th></tr><tr><td>Uma</td><td>70000</td></tr></table>
-  <p>The common wrong answer sorts and skips two rows:</p>
-  <div class="fx" data-lang="sql">SELECT name, salary FROM employees ORDER BY salary DESC LIMIT 1 OFFSET 2;</div>
-  <table class="tbl out"><caption>Wrong: OFFSET counts Sara and Tom separately</caption><tr><th>name</th><th>salary</th></tr><tr><td>Tom</td><td>95000</td></tr></table>
-  <p><code>OFFSET 2</code> skips two <em>rows</em> (Ravi, Sara) and lands on Tom, who has the second-highest salary, not the third. Always ask "should ties count once?" before choosing.</p>
-  </div></details>
-
-  <details class="qa"><summary><span class="qmark">Q</span>Each category's share of total revenue, in %.</summary><div class="qa-body">
-  <p><strong>How to think:</strong> share = (category revenue ÷ revenue of everything) × 100. We need two levels: one total per category, and one grand total. Revenue lives in <code>order_items</code>, the category in <code>products</code>, and the cancelled flag in <code>orders</code>, so three tables are joined.</p>
-  <p><strong>Step 1, one row per sold line, with its category and amount:</strong></p>
-  <div class="fx" data-lang="sql">SELECT o.order_id, p.name, p.category, oi.qty * oi.unit_price AS amount
-FROM order_items oi
-JOIN orders o   USING (order_id)
-JOIN products p USING (product_id)
-WHERE o.status &lt;&gt; 'cancelled'
-ORDER BY p.category, o.order_id;</div>
-  <table class="tbl out"><caption>Step 1: non-cancelled lines</caption><tr><th>order_id</th><th>name</th><th>category</th><th>amount</th></tr><tr><td>100</td><td>Laptop</td><td>Electronics</td><td>800.00</td></tr><tr><td>101</td><td>Phone</td><td>Electronics</td><td>500.00</td></tr><tr><td>103</td><td>Phone</td><td>Electronics</td><td>1000.00</td></tr><tr><td>100</td><td>Lamp</td><td>Furniture</td><td>80.00</td></tr><tr><td>103</td><td>Desk</td><td>Furniture</td><td>150.00</td></tr><tr><td>104</td><td>Lamp</td><td>Furniture</td><td>120.00</td></tr></table>
-  <p>Ben's Desk (order 102) is gone because it was cancelled. Six lines remain.</p>
-  <p><strong>Step 2, total per category:</strong> same joins and filter, <code>GROUP BY p.category</code>, <code>sum(oi.qty * oi.unit_price)</code>. Electronics 800 + 500 + 1000 = 2300, Furniture 80 + 150 + 120 = 350.</p>
-  <table class="tbl out"><caption>Step 2</caption><tr><th>category</th><th>revenue</th></tr><tr><td>Electronics</td><td>2300.00</td></tr><tr><td>Furniture</td><td>350.00</td></tr></table>
-  <p><strong>Step 3, put the grand total next to each group and divide.</strong> <code>sum(…) OVER ()</code> is a window over all result rows: empty brackets mean "one window containing every row". Wrapped around the group sum, it adds up both groups (2650) and repeats that on each row.</p>
-  <div class="fx" data-lang="sql">SELECT p.category,
-       sum(oi.qty * oi.unit_price) AS revenue,
-       sum(sum(oi.qty * oi.unit_price)) OVER () AS total,
-       round(100.0 * sum(oi.qty * oi.unit_price)
-             / sum(sum(oi.qty * oi.unit_price)) OVER (), 2) AS pct
-FROM order_items oi
-JOIN orders o   USING (order_id)
-JOIN products p USING (product_id)
-WHERE o.status &lt;&gt; 'cancelled'
-GROUP BY p.category ORDER BY p.category;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>category</th><th>revenue</th><th>total</th><th>pct</th></tr><tr><td>Electronics</td><td>2300.00</td><td>2650.00</td><td>86.79</td></tr><tr><td>Furniture</td><td>350.00</td><td>2650.00</td><td>13.21</td></tr></table>
-  <p>Furniture: 350 ÷ 2650 × 100 = 13.21%. The inner <code>sum</code> works per group (GROUP BY runs first); the outer <code>sum … OVER ()</code> then runs over the grouped rows. <code>100.0</code> (not <code>100</code>) forces decimal division; section 07 shows what integer division does.</p></div></details>
-
-  <details class="qa"><summary><span class="qmark">Q</span>Pivot: one row per month, one revenue column per category.</summary><div class="qa-body">
-  <p><strong>How to think:</strong> the manager wants an Excel-style report: months down the side, categories across the top. Turning a column's <em>values</em> (Electronics, Furniture) into column <em>headings</em> is called a <strong>pivot</strong>. SQL has no "make columns from values" button, so you write one output column per category by hand. The trick is a <code>CASE</code> that keeps the amount only when the row belongs to that column's category.</p>
-  <p><strong>Step 1, label each line with its month, and split its amount into two columns:</strong></p>
-  <div class="fx" data-lang="sql">SELECT to_char(o.order_date, 'YYYY-MM') AS month, p.category,
-       CASE WHEN p.category = 'Electronics' THEN oi.qty * oi.unit_price ELSE 0 END AS electronics,
-       CASE WHEN p.category = 'Furniture'   THEN oi.qty * oi.unit_price ELSE 0 END AS furniture
-FROM orders o
-JOIN order_items oi USING (order_id)
-JOIN products p     USING (product_id)
-WHERE o.status &lt;&gt; 'cancelled'
-ORDER BY month, p.category;</div>
-  <table class="tbl out"><caption>Step 1: one row per line, amount placed in its category&#x27;s column</caption><tr><th>month</th><th>category</th><th>electronics</th><th>furniture</th></tr><tr><td>2024-05</td><td>Electronics</td><td>800.00</td><td>0</td></tr><tr><td>2024-05</td><td>Electronics</td><td>500.00</td><td>0</td></tr><tr><td>2024-05</td><td>Furniture</td><td>0</td><td>80.00</td></tr><tr><td>2024-06</td><td>Electronics</td><td>1000.00</td><td>0</td></tr><tr><td>2024-06</td><td>Furniture</td><td>0</td><td>150.00</td></tr><tr><td>2024-07</td><td>Furniture</td><td>0</td><td>120.00</td></tr></table>
-  <p><code>to_char(date, 'YYYY-MM')</code> turns 2024-05-20 into the text <code>2024-05</code>. Each row now has its amount in exactly one of the two columns and 0 in the other.</p>
-  <p><strong>Step 2, add up each column per month.</strong> Final query:</p>
-  <div class="fx" data-lang="sql">SELECT to_char(o.order_date, 'YYYY-MM') AS month,
-       sum(CASE WHEN p.category = 'Electronics' THEN oi.qty * oi.unit_price ELSE 0 END) AS electronics,
-       sum(CASE WHEN p.category = 'Furniture'   THEN oi.qty * oi.unit_price ELSE 0 END) AS furniture
-FROM orders o
-JOIN order_items oi USING (order_id)
-JOIN products p     USING (product_id)
-WHERE o.status &lt;&gt; 'cancelled'
-GROUP BY 1 ORDER BY 1;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>month</th><th>electronics</th><th>furniture</th></tr><tr><td>2024-05</td><td>1300.00</td><td>80.00</td></tr><tr><td>2024-06</td><td>1000.00</td><td>150.00</td></tr><tr><td>2024-07</td><td>0</td><td>120.00</td></tr></table>
-  <p>May: electronics 800 + 500 = 1300, furniture 80. <code>GROUP BY 1</code> means "group by the first SELECT column". This pattern is called <strong>conditional aggregation</strong>. PostgreSQL shorthand: <code>sum(x) FILTER (WHERE category = 'Furniture')</code>, which gives NULL instead of 0 for an empty cell. In pandas the same report is <code>pivot_table</code>.</p></div></details>
-
-  <details class="qa"><summary><span class="qmark">Q</span>What is the median order value?</summary><div class="qa-body">
-  <p><strong>How to think:</strong> the <strong>median</strong> is the middle value after sorting. Unlike the average, one huge order cannot pull it up, which is why analysts prefer it for money. The question is about <em>orders</em>, but the amounts are stored per <em>line</em>, so first build one total per order. Skipping that step gives the median line, a different number.</p>
-  <p><strong>Step 1, one total per non-cancelled order:</strong></p>
-  <div class="fx" data-lang="sql">SELECT o.order_id, sum(oi.qty * oi.unit_price) AS total
-FROM orders o JOIN order_items oi USING (order_id)
-WHERE o.status &lt;&gt; 'cancelled'
-GROUP BY o.order_id ORDER BY total;</div>
-  <table class="tbl out"><caption>Step 1: order totals, sorted</caption><tr><th>order_id</th><th>total</th></tr><tr><td>104</td><td>120.00</td></tr><tr><td>101</td><td>500.00</td></tr><tr><td>100</td><td>880.00</td></tr><tr><td>103</td><td>1150.00</td></tr></table>
-  <p>Four totals: 120, 500, 880, 1150. With an even count there is no single middle; the two middle values are 500 and 880.</p>
-  <p><strong>Step 2, ask for the 50% point.</strong> Final query:</p>
-  <div class="fx" data-lang="sql">WITH t AS (
-  SELECT o.order_id, sum(oi.qty * oi.unit_price) AS total
-  FROM orders o JOIN order_items oi USING (order_id)
-  WHERE o.status &lt;&gt; 'cancelled'
-  GROUP BY o.order_id)
-SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY total) AS median_cont,
-       percentile_disc(0.5) WITHIN GROUP (ORDER BY total) AS median_disc,
-       round(avg(total), 2) AS mean
-FROM t;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>median_cont</th><th>median_disc</th><th>mean</th></tr><tr><td>690</td><td>500.00</td><td>662.50</td></tr></table>
-  <p><code>percentile_cont</code> ("continuous") takes the midpoint of the two middle values: (500 + 880) ÷ 2 = 690. <code>percentile_disc</code> ("discrete") returns an actual value from the list, the lower middle one, 500. <code>WITHIN GROUP (ORDER BY total)</code> tells it which column to sort. MySQL and SQLite lack these functions; there you number the sorted rows with <code>row_number()</code> and average the middle one or two.</p></div></details>
-
-  <h2 id="si-join"><span class="num">03</span>Joins</h2>
-  <p>A <strong>join</strong> places rows from two tables side by side when a condition matches, usually "this id equals that id". An <strong>inner join</strong> (plain <code>JOIN</code>) keeps only rows that found a partner. A <strong>left join</strong> keeps every row of the left table and fills the right side with NULL when no partner exists. Most join questions are really asking "which rows have a partner, which don't, and how many partners?".</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A school roll call. The teacher reads every name on the register (the left table) and ticks those who answer from the hall (the right table). An inner join lists only students who answered. A left join lists every name, with a blank next to the absent ones. "Who was absent?" is a left join where the tick is blank: that is an <strong>anti-join</strong>.</p>
+  <h2 id="si-nth"><span class="num">02</span>Nth Highest</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>MAX gives the highest. "Second highest" can be done with a subquery trick. But "the 6th highest" needs a general way to number values, and the numbering must decide what happens when two orders have the same amount.</p>
   </div>
-
-  <details class="qa"><summary><span class="qmark">Q</span>Find employees who earn more than their manager.</summary><div class="qa-body">
-  <p><strong>How to think:</strong> we need two salaries on the same row: the employee's and the manager's. But the manager is also a row in <code>employees</code>. So use the table twice under two nicknames: <code>e</code> plays "employee", <code>m</code> plays "manager", linked by <code>e.manager_id = m.emp_id</code>. Joining a table to itself is a <strong>self-join</strong>. It is like photocopying the staff register: one copy for the staff, one copy to look up each boss.</p>
-  <p><strong>Step 1, put each employee next to their manager (no filter yet):</strong></p>
-  <div class="fx" data-lang="sql">SELECT e.name, e.salary, m.name AS manager, m.salary AS manager_salary
-FROM employees e
-JOIN employees m ON m.emp_id = e.manager_id
-ORDER BY e.emp_id;</div>
-  <table class="tbl out"><caption>Step 1: employee and manager side by side</caption><tr><th>name</th><th>salary</th><th>manager</th><th>manager_salary</th></tr><tr><td>Sara</td><td>95000</td><td>Ravi</td><td>120000</td></tr><tr><td>Tom</td><td>95000</td><td>Ravi</td><td>120000</td></tr><tr><td>Uma</td><td>70000</td><td>Ravi</td><td>120000</td></tr><tr><td>Vik</td><td>65000</td><td>Uma</td><td>70000</td></tr></table>
-  <p>Ravi has no manager (NULL), so the inner join drops him, which is right: he cannot out-earn a boss he does not have.</p>
-  <p><strong>Step 2, compare.</strong> Final query:</p>
-  <div class="fx" data-lang="sql">SELECT e.name, e.salary, m.name AS manager, m.salary AS manager_salary
-FROM employees e
-JOIN employees m ON m.emp_id = e.manager_id
-WHERE e.salary &gt; m.salary;</div>
-  <table class="tbl out"><caption>Result (0 rows)</caption><tr><th>name</th><th>salary</th><th>manager</th><th>manager_salary</th></tr></table>
-  <p>Zero rows is a correct answer: in step 1 every employee earns less than the manager beside them. When a final query returns nothing, always remove the <code>WHERE</code> and check that the join itself works, as we did in step 1. Interviewers like it when you say this out loud.</p>
-  </div></details>
-
-  <details class="qa"><summary><span class="qmark">Q</span>Find customers who never placed an order.</summary><div class="qa-body">
-  <p><strong>How to think:</strong> this is the "absent students" question. Keep every customer, try to attach their orders, and keep the customers where nothing attached.</p>
-  <p><strong>Step 1, LEFT JOIN and look at the blanks:</strong></p>
-  <div class="fx" data-lang="sql">SELECT c.name, o.order_id
-FROM customers c LEFT JOIN orders o ON o.customer_id = c.customer_id
-ORDER BY c.customer_id, o.order_id;</div>
-  <table class="tbl out"><caption>Step 1: every customer, with orders if any</caption><tr><th>name</th><th>order_id</th></tr><tr><td>Asha</td><td>100</td></tr><tr><td>Asha</td><td>101</td></tr><tr><td>Ben</td><td>102</td></tr><tr><td>Chen</td><td>103</td></tr><tr><td>Chen</td><td>104</td></tr><tr><td>Dia</td><td>NULL</td></tr></table>
-  <p>Dia's <code>order_id</code> is NULL: the left join kept her and filled the right side with blanks.</p>
-  <p><strong>Step 2, keep rows where the right side is blank:</strong></p>
-  <div class="fx" data-lang="sql">SELECT c.name
-FROM customers c LEFT JOIN orders o ON o.customer_id = c.customer_id
-WHERE o.order_id IS NULL;</div>
-  <table class="tbl out"><caption>Version A: LEFT JOIN … IS NULL</caption><tr><th>name</th></tr><tr><td>Dia</td></tr></table>
-  <p>The version most interviewers prefer reads like the English sentence. <code>NOT EXISTS (…)</code> is true when the inner query finds zero rows; the inner query uses the outer row's <code>c.customer_id</code>, so it is checked once per customer:</p>
-  <div class="fx" data-lang="sql">SELECT c.name
-FROM customers c
-WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.customer_id);</div>
-  <table class="tbl out"><caption>Version B: NOT EXISTS (final)</caption><tr><th>name</th></tr><tr><td>Dia</td></tr></table>
-  <p>Asha, Ben and Chen each have at least one order, so EXISTS is true and NOT EXISTS drops them. <code>SELECT 1</code> is a convention: EXISTS only cares whether a row exists, not what is in it. This pattern is an <strong>anti-join</strong>. Avoid <code>NOT IN (subquery)</code> for it: one NULL in the list makes it return nothing (section 07 shows why).</p></div></details>
-
-  <details class="qa"><summary><span class="qmark">Q</span>Revenue per customer, including customers with zero.</summary><div class="qa-body">
-  <p><strong>How to think:</strong> "including zero" means every customer must appear, so start from <code>customers</code> and LEFT JOIN orders and items. A customer with no qualifying orders gets NULLs; <code>coalesce(x, 0)</code> ("first non-NULL of these") turns the NULL total into 0. The tricky part is where to put "not cancelled".</p>
-  <p><strong>Step 1, the joined rows:</strong> run the final query's <code>FROM … LEFT JOIN …</code> part with <code>SELECT c.name, o.order_id, o.status, oi.qty * oi.unit_price AS amount</code> and no grouping. The status filter sits inside the first <code>ON</code>.</p>
-  <table class="tbl out"><caption>Step 1: cancelled order rejected in ON, Ben kept with blanks</caption><tr><th>name</th><th>order_id</th><th>status</th><th>amount</th></tr><tr><td>Asha</td><td>100</td><td>delivered</td><td>800.00</td></tr><tr><td>Asha</td><td>100</td><td>delivered</td><td>80.00</td></tr><tr><td>Asha</td><td>101</td><td>delivered</td><td>500.00</td></tr><tr><td>Ben</td><td>NULL</td><td>NULL</td><td>NULL</td></tr><tr><td>Chen</td><td>103</td><td>delivered</td><td>150.00</td></tr><tr><td>Chen</td><td>103</td><td>delivered</td><td>1000.00</td></tr><tr><td>Chen</td><td>104</td><td>pending</td><td>120.00</td></tr><tr><td>Dia</td><td>NULL</td><td>NULL</td><td>NULL</td></tr></table>
-  <p>Ben's only order is cancelled, so the <code>ON</code> condition finds no partner for him; like Dia, he stays with blanks.</p>
-  <p><strong>Step 2, total per customer, NULL → 0.</strong> Final query:</p>
-  <div class="fx" data-lang="sql">SELECT c.name, coalesce(sum(oi.qty * oi.unit_price), 0) AS revenue
-FROM customers c
-LEFT JOIN orders o       ON o.customer_id = c.customer_id AND o.status &lt;&gt; 'cancelled'
-LEFT JOIN order_items oi ON oi.order_id = o.order_id
-GROUP BY c.customer_id, c.name
-ORDER BY revenue DESC, c.name;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>revenue</th></tr><tr><td>Asha</td><td>1380.00</td></tr><tr><td>Chen</td><td>1270.00</td></tr><tr><td>Ben</td><td>0</td></tr><tr><td>Dia</td><td>0</td></tr></table>
-  <p>Now the common mistake: the same filter moved into <code>WHERE</code>.</p>
-  <div class="fx" data-lang="sql">SELECT c.name, coalesce(sum(oi.qty * oi.unit_price), 0) AS revenue
-FROM customers c
-LEFT JOIN orders o       ON o.customer_id = c.customer_id
-LEFT JOIN order_items oi ON oi.order_id = o.order_id
-WHERE o.status &lt;&gt; 'cancelled'
-GROUP BY c.customer_id, c.name
-ORDER BY revenue DESC, c.name;</div>
-  <table class="tbl out"><caption>Wrong: filter in WHERE turns the LEFT JOIN into an inner join</caption><tr><th>name</th><th>revenue</th></tr><tr><td>Asha</td><td>1380.00</td></tr><tr><td>Chen</td><td>1270.00</td></tr></table>
-  <p>Ben's row has status 'cancelled' and Dia's has NULL. <code>WHERE</code> runs after the join and keeps only rows where the test is true; <code>NULL &lt;&gt; 'cancelled'</code> is unknown, not true. Both disappear. Rule: a filter on the right-hand table of a LEFT JOIN goes in <code>ON</code>.</p></div></details>
-
-  <details class="qa"><summary><span class="qmark">Q</span>Per customer: number of orders and total items. Why does the obvious query overcount?</summary><div class="qa-body">
-  <p><strong>How to think:</strong> orders are counted per order, items per line. The moment you join <code>order_items</code>, each order is repeated once per line. Anything you count "per order" after that join is inflated. This row multiplication is called <strong>fan-out</strong>.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A wedding caterer counts invitations. If you count plates instead, a family of four looks like four invitations. Joining items is switching from "invitations" to "plates".</p></div>
-  <p><strong>Step 1, look at the joined rows:</strong></p>
-  <div class="fx" data-lang="sql">SELECT c.name, o.order_id, p.name AS product, oi.qty
-FROM customers c
-JOIN orders o       USING (customer_id)
-JOIN order_items oi USING (order_id)
-JOIN products p     USING (product_id)
-ORDER BY c.name, o.order_id, p.name;</div>
-  <table class="tbl out"><caption>Step 1: one row per order line</caption><tr><th>name</th><th>order_id</th><th>product</th><th>qty</th></tr><tr><td>Asha</td><td>100</td><td>Lamp</td><td>2</td></tr><tr><td>Asha</td><td>100</td><td>Laptop</td><td>1</td></tr><tr><td>Asha</td><td>101</td><td>Phone</td><td>1</td></tr><tr><td>Ben</td><td>102</td><td>Desk</td><td>1</td></tr><tr><td>Chen</td><td>103</td><td>Desk</td><td>1</td></tr><tr><td>Chen</td><td>103</td><td>Phone</td><td>2</td></tr><tr><td>Chen</td><td>104</td><td>Lamp</td><td>3</td></tr></table>
-  <p>Asha has two orders but three rows: order 100 appears twice. Chen too.</p>
-  <p><strong>Step 2, count both ways.</strong> Final query:</p>
-  <div class="fx" data-lang="sql">SELECT c.name,
-       count(*)                   AS wrong_orders,
-       count(DISTINCT o.order_id) AS orders,
-       sum(oi.qty)                AS items
-FROM customers c
-JOIN orders o       USING (customer_id)
-JOIN order_items oi USING (order_id)
-GROUP BY c.customer_id, c.name ORDER BY c.name;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>wrong_orders</th><th>orders</th><th>items</th></tr><tr><td>Asha</td><td>3</td><td>2</td><td>4</td></tr><tr><td>Ben</td><td>1</td><td>1</td><td>1</td></tr><tr><td>Chen</td><td>3</td><td>2</td><td>6</td></tr></table>
-  <p><code>count(*)</code> counts rows (lines), so Asha shows 3. <code>count(DISTINCT o.order_id)</code> counts each order id once: 2. <code>sum(oi.qty)</code> is right as it is, because each line should be counted once: 1 + 2 + 1 = 4 items. The other fix is to aggregate items per order in a CTE first, then join that one-row-per-order result.</p>
-  <figure class="viz"><svg viewBox="0 0 600 150" width="600">
-    <defs><marker id="si-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
-    <text x="0" y="14" font-size="11" class="tm">Asha's orders (2 rows)</text>
-    <rect x="0" y="24" width="120" height="30" rx="5" class="fb sb"/><text x="60" y="44" text-anchor="middle">order 100</text>
-    <rect x="0" y="84" width="120" height="30" rx="5" class="ft st"/><text x="60" y="104" text-anchor="middle">order 101</text>
-    <text x="200" y="14" font-size="11" class="tm">after JOIN order_items (3 rows)</text>
-    <rect x="200" y="24" width="190" height="26" rx="5" class="fb sb"/><text x="295" y="42" text-anchor="middle">100 · Laptop ×1</text>
-    <rect x="200" y="56" width="190" height="26" rx="5" class="fb sb"/><text x="295" y="74" text-anchor="middle">100 · Lamp ×2</text>
-    <rect x="200" y="88" width="190" height="26" rx="5" class="ft st"/><text x="295" y="106" text-anchor="middle">101 · Phone ×1</text>
-    <g stroke="currentColor"><line x1="120" y1="39" x2="198" y2="37" marker-end="url(#si-ar)"/><line x1="120" y1="39" x2="198" y2="69" marker-end="url(#si-ar)"/><line x1="120" y1="99" x2="198" y2="101" marker-end="url(#si-ar)"/></g>
-    <text x="410" y="42" class="tr">count(*) = 3 ✗</text>
-    <text x="410" y="74" class="tg">count(DISTINCT) = 2</text>
-    <text x="410" y="106">sum(qty) = 4 ✓</text>
-    <text x="0" y="140" font-size="11" class="tm">order 100 now appears twice: anything counted per order is inflated</text>
-  </svg><figcaption>Fan-out: a 1-row-per-order table joined to a 1-row-per-item table repeats each order once per line.</figcaption></figure></div></details>
-
-  <details class="qa"><summary><span class="qmark">Q</span>List pairs of customers who live in the same city, each pair once.</summary><div class="qa-body">
-  <p><strong>How to think:</strong> a pair is two customer rows side by side, so self-join <code>customers</code> on city. Then remove two kinds of junk: a customer paired with themselves, and the mirror copy (Asha–Chen and Chen–Asha).</p>
-  <p><strong>Step 1, join on city only:</strong></p>
-  <div class="fx" data-lang="sql">SELECT a.name AS customer_1, b.name AS customer_2, a.city
-FROM customers a JOIN customers b ON a.city = b.city
-ORDER BY a.customer_id, b.customer_id;</div>
-  <table class="tbl out"><caption>Step 1: every same-city combination</caption><tr><th>customer_1</th><th>customer_2</th><th>city</th></tr><tr><td>Asha</td><td>Asha</td><td>Mumbai</td></tr><tr><td>Asha</td><td>Chen</td><td>Mumbai</td></tr><tr><td>Ben</td><td>Ben</td><td>Delhi</td></tr><tr><td>Chen</td><td>Asha</td><td>Mumbai</td></tr><tr><td>Chen</td><td>Chen</td><td>Mumbai</td></tr></table>
-  <p>Five rows: three self-pairs (Asha–Asha, Ben–Ben, Chen–Chen) and Asha–Chen twice in both orders. Dia is missing entirely, because her city is NULL and <code>NULL = NULL</code> is not true.</p>
-  <p><strong>Step 2, keep only the copy where the first id is smaller.</strong> Final query:</p>
-  <div class="fx" data-lang="sql">SELECT a.name AS customer_1, b.name AS customer_2, a.city
-FROM customers a
-JOIN customers b ON a.city = b.city AND a.customer_id &lt; b.customer_id;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>customer_1</th><th>customer_2</th><th>city</th></tr><tr><td>Asha</td><td>Chen</td><td>Mumbai</td></tr></table>
-  <p><code>a.customer_id &lt; b.customer_id</code> does two jobs at once: 1 &lt; 1 is false, so self-pairs go; of (1, 3) and (3, 1) only (1, 3) passes, so mirrors go. Using <code>&lt;&gt;</code> instead would remove self-pairs but keep both mirrors.</p></div></details>
-
-  <h2 id="si-cte"><span class="num">04</span>Subqueries &amp; CTEs</h2>
-  <p>Some questions need an answer that depends on another answer: "above <em>its category's</em> average", "the <em>top</em> product <em>in each</em> category", "the <em>copies</em> of each email". You compute the inner answer first (a subquery or a CTE), then use it. A <strong>subquery</strong> is a query in brackets inside another query. A <strong>correlated</strong> subquery uses a column of the outer row, so it gives a different answer for each outer row.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A class teacher asks "who scored above their own section's average?". She first works out each section's average on a sheet of paper (the inner query), then checks every student against the number for their section (the outer query). The sheet of paper is the CTE.</p>
-  </div>
-
-  <details class="qa"><summary><span class="qmark">Q</span>Products priced above their category's average.</summary><div class="qa-body">
-  <p><strong>How to think:</strong> two numbers per product: its own price and its category's average price. Then compare. The overall average would be wrong: a Desk at 150 is cheap compared with electronics but expensive for furniture.</p>
-  <p><strong>Step 1, the average per category:</strong></p>
-  <div class="fx" data-lang="sql">SELECT category, round(avg(price), 2) AS avg_price
-FROM products GROUP BY category ORDER BY category;</div>
-  <table class="tbl out"><caption>Step 1</caption><tr><th>category</th><th>avg_price</th></tr><tr><td>Electronics</td><td>650.00</td></tr><tr><td>Furniture</td><td>95.00</td></tr></table>
-  <p><strong>Step 2, put that average beside every product.</strong> A window <code>avg(price) OVER (PARTITION BY category)</code> computes the average inside each category and writes it on every row, without collapsing rows:</p>
-  <div class="fx" data-lang="sql">SELECT name, category, price,
-       round(avg(price) OVER (PARTITION BY category), 2) AS cat_avg
-FROM products ORDER BY category, price DESC;</div>
-  <table class="tbl out"><caption>Step 2: each product with its own category&#x27;s average</caption><tr><th>name</th><th>category</th><th>price</th><th>cat_avg</th></tr><tr><td>Laptop</td><td>Electronics</td><td>800.00</td><td>650.00</td></tr><tr><td>Phone</td><td>Electronics</td><td>500.00</td><td>650.00</td></tr><tr><td>Desk</td><td>Furniture</td><td>150.00</td><td>95.00</td></tr><tr><td>Lamp</td><td>Furniture</td><td>40.00</td><td>95.00</td></tr></table>
-  <p><strong>Step 3, compare.</strong> The classic interview answer uses a correlated subquery, which reads "price greater than the average of products in <em>my</em> category":</p>
-  <div class="fx" data-lang="sql">SELECT name, category, price
-FROM products p
-WHERE price &gt; (SELECT avg(price) FROM products WHERE category = p.category);</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>category</th><th>price</th></tr><tr><td>Laptop</td><td>Electronics</td><td>800.00</td></tr><tr><td>Desk</td><td>Furniture</td><td>150.00</td></tr></table>
-  <p>Laptop 800 &gt; 650 and Desk 150 &gt; 95 pass. The inner query refers to <code>p.category</code> from the outer row, so it is re-evaluated per product. Both versions are fine; the window version (filter step 2's result in an outer query) scans the table once, which matters on big tables.</p></div></details>
-
-  <details class="qa"><summary><span class="qmark">Q</span>Customers who bought from both Electronics and Furniture.</summary><div class="qa-body">
-  <p><strong>How to think:</strong> the tempting <code>WHERE category = 'Electronics' AND category = 'Furniture'</code> is always empty: a single row has one category. "Both" is a property of a <em>group</em> of rows (a customer's purchases), so group per customer and count how many different categories the group contains.</p>
-  <p><strong>Step 1, each customer's purchased categories:</strong> the final query's joins and <code>WHERE</code>, selecting just <code>c.name, p.category</code>, no grouping.</p>
-  <table class="tbl out"><caption>Step 1</caption><tr><th>name</th><th>category</th></tr><tr><td>Asha</td><td>Electronics</td></tr><tr><td>Asha</td><td>Electronics</td></tr><tr><td>Asha</td><td>Furniture</td></tr><tr><td>Chen</td><td>Electronics</td></tr><tr><td>Chen</td><td>Furniture</td></tr><tr><td>Chen</td><td>Furniture</td></tr></table>
-  <p><strong>Step 2, count distinct categories per customer and keep those with 2.</strong> Final query:</p>
-  <div class="fx" data-lang="sql">SELECT c.name, count(DISTINCT p.category) AS categories
-FROM customers c
-JOIN orders o       USING (customer_id)
-JOIN order_items oi USING (order_id)
-JOIN products p     USING (product_id)
-WHERE o.status &lt;&gt; 'cancelled'
-  AND p.category IN ('Electronics', 'Furniture')
-GROUP BY c.customer_id, c.name
-HAVING count(DISTINCT p.category) = 2;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>categories</th></tr><tr><td>Asha</td><td>2</td></tr><tr><td>Chen</td><td>2</td></tr></table>
-  <p>Chen has three rows (Phone, Desk, Lamp) but only two distinct categories. <code>DISTINCT</code> matters: plain <code>count(*) = 2</code> would wrongly reject Chen and could accept someone who bought two Lamps. Ben's only order is cancelled, so <code>WHERE</code> removed him before grouping.</p></div></details>
-
-  <details class="qa"><summary><span class="qmark">Q</span>Top-selling product (by revenue) in each category.</summary><div class="qa-body">
-  <p><strong>How to think:</strong> this is the most asked SQL pattern, "top N per group". Three bowls: (1) revenue per product, (2) a rank inside each category, (3) keep rank 1. <code>PARTITION BY category</code> means "restart the ranking for every category", like ranking students separately in each section.</p>
-  <p><strong>Step 1, revenue per product:</strong></p>
-  <div class="fx" data-lang="sql">SELECT p.category, p.name, sum(oi.qty * oi.unit_price) AS revenue
-FROM order_items oi
-JOIN orders o   USING (order_id)
-JOIN products p USING (product_id)
-WHERE o.status &lt;&gt; 'cancelled'
-GROUP BY p.category, p.name ORDER BY p.category, revenue DESC;</div>
-  <table class="tbl out"><caption>Step 1 (CTE rev)</caption><tr><th>category</th><th>name</th><th>revenue</th></tr><tr><td>Electronics</td><td>Phone</td><td>1500.00</td></tr><tr><td>Electronics</td><td>Laptop</td><td>800.00</td></tr><tr><td>Furniture</td><td>Lamp</td><td>200.00</td></tr><tr><td>Furniture</td><td>Desk</td><td>150.00</td></tr></table>
-  <p><strong>Step 2, rank within each category:</strong> select <code>*, rank() OVER (PARTITION BY category ORDER BY revenue DESC) AS rk</code> from step 1 (this is the CTE <code>ranked</code> in the final query).</p>
-  <table class="tbl out"><caption>Step 2 (CTE ranked)</caption><tr><th>category</th><th>name</th><th>revenue</th><th>rk</th></tr><tr><td>Electronics</td><td>Phone</td><td>1500.00</td><td>1</td></tr><tr><td>Electronics</td><td>Laptop</td><td>800.00</td><td>2</td></tr><tr><td>Furniture</td><td>Lamp</td><td>200.00</td><td>1</td></tr><tr><td>Furniture</td><td>Desk</td><td>150.00</td><td>2</td></tr></table>
-  <p><strong>Step 3, keep rank 1.</strong> Final query:</p>
-  <div class="fx" data-lang="sql">WITH rev AS (
-  SELECT p.category, p.name, sum(oi.qty * oi.unit_price) AS revenue
-  FROM order_items oi
-  JOIN orders o   USING (order_id)
-  JOIN products p USING (product_id)
-  WHERE o.status &lt;&gt; 'cancelled'
-  GROUP BY p.category, p.name),
-ranked AS (
-  SELECT *, rank() OVER (PARTITION BY category ORDER BY revenue DESC) AS rk
-  FROM rev)
-SELECT category, name, revenue FROM ranked WHERE rk = 1;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>category</th><th>name</th><th>revenue</th></tr><tr><td>Electronics</td><td>Phone</td><td>1500.00</td></tr><tr><td>Furniture</td><td>Lamp</td><td>200.00</td></tr></table>
-  <p>Phone 500 + 1000 = 1500 beats Laptop 800; Lamp 80 + 120 = 200 beats Desk 150. <code>rank</code> keeps both products if they tie; <code>row_number</code> would pick one arbitrarily. Note how the definition of revenue changes the answer: including cancelled orders gives Desk 300 and flips Furniture's winner. That is why you state the definition first.</p></div></details>
-
-  <details class="qa"><summary><span class="qmark">Q</span>A <code>signups</code> table has duplicate emails. Find them.</summary><div class="qa-body">
-  <p><strong>How to think:</strong> "duplicate" means "same value in the columns that should be unique", here the email. Group by email; any group with more than one row is a duplicate. We also want to see which row ids are the copies. This table is created in a scratch copy of the database:</p>
-  <div class="fx" data-lang="sql">CREATE TABLE signups (id int PRIMARY KEY, email text, signed_up date);
-INSERT INTO signups VALUES
- (1, 'asha@x.com', '2024-01-05'), (2, 'ben@x.com', '2024-02-10'), (3, 'asha@x.com', '2024-01-06'),
- (4, 'chen@x.com', '2024-03-15'), (5, 'ben@x.com', '2024-02-10'), (6, 'asha@x.com', '2024-01-09');</div>
-  <p><strong>Step 1, count rows per email:</strong></p>
-  <div class="fx" data-lang="sql">SELECT email, count(*) AS copies
-FROM signups GROUP BY email ORDER BY email;</div>
-  <table class="tbl out"><caption>Step 1</caption><tr><th>email</th><th>copies</th></tr><tr><td>asha@x.com</td><td>3</td></tr><tr><td>ben@x.com</td><td>2</td></tr><tr><td>chen@x.com</td><td>1</td></tr></table>
-  <p><strong>Step 2, keep groups above 1 and list their ids.</strong> Final query:</p>
-  <div class="fx" data-lang="sql">SELECT email, count(*) AS copies, array_agg(id ORDER BY id) AS ids
-FROM signups GROUP BY email HAVING count(*) &gt; 1 ORDER BY email;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>email</th><th>copies</th><th>ids</th></tr><tr><td>asha@x.com</td><td>3</td><td>{1,3,6}</td></tr><tr><td>ben@x.com</td><td>2</td><td>{2,5}</td></tr></table>
-  <p><code>array_agg(id ORDER BY id)</code> collects a group's ids into one list (PostgreSQL; MySQL has <code>group_concat</code>, SQL Server <code>string_agg</code>). On real data, normalise first with <code>lower(trim(email))</code>, so "Asha@X.com " counts as the same address.</p></div></details>
-
-  <details class="qa"><summary><span class="qmark">Q</span>Delete the duplicates, keeping the earliest row per email.</summary><div class="qa-body">
-  <p><strong>How to think:</strong> inside each email group, number the rows 1, 2, 3 by id. Row 1 is the keeper; every row numbered 2 or more is a copy. First <em>look</em> at the rows you are about to delete (a DELETE cannot be undone outside a transaction), then delete them.</p>
-  <p><strong>Step 1, number rows inside each email:</strong></p>
-  <div class="fx" data-lang="sql">SELECT id, email, row_number() OVER (PARTITION BY email ORDER BY id) AS rn
-FROM signups ORDER BY email, id;</div>
-  <table class="tbl out"><caption>Step 1</caption><tr><th>id</th><th>email</th><th>rn</th></tr><tr><td>1</td><td>asha@x.com</td><td>1</td></tr><tr><td>3</td><td>asha@x.com</td><td>2</td></tr><tr><td>6</td><td>asha@x.com</td><td>3</td></tr><tr><td>2</td><td>ben@x.com</td><td>1</td></tr><tr><td>5</td><td>ben@x.com</td><td>2</td></tr><tr><td>4</td><td>chen@x.com</td><td>1</td></tr></table>
-  <p><strong>Step 2, the ids to delete (rn &gt; 1):</strong></p>
-  <div class="fx" data-lang="sql">SELECT id FROM (
-  SELECT id, row_number() OVER (PARTITION BY email ORDER BY id) AS rn
-  FROM signups) t
-WHERE rn &gt; 1 ORDER BY id;</div>
-  <table class="tbl out"><caption>Step 2: check before deleting</caption><tr><th>id</th></tr><tr><td>3</td></tr><tr><td>5</td></tr><tr><td>6</td></tr></table>
-  <p><strong>Step 3, delete exactly those ids:</strong></p>
-  <div class="fx" data-lang="sql">DELETE FROM signups
-WHERE id IN (
-  SELECT id FROM (
-    SELECT id, row_number() OVER (PARTITION BY email ORDER BY id) AS rn
-    FROM signups) t
-  WHERE rn &gt; 1);</div>
-  <div class="fx" data-lang="sql">SELECT * FROM signups ORDER BY id;</div>
-  <table class="tbl out"><caption>After the delete</caption><tr><th>id</th><th>email</th><th>signed_up</th></tr><tr><td>1</td><td>asha@x.com</td><td>2024-01-05</td></tr><tr><td>2</td><td>ben@x.com</td><td>2024-02-10</td></tr><tr><td>4</td><td>chen@x.com</td><td>2024-03-15</td></tr></table>
-  <p>Ids 3, 5 and 6 are gone; one row per email remains. The same step-2 query became the body of the DELETE, which is the safe habit. PostgreSQL shortcut: <code>DELETE FROM signups a USING signups b WHERE a.email = b.email AND a.id &gt; b.id</code>. Finish with <code>ALTER TABLE signups ADD UNIQUE (email)</code> so duplicates cannot come back.</p></div></details>
-
-  <details class="qa"><summary><span class="qmark">Q</span>Show the reporting chain for every employee, starting from the CEO.</summary><div class="qa-body">
-  <p><strong>How to think:</strong> for each person, the path of bosses from the top down, like "Ravi &gt; Uma &gt; Vik". You don't know how deep the tree is, so a fixed number of self-joins won't do. You need a query that repeats until it finds nobody new: a <strong>recursive CTE</strong>. It has an <em>anchor</em> (the starting rows) and a <em>step</em> (find the direct reports of the rows found so far), glued with <code>UNION ALL</code>.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Drawing a family tree at a wedding. Start with the grandfather (anchor). Ask "who are his children?" (step). Then ask the same about each child, generation by generation, until someone has no children.</p></div>
-  <p><strong>Round by round, by hand:</strong> round 1 is the anchor, the person with no manager.</p>
-  <div class="fx" data-lang="sql">SELECT emp_id, name FROM employees WHERE manager_id IS NULL;</div>
-  <table class="tbl out"><caption>Round 1 (anchor)</caption><tr><th>emp_id</th><th>name</th></tr><tr><td>1</td><td>Ravi</td></tr></table>
-  <div class="fx" data-lang="sql">SELECT emp_id, name FROM employees WHERE manager_id IN (1) ORDER BY emp_id;</div>
-  <table class="tbl out"><caption>Round 2: direct reports of round 1 (Ravi = 1)</caption><tr><th>emp_id</th><th>name</th></tr><tr><td>2</td><td>Sara</td></tr><tr><td>3</td><td>Tom</td></tr><tr><td>4</td><td>Uma</td></tr></table>
-  <div class="fx" data-lang="sql">SELECT emp_id, name FROM employees WHERE manager_id IN (2, 3, 4);</div>
-  <table class="tbl out"><caption>Round 3: direct reports of round 2 (ids 2, 3, 4)</caption><tr><th>emp_id</th><th>name</th></tr><tr><td>5</td><td>Vik</td></tr></table>
-  <p>Round 4 would ask for reports of Vik (id 5) and find none, so it stops. The recursive CTE does exactly these rounds, carrying a level and a path along:</p>
-  <div class="fx" data-lang="sql">WITH RECURSIVE chain AS (
-  SELECT emp_id, name, 1 AS level, name AS path
-  FROM employees WHERE manager_id IS NULL                       -- anchor: the top
-  UNION ALL
-  SELECT e.emp_id, e.name, c.level + 1, c.path || ' &gt; ' || e.name
-  FROM employees e JOIN chain c ON e.manager_id = c.emp_id)     -- step: direct reports
-SELECT name, level, path FROM chain ORDER BY path;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>level</th><th>path</th></tr><tr><td>Ravi</td><td>1</td><td>Ravi</td></tr><tr><td>Sara</td><td>2</td><td>Ravi &gt; Sara</td></tr><tr><td>Tom</td><td>2</td><td>Ravi &gt; Tom</td></tr><tr><td>Uma</td><td>2</td><td>Ravi &gt; Uma</td></tr><tr><td>Vik</td><td>3</td><td>Ravi &gt; Uma &gt; Vik</td></tr></table>
-  <p><code>||</code> joins text. In the step, <code>chain</code> means "the rows found in the previous round", so each new row's path is its boss's path plus its own name. Real uses: org charts, category trees, bill of materials, friend-of-friend graphs.</p>
-  <div class="callout trap"><span class="label">Trap</span><p>If the data has a cycle (A manages B, B manages A), the recursion never ends. Add a guard such as <code>WHERE c.level &lt; 20</code> in the step.</p></div></div></details>
-
-  <h2 id="si-win"><span class="num">05</span>Window Functions</h2>
-  <p><code>GROUP BY</code> collapses rows: ten orders become one row per customer. Often you need the opposite: keep every row, but add a number computed from its neighbours (its rank, the running total so far, the previous order's date). A <strong>window function</strong> does that. <code>OVER (PARTITION BY x ORDER BY y)</code> says: split the rows into groups by x (without merging them), sort each group by y, and compute the value for each row inside its group.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>After an exam, the teacher writes each student's rank in the section on their own answer sheet. The sheets are not stapled into one; each keeps its own marks plus a new "rank" line. GROUP BY would be the teacher writing one summary line per section and throwing the sheets away.</p>
-  </div>
-
-  <details class="qa"><summary><span class="qmark">Q</span>Each customer's latest order.</summary><div class="qa-body">
-  <p><strong>How to think:</strong> one row per customer, but the row must be a whole order (id and date), not just <code>max(order_date)</code>. Number each customer's orders newest-first; the latest is always number 1.</p>
-  <p><strong>Step 1, number orders within each customer:</strong> run the CTE <code>r</code> from the final query on its own.</p>
-  <table class="tbl out"><caption>Step 1</caption><tr><th>customer_id</th><th>order_id</th><th>order_date</th><th>rn</th></tr><tr><td>1</td><td>101</td><td>2024-05-20</td><td>1</td></tr><tr><td>1</td><td>100</td><td>2024-05-01</td><td>2</td></tr><tr><td>2</td><td>102</td><td>2024-06-02</td><td>1</td></tr><tr><td>3</td><td>104</td><td>2024-07-01</td><td>1</td></tr><tr><td>3</td><td>103</td><td>2024-06-15</td><td>2</td></tr></table>
-  <p>The numbering restarts at 1 for every customer, because of <code>PARTITION BY customer_id</code>. <code>order_id DESC</code> is a tie-breaker: if two orders share a date, the result is still the same every run.</p>
-  <p><strong>Step 2, keep rn = 1 and add names.</strong> Final query:</p>
-  <div class="fx" data-lang="sql">WITH r AS (
-  SELECT customer_id, order_id, order_date,
-         row_number() OVER (PARTITION BY customer_id
-                            ORDER BY order_date DESC, order_id DESC) AS rn
+  <p><b>The question.</b> What is the 6th highest order amount (counting equal amounts once), and which orders have it?</p>
+  <p><b>Needs.</b> Window ranking functions (<a class="xref" data-note="sql_windows">Window Functions</a>: ROW_NUMBER, RANK, DENSE_RANK) and a CTE to filter on the rank (<a class="xref" data-note="sql_subqueries">Subqueries &amp; CTEs</a>).</p>
+  <p><b>Approach in plain words.</b> Sort amounts from high to low and give each <em>distinct</em> amount a number 1, 2, 3, … with equal amounts sharing a number (that is DENSE_RANK). Keep the rows numbered 6.</p>
+  <p><b>Trace.</b> Amounts high to low: 600 (109), 520 (103), 450 (102), 380 (104), 310 (105, 110), 260 (107, 108), 240 (101), 180 (106). Distinct ranks: 600→1, 520→2, 450→3, 380→4, 310→5, 260→6. Answer: 260, orders 107 and 108.</p>
+  <div class="fx" data-lang="sql">WITH ranked AS (
+  SELECT order_id, amount, dense_rank() OVER (ORDER BY amount DESC) AS rnk
   FROM orders)
-SELECT c.name, r.order_id, r.order_date
-FROM r JOIN customers c USING (customer_id)
-WHERE rn = 1 ORDER BY c.name;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>order_id</th><th>order_date</th></tr><tr><td>Asha</td><td>101</td><td>2024-05-20</td></tr><tr><td>Ben</td><td>102</td><td>2024-06-02</td></tr><tr><td>Chen</td><td>104</td><td>2024-07-01</td></tr></table>
-  <p>PostgreSQL shortcut: <code>SELECT DISTINCT ON (customer_id) … ORDER BY customer_id, order_date DESC</code>. The usual alternative, joining back on <code>max(order_date)</code>, returns two rows when a customer has two orders on the same day.</p></div></details>
-
-  <details class="qa"><summary><span class="qmark">Q</span>Running total of revenue by date.</summary><div class="qa-body">
-  <p><strong>How to think:</strong> like the balance column in a bank passbook: each line shows everything so far. First make one row per day, then add a cumulative sum.</p>
-  <p><strong>Step 1, revenue per day:</strong> the CTE <code>daily</code> from the final query, run alone.</p>
-  <table class="tbl out"><caption>Step 1 (CTE daily)</caption><tr><th>order_date</th><th>revenue</th></tr><tr><td>2024-05-01</td><td>880.00</td></tr><tr><td>2024-05-20</td><td>500.00</td></tr><tr><td>2024-06-15</td><td>1150.00</td></tr><tr><td>2024-07-01</td><td>120.00</td></tr></table>
-  <p><strong>Step 2, running sum.</strong> Final query:</p>
-  <div class="fx" data-lang="sql">WITH daily AS (
-  SELECT o.order_date, sum(oi.qty * oi.unit_price) AS revenue
-  FROM orders o JOIN order_items oi USING (order_id)
-  WHERE o.status &lt;&gt; 'cancelled'
-  GROUP BY o.order_date)
-SELECT order_date, revenue,
-       sum(revenue) OVER (ORDER BY order_date) AS running_total
-FROM daily ORDER BY order_date;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>order_date</th><th>revenue</th><th>running_total</th></tr><tr><td>2024-05-01</td><td>880.00</td><td>880.00</td></tr><tr><td>2024-05-20</td><td>500.00</td><td>1380.00</td></tr><tr><td>2024-06-15</td><td>1150.00</td><td>2530.00</td></tr><tr><td>2024-07-01</td><td>120.00</td><td>2650.00</td></tr></table>
-  <p>880, then 880 + 500 = 1380, then + 1150 = 2530, then + 120 = 2650. Putting <code>ORDER BY</code> inside <code>OVER</code> is what makes the sum cumulative: for each row it adds the rows from the start up to this one. The default frame is <code>RANGE</code>, which treats rows with equal dates as one step; write <code>ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW</code> for strict row-by-row.</p></div></details>
-
-  <details class="qa"><summary><span class="qmark">Q</span>Top 2 earners in each department, keeping ties.</summary><div class="qa-body">
-  <p><strong>How to think:</strong> top-N per group again. "Keeping ties" decides the function: <code>dense_rank</code> lets Sara and Tom share rank 2.</p>
-  <p><strong>Step 1, rank within each department:</strong> the inner query of the final answer, run alone.</p>
-  <table class="tbl out"><caption>Step 1</caption><tr><th>dept</th><th>name</th><th>salary</th><th>rk</th></tr><tr><td>Eng</td><td>Ravi</td><td>120000</td><td>1</td></tr><tr><td>Eng</td><td>Sara</td><td>95000</td><td>2</td></tr><tr><td>Eng</td><td>Tom</td><td>95000</td><td>2</td></tr><tr><td>Sales</td><td>Uma</td><td>70000</td><td>1</td></tr><tr><td>Sales</td><td>Vik</td><td>65000</td><td>2</td></tr></table>
-  <p><strong>Step 2, keep rk ≤ 2.</strong> A window result can't go straight into <code>WHERE</code>, so wrap it (here as a subquery in <code>FROM</code>, which works like a CTE):</p>
-  <div class="fx" data-lang="sql">SELECT dept, name, salary, rk
-FROM (SELECT dept, name, salary,
-             dense_rank() OVER (PARTITION BY dept ORDER BY salary DESC) AS rk
-      FROM employees) t
-WHERE rk &lt;= 2 ORDER BY dept, rk, name;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>dept</th><th>name</th><th>salary</th><th>rk</th></tr><tr><td>Eng</td><td>Ravi</td><td>120000</td><td>1</td></tr><tr><td>Eng</td><td>Sara</td><td>95000</td><td>2</td></tr><tr><td>Eng</td><td>Tom</td><td>95000</td><td>2</td></tr><tr><td>Sales</td><td>Uma</td><td>70000</td><td>1</td></tr><tr><td>Sales</td><td>Vik</td><td>65000</td><td>2</td></tr></table>
-  <p>Eng returns three people because of the tie. Say which you want: <code>row_number</code> = exactly 2 rows per department; <code>rank</code>/<code>dense_rank</code> = keep ties (they differ only in what comes after a tie).</p></div></details>
-
-  <details class="qa"><summary><span class="qmark">Q</span>Days between each order and the same customer's previous order.</summary><div class="qa-body">
-  <p><strong>How to think:</strong> on each order row we need the previous order's date of the same customer. <code>lag(col)</code> reads <code>col</code> from the previous row in the window; <code>lead(col)</code> reads the next one.</p>
-  <p><strong>Step 1, bring the previous date onto each row:</strong></p>
-  <div class="fx" data-lang="sql">SELECT customer_id, order_id, order_date,
-       lag(order_date) OVER (PARTITION BY customer_id ORDER BY order_date) AS prev_date
-FROM orders ORDER BY customer_id, order_date;</div>
-  <table class="tbl out"><caption>Step 1</caption><tr><th>customer_id</th><th>order_id</th><th>order_date</th><th>prev_date</th></tr><tr><td>1</td><td>100</td><td>2024-05-01</td><td>NULL</td></tr><tr><td>1</td><td>101</td><td>2024-05-20</td><td>2024-05-01</td></tr><tr><td>2</td><td>102</td><td>2024-06-02</td><td>NULL</td></tr><tr><td>3</td><td>103</td><td>2024-06-15</td><td>NULL</td></tr><tr><td>3</td><td>104</td><td>2024-07-01</td><td>2024-06-15</td></tr></table>
-  <p><strong>Step 2, subtract.</strong> Final query:</p>
-  <div class="fx" data-lang="sql">SELECT customer_id, order_id, order_date,
-       order_date - lag(order_date) OVER (PARTITION BY customer_id ORDER BY order_date) AS days_since_prev
-FROM orders ORDER BY customer_id, order_date;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>customer_id</th><th>order_id</th><th>order_date</th><th>days_since_prev</th></tr><tr><td>1</td><td>100</td><td>2024-05-01</td><td>NULL</td></tr><tr><td>1</td><td>101</td><td>2024-05-20</td><td>19</td></tr><tr><td>2</td><td>102</td><td>2024-06-02</td><td>NULL</td></tr><tr><td>3</td><td>103</td><td>2024-06-15</td><td>NULL</td></tr><tr><td>3</td><td>104</td><td>2024-07-01</td><td>16</td></tr></table>
-  <p>Asha: 20 May − 1 May = 19 days. A customer's first order has no previous row, so <code>lag</code> gives NULL and the difference is NULL. In PostgreSQL, <code>date − date</code> is a whole number of days. This "gap between events" column is a standard churn feature in ML models.</p></div></details>
-
-  <h2 id="si-date"><span class="num">06</span>Dates &amp; Time</h2>
-  <p>Product and growth teams ask time questions all day: is revenue growing month on month, which months had no sales, how long until a new user buys, who has a login streak, how many users come back. These questions combine three tools: truncating dates to a period, window functions over time, and generating calendars for missing periods. Streak and retention need daily activity, so this section adds a <code>logins</code> table to the scratch copy:</p>
-  <div class="fx" data-lang="sql">CREATE TABLE logins (user_id int, login_date date);
-INSERT INTO logins VALUES
- (1,'2024-07-01'),(1,'2024-07-02'),(1,'2024-07-02'),(1,'2024-07-03'),(1,'2024-07-05'),(1,'2024-07-06'),
- (2,'2024-07-01'),(2,'2024-07-08'),(2,'2024-07-09'),(2,'2024-07-10'),(2,'2024-07-11'),
- (3,'2024-07-02'),
- (4,'2024-07-03'),(4,'2024-07-04'),(4,'2024-07-12'),
- (5,'2024-07-08'),(5,'2024-07-20'),
- (6,'2024-07-09'),(6,'2024-07-10');</div>
-  <p>User 1 logged in twice on 2 July on purpose: real event tables have duplicates.</p>
-
-  <details class="qa"><summary><span class="qmark">Q</span>Monthly revenue and month-over-month growth %.</summary><div class="qa-body">
-  <p><strong>How to think:</strong> one row per month, then compare each month with the one before. <code>date_trunc('month', d)</code> turns any date into the first day of its month (2024-05-20 → 2024-05-01), so grouping by it gives one row per month. <code>lag</code> brings last month's number onto this month's row. Growth = (this − previous) ÷ previous × 100.</p>
-  <p><strong>Step 1, revenue per month:</strong> the CTE <code>m</code> from the final query, run alone.</p>
-  <table class="tbl out"><caption>Step 1 (CTE m)</caption><tr><th>month</th><th>revenue</th></tr><tr><td>2024-05-01</td><td>1380.00</td></tr><tr><td>2024-06-01</td><td>1150.00</td></tr><tr><td>2024-07-01</td><td>120.00</td></tr></table>
-  <p><code>::date</code> converts the timestamp that <code>date_trunc</code> returns back into a plain date, for cleaner output.</p>
-  <p><strong>Step 2, previous month alongside, then growth.</strong> Final query:</p>
-  <div class="fx" data-lang="sql">WITH m AS (
-  SELECT date_trunc('month', o.order_date)::date AS month, sum(oi.qty * oi.unit_price) AS revenue
-  FROM orders o JOIN order_items oi USING (order_id)
-  WHERE o.status &lt;&gt; 'cancelled'
-  GROUP BY 1)
-SELECT month, revenue,
-       lag(revenue) OVER (ORDER BY month) AS prev,
-       round(100.0 * (revenue - lag(revenue) OVER (ORDER BY month))
-             / nullif(lag(revenue) OVER (ORDER BY month), 0), 1) AS growth_pct
-FROM m ORDER BY month;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>month</th><th>revenue</th><th>prev</th><th>growth_pct</th></tr><tr><td>2024-05-01</td><td>1380.00</td><td>NULL</td><td>NULL</td></tr><tr><td>2024-06-01</td><td>1150.00</td><td>1380.00</td><td>-16.7</td></tr><tr><td>2024-07-01</td><td>120.00</td><td>1150.00</td><td>-89.6</td></tr></table>
-  <p>June: (1150 − 1380) ÷ 1380 = −16.7%. <code>nullif(prev, 0)</code> returns NULL when prev is 0, so a divide-by-zero becomes NULL instead of an error. One more trap: if a month had no sales at all, it has no row, and <code>lag</code> would silently compare with two months ago. The next question fixes that.</p></div></details>
-
-  <details class="qa"><summary><span class="qmark">Q</span>Orders per month for Jan–Jul 2024, showing months with zero.</summary><div class="qa-body">
-  <p><strong>How to think:</strong> <code>GROUP BY</code> can only show months that exist in the data, and January to April have no orders. So build the full list of months yourself and LEFT JOIN the orders onto it, like printing a blank calendar first and then writing orders into the boxes.</p>
-  <p><strong>Step 1, the calendar:</strong> <code>generate_series(start, stop, step)</code> produces a sequence of values.</p>
-  <div class="fx" data-lang="sql">SELECT m::date AS month
-FROM generate_series('2024-01-01'::date, '2024-07-01', '1 month') m;</div>
-  <table class="tbl out"><caption>Step 1</caption><tr><th>month</th></tr><tr><td>2024-01-01</td></tr><tr><td>2024-02-01</td></tr><tr><td>2024-03-01</td></tr><tr><td>2024-04-01</td></tr><tr><td>2024-05-01</td></tr><tr><td>2024-06-01</td></tr><tr><td>2024-07-01</td></tr></table>
-  <p><strong>Step 2, LEFT JOIN orders and count.</strong> Final query:</p>
-  <div class="fx" data-lang="sql">SELECT m::date AS month, count(o.order_id) AS orders
-FROM generate_series('2024-01-01'::date, '2024-07-01', '1 month') m
-LEFT JOIN orders o ON date_trunc('month', o.order_date) = m
-GROUP BY m ORDER BY m;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>month</th><th>orders</th></tr><tr><td>2024-01-01</td><td>0</td></tr><tr><td>2024-02-01</td><td>0</td></tr><tr><td>2024-03-01</td><td>0</td></tr><tr><td>2024-04-01</td><td>0</td></tr><tr><td>2024-05-01</td><td>2</td></tr><tr><td>2024-06-01</td><td>2</td></tr><tr><td>2024-07-01</td><td>1</td></tr></table>
-  <p>January's row has no matching order, so its <code>o.order_id</code> is NULL and <code>count(o.order_id)</code> skips it: 0. With <code>count(*)</code> every empty month would show 1, because the calendar row itself is counted. MySQL and SQLite have no <code>generate_series</code> for dates; use a recursive CTE or a calendar table.</p></div></details>
-
-  <details class="qa"><summary><span class="qmark">Q</span>Days from signup to first order, per customer.</summary><div class="qa-body">
-  <p><strong>How to think:</strong> the first order is the earliest order date per customer, <code>min(order_date)</code>. Subtract the signup date. Dia must still appear (she never ordered), so LEFT JOIN.</p>
-  <p><strong>Step 1, first order per customer:</strong> the final query without its last column.</p>
-  <table class="tbl out"><caption>Step 1</caption><tr><th>name</th><th>signup_date</th><th>first_order</th></tr><tr><td>Asha</td><td>2024-01-05</td><td>2024-05-01</td></tr><tr><td>Ben</td><td>2024-02-10</td><td>2024-06-02</td></tr><tr><td>Chen</td><td>2024-03-15</td><td>2024-06-15</td></tr><tr><td>Dia</td><td>2024-04-20</td><td>NULL</td></tr></table>
-  <p><strong>Step 2, subtract.</strong> Final query:</p>
-  <div class="fx" data-lang="sql">SELECT c.name, c.signup_date, min(o.order_date) AS first_order,
-       min(o.order_date) - c.signup_date AS days_to_first
-FROM customers c LEFT JOIN orders o USING (customer_id)
-GROUP BY c.customer_id, c.name, c.signup_date ORDER BY c.customer_id;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>signup_date</th><th>first_order</th><th>days_to_first</th></tr><tr><td>Asha</td><td>2024-01-05</td><td>2024-05-01</td><td>117</td></tr><tr><td>Ben</td><td>2024-02-10</td><td>2024-06-02</td><td>113</td></tr><tr><td>Chen</td><td>2024-03-15</td><td>2024-06-15</td><td>92</td></tr><tr><td>Dia</td><td>2024-04-20</td><td>NULL</td><td>NULL</td></tr></table>
-  <p>Asha signed up 5 Jan and first ordered 1 May: 117 days. Dia's <code>min</code> is NULL and NULL − date is NULL. That is correct: "never ordered" is not "0 days". If the business wants an average, say whether non-buyers are excluded.</p></div></details>
-
-  <details class="qa"><summary><span class="qmark">Q</span>Find users with a login streak of 3 or more consecutive days.</summary><div class="qa-body">
-  <p><strong>How to think:</strong> a trick worth memorising. Number each user's distinct login days 1, 2, 3, … in date order. Inside a run of consecutive days, the date and the number both go up by 1 each step, so <code>date − number</code> stays the same. When a day is skipped, the date jumps by 2 but the number by 1, so the difference changes. That difference is a label for each run. This problem family is called <strong>gaps and islands</strong> (an island is a run, a gap is a break).</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Train coaches numbered S1, S2, S3 sit at platform markers 11, 12, 13. Marker − coach number = 10 for all three: same train. If the next coach S4 is at marker 15, 15 − 4 = 11: a gap, a different train.</p></div>
-  <p><strong>Step 1, remove duplicate days, number them, compute the label</strong> (users 1 and 2 shown):</p>
-  <div class="fx" data-lang="sql">WITH d AS (SELECT DISTINCT user_id, login_date FROM logins)
-SELECT user_id, login_date,
-       row_number() OVER (PARTITION BY user_id ORDER BY login_date) AS rn,
-       login_date - row_number() OVER (PARTITION BY user_id ORDER BY login_date)::int AS grp
-FROM d WHERE user_id IN (1, 2) ORDER BY user_id, login_date;</div>
-  <table class="tbl out"><caption>Step 1: date − row_number labels each run</caption><tr><th>user_id</th><th>login_date</th><th>rn</th><th>grp</th></tr><tr><td>1</td><td>2024-07-01</td><td>1</td><td>2024-06-30</td></tr><tr><td>1</td><td>2024-07-02</td><td>2</td><td>2024-06-30</td></tr><tr><td>1</td><td>2024-07-03</td><td>3</td><td>2024-06-30</td></tr><tr><td>1</td><td>2024-07-05</td><td>4</td><td>2024-07-01</td></tr><tr><td>1</td><td>2024-07-06</td><td>5</td><td>2024-07-01</td></tr><tr><td>2</td><td>2024-07-01</td><td>1</td><td>2024-06-30</td></tr><tr><td>2</td><td>2024-07-08</td><td>2</td><td>2024-07-06</td></tr><tr><td>2</td><td>2024-07-09</td><td>3</td><td>2024-07-06</td></tr><tr><td>2</td><td>2024-07-10</td><td>4</td><td>2024-07-06</td></tr><tr><td>2</td><td>2024-07-11</td><td>5</td><td>2024-07-06</td></tr></table>
-  <p>User 1's first three days share label 2024-06-30; after the gap on 4 July the label becomes 2024-07-01. <code>::int</code> converts the row number (a bigint) so it can be subtracted from a date.</p>
-  <p><strong>Step 2, one row per island with its length</strong> (all users): group step 1's rows by <code>user_id, grp</code> and take <code>min</code>, <code>max</code> and <code>count(*)</code> of the dates (the final query without <code>HAVING</code>).</p>
-  <table class="tbl out"><caption>Step 2: every island</caption><tr><th>user_id</th><th>streak_start</th><th>streak_end</th><th>days</th></tr><tr><td>1</td><td>2024-07-01</td><td>2024-07-03</td><td>3</td></tr><tr><td>1</td><td>2024-07-05</td><td>2024-07-06</td><td>2</td></tr><tr><td>2</td><td>2024-07-01</td><td>2024-07-01</td><td>1</td></tr><tr><td>2</td><td>2024-07-08</td><td>2024-07-11</td><td>4</td></tr><tr><td>3</td><td>2024-07-02</td><td>2024-07-02</td><td>1</td></tr><tr><td>4</td><td>2024-07-03</td><td>2024-07-04</td><td>2</td></tr><tr><td>4</td><td>2024-07-12</td><td>2024-07-12</td><td>1</td></tr><tr><td>5</td><td>2024-07-08</td><td>2024-07-08</td><td>1</td></tr><tr><td>5</td><td>2024-07-20</td><td>2024-07-20</td><td>1</td></tr><tr><td>6</td><td>2024-07-09</td><td>2024-07-10</td><td>2</td></tr></table>
-  <p><strong>Step 3, keep islands of 3+ days.</strong> Final query:</p>
-  <div class="fx" data-lang="sql">WITH d AS (SELECT DISTINCT user_id, login_date FROM logins),
-g AS (
-  SELECT user_id, login_date,
-         login_date - row_number() OVER (PARTITION BY user_id ORDER BY login_date)::int AS grp
-  FROM d)
-SELECT user_id, min(login_date) AS streak_start, max(login_date) AS streak_end, count(*) AS days
-FROM g GROUP BY user_id, grp
-HAVING count(*) &gt;= 3 ORDER BY user_id;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>user_id</th><th>streak_start</th><th>streak_end</th><th>days</th></tr><tr><td>1</td><td>2024-07-01</td><td>2024-07-03</td><td>3</td></tr><tr><td>2</td><td>2024-07-08</td><td>2024-07-11</td><td>4</td></tr></table>
-  <figure class="viz"><svg viewBox="0 0 600 140" width="600">
-    <g font-size="11" class="tm"><text x="0" y="24">login_date</text><text x="0" y="56">row_number</text><text x="0" y="88">date − rn</text></g>
-    <g text-anchor="middle">
-      <rect x="100" y="8" width="84" height="88" rx="5" class="fb sb"/><rect x="190" y="8" width="84" height="88" rx="5" class="fb sb"/><rect x="280" y="8" width="84" height="88" rx="5" class="fb sb"/>
-      <rect x="410" y="8" width="84" height="88" rx="5" class="ft st"/><rect x="500" y="8" width="84" height="88" rx="5" class="ft st"/>
-      <text x="142" y="24">07-01</text><text x="232" y="24">07-02</text><text x="322" y="24">07-03</text><text x="452" y="24">07-05</text><text x="542" y="24">07-06</text>
-      <text x="142" y="56">1</text><text x="232" y="56">2</text><text x="322" y="56">3</text><text x="452" y="56">4</text><text x="542" y="56">5</text>
-      <text x="142" y="88" class="tb">06-30</text><text x="232" y="88" class="tb">06-30</text><text x="322" y="88" class="tb">06-30</text><text x="452" y="88" class="tg">07-01</text><text x="542" y="88" class="tg">07-01</text>
-      <text x="232" y="118" class="tb">island 1: 3 days ✓</text><text x="497" y="118" class="tg">island 2: 2 days</text>
-      <text x="387" y="56" class="tr">gap</text>
-    </g>
-  </svg><figcaption>User 1: both rows rise by 1 inside a run, so their difference is a constant label. The gap (07-04) bumps the label.</figcaption></figure>
-  <div class="callout trap"><span class="label">Trap</span><p>Skip <code>DISTINCT</code> and user 1's double login on 2 July gets two row numbers, shifting the label mid-run and splitting a 3-day streak into pieces.</p></div></div></details>
-
-  <details class="qa"><summary><span class="qmark">Q</span>7-day retention by weekly cohort: what % of users came back within 7 days of their first login?</summary><div class="qa-body">
-  <p><strong>How to think:</strong> a <strong>cohort</strong> is a group of users who started in the same period, here the same week. <strong>Retention</strong> is the share of a cohort that came back. Three bowls: (1) each user's first login day; (2) a true/false flag: any login in days 1 to 7 after it? (3) group by the week of the first day, count users and flagged users.</p>
-  <p><strong>Step 1, first day per user:</strong></p>
-  <div class="fx" data-lang="sql">SELECT user_id, min(login_date) AS first_day FROM logins GROUP BY user_id ORDER BY user_id;</div>
-  <table class="tbl out"><caption>Step 1 (CTE firsts)</caption><tr><th>user_id</th><th>first_day</th></tr><tr><td>1</td><td>2024-07-01</td></tr><tr><td>2</td><td>2024-07-01</td></tr><tr><td>3</td><td>2024-07-02</td></tr><tr><td>4</td><td>2024-07-03</td></tr><tr><td>5</td><td>2024-07-08</td></tr><tr><td>6</td><td>2024-07-09</td></tr></table>
-  <p><strong>Step 2, the flag:</strong> the CTE <code>flagged</code> from the final query, run alone (with the cohort week added so you can see it). <code>EXISTS (…)</code> returns true if the inner query finds any row: a login of the same user between day+1 and day+7.</p>
-  <table class="tbl out"><caption>Step 2 (CTE flagged)</caption><tr><th>user_id</th><th>first_day</th><th>cohort_week</th><th>retained</th></tr><tr><td>1</td><td>2024-07-01</td><td>2024-07-01</td><td>t</td></tr><tr><td>2</td><td>2024-07-01</td><td>2024-07-01</td><td>t</td></tr><tr><td>3</td><td>2024-07-02</td><td>2024-07-01</td><td>f</td></tr><tr><td>4</td><td>2024-07-03</td><td>2024-07-01</td><td>t</td></tr><tr><td>5</td><td>2024-07-08</td><td>2024-07-08</td><td>f</td></tr><tr><td>6</td><td>2024-07-09</td><td>2024-07-08</td><td>t</td></tr></table>
-  <p>User 2 returned on 8 July, exactly day 7: counted. User 5's next login is 12 days later: not counted. <code>date_trunc('week', …)</code> gives the Monday of that week.</p>
-  <p><strong>Step 3, per cohort.</strong> Final query:</p>
-  <div class="fx" data-lang="sql">WITH firsts AS (
-  SELECT user_id, min(login_date) AS first_day FROM logins GROUP BY user_id),
-flagged AS (
-  SELECT f.*, EXISTS (SELECT 1 FROM logins l
-                      WHERE l.user_id = f.user_id
-                        AND l.login_date BETWEEN f.first_day + 1 AND f.first_day + 7) AS retained
-  FROM firsts f)
-SELECT date_trunc('week', first_day)::date AS cohort_week,
-       count(*) AS users,
-       count(*) FILTER (WHERE retained) AS retained_d7,
-       round(100.0 * count(*) FILTER (WHERE retained) / count(*), 1) AS pct
-FROM flagged GROUP BY 1 ORDER BY 1;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>cohort_week</th><th>users</th><th>retained_d7</th><th>pct</th></tr><tr><td>2024-07-01</td><td>4</td><td>3</td><td>75.0</td></tr><tr><td>2024-07-08</td><td>2</td><td>1</td><td>50.0</td></tr></table>
-  <p><code>count(*) FILTER (WHERE retained)</code> counts only flagged rows. Week of 1 July: 3 of 4 = 75%. Clarify the definition first: "active on day 7" and "active at least once within 7 days" are different metrics that product teams both call D7 retention.</p></div></details>
-
-  <h2 id="si-null"><span class="num">07</span>Tricky NULL &amp; Edge Cases</h2>
-  <p><strong>NULL</strong> means "unknown", not zero and not empty text. Any comparison with NULL (<code>= NULL</code>, <code>&lt;&gt; NULL</code>, <code>&gt; NULL</code>) gives neither true nor false but a third answer, <strong>unknown</strong>. <code>WHERE</code> keeps only rows whose test is true, so an unknown row is quietly dropped. No error, no warning: just a smaller answer. Most "the query looks right but the number is wrong" bugs in real reports come from this, which is why interviewers love it.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A blank box on an exam form for "age". Is the student older than 18? You can't say yes, you can't say no: you don't know. SQL refuses to guess, so the row fails every test except <code>IS NULL</code>.</p>
+SELECT order_id, amount FROM ranked WHERE rnk = 6 ORDER BY order_id;</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>order_id</th><th>amount</th></tr><tr><td>107</td><td>260.00</td></tr><tr><td>108</td><td>260.00</td></tr></table>
+  <p>Why each numbering differs, side by side:</p>
+  <div class="fx" data-lang="sql">SELECT order_id, amount,
+       row_number() OVER w AS row_number, rank() OVER w AS rank, dense_rank() OVER w AS dense_rank
+FROM orders WINDOW w AS (ORDER BY amount DESC) ORDER BY amount DESC, order_id;</div>
+  <table class="tbl out"><caption>ROW_NUMBER vs RANK vs DENSE_RANK on the same amounts</caption><tr><th>order_id</th><th>amount</th><th>row_number</th><th>rank</th><th>dense_rank</th></tr><tr><td>109</td><td>600.00</td><td>1</td><td>1</td><td>1</td></tr><tr><td>103</td><td>520.00</td><td>2</td><td>2</td><td>2</td></tr><tr><td>102</td><td>450.00</td><td>3</td><td>3</td><td>3</td></tr><tr><td>104</td><td>380.00</td><td>4</td><td>4</td><td>4</td></tr><tr><td>105</td><td>310.00</td><td>5</td><td>5</td><td>5</td></tr><tr><td>110</td><td>310.00</td><td>6</td><td>5</td><td>5</td></tr><tr><td>107</td><td>260.00</td><td>7</td><td>7</td><td>6</td></tr><tr><td>108</td><td>260.00</td><td>8</td><td>7</td><td>6</td></tr><tr><td>101</td><td>240.00</td><td>9</td><td>9</td><td>7</td></tr><tr><td>106</td><td>180.00</td><td>10</td><td>10</td><td>8</td></tr></table>
+  <p>On the two ₹310 orders: ROW_NUMBER gives 5 and 6 (which one gets 5 is arbitrary), RANK gives both 5 and then jumps to 7, DENSE_RANK gives both 5 and continues with 6. Only DENSE_RANK numbers <em>distinct amounts</em>.</p>
+  <div class="callout trap"><span class="label">Wrong answer 1: LIMIT/OFFSET</span>
+    <p><code>ORDER BY amount DESC LIMIT 1 OFFSET 5</code> takes the 6th <em>row</em>, and the two ₹310 orders occupy rows 5 and 6:</p>
   </div>
-  <details class="qa"><summary><span class="qmark">Q</span>Find employees who are not anyone's manager. Why does this return nothing?</summary><div class="qa-body">
-  <p><strong>How to think:</strong> the people whose id appears in nobody's <code>manager_id</code>. The natural query looks right, yet returns zero rows:</p>
-  <div class="fx" data-lang="sql">SELECT name FROM employees
-WHERE emp_id NOT IN (SELECT manager_id FROM employees);</div>
-  <table class="tbl out"><caption>Looks right, returns nothing (0 rows)</caption><tr><th>name</th></tr></table>
-  <p><strong>Step 1, look at the list NOT IN compares against:</strong></p>
-  <div class="fx" data-lang="sql">SELECT manager_id FROM employees ORDER BY emp_id;</div>
-  <table class="tbl out"><caption>The subquery&#x27;s list</caption><tr><th>manager_id</th></tr><tr><td>NULL</td></tr><tr><td>1</td></tr><tr><td>1</td></tr><tr><td>1</td></tr><tr><td>4</td></tr></table>
-  <p>It contains a NULL (Ravi's). <code>x NOT IN (list)</code> means "x is different from every item". Follow Sara (id 2):</p>
-  <div class="flow"><span>2 NOT IN (1, 4, NULL)</span><span>2 &lt;&gt; 1 AND 2 &lt;&gt; 4 AND 2 &lt;&gt; NULL</span><span>TRUE AND TRUE AND UNKNOWN</span><span>UNKNOWN → row dropped</span></div>
-  <p>The same happens for everyone, so nothing survives. <strong>Step 2, the fix:</strong> <code>NOT EXISTS</code> asks "is there any row whose manager_id equals my id?". A NULL manager_id simply never equals anything, so it is ignored instead of poisoning the whole test.</p>
-  <div class="fx" data-lang="sql">SELECT name FROM employees e
-WHERE NOT EXISTS (SELECT 1 FROM employees r WHERE r.manager_id = e.emp_id)
-ORDER BY e.emp_id;</div>
-  <table class="tbl out"><caption>Fixed</caption><tr><th>name</th></tr><tr><td>Sara</td></tr><tr><td>Tom</td></tr><tr><td>Vik</td></tr></table>
-  <p>Another fix is <code>NOT IN (SELECT manager_id FROM employees WHERE manager_id IS NOT NULL)</code>, but you must remember it every time. Default to <code>NOT EXISTS</code>.</p>
-  </div></details>
+  <div class="fx" data-lang="sql">SELECT amount FROM orders ORDER BY amount DESC LIMIT 1 OFFSET 5;</div>
+  <table class="tbl out"><caption>Says 310: wrong</caption><tr><th>amount</th></tr><tr><td>310.00</td></tr></table>
+  <div class="callout trap"><span class="label">Wrong answer 2: RANK instead of DENSE_RANK</span>
+    <p>RANK leaves gaps after ties (1, 2, 3, 4, 5, 5, 7…), so "rank = 6" matches nothing at all:</p>
+  </div>
+  <div class="fx" data-lang="sql">SELECT order_id, amount FROM (SELECT order_id, amount, rank() OVER (ORDER BY amount DESC) AS rnk FROM orders) r WHERE rnk = 6;</div>
+  <table class="tbl out"><caption>No rows: wrong</caption><tr><th>order_id</th><th>amount</th></tr></table>
+  <p>Other edges to mention: if N is larger than the number of distinct amounts the query returns no rows (say whether NULL is wanted instead); NULL amounts sort first in DESC order in PostgreSQL unless you write <code>NULLS LAST</code>.</p>
+  <div class="callout def"><span class="label">Pattern</span>
+    <p><strong>Nth highest</strong> = <code>dense_rank() OVER (ORDER BY x DESC)</code> in a CTE, then <code>WHERE rnk = N</code>. Use RANK if ties should consume positions ("6th place in a race"), ROW_NUMBER only when exactly one row is wanted and ties may be broken arbitrarily.</p>
+  </div>
+  <div class="bridge"><b>What this still can't tell us → next: top-N per group.</b> This ranked the whole table at once. Most real questions rank <em>within</em> each group: the top dish at each restaurant, the latest order of each customer.</div>
 
-  <details class="qa"><summary><span class="qmark">Q</span>"Customers not in Mumbai": why is Dia missing?</summary><div class="qa-body">
-  <p><strong>How to think:</strong> <code>WHERE city &lt;&gt; 'Mumbai'</code> returns only Ben. To see why, print the test itself as a column instead of filtering on it:</p>
-  <div class="fx" data-lang="sql">SELECT name, city,
-       city &lt;&gt; 'Mumbai'                AS ne,
-       city IS DISTINCT FROM 'Mumbai' AS distinct_from
-FROM customers ORDER BY customer_id;</div>
-  <table class="tbl out"><caption>Both tests side by side</caption><tr><th>name</th><th>city</th><th>ne</th><th>distinct_from</th></tr><tr><td>Asha</td><td>Mumbai</td><td>f</td><td>f</td></tr><tr><td>Ben</td><td>Delhi</td><td>t</td><td>t</td></tr><tr><td>Chen</td><td>Mumbai</td><td>f</td><td>f</td></tr><tr><td>Dia</td><td>NULL</td><td>NULL</td><td>t</td></tr></table>
-  <p>For Dia the <code>ne</code> column is NULL (unknown), and <code>WHERE</code> keeps only TRUE, so she is dropped. <code>IS DISTINCT FROM</code> treats NULL as an ordinary value that is simply different from 'Mumbai', so it says true (<code>t</code>). Use it, or write <code>city &lt;&gt; 'Mumbai' OR city IS NULL</code>, when unknown cities should count as "not Mumbai". Printing the condition as a column is the general debugging trick for any filter that drops rows you expected.</p></div></details>
+  <h2 id="si-topn"><span class="num">03</span>Top-N per Group</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>DENSE_RANK over the whole table finds the overall best. How do we restart the numbering for each restaurant, and what happens when two dishes tie for first?</p>
+  </div>
+  <p><b>The question.</b> For each restaurant, its best-selling dish by quantity (not counting cancelled orders), keeping ties.</p>
+  <p><b>Needs.</b> Join + GROUP BY (<a class="xref" data-note="sql_joins">JOINs</a>, <a class="xref" data-note="sql_fundamentals">Fundamentals</a>), then <code>rank() OVER (PARTITION BY …)</code> (<a class="xref" data-note="sql_windows">Window Functions</a>), filtered in an outer query because window functions can't go in WHERE.</p>
+  <p><b>Approach in plain words.</b> Step 1: quantity per (restaurant, dish). Step 2: inside each restaurant, rank dishes by quantity, ties sharing a rank. Step 3: keep rank 1.</p>
+  <p><b>Trace.</b> Non-cancelled lines per restaurant: Dosa Hut: Masala Dosa 2 + 1 + 2 = 5, Filter Coffee 2 + 1 = 3. Biryani Bros: Chicken Biryani 1 + 1 = 2, Raita 2, Veg Biryani 1, Mutton Kebab 1. Pizza Point: Farmhouse Pizza 2 (order 107's 1 is cancelled), Garlic Bread 1, Margherita 1. Green Bowl: its only order (105) is cancelled. Top: Masala Dosa; Chicken Biryani <em>and</em> Raita (tie at 2); Farmhouse Pizza.</p>
+  <div class="fx" data-lang="sql">SELECT r.name AS restaurant, oi.item, sum(oi.qty) AS qty
+FROM orders o JOIN order_items oi USING (order_id) JOIN restaurants r USING (restaurant_id)
+WHERE o.status &lt;&gt; 'cancelled'
+GROUP BY r.name, oi.item ORDER BY r.name, qty DESC, oi.item;</div>
+  <table class="tbl out"><caption>Step 1: quantity per restaurant and dish</caption><tr><th>restaurant</th><th>item</th><th>qty</th></tr><tr><td>Biryani Bros</td><td>Chicken Biryani</td><td>2</td></tr><tr><td>Biryani Bros</td><td>Raita</td><td>2</td></tr><tr><td>Biryani Bros</td><td>Mutton Kebab</td><td>1</td></tr><tr><td>Biryani Bros</td><td>Veg Biryani</td><td>1</td></tr><tr><td>Dosa Hut</td><td>Masala Dosa</td><td>5</td></tr><tr><td>Dosa Hut</td><td>Filter Coffee</td><td>3</td></tr><tr><td>Pizza Point</td><td>Farmhouse Pizza</td><td>2</td></tr><tr><td>Pizza Point</td><td>Garlic Bread</td><td>1</td></tr><tr><td>Pizza Point</td><td>Margherita</td><td>1</td></tr></table>
+  <div class="fx" data-lang="sql">WITH dish_qty AS (
+  SELECT r.name AS restaurant, oi.item, sum(oi.qty) AS qty
+  FROM orders o JOIN order_items oi USING (order_id) JOIN restaurants r USING (restaurant_id)
+  WHERE o.status &lt;&gt; 'cancelled'
+  GROUP BY r.name, oi.item),
+ranked AS (
+  SELECT *, rank() OVER (PARTITION BY restaurant ORDER BY qty DESC) AS rnk FROM dish_qty)
+SELECT restaurant, item, qty FROM ranked WHERE rnk = 1 ORDER BY restaurant, item;</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>restaurant</th><th>item</th><th>qty</th></tr><tr><td>Biryani Bros</td><td>Chicken Biryani</td><td>2</td></tr><tr><td>Biryani Bros</td><td>Raita</td><td>2</td></tr><tr><td>Dosa Hut</td><td>Masala Dosa</td><td>5</td></tr><tr><td>Pizza Point</td><td>Farmhouse Pizza</td><td>2</td></tr></table>
+  <div class="callout trap"><span class="label">Wrong answer 1: ROW_NUMBER</span>
+    <p>It gives exactly one row per restaurant and silently drops one of the tied Biryani Bros dishes (which one depends on the plan):</p>
+  </div>
+  <div class="fx" data-lang="sql">WITH dish_qty AS (
+  SELECT r.name AS restaurant, oi.item, sum(oi.qty) AS qty
+  FROM orders o JOIN order_items oi USING (order_id) JOIN restaurants r USING (restaurant_id)
+  WHERE o.status &lt;&gt; 'cancelled' GROUP BY r.name, oi.item)
+SELECT restaurant, item, qty FROM (
+  SELECT *, row_number() OVER (PARTITION BY restaurant ORDER BY qty DESC) AS rn FROM dish_qty) x
+WHERE rn = 1 ORDER BY restaurant;</div>
+  <table class="tbl out"><caption>One Biryani Bros dish vanished</caption><tr><th>restaurant</th><th>item</th><th>qty</th></tr><tr><td>Biryani Bros</td><td>Raita</td><td>2</td></tr><tr><td>Dosa Hut</td><td>Masala Dosa</td><td>5</td></tr><tr><td>Pizza Point</td><td>Farmhouse Pizza</td><td>2</td></tr></table>
+  <div class="callout trap"><span class="label">Wrong answer 2: GROUP BY with MAX</span>
+    <p><code>SELECT restaurant, max(qty) … GROUP BY restaurant</code> returns the top quantity but not the dish, and adding <code>item</code> to the SELECT is an error (or, in MySQL with ONLY_FULL_GROUP_BY off, an arbitrary dish). Wrong answer 3: putting <code>rank() OVER (…) = 1</code> in WHERE: windows are computed after WHERE, so it is an error.</p>
+  </div>
+  <p>Green Bowl and Momo Magic sold nothing, so they are absent. If the question says "each restaurant", ask whether they should appear with NULL: that needs a LEFT JOIN from restaurants, which is exactly the next pattern's idea.</p>
+  <div class="callout def"><span class="label">Pattern</span>
+    <p><strong>Top-N per group</strong>: aggregate in a CTE → <code>rank() OVER (PARTITION BY group ORDER BY measure DESC)</code> → outer <code>WHERE rnk &lt;= N</code>. RANK keeps ties; ROW_NUMBER doesn't. PostgreSQL's <code>DISTINCT ON (group)</code> is a shortcut for N = 1 without ties.</p>
+  </div>
+  <div class="bridge"><b>What this still can't tell us → next: date spines.</b> Rankings and GROUP BY only see rows that exist. A restaurant with no sales vanished above; in a daily report, a day with no orders vanishes the same way, and the chart's x-axis silently skips it.</div>
 
-  <details class="qa"><summary><span class="qmark">Q</span>What fraction of orders were cancelled? Why does the first attempt say 0?</summary><div class="qa-body">
-  <p><strong>How to think:</strong> 1 cancelled out of 5 orders should be 0.20. But both counts are whole numbers (integers), and integer division throws away the remainder, like sharing 1 samosa among 5 friends in whole samosas: each gets 0.</p>
-  <div class="fx" data-lang="sql">SELECT count(*) FILTER (WHERE status = 'cancelled') / count(*)                  AS wrong,
-       round(count(*) FILTER (WHERE status = 'cancelled')::numeric / count(*), 2) AS rate,
-       round(avg((status = 'cancelled')::int), 2)                                AS rate_avg
-FROM orders;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>wrong</th><th>rate</th><th>rate_avg</th></tr><tr><td>0</td><td>0.20</td><td>0.20</td></tr></table>
-  <p><code>wrong</code> is 1 / 5 = 0. Casting one side to <code>numeric</code> (a decimal type) gives 0.20. The third column is a handy trick: <code>status = 'cancelled'</code> is true or false, <code>::int</code> turns it into 1 or 0, and the average of (0, 0, 1, 0, 0) is 0.20. It computes any rate in one step. Watch out: in MySQL <code>/</code> always returns a decimal, so this bug appears in PostgreSQL, SQL Server and SQLite but not MySQL.</p></div></details>
+  <h2 id="si-spine"><span class="num">04</span>Date Spines: Days With Zero</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>GROUP BY makes one row per value that appears. How do we get a row for a day on which <em>nothing</em> happened?</p>
+  </div>
+  <p><b>The question.</b> Number of orders and revenue (non-cancelled) for every day from 2 to 8 March 2026, showing 0 on days without orders.</p>
+  <p><b>Needs.</b> <code>generate_series</code> to create rows that exist in no table (the CROSS JOIN grid idea from <a class="xref" data-note="sql_joins">JOINs</a> §04), LEFT JOIN with the filter in ON (§07), counting a right-table column (§02), COALESCE for NULL sums (<a class="xref" data-note="sql_fundamentals">Fundamentals</a>).</p>
+  <p><b>Approach in plain words.</b> Build a "spine": one row per calendar day. Attach the orders of that day with a LEFT JOIN so days with no orders survive with NULLs. Count order ids (NULL doesn't count) and turn NULL sums into 0.</p>
+  <p><b>Trace.</b> Orders by day: 2 Mar: 101, 102, 103 (3; ₹1,210); 3 Mar: 104, 105 (105 cancelled → 1; ₹380); 4 Mar: 106, 107 (107 cancelled → 1; ₹180); 5 Mar: 108, 109 (2; ₹860); 6 and 7 Mar: none; 8 Mar: 110 (1; ₹310).</p>
+  <div class="fx" data-lang="sql">WITH spine AS (
+  SELECT d::date AS day FROM generate_series(date '2026-03-02', date '2026-03-08', interval '1 day') d)
+SELECT s.day, to_char(s.day, 'Dy') AS weekday,
+       count(o.order_id) AS orders, coalesce(sum(o.amount), 0) AS revenue
+FROM spine s
+LEFT JOIN orders o ON o.ordered_at &gt;= s.day AND o.ordered_at &lt; s.day + 1
+                  AND o.status &lt;&gt; 'cancelled'
+GROUP BY s.day ORDER BY s.day;</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>day</th><th>weekday</th><th>orders</th><th>revenue</th></tr><tr><td>2026-03-02</td><td>Mon</td><td>3</td><td>1210.00</td></tr><tr><td>2026-03-03</td><td>Tue</td><td>1</td><td>380.00</td></tr><tr><td>2026-03-04</td><td>Wed</td><td>1</td><td>180.00</td></tr><tr><td>2026-03-05</td><td>Thu</td><td>2</td><td>860.00</td></tr><tr><td>2026-03-06</td><td>Fri</td><td>0</td><td>0</td></tr><tr><td>2026-03-07</td><td>Sat</td><td>0</td><td>0</td></tr><tr><td>2026-03-08</td><td>Sun</td><td>1</td><td>310.00</td></tr></table>
+  <p>The join condition is a half-open range on the timestamp (<code>&gt;= day AND &lt; day + 1</code>), so the index on ordered_at stays usable (<a class="xref" data-note="sql_optimization">sargability</a>) and order 110 at 20:50 on 8 March is not lost.</p>
+  <div class="callout trap"><span class="label">Wrong answer 1: GROUP BY the order date</span>
+    <p>Only days that have orders appear; 6 and 7 March are simply missing (5 rows, not 7):</p>
+  </div>
+  <div class="fx" data-lang="sql">SELECT ordered_at::date AS day, count(*) AS orders FROM orders WHERE status &lt;&gt; 'cancelled' GROUP BY 1 ORDER BY 1;</div>
+  <table class="tbl out"><caption>5 rows</caption><tr><th>day</th><th>orders</th></tr><tr><td>2026-03-02</td><td>3</td></tr><tr><td>2026-03-03</td><td>1</td></tr><tr><td>2026-03-04</td><td>1</td></tr><tr><td>2026-03-05</td><td>2</td></tr><tr><td>2026-03-08</td><td>1</td></tr></table>
+  <div class="callout trap"><span class="label">Wrong answer 2: count(*) and status in WHERE</span>
+    <p>count(*) counts the NULL-padded row as 1 on empty days, and the status filter in WHERE drops those padded rows altogether:</p>
+  </div>
+  <div class="fx" data-lang="sql">WITH spine AS (SELECT d::date AS day FROM generate_series(date '2026-03-02', date '2026-03-08', interval '1 day') d)
+SELECT s.day, count(*) AS orders
+FROM spine s LEFT JOIN orders o ON o.ordered_at &gt;= s.day AND o.ordered_at &lt; s.day + 1
+WHERE o.status &lt;&gt; 'cancelled'
+GROUP BY s.day ORDER BY s.day;</div>
+  <table class="tbl out"><caption>Empty days vanish again</caption><tr><th>day</th><th>orders</th></tr><tr><td>2026-03-02</td><td>3</td></tr><tr><td>2026-03-03</td><td>1</td></tr><tr><td>2026-03-04</td><td>1</td></tr><tr><td>2026-03-05</td><td>2</td></tr><tr><td>2026-03-08</td><td>1</td></tr></table>
+  <div class="callout def"><span class="label">Pattern</span>
+    <p><strong>Date spine</strong>: <code>generate_series(start, end, interval)</code> → LEFT JOIN facts with all fact filters in ON → <code>count(fact.pk)</code>, <code>coalesce(sum(…), 0)</code>. In warehouses a permanent <code>dim_date</code> table plays the spine's role (<a class="xref" data-note="sql_modeling">Data Modeling</a> §09).</p>
+  </div>
+  <div class="bridge"><b>What this still can't tell us → next: pivoting.</b> The spine gives one row per day. Reports often want a second dimension spread across <em>columns</em>: one row per restaurant, one column per status.</div>
 
-  <details class="qa"><summary><span class="qmark">Q</span>Total qty for an order that doesn't exist: 0 or NULL?</summary><div class="qa-body">
-  <p><strong>How to think:</strong> sum the quantities of order 999, which has no rows. Common sense says 0. SQL says: there were no values to add, so the sum is unknown.</p>
-  <div class="fx" data-lang="sql">SELECT sum(qty) AS s, count(*) AS c, coalesce(sum(qty), 0) AS s_fixed
-FROM order_items WHERE order_id = 999;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>s</th><th>c</th><th>s_fixed</th></tr><tr><td>NULL</td><td>0</td><td>0</td></tr></table>
-  <p>Over zero rows, <code>count</code> gives 0 but <code>sum</code>, <code>avg</code>, <code>max</code> and <code>min</code> give NULL. Wrap in <code>coalesce(…, 0)</code> when the report needs a number. With <code>GROUP BY</code>, empty groups don't appear at all (that is the missing-months problem from section 06).</p></div></details>
+  <h2 id="si-pivot"><span class="num">05</span>Pivoting: Rows into Columns</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>GROUP BY restaurant, status gives one row per combination: long and hard to read. How do we turn the status values into columns, with 0 where a restaurant had none?</p>
+  </div>
+  <p><b>The question.</b> One row per restaurant (all five), with columns delivered, pending, cancelled (order counts) and delivered revenue.</p>
+  <p><b>Needs.</b> LEFT JOIN from restaurants (<a class="xref" data-note="sql_joins">JOINs</a>), conditional aggregation: an aggregate with <code>FILTER (WHERE …)</code> or a CASE inside (<a class="xref" data-note="sql_fundamentals">Fundamentals</a>).</p>
+  <p><b>Approach in plain words.</b> One group per restaurant. For each output column, count only the rows that match that column's condition. A LEFT JOIN keeps Momo Magic, whose counts are then 0.</p>
+  <p><b>Trace.</b> Dosa Hut: 101, 108 delivered, 110 pending. Biryani Bros: 102, 106, 109 delivered (₹1,230). Pizza Point: 103, 104 delivered (₹900), 107 cancelled. Green Bowl: 105 cancelled. Momo Magic: nothing.</p>
+  <div class="fx" data-lang="sql">SELECT r.name AS restaurant,
+       count(*) FILTER (WHERE o.status = 'delivered') AS delivered,
+       count(*) FILTER (WHERE o.status = 'pending')   AS pending,
+       count(*) FILTER (WHERE o.status = 'cancelled') AS cancelled,
+       coalesce(sum(o.amount) FILTER (WHERE o.status = 'delivered'), 0) AS delivered_revenue
+FROM restaurants r LEFT JOIN orders o USING (restaurant_id)
+GROUP BY r.restaurant_id, r.name ORDER BY r.restaurant_id;</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>restaurant</th><th>delivered</th><th>pending</th><th>cancelled</th><th>delivered_revenue</th></tr><tr><td>Dosa Hut</td><td>2</td><td>1</td><td>0</td><td>500.00</td></tr><tr><td>Biryani Bros</td><td>3</td><td>0</td><td>0</td><td>1230.00</td></tr><tr><td>Pizza Point</td><td>2</td><td>0</td><td>1</td><td>900.00</td></tr><tr><td>Green Bowl</td><td>0</td><td>0</td><td>1</td><td>0</td></tr><tr><td>Momo Magic</td><td>0</td><td>0</td><td>0</td><td>0</td></tr></table>
+  <p><code>count(*) FILTER (WHERE …)</code> counts only rows meeting the condition; for Momo Magic's padded row the status is NULL, so every FILTER is false and it gets 0s. The portable spelling (MySQL, SQL Server) is <code>sum(CASE WHEN o.status = 'delivered' THEN 1 ELSE 0 END)</code>.</p>
+  <div class="callout trap"><span class="label">Wrong answer: COUNT(CASE … ELSE 0 END)</span>
+    <p>COUNT counts every non-NULL value, and 0 is not NULL, so each "status" column counts all orders:</p>
+  </div>
+  <div class="fx" data-lang="sql">SELECT r.name AS restaurant,
+       count(CASE WHEN o.status = 'delivered' THEN 1 ELSE 0 END) AS delivered,
+       count(CASE WHEN o.status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled
+FROM restaurants r LEFT JOIN orders o USING (restaurant_id)
+GROUP BY r.restaurant_id, r.name ORDER BY r.restaurant_id;</div>
+  <table class="tbl out"><caption>Every column is the same: wrong</caption><tr><th>restaurant</th><th>delivered</th><th>cancelled</th></tr><tr><td>Dosa Hut</td><td>3</td><td>3</td></tr><tr><td>Biryani Bros</td><td>3</td><td>3</td></tr><tr><td>Pizza Point</td><td>3</td><td>3</td></tr><tr><td>Green Bowl</td><td>1</td><td>1</td></tr><tr><td>Momo Magic</td><td>1</td><td>1</td></tr></table>
+  <p>Fix: <code>sum(… THEN 1 ELSE 0 END)</code> or <code>count(CASE … THEN 1 END)</code> (no ELSE, so non-matches are NULL). Notice Momo Magic shows 1 in the wrong version: its padded row counts too.</p>
+  <div class="callout def"><span class="label">Pattern</span>
+    <p><strong>Pivot</strong> = GROUP BY the row label + one conditional aggregate per column. The column list must be known when writing the query (dynamic pivots need generated SQL or a tool; PostgreSQL's <code>crosstab()</code> from the tablefunc extension is another option, not used here).</p>
+  </div>
+  <div class="bridge"><b>What this still can't tell us → next: year-over-year.</b> A pivot puts categories side by side. The most-asked business comparison puts <em>time periods</em> side by side: this month vs the same month last year.</div>
 
-  <details class="qa"><summary><span class="qmark">Q</span>Is an event at 2024-05-20 10:30 "between 1 May and 20 May"?</summary><div class="qa-body">
-  <p><strong>How to think:</strong> a human says yes, it happened on 20 May. But <code>'2024-05-20'</code> compared with a timestamp means 20 May at 00:00, and 10:30 is after that.</p>
-  <div class="fx" data-lang="sql">SELECT TIMESTAMP '2024-05-20 10:30' BETWEEN '2024-05-01' AND '2024-05-20' AS with_between,
-       TIMESTAMP '2024-05-20 10:30' &gt;= '2024-05-01'
-   AND TIMESTAMP '2024-05-20 10:30' &lt;  '2024-05-21'                         AS half_open;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>with_between</th><th>half_open</th></tr><tr><td>f</td><td>t</td></tr></table>
-  <p><code>BETWEEN a AND b</code> includes both ends, and the end is midnight, so the whole of 20 May except 00:00 is lost. For timestamps use a <strong>half-open range</strong>: start included, end excluded, end = the day after. Then 20 May 23:59 is in and 21 May 00:00 is out, with no gap and no overlap between consecutive months. Like a shop board "open 9 to 9": at exactly 9 pm you are out.</p></div></details>
+  <h2 id="si-yoy"><span class="num">06</span>Year-over-Year</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Pivoting compared categories within one period. "Are we growing?" compares a period with the <em>same</em> period a year earlier, which lives in a different row of the same table. How do we put the two rows side by side, and what if a month is missing?</p>
+  </div>
+  <p><b>The question.</b> For each month of 2026, revenue, revenue in the same month of 2025, and growth %.</p>
+  <p><b>Needs.</b> A self join (<a class="xref" data-note="sql_joins">JOINs</a> §05) on a computed key, LEFT JOIN so months with no previous-year row survive; or LAG (<a class="xref" data-note="sql_windows">Window Functions</a>) and why it is fragile here; date arithmetic with intervals.</p>
+  <p><b>Approach in plain words.</b> Match each month's row with the row whose month is exactly one year earlier (<code>month - interval '1 year'</code>), then growth = (this − last) / last × 100.</p>
+  <p><b>Trace.</b> Jan 2026: 40,300 vs Jan 2025: 31,000 → (40,300 − 31,000) / 31,000 = +30.0%. Feb: 41,300 vs 29,500 → +40.0%. Mar: 2,630 vs 34,000 → −92.3%, but March 2026 only covers 1–8 March (see the trap).</p>
+  <div class="fx" data-lang="sql">SELECT to_char(cur.month, 'YYYY-MM') AS month, cur.revenue,
+       prev.revenue AS revenue_last_year,
+       round(100.0 * (cur.revenue - prev.revenue) / prev.revenue, 1) AS yoy_pct
+FROM monthly_revenue cur
+LEFT JOIN monthly_revenue prev ON prev.month = cur.month - interval '1 year'
+WHERE cur.month &gt;= '2026-01-01'
+ORDER BY cur.month;</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>month</th><th>revenue</th><th>revenue_last_year</th><th>yoy_pct</th></tr><tr><td>2026-01</td><td>40300.00</td><td>31000.00</td><td>30.0</td></tr><tr><td>2026-02</td><td>41300.00</td><td>29500.00</td><td>40.0</td></tr><tr><td>2026-03</td><td>2630.00</td><td>34000.00</td><td>-92.3</td></tr></table>
+  <div class="callout trap"><span class="label">Wrong answer 1: LAG(revenue, 12)</span>
+    <p>LAG counts <em>rows</em>, not months. With June 2025 missing, "12 rows back" is not "12 months back":</p>
+  </div>
+  <div class="fx" data-lang="sql">SELECT to_char(month, 'YYYY-MM') AS month, revenue,
+       to_char(lag(month, 12) OVER (ORDER BY month), 'YYYY-MM') AS compared_with,
+       lag(revenue, 12) OVER (ORDER BY month) AS lag12_revenue
+FROM monthly_revenue ORDER BY month DESC LIMIT 3;</div>
+  <table class="tbl out"><caption>Compared with the wrong month</caption><tr><th>month</th><th>revenue</th><th>compared_with</th><th>lag12_revenue</th></tr><tr><td>2026-03</td><td>2630.00</td><td>2025-02</td><td>29500.00</td></tr><tr><td>2026-02</td><td>41300.00</td><td>2025-01</td><td>31000.00</td></tr><tr><td>2026-01</td><td>40300.00</td><td>NULL</td><td>NULL</td></tr></table>
+  <p>February 2026 is compared with January 2025 and March with February 2025, and January 2026 gets nothing. LAG is fine only when every period is guaranteed present (build a spine first, as in section 04).</p>
+  <div class="callout trap"><span class="label">Wrong answer 2: comparing a partial period</span>
+    <p>−92.3% for March is not a collapse: 8 days of 2026 against 31 days of 2025. Compare like with like: wait for month end, or compare month-to-date with the same days last year (which needs daily data), and say so in the answer.</p>
+  </div>
+  <p>Integer division is the third classic: if revenue were an integer column, <code>(cur - prev) / prev</code> would be 0. Multiply by <code>100.0</code> first, as above.</p>
+  <div class="callout def"><span class="label">Pattern</span>
+    <p><strong>Period-over-period</strong>: self-join on the shifted key (<code>prev.month = cur.month - interval '1 year'</code>), LEFT JOIN, growth = (cur − prev) / prev. LAG(…, k) only after guaranteeing one row per period. Flag incomplete periods.</p>
+  </div>
+  <div class="bridge"><b>What this still can't tell us → next: funnels.</b> YoY compares totals of whole periods. Product questions follow each <em>user</em> through ordered steps: how many who opened the app went on to checkout?</div>
 
-  <h2 id="si-traps"><span class="num">08</span>Common Mistakes</h2>
-  <p>The same ten bugs cause most wrong answers, in interviews and in production dashboards. Each one was shown with a real result above; here they are in one place for revision.</p>
-  <div class="callout trap"><span class="label">Trap: aggregate in WHERE</span><p><code>WHERE count(*) &gt; 1</code> is an error. Filters on aggregates go in <code>HAVING</code>; filters on plain columns go in <code>WHERE</code> (fewer rows reach the grouping, so it is also faster).</p></div>
-  <div class="callout trap"><span class="label">Trap: window function in WHERE</span><p><code>WHERE rank() OVER (…) = 1</code> is an error: windows are computed at the SELECT stage, after WHERE. Rank in a CTE or subquery, filter outside.</p></div>
-  <div class="callout trap"><span class="label">Trap: LIMIT/OFFSET for "Nth highest"</span><p>Counts tied rows separately (Tom came out "3rd"). Use <code>dense_rank</code> when ties should count once.</p></div>
-  <div class="callout trap"><span class="label">Trap: fan-out</span><p>Joining a one-per-order table to a one-per-item table repeats orders. <code>count(*)</code> and <code>sum(order_total)</code> are inflated. Use <code>count(DISTINCT)</code> or aggregate before joining.</p></div>
-  <div class="callout trap"><span class="label">Trap: right-table filter in WHERE after a LEFT JOIN</span><p>Silently drops the unmatched rows (Ben and Dia vanished). Put it in <code>ON</code>.</p></div>
-  <div class="callout trap"><span class="label">Trap: NOT IN with a NULL</span><p>One NULL in the subquery's list makes <code>NOT IN</code> return zero rows. Use <code>NOT EXISTS</code>.</p></div>
-  <div class="callout trap"><span class="label">Trap: <code>&lt;&gt;</code> and NULL</span><p><code>city &lt;&gt; 'Mumbai'</code> drops unknown cities. Use <code>IS DISTINCT FROM</code> or add <code>OR city IS NULL</code>.</p></div>
-  <div class="callout trap"><span class="label">Trap: integer division</span><p><code>1 / 5 = 0</code>. Multiply by <code>100.0</code> or cast to numeric before dividing.</p></div>
-  <div class="callout trap"><span class="label">Trap: count(*) after a LEFT JOIN</span><p>Counts the unmatched row too, so empty months show 1. Count a right-side column: <code>count(o.order_id)</code>.</p></div>
-  <div class="callout trap"><span class="label">Trap: BETWEEN on timestamps</span><p>The end date means midnight; the last day is lost. Use <code>&gt;= start AND &lt; end + 1 day</code>.</p></div>
+  <h2 id="si-funnel"><span class="num">07</span>Funnels</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Counting events by type is a GROUP BY. But a funnel asks how many <em>sessions</em> reached each step after the previous one: steps must be counted once per session and in the right order. Which grain, and how do we enforce order?</p>
+  </div>
+  <p><b>The question.</b> A session is one customer on one day. How many sessions reached each step: app_open → view_menu → add_to_cart → checkout, and the conversion from each step to the next?</p>
+  <p><b>Needs.</b> Grain (<a class="xref" data-note="sql_modeling">Data Modeling</a> §10), GROUP BY with conditional aggregates (section 05's FILTER), CTEs.</p>
+  <p><b>Approach in plain words.</b> Step 1: collapse events to one row per session with the <em>earliest</em> time of each step. Step 2: a session reaches a step if it has that step and all earlier steps, each no earlier than the one before. Step 3: count per step.</p>
+  <p><b>Trace.</b> 26 sessions (one per app_open day). Menus were viewed in all 10 ordering sessions plus 6 browsing sessions (Asha 6 Mar, Ben 6 Mar, Farah 3 and 4 Mar, Gita 4 Mar, Dia 5 Mar) = 16. Carts: the 10 ordering sessions plus Farah's and Gita's abandoned carts on 4 Mar = 12. Checkouts: 10. Farah's 5 March session as one row: open 19:55, menu 19:57, cart 19:59 (two items, two events, earliest kept), checkout 20:05: reaches all four.</p>
+  <div class="fx" data-lang="sql">SELECT customer_id, event_at::date AS day,
+       to_char(min(event_at) FILTER (WHERE event = 'app_open'), 'HH24:MI')    AS t_open,
+       to_char(min(event_at) FILTER (WHERE event = 'view_menu'), 'HH24:MI')   AS t_menu,
+       to_char(min(event_at) FILTER (WHERE event = 'add_to_cart'), 'HH24:MI') AS t_cart,
+       to_char(min(event_at) FILTER (WHERE event = 'checkout'), 'HH24:MI')    AS t_checkout
+FROM events GROUP BY customer_id, event_at::date ORDER BY day, customer_id LIMIT 6;</div>
+  <table class="tbl out"><caption>Step 1 (first 6 sessions): one row per session, earliest time per step</caption><tr><th>customer_id</th><th>day</th><th>t_open</th><th>t_menu</th><th>t_cart</th><th>t_checkout</th></tr><tr><td>1</td><td>2026-03-01</td><td>19:00</td><td>NULL</td><td>NULL</td><td>NULL</td></tr><tr><td>1</td><td>2026-03-02</td><td>12:00</td><td>12:02</td><td>12:04</td><td>12:10</td></tr><tr><td>2</td><td>2026-03-02</td><td>12:55</td><td>12:57</td><td>12:59</td><td>13:05</td></tr><tr><td>3</td><td>2026-03-02</td><td>20:20</td><td>20:22</td><td>20:24</td><td>20:30</td></tr><tr><td>6</td><td>2026-03-02</td><td>19:00</td><td>NULL</td><td>NULL</td><td>NULL</td></tr><tr><td>1</td><td>2026-03-03</td><td>13:05</td><td>13:07</td><td>13:09</td><td>13:15</td></tr></table>
+  <div class="fx" data-lang="sql">WITH s AS (
+  SELECT customer_id, event_at::date AS day,
+         min(event_at) FILTER (WHERE event = 'app_open')    AS t_open,
+         min(event_at) FILTER (WHERE event = 'view_menu')   AS t_menu,
+         min(event_at) FILTER (WHERE event = 'add_to_cart') AS t_cart,
+         min(event_at) FILTER (WHERE event = 'checkout')    AS t_checkout
+  FROM events GROUP BY customer_id, event_at::date),
+steps AS (
+  SELECT count(*) FILTER (WHERE t_open IS NOT NULL) AS s1_open,
+         count(*) FILTER (WHERE t_menu &gt;= t_open) AS s2_menu,
+         count(*) FILTER (WHERE t_cart &gt;= t_menu AND t_menu &gt;= t_open) AS s3_cart,
+         count(*) FILTER (WHERE t_checkout &gt;= t_cart AND t_cart &gt;= t_menu AND t_menu &gt;= t_open) AS s4_checkout
+  FROM s)
+SELECT *, round(100.0 * s2_menu / s1_open, 1) AS open_to_menu_pct,
+          round(100.0 * s3_cart / s2_menu, 1) AS menu_to_cart_pct,
+          round(100.0 * s4_checkout / s3_cart, 1) AS cart_to_checkout_pct,
+          round(100.0 * s4_checkout / s1_open, 1) AS overall_pct
+FROM steps;</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>s1_open</th><th>s2_menu</th><th>s3_cart</th><th>s4_checkout</th><th>open_to_menu_pct</th><th>menu_to_cart_pct</th><th>cart_to_checkout_pct</th><th>overall_pct</th></tr><tr><td>26</td><td>16</td><td>12</td><td>10</td><td>61.5</td><td>75.0</td><td>83.3</td><td>38.5</td></tr></table>
+  <p>(A comparison with a NULL time is UNKNOWN, so a session missing a step can never pass the later steps' conditions: NULL logic from <a class="xref" data-note="sql_fundamentals">Fundamentals</a> doing useful work.)</p>
+  <div class="callout trap"><span class="label">Wrong answer 1: count events</span>
+    <p>One add_to_cart per item means a 2-item order adds 2 events. More carts than menus is a sign of the wrong grain:</p>
+  </div>
+  <div class="fx" data-lang="sql">SELECT event, count(*) AS events FROM events GROUP BY event ORDER BY count(*) DESC;</div>
+  <table class="tbl out"><caption>add_to_cart 17 > view_menu 16: impossible as a funnel</caption><tr><th>event</th><th>events</th></tr><tr><td>app_open</td><td>26</td></tr><tr><td>add_to_cart</td><td>17</td></tr><tr><td>view_menu</td><td>16</td></tr><tr><td>checkout</td><td>10</td></tr></table>
+  <div class="callout trap"><span class="label">Wrong answer 2: distinct customers without order or session</span>
+    <p><code>count(DISTINCT customer_id)</code> per event type gives 7, 7, 7, 6: a different question (did each <em>customer</em> ever do the step, in any order, on any day). Gita's view on 4 March and a checkout on another day would count as a conversion. Agree the grain (session or user) and the time window first.</p>
+  </div>
+  <div class="callout def"><span class="label">Pattern</span>
+    <p><strong>Funnel</strong>: one row per unit (session/user) with <code>min(time) FILTER (WHERE step = …)</code> per step → step k counted if steps 1..k exist in non-decreasing time → conversion = step(k+1) / step(k).</p>
+  </div>
+  <div class="bridge"><b>What this still can't tell us → next: retention and cohorts.</b> A funnel follows a user within one session. The health of an app is whether users come <em>back</em> on later days, measured from when each user started.</div>
 
-  <h2 id="si-rapid"><span class="num">09</span>Conceptual Rapid-Fire</h2>
-  <p>Short "explain the difference" questions. Interviewers use them as warm-ups or between coding problems. Answer in two or three sentences with one example from the data.</p>
-  <details class="qa"><summary><span class="qmark">Q</span>WHERE vs HAVING?</summary><div class="qa-body"><code>WHERE</code> filters rows before grouping and can't use aggregates. <code>HAVING</code> filters groups after aggregation. Example: <code>WHERE status &lt;&gt; 'cancelled'</code> drops rows first; <code>HAVING count(*) &gt; 1</code> drops whole customers after counting. Put non-aggregate filters in <code>WHERE</code>: fewer rows reach the grouping.</div></details>
+  <h2 id="si-ret"><span class="num">08</span>Retention and Cohorts</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>"How many users came back?" depends on when each one started: a user who arrived yesterday has had no chance to return. How do we line users up by their own start date and measure returns within a fair window?</p>
+  </div>
+  <p><b>The question.</b> Group customers by the day they first opened the app (their <strong>cohort</strong>). For each cohort: how many opened it again within 3 days after that first day (day 1 to day 3), and what %?</p>
+  <p><b>Needs.</b> MIN per group, EXISTS (a semi-join, <a class="xref" data-note="sql_joins">JOINs</a> §06), date arithmetic, CTEs.</p>
+  <p><b>Approach in plain words.</b> Step 1: distinct (customer, day) of app opens. Step 2: each customer's first day = cohort. Step 3: did they open on any day from cohort + 1 to cohort + 3? Step 4: count per cohort.</p>
+  <p><b>Trace.</b> First days: Asha 1 Mar; Ben, Chen, Farah 2 Mar; Dia 3 Mar; Esha, Gita 4 Mar. Returns within 3 days: Asha (2 Mar) yes; Ben (3) yes; Chen (5 is day 3) yes; Farah (3) yes; Dia (5) yes; Esha (only 4 Mar) no; Gita (5) yes. Cohorts: 1 Mar 1/1, 2 Mar 3/3, 3 Mar 1/1, 4 Mar 1/2. Every cohort's window ends by 7 March and our data runs to 8 March, so all windows are complete.</p>
+  <div class="fx" data-lang="sql">WITH opens AS (
+  SELECT DISTINCT customer_id, event_at::date AS day FROM events WHERE event = 'app_open'),
+cohorts AS (
+  SELECT customer_id, min(day) AS cohort_day FROM opens GROUP BY customer_id),
+flags AS (
+  SELECT c.customer_id, c.cohort_day,
+         EXISTS (SELECT 1 FROM opens o WHERE o.customer_id = c.customer_id
+                   AND o.day BETWEEN c.cohort_day + 1 AND c.cohort_day + 3) AS returned
+  FROM cohorts c
+  WHERE c.cohort_day + 3 &lt;= date '2026-03-08')          -- only cohorts with a complete window
+SELECT cohort_day, count(*) AS users, count(*) FILTER (WHERE returned) AS returned,
+       round(100.0 * count(*) FILTER (WHERE returned) / count(*), 1) AS retention_pct
+FROM flags GROUP BY cohort_day ORDER BY cohort_day;</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>cohort_day</th><th>users</th><th>returned</th><th>retention_pct</th></tr><tr><td>2026-03-01</td><td>1</td><td>1</td><td>100.0</td></tr><tr><td>2026-03-02</td><td>3</td><td>3</td><td>100.0</td></tr><tr><td>2026-03-03</td><td>1</td><td>1</td><td>100.0</td></tr><tr><td>2026-03-04</td><td>2</td><td>1</td><td>50.0</td></tr></table>
+  <p>Here <code>BETWEEN</code> is safe because <code>day</code> is a <code>date</code>, not a timestamp (the timestamp version of BETWEEN is a trap: section 10).</p>
+  <div class="callout trap"><span class="label">Wrong answer 1: counting day 0</span>
+    <p>Using <code>o.day &gt;= c.cohort_day</code> lets the first visit itself count as a return: everyone is retained.</p>
+  </div>
+  <div class="fx" data-lang="sql">WITH opens AS (SELECT DISTINCT customer_id, event_at::date AS day FROM events WHERE event = 'app_open'),
+cohorts AS (SELECT customer_id, min(day) AS cohort_day FROM opens GROUP BY customer_id)
+SELECT c.cohort_day, count(*) AS users,
+       count(*) FILTER (WHERE EXISTS (SELECT 1 FROM opens o WHERE o.customer_id = c.customer_id
+                                        AND o.day &gt;= c.cohort_day AND o.day &lt;= c.cohort_day + 3)) AS returned
+FROM cohorts c GROUP BY c.cohort_day ORDER BY c.cohort_day;</div>
+  <table class="tbl out"><caption>100% everywhere: wrong</caption><tr><th>cohort_day</th><th>users</th><th>returned</th></tr><tr><td>2026-03-01</td><td>1</td><td>1</td></tr><tr><td>2026-03-02</td><td>3</td><td>3</td></tr><tr><td>2026-03-03</td><td>1</td><td>1</td></tr><tr><td>2026-03-04</td><td>2</td><td>2</td></tr></table>
+  <div class="callout trap"><span class="label">Wrong answer 2: incomplete windows</span>
+    <p>A cohort that started on 7 March would have only 1 of its 3 days observed; including it drags retention down for a reason that is about the calendar, not the users. Keep only cohorts whose window has fully passed (the WHERE line above), or show them greyed out.</p>
+  </div>
+  <div class="callout def"><span class="label">Pattern</span>
+    <p><strong>Cohort retention</strong>: distinct activity per (user, period) → cohort = first period per user → flag activity in the window [cohort + 1, cohort + N] (EXISTS or a join) → aggregate per cohort, only for complete windows. A cohort table (one column per day/week since start) is this plus a pivot (section 05).</p>
+  </div>
+  <div class="bridge"><b>What this still can't tell us → next: streaks.</b> Retention asks "did they come back at least once?". Engagement features (Duolingo-style streaks) ask "for how many days <em>in a row</em>?", which needs to recognise unbroken runs of consecutive days.</div>
+
+  <h2 id="si-streak"><span class="num">09</span>Streaks: Gaps and Islands</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Each row is one day a customer opened the app. A streak is a run of consecutive days, and SQL has no "consecutive" keyword. How do we give every day in the same run the same label so we can GROUP BY it?</p>
+  </div>
+  <p><b>The question.</b> Each customer's longest streak of consecutive days with an app open, with its start and end.</p>
+  <p><b>Needs.</b> DISTINCT, <code>row_number() OVER (PARTITION BY … ORDER BY …)</code> (<a class="xref" data-note="sql_windows">Window Functions</a>), date − integer arithmetic, GROUP BY, then section 03's top-1-per-group.</p>
+  <p><b>Approach in plain words.</b> Number each customer's days 1, 2, 3, … in date order. Inside a run of consecutive days, the date goes up by 1 exactly when the number goes up by 1, so <em>date − number</em> stays the same; a gap makes it jump. That constant is the run's label ("island"). Group by it, count days, keep each customer's longest.</p>
+  <p><b>Trace (Asha).</b> Days 1, 2, 3, 4, 6, 7, 8 March get numbers 1–7. date − number: 1−1, 2−2, 3−3, 4−4 → all "28 Feb"; 6−5, 7−6, 8−7 → all "1 Mar". Two islands: 1–4 March (4 days) and 6–8 March (3 days). Longest: 4.</p>
+  <div class="fx" data-lang="sql">WITH days AS (SELECT DISTINCT customer_id, event_at::date AS day FROM events WHERE event = 'app_open')
+SELECT day, row_number() OVER (ORDER BY day) AS n,
+       day - (row_number() OVER (ORDER BY day))::int AS island
+FROM days WHERE customer_id = 1 ORDER BY day;</div>
+  <table class="tbl out"><caption>Islands for Asha</caption><tr><th>day</th><th>n</th><th>island</th></tr><tr><td>2026-03-01</td><td>1</td><td>2026-02-28</td></tr><tr><td>2026-03-02</td><td>2</td><td>2026-02-28</td></tr><tr><td>2026-03-03</td><td>3</td><td>2026-02-28</td></tr><tr><td>2026-03-04</td><td>4</td><td>2026-02-28</td></tr><tr><td>2026-03-06</td><td>5</td><td>2026-03-01</td></tr><tr><td>2026-03-07</td><td>6</td><td>2026-03-01</td></tr><tr><td>2026-03-08</td><td>7</td><td>2026-03-01</td></tr></table>
+  <div class="fx" data-lang="sql">WITH days AS (
+  SELECT DISTINCT customer_id, event_at::date AS day FROM events WHERE event = 'app_open'),
+islands AS (
+  SELECT customer_id, day,
+         day - (row_number() OVER (PARTITION BY customer_id ORDER BY day))::int AS island
+  FROM days),
+runs AS (
+  SELECT customer_id, island, count(*) AS days, min(day) AS start_day, max(day) AS end_day
+  FROM islands GROUP BY customer_id, island)
+SELECT DISTINCT ON (r.customer_id) c.name, r.days AS longest_streak, r.start_day, r.end_day
+FROM runs r JOIN customers c USING (customer_id)
+ORDER BY r.customer_id, r.days DESC, r.start_day;</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>longest_streak</th><th>start_day</th><th>end_day</th></tr><tr><td>Asha</td><td>4</td><td>2026-03-01</td><td>2026-03-04</td></tr><tr><td>Ben</td><td>3</td><td>2026-03-02</td><td>2026-03-04</td></tr><tr><td>Chen</td><td>1</td><td>2026-03-02</td><td>2026-03-02</td></tr><tr><td>Dia</td><td>1</td><td>2026-03-03</td><td>2026-03-03</td></tr><tr><td>Esha</td><td>1</td><td>2026-03-04</td><td>2026-03-04</td></tr><tr><td>Farah</td><td>7</td><td>2026-03-02</td><td>2026-03-08</td></tr><tr><td>Gita</td><td>2</td><td>2026-03-04</td><td>2026-03-05</td></tr></table>
+  <p>Farah opened the app every day from 2 to 8 March: 7. <code>DISTINCT ON (customer_id)</code> with <code>ORDER BY customer_id, days DESC</code> keeps the first (longest) run per customer; on a tie it keeps the earliest because of <code>start_day</code>.</p>
+  <div class="callout trap"><span class="label">Wrong answer 1: counting consecutive pairs</span>
+    <p>"Count days where day − previous day = 1" (with LAG) counts <em>pairs</em> across all runs, not the length of one run:</p>
+  </div>
+  <div class="fx" data-lang="sql">WITH days AS (SELECT DISTINCT customer_id, event_at::date AS day FROM events WHERE event = 'app_open')
+SELECT customer_id, count(*) FILTER (WHERE day - prev = 1) AS consecutive_pairs
+FROM (SELECT customer_id, day, lag(day) OVER (PARTITION BY customer_id ORDER BY day) AS prev FROM days) x
+WHERE customer_id = 1 GROUP BY customer_id;</div>
+  <table class="tbl out"><caption>Asha: 5 consecutive pairs, but her longest streak is 4</caption><tr><th>customer_id</th><th>consecutive_pairs</th></tr><tr><td>1</td><td>5</td></tr></table>
+  <div class="callout trap"><span class="label">Wrong answer 2: skipping DISTINCT</span>
+    <p>If a customer opens the app twice on one day, row_number advances twice while the date doesn't, splitting the island. Reduce to one row per (customer, day) first (the <code>days</code> CTE).</p>
+  </div>
+  <div class="callout def"><span class="label">Pattern</span>
+    <p><strong>Gaps and islands</strong>: distinct (entity, day) → <code>day − row_number() OVER (PARTITION BY entity ORDER BY day)</code> = island id → GROUP BY entity, island → length, start, end. The same trick finds consecutive IDs, sessions split by inactivity gaps (with LAG and a running sum), and date ranges to merge.</p>
+  </div>
+  <div class="bridge"><b>What this still can't tell us → next: more practice.</b> These eight patterns cover the long questions. Interviews also ask many short ones that test single tools and NULL traps; here they are, all on Biteful.</div>
+
+  <h2 id="si-more"><span class="num">10</span>More Practice: Shorter Problems</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Can you do the quick ones fast, and spot the trap each one hides? Try each before revealing; every answer was run.</p>
+  </div>
+  <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>Which customers placed more than one order? (needs GROUP BY + HAVING)</summary><div class="qa-body">
+  <div class="fx" data-lang="sql">SELECT c.name, count(*) AS orders
+FROM orders o JOIN customers c USING (customer_id)
+GROUP BY c.customer_id, c.name HAVING count(*) &gt; 1 ORDER BY orders DESC, c.name;</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>orders</th></tr><tr><td>Asha</td><td>3</td></tr><tr><td>Ben</td><td>2</td></tr><tr><td>Chen</td><td>2</td></tr></table>
+  A filter on an aggregate goes in HAVING; <code>WHERE count(*) &gt; 1</code> is an error.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Customers who never ordered. Give a safe way and say why NOT IN can be dangerous. (anti-join)</summary><div class="qa-body">
+  <div class="fx" data-lang="sql">SELECT name FROM customers c WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.customer_id);
+SELECT name FROM customers WHERE customer_id NOT IN (SELECT referred_by FROM customers);</div>
+  <table class="tbl out"><caption>NOT EXISTS: Gita</caption><tr><th>name</th></tr><tr><td>Gita</td></tr></table>
+  <table class="tbl out"><caption>NOT IN against a nullable column: nobody</caption><tr><th>name</th></tr></table>
+  The second query asks "who referred nobody" and returns 0 rows because <code>referred_by</code> contains NULLs: <code>x NOT IN (…, NULL)</code> is never TRUE. NOT EXISTS is NULL-safe.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Revenue per customer, including customers with zero. (LEFT JOIN + COALESCE)</summary><div class="qa-body">
+  <div class="fx" data-lang="sql">SELECT c.name, count(o.order_id) AS orders, coalesce(sum(o.amount), 0) AS revenue
+FROM customers c LEFT JOIN orders o ON o.customer_id = c.customer_id AND o.status &lt;&gt; 'cancelled'
+GROUP BY c.customer_id, c.name ORDER BY revenue DESC, c.name;</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>orders</th><th>revenue</th></tr><tr><td>Asha</td><td>3</td><td>930.00</td></tr><tr><td>Chen</td><td>2</td><td>780.00</td></tr><tr><td>Ben</td><td>2</td><td>630.00</td></tr><tr><td>Farah</td><td>1</td><td>600.00</td></tr><tr><td>Dia</td><td>0</td><td>0</td></tr><tr><td>Esha</td><td>0</td><td>0</td></tr><tr><td>Gita</td><td>0</td><td>0</td></tr></table>
+  The status test sits in ON, so Dia and Esha (only cancelled orders) and Gita (none) keep a row with 0.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Per customer: orders and items. Why does the obvious query overcount? (fan-out)</summary><div class="qa-body">
+  <div class="fx" data-lang="sql">SELECT c.name, count(*) AS orders_wrong, sum(o.amount) AS spend_wrong
+FROM customers c JOIN orders o USING (customer_id) JOIN order_items oi USING (order_id)
+WHERE c.name = 'Asha' GROUP BY c.name;
+SELECT c.name, count(DISTINCT o.order_id) AS orders, sum(oi.qty) AS items,
+       (SELECT sum(amount) FROM orders WHERE customer_id = c.customer_id) AS spend
+FROM customers c JOIN orders o USING (customer_id) JOIN order_items oi USING (order_id)
+WHERE c.name = 'Asha' GROUP BY c.customer_id, c.name;</div>
+  <table class="tbl out"><caption>Wrong: orders counted once per line</caption><tr><th>name</th><th>orders_wrong</th><th>spend_wrong</th></tr><tr><td>Asha</td><td>5</td><td>1620.00</td></tr></table>
+  <table class="tbl out"><caption>Right: count distinct orders, sum line quantities</caption><tr><th>name</th><th>orders</th><th>items</th><th>spend</th></tr><tr><td>Asha</td><td>3</td><td>7</td><td>930.00</td></tr></table>
+  Asha's orders 104 and 110 have two lines each, so the join repeats them: 5 rows, spend 1,620 instead of 930 (<a class="xref" data-note="sql_joins">JOINs</a> §08).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Pairs of customers in the same city, each pair once. (self join)</summary><div class="qa-body">
+  <div class="fx" data-lang="sql">SELECT a.name AS customer_a, b.name AS customer_b, a.city
+FROM customers a JOIN customers b ON b.city = a.city AND a.customer_id &lt; b.customer_id
+ORDER BY a.city, a.name, b.name;</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>customer_a</th><th>customer_b</th><th>city</th></tr><tr><td>Ben</td><td>Dia</td><td>Mumbai</td></tr><tr><td>Ben</td><td>Farah</td><td>Mumbai</td></tr><tr><td>Dia</td><td>Farah</td><td>Mumbai</td></tr><tr><td>Asha</td><td>Chen</td><td>Pune</td></tr><tr><td>Asha</td><td>Gita</td><td>Pune</td></tr><tr><td>Chen</td><td>Gita</td><td>Pune</td></tr></table>
+  <code>&lt;</code> (not <code>&lt;&gt;</code>) removes mirrored duplicates; Esha (NULL city) pairs with nobody.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Orders above their own restaurant's average amount. (correlated subquery)</summary><div class="qa-body">
+  <div class="fx" data-lang="sql">SELECT o.order_id, o.restaurant_id, o.amount,
+       round((SELECT avg(amount) FROM orders o2 WHERE o2.restaurant_id = o.restaurant_id), 2) AS restaurant_avg
+FROM orders o
+WHERE o.amount &gt; (SELECT avg(amount) FROM orders o2 WHERE o2.restaurant_id = o.restaurant_id)
+ORDER BY o.order_id;</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>order_id</th><th>restaurant_id</th><th>amount</th><th>restaurant_avg</th></tr><tr><td>102</td><td>11</td><td>450.00</td><td>410.00</td></tr><tr><td>103</td><td>12</td><td>520.00</td><td>386.67</td></tr><tr><td>109</td><td>11</td><td>600.00</td><td>410.00</td></tr><tr><td>110</td><td>10</td><td>310.00</td><td>270.00</td></tr></table>
+  The inner query is re-evaluated per outer row's restaurant. A window version: <code>avg(amount) OVER (PARTITION BY restaurant_id)</code> in a CTE, then filter.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Customers who ordered both South Indian and Pizza. (GROUP BY + HAVING count DISTINCT)</summary><div class="qa-body">
+  <div class="fx" data-lang="sql">SELECT c.name
+FROM orders o JOIN customers c USING (customer_id) JOIN restaurants r USING (restaurant_id)
+WHERE r.cuisine IN ('South Indian', 'Pizza')
+GROUP BY c.customer_id, c.name HAVING count(DISTINCT r.cuisine) = 2 ORDER BY c.name;</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>name</th></tr><tr><td>Asha</td></tr><tr><td>Chen</td></tr></table>
+  <code>WHERE cuisine = 'South Indian' AND cuisine = 'Pizza'</code> is the classic wrong answer: one row can't have two cuisines, so it returns nothing.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Show the referral chain from Asha downwards. (recursive CTE)</summary><div class="qa-body">
+  <div class="fx" data-lang="sql">WITH RECURSIVE chain AS (
+  SELECT customer_id, name, 0 AS depth, name::text AS path FROM customers WHERE name = 'Asha'
+  UNION ALL
+  SELECT c.customer_id, c.name, ch.depth + 1, ch.path || ' → ' || c.name
+  FROM customers c JOIN chain ch ON c.referred_by = ch.customer_id)
+SELECT depth, name, path FROM chain ORDER BY depth, name;</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>depth</th><th>name</th><th>path</th></tr><tr><td>0</td><td>Asha</td><td>Asha</td></tr><tr><td>1</td><td>Ben</td><td>Asha → Ben</td></tr><tr><td>1</td><td>Chen</td><td>Asha → Chen</td></tr><tr><td>2</td><td>Farah</td><td>Asha → Ben → Farah</td></tr></table>
+  The anchor row is Asha; each recursive step adds the people referred by the previous level (<a class="xref" data-note="sql_subqueries">Subqueries</a>).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Each customer's latest order. (top-1 per group)</summary><div class="qa-body">
+  <div class="fx" data-lang="sql">SELECT DISTINCT ON (customer_id) customer_id, order_id, to_char(ordered_at, 'Mon DD HH24:MI') AS ordered_at, amount
+FROM orders ORDER BY customer_id, ordered_at DESC;</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>customer_id</th><th>order_id</th><th>ordered_at</th><th>amount</th></tr><tr><td>1</td><td>110</td><td>Mar 08 20:50</td><td>310.00</td></tr><tr><td>2</td><td>106</td><td>Mar 04 12:40</td><td>180.00</td></tr><tr><td>3</td><td>108</td><td>Mar 05 18:20</td><td>260.00</td></tr><tr><td>4</td><td>105</td><td>Mar 03 19:45</td><td>310.00</td></tr><tr><td>5</td><td>107</td><td>Mar 04 21:10</td><td>260.00</td></tr><tr><td>6</td><td>109</td><td>Mar 05 20:05</td><td>600.00</td></tr></table>
+  Portable version: <code>row_number() OVER (PARTITION BY customer_id ORDER BY ordered_at DESC) = 1</code> in an outer query.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Running total of delivered revenue by day. (window SUM)</summary><div class="qa-body">
+  <div class="fx" data-lang="sql">SELECT ordered_at::date AS day, sum(amount) AS revenue,
+       sum(sum(amount)) OVER (ORDER BY ordered_at::date) AS running_total
+FROM orders WHERE status = 'delivered' GROUP BY 1 ORDER BY 1;</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>day</th><th>revenue</th><th>running_total</th></tr><tr><td>2026-03-02</td><td>1210.00</td><td>1210.00</td></tr><tr><td>2026-03-03</td><td>380.00</td><td>1590.00</td></tr><tr><td>2026-03-04</td><td>180.00</td><td>1770.00</td></tr><tr><td>2026-03-05</td><td>860.00</td><td>2630.00</td></tr></table>
+  <code>sum(sum(amount)) OVER (…)</code>: the inner SUM is the GROUP BY aggregate per day, the outer SUM is a window over those daily rows.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Hours between each order and the same customer's previous order. (LAG)</summary><div class="qa-body">
+  <div class="fx" data-lang="sql">SELECT customer_id, order_id,
+       round(extract(epoch FROM ordered_at - lag(ordered_at) OVER w) / 3600, 1) AS hours_since_prev
+FROM orders WHERE customer_id IN (1, 2, 3)
+WINDOW w AS (PARTITION BY customer_id ORDER BY ordered_at)
+ORDER BY customer_id, ordered_at;</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>customer_id</th><th>order_id</th><th>hours_since_prev</th></tr><tr><td>1</td><td>101</td><td>NULL</td></tr><tr><td>1</td><td>104</td><td>25.1</td></tr><tr><td>1</td><td>110</td><td>127.6</td></tr><tr><td>2</td><td>102</td><td>NULL</td></tr><tr><td>2</td><td>106</td><td>47.6</td></tr><tr><td>3</td><td>103</td><td>NULL</td></tr><tr><td>3</td><td>108</td><td>69.8</td></tr></table>
+  Each customer's first order has no previous one: NULL, not 0.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Median order amount. (ordered-set aggregate)</summary><div class="qa-body">
+  <div class="fx" data-lang="sql">SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY amount) AS median, round(avg(amount), 2) AS mean FROM orders;</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>median</th><th>mean</th></tr><tr><td>310</td><td>351.00</td></tr></table>
+  Sorted: 180, 240, 260, 260, 310, 310, 380, 450, 520, 600; the middle two are 310 and 310. <code>percentile_disc</code> would return an actual value from the data.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What fraction of orders were cancelled? Why might the first attempt say 0?</summary><div class="qa-body">
+  <div class="fx" data-lang="sql">SELECT count(*) FILTER (WHERE status = 'cancelled') / count(*) AS fraction FROM orders;
+SELECT round(100.0 * count(*) FILTER (WHERE status = 'cancelled') / count(*), 1) AS cancelled_pct FROM orders;</div>
+  <table class="tbl out"><caption>Integer division</caption><tr><th>fraction</th></tr><tr><td>0</td></tr></table>
+  <table class="tbl out"><caption>Fixed</caption><tr><th>cancelled_pct</th></tr><tr><td>20.0</td></tr></table>
+  2 / 10 between integers is 0. Multiply by 100.0 (or cast) before dividing.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>"Customers not in Pune": why is Esha missing? (three-valued logic)</summary><div class="qa-body">
+  <div class="fx" data-lang="sql">SELECT name FROM customers WHERE city &lt;&gt; 'Pune' ORDER BY name;
+SELECT name FROM customers WHERE city IS DISTINCT FROM 'Pune' ORDER BY name;</div>
+  <table class="tbl out"><caption>&lt;&gt; drops NULL</caption><tr><th>name</th></tr><tr><td>Ben</td></tr><tr><td>Dia</td></tr><tr><td>Farah</td></tr></table>
+  <table class="tbl out"><caption>IS DISTINCT FROM keeps it</caption><tr><th>name</th></tr><tr><td>Ben</td></tr><tr><td>Dia</td></tr><tr><td>Esha</td></tr><tr><td>Farah</td></tr></table>
+  <code>NULL &lt;&gt; 'Pune'</code> is UNKNOWN and WHERE keeps only TRUE. Decide with the interviewer whether an unknown city counts as "not Pune".</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Orders "between 2 March and 8 March": why is order 110 missing?</summary><div class="qa-body">
+  <div class="fx" data-lang="sql">SELECT count(*) FROM orders WHERE ordered_at BETWEEN '2026-03-02' AND '2026-03-08';
+SELECT count(*) FROM orders WHERE ordered_at &gt;= '2026-03-02' AND ordered_at &lt; '2026-03-09';</div>
+  <table class="tbl out"><caption>BETWEEN on a timestamp</caption><tr><th>count</th></tr><tr><td>9</td></tr></table>
+  <table class="tbl out"><caption>Half-open range</caption><tr><th>count</th></tr><tr><td>10</td></tr></table>
+  '2026-03-08' means midnight at the start of 8 March; order 110 was at 20:50 that day. Use <code>&gt;= start AND &lt; end + 1 day</code>.</div></details>
+  <div class="bridge"><b>What this still can't tell us → next: common mistakes.</b> Fifteen problems, and the same few bugs kept appearing. Collected in one place, they become a checklist.</div>
+
+  <h2 id="si-traps"><span class="num">11</span>Common Mistakes</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Most wrong answers above come from the same dozen bugs. Can you recognise them on sight?</p>
+  </div>
+  <div class="callout trap"><span class="label">Trap: aggregate in WHERE</span><p><code>WHERE count(*) &gt; 1</code> is an error. Aggregate filters go in HAVING; plain-column filters in WHERE.</p></div>
+  <div class="callout trap"><span class="label">Trap: window function in WHERE</span><p>Windows are computed at the SELECT stage, after WHERE. Rank in a CTE, filter outside.</p></div>
+  <div class="callout trap"><span class="label">Trap: LIMIT/OFFSET or RANK for "Nth highest"</span><p>OFFSET counted the two ₹310 orders separately (said 310 for the 6th); RANK = 6 matched nothing. Use DENSE_RANK.</p></div>
+  <div class="callout trap"><span class="label">Trap: ROW_NUMBER when ties matter</span><p>Dropped one of Biryani Bros' tied dishes. Use RANK.</p></div>
+  <div class="callout trap"><span class="label">Trap: fan-out</span><p>Asha's spend 930 became 1,620 after joining lines. Aggregate each table at its grain first.</p></div>
+  <div class="callout trap"><span class="label">Trap: right-table filter in WHERE after a LEFT JOIN, and count(*)</span><p>Empty spine days vanished. Put filters in ON and count a right-table column.</p></div>
+  <div class="callout trap"><span class="label">Trap: COUNT(CASE … ELSE 0 END)</span><p>Counts every row. Use SUM, or COUNT without ELSE, or FILTER.</p></div>
+  <div class="callout trap"><span class="label">Trap: LAG(k) for "same period last year"</span><p>Wrong month when a period is missing (June 2025). Self-join on the shifted key.</p></div>
+  <div class="callout trap"><span class="label">Trap: partial or incomplete periods</span><p>March MTD vs full March (−92%); cohorts with unfinished windows.</p></div>
+  <div class="callout trap"><span class="label">Trap: wrong grain in funnels</span><p>Counting events (17 carts) instead of sessions (12).</p></div>
+  <div class="callout trap"><span class="label">Trap: NOT IN with NULL, &lt;&gt; with NULL</span><p>Zero rows; Esha dropped. Use NOT EXISTS / IS DISTINCT FROM.</p></div>
+  <div class="callout trap"><span class="label">Trap: integer division and BETWEEN on timestamps</span><p>2/10 = 0; order 110 lost on its last day.</p></div>
+  <div class="bridge"><b>What this still can't tell us → next: conceptual rapid-fire.</b> Between coding problems, interviewers ask "explain the difference" questions. Short, exact answers with one example each.</div>
+
+  <h2 id="si-rapid"><span class="num">12</span>Conceptual Rapid-Fire</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Can you explain the classic "X vs Y" pairs in two or three sentences, with an example from Biteful?</p>
+  </div>
+  <details class="qa"><summary><span class="qmark">Q</span>WHERE vs HAVING?</summary><div class="qa-body"><code>WHERE</code> filters rows before grouping and can't use aggregates; <code>HAVING</code> filters groups after aggregation. <code>WHERE status &lt;&gt; 'cancelled'</code> drops rows first; <code>HAVING count(*) &gt; 1</code> drops whole customers after counting. Non-aggregate filters belong in WHERE: fewer rows reach the grouping.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>DELETE vs TRUNCATE vs DROP?</summary><div class="qa-body">
   <table class="tbl"><tr><th></th><th>Removes</th><th>WHERE?</th><th>Speed</th><th>Triggers</th></tr>
   <tr><td><code>DELETE</code></td><td>Chosen rows</td><td>Yes</td><td>Slow (row by row, logged)</td><td>Fire</td></tr>
   <tr><td><code>TRUNCATE</code></td><td>All rows, keeps table</td><td>No</td><td>Fast (drops data files)</td><td>Row triggers don't fire</td></tr>
   <tr><td><code>DROP</code></td><td>Table + structure</td><td>No</td><td>Fast</td><td>n/a</td></tr></table>
-  In PostgreSQL all three can be rolled back inside a transaction; in MySQL, TRUNCATE and DROP auto-commit.</div></details>
+  In PostgreSQL all three can be rolled back inside a transaction (<a class="xref" data-note="sql_transactions">Transactions</a>); MySQL's documentation says TRUNCATE and DROP commit implicitly (not run here).</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>UNION vs UNION ALL?</summary><div class="qa-body">
-  <div class="fx" data-lang="sql">SELECT (SELECT count(*) FROM (SELECT city FROM customers UNION     SELECT 'Delhi') t) AS union_rows,
-       (SELECT count(*) FROM (SELECT city FROM customers UNION ALL SELECT 'Delhi') t) AS union_all_rows;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>union_rows</th><th>union_all_rows</th></tr><tr><td>3</td><td>5</td></tr></table>
-  Cities are Mumbai, Delhi, Mumbai, NULL plus an extra 'Delhi'. <code>UNION</code> removes duplicates (Mumbai, Delhi, NULL = 3 rows; it needs a sort or hash, so it is slower; NULLs count as equal here). <code>UNION ALL</code> keeps every row (5). Default to <code>UNION ALL</code> unless you need de-duplication.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>RANK vs DENSE_RANK vs ROW_NUMBER?</summary><div class="qa-body">
-  <div class="fx" data-lang="sql">SELECT name, salary,
-       row_number() OVER w AS row_number, rank() OVER w AS rank, dense_rank() OVER w AS dense_rank
-FROM employees WINDOW w AS (ORDER BY salary DESC) ORDER BY salary DESC, name;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>name</th><th>salary</th><th>row_number</th><th>rank</th><th>dense_rank</th></tr><tr><td>Ravi</td><td>120000</td><td>1</td><td>1</td><td>1</td></tr><tr><td>Sara</td><td>95000</td><td>2</td><td>2</td><td>2</td></tr><tr><td>Tom</td><td>95000</td><td>3</td><td>2</td><td>2</td></tr><tr><td>Uma</td><td>70000</td><td>4</td><td>4</td><td>3</td></tr><tr><td>Vik</td><td>65000</td><td>5</td><td>5</td><td>4</td></tr></table>
-  On ties: <code>ROW_NUMBER</code> breaks them arbitrarily (1,2,3,4,5), <code>RANK</code> shares and leaves a gap (1,2,2,4), <code>DENSE_RANK</code> shares with no gap (1,2,2,3). <code>WINDOW w AS (…)</code> names a window once so several functions can reuse it.</div></details>
+  <div class="fx" data-lang="sql">SELECT (SELECT count(*) FROM (SELECT city FROM customers UNION     SELECT city FROM restaurants) t) AS union_rows,
+       (SELECT count(*) FROM (SELECT city FROM customers UNION ALL SELECT city FROM restaurants) t) AS union_all_rows;</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>union_rows</th><th>union_all_rows</th></tr><tr><td>3</td><td>12</td></tr></table>
+  7 customer cities + 5 restaurant cities = 12 rows with UNION ALL. UNION removes duplicates: Pune, Mumbai and NULL (Esha) = 3; NULLs count as equal here. UNION needs a sort or hash, so default to UNION ALL unless you need de-duplication.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>RANK vs DENSE_RANK vs ROW_NUMBER?</summary><div class="qa-body">On ties: ROW_NUMBER breaks them arbitrarily, RANK shares and leaves a gap, DENSE_RANK shares with no gap. On Biteful's amounts the two ₹310 orders get row numbers 5 and 6, ranks 5 and 5 (next is 7), dense ranks 5 and 5 (next is 6): section 02's table.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>COUNT(*) vs COUNT(col) vs COUNT(DISTINCT col)?</summary><div class="qa-body">
-  <div class="fx" data-lang="sql">SELECT count(*) AS all_rows, count(city) AS non_null, count(DISTINCT city) AS distinct_cities
-FROM customers;</div>
-  <table class="tbl out"><caption>Result</caption><tr><th>all_rows</th><th>non_null</th><th>distinct_cities</th></tr><tr><td>4</td><td>3</td><td>2</td></tr></table>
-  <code>COUNT(*)</code> counts rows; <code>COUNT(col)</code> skips NULLs (Dia); <code>COUNT(DISTINCT col)</code> also merges repeats (Mumbai twice).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>CHAR vs VARCHAR?</summary><div class="qa-body"><code>CHAR(n)</code> is fixed length, padded with spaces; <code>VARCHAR(n)</code> stores only what you give, up to n. Use CHAR only for truly fixed codes (country 'IN'). In PostgreSQL, <code>text</code> and <code>varchar</code> perform the same; CHAR is never faster.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Clustered vs non-clustered index?</summary><div class="qa-body">An index is a sorted lookup structure that lets the database find rows without reading the whole table, like the index at the back of a textbook. A <strong>clustered</strong> index <em>is</em> the table: rows are stored in key order, so only one per table (SQL Server, MySQL InnoDB's primary key). A <strong>non-clustered</strong> index is a separate structure pointing to the rows; you can have many. PostgreSQL tables are heaps, so every index is non-clustered (<code>CLUSTER</code> reorders once, not maintained).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Primary key vs unique key?</summary><div class="qa-body">Both enforce uniqueness with an index. A primary key is one per table, implies NOT NULL, and is the row's identity that foreign keys point to. A table can have many unique keys, and they allow NULLs (in PostgreSQL, multiple NULLs, since NULL ≠ NULL).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>In what order does SQL evaluate a query? Can you use a SELECT alias in WHERE?</summary><div class="qa-body"><div class="flow"><span>FROM / JOIN</span><span>WHERE</span><span>GROUP BY</span><span>HAVING</span><span>SELECT</span><span>DISTINCT</span><span>ORDER BY</span><span>LIMIT</span></div>The database first picks the tables, then filters rows, then groups, then filters groups, and only then computes the SELECT list. So a SELECT alias doesn't exist yet in <code>WHERE</code> (error), but works in <code>ORDER BY</code>, which runs after SELECT. Window functions run at the SELECT stage, which is why you filter them in an outer query.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>IN vs EXISTS vs JOIN for "customers who ordered"?</summary><div class="qa-body">All give Asha, Ben, Chen, and modern planners often produce the same plan. <code>EXISTS</code> stops at the first match and is NULL-safe in the negated form. A plain <code>JOIN</code> returns a customer once <em>per order</em> (Asha twice), so it needs <code>DISTINCT</code>: a classic duplicate bug.</div></details>
-</main>
-`
+  <div class="fx" data-lang="sql">SELECT count(*) AS all_rows, count(city) AS non_null, count(DISTINCT city) AS distinct_cities FROM customers;</div>
+  <table class="tbl out"><caption>Result</caption><tr><th>all_rows</th><th>non_null</th><th>distinct_cities</th></tr><tr><td>7</td><td>6</td><td>2</td></tr></table>
+  COUNT(*) counts rows (7); COUNT(city) skips Esha's NULL (6); COUNT(DISTINCT city) also merges repeats (Pune, Mumbai = 2).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>CHAR vs VARCHAR vs TEXT?</summary><div class="qa-body"><code>CHAR(n)</code> is fixed length, padded with spaces; <code>VARCHAR(n)</code> stores what you give up to n. In PostgreSQL, <code>text</code> and <code>varchar</code> perform the same and CHAR is never faster; use CHAR only for truly fixed codes.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Clustered vs non-clustered index?</summary><div class="qa-body">A <strong>clustered</strong> index <em>is</em> the table: rows stored in key order, one per table (SQL Server; MySQL InnoDB's primary key). A <strong>non-clustered</strong> index is a separate sorted structure pointing to rows; you can have many. PostgreSQL tables are heaps, so every index is non-clustered (<a class="xref" data-note="sql_optimization">Indexes &amp; Performance</a> §02); <code>CLUSTER</code> reorders once and is not maintained.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Primary key vs unique key?</summary><div class="qa-body">Both enforce uniqueness with an index. A primary key is one per table, implies NOT NULL and is what foreign keys point to. A table can have several unique keys, and they allow NULLs (in PostgreSQL, multiple NULLs by default, since NULL ≠ NULL).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>In what order does SQL evaluate a query? Can you use a SELECT alias in WHERE?</summary><div class="qa-body"><div class="flow"><span>FROM / JOIN</span><span>WHERE</span><span>GROUP BY</span><span>HAVING</span><span>SELECT (windows here)</span><span>DISTINCT</span><span>ORDER BY</span><span>LIMIT</span></div>A SELECT alias doesn't exist yet in WHERE (error) but works in ORDER BY. Window functions run at the SELECT stage, which is why you filter them in an outer query.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>IN vs EXISTS vs JOIN for "customers who ordered"?</summary><div class="qa-body">All three find Asha, Ben, Chen, Dia, Esha, Farah, and modern planners often produce the same semi-join plan. EXISTS stops at the first match and its negation is NULL-safe. A plain JOIN returns a customer once <em>per order</em> (Asha 3 times), so it needs DISTINCT: a classic duplicate bug.</div></details>
+  <div class="bridge"><b>What this still can't tell us → next: how it all connects.</b> Eight patterns and a dozen short ones: which earlier tools does each one combine?</div>
+
+  <h2 id="si-connect"><span class="num">13</span>How It All Connects</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Are the patterns separate tricks to memorise, or combinations of a few tools you already know?</p>
+  </div>
+  <figure class="viz"><svg viewBox="0 0 720 260" width="720">
+<defs><marker id="si-a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+<g font-size="10.5">
+<rect x="10" y="15" width="120" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="70" y="40" text-anchor="middle">GROUP BY / FILTER</text>
+<rect x="10" y="70" width="120" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="70" y="95" text-anchor="middle">LEFT JOIN / self join</text>
+<rect x="10" y="125" width="120" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="70" y="150" text-anchor="middle">window rank / LAG</text>
+<rect x="10" y="180" width="120" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="70" y="205" text-anchor="middle">generate_series</text>
+<rect x="250" y="15" width="130" height="34" rx="8" class="fb sb"/><text x="315" y="37" text-anchor="middle">Nth highest</text>
+<rect x="250" y="55" width="130" height="34" rx="8" class="fb sb"/><text x="315" y="77" text-anchor="middle">Top-N per group</text>
+<rect x="250" y="95" width="130" height="34" rx="8" class="fb sb"/><text x="315" y="117" text-anchor="middle">Date spine</text>
+<rect x="250" y="135" width="130" height="34" rx="8" class="fb sb"/><text x="315" y="157" text-anchor="middle">Pivot</text>
+<rect x="250" y="175" width="130" height="34" rx="8" class="fb sb"/><text x="315" y="197" text-anchor="middle">YoY</text>
+<rect x="470" y="35" width="130" height="34" rx="8" class="fg sg"/><text x="535" y="57" text-anchor="middle">Funnel</text>
+<rect x="470" y="95" width="130" height="34" rx="8" class="fg sg"/><text x="535" y="117" text-anchor="middle">Retention cohorts</text>
+<rect x="470" y="155" width="130" height="34" rx="8" class="fg sg"/><text x="535" y="177" text-anchor="middle">Streaks</text>
+<g stroke="currentColor" stroke-opacity="0.5">
+<line x1="130" y1="145" x2="248" y2="32" marker-end="url(#si-a9)"/><line x1="130" y1="145" x2="248" y2="72" marker-end="url(#si-a9)"/>
+<line x1="130" y1="35" x2="248" y2="72" marker-end="url(#si-a9)"/><line x1="130" y1="200" x2="248" y2="112" marker-end="url(#si-a9)"/>
+<line x1="130" y1="90" x2="248" y2="112" marker-end="url(#si-a9)"/><line x1="130" y1="35" x2="248" y2="152" marker-end="url(#si-a9)"/>
+<line x1="130" y1="90" x2="248" y2="192" marker-end="url(#si-a9)"/>
+<line x1="380" y1="152" x2="468" y2="52" marker-end="url(#si-a9)"/><line x1="380" y1="112" x2="468" y2="112" marker-end="url(#si-a9)"/>
+<line x1="380" y1="72" x2="468" y2="172" marker-end="url(#si-a9)"/>
+</g>
+<text x="10" y="248" class="tm">Left: tools from earlier notes. Middle: patterns over whole tables or periods. Right: patterns that follow individual users over time.</text>
+</g>
+</svg><figcaption>Every pattern is a short pipeline of familiar tools; the user-journey patterns reuse the earlier patterns (FILTER pivots, spines, top-1 per group).</figcaption></figure>
+  <table class="tbl"><caption>Every pattern on the same running example</caption>
+    <tr><th>Pattern</th><th>Built from</th><th>Answers which question</th><th>Value on Biteful</th><th>Signature trap</th></tr>
+    <tr><td>Nth highest</td><td>DENSE_RANK + CTE</td><td>Nth distinct value?</td><td>6th highest = 260 (107, 108)</td><td>OFFSET says 310</td></tr>
+    <tr><td>Top-N per group</td><td>aggregate + RANK PARTITION BY</td><td>best per group?</td><td>Biryani Bros tie: Chicken Biryani, Raita</td><td>ROW_NUMBER drops a tie</td></tr>
+    <tr><td>Date spine</td><td>generate_series + LEFT JOIN</td><td>every period, even empty?</td><td>6 and 7 March: 0</td><td>GROUP BY shows 5 days</td></tr>
+    <tr><td>Pivot</td><td>GROUP BY + FILTER</td><td>categories as columns?</td><td>Pizza Point 2 / 0 / 1</td><td>COUNT(… ELSE 0)</td></tr>
+    <tr><td>YoY</td><td>self join on month − 1 year</td><td>vs same period last year?</td><td>Jan +30.0%, Feb +40.0%</td><td>LAG(12) with missing June; partial March</td></tr>
+    <tr><td>Funnel</td><td>per-session min time per step</td><td>how far do sessions get?</td><td>26 → 16 → 12 → 10</td><td>counting events (17 carts)</td></tr>
+    <tr><td>Retention</td><td>cohort = first day + EXISTS in window</td><td>do users come back?</td><td>6 of 7 within 3 days; 4 Mar cohort 50%</td><td>counting day 0; incomplete windows</td></tr>
+    <tr><td>Streaks</td><td>day − row_number islands</td><td>longest consecutive run?</td><td>Farah 7, Asha 4</td><td>counting pairs (Asha 5)</td></tr>
+  </table>
+  <div class="callout intu"><span class="label">Key insight</span>
+    <p>One sentence: <strong>every interview problem is "choose the grain, build it in steps, then rank, fill, spread or compare"; and every classic wrong answer is a grain error (fan-out, events vs sessions), a missing-row error (no spine, WHERE after LEFT JOIN), a tie error, or a NULL/boundary error.</strong> When stuck, write the grain of each CTE as a comment.</p>
+  </div>
+  <div class="bridge"><b>What this still can't tell us → next: the revision sheet.</b> Every pattern on one page.</div>
+
+  <h2 id="si-rev"><span class="num">R</span>Revision Sheet</h2>
+  <p>All patterns on one sheet. Running example: Biteful (orders 101–110: amounts 240, 450, 520, 380, 310, 180, 260, 260, 600, 310; 105 and 107 cancelled, 110 pending; Gita and Momo Magic have none), <code>events</code> (26 app-open sessions, 1–8 March) and <code>monthly_revenue</code> (Jan 2025 – Mar 2026, no June 2025, March 2026 partial).</p>
+  <h3>The pattern ladder</h3>
+  <table class="tbl">
+    <tr><th>Pattern</th><th>Recipe in one line</th><th>On Biteful</th><th>Weakness → next</th></tr>
+    <tr><td>Approach</td><td>grain → tables → CTE steps → edges</td><td>revenue = non-cancelled amount</td><td>ties → Nth highest</td></tr>
+    <tr><td>Nth highest</td><td>dense_rank() OVER (ORDER BY x DESC) = N</td><td>6th = 260</td><td>whole table only → per group</td></tr>
+    <tr><td>Top-N per group</td><td>aggregate → rank() OVER (PARTITION BY g ORDER BY m DESC) ≤ N</td><td>Biryani tie kept</td><td>missing rows → spine</td></tr>
+    <tr><td>Date spine</td><td>generate_series LEFT JOIN facts (filters in ON), count(fact.pk)</td><td>6, 7 Mar = 0</td><td>columns wanted → pivot</td></tr>
+    <tr><td>Pivot</td><td>GROUP BY label, count(*) FILTER (WHERE …) per column</td><td>Momo Magic all 0</td><td>across years → YoY</td></tr>
+    <tr><td>YoY</td><td>self join prev.month = cur.month − 1 year</td><td>+30.0%, +40.0%</td><td>per-user steps → funnel</td></tr>
+    <tr><td>Funnel</td><td>per session min(t) FILTER per step; steps in time order</td><td>26 → 16 → 12 → 10</td><td>across days → retention</td></tr>
+    <tr><td>Retention</td><td>cohort = min(day); EXISTS activity in [c+1, c+N]; complete windows only</td><td>4 Mar cohort 1/2</td><td>consecutive → streaks</td></tr>
+    <tr><td>Streaks</td><td>day − row_number() = island; group; max length</td><td>Farah 7, Asha 4</td><td>—</td></tr>
+  </table>
+  <h3>Formulas</h3>
+  <table class="tbl">
+    <tr><th>Quantity</th><th>Formula</th></tr>
+    <tr><td>Growth %</td><td>(current − previous) ÷ previous × 100, with 100.0 to avoid integer division</td></tr>
+    <tr><td>Step conversion</td><td>sessions reaching step k+1 ÷ sessions reaching step k</td></tr>
+    <tr><td>Retention %</td><td>users in cohort active in the window ÷ users in cohort</td></tr>
+    <tr><td>Island id</td><td>date − row_number() within the entity, ordered by date</td></tr>
+    <tr><td>Median</td><td>percentile_cont(0.5) WITHIN GROUP (ORDER BY x)</td></tr>
+  </table>
+  <h3>When to use what</h3>
+  <div class="cards">
+    <div><b>DENSE_RANK</b><p>Nth distinct value; ties share.</p><small>RANK for competition ranking; ROW_NUMBER for exactly one</small></div>
+    <div><b>Spine + LEFT JOIN</b><p>Any report over periods or categories that must show zeros.</p><small>Filters in ON, count a right column</small></div>
+    <div><b>FILTER / CASE</b><p>Pivots, funnels, conditional counts.</p><small>Never COUNT(… ELSE 0)</small></div>
+    <div><b>Self join on shifted key</b><p>Period-over-period when periods can be missing.</p><small>LAG only on a complete series</small></div>
+    <div><b>EXISTS</b><p>"Did they ever / within the window?"</p><small>Not JOIN (duplicates) or NOT IN (NULLs)</small></div>
+    <div><b>Gaps and islands</b><p>Streaks, consecutive ids, merging ranges.</p><small>DISTINCT per day first</small></div>
+  </div>
+  <div class="callout trap"><span class="label">Key traps</span>
+    <p>OFFSET or RANK for Nth highest; ROW_NUMBER dropping ties; window function in WHERE; GROUP BY without a spine; WHERE after LEFT JOIN; count(*) on padded rows; COUNT(CASE … ELSE 0); LAG(12) with a missing month; partial periods; events vs sessions vs users; counting day 0 as a return; incomplete cohort windows; fan-out; NOT IN with NULL; integer division; BETWEEN on timestamps.</p>
+  </div>
+  <h3>Five rapid-fire checks</h3>
+  <table class="tbl">
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>Amounts 600, 520, 520, 400: 2nd highest with DENSE_RANK? with OFFSET 1?</td><td>520 both; 3rd: DENSE_RANK 400, OFFSET 2 gives 520</td></tr>
+    <tr><td>Window function in WHERE: allowed?</td><td>No; compute in a CTE, filter outside</td></tr>
+    <tr><td>Daily counts with zero days: which join and which count?</td><td>spine LEFT JOIN facts; count(fact.pk)</td></tr>
+    <tr><td><code>count(CASE WHEN ok THEN 1 ELSE 0 END)</code> on 10 rows with 3 ok?</td><td>10</td></tr>
+    <tr><td>Asha opened on 1, 2, 3, 4, 6, 7, 8 March: island ids?</td><td>28 Feb for 1–4 March, 1 March for 6–8 March</td></tr>
+  </table>
+
+  <h2 id="si-qa"><span class="num">14</span>Questions &amp; Answers</h2>
+  <div class="callout intu"><span class="label">The question we can't answer yet</span>
+    <p>Can you explain why each pattern is built the way it is, and what breaks if a step is skipped?</p>
+  </div>
+  <details class="qa"><summary><span class="qmark">Q</span>Walk through how you would answer "top 3 restaurants by delivered revenue in each city" in an interview.</summary><div class="qa-body">Grain: one row per (city, restaurant) in the output, top 3 per city. Tables: restaurants (city) and orders (amount, status). Steps: CTE 1 sums delivered amount per restaurant (LEFT JOIN if zero-revenue restaurants should compete); CTE 2 ranks with <code>rank() OVER (PARTITION BY city ORDER BY revenue DESC)</code>; outer query keeps rank ≤ 3. Edges: ties (RANK may return more than 3; say so), NULL cities, cancelled orders excluded.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does top-N per group need a CTE or subquery at all?</summary><div class="qa-body">Because of evaluation order: WHERE runs before the SELECT stage where window functions are computed, so <code>WHERE rank() OVER (…) = 1</code> is an error. The rank must be materialised as a column in an inner step, then filtered in an outer one (<a class="xref" data-note="sql_subqueries">Subqueries &amp; CTEs</a> + <a class="xref" data-note="sql_windows">Window Functions</a>).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does a date spine need a LEFT JOIN and not an INNER JOIN?</summary><div class="qa-body">The spine exists to keep days with no orders. An INNER JOIN keeps only days that match an order: exactly the 5 days GROUP BY already gave. LEFT JOIN keeps all 7, with NULL order columns that count(o.order_id) turns into 0 (<a class="xref" data-note="sql_joins">JOINs</a> §02 and §04).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: what do the funnel's "17 carts" and JOINs' fan-out have in common?</summary><div class="qa-body">Both are grain errors: a value is counted at a finer grain (one event per item, one row per order line) than the question's grain (one session, one order). Fix both the same way: collapse to the question's grain first (min time per session; sum per order), then count.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks if you skip DISTINCT in the streak query?</summary><div class="qa-body">Two app opens on one day give two rows with the same date; row_number still advances, so date − row_number changes inside a real streak and splits one island into two. Gaps and islands assumes one row per (entity, day).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: why is LAG(12) fine for a complete monthly series but wrong on monthly_revenue?</summary><div class="qa-body">LAG moves by rows. With every month present, 12 rows = 12 months. With June 2025 missing, row positions after June shift by one, so February 2026 is compared with January 2025. A spine (section 04) or a self join on the date key makes the comparison about time, not position.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Connection: retention uses EXISTS. Why not a JOIN to the later visits?</summary><div class="qa-body">A JOIN returns one row per matching later visit (Farah has six), so counting returned users would overcount unless you add DISTINCT. EXISTS is a semi-join: one yes/no per user, which is exactly the question.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>An interviewer asks for "7-day retention" but your data ends 3 days after the latest signups. What do you say?</summary><div class="qa-body">Those cohorts haven't had 7 days to return, so their retention is not yet known (it would be understated). Report only cohorts whose window has closed, or show the open ones separately as incomplete.</div></details>
+  <div class="bridge"><b>What this still can't tell us → next: back to <a class="xref" data-note="sql_optimization">Indexes &amp; Performance</a>.</b> Every pattern here ran instantly on 10 orders. On a million orders the same queries need the right indexes (ordered_at for spines and YoY, customer_id for funnels and retention) and sargable date ranges.</div>
+</main>`
 });
