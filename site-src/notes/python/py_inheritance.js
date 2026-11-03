@@ -3,42 +3,7 @@ Object.assign(TOPIC_CONTENT, {
   "py_inheritance": `<main>
 <h1>Inheritance, Polymorphism &amp; Design</h1>
   <div class="where"><span>Python</span><span>Object-Oriented Python</span><span>Inheritance, Polymorphism &amp; Design</span></div>
-  <p class="lead">One <code>Account</code> class is not enough for PocketBank: Asha wants a savings account that earns interest, Ben needs a current account that may go overdrawn and pays a fee. This note grows the running example one need at a time: subclassing to reuse what is shared, overriding and <code>super()</code> traced step by step, polymorphism (one loop, many behaviours), duck typing and Protocols, abstract base classes as contracts, multiple inheritance with the MRO worked out by hand with the C3 rule, composition as the better tool when inheritance explodes (a worked refactor), the five SOLID principles each shown on PocketBank, and the design patterns that fall out naturally (strategy, factory, observer). Every code block was run and its real output is shown under it.</p>
-
-  <h2 id="pi-fits" class="open"><span class="num">★</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 640 170" width="640">
-    <defs><marker id="pi-a0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
-    <rect x="200" y="6" width="240" height="30" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="320" y="26" text-anchor="middle" font-size="12">Object-Oriented Python: the map</text>
-    <line x1="320" y1="36" x2="115" y2="66" stroke="currentColor" stroke-opacity="0.45"/>
-    <line x1="320" y1="36" x2="320" y2="66" stroke="currentColor" stroke-opacity="0.45"/>
-    <line x1="320" y1="36" x2="525" y2="66" stroke="currentColor" stroke-opacity="0.45"/>
-    <rect x="15" y="66" width="200" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="115" y="85" text-anchor="middle" font-size="12">Classes &amp; Objects</text><text x="115" y="101" text-anchor="middle" class="tm" font-size="10">bundle + protect</text>
-    <rect x="220" y="66" width="200" height="44" rx="6" class="fg sg" stroke-width="2.5"/><text x="320" y="85" text-anchor="middle" font-size="12" font-weight="700">Inheritance, Polymorphism</text><text x="320" y="101" text-anchor="middle" class="tg" font-size="10">YOU ARE HERE: reuse + design</text>
-    <rect x="425" y="66" width="200" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="525" y="85" text-anchor="middle" font-size="12">Dunder Methods</text><text x="525" y="101" text-anchor="middle" class="tm" font-size="10">act like built-in types</text>
-    <line x1="215" y1="88" x2="218" y2="88" stroke="currentColor" marker-end="url(#pi-a0)"/>
-    <line x1="420" y1="88" x2="423" y2="88" stroke="currentColor" marker-end="url(#pi-a0)"/>
-    <text x="320" y="150" text-anchor="middle" class="tm" font-size="11">Account → SavingsAccount, CurrentAccount → policies (composition)</text>
-  </svg><figcaption>The Object-Oriented Python group. You are on the green note. It starts from the <code>Account</code> built in Classes &amp; Objects.</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: <a class="xref" data-note="py_classes">Classes &amp; Objects</a></b><span>We have one <code>Account</code> class: owner and a protected balance, <code>deposit</code> and <code>withdraw</code> that keep the rule "balance never below 0", a read-only <code>balance</code> property. Left open: PocketBank needs account types that are almost the same but differ in a few rules.</span></li>
-    <li><b>This note adds: reuse, many forms, and how to design with them</b><span>Inheritance shares code between types; polymorphism lets one piece of code handle all of them; ABCs make the shared interface a contract; the MRO decides which method wins with several parents; composition, SOLID and a few patterns keep the design easy to change.</span></li>
-    <li><b>Leads to: <a class="xref" data-note="py_dunder">Dunder Methods &amp; the Data Model</a></b><span>Balances are still floats (121.2, 123.62) and an account statement is a bare list. Next, a <code>Money</code> type and a <code>Statement</code> container are taught to print, compare, add and loop like built-in values. Later, <a class="xref" data-note="py_testing">Testing</a> uses the dependency injection met in section 08.</span></li>
-  </ol>
-
-  <h2 id="pi-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
-  <p>The whole note as one chain. Each concept answers the question above it, and its weakness raises the next question. Numbers come from PocketBank: Asha's savings account (₹120, 1% interest a month), Ben's current account (₹50, overdraft up to ₹100, ₹10 fee in a month that ends overdrawn), Chitra's plain account (₹70).</p>
-  <ol class="story">
-    <li><b>Subclassing</b><span>Q: how do we make a savings account without copying every line of <code>Account</code>? → <code>class SavingsAccount(Account)</code> gets everything for free and adds <code>add_interest</code>: 120 → 121.2. But the savings account also needs its own data (a rate) passed in when it is created…</span></li>
-    <li><b>Overriding &amp; super()</b><span>Q: how does a child change or extend a parent method without losing the parent's work? → Write a method with the same name; call <code>super().__init__(...)</code> or <code>super().withdraw(...)</code> to run the parent's part. Ben's current account replaces <code>withdraw</code> and goes to −30. But code that processes "all accounts" now needs an if for every type…</span></li>
-    <li><b>Polymorphism</b><span>Q: can one loop treat every account correctly without checking its type? → Yes: <code>a.month_end()</code> runs the right version for each object. Asha +1.2, Ben −10, Chitra +0. But must everything in the loop be an <code>Account</code>?</span></li>
-    <li><b>Duck typing &amp; Protocols</b><span>Q: what about a gift card that is not an account at all? → If it has <code>month_end</code> and <code>describe</code>, the loop works (GC-7: 25 → 24). A <code>Protocol</code> writes that expectation down for type checkers. But nothing stops someone from writing a new account type that forgets a method…</span></li>
-    <li><b>Abstract base classes</b><span>Q: how do we force every account type to implement <code>interest</code> and <code>fee</code>? → Mark them <code>@abstractmethod</code> in an ABC: a fixed deposit missing <code>fee</code> cannot even be created. But some features (auditing, overdraft, rewards) cut across the tree and need several parents…</span></li>
-    <li><b>Multiple inheritance &amp; MRO</b><span>Q: with several parents, whose method runs, and does a shared grandparent run twice? → The MRO, built by the C3 rule: Premium → Overdraft → Rewards → Account → object, perks <code>['lounge', 'overdraft', 'cashback', 'basic']</code>. But every new feature multiplies classes: 2 kinds × cashback × student = 8 classes…</span></li>
-    <li><b>Composition</b><span>Q: how do we combine features without a class for every combination? → An account <em>has</em> an interest policy and a fee policy; swap them freely. Asha upgrades from 1% to 2% on the same object: 121.2 → 123.62. Now: what general rules keep such designs easy to change?</span></li>
-    <li><b>SOLID</b><span>Q: what are the rules? → One reason to change (S), extend without editing (O), children keep the parent's promises (L: a fixed deposit that refuses <code>withdraw</code> breaks <code>pay_canteen_bill</code>), small interfaces (I), depend on abstractions that are passed in (D). And some solutions recur so often they have names…</span></li>
-    <li><b>Design patterns</b><span>Q: what are the standard named solutions? → Strategy (the swappable policies), factory (<code>open_account("savings", …)</code>), observer (SMS and fraud check subscribe to withdrawals), singleton (one bank config). Then accounts need to print, compare and add like built-in values: <a class="xref" data-note="py_dunder">Dunder Methods</a>.</span></li>
-  </ol>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A bank's product catalogue. Every product follows the general account rules (the <strong>parent class</strong>); a savings account adds interest and a current account adds an overdraft (<strong>subclasses</strong> that <strong>override</strong> a rule). The month-end batch job runs "close the month" on every product without asking which one it is (<strong>polymorphism</strong>). Head office writes a checklist every new product must fill in before launch (<strong>ABC</strong>). Instead of a new product for every combination of add-ons, the bank attaches add-on cards to any account (<strong>composition</strong>).</p></div>
+  <p class="lead">Inheritance lets a class reuse another class and specify only what differs; polymorphism lets one piece of code work with every such variant without checking types. Without them you either copy a class to make a variant (and fix every bug twice) or write <code>if isinstance(...)</code> chains that must be edited for every new type. Python adds its own twists: polymorphism works through duck typing with no common parent required, interfaces are optional (<code>abc.ABC</code>, <code>typing.Protocol</code>), and multiple inheritance is allowed, ordered by the C3 method resolution order that <code>super()</code> follows. Overused, inheritance produces class explosions and fragile hierarchies, which is why composition, SOLID and a few design patterns belong here too; they are how scikit-learn (<code>BaseEstimator</code>, mixins, <code>Pipeline</code>) and PyTorch (<code>nn.Module</code>, <code>nn.Sequential</code>) are built. Code here was run on Python 3.13.</p>
 
   <h2 id="pi-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -50,7 +15,6 @@ Object.assign(TOPIC_CONTENT, {
           <li><code>class Child(Parent)</code> — child gets every attribute and method; "is-a"</li>
           <li>Lookup: object → Child → Parent → object (<code>__mro__</code>)</li>
           <li><code>isinstance(s, Account)</code> True for a SavingsAccount</li>
-          <li>💡 a product that follows the general account rules plus its own</li>
         </ul>
       </div>
       <div class="mm-branch">
@@ -66,7 +30,7 @@ Object.assign(TOPIC_CONTENT, {
         <div class="mm-title">Polymorphism</div>
         <ul>
           <li>Same call, behaviour chosen by the object's type at run time (dynamic dispatch)</li>
-          <li>Month end: Asha +1.2, Ben −10, Chitra +0, one loop</li>
+          <li>One loop calls <code>a.month_end()</code> on every account type; no type checks</li>
           <li><b>Template method</b>: parent's <code>month_end</code> calls <code>self.interest()</code>, <code>self.fee()</code> hooks</li>
           <li>⚠ <code>isinstance</code> chains = polymorphism done by hand</li>
         </ul>
@@ -94,7 +58,7 @@ Object.assign(TOPIC_CONTENT, {
         <ul>
           <li><b>C3</b>: child first, parents left → right, each class once, parents after all children</li>
           <li><code>L[C] = C + merge(L[parents]…, [parents])</code>; take a head not in any tail</li>
-          <li>Diamond: Premium → Overdraft → Rewards → Account → object</li>
+          <li>Diamond <code>D(B, C)</code>, B and C inherit A: D → B → C → A → object</li>
           <li><code>super()</code> = next class in <em>the object's</em> MRO, not "my parent"</li>
           <li><b>Mixin</b> — small class adding one feature (AuditMixin)</li>
         </ul>
@@ -103,8 +67,8 @@ Object.assign(TOPIC_CONTENT, {
         <div class="mm-title">Composition</div>
         <ul>
           <li>"has-a": account holds policy objects and delegates to them</li>
-          <li>Fixes class explosion (8 combination classes → 1 class + 4 policies)</li>
-          <li>Swap parts at run time (1% → 2%: 121.2 → 123.62)</li>
+          <li>Avoids class explosion: no subclass per feature combination</li>
+          <li>Swap a part on a live object (assign a new policy)</li>
           <li>Prefer composition; inherit only for a true is-a</li>
         </ul>
       </div>
@@ -123,27 +87,24 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="pi-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain</span></div></div>
-      <div class="rm-item rm-done" data-target="pi-sub"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Subclassing</span><span class="rm-sub">Reuse what is shared</span></div></div>
-      <div class="rm-item rm-done" data-target="pi-super"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Overriding &amp; super()</span><span class="rm-sub">Replace or extend, traced</span></div></div>
-      <div class="rm-item rm-done" data-target="pi-poly"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Polymorphism</span><span class="rm-sub">One loop, many behaviours</span></div></div>
-      <div class="rm-item rm-done" data-target="pi-duck"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Duck Typing &amp; Protocols</span><span class="rm-sub">No inheritance needed</span></div></div>
-      <div class="rm-item rm-done" data-target="pi-abc"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Abstract Base Classes</span><span class="rm-sub">Interfaces as contracts</span></div></div>
-      <div class="rm-item rm-done" data-target="pi-mro"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Multiple Inheritance &amp; MRO</span><span class="rm-sub">Mixins, the diamond, C3 by hand</span></div></div>
-      <div class="rm-item rm-done" data-target="pi-comp"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Composition vs Inheritance</span><span class="rm-sub">A worked refactor</span></div></div>
-      <div class="rm-item rm-done" data-target="pi-solid"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">SOLID on PocketBank</span><span class="rm-sub">Five rules, each in code</span></div></div>
-      <div class="rm-item rm-done" data-target="pi-pat"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Design Patterns</span><span class="rm-sub">Strategy, factory, observer, singleton</span></div></div>
-      <div class="rm-item rm-done" data-target="pi-connect"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One picture, one table</span></div></div>
-      <div class="rm-item rm-done" data-target="pi-traps"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">The ones that bite</span></div></div>
-      <div class="rm-item rm-done" data-target="pi-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note on one page</span></div></div>
-      <div class="rm-item rm-done" data-target="pi-qa"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-sub"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Subclassing</span><span class="rm-sub">class Child(Parent), lookup, isinstance</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-super"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Overriding and super()</span><span class="rm-sub">replace vs extend, super().__init__</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-poly"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Polymorphism and the Template Method</span><span class="rm-sub">dynamic dispatch, hook methods</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-duck"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Duck Typing and Protocols</span><span class="rm-sub">EAFP, typing.Protocol</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-abc"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Abstract Base Classes</span><span class="rm-sub">ABC, @abstractmethod, TypeError</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-mro"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Multiple Inheritance and the MRO</span><span class="rm-sub">mixins, diamond, C3 by hand</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-comp"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Composition vs Inheritance</span><span class="rm-sub">has-a policies, swapping parts</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-solid"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">SOLID Principles</span><span class="rm-sub">SRP, OCP, LSP, ISP, DIP in code</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-pat"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Design Patterns</span><span class="rm-sub">strategy, factory, observer, singleton</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-traps"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">super(), LSP, has-a misuse</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">rules, C3, SOLID table</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">super, MRO, ABCs, design</span></div></div>
     </div>
   </div>
 
-  <h2 id="pi-sub"><span class="num">01</span>Subclassing: Reuse What Is Shared</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>PocketBank's <code>Account</code> works. Now Asha wants a savings account: everything an account does, plus monthly interest. Copying the whole class and adding one method would duplicate <code>deposit</code>, <code>withdraw</code> and the balance rule, and every future bug fix would have to be made twice. How do we write only the difference?</p></div>
-  <p>We start from the <code>Account</code> of <a class="xref" data-note="py_classes">Classes &amp; Objects</a>, trimmed. <code>describe()</code> is a small helper that prints the class name, owner and balance, so we can see what type each object really is.</p>
-  <div class="fx" data-lang="py"># The Account from "Classes &amp; Objects", trimmed to what this note needs
+  <h2 id="pi-sub"><span class="num">01</span>Subclassing: class Child(Parent)</h2>
+  <p>Inheritance lets a new class start as everything an existing class is and then add or change a few things, instead of copying the class and maintaining two versions. The examples extend this <code>Account</code> (see <a class="xref" data-note="py_classes">Classes &amp; Objects</a>); <code>describe()</code> prints the class name, owner and balance, so the real type of each object is visible.</p>
+  <div class="fx" data-lang="py"># A base Account class (see Classes &amp; Objects)
 class Account:
     def __init__(self, owner, balance=0):
         self.owner = owner
@@ -169,7 +130,7 @@ class Account:
 asha = Account("Asha", 120)
 print(asha.describe())</div>
   <div class="fx" data-lang="text">Account(Asha, 120)</div>
-  <p>In plain words: <strong>inheritance</strong> lets a new class start as everything an existing class is, and then add or change a few things. The existing class is the <strong>parent</strong> (also <em>base class</em> or <em>superclass</em>); the new one is the <strong>child</strong> (<em>subclass</em>). You write the parent's name in brackets: <code>class SavingsAccount(Account)</code>. Read it as "a SavingsAccount <em>is an</em> Account".</p>
+  <p>The existing class is the <strong>parent</strong> (also <em>base class</em> or <em>superclass</em>); the new one is the <strong>child</strong> (<em>subclass</em>). You write the parent's name in brackets: <code>class SavingsAccount(Account)</code>. Read it as "a SavingsAccount <em>is an</em> Account".</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>A recipe card that says "Masala chai: make plain tea (see card 1), then add spices". It does not copy card 1; it points to it and writes down only what is different.</p></div>
   <div class="fx" data-lang="py">class SavingsAccount(Account):     # "a SavingsAccount IS an Account"
     pass                           # nothing new yet
@@ -209,12 +170,10 @@ print(hasattr(Account("Ben", 50), "add_interest"))</div>
 False</div>
   <p>Asha's 120 earned 1% (120 × 0.01 = 1.2) and became 121.2. A plain <code>Account</code> has no <code>add_interest</code>: the child added something the parent does not have.</p>
   <div class="callout def"><span class="label">Definition</span><p><strong>Inheritance</strong>: a class defined as <code>class Child(Parent)</code> inherits all attributes and methods of <code>Parent</code>; attribute lookup searches the child, then its parents in method resolution order (<code>Child.__mro__</code>), ending at <code>object</code>. It models an <strong>is-a</strong> relationship.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Inherit only for a true is-a. "A savings account is an account" is true. "An account is a list of transactions" is not: an account <em>has</em> a list. Inheriting from <code>list</code> would give the account <code>sort</code>, <code>pop</code> and <code>clear</code>, which could wipe the history. Section 07 returns to this.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Overriding &amp; super().</b> The rate is a class attribute, so every savings account has 1%. Asha's rate should be given when her account is opened, which means the child needs its own <code>__init__</code>. And Ben's current account must <em>change</em> how <code>withdraw</code> works. How does a child replace or extend a parent's method without losing the parent's work?</div>
+  <div class="callout trap"><span class="label">Trap</span><p>Inherit only for a true is-a. "A savings account is an account" is true. "An account is a list of transactions" is not: an account <em>has</em> a list. Inheriting from <code>list</code> would give the account <code>sort</code>, <code>pop</code> and <code>clear</code>, which could wipe the history. Composition, covered below, is the alternative.</p></div>
 
-  <h2 id="pi-super"><span class="num">02</span>Overriding &amp; super()</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>If <code>SavingsAccount</code> writes its own <code>__init__</code> to accept a rate, the parent's <code>__init__</code> (which sets owner and balance) no longer runs by itself. And Ben's current account needs a <code>withdraw</code> that allows an overdraft. How does a child change one method and still reuse the parent's code where it wants to?</p></div>
-  <p>In plain words: writing a method in the child with the <em>same name</em> as a parent method is called <strong>overriding</strong>. Lookup finds the child's version first, so the parent's is skipped. If the child still wants the parent's version to run as part of its own, it calls <code>super().method(...)</code>, which means "the same method, from the next class up".</p>
+  <h2 id="pi-super"><span class="num">02</span>Overriding and super()</h2>
+  <p>Writing a method in the child with the <em>same name</em> as a parent method is called <strong>overriding</strong>. Lookup finds the child's version first, so the parent's is skipped. If the child still wants the parent's version to run as part of its own, it calls <code>super().method(...)</code>, which means "the same method, from the next class up".</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>A branch manager adds a local rule ("savings: at most ₹500 per withdrawal"), checks it, and then sends the request on to head office's standard procedure. <code>super()</code> is "send it on to head office".</p></div>
   <h3>super().__init__, traced</h3>
   <p>The child below prints the object's attributes at three moments, so you can watch the parent and child each fill in their part.</p>
@@ -294,12 +253,10 @@ withdraw 600: savings: at most 500 per withdrawal
 withdraw 200: insufficient funds</div>
   <p>After the code. Ben (₹50, overdraft limit 100) withdrew 80 and is at −30: the current account's own <code>withdraw</code> ran, and the parent's check never did. Asha's 600 was stopped by the savings rule before the parent was even asked; her 200 passed the savings rule, went on to <code>Account.withdraw</code> through <code>super()</code>, and was stopped there by "insufficient funds" (200 &gt; 120). Two rules, each written once, applied in order.</p>
   <div class="callout def"><span class="label">Definition</span><p><strong>Overriding</strong>: defining in a subclass a method with the same name as one in a parent, so lookup finds the subclass's version. <code>super()</code> returns a proxy that continues the lookup from the <em>next</em> class in the instance's MRO, so <code>super().m(args)</code> runs the inherited version of <code>m</code> on the same object.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>An overriding child that defines <code>__init__</code> must call <code>super().__init__(...)</code>, normally first. And keep the parent's signature compatible: if callers pass <code>withdraw(amount)</code> to any account, a child that requires <code>withdraw(amount, pin)</code> breaks them (this is the L in SOLID, section 08).</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Polymorphism.</b> We now have three kinds of account. At the end of every month PocketBank must add interest to savings and charge a fee on overdrawn current accounts. Must the month-end code check the type of every account with a chain of <code>if</code>s?</div>
+  <div class="callout trap"><span class="label">Trap</span><p>An overriding child that defines <code>__init__</code> must call <code>super().__init__(...)</code>, normally first. And keep the parent's signature compatible: if callers pass <code>withdraw(amount)</code> to any account, a child that requires <code>withdraw(amount, pin)</code> breaks them (the L in SOLID).</p></div>
 
-  <h2 id="pi-poly"><span class="num">03</span>Polymorphism: One Interface, Many Forms</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>Month end is different for each type: savings earn 1%, an overdrawn current account pays ₹10, a plain account does nothing. How do we write the month-end job once, so that adding a fourth account type next year does not mean editing it?</p></div>
-  <p>First, the version a beginner usually writes: one function that asks each object what it is.</p>
+  <h2 id="pi-poly"><span class="num">03</span>Polymorphism and the Template Method</h2>
+  <p><strong>Polymorphism</strong> ("many forms") means one call works on objects of different types, each responding in its own way. Without it, code that handles several types has to ask each object what it is:</p>
   <div class="fx" data-lang="py">def month_end_with_ifs(acc):                     # BEFORE: one function that knows every type
     if isinstance(acc, SavingsAccount):
         acc._balance += acc._balance * acc.rate
@@ -316,7 +273,7 @@ for a in accounts:
   <div class="fx" data-lang="text">SavingsAccount(Asha, 121.2)
 CurrentAccount(Ben, -40)
 Account(Chitra, 70)</div>
-  <p>It works (Asha 121.2, Ben −30 − 10 = −40, Chitra unchanged), but the function must know every account type and reach into each one's internals, and each new type means another <code>elif</code>. In plain words, <strong>polymorphism</strong> ("many forms") is the cure: every type provides a method with the same name, and the caller just calls it. The object's own type decides which version runs.</p>
+  <p>It works (Asha 121.2, Ben −30 − 10 = −40, Chitra unchanged), but the function must know every account type and reach into each one's internals, and each new type means another <code>elif</code>. Polymorphism is the cure: every type provides a method with the same name, and the caller just calls it. The object's own type decides which version runs.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>The month-end batch job says "close your month" to every account. A savings account adds interest, a current account charges its fee, a plain account does nothing. The job does not need to know which is which, just as "show your ID" at a gate works for students, staff and visitors alike.</p></div>
   <h3>The template method: shared steps, per-type hooks</h3>
   <p>Below, the parent <code>Account</code> writes the month-end <em>procedure</em> once: change = interest − fee. The two steps it needs are small methods, <code>interest()</code> and <code>fee()</code>, which default to 0. Children override only the hook they care about. This shape (a parent method that calls methods children override) is the <strong>template method</strong> pattern.</p>
@@ -395,11 +352,9 @@ Account(Chitra, 70)          change +0</div>
   <p>Step 3 is the key: code written in the parent called a method written in the child, because <code>self.fee</code> is looked up on the object's real type <em>at run time</em>. This is <strong>dynamic dispatch</strong>. Adding a new account type next year means writing a new class with its own <code>interest</code> or <code>fee</code>; the loop and <code>month_end</code> are never edited.</p>
   <div class="callout def"><span class="label">Definition</span><p><strong>Polymorphism</strong>: the same operation (<code>a.month_end()</code>) works on objects of different types, each responding in its own way. In Python it comes from dynamic dispatch: <code>obj.method</code> is looked up on <code>type(obj)</code> when the call runs. The <strong>template method</strong> pattern fixes an algorithm's steps in a parent and lets subclasses override individual steps.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>A chain of <code>if isinstance(x, A): … elif isinstance(x, B): …</code> spread around the code is polymorphism done by hand, and every new type means hunting down every chain. Move the varying behaviour into a method on each class.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Duck Typing &amp; Protocols.</b> The loop works for anything that is an <code>Account</code>. PocketBank now also sells gift cards, which are not bank accounts at all (no owner, no overdraft) but also lose ₹1 a month. Do they have to inherit from <code>Account</code> to join the loop?</div>
 
-  <h2 id="pi-duck"><span class="num">04</span>Duck Typing &amp; Protocols</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>A gift card has a code and a value, loses ₹1 every month, and must appear in the month-end job. Making it a subclass of <code>Account</code> would give it <code>withdraw</code>, an owner and an overdraft rule it should not have. Does Python's polymorphism need inheritance at all?</p></div>
-  <p>In plain words: no. Python never checks the type when you call <code>t.month_end()</code>; it only looks for a method with that name. Any object that has the methods the code uses will work. This is <strong>duck typing</strong>: "if it walks like a duck and quacks like a duck, it is a duck".</p>
+  <h2 id="pi-duck"><span class="num">04</span>Duck Typing, EAFP and typing.Protocol</h2>
+  <p>Polymorphism in Python does not need inheritance. Python never checks the type when you call <code>t.month_end()</code>; it only looks for a method with that name. Any object that has the methods the code uses will work. This is <strong>duck typing</strong>: "if it walks like a duck and quacks like a duck, it is a duck".</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>A driving job asks "can you drive?", not "which driving school did you attend?". Anyone with the skill gets the job.</p></div>
   <div class="fx" data-lang="py">class GiftCard:                    # NOT an Account: no inheritance at all
     def __init__(self, code, value):
@@ -465,10 +420,9 @@ True</div>
   <p>The gift card and the savings account both count as <code>MonthEndable</code> although neither inherits from it; a string does not. The last line is the catch: <code>Liar</code> has attributes with the right <em>names</em> (one is the number 42), and <code>isinstance</code> still says True, because the runtime check only looks for names.</p>
   <div class="callout def"><span class="label">Definition</span><p><strong>Duck typing</strong>: an object is usable wherever it provides the methods and attributes the code uses, regardless of its class. A <strong>Protocol</strong> (<code>typing.Protocol</code>) describes such a set of methods for static type checkers (structural typing); <code>@runtime_checkable</code> enables <code>isinstance</code> checks of method <em>presence</em> only.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Duck typing fails late: a missing method shows up only when that line runs, possibly in production. Protocols plus a type checker catch it before running; ABCs (next section) catch it when the object is created.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Abstract Base Classes.</b> Duck typing trusts that every type has the right methods. What if a teammate writes a new account type and forgets one? With our hooks defaulting to 0, the mistake does not even raise an error. How do we make the interface a contract that is enforced?</div>
 
-  <h2 id="pi-abc"><span class="num">05</span>Abstract Base Classes: Interfaces as Contracts</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>A teammate adds a fixed-deposit account (6% a year) and forgets to write <code>interest()</code>. Because the parent's default returns 0, nothing fails: the customer silently earns nothing. How do we force every account type to provide <code>interest</code> and <code>fee</code>?</p></div>
+  <h2 id="pi-abc"><span class="num">05</span>Abstract Base Classes: abc.ABC and @abstractmethod</h2>
+  <p>When a base class supplies default hooks, a subclass that forgets to override one fails silently instead of loudly:</p>
   <div class="fx" data-lang="py">class FixedDeposit(Account):       # someone forgot to write interest()
     def __init__(self, owner, balance=0, rate=0.06):
         super().__init__(owner, balance)
@@ -524,17 +478,16 @@ print(s.month_end(), s.describe(), isinstance(s, BaseAccount))</div>
   <div class="fx" data-lang="text">TypeError: Can't instantiate abstract class BaseAccount without an implementation for abstract methods 'fee', 'interest'
 TypeError: Can't instantiate abstract class FixedDeposit without an implementation for abstract method 'fee'
 1.2 Savings(Asha, 121.2) True</div>
-  <p>After the code. <code>BaseAccount</code> itself cannot be created: it is a contract, not a product. <code>FixedDeposit</code> wrote <code>interest</code> but not <code>fee</code>, and is refused <em>at creation</em>, with the missing method named. <code>Savings</code> implemented both, so it works, and it inherits the concrete <code>month_end</code> and <code>describe</code>: an ABC can hold real shared code next to the abstract methods (here, the template method of section 03). The <code>...</code> in the abstract methods is just a placeholder body.</p>
+  <p>After the code. <code>BaseAccount</code> itself cannot be created: it is a contract, not a product. <code>FixedDeposit</code> wrote <code>interest</code> but not <code>fee</code>, and is refused <em>at creation</em>, with the missing method named. <code>Savings</code> implemented both, so it works, and it inherits the concrete <code>month_end</code> and <code>describe</code>: an ABC can hold real shared code next to the abstract methods (here, the template method from the polymorphism section). The <code>...</code> in the abstract methods is just a placeholder body.</p>
   <div class="cards">
     <div><b>ABC</b><p>You must inherit it. Missing abstract methods → the object cannot be created. Can hold shared code.</p><small>Use: your own family of classes. 💡 a degree from a named college</small></div>
     <div><b>Protocol</b><p>Anything with matching methods fits; no inheritance. Checked by mypy, optionally by <code>isinstance</code>.</p><small>Use: accepting objects you don't control. 💡 "can you drive? then you're a driver"</small></div>
   </div>
   <div class="callout def"><span class="label">Definition</span><p>An <strong>abstract base class</strong> inherits from <code>abc.ABC</code> and marks required methods with <code>@abstractmethod</code>. A class is <em>abstract</em> while any abstract method lacks an implementation, and instantiating it raises <code>TypeError</code>. <strong>Abstraction</strong> (exposing what, hiding how) is the design goal; the ABC is Python's tool for enforcing it.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Encapsulation and abstraction are the most-asked mix-up. <strong>Encapsulation</strong> protects data (who may change <code>_balance</code>). <strong>Abstraction</strong> simplifies the interface (what a caller must know: <code>interest</code>, <code>fee</code>, <code>month_end</code>). Also: <code>@abstractmethod</code> without inheriting <code>ABC</code> enforces nothing.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Multiple Inheritance &amp; the MRO.</b> Some features cut across account types: auditing every withdrawal, an overdraft facility, a rewards programme. A premium account wants overdraft <em>and</em> rewards. With two parents, whose method runs first, and does their shared parent <code>Account</code> run once or twice?</div>
 
-  <h2 id="pi-mro"><span class="num">06</span>Multiple Inheritance, Mixins &amp; the MRO</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>Python lets a class have several parents: <code>class Premium(Overdraft, Rewards)</code>. If both parents define <code>perks()</code>, which one runs? And both inherit from <code>Account</code>; if each calls up to its parent, does <code>Account</code>'s code run twice?</p></div>
+  <h2 id="pi-mro"><span class="num">06</span>Multiple Inheritance, Mixins and the MRO (C3)</h2>
+  <p>A Python class may have several parents: <code>class Premium(Overdraft, Rewards)</code>. That raises two questions: if both parents define a method, which one runs, and if both inherit from a common base, does the base's code run twice? The <strong>method resolution order</strong> (MRO) answers both.</p>
   <h3>Mixins: one feature, added to any class</h3>
   <p>The friendliest use of multiple inheritance is a <strong>mixin</strong>: a small class that adds one feature and is meant to be combined with a "real" class. <code>AuditMixin</code> logs every withdrawal and then passes the call on with <code>super()</code>.</p>
   <div class="fx" data-lang="py">class AuditMixin:                  # adds ONE feature to any account class
@@ -649,10 +602,9 @@ except TypeError as e:
   <p>By hand: <code>merge([Account, object], [Overdraft, Account, object], [Account, Overdraft])</code>. Head Account is in the tail of the second list; head Overdraft is in the tail of the third; head Account again (third list) is still in the second list's tail. No head can be taken. The bases say "Account before Overdraft", but Overdraft is a child of Account and must come first. Fix: list the more specific class first.</p>
   <div class="callout def"><span class="label">Definition</span><p>The <strong>method resolution order</strong> (MRO, <code>C.__mro__</code> or <code>C.mro()</code>) is the linear order in which Python searches classes for an attribute. It is computed by <strong>C3 linearisation</strong>, which guarantees: a class comes before its parents, parents keep the order they were listed in, and every class appears once. <code>super()</code> delegates to the next class in the MRO of <code>type(self)</code>.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Cooperative multiple inheritance only works if every class in the chain calls <code>super()</code> and accepts the same arguments (often via <code>**kwargs</code>). One class that calls <code>Account.perks(self)</code> directly, or forgets <code>super()</code>, silently cuts off everything after it in the MRO.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Composition vs Inheritance.</b> Mixins and diamonds let us combine features, but each combination is still a new class. With two account kinds, cashback on or off and student on or off, how many classes do we need, and what happens when the fourth feature arrives?</div>
 
   <h2 id="pi-comp"><span class="num">07</span>Composition vs Inheritance</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>Every feature PocketBank adds doubles the number of combination classes, and a customer who changes plan (1% interest → 2%) would need a different <em>class</em>, so a brand-new object, losing nothing only if we copy everything across. Is there a way to combine behaviours without a class for every combination?</p></div>
+  <p>Inheritance combines features by making a class per combination, so the number of classes doubles with every yes/no feature, and changing a customer's plan means changing the object's class:</p>
   <div class="fx" data-lang="py">from itertools import product
 kinds = ["Savings", "Current"]
 cashback = ["", "Cashback"]
@@ -670,7 +622,7 @@ for n in names:
   StudentCurrentAccount
   CashbackCurrentAccount
   StudentCashbackCurrentAccount</div>
-  <p>Eight classes for three yes/no choices, sixteen for four. In plain words: <strong>composition</strong> means building an object out of other objects it holds, and handing work to them ("has-a"). Instead of "a cashback savings account <em>is</em> a special kind of savings account", say "an account <em>has</em> an interest policy and a fee policy". Each policy is a small object with one method; the account <em>delegates</em> to it.</p>
+  <p>Eight classes for three yes/no choices, sixteen for four. <strong>Composition</strong> means building an object out of other objects it holds, and handing work to them ("has-a"). Instead of "a cashback savings account <em>is</em> a special kind of savings account", say "an account <em>has</em> an interest policy and a fee policy". Each policy is a small object with one method; the account <em>delegates</em> to it.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>A mobile phone with a SIM slot. To change from one network to another you swap the SIM; you do not buy a new phone. Inheritance is a phone with the network soldered in.</p></div>
   <h3>The worked refactor</h3>
   <table class="tbl">
@@ -766,13 +718,11 @@ Asha: 123.62 [FlatRate, NoFee]</div>
   <p>Composition also avoids the <strong>fragile base class</strong> problem: with inheritance, a change inside the parent (renaming a hook, changing when <code>month_end</code> calls <code>fee</code>) can quietly break every child, because children depend on the parent's internals. A composed policy depends only on the small public method it implements. Real libraries do this everywhere: a scikit-learn <code>Pipeline</code> <em>has</em> steps, a PyTorch model <em>has</em> layers.</p>
   <div class="callout def"><span class="label">Definition</span><p><strong>Composition</strong>: an object holds references to other objects (its parts) and delegates part of its behaviour to them; it models <strong>has-a</strong>. "Favour composition over inheritance" (Gang of Four, 1994): inherit for a genuine is-a with shared behaviour; compose to combine or swap behaviours.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Composition is not "never inherit". Small, shallow hierarchies with true is-a relationships (SavingsAccount is an Account; all your policies inherit one ABC) are fine. The smell is deep trees and combination class names like <code>StudentCashbackCurrentAccount</code>.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: SOLID.</b> We keep meeting the same instincts: give each class one job, add new rules without editing old code, make children keep their parents' promises, keep interfaces small, pass parts in. Is there a named set of rules that collects them?</div>
 
-  <h2 id="pi-solid"><span class="num">08</span>SOLID on PocketBank</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>A class that works today can still be painful tomorrow: every new feature means editing it, and every edit breaks something. What general rules keep a design like PocketBank easy to change, and how does each one look in code?</p></div>
-  <p><strong>SOLID</strong> is five design rules, one per letter, collected by Robert C. Martin. None is enforced by Python; each prevents a specific pain. Each is shown below on PocketBank.</p>
+  <h2 id="pi-solid"><span class="num">08</span>SOLID Principles</h2>
+  <p><strong>SOLID</strong> is five design rules, one per letter, collected by Robert C. Martin. None is enforced by Python; each prevents a specific pain, shown below in code.</p>
   <table class="tbl">
-    <tr><th>Rule</th><th>Plain words</th><th>Pain it prevents</th><th>PocketBank example</th></tr>
+    <tr><th>Rule</th><th>Plain words</th><th>Pain it prevents</th><th>Example</th></tr>
     <tr><td><b>S</b>ingle responsibility</td><td>a class has one reason to change</td><td>an SMS wording change forces edits to the money logic</td><td>Account, Notifier, StatementPrinter</td></tr>
     <tr><td><b>O</b>pen/closed</td><td>open for extension, closed for modification</td><td>every new rule edits (and risks) old code</td><td>new rule = new policy class</td></tr>
     <tr><td><b>L</b>iskov substitution</td><td>a child must work wherever the parent works</td><td>code written for the parent crashes on a child</td><td>FixedDeposit refusing <code>withdraw</code></td></tr>
@@ -815,7 +765,7 @@ print(StatementPrinter().render(a.log))</div>
  withdraw    30</div>
   <p><code>LeanAccount</code> only keeps money and a log; sending is the <code>Notifier</code>'s job, layout is the <code>StatementPrinter</code>'s. Each can change, and be tested, alone.</p>
   <h3>O: open for extension, closed for modification</h3>
-  <p>The composition refactor of section 07 already obeys it. A new interest rule is a new class; <code>Account</code> is not edited.</p>
+  <p>The composition refactor above already obeys it. A new interest rule is a new class; <code>Account</code> is not edited.</p>
   <div class="fx" data-lang="py">class WeekendBonus:                # a NEW interest rule = a NEW class; Account is not edited
     def interest(self, balance):
         return 5
@@ -824,7 +774,7 @@ chitra = Account("Chitra", 70)
 chitra.interest_policy = WeekendBonus()
 print(chitra.month_end(), chitra._balance)</div>
   <div class="fx" data-lang="text">5 75</div>
-  <p>Chitra's 70 earned the weekend bonus of 5, and the <code>Account</code> class was never opened. Compare <code>month_end_with_ifs</code> in section 03, which had to be edited for every new type.</p>
+  <p>Chitra's 70 earned the weekend bonus of 5, and the <code>Account</code> class was never opened. Compare <code>month_end_with_ifs</code> in the polymorphism section, which had to be edited for every new type.</p>
   <h3>L: Liskov substitution</h3>
   <p>A fixed deposit is money in the bank, so it is tempting to write <code>class FixedDeposit(Account)</code>. But <code>Account</code> promises "<code>withdraw</code> works when the balance is enough", and a fixed deposit cannot keep that promise.</p>
   <div class="fx" data-lang="py">class Account:
@@ -960,19 +910,17 @@ print(fake.sent)</div>
   <div class="callout anlg"><span class="label">Analogy</span><p>Dependency inversion is a wall socket. A lamp depends on the socket standard, not on a particular power plant, so you can plug it in at home, in an office, or into a test bench.</p></div>
   <div class="callout def"><span class="label">Definition</span><p><strong>SOLID</strong>: Single responsibility (one reason to change), Open/closed (extend without modifying), Liskov substitution (subtypes must be usable wherever the base type is expected, keeping its contracts), Interface segregation (many small, client-specific interfaces), Dependency inversion (high-level code depends on abstractions; concrete dependencies are injected).</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>SOLID is a set of tests for pain, not a checklist to maximise. Ten one-method classes for a 50-line script is worse than one clear class. Apply a rule when you feel the pain it prevents (repeated edits, untestable code, fake methods).</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Design Patterns.</b> Several of our solutions keep recurring: swappable policy objects, a function that picks which class to build, a list of listeners told about every withdrawal. Do these have names, so a team can say "use a strategy here" instead of explaining it from scratch?</div>
 
-  <h2 id="pi-pat"><span class="num">09</span>Design Patterns</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>PocketBank still needs three things: open an account from a form that says "savings" or "current"; let an SMS service and a fraud check react to every withdrawal without <code>Account</code> knowing about them; keep one shared bank configuration. Are there standard, named shapes for these problems?</p></div>
-  <p>A <strong>design pattern</strong> is a named, reusable solution to a problem that keeps coming up in object-oriented code. Names let a team communicate in one word. You have already written two: the <strong>template method</strong> (section 03) and the <strong>strategy</strong> (section 07).</p>
+  <h2 id="pi-pat"><span class="num">09</span>Design Patterns: Strategy, Factory, Observer, Singleton</h2>
+  <p>A <strong>design pattern</strong> is a named, reusable solution to a problem that keeps coming up in object-oriented code. Names let a team communicate in one word. Two have already appeared: the <strong>template method</strong> (<code>month_end</code> calling overridable hooks) and the <strong>strategy</strong> (the swappable interest and fee policies).</p>
   <div class="cards">
-    <div><b>Strategy</b><p>Swap an algorithm by passing in an object (or function) that does it.</p><small>PocketBank: <code>FlatRate</code>, <code>OverdraftFee</code>. 💡 pay by UPI, card or cash, same checkout</small></div>
-    <div><b>Factory</b><p>A function or classmethod that decides which class to build from input.</p><small>PocketBank: <code>open_account("savings", …)</code>. 💡 a ticket counter: say "sleeper" or "AC"</small></div>
-    <div><b>Observer</b><p>Subscribers register; the subject notifies all of them when something happens.</p><small>PocketBank: SMS and fraud check on withdrawals. 💡 the YouTube bell icon</small></div>
-    <div><b>Singleton</b><p>Exactly one shared instance of a class.</p><small>PocketBank: bank config. 💡 one principal per school</small></div>
+    <div><b>Strategy</b><p>Swap an algorithm by passing in an object (or function) that does it.</p><small>Example: <code>FlatRate</code>, <code>OverdraftFee</code>. 💡 pay by UPI, card or cash, same checkout</small></div>
+    <div><b>Factory</b><p>A function or classmethod that decides which class to build from input.</p><small>Example: <code>open_account("savings", …)</code>. 💡 a ticket counter: say "sleeper" or "AC"</small></div>
+    <div><b>Observer</b><p>Subscribers register; the subject notifies all of them when something happens.</p><small>Example: SMS and fraud check on withdrawals. 💡 the YouTube bell icon</small></div>
+    <div><b>Singleton</b><p>Exactly one shared instance of a class.</p><small>Example: bank config. 💡 one principal per school</small></div>
   </div>
   <h3>Strategy</h3>
-  <p>Section 07's policies are the strategy pattern: <code>Account</code> holds an object that knows how to compute interest and calls it, without caring which one it is. In Python a strategy is often just a function, since functions are objects too (<a class="xref" data-note="py_functions">Functions</a>): <code>Account(interest=lambda b: b * 0.01)</code> would work with a one-line change to <code>month_end</code>.</p>
+  <p>The interest and fee policies are the strategy pattern: <code>Account</code> holds an object that knows how to compute interest and calls it, without caring which one it is. In Python a strategy is often just a function, since functions are objects too (<a class="xref" data-note="py_functions">Functions</a>): <code>Account(interest=lambda b: b * 0.01)</code> would work with a one-line change to <code>month_end</code>.</p>
   <h3>Factory</h3>
   <div class="fx" data-lang="py">class Savings:
     def __init__(self, owner, balance): self.owner, self.balance = owner, balance
@@ -1049,55 +997,8 @@ print(a is b, b.settings)</div>
   <p><code>__new__</code> (the method that creates the object, before <code>__init__</code>) hands back the same object every time, so <code>a is b</code> and a change through <code>a</code> is seen through <code>b</code>.</p>
   <div class="callout def"><span class="label">Definition</span><p><strong>Strategy</strong>: encapsulate interchangeable algorithms behind one interface and inject the chosen one. <strong>Factory</strong>: centralise the choice of which concrete class to instantiate. <strong>Observer</strong>: a subject keeps a list of dependents and notifies them of events. <strong>Singleton</strong>: ensure a class has one instance with a global access point.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>A singleton is global state in disguise: hard to test and to reset between tests. In Python a module is already a singleton: a <code>config.py</code> with module-level values, imported wherever needed, is usually all you need.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: How It All Connects.</b> We have reuse, many forms, contracts, the MRO, composition, five rules and four patterns. One picture and one table should show how each grew out of the previous one.</div>
 
-  <h2 id="pi-connect"><span class="num">10</span>How It All Connects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>Are subclassing, <code>super()</code>, polymorphism, duck typing, ABCs, the MRO, composition, SOLID and patterns nine separate topics, or one story in which each is the fix for the previous one's weakness?</p></div>
-  <figure class="viz"><svg viewBox="0 0 700 250" width="700">
-    <defs><marker id="pi-a5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-    <rect x="10" y="10" width="150" height="46" rx="7" class="fb sb"/><text x="85" y="30" text-anchor="middle" font-size="11.5" font-weight="700">subclassing</text><text x="85" y="46" text-anchor="middle" class="tm" font-size="10">Savings: 120 → 121.2</text>
-    <line x1="160" y1="33" x2="188" y2="33" stroke="currentColor" marker-end="url(#pi-a5)"/>
-    <rect x="190" y="10" width="150" height="46" rx="7" class="fb sb"/><text x="265" y="30" text-anchor="middle" font-size="11.5" font-weight="700">override + super()</text><text x="265" y="46" text-anchor="middle" class="tm" font-size="10">Ben −30 (overdraft)</text>
-    <line x1="340" y1="33" x2="368" y2="33" stroke="currentColor" marker-end="url(#pi-a5)"/>
-    <rect x="370" y="10" width="150" height="46" rx="7" class="fb sb"/><text x="445" y="30" text-anchor="middle" font-size="11.5" font-weight="700">polymorphism</text><text x="445" y="46" text-anchor="middle" class="tm" font-size="10">+1.2, −10, +0</text>
-    <line x1="520" y1="33" x2="548" y2="33" stroke="currentColor" marker-end="url(#pi-a5)"/>
-    <rect x="550" y="10" width="140" height="46" rx="7" class="fv" stroke="currentColor" stroke-opacity="0.4"/><text x="620" y="30" text-anchor="middle" font-size="11.5" font-weight="700">duck typing</text><text x="620" y="46" text-anchor="middle" class="tm" font-size="10">GiftCard 25 → 24</text>
-    <line x1="620" y1="56" x2="620" y2="98" stroke="currentColor" marker-end="url(#pi-a5)"/>
-    <rect x="550" y="100" width="140" height="46" rx="7" class="fv" stroke="currentColor" stroke-opacity="0.4"/><text x="620" y="120" text-anchor="middle" font-size="11.5" font-weight="700">ABC contract</text><text x="620" y="136" text-anchor="middle" class="tm" font-size="10">FixedDeposit refused</text>
-    <line x1="550" y1="123" x2="522" y2="123" stroke="currentColor" marker-end="url(#pi-a5)"/>
-    <rect x="370" y="100" width="150" height="46" rx="7" class="fr sr"/><text x="445" y="120" text-anchor="middle" font-size="11.5" font-weight="700">multiple inh. + MRO</text><text x="445" y="136" text-anchor="middle" class="tm" font-size="10">P → O → R → A → object</text>
-    <line x1="370" y1="123" x2="342" y2="123" stroke="currentColor" marker-end="url(#pi-a5)"/>
-    <rect x="190" y="100" width="150" height="46" rx="7" class="ft st"/><text x="265" y="120" text-anchor="middle" font-size="11.5" font-weight="700">composition</text><text x="265" y="136" text-anchor="middle" class="tm" font-size="10">8 classes → policies</text>
-    <line x1="190" y1="123" x2="162" y2="123" stroke="currentColor" marker-end="url(#pi-a5)"/>
-    <rect x="10" y="100" width="150" height="46" rx="7" class="ft st"/><text x="85" y="120" text-anchor="middle" font-size="11.5" font-weight="700">SOLID</text><text x="85" y="136" text-anchor="middle" class="tm" font-size="10">FixedDeposit breaks L</text>
-    <line x1="85" y1="146" x2="85" y2="188" stroke="currentColor" marker-end="url(#pi-a5)"/>
-    <rect x="10" y="190" width="680" height="46" rx="7" class="fg sg"/><text x="350" y="210" text-anchor="middle" font-size="11.5" font-weight="700">patterns: template method (03) · strategy (07) · factory · observer · singleton</text><text x="350" y="226" text-anchor="middle" class="tm" font-size="10">Asha 1% → 2% on the same object: 121.2 → 123.62; open_account("savings", "Asha", 120)</text>
-  </svg><figcaption>Each box is a section; each arrow is "the weakness here is fixed by the next box". Small grey text is the value on PocketBank.</figcaption></figure>
-  <table class="tbl"><caption>Every concept, what it is built from, and its value on PocketBank</caption>
-    <tr><th>Concept</th><th>Built from</th><th>Answers which question</th><th>Value on the running example</th><th>When to use</th></tr>
-    <tr><td>Subclassing</td><td>class + attribute lookup through parents</td><td>reuse without copying?</td><td>empty SavingsAccount deposits; 120 → 121.2</td><td>true is-a with shared behaviour</td></tr>
-    <tr><td>Overriding &amp; <code>super()</code></td><td>lookup finds the child first; super() continues the MRO</td><td>change or extend one method?</td><td>Ben −30; Asha's 600 and 200 refused by two rules</td><td>always call <code>super().__init__</code></td></tr>
-    <tr><td>Polymorphism</td><td>overriding + dynamic dispatch on <code>type(self)</code></td><td>one loop for every type?</td><td>month end +1.2, −10, +0</td><td>replace isinstance chains</td></tr>
-    <tr><td>Duck typing / Protocol</td><td>polymorphism without inheritance</td><td>non-Account objects in the loop?</td><td>GiftCard 25 → 24; Liar passes the runtime check</td><td>flexible inputs; third-party objects</td></tr>
-    <tr><td>ABC</td><td>inheritance + <code>@abstractmethod</code></td><td>force every type to implement the interface?</td><td>FixedDeposit without <code>fee</code> cannot be created</td><td>your own class families</td></tr>
-    <tr><td>MRO / C3 / mixins</td><td>several parents + C3 merge</td><td>whose method, how often?</td><td>perks lounge, overdraft, cashback, basic</td><td>small mixins; cooperative super()</td></tr>
-    <tr><td>Composition</td><td>objects holding objects + delegation</td><td>combine and swap behaviours?</td><td>8 combination classes avoided; 121.2 → 123.62</td><td>default choice</td></tr>
-    <tr><td>SOLID</td><td>all of the above, as design rules</td><td>what keeps a design changeable?</td><td>canteen bill crashes on FixedDeposit (L)</td><td>when you feel the pain</td></tr>
-    <tr><td>Patterns</td><td>named recurring uses of the above</td><td>standard shapes for standard problems?</td><td>open_account, SMS + fraud observers</td><td>to communicate and reuse</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span><p>One sentence holds the note: <strong>inheritance shares code along an is-a line and makes polymorphism possible; Python's polymorphism really runs on duck typing, which ABCs and Protocols turn into contracts; with several parents the C3 MRO fixes the order and <code>super()</code> follows it; and when combinations multiply, composition (has-a) replaces inheritance, which is what SOLID and the strategy, factory and observer patterns keep recommending.</strong></p></div>
-  <h3>Notes before and after</h3>
-  <ul>
-    <li><a class="xref" data-note="py_classes">Classes &amp; Objects</a> — the Account, <code>self</code>, lookup order and classmethods this note extends.</li>
-    <li><a class="xref" data-note="py_functions">Functions</a> — functions are objects, so a strategy or an observer can be a plain function.</li>
-    <li><a class="xref" data-note="py_dunder">Dunder Methods</a> — duck typing at the language level: <code>len()</code>, <code>+</code>, <code>for</code> work on any type with the right dunder methods.</li>
-    <li><a class="xref" data-note="py_iterators">Iterators &amp; Generators</a> — the iterator protocol is duck typing in its purest form.</li>
-    <li><a class="xref" data-note="py_testing">Testing</a> — dependency injection and fakes make classes testable.</li>
-  </ul>
-  <div class="bridge"><b>What this still can't tell us → next: Common Mistakes.</b> The most frequent ways these tools are misused, each with its symptom.</div>
-
-  <h2 id="pi-traps"><span class="num">11</span>Common Mistakes</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>Which inheritance and design mistakes cost the most, and how do you recognise each one from its symptom?</p></div>
+  <h2 id="pi-traps"><span class="num">10</span>Common Mistakes</h2>
   <div class="callout trap"><span class="label">Trap: forgetting <code>super().__init__()</code></span><p>Symptom: <code>AttributeError</code> on a parent attribute, long after creation. Cause: the child's <code>__init__</code> replaced the parent's. Fix: call <code>super().__init__(...)</code> first.</p></div>
   <div class="callout trap"><span class="label">Trap: inheriting for has-a</span><p>Symptom: the child has methods that make no sense (an Account inheriting <code>list</code> gets <code>clear()</code>). Fix: hold the object as an attribute (composition).</p></div>
   <div class="callout trap"><span class="label">Trap: breaking the parent's promise (LSP)</span><p>Symptom: code that works for the parent crashes or gives wrong numbers for a child (FixedDeposit, Square). Fix: do not inherit; split the interface so each type promises only what it can do.</p></div>
@@ -1106,69 +1007,106 @@ print(a is b, b.settings)</div>
   <div class="callout trap"><span class="label">Trap: <code>@abstractmethod</code> without <code>ABC</code></span><p>Without inheriting <code>ABC</code> (or using <code>ABCMeta</code>) nothing is enforced and the incomplete class can be created.</p></div>
   <div class="callout trap"><span class="label">Trap: trusting <code>@runtime_checkable</code></span><p><code>isinstance(obj, Proto)</code> only checks method <em>names</em>; <code>month_end = 42</code> passes. Use a type checker for real signatures.</p></div>
   <div class="callout trap"><span class="label">Trap: deep hierarchies and combination classes</span><p>Symptom: names like <code>StudentCashbackCurrentAccount</code>, or a change in a base class breaking distant children (fragile base class). Fix: shallow trees plus composed policies.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Revision Sheet.</b> Everything in this note, condensed to one page.</div>
 
   <h2 id="pi-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>Running example: <strong>PocketBank</strong>. Asha: savings, ₹120, 1% a month (→ 121.2; at 2% → 123.62). Ben: current, ₹50, overdraft limit 100, withdraws 80 → −30, ₹10 fee when overdrawn → −40. Chitra: plain account, ₹70. GiftCard GC-7: ₹25, −1 a month.</p>
-  <h3>The question ladder</h3>
+  <h3>Subclassing</h3>
+  <ul>
+    <li><code>class Child(Parent)</code>: child inherits every attribute and method; models <b>is-a</b>.</li>
+    <li>Lookup: <code>vars(obj)</code>, then each class in <code>type(obj).__mro__</code>, ending at <code>object</code>. Nothing is copied.</li>
+    <li><code>isinstance(s, Parent)</code> True for a child instance; <code>issubclass(Child, Parent)</code>; <code>Child.__bases__</code> = direct parents.</li>
+  </ul>
+  <h3>Overriding and super()</h3>
+  <ul>
+    <li>Same-name method in the child replaces the parent's. <b>Replace</b>: don't call the parent. <b>Extend</b>: add a step, then <code>super().m(...)</code>.</li>
+    <li>A child <code>__init__</code> replaces the parent's: call <code>super().__init__(...)</code> (normally first), else parent attributes are missing → <code>AttributeError</code> later.</li>
+    <li><code>super()</code> inside class K = the next class after K in <code>type(self).__mro__</code>, not "K's parent".</li>
+    <li>Keep overriding signatures compatible with the parent's.</li>
+  </ul>
+  <h3>Polymorphism</h3>
+  <ul>
+    <li>Same call, type-specific behaviour; method looked up on <code>type(obj)</code> at run time (dynamic dispatch).</li>
+    <li><b>Template method</b>: parent fixes the algorithm (<code>month_end</code> = <code>self.interest() - self.fee()</code>), children override the hook steps.</li>
+    <li><code>isinstance</code> chains = polymorphism done by hand; move behaviour into methods.</li>
+  </ul>
+  <h3>Duck typing and Protocols</h3>
+  <ul>
+    <li>Duck typing: any object with the required methods works; no common parent needed.</li>
+    <li><b>EAFP</b> (try, catch <code>AttributeError</code>) is idiomatic; <b>LBYL</b> (<code>hasattr</code> first) is the alternative.</li>
+    <li><code>typing.Protocol</code>: structural typing for type checkers; <code>@runtime_checkable</code> enables <code>isinstance</code>, which checks only that the names exist.</li>
+  </ul>
+  <h3>Abstract base classes</h3>
   <table class="tbl">
-    <tr><th>Concept</th><th>Question it answers</th><th>On PocketBank</th><th>Weakness → next</th></tr>
-    <tr><td>Subclassing</td><td>reuse without copying?</td><td><code>SavingsAccount(Account)</code>, 120 → 121.2</td><td>child needs own data/behaviour</td></tr>
-    <tr><td>Override + super()</td><td>change or extend a method?</td><td>Ben −30; savings limit then parent check</td><td>callers need ifs per type</td></tr>
-    <tr><td>Polymorphism</td><td>one loop, every type?</td><td>+1.2, −10, +0</td><td>must everything inherit?</td></tr>
-    <tr><td>Duck typing</td><td>non-Accounts in the loop?</td><td>GiftCard 25 → 24</td><td>missing methods fail late</td></tr>
-    <tr><td>ABC</td><td>enforce the interface?</td><td>FixedDeposit without fee refused</td><td>features across the tree</td></tr>
-    <tr><td>MRO / mixins</td><td>several parents: order?</td><td>Premium → Overdraft → Rewards → Account</td><td>combinations multiply</td></tr>
-    <tr><td>Composition</td><td>combine/swap behaviours?</td><td>policies; 1% → 2% on the same object</td><td>general rules?</td></tr>
-    <tr><td>SOLID</td><td>keep design changeable?</td><td>FixedDeposit breaks L; FakeNotifier (D)</td><td>named solutions?</td></tr>
-    <tr><td>Patterns</td><td>standard shapes?</td><td>strategy, factory, observer, singleton</td><td>values that act built-in → dunders</td></tr>
+    <tr><th></th><th><code>abc.ABC</code></th><th><code>typing.Protocol</code></th></tr>
+    <tr><td>Typing style</td><td>nominal: must inherit (or <code>register</code>)</td><td>structural: just match the methods</td></tr>
+    <tr><td>Checked</td><td>at instantiation: missing abstract method → <code>TypeError</code></td><td>by mypy/pyright; runtime only names</td></tr>
+    <tr><td>Shared code</td><td>yes, concrete methods</td><td>not intended</td></tr>
+    <tr><td>Use for</td><td>your own class families</td><td>accepting third-party objects</td></tr>
   </table>
-  <h3>Rules to remember</h3>
+  <p><code>@abstractmethod</code> without inheriting <code>ABC</code> (or <code>metaclass=ABCMeta</code>) enforces nothing.</p>
+  <h3>Multiple inheritance and the MRO</h3>
+  <ul>
+    <li>C3: <code>L[C] = C + merge(L[P1], …, L[Pn], [P1, …, Pn])</code>. Merge: take the first head that is in no list's tail; repeat; no candidate → <code>TypeError: Cannot create a consistent method resolution order</code>.</li>
+    <li>Guarantees: child before parents; parents in listed order; each class once.</li>
+    <li>Diamond <code>D(B, C)</code>, B and C inherit A → D, B, C, A, object; A's method runs once if every class calls <code>super()</code>.</li>
+    <li><b>Mixin</b>: small class adding one feature, listed first, calling <code>super()</code>; avoid its own <code>__init__</code> state.</li>
+    <li>Cooperative chains need every class to call <code>super()</code> and accept compatible arguments (<code>**kwargs</code>).</li>
+  </ul>
+  <h3>Composition</h3>
+  <ul>
+    <li>has-a: the object holds parts (policies, strategies) and delegates to them.</li>
+    <li>Avoids class explosion (n yes/no features → 2<sup>n</sup> subclasses) and the fragile base class problem; parts can be swapped at run time and tested alone.</li>
+    <li>Rule: inherit for a real is-a that keeps all the parent's promises; compose otherwise.</li>
+  </ul>
+  <h3>SOLID</h3>
   <table class="tbl">
-    <tr><th>Rule</th><th>Form</th><th>What each part means</th></tr>
-    <tr><td>Lookup</td><td><code>obj.x</code>: <code>vars(obj)</code>, then each class in <code>type(obj).__mro__</code></td><td>first match wins; children before parents</td></tr>
-    <tr><td>super()</td><td><code>super().m()</code> inside class K = next class after K in <code>type(self).__mro__</code></td><td>not "K's parent"; can be a sibling</td></tr>
-    <tr><td>C3</td><td><code>L[C] = C + merge(L[P1], …, L[Pn], [P1, …, Pn])</code></td><td>take the first head not in any tail; fail if none</td></tr>
-    <tr><td>Diamond result</td><td><code>Premium(Overdraft, Rewards)</code> → P, O, R, Account, object</td><td>shared parent once, after all its children</td></tr>
-    <tr><td>Abstract class</td><td>any <code>@abstractmethod</code> unimplemented → <code>TypeError</code> on creation</td><td>needs <code>ABC</code> as a base</td></tr>
-    <tr><td>Template method</td><td>parent <code>month_end</code> = <code>self.interest() − self.fee()</code></td><td>children override the hooks</td></tr>
+    <tr><th>Principle</th><th>Rule</th><th>Violation symptom</th></tr>
+    <tr><td>Single responsibility</td><td>one reason to change</td><td>SMS wording change edits money logic</td></tr>
+    <tr><td>Open/closed</td><td>extend by adding classes, not editing</td><td>growing <code>if/elif</code> per type</td></tr>
+    <tr><td>Liskov substitution</td><td>child usable wherever parent is</td><td>child raises where parent works (FixedDeposit, Square/Rect)</td></tr>
+    <tr><td>Interface segregation</td><td>small, focused interfaces</td><td>methods that raise "not supported"</td></tr>
+    <tr><td>Dependency inversion</td><td>depend on abstractions, inject them</td><td>class creates its own SMS sender; untestable</td></tr>
   </table>
-  <h3>When to use, when not</h3>
-  <div class="cards">
-    <div><b>Inheritance</b><p>A real is-a where the child keeps every promise of the parent; shallow.</p><small>Avoid for has-a, for combinations, for "almost is-a"</small></div>
-    <div><b>Composition</b><p>Combine and swap behaviours (policies, strategies, notifiers); the default.</p><small>A little more wiring code</small></div>
-    <div><b>ABC</b><p>Your own family of classes that must share an interface, plus shared code.</p><small>Can't make third-party classes inherit it</small></div>
-    <div><b>Protocol</b><p>Accept any object with the right methods, checked by mypy.</p><small>Runtime check is names only</small></div>
-    <div><b>Mixin</b><p>One small feature added across classes (audit, logging), calling <code>super()</code>.</p><small>Avoid stateful mixins with their own <code>__init__</code></small></div>
-    <div><b>Patterns</b><p>Strategy for swappable algorithms, factory for choosing a class, observer for events.</p><small>Singleton: prefer a module</small></div>
-  </div>
-  <div class="callout trap"><span class="label">Key traps</span><p>Forgetting <code>super().__init__()</code>; inheriting for has-a; children that break the parent's promises (FixedDeposit, Square); isinstance chains; <code>super()</code> is not "my parent"; <code>@abstractmethod</code> without ABC; runtime Protocol checks only names; deep hierarchies and combination classes; singletons as hidden globals.</p></div>
-  <h3>Five rapid-fire checks</h3>
-  <table class="tbl">
-    <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td>MRO of <code>class D(B, C)</code> where B and C inherit A?</td><td>D, B, C, A, object.</td></tr>
-    <tr><td>In that D, what does <code>super()</code> inside B call?</td><td>C, the next class in D's MRO (not A).</td></tr>
-    <tr><td>Ben (₹50, limit 100) withdraws 80 and month end runs. Balance?</td><td>−30, then the ₹10 fee: −40.</td></tr>
-    <tr><td>An ABC has abstract <code>interest</code> and <code>fee</code>; a child implements only <code>interest</code>. What happens?</td><td><code>TypeError</code> when you try to create the child: "without an implementation for abstract method 'fee'".</td></tr>
-    <tr><td>Why is FixedDeposit(Account) with a raising <code>withdraw</code> bad design?</td><td>It violates Liskov: code written for Account (pay_canteen_bill) breaks on it. Don't inherit; give it no <code>withdraw</code>.</td></tr>
-  </table>
+  <h3>Design patterns</h3>
+  <ul>
+    <li><b>Strategy</b>: inject an interchangeable algorithm (object or function).</li>
+    <li><b>Factory</b>: one place maps input to the class to build (<code>{"savings": Savings}[kind]</code>, classmethods like <code>from_csv</code>).</li>
+    <li><b>Observer</b>: subject keeps a list of callbacks and notifies them on events.</li>
+    <li><b>Singleton</b>: one instance via <code>__new__</code>; in Python a module usually does the job.</li>
+    <li><b>Template method</b>: parent algorithm with overridable steps.</li>
+  </ul>
+  <h3>Gotchas</h3>
+  <ul>
+    <li>Forgetting <code>super().__init__()</code>.</li>
+    <li>Inheriting for has-a (subclassing <code>list</code> exposes <code>clear</code>, <code>sort</code>).</li>
+    <li>Children that break the parent's contract (LSP).</li>
+    <li>Calling <code>Parent.m(self)</code> directly in a cooperative chain skips classes later in the MRO.</li>
+    <li>Listing a parent before its own child in the bases → MRO <code>TypeError</code>.</li>
+    <li>Runtime Protocol checks pass objects whose attributes merely have the right names.</li>
+    <li>Deep hierarchies and combination class names; singletons as hidden global state.</li>
+  </ul>
 
-  <h2 id="pi-qa"><span class="num">12</span>Questions &amp; Answers</h2>
+  <h2 id="pi-qa"><span class="num">11</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>Why must a child call <code>super().__init__()</code>?</summary><div class="qa-body">Defining <code>__init__</code> in the child replaces the parent's. Without the call, the parent's attributes are never set and the first method using them raises <code>AttributeError</code>. With multiple inheritance, the call also keeps the MRO chain going.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is polymorphism, and how does Python implement it?</summary><div class="qa-body">The same call works on different types, each responding its own way (<code>a.month_end()</code>). Python looks up the method on <code>type(obj)</code> at run time (dynamic dispatch), and does not require a shared parent at all (duck typing).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is the MRO of <code>class D(B, C)</code> where B and C inherit A? What does <code>super()</code> in B call?</summary><div class="qa-body">D → B → C → A → object (C3). For a D object, <code>super()</code> inside B calls C, the next class in D's MRO, so A's method runs once.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Walk through C3 for <code>Premium(Overdraft, Rewards)</code>.</summary><div class="qa-body">merge([Overdraft, Account, object], [Rewards, Account, object], [Overdraft, Rewards]): take Overdraft (in no tail); Account is in the tail of the Rewards list, so skip it and take Rewards; then Account; then object. Result: Premium, Overdraft, Rewards, Account, object.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>ABC vs Protocol?</summary><div class="qa-body">ABC: classes must inherit it, missing abstract methods block object creation, and it can provide shared code. Protocol: any class with matching methods satisfies it for type checkers, no inheritance; use it to accept third-party objects. Runtime Protocol checks only see names.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Composition vs inheritance: which do you prefer, and why?</summary><div class="qa-body">Composition by default: has-a, swappable parts (Asha's 1% → 2% on the same object), no class explosion, no fragile base class. Inheritance for a real is-a where the child keeps all of the parent's promises and polymorphism helps.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Give a Liskov violation and its fix.</summary><div class="qa-body">FixedDeposit(Account) whose <code>withdraw</code> raises: <code>pay_canteen_bill</code>, correct for every Account, crashes. Or Square(Rect): <code>stretch</code> gives 100 instead of 50. Fix: don't inherit; split the interface (Withdrawable vs Fixed, or a common Shape with <code>area()</code>).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What are mixins, and what makes them work?</summary><div class="qa-body">Small classes that add one feature (AuditMixin) and are listed before the main base. They work because <code>super()</code> follows the object's MRO, so the mixin's <code>super().withdraw()</code> reaches CurrentAccount even though the mixin itself has no such parent.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Which patterns hide inside ML libraries?</summary><div class="qa-body">Strategy: <code>scoring="f1"</code> or an optimizer object. Observer: Keras/Lightning callbacks. Factory: <code>AutoModel.from_pretrained(name)</code>. Template method: <code>nn.Module.__call__</code> runs hooks and your <code>forward</code>. Composition: <code>Pipeline</code>, <code>nn.Sequential</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does polymorphism need overriding, and what does duck typing remove from that requirement?</summary><div class="qa-body">With inheritance, polymorphism comes from each child overriding a method the parent declares, so one call can run different code. Duck typing removes the shared parent: any object with a method of that name works (GiftCard). What remains is the shared method name, the interface.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks if one class in a cooperative <code>super()</code> chain calls its parent directly (<code>Account.perks(self)</code>)?</summary><div class="qa-body">The chain is cut. In Premium, if Overdraft called <code>Account.perks(self)</code> directly, Rewards would be skipped and "cashback" would vanish, because the next class in the MRO (Rewards) is never called. The MRO only helps if every class hands on with <code>super()</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: how do composition, the open/closed principle and the strategy pattern relate?</summary><div class="qa-body">They are one move seen three ways. Composition puts the varying behaviour (interest rule) in a separate object; that object is a strategy; and because new rules are new strategy classes, <code>Account</code> never has to be edited, which is open/closed (WeekendBonus added without touching Account).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why would the inheritance-based month end (template method) suffer from the fragile base class problem while the composed one does not?</summary><div class="qa-body">Children of the template method depend on the parent's internal call order (<code>month_end</code> calling <code>interest()</code> and <code>fee()</code> at specific times). Change that in the parent and every child's behaviour shifts. Composed policies depend only on their own tiny public method (<code>interest(balance)</code>), so the account's internals can change freely.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Encapsulation vs abstraction?</summary><div class="qa-body">Encapsulation hides data: it changes only through controlled methods and properties (<code>_balance</code> + <code>withdraw</code>). Abstraction hides complexity: callers see a small interface (<code>interest</code>, <code>fee</code>, <code>month_end</code>), and an ABC can enforce it.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is inheritance, and when should you use it?</summary><div class="qa-body">Defining a class as an extension of another: <code>class Child(Parent)</code> inherits all the parent's attributes and methods and adds or overrides some. Use it for a genuine is-a relationship where the child can be used anywhere the parent is expected and you benefit from shared code or polymorphism. For has-a relationships or combining features, use composition.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does <code>super()</code> do, and why prefer it over <code>Parent.method(self)</code>?</summary><div class="qa-body"><code>super()</code> returns a proxy that continues attribute lookup from the class after the current one in <code>type(self).__mro__</code>. With single inheritance that is the parent. With multiple inheritance it may be a sibling, which is what makes cooperative mixins and diamonds work; hard-coding <code>Parent.method(self)</code> skips the rest of the MRO and can run a shared base twice.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does this print? <code>class A: def __init__(self): self.x = 1</code>; <code>class B(A): def __init__(self): self.y = 2</code>; <code>b = B(); print(vars(b)); print(b.x)</code></summary><div class="qa-body"><code>{'y': 2}</code> and then <code>AttributeError: 'B' object has no attribute 'x'</code>. B's <code>__init__</code> replaced A's, and without <code>super().__init__()</code> the parent never set <code>x</code>. The object is created without complaint; the error appears at first use.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Overriding vs overloading?</summary><div class="qa-body">Overriding: a subclass defines a method with the same name as its parent's, replacing it for instances of the subclass; Python supports this. Overloading: several methods with the same name but different parameter lists, chosen by signature; Python does not support it, because a second <code>def</code> just rebinds the name. Python uses default arguments, <code>*args</code> or <code>functools.singledispatchmethod</code> instead.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is polymorphism, and how does Python implement it?</summary><div class="qa-body">The same operation working on different types, each in its own way: <code>acc.month_end()</code> adds interest for a savings account and charges a fee for a current account. Python looks up the method on the object's type when the call runs (dynamic dispatch), and does not require a common parent at all (duck typing). Operators are polymorphic through dunder methods.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the template method pattern?</summary><div class="qa-body">A parent method defines the steps of an algorithm and calls other methods for the parts that vary; subclasses override only those hook methods. <code>Account.month_end</code> calls <code>self.interest()</code> and <code>self.fee()</code>; <code>SavingsAccount</code> overrides <code>interest</code>. PyTorch's <code>nn.Module.__call__</code> running hooks around your <code>forward</code> is the same shape.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is duck typing? What are EAFP and LBYL?</summary><div class="qa-body">Duck typing: an object is usable wherever it has the methods the code calls, regardless of its class. EAFP ("easier to ask forgiveness than permission") tries the operation and catches the exception (<code>try: x.month_end() except AttributeError</code>); LBYL ("look before you leap") checks first (<code>if hasattr(x, "month_end")</code>). EAFP is idiomatic Python and avoids race conditions between the check and the use.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What happens if a subclass of an ABC does not implement every abstract method?</summary><div class="qa-body">The class is created, but instantiating it raises <code>TypeError: Can't instantiate abstract class FixedDeposit without an implementation for abstract method 'fee'</code>. The error appears at object creation, not when the missing method would first be called. The ABC itself also cannot be instantiated.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>ABC vs Protocol?</summary><div class="qa-body">An ABC is nominal: classes must inherit from it (or be registered), missing abstract methods block instantiation, and it can provide shared concrete methods. A <code>typing.Protocol</code> is structural: any class with matching methods satisfies it for static type checkers, with no inheritance, which suits third-party objects. <code>@runtime_checkable</code> allows <code>isinstance</code>, but it only checks that the attribute names exist.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the MRO, and how is it computed?</summary><div class="qa-body">The method resolution order, <code>C.__mro__</code> or <code>C.mro()</code>, is the linear order Python searches classes for an attribute. It is computed by C3 linearisation: <code>L[C] = C + merge(L[P1], …, L[Pn], [P1, …, Pn])</code>, repeatedly taking the first head that does not appear in the tail of any list. It guarantees children before parents, parents in their listed order, and each class once.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does this print? <code>A.hi</code> returns <code>"A"</code>; <code>B(A)</code>, <code>C(A)</code> and <code>D(B, C)</code> each return their own letter + <code>super().hi()</code>; <code>print(D().hi())</code></summary><div class="qa-body"><code>DBCA</code>. The MRO of D is D, B, C, A, object. <code>super()</code> inside B goes to C (the next class in D's MRO), not to A, so A runs exactly once at the end.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When does Python refuse to create a class because of the MRO?</summary><div class="qa-body">When C3 finds no consistent order, for example <code>class Broken(Account, Overdraft)</code> where <code>Overdraft</code> is a subclass of <code>Account</code>: the bases demand Account before Overdraft, but a child must come before its parent. Python raises <code>TypeError: Cannot create a consistent method resolution order (MRO)</code>. List the more specific class first.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a mixin?</summary><div class="qa-body">A small class that adds one feature (logging, auditing, JSON serialisation) to any class it is combined with, and is not meant to be instantiated alone. It is listed before the main base (<code>class AuditedCurrent(AuditMixin, CurrentAccount)</code>) and calls <code>super()</code>, which reaches the main base through the object's MRO. scikit-learn's <code>ClassifierMixin</code> and Django's view mixins are examples.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Composition vs inheritance: which do you prefer, and why?</summary><div class="qa-body">Composition by default. An object that holds parts (an interest policy, a notifier) can combine and swap behaviours at run time, avoids one subclass per feature combination, and does not depend on a parent's internals (the fragile base class problem). Inheritance is right for a true is-a where the child keeps every promise of the parent and polymorphism helps.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the Liskov substitution principle? Give a violation.</summary><div class="qa-body">A subclass must be usable anywhere its parent is expected without breaking the caller's assumptions. Classic violation: <code>Square(Rect)</code> whose <code>set_w</code> also changes the height, so code that sets the width of a 5×5 shape to 10 expects area 50 and gets 100. Another: a <code>FixedDeposit(Account)</code> whose <code>withdraw</code> always raises. Fix by not inheriting and modelling only the abilities each type really has.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain the SOLID principles in one line each.</summary><div class="qa-body">S: a class should have one reason to change. O: add behaviour by adding code (new classes), not editing working code. L: subtypes must honour the base type's contract. I: prefer several small interfaces over one large one, so no class implements methods it cannot support. D: high-level code depends on abstractions, and concrete dependencies are passed in (dependency injection).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is dependency injection, and why does it help testing?</summary><div class="qa-body">Passing an object's collaborators in (constructor arguments) instead of creating them inside: <code>Account(owner, balance, notifier)</code>. Production passes a real SMS sender; a test passes a fake that records messages, so the test runs fast, has no side effects and can assert on what was sent. It is the practical form of dependency inversion and why mocking is easy in well-designed code.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Which design patterns appear in ML libraries?</summary><div class="qa-body">Strategy: passing <code>scoring="f1"</code>, an optimizer or a loss object. Observer: Keras and PyTorch Lightning callbacks. Factory: <code>AutoModel.from_pretrained(name)</code>, <code>pd.DataFrame.from_dict</code>. Template method: <code>nn.Module.__call__</code> wrapping <code>forward</code>. Composition: <code>Pipeline</code>, <code>nn.Sequential</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you write a singleton in Python, and should you?</summary><div class="qa-body">Override <code>__new__</code> to create the instance once and return the stored one on every later call, or use a decorator or metaclass. Usually you should not: a singleton is global state, hard to reset between tests. A module is already a single shared object, so a <code>config.py</code> with module-level values covers most cases.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the fragile base class problem?</summary><div class="qa-body">Subclasses depend on the internals of their parent (which hooks it calls, in what order, which attributes it sets), so a seemingly safe change to the base class silently breaks distant subclasses. Deep hierarchies make it worse. Composition limits it, because a composed part depends only on the small public interface it implements.</div></details>
 </main>
 `
 });

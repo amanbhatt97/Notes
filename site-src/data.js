@@ -22,7 +22,7 @@ const CATEGORIES = [
     ]},
     {"key": "grp_py_adv", "label": "Advanced Python", "children": [
       {"key": "grp_py_oop", "label": "Object-Oriented Python", "children": [
-        {"key": "py_oop",         "label": "The Map: Object-Oriented Python"},
+        {"key": "py_oop",         "label": "OOP Concepts"},
         {"key": "py_classes",     "label": "Classes & Objects"},
         {"key": "py_inheritance", "label": "Inheritance, Polymorphism & Design"},
         {"key": "py_dunder",      "label": "Dunder Methods & the Data Model"}
