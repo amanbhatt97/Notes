@@ -537,7 +537,8 @@ Ridge(alpha=60) = Ridge(n * 10)    : [3.769]</div>
     <tr><td>Standardised: OLS / ridge 1 / lasso 2</td><td>21.2, 2.8 / 12.5, 9.6 / 20.2, 1.7</td></tr>
   </table>
   <h3>Syntax</h3>
-  <div class="fx" data-lang="py">from sklearn.pipeline import make_pipeline
+  <div class="fx" data-lang="py">import numpy as np
+from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import Ridge, Lasso, ElasticNet, RidgeCV, LassoCV, ElasticNetCV
 
