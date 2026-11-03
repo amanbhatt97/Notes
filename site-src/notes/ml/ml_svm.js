@@ -3,110 +3,45 @@ Object.assign(TOPIC_CONTENT, {
   "ml_svm": `<main>
   <h1>Support Vector Machines</h1>
   <div class="where"><span>Machine Learning</span><span>Classification</span><span>Support Vector Machines</span></div>
-  <p class="lead">A support vector machine (SVM) separates two classes with the widest possible empty "street", decided only by the few training points that touch its edges. This note builds it completely on one tiny running example, six students: the geometry of w·x + b by hand, the margin 2/‖w‖, the hard-margin problem solved by hand, the dual and its α values, soft margins with C and the hinge loss, the kernel trick computed both ways, polynomial and RBF kernels and what γ and C do, why scaling is required, SVR, multiclass strategies, probabilities (and why <code>probability=True</code> is deprecated in scikit-learn 1.9), cost and when to use it, every scikit-learn parameter, and from-scratch solvers that match scikit-learn.</p>
+  <p class="lead">A support vector machine, or SVM, separates two classes with the widest possible empty "street" between them, and that street is decided only by the few training points that touch its edges. With a mathematical shortcut called the kernel trick, the same idea draws curved boundaries without ever building curved features. Before gradient boosting took over tabular data, SVMs were the strongest general-purpose classifiers, and they are still excellent on small-to-medium datasets with many features, such as text and genomics; interviewers love them because they connect geometry, optimisation and loss functions in one model. Our running example is deliberately tiny: six students described by (hours studied per day, mock tests taken), three who failed, S1 (1, 1), S2 (2, 1) and S3 (1, 2), and three who passed, S4 (3, 3), S5 (4, 3) and S6 (3, 4). We will solve the SVM on them by hand and then add one awkward student, three burnt-out students, marks and a third grade, always on top of the same six.</p>
 
-  <h2 id="svm-fit" class="open"><span class="num">★</span>Where this fits</h2>
-<figure class="viz"><svg viewBox="0 0 640 220" width="640">
-<defs><marker id="svm-a0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="245" y="8" width="150" height="34" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="320" y="30" text-anchor="middle" font-size="13">Classification</text>
-<line x1="290" y1="42" x2="95" y2="78" stroke="currentColor" marker-end="url(#svm-a0)"/><line x1="305" y1="42" x2="250" y2="78" stroke="currentColor" marker-end="url(#svm-a0)"/><line x1="335" y1="42" x2="400" y2="78" stroke="currentColor" marker-end="url(#svm-a0)"/><line x1="350" y1="42" x2="550" y2="78" stroke="currentColor" marker-end="url(#svm-a0)"/>
-<rect x="20" y="80" width="150" height="44" rx="7" class="fb sb"/><text x="95" y="99" text-anchor="middle" font-size="12.5">Logistic Regression</text><text x="95" y="115" text-anchor="middle" font-size="10.5" class="tm">a line from log loss</text>
-<rect x="180" y="80" width="140" height="44" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="250" y="99" text-anchor="middle" font-size="12.5">Naive Bayes</text><text x="250" y="115" text-anchor="middle" font-size="10.5" class="tm">class counts</text>
-<rect x="330" y="80" width="140" height="44" rx="7" class="fb sb"/><text x="400" y="99" text-anchor="middle" font-size="12.5">K-Nearest Neighbors</text><text x="400" y="115" text-anchor="middle" font-size="10.5" class="tm">keeps every point</text>
-<rect x="480" y="76" width="150" height="52" rx="7" class="fg sg" stroke-width="3"/><text x="555" y="98" text-anchor="middle" font-size="13" font-weight="700">Support Vector Machines</text><text x="555" y="116" text-anchor="middle" font-size="10.5" class="tg">you are here</text>
-<line x1="470" y1="102" x2="478" y2="102" stroke="currentColor" marker-end="url(#svm-a0)"/>
-<rect x="170" y="160" width="170" height="40" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.3"/><text x="255" y="184" text-anchor="middle" font-size="12" class="tm">Tree-Based Models (next group)</text>
-<rect x="360" y="160" width="130" height="40" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.3"/><text x="425" y="184" text-anchor="middle" font-size="12" class="tm">Calibration</text>
-<rect x="510" y="160" width="120" height="40" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.3"/><text x="570" y="184" text-anchor="middle" font-size="12" class="tm">Kernel PCA</text>
-<line x1="530" y1="128" x2="270" y2="158" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#svm-a0)"/><line x1="545" y1="128" x2="430" y2="158" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#svm-a0)"/><line x1="565" y1="128" x2="570" y2="158" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#svm-a0)"/>
-</svg><figcaption>The Classification group. The SVM takes logistic regression's straight line and KNN's "similarity to training points", and keeps only the few points on the border.</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: <a class="xref" data-note="ml_classification">Logistic Regression</a> and <a class="xref" data-note="ml_knn">K-Nearest Neighbors</a></b><span>Logistic regression draws one straight line, chosen by probabilities (log loss): every training point pulls on it a little, even points far from the border. KNN draws any shape, but keeps all n points, predicts slowly and has no notion of a "safe gap" between classes. Neither asks the question "how far is my boundary from the nearest examples?"</span></li>
-    <li><b>This note adds: the maximum-margin boundary</b><span>Among all lines that separate the classes, pick the one with the widest empty gap. It depends only on the border points (support vectors). With the kernel trick the same machinery draws curved boundaries without ever building the curved features.</span></li>
-    <li><b>Leads to: <a class="xref" data-note="ml_trees">Tree-Based Models</a>, <a class="xref" data-note="ml_evaluation">Model Evaluation</a> and <a class="xref" data-note="ml_calibration">Calibration</a></b><span>SVMs need scaling, struggle beyond ~100k rows and give no probabilities. Trees and boosting need no scaling and scale to millions of rows; evaluation and calibration turn SVM scores into decisions and probabilities. Kernels return in kernel PCA (<a class="xref" data-note="ml_pca">PCA</a>).</span></li>
-  </ol>
-  <p>Helpful background: dot products and vector length (<a class="xref" data-note="m_linalg">Linear Algebra</a>), minimising a function with constraints (<a class="xref" data-note="m_optimization">Optimization</a>), and loss functions (<a class="xref" data-note="ml_loss_gd">Loss Functions &amp; Gradient Descent</a>). Each is re-explained where it is used.</p>
-
-  <h2 id="svm-ladder" class="open"><span class="num">★</span>The Question Ladder</h2>
-  <p>One running example carries the whole note: <strong>six students</strong> described by (hours studied per day, mock tests taken). S1 (1,1), S2 (2,1), S3 (1,2) failed; S4 (3,3), S5 (4,3), S6 (3,4) passed. We code Fail as −1 and Pass as +1. Later we add one awkward student S7 (2.5, 2.5, Fail), then three burnt-out students, then marks and a third grade, always on top of the same six.</p>
-  <ol class="story">
-    <li><b>Many lines (01)</b><span>Q: many lines separate the six students; which is best? → The one that stays farthest from the nearest student: x1 + x2 = 4.5, 1.061 from the closest. But "farthest" needs a formula…</span></li>
-    <li><b>Geometry of a line (02)</b><span>Q: how far is a student from a line w·x + b = 0? → |w·x + b| / ‖w‖ (S4: 1.5 / 1.414 = 1.061). But we compared four hand-picked lines; we need the best of all lines…</span></li>
-    <li><b>Hard margin (03)</b><span>Q: which w, b give the widest street? → Minimise ½‖w‖² with every yᵢ(w·xᵢ + b) ≥ 1: w = (2/3, 2/3), b = −3, margin 2/‖w‖ = 2.121. But why did only three students matter?</span></li>
-    <li><b>Dual &amp; support vectors (04)</b><span>Q: which students decide the line? → Only those with αᵢ &gt; 0: S2, S3 (2/9 each), S4 (4/9). And the dual uses the data only through dot products. But real data is not perfectly separable…</span></li>
-    <li><b>Soft margin &amp; C (05)</b><span>Q: what if S7 (2.5, 2.5, Fail) sits among the Pass students? → Allow slack ξᵢ and pay C per unit: C = 1 gives a 2.828-wide street, C = 10 squeezes it to 0.707. But what is this objective in the language of losses?</span></li>
-    <li><b>Hinge loss (06)</b><span>Q: how does the SVM compare with logistic regression? → Both minimise "penalty + loss"; the SVM's hinge max(0, 1 − y·f) is exactly zero beyond the kerb, log loss never is. But both draw only straight lines…</span></li>
-    <li><b>Kernel trick (07)</b><span>Q: three burnt-out students (5,5), (6,5), (5,6) also failed; no straight line works. → Lift the data (effort s → (s, s²)) and cut there; the dual needs only dot products, so a kernel K(a, b) gives them without lifting (121 = 121). But which kernel?</span></li>
-    <li><b>Kernels, γ and C (08)</b><span>Q: linear, polynomial or RBF, and how do γ and C shape the boundary? → RBF exp(−γ‖a − b‖²) is a similarity; large γ = tiny bubbles (overfit), tune γ and C together. But distances assume comparable columns…</span></li>
-    <li><b>Scaling (09)</b><span>Q: what if hours are in minutes? → The widest street turns into "hours = 2.5" and ignores mocks; standardising restores it. But we have only predicted classes…</span></li>
-    <li><b>SVR (10)</b><span>Q: can the same idea predict marks? → Fit the flattest line with every mark inside a ±ε tube: mark = 8·s + 9 with ε = 5. And more than two classes?</span></li>
-    <li><b>Multiclass (11)</b><span>Q: Fail / Pass / Distinction? → One-vs-one: 3 pairwise SVMs vote; (4, 4) → Pass with 2 votes. But a score of +1 is not a probability…</span></li>
-    <li><b>Probabilities (12)</b><span>Q: what is P(Pass)? → Platt's sigmoid on the score (f = 1 → 0.818), fitted on held-out data via CalibratedClassifierCV. And what does all this cost?</span></li>
-    <li><b>Cost &amp; when to use (13)</b><span>Q: how big can the data be? → Kernel SVMs grow roughly as n² to n³; use LinearSVC or kernel approximations beyond ~100k rows; class_weight for imbalance. Then sklearn (14), from scratch (15), comparisons (16) and how it all connects (17).</span></li>
-  </ol>
-  <div class="bridge"><b>What this still can't tell us →</b> the ladder is only the map. <b>Next: the one-page Mind Map, then step 01.</b></div>
-
-  <h2 id="svm-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="svm-map"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">Support Vector Machines</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">1 · Geometry</div>
+        <div class="mm-title">Geometry</div>
         <ul>
-          <li><b>Boundary</b> w·x + b = 0; predict sign(w·x + b)</li>
-          <li><b>w</b> is perpendicular to the boundary; distance = |w·x + b| / ‖w‖</li>
-          <li>Scale (w, b) so the nearest points have |w·x + b| = 1 → <b>margin = 2/‖w‖</b></li>
-          <li>Six students: x1 + x2 = 4.5, w = (2/3, 2/3), b = −3, margin 2.121</li>
-          <li>💡 The widest road between two villages</li>
+          <li>Boundary w·x + b = 0; predict the sign of w·x + b</li>
+          <li>Distance to the boundary = |w·x + b| / ‖w‖</li>
+          <li>Scale so the nearest points score ±1 → <b>margin = 2/‖w‖</b></li>
+          <li><b>Support vectors</b>: the points that fix the street</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">2 · Hard margin &amp; dual</div>
+        <div class="mm-title">Optimisation</div>
         <ul>
-          <li><b>Primal</b>: min ½‖w‖² s.t. yᵢ(w·xᵢ + b) ≥ 1</li>
-          <li><b>Dual</b>: max Σαᵢ − ½ΣΣαᵢαⱼyᵢyⱼ xᵢ·xⱼ, αᵢ ≥ 0, Σαᵢyᵢ = 0</li>
-          <li><b>w = Σ αᵢyᵢxᵢ</b>; αᵢ &gt; 0 only for <b>support vectors</b></li>
-          <li>Students: α = 2/9 (S2), 2/9 (S3), 4/9 (S4); ‖w‖² = Σα = 8/9</li>
-          <li>Data enters only through dot products xᵢ·xⱼ</li>
+          <li>Hard margin: min ½‖w‖² s.t. yᵢ(w·xᵢ + b) ≥ 1</li>
+          <li>Soft margin: + C Σ ξᵢ; <b>C</b> = price of violations</li>
+          <li>= L2 penalty + <b>hinge loss</b> max(0, 1 − y·f)</li>
+          <li>Dual: w = Σ αᵢyᵢxᵢ, uses only dot products</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">3 · Soft margin &amp; hinge</div>
+        <div class="mm-title">Kernels</div>
         <ul>
-          <li>min ½‖w‖² + C Σ ξᵢ, ξᵢ = max(0, 1 − yᵢfᵢ) = <b>hinge loss</b></li>
-          <li>Small C: wide street, many SVs · large C: narrow, few violations</li>
-          <li>S7 added: C=0.1 margin 3.143 · C=1 2.828 · C=10 0.707</li>
-          <li>Dual: 0 ≤ αᵢ ≤ C (box); αᵢ = C → inside the street or wrong side</li>
-          <li>vs logistic: hinge = 0 beyond the kerb, log loss never 0</li>
+          <li>K(a, b) = φ(a)·φ(b) without building φ</li>
+          <li>Linear, polynomial, <b>RBF</b> exp(−γ‖a − b‖²)</li>
+          <li>Large γ → wiggly, overfits; tune C and γ together</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">4 · Kernels</div>
+        <div class="mm-title">In practice</div>
         <ul>
-          <li><b>K(a, b) = φ(a)·φ(b)</b> without building φ: (a·b)² = 121 both ways</li>
-          <li><b>Linear</b> a·b · <b>poly</b> (γa·b + r)^d · <b>RBF</b> exp(−γ‖a−b‖²) · sigmoid</li>
-          <li>Burnt-out students: linear 0.667, poly / RBF 1.000</li>
-          <li><b>γ</b> large → tiny bubbles, wiggly (overfit); small → smooth</li>
-          <li>f(x) = Σ αᵢyᵢK(xᵢ, x) + b; tune C and γ together</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">5 · Variants</div>
-        <ul>
-          <li><b>SVR</b>: flattest f with |y − f| ≤ ε; ε-insensitive loss; marks = 8s + 9</li>
-          <li><b>Multiclass</b>: SVC one-vs-one (k(k−1)/2 models, vote); LinearSVC one-vs-rest</li>
-          <li><b>Probabilities</b>: Platt sigmoid; use <code>CalibratedClassifierCV(SVC(), ensemble=False)</code></li>
-          <li>⚠ <code>probability=True</code> deprecated in sklearn 1.9</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">6 · Practice</div>
-        <ul>
-          <li>⚠ <b>Scale features</b>: wine RBF 0.663 raw → 0.983 scaled</li>
-          <li>Kernel SVC ≈ O(n²)–O(n³) time, O(n²) kernel memory; great for n ≲ 50k</li>
-          <li>Large n: LinearSVC, SGDClassifier(hinge), Nystroem + linear</li>
-          <li><code>class_weight="balanced"</code>: minority recall 0.183 → 0.865</li>
-          <li>Strong for high-d, small-n (text, genes); no native probabilities</li>
+          <li><b>Always scale</b> (pipeline with StandardScaler)</li>
+          <li>SVR (ε-tube), multiclass one-vs-one</li>
+          <li>No probabilities: CalibratedClassifierCV(SVC(), ensemble=False)</li>
+          <li>Kernel cost ≈ n² to n³; LinearSVC for big data; class_weight</li>
         </ul>
       </div>
     </div>
@@ -115,35 +50,28 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="svm-ladder"><span class="rm-num">★</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The story in 13 questions</span></div></div>
-      <div class="rm-item rm-done" data-target="svm-idea"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">The Widest Street</span><span class="rm-sub">Four lines on six students</span></div></div>
-      <div class="rm-item rm-done" data-target="svm-geom"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Hyperplane Geometry</span><span class="rm-sub">w·x + b, distance, 2/‖w‖</span></div></div>
-      <div class="rm-item rm-done" data-target="svm-hard"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Hard Margin</span><span class="rm-sub">The primal, solved by hand</span></div></div>
-      <div class="rm-item rm-done" data-target="svm-dual"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Support Vectors &amp; the Dual</span><span class="rm-sub">α by hand, KKT</span></div></div>
-      <div class="rm-item rm-done" data-target="svm-soft"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Soft Margin &amp; C</span><span class="rm-sub">Slack for student S7</span></div></div>
-      <div class="rm-item rm-done" data-target="svm-hinge"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Hinge Loss</span><span class="rm-sub">vs log loss and 0-1</span></div></div>
-      <div class="rm-item rm-done" data-target="svm-kernel"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">The Kernel Trick</span><span class="rm-sub">Lift by hand, then skip the lift</span></div></div>
-      <div class="rm-item rm-done" data-target="svm-kernels"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Kernels, γ and C</span><span class="rm-sub">Linear, poly, RBF, sigmoid</span></div></div>
-      <div class="rm-item rm-done" data-target="svm-scale"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Feature Scaling</span><span class="rm-sub">Hours vs minutes</span></div></div>
-      <div class="rm-item rm-done" data-target="svm-svr"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">SVR</span><span class="rm-sub">The ε-tube on marks</span></div></div>
-      <div class="rm-item rm-done" data-target="svm-multi"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Multiclass</span><span class="rm-sub">One-vs-one, one-vs-rest</span></div></div>
-      <div class="rm-item rm-done" data-target="svm-prob"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Probabilities &amp; Calibration</span><span class="rm-sub">Platt, the 1.9 deprecation</span></div></div>
-      <div class="rm-item rm-done" data-target="svm-cost"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Cost &amp; When to Use</span><span class="rm-sub">n², LinearSVC, imbalance</span></div></div>
-      <div class="rm-item rm-done" data-target="svm-sklearn"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">scikit-learn in Practice</span><span class="rm-sub">Every parameter, C × γ grid</span></div></div>
-      <div class="rm-item rm-done" data-target="svm-scratch"><span class="rm-num">15</span><div class="rm-text"><span class="rm-label">From Scratch</span><span class="rm-sub">QP and subgradient solvers</span></div></div>
-      <div class="rm-item rm-done" data-target="svm-compare"><span class="rm-num">16</span><div class="rm-text"><span class="rm-label">Strengths &amp; Comparisons</span><span class="rm-sub">vs logistic, KNN, trees</span></div></div>
-      <div class="rm-item rm-done" data-target="svm-connect"><span class="rm-num">17</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One chain, one table</span></div></div>
-      <div class="rm-item rm-done" data-target="svm-traps"><span class="rm-num">18</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Scaling, γ, probabilities</span></div></div>
-      <div class="rm-item rm-done" data-target="svm-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note on one page</span></div></div>
-      <div class="rm-item rm-done" data-target="svm-qa"><span class="rm-num">19</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="svm-idea"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">The Widest Street</span><span class="rm-sub">many lines separate the students; which is best?</span></div></div>
+      <div class="rm-item rm-done" data-target="svm-geom"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Hyperplanes and the Margin</span><span class="rm-sub">w·x + b, distance to a line, 2/‖w‖</span></div></div>
+      <div class="rm-item rm-done" data-target="svm-hard"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">The Hard-Margin SVM</span><span class="rm-sub">the widest street as an optimisation problem</span></div></div>
+      <div class="rm-item rm-done" data-target="svm-dual"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Support Vectors and the Dual</span><span class="rm-sub">why only three students matter</span></div></div>
+      <div class="rm-item rm-done" data-target="svm-soft"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Soft Margin and C</span><span class="rm-sub">paying for points that do not fit</span></div></div>
+      <div class="rm-item rm-done" data-target="svm-hinge"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">The Hinge Loss</span><span class="rm-sub">SVM vs logistic regression</span></div></div>
+      <div class="rm-item rm-done" data-target="svm-kernel"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">The Kernel Trick</span><span class="rm-sub">curved boundaries without curved features</span></div></div>
+      <div class="rm-item rm-done" data-target="svm-kernels"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Kernels, γ and C</span><span class="rm-sub">polynomial, RBF, and how to tune them</span></div></div>
+      <div class="rm-item rm-done" data-target="svm-scale"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Feature Scaling</span><span class="rm-sub">why minutes instead of hours changes the line</span></div></div>
+      <div class="rm-item rm-done" data-target="svm-svr"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Support Vector Regression</span><span class="rm-sub">a tube instead of a street</span></div></div>
+      <div class="rm-item rm-done" data-target="svm-multi"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Multiclass and Probabilities</span><span class="rm-sub">one-vs-one voting, Platt scaling, the 1.9 change</span></div></div>
+      <div class="rm-item rm-done" data-target="svm-practice"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">SVMs in Practice</span><span class="rm-sub">cost, imbalance, tuning, from scratch, when to use</span></div></div>
+      <div class="rm-item rm-done" data-target="svm-traps"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">scaling, C backwards, γ, probabilities</span></div></div>
+      <div class="rm-item rm-done" data-target="svm-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">formulas, kernels, the students' numbers</span></div></div>
+      <div class="rm-item rm-done" data-target="svm-qa"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">the questions interviewers ask on SVMs</span></div></div>
     </div>
   </div>
 
   <h2 id="svm-idea"><span class="num">01</span>The Widest Street</h2>
-  <p><strong>The question we can't answer yet:</strong> logistic regression gives us <em>a</em> straight line between Pass and Fail, and KNN gives a boundary made of votes. Neither asks how much room the boundary leaves. When several lines all separate the students perfectly, which one should we trust for the next student?</p>
-  <h3>The need</h3>
-  <p>The six students can be separated by many lines. All of them make zero mistakes on these six, so "accuracy on the training data" cannot choose. But a line that passes very close to a student is fragile: the next student who is a little different from that one lands on the wrong side.</p>
-<figure class="viz"><svg viewBox="0 0 620 350" width="620">
+  <p>Plot the six students with hours across and mocks up. The three failing students sit in the bottom-left corner, the three passing students further up and to the right, and many different straight lines separate them perfectly. <a class="xref" data-note="ml_classification">Logistic regression</a> would give us one of those lines, chosen by fitting probabilities, and every training point would pull on it a little, even points far from the border. <a class="xref" data-note="ml_knn">KNN</a> would give a boundary made of local votes. Neither asks the question that matters most for the next student: how much room does the boundary leave?</p>
+  <p>All the lines below make zero mistakes on these six students, so training accuracy cannot choose between them. But a line that passes very close to a student is fragile: the next student who is only slightly different from that one will land on the wrong side.</p>
+  <figure class="viz"><svg viewBox="0 0 620 350" width="620">
 <line x1="40.0" y1="310.0" x2="40.0" y2="10.0" stroke="currentColor" stroke-opacity="0.07"/><text x="40.0" y="324.0" text-anchor="middle" class="tm" font-size="10">0</text>
 <line x1="100.0" y1="310.0" x2="100.0" y2="10.0" stroke="currentColor" stroke-opacity="0.07"/><text x="100.0" y="324.0" text-anchor="middle" class="tm" font-size="10">1</text>
 <line x1="160.0" y1="310.0" x2="160.0" y2="10.0" stroke="currentColor" stroke-opacity="0.07"/><text x="160.0" y="324.0" text-anchor="middle" class="tm" font-size="10">2</text>
@@ -180,76 +108,38 @@ Object.assign(TOPIC_CONTENT, {
 <line x1="380" y1="172" x2="410" y2="172" class="sg" stroke-width="3"/><text x="418" y="176" font-size="12">x1 + x2 = 4.5</text><text x="418" y="191" font-size="10.5" class="tm">closest student 1.061 ★</text>
 <circle cx="390" cy="230" r="6" class="fg sg"/><text x="402" y="234" font-size="12">Pass (+1)</text><rect x="384" y="250" width="12" height="12" class="fr sr"/><text x="402" y="260" font-size="12">Fail (−1)</text>
 </svg><figcaption>The six students and four lines that all separate them perfectly. They differ in how close they pass to the nearest student. The green line x1 + x2 = 4.5 keeps every student at least 1.061 away: the widest street.</figcaption></figure>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>You are building the widest possible road between two villages. Only the houses right at the roadside decide where the road can go. Houses deep inside the villages do not matter: you could demolish them and the road would not move. Those roadside houses are the <strong>support vectors</strong>.</p>
-  </div>
-  <h3>By hand: how close does each line pass?</h3>
-  <p>For each line we measure the distance of every student from it (the formula is derived in section 02) and keep the <strong>smallest</strong>, because the weakest point is what matters.</p>
-  <table class="tbl">
-    <tr><th>Line</th><th>S1 (1,1)</th><th>S2 (2,1)</th><th>S3 (1,2)</th><th>S4 (3,3)</th><th>S5 (4,3)</th><th>S6 (3,4)</th><th>Smallest</th></tr>
-    <tr><td>hours = 2.5</td><td>1.5</td><td>0.5</td><td>1.5</td><td>0.5</td><td>1.5</td><td>0.5</td><td>0.500</td></tr>
-    <tr><td>mocks = 2.5</td><td>1.5</td><td>1.5</td><td>0.5</td><td>0.5</td><td>0.5</td><td>1.5</td><td>0.500</td></tr>
-    <tr><td>x1 + x2 = 4</td><td>1.414</td><td>0.707</td><td>0.707</td><td>1.414</td><td>2.121</td><td>2.121</td><td>0.707</td></tr>
-    <tr><td><strong>x1 + x2 = 4.5</strong></td><td>1.768</td><td>1.061</td><td>1.061</td><td>1.061</td><td>1.768</td><td>1.768</td><td><strong>1.061</strong></td></tr>
-  </table>
-  <p>The vertical line hours = 2.5 passes 0.5 from S2, S4 and S6. The diagonal x1 + x2 = 4 is better (0.707) but sits closer to the Fail side. The diagonal x1 + x2 = 4.5, exactly halfway between the Fail students' best total (3) and the Pass students' worst total (6), keeps everyone at least 1.061 away. That is the SVM's choice.</p>
-<div class="fx" data-lang="py">import numpy as np
+  <p>To compare the lines, measure every student's distance from each line and keep the <em>smallest</em>, because the weakest point is what matters. (The distance formula is explained in the next section.)</p>
+  <div class="fx" data-lang="py">import numpy as np
 X6 = np.array([[1, 1], [2, 1], [1, 2], [3, 3], [4, 3], [3, 4]], dtype=float)   # (hours, mocks)
 y6 = np.array([-1, -1, -1, 1, 1, 1])                                         # -1 = Fail, +1 = Pass
-lines = {"x1 = 2.5":      (np.array([1, 0]), -2.5),
+lines = {"x1 = 2.5":      (np.array([1, 0]), -2.5),        # each line written as w.x + b = 0
          "x2 = 2.5":      (np.array([0, 1]), -2.5),
          "x1 + x2 = 4":   (np.array([1, 1]), -4.0),
          "x1 + x2 = 4.5": (np.array([1, 1]), -4.5)}
 for name, (w, b) in lines.items():
-    dist = y6 * (X6 @ w + b) / np.linalg.norm(w)        # signed distance, positive = correct side
-    print(f"{name:14s} distances {dist.round(3)}  all correct: {bool((dist &gt; 0).all())}  smallest: {dist.min():.3f}")</div>
-<div class="fx" data-lang="text">x1 = 2.5       distances [1.5 0.5 1.5 0.5 1.5 0.5]  all correct: True  smallest: 0.500
-x2 = 2.5       distances [1.5 1.5 0.5 0.5 0.5 1.5]  all correct: True  smallest: 0.500
-x1 + x2 = 4    distances [1.414 0.707 0.707 1.414 2.121 2.121]  all correct: True  smallest: 0.707
-x1 + x2 = 4.5  distances [1.768 1.061 1.061 1.061 1.768 1.768]  all correct: True  smallest: 1.061</div>
-  <p>All four lines put every student on the correct side ("all correct: True"); the last column is what separates them. The SVM picks the line that <strong>maximises the smallest distance</strong>.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>The <strong>margin</strong> of a separating line is the distance from the line to the closest training point; the street between the two classes is twice that wide. A <strong>maximum-margin classifier</strong> chooses, among all separating lines (hyperplanes in more dimensions), the one with the largest margin. The training points at that closest distance are the <strong>support vectors</strong>.</p>
-  </div>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>Why should the widest street generalise better? A new student is like an old one plus a little noise. If every training student is at least 1.061 from the line, a new student must differ from them by more than 1.061 to cross it. A wider margin means more tolerance for noise. Statistical learning theory makes this precise: the margin, not the number of features, controls how complex the classifier really is.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"The SVM finds the line with the highest accuracy." No: all four lines above have 100% training accuracy. The SVM optimises the margin, and with a soft margin (section 05) it may even accept some training mistakes to keep a wider street.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> we measured distances with a formula we have not explained, and we only compared four hand-picked lines. <b>Next: the geometry of w·x + b, so the distance and the margin become formulas.</b></div>
+    dist = y6 * (X6 @ w + b) / np.linalg.norm(w)            # signed distance, positive = correct side
+    print(f"{name:14s} distances {dist.round(3)}  smallest: {dist.min():.3f}")</div>
+  <div class="fx" data-lang="text">x1 = 2.5       distances [1.5 0.5 1.5 0.5 1.5 0.5]  smallest: 0.500
+x2 = 2.5       distances [1.5 1.5 0.5 0.5 0.5 1.5]  smallest: 0.500
+x1 + x2 = 4    distances [1.414 0.707 0.707 1.414 2.121 2.121]  smallest: 0.707
+x1 + x2 = 4.5  distances [1.768 1.061 1.061 1.061 1.768 1.768]  smallest: 1.061</div>
+  <p>The vertical line hours = 2.5 passes only 0.5 from S2, S4 and S6, and the horizontal line mocks = 2.5 is just as tight. The diagonal x1 + x2 = 4 (hours + mocks = 4) does better, keeping everyone at least 0.707 away, but it sits closer to the Fail side than the Pass side. The diagonal x1 + x2 = 4.5, exactly halfway between the failing students' best total (3) and the passing students' worst total (6), keeps every student at least 1.061 away. Among all separating lines, an SVM chooses the one that <strong>maximises the smallest distance</strong>. That smallest distance is called the <strong>margin</strong>, and the empty band on either side of the line, twice the margin wide, is the "street".</p>
+  <p>Think of building the widest possible road between two villages. Only the houses right at the roadside decide where the road can go; houses deep inside the villages do not matter, and you could demolish them without moving the road. In the SVM those roadside houses are called <strong>support vectors</strong>: the training points that sit exactly on the edges of the street and hold it in place. Here they are S2, S3 and S4.</p>
+  <p>Why should the widest street work best on new data? A new student is like an old one plus a little noise. If every training student is at least 1.061 from the line, a new student has to differ from them by more than 1.061 to cross it. A wider margin means more tolerance for noise, and statistical learning theory makes this precise: it is the margin, not the number of features, that controls how complex the classifier really is. That is why SVMs work well even when there are more features than rows.</p>
 
-  <h2 id="svm-geom"><span class="num">02</span>Hyperplane Geometry by Hand</h2>
-  <p><strong>The question we can't answer yet:</strong> how do we write a line so that a computer can (a) decide which side a student is on and (b) measure how far away the student is, in any number of dimensions?</p>
-  <h3>A line as w·x + b = 0</h3>
-  <p>Write the boundary as w·x + b = 0, where w = (w₁, w₂) is a vector of weights and b a number. For the green line, w = (1, 1) and b = −4.5: the line is 1·hours + 1·mocks − 4.5 = 0, i.e. x1 + x2 = 4.5. Every point gets a <strong>score</strong> f(x) = w·x + b.</p>
-  <ul>
-    <li>f(x) &gt; 0: Pass side. S4: 3 + 3 − 4.5 = +1.5.</li>
-    <li>f(x) &lt; 0: Fail side. S1: 1 + 1 − 4.5 = −2.5.</li>
-    <li>f(x) = 0: on the line, e.g. (2.25, 2.25).</li>
-  </ul>
-  <p>In 3 dimensions w·x + b = 0 is a flat plane, in d dimensions a <strong>hyperplane</strong>; the formulas do not change.</p>
-  <h3>w points across the line</h3>
-  <p>Take two points on the line, p = (2, 2.5) and q = (2.5, 2). Their difference p − q = (−0.5, 0.5) runs along the line. w·(p − q) = 1×(−0.5) + 1×0.5 = 0, so w is perpendicular to every direction along the line. w is the line's <strong>normal vector</strong>, pointing toward the Pass side.</p>
-  <h3>Deriving the distance formula</h3>
-  <p>Start from a point x and walk straight toward the line along w until you hit it. The unit vector in w's direction is w/‖w‖. Walking a distance r changes the score by r·‖w‖ (because w·(r·w/‖w‖) = r‖w‖²/‖w‖ = r‖w‖). To reduce the score from f(x) to 0 we need r = f(x)/‖w‖. So:</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Distance from x to the hyperplane w·x + b = 0</strong>: d = |w·x + b| / ‖w‖, where ‖w‖ = √(w₁² + w₂² + …). The sign of w·x + b tells the side; for a labelled point, yᵢ(w·xᵢ + b)/‖w‖ is positive when it is on the correct side (this is the <em>geometric margin</em> of the point).</p>
-  </div>
-  <p>By hand with w = (1, 1), ‖w‖ = √2 = 1.414: S4 has score 1.5 → distance 1.5/1.414 = <strong>1.061</strong>; S1 has score −2.5 → 2.5/1.414 = <strong>1.768</strong>. The origin (0,0) has score −4.5 → 3.182 from the line.</p>
-  <h3>The same line has many (w, b): fix the scale</h3>
-  <p>Multiply w and b by any positive number and the line does not move: (2/3)·(x1 + x2 − 4.5) = 0 is the same line as x1 + x2 − 4.5 = 0. The scores change, the distances do not. The SVM uses this freedom to fix one convenient scale: <strong>choose (w, b) so that the closest students have score exactly ±1</strong>. Here the closest score was ±1.5, so divide by 1.5: w = (2/3, 2/3), b = −3. Now S2, S3 score −1 and S4 scores +1.</p>
-<div class="fx" data-lang="py">for w, b in [(np.array([1.0, 1.0]), -4.5), (np.array([2 / 3, 2 / 3]), -3.0)]:
-    f = X6 @ w + b                                       # the score w.x + b of every student
-    print(f"w={w.round(3)} b={b}:  w.x+b = {f.round(3)}   distance |w.x+b|/||w|| = {(np.abs(f) / np.linalg.norm(w)).round(3)}")
-print("origin's distance |b|/||w|| =", round(4.5 / np.sqrt(2), 3))</div>
-<div class="fx" data-lang="text">w=[1. 1.] b=-4.5:  w.x+b = [-2.5 -1.5 -1.5  1.5  2.5  2.5]   distance |w.x+b|/||w|| = [1.768 1.061 1.061 1.061 1.768 1.768]
-w=[0.667 0.667] b=-3.0:  w.x+b = [-1.667 -1.    -1.     1.     1.667  1.667]   distance |w.x+b|/||w|| = [1.768 1.061 1.061 1.061 1.768 1.768]
-origin's distance |b|/||w|| = 3.182</div>
-  <p>Both rows describe the same line: scores differ by the factor 1.5, distances are identical. In the second, the three closest students have score exactly ±1.</p>
-  <h3>Margin = 2/‖w‖</h3>
-  <p>With that scaling, the two kerbs of the street are the lines w·x + b = +1 and w·x + b = −1. A point on the +1 kerb is 1/‖w‖ from the centre line (distance formula with |f| = 1), and the same on the −1 side. The street is <strong>2/‖w‖</strong> wide. Here ‖w‖ = √((2/3)² + (2/3)²) = 0.943, so the width is 2/0.943 = <strong>2.121</strong>, twice 1.061.</p>
-<figure class="viz"><svg viewBox="0 0 620 350" width="620">
+  <h2 id="svm-geom"><span class="num">02</span>Hyperplanes and the Margin</h2>
+  <p>To let a computer find the widest street, we need to describe a line with numbers, decide which side a point is on, and measure distances, in any number of dimensions. Write the boundary as <strong>w·x + b = 0</strong>, where x is a point (hours, mocks), w = (w₁, w₂) is a vector of weights and b is a number called the bias. For the line x1 + x2 = 4.5, w = (1, 1) and b = −4.5: 1 × hours + 1 × mocks − 4.5 = 0. Every point gets a <strong>score</strong> f(x) = w·x + b. A positive score means the Pass side (S4: 3 + 3 − 4.5 = +1.5), a negative score the Fail side (S1: 1 + 1 − 4.5 = −2.5), and zero means the point lies on the line. In three dimensions w·x + b = 0 is a flat plane, and in d dimensions it is called a <strong>hyperplane</strong>; the formulas do not change.</p>
+  <p>The vector w has a geometric meaning: it points straight across the line. Take two points on the line, (2, 2.5) and (2.5, 2); their difference (−0.5, 0.5) runs along the line, and w·(−0.5, 0.5) = −0.5 + 0.5 = 0, so w is perpendicular to every direction along the line. It is the line's <strong>normal vector</strong>, pointing toward the Pass side. That gives us the distance formula. Start at a point and walk straight toward the line along w. Each unit of distance walked changes the score by ‖w‖ (the length of w, √(w₁² + w₂²)). To bring the score from f(x) down to 0 you must therefore walk f(x)/‖w‖. So:</p>
+  <p style="text-align:center"><strong>distance from x to the hyperplane = |w·x + b| / ‖w‖</strong></p>
+  <p>By hand with w = (1, 1), so ‖w‖ = √2 = 1.414: S4 has score 1.5, distance 1.5/1.414 = 1.061; S1 has score −2.5, distance 1.768. Those are the numbers in the table of section 01. For a labelled point, multiplying by its label y (+1 for Pass, −1 for Fail) gives y(w·x + b)/‖w‖, which is positive when the point is on its correct side; that is what the code in section 01 computed.</p>
+  <p>There is one more subtlety. The same line has many descriptions: multiply w and b by any positive number and the line does not move, because 2·(x1 + x2 − 4.5) = 0 is the same line as x1 + x2 − 4.5 = 0. The scores change but the distances do not. The SVM uses this freedom to fix one convenient scale: <strong>choose w and b so that the closest points have scores of exactly +1 and −1</strong>. Here the closest scores are ±1.5, so divide everything by 1.5, giving w = (2/3, 2/3) and b = −3.</p>
+  <div class="fx" data-lang="py">for w, b in [(np.array([1.0, 1.0]), -4.5), (np.array([2 / 3, 2 / 3]), -3.0)]:
+    f = X6 @ w + b                                           # the score w.x + b of every student
+    print(f"w={w.round(3)} b={b}:  scores {f.round(3)}   distances {(np.abs(f) / np.linalg.norm(w)).round(3)}")</div>
+  <div class="fx" data-lang="text">w=[1. 1.] b=-4.5:  scores [-2.5 -1.5 -1.5  1.5  2.5  2.5]   distances [1.768 1.061 1.061 1.061 1.768 1.768]
+w=[0.667 0.667] b=-3.0:  scores [-1.667 -1.    -1.     1.     1.667  1.667]   distances [1.768 1.061 1.061 1.061 1.768 1.768]</div>
+  <p>Both rows describe the same line: the scores differ by the factor 1.5, the distances are identical, and in the second row the three closest students score exactly −1, −1 and +1. With this scaling, the two edges of the street are the lines w·x + b = +1 and w·x + b = −1. A point on the +1 edge is 1/‖w‖ from the centre line, and the same on the other side, so the street is <strong>2/‖w‖</strong> wide. Here ‖w‖ = √((2/3)² + (2/3)²) = 0.943, so the width is 2/0.943 = 2.121, twice the 1.061 we found. This formula is the key to the whole method: <em>a wider street means a smaller ‖w‖</em>.</p>
+  <figure class="viz"><svg viewBox="0 0 620 350" width="620">
 <defs><marker id="svm-w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="tb"/></marker></defs>
 <line x1="40.0" y1="310.0" x2="40.0" y2="10.0" stroke="currentColor" stroke-opacity="0.07"/><text x="40.0" y="324.0" text-anchor="middle" class="tm" font-size="10">0</text>
 <line x1="100.0" y1="310.0" x2="100.0" y2="10.0" stroke="currentColor" stroke-opacity="0.07"/><text x="100.0" y="324.0" text-anchor="middle" class="tm" font-size="10">1</text>
@@ -289,115 +179,62 @@ origin's distance |b|/||w|| = 3.182</div>
 <text x="380" y="142" font-size="10.5" class="tm">S2 (2,1), S3 (1,2), S4 (3,3)</text>
 <text x="380" y="170" font-size="12" class="tb">w is perpendicular to the line</text>
 </svg><figcaption>The hard-margin SVM on the six students. The street between the dashed kerbs is as wide as possible (2.121). Only the three ringed students touch the kerbs; delete S1, S5 or S6 and nothing moves.</figcaption></figure>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>The raw score w·x + b is <em>not</em> a distance and not a probability. Multiplying w and b by 10 multiplies every score by 10 and changes nothing about the line. Only |w·x + b|/‖w‖ is a distance, and only after calibration (section 12) does a score become a probability.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> we can measure the street for any given line, but we found the best line by trying four. <b>Next: state "widest street" as an optimisation problem and solve it.</b></div>
+  <p>The figure shows the result: the centre line x1 + x2 = 4.5, the two dashed edges at scores ±1, and the three ringed support vectors touching them. S1, S5 and S6 sit beyond the edges and play no part. Remember also that the raw score w·x + b is neither a distance nor a probability: multiply w and b by 10 and every score is multiplied by 10 while the line stays put.</p>
 
-  <h2 id="svm-hard"><span class="num">03</span>Hard Margin: the Optimisation Problem</h2>
-  <p><strong>The question we can't answer yet:</strong> there are infinitely many lines. How do we find the one with the widest street without trying them all, and how would a computer do it in 100 dimensions?</p>
-  <h3>From "widest street" to a clean problem</h3>
-  <ol>
-    <li>We want to maximise the width 2/‖w‖.</li>
-    <li>Subject to: every student on the correct side and outside the street. With the ±1 scaling this is yᵢ(w·xᵢ + b) ≥ 1 for every i (Pass students score ≥ +1, Fail students ≤ −1).</li>
-    <li>Maximising 2/‖w‖ is the same as minimising ‖w‖, which is the same as minimising ½‖w‖² (squaring removes the square root; ½ makes the derivative tidy). That is a smooth bowl, so there is exactly one best answer.</li>
-  </ol>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Hard-margin SVM (primal)</strong>: minimise ½‖w‖² over w, b, subject to yᵢ(w·xᵢ + b) ≥ 1 for all training points i. It is a <strong>convex quadratic program</strong>: a quadratic bowl with linear constraints, so any local minimum is the global one. It has a solution only if the classes are linearly separable.</p>
-  </div>
-  <h3>Solving it by hand for the six students</h3>
-  <p>By symmetry (the data is mirror-symmetric across the line hours = mocks) the best w has equal parts: w = (a, a). The score is a·(x1 + x2) + b, so only the total x1 + x2 matters. Fail totals: 2, 3, 3; Pass totals: 6, 7, 7. The constraints that can bind are the closest ones:</p>
-  <ul>
-    <li>Fail with total 3 (S2, S3): a·3 + b ≤ −1.</li>
-    <li>Pass with total 6 (S4): a·6 + b ≥ +1.</li>
-  </ul>
-  <p>To make ‖w‖ = a√2 as small as possible we want a small, so both constraints are tight: 3a + b = −1 and 6a + b = 1. Subtract: 3a = 2, so <strong>a = 2/3</strong>, and b = −1 − 3·(2/3) = <strong>−3</strong>. Check the other students: S1 total 2 → (2/3)·2 − 3 = −1.667 ≤ −1 ✓; S5, S6 total 7 → +1.667 ≥ 1 ✓. ‖w‖ = (2/3)√2 = 0.943, margin 2.121.</p>
-<div class="fx" data-lang="py">from sklearn.svm import SVC
-hard = SVC(kernel="linear", C=1e6, tol=1e-10).fit(X6, y6)   # huge C: no violations; tight tol: exact answer
+  <h2 id="svm-hard"><span class="num">03</span>The Hard-Margin SVM</h2>
+  <p>We found the best line by trying four. There are infinitely many lines, and in 100 dimensions we could not even draw them, so we need to state "widest street" as a mathematical problem a computer can solve. We want to maximise the width 2/‖w‖, subject to every training point being on its correct side and outside the street. With the ±1 scaling, "outside the street on the correct side" is yᵢ(w·xᵢ + b) ≥ 1 for every point i: passing students must score at least +1, failing students at most −1. Maximising 2/‖w‖ is the same as minimising ‖w‖, which is the same as minimising ½‖w‖² (squaring removes the square root, and the ½ makes the derivative neater). So:</p>
+  <p style="text-align:center"><strong>minimise ½‖w‖² over w and b, subject to yᵢ(w·xᵢ + b) ≥ 1 for every training point</strong></p>
+  <p>This is the <strong>hard-margin SVM</strong>, "hard" because no point is allowed inside the street. Mathematically it is a <strong>convex quadratic program</strong>: a bowl-shaped objective with straight-line constraints, which means it has exactly one best answer and reliable algorithms find it. It has a solution only when the classes can be separated by a straight line.</p>
+  <p>On the six students we can solve it by hand. The data is mirror-symmetric across the line hours = mocks, so the best w has equal parts, w = (a, a), and the score becomes a × (hours + mocks) + b: only each student's total matters. The failing totals are 2, 3, 3 and the passing totals 6, 7, 7. The constraints that can bind are the closest students: the failing students with total 3 need 3a + b ≤ −1, and the passing student with total 6 needs 6a + b ≥ +1. To make ‖w‖ = a√2 as small as possible we want a as small as possible, which happens when both constraints are tight: 3a + b = −1 and 6a + b = +1. Subtracting gives 3a = 2, so a = 2/3, and then b = −1 − 2 = −3. Check the others: S1 (total 2) scores −1.667 ≤ −1, and S5 and S6 (total 7) score +1.667 ≥ 1. The answer is w = (2/3, 2/3), b = −3, exactly the line from section 02.</p>
+  <div class="fx" data-lang="py">from sklearn.svm import SVC
+hard = SVC(kernel="linear", C=1e6, tol=1e-10).fit(X6, y6)  # huge C: no violations allowed
 w, b = hard.coef_[0], hard.intercept_[0]
-print("w =", w.round(4), " b =", round(b, 4), " ||w|| =", round(np.linalg.norm(w), 4), " margin 2/||w|| =", round(2 / np.linalg.norm(w), 4))
-print("support vectors:", hard.support_vectors_.tolist(), " indices:", hard.support_)
-print("y(w.x+b) for every student:", (y6 * (X6 @ w + b)).round(3))</div>
-<div class="fx" data-lang="text">w = [0.6667 0.6667]  b = -3.0  ||w|| = 0.9428  margin 2/||w|| = 2.1213
-support vectors: [[2.0, 1.0], [1.0, 2.0], [3.0, 3.0]]  indices: [1 2 3]
-y(w.x+b) for every student: [1.667 1.    1.    1.    1.667 1.667]</div>
-  <p>sklearn (with a huge C, which forbids violations, and a tight tolerance) gives exactly w = (2/3, 2/3), b = −3, margin 2.121, and lists S2, S3, S4 (rows 1, 2, 3) as support vectors: the three students with y·f = 1 exactly. S1, S5, S6 have 1.667: safely beyond the kerbs.</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Hard margin has no solution if even one point is on the wrong side, and it lets a single odd point squeeze the street to almost nothing. Real data always needs the soft margin of section 05. sklearn has no "hard margin" switch; a very large C imitates it.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> only three of the six students ended up mattering. Why exactly those three, and is there a way to see that from the problem itself? <b>Next: the dual problem and support vectors.</b></div>
+print("w =", w.round(4), " b =", round(b, 4), " margin 2/||w|| =", round(2 / np.linalg.norm(w), 4))
+print("support vectors:", hard.support_vectors_.tolist())
+print("y(w.x + b) for every student:", (y6 * (X6 @ w + b)).round(3))</div>
+  <div class="fx" data-lang="text">w = [0.6667 0.6667]  b = -3.0  margin 2/||w|| = 2.1213
+support vectors: [[2.0, 1.0], [1.0, 2.0], [3.0, 3.0]]
+y(w.x + b) for every student: [1.667 1.    1.    1.    1.667 1.667]</div>
+  <p>scikit-learn's <code>SVC</code> agrees exactly. It has no "hard margin" switch, so we imitate one with an enormous C (the next sections explain C), which forbids violations, and a tight tolerance so the solver stops at the exact answer. The support vectors it reports are (2, 1), (1, 2) and (3, 3): S2, S3 and S4, the three students whose y·f is exactly 1. The others have 1.667, safely beyond the edges. The hard margin has a serious weakness, though: if even one point sits on the wrong side there is no solution at all, and a single odd point near the border can squeeze the street to almost nothing. Section 05 fixes that.</p>
 
   <h2 id="svm-dual"><span class="num">04</span>Support Vectors and the Dual</h2>
-  <p><strong>The question we can't answer yet:</strong> the line was decided by S2, S3 and S4 alone. How does the mathematics "know" which points matter, how much each one matters, and why is this the key to kernels later?</p>
-  <h3>Lagrange multipliers in plain words</h3>
-  <p>A constrained problem can be turned into an unconstrained one by giving every constraint a "price" αᵢ ≥ 0 (a Lagrange multiplier; see <a class="xref" data-note="m_optimization">Optimization</a>). The Lagrangian is</p>
-  <p>L(w, b, α) = ½‖w‖² − Σᵢ αᵢ [yᵢ(w·xᵢ + b) − 1].</p>
-  <p>Setting the derivatives with respect to w and b to zero gives two famous equations:</p>
-  <ul>
-    <li>∂L/∂w = 0 → <strong>w = Σᵢ αᵢ yᵢ xᵢ</strong>: the weight vector is a weighted sum of training points.</li>
-    <li>∂L/∂b = 0 → <strong>Σᵢ αᵢ yᵢ = 0</strong>: the prices on the two sides balance.</li>
-  </ul>
-  <p>And the optimality (KKT) conditions add <strong>complementary slackness</strong>: αᵢ · [yᵢ(w·xᵢ + b) − 1] = 0. Either a point is exactly on its kerb, or its price is zero. Points beyond the kerb get αᵢ = 0 and vanish from w. The points with αᵢ &gt; 0 are the support vectors.</p>
-  <h3>The α values by hand</h3>
-  <p>Only S2 (2,1), S3 (1,2) and S4 (3,3) can have α &gt; 0. By symmetry α₂ = α₃ = α. Balance: α₄·(+1) + α·(−1) + α·(−1) = 0, so α₄ = 2α. Now w = Σ αᵢyᵢxᵢ:</p>
-  <p>w = 2α·(3, 3) − α·(2, 1) − α·(1, 2) = (6α − 3α, 6α − 3α) = (3α, 3α). We know w = (2/3, 2/3), so 3α = 2/3, <strong>α = 2/9 = 0.222</strong> and <strong>α₄ = 4/9 = 0.444</strong>.</p>
-  <p>A neat check for hard margins: ‖w‖² = Σαᵢ. Here ‖w‖² = 8/9 = 0.889 and Σα = 2/9 + 2/9 + 4/9 = 8/9 ✓. S4 carries twice the weight of S2 or S3 because it alone holds the Pass kerb against two Fail students.</p>
-<div class="fx" data-lang="py">print("dual_coef_ (= alpha_i * y_i, support vectors only):", hard.dual_coef_.round(4))
+  <p>Only three of the six students decided the line. How does the mathematics "know" which points matter, and how much each one matters? The answer comes from rewriting the problem in a second form, called the <strong>dual</strong>, and this rewriting is also what makes kernels possible later.</p>
+  <p>The standard tool for an optimisation problem with constraints is to give every constraint a "price", a number αᵢ ≥ 0 called a <strong>Lagrange multiplier</strong> (see <a class="xref" data-note="m_optimization">Optimization</a>). Combining the objective and the priced constraints and setting the derivatives to zero gives two famous equations. The first is <strong>w = Σ αᵢ yᵢ xᵢ</strong>: the weight vector is a weighted sum of the training points themselves. The second is <strong>Σ αᵢ yᵢ = 0</strong>: the total price on the Pass side balances the total on the Fail side. The optimality conditions (called the KKT conditions) add one more rule, <strong>complementary slackness</strong>: for every point, either it sits exactly on its edge of the street, or its price αᵢ is zero. Points beyond the edge get αᵢ = 0 and vanish from w. The points with αᵢ &gt; 0 are, by definition, the support vectors.</p>
+  <p>We can find the α values by hand. Only S2 (2, 1), S3 (1, 2) and S4 (3, 3) can have α &gt; 0, and by symmetry S2 and S3 have the same value, call it α. The balance condition says α₄ × (+1) + α × (−1) + α × (−1) = 0, so α₄ = 2α. Then w = 2α(3, 3) − α(2, 1) − α(1, 2) = (3α, 3α). We know w = (2/3, 2/3), so 3α = 2/3, giving α = 2/9 ≈ 0.222 for S2 and S3 and α₄ = 4/9 ≈ 0.444 for S4. S4 carries twice the weight because it alone holds the Pass edge against two failing students. There is a neat check for hard margins: ‖w‖² should equal Σαᵢ, and indeed 8/9 = 2/9 + 2/9 + 4/9.</p>
+  <div class="fx" data-lang="py">print("dual_coef_ (alpha_i * y_i):", hard.dual_coef_.round(4))
 alpha = np.abs(hard.dual_coef_[0])
 sv, ysv = hard.support_vectors_, y6[hard.support_]
-print("alphas:", alpha.round(4), " sum(alpha*y) =", round(float((alpha * ysv).sum()), 6))
-print("w rebuilt = sum(alpha*y*x):", ((alpha * ysv) @ sv).round(4), "  ||w||^2 =", round(np.linalg.norm(w) ** 2, 4), " sum(alpha) =", round(alpha.sum(), 4))
+print("w rebuilt as sum(alpha*y*x):", ((alpha * ysv) @ sv).round(4),
+      "  sum(alpha) =", alpha.sum().round(4), " ||w||^2 =", round(float(w @ w), 4))
 xnew = np.array([3.0, 2.0])
-print("f(3,2) via dual:", round(float((alpha * ysv) @ (sv @ xnew) + b), 4), "  via w:", round(float(w @ xnew + b), 4))</div>
-<div class="fx" data-lang="text">dual_coef_ (= alpha_i * y_i, support vectors only): [[-0.2222 -0.2222  0.4444]]
-alphas: [0.2222 0.2222 0.4444]  sum(alpha*y) = 0.0
-w rebuilt = sum(alpha*y*x): [0.6667 0.6667]   ||w||^2 = 0.8889  sum(alpha) = 0.8889
-f(3,2) via dual: 0.3333   via w: 0.3333</div>
-  <p>sklearn stores αᵢyᵢ for support vectors only in <code>dual_coef_</code>: −0.2222, −0.2222, +0.4444, exactly the hand values. Rebuilding w from them gives (2/3, 2/3). The last line scores a new student (3, 2) two ways: through w, and through the dual form, which uses only dot products with the three support vectors.</p>
-  <h3>The dual problem: only dot products</h3>
-  <p>Substituting w = Σαᵢyᵢxᵢ back into L removes w and b and leaves a problem in α alone:</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Dual SVM</strong>: maximise Σᵢ αᵢ − ½ Σᵢ Σⱼ αᵢ αⱼ yᵢ yⱼ (xᵢ·xⱼ) subject to αᵢ ≥ 0 and Σᵢ αᵢyᵢ = 0. Prediction: f(x) = Σᵢ αᵢ yᵢ (xᵢ·x) + b, summing over support vectors only. <strong>Support vectors</strong> are the training points with αᵢ &gt; 0.</p>
-  </div>
-  <p>By hand for the new student (3, 2): dot products with the support vectors: (2,1)·(3,2) = 8, (1,2)·(3,2) = 7, (3,3)·(3,2) = 15. f = −(2/9)·8 − (2/9)·7 + (4/9)·15 − 3 = −1.778 − 1.556 + 6.667 − 3 = <strong>0.333</strong> → Pass, just inside the street. Same as w·x + b = (2/3)·5 − 3 = 0.333.</p>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>Look at what the dual needs: never the points themselves, only the dot products xᵢ·xⱼ between pairs. That single fact is what makes the kernel trick (section 07) possible: replace every dot product by a kernel K(xᵢ, xⱼ) and the SVM works in a lifted space it never builds.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"Support vectors are the points closest to the other class." Close, but the definition is αᵢ &gt; 0. With a soft margin they include every point on the kerb, inside the street or misclassified; there can be many (416 of 420 on noisy data with tiny C, section 08).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> everything so far assumed a perfect, empty street exists. One awkward student can destroy it. <b>Next: soft margins, slack and C.</b></div>
+print("score of (3,2) via dot products with SVs:", round(float((alpha * ysv) @ (sv @ xnew) + b), 4),
+      "  via w:", round(float(w @ xnew + b), 4))</div>
+  <div class="fx" data-lang="text">dual_coef_ (alpha_i * y_i): [[-0.2222 -0.2222  0.4444]]
+w rebuilt as sum(alpha*y*x): [0.6667 0.6667]   sum(alpha) = 0.8889  ||w||^2 = 0.8889
+score of (3,2) via dot products with SVs: 0.3333   via w: 0.3333</div>
+  <p>scikit-learn stores αᵢyᵢ for the support vectors only, in <code>dual_coef_</code>: −0.2222, −0.2222, +0.4444, exactly the hand values. Rebuilding w from them gives (2/3, 2/3), and Σα = ‖w‖² = 0.8889. The last line scores a new student (3, 2) in two ways. Through w it is (2/3)·5 − 3 = 0.333. Through the dual it uses only the dot products of (3, 2) with the three support vectors, 8, 7 and 15: −(2/9)·8 − (2/9)·7 + (4/9)·15 − 3 = 0.333. The answer is Pass, just inside the street.</p>
+  <p>Substituting w = Σαᵢyᵢxᵢ back into the problem removes w and b entirely and leaves a problem in the α values alone, the <strong>dual problem</strong>: maximise Σαᵢ − ½ Σᵢ Σⱼ αᵢαⱼyᵢyⱼ (xᵢ·xⱼ), subject to αᵢ ≥ 0 and Σαᵢyᵢ = 0; then predict with f(x) = Σ αᵢyᵢ (xᵢ·x) + b over the support vectors. Look carefully at what the dual needs: never the points themselves, only the <strong>dot products</strong> xᵢ·xⱼ between pairs of points. That single observation is what the kernel trick in section 07 exploits. It also explains a practical fact: deleting any point that is not a support vector (S1, S5 or S6 here) and retraining gives exactly the same model.</p>
 
-  <h2 id="svm-soft"><span class="num">05</span>Soft Margin, Slack and C</h2>
-  <p><strong>The question we can't answer yet:</strong> a seventh student, S7, studied 2.5 hours and took 2.5 mocks, and failed. S7's total effort is 5, more than the centre of our street (4.5), so the six-student line puts S7 on the Pass side, inside the street. Should the street squeeze until S7 fits, or should we accept one awkward student and keep a wide street?</p>
-  <h3>Slack: paying for violations</h3>
-  <p>Give every student a slack ξᵢ ≥ 0 that measures how far it intrudes: yᵢ(w·xᵢ + b) ≥ 1 − ξᵢ. ξ = 0: beyond the kerb (no cost). 0 &lt; ξ &lt; 1: inside the street but on the correct side. ξ &gt; 1: on the wrong side. Each unit of slack costs C.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Soft-margin SVM</strong>: minimise ½‖w‖² + C Σᵢ ξᵢ subject to yᵢ(w·xᵢ + b) ≥ 1 − ξᵢ and ξᵢ ≥ 0. At the optimum ξᵢ = max(0, 1 − yᵢ(w·xᵢ + b)). <strong>C</strong> is the price of one unit of violation: small C = wide street, more violations tolerated; large C = narrow street, few violations.</p>
-  </div>
-  <h3>By hand: three candidate lines at C = 1</h3>
-  <table class="tbl">
-    <tr><th>Candidate</th><th>½‖w‖²</th><th>Slacks (who pays)</th><th>Objective at C = 1</th></tr>
-    <tr><td>Old six-student line: w = (2/3, 2/3), b = −3</td><td>½ · 8/9 = 0.444</td><td>S7: score (2/3)·5 − 3 = 0.333, y·f = −0.333 → ξ = 1.333</td><td>0.444 + 1.333 = 1.778</td></tr>
-    <tr><td>Narrow line: w = (2, 2), b = −11 (x1 + x2 = 5.5)</td><td>½ · 8 = 4.000</td><td>none: S7 scores −1, S4 scores +1</td><td>4.000</td></tr>
-    <tr><td>sklearn's answer: w = (0.5, 0.5), b = −2.5 (x1 + x2 = 5)</td><td>½ · 0.5 = 0.250</td><td>S4: y·f = 0.5 → ξ = 0.5; S7: y·f = 0 → ξ = 1</td><td>0.25 + 1.5 = <strong>1.750</strong></td></tr>
-  </table>
-  <p>At C = 1 the narrow line that obeys every student costs 4.0, while tolerating S7 costs about 1.75. The SVM prefers the wide street and pays for S7. Raise C to 10 and violations become expensive: 0.25 + 10 × 1.5 = 15.25 for the wide line versus 4.0 for the narrow one, so the narrow line wins.</p>
-<div class="fx" data-lang="py">X7 = np.vstack([X6, [2.5, 2.5]])                     # student 7: 2.5 hours, 2.5 mocks, failed
+  <h2 id="svm-soft"><span class="num">05</span>Soft Margin and C</h2>
+  <p>Real data is never perfectly separable. Suppose a seventh student, S7, studied 2.5 hours, took 2.5 mocks, and failed. S7's total effort is 5, more than the centre of our street (4.5), so the six-student line puts S7 on the Pass side. The hard-margin SVM now has two bad options: squeeze the street until S7 fits on the correct side, or, if a student lands deep in the other class, give up because no solution exists. What we want instead is to accept that one awkward student does not fit and keep a wide street for everyone else.</p>
+  <p>The <strong>soft-margin SVM</strong> allows this by giving every point a <strong>slack</strong> ξᵢ ≥ 0 (the Greek letter xi) that measures how far it intrudes: the constraint becomes yᵢ(w·xᵢ + b) ≥ 1 − ξᵢ. A slack of 0 means the point is outside the street on its correct side; between 0 and 1, inside the street but still on the correct side; above 1, on the wrong side. Slack is not free: each unit costs C, so the problem becomes</p>
+  <p style="text-align:center"><strong>minimise ½‖w‖² + C Σ ξᵢ, subject to yᵢ(w·xᵢ + b) ≥ 1 − ξᵢ and ξᵢ ≥ 0</strong></p>
+  <p>C is the price of one unit of violation. A small C makes violations cheap, so the SVM keeps a wide street and lets several points intrude. A large C makes them expensive, so the street narrows until almost no point intrudes. Think of a strict versus a relaxed teacher drawing a pass mark: the strict one (large C) moves the line to accommodate every individual case, the relaxed one (small C) keeps a simple, generous rule and accepts a few exceptions.</p>
+  <p>Compare three candidate lines at C = 1 by hand. The old six-student line, w = (2/3, 2/3), b = −3, has ½‖w‖² = 0.444; S7 scores (2/3)·5 − 3 = 0.333, but it is a failing student, so y·f = −0.333 and its slack is 1 − (−0.333) = 1.333, for a total of 1.778. A narrow line that obeys everyone, w = (2, 2), b = −11 (the line x1 + x2 = 5.5), has no slack but ½‖w‖² = 4.0. The line x1 + x2 = 5 with w = (0.5, 0.5), b = −2.5 has ½‖w‖² = 0.25, and makes S4 pay 0.5 (it scores only +0.5) and S7 pay 1 (it scores 0), for a total of 0.25 + 1.5 = 1.75. That is the cheapest, and it is what scikit-learn finds. Raise C to 10 and the same line costs 0.25 + 10 × 1.5 = 15.25, so the narrow line, at 4.0, wins instead.</p>
+  <div class="fx" data-lang="py">X7 = np.vstack([X6, [2.5, 2.5]])                             # student 7: 2.5 hours, 2.5 mocks, failed
 y7 = np.append(y6, -1)
-print(" C      w             b       margin   slacks xi (students 1..7)            objective")
-for C in [0.1, 1, 2, 10]:
+print(" C     w              b       margin   slacks of students 1..7            objective")
+for C in [0.1, 1, 10]:
     m = SVC(kernel="linear", C=C, tol=1e-10).fit(X7, y7)
     w, b = m.coef_[0], m.intercept_[0]
-    xi = np.maximum(0, 1 - y7 * (X7 @ w + b))           # hinge loss of every student
-    obj = 0.5 * w @ w + C * xi.sum()
-    print(f"{C:&lt;5}  {w.round(3)}  {b:7.3f}   {2 / np.linalg.norm(w):.3f}    {xi.round(2)}   {obj:.3f}")</div>
-<div class="fx" data-lang="text"> C      w             b       margin   slacks xi (students 1..7)            objective
-0.1    [0.45 0.45]   -2.250   3.143    [0.   0.1  0.1  0.55 0.1  0.1  1.  ]   0.398
-1      [0.5 0.5]   -2.500   2.828    [0.  0.  0.  0.5 0.  0.  1. ]   1.750
-2      [1. 1.]   -5.500   1.414    [0.  0.  0.  0.5 0.  0.  0.5]   3.000
-10     [2. 2.]  -11.000   0.707    [0. 0. 0. 0. 0. 0. 0.]   4.000</div>
-<figure class="viz"><svg viewBox="0 0 640 305" width="640">
+    xi = np.maximum(0, 1 - y7 * (X7 @ w + b))                # slack = hinge loss of every student
+    print(f"{C:&lt;5} {w.round(3)}  {b:7.3f}   {2 / np.linalg.norm(w):.3f}    {xi.round(2)}   {0.5 * w @ w + C * xi.sum():.3f}")</div>
+  <div class="fx" data-lang="text"> C     w              b       margin   slacks of students 1..7            objective
+0.1   [0.45 0.45]   -2.250   3.143    [0.   0.1  0.1  0.55 0.1  0.1  1.  ]   0.398
+1     [0.5 0.5]   -2.500   2.828    [0.  0.  0.  0.5 0.  0.  1. ]   1.750
+10    [2. 2.]  -11.000   0.707    [0. 0. 0. 0. 0. 0. 0.]   4.000</div>
+  <p>Read the table from top to bottom. At C = 0.1 the street is widest (3.143); five students pay a little slack and S7 pays 1. At C = 1 the street is 2.828 wide and only S4 and S7 pay, exactly as computed by hand (objective 1.750). At C = 10 the street shrinks to 0.707 and nobody pays: the model has bent to fit every student.</p>
+  <figure class="viz"><svg viewBox="0 0 640 305" width="640">
 <line x1="30.0" y1="240.0" x2="30.0" y2="10.0" stroke="currentColor" stroke-opacity="0.07"/><text x="30.0" y="254.0" text-anchor="middle" class="tm" font-size="10">0</text>
 <line x1="76.0" y1="240.0" x2="76.0" y2="10.0" stroke="currentColor" stroke-opacity="0.07"/><text x="76.0" y="254.0" text-anchor="middle" class="tm" font-size="10">1</text>
 <line x1="122.0" y1="240.0" x2="122.0" y2="10.0" stroke="currentColor" stroke-opacity="0.07"/><text x="122.0" y="254.0" text-anchor="middle" class="tm" font-size="10">2</text>
@@ -453,46 +290,24 @@ for C in [0.1, 1, 2, 10]:
 <text x="145" y="296" text-anchor="middle" font-size="10.5" class="tm">wide street, S7 and others inside it</text>
 <text x="465" y="296" text-anchor="middle" font-size="10.5" class="tm">narrow street, nobody inside</text>
 </svg><figcaption>Student S7 (2.5, 2.5, Fail, ringed) sits among the Pass students. Small C (left) accepts paying for S7 and a few others to keep a wide street; large C (right) squeezes the street to 0.707 so that every student is on the correct side.</figcaption></figure>
-  <p>Read the table from top to bottom. C = 0.1: the widest street (3.143), five students pay a little and S7 pays 1. C = 1 and 2: narrower. C = 10: the street shrinks to 0.707 and nobody pays, which is the hard-margin answer for seven students. In the dual, soft margin only adds an upper limit: <strong>0 ≤ αᵢ ≤ C</strong>. Points with αᵢ = C are the ones inside the street or on the wrong side.</p>
-  <table class="tbl">
-    <tr><th>C</th><th>Street</th><th>Support vectors</th><th>Risk</th></tr>
-    <tr><td>small (0.01–0.1)</td><td>wide; many points inside</td><td>many</td><td>underfit: ignores real structure</td></tr>
-    <tr><td>medium (1)</td><td>balanced</td><td>moderate</td><td>usually the best starting point (sklearn default)</td></tr>
-    <tr><td>large (100+)</td><td>narrow; bends around single points</td><td>few, but each decisive</td><td>overfit to noise or mislabelled rows</td></tr>
-  </table>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>C is the <em>inverse</em> of regularisation strength, like C in LogisticRegression and unlike α in Ridge. "Increase C to regularise more" is backwards. Also, the best C depends on the number of rows (the slack sum grows with n), so re-tune C when the dataset size changes a lot.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> we wrote the SVM as "margin + C × slacks". How does that compare with logistic regression, which we know as "penalty + log loss"? <b>Next: the hinge loss.</b></div>
+  <p>The figure shows the two extremes: with small C the street stays wide and S7 sits inside it, paying its cost; with large C the street squeezes between S7 and S4. Which is better depends on whether S7 is a genuine pattern or noise, and that is exactly what cross-validation decides when we tune C. In the dual, the soft margin changes only one thing: each α is capped, <strong>0 ≤ αᵢ ≤ C</strong>. Points with αᵢ = C are the ones inside the street or on the wrong side. Note the direction carefully, because it trips people up: C is the <em>inverse</em> of regularisation strength, like C in logistic regression and unlike α in ridge regression. Large C means less regularisation and a risk of overfitting; small C means more regularisation and a risk of underfitting. The default, C = 1, is a reasonable starting point.</p>
 
-  <h2 id="svm-hinge"><span class="num">06</span>Hinge Loss: the SVM as Penalty + Loss</h2>
-  <p><strong>The question we can't answer yet:</strong> logistic regression minimises a loss (log loss) plus a penalty on the weights. Is the SVM a completely different animal, or the same recipe with a different loss? And what difference does the loss make?</p>
-  <h3>The slack is a loss</h3>
-  <p>At the optimum ξᵢ = max(0, 1 − yᵢf(xᵢ)). So the soft-margin problem is simply</p>
-  <p><strong>minimise ½‖w‖² + C Σᵢ max(0, 1 − yᵢ f(xᵢ))</strong>, where f(x) = w·x + b.</p>
-  <p>The term max(0, 1 − z) with z = y·f is the <strong>hinge loss</strong>. Dividing by C·n shows it is the same shape as regularised logistic regression: average loss + λ‖w‖², with λ = 1/(2Cn).</p>
-  <h3>By hand on the seven students (C = 1 line, f = 0.5·(x1 + x2) − 2.5)</h3>
-  <table class="tbl">
-    <tr><th>Student</th><th>y</th><th>f</th><th>z = y·f</th><th>0-1 loss</th><th>hinge max(0, 1−z)</th><th>log loss log₂(1+e^(−z))</th></tr>
-    <tr><td>S1 (1,1)</td><td>−1</td><td>−1.5</td><td>1.5</td><td>0</td><td>0</td><td>0.291</td></tr>
-    <tr><td>S2, S3</td><td>−1</td><td>−1.0</td><td>1.0</td><td>0</td><td>0</td><td>0.452</td></tr>
-    <tr><td>S4 (3,3)</td><td>+1</td><td>0.5</td><td>0.5</td><td>0</td><td>0.5</td><td>0.684</td></tr>
-    <tr><td>S5, S6</td><td>+1</td><td>1.0</td><td>1.0</td><td>0</td><td>0</td><td>0.452</td></tr>
-    <tr><td>S7 (2.5,2.5)</td><td>−1</td><td>0.0</td><td>0.0</td><td>1</td><td>1</td><td>1.000</td></tr>
-  </table>
-<div class="fx" data-lang="py">m1 = SVC(kernel="linear", C=1, tol=1e-10).fit(X7, y7)
-z = y7 * m1.decision_function(X7)                      # z = y * f(x), the signed score
-print("z = y*f(x)     :", z.round(3))
-print("0-1 loss       :", (z &lt;= 0).astype(float))
-print("hinge          :", np.maximum(0, 1 - z).round(3))
-print("log loss (bits):", np.log2(1 + np.exp(-z)).round(3))
-print("squared hinge  :", (np.maximum(0, 1 - z) ** 2).round(3))</div>
-<div class="fx" data-lang="text">z = y*f(x)     : [1.5 1.  1.  0.5 1.  1.  0. ]
-0-1 loss       : [0. 0. 0. 0. 0. 0. 1.]
-hinge          : [0.  0.  0.  0.5 0.  0.  1. ]
-log loss (bits): [0.291 0.452 0.452 0.684 0.452 0.452 1.   ]
-squared hinge  : [0.   0.   0.   0.25 0.   0.   1.  ]</div>
-<figure class="viz"><svg viewBox="0 0 600 280" width="600">
+  <h2 id="svm-hinge"><span class="num">06</span>The Hinge Loss</h2>
+  <p>Logistic regression is usually described as "minimise a loss (log loss) plus a penalty on the weights". Is the SVM a completely different kind of model, or the same recipe with a different loss? At the optimum, each slack takes the smallest value its constraint allows, ξᵢ = max(0, 1 − yᵢf(xᵢ)). Substituting that in, the soft-margin SVM is simply</p>
+  <p style="text-align:center"><strong>minimise ½‖w‖² + C Σ max(0, 1 − yᵢ f(xᵢ))</strong></p>
+  <p>The term max(0, 1 − y·f) is called the <strong>hinge loss</strong>, because its graph looks like a door hinge: flat at zero, then a straight line rising. So an SVM is exactly <strong>L2-regularised hinge-loss minimisation</strong>, while logistic regression is L2-regularised log-loss minimisation. Same recipe, different loss (<a class="xref" data-note="ml_loss_gd">Loss Functions &amp; Gradient Descent</a>). Write z = y·f, the signed score, which is positive when a point is on its correct side. Here are the losses for the seven students under the C = 1 line:</p>
+  <div class="fx" data-lang="py">m1 = SVC(kernel="linear", C=1, tol=1e-10).fit(X7, y7)
+z = y7 * m1.decision_function(X7)                            # z = y * f(x)
+print("z = y*f(x)      :", z.round(3))
+print("0-1 loss        :", (z &lt;= 0).astype(float))
+print("hinge loss      :", np.maximum(0, 1 - z).round(3))
+print("log loss (bits) :", np.log2(1 + np.exp(-z)).round(3))</div>
+  <div class="fx" data-lang="text">z = y*f(x)      : [1.5 1.  1.  0.5 1.  1.  0. ]
+0-1 loss        : [0. 0. 0. 0. 0. 0. 1.]
+hinge loss      : [0.  0.  0.  0.5 0.  0.  1. ]
+log loss (bits) : [0.291 0.452 0.452 0.684 0.452 0.452 1.   ]</div>
+  <p>The hinge column is exactly the slack column from section 05: 0.5 for S4, 1 for S7, zero for everyone else. The plain 0-1 loss (1 for a mistake, 0 otherwise) only charges S7. Log loss charges every student something, even S1, who is far on the correct side (0.291).</p>
+  <figure class="viz"><svg viewBox="0 0 600 280" width="600">
 <line x1="60.0" y1="235.0" x2="60.0" y2="15.0" stroke="currentColor" stroke-opacity="0.08"/><text x="60.0" y="250.0" text-anchor="middle" class="tm" font-size="11">-2</text>
 <line x1="160.0" y1="235.0" x2="160.0" y2="15.0" stroke="currentColor" stroke-opacity="0.08"/><text x="160.0" y="250.0" text-anchor="middle" class="tm" font-size="11">-1</text>
 <line x1="260.0" y1="235.0" x2="260.0" y2="15.0" stroke="currentColor" stroke-opacity="0.08"/><text x="260.0" y="250.0" text-anchor="middle" class="tm" font-size="11">0</text>
@@ -514,25 +329,12 @@ squared hinge  : [0.   0.   0.   0.25 0.   0.   1.  ]</div>
 <line x1="400" y1="62" x2="430" y2="62" class="sb" stroke-width="2"/><text x="436" y="66" font-size="12">log loss (bits)</text>
 <line x1="400" y1="84" x2="430" y2="84" class="sr" stroke-width="2" stroke-dasharray="6 4"/><text x="436" y="88" font-size="12">0-1 loss</text>
 </svg><figcaption>Three losses against the signed score z. Hinge is exactly zero once a student is beyond the kerb (z ≥ 1), so those students have no influence. Log loss never reaches zero, so logistic regression listens to every point. Dots: three of the seven students under the C = 1 line.</figcaption></figure>
-  <p>The hinge column is exactly the slack column of section 05 for C = 1 (0.5 for S4, 1 for S7). Two differences from log loss matter:</p>
-  <ul>
-    <li><strong>Exactly zero beyond the kerb.</strong> S1, S2, S3, S5, S6 contribute nothing to the hinge loss, so moving them (without crossing the kerb) cannot move the line. That is why only support vectors matter. Under log loss every student still pulls (0.291 for S1).</li>
-    <li><strong>Linear, not exponential, for bad mistakes.</strong> Both grow roughly linearly for very wrong points, so both are more robust to outliers than squared losses. The squared hinge (sklearn <code>LinearSVC(loss="squared_hinge")</code>, its default) punishes big violations more.</li>
-  </ul>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Hinge loss</strong>: ℓ(y, f) = max(0, 1 − y·f), for y ∈ {−1, +1}. It is a convex upper bound of the 0-1 loss. <strong>SVM = L2-regularised hinge-loss minimisation</strong>; logistic regression = L2-regularised log-loss minimisation (see <a class="xref" data-note="ml_loss_gd">Loss Functions &amp; Gradient Descent</a>).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Because the hinge is flat at zero beyond the kerb, the SVM has no reason to push points further out, so its scores carry no probability meaning. Logistic regression's log loss keeps rewarding confidence, which is why its outputs are (roughly) calibrated probabilities and the SVM's are not.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> every boundary so far was a straight line. Some students fail because they did too little and others because they burnt out from too much; no straight line can separate that. <b>Next: the kernel trick.</b></div>
+  <p>The figure shows the three losses against z, and two differences matter. First, the hinge is <em>exactly zero</em> once a point is beyond the edge of the street (z ≥ 1). Moving such a point around, without crossing the edge, cannot change the loss, so it cannot move the line. That is the loss-function view of why only support vectors matter. Log loss never reaches zero, so in logistic regression every point keeps pulling a little. Second, because the hinge stops rewarding a point once it is past the edge, the SVM has no reason to make its scores mean anything beyond "which side, and is it past the edge"; its scores are not probabilities. Log loss keeps rewarding confidence, which is why logistic regression's outputs are roughly calibrated probabilities. Both losses grow only linearly for badly wrong points, so both are more robust to outliers than a squared loss would be; the <strong>squared hinge</strong>, max(0, 1 − z)², which <code>LinearSVC</code> uses by default, punishes large violations more heavily.</p>
 
   <h2 id="svm-kernel"><span class="num">07</span>The Kernel Trick</h2>
-  <p><strong>The question we can't answer yet:</strong> three over-worked students, (5,5), (6,5) and (5,6), burnt out and failed. Now Fail students sit on <em>both</em> sides of the Pass students. A straight line cannot separate them. Can the same SVM machinery draw a curved boundary?</p>
-  <h3>By hand: lift one feature</h3>
-  <p>Use one number per student, effort s = hours + mocks. The nine efforts are 2, 3, 3 (Fail), 6, 7, 7 (Pass), 10, 11, 11 (Fail). On a line, Pass is in the middle: no single cut works. Now give each student a second feature s². The points move onto a parabola: (2, 4), (3, 9), (6, 36), (7, 49), (10, 100), (11, 121). In this 2-D space a straight line can separate them.</p>
-  <p>The hard-margin SVM on (s, s²) finds w = (13/6, −1/6), b = −6, i.e. f(s) = (13s − s²)/6 − 6 = −(s − 4)(s − 9)/6. Check the kerbs: s = 3 → −(−1)(−6)/6 = −1 ✓; s = 6 → −(2)(−3)/6 = +1 ✓; s = 7 → +1 ✓; s = 10 → −(6)(1)/6 = −1 ✓. f &gt; 0 exactly when 4 &lt; s &lt; 9. One straight line in the lifted space = <strong>two cuts</strong>, s = 4 and s = 9, back on the original line.</p>
-<figure class="viz"><svg viewBox="0 0 640 280" width="640">
+  <p>Every boundary so far has been a straight line. Now add three over-worked students, (5, 5), (6, 5) and (5, 6), who burnt out and failed. Failing students now sit on <em>both</em> sides of the passing ones: too little effort fails, and so does too much. No straight line can separate that. Can the same SVM machinery draw a curved boundary?</p>
+  <p>Start with a hand-made fix. Use one number per student, effort s = hours + mocks. The nine efforts are 2, 3, 3 (Fail), 6, 7, 7 (Pass), 10, 11, 11 (Fail). On a number line, Pass is in the middle, so no single cut works. Now give each student a second feature, s². The points move onto a parabola, (2, 4), (3, 9), (6, 36), (7, 49), (10, 100), (11, 121), and in this two-dimensional space a straight line <em>can</em> separate them. Adding new features computed from the old ones like this is called <strong>lifting</strong> the data into a higher-dimensional space, and the function that does it is written φ (phi), here φ(s) = (s, s²).</p>
+  <figure class="viz"><svg viewBox="0 0 640 280" width="640">
 <line x1="20" y1="130" x2="250" y2="130" stroke="currentColor"/>
 <text x="20.0" y="150" text-anchor="middle" class="tm" font-size="10">0</text>
 <text x="96.7" y="150" text-anchor="middle" class="tm" font-size="10">4</text>
@@ -568,111 +370,58 @@ squared hinge  : [0.   0.   0.   0.25 0.   0.   1.  ]</div>
 <text x="480" y="275" text-anchor="middle" font-size="11">s</text><text x="350" y="28" font-size="11">s²</text>
 <text x="440.3" y="121.2" font-size="11" class="tg">s² = 13s − 36</text>
 </svg><figcaption>Left: on the effort line the Pass students sit between two groups of Fail students. Right: add s² as a second feature; the points move onto a parabola, and one straight line (green) separates them. Back on the original line that one cut is two boundaries, s = 4 and s = 9.</figcaption></figure>
-<div class="fx" data-lang="py">XB = np.vstack([X6, [[5, 5], [6, 5], [5, 6]]])        # three over-worked students who burnt out
+  <p>On the left the classes cannot be split with one cut; on the right, after lifting, one straight line (green) separates them. Solving the hard-margin SVM on (s, s²) gives w = (13/6, −1/6), b = −6, so f(s) = −(s − 4)(s − 9)/6, which is positive exactly when 4 &lt; s &lt; 9. Check the edges: s = 3 gives −(−1)(−6)/6 = −1, s = 6 gives +1, s = 10 gives −1. One straight line in the lifted space is <em>two</em> cuts, s = 4 and s = 9, back on the original line.</p>
+  <div class="fx" data-lang="py">XB = np.vstack([X6, [[5, 5], [6, 5], [5, 6]]])               # three over-worked students who burnt out
 yB = np.append(y6, [-1, -1, -1])
-effort = XB.sum(axis=1)                               # hours + mocks
-print("effort:", effort, " label:", yB)
+s = XB.sum(axis=1)                                           # effort = hours + mocks
+print("effort:", s, " label:", yB)
 lin = SVC(kernel="linear", C=1).fit(XB, yB)
-print("linear SVM on (hours, mocks): accuracy", round(lin.score(XB, yB), 3), " predictions", lin.predict(XB))
-F = np.c_[effort, effort ** 2]                        # lift by hand: (s, s^2)
+print("linear SVM on (hours, mocks): accuracy", round(lin.score(XB, yB), 3))
+F = np.c_[s, s ** 2]                                         # lift by hand: (s, s^2)
 lift = SVC(kernel="linear", C=1e6, tol=1e-10).fit(F, yB)
 w, b = lift.coef_[0], lift.intercept_[0]
 print("linear SVM on (s, s^2): accuracy", lift.score(F, yB), " w =", w.round(4), " b =", round(b, 4))
-print("boundary s values (roots of w2*s^2 + w1*s + b = 0):", np.sort(np.roots([w[1], w[0], b])).round(3))</div>
-<div class="fx" data-lang="text">effort: [ 2.  3.  3.  6.  7.  7. 10. 11. 11.]  label: [-1 -1 -1  1  1  1 -1 -1 -1]
-linear SVM on (hours, mocks): accuracy 0.667  predictions [-1 -1 -1 -1 -1 -1 -1 -1 -1]
+print("boundary at s =", np.sort(np.roots([w[1], w[0], b])).round(3))</div>
+  <div class="fx" data-lang="text">effort: [ 2.  3.  3.  6.  7.  7. 10. 11. 11.]  label: [-1 -1 -1  1  1  1 -1 -1 -1]
+linear SVM on (hours, mocks): accuracy 0.667
 linear SVM on (s, s^2): accuracy 1.0  w = [ 2.1667 -0.1667]  b = -6.0
-boundary s values (roots of w2*s^2 + w1*s + b = 0): [4. 9.]</div>
-  <p>The linear SVM on (hours, mocks) gives up and predicts Fail for everyone (accuracy 6/9 = 0.667). After adding s², a linear SVM separates all nine, and the roots of the score are exactly 4 and 9.</p>
-  <h3>The problem with lifting</h3>
-  <p>Lifting by hand needs you to guess the right new features, and the number of features explodes. All degree-2 products of 2 features: 6 features; of 100 features: 5,151; degree 3 of 1,000 features: 167 million. Computing and storing those is hopeless.</p>
-  <h3>The trick: never lift, compute the dot product directly</h3>
-  <p>Section 04 showed that the SVM touches the data only through dot products xᵢ·xⱼ. So we only need φ(a)·φ(b), not φ itself. Take S3 = a = (1, 2) and S6 = b = (3, 4) and the lift φ(v) = (v₁², √2·v₁v₂, v₂²):</p>
-  <ul>
-    <li><strong>Lift then dot:</strong> φ(a) = (1, 2.828, 4), φ(b) = (9, 16.971, 16). Dot = 9 + 48 + 64 = <strong>121</strong>.</li>
-    <li><strong>Kernel:</strong> a·b = 3 + 8 = 11, then square: 11² = <strong>121</strong>.</li>
-  </ul>
-  <p>Same number, but the kernel needed 2 multiplications and a square instead of building two 3-D vectors. With the extra constant, (a·b + 1)² = 12² = 144 equals the dot product of a 6-D lift (1, √2a₁, √2a₂, a₁², √2a₁a₂, a₂²), which contains all degree-0, 1 and 2 terms.</p>
-<div class="fx" data-lang="py">a, bb = np.array([1.0, 2.0]), np.array([3.0, 4.0])     # student 3 (Fail) and student 6 (Pass)
-phi2 = lambda v: np.array([v[0]**2, np.sqrt(2) * v[0] * v[1], v[1]**2])
-phi2c = lambda v: np.array([1, np.sqrt(2) * v[0], np.sqrt(2) * v[1], v[0]**2, np.sqrt(2) * v[0] * v[1], v[1]**2])
-print("phi(a) =", phi2(a).round(3), " phi(b) =", phi2(bb).round(3))
-print("(a.b)^2      : lift then dot =", round(float(phi2(a) @ phi2(bb)), 6), "  kernel =", (a @ bb) ** 2)
-print("(a.b + 1)^2  : lift then dot =", round(float(phi2c(a) @ phi2c(bb)), 6), "  kernel =", (a @ bb + 1) ** 2)
+boundary at s = [4. 9.]</div>
+  <p>A linear SVM on (hours, mocks) gives up and predicts Fail for everyone (6 of 9 correct). After adding s², a linear SVM separates all nine, and the roots of its score are exactly 4 and 9. Lifting has two problems, though. You must guess the right new features, and their number explodes: all products of degree 2 of 100 features is already 5,151 features, and of degree 3 of 1,000 features, about 167 million. Computing and storing those is hopeless.</p>
+  <p>Here is the trick. Section 04 showed that the SVM only ever uses the data through dot products xᵢ·xⱼ. In a lifted space it would only need φ(xᵢ)·φ(xⱼ), never φ itself. And for many useful lifts, that dot product can be computed directly from the original points, cheaply. Take S3 = a = (1, 2), S6 = b = (3, 4) and the lift φ(v) = (v₁², √2·v₁v₂, v₂²), all degree-2 products. Lifting then taking the dot product: φ(a) = (1, 2.828, 4), φ(b) = (9, 16.971, 16), and the dot product is 9 + 48 + 64 = 121. Alternatively: a·b = 3 + 8 = 11, and 11² = 121. The same number, without ever building the lifted vectors.</p>
+  <div class="fx" data-lang="py">a, bb = np.array([1.0, 2.0]), np.array([3.0, 4.0])          # S3 and S6
+phi = lambda v: np.array([v[0] ** 2, np.sqrt(2) * v[0] * v[1], v[1] ** 2])   # explicit degree-2 lift
+print("phi(a) =", phi(a).round(3), " phi(b) =", phi(bb).round(3))
+print("lift then dot:", round(float(phi(a) @ phi(bb)), 6), "   kernel (a.b)^2:", (a @ bb) ** 2)
 from math import comb
-for n, d in [(2, 2), (10, 2), (100, 2), (100, 3), (1000, 3)]:
-    print(f"{n:5d} features, degree {d}: lifted space has {comb(n + d, d):&gt;12,} dimensions; kernel cost ~{n} multiplications")</div>
-<div class="fx" data-lang="text">phi(a) = [1.    2.828 4.   ]  phi(b) = [ 9.    16.971 16.   ]
-(a.b)^2      : lift then dot = 121.0   kernel = 121.0
-(a.b + 1)^2  : lift then dot = 144.0   kernel = 144.0
-    2 features, degree 2: lifted space has            6 dimensions; kernel cost ~2 multiplications
-   10 features, degree 2: lifted space has           66 dimensions; kernel cost ~10 multiplications
-  100 features, degree 2: lifted space has        5,151 dimensions; kernel cost ~100 multiplications
-  100 features, degree 3: lifted space has      176,851 dimensions; kernel cost ~100 multiplications
- 1000 features, degree 3: lifted space has  167,668,501 dimensions; kernel cost ~1000 multiplications</div>
-  <p>Both identities hold to the last digit. The table shows why it matters: the lifted space grows to 167 million dimensions, while the kernel still costs about 1,000 multiplications per pair.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A <strong>kernel</strong> is a function K(a, b) that equals φ(a)·φ(b) for some feature map φ. The <strong>kernel trick</strong>: replace every xᵢ·xⱼ in the dual by K(xᵢ, xⱼ). Training uses the n × n <strong>Gram matrix</strong> Kᵢⱼ = K(xᵢ, xⱼ); prediction is f(x) = Σᵢ αᵢyᵢK(xᵢ, x) + b. <strong>Mercer's condition</strong>: K is a valid kernel when every Gram matrix it produces is symmetric positive semi-definite.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>With a kernel there is no w you can print (it lives in the lifted space), so <code>coef_</code> exists only for <code>kernel="linear"</code>. Explanations of a kernel SVM must go through the support vectors, permutation importance or SHAP.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> we used one particular kernel. Which kernels exist, what do their settings (degree, γ) do to the boundary, and how does C interact with them? <b>Next: kernels, γ and C.</b></div>
+for n, d in [(2, 2), (100, 2), (1000, 3)]:
+    print(f"{n:5d} features, degree {d}: lifted space has {comb(n + d, d):&gt;12,} dimensions")</div>
+  <div class="fx" data-lang="text">phi(a) = [1.    2.828 4.   ]  phi(b) = [ 9.    16.971 16.   ]
+lift then dot: 121.0    kernel (a.b)^2: 121.0
+    2 features, degree 2: lifted space has            6 dimensions
+  100 features, degree 2: lifted space has        5,151 dimensions
+ 1000 features, degree 3: lifted space has  167,668,501 dimensions</div>
+  <p>The identity holds exactly, and the table shows why it matters: the lifted space grows to 167 million dimensions for 1,000 features at degree 3, while the shortcut still costs about 1,000 multiplications per pair. A function K(a, b) that equals φ(a)·φ(b) for some lift φ is called a <strong>kernel</strong>, and the <strong>kernel trick</strong> is to replace every dot product xᵢ·xⱼ in the dual by K(xᵢ, xⱼ). Training then works with the n × n table of kernel values between all pairs of training points (the <strong>Gram matrix</strong>), and prediction becomes f(x) = Σ αᵢyᵢ K(xᵢ, x) + b over the support vectors. The SVM effectively draws a straight line in a huge lifted space, which looks like a curve in the original one, without ever visiting that space. (Not every function is a valid kernel: Mercer's condition says the Gram matrices it produces must be symmetric and positive semi-definite.) One consequence: a kernel SVM has no w you can print, because w lives in the lifted space, so <code>coef_</code> exists only for the linear kernel, and explaining a kernel SVM needs the support vectors, permutation importance or SHAP.</p>
 
   <h2 id="svm-kernels"><span class="num">08</span>Kernels, γ and C</h2>
-  <p><strong>The question we can't answer yet:</strong> the effort lift worked because we guessed s². Without guessing, which kernel should we use on the nine students, and what do its knobs do?</p>
-  <h3>The four standard kernels</h3>
-  <table class="tbl">
-    <tr><th>Kernel</th><th>K(a, b)</th><th>Lifted space</th><th>Boundary in the original space</th><th>sklearn</th></tr>
-    <tr><td>Linear</td><td>a·b</td><td>none</td><td>straight</td><td><code>kernel="linear"</code></td></tr>
-    <tr><td>Polynomial</td><td>(γ a·b + r)^d</td><td>all products up to degree d</td><td>curves of degree d</td><td><code>kernel="poly", degree, gamma, coef0</code></td></tr>
-    <tr><td>RBF (Gaussian)</td><td>exp(−γ‖a − b‖²)</td><td>infinite-dimensional</td><td>any smooth shape</td><td><code>kernel="rbf"</code> (default), <code>gamma</code></td></tr>
-    <tr><td>Sigmoid</td><td>tanh(γ a·b + r)</td><td>not always a valid kernel</td><td>neural-net-like; rarely best</td><td><code>kernel="sigmoid"</code></td></tr>
-  </table>
-  <h3>By hand: three students' Gram matrices</h3>
-  <p>For S1 (1,1), S2 (2,1), S4 (3,3): dot products S1·S1 = 2, S1·S2 = 3, S1·S4 = 6, S2·S2 = 5, S2·S4 = 9, S4·S4 = 18. Polynomial (a·b + 1)²: (2+1)² = 9, (3+1)² = 16, (6+1)² = 49, … RBF with γ = 0.5 needs squared distances: S1–S2: 1 → e^(−0.5) = 0.6065; S1–S4: 8 → e^(−4) = 0.0183; S2–S4: 5 → e^(−2.5) = 0.0821.</p>
-  <h3>RBF as a similarity, and what γ does</h3>
-  <p>The RBF kernel is 1 for identical points and fades toward 0 as they move apart; γ sets how fast. For S3 = (1,2) and S6 = (3,4), ‖a − b‖² = 8:</p>
-<div class="fx" data-lang="py">sq = ((a - bb) ** 2).sum()
-print("||a - b||^2 =", sq)
-for g in [0.01, 0.1, 0.5, 1, 10]:
-    print(f"gamma={g:&lt;5} K(a,b) = exp(-{g} x {sq:g}) = {np.exp(-g * sq):.6f}")
-from sklearn.metrics.pairwise import rbf_kernel, polynomial_kernel, linear_kernel
-P3 = X6[[0, 1, 3]]                                    # students (1,1), (2,1), (3,3)
-print("linear Gram:\\n", linear_kernel(P3))
-print("poly Gram, (a.b + 1)^2:\\n", polynomial_kernel(P3, degree=2, gamma=1, coef0=1))
-print("RBF Gram, gamma=0.5:\\n", rbf_kernel(P3, gamma=0.5).round(4))</div>
-<div class="fx" data-lang="text">||a - b||^2 = 8.0
-gamma=0.01  K(a,b) = exp(-0.01 x 8) = 0.923116
-gamma=0.1   K(a,b) = exp(-0.1 x 8) = 0.449329
-gamma=0.5   K(a,b) = exp(-0.5 x 8) = 0.018316
-gamma=1     K(a,b) = exp(-1 x 8) = 0.000335
-gamma=10    K(a,b) = exp(-10 x 8) = 0.000000
-linear Gram:
- [[ 2.  3.  6.]
- [ 3.  5.  9.]
- [ 6.  9. 18.]]
-poly Gram, (a.b + 1)^2:
- [[  9.  16.  49.]
- [ 16.  36. 100.]
- [ 49. 100. 361.]]
-RBF Gram, gamma=0.5:
- [[1.     0.6065 0.0183]
- [0.6065 1.     0.0821]
- [0.0183 0.0821 1.    ]]</div>
-  <p>With γ = 0.01 the two students look 92% similar (everyone influences everyone, a nearly linear boundary). With γ = 1 they are 0.03% similar (each student influences only its immediate neighbourhood). Gram matrices: the linear and polynomial ones grow with vector length; the RBF one has 1s on the diagonal and similarities in between. An RBF SVM predicts with f(x) = Σ αᵢyᵢ exp(−γ‖xᵢ − x‖²) + b: a weighted vote of similarities to the support vectors, like a KNN whose weights are learned.</p>
-  <h3>Back to the burnt-out students</h3>
-<div class="fx" data-lang="py">for name, mdl in [("linear", SVC(kernel="linear", C=1)),
-                  ("poly d=2, (a.b+1)^2", SVC(kernel="poly", degree=2, gamma=1, coef0=1, C=100)),
-                  ("rbf gamma=0.5", SVC(kernel="rbf", gamma=0.5, C=100))]:
+  <p>We used the polynomial lift because we guessed it. In practice you choose from a few standard kernels. The <strong>linear kernel</strong> K(a, b) = a·b is no lift at all: a straight boundary. The <strong>polynomial kernel</strong> (γ a·b + r)^d corresponds to all products of features up to degree d and draws curves of degree d (in scikit-learn, <code>degree</code>, <code>gamma</code> and <code>coef0</code> = r). The <strong>RBF kernel</strong> (radial basis function, also called the Gaussian kernel), K(a, b) = exp(−γ‖a − b‖²), corresponds to an <em>infinite</em>-dimensional lift, so the kernel trick is the only way to use it, and it can draw any smooth shape; it is scikit-learn's default. (A sigmoid kernel tanh(γ a·b + r) also exists but is rarely the best choice.)</p>
+  <p>The RBF kernel is easiest to understand as a <strong>similarity</strong>: it is 1 for identical points and fades toward 0 as points move apart, and γ (gamma) sets how fast it fades. For S3 and S6 the squared distance is (1 − 3)² + (2 − 4)² = 8:</p>
+  <div class="fx" data-lang="py">sq = ((a - bb) ** 2).sum()
+for g in [0.01, 0.1, 1, 10]:
+    print(f"gamma={g:&lt;5} K(S3, S6) = exp(-{g} x {sq:g}) = {np.exp(-g * sq):.6f}")</div>
+  <div class="fx" data-lang="text">gamma=0.01  K(S3, S6) = exp(-0.01 x 8) = 0.923116
+gamma=0.1   K(S3, S6) = exp(-0.1 x 8) = 0.449329
+gamma=1     K(S3, S6) = exp(-1 x 8) = 0.000335
+gamma=10    K(S3, S6) = exp(-10 x 8) = 0.000000</div>
+  <p>With γ = 0.01 the two students look 92% similar, so every point influences every other and the boundary is almost straight. With γ = 1 they are 0.03% similar, so each point influences only its immediate surroundings. An RBF SVM therefore predicts with f(x) = Σ αᵢyᵢ exp(−γ‖xᵢ − x‖²) + b: a weighted vote of similarities to the support vectors. That is very like a KNN with soft, distance-based weights, except that the SVM <em>learns</em> the weights αᵢ and sets most of them to zero. Back to the burnt-out students:</p>
+  <div class="fx" data-lang="py">for name, mdl in [("linear", SVC(kernel="linear", C=1)),
+                  ("poly, (a.b+1)^2", SVC(kernel="poly", degree=2, gamma=1, coef0=1, C=100)),
+                  ("rbf, gamma=0.5", SVC(kernel="rbf", gamma=0.5, C=100))]:
     mdl.fit(XB, yB)
-    print(f"{name:20s} accuracy {mdl.score(XB, yB):.3f}  support vectors {mdl.support_.tolist()}")
-print("f(4,4) under rbf:", SVC(gamma=0.5, C=100).fit(XB, yB).decision_function([[4, 4]]).round(3))</div>
-<div class="fx" data-lang="text">linear               accuracy 0.667  support vectors [0, 1, 2, 7, 8, 3, 4, 5]
-poly d=2, (a.b+1)^2  accuracy 1.000  support vectors [1, 2, 6, 3, 4, 5]
-rbf gamma=0.5        accuracy 1.000  support vectors [0, 1, 2, 6, 7, 8, 3, 4, 5]
-f(4,4) under rbf: [0.616]</div>
-<figure class="viz"><svg viewBox="0 0 640 290" width="640">
+    print(f"{name:16s} accuracy {mdl.score(XB, yB):.3f}  support vectors: {len(mdl.support_)} of 9")</div>
+  <div class="fx" data-lang="text">linear           accuracy 0.667  support vectors: 8 of 9
+poly, (a.b+1)^2  accuracy 1.000  support vectors: 6 of 9
+rbf, gamma=0.5   accuracy 1.000  support vectors: 9 of 9</div>
+  <figure class="viz"><svg viewBox="0 0 640 290" width="640">
 <clipPath id="svm-b0"><rect x="15" y="10" width="190" height="220"/></clipPath>
 <rect x="15" y="10" width="190" height="220" fill="none" stroke="currentColor" stroke-opacity="0.4"/>
 <rect x="36.1" y="192.6" width="12" height="12" class="fr sr"/>
@@ -745,48 +494,39 @@ f(4,4) under rbf: [0.616]</div>
 <text x="534" y="252" text-anchor="middle" font-size="12" font-weight="700">RBF γ = 0.5: 1.000</text>
 <text x="320" y="278" text-anchor="middle" font-size="11" class="tm">axes: hours 0–7 (across), mocks 0–7 (up); ringed = support vectors</text>
 </svg><figcaption>Nine students: the six from before plus three over-worked students at (5,5), (6,5), (5,6) who failed. No straight line works; the polynomial and RBF kernels both draw a closed region around the Pass band.</figcaption></figure>
-  <p>Linear fails (0.667). The degree-2 polynomial kernel (a·b + 1)² contains the s² feature we built by hand (and more), and separates all nine with six support vectors. RBF also separates them; with only nine points every student ends up a support vector. The new student (4, 4) gets an RBF score of +0.616: Pass.</p>
-  <h3>At scale: rings and moons</h3>
-  <p>Two data sets show the kernels on more data. <code>make_circles</code> is one class inside a ring of the other (like the burnt-out students, but in 2-D); two-moons is two interleaved half-circles with noise.</p>
-<div class="fx" data-lang="py">from sklearn.datasets import make_circles, make_moons
+  <p>The linear kernel fails (0.667). The degree-2 polynomial kernel (a·b + 1)² contains the s² feature we built by hand, and more, and separates all nine; the RBF kernel separates them too, and the figure shows both drawing a closed region around the Pass band. With only nine points, every student ends up a support vector for the RBF model. On a larger example, one class inside a ring of the other (<code>make_circles</code>), the pattern is the same:</p>
+  <div class="fx" data-lang="py">from sklearn.datasets import make_circles, make_moons
 from sklearn.model_selection import cross_val_score, train_test_split
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
-Xc, yc = make_circles(n_samples=400, noise=0.1, factor=0.4, random_state=0)
+Xc, yc = make_circles(n_samples=400, noise=0.1, factor=0.4, random_state=0)   # one class inside a ring
 for n, mdl in [("linear", SVC(kernel="linear")), ("poly d=2", SVC(kernel="poly", degree=2)),
-               ("poly d=3", SVC(kernel="poly", degree=3)), ("rbf", SVC(kernel="rbf")),
-               ("sigmoid", SVC(kernel="sigmoid"))]:
-    print(f"{n:9s} CV acc {cross_val_score(mdl, Xc, yc, cv=5).mean():.3f}")
-Z = np.c_[Xc, (Xc ** 2).sum(axis=1)]                      # lift by hand: add r^2 = x1^2 + x2^2
-print(f"linear on [x1, x2, x1^2 + x2^2] CV acc {cross_val_score(SVC(kernel='linear'), Z, yc, cv=5).mean():.3f}")</div>
-<div class="fx" data-lang="text">linear    CV acc 0.547
-poly d=2  CV acc 1.000
-poly d=3  CV acc 0.637
-rbf       CV acc 1.000
-sigmoid   CV acc 0.653
-linear on [x1, x2, x1^2 + x2^2] CV acc 1.000</div>
-  <p>On rings, linear is a coin toss (0.547), degree-2 polynomial and RBF are perfect, degree-3 is poor (an odd-degree polynomial cannot make a closed ring shape centred on the origin here), and adding r² = x1² + x2² by hand rescues even the linear SVM: the same lesson as s² for the students.</p>
-<div class="fx" data-lang="py">Xm, ym = make_moons(n_samples=600, noise=0.3, random_state=0)
+               ("poly d=3", SVC(kernel="poly", degree=3)), ("rbf", SVC(kernel="rbf"))]:
+    print(f"{n:9s} CV accuracy {cross_val_score(mdl, Xc, yc, cv=5).mean():.3f}")</div>
+  <div class="fx" data-lang="text">linear    CV accuracy 0.547
+poly d=2  CV accuracy 1.000
+poly d=3  CV accuracy 0.637
+rbf       CV accuracy 1.000</div>
+  <p>Linear is a coin toss, degree 2 and RBF are perfect, and degree 3 is poor, a reminder that the polynomial degree must fit the shape (here an odd degree cannot make a ring centred on the origin). RBF is the safest general choice because it does not need you to guess the shape.</p>
+  <p>The two RBF knobs, γ and C, both control how tightly the boundary follows individual points, so they must be tuned together. The table below uses the two-moons dataset (600 points in two interleaved half-circles with noise, 420 for training). Each cell shows train/test accuracy and, in brackets, the number of support vectors:</p>
+  <div class="fx" data-lang="py">Xm, ym = make_moons(n_samples=600, noise=0.3, random_state=0)
 Xtr, Xte, ytr, yte = train_test_split(Xm, ym, test_size=0.3, random_state=0)
-print("gamma \\\\ C      0.01           1            100")
+print("train/test accuracy (support vectors)")
+print("gamma      C=0.01              C=1                 C=100")
 for g in [0.1, 1, 10, 100]:
     row = []
     for C in [0.01, 1, 100]:
         p = make_pipeline(StandardScaler(), SVC(C=C, gamma=g)).fit(Xtr, ytr)
         row.append(f"{p.score(Xtr, ytr):.2f}/{p.score(Xte, yte):.2f} ({p[-1].n_support_.sum():3d})")
-    print(f"{g:&lt;6}  " + "   ".join(row))</div>
-<div class="fx" data-lang="text">gamma \\ C      0.01           1            100
-0.1     0.81/0.81 (416)   0.88/0.85 (156)   0.90/0.88 (106)
-1       0.79/0.81 (416)   0.91/0.88 (115)   0.93/0.89 ( 90)
-10      0.50/0.49 (418)   0.94/0.88 (222)   0.98/0.86 (156)
-100     0.50/0.49 (418)   0.98/0.81 (386)   1.00/0.81 (378)</div>
-  <p>Each cell is train/test accuracy (number of support vectors) for the moons data. Read it in three directions:</p>
-  <ul>
-    <li><strong>Small C (0.01)</strong>: almost every point is a support vector (416 of 420), the street covers everything, and at large γ the model collapses to guessing (0.50).</li>
-    <li><strong>Large γ (100)</strong>: train accuracy 0.98–1.00, test 0.81: each point gets its own bubble. Classic overfitting.</li>
-    <li><strong>The sweet spot</strong> is γ around 0.1–1 with C 1–100: test 0.85–0.89.</li>
-  </ul>
-<figure class="viz"><svg viewBox="0 0 620 215" width="620">
+    print(f"{g:&lt;6}   " + "   ".join(row))</div>
+  <div class="fx" data-lang="text">train/test accuracy (support vectors)
+gamma      C=0.01              C=1                 C=100
+0.1      0.81/0.81 (416)   0.88/0.85 (156)   0.90/0.88 (106)
+1        0.79/0.81 (416)   0.91/0.88 (115)   0.93/0.89 ( 90)
+10       0.50/0.49 (418)   0.94/0.88 (222)   0.98/0.86 (156)
+100      0.50/0.49 (418)   0.98/0.81 (386)   1.00/0.81 (378)</div>
+  <p>Read it in three directions. With tiny C (0.01), violations are almost free, nearly every point becomes a support vector (416 of 420), and at large γ the model collapses to guessing (0.50). With large γ (100), training accuracy reaches 0.98 to 1.00 while test accuracy falls to 0.81: each point gets its own little bubble, which is classic overfitting. The sweet spot is γ around 0.1 to 1 with C between 1 and 100, at a test accuracy of 0.85 to 0.89.</p>
+  <figure class="viz"><svg viewBox="0 0 620 215" width="620">
 <clipPath id="svm-g0"><rect x="10" y="10" width="190" height="150"/></clipPath>
 <rect x="10" y="10" width="190" height="150" fill="none" stroke="currentColor" stroke-opacity="0.4"/>
 <path clip-path="url(#svm-g0)" d="M107 53h0 M92 64h0 M67 68h0 M43 69h0 M79 76h0 M42 47h0 M50 97h0 M34 89h0 M105 100h0 M60 51h0 M49 72h0 M122 63h0 M116 44h0 M110 72h0 M36 57h0 M55 53h0 M131 73h0 M117 99h0 M94 77h0 M80 51h0 M100 30h0 M62 92h0 M79 33h0 M121 45h0 M50 78h0 M78 71h0 M84 44h0 M37 91h0 M55 117h0 M124 91h0 M52 99h0 M51 67h0 M122 100h0 M141 76h0 M60 60h0 M105 61h0 M33 113h0 M148 90h0 M72 47h0 M97 38h0 M113 58h0 M94 81h0 M106 46h0 M120 76h0 M48 73h0 M54 79h0 M133 48h0 M76 67h0 M86 57h0 M64 51h0 M140 80h0 M50 55h0 M67 71h0 M46 95h0 M23 93h0 M108 80h0 M69 74h0 M90 58h0 M37 79h0 M132 93h0 M126 60h0 M88 57h0 M69 59h0 M128 65h0 M80 49h0 M148 95h0 M60 32h0 M139 91h0 M102 58h0 M118 73h0 M132 94h0 M41 27h0 M27 51h0 M23 105h0 M33 83h0 M106 79h0 M99 95h0 M120 48h0 M122 58h0 M133 76h0 M112 85h0 M58 58h0 M38 79h0 M97 54h0 M109 23h0 M137 75h0 M39 89h0 M88 68h0 M71 97h0 M43 118h0 M70 55h0 M80 78h0 M89 54h0 M42 79h0 M88 71h0 M67 94h0 M40 97h0 M130 56h0 M46 53h0 M107 78h0 M114 79h0 M90 15h0 M58 65h0 M102 81h0 M105 79h0 M124 86h0 M37 84h0 M15 80h0 M114 43h0 M119 62h0 M33 102h0 M120 50h0 M95 27h0 M50 56h0 M118 52h0 M109 45h0 M89 54h0 M56 73h0 M66 81h0 M127 67h0 M119 87h0 M40 96h0 M56 65h0 M89 55h0 M40 83h0 M84 24h0 M38 86h0 M117 71h0 M99 71h0 M88 44h0 M92 62h0 M42 103h0 M132 97h0 M48 96h0 M107 38h0 M60 56h0 M104 39h0 M23 97h0 M87 69h0 M61 63h0 M93 63h0 M56 77h0 M60 64h0 M106 56h0 M121 56h0 M40 109h0 M84 63h0 M53 59h0 M125 79h0 M117 52h0 M101 82h0 M77 52h0 M75 70h0 M31 64h0 M41 35h0 M85 26h0 M34 78h0 M71 52h0 M19 58h0 M43 106h0 M109 68h0 M57 74h0 M132 66h0 M113 55h0 M116 51h0 M47 89h0 M30 73h0 M70 57h0 M36 87h0 M129 62h0 M98 76h0 M113 84h0 M34 74h0 M46 90h0 M138 92h0 M37 87h0 M111 72h0 M85 70h0 M70 52h0 M113 57h0 M112 68h0 M27 87h0 M113 91h0 M45 74h0 M119 50h0 M89 42h0 M100 48h0 M33 64h0 M110 100h0 M54 80h0 M81 50h0 M100 86h0 M104 67h0 M134 94h0 M69 30h0 M119 53h0 M86 62h0 M93 54h0 M124 77h0 M35 67h0 M117 36h0 M28 90h0 M66 33h0 M57 108h0 M156 78h0 M89 44h0 M48 88h0 M115 82h0" class="sb" stroke-width="4" stroke-linecap="round" stroke-opacity="0.55"/>
@@ -818,99 +558,57 @@ for g in [0.1, 1, 10, 100]:
 <text x="515.0" y="180" text-anchor="middle" font-size="12.5" font-weight="700">γ = 100</text>
 <text x="515.0" y="196" text-anchor="middle" font-size="11" class="tm">train 0.98 · test 0.81</text>
 </svg><figcaption>RBF SVM (C = 1) on the two-moons data at scale. Small γ: each training point influences a wide area, the boundary is a gentle curve. γ = 100: each point influences a tiny bubble, the boundary wraps individual points and test accuracy falls.</figcaption></figure>
-<div class="fx" data-lang="py">print("gamma='scale' on scaled moons =", round(1 / (2 * StandardScaler().fit_transform(Xtr).var()), 3))</div>
-<div class="fx" data-lang="text">gamma='scale' on scaled moons = 0.5</div>
-  <p>sklearn's default <code>gamma="scale"</code> is 1 / (number of features × variance of X). After standardising two features, that is 1/(2 × 1) = 0.5, a sensible middle value. Finally, a check that the prediction formula is really just a weighted sum of RBF similarities to the support vectors:</p>
-<div class="fx" data-lang="py">p = make_pipeline(StandardScaler(), SVC(C=1, gamma=1)).fit(Xtr, ytr)
-svc, Ztr = p[-1], p[0].transform(Xte[:5])
-from sklearn.metrics.pairwise import rbf_kernel
-K = rbf_kernel(Ztr, svc.support_vectors_, gamma=1)        # similarity of 5 test points to every SV
-mine = K @ svc.dual_coef_[0] + svc.intercept_[0]           # f(x) = sum(alpha_i y_i K(x_i, x)) + b
-print("support vectors:", svc.support_vectors_.shape[0], "of", len(Xtr))
-print("by formula     :", mine.round(4))
-print("decision_func  :", p.decision_function(Xte[:5]).round(4))
-print("|alpha| &lt;= C   :", np.abs(svc.dual_coef_).max().round(4), " at the bound C:", int(np.isclose(np.abs(svc.dual_coef_), 1).sum()))</div>
-<div class="fx" data-lang="text">support vectors: 115 of 420
-by formula     : [-1.5521  1.4092 -1.0694  1.3758  1.4371]
-decision_func  : [-1.5521  1.4092 -1.0694  1.3758  1.4371]
-|alpha| &lt;= C   : 1.0  at the bound C: 95</div>
-  <p>Our formula reproduces <code>decision_function</code> exactly. 115 of 420 training points are support vectors, and 95 of them sit at the upper bound |α| = C = 1: they are inside the street or on the wrong side.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>RBF kernel</strong>: K(a, b) = exp(−γ‖a − b‖²), γ &gt; 0. Large γ = narrow similarity = complex boundary (low bias, high variance); small γ = broad similarity = smooth boundary. <strong>C</strong> trades margin width against violations. The two interact and must be tuned together, usually on a log grid (C, γ ∈ 10⁻³ … 10³).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Train 0.98, test 0.81 is the signature of γ too large. And trying a kernel because it "sounds powerful" is not a strategy: start with linear (fast, interpretable), then RBF, and keep polynomial for cases where the degree has a meaning.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> both the margin (‖w‖) and the RBF kernel (‖a − b‖²) are built from distances. What if the columns are measured in very different units? <b>Next: feature scaling.</b></div>
+  <p>The figure shows the γ effect directly: a small γ gives a gentle curve, while γ = 100 wraps the boundary around individual points. So "train high, test much lower" in an RBF SVM usually means γ is too large. scikit-learn's default <code>gamma="scale"</code> sets γ = 1 / (number of features × variance of X), which for two standardised features is 1/(2 × 1) = 0.5, a sensible middle value. Finally, a check that the prediction formula really is just a weighted sum of RBF similarities to the support vectors:</p>
+  <div class="fx" data-lang="py">from sklearn.metrics.pairwise import rbf_kernel
+p = make_pipeline(StandardScaler(), SVC(C=1, gamma=1)).fit(Xtr, ytr)
+svc, Zte = p[-1], p[0].transform(Xte[:5])
+K = rbf_kernel(Zte, svc.support_vectors_, gamma=1)           # similarity of 5 test points to every SV
+mine = K @ svc.dual_coef_[0] + svc.intercept_[0]             # f(x) = sum(alpha_i y_i K(x_i, x)) + b
+print("support vectors:", len(svc.support_), "of", len(Xtr))
+print("by the formula   :", mine.round(4))
+print("decision_function:", p.decision_function(Xte[:5]).round(4))</div>
+  <div class="fx" data-lang="text">support vectors: 115 of 420
+by the formula   : [-1.5521  1.4092 -1.0694  1.3758  1.4371]
+decision_function: [-1.5521  1.4092 -1.0694  1.3758  1.4371]</div>
+  <p>Our formula, using the support vectors, <code>dual_coef_</code> (the αᵢyᵢ values) and <code>intercept_</code> (b), reproduces <code>decision_function</code> exactly. Only 115 of the 420 training points are needed to make any prediction. A sensible order for trying kernels: linear first (fast, interpretable, often enough with many features), then RBF, and polynomial only when the degree means something in your problem.</p>
 
   <h2 id="svm-scale"><span class="num">09</span>Feature Scaling</h2>
-  <p><strong>The question we can't answer yet:</strong> suppose the institute records study time in <em>minutes</em>. The students are the same people; does the SVM still draw the same boundary?</p>
-  <h3>By hand: the six students in minutes</h3>
-  <p>In minutes S2 = (120, 1), S4 = (180, 3). The widest street in this space: the Fail and Pass groups are 60 minutes apart along the first axis but only 0–2 apart along mocks, so the widest gap is simply "between 120 and 180 minutes". The margin becomes 60 (minutes!), and the line is almost vertical: about 2·hours = 5, i.e. <strong>hours = 2.5</strong>, ignoring mocks. In hours, the widest street was the diagonal x1 + x2 = 4.5, using both columns equally.</p>
-<div class="fx" data-lang="py">Xmin = X6.copy(); Xmin[:, 0] *= 60                     # study time in MINUTES
+  <p>Both the margin (through ‖w‖) and the RBF kernel (through ‖a − b‖²) are built from distances, so they inherit the problem every distance-based model has: they depend on the units of the columns. Suppose the institute records study time in <em>minutes</em>. The students are the same people, so the boundary should be the same. In minutes, S2 = (120, 1) and S4 = (180, 3). The failing and passing groups are now 60 units apart along the first axis but only 0 to 2 apart along mocks, so the widest street is simply "between 120 and 180 minutes". The margin becomes 60 (in minutes) and the line is almost vertical, at about hours = 2.5, ignoring mocks completely. In hours, the widest street was the diagonal x1 + x2 = 4.5, which used both columns equally.</p>
+  <div class="fx" data-lang="py">Xmin = X6.copy(); Xmin[:, 0] *= 60                           # study time in MINUTES
 hm = SVC(kernel="linear", C=1e6, tol=1e-10).fit(Xmin, y6)
 wm, bm = hm.coef_[0], hm.intercept_[0]
-print("minutes: w =", wm.round(5), " b =", round(bm, 3), " SVs:", hm.support_vectors_.tolist())
-print("boundary in hours units: %.3f*hours + %.5f*mocks = %.3f" % (wm[0] * 60, wm[1], -bm))
-from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import make_pipeline
+print("minutes: boundary in hours units: %.3f*hours + %.4f*mocks = %.3f" % (wm[0] * 60, wm[1], -bm))
 for name, Xs in [("hours", X6), ("minutes", Xmin)]:
-    p = make_pipeline(StandardScaler(), SVC(kernel="linear", C=1e6, tol=1e-10)).fit(Xs, y6)
-    print(f"standardised {name:7s}: decision values {p.decision_function(Xs).round(3)}")</div>
-<div class="fx" data-lang="text">minutes: w = [0.0333  0.00111]  b = -4.997  SVs: [[120.0, 1.0], [180.0, 3.0]]
-boundary in hours units: 1.998*hours + 0.00111*mocks = 4.997
-standardised hours  : decision values [-1.667 -1.    -1.     1.     1.667  1.667]
-standardised minutes: decision values [-1.667 -1.    -1.     1.     1.667  1.667]</div>
-  <p>sklearn confirms: in minutes w ≈ (0.0333, 0.0011); converted back to hours the line is 1.998·hours + 0.0011·mocks = 4.997, i.e. hours ≈ 2.5. Only the unit changed, and the "best" boundary changed with it. After standardising each column (z = (x − mean)/std), hours and minutes give identical scores, equal to the original diagonal line's (−1.667, −1, −1, 1, 1.667, 1.667).</p>
-  <h3>At scale: the wine data</h3>
-<div class="fx" data-lang="py">from sklearn.datasets import load_wine
+    pz = make_pipeline(StandardScaler(), SVC(kernel="linear", C=1e6, tol=1e-10)).fit(Xs, y6)
+    print(f"standardised {name:7s}: scores {pz.decision_function(Xs).round(3)}")</div>
+  <div class="fx" data-lang="text">minutes: boundary in hours units: 1.998*hours + 0.0011*mocks = 4.997
+standardised hours  : scores [-1.667 -1.    -1.     1.     1.667  1.667]
+standardised minutes: scores [-1.667 -1.    -1.     1.     1.667  1.667]</div>
+  <p>scikit-learn confirms it: in minutes, converted back to hours, the boundary is 1.998·hours + 0.0011·mocks = 4.997, which is hours ≈ 2.5. Only the unit changed, and the "best" boundary changed with it. After standardising each column (z = (x − mean)/standard deviation), hours and minutes give identical scores, equal to the original diagonal's −1.667, −1, −1, 1, 1.667, 1.667. On a real dataset the effect is large: the wine data has 13 chemical measurements on very different scales.</p>
+  <div class="fx" data-lang="py">from sklearn.datasets import load_wine
 Xw, yw = load_wine(return_X_y=True)
-for name, mdl in [("RBF, raw", SVC()), ("RBF, scaled", make_pipeline(StandardScaler(), SVC())),
-                  ("linear, raw", SVC(kernel="linear")), ("linear, scaled", make_pipeline(StandardScaler(), SVC(kernel="linear")))]:
-    print(f"{name:15s} 5-fold CV acc {cross_val_score(mdl, Xw, yw, cv=5).mean():.3f}")</div>
-<div class="fx" data-lang="text">RBF, raw        5-fold CV acc 0.663
-RBF, scaled     5-fold CV acc 0.983
-linear, raw     5-fold CV acc 0.961
-linear, scaled  5-fold CV acc 0.961</div>
-  <p>The RBF SVM on raw wine features scores 0.663 (proline, in the hundreds to thousands, dominates every ‖a − b‖²); scaled it scores 0.983. The linear SVM happens to score the same here, but its margin still depends on the units (as the minutes example shows), and unscaled linear SVMs also train much more slowly.</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Always put the scaler inside a pipeline (<code>make_pipeline(StandardScaler(), SVC())</code>) so it is fit on training folds only (<a class="xref" data-note="ml_pipelines">Pipelines &amp; Data Leakage</a>). For sparse text features (TF-IDF), do not centre (it destroys sparsity); TF-IDF rows are already normalised.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> we can now classify reliably, but the institute also wants a predicted <em>mark</em>. <b>Next: support vector regression.</b></div>
+for name, mdl in [("RBF, raw", SVC()), ("RBF, scaled", make_pipeline(StandardScaler(), SVC()))]:
+    print(f"{name:12s} 5-fold CV accuracy {cross_val_score(mdl, Xw, yw, cv=5).mean():.3f}")</div>
+  <div class="fx" data-lang="text">RBF, raw     5-fold CV accuracy 0.663
+RBF, scaled  5-fold CV accuracy 0.983</div>
+  <p>The RBF SVM on raw wine features scores 0.663, because one column (proline, in the hundreds to thousands) dominates every distance; scaled, it scores 0.983. Always put the scaler inside a pipeline, <code>make_pipeline(StandardScaler(), SVC())</code>, so that it is fitted on the training folds only during cross-validation (<a class="xref" data-note="ml_pipelines">Pipelines &amp; Data Leakage</a>). One exception: for sparse text features such as TF-IDF, do not centre the data (subtracting the mean destroys sparsity); TF-IDF rows are already normalised.</p>
 
-  <h2 id="svm-svr"><span class="num">10</span>Support Vector Regression (SVR)</h2>
-  <p><strong>The question we can't answer yet:</strong> the six students' final marks are 20, 28, 30 (the Fail students) and 62, 70, 66. Can the margin idea predict a number instead of a side?</p>
-  <h3>The idea: a tube instead of a street</h3>
-  <p>Turn the street inside out. In classification, points should stay <em>outside</em> the street. In regression, points should stay <em>inside</em> a tube of half-width ε around the prediction. Errors smaller than ε cost nothing; larger ones cost the excess. Among all functions that fit, choose the <strong>flattest</strong> (smallest ‖w‖).</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>ε-insensitive loss</strong>: ℓ(y, f) = max(0, |y − f| − ε). <strong>SVR</strong>: minimise ½‖w‖² + C Σᵢ max(0, |yᵢ − f(xᵢ)| − ε). Points strictly inside the tube have α = 0; only points on or outside the tube edge are support vectors.</p>
-  </div>
-  <h3>By hand with ε = 5</h3>
-  <p>sklearn's linear SVR with ε = 5 returns w = (8, 8), b = 9: mark = 8·hours + 8·mocks + 9 = 8s + 9.</p>
-  <table class="tbl">
-    <tr><th>Student</th><th>s</th><th>Mark</th><th>8s + 9</th><th>Residual</th><th>ε-loss max(0, |r| − 5)</th></tr>
-    <tr><td>S1</td><td>2</td><td>20</td><td>25</td><td>−5</td><td>0 (on the edge)</td></tr>
-    <tr><td>S2</td><td>3</td><td>28</td><td>33</td><td>−5</td><td>0 (on the edge)</td></tr>
-    <tr><td>S3</td><td>3</td><td>30</td><td>33</td><td>−3</td><td>0</td></tr>
-    <tr><td>S4</td><td>6</td><td>62</td><td>57</td><td>+5</td><td>0 (on the edge)</td></tr>
-    <tr><td>S5</td><td>7</td><td>70</td><td>65</td><td>+5</td><td>0 (on the edge)</td></tr>
-    <tr><td>S6</td><td>7</td><td>66</td><td>65</td><td>+1</td><td>0</td></tr>
-  </table>
-  <p>Every student fits in the ±5 tube, so the loss is zero and only ½‖w‖² = ½(64 + 64) = 64 remains. A steeper line such as 10·hours + 10·mocks fits even better (ε = 0 gives exactly that) but has ½‖w‖² = 100. SVR picks the flatter one because the tube lets it.</p>
-<div class="fx" data-lang="py">from sklearn.svm import SVR
-marks6 = np.array([20, 28, 30, 62, 70, 66])          # final marks of the six students
-for e in [0, 2, 5]:
+  <h2 id="svm-svr"><span class="num">10</span>Support Vector Regression</h2>
+  <p>The institute also wants to predict marks. The six students scored 20, 28 and 30 (the failing students) and 62, 70 and 66. Can the margin idea predict a number instead of a side? <strong>Support vector regression</strong> (SVR) turns the street inside out. In classification, points should stay <em>outside</em> the street. In regression, points should stay <em>inside</em> a tube of half-width ε (epsilon) around the prediction. Errors smaller than ε cost nothing; larger ones cost the amount by which they exceed ε, max(0, |y − f| − ε), which is called the <strong>ε-insensitive loss</strong>. Among all functions that keep the points in the tube, SVR picks the <strong>flattest</strong> one (smallest ‖w‖), and C prices any points outside the tube.</p>
+  <p>Think of a tolerance band in manufacturing: any part within ±5 mm of spec is accepted at no cost, and only parts beyond the band count as defects. SVR does not care about small errors at all, which makes it robust to noise inside the band and leaves only the points on or outside the tube's edge as support vectors.</p>
+  <div class="fx" data-lang="py">from sklearn.svm import SVR
+marks6 = np.array([20, 28, 30, 62, 70, 66])                 # final marks of the six students
+for e in [0, 5]:
     r = SVR(kernel="linear", C=100, epsilon=e).fit(X6, marks6)
-    print(f"eps={e}: w={r.coef_[0].round(3)} b={r.intercept_[0]:.3f}  SVs={r.support_.tolist()}"
-          f"  fitted={r.predict(X6).round(1)}  (8 h, 8 mocks) -&gt; {r.predict([[8, 8]])[0]:.1f}")
+    print(f"epsilon={e}: w={r.coef_[0].round(3)} b={r.intercept_[0]:.3f}  support vectors={len(r.support_)}"
+          f"  fitted={r.predict(X6).round(1)}")
 r5 = SVR(kernel="linear", C=100, epsilon=5).fit(X6, marks6)
-res = marks6 - r5.predict(X6)
-print("residuals:", res.round(2), " eps-insensitive loss:", np.maximum(0, np.abs(res) - 5).round(2))</div>
-<div class="fx" data-lang="text">eps=0: w=[10.     9.999] b=0.001  SVs=[0, 1, 2, 3, 4, 5]  fitted=[20. 30. 30. 60. 70. 70.]  (8 h, 8 mocks) -&gt; 160.0
-eps=2: w=[11.  9.] b=-1.000  SVs=[1, 2, 3, 5]  fitted=[19. 30. 28. 59. 70. 68.]  (8 h, 8 mocks) -&gt; 159.0
-eps=5: w=[8. 8.] b=9.000  SVs=[1, 4]  fitted=[25. 33. 33. 57. 65. 65.]  (8 h, 8 mocks) -&gt; 137.0
-residuals: [-5. -5. -3.  5.  5.  1.]  eps-insensitive loss: [0. 0. 0. 0. 0. 0.]</div>
-<figure class="viz"><svg viewBox="0 0 620 275" width="620">
+print("residuals at epsilon=5:", (marks6 - r5.predict(X6)).round(2), "  prediction for (8, 8):", r5.predict([[8, 8]]).round(1))</div>
+  <div class="fx" data-lang="text">epsilon=0: w=[10.     9.999] b=0.001  support vectors=6  fitted=[20. 30. 30. 60. 70. 70.]
+epsilon=5: w=[8. 8.] b=9.000  support vectors=2  fitted=[25. 33. 33. 57. 65. 65.]
+residuals at epsilon=5: [-5. -5. -3.  5.  5.  1.]   prediction for (8, 8): [137.]</div>
+  <p>With ε = 0 there is no tube, and SVR fits the steeper line mark ≈ 10·hours + 10·mocks, using all six students as support vectors. With ε = 5 it fits mark = 8·hours + 8·mocks + 9. Check by hand: S1 has effort 2, so the fit is 8 × 2 + 9 = 25 and the residual is 20 − 25 = −5, exactly on the tube's edge; S6 has effort 7, fit 65, residual +1, inside the tube. All six residuals are within ±5, so the loss is zero and only ½‖w‖² = ½(64 + 64) = 64 remains, less than the 100 of the steeper line. SVR picks the flatter line because the tube allows it. Only two students are reported as support vectors (four lie exactly on the edge; when points tie, the solver may give some of them α = 0).</p>
+  <figure class="viz"><svg viewBox="0 0 620 275" width="620">
 <text x="60.0" y="250" text-anchor="middle" class="tm" font-size="10">0</text>
 <text x="100.0" y="250" text-anchor="middle" class="tm" font-size="10">1</text>
 <text x="140.0" y="250" text-anchor="middle" class="tm" font-size="10">2</text>
@@ -940,484 +638,233 @@ residuals: [-5. -5. -3.  5.  5.  1.]  eps-insensitive loss: [0. 0. 0. 0. 0. 0.]<
 <text x="440" y="50" font-size="12">mark = 8·s + 9</text><text x="440" y="70" font-size="12">tube: ± ε = ± 5 marks</text>
 <text x="440" y="94" font-size="11" class="tm">inside the tube: no loss</text><text x="440" y="110" font-size="11" class="tm">ringed: on the tube edge</text><text x="440" y="126" font-size="11" class="tm">= the 2 support vectors</text>
 </svg><figcaption>Linear SVR (ε = 5) on the six students' marks. Because its w = (8, 8) treats hours and mocks equally, the prediction depends only on effort s. All six marks fit inside the ±5 tube, so the loss is zero and SVR chooses the flattest such line.</figcaption></figure>
-  <p>ε = 0 behaves like least absolute deviations and uses all six students; ε = 5 uses only 2 as support vectors (sklearn reports S2 and S5, two of the four students exactly on the tube edge; when several points tie on the edge the solver may give some of them α = 0). Unlike KNN regression, a linear SVR extrapolates: a student with 8 hours and 8 mocks gets 137, beyond any mark seen (which is also a warning: marks cannot exceed 100).</p>
-  <h3>At scale: RBF SVR on a noisy sine</h3>
-<div class="fx" data-lang="py">from sklearn.metrics import root_mean_squared_error
+  <p>Unlike KNN regression, a linear SVR extrapolates: a student with 8 hours and 8 mocks gets 137, beyond any mark seen, which is also a warning, since marks cannot exceed 100. With an RBF kernel, SVR fits curves. On 100 noisy points from a sine wave (noise standard deviation 0.3):</p>
+  <div class="fx" data-lang="py">from sklearn.metrics import root_mean_squared_error
 rng = np.random.default_rng(0)
 xs = np.sort(rng.uniform(0, 6, 200)).reshape(-1, 1)
-ys = np.sin(xs).ravel() + rng.normal(0, 0.3, 200)
+ys = np.sin(xs).ravel() + rng.normal(0, 0.3, 200)           # sine + noise with sd 0.3
 xa, xb, ya, yb = train_test_split(xs, ys, test_size=0.5, random_state=0)
-print(" epsilon  support vectors  test RMSE")
+print(" epsilon   support vectors   test RMSE")
 for e in [0.0, 0.1, 0.3, 0.5, 1.0]:
-    s = SVR(kernel="rbf", C=10, epsilon=e).fit(xa, ya)
-    print(f"  {e:&lt;5}       {len(s.support_):3d} / {len(xa)}       {root_mean_squared_error(yb, s.predict(xb)):.3f}")
-s = SVR(C=10, epsilon=0.3).fit(xa, ya)
-print("prediction at x=20 (far outside 0..6):", s.predict([[20]]).round(3), " intercept:", s.intercept_.round(3))</div>
-<div class="fx" data-lang="text"> epsilon  support vectors  test RMSE
-  0.0         100 / 100       0.327
-  0.1          76 / 100       0.322
-  0.3          38 / 100       0.322
-  0.5          11 / 100       0.327
-  1.0           2 / 100       0.450
-prediction at x=20 (far outside 0..6): [-0.014]  intercept: [-0.014]</div>
-  <p>Raising ε from 0 to 0.5 cuts the support vectors from 100 to 11 at nearly the same test error: the tube absorbs the noise (σ = 0.3). At ε = 1.0 the tube is wider than the signal's wiggles and the error rises. Far from the data, an RBF SVR falls back to the intercept, because every RBF similarity fades to zero.</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>ε is in the units of y. ε = 0.1 is tiny for house prices in rupees and huge for probabilities. Scale y (or choose ε relative to its spread), and tune C, ε and γ together.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> an SVM separates two classes. The institute also awards a third grade, Distinction. <b>Next: multiclass strategies.</b></div>
+    sr = SVR(kernel="rbf", C=10, epsilon=e).fit(xa, ya)
+    print(f"   {e:&lt;5}      {len(sr.support_):3d} / 100        {root_mean_squared_error(yb, sr.predict(xb)):.3f}")</div>
+  <div class="fx" data-lang="text"> epsilon   support vectors   test RMSE
+   0.0        100 / 100        0.327
+   0.1         76 / 100        0.322
+   0.3         38 / 100        0.322
+   0.5         11 / 100        0.327
+   1.0          2 / 100        0.450</div>
+  <p>Raising ε from 0 to 0.5 cuts the support vectors from 100 to 11 at almost the same test error: the tube absorbs the noise. At ε = 1.0 the tube is wider than the curve's real wiggles and the error rises to 0.450. ε is measured in the units of the target, so 0.1 is tiny for house prices and huge for probabilities; scale y or choose ε relative to its spread, and tune C, ε and γ together.</p>
 
-  <h2 id="svm-multi"><span class="num">11</span>Multiclass SVMs</h2>
-  <p><strong>The question we can't answer yet:</strong> relabel the three top students (5,5), (6,5), (5,6) as Distinction. Now there are three classes, but an SVM has only two sides. How do we predict a grade for a new student at (4, 4)?</p>
-  <h3>Two strategies</h3>
-  <table class="tbl">
-    <tr><th></th><th>One-vs-one (OvO)</th><th>One-vs-rest (OvR)</th></tr>
-    <tr><td>Models</td><td>one per pair: k(k−1)/2 (3 classes → 3; 10 → 45)</td><td>one per class: k</td></tr>
-    <tr><td>Each trained on</td><td>only the two classes' rows (small)</td><td>all rows (one class vs everything else)</td></tr>
-    <tr><td>Prediction</td><td>each model votes; most votes wins</td><td>highest score wins</td></tr>
-    <tr><td>Used by</td><td><code>SVC</code>, <code>NuSVC</code> (libsvm)</td><td><code>LinearSVC</code> (liblinear)</td></tr>
-    <tr><td>Why</td><td>kernel cost grows ≈ n², so many small problems are cheaper</td><td>linear training is fast; k models are fewer</td></tr>
-  </table>
-  <h3>By hand: OvO votes for (4, 4)</h3>
-  <p>The classes in alphabetical order are Distinction, Fail, Pass, so the three pairwise SVMs are D-vs-F, D-vs-P, F-vs-P. A positive score votes for the first class of the pair.</p>
-  <table class="tbl">
-    <tr><th>Pair</th><th>Score for (4, 4)</th><th>Vote</th></tr>
-    <tr><td>Distinction vs Fail</td><td>+0.429</td><td>Distinction</td></tr>
-    <tr><td>Distinction vs Pass</td><td>−0.333</td><td>Pass</td></tr>
-    <tr><td>Fail vs Pass</td><td>−2.333</td><td>Pass</td></tr>
-    <tr><td colspan="2"><strong>Votes</strong></td><td>Pass 2, Distinction 1, Fail 0 → <strong>Pass</strong></td></tr>
-  </table>
-<div class="fx" data-lang="py">yM = np.array(["Fail"] * 3 + ["Pass"] * 3 + ["Distinction"] * 3)   # the 3 top students now scored a distinction
+  <h2 id="svm-multi"><span class="num">11</span>Multiclass and Probabilities</h2>
+  <p>An SVM has two sides, so it separates two classes. Suppose the three top students, (5, 5), (6, 5) and (5, 6), are now relabelled Distinction, giving three grades. There are two standard ways to build a multiclass classifier from binary ones. <strong>One-vs-rest</strong> (OvR) trains one model per class, "this class against everything else", and picks the class with the highest score. <strong>One-vs-one</strong> (OvO) trains one model for every pair of classes, k(k − 1)/2 of them (3 for 3 classes, 45 for 10), each on only those two classes' rows, and lets them vote. scikit-learn's <code>SVC</code> always uses one-vs-one, because kernel training cost grows roughly with n², so many small problems are cheaper than a few big ones; <code>LinearSVC</code> uses one-vs-rest. (<code>SVC</code>'s <code>decision_function_shape</code> parameter only changes the shape of the output, not how it trains.)</p>
+  <div class="fx" data-lang="py">yM = np.array(["Fail"] * 3 + ["Pass"] * 3 + ["Distinction"] * 3)   # the 3 top students got a distinction
 ovo = SVC(kernel="linear", decision_function_shape="ovo").fit(XB, yM)
 print("classes_:", ovo.classes_)
-print("pairwise scores for (4,4) [D-F, D-P, F-P]:", ovo.decision_function([[4, 4]]).round(3))
+print("pairwise scores for (4,4) [D-vs-F, D-vs-P, F-vs-P]:", ovo.decision_function([[4, 4]]).round(3))
 print("predictions for (4,4), (2,2), (6,6):", ovo.predict([[4, 4], [2, 2], [6, 6]]))</div>
-<div class="fx" data-lang="text">classes_: ['Distinction' 'Fail' 'Pass']
-pairwise scores for (4,4) [D-F, D-P, F-P]: [[ 0.429 -0.333 -2.333]]
+  <div class="fx" data-lang="text">classes_: ['Distinction' 'Fail' 'Pass']
+pairwise scores for (4,4) [D-vs-F, D-vs-P, F-vs-P]: [[ 0.429 -0.333 -2.333]]
 predictions for (4,4), (2,2), (6,6): ['Pass' 'Fail' 'Distinction']</div>
-<div class="fx" data-lang="py">from sklearn.svm import LinearSVC
-from sklearn.datasets import make_blobs
-Xb4, yb4 = make_blobs(n_samples=200, centers=4, random_state=0)
-ovo = SVC(kernel="linear", decision_function_shape="ovo").fit(Xb4, yb4)
-ovr = SVC(kernel="linear").fit(Xb4, yb4)                  # default shape "ovr" (still trained one-vs-one)
-lin = LinearSVC().fit(Xb4, yb4)                           # truly one-vs-rest
-print("classes:", ovo.classes_)
-print("SVC ovo decision shape:", ovo.decision_function(Xb4[:1]).shape, " (4*3/2 = 6 pairwise classifiers)")
-print("SVC ovr decision shape:", ovr.decision_function(Xb4[:1]).shape)
-print("LinearSVC coef_ shape  :", lin.coef_.shape, " (one weight vector per class)")
-print("pairwise scores, row 0:", ovo.decision_function(Xb4[:1]).round(2), " -&gt; predicted", ovo.predict(Xb4[:1]))
-print("accuracies: SVC", ovo.score(Xb4, yb4), " LinearSVC", lin.score(Xb4, yb4))</div>
-<div class="fx" data-lang="text">classes: [0 1 2 3]
-SVC ovo decision shape: (1, 6)  (4*3/2 = 6 pairwise classifiers)
-SVC ovr decision shape: (1, 4)
-LinearSVC coef_ shape  : (4, 2)  (one weight vector per class)
-pairwise scores, row 0: [[-1.    1.52  8.36  2.79  1.54  2.26]]  -&gt; predicted [1]
-accuracies: SVC 0.925  LinearSVC 0.92</div>
-  <p>On four blob classes, <code>SVC</code> trains 6 pairwise models; with the default <code>decision_function_shape="ovr"</code> it still trains one-vs-one but reshapes the output into one column per class. <code>LinearSVC</code> trains 4 one-vs-rest models (one weight vector per class). Accuracies are similar.</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>OvO votes can tie (each class wins once with three classes); libsvm then breaks ties using the summed confidences, so results can depend on class order. With many classes (hundreds), OvO's k(k−1)/2 models become slow at prediction time.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> the SVM says "Pass" with score +1, but a counsellor asks "how likely is Q to pass?". A score is not a probability. <b>Next: probabilities and calibration.</b></div>
-
-  <h2 id="svm-prob"><span class="num">12</span>Probabilities and Calibration</h2>
-  <p><strong>The question we can't answer yet:</strong> the six students' scores under the hard-margin line are −1.667, −1, −1, +1, +1.667, +1.667. What is P(Pass) for a student with score +1? The hinge loss never asked the model to make that meaningful.</p>
-  <h3>Platt scaling by hand</h3>
-  <p>John Platt's idea (1999): pass the score through a sigmoid, P(y = 1 | f) = 1 / (1 + exp(A·f + B)), and fit A and B by logistic regression on held-out scores. With A = −1.5, B = 0 (made-up values for illustration):</p>
-  <ul>
-    <li>f = +1: 1 / (1 + e^(−1.5)) = 1 / (1 + 0.223) = <strong>0.818</strong>.</li>
-    <li>f = −1: 1 / (1 + e^(1.5)) = 1 / (1 + 4.482) = <strong>0.182</strong>.</li>
-    <li>f = +1.667: 1 / (1 + e^(−2.5)) = <strong>0.924</strong>.</li>
-  </ul>
-<div class="fx" data-lang="py">f6 = hard.decision_function(X6)                       # the six students' scores under the hard-margin line
-A, B = -1.5, 0.0                                      # Platt parameters (in practice fitted on held-out data)
-print("f        :", f6.round(3))
+  <p>The classes in alphabetical order are Distinction, Fail and Pass, so the three pairwise models are D-vs-F, D-vs-P and F-vs-P, and a positive score votes for the first class of the pair. For a new student at (4, 4), D-vs-F scores +0.429 (a vote for Distinction), D-vs-P scores −0.333 (a vote for Pass), and F-vs-P scores −2.333 (a vote for Pass). Pass wins with two votes. (With three classes, votes can tie one each; libsvm then breaks the tie using the summed confidences.)</p>
+  <p>The next question a counsellor asks is "how likely is this student to pass?". The SVM gives a score, not a probability, and section 06 explained why the hinge loss never asked that score to mean anything more. The standard fix is <strong>Platt scaling</strong> (John Platt, 1999): pass the score through a sigmoid, P(y = 1 | f) = 1 / (1 + exp(A·f + B)), and fit A and B by logistic regression on scores from data the SVM was not trained on. To see what it does, take A = −1.5 and B = 0 (illustrative values): a score of +1 becomes 1/(1 + e^(−1.5)) = 0.818, a score of −1 becomes 0.182.</p>
+  <div class="fx" data-lang="py">f6 = hard.decision_function(X6)                              # scores under the hard-margin line
+A, B = -1.5, 0.0                                             # illustrative Platt parameters
+print("score f  :", f6.round(3))
 print("P(Pass|f):", (1 / (1 + np.exp(A * f6 + B))).round(3))</div>
-<div class="fx" data-lang="text">f        : [-1.667 -1.    -1.     1.     1.667  1.667]
+  <div class="fx" data-lang="text">score f  : [-1.667 -1.    -1.     1.     1.667  1.667]
 P(Pass|f): [0.076 0.182 0.182 0.818 0.924 0.924]</div>
-  <h3>scikit-learn 1.9: <code>probability=True</code> is deprecated</h3>
-  <p>For years the way to get probabilities was <code>SVC(probability=True)</code>, which ran an internal 5-fold cross-validation to fit Platt's A and B. In the installed scikit-learn 1.9 this raises a warning:</p>
-<div class="fx" data-lang="py">import warnings
-with warnings.catch_warnings(record=True) as caught:
+  <p>For years the way to get probabilities was <code>SVC(probability=True)</code>, which ran Platt scaling internally with five extra fits. In scikit-learn 1.9, installed here, that is deprecated:</p>
+  <div class="fx" data-lang="py">with warnings.catch_warnings(record=True) as caught:
     warnings.simplefilter("always")
     SVC(probability=True).fit(Xtr, ytr)
 print(caught[0].category.__name__ + ":", caught[0].message)</div>
-<div class="fx" data-lang="text">FutureWarning: The \`probability\` parameter was deprecated in 1.9 and will be removed in version 1.11. Use \`CalibratedClassifierCV(SVC(), ensemble=False)\` instead of \`SVC(probability=True)\`</div>
-  <p>It says: the parameter is deprecated in 1.9 and will be removed in 1.11, and the replacement is <code>CalibratedClassifierCV(SVC(), ensemble=False)</code>. That wrapper does the same job in the open: it gets cross-validated scores from the SVC, fits a calibrator on them (sigmoid = Platt, or isotonic), and with <code>ensemble=False</code> refits one SVC on all the data so that prediction uses a single model. It also works for any classifier, which is why scikit-learn is removing the special SVC path.</p>
-<div class="fx" data-lang="py">from sklearn.calibration import CalibratedClassifierCV
-from sklearn.metrics import log_loss, brier_score_loss
+  <div class="fx" data-lang="text">FutureWarning: The \`probability\` parameter was deprecated in 1.9 and will be removed in version 1.11. Use \`CalibratedClassifierCV(SVC(), ensemble=False)\` instead of \`SVC(probability=True)\`</div>
+  <p>The message says the parameter will be removed in version 1.11 and names the replacement, <code>CalibratedClassifierCV(SVC(), ensemble=False)</code>. That wrapper does the same job in the open, and works for any classifier: it gets cross-validated scores from the SVC, fits a calibrator on them (method="sigmoid" for Platt, or "isotonic" for a free-form increasing curve), and with <code>ensemble=False</code> refits a single SVC on all the data for prediction.</p>
+  <div class="fx" data-lang="py">from sklearn.calibration import CalibratedClassifierCV
+from sklearn.metrics import log_loss
 base = make_pipeline(StandardScaler(), SVC(C=1, gamma=1))
 for method in ["sigmoid", "isotonic"]:
     cal = CalibratedClassifierCV(base, method=method, cv=5, ensemble=False).fit(Xtr, ytr)
     pr = cal.predict_proba(Xte)[:, 1]
-    print(f"{method:8s}: log loss {log_loss(yte, pr):.3f}  Brier {brier_score_loss(yte, pr):.3f}"
-          f"  P(class 1) for first 3 test rows {pr[:3].round(3)}")
-svm_only = base.fit(Xtr, ytr)
-print("raw decision_function, first 3 rows:", svm_only.decision_function(Xte[:3]).round(3), " true labels:", yte[:3])
-agree = (cal.predict(Xte) == svm_only.predict(Xte)).mean()
-print(f"calibrated argmax agrees with SVC.predict on {agree:.3f} of test rows")</div>
-<div class="fx" data-lang="text">sigmoid : log loss 0.345  Brier 0.099  P(class 1) for first 3 test rows [0.023 0.973 0.072]
-isotonic: log loss 0.923  Brier 0.101  P(class 1) for first 3 test rows [0.    1.    0.052]
-raw decision_function, first 3 rows: [-1.552  1.409 -1.069]  true labels: [0 0 1]
-calibrated argmax agrees with SVC.predict on 1.000 of test rows</div>
-  <p>Sigmoid (Platt) calibration gives a log loss of 0.345 and Brier score 0.099 on the moons test set. Isotonic calibration has a similar Brier score but a far worse log loss (0.923): with 420 rows it produces some probabilities of exactly 0 and 1, and a single confident mistake costs a huge log loss. Prefer sigmoid for small data, isotonic for large. The calibrated model's predicted class agrees with <code>SVC.predict</code> on every test row here; in general the two can disagree near the boundary, because calibration is fitted separately.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Platt scaling</strong>: P(y=1 | f) = σ(−(A·f + B)) with A, B fitted by maximum likelihood on held-out decision values. Use <code>CalibratedClassifierCV(SVC(), method="sigmoid", ensemble=False)</code>. Without calibration, use <code>decision_function</code> scores for ranking (ROC-AUC) and thresholds; see <a class="xref" data-note="ml_calibration">Thresholds &amp; Calibration</a>.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Do not write new code with <code>SVC(probability=True)</code>: it is deprecated, slow (5 extra fits), and its <code>predict_proba</code> can disagree with <code>predict</code>. Calibrating on the same rows used to train the SVM gives over-confident probabilities; always calibrate on held-out folds (which CalibratedClassifierCV does).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> we can now classify, regress and give probabilities on six students instantly. Would it still be instant on six million? <b>Next: cost, scale and when to use an SVM.</b></div>
+    print(f"{method:8s}: log loss {log_loss(yte, pr):.3f}   P(class 1) for the first 3 test rows {pr[:3].round(3)}")
+print("raw decision_function for the same rows:", base.fit(Xtr, ytr).decision_function(Xte[:3]).round(3))</div>
+  <div class="fx" data-lang="text">sigmoid : log loss 0.345   P(class 1) for the first 3 test rows [0.023 0.973 0.072]
+isotonic: log loss 0.923   P(class 1) for the first 3 test rows [0.    1.    0.052]
+raw decision_function for the same rows: [-1.552  1.409 -1.069]</div>
+  <p>The raw scores −1.552, 1.409 and −1.069 have become probabilities 0.023, 0.973 and 0.072 under sigmoid calibration, with a test log loss of 0.345. Isotonic calibration gives a much worse log loss here (0.923), because with only 420 rows it produces some probabilities of exactly 0 and 1, and a single confident mistake costs an enormous log loss. Prefer sigmoid for small data and isotonic for large. If you only need to rank examples (for ROC-AUC or choosing a threshold), the raw <code>decision_function</code> scores are enough (<a class="xref" data-note="ml_calibration">Thresholds &amp; Calibration</a>).</p>
 
-  <h2 id="svm-cost"><span class="num">13</span>Cost, Scale and When to Use It</h2>
-  <p><strong>The question we can't answer yet:</strong> with six students the Gram matrix is 6 × 6. With n students it is n × n. How does training time grow, and what are the alternatives when n is large or one class is rare?</p>
-  <h3>How the cost grows</h3>
-  <table class="tbl">
-    <tr><th>Model</th><th>Training</th><th>Memory</th><th>Prediction per row</th></tr>
-    <tr><td>Kernel SVC (libsvm, SMO)</td><td>between O(n²) and O(n³)</td><td>kernel cache, up to O(n²)</td><td>O(#SV · d)</td></tr>
-    <tr><td>LinearSVC (liblinear)</td><td>≈ O(n · d) per pass</td><td>O(n · d)</td><td>O(d)</td></tr>
-    <tr><td>SGDClassifier(loss="hinge")</td><td>O(n · d) per epoch, streams</td><td>O(d)</td><td>O(d)</td></tr>
-    <tr><td>Nystroem / RBFSampler + linear</td><td>O(n · m · d) for m components</td><td>O(n · m)</td><td>O(m · d)</td></tr>
-  </table>
-<div class="fx" data-lang="py">import time
+  <h2 id="svm-practice"><span class="num">12</span>SVMs in Practice</h2>
+  <p>With six students the Gram matrix is 6 × 6; with n rows it is n × n. Kernel SVM training (scikit-learn uses the libsvm library and an algorithm called SMO) takes somewhere between O(n²) and O(n³) time, and prediction costs grow with the number of support vectors, which on noisy data grows with n. Here is the effect (times are approximate and vary by machine):</p>
+  <div class="fx" data-lang="py">import time
 from sklearn.datasets import make_classification
-print("     n    SVC rbf fit (s)   #SV    LinearSVC fit (s)")
+from sklearn.svm import LinearSVC
+print("     n    SVC (rbf) fit seconds   support vectors   LinearSVC fit seconds")
 for n in [1000, 2000, 4000, 8000]:
     Xn, yn = make_classification(n_samples=n, n_features=20, flip_y=0.1, random_state=0)
-    t0 = time.perf_counter(); s = SVC().fit(Xn, yn); t1 = time.perf_counter() - t0
+    t0 = time.perf_counter(); sm = SVC().fit(Xn, yn); t1 = time.perf_counter() - t0
     t0 = time.perf_counter(); LinearSVC().fit(Xn, yn); t2 = time.perf_counter() - t0
-    print(f"{n:6d}      {t1:6.3f}        {len(s.support_):5d}       {t2:6.3f}")</div>
-<div class="fx" data-lang="text">     n    SVC rbf fit (s)   #SV    LinearSVC fit (s)
-  1000       0.064          429        0.003
-  2000       0.111          673        0.003
-  4000       0.482         1869        0.009
-  8000       1.843         3642        0.012</div>
-  <p>(Times vary by machine; the pattern does not.) Going from 1,000 to 8,000 rows (8 times the data) multiplies the kernel SVC's fit time by far more than 8, and the number of support vectors (and hence prediction cost) grows with n on noisy data. LinearSVC stays in milliseconds. A middle way is to approximate the RBF kernel with explicit features, <code>make_pipeline(Nystroem(n_components=300), LinearSVC())</code> or <code>RBFSampler</code>, whose cost grows linearly in n; it pays off from roughly a hundred thousand rows upward.</p>
-  <h3>Imbalanced classes: class_weight</h3>
-  <p>With 10% positives, the cheapest way to reduce Σξ is to let the minority's points pay: the street drifts into the minority class. <code>class_weight</code> multiplies C per class, so violations by the rare class cost more.</p>
-<div class="fx" data-lang="py">from sklearn.metrics import recall_score, balanced_accuracy_score
+    print(f"{n:6d}         {t1:6.3f}              {len(sm.support_):5d}               {t2:6.3f}")</div>
+  <div class="fx" data-lang="text">     n    SVC (rbf) fit seconds   support vectors   LinearSVC fit seconds
+  1000          0.035                429                0.002
+  2000          0.102                673                0.011
+  4000          0.504               1869                0.019
+  8000          2.159               3642                0.026</div>
+  <p>Going from 1,000 to 8,000 rows, eight times the data, multiplies the RBF SVC's fit time by far more than eight, and the number of support vectors grows almost in proportion to n. <code>LinearSVC</code>, which uses a different library (liblinear) and solves only the linear problem, stays in milliseconds. For large data the options are therefore <code>LinearSVC</code> or <code>SGDClassifier(loss="hinge")</code> (a linear SVM trained by stochastic gradient descent, which can stream data), or approximating the RBF kernel with explicit features, <code>make_pipeline(Nystroem(n_components=300), LinearSVC())</code> or <code>RBFSampler</code>, whose cost grows linearly in n. A rough rule: kernel SVC is comfortable up to a few tens of thousands of rows.</p>
+  <p>Imbalanced classes need attention too. With 10% positives, the cheapest way to reduce total slack is to let the minority's points pay, so the street drifts into the minority class. The <code>class_weight</code> parameter multiplies C per class, making violations by the rare class more expensive:</p>
+  <div class="fx" data-lang="py">from sklearn.metrics import recall_score, balanced_accuracy_score
 Xi, yi = make_classification(n_samples=2000, n_features=4, n_informative=3, n_redundant=0,
                              weights=[0.9, 0.1], class_sep=0.8, random_state=0)
 Xa, Xb2, ya2, yb2 = train_test_split(Xi, yi, test_size=0.5, stratify=yi, random_state=0)
-for cw in [None, "balanced", {0: 1, 1: 3}]:
-    p = make_pipeline(StandardScaler(), SVC(class_weight=cw)).fit(Xa, ya2)
-    pr = p.predict(Xb2)
-    print(f"class_weight={str(cw):15s} recall(class 1) {recall_score(yb2, pr):.3f}  balanced acc {balanced_accuracy_score(yb2, pr):.3f}")</div>
-<div class="fx" data-lang="text">class_weight=None            recall(class 1) 0.183  balanced acc 0.591
-class_weight=balanced        recall(class 1) 0.865  balanced acc 0.861
-class_weight={0: 1, 1: 3}    recall(class 1) 0.596  balanced acc 0.777</div>
-  <p>Without weights the SVM finds only 18% of the minority. <code>class_weight="balanced"</code> (weights n / (k · count) = about 1 and 4.8 here) raises minority recall to 0.865 and balanced accuracy to 0.861. A manual 1:3 weight sits in between.</p>
-  <h3>When to use an SVM</h3>
-  <div class="cards">
-    <div><b>Good fit</b><p>Small-to-medium data (up to tens of thousands of rows), many features relative to rows (text, genomics), clear margins, curved boundaries with RBF.</p><small>Strong accuracy with few hyperparameters</small></div>
-    <div><b>Poor fit</b><p>Hundreds of thousands of rows with a kernel; need for calibrated probabilities or easy explanations; messy tabular data with mixed types and missing values.</p><small>Use boosting or logistic regression</small></div>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> we have used sklearn's SVM classes piece by piece. <b>Next: every parameter in one place and a proper C × γ search.</b></div>
-
-  <h2 id="svm-sklearn"><span class="num">14</span>scikit-learn in Practice</h2>
-  <p><strong>The question we can't answer yet:</strong> which sklearn class should we use for which job, what does every parameter do, and how do we tune C and γ honestly?</p>
-  <h3>The classes</h3>
-  <table class="tbl">
-    <tr><th>Class</th><th>Use</th><th>Notes</th></tr>
-    <tr><td><code>SVC</code></td><td>kernel classification</td><td>libsvm, OvO; <code>probability</code> deprecated in 1.9</td></tr>
-    <tr><td><code>NuSVC</code></td><td>same, parameterised by ν</td><td>ν ∈ (0, 1] bounds the share of support vectors / margin errors</td></tr>
-    <tr><td><code>LinearSVC</code></td><td>large linear problems</td><td>liblinear, OvR, squared hinge by default, penalises b too</td></tr>
-    <tr><td><code>SVR</code>, <code>NuSVR</code>, <code>LinearSVR</code></td><td>regression</td><td>ε-tube</td></tr>
-    <tr><td><code>OneClassSVM</code></td><td>novelty / anomaly detection</td><td>learns a boundary around "normal" data</td></tr>
-  </table>
-  <h3>Every SVC parameter</h3>
-  <table class="tbl">
-    <tr><th>Parameter</th><th>Default</th><th>Meaning</th></tr>
-    <tr><td><code>C</code></td><td>1.0</td><td>Price of violations (inverse regularisation)</td></tr>
-    <tr><td><code>kernel</code></td><td>"rbf"</td><td>"linear", "poly", "rbf", "sigmoid", "precomputed" or a callable</td></tr>
-    <tr><td><code>degree</code></td><td>3</td><td>Polynomial degree (poly only)</td></tr>
-    <tr><td><code>gamma</code></td><td>"scale"</td><td>1/(n_features · X.var()); or "auto" = 1/n_features; or a number</td></tr>
-    <tr><td><code>coef0</code></td><td>0.0</td><td>The constant r in poly and sigmoid</td></tr>
-    <tr><td><code>shrinking</code></td><td>True</td><td>Solver heuristic; speed only</td></tr>
-    <tr><td><code>probability</code></td><td>False</td><td>Deprecated in 1.9; use CalibratedClassifierCV</td></tr>
-    <tr><td><code>tol</code></td><td>1e-3</td><td>Stopping tolerance (we used 1e-10 to see exact values)</td></tr>
-    <tr><td><code>cache_size</code></td><td>200 (MB)</td><td>Kernel cache; raise it for big data</td></tr>
-    <tr><td><code>class_weight</code></td><td>None</td><td>Per-class multiplier on C; "balanced"</td></tr>
-    <tr><td><code>max_iter</code></td><td>−1</td><td>No limit; set one if training hangs on non-separable data with huge C</td></tr>
-    <tr><td><code>decision_function_shape</code></td><td>"ovr"</td><td>Output shape only; training is always OvO</td></tr>
-    <tr><td><code>break_ties</code></td><td>False</td><td>Use confidences to break OvR ties (slower)</td></tr>
-  </table>
-  <p>Fitted attributes: <code>support_</code> (row indices), <code>support_vectors_</code>, <code>n_support_</code> (per class), <code>dual_coef_</code> (αᵢyᵢ), <code>intercept_</code> (b), <code>coef_</code> (w, linear kernel only), <code>classes_</code>.</p>
-  <h3>Tuning C and γ together</h3>
-<div class="fx" data-lang="py">from sklearn.model_selection import GridSearchCV
-pipe = make_pipeline(StandardScaler(), SVC())
-grid = GridSearchCV(pipe, {"svc__C": [0.1, 1, 10, 100], "svc__gamma": [0.01, 0.1, 1, 10]}, cv=5, n_jobs=1)
-grid.fit(Xtr, ytr)
-print("best:", grid.best_params_, " CV acc", round(grid.best_score_, 3), " test acc", round(grid.score(Xte, yte), 3))
-res = grid.cv_results_["mean_test_score"].reshape(4, 4)
-print("CV accuracy (rows C = 0.1, 1, 10, 100; columns gamma = 0.01, 0.1, 1, 10):\\n", res.round(3))</div>
-<div class="fx" data-lang="text">best: {'svc__C': 0.1, 'svc__gamma': 10}  CV acc 0.905  test acc 0.883
+for cw in [None, "balanced"]:
+    pr = make_pipeline(StandardScaler(), SVC(class_weight=cw)).fit(Xa, ya2).predict(Xb2)
+    print(f"class_weight={str(cw):9s} recall of the rare class {recall_score(yb2, pr):.3f}"
+          f"   balanced accuracy {balanced_accuracy_score(yb2, pr):.3f}")</div>
+  <div class="fx" data-lang="text">class_weight=None      recall of the rare class 0.183   balanced accuracy 0.591
+class_weight=balanced  recall of the rare class 0.865   balanced accuracy 0.861</div>
+  <p>Without weights the SVM finds only 18% of the rare class. <code>class_weight="balanced"</code>, which sets each class's weight inversely proportional to its frequency (here about 1 and 4.8), raises that to 86.5% and balanced accuracy from 0.591 to 0.861.</p>
+  <p>The main parameters of <code>SVC</code> are <code>C</code> (default 1.0), <code>kernel</code> (default "rbf"; also "linear", "poly", "sigmoid", "precomputed" or your own function), <code>gamma</code> (default "scale"), <code>degree</code> and <code>coef0</code> for the polynomial kernel, <code>class_weight</code>, <code>cache_size</code> (memory in MB for kernel values; raise it for big data) and <code>max_iter</code> (set it if training hangs). After fitting, <code>support_</code>, <code>support_vectors_</code>, <code>n_support_</code>, <code>dual_coef_</code> (αᵢyᵢ), <code>intercept_</code> (b) and, for the linear kernel only, <code>coef_</code> (w) hold everything we computed by hand. The family also includes <code>NuSVC</code> (which replaces C by ν, a bound on the share of support vectors), <code>SVR</code>, <code>LinearSVR</code>, and <code>OneClassSVM</code>, which learns a boundary around "normal" data for anomaly detection. Tuning C and γ is a grid search over logarithmic values with the scaler inside the pipeline:</p>
+  <div class="fx" data-lang="py">from sklearn.model_selection import GridSearchCV
+grid = GridSearchCV(make_pipeline(StandardScaler(), SVC()),
+                    {"svc__C": [0.1, 1, 10, 100], "svc__gamma": [0.01, 0.1, 1, 10]}, cv=5).fit(Xtr, ytr)
+print("best:", grid.best_params_, " CV accuracy", round(grid.best_score_, 3), " test accuracy", round(grid.score(Xte, yte), 3))
+print("CV accuracy (rows C = 0.1, 1, 10, 100; columns gamma = 0.01, 0.1, 1, 10):")
+print(grid.cv_results_["mean_test_score"].reshape(4, 4).round(3))</div>
+  <div class="fx" data-lang="text">best: {'svc__C': 0.1, 'svc__gamma': 10}  CV accuracy 0.905  test accuracy 0.883
 CV accuracy (rows C = 0.1, 1, 10, 100; columns gamma = 0.01, 0.1, 1, 10):
- [[0.869 0.876 0.895 0.905]
+[[0.869 0.876 0.895 0.905]
  [0.869 0.881 0.902 0.902]
  [0.874 0.895 0.905 0.898]
  [0.871 0.905 0.9   0.876]]</div>
-  <p>The grid shows the interaction: the best cells run along a diagonal (C = 0.1 with γ = 10, C = 10 with γ = 1, C = 100 with γ = 0.1 are all about 0.90). Large γ needs small C and vice versa, because both control how tightly the boundary follows individual points. Differences of 0.01 on 420 rows are noise; the untouched test set gives 0.883.</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Grids over C and γ should be logarithmic (0.01, 0.1, 1, 10, 100), not linear. And never search with the scaler outside the pipeline: <code>svc__C</code> naming only works because the SVC is a pipeline step.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> sklearn solved every problem for us. Could we solve the SVM problem ourselves and get the same answer? <b>Next: from scratch.</b></div>
-
-  <h2 id="svm-scratch"><span class="num">15</span>From Scratch</h2>
-  <p><strong>The question we can't answer yet:</strong> is the SVM really "just" the optimisation problems written in sections 03 and 05, or does sklearn do something extra? Let us solve both with general-purpose tools and compare.</p>
-  <h3>Hard margin with a generic optimiser</h3>
-  <p>The primal of section 03 is a small constrained problem in three numbers (w₁, w₂, b). scipy's SLSQP solver accepts an objective and inequality constraints directly.</p>
-<div class="fx" data-lang="py">from scipy.optimize import minimize
-# variables v = (w1, w2, b); minimise 1/2 ||w||^2 subject to y_i (w.x_i + b) - 1 &gt;= 0 for every student
+  <p>The grid shows the interaction between the two knobs: the best cells run along a diagonal (C = 0.1 with γ = 10, C = 10 with γ = 1, C = 100 with γ = 0.1 are all about 0.90). Large γ pairs with small C and vice versa, because both control how tightly the boundary follows individual points. Differences of 0.01 on 420 rows are noise; the untouched test set gives 0.883.</p>
+  <p>Is the SVM really just the optimisation problems of sections 03 and 05? We can solve both with general-purpose tools. The hard margin is a small constrained problem in three numbers (w₁, w₂, b), which scipy's SLSQP optimiser accepts directly. The soft margin in its hinge form has no constraints at all, so we can minimise it by <strong>subgradient descent</strong>: gradient descent where, at the kink of the hinge, we use any valid slope. Students with y·f &lt; 1 contribute −C·yᵢxᵢ to the slope for w; the others contribute nothing.</p>
+  <div class="fx" data-lang="py">from scipy.optimize import minimize
+# variables v = (w1, w2, b): minimise 1/2 ||w||^2 subject to y_i (w.x_i + b) - 1 &gt;= 0 for every student
 res = minimize(lambda v: 0.5 * v[:2] @ v[:2], x0=np.zeros(3), method="SLSQP",
                constraints=[{"type": "ineq", "fun": lambda v: y6 * (X6 @ v[:2] + v[2]) - 1}])
-print("hard margin by a generic optimiser: w =", res.x[:2].round(4), " b =", round(res.x[2], 4), " sklearn:", hard.coef_[0].round(4), round(hard.intercept_[0], 4))</div>
-<div class="fx" data-lang="text">hard margin by a generic optimiser: w = [0.6667 0.6667]  b = -3.0  sklearn: [0.6667 0.6667] -3.0</div>
-  <p>Exactly w = (2/3, 2/3), b = −3: the hand answer and sklearn's.</p>
-  <h3>Soft margin by subgradient descent</h3>
-  <p>The hinge form of section 06 is unconstrained: ½‖w‖² + C Σ max(0, 1 − yᵢf(xᵢ)). It is not differentiable at the kink, but a <em>subgradient</em> works: for students with y·f &lt; 1 the hinge contributes −C·yᵢxᵢ to the gradient of w (and −C·yᵢ for b); for the others nothing. We take shrinking steps and keep the best point seen.</p>
-<div class="fx" data-lang="py">def soft_svm_subgradient(X, y, C, steps=20000, lr0=0.1):
-    """Minimise 1/2||w||^2 + C * sum(hinge) by subgradient descent; keep the best point seen."""
-    w, b = np.zeros(X.shape[1]), 0.0
-    best = (np.inf, w.copy(), b)
+print("hard margin, generic optimiser: w =", res.x[:2].round(4), " b =", round(res.x[2], 4))
+
+def soft_svm(X, y, C, steps=20000, lr0=0.1):
+    """Minimise 1/2||w||^2 + C*sum(hinge) by subgradient descent; keep the best point seen."""
+    w, b, best = np.zeros(X.shape[1]), 0.0, (np.inf, None, None)
     for t in range(1, steps + 1):
         inside = y * (X @ w + b) &lt; 1                          # students with non-zero hinge loss
         gw = w - C * (y[inside, None] * X[inside]).sum(axis=0)
         gb = -C * y[inside].sum()
-        lr = lr0 / np.sqrt(t)                                 # shrinking step size
-        w, b = w - lr * gw, b - lr * gb
+        w, b = w - lr0 / np.sqrt(t) * gw, b - lr0 / np.sqrt(t) * gb
         obj = 0.5 * w @ w + C * np.maximum(0, 1 - y * (X @ w + b)).sum()
         if obj &lt; best[0]:
             best = (obj, w.copy(), b)
     return best
 
-for C in [0.1, 1, 10]:
-    obj, w, b = soft_svm_subgradient(X7, y7, C)
-    sk = SVC(kernel="linear", C=C, tol=1e-10).fit(X7, y7)
-    ws, bs = sk.coef_[0], sk.intercept_[0]
-    obj_sk = 0.5 * ws @ ws + C * np.maximum(0, 1 - y7 * (X7 @ ws + bs)).sum()
-    print(f"C={C:&lt;4} scratch w={w.round(3)} b={b:7.3f} obj={obj:.4f} | sklearn w={ws.round(3)} b={bs:7.3f} obj={obj_sk:.4f}")</div>
-<div class="fx" data-lang="text">C=0.1  scratch w=[0.418 0.418] b= -1.928 obj=0.3985 | sklearn w=[0.45 0.45] b= -2.250 obj=0.3975
-C=1    scratch w=[0.503 0.503] b= -2.523 obj=1.7500 | sklearn w=[0.5 0.5] b= -2.500 obj=1.7500
-C=10   scratch w=[2.006 2.006] b=-11.031 obj=4.0328 | sklearn w=[2. 2.] b=-11.000 obj=4.0000</div>
-  <p>For C = 1 the scratch solver reaches the same objective (1.7500) and almost the same line. For C = 0.1 and C = 10 its objective is within 0.001 and 0.033 of sklearn's: subgradient descent zig-zags near the kink and converges slowly, which is why real solvers use the dual with SMO (libsvm), coordinate descent (liblinear) or Pegasos-style stochastic steps. The kernel prediction formula was already reproduced exactly in section 08.</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>The objectives are equal at C = 0.1 to three decimals while the lines differ (0.418 vs 0.45): near the optimum the objective is flat, so many nearby (w, b) are almost equally good. Compare objective values, not raw coefficients, when testing a solver.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> we know how the SVM works; we have not placed it against the other models we know. <b>Next: strengths and comparisons.</b></div>
-
-  <h2 id="svm-compare"><span class="num">16</span>Strengths, Weaknesses and Comparisons</h2>
-  <p><strong>The question we can't answer yet:</strong> given the six students (or a real dataset), why choose an SVM rather than logistic regression, KNN or a tree?</p>
-  <div class="cards">
-    <div><b>Maximum margin</b><p>A principled boundary that depends only on border points; robust to points far from the boundary.</p><small>Good generalisation with little data</small></div>
-    <div><b>Kernels</b><p>Curved boundaries without hand-built features; works with any similarity (strings, graphs) via custom kernels.</p><small>RBF is a strong default</small></div>
-    <div><b>High dimensions</b><p>Works when features outnumber rows (text, genes); the margin, not d, controls complexity.</p><small>Linear SVM on TF-IDF is a classic</small></div>
-    <div><b>Convex</b><p>One global optimum; same answer every run.</p><small>No random restarts</small></div>
-  </div>
-  <div class="cards">
-    <div><b>Scales badly with n</b><p>Kernel training ~n² to n³; memory for the kernel cache.</p><small>LinearSVC / Nystroem beyond ~100k</small></div>
-    <div><b>Needs scaling and tuning</b><p>Sensitive to units; C and γ interact.</p><small>Pipeline + log grid</small></div>
-    <div><b>No probabilities</b><p>Scores only; calibration needs extra fits.</p><small>CalibratedClassifierCV</small></div>
-    <div><b>Hard to explain</b><p>Kernel models have no coefficients; support vectors are not a story for a manager.</p><small>Use SHAP or simpler models</small></div>
-  </div>
+obj, w, b = soft_svm(X7, y7, C=1)
+print(f"soft margin C=1, subgradient: w={w.round(3)} b={b:.3f} objective={obj:.4f}   (sklearn: w=[0.5 0.5], b=-2.5, 1.75)")</div>
+  <div class="fx" data-lang="text">hard margin, generic optimiser: w = [0.6667 0.6667]  b = -3.0
+soft margin C=1, subgradient: w=[0.503 0.503] b=-2.523 objective=1.7500   (sklearn: w=[0.5 0.5], b=-2.5, 1.75)</div>
+  <p>The generic optimiser finds exactly w = (2/3, 2/3), b = −3, and subgradient descent reaches the same objective as scikit-learn, 1.75, with almost the same line. Subgradient descent zig-zags near the kink and converges slowly, which is why real solvers use the dual with SMO (libsvm), coordinate descent (liblinear), or stochastic steps (Pegasos, SGD).</p>
+  <p>So when should you choose an SVM? Its strengths are a principled maximum-margin boundary that depends only on border points; curved boundaries through kernels without hand-built features (and custom kernels for strings or graphs); strong performance when features outnumber rows, as with text and genes, since the margin rather than the number of features controls complexity; and a convex problem with one global optimum, so the same answer every run. Its weaknesses are poor scaling beyond tens of thousands of rows with a kernel, sensitivity to feature scale and to the C and γ settings, no native probabilities, and hard-to-explain kernel models. For messy tabular data with mixed types and missing values, gradient boosting is usually the better tool.</p>
   <table class="tbl">
     <tr><th></th><th>SVM</th><th><a class="xref" data-note="ml_classification">Logistic Regression</a></th><th><a class="xref" data-note="ml_knn">KNN</a></th><th><a class="xref" data-note="ml_naivebayes">Naive Bayes</a></th><th><a class="xref" data-note="ml_dtree">Decision Tree</a></th></tr>
     <tr><td>Loss</td><td>hinge</td><td>log loss</td><td>none (votes)</td><td>likelihood (counting)</td><td>impurity</td></tr>
-    <tr><td>Boundary</td><td>max-margin line, or any shape with kernels</td><td>straight</td><td>any shape</td><td>straight / quadratic</td><td>axis-aligned boxes</td></tr>
-    <tr><td>Points that matter</td><td>support vectors only</td><td>all, weighted by error</td><td>the k nearest</td><td>all (through counts)</td><td>all (through splits)</td></tr>
-    <tr><td>Probabilities</td><td>needs calibration</td><td>good</td><td>coarse</td><td>too extreme</td><td>coarse</td></tr>
-    <tr><td>Scaling needed</td><td>yes</td><td>yes (with penalty)</td><td>yes</td><td>no</td><td>no</td></tr>
+    <tr><td>Boundary</td><td>max-margin line, any shape with kernels</td><td>straight</td><td>any shape</td><td>straight or quadratic</td><td>axis-aligned boxes</td></tr>
+    <tr><td>Points that matter</td><td>support vectors only</td><td>all</td><td>the k nearest</td><td>all, through counts</td><td>all, through splits</td></tr>
+    <tr><td>Probabilities</td><td>need calibration</td><td>good</td><td>coarse</td><td>too extreme</td><td>coarse</td></tr>
+    <tr><td>Needs scaling</td><td>yes</td><td>yes (with penalty)</td><td>yes</td><td>no</td><td>no</td></tr>
     <tr><td>Large n</td><td>linear only</td><td>excellent</td><td>slow prediction</td><td>excellent</td><td>good</td></tr>
-    <tr><td>Main knobs</td><td>C, kernel, γ</td><td>C</td><td>k, weights</td><td>α smoothing</td><td>depth, leaf size</td></tr>
   </table>
-  <p><strong>SVM vs logistic regression</strong>, the classic interview question: same "penalty + loss" recipe, different loss. Logistic regression gives probabilities and uses every point; a linear SVM ignores points beyond the margin and often wins slightly when classes are well separated. With a kernel, an SVM is an RBF-similarity model with learned, sparse weights; logistic regression would need hand-built features. <strong>SVM vs KNN</strong>: both use similarity to training points, but the RBF SVM learns which points matter (α) and keeps few of them, while KNN keeps all and weights them equally.</p>
-  <div class="bridge"><b>What this still can't tell us →</b> we have seen every concept and every comparison, but not the whole note at once. <b>Next: how it all connects.</b></div>
+  <p>Two comparisons come up in every interview. <strong>SVM versus logistic regression</strong>: the same "penalty + loss" recipe with a different loss; logistic regression gives probabilities and listens to every point, while a linear SVM ignores points beyond the margin and often does slightly better when classes are well separated. Their accuracy is usually similar; choose logistic regression when you need probabilities, and a kernel SVM for curved boundaries on modest data. <strong>SVM versus KNN</strong>: both predict from similarity to training points, but an RBF SVM learns which points matter and how much, and keeps only a few, while KNN keeps all of them and weights them equally. Next in this track, <a class="xref" data-note="ml_trees">tree-based models</a> need no scaling, handle mixed data and scale to millions of rows.</p>
 
-  <h2 id="svm-connect"><span class="num">17</span>How It All Connects</h2>
-  <p><strong>The question we can't answer yet:</strong> how does each concept in this note grow out of the one before, which question does each answer, and what are all the numbers for the six students side by side?</p>
-<figure class="viz"><svg viewBox="0 0 660 360" width="660">
-<defs><marker id="svm-cx" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="10" y="15" width="140" height="44" rx="8" class="fb" stroke="currentColor" stroke-opacity="0.5"/><text x="80.0" y="33" text-anchor="middle" font-size="12" font-weight="700">Score w·x + b (02)</text><text x="80.0" y="49" text-anchor="middle" font-size="10.5" class="tm">sign = class</text>
-<rect x="175" y="15" width="145" height="44" rx="8" class="fb" stroke="currentColor" stroke-opacity="0.5"/><text x="247.5" y="33" text-anchor="middle" font-size="12" font-weight="700">Distance |f|/‖w‖ (02)</text><text x="247.5" y="49" text-anchor="middle" font-size="10.5" class="tm">S4: 1.061</text>
-<rect x="345" y="15" width="145" height="44" rx="8" class="fb" stroke="currentColor" stroke-opacity="0.5"/><text x="417.5" y="33" text-anchor="middle" font-size="12" font-weight="700">Hard margin (03)</text><text x="417.5" y="49" text-anchor="middle" font-size="10.5" class="tm">min ½‖w‖²: margin 2.121</text>
-<rect x="515" y="15" width="135" height="44" rx="8" class="fb" stroke="currentColor" stroke-opacity="0.5"/><text x="582.5" y="33" text-anchor="middle" font-size="12" font-weight="700">Dual α (04)</text><text x="582.5" y="49" text-anchor="middle" font-size="10.5" class="tm">2/9, 2/9, 4/9</text>
-<line x1="150" y1="37" x2="173" y2="37" stroke="currentColor" marker-end="url(#svm-cx)"/>
-<line x1="320" y1="37" x2="343" y2="37" stroke="currentColor" marker-end="url(#svm-cx)"/>
-<line x1="490" y1="37" x2="513" y2="37" stroke="currentColor" marker-end="url(#svm-cx)"/>
-<rect x="345" y="100" width="145" height="44" rx="8" class="ft" stroke="currentColor" stroke-opacity="0.5"/><text x="417.5" y="118" text-anchor="middle" font-size="12" font-weight="700">Soft margin + C (05)</text><text x="417.5" y="134" text-anchor="middle" font-size="10.5" class="tm">S7: slack 1, C=1 obj 1.75</text>
-<line x1="417" y1="59" x2="417" y2="98" stroke="currentColor" marker-end="url(#svm-cx)"/>
-<rect x="175" y="100" width="145" height="44" rx="8" class="ft" stroke="currentColor" stroke-opacity="0.5"/><text x="247.5" y="118" text-anchor="middle" font-size="12" font-weight="700">Hinge loss (06)</text><text x="247.5" y="134" text-anchor="middle" font-size="10.5" class="tm">max(0, 1 − y·f)</text>
-<line x1="345" y1="122" x2="322" y2="122" stroke="currentColor" marker-end="url(#svm-cx)"/>
-<rect x="515" y="100" width="135" height="44" rx="8" class="fg" stroke="currentColor" stroke-opacity="0.5"/><text x="582.5" y="118" text-anchor="middle" font-size="12" font-weight="700">Kernel trick (07)</text><text x="582.5" y="134" text-anchor="middle" font-size="10.5" class="tm">only dot products</text>
-<line x1="582" y1="59" x2="582" y2="98" stroke="currentColor" marker-end="url(#svm-cx)"/>
-<rect x="515" y="185" width="135" height="44" rx="8" class="fg" stroke="currentColor" stroke-opacity="0.5"/><text x="582.5" y="203" text-anchor="middle" font-size="12" font-weight="700">Kernels, γ, C (08)</text><text x="582.5" y="219" text-anchor="middle" font-size="10.5" class="tm">burnout: RBF 1.000</text>
-<line x1="582" y1="144" x2="582" y2="183" stroke="currentColor" marker-end="url(#svm-cx)"/>
-<rect x="345" y="185" width="145" height="44" rx="8" class="fr" stroke="currentColor" stroke-opacity="0.5"/><text x="417.5" y="203" text-anchor="middle" font-size="12" font-weight="700">Scaling (09)</text><text x="417.5" y="219" text-anchor="middle" font-size="10.5" class="tm">minutes → x1 = 2.5</text>
-<line x1="400" y1="185" x2="260" y2="61" stroke="currentColor" stroke-dasharray="4 3" class="sr" marker-end="url(#svm-cx)"/>
-<rect x="10" y="185" width="140" height="44" rx="8" class="fv" stroke="currentColor" stroke-opacity="0.5"/><text x="80.0" y="203" text-anchor="middle" font-size="12" font-weight="700">SVR (10)</text><text x="80.0" y="219" text-anchor="middle" font-size="10.5" class="tm">ε-tube: 8s + 9</text>
-<rect x="175" y="185" width="145" height="44" rx="8" class="fv" stroke="currentColor" stroke-opacity="0.5"/><text x="247.5" y="203" text-anchor="middle" font-size="12" font-weight="700">Multiclass (11)</text><text x="247.5" y="219" text-anchor="middle" font-size="10.5" class="tm">OvO votes → Pass</text>
-<rect x="10" y="100" width="140" height="44" rx="8" class="fv" stroke="currentColor" stroke-opacity="0.5"/><text x="80.0" y="118" text-anchor="middle" font-size="12" font-weight="700">Platt / calibration (12)</text><text x="80.0" y="134" text-anchor="middle" font-size="10.5" class="tm">f = 1 → 0.818</text>
-<line x1="175" y1="122" x2="152" y2="122" stroke="currentColor" marker-end="url(#svm-cx)"/>
-<line x1="200" y1="144" x2="100" y2="183" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#svm-cx)"/>
-<line x1="250" y1="144" x2="250" y2="183" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#svm-cx)"/>
-<rect x="175" y="270" width="315" height="44" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="332.5" y="288" text-anchor="middle" font-size="12" font-weight="700">Cost (13): kernel matrix n × n</text><text x="332.5" y="304" text-anchor="middle" font-size="10.5" class="tm">LinearSVC / Nystroem when n is large</text>
-<line x1="582" y1="229" x2="490" y2="290" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#svm-cx)"/>
-<text x="330" y="340" text-anchor="middle" font-size="11" class="tm">Solid: each idea built from the previous one. Dashed: reused by (violet), breaks (red) or limits (grey).</text>
-</svg><figcaption>The SVM note as one chain on the six students: score → distance → widest street → dual → soft margin = hinge loss; the dual's dot products open the kernel trick; the same machinery gives SVR, multiclass and (with Platt) probabilities.</figcaption></figure>
-  <table class="tbl">
-    <tr><th>Concept</th><th>Question it answers</th><th>Built from</th><th>On the students</th><th>Sensitive to</th></tr>
-    <tr><td>Score f = w·x + b</td><td>Which side?</td><td>weights w, bias b</td><td>S4: 1.5 (w = (1,1), b = −4.5)</td><td>scale of w (not meaningful alone)</td></tr>
-    <tr><td>Distance |f|/‖w‖</td><td>How far from the line?</td><td>score ÷ length of w</td><td>S4: 1.061; S1: 1.768</td><td>units of the columns</td></tr>
-    <tr><td>Margin 2/‖w‖</td><td>How wide is the street?</td><td>distance with |f| = 1 on the kerbs</td><td>2.121</td><td>a single close point (hard margin)</td></tr>
-    <tr><td>Hard-margin primal</td><td>Which line is widest?</td><td>min ½‖w‖² with yᵢfᵢ ≥ 1</td><td>w = (2/3, 2/3), b = −3</td><td>any overlap → no solution</td></tr>
-    <tr><td>Dual α</td><td>Which points matter, how much?</td><td>Lagrange multipliers; w = Σαᵢyᵢxᵢ</td><td>S2, S3: 2/9; S4: 4/9; Σα = ‖w‖² = 8/9</td><td>—</td></tr>
-    <tr><td>Soft margin, C</td><td>What if one point does not fit?</td><td>slack ξᵢ priced at C</td><td>S7: C=1 → margin 2.828, objective 1.75</td><td>C (inverse regularisation)</td></tr>
-    <tr><td>Hinge loss</td><td>How does it relate to other models?</td><td>ξᵢ = max(0, 1 − yᵢfᵢ)</td><td>S4: 0.5, S7: 1, others 0</td><td>—</td></tr>
-    <tr><td>Kernel K(a, b)</td><td>How to bend the boundary cheaply?</td><td>dot products in the dual</td><td>(S3·S6)² = 121 = φ·φ; burnout: s = 4 and 9</td><td>choice of kernel</td></tr>
-    <tr><td>γ (RBF)</td><td>How local is similarity?</td><td>exp(−γ‖a − b‖²)</td><td>S3–S6: 0.449 at γ = 0.1, 0.0003 at γ = 1</td><td>overfits when large</td></tr>
-    <tr><td>Scaling</td><td>Are columns comparable?</td><td>z-scores</td><td>minutes → hours = 2.5; z-scored → diagonal again</td><td>leakage if fit on all data</td></tr>
-    <tr><td>SVR</td><td>Predict a number?</td><td>ε-tube + flattest w</td><td>marks = 8s + 9, ε = 5</td><td>units of y (ε)</td></tr>
-    <tr><td>OvO multiclass</td><td>More than two classes?</td><td>k(k−1)/2 binary SVMs vote</td><td>(4,4) → Pass, 2 votes</td><td>ties</td></tr>
-    <tr><td>Platt scaling</td><td>A probability?</td><td>sigmoid of the score</td><td>f = 1 → 0.818 (A = −1.5)</td><td>needs held-out data</td></tr>
-  </table>
-  <h3>Which to reach for, when</h3>
-  <table class="tbl">
-    <tr><th>Situation</th><th>Reach for</th></tr>
-    <tr><td>Linearly separable or many features (text)</td><td>LinearSVC (or SVC linear), tune C</td></tr>
-    <tr><td>Curved boundary, up to tens of thousands of rows</td><td>SVC RBF in a pipeline with StandardScaler; log grid over C and γ</td></tr>
-    <tr><td>Hundreds of thousands of rows</td><td>LinearSVC / SGDClassifier(hinge) / Nystroem + LinearSVC</td></tr>
-    <tr><td>Need probabilities</td><td>CalibratedClassifierCV(SVC(), ensemble=False)</td></tr>
-    <tr><td>Rare class</td><td>class_weight="balanced", then tune the threshold on decision_function</td></tr>
-    <tr><td>Numeric target</td><td>SVR with ε matched to the noise in y</td></tr>
-  </table>
-  <div class="bridge"><b>What this still can't tell us →</b> the map shows how the ideas fit; it does not list how people misuse them. <b>Next: common mistakes.</b></div>
-
-  <h2 id="svm-traps"><span class="num">18</span>Common Mistakes</h2>
-  <p><strong>The question we can't answer yet:</strong> which SVM mistakes actually happen in projects and interviews, in one list?</p>
-  <div class="callout trap"><span class="label">Trap: not scaling</span>
-    <p>Minutes instead of hours turned the best line into "hours = 2.5"; on wine, RBF drops from 0.983 to 0.663. Scale inside a pipeline.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: C backwards</span>
-    <p>Large C = less regularisation (narrow street, risk of overfit). Small C = more regularisation.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: tuning γ alone</span>
-    <p>γ and C interact (the best cells lie on a diagonal). Search both on a log grid with CV.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: using probability=True</span>
-    <p>Deprecated in scikit-learn 1.9 (removed in 1.11), slow, and can disagree with predict. Use <code>CalibratedClassifierCV(SVC(), ensemble=False)</code>.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: reading scores as probabilities or distances</span>
-    <p>w·x + b changes when (w, b) is rescaled; only |w·x + b|/‖w‖ is a distance, and only a calibrated score is a probability.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: kernel SVM on huge data</span>
-    <p>Fit time grows roughly n² to n³. Beyond ~100k rows switch to linear models or kernel approximations.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: huge C on overlapping data</span>
-    <p>Imitating a hard margin with C = 10⁶ on non-separable data can make libsvm run for a very long time. Set <code>max_iter</code> or use a sensible C.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: ignoring imbalance</span>
-    <p>Minority recall 0.183 without weights vs 0.865 with <code>class_weight="balanced"</code>.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: ε in the wrong units (SVR)</span>
-    <p>ε is measured in the target's units; scale y or choose ε from its spread.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> everything is explained, but spread over eighteen sections. <b>Next: the revision sheet.</b></div>
+  <h2 id="svm-traps"><span class="num">13</span>Common Mistakes</h2>
+  <p>The most common SVM mistake is not scaling the features. Section 09 showed both symptoms: changing hours to minutes turned the best line into "hours = 2.5", ignoring mocks, and on the wine data the RBF SVM fell from 0.983 to 0.663. Put <code>StandardScaler</code> and the SVM together in a pipeline, and fit them only on training data.</p>
+  <p>The second is getting C backwards. Because C is the price of violations, a larger C means <em>less</em> regularisation, not more:</p>
+  <div class="fx" data-lang="py">for C in [1e6, 1]:
+    m = SVC(kernel="linear", C=C, tol=1e-10).fit(X7, y7)
+    print(f"C={C:&lt;9g} margin {2 / np.linalg.norm(m.coef_[0]):.3f}  training accuracy {m.score(X7, y7):.3f}")</div>
+  <div class="fx" data-lang="text">C=1e+06     margin 0.707  training accuracy 1.000
+C=1         margin 2.828  training accuracy 0.857</div>
+  <p>The enormous C fits every one of the seven students, including the awkward S7, by squeezing the street to 0.707; C = 1 keeps a street four times wider and accepts one training mistake. If a model overfits, <em>decrease</em> C (and, for RBF, decrease γ). Relatedly, tuning γ without C, or over a linear grid such as 1, 2, 3, misses the diagonal interaction of section 12; search both together on a logarithmic grid.</p>
+  <p>Third, treating scores as something they are not. The raw <code>decision_function</code> value is not a distance (only |w·x + b|/‖w‖ is) and not a probability. Do not write new code with <code>SVC(probability=True)</code>: it is deprecated in scikit-learn 1.9, slow (five extra fits), and its probabilities can disagree with <code>predict</code>. Use <code>CalibratedClassifierCV(SVC(), ensemble=False)</code>, which calibrates on held-out folds.</p>
+  <p>Finally, three practical traps. Running a kernel SVC on hundreds of thousands of rows will take a very long time, because cost grows between n² and n³; use <code>LinearSVC</code> or a kernel approximation. Imitating a hard margin with a huge C on data that overlaps can make the solver run for a very long time too; use a sensible C or set <code>max_iter</code>. And ignoring class imbalance lets the street drift into the rare class; use <code>class_weight="balanced"</code> and then tune the decision threshold.</p>
 
   <h2 id="svm-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>The whole note on one page. Running example: six students (hours, mocks), Fail = −1: S1 (1,1), S2 (2,1), S3 (1,2); Pass = +1: S4 (3,3), S5 (4,3), S6 (3,4). Extensions: S7 (2.5, 2.5) Fail; burnt-out Fail students (5,5), (6,5), (5,6); marks 20, 28, 30, 62, 70, 66.</p>
-  <h3>The question ladder</h3>
+  <h3>Definitions</h3>
+  <ul>
+    <li><b>Hyperplane</b>: w·x + b = 0; predict the sign of the score f(x) = w·x + b.</li>
+    <li><b>Margin</b>: distance from the boundary to the nearest training point; with canonical scaling the street is 2/‖w‖ wide.</li>
+    <li><b>Support vectors</b>: training points with αᵢ &gt; 0 (on the edge, inside the street, or misclassified).</li>
+    <li><b>Slack</b> ξᵢ: how far a point intrudes; <b>C</b>: price per unit of slack (inverse regularisation).</li>
+    <li><b>Hinge loss</b>: max(0, 1 − y·f); SVM = L2 penalty + hinge loss.</li>
+    <li><b>Kernel</b>: K(a, b) = φ(a)·φ(b); <b>kernel trick</b>: replace xᵢ·xⱼ in the dual by K(xᵢ, xⱼ).</li>
+    <li><b>ε-insensitive loss</b> (SVR): max(0, |y − f| − ε).</li>
+    <li><b>Platt scaling</b>: P(y = 1 | f) = 1/(1 + exp(A·f + B)), fitted on held-out scores.</li>
+  </ul>
+  <h3>Formulas</h3>
   <table class="tbl">
-    <tr><th>Step</th><th>Question</th><th>Answer</th><th>Leaves open</th></tr>
-    <tr><td>1. Widest street</td><td>Which of many separating lines?</td><td>The one farthest from the nearest point</td><td>How to measure distance</td></tr>
-    <tr><td>2. Geometry</td><td>Side and distance?</td><td>sign(w·x + b); |w·x + b|/‖w‖; margin 2/‖w‖</td><td>How to find the best line</td></tr>
-    <tr><td>3. Hard margin</td><td>Best line?</td><td>min ½‖w‖² s.t. yᵢ(w·xᵢ + b) ≥ 1</td><td>Why only 3 points matter</td></tr>
-    <tr><td>4. Dual</td><td>Which points matter?</td><td>α &gt; 0 = support vectors; w = Σαᵢyᵢxᵢ; only dot products</td><td>Overlapping data</td></tr>
-    <tr><td>5. Soft margin</td><td>What if a point does not fit?</td><td>Slack ξ priced at C</td><td>Link to other losses</td></tr>
-    <tr><td>6. Hinge</td><td>SVM vs logistic?</td><td>Same recipe, hinge vs log loss</td><td>Only straight lines</td></tr>
-    <tr><td>7. Kernel trick</td><td>Curved boundaries?</td><td>Replace xᵢ·xⱼ by K(xᵢ, xⱼ)</td><td>Which kernel</td></tr>
-    <tr><td>8. Kernels</td><td>Which, and the knobs?</td><td>Linear, poly, RBF (γ); tune C, γ together</td><td>Units of columns</td></tr>
-    <tr><td>9. Scaling</td><td>Different units?</td><td>Standardise in a pipeline</td><td>Numeric targets</td></tr>
-    <tr><td>10. SVR</td><td>Predict numbers?</td><td>Flattest function inside a ±ε tube</td><td>More classes</td></tr>
-    <tr><td>11. Multiclass</td><td>3+ classes?</td><td>OvO voting (SVC), OvR (LinearSVC)</td><td>Probabilities</td></tr>
-    <tr><td>12. Probabilities</td><td>P(class)?</td><td>Platt sigmoid via CalibratedClassifierCV</td><td>Cost at scale</td></tr>
-    <tr><td>13. Cost</td><td>Big data, rare classes?</td><td>n² – n³; LinearSVC, Nystroem; class_weight</td><td>—</td></tr>
+    <tr><th>Name</th><th>Formula</th></tr>
+    <tr><td>Distance to the hyperplane</td><td>|w·x + b| / ‖w‖</td></tr>
+    <tr><td>Hard margin</td><td>min ½‖w‖² s.t. yᵢ(w·xᵢ + b) ≥ 1</td></tr>
+    <tr><td>Soft margin</td><td>min ½‖w‖² + C Σ max(0, 1 − yᵢ(w·xᵢ + b))</td></tr>
+    <tr><td>Dual</td><td>max Σαᵢ − ½ ΣΣ αᵢαⱼyᵢyⱼK(xᵢ, xⱼ), 0 ≤ αᵢ ≤ C, Σαᵢyᵢ = 0</td></tr>
+    <tr><td>Weights and prediction</td><td>w = Σαᵢyᵢxᵢ; f(x) = Σαᵢyᵢ K(xᵢ, x) + b</td></tr>
+    <tr><td>Kernels</td><td>linear a·b; polynomial (γ a·b + r)^d; RBF exp(−γ‖a − b‖²)</td></tr>
+    <tr><td>gamma="scale"</td><td>1 / (n_features × Var(X))</td></tr>
+    <tr><td>One-vs-one models</td><td>k(k − 1)/2</td></tr>
   </table>
-  <h3>Every formula</h3>
-  <table class="tbl">
-    <tr><th>Name</th><th>Formula</th><th>Symbols</th></tr>
-    <tr><td>Decision function</td><td>f(x) = w·x + b; predict sign f</td><td>w weights (normal to the boundary), b bias</td></tr>
-    <tr><td>Distance to hyperplane</td><td>|w·x + b| / ‖w‖</td><td>‖w‖ = √Σwⱼ²</td></tr>
-    <tr><td>Margin (canonical scaling)</td><td>2 / ‖w‖</td><td>nearest points have |f| = 1</td></tr>
-    <tr><td>Hard-margin primal</td><td>min ½‖w‖² s.t. yᵢ(w·xᵢ + b) ≥ 1</td><td>yᵢ ∈ {−1, +1}</td></tr>
-    <tr><td>Soft-margin primal</td><td>min ½‖w‖² + C Σξᵢ s.t. yᵢ(w·xᵢ + b) ≥ 1 − ξᵢ, ξᵢ ≥ 0</td><td>ξᵢ slack, C price of slack</td></tr>
-    <tr><td>Hinge form</td><td>min ½‖w‖² + C Σ max(0, 1 − yᵢf(xᵢ))</td><td>z = y·f signed score</td></tr>
-    <tr><td>Dual</td><td>max Σαᵢ − ½ΣΣαᵢαⱼyᵢyⱼK(xᵢ, xⱼ), 0 ≤ αᵢ ≤ C, Σαᵢyᵢ = 0</td><td>αᵢ Lagrange multipliers</td></tr>
-    <tr><td>Weights from the dual</td><td>w = Σαᵢyᵢxᵢ; hard margin: ‖w‖² = Σαᵢ</td><td>sum over support vectors</td></tr>
-    <tr><td>Kernel prediction</td><td>f(x) = Σαᵢyᵢ K(xᵢ, x) + b</td><td>dual_coef_ = αᵢyᵢ</td></tr>
-    <tr><td>Kernels</td><td>linear a·b; poly (γa·b + r)^d; RBF exp(−γ‖a − b‖²)</td><td>γ, r = coef0, d = degree</td></tr>
-    <tr><td>gamma="scale"</td><td>1 / (n_features · Var(X))</td><td>0.5 for two standardised columns</td></tr>
-    <tr><td>ε-insensitive loss</td><td>max(0, |y − f| − ε)</td><td>ε tube half-width</td></tr>
-    <tr><td>Platt scaling</td><td>P(y=1|f) = 1 / (1 + exp(A·f + B))</td><td>A, B fitted on held-out scores</td></tr>
-    <tr><td>OvO model count</td><td>k(k − 1)/2</td><td>k classes</td></tr>
-  </table>
-  <h3>The running example's numbers</h3>
+  <h3>The students' numbers</h3>
   <table class="tbl">
     <tr><th>Quantity</th><th>Value</th></tr>
-    <tr><td>Smallest distance of candidate lines</td><td>hours = 2.5: 0.5 · mocks = 2.5: 0.5 · x1+x2 = 4: 0.707 · x1+x2 = 4.5: 1.061</td></tr>
-    <tr><td>Hard-margin solution</td><td>w = (2/3, 2/3), b = −3, ‖w‖ = 0.943, margin 2.121, SVs S2, S3, S4</td></tr>
-    <tr><td>Dual</td><td>α = 2/9, 2/9, 4/9; Σαᵢyᵢ = 0; ‖w‖² = Σα = 8/9; f(3,2) = 0.333</td></tr>
-    <tr><td>Soft margin with S7</td><td>C=0.1: margin 3.143, obj 0.398 · C=1: 2.828, 1.750 · C=2: 1.414, 3.0 · C=10: 0.707, 4.0</td></tr>
-    <tr><td>Hinge at C = 1</td><td>S4: 0.5, S7: 1, others 0</td></tr>
-    <tr><td>Kernel identity</td><td>S3 = (1,2), S6 = (3,4): (a·b)² = 121, (a·b + 1)² = 144</td></tr>
-    <tr><td>Burnt-out students</td><td>linear 0.667; (s, s²) lift: f = −(s − 4)(s − 9)/6; poly, RBF 1.000</td></tr>
-    <tr><td>RBF similarity S3–S6</td><td>‖a − b‖² = 8: γ=0.01 → 0.923, 0.1 → 0.449, 1 → 0.0003</td></tr>
-    <tr><td>Minutes</td><td>boundary becomes hours ≈ 2.5 (mocks ignored); standardised → original line</td></tr>
-    <tr><td>SVR (ε = 5)</td><td>marks = 8·hours + 8·mocks + 9; residuals −5, −5, −3, 5, 5, 1</td></tr>
-    <tr><td>OvO for (4, 4)</td><td>D-F +0.429, D-P −0.333, F-P −2.333 → Pass</td></tr>
-    <tr><td>Platt (A = −1.5)</td><td>f = −1 → 0.182, 1 → 0.818, 1.667 → 0.924</td></tr>
+    <tr><td>Smallest distance of candidate lines</td><td>hours = 2.5: 0.5 · x1 + x2 = 4: 0.707 · x1 + x2 = 4.5: 1.061</td></tr>
+    <tr><td>Hard margin</td><td>w = (2/3, 2/3), b = −3, margin 2.121; support vectors S2, S3, S4</td></tr>
+    <tr><td>Dual</td><td>α = 2/9, 2/9, 4/9; Σα = ‖w‖² = 8/9</td></tr>
+    <tr><td>Soft margin with S7</td><td>C = 0.1: margin 3.143 · C = 1: 2.828, objective 1.75 · C = 10: 0.707</td></tr>
+    <tr><td>Kernel identity</td><td>(1, 2), (3, 4): φ(a)·φ(b) = 121 = (a·b)²</td></tr>
+    <tr><td>Burnt-out students</td><td>linear 0.667; lift (s, s²): boundaries s = 4 and 9; poly and RBF 1.000</td></tr>
+    <tr><td>SVR, ε = 5</td><td>mark = 8·hours + 8·mocks + 9</td></tr>
+    <tr><td>One-vs-one for (4, 4)</td><td>+0.429, −0.333, −2.333 → Pass</td></tr>
   </table>
-  <h3>When to use, when not</h3>
-  <div class="cards">
-    <div><b>Use an SVM</b><p>Up to tens of thousands of rows, scaled numeric features or text, curved boundaries (RBF), many features relative to rows, when accuracy matters more than explanation.</p><small>Start: StandardScaler + SVC(), grid C, γ</small></div>
-    <div><b>Avoid it</b><p>Very large n with a kernel, mixed raw tabular data with missing values, when calibrated probabilities or simple explanations are required.</p><small>Use logistic regression or gradient boosting</small></div>
-  </div>
-  <h3>Key traps</h3>
-  <ul>
-    <li><strong>No scaling</strong>: the margin and RBF distances follow the biggest units.</li>
-    <li><strong>C direction</strong>: large C = less regularisation.</li>
-    <li><strong>γ too large</strong>: train ≈ 1.00, test drops (0.81 on moons).</li>
-    <li><strong>probability=True</strong>: deprecated in 1.9; use CalibratedClassifierCV(SVC(), ensemble=False).</li>
-    <li><strong>Scores are not probabilities</strong> and not distances unless divided by ‖w‖.</li>
-    <li><strong>Kernel SVM cost</strong> grows ≈ n² – n³.</li>
-    <li><strong>Imbalance</strong>: use class_weight.</li>
-  </ul>
-  <h3>Five rapid-fire checks</h3>
-  <table class="tbl">
-    <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td>Distance of S4 (3,3) from x1 + x2 = 4.5?</td><td>|3 + 3 − 4.5| / √2 = 1.5 / 1.414 = 1.061</td></tr>
-    <tr><td>Margin when w = (2/3, 2/3)?</td><td>2 / ‖w‖ = 2 / 0.943 = 2.121</td></tr>
-    <tr><td>Hinge loss for a point with y·f = 0.5?</td><td>max(0, 1 − 0.5) = 0.5</td></tr>
-    <tr><td>(a·b)² for a = (1,2), b = (3,4), and why it matters?</td><td>121 = φ(a)·φ(b) for the degree-2 lift, computed without lifting</td></tr>
-    <tr><td>How many SVMs does one-vs-one train for 10 classes?</td><td>10 × 9 / 2 = 45</td></tr>
-  </table>
-  <div class="bridge"><b>What this still can't tell us →</b> a summary does not prove you can explain it. <b>Next: questions to answer out loud.</b></div>
+  <h3>Syntax</h3>
+  <div class="fx" data-lang="py">from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVC, LinearSVC, SVR
+from sklearn.model_selection import GridSearchCV
+from sklearn.calibration import CalibratedClassifierCV
 
-  <h2 id="svm-qa"><span class="num">19</span>Questions &amp; Answers</h2>
-  <p><strong>The question we can't answer yet:</strong> can you explain every step of the ladder, with the six students' numbers, without looking? Answer each question before revealing it.</p>
+pipe = make_pipeline(StandardScaler(), SVC(kernel="rbf", class_weight="balanced"))
+grid = GridSearchCV(pipe, {"svc__C": [0.1, 1, 10, 100], "svc__gamma": [0.01, 0.1, 1, 10]}, cv=5)
+grid.fit(X_train, y_train)
+proba_model = CalibratedClassifierCV(SVC(), method="sigmoid", ensemble=False)   # not probability=True
+make_pipeline(StandardScaler(), LinearSVC(C=1.0))                     # large data
+make_pipeline(StandardScaler(), SVR(C=10, epsilon=0.1))              # regression</div>
+  <h3>Gotchas</h3>
+  <ul>
+    <li>Always scale, inside a pipeline.</li>
+    <li>Large C = less regularisation; large γ = wigglier boundary. Tune both on a log grid.</li>
+    <li>Scores are not probabilities; probability=True is deprecated in 1.9.</li>
+    <li>coef_ exists only for the linear kernel.</li>
+    <li>Kernel SVC cost ≈ n² to n³; use LinearSVC or Nystroem for large n.</li>
+    <li>ε in SVR is in the units of y.</li>
+  </ul>
+
+  <h2 id="svm-qa"><span class="num">14</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>What does an SVM optimise, in one sentence?</summary><div class="qa-body">It finds the separating hyperplane with the largest margin (distance to the nearest training points), trading margin width against violations with C: minimise ½‖w‖² + C Σ max(0, 1 − yᵢ(w·xᵢ + b)).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Derive the margin 2/‖w‖.</summary><div class="qa-body">Distance from x to w·x + b = 0 is |w·x + b|/‖w‖ (walking along the unit normal w/‖w‖ changes the score by ‖w‖ per unit). Rescale (w, b) so the nearest points have |w·x + b| = 1; each kerb is then 1/‖w‖ from the centre line, so the street is 2/‖w‖ wide. Six students: w = (2/3, 2/3), ‖w‖ = 0.943, margin 2.121.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why minimise ½‖w‖² instead of maximising 2/‖w‖?</summary><div class="qa-body">They have the same solution, but ½‖w‖² is a smooth convex quadratic, so with linear constraints the problem is a convex quadratic program with one global optimum and efficient solvers. The ½ just makes the derivative w instead of 2w.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What are support vectors, and what happens if you delete a non-support vector?</summary><div class="qa-body">Training points with αᵢ &gt; 0: on the kerb, inside the street or misclassified. w = Σαᵢyᵢxᵢ uses only them, so deleting any other point (S1, S5 or S6 in our example) and retraining gives exactly the same boundary.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Compute the α values for the six students.</summary><div class="qa-body">Support vectors S2 (2,1), S3 (1,2), S4 (3,3). Symmetry: α₂ = α₃ = α; balance Σαᵢyᵢ = 0 gives α₄ = 2α; w = 2α(3,3) − α(2,1) − α(1,2) = (3α, 3α) = (2/3, 2/3) → α = 2/9, α₄ = 4/9. Check: Σα = 8/9 = ‖w‖².</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does C do? What happens as C → ∞ and C → 0?</summary><div class="qa-body">C is the price per unit of slack. C → ∞: violations forbidden, hard margin (narrow street 0.707 once S7 is added; may not exist if data overlaps). C → 0: violations free, the street widens until almost every point is a support vector (416/420 at C = 0.01 on moons) and the model underfits. C is inverse regularisation.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>SVM vs logistic regression: what is the real difference?</summary><div class="qa-body">Both minimise L2 penalty + loss. SVM uses hinge max(0, 1 − yf), which is exactly 0 beyond the margin, so only support vectors matter and outputs are not probabilities. Logistic uses log loss, which is never 0, so every point pulls and outputs are calibrated-ish probabilities. In practice accuracy is often similar; logistic is preferred when probabilities are needed, SVM with kernels for curved boundaries on modest data.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Explain the kernel trick with numbers.</summary><div class="qa-body">The dual needs only dot products. For a = (1,2), b = (3,4) and φ(v) = (v₁², √2v₁v₂, v₂²): φ(a)·φ(b) = 9 + 48 + 64 = 121, and (a·b)² = 11² = 121. So K(a,b) = (a·b)² gives the lifted dot product without building φ. For RBF the lifted space is infinite-dimensional, so the kernel is the only way.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does γ do in the RBF kernel, and how does it interact with C?</summary><div class="qa-body">K = exp(−γ‖a − b‖²): γ sets how fast similarity fades. Large γ → each point influences a tiny region → wiggly boundary, overfit (moons: train 0.98–1.00, test 0.81 at γ = 100). Small γ → nearly linear. Large γ pairs with small C and vice versa (the best grid cells lie on a diagonal), so tune both together on a log grid.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why must features be scaled for an SVM?</summary><div class="qa-body">The margin (‖w‖) and RBF distances depend on units. Recording the six students' hours in minutes turned the widest street into "hours = 2.5", ignoring mocks; standardising restored the diagonal line. On wine, RBF SVC goes 0.663 → 0.983 with scaling. Fit the scaler inside a pipeline.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How does SVR work?</summary><div class="qa-body">It fits the flattest function such that residuals within ±ε cost nothing (ε-insensitive loss), paying C per unit beyond. Points inside the tube are not support vectors. Six students' marks with ε = 5: mark = 8·hours + 8·mocks + 9, all residuals within ±5, only two support vectors.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How does sklearn's SVC handle 3+ classes?</summary><div class="qa-body">One-vs-one: k(k−1)/2 binary SVMs, each on two classes' rows, then voting. For (4,4) with Fail/Pass/Distinction: D-vs-F votes D, D-vs-P votes P, F-vs-P votes P → Pass. decision_function_shape only changes the output shape. LinearSVC uses one-vs-rest.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you get probabilities from an SVM in scikit-learn 1.9?</summary><div class="qa-body"><code>SVC(probability=True)</code> is deprecated in 1.9 (removed in 1.11) and warns to use <code>CalibratedClassifierCV(SVC(), ensemble=False)</code>. That fits Platt's sigmoid P = 1/(1 + exp(A·f + B)) (or isotonic) on cross-validated scores and refits one SVC on all data. Example: A = −1.5, f = 1 → 0.818.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Your dataset has 2 million rows. Would you use SVC(kernel="rbf")?</summary><div class="qa-body">No: training grows roughly n² to n³ (in our test 8 times the rows cost far more than 8 times the fit time) and the kernel cache does not fit. Use LinearSVC or SGDClassifier(loss="hinge"), a kernel approximation (Nystroem / RBFSampler) followed by a linear SVM, or gradient boosting for tabular data.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: how is an RBF SVM related to KNN, and what comes after SVMs in this track?</summary><div class="qa-body">Both predict from similarity to training points. KNN uses the k nearest with equal (or 1/d) weights and keeps everything; an RBF SVM uses f(x) = Σαᵢyᵢexp(−γ‖xᵢ − x‖²) + b with learned, sparse weights, keeping only support vectors. Next come tree-based models, which need no scaling, handle mixed data and scale to millions of rows, and evaluation/calibration notes that turn scores into decisions.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does an SVM optimise, in one sentence?</summary><div class="qa-body">It finds the separating hyperplane with the largest margin to the nearest training points, trading margin width against violations through C: minimise ½‖w‖² + C Σ max(0, 1 − yᵢ(w·xᵢ + b)).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Derive the margin 2/‖w‖.</summary><div class="qa-body">The distance from x to w·x + b = 0 is |w·x + b|/‖w‖, because walking along the unit normal changes the score by ‖w‖ per unit. Rescale w and b so the nearest points have |w·x + b| = 1; each edge of the street is then 1/‖w‖ from the centre line, so the street is 2/‖w‖ wide. For the six students, w = (2/3, 2/3), ‖w‖ = 0.943, margin 2.121.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why minimise ½‖w‖² instead of maximising 2/‖w‖?</summary><div class="qa-body">Both have the same solution, but ½‖w‖² is a smooth convex quadratic. With linear constraints that makes the problem a convex quadratic program, which has a single global optimum and efficient solvers. The ½ only tidies the derivative.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What are support vectors? What happens if you remove a point that is not one?</summary><div class="qa-body">Support vectors are the training points with αᵢ &gt; 0: on the edge of the street, inside it, or misclassified. Since w = Σαᵢyᵢxᵢ uses only them, removing any other point and retraining gives exactly the same boundary.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between a hard and a soft margin?</summary><div class="qa-body">A hard margin requires every point to be outside the street on its correct side; it has no solution if the classes overlap and is very sensitive to a single odd point. A soft margin adds a slack for each point and a cost C per unit of slack, so a few points may sit inside the street or on the wrong side in exchange for a wider, more robust street.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does C do? What happens as C becomes very large or very small?</summary><div class="qa-body">C is the price of each unit of violation, the inverse of regularisation strength. Very large C forbids violations, approaching a hard margin with a narrow street that can overfit. Very small C makes violations nearly free, so the street widens until almost every point is a support vector and the model underfits.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the hinge loss, and how does it differ from log loss?</summary><div class="qa-body">Hinge loss is max(0, 1 − y·f). It is exactly zero for points beyond the margin, so those points do not influence the model, which is why only support vectors matter and why SVM scores are not probabilities. Log loss is never zero, so every point pulls on logistic regression and its outputs are roughly calibrated probabilities. Both grow linearly for badly wrong points.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>SVM vs logistic regression: what is the real difference?</summary><div class="qa-body">Both minimise an L2 penalty plus a loss; the SVM uses the hinge loss, logistic regression the log loss. So the SVM depends only on points near the boundary and gives scores, while logistic regression uses every point and gives probabilities. Accuracy is often similar; choose logistic regression when probabilities matter and a kernel SVM for curved boundaries on modest data.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain the kernel trick.</summary><div class="qa-body">The SVM dual uses the data only through dot products xᵢ·xⱼ. A kernel K(a, b) computes the dot product φ(a)·φ(b) in a lifted feature space directly from the original vectors, so we can replace every dot product with K and fit a linear boundary in the lifted space without building it. For a = (1, 2), b = (3, 4): the explicit degree-2 lift gives 121, and (a·b)² = 11² = 121.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does γ do in the RBF kernel, and how does it interact with C?</summary><div class="qa-body">K = exp(−γ‖a − b‖²), so γ sets how quickly similarity fades with distance. Large γ means each point influences only a tiny region, giving a wiggly boundary that overfits (on moons: training 0.98–1.00, test 0.81 at γ = 100); small γ gives a nearly linear boundary. Both γ and C control how closely the boundary follows individual points, so large γ pairs with small C; tune them together on a logarithmic grid.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Which kernel would you try first?</summary><div class="qa-body">Linear first when there are many features (such as text) or lots of data: it is fast, interpretable and often enough. Then RBF, which can fit any smooth boundary and is the default. Polynomial only when a particular degree of interaction is meaningful for the problem.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why must features be scaled for an SVM?</summary><div class="qa-body">The margin (through ‖w‖) and the RBF kernel (through ‖a − b‖²) depend on the units of each column, so the column with the largest numbers dominates. Recording study time in minutes made the widest street "hours = 2.5", ignoring mocks; on wine, scaling lifted RBF SVC from 0.663 to 0.983. Fit the scaler inside a pipeline.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How does support vector regression work?</summary><div class="qa-body">It fits the flattest function such that errors within ±ε cost nothing (the ε-insensitive loss), with C pricing errors beyond the tube. Points inside the tube are not support vectors. For the six students' marks with ε = 5 it fitted mark = 8·hours + 8·mocks + 9, with every residual within ±5.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How does scikit-learn's SVC handle more than two classes?</summary><div class="qa-body">One-vs-one: it trains k(k − 1)/2 binary SVMs, each on two classes' rows, and the class with the most votes wins. This is cheaper than one-vs-rest for kernel SVMs because each problem is small. decision_function_shape only changes the output shape. LinearSVC uses one-vs-rest.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you get probabilities from an SVM?</summary><div class="qa-body">Fit a calibrator on held-out scores: Platt scaling fits P = 1/(1 + exp(A·f + B)), isotonic regression fits a free increasing curve. In scikit-learn 1.9, SVC(probability=True) is deprecated in favour of CalibratedClassifierCV(SVC(), ensemble=False), which does this with cross-validation and then refits one SVC on all the data.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Your dataset has 2 million rows. Would you use SVC(kernel="rbf")?</summary><div class="qa-body">No. Kernel SVM training grows between n² and n³ and the number of support vectors grows with n, so it would be far too slow. Use LinearSVC or SGDClassifier(loss="hinge"), a kernel approximation (Nystroem or RBFSampler) followed by a linear SVM, or gradient boosting for tabular data.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you handle class imbalance with an SVM?</summary><div class="qa-body">Without help, the cheapest solution lets the rare class's points pay slack, so the boundary drifts into it. class_weight multiplies C per class; "balanced" uses weights inversely proportional to class frequency (rare-class recall went from 0.18 to 0.87 in our example). Then tune the threshold on decision_function.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why are SVMs good when there are more features than samples?</summary><div class="qa-body">Their complexity is controlled by the margin, not the number of features, and the solution depends only on the support vectors; with a linear kernel the problem stays small in n. That is why linear SVMs on TF-IDF text and SVMs on gene-expression data, both with many more features than rows, work well.</div></details>
 </main>
 `
 });

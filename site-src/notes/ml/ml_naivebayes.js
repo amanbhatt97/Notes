@@ -3,110 +3,44 @@ Object.assign(TOPIC_CONTENT, {
   "ml_naivebayes": `<main>
   <h1>Naive Bayes</h1>
   <div class="where"><span>Machine Learning</span><span>Classification</span><span>Naive Bayes</span></div>
-  <p class="lead">Naive Bayes classifies by counting. It learns how often each clue (a word, a sender type, a length) appears in each class, then flips those counts into P(class | clues) with Bayes' theorem, treating the clues as independent. This note builds a tiny SMS spam filter completely by hand on eight messages: Bayes' theorem, the naive assumption and why it still works, Multinomial NB with Laplace smoothing, log-probabilities against underflow, Bernoulli NB, Gaussian NB with means and variances, mixing feature types, the hidden linear model inside NB, its (often poor) calibration, every sklearn class, and a from-scratch version that matches sklearn exactly.</p>
+  <p class="lead">Naive Bayes is a classifier that works by counting. It learns how often each clue (a word, the type of sender, the length of a message) turns up in each class, and then uses Bayes' theorem to turn those counts into the probability that a new example belongs to each class. It trains in a single pass over the data, needs very few examples, copes with tens of thousands of features, and for decades it was the standard spam filter, which is why interviewers still ask about it. In this note we build one small spam filter from scratch: an inbox of eight labelled SMS messages, four spam and four normal ("ham"), and one new message, "free lunch monday", that we want to classify. Every idea is computed by hand on those same eight messages first and then checked with scikit-learn, so each new step adds to numbers you have already seen.</p>
 
-  <h2 id="nb-fit" class="open"><span class="num">★</span>Where this fits</h2>
-  <ol class="story">
-    <li><b>Came from: <a class="xref" data-note="ml_classification">Logistic Regression</a> and <a class="xref" data-note="st_probability">Probability</a></b><span>Logistic regression opened the Classification group: it outputs P(class | x) by fitting weights with gradient descent on log-loss. That needs enough data to estimate every weight, and an optimiser. Probability gave us conditional probability and Bayes' theorem. The open question: can we get P(class | x) with no optimisation at all, from simple counts, and from very few examples?</span></li>
-    <li><b>This note adds: the generative route to P(class | x)</b><span>Model how each class <em>produces</em> its clues, P(x | class), assume the clues are independent within a class, and combine with Bayes' theorem. Training is a single pass of counting; prediction is a sum of logs.</span></li>
-    <li><b>Leads to: <a class="xref" data-note="ml_knn">K-Nearest Neighbors</a> and beyond</b><span>NB and logistic regression both draw (mostly) straight boundaries. <a class="xref" data-note="ml_knn">KNN</a> drops all modelling and asks the nearest neighbours, so boundaries can take any shape; <a class="xref" data-note="ml_svm">SVM</a> chases the widest margin. NB's over-confident probabilities are the classic motivation for <a class="xref" data-note="ml_calibration">Thresholds &amp; Calibration</a>, and its word counts reappear in text work (<a class="xref" data-note="nlp">NLP Foundations</a>: bag of words, TF-IDF).</span></li>
-  </ol>
-  <figure class="viz"><svg viewBox="0 0 680 210" width="680">
-<defs><marker id="nb-fa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="20" y="10" width="640" height="190" rx="12" fill="none" stroke="currentColor" stroke-dasharray="5 4" stroke-opacity="0.5"/>
-<text x="34" y="28" class="tm" font-size="11.5">CLASSIFICATION GROUP</text>
-<rect x="250" y="22" width="180" height="46" rx="8" class="ft st"/>
-<text x="340" y="41" text-anchor="middle" font-size="12.5">Logistic Regression</text><text x="340" y="58" text-anchor="middle" class="tm" font-size="11">fit P(y|x) directly</text>
-<line x1="300" y1="68" x2="130" y2="118" stroke="currentColor" marker-end="url(#nb-fa)"/>
-<line x1="340" y1="68" x2="340" y2="118" stroke="currentColor" marker-end="url(#nb-fa)"/>
-<line x1="380" y1="68" x2="550" y2="118" stroke="currentColor" marker-end="url(#nb-fa)"/>
-<rect x="40" y="120" width="180" height="54" rx="8" class="fb sb" stroke-width="3"/>
-<text x="130" y="141" text-anchor="middle" font-size="14" font-weight="700">Naive Bayes</text><text x="130" y="160" text-anchor="middle" class="tb" font-size="11">YOU ARE HERE · count P(x|y)</text>
-<rect x="250" y="120" width="180" height="54" rx="8" class="ft st"/>
-<text x="340" y="141" text-anchor="middle" font-size="12.5">K-Nearest Neighbors</text><text x="340" y="160" text-anchor="middle" class="tm" font-size="11">ask the neighbours</text>
-<rect x="460" y="120" width="180" height="54" rx="8" class="ft st"/>
-<text x="550" y="141" text-anchor="middle" font-size="12.5">Support Vector Machines</text><text x="550" y="160" text-anchor="middle" class="tm" font-size="11">widest margin</text>
-<line x1="220" y1="147" x2="248" y2="147" stroke="currentColor" stroke-dasharray="3 3" marker-end="url(#nb-fa)"/>
-<text x="130" y="192" text-anchor="middle" class="tm" font-size="10.5">generative twin of logistic regression</text>
-</svg><figcaption>Naive Bayes sits beside logistic regression: both output P(class | x) with near-linear boundaries, but NB models how each class generates the data (generative), while logistic regression models the class given the data (discriminative). Read next: KNN.</figcaption></figure>
-
-  <h2 id="nb-ladder" class="open"><span class="num">★</span>The Question Ladder</h2>
-  <p>One running example carries the whole note: <strong>a tiny SMS inbox of eight labelled messages</strong>, four spam and four ham (normal), each with its text, whether the sender is known, whether it was sent at night, the age of the sender's account and its length. The new message to classify is <strong>"free lunch monday"</strong>. Each concept answers the question the previous one left open.</p>
-  <ol class="story">
-    <li><b>Bayes' theorem</b><span>Q: we know how often spam comes from unknown senders; how likely is a message from an unknown sender to be spam? → flip the conditional: P(spam | unknown) = 0.75. But a real message has many clues at once.</span></li>
-    <li><b>Bayes classifier</b><span>Q: how do we use all clues together? → pick the class with the largest P(class)·P(all clues | class). But P(all clues | class) needs a table with millions of cells and we have eight messages.</span></li>
-    <li><b>Naive (conditional independence) assumption</b><span>Q: how can we estimate P(all clues | class) from so little data? → multiply one small probability per clue: unknown + night gives 0.90. But what are the "clues" when the input is free text?</span></li>
-    <li><b>Multinomial NB</b><span>Q: how do we turn words into probabilities? → count each word per class: P(spam | "free lunch monday") = 0.382. But a word never seen in spam gets probability 0 and vetoes everything.</span></li>
-    <li><b>Laplace smoothing</b><span>Q: how do we stop one unseen word from zeroing a class? → add α to every count. But multiplying hundreds of small numbers underflows to 0.</span></li>
-    <li><b>Log-probabilities</b><span>Q: how do we compute with numbers like 10⁻¹²⁰⁰? → add logs, normalise with log-sum-exp. But Multinomial NB ignores which words are <em>absent</em>.</span></li>
-    <li><b>Bernoulli NB</b><span>Q: what if presence/absence matters more than counts? → model each word as present or absent: 0.292. But age and length are numbers, not counts.</span></li>
-    <li><b>Gaussian NB</b><span>Q: how do we handle continuous clues? → a bell curve per feature per class (means and variances): 0.906. But real data mixes words, categories and numbers.</span></li>
-    <li><b>Categorical NB and mixing types</b><span>Q: how do we combine all clue types? → add their log-probabilities: 0.96. But what kind of model have we actually built?</span></li>
-    <li><b>NB as a linear model</b><span>Q: how does NB relate to logistic regression? → its log-odds are a weighted sum of counts, the same form; NB wins with little data, LR with lots. But are NB's probabilities trustworthy?</span></li>
-    <li><b>Calibration</b><span>Q: does "p = 0.999" really mean 99.9%? → no: double-counted clues push probabilities to the extremes (11 confident mistakes vs 0). Calibrate if you need probabilities. But how do we run all this in practice?</span></li>
-    <li><b>sklearn, from scratch, when to use</b><span>Q: which class, which settings, can we rebuild it, when is it the right model? → sections 12–16, then the Revision Sheet.</span></li>
-  </ol>
-
-  <h2 id="nb-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="nb-map"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">Naive Bayes</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">Bayes' theorem</div>
+        <div class="mm-title">The idea</div>
         <ul>
-          <li><b>P(c | x) = P(x | c)·P(c) / P(x)</b>: posterior = likelihood × prior / evidence</li>
-          <li>P(x) = Σ_c P(x | c)P(c) (total probability)</li>
-          <li>Inbox: P(spam | unknown sender) = 0.375 / 0.5 = 0.75</li>
-          <li>💡 Detective: start with a hunch (prior), update with each clue</li>
+          <li><b>Bayes' theorem</b>: P(c | x) = P(x | c)·P(c) / P(x)</li>
+          <li>Prior × likelihood, then normalise</li>
+          <li><b>Naive</b>: clues independent <em>given the class</em>, so P(x | c) = Π P(xⱼ | c)</li>
+          <li>Generative: models how each class produces its data</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">The naive assumption</div>
+        <div class="mm-title">Variants</div>
         <ul>
-          <li>Clues independent <b>given the class</b>: P(x₁…x_d | c) = Π P(xⱼ | c)</li>
-          <li>d counts instead of a 2^d table (2²⁴ = 16.8 M cells for 24 words)</li>
-          <li>Unknown + night: 0.281 vs 0.031 → 0.90</li>
-          <li>Works for <b>ranking</b> (argmax) even when probabilities are wrong</li>
-          <li>⚠ Duplicate clue counted 3× → 0.75 → 0.964</li>
+          <li><b>Multinomial</b>: word counts, (count + α)/(N_c + αV)</li>
+          <li><b>Bernoulli</b>: present/absent; absent words count too</li>
+          <li><b>Gaussian</b>: a bell curve per feature per class</li>
+          <li><b>Categorical</b>, <b>Complement</b> (imbalanced text)</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Multinomial &amp; smoothing</div>
+        <div class="mm-title">Making it work</div>
         <ul>
-          <li>P(w | c) = (count(w, c) + α) / (total words in c + αV)</li>
-          <li>V = 24; spam 16 words, ham 15; P(free | spam) = 4/40 = 0.10</li>
-          <li>"free lunch monday": 3.13e−5 vs 5.06e−5 → <b>0.382</b></li>
-          <li>α → 0: unseen word zeroes the class; α → ∞: prior only (0.5)</li>
-          <li>Repeated words count again ("free" ×3 → 0.904)</li>
+          <li><b>Laplace smoothing</b> α stops an unseen word zeroing a class</li>
+          <li>Sum <b>logs</b>, normalise with <b>log-sum-exp</b></li>
+          <li>Log-odds = bias + Σ count × weight: a <b>linear</b> model</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Bernoulli &amp; Gaussian</div>
+        <div class="mm-title">In practice</div>
         <ul>
-          <li><b>Bernoulli</b>: P(present | c) = (docs + α)/(n_c + 2α); absent words multiply (1 − p) → 0.292</li>
-          <li><b>Gaussian</b>: per class, per feature mean μ and variance σ² (ddof = 0)</li>
-          <li>Age 40 days, length 20 → 0.906</li>
-          <li>⚠ Tiny variance (spam lengths 0.69) → length 17 drops it to 0.062</li>
-          <li>Categorical NB: counts per category; mix types by adding log-probs</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Computing safely</div>
-        <ul>
-          <li>Products underflow (0.001⁴⁰⁰ = 0.0); sum logs instead</li>
-          <li>Normalise with <b>log-sum-exp</b>: subtract the max before exp</li>
-          <li>Log-odds = log prior ratio + Σ count·ln(P(w|spam)/P(w|ham))</li>
-          <li>free +1.361, lunch −0.718, monday −1.124 → −0.481 → 0.382</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Practice</div>
-        <ul>
-          <li>Linear classifier, <b>generative</b>; LR is its discriminative twin</li>
-          <li>NB better at 10–100 messages; LR better at 300+</li>
-          <li>Probabilities too extreme: 11 wrong at p &lt; 0.01 or &gt; 0.99 (LR 0)</li>
-          <li>sklearn: MultinomialNB, ComplementNB, BernoulliNB, GaussianNB, CategoricalNB; alpha, var_smoothing, partial_fit</li>
-          <li>Fast, tiny, streaming; great baseline for text</li>
+          <li>Wins with little data; logistic regression wins with lots</li>
+          <li>Probabilities too extreme: calibrate before using them</li>
+          <li>One-pass, streaming (<code>partial_fit</code>), great text baseline</li>
         </ul>
       </div>
     </div>
@@ -115,50 +49,35 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="nb-ladder"><span class="rm-num">★</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The whole story in one chain</span></div></div>
-      <div class="rm-item rm-done" data-target="nb-bayes"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Bayes' Theorem</span><span class="rm-sub">Flipping a conditional by hand</span></div></div>
-      <div class="rm-item rm-done" data-target="nb-classifier"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">The Bayes Classifier</span><span class="rm-sub">MAP rule, generative models</span></div></div>
-      <div class="rm-item rm-done" data-target="nb-naive"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">The Naive Assumption</span><span class="rm-sub">And why it still works</span></div></div>
-      <div class="rm-item rm-done" data-target="nb-multi"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Multinomial NB</span><span class="rm-sub">Spam filter by hand</span></div></div>
-      <div class="rm-item rm-done" data-target="nb-smooth"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Laplace Smoothing</span><span class="rm-sub">The zero-count problem</span></div></div>
-      <div class="rm-item rm-done" data-target="nb-log"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Log-Probabilities</span><span class="rm-sub">Underflow, log-sum-exp</span></div></div>
-      <div class="rm-item rm-done" data-target="nb-bern"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Bernoulli NB</span><span class="rm-sub">Present or absent</span></div></div>
-      <div class="rm-item rm-done" data-target="nb-gauss"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Gaussian NB</span><span class="rm-sub">Means and variances by hand</span></div></div>
-      <div class="rm-item rm-done" data-target="nb-variants"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Categorical &amp; Mixed</span><span class="rm-sub">Combining clue types</span></div></div>
-      <div class="rm-item rm-done" data-target="nb-linear"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">NB Is Linear</span><span class="rm-sub">vs logistic regression</span></div></div>
-      <div class="rm-item rm-done" data-target="nb-calib"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Calibration</span><span class="rm-sub">Over-confident probabilities</span></div></div>
-      <div class="rm-item rm-done" data-target="nb-sklearn"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">sklearn in Practice</span><span class="rm-sub">Classes, pipelines, partial_fit</span></div></div>
-      <div class="rm-item rm-done" data-target="nb-scratch"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">From Scratch</span><span class="rm-sub">Matched to sklearn</span></div></div>
-      <div class="rm-item rm-done" data-target="nb-when"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">When to Use &amp; Comparisons</span><span class="rm-sub">vs LR, KNN, SVM, trees</span></div></div>
-      <div class="rm-item rm-done" data-target="nb-connect"><span class="rm-num">15</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">Each concept built from the last</span></div></div>
-      <div class="rm-item rm-done" data-target="nb-traps"><span class="rm-num">16</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Interview and code traps</span></div></div>
-      <div class="rm-item rm-done" data-target="nb-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note in 15 minutes</span></div></div>
-      <div class="rm-item rm-done" data-target="nb-qa"><span class="rm-num">17</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
+      <div class="rm-item rm-done" data-target="nb-bayes"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Bayes' Theorem</span><span class="rm-sub">turning "spam has unknown senders" into "unknown senders are spam"</span></div></div>
+      <div class="rm-item rm-done" data-target="nb-naive"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">The Naive Assumption</span><span class="rm-sub">combining many clues from very little data</span></div></div>
+      <div class="rm-item rm-done" data-target="nb-multi"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Multinomial Naive Bayes</span><span class="rm-sub">words as clues: the spam filter by hand</span></div></div>
+      <div class="rm-item rm-done" data-target="nb-smooth"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Laplace Smoothing</span><span class="rm-sub">stopping one unseen word from vetoing a class</span></div></div>
+      <div class="rm-item rm-done" data-target="nb-log"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Working in Log Space</span><span class="rm-sub">why products of probabilities break, and the fix</span></div></div>
+      <div class="rm-item rm-done" data-target="nb-bern"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Bernoulli Naive Bayes</span><span class="rm-sub">present or absent, and missing words as evidence</span></div></div>
+      <div class="rm-item rm-done" data-target="nb-gauss"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Gaussian Naive Bayes</span><span class="rm-sub">numbers instead of counts: means and variances</span></div></div>
+      <div class="rm-item rm-done" data-target="nb-mix"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Mixing Feature Types</span><span class="rm-sub">categories, words and numbers in one model</span></div></div>
+      <div class="rm-item rm-done" data-target="nb-linear"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Naive Bayes vs Logistic Regression</span><span class="rm-sub">the hidden linear model, and who wins when</span></div></div>
+      <div class="rm-item rm-done" data-target="nb-calib"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Calibration</span><span class="rm-sub">why its probabilities are over-confident</span></div></div>
+      <div class="rm-item rm-done" data-target="nb-practice"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Naive Bayes in Practice</span><span class="rm-sub">sklearn classes, tuning, streaming, from scratch, when to use</span></div></div>
+      <div class="rm-item rm-done" data-target="nb-traps"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">smoothing, logs, scaled inputs, wrong priors</span></div></div>
+      <div class="rm-item rm-done" data-target="nb-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">formulas, variants table, the inbox numbers</span></div></div>
+      <div class="rm-item rm-done" data-target="nb-qa"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">the questions interviewers ask on Naive Bayes</span></div></div>
     </div>
   </div>
 
-  <h2 id="nb-bayes"><span class="num">01</span>Bayes' Theorem by Hand</h2>
-  <p class="gap"><strong>The question we can't answer yet.</strong> From past messages we can easily count "how often does spam come from an unknown sender?". But the question we need answered runs the other way: "this message came from an unknown sender; how likely is it to be spam?". How do we flip one conditional probability into the other?</p>
-  <h3>The running example</h3>
-  <p>Our whole inbox: eight labelled messages. Every section of this note uses these same eight rows.</p>
+  <h2 id="nb-bayes"><span class="num">01</span>Bayes' Theorem</h2>
+  <p>Here is the whole inbox we will work with. Each message has its text, a label (1 = spam, 0 = ham), whether the sender is in the phone's contacts, whether it arrived at night, how old the sender's account is, and its length in characters. Every section of this note uses these same eight rows.</p>
   <div class="fx" data-lang="py">import numpy as np, pandas as pd
 inbox = pd.DataFrame({
     "text": ["win a free prize now", "free cash offer win", "claim your free prize", "cheap offer buy now",
              "meeting moved to monday", "see you at lunch", "project update attached", "can we meet monday"],
     "spam": [1, 1, 1, 1, 0, 0, 0, 0],
     "sender": ["unknown", "unknown", "unknown", "known", "known", "known", "unknown", "known"],
-    "night": ["yes", "yes", "yes", "no", "no", "no", "no", "yes"],          # sent between 10 pm and 6 am
-    "age_days": [2, 5, 1, 30, 400, 900, 15, 650]})                         # age of the sender's account
-inbox["length"] = inbox.text.str.len()                                     # characters
-print(inbox.to_string())
-# Bayes' theorem with one clue: the sender is unknown
-p_spam = inbox.spam.mean()
-p_u_spam = (inbox[inbox.spam == 1].sender == "unknown").mean()
-p_u_ham = (inbox[inbox.spam == 0].sender == "unknown").mean()
-evidence = p_u_spam * p_spam + p_u_ham * (1 - p_spam)
-print(f"\\nP(spam)={p_spam}  P(unknown|spam)={p_u_spam}  P(unknown|ham)={p_u_ham}")
-print(f"P(unknown) = {p_u_spam}*{p_spam} + {p_u_ham}*{1 - p_spam} = {evidence}")
-print(f"P(spam | unknown) = {p_u_spam * p_spam} / {evidence} = {p_u_spam * p_spam / evidence}")</div>
+    "night": ["yes", "yes", "yes", "no", "no", "no", "no", "yes"],   # sent between 10 pm and 6 am
+    "age_days": [2, 5, 1, 30, 400, 900, 15, 650]})                  # age of the sender's account
+inbox["length"] = inbox.text.str.len()                              # characters
+print(inbox.to_string())</div>
   <div class="fx" data-lang="text">                      text  spam   sender night  age_days  length
 0     win a free prize now     1  unknown   yes         2      20
 1      free cash offer win     1  unknown   yes         5      19
@@ -167,13 +86,9 @@ print(f"P(spam | unknown) = {p_u_spam * p_spam} / {evidence} = {p_u_spam * p_spa
 4  meeting moved to monday     0    known    no       400      23
 5         see you at lunch     0    known    no       900      16
 6  project update attached     0  unknown    no        15      23
-7       can we meet monday     0    known   yes       650      18
-
-P(spam)=0.5  P(unknown|spam)=0.75  P(unknown|ham)=0.25
-P(unknown) = 0.75*0.5 + 0.25*0.5 = 0.5
-P(spam | unknown) = 0.375 / 0.5 = 0.75</div>
-  <h3>Flipping the conditional, by counting</h3>
-  <p>Before any formula, just count. Of the 8 messages, 4 are spam. Of the 4 spam, 3 came from unknown senders; of the 4 ham, 1 did. So 4 messages came from unknown senders, and 3 of those 4 are spam: <strong>P(spam | unknown) = 3/4 = 0.75</strong>.</p>
+7       can we meet monday     0    known   yes       650      18</div>
+  <p>Start with a single clue: the sender. From past messages it is easy to count "how often does spam come from an unknown sender?". Three of the four spam messages did, so that number is 3/4. But that is not the question a spam filter needs answered. A filter sees a new message from an unknown sender and must decide "how likely is <em>this</em> to be spam?". These are two different questions. The first is the probability of the clue given the class, written P(unknown | spam); the second is the probability of the class given the clue, P(spam | unknown). The vertical bar is read "given". Training data naturally gives us the first kind; prediction needs the second. We need a way to flip one into the other.</p>
+  <p>Before any formula, we can flip it simply by counting. Picture the eight messages split first by class and then by sender:</p>
   <figure class="viz"><svg viewBox="0 0 640 230" width="640">
 <rect x="250" y="10" width="140" height="40" rx="8" class="fs" stroke="currentColor"/><text x="320" y="35" text-anchor="middle" font-size="13">8 messages</text>
 <line x1="290" y1="50" x2="170" y2="88" stroke="currentColor"/><line x1="350" y1="50" x2="470" y2="88" stroke="currentColor"/>
@@ -189,359 +104,190 @@ P(spam | unknown) = 0.375 / 0.5 = 0.75</div>
 <rect x="500" y="164" width="100" height="36" rx="8" class="fs" stroke="currentColor"/><text x="550" y="187" text-anchor="middle" font-size="12">3 known</text>
 <text x="320" y="222" text-anchor="middle" font-size="12">unknown senders: 3 spam + 1 ham → P(spam | unknown) = 3 / (3 + 1) = 0.75</text>
 </svg><figcaption>The eight messages split first by class, then by sender. Bayes' theorem is just "keep the thick-bordered boxes and see what share of them is spam".</figcaption></figure>
-  <h3>The same thing as a formula</h3>
-  <p>Write the count reasoning with probabilities. The share of all messages that are "spam and unknown" is P(unknown | spam)·P(spam) = 0.75 × 0.5 = 0.375. The share that is "unknown" at all is the sum over both classes (the <strong>law of total probability</strong>): 0.75 × 0.5 + 0.25 × 0.5 = 0.5. Divide:</p>
+  <p>Follow the tree from the top. Four messages are spam and four are ham. Among the spam, 3 came from unknown senders; among the ham, 1 did. So 4 messages in total came from unknown senders (the two thick-bordered boxes), and 3 of those 4 are spam. That is the answer: P(spam | unknown) = 3/4 = 0.75. All we did was keep the boxes that match the clue and ask what share of them belongs to each class.</p>
+  <p>Writing the same reasoning with probabilities gives <strong>Bayes' theorem</strong>, a rule for turning P(clue | class) into P(class | clue). The share of all messages that are "spam and unknown" is P(unknown | spam) × P(spam) = 0.75 × 0.5 = 0.375. The share that are "unknown" at all is the sum over both classes, 0.75 × 0.5 + 0.25 × 0.5 = 0.5 (adding up over every way something can happen like this is called the <strong>law of total probability</strong>). Dividing the first by the second gives the answer:</p>
   <p style="text-align:center"><strong>P(spam | unknown) = P(unknown | spam) · P(spam) / P(unknown) = 0.375 / 0.5 = 0.75</strong></p>
-  <table class="tbl">
-    <tr><th>Name</th><th>Symbol</th><th>Meaning</th><th>Inbox value</th></tr>
-    <tr><td>Prior</td><td>P(c)</td><td>Belief in the class before seeing the clue</td><td>P(spam) = 0.5</td></tr>
-    <tr><td>Likelihood</td><td>P(x | c)</td><td>How typical the clue is for that class</td><td>P(unknown | spam) = 0.75</td></tr>
-    <tr><td>Evidence</td><td>P(x)</td><td>How common the clue is overall; the same for every class</td><td>P(unknown) = 0.5</td></tr>
-    <tr><td>Posterior</td><td>P(c | x)</td><td>Updated belief after the clue</td><td>P(spam | unknown) = 0.75</td></tr>
-  </table>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A detective starts with a hunch (prior: "half of all tips are fake"), then sees a clue ("anonymous caller"). How much the hunch moves depends on how much more typical the clue is of fakes than of genuine tips (likelihood 0.75 vs 0.25: three times). A clue equally typical of both would not move the hunch at all.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Bayes' theorem</strong>: P(c | x) = P(x | c)·P(c) / P(x), with P(x) = Σ_k P(x | k)·P(k). It follows from writing the joint probability two ways: P(c, x) = P(c | x)P(x) = P(x | c)P(c). In odds form: posterior odds = prior odds × likelihood ratio, here 1 × (0.75/0.25) = 3, i.e. p = 3/4. (Background: <a class="xref" data-note="st_probability">Probability</a>.)</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>P(unknown | spam) = 0.75 and P(spam | unknown) = 0.75 are equal here only because the priors are 50/50. With 1% spam the same clue gives P(spam | unknown) = 0.75 × 0.01 / (0.75 × 0.01 + 0.25 × 0.99) ≈ 0.03. Confusing the two directions (the "prosecutor's fallacy") is the most common probability mistake in interviews.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: The Bayes Classifier.</b> We used one clue. A real message has a sender, a time, an account age, a length and a dozen words. How do we turn Bayes' theorem into a classifier that uses all of them?</div>
+  <p>Each piece has a name you will hear in every interview. P(spam) is the <strong>prior</strong>: what we believed before looking at the clue (half the inbox is spam). P(unknown | spam) is the <strong>likelihood</strong>: how typical the clue is of that class. P(unknown) is the <strong>evidence</strong>: how common the clue is overall; it is the same for every class, so it only rescales the answers so they add up to 1. And P(spam | unknown) is the <strong>posterior</strong>: the updated belief after seeing the clue. In words: posterior = prior × likelihood, divided by the evidence.</p>
+  <p>Think of a detective with a hunch. Before any evidence, they think half of all anonymous tips are fake (the prior). Then a clue arrives: the caller hid their number. How far the hunch should move depends on how much more typical that clue is of fake tips than of genuine ones. If hidden numbers are three times as common among fake tips (0.75 against 0.25), the detective's odds of "fake" are multiplied by three, from 1:1 to 3:1, which is a probability of 0.75. A clue that is equally common in both groups would not move the hunch at all. This "multiply the odds by the likelihood ratio" view is a useful second way to think about Bayes' theorem, and it will become important when we combine many clues.</p>
+  <p>Here is the same calculation in code, computed from the DataFrame rather than by eye:</p>
+  <div class="fx" data-lang="py">p_spam = inbox.spam.mean()                                          # prior P(spam)
+p_u_spam = (inbox[inbox.spam == 1].sender == "unknown").mean()      # likelihood P(unknown | spam)
+p_u_ham = (inbox[inbox.spam == 0].sender == "unknown").mean()       # P(unknown | ham)
+evidence = p_u_spam * p_spam + p_u_ham * (1 - p_spam)               # P(unknown), both classes added
+print(f"P(spam)={p_spam}  P(unknown|spam)={p_u_spam}  P(unknown|ham)={p_u_ham}")
+print(f"P(unknown) = {evidence}")
+print(f"P(spam | unknown) = {p_u_spam * p_spam} / {evidence} = {p_u_spam * p_spam / evidence}")</div>
+  <div class="fx" data-lang="text">P(spam)=0.5  P(unknown|spam)=0.75  P(unknown|ham)=0.25
+P(unknown) = 0.5
+P(spam | unknown) = 0.375 / 0.5 = 0.75</div>
+  <p>The code reproduces the hand numbers: a prior of 0.5, likelihoods of 0.75 and 0.25, evidence 0.5, and a posterior of 0.75. One warning before we go on. In this inbox P(unknown | spam) and P(spam | unknown) happen to both be 0.75, but only because the classes are 50/50. If just 1% of real messages were spam, the same clue would give 0.75 × 0.01 / (0.75 × 0.01 + 0.25 × 0.99) ≈ 0.03: an unknown sender would barely raise suspicion, because there is so much more ham to come from unknown senders. Mixing up the two directions is the most common probability mistake there is (in courtrooms it is called the "prosecutor's fallacy"), and the prior is what separates them. (The probability background is in <a class="xref" data-note="st_probability">Probability</a>.)</p>
 
-  <h2 id="nb-classifier"><span class="num">02</span>From Bayes' Theorem to a Classifier</h2>
-  <p class="gap"><strong>The question we can't answer yet.</strong> Bayes' theorem gave P(spam | one clue). A message brings many clues at once, x = (x₁, …, x_d). What is the rule for choosing a class, and what do we need to estimate for it?</p>
-  <h3>The MAP rule</h3>
-  <p>Apply Bayes' theorem to the whole clue vector x and compare classes. The evidence P(x) is the same for every class, so for <em>choosing</em> a class we can drop it:</p>
-  <p style="text-align:center"><strong>ŷ = argmax_c P(c | x) = argmax_c P(c) · P(x | c)</strong></p>
-  <p>This is the <strong>maximum a posteriori (MAP)</strong> rule. If we did know the true P(x | c), it would be the best possible classifier (the <strong>Bayes optimal classifier</strong>, whose error is the lowest achievable, the "Bayes error"). To report a probability, divide each class's score by the sum of the scores; that sum <em>is</em> P(x).</p>
-  <h3>The problem: P(x | c) for many clues</h3>
-  <p>To estimate P(x | spam) directly we would count how often each <em>full combination</em> of clues appears among spam messages. With just the 24 words of our inbox, each present or absent, there are 2²⁴ = 16,777,216 combinations per class. We have four spam messages. Almost every combination has count 0, including the one we want to classify. Direct estimation is hopeless; this is the curse of dimensionality in its plainest form (<a class="xref" data-note="ml_dimred">Curse of Dimensionality</a>).</p>
-  <h3>Generative vs discriminative</h3>
-  <table class="tbl">
-    <tr><th></th><th>Generative (Naive Bayes)</th><th>Discriminative (<a class="xref" data-note="ml_classification">Logistic Regression</a>)</th></tr>
-    <tr><td>Models</td><td>P(x | c) and P(c): how each class produces its data</td><td>P(c | x) directly</td></tr>
-    <tr><td>Training</td><td>Counting, closed form, one pass</td><td>Optimisation (gradient descent)</td></tr>
-    <tr><td>Can generate fake examples?</td><td>Yes (sample words from P(w | spam))</td><td>No</td></tr>
-    <tr><td>Strength</td><td>Little data, many features, missing features easy to skip</td><td>More accurate with lots of data; fewer assumptions</td></tr>
-  </table>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A <strong>Bayes classifier</strong> predicts ŷ(x) = argmax_c P(c)P(x | c). A <strong>generative classifier</strong> estimates P(c) and P(x | c) from data and plugs them into this rule; Naive Bayes is the generative classifier with the extra assumption of section 03.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"Naive Bayes is Bayesian" is not quite right. It uses Bayes' <em>theorem</em>, but the probabilities are point estimates from counts (maximum likelihood, or with a smoothing prior). A fully Bayesian model would keep whole distributions over its parameters.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: The Naive Assumption.</b> The MAP rule needs P(all clues | class), which would take millions of counts. We need a way to build it from one small count per clue.</div>
-
-  <h2 id="nb-naive"><span class="num">03</span>The Naive Assumption</h2>
-  <p class="gap"><strong>The question we can't answer yet.</strong> We cannot estimate P(unknown sender AND night AND …| spam) as one big table from eight messages. Can we build it from pieces we <em>can</em> count, one clue at a time?</p>
-  <h3>Plain words</h3>
-  <p>Assume that <strong>once you know the class</strong>, the clues tell you nothing about each other. Among spam messages, knowing the sender is unknown does not change the chance it was sent at night. Then the joint probability is a product:</p>
+  <h2 id="nb-naive"><span class="num">02</span>The Naive Assumption</h2>
+  <p>A real message brings many clues at once: the sender, the time, the account age, the length, and a dozen words. To classify it we apply Bayes' theorem to all of them together, x = (x₁, x₂, …, x_d), and pick the class with the largest posterior. Because the evidence P(x) is the same for every class, it cannot change which class wins, so for choosing a class we only need to compare P(class) × P(x | class). Picking the class this way is called the <strong>maximum a posteriori</strong> or <strong>MAP</strong> rule ("a posteriori" just means "after seeing the evidence"):</p>
+  <p style="text-align:center"><strong>predicted class = the c with the largest P(c) · P(x₁, x₂, …, x_d | c)</strong></p>
+  <p>If we knew the true P(x | c), this would be the best classifier possible; its error is the lowest any model can achieve on that problem and is called the <strong>Bayes error</strong>. The difficulty is estimating P(x | c) when x has many parts. To estimate P(x | spam) directly we would have to count how often each <em>complete combination</em> of clues appears among spam messages. Even with only the 24 different words in our inbox, each either present or absent, there are 2²⁴ = 16,777,216 possible combinations per class, and we have four spam messages. Almost every combination, including the one we want to classify, has a count of zero. This is the problem the "naive" part of Naive Bayes exists to solve.</p>
+  <p>The solution is an assumption: <strong>once you know the class, the clues tell you nothing about each other</strong>. Among spam messages, knowing that the sender is unknown does not change the chance that the message was sent at night. This is called <strong>conditional independence</strong> (independence <em>given the class</em>), and it lets us replace the impossible joint probability with a product of one small probability per clue:</p>
   <p style="text-align:center"><strong>P(x₁, x₂, …, x_d | c) = P(x₁ | c) · P(x₂ | c) · … · P(x_d | c)</strong></p>
-  <p>and the classifier becomes <strong>score(c) = P(c) · Πⱼ P(xⱼ | c)</strong>. Instead of 16.8 million cells per class we need d small tables.</p>
-  <h3>By hand: unknown sender, sent at night</h3>
-  <table class="tbl">
-    <tr><th>class</th><th>prior</th><th>P(unknown | c)</th><th>P(night | c)</th><th>score</th></tr>
-    <tr><td>spam</td><td>4/8</td><td>3/4</td><td>3/4</td><td>0.5 × 0.75 × 0.75 = 0.2812</td></tr>
-    <tr><td>ham</td><td>4/8</td><td>1/4</td><td>1/4</td><td>0.5 × 0.25 × 0.25 = 0.0312</td></tr>
-  </table>
-  <p>P(spam | unknown, night) = 0.2812 / (0.2812 + 0.0312) = <strong>0.90</strong>. The first clue moved us from 0.5 to 0.75; the second, treated as independent evidence, moved us to 0.90 (odds 1 → 3 → 9: each clue multiplies the odds by its likelihood ratio 3).</p>
-  <div class="fx" data-lang="py"># two clues: unknown sender AND sent at night
-def naive(df, clues):
-    out = {}
+  <p>Instead of sixteen million counts per class we now need d small ones, each of which can be estimated from every message in the class. A <strong>Naive Bayes classifier</strong> is exactly this: the MAP rule with the product plugged in, score(c) = P(c) × Π P(xⱼ | c), where Π means "multiply over all clues j". It is called naive because the assumption is almost never literally true.</p>
+  <p>A good picture is a selection committee in which each member reads only one document about a candidate (one reads the CV, one the marks sheet, one the interview notes) and nobody talks to anyone else. Each gives an independent opinion, and the opinions are multiplied together. If the documents really are about different things, this works very well. If two members happen to read near-identical documents, that view is counted twice. Keep that weakness in mind; we will see it in a moment.</p>
+  <p>Let us use two clues, an unknown sender and a night-time message. For spam, the prior is 4/8, P(unknown | spam) = 3/4 and P(night | spam) = 3/4, so the score is 0.5 × 0.75 × 0.75 = 0.2812. For ham the same pieces are 4/8, 1/4 and 1/4, giving 0.5 × 0.25 × 0.25 = 0.0312. Normalising, P(spam | unknown, night) = 0.2812 / (0.2812 + 0.0312) = 0.90. In odds: the first clue multiplied the odds of spam by 3 (from 1:1 to 3:1), the second by 3 again (to 9:1), and 9:1 is a probability of 0.9.</p>
+  <div class="fx" data-lang="py">def naive(df, clues):
+    """prior x one likelihood per clue, for each class; returns P(spam | clues)"""
+    score = {}
     for c in [1, 0]:
         part = df[df.spam == c]
-        s = len(part) / len(df)                              # prior
+        s = len(part) / len(df)                                     # prior
         for col, val in clues.items():
-            s *= (part[col] == val).mean()                   # one likelihood per clue, multiplied
-        out[c] = s
-    return out[1], out[0], out[1] / (out[1] + out[0])
+            s *= (part[col] == val).mean()                          # multiply in each clue separately
+        score[c] = s
+    return score[1], score[0], score[1] / (score[1] + score[0])
+
 s1, s0, post = naive(inbox, {"sender": "unknown", "night": "yes"})
-print(f"naive: spam score {s1:.4f}  ham score {s0:.4f}  P(spam) = {post:.3f}")
+print(f"spam score {s1:.4f}  ham score {s0:.4f}  P(spam | unknown, night) = {post:.3f}")
 both = inbox[(inbox.sender == "unknown") &amp; (inbox.night == "yes")]
-print(f"exact count: messages with both clues = {len(both)}, of which spam = {both.spam.sum()}")
-print("full joint table for 24 words present/absent needs", f"{2 ** 24:,}", "cells per class; we have 8 messages")
-# double counting: give the model the same clue three times
-for k in [1, 2, 3]:
+print(f"exact count: {len(both)} messages have both clues, {both.spam.sum()} of them spam")</div>
+  <div class="fx" data-lang="text">spam score 0.2812  ham score 0.0312  P(spam | unknown, night) = 0.900
+exact count: 3 messages have both clues, 3 of them spam</div>
+  <p>The first line matches the hand calculation. The second line is the honest count from the data: three messages have both clues and all three are spam, so on this data the "true" answer would be 1.0. The naive product says 0.90. It is not exactly right, but it points firmly in the right direction, and it got there by multiplying two numbers that were each estimated from four messages.</p>
+  <p>Now the weakness. What if the same clue enters the model more than once, for example because the dataset has two columns that really say the same thing? Below we copy the sender column one and two extra times:</p>
+  <div class="fx" data-lang="py">for k in [1, 2, 3]:                                                 # feed the SAME clue in k times
     df = inbox.copy()
     for j in range(1, k):
         df[f"sender{j}"] = df.sender
     clues = {"sender": "unknown", **{f"sender{j}": "unknown" for j in range(1, k)}}
     print(f"'unknown sender' counted {k}x -&gt; P(spam) = {naive(df, clues)[2]:.3f}")</div>
-  <div class="fx" data-lang="text">naive: spam score 0.2812  ham score 0.0312  P(spam) = 0.900
-exact count: messages with both clues = 3, of which spam = 3
-full joint table for 24 words present/absent needs 16,777,216 cells per class; we have 8 messages
-'unknown sender' counted 1x -&gt; P(spam) = 0.750
+  <div class="fx" data-lang="text">'unknown sender' counted 1x -&gt; P(spam) = 0.750
 'unknown sender' counted 2x -&gt; P(spam) = 0.900
 'unknown sender' counted 3x -&gt; P(spam) = 0.964</div>
-  <p>Line 2 is the honest count: 3 messages have both clues and all 3 are spam, so the "true" answer on this data is 1.0; the naive product says 0.90. Not equal, but it points the same way. Line 3 is why we accept the approximation. The last three lines show the danger: if the same clue enters the model twice (two columns that say the same thing), NB treats it as two independent pieces of evidence and the probability inflates from 0.75 to 0.90 to 0.964, though nothing new was learnt.</p>
-  <h3>Why it still works</h3>
-  <ul>
-    <li><strong>Classification only needs the winner.</strong> Errors in the probabilities often push both classes' scores the same way; as long as the right class still has the larger score, the decision is correct. Domingos and Pazzani (1997) showed NB is optimal for 0/1 loss in many cases where independence is badly violated.</li>
-    <li><strong>Low variance.</strong> Each P(xⱼ | c) is estimated from all rows of class c, so the estimates are stable even with tiny data. A small bias in exchange for a big variance reduction (<a class="xref" data-note="ml_core">Bias, Variance &amp; Generalization</a>).</li>
-    <li><strong>Dependencies often cancel.</strong> Positive dependencies in one class and similar ones in the other partly cancel in the ratio.</li>
-  </ul>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A selection committee where each member votes from one document only (one reads the CV, one the marks sheet, one the interview notes) and nobody talks to anyone. If two members read near-identical documents, that view gets two votes: that is double counting. Still, the final ranking of candidates is usually right.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Conditional independence</strong>: x_i ⫫ x_j | c means P(x_i, x_j | c) = P(x_i | c)P(x_j | c). <strong>Naive Bayes</strong>: ŷ = argmax_c P(c) Πⱼ P(xⱼ | c), with each factor estimated separately. Note it is independence <em>given the class</em>; the clues may be strongly related overall (spam has both unknown senders and night messages).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"NB assumes the features are independent" is the common, slightly wrong statement. It assumes they are independent <em>within each class</em>. Unknown sender and night are clearly correlated across the whole inbox (both mark spam); the assumption is only that they are unrelated among spam messages and among ham messages.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Multinomial NB.</b> Our clues so far were neat yes/no columns. The most important clue in a message is its text. What are the "features" of free text, and how do we turn them into P(xⱼ | c)?</div>
+  <p>Nothing new was learnt, yet the probability climbs from 0.75 to 0.90 to 0.964. Naive Bayes believes each copy is independent evidence, so it multiplies the same likelihood ratio of 3 in again and again. This is the price of the naive assumption: correlated features are double-counted, and the model becomes over-confident. We will measure how much this matters in section 10.</p>
+  <p>So why does a model built on a false assumption work so well in practice? There are three reasons. First, classification only needs the right <em>winner</em>, not the right probability: errors from dependent clues often push both classes' scores in the same direction, so the larger one usually stays larger. Domingos and Pazzani (1997) showed that Naive Bayes is optimal for plain right/wrong accuracy in many cases where independence is badly violated. Second, every small probability is estimated from all the rows of its class, so the estimates are stable even with tiny data: the model trades a little bias (a wrong assumption) for a large reduction in variance (estimates that do not jump around), the trade-off explained in <a class="xref" data-note="ml_core">Bias, Variance &amp; Generalization</a>. Third, dependencies in one class are often mirrored in the other and partly cancel out.</p>
+  <p>Two points about vocabulary are worth getting exactly right, because interviewers listen for them. Naive Bayes is a <strong>generative</strong> model: it learns how each class <em>generates</em> its data, P(x | c), and then uses Bayes' theorem. Logistic regression is <strong>discriminative</strong>: it learns P(c | x) directly and never models how the data was produced. And the assumption is not "the features are independent". Unknown senders and night-time messages are clearly related across the whole inbox, since both mark spam. The assumption is only that they are unrelated <em>within</em> the spam messages and <em>within</em> the ham messages.</p>
 
-  <h2 id="nb-multi"><span class="num">04</span>Multinomial NB: the Spam Filter by Hand</h2>
-  <p class="gap"><strong>The question we can't answer yet.</strong> The new message is the text "free lunch monday". What are its clues, and how likely is each one in spam and in ham?</p>
-  <h3>Words as clues</h3>
-  <p>Treat a message as a <strong>bag of words</strong>: forget word order, keep how many times each word appears (<a class="xref" data-note="nlp">NLP Foundations</a>). Imagine each class has a bag of word tokens; a spam message is made by drawing its words one at a time from the spam bag. Then P(word | spam) is simply the share of all spam word tokens that are that word.</p>
-  <h3>Step 1: count words per class</h3>
-  <p>sklearn's <code>CountVectorizer</code> lower-cases, splits on spaces and drops one-letter words ("a"). The four spam messages contain 16 word tokens; the four ham messages contain 15; there are V = 24 different words.</p>
-  <table class="tbl"><caption>Counts for the words in "free lunch monday"</caption>
-    <tr><th>word</th><th>count in spam</th><th>count in ham</th><th>raw P(w | spam)</th><th>raw P(w | ham)</th></tr>
-    <tr><td>free</td><td>3</td><td>0</td><td>3/16 = 0.188</td><td>0/15 = 0</td></tr>
-    <tr><td>lunch</td><td>0</td><td>1</td><td>0/16 = 0</td><td>1/15 = 0.067</td></tr>
-    <tr><td>monday</td><td>0</td><td>2</td><td>0/16 = 0</td><td>2/15 = 0.133</td></tr>
-  </table>
-  <p>Raw counts give a zero in each class: "lunch" never appeared in spam, "free" never in ham. Both scores would be exactly 0, and we could not decide. The fix (section 05 explains it fully) is to add 1 to every count: P(w | c) = (count + 1) / (total words in c + V).</p>
-  <h3>Step 2: smoothed probabilities and scores</h3>
+  <h2 id="nb-multi"><span class="num">03</span>Multinomial Naive Bayes</h2>
+  <p>So far our clues were tidy yes/no columns. The most important clue in a message, though, is its text. To use text we first need to decide what the "clues" in a piece of text are. The standard answer is the <strong>bag of words</strong>: forget word order and grammar, and describe each message only by how many times each word appears (more in <a class="xref" data-note="nlp">NLP Foundations</a>). "free lunch monday" becomes free = 1, lunch = 1, monday = 1, and zero for every other word.</p>
+  <p>Now imagine that each class has its own big bag of word tokens. A spam message is written by reaching into the spam bag and pulling out words one at a time; a ham message by pulling from the ham bag. Under that picture, P(word | spam) is simply the share of all spam word tokens that are that word. A model of drawing items from a bag, with counts of how often each kind came out, is called a <strong>multinomial</strong> distribution, so this version is <strong>Multinomial Naive Bayes</strong>. It is the version used for text.</p>
+  <p>Let us compute it by hand. scikit-learn's <code>CountVectorizer</code>, which builds the word counts, lower-cases the text, splits on spaces and drops one-letter words such as "a". After that, the four spam messages contain 16 word tokens in total, the four ham messages contain 15, and there are V = 24 different words (V is the size of the <strong>vocabulary</strong>). The words of our new message appear like this:</p>
   <table class="tbl">
-    <tr><th>word</th><th>P(w | spam) = (count + 1)/(16 + 24)</th><th>P(w | ham) = (count + 1)/(15 + 24)</th></tr>
-    <tr><td>free</td><td>4/40 = 0.100</td><td>1/39 = 0.0256</td></tr>
-    <tr><td>lunch</td><td>1/40 = 0.025</td><td>2/39 = 0.0513</td></tr>
-    <tr><td>monday</td><td>1/40 = 0.025</td><td>3/39 = 0.0769</td></tr>
+    <tr><th>word</th><th>count in spam (of 16)</th><th>count in ham (of 15)</th><th>P(w | spam) = (count + 1)/(16 + 24)</th><th>P(w | ham) = (count + 1)/(15 + 24)</th></tr>
+    <tr><td>free</td><td>3</td><td>0</td><td>4/40 = 0.100</td><td>1/39 = 0.0256</td></tr>
+    <tr><td>lunch</td><td>0</td><td>1</td><td>1/40 = 0.025</td><td>2/39 = 0.0513</td></tr>
+    <tr><td>monday</td><td>0</td><td>2</td><td>1/40 = 0.025</td><td>3/39 = 0.0769</td></tr>
   </table>
-  <ul>
-    <li>Spam score = P(spam) × 0.100 × 0.025 × 0.025 = 0.5 × 6.25 × 10⁻⁵ = <strong>3.13 × 10⁻⁵</strong></li>
-    <li>Ham score = 0.5 × 0.0256 × 0.0513 × 0.0769 = <strong>5.06 × 10⁻⁵</strong></li>
-    <li>P(spam | "free lunch monday") = 3.13 / (3.13 + 5.06) = <strong>0.382</strong>: ham. "free" pulls toward spam (4 times likelier there), but "lunch" (2×) and "monday" (3×) pull harder toward ham.</li>
-  </ul>
+  <p>The raw shares would be 3/16 for "free" in spam and 0/16 for "lunch" in spam, and that zero is a problem: one zero in a product makes the whole spam score zero, and "free" never appeared in ham, so the ham score would be zero too. The last two columns therefore add 1 to every count and V to every total. That adjustment is called smoothing; the next section explains it properly. With it, the scores are:</p>
+  <p style="text-align:center">spam: 0.5 × 0.100 × 0.025 × 0.025 = 3.13 × 10⁻⁵ &nbsp;&nbsp;&nbsp; ham: 0.5 × 0.0256 × 0.0513 × 0.0769 = 5.06 × 10⁻⁵</p>
+  <p>and P(spam | "free lunch monday") = 3.13 / (3.13 + 5.06) = <strong>0.382</strong>. The message is classified as ham. "free" pulls toward spam (it is four times more likely there), but "lunch" (twice as likely in ham) and "monday" (three times as likely in ham) together pull harder. Now let scikit-learn do it:</p>
   <div class="fx" data-lang="py">from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.naive_bayes import MultinomialNB
 y = inbox.spam.values
-vec = CountVectorizer()                                   # splits words, drops 1-letter words like "a"
-X = vec.fit_transform(inbox.text)                         # 8 x V table of word counts
+vec = CountVectorizer()                           # lower-cases, splits words, drops 1-letter words like "a"
+X = vec.fit_transform(inbox.text)                 # 8 x V table of word counts
 vocab = vec.get_feature_names_out()
-counts = pd.DataFrame({"spam": X[y == 1].sum(0).A1, "ham": X[y == 0].sum(0).A1}, index=vocab)
-V = len(vocab); n_spam, n_ham = counts.spam.sum(), counts.ham.sum()
-print(f"V = {V} words; total words: spam {n_spam}, ham {n_ham}")
-msg = ["free", "lunch", "monday"]
-tab = counts.loc[msg].copy()
-tab["P(w|spam)"] = (tab.spam + 1) / (n_spam + V)
-tab["P(w|ham)"] = (tab.ham + 1) / (n_ham + V)
-print(tab.round(4))
-s_spam = 0.5 * tab["P(w|spam)"].prod(); s_ham = 0.5 * tab["P(w|ham)"].prod()
-print(f"spam score {s_spam:.3e}  ham score {s_ham:.3e}  P(spam | msg) = {s_spam / (s_spam + s_ham):.3f}")
 mnb = MultinomialNB(alpha=1.0).fit(X, y)
-print("sklearn P(spam):", round(mnb.predict_proba(vec.transform(["free lunch monday"]))[0, 1], 3))
-print("sklearn P(free|spam):", round(np.exp(mnb.feature_log_prob_[1, vec.vocabulary_["free"]]), 4))
+msg = vec.transform(["free lunch monday"])
+print("V =", len(vocab), " words per class (ham, spam):", mnb.feature_count_.sum(axis=1))
+print("P(free|spam) =", np.exp(mnb.feature_log_prob_[1, vec.vocabulary_["free"]]).round(4))
+print("P(spam | 'free lunch monday') =", mnb.predict_proba(msg)[0, 1].round(3))
 for m in ["free free free lunch monday", "claim your cash prize", "lunch meeting monday"]:
     print(f"  {m:28s} P(spam) = {mnb.predict_proba(vec.transform([m]))[0, 1]:.3f}")</div>
-  <div class="fx" data-lang="text">V = 24 words; total words: spam 16, ham 15
-        spam  ham  P(w|spam)  P(w|ham)
-free       3    0      0.100    0.0256
-lunch      0    1      0.025    0.0513
-monday     0    2      0.025    0.0769
-spam score 3.125e-05  ham score 5.057e-05  P(spam | msg) = 0.382
-sklearn P(spam): 0.382
-sklearn P(free|spam): 0.1
+  <div class="fx" data-lang="text">V = 24  words per class (ham, spam): [15. 16.]
+P(free|spam) = 0.1
+P(spam | 'free lunch monday') = 0.382
   free free free lunch monday  P(spam) = 0.904
   claim your cash prize        P(spam) = 0.956
   lunch meeting monday         P(spam) = 0.072</div>
-  <p>The hand table, the scores and sklearn agree (0.382; P(free | spam) = 0.1). Three more messages: repeating "free" three times multiplies 0.100/0.0256 in three times and flips the verdict to 0.904 spam; "claim your cash prize" is 0.956 spam; "lunch meeting monday" is 0.072. Note "meeting" is in the vocabulary but "meet" is a different word; NB knows nothing about meaning.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Multinomial NB</strong>: a document with word counts x = (x₁, …, x_V) has P(x | c) ∝ Πⱼ θ_{cj}^{xⱼ}, where θ_{cj} = P(word j | c) = (N_{cj} + α)/(N_c + αV), N_{cj} = count of word j in class c, N_c = total words in class c. Prediction: argmax_c [ln P(c) + Σⱼ xⱼ ln θ_{cj}].</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>The denominator is total <em>words</em> in the class (16), not the number of <em>messages</em> (4). Using messages gives Bernoulli-style numbers in a multinomial formula. And words outside the training vocabulary are silently ignored at prediction time.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Laplace Smoothing.</b> We added 1 to every count to escape the zeros, but did not justify the 1, nor ask what other values would do.</div>
+  <p>The first line confirms the hand counts (15 ham words, 16 spam words; the array is ordered by class label, so ham comes first). P(free | spam) is 0.1 and the posterior is 0.382, exactly as computed. The last three lines show the model's character. Repeating "free" three times multiplies its spam-to-ham ratio in three times and flips the verdict to 0.904 spam, because a multinomial model counts every occurrence. "claim your cash prize" is 0.956 spam. "lunch meeting monday" is 0.072. Notice too that the model knows nothing about meaning: "meet" and "meeting" are simply two different words, and any word that never appeared in training is silently ignored at prediction time.</p>
+  <p>Written generally, Multinomial NB estimates, for each class c and each word j, θ_cj = P(word j | c) = (N_cj + α) / (N_c + αV), where N_cj is how often word j appears in class c, N_c is the total number of words in class c and α is the smoothing amount (1 above). A document with word counts x₁ … x_V then gets the score P(c) × Π θ_cj^xⱼ: each word's probability is multiplied in once per occurrence. Note that the denominator is the number of <em>words</em> in the class (16), not the number of <em>messages</em> (4); confusing the two is a common slip in hand calculations.</p>
 
-  <h2 id="nb-smooth"><span class="num">05</span>Laplace Smoothing</h2>
-  <p class="gap"><strong>The question we can't answer yet.</strong> Without smoothing, one word never seen in spam ("lunch") made P(spam) exactly 0 for any message containing it, however spammy the rest. Why is adding 1 the fix, and how much should we add?</p>
-  <h3>The zero-frequency problem</h3>
-  <p>A product is zero if any factor is zero. With four spam messages, most words have never appeared in spam, simply by chance. "Never seen in 16 words" is weak evidence that a word is impossible in spam; it should make the word unlikely, not forbidden.</p>
-  <h3>The fix as pseudo-counts</h3>
-  <p>Pretend that before seeing any data we saw every word α times in every class. Then P(w | c) = (count + α)/(N_c + αV). With α = 1 (Laplace) this is the +1 rule; with 0 &lt; α &lt; 1 it is called Lidstone smoothing. Each class's probabilities still add to 1, because we added αV to the denominator.</p>
-  <table class="tbl"><caption>P(lunch | spam) for different α (count 0, N_spam = 16, V = 24)</caption>
-    <tr><th>α</th><th>(0 + α)/(16 + 24α)</th><th>meaning</th></tr>
-    <tr><td>0</td><td>0</td><td>"impossible": vetoes spam</td></tr>
-    <tr><td>0.1</td><td>0.1/18.4 = 0.0054</td><td>rare</td></tr>
-    <tr><td>1</td><td>1/40 = 0.025</td><td>Laplace</td></tr>
-    <tr><td>10</td><td>10/256 = 0.039</td><td>close to uniform 1/24 = 0.042</td></tr>
-  </table>
-  <div class="fx" data-lang="py">x_new = vec.transform(["free lunch monday"])
-print("alpha   P(lunch|spam)  P(spam | 'free lunch monday')")
+  <h2 id="nb-smooth"><span class="num">04</span>Laplace Smoothing</h2>
+  <p>Look again at "lunch". It never appeared in our four spam messages. Without the +1, P(lunch | spam) = 0/16 = 0, and because the spam score is a product, any message containing "lunch" would get a spam probability of exactly zero, however spammy the rest of it was. "Win a free cash prize, see you at lunch" would be declared certainly ham. This is called the <strong>zero-frequency problem</strong>. With only 16 spam words, most words have never appeared in spam simply by chance. "Not seen in 16 words" is weak evidence that a word is rare in spam; it is not proof that the word is impossible.</p>
+  <p><strong>Laplace smoothing</strong> fixes this by pretending that, before seeing any data, we had already seen every word once in every class. More generally we add a small number α (alpha) to every count: P(w | c) = (count + α) / (N_c + αV). Adding αV to the denominator keeps each class's probabilities summing to 1. With α = 1 this is called Laplace smoothing; with α between 0 and 1 it is sometimes called Lidstone smoothing. For an everyday picture, think of a new restaurant with no reviews. Rating sites do not show it as "zero stars"; many quietly add a few imaginary average reviews to every restaurant, so that one early review cannot make a place look perfect or terrible. α is the number of imaginary reviews.</p>
+  <p>How much to add matters. By hand for "lunch" in spam (count 0, N_spam = 16, V = 24): with α = 0.1 the probability is 0.1 / (16 + 2.4) = 0.0054; with α = 1 it is 1/40 = 0.025; with α = 10 it is 10/256 = 0.039, already close to the "every word equally likely" value of 1/24 = 0.042. Here is the effect on the whole prediction:</p>
+  <div class="fx" data-lang="py">print("alpha    P(lunch|spam)   P(spam | 'free lunch monday')")
 for a in [1e-10, 0.1, 1.0, 10.0, 100.0]:
     m = MultinomialNB(alpha=a).fit(X, y)
-    print(f"{a:&lt;7g} {np.exp(m.feature_log_prob_[1, vec.vocabulary_['lunch']]):.2e}       {m.predict_proba(x_new)[0, 1]:.3f}")</div>
-  <div class="fx" data-lang="text">alpha   P(lunch|spam)  P(spam | 'free lunch monday')
-1e-10   6.25e-12       0.000
-0.1     5.43e-03       0.102
-1       2.50e-02       0.382
-10      3.91e-02       0.493
-100     4.14e-02       0.500</div>
-  <p>With α ≈ 0 the verdict is "certainly ham" (0.000) because of a single unseen word. As α grows, every word's probability is pulled toward the uniform 1/V and the data matters less; at α = 100 the words carry almost no information and the answer is just the prior, 0.500. α is a bias-variance knob: small α trusts the few counts (high variance), large α ignores them (high bias). Tune it by cross-validation, as section 12 does.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A new restaurant with zero reviews is not "zero stars". Rating sites add a few imaginary average reviews to every restaurant so that one early review cannot make it look perfect or terrible. α is the number of imaginary reviews.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Additive (Lidstone) smoothing</strong>: θ̂_{cj} = (N_{cj} + α)/(N_c + αV), α &gt; 0; α = 1 is <strong>Laplace smoothing</strong>. It equals the posterior mean of θ_c under a symmetric Dirichlet(α) prior (equivalently the MAP estimate under Dirichlet(α + 1)): α imaginary occurrences of every word in every class. In sklearn: <code>alpha</code> (default 1.0; <code>force_alpha=True</code> keeps tiny values instead of clipping them).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Smoothing must be applied to every class and every word in the vocabulary, including words that appear only in the other class. And α interacts with vocabulary size: with V = 100,000 words, α = 1 adds 100,000 imaginary words to each class, which can swamp a small class; smaller α (0.01–0.1) is often better for big vocabularies.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Log-Probabilities.</b> Our message had three words and the scores were already around 10⁻⁵. A 400-word e-mail would multiply 400 such numbers. Can a computer even hold the result?</div>
+    p_lunch = np.exp(m.feature_log_prob_[1, vec.vocabulary_["lunch"]])
+    print(f"{a:&lt;8g} {p_lunch:.2e}        {m.predict_proba(msg)[0, 1]:.3f}")</div>
+  <div class="fx" data-lang="text">alpha    P(lunch|spam)   P(spam | 'free lunch monday')
+1e-10    6.25e-12        0.000
+0.1      5.43e-03        0.102
+1        2.50e-02        0.382
+10       3.91e-02        0.493
+100      4.14e-02        0.500</div>
+  <p>With α almost zero, the single unseen word "lunch" makes the verdict "certainly ham" (0.000), which is the zero-frequency problem in action. As α grows, every word's probability is pulled toward the uniform 1/V, so the actual counts matter less and less. At α = 100 the words carry almost no information and the answer is just the prior, 0.500. So α is a knob between two failure modes: a small α trusts a handful of counts too much (high variance), a large α ignores the data (high bias). The default α = 1 is a sensible start, and you tune it by cross-validation like any other hyperparameter (section 11 does this).</p>
+  <p>For the mathematically inclined, adding α to every count is the same as placing a symmetric Dirichlet prior on the word probabilities, a "prior belief" that every word has some chance in every class. One practical point follows from the formula: α interacts with the vocabulary size. With V = 100,000 words, α = 1 adds 100,000 imaginary words to each class, which can drown a small class's real counts, so large vocabularies often work better with α between 0.01 and 0.1.</p>
 
-  <h2 id="nb-log"><span class="num">06</span>Log-Probabilities and Underflow</h2>
-  <p class="gap"><strong>The question we can't answer yet.</strong> Three words gave scores of 3 × 10⁻⁵. Each extra word multiplies in another factor of about 0.01–0.1. What happens to a long message, and how do we compute P(spam) safely?</p>
-  <h3>Underflow</h3>
-  <p>A computer's double-precision numbers cannot go below about 10⁻³⁰⁸. A 400-word e-mail whose words each have probability 0.001 has a product of 10⁻¹²⁰⁰, which the computer stores as exactly 0.0. Both classes become 0, and 0/0 is undefined.</p>
-  <h3>Work with logs</h3>
-  <p>The log turns a product into a sum, and since ln is increasing the class with the bigger score also has the bigger log-score:</p>
-  <p style="text-align:center"><strong>ln score(c) = ln P(c) + Σⱼ xⱼ · ln P(wⱼ | c)</strong></p>
-  <p>For "free lunch monday": ln score(spam) = ln 0.5 + ln 0.100 + ln 0.025 + ln 0.025 = −0.693 − 2.303 − 3.689 − 3.689 = <strong>−10.374</strong>; ln score(ham) = −0.693 − 3.664 − 2.970 − 2.565 = <strong>−9.892</strong>. Ham is larger (less negative): same decision as before.</p>
-  <h3>Turning log-scores back into probabilities: log-sum-exp</h3>
-  <p>To get P(spam) we need e^(−10.374) / (e^(−10.374) + e^(−9.892)). For a long message the log-scores are around −2,771, and e^(−2771) is again 0.0. The trick: subtract the largest log-score from all of them before exponentiating (this multiplies top and bottom by the same constant, so the ratio is unchanged). By hand for the short message: subtract −9.892 → e^(−0.482) = 0.618 and e^0 = 1, so P(spam) = 0.618 / 1.618 = <strong>0.382</strong>.</p>
-  <div class="fx" data-lang="py">p_words = np.full(400, 0.001)                             # a 400-word e-mail, each word has P = 0.001
-print("direct product:", np.prod(p_words), "   sum of logs:", round(np.log(p_words).sum(), 1))
-log_spam, log_ham = -2771.2, -2774.5                      # two log-scores of a long message
-print("exp of log scores:", np.exp(log_spam), np.exp(log_ham))
-m = max(log_spam, log_ham)                                # log-sum-exp trick: subtract the max first
-p_spam = np.exp(log_spam - m) / (np.exp(log_spam - m) + np.exp(log_ham - m))
-print(f"P(spam) via log-sum-exp = {p_spam:.4f}")
-from scipy.special import logsumexp
-print(f"scipy: {np.exp(log_spam - logsumexp([log_spam, log_ham])):.4f}")
+  <h2 id="nb-log"><span class="num">05</span>Working in Log Space</h2>
+  <p>Our three-word message already had scores around 3 × 10⁻⁵. Every extra word multiplies in another factor between about 0.001 and 0.1, so the scores shrink very fast. A computer stores ordinary decimal numbers (64-bit "doubles") only down to about 10⁻³⁰⁸. A 400-word e-mail whose words each have probability 0.001 has a product of 10⁻¹²⁰⁰, which the computer rounds to exactly 0.0. Then both classes score 0, and 0/0 has no answer. Rounding a tiny number down to zero like this is called <strong>underflow</strong>, and a Naive Bayes written with plain multiplication works in a demo and silently breaks on real e-mails.</p>
+  <p>The fix is to work with logarithms. The log turns a product into a sum, ln(a × b) = ln a + ln b, and since ln is an increasing function, the class with the bigger score also has the bigger log-score. So instead of multiplying probabilities we add their logs:</p>
+  <p style="text-align:center"><strong>log-score(c) = ln P(c) + Σⱼ xⱼ · ln P(wⱼ | c)</strong></p>
+  <p>For "free lunch monday": log-score(spam) = ln 0.5 + ln 0.100 + ln 0.025 + ln 0.025 = −0.693 − 2.303 − 3.689 − 3.689 = −10.374, and log-score(ham) = −0.693 − 3.664 − 2.970 − 2.565 = −9.892. Ham is larger (less negative), the same decision as before, and the numbers are perfectly ordinary.</p>
+  <p>There is one more step. To report a probability we must undo the logs: P(spam) = e^(−10.374) / (e^(−10.374) + e^(−9.892)). For a long message the log-scores are around −2,771, and e^(−2771) underflows to 0.0 again. The standard trick, called <strong>log-sum-exp</strong>, is to subtract the largest log-score from all of them before exponentiating. That multiplies the top and bottom of the fraction by the same constant, so the answer does not change, but now the largest term is e⁰ = 1 and nothing can underflow to all-zeros. By hand for the short message: subtract −9.892, giving e^(−0.482) = 0.618 for spam and e⁰ = 1 for ham, so P(spam) = 0.618 / 1.618 = 0.382, as before.</p>
+  <div class="fx" data-lang="py">p_words = np.full(400, 0.001)                     # a 400-word e-mail, each word has P = 0.001
+print("direct product:", np.prod(p_words), "   sum of logs:", np.log(p_words).sum().round(1))
+log_spam, log_ham = -2771.2, -2774.5              # log-scores of a long message
+print("exp of the log-scores:", np.exp(log_spam), np.exp(log_ham))
+m = max(log_spam, log_ham)                        # log-sum-exp: subtract the max first
+p = np.exp(log_spam - m) / (np.exp(log_spam - m) + np.exp(log_ham - m))
+print(f"P(spam) after subtracting the max = {p:.4f}")
 long_msg = " ".join(["free"] * 300 + ["monday"] * 363)
-print("sklearn on a 663-word message:", mnb.predict_log_proba(vec.transform([long_msg])).round(1),
-      mnb.predict_proba(vec.transform([long_msg])).round(4))</div>
+print("sklearn on a 663-word message:", mnb.predict_proba(vec.transform([long_msg])).round(3))</div>
   <div class="fx" data-lang="text">direct product: 0.0    sum of logs: -2763.1
-exp of log scores: 0.0 0.0
-P(spam) via log-sum-exp = 0.9644
-scipy: 0.9644
-sklearn on a 663-word message: [[-0.9 -0.6]] [[0.424 0.576]]</div>
-  <p>Line 1: the direct product is 0.0, but the sum of logs (−2,763) is a perfectly ordinary number. Line 2: exponentiating log-scores of −2,771 gives 0.0 again. Line 3: subtract the max first and the answer is 0.9644 (the scores differ by 3.3, and 1/(1 + e^(−3.3)) = 0.964). scipy's <code>logsumexp</code> does the same. Last line: sklearn handles a 663-word message without trouble, because it works in logs internally (<code>predict_log_proba</code>); 300 × "free" (+1.361 each) against 363 × "monday" (−1.124 each) nearly cancel, giving 0.576 spam.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Log-sum-exp</strong>: ln Σ_k e^(a_k) = m + ln Σ_k e^(a_k − m) with m = max_k a_k. Posterior: P(c | x) = exp(a_c − logsumexp(a)), where a_c = ln P(c) + Σⱼ ln P(xⱼ | c). Every term e^(a_k − m) ≤ 1 and at least one equals 1, so nothing overflows or underflows to all-zero.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Implementing NB with plain products works in a demo with 3-word messages and silently breaks on real e-mails. Always sum logs. Also, "log of 0" is −∞, another reason smoothing is required.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Bernoulli NB.</b> Multinomial NB only looks at the words that are present, and counts repeats. For short messages, the words that are <em>missing</em> ("no 'meeting', no 'project'") may be evidence too.</div>
+exp of the log-scores: 0.0 0.0
+P(spam) after subtracting the max = 0.9644
+sklearn on a 663-word message: [[0.424 0.576]]</div>
+  <p>Read the output line by line. The direct product of 400 probabilities is 0.0, while the sum of their logs, −2,763, is an ordinary number. Exponentiating two log-scores near −2,771 gives 0.0 and 0.0, which is useless. Subtracting the maximum first gives 0.9644, the correct answer (the two scores differ by 3.3, and 1 / (1 + e^(−3.3)) = 0.964). Finally, scikit-learn handles a 663-word message without any trouble, because it works in logs internally (its <code>predict_log_proba</code> method returns the log-probabilities directly). There is also a second reason smoothing is required: the log of zero is minus infinity, so a single unsmoothed zero would break the sum as well.</p>
 
-  <h2 id="nb-bern"><span class="num">07</span>Bernoulli NB: Present or Absent</h2>
-  <p class="gap"><strong>The question we can't answer yet.</strong> Multinomial NB treats "free free free" as three times the evidence and ignores every word that is not in the message. Is there a version that asks only "is the word there or not?" and also learns from absent words?</p>
-  <h3>The model</h3>
-  <p>Describe each message by V yes/no flags, one per vocabulary word. For each class and word, estimate the share of <em>messages</em> (not word tokens) that contain the word, smoothed: P(w present | c) = (messages in c containing w + α)/(messages in c + 2α). The "2α" is because each flag has two outcomes. Then multiply over <strong>all</strong> V words: P(w | c) for those present, 1 − P(w | c) for those absent.</p>
-  <h3>By hand for "free lunch monday"</h3>
-  <table class="tbl">
-    <tr><th>word</th><th>spam messages with it (of 4)</th><th>P(present | spam) = (k + 1)/6</th><th>ham messages with it</th><th>P(present | ham)</th></tr>
-    <tr><td>free</td><td>3</td><td>4/6 = 0.667</td><td>0</td><td>1/6 = 0.167</td></tr>
-    <tr><td>lunch</td><td>0</td><td>1/6 = 0.167</td><td>1</td><td>2/6 = 0.333</td></tr>
-    <tr><td>monday</td><td>0</td><td>1/6 = 0.167</td><td>2</td><td>3/6 = 0.500</td></tr>
-  </table>
-  <ul>
-    <li>Present-word factor: spam 0.667 × 0.167 × 0.167 = 0.01852; ham 0.167 × 0.333 × 0.5 = 0.02778.</li>
-    <li>The other 21 words are absent. Each contributes 1 − P(w | c). Spam's own words (prize, offer, win, …) have high P(w | spam), so their absence costs spam a lot: product 0.00092 for spam vs 0.00149 for ham.</li>
-    <li>Scores: 0.5 × 0.01852 × 0.00092 = 8.55 × 10⁻⁶ and 0.5 × 0.02778 × 0.00149 = 2.08 × 10⁻⁵ → P(spam) = <strong>0.292</strong>.</li>
-  </ul>
+  <h2 id="nb-bern"><span class="num">06</span>Bernoulli Naive Bayes</h2>
+  <p>Multinomial NB has two habits that are not always what we want. It counts repeats, so "free free free" is three times the evidence of "free". And it completely ignores every word that is <em>not</em> in the message. For short texts, though, absence can be informative: a message with no "win", no "prize" and no "offer" is, for that reason alone, a little less likely to be spam.</p>
+  <p><strong>Bernoulli Naive Bayes</strong> describes each message by V yes/no flags, one per vocabulary word: is the word present or not? (A single yes/no outcome is called a Bernoulli trial, hence the name.) For each class and word it estimates the share of <em>messages</em> in that class that contain the word, smoothed: P(w present | c) = (number of class-c messages containing w + α) / (number of class-c messages + 2α). The 2α appears because each flag has two possible outcomes. Then, for a new message, it multiplies over <strong>all</strong> V words: P(w | c) for each word that is present and 1 − P(w | c) for each word that is absent.</p>
+  <p>By hand for "free lunch monday" with α = 1 and 4 messages per class: "free" is in 3 of the 4 spam messages, so P(free | spam) = (3 + 1)/(4 + 2) = 0.667, and in none of the ham, so P(free | ham) = 1/6 = 0.167. Likewise P(lunch | spam) = 1/6, P(lunch | ham) = 2/6, P(monday | spam) = 1/6 and P(monday | ham) = 3/6. The present words give 0.667 × 0.167 × 0.167 = 0.0185 for spam and 0.167 × 0.333 × 0.5 = 0.0278 for ham. The other 21 words are absent, and each contributes 1 − P(w | c). Words that are typical of spam ("prize", "offer", "win") have high P(w | spam), so their absence costs spam a lot: the absent-word products come to about 0.00092 for spam and 0.00149 for ham. Multiplying everything with the prior 0.5 gives scores of 8.55 × 10⁻⁶ and 2.08 × 10⁻⁵, so P(spam) = 0.292.</p>
   <div class="fx" data-lang="py">from sklearn.naive_bayes import BernoulliNB
-present = (X &gt; 0).astype(int)                             # 1 if the word occurs in the message at all
-df = pd.DataFrame({"spam docs": present[y == 1].sum(0).A1, "ham docs": present[y == 0].sum(0).A1}, index=vocab)
-df["P(w|spam)"] = (df["spam docs"] + 1) / (4 + 2)         # 4 spam messages, +1 / +2 smoothing
-df["P(w|ham)"] = (df["ham docs"] + 1) / (4 + 2)
-x = pd.Series(0, index=vocab); x[msg] = 1                 # 'free lunch monday' as present / absent
-fac = {}
-for c, col in [("spam", "P(w|spam)"), ("ham", "P(w|ham)")]:
-    pres = df.loc[x == 1, col].prod()                     # words that are there: P(w|c)
-    absn = (1 - df.loc[x == 0, col]).prod()               # words that are NOT there: 1 - P(w|c)
-    fac[c] = 0.5 * pres * absn
-    print(f"{c:4s}: present-words {pres:.5f} x absent-words {absn:.5f} x prior 0.5 = {fac[c]:.3e}")
-print(f"P(spam) = {fac['spam'] / (fac['spam'] + fac['ham']):.3f}")
-bnb = BernoulliNB(alpha=1.0).fit(X, y)
+bnb = BernoulliNB(alpha=1.0).fit(X, y)            # binarises counts: word present (1) or absent (0)
+p_present = np.exp(bnb.feature_log_prob_)         # P(word present | class), rows = ham, spam
+show = ["free", "prize", "offer", "monday", "lunch"]
+print(pd.DataFrame(p_present[:, [vec.vocabulary_[w] for w in show]].T,
+                   index=show, columns=["P(w|ham)", "P(w|spam)"]).round(3))
 for m in ["free lunch monday", "free free free lunch monday"]:
-    print(f"BernoulliNB  {m:28s} P(spam) = {bnb.predict_proba(vec.transform([m]))[0, 1]:.3f}")
-print(df.loc[["free", "prize", "offer", "monday", "lunch"]].round(3))</div>
-  <div class="fx" data-lang="text">spam: present-words 0.01852 x absent-words 0.00092 x prior 0.5 = 8.547e-06
-ham : present-words 0.02778 x absent-words 0.00149 x prior 0.5 = 2.075e-05
-P(spam) = 0.292
-BernoulliNB  free lunch monday            P(spam) = 0.292
-BernoulliNB  free free free lunch monday  P(spam) = 0.292
-        spam docs  ham docs  P(w|spam)  P(w|ham)
-free            3         0      0.667     0.167
-prize           2         0      0.500     0.167
-offer           2         0      0.500     0.167
-monday          0         2      0.167     0.500
-lunch           0         1      0.167     0.333</div>
-  <p>The code reproduces each factor and sklearn's <code>BernoulliNB</code> agrees (0.292). Repeating "free" three times changes nothing (still 0.292): only presence counts. Compare Multinomial's 0.382 → 0.904 for the same two messages. The absent words made Bernoulli more confident that this is ham (0.292 vs 0.382): the message lacks "prize", "win", "offer", which spam usually has.</p>
+    print(f"BernoulliNB   {m:28s} P(spam) = {bnb.predict_proba(vec.transform([m]))[0, 1]:.3f}")</div>
+  <div class="fx" data-lang="text">        P(w|ham)  P(w|spam)
+free       0.167      0.667
+prize      0.167      0.500
+offer      0.167      0.500
+monday     0.500      0.167
+lunch      0.333      0.167
+BernoulliNB   free lunch monday            P(spam) = 0.292
+BernoulliNB   free free free lunch monday  P(spam) = 0.292</div>
+  <p>The table shows a few of the per-class probabilities: "free", "prize" and "offer" are much more common in spam messages, "monday" and "lunch" in ham. scikit-learn agrees with the hand result, 0.292. The second prediction is the interesting one: repeating "free" three times changes nothing, still 0.292, because only presence counts. Compare that with Multinomial NB, which went from 0.382 to 0.904 for the same two messages. Bernoulli NB is also a bit more confident that this message is ham (0.292 against 0.382), and the reason is the absent words: the message lacks the vocabulary that spam usually has.</p>
   <table class="tbl">
     <tr><th></th><th>Multinomial NB</th><th>Bernoulli NB</th></tr>
-    <tr><td>Feature</td><td>word counts</td><td>word present (1) / absent (0)</td></tr>
-    <tr><td>P(w | c) from</td><td>share of word <em>tokens</em> in c</td><td>share of <em>messages</em> in c containing w</td></tr>
-    <tr><td>Absent words</td><td>ignored</td><td>multiply 1 − P(w | c)</td></tr>
-    <tr><td>Repeats</td><td>count again</td><td>ignored</td></tr>
-    <tr><td>Best for</td><td>longer documents, counts / TF-IDF</td><td>short texts, binary flags; <code>binarize=</code> threshold for numeric input</td></tr>
+    <tr><td>Feature</td><td>word counts</td><td>word present (1) or absent (0)</td></tr>
+    <tr><td>P(w | c) estimated from</td><td>share of word <em>tokens</em> in class c</td><td>share of <em>messages</em> in class c containing w</td></tr>
+    <tr><td>Absent words</td><td>ignored</td><td>multiply in 1 − P(w | c)</td></tr>
+    <tr><td>Repeated words</td><td>counted again</td><td>ignored</td></tr>
+    <tr><td>Best for</td><td>longer documents</td><td>short texts and binary flags</td></tr>
   </table>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Bernoulli NB</strong>: P(x | c) = Πⱼ p_{cj}^{xⱼ}(1 − p_{cj})^{1 − xⱼ}, xⱼ ∈ {0, 1}, with p_{cj} = (n_{cj} + α)/(n_c + 2α), n_{cj} = number of class-c documents containing word j, n_c = number of class-c documents.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Feeding counts into <code>BernoulliNB</code> is fine (it binarises at <code>binarize=0.0</code>), but feeding already-scaled data with negative values silently turns most of it into 0s. And with a large vocabulary, the long product of absent-word factors dominates; Bernoulli tends to lose to Multinomial on long documents.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Gaussian NB.</b> Words are counts or flags. Our inbox also has the account age (2 to 900 days) and the message length: real numbers that never repeat exactly, so we cannot count them.</div>
+  <p>In scikit-learn, <code>BernoulliNB</code> turns any input into 0/1 using its <code>binarize</code> threshold (default 0.0, so any positive count becomes 1). On long documents with big vocabularies, the long product of absent-word factors tends to dominate, and Multinomial NB usually wins.</p>
 
-  <h2 id="nb-gauss"><span class="num">08</span>Gaussian NB: Continuous Clues</h2>
-  <p class="gap"><strong>The question we can't answer yet.</strong> A new message comes from an account that is 40 days old and is 20 characters long. No training message has exactly these values, so counting gives 0. How do we get P(age = 40 | spam)?</p>
-  <h3>The idea</h3>
-  <p>Assume each continuous feature, within each class, follows a bell curve (normal distribution). A bell curve is fully described by its mean μ and variance σ², which we can compute from the class's rows. Then P(xⱼ | c) is replaced by the curve's height (density) at the new value:</p>
+  <h2 id="nb-gauss"><span class="num">07</span>Gaussian Naive Bayes</h2>
+  <p>Our inbox also has two numeric columns: the age of the sender's account in days and the length of the message. A new message arrives from an account that is 40 days old and is 20 characters long. We cannot count how often "age = 40" happened in spam, because no training message has exactly that value, and with real-valued measurements almost no two values are ever equal. Counting gives zero for everything. We need a different way to get P(xⱼ | c) for numbers.</p>
+  <p><strong>Gaussian Naive Bayes</strong> assumes that, within each class, each numeric feature follows a bell-shaped curve, the normal or <strong>Gaussian distribution</strong>. A bell curve is completely described by two numbers: its centre, the <strong>mean</strong> μ, and its spread, the <strong>variance</strong> σ² (the average squared distance from the mean). So "training" is just computing a mean and a variance for every feature in every class. To score a new value, we read off the height of the class's curve at that value, which is called the probability <strong>density</strong>:</p>
   <p style="text-align:center"><strong>f(x | c) = 1/√(2πσ²_c) · exp(−(x − μ_c)² / (2σ²_c))</strong></p>
-  <h3>Step 1: means and variances by hand</h3>
-  <table class="tbl">
-    <tr><th>class</th><th>age_days</th><th>mean μ</th><th>variance σ² = mean of (x − μ)²</th><th>length</th><th>mean</th><th>variance</th></tr>
-    <tr><td>spam</td><td>2, 5, 1, 30</td><td>38/4 = 9.5</td><td>(56.25 + 20.25 + 72.25 + 420.25)/4 = 142.25</td><td>20, 19, 21, 19</td><td>19.75</td><td>(0.0625 + 0.5625 + 1.5625 + 0.5625)/4 = 0.6875</td></tr>
-    <tr><td>ham</td><td>400, 900, 15, 650</td><td>491.25</td><td>106,854.7</td><td>23, 16, 23, 18</td><td>20.0</td><td>(9 + 16 + 9 + 4)/4 = 9.5</td></tr>
-  </table>
-  <h3>Step 2: densities at the new message (age 40, length 20)</h3>
-  <table class="tbl">
-    <tr><th></th><th>(x − μ)²/(2σ²)</th><th>exp(−…)</th><th>1/√(2πσ²)</th><th>density</th></tr>
-    <tr><td>age | spam</td><td>30.5²/284.5 = 3.270</td><td>0.0380</td><td>1/29.90 = 0.0334</td><td>0.00127</td></tr>
-    <tr><td>age | ham</td><td>451.25²/213,709 = 0.953</td><td>0.386</td><td>1/819.4 = 0.00122</td><td>0.00047</td></tr>
-    <tr><td>length | spam</td><td>0.25²/1.375 = 0.045</td><td>0.956</td><td>1/2.078 = 0.481</td><td>0.460</td></tr>
-    <tr><td>length | ham</td><td>0</td><td>1</td><td>1/7.726 = 0.129</td><td>0.129</td></tr>
-  </table>
-  <p>Scores: spam 0.5 × 0.00127 × 0.460 = 2.92 × 10⁻⁴; ham 0.5 × 0.00047 × 0.129 = 3.05 × 10⁻⁵. <strong>P(spam) = 2.92 / (2.92 + 0.305) = 0.906.</strong> A 40-day-old account is far more typical of spam (mean 9.5 days) than of ham (mean 491 days, but very spread out).</p>
+  <p>The exponential part shrinks quickly as x moves away from the mean, measured in units of the spread; the fraction in front makes narrow curves taller, so that every curve has the same total area. Let us do it by hand. For spam, the ages are 2, 5, 1 and 30, so the mean is 38/4 = 9.5 and the variance is ((2 − 9.5)² + (5 − 9.5)² + (1 − 9.5)² + (30 − 9.5)²)/4 = 142.25. For ham, the ages 400, 900, 15 and 650 give a mean of 491.25 and a huge variance of about 106,855. The lengths are 20, 19, 21, 19 for spam (mean 19.75, variance 0.6875) and 23, 16, 23, 18 for ham (mean 20, variance 9.5).</p>
+  <p>At age 40, the spam curve has height 0.00127 (40 is 30.5 days from the spam mean, quite far relative to a spread of √142 ≈ 12, but the curve is tall) and the ham curve has height 0.00047 (the ham curve is so wide that it is low everywhere). At length 20 the spam curve is 0.460 high and the ham curve 0.129. Multiplying with the priors: spam 0.5 × 0.00127 × 0.460 = 2.92 × 10⁻⁴, ham 0.5 × 0.00047 × 0.129 = 3.05 × 10⁻⁵, so P(spam) = 2.92 / (2.92 + 0.305) = <strong>0.906</strong>. A 40-day-old account looks far more like the young spam accounts than the mostly old ham accounts.</p>
   <div class="fx" data-lang="py">from sklearn.naive_bayes import GaussianNB
 num = ["age_days", "length"]
-stats = inbox.groupby("spam")[num].agg(["mean", lambda s: s.var(ddof=0)])   # population variance, like sklearn
-stats.columns = ["age_mean", "age_var", "len_mean", "len_var"]
-print(stats.round(3))
-def gauss(x, mu, var):
-    return np.exp(-(x - mu) ** 2 / (2 * var)) / np.sqrt(2 * np.pi * var)
-new_msg = {"age_days": 40, "length": 20}                                    # a 20-character message from a 40-day-old account
-score = {}
-for c, r in stats.iterrows():
-    fa = gauss(40, r.age_mean, r.age_var); fl = gauss(20, r.len_mean, r.len_var)
-    score[c] = 0.5 * fa * fl
-    print(f"class {c}: f(age=40) = {fa:.3e}  f(length=20) = {fl:.4f}  score = {score[c]:.3e}")
-print("P(spam | age, length) =", round(score[1] / (score[0] + score[1]), 4))
 gnb = GaussianNB().fit(inbox[num], y)
-print("sklearn theta_:", gnb.theta_.round(3).tolist(), " var_:", gnb.var_.round(3).tolist())
-print("sklearn P(spam):", round(gnb.predict_proba(pd.DataFrame([new_msg]))[0, 1], 4),
-      " epsilon added to variances:", f"{gnb.epsilon_:.2e}")
-print("same account, 17 characters:", round(gnb.predict_proba(pd.DataFrame([{"age_days": 40, "length": 17}]))[0, 1], 4))</div>
-  <div class="fx" data-lang="text">      age_mean     age_var  len_mean  len_var
-spam                                         
-0       491.25  106854.688     20.00    9.500
-1         9.50     142.250     19.75    0.688
-class 0: f(age=40) = 4.707e-04  f(length=20) = 0.1294  score = 3.046e-05
-class 1: f(age=40) = 1.272e-03  f(length=20) = 0.4598  score = 2.923e-04
-P(spam | age, length) = 0.9056
-sklearn theta_: [[491.25, 20.0], [9.5, 19.75]]  var_: [[106854.688, 9.5], [142.25, 0.688]]
-sklearn P(spam): 0.9056  epsilon added to variances: 1.12e-04
-same account, 17 characters: 0.0619</div>
-  <p>Every hand number appears in the output, and sklearn stores the same means (<code>theta_</code>) and variances (<code>var_</code>, population variance, dividing by n). The last line is a warning: change the length from 20 to 17 characters and P(spam) collapses to 0.062. The four spam lengths (19–21) happen to be almost identical, so their variance is tiny (0.69) and the spam bell curve is a narrow spike; 17 is 3.3 standard deviations away. Four rows are not enough to trust a variance.</p>
+print("means   (rows ham, spam):", gnb.theta_.round(3).tolist())
+print("variances              :", gnb.var_.round(3).tolist())
+new_msg = pd.DataFrame([{"age_days": 40, "length": 20}])
+print("P(spam | age 40, length 20) =", gnb.predict_proba(new_msg)[0, 1].round(4))
+print("P(spam | age 40, length 17) =",
+      gnb.predict_proba(pd.DataFrame([{"age_days": 40, "length": 17}]))[0, 1].round(4))</div>
+  <div class="fx" data-lang="text">means   (rows ham, spam): [[491.25, 20.0], [9.5, 19.75]]
+variances              : [[106854.688, 9.5], [142.25, 0.688]]
+P(spam | age 40, length 20) = 0.9056
+P(spam | age 40, length 17) = 0.0619</div>
+  <p>scikit-learn stores the means in <code>theta_</code> and the variances in <code>var_</code>; both match the hand values (it uses the population variance, dividing by n rather than n − 1). The posterior is 0.9056. But the last line is a warning: shorten the message from 20 characters to 17 and P(spam) collapses to 0.062. The figure shows why.</p>
   <figure class="viz"><svg viewBox="0 0 640 300" width="640">
 <line x1="70" y1="250" x2="590" y2="250" stroke="currentColor" stroke-opacity="0.6"/>
 <line x1="70" y1="250" x2="70" y2="50" stroke="currentColor" stroke-opacity="0.6"/>
@@ -578,112 +324,64 @@ same account, 17 characters: 0.0619</div>
 <text x="437.2" y="190.0" class="tb" font-size="12">ham: mean 20, var 9.5</text>
 <text x="79.8" y="130.0" class="tm" font-size="11">at 17: spam 0.0020, ham 0.081</text>
 </svg><figcaption>The two length curves. Spam's four lengths (red dots) are bunched, so its curve is a tall spike; ham's (blue dots) are spread, so its curve is low and wide. At length 20 spam's curve is higher; at 17 ham's is 40 times higher. Tiny training sets give over-narrow spikes.</figcaption></figure>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Gaussian NB</strong>: P(xⱼ | c) = N(xⱼ; μ_{cj}, σ²_{cj}) with μ_{cj}, σ²_{cj} the class-c mean and (population) variance of feature j. sklearn adds <code>var_smoothing</code> × (largest variance of any feature) to every variance (<code>epsilon_</code>, here 1.1 × 10⁻⁴) so that a constant feature never gives σ² = 0.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Gaussian NB assumes a bell shape per class. Skewed features (ages, incomes, counts) fit badly; a log transform often helps (<a class="xref" data-note="ml_features">Feature Engineering</a>). Scaling does not change Gaussian NB's predictions (μ and σ scale together), so unlike KNN or SVM it does not need standardisation.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Categorical NB and Mixed Types.</b> We now have separate models for words, for yes/no columns and for numbers. A real message has all three kinds of clue at once.</div>
+  <p>The four spam lengths happen to be almost identical (19 to 21), so their variance is tiny, 0.69, and the spam curve is a tall, narrow spike. Ham's lengths are spread out, so its curve is low and wide. At 20 characters the spike is far higher than the ham curve; at 17, which is about 3.3 standard deviations from the spam mean, the spike has fallen to almost nothing and the ham curve is 40 times higher. Four rows are simply not enough to estimate a spread reliably. scikit-learn guards against the worst case, a variance of exactly zero, by adding <code>var_smoothing</code> × (the largest variance of any feature) to every variance. Two other practical points: Gaussian NB fits skewed features such as ages and incomes poorly, so a log transform often helps (<a class="xref" data-note="ml_features">Feature Engineering</a>); and, unlike KNN or SVM, it does not need feature scaling, because each feature's mean and spread are estimated in that feature's own units.</p>
 
-  <h2 id="nb-variants"><span class="num">09</span>Categorical NB, Complement NB and Mixing Types</h2>
-  <p class="gap"><strong>The question we can't answer yet.</strong> The sender (known/unknown) and night (yes/no) columns are categories; the text is word counts; age and length are numbers. Each needs a different P(xⱼ | c). How do we combine them into one answer?</p>
-  <h3>Categorical NB</h3>
-  <p>For a column with categories, P(value | c) = (rows of class c with that value + α)/(rows of class c + α·(number of categories)). This is what we did by hand in section 03, now with smoothing. With α = 1: P(unknown | spam) = (3 + 1)/(4 + 2) = 0.667, P(night | spam) = 0.667, P(unknown | ham) = P(night | ham) = (1 + 1)/6 = 0.333. Scores 0.5 × 0.444 = 0.222 and 0.5 × 0.111 = 0.056 → 0.80 (smoothing pulled the unsmoothed 0.90 toward 0.5).</p>
-  <h3>Mixing feature types</h3>
-  <p>Because NB multiplies one factor per feature, separate NB models over disjoint feature groups can be combined by <strong>adding their log-probabilities</strong> and removing the extra copies of the prior (each model's posterior already includes ln P(c) once). In log-odds form: combined log-odds = Σ (each model's log-odds) − (models − 1) × prior log-odds.</p>
+  <h2 id="nb-mix"><span class="num">08</span>Mixing Feature Types</h2>
+  <p>We now have three kinds of clue in the same inbox: categories (sender known or unknown, sent at night or not), words, and numbers (age, length). Each needs its own way of computing P(xⱼ | c). For categories there is <strong>Categorical Naive Bayes</strong>, which simply counts: P(value | c) = (class-c rows with that value + α) / (class-c rows + α × number of categories). That is what we did by hand in section 02, now with smoothing. With α = 1, P(unknown | spam) = (3 + 1)/(4 + 2) = 0.667 and P(unknown | ham) = (1 + 1)/6 = 0.333, and the same for night, so the two clues give 0.5 × 0.667² = 0.222 against 0.5 × 0.333² = 0.056, a posterior of 0.80 (smoothing has pulled the earlier 0.90 a little toward 0.5).</p>
+  <p>How do we combine all three kinds of clue into one answer? Because Naive Bayes multiplies one independent factor per feature, separate Naive Bayes models built on separate groups of features can be combined by multiplying their results, which in log space means <strong>adding their log-probabilities</strong>. The one subtlety is the prior: each model's posterior already contains P(c) once, so if we add three models we must subtract two extra copies of the log-prior.</p>
   <div class="fx" data-lang="py">from sklearn.naive_bayes import CategoricalNB
 from sklearn.preprocessing import OrdinalEncoder
-enc = OrdinalEncoder().fit(inbox[["sender", "night"]])
-cat = CategoricalNB(alpha=1e-10).fit(enc.transform(inbox[["sender", "night"]]), y)
-q = pd.DataFrame([{"sender": "unknown", "night": "yes"}])
-print("CategoricalNB (alpha~0) P(spam | unknown, night):", round(cat.predict_proba(enc.transform(q))[0, 1], 3))
-cat1 = CategoricalNB(alpha=1.0).fit(enc.transform(inbox[["sender", "night"]]), y)
-print("CategoricalNB (alpha=1)  P(spam | unknown, night):", round(cat1.predict_proba(enc.transform(q))[0, 1], 3))
-# mixing feature types: add the log-probabilities of separate NB models, subtract the extra log-prior
+enc = OrdinalEncoder().fit(inbox[["sender", "night"]])           # categories -&gt; integer codes
+cat = CategoricalNB(alpha=1.0).fit(enc.transform(inbox[["sender", "night"]]), y)
+q = enc.transform(pd.DataFrame([{"sender": "unknown", "night": "yes"}]))
 lp_text = mnb.predict_log_proba(vec.transform(["free lunch monday"]))[0]
-lp_cat = cat1.predict_log_proba(enc.transform(q))[0]
-lp_num = gnb.predict_log_proba(pd.DataFrame([new_msg]))[0]
-log_prior = np.log([0.5, 0.5])
-joint = lp_text + lp_cat + lp_num - 2 * log_prior
+lp_cat = cat.predict_log_proba(q)[0]
+lp_num = gnb.predict_log_proba(new_msg)[0]
 print("text alone", np.exp(lp_text[1]).round(3), "| sender+night alone", np.exp(lp_cat[1]).round(3),
       "| age+length alone", np.exp(lp_num[1]).round(3))
-print("all clues combined: P(spam) =", round(float(np.exp(joint[1] - np.logaddexp(joint[0], joint[1]))), 3))</div>
-  <div class="fx" data-lang="text">CategoricalNB (alpha~0) P(spam | unknown, night): 0.9
-CategoricalNB (alpha=1)  P(spam | unknown, night): 0.8
-text alone 0.382 | sender+night alone 0.8 | age+length alone 0.906
-all clues combined: P(spam) = 0.96</div>
-  <p>Line 1 matches section 03's unsmoothed 0.90, line 2 the smoothed 0.80. By hand in log-odds (priors are 50/50, so the prior term is 0): text ln(0.382/0.618) = −0.481, sender+night ln(0.8/0.2) = +1.386, age+length ln(0.906/0.094) = +2.265. Sum = +3.17 → P(spam) = 1/(1 + e^(−3.17)) = <strong>0.96</strong>. The words alone said ham; the metadata says spam strongly; NB simply adds the evidence.</p>
-  <table class="tbl">
-    <tr><th>sklearn class</th><th>Feature type</th><th>P(xⱼ | c)</th><th>Typical use</th></tr>
-    <tr><td><code>MultinomialNB</code></td><td>counts (also TF-IDF)</td><td>(N_cj + α)/(N_c + αV)</td><td>text classification</td></tr>
-    <tr><td><code>ComplementNB</code></td><td>counts</td><td>estimated from all <em>other</em> classes, then inverted</td><td>imbalanced text; often beats Multinomial</td></tr>
-    <tr><td><code>BernoulliNB</code></td><td>binary</td><td>p^x(1 − p)^(1 − x)</td><td>short texts, flags</td></tr>
-    <tr><td><code>GaussianNB</code></td><td>continuous</td><td>normal density</td><td>sensors, measurements</td></tr>
-    <tr><td><code>CategoricalNB</code></td><td>categories (integer-encoded)</td><td>(count + α)/(n_c + α·K_j)</td><td>survey answers, codes</td></tr>
-  </table>
-  <p><strong>Complement NB</strong> (Rennie et al., 2003) estimates, for each class, the word distribution of all the <em>other</em> classes (much more data when a class is small) and picks the class whose complement fits the document <em>worst</em>. It corrects Multinomial NB's bias toward large classes on imbalanced text.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>For disjoint feature groups G₁…G_m under the NB assumption: ln P(c | x) = ln P(c) + Σ_g Σ_{j∈G_g} ln P(xⱼ | c) − ln Z = Σ_g ln P_g(c | x_{G_g}) − (m − 1) ln P(c) − ln Z′. Each group may use its own distribution (multinomial, Gaussian, categorical).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p><code>CategoricalNB</code> needs integer codes 0…K−1 (use <code>OrdinalEncoder</code>), not one-hot columns. One-hot columns fed to Multinomial or Bernoulli NB double-count: the "unknown" column and the "known" column are perfectly dependent.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: NB Is a Linear Model.</b> We have been adding log-probabilities, one per clue. That smells like a weighted sum. What kind of model is NB really, and how does it compare with logistic regression?</div>
+joint = lp_text + lp_cat + lp_num - 2 * np.log([0.5, 0.5])        # add evidence, keep ONE copy of the prior
+print("all clues together: P(spam) =", np.exp(joint[1] - np.logaddexp(*joint)).round(3))</div>
+  <div class="fx" data-lang="text">text alone 0.382 | sender+night alone 0.8 | age+length alone 0.906
+all clues together: P(spam) = 0.96</div>
+  <p>Each group of clues on its own tells a different story: the words alone say ham (0.382), the sender and time say spam (0.8), the account age and length say strongly spam (0.906). Combined, P(spam) = 0.96. You can check it by hand using log-odds, the log of P(spam)/P(ham). The text gives ln(0.382/0.618) = −0.481, the categories ln(0.8/0.2) = +1.386 and the numbers ln(0.906/0.094) = +2.265. The prior log-odds are 0 because the classes are 50/50, so the combined log-odds are simply the sum, +3.17, and 1/(1 + e^(−3.17)) = 0.96. Naive Bayes just adds up the evidence from every source.</p>
+  <p>Two cautions. <code>CategoricalNB</code> expects each category as an integer code 0, 1, 2, … (that is what <code>OrdinalEncoder</code> produced above), not one-hot columns. And if you one-hot encode a category and feed the columns to Multinomial or Bernoulli NB, the "unknown" column and the "known" column are perfectly dependent (one is 1 exactly when the other is 0), so the same evidence is counted twice, exactly the problem from section 02.</p>
+  <p>One more variant belongs here because it is the usual upgrade for text. <strong>Complement Naive Bayes</strong> (Rennie et al., 2003) estimates, for each class, the word distribution of all the <em>other</em> classes (its complement) and picks the class whose complement fits the document worst. When one class is small, its complement contains much more data, so the estimates are more stable. It corrects Multinomial NB's tendency to favour large classes on imbalanced text and often beats it.</p>
 
-  <h2 id="nb-linear"><span class="num">10</span>Naive Bayes Is a Linear Classifier</h2>
-  <p class="gap"><strong>The question we can't answer yet.</strong> NB and logistic regression both output P(spam | x). Are they related, and when should we prefer one over the other?</p>
-  <h3>The log-odds are a weighted sum</h3>
-  <p>For two classes and Multinomial NB, take the log of the ratio of the two scores:</p>
-  <p style="text-align:center"><strong>ln [P(spam | x)/P(ham | x)] = ln [P(spam)/P(ham)] + Σⱼ xⱼ · ln [P(wⱼ | spam)/P(wⱼ | ham)]</strong></p>
-  <p>That is b + Σ wⱼxⱼ with bias b = prior log-odds and weight wⱼ = ln(P(wⱼ | spam)/P(wⱼ | ham)) for each word: exactly the form of <a class="xref" data-note="ml_classification">logistic regression</a>, z = b + w·x, followed by the sigmoid. By hand for "free lunch monday": b = ln(0.5/0.5) = 0; w_free = ln(0.100/0.0256) = +1.361; w_lunch = ln(0.025/0.0513) = −0.718; w_monday = ln(0.025/0.0769) = −1.124. z = −0.481 and σ(−0.481) = <strong>0.382</strong>.</p>
-  <div class="fx" data-lang="py"># Multinomial NB as a linear model: log-odds = bias + sum_j count_j * weight_j
-w_words = mnb.feature_log_prob_[1] - mnb.feature_log_prob_[0]          # log(P(w|spam) / P(w|ham))
-bias = mnb.class_log_prior_[1] - mnb.class_log_prior_[0]
-wt = pd.Series(w_words, index=vocab).sort_values()
-print("most ham-like:", wt.head(3).round(3).to_dict())
+  <h2 id="nb-linear"><span class="num">09</span>Naive Bayes vs Logistic Regression</h2>
+  <p>In the last section we kept adding log-probabilities, one per clue. A sum of one number per feature should remind you of something: a linear model. Take Multinomial NB with two classes and look at the log of the ratio of the two scores, the log-odds:</p>
+  <p style="text-align:center"><strong>ln [P(spam | x) / P(ham | x)] = ln [P(spam)/P(ham)] + Σⱼ xⱼ · ln [P(wⱼ | spam) / P(wⱼ | ham)]</strong></p>
+  <p>This is a constant (the prior log-odds, which plays the role of the bias b) plus a weighted sum of the word counts xⱼ, with one weight per word, wⱼ = ln(P(wⱼ | spam)/P(wⱼ | ham)). Turning log-odds back into a probability uses the sigmoid function. That is exactly the form of <a class="xref" data-note="ml_classification">logistic regression</a>: z = b + w·x, then sigmoid. Naive Bayes is a <strong>linear classifier</strong> in disguise. By hand for our message: b = ln(0.5/0.5) = 0, w_free = ln(0.100/0.0256) = +1.361, w_lunch = ln(0.025/0.0513) = −0.718, w_monday = ln(0.025/0.0769) = −1.124. The sum is −0.481, and sigmoid(−0.481) = 0.382, the same answer for the fourth time.</p>
+  <div class="fx" data-lang="py">w = mnb.feature_log_prob_[1] - mnb.feature_log_prob_[0]          # weight of each word: ln P(w|spam)/P(w|ham)
+b = mnb.class_log_prior_[1] - mnb.class_log_prior_[0]            # bias: prior log-odds
+wt = pd.Series(w, index=vocab).sort_values()
+print("most ham-like :", wt.head(3).round(3).to_dict())
 print("most spam-like:", wt.tail(3).round(3).to_dict())
-xq = vec.transform(["free lunch monday"]).toarray()[0]
-lin = bias + xq @ w_words
-lp = mnb.predict_log_proba(vec.transform(["free lunch monday"]))[0]
-print(f"bias {bias:.3f} + free {w_words[vec.vocabulary_['free']]:.3f} + lunch {w_words[vec.vocabulary_['lunch']]:.3f}"
-      f" + monday {w_words[vec.vocabulary_['monday']]:.3f} = {lin:.3f}")
-print(f"sklearn log-odds = {lp[1] - lp[0]:.3f}  -&gt; sigmoid = {1 / (1 + np.exp(-lin)):.3f}")</div>
-  <div class="fx" data-lang="text">most ham-like: {'monday': -1.124, 'at': -0.718, 'can': -0.718}
+x = msg.toarray()[0]
+z = b + x @ w                                                    # log-odds = bias + sum(count * weight)
+print(f"log-odds for 'free lunch monday' = {z:.3f}  -&gt;  sigmoid = {1 / (1 + np.exp(-z)):.3f}")</div>
+  <div class="fx" data-lang="text">most ham-like : {'monday': -1.124, 'at': -0.718, 'can': -0.718}
 most spam-like: {'prize': 1.073, 'win': 1.073, 'free': 1.361}
-bias 0.000 + free 1.361 + lunch -0.718 + monday -1.124 = -0.481
-sklearn log-odds = -0.481  -&gt; sigmoid = 0.382</div>
-  <p>The weights are a ready-made "spam dictionary": "free" (+1.361), "win" and "prize" (+1.073) push toward spam; "monday" (−1.124) toward ham. Bernoulli NB and Gaussian NB with equal variances per feature across classes are also linear; Gaussian NB with different variances gives a quadratic boundary.</p>
-  <h3>Same form, different way of choosing the weights</h3>
-  <p>NB sets each weight from counts, one feature at a time, as if the others did not exist. Logistic regression sets all weights jointly to maximise P(y | x), so it can correct for correlated features. Ng and Jordan (2002) showed the consequence: NB reaches its (higher) best error with far less data; logistic regression needs more data but ends lower when the naive assumption is wrong. To see this, we scale our inbox up to a simulated one: 300 word types, 30% spam, where some words always come as 4-word phrases (so independence is broken).</p>
-  <p>The simulator, saved as <code>inbox_sim.py</code> next to the notebook (the next blocks import it):</p>
-  <div class="fx" data-lang="py">"""A simulated SMS inbox: 300 word types w0..w299, 30% spam, 5-19 words per message.
-Words w0..w19 always come as 4-word phrases (copied into w20-39, w40-59, w60-79),
-which breaks the naive assumption."""
-import numpy as np
-V = 300
+log-odds for 'free lunch monday' = -0.481  -&gt;  sigmoid = 0.382</div>
+  <p>The weights form a ready-made spam dictionary: "free" (+1.361), "win" and "prize" (+1.073) push toward spam, while "monday" (−1.124) and "at", "can" (−0.718) push toward ham. (Bernoulli NB is linear in the same way; Gaussian NB is linear only if each feature has the same variance in both classes, and otherwise draws a curved, quadratic boundary.)</p>
+  <p>So Naive Bayes and logistic regression produce the same kind of model. The difference is how they choose the weights. Naive Bayes sets each weight from counts, one feature at a time, as if the other features did not exist. Logistic regression chooses all the weights together to make P(y | x) as accurate as possible on the training data, so when two words always appear together it can split the credit between them instead of counting it twice. Together they are called a <strong>generative–discriminative pair</strong>. Ng and Jordan (2002) showed what this means in practice: Naive Bayes reaches its best accuracy with far less data, but that best is a little worse; logistic regression needs more data but ends higher when the naive assumption is wrong.</p>
+  <p>Eight messages are too few to see this, so we simulate a bigger inbox in the same spirit: 300 word types, 30% spam, messages of 5 to 19 words, and a deliberate violation of the naive assumption, where 20 of the words always appear as 4-word phrases. For each training size we train both models on 10 random samples and test on a fixed set of 2,000 messages.</p>
+  <div class="fx" data-lang="py">V = 300                                          # simulated inbox: 300 word types, 30% spam
 _rng = np.random.default_rng(0)
 _base = _rng.dirichlet(np.ones(V) * 0.3)
-SPAM_W = _base * np.exp(_rng.normal(0, 0.8, V)); SPAM_W /= SPAM_W.sum()
-HAM_W = _base * np.exp(_rng.normal(0, 0.8, V)); HAM_W /= HAM_W.sum()
+SPAM_W = _base * np.exp(_rng.normal(0, 0.8, V)); SPAM_W /= SPAM_W.sum()   # word shares in spam
+HAM_W = _base * np.exp(_rng.normal(0, 0.8, V)); HAM_W /= HAM_W.sum()      # word shares in ham
 
 def make_inbox(n, seed):
     rng = np.random.default_rng(seed)
-    y = (rng.random(n) &lt; 0.3).astype(int)
-    X = np.zeros((n, V), dtype=int)
-    for i in range(n):
-        X[i] = rng.multinomial(rng.integers(5, 20), SPAM_W if y[i] else HAM_W)
-    for k in (20, 40, 60):                            # phrases: w0 is always followed by w20, w40, w60
-        X[:, k:k + 20] += X[:, 0:20]
-    return X, y
+    yy = (rng.random(n) &lt; 0.3).astype(int)
+    XX = np.array([rng.multinomial(rng.integers(5, 20), SPAM_W if t else HAM_W) for t in yy])
+    for k in (20, 40, 60):                       # phrases: word j always comes with j+20, j+40, j+60
+        XX[:, k:k + 20] += XX[:, 0:20]           # (this breaks the naive assumption on purpose)
+    return XX, yy
 
-def to_text(X):
-    return [" ".join(f"w{j}" for j in np.repeat(np.arange(V), row)) for row in X]</div>
-  <div class="fx" data-lang="py">from inbox_sim import make_inbox, to_text
 from sklearn.linear_model import LogisticRegression
-Xbig, ybig = make_inbox(3000, seed=1)                     # pool of training messages
-Xtest, ytest = make_inbox(2000, seed=2)                   # fixed test inbox
-print("spam share:", ybig.mean().round(3), " example message:", to_text(Xbig[:1])[0])
+Xbig, ybig = make_inbox(3000, seed=1)            # pool of training messages
+Xtest, ytest = make_inbox(2000, seed=2)          # fixed test inbox
 rng = np.random.default_rng(3)
 print("train size   NB acc   LR acc   (mean of 10 random training sets)")
 for n in [10, 30, 100, 300, 1000, 3000]:
@@ -691,177 +389,81 @@ for n in [10, 30, 100, 300, 1000, 3000]:
     for r in range(10 if n &lt; 3000 else 1):
         idx = rng.choice(len(ybig), n, replace=False)
         if ybig[idx].min() == ybig[idx].max():
-            continue                                      # need both classes
+            continue                             # need both classes
         nb_acc.append(MultinomialNB().fit(Xbig[idx], ybig[idx]).score(Xtest, ytest))
         lr_acc.append(LogisticRegression(max_iter=2000).fit(Xbig[idx], ybig[idx]).score(Xtest, ytest))
     print(f"{n:9d}   {np.mean(nb_acc):.3f}    {np.mean(lr_acc):.3f}")</div>
-  <div class="fx" data-lang="text">spam share: 0.306  example message: w3 w23 w42 w43 w63 w64 w64 w66 w78 w109 w120 w149 w228 w231 w231 w231 w231
-train size   NB acc   LR acc   (mean of 10 random training sets)
+  <div class="fx" data-lang="text">train size   NB acc   LR acc   (mean of 10 random training sets)
        10   0.728    0.709
        30   0.813    0.801
       100   0.870    0.867
       300   0.900    0.903
      1000   0.919    0.921
      3000   0.925    0.932</div>
-  <figure class="viz"><svg viewBox="0 0 640 290" width="640">
-<line x1="70" y1="240" x2="590" y2="240" stroke="currentColor" stroke-opacity="0.6"/>
-<line x1="70" y1="240" x2="70" y2="50" stroke="currentColor" stroke-opacity="0.6"/>
-<line x1="70.0" y1="240" x2="70.0" y2="244" stroke="currentColor"/><text x="70.0" y="256" text-anchor="middle" class="tm" font-size="11">10</text>
-<line x1="170.2" y1="240" x2="170.2" y2="244" stroke="currentColor"/><text x="170.2" y="256" text-anchor="middle" class="tm" font-size="11">30</text>
-<line x1="279.9" y1="240" x2="279.9" y2="244" stroke="currentColor"/><text x="279.9" y="256" text-anchor="middle" class="tm" font-size="11">100</text>
-<line x1="380.1" y1="240" x2="380.1" y2="244" stroke="currentColor"/><text x="380.1" y="256" text-anchor="middle" class="tm" font-size="11">300</text>
-<line x1="489.8" y1="240" x2="489.8" y2="244" stroke="currentColor"/><text x="489.8" y="256" text-anchor="middle" class="tm" font-size="11">1000</text>
-<line x1="590.0" y1="240" x2="590.0" y2="244" stroke="currentColor"/><text x="590.0" y="256" text-anchor="middle" class="tm" font-size="11">3000</text>
-<line x1="66" y1="240.0" x2="70" y2="240.0" stroke="currentColor"/><text x="63" y="244.0" text-anchor="end" class="tm" font-size="11">0.7</text>
-<line x1="66" y1="202.0" x2="70" y2="202.0" stroke="currentColor"/><text x="63" y="206.0" text-anchor="end" class="tm" font-size="11">0.75</text>
-<line x1="66" y1="164.0" x2="70" y2="164.0" stroke="currentColor"/><text x="63" y="168.0" text-anchor="end" class="tm" font-size="11">0.8</text>
-<line x1="66" y1="126.0" x2="70" y2="126.0" stroke="currentColor"/><text x="63" y="130.0" text-anchor="end" class="tm" font-size="11">0.85</text>
-<line x1="66" y1="88.0" x2="70" y2="88.0" stroke="currentColor"/><text x="63" y="92.0" text-anchor="end" class="tm" font-size="11">0.9</text>
-<line x1="66" y1="50.0" x2="70" y2="50.0" stroke="currentColor"/><text x="63" y="54.0" text-anchor="end" class="tm" font-size="11">0.95</text>
-<text x="330.0" y="272" text-anchor="middle" font-size="12">training messages (log scale)</text>
-<text x="30" y="145.0" text-anchor="middle" font-size="12" transform="rotate(-90 30 145.0)">test accuracy</text>
-<path d="M70.0 218.7 L170.2 154.1 L279.9 110.8 L380.1 88.0 L489.8 73.6 L590.0 69.0" fill="none" class="sr" stroke-width="2.4"/>
-<circle cx="70.0" cy="218.7" r="4" class="fr sr"/>
-<circle cx="170.2" cy="154.1" r="4" class="fr sr"/>
-<circle cx="279.9" cy="110.8" r="4" class="fr sr"/>
-<circle cx="380.1" cy="88.0" r="4" class="fr sr"/>
-<circle cx="489.8" cy="73.6" r="4" class="fr sr"/>
-<circle cx="590.0" cy="69.0" r="4" class="fr sr"/>
-<path d="M70.0 233.2 L170.2 163.2 L279.9 113.1 L380.1 85.7 L489.8 72.0 L590.0 63.7" fill="none" class="sb" stroke-width="2.4"/>
-<circle cx="70.0" cy="233.2" r="4" class="fb sb"/>
-<circle cx="170.2" cy="163.2" r="4" class="fb sb"/>
-<circle cx="279.9" cy="113.1" r="4" class="fb sb"/>
-<circle cx="380.1" cy="85.7" r="4" class="fb sb"/>
-<circle cx="489.8" cy="72.0" r="4" class="fb sb"/>
-<circle cx="590.0" cy="63.7" r="4" class="fb sb"/>
-<text x="107.0" y="230.9" class="tr" font-size="12">Naive Bayes: ahead with little data</text>
-<text x="288.6" y="53.8" class="tb" font-size="12">Logistic regression: ahead with lots</text>
-</svg><figcaption>Test accuracy against the number of training messages (mean of 10 random draws). NB is ahead at 10–100 messages; logistic regression overtakes from about 300 and ends higher (0.932 vs 0.925) because it can down-weight the duplicated phrase words.</figcaption></figure>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>Multinomial and Bernoulli NB are <strong>linear classifiers</strong> in their features: log-odds = b + wᵀx with wⱼ = ln(θ_{1j}/θ_{0j}) (multinomial). NB and logistic regression form a <strong>generative–discriminative pair</strong>: same hypothesis family, parameters estimated by maximising the joint likelihood P(x, y) (NB) vs the conditional likelihood P(y | x) (LR).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"NB is always worse than logistic regression" is false: with little data or very many features (short texts, few labels), NB often wins, and it trains in one pass. With lots of data and correlated features, LR usually wins. Try both.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Calibration.</b> Accuracy compares decisions. If a bank, a doctor or a ranking system uses the <em>probability</em> itself, we must ask whether NB's 0.999 really means 99.9%.</div>
+  <p>With 10 to 100 training messages, Naive Bayes is ahead (0.728 against 0.709 at 10 messages). From about 300 messages logistic regression catches up, and with 3,000 it wins, 0.932 against 0.925, because it learns to down-weight the duplicated phrase words that Naive Bayes counts four times. This is the practical rule: with little labelled data or very many features, start with Naive Bayes; with plenty of data and correlated features, logistic regression usually wins. In practice, try both.</p>
 
-  <h2 id="nb-calib"><span class="num">11</span>Calibration: Can We Trust NB's Probabilities?</h2>
-  <p class="gap"><strong>The question we can't answer yet.</strong> In section 03 a duplicated clue pushed P(spam) from 0.75 to 0.964 with no new information. On a real inbox, where many words come in phrases, how far off are NB's probabilities, and can we repair them?</p>
-  <h3>What "calibrated" means</h3>
-  <p>A model is <strong>calibrated</strong> if, among all messages it scores at about 0.9, about 90% really are spam. Calibration is checked by grouping predictions into bins and comparing the average prediction with the actual rate (a reliability table), and summarised by log-loss and the Brier score (mean squared difference between p and the 0/1 outcome). Full treatment: <a class="xref" data-note="ml_calibration">Thresholds &amp; Calibration</a>.</p>
-  <h3>Why NB is over-confident</h3>
-  <p>Correlated clues are counted as independent evidence. A 4-word phrase that always appears together contributes its log-likelihood ratio four times. Each extra copy multiplies the odds again, pushing p toward 0 or 1. The decision (which side of 0.5) is often still right, but the size of the probability is exaggerated.</p>
+  <h2 id="nb-calib"><span class="num">10</span>Calibration</h2>
+  <p>Accuracy only checks whether the predicted class is right. Many systems use the probability itself: "block the message if P(spam) &gt; 0.99", or "show the 100 riskiest transactions to a human". For that, the probabilities must be honest. A model is <strong>calibrated</strong> if, among all the messages it scores at about 0.9, about 90% really are spam. Think of a weather forecaster: if it rains on only half of the days she announces "90% chance of rain", her forecasts are not calibrated, even if she gets "rain or no rain" mostly right.</p>
+  <p>We already know why Naive Bayes is not calibrated. Correlated clues are counted as independent evidence, and every extra copy multiplies the odds again, pushing probabilities toward 0 or 1 (section 02 showed 0.75 becoming 0.964). The decision is often still right, but the confidence is exaggerated. On the simulated inbox, where phrases repeat four words at a time, we can measure it. <strong>Log-loss</strong> is the standard score for probabilities: it is small when the model gives high probability to what actually happened, and it punishes confident mistakes very heavily. We also count how often each model says "below 1%" or "above 99%", and how many of those extreme predictions are wrong. The repair tool is scikit-learn's <code>CalibratedClassifierCV</code>, which learns a mapping from the model's raw probabilities to honest ones on held-out folds, either with a sigmoid curve (<strong>Platt scaling</strong>, method="sigmoid") or a free-form increasing step function (<strong>isotonic regression</strong>).</p>
   <div class="fx" data-lang="py">from sklearn.calibration import CalibratedClassifierCV
-from sklearn.metrics import brier_score_loss, log_loss
+from sklearn.metrics import log_loss
 models = {"MultinomialNB": MultinomialNB(),
-          "NB + isotonic": CalibratedClassifierCV(MultinomialNB(), method="isotonic", cv=5),
           "NB + sigmoid": CalibratedClassifierCV(MultinomialNB(), method="sigmoid", cv=5),
+          "NB + isotonic": CalibratedClassifierCV(MultinomialNB(), method="isotonic", cv=5),
           "LogisticRegression": LogisticRegression(max_iter=2000)}
-probs = {}
-print(f"{'model':20s} acc    log-loss  Brier   share p&lt;0.01 or p&gt;0.99   wrong among those")
+print(f"{'model':19s} acc    log-loss  share of p&lt;0.01 or &gt;0.99   wrong among those")
 for name, mdl in models.items():
     p = mdl.fit(Xbig, ybig).predict_proba(Xtest)[:, 1]
-    probs[name] = p
-    print(f"{name:20s} {np.mean((p &gt; 0.5) == ytest):.3f}  {log_loss(ytest, p):.3f}     {brier_score_loss(ytest, p):.3f}   "
-          f"{np.mean((p &lt; 0.01) | (p &gt; 0.99)):.3f}                   "
-          f"{np.sum(((p &lt; 0.01) &amp; (ytest == 1)) | ((p &gt; 0.99) &amp; (ytest == 0)))}")
-print("\\nreliability: predicted bin -&gt; actual spam rate (count)")
-bins = [0, 0.01, 0.1, 0.5, 0.9, 0.99, 1.0]
-for name in ["MultinomialNB", "NB + isotonic"]:
-    cut = pd.cut(probs[name], bins, include_lowest=True)
-    t = pd.DataFrame({"bin": cut, "y": ytest}).groupby("bin", observed=False).y.agg(["mean", "size"])
-    print(name, "  ".join(f"{str(i)}: {m:.2f} ({s})" for i, (m, s) in t.iterrows()))</div>
-  <div class="fx" data-lang="text">model                acc    log-loss  Brier   share p&lt;0.01 or p&gt;0.99   wrong among those
-MultinomialNB        0.925  0.196     0.055   0.628                   11
-NB + isotonic        0.924  0.197     0.055   0.529                   3
-NB + sigmoid         0.924  0.206     0.058   0.000                   0
-LogisticRegression   0.932  0.162     0.050   0.526                   0
+    extreme = (p &lt; 0.01) | (p &gt; 0.99)
+    wrong = extreme &amp; ((p &gt; 0.5) != ytest)
+    print(f"{name:19s} {np.mean((p &gt; 0.5) == ytest):.3f}  {log_loss(ytest, p):.3f}     {extreme.mean():.3f}"
+          f"                    {wrong.sum()}")</div>
+  <div class="fx" data-lang="text">model               acc    log-loss  share of p&lt;0.01 or &gt;0.99   wrong among those
+MultinomialNB       0.925  0.196     0.628                    11
+NB + sigmoid        0.924  0.206     0.000                    0
+NB + isotonic       0.924  0.197     0.529                    3
+LogisticRegression  0.932  0.162     0.526                    0</div>
+  <p>Naive Bayes puts 62.8% of messages below 0.01 or above 0.99, and 11 of those extreme predictions are wrong: it said "less than 1% spam" for a spam message, or "more than 99%" for a ham one. Logistic regression makes extreme predictions less often (52.6%) and is never wrong when it does. Those few confident mistakes are expensive: Naive Bayes' log-loss is 0.196 against 0.162 for logistic regression, at almost the same accuracy. Sigmoid calibration removes the extreme predictions entirely and isotonic cuts the confident mistakes from 11 to 3, while accuracy barely moves, because calibration changes how confident the model is, not which side of 0.5 it lands on. Here neither calibrated version beats logistic regression's log-loss, because the double counting has also slightly damaged Naive Bayes' ranking of messages. The rule: use Naive Bayes' ranking freely, but calibrate before treating its numbers as probabilities, and always calibrate on data the model was not trained on (<a class="xref" data-note="ml_calibration">Thresholds &amp; Calibration</a> covers this fully).</p>
 
-reliability: predicted bin -&gt; actual spam rate (count)
-MultinomialNB (-0.001, 0.01]: 0.00 (931.0)  (0.01, 0.1]: 0.07 (274.0)  (0.1, 0.5]: 0.33 (192.0)  (0.5, 0.9]: 0.71 (147.0)  (0.9, 0.99]: 0.91 (130.0)  (0.99, 1.0]: 0.98 (326.0)
-NB + isotonic (-0.001, 0.01]: 0.00 (893.0)  (0.01, 0.1]: 0.05 (261.0)  (0.1, 0.5]: 0.29 (238.0)  (0.5, 0.9]: 0.73 (201.0)  (0.9, 0.99]: 0.95 (242.0)  (0.99, 1.0]: 1.00 (165.0)</div>
-  <ul>
-    <li><strong>Extremes</strong>: NB puts 62.8% of messages below 0.01 or above 0.99; logistic regression 52.6%.</li>
-    <li><strong>Confident mistakes</strong>: among those extreme predictions NB is wrong 11 times (saying "&lt; 1% spam" for spam or "&gt; 99%" for ham); logistic regression 0 times. These few mistakes cost a lot of log-loss: NB 0.196 vs LR 0.162 at almost the same accuracy.</li>
-    <li><strong>Calibrating NB</strong> with <code>CalibratedClassifierCV</code> (5-fold): isotonic regression cuts the confident mistakes to 3 and moves the top bin's accuracy from 0.98 to 1.00; sigmoid (Platt) scaling removes all extreme predictions. Neither changes accuracy much: calibration fixes probabilities, not rankings. Here neither beats LR's log-loss, because NB's ranking itself is hurt by the double counting.</li>
-  </ul>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A classifier is <strong>calibrated</strong> if P(y = 1 | p̂(x) = q) = q for all q. NB violates this systematically when features are positively dependent within a class, producing probabilities too close to 0 and 1. <strong>Platt scaling</strong> fits σ(a·score + b) on held-out data; <strong>isotonic regression</strong> fits a free increasing step function.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Do not threshold NB probabilities at business-meaningful values ("block above 0.99") without calibrating first, and never calibrate on the training data (use <code>CalibratedClassifierCV</code>'s cross-validation or a separate validation set).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: sklearn in Practice.</b> We know what every NB variant computes and where it fails. We have not yet built a proper text pipeline, chosen α by cross-validation, or learnt from a stream of messages.</div>
-
-  <h2 id="nb-sklearn"><span class="num">12</span>scikit-learn in Practice</h2>
-  <p class="gap"><strong>The question we can't answer yet.</strong> Which vectoriser, which NB class and which α should our spam filter use, and how do we keep it learning as new messages arrive without retraining from scratch?</p>
-  <h3>Parameters and attributes</h3>
-  <table class="tbl">
-    <tr><th>Parameter</th><th>Classes</th><th>Meaning</th></tr>
-    <tr><td><code>alpha</code> (1.0)</td><td>Multinomial, Complement, Bernoulli, Categorical</td><td>Additive smoothing; tune on a log grid</td></tr>
-    <tr><td><code>force_alpha</code> (True)</td><td>same</td><td>Keep very small α as given (else clipped to 1e-10)</td></tr>
-    <tr><td><code>fit_prior</code> (True) / <code>class_prior</code></td><td>discrete NBs</td><td>Learn P(c) from data, use uniform (False), or give your own</td></tr>
-    <tr><td><code>priors</code></td><td>GaussianNB</td><td>Fixed class priors</td></tr>
-    <tr><td><code>var_smoothing</code> (1e-9)</td><td>GaussianNB</td><td>Fraction of the largest variance added to all variances</td></tr>
-    <tr><td><code>binarize</code> (0.0)</td><td>BernoulliNB</td><td>Threshold that turns inputs into 0/1 (None = already binary)</td></tr>
-    <tr><td><code>norm</code> (False)</td><td>ComplementNB</td><td>Second weight normalisation from the paper</td></tr>
-    <tr><td><code>min_categories</code></td><td>CategoricalNB</td><td>Number of categories per feature (for unseen codes)</td></tr>
-  </table>
-  <p>Fitted attributes: <code>class_count_</code>, <code>class_log_prior_</code>, <code>feature_count_</code> and <code>feature_log_prob_</code> (discrete NBs: log P(w | c), shape (classes, features)), <code>theta_</code>, <code>var_</code>, <code>epsilon_</code> (Gaussian). All NB classes support <code>partial_fit</code>.</p>
-  <div class="fx" data-lang="py">from sklearn.pipeline import Pipeline
+  <h2 id="nb-practice"><span class="num">11</span>Naive Bayes in Practice</h2>
+  <p>scikit-learn has one class per variant, and the right one follows from the type of feature: <code>MultinomialNB</code> for counts (and, in practice, TF-IDF), <code>ComplementNB</code> for counts with imbalanced classes, <code>BernoulliNB</code> for binary flags, <code>GaussianNB</code> for continuous measurements and <code>CategoricalNB</code> for integer-coded categories. They share a small set of settings. <code>alpha</code> (default 1.0) is the smoothing. <code>fit_prior</code> (default True) learns P(c) from the class frequencies in the training data; <code>class_prior</code> lets you supply your own. <code>GaussianNB</code> has <code>var_smoothing</code> instead of <code>alpha</code> and <code>priors</code> instead of <code>class_prior</code>. After fitting, <code>class_count_</code>, <code>class_log_prior_</code>, <code>feature_count_</code> and <code>feature_log_prob_</code> hold the counts and log-probabilities we computed by hand (<code>theta_</code> and <code>var_</code> for the Gaussian version).</p>
+  <p>For text, the vectoriser and the model go together in a pipeline so that the vocabulary is learnt only from the training folds during cross-validation (otherwise words from the test set leak into training; see <a class="xref" data-note="ml_pipelines">Pipelines &amp; Data Leakage</a>). Below we tune α on the simulated inbox, scoring by log-loss, and then compare the three discrete variants:</p>
+  <div class="fx" data-lang="py">from sklearn.pipeline import make_pipeline
 from sklearn.model_selection import GridSearchCV
-from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import ComplementNB
+to_text = lambda XX: [" ".join(f"w{j}" for j in np.repeat(np.arange(XX.shape[1]), row)) for row in XX]
 texts_tr, texts_te = to_text(Xbig), to_text(Xtest)
-pipe = Pipeline([("vec", CountVectorizer(token_pattern=r"\\S+")), ("nb", MultinomialNB())])
-grid = GridSearchCV(pipe, {"vec": [CountVectorizer(token_pattern=r"\\S+"), TfidfVectorizer(token_pattern=r"\\S+")],
-                           "nb": [MultinomialNB(), ComplementNB(), BernoulliNB()],
-                           "nb__alpha": [0.01, 0.1, 1.0]}, cv=5, scoring="neg_log_loss", n_jobs=1)
-grid.fit(texts_tr, ybig)
-res = pd.DataFrame(grid.cv_results_)
-res["vec"] = res.param_vec.map(lambda v: type(v).__name__); res["nb"] = res.param_nb.map(lambda v: type(v).__name__)
-print(res.pivot_table(index=["nb", "vec"], columns="param_nb__alpha", values="mean_test_score").round(3))
-best = grid.best_estimator_
-print("best:", type(best["vec"]).__name__, type(best["nb"]).__name__, "alpha", best["nb"].alpha,
-      f"| test acc {best.score(texts_te, ytest):.3f}")
-# streaming: learn from three batches with partial_fit
-stream = MultinomialNB()
-for k, (a, b) in enumerate([(0, 1000), (1000, 2000), (2000, 3000)]):
-    stream.partial_fit(Xbig[a:b], ybig[a:b], classes=[0, 1])
+pipe = make_pipeline(CountVectorizer(token_pattern=r"\\S+"), MultinomialNB())
+grid = GridSearchCV(pipe, {"multinomialnb__alpha": [0.01, 0.1, 0.3, 1.0, 3.0]},
+                    cv=5, scoring="neg_log_loss").fit(texts_tr, ybig)
+for a, s in zip(grid.param_grid["multinomialnb__alpha"], grid.cv_results_["mean_test_score"]):
+    print(f"alpha={a:&lt;5} CV log-loss {-s:.3f}")
+print("best alpha:", grid.best_params_["multinomialnb__alpha"], " test acc:", round(grid.best_estimator_.score(texts_te, ytest), 3))
+for M in (MultinomialNB, ComplementNB, BernoulliNB):
+    print(f"{M.__name__:14s} test acc {M().fit(Xbig, ybig).score(Xtest, ytest):.3f}")</div>
+  <div class="fx" data-lang="text">alpha=0.01  CV log-loss 0.190
+alpha=0.1   CV log-loss 0.184
+alpha=0.3   CV log-loss 0.183
+alpha=1.0   CV log-loss 0.181
+alpha=3.0   CV log-loss 0.180
+best alpha: 3.0  test acc: 0.926
+MultinomialNB  test acc 0.925
+ComplementNB   test acc 0.926
+BernoulliNB    test acc 0.917</div>
+  <p>The cross-validated log-loss improves slightly as α grows from 0.01 to 3, and the test accuracy of the tuned pipeline is 0.926. The differences are small, which is typical: α matters most when data is tiny or the vocabulary is huge. Multinomial and Complement NB are essentially tied here (the classes are only mildly imbalanced), and Bernoulli is a little behind on these longer messages, as section 06 predicted.</p>
+  <p>Naive Bayes has one property few models share. Its "training" is nothing but adding up counts, so it can learn from new data without starting over. scikit-learn exposes this as <code>partial_fit</code>, which a nightly job can call with each new batch of labelled messages:</p>
+  <div class="fx" data-lang="py">stream = MultinomialNB()
+for k, (a, z) in enumerate([(0, 1000), (1000, 2000), (2000, 3000)]):
+    stream.partial_fit(Xbig[a:z], ybig[a:z], classes=[0, 1])      # just adds the new counts
     print(f"after batch {k + 1}: messages seen {int(stream.class_count_.sum())}, test acc {stream.score(Xtest, ytest):.3f}")
 full = MultinomialNB().fit(Xbig, ybig)
-print("same as one fit on all 3000:", np.allclose(stream.feature_log_prob_, full.feature_log_prob_))
-print("attributes:", "class_count_", full.class_count_, " feature_count_ shape", full.feature_count_.shape,
-      " class_log_prior_", full.class_log_prior_.round(3))</div>
-  <div class="fx" data-lang="text">param_nb__alpha                 0.01   0.10   1.00
-nb            vec                                 
-BernoulliNB   CountVectorizer -0.213 -0.206 -0.202
-              TfidfVectorizer -0.213 -0.206 -0.202
-ComplementNB  CountVectorizer -0.198 -0.192 -0.188
-              TfidfVectorizer -0.291 -0.290 -0.300
-MultinomialNB CountVectorizer -0.190 -0.184 -0.181
-              TfidfVectorizer -0.273 -0.270 -0.279
-best: CountVectorizer MultinomialNB alpha 1.0 | test acc 0.925
-after batch 1: messages seen 1000, test acc 0.919
+print("identical to one fit on all 3000:", np.allclose(stream.feature_log_prob_, full.feature_log_prob_))</div>
+  <div class="fx" data-lang="text">after batch 1: messages seen 1000, test acc 0.919
 after batch 2: messages seen 2000, test acc 0.923
 after batch 3: messages seen 3000, test acc 0.925
-same as one fit on all 3000: True
-attributes: class_count_ [2081.  919.]  feature_count_ shape (2, 300)  class_log_prior_ [-0.366 -1.183]</div>
-  <ul>
-    <li><strong>Grid search</strong> (5-fold CV, scored by log-loss, higher = better): raw counts beat TF-IDF for Multinomial and Complement NB here (TF-IDF breaks the "word counts" model the probabilities assume; it often helps accuracy on real text, so test both). Bernoulli is unaffected by the vectoriser, since it only sees presence. The winner is CountVectorizer + MultinomialNB with α = 1, test accuracy 0.925.</li>
-    <li><strong>partial_fit</strong>: NB's "training" is just adding counts, so learning from three batches of 1,000 gives <em>exactly</em> the same model as one fit on 3,000 (<code>True</code>). The filter can update every night with new labelled messages, in constant memory. Pass <code>classes=</code> on the first call.</li>
-  </ul>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>Typical text pipeline: <code>Pipeline([("vec", CountVectorizer()), ("nb", MultinomialNB(alpha=...))])</code>, tuned with <code>GridSearchCV</code> over <code>vec__ngram_range</code>, <code>vec__min_df</code> and <code>nb__alpha</code>. Training cost O(n · d) (one pass of counting), prediction O(non-zero words × classes), memory O(classes × V).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Fit the vectoriser inside the pipeline: fitting it on all data before splitting leaks test vocabulary into training (<a class="xref" data-note="ml_pipelines">Pipelines &amp; Data Leakage</a>). And <code>MultinomialNB</code> rejects negative inputs, so do not put a <code>StandardScaler</code> in front of it.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: From Scratch.</b> We trust sklearn's numbers, but can we write the whole thing ourselves in a few lines and get identical results?</div>
-
-  <h2 id="nb-scratch"><span class="num">13</span>From Scratch, Matched to sklearn</h2>
-  <p class="gap"><strong>The question we can't answer yet.</strong> Every number so far came from a hand table or a library. Can we turn the hand tables of sections 04, 06 and 08 into code that reproduces sklearn exactly?</p>
-  <p>Two short classes. <code>ScratchMultinomialNB</code>: add α to the word counts per class, normalise each row to get log P(w | c), add log P(c), and normalise with log-sum-exp (sections 04–06). <code>ScratchGaussianNB</code>: per-class means and population variances plus sklearn's epsilon, then the log of the normal density summed over features (section 08).</p>
+identical to one fit on all 3000: True</div>
+  <p>After three batches of 1,000 messages the model is <em>identical</em> to one trained on all 3,000 at once, not just similar. Memory stays constant however many messages arrive, which is why Naive Bayes suits streaming filters. (Pass <code>classes=</code> on the first call, because the first batch might not contain every class.)</p>
+  <p>Finally, to be sure nothing is hidden inside the library, here is Multinomial NB from scratch. Fitting is "add α to the counts per class and normalise each row" (sections 03 and 04); predicting is "log prior plus counts times log-probabilities, normalised with log-sum-exp" (section 05):</p>
   <div class="fx" data-lang="py">from scipy.special import logsumexp
 
 class ScratchMultinomialNB:
@@ -870,227 +472,127 @@ class ScratchMultinomialNB:
     def fit(self, X, y):
         X = np.asarray(X.todense()) if hasattr(X, "todense") else np.asarray(X)
         self.classes_ = np.unique(y)
-        counts = np.array([X[y == c].sum(axis=0) for c in self.classes_]) + self.alpha    # smoothed word counts
+        counts = np.array([X[y == c].sum(axis=0) for c in self.classes_]) + self.alpha  # smoothed counts
         self.log_theta_ = np.log(counts / counts.sum(axis=1, keepdims=True))            # log P(word | class)
-        self.log_prior_ = np.log(np.array([np.mean(y == c) for c in self.classes_]))     # log P(class)
+        self.log_prior_ = np.log([np.mean(y == c) for c in self.classes_])               # log P(class)
         return self
-    def predict_log_proba(self, X):
+    def predict_proba(self, X):
         X = np.asarray(X.todense()) if hasattr(X, "todense") else np.asarray(X)
-        joint = self.log_prior_ + X @ self.log_theta_.T                                 # log P(c) + sum count*log P(w|c)
-        return joint - logsumexp(joint, axis=1, keepdims=True)                          # normalise in log space
-    def predict_proba(self, X):
-        return np.exp(self.predict_log_proba(X))
-    def predict(self, X):
-        return self.classes_[self.predict_log_proba(X).argmax(axis=1)]
-
-class ScratchGaussianNB:
-    def __init__(self, var_smoothing=1e-9):
-        self.var_smoothing = var_smoothing
-    def fit(self, X, y):
-        X = np.asarray(X, dtype=float)
-        self.classes_ = np.unique(y)
-        eps = self.var_smoothing * X.var(axis=0).max()                                   # sklearn's epsilon_
-        self.mu_ = np.array([X[y == c].mean(axis=0) for c in self.classes_])
-        self.var_ = np.array([X[y == c].var(axis=0) for c in self.classes_]) + eps
-        self.log_prior_ = np.log(np.array([np.mean(y == c) for c in self.classes_]))
-        return self
-    def predict_proba(self, X):
-        X = np.asarray(X, dtype=float)
-        ll = -0.5 * (np.log(2 * np.pi * self.var_)[None] + (X[:, None, :] - self.mu_[None]) ** 2 / self.var_[None]).sum(axis=2)
-        joint = self.log_prior_ + ll
+        joint = self.log_prior_ + X @ self.log_theta_.T          # log P(c) + sum(count * log P(w|c))
         return np.exp(joint - logsumexp(joint, axis=1, keepdims=True))
 
-sm = ScratchMultinomialNB().fit(X, y)
-print("8 messages, 'free lunch monday': scratch", sm.predict_proba(vec.transform(["free lunch monday"]))[0, 1].round(3),
-      " sklearn", mnb.predict_proba(vec.transform(["free lunch monday"]))[0, 1].round(3))
-sm_big = ScratchMultinomialNB().fit(Xbig, ybig)
-print("big inbox: max |proba diff| vs sklearn =", f"{np.abs(sm_big.predict_proba(Xtest) - full.predict_proba(Xtest)).max():.1e}",
-      " same labels:", np.array_equal(sm_big.predict(Xtest), full.predict(Xtest)))
-sg = ScratchGaussianNB().fit(inbox[num], y)
-print("Gaussian, new message: scratch", sg.predict_proba(pd.DataFrame([new_msg]))[0, 1].round(4),
-      " sklearn", gnb.predict_proba(pd.DataFrame([new_msg]))[0, 1].round(4),
-      f" max |var diff| {np.abs(sg.var_ - gnb.var_).max():.1e}")</div>
-  <div class="fx" data-lang="text">8 messages, 'free lunch monday': scratch 0.382  sklearn 0.382
-big inbox: max |proba diff| vs sklearn = 1.4e-14  same labels: True
-Gaussian, new message: scratch 0.9056  sklearn 0.9056  max |var diff| 0.0e+00</div>
-  <p>On the eight messages the scratch class gives 0.382 like sklearn; on the 2,000-message simulated test inbox the probabilities agree to 10⁻¹⁴ (floating-point noise) with identical labels; the Gaussian version gives 0.9056 with identical variances. The key line is <code>joint = self.log_prior_ + X @ self.log_theta_.T</code>: a matrix product of counts with log-probabilities is exactly the linear model of section 10.</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Common bugs in hand-written NB: sample variance (ddof = 1) instead of population variance; forgetting to smooth words that occur only in the other class; normalising with a plain sum of exponentials (underflow); using document counts in Multinomial NB.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: When to Use It.</b> We can build and run NB. When is it the right choice compared with its siblings and with trees?</div>
-
-  <h2 id="nb-when"><span class="num">14</span>When to Use Naive Bayes, and Comparisons</h2>
-  <p class="gap"><strong>The question we can't answer yet.</strong> Given a new classification problem, should we start with NB, logistic regression, KNN, SVM or a tree model?</p>
-  <div class="cards">
-    <div><b>Strengths</b><p>Trains in one pass of counting, no iterations; works with tiny datasets; handles 100,000+ features (words) easily; streaming updates via partial_fit; missing features can simply be skipped (leave out their factor); each weight is readable.</p><small>A classic first baseline for text and spam</small></div>
-    <div><b>Weaknesses</b><p>Independence assumption double-counts correlated features; probabilities over-confident; cannot learn interactions ("free" is spammy unless the sender is known); Gaussian NB assumes bell-shaped features; usually beaten by logistic regression or boosting with lots of data.</p><small>Calibrate before using probabilities</small></div>
-    <div><b>Use it when</b><p>Short texts or documents, many sparse features, few labels, need for speed (real-time filters, very large corpora), or as a fast baseline and a feature for other models (NB log-count ratios are strong features for linear models: "NB-SVM").</p><small>Spam, sentiment, topic tagging, language detection</small></div>
-  </div>
+print("8 messages:", ScratchMultinomialNB().fit(X, y).predict_proba(msg)[0, 1].round(3), " sklearn:", mnb.predict_proba(msg)[0, 1].round(3))
+diff = np.abs(ScratchMultinomialNB().fit(Xbig, ybig).predict_proba(Xtest) - full.predict_proba(Xtest)).max()
+print(f"simulated inbox: largest probability difference from sklearn = {diff:.1e}")</div>
+  <div class="fx" data-lang="text">8 messages: 0.382  sklearn: 0.382
+simulated inbox: largest probability difference from sklearn = 1.4e-14</div>
+  <p>It gives 0.382 on our eight messages, and on the 2,000 simulated test messages its probabilities differ from scikit-learn's by at most 10⁻¹⁴, which is just floating-point rounding. Notice the key line, <code>joint = self.log_prior_ + X @ self.log_theta_.T</code>: a matrix product of word counts with log-probabilities, which is exactly the linear model of section 09.</p>
+  <p>When should you reach for Naive Bayes? Its strengths are speed (one pass, no iterations), tiny data requirements, effortless handling of 100,000+ sparse features, streaming updates, and readable weights. It also handles missing features gracefully: under the independence assumption you can simply leave a missing feature's factor out of the product. Its weaknesses are the ones we have measured: correlated features are double-counted, probabilities are over-confident, it cannot learn interactions (for example "'free' is spammy unless the sender is a known contact"), Gaussian NB assumes bell-shaped features, and with plenty of data logistic regression or boosting usually beat it. That makes it the classic first baseline for text (spam, sentiment, topic tagging, language detection) and a good choice whenever labels are scarce or training must be very fast.</p>
   <table class="tbl">
     <tr><th></th><th>Naive Bayes</th><th><a class="xref" data-note="ml_classification">Logistic regression</a></th><th><a class="xref" data-note="ml_knn">KNN</a></th><th><a class="xref" data-note="ml_svm">SVM</a></th><th><a class="xref" data-note="ml_dtree">Trees</a> / <a class="xref" data-note="ml_gbm">boosting</a></th></tr>
-    <tr><td>Approach</td><td>Generative, counting</td><td>Discriminative, optimisation</td><td>Instance-based</td><td>Max margin</td><td>Recursive splits</td></tr>
-    <tr><td>Training</td><td>One pass, O(n·d)</td><td>Iterative</td><td>None (stores data)</td><td>O(n²)–O(n³) with kernels</td><td>Iterative, heavier</td></tr>
-    <tr><td>Small data</td><td>Best</td><td>Good with regularization</td><td>OK</td><td>Good</td><td>Unstable / overfits</td></tr>
-    <tr><td>Correlated features</td><td>Double counts</td><td>Handles (shares weight)</td><td>Distances distorted</td><td>Handles</td><td>Handles</td></tr>
-    <tr><td>Interactions</td><td>No</td><td>Only if engineered</td><td>Yes</td><td>With kernels</td><td>Yes</td></tr>
-    <tr><td>Probabilities</td><td>Too extreme</td><td>Good</td><td>Coarse</td><td>Need calibration</td><td>Decent (boosting)</td></tr>
-    <tr><td>Scaling needed</td><td>No</td><td>Yes</td><td>Yes</td><td>Yes</td><td>No</td></tr>
+    <tr><td>How it learns</td><td>counting (generative)</td><td>optimisation (discriminative)</td><td>stores the data</td><td>maximum margin</td><td>recursive splits</td></tr>
+    <tr><td>Small data</td><td>very good</td><td>good with regularisation</td><td>OK</td><td>good</td><td>unstable</td></tr>
+    <tr><td>Correlated features</td><td>double-counts</td><td>handles</td><td>distorts distances</td><td>handles</td><td>handles</td></tr>
+    <tr><td>Interactions</td><td>no</td><td>only if engineered</td><td>yes</td><td>with kernels</td><td>yes</td></tr>
+    <tr><td>Probabilities</td><td>too extreme</td><td>good</td><td>coarse</td><td>need calibration</td><td>decent (boosting)</td></tr>
+    <tr><td>Needs scaling</td><td>no</td><td>yes</td><td>yes</td><td>yes</td><td>no</td></tr>
   </table>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Choosing NB "because the features are independent" is backwards: features are almost never independent. Choose it because it is fast, needs little data, and ranks well; verify by cross-validation against logistic regression.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: How It All Connects.</b> We have met each concept on its own. Next we lay them side by side and see how each is built from the previous ones.</div>
 
-  <h2 id="nb-connect"><span class="num">15</span>How It All Connects</h2>
-  <p class="gap"><strong>The question we can't answer yet.</strong> Bayes' theorem, the MAP rule, the naive product, smoothing, logs, the three likelihood models, the linear form and calibration: how does each one come out of the one before, and which question does each answer?</p>
-  <figure class="viz"><svg viewBox="0 0 700 360" width="700">
-<defs><marker id="nb-ca" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="10" y="14" width="150" height="54" rx="8" class="fs" stroke="currentColor"/><text x="85" y="36" text-anchor="middle" font-size="12.5">counts per class</text><text x="85" y="54" text-anchor="middle" class="tm" font-size="11">3 of 4 spam unknown</text>
-<line x1="160" y1="41" x2="188" y2="41" stroke="currentColor" marker-end="url(#nb-ca)"/>
-<rect x="190" y="14" width="150" height="54" rx="8" class="fb sb"/><text x="265" y="36" text-anchor="middle" font-size="12.5">Bayes' theorem</text><text x="265" y="54" text-anchor="middle" class="tm" font-size="11">P(spam|unknown) = 0.75</text>
-<line x1="340" y1="41" x2="368" y2="41" stroke="currentColor" marker-end="url(#nb-ca)"/>
-<rect x="370" y="14" width="150" height="54" rx="8" class="fb sb"/><text x="445" y="36" text-anchor="middle" font-size="12.5">MAP rule</text><text x="445" y="54" text-anchor="middle" class="tm" font-size="11">argmax P(c)·P(x|c)</text>
-<line x1="520" y1="41" x2="548" y2="41" stroke="currentColor" marker-end="url(#nb-ca)"/>
-<rect x="550" y="14" width="140" height="54" rx="8" class="fb sb"/><text x="620" y="36" text-anchor="middle" font-size="12.5">naive product</text><text x="620" y="54" text-anchor="middle" class="tm" font-size="11">Π P(xⱼ|c): 0.90</text>
-<line x1="620" y1="68" x2="620" y2="98" stroke="currentColor"/>
-<line x1="110" y1="98" x2="620" y2="98" stroke="currentColor"/>
-<line x1="110" y1="98" x2="110" y2="118" stroke="currentColor" marker-end="url(#nb-ca)"/><line x1="345" y1="98" x2="345" y2="118" stroke="currentColor" marker-end="url(#nb-ca)"/><line x1="580" y1="98" x2="580" y2="118" stroke="currentColor" marker-end="url(#nb-ca)"/>
-<rect x="20" y="120" width="180" height="54" rx="8" class="ft st"/><text x="110" y="141" text-anchor="middle" font-size="12.5">Multinomial / Bernoulli</text><text x="110" y="159" text-anchor="middle" class="tm" font-size="11">word counts: 0.382 / 0.292</text>
-<rect x="255" y="120" width="180" height="54" rx="8" class="ft st"/><text x="345" y="141" text-anchor="middle" font-size="12.5">Categorical</text><text x="345" y="159" text-anchor="middle" class="tm" font-size="11">sender, night: 0.80</text>
-<rect x="490" y="120" width="180" height="54" rx="8" class="ft st"/><text x="580" y="141" text-anchor="middle" font-size="12.5">Gaussian</text><text x="580" y="159" text-anchor="middle" class="tm" font-size="11">μ, σ²: age, length 0.906</text>
-<line x1="110" y1="174" x2="110" y2="208" stroke="currentColor" marker-end="url(#nb-ca)"/><text x="118" y="196" class="tm" font-size="10.5">zero counts → + α smoothing</text>
-<rect x="20" y="210" width="180" height="40" rx="8" class="fv" stroke="currentColor"/><text x="110" y="235" text-anchor="middle" font-size="12">(count + α)/(N + αV)</text>
-<line x1="110" y1="250" x2="300" y2="284" stroke="currentColor" marker-end="url(#nb-ca)"/><line x1="345" y1="174" x2="345" y2="282" stroke="currentColor" marker-end="url(#nb-ca)"/><line x1="580" y1="174" x2="390" y2="284" stroke="currentColor" marker-end="url(#nb-ca)"/>
-<rect x="230" y="286" width="230" height="54" rx="8" class="fg sg"/><text x="345" y="306" text-anchor="middle" font-size="12.5">sum of logs + log-sum-exp</text><text x="345" y="324" text-anchor="middle" class="tm" font-size="11">all clues: P(spam) = 0.96</text>
-<line x1="460" y1="313" x2="498" y2="313" stroke="currentColor" marker-end="url(#nb-ca)"/>
-<rect x="500" y="286" width="190" height="54" rx="8" class="fg sg"/><text x="595" y="306" text-anchor="middle" font-size="12.5">= linear log-odds</text><text x="595" y="324" text-anchor="middle" class="tm" font-size="11">b + Σ wⱼxⱼ · twin of LR</text>
-<line x1="230" y1="313" x2="190" y2="313" stroke="currentColor" marker-end="url(#nb-ca)"/>
-<rect x="20" y="286" width="170" height="54" rx="8" class="fr sr"/><text x="105" y="306" text-anchor="middle" font-size="12.5">calibration check</text><text x="105" y="324" text-anchor="middle" class="tm" font-size="11">double counting → extremes</text>
-</svg><figcaption>Counts feed Bayes' theorem; Bayes' theorem with many clues becomes the MAP rule; the naive product makes it estimable; each feature type gets its own P(xⱼ | c); smoothing fixes zero counts; logs make the product computable and reveal the linear form; double counting makes calibration necessary.</figcaption></figure>
-  <table class="tbl"><caption>Every concept on the eight-message inbox</caption>
-    <tr><th>Concept</th><th>Built from</th><th>Formula</th><th>Question it answers</th><th>Inbox value</th><th>Robust / sensitive · use when</th></tr>
-    <tr><td>Prior</td><td>class counts</td><td>P(c) = n_c/n</td><td>how common is spam?</td><td>0.5</td><td>Wrong if training mix ≠ real mix; set <code>class_prior</code></td></tr>
-    <tr><td>Likelihood</td><td>counts within a class</td><td>P(x | c)</td><td>how typical is the clue of the class?</td><td>P(unknown | spam) = 0.75</td><td>Noisy with few rows</td></tr>
-    <tr><td>Bayes' theorem</td><td>prior, likelihood, total probability</td><td>P(x | c)P(c)/Σ_k P(x | k)P(k)</td><td>flip the conditional</td><td>P(spam | unknown) = 0.75</td><td>Exact; always valid</td></tr>
-    <tr><td>MAP rule</td><td>Bayes' theorem, drop P(x)</td><td>argmax_c P(c)P(x | c)</td><td>which class to predict?</td><td>–</td><td>Optimal if P(x | c) were known</td></tr>
-    <tr><td>Naive product</td><td>MAP + conditional independence</td><td>P(c)Πⱼ P(xⱼ | c)</td><td>estimate P(x | c) from little data</td><td>unknown + night: 0.90 (true 3/3)</td><td>Double counts dependent clues</td></tr>
-    <tr><td>Multinomial NB</td><td>naive product on word counts</td><td>θ_cj = (N_cj + α)/(N_c + αV)</td><td>text as clues</td><td>"free lunch monday": 0.382</td><td>Counts repeats; long documents</td></tr>
-    <tr><td>Laplace smoothing</td><td>pseudo-counts</td><td>+α to every count</td><td>avoid zero vetoes</td><td>P(lunch | spam) 0 → 0.025</td><td>Tune α; large α → prior only</td></tr>
-    <tr><td>Logs / log-sum-exp</td><td>naive product</td><td>Σ ln, subtract max</td><td>avoid underflow</td><td>−10.374 vs −9.892 → 0.382</td><td>Always use</td></tr>
-    <tr><td>Bernoulli NB</td><td>naive product on presence</td><td>p^x(1 − p)^(1 − x)</td><td>absence as evidence</td><td>0.292</td><td>Short texts</td></tr>
-    <tr><td>Gaussian NB</td><td>naive product on numbers</td><td>N(x; μ_c, σ²_c)</td><td>continuous clues</td><td>age 40, length 20: 0.906</td><td>Sensitive to tiny variances, skew</td></tr>
-    <tr><td>Combining types</td><td>adding log-probabilities</td><td>Σ log-odds − (m − 1)·prior log-odds</td><td>use every clue</td><td>−0.481 + 1.386 + 2.265 → 0.96</td><td>Same independence caveat</td></tr>
-    <tr><td>Linear form</td><td>log of the score ratio</td><td>b + Σ xⱼ ln(θ_1j/θ_0j)</td><td>what model is NB?</td><td>free +1.361, monday −1.124</td><td>Twin of logistic regression</td></tr>
-    <tr><td>Calibration</td><td>reliability, log-loss</td><td>P(y | p̂ = q) = q?</td><td>are probabilities honest?</td><td>(simulated) 11 confident mistakes</td><td>Calibrate before using p</td></tr>
-  </table>
-  <div class="bridge"><b>What this still can't tell us → next: Common Mistakes.</b> The chain shows how the pieces fit when used correctly; next, the ways people most often misuse them.</div>
-
-  <h2 id="nb-traps"><span class="num">16</span>Common Mistakes</h2>
-  <p class="gap"><strong>The question we can't answer yet.</strong> We know how NB works. Where do practitioners, and interview answers, most often go wrong?</p>
-  <div class="callout trap"><span class="label">Trap: "assumes features are independent"</span>
-    <p>It assumes conditional independence given the class, not overall independence.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: no smoothing</span>
-    <p>One unseen word gives probability 0 and vetoes a class (α ≈ 0 gave P(spam) = 0.000 for "free lunch monday").</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: multiplying probabilities</span>
-    <p>Products underflow to 0 on long documents; sum logs and normalise with log-sum-exp.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: trusting the probabilities</span>
-    <p>Double-counted evidence makes NB over-confident (11 confident mistakes vs 0 for LR). Use the ranking freely; calibrate before using the number.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: wrong variant for the data</span>
-    <p>Counts → Multinomial/Complement; binary → Bernoulli; continuous → Gaussian; categories as integer codes → Categorical. TF-IDF into MultinomialNB works in practice but is no longer a count model; negative (scaled) values are rejected.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: duplicated or highly correlated features</span>
-    <p>Duplicates multiply the same evidence (0.75 → 0.964 with three copies). Remove duplicates, or use logistic regression.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: priors from a skewed training set</span>
-    <p>If you down-sampled ham for training, the learnt prior is wrong for the real inbox; set <code>class_prior</code> to the true rate or correct the threshold.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: Gaussian NB on tiny or skewed samples</span>
-    <p>Four spam lengths gave variance 0.69 and made length 17 "impossible" for spam (0.906 → 0.062). Use more data, larger <code>var_smoothing</code>, or transform skewed features.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Revision Sheet.</b> Everything is covered; next comes the whole note condensed for revision.</div>
+  <h2 id="nb-traps"><span class="num">12</span>Common Mistakes</h2>
+  <p>The most damaging mistake is forgetting to smooth. With α at zero, any word never seen in a class sets that class's probability to exactly zero, so one unusual word vetoes everything else in the message; section 04 showed "free lunch monday" become 0.000 spam for that reason. Close behind is computing the score as a plain product of probabilities: it works on three-word examples and underflows to 0.0 on real e-mails. Always smooth, and always sum logs and normalise with log-sum-exp (or simply use the library, which does both).</p>
+  <p>A second family of mistakes comes from giving a variant the wrong kind of input. <code>MultinomialNB</code> models counts, so it refuses negative numbers, and a common way to produce them is to put a <code>StandardScaler</code> in front of it out of habit:</p>
+  <div class="fx" data-lang="py">from sklearn.preprocessing import StandardScaler
+try:
+    make_pipeline(StandardScaler(with_mean=True), MultinomialNB()).fit(X.toarray(), y)
+except ValueError as e:
+    print("ValueError:", e)</div>
+  <div class="fx" data-lang="text">ValueError: Negative values in data passed to MultinomialNB (input X).</div>
+  <p>Scaling is pointless for Naive Bayes anyway (each feature's probabilities are estimated in its own units), so the fix is to remove the scaler. Similarly, feed integer codes rather than one-hot columns to <code>CategoricalNB</code>, use <code>GaussianNB</code> for continuous measurements rather than binarising them into Bernoulli features, and remove duplicated or near-duplicate columns, which are double-counted.</p>
+  <p>A subtler mistake is learning the prior from a training set whose class balance differs from reality. Teams often build a balanced training set, say 50% spam, when the real inbox is 5% spam. The model then learns P(spam) = 0.5 and over-predicts spam in production. The prior can be set directly:</p>
+  <div class="fx" data-lang="py">true_rate = 0.05                                     # in the real inbox only 5% of messages are spam
+m_fix = MultinomialNB(class_prior=[1 - true_rate, true_rate]).fit(X, y)
+probe = vec.transform(["free cash prize"])
+print("prior learnt from 50/50 training data:", mnb.predict_proba(probe)[0, 1].round(3))
+print("prior set to the real 5% spam rate   :", m_fix.predict_proba(probe)[0, 1].round(3))</div>
+  <div class="fx" data-lang="text">prior learnt from 50/50 training data: 0.957
+prior set to the real 5% spam rate   : 0.539</div>
+  <p>The same message drops from 0.957 to 0.539 once the model is told that spam is rare, which is the Bayes' theorem lesson of section 01 again: the prior matters. Finally, two conceptual slips come up in interviews: saying "Naive Bayes assumes the features are independent" (it assumes independence <em>given the class</em>), and treating its probabilities as trustworthy (they are over-confident; calibrate them first).</p>
 
   <h2 id="nb-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>Naive Bayes is a generative classifier: it estimates how often each clue appears in each class, assumes the clues are independent within a class, and combines them with Bayes' theorem into P(class | clues). Training is counting; prediction is a sum of logs. Running example: eight SMS messages (4 spam, 4 ham); new message "free lunch monday".</p>
-  <h3>The story in one line per step</h3>
-  <table class="tbl">
-    <tr><th>Step</th><th>Question</th><th>Answer</th><th>Weakness that forces the next step</th></tr>
-    <tr><td>Bayes' theorem</td><td>Flip P(clue | spam) into P(spam | clue)?</td><td>P(x|c)P(c)/P(x): 0.75</td><td>Only one clue</td></tr>
-    <tr><td>MAP rule</td><td>Use many clues?</td><td>argmax P(c)P(x|c)</td><td>P(x|c) needs 2^d cells</td></tr>
-    <tr><td>Naive product</td><td>Estimate P(x|c) from little data?</td><td>Π P(xⱼ|c): 0.90</td><td>What are text clues?</td></tr>
-    <tr><td>Multinomial NB</td><td>Words as clues?</td><td>word-count shares: 0.382</td><td>Unseen word = 0</td></tr>
-    <tr><td>Smoothing</td><td>Avoid zero vetoes?</td><td>+α pseudo-counts</td><td>Products underflow</td></tr>
-    <tr><td>Logs</td><td>Compute safely?</td><td>sum logs, log-sum-exp</td><td>Absent words ignored</td></tr>
-    <tr><td>Bernoulli NB</td><td>Presence/absence?</td><td>p^x(1 − p)^(1 − x): 0.292</td><td>Numbers can't be counted</td></tr>
-    <tr><td>Gaussian NB</td><td>Continuous clues?</td><td>normal density per class: 0.906</td><td>Mixed feature types</td></tr>
-    <tr><td>Mixing types</td><td>All clues together?</td><td>add log-odds: 0.96</td><td>What model is this?</td></tr>
-    <tr><td>Linear form</td><td>Relation to LR?</td><td>log-odds = b + Σwⱼxⱼ; NB wins small n</td><td>Probabilities?</td></tr>
-    <tr><td>Calibration</td><td>Is p honest?</td><td>too extreme; calibrate</td><td>–</td></tr>
-  </table>
-  <h3>Definitions and formulas</h3>
-  <div class="cards">
-    <div><b>Bayes' theorem</b><p>P(c | x) = P(x | c)P(c)/P(x); P(x) = Σ_k P(x | k)P(k). Prior P(c), likelihood P(x | c), evidence P(x), posterior P(c | x). Odds form: posterior odds = prior odds × likelihood ratio.</p><small>Unknown sender: 0.75 × 0.5 / 0.5 = 0.75</small></div>
-    <div><b>Naive Bayes rule</b><p>ŷ = argmax_c [ln P(c) + Σⱼ ln P(xⱼ | c)], assuming xⱼ independent given c. Probabilities by normalising the scores (log-sum-exp).</p><small>Generative; one pass of counting</small></div>
-    <div><b>Multinomial</b><p>θ_cj = (N_cj + α)/(N_c + αV): N_cj = count of word j in class c, N_c = all words in c, V = vocabulary size, α = smoothing. Score multiplies θ_cj once per occurrence.</p><small>P(free | spam) = 4/40</small></div>
-    <div><b>Bernoulli</b><p>p_cj = (n_cj + α)/(n_c + 2α): n_cj = class-c documents containing j, n_c = class-c documents. Present words give p, absent words 1 − p.</p><small>Repeats ignored</small></div>
-    <div><b>Gaussian</b><p>N(x; μ_cj, σ²_cj) = exp(−(x − μ)²/(2σ²))/√(2πσ²) with class mean μ and population variance σ² (+ var_smoothing × max variance).</p><small>Spam age μ 9.5, σ² 142.25</small></div>
-    <div><b>Linear form</b><p>ln(P(1|x)/P(0|x)) = ln(P(1)/P(0)) + Σⱼ xⱼ ln(θ_1j/θ_0j): a logistic-regression-shaped model whose weights come from counts, not optimisation.</p><small>free +1.361, lunch −0.718, monday −1.124</small></div>
-  </div>
-  <h3>The running example's numbers</h3>
-  <table class="tbl">
-    <tr><th>Quantity</th><th>Spam</th><th>Ham</th><th>Result</th></tr>
-    <tr><td>Messages / prior</td><td>4 / 0.5</td><td>4 / 0.5</td><td>–</td></tr>
-    <tr><td>Unknown sender; night</td><td>3/4; 3/4</td><td>1/4; 1/4</td><td>P(spam | unknown) 0.75; both clues 0.90 (α = 1: 0.80)</td></tr>
-    <tr><td>Words (total, V = 24)</td><td>16</td><td>15</td><td>–</td></tr>
-    <tr><td>P(free), P(lunch), P(monday) | c (α = 1)</td><td>0.100, 0.025, 0.025</td><td>0.0256, 0.0513, 0.0769</td><td>scores 3.13e−5 vs 5.06e−5 → 0.382</td></tr>
-    <tr><td>Log-scores</td><td>−10.374</td><td>−9.892</td><td>0.382</td></tr>
-    <tr><td>Bernoulli present / absent factors</td><td>0.01852 / 0.00092</td><td>0.02778 / 0.00149</td><td>0.292</td></tr>
-    <tr><td>Age μ, σ²; length μ, σ²</td><td>9.5, 142.25; 19.75, 0.6875</td><td>491.25, 106,855; 20, 9.5</td><td>age 40, length 20 → 0.906 (length 17 → 0.062)</td></tr>
-    <tr><td>All clue types combined</td><td colspan="2">log-odds −0.481 + 1.386 + 2.265 = 3.17</td><td>0.96</td></tr>
-  </table>
-  <h3>When to use it, when not</h3>
-  <table class="tbl">
-    <tr><th>Use</th><th>Avoid or calibrate</th></tr>
-    <tr><td>Text and other sparse high-dimensional data; very little labelled data; need for one-pass or streaming training; quick baseline.</td><td>When you need honest probabilities (calibrate first); strongly correlated or duplicated features; interactions matter; plenty of data (logistic regression or boosting usually win).</td></tr>
-  </table>
-  <h3>Key traps</h3>
+  <h3>Definitions</h3>
   <ul>
-    <li>Independence is assumed <em>given the class</em>, and it is almost always false; NB still ranks well.</li>
-    <li>Always smooth (α) and always compute in logs.</li>
-    <li>Probabilities are over-confident because correlated clues are double counted.</li>
-    <li>Match the variant to the feature type; CategoricalNB needs integer codes; no negative inputs to MultinomialNB.</li>
-    <li>Priors learnt from a re-sampled training set are wrong for deployment.</li>
+    <li><b>Bayes' theorem</b>: P(c | x) = P(x | c)·P(c) / P(x), with P(x) = Σₖ P(x | k)P(k).</li>
+    <li><b>Prior</b> P(c), <b>likelihood</b> P(x | c), <b>evidence</b> P(x), <b>posterior</b> P(c | x).</li>
+    <li><b>MAP rule</b>: predict the class with the largest P(c)·P(x | c).</li>
+    <li><b>Naive (conditional independence) assumption</b>: P(x₁…x_d | c) = Π P(xⱼ | c).</li>
+    <li><b>Generative</b> (models P(x | c), e.g. NB) vs <b>discriminative</b> (models P(c | x), e.g. logistic regression).</li>
+    <li><b>Laplace smoothing</b>: add α to every count; α = 1 is Laplace.</li>
+    <li><b>Log-sum-exp</b>: ln Σ e^aₖ = m + ln Σ e^(aₖ − m), m = max aₖ.</li>
+    <li><b>Calibrated</b>: among predictions of about p, a share p are positive.</li>
   </ul>
-  <h3>Rapid-fire checks</h3>
+  <h3>The variants</h3>
   <table class="tbl">
-    <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td>Prior 1% spam, P(clue | spam) = 0.75, P(clue | ham) = 0.25: P(spam | clue)?</td><td>0.0075 / (0.0075 + 0.2475) ≈ 0.03.</td></tr>
-    <tr><td>Word seen 0 times in a class of 16 words, V = 24, α = 1: P(word | class)?</td><td>1/40 = 0.025.</td></tr>
-    <tr><td>Why subtract the max log-score before exponentiating?</td><td>So the largest term becomes e⁰ = 1 and nothing underflows; the ratio is unchanged.</td></tr>
-    <tr><td>Message "free free free": does Bernoulli NB change its answer vs "free"?</td><td>No, only presence matters; Multinomial counts all three.</td></tr>
-    <tr><td>NB or logistic regression with 20 labelled examples and 5,000 words?</td><td>Start with NB: it reaches its best accuracy with far less data.</td></tr>
+    <tr><th>Class</th><th>Features</th><th>P(xⱼ | c)</th><th>Typical use</th></tr>
+    <tr><td><code>MultinomialNB</code></td><td>counts</td><td>(N_cj + α)/(N_c + αV), multiplied once per occurrence</td><td>text</td></tr>
+    <tr><td><code>ComplementNB</code></td><td>counts</td><td>estimated from the other classes</td><td>imbalanced text</td></tr>
+    <tr><td><code>BernoulliNB</code></td><td>0/1</td><td>p = (n_cj + α)/(n_c + 2α); absent words give 1 − p</td><td>short texts, flags</td></tr>
+    <tr><td><code>GaussianNB</code></td><td>continuous</td><td>normal density with class mean and variance</td><td>measurements</td></tr>
+    <tr><td><code>CategoricalNB</code></td><td>integer codes</td><td>(count + α)/(n_c + α·K)</td><td>categories</td></tr>
   </table>
+  <h3>The inbox numbers</h3>
+  <table class="tbl">
+    <tr><th>Quantity</th><th>Value</th></tr>
+    <tr><td>P(spam | unknown sender)</td><td>0.75 × 0.5 / 0.5 = 0.75</td></tr>
+    <tr><td>Unknown + night (naive)</td><td>0.2812 vs 0.0312 → 0.90; same clue 3× → 0.964</td></tr>
+    <tr><td>Multinomial, "free lunch monday"</td><td>0.100·0.025·0.025 vs 0.0256·0.0513·0.0769 → 0.382</td></tr>
+    <tr><td>Log-scores</td><td>−10.374 vs −9.892 → 0.382</td></tr>
+    <tr><td>Bernoulli</td><td>0.292 (repeats ignored)</td></tr>
+    <tr><td>Gaussian, age 40, length 20</td><td>0.906 (length 17 → 0.062)</td></tr>
+    <tr><td>All clues combined</td><td>log-odds −0.481 + 1.386 + 2.265 → 0.96</td></tr>
+    <tr><td>Linear weights</td><td>free +1.361, lunch −0.718, monday −1.124</td></tr>
+  </table>
+  <h3>Syntax</h3>
+  <div class="fx" data-lang="py">from sklearn.pipeline import make_pipeline
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.naive_bayes import MultinomialNB, BernoulliNB, GaussianNB, ComplementNB, CategoricalNB
+from sklearn.calibration import CalibratedClassifierCV
 
-  <h2 id="nb-qa"><span class="num">17</span>Questions &amp; Answers</h2>
+model = make_pipeline(CountVectorizer(), MultinomialNB(alpha=1.0))  # text
+model.fit(texts, y); model.predict_proba(new_texts)
+GaussianNB(var_smoothing=1e-9)                     # numeric columns
+MultinomialNB(class_prior=[0.95, 0.05])            # set the real-world prior
+nb.partial_fit(X_batch, y_batch, classes=[0, 1])   # streaming updates
+CalibratedClassifierCV(MultinomialNB(), method="sigmoid", cv=5)  # honest probabilities</div>
+  <h3>Gotchas</h3>
+  <ul>
+    <li>Independence is assumed <em>given the class</em>, and is almost always false; NB still ranks well.</li>
+    <li>Always smooth, always compute in logs.</li>
+    <li>Duplicated or correlated features are double-counted → over-confident probabilities.</li>
+    <li>No negative inputs to MultinomialNB; no scaling needed for any NB.</li>
+    <li>A prior learnt from a re-balanced training set is wrong for deployment.</li>
+    <li>Little data → NB; lots of data → logistic regression usually wins.</li>
+  </ul>
+
+  <h2 id="nb-qa"><span class="num">13</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>State Bayes' theorem and name each term.</summary><div class="qa-body">P(c | x) = P(x | c)P(c)/P(x). P(c) is the prior (belief before the evidence), P(x | c) the likelihood (how typical the evidence is of class c), P(x) = Σ_k P(x | k)P(k) the evidence (a normaliser), P(c | x) the posterior. In our inbox, P(spam | unknown sender) = 0.75 × 0.5 / 0.5 = 0.75.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What exactly is "naive" about Naive Bayes?</summary><div class="qa-body">It assumes the features are conditionally independent given the class: P(x₁, …, x_d | c) = Πⱼ P(xⱼ | c). This replaces an impossible joint table (2²⁴ cells for 24 binary words) with d small ones. It is "naive" because real features (words in phrases) are dependent even within a class.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why does NB work well even though the assumption is false?</summary><div class="qa-body">Classification needs only the right argmax, not accurate probabilities; dependence errors often affect both classes' scores similarly. Estimating each P(xⱼ | c) separately has very low variance, which wins with small data. The cost is in the probabilities: they become over-confident.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Compute P(spam | "free lunch monday") for our 8 messages with Multinomial NB.</summary><div class="qa-body">Spam has 16 words, ham 15, V = 24. With α = 1: P(free|spam) = 4/40, P(lunch|spam) = 1/40, P(monday|spam) = 1/40; P(free|ham) = 1/39, P(lunch|ham) = 2/39, P(monday|ham) = 3/39. Scores 0.5 × 0.1 × 0.025² = 3.13e−5 and 0.5 × 0.0256 × 0.0513 × 0.0769 = 5.06e−5, so P(spam) = 0.382.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is Laplace smoothing and why is it needed?</summary><div class="qa-body">Adding α (1 for Laplace) to every count: P(w | c) = (count + α)/(N_c + αV). Without it, a word never seen in a class gives probability 0 and vetoes that class for any message containing it (α ≈ 0 gave P(spam) = 0.000). It equals adding α imaginary occurrences of every word (a Dirichlet prior). Larger α pulls everything toward uniform; tune α by CV.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why compute in log space, and what is log-sum-exp?</summary><div class="qa-body">Multiplying hundreds of probabilities below 1 underflows to 0.0. Logs turn the product into a sum and keep the argmax. To normalise, compute ln Σ e^(a_k) as m + ln Σ e^(a_k − m) with m = max a_k, so no exponent underflows; P(c | x) = e^(a_c − logsumexp).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Multinomial vs Bernoulli vs Gaussian NB: when do you use each?</summary><div class="qa-body">Multinomial for counts (word counts, TF-IDF in practice); it counts repeats and ignores absent words. Bernoulli for binary presence features; absent words count as evidence (1 − p) and repeats do not (0.292 vs 0.382 on our message). Gaussian for continuous features, one normal curve per class per feature. Categorical for integer-coded categories; Complement NB for imbalanced text.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How does Gaussian NB estimate P(x | c)? What can go wrong?</summary><div class="qa-body">It computes per class and feature the mean and population variance and uses the normal density. Problems: non-normal (skewed) features, and tiny variances from few or identical values, which make the curve a spike (spam lengths var 0.69 turned length 17 into P(spam) = 0.062). sklearn adds var_smoothing × max variance.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Show that Multinomial NB is a linear classifier.</summary><div class="qa-body">ln(P(1 | x)/P(0 | x)) = ln(P(1)/P(0)) + Σⱼ xⱼ ln(θ_1j/θ_0j), a bias plus a weighted sum of counts, followed by a sigmoid for the probability. For "free lunch monday": 0 + 1.361 − 0.718 − 1.124 = −0.481 → σ = 0.382. Same form as logistic regression.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>(Connection) Naive Bayes vs logistic regression: which and when?</summary><div class="qa-body">They are a generative/discriminative pair with the same linear form. NB estimates weights from per-feature counts (fast, low variance, converges with little data); LR optimises all weights jointly for P(y | x) (handles correlated features, lower asymptotic error, better calibrated). In our simulation NB won at 10–100 messages, LR from 300 on (0.932 vs 0.925 at 3,000).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Are NB probabilities well calibrated? How would you fix them?</summary><div class="qa-body">Usually not: correlated features are double counted, pushing p toward 0 and 1 (11 wrong predictions beyond 0.01/0.99 vs 0 for LR on our simulated inbox). Fix with CalibratedClassifierCV (sigmoid/Platt or isotonic) on held-out folds, or use LR if probabilities matter.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How does NB handle missing features and new data arriving over time?</summary><div class="qa-body">A missing feature can simply be left out of the product (its factor is skipped), which is principled under the independence assumption. New data: training is just adding counts, so partial_fit on batches gives exactly the same model as one fit on everything; ideal for streaming spam filters.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What happens if you include the same feature twice?</summary><div class="qa-body">NB treats it as two independent pieces of evidence and multiplies its likelihood ratio in twice, so the probability becomes more extreme without any new information (P(spam | unknown) 0.75 → 0.90 → 0.964 for 1, 2, 3 copies). Accuracy may survive, calibration does not. Remove duplicates or one-hot "complement" columns.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What are the training and prediction costs of NB?</summary><div class="qa-body">Training is one pass of counting, O(n · d) (only non-zero entries for sparse text); prediction is O(non-zero features × classes); memory O(classes × d). No iterations, no hyperparameters except α (or var_smoothing).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>(Connection) Where does Bayes' rule with independent evidence appear elsewhere?</summary><div class="qa-body">Sequential diagnostic testing (each independent positive test multiplies the odds by its likelihood ratio, exactly like each clue here), Bayesian A/B testing updates (<a class="xref" data-note="st_abtesting">A/B Testing</a>), and the class-conditional view returns in <a class="xref" data-note="ml_gmm">Gaussian Mixture Models</a>, which are Gaussian class-conditional models without labels.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>State Bayes' theorem and name each term.</summary><div class="qa-body">P(c | x) = P(x | c)·P(c) / P(x). P(c) is the prior, the belief before seeing the evidence; P(x | c) the likelihood, how typical the evidence is of class c; P(x) the evidence, a normalising constant equal to Σₖ P(x | k)P(k); P(c | x) the posterior. In our inbox, P(spam | unknown sender) = 0.75 × 0.5 / 0.5 = 0.75.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is "naive" about Naive Bayes?</summary><div class="qa-body">It assumes the features are conditionally independent given the class, so P(x₁, …, x_d | c) = Π P(xⱼ | c). This replaces an impossible joint table (2²⁴ cells for 24 binary words) with d small ones that can each be estimated from all the rows of a class. It is naive because real features, such as words in phrases, are dependent even within a class.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does Naive Bayes work well even though its assumption is false?</summary><div class="qa-body">Classification only needs the correct winner, not correct probabilities, and dependence errors often shift both classes' scores in the same direction. Estimating each P(xⱼ | c) separately has very low variance, which matters most with small data. The cost shows up in the probabilities, which become over-confident.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Is Naive Bayes generative or discriminative? What is the difference?</summary><div class="qa-body">Generative: it models how each class produces its features, P(x | c), plus the prior P(c), and gets P(c | x) through Bayes' theorem. A discriminative model such as logistic regression models P(c | x) directly. Generative models need less data and can generate examples; discriminative models usually reach higher accuracy with plenty of data because they make fewer assumptions.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is Laplace smoothing and why is it needed?</summary><div class="qa-body">Adding α (1 for Laplace) to every count: P(w | c) = (count + α)/(N_c + αV). Without it, a word never seen in a class gets probability 0, and a single such word sets the whole class score to 0 regardless of the other evidence. Larger α pulls every probability toward uniform (more bias); α is tuned by cross-validation.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why do implementations work with log-probabilities?</summary><div class="qa-body">Multiplying hundreds of probabilities below 1 underflows to 0.0 in floating point. Logs turn the product into a sum and preserve which class is largest. To convert back to probabilities, log-sum-exp subtracts the largest log-score before exponentiating so nothing underflows; the ratio is unchanged.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Multinomial vs Bernoulli vs Gaussian Naive Bayes: when do you use each?</summary><div class="qa-body">Multinomial for count features such as word counts; it counts repeats and ignores absent words. Bernoulli for binary presence features; absent words contribute (1 − p) and repeats do not matter, which suits short texts. Gaussian for continuous features, fitting a normal curve per class per feature. Categorical for integer-coded categories, Complement NB for imbalanced text.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>For "free free free", does Bernoulli NB's answer change compared with "free"? Does Multinomial NB's?</summary><div class="qa-body">Bernoulli does not change, because it only records whether the word is present. Multinomial does: it multiplies P(free | c) in once per occurrence, so the spam evidence is cubed. In our inbox "free lunch monday" goes from 0.382 to 0.904 spam under Multinomial NB when "free" is repeated, and stays at 0.292 under Bernoulli NB.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How does Gaussian NB estimate P(x | c), and what can go wrong?</summary><div class="qa-body">For each class and feature it computes the mean and variance and uses the normal density at the new value. It goes wrong when features are far from bell-shaped (skewed ages or incomes) and when a class has a tiny variance from few or near-identical values, which makes the curve a spike: in our inbox a length of 17 instead of 20 dropped P(spam) from 0.906 to 0.062. sklearn adds var_smoothing to every variance.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Show that Multinomial Naive Bayes is a linear classifier.</summary><div class="qa-body">The log-odds are ln(P(1)/P(0)) + Σⱼ xⱼ ln(θ₁ⱼ/θ₀ⱼ): a bias plus a weighted sum of the counts, followed by a sigmoid for the probability. That is the same form as logistic regression. For "free lunch monday": 0 + 1.361 − 0.718 − 1.124 = −0.481, and sigmoid(−0.481) = 0.382.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Naive Bayes or logistic regression: which would you choose, and when?</summary><div class="qa-body">They share the same linear form but fit it differently. NB sets each weight from per-feature counts, so it is fast and reaches its best accuracy with little data. Logistic regression optimises all weights jointly, handles correlated features and gives better-calibrated probabilities, so it usually wins with plenty of data. In our simulation NB led up to about 100 training messages and logistic regression led from about 300.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Are Naive Bayes probabilities well calibrated? How would you fix them?</summary><div class="qa-body">Usually not: correlated features are counted as independent evidence, which pushes probabilities toward 0 and 1. On our simulated inbox NB made 11 wrong predictions beyond 0.01/0.99, logistic regression none. Fix with CalibratedClassifierCV (sigmoid/Platt or isotonic) fitted on held-out folds, or use logistic regression when probabilities matter.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What happens if you include the same feature twice?</summary><div class="qa-body">NB treats the copies as independent evidence and multiplies the same likelihood ratio in twice, so the posterior becomes more extreme without any new information: P(spam | unknown sender) went from 0.75 to 0.90 to 0.964 with one, two and three copies. Accuracy may survive; calibration does not. Remove duplicates or use a discriminative model.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How does Naive Bayes handle missing values and data that arrives over time?</summary><div class="qa-body">A missing feature can simply be left out of the product, which is principled under the independence assumption. For new data, training is just adding counts, so partial_fit on successive batches gives exactly the same model as one fit on all the data, in constant memory. That makes NB a natural fit for streaming spam filters.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Your training set is 50% spam but production traffic is 5% spam. What do you do?</summary><div class="qa-body">The learnt prior P(spam) = 0.5 is wrong for production and will over-predict spam. Set class_prior to the real rates (in our example a message dropped from 0.957 to 0.539 spam), or keep the model and move the decision threshold. This is Bayes' theorem in action: the same likelihoods with a different prior give a different posterior.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What are the training and prediction costs of Naive Bayes?</summary><div class="qa-body">Training is one pass of counting, O(n·d), and only non-zero entries matter for sparse text. Prediction is O(non-zero features × classes). Memory is O(classes × features). There are no iterations and almost no hyperparameters beyond α or var_smoothing.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why should you not put a StandardScaler before MultinomialNB?</summary><div class="qa-body">MultinomialNB models counts and rejects negative values, which standardising produces. Scaling also has no benefit for any Naive Bayes variant, since each feature's probabilities are estimated in its own units; Gaussian NB's predictions do not change when a feature is rescaled.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Name a situation where Naive Bayes is a poor choice.</summary><div class="qa-body">When features interact (a word is spammy only from unknown senders), because NB cannot represent interactions; when features are strongly correlated, because they are double-counted; when calibrated probabilities are required; and when there is plenty of labelled data, where logistic regression or gradient boosting usually win.</div></details>
 </main>
 `
 });

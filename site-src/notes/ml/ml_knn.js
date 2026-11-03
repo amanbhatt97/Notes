@@ -3,109 +3,44 @@ Object.assign(TOPIC_CONTENT, {
   "ml_knn": `<main>
   <h1>K-Nearest Neighbors</h1>
   <div class="where"><span>Machine Learning</span><span>Classification</span><span>K-Nearest Neighbors</span></div>
-  <p class="lead">K-nearest neighbors (KNN) classifies a new row by finding the k most similar rows it has already seen and letting them vote. It learns no weights and makes no assumption about the shape of the data, so it is the simplest model in machine learning and a very useful baseline. This note covers it completely: every distance measure worked by hand, a full prediction by hand for k = 1, 3, 5 and 7, choosing k with leave-one-out by hand, distance weighting, why scaling is required, KNN regression, the curse of dimensionality, KD-trees traced by hand, approximate search, imbalance, every scikit-learn parameter, and a from-scratch version that matches scikit-learn exactly.</p>
+  <p class="lead">K-nearest neighbors, or KNN, predicts for a new example by finding the k most similar examples it has already seen and letting them vote (or, for numbers, averaging their values). It learns no weights and assumes nothing about the shape of the boundary between classes, which makes it the simplest model in machine learning, a strong baseline, and the core of everyday tools such as recommendation, missing-value filling and vector search. Its simplicity hides real decisions, though: what "similar" means, how many neighbours to ask, why the columns must be scaled, and why it breaks down when there are many columns. We will learn all of these on one small running example: a coaching institute with eight past students, described by hours studied per day and mock tests taken, each of whom passed or failed, and one new student, Q, with 4 hours and 5 mocks, whose result we want to predict.</p>
 
-  <h2 id="knn-fit" class="open"><span class="num">★</span>Where this fits</h2>
-<figure class="viz"><svg viewBox="0 0 640 220" width="640">
-<defs><marker id="knn-a0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="245" y="8" width="150" height="34" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="320" y="30" text-anchor="middle" font-size="13">Classification</text>
-<line x1="290" y1="42" x2="95" y2="78" stroke="currentColor" marker-end="url(#knn-a0)"/><line x1="305" y1="42" x2="250" y2="78" stroke="currentColor" marker-end="url(#knn-a0)"/><line x1="335" y1="42" x2="400" y2="78" stroke="currentColor" marker-end="url(#knn-a0)"/><line x1="350" y1="42" x2="550" y2="78" stroke="currentColor" marker-end="url(#knn-a0)"/>
-<rect x="20" y="80" width="150" height="44" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="95" y="99" text-anchor="middle" font-size="12.5">Logistic Regression</text><text x="95" y="115" text-anchor="middle" font-size="10.5" class="tm">learns a line (weights)</text>
-<rect x="180" y="80" width="140" height="44" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="250" y="99" text-anchor="middle" font-size="12.5">Naive Bayes</text><text x="250" y="115" text-anchor="middle" font-size="10.5" class="tm">learns class counts</text>
-<rect x="330" y="76" width="140" height="52" rx="7" class="fg sg" stroke-width="3"/><text x="400" y="98" text-anchor="middle" font-size="13" font-weight="700">K-Nearest Neighbors</text><text x="400" y="116" text-anchor="middle" font-size="10.5" class="tg">you are here: learns nothing</text>
-<rect x="480" y="80" width="140" height="44" rx="7" class="fb sb"/><text x="550" y="99" text-anchor="middle" font-size="12.5">Support Vector Machines</text><text x="550" y="115" text-anchor="middle" font-size="10.5" class="tm">keeps only a few points</text>
-<line x1="470" y1="102" x2="478" y2="102" stroke="currentColor" marker-end="url(#knn-a0)"/>
-<rect x="150" y="160" width="160" height="40" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.3"/><text x="230" y="184" text-anchor="middle" font-size="12" class="tm">Clustering (distances again)</text>
-<rect x="330" y="160" width="140" height="40" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.3"/><text x="400" y="184" text-anchor="middle" font-size="12" class="tm">Vector search (ANN)</text>
-<rect x="490" y="160" width="130" height="40" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.3"/><text x="555" y="184" text-anchor="middle" font-size="12" class="tm">Curse of dimensionality</text>
-<line x1="380" y1="128" x2="250" y2="158" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#knn-a0)"/><line x1="400" y1="128" x2="400" y2="158" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#knn-a0)"/><line x1="420" y1="128" x2="540" y2="158" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#knn-a0)"/>
-</svg><figcaption>The Classification group. KNN is the one model that does no fitting at all; the same "nearest points" idea comes back in clustering, vector databases and dimensionality reduction.</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: <a class="xref" data-note="ml_classification">Logistic Regression</a> and <a class="xref" data-note="ml_naivebayes">Naive Bayes</a></b><span>Logistic regression learns one weight per column and can only draw a straight boundary. Naive Bayes learns counts per class and assumes the columns are independent and follow a fixed shape. Both make an assumption about what the boundary looks like. If the true border between classes is a curve, an island or two separate blobs, those assumptions cost accuracy and no amount of data fixes it.</span></li>
-    <li><b>This note adds: no assumption at all</b><span>KNN keeps every training row and, for a new row, looks only at its closest neighbours. The boundary can take any shape the data has. The price: you must choose what "close" means (the distance), how many neighbours to ask (k), you must scale the columns, every prediction searches the whole training set, and it breaks down when there are many columns.</span></li>
-    <li><b>Leads to: <a class="xref" data-note="ml_svm">Support Vector Machines</a></b><span>KNN stores all n points and treats them all as equally important. An SVM also uses similarities between points (kernels), but keeps only the few points that sit on the border (support vectors) and draws the widest possible gap between classes. Later the same "nearest points" idea returns in <a class="xref" data-note="ml_clustering">Clustering</a>, <a class="xref" data-note="ml_dimred">Dimensionality Reduction</a> and vector search (<a class="xref" data-note="vectordb">Embeddings &amp; Vector DBs</a>).</span></li>
-  </ol>
-  <p>You only need the idea of a training set and a test set (<a class="xref" data-note="ml_splits">Train/Val/Test &amp; Cross-Validation</a>) and of overfitting (<a class="xref" data-note="ml_core">Bias, Variance &amp; Generalization</a>). Both are re-explained in one line where they are used.</p>
-
-  <h2 id="knn-ladder" class="open"><span class="num">★</span>The Question Ladder</h2>
-  <p>The whole note is one story about one small dataset: <strong>eight past students</strong> (hours studied per day, mock tests taken, Pass or Fail, and their final mark) and <strong>one new student Q</strong> with 4 hours and 5 mocks. Every concept below is computed on these same nine rows, and each concept exists because the one before it left a question open.</p>
-  <ol class="story">
-    <li><b>Ask the neighbours (01)</b><span>Q: how do we predict for Q without assuming a straight-line boundary? → Look at the most similar past students and copy their outcome. But "most similar" is not yet a number…</span></li>
-    <li><b>Distance (02)</b><span>Q: how far is Q from each student? → Euclidean, Manhattan, Minkowski, Chebyshev, cosine (Q→H = 4.472 / 6 / 4 / 0.092). But a distance alone does not give a prediction…</span></li>
-    <li><b>Vote among the k nearest (03)</b><span>Q: what do we predict? → Sort by distance, take the k closest, majority vote: k=1 Pass, k=3 Pass, k=5 Fail, k=7 Pass. But the answer flips with k, so which k?</span></li>
-    <li><b>Choosing k (04)</b><span>Q: which k is right? → Score each k on students the model did not see (leave-one-out): k=3 makes 0 errors, k=1 and k=5 make 2, k=7 makes 8. But with plain votes the student 1.0 away counts the same as the one 3.0 away…</span></li>
-    <li><b>Distance weighting (05)</b><span>Q: shouldn't closer students count more? → Vote with weight 1/d; k=5 flips from Fail to Pass (P = 0.569). But all of this silently assumed both columns are measured in comparable units…</span></li>
-    <li><b>Scaling (06)</b><span>Q: what if hours are recorded in minutes? → Raw distances then ignore mocks completely; z-scores (x − mean)/std make the answer independent of units. But so far we only predicted a class…</span></li>
-    <li><b>KNN regression (07)</b><span>Q: can we predict Q's mark, a number? → Average the neighbours' marks: k=3 gives 55.67 (weighted 59.31). But it cannot go beyond the marks it has seen, and we only had two columns…</span></li>
-    <li><b>Curse of dimensionality (08)</b><span>Q: what happens with many columns? → Each useless column scrambles the neighbour order; with 50 noise columns nearest/farthest goes 0.22 → 0.81, so "nearest" means little. And even with few columns, every prediction measured all n distances…</span></li>
-    <li><b>Speed-ups (09)</b><span>Q: can we avoid computing every distance? → A KD-tree on the 8 students finds the neighbour of (8, 3) with 3 distances instead of 8; ball trees and approximate search scale it up. But the votes themselves have problems…</span></li>
-    <li><b>Ties, probabilities, imbalance (10)</b><span>Q: what do vote shares mean, and what if Pass is rare? → Coarse probabilities, tie rules, and a lower vote threshold for rare classes. And how good can this simple method ever be?</span></li>
-    <li><b>Theory and other uses (11)</b><span>Q: how good can KNN get, and where else is it used? → 1-NN error ≤ 2 × the best possible; the same search fills B's missing mark (56.5). Then we package everything: sklearn (12), from scratch (13), when to use it (14–15), how it all connects (16).</span></li>
-  </ol>
-  <div class="bridge"><b>What this still can't tell us →</b> the ladder is the map; the steps themselves come next. <b>Next: a one-page summary (Mind Map), then step 01.</b></div>
-
-  <h2 id="knn-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="knn-map"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">K-Nearest Neighbors</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">1 · The idea</div>
+        <div class="mm-title">The idea</div>
         <ul>
-          <li><b>Similar inputs → similar outputs</b>; ask the k closest training rows</li>
-          <li><b>Classification</b> — majority vote · <b>regression</b> — average of their values</li>
-          <li><b>Lazy / instance-based / non-parametric</b>: <code>fit</code> only stores the data</li>
-          <li>💡 Guessing a flat's rent by asking the nearest flats in your society</li>
-          <li><b>predict_proba</b> = share of votes (only k+1 possible values)</li>
+          <li>Similar inputs → similar outputs; ask the k closest rows</li>
+          <li>Classification: majority vote; regression: average</li>
+          <li><b>Lazy</b>, <b>instance-based</b>, <b>non-parametric</b>: fit only stores the data</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">2 · Distance</div>
+        <div class="mm-title">The choices</div>
         <ul>
-          <li><b>Euclidean</b> √Σ(aᵢ−bᵢ)² · Q(4,5)→H(2,1) = √20 = 4.472</li>
-          <li><b>Manhattan</b> Σ|aᵢ−bᵢ| = 6 · <b>Chebyshev</b> max|aᵢ−bᵢ| = 4</li>
-          <li><b>Minkowski</b> (Σ|aᵢ−bᵢ|ᵖ)^(1/p): p=1 Manhattan, p=2 Euclid, p→∞ Chebyshev</li>
-          <li><b>Cosine</b> 1 − a·b/(‖a‖‖b‖) = 0.092 for Q, H; 0 for Q vs 2Q (ignores length)</li>
-          <li><b>Hamming</b> share of mismatching categories</li>
+          <li><b>Distance</b>: Euclidean (default), Manhattan, Minkowski p, cosine</li>
+          <li><b>k</b>: small = jagged, overfits; large = flat, underfits; pick by CV</li>
+          <li><b>weights="distance"</b>: closer neighbours count more (1/d)</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">3 · Choosing k</div>
+        <div class="mm-title">The dangers</div>
         <ul>
-          <li>k = 1: train error 0, jagged islands (high variance)</li>
-          <li>k = n: always predicts the majority (high bias)</li>
-          <li>Students example: k=1 Pass, k=3 Pass, k=5 Fail, k=7 Pass</li>
-          <li>Pick k by CV; odd k for 2 classes; start near √n</li>
-          <li>Regression: Q's mark k=3 → 55.67; error = σ² + bias² + <b>σ²/k</b></li>
+          <li><b>Always scale</b>: the biggest-unit column decides everything</li>
+          <li><b>Curse of dimensionality</b>: with many columns everyone is equally far</li>
+          <li>Prediction is O(n·d): slow on big data</li>
+          <li>Majority class swamps neighbourhoods; no extrapolation</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">4 · Weights &amp; scaling</div>
+        <div class="mm-title">In practice</div>
         <ul>
-          <li><b>weights="distance"</b>: vote = 1/d; k=5 flips Fail → Pass (0.569)</li>
-          <li>Exact match (d = 0) takes all the weight</li>
-          <li>⚠ <b>Always scale</b>: wine raw 0.691 → scaled 0.949</li>
-          <li>Scale inside a Pipeline (fit scaler on train folds only)</li>
-          <li>Noise columns scramble Q's neighbours; moons 0.907 → 0.652 with 128</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">5 · Curse &amp; speed</div>
-        <ul>
-          <li>Students + 50 noise cols: nearest/farthest 0.22 → 0.81</li><li>10% neighbourhood in d=10 needs 79% of each axis</li>
-          <li>d=1000: nearest/farthest = 0.90 → "nearest" means little</li>
-          <li><b>Brute force</b>: O(n·d) per query, no build</li>
-          <li><b>KD-tree</b> (axis cuts): (8,3) found with 3 of 8 distances · <b>ball tree</b> (spheres); good for d ≲ 20</li>
-          <li><b>Approximate NN</b> (HNSW, IVF, LSH) for millions of vectors</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">6 · Practice</div>
-        <ul>
-          <li><code>KNeighborsClassifier(n_neighbors, weights, p, metric, algorithm, leaf_size)</code></li>
-          <li>Imbalance: big k drowns the minority; lower the vote threshold</li>
-          <li>Cover–Hart: 1-NN error ≤ 2 × best possible error (large n)</li>
-          <li>Also: KNNImputer (B's mark → 56.5), RadiusNeighbors, NearestNeighbors, anomaly scores</li>
-          <li>⚠ Not K-means: KNN is supervised, K-means is clustering</li>
+          <li>Pipeline(StandardScaler, KNeighborsClassifier), grid over k, weights, p</li>
+          <li>KD-tree / ball tree for few columns; ANN (HNSW, IVF) for embeddings</li>
+          <li>Also: KNNImputer, recommenders, anomaly scores, RAG retrieval</li>
+          <li>Not K-means (that is clustering)</li>
         </ul>
       </div>
     </div>
@@ -114,83 +49,79 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="knn-ladder"><span class="rm-num">★</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The whole story in 11 questions</span></div></div>
-      <div class="rm-item rm-done" data-target="knn-idea"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Ask the Neighbours</span><span class="rm-sub">The idea, lazy learning</span></div></div>
-      <div class="rm-item rm-done" data-target="knn-dist"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Measuring Distance</span><span class="rm-sub">Q→H in five metrics</span></div></div>
-      <div class="rm-item rm-done" data-target="knn-hand"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Prediction by Hand</span><span class="rm-sub">k = 1, 3, 5, 7 on 8 students</span></div></div>
-      <div class="rm-item rm-done" data-target="knn-k"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Choosing k</span><span class="rm-sub">LOOCV by hand, bias-variance</span></div></div>
-      <div class="rm-item rm-done" data-target="knn-weight"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Distance Weighting</span><span class="rm-sub">1/d votes by hand</span></div></div>
-      <div class="rm-item rm-done" data-target="knn-scale"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Feature Scaling</span><span class="rm-sub">Hours vs minutes, z-scores by hand</span></div></div>
-      <div class="rm-item rm-done" data-target="knn-reg"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">KNN Regression</span><span class="rm-sub">Q's mark by hand, no extrapolation</span></div></div>
-      <div class="rm-item rm-done" data-target="knn-curse"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Curse of Dimensionality</span><span class="rm-sub">When everything is far away</span></div></div>
-      <div class="rm-item rm-done" data-target="knn-speed"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Cost &amp; Speed-ups</span><span class="rm-sub">KD-tree on the students, ANN</span></div></div>
-      <div class="rm-item rm-done" data-target="knn-imb"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Ties, Probabilities, Imbalance</span><span class="rm-sub">What the votes really mean</span></div></div>
-      <div class="rm-item rm-done" data-target="knn-more"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Theory &amp; Other Uses</span><span class="rm-sub">Cover–Hart, radius, B's missing mark</span></div></div>
-      <div class="rm-item rm-done" data-target="knn-sklearn"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">scikit-learn in Practice</span><span class="rm-sub">Every parameter, grid search</span></div></div>
-      <div class="rm-item rm-done" data-target="knn-scratch"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">From Scratch</span><span class="rm-sub">Matches sklearn exactly</span></div></div>
-      <div class="rm-item rm-done" data-target="knn-pros"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">Strengths &amp; Weaknesses</span><span class="rm-sub">When to use it</span></div></div>
-      <div class="rm-item rm-done" data-target="knn-compare"><span class="rm-num">15</span><div class="rm-text"><span class="rm-label">Comparisons</span><span class="rm-sub">vs siblings, vs K-means</span></div></div>
-      <div class="rm-item rm-done" data-target="knn-connect"><span class="rm-num">16</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One pipeline, one table</span></div></div>
-      <div class="rm-item rm-done" data-target="knn-traps"><span class="rm-num">17</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Scaling, leakage, k, ties</span></div></div>
-      <div class="rm-item rm-done" data-target="knn-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note on one page</span></div></div>
-      <div class="rm-item rm-done" data-target="knn-qa"><span class="rm-num">18</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="knn-idea"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Ask the Neighbours</span><span class="rm-sub">why a model with no assumptions is useful</span></div></div>
+      <div class="rm-item rm-done" data-target="knn-dist"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Measuring Distance</span><span class="rm-sub">Euclidean, Manhattan, Minkowski, cosine</span></div></div>
+      <div class="rm-item rm-done" data-target="knn-hand"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Predicting by Hand</span><span class="rm-sub">rank the students, let k of them vote</span></div></div>
+      <div class="rm-item rm-done" data-target="knn-k"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Choosing k</span><span class="rm-sub">leave-one-out, bias and variance</span></div></div>
+      <div class="rm-item rm-done" data-target="knn-weight"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Distance Weighting</span><span class="rm-sub">letting closer neighbours count more</span></div></div>
+      <div class="rm-item rm-done" data-target="knn-scale"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Feature Scaling</span><span class="rm-sub">hours vs minutes, and why z-scores fix it</span></div></div>
+      <div class="rm-item rm-done" data-target="knn-reg"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">KNN Regression</span><span class="rm-sub">predicting a mark, and why it cannot extrapolate</span></div></div>
+      <div class="rm-item rm-done" data-target="knn-curse"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">The Curse of Dimensionality</span><span class="rm-sub">when every point is equally far away</span></div></div>
+      <div class="rm-item rm-done" data-target="knn-speed"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Making Search Fast</span><span class="rm-sub">KD-trees, ball trees, approximate search</span></div></div>
+      <div class="rm-item rm-done" data-target="knn-imb"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Votes, Imbalance and Other Uses</span><span class="rm-sub">ties, rare classes, theory, imputation</span></div></div>
+      <div class="rm-item rm-done" data-target="knn-practice"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">KNN in Practice</span><span class="rm-sub">sklearn, tuning, from scratch, when to use</span></div></div>
+      <div class="rm-item rm-done" data-target="knn-traps"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">scaling, leakage, duplicates, choosing k</span></div></div>
+      <div class="rm-item rm-done" data-target="knn-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">formulas, the students' numbers, gotchas</span></div></div>
+      <div class="rm-item rm-done" data-target="knn-qa"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">the questions interviewers ask on KNN</span></div></div>
     </div>
   </div>
 
-  <h2 id="knn-idea"><span class="num">01</span>The Idea: Ask the Neighbours</h2>
-  <p><strong>The question we can't answer yet:</strong> logistic regression and Naive Bayes both assume a shape for the boundary between Pass and Fail (a straight line, independent columns). If the real border bends, they cannot follow it. Can we predict Q's result with no assumption about the boundary at all?</p>
-  <h3>The need</h3>
-  <p>A coaching institute wants to warn students who are likely to fail the final exam. For each past student it knows two numbers (hours studied per day, mock tests taken) and the result (Pass or Fail). A new student arrives with 4 hours and 5 mocks. What should we predict?</p>
-  <p>Logistic regression would fit one straight line through the plane and check which side the new student falls on. But nobody promised the border is straight. A simpler thought: <em>look at the past students who were most like this one, and see how they did.</em> That is the whole of KNN.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>You move to a new city and want to guess a fair rent for your flat. You do not build a formula. You ask the owners of the 5 flats nearest to yours, of similar size, and take the typical answer. Ask only 1 flat and one odd owner (who charges his cousin half) fools you. Ask 500 flats and you are averaging the whole city, so your sea-facing flat gets the city average. Choosing "how many to ask" is choosing k.</p>
-  </div>
-  <h3>The algorithm in four steps</h3>
-  <div class="flow"><span>Store all training rows (that is "fit")</span><span>New row arrives: compute its distance to every stored row</span><span>Take the k smallest distances</span><span>Classification: majority vote · Regression: average</span></div>
-  <p>There is no training loop, no loss to minimise, no weights. All the work happens at prediction time. That is why KNN is called a <strong>lazy learner</strong>: it postpones the work until a question is asked. Models such as logistic regression are <strong>eager learners</strong>: they do the work up front and then predict quickly from a few numbers.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>k-nearest neighbors.</strong> Given training rows (xᵢ, yᵢ), a distance d and a number k, let N_k(x) be the k training rows closest to x. Classification predicts ŷ = the most common class among the yᵢ in N_k(x), and estimates P(class c | x) = (number of neighbours with class c) / k. Regression predicts ŷ = (1/k) Σ_{i∈N_k(x)} yᵢ.</p>
-  </div>
-  <p>Three words you will hear in interviews describe it:</p>
-  <table class="tbl">
-    <tr><th>Word</th><th>Meaning</th><th>Why KNN is one</th></tr>
-    <tr><td>Lazy learner</td><td>Defers work to prediction time</td><td><code>fit</code> just stores X and y</td></tr>
-    <tr><td>Instance-based</td><td>Predicts from stored examples, not from a summary</td><td>The training data <em>is</em> the model</td></tr>
-    <tr><td>Non-parametric</td><td>The number of things the model keeps grows with the data</td><td>It keeps n rows, not a fixed set of weights. It still has a <em>hyperparameter</em> (k)</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>Every model encodes an assumption about the world. Logistic regression assumes "the classes are split by a straight line". KNN assumes only "points that are close together usually have the same label" (the smoothness assumption). That is a much weaker assumption, which is why KNN can fit any shape, and why everything depends on what "close" means.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"KNN has no training, so it is fast." Training is instant, but predicting one row means measuring its distance to <em>every</em> stored row. With 10 million rows and a website that needs an answer in 50 ms, that is the problem. Section 09 shows the fixes.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> "most similar student" is still a feeling, not a number. <b>Next: measuring the distance from Q to each student.</b></div>
+  <h2 id="knn-idea"><span class="num">01</span>Ask the Neighbours</h2>
+  <p>A coaching institute wants to warn students who are likely to fail the final exam, early enough to help them. For each past student it knows two numbers, hours studied per day and mock tests taken, plus the result. Here is the data, including each student's final mark (we will use the marks in section 07):</p>
+  <div class="fx" data-lang="py">import numpy as np, pandas as pd
+from sklearn.neighbors import KNeighborsClassifier
+students = pd.DataFrame({
+    "name":   list("ABCDEFGH"),
+    "hours":  [5, 4, 2, 2, 1, 7, 7, 2],      # hours studied per day
+    "mocks":  [5, 7, 4, 7, 5, 6, 2, 1],      # mock tests taken
+    "result": ["Pass", "Pass", "Fail", "Fail", "Fail", "Pass", "Pass", "Fail"],
+    "mark":   [68, 61, 38, 45, 30, 82, 71, 25]})
+X = students[["hours", "mocks"]].to_numpy()
+y = students["result"].to_numpy()
+q = np.array([[4, 5]])                       # the new student Q
+print(students.to_string(index=False))</div>
+  <div class="fx" data-lang="text">name  hours  mocks result  mark
+   A      5      5   Pass    68
+   B      4      7   Pass    61
+   C      2      4   Fail    38
+   D      2      7   Fail    45
+   E      1      5   Fail    30
+   F      7      6   Pass    82
+   G      7      2   Pass    71
+   H      2      1   Fail    25</div>
+  <p>A new student, Q, studies 4 hours a day and has taken 5 mocks. What should we predict? A model such as <a class="xref" data-note="ml_classification">logistic regression</a> would fit one straight line through this plane and check which side Q falls on. That works if the border between Pass and Fail really is a straight line, but nothing promised us that. Real borders bend, form islands or come in several pieces, and a model that can only draw straight lines will be wrong near those bends however much data it gets. <a class="xref" data-note="ml_naivebayes">Naive Bayes</a> makes a different assumption (independent columns with a fixed shape) and has the same kind of problem when its assumption is wrong.</p>
+  <p>There is a much simpler thought: look at the past students who were most like Q and see how they did. That is the whole of the <strong>k-nearest neighbors</strong> algorithm: to predict for a new example, find the k training examples closest to it and let them vote on the class (or, for a number, average their values). Think of moving to a new city and wanting a fair rent for your flat. You do not build a formula; you ask the owners of the five most similar flats nearby and take the typical answer. Ask only one and an odd owner who rents to his cousin at half price fools you. Ask five hundred and you are averaging the whole city, so your sea-facing flat gets the city average. Choosing how many to ask is choosing k.</p>
+  <p>Step by step, KNN does four things. When you call <code>fit</code>, it simply stores all the training rows. When a new row arrives, it computes the distance from that row to every stored row. It keeps the k smallest distances. And it returns the majority class among those k (or their average value). There is no training loop, no loss to minimise and no weights. All the work happens when a prediction is requested, which is why KNN is called a <strong>lazy learner</strong>; models such as logistic regression are <strong>eager learners</strong>, which do the work up front and then predict quickly from a few stored numbers. KNN is also called <strong>instance-based</strong> (it predicts directly from stored examples; the training data <em>is</em> the model) and <strong>non-parametric</strong> (what it keeps grows with the data, n rows, rather than being a fixed set of weights; it still has a hyperparameter, k).</p>
+  <p>Every model carries an assumption about the world. Logistic regression assumes "the classes are separated by a straight line". KNN assumes only "points that are close together usually share a label", which is called the smoothness assumption. That is a much weaker assumption, which is why KNN can follow any shape of boundary. It also means that everything depends on what "close" means, so that is where we start.</p>
 
   <h2 id="knn-dist"><span class="num">02</span>Measuring Distance</h2>
-  <p><strong>The question we can't answer yet:</strong> section 01 said "ask the most similar students", but similarity is still a feeling. Which of the eight students is closest to Q = (4, 5), and by how much? We need one number per pair of rows.</p>
-  <h3>The need</h3>
-  <p>A row is a list of numbers, a point in space. There are several sensible ways to measure how far apart two points are, and each gives a different idea of "nearest". We compute every one by hand for the same pair: <strong>Q = (4, 5)</strong> and student <strong>H = (2, 1)</strong>. The difference H − Q = (−2, −4); the absolute gaps are 2 hours and 4 mocks.</p>
-  <h3>Euclidean distance (straight line)</h3>
-  <p>The ruler distance. Pythagoras: the two gaps are the sides of a right triangle and the distance is the long side.</p>
-  <p>d(Q, H) = √((4 − 2)² + (5 − 1)²) = √(4 + 16) = √20 = <strong>4.472</strong>.</p>
-  <h3>Manhattan distance (city blocks)</h3>
-  <p>A taxi in a city grid cannot cut diagonally through buildings; it drives along the streets. Add the absolute gaps.</p>
-  <p>d(Q, H) = |4 − 2| + |5 − 1| = 2 + 4 = <strong>6</strong>. It is never smaller than Euclidean (the taxi route is at least as long as the straight line).</p>
-  <h3>Chebyshev distance (the biggest single gap)</h3>
-  <p>Only the largest gap counts. A king on a chessboard moves one square in any direction, including diagonally, so the number of moves is the bigger of the two gaps.</p>
-  <p>d(Q, H) = max(2, 4) = <strong>4</strong>.</p>
-  <h3>Minkowski distance: one formula for all three</h3>
-  <p>Raise each absolute gap to a power p, add, then take the p-th root: d = (Σ|aᵢ − bᵢ|ᵖ)^(1/p).</p>
-  <table class="tbl">
-    <tr><th>p</th><th>Working for gaps (2, 4)</th><th>Result</th><th>Same as</th></tr>
-    <tr><td>1</td><td>(2 + 4)^(1/1)</td><td>6</td><td>Manhattan</td></tr>
-    <tr><td>2</td><td>(4 + 16)^(1/2) = 20^0.5</td><td>4.472</td><td>Euclidean</td></tr>
-    <tr><td>3</td><td>(8 + 64)^(1/3) = 72^(1/3)</td><td>4.160</td><td>between</td></tr>
-    <tr><td>10</td><td>(1,024 + 1,048,576)^(1/10)</td><td>4.000</td><td>almost Chebyshev</td></tr>
-    <tr><td>∞</td><td>the largest term wins completely</td><td>4</td><td>Chebyshev</td></tr>
-  </table>
-  <p>As p grows, the biggest gap dominates more and more. Small p treats both columns' gaps more equally; large p cares only about the worst one.</p>
-<figure class="viz"><svg viewBox="0 0 600 240" width="600">
+  <p>"The most similar students" is still a feeling. To compute anything we need one number for how far apart two students are. Each student is a point (hours, mocks), and there are several sensible ways to measure the distance between two points; each gives a different idea of "nearest". We will compute them all for the same pair, Q = (4, 5) and student H = (2, 1). The gaps are 2 hours and 4 mocks.</p>
+  <p>The most familiar is the <strong>Euclidean distance</strong>, the straight-line distance you would measure with a ruler. By Pythagoras, the two gaps are the sides of a right-angled triangle and the distance is the long side: √(2² + 4²) = √20 = 4.472. In general it is √Σ(aᵢ − bᵢ)², the square root of the sum of squared gaps over all columns. This is KNN's default.</p>
+  <p>The <strong>Manhattan distance</strong> adds the absolute gaps: |4 − 2| + |5 − 1| = 6. The name comes from a taxi in a city grid, which cannot cut diagonally through buildings and must drive along the streets. It is never shorter than the Euclidean distance, and because it does not square the gaps, one large gap dominates it less. The <strong>Chebyshev distance</strong> keeps only the largest gap, max(2, 4) = 4; think of a king on a chessboard, who needs as many moves as the bigger of the two gaps because he can move diagonally.</p>
+  <p>These three are members of one family, the <strong>Minkowski distance</strong>: raise each absolute gap to a power p, add them up, and take the p-th root, (Σ|aᵢ − bᵢ|ᵖ)^(1/p). With p = 1 it is Manhattan (6), with p = 2 Euclidean (4.472), and as p grows the biggest gap dominates more and more until, as p → ∞, it becomes Chebyshev (4). In scikit-learn, the <code>p</code> parameter chooses which one.</p>
+  <p>Sometimes the size of a vector is not what matters at all. Two news articles about cricket, one of 200 words and one of 2,000, have word-count vectors that point in the same direction, but one is ten times longer. The <strong>cosine distance</strong> ignores length and measures only the angle between two vectors, drawn as arrows from the origin: cosine similarity = (a · b) / (‖a‖ ‖b‖), and cosine distance = 1 − similarity. For Q and H: Q · H = 4×2 + 5×1 = 13, ‖Q‖ = √41 = 6.403, ‖H‖ = √5 = 2.236, so the similarity is 13 / 14.318 = 0.908 and the distance 0.092. A student with 8 hours and 10 mocks, exactly 2Q, has cosine distance 0 from Q ("identical direction") although she works twice as hard. For students that is clearly the wrong notion of similarity; for text and embeddings it is the right one. Finally, for rows of categories there is the <strong>Hamming distance</strong>, the share of positions that differ: (CBSE, Hindi, coaching) against (CBSE, English, coaching) differ in 1 of 3 places, 0.333.</p>
+  <div class="fx" data-lang="py">from scipy.spatial import distance
+qv, h = np.array([4., 5.]), np.array([2., 1.])          # Q and student H
+print("Euclidean :", round(distance.euclidean(qv, h), 3))
+print("Manhattan :", distance.cityblock(qv, h))
+print("Chebyshev :", distance.chebyshev(qv, h))
+for p in [1, 2, 3, 10]:
+    print(f"Minkowski p={p:&lt;2}:", round(distance.minkowski(qv, h, p), 3))
+print("cosine distance Q,H :", round(distance.cosine(qv, h), 4))
+print("Q vs 2Q: Euclidean", round(distance.euclidean(qv, 2 * qv), 3), " cosine", round(distance.cosine(qv, 2 * qv), 4))
+print("Hamming:", round(distance.hamming(["CBSE", "Hindi", "coaching"], ["CBSE", "English", "coaching"]), 3))</div>
+  <div class="fx" data-lang="text">Euclidean : 4.472
+Manhattan : 6.0
+Chebyshev : 4.0
+Minkowski p=1 : 6.0
+Minkowski p=2 : 4.472
+Minkowski p=3 : 4.16
+Minkowski p=10: 4.0
+cosine distance Q,H : 0.092
+Q vs 2Q: Euclidean 6.403  cosine 0.0
+Hamming: 0.333</div>
+  <p>Every number matches the hand work, including the Minkowski distance sliding from 6 down to 4 as p grows, and the "2Q" student who is 6.403 away in a straight line but at cosine distance 0. The figure shows what the metric does to the idea of a neighbourhood:</p>
+  <figure class="viz"><svg viewBox="0 0 600 240" width="600">
 <path d="M100 30 L170 100 L100 170 L30 100 z" class="fr sr" fill-opacity="0.6" stroke-width="2"/>
 <circle cx="300" cy="100" r="70" class="fb sb" fill-opacity="0.6" stroke-width="2"/>
 <rect x="430" y="30" width="140" height="140" class="fg sg" fill-opacity="0.6" stroke-width="2"/>
@@ -207,66 +138,31 @@ Object.assign(TOPIC_CONTENT, {
 <text x="300" y="226" text-anchor="middle" class="tm" font-size="11">√(Δx² + Δy²) = 1</text>
 <text x="500" y="226" text-anchor="middle" class="tm" font-size="11">max(|Δx|, |Δy|) = 1</text>
 </svg><figcaption>All points at distance exactly 1 from the centre, under three metrics. "Nearest" means "inside the smallest such shape", so the metric decides the shape of the neighbourhood.</figcaption></figure>
-  <h3>Cosine distance (direction, not length)</h3>
-  <p>Sometimes the size of a vector is not what matters. Two news articles, one 200 words and one 2,000 words, both about cricket: their word-count vectors point in the same direction but one is ten times longer. Cosine similarity measures only the angle between the vectors, as arrows from the origin.</p>
-  <p>cos θ = (Q · H) / (‖Q‖ · ‖H‖). By hand: Q · H = 4×2 + 5×1 = 13. ‖Q‖ = √(16 + 25) = 6.403, ‖H‖ = √(4 + 1) = 2.236. Product 14.318. cos θ = 13 / 14.318 = <strong>0.908</strong>. Cosine distance = 1 − 0.908 = <strong>0.092</strong>: as arrows, Q and H point in fairly similar directions even though H studied half as much.</p>
-  <p>Now a student with 8 hours and 10 mocks, exactly 2Q. Euclidean distance √(16 + 25) = 6.403, yet cosine distance = 0: "identical direction". For students that is clearly the wrong notion of similarity (one works twice as hard). For text it is the right one. Neither metric is wrong; they answer different questions.</p>
-  <h3>Hamming distance (categories)</h3>
-  <p>For rows of categories, count how many positions differ (sklearn and scipy divide by the number of positions). Suppose we also knew each student's board, medium and coaching: (CBSE, Hindi, coaching) vs (CBSE, English, coaching): 1 mismatch out of 3 = <strong>0.333</strong>. For mixed numeric + category columns, the usual choices are one-hot encoding plus scaling, or Gower distance (see <a class="xref" data-note="ml_clustering">Clustering: The Idea &amp; Distances</a>).</p>
-  <h3>Check it in code</h3>
-  <p>numpy formulas next to the ready-made <code>scipy.spatial.distance</code> functions. Floats (<code>4.</code>) avoid integer overflow for large powers such as p = 100.</p>
-<div class="fx" data-lang="py">import numpy as np
-import pandas as pd
-from scipy.spatial import distance
+  <p>Each shape is the set of points exactly 1 unit from the centre. Under Manhattan distance it is a diamond, under Euclidean a circle, under Chebyshev a square. "The nearest neighbours" are the points inside the smallest such shape that holds k of them, so the metric literally decides the shape of the neighbourhood. In practice: use Euclidean on scaled numeric columns, try Manhattan when there are many columns or outliers, use cosine for text, ratings and embeddings, and treat p as a hyperparameter to tune. One technical note that matters later: Euclidean, Manhattan, Chebyshev and Minkowski with p ≥ 1 are true <strong>metrics</strong>, meaning they obey the triangle inequality (going from a to c directly is never longer than going via b). Cosine distance is not a true metric, and the fast search trees of section 09 rely on the triangle inequality, so they cannot use it.</p>
 
-q = np.array([4., 5.])                       # the new student: 4 hours, 5 mocks
-h = np.array([2., 1.])                       # student H: 2 hours, 1 mock
-print("difference      :", h - q)
-print("Euclidean       :", np.sqrt(((q - h) ** 2).sum()).round(3), round(distance.euclidean(q, h), 3))
-print("Manhattan       :", np.abs(q - h).sum(), distance.cityblock(q, h))
-for p in [1, 2, 3, 10, 100]:
-    print(f"Minkowski p={p:&lt;3} :", round(float((np.abs(q - h) ** p).sum() ** (1 / p)), 3))
-print("Chebyshev       :", np.abs(q - h).max(), distance.chebyshev(q, h))
-cos_sim = q @ h / (np.linalg.norm(q) * np.linalg.norm(h))
-print("cosine sim / dist:", round(float(cos_sim), 4), round(distance.cosine(q, h), 4))
-twice = 2 * q                                # 8 hours, 10 mocks: same "direction" as Q
-print("Q vs 2Q  Euclidean:", round(distance.euclidean(q, twice), 3), " cosine dist:", round(distance.cosine(q, twice), 4))
-print("Hamming (share of mismatches):", round(distance.hamming(["CBSE", "Hindi", "coaching"], ["CBSE", "English", "coaching"]), 3))</div>
-<div class="fx" data-lang="text">difference      : [-2. -4.]
-Euclidean       : 4.472 4.472
-Manhattan       : 6.0 6.0
-Minkowski p=1   : 6.0
-Minkowski p=2   : 4.472
-Minkowski p=3   : 4.16
-Minkowski p=10  : 4.0
-Minkowski p=100 : 4.0
-Chebyshev       : 4.0 4.0
-cosine sim / dist: 0.908 0.092
-Q vs 2Q  Euclidean: 6.403  cosine dist: 0.0
-Hamming (share of mismatches): 0.333</div>
-  <p>Every number matches the hand work: Euclid 4.472, Manhattan 6, Minkowski sliding from 6 down to 4 as p grows, Chebyshev 4, cosine distance 0.092, and cosine 0 for the hard-working "2Q" student who is 6.403 away in a straight line.</p>
-  <table class="tbl">
-    <tr><th>Metric</th><th>Formula</th><th>Q→H</th><th>Use when</th><th>sklearn</th></tr>
-    <tr><td>Euclidean</td><td>√Σ(aᵢ − bᵢ)²</td><td>4.472</td><td>Default for scaled, continuous columns</td><td><code>p=2</code> (default)</td></tr>
-    <tr><td>Manhattan</td><td>Σ|aᵢ − bᵢ|</td><td>6</td><td>Grid-like data, many columns, less hurt by one big gap</td><td><code>p=1</code></td></tr>
-    <tr><td>Minkowski</td><td>(Σ|aᵢ − bᵢ|ᵖ)^(1/p)</td><td>4.160 (p=3)</td><td>Tune p as a hyperparameter</td><td><code>metric="minkowski", p=…</code></td></tr>
-    <tr><td>Chebyshev</td><td>max|aᵢ − bᵢ|</td><td>4</td><td>"Close only if close in every column" (tolerances)</td><td><code>metric="chebyshev"</code></td></tr>
-    <tr><td>Cosine</td><td>1 − a·b / (‖a‖‖b‖)</td><td>0.092</td><td>Text, embeddings, ratings: direction matters, length does not</td><td><code>metric="cosine"</code> (brute force only)</td></tr>
-    <tr><td>Hamming</td><td>share of positions that differ</td><td>—</td><td>Binary or categorical codes</td><td><code>metric="hamming"</code></td></tr>
-  </table>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A <strong>metric</strong> d must satisfy: d(a, b) ≥ 0 and = 0 only when a = b; d(a, b) = d(b, a); and the triangle inequality d(a, c) ≤ d(a, b) + d(b, c). Euclid, Manhattan, Chebyshev and Minkowski with p ≥ 1 are metrics. Cosine distance is <em>not</em> a true metric (it is 0 for Q and 2Q, which are different points, and it can break the triangle inequality), which is why tree-based search structures that rely on the triangle inequality cannot use it.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Minkowski with p &lt; 1 (say 0.5) is not a metric: the triangle inequality fails, and sklearn's KD-tree / ball tree refuse it. Also, for unit-length vectors Euclidean distance and cosine distance rank neighbours identically, because ‖a − b‖² = 2 − 2 cos θ. That is why many vector databases normalise embeddings and then use plain Euclid or dot product.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> we can now measure Q's distance to each student, but a list of distances is not yet a prediction. <b>Next: rank all eight students and let the k nearest vote.</b></div>
-
-  <h2 id="knn-hand"><span class="num">03</span>Prediction by Hand: k = 1, 3, 5, 7</h2>
-  <p><strong>The question we can't answer yet:</strong> section 02 gives one distance per student, but the institute asked "will Q pass?". How do eight distances turn into one prediction, and how many students should we listen to?</p>
-  <h3>The data</h3>
-  <p>Eight past students. The new student Q has 4 study hours per day and has taken 5 mock tests.</p>
-<figure class="viz"><svg viewBox="0 0 600 370" width="600">
+  <h2 id="knn-hand"><span class="num">03</span>Predicting by Hand</h2>
+  <p>With a distance chosen, prediction is mechanical: compute Q's distance to every student, sort, take the k closest, and vote. Here are all eight distances, using Euclidean distance:</p>
+  <div class="fx" data-lang="py">students["dist"] = np.sqrt(((X - q) ** 2).sum(axis=1)).round(3)   # Euclidean distance to Q
+print(students.sort_values("dist")[["name", "hours", "mocks", "result", "dist"]].to_string(index=False))
+for k in [1, 3, 5, 7]:
+    m = KNeighborsClassifier(n_neighbors=k).fit(X, y)
+    print(f"k={k}: {m.predict(q)[0]}   P(Fail), P(Pass) = {m.predict_proba(q)[0].round(3)}")</div>
+  <div class="fx" data-lang="text">name  hours  mocks result  dist
+   A      5      5   Pass 1.000
+   B      4      7   Pass 2.000
+   C      2      4   Fail 2.236
+   D      2      7   Fail 2.828
+   E      1      5   Fail 3.000
+   F      7      6   Pass 3.162
+   G      7      2   Pass 4.243
+   H      2      1   Fail 4.472
+k=1: Pass   P(Fail), P(Pass) = [0. 1.]
+k=3: Pass   P(Fail), P(Pass) = [0.333 0.667]
+k=5: Fail   P(Fail), P(Pass) = [0.6 0.4]
+k=7: Pass   P(Fail), P(Pass) = [0.429 0.571]</div>
+  <p>A (5, 5) is closest at 1.0, then B at 2.0, C at 2.236 (√(4 + 1)), and so on down to H at 4.472. Now the vote. With k = 1 we ask only A, who passed, so the prediction is Pass. With k = 3 we ask A, B and C: two Pass, one Fail, so Pass, and the share of votes, 2/3 = 0.667, is what <code>predict_proba</code> reports as P(Pass). With k = 5 we add D and E, both Fail: 2 Pass against 3 Fail, so the prediction flips to Fail with P(Pass) = 0.4. With k = 7, F and G (both Pass) join and it flips back to Pass, 4/7 = 0.571. The probabilities appear in alphabetical order of the classes, Fail then Pass.</p>
+  <p>The picture explains the flipping:</p>
+  <figure class="viz"><svg viewBox="0 0 600 370" width="600">
 <line x1="50.0" y1="335.0" x2="50.0" y2="15.0" stroke="currentColor" stroke-opacity="0.08"/>
 <line x1="50.0" y1="335.0" x2="370.0" y2="335.0" stroke="currentColor" stroke-opacity="0.08"/>
 <text x="50.0" y="351.0" text-anchor="middle" class="tm" font-size="11">0</text>
@@ -334,167 +230,48 @@ Hamming (share of mismatches): 0.333</div>
 <line x1="390" y1="168" x2="410" y2="168" class="sr" stroke-dasharray="5 4" stroke-width="1.6"/><text x="414" y="172" font-size="12">k=5 adds D, E → 3:2 Fail</text>
 <text x="390" y="210" font-size="11" class="tm">Each ring is drawn at the</text><text x="390" y="225" font-size="11" class="tm">distance of the k-th neighbour.</text>
 </svg><figcaption>Eight past students and one new one. Growing k widens the circle of people we ask, and the vote flips from Pass to Fail.</figcaption></figure>
-  <h3>Step 1: distance from Q = (4, 5) to every student</h3>
-  <table class="tbl">
-    <tr><th>Student</th><th>(hours, mocks)</th><th>Result</th><th>Δ = row − Q</th><th>Δ₁² + Δ₂²</th><th>Euclid d</th><th>Rank</th></tr>
-    <tr><td>A</td><td>(5, 5)</td><td>Pass</td><td>(1, 0)</td><td>1 + 0 = 1</td><td>1.000</td><td>1</td></tr>
-    <tr><td>B</td><td>(4, 7)</td><td>Pass</td><td>(0, 2)</td><td>0 + 4 = 4</td><td>2.000</td><td>2</td></tr>
-    <tr><td>C</td><td>(2, 4)</td><td>Fail</td><td>(−2, −1)</td><td>4 + 1 = 5</td><td>2.236</td><td>3</td></tr>
-    <tr><td>D</td><td>(2, 7)</td><td>Fail</td><td>(−2, 2)</td><td>4 + 4 = 8</td><td>2.828</td><td>4</td></tr>
-    <tr><td>E</td><td>(1, 5)</td><td>Fail</td><td>(−3, 0)</td><td>9 + 0 = 9</td><td>3.000</td><td>5</td></tr>
-    <tr><td>F</td><td>(7, 6)</td><td>Pass</td><td>(3, 1)</td><td>9 + 1 = 10</td><td>3.162</td><td>6</td></tr>
-    <tr><td>G</td><td>(7, 2)</td><td>Pass</td><td>(3, −3)</td><td>9 + 9 = 18</td><td>4.243</td><td>7</td></tr>
-    <tr><td>H</td><td>(2, 1)</td><td>Fail</td><td>(−2, −4)</td><td>4 + 16 = 20</td><td>4.472</td><td>8</td></tr>
-  </table>
-  <p>A shortcut worth knowing: to <em>rank</em> neighbours you never need the square root. √ is increasing, so sorting by Δ₁² + Δ₂² gives the same order. Libraries use squared distances internally for speed.</p>
-  <h3>Step 2: vote among the k nearest</h3>
-  <table class="tbl">
-    <tr><th>k</th><th>Neighbours</th><th>Votes</th><th>Prediction</th><th>P(Pass)</th></tr>
-    <tr><td>1</td><td>A</td><td>Pass 1</td><td><strong>Pass</strong></td><td>1/1 = 1.00</td></tr>
-    <tr><td>3</td><td>A, B, C</td><td>Pass 2, Fail 1</td><td><strong>Pass</strong></td><td>2/3 = 0.67</td></tr>
-    <tr><td>5</td><td>A, B, C, D, E</td><td>Pass 2, Fail 3</td><td><strong>Fail</strong></td><td>2/5 = 0.40</td></tr>
-    <tr><td>7</td><td>A … G</td><td>Pass 4, Fail 3</td><td><strong>Pass</strong></td><td>4/7 = 0.57</td></tr>
-  </table>
-  <p>Same student, same data, and the answer flips twice as k changes. Q sits right on the border between the Pass region (right) and the Fail region (left), so the answer depends on how wide a circle we draw. Far from the border, all k would agree.</p>
-  <h3>Check it in code</h3>
-  <p>The DataFrame holds the eight students. We add the squared distance and the distance as columns, sort, then ask sklearn for k = 1, 3, 5, 7. <code>predict_proba</code> returns one column per class in alphabetical order (Fail, Pass).</p>
-<div class="fx" data-lang="py">import pandas as pd
-from sklearn.neighbors import KNeighborsClassifier
-
-students = pd.DataFrame({
-    "name":   list("ABCDEFGH"),
-    "hours":  [5, 4, 2, 2, 1, 7, 7, 2],      # hours studied per day
-    "mocks":  [5, 7, 4, 7, 5, 6, 2, 1],      # mock tests taken
-    "result": ["Pass", "Pass", "Fail", "Fail", "Fail", "Pass", "Pass", "Fail"]})
-X = students[["hours", "mocks"]].to_numpy()
-y = students["result"].to_numpy()
-q = np.array([[4, 5]])                       # the new student
-
-students["d2"] = ((X - q) ** 2).sum(axis=1)                 # squared distance
-students["dist"] = np.sqrt(students["d2"]).round(3)
-print(students.sort_values("dist").to_string(index=False))
-for k in [1, 3, 5, 7]:
-    m = KNeighborsClassifier(n_neighbors=k).fit(X, y)
-    print(f"k={k}: {m.predict(q)[0]}   P(Fail), P(Pass) = {m.predict_proba(q)[0]}")</div>
-<div class="fx" data-lang="text">name  hours  mocks result  d2  dist
-   A      5      5   Pass   1 1.000
-   B      4      7   Pass   4 2.000
-   C      2      4   Fail   5 2.236
-   D      2      7   Fail   8 2.828
-   E      1      5   Fail   9 3.000
-   F      7      6   Pass  10 3.162
-   G      7      2   Pass  18 4.243
-   H      2      1   Fail  20 4.472
-k=1: Pass   P(Fail), P(Pass) = [0. 1.]
-k=3: Pass   P(Fail), P(Pass) = [0.33333333 0.66666667]
-k=5: Fail   P(Fail), P(Pass) = [0.6 0.4]
-k=7: Pass   P(Fail), P(Pass) = [0.42857143 0.57142857]</div>
-  <p>The table and all four predictions match the hand work, including the probabilities 2/3, 0.4 and 4/7 = 0.571. You can also ask a fitted model <em>which</em> neighbours it used:</p>
-<div class="fx" data-lang="py">m = KNeighborsClassifier(n_neighbors=3).fit(X, y)
-dist, idx = m.kneighbors(q)                 # the 3 nearest: distances and row numbers
-print("distances:", dist.round(3), " rows:", idx, " names:", students["name"].to_numpy()[idx])
-print("classes_ (column order of predict_proba):", m.classes_)</div>
-<div class="fx" data-lang="text">distances: [[1.    2.    2.236]]  rows: [[0 1 2]]  names: [['A' 'B' 'C']]
-classes_ (column order of predict_proba): ['Fail' 'Pass']</div>
-  <p><code>kneighbors</code> returns the distances (1, 2, 2.236) and the row numbers (0, 1, 2 = A, B, C), exactly the top three of the table. This is how you explain a KNN prediction to a manager: "these three past students were most similar, and two of them passed".</p>
-  <h3>Does the metric change the answer?</h3>
-  <p>Repeat the ranking with Manhattan distance (|Δ₁| + |Δ₂|): A 1, B 2, C 3, E 3, D 4, F 4, G 6, H 6. For k = 3 the third place is a tie between C and E, both Fail, so the vote is still 2 Pass : 1 Fail. For k = 5 the neighbours are A, B, C, E plus one of D (Fail) or F (Pass), tied at 4: the answer is Fail or a 3:2 Pass depending on which one is taken. When two rows are tied for the last place, the result depends on their order in the data, which is a weak spot of KNN worth knowing (section 10). On scaled, continuous data with many rows the metric choice usually changes accuracy by a point or two; treat p as a hyperparameter and let cross-validation choose.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>KNN class probability</strong>: P̂(c | x) = (1/k) Σ_{i∈N_k(x)} 1[yᵢ = c]. With uniform weights it can only take the values 0, 1/k, 2/k, …, 1. The predicted class is the one with the largest P̂.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Even k in a two-class problem can tie (2 vs 2). sklearn then picks the class that comes first in <code>classes_</code> (alphabetically "Fail"), not a random one, so ties silently favour one class. Use odd k for two classes, or distance weights (ties in weighted votes are practically impossible).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> the answer changed with k (Pass, Pass, Fail, Pass), and we have no rule for picking k. <b>Next: choosing k with leave-one-out cross-validation.</b></div>
+  <p>Passing students sit on the right (more hours), failing ones on the left, and Q is right on the border between the two regions. Each value of k draws a wider circle around Q, and as the circle grows it takes in students from one side and then the other. Far from the border, every k would give the same answer. Near it, the answer depends on how wide a circle we draw, which is why choosing k is the main decision in KNN. (A small aside: to <em>rank</em> neighbours you never need the square root, because √ preserves order; libraries compare squared distances to save time.)</p>
+  <p>A fitted model can also tell you <em>which</em> neighbours it used, which is one of KNN's best features:</p>
+  <div class="fx" data-lang="py">m = KNeighborsClassifier(n_neighbors=3).fit(X, y)
+dist, idx = m.kneighbors(q)                  # the 3 nearest training rows: distances and positions
+print("distances:", dist.round(3), " names:", students["name"].to_numpy()[idx])</div>
+  <div class="fx" data-lang="text">distances: [[1.    2.    2.236]]  names: [['A' 'B' 'C']]</div>
+  <p><code>kneighbors</code> returns the three distances (1, 2, 2.236) and the matching rows, A, B and C. This is how you explain a KNN prediction to a manager: "these three past students were most like Q, and two of them passed". Few models are this easy to explain.</p>
 
   <h2 id="knn-k"><span class="num">04</span>Choosing k</h2>
-  <p><strong>The question we can't answer yet:</strong> section 03 showed Q's prediction flipping from Pass (k = 3) to Fail (k = 5) to Pass (k = 7). Both answers cannot be right. How do we decide which k to trust, without cheating by looking at Q's real result?</p>
-  <h3>Why not just pick the k with the best training accuracy?</h3>
-  <p>With k = 1, every training row's nearest neighbour is <em>itself</em> (distance 0), so training accuracy is always 100%. Training accuracy is useless for choosing k. We must score each k on rows that were not used to make the prediction, which is cross-validation (<a class="xref" data-note="ml_splits">Train/Val/Test &amp; Cross-Validation</a>).</p>
-  <h3>Leave-one-out by hand on the eight students</h3>
-  <p>Leave-one-out cross-validation (LOOCV): hide one student, predict them from the other seven, check, repeat for all eight. For KNN this is cheap because there is nothing to retrain. The table lists, for each hidden student, the nearest other students (distance, class).</p>
-  <table class="tbl">
-    <tr><th>Hidden</th><th>True</th><th>Nearest others (distance, class)</th><th>k=1</th><th>k=3</th><th>k=5</th></tr>
-    <tr><td>A (5,5)</td><td>P</td><td>B 2.24 P · F 2.24 P · C 3.16 F · D 3.61 F · G 3.61 P</td><td>P ✓</td><td>P ✓</td><td>P ✓</td></tr>
-    <tr><td>B (4,7)</td><td>P</td><td>D 2.00 F · A 2.24 P · F 3.16 P · C 3.61 F · E 3.61 F</td><td>F ✗</td><td>P ✓</td><td>F ✗</td></tr>
-    <tr><td>C (2,4)</td><td>F</td><td>E 1.41 F · D 3.00 F · H 3.00 F · A 3.16 P · B 3.61 P</td><td>F ✓</td><td>F ✓</td><td>F ✓</td></tr>
-    <tr><td>D (2,7)</td><td>F</td><td>B 2.00 P · E 2.24 F · C 3.00 F · A 3.61 P · F 5.10 P</td><td>P ✗</td><td>F ✓</td><td>P ✗</td></tr>
-    <tr><td>E (1,5)</td><td>F</td><td>C 1.41 F · D 2.24 F · B 3.61 P · A 4.00 P · H 4.12 F</td><td>F ✓</td><td>F ✓</td><td>F ✓</td></tr>
-    <tr><td>F (7,6)</td><td>P</td><td>A 2.24 P · B 3.16 P · G 4.00 P · D 5.10 F · C 5.39 F</td><td>P ✓</td><td>P ✓</td><td>P ✓</td></tr>
-    <tr><td>G (7,2)</td><td>P</td><td>A 3.61 P · F 4.00 P · H 5.10 F · C 5.39 F · B 5.83 P</td><td>P ✓</td><td>P ✓</td><td>P ✓</td></tr>
-    <tr><td>H (2,1)</td><td>F</td><td>C 3.00 F · E 4.12 F · A 5.00 P · G 5.10 P · D 6.00 F</td><td>F ✓</td><td>F ✓</td><td>F ✓</td></tr>
-    <tr><td colspan="3"><strong>Errors</strong></td><td><strong>2</strong></td><td><strong>0</strong></td><td><strong>2</strong></td></tr>
-  </table>
-  <p>B and D are each other's nearest neighbour but have different labels, so k = 1 gets both wrong. k = 3 outvotes that one odd neighbour. k = 5 starts pulling in students from the far side again.</p>
-  <p>Now k = 7, which is "everyone else". Hide a Pass student: the remaining seven are 3 Pass and 4 Fail, so the vote says Fail. Hide a Fail student: the rest are 4 Pass, 3 Fail, so the vote says Pass. <strong>Every single prediction is wrong: 8 errors out of 8.</strong> When k equals the whole training set, KNN ignores the query completely and just predicts the majority class of the training data. That is maximum bias.</p>
-<div class="fx" data-lang="py">from sklearn.model_selection import LeaveOneOut, cross_val_score
+  <p>Q's prediction was Pass for k = 3 and Fail for k = 5. Both cannot be right, so how do we choose k without cheating? The obvious idea, picking the k with the best accuracy on the training data, fails completely. With k = 1, every training student's nearest neighbour is itself (distance 0), so training accuracy is always 100%. We must score each k on students the model did not use to make the prediction. That is <strong>cross-validation</strong>: hold some data out, predict it from the rest, and repeat (<a class="xref" data-note="ml_splits">Train/Val/Test &amp; Cross-Validation</a>).</p>
+  <p>With only eight students, the natural version is <strong>leave-one-out cross-validation</strong> (LOOCV): hide one student, predict them from the other seven, check, and repeat for all eight. For KNN this is cheap because there is nothing to retrain. By hand, take B (4, 7, Pass). Its nearest other students are D (2.00 away, Fail), A (2.24, Pass) and F (3.16, Pass). With k = 1, D alone says Fail: wrong. With k = 3, the vote is 2 Pass to 1 Fail: right. D, hidden in turn, has B as its nearest neighbour, so k = 1 gets D wrong too. These two students are each other's nearest neighbours but have different labels, and k = 1 cannot cope with that; k = 3 outvotes the one odd neighbour.</p>
+  <p>Now the extreme case, k = 7, which with one student hidden means "ask everyone else". Hide a Pass student, and the remaining seven are 3 Pass and 4 Fail, so the vote says Fail. Hide a Fail student, and the rest are 4 Pass and 3 Fail, so it says Pass. Every single prediction is wrong. When k is as large as the training set, KNN ignores the query entirely and always predicts the training majority:</p>
+  <div class="fx" data-lang="py">from sklearn.model_selection import LeaveOneOut, cross_val_score
 for k in [1, 3, 5, 7]:
     acc = cross_val_score(KNeighborsClassifier(n_neighbors=k), X, y, cv=LeaveOneOut())
     print(f"k={k}: LOOCV errors = {int((1 - acc).sum())} of 8")</div>
-<div class="fx" data-lang="text">k=1: LOOCV errors = 2 of 8
+  <div class="fx" data-lang="text">k=1: LOOCV errors = 2 of 8
 k=3: LOOCV errors = 0 of 8
 k=5: LOOCV errors = 2 of 8
 k=7: LOOCV errors = 8 of 8</div>
-  <p>sklearn's <code>LeaveOneOut</code> splitter gives the same 2, 0, 2, 8.</p>
-  <h3>The bias-variance picture</h3>
-  <table class="tbl">
-    <tr><th>k</th><th>Boundary</th><th>Bias</th><th>Variance</th><th>Typical symptom</th></tr>
-    <tr><td>small (1–3)</td><td>jagged, islands around single points</td><td>low</td><td>high: one noisy row changes predictions near it</td><td>train ≫ test (overfit)</td></tr>
-    <tr><td>medium</td><td>smooth curve</td><td>moderate</td><td>moderate</td><td>best CV score</td></tr>
-    <tr><td>large (→ n)</td><td>almost flat, finally "always the majority"</td><td>high</td><td>low</td><td>train ≈ test, both poor (underfit)</td></tr>
-  </table>
-  <p>A useful way to think about it: KNN with n rows and neighbourhoods of size k behaves roughly like a model with <strong>n/k</strong> free parameters (one "average" per neighbourhood). k = 1 → n parameters (memorise everything); k = n → 1 parameter (the overall majority).</p>
-  <p>For regression this can be made exact. If y = f(x) + noise with noise variance σ², and we treat the training x values as fixed, the expected squared error of KNN at a point x₀ is:</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>E[(y₀ − ŷ(x₀))²] = σ² + [f(x₀) − (1/k) Σ_{l=1..k} f(x₍ₗ₎)]² + σ²/k<br>= irreducible noise + bias² + variance. The variance term σ²/k is the variance of an average of k independent noises; it falls as k grows. The bias term grows as the k neighbours spread further from x₀ and their true values f(x₍ₗ₎) differ from f(x₀).</p>
-  </div>
-  <p>By hand with σ = 0.3 (σ² = 0.09): at k = 1 the variance term is 0.09, so even with zero bias the expected error is 0.09 + 0.09 = 0.18, an RMSE of √0.18 = 0.42. At k = 10 the variance term is 0.009, and the floor is √(0.09 + 0.009) = 0.31. Keep these two numbers; section 07 measures 0.433 and 0.329 on real data.</p>
-  <h3>On a real dataset</h3>
-  <p>The two-moons data: 600 points in two interleaved half-circles with noise, 420 for training. For each k the code prints training accuracy and 5-fold CV accuracy on the training part.</p>
-<div class="fx" data-lang="py">from sklearn.datasets import make_moons
-from sklearn.model_selection import train_test_split, cross_val_score
+  <p>scikit-learn's <code>LeaveOneOut</code> splitter confirms the counts: 2 errors for k = 1, 0 for k = 3, 2 for k = 5, and 8 out of 8 for k = 7. On this data, k = 3 is the best choice, and it predicts Pass for Q.</p>
+  <p>This is a clean example of the <strong>bias–variance trade-off</strong> (<a class="xref" data-note="ml_core">Bias, Variance &amp; Generalization</a>). With small k, each prediction depends on one or two points, so a single noisy or mislabelled row changes predictions around it: low bias, high <strong>variance</strong>, which is overfitting. With large k, predictions average over a wide region and stop following the real shape of the data: low variance, high <strong>bias</strong>, which is underfitting, and k = n is the extreme where the model always gives the same answer. A useful rule of thumb is that KNN with n rows and neighbourhoods of size k behaves roughly like a model with n/k free parameters: k = 1 memorises everything, k = n keeps a single number. Eight students cannot show the full curve, so here is a larger dataset, "two moons" (600 points in two interleaved half-circles, with noise), with 420 rows for training:</p>
+  <div class="fx" data-lang="py">from sklearn.datasets import make_moons
+from sklearn.model_selection import train_test_split
 Xm, ym = make_moons(n_samples=600, noise=0.3, random_state=0)
 Xtr, Xte, ytr, yte = train_test_split(Xm, ym, test_size=0.3, random_state=0)
-print(" k    train   5-fold CV")
-for k in [1, 3, 5, 9, 15, 25, 51, 101, 201, 335]:
+print("  k    train   5-fold CV")
+for k in [1, 3, 5, 15, 25, 51, 201, 335]:
     m = KNeighborsClassifier(n_neighbors=k)
     cv = cross_val_score(m, Xtr, ytr, cv=5).mean()
-    print(f"{k:3d}   {m.fit(Xtr, ytr).score(Xtr, ytr):.3f}   {cv:.3f}")</div>
-<div class="fx" data-lang="text"> k    train   5-fold CV
-  1   1.000   0.893
-  3   0.945   0.907
-  5   0.940   0.907
-  9   0.914   0.907
- 15   0.924   0.912
- 25   0.917   0.912
- 51   0.907   0.898
-101   0.912   0.905
-201   0.857   0.802
-335   0.733   0.505</div>
-<figure class="viz"><svg viewBox="0 0 600 270" width="600">
-<line x1="60" y1="220" x2="560" y2="220" stroke="currentColor"/><line x1="60" y1="20" x2="60" y2="220" stroke="currentColor"/>
-<text x="54" y="224" text-anchor="end" class="tm" font-size="11">0.0</text><line x1="60" y1="220" x2="560" y2="220" stroke="currentColor" stroke-opacity="0.08"/>
-<text x="54" y="184" text-anchor="end" class="tm" font-size="11">0.1</text><line x1="60" y1="180" x2="560" y2="180" stroke="currentColor" stroke-opacity="0.08"/>
-<text x="54" y="144" text-anchor="end" class="tm" font-size="11">0.2</text><line x1="60" y1="140" x2="560" y2="140" stroke="currentColor" stroke-opacity="0.08"/>
-<text x="54" y="104" text-anchor="end" class="tm" font-size="11">0.3</text><line x1="60" y1="100" x2="560" y2="100" stroke="currentColor" stroke-opacity="0.08"/>
-<text x="54" y="64" text-anchor="end" class="tm" font-size="11">0.4</text><line x1="60" y1="60" x2="560" y2="60" stroke="currentColor" stroke-opacity="0.08"/>
-<text x="54" y="24" text-anchor="end" class="tm" font-size="11">0.5</text><line x1="60" y1="20" x2="560" y2="20" stroke="currentColor" stroke-opacity="0.08"/>
-<text x="60" y="236" text-anchor="middle" class="tm" font-size="11">1</text>
-<text x="154" y="236" text-anchor="middle" class="tm" font-size="11">3</text>
-<text x="258" y="236" text-anchor="middle" class="tm" font-size="11">10</text>
-<text x="352" y="236" text-anchor="middle" class="tm" font-size="11">30</text>
-<text x="456" y="236" text-anchor="middle" class="tm" font-size="11">100</text>
-<text x="551" y="236" text-anchor="middle" class="tm" font-size="11">300</text>
-<text x="310" y="256" text-anchor="middle" font-size="12">k (log scale) → simpler model</text>
-<polyline points="60.0,220.0 119.6,201.0 154.5,198.1 198.4,196.2 227.3,188.6 249.0,185.7 273.7,186.7 292.9,189.5 317.6,183.8 336.8,186.7 365.8,187.6 398.1,182.9 431.3,182.9 456.9,184.8 491.5,178.1 516.1,162.9 535.2,141.9 550.8,127.6 560.0,113.3" fill="none" class="sb" stroke-width="2.2"/>
-<polyline points="60.0,177.1 119.6,173.3 154.5,182.9 198.4,182.9 227.3,185.7 249.0,182.9 273.7,182.9 292.9,184.8 317.6,183.8 336.8,184.8 365.8,180.0 398.1,179.0 431.3,179.0 456.9,181.9 491.5,174.3 516.1,141.0 535.2,120.0 550.8,110.5 560.0,21.9" fill="none" class="sr" stroke-width="2.2"/>
-<circle cx="227.3" cy="185.7" r="5" class="fg sg"/><text x="227.3" y="205.7" text-anchor="middle" class="tg" font-size="11">best CV, k=7</text>
-<line x1="420" y1="40" x2="445" y2="40" class="sb" stroke-width="2.2"/><text x="450" y="44" font-size="12">training error</text>
-<line x1="420" y1="60" x2="445" y2="60" class="sr" stroke-width="2.2"/><text x="450" y="64" font-size="12">5-fold CV error</text>
-<text x="70" y="45" class="tm" font-size="11">← high variance (memorises)</text><text x="420" y="110" class="tm" font-size="11">high bias (blurs) →</text>
-</svg><figcaption>Error against k on the moons training set. Training error is 0 at k = 1 (each point is its own neighbour) and rises with k; CV error is a wide, flat valley, then shoots up once k approaches the whole training set.</figcaption></figure>
-  <p>Training accuracy starts at 1.000 for k = 1, as promised. CV accuracy is low at k = 1 (0.893), plateaus around 0.91 for k between 3 and 25, and collapses at k = 335 (each CV training fold has 336 rows, so k = 335 is nearly "ask everyone" and it scores like a coin). Notice how flat the middle is: any k from 5 to 25 is fine. That is typical; tuning k matters most at the extremes.</p>
-<figure class="viz"><svg viewBox="0 0 620 210" width="620">
+    print(f"{k:3d}    {m.fit(Xtr, ytr).score(Xtr, ytr):.3f}   {cv:.3f}")</div>
+  <div class="fx" data-lang="text">  k    train   5-fold CV
+  1    1.000   0.893
+  3    0.945   0.907
+  5    0.940   0.907
+ 15    0.924   0.912
+ 25    0.917   0.912
+ 51    0.907   0.898
+201    0.857   0.802
+335    0.733   0.505</div>
+  <p>Training accuracy is 1.000 at k = 1, as predicted, and falls as k grows. Cross-validated accuracy is lowest at small k (0.893), plateaus around 0.91 for k between 3 and 25, and collapses to 0.505, a coin toss, at k = 335, which is nearly "ask every training row". Notice how flat the middle is: any k from about 5 to 25 is fine, which is typical. Tuning k matters most at the extremes. The figure shows the actual boundaries:</p>
+  <figure class="viz"><svg viewBox="0 0 620 210" width="620">
 <clipPath id="knn-c0"><rect x="10" y="10" width="190" height="150"/></clipPath>
 <rect x="10" y="10" width="190" height="150" fill="none" stroke="currentColor" stroke-opacity="0.4"/>
 <path clip-path="url(#knn-c0)" d="M107 53h0 M92 64h0 M67 68h0 M43 69h0 M79 76h0 M42 47h0 M50 97h0 M34 89h0 M105 100h0 M60 51h0 M49 72h0 M122 63h0 M116 44h0 M110 72h0 M36 57h0 M55 53h0 M131 73h0 M117 99h0 M94 77h0 M80 51h0 M100 30h0 M62 92h0 M79 33h0 M121 45h0 M50 78h0 M78 71h0 M84 44h0 M37 91h0 M55 117h0 M124 91h0 M52 99h0 M51 67h0 M122 100h0 M141 76h0 M60 60h0 M105 61h0 M33 113h0 M148 90h0 M72 47h0 M97 38h0 M113 58h0 M94 81h0 M106 46h0 M120 76h0 M48 73h0 M54 79h0 M133 48h0 M76 67h0 M86 57h0 M64 51h0 M140 80h0 M50 55h0 M67 71h0 M46 95h0 M23 93h0 M108 80h0 M69 74h0 M90 58h0 M37 79h0 M132 93h0 M126 60h0 M88 57h0 M69 59h0 M128 65h0 M80 49h0 M148 95h0 M60 32h0 M139 91h0 M102 58h0 M118 73h0 M132 94h0 M41 27h0 M27 51h0 M23 105h0 M33 83h0 M106 79h0 M99 95h0 M120 48h0 M122 58h0 M133 76h0 M112 85h0 M58 58h0 M38 79h0 M97 54h0 M109 23h0 M137 75h0 M39 89h0 M88 68h0 M71 97h0 M43 118h0 M70 55h0 M80 78h0 M89 54h0 M42 79h0 M88 71h0 M67 94h0 M40 97h0 M130 56h0 M46 53h0 M107 78h0 M114 79h0 M90 15h0 M58 65h0 M102 81h0 M105 79h0 M124 86h0 M37 84h0 M15 80h0 M114 43h0 M119 62h0 M33 102h0 M120 50h0 M95 27h0 M50 56h0 M118 52h0 M109 45h0 M89 54h0 M56 73h0 M66 81h0 M127 67h0 M119 87h0 M40 96h0 M56 65h0 M89 55h0 M40 83h0 M84 24h0 M38 86h0 M117 71h0 M99 71h0 M88 44h0 M92 62h0 M42 103h0 M132 97h0 M48 96h0 M107 38h0 M60 56h0 M104 39h0 M23 97h0 M87 69h0 M61 63h0 M93 63h0 M56 77h0 M60 64h0 M106 56h0 M121 56h0 M40 109h0 M84 63h0 M53 59h0 M125 79h0 M117 52h0 M101 82h0 M77 52h0 M75 70h0 M31 64h0 M41 35h0 M85 26h0 M34 78h0 M71 52h0 M19 58h0 M43 106h0 M109 68h0 M57 74h0 M132 66h0 M113 55h0 M116 51h0 M47 89h0 M30 73h0 M70 57h0 M36 87h0 M129 62h0 M98 76h0 M113 84h0 M34 74h0 M46 90h0 M138 92h0 M37 87h0 M111 72h0 M85 70h0 M70 52h0 M113 57h0 M112 68h0 M27 87h0 M113 91h0 M45 74h0 M119 50h0 M89 42h0 M100 48h0 M33 64h0 M110 100h0 M54 80h0 M81 50h0 M100 86h0 M104 67h0 M134 94h0 M69 30h0 M119 53h0 M86 62h0 M93 54h0 M124 77h0 M35 67h0 M117 36h0 M28 90h0 M66 33h0 M57 108h0 M156 78h0 M89 44h0 M48 88h0 M115 82h0" class="sb" stroke-width="4" stroke-linecap="round" stroke-opacity="0.6"/>
@@ -528,178 +305,81 @@ for k in [1, 3, 5, 9, 15, 25, 51, 101, 201, 335]:
 <text x="515.0" y="178" text-anchor="middle" font-size="12.5" font-weight="700">k = 201</text>
 <text x="515.0" y="194" text-anchor="middle" font-size="11" class="tm">train 0.857 · test 0.833</text>
 </svg><figcaption>Real KNN boundaries on the two-moons training data (blue = class 0, red = class 1). k = 1 draws islands around single noisy points (overfit); k = 15 draws a smooth S-curve; k = 201 asks almost half the data and flattens toward a straight cut (underfit).</figcaption></figure>
-  <h3>Rules of thumb</h3>
-  <ul>
-    <li>Choose k by cross-validation over a grid such as 1, 3, 5, 7, 11, 15, 21, 31, 51.</li>
-    <li>For two classes use odd k to avoid tied votes; for c classes, avoid multiples of c.</li>
-    <li>A common starting point is k ≈ √n (here √420 ≈ 20). It is only a start.</li>
-    <li>More data allows larger k: the neighbourhoods stay small in space while holding more points.</li>
-    <li>Noisy labels → larger k; clean, well-separated classes → smaller k works.</li>
-  </ul>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Scoring k on the training set itself always picks k = 1 (100%). Scoring k on the test set and then reporting that same test score is leakage: the test set helped choose the model. Choose k with CV on the training part; touch the test set once at the end.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> with plain votes A (1.0 away) and E (3.0 away) have equal say, although A is far more similar to Q. <b>Next: distance weighting.</b></div>
+  <p>At k = 1 the boundary draws little islands around individual noisy points, which will not be there in new data. At k = 15 it is a smooth S-curve that follows the true shape of the moons. At k = 201, almost half the data votes on every point, and the boundary flattens toward a straight cut. In practice: choose k by cross-validation over a grid such as 1, 3, 5, 7, 11, 15, 21, 31; use odd k for two classes so that votes cannot tie; start near √n if you need a first guess; use larger k when labels are noisy and when you have more data.</p>
 
   <h2 id="knn-weight"><span class="num">05</span>Distance Weighting</h2>
-  <p><strong>The question we can't answer yet:</strong> with k = 5, student A (1.0 away, Pass) and student E (3.0 away, Fail) each get exactly one vote. Common sense says A, who is three times closer, is a better guide to Q. Plain voting cannot express that.</p>
-  <h3>The idea</h3>
-  <p>Give each neighbour a vote of weight wᵢ = 1/dᵢ. A neighbour twice as close gets twice the say. Then compare the total weight per class instead of the count.</p>
-  <h3>By hand: Q with k = 5</h3>
-  <table class="tbl">
-    <tr><th>Neighbour</th><th>Class</th><th>d</th><th>w = 1/d</th></tr>
-    <tr><td>A</td><td>Pass</td><td>1.000</td><td>1.000</td></tr>
-    <tr><td>B</td><td>Pass</td><td>2.000</td><td>0.500</td></tr>
-    <tr><td>C</td><td>Fail</td><td>2.236</td><td>0.447</td></tr>
-    <tr><td>D</td><td>Fail</td><td>2.828</td><td>0.354</td></tr>
-    <tr><td>E</td><td>Fail</td><td>3.000</td><td>0.333</td></tr>
-    <tr><td colspan="2"><strong>Totals</strong></td><td></td><td>Pass 1.500 · Fail 1.134</td></tr>
-  </table>
-  <p>Plain vote: 3 Fail vs 2 Pass → Fail. Weighted vote: Pass 1.500 vs Fail 1.134 → <strong>Pass</strong>, with P(Pass) = 1.500 / (1.500 + 1.134) = 1.500 / 2.634 = <strong>0.569</strong>. The two Pass students are the two closest, so weighting lets them win.</p>
-  <p>For k = 7, add F (Pass, w = 0.316) and G (Pass, w = 0.236): Pass = 2.052, Fail = 1.134, P(Pass) = 2.052 / 3.186 = <strong>0.644</strong>.</p>
-<div class="fx" data-lang="py">for k in [5, 7]:
+  <p>With k = 5, student A, who is 1.0 away from Q, and student E, who is 3.0 away, each get exactly one vote. Common sense says A, who is three times closer, is the better guide. Plain voting cannot express that. <strong>Distance weighting</strong> gives each neighbour a vote of weight 1/d, so a neighbour twice as close has twice the say, and then compares the total weight per class instead of the count.</p>
+  <p>By hand for Q with k = 5: A (Pass, d = 1.000) has weight 1.000, B (Pass, 2.000) 0.500, C (Fail, 2.236) 0.447, D (Fail, 2.828) 0.354 and E (Fail, 3.000) 0.333. Pass totals 1.500, Fail totals 1.134. The plain vote was 3 Fail to 2 Pass; the weighted vote is Pass, with P(Pass) = 1.500 / 2.634 = 0.569. The two Pass students are the two closest, and weighting lets them win. With k = 7, F (0.316) and G (0.236) add to Pass, giving 2.052 against 1.134, or 0.644.</p>
+  <div class="fx" data-lang="py">for k in [5, 7]:
     for w in ["uniform", "distance"]:
         m = KNeighborsClassifier(n_neighbors=k, weights=w).fit(X, y)
-        print(f"k={k} {w:8s}: {m.predict(q)[0]}  P(Fail), P(Pass) = {m.predict_proba(q)[0].round(3)}")
-same = np.array([[2, 4]])                   # exactly student C
-m = KNeighborsClassifier(n_neighbors=5, weights="distance").fit(X, y)
-print("query on top of C:", m.predict(same)[0], m.predict_proba(same)[0])</div>
-<div class="fx" data-lang="text">k=5 uniform : Fail  P(Fail), P(Pass) = [0.6 0.4]
+        print(f"k={k} {w:8s}: {m.predict(q)[0]}  P(Fail), P(Pass) = {m.predict_proba(q)[0].round(3)}")</div>
+  <div class="fx" data-lang="text">k=5 uniform : Fail  P(Fail), P(Pass) = [0.6 0.4]
 k=5 distance: Pass  P(Fail), P(Pass) = [0.431 0.569]
 k=7 uniform : Pass  P(Fail), P(Pass) = [0.429 0.571]
-k=7 distance: Pass  P(Fail), P(Pass) = [0.356 0.644]
-query on top of C: Fail [1. 0.]</div>
-  <p>All four probabilities match. The last line shows the special case: when the query sits exactly on a training row (d = 0, so 1/d is infinite), sklearn gives that row all the weight and the prediction is simply its label, probability 1.</p>
-  <h3>Does it help on real data?</h3>
-  <p>Weighting matters most for large k, where far-away neighbours would otherwise dilute the vote. A Gaussian kernel weight w = exp(−d²/(2h²)) is a smoother alternative; <code>weights</code> accepts any function of the distance array.</p>
-<div class="fx" data-lang="py">print(" k    uniform  distance")
+k=7 distance: Pass  P(Fail), P(Pass) = [0.356 0.644]</div>
+  <p>All four probabilities match. Weighting has one special case: if the query sits exactly on a training row, the distance is 0 and 1/d is infinite, so scikit-learn gives that row all the weight and predicts its label with probability 1. A consequence is that with <code>weights="distance"</code> every training row predicts itself perfectly, so training accuracy is 100% for <em>any</em> k; only cross-validation scores mean anything.</p>
+  <p>Does weighting help on real data? It matters most for large k, where far-away neighbours would otherwise dilute the vote:</p>
+  <div class="fx" data-lang="py">print("  k    uniform  distance")
 for k in [1, 5, 15, 51, 101]:
     u = cross_val_score(KNeighborsClassifier(k), Xtr, ytr, cv=5).mean()
     d = cross_val_score(KNeighborsClassifier(k, weights="distance"), Xtr, ytr, cv=5).mean()
-    print(f"{k:3d}    {u:.3f}    {d:.3f}")
-gauss = lambda dist: np.exp(-dist ** 2 / (2 * 0.5 ** 2))       # Gaussian kernel, width 0.5
-print("Gaussian weights, k=51:", round(cross_val_score(KNeighborsClassifier(51, weights=gauss), Xtr, ytr, cv=5).mean(), 3))</div>
-<div class="fx" data-lang="text"> k    uniform  distance
+    print(f"{k:3d}    {u:.3f}    {d:.3f}")</div>
+  <div class="fx" data-lang="text">  k    uniform  distance
   1    0.893    0.893
   5    0.907    0.907
  15    0.912    0.926
  51    0.898    0.917
-101    0.905    0.902
-Gaussian weights, k=51: 0.905</div>
-  <p>For k = 1 and 5 the two are identical or nearly so. At k = 15 and 51 distance weights add 1.4 and 1.9 points, because the far neighbours no longer outvote the near ones. Weighted KNN is also less sensitive to the exact k chosen. The Gaussian weight (width 0.5) is similar to uniform here.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Weighted KNN</strong>: ŷ = argmax_c Σ_{i∈N_k(x)} wᵢ·1[yᵢ = c], with wᵢ = 1/d(x, xᵢ) (sklearn <code>weights="distance"</code>) or a kernel K(d). For regression ŷ = Σ wᵢyᵢ / Σ wᵢ. With a kernel and all n points instead of k, this becomes the Nadaraya–Watson kernel regression.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>With <code>weights="distance"</code>, a training row predicts itself perfectly (distance 0), so training accuracy is always 100% for <em>any</em> k. Do not read that as "no overfitting"; look at CV scores only. Also, duplicated rows with different labels can make distance-weighted predictions unstable.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> all our distances quietly assumed one hour of study is "worth" one mock test. If the units change, the neighbours may change. <b>Next: feature scaling.</b></div>
+101    0.905    0.902</div>
+  <p>For k = 1 and 5 the two are identical. At k = 15 and 51, distance weights add about 1.5 to 2 points of accuracy, because the far neighbours no longer outvote the near ones. Weighted KNN is also less sensitive to the exact k you choose. So it is always worth including both settings in the search. (The <code>weights</code> parameter also accepts any function of the distances, for example a Gaussian kernel exp(−d²/2h²).)</p>
 
-  <h2 id="knn-scale"><span class="num">06</span>Feature Scaling: Why It Is Required</h2>
-  <p><strong>The question we can't answer yet:</strong> every distance so far added "hours" gaps and "mocks" gaps as if one hour were worth one mock test. That happened to be reasonable because both columns run from about 1 to 7. What if the institute had recorded study time in <em>minutes</em>? Would KNN still find the same neighbours for Q?</p>
-  <h3>The problem, by hand on the students</h3>
-  <p>In minutes, Q = (240, 5), A = (300, 5), B = (240, 7), E = (60, 5), F = (420, 6). A one-hour gap is now a gap of 60, while a mock gap is still 1–6.</p>
-  <table class="tbl">
-    <tr><th>Student</th><th>Δ minutes</th><th>Δ mocks</th><th>Raw distance</th><th>Rank (minutes)</th><th>Rank (hours, section 03)</th></tr>
-    <tr><td>B</td><td>0</td><td>2</td><td>√(0 + 4) = 2.00</td><td>1</td><td>2</td></tr>
-    <tr><td>A</td><td>60</td><td>0</td><td>60.00</td><td>2</td><td>1</td></tr>
-    <tr><td>C</td><td>120</td><td>1</td><td>√(14,400 + 1) = 120.00</td><td>3</td><td>3</td></tr>
-    <tr><td>D</td><td>120</td><td>2</td><td>120.02</td><td>4</td><td>4</td></tr>
-    <tr><td>H</td><td>120</td><td>4</td><td>120.07</td><td>5</td><td>8</td></tr>
-    <tr><td>E</td><td>180</td><td>0</td><td>180.00</td><td>6</td><td>5</td></tr>
-    <tr><td>F, G</td><td>180</td><td>1, 3</td><td>180.00, 180.02</td><td>7, 8</td><td>6, 7</td></tr>
-  </table>
-  <p>The mocks column has become invisible: H, who took only 1 mock, is now Q's 5th neighbour, and E, who took exactly as many mocks as Q, dropped to 6th. Distance is now "difference in study time" and nothing else. Nothing about the students changed, only the unit we wrote down. A model whose answers depend on the unit of a column is not trustworthy.</p>
-  <h3>The fix: standardise each column (z-scores)</h3>
-  <p>Replace every value by how many standard deviations it is from its column's mean: z = (x − mean) / std. By hand for the hours column (A..H = 5, 4, 2, 2, 1, 7, 7, 2):</p>
-  <table class="tbl">
-    <tr><th>Step</th><th>Hours</th><th>Mocks (5, 7, 4, 7, 5, 6, 2, 1)</th></tr>
-    <tr><td>mean</td><td>30 / 8 = 3.75</td><td>37 / 8 = 4.625</td></tr>
-    <tr><td>squared deviations</td><td>1.5625, 0.0625, 3.0625, 3.0625, 7.5625, 10.5625, 10.5625, 3.0625 (sum 39.5)</td><td>0.141, 5.641, 0.391, 5.641, 0.141, 1.891, 6.891, 13.141 (sum 33.875)</td></tr>
-    <tr><td>variance = sum / 8</td><td>4.9375</td><td>4.234</td></tr>
-    <tr><td>std = √variance</td><td>2.222</td><td>2.058</td></tr>
-    <tr><td>Q's z-score</td><td>(4 − 3.75) / 2.222 = 0.113</td><td>(5 − 4.625) / 2.058 = 0.182</td></tr>
-    <tr><td>A's z-score</td><td>(5 − 3.75) / 2.222 = 0.563</td><td>(5 − 4.625) / 2.058 = 0.182</td></tr>
-  </table>
-  <p>Scaled distance Q→A = √((0.563 − 0.113)² + 0²) = <strong>0.450</strong>. If hours were in minutes, the mean would be 225 and the std 133.3, and Q's z-score would still be (240 − 225)/133.3 = 0.113: <strong>standardising removes the unit</strong>. The ranking goes back to A, B, C, D, E, F, G, H.</p>
-<div class="fx" data-lang="py">Xmin = X.astype(float).copy(); Xmin[:, 0] *= 60          # the same students, study time in MINUTES
+  <h2 id="knn-scale"><span class="num">06</span>Feature Scaling</h2>
+  <p>Every distance so far added an hours gap and a mocks gap as if one hour were worth one mock test. That happened to be reasonable, because both columns run from about 1 to 7. Now suppose the institute had recorded study time in <em>minutes</em>. The students are exactly the same people, so the prediction should not change. Does it?</p>
+  <p>In minutes, Q = (240, 5), A = (300, 5) and B = (240, 7). A one-hour gap is now a gap of 60, while mock gaps are still between 0 and 6. Q to B is √(0² + 2²) = 2, while Q to A is √(60² + 0²) = 60. Q to H is √(120² + 4²) = 120.07, barely more than Q to C at 120.00, although H took only 1 mock and C took 4. The mocks column has become invisible: distance now means "difference in study time" and nothing else.</p>
+  <p>The fix is to put every column on the same scale before measuring distances. The standard way is <strong>standardisation</strong>: replace each value by its <strong>z-score</strong>, z = (x − mean) / standard deviation, which says how many standard deviations the value is from its column's average. By hand for hours (5, 4, 2, 2, 1, 7, 7, 2): the mean is 30/8 = 3.75, the squared deviations add up to 39.5, the variance is 39.5/8 = 4.94 and the standard deviation √4.94 = 2.222. Q's hours become (4 − 3.75)/2.222 = 0.113 and A's (5 − 3.75)/2.222 = 0.563. For mocks the mean is 4.625 and the standard deviation 2.058, and Q and A both have 5 mocks, so both become 0.182. The scaled distance Q→A is √((0.563 − 0.113)² + 0²) = 0.450. In minutes, the mean of the hours column would be 225 and its standard deviation 133.3, and Q's z-score would still be (240 − 225)/133.3 = 0.113: standardising removes the unit.</p>
+  <div class="fx" data-lang="py">Xmin = X.astype(float).copy(); Xmin[:, 0] *= 60                 # same students, study time in MINUTES
 qmin = np.array([[240., 5.]])
-d_min = np.sqrt(((Xmin - qmin) ** 2).sum(axis=1))
-show = lambda d: "  ".join(f"{n} {v:.2f}" for n, v in zip(students["name"], d))
-print("minutes, raw distance :", show(d_min))
-mu, sd = X.mean(axis=0), X.std(axis=0)                     # population std, as StandardScaler uses
-print("mean", mu, " std", sd.round(3))
-Z, zq = (X - mu) / sd, (q[0] - mu) / sd
-d_z = np.sqrt(((Z - zq) ** 2).sum(axis=1))
-print("z-scored Q:", zq.round(3), " z-scored A:", Z[0].round(3))
-print("z-scored distance     :", show(d_z))
+names = students["name"].to_numpy()
+order = lambda d: " ".join(f"{n}:{v:.2f}" for n, v in sorted(zip(names, d), key=lambda t: t[1]))
+print("minutes, raw      :", order(np.sqrt(((Xmin - qmin) ** 2).sum(axis=1))))
 from sklearn.preprocessing import StandardScaler
-Zmin = StandardScaler().fit(Xmin)
-same = np.allclose(np.sqrt(((Zmin.transform(Xmin) - Zmin.transform(qmin)) ** 2).sum(axis=1)), d_z)
-print("hours or minutes, after standardising the distances are identical:", same)</div>
-<div class="fx" data-lang="text">minutes, raw distance : A 60.00  B 2.00  C 120.00  D 120.02  E 180.00  F 180.00  G 180.02  H 120.07
-mean [3.75  4.625]  std [2.222 2.058]
-z-scored Q: [0.113 0.182]  z-scored A: [0.563 0.182]
-z-scored distance     : A 0.45  B 0.97  C 1.02  D 1.32  E 1.35  F 1.43  G 1.99  H 2.14
-hours or minutes, after standardising the distances are identical: True</div>
-  <p>The first line reproduces the minutes table (B nearest, mocks ignored). After standardising, Q→A = 0.450 and the order is A, B, C, D, E, F, G, H whether we start from hours or minutes. <strong>Min-max scaling</strong> (x' = (x − min)/(max − min), every column to [0, 1]) and <strong>robust scaling</strong> (median and IQR, for columns with extreme outliers) do the same job in different ways; see <a class="xref" data-note="ml_features">Feature Engineering</a>.</p>
-  <h3>At scale: the wine data</h3>
-  <p>The same effect on a real dataset: 178 wines, 13 chemical measurements, 3 grape types. The columns live on wildly different scales.</p>
-<div class="fx" data-lang="py">from sklearn.datasets import load_wine
+for label, data, query in [("hours", X, q), ("minutes", Xmin, qmin)]:
+    sc = StandardScaler().fit(data)                              # z = (x - mean) / std, per column
+    d = np.sqrt(((sc.transform(data) - sc.transform(query)) ** 2).sum(axis=1))
+    print(f"{label + ', z-scored':18s}:", order(d))</div>
+  <div class="fx" data-lang="text">minutes, raw      : B:2.00 A:60.00 C:120.00 D:120.02 H:120.07 E:180.00 F:180.00 G:180.02
+hours, z-scored   : A:0.45 B:0.97 C:1.02 D:1.32 E:1.35 F:1.43 G:1.99 H:2.14
+minutes, z-scored : A:0.45 B:0.97 C:1.02 D:1.32 E:1.35 F:1.43 G:1.99 H:2.14</div>
+  <p>The first line shows the damage in minutes: B is now nearest and H has jumped ahead of E. The next two lines show that after standardising, the distances from hours and from minutes are identical, and the order is A, B, C, D, E, F, G, H again. Other scalers do the same job differently: <strong>min-max scaling</strong> maps every column to the range 0 to 1, and <strong>robust scaling</strong> uses the median and interquartile range so that extreme outliers do not squash everything else (see <a class="xref" data-note="ml_features">Feature Engineering</a>). The effect on a real dataset is dramatic. The wine dataset has 178 wines, 13 chemical measurements and 3 grape types, with columns on wildly different scales:</p>
+  <div class="fx" data-lang="py">from sklearn.datasets import load_wine
 from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
+from sklearn.preprocessing import MinMaxScaler
 Xw, yw = load_wine(return_X_y=True, as_frame=True)
-print(Xw.agg(["min", "max"]).T.loc[["proline", "magnesium", "hue", "nonflavanoid_phenols"]])
-for name, model in [("raw (no scaling)", KNeighborsClassifier(5)),
+print(Xw.agg(["min", "max"]).T.loc[["proline", "magnesium", "hue"]])
+for name, model in [("no scaling", KNeighborsClassifier(5)),
                     ("StandardScaler", make_pipeline(StandardScaler(), KNeighborsClassifier(5))),
-                    ("MinMaxScaler", make_pipeline(MinMaxScaler(), KNeighborsClassifier(5))),
-                    ("RobustScaler", make_pipeline(RobustScaler(), KNeighborsClassifier(5)))]:
-    print(f"{name:17s} 5-fold CV acc {cross_val_score(model, Xw, yw, cv=5).mean():.3f}")</div>
-<div class="fx" data-lang="text">                         min      max
-proline               278.00  1680.00
-magnesium              70.00   162.00
-hue                     0.48     1.71
-nonflavanoid_phenols    0.13     0.66
-raw (no scaling)  5-fold CV acc 0.691
-StandardScaler    5-fold CV acc 0.949
-MinMaxScaler      5-fold CV acc 0.950
-RobustScaler      5-fold CV acc 0.938</div>
-  <p>Proline runs from 278 to 1,680; hue from 0.48 to 1.71. Unscaled, distance is essentially "difference in proline", exactly like "difference in minutes" for the students, and KNN scores 0.691. Any scaler lifts it to about 0.94–0.95. The scaler is placed <em>inside</em> a pipeline so that, in each CV fold, means and standard deviations are computed on the training folds only.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Standardisation</strong>: zⱼ = (xⱼ − meanⱼ) / stdⱼ for every column j, with mean and std learned on the training data. A model is <strong>scale-sensitive</strong> when multiplying one column by a constant changes its predictions. KNN, SVM, K-means, PCA and anything with a distance or a penalty are scale-sensitive. Decision trees and their ensembles are not.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Fitting the scaler on all the data before splitting leaks the test set's mean and spread into training (<a class="xref" data-note="ml_pipelines">Pipelines &amp; Data Leakage</a>). Always <code>make_pipeline(StandardScaler(), KNeighborsClassifier())</code>. And scaling makes every column count <em>equally</em>, which is only right if every column is equally relevant: a useless column now has as much say as the best one (section 08).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> we can now find Q's neighbours fairly and predict Pass or Fail, but the institute also wants Q's expected <em>mark</em>, a number, not a class. <b>Next: KNN regression.</b></div>
+                    ("MinMaxScaler", make_pipeline(MinMaxScaler(), KNeighborsClassifier(5)))]:
+    print(f"{name:15s} 5-fold CV accuracy {cross_val_score(model, Xw, yw, cv=5).mean():.3f}")</div>
+  <div class="fx" data-lang="text">              min      max
+proline    278.00  1680.00
+magnesium   70.00   162.00
+hue          0.48     1.71
+no scaling      5-fold CV accuracy 0.691
+StandardScaler  5-fold CV accuracy 0.949
+MinMaxScaler    5-fold CV accuracy 0.950</div>
+  <p>Proline runs from 278 to 1,680 while hue runs from 0.48 to 1.71. Without scaling, distance is essentially "difference in proline", just as it was "difference in minutes" for the students, and KNN scores 0.691. With either scaler it scores about 0.95. Notice that the scaler is placed <em>inside</em> a pipeline with <code>make_pipeline</code>. That way, in each cross-validation fold, the means and standard deviations are computed from the training folds only; fitting the scaler on all the data first would let information about the test rows leak into training (<a class="xref" data-note="ml_pipelines">Pipelines &amp; Data Leakage</a>).</p>
+  <p>Any model built on distances or penalties is <strong>scale-sensitive</strong> in this way: KNN, SVM, K-means, PCA and regularised linear models. Decision trees and their ensembles are not, because they split one column at a time. Remember one more consequence: scaling makes every column count <em>equally</em>. That is only right if every column is equally relevant, and section 08 shows what happens when some are not.</p>
 
   <h2 id="knn-reg"><span class="num">07</span>KNN Regression</h2>
-  <p><strong>The question we can't answer yet:</strong> everything so far predicted a class. The institute also has each student's final mark and wants to tell Q, "you are on track for about 55". Voting needs classes; marks are numbers. What replaces the vote?</p>
-  <h3>By hand: predicting Q's mark</h3>
-  <p>Final marks: A 68, B 61, C 38, D 45, E 30, F 82, G 71, H 25 (Pass means 50 or more, so these agree with the Pass/Fail labels). Replace the vote by an average of the neighbours' marks.</p>
-  <table class="tbl">
-    <tr><th>Rank</th><th>Student</th><th>d</th><th>Mark</th><th>w = 1/d</th><th>w × mark</th></tr>
-    <tr><td>1</td><td>A</td><td>1.000</td><td>68</td><td>1.000</td><td>68.00</td></tr>
-    <tr><td>2</td><td>B</td><td>2.000</td><td>61</td><td>0.500</td><td>30.50</td></tr>
-    <tr><td>3</td><td>C</td><td>2.236</td><td>38</td><td>0.447</td><td>16.99</td></tr>
-    <tr><td>4</td><td>D</td><td>2.828</td><td>45</td><td>0.354</td><td>15.91</td></tr>
-    <tr><td>5</td><td>E</td><td>3.000</td><td>30</td><td>0.333</td><td>10.00</td></tr>
-  </table>
-  <ul>
-    <li><strong>k = 1</strong>: A's mark → <strong>68.00</strong>.</li>
-    <li><strong>k = 3, plain average</strong>: (68 + 61 + 38) / 3 = 167 / 3 = <strong>55.67</strong>.</li>
-    <li><strong>k = 3, weighted</strong>: (68 + 30.50 + 16.99) / (1 + 0.5 + 0.447) = 115.49 / 1.947 = <strong>59.31</strong>. The very close A pulls the answer up.</li>
-    <li><strong>k = 5, plain</strong>: (68 + 61 + 38 + 45 + 30) / 5 = 242 / 5 = <strong>48.40</strong>; weighted 141.40 / 2.634 = <strong>53.68</strong>.</li>
-    <li><strong>k = 8</strong> (everyone): 420 / 8 = <strong>52.50</strong>, the class average, whoever asks.</li>
-  </ul>
-  <p>Now a student far outside the data: 12 hours a day and 10 mocks, more than anyone studied. With k = 3 the neighbours are F (6.40 away, 82), B (8.54, 61) and A (8.60, 68): (82 + 61 + 68) / 3 = <strong>70.33</strong>, lower than F's 82 even though this student works far harder than F. KNN can never predict outside the range of marks it has seen; it cannot extrapolate a trend. A linear model would follow the slope upward.</p>
-<div class="fx" data-lang="py">from sklearn.neighbors import KNeighborsRegressor
-marks = np.array([68, 61, 38, 45, 30, 82, 71, 25])            # final exam marks of A..H
+  <p>The institute also wants to tell Q, "you are on track for a mark of about 55". Marks are numbers, not classes, so there is nothing to vote on. <strong>KNN regression</strong> replaces the vote by an average of the neighbours' values. The marks are A 68, B 61, C 38, D 45, E 30, F 82, G 71, H 25. With k = 1, Q's prediction is A's mark, 68. With k = 3, the plain average of A, B and C is (68 + 61 + 38)/3 = 55.67. With distance weights it is (68×1 + 61×0.5 + 38×0.447)/(1 + 0.5 + 0.447) = 115.49/1.947 = 59.31: the very close A pulls the answer up. With all eight students (k = 8), the prediction is the class average, 420/8 = 52.50, whoever asks.</p>
+  <p>Now a student far outside the data: 12 hours a day and 10 mocks, more than anyone has ever done. With k = 3 the nearest are F (82), B (61) and A (68), so the prediction is 70.33, <em>lower</em> than F's 82 although this student works far harder than F. KNN can never predict outside the range of values it has seen, because an average of marks always lies between the smallest and largest of them.</p>
+  <div class="fx" data-lang="py">from sklearn.neighbors import KNeighborsRegressor
+marks = students["mark"].to_numpy()
 for k in [1, 3, 5, 8]:
     for w in ["uniform", "distance"]:
         r = KNeighborsRegressor(n_neighbors=k, weights=w).fit(X, marks)
         print(f"k={k} {w:8s}: mark(Q) = {r.predict(q)[0]:.2f}   mark(12 h, 10 mocks) = {r.predict([[12, 10]])[0]:.2f}")</div>
-<div class="fx" data-lang="text">k=1 uniform : mark(Q) = 68.00   mark(12 h, 10 mocks) = 82.00
+  <div class="fx" data-lang="text">k=1 uniform : mark(Q) = 68.00   mark(12 h, 10 mocks) = 82.00
 k=1 distance: mark(Q) = 68.00   mark(12 h, 10 mocks) = 82.00
 k=3 uniform : mark(Q) = 55.67   mark(12 h, 10 mocks) = 70.33
 k=3 distance: mark(Q) = 59.31   mark(12 h, 10 mocks) = 71.51
@@ -707,25 +387,8 @@ k=5 uniform : mark(Q) = 48.40   mark(12 h, 10 mocks) = 65.40
 k=5 distance: mark(Q) = 53.68   mark(12 h, 10 mocks) = 67.12
 k=8 uniform : mark(Q) = 52.50   mark(12 h, 10 mocks) = 52.50
 k=8 distance: mark(Q) = 55.62   mark(12 h, 10 mocks) = 56.69</div>
-  <p>Every number matches the hand work. Note how k = 8 gives the same 52.50 for Q and for the 12-hour student: with everyone as a neighbour, the query no longer matters.</p>
-  <h3>k and the bias-variance trade-off, measured at scale</h3>
-  <p>Eight students are too few to measure error reliably, so we use 200 points from y = sin(x) + noise with standard deviation σ = 0.3, half for training, and measure train and test RMSE (root mean squared error, the typical size of a miss).</p>
-<div class="fx" data-lang="py">from sklearn.metrics import root_mean_squared_error
-rng = np.random.default_rng(0)
-xs = np.sort(rng.uniform(0, 6, 200)).reshape(-1, 1)
-ys = np.sin(xs).ravel() + rng.normal(0, 0.3, 200)              # true curve + noise (sd 0.3)
-xtr, xte, ytr_r, yte_r = train_test_split(xs, ys, test_size=0.5, random_state=0)
-print(" k   train RMSE  test RMSE")
-for k in [1, 3, 10, 30, 100]:
-    r = KNeighborsRegressor(n_neighbors=k).fit(xtr, ytr_r)
-    print(f"{k:3d}     {root_mean_squared_error(ytr_r, r.predict(xtr)):.3f}     {root_mean_squared_error(yte_r, r.predict(xte)):.3f}")</div>
-<div class="fx" data-lang="text"> k   train RMSE  test RMSE
-  1     0.000     0.433
-  3     0.232     0.382
- 10     0.296     0.329
- 30     0.368     0.365
-100     0.726     0.787</div>
-<figure class="viz"><svg viewBox="0 0 600 260" width="600">
+  <p>Every number matches the hand work. Look at k = 8: Q and the 12-hour student both get 52.50, because when everyone is a neighbour the query no longer matters. The figure shows what KNN regression looks like on a continuous input:</p>
+  <figure class="viz"><svg viewBox="0 0 600 260" width="600">
 <line x1="50" y1="115" x2="590" y2="115" stroke="currentColor" stroke-opacity="0.2"/><line x1="50" y1="15" x2="50" y2="215" stroke="currentColor"/>
 <path d="M515 161h0 M575 152h0 M206 27h0 M51 123h0 M341 141h0 M378 148h0 M342 111h0 M249 82h0 M530 168h0 M179 112h0 M264 89h0 M206 71h0 M198 62h0 M314 108h0 M82 96h0 M516 147h0 M117 82h0 M567 139h0 M445 153h0 M99 98h0 M86 107h0 M282 89h0 M362 122h0 M212 85h0 M353 122h0 M280 107h0 M58 121h0 M390 161h0 M525 127h0 M587 129h0 M65 96h0 M261 68h0 M312 109h0 M411 167h0 M504 168h0 M542 163h0 M508 175h0 M334 125h0 M588 106h0 M73 109h0 M401 162h0 M359 117h0 M157 50h0 M232 58h0 M256 93h0 M53 120h0 M402 154h0 M517 145h0 M181 82h0 M363 123h0 M444 167h0 M549 143h0 M92 95h0 M173 84h0 M444 158h0 M217 64h0 M513 138h0 M434 162h0 M155 91h0 M129 56h0 M387 150h0 M494 138h0 M140 80h0 M530 161h0 M429 145h0 M551 127h0 M145 87h0 M474 191h0 M531 154h0 M489 168h0 M130 61h0 M353 130h0 M298 75h0 M288 91h0 M388 126h0 M489 186h0 M578 123h0 M273 97h0 M282 103h0 M118 90h0 M526 143h0 M293 113h0 M568 148h0 M550 154h0 M573 147h0 M175 92h0 M232 57h0 M467 181h0 M326 109h0 M268 85h0 M320 152h0 M158 45h0 M107 98h0 M72 101h0 M359 111h0 M260 79h0 M577 130h0 M394 131h0 M196 39h0 M543 139h0" stroke="currentColor" stroke-opacity="0.45" stroke-width="4" stroke-linecap="round"/>
 <polyline points="50.0,123.0 50.9,123.0 51.8,123.0 52.7,120.2 53.6,120.2 54.5,120.2 55.4,120.2 56.3,120.5 57.2,120.5 58.1,120.5 59.0,120.5 59.9,120.5 60.8,120.5 61.7,95.6 62.6,95.6 63.5,95.6 64.4,95.6 65.3,95.6 66.2,95.6 67.1,95.6 68.0,95.6 68.9,100.5 69.8,100.5 70.7,100.5 71.6,100.5 72.5,100.5 73.4,109.3 74.3,109.3 75.2,109.3 76.1,109.3 77.0,109.3 77.9,95.8 78.8,95.8 79.7,95.8 80.7,95.8 81.6,95.8 82.5,95.8 83.4,95.8 84.3,107.5 85.2,107.5 86.1,107.5 87.0,107.5 87.9,107.5 88.8,107.5 89.7,95.2 90.6,95.2 91.5,95.2 92.4,95.2 93.3,95.2 94.2,95.2 95.1,95.2 96.0,97.5 96.9,97.5 97.8,97.5 98.7,97.5 99.6,97.5 100.5,97.5 101.4,97.5 102.3,97.5 103.2,98.4 104.1,98.4 105.0,98.4 105.9,98.4 106.8,98.4 107.7,98.4 108.6,98.4 109.5,98.4 110.4,98.4 111.3,98.4 112.2,82.2 113.1,82.2 114.0,82.2 114.9,82.2 115.8,82.2 116.7,82.2 117.6,82.2 118.5,90.3 119.4,90.3 120.3,90.3 121.2,90.3 122.1,90.3 123.0,90.3 123.9,56.3 124.8,56.3 125.7,56.3 126.6,56.3 127.5,56.3 128.4,56.3 129.3,56.3 130.2,61.0 131.1,61.0 132.0,61.0 132.9,61.0 133.8,61.0 134.7,61.0 135.6,79.9 136.5,79.9 137.4,79.9 138.3,79.9 139.2,79.9 140.2,79.9 141.1,79.9 142.0,79.9 142.9,86.6 143.8,86.6 144.7,86.6 145.6,86.6 146.5,86.6 147.4,86.6 148.3,86.6 149.2,86.6 150.1,91.2 151.0,91.2 151.9,91.2 152.8,91.2 153.7,91.2 154.6,91.2 155.5,91.2 156.4,50.5 157.3,50.5 158.2,44.6 159.1,44.6 160.0,44.6 160.9,44.6 161.8,44.6 162.7,44.6 163.6,44.6 164.5,44.6 165.4,83.8 166.3,83.8 167.2,83.8 168.1,83.8 169.0,83.8 169.9,83.8 170.8,83.8 171.7,83.8 172.6,83.8 173.5,83.8 174.4,92.4 175.3,92.4 176.2,92.4 177.1,112.0 178.0,112.0 178.9,112.0 179.8,112.0 180.7,82.5 181.6,82.5 182.5,82.5 183.4,82.5 184.3,82.5 185.2,82.5 186.1,82.5 187.0,82.5 187.9,82.5 188.8,38.6 189.7,38.6 190.6,38.6 191.5,38.6 192.4,38.6 193.3,38.6 194.2,38.6 195.1,38.6 196.0,38.6 196.9,62.1 197.8,62.1 198.7,62.1 199.6,62.1 200.6,62.1 201.5,62.1 202.4,71.4 203.3,71.4 204.2,71.4 205.1,71.4 206.0,27.4 206.9,27.4 207.8,27.4 208.7,27.4 209.6,84.6 210.5,84.6 211.4,84.6 212.3,84.6 213.2,84.6 214.1,84.6 215.0,64.0 215.9,64.0 216.8,64.0 217.7,64.0 218.6,64.0 219.5,64.0 220.4,64.0 221.3,64.0 222.2,64.0 223.1,64.0 224.0,64.0 224.9,57.8 225.8,57.8 226.7,57.8 227.6,57.8 228.5,57.8 229.4,57.8 230.3,57.8 231.2,57.8 232.1,57.3 233.0,57.3 233.9,57.3 234.8,57.3 235.7,57.3 236.6,57.3 237.5,57.3 238.4,57.3 239.3,57.3 240.2,57.3 241.1,81.9 242.0,81.9 242.9,81.9 243.8,81.9 244.7,81.9 245.6,81.9 246.5,81.9 247.4,81.9 248.3,81.9 249.2,81.9 250.1,81.9 251.0,81.9 251.9,81.9 252.8,93.2 253.7,93.2 254.6,93.2 255.5,93.2 256.4,93.2 257.3,93.2 258.2,78.9 259.1,78.9 260.1,78.9 261.0,67.9 261.9,67.9 262.8,89.4 263.7,89.4 264.6,89.4 265.5,89.4 266.4,85.0 267.3,85.0 268.2,85.0 269.1,85.0 270.0,85.0 270.9,96.6 271.8,96.6 272.7,96.6 273.6,96.6 274.5,96.6 275.4,96.6 276.3,96.6 277.2,107.2 278.1,107.2 279.0,107.2 279.9,107.2 280.8,107.2 281.7,102.9 282.6,88.8 283.5,88.8 284.4,88.8 285.3,90.5 286.2,90.5 287.1,90.5 288.0,90.5 288.9,90.5 289.8,90.5 290.7,113.0 291.6,113.0 292.5,113.0 293.4,113.0 294.3,113.0 295.2,113.0 296.1,75.1 297.0,75.1 297.9,75.1 298.8,75.1 299.7,75.1 300.6,75.1 301.5,75.1 302.4,75.1 303.3,75.1 304.2,75.1 305.1,75.1 306.0,109.4 306.9,109.4 307.8,109.4 308.7,109.4 309.6,109.4 310.5,109.4 311.4,109.4 312.3,109.4 313.2,108.0 314.1,108.0 315.0,108.0 315.9,108.0 316.8,108.0 317.7,152.0 318.6,152.0 319.5,152.0 320.5,152.0 321.4,152.0 322.3,152.0 323.2,109.4 324.1,109.4 325.0,109.4 325.9,109.4 326.8,109.4 327.7,109.4 328.6,109.4 329.5,109.4 330.4,125.1 331.3,125.1 332.2,125.1 333.1,125.1 334.0,125.1 334.9,125.1 335.8,125.1 336.7,125.1 337.6,141.1 338.5,141.1 339.4,141.1 340.3,141.1 341.2,141.1 342.1,110.8 343.0,110.8 343.9,110.8 344.8,110.8 345.7,110.8 346.6,110.8 347.5,110.8 348.4,130.3 349.3,130.3 350.2,130.3 351.1,130.3 352.0,130.3 352.9,130.3 353.8,121.7 354.7,121.7 355.6,121.7 356.5,116.6 357.4,116.6 358.3,116.6 359.2,111.1 360.1,111.1 361.0,121.6 361.9,121.6 362.8,121.6 363.7,123.3 364.6,123.3 365.5,123.3 366.4,123.3 367.3,123.3 368.2,123.3 369.1,123.3 370.0,123.3 370.9,148.4 371.8,148.4 372.7,148.4 373.6,148.4 374.5,148.4 375.4,148.4 376.3,148.4 377.2,148.4 378.1,148.4 379.0,148.4 379.9,148.4 380.9,148.4 381.8,148.4 382.7,150.1 383.6,150.1 384.5,150.1 385.4,150.1 386.3,150.1 387.2,150.1 388.1,125.5 389.0,125.5 389.9,161.2 390.8,161.2 391.7,161.2 392.6,131.0 393.5,131.0 394.4,131.0 395.3,131.0 396.2,131.0 397.1,131.0 398.0,161.6 398.9,161.6 399.8,161.6 400.7,161.6 401.6,161.6 402.5,154.3 403.4,154.3 404.3,154.3 405.2,154.3 406.1,154.3 407.0,166.9 407.9,166.9 408.8,166.9 409.7,166.9 410.6,166.9 411.5,166.9 412.4,166.9 413.3,166.9 414.2,166.9 415.1,166.9 416.0,166.9 416.9,166.9 417.8,166.9 418.7,166.9 419.6,166.9 420.5,144.6 421.4,144.6 422.3,144.6 423.2,144.6 424.1,144.6 425.0,144.6 425.9,144.6 426.8,144.6 427.7,144.6 428.6,144.6 429.5,144.6 430.4,144.6 431.3,144.6 432.2,161.8 433.1,161.8 434.0,161.8 434.9,161.8 435.8,161.8 436.7,161.8 437.6,161.8 438.5,161.8 439.4,166.5 440.4,166.5 441.3,166.5 442.2,166.5 443.1,166.5 444.0,157.8 444.9,152.8 445.8,152.8 446.7,152.8 447.6,152.8 448.5,152.8 449.4,152.8 450.3,152.8 451.2,152.8 452.1,152.8 453.0,152.8 453.9,152.8 454.8,152.8 455.7,152.8 456.6,180.9 457.5,180.9 458.4,180.9 459.3,180.9 460.2,180.9 461.1,180.9 462.0,180.9 462.9,180.9 463.8,180.9 464.7,180.9 465.6,180.9 466.5,180.9 467.4,180.9 468.3,180.9 469.2,180.9 470.1,180.9 471.0,190.6 471.9,190.6 472.8,190.6 473.7,190.6 474.6,190.6 475.5,190.6 476.4,190.6 477.3,190.6 478.2,190.6 479.1,190.6 480.0,190.6 480.9,190.6 481.8,168.1 482.7,168.1 483.6,168.1 484.5,168.1 485.4,168.1 486.3,168.1 487.2,168.1 488.1,168.1 489.0,185.7 489.9,185.7 490.8,185.7 491.7,138.4 492.6,138.4 493.5,138.4 494.4,138.4 495.3,138.4 496.2,138.4 497.1,138.4 498.0,138.4 498.9,138.4 499.8,168.1 500.8,168.1 501.7,168.1 502.6,168.1 503.5,168.1 504.4,168.1 505.3,168.1 506.2,168.1 507.1,174.7 508.0,174.7 508.9,174.7 509.8,174.7 510.7,138.3 511.6,138.3 512.5,138.3 513.4,138.3 514.3,160.7 515.2,160.7 516.1,146.9 517.0,144.5 517.9,144.5 518.8,144.5 519.7,144.5 520.6,144.5 521.5,127.2 522.4,127.2 523.3,127.2 524.2,127.2 525.1,127.2 526.0,142.7 526.9,142.7 527.8,161.5 528.7,161.5 529.6,161.5 530.5,167.8 531.4,153.6 532.3,153.6 533.2,153.6 534.1,153.6 535.0,153.6 535.9,153.6 536.8,163.1 537.7,163.1 538.6,163.1 539.5,163.1 540.4,163.1 541.3,163.1 542.2,138.9 543.1,138.9 544.0,138.9 544.9,138.9 545.8,143.3 546.7,143.3 547.6,143.3 548.5,143.3 549.4,154.2 550.3,154.2 551.2,127.4 552.1,127.4 553.0,127.4 553.9,127.4 554.8,127.4 555.7,127.4 556.6,127.4 557.5,127.4 558.4,127.4 559.3,138.9 560.3,138.9 561.2,138.9 562.1,138.9 563.0,138.9 563.9,138.9 564.8,138.9 565.7,138.9 566.6,138.9 567.5,147.5 568.4,147.5 569.3,147.5 570.2,147.5 571.1,147.2 572.0,147.2 572.9,147.2 573.8,147.2 574.7,151.7 575.6,151.7 576.5,130.1 577.4,130.1 578.3,123.2 579.2,123.2 580.1,123.2 581.0,123.2 581.9,123.2 582.8,123.2 583.7,129.0 584.6,129.0 585.5,129.0 586.4,129.0 587.3,129.0 588.2,105.9 589.1,105.9 590.0,105.9" fill="none" class="sr" stroke-width="1.2"/>
@@ -736,112 +399,77 @@ for k in [1, 3, 10, 30, 100]:
 <line x1="380" y1="70" x2="405" y2="70" class="sg" stroke-width="1.5" stroke-dasharray="5 4"/><text x="410" y="74" font-size="12">true curve sin(x)</text>
 <text x="320" y="245" text-anchor="middle" class="tm" font-size="11">x from 0 to 6; grey dots = 100 noisy training points</text>
 </svg><figcaption>KNN regression predicts a flat step between neighbours. k = 1 follows every noisy point; k = 10 averages them into a curve close to the truth. Both flatten out beyond the data.</figcaption></figure>
-  <p>Compare with the formula of section 04. At k = 1 the predicted floor was √(σ² + σ²) = √0.18 = 0.42; measured test RMSE 0.433. At k = 10 the floor was √(0.09 + 0.009) = 0.31; measured 0.329 (the small extra is bias). At k = 100, half the training set, the neighbours span most of the sine wave, the average is nearly flat, and test RMSE jumps to 0.787: pure bias, like k = 8 for the students.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>KNN regression</strong>: ŷ(x) = (1/k) Σ_{i∈N_k(x)} yᵢ, or Σwᵢyᵢ / Σwᵢ with distance weights. The prediction is piecewise constant (uniform weights) and always lies between the smallest and largest target among the neighbours.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Never use KNN regression to forecast a growing quantity (sales next year, prices with inflation). Past the edge of the data it returns the average of the edge points: flat forecasts. The same weakness hits trees (<a class="xref" data-note="ml_dtree">Decision Trees</a>); linear models or a trend feature are needed.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> all our students had just two columns. A real student record might have 50 (attendance, each subject's marks, sleep, travel time…). Does "nearest" still mean anything then? <b>Next: the curse of dimensionality.</b></div>
+  <p>The prediction is a staircase: it stays flat while the set of k neighbours stays the same and jumps when it changes. With k = 1 it follows every noisy point; with k = 10 the steps average out into something close to the true curve. Beyond the edge of the data both lines go flat, because the nearest neighbours of any far-away point are always the same few edge points. That makes KNN regression a poor choice for forecasting anything that keeps growing, such as sales or prices with inflation; a linear model, or a trend feature, is needed for that (trees have the same weakness; see <a class="xref" data-note="ml_dtree">Decision Trees</a>).</p>
+  <p>For regression the bias–variance trade-off from section 04 can be written exactly. If each target is a true value plus random noise with variance σ², the expected squared error of KNN at a point is σ² + bias² + σ²/k. The first term is noise no model can remove. The last term is the variance of an average of k noisy values, which falls as k grows. The bias term grows as the k neighbours spread further away and their true values differ from the true value at the query. To see it, we use 200 points from y = sin(x) plus noise with σ = 0.3, half for training:</p>
+  <div class="fx" data-lang="py">from sklearn.metrics import root_mean_squared_error
+rng = np.random.default_rng(0)
+xs = np.sort(rng.uniform(0, 6, 200)).reshape(-1, 1)
+ys = np.sin(xs).ravel() + rng.normal(0, 0.3, 200)              # true curve + noise with sd 0.3
+xtr, xte, ytr_r, yte_r = train_test_split(xs, ys, test_size=0.5, random_state=0)
+print("  k   train RMSE  test RMSE")
+for k in [1, 3, 10, 30, 100]:
+    r = KNeighborsRegressor(n_neighbors=k).fit(xtr, ytr_r)
+    print(f"{k:3d}     {root_mean_squared_error(ytr_r, r.predict(xtr)):.3f}     {root_mean_squared_error(yte_r, r.predict(xte)):.3f}")</div>
+  <div class="fx" data-lang="text">  k   train RMSE  test RMSE
+  1     0.000     0.433
+  3     0.232     0.382
+ 10     0.296     0.329
+ 30     0.368     0.365
+100     0.726     0.787</div>
+  <p>With k = 1 the formula predicts a test error of at least √(0.09 + 0.09) = 0.42 even with zero bias, and we measure 0.433. With k = 10 the floor is √(0.09 + 0.009) = 0.31, and we measure 0.329; the small extra is bias. With k = 100, half the training set, the neighbours span most of the sine wave, the average is nearly flat, and the test error jumps to 0.787: almost pure bias.</p>
 
   <h2 id="knn-curse"><span class="num">08</span>The Curse of Dimensionality</h2>
-  <p><strong>The question we can't answer yet:</strong> our students had two columns, both related to passing. A real record has dozens, and many of them (roll number digits, bus route, seat row) have nothing to do with the result. Does KNN still find the right neighbours for Q when such columns are added?</p>
-  <h3>On the students: add useless columns</h3>
-  <p>We add 2, 10 and 50 random columns (values between 0 and 3, the same for every analysis) to the eight students and to Q, and re-rank Q's neighbours. Without noise the order is A B C D E F G H and the nearest student is 0.22 times as far as the farthest.</p>
-<div class="fx" data-lang="py">rng = np.random.default_rng(0)
+  <p>Our students have two columns, and both genuinely relate to passing. A real student record might have fifty: attendance, marks in each subject, travel time, roll-number digits, seat row. Many of those have nothing to do with the result. KNN has no way of knowing that: its distance treats every column the same. What happens to Q's neighbours when useless columns are added? Below we append 2, 10 and 50 columns of random numbers (between 0 and 3) to the eight students and to Q:</p>
+  <div class="fx" data-lang="py">rng = np.random.default_rng(0)
 for extra in [0, 2, 10, 50]:
-    noise = rng.random((9, extra)) * 3                       # useless columns, values 0..3
+    noise = rng.random((9, extra)) * 3                           # useless columns, values 0..3
     A = np.hstack([X, noise[:8]]); qa = np.hstack([q[0], noise[8]])
     d = np.sqrt(((A - qa) ** 2).sum(axis=1))
-    order = "".join(students["name"].to_numpy()[np.argsort(d)])
-    print(f"{extra:2d} noise columns: neighbour order {order}   nearest/farthest = {d.min() / d.max():.2f}")</div>
-<div class="fx" data-lang="text"> 0 noise columns: neighbour order ABCDEFGH   nearest/farthest = 0.22
+    print(f"{extra:2d} noise columns: neighbour order {''.join(names[np.argsort(d)])}"
+          f"   nearest/farthest = {d.min() / d.max():.2f}")</div>
+  <div class="fx" data-lang="text"> 0 noise columns: neighbour order ABCDEFGH   nearest/farthest = 0.22
  2 noise columns: neighbour order ACDEBFGH   nearest/farthest = 0.32
 10 noise columns: neighbour order BACGDFEH   nearest/farthest = 0.49
 50 noise columns: neighbour order BDCGAEHF   nearest/farthest = 0.81</div>
-  <p>With just 2 noise columns, B (Pass) drops from 2nd to 5th and three Fail students move ahead of it. With 10, the order is B A C G D F E H. With 50 noise columns the "nearest" student is 0.81 times as far as the farthest: everyone is roughly equally far from Q, and the neighbour list is mostly decided by the noise. Two things went wrong, and both have names.</p>
-  <h3>Neighbourhoods stop being local</h3>
-  <p>Suppose the data is spread evenly in a unit cube (every column between 0 and 1) and we want a small neighbourhood that holds 10% of the points. In 1 dimension that is an interval of length 0.1. In 2 dimensions it is a square with area 0.1, so each side is √0.1 = 0.316. In d dimensions each side is 0.1^(1/d).</p>
-  <table class="tbl">
-    <tr><th>d</th><th>Side for 10% of the data</th><th>Side for 1%</th><th>By hand</th></tr>
-    <tr><td>1</td><td>0.100</td><td>0.010</td><td>0.1¹</td></tr>
-    <tr><td>2</td><td>0.316</td><td>0.100</td><td>√0.1 ; √0.01</td></tr>
-    <tr><td>3</td><td>0.464</td><td>0.215</td><td>cube root of 0.1</td></tr>
-    <tr><td>10</td><td>0.794</td><td>0.631</td><td>0.1^0.1</td></tr>
-    <tr><td>100</td><td>0.977</td><td>0.955</td><td>0.1^0.01</td></tr>
-  </table>
-  <p>In 10 dimensions, to collect just 10% of the data you must stretch 79% of the way along every column. The "neighbours" are not near at all; they differ on almost every column. The local average stops being local, so bias rises. To keep neighbourhoods truly small you need exponentially more data as d grows.</p>
-  <h3>Distances concentrate</h3>
-  <p>Second symptom: in high dimensions the nearest and the farthest points are almost the same distance away. If everything is equally far, "nearest" carries no information.</p>
-<div class="fx" data-lang="py">print("  d   edge of a cube holding 10% of the data   1% of the data")
+  <p>With no noise the order is A B C D E F G H, and the nearest student is 0.22 times as far as the farthest. With just 2 noise columns B, who passed and was second nearest, drops to fifth. With 50 noise columns the order is mostly decided by the noise, and the nearest student is 0.81 times as far as the farthest: everyone is roughly equally far from Q, so "nearest" carries very little information. This is the <strong>curse of dimensionality</strong>, a name for the ways that space behaves strangely when it has many dimensions, and it has two symptoms.</p>
+  <p>The first is that neighbourhoods stop being local. Suppose data is spread evenly inside a unit cube (every column between 0 and 1) and we want a small neighbourhood containing 10% of the points. In one dimension that is an interval of length 0.1. In two dimensions it is a square of area 0.1, so each side is √0.1 = 0.316. In d dimensions each side is 0.1^(1/d). The second is that distances concentrate: as columns are added, each one contributes a little random difference to every distance, and these add up to almost the same total for every pair of points.</p>
+  <div class="fx" data-lang="py">print("  d   cube side holding 10% of the data")
 for d in [1, 2, 3, 10, 100]:
-    print(f"{d:3d}   {0.10 ** (1 / d):.3f}                                  {0.01 ** (1 / d):.3f}")
+    print(f"{d:3d}   {0.10 ** (1 / d):.3f}")
 rng = np.random.default_rng(0)
 for d in (2, 10, 100, 1000):
-    P = rng.random((1000, d)); qd = rng.random(d)               # 1000 random points, 1 query
+    P = rng.random((1000, d)); qd = rng.random(d)                # 1000 random points, 1 query
     dd = np.linalg.norm(P - qd, axis=1)
     print(f"d={d:4d}  nearest={dd.min():.2f}  farthest={dd.max():.2f}  ratio={dd.min() / dd.max():.2f}")</div>
-<div class="fx" data-lang="text">  d   edge of a cube holding 10% of the data   1% of the data
-  1   0.100                                  0.010
-  2   0.316                                  0.100
-  3   0.464                                  0.215
- 10   0.794                                  0.631
-100   0.977                                  0.955
+  <div class="fx" data-lang="text">  d   cube side holding 10% of the data
+  1   0.100
+  2   0.316
+  3   0.464
+ 10   0.794
+100   0.977
 d=   2  nearest=0.01  farthest=1.33  ratio=0.01
 d=  10  nearest=0.47  farthest=2.11  ratio=0.22
 d= 100  nearest=3.35  farthest=4.65  ratio=0.72
 d=1000  nearest=12.17  farthest=13.55  ratio=0.90</div>
-  <p>In 2-D the nearest of 1,000 random points is 100 times closer than the farthest (ratio 0.01). In 1,000-D the ratio is 0.90: the nearest point is only 10% closer than the farthest one. Each extra column adds a little random difference to every distance, and these add up to nearly the same total for every pair.</p>
-  <h3>Irrelevant columns, measured as accuracy</h3>
-  <p>The students showed the neighbour list scrambling; here is what that costs in accuracy on the 420-row moons data (k = 15, scaled), adding useless random columns:</p>
-<div class="fx" data-lang="py">rng = np.random.default_rng(1)
-print("noise cols   KNN k=15 CV acc")
+  <p>In 10 dimensions, to collect just 10% of the data you must stretch 79% of the way along every column; in 100 dimensions, 98%. The "neighbours" differ from the query on almost every column, so the local average is not local any more. And in the second table, among 1,000 random points, the nearest is 100 times closer than the farthest in 2 dimensions (ratio 0.01) but only 10% closer in 1,000 dimensions (ratio 0.90). Here is what that costs in accuracy on the moons data, with k = 15 and scaling, as useless columns are added:</p>
+  <div class="fx" data-lang="py">rng = np.random.default_rng(1)
+print("noise columns   KNN (k=15) CV accuracy")
 for extra in [0, 2, 8, 32, 128]:
-    Xn = np.hstack([Xtr, rng.normal(0, 1, (len(Xtr), extra))])   # moons + useless columns
+    Xn = np.hstack([Xtr, rng.normal(0, 1, (len(Xtr), extra))])  # moons + useless columns
     acc = cross_val_score(make_pipeline(StandardScaler(), KNeighborsClassifier(15)), Xn, ytr, cv=5).mean()
-    print(f"{extra:9d}    {acc:.3f}")</div>
-<div class="fx" data-lang="text">noise cols   KNN k=15 CV acc
-        0    0.907
-        2    0.888
-        8    0.850
-       32    0.755
-      128    0.652</div>
-  <p>Two real columns plus 8 noise columns: 0.907 → 0.850. Plus 128 noise columns: 0.652, close to guessing. A logistic regression or a tree would learn to give the noise columns zero weight; plain KNN cannot, because its distance treats all columns equally.</p>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>KNN has no way to learn which columns matter. Feature selection, PCA or a learned embedding is therefore part of the KNN recipe whenever there are more than a handful of columns. Real data helps too: it usually lies near a low-dimensional surface (images of faces do not fill pixel space), and KNN works with that intrinsic dimension rather than the column count.</p>
-  </div>
-  <table class="tbl">
-    <tr><th>Fix</th><th>What it does</th><th>Where</th></tr>
-    <tr><td>Feature selection</td><td>Drop columns unrelated to the target</td><td><a class="xref" data-note="ml_dimred">Curse of Dimensionality &amp; Feature Selection</a></td></tr>
-    <tr><td>PCA / embeddings</td><td>Compress to a few informative directions</td><td><a class="xref" data-note="ml_pca">PCA</a></td></tr>
-    <tr><td>Metric learning</td><td>Learn a distance (e.g. sklearn <code>NeighborhoodComponentsAnalysis</code>) that stretches useful columns and shrinks useless ones</td><td>sklearn.neighbors</td></tr>
-    <tr><td>Feature weights by hand</td><td>Multiply important columns by a factor &gt; 1 after scaling</td><td>domain knowledge</td></tr>
-  </table>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>One-hot encoding a column with 500 categories adds 500 columns to the distance. KNN on wide one-hot data usually performs badly; prefer a few meaningful numeric features or embeddings.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> even with good columns, every prediction measures the distance to every stored student, which is far too slow for millions of rows. <b>Next: KD-trees, ball trees and approximate search.</b></div>
+    print(f"{extra:13d}   {acc:.3f}")</div>
+  <div class="fx" data-lang="text">noise columns   KNN (k=15) CV accuracy
+            0   0.907
+            2   0.888
+            8   0.850
+           32   0.755
+          128   0.652</div>
+  <p>Two real columns plus 8 noise columns drop accuracy from 0.907 to 0.850; plus 128, to 0.652, close to guessing. A logistic regression or a tree would learn to give the noise columns zero weight; plain KNN cannot. So for KNN, choosing columns is part of the model. The standard remedies are feature selection (drop columns unrelated to the target; see <a class="xref" data-note="ml_dimred">Curse of Dimensionality &amp; Feature Selection</a>), compressing to a few informative directions with <a class="xref" data-note="ml_pca">PCA</a> or a learned embedding, metric learning (scikit-learn's <code>NeighborhoodComponentsAnalysis</code> learns a distance that stretches useful columns and shrinks useless ones), or weighting important columns by hand after scaling. Real data is kinder than random data, too: it usually lies near a much lower-dimensional surface (photos of faces do not fill all of pixel space), and KNN's performance depends on that intrinsic dimension rather than the raw column count. The same warning applies to one-hot encoding: a categorical column with 500 categories adds 500 columns to every distance.</p>
 
-  <h2 id="knn-speed"><span class="num">09</span>Cost and Speed-ups</h2>
-  <p><strong>The question we can't answer yet:</strong> for every prediction we measured Q's distance to all eight students. With eight that is nothing; with a national database of 10 million students and an app that must answer in 50 ms it is impossible. Can we find the nearest students without measuring all of them?</p>
-  <h3>Brute force</h3>
-  <p>For one query: compute n distances, each over d columns (O(n·d)), then find the k smallest (O(n) with a partial sort). Memory: the whole training set, O(n·d). With n = 1 million and d = 100 that is 100 million multiplications per query.</p>
-  <table class="tbl">
-    <tr><th>Step</th><th>Brute force</th><th>KD-tree / ball tree (low d)</th></tr>
-    <tr><td>fit</td><td>O(1) (store)</td><td>O(n log n) to build</td></tr>
-    <tr><td>one query</td><td>O(n·d)</td><td>about O(log n) when d is small; degrades towards O(n) as d grows</td></tr>
-    <tr><td>memory</td><td>O(n·d)</td><td>O(n·d) + tree</td></tr>
-  </table>
-  <h3>KD-tree: built by hand on the eight students</h3>
-  <p>Idea: like binary search, but in several dimensions. Cut the space in two at the median of one column, then cut each half on the next column, and so on. The columns are x = hours and y = mocks.</p>
-  <ol>
-    <li><strong>Root, cut on x (hours).</strong> Sorted by hours: E 1, C 2, D 2, H 2, B 4, A 5, F 7, G 7. The median (upper middle, 5th of 8) is <strong>B (4, 7)</strong>. Left (before B in the order): E, C, D, H. Right: A, F, G.</li>
-    <li><strong>Left half, cut on y (mocks).</strong> Sorted by mocks: H 1, C 4, E 5, D 7 → median <strong>E (1, 5)</strong>. Below: H, C. Above: D.</li>
-    <li><strong>Lower-left, cut on x.</strong> H and C both have 2 hours → median C; H goes left.</li>
-    <li><strong>Right half, cut on y.</strong> Sorted by mocks: G 2, A 5, F 6 → median <strong>A (5, 5)</strong>. Below: G. Above: F.</li>
-  </ol>
-<figure class="viz"><svg viewBox="0 0 640 290" width="640">
+  <h2 id="knn-speed"><span class="num">09</span>Making Search Fast</h2>
+  <p>For every prediction so far we measured Q's distance to all eight students. That is the <strong>brute-force</strong> method: for one query, compute n distances, each over d columns, so the cost is O(n·d) per prediction, and the whole training set must be kept in memory. With eight students it is nothing. With ten million records and an app that must answer in 50 milliseconds, it is impossible. Unusually, KNN gets <em>slower</em> to predict as you give it more training data. Can we find the nearest rows without measuring all of them?</p>
+  <p>The classic answer is a <strong>KD-tree</strong> ("k-dimensional tree"), which is binary search extended to several columns. You cut the space in two at the median of one column, then cut each half at the median of the next column, and so on, alternating. On the eight students, sorted by hours (E 1, C 2, D 2, H 2, B 4, A 5, F 7, G 7), the median is B (4, 7), so the root cuts at hours = 4, with E, C, D, H on the left and A, F, G on the right. The left half is then cut on mocks at E (1, 5), with H and C below and D above; C (2, 4) makes one more cut with H below it. The right half is cut on mocks at A (5, 5), with G below and F above.</p>
+  <figure class="viz"><svg viewBox="0 0 640 290" width="640">
 <rect x="40.0" y="10.0" width="300.0" height="240.0" fill="none" stroke="currentColor"/>
 <line x1="173.33333333333331" y1="250.0" x2="173.33333333333331" y2="10.0" class="sr" stroke-width="2.5"/>
 <line x1="40.0" y1="100.0" x2="173.33333333333331" y2="100.0" class="sb" stroke-width="2"/>
@@ -876,513 +504,241 @@ for extra in [0, 2, 8, 32, 128]:
 <text x="450" y="62" font-size="10.5" class="tm">x &lt; 4</text><text x="545" y="62" font-size="10.5" class="tm">x ≥ 4</text>
 <text x="500" y="272" text-anchor="middle" font-size="11" class="tg">green = visited for (8,3): 3 of 8</text>
 </svg><figcaption>Left: the KD-tree on the eight students. The root B cuts at hours = 4 (red); E and A cut their halves at mocks = 5 (blue); C cuts once more at hours = 2 (green). Right: the same cuts as a tree. For a new student at (8, 3) the dashed circle of the best distance so far (1.414, to G) never reaches the walls, so F and the whole left half are skipped.</figcaption></figure>
-  <h3>Searching it by hand: a new student at (8, 3)</h3>
-  <ol>
-    <li>At the root B (4, 7): distance √(16 + 16) = 5.657. Best so far: B. The query's hours 8 ≥ 4, so go right first.</li>
-    <li>At A (5, 5): distance √(9 + 4) = 3.606. New best: A. Query mocks 3 &lt; 5, so go to the lower child.</li>
-    <li>At G (7, 2): distance √(1 + 1) = 1.414. New best: G. G has no children.</li>
-    <li>Back at A: could the other side (mocks ≥ 5, where F lives) hold something closer? The wall mocks = 5 is |3 − 5| = 2 away, more than 1.414. No: skip F.</li>
-    <li>Back at the root: the wall hours = 4 is |8 − 4| = 4 away, more than 1.414. <strong>The whole left half (E, C, D, H) cannot contain anything closer. Skip it.</strong></li>
-  </ol>
-  <p>Answer G, found with 3 distance calculations instead of 8. The pruning rule is the key: <em>only open the far side of a wall if the wall is closer than the best distance so far</em>. With a million points in 2 or 3 dimensions, a query typically touches a few dozen nodes.</p>
-  <p>Q itself is the bad case. Q has exactly 4 hours, so it sits <em>on</em> the root's wall (distance 0 to it), and the best distance (1.0, to A) is larger than several walls: 7 of the 8 students get measured. Queries near many walls, and high-dimensional data where every wall is close, get little speed-up.</p>
-<div class="fx" data-lang="py">pts = X.copy()                                         # the eight students
-
-def build(idx, depth=0):
-    """Split on x (hours) then y (mocks) then x ... at the median point."""
-    if len(idx) == 0:
+  <p>Now search it for a new student at (8, 3). Start at the root B: distance √(16 + 16) = 5.657, the best so far. The query's hours (8) are at least 4, so go right first. At A: distance √(9 + 4) = 3.606, a new best. The query's mocks (3) are below 5, so go to A's lower side. At G: distance √(1 + 1) = 1.414, a new best, and G has no children. Now back up. Could A's other side (mocks above 5, where F lives) hold anything closer? The wall at mocks = 5 is |3 − 5| = 2 away, more than our best distance of 1.414, so no: skip F. Back at the root, the wall at hours = 4 is |8 − 4| = 4 away, so the entire left half (E, C, D, H) cannot contain anything closer either. The answer is G, found with 3 distance calculations instead of 8. The pruning rule is the whole trick: <em>only search the far side of a wall if the wall is closer than the best distance found so far</em>. The dashed circle in the figure is that best distance; it never reaches either wall.</p>
+  <div class="fx" data-lang="py">def build(idx, depth=0):
+    """Split at the median point, on hours (x) at even depths and mocks (y) at odd depths."""
+    if not idx:
         return None
     axis = depth % 2
-    idx = sorted(idx, key=lambda i: pts[i][axis])
+    idx = sorted(idx, key=lambda i: X[i][axis])
     mid = len(idx) // 2
     return {"i": idx[mid], "axis": axis,
             "left": build(idx[:mid], depth + 1), "right": build(idx[mid + 1:], depth + 1)}
 
-def show(node, pad="", tag="root"):
-    if node:
-        print(f"{pad}{tag}: {students['name'][node['i']]} {tuple(pts[node['i']].tolist())} splits on {'xy'[node['axis']]}")
-        show(node["left"], pad + "    ", "L"); show(node["right"], pad + "    ", "R")
-
 def nearest(node, qp, best=None, log=None):
     if node is None:
         return best
-    p = pts[node["i"]]
-    d = float(np.linalg.norm(p - qp)); log.append((students["name"][node["i"]], round(d, 3)))
+    p = X[node["i"]]
+    d = float(np.linalg.norm(p - qp)); log.append(names[node["i"]])
     if best is None or d &lt; best[1]:
-        best = (students["name"][node["i"]], d)
+        best = (names[node["i"]], d)
     diff = qp[node["axis"]] - p[node["axis"]]
     near, far = (node["left"], node["right"]) if diff &lt; 0 else (node["right"], node["left"])
-    best = nearest(near, qp, best, log)                 # go down the side the query is on
-    if abs(diff) &lt; best[1]:                             # can the other side hold anything closer?
+    best = nearest(near, qp, best, log)          # search the side the query is on first
+    if abs(diff) &lt; best[1]:                      # could the far side hold anything closer?
         best = nearest(far, qp, best, log)
     return best
 
-tree = build(list(range(len(pts))))
-show(tree)
+tree = build(list(range(8)))
 for qp in [np.array([8, 3]), np.array([4, 5])]:
     log = []
     best = nearest(tree, qp, log=log)
-    print(f"query {tuple(qp.tolist())}: nearest {best[0]} d={best[1]:.3f}; distances computed {len(log)} of 8: {log}")</div>
-<div class="fx" data-lang="text">root: B (4, 7) splits on x
-    L: E (1, 5) splits on y
-        L: C (2, 4) splits on x
-            L: H (2, 1) splits on y
-        R: D (2, 7) splits on x
-    R: A (5, 5) splits on y
-        L: G (7, 2) splits on x
-        R: F (7, 6) splits on x
-query (8, 3): nearest G d=1.414; distances computed 3 of 8: [('B', 5.657), ('A', 3.606), ('G', 1.414)]
-query (4, 5): nearest A d=1.000; distances computed 7 of 8: [('B', 2.0), ('A', 1.0), ('F', 3.162), ('G', 4.243), ('E', 3.0), ('D', 2.828), ('C', 2.236)]</div>
-  <p>The tree printout matches steps 1–4 and the distance log matches the hand trace: 3 computations for (8, 3), 7 for Q. sklearn's trees give the same neighbours:</p>
-<div class="fx" data-lang="py">from sklearn.neighbors import KDTree, BallTree
-for T in (KDTree, BallTree):
-    t = T(X, leaf_size=1)
-    d, i = t.query([[8, 3], [4, 5]], k=1)
-    print(T.__name__, "nearest:", students["name"].to_numpy()[i.ravel()], "dist:", d.ravel().round(3))</div>
-<div class="fx" data-lang="text">KDTree nearest: ['G' 'A'] dist: [1.414 1.   ]
-BallTree nearest: ['G' 'A'] dist: [1.414 1.   ]</div>
-  <h3>Ball tree</h3>
-  <p>Instead of axis-aligned walls, a ball tree groups points into nested spheres (a centre and a radius). If the query's distance to a sphere's centre minus its radius is already bigger than the best distance found, every point inside can be skipped (this uses the triangle inequality). Spheres fit clustered or curved data better than boxes, so ball trees hold up better as dimension grows and work with any true metric.</p>
-  <h3>Measured: when trees help and when they hurt</h3>
-<div class="fx" data-lang="py">import time
+    print(f"query {tuple(qp.tolist())}: nearest {best[0]} (d={best[1]:.3f}); measured {len(log)} of 8: {log}")</div>
+  <div class="fx" data-lang="text">query (8, 3): nearest G (d=1.414); measured 3 of 8: ['B', 'A', 'G']
+query (4, 5): nearest A (d=1.000); measured 7 of 8: ['B', 'A', 'F', 'G', 'E', 'D', 'C']</div>
+  <p>The code builds the tree exactly as described and logs which students it measured. For (8, 3) it measures B, A and G, as in the hand trace. Q itself is the bad case: Q has exactly 4 hours, so it sits <em>on</em> the root's wall, the best distance (1.0, to A) is larger than several walls, and 7 of the 8 students get measured. With a million points in two or three dimensions a typical query touches only a few dozen; but queries near many walls, and high-dimensional data where almost every wall is close, get little speed-up.</p>
+  <p>A <strong>ball tree</strong> does the same with nested spheres instead of axis-aligned walls: if the query's distance to a sphere's centre, minus the sphere's radius, is already larger than the best distance found, every point inside the sphere is skipped (this uses the triangle inequality). Spheres fit clustered or curved data better than boxes, so ball trees hold up better as the number of columns grows. Here is the effect of dimension on speed (times are approximate and vary by machine):</p>
+  <div class="fx" data-lang="py">import time
 rng = np.random.default_rng(0)
-print("   d   brute   kd_tree   ball_tree   (seconds for 2,000 queries, k=5, 20,000 points)")
+print("   d    brute   kd_tree   (seconds for 2,000 queries among 20,000 points; approximate)")
 for d in [3, 40]:
     P = rng.random((20000, d)); Q = rng.random((2000, d))
     row = []
-    for algo in ["brute", "kd_tree", "ball_tree"]:
+    for algo in ["brute", "kd_tree"]:
         nn = KNeighborsClassifier(5, algorithm=algo, n_jobs=1).fit(P, np.zeros(20000))
+        nn.kneighbors(Q[:10])                                    # warm-up call
         t0 = time.perf_counter(); nn.kneighbors(Q); row.append(time.perf_counter() - t0)
-    print(f"{d:4d}   {row[0]:.3f}    {row[1]:.3f}     {row[2]:.3f}")</div>
-<div class="fx" data-lang="text">   d   brute   kd_tree   ball_tree   (seconds for 2,000 queries, k=5, 20,000 points)
-   3   0.035    0.007     0.008
-  40   0.079    3.776     2.640</div>
-  <p>(Your times will differ; the pattern will not.) In 3 dimensions the KD-tree answers the 2,000 queries many times faster than brute force. In 40 dimensions it is many times <em>slower</em>: nearly every wall is close, so it visits almost everything and pays the tree overhead too. Brute force on modern CPUs is a big matrix multiplication and is hard to beat in high dimensions. sklearn's default <code>algorithm="auto"</code> chooses among these based on the data; a rough rule is that KD-trees pay off when n ≫ 2^d.</p>
-  <h3>Approximate nearest neighbours (ANN)</h3>
-  <p>For millions of embedding vectors with hundreds of dimensions (search, recommendations, RAG), exact search is too slow. Approximate methods accept that they will sometimes miss the true nearest neighbour in exchange for 100–1000× speed:</p>
-  <table class="tbl">
-    <tr><th>Method</th><th>Idea in one line</th><th>Used in</th></tr>
-    <tr><td>HNSW</td><td>A layered "small world" graph; greedily hop toward the query from coarse to fine layers</td><td>FAISS, hnswlib, most vector DBs</td></tr>
-    <tr><td>IVF</td><td>Cluster the vectors with k-means; search only the few clusters nearest the query</td><td>FAISS</td></tr>
-    <tr><td>Product quantization</td><td>Compress each vector into a few bytes; compute approximate distances on codes</td><td>FAISS, ScaNN</td></tr>
-    <tr><td>LSH</td><td>Hash functions that put nearby points in the same bucket with high probability</td><td>Near-duplicate detection</td></tr>
-  </table>
-  <p>The quality measure is <strong>recall@k</strong>: what share of the true k nearest neighbours the index returns. Details are in <a class="xref" data-note="vectordb">Embeddings &amp; Vector DBs</a>.</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"Use a KD-tree to make KNN fast" is only true for low dimensions. For 50+ dimensions use brute force (vectorised, maybe on GPU) or an ANN index. And remember that prediction time grows with training size: doubling the data doubles brute-force prediction cost, the opposite of most models.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> we can now find neighbours quickly, but we have not asked what the vote shares mean as probabilities, how ties are broken, or what happens when one class is rare. <b>Next: ties, probabilities and imbalance.</b></div>
+    print(f"{d:4d}    {row[0]:.3f}    {row[1]:.3f}")</div>
+  <div class="fx" data-lang="text">   d    brute   kd_tree   (seconds for 2,000 queries among 20,000 points; approximate)
+   3    1.713    0.027
+  40    1.937    7.710</div>
+  <p>With 3 columns the KD-tree answers the 2,000 queries many times faster than brute force. With 40 columns it is several times <em>slower</em>: nearly every wall is close, so it visits almost everything and pays for the tree as well. Brute force, on the other hand, is one big matrix calculation that modern CPUs do very efficiently. scikit-learn's default <code>algorithm="auto"</code> chooses between brute force, KD-tree and ball tree based on the data; a rough rule is that trees pay off only when n is much larger than 2^d.</p>
+  <p>For millions of vectors with hundreds of dimensions (search engines, recommendations, retrieval for LLMs), even exact search with trees is too slow, so systems use <strong>approximate nearest neighbour</strong> (ANN) search, which accepts occasionally missing the true nearest neighbour in exchange for being 100 to 1,000 times faster. HNSW builds a layered graph and hops greedily toward the query; IVF clusters the vectors with k-means and searches only the clusters nearest the query; product quantisation compresses each vector to a few bytes; LSH uses hash functions that put nearby points in the same bucket. Their quality is measured by <strong>recall@k</strong>, the share of the true k nearest neighbours the index returns. Details are in <a class="xref" data-note="vectordb">Embeddings &amp; Vector DBs</a>.</p>
 
-  <h2 id="knn-imb"><span class="num">10</span>Ties, Probabilities and Imbalance</h2>
-  <p><strong>The question we can't answer yet:</strong> we have been reading the vote as the answer. But what does "P(Pass) = 0.4" from five neighbours really mean, what happens on tied votes or tied distances, and what if Pass were rare, say 1 student in 10?</p>
-  <h3>Two kinds of ties</h3>
-  <ul>
-    <li><strong>Tied votes</strong> (2 vs 2 with k = 4): sklearn takes the class that comes first in <code>classes_</code>. Fix: odd k, or distance weights.</li>
-    <li><strong>Tied distances</strong> at the k-th place (two rows equally far): sklearn keeps whichever comes first in the training data, so shuffling the rows can change a prediction. Fix: usually harmless on continuous data; with integer or duplicated data, consider distance weights or a radius-based model.</li>
-  </ul>
-  <h3>Probabilities are coarse</h3>
-  <p>With uniform weights and k = 5, <code>predict_proba</code> can only output 0, 0.2, 0.4, 0.6, 0.8 or 1. These are rough and often over-confident (k = 1 says 0 or 1 for everything). They rank rows reasonably, so they can be used for ROC-AUC, but calibrate them before using them as real risk numbers (<a class="xref" data-note="ml_calibration">Thresholds &amp; Calibration</a>).</p>
-  <h3>Imbalanced classes</h3>
-  <p><strong>On the students first.</strong> With k = 5, Q gets P(Pass) = 2/5 = 0.4, so the usual "more than half" rule says Fail. But the 0.5 cut-off is only a convention. If Pass were the rare, important class (say, picking students for a scholarship test, where missing a likely passer is costly), the institute could predict Pass whenever at least 40% of the neighbours passed, and Q becomes Pass. Choosing that threshold is a business decision about costs (<a class="xref" data-note="ml_calibration">Thresholds &amp; Calibration</a>).</p>
-  <p>If 90% of rows are class 0, a neighbourhood of size k contains on average 9 class-0 rows for every class-1 row. The bigger k, the more surely the majority wins. Measured on data with 10% positives:</p>
-<div class="fx" data-lang="py">from sklearn.datasets import make_classification
+  <h2 id="knn-imb"><span class="num">10</span>Votes, Imbalance and Other Uses</h2>
+  <p>We have been reading the vote as the answer, so it is worth looking at what the vote can and cannot tell us. Ties come first. With an even k, votes can tie (2 against 2 with k = 4), and scikit-learn then picks the class that comes first in <code>classes_</code> (alphabetically "Fail"), not a random one, so ties silently favour one class. Use odd k for two classes, or distance weights, where exact ties are practically impossible. Distances can also tie at the k-th place; scikit-learn then keeps whichever row comes first in the training data, so shuffling the rows can change a prediction. On continuous data this rarely matters; with integer or duplicated values it can.</p>
+  <p>The probabilities are coarse. With uniform weights and k = 5, <code>predict_proba</code> can only return 0, 0.2, 0.4, 0.6, 0.8 or 1, and with k = 1 every prediction is 0 or 1. They rank examples reasonably, so they are fine for ROC-AUC, but they should be calibrated before being used as real risk numbers (<a class="xref" data-note="ml_calibration">Thresholds &amp; Calibration</a>).</p>
+  <p>Imbalanced classes are a bigger problem. If 90% of rows are class 0, a neighbourhood of size k contains on average nine class-0 rows for every class-1 row, and the larger k is, the more surely the majority wins every vote. On the students, Q got P(Pass) = 0.4 with k = 5, so the usual "more than half" rule said Fail. But 0.5 is only a convention. If Pass were the rare and important class, say when choosing students for a scholarship exam where missing a likely passer is costly, the institute could predict Pass whenever at least 40% of the neighbours passed, and Q becomes Pass. Here is the effect on data with 10% positives:</p>
+  <div class="fx" data-lang="py">from sklearn.datasets import make_classification
 from sklearn.metrics import recall_score, balanced_accuracy_score
 Xi, yi = make_classification(n_samples=2000, n_features=4, n_informative=3, n_redundant=0,
                              weights=[0.9, 0.1], class_sep=0.8, random_state=0)
 Xa, Xb, ya, yb = train_test_split(Xi, yi, test_size=0.5, stratify=yi, random_state=0)
-print("share of class 1:", ya.mean())
-print(" k   weights    recall(class 1)  balanced acc")
+print("  k   recall of the rare class   balanced accuracy")
 for k in [1, 5, 25, 101]:
-    for w in ["uniform", "distance"]:
-        p = make_pipeline(StandardScaler(), KNeighborsClassifier(k, weights=w)).fit(Xa, ya)
-        pr = p.predict(Xb)
-        print(f"{k:3d}  {w:9s}   {recall_score(yb, pr):.3f}            {balanced_accuracy_score(yb, pr):.3f}")
-p = make_pipeline(StandardScaler(), KNeighborsClassifier(25)).fit(Xa, ya)
-pr = (p.predict_proba(Xb)[:, 1] &gt;= 0.2).astype(int)          # lower the vote threshold
-print("k=25, predict 1 if at least 20% of neighbours are 1:",
-      f"recall {recall_score(yb, pr):.3f}  balanced acc {balanced_accuracy_score(yb, pr):.3f}")</div>
-<div class="fx" data-lang="text">share of class 1: 0.104
- k   weights    recall(class 1)  balanced acc
-  1  uniform     0.490            0.719
-  1  distance    0.490            0.719
-  5  uniform     0.394            0.690
-  5  distance    0.413            0.699
- 25  uniform     0.067            0.534
- 25  distance    0.154            0.577
-101  uniform     0.000            0.500
-101  distance    0.000            0.500
-k=25, predict 1 if at least 20% of neighbours are 1: recall 0.721  balanced acc 0.810</div>
-  <p>At k = 1, half the positives are found (recall 0.490). At k = 25 only 6.7%, and at k = 101 none: the majority swamps every neighbourhood. Distance weights help a little. The strongest fix is to stop requiring a majority: predict class 1 when at least 20% of the 25 neighbours are class 1, and recall jumps to 0.721 with balanced accuracy 0.810. Other fixes: undersample the majority or oversample the minority (SMOTE itself is a KNN-based method; see <a class="xref" data-note="ml_features">Feature Engineering</a>).</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p><code>KNeighborsClassifier</code> has no <code>class_weight</code> parameter (unlike logistic regression or SVM). Handle imbalance with the decision threshold, resampling, or a custom weight function.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> we know the practical fixes, but not how good KNN can be in principle, or where else the same search is used. <b>Next: theory (Cover–Hart) and other uses.</b></div>
-
-  <h2 id="knn-more"><span class="num">11</span>Theory and Other Uses</h2>
-  <p><strong>The question we can't answer yet:</strong> we know how to use KNN, but not how good it can possibly be, or where the same "find the nearest rows" machinery is used outside classification (for example, to fill in a student's missing mark).</p>
-  <h3>How good can 1-NN be? (Cover and Hart, 1967)</h3>
-  <p>The <strong>Bayes error</strong> is the error of the best possible classifier, the one that knows the true probabilities (some rows are genuinely ambiguous, so it is usually above 0). Cover and Hart proved that as the training set grows without limit, the error of the 1-nearest-neighbour rule is at most <strong>twice the Bayes error</strong> (for two classes, exactly ≤ 2·E*(1 − E*)). So if the best possible error is 5%, 1-NN will eventually be below 10%, with no tuning at all.</p>
-  <p>Why roughly twice? With infinite data the nearest neighbour sits on top of the query, so it is a random draw from the same class probabilities. If the query is Pass with probability p, we are wrong when the two disagree: p(1 − p) + (1 − p)p = 2p(1 − p). With p = 0.9 the best rule errs 0.1 of the time and 1-NN errs 2 × 0.9 × 0.1 = 0.18, under twice 0.1.</p>
-  <p>And if k grows too, but slowly (k → ∞ while k/n → 0), KNN's error approaches the Bayes error itself: KNN is <strong>universally consistent</strong>. The catch is "with enough data", which in high dimensions means an impossible amount (section 08).</p>
-  <h3>Radius neighbours and plain neighbour search</h3>
-  <p>Instead of a fixed number k, <code>RadiusNeighborsClassifier</code> votes among all training rows within a fixed distance. In dense regions it asks many neighbours, in sparse regions few, and if nobody is within the radius it can say "unknown". <code>NearestNeighbors</code> does the search without any labels: "find the 5 most similar products" in a recommender.</p>
-<div class="fx" data-lang="py">from sklearn.neighbors import RadiusNeighborsClassifier, NearestNeighbors
+    pr = make_pipeline(StandardScaler(), KNeighborsClassifier(k)).fit(Xa, ya).predict(Xb)
+    print(f"{k:3d}   {recall_score(yb, pr):.3f}                     {balanced_accuracy_score(yb, pr):.3f}")
+p25 = make_pipeline(StandardScaler(), KNeighborsClassifier(25)).fit(Xa, ya)
+pr = (p25.predict_proba(Xb)[:, 1] &gt;= 0.2).astype(int)           # rare class if &gt;= 20% of neighbours vote for it
+print(f"k=25, threshold 20%: recall {recall_score(yb, pr):.3f}   balanced accuracy {balanced_accuracy_score(yb, pr):.3f}")</div>
+  <div class="fx" data-lang="text">  k   recall of the rare class   balanced accuracy
+  1   0.490                     0.719
+  5   0.394                     0.690
+ 25   0.067                     0.534
+101   0.000                     0.500
+k=25, threshold 20%: recall 0.721   balanced accuracy 0.810</div>
+  <p>At k = 1 about half of the rare class is found (recall 0.490). At k = 25 only 6.7%, and at k = 101 none at all: the majority swamps every neighbourhood. The strongest fix is to stop requiring a majority. Predicting the rare class whenever at least 20% of the 25 neighbours belong to it lifts recall to 0.721 and balanced accuracy to 0.810. Other fixes are distance weights, a smaller k, and resampling (SMOTE, the popular oversampling method, is itself built on nearest neighbours). Note that <code>KNeighborsClassifier</code> has no <code>class_weight</code> parameter, unlike logistic regression or SVM.</p>
+  <p>How good can such a simple method be in principle? Cover and Hart proved in 1967 that, as the training set grows without limit, the error of the 1-nearest-neighbour rule is at most <strong>twice the Bayes error</strong>, the error of the best possible classifier. The reason is simple: with infinite data the nearest neighbour sits right on top of the query, so its label is like a second random draw from the same class probabilities. If the query is Pass with probability p, 1-NN is wrong when the two draws disagree, which happens with probability 2p(1 − p); with p = 0.9 the best rule errs 10% of the time and 1-NN 18%. If k also grows, slowly enough that k/n → 0, KNN's error approaches the Bayes error itself (it is "universally consistent"). The catch is "with enough data", which in high dimensions means an impossible amount.</p>
+  <p>The same neighbour search is useful well beyond classification. <code>RadiusNeighborsClassifier</code> votes among all training rows within a fixed distance instead of a fixed number, asking many neighbours in dense regions, few in sparse ones, and none at all far from the data, where it can answer "unknown". <code>KNNImputer</code> fills a missing value with the average of that column over the k most similar rows. Suppose B's mark was lost: B's two nearest students are D (2.00 away, mark 45) and A (2.24 away, mark 68), so the filled value is (45 + 68)/2 = 56.5.</p>
+  <div class="fx" data-lang="py">from sklearn.neighbors import RadiusNeighborsClassifier
+from sklearn.impute import KNNImputer
 rn = RadiusNeighborsClassifier(radius=2.5, outlier_label="unknown").fit(X, y)
-print("radius 2.5 around (4,5):", rn.predict(q), rn.predict_proba(q).round(3))
-print("radius 2.5 around (9,9):", rn.predict([[9, 9]]))
-nn = NearestNeighbors(n_neighbors=2).fit(X)
-d, i = nn.kneighbors([[4, 5]])
-print("NearestNeighbors (no labels):", students["name"].to_numpy()[i], d.round(3))</div>
-<div class="fx" data-lang="text">radius 2.5 around (4,5): ['Pass'] [[0.333 0.667]]
-radius 2.5 around (9,9): ['unknown']
-NearestNeighbors (no labels): [['A' 'B']] [[1. 2.]]</div>
-  <p>Within 2.5 of Q are A (1.0), B (2.0) and C (2.236): 2 Pass, 1 Fail. The point (9, 9) has nobody within 2.5, so it gets the outlier label. <code>NearestNeighbors</code> returns A and B with no voting at all.</p>
-  <h3>Filling missing values</h3>
-  <p><code>KNNImputer</code> fills a missing cell with the average of that column over the k most similar rows, where similarity is measured on the columns that are present. Suppose B's final mark was lost. B's two nearest students by (hours, mocks) are D (2.00 away, mark 45) and A (2.24 away, mark 68), so with k = 2 the fill is (45 + 68) / 2 = <strong>56.5</strong>.</p>
-<div class="fx" data-lang="py">from sklearn.impute import KNNImputer
+print("radius 2.5 around Q (4,5):", rn.predict(q), " around (9,9):", rn.predict([[9, 9]]))
 table = np.column_stack([X, marks]).astype(float)
-table[1, 2] = np.nan                                       # B's mark is missing
-print("B filled with:", KNNImputer(n_neighbors=2).fit_transform(table)[1])
-print("column mean would give:", np.nanmean(table[:, 2]).round(2))</div>
-<div class="fx" data-lang="text">B filled with: [ 4.   7.  56.5]
-column mean would give: 51.29</div>
-  <p>The imputer agrees: 56.5. Filling with the column mean (51.29, the average of the other seven marks) would ignore everything we know about B. More on imputation in <a class="xref" data-note="ml_features">Feature Engineering</a>.</p>
-  <h3>Other places KNN appears</h3>
-  <ul>
-    <li><strong>Anomaly detection</strong>: the distance to the k-th nearest neighbour is an outlier score (far from everyone = unusual). LOF refines it.</li>
-    <li><strong>Recommendation</strong>: user-based and item-based collaborative filtering are KNN on rating vectors with cosine similarity (<a class="xref" data-note="ml_cf">Collaborative Filtering</a>).</li>
-    <li><strong>Clustering and manifold methods</strong>: DBSCAN's k-distance plot, t-SNE and UMAP all start from a k-nearest-neighbour graph (<a class="xref" data-note="ml_dbscan">DBSCAN</a>, <a class="xref" data-note="ml_umap">UMAP</a>).</li>
-    <li><strong>Retrieval for LLMs</strong>: RAG finds the k nearest document chunks to a question embedding.</li>
-  </ul>
-  <div class="bridge"><b>What this still can't tell us →</b> the sklearn options are scattered across ten sections and were never tuned together. <b>Next: scikit-learn in practice.</b></div>
+table[1, 2] = np.nan                                              # B's mark is missing
+print("B's mark filled by KNNImputer(k=2):", KNNImputer(n_neighbors=2).fit_transform(table)[1, 2],
+      "  column mean would give:", np.nanmean(table[:, 2]).round(2))</div>
+  <div class="fx" data-lang="text">radius 2.5 around Q (4,5): ['Pass']  around (9,9): ['unknown']
+B's mark filled by KNNImputer(k=2): 56.5   column mean would give: 51.29</div>
+  <p>Within 2.5 of Q are A, B and C (2 Pass, 1 Fail), so Q is Pass; (9, 9) has nobody within 2.5, so it gets the outlier label. The imputer fills B's mark with 56.5, while the column mean, 51.29, would ignore everything we know about B. Beyond scikit-learn, the distance to the k-th nearest neighbour is a common anomaly score (far from everyone means unusual); user-based and item-based collaborative filtering are KNN on rating vectors with cosine similarity (<a class="xref" data-note="ml_cf">Collaborative Filtering</a>); DBSCAN, t-SNE and UMAP all start from a nearest-neighbour graph (<a class="xref" data-note="ml_dbscan">DBSCAN</a>, <a class="xref" data-note="ml_umap">UMAP</a>); and retrieval for LLMs finds the k document chunks nearest to a question's embedding.</p>
 
-  <h2 id="knn-sklearn"><span class="num">12</span>scikit-learn in Practice</h2>
-  <p><strong>The question we can't answer yet:</strong> we have used sklearn options one at a time (k, weights, p, algorithm). We still need them in one place, and a single honest procedure that tunes them together without leaking the test set.</p>
-  <h3>Every constructor parameter</h3>
-  <table class="tbl">
-    <tr><th>Parameter</th><th>Default</th><th>Meaning and advice</th></tr>
-    <tr><td><code>n_neighbors</code></td><td>5</td><td>k. Tune by CV.</td></tr>
-    <tr><td><code>weights</code></td><td>"uniform"</td><td>"distance" = 1/d votes, or any function of the distance array. Try both.</td></tr>
-    <tr><td><code>algorithm</code></td><td>"auto"</td><td>"brute", "kd_tree", "ball_tree". Changes speed only, never the answer (up to ties).</td></tr>
-    <tr><td><code>leaf_size</code></td><td>30</td><td>Points per tree leaf before switching to brute force inside it. Speed/memory knob only.</td></tr>
-    <tr><td><code>p</code></td><td>2</td><td>Minkowski power: 1 Manhattan, 2 Euclidean.</td></tr>
-    <tr><td><code>metric</code></td><td>"minkowski"</td><td>Any of "euclidean", "manhattan", "chebyshev", "cosine", "hamming", … or a callable (slow). "precomputed" lets you pass a distance matrix.</td></tr>
-    <tr><td><code>metric_params</code></td><td>None</td><td>Extra arguments for the metric (e.g. a weight vector).</td></tr>
-    <tr><td><code>n_jobs</code></td><td>None</td><td>Parallel neighbour search; −1 = all cores.</td></tr>
-  </table>
-  <p>After fitting: <code>classes_</code>, <code>n_samples_fit_</code>, <code>effective_metric_</code>, <code>_fit_method</code> (which algorithm "auto" chose). Methods: <code>predict</code>, <code>predict_proba</code>, <code>score</code>, <code>kneighbors(X, n_neighbors)</code>, <code>kneighbors_graph</code> (sparse n × n neighbour matrix). The regression twin is <code>KNeighborsRegressor</code> with the same parameters.</p>
-  <h3>Tuning k, weights and p together</h3>
-  <p>A pipeline (scaler + KNN), searched over 7 values of k × 2 weightings × 2 metrics = 28 settings with 5-fold CV on the training 70% of the wine data. Parameter names are <code>step__param</code>, where the step name is the lower-cased class name that <code>make_pipeline</code> generates.</p>
-<div class="fx" data-lang="py">from sklearn.model_selection import GridSearchCV
+  <h2 id="knn-practice"><span class="num">11</span>KNN in Practice</h2>
+  <p>scikit-learn's <code>KNeighborsClassifier</code> (and its twin <code>KNeighborsRegressor</code>) has only a few settings, and every one of them has appeared in this note. <code>n_neighbors</code> (default 5) is k. <code>weights</code> is "uniform" or "distance" (or your own function). <code>p</code> (default 2) is the Minkowski power, and <code>metric</code> chooses another distance such as "cosine" or "hamming", or "precomputed" if you pass a distance matrix. <code>algorithm</code> ("auto", "brute", "kd_tree", "ball_tree") and <code>leaf_size</code> change only the speed, never the answer (apart from ties). <code>n_jobs=-1</code> searches in parallel. After fitting, <code>kneighbors</code> returns the neighbours and distances, and <code>classes_</code> gives the column order of <code>predict_proba</code>.</p>
+  <p>The honest way to tune is a pipeline with the scaler, searched with cross-validation on the training part only, and the test set touched once at the end. Below we search k, the weighting and p together on 70% of the wine data. Parameter names have the form <code>step__parameter</code>, where the step name is the lower-cased class name that <code>make_pipeline</code> generates:</p>
+  <div class="fx" data-lang="py">from sklearn.model_selection import GridSearchCV
 Xwa, Xwb, ywa, ywb = train_test_split(Xw, yw, test_size=0.3, stratify=yw, random_state=0)
 pipe = make_pipeline(StandardScaler(), KNeighborsClassifier())
 grid = GridSearchCV(pipe, {"kneighborsclassifier__n_neighbors": [1, 3, 5, 7, 11, 15, 21],
                            "kneighborsclassifier__weights": ["uniform", "distance"],
-                           "kneighborsclassifier__p": [1, 2]}, cv=5, n_jobs=1)
-grid.fit(Xwa, ywa)
-print("best params :", grid.best_params_)
-print("best CV acc :", round(grid.best_score_, 3), "  test acc:", round(grid.score(Xwb, ywb), 3))</div>
-<div class="fx" data-lang="text">best params : {'kneighborsclassifier__n_neighbors': 21, 'kneighborsclassifier__p': 2, 'kneighborsclassifier__weights': 'uniform'}
-best CV acc : 0.968   test acc: 0.981</div>
-  <p>The search picked k = 21, uniform votes, Euclidean distance, with CV accuracy 0.968; the untouched test set gives 0.981. With 124 training rows, many settings are within one or two rows of each other, so do not over-read the exact winner.</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>The common error <code>ValueError: Expected n_neighbors &lt;= n_samples_fit</code> appears when k is larger than a CV training fold. With 5-fold CV each fold trains on only 80% of the rows, so keep k below that.</p>
-  </div>
-
-  <div class="bridge"><b>What this still can't tell us →</b> we called sklearn as a black box; we have not shown that nothing else happens inside. <b>Next: KNN from scratch, matched to sklearn.</b></div>
-
-  <h2 id="knn-scratch"><span class="num">13</span>From Scratch</h2>
-  <p><strong>The question we can't answer yet:</strong> sklearn gives the right answers, but is there anything hidden inside it? The only way to be sure we understand every step (distance, sort, vote, weights) is to rebuild it and match sklearn number for number.</p>
-  <p>The whole classifier is a distance matrix, a sort and a vote. The code below computes the Minkowski distance from every query to every training row with numpy broadcasting (an array of shape queries × rows × columns), keeps the k smallest per query with a stable sort, and adds up uniform or 1/d weights per class. The special case "exact match" gives all the weight to the matching rows, as sklearn does.</p>
-<div class="fx" data-lang="py">class KNNScratch:
-    def __init__(self, k=5, weights="uniform", p=2):
-        self.k, self.weights, self.p = k, weights, p
-
+                           "kneighborsclassifier__p": [1, 2]}, cv=5).fit(Xwa, ywa)
+print("best params:", grid.best_params_)
+print("best CV accuracy:", round(grid.best_score_, 3), "  test accuracy:", round(grid.score(Xwb, ywb), 3))</div>
+  <div class="fx" data-lang="text">best params: {'kneighborsclassifier__n_neighbors': 21, 'kneighborsclassifier__p': 2, 'kneighborsclassifier__weights': 'uniform'}
+best CV accuracy: 0.968   test accuracy: 0.981</div>
+  <p>The search picked k = 21 with uniform votes and Euclidean distance, with a cross-validated accuracy of 0.968, and the untouched test set gives 0.981. With 124 training rows, many settings are within a row or two of each other, so do not over-read the exact winner. (If you include a k larger than a cross-validation training fold, scikit-learn raises "Expected n_neighbors &lt;= n_samples_fit".)</p>
+  <p>To see that nothing else happens inside, here is the whole classifier from scratch: a matrix of distances from every query to every training row, a sort, and a weighted vote:</p>
+  <div class="fx" data-lang="py">class KNNScratch:
+    def __init__(self, k=5, weights="uniform"):
+        self.k, self.weights = k, weights
     def fit(self, X, y):
-        self.X = np.asarray(X, dtype=float)                # "training" = remembering
+        self.X = np.asarray(X, dtype=float)                       # "training" = remembering
         self.classes_, self.y = np.unique(y, return_inverse=True)
         return self
-
-    def _neighbours(self, Q):
-        diff = np.abs(np.asarray(Q, dtype=float)[:, None, :] - self.X[None, :, :])
-        D = (diff ** self.p).sum(axis=2) ** (1 / self.p)     # Minkowski distance, every query x every row
-        idx = np.argsort(D, axis=1, kind="stable")[:, :self.k]
-        return np.take_along_axis(D, idx, axis=1), idx
-
     def predict_proba(self, Q):
-        D, idx = self._neighbours(Q)
-        if self.weights == "uniform":
-            W = np.ones_like(D)
-        else:                                                # 1/d; an exact match takes all the weight
-            with np.errstate(divide="ignore"):
-                W = 1 / D
-            exact = np.isinf(W)
-            W[exact.any(axis=1)] = exact[exact.any(axis=1)]
-        votes = np.zeros((len(D), len(self.classes_)))
-        for c in range(len(self.classes_)):
-            votes[:, c] = (W * (self.y[idx] == c)).sum(axis=1)
+        D = np.sqrt(((np.asarray(Q, float)[:, None, :] - self.X[None]) ** 2).sum(axis=2))  # all distances
+        idx = np.argsort(D, axis=1, kind="stable")[:, :self.k]   # the k nearest per query
+        d = np.take_along_axis(D, idx, axis=1)
+        W = np.ones_like(d) if self.weights == "uniform" else 1 / np.maximum(d, 1e-12)
+        votes = np.stack([(W * (self.y[idx] == c)).sum(axis=1) for c in range(len(self.classes_))], axis=1)
         return votes / votes.sum(axis=1, keepdims=True)
-
     def predict(self, Q):
         return self.classes_[self.predict_proba(Q).argmax(axis=1)]
 
 print("students, k=5:", KNNScratch(5).fit(X, y).predict(q), KNNScratch(5, "distance").fit(X, y).predict_proba(q).round(3))
 sc = StandardScaler().fit(Xwa)
 A, B = sc.transform(Xwa), sc.transform(Xwb)
-for k, w, p in [(5, "uniform", 2), (7, "distance", 1), (15, "distance", 2)]:
-    mine = KNNScratch(k, w, p).fit(A, ywa)
-    sk = KNeighborsClassifier(k, weights=w, p=p).fit(A, ywa)
-    print(f"k={k:2d} {w:8s} p={p}: same predictions {np.mean(mine.predict(B) == sk.predict(B)):.3f}"
-          f"  max |proba diff| {np.abs(mine.predict_proba(B) - sk.predict_proba(B)).max():.1e}"
-          f"  test acc {np.mean(mine.predict(B) == ywb):.3f}")</div>
-<div class="fx" data-lang="text">students, k=5: ['Fail'] [[0.431 0.569]]
-k= 5 uniform  p=2: same predictions 1.000  max |proba diff| 0.0e+00  test acc 0.963
-k= 7 distance p=1: same predictions 1.000  max |proba diff| 1.1e-16  test acc 0.981
-k=15 distance p=2: same predictions 1.000  max |proba diff| 1.1e-16  test acc 0.981</div>
-  <p>First line: the scratch model reproduces the hand result for the students (k = 5 uniform → Fail; distance weights → 0.569 Pass). Then on scaled wine data, for three settings, it agrees with sklearn on every test prediction and every probability (differences of 1e−16 are floating-point rounding). Regression is even shorter:</p>
-<div class="fx" data-lang="py">def knn_regress(Xt, yt, Q, k=3, weights="uniform"):
-    D = np.sqrt(((np.asarray(Q, float)[:, None] - np.asarray(Xt, float)[None]) ** 2).sum(-1))
-    idx = np.argsort(D, axis=1, kind="stable")[:, :k]
-    d = np.take_along_axis(D, idx, axis=1)
-    w = np.ones_like(d) if weights == "uniform" else 1 / d
-    return (w * yt[idx]).sum(1) / w.sum(1)
-
-print(knn_regress(X, marks, [[4, 5], [12, 10]], 3).round(2), knn_regress(X, marks, [[4, 5], [12, 10]], 3, "distance").round(2))
-r = KNeighborsRegressor(10).fit(xtr, ytr_r)
-print("matches sklearn on the sine data:", np.allclose(knn_regress(xtr, ytr_r, xte, 10), r.predict(xte)))</div>
-<div class="fx" data-lang="text">[55.67 70.33] [59.31 71.51]
-matches sklearn on the sine data: True</div>
-  <p>The marks are the hand values 55.67 / 70.33 (plain) and 59.31 / 71.51 (weighted) for Q and the 12-hour student, and the sine predictions match sklearn's to floating-point precision.</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>The broadcasting trick builds a queries × rows × columns array. For 10,000 queries × 100,000 rows × 50 columns that is 50 billion numbers. Real implementations work in chunks and use ‖a − b‖² = ‖a‖² + ‖b‖² − 2a·b, which turns the work into one matrix multiplication.</p>
-  </div>
-
-  <div class="bridge"><b>What this still can't tell us →</b> we can build and tune KNN, but not yet say when it is the right model to choose. <b>Next: strengths and weaknesses.</b></div>
-
-  <h2 id="knn-pros"><span class="num">14</span>Strengths and Weaknesses</h2>
-  <p><strong>The question we can't answer yet:</strong> we know how KNN works and how to tune it. When should we actually choose it over other models, and when is it the wrong tool?</p>
-  <div class="cards">
-    <div><b>No assumptions</b><p>Any boundary shape; works for many classes at once without one-vs-rest tricks.</p><small>Good when the boundary is irregular</small></div>
-    <div><b>Instant training, easy updates</b><p>Add or delete rows any time; no retraining. Useful when data changes often.</p><small>"Online" for free</small></div>
-    <div><b>Explainable by example</b><p>"These 5 similar cases were approved" is easy to show a customer or doctor.</p><small>Case-based reasoning</small></div>
-    <div><b>Strong baseline</b><p>Few hyperparameters (k, weights, metric). If a fancy model cannot beat scaled KNN, something is wrong.</p><small>Also a quick sanity check on features</small></div>
-  </div>
-  <div class="cards">
-    <div><b>Slow prediction, big memory</b><p>Stores all n rows; brute force O(n·d) per query.</p><small>Needs trees or ANN at scale</small></div>
-    <div><b>Needs scaling and good features</b><p>Cannot learn which columns matter; irrelevant columns ruin it.</p><small>Scale + select features</small></div>
-    <div><b>Curse of dimensionality</b><p>Fades beyond ~20 informative dimensions unless the data lies on a low-dimensional surface.</p><small>Use PCA / embeddings first</small></div>
-    <div><b>Weak with imbalance, no extrapolation</b><p>Majority swamps neighbourhoods; regression is flat outside the data; probabilities are coarse.</p><small>Threshold, resample, calibrate</small></div>
-  </div>
-  <p><strong>Use KNN</strong> for small-to-medium tables (up to perhaps 100k rows) with a few meaningful, scaled numeric columns; as a baseline; for similarity search over good embeddings; and for imputation. <strong>Avoid it</strong> for wide raw tables, very large data with tight latency limits (unless with an ANN index), and when you need to extrapolate.</p>
-
-  <div class="bridge"><b>What this still can't tell us →</b> the strengths and weaknesses are clear in isolation, but a model is always chosen against alternatives. <b>Next: comparisons with the sibling models and with K-means.</b></div>
-
-  <h2 id="knn-compare"><span class="num">15</span>Comparisons</h2>
-  <p><strong>The question we can't answer yet:</strong> section 14 judged KNN on its own. Interviews ask "why KNN and not logistic regression, an SVM or a tree?", and "how is it different from K-means?" We need the side-by-side view.</p>
-  <h3>Against its siblings</h3>
+for k, w in [(5, "uniform"), (15, "distance")]:
+    mine = KNNScratch(k, w).fit(A, ywa).predict_proba(B)
+    sk = KNeighborsClassifier(k, weights=w).fit(A, ywa).predict_proba(B)
+    print(f"wine, k={k} {w}: largest probability difference from sklearn {np.abs(mine - sk).max():.1e}")</div>
+  <div class="fx" data-lang="text">students, k=5: ['Fail'] [[0.431 0.569]]
+wine, k=5 uniform: largest probability difference from sklearn 0.0e+00
+wine, k=15 distance: largest probability difference from sklearn 1.1e-16</div>
+  <p>It reproduces the students' results (k = 5 gives Fail; with distance weights, 0.569 Pass) and agrees with scikit-learn on every wine probability to within 10⁻¹⁶, which is rounding. One caution about this compact version: it builds a queries × rows × columns array, which for 10,000 queries, 100,000 rows and 50 columns is 50 billion numbers. Real implementations work in chunks and use ‖a − b‖² = ‖a‖² + ‖b‖² − 2a·b, which turns the work into one matrix multiplication.</p>
+  <p>So when should you choose KNN? Its strengths are that it assumes nothing about the boundary, handles many classes naturally, needs no training (so adding or removing data is instant), explains itself by example ("these five similar cases were approved"), and has very few hyperparameters, which makes scaled KNN a good sanity-check baseline. Its weaknesses are slow prediction and large memory on big data, dependence on scaling and good features, the curse of dimensionality beyond about 20 informative columns, weakness on imbalanced data, coarse probabilities and no extrapolation. Use it for small-to-medium tables with a few meaningful numeric columns, for similarity search over good embeddings, and for imputation; avoid it for wide raw tables, for very large data with tight time limits (unless with an ANN index), and for anything that must extrapolate.</p>
   <table class="tbl">
     <tr><th></th><th>KNN</th><th><a class="xref" data-note="ml_classification">Logistic Regression</a></th><th><a class="xref" data-note="ml_naivebayes">Naive Bayes</a></th><th><a class="xref" data-note="ml_svm">SVM</a></th><th><a class="xref" data-note="ml_dtree">Decision Tree</a></th></tr>
-    <tr><td>What is learned</td><td>nothing (stores rows)</td><td>one weight per column</td><td>per-class counts / means</td><td>support vectors + weights</td><td>a tree of questions</td></tr>
-    <tr><td>Boundary</td><td>any shape</td><td>straight</td><td>straight / quadratic</td><td>straight or curved (kernel)</td><td>axis-aligned boxes</td></tr>
-    <tr><td>Training cost</td><td>none</td><td>fast</td><td>fastest</td><td>O(n²)–O(n³) with kernels</td><td>O(n·d·log n)</td></tr>
-    <tr><td>Prediction cost</td><td>slow, O(n·d)</td><td>O(d)</td><td>O(d)</td><td>O(#SV · d)</td><td>O(depth)</td></tr>
+    <tr><td>What is learned</td><td>nothing; stores the rows</td><td>one weight per column</td><td>counts / means per class</td><td>support vectors + weights</td><td>a tree of questions</td></tr>
+    <tr><td>Boundary</td><td>any shape</td><td>straight</td><td>straight or quadratic</td><td>straight or curved (kernel)</td><td>axis-aligned boxes</td></tr>
+    <tr><td>Training / prediction</td><td>none / slow, O(n·d)</td><td>fast / O(d)</td><td>fastest / O(d)</td><td>slow with kernels / O(#SV·d)</td><td>medium / O(depth)</td></tr>
     <tr><td>Needs scaling</td><td>yes</td><td>yes (with penalty)</td><td>no</td><td>yes</td><td>no</td></tr>
-    <tr><td>Many columns</td><td>poor</td><td>good</td><td>good (text)</td><td>good</td><td>good</td></tr>
-    <tr><td>Probabilities</td><td>coarse vote shares</td><td>well calibrated</td><td>too extreme</td><td>none by default</td><td>coarse</td></tr>
-    <tr><td>Hyperparameters</td><td>k, weights, metric</td><td>C</td><td>smoothing α</td><td>C, kernel, γ</td><td>depth, leaf size</td></tr>
+    <tr><td>Many columns</td><td>poor</td><td>good</td><td>good</td><td>good</td><td>good</td></tr>
   </table>
-  <h3>KNN vs K-means: the classic confusion</h3>
-  <table class="tbl">
-    <tr><th></th><th>KNN</th><th><a class="xref" data-note="ml_kmeans">K-Means</a></th></tr>
-    <tr><td>Type</td><td>supervised (needs labels)</td><td>unsupervised (no labels)</td></tr>
-    <tr><td>k means</td><td>number of neighbours asked</td><td>number of clusters to create</td></tr>
-    <tr><td>Output</td><td>a label or value for a new row</td><td>a group id for every row</td></tr>
-    <tr><td>Training</td><td>none</td><td>iterative (Lloyd's algorithm)</td></tr>
-    <tr><td>Shared</td><td colspan="2">both use distances, so both need scaling and suffer in high dimensions</td></tr>
-  </table>
+  <p>One comparison deserves its own paragraph because it is a classic interview trap: KNN is not <a class="xref" data-note="ml_kmeans">K-means</a>. KNN is supervised: it needs labels, k is the number of neighbours asked, and it predicts a label or value for a new row. K-means is unsupervised clustering: it has no labels, k is the number of clusters to create, and it iteratively moves k centres to group the rows. They share only the use of distances, which means both need scaled features and both suffer in high dimensions. And looking ahead, an <a class="xref" data-note="ml_svm">SVM</a> with an RBF kernel also predicts from similarity to training points, but it learns which points matter and keeps only the few on the border.</p>
 
-  <div class="bridge"><b>What this still can't tell us →</b> we have compared KNN with other models, but we have not yet seen all of KNN's own concepts on one page, built from each other. <b>Next: how it all connects.</b></div>
-
-  <h2 id="knn-connect"><span class="num">16</span>How It All Connects</h2>
-  <p><strong>The question we can't answer yet:</strong> we learned distance, k, voting, weights, scaling, regression, the curse, trees and imbalance one at a time. How does each one feed the next, and which question does each answer? Here is the whole note as one pipeline, run on the eight students and Q.</p>
-<figure class="viz"><svg viewBox="0 0 660 330" width="660">
-<defs><marker id="knn-cx" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="10" y="20" width="130" height="44" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="75.0" y="38" text-anchor="middle" font-size="12.5" font-weight="700">8 students + Q</text><text x="75.0" y="54" text-anchor="middle" font-size="10.5" class="tm">stored = the model</text>
-<rect x="170" y="20" width="130" height="44" rx="8" class="fb" stroke="currentColor" stroke-opacity="0.5"/><text x="235.0" y="38" text-anchor="middle" font-size="12.5" font-weight="700">Scale (06)</text><text x="235.0" y="54" text-anchor="middle" font-size="10.5" class="tm">z = (x − mean)/std</text>
-<rect x="330" y="20" width="130" height="44" rx="8" class="fb" stroke="currentColor" stroke-opacity="0.5"/><text x="395.0" y="38" text-anchor="middle" font-size="12.5" font-weight="700">Distance (02)</text><text x="395.0" y="54" text-anchor="middle" font-size="10.5" class="tm">Q→A = 1.000</text>
-<rect x="490" y="20" width="150" height="44" rx="8" class="fb" stroke="currentColor" stroke-opacity="0.5"/><text x="565.0" y="38" text-anchor="middle" font-size="12.5" font-weight="700">Rank (03)</text><text x="565.0" y="54" text-anchor="middle" font-size="10.5" class="tm">A, B, C, D, E, …</text>
-<line x1="140" y1="42" x2="168" y2="42" stroke="currentColor" marker-end="url(#knn-cx)"/>
-<line x1="300" y1="42" x2="328" y2="42" stroke="currentColor" marker-end="url(#knn-cx)"/>
-<line x1="460" y1="42" x2="488" y2="42" stroke="currentColor" marker-end="url(#knn-cx)"/>
-<rect x="490" y="110" width="150" height="44" rx="8" class="ft" stroke="currentColor" stroke-opacity="0.5"/><text x="565.0" y="128" text-anchor="middle" font-size="12.5" font-weight="700">Take k nearest (04)</text><text x="565.0" y="144" text-anchor="middle" font-size="10.5" class="tm">k=3 by LOOCV</text>
-<line x1="565" y1="64" x2="565" y2="108" stroke="currentColor" marker-end="url(#knn-cx)"/>
-<rect x="330" y="110" width="130" height="44" rx="8" class="fg" stroke="currentColor" stroke-opacity="0.5"/><text x="395.0" y="128" text-anchor="middle" font-size="12.5" font-weight="700">Vote / average</text><text x="395.0" y="144" text-anchor="middle" font-size="10.5" class="tm">2:1 → Pass</text>
-<line x1="490" y1="132" x2="462" y2="132" stroke="currentColor" marker-end="url(#knn-cx)"/>
-<rect x="170" y="110" width="130" height="44" rx="8" class="fg" stroke="currentColor" stroke-opacity="0.5"/><text x="235.0" y="128" text-anchor="middle" font-size="12.5" font-weight="700">Weights (05)</text><text x="235.0" y="144" text-anchor="middle" font-size="10.5" class="tm">1/d: 0.569 Pass</text>
-<line x1="330" y1="132" x2="302" y2="132" stroke="currentColor" marker-end="url(#knn-cx)"/>
-<rect x="10" y="110" width="130" height="44" rx="8" class="fg" stroke="currentColor" stroke-opacity="0.5"/><text x="75.0" y="128" text-anchor="middle" font-size="12.5" font-weight="700">Regression (07)</text><text x="75.0" y="144" text-anchor="middle" font-size="10.5" class="tm">mean of marks 55.67</text>
-<line x1="170" y1="132" x2="142" y2="132" stroke="currentColor" marker-end="url(#knn-cx)"/>
-<rect x="170" y="210" width="160" height="44" rx="8" class="fr" stroke="currentColor" stroke-opacity="0.5"/><text x="250.0" y="228" text-anchor="middle" font-size="12.5" font-weight="700">Curse of dim. (08)</text><text x="250.0" y="244" text-anchor="middle" font-size="10.5" class="tm">breaks Distance</text>
-<line x1="300" y1="210" x2="380" y2="66" stroke="currentColor" stroke-dasharray="4 3" class="sr" marker-end="url(#knn-cx)"/>
-<rect x="350" y="210" width="150" height="44" rx="8" class="fv" stroke="currentColor" stroke-opacity="0.5"/><text x="425.0" y="228" text-anchor="middle" font-size="12.5" font-weight="700">KD-tree / ANN (09)</text><text x="425.0" y="244" text-anchor="middle" font-size="10.5" class="tm">skips most distances</text>
-<line x1="440" y1="210" x2="420" y2="66" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#knn-cx)"/>
-<rect x="520" y="210" width="130" height="44" rx="8" class="fr" stroke="currentColor" stroke-opacity="0.5"/><text x="585.0" y="228" text-anchor="middle" font-size="12.5" font-weight="700">Imbalance (10)</text><text x="585.0" y="244" text-anchor="middle" font-size="10.5" class="tm">threshold on votes</text>
-<line x1="560" y1="210" x2="420" y2="156" stroke="currentColor" stroke-dasharray="4 3" class="sr" marker-end="url(#knn-cx)"/>
-<text x="330" y="290" text-anchor="middle" font-size="11.5" class="tm">Solid arrows: the prediction pipeline for Q. Dashed: what breaks (red) or speeds up (violet) a step.</text>
-<text x="330" y="310" text-anchor="middle" font-size="11.5" class="tm">Numbers in brackets are the note's section numbers.</text>
-</svg><figcaption>Every concept in this note is one step of a single pipeline that turns the eight students into a prediction for Q, or something that breaks or speeds up a step.</figcaption></figure>
-  <table class="tbl">
-    <tr><th>Concept</th><th>Question it answers</th><th>Built from</th><th>On the students (Q = (4, 5))</th><th>Robust or sensitive?</th></tr>
-    <tr><td>Stored data</td><td>What is the model?</td><td>—</td><td>8 rows (hours, mocks, result, mark)</td><td>sensitive to duplicates and label noise</td></tr>
-    <tr><td>Scaling (z-score)</td><td>Are columns comparable?</td><td>column mean and std</td><td>Q → (0.113, 0.182); same if hours are in minutes</td><td>std is sensitive to outliers (use robust scaling then)</td></tr>
-    <tr><td>Distance</td><td>How similar are two rows?</td><td>scaled columns + a metric</td><td>Q→A 1.000 (raw), 0.450 (scaled); Q→H 4.472 Euclid, 6 Manhattan</td><td>sensitive to scale and to irrelevant columns</td></tr>
-    <tr><td>Ranking</td><td>Who are the neighbours?</td><td>distances, sorted</td><td>A, B, C, D, E, F, G, H</td><td>ties at the k-th place depend on row order</td></tr>
-    <tr><td>k</td><td>How many to ask?</td><td>LOOCV / CV errors</td><td>errors: k=1 → 2, k=3 → 0, k=5 → 2, k=7 → 8</td><td>small k: high variance; large k: high bias</td></tr>
-    <tr><td>Vote</td><td>Which class?</td><td>labels of the k nearest</td><td>k=3: 2 Pass : 1 Fail → Pass, P = 0.667</td><td>coarse probabilities (multiples of 1/k)</td></tr>
-    <tr><td>Weighted vote</td><td>Should closer count more?</td><td>votes × 1/d</td><td>k=5: Pass 1.500 vs Fail 1.134 → P = 0.569</td><td>less sensitive to k; exact matches dominate</td></tr>
-    <tr><td>Regression</td><td>Which number?</td><td>mean of neighbours' targets</td><td>mark k=3: 55.67 (weighted 59.31)</td><td>cannot extrapolate (12-hour student → 70.33)</td></tr>
-    <tr><td>Curse of dimensionality</td><td>What do extra columns do?</td><td>distance over many columns</td><td>50 noise columns: nearest/farthest 0.22 → 0.81</td><td>KNN's biggest weakness</td></tr>
-    <tr><td>KD-tree</td><td>Can we skip distances?</td><td>median cuts + triangle inequality</td><td>(8, 3): 3 of 8 distances; Q: 7 of 8</td><td>fails in high dimensions</td></tr>
-    <tr><td>Threshold</td><td>What if a class is rare?</td><td>vote shares</td><td>"Pass if ≥ 40% of 5 neighbours" → Q Pass</td><td>needs a business choice of cost</td></tr>
-  </table>
-  <h3>Which concept to reach for, when</h3>
-  <table class="tbl">
-    <tr><th>Situation</th><th>Reach for</th><th>Why</th></tr>
-    <tr><td>Columns in different units</td><td>StandardScaler in a pipeline</td><td>Distance must not depend on units</td></tr>
-    <tr><td>Answer flips with k</td><td>CV over odd k; distance weights</td><td>Query is near the border; let held-out data decide</td></tr>
-    <tr><td>Text, embeddings</td><td>cosine metric (or normalise + Euclid)</td><td>Direction matters, length does not</td></tr>
-    <tr><td>More than ~20 columns</td><td>feature selection / PCA first</td><td>Distances concentrate, noise columns scramble neighbours</td></tr>
-    <tr><td>Millions of rows, few columns</td><td>KD-tree / ball tree</td><td>Prunes whole regions</td></tr>
-    <tr><td>Millions of embedding vectors</td><td>ANN index (HNSW, IVF)</td><td>Trees fail in high dimensions</td></tr>
-    <tr><td>Rare positive class</td><td>lower vote threshold, resampling</td><td>Majority swamps neighbourhoods</td></tr>
-    <tr><td>Need a number, inside the data range</td><td>KNeighborsRegressor</td><td>Local average; never use it to extrapolate</td></tr>
-  </table>
-  <div class="bridge"><b>What this still can't tell us →</b> the pipeline shows how the concepts fit; it does not list the mistakes people actually make with them. <b>Next: common mistakes.</b></div>
-
-  <h2 id="knn-traps"><span class="num">17</span>Common Mistakes</h2>
-  <p><strong>The question we can't answer yet:</strong> we have met each trap inside its own section. Which mistakes are the common ones in real projects and interviews, in one list?</p>
-  <div class="callout trap"><span class="label">Trap: forgetting to scale</span>
-    <p>The single most common KNN bug. Wine: 0.691 unscaled vs 0.949 scaled. Put the scaler in a pipeline.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: scaling before the split</span>
-    <p>Fitting the scaler on all data leaks test statistics into training. Fit it on training folds only (pipeline inside CV).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: choosing k by training accuracy</span>
-    <p>k = 1 (and any k with distance weights) gives 100% training accuracy. Use cross-validation.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: even k for two classes</span>
-    <p>2 vs 2 ties are broken in favour of the first class in <code>classes_</code>, silently. Use odd k or distance weights.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: throwing every column in</span>
-    <p>Irrelevant or one-hot-exploded columns drown the useful ones (0.907 → 0.652 with 128 noise columns). Select or compress features.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: duplicates across train and test</span>
-    <p>If the same customer appears in both, 1-NN finds the copy at distance 0 and scores look perfect. Deduplicate or split by group (<code>GroupKFold</code>).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: trusting KD-trees in high dimensions</span>
-    <p>At d = 40 our KD-tree was many times slower than brute force. Let <code>algorithm="auto"</code> decide, or use ANN for large embedding sets.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: using vote shares as calibrated risk</span>
-    <p>With k = 5 the only possible probabilities are multiples of 0.2. Calibrate before using them as real probabilities.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: confusing KNN with K-means</span>
-    <p>Different problems (supervised vs clustering), different meaning of k. Say it clearly in interviews.</p>
-  </div>
-
-  <div class="bridge"><b>What this still can't tell us →</b> everything is now explained, but it is spread over seventeen sections. <b>Next: the whole note condensed into one revision sheet.</b></div>
+  <h2 id="knn-traps"><span class="num">12</span>Common Mistakes</h2>
+  <p>The single most common KNN bug is forgetting to scale. Section 06 showed the damage: in minutes, the mocks column vanished from the distance, and on the wine data accuracy fell from 0.949 to 0.691. Close behind is scaling the wrong way: fitting <code>StandardScaler</code> on the whole dataset before splitting, which leaks the test rows' means and spreads into training. Both are fixed by the same habit, always putting the scaler and the model together in a pipeline:</p>
+  <div class="fx" data-lang="py">model = make_pipeline(StandardScaler(), KNeighborsClassifier(n_neighbors=15))   # scaler refitted on each training fold
+print("wine, CV accuracy with the scaler inside the pipeline:", cross_val_score(model, Xwa, ywa, cv=5).mean().round(3))</div>
+  <div class="fx" data-lang="text">wine, CV accuracy with the scaler inside the pipeline: 0.944</div>
+  <p>Choosing k by training accuracy is the next mistake: k = 1, and any k with distance weights, scores 100% on the training data because every row is its own nearest neighbour. Use cross-validation. Using an even k with two classes lets votes tie, and the tie silently goes to the first class in <code>classes_</code>; use odd k or distance weights.</p>
+  <p>A sneakier mistake is having the same row in both training and test sets, for example when a customer appears twice in the data. 1-NN then finds the copy at distance zero and the scores look far better than reality. Below, 100 rows of the moons data were accidentally duplicated before the split:</p>
+  <div class="fx" data-lang="py">Xd = np.vstack([Xtr, Xtr[:100]]); yd = np.append(ytr, ytr[:100])   # 100 rows accidentally duplicated
+Xd_tr, Xd_te, yd_tr, yd_te = train_test_split(Xd, yd, test_size=0.3, random_state=1)
+m1 = KNeighborsClassifier(1).fit(Xd_tr, yd_tr)
+copies = (np.abs(Xd_te[:, None] - Xd_tr[None]).sum(-1) == 0).any(1)  # test rows with an exact copy in train
+print(f"1-NN accuracy on test rows that have a copy in training: {m1.score(Xd_te[copies], yd_te[copies]):.3f}")
+print(f"1-NN accuracy on genuinely new test rows               : {m1.score(Xd_te[~copies], yd_te[~copies]):.3f}")</div>
+  <div class="fx" data-lang="text">1-NN accuracy on test rows that have a copy in training: 1.000
+1-NN accuracy on genuinely new test rows               : 0.913</div>
+  <p>On test rows whose copy landed in training, 1-NN is 100% accurate; on genuinely new rows it is 91.3%. The overall test score is inflated by the copies. Remove duplicates before splitting, or split by group (for example with <code>GroupKFold</code>) so that all rows of one customer stay on the same side.</p>
+  <p>Finally, three design mistakes. Throwing every available column into the distance lets irrelevant and one-hot-exploded columns drown the useful ones (moons accuracy fell from 0.907 to 0.652 with 128 noise columns); select or compress features first. Forcing a KD-tree on high-dimensional data makes search slower, not faster; let <code>algorithm="auto"</code> decide, or use an ANN index for large embedding sets. And in interviews, confusing KNN with K-means: different problems (supervised versus clustering), and k means something different in each.</p>
 
   <h2 id="knn-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>Everything in this note on one page. The running example: eight past students (hours studied per day, mock tests taken, result, mark) and a new student <strong>Q = (4 hours, 5 mocks)</strong>. A (5,5) Pass 68 · B (4,7) Pass 61 · C (2,4) Fail 38 · D (2,7) Fail 45 · E (1,5) Fail 30 · F (7,6) Pass 82 · G (7,2) Pass 71 · H (2,1) Fail 25.</p>
-  <h3>The question ladder</h3>
+  <h3>Definitions</h3>
+  <ul>
+    <li><b>KNN classification</b>: majority class among the k nearest training rows; P̂(c | x) = (neighbours of class c)/k.</li>
+    <li><b>KNN regression</b>: average (or 1/d-weighted average) of the k nearest targets.</li>
+    <li><b>Lazy / instance-based / non-parametric</b>: fit only stores data; the data is the model; size grows with n.</li>
+    <li><b>Weighted KNN</b>: vote weight 1/d; an exact match (d = 0) takes all the weight.</li>
+    <li><b>Standardisation</b>: z = (x − mean)/std per column, learned on training data.</li>
+    <li><b>Curse of dimensionality</b>: with many columns, neighbourhoods stop being local and distances concentrate.</li>
+    <li><b>Cover–Hart</b>: with infinite data, 1-NN error ≤ 2 × Bayes error.</li>
+  </ul>
+  <h3>Distances</h3>
   <table class="tbl">
-    <tr><th>Step</th><th>Question</th><th>Answer</th><th>What it leaves open</th></tr>
-    <tr><td>1. Idea</td><td>How to predict with no assumed boundary?</td><td>Copy the outcome of the most similar past rows</td><td>"Similar" needs a number</td></tr>
-    <tr><td>2. Distance</td><td>How far apart are two rows?</td><td>Euclid, Manhattan, Minkowski, Chebyshev, cosine</td><td>Distances are not a prediction</td></tr>
-    <tr><td>3. Vote</td><td>What do we predict?</td><td>Majority of the k nearest (mean for numbers)</td><td>Answer flips with k</td></tr>
-    <tr><td>4. Choosing k</td><td>Which k?</td><td>Cross-validation (LOOCV on small data)</td><td>Near and far neighbours count equally</td></tr>
-    <tr><td>5. Weights</td><td>Should closer count more?</td><td>Weight each vote by 1/d</td><td>Assumes columns are comparable</td></tr>
-    <tr><td>6. Scaling</td><td>What if units differ?</td><td>Standardise columns (z-scores) in a pipeline</td><td>Only classes so far</td></tr>
-    <tr><td>7. Regression</td><td>Can we predict a number?</td><td>Average neighbours' targets</td><td>No extrapolation; only 2 columns so far</td></tr>
-    <tr><td>8. Curse</td><td>What do many columns do?</td><td>Neighbourhoods stop being local; distances concentrate</td><td>Every query still measures all n rows</td></tr>
-    <tr><td>9. Speed</td><td>Can we skip distances?</td><td>KD-tree, ball tree (low d), ANN (high d)</td><td>What the votes mean</td></tr>
-    <tr><td>10. Votes</td><td>Ties, probabilities, rare classes?</td><td>Odd k, coarse probabilities, lower threshold</td><td>How good can it be?</td></tr>
-    <tr><td>11. Theory</td><td>Limits and other uses?</td><td>1-NN ≤ 2 × Bayes error; imputation, recsys, anomaly</td><td>—</td></tr>
+    <tr><th>Metric</th><th>Formula</th><th>Q (4,5) → H (2,1)</th><th>Use for</th></tr>
+    <tr><td>Euclidean</td><td>√Σ(aᵢ − bᵢ)²</td><td>4.472</td><td>default, scaled numeric columns</td></tr>
+    <tr><td>Manhattan</td><td>Σ|aᵢ − bᵢ|</td><td>6</td><td>many columns, outliers</td></tr>
+    <tr><td>Chebyshev</td><td>max|aᵢ − bᵢ|</td><td>4</td><td>"close in every column"</td></tr>
+    <tr><td>Minkowski</td><td>(Σ|aᵢ − bᵢ|ᵖ)^(1/p)</td><td>p=3: 4.160</td><td>tune p</td></tr>
+    <tr><td>Cosine</td><td>1 − a·b/(‖a‖‖b‖)</td><td>0.092</td><td>text, embeddings (ignores length)</td></tr>
   </table>
-  <h3>Definitions and formulas</h3>
-  <table class="tbl">
-    <tr><th>Term</th><th>Formula / meaning</th><th>Symbols</th></tr>
-    <tr><td>KNN classifier</td><td>ŷ = most common class among N_k(x); P̂(c|x) = (#neighbours of class c)/k</td><td>N_k(x) = the k training rows closest to x</td></tr>
-    <tr><td>KNN regressor</td><td>ŷ = (1/k) Σ yᵢ over N_k(x)</td><td>yᵢ = target of neighbour i</td></tr>
-    <tr><td>Weighted KNN</td><td>class score = Σ wᵢ·1[yᵢ = c], wᵢ = 1/dᵢ; regression Σwᵢyᵢ / Σwᵢ</td><td>dᵢ = distance to neighbour i; d = 0 takes all weight</td></tr>
-    <tr><td>Euclidean</td><td>√Σⱼ(aⱼ − bⱼ)²</td><td>j runs over columns</td></tr>
-    <tr><td>Manhattan</td><td>Σⱼ|aⱼ − bⱼ|</td><td></td></tr>
-    <tr><td>Minkowski</td><td>(Σⱼ|aⱼ − bⱼ|ᵖ)^(1/p)</td><td>p=1 Manhattan, p=2 Euclid, p→∞ Chebyshev max|aⱼ − bⱼ|</td></tr>
-    <tr><td>Cosine distance</td><td>1 − a·b / (‖a‖‖b‖)</td><td>‖a‖ = √Σaⱼ²; ignores vector length</td></tr>
-    <tr><td>z-score</td><td>z = (x − mean)/std</td><td>mean, std of the column on training data</td></tr>
-    <tr><td>Bias-variance (regression)</td><td>E[error] = σ² + bias² + σ²/k</td><td>σ² = noise variance; σ²/k = variance of a k-average</td></tr>
-    <tr><td>Curse (cube side)</td><td>side = r^(1/d) to hold share r of uniform data</td><td>10% in d=10 → 0.794 of each axis</td></tr>
-    <tr><td>Cover–Hart</td><td>error(1-NN, n → ∞) ≤ 2 · Bayes error</td><td>2-class: 2p(1 − p)</td></tr>
-  </table>
-  <h3>The running example's numbers</h3>
+  <h3>The students' numbers</h3>
   <table class="tbl">
     <tr><th>Quantity</th><th>Value</th></tr>
-    <tr><td>Distances Q→A…H (Euclid)</td><td>1.000, 2.000, 2.236, 2.828, 3.000, 3.162, 4.243, 4.472</td></tr>
-    <tr><td>Q→H in other metrics</td><td>Manhattan 6 · Chebyshev 4 · Minkowski p=3 4.160 · cosine 0.092</td></tr>
-    <tr><td>Predictions by k</td><td>k=1 Pass · k=3 Pass (0.667) · k=5 Fail (P(Pass) 0.4) · k=7 Pass (0.571)</td></tr>
-    <tr><td>LOOCV errors</td><td>k=1: 2 · k=3: 0 · k=5: 2 · k=7: 8 (k = n−1 predicts the opposite class)</td></tr>
-    <tr><td>Weighted, k=5 / k=7</td><td>P(Pass) 0.569 / 0.644</td></tr>
-    <tr><td>Scaling</td><td>mean (3.75, 4.625), std (2.222, 2.058); Q z = (0.113, 0.182); Q→A 0.450</td></tr>
-    <tr><td>Marks for Q</td><td>k=1 68 · k=3 55.67 (weighted 59.31) · k=5 48.40 · k=8 52.50</td></tr>
-    <tr><td>Extrapolation</td><td>12 hours, 10 mocks, k=3 → 70.33 (below F's 82)</td></tr>
-    <tr><td>Curse</td><td>nearest/farthest: 0 noise cols 0.22 · 50 noise cols 0.81</td></tr>
-    <tr><td>KD-tree</td><td>root B (x=4); (8,3) → G with 3 of 8 distances</td></tr>
-    <tr><td>Imputation</td><td>B's missing mark → (45 + 68)/2 = 56.5</td></tr>
+    <tr><td>Distances Q → A…H</td><td>1.000, 2.000, 2.236, 2.828, 3.000, 3.162, 4.243, 4.472</td></tr>
+    <tr><td>Votes</td><td>k=1 Pass · k=3 Pass (0.667) · k=5 Fail (0.4) · k=7 Pass (0.571)</td></tr>
+    <tr><td>LOOCV errors</td><td>k=1: 2 · k=3: 0 · k=5: 2 · k=7: 8 of 8</td></tr>
+    <tr><td>Weighted, k = 5</td><td>Pass 1.500 vs Fail 1.134 → 0.569</td></tr>
+    <tr><td>z-scores</td><td>mean (3.75, 4.625), std (2.222, 2.058); Q → (0.113, 0.182)</td></tr>
+    <tr><td>Marks for Q</td><td>k=1: 68 · k=3: 55.67 (weighted 59.31) · k=8: 52.50; 12 h, 10 mocks → 70.33</td></tr>
+    <tr><td>KD-tree</td><td>root B (hours = 4); (8, 3) → G with 3 of 8 distances</td></tr>
   </table>
-  <h3>When to use, when not</h3>
-  <div class="cards">
-    <div><b>Use KNN</b><p>Small-to-medium tables with a few meaningful, scaled numeric columns; irregular boundaries; a quick baseline; similarity search on good embeddings; imputation.</p><small>Instant training, explain by example</small></div>
-    <div><b>Avoid KNN</b><p>Many raw or irrelevant columns; millions of rows with strict latency and no ANN index; need to extrapolate; need calibrated probabilities without extra work.</p><small>Use linear models, trees or boosting</small></div>
-  </div>
-  <h3>Key traps</h3>
-  <ul>
-    <li><strong>No scaling</strong> → the column with the biggest numbers decides everything (minutes hid mocks; wine 0.691 vs 0.949).</li>
-    <li><strong>Scaler fitted before the split</strong> → leakage; put it in a pipeline.</li>
-    <li><strong>k chosen on training accuracy</strong> → always k = 1 (100%). Use CV.</li>
-    <li><strong>Even k with two classes</strong> → ties go silently to the first class.</li>
-    <li><strong>Too many columns</strong> → neighbours become random; select or compress features.</li>
-    <li><strong>KD-trees in high dimensions</strong> → slower than brute force.</li>
-    <li><strong>Vote shares as probabilities</strong> → coarse and over-confident; calibrate.</li>
-    <li><strong>KNN vs K-means</strong> → supervised voting vs unsupervised clustering.</li>
-  </ul>
-  <h3>Five rapid-fire checks</h3>
-  <table class="tbl">
-    <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td>Manhattan distance from Q (4,5) to H (2,1)?</td><td>2 + 4 = 6</td></tr>
-    <tr><td>Why does k = 7 get all 8 LOOCV predictions wrong?</td><td>It asks all other 7 students, whose majority is always the opposite class of the one left out</td></tr>
-    <tr><td>Weighted vote for Q with k = 5?</td><td>Pass 1 + 0.5 = 1.5 vs Fail 0.447 + 0.354 + 0.333 = 1.134 → Pass, 0.569</td></tr>
-    <tr><td>Training accuracy of 1-NN?</td><td>100%: every row is its own nearest neighbour</td></tr>
-    <tr><td>Cost of one brute-force prediction?</td><td>O(n·d): one distance per stored row</td></tr>
-  </table>
-  <div class="bridge"><b>What this still can't tell us →</b> reading a summary is not the same as being able to explain it. <b>Next: interview questions to answer out loud.</b></div>
+  <h3>Syntax</h3>
+  <div class="fx" data-lang="py">from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
+from sklearn.model_selection import GridSearchCV
 
-  <h2 id="knn-qa"><span class="num">18</span>Questions &amp; Answers</h2>
-  <p><strong>The question we can't answer yet:</strong> can you explain every step of the ladder out loud, with the students' numbers, without looking? Answer each question before revealing it.</p>
+pipe = make_pipeline(StandardScaler(), KNeighborsClassifier())
+grid = GridSearchCV(pipe, {"kneighborsclassifier__n_neighbors": [1, 3, 5, 11, 21],
+                           "kneighborsclassifier__weights": ["uniform", "distance"],
+                           "kneighborsclassifier__p": [1, 2]}, cv=5)
+grid.fit(X_train, y_train)
+dist, idx = grid.best_estimator_[-1].kneighbors(scaled_query)   # explain a prediction
+KNeighborsRegressor(n_neighbors=5, weights="distance")</div>
+  <h3>Gotchas</h3>
+  <ul>
+    <li>Always scale, and scale inside a pipeline.</li>
+    <li>Choose k by cross-validation, never by training accuracy; odd k for two classes.</li>
+    <li>Small k overfits, large k underfits; k = n always predicts the majority.</li>
+    <li>Irrelevant columns ruin distances; select or compress features.</li>
+    <li>KD-trees help only in low dimensions; ANN for large embedding sets.</li>
+    <li>No class_weight: handle imbalance with the threshold or resampling.</li>
+    <li>Regression cannot extrapolate beyond the targets it has seen.</li>
+  </ul>
+
+  <h2 id="knn-qa"><span class="num">13</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>Explain KNN in two sentences. Why is it called lazy and non-parametric?</summary><div class="qa-body">To predict a new row, find the k training rows closest to it and take a majority vote (classification) or an average (regression). It is lazy because <code>fit</code> only stores the data and all work happens at prediction time; non-parametric because what it keeps grows with the data (all n rows) instead of a fixed set of weights.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Compute the Euclidean, Manhattan and Chebyshev distance between Q = (4, 5) and H = (2, 1).</summary><div class="qa-body">Gaps 2 and 4. Euclidean √(4 + 16) = √20 = 4.472. Manhattan 2 + 4 = 6. Chebyshev max(2, 4) = 4. All three are Minkowski distances with p = 2, 1 and ∞ (p = 3 gives 72^(1/3) = 4.160, in between).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>When would you use cosine distance instead of Euclidean?</summary><div class="qa-body">When the direction of a vector matters but its length does not: word counts of documents of different length, user rating vectors, embeddings. Q = (4, 5) and 2Q = (8, 10) have cosine distance 0 but Euclidean distance 6.403. For unit-normalised vectors the two give the same ranking, since ‖a − b‖² = 2 − 2cos θ.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What happens at k = 1 and at k = n? Relate it to bias and variance.</summary><div class="qa-body">k = 1: training accuracy 100%, jagged boundary that follows every noisy point: low bias, high variance (overfit). k = n: every query gets the training majority class, the query is ignored: high bias, zero variance (underfit). In LOOCV on our 8 balanced students, k = 7 got all 8 wrong, because removing a student makes the other class the majority.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you choose k?</summary><div class="qa-body">Cross-validation over a grid of (odd, for two classes) values, in a pipeline with the scaler. √n is a starting point. Larger data or noisier labels allow larger k. Never choose by training accuracy (k = 1 always wins) or on the test set.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why must features be scaled for KNN? Give a concrete example.</summary><div class="qa-body">Distance adds up raw differences, so the column with the biggest numbers dominates. Record the students' study time in minutes instead of hours: a one-hour gap becomes 60 while mock gaps stay 1–6, so the mocks column vanishes from the distance (H, with 1 mock, becomes Q's 5th neighbour). Standardising (z = (x − mean)/std) gives identical distances whatever the unit. On wine, accuracy goes 0.691 → 0.949.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does weights="distance" do, and when does it help?</summary><div class="qa-body">Each neighbour votes with weight 1/d, so closer neighbours count more; an exact match takes all the weight. It reduces sensitivity to k and helps most for large k (k = 51 on moons: 0.898 → 0.917). In the students example it flipped k = 5 from Fail (3 votes vs 2) to Pass (weights 1.500 vs 1.134). Side effect: training accuracy is always 100%.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Explain the curse of dimensionality for KNN with numbers.</summary><div class="qa-body">Adding 50 random columns to the students pushed Q's nearest/farthest ratio from 0.22 to 0.81 and scrambled the neighbour order. To capture 10% of uniform data in d dimensions, a cube needs side 0.1^(1/d): 0.316 in 2-D, 0.794 in 10-D, so neighbourhoods are no longer local. Distances concentrate: nearest/farthest ratio 0.01 in 2-D but 0.90 in 1,000-D. Irrelevant columns add noise to every distance (moons 0.907 → 0.652 with 128 noise columns). Fix with feature selection, PCA, embeddings or metric learning.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How does a KD-tree speed up KNN, and when does it stop helping?</summary><div class="qa-body">It splits space at medians, alternating columns, building a binary tree in O(n log n). A query descends to its leaf, then backtracks, opening the other side of a wall only if the wall is closer than the best distance found so far, so whole regions are skipped (3 of 8 students measured for a new student at (8, 3); but 7 of 8 for Q, which sits on the root's wall). In high dimensions almost every wall is close, nothing is pruned, and it becomes slower than brute force (many times slower at d = 40 in our test). Ball trees cope better; ANN indexes (HNSW, IVF) are used at scale.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is the time and memory complexity of KNN?</summary><div class="qa-body">Training O(1) for brute force (O(n log n) to build a tree). Prediction O(n·d) per query brute force, about O(log n) with a tree in low dimensions. Memory O(n·d): it keeps the whole training set. Unlike most models, prediction gets slower as you add training data.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How does KNN regression work, and what can it not do?</summary><div class="qa-body">Average (or 1/d-weighted average) of the k nearest targets: Q's mark with k = 3 is (68 + 61 + 38)/3 = 55.67 (weighted 59.31). Predictions are flat steps and always within the range of the neighbours' targets, so it cannot extrapolate: a student with 12 hours and 10 mocks gets 70.33, less than F's 82.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you handle class imbalance with KNN?</summary><div class="qa-body">Large k lets the majority swamp every neighbourhood (recall of the 10% class: 0.49 at k = 1, 0.067 at k = 25, 0 at k = 101). Lower the decision threshold on predict_proba (20% of neighbours → recall 0.721), use distance weights, resample (undersampling, SMOTE), or a smaller k. There is no class_weight parameter.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does the Cover–Hart result say?</summary><div class="qa-body">With infinite data, the 1-NN error is at most twice the Bayes (best possible) error. Reason: the nearest neighbour becomes an independent draw from the same class probabilities, so the error is 2p(1 − p) ≤ 2 min(p, 1 − p). If k → ∞ with k/n → 0, KNN reaches the Bayes error (universal consistency) — but the data needed grows exponentially with dimension.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>KNN vs K-means?</summary><div class="qa-body">KNN is supervised: k is the number of labelled neighbours asked to predict a new row. K-means is unsupervised clustering: k is the number of clusters, found by iterating centroid updates. Both use distances, so both need scaled features.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: how does KNN relate to the SVM that comes next?</summary><div class="qa-body">Both classify by similarity to training points. KNN uses all n points, each with equal (or 1/d) weight, and draws whatever boundary the local votes give. An RBF-kernel SVM predicts with a weighted sum of similarities exp(−γ‖x − xᵢ‖²) to training points too, but it <em>learns</em> the weights, and most of them become exactly zero: only the support vectors on the border remain. That makes prediction cheaper and the boundary a maximum-margin one.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain KNN in two sentences.</summary><div class="qa-body">To predict for a new row, find the k training rows closest to it under some distance, then take a majority vote of their classes (classification) or the average of their values (regression). Nothing is learned in advance; the stored training data is the model.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why is KNN called lazy, instance-based and non-parametric?</summary><div class="qa-body">Lazy because fit only stores the data and all the work happens at prediction time. Instance-based because it predicts directly from stored examples rather than from a summary. Non-parametric because what it keeps grows with the data (all n rows) instead of being a fixed set of weights; it still has hyperparameters such as k.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Compute the Euclidean, Manhattan and Chebyshev distances between (4, 5) and (2, 1).</summary><div class="qa-body">The gaps are 2 and 4. Euclidean √(4 + 16) = 4.472, Manhattan 2 + 4 = 6, Chebyshev max(2, 4) = 4. They are Minkowski distances with p = 2, 1 and ∞.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When would you use cosine distance instead of Euclidean?</summary><div class="qa-body">When the direction of a vector matters and its length does not: word counts of documents of different lengths, rating vectors, embeddings. (4, 5) and (8, 10) have cosine distance 0 but Euclidean distance 6.4. For unit-length vectors the two rank neighbours identically, because ‖a − b‖² = 2 − 2 cos θ.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What happens at k = 1 and at k = n? Relate this to bias and variance.</summary><div class="qa-body">k = 1 gives 100% training accuracy and a jagged boundary that follows every noisy point: low bias, high variance, overfitting. k = n ignores the query and always predicts the training majority: high bias, no variance, underfitting. In leave-one-out on our 8 balanced students, k = 7 got all 8 wrong, because removing a student makes the other class the majority.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you choose k?</summary><div class="qa-body">By cross-validation over a grid of values, with the scaler inside a pipeline; use odd k for two classes. √n is a reasonable first guess, noisier labels and more data allow larger k, and the CV curve is usually flat over a wide middle range. Never choose k by training accuracy (k = 1 always wins) or on the test set.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why must features be scaled for KNN? Give an example.</summary><div class="qa-body">The distance adds up raw differences, so the column with the biggest numbers dominates. Recording study time in minutes instead of hours makes a one-hour gap worth 60 while mock-test gaps stay below 6, so the mocks column effectively disappears from the distance. Standardising each column gives identical distances whatever the unit; on the wine data accuracy rose from 0.691 to 0.949.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does weights="distance" do, and when does it help?</summary><div class="qa-body">Each neighbour's vote is weighted by 1/d, so closer neighbours count more and an exact match takes all the weight. It reduces sensitivity to k and helps most at large k, where far neighbours would otherwise dilute the vote (k = 51 on moons: 0.898 → 0.917). Side effect: training accuracy is always 100%.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain the curse of dimensionality and how it affects KNN.</summary><div class="qa-body">In many dimensions, a neighbourhood holding a small share of the data must span most of every axis (10% of uniform data in 10-D needs 79% of each side), so neighbours are not really near. Distances also concentrate: the nearest and farthest points become almost equally far (ratio 0.90 in 1,000-D). Irrelevant columns add noise to every distance and scramble the neighbour order. Fix with feature selection, PCA, embeddings or metric learning.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the time and memory complexity of KNN?</summary><div class="qa-body">Training is O(1) for brute force (just storing) or O(n log n) to build a tree. Prediction is O(n·d) per query with brute force, roughly O(log n) with a tree in low dimensions. Memory is O(n·d), the whole training set. Unlike most models, prediction gets slower as you add training data.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How does a KD-tree speed up neighbour search, and when does it stop helping?</summary><div class="qa-body">It recursively splits the data at the median of alternating columns. A query descends to its region and then backtracks, searching the far side of a split only if that wall is closer than the best distance found so far, so whole regions are skipped. In high dimensions almost every wall is close, nothing is pruned, and it becomes slower than brute force; ball trees cope somewhat better, and approximate methods (HNSW, IVF) are used at scale.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How does KNN regression work, and what can it not do?</summary><div class="qa-body">It predicts the average (or distance-weighted average) of the k nearest targets, producing a piecewise-constant, staircase-shaped function. Because an average always lies between the smallest and largest values averaged, it cannot extrapolate: a student far beyond the data got 70.33, less than the best neighbour's 82.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you handle class imbalance with KNN?</summary><div class="qa-body">Large k lets the majority swamp every neighbourhood (rare-class recall fell from 0.49 at k = 1 to 0 at k = 101). Lower the decision threshold on predict_proba (20% of neighbours raised recall to 0.72), use distance weights or a smaller k, or resample (undersampling, SMOTE). There is no class_weight parameter.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does the Cover–Hart result say?</summary><div class="qa-body">With infinite data, the 1-nearest-neighbour error is at most twice the Bayes (best possible) error, because the nearest neighbour's label behaves like an independent draw from the same class probabilities, giving error 2p(1 − p). If k grows with n while k/n → 0, KNN approaches the Bayes error. The amount of data needed grows exponentially with dimension.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between KNN and K-means?</summary><div class="qa-body">KNN is supervised: k is the number of labelled neighbours asked to predict a new row, and there is no training. K-means is unsupervised clustering: k is the number of clusters, found by iteratively moving centroids. Both rely on distances, so both need scaled features.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Your KNN model scores much better on the test set than in production. What might be wrong?</summary><div class="qa-body">Common causes: duplicate or near-duplicate rows shared between train and test (1-NN finds the copy at distance 0), the scaler fitted on all data before splitting, or k chosen on the test set. Production data may also contain new columns' noise, different units or a different class balance. Deduplicate, split by group, and keep scaling and tuning inside cross-validation on the training data.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Where is nearest-neighbour search used besides classification?</summary><div class="qa-body">Missing-value imputation (KNNImputer), recommendation (user- and item-based collaborative filtering with cosine similarity), anomaly detection (distance to the k-th neighbour), clustering and visualisation methods built on neighbour graphs (DBSCAN, t-SNE, UMAP), and vector search for retrieval-augmented generation.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How is an RBF-kernel SVM related to KNN?</summary><div class="qa-body">Both predict from similarity to training points. KNN uses the k nearest with equal or 1/d weights and keeps every training row. An RBF SVM computes Σ αᵢyᵢ exp(−γ‖x − xᵢ‖²) + b, learning the weights αᵢ, most of which become exactly zero, so only the support vectors near the border are kept, and the boundary has the maximum margin.</div></details>
 </main>
 `
 });

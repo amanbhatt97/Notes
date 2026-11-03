@@ -3,116 +3,43 @@ Object.assign(TOPIC_CONTENT, {
   "ml_loss_gd": `<main>
   <h1>Loss Functions &amp; Gradient Descent</h1>
   <div class="where"><span>Machine Learning</span><span>Foundations</span><span>Loss Functions &amp; Gradient Descent</span></div>
-  <p class="lead">Every model you will train does the same two things: it measures how wrong it is with a <strong>loss function</strong>, and it changes its parameters to make that number smaller, usually with <strong>gradient descent</strong>. This note covers both completely. Squared, absolute, Huber, log-loss (derived from likelihood), hinge and 0-1 loss are each worked by hand and plotted; then gradient descent is derived for linear regression and run by hand for three steps, followed by learning rates, convexity, batch vs stochastic vs mini-batch, feature scaling, momentum and Adam, the closed-form alternative, and a from-scratch implementation that matches scikit-learn to many decimal places. The running example is the Foundations group's <strong>ten flats in Pune</strong>: every loss is computed on their prices, and gradient descent walks, step by step, to the line price = 6 × area + 10 that earlier notes found with a formula.</p>
+  <p class="lead">Every model you will ever train does the same two things. First it measures how wrong it currently is, using a <strong>loss function</strong>, and then it adjusts its own numbers (its parameters) to make that wrongness smaller, most often with an algorithm called <strong>gradient descent</strong>. The choice of loss decides what the model is trying to get right and which mistakes it fears most; the optimiser decides how quickly and reliably it gets there. Interviewers love this topic because every later model (linear and logistic regression, SVMs, gradient boosting, neural networks) is just "a particular loss, minimised a particular way". Our running example is the same ten flats in Pune used in the earlier Foundations notes: area (in hundreds of square feet) and price (in ₹ lakh), with the best straight line price = 6 × area + 10, plus a yes/no question, "did the flat sell within 30 days?". We will score that line with different losses, then watch gradient descent walk, step by step, to the very same line.</p>
 
-  <h2 id="lg-fit" class="open"><span class="num">★</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 660 230" width="660">
-<defs><marker id="lg-a0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<text x="330" y="16" text-anchor="middle" class="tm" font-size="11">Machine Learning › Foundations</text>
-<rect x="15" y="30" width="190" height="44" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="110" y="50" text-anchor="middle" font-size="12">Bias, Variance &amp;</text><text x="110" y="65" text-anchor="middle" font-size="12">Generalization</text>
-<rect x="235" y="24" width="190" height="56" rx="8" class="fg sg" stroke-width="3"/><text x="330" y="46" text-anchor="middle" font-size="12.5" font-weight="700">Loss Functions &amp;</text><text x="330" y="61" text-anchor="middle" font-size="12.5" font-weight="700">Gradient Descent</text><text x="330" y="74" text-anchor="middle" font-size="10" class="tg">YOU ARE HERE</text>
-<rect x="455" y="30" width="190" height="44" rx="8" class="fb sb"/><text x="550" y="57" text-anchor="middle" font-size="12">Regularization</text>
-<line x1="205" y1="52" x2="233" y2="52" stroke="currentColor" marker-end="url(#lg-a0)"/><line x1="425" y1="52" x2="453" y2="52" stroke="currentColor" marker-end="url(#lg-a0)"/>
-<text x="550" y="92" text-anchor="middle" class="tm" font-size="10.5">cost = loss + λ·penalty</text>
-<line x1="330" y1="80" x2="330" y2="112" stroke="currentColor"/><line x1="80" y1="112" x2="580" y2="112" stroke="currentColor"/>
-<line x1="80" y1="112" x2="80" y2="132" stroke="currentColor" marker-end="url(#lg-a0)"/><line x1="205" y1="112" x2="205" y2="132" stroke="currentColor" marker-end="url(#lg-a0)"/><line x1="330" y1="112" x2="330" y2="132" stroke="currentColor" marker-end="url(#lg-a0)"/><line x1="455" y1="112" x2="455" y2="132" stroke="currentColor" marker-end="url(#lg-a0)"/><line x1="580" y1="112" x2="580" y2="132" stroke="currentColor" marker-end="url(#lg-a0)"/>
-<rect x="20" y="134" width="120" height="44" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="80" y="153" text-anchor="middle" font-size="11.5">Linear Regr.</text><text x="80" y="168" text-anchor="middle" class="tm" font-size="10.5">squared loss</text>
-<rect x="145" y="134" width="120" height="44" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="205" y="153" text-anchor="middle" font-size="11.5">Logistic Regr.</text><text x="205" y="168" text-anchor="middle" class="tm" font-size="10.5">log loss</text>
-<rect x="270" y="134" width="120" height="44" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="330" y="153" text-anchor="middle" font-size="11.5">SVM</text><text x="330" y="168" text-anchor="middle" class="tm" font-size="10.5">hinge loss</text>
-<rect x="395" y="134" width="120" height="44" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="455" y="153" text-anchor="middle" font-size="11.5">Gradient Boosting</text><text x="455" y="168" text-anchor="middle" class="tm" font-size="10.5">fits loss gradients</text>
-<rect x="520" y="134" width="120" height="44" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="580" y="153" text-anchor="middle" font-size="11.5">Neural Networks</text><text x="580" y="168" text-anchor="middle" class="tm" font-size="10.5">SGD / Adam</text>
-<text x="330" y="205" text-anchor="middle" class="tm" font-size="11">Every model below chooses a loss and minimises it; most of them with a version of gradient descent.</text>
-<text x="330" y="222" text-anchor="middle" class="tm" font-size="11">The maths behind it lives in Calculus (derivatives) and Optimization (convergence, Adam).</text>
-</svg><figcaption>This note sits between "why test error matters" and "how to control complexity". Every later model family is a choice of loss plus a way to minimise it.</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: <a class="xref" data-note="ml_core">Bias, Variance &amp; Generalization</a></b><span>You saw that a model is judged on new data, that the ten flats are best fitted by a straight line (LOOCV picked degree 1), and that training error can lie. But we never said exactly what "error" is for a given row, why it was <em>squared</em>, or how a model actually changes its parameters to reduce it. Every fit in that note was a black box called <code>.fit()</code> or a calculus formula.</span></li>
-    <li><b>This note adds: the objective and the optimiser</b><span>What a loss function is, the six losses you must know (squared, absolute, Huber, log-loss, hinge, 0-1), why each exists (they come from different assumptions about noise), and gradient descent: the algorithm that walks downhill on the average loss. You will run it by hand on the ten flats, break it with a bad learning rate, speed it up with scaling and momentum, and write it from scratch.</span></li>
-    <li><b>Leads to: <a class="xref" data-note="ml_regularization">Regularization</a>, then every model</b><span>Regularization adds a penalty to this cost (cost = average loss + λ·penalty) to trade a little bias for less variance, the fix the bias–variance note recommended for the line's variance gap. <a class="xref" data-note="ml_regression">Linear Regression</a> is squared loss, <a class="xref" data-note="ml_classification">Logistic Regression</a> is log-loss, <a class="xref" data-note="ml_svm">SVMs</a> are hinge loss, and <a class="xref" data-note="ml_gbm">Gradient Boosting</a> fits trees to the gradient of any of these losses. The calculus is in <a class="xref" data-note="m_calculus">Calculus</a>; deeper optimiser theory is in <a class="xref" data-note="m_optimization">Optimization</a>.</span></li>
-  </ol>
-
-  <h2 id="lg-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
-  <p>The whole note as one chain. Each concept answers the question above it; its weakness raises the next question. All numbers are on the ten flats (one of them sometimes mistyped).</p>
-  <ol class="story">
-    <li><b>Loss vs cost vs metric</b><span>Q: how do we turn "how wrong" into one number per row and one number to minimise? → Loss per row, cost = average over rows, metric for reporting. The line's misses −2, 3, 1, … give squared 4.6, absolute 2.0, Huber 1.5. Which loss should it be?</span></li>
-    <li><b>Squared loss</b><span>Q: why square the miss? → It is smooth, its best constant is the mean, and it is the likelihood of Gaussian noise. But one typo (flat J's ₹96 lakh typed as 69) multiplies the MSE by 14.5 and drags the mean from 67 to 64.3…</span></li>
-    <li><b>Absolute loss</b><span>Q: can we stop one big miss from dominating? → Drop the square: every unit costs the same; the best constant is the median (still 67–68 with the typo). But it has a kink at 0, so gradients do not shrink near the answer…</span></li>
-    <li><b>Huber loss</b><span>Q: can we be smooth near zero and robust far away? → Square small misses, go linear past δ: the best constant stays at 67, and the typo pulls a fitted slope only to 5.58 instead of 4.53. But all three compare numbers; what about a yes/no answer?</span></li>
-    <li><b>Log-loss (cross-entropy)</b><span>Q: how wrong is a probability? → Minus the log of the probability given to what happened (the Bernoulli likelihood): 0.201 for a fast seller given 0.818, 4.51 for a flat given 0.989 that did not sell fast. Gradient p − y. But it never stops pushing on rows already correct…</span></li>
-    <li><b>Hinge loss</b><span>Q: can a row that is safely correct stop mattering? → max(0, 1 − margin): flat A (margin 1.5) costs 0, flats C and F (margin 0.5) cost 0.5. But what we report is accuracy; why not minimise that?</span></li>
-    <li><b>0-1 loss and surrogates</b><span>Q: why not minimise the error rate itself? → It is flat (0 on all ten flats, whatever the scale of the score), so it has no gradient. Convex surrogates (log, hinge) do. Now the cost is a function of the parameters…</span></li>
-    <li><b>The cost surface</b><span>Q: what does the cost look like as the parameters move? → A bowl: J = 4790.6 at (0, 0), 118.6 for 8 × area, 4.6 at the bottom (6, 10). With thousands of parameters we cannot scan it…</span></li>
-    <li><b>Gradient descent</b><span>Q: how do we find the bottom using only the local slope? → θ ← θ − η∇J. Three steps by hand on the flats: J 4790.6 → 3003.0 → 1896.3 → 1203.8, reaching w = 6, b = 10 after about 50 steps. But how big should each step be?</span></li>
-    <li><b>The learning rate</b><span>Q: which η? → Below 2/L = 0.121 for the flats; 0.1 converges, 0.125 explodes to 10²⁸. Is "keep going downhill" always safe, or can it get stuck?</span></li>
-    <li><b>Convexity</b><span>Q: can downhill steps end at a bad place? → Not for a convex cost: MSE, log-loss, hinge. But every step so far used all rows; with millions of rows that is slow…</span></li>
-    <li><b>Batch, stochastic, mini-batch</b><span>Q: can a step use only some rows? → One flat's gradient is a noisy but unbiased estimate (the ten average to (−99, −134)). Cheap noisy steps win early but never settle. Yet even full-batch GD on the raw flats needs 8,549 steps…</span></li>
-    <li><b>Feature scaling</b><span>Q: why so slow, and how do we fix it? → An elongated bowl (κ = 1,198 for raw area, 11.8 million for area in sq ft); centring gives 81 steps, standardizing 1. When we cannot rescale the valley away?</span></li>
-    <li><b>Momentum and Adam</b><span>Q: can the optimiser adapt its own steps? → Momentum builds speed along the valley (8,549 → 792 steps on the raw flats); Adam scales each parameter's step. For the line, is iterating needed at all?</span></li>
-    <li><b>Closed form vs iterative</b><span>Q: when can we solve in one go? → For squared loss: XᵀXθ = Xᵀy gives w = 4950/825 = 6, b = 8250/825 = 10 exactly. Not for log-loss, hinge or networks. Finally: can we build it all ourselves?</span></li>
-    <li><b>From scratch</b><span>Q: does our own gradient descent match the library? → Yes: the flats to (6, 10), diabetes to 10⁻¹¹, logistic to 10⁻⁶. Next: the cost minimised so well that it overfits → <a class="xref" data-note="ml_regularization">Regularization</a>.</span></li>
-  </ol>
-
-  <h2 id="lg-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="lg-map"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
-    <div class="mm-center">Loss Functions &amp; Gradient Descent</div>
+    <div class="mm-center">Loss &amp; Gradient Descent</div>
     <div class="mm-branches">
       <div class="mm-branch">
         <div class="mm-title">Loss, cost, metric</div>
         <ul>
-          <li><b>Loss</b> L(y, ŷ) — wrongness of ONE prediction</li>
-          <li><b>Cost / objective</b> J(θ) — average loss over training rows (+ penalty); what is minimised</li>
-          <li><b>Metric</b> — what the business reads (accuracy, RMSE); need not be differentiable</li>
-          <li>Residual r = y − ŷ; margin m = y·f(x) with y ∈ {−1, +1}</li>
-          <li>💡 Loss = marks lost on one question; cost = total marks lost in the paper</li>
+          <li><b>Loss</b>: wrongness of one prediction</li>
+          <li><b>Cost</b>: average loss over training rows (+ penalty); what is minimised</li>
+          <li><b>Metric</b>: what you report; need not be differentiable</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Regression losses</div>
+        <div class="mm-title">Which loss</div>
         <ul>
-          <li><b>Squared</b> r² — smooth, gradient −2r; best constant = <b>mean</b>; Gaussian noise MLE; outlier-sensitive</li>
-          <li><b>Absolute</b> |r| — gradient −sign(r); best constant = <b>median</b>; Laplace MLE; kink at 0</li>
-          <li><b>Huber</b> — ½r² if |r| ≤ δ else δ(|r| − ½δ); gradient = clipped residual</li>
-          <li>Flats: MSE 4.6 → 66.7 with one typo; MAE 2.0 → 4.3; Huber 1.5 → 3.8</li>
-          <li>Typo prices: mean 64.3, median 67.5, Huber (δ = 3) 67</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Classification losses</div>
-        <ul>
-          <li><b>Log-loss</b> −[y ln p + (1−y) ln(1−p)] — negative Bernoulli log-likelihood</li>
-          <li>Gradient w.r.t. score z: <b>p − y</b>; multiclass: softmax + −ln p_true (Baner 0.665 → 0.408)</li>
-          <li>Flat K: p = 0.989 "sells fast", did not → 4.51; flat A p = 0.818 right → 0.201</li>
-          <li><b>Hinge</b> max(0, 1 − m) — SVM; zero once m ≥ 1</li>
-          <li><b>0-1</b> — what we care about; gradient 0 everywhere → use convex surrogates</li>
-          <li>⚠ MSE + sigmoid is not convex; gradient vanishes when confidently wrong</li>
+          <li><b>Squared</b> → mean, Gaussian noise, outlier-sensitive</li>
+          <li><b>Absolute</b> → median, robust, kink at 0; <b>Huber</b> = both</li>
+          <li><b>Log-loss</b> → probabilities, gradient p − y</li>
+          <li><b>Hinge</b> → margins, SVM; <b>0-1</b> → report only</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Gradient descent</div>
         <ul>
-          <li><b>θ ← θ − η ∇J(θ)</b>; for MSE ∇J = (2/n) Xᵀ(Xθ − y)</li>
-          <li>Flats, centred area: ∂J/∂w = 16.5(w − 6), ∂J/∂c = 2(c − 67)</li>
-          <li>η = 0.1: (0, 0) → (9.9, 13.4) → (3.465, 24.12) → (7.648, 32.70); J 4790.6 → 1203.8</li>
-          <li><b>Learning rate</b>: stable iff η &lt; 2/L (L = 16.5 → 0.121)</li>
-          <li>Speed governed by condition number κ = L/μ; <b>convex</b> cost → any minimum is global</li>
+          <li>θ ← θ − η∇J; stable only if η &lt; 2/L</li>
+          <li>Convex cost → any bottom is the global one</li>
+          <li>Batch / SGD / mini-batch: rows per step</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Variants &amp; speed-ups</div>
+        <div class="mm-title">Speed</div>
         <ul>
-          <li><b>Batch</b> — all rows per step; smooth, slow per step</li>
-          <li><b>SGD</b> — one row; noisy, cheap; needs decaying η; 10 flat gradients average to (−99, −134)</li>
-          <li><b>Mini-batch</b> (32–512) — the default; 1 epoch = 313 updates for n = 10,000</li>
-          <li><b>Scaling</b> — flats κ 1,198 (raw) → 8.3 (centred) → 1 (standardized); steps 8,549 → 81 → 1</li>
-          <li><b>Momentum</b> (8,549 → 792 steps on raw flats), <b>Adam</b> (per-coordinate step size)</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Closed form vs iterative</div>
-        <ul>
-          <li>Normal equation XᵀXθ = Xᵀy; flats: [[985, 95], [95, 10]]θ = [6860, 670] → (6, 10)</li>
-          <li>Cost O(nd² + d³) once vs O(nd) per GD step</li>
-          <li>Closed form only for squared loss (and ridge); logistic, hinge, NNs need iterations</li>
-          <li>From scratch: flats (6, 10); linear coef diff 1.5e-11, logistic 1.1e-6 vs sklearn</li>
+          <li>Condition number κ sets the speed; scaling fixes it</li>
+          <li>Momentum and Adam adapt the step</li>
+          <li>Squared loss also has a closed form (normal equation)</li>
         </ul>
       </div>
     </div>
@@ -121,208 +48,80 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="lg-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain</span></div></div>
-      <div class="rm-item rm-done" data-target="lg-what"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">What a Loss Is</span><span class="rm-sub">Loss vs cost vs metric</span></div></div>
-      <div class="rm-item rm-done" data-target="lg-sq"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Squared Loss</span><span class="rm-sub">Mean, Gaussian likelihood</span></div></div>
-      <div class="rm-item rm-done" data-target="lg-abs"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Absolute Loss</span><span class="rm-sub">Median, robustness</span></div></div>
-      <div class="rm-item rm-done" data-target="lg-huber"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Huber Loss</span><span class="rm-sub">The best of both</span></div></div>
-      <div class="rm-item rm-done" data-target="lg-log"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Log-Loss / Cross-Entropy</span><span class="rm-sub">Derived from likelihood</span></div></div>
-      <div class="rm-item rm-done" data-target="lg-hinge"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Hinge Loss</span><span class="rm-sub">Margins and SVMs</span></div></div>
-      <div class="rm-item rm-done" data-target="lg-01"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">0-1 Loss &amp; Surrogates</span><span class="rm-sub">Why we don't minimise accuracy</span></div></div>
-      <div class="rm-item rm-done" data-target="lg-cost"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">From Loss to Cost Surface</span><span class="rm-sub">J(w, b) on the ten flats</span></div></div>
-      <div class="rm-item rm-done" data-target="lg-gd"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Gradient Descent, Derived</span><span class="rm-sub">3 steps by hand</span></div></div>
-      <div class="rm-item rm-done" data-target="lg-lr"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">The Learning Rate</span><span class="rm-sub">Too small, right, too big</span></div></div>
-      <div class="rm-item rm-done" data-target="lg-convex"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Convexity</span><span class="rm-sub">When downhill means best</span></div></div>
-      <div class="rm-item rm-done" data-target="lg-batch"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Batch, Stochastic, Mini-batch</span><span class="rm-sub">How much data per step</span></div></div>
-      <div class="rm-item rm-done" data-target="lg-scale"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Feature Scaling</span><span class="rm-sub">Why GD crawls without it</span></div></div>
-      <div class="rm-item rm-done" data-target="lg-adam"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">Momentum &amp; Adam</span><span class="rm-sub">Brief, with one step by hand</span></div></div>
-      <div class="rm-item rm-done" data-target="lg-closed"><span class="rm-num">15</span><div class="rm-text"><span class="rm-label">Closed Form vs Iterative</span><span class="rm-sub">The normal equation</span></div></div>
-      <div class="rm-item rm-done" data-target="lg-scratch"><span class="rm-num">16</span><div class="rm-text"><span class="rm-label">From Scratch</span><span class="rm-sub">Matching sklearn exactly</span></div></div>
-      <div class="rm-item rm-done" data-target="lg-connect"><span class="rm-num">17</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One diagram, one table</span></div></div>
-      <div class="rm-item rm-done" data-target="lg-compare"><span class="rm-num">18</span><div class="rm-text"><span class="rm-label">Comparisons</span><span class="rm-sub">Losses and optimisers side by side</span></div></div>
-      <div class="rm-item rm-done" data-target="lg-traps"><span class="rm-num">19</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Interview and code traps</span></div></div>
-      <div class="rm-item rm-done" data-target="lg-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note on one page</span></div></div>
-      <div class="rm-item rm-done" data-target="lg-qa"><span class="rm-num">20</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
+      <div class="rm-item rm-done" data-target="lg-what"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">What a Loss Function Is</span><span class="rm-sub">loss, cost and metric on the ten flats</span></div></div>
+      <div class="rm-item rm-done" data-target="lg-sq"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Squared Loss</span><span class="rm-sub">why we square, and what it costs</span></div></div>
+      <div class="rm-item rm-done" data-target="lg-robust"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Absolute and Huber Loss</span><span class="rm-sub">staying calm about one bad row</span></div></div>
+      <div class="rm-item rm-done" data-target="lg-log"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Log-Loss (Cross-Entropy)</span><span class="rm-sub">how wrong is a probability</span></div></div>
+      <div class="rm-item rm-done" data-target="lg-hinge"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Hinge Loss and the 0-1 Loss</span><span class="rm-sub">margins, and why we don't train on accuracy</span></div></div>
+      <div class="rm-item rm-done" data-target="lg-cost"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">The Cost Surface and Convexity</span><span class="rm-sub">the landscape training has to search</span></div></div>
+      <div class="rm-item rm-done" data-target="lg-gd"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Gradient Descent</span><span class="rm-sub">walking downhill, three steps by hand</span></div></div>
+      <div class="rm-item rm-done" data-target="lg-lr"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">The Learning Rate</span><span class="rm-sub">too small, just right, too big</span></div></div>
+      <div class="rm-item rm-done" data-target="lg-batch"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Batch, Stochastic and Mini-batch</span><span class="rm-sub">how many rows per step</span></div></div>
+      <div class="rm-item rm-done" data-target="lg-scale"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Feature Scaling, Momentum and Adam</span><span class="rm-sub">why GD crawls and how to speed it up</span></div></div>
+      <div class="rm-item rm-done" data-target="lg-closed"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Closed Form vs Gradient Descent</span><span class="rm-sub">the normal equation, and GD from scratch</span></div></div>
+      <div class="rm-item rm-done" data-target="lg-traps"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">wrong loss, wrong step size, wrong sign</span></div></div>
+      <div class="rm-item rm-done" data-target="lg-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">definitions, formulas, comparison tables</span></div></div>
+      <div class="rm-item rm-done" data-target="lg-qa"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">the questions interviewers ask on losses and optimisers</span></div></div>
     </div>
   </div>
 
-  <h2 id="lg-what"><span class="num">01</span>What a Loss Is</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Earlier notes scored the flat-price line by "mean squared error" and fitted it with a formula. But why squared? Is that the only way to say "how wrong", and what exactly is the number a model tries to make small?</p>
-  </div>
-  <h3>The need</h3>
-  <p>To learn, a model must be able to answer "how wrong am I right now?" with a single number, and that number must get smaller when the model gets better. Without it there is nothing to improve. A <strong>loss function</strong> is that number for one prediction: it takes the true answer y and the prediction ŷ and returns a non-negative penalty, 0 when the prediction is perfect.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A board exam. The <strong>loss</strong> is the marks lost on one question. The <strong>cost</strong> is the total (or average) marks lost over the whole paper; that is what you try to reduce while preparing. The <strong>metric</strong> is what the college admission office looks at, maybe just "pass or fail". Different examiners (losses) cut marks differently for the same mistake: one cuts heavily for a big blunder, another cuts the same for every wrong answer.</p>
-  </div>
-  <h3>Loss vs cost vs metric</h3>
-  <table class="tbl">
-    <tr><th>Term</th><th>Scope</th><th>Example</th><th>Must be smooth?</th></tr>
-    <tr><td><strong>Loss</strong> L(y, ŷ)</td><td>one row</td><td>(y − ŷ)²</td><td>should have a usable gradient</td></tr>
-    <tr><td><strong>Cost / objective</strong> J(θ)</td><td>all training rows, as a function of the parameters θ</td><td>(1/n) Σ (yᵢ − ŷᵢ)² + λ Σ w²</td><td>yes, it is what the optimiser minimises</td></tr>
-    <tr><td><strong>Metric</strong></td><td>a dataset, for reporting</td><td>accuracy, RMSE, F1, AUC</td><td>no; it only has to match the business goal</td></tr>
-  </table>
-  <p>People often say "loss" for all three. The distinction matters in two places: the cost can include a penalty that is not a loss on any row (<a class="xref" data-note="ml_regularization">regularization</a>), and the metric you report may be one you cannot optimise directly (accuracy, section 07). Metrics are covered in <a class="xref" data-note="ml_evaluation">Classification Metrics</a> and <a class="xref" data-note="ml_reg_metrics">Regression Metrics</a>.</p>
-  <h3>Worked by hand: the ten flats, three losses, one typo</h3>
-  <p>The line price = 6 × area + 10 misses the ten flats A–J by r = y − ŷ = −2, 3, 1, −2, 3, −2, −3, 1, −1, 2 (₹ lakh). Score those misses three ways. Then suppose a data-entry clerk swapped two digits and flat J's ₹96 lakh was stored as ₹69 lakh: its residual becomes 69 − 94 = −25.</p>
-  <table class="tbl">
-    <tr><th>Residual size |r|</th><th>flats</th><th>squared r²</th><th>absolute |r|</th><th>Huber (δ = 1)</th></tr>
-    <tr><td>1</td><td>C, H, I</td><td>1 each</td><td>1 each</td><td>½·1² = 0.5 each</td></tr>
-    <tr><td>2</td><td>A, D, F, J</td><td>4 each</td><td>2 each</td><td>1·(2 − 0.5) = 1.5 each</td></tr>
-    <tr><td>3</td><td>B, E, G</td><td>9 each</td><td>3 each</td><td>1·(3 − 0.5) = 2.5 each</td></tr>
-    <tr><td colspan="2"><strong>average, clean data (the cost)</strong></td><td><strong>46/10 = 4.6</strong></td><td><strong>20/10 = 2.0</strong></td><td><strong>15/10 = 1.5</strong></td></tr>
-    <tr><td>25 (J mistyped)</td><td>J replaces its 2</td><td>625 (was 4)</td><td>25 (was 2)</td><td>1·(25 − 0.5) = 24.5 (was 1.5)</td></tr>
-    <tr><td colspan="2"><strong>average, with the typo</strong></td><td><strong>667/10 = 66.7</strong></td><td><strong>43/10 = 4.3</strong></td><td><strong>38/10 = 3.8</strong></td></tr>
-  </table>
-  <p>Same predictions, three very different verdicts. Under squared loss the single typo makes the cost 14.5 times larger and contributes 625 of the 667 total (94%). Under absolute loss it is 25 of 43 (58%), under Huber 24.5 of 38. The choice of loss decides which mistakes the model will work hardest to avoid.</p>
+  <h2 id="lg-what"><span class="num">01</span>What a Loss Function Is</h2>
+  <p>To learn anything, a model must be able to answer the question "how wrong am I right now?" with a single number, and that number must go down when the model gets better. Without such a number there is nothing to improve and no way to tell a good set of parameters from a bad one. A <strong>loss function</strong> is that number for one prediction: it takes the true answer y and the model's prediction ŷ (read "y-hat") and returns a penalty that is zero when the prediction is perfect and grows as the prediction gets worse.</p>
+  <p>Think of a board exam. The loss is the marks you lose on one question. What you actually try to reduce while preparing is the total, or average, marks lost over the whole paper; in machine learning that average is called the <strong>cost function</strong> (also the <strong>objective</strong>), and it is the one number the training algorithm minimises. Finally there is the result the college admissions office looks at, perhaps just "pass" or "fail". That is the <strong>metric</strong>: the number you report to the business. It must match the business goal, but unlike the cost it does not need to be smooth or easy to optimise. People often say "loss" for all three, and the difference matters in two places later: the cost can contain an extra penalty that is not a loss on any row (that is <a class="xref" data-note="ml_regularization">Regularization</a>), and the metric you report may be one you cannot optimise directly (accuracy, section 05).</p>
+  <p>Different examiners cut marks differently for the same mistake. One cuts heavily for a big blunder and barely notices small slips; another cuts the same amount per unit of error however big it is. Losses differ in exactly this way, and that choice decides which mistakes the model works hardest to avoid. Let us see it on the ten flats. The line price = 6 × area + 10 misses each flat by a <strong>residual</strong> r = y − ŷ (true price minus predicted price). We score those misses three ways: by squaring them, by taking their size (absolute value), and by Huber's rule, which squares small misses and counts big ones linearly (section 03 explains it). Then we imagine a data-entry clerk swapped two digits so that flat J's ₹96 lakh was stored as ₹69 lakh.</p>
   <div class="fx" data-lang="py">import numpy as np
-from sklearn.metrics import mean_squared_error, mean_absolute_error
 
-area  = np.array([5, 6, 7, 8, 9, 10, 11, 12, 13, 14])
-price = np.array([38, 49, 53, 56, 67, 68, 73, 83, 87, 96], dtype=float)
-y_hat = 6 * area + 10                          # the line from "What is ML"
+area  = np.array([5, 6, 7, 8, 9, 10, 11, 12, 13, 14], dtype=float)   # flats A..J, in 100 sq ft
+price = np.array([38, 49, 53, 56, 67, 68, 73, 83, 87, 96], dtype=float)  # in ₹ lakh
+y_hat = 6 * area + 10                                  # the line from the earlier notes
 
 def huber(r, delta=1.0):
-    small = np.abs(r) &lt;= delta
-    return np.where(small, 0.5 * r**2, delta * (np.abs(r) - 0.5 * delta))
+    return np.where(np.abs(r) &lt;= delta, 0.5 * r**2, delta * (np.abs(r) - 0.5 * delta))
 
-typo = price.copy(); typo[9] = 69               # flat J's price typed as 69 instead of 96
+typo = price.copy(); typo[9] = 69                      # flat J's 96 typed as 69
 for name, y in [("clean data", price), ("J typed as 69", typo)]:
-    r = y - y_hat                              # residuals
+    r = y - y_hat                                      # residuals
     print(f"{name}: residuals {r.astype(int).tolist()}")
-    print(f"   squared mean = {(r**2).mean():.2f}   absolute mean = {np.abs(r).mean():.2f}"
-          f"   huber(delta=1) mean = {huber(r).mean():.2f}")
-    print(f"   sklearn MSE / MAE: {mean_squared_error(y, y_hat):.2f} {mean_absolute_error(y, y_hat):.2f}")</div>
+    print(f"   squared {np.mean(r**2):.2f}   absolute {np.mean(np.abs(r)):.2f}   huber {huber(r).mean():.2f}")</div>
   <div class="fx" data-lang="text">clean data: residuals [-2, 3, 1, -2, 3, -2, -3, 1, -1, 2]
-   squared mean = 4.60   absolute mean = 2.00   huber(delta=1) mean = 1.50
-   sklearn MSE / MAE: 4.60 2.00
+   squared 4.60   absolute 2.00   huber 1.50
 J typed as 69: residuals [-2, 3, 1, -2, 3, -2, -3, 1, -1, -25]
-   squared mean = 66.70   absolute mean = 4.30   huber(delta=1) mean = 3.80
-   sklearn MSE / MAE: 66.70 4.30</div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A <strong>loss function</strong> L(y, ŷ) ≥ 0 measures the cost of predicting ŷ when the truth is y. The <strong>empirical risk</strong> or <strong>cost function</strong> is J(θ) = (1/n) Σᵢ L(yᵢ, f(xᵢ; θ)), optionally plus a penalty Ω(θ). <strong>Training</strong> means finding θ that minimises J. The model's hope is that low J on training rows means low expected loss on new rows (<a class="xref" data-note="ml_core">generalization</a>).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Optimising one loss and reporting another without noticing. A model trained with squared loss is built to predict the <em>mean</em>; if the business reports median-based or percentage errors, a different loss (absolute, quantile) may serve them better. Pick the loss with the metric in mind.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Squared Loss.</b> Why would anyone square a residual in the first place, when it lets one typo dominate? Squared loss is the default in regression, and there are two deep reasons for it: what it makes the model predict, and what it assumes about the noise.</div>
+   squared 66.70   absolute 4.30   huber 3.80</div>
+  <p>On clean data the three costs are 4.6, 2.0 and 1.5. Now look at the typo row. J's residual became −25. Under squared loss that single row contributes 625 of the total 667, so the cost jumps 14.5 times, from 4.6 to 66.7. Under absolute loss the same row contributes 25 out of 43, and under Huber 24.5 out of 38. Same predictions, same data, three very different verdicts on how bad things are. The rest of this part of the note explains where each loss comes from and when to use it.</p>
 
   <h2 id="lg-sq"><span class="num">02</span>Squared Loss</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Squared loss turned one typo into 94% of the cost. If it is that fragile, why is it the default for every regression in the track? What does squaring make the model aim for, and what does it assume about the world?</p>
-  </div>
-  <h3>Formula and shape</h3>
-  <p>L(y, ŷ) = (y − ŷ)². Averaged over rows it is the <strong>mean squared error</strong>, MSE. It is a smooth bowl: zero at r = 0, growing faster and faster. Its derivative with respect to the prediction is dL/dŷ = −2(y − ŷ) = 2(ŷ − y): the push on a prediction is proportional to how far off it is. Small misses get gentle pushes, big misses get big pushes.</p>
-  <h3>What it makes the model predict: the mean</h3>
-  <p>Strip a model down to a single constant c (the same price for every flat). Which c minimises the squared loss? Use the ten prices with the typo: 38, 49, 53, 56, 67, 68, 73, 83, 87, 69.</p>
-  <p><strong>By calculus</strong>: SSE(c) = Σ (yᵢ − c)². Its derivative is −2 Σ (yᵢ − c). Setting it to zero: Σ yᵢ − n·c = 0, so c = Σ yᵢ / n, the <strong>mean</strong>. Here 643/10 = <strong>64.3</strong>; without the typo it was 670/10 = 67. One mistyped row moved the "typical price" by ₹2.7 lakh.</p>
-  <p><strong>By checking</strong>: the same algebra gives SSE(c) = SSE(mean) + n·(c − mean)², so any other constant pays an extra n·(distance)². SSE(64.3) = 2106.1, and SSE(67) = 2106.1 + 10 × 2.7² = 2106.1 + 72.9 = 2179.0. The mean wins under squared loss, even though it is pulled towards the one bad row.</p>
+  <p>Squared loss is L(y, ŷ) = (y − ŷ)², and its average over the rows is the familiar <strong>mean squared error</strong> (MSE). It is the default for regression, and the typo has just shown its weakness, so it is fair to ask why everyone uses it. There are two good reasons: what it makes the model predict, and what it assumes about the world.</p>
+  <p>First, what it makes the model predict. Strip a model down to its simplest possible form: one constant c, the same predicted price for every flat. Which c gives the smallest total squared loss? The total is Σ(yᵢ − c)². Its derivative with respect to c is −2Σ(yᵢ − c); setting that to zero gives Σyᵢ = n·c, so c = Σyᵢ / n, which is the <strong>mean</strong>. With the typo the prices add up to 643, so the best constant is 64.3; with clean data it was 67. One mistyped row moved the "typical price" by ₹2.7 lakh. More generally, a model trained with squared loss tries to predict the <strong>conditional mean</strong>, the average y for a given x. The block below finds the best constant for all three losses on the typo prices numerically, so you can compare:</p>
   <div class="fx" data-lang="py">import numpy as np
 from scipy.optimize import minimize_scalar
 
-# the ten flat prices, with flat J's 96 mistyped as 69
-y = np.array([38, 49, 53, 56, 67, 68, 73, 83, 87, 69], dtype=float)
+y = np.array([38, 49, 53, 56, 67, 68, 73, 83, 87, 69], dtype=float)  # prices, J mistyped
 
 def huber(r, delta=3.0):
     return np.where(np.abs(r) &lt;= delta, 0.5 * r**2, delta * (np.abs(r) - 0.5 * delta))
 
-losses = {
-    "squared":  lambda c: ((y - c) ** 2).sum(),
-    "absolute": lambda c: np.abs(y - c).sum(),
-    "huber":    lambda c: huber(y - c).sum(),
-}
-for c in [64.3, 67, 67.5, 68]:
-    print(f"c={c:&lt;5}: " + "  ".join(f"{k}={fn(c):8.2f}" for k, fn in losses.items()))
+losses = {"squared":  lambda c: ((y - c) ** 2).sum(),
+          "absolute": lambda c: np.abs(y - c).sum(),
+          "huber":    lambda c: huber(y - c).sum()}
 for k, fn in losses.items():
     best = minimize_scalar(fn, bounds=(30, 100), method="bounded").x
-    print(f"best constant under {k:8s} loss: {best:.3f}")
-print("mean =", y.mean(), " median =", np.median(y), "  (clean data: mean 67.0, median 67.5)")</div>
-  <div class="fx" data-lang="text">c=64.3 : squared= 2106.10  absolute=  122.40  huber=  322.25
-c=67   : squared= 2179.00  absolute=  117.00  huber=  313.00
-c=67.5 : squared= 2208.50  absolute=  117.00  huber=  313.38
-c=68   : squared= 2243.00  absolute=  117.00  huber=  314.50
-best constant under squared  loss: 64.300
-best constant under absolute loss: 67.187
-best constant under huber    loss: 67.000
-mean = 64.3  median = 67.5   (clean data: mean 67.0, median 67.5)</div>
-  <p>The squared column is the by-hand check (2106.10 at the mean 64.3, 2179.00 at 67). The last lines minimise each loss numerically: squared loss picks the mean 64.3, absolute loss any value between 67 and 68 (section 03 explains why the optimiser returned 67.187), and Huber 67 (section 04). This generalises: a model trained with squared loss tries to predict the <strong>conditional mean</strong> E[y | x].</p>
-  <h3>Where it comes from: Gaussian noise and maximum likelihood</h3>
-  <p>Assume each price is the model's prediction plus noise from a normal (Gaussian) distribution: y = ŷ + ε, ε ~ N(0, σ²). The probability density of seeing y is</p>
-  <p style="text-align:center">p(y | ŷ) = (1 / √(2πσ²)) · exp(−(y − ŷ)² / (2σ²))</p>
-  <p><strong>Maximum likelihood</strong> says: choose the parameters that make the observed data most probable. For independent rows the likelihood is the product of densities. Products are awkward, so take the logarithm (it turns products into sums and does not move the maximum), and flip the sign to get something to minimise, the <strong>negative log-likelihood</strong> (NLL):</p>
-  <p style="text-align:center">NLL = Σ [ ½ ln(2πσ²) + (yᵢ − ŷᵢ)² / (2σ²) ] = (n/2) ln(2πσ²) + SSE / (2σ²)</p>
-  <p>The first term does not depend on the predictions, and 1/(2σ²) is a positive constant. So <strong>minimising NLL is exactly minimising SSE</strong>. Squared loss is the right loss when the noise is Gaussian. By hand on flats D, E, F (prices 56, 67, 68) with σ = 2 (about the flats' typical miss) and a constant prediction c: the mean 63.667 gives SSE = 7.667² + 3.333² + 4.333² = 58.78 + 11.11 + 18.78 = 88.67; one lakh either side gives 88.67 + 3 × 1² = 91.67. So the mean also has the highest likelihood:</p>
-  <div class="fx" data-lang="py">import numpy as np
-y = np.array([56.0, 67.0, 68.0])               # prices of flats D, E, F
-sigma = 2.0                                    # assumed noise std (about the flats' typical miss)
-for c in [62 + 2/3, 63 + 2/3, 64 + 2/3]:       # candidate constant predictions: mean - 1, mean, mean + 1
-    lik = np.prod(np.exp(-(y - c) ** 2 / (2 * sigma**2)) / np.sqrt(2 * np.pi * sigma**2))
-    nll = -np.log(lik)
-    sse = ((y - c) ** 2).sum()
-    print(f"c={c:.3f}: likelihood={lik:.2e}  NLL={nll:.3f}  SSE={sse:6.3f}  "
-          f"check 1.5*log(2*pi*4) + SSE/8 = {1.5 * np.log(2 * np.pi * 4) + sse / 8:.3f}")</div>
-  <div class="fx" data-lang="text">c=62.667: likelihood=8.38e-08  NLL=16.295  SSE=91.667  check 1.5*log(2*pi*4) + SSE/8 = 16.295
-c=63.667: likelihood=1.22e-07  NLL=15.920  SSE=88.667  check 1.5*log(2*pi*4) + SSE/8 = 15.920
-c=64.667: likelihood=8.38e-08  NLL=16.295  SSE=91.667  check 1.5*log(2*pi*4) + SSE/8 = 16.295</div>
-  <p>The likelihood column is tiny (products of densities always are, which is another reason to work with logs), but its ranking matches SSE exactly, and the NLL equals 1.5·ln(2π·4) + SSE/8 as the formula says.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Squared loss</strong>: L(y, ŷ) = (y − ŷ)²; cost MSE = (1/n) Σ (yᵢ − ŷᵢ)². Gradient with respect to ŷ: 2(ŷ − y). Its minimiser over constants is the mean; over functions, the conditional mean E[y | x]. It is the negative log-likelihood (up to constants) under Gaussian noise with constant variance.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Squared loss lets a single outlier dominate: one digit swap pulled the best constant from 67 to 64.3 and multiplied the MSE by 14.5. Typos, sensor glitches and rare extreme customers can bend a whole regression line (section 04 shows it on the flats and on 50 rows).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Absolute Loss.</b> If big misses should not be punished so much harder than small ones, the obvious fix is to drop the square. What does that change?</div>
+    print(f"best constant under {k:8s} loss: {best:.2f}")
+print("mean =", y.mean(), "  median =", np.median(y))</div>
+  <div class="fx" data-lang="text">best constant under squared  loss: 64.30
+best constant under absolute loss: 67.19
+best constant under huber    loss: 67.00
+mean = 64.3   median = 67.5</div>
+  <p>Squared loss picks the mean, 64.3. The other two land at about 67 (section 03 explains why), much less disturbed by the typo.</p>
+  <p>Second, what it assumes. Suppose each flat's price is the model's prediction plus some random luck, and that luck follows a bell-shaped <strong>normal (Gaussian) distribution</strong>: small misses common, big misses rare, symmetric around zero. A standard way to fit a model is <strong>maximum likelihood</strong>: choose the parameters that make the observed data most probable. The Gaussian density of seeing y when the model says ŷ is proportional to exp(−(y − ŷ)² / 2σ²), where σ is the typical size of the noise. For independent rows we multiply these densities; taking the logarithm turns the product into a sum, and flipping the sign gives something to minimise, the <strong>negative log-likelihood</strong>:</p>
+  <p style="text-align:center">−log likelihood = constant + (1 / 2σ²) · Σ(yᵢ − ŷᵢ)²</p>
+  <p>The constant and the factor 1/2σ² do not depend on the predictions, so minimising the negative log-likelihood is exactly minimising the sum of squared errors. In plain words: <em>squared loss is the right loss when the noise is Gaussian</em>. This is also why a single huge miss is treated as a catastrophe: under a bell curve, a miss of 25 when typical misses are 2 is almost impossible, so the model bends itself to explain it. The derivative of squared loss with respect to the prediction is 2(ŷ − y), which means the push on each prediction is proportional to how far off it is. Small misses get gentle pushes, big misses get big pushes, and the typo gets the biggest push of all.</p>
+  <p>So squared loss is smooth, has a simple gradient, gives the mean, and (section 11) even has a closed-form solution for linear models. Its weakness is that it trusts the data completely, including the rows that are wrong.</p>
 
-  <h2 id="lg-abs"><span class="num">03</span>Absolute Loss</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Squaring makes a ₹25 lakh miss cost 625 units, as much as 156 misses of ₹2 lakh. Can we score misses so that one bad row cannot drown out all the others?</p>
-  </div>
-  <h3>Formula and shape</h3>
-  <p>L(y, ŷ) = |y − ŷ|. Averaged: the <strong>mean absolute error</strong>, MAE. It is a V shape: every unit of miss costs the same, whether it is the first unit or the twenty-fifth. The typo's residual of 25 costs 25, not 625.</p>
-  <h3>What it makes the model predict: the median</h3>
-  <p>For the constant c, the derivative of Σ |yᵢ − c| is (number of yᵢ below c) − (number of yᵢ above c), because each point below pulls the slope up by 1 and each point above pulls it down by 1. Walk c along the sorted typo prices 38, 49, 53, 56, 67, 68, 69, 73, 83, 87:</p>
-  <table class="tbl">
-    <tr><th>c between</th><th>points below</th><th>points above</th><th>slope</th><th>so…</th></tr>
-    <tr><td>56 and 67</td><td>4</td><td>6</td><td>−2</td><td>loss still falling, move right</td></tr>
-    <tr><td>67 and 68</td><td>5</td><td>5</td><td><strong>0</strong></td><td>flat: every c here is equally good</td></tr>
-    <tr><td>68 and 69</td><td>6</td><td>4</td><td>+2</td><td>loss rising, went too far</td></tr>
-  </table>
-  <p>With an even number of rows the minimum is a whole interval, from the 5th to the 6th value: any c in [67, 68] gives total absolute loss 117 (the code above printed 117.00 at 67, 67.5 and 68, and the optimiser happened to stop at 67.187). The conventional <strong>median</strong> is the midpoint, 67.5. Without the typo the sorted prices are 38 … 67, 68 … 96: the same middle pair, so the same median. The typo counts as just "one point above or below", however far away it is, so it did not move the answer at all.</p>
-  <h3>The catch: a kink at zero</h3>
-  <p>The derivative is −sign(y − ŷ): always −1 or +1, undefined exactly at 0. Two consequences. Gradient descent gets the same size push whether the miss is 0.01 or 100, so near the answer it keeps overshooting unless the step size shrinks. And at r = 0 we must use a <strong>subgradient</strong> (any value between −1 and +1; libraries use 0). Solvers for absolute loss therefore often use linear programming instead of plain gradient descent.</p>
-  <p>Probability view: absolute loss is the negative log-likelihood when the noise follows a <strong>Laplace</strong> distribution, p(ε) ∝ exp(−|ε|/b), which has heavier tails than a Gaussian. Heavy tails mean big errors are expected now and then, so they are not treated as disasters.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Absolute loss</strong>: L(y, ŷ) = |y − ŷ|; cost MAE. (Sub)gradient with respect to ŷ: −sign(y − ŷ). Minimiser over constants: the median (an interval when n is even); over functions: the conditional median. Generalisation: the <strong>quantile (pinball) loss</strong> with τ ∈ (0, 1) penalises under-prediction by τ·r and over-prediction by (1 − τ)·|r|, and its minimiser is the τ-quantile (used for prediction intervals, see <a class="xref" data-note="ml_ts_ml">ML Forecasting</a>).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"MAE is robust, so always use it." It ignores the size of large errors, which is wrong when large errors are genuinely costly (under-pricing a flat by ₹25 lakh is a real loss to a seller, not noise). It also converges slowly with gradient methods. Choose by what a mistake really costs.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Huber Loss.</b> Squared loss is smooth but fragile; absolute loss is robust but kinked. Can one loss be quadratic for small misses and linear for big ones?</div>
-
-  <h2 id="lg-huber"><span class="num">04</span>Huber Loss</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We want the gentle, smooth push of squared loss for ordinary ₹2–3 lakh misses, and the bounded push of absolute loss for a ₹25 lakh typo. Is there a single loss that behaves like each in its own range?</p>
-  </div>
-  <h3>The formula, in plain words</h3>
-  <p>Pick a threshold δ. For a small residual (|r| ≤ δ) use half the square, ½r². For a big residual use a straight line, δ(|r| − ½δ). The ½δ is there so the two pieces meet smoothly at |r| = δ: both give ½δ² and both have slope δ.</p>
-  <p>Its derivative is the <strong>clipped residual</strong>: ψ(r) = r when |r| ≤ δ, and ±δ beyond. So an outlier can push on the model, but never harder than δ.</p>
-  <h3>Worked by hand: the best constant with δ = 3</h3>
-  <p>The best c makes the clipped residuals sum to zero: Σ ψ(yᵢ − c) = 0. Try c = 67 on the typo prices (δ = 3, about one and a half typical misses):</p>
-  <table class="tbl">
-    <tr><th>y</th><th>r = y − 67</th><th>ψ(r), clipped to ±3</th><th>Huber loss</th></tr>
-    <tr><td>38</td><td>−29</td><td>−3</td><td>3·(29 − 1.5) = 82.5</td></tr>
-    <tr><td>49</td><td>−18</td><td>−3</td><td>3·(18 − 1.5) = 49.5</td></tr>
-    <tr><td>53</td><td>−14</td><td>−3</td><td>37.5</td></tr>
-    <tr><td>56</td><td>−11</td><td>−3</td><td>28.5</td></tr>
-    <tr><td>67</td><td>0</td><td>0</td><td>0</td></tr>
-    <tr><td>68</td><td>1</td><td>1</td><td>½·1² = 0.5</td></tr>
-    <tr><td>73</td><td>6</td><td>3</td><td>13.5</td></tr>
-    <tr><td>83</td><td>16</td><td>3</td><td>43.5</td></tr>
-    <tr><td>87</td><td>20</td><td>3</td><td>55.5</td></tr>
-    <tr><td>69 (typo)</td><td>2</td><td>2</td><td>½·2² = 2</td></tr>
-    <tr><td colspan="2"><strong>sum</strong></td><td><strong>−12 + 0 + 1 + 9 + 2 = 0</strong> ✓</td><td><strong>313.0</strong></td></tr>
-  </table>
-  <p>The clipped pushes balance at c = 67, matching the numerical answer from section 02 (313.00 at c = 67). No row, however far, pushes harder than 3. Huber sits between the median interval [67, 68] and the mean 64.3, and here lands right next to the median because one row is badly wrong.</p>
+  <h2 id="lg-robust"><span class="num">03</span>Absolute and Huber Loss</h2>
+  <p>If one bad row should not be allowed to dominate, the obvious fix is to stop squaring. <strong>Absolute loss</strong> is L(y, ŷ) = |y − ŷ|, and its average is the <strong>mean absolute error</strong> (MAE). Every unit of miss now costs the same, whether it is the first unit or the twenty-fifth, so the typo's residual of 25 costs 25, not 625.</p>
+  <p>What does absolute loss make a model predict? Go back to the single constant c. The slope of Σ|yᵢ − c| with respect to c is simply (number of prices below c) − (number of prices above c), because each price below pulls the slope up by 1 and each price above pulls it down by 1. The loss stops falling exactly when as many prices lie above c as below it, which is the definition of the <strong>median</strong>. On the ten typo prices, sorted 38, 49, 53, 56, 67, 68, 69, 73, 83, 87, any c between the 5th and 6th values (67 and 68) has five prices on each side, so every c in that interval is equally good (the optimiser above happened to stop at 67.19; the conventional median is the midpoint, 67.5). The typo counts only as "one price on one side", no matter how far away it is, so it did not move the answer at all. A model trained with absolute loss predicts the <strong>conditional median</strong>. In the likelihood view, absolute loss corresponds to noise with a <strong>Laplace distribution</strong>, which has heavier tails than a Gaussian: big errors are expected now and then, so they are not treated as disasters.</p>
+  <p>The price of this robustness is a sharp corner. The derivative of |r| is −1 or +1 and is undefined at r = 0. That causes two practical problems. Gradient descent gets the same size push whether a miss is 0.01 or 100, so near the answer it keeps overshooting unless the step size shrinks. And at exactly zero we must use a <strong>subgradient</strong> (any value between −1 and +1). This is why absolute-loss regression is often solved by linear programming rather than plain gradient descent.</p>
+  <p><strong>Huber loss</strong> takes the best of both. Pick a threshold δ (delta). For small residuals, |r| ≤ δ, use half the square, ½r², which is smooth near zero. For big residuals use a straight line, δ(|r| − ½δ), which grows only linearly. The −½δ is there so the two pieces meet smoothly at |r| = δ. The easiest way to understand Huber is through its derivative: it equals the residual r when |r| ≤ δ and is clipped to ±δ beyond that. In other words, every row is allowed to push on the model, but no row can push harder than δ. Think of a committee where each member votes in proportion to how strongly they feel, but nobody is allowed more than δ votes, so one shouting member cannot outvote everyone else. With δ = 3 on the typo prices, the best constant is the c where the clipped residuals sum to zero; at c = 67 the four cheap flats each push −3, the three expensive ones each +3, and flats E, F and J push 0, +1 and +2, which balance exactly. That is the 67.00 printed earlier.</p>
   <figure class="viz"><svg viewBox="0 0 620 255" width="620">
 <line x1="60" y1="215" x2="580" y2="215" stroke="currentColor" opacity="0.5"/>
 <line x1="60" y1="25" x2="60" y2="215" stroke="currentColor" opacity="0.5"/>
@@ -361,324 +160,98 @@ c=64.667: likelihood=8.38e-08  NLL=16.295  SSE=91.667  check 1.5*log(2*pi*4) + S
 <text x="130" y="45" class="tm" font-size="11">squared grows fast:</text>
 <text x="130" y="60" class="tm" font-size="11">one outlier dominates</text>
 </svg><figcaption>The three regression losses against the residual. Squared (red) is gentle near 0 and explodes for big misses. Absolute (blue) is a V with a sharp corner at 0. Huber (green, δ = 1) copies the square near 0 and the straight line far away.</figcaption></figure>
-  <h3>On a real fit: the flats line with the typo</h3>
-  <p>Fit price on area three ways: squared loss on clean data, squared loss with flat J mistyped, and Huber loss with the typo:</p>
+  <p>The figure shows the three shapes against the residual. The red squared curve is gentle near zero but explodes for big misses. The blue absolute loss is a V with a sharp corner at zero. The green Huber curve copies the square near zero and becomes a straight line further out. Now the real test: fit the price line itself on the typo data with squared loss and with Huber loss.</p>
   <div class="fx" data-lang="py">import numpy as np
 from sklearn.linear_model import LinearRegression, HuberRegressor
 
-area  = np.array([5, 6, 7, 8, 9, 10, 11, 12, 13, 14], dtype=float).reshape(-1, 1)
-price = np.array([38, 49, 53, 56, 67, 68, 73, 83, 87, 96], dtype=float)
-typo = price.copy(); typo[9] = 69                # flat J mistyped
+X = area.reshape(-1, 1)
+typo = price.copy(); typo[9] = 69                      # flat J mistyped
+for name, y, model in [("squared, clean data", price, LinearRegression()),
+                       ("squared, with typo ", typo, LinearRegression()),
+                       ("Huber,   with typo ", typo, HuberRegressor(epsilon=1.35))]:
+    m = model.fit(X, y)
+    print(f"{name}: price = {m.coef_[0]:.3f} x area + {m.intercept_:.3f}")</div>
+  <div class="fx" data-lang="text">squared, clean data: price = 6.000 x area + 10.000
+squared, with typo : price = 4.527 x area + 21.291
+Huber,   with typo : price = 5.579 x area + 13.174</div>
+  <p>One bad row out of ten flattened the least-squares slope from 6.00 to 4.53 and lifted the intercept from 10 to 21.3. Huber's slope of 5.58 recovers most of the damage, because the typo can push only with a capped force. It does not recover all of it, because J is the largest flat, sitting at the end of the line where any row has the most leverage over the slope. In <code>HuberRegressor</code>, the <code>epsilon</code> parameter plays the role of δ, measured in units of an estimated noise scale; 1.35 is the classic default, chosen so that Huber loses only about 5% of the efficiency of least squares when the noise really is Gaussian.</p>
+  <p>When to use which: squared loss when the data are clean and big errors are genuinely costly (under-pricing a flat by ₹25 lakh is a real loss to a seller, not noise to be ignored); absolute loss when you want the median or the data contain wild values; Huber when you want robustness and smooth gradients together. A close relative of absolute loss, the <strong>quantile (pinball) loss</strong>, penalises under- and over-prediction unequally and makes the model predict any chosen percentile, which is how prediction intervals are built (<a class="xref" data-note="ml_ts_ml">ML Forecasting</a>). For all of these, choose δ or the loss with the data's units in mind: δ = 1 means "a ₹1 lakh miss" if prices are in lakh but "a ₹1 miss" if they are in rupees.</p>
 
-for name, y, model in [("squared loss, clean data", price, LinearRegression()),
-                       ("squared loss, with typo ", typo, LinearRegression()),
-                       ("Huber loss,   with typo ", typo, HuberRegressor(epsilon=1.35))]:
-    m = model.fit(area, y)
-    print(f"{name}: price = {m.coef_[0]:.3f} x area + {m.intercept_:.3f}"
-          f"   prediction for a 950 sq ft flat: {m.predict([[9.5]])[0]:.2f}")</div>
-  <div class="fx" data-lang="text">squared loss, clean data: price = 6.000 x area + 10.000   prediction for a 950 sq ft flat: 67.00
-squared loss, with typo : price = 4.527 x area + 21.291   prediction for a 950 sq ft flat: 64.30
-Huber loss,   with typo : price = 5.579 x area + 13.174   prediction for a 950 sq ft flat: 66.17</div>
-  <p>One bad row out of ten flattened the least-squares slope from 6.00 to 4.53 (₹1.5 lakh less per 100 sq ft) and lifted the intercept from 10 to 21.3; a 950 sq ft flat is now priced at 64.30 instead of 67. Huber's slope 5.58 recovers most of the damage, because the typo can push only with force δ. It does not recover all of it: J is the largest flat, at the end of the line, where any row has the most leverage (<a class="xref" data-note="ml_splits">Train/Val/Test &amp; CV</a>, section 09). In <code>HuberRegressor</code>, <code>epsilon</code> plays the role of δ but in units of an estimated noise scale; 1.35 is the classic choice that keeps 95% of the efficiency of least squares when the noise really is Gaussian.</p>
-  <h3>The same idea at scale: 50 rows with three typos</h3>
-  <p>50 rows from y = 2x + 1 + noise, then three rows get +35 to +45 added (data-entry errors). Squared loss (ordinary least squares) vs Huber:</p>
-  <div class="fx" data-lang="py">import numpy as np
-from sklearn.linear_model import LinearRegression, HuberRegressor
-
-rng = np.random.default_rng(0)
-x = rng.uniform(0, 10, 50)
-y = 2 * x + 1 + rng.normal(0, 1, 50)           # true line: slope 2, intercept 1
-y[[3, 17, 29]] += [40, 35, 45]                 # three corrupted rows (typos)
-X = x[:, None]
-
-ols = LinearRegression().fit(X, y)
-hub = HuberRegressor(epsilon=1.35).fit(X, y)   # epsilon = delta, in units of the noise scale
-print(f"squared loss (OLS): slope={ols.coef_[0]:.3f}  intercept={ols.intercept_:.3f}")
-print(f"Huber loss        : slope={hub.coef_[0]:.3f}  intercept={hub.intercept_:.3f}")
-clean = np.setdiff1d(np.arange(50), [3, 17, 29])
-ref = LinearRegression().fit(X[clean], y[clean])   # what we would get without the typos
-print(f"OLS on clean rows : slope={ref.coef_[0]:.3f}  intercept={ref.intercept_:.3f}")</div>
-  <div class="fx" data-lang="text">squared loss (OLS): slope=1.715  intercept=4.936
-Huber loss        : slope=2.047  intercept=0.765
-OLS on clean rows : slope=2.058  intercept=0.639</div>
-  <p>Three bad rows out of 50 dragged the OLS slope from 2.06 (the fit without the typos) to 1.72 and the intercept from 0.64 to 4.94. With more ordinary rows to outvote the typos, Huber's slope is within 0.011 of the clean fit and its intercept within 0.13.</p>
-  <table class="tbl">
-    <tr><th></th><th>Squared</th><th>Absolute</th><th>Huber</th></tr>
-    <tr><td>Best constant (typo prices)</td><td>mean (64.3)</td><td>median (any of 67–68)</td><td>between (67 at δ = 3)</td></tr>
-    <tr><td>Gradient</td><td>2(ŷ − y): grows with the miss</td><td>±1: same for all misses</td><td>clipped: grows, then capped at δ</td></tr>
-    <tr><td>Smooth at 0?</td><td>yes</td><td>no (kink)</td><td>yes</td></tr>
-    <tr><td>Outliers</td><td>dominate (slope 6 → 4.53)</td><td>ignored in size</td><td>limited influence (slope 5.58)</td></tr>
-    <tr><td>Noise model</td><td>Gaussian</td><td>Laplace</td><td>Gaussian centre, heavy tails</td></tr>
-    <tr><td>sklearn</td><td><code>LinearRegression</code>, <code>loss="squared_error"</code></td><td><code>QuantileRegressor(quantile=0.5)</code>, <code>"absolute_error"</code></td><td><code>HuberRegressor</code>, <code>loss="huber"</code></td></tr>
-  </table>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Huber loss</strong> with threshold δ &gt; 0: L<sub>δ</sub>(r) = ½r² if |r| ≤ δ, else δ(|r| − ½δ). Its derivative ψ(r) = clip(r, −δ, δ) is continuous. As δ → ∞ it becomes (half) squared loss; as δ → 0 it behaves like δ·|r|, i.e. absolute loss.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Choosing δ in raw units without looking at the data's scale. δ = 1 means "a miss of ₹1 lakh" if prices are in lakh (most flats would count as outliers) and "a miss of ₹1" if they are in rupees (nothing would). Set δ relative to the noise level, as <code>HuberRegressor</code> does, or tune it.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Log-Loss.</b> All three losses compare two numbers. The portal also predicts "will this flat sell within 30 days?", a yes/no answer given as a probability. What is the loss for "I said 99% it sells fast, and it did not"?</div>
-
-  <h2 id="lg-log"><span class="num">05</span>Log-Loss / Cross-Entropy</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>For a yes/no answer the model outputs a probability, say 0.818 that flat A sells within 30 days. "Residual" makes little sense for a probability. How wrong is a probability, and how should confident mistakes be punished?</p>
-  </div>
-  <h3>Derived from the likelihood</h3>
-  <p>A binary classifier outputs p = P(y = 1 | x). If the truth is y ∈ {0, 1}, the probability the model gave to what actually happened is p when y = 1 and 1 − p when y = 0. One formula covers both cases (the Bernoulli distribution):</p>
-  <p style="text-align:center">P(y | p) = p<sup>y</sup> · (1 − p)<sup>1 − y</sup></p>
-  <p>(Check: y = 1 gives p¹·(1−p)⁰ = p; y = 0 gives p⁰·(1−p)¹ = 1 − p.) Exactly as for squared loss, maximum likelihood over independent rows means maximising the product, i.e. minimising the negative log of it:</p>
-  <p style="text-align:center">NLL = −Σᵢ [ yᵢ ln pᵢ + (1 − yᵢ) ln(1 − pᵢ) ]</p>
-  <p>Divide by n and you have <strong>log-loss</strong>, also called <strong>binary cross-entropy</strong>. In words: <em>minus the log of the probability you gave to the right answer</em>.</p>
-  <h3>Worked by hand on the flats</h3>
-  <p>In <a class="xref" data-note="ml_intro">What is Machine Learning</a> the flats that sold within 30 days (A, D, F, G) were exactly the ones aged 9 years or more. A simple probabilistic model: score z = 0.5 × (age − 9), probability p = σ(z) = 1/(1 + e<sup>−z</sup>). Score three of our flats and one new flat K, 18 years old, which did <em>not</em> sell fast:</p>
-  <table class="tbl">
-    <tr><th>flat</th><th>age</th><th>y</th><th>z</th><th>p = P(fast)</th><th>probability given to the truth</th><th>log-loss = −ln(that)</th><th>squared (p − y)²</th></tr>
-    <tr><td>A</td><td>12</td><td>1</td><td>1.5</td><td>0.818</td><td>0.818</td><td>0.201</td><td>0.033</td></tr>
-    <tr><td>C</td><td>8</td><td>0</td><td>−0.5</td><td>0.378</td><td>0.622</td><td>0.474</td><td>0.143</td></tr>
-    <tr><td>F</td><td>10</td><td>1</td><td>0.5</td><td>0.622</td><td>0.622</td><td>0.474</td><td>0.143</td></tr>
-    <tr><td>K</td><td>18</td><td>0</td><td>4.5</td><td>0.989</td><td>0.011</td><td>4.511</td><td>0.978</td></tr>
-    <tr><td colspan="6"><strong>mean</strong></td><td><strong>1.415</strong></td><td><strong>0.324</strong> (Brier score)</td></tr>
-  </table>
+  <h2 id="lg-log"><span class="num">04</span>Log-Loss (Cross-Entropy)</h2>
+  <p>So far every loss compared two numbers. Many problems are yes/no questions instead: will this flat sell within 30 days? A classifier for such a question usually outputs a <strong>probability</strong> p, its belief that the answer is "yes". A residual makes little sense for a probability, so we need a different way to say how wrong a probability is, and we especially want to punish a model that is confidently wrong.</p>
+  <p>The answer again comes from likelihood. If the truth is y = 1 ("yes") the model gave probability p to what actually happened; if y = 0 it gave 1 − p. One formula covers both cases: P(y | p) = pʸ(1 − p)¹⁻ʸ (check: y = 1 gives p, y = 0 gives 1 − p). Taking minus the log of this over all rows, exactly as we did for squared loss, gives the <strong>log-loss</strong>, also called <strong>binary cross-entropy</strong>:</p>
+  <p style="text-align:center"><strong>L(y, p) = −[ y·ln p + (1 − y)·ln(1 − p) ]</strong></p>
+  <p>In words: <em>log-loss is minus the log of the probability you gave to the right answer</em>. Give the truth a probability of 1 and the loss is 0; give it 0.5 and the loss is ln 2 = 0.693 (a coin flip); give it 0.01 and the loss is 4.6; give it 0 and the loss is infinite.</p>
+  <p>In <a class="xref" data-note="ml_intro">What is Machine Learning</a> the flats that sold within 30 days were exactly the ones aged 9 years or more. A simple probabilistic model turns age into a score z = 0.5 × (age − 9) and the score into a probability with the <strong>sigmoid</strong> function p = 1/(1 + e⁻ᶻ), which squashes any number into the range 0 to 1. Let us score flats A (12 years, sold fast), C (8 years, did not), F (10 years, sold fast), and a new flat K, 18 years old, which surprisingly did not sell fast.</p>
   <div class="fx" data-lang="py">import numpy as np
 from sklearn.metrics import log_loss
 
 sigmoid = lambda z: 1 / (1 + np.exp(-z))
-# "sold within 30 days?" scored by a simple model: z = 0.5 x (age - 9), p = sigmoid(z)
-age = np.array([12, 8, 10, 18])                # flats A, C, F and a new flat K
-y   = np.array([1, 0, 1, 0])                   # truth: K (18 years) did NOT sell fast
-p = sigmoid(0.5 * (age - 9))
-print("p = P(sells fast):", p.round(3))
-
+age = np.array([12, 8, 10, 18])                        # flats A, C, F and a new flat K
+y   = np.array([1, 0, 1, 0])                           # 1 = sold within 30 days
+p = sigmoid(0.5 * (age - 9))                           # the model's P(sells fast)
 per_row = -(y * np.log(p) + (1 - y) * np.log(1 - p))
-print("per-row log loss:", per_row.round(3))
-print("mean log loss   :", per_row.mean().round(4), " sklearn:", round(log_loss(y, p), 4))
-print("per-row squared :", ((p - y) ** 2).round(4), " Brier =", ((p - y) ** 2).mean().round(4))
-print("gradient w.r.t. the score z, p - y:", (p - y).round(3))</div>
-  <div class="fx" data-lang="text">p = P(sells fast): [0.818 0.378 0.622 0.989]
-per-row log loss: [0.201 0.474 0.474 4.511]
-mean log loss   : 1.4152  sklearn: 1.4152
-per-row squared : [0.0333 0.1425 0.1425 0.9781]  Brier = 0.3241
-gradient w.r.t. the score z, p - y: [-0.182  0.378 -0.378  0.989]</div>
-  <p>Look at flat K. Being 98.9% sure of the wrong answer costs 4.51, more than three times the other three rows together (1.15). As p for the true class goes to 0, −ln p goes to infinity. Log-loss punishes <em>confident</em> mistakes brutally, which forces the model to produce honest probabilities. The squared version (the Brier score) caps that row at 0.98. A useful reference: always predicting 0.5 gives log-loss ln 2 = 0.693; anything above that on balanced data is worse than a coin.</p>
-  <h3>The gradient: p − y</h3>
-  <p>In logistic regression (<a class="xref" data-note="ml_classification">Logistic Regression</a>) the model computes a score z = w·x + b and turns it into a probability with the sigmoid p = σ(z). Differentiate the loss with respect to z, step by step:</p>
-  <ol>
-    <li>The sigmoid has the neat derivative dσ/dz = σ(z)(1 − σ(z)) = p(1 − p).</li>
-    <li>dL/dz = −[ y·(1/p)·p(1 − p) + (1 − y)·(−1/(1 − p))·p(1 − p) ] = −[ y(1 − p) − (1 − y)p ].</li>
-    <li>Expand: −[ y − yp − p + yp ] = −[y − p] = <strong>p − y</strong>.</li>
-  </ol>
-  <p>So ∂L/∂w = (p − y)·x and ∂L/∂b = p − y: "prediction minus truth, times the input", the same shape as the squared-loss gradient for linear regression. On the flats: flat A pushes its score up by 0.182 (p − y = −0.182), flat K pushes down hard, by 0.989. That is why the from-scratch code in section 16 looks almost identical for both models.</p>
-  <h3>Multiclass: softmax and cross-entropy</h3>
-  <p>With K classes the model outputs K scores z₁…z<sub>K</sub>, and <strong>softmax</strong> turns them into probabilities: pₖ = e<sup>zₖ</sup> / Σⱼ e<sup>zⱼ</sup>. The loss is still −ln(probability of the true class). By hand for a model guessing a flat's locality from its listing, with scores (Baner 2, Kothrud 1, Hadapsar 0): e² = 7.389, e¹ = 2.718, e⁰ = 1, sum 11.107, so p = (0.665, 0.245, 0.090). If the flat is really in Baner, the loss is −ln 0.665 = 0.408. The gradient with respect to the scores is again p − (one-hot truth) = (0.665 − 1, 0.245, 0.090).</p>
-  <div class="fx" data-lang="py">import numpy as np
-from sklearn.metrics import log_loss
-
-z = np.array([2.0, 1.0, 0.0])                  # raw scores for Baner, Kothrud, Hadapsar
-p = np.exp(z) / np.exp(z).sum()                # softmax
-print("softmax probs:", p.round(3), " sum =", p.sum())
-true = 0                                       # the flat is really in Baner
-print("cross-entropy = -ln p[true] =", round(-np.log(p[true]), 3))
-onehot = np.eye(3)[true]
-print("gradient w.r.t. scores = p - onehot =", (p - onehot).round(3))
-print("sklearn log_loss:", round(log_loss([0], [p], labels=[0, 1, 2]), 3))</div>
-  <div class="fx" data-lang="text">softmax probs: [0.665 0.245 0.09 ]  sum = 1.0
-cross-entropy = -ln p[true] = 0.408
-gradient w.r.t. scores = p - onehot = [-0.335  0.245  0.09 ]
-sklearn log_loss: 0.408</div>
-  <h3>Why not just use squared loss for classification?</h3>
-  <p>Put squared loss on top of the sigmoid: L = (σ(z) − y)². By the chain rule its gradient is 2(p − y)·p(1 − p). The extra factor p(1 − p) is tiny when p is near 0 or 1, including when the model is <em>confidently wrong</em>. Compare the two for a true class 1:</p>
+print("p          :", p.round(3))
+print("log-loss   :", per_row.round(3), " mean", per_row.mean().round(3),
+      " sklearn", round(log_loss(y, p), 3))
+print("squared    :", ((p - y) ** 2).round(3))
+print("p - y      :", (p - y).round(3))</div>
+  <div class="fx" data-lang="text">p          : [0.818 0.378 0.622 0.989]
+log-loss   : [0.201 0.474 0.474 4.511]  mean 1.415  sklearn 1.415
+squared    : [0.033 0.143 0.143 0.978]
+p - y      : [-0.182  0.378 -0.378  0.989]</div>
+  <p>Flat A got p = 0.818 for the outcome that happened and costs only 0.201. Flats C and F were right but unsure (0.622 for the truth) and cost 0.474 each. Flat K is the interesting one: the model was 98.9% sure it would sell fast, it did not, and that single row costs 4.511, more than the other three rows together. Squared error on the same probabilities (the line "squared", known as the <strong>Brier score</strong>) caps that row at 0.978. Log-loss punishes confident mistakes brutally, and that is precisely what forces a model trained on it to produce honest, well-calibrated probabilities. Statisticians call it a <strong>proper scoring rule</strong>: on average, the best thing a model can report is its true belief.</p>
+  <p>The gradient of log-loss is remarkably simple. In logistic regression the model computes z = w·x + b and then p = σ(z). The sigmoid has the neat derivative σ'(z) = p(1 − p). Applying the chain rule, dL/dz = −[y/p − (1 − y)/(1 − p)]·p(1 − p) = −[y(1 − p) − (1 − y)p] = <strong>p − y</strong>. So the gradient with respect to each weight is (p − y)·x: "prediction minus truth, times the input", exactly the same shape as the squared-loss gradient for linear regression. The last line of the output shows it: flat A nudges its score up a little (−0.182), flat K pushes its score down hard (0.989). That is why the from-scratch code for linear and logistic regression in section 11 looks almost identical.</p>
+  <p>With more than two classes, the model outputs one score per class and the <strong>softmax</strong> function turns them into probabilities that add up to 1: pₖ = e^zₖ / Σⱼ e^zⱼ. The loss is still minus the log of the probability of the true class (<strong>categorical cross-entropy</strong>). By hand: scores (2, 1, 0) for the localities Baner, Kothrud and Hadapsar give e² = 7.389, e¹ = 2.718, e⁰ = 1, total 11.107, so p = (0.665, 0.245, 0.090); if the flat really is in Baner the loss is −ln 0.665 = 0.408, and the gradient with respect to the scores is again p minus the one-hot truth, (−0.335, 0.245, 0.090).</p>
+  <p>Why not simply use squared loss on the probability? Because the sigmoid flattens out at both ends. By the chain rule the gradient of (σ(z) − y)² is 2(p − y)·p(1 − p), and the extra factor p(1 − p) is tiny whenever p is near 0 or 1, including when the model is confidently <em>wrong</em>. Compare the two for a row whose true class is 1:</p>
   <div class="fx" data-lang="py">import numpy as np
 sigmoid = lambda z: 1 / (1 + np.exp(-z))
 
-y = 1                                          # the true class
-print("    z      p    logloss  dLog/dz   sq.loss  dSq/dz")
-for z in [-6, -4, -2, 0, 2, 4]:                # z = the model's raw score (logit)
+print("    z      p   log-loss  its slope   sq.loss  its slope")
+for z in [-6, -4, -2, 0, 2, 4]:                        # the score of a row whose true class is 1
     p = sigmoid(z)
-    log_l, log_g = -np.log(p), p - y                    # derivative of log loss w.r.t. z
-    sq_l, sq_g = (p - y) ** 2, 2 * (p - y) * p * (1 - p)  # chain rule through the sigmoid
-    print(f"{z:5d} {p:6.3f} {log_l:8.3f} {log_g:8.3f} {sq_l:8.3f} {sq_g:8.4f}")
+    print(f"{z:5d} {p:6.3f} {-np.log(p):9.3f} {p - 1:10.3f} {(p - 1)**2:9.3f} {2*(p - 1)*p*(1 - p):10.4f}")</div>
+  <div class="fx" data-lang="text">    z      p   log-loss  its slope   sq.loss  its slope
+   -6  0.002     6.002     -0.998     0.995    -0.0049
+   -4  0.018     4.018     -0.982     0.964    -0.0347
+   -2  0.119     2.127     -0.881     0.776    -0.1850
+    0  0.500     0.693     -0.500     0.250    -0.2500
+    2  0.881     0.127     -0.119     0.014    -0.0250
+    4  0.982     0.018     -0.018     0.000    -0.0006</div>
+  <p>At z = −6 the model says p = 0.002 for a row that is really class 1, the worst possible situation. Log-loss pushes back with slope −0.998, nearly its maximum. Squared loss pushes with −0.0049, two hundred times weaker, so the model barely learns from its worst mistakes. Squared loss through a sigmoid is also not convex (section 06), so gradient descent can stall on its flat plateau. For classification, use log-loss. In code, prefer the "with logits" versions of the loss (for example <code>BCEWithLogitsLoss</code> in PyTorch) that combine the sigmoid and the log in one numerically safe formula, because a probability of exactly 0 or 1 makes ln blow up.</p>
 
-# convexity check: second derivative in z, by finite differences
-zs = np.linspace(-6, 4, 11); h = 1e-4
-second = lambda L, z: (L(z + h) - 2 * L(z) + L(z - h)) / h**2
-log_L = lambda z: -np.log(sigmoid(z)); sq_L = lambda z: (sigmoid(z) - 1) ** 2
-print("min 2nd derivative, log loss :", round(min(second(log_L, z) for z in zs), 4))
-print("min 2nd derivative, sq. loss :", round(min(second(sq_L, z) for z in zs), 4))</div>
-  <div class="fx" data-lang="text">    z      p    logloss  dLog/dz   sq.loss  dSq/dz
-   -6  0.002    6.002   -0.998    0.995  -0.0049
-   -4  0.018    4.018   -0.982    0.964  -0.0347
-   -2  0.119    2.127   -0.881    0.776  -0.1850
-    0  0.500    0.693   -0.500    0.250  -0.2500
-    2  0.881    0.127   -0.119    0.014  -0.0250
-    4  0.982    0.018   -0.018    0.000  -0.0006
-min 2nd derivative, log loss : 0.0025
-min 2nd derivative, sq. loss : -0.1188</div>
-  <p>At z = −6 the model says p = 0.002 for a row that is truly class 1, the worst possible situation. Log-loss pushes with gradient −0.998, nearly the maximum. Squared loss pushes with −0.0049, two hundred times weaker: the model barely learns from its worst mistakes. The last two lines check curvature: log-loss has a positive second derivative everywhere (convex, section 11), while squared loss through a sigmoid has negative curvature in places (not convex), so gradient descent can stall on its flat plateau.</p>
-  <figure class="viz"><svg viewBox="0 0 660 235" width="660">
-<line x1="55" y1="190" x2="305" y2="190" stroke="currentColor" opacity="0.5"/>
-<line x1="55" y1="30" x2="55" y2="190" stroke="currentColor" opacity="0.5"/>
-<text x="55" y="204" text-anchor="middle" class="tm" font-size="10.5">-6</text>
-<line x1="55" y1="190" x2="55" y2="193" stroke="currentColor" opacity="0.5"/>
-<text x="105" y="204" text-anchor="middle" class="tm" font-size="10.5">-4</text>
-<line x1="105" y1="190" x2="105" y2="193" stroke="currentColor" opacity="0.5"/>
-<text x="155" y="204" text-anchor="middle" class="tm" font-size="10.5">-2</text>
-<line x1="155" y1="190" x2="155" y2="193" stroke="currentColor" opacity="0.5"/>
-<text x="205" y="204" text-anchor="middle" class="tm" font-size="10.5">0</text>
-<line x1="205" y1="190" x2="205" y2="193" stroke="currentColor" opacity="0.5"/>
-<text x="255" y="204" text-anchor="middle" class="tm" font-size="10.5">2</text>
-<line x1="255" y1="190" x2="255" y2="193" stroke="currentColor" opacity="0.5"/>
-<text x="305" y="204" text-anchor="middle" class="tm" font-size="10.5">4</text>
-<line x1="305" y1="190" x2="305" y2="193" stroke="currentColor" opacity="0.5"/>
-<text x="50" y="193.5" text-anchor="end" class="tm" font-size="10.5">0</text>
-<line x1="52" y1="190" x2="55" y2="190" stroke="currentColor" opacity="0.5"/>
-<text x="50" y="144.3" text-anchor="end" class="tm" font-size="10.5">2</text>
-<line x1="52" y1="140.8" x2="55" y2="140.8" stroke="currentColor" opacity="0.5"/>
-<text x="50" y="95" text-anchor="end" class="tm" font-size="10.5">4</text>
-<line x1="52" y1="91.5" x2="55" y2="91.5" stroke="currentColor" opacity="0.5"/>
-<text x="50" y="45.8" text-anchor="end" class="tm" font-size="10.5">6</text>
-<line x1="52" y1="42.3" x2="55" y2="42.3" stroke="currentColor" opacity="0.5"/>
-<polyline points="55,42.2 57.5,44.7 60,47.2 62.5,49.6 65,52.1 67.5,54.5 70,57 72.5,59.4 75,61.9 77.5,64.3 80,66.8 82.5,69.2 85,71.6 87.5,74.1 90,76.5 92.5,79 95,81.4 97.5,83.8 100,86.2 102.5,88.7 105,91.1 107.5,93.5 110,95.9 112.5,98.3 115,100.7 117.5,103.1 120,105.5 122.5,107.9 125,110.2 127.5,112.6 130,115 132.5,117.3 135,119.6 137.5,121.9 140,124.2 142.5,126.5 145,128.8 147.5,131 150,133.3 152.5,135.5 155,137.6 157.5,139.8 160,141.9 162.5,144 165,146.1 167.5,148.1 170,150.1 172.5,152.1 175,154 177.5,155.9 180,157.7 182.5,159.4 185,161.2 187.5,162.8 190,164.5 192.5,166 195,167.5 197.5,169 200,170.4 202.5,171.7 205,172.9 207.5,174.1 210,175.3 212.5,176.4 215,177.4 217.5,178.3 220,179.2 222.5,180.1 225,180.9 227.5,181.6 230,182.3 232.5,182.9 235,183.5 237.5,184.1 240,184.6 242.5,185 245,185.5 247.5,185.9 250,186.2 252.5,186.6 255,186.9 257.5,187.2 260,187.4 262.5,187.6 265,187.9 267.5,188.1 270,188.2 272.5,188.4 275,188.5 277.5,188.7 280,188.8 282.5,188.9 285,189 287.5,189.1 290,189.2 292.5,189.3 295,189.3 297.5,189.4 300,189.5 302.5,189.5 305,189.6" fill="none" class="sb" stroke-width="2"/>
-<text x="180" y="220" text-anchor="middle" class="tm" font-size="11">score z (true class 1)</text>
-<text x="27" y="110" text-anchor="middle" class="tm" font-size="11" transform="rotate(-90 27 110)">loss</text>
-<text x="180" y="22" text-anchor="middle" font-size="12.5" font-weight="700">log loss −ln σ(z): convex</text>
-<line x1="385" y1="190" x2="635" y2="190" stroke="currentColor" opacity="0.5"/>
-<line x1="385" y1="30" x2="385" y2="190" stroke="currentColor" opacity="0.5"/>
-<text x="385" y="204" text-anchor="middle" class="tm" font-size="10.5">-6</text>
-<line x1="385" y1="190" x2="385" y2="193" stroke="currentColor" opacity="0.5"/>
-<text x="435" y="204" text-anchor="middle" class="tm" font-size="10.5">-4</text>
-<line x1="435" y1="190" x2="435" y2="193" stroke="currentColor" opacity="0.5"/>
-<text x="485" y="204" text-anchor="middle" class="tm" font-size="10.5">-2</text>
-<line x1="485" y1="190" x2="485" y2="193" stroke="currentColor" opacity="0.5"/>
-<text x="535" y="204" text-anchor="middle" class="tm" font-size="10.5">0</text>
-<line x1="535" y1="190" x2="535" y2="193" stroke="currentColor" opacity="0.5"/>
-<text x="585" y="204" text-anchor="middle" class="tm" font-size="10.5">2</text>
-<line x1="585" y1="190" x2="585" y2="193" stroke="currentColor" opacity="0.5"/>
-<text x="635" y="204" text-anchor="middle" class="tm" font-size="10.5">4</text>
-<line x1="635" y1="190" x2="635" y2="193" stroke="currentColor" opacity="0.5"/>
-<text x="380" y="193.5" text-anchor="end" class="tm" font-size="10.5">0</text>
-<line x1="382" y1="190" x2="385" y2="190" stroke="currentColor" opacity="0.5"/>
-<text x="380" y="120.8" text-anchor="end" class="tm" font-size="10.5">0.5</text>
-<line x1="382" y1="117.3" x2="385" y2="117.3" stroke="currentColor" opacity="0.5"/>
-<text x="380" y="48" text-anchor="end" class="tm" font-size="10.5">1</text>
-<line x1="382" y1="44.5" x2="385" y2="44.5" stroke="currentColor" opacity="0.5"/>
-<polyline points="385,45.3 387.5,45.3 390,45.4 392.5,45.5 395,45.6 397.5,45.7 400,45.9 402.5,46 405,46.1 407.5,46.3 410,46.5 412.5,46.7 415,46.9 417.5,47.2 420,47.4 422.5,47.7 425,48.1 427.5,48.4 430,48.8 432.5,49.2 435,49.7 437.5,50.3 440,50.8 442.5,51.5 445,52.2 447.5,52.9 450,53.8 452.5,54.7 455,55.7 457.5,56.8 460,58 462.5,59.3 465,60.7 467.5,62.3 470,64 472.5,65.8 475,67.7 477.5,69.8 480,72.1 482.5,74.6 485,77.2 487.5,79.9 490,82.9 492.5,86 495,89.3 497.5,92.8 500,96.4 502.5,100.2 505,104.1 507.5,108.1 510,112.3 512.5,116.5 515,120.8 517.5,125.1 520,129.4 522.5,133.6 525,137.9 527.5,142 530,146 532.5,149.9 535,153.6 537.5,157.2 540,160.5 542.5,163.7 545,166.6 547.5,169.3 550,171.7 552.5,174 555,176 557.5,177.8 560,179.5 562.5,180.9 565,182.2 567.5,183.3 570,184.3 572.5,185.2 575,185.9 577.5,186.5 580,187.1 582.5,187.5 585,187.9 587.5,188.3 590,188.6 592.5,188.8 595,189 597.5,189.2 600,189.3 602.5,189.4 605,189.5 607.5,189.6 610,189.7 612.5,189.7 615,189.8 617.5,189.8 620,189.8 622.5,189.9 625,189.9 627.5,189.9 630,189.9 632.5,189.9 635,190" fill="none" class="sr" stroke-width="2"/>
-<text x="510" y="220" text-anchor="middle" class="tm" font-size="11">score z (true class 1)</text>
-<text x="345" y="110" text-anchor="middle" class="tm" font-size="11" transform="rotate(-90 345 110)">loss</text>
-<text x="510" y="22" text-anchor="middle" font-size="12.5" font-weight="700">squared (1 − σ(z))²: not convex</text>
-<text x="392" y="150" class="tr" font-size="11">flat plateau on the left:</text>
-<text x="392" y="164" class="tr" font-size="11">tiny gradient when</text>
-<text x="392" y="178" class="tr" font-size="11">confidently wrong</text>
-</svg><figcaption>For a row whose true class is 1. Left: log-loss keeps a steady slope when the score is badly wrong and is bowl-shaped (convex). Right: squared loss on the sigmoid output flattens out when badly wrong, giving almost no gradient, and is not convex.</figcaption></figure>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Binary log-loss / cross-entropy</strong>: L(y, p) = −[y ln p + (1 − y) ln(1 − p)], y ∈ {0, 1}. <strong>Categorical cross-entropy</strong>: L = −Σₖ yₖ ln pₖ = −ln p<sub>true</sub> with one-hot y and softmax p. Both are negative log-likelihoods; with a sigmoid/softmax output the gradient with respect to the scores is p − y. Log-loss is a <strong>proper scoring rule</strong>: its expected value is minimised by predicting the true probability, so it rewards calibrated outputs.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Computing log(0). A model that outputs exactly 0 or 1 gives infinite loss on a single mistake. Libraries clip p to [ε, 1 − ε], and deep-learning frameworks offer "with logits" versions (<code>BCEWithLogitsLoss</code>) that combine sigmoid and log in one numerically stable formula. Never feed already-sigmoided outputs into a loss that expects logits, or vice versa.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Hinge Loss.</b> Log-loss keeps pushing even on flats that are already classified correctly with a good margin (flat A still costs 0.201). A different idea: stop caring about a row once it is "safely" on the right side. That is the hinge.</div>
-
-  <h2 id="lg-hinge"><span class="num">06</span>Hinge Loss</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Flat A is 12 years old and sold fast; the model already scores it confidently on the right side. Log-loss still charges it 0.201 and keeps nudging the weights for it. Can a loss ignore rows that are safely correct and spend all its effort on the doubtful ones?</p>
-  </div>
-  <h3>Margins</h3>
-  <p>For hinge loss the classes are coded y ∈ {−1, +1}, and the model outputs a raw score f(x) (not a probability). The <strong>margin</strong> m = y·f(x) combines both: positive when the score has the right sign, negative when wrong, and its size says how confidently.</p>
+  <h2 id="lg-hinge"><span class="num">05</span>Hinge Loss and the 0-1 Loss</h2>
+  <p>Log-loss never stops pushing. Flat A is 12 years old, sold fast, and the model already scores it confidently on the right side, yet it still costs 0.201 and still nudges the weights. A different philosophy says: once a row is safely correct, stop caring about it and spend all the effort on the doubtful ones. That philosophy is the hinge loss used by support vector machines.</p>
+  <p>For hinge loss the classes are coded −1 and +1 instead of 0 and 1, and the model outputs a raw score f(x), not a probability. The key quantity is the <strong>margin</strong> m = y·f(x). It is positive when the score has the right sign and negative when it is wrong, and its size says how confidently. The hinge loss is</p>
   <p style="text-align:center"><strong>hinge(m) = max(0, 1 − m)</strong></p>
-  <p>Zero loss once a row is correct with margin at least 1. A linear penalty for anything less, including rows that are correct but too close to the boundary (0 &lt; m &lt; 1).</p>
-  <h3>Worked by hand on the flats</h3>
-  <p>Same score f = 0.5 × (age − 9), labels +1 = sold fast, −1 = did not:</p>
-  <table class="tbl">
-    <tr><th>flat</th><th>y</th><th>score f</th><th>margin m = y·f</th><th>0-1 loss</th><th>hinge max(0, 1 − m)</th></tr>
-    <tr><td>A</td><td>+1</td><td>1.5</td><td>1.5</td><td>0</td><td>0</td></tr>
-    <tr><td>F</td><td>+1</td><td>0.5</td><td>0.5</td><td>0 (right, but close)</td><td>0.5</td></tr>
-    <tr><td>C</td><td>−1</td><td>−0.5</td><td>0.5</td><td>0 (right, but close)</td><td>0.5</td></tr>
-    <tr><td>K</td><td>−1</td><td>4.5</td><td>−4.5</td><td>1 (wrong)</td><td>5.5</td></tr>
-    <tr><td colspan="4"><strong>mean</strong></td><td><strong>0.25</strong></td><td><strong>1.625</strong></td></tr>
-  </table>
+  <p>It is zero once a row is correct with a margin of at least 1, and grows linearly for anything less, including rows that are correct but too close to the boundary (margins between 0 and 1). The picture to keep in mind is a football goal line with a safety zone in front of it: a defender standing well beyond the zone is fine and gets no instructions; anyone inside the zone, or on the wrong side of the line, is told to move. Using the same score 0.5 × (age − 9):</p>
   <div class="fx" data-lang="py">import numpy as np
-from sklearn.metrics import hinge_loss, zero_one_loss
 
-# "sold within 30 days?" coded as +1 / -1, raw score f = 0.5 x (age - 9)
-age = np.array([12, 10, 8, 18])                # flats A, F, C and the new flat K
-y   = np.array([+1, +1, -1, -1])               # K did not sell fast
-f = 0.5 * (age - 9)
-m = y * f                                      # margin: positive = correct side
-print("scores       :", f)
-print("margins      :", m)
-print("0-1 loss     :", (m &lt;= 0).astype(int), " mean =", (m &lt;= 0).mean())
-print("hinge loss   :", np.maximum(0, 1 - m), " mean =", np.maximum(0, 1 - m).mean())
-print("log loss (ln):", np.log1p(np.exp(-m)).round(3), " mean =", np.log1p(np.exp(-m)).mean().round(3))
-print("sklearn hinge:", hinge_loss(y, f), " sklearn 0-1:", zero_one_loss(y, np.sign(f)))
+age = np.array([12, 10, 8, 18])                        # flats A, F, C and K
+y   = np.array([+1, +1, -1, -1])                       # +1 = sold fast, -1 = did not
+m = y * 0.5 * (age - 9)                                # margin = label x score
+print("margins   :", m)
+print("0-1 loss  :", (m &lt;= 0).astype(int))
+print("hinge     :", np.maximum(0, 1 - m))
+print("log-loss  :", np.log1p(np.exp(-m)).round(3))
 
-print("\\n margin   0-1   hinge  log2-loss  squared")
-for mm in [-2, -1, 0, 0.5, 1, 2]:
-    print(f"{mm:7} {int(mm &lt;= 0):5d} {max(0, 1 - mm):7.2f} {np.log2(1 + np.exp(-mm)):9.3f} {(1 - mm) ** 2:8.2f}")</div>
-  <div class="fx" data-lang="text">scores       : [ 1.5  0.5 -0.5  4.5]
-margins      : [ 1.5  0.5  0.5 -4.5]
-0-1 loss     : [0 0 0 1]  mean = 0.25
-hinge loss   : [0.  0.5 0.5 5.5]  mean = 1.625
-log loss (ln): [0.201 0.474 0.474 4.511]  mean = 1.415
-sklearn hinge: 1.625  sklearn 0-1: 0.25
-
- margin   0-1   hinge  log2-loss  squared
-     -2     1    3.00     3.069     9.00
-     -1     1    2.00     1.895     4.00
-      0     1    1.00     1.000     1.00
-    0.5     0    0.50     0.684     0.25
-      1     0    0.00     0.452     0.00
-      2     0    0.00     0.183     1.00</div>
-  <p>The first part matches the hand table and sklearn's <code>hinge_loss</code> and <code>zero_one_loss</code>. Note the "log loss (ln)" line: written with margins, log(1 + e<sup>−m</sup>) gives 0.201, 0.474, 0.474, 4.511, exactly the per-row log-loss of section 05; it is the same loss, just in ±1 notation. The second part tabulates all the classification losses against the margin; the next section uses it.</p>
-  <h3>Why the hinge matters: support vectors</h3>
-  <p>Rows with m ≥ 1 have zero loss <em>and zero gradient</em>: they do not influence the fit at all. Flat A is out of the picture; only F, C and K matter. Those are the <strong>support vectors</strong>, and minimising hinge loss plus an L2 penalty on w is exactly the soft-margin <a class="xref" data-note="ml_svm">Support Vector Machine</a>. The gradient (strictly a subgradient, because of the corner at m = 1) with respect to w is −y·x for rows with m &lt; 1 and 0 otherwise.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Hinge loss</strong>: L(y, f) = max(0, 1 − y·f) with y ∈ {−1, +1}. It is convex, piecewise linear, an upper bound on the 0-1 loss, and gives sparse solutions (only margin violators matter). It does not produce probabilities.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Feeding 0/1 labels into a hinge formula. With y = 0 the margin y·f is always 0 and every row has loss 1. Libraries convert labels internally; your own code must use −1/+1. Also, SVM scores are not probabilities; <code>SVC(probability=True)</code> fits an extra calibration step (see <a class="xref" data-note="ml_calibration">Thresholds &amp; Calibration</a>).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: 0-1 Loss and Surrogates.</b> All these classification losses are stand-ins. What the portal reports is accuracy, i.e. the 0-1 loss (one mistake in four on A, F, C, K). Why don't we minimise that directly?</div>
-
-  <h2 id="lg-01"><span class="num">07</span>0-1 Loss and Surrogate Losses</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Log-loss and hinge are proxies. The number on the portal's dashboard is "how many flats did we classify wrongly". If that is what we care about, why train on anything else?</p>
-  </div>
-  <h3>The loss we actually care about</h3>
-  <p>0-1 loss is 1 for a wrong class and 0 for a right one: L = 𝟙[m ≤ 0]. Its average is the error rate, 1 − accuracy. It is the honest measure of a classifier. So why train with anything else?</p>
-  <ul>
-    <li><strong>No useful gradient.</strong> Change w slightly and the predicted classes usually do not change: the loss is flat (gradient 0) almost everywhere, and jumps at the boundary (gradient undefined). Gradient descent has nothing to follow.</li>
-    <li><strong>Hard to optimise exactly.</strong> Finding the linear classifier with the fewest training mistakes is NP-hard in general when no perfect separator exists.</li>
-    <li><strong>No notion of "almost right".</strong> A row at margin 0.01 and a row at margin 10 count the same, so the model has no incentive to move rows away from the boundary.</li>
-  </ul>
-  <h3>On all ten flats</h3>
-  <p>The score 0.5 × (age − 9) classifies all ten flats correctly. What does each loss say, and what happens if we simply double the score (a "more confident" model with the same decisions)?</p>
-  <div class="fx" data-lang="py">import numpy as np
-# the same score rule on all ten flats: z = 0.5 x (age - 9); 0-1 loss vs the surrogates
-age  = np.array([12, 3, 8, 15, 5, 10, 20, 2, 7, 4])
-sold = np.array([1, 0, 0, 1, 0, 1, 1, 0, 0, 0])
-z = 0.5 * (age - 9)
-m = np.where(sold == 1, 1, -1) * z            # margins with +1/-1 labels
-p = 1 / (1 + np.exp(-z))
-print("margins       :", m)
-print("0-1 loss      :", (m &lt;= 0).mean())
-print("hinge loss    :", np.maximum(0, 1 - m).mean(), " (rows still inside the margin:", int((m &lt; 1).sum()), ")")
-print("log loss      :", (-(sold * np.log(p) + (1 - sold) * np.log(1 - p))).mean().round(4))
-print("doubling the scores: 0-1", (2 * m &lt;= 0).mean(), " hinge", np.maximum(0, 1 - 2 * m).mean(),
-      " log loss", np.log1p(np.exp(-2 * m)).mean().round(4))</div>
-  <div class="fx" data-lang="text">margins       : [1.5 3.  0.5 3.  2.  0.5 5.5 3.5 1.  2.5]
-0-1 loss      : 0.0
-hinge loss    : 0.1  (rows still inside the margin: 2 )
-log loss      : 0.18
-doubling the scores: 0-1 0.0  hinge 0.0  log loss 0.0833</div>
-  <p>0-1 loss is 0 and stays 0 when the score is doubled: it cannot tell the two models apart, so it gives an optimiser nothing to work with. Hinge loss is 0.1, contributed by C and F (margin 0.5 each), and drops to 0 once the scores are doubled; then it, too, stops caring. Log-loss keeps falling (0.18 → 0.083) every time the scores are scaled up. On perfectly separable data like this, plain log-loss would push the weights towards infinity; that is one reason logistic regression is always fitted with a penalty (<a class="xref" data-note="ml_regularization">Regularization</a>).</p>
-  <h3>Surrogates: convex upper bounds</h3>
-  <p>The fix is to minimise a smooth or convex <strong>surrogate</strong> that lies on or above the 0-1 loss and goes down as the margin goes up. Tabulated against the margin (from section 06's run):</p>
-  <table class="tbl">
-    <tr><th>margin m</th><th>−2</th><th>−1</th><th>0</th><th>0.5</th><th>1</th><th>2</th></tr>
-    <tr><td>0-1</td><td>1</td><td>1</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
-    <tr><td>hinge</td><td>3</td><td>2</td><td>1</td><td>0.5</td><td>0</td><td>0</td></tr>
-    <tr><td>log-loss (base 2)</td><td>3.069</td><td>1.895</td><td>1</td><td>0.684</td><td>0.452</td><td>0.183</td></tr>
-    <tr><td>squared (1 − m)²</td><td>9</td><td>4</td><td>1</td><td>0.25</td><td>0</td><td><strong>1</strong></td></tr>
-  </table>
+# all ten flats, then the same model with every score doubled
+age10 = np.array([12, 3, 8, 15, 5, 10, 20, 2, 7, 4])
+sold  = np.array([1, 0, 0, 1, 0, 1, 1, 0, 0, 0])
+m10 = np.where(sold == 1, 1, -1) * 0.5 * (age10 - 9)
+for k in [1, 2]:
+    mk = k * m10
+    print(f"scores x{k}: 0-1 {np.mean(mk &lt;= 0):.1f}   hinge {np.maximum(0, 1 - mk).mean():.2f}"
+          f"   log-loss {np.log1p(np.exp(-mk)).mean():.3f}")</div>
+  <div class="fx" data-lang="text">margins   : [ 1.5  0.5  0.5 -4.5]
+0-1 loss  : [0 0 0 1]
+hinge     : [0.  0.5 0.5 5.5]
+log-loss  : [0.201 0.474 0.474 4.511]
+scores x1: 0-1 0.0   hinge 0.10   log-loss 0.180
+scores x2: 0-1 0.0   hinge 0.00   log-loss 0.083</div>
+  <p>Flat A has margin 1.5, so its hinge loss is 0 and, just as importantly, its gradient is 0: it has no influence on the fit at all. Flats F and C are correct but inside the margin (0.5), so they cost 0.5 each. Flat K is on the wrong side (margin −4.5) and costs 5.5. Only F, C and K shape the solution; these rows are called <strong>support vectors</strong>, and minimising the hinge loss plus a penalty on the weight size is exactly the soft-margin <a class="xref" data-note="ml_svm">Support Vector Machine</a>. Notice also that the log-loss line, written in margin form as ln(1 + e⁻ᵐ), gives exactly the numbers of section 04: it is the same loss in ±1 notation. Hinge loss does not produce probabilities; an SVM's scores need an extra calibration step if you want them (<a class="xref" data-note="ml_calibration">Thresholds &amp; Calibration</a>).</p>
+  <p>All these classification losses are stand-ins for the thing the dashboard actually reports: the fraction of flats classified wrongly. That is the <strong>0-1 loss</strong>: 1 for a wrong class, 0 for a right one, and its average is 1 − accuracy. If it is what we care about, why not train on it directly? The last two lines of the output answer that. On all ten flats the score rule makes no mistakes, so the 0-1 loss is 0, and doubling every score (a "more confident" model with identical decisions) leaves it at 0. Change the weights slightly and the predicted classes usually do not change at all, so the 0-1 loss is flat almost everywhere, with sudden jumps at the decision boundary: its gradient is either zero or undefined, and gradient descent has nothing to follow. Finding the linear classifier with the fewest mistakes is in fact NP-hard in general. The 0-1 loss also has no idea of "almost right": a margin of 0.01 and a margin of 10 count the same.</p>
+  <p>So we train on a <strong>surrogate loss</strong>: a convex, smooth (or nearly smooth) function that lies on or above the 0-1 loss and goes down as the margin goes up. The hinge loss fell from 0.10 to 0 when the scores were doubled, because C and F left the margin zone; the log-loss kept falling (0.180 → 0.083) and would keep falling forever on data this cleanly separable, which is one reason logistic regression is always fitted with a penalty (<a class="xref" data-note="ml_regularization">Regularization</a>).</p>
   <figure class="viz"><svg viewBox="0 0 620 255" width="620">
 <line x1="60" y1="215" x2="580" y2="215" stroke="currentColor" opacity="0.5"/>
 <line x1="60" y1="25" x2="60" y2="215" stroke="currentColor" opacity="0.5"/>
@@ -716,116 +289,64 @@ doubling the scores: 0-1 0.0  hinge 0.0  log loss 0.0833</div>
 <text x="320" y="245" text-anchor="middle" class="tm" font-size="11">margin m = y·f(x)  (y in {−1, +1});  m &gt; 0 means correct</text>
 <text x="26" y="120" text-anchor="middle" class="tm" font-size="11" transform="rotate(-90 26 120)">loss</text>
 </svg><figcaption>Classification losses as a function of the margin. The 0-1 step (black) is what we want; hinge (red) and log-loss (blue, base 2 so it passes through 1 at m = 0) are convex upper bounds that keep falling as the margin grows. Squared loss (teal) wrongly rises again for very confident correct answers.</figcaption></figure>
-  <p>With base-2 logs, log-loss in margin form is log₂(1 + e<sup>−m</sup>), which equals 1 at m = 0 and stays above the step, so it is an upper bound on the error rate. Note the squared column: at m = 2 the loss is 1, as large as a wrong answer at m = 0. Squared loss on ±1 labels punishes being "too correct" (flat G, margin 5.5, would cost 20.25), one more reason it is a poor classification loss.</p>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>Each surrogate is a modelling choice. Log-loss gives calibrated probabilities and never fully ignores a row. Hinge ignores well-classified rows and gives sparse "support vector" solutions but no probabilities. Exponential loss e<sup>−m</sup> (used by <a class="xref" data-note="ml_adaboost">AdaBoost</a>) punishes negative margins even harder and is very sensitive to label noise. All are <strong>classification-calibrated</strong>: with enough data, minimising them also minimises the 0-1 error.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>0-1 loss</strong>: L(y, ŷ) = 𝟙[y ≠ ŷ] (or 𝟙[y·f ≤ 0]). A <strong>surrogate loss</strong> φ(m) is a tractable (usually convex, differentiable or sub-differentiable) function used in place of the 0-1 loss during training, with φ(m) ≥ 𝟙[m ≤ 0] and φ decreasing in m.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Early-stopping or tuning on log-loss and then being surprised that accuracy did not move, or the reverse. The two can disagree: doubling the flats' scores lowered log-loss from 0.18 to 0.083 without changing a single predicted class. Track the metric you report as well as the loss you train on.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: From Loss to Cost Surface.</b> We have the losses. Now the model has parameters (w, b), and the average loss over the ten flats is a function of them, a landscape. To find the lowest point we need to see that landscape.</div>
+  <p>The figure plots every classification loss against the margin. The black step is the 0-1 loss we really want. The red hinge and the blue log-loss (drawn in base 2 so that it passes through 1 at m = 0) are convex upper bounds of it that keep decreasing as the margin grows. The teal squared loss (1 − m)² is the odd one out: it rises again for very confident correct answers, punishing a margin of 2 as much as a wrong answer at margin 0, one more reason it is a poor classification loss. A useful fact for interviews: these surrogates are <strong>classification-calibrated</strong>, meaning that with enough data, minimising them also minimises the error rate. AdaBoost's exponential loss e⁻ᵐ is another surrogate, even harsher on negative margins and therefore sensitive to mislabelled rows (<a class="xref" data-note="ml_adaboost">AdaBoost</a>).</p>
 
-  <h2 id="lg-cost"><span class="num">08</span>From Loss to Cost Surface</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>A loss scores one prediction; training changes the parameters. How does the average loss over the ten flats change as the slope w and intercept b move, and what shape is that landscape?</p>
-  </div>
-  <h3>The cost as a function of the parameters</h3>
-  <p>The data is fixed during training; the parameters move. So we read the cost J as a function of the parameters. For a line ŷ = w·x + b with squared loss:</p>
-  <p style="text-align:center">J(w, b) = (1/n) Σᵢ (w·xᵢ + b − yᵢ)²</p>
-  <h3>By hand: the height of the landscape at a few spots</h3>
-  <p>Most of these were met in <a class="xref" data-note="ml_intro">What is Machine Learning</a>; now they are points on one surface:</p>
-  <table class="tbl">
-    <tr><th>(w, b)</th><th>meaning</th><th>J = MSE on the ten flats</th></tr>
-    <tr><td>(0, 0)</td><td>predict ₹0 for every flat</td><td>mean of y² = 47906/10 = <strong>4790.6</strong></td></tr>
-    <tr><td>(8, 0)</td><td>the broker's rule</td><td>1186/10 = <strong>118.6</strong></td></tr>
-    <tr><td>(7, 0)</td><td>the learned rate</td><td>131/10 = <strong>13.1</strong></td></tr>
-    <tr><td>(6.5, 5)</td><td>a line with an intercept</td><td>67.25/10 = <strong>6.725</strong></td></tr>
-    <tr><td>(6, 10)</td><td>least squares</td><td>46/10 = <strong>4.6</strong></td></tr>
-  </table>
-  <h3>A cleaner coordinate: centred area</h3>
-  <p>Measure area from its average: u = x − 9.5, so u runs −4.5 … 4.5 and Σu = 0. Write the line as ŷ = w·u + c, where c is the predicted price of an average-sized (950 sq ft) flat; the usual intercept is b = c − 9.5w. Because Σu = 0, the cost splits into separate pieces for w and c. With Σu² = 82.5, Σuy = 495, Σy = 670 and the leftover misses (4.6) at the bottom:</p>
-  <p style="text-align:center"><strong>J(w, c) = 4.6 + 8.25·(w − 6)² + (c − 67)²</strong></p>
-  <p>A bowl whose bottom is at w = 6, c = 67 (i.e. b = 67 − 57 = 10), with height 4.6. It is 8.25 times steeper in w than in c: one lakh per 100 sq ft of slope error costs as much as ₹2.9 lakh of level error.</p>
+  <h2 id="lg-cost"><span class="num">06</span>The Cost Surface and Convexity</h2>
+  <p>A loss scores one prediction. Training, however, does not change predictions directly; it changes the parameters, and the predictions follow. During training the data are fixed and the parameters move, so it helps to read the cost as a function of the parameters. For a line ŷ = w·x + b with squared loss on the ten flats:</p>
+  <p style="text-align:center">J(w, b) = (1/n) Σ (w·xᵢ + b − yᵢ)²</p>
+  <p>Every pair (w, b) is a point on a map, and J is the height of the ground at that point. Training means finding the lowest point of this landscape. Let us measure the height at a few places, all of them lines met in earlier notes:</p>
   <div class="fx" data-lang="py">import numpy as np
-x = np.array([5, 6, 7, 8, 9, 10, 11, 12, 13, 14], dtype=float)       # area of flats A..J
-y = np.array([38, 49, 53, 56, 67, 68, 73, 83, 87, 96], dtype=float)  # price
 
-def cost(w, b):                                # J(w, b) = mean squared error of y_hat = w*x + b
-    return ((w * x + b - y) ** 2).mean()
+def J(w, b):                                           # mean squared error of the line w*x + b
+    return np.mean((w * area + b - price) ** 2)
 
 for w, b in [(0, 0), (8, 0), (7, 0), (6.5, 5), (6, 10)]:
-    print(f"J(w={w}, b={b}) = {cost(w, b):9.3f}")
+    print(f"J(w={w}, b={b}) = {J(w, b):8.2f}")
+u = area - area.mean()                                 # centred area
+print("sum u =", u.sum(), " sum u^2 =", (u**2).sum(), " sum u*y =", (u * price).sum())</div>
+  <div class="fx" data-lang="text">J(w=0, b=0) =  4790.60
+J(w=8, b=0) =   118.60
+J(w=7, b=0) =    13.10
+J(w=6.5, b=5) =     6.72
+J(w=6, b=10) =     4.60
+sum u = 0.0  sum u^2 = 82.5  sum u*y = 495.0</div>
+  <p>Predicting ₹0 for every flat, (0, 0), costs 4790.6. The broker's rule "₹8 lakh per 100 sq ft" costs 118.6; the line through the origin with slope 7 costs 13.1; adding an intercept helps further; and the least-squares line (6, 10) costs 4.6, the lowest possible, because the ten flats do not lie exactly on any line.</p>
+  <p>The algebra becomes much cleaner if we measure area from its average, u = x − 9.5, and write the line as ŷ = w·u + c, where c is simply the predicted price of an average-sized (950 sq ft) flat (the usual intercept is b = c − 9.5w). Because the centred areas add up to zero, the cost separates into one piece for w and one for c. Using the three sums printed above, Σu² = 82.5, Σuy = 495 and Σy = 670, it works out to</p>
+  <p style="text-align:center"><strong>J(w, c) = 4.6 + 8.25·(w − 6)² + (c − 67)²</strong></p>
+  <p>This is a bowl. Its lowest point is at w = 6, c = 67 (so b = 67 − 57 = 10), at height 4.6, and it is 8.25 times steeper in the w direction than in the c direction. Its contour lines (points of equal cost) are ellipses, which you will see in the next section's figure.</p>
+  <p>The bowl shape is not an accident of these ten flats; it is a property called convexity, and it is what makes training trustworthy. A function is <strong>convex</strong> if the straight line (chord) between any two points on its graph never dips below the graph. Check it on the slope direction: at w = 4 and w = 8 the cost is 4.6 + 8.25 × 4 = 37.6; the chord between them sits at height 37.6 above w = 6, while the curve there is only 4.6. For a smooth function, convexity is the same as having a second derivative that is never negative (here it is 16.5 everywhere); with many parameters, the matrix of second derivatives (the <strong>Hessian</strong>) must have no negative eigenvalues. The reason we care: a convex function has no false valleys. Any point where the slope is zero is the global minimum, so an algorithm that only ever walks downhill cannot get trapped somewhere worse.</p>
+  <p>Which costs are convex? MSE for linear regression always is. Log-loss for logistic regression is (its second derivative with respect to the score is p(1 − p) &gt; 0). Hinge, absolute and Huber losses are convex too, though not all are smooth. Squared loss through a sigmoid is not, and neither is any neural network: multiplying layers together creates many valleys and <strong>saddle points</strong> (places where the ground goes up in one direction and down in another, so the slope is zero without being a minimum). Gradient descent still works well in practice for networks, but without the guarantee (<a class="xref" data-note="dl_foundations">Neural Network Foundations</a>). Two warnings. Convexity guarantees the destination, not the speed: this same bowl takes 8,549 steps when area is not centred (section 10). And if two features are exact copies (area in sq ft and in sq m), one Hessian eigenvalue is zero: the cost is still convex, but its bottom is a flat trough of equally good solutions, a problem <a class="xref" data-note="ml_regularization">Regularization</a> fixes.</p>
 
-# centred area u = x - 9.5: y_hat = w*u + c, where c = price of an average-sized flat
-u = x - x.mean()
-print("sum u =", u.sum(), "  sum u^2 =", (u**2).sum(), "  sum u*y =", (u * y).sum(), "  sum y =", y.sum())
-for w, c in [(6, 67), (9.9, 13.4), (0, 0)]:
-    J = ((w * u + c - y) ** 2).mean()
-    print(f"J(w={w}, c={c}) = {J:9.2f}   formula 4.6 + 8.25(w-6)^2 + (c-67)^2 = {4.6 + 8.25*(w-6)**2 + (c-67)**2:9.2f}")</div>
-  <div class="fx" data-lang="text">J(w=0, b=0) =  4790.600
-J(w=8, b=0) =   118.600
-J(w=7, b=0) =    13.100
-J(w=6.5, b=5) =     6.725
-J(w=6, b=10) =     4.600
-sum u = 0.0   sum u^2 = 82.5   sum u*y = 495.0   sum y = 670.0
-J(w=6, c=67) =      4.60   formula 4.6 + 8.25(w-6)^2 + (c-67)^2 =      4.60
-J(w=9.9, c=13.4) =   3003.04   formula 4.6 + 8.25(w-6)^2 + (c-67)^2 =   3003.04
-J(w=0, c=0) =   4790.60   formula 4.6 + 8.25(w-6)^2 + (c-67)^2 =   4790.60</div>
-  <p>The first five lines are the hand table. The centred formula reproduces the direct computation at three points, including (0, 0), the same 4790.6 in either coordinate. No (w, b) does better than 4.6 because the ten flats are not on one line. The cost is a quadratic in the parameters, so the landscape is a bowl; its contour lines (points of equal cost) are ellipses, drawn in the next section's figure.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>The <strong>cost function</strong> (objective, empirical risk) J(θ) = (1/n) Σᵢ L(yᵢ, f(xᵢ; θ)) + λΩ(θ) maps a parameter vector θ to a single number. <strong>Training</strong> solves θ* = argmin<sub>θ</sub> J(θ). The <strong>gradient</strong> ∇J(θ) is the vector of partial derivatives ∂J/∂θⱼ; it points in the direction of steepest increase of J.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Gradient Descent.</b> With two parameters we could scan a grid, or even read the bottom off the formula. A real model has thousands or millions of parameters; scanning is impossible. We need a way to find the bottom of the bowl using only local information: the slope where we stand.</div>
-
-  <h2 id="lg-gd"><span class="num">09</span>Gradient Descent, Derived for Linear Regression</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We know the bowl's shape for two parameters. For a model whose bowl we cannot draw or solve, how do we get from a starting guess to the bottom using only the slope at the point where we stand?</p>
-  </div>
-  <h3>The idea</h3>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>You are on a hillside in thick fog near Munnar and need to reach the valley floor. You cannot see the valley, but you can feel the slope under your feet. Take a step in the steepest downhill direction, feel again, step again. The slope is the gradient; the length of your step is the learning rate.</p>
-  </div>
-  <p>The gradient ∇J points uphill. So the update is: <strong>θ ← θ − η·∇J(θ)</strong>, where η (eta) is the <strong>learning rate</strong>. Repeat until the gradient is (nearly) zero, which happens only at the bottom.</p>
-  <h3>The partial derivatives, step by step</h3>
-  <p>J(w, b) = (1/n) Σ eᵢ², with error eᵢ = w·xᵢ + b − yᵢ. Use the chain rule (<a class="xref" data-note="m_calculus">Calculus</a>): the derivative of e² is 2e times the derivative of e.</p>
-  <ul>
-    <li>∂eᵢ/∂w = xᵢ (w is multiplied by xᵢ), and ∂eᵢ/∂b = 1.</li>
-    <li>So <strong>∂J/∂w = (2/n) Σ eᵢ·xᵢ</strong> and <strong>∂J/∂b = (2/n) Σ eᵢ</strong>.</li>
-  </ul>
-  <p>In plain words: the slope with respect to b is twice the average error (if predictions are too high on average, lower b). The slope with respect to w is twice the average of error × input (if the big flats are over-predicted, lower w). With many features stacked in a matrix X (one row per example, a column of 1s for b), both lines become one: <strong>∇J = (2/n)·Xᵀ(Xθ − y)</strong>.</p>
-  <p>For the flats in centred form (ŷ = w·u + c) the sums simplify, because Σu = 0, Σu² = 82.5 and Σuy = 495: ∂J/∂w = (2/10)(82.5w − 495) = <strong>16.5(w − 6)</strong> and ∂J/∂c = (2/10)(10c − 670) = <strong>2(c − 67)</strong>. Each gradient is "steepness × distance from the bottom".</p>
-  <h3>Three steps by hand (η = 0.1, start at w = c = 0)</h3>
-  <p><strong>Step 1.</strong> At (0, 0): ∂J/∂w = 16.5 × (0 − 6) = −99, ∂J/∂c = 2 × (0 − 67) = −134. New w = 0 − 0.1 × (−99) = <strong>9.9</strong>, c = 0 − 0.1 × (−134) = <strong>13.4</strong>. J = 4.6 + 8.25 × 3.9² + 53.6² = 4.6 + 125.48 + 2872.96 = <strong>3003.04</strong> (down from 4790.6).</p>
-  <p><strong>Step 2.</strong> ∂J/∂w = 16.5 × 3.9 = 64.35 (positive: step 1 overshot the slope), ∂J/∂c = 2 × (13.4 − 67) = −107.2. w = 9.9 − 6.435 = <strong>3.465</strong>, c = 13.4 + 10.72 = <strong>24.12</strong>. J = 4.6 + 8.25 × 2.535² + 42.88² = 4.6 + 53.02 + 1838.69 = <strong>1896.31</strong>.</p>
-  <p><strong>Step 3.</strong> ∂J/∂w = 16.5 × (−2.535) = −41.83, ∂J/∂c = 2 × (−42.88) = −85.76. w = 3.465 + 4.183 = <strong>7.648</strong>, c = 24.12 + 8.576 = <strong>32.70</strong>, J = 4.6 + 22.40 + 1176.76 = <strong>1203.76</strong>.</p>
-  <p>Two different behaviours already show. The slope w jumps across its target 6 every step (0 → 9.9 → 3.47 → 7.65): its distance from 6 is multiplied by 1 − 0.1 × 16.5 = −0.65 each step, a shrinking zig-zag. The level c crawls up (0 → 13.4 → 24.1 → 32.7): its distance from 67 is multiplied by 1 − 0.1 × 2 = 0.8, a slow steady approach.</p>
+  <h2 id="lg-gd"><span class="num">07</span>Gradient Descent</h2>
+  <p>With two parameters we could scan the whole map, or read the bottom off the formula. A real model has thousands or millions of parameters, and its landscape cannot be drawn or scanned. We need a way to reach the bottom using only local information: the slope of the ground where we stand.</p>
+  <p>Imagine you are on a hillside near Munnar in thick fog and need to reach the valley floor. You cannot see the valley, but you can feel which way the ground slopes under your feet. So you take a step in the steepest downhill direction, feel the slope again, take another step, and repeat until the ground is flat. That is <strong>gradient descent</strong>. The <strong>gradient</strong> ∇J is the vector of slopes of the cost with respect to each parameter, and it points in the direction of steepest <em>increase</em>. So we step the opposite way:</p>
+  <p style="text-align:center"><strong>θ ← θ − η · ∇J(θ)</strong></p>
+  <p>Here θ (theta) stands for all the parameters together and η (eta) is the <strong>learning rate</strong>, the size of each step. We repeat until the gradient is nearly zero, which happens only at the bottom.</p>
+  <p>For the flat-price line we need two slopes. Write the error of row i as eᵢ = (w·xᵢ + b) − yᵢ, so J = (1/n)Σeᵢ². By the chain rule (<a class="xref" data-note="m_calculus">Calculus</a>) the derivative of e² is 2e times the derivative of e, and e changes by xᵢ when w changes by 1 and by 1 when b changes by 1. Therefore ∂J/∂w = (2/n)Σeᵢxᵢ and ∂J/∂b = (2/n)Σeᵢ. Read them in plain words: the slope with respect to b is twice the average error (if predictions are too high on average, lower b), and the slope with respect to w is twice the average of error × input (if the big flats are over-predicted, lower w). With many features stacked in a matrix X, both become one line, ∇J = (2/n)·Xᵀ(Xθ − y). In the centred form the sums simplify to ∂J/∂w = <strong>16.5(w − 6)</strong> and ∂J/∂c = <strong>2(c − 67)</strong>: each slope is "steepness × distance from the bottom".</p>
+  <p>Let us take three steps by hand, starting from w = c = 0 with η = 0.1. Step 1: the slopes are 16.5 × (0 − 6) = −99 and 2 × (0 − 67) = −134, so w becomes 0 − 0.1 × (−99) = 9.9 and c becomes 13.4; the cost falls from 4790.6 to 4.6 + 8.25 × 3.9² + 53.6² = 3003.0. Step 2: the slope in w is now 16.5 × 3.9 = +64.35 (positive, because step 1 overshot), and in c it is −107.2; w drops to 3.465 and c rises to 24.12, cost 1896.3. Step 3: w = 7.648, c = 32.70, cost 1203.8. The code continues the same loop for 100 steps:</p>
   <div class="fx" data-lang="py">import numpy as np
-x = np.array([5, 6, 7, 8, 9, 10, 11, 12, 13, 14], dtype=float)       # area of flats A..J
-y = np.array([38, 49, 53, 56, 67, 68, 73, 83, 87, 96], dtype=float)  # price
-u = x - x.mean()                               # centred area (x - 9.5)
-w, c, lr = 0.0, 0.0, 0.1                       # start at zero, learning rate 0.1
-n = len(x)
+
+u = area - area.mean()                                 # centred area, x - 9.5
+w, c, lr, n = 0.0, 0.0, 0.1, len(u)
 for step in range(1, 101):
-    err = (w * u + c) - y                      # prediction minus truth
-    dw = 2 / n * (err * u).sum()               # dJ/dw
-    dc = 2 / n * err.sum()                     # dJ/dc
-    w, c = w - lr * dw, c - lr * dc            # move against the gradient
+    err = (w * u + c) - price                          # prediction minus truth
+    dw = 2 / n * (err * u).sum()                       # dJ/dw
+    dc = 2 / n * err.sum()                             # dJ/dc
+    w, c = w - lr * dw, c - lr * dc                    # step against the gradient
     if step &lt;= 3 or step in (10, 25, 50, 100):
-        J = (((w * u + c) - y) ** 2).mean()
-        print(f"step {step:3d}: grad=({round(dw, 3) + 0:8.3f}, {round(dc, 3) + 0:8.3f})  w={w:.4f}  c={c:8.4f}  J={J:9.3f}")
-print("back to the original intercept: b = c - 9.5 w =", round(c - 9.5 * w, 4))</div>
-  <div class="fx" data-lang="text">step   1: grad=( -99.000, -134.000)  w=9.9000  c= 13.4000  J= 3003.042
-step   2: grad=(  64.350, -107.200)  w=3.4650  c= 24.1200  J= 1896.311
-step   3: grad=( -41.827,  -85.760)  w=7.6478  c= 32.6960  J= 1203.764
-step  10: grad=(   2.050,  -17.985)  w=5.9192  c= 59.8059  J=   56.408
-step  25: grad=(  -0.003,   -0.633)  w=6.0001  c= 66.7469  J=    4.664
-step  50: grad=(   0.000,   -0.002)  w=6.0000  c= 66.9990  J=    4.600
-step 100: grad=(   0.000,    0.000)  w=6.0000  c= 67.0000  J=    4.600
-back to the original intercept: b = c - 9.5 w = 10.0</div>
-  <p>The first three lines are the hand computation. By step 10 the slope has essentially arrived (5.92) while the level is still at 59.8; by step 25 J is 4.664, within 1.4% of the minimum; by step 50 both are exact: w = 6, c = 67, and b = c − 9.5w = 10, the same line the formula gave in earlier notes.</p>
+        J = np.mean(((w * u + c) - price) ** 2)
+        dw, dc = round(dw, 3) + 0.0, round(dc, 3) + 0.0     # (+0.0 avoids printing -0.000)
+        print(f"step {step:3d}: grad=({dw:8.3f}, {dc:8.3f})  w={w:.4f}  c={c:8.4f}  J={J:8.3f}")
+print("intercept b = c - 9.5 w =", round(c - 9.5 * w, 4))</div>
+  <div class="fx" data-lang="text">step   1: grad=( -99.000, -134.000)  w=9.9000  c= 13.4000  J=3003.042
+step   2: grad=(  64.350, -107.200)  w=3.4650  c= 24.1200  J=1896.311
+step   3: grad=( -41.827,  -85.760)  w=7.6478  c= 32.6960  J=1203.764
+step  10: grad=(   2.050,  -17.985)  w=5.9192  c= 59.8059  J=  56.408
+step  25: grad=(  -0.003,   -0.633)  w=6.0001  c= 66.7469  J=   4.664
+step  50: grad=(   0.000,   -0.002)  w=6.0000  c= 66.9990  J=   4.600
+step 100: grad=(   0.000,    0.000)  w=6.0000  c= 67.0000  J=   4.600
+intercept b = c - 9.5 w = 10.0</div>
+  <p>The first three lines match the hand calculation. Two different behaviours are already visible. The slope w jumps back and forth across its target 6 (0 → 9.9 → 3.47 → 7.65): each step multiplies its distance from 6 by 1 − 0.1 × 16.5 = −0.65, a shrinking zig-zag. The level c crawls steadily upward (0 → 13.4 → 24.1 → 32.7): each step multiplies its distance from 67 by 1 − 0.1 × 2 = 0.8. By step 10 the slope has essentially arrived (5.92) while c is still at 59.8; by step 50 both are exact, w = 6 and c = 67, which is b = 10, the same line the formula gave in earlier notes.</p>
   <figure class="viz"><svg viewBox="0 0 680 330" width="680">
 <line x1="55" y1="260" x2="315" y2="260" stroke="currentColor" opacity="0.5"/>
 <line x1="55" y1="30" x2="55" y2="260" stroke="currentColor" opacity="0.5"/>
@@ -986,306 +507,115 @@ back to the original intercept: b = c - 9.5 w = 10.0</div>
 <text x="355" y="145" text-anchor="middle" class="tm" font-size="11" transform="rotate(-90 355 145)">c (price at 950 sq ft)</text>
 <text x="515" y="22" text-anchor="middle" font-size="12.5" font-weight="700">SGD (one flat per step), η = 0.004</text>
 <text x="40" y="305" class="tb" font-size="11">blue η = 0.1: zig-zags in w</text><text x="40" y="320" class="tm" font-size="11">teal η = 0.06: smooth, slower</text><text x="370" y="305" class="tr" font-size="11">red: 400 one-flat steps: noisy,</text><text x="370" y="320" class="tm" font-size="11">slow, never settling exactly at ×</text><text x="185" y="69.2" text-anchor="middle" font-weight="700">×</text><text x="515" y="69.2" text-anchor="middle" font-weight="700">×</text>
-</svg><figcaption>Contours of J(w, c) for the ten flats; the ellipses are 8.25 times steeper in w than in c. Left: η = 0.1 (blue) zig-zags across the steep w direction while sliding up in c; η = 0.06 (teal) moves smoothly but more slowly. Right: stochastic updates on one flat at a time (section 12).</figcaption></figure>
-  <div class="flow"><span>Start θ (zeros or random)</span><span>Predict, compute errors</span><span>Gradient ∇J = (2/n)Xᵀ(Xθ − y)</span><span>θ ← θ − η∇J</span><span>Repeat until ∇J ≈ 0 or J stops falling</span></div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Gradient descent</strong>: given a differentiable cost J, a start θ₀ and a learning rate η &gt; 0, iterate θ<sub>t+1</sub> = θ<sub>t</sub> − η∇J(θ<sub>t</sub>). For linear regression with MSE, ∇J(θ) = (2/n)Xᵀ(Xθ − y). Stopping rules: a maximum number of iterations, a tolerance on the change in J or on ‖∇J‖, or early stopping on a validation set.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Mixing up the sign or the error definition. With e = ŷ − y the update is θ − η·(2/n)Xᵀe. Writing e = y − ŷ and keeping the minus sign makes you walk <em>uphill</em> and the cost explodes. When in doubt, check that J goes down after the first step (4790.6 → 3003.0 here).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: The Learning Rate.</b> We picked η = 0.1 and it worked, with a zig-zag. Why that value? What happens with 0.01 or 0.125, and how can we know the safe range before trying?</div>
+</svg><figcaption>Contours of J(w, c) for the ten flats; the ellipses are 8.25 times steeper in w than in c. Left: η = 0.1 (blue) zig-zags across the steep w direction while sliding up in c; η = 0.06 (teal) moves smoothly but more slowly. Right: stochastic updates on one flat at a time (section 09).</figcaption></figure>
+  <p>The left panel draws this walk on the contour map. The ellipses are stretched because the bowl is 8.25 times steeper in w than in c. With η = 0.1 (blue) the path zig-zags across the steep direction while sliding along the gentle one; with η = 0.06 (teal) it moves smoothly but more slowly. The right panel previews section 09: the ragged red path of updates that each use only one flat. One practical check is worth making a habit: after the first step, the cost must go down. If you define the error the other way round (y − ŷ) but keep the minus sign in the update, you walk uphill and the cost explodes, a mistake shown in Common Mistakes.</p>
 
-  <h2 id="lg-lr"><span class="num">10</span>The Learning Rate</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>With η = 0.1 the slope overshot every step and the level crawled. A bigger η might speed up the level but make the zig-zag worse; a smaller one might calm the zig-zag but crawl even more. Is there a rule for the safe range and the best value?</p>
-  </div>
-  <h3>One parameter first: J(w) = w²</h3>
-  <p>The gradient is 2w, so a step is w ← w − η·2w = (1 − 2η)·w. Everything depends on the factor (1 − 2η). Start at w = 1:</p>
-  <table class="tbl">
-    <tr><th>η</th><th>factor 1 − 2η</th><th>w₀, w₁, w₂, w₃</th><th>behaviour</th></tr>
-    <tr><td>0.1</td><td>0.8</td><td>1, 0.8, 0.64, 0.512</td><td>smooth, steady</td></tr>
-    <tr><td>0.5</td><td>0</td><td>1, 0, 0, 0</td><td>one step to the minimum</td></tr>
-    <tr><td>0.9</td><td>−0.8</td><td>1, −0.8, 0.64, −0.512</td><td>zig-zags across, still shrinks</td></tr>
-    <tr><td>1.0</td><td>−1</td><td>1, −1, 1, −1</td><td>bounces forever</td></tr>
-    <tr><td>1.1</td><td>−1.2</td><td>1, −1.2, 1.44, −1.728</td><td><strong>diverges</strong></td></tr>
-  </table>
-  <p>Convergence needs |1 − 2η| &lt; 1, i.e. 0 &lt; η &lt; 1. Here 2 is the curvature J''(w), so the rule is <strong>η &lt; 2 / curvature</strong>, and the fastest choice is η = 1/curvature.</p>
-  <h3>Two parameters: the steepest direction sets the limit</h3>
-  <p>For MSE the curvature is the Hessian matrix H = (2/n)XᵀX. For the flats with columns (u, 1): XᵀX = [[Σu², Σu], [Σu, n]] = [[82.5, 0], [0, 10]], so H = (2/10)·XᵀX has eigenvalues (the curvatures along the bowl's two main axes) <strong>L = 16.5</strong> (the slope direction) and <strong>μ = 2</strong> (the level direction). They are the "16.5" and "2" in the gradients of section 09.</p>
-  <ul>
-    <li>Stability is decided by the steepest direction: η &lt; 2/L = 2/16.5 = <strong>0.121</strong>.</li>
-    <li>Each direction shrinks by (1 − ηλ) per step. With η = 0.1: slope 1 − 1.65 = −0.65 (zig-zag), level 1 − 0.2 = 0.8. With η = 1/L = 0.0606: slope 0 (the slope is exact after one step), level 0.879 (slower).</li>
-    <li>The ratio κ = L/μ = 8.25 is the <strong>condition number</strong>. Large κ means a long, thin valley and slow gradient descent; section 13 shows the raw (uncentred) flats have κ = 1,198.</li>
-  </ul>
+  <h2 id="lg-lr"><span class="num">08</span>The Learning Rate</h2>
+  <p>We picked η = 0.1 and it worked, with a zig-zag. A bigger η might speed up the slow c direction but make the zig-zag worse; a smaller one might calm the zig-zag but crawl even more. Is there a rule? There is, and it is easiest to see with one parameter. Take J(w) = w². Its gradient is 2w, so one step gives w ← w − η·2w = (1 − 2η)·w: every step multiplies w by the same factor. Starting from w = 1, η = 0.1 gives 1, 0.8, 0.64, 0.512 (smooth, steady); η = 0.5 gives 1, 0, 0 (straight to the bottom in one step); η = 0.9 gives 1, −0.8, 0.64 (zig-zag, but shrinking); η = 1 gives 1, −1, 1 (bouncing forever); η = 1.1 gives 1, −1.2, 1.44 (exploding). Convergence needs |1 − 2η| &lt; 1. The 2 here is the curvature (second derivative) of J, so the general rule is: <strong>η must be less than 2 divided by the curvature</strong>, and η = 1/curvature is the single best choice.</p>
+  <p>With several parameters there is a curvature for each main direction of the bowl: the eigenvalues of the Hessian, which for MSE is (2/n)XᵀX. For the centred flats they are <strong>L = 16.5</strong> along w and <strong>μ = 2</strong> along c, the same 16.5 and 2 that appeared in the gradients. Each direction is multiplied by (1 − ηλ) per step. The steepest direction decides stability, so we need η &lt; 2/L = 2/16.5 = 0.121. The flattest direction decides speed: with η just below the limit, it shrinks only by 1 − ημ per step. The ratio κ = L/μ is called the <strong>condition number</strong>; a large κ means a long, thin valley where gradient descent must take tiny steps to stay stable across the valley and therefore crawls along it. For the centred flats κ = 8.25.</p>
   <div class="fx" data-lang="py">import numpy as np
-x = np.array([5, 6, 7, 8, 9, 10, 11, 12, 13, 14], dtype=float)
-y = np.array([38, 49, 53, 56, 67, 68, 73, 83, 87, 96], dtype=float)
-X = np.c_[x - x.mean(), np.ones(10)]             # columns: centred area u, and 1s (for c)
-H = 2 / len(x) * X.T @ X                         # Hessian of the MSE (constant for a quadratic)
-eig = np.linalg.eigvalsh(H)
-print("X^T X =", (X.T @ X).tolist(), " Hessian eigenvalues =", eig.round(3))
-print("largest stable learning rate 2/L =", round(2 / eig.max(), 4))
 
-def run(lr, steps):
-    theta = np.zeros(2); out = []
+X = np.c_[area - area.mean(), np.ones(10)]             # columns: centred area, 1
+H = 2 / 10 * X.T @ X                                   # Hessian (curvature) of the MSE
+print("Hessian eigenvalues:", np.linalg.eigvalsh(H), "  2/L =", round(2 / np.linalg.eigvalsh(H).max(), 4))
+
+def extra_cost(lr, steps):
+    theta, out = np.zeros(2), []
     for t in range(1, steps + 1):
-        theta -= lr * 2 / len(x) * X.T @ (X @ theta - y)
+        theta -= lr * 2 / 10 * X.T @ (X @ theta - price)
         if t in (1, 5, 20, 100, 500):
-            out.append(((X @ theta - y) ** 2).mean())
+            out.append(np.mean((X @ theta - price) ** 2) - 4.6)
     return out
 
-J_best = 4.6                                     # cost at the exact solution (w = 6, c = 67)
-print("\\nextra cost J - J_best after t steps")
-print("    lr        t=1        t=5       t=20      t=100      t=500")
+print("    lr      t=1      t=5     t=20    t=100    t=500   (cost above the minimum)")
 for lr in [0.01, 0.06, 0.1, 0.12, 0.125]:
-    print(f"{lr:6}" + "".join(f"{abs(J - J_best):11.2e}" for J in run(lr, 500)))</div>
-  <div class="fx" data-lang="text">X^T X = [[82.5, 0.0], [0.0, 10.0]]  Hessian eigenvalues = [ 2.  16.5]
-largest stable learning rate 2/L = 0.1212
+    print(f"{lr:6}" + "".join(f"{abs(e):9.1e}" for e in extra_cost(lr, 500)))</div>
+  <div class="fx" data-lang="text">Hessian eigenvalues: [ 2.  16.5]   2/L = 0.1212
+    lr      t=1      t=5     t=20    t=100    t=500   (cost above the minimum)
+  0.01  4.5e+03  3.7e+03  2.0e+03  7.9e+01  7.6e-06
+  0.06  3.5e+03  1.3e+03  2.7e+01  3.5e-08  2.7e-15
+   0.1  3.0e+03  4.9e+02  6.0e-01  0.0e+00  0.0e+00
+  0.12  2.9e+03  5.3e+02  1.3e+02  5.2e+00  5.0e-07
+ 0.125  2.9e+03  8.0e+02  3.4e+03  5.5e+07  6.3e+28</div>
+  <p>Read the table row by row; each number is how far the cost still is above its minimum of 4.6. With η = 0.01 it is still 2,000 above after 20 steps: safe but painfully slow. With η = 0.06 (that is 1/L) the slope is fixed in one step but the level direction shrinks only by 0.879 per step. With η = 0.1 the two directions are balanced and the cost is exact by step 100. With η = 0.12 the run is legal but slow, because the steep direction now shrinks by only |1 − 0.12 × 16.5| = 0.98 per step and keeps zig-zagging. With η = 0.125, just above the 2/L limit, the cost grows at every step and reaches 10²⁸ by step 500.</p>
+  <p>In real work you never compute the Hessian; you try learning rates on a log scale (1, 0.1, 0.01, 0.001) and watch the training loss. If the loss rises or turns into <code>nan</code>, the learning rate is too large (or the features are unscaled, which makes L huge), and the first fix is to divide η by 10. It is also common to change η during training with a <strong>learning-rate schedule</strong>: large steps early to cover distance, smaller steps later to settle into the minimum, for example halving η every few epochs, 1/t decay, or cosine decay after a short warm-up (<a class="xref" data-note="m_optimization">Optimization</a>).</p>
 
-extra cost J - J_best after t steps
-    lr        t=1        t=5       t=20      t=100      t=500
-  0.01   4.52e+03   3.72e+03   2.00e+03   7.90e+01   7.55e-06
-  0.06   3.48e+03   1.25e+03   2.70e+01   3.54e-08   2.66e-15
-   0.1   3.00e+03   4.86e+02   5.97e-01   0.00e+00   0.00e+00
-  0.12   2.88e+03   5.31e+02   1.32e+02   5.22e+00   5.00e-07
- 0.125   2.86e+03   7.97e+02   3.36e+03   5.48e+07   6.33e+28</div>
-  <figure class="viz"><svg viewBox="0 0 620 255" width="620">
-<line x1="70" y1="215" x2="570" y2="215" stroke="currentColor" opacity="0.5"/>
-<line x1="70" y1="25" x2="70" y2="215" stroke="currentColor" opacity="0.5"/>
-<text x="70" y="229" text-anchor="middle" class="tm" font-size="10.5">1</text>
-<line x1="70" y1="215" x2="70" y2="218" stroke="currentColor" opacity="0.5"/>
-<text x="150.5" y="229" text-anchor="middle" class="tm" font-size="10.5">25</text>
-<line x1="150.5" y1="215" x2="150.5" y2="218" stroke="currentColor" opacity="0.5"/>
-<text x="234.4" y="229" text-anchor="middle" class="tm" font-size="10.5">50</text>
-<line x1="234.4" y1="215" x2="234.4" y2="218" stroke="currentColor" opacity="0.5"/>
-<text x="318.3" y="229" text-anchor="middle" class="tm" font-size="10.5">75</text>
-<line x1="318.3" y1="215" x2="318.3" y2="218" stroke="currentColor" opacity="0.5"/>
-<text x="402.2" y="229" text-anchor="middle" class="tm" font-size="10.5">100</text>
-<line x1="402.2" y1="215" x2="402.2" y2="218" stroke="currentColor" opacity="0.5"/>
-<text x="486.1" y="229" text-anchor="middle" class="tm" font-size="10.5">125</text>
-<line x1="486.1" y1="215" x2="486.1" y2="218" stroke="currentColor" opacity="0.5"/>
-<text x="570" y="229" text-anchor="middle" class="tm" font-size="10.5">150</text>
-<line x1="570" y1="215" x2="570" y2="218" stroke="currentColor" opacity="0.5"/>
-<text x="65" y="218.5" text-anchor="end" class="tm" font-size="10.5">1e-12</text>
-<line x1="67" y1="215" x2="70" y2="215" stroke="currentColor" opacity="0.5"/>
-<text x="65" y="180.5" text-anchor="end" class="tm" font-size="10.5">1e-8</text>
-<line x1="67" y1="177" x2="70" y2="177" stroke="currentColor" opacity="0.5"/>
-<text x="65" y="142.5" text-anchor="end" class="tm" font-size="10.5">1e-4</text>
-<line x1="67" y1="139" x2="70" y2="139" stroke="currentColor" opacity="0.5"/>
-<text x="65" y="104.5" text-anchor="end" class="tm" font-size="10.5">1</text>
-<line x1="67" y1="101" x2="70" y2="101" stroke="currentColor" opacity="0.5"/>
-<text x="65" y="66.5" text-anchor="end" class="tm" font-size="10.5">1e4</text>
-<line x1="67" y1="63" x2="70" y2="63" stroke="currentColor" opacity="0.5"/>
-<text x="65" y="28.5" text-anchor="end" class="tm" font-size="10.5">1e8</text>
-<line x1="67" y1="25" x2="70" y2="25" stroke="currentColor" opacity="0.5"/>
-<polyline points="70,66.3 73.4,66.5 76.7,66.7 80.1,66.9 83.4,67.1 86.8,67.3 90.1,67.4 93.5,67.6 96.8,67.8 100.2,68 103.6,68.1 106.9,68.3 110.3,68.5 113.6,68.6 117,68.8 120.3,69 123.7,69.1 127,69.3 130.4,69.5 133.8,69.6 137.1,69.8 140.5,70 143.8,70.1 147.2,70.3 150.5,70.5 153.9,70.6 157.2,70.8 160.6,71 164,71.1 167.3,71.3 170.7,71.5 174,71.6 177.4,71.8 180.7,72 184.1,72.1 187.4,72.3 190.8,72.5 194.2,72.6 197.5,72.8 200.9,73 204.2,73.1 207.6,73.3 210.9,73.5 214.3,73.6 217.7,73.8 221,74 224.4,74.1 227.7,74.3 231.1,74.5 234.4,74.6 237.8,74.8 241.1,75 244.5,75.1 247.9,75.3 251.2,75.5 254.6,75.6 257.9,75.8 261.3,76 264.6,76.1 268,76.3 271.3,76.5 274.7,76.6 278.1,76.8 281.4,77 284.8,77.1 288.1,77.3 291.5,77.5 294.8,77.6 298.2,77.8 301.5,78 304.9,78.1 308.3,78.3 311.6,78.5 315,78.6 318.3,78.8 321.7,79 325,79.1 328.4,79.3 331.7,79.5 335.1,79.6 338.5,79.8 341.8,80 345.2,80.1 348.5,80.3 351.9,80.5 355.2,80.6 358.6,80.8 361.9,81 365.3,81.1 368.7,81.3 372,81.5 375.4,81.6 378.7,81.8 382.1,82 385.4,82.1 388.8,82.3 392.1,82.5 395.5,82.6 398.9,82.8 402.2,83 405.6,83.1 408.9,83.3 412.3,83.5 415.6,83.6 419,83.8 422.3,84 425.7,84.1 429.1,84.3 432.4,84.5 435.8,84.6 439.1,84.8 442.5,85 445.8,85.1 449.2,85.3 452.6,85.5 455.9,85.6 459.3,85.8 462.6,86 466,86.1 469.3,86.3 472.7,86.5 476,86.6 479.4,86.8 482.8,87 486.1,87.1 489.5,87.3 492.8,87.5 496.2,87.6 499.5,87.8 502.9,88 506.2,88.1 509.6,88.3 513,88.5 516.3,88.6 519.7,88.8 523,89 526.4,89.1 529.7,89.3 533.1,89.5 536.4,89.6 539.8,89.8 543.2,90 546.5,90.1 549.9,90.3 553.2,90.5 556.6,90.6 559.9,90.8 563.3,91 566.6,91.1 570,91.3" fill="none" class="st" stroke-width="2"/>
-<text x="320" y="176" class="tm" font-size="11.5">teal: η = 0.01 (too small: slow)</text>
-<polyline points="70,68 73.4,69.9 76.7,71.8 80.1,73.6 83.4,75.5 86.8,77.3 90.1,79.2 93.5,81 96.8,82.9 100.2,84.7 103.6,86.6 106.9,88.4 110.3,90.2 113.6,92.1 117,93.9 120.3,95.8 123.7,97.6 127,99.4 130.4,101.3 133.8,103.1 137.1,105 140.5,106.8 143.8,108.7 147.2,110.5 150.5,112.3 153.9,114.2 157.2,116 160.6,117.9 164,119.7 167.3,121.5 170.7,123.4 174,125.2 177.4,127.1 180.7,128.9 184.1,130.7 187.4,132.6 190.8,134.4 194.2,136.3 197.5,138.1 200.9,140 204.2,141.8 207.6,143.6 210.9,145.5 214.3,147.3 217.7,149.2 221,151 224.4,152.8 227.7,154.7 231.1,156.5 234.4,158.4 237.8,160.2 241.1,162.1 244.5,163.9 247.9,165.7 251.2,167.6 254.6,169.4 257.9,171.3 261.3,173.1 264.6,174.9 268,176.8 271.3,178.6 274.7,180.5 278.1,182.3 281.4,184.1 284.8,186 288.1,187.8 291.5,189.7 294.8,191.5 298.2,193.4 301.5,195.2 304.9,197 308.3,198.9 311.6,200.7 315,202.6 318.3,204.4 321.7,206.2 325,208.1 328.4,209.9 331.7,211.8 335.1,213.6 338.5,215 341.8,215 345.2,215 348.5,215 351.9,215 355.2,215 358.6,215 361.9,215 365.3,215 368.7,215 372,215 375.4,215 378.7,215 382.1,215 385.4,215 388.8,215 392.1,215 395.5,215 398.9,215 402.2,215 405.6,215 408.9,215 412.3,215 415.6,215 419,215 422.3,215 425.7,215 429.1,215 432.4,215 435.8,215 439.1,215 442.5,215 445.8,215 449.2,215 452.6,215 455.9,215 459.3,215 462.6,215 466,215 469.3,215 472.7,215 476,215 479.4,215 482.8,215 486.1,215 489.5,215 492.8,215 496.2,215 499.5,215 502.9,215 506.2,215 509.6,215 513,215 516.3,215 519.7,215 523,215 526.4,215 529.7,215 533.1,215 536.4,215 539.8,215 543.2,215 546.5,215 549.9,215 553.2,215 556.6,215 559.9,215 563.3,215 566.6,215 570,215" fill="none" class="sb" stroke-width="2"/>
-<text x="320" y="192" class="tb" font-size="11.5">blue: η = 0.1 (fastest here)</text>
-<polyline points="70,68.1 73.4,70.1 76.7,72 80.1,73.7 83.4,75.1 86.8,76.3 90.1,77.2 93.5,77.9 96.8,78.4 100.2,78.8 103.6,79.1 106.9,79.4 110.3,79.6 113.6,79.8 117,80 120.3,80.2 123.7,80.3 127,80.5 130.4,80.7 133.8,80.8 137.1,81 140.5,81.2 143.8,81.3 147.2,81.5 150.5,81.7 153.9,81.8 157.2,82 160.6,82.2 164,82.3 167.3,82.5 170.7,82.7 174,82.8 177.4,83 180.7,83.2 184.1,83.3 187.4,83.5 190.8,83.7 194.2,83.8 197.5,84 200.9,84.2 204.2,84.3 207.6,84.5 210.9,84.7 214.3,84.8 217.7,85 221,85.2 224.4,85.3 227.7,85.5 231.1,85.7 234.4,85.8 237.8,86 241.1,86.2 244.5,86.3 247.9,86.5 251.2,86.7 254.6,86.8 257.9,87 261.3,87.2 264.6,87.3 268,87.5 271.3,87.7 274.7,87.8 278.1,88 281.4,88.2 284.8,88.3 288.1,88.5 291.5,88.7 294.8,88.8 298.2,89 301.5,89.2 304.9,89.3 308.3,89.5 311.6,89.7 315,89.8 318.3,90 321.7,90.2 325,90.3 328.4,90.5 331.7,90.7 335.1,90.8 338.5,91 341.8,91.2 345.2,91.3 348.5,91.5 351.9,91.7 355.2,91.8 358.6,92 361.9,92.2 365.3,92.3 368.7,92.5 372,92.7 375.4,92.8 378.7,93 382.1,93.2 385.4,93.3 388.8,93.5 392.1,93.7 395.5,93.8 398.9,94 402.2,94.2 405.6,94.3 408.9,94.5 412.3,94.7 415.6,94.8 419,95 422.3,95.2 425.7,95.3 429.1,95.5 432.4,95.7 435.8,95.8 439.1,96 442.5,96.2 445.8,96.3 449.2,96.5 452.6,96.7 455.9,96.8 459.3,97 462.6,97.2 466,97.3 469.3,97.5 472.7,97.7 476,97.8 479.4,98 482.8,98.2 486.1,98.3 489.5,98.5 492.8,98.7 496.2,98.8 499.5,99 502.9,99.2 506.2,99.3 509.6,99.5 513,99.7 516.3,99.8 519.7,100 523,100.2 526.4,100.3 529.7,100.5 533.1,100.7 536.4,100.8 539.8,101 543.2,101.2 546.5,101.3 549.9,101.5 553.2,101.7 556.6,101.8 559.9,102 563.3,102.2 566.6,102.3 570,102.5" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="5 3"/>
-<text x="320" y="160" class="tm" font-size="11.5">dashed: η = 0.12 (zig-zag, slow)</text>
-<polyline points="70,68.2 73.4,70.1 76.7,71.7 80.1,72.8 83.4,73.4 86.8,73.6 90.1,73.6 93.5,73.3 96.8,72.9 100.2,72.4 103.6,72 106.9,71.5 110.3,71 113.6,70.5 117,70 120.3,69.5 123.7,69 127,68.5 130.4,68 133.8,67.5 137.1,67 140.5,66.5 143.8,66 147.2,65.5 150.5,65 153.9,64.5 157.2,64 160.6,63.5 164,63 167.3,62.5 170.7,62 174,61.5 177.4,61 180.7,60.5 184.1,60 187.4,59.5 190.8,59 194.2,58.5 197.5,58 200.9,57.5 204.2,57 207.6,56.5 210.9,56 214.3,55.5 217.7,55 221,54.5 224.4,54 227.7,53.5 231.1,53 234.4,52.5 237.8,52 241.1,51.5 244.5,51 247.9,50.5 251.2,50 254.6,49.5 257.9,49 261.3,48.5 264.6,48 268,47.5 271.3,47 274.7,46.5 278.1,46 281.4,45.5 284.8,45 288.1,44.5 291.5,44 294.8,43.5 298.2,43 301.5,42.5 304.9,42 308.3,41.5 311.6,41 315,40.5 318.3,40 321.7,39.5 325,39 328.4,38.5 331.7,38 335.1,37.5 338.5,37 341.8,36.5 345.2,36 348.5,35.5 351.9,35 355.2,34.5 358.6,34 361.9,33.5 365.3,33 368.7,32.5 372,32 375.4,31.5 378.7,31 382.1,30.5 385.4,30 388.8,29.5 392.1,29 395.5,28.5 398.9,28 402.2,27.5 405.6,27 408.9,26.5 412.3,26 415.6,25.5 419,25 422.3,25 425.7,25 429.1,25 432.4,25 435.8,25 439.1,25 442.5,25 445.8,25 449.2,25 452.6,25 455.9,25 459.3,25 462.6,25 466,25 469.3,25 472.7,25 476,25 479.4,25 482.8,25 486.1,25 489.5,25 492.8,25 496.2,25 499.5,25 502.9,25 506.2,25 509.6,25 513,25 516.3,25 519.7,25 523,25 526.4,25 529.7,25 533.1,25 536.4,25 539.8,25 543.2,25 546.5,25 549.9,25 553.2,25 556.6,25 559.9,25 563.3,25 566.6,25 570,25" fill="none" class="sr" stroke-width="2"/>
-<text x="320" y="144" class="tr" font-size="11.5">red: η = 0.125 red: η = 0.125 (&gt; 2/L = 0.121: diverges)gt; 2/L = 0.121, diverges</text>
-<text x="320" y="245" text-anchor="middle" class="tm" font-size="11">step</text>
-<text x="18" y="120" text-anchor="middle" class="tm" font-size="11" transform="rotate(-90 18 120)">J − J_best (log)</text>
-</svg><figcaption>Extra cost above the minimum (log scale) for four learning rates on the ten flats. 0.125 is above the 2/L limit and explodes. 0.01 is safe but crawls. 0.12 is just inside the limit: the slope direction shrinks by only |1 − 0.12 × 16.5| = 0.98 per step, so it zig-zags for a long time. 0.1 balances the two directions and wins.</figcaption></figure>
-  <p>Read the table row by row. η = 0.01: still 2,000 above the minimum after 20 steps. η = 0.06 (= 1/L): fixes the slope at once but the level shrinks only by 0.879 per step. η = 0.1: exact to machine precision by step 100. η = 0.12: legal but slow, because the steep direction now barely shrinks. η = 0.125: the cost multiplies at every step, reaching 10²⁸ by step 500.</p>
-  <h3>Learning-rate schedules (brief)</h3>
-  <p>In practice η is often reduced during training: step decay (halve η every k epochs), exponential decay, 1/t decay (sklearn's <code>"invscaling"</code>), or cosine annealing, sometimes after a short warm-up. Large steps early cover distance; small steps late settle into the minimum. For stochastic methods a decaying η is needed for exact convergence (section 12). Details in <a class="xref" data-note="m_optimization">Optimization</a>.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>For a quadratic cost (or near a minimum of a smooth cost) with Hessian eigenvalues between μ and L, gradient descent with fixed η converges if and only if 0 &lt; η &lt; 2/L; the error along each eigen-direction shrinks by |1 − ηλ| per step, so the slowest direction contracts by about 1 − ημ, giving roughly κ = L/μ steps per factor of e improvement when η ≈ 1/L.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Reading a rising loss as "the model is too simple". If the training loss goes <em>up</em> or turns into <code>nan</code>, the learning rate is almost always too large (or the features are unscaled, which makes L huge). Divide η by 10 and try again before touching anything else.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Convexity.</b> Our bowl had exactly one bottom, so "keep going downhill" was guaranteed to find it. Is that always true? When can gradient descent get stuck somewhere that is not the best?</div>
-
-  <h2 id="lg-convex"><span class="num">11</span>Convexity</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Gradient descent only sees the local slope. On the flats' bowl that was enough, but a landscape with several valleys could trap it in a worse one. Which costs guarantee that the bottom we reach is the best one?</p>
-  </div>
-  <h3>Plain meaning</h3>
-  <p>A function is <strong>convex</strong> if it is bowl-shaped everywhere: the straight line (chord) between any two points on the curve lies on or above the curve. A convex function has no false valleys, so <em>any</em> point where the gradient is zero is the global minimum. Gradient descent with a sensible learning rate cannot get trapped.</p>
-  <h3>Checking by hand</h3>
-  <p>Take the flats' cost along the slope direction with c fixed at 67: J(w) = 4.6 + 8.25(w − 6)². At w = 4 and w = 8, J = 4.6 + 33 = 37.6 both. The chord's midpoint is at w = 6 with height 37.6. The curve at w = 6 is 4.6 ≤ 37.6 ✓. A quicker test for smooth functions: the second derivative is ≥ 0 everywhere (here J'' = 16.5). In many dimensions: the Hessian matrix is positive semi-definite (all eigenvalues ≥ 0).</p>
-  <ul>
-    <li><strong>MSE for linear regression</strong>: Hessian (2/n)XᵀX, whose eigenvalues are always ≥ 0 (16.5 and 2 for the centred flats). Convex. If two features are perfectly collinear one eigenvalue is 0: still convex, but the minimum is a whole line of equally good solutions (area in sq ft and in sq m together would do this).</li>
-    <li><strong>Log-loss for logistic regression</strong>: the second derivative with respect to z is p(1 − p) &gt; 0 (the 0.0025 minimum in section 05's check). Convex.</li>
-    <li><strong>Hinge, absolute, Huber</strong>: convex (piecewise linear or quadratic), though not all are smooth.</li>
-    <li><strong>Squared loss through a sigmoid</strong>: not convex (negative second derivative −0.119 in section 05).</li>
-    <li><strong>Neural networks</strong>: not convex in their weights, whatever the loss, because layers are multiplied together. Many minima and saddle points exist; in practice SGD finds good-enough ones (see <a class="xref" data-note="dl_foundations">Neural Network Foundations</a>).</li>
-  </ul>
-  <h3>Local minima, plateaus and saddle points</h3>
-  <table class="tbl">
-    <tr><th>Feature of the landscape</th><th>Gradient there</th><th>Effect on GD</th><th>Possible in a convex cost?</th></tr>
-    <tr><td>Global minimum</td><td>0</td><td>the goal</td><td>yes (one value; maybe many θ)</td></tr>
-    <tr><td>Local (non-global) minimum</td><td>0</td><td>stuck in a worse solution</td><td>no</td></tr>
-    <tr><td>Saddle point (down one way, up another)</td><td>0</td><td>slows down; noise from SGD helps escape</td><td>no</td></tr>
-    <tr><td>Plateau</td><td>≈ 0</td><td>very slow progress</td><td>flat regions possible at the minimum only</td></tr>
-  </table>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>J is <strong>convex</strong> if J(αa + (1 − α)b) ≤ αJ(a) + (1 − α)J(b) for all a, b and α ∈ [0, 1]. For twice-differentiable J this is equivalent to a positive semi-definite Hessian everywhere. <strong>Strictly / strongly convex</strong> (e.g. Hessian eigenvalues ≥ μ &gt; 0) guarantees a unique minimiser and linear convergence of gradient descent. Adding an L2 penalty λ‖w‖² adds 2λ to every Hessian eigenvalue, making a convex cost strongly convex.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"Convex means fast." Convexity guarantees you reach the right place, not how quickly. The flats' convex bowl still needed about 50 steps with the best η; the raw, uncentred version (section 13) needs 8,549.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Batch vs Stochastic vs Mini-batch.</b> Every step so far used all ten flats to compute the gradient. With 10 million rows that is 10 million calculations for one small step. Could we step after looking at only some of them?</div>
-
-  <h2 id="lg-batch"><span class="num">12</span>Batch vs Stochastic vs Mini-batch</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Each gradient step averaged the errors of all ten flats. The portal has lakhs of past sales. Must every single step read all of them, or is a rough direction from a few rows good enough?</p>
-  </div>
-  <h3>The idea</h3>
-  <p>The full gradient is an <em>average</em> of per-row gradients. An average can be estimated from a sample. So instead of all n rows, use a random handful each step: much cheaper per step, slightly noisy in direction.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Deciding which way the crowd is moving at a railway station. Batch: interview all 10,000 passengers before taking one step. SGD: ask one random passenger and step. Mini-batch: ask 32 people. Asking 32 is nearly as reliable as asking 10,000, and you take 300 steps in the time batch takes one.</p>
-  </div>
-  <h3>By hand: one stochastic step on the flats</h3>
-  <p>At the start (w = c = 0) every error is eᵢ = −yᵢ, so flat i's own gradient is (2eᵢuᵢ, 2eᵢ). For flat J (u = 4.5, y = 96): (2 × (−96) × 4.5, 2 × (−96)) = (−864, −192). One SGD step with η = 0.01 on flat J alone: w = 0 + 0.01 × 864 = <strong>8.64</strong>, c = 0 + 0.01 × 192 = <strong>1.92</strong>. A different flat would point somewhere else; flat A (u = −4.5, y = 38) says (+342, −76), "make the slope smaller". But on average they agree with the full gradient:</p>
+  <h2 id="lg-batch"><span class="num">09</span>Batch, Stochastic and Mini-batch Gradient Descent</h2>
+  <p>Every step so far averaged the errors of all ten flats. A property portal has lakhs of past sales, and a neural network may train on millions of images. If every single small step must read every row, training becomes painfully slow. The way out comes from noticing that the full gradient is just an <em>average</em> of per-row gradients, and an average can be estimated from a sample.</p>
+  <p>Picture deciding which way a crowd is moving at a busy railway station. You could interview all 10,000 passengers before taking one step (batch gradient descent). You could ask one random passenger and step (stochastic gradient descent). Or you could ask 32 people (mini-batch). Asking 32 is nearly as reliable as asking 10,000, and you get to take about 300 steps in the time the full survey allows one. On the flats at the starting point w = c = 0, each flat's own gradient points in a different direction:</p>
   <div class="fx" data-lang="py">import numpy as np
-x = np.array([5, 6, 7, 8, 9, 10, 11, 12, 13, 14], dtype=float)
-y = np.array([38, 49, 53, 56, 67, 68, 73, 83, 87, 96], dtype=float)
-u = x - x.mean()                                  # centred area, as in section 09
-w, c = 0.0, 0.0
-err = w * u + c - y                               # all errors at the start: -y
-per_row = np.c_[2 * err * u, 2 * err]             # each flat's own gradient (dw, dc)
-print("per-flat gradients (dw, dc):")
-for name, g in zip("ABCDEFGHIJ", per_row):
-    print(f"   {name}: ({g[0]:7.1f}, {g[1]:6.1f})")
-print("average of the 10 =", per_row.mean(axis=0),
-      "  full-batch gradient =", [float(2 / 10 * (err * u).sum()), float(2 / 10 * err.sum())])
-lr = 0.01
-g = per_row[9]                                    # SGD: one random flat, say J
-print("one SGD step on flat J with lr = 0.01 -&gt;  w =", w - lr * g[0], " c =", c - lr * g[1])</div>
-  <div class="fx" data-lang="text">per-flat gradients (dw, dc):
-   A: (  342.0,  -76.0)
-   B: (  343.0,  -98.0)
-   C: (  265.0, -106.0)
-   D: (  168.0, -112.0)
-   E: (   67.0, -134.0)
-   F: (  -68.0, -136.0)
-   G: ( -219.0, -146.0)
-   H: ( -415.0, -166.0)
-   I: ( -609.0, -174.0)
-   J: ( -864.0, -192.0)
-average of the 10 = [ -99. -134.]   full-batch gradient = [-99.0, -134.0]
-one SGD step on flat J with lr = 0.01 -&gt;  w = 8.64  c = 1.92</div>
-  <p>The ten per-flat gradients disagree wildly (from +343 to −864 in w), but their average is exactly the full-batch gradient (−99, −134) of section 09. A random row's gradient is an <strong>unbiased</strong> but noisy estimate of the true gradient. The right panel of the contour figure in section 09 shows 400 such single-flat steps: a ragged path that heads the right way but never settles exactly at the bottom.</p>
-  <h3>The three variants at scale: 10,000 rows</h3>
-  <p>One <strong>epoch</strong> = one pass over all rows. Batch GD makes 1 update per epoch, mini-batch (size 32) makes ⌈10,000/32⌉ = 313, SGD makes 10,000.</p>
+
+u = area - area.mean()
+err = 0 * u + 0 - price                                # errors at the start (w = c = 0)
+per_flat = np.c_[2 * err * u, 2 * err]                 # each flat's own gradient (dw, dc)
+for half in (slice(0, 5), slice(5, 10)):
+    print("   ".join(f"{n}: ({g[0]:4.0f}, {g[1]:4.0f})" for n, g in zip("ABCDEFGHIJ"[half], per_flat[half])))
+print("average of the ten:", per_flat.mean(axis=0))</div>
+  <div class="fx" data-lang="text">A: ( 342,  -76)   B: ( 343,  -98)   C: ( 265, -106)   D: ( 168, -112)   E: (  67, -134)
+F: ( -68, -136)   G: (-219, -146)   H: (-415, -166)   I: (-609, -174)   J: (-864, -192)
+average of the ten: [ -99. -134.]</div>
+  <p>The ten per-flat gradients disagree wildly: flat A says "make the slope smaller" (+342), flat J says "make it much bigger" (−864). Yet their average is exactly the full-batch gradient (−99, −134) from section 07. A random row's gradient is therefore an <strong>unbiased</strong> but noisy estimate of the true gradient: right on average, wrong in any single draw. One stochastic step on flat J alone with η = 0.01 would move (w, c) from (0, 0) to (8.64, 1.92). The red path in the right panel of the section 07 figure shows 400 such one-flat steps: it heads the right way but never settles exactly at the bottom.</p>
+  <p>So there are three variants. <strong>Batch gradient descent</strong> uses all n rows per update. <strong>Stochastic gradient descent (SGD)</strong> uses one random row. <strong>Mini-batch gradient descent</strong> uses a small random batch of b rows, typically 32 to 512, and is what people usually mean by "SGD" in deep learning. One <strong>epoch</strong> is one full pass over the data; with 10,000 rows, batch GD makes 1 update per epoch, mini-batches of 32 make ⌈10,000/32⌉ = 313, and SGD makes 10,000. Here they are on a synthetic problem with 10,000 rows and three features, shuffled every epoch:</p>
   <div class="fx" data-lang="py">import numpy as np
 
 rng = np.random.default_rng(0)
-n, d = 10_000, 3
-X = rng.normal(size=(n, d))                       # already on similar scales
-w_true = np.array([3.0, -2.0, 0.5])
-y = X @ w_true + 4.0 + rng.normal(0, 1.0, n)      # intercept 4, noise std 1
-Xb = np.c_[X, np.ones(n)]                         # add the 1s column for the intercept
+n = 10_000
+X = np.c_[rng.normal(size=(n, 3)), np.ones(n)]         # 3 features + a column of 1s
+y = X @ np.array([3.0, -2.0, 0.5, 4.0]) + rng.normal(0, 1.0, n)
 
-def mse(theta):
-    return ((Xb @ theta - y) ** 2).mean()
-
-def train(batch_size, lr, epochs=20, seed=1):
-    r = np.random.default_rng(seed)
-    theta = np.zeros(d + 1); updates = 0; log = {}
+def train(batch_size, lr, epochs=20):
+    r = np.random.default_rng(1)
+    theta, updates = np.zeros(4), 0
     for epoch in range(1, epochs + 1):
-        order = r.permutation(n)                  # shuffle once per epoch
+        order = r.permutation(n)                       # shuffle every epoch
         for start in range(0, n, batch_size):
             idx = order[start:start + batch_size]
-            g = 2 / len(idx) * Xb[idx].T @ (Xb[idx] @ theta - y[idx])   # gradient on this batch
-            theta -= lr * g
+            theta -= lr * 2 / len(idx) * X[idx].T @ (X[idx] @ theta - y[idx])
             updates += 1
-        if epoch in (1, 5, 20):
-            log[epoch] = (mse(theta), updates)
-    return theta, log
+        if epoch in (1, 20):
+            print(f"   epoch {epoch:2d}: {updates:6d} updates, MSE {np.mean((X @ theta - y) ** 2):.4f}")
+    return theta
 
-for name, bs, lr in [("batch GD (all 10,000)", n, 0.1), ("mini-batch (32)", 32, 0.01), ("SGD (1 row)", 1, 0.001)]:
-    theta, log = train(bs, lr)
-    print(f"{name}, lr={lr}")
-    for e, (m, u) in log.items():
-        print(f"   after epoch {e:2d}: {u:6d} updates, MSE = {m:.4f}")
-    print(f"   final weights {theta.round(3)}")
-best = np.linalg.lstsq(Xb, y, rcond=None)[0]
-print("exact least squares:", best.round(3), " MSE =", round(mse(best), 4))</div>
-  <div class="fx" data-lang="text">batch GD (all 10,000), lr=0.1
-   after epoch  1:      1 updates, MSE = 19.7733
-   after epoch  5:      5 updates, MSE = 4.1329
-   after epoch 20:     20 updates, MSE = 1.0357
-   final weights [ 2.966 -1.972  0.479  3.952]
-mini-batch (32), lr=0.01
-   after epoch  1:    313 updates, MSE = 1.0323
-   after epoch  5:   1565 updates, MSE = 1.0346
-   after epoch 20:   6260 updates, MSE = 1.0331
-   final weights [ 2.981 -1.972  0.474  4.006]
-SGD (1 row), lr=0.001
-   after epoch  1:  10000 updates, MSE = 1.0334
-   after epoch  5:  50000 updates, MSE = 1.0395
-   after epoch 20: 200000 updates, MSE = 1.0384
-   final weights [ 2.937 -1.955  0.455  4.013]
-exact least squares: [ 2.998 -1.997  0.481  3.997]  MSE = 1.032</div>
-  <ul>
-    <li>After <strong>one epoch</strong> (the same amount of arithmetic), batch GD is at MSE 19.77, while mini-batch and SGD are already at about 1.03, the noise level. Many cheap noisy steps beat one exact step.</li>
-    <li><strong>But</strong> with a constant learning rate the stochastic versions never settle: SGD's MSE wanders (1.033 → 1.040 → 1.038) and its weights are visibly off (2.937 vs 2.998). The noise in each step keeps kicking it around the bottom. A decaying learning rate fixes this.</li>
-    <li>Batch GD, given enough epochs, converges smoothly to the exact answer.</li>
-  </ul>
-  <p>sklearn's <code>SGDRegressor</code> and <code>SGDClassifier</code> implement SGD with a decaying schedule, and the loss is a single argument. Scale first (section 13):</p>
+for name, bs, lr in [("batch (all rows)", n, 0.1), ("mini-batch of 32", 32, 0.01), ("SGD, one row", 1, 0.001)]:
+    print(name); theta = train(bs, lr)
+print("exact least squares MSE:", round(np.mean((X @ np.linalg.lstsq(X, y, rcond=None)[0] - y) ** 2), 4))</div>
+  <div class="fx" data-lang="text">batch (all rows)
+   epoch  1:      1 updates, MSE 19.7733
+   epoch 20:     20 updates, MSE 1.0357
+mini-batch of 32
+   epoch  1:    313 updates, MSE 1.0323
+   epoch 20:   6260 updates, MSE 1.0331
+SGD, one row
+   epoch  1:  10000 updates, MSE 1.0334
+   epoch 20: 200000 updates, MSE 1.0384
+exact least squares MSE: 1.032</div>
+  <p>After one epoch, which is the same amount of arithmetic for all three, batch GD has made a single step and is still at MSE 19.8, while mini-batch and SGD are already at about 1.03, the noise level of the data (the exact least-squares answer has MSE 1.032). Many cheap, noisy steps beat one exact step. But look at epoch 20: with a constant learning rate the stochastic versions never quite settle. SGD has actually got slightly worse (1.0384), because the noise in each step keeps kicking it around the bottom. That is why SGD needs a decaying learning rate to converge exactly, and why mini-batches, whose noise shrinks like 1/√b, are the usual compromise. They also suit modern hardware, which processes a batch of rows in parallel as one matrix multiplication.</p>
+  <p>Two more points come up in interviews. The noise of SGD is not only a cost: in non-convex problems it helps the optimiser escape saddle points and sharp minima, and it is thought to act as a mild regularizer. And the data must be <strong>shuffled</strong>: if rows are sorted by date, area or class, consecutive batches are not random samples, and the model chases the small flats, then the big ones. In scikit-learn, <code>SGDRegressor</code> and <code>SGDClassifier</code> implement this with a decaying schedule, and the loss is a single argument: <code>loss="hinge"</code> gives a linear SVM, <code>loss="log_loss"</code> a logistic regression, <code>loss="huber"</code> a robust regression. One optimiser, many models.</p>
+
+  <h2 id="lg-scale"><span class="num">10</span>Feature Scaling, Momentum and Adam</h2>
+  <p>In section 07 we quietly measured area from its average "to keep the arithmetic clean". That was not only cosmetic. For MSE, the curvature along each feature is roughly twice the average of that feature squared, and the intercept's curvature is 2. With centred area the two curvatures are 16.5 and 2. With raw area (5 to 14, never near zero) the slope and the intercept become tangled together and the ratio of curvatures jumps to about 1,200. Record area in square feet instead (500 to 1,400) and the numbers squared are 10,000 times larger again. The bowl turns into a canyon: extremely steep across one direction, almost flat along another. Because the learning rate must stay below 2/L for the steep direction, each step along the flat direction moves almost nothing. Let us count steps to convergence, using the best safe learning rate each time, for four versions of the same feature:</p>
   <div class="fx" data-lang="py">import numpy as np
-from sklearn.linear_model import SGDRegressor, SGDClassifier, LinearRegression
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
 
-rng = np.random.default_rng(0)
-X = rng.normal(size=(10_000, 3))
-y = X @ np.array([3.0, -2.0, 0.5]) + 4.0 + rng.normal(0, 1.0, 10_000)
+def gd_steps(feature, max_steps=100_000):
+    X = np.c_[feature, np.ones(10)]
+    eig = np.linalg.eigvalsh(2 / 10 * X.T @ X)
+    lr = 1 / eig.max()                                 # the best safe step for this bowl
+    theta = np.zeros(2)
+    for t in range(1, max_steps + 1):
+        theta -= lr * 2 / 10 * X.T @ (X @ theta - price)
+        if np.mean((X @ theta - price) ** 2) &lt; 4.6 * (1 + 1e-6):
+            return t, eig.max() / eig.min()
+    return f"&gt;{max_steps}", eig.max() / eig.min()
 
-sgd = make_pipeline(StandardScaler(),
-                    SGDRegressor(loss="squared_error", penalty=None, learning_rate="invscaling",
-                                 eta0=0.01, max_iter=50, tol=1e-6, random_state=0))
-sgd.fit(X, y)
-reg = sgd[-1]; sc = sgd[0]
-print("SGDRegressor coef (original units):", (reg.coef_ / sc.scale_).round(3), " epochs run:", reg.n_iter_)
-print("LinearRegression coef             :", LinearRegression().fit(X, y).coef_.round(3))
-
-# the same class of model, different losses: just change one argument
-for loss in ["hinge", "log_loss", "modified_huber"]:
-    clf = SGDClassifier(loss=loss, random_state=0).fit(X, (y &gt; 4).astype(int))
-    print(f"SGDClassifier loss={loss:15s} train accuracy = {clf.score(X, (y &gt; 4).astype(int)):.3f}")</div>
-  <div class="fx" data-lang="text">SGDRegressor coef (original units): [ 3.012 -1.992  0.494]  epochs run: 9
-LinearRegression coef             : [ 2.998 -1.997  0.481]
-SGDClassifier loss=hinge           train accuracy = 0.915
-SGDClassifier loss=log_loss        train accuracy = 0.915
-SGDClassifier loss=modified_huber  train accuracy = 0.911</div>
-  <p><code>loss="hinge"</code> gives a linear SVM, <code>"log_loss"</code> a logistic regression, <code>"modified_huber"</code> a smoothed hinge: one optimiser, many models. The coefficients are divided by the scaler's <code>scale_</code> to compare them with the unscaled <code>LinearRegression</code>.</p>
-  <table class="tbl">
-    <tr><th></th><th>Batch GD</th><th>Stochastic GD</th><th>Mini-batch GD</th></tr>
-    <tr><td>Rows per update</td><td>all n</td><td>1</td><td>b (typically 32–512)</td></tr>
-    <tr><td>Cost per update</td><td>O(n·d)</td><td>O(d)</td><td>O(b·d)</td></tr>
-    <tr><td>Updates per epoch</td><td>1</td><td>n</td><td>n / b</td></tr>
-    <tr><td>Gradient noise</td><td>none</td><td>high (flats: −864 to +343)</td><td>medium, shrinks like 1/√b</td></tr>
-    <tr><td>Converges with fixed η?</td><td>yes (η &lt; 2/L)</td><td>to a noisy region</td><td>to a smaller noisy region</td></tr>
-    <tr><td>Hardware</td><td>memory for all rows</td><td>poor vectorisation</td><td>fits GPU / vector units well</td></tr>
-    <tr><td>Data streams / huge data</td><td>no</td><td>yes (online learning)</td><td>yes</td></tr>
-    <tr><td>Typical use</td><td>small convex problems</td><td>online updates</td><td>default for deep learning and large data</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>The noise of SGD is not only a cost. In non-convex problems it helps escape saddle points and sharp minima, and it is believed to act as a mild regularizer. That is one reason deep learning uses small mini-batches even when larger ones would fit in memory.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Stochastic gradient descent</strong>: at step t sample a mini-batch B<sub>t</sub> and update θ ← θ − η<sub>t</sub>·(1/|B<sub>t</sub>|) Σ<sub>i∈B<sub>t</sub></sub> ∇L<sub>i</sub>(θ). With |B| = 1 it is pure SGD; with |B| = n it is batch GD. For convergence to the exact minimum the step sizes must decay, e.g. Σ η<sub>t</sub> = ∞ and Σ η<sub>t</sub>² &lt; ∞ (η<sub>t</sub> ∝ 1/t satisfies both).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Not shuffling. If the rows are sorted (by date, by area, by class), consecutive mini-batches are not random samples: the model chases the small flats, then the big ones. Shuffle every epoch (the code does <code>r.permutation(n)</code>). Also: when you change the batch size, retune the learning rate; larger batches usually allow a larger η.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Feature Scaling and Convergence.</b> We quietly centred the area before running gradient descent. What actually happens if we use the raw area (5 … 14), or area in square feet (500 … 1,400)?</div>
-
-  <h2 id="lg-scale"><span class="num">13</span>Feature Scaling and Convergence</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Section 09 measured area from its average "to keep the arithmetic clean". Was that only cosmetic? Gradient descent on the raw area, or on area in square feet, solves the same problem; does it take the same number of steps?</p>
-  </div>
-  <h3>Why scale changes the shape of the bowl</h3>
-  <p>For MSE, the curvature along feature j is about 2·(average of xⱼ²). The intercept's curvature is 2. With centred area (average u² = 8.25) the two curvatures are 16.5 and 2: ratio 8.25. With raw area (average x² = 98.5, and x is tangled with the intercept because it is never near 0) the ratio becomes about 1,200. With area in square feet, x² is 10,000 times larger again. The bowl turns into a canyon: extremely steep across one direction, almost flat along another.</p>
-  <p>The learning rate must stay below 2/L for the steep direction, so along the flat direction each step moves almost nothing. Gradient descent zig-zags across the canyon and crawls along it.</p>
+for name, f in [("raw area (5..14)", area), ("area in sq ft", 100 * area),
+                ("centred (x - 9.5)", area - 9.5), ("standardized", (area - 9.5) / area.std())]:
+    steps, kappa = gd_steps(f)
+    print(f"{name:18s}: condition number {kappa:12.1f}   steps {steps}")</div>
+  <div class="fx" data-lang="text">raw area (5..14)  : condition number       1198.0   steps 8549
+area in sq ft     : condition number   11760324.9   steps &gt;100000
+centred (x - 9.5) : condition number          8.3   steps 81
+standardized      : condition number          1.0   steps 1</div>
+  <p>Same ten flats, same line, same final answer, wildly different effort. Raw area has condition number 1,198 and needs 8,549 steps. Area in square feet has κ ≈ 11.8 million and does not converge in 100,000 steps. Centring brings κ down to 8.25 and the step count to 81. <strong>Standardization</strong>, subtracting the mean and dividing by the standard deviation, gives κ = 1, a perfectly round bowl, where one step with η = 0.5 lands exactly on the bottom. Only the optimiser's job changed; after converting the weight back to the original units the line is price = 6 × area + 10 every time.</p>
   <figure class="viz"><svg viewBox="0 0 660 215" width="660">
 <line x1="40" y1="180" x2="290" y2="180" stroke="currentColor" opacity="0.5"/>
 <line x1="40" y1="30" x2="40" y2="180" stroke="currentColor" opacity="0.5"/>
@@ -1346,525 +676,188 @@ SGDClassifier loss=modified_huber  train accuracy = 0.911</div>
 <text x="495" y="22" text-anchor="middle" font-size="12.5" font-weight="700">standardized: round bowl</text>
 <text x="165" y="205" text-anchor="middle" class="tm" font-size="11">25 steps: zig-zag, still creeping in</text><text x="495" y="205" text-anchor="middle" class="tm" font-size="11">6 steps, almost straight to the centre</text>
 </svg><figcaption>Same algorithm, same number of steps. Left: an elongated bowl (curvatures 1 and 20) forces a small step size and a zig-zag path. Right: after standardization the bowl is nearly round and gradient descent heads almost straight for the centre.</figcaption></figure>
-  <h3>Measured on the ten flats</h3>
-  <p>Gradient descent with its best safe step (η = 1/L), counting steps until the cost is within one part per million of the exact minimum 4.6, for four versions of the same feature:</p>
+  <p>The figure shows why. On the left, an elongated bowl forces a small step size and the path zig-zags across the narrow direction while creeping along the long one. On the right, after standardization, the bowl is nearly round and gradient descent heads almost straight for the centre. This is why every model trained by gradient descent (linear and logistic regression with SGD, neural networks) needs scaled inputs, using statistics computed on the training rows only. Models solved in closed form, and tree models, do not care (<a class="xref" data-note="ml_features">Feature Engineering</a> covers the scalers).</p>
+  <p>Sometimes the valley cannot be rescaled away: it may be tilted (because features are correlated) or it may appear deep inside a neural network. Then we let the optimiser adapt. <strong>Momentum</strong> treats the parameters like a heavy ball rolling downhill. It keeps a running "velocity" v that adds up past gradients, v ← β·v + ∇J, and steps along it, θ ← θ − η·v, with β around 0.9. Along the valley floor the gradients keep pointing the same way, so the velocity builds up speed. Across the valley they flip sign every step, so they cancel inside v and the zig-zag is damped. <strong>Adam</strong> goes one step further. It keeps two running averages per parameter: m, the average gradient (like momentum), and s, the average <em>squared</em> gradient, a measure of how big that parameter's gradients usually are. It steps by m/√s, so a parameter with huge gradients takes small steps and one with tiny gradients takes larger ones. Because both averages start at zero they are biased low for the first few steps, and Adam divides them by (1 − βᵗ) to correct for that. By hand on the first step: with gradient g, m = 0.1g and s = 0.001g², and after correction m̂ = g and ŝ = g², so the step is η·g/|g| = η for <em>every</em> parameter, however different their gradients are. Here are all three on the raw-area flats, the badly conditioned case:</p>
   <div class="fx" data-lang="py">import numpy as np
-x = np.array([5, 6, 7, 8, 9, 10, 11, 12, 13, 14], dtype=float)       # area, 100 sq ft
-y = np.array([38, 49, 53, 56, 67, 68, 73, 83, 87, 96], dtype=float)
 
-def gd_steps(feature, max_steps=100_000, tol=1e-6):
-    Xb = np.c_[feature, np.ones(len(y))]
-    H = 2 / len(y) * Xb.T @ Xb
-    eig = np.linalg.eigvalsh(H)
-    lr = 1 / eig.max()                                    # the best safe step for this bowl
-    best = np.linalg.lstsq(Xb, y, rcond=None)[0]
-    J_best = ((Xb @ best - y) ** 2).mean()
-    theta = np.zeros(2)
-    for t in range(1, max_steps + 1):
-        theta -= lr * 2 / len(y) * Xb.T @ (Xb @ theta - y)
-        if ((Xb @ theta - y) ** 2).mean() - J_best &lt; tol * J_best:
-            return t, eig.max() / eig.min(), lr
-    return f"&gt;{max_steps}", eig.max() / eig.min(), lr
-
-for name, f in [("raw area (5..14)", x), ("area in sq ft (500..1400)", 100 * x),
-                ("centred (x - 9.5)", x - x.mean()), ("standardized", (x - x.mean()) / x.std())]:
-    steps, kappa, lr = gd_steps(f)
-    print(f"{name:26s}: condition number = {kappa:12.1f}   lr = {lr:.2e}   steps to converge = {steps}")</div>
-  <div class="fx" data-lang="text">raw area (5..14)          : condition number =       1198.0   lr = 5.03e-03   steps to converge = 8549
-area in sq ft (500..1400) : condition number =   11760324.9   lr = 5.08e-07   steps to converge = &gt;100000
-centred (x - 9.5)         : condition number =          8.3   lr = 6.06e-02   steps to converge = 81
-standardized              : condition number =          1.0   lr = 5.00e-01   steps to converge = 1</div>
-  <p>Same ten flats, same line, same answer. Raw area: condition number 1,198 and 8,549 steps. Area in square feet: κ ≈ 11.8 million, not converged in 100,000 steps. Centred: κ = 8.25 (the 16.5 / 2 of section 10) and 81 steps. Standardized (centred and divided by the standard deviation 2.87): κ = 1, a perfectly round bowl, and one step with η = 0.5 lands exactly on the bottom. Only the optimiser's job changed; after converting the weights back, the line is price = 6 × area + 10 every time.</p>
-  <h3>The same effect at scale: 500 flats with two features</h3>
-  <p>500 flats, price = 0.05·size + 2·rooms + 5 + noise, with size in square feet (standard deviation about 720) and rooms (about 1.2):</p>
-  <div class="fx" data-lang="py">import numpy as np
-from sklearn.preprocessing import StandardScaler
-
-rng = np.random.default_rng(0)
-n = 500
-size = rng.uniform(500, 3000, n)                          # sq ft
-rooms = np.clip(np.round(size / 700 + rng.normal(0, 0.7, n)), 1, 5)
-price = 0.05 * size + 2.0 * rooms + 5 + rng.normal(0, 5, n)  # lakh rupees
-
-def gd_steps(X, y, max_steps=100_000, tol=1e-6):
-    Xb = np.c_[X, np.ones(len(y))]
-    H = 2 / len(y) * Xb.T @ Xb
-    eig = np.linalg.eigvalsh(H)
-    lr = 1 / eig.max()                                    # a safe step for this bowl
-    best = np.linalg.lstsq(Xb, y, rcond=None)[0]
-    J_best = ((Xb @ best - y) ** 2).mean()
-    theta = np.zeros(Xb.shape[1])
-    for t in range(1, max_steps + 1):
-        theta -= lr * 2 / len(y) * Xb.T @ (Xb @ theta - y)
-        if ((Xb @ theta - y) ** 2).mean() - J_best &lt; tol * J_best:
-            return t, eig.max() / eig.min()
-    return f"&gt;{max_steps}", eig.max() / eig.min()
-
-X_raw = np.c_[size, rooms]
-X_std = StandardScaler().fit_transform(X_raw)
-print("feature std (raw):", X_raw.std(axis=0).round(2))
-for name, X in [("raw features", X_raw), ("standardized", X_std)]:
-    steps, kappa = gd_steps(X, price)
-    print(f"{name:13s}: condition number = {kappa:12.1f}   steps to converge = {steps}")</div>
-  <div class="fx" data-lang="text">feature std (raw): [720.49   1.18]
-raw features : condition number =   28833051.0   steps to converge = &gt;100000
-standardized : condition number =         11.2   steps to converge = 82</div>
-  <p>The raw condition number is about 29 million; gradient descent does not get close in 100,000 steps. After <code>StandardScaler</code> (each column minus its mean, divided by its standard deviation) κ = 11 and it converges in 82 steps.</p>
-  <table class="tbl">
-    <tr><th>Needs scaling for the optimiser</th><th>Does not care</th></tr>
-    <tr><td>Anything trained by gradient descent: linear/logistic regression with GD/SGD, neural networks, <code>SGDClassifier</code></td><td>Closed-form OLS (<code>LinearRegression</code>): same predictions either way</td></tr>
-    <tr><td>Penalised models (ridge, lasso): the penalty itself depends on scale (<a class="xref" data-note="ml_regularization">Regularization</a>)</td><td>Tree models: splits depend only on order (<a class="xref" data-note="ml_dtree">Decision Trees</a>)</td></tr>
-    <tr><td>Distance-based models (kNN, SVM, k-means) for a different reason (distances)</td><td>Naive Bayes</td></tr>
-  </table>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Standardization</strong>: z = (x − mean) / std per feature, using statistics from the training rows only. For a quadratic cost it reduces the condition number κ = λ<sub>max</sub>/λ<sub>min</sub> of the Hessian, which controls how many gradient steps are needed (≈ κ·ln(1/ε) for accuracy ε with η = 1/L).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Fitting the scaler on the full dataset before splitting. The test rows' mean and spread leak into training. Put the scaler inside a <code>Pipeline</code> so it is fitted on training folds only (<a class="xref" data-note="ml_pipelines">Pipelines &amp; Data Leakage</a>). And remember to scale new data with the <em>training</em> statistics at prediction time (a new flat's area minus the training mean 9.5, not its own).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Momentum and Adam.</b> Scaling helps when the long, thin valley lines up with the feature axes. Valleys can also be tilted (correlated features) or appear in non-convex networks where you cannot rescale them away. Better optimisers adapt the step themselves.</div>
-
-  <h2 id="lg-adam"><span class="num">14</span>Momentum and Adam (Brief)</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>On the raw flats, plain gradient descent needed 8,549 steps because it zig-zags across a canyon and crawls along it. If we cannot or did not rescale, can the optimiser itself learn to take longer strides along the valley and shorter ones across it?</p>
-  </div>
-  <h3>Momentum: a ball rolling downhill</h3>
-  <p>Keep a running "velocity" v that adds up past gradients: v ← β·v + ∇J, then θ ← θ − η·v (β ≈ 0.9). Along the valley floor the gradients keep pointing the same way, so v builds up speed. Across the valley they flip sign every step, so they cancel in v and the zig-zag is damped.</p>
-  <p><strong>By hand</strong> on a long bowl J = ½(w₁² + 50·w₂²) from (10, 1), η = 0.02, β = 0.9. Gradient = (w₁, 50·w₂) = (10, 50).</p>
-  <ul>
-    <li>Plain GD step: (10 − 0.02·10, 1 − 0.02·50) = (9.8, 0.0).</li>
-    <li>Momentum step 1: v = (10, 50), same as GD → (9.8, 0.0). Step 2: gradient (9.8, 0); v = 0.9·(10, 50) + (9.8, 0) = (18.8, 45); θ = (9.8 − 0.376, 0 − 0.9) = (9.424, −0.9). In w₁ (the slow direction) it moved 0.376 instead of plain GD's 0.196: almost twice as fast. In w₂ it overshot; later steps damp that.</li>
-  </ul>
-  <h3>Adam: a separate step size per parameter</h3>
-  <p>Adam keeps two running averages per parameter: m (the average gradient, like momentum) and s (the average <em>squared</em> gradient, a measure of that parameter's typical gradient size). It steps by m / √s, so a parameter with huge gradients takes small steps and one with tiny gradients takes bigger ones. Early averages start at 0 and are biased low, so both are divided by (1 − βᵗ).</p>
-  <p><strong>By hand</strong>, step 1 from (10, 1), η = 0.5, β₁ = 0.9, β₂ = 0.999: g = (10, 50). m = 0.1·g = (1, 5); s = 0.001·g² = (0.1, 2.5). Bias-corrected: m̂ = m/0.1 = (10, 50), ŝ = s/0.001 = (100, 2,500). Step = 0.5·m̂/√ŝ = 0.5·(10/10, 50/50) = (0.5, 0.5). Both coordinates move by exactly 0.5 even though their gradients differ 5-fold: the step size has been normalised per coordinate.</p>
-  <h3>On the raw flats</h3>
-  <p>The flats with raw area (κ = 1,198), all three optimisers stopping at one part per million above the minimum:</p>
-  <div class="fx" data-lang="py">import numpy as np
-x = np.array([5, 6, 7, 8, 9, 10, 11, 12, 13, 14], dtype=float)       # RAW area: kappa = 1198
-y = np.array([38, 49, 53, 56, 67, 68, 73, 83, 87, 96], dtype=float)
-X = np.c_[x, np.ones(10)]
-grad = lambda th: 2 / 10 * X.T @ (X @ th - y)
-J = lambda th: ((X @ th - y) ** 2).mean()
+X = np.c_[area, np.ones(10)]                           # RAW area: a long, thin valley
+grad = lambda th: 2 / 10 * X.T @ (X @ th - price)
 L = np.linalg.eigvalsh(2 / 10 * X.T @ X).max()
 
-def steps_to_converge(update, max_steps=50_000):
-    th, state = np.zeros(2), {}
-    for t in range(1, max_steps + 1):
-        th = update(th, state, t)
-        if J(th) - 4.6 &lt; 1e-6 * 4.6:
+def run(update):
+    th, s = np.zeros(2), {}
+    for t in range(1, 50_001):
+        th = update(th, s, t)
+        if np.mean((X @ th - price) ** 2) &lt; 4.6 * (1 + 1e-6):
             return t, th
-    return None, th
 
 def gd(th, s, t):
-    return th - (1 / L) * grad(th)
+    return th - grad(th) / L
 def momentum(th, s, t, beta=0.9):
-    s["v"] = beta * s.get("v", 0) + grad(th)
-    return th - (1 / L) * s["v"]
-def adam(th, s, t, lr=0.5, b1=0.9, b2=0.999, eps=1e-8):
+    s["v"] = beta * s.get("v", 0) + grad(th)           # running sum of past gradients
+    return th - s["v"] / L
+def adam(th, s, t, lr=0.5, b1=0.9, b2=0.999):
     g = grad(th)
-    s["m"] = b1 * s.get("m", 0) + (1 - b1) * g
-    s["s"] = b2 * s.get("s", 0) + (1 - b2) * g**2
+    s["m"] = b1 * s.get("m", 0) + (1 - b1) * g         # average gradient
+    s["s"] = b2 * s.get("s", 0) + (1 - b2) * g**2      # average squared gradient
     m_hat, s_hat = s["m"] / (1 - b1**t), s["s"] / (1 - b2**t)
-    return th - lr * m_hat / (np.sqrt(s_hat) + eps)
+    return th - lr * m_hat / (np.sqrt(s_hat) + 1e-8)
 
 for name, fn in [("plain GD", gd), ("momentum", momentum), ("Adam", adam)]:
-    t, th = steps_to_converge(fn)
-    print(f"{name:9s} on the raw flats: steps = {t}   (w, b) = {th.round(3)}")</div>
-  <div class="fx" data-lang="text">plain GD  on the raw flats: steps = 8549   (w, b) = [6.001 9.993]
-momentum  on the raw flats: steps = 792   (w, b) = [6.001 9.993]
-Adam      on the raw flats: steps = 975   (w, b) = [6.001 9.993]</div>
-  <p>Momentum cuts the steps from 8,549 to 792, more than ten times fewer, without touching the data. Adam (η = 0.5) needs 975; both reach the same (6, 10). Standardizing first (one step, section 13) is still the cheapest fix when it is available.</p>
-  <h3>The stylised bowl in code</h3>
-  <div class="fx" data-lang="py">import numpy as np
-a = np.array([1.0, 50.0])                     # a long, narrow bowl: J = 0.5*(1*w1^2 + 50*w2^2)
-J = lambda w: 0.5 * (a * w**2).sum()
-grad = lambda w: a * w
+    t, th = run(fn)
+    print(f"{name:9s}: {t:5d} steps   (w, b) = {th.round(3)}")</div>
+  <div class="fx" data-lang="text">plain GD :  8549 steps   (w, b) = [6.001 9.993]
+momentum :   792 steps   (w, b) = [6.001 9.993]
+Adam     :   975 steps   (w, b) = [6.001 9.993]</div>
+  <p>Momentum cuts the work from 8,549 steps to 792, more than ten times fewer, without touching the data. Adam needs 975. All three reach the same line. Standardizing first (one step) is still the cheapest fix when it is available. Adam's real strength is in deep networks with millions of parameters whose gradient sizes differ by orders of magnitude, where no single learning rate suits them all; its default η = 0.001 works reasonably across many problems, which is why it is the deep-learning default. For classic convex models like logistic regression, scikit-learn uses specialised solvers (lbfgs, coordinate descent) that beat both. RMSProp, Nesterov momentum and AdamW are covered in <a class="xref" data-note="m_optimization">Optimization</a>.</p>
 
-def gd(lr=0.02):
-    w = np.array([10.0, 1.0])
-    for t in range(1, 10_001):
-        w = w - lr * grad(w)
-        if J(w) &lt; 1e-6: return t, w
-    return None, w
-
-def momentum(lr=0.02, beta=0.9):
-    w, v = np.array([10.0, 1.0]), np.zeros(2)
-    for t in range(1, 10_001):
-        v = beta * v + grad(w)                # running sum of past gradients
-        w = w - lr * v
-        if J(w) &lt; 1e-6: return t, w
-    return None, w
-
-def adam(lr=0.5, b1=0.9, b2=0.999, eps=1e-8):
-    w, m, s = np.array([10.0, 1.0]), np.zeros(2), np.zeros(2)
-    for t in range(1, 10_001):
-        g = grad(w)
-        m = b1 * m + (1 - b1) * g             # average gradient (direction)
-        s = b2 * s + (1 - b2) * g**2          # average squared gradient (scale)
-        m_hat, s_hat = m / (1 - b1**t), s / (1 - b2**t)   # bias correction
-        w = w - lr * m_hat / (np.sqrt(s_hat) + eps)
-        if J(w) &lt; 1e-6: return t, w
-    return None, w
-
-for name, fn in [("plain GD", gd), ("momentum", momentum), ("Adam", adam)]:
-    t, w = fn()
-    print(f"{name:9s}: steps to J &lt; 1e-6 = {t}")</div>
-  <div class="fx" data-lang="text">plain GD : steps to J &lt; 1e-6 = 439
-momentum : steps to J &lt; 1e-6 = 153
-Adam     : steps to J &lt; 1e-6 = 151</div>
-  <p>On this bowl (κ = 50) momentum cuts the steps from 439 to 153, and Adam (with a hand-picked η = 0.5) needs 151. Adam's real strength is in deep networks with millions of parameters whose gradient sizes differ by orders of magnitude, where one global η cannot suit them all; its default η = 0.001 works reasonably across many problems. Full treatment, including RMSProp and AdamW, in <a class="xref" data-note="m_optimization">Optimization</a>.</p>
-  <table class="tbl">
-    <tr><th>Optimizer</th><th>Update (per parameter)</th><th>Fixes</th><th>Typical settings</th></tr>
-    <tr><td>GD / SGD</td><td>θ ← θ − η g</td><td>–</td><td>η tuned</td></tr>
-    <tr><td>Momentum</td><td>v ← βv + g; θ ← θ − ηv</td><td>zig-zag, slow valleys</td><td>β = 0.9</td></tr>
-    <tr><td>Nesterov</td><td>gradient taken at the look-ahead point θ − ηβv</td><td>overshoot of momentum</td><td>β = 0.9</td></tr>
-    <tr><td>RMSProp</td><td>s ← ρs + (1 − ρ)g²; θ ← θ − η g/√s</td><td>very different gradient scales</td><td>ρ = 0.9</td></tr>
-    <tr><td>Adam</td><td>momentum on g and on g², bias-corrected; θ ← θ − η m̂/(√ŝ + ε)</td><td>both of the above</td><td>η = 0.001, β₁ = 0.9, β₂ = 0.999</td></tr>
-  </table>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Adam</strong>: mₜ = β₁mₜ₋₁ + (1 − β₁)gₜ, sₜ = β₂sₜ₋₁ + (1 − β₂)gₜ², m̂ₜ = mₜ/(1 − β₁ᵗ), ŝₜ = sₜ/(1 − β₂ᵗ), θₜ = θₜ₋₁ − η·m̂ₜ/(√ŝₜ + ε), all element-wise.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Using Adam's default learning rate on a problem where plain GD with a tuned η and scaled features would be faster and more exact, or assuming Adam needs no tuning at all. For classic convex models (linear, logistic) sklearn uses specialised solvers (lbfgs, coordinate descent, liblinear) that beat both.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Closed Form vs Iterative.</b> For the flats' line the bottom of the bowl can be computed in one go, without any steps; earlier notes did exactly that. When is that better, and why can't we do it for every model?</div>
-
-  <h2 id="lg-closed"><span class="num">15</span>Closed Form vs Iterative</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Gradient descent took 50 to 8,549 steps to reach w = 6, b = 10, which <a class="xref" data-note="ml_intro">What is Machine Learning</a> found with one formula. If a formula exists, why iterate at all, and for which losses does such a formula exist?</p>
-  </div>
-  <h3>Setting the gradient to zero</h3>
-  <p>At the bottom of the bowl the gradient is zero: (2/n)Xᵀ(Xθ − y) = 0, which rearranges to the <strong>normal equation</strong> XᵀXθ = Xᵀy, and (if XᵀX is invertible) θ = (XᵀX)⁻¹Xᵀy.</p>
-  <h3>By hand on the ten flats</h3>
-  <p>With columns (x, 1): XᵀX = [[Σx², Σx], [Σx, n]] = [[985, 95], [95, 10]] and Xᵀy = [Σxy, Σy] = [6860, 670]. Solve the 2×2 system 985w + 95b = 6860, 95w + 10b = 670. Determinant = 985·10 − 95·95 = 9850 − 9025 = 825.</p>
-  <ul>
-    <li>w = (10·6860 − 95·670)/825 = (68600 − 63650)/825 = 4950/825 = <strong>6</strong></li>
-    <li>b = (985·670 − 95·6860)/825 = (659950 − 651700)/825 = 8250/825 = <strong>10</strong></li>
-  </ul>
-  <p>The same point gradient descent walked to, and the same as the slope formula Σ(x − x̄)(y − ȳ)/Σ(x − x̄)² = 495/82.5 of the first note (that formula is this 2×2 solve written out).</p>
+  <h2 id="lg-closed"><span class="num">11</span>Closed Form vs Gradient Descent</h2>
+  <p>Gradient descent took anywhere from 1 to 8,549 steps to reach w = 6, b = 10, yet <a class="xref" data-note="ml_intro">What is Machine Learning</a> found that line with a single formula. If a formula exists, why iterate at all? Because the formula exists only for squared loss with a linear model.</p>
+  <p>At the bottom of the bowl the gradient is zero: (2/n)Xᵀ(Xθ − y) = 0. Rearranged, that is a set of linear equations called the <strong>normal equation</strong>, XᵀXθ = Xᵀy, which can be solved in one go. For the flats, with columns (area, 1), XᵀX = [[985, 95], [95, 10]] and Xᵀy = [6860, 670]. Solving the 2 × 2 system 985w + 95b = 6860 and 95w + 10b = 670 by hand: the determinant is 985 × 10 − 95 × 95 = 825, so w = (10 × 6860 − 95 × 670)/825 = 4950/825 = 6 and b = (985 × 670 − 95 × 6860)/825 = 8250/825 = 10.</p>
   <div class="fx" data-lang="py">import numpy as np
 from sklearn.linear_model import LinearRegression
 
-x = np.array([5, 6, 7, 8, 9, 10, 11, 12, 13, 14], dtype=float)
-y = np.array([38, 49, 53, 56, 67, 68, 73, 83, 87, 96], dtype=float)
-X = np.c_[x, np.ones(10)]                        # columns: area, 1
-XtX, Xty = X.T @ X, X.T @ y
-print("X^T X =", XtX.tolist(), "  X^T y =", Xty.tolist())
-print("solve(X^T X, X^T y) :", np.linalg.solve(XtX, Xty).round(4))   # [w, b]
-print("lstsq (SVD)         :", np.linalg.lstsq(X, y, rcond=None)[0].round(4))
-m = LinearRegression().fit(x[:, None], y)
-print("sklearn             :", round(m.coef_[0], 4), round(m.intercept_, 4))</div>
+X = np.c_[area, np.ones(10)]                           # columns: area, 1
+print("X^T X =", (X.T @ X).tolist(), "  X^T y =", (X.T @ price).tolist())
+print("solve(X^T X, X^T y):", np.linalg.solve(X.T @ X, X.T @ price))
+m = LinearRegression().fit(area.reshape(-1, 1), price)
+print("sklearn            :", m.coef_[0].round(4), round(m.intercept_, 4))</div>
   <div class="fx" data-lang="text">X^T X = [[985.0, 95.0], [95.0, 10.0]]   X^T y = [6860.0, 670.0]
-solve(X^T X, X^T y) : [ 6. 10.]
-lstsq (SVD)         : [ 6. 10.]
-sklearn             : 6.0 10.0</div>
-  <p><code>np.linalg.solve</code> solves the system without forming an inverse; <code>lstsq</code> uses the SVD and also copes with collinear columns; <code>LinearRegression</code> uses an lstsq-style solver internally. The full derivation and statistics of OLS are in <a class="xref" data-note="ml_regression">Linear Regression</a>.</p>
-  <table class="tbl">
-    <tr><th></th><th>Closed form (normal equation / SVD)</th><th>Gradient descent family</th></tr>
-    <tr><td>Result</td><td>exact (up to rounding)</td><td>approximate; improves with iterations</td></tr>
-    <tr><td>Cost</td><td>O(n·d²) to form XᵀX + O(d³) to solve</td><td>O(n·d) per full step × number of steps</td></tr>
-    <tr><td>Hyperparameters</td><td>none</td><td>learning rate, iterations, batch size</td></tr>
-    <tr><td>Large d (e.g. 100,000 features)</td><td>d³ = 10¹⁵: impractical</td><td>fine</td></tr>
-    <tr><td>Data larger than memory / streaming</td><td>hard</td><td>natural (mini-batches)</td></tr>
-    <tr><td>Feature scaling needed?</td><td>no (the raw flats solve in one go)</td><td>yes, for speed (8,549 vs 1 step)</td></tr>
-    <tr><td>Works for</td><td>squared loss, ridge (XᵀX + λI)</td><td>any differentiable (or sub-differentiable) loss</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>Only squared loss with a linear model gives linear equations when the gradient is set to zero. For log-loss the condition Xᵀ(σ(Xθ) − y) = 0 has θ inside a sigmoid; no formula solves it, so logistic regression (the "sold within 30 days" model) is always fitted iteratively (Newton / lbfgs / GD). The same holds for hinge, Huber and every neural network.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Computing <code>np.linalg.inv(X.T @ X) @ X.T @ y</code>. When columns are nearly collinear, XᵀX is nearly singular and the inverse amplifies rounding errors (the condition number of XᵀX is the <em>square</em> of X's). Use <code>solve</code>, <code>lstsq</code>, or add a ridge term.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: From Scratch.</b> We have checked everything on ten flats. The real test of understanding: implement gradient descent for linear and logistic regression and match scikit-learn's answers, on the flats and on real datasets.</div>
-
-  <h2 id="lg-scratch"><span class="num">16</span>From Scratch, Matching scikit-learn</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We know every piece: the loss, its gradient, the learning-rate limit, scaling. Can about 20 lines of our own code reproduce what <code>LinearRegression</code> and <code>LogisticRegression</code> return, to many decimal places?</p>
-  </div>
-  <p>Two classes. <code>LinearRegressionGD</code> standardizes internally (section 13), runs batch gradient descent with the gradient from section 09, then converts the weights back to the original units: if z = (x − μ)/σ and ŷ = w·z + b, then ŷ = (w/σ)·x + (b − Σ wμ/σ). <code>LogisticRegressionGD</code> uses the p − y gradient from section 05, plus sklearn's L2 penalty: sklearn minimises ½‖w‖² + C·Σ log-loss; dividing by C·n gives the same minimiser as mean log-loss + ‖w‖²/(2Cn), whose gradient adds w/(Cn).</p>
+solve(X^T X, X^T y): [ 6. 10.]
+sklearn            : 6.0 10.0</div>
+  <p>The same point gradient descent walked to, and the same answer <code>LinearRegression</code> gives (it uses a least-squares solver of this kind internally). In code, solve the system with <code>np.linalg.solve</code> or <code>np.linalg.lstsq</code>; never compute <code>inv(X.T @ X)</code>, because when columns are nearly collinear the inverse amplifies rounding errors. Why not always use the formula? Forming XᵀX costs about n·d² operations and solving it about d³, so with 100,000 features d³ is 10¹⁵: impractical. Gradient descent costs about n·d per step, works with data that does not fit in memory (mini-batches), and works for <em>any</em> differentiable loss. That last point is decisive: for log-loss, setting the gradient to zero gives Xᵀ(σ(Xθ) − y) = 0, with θ trapped inside a sigmoid, and no formula solves it. Logistic regression, hinge-loss SVMs, Huber regression and every neural network must be fitted iteratively.</p>
+  <p>To prove that we understand every piece, here is gradient descent written from scratch for both models, checked against scikit-learn. The linear version standardizes internally (section 10) and converts the weights back to original units at the end. The logistic version uses the p − y gradient from section 04 plus the small L2 penalty that sklearn's <code>LogisticRegression</code> adds by default, so that both minimise exactly the same cost.</p>
   <div class="fx" data-lang="py">import numpy as np
 from sklearn.datasets import load_diabetes, load_breast_cancer
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LinearRegression, LogisticRegression
 
-class LinearRegressionGD:
-    """Least squares by batch gradient descent on standardized features."""
-    def __init__(self, lr=0.2, n_iter=20000):
-        self.lr, self.n_iter = lr, n_iter
-    def fit(self, X, y):
-        self.mu, self.sd = X.mean(0), X.std(0)
-        Z = (X - self.mu) / self.sd                     # scale for fast, stable GD
-        n, d = Z.shape
-        w, b = np.zeros(d), 0.0
-        for _ in range(self.n_iter):
-            err = Z @ w + b - y
-            w -= self.lr * 2 / n * Z.T @ err            # dJ/dw
-            b -= self.lr * 2 / n * err.sum()            # dJ/db
-        self.coef_ = w / self.sd                        # back to original units
-        self.intercept_ = b - (self.mu / self.sd) @ w
-        return self
-    def predict(self, X):
-        return X @ self.coef_ + self.intercept_
+def linear_gd(X, y, lr=0.2, n_iter=20000):
+    mu, sd = X.mean(0), X.std(0)
+    Z = (X - mu) / sd                                  # standardize: a round bowl
+    w, b = np.zeros(X.shape[1]), 0.0
+    for _ in range(n_iter):
+        err = Z @ w + b - y
+        w -= lr * 2 / len(y) * Z.T @ err
+        b -= lr * 2 / len(y) * err.sum()
+    return w / sd, b - (mu / sd) @ w                   # back to original units
 
-class LogisticRegressionGD:
-    """Log loss + L2 penalty, same objective as sklearn's LogisticRegression(C=C)."""
-    def __init__(self, C=1.0, lr=0.5, n_iter=50000):
-        self.C, self.lr, self.n_iter = C, lr, n_iter
-    def fit(self, X, y):
-        n, d = X.shape
-        w, b = np.zeros(d), 0.0
-        for _ in range(self.n_iter):
-            p = 1 / (1 + np.exp(-(X @ w + b)))           # predicted probabilities
-            g_w = X.T @ (p - y) / n + w / (self.C * n)   # gradient of mean log loss + penalty
-            g_b = (p - y).mean()                         # the intercept is not penalised
-            w -= self.lr * g_w
-            b -= self.lr * g_b
-        self.coef_, self.intercept_ = w, b
-        return self
+def logistic_gd(X, y, C=1.0, lr=0.5, n_iter=50000):    # same objective as sklearn's C
+    w, b, n = np.zeros(X.shape[1]), 0.0, len(y)
+    for _ in range(n_iter):
+        p = 1 / (1 + np.exp(-(X @ w + b)))
+        w -= lr * (X.T @ (p - y) / n + w / (C * n))    # gradient p - y, plus the L2 penalty
+        b -= lr * (p - y).mean()
+    return w, b
 
-# 1) the ten flats: GD must land on price = 6 x area + 10
-area = np.array([5, 6, 7, 8, 9, 10, 11, 12, 13, 14], dtype=float).reshape(-1, 1)
-price = np.array([38, 49, 53, 56, 67, 68, 73, 83, 87, 96], dtype=float)
-flats = LinearRegressionGD(lr=0.2, n_iter=200).fit(area, price)
-print("flats   : coef", flats.coef_.round(6), " intercept", round(flats.intercept_, 6))
-
-# 2) diabetes (442 patients, 10 features) and breast cancer (569 rows, 30 features)
-X, y = load_diabetes(return_X_y=True)
-mine = LinearRegressionGD().fit(X, y)
-ref = LinearRegression().fit(X, y)
-print("linear  : max |coef diff| =", f"{np.abs(mine.coef_ - ref.coef_).max():.2e}",
-      " intercept diff =", f"{abs(mine.intercept_ - ref.intercept_):.2e}")
-print("          first 3 coefs, mine:", mine.coef_[:3].round(2), " sklearn:", ref.coef_[:3].round(2))
-
-Xc, yc = load_breast_cancer(return_X_y=True)
+X, y = load_diabetes(return_X_y=True)                  # 442 patients, 10 features
+w, b = linear_gd(X, y)
+print("linear  : max |coef difference| vs LinearRegression =", f"{np.abs(w - LinearRegression().fit(X, y).coef_).max():.1e}")
+Xc, yc = load_breast_cancer(return_X_y=True)           # 569 tumours, 30 features
 Xc = StandardScaler().fit_transform(Xc)
-mine = LogisticRegressionGD(C=1.0).fit(Xc, yc)
+w, b = logistic_gd(Xc, yc)
 ref = LogisticRegression(C=1.0, tol=1e-10, max_iter=10_000).fit(Xc, yc)
-print("logistic: max |coef diff| =", f"{np.abs(mine.coef_ - ref.coef_[0]).max():.2e}",
-      " intercept diff =", f"{abs(mine.intercept_ - ref.intercept_[0]):.2e}")
-print("          first 3 coefs, mine:", mine.coef_[:3].round(3), " sklearn:", ref.coef_[0][:3].round(3))</div>
-  <div class="fx" data-lang="text">flats   : coef [6.]  intercept 10.0
-linear  : max |coef diff| = 1.52e-11  intercept diff = 2.84e-14
-          first 3 coefs, mine: [ -10.01 -239.82  519.85]  sklearn: [ -10.01 -239.82  519.85]
-logistic: max |coef diff| = 1.13e-06  intercept diff = 2.31e-07
-          first 3 coefs, mine: [-0.363 -0.388 -0.351]  sklearn: [-0.363 -0.388 -0.351]</div>
-  <p>On the ten flats our gradient descent lands exactly on price = 6 × area + 10 in 200 steps (standardized, so the bowl is round). On the diabetes data (442 patients, 10 features) the gradient-descent coefficients agree with <code>LinearRegression</code>'s exact solution to about 10⁻¹¹. On breast cancer (569 rows, 30 standardized features) the logistic coefficients agree with sklearn's lbfgs solver to about 10⁻⁶. Two choices made that possible: a learning rate under the 2/L limit (0.2 &lt; 0.248 for diabetes), and enough iterations for the shallow directions (diabetes has κ ≈ 470 because several blood-serum features are strongly correlated).</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Declaring "my implementation matches" after 1,000 iterations because the first two decimals agree. With the original settings (η = 0.1, 5,000 iterations) the linear version was still off by 0.15 in one coefficient. Compare the full coefficient vectors, and check the gradient norm, not just the loss.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: How It All Connects.</b> Six losses, a cost surface, gradient descent and five ways to speed it up: how are they built from one another, and which answers which question?</div>
+print("logistic: max |coef difference| vs LogisticRegression =", f"{np.abs(w - ref.coef_[0]).max():.1e}")</div>
+  <div class="fx" data-lang="text">linear  : max |coef difference| vs LinearRegression = 1.5e-11
+logistic: max |coef difference| vs LogisticRegression = 1.1e-06</div>
+  <p>On the diabetes data (442 patients, 10 features) our coefficients agree with <code>LinearRegression</code>'s exact solution to about 10⁻¹¹, and on breast cancer (569 rows, 30 features) the logistic coefficients agree with sklearn's lbfgs solver to about 10⁻⁶. Two choices made that possible: a learning rate below the 2/L limit, and enough iterations for the flattest directions (diabetes has a condition number near 470 because several blood-serum features are strongly correlated). When you check your own implementation, compare the whole coefficient vector, not just the first two decimals of the loss.</p>
 
-  <h2 id="lg-connect"><span class="num">17</span>How It All Connects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Squared, absolute, Huber, log, hinge, 0-1; cost surface, gradient, learning rate, convexity, SGD, scaling, momentum, Adam, normal equation. A catalogue, or two short chains that every model in the track reuses?</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 680 340" width="680">
-<defs><marker id="lg-c9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<text x="160" y="16" text-anchor="middle" class="tm" font-size="11" font-weight="700">WHAT TO MINIMISE (the loss)</text>
-<text x="520" y="16" text-anchor="middle" class="tm" font-size="11" font-weight="700">HOW TO MINIMISE (the optimiser)</text>
-<rect x="10" y="26" width="140" height="40" rx="7" class="fb sb"/><text x="80" y="43" text-anchor="middle" font-size="11" font-weight="700">noise assumption</text><text x="80" y="58" text-anchor="middle" class="tm" font-size="10">likelihood → −log</text>
-<line x1="80" y1="66" x2="40" y2="90" stroke="currentColor" marker-end="url(#lg-c9)"/><line x1="80" y1="66" x2="120" y2="90" stroke="currentColor" marker-end="url(#lg-c9)"/><line x1="150" y1="46" x2="228" y2="90" stroke="currentColor" marker-end="url(#lg-c9)"/>
-<rect x="5" y="92" width="80" height="40" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="45" y="109" text-anchor="middle" font-size="10.5" font-weight="700">squared</text><text x="45" y="124" text-anchor="middle" class="tm" font-size="9.5">Gauss · 4.6</text>
-<rect x="90" y="92" width="80" height="40" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="130" y="109" text-anchor="middle" font-size="10.5" font-weight="700">absolute</text><text x="130" y="124" text-anchor="middle" class="tm" font-size="9.5">Laplace · 2.0</text>
-<rect x="190" y="92" width="110" height="40" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="245" y="109" text-anchor="middle" font-size="10.5" font-weight="700">log-loss</text><text x="245" y="124" text-anchor="middle" class="tm" font-size="9.5">Bernoulli · K: 4.51</text>
-<line x1="45" y1="132" x2="80" y2="156" stroke="currentColor" marker-end="url(#lg-c9)"/><line x1="130" y1="132" x2="90" y2="156" stroke="currentColor" marker-end="url(#lg-c9)"/>
-<rect x="30" y="158" width="110" height="40" rx="6" class="fg sg"/><text x="85" y="175" text-anchor="middle" font-size="10.5" font-weight="700">Huber</text><text x="85" y="190" text-anchor="middle" class="tm" font-size="9.5">clip at δ · slope 5.58</text>
-<rect x="190" y="158" width="110" height="40" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="245" y="175" text-anchor="middle" font-size="10.5" font-weight="700">hinge</text><text x="245" y="190" text-anchor="middle" class="tm" font-size="9.5">margin ≥ 1 → 0</text>
-<line x1="245" y1="132" x2="245" y2="156" stroke="currentColor" stroke-dasharray="3 3" marker-end="url(#lg-c9)"/>
-<rect x="160" y="222" width="160" height="40" rx="6" class="fr sr"/><text x="240" y="239" text-anchor="middle" font-size="10.5" font-weight="700">0-1 loss (reported)</text><text x="240" y="254" text-anchor="middle" class="tm" font-size="9.5">no gradient → surrogates</text>
-<line x1="245" y1="198" x2="243" y2="220" stroke="currentColor" stroke-dasharray="3 3" marker-end="url(#lg-c9)"/>
-<rect x="20" y="222" width="120" height="40" rx="6" class="fb sb"/><text x="80" y="239" text-anchor="middle" font-size="10.5" font-weight="700">cost J(θ)</text><text x="80" y="254" text-anchor="middle" class="tm" font-size="9.5">mean loss (+ penalty)</text>
-<line x1="85" y1="198" x2="82" y2="220" stroke="currentColor" marker-end="url(#lg-c9)"/>
-<line x1="140" y1="242" x2="388" y2="60" stroke="currentColor" marker-end="url(#lg-c9)"/>
-<rect x="390" y="30" width="270" height="40" rx="6" class="ft st"/><text x="525" y="47" text-anchor="middle" font-size="10.5" font-weight="700">cost surface: a bowl if convex</text><text x="525" y="62" text-anchor="middle" class="tm" font-size="9.5">4.6 + 8.25(w − 6)² + (c − 67)²</text>
-<line x1="525" y1="70" x2="460" y2="96" stroke="currentColor" marker-end="url(#lg-c9)"/><line x1="560" y1="70" x2="610" y2="96" stroke="currentColor" marker-end="url(#lg-c9)"/>
-<rect x="380" y="98" width="160" height="40" rx="6" class="ft st"/><text x="460" y="115" text-anchor="middle" font-size="10.5" font-weight="700">gradient descent</text><text x="460" y="130" text-anchor="middle" class="tm" font-size="9.5">θ ← θ − η∇J; 4790.6 → 4.6</text>
-<rect x="555" y="98" width="115" height="40" rx="6" class="fg sg"/><text x="612" y="115" text-anchor="middle" font-size="10.5" font-weight="700">closed form</text><text x="612" y="130" text-anchor="middle" class="tm" font-size="9.5">squared only: (6, 10)</text>
-<line x1="420" y1="138" x2="410" y2="164" stroke="currentColor" marker-end="url(#lg-c9)"/><line x1="500" y1="138" x2="540" y2="164" stroke="currentColor" marker-end="url(#lg-c9)"/>
-<rect x="350" y="166" width="125" height="40" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="412" y="183" text-anchor="middle" font-size="10.5" font-weight="700">learning rate</text><text x="412" y="198" text-anchor="middle" class="tm" font-size="9.5">η &lt; 2/L = 0.121</text>
-<rect x="485" y="166" width="185" height="40" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="577" y="183" text-anchor="middle" font-size="10.5" font-weight="700">batch · SGD · mini-batch</text><text x="577" y="198" text-anchor="middle" class="tm" font-size="9.5">rows per step; noise vs cost</text>
-<line x1="412" y1="206" x2="440" y2="230" stroke="currentColor" marker-end="url(#lg-c9)"/>
-<rect x="350" y="232" width="320" height="40" rx="6" class="fr sr"/><text x="510" y="249" text-anchor="middle" font-size="10.5" font-weight="700">condition number κ sets the speed</text><text x="510" y="264" text-anchor="middle" class="tm" font-size="9.5">raw 1,198 (8,549 steps) · centred 8.3 (81) · standardized 1 (1)</text>
-<line x1="440" y1="272" x2="430" y2="296" stroke="currentColor" marker-end="url(#lg-c9)"/><line x1="580" y1="272" x2="590" y2="296" stroke="currentColor" marker-end="url(#lg-c9)"/>
-<rect x="350" y="298" width="150" height="34" rx="6" class="fg sg"/><text x="425" y="320" text-anchor="middle" font-size="10.5">fix the data: scaling</text>
-<rect x="520" y="298" width="150" height="34" rx="6" class="fg sg"/><text x="595" y="320" text-anchor="middle" font-size="10.5">fix the steps: momentum, Adam</text>
-</svg><figcaption>Two chains. Left: an assumption about the noise, through the likelihood, gives a loss (squared, absolute, log); Huber blends the first two; hinge and log are convex stand-ins for the 0-1 loss we report; averaging gives the cost. Right: the cost is a surface; gradient descent walks it (closed form jumps to the bottom for squared loss); the learning rate is capped by the steepest curvature, the condition number sets the speed, and scaling or momentum/Adam fix a bad κ.</figcaption></figure>
-  <table class="tbl"><caption>Every concept on the ten flats</caption>
-    <tr><th>Concept</th><th>Built from</th><th>Answers which question</th><th>Value on our flats</th><th>When to use</th></tr>
-    <tr><td>Squared loss</td><td>Gaussian likelihood</td><td>how wrong is a number, smoothly?</td><td>MSE 4.6; with the typo 66.7; best constant = mean 64.3</td><td>default regression; big errors are costly</td></tr>
-    <tr><td>Absolute loss</td><td>Laplace likelihood</td><td>how wrong, robust to outliers?</td><td>MAE 2.0 → 4.3; median 67–68 unmoved</td><td>outliers, median-based reporting</td></tr>
-    <tr><td>Huber loss</td><td>square near 0, linear beyond δ</td><td>smooth and robust?</td><td>1.5 → 3.8; constant 67; slope 5.58 vs OLS 4.53</td><td>regression with occasional bad rows</td></tr>
-    <tr><td>Log-loss</td><td>Bernoulli likelihood</td><td>how wrong is a probability?</td><td>A 0.201, K 4.511; gradient p − y</td><td>any probabilistic classifier</td></tr>
-    <tr><td>Hinge loss</td><td>margin, max(0, 1 − m)</td><td>ignore safely correct rows?</td><td>A 0, C and F 0.5, K 5.5</td><td>SVMs, sparse support vectors</td></tr>
-    <tr><td>0-1 loss</td><td>right/wrong count</td><td>how many mistakes?</td><td>0 on all ten (any scale of score)</td><td>reporting only, never training</td></tr>
-    <tr><td>Cost surface</td><td>mean loss over rows</td><td>what does training minimise?</td><td>4790.6 at (0, 0) … 4.6 at (6, 10)</td><td>visualising, reasoning about curvature</td></tr>
-    <tr><td>Gradient descent</td><td>chain rule on the cost</td><td>how to go downhill?</td><td>16.5(w − 6), 2(c − 67); J 4790.6 → 1203.8 in 3 steps</td><td>any differentiable cost</td></tr>
-    <tr><td>Learning rate</td><td>Hessian eigenvalues</td><td>how big a step?</td><td>2/L = 0.121; 0.1 best; 0.125 diverges</td><td>always; check the first steps</td></tr>
-    <tr><td>Convexity</td><td>PSD Hessian</td><td>is the bottom we reach the best?</td><td>eigenvalues 16.5, 2 ≥ 0</td><td>trusting GD's answer</td></tr>
-    <tr><td>SGD / mini-batch</td><td>per-row gradients</td><td>can a step use few rows?</td><td>flat J alone: (−864, −192); average (−99, −134)</td><td>large data, deep learning</td></tr>
-    <tr><td>Scaling</td><td>condition number</td><td>why is GD slow?</td><td>κ 1,198 → 8.3 → 1; steps 8,549 → 81 → 1</td><td>any GD-trained or penalised model</td></tr>
-    <tr><td>Momentum / Adam</td><td>running averages of gradients</td><td>can the optimiser adapt?</td><td>raw flats: 8,549 → 792 (momentum), 975 (Adam)</td><td>ill-conditioned or non-convex problems</td></tr>
-    <tr><td>Normal equation</td><td>gradient = 0, linear system</td><td>can we skip iterating?</td><td>4950/825 = 6, 8250/825 = 10</td><td>squared loss (and ridge), moderate d</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>One sentence holds the note: <strong>a loss is a noise assumption written as a penalty, the cost is its average, and gradient descent walks the cost downhill at a speed set by the learning rate and the condition number.</strong> On the flats: squared loss assumed Gaussian luck and was wrecked by a typo; absolute and Huber assumed heavier tails and resisted it; and the same bowl took 8,549 steps or one step depending only on how area was scaled.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Comparisons.</b> Side by side, how do the six losses and the ways to minimise a cost compare?</div>
+  <h2 id="lg-traps"><span class="num">12</span>Common Mistakes</h2>
+  <p>The most common mistake with gradient descent is a sign error. The update θ ← θ − η·(2/n)Xᵀe is correct when the error is defined as e = ŷ − y. If you define it as y − ŷ and keep the minus sign, every step goes uphill:</p>
+  <div class="fx" data-lang="py">import numpy as np
 
-  <h2 id="lg-compare"><span class="num">18</span>Comparisons</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Given a new problem, which loss and which optimiser? What does each loss assume, how does it behave with outliers, and what does each minimiser cost?</p>
-  </div>
-  <h3>The losses side by side</h3>
-  <table class="tbl">
-    <tr><th>Loss</th><th>Formula</th><th>Task</th><th>Gradient (w.r.t. prediction or score)</th><th>Convex</th><th>Smooth</th><th>Robust to outliers</th><th>Predicts / implies</th><th>Used by</th></tr>
-    <tr><td>Squared</td><td>(y − ŷ)²</td><td>regression</td><td>2(ŷ − y)</td><td>yes</td><td>yes</td><td>no</td><td>mean; Gaussian noise</td><td>OLS, ridge, GBM default</td></tr>
-    <tr><td>Absolute</td><td>|y − ŷ|</td><td>regression</td><td>sign(ŷ − y)</td><td>yes</td><td>no (kink)</td><td>yes</td><td>median; Laplace noise</td><td>quantile regression, GBM option</td></tr>
-    <tr><td>Huber</td><td>½r² or δ(|r| − ½δ)</td><td>regression</td><td>clip(ŷ − y, ±δ)</td><td>yes</td><td>yes (C¹)</td><td>yes</td><td>between mean and median</td><td>HuberRegressor, GBM option</td></tr>
-    <tr><td>Log-loss</td><td>−[y ln p + (1 − y) ln(1 − p)]</td><td>classification</td><td>p − y (w.r.t. score)</td><td>yes (in the score)</td><td>yes</td><td>no (confident errors huge)</td><td>calibrated probabilities</td><td>logistic regression, NNs, GBM</td></tr>
-    <tr><td>Hinge</td><td>max(0, 1 − yf)</td><td>classification</td><td>−y if yf &lt; 1, else 0</td><td>yes</td><td>no (corner)</td><td>more than exponential</td><td>a margin; no probabilities</td><td>SVM, SGDClassifier</td></tr>
-    <tr><td>0-1</td><td>𝟙[y ≠ ŷ]</td><td>classification</td><td>0 / undefined</td><td>no</td><td>no</td><td>–</td><td>the error rate</td><td>evaluation only</td></tr>
-  </table>
-  <h3>Ways to minimise a cost</h3>
-  <table class="tbl">
-    <tr><th>Method</th><th>Uses</th><th>Per-step cost</th><th>Good for</th></tr>
-    <tr><td>Closed form</td><td>linear algebra</td><td>one O(nd² + d³) solve</td><td>OLS, ridge with moderate d</td></tr>
-    <tr><td>Batch GD</td><td>gradient</td><td>O(nd)</td><td>small, smooth, convex problems; teaching</td></tr>
-    <tr><td>Mini-batch SGD (+ momentum)</td><td>noisy gradient</td><td>O(bd)</td><td>large data, neural networks</td></tr>
-    <tr><td>Adam / RMSProp</td><td>noisy gradient + per-parameter scaling</td><td>O(bd)</td><td>deep learning default</td></tr>
-    <tr><td>Newton / lbfgs</td><td>gradient + (approximate) curvature</td><td>higher per step, few steps</td><td>logistic regression in sklearn, medium d</td></tr>
-    <tr><td>Coordinate descent</td><td>one parameter at a time</td><td>O(n) per coordinate</td><td>lasso / elastic net (<a class="xref" data-note="ml_ridge_lasso">Ridge, Lasso &amp; Elastic Net</a>)</td></tr>
-  </table>
-  <div class="bridge"><b>What this still can't tell us → next: Common Mistakes.</b> Most training failures are not exotic; they are a handful of repeated slips. Which ones, and how do they show up?</div>
-
-  <h2 id="lg-traps"><span class="num">19</span>Common Mistakes</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We know the right loss and the right optimiser in theory. What are the classic ways training goes wrong in practice, and what did each look like in this note's numbers?</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: MSE for classification</span>
-    <p>Squared loss on sigmoid outputs is non-convex and has vanishing gradients when confidently wrong (−0.0049 vs −0.998 at z = −6). Use log-loss.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: squared loss with dirty data</span>
-    <p>One mistyped price multiplied the flats' MSE by 14.5 and pulled the fitted slope from 6 to 4.53. Clean the data, or use Huber / absolute loss.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: learning rate too large</span>
-    <p>Rising or <code>nan</code> loss means η is above 2/L (0.125 &gt; 0.121 on the flats, reaching 10²⁸). Lower it by 10×, and scale the features, before changing the model.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: unscaled features with gradient descent</span>
-    <p>The same ten flats took 8,549 steps with raw area, over 100,000 with area in square feet, 1 when standardized. Always scale inputs for GD-based models, using training-set statistics only.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: reading training loss as model quality</span>
-    <p>Gradient descent minimises <em>training</em> cost. A lower training loss can mean overfitting (<a class="xref" data-note="ml_core">Bias, Variance &amp; Generalization</a>). Watch a validation curve and use early stopping or regularization.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: sign and label conventions</span>
-    <p>Error defined as y − ŷ with the update θ − η·gradient walks uphill. Hinge needs labels −1/+1; log-loss needs 0/1. Check that the first step lowers the cost.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: constant learning rate with SGD and expecting exact answers</span>
-    <p>SGD with fixed η hovers around the minimum (MSE 1.038 vs 1.032, weights off in the 2nd decimal). Decay η, increase the batch, or finish with a few full-batch steps.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: log of zero</span>
-    <p>Hard 0/1 probabilities make log-loss infinite. Clip probabilities, or use "with logits" loss functions that combine sigmoid/softmax and log stably.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: forgetting the averaging factor</span>
-    <p>Using the sum of losses instead of the mean multiplies the gradient by n, so a learning rate that worked on 100 rows explodes on 100,000. Use the mean, or rescale η.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: "loss is low, so the metric is good"</span>
-    <p>Log-loss can fall while accuracy stays flat (doubling the flats' scores: 0.18 → 0.083, same decisions), and a model trained for MSE can have a poor MAPE. Monitor the metric that matters alongside the loss.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: the Revision Sheet, then <a class="xref" data-note="ml_regularization">Regularization</a>.</b> Gradient descent minimises the training cost as well as it can, and with many features that is exactly the problem: it fits the noise too. How do we change the cost so that the minimum is a model that generalises?</div>
+u = area - area.mean()
+for label, sign in [("e = y_hat - y (correct)", 1), ("e = y - y_hat (wrong)  ", -1)]:
+    w, c = 0.0, 0.0
+    for step in range(3):
+        e = sign * ((w * u + c) - price)
+        w, c = w - 0.1 * 2 / 10 * (e * u).sum(), c - 0.1 * 2 / 10 * e.sum()
+    print(f"{label}: cost after 3 steps = {np.mean((w * u + c - price) ** 2):10.1f}   (start 4790.6)")</div>
+  <div class="fx" data-lang="text">e = y_hat - y (correct): cost after 3 steps =     1203.8   (start 4790.6)
+e = y - y_hat (wrong)  : cost after 3 steps =   116265.2   (start 4790.6)</div>
+  <p>With the correct sign the cost falls from 4790.6 to 1203.8 in three steps, exactly as in section 07; with the wrong sign it rises to 116,265. The habit that catches this, and many other bugs, is to print the cost after the first step and check that it went down. The same check catches a learning rate that is too big: a rising or <code>nan</code> loss means η is above 2/L (0.125 against a limit of 0.121 on the flats sent the cost to 10²⁸), and the first fix is to divide η by 10 and scale the features, before changing the model. A related slip is summing the losses instead of averaging them: the gradient is then n times bigger, so a learning rate that worked on 100 rows explodes on 100,000.</p>
+  <p>The second family of mistakes is choosing the wrong loss. Squared loss on a sigmoid output for classification gives almost no gradient when the model is confidently wrong (−0.0049 against log-loss's −0.998 at z = −6) and is not convex; use log-loss. Squared loss on dirty data lets one typo drag the slope from 6 to 4.53; clean the data or use Huber or absolute loss. Hinge loss with 0/1 labels instead of −1/+1 makes every margin zero and every loss 1. And log-loss with probabilities of exactly 0 or 1 is infinite; clip the probabilities or use a "with logits" loss.</p>
+  <p>Finally, do not confuse the loss with the goal. Gradient descent minimises the <em>training</em> cost, and a lower training loss can simply mean overfitting (<a class="xref" data-note="ml_core">Bias, Variance &amp; Generalization</a>), so watch a validation curve. The training loss and the reported metric can also disagree: doubling the flats' scores lowered log-loss from 0.180 to 0.083 without changing a single predicted class. Expecting SGD with a fixed learning rate to give exact answers is a similar misunderstanding: it hovers around the minimum (MSE 1.038 against the exact 1.032) unless the learning rate decays. And forgetting to scale features for any gradient-trained model turns 1 step into 8,549.</p>
 
   <h2 id="lg-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>The whole note on one page. Running example: ten flats, area x (100 sq ft) → price y (₹ lakh): A (5, 38), B (6, 49), C (7, 53), D (8, 56), E (9, 67), F (10, 68), G (11, 73), H (12, 83), I (13, 87), J (14, 96); best line price = 6x + 10, residuals −2, 3, 1, −2, 3, −2, −3, 1, −1, 2. Typo: J stored as 69. Ages for "sold within 30 days": A 12, C 8, F 10, new flat K 18 (did not sell fast); score z = 0.5(age − 9).</p>
-  <h3>The question ladder</h3>
+  <h3>Key definitions</h3>
+  <ul>
+    <li><b>Loss</b> L(y, ŷ): penalty for one prediction. <b>Cost / objective</b> J(θ): average loss over training rows (plus any penalty), minimised by training. <b>Metric</b>: what is reported; need not be differentiable.</li>
+    <li><b>Residual</b> r = y − ŷ (regression). <b>Margin</b> m = y·f(x) with y ∈ {−1, +1} (classification; positive = correct).</li>
+    <li><b>Maximum likelihood</b>: minimising −log likelihood gives squared loss (Gaussian noise), absolute loss (Laplace noise), log-loss (Bernoulli).</li>
+    <li><b>Surrogate loss</b>: a convex stand-in above the 0-1 loss (hinge, log-loss) that has usable gradients.</li>
+    <li><b>Gradient</b>: vector of partial derivatives, points uphill. <b>Learning rate</b> η: step size.</li>
+    <li><b>Hessian</b>: matrix of second derivatives (curvatures). <b>Condition number</b> κ = largest / smallest eigenvalue: high κ = long thin valley = slow GD.</li>
+    <li><b>Convex</b>: bowl-shaped everywhere (Hessian has no negative eigenvalues), so any zero-gradient point is the global minimum.</li>
+    <li><b>Epoch</b>: one pass over all training rows.</li>
+  </ul>
+  <h3>The losses</h3>
   <table class="tbl">
-    <tr><th>Concept</th><th>Question it answers</th><th>Answer on our flats</th><th>Weakness → next</th></tr>
-    <tr><td>Loss / cost / metric</td><td>"how wrong" as one number?</td><td>MSE 4.6, MAE 2.0, Huber 1.5</td><td>which loss?</td></tr>
-    <tr><td>Squared</td><td>why square?</td><td>mean; Gaussian MLE; typo → 66.7, mean 64.3</td><td>outliers dominate</td></tr>
-    <tr><td>Absolute</td><td>robust to one bad row?</td><td>median 67–68 unmoved; MAE 4.3</td><td>kink at 0</td></tr>
-    <tr><td>Huber</td><td>smooth and robust?</td><td>constant 67; slope 5.58 vs 4.53</td><td>only for numbers</td></tr>
-    <tr><td>Log-loss</td><td>how wrong is a probability?</td><td>A 0.201, K 4.511; p − y</td><td>never stops pushing</td></tr>
-    <tr><td>Hinge</td><td>ignore safe rows?</td><td>A 0, C/F 0.5, K 5.5</td><td>we report accuracy</td></tr>
-    <tr><td>0-1, surrogates</td><td>why not minimise errors?</td><td>0 at any scale → no gradient</td><td>now the cost surface</td></tr>
-    <tr><td>Cost surface</td><td>what is minimised?</td><td>4.6 + 8.25(w − 6)² + (c − 67)²</td><td>can't scan big models</td></tr>
-    <tr><td>Gradient descent</td><td>how to go downhill?</td><td>4790.6 → 3003.0 → 1896.3 → 1203.8</td><td>step size?</td></tr>
-    <tr><td>Learning rate</td><td>how big a step?</td><td>η &lt; 0.121; 0.1 best</td><td>can it get stuck?</td></tr>
-    <tr><td>Convexity</td><td>bottom = best?</td><td>eigenvalues 16.5, 2</td><td>all rows per step is slow</td></tr>
-    <tr><td>SGD / mini-batch</td><td>fewer rows per step?</td><td>flat J (−864, −192); mean (−99, −134)</td><td>raw data still slow</td></tr>
-    <tr><td>Scaling</td><td>why slow?</td><td>κ 1,198 → 1; 8,549 → 1 step</td><td>can't always rescale</td></tr>
-    <tr><td>Momentum / Adam</td><td>adaptive steps?</td><td>8,549 → 792 / 975</td><td>needed at all?</td></tr>
-    <tr><td>Normal equation</td><td>skip iterating?</td><td>(6, 10) from a 2×2 solve</td><td>squared loss only</td></tr>
-    <tr><td>From scratch</td><td>do we understand it?</td><td>matches sklearn to 10⁻¹¹</td><td>overfitting → regularization</td></tr>
+    <tr><th>Loss</th><th>Formula</th><th>Gradient</th><th>Predicts / assumes</th><th>Outliers</th><th>Used by</th></tr>
+    <tr><td>Squared</td><td>(y − ŷ)²</td><td>2(ŷ − y)</td><td>mean; Gaussian noise</td><td>dominate</td><td>OLS, ridge, GBM default</td></tr>
+    <tr><td>Absolute</td><td>|y − ŷ|</td><td>sign(ŷ − y), kink at 0</td><td>median; Laplace noise</td><td>robust</td><td>quantile regression</td></tr>
+    <tr><td>Huber</td><td>½r² if |r| ≤ δ, else δ(|r| − ½δ)</td><td>r clipped to ±δ</td><td>between mean and median</td><td>robust</td><td>HuberRegressor</td></tr>
+    <tr><td>Log-loss</td><td>−[y ln p + (1 − y) ln(1 − p)]</td><td>p − y (w.r.t. score)</td><td>calibrated probabilities</td><td>confident errors huge</td><td>logistic regression, NNs, GBM</td></tr>
+    <tr><td>Hinge</td><td>max(0, 1 − y·f)</td><td>−y if margin &lt; 1, else 0</td><td>a margin; no probabilities</td><td>moderate</td><td>SVM</td></tr>
+    <tr><td>0-1</td><td>1 if wrong, else 0</td><td>0 or undefined</td><td>the error rate</td><td>–</td><td>evaluation only</td></tr>
   </table>
-  <h3>Definitions</h3>
+  <h3>Optimisers</h3>
   <table class="tbl">
-    <tr><th>Term</th><th>Meaning</th></tr>
-    <tr><td>Loss, cost, metric</td><td>Penalty for one prediction; average loss over the training rows as a function of θ (plus any penalty), which the optimiser minimises; the number reported to the business.</td></tr>
-    <tr><td>Residual, margin</td><td>r = y − ŷ for regression; m = y·f(x) with y ∈ {−1, +1} for classification (positive = correct side).</td></tr>
-    <tr><td>Maximum likelihood</td><td>Choose parameters that make the data most probable; minimising the negative log-likelihood gives squared loss (Gaussian), absolute (Laplace), log-loss (Bernoulli).</td></tr>
-    <tr><td>Surrogate loss</td><td>A convex, differentiable stand-in for the 0-1 loss that lies above it (hinge, log-loss).</td></tr>
-    <tr><td>Gradient, learning rate</td><td>Vector of partial derivatives (points uphill); the step size η in θ ← θ − η∇J.</td></tr>
-    <tr><td>Hessian, condition number</td><td>Matrix of second derivatives (curvatures); κ = largest / smallest eigenvalue, which sets how slowly GD converges.</td></tr>
-    <tr><td>Convex</td><td>Bowl-shaped everywhere (PSD Hessian): every zero-gradient point is a global minimum.</td></tr>
-    <tr><td>Batch / SGD / mini-batch; epoch</td><td>All rows / one row / b rows per update; one pass over all rows.</td></tr>
-    <tr><td>Momentum, Adam</td><td>Step along a running sum of gradients; additionally divide by the running root-mean-square gradient per parameter.</td></tr>
-    <tr><td>Normal equation</td><td>XᵀXθ = Xᵀy, the closed-form minimiser of squared loss for a linear model.</td></tr>
+    <tr><th>Method</th><th>Update</th><th>Good for</th></tr>
+    <tr><td>Closed form</td><td>solve XᵀXθ = Xᵀy</td><td>squared loss (and ridge), moderate number of features</td></tr>
+    <tr><td>Batch GD</td><td>θ ← θ − η∇J on all rows</td><td>small, smooth, convex problems</td></tr>
+    <tr><td>SGD / mini-batch</td><td>same, on 1 or b random rows</td><td>large data; decaying η for exact convergence</td></tr>
+    <tr><td>Momentum</td><td>v ← βv + g; θ ← θ − ηv</td><td>zig-zagging valleys</td></tr>
+    <tr><td>Adam</td><td>θ ← θ − η·m̂/(√ŝ + ε)</td><td>deep learning default (η = 0.001, β₁ = 0.9, β₂ = 0.999)</td></tr>
+    <tr><td>Newton / lbfgs</td><td>uses curvature too</td><td>logistic regression in sklearn</td></tr>
   </table>
-  <h3>Formulas</h3>
-  <table class="tbl">
-    <tr><th>Name</th><th>Formula</th><th>Symbols and our numbers</th></tr>
-    <tr><td>Squared / MSE</td><td>(1/n) Σ (yᵢ − ŷᵢ)²; gradient 2(ŷ − y)</td><td>46/10 = 4.6; typo 667/10 = 66.7</td></tr>
-    <tr><td>Absolute / MAE</td><td>(1/n) Σ |yᵢ − ŷᵢ|; gradient sign(ŷ − y)</td><td>20/10 = 2.0; typo 43/10 = 4.3</td></tr>
-    <tr><td>Huber</td><td>½r² if |r| ≤ δ, else δ(|r| − ½δ); gradient clip(r, ±δ)</td><td>δ = 1: 15/10 = 1.5; δ = 3 constant: 67</td></tr>
-    <tr><td>Gaussian NLL</td><td>(n/2) ln(2πσ²) + SSE/(2σ²)</td><td>D, E, F, σ = 2: 1.5 ln(8π) + 88.67/8 = 15.92</td></tr>
-    <tr><td>Off-mean cost</td><td>SSE(c) = SSE(ȳ) + n(c − ȳ)²</td><td>2106.1 + 10 × 2.7² = 2179.0</td></tr>
-    <tr><td>Log-loss</td><td>−[y ln p + (1 − y) ln(1 − p)]; ∂/∂z = p − y</td><td>p = σ(z), z score: K: −ln 0.011 = 4.51</td></tr>
-    <tr><td>Softmax, cross-entropy</td><td>pₖ = e<sup>zₖ</sup>/Σⱼ e<sup>zⱼ</sup>; −ln p<sub>true</sub></td><td>(2, 1, 0) → 0.665; loss 0.408</td></tr>
-    <tr><td>Hinge</td><td>max(0, 1 − y·f)</td><td>margin 0.5 → 0.5; −4.5 → 5.5</td></tr>
-    <tr><td>GD update</td><td>θ ← θ − η (2/n) Xᵀ(Xθ − y)</td><td>centred flats: ∂w = 16.5(w − 6), ∂c = 2(c − 67)</td></tr>
-    <tr><td>Stability</td><td>0 &lt; η &lt; 2/L; per-direction factor |1 − ηλ|</td><td>L = 16.5 → 0.121; η = 0.1: −0.65 and 0.8</td></tr>
-    <tr><td>Adam</td><td>m̂ = m/(1 − β₁ᵗ), ŝ = s/(1 − β₂ᵗ), θ ← θ − η m̂/(√ŝ + ε)</td><td>first step moves every coordinate by η</td></tr>
-    <tr><td>Normal equation</td><td>θ = (XᵀX)⁻¹Xᵀy (solve, don't invert)</td><td>[[985, 95], [95, 10]], [6860, 670] → (6, 10)</td></tr>
-  </table>
-  <h3>When to use, when not</h3>
-  <div class="cards">
-    <div><b>Squared loss</b><p>Default for regression when big errors are truly costly and the data is clean; gives the mean and a closed form.</p><small>Avoid with typos or heavy tails</small></div>
-    <div><b>Absolute / Huber</b><p>When a few rows are wrong or extreme; Huber when you also want smooth gradients. Set δ relative to the noise.</p><small>Quantile loss for intervals</small></div>
-    <div><b>Log-loss vs hinge</b><p>Log-loss when you need probabilities (pricing advice, thresholds); hinge for a max-margin SVM. Never squared loss on a sigmoid.</p><small>Report accuracy, train on a surrogate</small></div>
-    <div><b>Which optimiser</b><p>Closed form for OLS/ridge with moderate d; batch GD for small convex problems; mini-batch SGD with momentum or Adam for large data and networks; always scale first.</p><small>Check η &lt; 2/L by watching the first steps</small></div>
-  </div>
-  <div class="callout trap"><span class="label">Key traps</span>
-    <p>Squared loss on dirty data; MSE for classification; η above 2/L; unscaled features with GD; trusting training loss; wrong sign or label coding; fixed-η SGD expected to be exact; log(0); summing instead of averaging; assuming a lower loss means a better metric.</p>
-  </div>
-  <h3>Five rapid-fire checks</h3>
-  <table class="tbl">
-    <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td>Residuals −2, 3, 1, −2, 3, −2, −3, 1, −1, 2: MSE and MAE?</td><td>46/10 = 4.6 and 20/10 = 2.0</td></tr>
-    <tr><td>p = 0.989 that a flat sells fast; it did not. Log-loss?</td><td>−ln(0.011) = 4.51</td></tr>
-    <tr><td>Centred flats, start (0, 0), η = 0.1: first step?</td><td>gradient (−99, −134) → w = 9.9, c = 13.4</td></tr>
-    <tr><td>Hessian eigenvalues 16.5 and 2: largest stable η and κ?</td><td>2/16.5 = 0.121; κ = 8.25</td></tr>
-    <tr><td>XᵀX = [[985, 95], [95, 10]], Xᵀy = [6860, 670]: w?</td><td>(10·6860 − 95·670)/825 = 6</td></tr>
-  </table>
+  <h3>Key formulas and numbers</h3>
+  <div class="fx" data-lang="py"># gradient descent for linear regression with MSE
+grad = 2 / n * X.T @ (X @ theta - y)        # e = y_hat - y
+theta = theta - lr * grad                   # stable only if lr &lt; 2 / L
 
-  <h2 id="lg-qa"><span class="num">20</span>Questions &amp; Answers</h2>
+# log-loss gradient with respect to the score z = Xw + b
+p = 1 / (1 + np.exp(-(X @ w + b)))
+grad_w = X.T @ (p - y) / n
+
+# Adam, per parameter
+m = b1 * m + (1 - b1) * g;  s = b2 * s + (1 - b2) * g**2
+theta -= lr * (m / (1 - b1**t)) / (np.sqrt(s / (1 - b2**t)) + eps)</div>
+  <ul>
+    <li>Flats: MSE 4.6 → 66.7 with one typo; MAE 2.0 → 4.3; slope 6 → 4.53 (OLS) vs 5.58 (Huber).</li>
+    <li>Centred flats: J = 4.6 + 8.25(w − 6)² + (c − 67)²; Hessian eigenvalues 16.5 and 2; η &lt; 0.121.</li>
+    <li>Scaling: κ 1,198 (raw) → 8.25 (centred) → 1 (standardized); steps 8,549 → 81 → 1.</li>
+  </ul>
+  <h3>Gotchas</h3>
+  <ul>
+    <li>MSE for classification: non-convex, vanishing gradient when confidently wrong. Use log-loss.</li>
+    <li>Rising or <code>nan</code> loss: η too big or features unscaled.</li>
+    <li>Wrong sign or wrong label coding (hinge needs −1/+1, log-loss 0/1): check that the first step lowers the cost.</li>
+    <li>Fixed-η SGD never settles exactly; shuffle every epoch.</li>
+    <li>Convex means the right destination, not a fast trip.</li>
+    <li>Low training loss is not a good model; low loss is not a good metric.</li>
+  </ul>
+
+  <h2 id="lg-qa"><span class="num">13</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between a loss function, a cost function and a metric?</summary><div class="qa-body">Loss: the penalty for one prediction, L(y, ŷ). Cost (objective): the average loss over the training set as a function of the parameters, plus any regularization penalty; it is what the optimiser minimises. Metric: the number you report for a dataset (accuracy, RMSE, AUC); it need not be differentiable and may differ from the loss.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why does minimising squared error give the mean, and absolute error the median?</summary><div class="qa-body">For a constant c, d/dc Σ(yᵢ − c)² = −2Σ(yᵢ − c) = 0 gives c = mean. For Σ|yᵢ − c| the slope is (#points below c) − (#points above c), which changes sign at the middle value(s), the median. On the flat prices with J mistyped: mean 64.3 (dragged from 67), median interval [67, 68] (unmoved), Huber (δ = 3) 67.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Derive MSE and log-loss from maximum likelihood.</summary><div class="qa-body">Gaussian noise: −ln Π (1/√(2πσ²)) exp(−(yᵢ − ŷᵢ)²/2σ²) = (n/2)ln(2πσ²) + SSE/(2σ²), so maximising likelihood = minimising SSE. Bernoulli: P(y|p) = pʸ(1 − p)¹⁻ʸ, so −ln of the product is −Σ[yᵢ ln pᵢ + (1 − yᵢ) ln(1 − pᵢ)], the log-loss.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Show that the gradient of log-loss with respect to the logit is p − y.</summary><div class="qa-body">With p = σ(z) and σ' = p(1 − p): dL/dz = −[y(1/p) − (1 − y)/(1 − p)]·p(1 − p) = −[y(1 − p) − (1 − y)p] = p − y. Hence ∂L/∂w = (p − y)x, the same form as linear regression's gradient. Flat K (p = 0.989, y = 0) pushes its score down by 0.989.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why not use MSE for logistic regression?</summary><div class="qa-body">On top of a sigmoid, MSE is non-convex in the weights and its gradient 2(p − y)p(1 − p) vanishes when the model is confidently wrong (−0.0049 vs log-loss −0.998 at z = −6), so learning from the worst mistakes is slow. Log-loss is convex, has gradient p − y, and is a proper scoring rule that rewards calibrated probabilities.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is hinge loss and how does it relate to SVMs and support vectors?</summary><div class="qa-body">max(0, 1 − y·f) with y ∈ {−1, +1}. Rows with margin ≥ 1 (flat A at 1.5) have zero loss and zero gradient, so only rows inside or on the wrong side of the margin (C, F, K) shape the solution: the support vectors. Hinge loss + L2 penalty is the soft-margin linear SVM.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why don't we train classifiers by minimising 0-1 loss directly?</summary><div class="qa-body">It is flat almost everywhere (gradient 0) and discontinuous at the boundary, so gradient methods get no signal (on the ten flats it is 0 whether the score is doubled or not); exact minimisation is NP-hard for linear classifiers in general; and it ignores how close a row is to the boundary. Convex surrogates (log-loss, hinge) upper-bound it, are easy to optimise, and are classification-calibrated.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Derive the gradient descent update for linear regression and do one step on the ten flats (centred area) from (0, 0) with η = 0.1.</summary><div class="qa-body">J = (1/n)Σ(w uᵢ + c − yᵢ)², ∂J/∂w = (2/n)Σeᵢuᵢ, ∂J/∂c = (2/n)Σeᵢ. With Σu = 0, Σu² = 82.5, Σuy = 495, Σy = 670 these are 16.5(w − 6) and 2(c − 67). At (0, 0): (−99, −134), so w = 9.9, c = 13.4 and J falls from 4790.6 to 3003.0. The bottom is (6, 67), i.e. b = 67 − 9.5 × 6 = 10.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you know the largest safe learning rate?</summary><div class="qa-body">For a quadratic cost, GD converges iff η &lt; 2/L, where L is the largest eigenvalue of the Hessian (for MSE, (2/n)XᵀX). For the centred flats L = 16.5, so η must be below 0.121: 0.12 converged slowly with zig-zags, 0.125 diverged to 10²⁸. In practice: try values on a log grid (1, 0.1, 0.01…) and watch the loss.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is convexity and why do we care?</summary><div class="qa-body">A convex function lies below its chords (Hessian positive semi-definite), so every point with zero gradient is a global minimum and GD cannot get stuck in a bad local minimum. MSE for linear models, log-loss for logistic regression, hinge and Huber are convex; neural networks are not. Convexity guarantees the destination, not the speed.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Compare batch, stochastic and mini-batch gradient descent.</summary><div class="qa-body">Batch: exact gradient, one update per epoch, O(nd) per step. SGD: one row per update, cheap and noisy (one flat's gradient ranged from +343 to −864 in w, though the ten average exactly to the full gradient), needs a decaying η to converge exactly. Mini-batch: b rows (32–512), noise shrinking like 1/√b, vectorises well; the default for large data and deep learning. On 10,000 rows, one epoch of mini-batch reached MSE 1.032 while one batch step was at 19.8.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why does feature scaling speed up gradient descent?</summary><div class="qa-body">Features on very different scales (or far from zero) make the cost bowl long and thin (high condition number κ = L/μ). The step size is limited by the steep direction (η &lt; 2/L), so progress along the flat direction is tiny and GD zig-zags. On the flats: raw area κ = 1,198 and 8,549 steps; area in sq ft κ ≈ 11.8 million and no convergence in 100,000; centred 81 steps; standardized 1.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Explain momentum and Adam in two sentences each.</summary><div class="qa-body">Momentum keeps a running sum of past gradients and steps along it, which accelerates consistent directions and cancels oscillating ones (8,549 → 792 steps on the raw flats). Adam combines momentum with a per-parameter running average of squared gradients, stepping by m̂/√ŝ so every parameter moves on a similar scale; bias correction fixes the zero initialisation.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Normal equation or gradient descent: when do you use which?</summary><div class="qa-body">Normal equation (via solve/SVD): exact, no tuning, O(nd² + d³), best for squared loss with up to a few thousand features that fit in memory (the flats: a 2×2 solve gives (6, 10)). Gradient descent: O(nd) per step, needed for huge d, streaming data, and any loss without a closed form (logistic, hinge, neural networks).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does the choice of loss matter more than the choice of optimiser for the typo problem?</summary><div class="qa-body">The optimiser only finds the minimum of the cost you give it. With squared loss every optimiser (formula, GD, SGD) lands on the same damaged line, slope 4.53. Only changing the loss (Huber: 5.58; absolute) changes where the minimum is. Optimisers decide speed; losses decide the answer.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks if you skip feature scaling, and which later notes depend on it?</summary><div class="qa-body">Gradient descent still converges but can take thousands of times longer (8,549 vs 1 step on the flats), and penalised models change their answer, because the penalty treats a coefficient on "sq ft" and one on "rooms" as comparable (<a class="xref" data-note="ml_regularization">Regularization</a>). Distance-based models (kNN, SVM, k-means) break for a different reason. <a class="xref" data-note="ml_features">Feature Engineering</a> covers the scalers, and <a class="xref" data-note="ml_pipelines">Pipelines</a> makes sure they are fitted on training data only.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: how do loss gradients appear in gradient boosting and regularization?</summary><div class="qa-body">Gradient boosting fits each new tree to the negative gradient of the loss at the current predictions: y − ŷ for squared loss, y − p for log-loss, sign(y − ŷ) for absolute loss, so changing the loss changes what each tree learns (<a class="xref" data-note="ml_gbm">Gradient Boosting</a>). Regularization adds λ·penalty to the cost; for L2 the gradient gains 2λw, which shrinks weights every step and makes the cost strongly convex (<a class="xref" data-note="ml_regularization">Regularization</a>).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between a loss function, a cost function and a metric?</summary><div class="qa-body">A loss scores one prediction. The cost (objective) is the average loss over the training set, as a function of the parameters, plus any regularization penalty; it is what the optimiser minimises. A metric is the number reported for a dataset, such as accuracy or RMSE; it should match the business goal but need not be differentiable, and it can differ from the loss used for training.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does minimising squared error give the mean, and absolute error the median?</summary><div class="qa-body">For a constant c, the derivative of Σ(yᵢ − c)² is −2Σ(yᵢ − c), which is zero when c is the mean. The slope of Σ|yᵢ − c| is (number of points below c) − (number above c), which is zero at the middle value, the median. That is why squared loss is pulled by outliers (one typo moved the flats' mean from 67 to 64.3) while absolute loss is not (median stayed at 67–68).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Derive MSE and log-loss from maximum likelihood.</summary><div class="qa-body">With Gaussian noise, −log of the product of densities is a constant plus Σ(yᵢ − ŷᵢ)²/(2σ²), so maximising likelihood is minimising squared error. For a yes/no label with P(y | p) = pʸ(1 − p)¹⁻ʸ, −log of the product over rows is −Σ[yᵢ ln pᵢ + (1 − yᵢ) ln(1 − pᵢ)], which is the log-loss.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When would you use MAE or Huber loss instead of MSE?</summary><div class="qa-body">When the data contain outliers or occasional bad rows that should not dominate the fit, or when you care about the median rather than the mean. Huber is quadratic for small residuals (smooth gradients) and linear for large ones (bounded influence), so it is robust and still easy to optimise. If large errors are genuinely costly, MSE is the right choice because it punishes them most.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Show that the gradient of log-loss with respect to the logit is p − y.</summary><div class="qa-body">With p = σ(z) and σ'(z) = p(1 − p): dL/dz = −[y/p − (1 − y)/(1 − p)]·p(1 − p) = −[y(1 − p) − (1 − y)p] = p − y. So the gradient with respect to the weights is (p − y)·x, the same form as linear regression's gradient.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why not use MSE as the loss for logistic regression?</summary><div class="qa-body">Through a sigmoid, MSE is non-convex in the weights, and its gradient 2(p − y)p(1 − p) almost vanishes when the model is confidently wrong (about −0.005 at z = −6 against −0.998 for log-loss), so the model learns slowly from its worst mistakes. Log-loss is convex, has the simple gradient p − y, and rewards calibrated probabilities.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is hinge loss, and what are support vectors?</summary><div class="qa-body">Hinge loss is max(0, 1 − y·f(x)) with labels −1/+1. Rows with margin at least 1 have zero loss and zero gradient, so they do not affect the solution; only rows inside the margin or misclassified matter, and those are the support vectors. Hinge loss plus an L2 penalty on the weights is the soft-margin linear SVM.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why don't we train classifiers by minimising the 0-1 loss directly?</summary><div class="qa-body">It is flat almost everywhere and jumps at the boundary, so its gradient is zero or undefined and gradient methods get no signal; exact minimisation is NP-hard in general; and it ignores how close a row is to the boundary. We minimise convex surrogates such as log-loss or hinge, which lie above it and, with enough data, also minimise the error rate.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain gradient descent and write its update rule.</summary><div class="qa-body">Start from some parameters, compute the gradient of the cost (the direction of steepest increase), and step the opposite way: θ ← θ − η∇J(θ). Repeat until the gradient is near zero or the cost stops falling. For linear regression with MSE, ∇J = (2/n)Xᵀ(Xθ − y).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What happens if the learning rate is too small or too large? How do you choose it?</summary><div class="qa-body">Too small: convergence is very slow. Too large: the steps overshoot, the cost oscillates or diverges (often to nan). For a quadratic cost, GD converges only if η &lt; 2/L, where L is the largest Hessian eigenvalue. In practice, try values on a log scale, watch the training loss, and often decay η during training.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is convexity and why does it matter for optimisation?</summary><div class="qa-body">A convex function lies below its chords; equivalently its Hessian has no negative eigenvalues. Then every point with zero gradient is a global minimum, so gradient descent cannot get stuck in a worse local minimum. Linear regression with MSE, logistic regression, SVMs and Huber regression are convex; neural networks are not. Convexity guarantees where you end up, not how fast.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Compare batch, stochastic and mini-batch gradient descent.</summary><div class="qa-body">Batch uses all rows per update: exact gradient, smooth convergence, expensive steps. SGD uses one row: cheap, noisy steps that need a decaying learning rate to settle. Mini-batch uses 32–512 rows: less noise than SGD, vectorises well on GPUs, and is the standard choice for large data and deep learning. A random row's gradient is an unbiased estimate of the full gradient.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does feature scaling speed up gradient descent?</summary><div class="qa-body">Features on very different scales make the cost surface a long, narrow valley (high condition number). The learning rate must be small enough for the steep direction, so progress along the flat direction is tiny and the path zig-zags. Standardizing makes the bowl rounder; on the flats it cut the steps from 8,549 to 1. Tree models and closed-form solutions do not need it.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain momentum and Adam.</summary><div class="qa-body">Momentum keeps a running sum of past gradients and steps along it, which speeds up movement in consistent directions and cancels oscillations. Adam combines momentum with a per-parameter running average of squared gradients and divides by its square root, so every parameter moves on a similar scale; it also corrects the bias from initialising both averages at zero. Adam is the default for deep learning.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Normal equation or gradient descent: when do you use which?</summary><div class="qa-body">The normal equation solves XᵀXθ = Xᵀy exactly, needs no learning rate, and costs about nd² + d³, so it suits squared loss with up to a few thousand features. Gradient descent costs about nd per step, handles huge feature counts and streaming data, and works for any differentiable loss, so it is required for logistic regression, SVMs and neural networks, which have no closed form.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Your training loss suddenly becomes nan. What do you check?</summary><div class="qa-body">First the learning rate (too large makes the updates explode) and feature scaling. Then numerical issues: log of 0 in log-loss (clip probabilities or use a with-logits loss), division by zero, overflow in exp, and nan or infinite values in the input data. Check that the cost falls after the first step.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>If your data has outliers, does changing the optimiser help?</summary><div class="qa-body">No. The optimiser only decides how fast you reach the minimum of the cost; the loss decides where that minimum is. With squared loss, every optimiser lands on the same outlier-damaged line (slope 4.53 on the flats). Only changing the loss (Huber: 5.58) or cleaning the data changes the answer.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do loss gradients appear in gradient boosting?</summary><div class="qa-body">Gradient boosting fits each new tree to the negative gradient of the loss at the current predictions: the residual y − ŷ for squared loss, y − p for log-loss, the sign of the residual for absolute loss. So changing the loss changes what each tree is trained to correct. This is gradient descent performed in the space of functions rather than parameters (<a class="xref" data-note="ml_gbm">Gradient Boosting</a>).</div></details>
 </main>
 `
 });
