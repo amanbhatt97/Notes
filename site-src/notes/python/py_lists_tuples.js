@@ -3,58 +3,7 @@ Object.assign(TOPIC_CONTENT, {
   "py_lists_tuples": `<main>
 <h1>Lists &amp; Tuples</h1>
   <div class="where"><span>Python</span><span>Collections</span><span>Lists &amp; Tuples</span></div>
-  <p class="lead">A list keeps many values in order and lets you change them; a tuple keeps a few values in order and promises never to change. Together they hold almost every "row" and "column" of data you will touch before numpy and pandas. This note teaches both completely on one running example, the six orders of Chai Corner's Monday morning: indexing and slicing traced cut by cut, how a list grows and what each operation costs, comprehensions desugared into the loops they replace, sorting with <code>key=</code>, the three kinds of "copy" traced with <code>id()</code>, the <code>[[0]*3]*3</code> trap, tuples as records, packing and unpacking, <code>namedtuple</code>, and why a tuple can be a dict key while a list cannot. Run on Python 3.13.</p>
-
-  <h2 id="plt-fits" class="open"><span class="num">★</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 640 262" width="640">
-<defs><marker id="plt-ga" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="120" y="6" width="400" height="36" rx="8" fill="none" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.5"/>
-<text x="320" y="22" text-anchor="middle" class="tm" font-size="10">came from</text>
-<text x="320" y="36" text-anchor="middle" font-size="11">Fundamentals · Values &amp; Types · Control Flow · Functions</text>
-<line x1="320" y1="42" x2="320" y2="60" stroke="currentColor" marker-end="url(#plt-ga)"/>
-<line x1="320" y1="100" x2="110" y2="130" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#plt-ga)"/>
-<line x1="320" y1="100" x2="320" y2="130" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#plt-ga)"/>
-<line x1="320" y1="100" x2="530" y2="130" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#plt-ga)"/>
-<line x1="200" y1="152" x2="228" y2="152" stroke="currentColor" stroke-dasharray="3 3" marker-end="url(#plt-ga)"/>
-<line x1="410" y1="152" x2="438" y2="152" stroke="currentColor" stroke-dasharray="3 3" marker-end="url(#plt-ga)"/>
-<rect x="210" y="62" width="220" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="320" y="79" text-anchor="middle" font-size="12" font-weight="400">Python Collections: the map</text>
-<text x="320" y="94" text-anchor="middle" class="tm" font-size="10">which container, and why</text>
-<rect x="20" y="132" width="180" height="40" rx="8" class="fg sg" stroke-width="2.5"/>
-<text x="110" y="149" text-anchor="middle" font-size="12" font-weight="700">Lists &amp; Tuples</text>
-<text x="110" y="164" text-anchor="middle" class="tg" font-size="10">YOU ARE HERE · order · fixed records</text>
-<rect x="230" y="132" width="180" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="320" y="149" text-anchor="middle" font-size="12" font-weight="400">Dicts &amp; Sets</text>
-<text x="320" y="164" text-anchor="middle" class="tm" font-size="10">lookup by key · unique</text>
-<rect x="440" y="132" width="180" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="530" y="149" text-anchor="middle" font-size="12" font-weight="400">Strings</text>
-<text x="530" y="164" text-anchor="middle" class="tm" font-size="10">text is a sequence too</text>
-<line x1="320" y1="172" x2="320" y2="208" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#plt-ga)"/>
-<rect x="60" y="210" width="520" height="44" rx="8" fill="none" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.5"/>
-<text x="320" y="227" text-anchor="middle" class="tm" font-size="10">leads to</text>
-<text x="320" y="245" text-anchor="middle" font-size="11">Iterators &amp; Generators · OOP · DSA: Arrays, Hashing · Pandas</text>
-</svg><figcaption>The Python Collections group. Read the map first, then left to right: each note answers a question the one before could not. The dotted arrows are the reading order.</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: <a class="xref" data-note="py_ds">Python Collections: the map</a></b><span>The map showed why one variable is not enough (a stall has many orders) and gave each container its job. It also introduced the running example: Chai Corner's Monday orders. <a class="xref" data-note="py_fundamentals">Python Fundamentals</a> (and <a class="xref" data-note="py_values">Values &amp; Types</a>) taught that a name is a tag tied to an object, and that some objects can change (mutable) while others cannot (immutable). Both ideas are used on every line below.</span></li>
-    <li><b>This note adds: the two ordered containers</b><span>The list (many values, in order, changeable) and the tuple (a fixed record). How to reach any part of them, how to grow them cheaply, how to build and sort them, and how to copy them without surprises.</span></li>
-    <li><b>Leads to: <a class="xref" data-note="py_dicts_sets">Dicts &amp; Sets</a></b><span>A list can only find things by position or by scanning every item. "What does a samosa cost?" and "has Esha been here today?" need a container that jumps straight to the answer. The last section of this note (tuples are hashable) is exactly the key that opens that door. Later: <a class="xref" data-note="py_iterators">Iterators &amp; Generators</a> explain what a <code>for</code> loop really does with a list, and <a class="xref" data-note="dsa_arrays">Arrays &amp; Two Pointers</a> uses lists for interview patterns.</span></li>
-  </ol>
-
-  <h2 id="plt-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
-  <p>The whole note as one chain. Each concept answers the question above it; its weakness raises the next question. Numbers come from the running example (section 01).</p>
-  <ol class="story">
-    <li><b>List</b><span>Q: how do we keep all six orders of the morning, in the order they came? → One list holding six references: <code>len(orders)</code> is 6. But how do we reach "the fourth order" or "the last one"?</span></li>
-    <li><b>Indexing</b><span>Q: how do we get one item? → By position, from 0: <code>names[3]</code> is "Chen"; negative positions count from the end: <code>names[-1]</code> is "Ben". But we often want a whole stretch, like "the first two orders"…</span></li>
-    <li><b>Slicing</b><span>Q: how do we get a piece? → <code>[start:stop:step]</code>, stop not included: <code>names[1:4]</code> is Ben, Asha, Chen; <code>[::-1]</code> reverses. But the day goes on and orders keep coming…</span></li>
-    <li><b>Changing a list</b><span>Q: how do we add and remove orders? → <code>append</code>, <code>extend</code>, <code>insert</code>, <code>pop</code>, <code>remove</code>. But are they all equally cheap? No: <code>pop(0)</code> on 100,000 items took about 0.9 s, a deque about 0.005 s, because a list is an array that must shift…</span></li>
-    <li><b>Comprehensions</b><span>Q: we keep writing "empty list, loop, if, append" to build new lists. Is there a shorter way? → <code>[qty for name, item, qty in orders if "chai" in item]</code> gives [2, 1, 1, 2]. But the results come out in arrival order, and the owner wants "biggest order first"…</span></li>
-    <li><b>Sorting</b><span>Q: how do we put items in a chosen order? → <code>sorted(orders, key=…)</code> for a new list, <code>.sort()</code> in place; stable, so two passes give "by qty, then by name". But we passed our list into functions and copied it around. Did anybody change it behind our back?</span></li>
-    <li><b>Aliasing, shallow and deep copy</b><span>Q: when are two names the same list, and how do we get a real copy? → <code>b = a</code> is the same object (same <code>id</code>); <code>.copy()</code> copies the outer list only; <code>deepcopy</code> copies every level. The same "shared reference" causes the grid trap: <code>[[0]*3]*3</code> is three names for one row. But some data should never change at all…</span></li>
-    <li><b>Tuple</b><span>Q: how do we store one order so nobody can edit it by accident? → A tuple: <code>order[2] = 3</code> raises TypeError. But how do we get the parts back out conveniently?</span></li>
-    <li><b>Packing &amp; unpacking</b><span>Q: how do we split a record into names? → <code>name, item, qty = order</code>; <code>first, *rest = names</code>; swaps; "returning two values". But <code>o[2]</code> still says nothing about what slot 2 means…</span></li>
-    <li><b>namedtuple</b><span>Q: can a tuple have field names? → <code>Order(customer, item, qty)</code>: <code>o.qty</code> and <code>o[2]</code> both work. And because a tuple never changes…</span></li>
-    <li><b>Hashable tuples</b><span>Q: can a record be used as a label to look things up? → Yes: a tuple's hash never changes, so <code>("Ben", "masala chai")</code> can be a dict key (total 2 cups); a list cannot (TypeError: unhashable). How that lookup works is the next note.</span></li>
-  </ol>
+  <p class="lead">A list is Python's mutable, ordered sequence; a tuple is its immutable counterpart. Lists hold rows of data that grow and change (records read from a file, a batch of samples, a queue of jobs); tuples hold fixed records, function return values and composite dict keys. Most list bugs in real code come from not knowing what a list physically is: a dynamic array of references. That one fact explains why <code>append</code> is O(1) but <code>pop(0)</code> is O(n), why a "copy" can still change the original, why <code>[[0]*3]*3</code> misbehaves, and why a tuple can be a dict key while a list cannot. Code here was run on Python 3.13.</p>
 
   <h2 id="plt-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -66,7 +15,7 @@ Object.assign(TOPIC_CONTENT, {
           <li><b>list</b> — ordered, changeable, duplicates OK; holds references, not copies</li>
           <li><b>Index</b> from 0; <code>-1</code> = last; out of range → IndexError</li>
           <li><b>Slice</b> <code>[start:stop:step]</code>; stop excluded; never raises; <code>[::-1]</code> reverses</li>
-          <li>💡 indices are cuts between bread slices</li>
+          <li>Works on every sequence: list, tuple, str, range</li>
           <li>Slice assignment can grow/shrink: <code>q[1:3] = [30, 10, 99]</code></li>
         </ul>
       </div>
@@ -107,7 +56,7 @@ Object.assign(TOPIC_CONTENT, {
           <li><b>Alias</b> <code>b = a</code>: same object, same <code>id</code></li>
           <li><b>Shallow</b> <code>a.copy()</code>, <code>a[:]</code>, <code>list(a)</code>: new outer, shared inner</li>
           <li><b>Deep</b> <code>copy.deepcopy(a)</code>: every level new</li>
-          <li>💡 shallow = photocopy of the contents page</li>
+          <li>Check sharing with <code>is</code> / <code>id()</code></li>
           <li>⚠ <code>[[0]*3]*3</code> = one row, three references → comprehension</li>
         </ul>
       </div>
@@ -128,31 +77,26 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="plt-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain</span></div></div>
-      <div class="rm-item rm-done" data-target="plt-list"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">A List of Orders</span><span class="rm-sub">The running example</span></div></div>
-      <div class="rm-item rm-done" data-target="plt-slice"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Indexing &amp; Slicing</span><span class="rm-sub">Traced cut by cut</span></div></div>
-      <div class="rm-item rm-done" data-target="plt-grow"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Changing a List</span><span class="rm-sub">append, extend, insert, pop &amp; costs</span></div></div>
-      <div class="rm-item rm-done" data-target="plt-comp"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Comprehensions</span><span class="rm-sub">Desugared into loops</span></div></div>
-      <div class="rm-item rm-done" data-target="plt-sort"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Sorting</span><span class="rm-sub">sorted vs .sort, key=</span></div></div>
-      <div class="rm-item rm-done" data-target="plt-copy"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Aliasing &amp; Copies</span><span class="rm-sub">Alias, shallow, deep, the grid trap</span></div></div>
-      <div class="rm-item rm-done" data-target="plt-tuple"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Tuples as Records</span><span class="rm-sub">Fixed on purpose</span></div></div>
-      <div class="rm-item rm-done" data-target="plt-unpack"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Packing &amp; Unpacking</span><span class="rm-sub">Records into names</span></div></div>
-      <div class="rm-item rm-done" data-target="plt-named"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">namedtuple</span><span class="rm-sub">Fields with names</span></div></div>
-      <div class="rm-item rm-done" data-target="plt-hash"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Tuples as Dict Keys</span><span class="rm-sub">Why hashable matters</span></div></div>
-      <div class="rm-item rm-done" data-target="plt-connect"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One picture, one table</span></div></div>
-      <div class="rm-item rm-done" data-target="plt-traps"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Traps in code and interviews</span></div></div>
-      <div class="rm-item rm-done" data-target="plt-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note in 10 minutes</span></div></div>
-      <div class="rm-item rm-done" data-target="plt-qa"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
+      <div class="rm-item rm-done" data-target="plt-list"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Creating Lists</span><span class="rm-sub">Literals, mixed types, references</span></div></div>
+      <div class="rm-item rm-done" data-target="plt-slice"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Indexing &amp; Slicing</span><span class="rm-sub">Negative indices, step, slice assignment</span></div></div>
+      <div class="rm-item rm-done" data-target="plt-grow"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Changing a List</span><span class="rm-sub">append, extend, insert, pop and their Big-O</span></div></div>
+      <div class="rm-item rm-done" data-target="plt-comp"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">List Comprehensions</span><span class="rm-sub">Filter, if/else, nesting, generators</span></div></div>
+      <div class="rm-item rm-done" data-target="plt-sort"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Sorting</span><span class="rm-sub">sorted vs .sort, key=, stability</span></div></div>
+      <div class="rm-item rm-done" data-target="plt-copy"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Aliasing &amp; Copies</span><span class="rm-sub">Alias, shallow, deep, grid trap</span></div></div>
+      <div class="rm-item rm-done" data-target="plt-tuple"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Tuples</span><span class="rm-sub">Immutability, the comma, memory</span></div></div>
+      <div class="rm-item rm-done" data-target="plt-unpack"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Packing &amp; Unpacking</span><span class="rm-sub">Star targets, swaps, multiple returns</span></div></div>
+      <div class="rm-item rm-done" data-target="plt-named"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">namedtuple</span><span class="rm-sub">Named fields, _replace, _asdict</span></div></div>
+      <div class="rm-item rm-done" data-target="plt-hash"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Hashability</span><span class="rm-sub">Why tuples can be dict keys</span></div></div>
+      <div class="rm-item rm-done" data-target="plt-traps"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">None returns, copies, mutation while looping</span></div></div>
+      <div class="rm-item rm-done" data-target="plt-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">Syntax, costs, rules, gotchas</span></div></div>
+      <div class="rm-item rm-done" data-target="plt-qa"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">20 questions, basic to internals</span></div></div>
     </div>
   </div>
-
-  <h2 id="plt-list"><span class="num">01</span>A List of Orders</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>One variable holds one value: <code>order = "Asha: 2 masala chai"</code>. By 9:30 Chai Corner has six orders, by evening three hundred. Six variables called <code>order1</code> … <code>order6</code> cannot be looped over, counted or sorted. How do we keep many values, in the order they arrived, under one name?</p>
   </div>
-  <h3>The running example</h3>
-  <p>Chai Corner is a small tea stall. Every order is three facts: who ordered, what, and how many. We store each order as a <strong>tuple</strong> (round brackets, explained in section 07; for now read it as "a fixed little record"), and the whole morning as a <strong>list</strong> of those tuples (square brackets). The same six orders are used in every section of this note and in the other notes of the group.</p>
-  <div class="fx" data-lang="py"># Chai Corner, Monday morning: one tuple per order = (customer, item, cups/pieces)
+
+  <h2 id="plt-list"><span class="num">01</span>Creating Lists: an Ordered Row of References</h2>
+  <p>A list keeps any number of values under one name, in a fixed order, so they can be counted, indexed, looped over and sorted. Separate variables (<code>order1</code>, <code>order2</code>, …) cannot do any of that. Below, each record is a tuple <code>(customer, item, qty)</code> (tuples are covered further down) and the collection of records is a list.</p>
+  <div class="fx" data-lang="py"># one tuple per order = (customer, item, qty)
 orders = [
     ("Asha", "masala chai", 2),
     ("Ben",  "samosa",      3),
@@ -161,25 +105,14 @@ orders = [
     ("Dia",  "bun maska",   2),
     ("Ben",  "masala chai", 2),
 ]
-print(len(orders))          # how many orders today
+print(len(orders))          # how many records
 print(orders[0])            # the first order
 print(type(orders), type(orders[0]))</div>
   <div class="fx" data-lang="text">6
 ('Asha', 'masala chai', 2)
 &lt;class 'list'&gt; &lt;class 'tuple'&gt;</div>
   <p>Reading the output: the list has 6 items; item 0 is the whole first order, the tuple <code>('Asha', 'masala chai', 2)</code>; the outer container is a <code>list</code>, each row is a <code>tuple</code>.</p>
-  <table class="tbl"><caption>The running example: Chai Corner, Monday morning</caption>
-    <tr><th>index</th><th>customer</th><th>item</th><th>qty</th></tr>
-    <tr><td>0</td><td>Asha</td><td>masala chai</td><td>2</td></tr>
-    <tr><td>1</td><td>Ben</td><td>samosa</td><td>3</td></tr>
-    <tr><td>2</td><td>Asha</td><td>ginger chai</td><td>1</td></tr>
-    <tr><td>3</td><td>Chen</td><td>masala chai</td><td>1</td></tr>
-    <tr><td>4</td><td>Dia</td><td>bun maska</td><td>2</td></tr>
-    <tr><td>5</td><td>Ben</td><td>masala chai</td><td>2</td></tr>
-  </table>
-  <h3>Plain words</h3>
   <p>A <strong>list</strong> is a numbered row of slots. "Ordered" means slot 0 stays slot 0 until you move it. "Changeable" (mutable) means you can add, remove and replace items after creating it. Duplicates are fine: Asha appears twice. A list can hold any mix of types, even other lists.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>The order pad hanging at the counter. Each line is one order, lines are numbered top to bottom, you can add a line at the bottom or strike one out, and the same customer can appear on many lines.</p></div>
   <h3>What a list really stores: references</h3>
   <p>From <a class="xref" data-note="py_fundamentals">Python Fundamentals</a>: a name is a tag tied to an object. A list is a row of such tags. Slot 0 does not contain a copy of Asha's order; it points at the tuple object. So <code>a = orders[0]</code> gives a second tag on the same object, which <code>is</code> and <code>id()</code> confirm:</p>
   <div class="fx" data-lang="py">a = orders[0]
@@ -190,16 +123,12 @@ print(len(mixed), mixed[-1])</div>
   <div class="fx" data-lang="text">True
 True
 5 [3, 4]</div>
-  <p>This one fact (lists hold references) explains the copy traps of section 06 and the grid trap. Keep it in mind.</p>
+  <p>This one fact (lists hold references) explains the copy traps and the <code>[[0]*3]*3</code> grid trap covered under Aliasing below.</p>
   <div class="callout def"><span class="label">Definition</span><p>A <strong>list</strong> is Python's built-in mutable sequence: an ordered collection of references to objects, written <code>[a, b, c]</code>, indexed from 0, allowing duplicates and mixed types. In CPython it is a dynamic array (one block of memory holding the references, with spare room at the end).</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Do not name a variable <code>list</code> (or <code>str</code>, <code>dict</code>). <code>list = [1, 2]</code> hides the built-in, and a later <code>list("abc")</code> fails with "'list' object is not callable".</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Indexing &amp; Slicing.</b> We have the six orders under one name. How do we reach "the fourth order", "the last one", or "the first two"?</div>
 
   <h2 id="plt-slice"><span class="num">02</span>Indexing &amp; Slicing</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The list holds six orders. The owner asks: "Who ordered fourth? Who was last? Show me just the first two." We need a way to point at one slot, and at a stretch of slots.</p>
-  </div>
-  <p>To keep the traces short we use just the customer column: <code>names = ["Asha", "Ben", "Asha", "Chen", "Dia", "Ben"]</code>.</p>
+  <p>Indexing reads one element by position; slicing reads a contiguous (or stepped) range and returns a new list. The same syntax works on every sequence type (list, tuple, str, range), so it is worth knowing exactly. The traces below use one column of names: <code>names = ["Asha", "Ben", "Asha", "Chen", "Dia", "Ben"]</code>.</p>
   <h3>Indexing: one item</h3>
   <p>Each slot has a position number, its <strong>index</strong>. Counting starts at 0, because the index means "how many steps from the start". A negative index counts from the end: <code>-1</code> is the last item, <code>-2</code> the one before. Python turns <code>names[-k]</code> into <code>names[len(names) - k]</code>, so <code>names[-2]</code> is <code>names[4]</code>.</p>
   <table class="tbl">
@@ -266,15 +195,12 @@ print(q, len(q))</div>
 [2, 1, 2, 2] 4</div>
   <p>Trace: <code>q[1:3]</code> is [3, 1] (2 items), replaced by 3 items, so length 6 → 7. Then <code>q[1:4]</code> (30, 10, 99) is replaced by nothing, so 7 → 4.</p>
   <div class="callout def"><span class="label">Definition</span><p><strong>Indexing</strong> <code>s[i]</code> returns one item, with <code>-k</code> meaning <code>len(s) - k</code>; an index outside <code>-len(s) … len(s)-1</code> raises IndexError. <strong>Slicing</strong> <code>s[start:stop:step]</code> returns a new sequence of the items at start, start+step, … while before stop; bounds are clamped and never raise. Both work on every sequence: list, tuple, str, range.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Off-by-one: <code>names[1:4]</code> has 3 items, not 4, and does not include <code>names[4]</code>. Also, a slice of a list is a new list (a shallow copy, section 06); slicing a numpy array gives a <em>view</em> that shares memory, which behaves differently.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Changing a List.</b> We can read any part of the morning. But the day goes on: new orders arrive, finished ones leave the queue. How do we change the list, and is every change equally cheap?</div>
+  <div class="callout trap"><span class="label">Trap</span><p>Off-by-one: <code>names[1:4]</code> has 3 items, not 4, and does not include <code>names[4]</code>. Also, a slice of a list is a new list (a shallow copy); slicing a numpy array gives a <em>view</em> that shares memory, which behaves differently.</p></div>
 
   <h2 id="plt-grow"><span class="num">03</span>Changing a List: append, extend, insert, pop &amp; Their Costs</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Reading is not enough: customers join the queue, are served and leave. Which methods add and remove items, and why does serving "the first in line" from a long list become painfully slow?</p>
-  </div>
+  <p>Lists are mutated in place by methods, and those methods have very different costs depending on <em>where</em> in the list they act. Getting this wrong is the most common way list code becomes accidentally quadratic.</p>
   <h3>The methods, traced on a queue</h3>
-  <p>The waiting queue at the counter starts as <code>["Asha", "Ben"]</code>. Follow each line:</p>
+  <p>A list grows and shrinks in place through its methods. Start from <code>["Asha", "Ben"]</code> and follow each line:</p>
   <div class="fx" data-lang="py">queue = ["Asha", "Ben"]
 queue.append("Chen")            # add ONE item at the end
 print(queue)
@@ -364,7 +290,7 @@ deque.popleft(): 0.005 s</div>
     <tr><td><code>insert(i, x)</code>, <code>pop(i)</code>, <code>del q[i]</code></td><td>O(n − i)</td><td>shift the tail</td></tr>
     <tr><td><code>x in q</code>, <code>index</code>, <code>remove</code>, <code>count</code></td><td>O(n)</td><td>scan by value</td></tr>
     <tr><td><code>extend(k items)</code>, <code>q[a:b]</code> (k items)</td><td>O(k)</td><td>copy k references</td></tr>
-    <tr><td><code>sort</code></td><td>O(n log n)</td><td>Timsort (section 05)</td></tr>
+    <tr><td><code>sort</code></td><td>O(n log n)</td><td>Timsort</td></tr>
   </table>
   <h3>In-place methods return None</h3>
   <div class="fx" data-lang="py">q = [2, 3, 1, 1, 2, 2]
@@ -377,12 +303,9 @@ None</div>
   <p><code>append</code>, <code>extend</code>, <code>insert</code>, <code>remove</code>, <code>sort</code> and <code>reverse</code> change the list itself and return <code>None</code>, as a signal that no new list was made. So <code>q = q.sort()</code> sorts q and then throws it away by rebinding q to <code>None</code>.</p>
   <div class="callout def"><span class="label">Definition</span><p><strong>Amortised O(1)</strong>: an operation that is occasionally expensive (a resize) but whose total cost over n calls is O(n), so O(1) per call on average. <code>list.append</code> is the textbook example; <a class="xref" data-note="dsa_arrays">Arrays &amp; Two Pointers</a> uses this cost table constantly.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Using a list as a queue (<code>pop(0)</code>, <code>insert(0, x)</code>) or checking <code>x in big_list</code> inside a loop silently turns O(n) code into O(n²). Use <code>deque</code> for queues and a set for membership (<a class="xref" data-note="py_dicts_sets">Dicts &amp; Sets</a>).</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Comprehensions.</b> We can grow lists one item at a time. But building a new list from an old one ("only the chai orders", "every name in capitals") takes four lines of "empty list, loop, if, append" every time. Is there a direct way to say it?</div>
 
-  <h2 id="plt-comp"><span class="num">04</span>List Comprehensions, Desugared</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>"How many cups of chai did we sell?" means: walk the orders, keep those whose item contains "chai", collect their quantities. Writing that loop by hand for every question is long and buries the meaning. Can one line say "the quantities of the chai orders"?</p>
-  </div>
+  <h2 id="plt-comp"><span class="num">04</span>List Comprehensions</h2>
+  <p>A list comprehension builds a new list from an iterable in one expression, replacing the "empty list, loop, if, append" pattern. It is the idiomatic way to map and filter in Python, and slightly faster than the loop it replaces.</p>
   <h3>The long way and the short way</h3>
   <div class="fx" data-lang="py">cups = []
 for name, item, qty in orders:
@@ -442,12 +365,9 @@ comprehension: 3.46 ms</div>
   <p>Same list, a bit faster: the comprehension skips looking up and calling <code>out.append</code> on every item. Choose it for clarity first; the speed is a bonus.</p>
   <div class="callout def"><span class="label">Definition</span><p>A <strong>list comprehension</strong> <code>[expr for target in iterable if cond]</code> evaluates to a new list equal to running the nested <code>for</code>/<code>if</code> clauses left to right and appending <code>expr</code> each time. Its loop variable is local to the comprehension (it does not leak out, unlike a <code>for</code> loop's).</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Do not use a comprehension only for side effects (<code>[print(x) for x in xs]</code> builds a useless list of None). And more than two <code>for</code>s or a long condition is unreadable: write a normal loop or a function.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Sorting.</b> Everything still comes out in arrival order. The owner wants the biggest orders first, or the menu alphabetically. How do we put a list in a chosen order?</div>
 
-  <h2 id="plt-sort"><span class="num">05</span>Sorting</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Arrival order is rarely the order we want to read. "Biggest order first", "by item, then by customer": how do we sort, and how do we tell Python <em>what</em> to sort by when each item is a whole tuple?</p>
-  </div>
+  <h2 id="plt-sort"><span class="num">05</span>Sorting: sorted(), list.sort() and key=</h2>
+  <p>Python has two sorting entry points: the <code>sorted()</code> built-in, which returns a new list, and the <code>list.sort()</code> method, which sorts in place. Both take a <code>key</code> function that says what to compare, which is how you sort records by one field.</p>
   <h3>sorted() vs .sort()</h3>
   <div class="fx" data-lang="py">q = [2, 3, 1, 1, 2, 2]
 s = sorted(q)                 # NEW sorted list, q untouched
@@ -498,12 +418,9 @@ except TypeError as e:
   <div class="fx" data-lang="text">TypeError: '&lt;' not supported between instances of 'str' and 'int'</div>
   <div class="callout def"><span class="label">Definition</span><p><code>sorted(iterable, *, key=None, reverse=False)</code> returns a new sorted list; <code>list.sort(*, key=None, reverse=False)</code> sorts in place and returns None. Both use Timsort: O(n log n) worst case, O(n) on already-sorted data, and stable. Items (or keys) must be comparable with <code>&lt;</code>.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p><code>key=</code> takes a function, not a call: <code>key=len</code>, not <code>key=len()</code>. And sorting needs comparable items: a list with numbers and strings raises TypeError.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Aliasing &amp; Copies.</b> We have sorted copies, sorted originals, lists inside lists and names passed around. When we change "a copy", is the original safe? We need to know exactly when two names are the same list.</div>
 
   <h2 id="plt-copy"><span class="num">06</span>Aliasing, Shallow &amp; Deep Copy</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The stall records who sits at which table: <code>tables = [["Asha", "Ben"], ["Chen"]]</code>. You "copy" it to plan tomorrow's seating, add a name, and today's record changes too. Why? Because a list holds references (section 01), "copy" can mean three different things.</p>
-  </div>
+  <p>Because a list holds references, "copy" can mean three different things, and confusing them is a common source of bugs where editing a "copy" silently changes the original (nested configs, lists of lists, JSON).</p>
   <h3>Alias: no copy at all</h3>
   <div class="fx" data-lang="py">tables = [["Asha", "Ben"], ["Chen"]]      # who sits at table 1 and table 2
 alias = tables
@@ -578,7 +495,7 @@ print(names[0], names2[0])       # a shallow copy is enough here</div>
   <p>For a flat list of immutable things (strings, numbers, tuples of those), a shallow copy is all you need: "changing" an item replaces a reference in your own outer list and cannot touch the original. Deep copy only matters when there are mutable containers inside.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>A shallow copy photocopies a book's contents page: a new page, but it points to the same chapters. Scribble in chapter 1 and both "books" show it. A deep copy reprints the whole book.</p></div>
   <h3>The grid trap: [[0]*3]*3</h3>
-  <p>The owner wants a 3×3 tally (3 tables × 3 hours) of zeros. <code>[0] * 3</code> makes one row; <code>* 3</code> on the outer list repeats the <em>reference</em> to that row three times. It is aliasing hidden in one expression:</p>
+  <p>Suppose we need a 3×3 grid of zeros (3 tables × 3 hours). <code>[0] * 3</code> makes one row; <code>* 3</code> on the outer list repeats the <em>reference</em> to that row three times. It is aliasing hidden in one expression:</p>
   <div class="fx" data-lang="py">grid = [[0] * 3] * 3                       # 3 references to ONE row
 print([id(row) for row in grid].count(id(grid[0])))
 grid[0][0] = 1
@@ -594,13 +511,8 @@ print(grid)</div>
   <p>First version: all three slots hold the id of row 0, so writing table 1 / hour 1 "changes all three rows" (there is only one). The comprehension evaluates <code>[0] * 3</code> afresh on every pass, giving 3 distinct rows, and only row 0 changes. (<code>[0] * 3</code> itself is safe: it repeats the immutable 0.)</p>
   <div class="callout def"><span class="label">Definition</span><p><strong>Alias</strong>: two names bound to one object (<code>a is b</code>). <strong>Shallow copy</strong>: a new container whose elements are the same objects as the original's. <strong>Deep copy</strong> (<code>copy.deepcopy</code>): recursively copies contained objects, keeping a memo so shared or cyclic references are copied once.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Copying a nested config with <code>.copy()</code> or <code>{**cfg}</code> and then editing <code>cfg2["params"]["lr"]</code> changes the original too. Nested lists or dicts (JSON, configs, lists of lists) need <code>copy.deepcopy</code>. pandas: <code>df.copy()</code> copies the data by default; plain assignment <code>df2 = df</code> is an alias (<a class="xref" data-note="da_pandas">Pandas</a>).</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Tuples as Records.</b> All these surprises come from one thing: lists can change, and many names can point at one list. For a record like "Asha, masala chai, 2" we would rather have a container that <em>cannot</em> change at all.</div>
 
-  <h2 id="plt-tuple"><span class="num">07</span>Tuples as Records</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>An order, once taken, is a fact: Asha ordered 2 masala chai. With a list, any function we pass it to could quietly change the 2 into a 3. How do we store a record that nobody can edit by accident?</p>
-  </div>
-  <h3>Plain words</h3>
+  <h2 id="plt-tuple"><span class="num">07</span>Tuples: Immutable Sequences</h2>
   <p>A <strong>tuple</strong> is an ordered sequence that cannot change after it is made. Indexing, slicing, <code>len</code>, <code>in</code>, <code>count</code> and <code>index</code> all work exactly as for lists; anything that would change it does not exist or raises an error.</p>
   <div class="fx" data-lang="py">order = ("Asha", "masala chai", 2)
 print(order[0], order[-1], len(order), order[1:])
@@ -637,16 +549,11 @@ print(f"build tuple: {timeit.timeit('(1, 2, 3)', number=1_000_000) * 1000:.0f} m
   <div class="fx" data-lang="text">88 64
 build list : 44 ms per million
 build tuple: 11 ms per million</div>
-  <p>A tuple needs no spare room and no resize logic, so the same three items take 64 bytes instead of 88, and a tuple of constants is built much faster (Python can even reuse it). Small wins; the main reasons for tuples are safety and hashability (section 10).</p>
+  <p>A tuple needs no spare room and no resize logic, so the same three items take 64 bytes instead of 88, and a tuple of constants is built much faster (Python can even reuse it). Small wins; the main reasons for tuples are safety and hashability.</p>
   <div class="callout def"><span class="label">Definition</span><p>A <strong>tuple</strong> is Python's built-in immutable sequence, written with commas (usually inside brackets): its length and the references in its slots are fixed at creation. It supports all read-only sequence operations; it is hashable exactly when all its items are hashable.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p><code>x = 5,</code> (a stray trailing comma) makes x a tuple <code>(5,)</code>, and later arithmetic fails with a confusing error. Conversely <code>("samosa")</code> is just a string, so <code>for c in ("samosa")</code> loops over letters.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Packing &amp; Unpacking.</b> Records are safe now, but <code>order[0]</code>, <code>order[1]</code>, <code>order[2]</code> everywhere is clumsy. How do we pull a record apart into named variables in one go?</div>
 
   <h2 id="plt-unpack"><span class="num">08</span>Packing &amp; Unpacking</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Each order has three parts. Writing <code>o[0]</code> for the customer and <code>o[2]</code> for the quantity hides the meaning and invites mistakes. Is there a way to give each part its own name at once?</p>
-  </div>
-  <h3>Plain words</h3>
   <p><strong>Packing</strong>: writing several values separated by commas builds a tuple (<code>t = "Asha", "samosa", 3</code>). <strong>Unpacking</strong>: putting several names on the left of <code>=</code> splits a sequence into them, one name per item, in order. The counts must match, unless one name has a star, which collects "everything else" into a list.</p>
   <div class="fx" data-lang="py">name, item, qty = orders[0]          # unpacking: one name per slot
 print(name, "|", item, "|", qty)
@@ -661,7 +568,7 @@ Asha wants 2 x masala chai
 Ben wants 3 x samosa
 Asha ['Ben', 'Asha', 'Chen', 'Dia', 'Ben']
 ['Asha', 'Ben', 'Asha', 'Chen', 'Dia'] Ben</div>
-  <p>Line by line: three names take the three slots of order 0. In the <code>for</code> loop the unpacking happens on every pass, which is why section 04 could write <code>for name, item, qty in orders</code>. <code>first, *rest = names</code> takes Asha and puts the other five into a list; <code>*early, last</code> does the opposite.</p>
+  <p>Line by line: three names take the three slots of order 0. In the <code>for</code> loop the unpacking happens on every pass, which is why comprehensions can write <code>for name, item, qty in orders</code>. <code>first, *rest = names</code> takes Asha and puts the other five into a list; <code>*early, last</code> does the opposite.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>Unpacking a tiffin: three compartments, three hands ready, each hand takes one. If the tiffin has four compartments and you have three hands, something falls (ValueError) unless one hand is a big bag (the star) that takes the rest.</p></div>
   <h3>Swaps, "multiple return values" and enumerate</h3>
   <div class="fx" data-lang="py">a, b = "Asha", "Ben"
@@ -695,13 +602,9 @@ ValueError: too many values to unpack (expected 2)
   </ul>
   <div class="callout def"><span class="label">Definition</span><p><strong>Sequence unpacking</strong>: <code>t1, t2, …, tn = iterable</code> assigns the n items of any iterable to n targets, in order; exactly n items are required unless one target is starred (<code>*rest</code>), which receives the remaining items as a list. <strong>Tuple packing</strong>: <code>a, b, c</code> in an expression builds a tuple.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Unpacking a dict gives its <em>keys</em>, not its pairs: <code>a, b = {"x": 1, "y": 2}</code> sets a = "x". Use <code>.items()</code> for pairs (<a class="xref" data-note="py_dicts_sets">Dicts &amp; Sets</a>).</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: namedtuple.</b> Unpacking names the parts at one moment, in one place. The tuple itself still knows nothing about "customer" or "qty": pass it on and the next reader sees <code>o[2]</code> again. Can the record carry its own field names?</div>
 
   <h2 id="plt-named"><span class="num">09</span>namedtuple</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We want records that are still tuples (fixed, light, unpackable, hashable) but where <code>o.qty</code> means something to the next person who reads the code.</p>
-  </div>
-  <p><code>collections.namedtuple</code> creates a new tuple <em>type</em> with named fields. Each object is a normal tuple, so everything from sections 07 and 08 still works, plus access by name.</p>
+  <p><code>collections.namedtuple</code> creates a new tuple <em>type</em> with named fields. Each object is a normal tuple, so everything about tuples and unpacking still works, plus access by name.</p>
   <div class="fx" data-lang="py">from collections import namedtuple
 Order = namedtuple("Order", ["customer", "item", "qty"])
 o = Order("Asha", "masala chai", 2)
@@ -723,14 +626,9 @@ Order(customer='Asha', item='masala chai', qty=3) 2
   <div class="callout anlg"><span class="label">Analogy</span><p>A printed form with labelled boxes ("Customer: ___  Item: ___  Qty: ___") instead of a blank strip of three boxes.</p></div>
   <div class="callout def"><span class="label">Definition</span><p><code>namedtuple(typename, field_names)</code> returns a subclass of tuple whose fields are reachable by attribute and by index, with helpers <code>_replace</code>, <code>_asdict</code>, <code>_fields</code>. <code>typing.NamedTuple</code> is the class-syntax version with type hints. When the record must be mutable or carry methods, use a <code>@dataclass</code> (<a class="xref" data-note="py_oop">OOP</a>).</p></div>
   <div class="callout trap"><span class="label">Trap</span><p><code>o.qty = 3</code> raises AttributeError: a namedtuple is still immutable. And because it is a tuple, <code>len(o)</code> is 3 and it unpacks positionally, so reordering the fields later breaks every <code>a, b, c = o</code> in the code base.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Tuples as Dict Keys.</b> Immutability gave us safety. It also gives something less obvious: a value that can never change can be used as a <em>label</em> to file things under. Why can a tuple be that label and a list cannot?</div>
 
-  <h2 id="plt-hash"><span class="num">10</span>Why Tuples Can Be Dict Keys</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The owner asks: "How many cups has each customer had of each item?" The natural label for an answer is the pair (customer, item). Can we file totals under a pair, and why does Python refuse when the pair is a list?</p>
-  </div>
-  <h3>Plain words</h3>
-  <p>A dict (next note) files each value under a key, and finds it again by turning the key into a number called its <strong>hash</strong>, which picks the shelf. That only works if the key's hash can never change while it is stored. A tuple of immutable items can never change, so its hash is stable: it is <strong>hashable</strong>. A list can change at any time, so Python does not give it a hash at all.</p>
+  <h2 id="plt-hash"><span class="num">10</span>Hashability: Why Tuples Can Be Dict Keys</h2>
+  <p>A dict files each value under a key, and finds it again by turning the key into a number called its <strong>hash</strong>, which picks the shelf. That only works if the key's hash can never change while it is stored. A tuple of immutable items can never change, so its hash is stable: it is <strong>hashable</strong>. A list can change at any time, so Python does not give it a hash at all.</p>
   <div class="fx" data-lang="py">print(hash(("Asha", "masala chai")) == hash(("Asha", "masala chai")))
 counts = {}
 for name, item, qty in orders:
@@ -753,53 +651,8 @@ TypeError: unhashable type: 'list'</div>
   <div class="callout anlg"><span class="label">Analogy</span><p>A cloakroom token must keep its number. If the number on your token could be rubbed out and rewritten, the attendant would look on the wrong shelf. A tuple is a stamped metal token; a list is a token written in pencil.</p></div>
   <div class="callout def"><span class="label">Definition</span><p>An object is <strong>hashable</strong> if it has a hash value that never changes during its lifetime and equal objects have equal hashes. Immutable built-ins (int, float, str, bytes, frozenset, tuples of hashables) are hashable; list, dict and set are not. Only hashable objects can be dict keys or set items.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>"Tuples are hashable" is not always true: <code>("table 1", ["Asha", "Ben"])</code> is a tuple and is not hashable. Use tuples of strings and numbers (or frozensets) as keys.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: <a class="xref" data-note="py_dicts_sets">Dicts &amp; Sets</a>.</b> We used a dict without knowing how it finds a key instantly among millions, or why a set can answer "has Esha been here?" without scanning. That is hashing, the subject of the next note. First, let us connect everything in this one.</div>
 
-  <h2 id="plt-connect"><span class="num">11</span>How It All Connects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Indexing, slicing, append, comprehensions, sorting, copies, tuples, unpacking, namedtuple, hashing: ten topics, or one idea seen from ten sides?</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 660 300" width="660">
-<defs><marker id="plt-a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="230" y="8" width="200" height="44" rx="7" class="fb sb"/><text x="330" y="27" text-anchor="middle" font-size="11.5" font-weight="700">a row of references</text><text x="330" y="43" text-anchor="middle" class="tm" font-size="10">ordered slots 0 … n−1</text>
-<line x1="280" y1="52" x2="120" y2="86" stroke="currentColor" marker-end="url(#plt-a9)"/><line x1="380" y1="52" x2="540" y2="86" stroke="currentColor" marker-end="url(#plt-a9)"/>
-<rect x="20" y="88" width="200" height="44" rx="7" class="ft st"/><text x="120" y="107" text-anchor="middle" font-size="11.5" font-weight="700">list: mutable</text><text x="120" y="123" text-anchor="middle" class="tm" font-size="10">dynamic array with spare room</text>
-<rect x="440" y="88" width="200" height="44" rx="7" class="ft st"/><text x="540" y="107" text-anchor="middle" font-size="11.5" font-weight="700">tuple: immutable</text><text x="540" y="123" text-anchor="middle" class="tm" font-size="10">fixed slots, no spare room</text>
-<line x1="330" y1="52" x2="330" y2="86" stroke="currentColor" marker-end="url(#plt-a9)"/>
-<rect x="240" y="88" width="180" height="44" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="330" y="107" text-anchor="middle" font-size="11.5" font-weight="700">index &amp; slice</text><text x="330" y="123" text-anchor="middle" class="tm" font-size="10">shared by every sequence</text>
-<line x1="70" y1="132" x2="60" y2="168" stroke="currentColor" marker-end="url(#plt-a9)"/><line x1="120" y1="132" x2="170" y2="168" stroke="currentColor" marker-end="url(#plt-a9)"/><line x1="170" y1="132" x2="290" y2="168" stroke="currentColor" marker-end="url(#plt-a9)"/>
-<rect x="5" y="170" width="110" height="44" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="60" y="189" text-anchor="middle" font-size="11" font-weight="700">append / pop</text><text x="60" y="205" text-anchor="middle" class="tm" font-size="10">O(1) end, O(n) front</text>
-<rect x="122" y="170" width="110" height="44" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="177" y="189" text-anchor="middle" font-size="11" font-weight="700">comprehension</text><text x="177" y="205" text-anchor="middle" class="tm" font-size="10">loop + if + append</text>
-<rect x="240" y="170" width="100" height="44" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="290" y="189" text-anchor="middle" font-size="11" font-weight="700">sort / sorted</text><text x="290" y="205" text-anchor="middle" class="tm" font-size="10">key=, stable</text>
-<line x1="120" y1="132" x2="120" y2="240" stroke="currentColor" stroke-opacity="0.4"/><line x1="120" y1="240" x2="148" y2="252" stroke="currentColor" marker-end="url(#plt-a9)"/>
-<rect x="150" y="236" width="190" height="44" rx="7" class="fr sr"/><text x="245" y="255" text-anchor="middle" font-size="11" font-weight="700">alias · shallow · deep</text><text x="245" y="271" text-anchor="middle" class="tm" font-size="10">shared refs → [[0]*3]*3 trap</text>
-<line x1="500" y1="132" x2="420" y2="168" stroke="currentColor" marker-end="url(#plt-a9)"/><line x1="540" y1="132" x2="540" y2="168" stroke="currentColor" marker-end="url(#plt-a9)"/>
-<rect x="355" y="170" width="120" height="44" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="415" y="189" text-anchor="middle" font-size="11" font-weight="700">unpacking</text><text x="415" y="205" text-anchor="middle" class="tm" font-size="10">name, item, qty = o</text>
-<rect x="485" y="170" width="120" height="44" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="545" y="189" text-anchor="middle" font-size="11" font-weight="700">namedtuple</text><text x="545" y="205" text-anchor="middle" class="tm" font-size="10">o.qty</text>
-<line x1="600" y1="132" x2="580" y2="234" stroke="currentColor" marker-end="url(#plt-a9)"/>
-<rect x="420" y="236" width="230" height="44" rx="7" class="fg sg"/><text x="535" y="255" text-anchor="middle" font-size="11" font-weight="700">hashable → dict key</text><text x="535" y="271" text-anchor="middle" class="tm" font-size="10">next note: Dicts &amp; Sets</text>
-</svg><figcaption>One idea, a numbered row of references, split two ways. Mutable (list) gives growth, comprehensions and sorting, and the price is the copy traps. Immutable (tuple) gives safe records, unpacking, names, and the bonus of hashability, which the next note builds on.</figcaption></figure>
-  <table class="tbl"><caption>Every concept on Chai Corner's six orders</caption>
-    <tr><th>Concept</th><th>Built from</th><th>Answers</th><th>On our orders</th><th>Use when</th></tr>
-    <tr><td>List</td><td>row of references</td><td>keep many values in order</td><td><code>len(orders)</code> = 6</td><td>a collection that grows, shrinks, reorders</td></tr>
-    <tr><td>Indexing</td><td>offset from start; −k = n − k</td><td>get one item</td><td><code>names[3]</code> Chen, <code>[-1]</code> Ben</td><td>known position</td></tr>
-    <tr><td>Slicing</td><td>cuts between items + step</td><td>get a stretch</td><td><code>[1:4]</code> Ben, Asha, Chen</td><td>first/last k, every k-th, reverse</td></tr>
-    <tr><td>append / pop / insert</td><td>dynamic array</td><td>change the collection</td><td>pop(0) ≈ 0.9 s vs deque ≈ 0.005 s on 100k</td><td>end ops on lists; deque for the front</td></tr>
-    <tr><td>Comprehension</td><td>for + if + append</td><td>build a list from a list</td><td>chai cups [2, 1, 1, 2] → 6</td><td>map/filter in one readable line</td></tr>
-    <tr><td>Sorting</td><td>comparisons + key function</td><td>put items in a chosen order</td><td>by (−qty, name): Ben 3 first</td><td>reports, top-k, ranking</td></tr>
-    <tr><td>Alias / copies</td><td>references</td><td>is this the same list?</td><td>shallow sees "Esha", deep does not</td><td>deepcopy for nested data</td></tr>
-    <tr><td>Tuple</td><td>fixed row of references</td><td>a record nobody can edit</td><td>("Asha", "masala chai", 2)</td><td>rows, returns, keys</td></tr>
-    <tr><td>Unpacking</td><td>tuple packing + positions</td><td>name the parts</td><td><code>first, *rest</code>: Asha + 5 others</td><td>loops, swaps, multiple returns</td></tr>
-    <tr><td>namedtuple</td><td>tuple subclass</td><td>self-describing record</td><td><code>o.qty</code> = 2; chai total 5</td><td>light read-only records</td></tr>
-    <tr><td>Hashable tuple</td><td>immutability</td><td>can it be a key?</td><td><code>("Ben", "masala chai")</code> → 2</td><td>composite dict keys, set items</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span><p>One sentence holds the note: <strong>a list and a tuple are both numbered rows of references; the list can change, the tuple cannot.</strong> Every list power (append, sort, comprehensions) and every list danger (aliases, shallow copies, the grid trap) comes from "can change + references". Every tuple power (safe records, hashable keys) comes from "cannot change".</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Common Mistakes.</b> Knowing how the pieces fit is half the job; the other half is knowing where people usually slip.</div>
-
-  <h2 id="plt-traps"><span class="num">12</span>Common Mistakes</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Which of these ideas cause real bugs in real code, and what does each bug look like when it happens?</p>
-  </div>
+  <h2 id="plt-traps"><span class="num">11</span>Common Mistakes</h2>
   <div class="callout trap"><span class="label">Trap: assigning the result of an in-place method</span><p><code>q = q.sort()</code>, <code>q = q.append(x)</code> → q becomes None. Use <code>q.sort()</code> alone, or <code>q = sorted(q)</code>.</p></div>
   <div class="callout trap"><span class="label">Trap: append vs extend</span><p><code>a.append([1, 2])</code> nests a list; <code>a.extend("Ben")</code> adds letters. Pick the one that matches "one item" vs "each item".</p></div>
   <div class="callout trap"><span class="label">Trap: list as a queue</span><p><code>pop(0)</code>/<code>insert(0, x)</code> are O(n); a loop of them is O(n²). Use <code>collections.deque</code>.</p></div>
@@ -810,71 +663,109 @@ TypeError: unhashable type: 'list'</div>
   <div class="callout trap"><span class="label">Trap: modifying a list while looping over it</span><p><code>for x in q: if bad(x): q.remove(x)</code> skips items, because removing shifts the next one into the current slot. Build a new list with a comprehension instead.</p></div>
   <div class="callout trap"><span class="label">Trap: one-item tuple</span><p><code>(5)</code> is an int, <code>(5,)</code> a tuple; a stray trailing comma makes an accidental tuple.</p></div>
   <div class="callout trap"><span class="label">Trap: "tuples are always hashable"</span><p>Only if every item is hashable: a tuple holding a list cannot be a key.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Revision Sheet.</b> Everything in this note, condensed to one page.</div>
 
   <h2 id="plt-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>The whole note on one sheet. Running example: Chai Corner's six orders <code>(customer, item, qty)</code>: (Asha, masala chai, 2), (Ben, samosa, 3), (Asha, ginger chai, 1), (Chen, masala chai, 1), (Dia, bun maska, 2), (Ben, masala chai, 2). <code>names</code> = Asha, Ben, Asha, Chen, Dia, Ben.</p>
-  <h3>The question ladder</h3>
+  <h3>Lists</h3>
+  <ul>
+    <li><strong>list</strong>: mutable, ordered sequence of <em>references</em>; duplicates and mixed types allowed. CPython: dynamic array with over-allocation.</li>
+    <li>Create: <code>[]</code>, <code>[1, 2]</code>, <code>list(iterable)</code>, <code>[0] * n</code> (safe for immutables only).</li>
+    <li>Never name a variable <code>list</code>, <code>str</code>, <code>dict</code>: it shadows the built-in.</li>
+  </ul>
+  <h3>Indexing &amp; slicing</h3>
+  <ul>
+    <li><code>s[-k]</code> = <code>s[len(s) - k]</code>; bad index → IndexError.</li>
+    <li><code>s[start:stop:step]</code>: stop excluded, length <code>stop - start</code> for step 1; bounds clamped, never raises.</li>
+    <li><code>s[::-1]</code> reverse; <code>s[-2:]</code> last two; <code>s[::2]</code> every second; <code>s[4:1:-1]</code> → items 4, 3, 2.</li>
+    <li>A list slice is a new list (shallow copy); a numpy slice is a <em>view</em>.</li>
+    <li>Slice assignment can resize: <code>q[1:3] = [a, b, c]</code>; <code>q[a:b] = []</code> deletes.</li>
+  </ul>
+  <h3>List operation costs</h3>
   <table class="tbl">
-    <tr><th>Concept</th><th>Question it answers</th><th>On our data</th><th>Weakness → next</th></tr>
-    <tr><td>List</td><td>keep many values in order?</td><td>6 orders, one name</td><td>how to reach one?</td></tr>
-    <tr><td>Indexing</td><td>get one item?</td><td><code>names[3]</code> Chen, <code>[-1]</code> Ben</td><td>want a stretch</td></tr>
-    <tr><td>Slicing</td><td>get a piece?</td><td><code>[1:4]</code> Ben, Asha, Chen; <code>[4:1:-1]</code> Dia, Chen, Asha</td><td>orders keep coming</td></tr>
-    <tr><td>append/extend/insert/pop</td><td>change it?</td><td>pop(0) O(n) vs deque O(1)</td><td>building lists is verbose</td></tr>
-    <tr><td>Comprehension</td><td>build a list in one line?</td><td>chai cups [2, 1, 1, 2]</td><td>still arrival order</td></tr>
-    <tr><td>Sorting</td><td>chosen order?</td><td>(−qty, name): Ben 3, Asha 2, Ben 2, Dia 2, Asha 1, Chen 1</td><td>who else changed my list?</td></tr>
-    <tr><td>Alias/shallow/deep</td><td>same list or a copy?</td><td>shallow sees inner edit, deep doesn't</td><td>want unchangeable records</td></tr>
-    <tr><td>Tuple</td><td>a fixed record?</td><td><code>order[2] = 3</code> → TypeError</td><td>o[2] is unreadable</td></tr>
-    <tr><td>Unpacking</td><td>name the parts?</td><td><code>first, *rest</code> → Asha, [5 names]</td><td>names don't travel</td></tr>
-    <tr><td>namedtuple</td><td>fields with names?</td><td><code>o.qty</code> 2; masala chai total 5</td><td>can a record be a key?</td></tr>
-    <tr><td>Hashable tuple</td><td>use as a key?</td><td>("Ben", "masala chai") → 2; list → TypeError</td><td>how do dicts find keys? → next note</td></tr>
+    <tr><th>Operation</th><th>Big-O</th><th>Why</th></tr>
+    <tr><td><code>q[i]</code>, <code>q[i] = x</code>, <code>len(q)</code></td><td>O(1)</td><td>offset into the array; length stored</td></tr>
+    <tr><td><code>append(x)</code>, <code>pop()</code></td><td>O(1) amortised</td><td>end of array; occasional resize (~1.125×)</td></tr>
+    <tr><td><code>insert(i, x)</code>, <code>pop(i)</code>, <code>del q[i]</code></td><td>O(n − i)</td><td>shift the tail</td></tr>
+    <tr><td><code>x in q</code>, <code>index</code>, <code>remove</code>, <code>count</code></td><td>O(n)</td><td>linear scan</td></tr>
+    <tr><td><code>extend(k items)</code>, slice of k</td><td>O(k)</td><td>copy k references</td></tr>
+    <tr><td><code>sort()</code>, <code>sorted()</code></td><td>O(n log n)</td><td>Timsort; O(n) if already sorted</td></tr>
   </table>
-  <h3>Definitions and rules</h3>
+  <ul>
+    <li><code>append(x)</code> adds one item (even a list); <code>extend(it)</code> adds each item; <code>+=</code> acts like extend.</li>
+    <li>In-place methods (<code>append</code>, <code>extend</code>, <code>insert</code>, <code>remove</code>, <code>sort</code>, <code>reverse</code>) return <code>None</code>.</li>
+    <li>Queue → <code>collections.deque</code> (<code>popleft</code> O(1)); membership → <code>set</code>.</li>
+  </ul>
+  <h3>Comprehensions</h3>
+  <ul>
+    <li><code>[expr for x in it if cond]</code> ≡ empty list + for + if + append. Filter <code>if</code> at the end; choose <code>a if c else b</code> at the front.</li>
+    <li>Nested: <code>[y for row in rows for y in row]</code> — outer loop first.</li>
+    <li><code>(expr for …)</code> is a lazy generator: <code>sum(x for x in xs)</code> builds no list.</li>
+    <li>The loop variable does not leak (Python 3). Slightly faster than append loops.</li>
+  </ul>
+  <h3>Sorting</h3>
+  <ul>
+    <li><code>sorted(it)</code> → new list, any iterable; <code>lst.sort()</code> → in place, returns None.</li>
+    <li><code>key=</code> takes a function: <code>key=len</code>, <code>key=str.lower</code>, <code>key=itemgetter(1, 0)</code>, <code>key=lambda r: (-r[2], r[0])</code>.</li>
+    <li><strong>Stable</strong>: equal keys keep their order → sort by secondary key first, then primary. Mixed types → TypeError.</li>
+  </ul>
+  <h3>Aliasing &amp; copies</h3>
   <table class="tbl">
-    <tr><th>Term</th><th>Rule</th><th>Symbols / notes</th></tr>
-    <tr><td>Negative index</td><td><code>s[-k]</code> = <code>s[len(s) - k]</code></td><td>valid k: 1 … len(s)</td></tr>
-    <tr><td>Slice</td><td><code>s[start:stop:step]</code> → items start, start+step, … before stop</td><td>stop excluded; length (stop − start) for step 1; clamped, never raises</td></tr>
-    <tr><td>Costs</td><td>index/append/pop() O(1)*; insert/pop(0)/in/remove O(n); sort O(n log n)</td><td>* amortised: rare resize (4 → 8 → 16 → 24 slots)</td></tr>
-    <tr><td>Comprehension</td><td><code>[expr for x in it if cond]</code> ≡ loop + if + append</td><td>if/else in front = choose; if at end = filter</td></tr>
-    <tr><td>Sort</td><td><code>sorted()</code> new list; <code>.sort()</code> in place → None</td><td><code>key=</code> function; stable; <code>reverse=True</code></td></tr>
-    <tr><td>Copies</td><td>alias <code>b = a</code>; shallow <code>a.copy()</code>; deep <code>copy.deepcopy(a)</code></td><td>check with <code>is</code> / <code>id()</code></td></tr>
-    <tr><td>Tuple</td><td>commas make it; <code>(5,)</code></td><td>immutable slots; inner mutables can change</td></tr>
-    <tr><td>Unpacking</td><td><code>a, b, c = seq</code>; <code>first, *rest = seq</code></td><td>counts must match unless starred</td></tr>
-    <tr><td>Hashable</td><td>hash never changes; equal ⇒ equal hash</td><td>tuple hashable iff all items are</td></tr>
+    <tr><th></th><th>Syntax</th><th>New outer?</th><th>New inner?</th></tr>
+    <tr><td>Alias</td><td><code>b = a</code></td><td>no</td><td>no</td></tr>
+    <tr><td>Shallow</td><td><code>a.copy()</code>, <code>a[:]</code>, <code>list(a)</code>, <code>copy.copy(a)</code></td><td>yes</td><td>no (shared)</td></tr>
+    <tr><td>Deep</td><td><code>copy.deepcopy(a)</code></td><td>yes</td><td>yes (recursively, memo for cycles)</td></tr>
   </table>
-  <h3>When to use, when not</h3>
-  <div class="cards">
-    <div><b>Use a list</b><p>Many items of one kind, count varies, order matters, you add/remove at the end, sort, or index.</p><small>Not for: frequent front removals (deque), membership tests (set), lookup by name (dict)</small></div>
-    <div><b>Use a tuple</b><p>A fixed record (each slot has a meaning), function returns, dict keys, set items, data that must not change.</p><small>namedtuple when the fields deserve names</small></div>
-    <div><b>Use deepcopy</b><p>Nested mutable data you will edit while keeping the original: configs, JSON, lists of lists.</p><small>Flat lists: shallow copy is enough</small></div>
-    <div><b>Use a comprehension</b><p>Building one list from another by transform and/or filter, in one readable line.</p><small>Not for side effects; not past 2 levels</small></div>
-  </div>
-  <div class="callout trap"><span class="label">Key traps</span><p><code>q = q.sort()</code> gives None; append vs extend; <code>pop(0)</code> in a loop is O(n²); slices exclude stop; shallow copies share inner lists; <code>[[0]*3]*3</code> shares one row; mutable default arguments; removing while iterating skips items; <code>(5)</code> is not a tuple; tuples with lists inside are unhashable.</p></div>
-  <h3>Five rapid-fire checks</h3>
-  <table class="tbl">
-    <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td><code>names[-2]</code> and <code>names[::2]</code>?</td><td>Dia; Asha, Asha, Dia</td></tr>
-    <tr><td>Cost of <code>pop(0)</code> on a list of n, and the fix?</td><td>O(n) (shift every item); <code>deque.popleft()</code> is O(1)</td></tr>
-    <tr><td><code>b = a.copy(); b[0].append(1)</code> on nested <code>a</code>: does a change?</td><td>Yes: shallow copy shares inner lists; use deepcopy</td></tr>
-    <tr><td>Sort orders by qty descending, ties by name, in one call?</td><td><code>sorted(orders, key=lambda o: (-o[2], o[0]))</code></td></tr>
-    <tr><td>Why can <code>("Ben", "samosa")</code> be a dict key but <code>["Ben", "samosa"]</code> not?</td><td>The tuple is immutable so its hash never changes; a list is mutable and unhashable</td></tr>
-  </table>
+  <ul>
+    <li><code>[[0]*3]*3</code> = three references to one row; use <code>[[0]*3 for _ in range(3)]</code>.</li>
+    <li>Flat list of immutables: a shallow copy is enough.</li>
+  </ul>
+  <h3>Tuples, unpacking, namedtuple</h3>
+  <ul>
+    <li><strong>tuple</strong>: immutable sequence; the comma makes it: <code>(5,)</code>, <code>5,</code>; <code>(5)</code> is an int; <code>()</code> empty.</li>
+    <li>Immutability is shallow: <code>(1, [2])[1].append(3)</code> works.</li>
+    <li>Smaller than a list (no spare room: 64 vs 88 bytes for 3 items) and faster to build; constant tuples are folded.</li>
+    <li>Unpacking: <code>a, b, c = seq</code> (count must match → ValueError); <code>first, *rest = seq</code> (rest is a list); swap <code>a, b = b, a</code>; <code>return x, y</code> returns one tuple.</li>
+    <li><code>namedtuple("Order", "customer item qty")</code>: tuple subclass, <code>o.qty</code> and <code>o[2]</code>, <code>_replace</code>, <code>_asdict</code>, <code>_fields</code>. <code>typing.NamedTuple</code> for type hints; <code>@dataclass</code> for mutable records with methods.</li>
+  </ul>
+  <h3>Hashability</h3>
+  <ul>
+    <li>Hashable = hash never changes and <code>a == b ⇒ hash(a) == hash(b)</code>. Required for dict keys and set items.</li>
+    <li>Hashable: int, float, str, bytes, frozenset, tuples of hashables. Not: list, dict, set.</li>
+    <li><code>hash((1, [2]))</code> → TypeError: unhashable type: 'list'.</li>
+  </ul>
+  <h3>Gotchas</h3>
+  <ul>
+    <li><code>q = q.sort()</code> → None.</li>
+    <li><code>pop(0)</code> / <code>insert(0, x)</code> in a loop → O(n²).</li>
+    <li>Shallow copies share nested lists; <code>[[0]*3]*3</code> shares one row.</li>
+    <li>Mutable default argument <code>def f(x, acc=[])</code> is shared across calls → use <code>None</code>.</li>
+    <li>Removing from a list while iterating it skips items → build a new list.</li>
+    <li><code>t[1] += [4]</code> on <code>t = (1, [2, 3])</code> raises TypeError <em>and</em> mutates the list.</li>
+    <li><code>extend("abc")</code> adds characters; <code>(5)</code> is not a tuple.</li>
+  </ul>
 
-  <h2 id="plt-qa"><span class="num">13</span>Questions &amp; Answers</h2>
+  <h2 id="plt-qa"><span class="num">12</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>List vs tuple: what is the real trade-off?</summary><div class="qa-body">List: mutable, can grow, not hashable, a little bigger (spare room: 88 vs 64 bytes for our 3-item order). Tuple: fixed, smaller and faster to build, hashable when its items are, so it can be a dict key or set item. Use a tuple for fixed records and as a promise that nobody changes the data; a list for a collection whose size or order changes.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why is <code>append</code> O(1) but <code>insert(0, x)</code> O(n)?</summary><div class="qa-body">A list is a dynamic array: references side by side with spare room at the end. append uses the next spare slot (an occasional resize is spread over many appends: amortised O(1)). insert(0) must shift all n references one slot right. Same for pop(0) vs pop().</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does <code>names[4:1:-1]</code> return for Asha, Ben, Asha, Chen, Dia, Ben?</summary><div class="qa-body">Start at index 4, step −1, stop before index 1: positions 4, 3, 2 → ['Dia', 'Chen', 'Asha'].</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Shallow vs deep copy: when does it bite?</summary><div class="qa-body"><code>a.copy()</code>/<code>a[:]</code>/<code>list(a)</code> make a new outer list but share the inner objects. Editing a nested list through the copy changes the original (our shallow copy saw "Esha"). Use <code>copy.deepcopy</code> for nested data such as configs, JSON and lists of lists. Flat lists of immutables are safe with a shallow copy.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is the output? <code>g = [[0]*2]*2; g[0][0] = 1; print(g)</code></summary><div class="qa-body"><code>[[1, 0], [1, 0]]</code>. The outer <code>*2</code> repeats the reference to one inner list. Build rows with <code>[[0]*2 for _ in range(2)]</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Desugar <code>[n.upper() for n, i, q in orders if q &gt;= 2]</code> into a loop.</summary><div class="qa-body"><code>out = []</code> / <code>for n, i, q in orders:</code> / <code>    if q &gt;= 2:</code> / <code>        out.append(n.upper())</code>. Result: ['ASHA', 'BEN', 'DIA', 'BEN'].</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span><code>sorted(x)</code> vs <code>x.sort()</code>?</summary><div class="qa-body">sorted works on any iterable and returns a new list, leaving x unchanged. x.sort() only exists on lists, sorts in place and returns None. Both accept key= and reverse=, both are stable Timsort, O(n log n).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does "stable sort" mean and why is it useful?</summary><div class="qa-body">Items with equal keys keep their previous relative order. So you can sort by a secondary key and then by the primary key, and ties in the primary key stay ordered by the secondary one. On our orders: sort by name, then by −qty → Ben 3, then Asha, Ben, Dia (all 2), then Asha, Chen (1). A tuple key <code>(-qty, name)</code> does it in one pass.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you return "two values" from a function, and what really comes back?</summary><div class="qa-body"><code>return who, qty</code> packs a single tuple; the caller can unpack it: <code>who, qty = busiest(orders)</code> → Ben, 3. Mismatched counts raise ValueError.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does the shallow-copy trap and the <code>[[0]*3]*3</code> trap have the same root cause?</summary><div class="qa-body">Both come from lists storing references, not values. A shallow copy copies the references to the inner lists; <code>* 3</code> repeats a reference to one row. In both cases two "different" slots point at one mutable object, so a change through one is seen through the other. That is the same idea as aliasing (<code>b = a</code>), one level down.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does a dict key need immutability, and what would break if lists were allowed?</summary><div class="qa-body">A dict files a key on a shelf chosen by its hash. If the key could change after being stored, its hash would change, and a later lookup would go to a different shelf and miss the entry, even though it is still in the dict. Tuples of immutables cannot change, so their hash is stable. That is why the tuple section leads straight into Dicts &amp; Sets.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why do we need deque if we have lists?</summary><div class="qa-body">The list's design (one contiguous array) makes the end cheap and the front expensive. A queue removes from the front, so a list queue costs O(n) per removal; draining 100,000 items took about 0.9 s vs 0.005 s with deque, which links blocks so both ends are O(1). The price: deque indexing in the middle is O(n).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>namedtuple vs dataclass vs dict for a record?</summary><div class="qa-body">namedtuple: immutable, light, hashable, positional and named access, unpackable. dataclass: a normal class with generated <code>__init__</code>/<code>__repr__</code>/<code>__eq__</code>, mutable by default (frozen=True for immutable), can have methods and defaults (<a class="xref" data-note="py_oop">OOP</a>). dict: flexible keys, no fixed shape, no attribute access; good for JSON-like data.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between a list and a tuple?</summary><div class="qa-body">A list is mutable (append, remove, item assignment); a tuple is immutable once created. Because of that, a tuple is hashable when all its items are, so it can be a dict key or set item; a list never can. Tuples are slightly smaller and faster to create. Use lists for homogeneous collections whose size changes, tuples for fixed records where each position has a meaning.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How is a Python list implemented internally?</summary><div class="qa-body">In CPython, a list is a dynamic array: a contiguous block of pointers (references) to objects plus a length and an allocated capacity. When the capacity is exhausted it reallocates a larger block (growth factor about 1.125 plus a constant) and copies the pointers. So indexing is O(1), and the list never stores the objects themselves, only references to them.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the time complexity of <code>append</code>, <code>insert(0, x)</code>, <code>pop()</code>, <code>pop(0)</code>, <code>x in lst</code> and <code>lst[i]</code>?</summary><div class="qa-body"><code>append</code> and <code>pop()</code>: O(1) amortised. <code>insert(0, x)</code> and <code>pop(0)</code>: O(n), every other pointer shifts. <code>x in lst</code>: O(n) linear scan. <code>lst[i]</code>: O(1). For frequent front operations use <code>collections.deque</code>; for frequent membership tests use a set.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does "amortised O(1)" mean for <code>list.append</code>?</summary><div class="qa-body">Most appends write into spare capacity in O(1). Occasionally the array is full and must be reallocated and copied, which is O(n). Because capacity grows proportionally, these copies are rare enough that n appends cost O(n) in total, so O(1) per append on average. Watching <code>sys.getsizeof</code> shows the capacity jumping 4 → 8 → 16 → 24 references.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span><code>append</code> vs <code>extend</code>?</summary><div class="qa-body"><code>a.append(x)</code> adds <code>x</code> as one element, even if <code>x</code> is a list (so it nests). <code>a.extend(it)</code> iterates <code>it</code> and adds each element; <code>a += it</code> does the same. Because strings are iterable, <code>a.extend("Ben")</code> adds <code>'B', 'e', 'n'</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does this print? <code>a = [1, 2, 3]; b = a; b.append(4); print(a)</code></summary><div class="qa-body"><code>[1, 2, 3, 4]</code>. Assignment never copies: <code>b</code> is a second name for the same list object (<code>a is b</code> is True), so a change through either name is visible through both.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Shallow copy vs deep copy?</summary><div class="qa-body">A shallow copy (<code>a.copy()</code>, <code>a[:]</code>, <code>list(a)</code>, <code>copy.copy</code>) creates a new outer list whose slots point to the same inner objects; mutating a nested list through the copy changes the original. <code>copy.deepcopy</code> recursively copies every contained object (keeping a memo so shared and cyclic references are copied once). Deep copy matters only for nested mutable data such as configs, JSON or lists of lists.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the output? <code>g = [[0] * 3] * 3; g[0][0] = 1; print(g)</code></summary><div class="qa-body"><code>[[1, 0, 0], [1, 0, 0], [1, 0, 0]]</code>. The outer <code>* 3</code> repeats a reference to the same inner list three times. Build independent rows with <code>[[0] * 3 for _ in range(3)]</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does this print, and why?
+<code>def add(item, bucket=[]): bucket.append(item); return bucket</code> then <code>print(add(1)); print(add(2))</code></summary><div class="qa-body"><code>[1]</code> then <code>[1, 2]</code>. Default values are evaluated once, when the <code>def</code> runs, so every call without <code>bucket</code> shares the same list. The fix is <code>bucket=None</code> and <code>if bucket is None: bucket = []</code> inside the function.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span><code>sorted(x)</code> vs <code>x.sort()</code>?</summary><div class="qa-body"><code>sorted</code> accepts any iterable and returns a new list, leaving the input unchanged. <code>list.sort</code> exists only on lists, sorts in place and returns <code>None</code> (so <code>x = x.sort()</code> loses the data). Both take <code>key=</code> and <code>reverse=</code>, both use Timsort: O(n log n), stable, O(n) on already-sorted input.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a stable sort, and how do you sort by several keys?</summary><div class="qa-body">Stable means items with equal keys keep their original relative order. You can therefore sort by the secondary key first and then by the primary key. In one pass, use a tuple key: <code>sorted(rows, key=lambda r: (-r.qty, r.name))</code> sorts by qty descending, then name ascending. For non-numeric descending keys, use the two-pass approach with <code>reverse=True</code> on one pass.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>List comprehension vs generator expression?</summary><div class="qa-body"><code>[x for x in it]</code> builds the whole list in memory immediately; <code>(x for x in it)</code> returns a lazy iterator that produces one item at a time and can be consumed once. For a million ints the list was about 8.4 MB (<code>sys.getsizeof</code> of the list object alone) while the generator object was 192 bytes. Use a generator when you only aggregate (<code>sum</code>, <code>max</code>, <code>any</code>) or stream.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Does the loop variable of a list comprehension leak into the enclosing scope?</summary><div class="qa-body">Not in Python 3. With <code>x = 10</code> and then <code>[x for x in range(3)]</code>, <code>x</code> is still 10 afterwards: the comprehension has its own scope. A plain <code>for</code> loop, by contrast, leaves its variable bound to the last value.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What happens if you remove items from a list while iterating over it?</summary><div class="qa-body">Items get skipped. <code>q = [1, 2, 2, 3]; for v in q: if v == 2: q.remove(v)</code> leaves <code>[1, 2, 3]</code>: removing shifts the next element into the current index, and the iterator moves past it. Build a new list (<code>[v for v in q if v != 2]</code> → <code>[1, 3]</code>), iterate over a copy (<code>for v in q[:]</code>), or iterate backwards by index.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Is a tuple always hashable? Can a tuple's contents change?</summary><div class="qa-body">No to the first: a tuple is hashable only if every element is; <code>hash((1, [2]))</code> raises <code>TypeError: unhashable type: 'list'</code>. Yes to the second, partly: the tuple's slots are fixed, but a mutable object in a slot can still be mutated (<code>t[1].append(3)</code> works on <code>t = (1, [2])</code>).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What happens here? <code>t = (1, [2, 3]); t[1] += [4]</code></summary><div class="qa-body">It raises <code>TypeError: 'tuple' object does not support item assignment</code>, yet afterwards <code>t</code> is <code>(1, [2, 3, 4])</code>. <code>+=</code> first calls <code>list.__iadd__</code>, which extends the list in place and succeeds, then tries to store the result back into <code>t[1]</code>, which fails. A classic puzzle showing that augmented assignment is "mutate, then assign".</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you create a one-element tuple? What is <code>type((1))</code>?</summary><div class="qa-body"><code>(1,)</code> or <code>1,</code>; the comma makes the tuple, parentheses only group. <code>type((1))</code> is <code>int</code>. A stray trailing comma (<code>x = 5,</code>) silently makes a tuple.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How does extended unpacking work? What does <code>first, *rest = [1, 2, 3]</code> give?</summary><div class="qa-body"><code>first = 1</code>, <code>rest = [2, 3]</code>; the starred target collects all remaining items into a <em>list</em> (even when unpacking a tuple), and there can be only one starred target. Without a star, the number of targets must match exactly, otherwise <code>ValueError: too many values to unpack</code> (or not enough). <code>a, b = b, a</code> swaps by packing the right side into a tuple first.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>namedtuple vs dataclass vs dict for a record?</summary><div class="qa-body">namedtuple: immutable, hashable, lightweight, positional and attribute access, unpackable, compares equal to plain tuples. dataclass: a regular class with generated <code>__init__</code>/<code>__repr__</code>/<code>__eq__</code>, mutable by default (<code>frozen=True</code> to freeze), supports defaults, methods and type hints (<a class="xref" data-note="py_oop">OOP</a>). dict: no fixed schema, string keys, best for JSON-shaped data. Choose namedtuple for small read-only records, dataclass for domain objects.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>You need a FIFO queue. Why not a list?</summary><div class="qa-body"><code>list.pop(0)</code> shifts every remaining element, so draining n items is O(n²); measured, 100,000 pops took about 0.95 s with a list versus 0.005 s with <code>deque.popleft()</code>. <code>collections.deque</code> is a doubly linked list of fixed-size blocks, giving O(1) appends and pops at both ends (at the cost of O(n) indexing in the middle). For thread-safe producer/consumer queues use <code>queue.Queue</code>.</div></details>
 </main>
 `
 });

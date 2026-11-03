@@ -8,7 +8,7 @@ const CATEGORIES = [
         {"key": "py_functions",    "label": "Functions"}
       ]},
       {"key": "grp_py_ds", "label": "Collections", "children": [
-        {"key": "py_ds",           "label": "The Map: Python Collections"},
+        {"key": "py_ds",           "label": "Choosing a Collection"},
         {"key": "py_lists_tuples", "label": "Lists & Tuples"},
         {"key": "py_dicts_sets",   "label": "Dicts & Sets"},
         {"key": "py_strings",      "label": "Strings"}
