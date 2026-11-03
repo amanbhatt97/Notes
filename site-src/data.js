@@ -2,7 +2,7 @@ const CATEGORIES = [
   { key: "python", label: "Python Programming", emoji: "\ud83d\udc0d", tag: "Foundation", blurb: "Clean, idiomatic, production-level Python", hue: 200, topics: [
     {"key": "grp_py_fund", "label": "Fundamentals", "children": [
       {"key": "grp_py_basics", "label": "Python Basics", "children": [
-        {"key": "py_fundamentals", "label": "The Map: Python Basics"},
+        {"key": "py_fundamentals", "label": "How Python Runs Your Code"},
         {"key": "py_values",       "label": "Values, Types & Variables"},
         {"key": "py_control",      "label": "Decisions & Loops"},
         {"key": "py_functions",    "label": "Functions"}

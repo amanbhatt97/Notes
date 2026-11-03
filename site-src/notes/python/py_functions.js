@@ -3,42 +3,7 @@ Object.assign(TOPIC_CONTENT, {
   "py_functions": `<main>
 <h1>Functions</h1>
   <div class="where"><span>Python</span><span>Fundamentals</span><span>Python Basics</span><span>Functions</span></div>
-  <p class="lead">A <strong>function</strong> is a block of code with a name: you write it once and run it from anywhere, as often as you like, with different inputs. This note turns Chai Corner's billing script into a handful of small named functions (<code>subtotal</code>, <code>discount</code>, <code>with_tax</code>, <code>bill</code>) and uses them to teach everything about functions: <code>def</code>, <code>return</code> and <code>None</code>, parameters vs arguments, positional, keyword and default arguments, the mutable-default trap (traced), <code>*args</code>/<code>**kwargs</code> and unpacking, scope and the LEGB rule (traced), <code>global</code>/<code>nonlocal</code> and closures, recursion with a call-stack table, <code>lambda</code>, functions as values (the doorway to decorators), and docstrings and type hints. Code here was run on Python 3.13.</p>
-
-  <h2 id="pfn-fits" class="open"><span class="num">★</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 660 190" width="660">
-<defs><marker id="pfn-a0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="230" y="8" width="200" height="36" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="330" y="31" text-anchor="middle" font-size="12">Python Basics: the Map</text>
-<line x1="330" y1="44" x2="560" y2="80" stroke="currentColor" marker-end="url(#pfn-a0)"/>
-<rect x="15" y="82" width="170" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="100" y="103" text-anchor="middle" font-size="12">Values, Types &amp; Variables</text><text x="100" y="121" text-anchor="middle" class="tm" font-size="10">the raw material</text>
-<line x1="185" y1="107" x2="243" y2="107" stroke="currentColor" marker-end="url(#pfn-a0)"/>
-<rect x="245" y="82" width="170" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="330" y="103" text-anchor="middle" font-size="12">Decisions &amp; Loops</text><text x="330" y="121" text-anchor="middle" class="tm" font-size="10">choose and repeat</text>
-<line x1="415" y1="107" x2="473" y2="107" stroke="currentColor" marker-end="url(#pfn-a0)"/>
-<rect x="475" y="82" width="170" height="50" rx="8" class="fg sg" stroke-width="3"/><text x="560" y="103" text-anchor="middle" font-size="12.5" font-weight="700">Functions</text><text x="560" y="121" text-anchor="middle" class="tg" font-size="10.5">YOU ARE HERE</text>
-<line x1="560" y1="132" x2="560" y2="150" stroke="currentColor" marker-end="url(#pfn-a0)"/>
-<text x="560" y="166" text-anchor="middle" class="tm" font-size="10.5">→ OOP (methods) · Decorators (functions as values)</text>
-<text x="560" y="182" text-anchor="middle" class="tm" font-size="10.5">→ Iterators &amp; Generators · Context Managers</text>
-</svg><figcaption>The last concept note of Python Basics. Every later Python note builds on functions.</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: <a class="xref" data-note="py_control">Decisions &amp; Loops</a></b><span>One script of loops and ifs billed all three tables (₹184, ₹74, ₹52; day total ₹310). Left open: the code is one long block. To bill a single table from another part of the program, or to change the GST rule once for everyone, we would have to copy and edit it.</span></li>
-    <li><b>This note adds: naming and reusing code</b><span><code>def</code> names a block; parameters make it work on any input; <code>return</code> hands back the answer; scope keeps each function's names private; recursion lets a function solve a smaller copy of its own problem; and because functions are values, they can be stored, passed and returned.</span></li>
-    <li><b>Leads to: the rest of Python</b><span><a class="xref" data-note="py_oop">OOP</a> puts functions (methods) and data together in classes. <a class="xref" data-note="py_decorators">Decorators</a> are functions that take and return functions (section 09 is the first step). <a class="xref" data-note="py_iterators">Iterators &amp; Generators</a> are functions that pause with <code>yield</code>. <a class="xref" data-note="py_io">Exceptions, Files &amp; Packages</a> shows how functions signal errors and how to group them into modules.</span></li>
-  </ol>
-
-  <h2 id="pfn-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
-  <p>The whole note as one chain. Each concept answers the question above it; its weakness raises the next question.</p>
-  <ol class="story">
-    <li><b>def and calling</b><span>Q: how do we stop copy-pasting the billing code? → Name it once with <code>def subtotal(lines):</code> and call it for each table: 195, 70, 50. But how does the answer get back to the caller?</span></li>
-    <li><b>return and None</b><span>Q: how does a function hand back a value? → <code>return</code>; without it, the call gives <code>None</code> (print is not return). But our functions need inputs that vary…</span></li>
-    <li><b>Parameters, arguments, defaults</b><span>Q: how do inputs get in, and can some be optional? → Parameters are the names in <code>def</code>, arguments the values in the call, by position or keyword; <code>rate=0.05</code> is a default. <code>bill(asha)</code> = 184. But defaults hide a nasty trap…</span></li>
-    <li><b>The mutable-default trap</b><span>Q: why did Ben's new order contain Asha's chai? → A default is built once, when <code>def</code> runs, and shared by every call; use <code>None</code>. And what if the number of inputs itself varies?</span></li>
-    <li><b>*args, **kwargs, unpacking</b><span>Q: how do we accept any number of items or options? → <code>*amounts</code> collects a tuple (60, 45, 90), <code>**notes</code> a dict; <code>*</code>/<code>**</code> in a call spread them out. Now functions have their own names inside: who can see which names?</span></li>
-    <li><b>Scope (LEGB), global, nonlocal, closures</b><span>Q: which <code>t</code> or <code>GST_RATE</code> does a function see, and can it change outer names? → Lookup goes Local → Enclosing → Global → Built-in; changing an outer name needs <code>global</code>/<code>nonlocal</code>; an inner function remembers outer names (bill numbers 1, 2, 3). Can a function call itself?</span></li>
-    <li><b>Recursion</b><span>Q: how do we total an order whose lines contain boxes of lines? → A function that calls itself on a smaller part, with a base case: 195 traced on the call stack; the party order 215. But tiny one-off functions with <code>def</code> feel heavy…</span></li>
-    <li><b>lambda</b><span>Q: how do we pass a tiny function inline, e.g. "sort lines by amount"? → <code>lambda line: line[1] * line[2]</code>. That only works because a function is a value…</span></li>
-    <li><b>Functions as values</b><span>Q: what can we do with a function besides calling it? → Store it in a dict of discount rules, pass it to <code>bill</code>, return it from <code>make_discount</code>, wrap it with logging: the first step to decorators. Finally: how do others know how to call our functions?</span></li>
-    <li><b>Docstrings and type hints</b><span>Q: how do we document what a function expects and returns? → A docstring and annotations like <code>lines: list[tuple[str, int, int]] -&gt; int</code> (documentation, not enforcement). Then the complete till, and on to <a class="xref" data-note="py_oop">OOP</a>.</span></li>
-  </ol>
+  <p class="lead">A <strong>function</strong> is a named block of code that takes inputs and returns a value. Without functions, the same logic gets copy-pasted, and when a rule changes one copy is always missed: nothing crashes, the results just quietly disagree. Functions put each rule in one place, give it a name and a testable contract, and, because they are objects, can be passed around: <code>sorted(key=...)</code>, sklearn scorers, callbacks, retry wrappers and decorators all depend on that. This note covers <code>def</code> and <code>return</code>, every kind of parameter (positional, keyword, defaults, <code>*args</code>/<code>**kwargs</code>, positional-only and keyword-only), the mutable-default trap, scope (LEGB, <code>global</code>, <code>nonlocal</code>, closures), recursion and the call stack, <code>lambda</code>, higher-order functions, and docstrings and type hints. Code here was run on Python 3.13.</p>
 
   <h2 id="pfn-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -51,7 +16,7 @@ Object.assign(TOPIC_CONTENT, {
           <li>Call <code>name(args)</code>: jump in, run, come back with the return value</li>
           <li>No <code>return</code> → returns <b>None</b>; ⚠ print is not return</li>
           <li><code>return a, b</code> returns one tuple</li>
-          <li>subtotal(asha) 195 · discount(195) 19.5 · with_tax(175.5) 184.275 · bill(asha) 184</li>
+          <li><code>def</code> runs once and creates a function object; the body runs per call</li>
         </ul>
       </div>
       <div class="mm-branch">
@@ -71,16 +36,16 @@ Object.assign(TOPIC_CONTENT, {
           <li>Assignment anywhere in a function makes a name local</li>
           <li>⚠ <code>count += 1</code> on a global → UnboundLocalError</li>
           <li><code>global</code> / <code>nonlocal</code> to rebind outer names</li>
-          <li><b>Closure</b>: inner function remembers outer variables (bill counter 1, 2, 3)</li>
-          <li>💡 keys: your room, the house, the street, lost-and-found</li>
+          <li><b>Closure</b>: inner function remembers outer variables (<code>__closure__</code>)</li>
+          <li>Loops and if-blocks do not create a scope</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Recursion</div>
         <ul>
           <li>Base case + a call on a smaller problem</li>
-          <li>total(asha): 60 + (45 + (90 + 0)) = 195 on the call stack</li>
-          <li>Natural for nested data: boxes in boxes → 215</li>
+          <li>Each active call has its own frame on the call stack</li>
+          <li>Natural for nested data: trees, JSON, folders</li>
           <li>Limit ~1000 → RecursionError; no tail-call optimisation</li>
           <li><code>@lru_cache</code> remembers answers (fib(80))</li>
         </ul>
@@ -91,7 +56,7 @@ Object.assign(TOPIC_CONTENT, {
           <li><code>lambda line: line[1] * line[2]</code>: one expression, no name</li>
           <li>For <code>key=</code> in sorted/max/min, <code>map</code></li>
           <li>Functions are objects: store, pass, return</li>
-          <li>Dict of discount rules; <code>bill(asha, festival)</code> = 164</li>
+          <li>Higher-order: take or return functions (strategy, callbacks)</li>
           <li><code>make_discount(0.15)</code> returns a function (closure)</li>
           <li>⚠ late binding: <code>[lambda: p for p in …]</code> all see the last p</li>
         </ul>
@@ -103,7 +68,7 @@ Object.assign(TOPIC_CONTENT, {
           <li><b>Type hints</b>: <code>def f(x: int) -&gt; int</code>; stored in <code>__annotations__</code></li>
           <li>⚠ not enforced at run time: <code>double("ab")</code> → "abab"</li>
           <li>Checked by tools (mypy, IDEs)</li>
-          <li>Wrapping a function = decorators (next notes)</li>
+          <li>Wrapping a function = a decorator (<code>@</code>)</li>
         </ul>
       </div>
     </div>
@@ -112,39 +77,26 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="pfn-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain</span></div></div>
-      <div class="rm-item rm-done" data-target="pfn-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Why Functions</span><span class="rm-sub">Repeat once, name it</span></div></div>
-      <div class="rm-item rm-done" data-target="pfn-return"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">return and None</span><span class="rm-sub">Handing back answers</span></div></div>
-      <div class="rm-item rm-done" data-target="pfn-params"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Parameters &amp; Arguments</span><span class="rm-sub">Positional, keyword, defaults</span></div></div>
-      <div class="rm-item rm-done" data-target="pfn-default"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">The Mutable-Default Trap</span><span class="rm-sub">Traced call by call</span></div></div>
-      <div class="rm-item rm-done" data-target="pfn-star"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">*args, **kwargs, Unpacking</span><span class="rm-sub">Any number of inputs</span></div></div>
-      <div class="rm-item rm-done" data-target="pfn-scope"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Scope: LEGB</span><span class="rm-sub">global, nonlocal, closures</span></div></div>
-      <div class="rm-item rm-done" data-target="pfn-rec"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Recursion</span><span class="rm-sub">The call stack, traced</span></div></div>
-      <div class="rm-item rm-done" data-target="pfn-lambda"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">lambda</span><span class="rm-sub">Tiny inline functions</span></div></div>
-      <div class="rm-item rm-done" data-target="pfn-values"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Functions as Values</span><span class="rm-sub">Store, pass, return, wrap</span></div></div>
-      <div class="rm-item rm-done" data-target="pfn-doc"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Docstrings &amp; Type Hints</span><span class="rm-sub">Saying how to call it</span></div></div>
-      <div class="rm-item rm-done" data-target="pfn-build"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Hands-on: the Complete Till</span><span class="rm-sub">Everything together</span></div></div>
-      <div class="rm-item rm-done" data-target="pfn-connect"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One diagram, one table</span></div></div>
-      <div class="rm-item rm-done" data-target="pfn-traps"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Bugs in code and interviews</span></div></div>
-      <div class="rm-item rm-done" data-target="pfn-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note in 10 minutes</span></div></div>
-      <div class="rm-item rm-done" data-target="pfn-qa"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
+      <div class="rm-item rm-done" data-target="pfn-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Defining and Calling Functions</span><span class="rm-sub">def, call, function objects</span></div></div>
+      <div class="rm-item rm-done" data-target="pfn-return"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">return and None</span><span class="rm-sub">print vs return, early return, tuples</span></div></div>
+      <div class="rm-item rm-done" data-target="pfn-params"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Parameters and Arguments</span><span class="rm-sub">positional, keyword, defaults</span></div></div>
+      <div class="rm-item rm-done" data-target="pfn-default"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Mutable Default Arguments</span><span class="rm-sub">built once at def, None sentinel</span></div></div>
+      <div class="rm-item rm-done" data-target="pfn-star"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">*args, **kwargs and Unpacking</span><span class="rm-sub">/, *, varargs, call-site unpacking</span></div></div>
+      <div class="rm-item rm-done" data-target="pfn-scope"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Scope: LEGB and Closures</span><span class="rm-sub">global, nonlocal, UnboundLocalError</span></div></div>
+      <div class="rm-item rm-done" data-target="pfn-rec"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Recursion</span><span class="rm-sub">base case, call stack, lru_cache</span></div></div>
+      <div class="rm-item rm-done" data-target="pfn-lambda"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">lambda Expressions</span><span class="rm-sub">key functions, late binding</span></div></div>
+      <div class="rm-item rm-done" data-target="pfn-values"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">First-Class and Higher-Order Functions</span><span class="rm-sub">store, pass, return, wrap</span></div></div>
+      <div class="rm-item rm-done" data-target="pfn-doc"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Docstrings and Type Hints</span><span class="rm-sub">__doc__, __annotations__, mypy</span></div></div>
+      <div class="rm-item rm-done" data-target="pfn-build"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Worked Example: an Event Router</span><span class="rm-sub">match + handlers + kwargs</span></div></div>
+      <div class="rm-item rm-done" data-target="pfn-traps"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">return, defaults, scope, lambdas</span></div></div>
+      <div class="rm-item rm-done" data-target="pfn-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">Condensed notes for revision</span></div></div>
+      <div class="rm-item rm-done" data-target="pfn-qa"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">Arguments, scope, closures, recursion</span></div></div>
     </div>
   </div>
 
-  <h2 id="pfn-why"><span class="num">01</span>Why Functions: Repeat Once, Name It</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Our loop from the previous note bills every table. But the code is one long script. If another part of the program (a refund screen, an end-of-day report) needs "the bill for this order", it must copy the code, and every copy must be kept in step. How do we write the billing steps once and use them from anywhere?</p>
-  </div>
-  <h3>The running example</h3>
-  <p>Chai Corner again: chai ₹30, samosa ₹15, vada pav ₹20, cold coffee ₹90; 10% off at ₹150 or more; 5% GST; round to rupees. Orders are lists of (item, qty, price) lines:</p>
-  <table class="tbl out"><caption>The three orders, and the functions we will build for them</caption>
-    <tr><th>Order</th><th>Lines</th><th><code>subtotal</code></th><th><code>discount</code></th><th><code>with_tax</code></th><th><code>bill</code></th></tr>
-    <tr><td>asha</td><td>("masala chai", 2, 30), ("samosa", 3, 15), ("cold coffee", 1, 90)</td><td>195</td><td>19.5</td><td>184.275</td><td>184</td></tr>
-    <tr><td>ben</td><td>("masala chai", 1, 30), ("vada pav", 2, 20)</td><td>70</td><td>0</td><td>73.5</td><td>74</td></tr>
-    <tr><td>chen</td><td>("samosa", 2, 15), ("vada pav", 1, 20)</td><td>50</td><td>0</td><td>52.5</td><td>52</td></tr>
-  </table>
-  <h3>The problem: copy-paste</h3>
-  <p>Here is billing done by copying. The government raises GST to 12%, and someone updates one copy but not the other:</p>
+  <h2 id="pfn-why"><span class="num">01</span>Defining and Calling Functions</h2>
+  <h3>Why Functions: One Rule in One Place</h3>
+  <p>Billing logic duplicated for two orders. The tax rate changes to 12%, and only one copy gets updated:</p>
   <div class="fx" data-lang="py">asha = [("masala chai", 2, 30), ("samosa", 3, 15), ("cold coffee", 1, 90)]
 ben = [("masala chai", 1, 30), ("vada pav", 2, 20)]
 # billing Asha ...
@@ -161,9 +113,9 @@ after = s - (s * 0.10 if s &gt;= 150 else 0)
 print("Ben ", round(after + after * 0.12))     # two copies, two different rules</div>
   <div class="fx" data-lang="text">Asha 184
 Ben  78</div>
-  <p>Two copies, two rules: Asha paid 5% tax, Ben 12%. Nothing crashed, so nobody noticed. This is the main reason functions exist: <strong>one rule should live in one place</strong>. The second reason is naming: <code>bill(ben)</code> says what it does; ten lines of arithmetic do not.</p>
+  <p>Two copies, two rules: one order taxed at 5%, the other at 12%. Nothing crashed, so nobody noticed. This is the main reason functions exist: <strong>one rule should live in one place</strong>. The second reason is naming: <code>bill(ben)</code> says what it does; ten lines of arithmetic do not.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>A recipe card. The chai-wala does not re-invent masala chai for every customer; the steps are written once on a card titled "masala chai". "Make masala chai, 2 cups" is a call: same steps, different quantity. Change the recipe card once and every future cup changes.</p></div>
-  <h3>def: writing the recipe card</h3>
+  <h3>def and the Call</h3>
   <p><code>def</code> creates a function. The first line gives its name and, in brackets, its <strong>parameters</strong>: names for the inputs it will receive. The indented body is the steps. <code>return</code> hands the result back.</p>
   <div class="fx" data-lang="py">def subtotal(lines):
     """Add up qty * price over the lines of one order."""
@@ -188,7 +140,7 @@ print(subtotal(asha) + 5)             # a call is an expression: use it anywhere
     <tr><td>4</td><td>body: <code>return total</code></td><td>leave the function with 195; its local names are discarded</td><td>(gone)</td></tr>
     <tr><td>5</td><td>caller</td><td><code>subtotal(asha)</code> is replaced by 195; next call starts fresh</td><td>—</td></tr>
   </table>
-  <p>Because a call becomes a value, it can be used anywhere a value can: <code>subtotal(asha) + 5</code> is 200. And <code>def</code> itself only <em>creates</em> the function; it runs nothing. The function is an object like any other (section 09 builds on that):</p>
+  <p>Because a call becomes a value, it can be used anywhere a value can: <code>subtotal(asha) + 5</code> is 200. And <code>def</code> itself only <em>creates</em> the function; it runs nothing. The function is an object like any other:</p>
   <div class="fx" data-lang="py">print(subtotal)                       # def made a function object...
 print(type(subtotal).__name__, subtotal.__name__)
 print(callable(subtotal), callable(195))</div>
@@ -199,12 +151,9 @@ True False</div>
     <p>A <strong>function</strong> is a named, reusable block of code. <code>def name(parameters): body</code> creates a function object and binds <code>name</code> to it; the body runs only when the function is <strong>called</strong> with <code>name(arguments)</code>. Each call gets fresh local names; the call expression evaluates to the function's return value.</p>
   </div>
   <div class="callout trap"><span class="label">Trap</span><p><code>subtotal</code> without brackets is the function object itself, not a call: <code>if subtotal:</code> is always True, and <code>print(subtotal)</code> prints <code>&lt;function subtotal at 0x…&gt;</code>. To run it you need the brackets.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: return and None.</b> <code>subtotal</code> handed back 195 with <code>return</code>. What happens if a function has no <code>return</code>, or only prints its answer? And can it return early, or return two things?</div>
 
   <h2 id="pfn-return"><span class="num">02</span>return and None</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Beginners often write functions that <em>print</em> their answer, and then cannot add it to anything. What exactly does <code>return</code> do that <code>print</code> does not, and what does a function give back when it has no <code>return</code>?</p>
-  </div>
+  <p>A function that prints its result instead of returning it looks fine on screen but cannot be used by other code. <code>return</code> is how a value gets back to the caller.</p>
   <p><code>print</code> shows text to a human. <code>return</code> gives a value to the <em>code</em> that called the function. A function that reaches the end of its body without a <code>return</code> (or with a bare <code>return</code>) returns <code>None</code>.</p>
   <div class="fx" data-lang="py">def show_subtotal(lines):
     print("subtotal is", subtotal(lines))   # shows it, hands nothing back
@@ -237,7 +186,7 @@ print(discount(195), discount(70), discount(50))</div>
     <tr><td>discount(50)</td><td>False</td><td><code>return 0</code></td><td>0</td></tr>
   </table>
   <h3>Returning several values</h3>
-  <p>Three friends split Asha's ₹184 bill. <code>return a, b</code> builds one tuple; the caller can unpack it into two names.</p>
+  <p>Splitting ₹184 three ways needs a share and a remainder. <code>return a, b</code> builds one tuple; the caller can unpack it into two names.</p>
   <div class="fx" data-lang="py">def split_bill(total, people):
     return total // people, total % people   # really ONE tuple
 
@@ -248,12 +197,9 @@ print(share, left, split_bill(184, 3))</div>
     <p><code>return expr</code> ends the call and makes the call expression evaluate to <code>expr</code>. A function with no <code>return</code>, or a bare <code>return</code>, returns <code>None</code>. <code>return a, b</code> returns the tuple <code>(a, b)</code>.</p>
   </div>
   <div class="callout trap"><span class="label">Trap</span><p>A function that only prints returns <code>None</code>; using its result gives <code>TypeError: ... 'NoneType'</code>. Also: methods that change an object in place, like <code>list.sort()</code> and <code>list.append()</code>, return <code>None</code> on purpose, so <code>order = order.sort()</code> destroys your list.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Parameters and Arguments.</b> <code>discount</code> has the 10% and ₹150 baked in, and the tax rate will change. How do values get into a function, and can some inputs be optional?</div>
 
   <h2 id="pfn-params"><span class="num">03</span>Parameters and Arguments</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The GST is 5% today but might be 12% tomorrow, and a few items already use a different rate. We want <code>with_tax(amount)</code> to use 5% unless told otherwise. How are inputs matched to a function's names, and how do we make one optional?</p>
-  </div>
+  <p>Hard-coded constants (a 5% tax) make a function single-use. Parameters let callers supply inputs, and defaults keep the common case short while allowing overrides.</p>
   <p>Two words that people mix up:</p>
   <ul>
     <li>A <strong>parameter</strong> is a name in the <code>def</code> line: <code>amount</code>, <code>rate</code>. It is a placeholder.</li>
@@ -296,7 +242,7 @@ with_tax(rate=0.1, 175.5)    SyntaxError: positional argument follows keyword ar
     <li>The same parameter by position <em>and</em> by name: "multiple values".</li>
     <li>A positional argument after a keyword one is not even valid Python: positional arguments always come first.</li>
   </ul>
-  <h3>Building the bill from small functions</h3>
+  <h3>Composing Small Functions</h3>
   <p>Now <code>bill</code> can be written from the pieces. Each function does one job and can be tested alone; <code>bill</code> just connects them.</p>
   <div class="fx" data-lang="py">def bill(lines):
     sub = subtotal(lines)
@@ -308,24 +254,21 @@ for name, lines in [("Asha", asha), ("Ben", ben), ("Chen", chen)]:
   <div class="fx" data-lang="text">Asha 195 184
 Ben 70 74
 Chen 50 52</div>
-  <p>₹184, ₹74, ₹52, the same as by hand. And the GST problem from section 01 is gone: the rate lives in one place, the default of <code>with_tax</code>.</p>
+  <p>The tax rate now lives in exactly one place, the default of <code>with_tax</code>, and each piece can be tested on its own.</p>
   <div class="callout def"><span class="label">Definition</span>
     <p><strong>Parameters</strong> are the names in a function definition; <strong>arguments</strong> are the values supplied in a call. Arguments bind to parameters <strong>positionally</strong> (left to right) and then by <strong>keyword</strong> (by name). A parameter with a <strong>default value</strong> (<code>p=v</code>) is optional; parameters with defaults must come after those without.</p>
   </div>
-  <div class="callout trap"><span class="label">Trap</span><p>Swapped positional arguments give wrong answers without an error: <code>with_tax(0.12, 175.5)</code> is 0.12 + 21.06. For anything beyond the first one or two obvious inputs, pass by keyword. Section 05 shows how to <em>force</em> callers to do that.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: The Mutable-Default Trap.</b> Defaults look harmless: <code>rate=0.05</code>. But give a parameter a list as its default and orders from different customers start mixing. Why?</div>
+  <div class="callout trap"><span class="label">Trap</span><p>Swapped positional arguments give wrong answers without an error: <code>with_tax(0.12, 175.5)</code> is 0.12 + 21.06. For anything beyond the first one or two obvious inputs, pass by keyword; keyword-only parameters <em>force</em> callers to.</p></div>
 
-  <h2 id="pfn-default"><span class="num">04</span>The Mutable-Default Trap</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We want a helper <code>add_line(line, order=[])</code> that starts a new order when none is given. It works for Asha. Then Ben's "new" order already contains Asha's chai. When exactly is a default value created, and who shares it?</p>
-  </div>
-  <div class="callout pred"><span class="label">Predict the output</span><p>Two different customers, two calls with no order passed. What do the prints show?</p></div>
+  <h2 id="pfn-default"><span class="num">04</span>Mutable Default Arguments</h2>
+  <p>A default value is created once, when <code>def</code> runs, not on each call. With an immutable default that is harmless; with a list or dict it means every call shares one object.</p>
+  <div class="callout pred"><span class="label">Predict the output</span><p>Two calls with no order passed. What do the prints show?</p></div>
   <div class="fx" data-lang="py">def add_line(line, order=[]):         # the [] is built ONCE, when def runs
     order.append(line)
     return order
 
 asha_order = add_line(("masala chai", 2, 30))
-ben_order = add_line(("vada pav", 2, 20))     # Ben gets a "new" order?
+ben_order = add_line(("vada pav", 2, 20))     # a "new" order?
 print(asha_order)
 print(ben_order)
 print(asha_order is ben_order, add_line.__defaults__)</div>
@@ -336,8 +279,8 @@ True ([('masala chai', 2, 30), ('vada pav', 2, 20)],)</div>
   <table class="tbl"><caption>Trace: the one default list across calls</caption>
     <tr><th>Moment</th><th>What runs</th><th>Default list D (stored on the function)</th><th>order inside the call →</th><th>Returned</th></tr>
     <tr><td><code>def</code></td><td>builds <code>[]</code> once</td><td>[] (id D)</td><td>—</td><td>—</td></tr>
-    <tr><td>Call 1 (Asha)</td><td>order omitted → order = D; append chai</td><td>[chai]</td><td>D</td><td>D</td></tr>
-    <tr><td>Call 2 (Ben)</td><td>order omitted → order = D again; append vada pav</td><td>[chai, vada pav]</td><td>D</td><td>D</td></tr>
+    <tr><td>Call 1</td><td>order omitted → order = D; append chai</td><td>[chai]</td><td>D</td><td>D</td></tr>
+    <tr><td>Call 2</td><td>order omitted → order = D again; append vada pav</td><td>[chai, vada pav]</td><td>D</td><td>D</td></tr>
     <tr><td>After</td><td><code>asha_order</code> and <code>ben_order</code></td><td>both are D</td><td></td><td><code>is</code> → True</td></tr>
   </table>
   <p>The same "evaluated once at <code>def</code> time" rule also explains this quieter surprise: a default copied from a global keeps the value the global had <em>when the function was defined</em>.</p>
@@ -365,12 +308,9 @@ print(asha_order, ben_order, asha_order is ben_order)</div>
     <p>Default values are evaluated <strong>once</strong>, when the <code>def</code> statement executes, and stored in <code>function.__defaults__</code>. A mutable default is therefore shared by all calls that omit that argument. Idiom: <code>def f(x=None): if x is None: x = []</code>.</p>
   </div>
   <div class="callout trap"><span class="label">Trap</span><p>Never use <code>[]</code>, <code>{}</code>, <code>set()</code> or any mutable object as a default. Test the sentinel with <code>is None</code>, not <code>if not order:</code>, or a caller's deliberately empty list would be replaced.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: *args, **kwargs and Unpacking.</b> So far every function has a fixed number of parameters. A total of "any number of amounts", or a line with "any extra notes" (less sugar, no onion), needs a function that accepts a varying number of inputs.</div>
 
   <h2 id="pfn-star"><span class="num">05</span>*args, **kwargs and Unpacking</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>How do we write <code>total_of(60, 45, 90)</code> that accepts any number of amounts, or <code>make_line("masala chai", 2, sugar="less", ginger=True)</code> with any extra options? And the reverse: if the amounts are already in a list, how do we pass them as separate arguments?</p>
-  </div>
+  <p>Some functions must accept a varying number of inputs (<code>print</code>, <code>max</code>, a wrapper that forwards any call). Stars in the definition collect extras; stars in a call spread a sequence or dict into arguments.</p>
   <h3>*args: any number of positional arguments</h3>
   <p>A parameter written with one star, <code>*amounts</code>, collects all extra positional arguments into a <strong>tuple</strong>.</p>
   <div class="fx" data-lang="py">def total_of(*amounts):               # any number of positional arguments
@@ -454,17 +394,14 @@ cfg = {"gst": 0.12, "tip": 20}
 receipt("Ben", 2, *ben, **cfg)          # spread a list and a dict into a call</div>
   <div class="fx" data-lang="text">samosa 3 15
 Ben 2 (('masala chai', 1, 30), ('vada pav', 2, 20)) 0.12 {'tip': 20}</div>
-  <p><code>print(*line)</code> is <code>print("samosa", 3, 15)</code>. In the receipt call, <code>*ben</code> spreads Ben's two lines into <code>*lines</code>, and <code>**cfg</code> becomes <code>gst=0.12, tip=20</code>. This pattern, collect with <code>*args, **kwargs</code> and pass on with <code>*args, **kwargs</code>, is exactly how a wrapper forwards any call (section 09, and <a class="xref" data-note="py_decorators">Decorators</a>).</p>
+  <p><code>print(*line)</code> is <code>print("samosa", 3, 15)</code>. In the receipt call, <code>*ben</code> spreads the two order lines into <code>*lines</code>, and <code>**cfg</code> becomes <code>gst=0.12, tip=20</code>. This pattern, collect with <code>*args, **kwargs</code> and pass on with <code>*args, **kwargs</code>, is exactly how a wrapper forwards any call (see <a class="xref" data-note="py_decorators">Closures &amp; Decorators</a>).</p>
   <div class="callout def"><span class="label">Definition</span>
     <p>In a definition, <code>*name</code> binds extra positional arguments as a tuple and <code>**name</code> binds extra keyword arguments as a dict; parameters after <code>*</code>/<code>*args</code> are <strong>keyword-only</strong>; parameters before <code>/</code> are <strong>positional-only</strong>. Full order: <code>def f(a, /, b, *args, c, **kwargs)</code>. In a call, <code>*iterable</code> and <code>**mapping</code> <strong>unpack</strong> into arguments.</p>
   </div>
   <div class="callout trap"><span class="label">Trap</span><p><code>*args</code> is a tuple, not a list (no <code>append</code>). And <code>**kwargs</code> silently accepts typos: <code>receipt("Asha", gts=0.12)</code> puts <code>gts</code> into <code>extra</code> instead of raising. Accept <code>**kwargs</code> only when you really forward them.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Scope.</b> Our functions now create names (<code>total</code>, <code>t</code>, <code>after</code>) and use outside names (<code>GST_RATE</code>). Which names can a function see, which are private to it, and can it change a name outside itself?</div>
 
-  <h2 id="pfn-scope"><span class="num">06</span>Scope: the LEGB Rule</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p><code>subtotal</code> and <code>bill</code> both might use a name like <code>total</code>. If they shared it, one would overwrite the other. And a counter of bills printed today must survive between calls. Where does each name live, and how does Python decide which one you mean?</p>
-  </div>
+  <h2 id="pfn-scope"><span class="num">06</span>Scope: LEGB and Closures</h2>
+  <p>If two functions both used a name like <code>total</code> and shared it, one would overwrite the other. Scope keeps each call's names private, and defines how a function finds names it did not create.</p>
   <p><strong>Scope</strong> is the region of code where a name can be seen. A name created inside a function (including its parameters) is <strong>local</strong>: it exists only while that call runs, and other functions cannot see it. A name created at the top level of the file is <strong>global</strong>: every function in the file can read it.</p>
   <div class="fx" data-lang="py">GST_RATE = 0.05                         # global: top level of the file
 def tax(amount):
@@ -478,7 +415,7 @@ except NameError as e:
     print("NameError:", e)</div>
   <div class="fx" data-lang="text">8.775
 NameError: name 't' is not defined</div>
-  <h3>Traced: the LEGB lookup</h3>
+  <h3>LEGB Lookup Order</h3>
   <p>When Python meets a name, it searches four places, from inside to outside, and uses the first match. The first letters spell <strong>LEGB</strong>: Local, Enclosing (an outer function, if this function is defined inside another), Global (the file), Built-in (names Python gives you, like <code>len</code>, <code>round</code>, <code>print</code>).</p>
   <figure class="viz"><svg viewBox="0 0 440 190" width="440">
     <rect x="5" y="5" width="430" height="180" rx="10" class="fs" stroke="currentColor"/><text x="15" y="24">B  built-in: len, round, print, sum</text>
@@ -542,7 +479,7 @@ print(record_bill_pure(bills_today))</div>
 3</div>
   <p>Three versions: the broken one, the <code>global</code> fix (works, but any function can now change the counter, which makes bugs hard to trace), and the cleaner design: take the value in as an argument and return the new value.</p>
   <h3>Closures: functions that remember</h3>
-  <p>Every printed bill needs the next bill number. A <strong>closure</strong> is an inner function that remembers the variables of the function it was created in, even after that outer function has returned. <code>nonlocal</code> lets it update them.</p>
+  <p>A counter that must survive between calls, without a global, is a classic use of a <strong>closure</strong>: an inner function that remembers the variables of the function it was created in, even after that outer function has returned. <code>nonlocal</code> lets it update them.</p>
   <div class="fx" data-lang="py">def make_bill_counter():
     n = 0
     def next_bill_no():
@@ -565,17 +502,14 @@ print(other_stall(), next_no())</div>
     <tr><td><code>other_stall()</code></td><td>a <b>new</b> n (second make_bill_counter call)</td><td>0</td><td>1</td></tr>
     <tr><td><code>next_no()</code></td><td>the first n</td><td>3</td><td>4</td></tr>
   </table>
-  <p><code>make_bill_counter</code> finished long ago, but each <code>next_bill_no</code> it created still holds its own <code>n</code>. Decorators (<a class="xref" data-note="py_decorators">Decorators</a>) are built on exactly this.</p>
+  <p><code>make_bill_counter</code> finished long ago, but each <code>next_bill_no</code> it created still holds its own <code>n</code>. Decorators (<a class="xref" data-note="py_decorators">Closures &amp; Decorators</a>) are built on exactly this.</p>
   <div class="callout def"><span class="label">Definition</span>
     <p><strong>Scope</strong> is where a name is visible. Name lookup follows <strong>LEGB</strong>: Local, Enclosing function(s), Global (module), Built-in. Any assignment to a name inside a function makes it local throughout that function, unless declared <code>global</code> (rebind the module name) or <code>nonlocal</code> (rebind the nearest enclosing function's name). A <strong>closure</strong> is a function object that keeps references to variables of its enclosing scope.</p>
   </div>
   <div class="callout trap"><span class="label">Trap</span><p>Reading a global is fine. Rebinding it needs <code>global</code>. Changing it in place (<code>items.append</code>) needs nothing, which is also how hidden shared state sneaks in. Prefer passing values in and returning results over <code>global</code>. And remember: a loop's variables are not local to the loop (only functions create a new scope).</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Recursion.</b> Functions can call other functions (<code>bill</code> calls <code>subtotal</code>). Can a function call <em>itself</em>, and why would it? A party order with snack boxes inside snack boxes is the reason.</div>
 
   <h2 id="pfn-rec"><span class="num">07</span>Recursion</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>A party orders a snack box that contains samosas and a smaller box, which contains a vada pav and a samosa. A loop handles one level; boxes can nest any number of levels deep. How do we total something that contains smaller copies of itself?</p>
-  </div>
+  <p>A loop handles one level of structure. Data that contains smaller copies of itself (nested boxes, folders, trees, JSON) can be any depth, and recursion handles that naturally.</p>
   <p>Some problems contain smaller copies of themselves. A folder contains folders. A box contains boxes. An order is "the first line plus the rest of the order". A <strong>recursive</strong> function solves such a problem by calling itself on the smaller copy. It must stop at a <strong>base case</strong>, a case small enough to answer directly. Without a base case it would call itself forever.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>In a long queue you ask "what is my position?" to the person ahead. They ask the person ahead of them, and so on. The first person says "1" (base case). Each answer comes back +1.</p></div>
   <p>The smallest example: a countdown. <code>countdown(3)</code> prints 3 and hands the smaller job <code>countdown(2)</code> to itself. At 0 it stops.</p>
@@ -590,7 +524,7 @@ countdown(3)</div>
 2
 1
 Go!</div>
-  <h3>Traced: Asha's total on the call stack</h3>
+  <h3>The Call Stack, Traced</h3>
   <p>Think of an order recursively: the total of an order is (first line's amount) + (total of the rest). The total of an empty order is 0 (base case). The function prints each step, indented by depth, so you can see the calls go down and the answers come back up.</p>
   <div class="fx" data-lang="py">def total(lines, depth=0):
     pad = "  " * depth
@@ -603,7 +537,7 @@ Go!</div>
     print(pad + f"returns {result}")
     return result
 
-print(total(asha))</div>
+print(total(asha))                              # asha = 2 chai@30, 3 samosa@15, 1 cold coffee@90</div>
   <div class="fx" data-lang="text">total(3 line(s)) = 60 + total(rest)
   total(2 line(s)) = 45 + total(rest)
     total(1 line(s)) = 90 + total(rest)
@@ -676,17 +610,13 @@ print(fib(80))</div>
 1000
 RecursionError: maximum recursion depth exceeded
 23416728348467685</div>
-  <p>The last part uses <code>@lru_cache</code> (the <code>@</code> line is a decorator; section 09 and <a class="xref" data-note="py_decorators">Decorators</a> explain the syntax). Plain <code>fib(n)</code> asks for <code>fib(n-1)</code> and <code>fib(n-2)</code>, and those ask again, so the same small values get computed an astronomical number of times. <code>@lru_cache</code> saves each answer the first time and reuses it. Saving answers to reuse later is called <strong>memoisation</strong>. With it, <code>fib(80)</code> is instant.</p>
+  <p>The last part uses <code>@lru_cache</code> (the <code>@</code> line is a decorator; see <a class="xref" data-note="py_decorators">Closures &amp; Decorators</a>). Plain <code>fib(n)</code> asks for <code>fib(n-1)</code> and <code>fib(n-2)</code>, and those ask again, so the same small values get computed an astronomical number of times. <code>@lru_cache</code> saves each answer the first time and reuses it. Saving answers to reuse later is called <strong>memoisation</strong>. With it, <code>fib(80)</code> is instant.</p>
   <div class="callout def"><span class="label">Definition</span>
     <p>A <strong>recursive</strong> function calls itself on a smaller instance of its problem and stops at one or more <strong>base cases</strong>. Each active call occupies a stack frame; CPython's default limit is 1000 frames (<code>sys.getrecursionlimit()</code>), beyond which <code>RecursionError</code> is raised. Python performs no tail-call optimisation.</p>
   </div>
   <div class="callout trap"><span class="label">Trap</span><p>Missing or unreachable base case → RecursionError. For depth in the thousands (long lists, deep trees), use a loop or your own stack (a list) instead; raising the limit can crash Python. And recursion that repeats sub-problems is exponentially slow without memoisation.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: lambda.</b> To sort Asha's lines by amount, <code>sorted</code> needs a tiny function "line → qty × price". Writing a full <code>def</code> with a name for a one-line, one-use function feels heavy.</div>
 
-  <h2 id="pfn-lambda"><span class="num">08</span>lambda: Small Functions Without a Name</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Many built-ins take a function as an argument: <code>sorted(..., key=...)</code>, <code>max(..., key=...)</code>, <code>map(...)</code>. Often that function is one short expression used once. Is there a lighter way to write it than <code>def</code>?</p>
-  </div>
+  <h2 id="pfn-lambda"><span class="num">08</span>lambda Expressions</h2>
   <p>A <strong>lambda</strong> is a one-expression function with no name. <code>lambda line: line[1] * line[2]</code> means "take line, give back line[1] × line[2]". The expression's value is returned automatically; there is no <code>return</code> keyword and no statements.</p>
   <div class="fx" data-lang="py">amount = lambda line: line[1] * line[2]     # a function with no def
 print(amount(("samosa", 3, 15)))
@@ -706,14 +636,14 @@ print(max(asha, key=amount))</div>
     <li><code>max(asha, key=amount)</code>: the best-so-far pattern from <a class="xref" data-note="py_control">Decisions &amp; Loops</a> in one call.</li>
   </ul>
   <h3>The late-binding trap</h3>
-  <p>We build three discount rules (5%, 10%, 15%) in a loop. All three give 30.0 on ₹200:</p>
+  <p>Three discount rules (5%, 10%, 15%) built in a loop all give 30.0 on ₹200:</p>
   <div class="fx" data-lang="py">rules = [lambda amt: amt * p for p in (0.05, 0.10, 0.15)]
 print([rules[i](200) for i in range(3)])           # all use the LAST p
 rules = [lambda amt, p=p: amt * p for p in (0.05, 0.10, 0.15)]
 print([rules[i](200) for i in range(3)])           # p frozen per lambda</div>
   <div class="fx" data-lang="text">[30.0, 30.0, 30.0]
 [10.0, 20.0, 30.0]</div>
-  <p>A lambda (like any function) reads outside variables when it is <em>called</em>, not when it is made. This is called <strong>late binding</strong>. All three lambdas read <code>p</code> after the loop ended, so all see 0.15. <code>p=p</code> fixes it: a default value is evaluated when the function is <em>created</em> (section 04), so each lambda stores its own p.</p>
+  <p>A lambda (like any function) reads outside variables when it is <em>called</em>, not when it is made. This is called <strong>late binding</strong>. All three lambdas read <code>p</code> after the loop ended, so all see 0.15. <code>p=p</code> fixes it: a default value is evaluated when the function is <em>created</em>, so each lambda stores its own p.</p>
   <table class="tbl"><caption>Trace: what p each rule uses at call time</caption>
     <tr><th>Rule</th><th>Created when p was</th><th>Without p=p, reads p at call time</th><th>Result</th><th>With p=p</th><th>Result</th></tr>
     <tr><td>0</td><td>0.05</td><td>0.15</td><td>30.0</td><td>0.05</td><td>10.0</td></tr>
@@ -724,12 +654,9 @@ print([rules[i](200) for i in range(3)])           # p frozen per lambda</div>
     <p><code>lambda params: expression</code> creates an anonymous function whose body is a single expression, returned implicitly. It supports the same parameter kinds as <code>def</code> (defaults, *args, …) but no statements or annotations.</p>
   </div>
   <div class="callout trap"><span class="label">Trap</span><p>Use lambda only for short throwaway functions passed as arguments. Anything you would name, reuse or test deserves a <code>def</code> (better error messages show the name). And remember late binding when creating functions in a loop.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Functions as Values.</b> We just passed a function to <code>sorted</code> as if it were a number or a list. What else can we do with functions as values, and why does that matter so much in Python?</div>
 
-  <h2 id="pfn-values"><span class="num">09</span>Functions as Values</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>During Diwali week the stall wants 20% off everything; students get 15%; some days no discount at all. Writing <code>bill_regular</code>, <code>bill_festival</code>, <code>bill_student</code> copies the bill logic three times, which is the very problem functions were supposed to solve. How can one <code>bill</code> work with any discount rule?</p>
-  </div>
+  <h2 id="pfn-values"><span class="num">09</span>First-Class and Higher-Order Functions</h2>
+  <p>Writing <code>bill_regular</code>, <code>bill_festival</code> and <code>bill_student</code> would copy the billing logic three times. Because functions are values, one <code>bill</code> can take the discount rule as an argument.</p>
   <p>In Python, functions are <strong>first-class</strong> objects: like a number or a list, a function can be given another name, stored in a list or dict, passed into another function, and returned from one.</p>
   <h3>Store them</h3>
   <div class="fx" data-lang="py">f = subtotal                            # a second name for the same function
@@ -754,9 +681,9 @@ none     0</div>
 
 print(bill(asha), bill(asha, rules["festival"]), bill(ben, rules["none"]))</div>
   <div class="fx" data-lang="text">184 164 74</div>
-  <p>Asha regular: ₹184. Asha festival: 195 × 0.8 = 156, × 1.05 = 163.8 → ₹164. Ben with no discount: ₹74. One <code>bill</code>, any rule. Functions that take functions are called <strong>higher-order functions</strong>; <code>sorted(key=...)</code> was one.</p>
+  <p>Regular rule: ₹184. Festival rule: 195 × 0.8 = 156, × 1.05 = 163.8 → ₹164. No discount on a ₹70 order: ₹74. One <code>bill</code>, any rule. Functions that take functions are called <strong>higher-order functions</strong>; <code>sorted(key=...)</code> was one.</p>
   <h3>Return them</h3>
-  <p>A function can <em>build</em> and return a new function. <code>make_discount(0.15)</code> returns a rule that remembers its own pct and threshold: a closure (section 06).</p>
+  <p>A function can <em>build</em> and return a new function. <code>make_discount(0.15)</code> returns a rule that remembers its own pct and threshold: a closure.</p>
   <div class="fx" data-lang="py">def make_discount(pct, at=0):           # a function that BUILDS functions
     def rule(sub):
         return sub * pct if sub &gt;= at else 0
@@ -766,9 +693,9 @@ student = make_discount(0.15)
 bulk = make_discount(0.10, at=150)
 print(student(70), bulk(195), bulk(70), bill(ben, student))</div>
   <div class="fx" data-lang="text">10.5 19.5 0 62</div>
-  <p>Ben as a student: 70 − 10.5 = 59.5, × 1.05 = 62.475 → ₹62.</p>
-  <h3>Wrap them: the doorway to decorators</h3>
-  <p>Put the pieces together: a function that <strong>takes</strong> a function and <strong>returns</strong> a new function that calls the old one with some extra behaviour around it. Here the extra behaviour is a log line. <code>*args, **kwargs</code> (section 05) let the wrapper accept and forward any call.</p>
+  <p>Student rule on a ₹70 order: 70 − 10.5 = 59.5, × 1.05 = 62.475 → ₹62.</p>
+  <h3>Wrapping Functions</h3>
+  <p>Put the pieces together: a function that <strong>takes</strong> a function and <strong>returns</strong> a new function that calls the old one with some extra behaviour around it. Here the extra behaviour is a log line. <code>*args, **kwargs</code> let the wrapper accept and forward any call.</p>
   <div class="fx" data-lang="py">def logged(func):                       # takes a function, returns a new one
     def wrapper(*args, **kwargs):
         result = func(*args, **kwargs)
@@ -782,17 +709,14 @@ print(round(with_tax(175.5)))           # the original is untouched: no log line
   <div class="fx" data-lang="text">  [log] with_tax(175.5,) -&gt; 184.275
 184
 184</div>
-  <p><code>logged_tax</code> logs and then returns the same 184.275 as <code>with_tax</code>. Writing <code>with_tax = logged(with_tax)</code> would replace the original name with the logged version; Python's <code>@logged</code> line above a <code>def</code> is shorthand for exactly that. That shorthand, and what it is used for (timing, caching like <code>@lru_cache</code>, access checks), is the whole topic of <a class="xref" data-note="py_decorators">Decorators</a>.</p>
+  <p><code>logged_tax</code> logs and then returns the same 184.275 as <code>with_tax</code>. Writing <code>with_tax = logged(with_tax)</code> would replace the original name with the logged version; Python's <code>@logged</code> line above a <code>def</code> is shorthand for exactly that. That shorthand, and what it is used for (timing, caching like <code>@lru_cache</code>, access checks), is the whole topic of <a class="xref" data-note="py_decorators">Closures &amp; Decorators</a>.</p>
   <div class="callout def"><span class="label">Definition</span>
     <p>Functions are <strong>first-class objects</strong>: they can be bound to names, stored in data structures, passed as arguments and returned as results. A <strong>higher-order function</strong> takes or returns functions. A <strong>wrapper</strong> is a function returned by a higher-order function that calls the original with added behaviour; a <strong>decorator</strong> is such a higher-order function applied with <code>@</code>.</p>
   </div>
   <div class="callout trap"><span class="label">Trap</span><p>Pass the function, not its result: <code>bill(asha, festival)</code>, not <code>bill(asha, festival(195))</code> (that passes a number, and <code>bill</code> then fails trying to call it). A wrapper written without <code>functools.wraps</code> also hides the original's name and docstring; the Decorators note fixes that.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Docstrings and Type Hints.</b> Our functions now take functions, lists of tuples and keyword-only options. How does a teammate (or you, in a month) know what to pass and what comes back, without reading the body?</div>
 
   <h2 id="pfn-doc"><span class="num">10</span>Docstrings and Type Hints</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>A function's name and parameters tell you how to call it, but not what the parameters mean or what type of value they expect. Where do we write "lines is a list of (item, qty, price) tuples; returns whole rupees", so that tools and people can read it?</p>
-  </div>
+  <p>A signature shows parameter names but not what they mean or what types they expect. Docstrings and annotations record that contract where people, editors and type checkers can read it.</p>
   <p>A <strong>docstring</strong> is a string written as the first statement of a function's body. Python stores it in <code>__doc__</code>, and <code>help(f)</code> and every editor show it. <strong>Type hints</strong> (annotations) are written after parameter names (<code>gst: float</code>) and after <code>-&gt;</code> for the return type. Python stores them in <code>__annotations__</code>.</p>
   <div class="fx" data-lang="py">def bill_total(lines: list[tuple[str, int, int]], gst: float = 0.05) -&gt; int:
     """Return the rounded bill for one order.
@@ -822,13 +746,9 @@ print(double(21), double("ab"), double([0]))   # hints are not checked at run ti
     <p>A <strong>docstring</strong> is a string literal as the first statement of a function, class or module, stored in <code>__doc__</code>. <strong>Annotations</strong> <code>def f(x: T = default) -&gt; R</code> attach type information, stored in <code>__annotations__</code>; CPython does not enforce them.</p>
   </div>
   <div class="callout trap"><span class="label">Trap</span><p>Do not rely on hints to reject bad input: validate explicitly (or with a library) where data enters the program. And keep docstrings true: a docstring that says "5% GST" after the rate became a parameter is worse than none.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Hands-on: the Complete Till.</b> We have every piece. Does it all work together on the whole day at Chai Corner?</div>
 
-  <h2 id="pfn-build"><span class="num">11</span>Hands-on: the Complete Till</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Each section added one tool. A real till receives a stream of different events (bill this table, take this payment, close the day) and must route each one. Can the functions of this note, plus <code>match</code> from <a class="xref" data-note="py_control">Decisions &amp; Loops</a>, run the whole day?</p>
-  </div>
-  <p>The till receives "events", small dicts like <code>{"type": "bill", "customer": "Asha", "lines": asha}</code>. This router uses ideas from every section: helper functions with returns, a <code>None</code> default (04), a keyword-only flag and <code>**meta</code> (05), a dict of handler functions (09), lambdas (08) and <code>match</code> guards. Predict each line, then read the output.</p>
+  <h2 id="pfn-build"><span class="num">11</span>Worked Example: an Event Router</h2>
+  <p>A router receives event dicts like <code>{"type": "bill", "customer": "Asha", "lines": asha}</code> and dispatches each one. It combines helper functions that return values, a <code>None</code> default, a keyword-only flag, <code>**meta</code>, a dict of handler functions, lambdas and <code>match</code> guards (see <a class="xref" data-note="py_control">Decisions &amp; Loops</a>). Predict each line, then read the output.</p>
   <div class="fx" data-lang="py">def till(event, handlers=None, *, verbose=False, **meta):
     handlers = handlers if handlers is not None else {}
     match event:
@@ -868,63 +788,15 @@ malformed event</div>
     <li>Line 6: no handler: <code>.get</code> returns the default lambda, which is then called.</li>
     <li>Line 7: a list, not a dict: only <code>_</code> fits.</li>
   </ul>
-  <p>And the whole day, with the <code>bill</code> function from section 09 (a dict comprehension, from <a class="xref" data-note="py_ds">Data Structures</a>, runs it for every table):</p>
+  <p>The higher-order <code>bill</code> from above, run over several orders with a dict comprehension:</p>
   <div class="fx" data-lang="py">day = {"Asha": asha, "Ben": ben, "Chen": chen}
 bills = {name: bill(lines) for name, lines in day.items()}
 print(bills, "day total:", sum(bills.values()))</div>
   <div class="fx" data-lang="text">{'Asha': 184, 'Ben': 74, 'Chen': 52} day total: 310</div>
-  <p>₹184 + ₹74 + ₹52 = ₹310: the same numbers we worked out by hand in <a class="xref" data-note="py_values">Values, Types &amp; Variables</a> and with loops in <a class="xref" data-note="py_control">Decisions &amp; Loops</a>, now produced by small named functions.</p>
   <p><strong>Extend it:</strong> add a <code>"batch"</code> case that matches <code>{"type": "batch", "events": [*evs]}</code> and routes each event by calling <code>till</code> recursively.</p>
   <div class="callout trap"><span class="label">Trap</span><p>Each handler must <em>return</em> its text; one that prints instead would make <code>out</code> None and <code>out += ...</code> would fail. The router's job is to return, the caller's job is to print.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: How It All Connects.</b> One diagram and one table to see how every function idea grew from the one before.</div>
 
-  <h2 id="pfn-connect"><span class="num">12</span>How It All Connects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>def, return, parameters, defaults, stars, scope, recursion, lambda, first-class functions, hints: separate rules to memorise, or one idea seen from different sides?</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 680 320" width="680">
-<defs><marker id="pfn-a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="240" y="8" width="200" height="44" rx="7" class="fb sb"/><text x="340" y="27" text-anchor="middle" font-size="12" font-weight="700">def: a named block</text><text x="340" y="43" text-anchor="middle" class="tm" font-size="10">a function object</text>
-<line x1="280" y1="52" x2="120" y2="86" stroke="currentColor" marker-end="url(#pfn-a9)"/><line x1="340" y1="52" x2="340" y2="86" stroke="currentColor" marker-end="url(#pfn-a9)"/><line x1="400" y1="52" x2="560" y2="86" stroke="currentColor" marker-end="url(#pfn-a9)"/>
-<rect x="20" y="88" width="200" height="44" rx="7" class="ft st"/><text x="120" y="107" text-anchor="middle" font-size="12" font-weight="700">inputs: parameters</text><text x="120" y="123" text-anchor="middle" class="tm" font-size="10">positional · keyword · defaults</text>
-<rect x="240" y="88" width="200" height="44" rx="7" class="ft st"/><text x="340" y="107" text-anchor="middle" font-size="12" font-weight="700">output: return</text><text x="340" y="123" text-anchor="middle" class="tm" font-size="10">None if missing</text>
-<rect x="460" y="88" width="200" height="44" rx="7" class="ft st"/><text x="560" y="107" text-anchor="middle" font-size="12" font-weight="700">private names: scope</text><text x="560" y="123" text-anchor="middle" class="tm" font-size="10">LEGB · global · nonlocal</text>
-<line x1="120" y1="132" x2="120" y2="166" stroke="currentColor" marker-end="url(#pfn-a9)"/>
-<rect x="10" y="168" width="220" height="44" rx="7" class="fr sr"/><text x="120" y="187" text-anchor="middle" font-size="12" font-weight="700">defaults built once</text><text x="120" y="203" text-anchor="middle" class="tm" font-size="10">mutable default trap → None</text>
-<line x1="120" y1="212" x2="120" y2="246" stroke="currentColor" marker-end="url(#pfn-a9)"/>
-<rect x="10" y="248" width="220" height="44" rx="7" class="fg sg"/><text x="120" y="267" text-anchor="middle" font-size="12" font-weight="700">*args · **kwargs</text><text x="120" y="283" text-anchor="middle" class="tm" font-size="10">any inputs; unpack in calls</text>
-<line x1="340" y1="132" x2="340" y2="166" stroke="currentColor" marker-end="url(#pfn-a9)"/><line x1="560" y1="132" x2="420" y2="166" stroke="currentColor" marker-end="url(#pfn-a9)"/>
-<rect x="250" y="168" width="180" height="44" rx="7" class="fg sg"/><text x="340" y="187" text-anchor="middle" font-size="12" font-weight="700">recursion</text><text x="340" y="203" text-anchor="middle" class="tm" font-size="10">a frame per call: 195, 215</text>
-<line x1="560" y1="132" x2="560" y2="166" stroke="currentColor" marker-end="url(#pfn-a9)"/>
-<rect x="450" y="168" width="220" height="44" rx="7" class="fg sg"/><text x="560" y="187" text-anchor="middle" font-size="12" font-weight="700">closures</text><text x="560" y="203" text-anchor="middle" class="tm" font-size="10">bill counter 1, 2, 3</text>
-<line x1="560" y1="212" x2="500" y2="246" stroke="currentColor" marker-end="url(#pfn-a9)"/><line x1="230" y1="270" x2="268" y2="270" stroke="currentColor" marker-end="url(#pfn-a9)"/>
-<rect x="270" y="248" width="400" height="44" rx="7" class="fv" stroke="currentColor" stroke-opacity="0.3"/><text x="470" y="267" text-anchor="middle" font-size="12" font-weight="700">functions as values: lambda · pass · return · wrap</text><text x="470" y="283" text-anchor="middle" class="tm" font-size="10">bill(asha, festival) = 164 → decorators</text>
-<text x="340" y="312" text-anchor="middle" class="tm" font-size="10.5">docstrings &amp; hints describe all of it: the calling contract</text>
-</svg><figcaption>A function is a named block with three faces: inputs (parameters), an output (return) and private names (scope). Defaults and stars refine the inputs; a frame per call gives recursion; remembered scopes give closures; and because the function itself is an object, it can be passed around and wrapped.</figcaption></figure>
-  <table class="tbl"><caption>Every concept on Chai Corner</caption>
-    <tr><th>Concept</th><th>Built from</th><th>Answers</th><th>On the running example</th><th>Use when</th></tr>
-    <tr><td>def / call</td><td>a block of code + a name</td><td>how to reuse code?</td><td>subtotal(asha) = 195</td><td>any repeated or nameable step</td></tr>
-    <tr><td>return / None</td><td>def</td><td>how to give back a value?</td><td>discount(195) = 19.5; print-only → None</td><td>always return, let callers print</td></tr>
-    <tr><td>Parameters, defaults</td><td>def</td><td>how do inputs get in?</td><td>with_tax(175.5) = 184.275; rate=0.12 → 196.56</td><td>keyword for clarity</td></tr>
-    <tr><td>Mutable default</td><td>defaults + mutability</td><td>why do calls share data?</td><td>Ben's order holds Asha's chai</td><td>always use None</td></tr>
-    <tr><td>*args / **kwargs</td><td>tuples, dicts</td><td>any number of inputs?</td><td>total_of(60, 45, 90) = 195</td><td>forwarding, flexible APIs</td></tr>
-    <tr><td>Keyword-/positional-only</td><td>* and / markers</td><td>how must callers pass?</td><td>pay(184, method="upi")</td><td>clear, stable APIs</td></tr>
-    <tr><td>Scope (LEGB)</td><td>names (labels) per call</td><td>which name is meant?</td><td>tax: amount L, GST_RATE G, round B</td><td>keep names local</td></tr>
-    <tr><td>Closure</td><td>enclosing scope + nonlocal</td><td>how can a function remember?</td><td>next_no() → 1, 2, 3</td><td>counters, factories, decorators</td></tr>
-    <tr><td>Recursion</td><td>a call + a base case</td><td>how to handle nested data?</td><td>total(asha) 195; party 215</td><td>trees, nesting; loops for depth 1000+</td></tr>
-    <tr><td>lambda</td><td>an expression as a function</td><td>a tiny inline function?</td><td>sort lines by amount: 90, 60, 45</td><td>key=, map</td></tr>
-    <tr><td>First-class functions</td><td>functions are objects</td><td>one bill, many rules?</td><td>bill(asha, festival) = 164; student Ben 62</td><td>strategies, callbacks, wrappers</td></tr>
-    <tr><td>Docstring / hints</td><td>strings, annotations</td><td>how to call it correctly?</td><td>bill_total(lines: list[tuple[str, int, int]]) -&gt; int</td><td>every public function</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>One sentence holds the note: <strong>a function is an object that holds a block of code with its own private names; calling it binds arguments to parameters in a fresh scope and evaluates to what it returns.</strong> Every rule here follows: defaults are stored on the object (built once), each call has its own frame (recursion), scopes can outlive calls (closures), and objects can be passed around (lambdas, strategies, decorators).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Common Mistakes.</b> Knowing how the pieces fit is half the job; the other half is knowing where people usually go wrong with them.</div>
-
-  <h2 id="pfn-traps"><span class="num">13</span>Common Mistakes</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Which function bugs appear most often in real code and in "what does this print?" interviews, and what is the fix for each?</p>
-  </div>
+  <h2 id="pfn-traps"><span class="num">12</span>Common Mistakes</h2>
   <table class="tbl">
     <tr><th>Mistake</th><th>What happens</th><th>Fix</th></tr>
     <tr><td>Printing instead of returning</td><td>Caller gets None; <code>None + 10</code> TypeError</td><td><code>return</code> the value; print at the top level</td></tr>
@@ -940,85 +812,98 @@ print(bills, "day total:", sum(bills.values()))</div>
     <tr><td><code>**kwargs</code> swallowing typos</td><td><code>gts=0.12</code> silently ignored</td><td>Keyword-only parameters; validate kwargs</td></tr>
     <tr><td>Trusting type hints to validate</td><td><code>double("ab")</code> runs</td><td>Explicit checks; mypy in CI</td></tr>
   </table>
-  <div class="bridge"><b>What this still can't tell us → next: Revision Sheet.</b> Everything in this note, condensed to one page for revision.</div>
 
   <h2 id="pfn-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>The whole note on one sheet. Running example: Chai Corner (chai 30, samosa 15, vada pav 20, cold coffee 90; 10% off at ₹150+, 5% GST, round). Functions: <code>subtotal(lines)</code>, <code>discount(sub)</code>, <code>with_tax(amount, rate=0.05)</code>, <code>bill(lines, discount_rule=discount, gst=0.05)</code>.</p>
-  <h3>The question ladder</h3>
+  <h3>def, call, return</h3>
+  <ul>
+    <li><code>def name(params): body</code> runs once, creating a function object bound to <code>name</code>; the body runs on each call.</li>
+    <li>A call binds arguments to parameters in a fresh local scope, runs the body, and evaluates to the return value.</li>
+    <li>No <code>return</code> (or bare <code>return</code>) → <code>None</code>. <code>return a, b</code> returns one tuple. <code>return</code> exits immediately (early return).</li>
+    <li>In-place methods (<code>list.sort</code>, <code>list.append</code>, <code>dict.update</code>) return None: <code>xs = xs.sort()</code> loses the list.</li>
+    <li><code>f</code> is the function object; <code>f()</code> calls it. Pass <code>f</code>, not <code>f()</code>, as a callback.</li>
+  </ul>
+  <h3>Parameters</h3>
   <table class="tbl">
-    <tr><th>Concept</th><th>Question</th><th>Answer on Chai Corner</th><th>Weakness → next</th></tr>
-    <tr><td>def / call</td><td>stop copy-pasting?</td><td>subtotal(asha), (ben), (chen) = 195, 70, 50</td><td>how does the answer come back?</td></tr>
-    <tr><td>return</td><td>hand back a value?</td><td>discount(195) = 19.5; print-only → None</td><td>inputs vary</td></tr>
-    <tr><td>Parameters</td><td>inputs, optional ones?</td><td>with_tax(175.5) = 184.275; bill(asha) = 184</td><td>defaults hide a trap</td></tr>
-    <tr><td>Mutable default</td><td>why shared data?</td><td>Ben's order holds Asha's chai</td><td>varying number of inputs</td></tr>
-    <tr><td>*args / **kwargs</td><td>any number of inputs?</td><td>total_of(60, 45, 90) = 195</td><td>who sees which names?</td></tr>
-    <tr><td>Scope / closures</td><td>which name? remember state?</td><td>GST_RATE global; counter 1, 2, 3</td><td>self-similar data</td></tr>
-    <tr><td>Recursion</td><td>nested data?</td><td>60 + (45 + (90 + 0)) = 195; party 215</td><td>tiny one-off functions</td></tr>
-    <tr><td>lambda</td><td>inline function?</td><td>key=lambda l: l[1]*l[2]</td><td>why can we pass functions?</td></tr>
-    <tr><td>First-class</td><td>one bill, many rules?</td><td>festival 164, student Ben 62, logged wrapper</td><td>how to document?</td></tr>
-    <tr><td>Docs / hints</td><td>calling contract?</td><td>-&gt; int; hints not enforced</td><td>→ <a class="xref" data-note="py_oop">OOP</a>, <a class="xref" data-note="py_decorators">Decorators</a></td></tr>
+    <tr><th>Kind</th><th>Syntax</th><th>Caller must</th></tr>
+    <tr><td>Positional-only</td><td>before <code>/</code></td><td>pass by position</td></tr>
+    <tr><td>Positional-or-keyword</td><td><code>b</code>, <code>b=default</code></td><td>either</td></tr>
+    <tr><td>Var-positional</td><td><code>*args</code></td><td>extra positionals → tuple</td></tr>
+    <tr><td>Keyword-only</td><td>after <code>*</code> or <code>*args</code></td><td>pass by name</td></tr>
+    <tr><td>Var-keyword</td><td><code>**kwargs</code></td><td>extra keywords → dict</td></tr>
   </table>
-  <h3>Syntax and rules</h3>
-  <table class="tbl">
-    <tr><th>Rule</th><th>Form</th><th>Meaning</th></tr>
-    <tr><td>Definition</td><td><code>def name(params): body</code></td><td>creates a function object; body runs per call</td></tr>
-    <tr><td>Return</td><td><code>return x</code> / none</td><td>call evaluates to x / None; <code>return a, b</code> → tuple</td></tr>
-    <tr><td>Parameter order</td><td><code>def f(a, /, b, *args, c, **kwargs)</code></td><td>pos-only, normal, extra tuple, kw-only, extra dict</td></tr>
-    <tr><td>Call order</td><td><code>f(1, 2, *lst, c=3, **d)</code></td><td>positionals before keywords</td></tr>
-    <tr><td>Defaults</td><td><code>def f(x=None)</code></td><td>evaluated once at def time; stored in <code>__defaults__</code></td></tr>
-    <tr><td>Lookup</td><td>L → E → G → B</td><td>first match; assignment makes local</td></tr>
-    <tr><td>Rebinding outer names</td><td><code>global x</code>, <code>nonlocal x</code></td><td>module name / nearest enclosing function's name</td></tr>
-    <tr><td>Recursion</td><td>base case + smaller call</td><td>limit 1000 frames; no tail-call optimisation</td></tr>
-    <tr><td>lambda</td><td><code>lambda args: expr</code></td><td>one expression, returned; late binding</td></tr>
-    <tr><td>Hints</td><td><code>def f(x: int) -&gt; int</code></td><td>stored in <code>__annotations__</code>; not enforced</td></tr>
-  </table>
-  <h3>The running example's numbers</h3>
-  <table class="tbl">
-    <tr><th>Call</th><th>Result</th></tr>
-    <tr><td>subtotal(asha), subtotal(ben), subtotal(chen)</td><td>195, 70, 50</td></tr>
-    <tr><td>discount(195), discount(70)</td><td>19.5, 0</td></tr>
-    <tr><td>with_tax(175.5), with_tax(175.5, 0.12)</td><td>184.275, 196.56</td></tr>
-    <tr><td>bill(asha), bill(ben), bill(chen) → day</td><td>184, 74, 52 → 310</td></tr>
-    <tr><td>bill(asha, festival 20%), bill(ben, student 15%)</td><td>164, 62</td></tr>
-    <tr><td>split_bill(184, 3)</td><td>(61, 1)</td></tr>
-    <tr><td>box_total(party)</td><td>215</td></tr>
-  </table>
-  <h3>When to use, when not</h3>
-  <div class="cards">
-    <div><b>def</b><p>Any step you repeat, test, or want to name.</p><small>Small: one job per function</small></div>
-    <div><b>lambda</b><p>Short key functions for sorted/max/min/map.</p><small>Not for anything you would name or reuse</small></div>
-    <div><b>Recursion</b><p>Nested or tree-shaped data; divide and conquer.</p><small>Not for flat or very deep data: loop</small></div>
-    <div><b>global</b><p>Rarely; configuration constants are read, not rebound.</p><small>Prefer arguments and return values</small></div>
-  </div>
-  <div class="callout trap"><span class="label">Key traps</span>
-    <p>Print instead of return; mutable defaults; defaults frozen at def time; UnboundLocalError from assigning a global; late binding in lambdas made in loops; missing base case; passing <code>f()</code> instead of <code>f</code>; <code>**kwargs</code> eating typos; hints are not checks.</p>
-  </div>
-  <h3>Five rapid-fire checks</h3>
-  <table class="tbl">
-    <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td><code>def f(x, l=[]): l.append(x); return l</code> — <code>f(1); print(f(2))</code>?</td><td><code>[1, 2]</code></td></tr>
-    <tr><td>Inside <code>def g(): print(n); n = 5</code>, with global n = 1: <code>g()</code>?</td><td>UnboundLocalError (n is local in all of g)</td></tr>
-    <tr><td><code>def h(*a, **k): return a, k</code> — <code>h(1, 2, x=3)</code>?</td><td><code>((1, 2), {'x': 3})</code></td></tr>
-    <tr><td><code>[f(10) for f in [lambda x: x * i for i in range(3)]]</code>?</td><td><code>[20, 20, 20]</code></td></tr>
-    <tr><td>What does a function without return give back?</td><td><code>None</code></td></tr>
-  </table>
+  <ul>
+    <li>Full order: <code>def f(a, /, b, *args, c, **kwargs)</code>. In calls, positional arguments come before keyword arguments.</li>
+    <li>Call-site unpacking: <code>f(*seq, **mapping)</code>. Forwarding: <code>def wrapper(*args, **kwargs): return func(*args, **kwargs)</code>.</li>
+    <li>Binding errors raise TypeError: missing argument, too many positionals, "got multiple values for argument".</li>
+  </ul>
+  <h3>Defaults</h3>
+  <ul>
+    <li>Evaluated <b>once</b> at <code>def</code> time, stored in <code>f.__defaults__</code>.</li>
+    <li>Mutable default (<code>[]</code>, <code>{}</code>, <code>set()</code>) is shared across calls. Idiom: <code>def f(x=None): if x is None: x = []</code>.</li>
+    <li><code>def f(rate=GST)</code> freezes GST's value at definition time.</li>
+  </ul>
+  <h3>Scope</h3>
+  <ul>
+    <li>Lookup order <b>LEGB</b>: Local → Enclosing function → Global (module) → Built-in.</li>
+    <li>Any assignment to a name in a function makes it local for the whole function (decided at compile time) → <code>count += 1</code> on a global raises <code>UnboundLocalError</code>.</li>
+    <li><code>global x</code> rebinds a module name; <code>nonlocal x</code> rebinds the nearest enclosing function's name. Mutating (<code>xs.append</code>) needs neither.</li>
+    <li>Only functions (and classes, comprehensions) create scopes; <code>if</code>/<code>for</code>/<code>while</code> blocks do not.</li>
+    <li><b>Closure</b>: an inner function keeps references to enclosing variables after the outer function returns (<code>f.__closure__</code>). Basis of factories and decorators.</li>
+  </ul>
+  <h3>Recursion</h3>
+  <ul>
+    <li>Base case + recursive call on a smaller input. Each active call is a stack frame.</li>
+    <li>Default limit 1000 (<code>sys.getrecursionlimit()</code>) → <code>RecursionError</code>; no tail-call optimisation. Deep inputs: loop + explicit stack.</li>
+    <li>Overlapping sub-problems: memoise with <code>@functools.lru_cache(maxsize=None)</code> or <code>@functools.cache</code>.</li>
+  </ul>
+  <h3>lambda and higher-order functions</h3>
+  <ul>
+    <li><code>lambda params: expr</code>: one expression, implicit return, no statements or annotations.</li>
+    <li>Common uses: <code>sorted(xs, key=lambda r: r[1])</code>, <code>max(..., key=...)</code>, <code>map</code>, <code>filter</code>.</li>
+    <li><b>Late binding</b>: closures read outer variables at call time, so lambdas built in a loop all see the last value. Fix: <code>lambda x, p=p: ...</code> or <code>functools.partial</code>.</li>
+    <li>Higher-order function: takes or returns a function (<code>sorted</code>, <code>map</code>, factories like <code>make_discount(0.15)</code>, decorators).</li>
+    <li><code>functools.partial(f, rate=0.12)</code> pre-fills arguments.</li>
+  </ul>
+  <h3>Docstrings and type hints</h3>
+  <ul>
+    <li>Docstring = first string literal in the body; <code>f.__doc__</code>, <code>help(f)</code>.</li>
+    <li>Hints: <code>def f(lines: list[tuple[str, int, int]], gst: float = 0.05) -&gt; int</code>; stored in <code>__annotations__</code>; <code>inspect.signature(f)</code>.</li>
+    <li>Not enforced at run time; checked by mypy/pyright and IDEs; Pydantic/FastAPI validate with them on purpose.</li>
+  </ul>
+  <h3>Gotchas</h3>
+  <ul>
+    <li>Print instead of return → caller gets None.</li>
+    <li>Mutable default shared between calls.</li>
+    <li>Assigning to a global inside a function → UnboundLocalError.</li>
+    <li>Lambdas created in a loop all use the final loop value.</li>
+    <li><code>**kwargs</code> silently swallows misspelt keyword arguments.</li>
+    <li>Swapped positional arguments give wrong answers without an error: use keywords.</li>
+    <li>A wrapper without <code>functools.wraps</code> hides the original <code>__name__</code> and docstring.</li>
+  </ul>
 
-  <h2 id="pfn-qa"><span class="num">14</span>Questions &amp; Answers</h2>
+  <h2 id="pfn-qa"><span class="num">13</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between a parameter and an argument?</summary><div class="qa-body">A parameter is the name in the <code>def</code> line (<code>amount</code>); an argument is the value passed in a call (<code>175.5</code>). Arguments bind to parameters by position, then by keyword.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does a function return if it has no return statement? Why does it matter?</summary><div class="qa-body"><code>None</code>. A function that prints its result instead of returning it cannot be reused: <code>x = show_subtotal(asha)</code> gives None and <code>x + 10</code> raises TypeError. In-place methods like <code>list.sort()</code> return None on purpose.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Explain the mutable default argument trap and its fix.</summary><div class="qa-body">Defaults are built once, when <code>def</code> runs, and stored in <code>f.__defaults__</code>. <code>def add_line(line, order=[])</code> shares one list across all calls, so Ben's "new" order contains Asha's chai. Fix: <code>order=None</code>, then <code>if order is None: order = []</code> inside.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What do <code>*args</code> and <code>**kwargs</code> become inside the function?</summary><div class="qa-body"><code>args</code> is a tuple of extra positional arguments. <code>kwargs</code> is a dict of extra keyword arguments. At a call, <code>f(*lst)</code> and <code>f(**d)</code> unpack. The names are just habit; the stars matter. Order: <code>a, /, b, *args, kw, **kwargs</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why would you make a parameter keyword-only?</summary><div class="qa-body">Clear and safe calls: callers must write <code>pay(184, method="upi")</code>, so arguments cannot be swapped by position. You can also reorder or add parameters later without breaking old calls. Put a bare <code>*</code> before them.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Explain LEGB, <code>global</code> and <code>nonlocal</code>.</summary><div class="qa-body">Lookup order: Local → Enclosing function → Global (module) → Built-in; first match wins. Assigning to a name makes it local to the function. <code>global x</code> lets a function rebind the module-level x. <code>nonlocal x</code> rebinds the nearest outer function's x (used in closures).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why does <code>count += 1</code> inside a function raise <code>UnboundLocalError</code> when <code>count</code> is global?</summary><div class="qa-body">The assignment makes <code>count</code> local for the whole function, decided before the code runs. So the read on the right side finds a local with no value yet. Fix with <code>global count</code>, or better, pass it in and return the new value.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is a closure? Give a use.</summary><div class="qa-body">An inner function that keeps references to variables of the function it was defined in, even after that function returned. <code>make_bill_counter()</code> returns <code>next_bill_no</code>, which remembers and updates its own <code>n</code> (1, 2, 3). Uses: counters, configurable functions (<code>make_discount(0.15)</code>), decorators.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What's the output? <code>fs = [lambda: i for i in range(3)]; print([f() for f in fs])</code></summary><div class="qa-body"><code>[2, 2, 2]</code>. Each lambda reads <code>i</code> when called, after the loop finished. Fix: <code>lambda i=i: i</code> or <code>functools.partial</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Your recursive tree walk crashes with <code>RecursionError</code> on deep data. Options?</summary><div class="qa-body">Python's default depth limit is about 1000, with no tail-call optimisation. Best fix: rewrite as a loop with your own stack (a list). Raising <code>sys.setrecursionlimit</code> is a stopgap and can crash Python. If sub-problems repeat, add <code>@lru_cache</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Are type hints enforced at run time?</summary><div class="qa-body">No. <code>def double(x: int) -&gt; int</code> happily returns "abab" for "ab". Hints are stored in <code>__annotations__</code> and used by editors and checkers like mypy; libraries such as Pydantic and FastAPI choose to validate with them.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does the mutable-default trap need ideas from both earlier notes?</summary><div class="qa-body">From <a class="xref" data-note="py_values">Values, Types &amp; Variables</a>: names are labels and lists are mutable, so two labels on one list see each other's appends. From this note: defaults are evaluated once and stored on the function. Put together, every call that omits the argument gets a label on the same stored list. With an immutable default (<code>rate=0.05</code>) nothing can go wrong, because it cannot be changed in place.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why do decorators need closures and <code>*args, **kwargs</code>?</summary><div class="qa-body">A decorator returns a wrapper function that must (1) remember which original function to call: that is a closure over <code>func</code>; and (2) accept any arguments the original accepts and forward them unchanged: that is <code>*args, **kwargs</code> collecting and then unpacking. <code>logged(with_tax)</code> in section 09 is a decorator without the <code>@</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks if you skip functions and keep the billing script from Decisions &amp; Loops?</summary><div class="qa-body">Every place that needs a bill gets a copy of the loop. A rule change (GST 5% → 12%) must be made in every copy; miss one and customers are billed differently (Asha ₹184 at 5%, Ben ₹78 at 12% in section 01). Functions put each rule in exactly one place and give it a name.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between a parameter and an argument?</summary><div class="qa-body">A parameter is a name in the function definition (<code>def with_tax(amount, rate=0.05)</code>); an argument is the value supplied in a call (<code>with_tax(175.5, rate=0.12)</code>). Arguments bind to parameters positionally first, then by keyword.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does a function return if it has no <code>return</code> statement?</summary><div class="qa-body"><code>None</code>. This is why a helper that prints its result cannot be reused (<code>x = show(…)</code> is None, and <code>x + 10</code> raises TypeError), and why <code>xs = xs.sort()</code> sets <code>xs</code> to None: in-place methods return None by convention.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does this print? <code>def f(x, l=[]): l.append(x); return l</code>, then <code>f(1); f(2); print(f(3))</code></summary><div class="qa-body"><code>[1, 2, 3]</code>. The default list is created once when <code>def</code> executes and stored in <code>f.__defaults__</code>; every call that omits <code>l</code> appends to that same list. Fix: <code>def f(x, l=None): if l is None: l = []</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What are <code>*args</code> and <code>**kwargs</code>?</summary><div class="qa-body">In a definition, <code>*args</code> collects extra positional arguments into a tuple and <code>**kwargs</code> collects extra keyword arguments into a dict. In a call, <code>*seq</code> and <code>**mapping</code> unpack into arguments. Together they let a wrapper accept and forward any call: <code>return func(*args, **kwargs)</code>. The names are convention; the stars do the work.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What do <code>/</code> and <code>*</code> mean in a parameter list?</summary><div class="qa-body">Parameters before <code>/</code> are positional-only; parameters after <code>*</code> (or <code>*args</code>) are keyword-only. <code>def pay(amount, /, *, method="cash")</code> forces <code>pay(184, method="upi")</code>. Keyword-only parameters prevent swapped arguments and let you add or reorder options later; positional-only lets you rename a parameter without breaking callers (many built-ins use it).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Can a function change a variable in the caller?</summary><div class="qa-body">It can mutate the object the caller passed (append to a list, set a dict key), and the caller sees it, because the parameter is another name for the same object. It cannot rebind the caller's variable: <code>param = []</code> inside the function only moves the local name. This is "call by object reference" (call by sharing).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain the LEGB rule.</summary><div class="qa-body">When a name is read, Python searches Local (the current function), Enclosing (outer functions, innermost first), Global (the module), then Built-in (<code>len</code>, <code>print</code>), and uses the first match; if none, NameError. Which scope a name belongs to is decided at compile time from where it is assigned.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does this raise <code>UnboundLocalError</code>? <code>x = 10</code>; <code>def show(): print(x); x = 5</code></summary><div class="qa-body">Because <code>x</code> is assigned somewhere in <code>show</code>, the compiler treats it as local for the whole function. The <code>print(x)</code> then reads a local that has no value yet: "cannot access local variable 'x' where it is not associated with a value". Fix: rename, pass it in as a parameter, or declare <code>global x</code> if you really mean the module variable.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between <code>global</code> and <code>nonlocal</code>?</summary><div class="qa-body"><code>global x</code> makes assignments in the function rebind the module-level <code>x</code>. <code>nonlocal x</code> rebinds <code>x</code> in the nearest enclosing function scope (it must already exist there); it is what lets a closure update a counter. Neither is needed just to read, or to mutate an object in place.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a closure? Give a practical use.</summary><div class="qa-body">A function that keeps references to variables from the scope where it was defined, after that scope has returned. <code>make_discount(0.15)</code> returns <code>rule</code>, which still sees <code>pct</code> (stored in <code>rule.__closure__</code>). Uses: function factories, counters without globals, callbacks carrying configuration, and decorators (the wrapper closes over <code>func</code>).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does this print? <code>fs = [lambda: i for i in range(3)]; print([f() for f in fs])</code></summary><div class="qa-body"><code>[2, 2, 2]</code>. Each lambda looks up <code>i</code> when it is called, not when it was created (late binding), and by then the comprehension has finished with <code>i = 2</code>. Fix: bind the current value as a default, <code>lambda i=i: i</code>, or use <code>functools.partial</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What are the limitations of <code>lambda</code> compared to <code>def</code>?</summary><div class="qa-body">A lambda is a single expression: no statements (no assignment except <code>:=</code>, no <code>try</code>, no loops), no annotations, no docstring, and its <code>__name__</code> is <code>&lt;lambda&gt;</code>, which makes tracebacks less clear. It supports the same parameter kinds. Use it for short key functions and callbacks; use <code>def</code> for anything you would name, reuse or test.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does "functions are first-class objects" mean? What is a higher-order function?</summary><div class="qa-body">Functions can be bound to names, stored in containers, passed as arguments and returned from other functions, like any other object. A higher-order function takes or returns functions: <code>sorted(xs, key=...)</code>, <code>map</code>, <code>filter</code>, <code>functools.partial</code>, factories like <code>make_discount</code>, and decorators.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a decorator, in one sentence, and how does it relate to closures?</summary><div class="qa-body">A decorator is a callable that takes a function and returns a replacement, applied with <code>@dec</code> above a <code>def</code> (shorthand for <code>f = dec(f)</code>). The replacement is usually a closure over the original <code>func</code> that accepts <code>*args, **kwargs</code>, adds behaviour (logging, timing, caching, retries) and forwards the call. See <a class="xref" data-note="py_decorators">Closures &amp; Decorators</a>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you return multiple values from a function?</summary><div class="qa-body"><code>return a, b</code> returns one tuple, which the caller can unpack: <code>share, left = split_bill(184, 3)</code> gives 61 and 1. For more than two or three values, return a <code>namedtuple</code>, dataclass or dict so fields have names.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Your recursive function raises <code>RecursionError</code> on deep input. What are your options?</summary><div class="qa-body">CPython limits recursion depth to about 1000 frames and does no tail-call optimisation. Best fix: rewrite iteratively with an explicit stack (a list) or a loop. <code>sys.setrecursionlimit</code> is a stopgap that can crash the interpreter with a C stack overflow. If the recursion recomputes the same sub-problems, memoise with <code>@lru_cache</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does <code>@functools.lru_cache</code> do, and when must you not use it?</summary><div class="qa-body">It memoises: results are stored in a dict keyed by the arguments, so repeated calls return instantly (naive <code>fib(80)</code> becomes instant). Arguments must be hashable, so lists and dicts cannot be passed. Do not use it on functions with side effects or results that depend on changing external state, and bound it (<code>maxsize</code>) if the argument space is large.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Are type hints enforced at run time?</summary><div class="qa-body">No. <code>def double(x: int) -&gt; int</code> happily returns "abab" for <code>double("ab")</code>. Hints are stored in <code>__annotations__</code> and used by static checkers (mypy, pyright), IDEs, and libraries that opt in to validation such as Pydantic and FastAPI. Validate untrusted input explicitly.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is <code>functools.partial</code> used for?</summary><div class="qa-body">It creates a new callable with some arguments pre-filled: <code>gst12 = partial(with_tax, rate=0.12)</code>, then <code>gst12(100)</code> gives 112.0. Useful for callbacks that must take fewer arguments than your function, for fixing hyperparameters before passing a function to a library, and as a late-binding-safe alternative to lambdas in loops.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why prefer pure functions (no side effects, no globals) where possible?</summary><div class="qa-body">A pure function's output depends only on its inputs, so it is easy to test, reason about, cache and run in parallel. Functions that read or rebind globals, or mutate their arguments, create hidden coupling: the bug appears far from its cause. Pass inputs in, return outputs, and keep I/O at the edges.</div></details>
+
 </main>
 `
 });
