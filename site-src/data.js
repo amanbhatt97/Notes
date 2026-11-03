@@ -2,19 +2,19 @@ const CATEGORIES = [
   { key: "python", label: "Python Programming", emoji: "\ud83d\udc0d", tag: "Foundation", blurb: "Clean, idiomatic, production-level Python", hue: 200, topics: [
     {"key": "grp_py_fund", "label": "Fundamentals", "children": [
       {"key": "grp_py_basics", "label": "Python Basics", "children": [
-        {"key": "py_fundamentals", "label": "The Map: Python Basics"},
+        {"key": "py_fundamentals", "label": "How Python Runs Your Code"},
         {"key": "py_values",       "label": "Values, Types & Variables"},
         {"key": "py_control",      "label": "Decisions & Loops"},
         {"key": "py_functions",    "label": "Functions"}
       ]},
       {"key": "grp_py_ds", "label": "Collections", "children": [
-        {"key": "py_ds",           "label": "The Map: Python Collections"},
+        {"key": "py_ds",           "label": "Choosing a Collection"},
         {"key": "py_lists_tuples", "label": "Lists & Tuples"},
         {"key": "py_dicts_sets",   "label": "Dicts & Sets"},
         {"key": "py_strings",      "label": "Strings"}
       ]},
-      {"key": "grp_py_io", "label": "Programs Meet the Real World", "children": [
-        {"key": "py_io",           "label": "The Map: Programs Meet the Real World"},
+      {"key": "grp_py_io", "label": "I/O, Errors & Packages", "children": [
+        {"key": "py_io",           "label": "Input, Output & CLI Programs"},
         {"key": "py_exceptions",   "label": "Exceptions & Error Handling"},
         {"key": "py_files",        "label": "Files & Data Formats"},
         {"key": "py_modules",      "label": "Modules, Packages & Environments"}
@@ -22,25 +22,25 @@ const CATEGORIES = [
     ]},
     {"key": "grp_py_adv", "label": "Advanced Python", "children": [
       {"key": "grp_py_oop", "label": "Object-Oriented Python", "children": [
-        {"key": "py_oop",         "label": "The Map: Object-Oriented Python"},
+        {"key": "py_oop",         "label": "OOP Concepts"},
         {"key": "py_classes",     "label": "Classes & Objects"},
         {"key": "py_inheritance", "label": "Inheritance, Polymorphism & Design"},
         {"key": "py_dunder",      "label": "Dunder Methods & the Data Model"}
       ]},
       {"key": "grp_py_func", "label": "Iterators, Decorators & Context Managers", "children": [
-        {"key": "py_advanced",    "label": "The Map: Advanced Functions"},
+        {"key": "py_advanced",    "label": "Functional Programming Tools"},
         {"key": "py_iterators",   "label": "Iterators & Generators"},
         {"key": "py_decorators",  "label": "Closures & Decorators"},
         {"key": "py_context",     "label": "Context Managers"}
       ]},
       {"key": "grp_py_conc", "label": "Concurrency", "children": [
-        {"key": "py_concurrency",     "label": "The Map: Concurrency in Python"},
+        {"key": "py_concurrency",     "label": "Concurrency vs Parallelism"},
         {"key": "py_threading",       "label": "Threads & the GIL"},
         {"key": "py_multiprocessing", "label": "Processes: multiprocessing"},
         {"key": "py_asyncio",         "label": "asyncio"}
       ]},
       {"key": "grp_py_test", "label": "Testing & Debugging", "children": [
-        {"key": "py_testing",   "label": "The Map: Making Code Trustworthy"},
+        {"key": "py_testing",   "label": "Testing Fundamentals"},
         {"key": "py_pytest",    "label": "Testing with pytest"},
         {"key": "py_mocking",   "label": "Mocks & Test Doubles"},
         {"key": "py_debugging", "label": "Debugging, Profiling & Logging"}
