@@ -28,7 +28,7 @@ const CATEGORIES = [
         {"key": "py_dunder",      "label": "Dunder Methods & the Data Model"}
       ]},
       {"key": "grp_py_func", "label": "Iterators, Decorators & Context Managers", "children": [
-        {"key": "py_advanced",    "label": "The Map: Advanced Functions"},
+        {"key": "py_advanced",    "label": "Functional Programming Tools"},
         {"key": "py_iterators",   "label": "Iterators & Generators"},
         {"key": "py_decorators",  "label": "Closures & Decorators"},
         {"key": "py_context",     "label": "Context Managers"}
