@@ -1,121 +1,53 @@
 // dl/dl_cnns.js — CNNs — Convolutional Neural Networks
 Object.assign(TOPIC_CONTENT, {
   "dl_cnns": `<main>
-  <h1>CNNs — Convolutional Neural Networks</h1>
+<h1>CNNs — Convolutional Neural Networks</h1>
   <div class="where"><span>Deep Learning</span><span>CNNs</span></div>
-  <p class="lead">A CNN is a neural network made for images. It slides one small filter over the whole picture to find edges, then stacks such layers to find shapes and objects. This note builds every idea on <strong>one running example</strong>: a 5 × 5 grey photo patch of a road, and the question "is there a pothole here?". On that patch we count why a plain network is wasteful, compute a convolution by hand, trace padding and stride with the output-size formula, add more filters and channels, read the feature maps, pool them, grow the receptive field by stacking, and then follow the story to deep networks: why they stop training (ResNet), how to grow them efficiently (EfficientNet), and how to reuse a pretrained one for our pothole detector (transfer learning). All code ran here (PyTorch 2.14 CPU, single thread).</p>
+  <p class="lead">A convolutional neural network, or CNN, is a neural network designed for images and other grid-shaped data. Instead of connecting every pixel to every neuron, it slides one small filter over the whole picture to find simple patterns such as edges, and then stacks such layers so that edges combine into shapes and shapes into objects. CNNs are behind road and factory defect inspection, medical scans, reading invoices, the vision part of self-driving cars, and the image side of many multimodal AI systems, and they are a favourite interview topic because so much of them can be calculated by hand. Our running example is a road-inspection van that photographs the road and asks of each small patch: <strong>is there a pothole here?</strong> We start with a tiny 5 × 5 grey patch so that every number can be computed by hand, then train a real CNN in PyTorch on thousands of generated road patches, and finally follow the same problem through the famous architectures and transfer learning. All code on this page was run for real (PyTorch 2.15, CPU).</p>
 
-  <h2 id="dc-fit" class="open"><span class="num">★</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 660 200" width="660">
-<defs><marker id="dc-a0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="10" y="20" width="150" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="85" y="41" text-anchor="middle" font-size="12">Neurons · Backprop</text><text x="85" y="58" text-anchor="middle" class="tm" font-size="10">· Training (MLPs)</text>
-<rect x="10" y="120" width="150" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="85" y="141" text-anchor="middle" font-size="12">PyTorch / Keras</text><text x="85" y="158" text-anchor="middle" class="tm" font-size="10">the tools</text>
-<rect x="245" y="70" width="150" height="56" rx="8" class="fg sg" stroke-width="3"/><text x="320" y="93" text-anchor="middle" font-size="13" font-weight="700">CNNs</text><text x="320" y="112" text-anchor="middle" class="tg" font-size="10.5">YOU ARE HERE · images</text>
-<rect x="480" y="20" width="160" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="560" y="41" text-anchor="middle" font-size="12">RNNs</text><text x="560" y="58" text-anchor="middle" class="tm" font-size="10">sequences, not grids</text>
-<rect x="480" y="120" width="160" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="560" y="141" text-anchor="middle" font-size="12">Attention → Transformers</text><text x="560" y="158" text-anchor="middle" class="tm" font-size="10">also used on images (ViT)</text>
-<line x1="160" y1="45" x2="243" y2="90" stroke="currentColor" marker-end="url(#dc-a0)"/><line x1="160" y1="145" x2="243" y2="108" stroke="currentColor" marker-end="url(#dc-a0)"/>
-<line x1="395" y1="90" x2="478" y2="48" stroke="currentColor" marker-end="url(#dc-a0)"/><line x1="395" y1="108" x2="478" y2="142" stroke="currentColor" marker-end="url(#dc-a0)"/>
-<text x="330" y="192" text-anchor="middle" class="tm" font-size="10.5">same idea throughout: share weights where the data repeats its structure</text>
-</svg><figcaption>CNNs are the first specialised architecture of the Deep Learning track: an MLP rebuilt for grids of pixels.</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: <a class="xref" data-note="dl_neurons">Neurons &amp; MLPs</a>, <a class="xref" data-note="dl_backprop">Backpropagation</a>, <a class="xref" data-note="dl_training">Training Neural Networks</a></b><span>We can build a network of fully connected layers and train it with gradients, using <a class="xref" data-note="dl_pytorch">PyTorch</a>. Left open: an MLP treats every pixel as an unrelated input, so on images it needs millions of weights and has no idea that neighbouring pixels belong together.</span></li>
-    <li><b>This note adds: weight sharing over space</b><span>One small filter slid over the whole image (convolution), the bookkeeping that controls sizes (padding, stride, channels, pooling), and the architecture ideas that made deep image models work (stacking, ResNet, EfficientNet, transfer learning).</span></li>
-    <li><b>Leads to: <a class="xref" data-note="dl_rnns">RNNs</a> and <a class="xref" data-note="dl_attention">Attention</a></b><span>Text and time series are not grids but sequences of any length; the RNN shares weights over <em>time</em> the way a CNN shares them over <em>space</em>. Later, <a class="xref" data-note="transformers">Transformers</a> replace both with attention (Vision Transformers cut an image into patches). The same CNN is written in Keras in <a class="xref" data-note="dl_keras">TensorFlow &amp; Keras</a>.</span></li>
-  </ol>
-
-  <h2 id="dc-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
-  <p>The whole note as one chain. Each concept answers the question above it; its weakness raises the next question. Every number is from our 5 × 5 road patch.</p>
-  <ol class="story">
-    <li><b>MLP on pixels</b><span>Q: can the network we already know read a photo? → Flatten it and connect every pixel to every neuron: 416 weights for one 16-neuron layer on our 25-pixel patch, 150.5 million for a 224 × 224 colour photo. And a pothole moved one pixel touches completely different weights…</span></li>
-    <li><b>Convolution</b><span>Q: how do we look only at neighbours and reuse what we learn everywhere? → Slide one 3 × 3 filter (10 numbers) over the patch: the edge filter gives 21 at the pothole's left edge, −21 at its right edge. But the 5 × 5 patch shrank to 3 × 3…</span></li>
-    <li><b>Padding &amp; stride</b><span>Q: how do we control the output size? → out = ⌊(W − K + 2P)/S⌋ + 1: padding 1 keeps 5 × 5, stride 2 gives 3 × 3. But one filter finds only one kind of pattern…</span></li>
-    <li><b>Many filters, many channels</b><span>Q: how do we look for several patterns, and in colour? → One filter per pattern; each filter spans all input channels: Conv2d(1, 2, 3) has 20 weights, on RGB Conv2d(3, 2, 3) has 56. What do the outputs mean?</span></li>
-    <li><b>Feature maps</b><span>Q: what does a filter's output tell us? → A map of "where is my pattern": after ReLU, left-edge map [[14, 7, 0], [21, 13, 0], [15, 6, 0]]; it moves when the pothole moves. But the maps are as big as the image, and the exact pixel hardly matters…</span></li>
-    <li><b>Pooling</b><span>Q: how do we keep "found it" but drop "exactly where"? → Max over 2 × 2 windows: the 5 × 5 map becomes [[14, 7], [21, 13]]; global max = 21 whether or not the pothole shifted. But one 3 × 3 layer only ever sees 3 × 3 pixels…</span></li>
-    <li><b>Stacking &amp; receptive field</b><span>Q: how does the network see a whole pothole, then a whole road? → Stack layers: two 3 × 3 convs see 5 × 5 (our whole patch), add a pool and a conv and it is 10 × 10. Recipe: shrink space, add channels. But stack 20, 50 layers and…</span></li>
-    <li><b>Deeper nets stop training → ResNet</b><span>Q: why does a deeper plain net get <em>worse</em>, even on training data? → The gradient is multiplied by a small factor per layer (10⁻¹⁴ at layer 1 of 50). Skip connections y = F(x) + x add a "+1" path (gradient 16). Now we can go deep, but how should we grow a net for more compute?</span></li>
-    <li><b>Efficient designs (EfficientNet)</b><span>Q: deeper, wider or sharper images? → All three together in a fixed ratio: FLOPs ×2 per step. Great models, but we have only a few hundred labelled road photos…</span></li>
-    <li><b>Transfer learning</b><span>Q: how do we train a pothole detector from 500 photos? → Reuse an ImageNet backbone that already knows edges and textures; train only a new 2-class head (1,026 weights out of 11.2 million), then gently fine-tune the top stage.</span></li>
-  </ol>
-
-  <h2 id="dc-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="dc-map"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">CNNs</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">Why not an MLP</div>
+        <div class="mm-title">Why convolution</div>
         <ul>
-          <li><b>Our 5×5 patch</b> → Linear(25, 16) = 416 weights; one 3×3 filter = 10</li>
-          <li><b>224×224×3 photo</b> → 1000 units = 150.5M weights; Conv2d(3,64,3) = 1,792</li>
-          <li><b>Locality</b>: neighbours matter; <b>sharing</b>: same filter everywhere</li>
-          <li><b>Equivariance</b>: pothole shifts → map shifts</li>
-          <li>💡 One rubber stamp pressed on every spot of the page</li>
+          <li>MLP on pixels: huge weight counts, no idea of neighbours</li>
+          <li>One small filter, <b>shared</b> at every position</li>
+          <li><b>Equivariance</b>: shift the input, the map shifts too</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Convolution</div>
+        <div class="mm-title">One layer</div>
         <ul>
-          <li><b>out(i,j)</b> = Σ kernel · patch(i,j) + bias</li>
-          <li>Edge filter [[1,0,−1]]×3 = left column − right column</li>
-          <li>Pothole: [[14, 7, −14], [21, 13, −21], [15, 6, −15]]</li>
-          <li>+ = bright→dark edge (left rim), − = dark→bright (right rim)</li>
-          <li>⚠ DL "convolution" is cross-correlation (no flip)</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Padding &amp; stride</div>
-        <ul>
-          <li><b>out = ⌊(W − K + 2P)/S⌋ + 1</b></li>
-          <li>5, K3, P0, S1 → 3 · P1 → 5 · P1 S2 → 3</li>
-          <li>Zero padding makes fake border edges (−16 at the corner)</li>
-          <li>1×1 conv mixes channels only</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Filters, channels, maps</div>
-        <ul>
-          <li>Filter depth = input channels; 3×3 on RGB = 27 weights</li>
-          <li>Params = C<sub>out</sub>·C<sub>in</sub>·k·k + C<sub>out</sub></li>
-          <li>Conv2d(1,2,3) = 20 · Conv2d(3,2,3) = 56 · Conv2d(64,128,3) = 73,856</li>
-          <li>ReLU keeps "pattern found"; maps shift with the input</li>
-          <li>Hierarchy: edges → textures → parts → objects</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Pooling</div>
-        <ul>
-          <li>Max 2×2: [[14, 7], [21, 13]]; avg keeps weak signals</li>
-          <li>Global max/avg: whole map → 1 number per channel</li>
-          <li>0 params; small shift tolerance</li>
-          <li>⚠ Modern nets often use stride-2 convs instead</li>
+          <li>out(i, j) = Σ filter × window + bias</li>
+          <li>Size: ⌊(W − K + 2P)/S⌋ + 1</li>
+          <li>Params: C<sub>out</sub>·C<sub>in</sub>·k·k + C<sub>out</sub></li>
+          <li>ReLU, then pooling (max / average / global)</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Stacking</div>
         <ul>
-          <li><b>Receptive field</b> r += (k − 1)·jump; jump ×= stride</li>
-          <li>3 → 5 → 6 → 10 (conv, conv, pool, conv), checked by gradients</li>
-          <li>Recipe: [conv-BN-ReLU] → downsample; spatial ↓ channels ↑; GAP → Linear</li>
-          <li>Two 3×3 = one 5×5 view, 28% fewer weights</li>
-          <li>Digits: CNN 98%; 1-pixel shift CNN 63% vs MLP 45%</li>
+          <li>Receptive field grows: 3 → 5 → 6 → 10</li>
+          <li>Recipe: shrink space, add channels, global pool, Linear</li>
+          <li>Edges → textures → parts → objects</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">ResNet &amp; EfficientNet</div>
+        <div class="mm-title">Architectures</div>
         <ul>
-          <li>Degradation: deeper plain nets → higher <em>training</em> error</li>
-          <li>y = F(x) + x → ∂y/∂x = ∂F/∂x + 1</li>
-          <li>50 layers: first-layer grad 1e-14 plain vs 16 with skips</li>
-          <li>Compound scaling α<sup>φ</sup>, β<sup>φ</sup>, γ<sup>φ</sup>; α·β²·γ² ≈ 2</li>
+          <li>LeNet → AlexNet → VGG (stacked 3×3)</li>
+          <li><b>ResNet</b>: y = F(x) + x keeps gradients alive</li>
+          <li>MobileNet / EfficientNet: depthwise convs, compound scaling</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Transfer learning</div>
         <ul>
-          <li>Freeze backbone, new head Linear(512, 2) = 1,026 weights</li>
-          <li>Then unfreeze layer4 at LR 1e-5, head 1e-3</li>
-          <li>Same preprocessing as pretraining (resize, ImageNet mean/std)</li>
-          <li>⚠ High LR on pretrained layers → catastrophic forgetting</li>
+          <li>Reuse a trained backbone, train a new head</li>
+          <li>ResNet-18 → Linear(512, 2): 1,026 trainable</li>
+          <li>Unfreeze top stage later with a tiny learning rate</li>
         </ul>
       </div>
     </div>
@@ -124,93 +56,68 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="dc-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain</span></div></div>
-      <div class="rm-item rm-done" data-target="dc-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Why Not an MLP?</span><span class="rm-sub">The road patch, weights counted</span></div></div>
-      <div class="rm-item rm-done" data-target="dc-conv"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">The Convolution Operation</span><span class="rm-sub">Edge filter on 5×5, by hand</span></div></div>
-      <div class="rm-item rm-done" data-target="dc-pad"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Padding &amp; Stride</span><span class="rm-sub">The output-size formula traced</span></div></div>
-      <div class="rm-item rm-done" data-target="dc-maps"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Filters &amp; Channels</span><span class="rm-sub">Many patterns, colour input</span></div></div>
-      <div class="rm-item rm-done" data-target="dc-fmap"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Feature Maps</span><span class="rm-sub">ReLU, reading maps, equivariance</span></div></div>
-      <div class="rm-item rm-done" data-target="dc-pool"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Pooling</span><span class="rm-sub">Max, average, global</span></div></div>
-      <div class="rm-item rm-done" data-target="dc-stack"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Stacking &amp; Receptive Field</span><span class="rm-sub">From edges to objects</span></div></div>
-      <div class="rm-item rm-done" data-target="dc-train"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Hands-on: Train a CNN</span><span class="rm-sub">Digits, CNN vs MLP</span></div></div>
-      <div class="rm-item rm-done" data-target="dc-res"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">ResNet Skip Connections</span><span class="rm-sub">Why deep nets stopped training</span></div></div>
-      <div class="rm-item rm-done" data-target="dc-eff"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">EfficientNet Scaling</span><span class="rm-sub">Depth × width × resolution</span></div></div>
-      <div class="rm-item rm-done" data-target="dc-tl"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Transfer Learning</span><span class="rm-sub">A pothole detector from 500 photos</span></div></div>
-      <div class="rm-item rm-done" data-target="dc-connect"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One idea, many consequences</span></div></div>
-      <div class="rm-item rm-done" data-target="dc-traps"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Shapes, params, pretrained LR</span></div></div>
-      <div class="rm-item rm-done" data-target="dc-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note in 10 minutes</span></div></div>
-      <div class="rm-item rm-done" data-target="dc-qa"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
+      <div class="rm-item rm-done" data-target="dc-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Why Not an MLP?</span><span class="rm-sub">what goes wrong when a plain network reads pixels</span></div></div>
+      <div class="rm-item rm-done" data-target="dc-conv"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">The Convolution Operation</span><span class="rm-sub">sliding a filter over the road patch, by hand</span></div></div>
+      <div class="rm-item rm-done" data-target="dc-pad"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Padding and Stride</span><span class="rm-sub">controlling the output size</span></div></div>
+      <div class="rm-item rm-done" data-target="dc-maps"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Filters and Channels</span><span class="rm-sub">many patterns, colour input, counting parameters</span></div></div>
+      <div class="rm-item rm-done" data-target="dc-fmap"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Feature Maps and Equivariance</span><span class="rm-sub">what a filter's output means</span></div></div>
+      <div class="rm-item rm-done" data-target="dc-pool"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Pooling</span><span class="rm-sub">keeping "found it", dropping "exactly where"</span></div></div>
+      <div class="rm-item rm-done" data-target="dc-stack"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Receptive Field and the CNN Recipe</span><span class="rm-sub">how stacked layers see whole objects</span></div></div>
+      <div class="rm-item rm-done" data-target="dc-train"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Training a CNN</span><span class="rm-sub">a pothole detector in PyTorch, CNN vs MLP</span></div></div>
+      <div class="rm-item rm-done" data-target="dc-arch"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Classic Architectures</span><span class="rm-sub">LeNet, AlexNet, VGG, Inception</span></div></div>
+      <div class="rm-item rm-done" data-target="dc-res"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">ResNet and Skip Connections</span><span class="rm-sub">why very deep networks stopped training</span></div></div>
+      <div class="rm-item rm-done" data-target="dc-eff"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Efficient CNNs</span><span class="rm-sub">depthwise convolutions and EfficientNet scaling</span></div></div>
+      <div class="rm-item rm-done" data-target="dc-tl"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Transfer Learning</span><span class="rm-sub">a good detector from very few labels</span></div></div>
+      <div class="rm-item rm-done" data-target="dc-traps"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">layouts, hard-coded sizes, parameter counts</span></div></div>
+      <div class="rm-item rm-done" data-target="dc-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">formulas, tables, gotchas</span></div></div>
+      <div class="rm-item rm-done" data-target="dc-qa"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">what interviewers ask about CNNs</span></div></div>
     </div>
   </div>
 
   <h2 id="dc-why"><span class="num">01</span>Why Not an MLP?</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>From the foundations notes we can train a fully connected network (an MLP) on any list of numbers. A photo is a grid of numbers. So why not just flatten the photo into a list and use the MLP we already have?</p>
-  </div>
-  <h3>The running example: is there a pothole here?</h3>
-  <p>A city's road-inspection van photographs the road every few metres. We cut each photo into small square patches and want a model that answers "pothole or not?" for each patch. To be able to compute everything by hand, our patch is tiny: 5 × 5 pixels, grey, brightness 0 (black) to 8 (bright asphalt). Here is a patch with a pothole: the dark hole sits in the middle, a little lopsided, as real potholes are.</p>
-<div class="fx" data-lang="py">import numpy as np, torch, torch.nn as nn, torch.nn.functional as F
+  <p>A city's road-inspection van photographs the road every few metres, and the photos are cut into small square patches. We want a model that answers "pothole or not?" for each patch. From the foundations notes we already know one kind of network, the multi-layer perceptron or <strong>MLP</strong>, in which every input is connected to every neuron of the next layer (a <a class="xref" data-note="dl_neurons">fully connected layer</a>). A photo is just a grid of numbers, so the obvious first idea is to flatten the grid into one long list and feed it to an MLP. Let us see why that works badly.</p>
+  <p>To be able to compute everything by hand, our first patch is tiny: 5 × 5 pixels, grey, with brightness from 0 (black) to 8 (bright asphalt). It contains a pothole: a dark hole in the middle, a little lopsided, as real potholes are.</p>
+    <div class="fx" data-lang="py">import numpy as np, torch, torch.nn as nn, torch.nn.functional as F
 patch = np.array([[8, 8, 8, 8, 8],      # row 0: smooth road
-                  [8, 8, 2, 1, 8],      # row 1: hole starts
+                  [8, 8, 2, 1, 8],      # row 1: the hole starts
                   [8, 1, 0, 1, 8],      # row 2: deepest part (0 = black)
                   [8, 8, 1, 2, 8],      # row 3
                   [8, 8, 8, 8, 8]], dtype=float)
 print(patch.shape, "pixels:", patch.size, " dark pixels (&lt;= 2):", int((patch &lt;= 2).sum()))</div>
   <div class="fx" data-lang="text">(5, 5) pixels: 25  dark pixels (&lt;= 2): 7</div>
-  <p>25 pixels, 7 of them dark. A human sees the hole at once because the dark pixels are <em>next to each other</em> and surrounded by bright ones. Keep that sentence in mind: "next to each other" is exactly what an MLP cannot see.</p>
-  <h3>Problem 1: too many weights (count them)</h3>
-  <p>Flatten the patch into 25 numbers and connect them to a first layer of 16 neurons. Every neuron has one weight per pixel plus a bias: 25 × 16 + 16 = <strong>416</strong> weights. That sounds fine, but the count grows with the image. A normal photo of 224 × 224 pixels in 3 colours is 150,528 numbers; a first layer of 1000 neurons needs 150,528 × 1000 + 1000 = <strong>150,529,000</strong> weights, for one layer. That is slow, memory-hungry, and overfits with any normal amount of data.</p>
-  <p>The alternative we are about to build: one small 3 × 3 filter, slid over the image. It has 9 weights + 1 bias = <strong>10</strong>, whatever the image size. 64 such filters on a colour photo: 64 · 3 · 3 · 3 + 64 = <strong>1,792</strong>.</p>
-<div class="fx" data-lang="py">mlp_patch = nn.Linear(5 * 5, 16)                 # MLP on our flattened 5x5 patch
-mlp_photo = nn.Linear(224 * 224 * 3, 1000)       # MLP on a flattened colour photo
-conv1     = nn.Conv2d(1, 1, kernel_size=3)       # ONE 3x3 filter, any image size
-conv64    = nn.Conv2d(3, 64, kernel_size=3)      # 64 filters on a colour photo
-n = lambda m: sum(p.numel() for p in m.parameters())
-for name, m in [("MLP on 5x5 patch", mlp_patch), ("MLP on 224x224x3", mlp_photo),
-                ("one 3x3 filter", conv1), ("Conv2d(3,64,3)", conv64)]:
-    print(f"{name:18s} {n(m):&gt;12,}")
-print("conv weight shape", tuple(conv64.weight.shape))</div>
-  <div class="fx" data-lang="text">MLP on 5x5 patch            416
-MLP on 224x224x3    150,529,000
-one 3x3 filter               10
-Conv2d(3,64,3)            1,792
-conv weight shape (64, 3, 3, 3)</div>
-  <p>The MLP numbers are inputs × outputs + biases. The conv weight shape (64, 3, 3, 3) reads (filters out, channels in, kernel height, kernel width); that layout is used everywhere in PyTorch. The conv layer's size does not depend on the image size at all.</p>
-  <h3>Problem 2: it ignores locality, so a moved pothole is a new pothole</h3>
-  <p>To an MLP, pixel 7 and pixel 8 are just input number 7 and input number 8; it has no idea they are neighbours. Worse, if the van stops 1 pixel later and the same pothole appears one pixel to the right, <em>different</em> pixels are dark, so <em>different</em> weights are used. Whatever the MLP learned about potholes in the middle must be learned again for every position. Count it on our patch: shift the hole one pixel right and see how many of the 25 inputs change.</p>
-<div class="fx" data-lang="py">shifted = np.roll(patch, 1, axis=1); shifted[:, 0] = 8     # same pothole, 1 pixel to the right
+  <p>The patch has 25 pixels, 7 of them dark. You see the hole at once because the dark pixels are <em>next to each other</em> and surrounded by bright ones. Keep that phrase in mind, because "next to each other" is exactly what an MLP cannot see.</p>
+  <p>The first problem is the number of weights. If we flatten the patch into 25 numbers and connect them to a layer of 16 neurons, each neuron needs one weight per pixel plus a bias, so the layer has 25 × 16 + 16 = 416 weights. That sounds harmless, but the count grows with the image. A normal photo of 224 × 224 pixels in 3 colours is 150,528 numbers, and a first layer of 1,000 neurons on it needs over 150 million weights, for one layer. Such a model is slow, needs a lot of memory, and with a normal amount of training data it overfits badly. Compare the alternative we are about to build, one small 3 × 3 filter slid over the image, which has 9 weights and 1 bias whatever the size of the image:</p>
+    <div class="fx" data-lang="py">count = lambda m: sum(p.numel() for p in m.parameters())
+layers_to_count = [
+    ("MLP layer on the 5x5 patch",   nn.Linear(5 * 5, 16)),
+    ("MLP layer on a 224x224x3 photo", nn.Linear(224 * 224 * 3, 1000)),
+    ("one 3x3 filter",               nn.Conv2d(1, 1, kernel_size=3)),
+    ("64 3x3 filters on colour",     nn.Conv2d(3, 64, kernel_size=3)),
+]
+for name, layer in layers_to_count:
+    print(f"{name:32s} {count(layer):&gt;12,}")</div>
+  <div class="fx" data-lang="text">MLP layer on the 5x5 patch                416
+MLP layer on a 224x224x3 photo    150,529,000
+one 3x3 filter                             10
+64 3x3 filters on colour                1,792</div>
+  <p>The MLP counts are inputs × outputs + biases. Even 64 different 3 × 3 filters on a colour photo need only 1,792 weights (we will derive that number in section 04), and the count does not depend on the image size at all.</p>
+  <p>The second problem is worse. To an MLP, pixel 7 and pixel 8 are just input number 7 and input number 8; it has no idea that they are neighbours. And if the van stops one pixel later, so that the same pothole appears one pixel to the right, different pixels are dark and therefore different weights are used. Whatever the MLP learned about potholes in one position has to be learned again for every other position. We can count how different the shifted picture looks to an MLP:</p>
+    <div class="fx" data-lang="py">shifted = np.roll(patch, 1, axis=1); shifted[:, 0] = 8     # same pothole, 1 pixel to the right
 print(shifted.astype(int))
-changed = (patch.flatten() != shifted.flatten())
-print("inputs that changed:", int(changed.sum()), "of 25 -&gt;", np.flatnonzero(changed).tolist())</div>
+changed = patch.flatten() != shifted.flatten()
+print("MLP inputs that changed:", int(changed.sum()), "of 25")</div>
   <div class="fx" data-lang="text">[[8 8 8 8 8]
  [8 8 8 2 1]
  [8 8 1 0 1]
  [8 8 8 1 2]
  [8 8 8 8 8]]
-inputs that changed: 10 of 25 -&gt; [7, 8, 9, 11, 12, 13, 14, 17, 18, 19]</div>
-  <p>10 of the 25 inputs change, so an MLP sees an almost different picture, although nothing about "is there a pothole" changed. We want a layer that reacts to the <em>pattern</em>, wherever it is.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A rubber stamp of a pothole rim. You press it on every spot of the page and note how well each spot matches. One stamp is used everywhere; you do not need a new stamp for each spot. The stamp has 9 dots of ink, no matter how big the page is.</p>
-  </div>
-  <table class="tbl">
-    <tr><th>Problem with an MLP on images</th><th>On our patch</th><th>CNN fix</th></tr>
-    <tr><td>Huge parameter count, overfits</td><td>416 weights for 25 pixels; 150.5M for a photo</td><td><strong>Parameter sharing</strong>: one 3×3 filter (10 weights) reused at every position</td></tr>
-    <tr><td>Ignores which pixels are neighbours</td><td>pixel 7 and 8 are unrelated inputs</td><td><strong>Locality</strong>: each output looks at a small patch</td></tr>
-    <tr><td>A moved object uses different weights</td><td>1-pixel shift changes 10 of 25 inputs</td><td><strong>Translation equivariance</strong>: the same filter fires wherever the pattern is</td></tr>
-  </table>
-  <div class="callout def"><span class="label">Definition</span><p>A <strong>convolutional neural network (CNN)</strong> is a network whose main layers are convolutions: small filters with shared weights slid over a grid. <strong>Locality</strong>: each output depends only on a small neighbourhood. <strong>Translation equivariance</strong>: shifting the input shifts the output map by the same amount. Where you meet CNNs: road and factory defect inspection, medical scans, OCR of invoices, the vision part of self-driving, and as the image encoder in many multimodal systems.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>"CNNs are translation <em>invariant</em>." The convolution itself is equivariant (the output moves with the input). Some invariance comes later, from pooling and the final global pooling (section 06). Interviewers check this word.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: The convolution operation.</b> We know <em>what</em> we want (one small filter, reused everywhere), but not how the filter actually turns a patch of pixels into a number.</div>
+MLP inputs that changed: 10 of 25</div>
+  <p>10 of the 25 inputs changed, so the MLP sees an almost different picture, although nothing about "is there a pothole?" has changed.</p>
+  <p>Both problems point to the same fix. Think of a rubber stamp carved with the shape of a pothole's rim. You press it on every spot of the page in turn and note how well each spot matches. One stamp is used everywhere, so you never need a separate stamp for each position, and the stamp has 9 dots of ink no matter how big the page is. A <strong>convolutional neural network (CNN)</strong> is a network whose main layers work exactly like this: small filters, slid over the grid, with the same weights used at every position. That design gives three properties that the MLP lacked. <strong>Locality</strong>: each output looks only at a small neighbourhood of pixels. <strong>Parameter sharing</strong>: one filter, and therefore one set of weights, is reused at every position. And <strong>translation equivariance</strong>: if the pattern moves in the input, the filter's response moves by the same amount. The rest of this page builds that layer step by step.</p>
 
   <h2 id="dc-conv"><span class="num">02</span>The Convolution Operation</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>How does one small 3 × 3 grid of weights "look at" a 5 × 5 road patch and report where the pothole's edges are?</p>
-  </div>
-  <p>A <strong>kernel</strong> (or <strong>filter</strong>) is a small grid of weights, here 3 × 3. Place it on the top-left 3 × 3 patch of the image. Multiply each kernel weight by the pixel under it and add the nine products. That sum is one output number. Slide the kernel one pixel right and repeat; at the end of the row, go one pixel down. The grid of sums is the output, called a <strong>feature map</strong>.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A torch beam moving over a wall, one spot at a time. At each spot you ask one question: "how much does this spot look like my pattern?" and write the answer on a grid. Big positive means "yes, strongly", near zero means "nothing here", negative means "the opposite pattern".</p>
-  </div>
-  <p>Our kernel has +1 in its left column, 0 in the middle and −1 in its right column. So it computes <strong>left column sum − right column sum</strong>: "is the left side of this window brighter than the right side?". That is a <strong>vertical-edge detector</strong>. On our road, bright asphalt on the left and a dark hole on the right gives a big positive number (the pothole's left rim); dark on the left and bright on the right gives a big negative number (the right rim).</p>
+  <p>A <strong>kernel</strong>, also called a <strong>filter</strong>, is a small grid of weights, here 3 × 3. The <strong>convolution</strong> of an image with a kernel is computed like this: place the kernel over the top-left 3 × 3 window of the image, multiply each kernel weight by the pixel under it, and add up the nine products. That sum is one output number. Then slide the kernel one pixel to the right and repeat; at the end of a row, move one pixel down and start again from the left. The grid of all these sums is the output, called a <strong>feature map</strong>. Think of shining a torch on a wall one spot at a time and asking at each spot "how much does this look like my pattern?": a big positive number means "very much", zero means "nothing here", and a negative number means "the opposite pattern".</p>
+  <p>Our kernel has +1 in its left column, 0 in the middle column and −1 in its right column. Multiplying and adding therefore computes <strong>(sum of the window's left column) − (sum of its right column)</strong>. In words, it asks "is the left side of this window brighter than the right side?". That is a <strong>vertical-edge detector</strong>. Where bright asphalt is on the left and the dark hole on the right, the answer is a large positive number: that is the pothole's left rim. Where the hole is on the left and asphalt on the right, the answer is a large negative number: the right rim.</p>
   <figure class="viz"><svg viewBox="0 0 640 260" width="640">
 <defs><marker id="dc-ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
 <text x="95" y="22" text-anchor="middle">Road patch 5×5</text>
@@ -239,65 +146,55 @@ inputs that changed: 10 of 25 -&gt; [7, 8, 9, 11, 12, 13, 14, 17, 18, 19]</div>
 <text x="320" y="225" text-anchor="middle" class="tm">blue window (rows 1–3, cols 0–2): left column 8+8+8 = 24, right column 2+0+1 = 3 → 24 − 3 = 21</text>
 <text x="320" y="248" text-anchor="middle" class="tm">positive column = left rim of the hole · negative column = right rim</text>
 </svg><figcaption>The blue 3×3 window times the filter, summed, gives the teal output cell. A 3×3 filter fits in a 5×5 patch at 3 positions across and 3 down, so the output is 3×3.</figcaption></figure>
-  <table class="tbl out"><caption>All nine positions, by hand (only the outer columns count because the middle column of the filter is 0)</caption>
-    <tr><th>Output cell</th><th>Window (rows, cols)</th><th>Left column sum</th><th>Right column sum</th><th>Left − right</th></tr>
-    <tr><td>(0, 0)</td><td>rows 0–2, cols 0–2</td><td>8 + 8 + 8 = 24</td><td>8 + 2 + 0 = 10</td><td><strong>14</strong></td></tr>
-    <tr><td>(0, 1)</td><td>rows 0–2, cols 1–3</td><td>8 + 8 + 1 = 17</td><td>8 + 1 + 1 = 10</td><td><strong>7</strong></td></tr>
-    <tr><td>(0, 2)</td><td>rows 0–2, cols 2–4</td><td>8 + 2 + 0 = 10</td><td>8 + 8 + 8 = 24</td><td><strong>−14</strong></td></tr>
-    <tr><td>(1, 0)</td><td>rows 1–3, cols 0–2</td><td>8 + 8 + 8 = 24</td><td>2 + 0 + 1 = 3</td><td><strong>21</strong></td></tr>
-    <tr><td>(1, 1)</td><td>rows 1–3, cols 1–3</td><td>8 + 1 + 8 = 17</td><td>1 + 1 + 2 = 4</td><td><strong>13</strong></td></tr>
-    <tr><td>(1, 2)</td><td>rows 1–3, cols 2–4</td><td>2 + 0 + 1 = 3</td><td>8 + 8 + 8 = 24</td><td><strong>−21</strong></td></tr>
-    <tr><td>(2, 0)</td><td>rows 2–4, cols 0–2</td><td>8 + 8 + 8 = 24</td><td>0 + 1 + 8 = 9</td><td><strong>15</strong></td></tr>
-    <tr><td>(2, 1)</td><td>rows 2–4, cols 1–3</td><td>1 + 8 + 8 = 17</td><td>1 + 2 + 8 = 11</td><td><strong>6</strong></td></tr>
-    <tr><td>(2, 2)</td><td>rows 2–4, cols 2–4</td><td>0 + 1 + 8 = 9</td><td>8 + 8 + 8 = 24</td><td><strong>−15</strong></td></tr>
+  <p>The figure shows one position. The blue window covers rows 1–3 and columns 0–2 of the patch. Its left column is 8 + 8 + 8 = 24 and its right column is 2 + 0 + 1 = 3, so the output is 24 − 3 = 21, written in the teal cell of the output. A 3 × 3 kernel fits into a 5 × 5 patch at 3 positions across and 3 positions down, so the output is 3 × 3. Here are all nine positions; only the outer columns matter, because the middle column of the kernel is 0:</p>
+  <table class="tbl">
+    <tr><th>Output cell</th><th>Window (rows, cols)</th><th>Left column</th><th>Right column</th><th>Left − right</th></tr>
+    <tr><td>(0, 0)</td><td>0–2, 0–2</td><td>8 + 8 + 8 = 24</td><td>8 + 2 + 0 = 10</td><td><strong>14</strong></td></tr>
+    <tr><td>(0, 1)</td><td>0–2, 1–3</td><td>8 + 8 + 1 = 17</td><td>8 + 1 + 1 = 10</td><td><strong>7</strong></td></tr>
+    <tr><td>(0, 2)</td><td>0–2, 2–4</td><td>8 + 2 + 0 = 10</td><td>8 + 8 + 8 = 24</td><td><strong>−14</strong></td></tr>
+    <tr><td>(1, 0)</td><td>1–3, 0–2</td><td>8 + 8 + 8 = 24</td><td>2 + 0 + 1 = 3</td><td><strong>21</strong></td></tr>
+    <tr><td>(1, 1)</td><td>1–3, 1–3</td><td>8 + 1 + 8 = 17</td><td>1 + 1 + 2 = 4</td><td><strong>13</strong></td></tr>
+    <tr><td>(1, 2)</td><td>1–3, 2–4</td><td>2 + 0 + 1 = 3</td><td>8 + 8 + 8 = 24</td><td><strong>−21</strong></td></tr>
+    <tr><td>(2, 0)</td><td>2–4, 0–2</td><td>8 + 8 + 8 = 24</td><td>0 + 1 + 8 = 9</td><td><strong>15</strong></td></tr>
+    <tr><td>(2, 1)</td><td>2–4, 1–3</td><td>1 + 8 + 8 = 17</td><td>1 + 2 + 8 = 11</td><td><strong>6</strong></td></tr>
+    <tr><td>(2, 2)</td><td>2–4, 2–4</td><td>0 + 1 + 8 = 9</td><td>8 + 8 + 8 = 24</td><td><strong>−15</strong></td></tr>
   </table>
-  <p>Written out in full for cell (1, 0), all nine products: 8·1 + 8·0 + 2·(−1) + 8·1 + 1·0 + 0·(−1) + 8·1 + 8·0 + 1·(−1) = 8 + 0 − 2 + 8 + 0 − 0 + 8 + 0 − 1 = 21. The biggest number, 21, sits exactly where the window's left side is road and its right side is the deepest part of the hole. Now the same in NumPy with two loops, and then with PyTorch's built-in <code>F.conv2d</code>:</p>
-<div class="fx" data-lang="py">K = np.array([[1, 0, -1],
+  <p>The biggest value, 21, sits exactly where the window's left side is road and its right side is the deepest part of the hole, and −21 marks the matching right rim. Now the same calculation in NumPy, written with two plain loops so that every step is visible:</p>
+    <div class="fx" data-lang="py">K = np.array([[1, 0, -1],
               [1, 0, -1],
-              [1, 0, -1]], dtype=float)                # vertical-edge filter: left - right
-out = np.zeros((3, 3))                                 # (5 - 3) + 1 = 3 positions each way
+              [1, 0, -1]], dtype=float)          # vertical-edge filter: left column - right column
+out = np.zeros((3, 3))                           # a 3x3 filter fits 3 times across and 3 times down
 for i in range(3):
     for j in range(3):
-        window = patch[i:i+3, j:j+3]                   # the 3x3 window under the filter
-        out[i, j] = (window * K).sum()                 # multiply cell by cell, then add
+        window = patch[i:i+3, j:j+3]             # the 3x3 window under the filter
+        out[i, j] = (window * K).sum()           # multiply cell by cell, then add up
 print(out)
-xt = torch.tensor(patch, dtype=torch.float32).reshape(1, 1, 5, 5)   # (N, C, H, W)
-kt = torch.tensor(K, dtype=torch.float32).reshape(1, 1, 3, 3)       # (C_out, C_in, k, k)
-y = F.conv2d(xt, kt)
-print(xt.shape, kt.shape, "-&gt;", y.shape)
-print(y[0, 0])</div>
+print("smooth road:", (np.full((3, 3), 8.0) * K).sum())</div>
   <div class="fx" data-lang="text">[[ 14.   7. -14.]
  [ 21.  13. -21.]
  [ 15.   6. -15.]]
-torch.Size([1, 1, 5, 5]) torch.Size([1, 1, 3, 3]) -&gt; torch.Size([1, 1, 3, 3])
+smooth road: 0.0</div>
+  <p><code>patch[i:i+3, j:j+3]</code> is the sliding window at position (i, j), and <code>(window * K).sum()</code> is the multiply-and-add. All nine numbers match the table. The last line checks a patch of smooth road: every window has a left column of 24 and a right column of 24, so the answer is 0, "no edge here". The filter answers its single question at every position using just these 9 weights.</p>
+  <p>In symbols, the output at row i and column j is out(i, j) = Σ<sub>m,n</sub> K(m, n) · X(i + m, j + n) + b, where K is the kernel, X the input, m and n run over the kernel's rows and columns, and b is a single bias added to every output. In other words, a dot product between the kernel and the window under it, repeated at every position. PyTorch provides it as <code>F.conv2d</code>. It expects a batch of images shaped (N, C, H, W): the number of images N, the number of channels C (1 for grey), the height H and the width W. The kernel must be shaped (C<sub>out</sub>, C<sub>in</sub>, k, k): the number of output maps, the number of input channels, and the kernel's height and width. So we reshape our grid and kernel before calling it:</p>
+    <div class="fx" data-lang="py">X  = torch.tensor(patch, dtype=torch.float32).reshape(1, 1, 5, 5)   # (N, C, H, W)
+Kt = torch.tensor(K, dtype=torch.float32).reshape(1, 1, 3, 3)       # (C_out, C_in, k, k)
+y = F.conv2d(X, Kt)
+print(tuple(X.shape), tuple(Kt.shape), "-&gt;", tuple(y.shape))
+print(y[0, 0])</div>
+  <div class="fx" data-lang="text">(1, 1, 5, 5) (1, 1, 3, 3) -&gt; (1, 1, 3, 3)
 tensor([[ 14.,   7., -14.],
         [ 21.,  13., -21.],
         [ 15.,   6., -15.]])</div>
-  <p>What happened: the loop's <code>patch[i:i+3, j:j+3]</code> is the sliding window, and <code>(window * K).sum()</code> is the multiply-and-add. All nine numbers match the hand table. For PyTorch we had to <strong>reshape</strong> the 5 × 5 grid into (1, 1, 5, 5): a batch of 1 image, 1 channel, 5 × 5 pixels. The filter became (1, 1, 3, 3): 1 output map, 1 input channel, 3 × 3. <code>F.conv2d</code> returned (1, 1, 3, 3) with the same nine numbers.</p>
-  <p>Compare a patch of smooth road (every pixel 8): every window has left sum 24 and right sum 24, so the whole map is 0: "no edge anywhere". The filter answers its one question, everywhere, with 10 numbers.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>2-D convolution</strong> (as used in deep learning): out(i, j) = Σ<sub>m,n</sub> kernel(m, n) · input(i + m, j + n) + bias. A dot product between the kernel and the window under it, repeated at every position. In a CNN the kernel values are not hand-picked like ours; they are <em>learned</em> by <a class="xref" data-note="dl_backprop">backpropagation</a>, and the network often discovers edge filters very like this one.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Deep-learning "convolution" is really cross-correlation: the kernel is not flipped as in the maths/signal-processing definition. Since the weights are learned, it makes no difference, but interviewers sometimes ask.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Padding &amp; stride.</b> Our 5 × 5 patch came out 3 × 3: every 3 × 3 convolution eats a border pixel on each side, and the corner pixels were used by only one window. How do we control the output size, keep it, or shrink it on purpose?</div>
+  <p>The 5 × 5 patch became (1, 1, 5, 5), one image with one channel, and the kernel (1, 1, 3, 3). PyTorch returned (1, 1, 3, 3) holding exactly our nine numbers. Two remarks complete the picture. First, in a real CNN nobody chooses the kernel values by hand as we did; they start random and are <em>learned</em> by <a class="xref" data-note="dl_backprop">backpropagation</a>, and trained networks very often end up with edge detectors much like this one in their first layer. Second, mathematicians would call this operation <strong>cross-correlation</strong>: the textbook definition of convolution flips the kernel first. Since the weights are learned anyway, flipping makes no difference, and deep-learning libraries skip it, but interviewers occasionally ask.</p>
 
-  <h2 id="dc-pad"><span class="num">03</span>Padding &amp; Stride</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>5 × 5 became 3 × 3. Stack ten such layers and a small image vanishes; and the border pixels (where a pothole might start) count less than the centre ones. Can we keep the size, or shrink it deliberately to save compute?</p>
-  </div>
-  <p><strong>Padding</strong> adds a border of zeros around the image before sliding, so the filter can sit centred on edge pixels too. <strong>Stride</strong> is how many pixels the filter jumps each step; stride 2 skips every other position and roughly halves the output size.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Padding is the white margin around a photo in a frame: the stamp can now be pressed right up to the photo's edge. Stride is how a ticket checker walks a train: checking every seat (stride 1) or every second seat (stride 2), which is quicker but sees half as much.</p></div>
-  <h3>Padding 1 on the road patch, by hand</h3>
-  <p>With padding 1 the 5 × 5 patch becomes 7 × 7 with a ring of zeros. Now the 3 × 3 filter fits at 5 × 5 positions, so the output stays 5 × 5. The new top-left output uses the padded window [[0, 0, 0], [0, 8, 8], [0, 8, 8]]: left column 0, right column 0 + 8 + 8 = 16, so 0 − 16 = <strong>−16</strong>. That is a "right rim" signal at the top-left corner of smooth road. It is fake: the zeros of the padding look like a dark hole to the filter. The inner 3 × 3 of the output must equal our unpadded answer.</p>
-<div class="fx" data-lang="py">X = torch.tensor(patch, dtype=torch.float32).reshape(1, 1, 5, 5)
-Kt = torch.tensor(K, dtype=torch.float32).reshape(1, 1, 3, 3)
-print(F.pad(X, (1, 1, 1, 1))[0, 0].int())               # (7, 7): zero border
+  <h2 id="dc-pad"><span class="num">03</span>Padding and Stride</h2>
+  <p>Our 5 × 5 patch came out as a 3 × 3 map. Each 3 × 3 convolution loses one pixel on every side, so after ten such layers a small image would vanish completely. Pixels at the border are also under-used: the corner pixel was covered by only one window, while the centre pixel was covered by nine, so a pothole that starts at the edge of a patch gets less attention. Two settings control this. <strong>Padding</strong> adds a border of extra pixels, usually zeros, around the image before sliding, so the kernel can also be centred on the edge pixels. <strong>Stride</strong> is how many pixels the kernel jumps between positions; with stride 2 it visits every second position, which roughly halves the output size. Padding is like the white margin around a photo in a frame, which lets the stamp be pressed right up to the photo's edge. Stride is like a ticket checker who checks every second seat: quicker, but seeing half as much.</p>
+  <p>With padding 1 the patch becomes 7 × 7 with a ring of zeros, the 3 × 3 kernel now fits at 5 × 5 positions, and the output stays 5 × 5. Let us predict one new value by hand. The new top-left window is [[0, 0, 0], [0, 8, 8], [0, 8, 8]]: left column 0, right column 0 + 8 + 8 = 16, so the output is 0 − 16 = −16. That is a "right rim" signal at the corner of smooth road, which is false: to the filter, the zeros of the padding look like a dark hole. The inner 3 × 3 of the padded output should equal our unpadded answer.</p>
+    <div class="fx" data-lang="py">print(F.pad(X, (1, 1, 1, 1))[0, 0].int())               # zero border: 5x5 -&gt; 7x7
 same = F.conv2d(X, Kt, padding=1)[0, 0]
-print(same.int())                                       # (5, 5): size kept
-print("inner 3x3 == unpadded:", torch.equal(same[1:4, 1:4], F.conv2d(X, Kt)[0, 0]))
-print(F.conv2d(X, Kt, padding=1, stride=2)[0, 0].int())  # (3, 3): stride 2</div>
+print(same.int())                                       # output stays 5x5
+print("inner 3x3 equals the unpadded map:", torch.equal(same[1:4, 1:4], F.conv2d(X, Kt)[0, 0]))
+print(F.conv2d(X, Kt, padding=1, stride=2)[0, 0].int())  # stride 2: every other position</div>
   <div class="fx" data-lang="text">tensor([[0, 0, 0, 0, 0, 0, 0],
         [0, 8, 8, 8, 8, 8, 0],
         [0, 8, 8, 2, 1, 8, 0],
@@ -310,58 +207,39 @@ tensor([[-16,   6,   7,  -6,   9],
         [-17,  21,  13, -21,   4],
         [-17,  15,   6, -15,  11],
         [-16,   7,   6,  -7,  10]], dtype=torch.int32)
-inner 3x3 == unpadded: True
+inner 3x3 equals the unpadded map: True
 tensor([[-16,   7,   9],
         [-17,  13,   4],
         [-16,   6,  10]], dtype=torch.int32)</div>
-  <p>Read it: the padded output's top-left is −16 as computed, and its inner block is exactly our earlier map. The first and last columns (−16, −17 … and 9, 10, 4 …) are the fake border edges. The stride-2 output keeps every other cell of the padded output: rows 0, 2, 4 and columns 0, 2, 4. All of this is captured by one formula.</p>
-  <div class="callout def"><span class="label">Formula</span>
-    <p><strong>out = ⌊(W − K + 2P) / S⌋ + 1</strong> — W input size, K kernel size, P zero-padding per side, S stride, ⌊ ⌋ round down. Traced on our patch (W = 5, K = 3): no padding (5 − 3 + 0)/1 + 1 = <strong>3</strong>; padding 1: (5 − 3 + 2)/1 + 1 = <strong>5</strong>; padding 1, stride 2: ⌊4/2⌋ + 1 = <strong>3</strong>; no padding, stride 2: ⌊2/2⌋ + 1 = <strong>2</strong>.</p>
-  </div>
-  <p>The same formula at photo scale: input 32, K = 5, P = 2, S = 2 → (32 − 5 + 4)/2 = 15.5 → floor 15 → +1 = <strong>16</strong>. The code checks the formula against real layers, first on our patch, then on a 32 × 32 image:</p>
-<div class="fx" data-lang="py">def size(W, K, P, S): return (W - K + 2*P) // S + 1
-for K_, P, S in [(3, 0, 1), (3, 1, 1), (3, 1, 2), (3, 0, 2)]:
-    y = nn.Conv2d(1, 1, K_, stride=S, padding=P)(X)
-    print(f"patch 5x5  K={K_} P={P} S={S}: formula {size(5, K_, P, S)}  torch {tuple(y.shape[2:])}")
-x32 = torch.randn(1, 3, 32, 32)
-for K_, P, S in [(5, 2, 2), (1, 0, 1)]:
-    y = nn.Conv2d(3, 8, K_, stride=S, padding=P)(x32)
-    print(f"image 32   K={K_} P={P} S={S}: formula {size(32, K_, P, S)}  torch {tuple(y.shape[2:])}")
-print("ResNet stem 224, K=7 P=3 S=2 -&gt;", size(224, 7, 3, 2))</div>
-  <div class="fx" data-lang="text">patch 5x5  K=3 P=0 S=1: formula 3  torch (3, 3)
-patch 5x5  K=3 P=1 S=1: formula 5  torch (5, 5)
-patch 5x5  K=3 P=1 S=2: formula 3  torch (3, 3)
-patch 5x5  K=3 P=0 S=2: formula 2  torch (2, 2)
-image 32   K=5 P=2 S=2: formula 16  torch (16, 16)
-image 32   K=1 P=0 S=1: formula 32  torch (32, 32)
-ResNet stem 224, K=7 P=3 S=2 -&gt; 112</div>
-  <table class="tbl">
-    <tr><th>Setting</th><th>Effect</th><th>On our 5×5 patch</th><th>Used for</th></tr>
-    <tr><td>P=0 ("valid")</td><td>Shrinks by K−1</td><td>5 → 3</td><td>Old nets; border pixels under-used</td></tr>
-    <tr><td>K=3, P=1, S=1 ("same")</td><td>Size kept</td><td>5 → 5</td><td>Default inside a stage</td></tr>
-    <tr><td>S=2</td><td>Size roughly halved</td><td>5 → 3 (with P=1)</td><td>Learned downsampling (ResNet)</td></tr>
-    <tr><td>K=1</td><td>Only channels change</td><td>5 → 5</td><td>Cheap channel mixing / bottlenecks</td></tr>
-  </table>
-  <div class="callout trap"><span class="label">Trap</span><p>The floor in the formula. 64 × 64 with K = 3, P = 0, S = 2 gives ⌊61/2⌋ + 1 = 31, not 31.5 or 32. Off-by-one sizes then break a later <code>Linear</code> layer whose input size you hard-coded. And zero padding invents edges at the border (our −16): one reason networks sometimes "see" defects at image borders. Reflect or replicate padding (<code>padding_mode="reflect"</code>) avoids it.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Filters &amp; channels.</b> We can now control the size of one map. But our one filter only finds vertical edges, and only on grey images. A pothole also has top and bottom rims, and the van's camera shoots in colour.</div>
+  <p>The padded output's top-left value is −16 as predicted, and its inner 3 × 3 block is exactly the earlier map. The first and last columns (−16, −17, … and 9, 10, 4, …) are invented edges caused by the zero border. That is a real effect: networks sometimes "see" defects at image borders because of zero padding, and reflect or replicate padding (<code>padding_mode="reflect"</code>) avoids it. The stride-2 output keeps every second cell of the padded output: rows 0, 2, 4 and columns 0, 2, 4, giving 3 × 3.</p>
+  <p>All of these sizes follow from one formula that is worth memorising, because you need it every time you design a network:</p>
+  <p style="text-align:center"><strong>output size = ⌊(W − K + 2P) / S⌋ + 1</strong></p>
+  <p>Here W is the input size, K the kernel size, P the padding on each side, S the stride, and ⌊ ⌋ means round down. The reasoning is simple: after padding the input is W + 2P wide; the kernel's first position uses K of those pixels, which leaves W + 2P − K pixels to slide over; jumping S at a time gives ⌊(W + 2P − K)/S⌋ further positions, plus the first one. On our patch (W = 5, K = 3): no padding gives (5 − 3)/1 + 1 = 3; padding 1 gives (5 − 3 + 2)/1 + 1 = 5; padding 1 with stride 2 gives ⌊4/2⌋ + 1 = 3; no padding with stride 2 gives ⌊2/2⌋ + 1 = 2. The code checks the formula against real PyTorch layers, including a 32-pixel image and the first layer of ResNet on a 224-pixel photo:</p>
+    <div class="fx" data-lang="py">def out_size(W, K, P, S):
+    return (W - K + 2 * P) // S + 1
+for W, K_, P, S in [(5, 3, 0, 1), (5, 3, 1, 1), (5, 3, 1, 2), (5, 3, 0, 2), (32, 5, 2, 2), (224, 7, 3, 2)]:
+    real = nn.Conv2d(1, 1, K_, stride=S, padding=P)(torch.zeros(1, 1, W, W)).shape[-1]
+    print(f"W={W:3d} K={K_} P={P} S={S}:  formula {out_size(W, K_, P, S):3d}   PyTorch {real}")</div>
+  <div class="fx" data-lang="text">W=  5 K=3 P=0 S=1:  formula   3   PyTorch 3
+W=  5 K=3 P=1 S=1:  formula   5   PyTorch 5
+W=  5 K=3 P=1 S=2:  formula   3   PyTorch 3
+W=  5 K=3 P=0 S=2:  formula   2   PyTorch 2
+W= 32 K=5 P=2 S=2:  formula  16   PyTorch 16
+W=224 K=7 P=3 S=2:  formula 112   PyTorch 112</div>
+  <p>Every prediction matches. Notice the rounding down: an input of 64 with K = 3, P = 0 and S = 2 gives ⌊61/2⌋ + 1 = 31, not 31.5 or 32, and such off-by-one sizes are a common source of shape errors later in a network. In practice two settings dominate. Kernel 3 with padding 1 and stride 1 keeps the size unchanged; this is called <strong>"same" padding</strong> and is the default inside a network. Stride 2 halves the size and is used when the network deliberately wants to shrink the image. No padding at all is called <strong>"valid"</strong> padding and shrinks the image by K − 1.</p>
 
-  <h2 id="dc-maps"><span class="num">04</span>Filters &amp; Channels</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>One filter asks one question ("vertical edge here?"). How does a layer ask many questions at once, and what does a filter look like when the image has 3 colour channels instead of 1?</p>
-  </div>
-  <p>Two things grow. The <strong>number</strong> of filters: a layer has many, each its own pattern detector, and each produces its own output map. The <strong>depth</strong> of each filter: a filter always covers <em>all</em> input channels. On an RGB image a "3 × 3" filter is really 3 × 3 × 3 = 27 weights, one 3 × 3 slice per colour; it multiplies-and-adds over all 27 numbers under it, so it still produces one number per position. Stack the maps of all filters and you get the output, whose number of channels equals the number of filters.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A panel of road inspectors. Each inspector (filter) looks for one thing, say vertical cracks or horizontal cracks, and looks at all photos of the same spot (the channels: red, green, blue) at once, to give one mark per spot. Two inspectors give two mark-sheets (two feature maps).</p></div>
-  <h3>Two filters on the road patch</h3>
-  <p>Add a second filter: the vertical one turned on its side, [[1, 1, 1], [0, 0, 0], [−1, −1, −1]], which computes <strong>top row sum − bottom row sum</strong>: a horizontal-edge detector. At window (0, 1) (rows 0–2, columns 1–3): top row 8 + 8 + 8 = 24, bottom row 1 + 0 + 1 = 2, so 22: the hole's top rim. At window (2, 1): top row 1 + 0 + 1 = 2, bottom row 8 + 8 + 8 = 24, so −22: the bottom rim. A layer with both filters is <code>Conv2d(1, 2, 3)</code>: 2 filters × 1 channel × 3 × 3 + 2 biases = <strong>20</strong> weights, output (1, 2, 3, 3).</p>
-<div class="fx" data-lang="py">two = nn.Conv2d(in_channels=1, out_channels=2, kernel_size=3, bias=False)
+  <h2 id="dc-maps"><span class="num">04</span>Filters and Channels</h2>
+  <p>Our filter asks a single question: "is there a vertical edge here?". A pothole also has a top rim and a bottom rim, and the van's camera shoots in colour. So a real layer grows in two directions. First, it has <strong>many filters</strong>, each its own pattern detector, and each filter produces its own output map. Second, each filter has <strong>depth</strong>: it always covers <em>all</em> the channels of its input. Think of a panel of road inspectors. Each inspector looks for one thing, say vertical cracks or horizontal cracks, and each one looks at all three colour photos of the same spot at once before writing down a single mark for that spot. Two inspectors produce two mark-sheets.</p>
+  <p>Let us add a second filter: the vertical one turned on its side, [[1, 1, 1], [0, 0, 0], [−1, −1, −1]], which computes <strong>top row − bottom row</strong>, a horizontal-edge detector. At the window covering rows 0–2 and columns 1–3, the top row is 8 + 8 + 8 = 24 and the bottom row 1 + 0 + 1 = 2, giving 22: the top rim of the hole. At rows 2–4, columns 1–3, the top row is 1 + 0 + 1 = 2 and the bottom row 24, giving −22: the bottom rim. A layer holding both filters is <code>nn.Conv2d(1, 2, 3)</code>, meaning 1 input channel, 2 output channels (one per filter), kernel size 3.</p>
+    <div class="fx" data-lang="py">two = nn.Conv2d(in_channels=1, out_channels=2, kernel_size=3, bias=False)
 with torch.no_grad():
-    two.weight[0, 0] = torch.tensor(K)          # filter 0: vertical edges  (left - right)
+    two.weight[0, 0] = torch.tensor(K)          # filter 0: vertical edges   (left - right)
     two.weight[1, 0] = torch.tensor(K.T)        # filter 1: horizontal edges (top - bottom)
 maps = two(X)
-print("output", tuple(maps.shape), " params with bias:", 2 * 1 * 3 * 3 + 2)
+print("output shape", tuple(maps.shape))
 print("vertical-edge map\\n", maps[0, 0].int())
 print("horizontal-edge map\\n", maps[0, 1].int())</div>
-  <div class="fx" data-lang="text">output (1, 2, 3, 3)  params with bias: 20
+  <div class="fx" data-lang="text">output shape (1, 2, 3, 3)
 vertical-edge map
  tensor([[ 14,   7, -14],
         [ 21,  13, -21],
@@ -370,93 +248,66 @@ horizontal-edge map
  tensor([[ 15,  22,  15],
         [  1,   0,   0],
         [-15, -22, -15]], dtype=torch.int32)</div>
-  <p>Two maps from one input: the vertical map lights up on the left (+) and right (−) rims, the horizontal map on the top (+) and bottom (−) rims. Together they outline the pothole on all four sides.</p>
-  <h3>Colour input: the filter gets depth</h3>
-  <p>Shape trace for the van's colour patch through <code>Conv2d(3, 2, kernel_size=3)</code>: input (1, 3, 5, 5); weight (2, 3, 3, 3), i.e. 2 filters each 3 × 3 × 3; bias (2,); output (1, 2, 3, 3): 2 maps, each 3 × 3 as before. Parameters: 2·3·3·3 + 2 = <strong>56</strong>. The code builds a colour version of our patch (muddy water in the hole is a little bluer) and checks one output number by hand: filter 1 times the top-left 3 × 3 × 3 block, summed, plus bias 1.</p>
-<div class="fx" data-lang="py">torch.manual_seed(0)
-rgb = np.stack([patch, patch, patch + (patch &lt;= 2) * 2])       # R, G, B; blue +2 in the hole
+  <p>One input produced two maps, stacked along the channel axis, so the output shape is (1, 2, 3, 3). The vertical map lights up on the left (+) and right (−) rims; the horizontal map on the top (+) and bottom (−) rims. Together they outline the pothole on all four sides.</p>
+  <p>Now colour. A colour image has 3 channels (red, green, blue), so its shape is (1, 3, 5, 5). A "3 × 3" filter on it is really 3 × 3 × 3 = 27 weights, one 3 × 3 slice for each colour. At each position it multiplies all 27 numbers under it by its 27 weights and adds them up, plus one bias, so it still produces one number per position. With 2 such filters, the layer's weight tensor has shape (2, 3, 3, 3) and the output is again 2 maps. This gives the general rule for counting a convolution's parameters, a classic interview question:</p>
+  <p style="text-align:center"><strong>parameters = C<sub>out</sub> × C<sub>in</sub> × k × k + C<sub>out</sub></strong></p>
+  <p>Each of the C<sub>out</sub> filters has C<sub>in</sub> × k × k weights and one bias. For our colour layer that is 2 × 3 × 3 × 3 + 2 = 56. The code builds a colour version of the patch (muddy water in the hole makes it a little bluer), checks one output number by hand, and verifies the formula on some typical layers:</p>
+    <div class="fx" data-lang="py">torch.manual_seed(0)
+rgb = np.stack([patch, patch, patch + (patch &lt;= 2) * 2])       # R, G, B: muddy water is bluer
 xc = torch.tensor(rgb, dtype=torch.float32).unsqueeze(0)       # (1, 3, 5, 5)
 conv = nn.Conv2d(in_channels=3, out_channels=2, kernel_size=3)
-print("input ", tuple(xc.shape))
-print("weight", tuple(conv.weight.shape), " bias", tuple(conv.bias.shape))
+print("input ", tuple(xc.shape), " weight", tuple(conv.weight.shape), " bias", tuple(conv.bias.shape))
 yc = conv(xc)
 print("output", tuple(yc.shape))
-manual = (xc[0, :, 0:3, 0:3] * conv.weight[1]).sum() + conv.bias[1]   # (3,3,3) * (3,3,3)
-print(round(manual.item(), 4), round(yc[0, 1, 0, 0].item(), 4))
-print(n(conv), 2*3*3*3 + 2, "| Conv2d(64,128,3):", n(nn.Conv2d(64, 128, 3)))</div>
-  <div class="fx" data-lang="text">input  (1, 3, 5, 5)
-weight (2, 3, 3, 3)  bias (2,)
+by_hand = (xc[0, :, 0:3, 0:3] * conv.weight[1]).sum() + conv.bias[1]   # 27 products + bias
+print(round(by_hand.item(), 4), round(yc[0, 1, 0, 0].item(), 4))
+for c_in, c_out, k in [(3, 2, 3), (3, 64, 3), (64, 128, 3), (256, 64, 1)]:
+    print(f"Conv2d({c_in}, {c_out}, {k}): formula {c_out*c_in*k*k + c_out:&gt;7,}  PyTorch {count(nn.Conv2d(c_in, c_out, k)):&gt;7,}")</div>
+  <div class="fx" data-lang="text">input  (1, 3, 5, 5)  weight (2, 3, 3, 3)  bias (2,)
 output (1, 2, 3, 3)
 1.2052 1.2052
-56 56 | Conv2d(64,128,3): 73856</div>
-  <p>What happened: <code>xc[0, :, 0:3, 0:3]</code> picks image 0, <em>all</em> channels, rows 0–2 and columns 0–2, a (3, 3, 3) block. <code>conv.weight[1]</code> is filter number 1, also (3, 3, 3). Multiply, sum all 27 products, add the bias: the result equals output channel 1 at position (0, 0). So a multi-channel convolution is the same multiply-and-add, just summed across channels too. Parameter counts: 56 for our layer, and 128·64·3·3 + 128 = 73,856 for a typical <code>Conv2d(64, 128, 3)</code> deep in a network, where the 64 "channels" are the 64 maps of the previous layer.</p>
-  <div class="flow"><span>Input: C<sub>in</sub> × H × W</span><span>Each filter: C<sub>in</sub> × k × k</span><span>One filter → one 2-D map</span><span>Output: C<sub>out</sub> × H′ × W′</span></div>
-  <div class="cards">
-    <div><b>Filter (kernel)</b><p>Learned weights spanning <em>all</em> input channels.</p><small>3×3 on RGB = 27 weights + 1 bias</small></div>
-    <div><b>Channels in</b><p>Colours for the image; previous layer's maps deeper in.</p><small>sets the filter's depth</small></div>
-    <div><b>Channels out</b><p>Number of filters = output depth.</p><small>2 filters → 2 maps</small></div>
-  </div>
-  <div class="callout def"><span class="label">Definition</span><p>Conv weight shape: (C<sub>out</sub>, C<sub>in</sub>, k, k); <strong>parameters = C<sub>out</sub>·C<sub>in</sub>·k·k + C<sub>out</sub></strong>. Output shape (N, C<sub>out</sub>, H′, W′) with H′, W′ from the size formula.</p></div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Counting params as 64·3·3 + 64 (forgetting input channels). The kernel has depth = input channels: Conv2d(3, 64, 3) is 64·<strong>3</strong>·3·3 + 64 = 1,792. This is the most common interview arithmetic slip.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Feature maps.</b> We get one output grid per filter. What exactly do these grids mean, why do we pass them through ReLU, and what happens to them when the pothole moves?</div>
+Conv2d(3, 2, 3): formula      56  PyTorch      56
+Conv2d(3, 64, 3): formula   1,792  PyTorch   1,792
+Conv2d(64, 128, 3): formula  73,856  PyTorch  73,856
+Conv2d(256, 64, 1): formula  16,448  PyTorch  16,448</div>
+  <p><code>xc[0, :, 0:3, 0:3]</code> takes image 0, <em>all</em> channels, rows 0–2 and columns 0–2: a 3 × 3 × 3 block. <code>conv.weight[1]</code> is filter number 1, also 3 × 3 × 3. Multiplying them, summing all 27 products and adding the bias gives exactly PyTorch's output for channel 1 at position (0, 0). So a multi-channel convolution is the same multiply-and-add as before, just summed across channels as well. The formula matches PyTorch on every layer. Look at the third one: deep inside a network, a <code>Conv2d(64, 128, 3)</code> has 73,856 parameters, and its 64 "input channels" are no longer colours but the 64 feature maps produced by the previous layer. The most common slip in interviews is to forget the C<sub>in</sub> factor: <code>Conv2d(3, 64, 3)</code> has 64 × 3 × 3 × 3 + 64 = 1,792 parameters, not 64 × 3 × 3 + 64 = 640.</p>
+  <p>The last layer in the list has a kernel of size 1. A <strong>1 × 1 convolution</strong> looks at a single pixel position, so it never mixes neighbouring pixels; what it does is mix the channels at each position, like a small fully connected layer applied separately to every pixel. Here it turns 256 channels into 64 with 16,448 parameters while keeping the height and width. Networks use 1 × 1 convolutions as a cheap way to reduce or increase the number of channels, and we will meet them again in Inception, ResNet and MobileNet.</p>
 
-  <h2 id="dc-fmap"><span class="num">05</span>Feature Maps</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We have produced grids of numbers like [[14, 7, −14], [21, 13, −21], [15, 6, −15]]. How should we read them, what does the next layer do with them, and did we really get the "same filter fires wherever the pattern is" promise from section 01?</p>
-  </div>
-  <p>A <strong>feature map</strong> is a map of "where is my pattern, and how strongly". Each cell corresponds to one window of the input. After a convolution a CNN almost always applies <strong>ReLU</strong> (max(0, value)): keep the places where the pattern was found, set everything else to 0. On the vertical-edge map that keeps the left-rim column and zeroes the right-rim column. (The right rim is not lost: a second, learned filter with the opposite sign will detect it.)</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A heat map on a delivery app showing where orders are coming from. Each cell is an area; brightness is how much activity. A feature map is a heat map of one pattern over the image.</p></div>
-  <h3>Reading the map, and checking equivariance</h3>
-  <p>Now move the pothole one pixel right (the shifted patch from section 01) and run the same filter. Promise: the map should move one cell right too, with the same values.</p>
-<div class="fx" data-lang="py">relu_map = torch.relu(F.conv2d(X, Kt))[0, 0]
-print("ReLU(left-edge map) on the patch\\n", relu_map.int())
+  <h2 id="dc-fmap"><span class="num">05</span>Feature Maps and Equivariance</h2>
+  <p>We now get one output grid per filter, and it is worth being precise about what these grids mean. A <strong>feature map</strong> is the output of one filter: a map of where the filter's pattern occurs in the input and how strongly. Each cell corresponds to one window of the input. The values in feature maps are also called <strong>activations</strong>. You can think of a feature map as a heat map on a food-delivery app showing where orders come from: each cell is an area, and brightness shows how much activity there is. A feature map is a heat map of one pattern over the image.</p>
+  <p>After a convolution, a CNN almost always applies <strong>ReLU</strong>, which replaces every negative value by 0 and keeps positive values unchanged. On our vertical-edge map this keeps the left-rim column and zeroes the right-rim column. The right rim is not lost for good: a network simply learns a second filter with the opposite signs, whose positive output marks the right rim. It is therefore wrong to read a negative value in a raw map as "nothing"; it means "the opposite pattern".</p>
+  <p>Now we can test the promise from section 01. Move the pothole one pixel to the right (the shifted patch we built there) and apply the same filter. If the convolution is translation equivariant, the map should move one cell to the right as well, with the same values:</p>
+    <div class="fx" data-lang="py">relu_map = torch.relu(F.conv2d(X, Kt))[0, 0]
+print("ReLU(edge map), original patch\\n", relu_map.int())
 Xs = torch.tensor(shifted, dtype=torch.float32).reshape(1, 1, 5, 5)
 ms = torch.relu(F.conv2d(Xs, Kt))[0, 0]
-print("same filter on the shifted patch\\n", ms.int())
-print("strongest response:", relu_map.max().item(), "at", divmod(relu_map.argmax().item(), 3),
+print("same filter, shifted patch\\n", ms.int())
+print("strongest:", relu_map.max().item(), "at", divmod(relu_map.argmax().item(), 3),
       "| shifted:", ms.max().item(), "at", divmod(ms.argmax().item(), 3))</div>
-  <div class="fx" data-lang="text">ReLU(left-edge map) on the patch
+  <div class="fx" data-lang="text">ReLU(edge map), original patch
  tensor([[14,  7,  0],
         [21, 13,  0],
         [15,  6,  0]], dtype=torch.int32)
-same filter on the shifted patch
+same filter, shifted patch
  tensor([[ 7, 14,  7],
         [ 7, 21, 13],
         [ 7, 15,  6]], dtype=torch.int32)
-strongest response: 21.0 at (1, 0) | shifted: 21.0 at (1, 1)</div>
-  <p>The strongest response 21 moved from cell (1, 0) to cell (1, 1): one step right, same value. That is <strong>translation equivariance</strong>, measured. The MLP of section 01 saw 10 of its 25 inputs change; the convolution just moved its answer. (The values at the edges differ a little because the shifted hole is now closer to the border.)</p>
-  <h3>What learned feature maps look like</h3>
-  <p>In a trained network, layer 1 filters turn out to be edge and colour-blob detectors, much like our hand filters. Layer 2 filters look at the layer-1 <em>maps</em> (that is what their input channels are), so they detect combinations of edges: corners, rims, textures such as cracked asphalt. Deeper layers detect parts (a pothole's shadowed rim, a manhole cover) and then whole objects. Each layer's maps are the next layer's image.</p>
-  <div class="cards">
-    <div><b>Layer 1</b><p>Edges, colour blobs</p><small>our vertical / horizontal filters</small></div>
-    <div><b>Layer 2–3</b><p>Corners, rims, textures</p><small>combinations of edge maps</small></div>
-    <div><b>Deep layers</b><p>Parts and objects</p><small>"pothole", "manhole", "car"</small></div>
-  </div>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Feature map</strong>: the 2-D output of one filter (usually after ReLU); high values mark where its pattern occurs. <strong>Activation</strong>: another name for the values in feature maps. <strong>Translation equivariance</strong>: conv(shift(x)) = shift(conv(x)), up to border effects.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>A negative value in a raw feature map is not "nothing": it is the opposite pattern (our right rim). ReLU throws it away, so networks learn sign-flipped twin filters. If you visualise maps for debugging, look at them before and after ReLU.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Pooling.</b> Feature maps are as large as the image (5 × 5 with padding; 112 × 112 in a real network) and record the <em>exact</em> pixel of each edge. For "is there a pothole?" we only need "an edge was found around here", and carrying full-size maps through every layer is expensive.</div>
+strongest: 21.0 at (1, 0) | shifted: 21.0 at (1, 1)</div>
+  <p>The strongest response, 21, moved from cell (1, 0) to cell (1, 1): one step right, with the same value. That is <strong>translation equivariance</strong>, measured: shifting the input shifts the output map by the same amount (apart from small differences at the border, here the 7s that appear on the left). Compare the MLP, which saw 10 of its 25 inputs change. The convolution simply moved its answer.</p>
+  <p>In a trained network, feature maps form a hierarchy. First-layer filters become edge and colour-blob detectors, much like ours. Second-layer filters take the first layer's maps as their input channels, so they detect combinations of edges: corners, rims, and textures such as cracked asphalt. Deeper layers detect parts, such as the shadowed rim of a pothole or the outline of a manhole cover, and the deepest layers respond to whole objects. Each layer's feature maps are, in effect, the next layer's image.</p>
 
   <h2 id="dc-pool"><span class="num">06</span>Pooling</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>How do we shrink a feature map so that it keeps "the pattern was found in this area" but forgets "exactly which pixel", which also makes the answer survive small shifts?</p>
-  </div>
-  <p><strong>Pooling</strong> summarises each small window of a map, usually 2 × 2 with stride 2, as one number. <strong>Max pooling</strong> keeps the biggest value ("was the feature anywhere here?"); <strong>average pooling</strong> keeps the mean. Pooling has no weights to learn, and it works on each channel separately, so the channel count does not change. The size formula still applies with K = 2, S = 2, P = 0.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Each bench of four students sends only its top mark to the teacher (max pooling). The teacher learns the best score per bench, not who sat where. Average pooling would send the bench average instead.</p>
-  </div>
-  <h3>Pooling our feature map, by hand</h3>
-  <p>Take the padded (5 × 5) left-edge map from section 03 after ReLU: [[0, 6, 7, 0, 9], [0, 14, 7, 0, 10], [0, 21, 13, 0, 4], [0, 15, 6, 0, 11], [0, 7, 6, 0, 10]]. Size formula: ⌊(5 − 2)/2⌋ + 1 = 2, so 2 × 2 windows cover rows 0–3 and columns 0–3; the last row and column are dropped by the floor. Top-left window {0, 6, 0, 14}: max <strong>14</strong>, mean 5. Top-right {7, 0, 7, 0}: max 7, mean 3.5. Bottom-left {0, 21, 0, 15}: max <strong>21</strong>, mean 9. Bottom-right {13, 0, 6, 0}: max 13, mean 4.75.</p>
-<div class="fx" data-lang="py">fm = torch.relu(F.conv2d(X, Kt, padding=1))           # (1, 1, 5, 5) padded left-edge map
+  <p>Feature maps are as large as the image (5 × 5 with padding here, 112 × 112 in a real network), and they record the exact pixel of every edge. To answer "is there a pothole?" we do not need the exact pixel; "an edge was found around here" is enough. Carrying full-size maps through every layer is also expensive. <strong>Pooling</strong> solves both: it summarises each small window of a map, usually 2 × 2 with stride 2, by a single number. <strong>Max pooling</strong> keeps the largest value in the window, answering "was the pattern anywhere in this window?". <strong>Average pooling</strong> keeps the mean. Pooling has no weights to learn, and it works on each channel separately, so the number of channels does not change. Picture a classroom where each bench of four students sends only its top mark to the teacher: the teacher learns the best score per bench but no longer knows who sat where. That is max pooling; sending the bench average would be average pooling.</p>
+  <p>Take the padded 5 × 5 edge map from section 03 after ReLU. The size formula with K = 2, S = 2, P = 0 gives ⌊(5 − 2)/2⌋ + 1 = 2, so 2 × 2 windows cover rows 0–3 and columns 0–3, and the last row and column are dropped by the rounding. The four windows are {0, 6, 0, 14}, {7, 0, 7, 0}, {0, 21, 0, 15} and {13, 0, 6, 0}; their maxima are 14, 7, 21 and 13, and their means 5, 3.5, 9 and 4.75.</p>
+    <div class="fx" data-lang="py">fm = torch.relu(F.conv2d(X, Kt, padding=1))           # (1, 1, 5, 5) padded edge map after ReLU
 print(fm[0, 0].int())
-print(nn.MaxPool2d(2)(fm)[0, 0])                      # (1,1,5,5) -&gt; (1,1,2,2)
+print(nn.MaxPool2d(2)(fm)[0, 0])                      # 2x2 windows, stride 2 -&gt; (2, 2)
 print(nn.AvgPool2d(2)(fm)[0, 0])
-gm  = torch.relu(F.conv2d(X, Kt)).amax(dim=(2, 3))    # global max: whole map -&gt; 1 number
-gms = torch.relu(F.conv2d(Xs, Kt)).amax(dim=(2, 3))   # same, pothole shifted 1 pixel
+gm  = torch.relu(F.conv2d(X,  Kt)).amax(dim=(2, 3))   # global max: whole map -&gt; 1 number
+gms = torch.relu(F.conv2d(Xs, Kt)).amax(dim=(2, 3))
 print("global max: patch", gm.item(), " shifted patch", gms.item())
-fmap = torch.randn(8, 128, 7, 7)                      # a real end-of-network shape
-print(nn.AdaptiveAvgPool2d(1)(fmap).shape, fmap.mean(dim=(2, 3)).shape)</div>
+fmap = torch.randn(8, 128, 7, 7)                      # a typical end-of-network shape
+print(tuple(nn.AdaptiveAvgPool2d(1)(fmap).shape))</div>
   <div class="fx" data-lang="text">tensor([[ 0,  6,  7,  0,  9],
         [ 0, 14,  7,  0, 10],
         [ 0, 21, 13,  0,  4],
@@ -467,63 +318,45 @@ tensor([[14.,  7.],
 tensor([[5.0000, 3.5000],
         [9.0000, 4.7500]])
 global max: patch 21.0  shifted patch 21.0
-torch.Size([8, 128, 1, 1]) torch.Size([8, 128])</div>
-  <p>What happened: max and average pooling match the hand values, and the dropped last column (9, 10, 4, 11, 10) was the fake padding edge anyway. The <strong>global max</strong> over the whole map is 21 for the original <em>and</em> the shifted patch: after pooling, the answer to "is there a left rim anywhere?" no longer depends on where the pothole sits. That is the invariance the trap in section 01 talked about: it comes from pooling, not from convolution. <strong>Global average pooling</strong> (<code>AdaptiveAvgPool2d(1)</code>) averages each whole map into one number per channel: (8, 128, 7, 7) becomes (8, 128, 1, 1), the same as <code>mean(dim=(2, 3))</code>. That turns any image size into a fixed-length vector for the final classifier.</p>
-  <div class="cards">
-    <div><b>Max pool</b><p>"Was the feature anywhere in this window?"</p><small>Halves H, W; 0 params</small></div>
-    <div><b>Average pool</b><p>Smooth summary of the window.</p><small>Keeps weak signals</small></div>
-    <div><b>Global pool</b><p>Each channel's whole map → 1 number.</p><small>Before the classifier; replaces huge FC layers</small></div>
-  </div>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Pooling</strong>: a fixed, parameter-free downsampling that applies max or mean over each window, per channel. (N, C, H, W) → (N, C, ⌊H/2⌋, ⌊W/2⌋) for 2 × 2, stride 2. <strong>Global average pooling (GAP)</strong>: one mean per channel over the whole map.</p></div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Pooling throws away position and 3 of every 4 values. Modern nets (ResNet) mostly downsample with stride-2 convs, which learn what to keep; global average pooling stays at the end. And the floor silently drops the last row/column of odd-sized maps (our 5 × 5 → 2 × 2).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Stacking &amp; the receptive field.</b> Every tool so far works on one layer, and one 3 × 3 layer only ever sees 3 × 3 pixels: a rim, never a whole pothole, never a whole road. How do layers combine into a network that sees large objects?</div>
+(8, 128, 1, 1)</div>
+  <p>Both pooled maps match the hand calculation, and the dropped last column (9, 10, 4, 11, 10) was the fake padding edge anyway. Then we pool over the <em>whole</em> map, called <strong>global max pooling</strong>: the answer is 21 for the original patch and also 21 for the shifted patch. After global pooling, "is there a left rim anywhere?" no longer depends on where the pothole sits. This is the difference between equivariance and <strong>invariance</strong>: the convolution is equivariant (its output moves with the input), while pooling, and especially global pooling, makes the final answer invariant (unchanged when the input moves). People often say "CNNs are translation invariant", but the invariance comes from pooling, not from the convolution itself.</p>
+  <p>The last line shows <strong>global average pooling</strong> (GAP), written <code>nn.AdaptiveAvgPool2d(1)</code> in PyTorch, on a typical end-of-network tensor of 8 images with 128 maps of 7 × 7: each map is averaged into one number, giving (8, 128, 1, 1). Whatever the input size, GAP turns the maps into a fixed-length vector of one number per channel, which is what the final classifier needs. Modern networks often shrink maps inside the network with stride-2 convolutions instead of max pooling, because a strided convolution learns what to keep while pooling throws away three of every four values by a fixed rule, but almost all of them still end with global average pooling.</p>
 
-  <h2 id="dc-stack"><span class="num">07</span>Stacking: Receptive Field &amp; Architecture</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>A single 3 × 3 filter cannot tell a pothole (a dark area with rims all round) from a single crack (one rim). Something must look at a bigger region. How does a network of small filters end up seeing a whole object?</p>
-  </div>
-  <p>Stack convolutions. A unit in layer 2 looks at a 3 × 3 window of layer-1 <em>maps</em>; each of those layer-1 cells looked at 3 × 3 pixels; together that is 5 × 5 pixels: our whole patch. The input region that can affect one unit is its <strong>receptive field</strong>. Each extra 3 × 3 conv adds 2 pixels; each stride-2 step (pool or strided conv) doubles how much every later layer adds.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Reading a newspaper photo of a cricket match. First you notice lines and colours, then shapes (bat, ball, stumps), then the scene ("a batsman getting bowled"). Each step looks at a bigger region in less detail, but with richer meaning.</p></div>
-  <h3>The receptive field, traced</h3>
-  <p>Rule: r<sub>new</sub> = r<sub>old</sub> + (k − 1)·j, and j<sub>new</sub> = j·s, where k is the layer's kernel size, s its stride, and j the "jump" (how many input pixels one step in the current map corresponds to). Start with r = 1, j = 1.</p>
-  <table class="tbl out"><caption>Receptive field of one unit, layer by layer</caption>
+  <h2 id="dc-stack"><span class="num">07</span>Receptive Field and the CNN Recipe</h2>
+  <p>Every tool so far works within one layer, and a single 3 × 3 layer only ever looks at 3 × 3 pixels. That is enough to see a rim, but not to tell a pothole (a dark area with rims all round) from a single crack (one rim), and certainly not enough to see a whole stretch of road. The answer is to stack layers. A unit in layer 2 looks at a 3 × 3 window of layer-1 maps; each of those layer-1 cells looked at 3 × 3 pixels; together that covers 5 × 5 pixels, our whole patch. The region of the input image that can influence one unit is called its <strong>receptive field</strong>. It is like looking at a cricket photo: first you notice lines and colours, then shapes such as a bat and stumps, then the scene, "a batsman being bowled". Each step looks at a bigger region with richer meaning.</p>
+  <p>The receptive field r can be tracked layer by layer with a rule that also tracks the <strong>jump</strong> j, the number of input pixels that one step in the current map corresponds to. Start with r = 1 and j = 1. For each layer with kernel size k and stride s: r becomes r + (k − 1) × j, and then j becomes j × s. In words, each layer widens the view by (k − 1) steps of the current map, and every stride makes later steps bigger.</p>
+  <table class="tbl">
     <tr><th>After layer</th><th>k, s</th><th>r = r + (k − 1)·j</th><th>j = j·s</th><th>Sees</th></tr>
     <tr><td>conv 3×3</td><td>3, 1</td><td>1 + 2·1 = <strong>3</strong></td><td>1</td><td>a rim</td></tr>
     <tr><td>conv 3×3</td><td>3, 1</td><td>3 + 2·1 = <strong>5</strong></td><td>1</td><td>our whole 5×5 patch</td></tr>
-    <tr><td>max pool 2×2</td><td>2, 2</td><td>5 + 1·1 = <strong>6</strong></td><td>2</td><td></td></tr>
-    <tr><td>conv 3×3</td><td>3, 1</td><td>6 + 2·2 = <strong>10</strong></td><td>2</td><td>several patches: a stretch of road</td></tr>
+    <tr><td>pool 2×2</td><td>2, 2</td><td>5 + 1·1 = <strong>6</strong></td><td>2</td><td></td></tr>
+    <tr><td>conv 3×3</td><td>3, 1</td><td>6 + 2·2 = <strong>10</strong></td><td>2</td><td>a stretch of road</td></tr>
   </table>
-  <p>We can check this without any formula: the receptive field is exactly the set of input pixels whose gradient on one output unit is non-zero. Build the stack, pick the centre output unit, back-propagate, and count the touched pixels.</p>
-<div class="fx" data-lang="py">def receptive_field(layers, size=24):
+  <p>We can check the table without the formula. The receptive field is exactly the set of input pixels whose gradient on one output unit is not zero, so we build the stack, pick the unit in the middle of the output, back-propagate from it, and measure how many input rows received a gradient:</p>
+    <div class="fx" data-lang="py">def receptive_field(layers, size=24):
     torch.manual_seed(0)
     x = torch.randn(1, 1, size, size, requires_grad=True)
     y = nn.Sequential(*layers)(x)
     c = y.shape[-1] // 2
-    y[0, 0, c, c].backward()                          # one unit in the middle
-    rows = (x.grad[0, 0].abs().sum(1) &gt; 0).nonzero()  # input rows that influence it
+    y[0, 0, c, c].backward()                          # one output unit in the middle
+    rows = (x.grad[0, 0].abs().sum(1) &gt; 0).nonzero()  # input rows that influenced it
     return int(rows.max() - rows.min() + 1)
-conv = lambda: nn.Conv2d(1, 1, 3, padding=1)
-print("conv              ", receptive_field([conv()]))
-print("conv conv         ", receptive_field([conv(), conv()]))
-pool = lambda: nn.AvgPool2d(2)     # average pool: gradient reaches every pixel of the window
-print("conv conv pool    ", receptive_field([conv(), conv(), pool()]))
-print("conv conv pool conv", receptive_field([conv(), conv(), pool(), conv()]))
-two_layer = nn.Sequential(nn.Conv2d(1, 1, 3), nn.Conv2d(1, 1, 3))
-print("two valid 3x3 convs on our 5x5 patch -&gt;", tuple(two_layer(X).shape))</div>
-  <div class="fx" data-lang="text">conv               3
-conv conv          5
-conv conv pool     6
-conv conv pool conv 10
-two valid 3x3 convs on our 5x5 patch -&gt; (1, 1, 1, 1)</div>
-  <p>3, 5, 6, 10: the gradient count agrees with the hand table. (The measurement uses an average pool: a max pool sends the gradient only to the winning pixel of each window, so the count would depend on the random input, although the region that <em>can</em> influence the unit is the same.) The last line is the concrete meaning on our running example: two unpadded 3 × 3 convs turn the 5 × 5 patch into a single number (5 → 3 → 1), and that number depends on all 25 pixels. A layer-2 unit can therefore combine "left rim here" and "right rim there" into "a hole between them".</p>
-  <div class="callout intu"><span class="label">Why 3×3 everywhere (VGG)</span>
-    <p>Two stacked 3×3 convs see a 5×5 region, like one 5×5 conv. With 64 channels: 2·9·64·64 = 73,728 weights vs 25·64·64 = 102,400 for one 5×5 — 28% fewer, plus an extra ReLU between them.</p>
-  </div>
-  <h3>The classic recipe: shrink space, add channels</h3>
-  <p>We now have all the bricks: conv (find patterns), ReLU (keep positives), pooling or stride (shrink and widen the receptive field), and a final linear layer (decide the class). How do you stack them? The answer has been stable for 30 years: repeat a block that <strong>shrinks the picture and adds more filters</strong>, then pool everything and classify.</p>
-  <p>Why shrink and widen at the same time? Early layers see small patches and only need a few filters (there are few kinds of edges). Later layers combine edges into many kinds of textures and parts, so they need more channels, but they no longer need fine pixel positions. Halving height and width while doubling channels keeps the compute per layer roughly balanced.</p>
+conv3 = lambda: nn.Conv2d(1, 1, 3, padding=1)
+pool2 = lambda: nn.AvgPool2d(2)
+print("conv                ", receptive_field([conv3()]))
+print("conv conv           ", receptive_field([conv3(), conv3()]))
+print("conv conv pool      ", receptive_field([conv3(), conv3(), pool2()]))
+print("conv conv pool conv ", receptive_field([conv3(), conv3(), pool2(), conv3()]))
+two_valid = nn.Sequential(nn.Conv2d(1, 1, 3), nn.Conv2d(1, 1, 3))
+print("two unpadded 3x3 convs on the 5x5 patch -&gt;", tuple(two_valid(X).shape))</div>
+  <div class="fx" data-lang="text">conv                 3
+conv conv            5
+conv conv pool       6
+conv conv pool conv  10
+two unpadded 3x3 convs on the 5x5 patch -&gt; (1, 1, 1, 1)</div>
+  <p>The measured sizes are 3, 5, 6 and 10, the same as the table. (The check uses average pooling, because max pooling passes the gradient only to the winning pixel of each window, which would make the count depend on the random input.) The last line shows what this means for our running example: two unpadded 3 × 3 convolutions turn the 5 × 5 patch into a single number, which depends on all 25 pixels, so a layer-2 unit can combine "left rim here" and "right rim there" into "a hole between them".</p>
+  <p>Stacking small kernels is also cheaper than using one big one. Two 3 × 3 layers see a 5 × 5 region, just like one 5 × 5 layer, but with 64 channels they need 2 × 9 × 64 × 64 = 73,728 weights instead of 25 × 64 × 64 = 102,400, about 28% fewer, and they put an extra ReLU in between, which makes the function more flexible. This is why almost every modern CNN uses 3 × 3 kernels. One caution: the receptive field computed this way is an upper bound. In practice pixels near its centre influence a unit far more than pixels near its edge, so a network that must recognise large objects needs more depth or more downsampling than the formula alone suggests.</p>
+  <p>Now we have all the bricks: convolutions find patterns, ReLU keeps the positive evidence, pooling or stride shrinks the maps and widens the receptive field, and a final linear layer makes the decision. The way to arrange them has been stable for decades: repeat a stage that <strong>shrinks the picture and adds more filters</strong>, then pool everything globally and classify. Early layers look at small regions and need only a few filters, because there are few kinds of edges. Later layers combine edges into many kinds of textures and parts, so they need more channels, but they no longer need precise pixel positions. Halving height and width while doubling channels keeps the amount of computation per layer roughly balanced.</p>
   <figure class="viz"><svg viewBox="0 0 600 190" width="600">
 <defs><marker id="dc-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
 <rect x="15" y="40" width="80" height="80" class="fs" stroke="currentColor"/>
@@ -552,20 +385,19 @@ two valid 3x3 convs on our 5x5 patch -&gt; (1, 1, 1, 1)</div>
 </g>
 <text x="300" y="178" text-anchor="middle" class="tm">spatial size ↓ · channels ↑ · edges → textures → parts → class</text>
 </svg><figcaption>The classic recipe: each stage halves the image and doubles the filters, then global-average-pool and a linear head.</figcaption></figure>
-  <p>Before running it, predict every shape with the formula. A batch of 8 images (8, 3, 32, 32). Conv(3→32, K3, P1) keeps 32 × 32: (8, 32, 32, 32), params 32·3·9 + 32 = 896. MaxPool → (8, 32, 16, 16). Conv(32→64) → (8, 64, 16, 16), params 64·32·9 + 64 = 18,496. MaxPool → (8, 64, 8, 8). Conv(64→128) → (8, 128, 8, 8), 73,856 params. Global pool → (8, 128, 1, 1), flatten → (8, 128), Linear(128→10) → (8, 10), 1,290 params.</p>
-  <div class="fx" data-lang="py">net = nn.Sequential(
-    nn.Conv2d(3, 32, 3, padding=1), nn.ReLU(), nn.MaxPool2d(2),   # block 1
-    nn.Conv2d(32, 64, 3, padding=1), nn.ReLU(), nn.MaxPool2d(2),  # block 2
-    nn.Conv2d(64, 128, 3, padding=1), nn.ReLU(),                  # block 3
+  <p>Before running the network in the figure, predict every shape with the size formula. A batch of 8 colour images is (8, 3, 32, 32). Conv(3 → 32, kernel 3, padding 1) keeps 32 × 32: (8, 32, 32, 32), with 32 × 3 × 9 + 32 = 896 parameters. Max pooling halves it: (8, 32, 16, 16). Conv(32 → 64): (8, 64, 16, 16), 64 × 32 × 9 + 64 = 18,496 parameters. Pooling: (8, 64, 8, 8). Conv(64 → 128): (8, 128, 8, 8), 73,856 parameters. Global average pooling: (8, 128, 1, 1), flattened to (8, 128). Linear(128 → 10): (8, 10), 128 × 10 + 10 = 1,290 parameters.</p>
+    <div class="fx" data-lang="py">net = nn.Sequential(
+    nn.Conv2d(3, 32, 3, padding=1), nn.ReLU(), nn.MaxPool2d(2),   # stage 1
+    nn.Conv2d(32, 64, 3, padding=1), nn.ReLU(), nn.MaxPool2d(2),  # stage 2
+    nn.Conv2d(64, 128, 3, padding=1), nn.ReLU(),                  # stage 3
     nn.AdaptiveAvgPool2d(1), nn.Flatten(),                        # global average pool
     nn.Linear(128, 10))                                           # classifier head
 x = torch.randn(8, 3, 32, 32)
 for layer in net:
     x = layer(x)
     if not isinstance(layer, nn.ReLU):
-        p = sum(q.numel() for q in layer.parameters())
-        print(f"{layer.__class__.__name__:18s} {str(tuple(x.shape)):18s} params {p:,}")
-print("params:", sum(p.numel() for p in net.parameters()))</div>
+        print(f"{layer.__class__.__name__:18s} {str(tuple(x.shape)):18s} params {count(layer):,}")
+print("total params:", f"{count(net):,}")</div>
   <div class="fx" data-lang="text">Conv2d             (8, 32, 32, 32)    params 896
 MaxPool2d          (8, 32, 16, 16)    params 0
 Conv2d             (8, 64, 16, 16)    params 18,496
@@ -574,87 +406,128 @@ Conv2d             (8, 128, 8, 8)     params 73,856
 AdaptiveAvgPool2d  (8, 128, 1, 1)     params 0
 Flatten            (8, 128)           params 0
 Linear             (8, 10)            params 1,290
-params: 94538</div>
-  <p>Every line matches the prediction. Loop over an <code>nn.Sequential</code> and print shapes like this whenever you build a new model; it is the quickest way to find a shape bug. Notice where the parameters are: the deepest conv holds 78% of them, pooling and flatten hold none. In practice add <code>BatchNorm2d</code> after each conv (conv-BN-ReLU), which makes training faster and more stable.</p>
-  <table class="tbl">
-    <tr><th>Net</th><th>Year</th><th>What it fixed</th><th>Top-5 (ImageNet)</th><th>Params</th></tr>
-    <tr><td>LeNet-5</td><td>1998</td><td>Proved CNNs on digits</td><td>—</td><td>60K</td></tr>
-    <tr><td>AlexNet</td><td>2012</td><td>Depth on GPUs; ReLU, dropout</td><td>84.7%</td><td>60M</td></tr>
-    <tr><td>VGG-16</td><td>2014</td><td>Depth via stacked 3×3 convs</td><td>92.7%</td><td>138M</td></tr>
-    <tr><td>ResNet-50</td><td>2015</td><td>Skip connections; trains 150+ layers</td><td>~93%</td><td>25.6M</td></tr>
-    <tr><td>EfficientNet-B4</td><td>2019</td><td>Compound scaling</td><td>96.4%</td><td>19M</td></tr>
-  </table>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Receptive field</strong>: the region of the input image that can affect one output unit; r grows by (k − 1)·j per layer, and the jump j multiplies by every stride. That is how deep layers can "see" whole objects. <strong>Stage</strong>: a group of layers working at one spatial size, ending in a downsampling step.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>The theoretical receptive field is an upper bound. In practice the centre pixels of it have much more influence than the edges (the "effective" receptive field is smaller), so a net that must see large objects needs more depth or downsampling than the formula alone suggests.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Train a CNN.</b> All of this is shapes and hand-set filters. Does a CNN actually learn useful filters from labelled images, and does it really beat an MLP when objects move?</div>
+total params: 94,538</div>
+  <p>Every line matches. Looping over an <code>nn.Sequential</code> and printing each layer's output shape like this is the quickest way to find a shape bug in a new model. Notice also where the parameters are: the deepest convolution holds about 78% of them, while pooling and flattening hold none. In practice a <strong>BatchNorm</strong> layer is usually placed after each convolution (the "conv–BN–ReLU" block), which normalises each channel's activations over the batch and makes training faster and more stable; it is covered in <a class="xref" data-note="dl_training">Training Neural Networks</a>.</p>
 
-  <h2 id="dc-train"><span class="num">08</span>Hands-on: Train a CNN</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We hand-picked our edge filters. Does training find good filters by itself, and does the CNN's sliding-and-pooling really protect it when the object shifts, as our pothole demo suggested?</p>
-  </div>
-  <p>Our 5 × 5 road patch is too small to train on, so here is <em>the same idea at scale</em>: scikit-learn's handwritten digits, 1,797 grey images of 8 × 8 pixels (just bigger patches), labels 0–9. We train a small CNN and a plain MLP with a similar number of weights. Then we shift every test image one pixel to the right, exactly what happened when the van stopped a pixel later, and see which model copes.</p>
-  <p>Shape trace for one image through our CNN: (1, 1, 8, 8) → Conv(1→16, P1) (1, 16, 8, 8) → MaxPool (1, 16, 4, 4) → Conv(16→32, P1) (1, 32, 4, 4) → MaxPool (1, 32, 2, 2) → Flatten (1, 128) → Linear (1, 10). The Linear layer's input size 128 is 32 channels × 2 × 2, which is why you must know the shapes before writing it.</p>
-  <div class="fx" data-lang="py">from sklearn.datasets import load_digits
-from sklearn.model_selection import train_test_split
-X, y = load_digits(return_X_y=True)                  # (1797, 64), values 0..16
-print(X.shape, y.shape, X.min(), X.max())
-X = torch.tensor(X / 16.0, dtype=torch.float32).reshape(-1, 1, 8, 8)   # (N, 1, 8, 8)
-y = torch.tensor(y)
-Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=0.25, random_state=0, stratify=y)
-print(Xtr.shape, Xte.shape)
+  <h2 id="dc-train"><span class="num">08</span>Training a CNN</h2>
+  <p>So far we have chosen the filters by hand. The real question is whether a CNN can <em>learn</em> useful filters from labelled examples, and whether weight sharing really helps when potholes appear in new places. A 5 × 5 patch is too small to train on, so we now generate realistic-looking road patches of 16 × 16 pixels with brightness from 0 to 1. Each patch is asphalt with a random overall brightness (sun or shade) and some grain. Half of the patches get a pothole, a dark oval of random size. To make the task honest, half of <em>all</em> patches, with or without a pothole, also get a thin dark crack, so a model cannot just count dark pixels; it must recognise the shape of a hole.</p>
+  <p>We also set a deliberate trap. In the training data, potholes appear only in the <em>left</em> part of the patch (centre column between 2.5 and 6.5). We then test on two sets: new patches with potholes in the same left part, and patches with potholes only on the <em>right</em> (centre column between 9.5 and 13.5). This imitates a common real situation: the training photos happen to show objects in some places, and the model must still work when they appear elsewhere.</p>
+    <div class="fx" data-lang="py">S = 16                                            # patches are 16 x 16 pixels, brightness 0..1
+yy, xx = np.mgrid[0:S, 0:S]
 
-def train(model, epochs=15):
-    opt = torch.optim.Adam(model.parameters(), lr=1e-2); lf = nn.CrossEntropyLoss()
-    for ep in range(1, epochs + 1):
-        model.train()
-        perm = torch.randperm(len(Xtr))
-        for i in range(0, len(Xtr), 64):                 # mini-batches of 64
-            idx = perm[i:i+64]
-            opt.zero_grad(); lf(model(Xtr[idx]), ytr[idx]).backward(); opt.step()
-        model.eval()
-        with torch.no_grad():
-            acc = (model(Xte).argmax(1) == yte).float().mean().item()
-        if ep in (1, 5, 15): print(f"  epoch {ep:2d}  test acc {acc:.3f}")
+def road_patch(rng, pothole, cols=(2.5, 13.5)):
+    img = np.clip(rng.uniform(0.6, 0.9) + rng.normal(0, 0.06, (S, S)), 0, 1)   # asphalt + grain
+    if pothole:                                   # a dark oval, centre column drawn from &#96;cols&#96;
+        cy, cx = rng.uniform(4, 11.5), rng.uniform(*cols)
+        ry, rx = rng.uniform(1.6, 2.8), rng.uniform(1.6, 2.8)
+        hole = ((yy - cy) / ry) ** 2 + ((xx - cx) / rx) ** 2 &lt;= 1
+        img[hole] = rng.uniform(0.05, 0.25) + rng.normal(0, 0.04, hole.sum())
+    if rng.random() &lt; 0.5:                        # half of all patches get a thin dark crack
+        a, cy, cx = rng.uniform(0, np.pi), rng.uniform(4, 12), rng.uniform(4, 12)
+        for t in np.linspace(-4, 4, 40):
+            y, x = int(round(cy + t * np.sin(a))), int(round(cx + t * np.cos(a)))
+            if 0 &lt;= y &lt; S and 0 &lt;= x &lt; S: img[y, x] = rng.uniform(0.05, 0.25)
+    return img
+
+def make_set(n, cols, seed):
+    rng = np.random.default_rng(seed)
+    labels = np.arange(n) % 2                     # half potholes, half not
+    imgs = np.stack([road_patch(rng, lab, cols) for lab in labels])[:, None]   # (n, 1, 16, 16)
+    return torch.tensor(imgs, dtype=torch.float32), torch.tensor(labels)
+
+X_train, y_train = make_set(2000, cols=(2.5, 6.5), seed=1)     # potholes only in the LEFT part
+X_left,  y_left  = make_set(1000, cols=(2.5, 6.5), seed=2)     # test: same positions
+X_right, y_right = make_set(1000, cols=(9.5, 13.5), seed=3)    # test: potholes on the RIGHT
+print(X_train.shape, y_train[:6].tolist())
+print((X_train[1, 0] * 9).int())                               # patch 1 (a pothole), scaled to 0..9</div>
+  <div class="fx" data-lang="text">torch.Size([2000, 1, 16, 16]) [0, 1, 0, 1, 0, 1]
+tensor([[6, 5, 6, 5, 5, 6, 5, 6, 6, 6, 5, 5, 6, 4, 7, 5],
+        [5, 6, 6, 5, 6, 6, 6, 6, 6, 5, 6, 6, 5, 5, 6, 5],
+        [6, 6, 6, 6, 6, 5, 6, 7, 6, 5, 6, 5, 5, 6, 6, 7],
+        [6, 6, 6, 6, 1, 1, 5, 6, 6, 5, 6, 5, 7, 6, 5, 5],
+        [6, 6, 5, 0, 2, 2, 1, 6, 6, 6, 5, 6, 6, 6, 7, 5],
+        [6, 5, 6, 1, 2, 0, 0, 6, 5, 5, 6, 6, 5, 6, 6, 6],
+        [6, 6, 5, 1, 1, 1, 1, 5, 6, 6, 6, 6, 5, 6, 6, 7],
+        [5, 5, 6, 5, 1, 1, 6, 5, 6, 6, 7, 6, 6, 5, 6, 6],
+        [6, 6, 5, 6, 6, 6, 6, 6, 5, 6, 6, 5, 6, 5, 5, 5],
+        [7, 5, 6, 6, 6, 6, 5, 5, 6, 5, 6, 5, 6, 6, 5, 6],
+        [6, 6, 6, 6, 6, 6, 6, 6, 5, 6, 6, 7, 5, 7, 6, 6],
+        [5, 6, 6, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 7, 6],
+        [6, 6, 5, 5, 6, 6, 7, 6, 6, 7, 6, 7, 6, 6, 6, 6],
+        [6, 6, 6, 6, 5, 6, 5, 6, 6, 6, 6, 6, 5, 6, 6, 6],
+        [6, 7, 6, 6, 6, 6, 5, 5, 6, 6, 6, 6, 6, 6, 5, 6],
+        [6, 5, 7, 5, 5, 5, 6, 5, 6, 6, 6, 5, 5, 7, 5, 5]], dtype=torch.int32)</div>
+  <p>The training set holds 2,000 patches, shaped (2000, 1, 16, 16), with labels alternating 0 and 1. Printing patch 1 scaled to 0–9 shows what the network sees: asphalt around 5 to 7, and a dark oval of 0s, 1s and 2s in rows 3 to 7 on the left side.</p>
+  <p>Now two models. The CNN follows the recipe from section 07: a convolution with 8 filters, ReLU and max pooling (16 × 16 becomes 8 × 8), a convolution with 16 filters and ReLU, then <strong>global max pooling</strong>, which keeps for each of the 16 maps only its strongest response anywhere in the patch, and a Linear layer that turns those 16 numbers into two class scores. The MLP flattens the 256 pixels and uses one hidden layer of 32 neurons. The training loop is the standard PyTorch loop from the <a class="xref" data-note="dl_pytorch">PyTorch</a> note: shuffle, cut into mini-batches of 64, and for each batch clear gradients, compute the cross-entropy loss, back-propagate and step. Both models train for 10 epochs.</p>
+    <div class="fx" data-lang="py">def train(model, X, y, epochs=10, lr=3e-3):
+    opt = torch.optim.Adam(model.parameters(), lr=lr)
+    loss_fn = nn.CrossEntropyLoss()
+    for ep in range(epochs):
+        perm = torch.randperm(len(X))
+        for i in range(0, len(X), 64):                         # mini-batches of 64
+            idx = perm[i:i + 64]
+            opt.zero_grad(); loss_fn(model(X[idx]), y[idx]).backward(); opt.step()
+
+def accuracy(model, X, y):
+    with torch.no_grad():
+        return round((model(X).argmax(1) == y).float().mean().item(), 3)
 
 torch.manual_seed(0)
 cnn = nn.Sequential(
-    nn.Conv2d(1, 16, 3, padding=1), nn.ReLU(), nn.MaxPool2d(2),    # (N,16,4,4)
-    nn.Conv2d(16, 32, 3, padding=1), nn.ReLU(), nn.MaxPool2d(2),   # (N,32,2,2)
-    nn.Flatten(),                                                 # (N,128)
-    nn.Linear(32 * 2 * 2, 10))                                    # (N,10)
-print("CNN params", sum(p.numel() for p in cnn.parameters())); train(cnn)
+    nn.Conv2d(1, 8, 3, padding=1), nn.ReLU(), nn.MaxPool2d(2),    # (N, 8, 8, 8)
+    nn.Conv2d(8, 16, 3, padding=1), nn.ReLU(),                    # (N, 16, 8, 8)
+    nn.AdaptiveMaxPool2d(1), nn.Flatten(),                        # (N, 16): global max pool
+    nn.Linear(16, 2))                                             # (N, 2): pothole / no pothole
 torch.manual_seed(0)
-mlp = nn.Sequential(nn.Flatten(), nn.Linear(64, 64), nn.ReLU(), nn.Linear(64, 10))
-print("MLP params", sum(p.numel() for p in mlp.parameters())); train(mlp)
+mlp = nn.Sequential(nn.Flatten(), nn.Linear(256, 32), nn.ReLU(), nn.Linear(32, 2))
 
-shifted = torch.roll(Xte, shifts=1, dims=3); shifted[..., 0] = 0     # move 1 pixel right
-with torch.no_grad():
-    print("shifted: CNN", round((cnn(shifted).argmax(1) == yte).float().mean().item(), 3),
-          " MLP", round((mlp(shifted).argmax(1) == yte).float().mean().item(), 3))</div>
-  <div class="fx" data-lang="text">(1797, 64) (1797,) 0.0 16.0
-torch.Size([1347, 1, 8, 8]) torch.Size([450, 1, 8, 8])
-CNN params 6090
-  epoch  1  test acc 0.820
-  epoch  5  test acc 0.951
-  epoch 15  test acc 0.982
-MLP params 4810
-  epoch  1  test acc 0.796
-  epoch  5  test acc 0.947
-  epoch 15  test acc 0.976
-shifted: CNN 0.627  MLP 0.447</div>
-  <p>What happened: the 64 pixel values per row were scaled to 0–1 and reshaped to (N, 1, 8, 8), the layout convolutions need. <code>train</code> is the standard PyTorch loop (see <a class="xref" data-note="dl_pytorch">PyTorch</a>). On normal test images both models do well (98.2% vs 97.6%); 8 × 8 digits are an easy, centred dataset. The difference shows on shifted images: <code>torch.roll</code> moves every image one pixel right. The MLP falls to 44.7%, because each of its weights is tied to one exact pixel position. The CNN keeps 62.7%, because its filters slide and pooling tolerates small moves. On real photos, where objects can be anywhere, this gap is why CNNs won.</p>
-  <div class="callout trap"><span class="label">Trap</span><p>The CNN still dropped from 98% to 63%: convolution is not magic shift-invariance, especially with only two pooling steps on a tiny image. In practice you also train with <strong>data augmentation</strong> (random shifts, crops, flips), so the model sees moved objects during training. For road photos: random crops, flips, brightness changes for sun and shade.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: ResNet.</b> Two conv layers were enough for 8 × 8 digits. Real road photos need dozens of layers for a large receptive field. Does simply stacking more layers keep working?</div>
+for name, model in [("CNN", cnn), ("MLP", mlp)]:
+    train(model, X_train, y_train)
+    print(f"{name}  params {count(model):5,}   test, left side {accuracy(model, X_left, y_left)}"
+          f"   test, right side {accuracy(model, X_right, y_right)}")</div>
+  <div class="fx" data-lang="text">CNN  params 1,282   test, left side 1.0   test, right side 0.992
+MLP  params 8,290   test, left side 0.895   test, right side 0.468</div>
+  <p>The results show the whole point of convolution. On potholes in familiar positions both models do reasonably well, the CNN perfectly. On potholes in the new, right-hand positions, the MLP collapses to 0.468, no better than tossing a coin, because each of its weights is tied to one exact pixel and the weights for the right side never learned anything about potholes. The CNN still scores 0.992, because the same filters slide over the right side, and global max pooling reports "found one" wherever the strongest response is. It does this with 1,282 parameters against the MLP's 8,290.</p>
+  <p>Real projects still help the model further with <strong>data augmentation</strong>: during training each image is randomly shifted, cropped, flipped or brightened, so the model sees objects in many positions and lighting conditions. For road photos that means random crops, horizontal flips, and brightness changes for sun and shade. Convolution gives equivariance for free, but augmentation also covers changes that convolution does not handle, such as rotation, scale and lighting.</p>
 
-  <h2 id="dc-res"><span class="num">09</span>ResNet Skip Connections</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Section 07 says depth gives a bigger receptive field and richer features. So why did researchers find that a 56-layer plain CNN does <em>worse</em> than a 20-layer one, even on its own training data?</p>
-  </div>
-  <p>If 8 layers are good, are 56 layers better? Around 2015, researchers found the opposite: plain CNNs deeper than ~20 layers got <em>higher training error</em>. Not overfitting (that would be low training error, high test error) but failing to learn at all. The reason: during backpropagation the gradient is multiplied by each layer's derivative on its way back. Fifty small factors multiplied together give almost zero, so the early layers barely learn (the "vanishing gradient").</p>
-  <p>The fix, from the ResNet paper, is one line: add each block's input to its output. Instead of learning the full transformation H(x), the block learns only the change F(x), and outputs F(x) + x. The added x is the <strong>skip connection</strong> (or shortcut).</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Correcting a homework answer instead of rewriting it from scratch. Each block only writes small corrections on top of what it received. If nothing needs fixing, it writes nothing, and the answer passes through unchanged. And the teacher's feedback (the gradient) reaches the first student directly through the original answer, not only through every correction.</p>
-  </div>
+  <h2 id="dc-arch"><span class="num">09</span>Classic Architectures</h2>
+  <p>An <strong>architecture</strong> is a particular arrangement of layers: how many, how wide, and in what order. A handful of famous CNN architectures marked the steps in which the field learned how to build good image models, and interviewers expect you to know what each one contributed. Most of them were measured on <strong>ImageNet</strong>, a dataset of about 1.2 million photos in 1,000 classes, where the usual score is "top-5 accuracy", the share of photos whose correct class is among the model's five highest guesses.</p>
+  <p><strong>LeNet-5</strong> (1998) read handwritten digits on bank cheques. It already had the full recipe: convolutions, pooling (then called subsampling), and fully connected layers at the end, with about 60,000 parameters. <strong>AlexNet</strong> (2012) won the ImageNet competition by a huge margin and started the deep-learning boom. It was LeNet's idea made much bigger, about 60 million parameters, and it made three choices that became standard: ReLU instead of sigmoid or tanh (ReLU does not saturate, so gradients stay healthy), dropout against overfitting, and training on GPUs. Its first layer used large 11 × 11 kernels with stride 4, which the size formula turns from 224 pixels into 55.</p>
+  <p><strong>VGG-16</strong> (2014) asked a simple question: what if we use only 3 × 3 convolutions and just go deeper? It stacked 13 convolution layers in five stages, each stage ending with max pooling and doubling the channels (64, 128, 256, 512, 512), followed by three fully connected layers. Its regular design makes it the easiest classic network to remember, and its parameter count teaches an important lesson. We can build it on PyTorch's "meta" device, which records shapes without allocating any memory, and count:</p>
+    <div class="fx" data-lang="py">def vgg16():
+    cfg = [64, 64, "M", 128, 128, "M", 256, 256, 256, "M", 512, 512, 512, "M", 512, 512, 512, "M"]
+    layers, c = [], 3
+    for v in cfg:
+        if v == "M": layers.append(nn.MaxPool2d(2))
+        else: layers += [nn.Conv2d(c, v, 3, padding=1), nn.ReLU()]; c = v
+    return nn.Sequential(*layers, nn.Flatten(),
+                         nn.Linear(512 * 7 * 7, 4096), nn.ReLU(), nn.Linear(4096, 4096), nn.ReLU(),
+                         nn.Linear(4096, 1000))
+with torch.device("meta"):                    # shapes only: no memory, no weights
+    vgg = vgg16()
+convs = sum(count(m) for m in vgg if isinstance(m, nn.Conv2d))
+print(f"VGG-16 total {count(vgg):,}   all 13 convs {convs:,}   first Linear {count(vgg[-5]):,}")
+print("two 3x3 convs, 64 ch:", 2 * 3 * 3 * 64 * 64, "  one 5x5 conv, 64 ch:", 5 * 5 * 64 * 64)
+print("AlexNet first conv, 224 in, K=11 P=2 S=4 -&gt;", out_size(224, 11, 2, 4))</div>
+  <div class="fx" data-lang="text">VGG-16 total 138,357,544   all 13 convs 14,714,688   first Linear 102,764,544
+two 3x3 convs, 64 ch: 73728   one 5x5 conv, 64 ch: 102400
+AlexNet first conv, 224 in, K=11 P=2 S=4 -&gt; 55</div>
+  <p>VGG-16 has 138 million parameters, but only 14.7 million of them are in the 13 convolution layers. The first fully connected layer alone, which connects the flattened 512 × 7 × 7 = 25,088 values to 4,096 neurons, holds 102.8 million, three quarters of the whole network. That is the MLP problem from section 01 again, at the end of the network. Later architectures replaced this flatten-and-connect step with global average pooling followed by one small Linear layer, which removed most of those weights with no loss of accuracy. The second line repeats the 3 × 3 argument from section 07: two stacked 3 × 3 layers cost 73,728 weights where one 5 × 5 layer costs 102,400.</p>
+  <p><strong>GoogLeNet</strong>, also called <strong>Inception</strong> (2014), took a different path. Each "Inception module" runs 1 × 1, 3 × 3 and 5 × 5 convolutions and a pooling branch side by side on the same input and concatenates their outputs, so the network can look at several scales at once. To keep this affordable it first shrinks the channels with 1 × 1 convolutions (a "bottleneck"), and it ends with global average pooling. It reached better accuracy than VGG with about 7 million parameters.</p>
+  <table class="tbl">
+    <tr><th>Network</th><th>Year</th><th>Main idea</th><th>Params</th><th>ImageNet top-5</th></tr>
+    <tr><td>LeNet-5</td><td>1998</td><td>conv + pool + FC on digits</td><td>60K</td><td>—</td></tr>
+    <tr><td>AlexNet</td><td>2012</td><td>big CNN on GPUs; ReLU, dropout</td><td>60M</td><td>≈ 84.7%</td></tr>
+    <tr><td>VGG-16</td><td>2014</td><td>only 3×3 convs, deeper</td><td>138M</td><td>≈ 92.7%</td></tr>
+    <tr><td>GoogLeNet</td><td>2014</td><td>parallel branches, 1×1 bottlenecks, GAP</td><td>≈ 7M</td><td>≈ 93.3%</td></tr>
+    <tr><td>ResNet-50</td><td>2015</td><td>skip connections, 50+ layers</td><td>25.6M</td><td>≈ 93%</td></tr>
+    <tr><td>EfficientNet-B0</td><td>2019</td><td>searched blocks, compound scaling</td><td>5.3M</td><td>≈ 93%</td></tr>
+  </table>
+  <p>The trend in the table is that depth helped: each winner was deeper than the last. But researchers trying to go beyond about 20 layers ran into a wall, which is the subject of the next section.</p>
+
+  <h2 id="dc-res"><span class="num">10</span>ResNet and Skip Connections</h2>
+  <p>If depth gives a larger receptive field and richer features, a 56-layer network should beat a 20-layer one. In 2015, researchers found the opposite: plain CNNs deeper than about 20 layers had <em>higher</em> error, and not only on test data but on their own <em>training</em> data. That rules out overfitting, which would show low training error and high test error. The deeper networks were simply failing to learn, a puzzle called the <strong>degradation problem</strong>. The main reason is the one described in <a class="xref" data-note="dl_backprop">Backpropagation</a>: the gradient that reaches an early layer is a product of one factor per layer above it, and when those factors are below 1, fifty of them multiplied together give almost zero. The early layers then receive almost no learning signal. This is the <strong>vanishing gradient</strong> problem from <a class="xref" data-note="dl_training">Training Neural Networks</a>.</p>
+  <p>The fix in the ResNet paper is a single line: add each block's input to its output. Instead of asking a group of layers to learn a whole transformation H(x), the block learns only the change F(x) and outputs <strong>y = F(x) + x</strong>. The added x is the <strong>skip connection</strong>, also called a shortcut, and a block built this way is a <strong>residual block</strong> (the "residual" is the change F). Think of correcting a student's homework instead of rewriting it from scratch. Each block only writes small corrections on top of what it received; if nothing needs fixing, it writes nothing and the answer passes through unchanged. And the teacher's feedback reaches the first student directly through the original answer, not only through every correction.</p>
   <figure class="viz"><svg viewBox="0 0 600 250" width="600">
 <defs><marker id="dc-ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
 <text x="130" y="20" text-anchor="middle">Plain block</text>
@@ -680,89 +553,72 @@ shifted: CNN 0.627  MLP 0.447</div>
 <text x="400" y="220" text-anchor="middle">y = F(x) + x</text>
 <text x="400" y="242" text-anchor="middle" class="tg">∂y/∂x = ∂F/∂x + 1</text>
 </svg><figcaption>The green shortcut adds x back, so the layers only learn the change F(x), and gradients get a "+1" path straight back.</figcaption></figure>
-  <p>Why "+1" matters, in numbers: the derivative of y = F(x) + x is ∂F/∂x + 1. Even if ∂F/∂x is tiny, say 0.01, the factor is 1.01, not 0.01. Fifty factors of 0.01 multiply to 10<sup>−100</sup>; fifty factors near 1 stay near 1. The experiment below builds a 50-layer network with and without skips and measures the gradient that reaches the first and last layers.</p>
-  <div class="fx" data-lang="py">class Block(nn.Module):
+  <p>On the left of the figure, a plain block must learn the whole output H(x). On the right, the green path carries x around the two convolution layers and adds it to their output F(x). Now look at the gradient. The derivative of y = F(x) + x with respect to x is ∂F/∂x + 1. Even if the layers' own factor ∂F/∂x is tiny, say 0.01, the block's factor is 1.01, not 0.01. Fifty factors of 0.01 multiply to 10<sup>−100</sup>, while fifty factors near 1 stay near 1. The experiment below builds a 50-layer network of small blocks, once without and once with skip connections, back-propagates once, and measures the size of the gradient that reaches the first and the last layer:</p>
+    <div class="fx" data-lang="py">class Block(nn.Module):
     def __init__(self, d, skip):
         super().__init__(); self.f = nn.Sequential(nn.Linear(d, d), nn.Tanh()); self.skip = skip
     def forward(self, x):
-        return x + self.f(x) if self.skip else self.f(x)      # F(x) + x   vs   F(x)
+        return x + self.f(x) if self.skip else self.f(x)        # F(x) + x   vs   F(x)
+
 for skip in (False, True):
     torch.manual_seed(0)
-    net = nn.Sequential(*[Block(64, skip) for _ in range(50)])   # 50 layers deep
-    net(torch.randn(32, 64)).pow(2).mean().backward()
-    print(f"skip={skip!s:5}  grad first layer {net[0].f[0].weight.grad.norm():.2e}"
-          f"   last layer {net[-1].f[0].weight.grad.norm():.2e}")</div>
-  <div class="fx" data-lang="text">skip=False  grad first layer 1.31e-14   last layer 1.45e-02
-skip=True   grad first layer 1.63e+01   last layer 5.71e+00</div>
-  <p>Why does this happen at all? It is the chain rule from <a class="xref" data-note="dl_backprop">Backpropagation</a>: the gradient reaching layer 1 is a product of one factor per layer above it, and the <a class="xref" data-note="dl_training">Training</a> note's vanishing-gradient problem says such products shrink exponentially when the factors are below 1. The skip connection does not make the factors bigger; it adds a second path whose factor is exactly 1. The same "+x" idea reappears as the LSTM cell state in <a class="xref" data-note="dl_rnns">RNNs</a> and as the residual connections in every <a class="xref" data-note="transformers">Transformer</a> layer.</p>
-  <p>Without skips the first layer gets a gradient of 10<sup>−14</sup>: effectively zero, it will never learn. With skips it gets 16. (Real ResNets add BatchNorm, which keeps the residual path's scale in check.) Now a real convolutional residual block, with shapes traced. When the block keeps the shape, the shortcut is just x. When it halves the size and doubles channels (stride 2, 64 → 128), x has the wrong shape to add, so the shortcut uses a 1×1 conv with stride 2 (a <strong>projection shortcut</strong>).</p>
-  <div class="fx" data-lang="py">class ResBlock(nn.Module):
+    deep = nn.Sequential(*[Block(64, skip) for _ in range(50)])   # 50 layers
+    deep(torch.randn(32, 64)).pow(2).mean().backward()
+    print(f"skip={skip!s:5}  gradient at first layer {deep[0].f[0].weight.grad.norm():.2e}"
+          f"   at last layer {deep[-1].f[0].weight.grad.norm():.2e}")</div>
+  <div class="fx" data-lang="text">skip=False  gradient at first layer 1.31e-14   at last layer 1.45e-02
+skip=True   gradient at first layer 1.63e+01   at last layer 5.71e+00</div>
+  <p>Without skips, the first layer receives a gradient of about 10<sup>−14</sup>, effectively zero, so it would never learn, while the last layer gets a normal gradient. With skips, the first layer receives about 16. The skip connection does not make the layers' own factors bigger; it adds a second path whose factor is exactly 1, so the gradient always has a way back. The same "+ x" idea reappears as the cell state in <a class="xref" data-note="dl_rnns">LSTMs</a> and as the residual connections around every layer of a <a class="xref" data-note="transformers">Transformer</a>.</p>
+  <p>A real convolutional residual block has two conv–BN layers in F. When the block keeps the shape, the shortcut is just x. When it halves the size and doubles the channels, for example from 64 channels at 56 × 56 to 128 channels at 28 × 28, x has the wrong shape to be added, so the shortcut becomes a 1 × 1 convolution with stride 2, called a <strong>projection shortcut</strong>, which produces the matching shape. The convolutions use <code>bias=False</code> because the BatchNorm right after each one has its own shift, which would make a bias redundant.</p>
+    <div class="fx" data-lang="py">class ResBlock(nn.Module):
     def __init__(self, c_in, c_out, stride=1):
         super().__init__()
         self.f = nn.Sequential(
             nn.Conv2d(c_in, c_out, 3, stride=stride, padding=1, bias=False), nn.BatchNorm2d(c_out), nn.ReLU(),
             nn.Conv2d(c_out, c_out, 3, padding=1, bias=False), nn.BatchNorm2d(c_out))
         self.shortcut = nn.Identity()
-        if stride != 1 or c_in != c_out:            # shapes differ -&gt; 1x1 projection
-            self.shortcut = nn.Sequential(nn.Conv2d(c_in, c_out, 1, stride=stride, bias=False), nn.BatchNorm2d(c_out))
+        if stride != 1 or c_in != c_out:              # shapes differ: 1x1 conv "projection"
+            self.shortcut = nn.Sequential(nn.Conv2d(c_in, c_out, 1, stride=stride, bias=False),
+                                          nn.BatchNorm2d(c_out))
     def forward(self, x):
         return torch.relu(self.f(x) + self.shortcut(x))
+
 x = torch.randn(4, 64, 56, 56)
-same = ResBlock(64, 64); down = ResBlock(64, 128, stride=2)
-print(tuple(same(x).shape), tuple(down(x).shape))
-print(tuple(down.f(x).shape), tuple(down.shortcut(x).shape))
-print(type(same.shortcut).__name__, type(down.shortcut).__name__)</div>
-  <div class="fx" data-lang="text">(4, 64, 56, 56) (4, 128, 28, 28)
-(4, 128, 28, 28) (4, 128, 28, 28)
-Identity Sequential</div>
-  <p>The same-shape block returns (4, 64, 56, 56), unchanged. In the downsampling block both branches produce (4, 128, 28, 28) (56 → 28 by stride 2, formula ⌊(56 − 3 + 2)/2⌋ + 1 = 28), so they can be added. <code>bias=False</code> because BatchNorm right after has its own shift.</p>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Residual block</strong>: y = F(x) + shortcut(x). <strong>Degradation problem</strong>: deeper plain networks reach higher training error, an optimisation failure. <strong>Projection shortcut</strong>: 1×1 conv (with stride) on the skip path to match shapes.</p></div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Saying skip connections fix <em>overfitting</em>. They fix optimisation (training error). Also: shapes must match exactly for the addition; a forgotten projection gives "The size of tensor a (28) must match the size of tensor b (56)".</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: EfficientNet.</b> Skips let us train 50 or 150 layers. But depth is only one knob. Given more compute, should the net be deeper, wider, or see sharper images?</div>
+same, down = ResBlock(64, 64), ResBlock(64, 128, stride=2)
+print("same-shape block :", tuple(same(x).shape), type(same.shortcut).__name__)
+print("downsample block :", tuple(down.f(x).shape), "+", tuple(down.shortcut(x).shape), "-&gt;", tuple(down(x).shape))</div>
+  <div class="fx" data-lang="text">same-shape block : (4, 64, 56, 56) Identity
+downsample block : (4, 128, 28, 28) + (4, 128, 28, 28) -&gt; (4, 128, 28, 28)</div>
+  <p>The same-shape block returns (4, 64, 56, 56) unchanged, and its shortcut is the identity. In the downsampling block, the main path gives (4, 128, 28, 28) (the size formula: ⌊(56 − 3 + 2)/2⌋ + 1 = 28) and the projection shortcut also gives (4, 128, 28, 28), so the two can be added. Forget the projection and PyTorch stops with an error such as "The size of tensor a (28) must match the size of tensor b (56)". With residual blocks, networks of 50, 101 and 152 layers trained without trouble, and ResNet-50 became the standard backbone for years. Remember what skip connections fix: optimisation (training error), not overfitting.</p>
 
-  <h2 id="dc-eff"><span class="num">10</span>EfficientNet Scaling</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We can now build very deep nets. With a fixed budget (a phone in the inspection van, a cloud bill), how should a network grow to get the most accuracy per unit of compute?</p>
-  </div>
-  <p>You have a working CNN and a bigger compute budget. Where should the extra compute go? Three knobs: make it <strong>deeper</strong> (more layers), <strong>wider</strong> (more channels per layer), or feed <strong>higher-resolution</strong> images. Before 2019 people turned one knob, usually depth (ResNet-18 → 152). Each knob alone gives quickly shrinking gains.</p>
-  <p>EfficientNet's idea in plain words: a bigger image has more detail, which needs more layers to cover it (bigger receptive field) and more channels to capture its finer patterns. So turn all three knobs together, in a fixed ratio found once by a small search.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Cooking for more wedding guests. You increase rice, dal and water together, in proportion. Doubling only the rice gives a bad meal, however much rice there is.</p>
-  </div>
-  <div class="cards">
-    <div><b>Deeper</b><p>More layers: bigger receptive field, harder to train.</p><small>ResNet-18 → 152</small></div>
-    <div><b>Wider</b><p>More channels: finer features, saturates fast.</p><small>Wide ResNet</small></div>
-    <div><b>Higher resolution</b><p>More pixels: small details, costs ∝ r².</p><small>224 → 380</small></div>
-    <div><b>Compound</b><p>Grow all three in a fixed ratio.</p><small>EfficientNet B0 → B7</small></div>
-  </div>
-  <p>The rule: depth × α<sup>φ</sup>, width × β<sup>φ</sup>, resolution × γ<sup>φ</sup>, where φ is "how much bigger" you want. Compute (FLOPs) grows roughly with depth × width² × resolution² (width and resolution both appear twice: channels in × channels out, height × width). The paper picked α = 1.2, β = 1.1, γ = 1.15 so that α·β²·γ² ≈ 2: each step of φ about doubles compute. The code works out the first few steps.</p>
-  <div class="fx" data-lang="py">a, b, g = 1.2, 1.1, 1.15                 # grid-searched once on B0
-print("a*b^2*g^2 =", round(a*b*b*g*g, 3))  # FLOPs grow ~ d * w^2 * r^2
-for phi in [0, 1, 2, 3]:
-    print(phi, "depth x%.2f width x%.2f res %d  FLOPs x%.1f"
-          % (a**phi, b**phi, round(224*g**phi), (a*b*b*g*g)**phi))</div>
-  <div class="fx" data-lang="text">a*b^2*g^2 = 1.92
-0 depth x1.00 width x1.00 res 224  FLOPs x1.0
-1 depth x1.20 width x1.10 res 258  FLOPs x1.9
-2 depth x1.44 width x1.21 res 296  FLOPs x3.7
-3 depth x1.73 width x1.33 res 341  FLOPs x7.1</div>
-  <p>Read a row: at φ = 2 the network is 44% deeper, 21% wider, takes 296-pixel images, and costs 3.7× the compute of B0. B0 itself (5.3M params, built from "MBConv" blocks found by automated architecture search) matches ResNet-50 (25.6M) in accuracy. The released B1–B7 use rounded resolutions such as 240, 260, 300.</p>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Compound scaling</strong>: scale depth, width and resolution together with a single coefficient φ under the constraint α·β²·γ² ≈ 2. <strong>FLOPs</strong>: floating-point operations, a hardware-independent measure of compute per image.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Fewer parameters does not always mean faster. EfficientNets use depthwise convolutions that are memory-bound on GPUs, so a ResNet-50 can be faster in practice despite more parameters. Measure latency on your target hardware.</p></div>
-  <p>On our running example the three knobs mean: <em>resolution</em>, cut 10 × 10 patches instead of 5 × 5 so small cracks are visible; <em>depth</em>, more layers so the receptive field still covers the larger patch (section 07: two 3 × 3 convs cover 5 pixels, a 10-pixel patch needs a pool and another conv); <em>width</em>, more filters to describe the finer textures. Turning only one knob wastes the others.</p>
-  <div class="bridge"><b>What this still can't tell us → next: Transfer learning.</b> We know how to design and grow strong CNNs, but every one of them needs a huge labelled dataset to train from scratch. The road-inspection team has labelled only a few hundred photos.</div>
+  <h2 id="dc-eff"><span class="num">11</span>Efficient CNNs</h2>
+  <p>With residual blocks we can train very deep networks, but a road-inspection van might run its model on a small onboard computer or a phone, where memory and battery are limited. Two ideas made CNNs much cheaper without losing much accuracy.</p>
+  <p>The first is the <strong>depthwise separable convolution</strong>, introduced by MobileNet. A normal convolution does two jobs at once: it looks at neighbouring pixels (the k × k part) and it mixes channels (the C<sub>in</sub> part), and its cost is the product of both. A depthwise separable convolution splits these jobs. First a <strong>depthwise</strong> convolution gives each input channel its own single 3 × 3 filter, looking at neighbours but not mixing channels (in PyTorch, <code>groups=C_in</code>). Then a <strong>pointwise</strong> 1 × 1 convolution mixes the channels. For 64 channels in and 128 out, the normal layer has 128 × 64 × 9 + 128 = 73,856 parameters; the depthwise part has 64 × 9 + 64 = 640 and the pointwise part 128 × 64 + 128 = 8,320, together 8,960.</p>
+  <p>The second idea is how to make a network bigger when you do have more compute. There are three knobs: make it <strong>deeper</strong> (more layers, a larger receptive field), <strong>wider</strong> (more channels, finer features), or feed it <strong>higher-resolution</strong> images (more detail). Before 2019 people mostly turned one knob, usually depth, and each knob alone gives quickly shrinking returns. <strong>EfficientNet</strong>'s insight was that the knobs depend on each other: a sharper image has more detail, which needs more layers to cover it and more channels to describe it. So it turns all three together in a fixed ratio, called <strong>compound scaling</strong>, much as you scale rice, dal and water together when cooking for more wedding guests. With a single number φ saying "how much bigger", depth is multiplied by α<sup>φ</sup>, width by β<sup>φ</sup> and resolution by γ<sup>φ</sup>. Compute grows roughly with depth × width² × resolution², because width appears twice (channels in × channels out) and resolution twice (height × width). The paper chose α = 1.2, β = 1.1 and γ = 1.15 so that α · β² · γ² ≈ 2, meaning each step of φ roughly doubles the compute.</p>
+    <div class="fx" data-lang="py">normal    = nn.Conv2d(64, 128, 3, padding=1)
+depthwise = nn.Conv2d(64, 64, 3, padding=1, groups=64)    # one 3x3 filter per channel
+pointwise = nn.Conv2d(64, 128, 1)                         # 1x1: mix channels
+x = torch.randn(1, 64, 28, 28)
+print("normal conv        ", tuple(normal(x).shape), f"{count(normal):,}")
+print("depthwise+pointwise", tuple(pointwise(depthwise(x)).shape), f"{count(depthwise) + count(pointwise):,}")
 
-  <h2 id="dc-tl"><span class="num">11</span>Transfer Learning with Pretrained CNNs</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>A ResNet has 11 million weights; we have 500 labelled road photos (pothole / no pothole). Trained from scratch it would memorise them. How do we get a good pothole detector anyway?</p>
-  </div>
-  <p>Notice what the early layers of any image CNN learn: edge and texture filters like the ones we wrote by hand in sections 02–04. Those are the same for road photos, X-rays and cat pictures. A ResNet trained on ImageNet (1.2 million photos, 1000 classes) already has them, plus filters for rims, shadows and surfaces. <strong>Transfer learning</strong> reuses that network and retrains only what is task-specific.</p>
-  <p>In plain words: keep the pretrained <strong>backbone</strong> (all conv stages), throw away its final layer (which outputs 1000 ImageNet classes), add a new final layer for our 2 classes, and train. First train only the new layer; later, optionally, gently adjust the top stage.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A cricket fielding coach moving to a hockey team. Fitness and footwork training carry over (frozen backbone). Only the hockey-specific skills need teaching (the new head). Later, small adjustments to the rest (fine-tuning at a tiny learning rate).</p>
-  </div>
+a, b, g = 1.2, 1.1, 1.15                                  # depth, width, resolution multipliers
+print("a * b^2 * g^2 =", round(a * b**2 * g**2, 2))
+for phi in range(4):
+    print(f"phi={phi}: depth x{a**phi:.2f}  width x{b**phi:.2f}  resolution {224 * g**phi:.0f}"
+          f"  compute x{(a * b**2 * g**2)**phi:.1f}")</div>
+  <div class="fx" data-lang="text">normal conv         (1, 128, 28, 28) 73,856
+depthwise+pointwise (1, 128, 28, 28) 8,960
+a * b^2 * g^2 = 1.92
+phi=0: depth x1.00  width x1.00  resolution 224  compute x1.0
+phi=1: depth x1.20  width x1.10  resolution 258  compute x1.9
+phi=2: depth x1.44  width x1.21  resolution 296  compute x3.7
+phi=3: depth x1.73  width x1.33  resolution 341  compute x7.1</div>
+  <p>The first two lines confirm that the depthwise separable version produces the same output shape, (1, 128, 28, 28), with 8,960 parameters instead of 73,856, about 8 times fewer. The rest works out compound scaling: at φ = 2 the network is 44% deeper and 21% wider, takes 296-pixel images, and costs 3.7 times the compute of the base model (the released B1–B7 models use rounded resolutions). The base model, EfficientNet-B0, built from depthwise-separable blocks found by an automated architecture search, matches ResNet-50's accuracy with about a fifth of the parameters. One practical warning: fewer parameters does not always mean faster. Depthwise convolutions do little arithmetic per byte of memory moved, so on a GPU a ResNet-50 can run faster than a "smaller" EfficientNet. Always measure speed on the hardware you will actually use.</p>
+
+  <h2 id="dc-tl"><span class="num">12</span>Transfer Learning</h2>
+  <p>Every architecture above needs a large labelled dataset to train from scratch: ImageNet has over a million labelled photos. A real road team might have a few hundred labelled patches, and when they install a new kind of camera, perhaps only a handful. Training a large network from scratch on so little data would simply memorise it. Notice, though, what the early layers of any image CNN learn: edge and texture detectors like the ones we wrote by hand, which are useful for road photos, X-rays and cat pictures alike. <strong>Transfer learning</strong> means taking a network already trained on a large dataset and reusing it for a new task, retraining only the part that is specific to the new task.</p>
+  <p>The vocabulary is simple. The <strong>backbone</strong> is the pretrained feature extractor, all the convolution stages. The <strong>head</strong> is the final layer or layers that turn features into the answer for a specific task. In the simplest form, called <strong>feature extraction</strong>, you <strong>freeze</strong> the backbone (its weights are not updated) and train only a new head. In <strong>fine-tuning</strong> you also let some pretrained layers change, but with a much smaller learning rate. It is like a cricket fielding coach who moves to a hockey team: fitness and footwork carry over unchanged, only the hockey-specific skills need to be taught, and later a few small adjustments are made to the rest.</p>
   <figure class="viz"><svg viewBox="0 0 600 150" width="600">
 <g text-anchor="middle">
 <rect x="10" y="30" width="105" height="44" rx="5" class="fs" stroke="currentColor"/><text x="62" y="50">stem +</text><text x="62" y="66">layer1</text>
@@ -778,191 +634,205 @@ for phi in [0, 1, 2, 3]:
 <text x="300" y="140" class="tm">small data: head only · more: unfreeze top-down · lots: all</text>
 </g>
 </svg><figcaption>Early layers are generic and stay frozen; the pothole head trains first; top stages are unfrozen later with a tiny learning rate.</figcaption></figure>
-  <p>First, know the backbone's shapes, because the head must fit them. Trace one 224 × 224 road photo through ResNet-18: the stem conv (K7, S2) gives 112 (the size formula: ⌊(224 − 7 + 6)/2⌋ + 1 = 112), max-pool 56, then four stages at 56, 28, 14, 7 with 64, 128, 256, 512 channels (the "spatial ↓, channels ↑" recipe of section 07), global average pool to (1, 512), and the original <code>fc</code> to 1000 classes. So the new head is <code>Linear(512, 2)</code>: 512·2 + 2 = <strong>1,026</strong> weights.</p>
-<div class="fx" data-lang="py">import torchvision
-m = torchvision.models.resnet18(weights=None)   # real use: weights=ResNet18_Weights.DEFAULT
-x = torch.randn(1, 3, 224, 224)
-for name in ["conv1", "bn1", "relu", "maxpool", "layer1", "layer2", "layer3", "layer4", "avgpool"]:
-    x = getattr(m, name)(x)
-    if name not in ("bn1", "relu"):
-        print(f"{name:8s} {tuple(x.shape)}")
-x = torch.flatten(x, 1); print(f"{'flatten':8s} {tuple(x.shape)}")
-print(f"{'fc':8s} {tuple(m.fc(x).shape)}")
-for p in m.parameters():
-    p.requires_grad = False                     # freeze the backbone
-m.fc = nn.Linear(m.fc.in_features, 2)           # new head: pothole / no pothole (trainable)
-cnt = lambda ps: sum(p.numel() for p in ps)
-print(f"total {cnt(m.parameters()):,}  trainable {cnt(p for p in m.parameters() if p.requires_grad):,}")
-for p in m.layer4.parameters():
-    p.requires_grad = True                      # stage 2: unfreeze the last stage
-opt = torch.optim.AdamW([
-    {"params": m.layer4.parameters(), "lr": 1e-5},   # pretrained: tiny LR
-    {"params": m.fc.parameters(),     "lr": 1e-3}])  # new head: normal LR
-print(f"trainable after unfreezing layer4 {cnt(p for p in m.parameters() if p.requires_grad):,}")
-print(tuple(m(torch.randn(2, 3, 224, 224)).shape))</div>
-  <div class="fx" data-lang="text">conv1    (1, 64, 112, 112)
-maxpool  (1, 64, 56, 56)
-layer1   (1, 64, 56, 56)
-layer2   (1, 128, 28, 28)
-layer3   (1, 256, 14, 14)
-layer4   (1, 512, 7, 7)
-avgpool  (1, 512, 1, 1)
-flatten  (1, 512)
-fc       (1, 1000)
-total 11,177,538  trainable 1,026
-trainable after unfreezing layer4 8,394,754
-(2, 2)</div>
-  <p>What happened: setting <code>requires_grad = False</code> on every parameter froze the backbone; the new <code>fc</code> is created after, so it is trainable: 1,026 of 11.2M weights. 500 photos are plenty to fit 1,026 weights. Unfreezing <code>layer4</code> adds 8.4M trainable weights, and the two <strong>parameter groups</strong> give them a 100× smaller learning rate than the head. The final output is (2, 2): two photos, two class scores (pothole, no pothole). <em>This ran with random weights (the sandbox cannot download ImageNet weights); shapes and counts are identical with pretrained weights.</em></p>
-  <table class="tbl">
-    <tr><th>Your data</th><th>Similar to ImageNet (road photos)</th><th>Very different (X-ray, satellite, thermal)</th></tr>
-    <tr><td>Small (&lt; 1K)</td><td>Freeze all, train head</td><td>Freeze early stages, fine-tune top + head</td></tr>
-    <tr><td>Large (10K+)</td><td>Fine-tune top stages + head</td><td>Fine-tune everything, still init from pretrained</td></tr>
-  </table>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Backbone</strong>: the pretrained feature extractor. <strong>Head</strong>: the task-specific final layer(s). <strong>Feature extraction</strong>: frozen backbone + trained head. <strong>Fine-tuning</strong>: also update pretrained weights with a small learning rate.</p></div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Fine-tuning pretrained layers at LR 1e-3 wipes out what they learned within a few epochs (catastrophic forgetting); the model then does worse than frozen features. Use parameter groups with 10–100× lower LR, and the same resize + ImageNet mean/std normalisation the model was trained with.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: How it all connects.</b> We have a working pothole detector and a dozen ideas behind it. How do they hang together as one story?</div>
+  <p>The figure shows the usual plan for a ResNet. The stem and the early stages hold generic edge and texture filters and stay frozen. The last stage holds more task-specific parts and may be unfrozen later with a tiny learning rate. The new head trains first, with a normal learning rate.</p>
+  <p>We cannot download real pretrained weights here, so we demonstrate the idea on our own road data, where it works for exactly the same reason. Suppose the city has 3,000 labelled <em>daytime</em> patches. Now a new <em>night</em> camera is installed, whose images are dark, low in contrast and grainy, and only 16 night patches have been labelled. First we train a model on the daytime data and try it, unchanged, on night images:</p>
+    <div class="fx" data-lang="py">def make_night(n, seed):                          # the new camera: dark, low contrast, grainy
+    rng = np.random.default_rng(seed)
+    labels = np.arange(n) % 2
+    imgs = np.stack([road_patch(rng, lab) * 0.35 + rng.normal(0, 0.06, (S, S)) for lab in labels])[:, None]
+    return torch.tensor(imgs, dtype=torch.float32), torch.tensor(labels)
 
-  <h2 id="dc-connect"><span class="num">12</span>How It All Connects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Convolution, padding, stride, channels, feature maps, pooling, receptive field, ResNet, EfficientNet, transfer learning: ten separate facts, or one idea with consequences?</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 680 330" width="680">
-<defs><marker id="dc-a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="10" y="10" width="170" height="44" rx="7" class="fr sr"/><text x="95" y="29" text-anchor="middle" font-size="11.5" font-weight="700">MLP on pixels</text><text x="95" y="45" text-anchor="middle" class="tm" font-size="10">416 / 150.5M weights</text>
-<line x1="180" y1="32" x2="218" y2="32" stroke="currentColor" marker-end="url(#dc-a9)"/>
-<rect x="220" y="10" width="200" height="44" rx="7" class="fb sb"/><text x="320" y="29" text-anchor="middle" font-size="11.5" font-weight="700">convolution = shared 3×3 filter</text><text x="320" y="45" text-anchor="middle" class="tm" font-size="10">10 weights; rim → 21 / −21</text>
-<line x1="420" y1="32" x2="458" y2="32" stroke="currentColor" marker-end="url(#dc-a9)"/>
-<rect x="460" y="10" width="210" height="44" rx="7" class="fb sb"/><text x="565" y="29" text-anchor="middle" font-size="11.5" font-weight="700">padding &amp; stride</text><text x="565" y="45" text-anchor="middle" class="tm" font-size="10">⌊(W − K + 2P)/S⌋ + 1: 3, 5, 3</text>
-<line x1="320" y1="54" x2="320" y2="84" stroke="currentColor" marker-end="url(#dc-a9)"/>
-<rect x="200" y="86" width="240" height="44" rx="7" class="fb sb"/><text x="320" y="105" text-anchor="middle" font-size="11.5" font-weight="700">many filters × all channels</text><text x="320" y="121" text-anchor="middle" class="tm" font-size="10">C_out·C_in·k·k + C_out: 20, 56</text>
-<line x1="320" y1="130" x2="320" y2="160" stroke="currentColor" marker-end="url(#dc-a9)"/>
-<rect x="200" y="162" width="240" height="44" rx="7" class="ft st"/><text x="320" y="181" text-anchor="middle" font-size="11.5" font-weight="700">feature maps (+ ReLU)</text><text x="320" y="197" text-anchor="middle" class="tm" font-size="10">equivariant: 21 moves with the hole</text>
-<line x1="200" y1="184" x2="168" y2="184" stroke="currentColor" marker-end="url(#dc-a9)"/>
-<rect x="10" y="162" width="156" height="44" rx="7" class="ft st"/><text x="88" y="181" text-anchor="middle" font-size="11.5" font-weight="700">pooling</text><text x="88" y="197" text-anchor="middle" class="tm" font-size="10">global max 21 either way</text>
-<line x1="440" y1="184" x2="472" y2="184" stroke="currentColor" marker-end="url(#dc-a9)"/>
-<rect x="474" y="162" width="196" height="44" rx="7" class="ft st"/><text x="572" y="181" text-anchor="middle" font-size="11.5" font-weight="700">stacking → receptive field</text><text x="572" y="197" text-anchor="middle" class="tm" font-size="10">3 → 5 → 6 → 10</text>
-<line x1="572" y1="206" x2="572" y2="236" stroke="currentColor" marker-end="url(#dc-a9)"/>
-<rect x="474" y="238" width="196" height="40" rx="7" class="fr sr"/><text x="572" y="256" text-anchor="middle" font-size="11.5" font-weight="700">deep plain nets stall</text><text x="572" y="271" text-anchor="middle" class="tm" font-size="10">grad 1e-14 at layer 1</text>
-<line x1="474" y1="258" x2="442" y2="258" stroke="currentColor" marker-end="url(#dc-a9)"/>
-<rect x="290" y="238" width="150" height="40" rx="7" class="fg sg"/><text x="365" y="256" text-anchor="middle" font-size="11.5" font-weight="700">ResNet: F(x) + x</text><text x="365" y="271" text-anchor="middle" class="tm" font-size="10">grad 16</text>
-<line x1="290" y1="258" x2="258" y2="258" stroke="currentColor" marker-end="url(#dc-a9)"/>
-<rect x="106" y="238" width="150" height="40" rx="7" class="fg sg"/><text x="181" y="256" text-anchor="middle" font-size="11.5" font-weight="700">EfficientNet</text><text x="181" y="271" text-anchor="middle" class="tm" font-size="10">d·w²·r² ≈ 2 per step</text>
-<line x1="181" y1="278" x2="181" y2="296" stroke="currentColor" marker-end="url(#dc-a9)"/>
-<rect x="60" y="298" width="300" height="28" rx="7" class="fv" stroke="currentColor" stroke-opacity="0.3"/><text x="210" y="317" text-anchor="middle" font-size="11">transfer learning: reuse backbone, new 2-class head (1,026)</text>
-</svg><figcaption>Everything grows out of one idea: share a small filter across all positions. Sharing creates the size bookkeeping (padding, stride, channels), the outputs (feature maps), the need to summarise them (pooling) and to stack them (receptive field); deep stacks need skips (ResNet), growth needs balance (EfficientNet), and the learned early filters are reusable (transfer learning).</figcaption></figure>
-  <table class="tbl"><caption>Every concept on the same 5×5 road patch</caption>
-    <tr><th>Concept</th><th>Built from</th><th>Answers which question</th><th>Value on our patch</th><th>When to use</th></tr>
-    <tr><td>MLP on pixels</td><td>flatten + Linear</td><td>can our old network read images?</td><td>416 weights; shift changes 10/25 inputs</td><td>tiny fixed-position inputs only</td></tr>
-    <tr><td>Convolution</td><td>dot product of filter and window, slid</td><td>where is my pattern?</td><td>[[14, 7, −14], [21, 13, −21], [15, 6, −15]]</td><td>any grid data (images, spectrograms)</td></tr>
-    <tr><td>Padding</td><td>zeros around the input</td><td>keep the size?</td><td>5 → 5; corner −16 (fake edge)</td><td>"same" convs inside a stage</td></tr>
-    <tr><td>Stride</td><td>skip positions</td><td>shrink on purpose?</td><td>5 → 3 (P1, S2)</td><td>learned downsampling</td></tr>
-    <tr><td>Size formula</td><td>W, K, P, S</td><td>what shape comes out?</td><td>⌊(5 − 3 + 2)/2⌋ + 1 = 3</td><td>before writing any Linear layer</td></tr>
-    <tr><td>Filters &amp; channels</td><td>one filter per pattern, depth = C<sub>in</sub></td><td>several patterns, colour?</td><td>Conv2d(1,2,3) = 20; Conv2d(3,2,3) = 56</td><td>every layer</td></tr>
-    <tr><td>Feature map + ReLU</td><td>conv output, negatives cut</td><td>what did the filter find, where?</td><td>[[14, 7, 0], [21, 13, 0], [15, 6, 0]]; peak moves with the hole</td><td>debugging, visualisation</td></tr>
-    <tr><td>Pooling</td><td>max/mean per window</td><td>found it "around here"?</td><td>[[14, 7], [21, 13]]; global max 21 either way</td><td>downsampling; GAP before the head</td></tr>
-    <tr><td>Receptive field</td><td>stacked k and strides</td><td>how much does one unit see?</td><td>3 → 5 (whole patch) → 6 → 10</td><td>choosing depth for object size</td></tr>
-    <tr><td>ResNet skip</td><td>output + input</td><td>why do deep nets stop training?</td><td>layer-1 grad 1e-14 → 16</td><td>any net deeper than ~20 layers</td></tr>
-    <tr><td>EfficientNet</td><td>depth, width, resolution together</td><td>how to grow with compute?</td><td>10×10 patches need more depth and filters</td><td>picking a backbone size</td></tr>
-    <tr><td>Transfer learning</td><td>pretrained backbone + new head</td><td>little labelled data?</td><td>1,026 trainable of 11.2M</td><td>almost every real image task</td></tr>
+def backbone():                                   # conv layers only: the feature extractor
+    return nn.Sequential(
+        nn.Conv2d(1, 16, 3, padding=1), nn.ReLU(), nn.Conv2d(16, 16, 3, padding=1), nn.ReLU(),
+        nn.MaxPool2d(2), nn.Conv2d(16, 32, 3, padding=1), nn.ReLU(),
+        nn.AdaptiveMaxPool2d(1), nn.Flatten())    # -&gt; (N, 32)
+
+X_day, y_day = make_set(3000, cols=(2.5, 13.5), seed=20)    # big labelled daytime dataset
+X_night_test, y_night_test = make_night(1000, 22)
+torch.manual_seed(0)
+day_model = nn.Sequential(backbone(), nn.Linear(32, 2))
+train(day_model, X_day, y_day, epochs=6)
+print("day model: day test", accuracy(day_model, *make_set(1000, (2.5, 13.5), 21)),
+      "  night test", accuracy(day_model, X_night_test, y_night_test))</div>
+  <div class="fx" data-lang="text">day model: day test 0.999   night test 0.53</div>
+  <p>The day model is nearly perfect on day patches (0.999) but scores 0.53 at night, close to guessing, because its final decision was tuned to daytime brightness levels. The question is whether its convolution layers, which learned to detect dark oval shapes, are still useful. So we keep the trained backbone, freeze it, attach a fresh Linear head, and train only that head on the 16 night patches. For comparison, the same network starting from random weights is trained on the same 16 patches:</p>
+    <div class="fx" data-lang="py">X_night, y_night = make_night(16, 100)            # only 16 labelled night patches
+import copy
+features = copy.deepcopy(day_model[0])            # reuse the trained conv layers
+for p in features.parameters():
+    p.requires_grad = False                       # freeze them
+torch.manual_seed(0)
+transfer = nn.Sequential(features, nn.Linear(32, 2))          # new head, trainable
+torch.manual_seed(0)
+scratch = nn.Sequential(backbone(), nn.Linear(32, 2))         # same network, random start
+trainable = lambda m: sum(p.numel() for p in m.parameters() if p.requires_grad)
+for name, model in [("transfer (frozen backbone)", transfer), ("from scratch", scratch)]:
+    train(model, X_night, y_night, epochs=80, lr=1e-2)
+    print(f"{name:27s} trainable {trainable(model):5,}   night test {accuracy(model, X_night_test, y_night_test)}")</div>
+  <div class="fx" data-lang="text">transfer (frozen backbone)  trainable    66   night test 0.981
+from scratch                trainable 7,186   night test 0.856</div>
+  <p>With the frozen backbone only 66 numbers are trained (a Linear layer from 32 features to 2 classes: 32 × 2 + 2), and 16 examples are plenty to fit them. It scores 0.981 on 1,000 night test patches. The network trained from scratch must fit all 7,186 parameters from the same 16 examples, and it reaches only 0.856. The pretrained features turned a tiny labelled set into a good detector. That is the whole idea of transfer learning; with ImageNet the "day data" is a million general photos instead of 3,000 road patches.</p>
+  <p>In practice you would load a standard network such as ResNet-18 with ImageNet weights (in torchvision, <code>resnet18(weights=ResNet18_Weights.DEFAULT)</code>). Its structure is exactly the pieces of this page, so we can build it ourselves from the <code>ResBlock</code> of section 10, with random weights, and follow the shapes. The stem is a 7 × 7 convolution with stride 2 (224 → 112, by the size formula) and a max pool (112 → 56); then four stages of two residual blocks at 56, 28, 14 and 7 pixels with 64, 128, 256 and 512 channels, the "shrink space, add channels" recipe; then global average pooling to 512 numbers; and the original head, a Linear layer to ImageNet's 1,000 classes. For potholes we replace that head with <code>Linear(512, 2)</code>, which has 512 × 2 + 2 = 1,026 parameters.</p>
+    <div class="fx" data-lang="py">resnet18 = nn.Sequential()
+resnet18.add_module("stem", nn.Sequential(nn.Conv2d(3, 64, 7, stride=2, padding=3, bias=False),
+                                          nn.BatchNorm2d(64), nn.ReLU(), nn.MaxPool2d(3, 2, 1)))
+c = 64
+for i, width in enumerate([64, 128, 256, 512], start=1):         # four stages of two blocks
+    stride = 1 if i == 1 else 2
+    resnet18.add_module(f"layer{i}", nn.Sequential(ResBlock(c, width, stride), ResBlock(width, width)))
+    c = width
+resnet18.add_module("pool", nn.Sequential(nn.AdaptiveAvgPool2d(1), nn.Flatten()))
+resnet18.add_module("fc", nn.Linear(512, 1000))                  # ImageNet's 1000 classes
+
+x = torch.randn(1, 3, 224, 224)
+for name, part in resnet18.named_children():
+    x = part(x); print(f"{name:7s} {tuple(x.shape)}")
+print(f"ResNet-18 params: {count(resnet18):,}")
+
+for p in resnet18.parameters():
+    p.requires_grad = False                                      # freeze everything
+resnet18.fc = nn.Linear(512, 2)                                  # new head: pothole / no pothole
+print(f"after swapping the head: total {count(resnet18):,}  trainable {trainable(resnet18):,}")
+for p in resnet18.layer4.parameters():
+    p.requires_grad = True                                       # later: unfreeze the last stage
+opt = torch.optim.AdamW([{"params": resnet18.layer4.parameters(), "lr": 1e-5},   # pretrained: tiny LR
+                         {"params": resnet18.fc.parameters(),     "lr": 1e-3}])  # new head: normal LR
+print(f"after unfreezing layer4: trainable {trainable(resnet18):,}")</div>
+  <div class="fx" data-lang="text">stem    (1, 64, 56, 56)
+layer1  (1, 64, 56, 56)
+layer2  (1, 128, 28, 28)
+layer3  (1, 256, 14, 14)
+layer4  (1, 512, 7, 7)
+pool    (1, 512)
+fc      (1, 1000)
+ResNet-18 params: 11,689,512
+after swapping the head: total 11,177,538  trainable 1,026
+after unfreezing layer4: trainable 8,394,754</div>
+  <p>The shapes follow the recipe exactly, and our hand-built network has 11,689,512 parameters, the published size of ResNet-18. Setting <code>requires_grad = False</code> on every parameter freezes the backbone; the new head is created afterwards, so it is trainable: 1,026 out of 11.2 million. If the frozen model plateaus, the next step is to unfreeze the last stage, <code>layer4</code>, which adds about 8.4 million trainable weights. The optimizer then gets two <strong>parameter groups</strong>: the pretrained stage learns with a learning rate 100 times smaller than the new head, so it adapts gently instead of being overwritten. Training pretrained layers with a large learning rate destroys what they learned within a few epochs, a failure called <strong>catastrophic forgetting</strong>. One more rule is easy to miss: feed the network images prepared exactly as during pretraining, the same resize and the same normalisation with the ImageNet mean and standard deviation per channel.</p>
+  <p>How much to unfreeze depends on how much data you have and how different it is from the pretraining data:</p>
+  <table class="tbl">
+    <tr><th>Your data</th><th>Similar to the pretraining images (road photos vs ImageNet)</th><th>Very different (X-ray, satellite, thermal)</th></tr>
+    <tr><td>Small (under about 1,000)</td><td>freeze the backbone, train the head</td><td>freeze early stages, fine-tune the top stages and head</td></tr>
+    <tr><td>Large (10,000+)</td><td>fine-tune the top stages and head</td><td>fine-tune everything, still starting from pretrained weights</td></tr>
   </table>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>One sentence holds the note: <strong>a CNN shares one small filter across every position, and stacks such layers so that small patterns combine into big ones.</strong> Sharing gives few weights and equivariance; stacking gives a growing receptive field; and the problems of stacking deep (vanishing gradients, cost, data hunger) are what ResNet, EfficientNet and transfer learning solve.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Common mistakes.</b> The ideas are connected; now the traps that catch people in code and interviews.</div>
 
   <h2 id="dc-traps"><span class="num">13</span>Common Mistakes</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Which errors do people actually make when they build and train CNNs, and how do you spot each one quickly?</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: wrong layout</span>
-    <p>PyTorch wants (N, C, H, W). An image loaded with PIL/NumPy is (H, W, C): use <code>permute(2, 0, 1)</code> and add a batch dim with <code>unsqueeze(0)</code>. Our single grey patch needed (1, 1, 5, 5).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: forgetting input channels in param counts</span>
-    <p>Params = C<sub>out</sub>·C<sub>in</sub>·k·k + C<sub>out</sub>. Conv2d(3, 64, 3) is 1,792, not 640.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: hard-coded Linear input size</span>
-    <p>Change the image size or a stride and <code>Linear(32*2*2, 10)</code> breaks with "mat1 and mat2 shapes cannot be multiplied". Print shapes with a dummy batch, or end the conv part with <code>AdaptiveAvgPool2d(1)</code> so the size is always C.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: the floor in the size formula</span>
-    <p>⌊(W − K + 2P)/S⌋ + 1. Odd sizes with stride 2 lose a pixel (64 → 31 with K3, P0, S2; our 5 × 5 map → 2 × 2 after pooling), and then a residual addition no longer matches.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: "CNNs are shift-invariant"</span>
-    <p>Convolution is equivariant (our peak moved from (1, 0) to (1, 1)); invariance comes from pooling (global max 21 both times) and data augmentation. Our digits CNN still fell from 98% to 63% on a 1-pixel shift.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: skip connections and overfitting</span>
-    <p>ResNet skips fix optimisation (vanishing gradients, degradation), not overfitting. Shapes must match; use a 1×1 projection when they do not.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: pretrained model, wrong preprocessing or LR</span>
-    <p>Feed the resize and ImageNet mean/std the backbone expects; fine-tune pretrained layers at 1e-5–1e-4, not 1e-3.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: the Revision Sheet,</b> then <a class="xref" data-note="dl_rnns">RNNs</a>, where the data is a sequence of any length instead of a fixed grid.</div>
+  <p>The most common error is the wrong tensor layout. PyTorch convolutions expect (N, C, H, W), but image libraries such as PIL and NumPy store a picture as (H, W, C). Feeding such an image directly makes PyTorch read the height as the number of channels:</p>
+    <div class="fx" data-lang="py">img_hwc = np.zeros((16, 16, 3), dtype=np.float32)          # how image libraries store a photo
+conv_rgb = nn.Conv2d(3, 8, 3, padding=1)
+try:
+    conv_rgb(torch.tensor(img_hwc).unsqueeze(0))            # (1, 16, 16, 3): wrong layout
+except RuntimeError as e:
+    print("RuntimeError:", e)
+fixed = torch.tensor(img_hwc).permute(2, 0, 1).unsqueeze(0) # (1, 3, 16, 16)
+print(tuple(conv_rgb(fixed).shape))</div>
+  <div class="fx" data-lang="text">RuntimeError: Given groups=1, weight of size [8, 3, 3, 3], expected input[1, 16, 16, 3] to have 3 channels, but got 16 channels instead
+(1, 8, 16, 16)</div>
+  <p>The layer was built for 3 channels but found 16, the image height, in the channel position. <code>permute(2, 0, 1)</code> moves the channel axis to the front and <code>unsqueeze(0)</code> adds the batch axis. Our single grey road patch needed the same treatment, which is why we reshaped it to (1, 1, 5, 5). Keras uses the other layout, (N, H, W, C), so porting code between the two needs care (see <a class="xref" data-note="dl_keras">TensorFlow &amp; Keras</a>).</p>
+  <p>The second classic is a Linear layer whose input size was hard-coded from one image size. It works until someone feeds a different size:</p>
+    <div class="fx" data-lang="py">fixed_head = nn.Sequential(nn.Conv2d(1, 8, 3, padding=1), nn.MaxPool2d(2), nn.Flatten(),
+                           nn.Linear(8 * 8 * 8, 2))         # written for 16x16 inputs
+print(tuple(fixed_head(torch.zeros(1, 1, 16, 16)).shape))
+try:
+    fixed_head(torch.zeros(1, 1, 20, 20))                    # a slightly bigger patch
+except RuntimeError as e:
+    print("RuntimeError:", e)
+print(tuple(cnn(torch.zeros(1, 1, 20, 20)).shape))          # global pooling: any size works</div>
+  <div class="fx" data-lang="text">(1, 2)
+RuntimeError: addmm: mat1 and mat2 shapes cannot be multiplied (1x800 and 512x2)
+(1, 2)</div>
+  <p>The network was written for 16 × 16 patches, so after one pooling step it expects 8 × 8 × 8 = 512 values; a 20 × 20 patch produces 8 × 10 × 10 = 800, and the matrix multiplication fails. The last line shows the fix we already used: our pothole CNN ends with global pooling, so its Linear layer always receives exactly one number per channel, whatever the image size. When you do need a fixed size, print the shapes with a dummy batch, as in section 07, instead of calculating them in your head.</p>
+  <p>A few more mistakes come up in interviews rather than error messages. Forgetting the input channels when counting parameters: <code>Conv2d(3, 64, 3)</code> has 1,792, not 640. Ignoring the rounding down in the size formula: odd sizes with stride 2 lose a pixel, and then a residual addition no longer lines up. Saying "CNNs are shift-invariant": the convolution is equivariant, and invariance comes from pooling and augmentation. Saying "ResNet fixes overfitting": skip connections fix optimisation. And fine-tuning a pretrained backbone at a learning rate like 1e-3, or with different preprocessing from pretraining, which quietly throws away the benefit of transfer learning.</p>
 
   <h2 id="dc-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>The whole note on one sheet. Running example: a 5 × 5 grey road patch (0 = black, 8 = asphalt) with a pothole: rows [8 8 8 8 8], [8 8 2 1 8], [8 1 0 1 8], [8 8 1 2 8], [8 8 8 8 8]. Question: pothole or not?</p>
-  <h3>The question ladder</h3>
-  <table class="tbl">
-    <tr><th>Concept</th><th>Question it answers</th><th>On our patch</th><th>Weakness → next</th></tr>
-    <tr><td>MLP on pixels</td><td>can a plain net read images?</td><td>416 weights; shift changes 10/25 inputs</td><td>too many weights, no locality</td></tr>
-    <tr><td>Convolution</td><td>find a pattern anywhere with few weights?</td><td>edge map peak 21 (left rim), −21 (right rim)</td><td>output shrinks 5 → 3</td></tr>
-    <tr><td>Padding &amp; stride</td><td>control the output size?</td><td>P1 → 5×5; P1 S2 → 3×3</td><td>one filter = one pattern</td></tr>
-    <tr><td>Filters &amp; channels</td><td>many patterns, colour input?</td><td>Conv2d(1,2,3) = 20; (3,2,3) = 56</td><td>what do outputs mean?</td></tr>
-    <tr><td>Feature maps</td><td>where was each pattern found?</td><td>ReLU map; peak (1,0) → (1,1) after shift</td><td>big, too exact</td></tr>
-    <tr><td>Pooling</td><td>keep "found", drop "exactly where"?</td><td>[[14, 7], [21, 13]]; global max 21 both</td><td>one layer sees only 3×3</td></tr>
-    <tr><td>Stacking</td><td>see whole objects?</td><td>RF 3 → 5 → 6 → 10</td><td>deep plain nets stall</td></tr>
-    <tr><td>ResNet</td><td>why does depth hurt training?</td><td>grad 1e-14 → 16 with skips</td><td>how to grow?</td></tr>
-    <tr><td>EfficientNet</td><td>deeper, wider or sharper?</td><td>all three, α·β²·γ² ≈ 2</td><td>needs lots of data</td></tr>
-    <tr><td>Transfer learning</td><td>little labelled data?</td><td>Linear(512, 2): 1,026 trainable</td><td>—</td></tr>
-  </table>
+  <h3>Key terms</h3>
+  <ul>
+    <li><b>CNN</b>: network whose main layers are convolutions: small filters with shared weights slid over a grid.</li>
+    <li><b>Kernel / filter</b>: small grid of learned weights spanning all input channels.</li>
+    <li><b>Feature map</b>: one filter's output; where its pattern occurs and how strongly.</li>
+    <li><b>Locality</b>, <b>parameter sharing</b>, <b>translation equivariance</b>: the three properties convolution gives.</li>
+    <li><b>Invariance</b>: output unchanged when the input shifts; comes from pooling (especially global) and augmentation.</li>
+    <li><b>Padding</b>: border added around the input ("same" keeps size, "valid" = none). <b>Stride</b>: step between positions.</li>
+    <li><b>Pooling</b>: parameter-free max or mean per window, per channel. <b>GAP</b>: one mean per channel over the whole map.</li>
+    <li><b>Receptive field</b>: input region that can affect one unit.</li>
+    <li><b>1×1 conv</b>: mixes channels per pixel; cheap channel reduction or projection.</li>
+    <li><b>Residual block</b>: y = F(x) + shortcut(x); <b>projection shortcut</b> = 1×1 conv when shapes differ.</li>
+    <li><b>Depthwise separable conv</b>: per-channel k×k conv, then 1×1 conv.</li>
+    <li><b>Compound scaling</b>: grow depth, width and resolution together.</li>
+    <li><b>Backbone</b> / <b>head</b>; <b>feature extraction</b> (frozen backbone) vs <b>fine-tuning</b> (small LR on pretrained layers).</li>
+  </ul>
   <h3>Formulas</h3>
   <table class="tbl">
-    <tr><th>Name</th><th>Formula</th><th>Symbols</th></tr>
-    <tr><td>Convolution</td><td>out(i, j) = Σ<sub>m,n</sub> K(m, n)·X(i + m, j + n) + b</td><td>K kernel, X input, b bias; summed over channels too</td></tr>
-    <tr><td>Output size</td><td>⌊(W − K + 2P)/S⌋ + 1</td><td>W input size, K kernel, P padding per side, S stride</td></tr>
-    <tr><td>Conv params</td><td>C<sub>out</sub>·C<sub>in</sub>·k·k + C<sub>out</sub></td><td>filters out, channels in, kernel side</td></tr>
-    <tr><td>Linear params</td><td>n<sub>in</sub>·n<sub>out</sub> + n<sub>out</sub></td><td>25·16 + 16 = 416</td></tr>
-    <tr><td>Receptive field</td><td>r ← r + (k − 1)·j; j ← j·s</td><td>start r = 1, j = 1; k kernel, s stride, j jump</td></tr>
-    <tr><td>Residual block</td><td>y = F(x) + x; ∂y/∂x = ∂F/∂x + 1</td><td>F the block's layers; 1×1 conv on the skip if shapes differ</td></tr>
-    <tr><td>Compound scaling</td><td>depth α<sup>φ</sup>, width β<sup>φ</sup>, resolution γ<sup>φ</sup>; α·β²·γ² ≈ 2</td><td>φ = how much bigger; α 1.2, β 1.1, γ 1.15</td></tr>
+    <tr><th>What</th><th>Formula</th><th>Example</th></tr>
+    <tr><td>Convolution</td><td>out(i, j) = Σ K(m, n)·X(i + m, j + n) + b</td><td>edge filter on our window: 24 − 3 = 21</td></tr>
+    <tr><td>Output size</td><td>⌊(W − K + 2P)/S⌋ + 1</td><td>5, K3, P1, S2 → 3; 224, K7, P3, S2 → 112</td></tr>
+    <tr><td>Conv params</td><td>C<sub>out</sub>·C<sub>in</sub>·k·k + C<sub>out</sub></td><td>Conv2d(3, 64, 3) = 1,792; (64, 128, 3) = 73,856</td></tr>
+    <tr><td>Linear params</td><td>n<sub>in</sub>·n<sub>out</sub> + n<sub>out</sub></td><td>Linear(512, 2) = 1,026</td></tr>
+    <tr><td>Receptive field</td><td>r ← r + (k − 1)·j, then j ← j·s (start r = j = 1)</td><td>conv, conv, pool, conv: 3, 5, 6, 10</td></tr>
+    <tr><td>Residual</td><td>y = F(x) + x; ∂y/∂x = ∂F/∂x + 1</td><td>50 layers: first-layer gradient 1e-14 → 16</td></tr>
+    <tr><td>Depthwise separable</td><td>C<sub>in</sub>·k·k + C<sub>in</sub> + C<sub>out</sub>·C<sub>in</sub> + C<sub>out</sub></td><td>64 → 128: 8,960 vs 73,856</td></tr>
+    <tr><td>Compound scaling</td><td>depth α<sup>φ</sup>, width β<sup>φ</sup>, resolution γ<sup>φ</sup>; α·β²·γ² ≈ 2</td><td>φ = 2: compute ×3.7</td></tr>
   </table>
-  <h3>When to use, when not</h3>
-  <div class="cards">
-    <div><b>Use a CNN</b><p>Images, video frames, spectrograms, any grid where nearby values belong together and patterns repeat anywhere.</p><small>Start from a pretrained backbone</small></div>
-    <div><b>Avoid / reconsider</b><p>Tabular data (no spatial neighbours), very long-range relations across the whole image with lots of data (Vision Transformers), sequences of variable length (RNNs, attention).</p><small>Trees for tables</small></div>
-    <div><b>Pooling vs stride-2 conv</b><p>Pooling is free and fixed; strided conv learns what to keep. GAP at the end either way.</p><small>Modern default: strided conv + GAP</small></div>
-    <div><b>Little data</b><p>Freeze backbone, train head; unfreeze top stage at 10–100× lower LR; augment.</p><small>Same preprocessing as pretraining</small></div>
-  </div>
-  <div class="callout trap"><span class="label">Key traps</span>
-    <p>(N, C, H, W) layout; forgetting C<sub>in</sub> in param counts; the floor in the size formula; zero padding inventing border edges; "invariant" vs "equivariant"; hard-coded Linear sizes; ResNet fixes optimisation not overfitting; projection shortcut when shapes change; high LR on pretrained layers.</p>
-  </div>
-  <h3>Five rapid-fire checks</h3>
+  <h3>Architectures</h3>
   <table class="tbl">
-    <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td>Window [[8, 8, 2], [8, 8, 0], [8, 8, 1]] with the left-minus-right edge filter?</td><td>24 − 3 = 21</td></tr>
-    <tr><td>Input 5, K = 3, P = 1, S = 2: output size?</td><td>⌊(5 − 3 + 2)/2⌋ + 1 = 3</td></tr>
-    <tr><td>Params of Conv2d(3, 2, 3)?</td><td>2·3·3·3 + 2 = 56</td></tr>
-    <tr><td>Receptive field of conv3 → conv3 → pool2 → conv3?</td><td>3, 5, 6, 10</td></tr>
-    <tr><td>Why does y = F(x) + x help a 50-layer net?</td><td>∂y/∂x = ∂F/∂x + 1: the gradient keeps a path with factor 1 (1e-14 → 16 in our demo)</td></tr>
+    <tr><th>Network</th><th>Remember it for</th></tr>
+    <tr><td>LeNet-5 (1998)</td><td>first conv + pool + FC recipe, digits</td></tr>
+    <tr><td>AlexNet (2012)</td><td>GPUs, ReLU, dropout; started the boom</td></tr>
+    <tr><td>VGG-16 (2014)</td><td>only 3×3 convs; 138M params, 102.8M in the first FC layer</td></tr>
+    <tr><td>GoogLeNet (2014)</td><td>parallel 1×1/3×3/5×5 branches, 1×1 bottlenecks, GAP</td></tr>
+    <tr><td>ResNet (2015)</td><td>skip connections; 50–152 layers train; ResNet-18 = 11.7M</td></tr>
+    <tr><td>MobileNet / EfficientNet</td><td>depthwise separable convs; compound scaling</td></tr>
   </table>
+  <h3>Syntax</h3>
+  <div class="fx" data-lang="py">import torch, torch.nn as nn
 
-  <h2 id="dc-qa"><span class="num">14</span>Questions &amp; Answers</h2>
+x = torch.randn(8, 3, 32, 32)                       # (N, C, H, W)
+net = nn.Sequential(
+    nn.Conv2d(3, 32, 3, padding=1), nn.BatchNorm2d(32), nn.ReLU(), nn.MaxPool2d(2),
+    nn.Conv2d(32, 64, 3, padding=1), nn.BatchNorm2d(64), nn.ReLU(),
+    nn.AdaptiveAvgPool2d(1), nn.Flatten(),          # global average pooling
+    nn.Linear(64, 2))
+print(net(x).shape)                                 # torch.Size([8, 2])
+
+# transfer learning
+for p in backbone.parameters():
+    p.requires_grad = False                         # freeze
+model.fc = nn.Linear(512, 2)                        # new head
+opt = torch.optim.AdamW([{"params": model.layer4.parameters(), "lr": 1e-5},
+                         {"params": model.fc.parameters(),     "lr": 1e-3}])</div>
+  <h3>Gotchas</h3>
+  <ul>
+    <li>PyTorch is (N, C, H, W); images load as (H, W, C): <code>permute(2, 0, 1).unsqueeze(0)</code>.</li>
+    <li>Count C<sub>in</sub> in conv parameters.</li>
+    <li>Round down in the size formula; odd sizes lose a pixel with stride 2.</li>
+    <li>Zero padding invents edges at the border.</li>
+    <li>Convolution is equivariant; invariance comes from pooling and augmentation.</li>
+    <li>Hard-coded Linear input sizes break when the image size changes; end with global pooling.</li>
+    <li>Skip connections fix optimisation, not overfitting; use a projection when shapes differ.</li>
+    <li>Pretrained models: same preprocessing as pretraining, small LR on pretrained layers.</li>
+  </ul>
+
+  <h2 id="dc-qa"><span class="num">14</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>Why CNNs instead of MLPs for images?</summary><div class="qa-body">(1) Parameters: an MLP's first layer on 224×224×3 with 1000 units has 150.5M weights; a 64-filter 3×3 conv has 1,792. (2) Locality: nearby pixels matter most, and convs only look at local patches. (3) Sharing gives translation equivariance: an edge detector fires anywhere without separate weights per position (our 1-pixel shift changed 10 of 25 MLP inputs but only moved the conv map's peak).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Compute by hand: input [[1,2,0],[0,1,3],[2,1,0]] with kernel [[1,0],[0,1]], no padding, stride 1.</summary><div class="qa-body">Output is 2×2 ((3 − 2) + 1 = 2). Each cell = top-left + bottom-right of the 2×2 window. (0,0): 1 + 1 = 2. (0,1): 2 + 3 = 5. (1,0): 0 + 1 = 1. (1,1): 1 + 0 = 1. Result [[2, 5], [1, 1]].</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>On our road patch the edge map has 21 in one place and −21 in another. What do the signs mean?</summary><div class="qa-body">The filter is left column minus right column. +21: bright road on the left, dark hole on the right (the pothole's left rim). −21: dark on the left, bright on the right (the right rim). ReLU keeps only the +21 side, so a network learns a sign-flipped twin filter for the other rim.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How many parameters in Conv2d(64, 128, kernel_size=3)?</summary><div class="qa-body">128 · 64 · 3 · 3 + 128 = 73,728 + 128 = <strong>73,856</strong>. Each of 128 filters spans all 64 input channels.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Input (16, 3, 64, 64) goes through Conv2d(3, 32, 3, stride=2, padding=0). Output shape?</summary><div class="qa-body">⌊(64 − 3 + 0) / 2⌋ + 1 = ⌊30.5⌋ + 1 = 31, so <strong>(16, 32, 31, 31)</strong>. Batch unchanged, channels = number of filters.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does a 1×1 convolution do?</summary><div class="qa-body">Mixes channels at each pixel without looking at neighbours: a per-pixel linear layer. Used to shrink or grow channel count cheaply (ResNet bottlenecks, Inception) and as the projection shortcut in ResNet.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Max pooling vs strided convolution for downsampling?</summary><div class="qa-body">Max pooling is fixed and parameter-free: it keeps the max and discards position and the other values. Strided conv learns what to keep. Modern nets mostly use strided convs, keeping global average pooling at the end.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does global average pooling do to a (N, 512, 7, 7) tensor, and why use it?</summary><div class="qa-body">Averages each 7×7 map to one number → (N, 512, 1, 1), flattened to (N, 512). It has no parameters, works for any input size, and replaces a huge flatten + FC layer (512·49·1000 = 25M weights) with a small Linear(512, classes).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What problem do ResNet skip connections solve, and how?</summary><div class="qa-body">Degradation: plain nets got worse <em>training</em> error as depth grew (an optimisation problem, not overfitting). y = F(x) + x means a block can do identity by pushing F → 0, and ∂y/∂x = ∂F/∂x + 1 gives gradients a direct path. In our 50-layer demo the first layer's gradient was 1e-14 without skips and ~16 with them.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is EfficientNet's key idea?</summary><div class="qa-body">Compound scaling: scale depth, width and resolution together (α<sup>φ</sup>, β<sup>φ</sup>, γ<sup>φ</sup> with α·β²·γ² ≈ 2, so FLOPs ≈ 2<sup>φ</sup>) instead of one dimension. Higher resolution needs more depth (receptive field) and width (finer features) to use it. B0 matches ResNet-50 accuracy with ~5× fewer params.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>You have 500 labelled road photos. How do you build a pothole classifier?</summary><div class="qa-body">Do not train from scratch. Load an ImageNet-pretrained ResNet/EfficientNet, freeze the backbone, replace the head with Linear(512, 2), train the head at LR ~1e-3 with augmentation (flips, crops, brightness). If it plateaus, unfreeze the last stage at LR ~1e-5. Use the same resize and ImageNet normalisation, and stratified validation.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does pooling need convolution to come first, and what breaks if you pool raw pixels?</summary><div class="qa-body">Pooling summarises "how strongly was a pattern found in this window". On raw pixels there is no pattern yet, only brightness: max-pooling our patch would keep the bright asphalt (8) in every window and erase the dark hole entirely. Convolution first turns pixels into pattern scores (rim = 21), and then the max keeps the evidence.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does a deeper network need both the receptive field idea and skip connections?</summary><div class="qa-body">Depth is how the receptive field grows (3 → 5 → 6 → 10), so seeing large objects requires many layers. But each layer multiplies the backward gradient by a factor, so many layers make early-layer gradients vanish (1e-14). Skips keep a factor-1 path. Without skips you cannot train the depth the receptive field asks for.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does transfer learning work so well for CNNs specifically?</summary><div class="qa-body">Because of the feature hierarchy: early layers learn generic edges and textures (like our hand edge filters), useful for any images; only the last layers are task-specific. Sharing makes those filters position-independent, so they transfer across datasets. You retrain the small task-specific head (1,026 weights) instead of 11.2M.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What breaks if you skip padding in a 20-layer network of 3×3 convs on 32×32 images?</summary><div class="qa-body">Each valid conv removes 2 pixels: 32 − 2·20 &lt; 0, so the map disappears after 15 layers, and border pixels are used by fewer windows than central ones. "Same" padding (P = 1) keeps the size, and you downsample deliberately with stride or pooling.</div></details>
-
+  <details class="qa"><summary><span class="qmark">Q</span>Why use a CNN instead of an MLP for images?</summary><div class="qa-body">An MLP connects every pixel to every neuron, so on a 224×224×3 photo one layer of 1,000 units needs over 150 million weights, and it treats neighbouring pixels as unrelated inputs. A CNN uses small filters that look only at local neighbourhoods and shares the same weights at every position, so it needs far fewer parameters and recognises a pattern wherever it appears. In our pothole experiment an MLP trained on left-side potholes scored 0.47 on right-side ones; the CNN scored 0.99.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Compute by hand: input [[1, 2, 0], [0, 1, 3], [2, 1, 0]] with kernel [[1, 0], [0, 1]], no padding, stride 1.</summary><div class="qa-body">The output is 2×2, since (3 − 2)/1 + 1 = 2. Each cell is the window's top-left plus bottom-right value. (0,0): 1 + 1 = 2; (0,1): 2 + 3 = 5; (1,0): 0 + 1 = 1; (1,1): 1 + 0 = 1. Result: [[2, 5], [1, 1]].</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the output size formula for a convolution? Apply it to input 64, kernel 3, padding 0, stride 2.</summary><div class="qa-body">Output = ⌊(W − K + 2P)/S⌋ + 1. Here ⌊(64 − 3 + 0)/2⌋ + 1 = ⌊30.5⌋ + 1 = 31. The batch size is unchanged and the number of output channels equals the number of filters.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How many parameters does <code>Conv2d(64, 128, kernel_size=3)</code> have?</summary><div class="qa-body">128 × 64 × 3 × 3 + 128 = 73,728 + 128 = 73,856. Each of the 128 filters spans all 64 input channels with a 3×3 kernel and has one bias. Forgetting the input-channel factor is the most common mistake.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does a 1×1 convolution do, and why is it useful?</summary><div class="qa-body">It looks at one pixel position at a time and mixes the channels there, like a small fully connected layer applied to every pixel. It changes the number of channels cheaply without changing height and width, so it is used for bottlenecks (Inception, ResNet-50), for ResNet's projection shortcuts, and as the pointwise half of depthwise separable convolutions.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What are padding and stride, and what does "same" padding mean?</summary><div class="qa-body">Padding adds a border (usually zeros) around the input so the kernel can be centred on edge pixels; stride is how far the kernel moves between positions. "Same" padding keeps the output size equal to the input size at stride 1, which for a 3×3 kernel means padding 1. Stride 2 roughly halves the size and is used for downsampling.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Are CNNs translation invariant or translation equivariant?</summary><div class="qa-body">The convolution itself is equivariant: if the input shifts, the feature map shifts by the same amount (our pothole's peak of 21 moved from cell (1, 0) to (1, 1)). Invariance, an output that does not change, comes from pooling, especially global pooling at the end, and from data augmentation. Even so, CNNs are not perfectly invariant, because strides and pooling grids depend on exact positions.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Max pooling vs average pooling vs strided convolution?</summary><div class="qa-body">Max pooling keeps the strongest response in each window ("was the feature here?"); average pooling keeps the mean and preserves weak, spread-out signals. Both are fixed and have no parameters. A strided convolution also downsamples but learns what to keep, so modern networks mostly use it inside the network and keep global average pooling at the end.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does global average pooling do to a (N, 512, 7, 7) tensor, and why use it?</summary><div class="qa-body">It averages each 7×7 map into one number, giving (N, 512, 1, 1), flattened to (N, 512). It has no parameters, works for any input size, and replaces a huge flatten-plus-FC layer: in VGG-16 the first FC layer alone had 102.8 million of the 138 million weights.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the receptive field, and how does it grow?</summary><div class="qa-body">The receptive field of a unit is the region of the input image that can influence it. Each layer adds (k − 1) × jump, where the jump is the product of all earlier strides: conv 3, conv 3, pool 2, conv 3 gives 3, 5, 6, 10. Stacking layers and downsampling is how deep units come to "see" whole objects.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why do modern CNNs use stacks of 3×3 kernels instead of larger kernels?</summary><div class="qa-body">Two stacked 3×3 layers cover the same 5×5 region as one 5×5 layer but with fewer weights (with C channels, 18C² instead of 25C², about 28% fewer) and with an extra nonlinearity in between. Three 3×3 layers cover 7×7 with 27C² instead of 49C². This was VGG's key observation.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What problem do ResNet skip connections solve, and how?</summary><div class="qa-body">They solve the degradation problem: plain networks beyond about 20 layers had higher <em>training</em> error, an optimisation failure caused largely by vanishing gradients, not overfitting. A residual block outputs y = F(x) + x, so ∂y/∂x = ∂F/∂x + 1 and the gradient always has a path with factor 1; a block can also learn the identity simply by pushing F towards zero. In our 50-layer test the first layer's gradient was 1e-14 without skips and about 16 with them.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a projection shortcut?</summary><div class="qa-body">When a residual block changes the shape, for example halving height and width and doubling channels, x cannot be added to F(x) directly. The shortcut then applies a 1×1 convolution with the same stride (usually followed by BatchNorm) so that both branches have the same shape before the addition.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a depthwise separable convolution, and how many parameters does it save?</summary><div class="qa-body">It splits a convolution into a depthwise step (one k×k filter per input channel, no channel mixing) and a pointwise 1×1 step that mixes channels. For 64 → 128 channels with 3×3 kernels, a normal conv has 73,856 parameters and the separable version 8,960, roughly k² times fewer. MobileNet and EfficientNet are built on it.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is EfficientNet's key idea?</summary><div class="qa-body">Compound scaling: grow depth, width and input resolution together with one coefficient φ (depth α<sup>φ</sup>, width β<sup>φ</sup>, resolution γ<sup>φ</sup>, with α·β²·γ² ≈ 2 so compute roughly doubles per step), instead of scaling only one dimension. Higher resolution needs more depth for a larger receptive field and more width for finer features. The base model B0 matches ResNet-50 accuracy with about a fifth of the parameters.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>You have 500 labelled road photos. How do you build a pothole classifier?</summary><div class="qa-body">Do not train from scratch. Load an ImageNet-pretrained backbone such as ResNet or EfficientNet, freeze it, replace the head with a 2-class Linear layer, and train the head with data augmentation (flips, crops, brightness). If accuracy plateaus, unfreeze the last stage with a learning rate 10–100× smaller than the head's. Use the same resize and ImageNet normalisation as in pretraining, and a stratified validation set.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does transfer learning work so well for CNNs?</summary><div class="qa-body">Because of the feature hierarchy: early layers learn generic edges and textures that are useful for almost any images, and only the last layers are task-specific. Reusing those layers means only a small head must be learned from the new data, so a few examples can be enough (in our demo, 16 night patches gave 0.98 with a frozen backbone versus 0.86 from scratch).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is catastrophic forgetting in fine-tuning, and how do you avoid it?</summary><div class="qa-body">Updating pretrained layers with a large learning rate quickly overwrites the useful features they learned, so the model ends up worse than with frozen features. Avoid it by training the new head first, then unfreezing only the top stages, and using parameter groups with a much smaller learning rate (for example 1e-5) for pretrained layers.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What breaks if you use no padding in a 20-layer stack of 3×3 convolutions on 32×32 images?</summary><div class="qa-body">Each unpadded 3×3 layer removes 2 pixels, so 32 − 2 × 20 is negative: the maps disappear after 15 layers, and border pixels are used by fewer windows than central ones. "Same" padding keeps the size, and the network downsamples deliberately with stride or pooling instead.</div></details>
 </main>`
 });
