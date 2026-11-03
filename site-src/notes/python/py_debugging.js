@@ -3,7 +3,7 @@ Object.assign(TOPIC_CONTENT, {
   "py_debugging": `<main>
 <h1>Debugging, Profiling &amp; Logging</h1>
   <div class="where"><span>Python</span><span>Making Code Trustworthy</span><span>Debugging, Profiling &amp; Logging</span></div>
-  <p class="lead">Tests tell you <em>that</em> something is wrong. This note is about finding out <em>where</em> and <em>why</em>, then <em>why it's slow</em>, then <em>what happened</em> when you weren't watching. All on the Chai Corner till: a crash from a quantity typed as text, Chen charged ₹52 when the board says halves round up (₹53), a daily report that takes 1.7 seconds for 20,000 orders, and a payment failure in production. In order: reading tracebacks, print debugging and its limits, a full <code>pdb</code>/<code>breakpoint()</code> session (shown as a real transcript, run by feeding commands to pdb), post-mortem debugging, timing with <code>time.perf_counter</code> and <code>timeit</code>, <code>cProfile</code> + <code>pstats</code> read line by line, memory with <code>tracemalloc</code>, the <code>logging</code> module (levels, handlers, formatters, the logger hierarchy, <code>logging.exception</code>), and a systematic method (reproduce → isolate → hypothesise → fix → add a test) applied to the rounding bug end to end. Python 3.13; folder paths shortened to <code>~/chai</code>.</p>
+  <p class="lead">A failing test or a crash tells you <em>that</em> something is wrong; debugging, profiling and logging tell you <em>where</em>, <em>why</em>, <em>why it is slow</em>, and <em>what happened</em> when nobody was watching. Without them, fixes and optimisations are guesses: people rewrite the function they suspect while the real hotspot is one line elsewhere, or "fix" a crash by swallowing the exception. The tools are all in the standard library: tracebacks, <code>pdb</code>/<code>breakpoint()</code> and post-mortem debugging; <code>time.perf_counter</code>, <code>timeit</code>, <code>cProfile</code>/<code>pstats</code> and <code>tracemalloc</code>; and the <code>logging</code> module. In DS/ML and backend work they find the row with a bad value deep in a pipeline, the <code>apply</code> that makes a job take an hour, the memory peak that kills a container, and the log line that explains last night's failed run. The examples use a small billing module and a 20,000-order daily report; Python 3.13, paths shortened to <code>~/chai</code>.</p>
 
   <h2 id="pdg-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -14,7 +14,8 @@ Object.assign(TOPIC_CONTENT, {
         <ul>
           <li>Read <b>bottom up</b>: type + message, then the frame, then callers</li>
           <li>"most recent call last" = the crash is at the bottom</li>
-          <li>Fix where the bad value <b>entered</b> (Dev's form), not only where it exploded</li>
+          <li>Fix where the bad value <b>entered</b>, not only where it exploded</li>
+          <li><code>raise … from e</code> → "direct cause" chain</li>
         </ul>
       </div>
       <div class="mm-branch">
@@ -24,7 +25,6 @@ Object.assign(TOPIC_CONTENT, {
           <li><code>n</code> next · <code>s</code> step in · <code>r</code> return · <code>c</code> continue</li>
           <li><code>p</code> / <code>pp</code> · <code>ll</code> · <code>w</code> · <code>u</code>/<code>d</code> · <code>b</code> · <code>q</code></li>
           <li><b>Post-mortem</b>: <code>python -m pdb</code>, <code>pytest --pdb</code>, <code>%debug</code></li>
-          <li>💡 pausing a match replay frame by frame</li>
         </ul>
       </div>
       <div class="mm-branch">
@@ -33,7 +33,7 @@ Object.assign(TOPIC_CONTENT, {
           <li><code>time.perf_counter()</code> — stopwatch</li>
           <li>Double n, time ×4 → O(n²)</li>
           <li><code>timeit.repeat</code> — take the <b>min</b></li>
-          <li>list <code>in</code>: 84,392 ns · set <code>in</code>: 15 ns</li>
+          <li>list <code>in</code> O(n) vs set <code>in</code> O(1)</li>
         </ul>
       </div>
       <div class="mm-branch">
@@ -50,7 +50,7 @@ Object.assign(TOPIC_CONTENT, {
         <div class="mm-title">Memory</div>
         <ul>
           <li><b>tracemalloc</b> — start · get_traced_memory · snapshot</li>
-          <li>Peak 5.71 MB (list) vs 0.02 MB (stream)</li>
+          <li>Peak matters; stream instead of building lists</li>
           <li>statistics("lineno") → which line allocates</li>
         </ul>
       </div>
@@ -59,7 +59,7 @@ Object.assign(TOPIC_CONTENT, {
         <ul>
           <li>DEBUG &lt; INFO &lt; WARNING &lt; ERROR &lt; CRITICAL</li>
           <li><b>logger → handlers → formatter</b></li>
-          <li><code>getLogger("till.payments")</code> → parent <code>till</code></li>
+          <li><code>getLogger("app.payments")</code> → parent <code>app</code></li>
           <li><code>log.exception</code> = ERROR + traceback</li>
           <li>Lazy <code>%s</code> args; configure once; JSON lines</li>
         </ul>
@@ -80,20 +80,18 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="pdg-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain</span></div></div>
-      <div class="rm-item rm-done" data-target="pdg-tb"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Reading a Traceback</span><span class="rm-sub">Dev's qty "2"</span></div></div>
-      <div class="rm-item rm-done" data-target="pdg-print"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">print Debugging</span><span class="rm-sub">And its limits</span></div></div>
-      <div class="rm-item rm-done" data-target="pdg-pdb"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">pdb and breakpoint()</span><span class="rm-sub">A full session</span></div></div>
-      <div class="rm-item rm-done" data-target="pdg-pm"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Post-mortem Debugging</span><span class="rm-sub">After the crash</span></div></div>
-      <div class="rm-item rm-done" data-target="pdg-time"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Timing</span><span class="rm-sub">perf_counter, timeit</span></div></div>
-      <div class="rm-item rm-done" data-target="pdg-prof"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">cProfile and pstats</span><span class="rm-sub">Which function, which line</span></div></div>
-      <div class="rm-item rm-done" data-target="pdg-mem"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Memory with tracemalloc</span><span class="rm-sub">Peak and who holds it</span></div></div>
-      <div class="rm-item rm-done" data-target="pdg-log"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Logging</span><span class="rm-sub">Levels, handlers, hierarchy</span></div></div>
-      <div class="rm-item rm-done" data-target="pdg-method"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">A Systematic Method</span><span class="rm-sub">The rounding bug, end to end</span></div></div>
-      <div class="rm-item rm-done" data-target="pdg-connect"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">Diagram + table</span></div></div>
-      <div class="rm-item rm-done" data-target="pdg-traps"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Guessing, print, lost tracebacks</span></div></div>
-      <div class="rm-item rm-done" data-target="pdg-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The note in 10 minutes</span></div></div>
-      <div class="rm-item rm-done" data-target="pdg-qa"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
+      <div class="rm-item rm-done" data-target="pdg-tb"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Reading a Traceback</span><span class="rm-sub">Bottom up: what, where, callers</span></div></div>
+      <div class="rm-item rm-done" data-target="pdg-print"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">print Debugging and Its Limits</span><span class="rm-sub">Quick looks, repr, costs</span></div></div>
+      <div class="rm-item rm-done" data-target="pdg-pdb"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">pdb and breakpoint()</span><span class="rm-sub">n, s, r, c, p, ll, w session</span></div></div>
+      <div class="rm-item rm-done" data-target="pdg-pm"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Post-mortem Debugging</span><span class="rm-sub">python -m pdb, pytest --pdb</span></div></div>
+      <div class="rm-item rm-done" data-target="pdg-time"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Timing: perf_counter and timeit</span><span class="rm-sub">Scaling, min of repeats</span></div></div>
+      <div class="rm-item rm-done" data-target="pdg-prof"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">cProfile, pstats, line_profiler</span><span class="rm-sub">tottime vs cumtime, hot line</span></div></div>
+      <div class="rm-item rm-done" data-target="pdg-mem"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Memory with tracemalloc</span><span class="rm-sub">Peak, snapshots by line</span></div></div>
+      <div class="rm-item rm-done" data-target="pdg-log"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">The logging Module</span><span class="rm-sub">Levels, handlers, hierarchy, exception</span></div></div>
+      <div class="rm-item rm-done" data-target="pdg-method"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">A Systematic Debugging Method</span><span class="rm-sub">Reproduce, isolate, fix, regression test</span></div></div>
+      <div class="rm-item rm-done" data-target="pdg-traps"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Guessing, print, lost tracebacks</span></div></div>
+      <div class="rm-item rm-done" data-target="pdg-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">Commands, APIs, gotchas</span></div></div>
+      <div class="rm-item rm-done" data-target="pdg-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">Tracebacks to memory leaks</span></div></div>
     </div>
   </div>
 
@@ -925,7 +923,108 @@ FAILED tests/test_tables.py::test_day_table - AssertionError: DataFrame.iloc[...
     <tr><td>Fixing without a test</td><td>Rounding bug returns next month</td><td>Reproduce as a test first; keep it</td></tr>
   </table>
 
-@@REVQA@@
+  <h2 id="pdg-rev"><span class="num">R</span>Revision Sheet</h2>
+  <h3>Tracebacks</h3>
+  <ul>
+    <li>"Most recent call last": read <b>bottom up</b>: exception type + message (what) → last frame (where) → frames above (how you got there).</li>
+    <li>Each <code>File … line … in func</code> entry is a frame of the call stack; <code>~~~^^^</code> marks the sub-expression (3.11+).</li>
+    <li>"During handling of the above exception…" = new exception inside an <code>except</code>; "The above exception was the direct cause…" = <code>raise … from e</code>.</li>
+    <li>Fix where the bad value <b>entered</b>, not only where it exploded; never <code>except: pass</code>.</li>
+  </ul>
+  <h3>print debugging</h3>
+  <ul>
+    <li>Quick for one or two values; each new question costs an edit and a rerun; prints get left behind.</li>
+    <li>Show type-revealing output: <code>print(f"{qty=!r}")</code> → <code>qty='2'</code>.</li>
+  </ul>
+  <h3>pdb</h3>
+  <table class="tbl">
+    <tr><th>Cmd</th><th>Does</th><th>Cmd</th><th>Does</th></tr>
+    <tr><td><code>n</code></td><td>Next line (step over)</td><td><code>p</code> / <code>pp</code></td><td>Print / pretty-print</td></tr>
+    <tr><td><code>s</code></td><td>Step into call</td><td><code>l</code> / <code>ll</code></td><td>List / whole function</td></tr>
+    <tr><td><code>r</code></td><td>Run to return</td><td><code>w</code></td><td>Stack</td></tr>
+    <tr><td><code>c</code></td><td>Continue</td><td><code>u</code> / <code>d</code></td><td>Up / down a frame</td></tr>
+    <tr><td><code>b file:line[, cond]</code></td><td>Breakpoint</td><td><code>until</code> · <code>interact</code> · <code>q</code></td><td>Leave loop · REPL · quit</td></tr>
+  </table>
+  <ul>
+    <li><code>breakpoint()</code> (3.7+) = <code>import pdb; pdb.set_trace()</code>; <code>PYTHONBREAKPOINT=0</code> disables all.</li>
+    <li>Post-mortem: <code>python -m pdb script.py</code>, <code>pytest --pdb</code> (or <code>--trace</code> to break at test start), <code>%debug</code> in Jupyter, <code>pdb.pm()</code> in a REPL.</li>
+  </ul>
+  <h3>Timing</h3>
+  <ul>
+    <li><code>time.perf_counter()</code>: monotonic, high resolution, for intervals (not <code>time.time()</code>).</li>
+    <li><code>min(timeit.repeat(stmt, globals=g, number=N, repeat=R)) / N</code>; take the <b>minimum</b>, noise only adds time. CLI: <code>python -m timeit -s "setup" "stmt"</code>; Jupyter <code>%timeit</code>.</li>
+    <li>Doubling n → time ×2: O(n); ×4: O(n²). List <code>in</code> is O(n), set/dict <code>in</code> O(1) average.</li>
+  </ul>
+  <h3>Profiling</h3>
+  <ul>
+    <li><code>with cProfile.Profile() as pr: f()</code> → <code>pstats.Stats(pr).sort_stats("cumulative").print_stats(10)</code>. CLI: <code>python -m cProfile -s cumtime script.py</code>.</li>
+    <li><b>ncalls</b>; <b>tottime</b> = own lines only; <b>cumtime</b> = own + callees. High tottime → the function itself; high cumtime, low tottime → look at callees.</li>
+    <li>Line-level: <code>line_profiler</code> (<code>%lprun</code>). Sampling profilers (py-spy, scalene) attach to running processes with low overhead.</li>
+    <li>Make it work → make it right (tests) → profile → fix the top hotspot → rerun tests → re-profile. Check results are identical before comparing speed.</li>
+  </ul>
+  <h3>Memory</h3>
+  <ul>
+    <li><code>tracemalloc.start()</code> … <code>current, peak = tracemalloc.get_traced_memory()</code>; <code>take_snapshot().statistics("lineno")</code> for top lines; <code>snap2.compare_to(snap1, "lineno")</code> for growth (leaks).</li>
+    <li>Peak is what crashes small machines; stream (generators) instead of building full lists.</li>
+    <li>Whole-process view: <code>psutil</code>, memray; <code>sys.getsizeof</code> is shallow.</li>
+  </ul>
+  <h3>logging</h3>
+  <table class="tbl">
+    <tr><th>Level</th><th>Value</th><th>Use</th></tr>
+    <tr><td>DEBUG</td><td>10</td><td>Developer detail</td></tr>
+    <tr><td>INFO</td><td>20</td><td>Normal milestones</td></tr>
+    <tr><td>WARNING</td><td>30</td><td>Unexpected but handled (root default)</td></tr>
+    <tr><td>ERROR</td><td>40</td><td>An operation failed</td></tr>
+    <tr><td>CRITICAL</td><td>50</td><td>Program may not continue</td></tr>
+  </table>
+  <ul>
+    <li><b>Logger</b> (named, dotted hierarchy, <code>getLogger(__name__)</code>) → records <b>propagate</b> to ancestors → each <b>handler</b> (destination + own level) → <b>formatter</b> (layout).</li>
+    <li><code>log.exception("msg")</code> inside <code>except</code> = ERROR + traceback (<code>exc_info=True</code>).</li>
+    <li>Lazy args: <code>log.debug("x=%s", x)</code>, not f-strings. Configure once at the entry point (<code>basicConfig</code> or <code>dictConfig</code>); libraries only get loggers (and may add <code>NullHandler</code>).</li>
+    <li>Structured logs: JSON lines with fields (<code>extra=</code>); test logs with <code>caplog</code>.</li>
+  </ul>
+  <h3>Systematic method</h3>
+  <ul>
+    <li>Reproduce (smallest failing test) → isolate (pdb, bisect inputs, <code>git bisect</code> commits) → hypothesise with predictions that could fail → minimal fix → keep the test, run the whole suite.</li>
+    <li><code>round()</code> is round-half-to-even: <code>round(0.5), round(1.5), round(2.5), round(52.5)</code> → 0, 2, 2, 52. Half up: <code>Decimal(str(x)).quantize(Decimal("1"), rounding=ROUND_HALF_UP)</code>.</li>
+  </ul>
+  <h3>Gotchas</h3>
+  <ul>
+    <li>Reading tracebacks top-down; fixing where it exploded.</li>
+    <li>Forgotten <code>breakpoint()</code> hangs a production job.</li>
+    <li>Optimising by guess; single timings; profiler overhead inflates absolute times (compare profiles with profiles).</li>
+    <li><code>log.error(str(e))</code> loses the traceback; configuring handlers twice duplicates every line.</li>
+    <li>Never log secrets (card numbers, tokens, passwords).</li>
+    <li><code>Decimal(184.275)</code> carries the float's binary error; build from strings.</li>
+  </ul>
+
+  <h2 id="pdg-qa"><span class="num">11</span>Interview Questions</h2>
+  <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you read a Python traceback?</summary><div class="qa-body">From the bottom: the last line is the exception type and message (what went wrong); the frame just above it is where it was raised (file, line, function, source); the frames above that show the chain of calls that got there, oldest at the top. The real cause is often where a bad value entered, which may be several frames up from where it exploded.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between "During handling of the above exception, another exception occurred" and "The above exception was the direct cause of the following exception"?</summary><div class="qa-body">The first is implicit chaining: a new exception was raised inside an <code>except</code> block (often a bug in the handler); the original is kept in <code>__context__</code>. The second is explicit chaining with <code>raise NewError(...) from e</code>, stored in <code>__cause__</code>, used to translate a low-level error (<code>KeyError: 'port'</code>) into a domain error (<code>ValueError: config missing port</code>) without losing the original. <code>raise ... from None</code> suppresses the chain.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Name the essential pdb commands. What is the difference between <code>n</code>, <code>s</code>, <code>r</code> and <code>c</code>?</summary><div class="qa-body"><code>n</code> runs the current line, stepping over calls; <code>s</code> steps into a call on the current line; <code>r</code> runs until the current function returns; <code>c</code> continues to the next breakpoint or the end. Also <code>p</code>/<code>pp</code> print, <code>l</code>/<code>ll</code> list source, <code>w</code> stack, <code>u</code>/<code>d</code> move between frames, <code>b</code> set breakpoints (optionally conditional), <code>q</code> quit.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span><code>breakpoint()</code> vs <code>import pdb; pdb.set_trace()</code>?</summary><div class="qa-body">Same effect by default; <code>breakpoint()</code> (Python 3.7+) is shorter and configurable through the <code>PYTHONBREAKPOINT</code> environment variable: <code>PYTHONBREAKPOINT=0</code> disables every call (a safety switch), and <code>PYTHONBREAKPOINT=ipdb.set_trace</code> switches debuggers without code changes.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is post-mortem debugging, and how do you start it?</summary><div class="qa-body">Inspecting the stack frames of an exception after it was raised, with all local variables still available. <code>python -m pdb script.py</code> then <code>c</code> (drops into the failing frame on an uncaught exception), <code>pytest --pdb</code> for failing tests, <code>%debug</code> in Jupyter after a cell fails, or <code>pdb.pm()</code> in a REPL. Use <code>u</code> to walk up to callers. It needs the exception to propagate: <code>except: pass</code> destroys the evidence.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why use logging instead of print in production code?</summary><div class="qa-body">Levels that can be filtered without code changes; timestamps, logger name, file and line on every record; several destinations with different levels (console shows warnings, a file keeps everything); tracebacks via <code>log.exception</code>; structured JSON output for log search tools; and library code can log without deciding where output goes. <code>print</code> has none of this and cannot be turned down.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span><span>What does this print (to stderr)?
+<div class="fx" data-lang="py">import logging
+logging.info("a")
+logging.warning("b")
+log = logging.getLogger("app")
+log.debug("c")
+log.error("d")</div></span></summary><div class="qa-body"><div class="fx" data-lang="text">WARNING:root:b
+ERROR:app:d</div>With no configuration, the root logger's level is WARNING, so INFO and DEBUG are dropped. The first module-level call (<code>logging.warning</code>) runs <code>basicConfig()</code> automatically, adding a stderr handler with the format <code>LEVEL:name:message</code>. <code>app</code> has no level of its own, so its effective level comes from root, and its records propagate to root's handler.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain loggers, handlers, formatters and propagation.</summary><div class="qa-body">A logger is a named source your code calls, arranged in a dotted hierarchy (<code>app.payments</code> is a child of <code>app</code>); its effective level is its own or its nearest ancestor's. A record that passes the logger's level is handed to its handlers and then propagates to its ancestors' handlers. A handler is a destination (stream, file, rotating file, HTTP) with its own level; a formatter defines the layout (<code>%(asctime)s %(levelname)s %(name)s: %(message)s</code>).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Every log line appears twice. Why?</summary><div class="qa-body">Two handlers are receiving the record: logging was configured twice (setup function called again, or <code>addHandler</code> at import time in a module imported twice), or a handler was added to both a child logger and the root, so the record is emitted by the child's handler and again after propagating to the root's. Configure once at the entry point; in libraries only call <code>getLogger(__name__)</code>; or set <code>propagate = False</code> on the child.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span><code>log.exception</code> vs <code>log.error</code>? And why <code>log.debug("x=%s", x)</code> rather than an f-string?</summary><div class="qa-body"><code>log.exception(msg)</code> logs at ERROR and appends the current traceback; call it inside an <code>except</code> block (equivalent to <code>log.error(msg, exc_info=True)</code>). <code>log.error(str(e))</code> loses the traceback. With <code>%s</code>-style arguments, logging checks the level first and only formats the message if the record is kept; an f-string is built before the call, so expensive <code>__str__</code>/<code>__repr__</code> work happens even when DEBUG is off.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you find out why a Python program is slow?</summary><div class="qa-body">Measure, don't guess. Time the whole thing with <code>perf_counter</code> and check how it scales (double the input: ×2 → linear, ×4 → quadratic). Profile with cProfile and sort by cumulative time to find the expensive call path; look at tottime to find functions whose own code is slow; use line_profiler on that function to find the line. Fix the top hotspot, confirm results are unchanged (tests), and re-profile. In production, use a sampling profiler like py-spy.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>In cProfile output, what are tottime and cumtime?</summary><div class="qa-body">tottime is time spent in the function's own code, excluding functions it calls; cumtime includes everything it calls. A function with high cumtime but low tottime is only slow because of its callees; high tottime means its own lines are slow (e.g. an <code>in</code> test on a large list, which never shows as a separate row because it is not a function call), so use a line profiler next.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why take the minimum of repeated <code>timeit</code> runs, and why <code>perf_counter</code> rather than <code>time.time</code>?</summary><div class="qa-body">Interference (other processes, cache misses, GC) only ever adds time, so the minimum is the best estimate of the code's own cost; the mean mixes in noise. <code>time.perf_counter</code> is monotonic and has the highest available resolution; <code>time.time</code> is wall-clock time, can jump when the system clock is adjusted, and has lower resolution.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>A pandas pipeline is slow. How would you approach it?</summary><div class="qa-body">Profile first (<code>%prun</code>, <code>%lprun</code>, or cProfile on the pipeline function) to find the hot step. Typical culprits: <code>df.apply(..., axis=1)</code> or Python loops over rows (replace with vectorised column operations or <code>np.where</code>), repeated <code>concat</code>/<code>append</code> in a loop (collect then concat once), object dtype strings (use categoricals), membership tests against lists (use sets or <code>isin</code>), and reading more columns or rows than needed. Assert the new output equals the old before comparing speed.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you find a memory leak in a long-running Python service?</summary><div class="qa-body">Confirm growth with process-level metrics (RSS over time). Then <code>tracemalloc</code>: take a snapshot, run the workload, take another, and <code>snap2.compare_to(snap1, "lineno")</code> shows which lines' allocations grew. Usual causes: unbounded caches or dicts keyed by request, global lists that are appended to, references kept by closures or listeners, and large objects held in exception tracebacks. For C extensions or the whole process, memray or heap profilers.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does <code>round(2.5)</code> return 2, and how do you round half up?</summary><div class="qa-body">Python 3's <code>round</code> uses round-half-to-even (banker's rounding): ties go to the even neighbour (0.5 → 0, 1.5 → 2, 2.5 → 2), which avoids an upward bias over many roundings. For half up use <code>Decimal(str(x)).quantize(Decimal("1"), rounding=ROUND_HALF_UP)</code>. Build the Decimal from a string: <code>Decimal(184.275)</code> is 184.27500000000000568… because of the float's binary error. Also note <code>round(2.675, 2)</code> gives 2.67 for the same reason.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Describe your process for debugging a bug report.</summary><div class="qa-body">Reproduce it reliably, ideally as the smallest failing test. Isolate where the wrong value appears (traceback, pdb, logs; bisect inputs; <code>git bisect</code> if it is a regression). Form a hypothesis that makes predictions that could fail, and check them. Make the smallest fix. Keep the reproduction as a regression test and run the whole suite, deliberately updating any old tests that encoded the wrong behaviour.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does <code>git bisect</code> do?</summary><div class="qa-body">It binary-searches the commit history for the commit that introduced a bug. You mark a known good and a known bad commit; git checks out the midpoint, you test and mark it good or bad, and it halves the range each time, so about log2(N) steps find the culprit among N commits. <code>git bisect run pytest tests/test_rounding.py</code> automates it with a failing test.</div></details>
 </main>
 `
 });
