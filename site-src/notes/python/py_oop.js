@@ -3,55 +3,45 @@ Object.assign(TOPIC_CONTENT, {
   "py_oop": `<main>
 <h1>OOP Concepts in Python</h1>
   <div class="where"><span>Python</span><span>Object-Oriented Python</span><span>OOP Concepts in Python</span></div>
-  <p class="lead">Object-oriented programming (OOP) organises code around <strong>objects</strong>: values that carry their own data together with the only functions allowed to change it. Without that bundling, data lives in dicts and the rules live in loose functions, so any line of code can skip the rules and put a record into an impossible state. Python supports OOP fully, but differently from Java or C++: there are no access modifiers, no interfaces you must declare, and everything, including classes and functions, is already an object. Every scikit-learn estimator (<code>fit</code>/<code>predict</code>), PyTorch <code>nn.Module</code> and pydantic model is a class, and "explain the four pillars" or "when would you not use a class?" come up in almost every Python interview. Code here was run on Python 3.13.</p>
+  <p class="lead">Object-oriented programming (OOP) is a way of organising code around <strong>objects</strong>: things that hold their own data and know how to work with it, the way a bank account holds a balance and knows how to accept a deposit. Below, the idea is built from zero: first the mess OOP was invented to clean up, then explains classes and objects with an everyday analogy, then the four ideas (the "four pillars") that OOP is built on, each with an analogy and code. Every example uses the same small banking program, so each new idea is added to code you have already seen. Code was run on Python 3.13.</p>
 
-  <h2 id="oo-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="oo-map"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">OOP in Python</div>
     <div class="mm-branches">
       <div class="mm-branch">
         <div class="mm-title">Why OOP</div>
         <ul>
-          <li>Dict + functions: nothing ties the rules to the data</li>
-          <li>A class bundles state (attributes) with behaviour (methods)</li>
-          <li><b>Invariant</b> — a rule about the data that must always hold</li>
+          <li>Loose variables and dicts: data and rules are separate</li>
+          <li>Nothing stops code from skipping the rules</li>
+          <li>OOP keeps data and its rules together in one object</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Class, object, instance</div>
+        <div class="mm-title">Class and object</div>
         <ul>
-          <li><b>Class</b> — a type you define; <b>object</b> — any value; <b>instance</b> — an object of a given class</li>
-          <li>Instance attributes per object (<code>vars(obj)</code>); class attributes shared</li>
-          <li><code>obj.m(x)</code> ≡ <code>type(obj).m(obj, x)</code></li>
+          <li><b>Class</b> = blueprint; <b>object</b> (instance) = a thing built from it</li>
+          <li><b>Attribute</b> = data on an object (<code>acc.balance</code>)</li>
+          <li><b>Method</b> = function inside a class (<code>acc.deposit(100)</code>)</li>
+          <li><code>__init__</code> runs when an object is created; <code>self</code> = that object</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Four pillars</div>
+        <div class="mm-title">The four pillars</div>
         <ul>
-          <li><b>Encapsulation</b> — data changes only through methods; <code>_x</code>, <code>@property</code></li>
-          <li><b>Abstraction</b> — small interface, hidden details; <code>abc.ABC</code></li>
-          <li><b>Inheritance</b> — <code>class Child(Parent)</code>, <code>super()</code>; is-a</li>
-          <li><b>Polymorphism</b> — one call, behaviour chosen by the object's type</li>
-          <li>⚠ encapsulation ≠ abstraction</li>
+          <li><b>Encapsulation</b>: protect the data; change it only through methods</li>
+          <li><b>Abstraction</b>: show a simple interface, hide the details</li>
+          <li><b>Inheritance</b>: build a new class from an existing one (is-a)</li>
+          <li><b>Polymorphism</b>: same method call, different behaviour per class</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Python vs Java / C++</div>
+        <div class="mm-title">Python specifics</div>
         <ul>
-          <li>No <code>private</code>: <code>_x</code> convention, <code>__x</code> name mangling → <code>_Class__x</code></li>
-          <li>Duck typing: no declared interface needed</li>
-          <li>Everything is an object, classes too; <code>type</code> is the metaclass</li>
-          <li>No overloading by signature; multiple inheritance with C3 MRO</li>
-          <li>Properties instead of getters/setters</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Paradigms</div>
-        <ul>
-          <li>Procedural: steps that update state</li>
-          <li>Functional: pure functions, no mutation</li>
-          <li>OOP: state + allowed operations; Python mixes all three</li>
-          <li>⚠ <code>__init__</code> + one method = a function</li>
+          <li>No true private: <code>_x</code> by convention, <code>__x</code> is name-mangled</li>
+          <li><code>@property</code> for read-only or validated attributes</li>
+          <li><code>abc.ABC</code> + <code>@abstractmethod</code> for contracts</li>
+          <li>Duck typing: having the method is enough</li>
         </ul>
       </div>
     </div>
@@ -60,481 +50,610 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="oo-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Why OOP: Data and Behaviour Together</span><span class="rm-sub">dict + functions vs a class</span></div></div>
-      <div class="rm-item rm-done" data-target="oo-class"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Class, Object and Instance</span><span class="rm-sub">blueprint, values, attributes, methods</span></div></div>
-      <div class="rm-item rm-done" data-target="oo-encap"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Encapsulation</span><span class="rm-sub">_x and @property validation</span></div></div>
-      <div class="rm-item rm-done" data-target="oo-abstr"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Abstraction</span><span class="rm-sub">ABC interface with fit/predict</span></div></div>
-      <div class="rm-item rm-done" data-target="oo-inherit"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Inheritance</span><span class="rm-sub">subclass, super(), __mro__</span></div></div>
-      <div class="rm-item rm-done" data-target="oo-poly"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Polymorphism</span><span class="rm-sub">same call, type decides</span></div></div>
-      <div class="rm-item rm-done" data-target="oo-diff"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Python OOP vs Java and C++</span><span class="rm-sub">mangling, duck typing, metaclass</span></div></div>
-      <div class="rm-item rm-done" data-target="oo-paradigms"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">OOP vs Procedural vs Functional</span><span class="rm-sub">and when not to write a class</span></div></div>
-      <div class="rm-item rm-done" data-target="oo-traps"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">god classes, shared state, Java habits</span></div></div>
-      <div class="rm-item rm-done" data-target="oo-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">pillars, Python rules, comparisons</span></div></div>
-      <div class="rm-item rm-done" data-target="oo-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">pillars, privacy, MRO, design</span></div></div>
+      <div class="rm-item rm-done" data-target="oo-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Why We Need OOP</span><span class="rm-sub">variables, then dicts, then what breaks</span></div></div>
+      <div class="rm-item rm-done" data-target="oo-class"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Classes and Objects</span><span class="rm-sub">blueprint analogy, __init__, self, methods</span></div></div>
+      <div class="rm-item rm-done" data-target="oo-pillars"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">The Four Pillars of OOP</span><span class="rm-sub">what they are, one car analogy</span></div></div>
+      <div class="rm-item rm-done" data-target="oo-encap"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Pillar 1: Encapsulation</span><span class="rm-sub">protect data: _balance, @property</span></div></div>
+      <div class="rm-item rm-done" data-target="oo-abstr"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Pillar 2: Abstraction</span><span class="rm-sub">simple interface, abstract classes</span></div></div>
+      <div class="rm-item rm-done" data-target="oo-inherit"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Pillar 3: Inheritance</span><span class="rm-sub">child classes, super(), overriding</span></div></div>
+      <div class="rm-item rm-done" data-target="oo-poly"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Pillar 4: Polymorphism</span><span class="rm-sub">same call, different behaviour</span></div></div>
+      <div class="rm-item rm-done" data-target="oo-all"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">All Four Pillars in One Program</span><span class="rm-sub">each line labelled with its pillar</span></div></div>
+      <div class="rm-item rm-done" data-target="oo-traps"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">self, shared lists, overusing classes</span></div></div>
+      <div class="rm-item rm-done" data-target="oo-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">terms, syntax, pillars table</span></div></div>
+      <div class="rm-item rm-done" data-target="oo-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">pillars, self, private, ABC, MRO</span></div></div>
     </div>
   </div>
 
-  <h2 id="oo-why"><span class="num">01</span>Why OOP: Keeping Data and Behaviour Together</h2>
-  <p>In procedural code, a record is a dict and the rules for changing it are separate functions. That works until someone changes the dict without calling the function. Below the rule is "a balance never goes below zero".</p>
-  <div class="fx" data-lang="py"># Procedural version: data in a dict, the rule in a separate function
-account = {"owner": "Asha", "balance": 100}
+  <h2 id="oo-why"><span class="num">01</span>Why We Need OOP</h2>
+  <p>Before learning what OOP is, it helps to feel the problem it solves. Suppose you are writing a tiny banking program. Each customer has a name and a balance, and there are two rules: you can deposit money, and you cannot withdraw more than you have.</p>
+  <h3>Attempt 1: plain variables</h3>
+  <p>The simplest thing is a pair of variables per customer.</p>
+  <div class="fx" data-lang="py"># Two customers, plain variables
+asha_name, asha_balance = "Asha", 1000
+ben_name, ben_balance = "Ben", 500
 
-def withdraw(acc, amount):
-    if amount &gt; acc["balance"]:
-        raise ValueError("insufficient funds")
-    acc["balance"] -= amount
+asha_balance = asha_balance + 200      # Asha deposits 200
+ben_balance = ben_balance - 100        # Ben withdraws 100
+print(asha_name, asha_balance)
+print(ben_name, ben_balance)</div>
+  <div class="fx" data-lang="text">Asha 1200
+Ben 400</div>
+  <p>This works for two customers. For two thousand it is hopeless: you need two thousand pairs of variable names, and every line that changes a balance must remember to apply the rules by hand.</p>
+  <h3>Attempt 2: a dict per customer, plus functions</h3>
+  <p>Grouping each customer's data into a dict, and writing the rules once as functions, is a real improvement.</p>
+  <div class="fx" data-lang="py"># Better: one dict per customer, and functions for the rules
+def deposit(account, amount):
+    account["balance"] += amount
 
-withdraw(account, 30)
-print("through the function:", account["balance"])
+def withdraw(account, amount):
+    if amount &gt; account["balance"]:
+        print("Not enough money")
+        return
+    account["balance"] -= amount
 
-account["balance"] -= 500        # nothing forces callers to use withdraw()
-account["balnce"] = 0            # a typo silently adds a new key
-print("after direct edits:  ", account)</div>
-  <div class="fx" data-lang="text">through the function: 70
-after direct edits:   {'owner': 'Asha', 'balance': -430, 'balnce': 0}</div>
-  <p>Through <code>withdraw</code> the balance is correct (70). Two ordinary lines then break it with no error: a direct write skips the rule and leaves −430, and a typo key adds junk. The cause is structural: the data and its rules are separate things that merely happen to be used together, and in a large codebase nothing says which functions belong to which dict.</p>
-  <p>OOP fixes this by defining a new type, a <strong>class</strong>, whose values carry the data and the methods that enforce its rules. The data is kept internal and exposed read-only:</p>
-  <div class="fx" data-lang="py">class Account:
-    def __init__(self, owner, balance=0):
-        self.owner = owner
-        self._balance = balance          # internal: change only through methods
+asha = {"name": "Asha", "balance": 1000}
+ben = {"name": "Ben", "balance": 500}
 
-    @property
-    def balance(self):                   # read-only view
-        return self._balance
+deposit(asha, 200)
+withdraw(ben, 800)                     # rule works: refused
+print(asha)
+print(ben)
 
-    def withdraw(self, amount):          # the rule lives next to the data
-        if amount &gt; self._balance:
-            raise ValueError("insufficient funds")
-        self._balance -= amount
+# ...but nothing forces anyone to use the functions
+ben["balance"] = ben["balance"] - 800  # skips the rule
+asha["balanse"] = 0                    # typo: silently adds a new key
+print(ben)
+print(asha)</div>
+  <div class="fx" data-lang="text">Not enough money
+{'name': 'Asha', 'balance': 1200}
+{'name': 'Ben', 'balance': 500}
+{'name': 'Ben', 'balance': -300}
+{'name': 'Asha', 'balance': 1200, 'balanse': 0}</div>
+  <p>When everyone calls <code>withdraw()</code>, the rule protects Ben. But look at the last part: one line changes Ben's balance directly and he ends at <b>−300</b>, and a spelling mistake quietly adds a junk key <code>'balanse'</code>. Python raises no error in either case.</p>
+  <p>The root cause is that <b>the data (the dict) and the rules (the functions) are separate things</b>. Nothing connects them. Any line anywhere in the program can change the dict without going through the rules, and in a large codebase nobody can tell which functions are meant to be used with which dicts.</p>
+  <div class="callout anlg"><span class="label">Analogy</span><p>Imagine a bank that keeps every customer's balance written on loose sheets of paper lying on a table, with the rulebook kept in another room. Anyone walking past can pick up a pen and change a number. A real bank keeps each customer's record locked in a file, and the only way to change it is through a teller who follows the rules. OOP does the same for code: it puts each record and its rules together into one unit, so changes go through the rules.</p></div>
+  <p>That unit is an <strong>object</strong>, and the design that describes it is a <strong>class</strong>. Everything else in OOP grows from that one move: keep data and the code that works on it together.</p>
+  <div class="callout def"><span class="label">Definition</span><p><strong>Object-oriented programming</strong> is a style of programming where you model your program as <strong>objects</strong>, each combining <strong>data</strong> (called attributes) and <strong>behaviour</strong> (called methods), created from blueprints called <strong>classes</strong>.</p></div>
 
-acc = Account("Asha", 100)
-acc.withdraw(30)
-print("balance:", acc.balance)
-try:
-    acc.balance = -430                   # direct write: refused
-except AttributeError as e:
-    print("AttributeError:", e)
-try:
-    acc.withdraw(500)                    # the rule always runs
-except ValueError as e:
-    print("ValueError:", e)
-print("balance:", acc.balance)</div>
-  <div class="fx" data-lang="text">balance: 70
-AttributeError: property 'balance' of 'Account' object has no setter
-ValueError: insufficient funds
-balance: 70</div>
-  <p>The direct write is refused and the overdraft is refused; the balance stays 70. Every other OOP idea refines this bundle: protecting it (encapsulation), simplifying how it is used (abstraction), reusing it (inheritance), and letting one piece of code work with many kinds of bundle (polymorphism).</p>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Object-oriented programming</strong>: structuring a program as objects that combine <strong>state</strong> (attributes) and <strong>behaviour</strong> (methods), created from classes. An <strong>invariant</strong> is a condition on an object's state that must hold after every public operation (here, <code>balance ≥ 0</code>); most OOP machinery exists to make invariants hard to break by accident.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>A plain class does not stop typos either: <code>acc.balnce = 0</code> just creates a new attribute. Declaring <code>__slots__ = ("x", "y")</code> (or using <code>@dataclass(slots=True)</code>) restricts which attribute names may exist:</p></div>
-  <div class="fx" data-lang="py">class Point:
-    __slots__ = ("x", "y")               # only these attributes may exist
-    def __init__(self, x, y):
-        self.x, self.y = x, y
+  <h2 id="oo-class"><span class="num">02</span>Classes and Objects</h2>
+  <div class="callout anlg"><span class="label">Analogy: blueprint and houses</span><p>An architect draws one <b>blueprint</b> of a house. From it, a builder can build many <b>houses</b>. Every house has the same structure (rooms, doors, windows) because it came from the same blueprint, but each house has its own details: its own owner, its own paint colour. Painting one house blue does not change the others. And every house can do the same things: open the door, switch on the lights.</p></div>
+  <p>In OOP the blueprint is the <strong>class</strong> and each house is an <strong>object</strong>. The table maps every OOP word you will meet onto the analogy, then onto the bank example.</p>
+  <table class="tbl"><caption>OOP terms, mapped</caption>
+    <tr><th>OOP term</th><th>House analogy</th><th>Bank example</th><th>Python</th></tr>
+    <tr><td><b>Class</b></td><td>the blueprint</td><td>the design of "a bank account"</td><td><code>class BankAccount:</code></td></tr>
+    <tr><td><b>Object</b> / <b>instance</b></td><td>one actual house</td><td>Asha's account, Ben's account</td><td><code>asha = BankAccount(...)</code></td></tr>
+    <tr><td><b>Instantiation</b></td><td>building a house from the blueprint</td><td>opening a new account</td><td>calling the class: <code>BankAccount(...)</code></td></tr>
+    <tr><td><b>Constructor</b></td><td>the builder's setup steps</td><td>filling in owner and opening balance</td><td><code>def __init__(self, ...):</code></td></tr>
+    <tr><td><b>Attribute</b></td><td>a house's details: owner, colour</td><td>owner, balance</td><td><code>self.balance = ...</code></td></tr>
+    <tr><td><b>Method</b></td><td>what a house can do: open door</td><td>deposit, withdraw</td><td><code>def deposit(self, amount):</code></td></tr>
+    <tr><td><b>self</b></td><td>"this particular house"</td><td>"this particular account"</td><td>first parameter of every method</td></tr>
+  </table>
+  <p>"Object" and "instance" mean the same thing; "instance" is used when you want to say which class it came from ("Asha's account is an instance of <code>BankAccount</code>"). Now let us build the class one step at a time.</p>
+  <h3>Step 1: an empty class, and objects made from it</h3>
+  <div class="fx" data-lang="py">class BankAccount:        # the blueprint
+    pass
 
-p = Point(1, 2)
-try:
-    p.z = 3
-except AttributeError as e:
-    print("AttributeError:", e)</div>
-  <div class="fx" data-lang="text">AttributeError: 'Point' object has no attribute 'z' and no __dict__ for setting new attributes</div>
-
-  <h2 id="oo-class"><span class="num">02</span>Class, Object and Instance</h2>
-  <p>A <strong>class</strong> is a blueprint: it defines which attributes its objects have and which methods they support. An <strong>object</strong> is any value in Python. An <strong>instance</strong> is an object considered relative to the class that made it: <code>a</code> is an instance of <code>Account</code>. Calling the class, <code>Account("Asha", 100)</code>, creates a new instance and runs <code>__init__</code> to fill it.</p>
-  <div class="fx" data-lang="py">class Account:
-    bank = "PocketBank"                  # class attribute: one value, shared
-
-    def __init__(self, owner, balance=0):
-        self.owner = owner               # instance attributes: one copy per object
+a = BankAccount()         # build object 1
+b = BankAccount()         # build object 2
+print(type(a))
+print(a is b)             # two separate objects</div>
+  <div class="fx" data-lang="text">&lt;class '__main__.BankAccount'&gt;
+False</div>
+  <p><code>class BankAccount:</code> defines the blueprint. Calling it like a function, <code>BankAccount()</code>, builds a new object. <code>a</code> and <code>b</code> are two separate objects of the same class, just as two houses from one blueprint are two separate houses. By convention class names use <code>CapitalisedWords</code>.</p>
+  <h3>Step 2: give every object its data with <code>__init__</code></h3>
+  <p>An account is useless without an owner and a balance. We want every account to receive these the moment it is created. A method with the special name <code>__init__</code> does exactly that: Python calls it automatically every time an object is built, passing in the new, empty object plus whatever arguments you gave.</p>
+  <div class="fx" data-lang="py">class BankAccount:
+    def __init__(self, owner, balance):
+        self.owner = owner          # attribute stored on this object
         self.balance = balance
 
-    def deposit(self, amount):           # method: defined once, on the class
+asha = BankAccount("Asha", 1000)    # Python calls __init__(asha_object, "Asha", 1000)
+ben = BankAccount("Ben", 500)
+print(asha.owner, asha.balance)
+print(ben.owner, ben.balance)</div>
+  <div class="fx" data-lang="text">Asha 1000
+Ben 500</div>
+  <p>When you write <code>BankAccount("Asha", 1000)</code>, Python (1) creates a new empty object, (2) calls <code>__init__</code> with that object as <code>self</code>, <code>owner="Asha"</code>, <code>balance=1000</code>, and (3) hands the object back, which we name <code>asha</code>. Inside <code>__init__</code>, <code>self.owner = owner</code> means "store this value on <em>this</em> object". Asha's object and Ben's object each have their own <code>owner</code> and <code>balance</code>, like two houses each with their own paint.</p>
+  <h3>Step 3: add behaviour with methods</h3>
+  <p>A <strong>method</strong> is a function written inside a class. It describes something every object of that class can do. Here we move the rules from attempt 2 into the class, so the data and its rules finally live together.</p>
+  <div class="fx" data-lang="py">class BankAccount:
+    def __init__(self, owner, balance):
+        self.owner = owner
+        self.balance = balance
+
+    def deposit(self, amount):
         self.balance += amount
-
-a = Account("Asha", 100)                 # two objects (instances) of one class
-b = Account("Ben", 50)
-a.deposit(50)
-print(a.balance, b.balance, a.bank, b.bank)
-print(vars(a), vars(b))
-print(type(a).__name__, isinstance(a, Account), a is b)
-Account.deposit(b, 10)                   # what b.deposit(10) really runs
-print(b.balance)
-print(isinstance(42, int), isinstance("hi", str), isinstance(Account, type))</div>
-  <div class="fx" data-lang="text">150 50 PocketBank PocketBank
-{'owner': 'Asha', 'balance': 150} {'owner': 'Ben', 'balance': 50}
-Account True False
-60
-True True True</div>
-  <p>Each instance has its own <strong>instance attributes</strong> (<code>vars(a)</code> shows Asha's, <code>vars(b)</code> Ben's), while <code>bank</code> is a <strong>class attribute</strong> stored once on the class and found by lookup. The method <code>deposit</code> is stored once, on the class; <code>b.deposit(10)</code> is shorthand for <code>Account.deposit(b, 10)</code>, which is all <code>self</code> is. The last line shows that the words overlap: <code>42</code> is an instance of <code>int</code>, and the class <code>Account</code> is itself an instance of <code>type</code>. Details of <code>self</code>, <code>__init__</code> and attribute lookup are in <a class="xref" data-note="py_classes">Classes &amp; Objects</a>.</p>
-  <table class="tbl">
-    <tr><th>Term</th><th>Meaning</th><th>Example</th></tr>
-    <tr><td>Class</td><td>user-defined type: attributes + methods</td><td><code>class Account: ...</code></td></tr>
-    <tr><td>Object</td><td>any value; has a type, identity and value</td><td><code>42</code>, <code>"hi"</code>, <code>Account</code>, <code>a</code></td></tr>
-    <tr><td>Instance</td><td>an object of a particular class</td><td><code>isinstance(a, Account)</code> is True</td></tr>
-    <tr><td>Attribute</td><td>a name stored on an object or class</td><td><code>a.balance</code>, <code>Account.bank</code></td></tr>
-    <tr><td>Method</td><td>a function defined in a class, called on an instance</td><td><code>a.deposit(50)</code></td></tr>
-  </table>
-  <div class="callout anlg"><span class="label">Analogy</span><p>An architect's drawing and the houses built from it. The drawing (class) is made once; each house (instance) has its own furniture (instance attributes); the street name printed on the drawing applies to every house (class attribute).</p></div>
-
-  <h2 id="oo-encap"><span class="num">03</span>Encapsulation</h2>
-  <p>Encapsulation means an object's internal state is changed only through operations that keep its invariants. Python enforces nothing by keyword: a single underscore (<code>_lr</code>) marks an attribute as internal, and a <code>@property</code> lets a public attribute name run validation code on every read or write.</p>
-  <div class="fx" data-lang="py">class Trainer:
-    def __init__(self, lr):
-        self.lr = lr                     # even __init__ goes through the setter
-
-    @property
-    def lr(self):
-        return self._lr
-
-    @lr.setter
-    def lr(self, value):                 # every assignment is validated
-        if not 0 &lt; value &lt; 1:
-            raise ValueError(f"lr must be in (0, 1), got {value}")
-        self._lr = value
-
-t = Trainer(0.01)
-t.lr = 0.001
-print(t.lr)
-try:
-    t.lr = 5
-except ValueError as e:
-    print("ValueError:", e)
-print(vars(t))</div>
-  <div class="fx" data-lang="text">0.001
-ValueError: lr must be in (0, 1), got 5
-{'_lr': 0.001}</div>
-  <p>Callers still write <code>t.lr = 0.001</code>, plain attribute syntax, but the setter rejects 5. The real value lives in <code>_lr</code>. Because a property can replace a plain attribute later without changing any caller, Python code starts with public attributes and adds properties only when a rule appears; Java-style <code>get_lr()</code>/<code>set_lr()</code> methods are unnecessary. Name mangling (<code>__x</code>), <code>@property</code> and dataclasses are covered in <a class="xref" data-note="py_classes">Classes &amp; Objects</a>.</p>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Encapsulation</strong>: bundling state with the methods that operate on it and restricting direct access to that state, so the object controls how it changes. In Python it is by convention (<code>_name</code>) and by managed attributes (<code>@property</code>), not by access modifiers.</p></div>
-
-  <h2 id="oo-abstr"><span class="num">04</span>Abstraction</h2>
-  <p>Abstraction means callers depend on a small interface (what an object can do) and not on how it does it. In Python an interface can be made explicit and enforced with an <strong>abstract base class</strong>: methods marked <code>@abstractmethod</code> must be implemented by every subclass before it can be instantiated. The scikit-learn estimator interface is the familiar example:</p>
-  <div class="fx" data-lang="py">from abc import ABC, abstractmethod
-
-class Model(ABC):
-    @abstractmethod
-    def fit(self, X, y): ...
-
-    @abstractmethod
-    def predict(self, X): ...
-
-    def score(self, X, y):               # written once, only against the interface
-        preds = self.predict(X)
-        return sum(p == t for p, t in zip(preds, y)) / len(y)
-
-class MajorityClass(Model):
-    def fit(self, X, y):
-        self.label_ = max(set(y), key=y.count)
-        return self
-
-    def predict(self, X):
-        return [self.label_] * len(X)
-
-X, y = [[1], [2], [3], [4]], [0, 1, 1, 1]
-print(MajorityClass().fit(X, y).score(X, y))
-try:
-    Model()
-except TypeError as e:
-    print("TypeError:", e)</div>
-  <div class="fx" data-lang="text">0.75
-TypeError: Can't instantiate abstract class Model without an implementation for abstract methods 'fit', 'predict'</div>
-  <p><code>score</code> is written once and only calls <code>predict</code>; it works for any model that implements the interface. <code>MajorityClass</code> predicts the most common label (1), so 3 of 4 are right: 0.75. <code>Model</code> itself cannot be created because its abstract methods have no implementation. ABCs, <code>typing.Protocol</code> and the template-method pattern used by <code>score</code> are covered in <a class="xref" data-note="py_inheritance">Inheritance, Polymorphism &amp; Design</a>.</p>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Abstraction</strong>: exposing the essential operations of a type and hiding the implementation. An <strong>abstract class</strong> (inherits <code>abc.ABC</code>, has at least one <code>@abstractmethod</code>) defines such an interface and raises <code>TypeError</code> if instantiated.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Encapsulation and abstraction are the most confused pair. Encapsulation protects <em>data</em> (who may change <code>_lr</code>). Abstraction simplifies the <em>interface</em> (a caller only needs <code>fit</code> and <code>predict</code>). A class can have either without the other.</p></div>
-
-  <h2 id="oo-inherit"><span class="num">05</span>Inheritance</h2>
-  <p>Inheritance defines a new class as an extension of an existing one: the child gets every attribute and method of the parent, and adds or overrides only what differs. It models an <strong>is-a</strong> relationship. <code>super()</code> calls the parent's version of a method, typically <code>super().__init__(...)</code> so the parent sets up its part of the object.</p>
-  <div class="fx" data-lang="py">class Account:
-    def __init__(self, owner, balance=0):
-        self.owner, self.balance = owner, balance
 
     def withdraw(self, amount):
         if amount &gt; self.balance:
-            raise ValueError("insufficient funds")
+            print("Not enough money")
+            return
         self.balance -= amount
 
-    def __repr__(self):
-        return f"{type(self).__name__}({self.owner!r}, {self.balance})"
+    def show(self):
+        print(f"{self.owner}: {self.balance}")
 
-class SavingsAccount(Account):           # "a SavingsAccount is an Account"
-    def __init__(self, owner, balance=0, rate=0.01):
-        super().__init__(owner, balance) # reuse the parent's setup
-        self.rate = rate
+asha = BankAccount("Asha", 1000)
+ben = BankAccount("Ben", 500)
 
-    def add_interest(self):              # add new behaviour
-        self.balance = round(self.balance * (1 + self.rate), 2)
+asha.deposit(200)
+ben.withdraw(800)
+asha.show()
+ben.show()
 
-s = SavingsAccount("Asha", 120)
-s.withdraw(20)                           # inherited from Account
-s.add_interest()
-print(s, isinstance(s, Account))
-print([c.__name__ for c in SavingsAccount.__mro__])</div>
-  <div class="fx" data-lang="text">SavingsAccount('Asha', 101.0) True
-['SavingsAccount', 'Account', 'object']</div>
-  <p><code>withdraw</code> and <code>__repr__</code> were inherited (120 − 20 = 100), <code>add_interest</code> is new (100 × 1.01 = 101.0), and <code>__repr__</code> printed the child's name because <code>type(self)</code> is <code>SavingsAccount</code>. <code>__mro__</code> is the order Python searches for attributes: child, parent, then <code>object</code>, the root of every class. Overriding, multiple inheritance and the C3 MRO are in <a class="xref" data-note="py_inheritance">Inheritance, Polymorphism &amp; Design</a>.</p>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Inheritance</strong>: <code>class Child(Parent)</code> makes <code>Child</code> a subclass; attribute lookup searches <code>Child.__mro__</code> in order, so the child's definitions win and anything missing is found on a parent.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Inherit for a true is-a whose child keeps every promise of the parent, not to borrow code. "An account has a list of transactions" is <em>has-a</em>: store a list as an attribute (composition) instead of subclassing <code>list</code>, which would also hand out <code>clear()</code> and <code>sort()</code>.</p></div>
+BankAccount.deposit(ben, 50)   # what ben.deposit(50) really does
+ben.show()</div>
+  <div class="fx" data-lang="text">Not enough money
+Asha: 1200
+Ben: 500
+Ben: 550</div>
+  <p><code>asha.deposit(200)</code> reads naturally: "Asha's account, deposit 200". The last two lines reveal what <code>self</code> really is. <code>ben.deposit(50)</code> is a shortcut: Python turns it into <code>BankAccount.deposit(ben, 50)</code>, passing the object before the dot as the first argument. That first argument is what we call <code>self</code>. So inside a method, <code>self.balance</code> always means "the balance of the object this method was called on". One method definition serves every account.</p>
+  <div class="callout def"><span class="label">Definition</span><p>A <strong>class</strong> is a blueprint that defines what data its objects hold and what they can do. An <strong>object</strong> (or <strong>instance</strong>) is one thing built from a class, with its own copy of the data. An <strong>attribute</strong> is a piece of data stored on an object. A <strong>method</strong> is a function defined in a class; it receives the object it was called on as its first parameter, <code>self</code>. <code>__init__</code> is the method Python runs automatically to set up each new object.</p></div>
+  <p>Notice what we have and have not fixed. The data and the rules now live together, which is the core of OOP. But nothing yet <em>prevents</em> someone from writing <code>ben.balance = -300</code> directly. Closing that gap is the first of the four pillars.</p>
 
-  <h2 id="oo-poly"><span class="num">06</span>Polymorphism</h2>
-  <p>Polymorphism means one operation works on objects of different types, each responding in its own way. Python decides which method runs by looking it up on the object's type when the call happens (dynamic dispatch), so the caller never checks types. A shared parent class is not required: any object with the right method works, which is <strong>duck typing</strong>.</p>
-  <div class="fx" data-lang="py">class Circle:
-    def __init__(self, r):
-        self.r = r
-    def area(self):
-        return round(3.14159 * self.r ** 2, 2)
+  <h2 id="oo-pillars"><span class="num">03</span>The Four Pillars of OOP</h2>
+  <p>A pillar holds a building up. The "four pillars of OOP" are simply the <b>four main ideas that make object-oriented design work</b>. Classes and objects are the bricks; the pillars are four ways of using those bricks well. Each pillar answers one practical question:</p>
+  <table class="tbl"><caption>The four pillars at a glance</caption>
+    <tr><th>Pillar</th><th>Question it answers</th><th>One-line meaning</th></tr>
+    <tr><td><b>Encapsulation</b></td><td>How do I stop other code from breaking my object's data?</td><td>Keep the data inside the object; change it only through its methods.</td></tr>
+    <tr><td><b>Abstraction</b></td><td>How do I make my object easy to use?</td><td>Show a few simple operations; hide how they work.</td></tr>
+    <tr><td><b>Inheritance</b></td><td>How do I make a similar class without copying code?</td><td>Build a new class from an existing one and add or change only what differs.</td></tr>
+    <tr><td><b>Polymorphism</b></td><td>How can one piece of code work with many kinds of objects?</td><td>Different classes provide the same method name, each in its own way.</td></tr>
+  </table>
+  <div class="callout anlg"><span class="label">Analogy: a car shows all four</span>
+    <p><b>Encapsulation</b>: the engine is sealed under the bonnet. You cannot reach in and turn the fuel valve by hand; you change speed only through the accelerator pedal, which keeps the engine safe.</p>
+    <p><b>Abstraction</b>: to drive, you only need to know the steering wheel, pedals and gear stick. You do not need to know how fuel injection or the gearbox works.</p>
+    <p><b>Inheritance</b>: an electric car <em>is a</em> car. It gets wheels, steering and brakes from the general idea of "car" and adds one new thing, a battery.</p>
+    <p><b>Polymorphism</b>: every car has an accelerator pedal. Press it in a petrol car and it burns fuel; press it in an electric car and it draws on the battery. Same pedal, same action from the driver, different behaviour inside.</p>
+  </div>
+  <p>Encapsulation and abstraction both "hide" something, which is why they get confused. Encapsulation hides the <em>data</em> to protect it; abstraction hides the <em>complexity</em> to simplify use. The next four sections take each pillar in turn, starting from the <code>BankAccount</code> we just built.</p>
 
-class Rect:                              # no common parent with Circle
-    def __init__(self, w, h):
-        self.w, self.h = w, h
-    def area(self):
-        return self.w * self.h
+  <h2 id="oo-encap"><span class="num">04</span>Pillar 1: Encapsulation</h2>
+  <p><strong>Encapsulation</strong> means bundling data together with the methods that work on it, and making sure the data is changed <em>only</em> through those methods. The word comes from "capsule": a medicine capsule wraps the powder inside so you take it whole, never touching the powder directly.</p>
+  <div class="callout anlg"><span class="label">Analogy</span><p>At a bank you cannot walk into the vault and change your balance. You go to the teller, who checks the rules (do you have enough money? is this really you?) and then updates the record. The vault is the data; the teller is the method.</p></div>
+  <p>The <code>BankAccount</code> we just built has the rules, but it does not enforce them, because anyone can write to <code>balance</code> directly:</p>
+  <div class="fx" data-lang="py">class BankAccount:
+    def __init__(self, owner, balance):
+        self.owner = owner
+        self.balance = balance
 
-shapes = [Circle(1), Rect(2, 3)]
-print([s.area() for s in shapes])        # one call, the object's type decides what runs
-print(len("abc"), len([1, 2]), len({"a": 1}))
-print(1 + 2, "a" + "b", [1] + [2])</div>
-  <div class="fx" data-lang="text">[3.14, 6]
-3 2 1
-3 ab [1, 2]</div>
-  <p><code>Circle</code> and <code>Rect</code> share no parent, yet one comprehension calls <code>area()</code> on both. The built-ins work the same way: <code>len</code> and <code>+</code> do different things for strings, lists and dicts because each type defines its own <code>__len__</code> and <code>__add__</code> (see <a class="xref" data-note="py_dunder">Dunder Methods &amp; the Data Model</a>). The alternative, an <code>if isinstance(s, Circle): … elif isinstance(s, Rect): …</code> chain, must be edited for every new type.</p>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Polymorphism</strong>: one interface, many implementations. Forms in Python: <strong>subtype</strong> polymorphism (subclasses override a method), <strong>duck typing</strong> (any object with the method), and <strong>operator overloading</strong> through special methods (<code>__add__</code>, <code>__len__</code>). <code>functools.singledispatch</code> adds dispatch on an argument's type for plain functions.</p></div>
-  <div class="callout anlg"><span class="label">Analogy</span><p>"Show your ID" at a gate works for students, staff and visitors alike; each shows a different card, and the guard does not need to know in advance who is who.</p></div>
+    def withdraw(self, amount):
+        if amount &gt; self.balance:
+            print("Not enough money")
+            return
+        self.balance -= amount
 
-  <h2 id="oo-diff"><span class="num">07</span>How Python's OOP Differs from Java and C++</h2>
-  <p>Python has the same concepts as Java and C++, with fewer rules enforced by the language. The differences below are frequent interview follow-ups.</p>
-  <h3>No access modifiers: conventions and name mangling</h3>
-  <p>There is no <code>private</code> or <code>protected</code>. A leading underscore is a convention for "internal". Two leading underscores (and not two trailing) trigger <strong>name mangling</strong>: inside the class body <code>__secret</code> is renamed to <code>_Account__secret</code>, which prevents accidental clashes with subclass attributes but is not security.</p>
-  <div class="fx" data-lang="py">class Account:
-    def __init__(self):
-        self.public = 1
-        self._internal = 2               # convention: "internal, don't touch"
-        self.__secret = 3                # name-mangled to _Account__secret
+ben = BankAccount("Ben", 500)
+ben.withdraw(800)          # the rule refuses this...
+ben.balance = -300         # ...but this line walks straight past it
+print(ben.balance)</div>
+  <div class="fx" data-lang="text">Not enough money
+-300</div>
+  <p>The fix has two parts. First, rename the attribute to <code>_balance</code>. A leading underscore is Python's signal for "internal: do not touch from outside, use the methods". Second, give read access through a <code>@property</code>: a method that is read like an attribute (<code>ben.balance</code>, no brackets). Because we define no way to set it, assigning to <code>balance</code> raises an error.</p>
+  <div class="fx" data-lang="py">class BankAccount:
+    def __init__(self, owner, balance):
+        self.owner = owner
+        self._balance = balance      # _ means: internal, use the methods
 
-a = Account()
-print(a.public, a._internal)
+    @property
+    def balance(self):               # read access, like an attribute
+        return self._balance
+
+    def deposit(self, amount):
+        if amount &lt;= 0:
+            raise ValueError("Deposit must be positive")
+        self._balance += amount
+
+    def withdraw(self, amount):
+        if amount &gt; self._balance:
+            raise ValueError("Not enough money")
+        self._balance -= amount
+
+ben = BankAccount("Ben", 500)
+ben.deposit(100)
+print(ben.balance)                   # reading is allowed
+
 try:
-    a.__secret
+    ben.balance = -300               # writing directly is refused
 except AttributeError as e:
     print("AttributeError:", e)
-print(a._Account__secret, sorted(vars(a)))</div>
+
+try:
+    ben.withdraw(5000)               # every change goes through the rules
+except ValueError as e:
+    print("ValueError:", e)
+print(ben.balance)</div>
+  <div class="fx" data-lang="text">600
+AttributeError: property 'balance' of 'BankAccount' object has no setter
+ValueError: Not enough money
+600</div>
+  <p>Now reading the balance works as before, writing to it directly is refused, and the only way to change the money is through <code>deposit</code> and <code>withdraw</code>, which always check the rules. The object protects its own data. The rule that must always be true (here "the balance never goes negative") is called an <strong>invariant</strong>, and encapsulation is how a class guarantees it.</p>
+  <h3>How private is "private" in Python?</h3>
+  <p>Languages like Java have a <code>private</code> keyword that the compiler enforces. Python deliberately does not. It relies on naming conventions:</p>
+  <div class="fx" data-lang="py">class Demo:
+    def __init__(self):
+        self.public = 1
+        self._internal = 2
+        self.__secret = 3
+
+d = Demo()
+print(d.public, d._internal)
+try:
+    print(d.__secret)
+except AttributeError as e:
+    print("AttributeError:", e)
+print(d._Demo__secret)          # name mangling: renamed, not locked</div>
   <div class="fx" data-lang="text">1 2
-AttributeError: 'Account' object has no attribute '__secret'
-3 ['_Account__secret', '_internal', 'public']</div>
-  <h3>Everything is an object, including classes</h3>
-  <p>Integers, functions and classes are all objects: they have a type, can be stored in lists, passed to functions and given attributes at run time. The type of a class is <code>type</code>, the default <strong>metaclass</strong> (the class whose instances are classes); calling <code>type(name, bases, namespace)</code> builds a class directly, which is what the <code>class</code> statement does for you.</p>
-  <div class="fx" data-lang="py">class Account:
+AttributeError: 'Demo' object has no attribute '__secret'
+3</div>
+  <table class="tbl"><caption>Python's naming conventions for access</caption>
+    <tr><th>Name</th><th>Meaning</th><th>Enforced?</th></tr>
+    <tr><td><code>balance</code></td><td>public: part of the class's interface</td><td>—</td></tr>
+    <tr><td><code>_balance</code></td><td>internal: "please don't touch from outside"</td><td>No, just a convention every Python developer respects</td></tr>
+    <tr><td><code>__balance</code></td><td>name-mangled: Python renames it to <code>_ClassName__balance</code></td><td>Partly: avoids accidental clashes in subclasses, but still reachable</td></tr>
+  </table>
+  <p>Python's view is "we are all consenting adults": the underscore tells others what is internal, and <code>@property</code> lets you add checks without changing how callers read the attribute. In practice <code>_name</code> plus properties is the standard way to encapsulate. (Details: <a class="xref" data-note="py_classes">Classes &amp; Objects</a>.)</p>
+  <div class="callout def"><span class="label">Definition</span><p><strong>Encapsulation</strong>: keeping an object's data and the methods that operate on it together, and restricting direct access to the data so it can change only through those methods. In Python: <code>_name</code> for internal attributes, <code>@property</code> for controlled access.</p></div>
+
+  <h2 id="oo-abstr"><span class="num">05</span>Pillar 2: Abstraction</h2>
+  <p><strong>Abstraction</strong> means showing only what someone needs in order to use an object, and hiding how it works. The user of your class should think "transfer 300 to Ben", not "check the amount, subtract from one balance, add to another, write a log line".</p>
+  <div class="callout anlg"><span class="label">Analogy</span><p>An ATM gives you a few buttons: Withdraw, Deposit, Check balance. Behind the Withdraw button the machine verifies your PIN, contacts the bank's servers, checks your balance, counts notes and updates records. You see one button. That is abstraction: a simple interface over a complicated process.</p></div>
+  <h3>Abstraction with simple public methods</h3>
+  <p>In practice abstraction mostly means designing a small set of public methods and keeping the helper steps internal (again marked with <code>_</code>). Here <code>transfer</code> is the "button"; <code>_check_amount</code> and <code>_log</code> are the machinery behind it.</p>
+  <div class="fx" data-lang="py">class BankAccount:
+    def __init__(self, owner, balance):
+        self.owner = owner
+        self._balance = balance
+
+    @property
+    def balance(self):
+        return self._balance
+
+    def _check_amount(self, amount):          # hidden helper
+        if amount &lt;= 0:
+            raise ValueError("Amount must be positive")
+
+    def _log(self, text):                     # hidden helper
+        print(f"[log] {self.owner}: {text}")
+
+    def deposit(self, amount):
+        self._check_amount(amount)
+        self._balance += amount
+
+    def withdraw(self, amount):
+        self._check_amount(amount)
+        if amount &gt; self._balance:
+            raise ValueError("Not enough money")
+        self._balance -= amount
+
+    def transfer(self, other, amount):        # the simple button
+        self.withdraw(amount)
+        other.deposit(amount)
+        self._log(f"sent {amount} to {other.owner}")
+
+asha = BankAccount("Asha", 1000)
+ben = BankAccount("Ben", 500)
+asha.transfer(ben, 300)                       # caller sees one simple call
+print(asha.balance, ben.balance)</div>
+  <div class="fx" data-lang="text">[log] Asha: sent 300 to Ben
+700 800</div>
+  <p>The caller writes one line, <code>asha.transfer(ben, 300)</code>. If the bank later changes how logging or validation works, only the hidden helpers change; every piece of code that calls <code>transfer</code> keeps working.</p>
+  <h3>Abstraction with abstract classes</h3>
+  <p>Sometimes you want to describe <em>what</em> every kind of account must be able to do, without saying <em>how</em>, because each kind does it differently. An <strong>abstract class</strong> is a class that only describes; you cannot create objects from it directly. In Python you write one by inheriting from <code>ABC</code> and marking the required methods with <code>@abstractmethod</code>:</p>
+  <div class="fx" data-lang="py">from abc import ABC, abstractmethod
+
+class Account(ABC):                 # an abstract idea: "some kind of account"
+    @abstractmethod
+    def monthly_charge(self):       # every account MUST say how this works
+        ...
+
+class SavingsAccount(Account):
+    def monthly_charge(self):
+        return 0
+
+class Broken(Account):              # forgot to implement monthly_charge
     pass
 
-def greet():
-    return "hi"
+print(SavingsAccount().monthly_charge())
+for cls in (Account, Broken):
+    try:
+        cls()
+    except TypeError as e:
+        print("TypeError:", e)</div>
+  <div class="fx" data-lang="text">0
+TypeError: Can't instantiate abstract class Account without an implementation for abstract method 'monthly_charge'
+TypeError: Can't instantiate abstract class Broken without an implementation for abstract method 'monthly_charge'</div>
+  <p><code>Account</code> is a contract: "every account must have a <code>monthly_charge</code> method". Python refuses to create an <code>Account</code> itself, and refuses to create a subclass that forgot to fill in the method, so the mistake shows up immediately instead of at month end. (<code>SavingsAccount(Account)</code> uses inheritance, the next pillar; for now, read it as "SavingsAccount is a kind of Account".)</p>
+  <div class="callout def"><span class="label">Definition</span><p><strong>Abstraction</strong>: exposing only the essential operations of an object and hiding the implementation details. In Python: a small public interface with <code>_</code>-prefixed helpers, and abstract base classes (<code>abc.ABC</code> + <code>@abstractmethod</code>) that define what subclasses must implement.</p></div>
+  <div class="callout trap"><span class="label">Encapsulation vs abstraction</span><p>Encapsulation is about <b>protection</b>: who is allowed to change the data (the vault and the teller). Abstraction is about <b>simplicity</b>: how much the user needs to know (the ATM's few buttons). A class usually does both, but they answer different questions.</p></div>
 
-print(type(42), type(greet), type(Account), type(type))
-print(isinstance(Account, object), isinstance(greet, object), isinstance(len, object))
-Account.kind = "bank"                    # a class is an object: add attributes at run time
-greet.calls = 0                          # so is a function
-handlers = [len, str.upper, Account]     # store and pass them like any value
-print(Account.kind, greet.calls, [h.__name__ for h in handlers])
+  <h2 id="oo-inherit"><span class="num">06</span>Pillar 3: Inheritance</h2>
+  <p>The bank now wants a savings account. It is exactly a bank account (owner, balance, deposit, withdraw) plus one extra thing: it earns interest. Copying the whole <code>BankAccount</code> class and adding a method would work, but then every bug fix has to be made twice. <strong>Inheritance</strong> lets a new class start from an existing class and add or change only what differs.</p>
+  <div class="callout anlg"><span class="label">Analogy</span><p>A child inherits traits from a parent, then has some of their own. In the same way a <b>child class</b> (also called subclass) inherits all the attributes and methods of its <b>parent class</b> (also called base class or superclass), then adds new ones or changes some. The test for using inheritance is the phrase "<b>is a</b>": a savings account <em>is a</em> bank account; an electric car <em>is a</em> car.</p></div>
+  <h3>Adding to the parent</h3>
+  <p>Here <code>BankAccount</code> is the class from the encapsulation step (with <code>_balance</code>, <code>deposit</code> and <code>withdraw</code>). Writing the parent's name in brackets, <code>class SavingsAccount(BankAccount):</code>, makes it a child class.</p>
+  <div class="fx" data-lang="py"># (BankAccount is the class from the encapsulation step)
 
-Dynamic = type("Dynamic", (object,), {"x": 1})   # type builds classes: it is the metaclass
-print(Dynamic, Dynamic().x)</div>
-  <div class="fx" data-lang="text">&lt;class 'int'&gt; &lt;class 'function'&gt; &lt;class 'type'&gt; &lt;class 'type'&gt;
-True True True
-bank 0 ['len', 'upper', 'Account']
-&lt;class '__main__.Dynamic'&gt; 1</div>
-  <h3>No method overloading by signature</h3>
-  <p>A class body is executed like ordinary code, so a second <code>def add</code> simply rebinds the name and the first version is gone. Python uses default arguments, <code>*args</code> or <code>functools.singledispatchmethod</code> instead.</p>
-  <div class="fx" data-lang="py">class Calc:
-    def add(self, a, b):
-        return a + b
-    def add(self, a, b, c):              # same name: REPLACES the first definition
-        return a + b + c
+class SavingsAccount(BankAccount):              # "a SavingsAccount IS A BankAccount"
+    def __init__(self, owner, balance, rate):
+        super().__init__(owner, balance)        # let the parent set owner and _balance
+        self.rate = rate                        # the one new piece of data
+
+    def add_interest(self):                     # the one new behaviour
+        self.deposit(self._balance * self.rate)
+
+s = SavingsAccount("Chen", 1000, 0.04)
+s.deposit(500)          # inherited: written once, in BankAccount
+s.add_interest()        # new: only savings accounts have this
+print(s.owner, s.balance)
+print(isinstance(s, SavingsAccount), isinstance(s, BankAccount))</div>
+  <div class="fx" data-lang="text">Chen 1560.0
+True True</div>
+  <p><code>deposit</code> was never written in <code>SavingsAccount</code>, yet <code>s.deposit(500)</code> works: Python did not find it in the child, so it looked in the parent. <code>super().__init__(owner, balance)</code> means "run the parent's setup first", so the child does not repeat that code; it then adds its own <code>rate</code>. And <code>isinstance(s, BankAccount)</code> is True: a savings account really is a bank account, so it can be used anywhere a bank account is expected.</p>
+  <h3>Changing the parent's behaviour: overriding</h3>
+  <p>A current account lets you go below zero up to an overdraft limit. Its <code>withdraw</code> must follow a different rule. If the child defines a method with the same name as the parent's, the child's version is used instead. This is called <strong>overriding</strong>.</p>
+  <div class="fx" data-lang="py">class CurrentAccount(BankAccount):
+    def __init__(self, owner, balance, overdraft):
+        super().__init__(owner, balance)
+        self.overdraft = overdraft
+
+    def withdraw(self, amount):                 # override: same name, new rule
+        if amount &gt; self._balance + self.overdraft:
+            raise ValueError("Overdraft limit reached")
+        self._balance -= amount
+
+c = CurrentAccount("Dev", 500, overdraft=1000)
+c.withdraw(1200)        # a plain BankAccount would refuse this
+print(c.balance)</div>
+  <div class="fx" data-lang="text">-700</div>
+  <p>A plain <code>BankAccount</code> would refuse to withdraw 1200 from 500. The <code>CurrentAccount</code> uses its own <code>withdraw</code> and allows it, ending at −700, within the 1000 overdraft. Everything else (owner, deposit, the <code>balance</code> property) is still inherited unchanged.</p>
+  <div class="callout def"><span class="label">Definition</span><p><strong>Inheritance</strong>: creating a new class (child) from an existing class (parent) so that the child automatically has the parent's attributes and methods. The child can <b>add</b> new ones and <b>override</b> existing ones. <code>super()</code> calls the parent's version of a method. Use it only for genuine "is-a" relationships.</p></div>
+  <div class="callout trap"><span class="label">Trap: not everything is "is-a"</span><p>A customer <em>has</em> an account; a customer is not an account. For "has-a" relationships, store one object inside another (<code>self.account = BankAccount(...)</code>) instead of inheriting. This is called <b>composition</b>, and it is usually the safer default. (More: <a class="xref" data-note="py_inheritance">Inheritance, Polymorphism &amp; Design</a>.)</p></div>
+
+  <h2 id="oo-poly"><span class="num">07</span>Pillar 4: Polymorphism</h2>
+  <p><strong>Polymorphism</strong> is Greek for "many forms". It means the same method call can do different things depending on which kind of object receives it. You have already used it without the name:</p>
+  <div class="fx" data-lang="py">print(len("chai"), len([10, 20, 30]), len({"a": 1}))
+print(2 + 3, "chai" + "wala", [1] + [2])</div>
+  <div class="fx" data-lang="text">4 3 1
+5 chaiwala [1, 2]</div>
+  <p>The same <code>len()</code> works on a string, a list and a dict; the same <code>+</code> adds numbers, joins strings and joins lists. Each type decides what the operation means for itself. Polymorphism in your own classes works the same way.</p>
+  <div class="callout anlg"><span class="label">Analogy</span><p>At a shop counter you say "pay", and the payment method decides what happens: a card is swiped, UPI scans a QR code, cash is counted. You do not need a different instruction for each; you say "pay" and each one does it its own way.</p></div>
+  <p>At month end, the bank must update every account. A basic account does nothing, a savings account earns 4% interest, a current account pays a ₹100 fee. Without polymorphism you would write <code>if type is SavingsAccount: ... elif type is CurrentAccount: ...</code> and edit that chain every time a new account type is added. With polymorphism each class provides its own <code>month_end</code> method, and the loop just calls it:</p>
+  <div class="fx" data-lang="py">class BankAccount:
+    def __init__(self, owner, balance):
+        self.owner = owner
+        self._balance = balance
+
+    def month_end(self):
+        pass                                    # basic account: nothing happens
+
+class SavingsAccount(BankAccount):
+    def month_end(self):
+        self._balance += self._balance * 0.04   # earns interest
+
+class CurrentAccount(BankAccount):
+    def month_end(self):
+        self._balance -= 100                    # pays a fee
+
+accounts = [BankAccount("Asha", 1000), SavingsAccount("Chen", 1000), CurrentAccount("Dev", 1000)]
+
+for acc in accounts:                            # no if/elif on the type
+    acc.month_end()                             # each object runs its OWN version
+    print(f"{acc.owner:5} {type(acc).__name__:15} {acc._balance}")</div>
+  <div class="fx" data-lang="text">Asha  BankAccount     1000
+Chen  SavingsAccount  1040.0
+Dev   CurrentAccount  900</div>
+  <p>The loop does not check types at all. Each object runs its own version of <code>month_end</code>: Asha's stays at 1000, Chen's earns interest to 1040, Dev's pays the fee down to 900. Adding a new account type later means writing one new class; the loop never changes.</p>
+  <h3>Duck typing: Python's relaxed polymorphism</h3>
+  <p>In Python the objects do not even need to share a parent class. As long as an object has the method being called, it works. This is called <strong>duck typing</strong>: "if it walks like a duck and quacks like a duck, treat it as a duck".</p>
+  <div class="fx" data-lang="py">class Wallet:                       # not a BankAccount at all
+    def __init__(self, owner):
+        self.owner = owner
+        self._balance = 50
+    def month_end(self):
+        print("wallet: nothing to do")
+
+for thing in [Wallet("Esha")]:
+    thing.month_end()               # works: Python only needs the method to exist</div>
+  <div class="fx" data-lang="text">wallet: nothing to do</div>
+  <p><code>Wallet</code> has nothing to do with <code>BankAccount</code>, but it has a <code>month_end</code> method, so the same loop can use it. Python checks for the method when the call happens, not the class.</p>
+  <div class="callout def"><span class="label">Definition</span><p><strong>Polymorphism</strong>: one interface (the same method name or operator) with many implementations, where the object's class decides which implementation runs. In Python it comes from method overriding in subclasses and from duck typing.</p></div>
+
+  <h2 id="oo-all"><span class="num">08</span>All Four Pillars in One Program</h2>
+  <p>Here is the finished banking program. Read the comments: each one names the pillar that line is using. This is what the four pillars look like when they work together in real code.</p>
+  <div class="fx" data-lang="py">from abc import ABC, abstractmethod
+
+class Account(ABC):                                  # ABSTRACTION: what every account can do
+    def __init__(self, owner, balance):
+        self.owner = owner
+        self._balance = balance                      # ENCAPSULATION: internal data
+
+    @property
+    def balance(self):                               # ENCAPSULATION: read-only view
+        return self._balance
+
+    def deposit(self, amount):
+        if amount &lt;= 0:
+            raise ValueError("Amount must be positive")
+        self._balance += amount
+
+    def withdraw(self, amount):
+        if amount &gt; self._balance:
+            raise ValueError("Not enough money")
+        self._balance -= amount
+
+    @abstractmethod
+    def month_end(self):                             # ABSTRACTION: each type must define it
+        ...
+
+class SavingsAccount(Account):                       # INHERITANCE: reuses Account
+    def __init__(self, owner, balance, rate):
+        super().__init__(owner, balance)
+        self.rate = rate
+
+    def month_end(self):
+        self.deposit(self._balance * self.rate)
+
+class CurrentAccount(Account):                       # INHERITANCE
+    def __init__(self, owner, balance, overdraft):
+        super().__init__(owner, balance)
+        self.overdraft = overdraft
+
+    def withdraw(self, amount):                      # override with a different rule
+        if amount &gt; self._balance + self.overdraft:
+            raise ValueError("Overdraft limit reached")
+        self._balance -= amount
+
+    def month_end(self):
+        self._balance -= 100
+
+accounts = [SavingsAccount("Chen", 1000, 0.04), CurrentAccount("Dev", 500, 1000)]
+accounts[1].withdraw(1200)                           # allowed: Dev has an overdraft
+
+for acc in accounts:                                 # POLYMORPHISM: same call, different behaviour
+    acc.month_end()
+    print(acc.owner, acc.balance)
 
 try:
-    Calc().add(1, 2)
-except TypeError as e:
-    print("TypeError:", e)
-
-def add(*nums):                          # the Python way: one function, flexible arguments
-    return sum(nums)
-print(add(1, 2), add(1, 2, 3))</div>
-  <div class="fx" data-lang="text">TypeError: Calc.add() missing 1 required positional argument: 'c'
-3 6</div>
-  <table class="tbl"><caption>Python vs Java / C++</caption>
-    <tr><th>Feature</th><th>Python</th><th>Java / C++</th></tr>
-    <tr><td>Access control</td><td>convention <code>_x</code>; mangling <code>__x</code> → <code>_C__x</code></td><td><code>private</code>, <code>protected</code>, <code>public</code> enforced by the compiler</td></tr>
-    <tr><td>Interfaces</td><td>duck typing; optional <code>abc.ABC</code> or <code>typing.Protocol</code></td><td>Java <code>interface</code>; C++ pure virtual classes</td></tr>
-    <tr><td>Dispatch</td><td>every method is looked up at run time ("virtual")</td><td>C++ only for <code>virtual</code> methods</td></tr>
-    <tr><td>Overloading</td><td>none by signature; defaults, <code>*args</code>, <code>singledispatch</code></td><td>overloads chosen at compile time</td></tr>
-    <tr><td>Multiple inheritance</td><td>yes, ordered by the C3 MRO; <code>super()</code> follows it</td><td>Java: classes no (interfaces yes); C++: yes, virtual bases</td></tr>
-    <tr><td>Receiver</td><td>explicit <code>self</code> parameter</td><td>implicit <code>this</code></td></tr>
-    <tr><td>Getters/setters</td><td>plain attributes, then <code>@property</code></td><td>written up front</td></tr>
-    <tr><td>Types</td><td>dynamic; type hints are not enforced at run time</td><td>static, checked at compile time</td></tr>
-    <tr><td>Classes at run time</td><td>objects of <code>type</code>; can be created and modified while running</td><td>fixed after compilation</td></tr>
-    <tr><td>Primitives</td><td>none: <code>int</code>, <code>bool</code> are objects</td><td><code>int</code>, <code>double</code> are not objects</td></tr>
-  </table>
-  <div class="callout trap"><span class="label">Trap</span><p>Treating <code>__x</code> as "private like Java". It is renamed, not hidden: <code>obj._Account__x</code> always works. Use one underscore for internal attributes and two only to avoid name clashes in classes designed to be subclassed.</p></div>
-
-  <h2 id="oo-paradigms"><span class="num">08</span>OOP vs Procedural vs Functional</h2>
-  <p>Python is multi-paradigm: the same task can be written as procedural steps, as functional expressions, or as an object. Each style suits a different kind of problem, and good Python code mixes them.</p>
-  <div class="fx" data-lang="py">txns = [("deposit", 100), ("withdraw", 30), ("deposit", 50)]
-
-# Procedural: a sequence of steps that update local state
-total = 0
-for kind, amount in txns:
-    if kind == "deposit":
-        total += amount
-print("procedural:", total)
-
-# Functional: one expression, no mutation
-print("functional:", sum(amount for kind, amount in txns if kind == "deposit"))
-
-# Object-oriented: state plus the only operations allowed on it
-class Ledger:
-    def __init__(self):
-        self._txns = []
-
-    def record(self, kind, amount):
-        if kind not in ("deposit", "withdraw") or amount &lt;= 0:
-            raise ValueError(f"bad transaction: {kind} {amount}")
-        self._txns.append((kind, amount))
-
-    def total_deposits(self):
-        return sum(a for k, a in self._txns if k == "deposit")
-
-ledger = Ledger()
-for kind, amount in txns:
-    ledger.record(kind, amount)
-print("oop:       ", ledger.total_deposits())
-try:
-    ledger.record("deposti", 10)
+    accounts[0].withdraw(5000)                       # Chen has no overdraft
 except ValueError as e:
     print("ValueError:", e)</div>
-  <div class="fx" data-lang="text">procedural: 150
-functional: 150
-oop:        150
-ValueError: bad transaction: deposti 10</div>
-  <p>All three give 150. The procedural and functional versions are shorter for a one-off calculation. The <code>Ledger</code> earns its extra lines only because it guards a rule: a typo like <code>"deposti"</code> is rejected at the moment it is recorded, and every later query can trust the data.</p>
-  <table class="tbl">
-    <tr><th>Style</th><th>Organising idea</th><th>Strength</th><th>Typical Python use</th></tr>
-    <tr><td>Procedural</td><td>steps that update variables</td><td>simple, direct</td><td>scripts, notebooks, glue code</td></tr>
-    <tr><td>Functional</td><td>pure functions, immutable data, composition</td><td>easy to test and parallelise; no hidden state</td><td>comprehensions, <code>map</code>/<code>filter</code>, pandas/Spark transforms</td></tr>
-    <tr><td>Object-oriented</td><td>objects owning state and behaviour</td><td>protects invariants; models many variants</td><td>libraries, models, services, anything with lifecycle state</td></tr>
-  </table>
-  <h3>When not to write a class</h3>
-  <p>A class with only <code>__init__</code> and one method is a function with extra steps:</p>
-  <div class="fx" data-lang="py">class Normalizer:                        # a class with __init__ and one method ...
-    def __init__(self, data):
-        self.data = data
-
-    def run(self):
-        lo, hi = min(self.data), max(self.data)
-        return [(x - lo) / (hi - lo) for x in self.data]
-
-def normalize(data):                     # ... is just a function
-    lo, hi = min(data), max(data)
-    return [(x - lo) / (hi - lo) for x in data]
-
-print(Normalizer([2, 4, 6]).run())
-print(normalize([2, 4, 6]))</div>
-  <div class="fx" data-lang="text">[0.0, 0.5, 1.0]
-[0.0, 0.5, 1.0]</div>
-  <table class="tbl">
-    <tr><th>Situation</th><th>Use instead of a class</th></tr>
-    <tr><td>Stateless transformation</td><td>a function</td></tr>
-    <tr><td>A bag of fields with no rules</td><td><code>@dataclass</code>, <code>NamedTuple</code>, or a dict</td></tr>
-    <tr><td>A function with fixed settings</td><td><code>functools.partial</code> or a closure</td></tr>
-    <tr><td>A namespace of helpers or one shared config</td><td>a module</td></tr>
-    <tr><td>Data with invariants, several operations on shared state, many variants of one kind of thing</td><td>a class is the right tool</td></tr>
-  </table>
+  <div class="fx" data-lang="text">Chen 1040.0
+Dev -800
+ValueError: Not enough money</div>
+  <p>How the pillars connect:</p>
+  <ul>
+    <li><b>Abstraction</b> sets the plan: <code>Account</code> says every account can deposit, withdraw and do <code>month_end</code>, without fixing how <code>month_end</code> works.</li>
+    <li><b>Encapsulation</b> keeps every account safe: <code>_balance</code> changes only inside methods, and <code>balance</code> is read-only from outside.</li>
+    <li><b>Inheritance</b> lets <code>SavingsAccount</code> and <code>CurrentAccount</code> reuse all of that, writing only what is different (a rate, an overdraft, their own <code>month_end</code>, and a different <code>withdraw</code> for current accounts).</li>
+    <li><b>Polymorphism</b> lets the final loop treat every account the same way, while each one behaves correctly: Chen earns interest to 1040, Dev pays the fee and goes from −700 to −800, and Chen is still refused an overdraft he does not have.</li>
+  </ul>
 
   <h2 id="oo-traps"><span class="num">09</span>Common Mistakes</h2>
-  <div class="callout trap"><span class="label">Trap: a class for everything</span><p>Classes with one method and no state, or "Manager"/"Helper" classes that only group functions. Use functions and modules; reach for a class when there is state with rules.</p></div>
-  <div class="callout trap"><span class="label">Trap: god classes</span><p>One class that loads data, trains, logs and sends e-mails has many reasons to change. Split responsibilities and pass collaborators in (see SOLID in <a class="xref" data-note="py_inheritance">Inheritance, Polymorphism &amp; Design</a>).</p></div>
-  <div class="callout trap"><span class="label">Trap: inheritance just to reuse code</span><p>Deep hierarchies and names like <code>StudentCashbackSavingsAccount</code> mean inheritance is being used for combinations. Prefer composition (has-a) and keep hierarchies shallow.</p></div>
-  <div class="callout trap"><span class="label">Trap: mutable class attributes</span><p><code>items = []</code> in the class body is one list shared by every instance:</p></div>
+  <h3>Forgetting <code>self</code></h3>
+  <p>Every regular method receives the object as its first argument. Leave out <code>self</code> and the call fails with a confusing count:</p>
+  <div class="fx" data-lang="py">class BankAccount:
+    def deposit(amount):            # forgot self
+        pass
+
+try:
+    BankAccount().deposit(100)
+except TypeError as e:
+    print("TypeError:", e)</div>
+  <div class="fx" data-lang="text">TypeError: BankAccount.deposit() takes 1 positional argument but 2 were given</div>
+  <p>"Takes 1 but 2 were given": you passed 100, and Python also passed the object, which had nowhere to go.</p>
+  <h3>A list written at class level is shared by every object</h3>
+  <p>Attributes written directly in the class body (not inside <code>__init__</code>) belong to the class and are shared by all objects. With a list, that is almost always a bug:</p>
   <div class="fx" data-lang="py">class Cart:
-    items = []                           # class attribute: ONE list for all carts
-    def add(self, x):
-        self.items.append(x)
+    items = []                      # class attribute: ONE list shared by every Cart
+    def add(self, item):
+        self.items.append(item)
 
 a, b = Cart(), Cart()
-a.add("tea")
+a.add("chai")
+print(b.items)                      # b sees a's item
+
+class CartFixed:
+    def __init__(self):
+        self.items = []             # instance attribute: each Cart gets its own
+    def add(self, item):
+        self.items.append(item)
+
+a, b = CartFixed(), CartFixed()
+a.add("chai")
 print(b.items)</div>
-  <div class="fx" data-lang="text">['tea']</div>
-  <p>Create per-object containers in <code>__init__</code> (<code>self.items = []</code>). Details in <a class="xref" data-note="py_classes">Classes &amp; Objects</a>.</p>
-  <div class="callout trap"><span class="label">Trap: Java habits</span><p>Writing <code>get_x()</code>/<code>set_x()</code> for every field, or checking <code>type(obj) == SomeClass</code> instead of relying on duck typing or <code>isinstance</code>. Use plain attributes plus <code>@property</code>, and let polymorphism replace type checks.</p></div>
-  <div class="callout trap"><span class="label">Trap: forgetting <code>super().__init__()</code></span><p>A child that defines <code>__init__</code> replaces the parent's, so the parent's attributes are never set and an <code>AttributeError</code> appears later, far from the cause.</p></div>
-  <div class="callout trap"><span class="label">Trap: no <code>__repr__</code></span><p>Objects print as <code>&lt;__main__.Account object at 0x…&gt;</code> in logs and test failures. Define <code>__repr__</code> (or use a dataclass); see <a class="xref" data-note="py_dunder">Dunder Methods</a>.</p></div>
+  <div class="fx" data-lang="text">['chai']
+[]</div>
+  <p>Put per-object data in <code>__init__</code> as <code>self.something</code>. (More: <a class="xref" data-note="py_classes">Classes &amp; Objects</a>.)</p>
+  <h3>Other mistakes</h3>
+  <ul>
+    <li><b>Inheriting for a "has-a" relationship.</b> A <code>Customer(BankAccount)</code> class is wrong; a customer has accounts. Use composition.</li>
+    <li><b>Making a class for everything.</b> A class with only <code>__init__</code> and one method is usually just a function. Use a class when there is data that must stay consistent across several operations.</li>
+    <li><b>Writing Java-style getters and setters</b> (<code>get_balance()</code>, <code>set_balance()</code>). In Python start with a plain attribute and switch to <code>@property</code> only when you need a check; callers do not change.</li>
+    <li><b>Treating <code>_name</code> as security.</b> It is a convention for other developers, not protection against malicious code.</li>
+  </ul>
 
   <h2 id="oo-rev"><span class="num">R</span>Revision Sheet</h2>
-  <h3>Core terms</h3>
+  <h3>Why OOP</h3>
   <ul>
-    <li><b>OOP</b>: objects = state (attributes) + behaviour (methods), created from classes. Solves data and rules drifting apart.</li>
-    <li><b>Class</b>: a user-defined type. <b>Object</b>: any value. <b>Instance</b>: an object of a given class (<code>isinstance(a, Account)</code>).</li>
-    <li><b>Instance attribute</b>: <code>self.x = …</code>, per object, in <code>vars(obj)</code>. <b>Class attribute</b>: in the class body, shared.</li>
-    <li><b>Method call</b>: <code>obj.m(x)</code> ≡ <code>type(obj).m(obj, x)</code>; <code>self</code> is the object.</li>
-    <li><b>Invariant</b>: a condition on state that every public method must preserve.</li>
+    <li>Without OOP, data (variables, dicts) and rules (functions) are separate, so any code can change data without the rules.</li>
+    <li>OOP bundles data (<b>attributes</b>) and behaviour (<b>methods</b>) into <b>objects</b>, created from <b>classes</b>.</li>
   </ul>
+  <h3>Classes and objects</h3>
+  <table class="tbl">
+    <tr><th>Term</th><th>Meaning</th><th>Syntax</th></tr>
+    <tr><td>Class</td><td>blueprint</td><td><code>class BankAccount:</code></td></tr>
+    <tr><td>Object / instance</td><td>one thing built from a class</td><td><code>a = BankAccount("Asha", 1000)</code></td></tr>
+    <tr><td>Constructor</td><td>runs automatically on creation</td><td><code>def __init__(self, owner, balance):</code></td></tr>
+    <tr><td>Attribute</td><td>data on one object</td><td><code>self.owner = owner</code></td></tr>
+    <tr><td>Method</td><td>function in a class</td><td><code>def deposit(self, amount):</code></td></tr>
+    <tr><td><code>self</code></td><td>the object the method was called on</td><td><code>a.deposit(5)</code> = <code>BankAccount.deposit(a, 5)</code></td></tr>
+  </table>
   <h3>The four pillars</h3>
   <table class="tbl">
-    <tr><th>Pillar</th><th>Meaning</th><th>Python tools</th></tr>
-    <tr><td>Encapsulation</td><td>state changes only through methods that keep invariants</td><td><code>_x</code>, <code>__x</code>, <code>@property</code>, <code>__slots__</code></td></tr>
-    <tr><td>Abstraction</td><td>small interface; hide implementation</td><td><code>abc.ABC</code>, <code>@abstractmethod</code>, <code>typing.Protocol</code></td></tr>
-    <tr><td>Inheritance</td><td>child reuses and extends a parent (is-a)</td><td><code>class C(P)</code>, <code>super()</code>, <code>__mro__</code></td></tr>
-    <tr><td>Polymorphism</td><td>one call, type-specific behaviour</td><td>overriding, duck typing, dunder methods, <code>singledispatch</code></td></tr>
+    <tr><th>Pillar</th><th>Meaning</th><th>Analogy</th><th>In Python</th></tr>
+    <tr><td>Encapsulation</td><td>protect data; change only via methods</td><td>bank vault + teller</td><td><code>_balance</code>, <code>@property</code></td></tr>
+    <tr><td>Abstraction</td><td>simple interface, hidden details</td><td>ATM buttons</td><td>public methods + <code>_helpers</code>; <code>ABC</code>, <code>@abstractmethod</code></td></tr>
+    <tr><td>Inheritance</td><td>child class reuses parent (is-a)</td><td>child inherits traits</td><td><code>class Savings(BankAccount):</code>, <code>super().__init__(...)</code></td></tr>
+    <tr><td>Polymorphism</td><td>same call, behaviour depends on class</td><td>"pay" by card / UPI / cash</td><td>overriding, duck typing</td></tr>
   </table>
-  <p>Encapsulation protects data; abstraction simplifies use. Abstract class with unimplemented methods → <code>TypeError</code> on instantiation.</p>
-  <h3>Python-specific rules</h3>
+  <h3>Syntax to remember</h3>
+  <div class="fx" data-lang="py">from abc import ABC, abstractmethod
+
+class Account(ABC):                    # abstract: cannot be instantiated
+    def __init__(self, owner, balance):
+        self.owner = owner             # public attribute
+        self._balance = balance        # internal attribute
+
+    @property
+    def balance(self):                 # read-only access
+        return self._balance
+
+    @abstractmethod
+    def month_end(self): ...           # subclasses must implement
+
+class Savings(Account):                # inheritance
+    def __init__(self, owner, balance, rate):
+        super().__init__(owner, balance)
+        self.rate = rate
+
+    def month_end(self):               # override → polymorphism
+        self._balance *= 1 + self.rate</div>
+  <h3>Python specifics</h3>
   <ul>
-    <li>No access modifiers. <code>_x</code> = internal by convention; <code>__x</code> in class <code>C</code> → <code>_C__x</code> (avoid subclass clashes, not security).</li>
-    <li>Duck typing: an object fits wherever it has the methods used; no declared interface.</li>
-    <li>Everything is an object; <code>type(42)</code> is <code>int</code>, <code>type(int)</code> is <code>type</code>. <code>type(name, bases, dict)</code> creates a class.</li>
-    <li>No overloading: a second <code>def</code> with the same name replaces the first.</li>
-    <li>Multiple inheritance allowed; lookup order is the C3 MRO; <code>super()</code> = next class in the MRO.</li>
-    <li>All methods dispatch dynamically (like C++ <code>virtual</code> everywhere).</li>
-    <li><code>isinstance(obj, A)</code> accepts subclasses; <code>type(obj) == A</code> does not.</li>
+    <li>No <code>private</code> keyword: <code>_x</code> = internal by convention; <code>__x</code> → renamed to <code>_Class__x</code> (name mangling).</li>
+    <li>Duck typing: an object only needs the method, not a shared parent class.</li>
+    <li>Abstract class: inherit <code>ABC</code>, mark <code>@abstractmethod</code>; instantiating it, or a subclass missing a method, raises <code>TypeError</code>.</li>
+    <li><code>isinstance(obj, Parent)</code> is True for child objects.</li>
   </ul>
-  <h3>Paradigms and when to use a class</h3>
-  <table class="tbl">
-    <tr><th>Need</th><th>Use</th></tr>
-    <tr><td>stateless transformation</td><td>function</td></tr>
-    <tr><td>record without rules</td><td><code>@dataclass</code> / <code>NamedTuple</code></td></tr>
-    <tr><td>function with settings</td><td><code>functools.partial</code>, closure</td></tr>
-    <tr><td>namespace / single config</td><td>module</td></tr>
-    <tr><td>state with invariants, variants, lifecycle</td><td>class</td></tr>
-    <tr><td>combining behaviours</td><td>composition over inheritance</td></tr>
-  </table>
   <h3>Gotchas</h3>
   <ul>
-    <li>Mutable class attribute (<code>items = []</code>) is shared by all instances.</li>
-    <li><code>__x</code> is not private; <code>obj._C__x</code> works.</li>
-    <li>Forgetting <code>super().__init__()</code> leaves parent attributes unset.</li>
-    <li>A plain class accepts typo attributes; <code>__slots__</code> prevents them.</li>
-    <li><code>isinstance</code> chains are polymorphism done by hand.</li>
-    <li><code>__init__</code> + one method → write a function.</li>
+    <li>Forgetting <code>self</code> → "takes 1 positional argument but 2 were given".</li>
+    <li>Mutable class attribute (<code>items = []</code> in class body) is shared by all objects; initialise in <code>__init__</code>.</li>
+    <li>Inheritance only for is-a; has-a → composition.</li>
+    <li>Encapsulation (protect data) ≠ abstraction (hide complexity).</li>
   </ul>
 
   <h2 id="oo-qa"><span class="num">10</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>What is object-oriented programming, and what problem does it solve?</summary><div class="qa-body">A way of structuring code around objects that combine state (attributes) with the behaviour that operates on it (methods), created from classes. It solves the problem of data and the rules for changing it drifting apart: with dicts and loose functions any code can modify the data directly and break its invariants. A class keeps the rules next to the data and lets it control how the data changes.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between a class, an object and an instance?</summary><div class="qa-body">A class is a blueprint (a user-defined type). An object is any value in Python. An instance is an object described relative to its class: <code>Account("Asha")</code> returns an instance of <code>Account</code>. In Python the class itself is also an object, an instance of <code>type</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Name the four pillars of OOP with a Python example of each.</summary><div class="qa-body">Encapsulation: a <code>_balance</code> attribute exposed through a read-only <code>@property</code>. Abstraction: an <code>abc.ABC</code> with abstract <code>fit</code> and <code>predict</code>, like the scikit-learn estimator interface. Inheritance: <code>class SavingsAccount(Account)</code> calling <code>super().__init__()</code>. Polymorphism: <code>[s.area() for s in shapes]</code> working for circles and rectangles, or <code>len()</code> working for strings, lists and dicts.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Encapsulation vs abstraction?</summary><div class="qa-body">Encapsulation hides and protects internal <em>state</em>: who may change it and how (<code>_x</code>, properties). Abstraction hides <em>complexity</em>: the caller sees a small interface and not the implementation (an ABC with <code>fit</code>/<code>predict</code>). One is about protecting data, the other about simplifying use; a class can have one without the other.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Does Python have private attributes?</summary><div class="qa-body">No. A single leading underscore (<code>_x</code>) is a convention meaning "internal; not part of the public API". A double leading underscore (<code>__x</code>) triggers name mangling to <code>_ClassName__x</code>, which avoids clashes with subclass attributes but can still be accessed. Python's philosophy is "we are all consenting adults".</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is name mangling and why does it exist?</summary><div class="qa-body">Inside a class body, any name of the form <code>__name</code> (not ending in two underscores) is rewritten to <code>_ClassName__name</code>. It exists so a base class can keep an attribute that a subclass will not overwrite by accidentally using the same name: <code>Account.__balance</code> and <code>Audited.__balance</code> are stored as <code>_Account__balance</code> and <code>_Audited__balance</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is <code>self</code>, and why is it explicit in Python?</summary><div class="qa-body"><code>self</code> is the instance a method was called on, passed automatically as the first argument: <code>a.deposit(50)</code> runs <code>Account.deposit(a, 50)</code>. It is explicit because methods are ordinary functions stored on the class; the explicit parameter makes attribute access (<code>self.balance</code> vs a local <code>balance</code>) unambiguous. The name is a convention, not a keyword.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is duck typing, and how does it differ from interfaces in Java?</summary><div class="qa-body">An object is accepted wherever it provides the methods the code uses, regardless of its class ("if it quacks like a duck"). Java checks at compile time that a type declares an interface; Python just looks the method up when the call runs. Python can add checking back with <code>typing.Protocol</code> (structural, for type checkers) or <code>abc.ABC</code> (nominal, enforced at instantiation).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does this print? <code>class Calc:</code> with <code>def add(self, a, b)</code> and then <code>def add(self, a, b, c)</code>; <code>Calc().add(1, 2)</code></summary><div class="qa-body"><code>TypeError: Calc.add() missing 1 required positional argument: 'c'</code>. Python has no overloading by signature: the class body runs top to bottom and the second <code>def</code> rebinds <code>add</code>. Use default arguments, <code>*args</code>, or <code>functools.singledispatchmethod</code> to dispatch on type.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does this print? <code>class Cart: items = []</code> with <code>def add(self, x): self.items.append(x)</code>; <code>a, b = Cart(), Cart(); a.add("tea"); print(b.items)</code></summary><div class="qa-body"><code>['tea']</code>. <code>items</code> is a class attribute, one list shared by every instance; <code>self.items.append</code> finds it on the class and mutates it in place. Create the list in <code>__init__</code> (<code>self.items = []</code>) so each cart gets its own.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between <code>isinstance(obj, A)</code> and <code>type(obj) == A</code>?</summary><div class="qa-body"><code>isinstance</code> is True for instances of <code>A</code> and of any subclass (and honours ABC registration); <code>type(obj) == A</code> is True only for the exact class. For <code>class B(A)</code> and <code>b = B()</code>: <code>isinstance(b, A)</code> is True, <code>type(b) == A</code> is False. Prefer <code>isinstance</code>, and prefer polymorphism to either.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Does Python support multiple inheritance? How are conflicts resolved?</summary><div class="qa-body">Yes. Attribute lookup follows the method resolution order (<code>C.__mro__</code>), computed by C3 linearisation: a class comes before its parents, parents keep their listed order, each class appears once. For <code>class D(B, C)</code> with B and C inheriting A, the MRO is D, B, C, A, object, and <code>super()</code> in B calls C. Python raises <code>TypeError</code> if no consistent order exists.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Inheritance vs composition: when do you use each?</summary><div class="qa-body">Inheritance for a genuine is-a relationship where the child honours every contract of the parent and you want polymorphism. Composition (an object holds other objects and delegates to them) for has-a relationships and for combining or swapping behaviours at run time. Composition is the default: it avoids class explosion and the fragile base class problem. scikit-learn's <code>Pipeline</code> and PyTorch's <code>nn.Sequential</code> are composition.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does "everything is an object" mean in Python? Is a class an object?</summary><div class="qa-body">Every value, including integers, functions, modules and classes, is an object with a type, an identity and attributes. A class is an object of type <code>type</code>: it can be stored in a variable, passed to a function, returned from one, and modified at run time (<code>Account.kind = "bank"</code>). This is what makes factories, decorators and dependency injection so lightweight in Python.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is a metaclass?</summary><div class="qa-body">The class of a class. By default it is <code>type</code>: the <code>class</code> statement collects the body into a namespace and calls <code>type(name, bases, namespace)</code> to build the class object. A custom metaclass (subclass of <code>type</code>) can modify classes as they are created; ABCs use <code>ABCMeta</code>. Most code never needs one; <code>__init_subclass__</code> and class decorators cover the common cases.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is an abstract class in Python? Can you instantiate one?</summary><div class="qa-body">A class that inherits <code>abc.ABC</code> (or uses <code>ABCMeta</code>) and has at least one method decorated with <code>@abstractmethod</code>. Instantiating it, or any subclass that has not implemented all abstract methods, raises <code>TypeError: Can't instantiate abstract class …</code>. It can also contain concrete methods shared by all subclasses.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why does Python prefer properties over getter and setter methods?</summary><div class="qa-body">Because a property can replace a plain attribute later without changing any caller: <code>obj.lr = 0.1</code> keeps working but now runs validation. So you start with public attributes and add control only when a rule appears. Java needs <code>getX()</code>/<code>setX()</code> from day one because changing a field to a method breaks callers there.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>When would you not write a class?</summary><div class="qa-body">When there is no state with rules: a stateless transformation is a function; a record without behaviour is a dataclass or NamedTuple; a function with fixed settings is a <code>functools.partial</code> or closure; a group of helpers or a single shared config is a module. A class whose only methods are <code>__init__</code> and one other is usually a function.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>OOP vs functional programming: how do they compare, and how does Python use both?</summary><div class="qa-body">OOP models a system as objects owning mutable state behind methods; functional programming builds results from pure functions over immutable data, which makes code easier to test and parallelise. Python mixes them: classes for stateful components (models, connections, services), and comprehensions, generators, <code>map</code>/<code>filter</code> and pure functions for data transformations, as in pandas or Spark pipelines.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Which OOP ideas does scikit-learn rely on?</summary><div class="qa-body">Abstraction and duck typing: every estimator has <code>fit</code>/<code>predict</code> (or <code>transform</code>), so <code>cross_val_score</code> and <code>GridSearchCV</code> accept any of them. Inheritance: estimators subclass <code>BaseEstimator</code> (which provides <code>get_params</code>/<code>set_params</code>) and mixins like <code>ClassifierMixin</code> (which provides <code>score</code>). Composition: <code>Pipeline</code> and <code>ColumnTransformer</code> hold other estimators. Encapsulation by convention: learnt state ends in an underscore (<code>coef_</code>).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is object-oriented programming, and why use it?</summary><div class="qa-body">OOP structures a program as objects that combine data (attributes) and behaviour (methods), created from classes. It keeps each piece of data next to the only code allowed to change it, which protects rules (like "balance never negative"), makes code reusable through inheritance, and lets one piece of code work with many object types through polymorphism. It suits programs with many entities that each have state and rules.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between a class and an object?</summary><div class="qa-body">A class is a blueprint that defines attributes and methods; an object is a concrete instance built from it, with its own data. One class can create many objects: <code>BankAccount</code> is the class, <code>asha = BankAccount("Asha", 1000)</code> and <code>ben = BankAccount("Ben", 500)</code> are two objects with separate balances.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What are the four pillars of OOP? Explain each in one line.</summary><div class="qa-body"><b>Encapsulation</b>: keep data and methods together and restrict direct access to the data. <b>Abstraction</b>: expose only essential operations, hide the implementation. <b>Inheritance</b>: create a class from an existing one, reusing and extending it. <b>Polymorphism</b>: the same method call behaves differently depending on the object's class.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is <code>self</code> in Python?</summary><div class="qa-body"><code>self</code> is the first parameter of an instance method and refers to the object the method was called on. <code>acc.deposit(100)</code> is translated to <code>BankAccount.deposit(acc, 100)</code>, so <code>self</code> is <code>acc</code>. It is a naming convention, not a keyword, but always use it.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is <code>__init__</code>? Is it a constructor?</summary><div class="qa-body"><code>__init__</code> initialises a newly created object: Python calls it automatically after creating the object, and it sets up attributes. Strictly, the object is created by <code>__new__</code> and <code>__init__</code> only initialises it, but in everyday speech <code>__init__</code> is called the constructor. It must return <code>None</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between encapsulation and abstraction?</summary><div class="qa-body">Encapsulation is about protecting data: bundling it with methods and preventing direct changes (in Python, <code>_balance</code> plus <code>@property</code>). Abstraction is about hiding complexity: offering a simple interface like <code>transfer()</code> and hiding the steps behind it, or defining an abstract class that says what must be done but not how. Encapsulation answers "who can change this?"; abstraction answers "what does the user need to know?".</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Does Python have private variables?</summary><div class="qa-body">No enforced ones. <code>_name</code> is a convention meaning internal. <code>__name</code> triggers name mangling: inside class <code>Demo</code> it becomes <code>_Demo__name</code>, which prevents accidental clashes in subclasses but can still be accessed. Python relies on convention ("consenting adults") rather than access modifiers.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is <code>@property</code> used for?</summary><div class="qa-body">It turns a method into something read like an attribute (<code>acc.balance</code>, no brackets). With no setter the attribute is read-only; with <code>@balance.setter</code> you can validate assignments. It lets you start with a plain attribute and add checks later without changing any calling code, which is why Python avoids Java-style <code>get_x()</code>/<code>set_x()</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is an abstract class? How do you create one in Python?</summary><div class="qa-body">A class that defines an interface but cannot be instantiated; subclasses must implement its abstract methods. In Python inherit from <code>abc.ABC</code> and decorate methods with <code>@abstractmethod</code>. Creating the abstract class, or a subclass that has not implemented every abstract method, raises <code>TypeError</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is inheritance, and what does <code>super()</code> do?</summary><div class="qa-body">Inheritance creates a child class that automatically has the parent's attributes and methods and can add or override them: <code>class SavingsAccount(BankAccount):</code>. <code>super()</code> gives access to the parent's methods, most often <code>super().__init__(...)</code> so the parent's setup runs before the child adds its own attributes.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is method overriding? How is it different from overloading?</summary><div class="qa-body">Overriding: a child class defines a method with the same name as the parent's, and the child's version runs for child objects (e.g. <code>CurrentAccount.withdraw</code> allowing an overdraft). Overloading: several methods with the same name but different parameter lists. Python does not support signature-based overloading; a later <code>def</code> with the same name replaces the earlier one. Use default arguments, <code>*args</code>, or <code>functools.singledispatch</code> instead.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is polymorphism? Give a Python example.</summary><div class="qa-body">One interface, many implementations: the object's class decides what a call does. Built-in example: <code>len()</code> works on strings, lists and dicts; <code>+</code> adds numbers and joins strings. Own example: <code>for acc in accounts: acc.month_end()</code>, where savings accounts add interest and current accounts charge a fee, with no type checks in the loop.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is duck typing?</summary><div class="qa-body">Python cares whether an object has the method you call, not what class it is: "if it walks like a duck and quacks like a duck, it's a duck". Any object with a <code>read()</code> method can be passed where a file is expected. It gives polymorphism without a shared parent class; <code>typing.Protocol</code> lets type checkers verify it.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Composition vs inheritance: when do you use each?</summary><div class="qa-body">Inheritance for "is-a" (a savings account is a bank account). Composition for "has-a": store an object as an attribute (a customer has accounts: <code>self.accounts = [...]</code>). Composition is the safer default: it keeps classes loosely coupled, avoids deep hierarchies and lets you swap parts at runtime. "Favour composition over inheritance" is a common design guideline.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between a class attribute and an instance attribute?</summary><div class="qa-body">An instance attribute is set on <code>self</code> (usually in <code>__init__</code>) and each object has its own. A class attribute is written in the class body and shared by all instances. Mutable class attributes are a classic bug: <code>items = []</code> in the class body means every object appends to the same list.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Does Python support multiple inheritance? How does it decide which method to use?</summary><div class="qa-body">Yes: <code>class C(A, B):</code>. Python searches classes in the <b>Method Resolution Order</b> (MRO), computed with the C3 linearisation: the class itself, then its parents left to right, with each class appearing before its own parents and only once. You can see it with <code>C.__mro__</code> or <code>C.mro()</code>. <code>super()</code> follows the MRO, which is what makes cooperative multiple inheritance and mixins work.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does "everything is an object" mean in Python?</summary><div class="qa-body">Every value, including ints, functions, modules and classes themselves, is an object with a type, an identity and attributes. Classes are objects too: they are instances of <code>type</code> (the default metaclass), so you can pass a class to a function or store it in a list.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When should you not use a class?</summary><div class="qa-body">When there is no state to protect: a class with just <code>__init__</code> and one method is a function in disguise. For plain data records, a <code>@dataclass</code> or <code>NamedTuple</code> is lighter. For stateless transformations (common in data pipelines), plain functions are simpler to test and reuse. Use a class when several operations must keep shared data consistent.</div></details>
 </main>
 `
 });
