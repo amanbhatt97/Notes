@@ -129,7 +129,7 @@ const CATEGORIES = [
       {"key": "ml_svm", "label": "Support Vector Machines"}
     ]},
     {"key": "grp_ml_trees", "label": "Tree-Based Models", "children": [
-      {"key": "ml_trees",          "label": "The Tree Family: Map & How to Choose"},
+      {"key": "ml_trees",          "label": "Tree Models: Overview & How to Choose"},
       {"key": "ml_dtree",          "label": "Decision Trees"},
       {"key": "grp_ml_ens", "label": "Ensemble Methods", "children": [
         {"key": "ml_ensembles",    "label": "Ensemble Learning: The Idea"},
