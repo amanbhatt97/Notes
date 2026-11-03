@@ -98,8 +98,8 @@ Object.assign(TOPIC_CONTENT, {
   </div>
 
   <h2 id="pdg-tb"><span class="num">01</span>Reading a Traceback</h2>
-  <h3>The running example</h3>
-  <p>The till (same rules as in <a class="xref" data-note="py_pytest">Testing with pytest</a>, with <code>bill</code> written one step per line so we can step through it later), and a daily report:</p>
+  <p>When an exception is not caught, Python prints a traceback: the exception type and message plus the chain of calls that led to it. It is the first and cheapest debugging tool, and most crashes can be located from it alone if you read it in the right order.</p>
+  <p>The examples use a small billing module (rules as in <a class="xref" data-note="py_pytest">Testing with pytest</a>, with <code>bill</code> written one step per line so it can be stepped through in pdb) and a daily report over many orders:</p>
   <div class="fx" data-lang="py"># till.py
 """Chai Corner till: the billing rules (one step per line, easy to step through)."""
 GST = 0.05
@@ -171,12 +171,13 @@ TypeError: '&lt;' not supported between instances of 'str' and 'int'</div>
     <tr><td>4th</td><td><code>File "crash.py", line 9, in &lt;module&gt;</code></td><td><b>Where it started</b>: the top-level script</td></tr>
   </table>
   <p>Each "File … line … in …" entry is a <strong>frame</strong>: one function call that was still running. Together they are the <strong>call stack</strong> at the moment of the crash (the same stack traced in <a class="xref" data-note="py_functions">Functions</a>). The <code>~~~^^^</code> markers (Python 3.11+) point at the exact sub-expression.</p>
-  <p>The traceback tells us <em>what</em> and <em>where</em>, but not <em>which order</em> had the text quantity; that value isn't printed. We can guess (Dev's form), or look: sections 03–04 show how to look. The right fix is where the bad value <em>entered</em>: convert the form's text to <code>int</code> when the order is created (<a class="xref" data-note="py_exceptions">Exceptions</a> shows validating input), not deep inside <code>bill</code>.</p>
+  <p>The traceback tells us <em>what</em> and <em>where</em>, but not <em>which order</em> had the text quantity; that value isn't printed. We can guess (Dev's form), or look, with pdb and post-mortem debugging below. The right fix is where the bad value <em>entered</em>: convert the form's text to <code>int</code> when the order is created (<a class="xref" data-note="py_exceptions">Exceptions</a> shows validating input), not deep inside <code>bill</code>.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>A parcel's tracking history: the newest scan ("damaged at Pune hub") is what happened; the older scans above it show the route it took to get there. You read the newest line first.</p></div>
   <div class="callout def"><span class="label">Definition</span><p>A <strong>traceback</strong> is the printed call stack of an uncaught exception: one entry (frame) per active call, oldest at the top, ending with the exception's type and message. When an exception is raised while handling another, Python prints both, joined by "During handling of the above exception…" (or "The above exception was the direct cause…" for <code>raise … from …</code>).</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Reading from the top: the first frames are usually your own entry script or library internals and say nothing about the cause. And don't "fix" the line that exploded by wrapping it in <code>try/except: pass</code>; that hides the bad data and moves the crash somewhere worse.</p></div>
 
   <h2 id="pdg-print"><span class="num">02</span>print Debugging and Its Limits</h2>
+  <p>A wrong answer with no crash leaves no traceback. The quickest way to see values flowing through the code is to print them.</p>
   <div class="fx" data-lang="py"># chen.py
 from till import bill
 chen = [("samosa", 2, 15), ("vada pav", 1, 20)]
@@ -200,13 +201,14 @@ Chen pays 52</div>
     <li>Every new question ("what does <code>round</code> do with 53.5?") means editing the code and re-running.</li>
     <li>On a report that takes minutes to reach the bug, ten rounds of prints cost an hour.</li>
     <li>Prints get left behind and end up in production output (or in the receipt!).</li>
-    <li>A print has no time, no severity and no source, and can't be switched off without editing code. That last point is why logging (section 08) exists.</li>
+    <li>A print has no time, no severity and no source, and can't be switched off without editing code. That last point is why the <code>logging</code> module exists.</li>
   </ul>
   <div class="callout anlg"><span class="label">Analogy</span><p>Debugging with prints is like asking a friend to text you the score, but only the scores you thought to ask about in advance. To ask anything new, you have to set up another text.</p></div>
   <div class="callout def"><span class="label">Definition</span><p><strong>print debugging</strong>: inserting temporary output statements to observe values. Quick for one or two values; costly when questions multiply, and it changes the program's output.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Leaving debug prints in committed code, and printing a value without its type: <code>print(qty)</code> shows <code>2</code> for both the int and the string <code>"2"</code> (Dev's bug). Use <code>print(repr(qty))</code> or <code>print(f"{qty=!r}")</code>, which shows <code>qty='2'</code>.</p></div>
 
   <h2 id="pdg-pdb"><span class="num">03</span>pdb and breakpoint()</h2>
+  <p>Prints show only what you decided to print before running. A debugger lets you stop at a line, inspect every variable, evaluate any expression, and step forward one line or into a call, without editing the code for each new question.</p>
   <p>A <strong>debugger</strong> pauses a running program and gives you a prompt. Python's built-in one is <strong>pdb</strong>. Putting <code>breakpoint()</code> on a line pauses there and opens the <code>(Pdb)</code> prompt, where you type short commands.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>Pausing a cricket replay at the ball where the wicket fell: you can look at every fielder, then play forward frame by frame, or zoom into one player. Prints are reading the scorecard afterwards: you see only what someone wrote down.</p></div>
   <p>We add one line to <code>bill</code>, <code>breakpoint()                                  # pause here</code>, just before <code>sub = subtotal(lines)</code>, and run <code>python3 chen.py</code>. Below is the real session. (To record it, the commands were fed to pdb from a file on standard input; each typed command has been put back after its <code>(Pdb)</code> prompt, exactly where you would type it.)</p>
@@ -275,7 +277,7 @@ Chen pays 52</div>
     <tr><td><code>w</code></td><td>"where": the call stack, newest at the bottom</td><td>chen.py line 3 called bill</td></tr>
     <tr><td><code>c</code></td><td>"continue": run on to the end or the next breakpoint</td><td>Output: Chen pays 52</td></tr>
   </table>
-  <p>One session answered every question, including ones we only thought of while paused (the <code>round</code> experiments). The cause is located: <code>round</code> uses "round half to even" (banker's rounding), so 52.5 goes down to 52. Section 09 fixes it.</p>
+  <p>One session answered every question, including ones we only thought of while paused (the <code>round</code> experiments). The cause is located: <code>round</code> uses "round half to even" (banker's rounding), so 52.5 goes down to 52. The fix is in the systematic-method section below.</p>
   <table class="tbl"><caption>pdb commands</caption>
     <tr><th>Cmd</th><th>Does</th><th>Cmd</th><th>Does</th></tr>
     <tr><td><code>n</code></td><td>Next line (step over calls)</td><td><code>p expr</code> / <code>pp expr</code></td><td>Print / pretty-print</td></tr>
@@ -291,14 +293,15 @@ Chen pays 52</div>
   <div class="callout def"><span class="label">Definition</span><p>A <strong>breakpoint</strong> is a place where execution pauses under the debugger. <strong>Step over</strong> (<code>n</code>) runs a whole call as one step; <strong>step into</strong> (<code>s</code>) enters it; <strong>step out</strong> (<code>r</code>) finishes the current function. A <strong>frame</strong> is one active call with its local variables; <code>u</code>/<code>d</code> move between frames.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>A <code>breakpoint()</code> left in committed code freezes a production job waiting for keyboard input. Search for it before committing (a pre-commit check helps). Also, a variable named like a pdb command (<code>n</code>, <code>c</code>, <code>p</code>) must be printed with <code>p n</code>, not just <code>n</code>. IDEs (VS Code, PyCharm) offer the same with clickable breakpoints.</p></div>
 
-  <h2 id="pdg-pm"><span class="num">04</span>Post-mortem Debugging</h2>
+  <h2 id="pdg-pm"><span class="num">04</span>Post-mortem Debugging: python -m pdb and pytest --pdb</h2>
+  <p>A breakpoint needs you to know where to stop before running. When a program has already crashed and the traceback does not show the bad value (here: which customer's order had the text quantity), post-mortem debugging opens the crashed frames with their variables intact.</p>
   <p><strong>Post-mortem</strong> debugging opens pdb at the frame where an uncaught exception was raised, with every variable still alive. Three common ways in: <code>python -m pdb script.py</code> (run under pdb; on a crash it enters post-mortem), <code>pytest --pdb</code> (open pdb at each failing test), and <code>%debug</code> in Jupyter after a cell fails (or <code>pdb.pm()</code> in a REPL).</p>
   <div class="fx" data-lang="text">$ python3 -m pdb crash.py
 &gt; ~/chai/crash.py(1)&lt;module&gt;()
 -&gt; from report import daily_report
 (Pdb) c
 Traceback (most recent call last):
-  ...                                   (the traceback from section 01, plus pdb's own frames)
+  ...                                   (the traceback above, plus pdb's own frames)
 TypeError: '&lt;' not supported between instances of 'str' and 'int'
 Uncaught exception. Entering post mortem debugging
 Running 'cont' or 'step' will restart the program
@@ -359,7 +362,7 @@ FAILED test_rounding.py::test_chen_rounds_half_up - AssertionError: assert 52...
   <div class="callout trap"><span class="label">Trap</span><p>Post-mortem needs the exception to propagate. If the code catches it with a bare <code>except: pass</code> (or logs only <code>str(e)</code>), the frames are gone. In pdb's post-mortem, <code>c</code> or <code>s</code> restarts the whole program; use <code>q</code> to leave.</p></div>
 
   <h2 id="pdg-time"><span class="num">05</span>Timing: perf_counter and timeit</h2>
-  <p>To get a realistic busy day we generate orders with a seeded random generator (same day every run; seeds were explained in <a class="xref" data-note="py_pytest">Testing</a>):</p>
+  <p>"It feels slow" is not a number. Before optimising anything, measure how long the code takes and, more importantly, how the time grows with input size. Test data for a busy day comes from a seeded random generator, so every run sees the same orders:</p>
   <div class="fx" data-lang="py"># bigday.py
 import random
 
@@ -413,7 +416,7 @@ for stmt in ['"cust99999" in names_list', '"cust99999" in names_set']:
     print(f"{stmt:&lt;28} best of 5: {min(runs) / 1_000 * 1e9:9.0f} ns per check")</div>
   <div class="fx" data-lang="text">"cust99999" in names_list    best of 5:     84392 ns per check
 "cust99999" in names_set     best of 5:        15 ns per check</div>
-  <p>A list check walks the list item by item (about 12,600 comparisons for a new customer); a set check is one hash lookup (sets are explained in <a class="xref" data-note="py_dicts_sets">Dicts &amp; Sets</a>). 84 µs × 20,000 orders ≈ 1.7 s: that would explain the whole report. But that's still a hypothesis; the profiler (next) confirms it. From the shell, <code>python -m timeit</code> does the same:</p>
+  <p>A list check walks the list item by item (about 12,600 comparisons for a new customer); a set check is one hash lookup (sets are explained in <a class="xref" data-note="py_dicts_sets">Dicts &amp; Sets</a>). 84 µs × 20,000 orders ≈ 1.7 s: that would explain the whole report. But that's still a hypothesis; a profiler confirms it. From the shell, <code>python -m timeit</code> does the same:</p>
   <div class="fx" data-lang="text">$ python3 -m timeit -s "from till import bill; o=[('samosa', 2, 15), ('vada pav', 1, 20)]" "bill(o)"
 500000 loops, best of 5: 678 nsec per loop</div>
   <p><code>-s</code> is setup (run once, not timed). One <code>bill</code> takes under a microsecond, so 20,000 bills cost about 14 ms: <code>bill</code> is not the problem.</p>
@@ -421,7 +424,7 @@ for stmt in ['"cust99999" in names_list', '"cust99999" in names_set']:
   <div class="callout def"><span class="label">Definition</span><p><code>time.perf_counter()</code>: a monotonic clock with the highest available resolution, for measuring intervals. <code>timeit.repeat(stmt, setup, number, repeat, globals)</code>: run <code>stmt</code> <code>number</code> times, <code>repeat</code> times, return the totals. <strong>Complexity</strong> (O(n), O(n²)) describes how time grows with input size.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Using <code>time.time()</code> (wall clock; can jump when the system clock is adjusted), timing once, timing setup together with the work, or averaging instead of taking the minimum. In Jupyter, <code>%timeit</code> handles all of this for you.</p></div>
 
-  <h2 id="pdg-prof"><span class="num">06</span>cProfile and pstats</h2>
+  <h2 id="pdg-prof"><span class="num">06</span>cProfile, pstats and line_profiler</h2>
   <p>A <strong>profiler</strong> runs your program and records how much time each function takes. Python ships <code>cProfile</code> (records every function call) and <code>pstats</code> (sorts and prints the results). The rule: make it work, make it right (tests pass), then make it fast, and only after measuring.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>A doctor orders a blood test before prescribing. Optimising without a profile is prescribing on a guess; the profile is the report that points at the one number out of range.</p></div>
   <div class="flow"><span>make it work</span><span>make it right (tests pass)</span><span>profile</span><span>fix the top hotspot</span><span>re-run tests</span><span>re-profile</span></div>
@@ -497,7 +500,7 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
     14         1          0.0      0.0      0.0      top = max(items, key=items.get) if items else None
     15         2          0.0      0.0      0.0      return {"orders": len(orders), "customers": len(customers),
     16         1          0.0      0.0      0.0              "sales": sales, "top_item": top}</div>
-  <p>Line 10, <code>customer not in customers</code>, takes 87.7% of the time. The list grows to 12,598 names, and each check scans it. The fix is the set from section 05: <code>customers = set()</code> and <code>customers.add(customer)</code> (a set ignores duplicates by itself).</p>
+  <p>Line 10, <code>customer not in customers</code>, takes 87.7% of the time. The list grows to 12,598 names, and each check scans it. The fix is the set from the <code>timeit</code> experiment: <code>customers = set()</code> and <code>customers.add(customer)</code> (a set ignores duplicates by itself).</p>
   <div class="fx" data-lang="py"># report_fast.py
 from till import bill
 
@@ -547,6 +550,7 @@ report_fast      20.1 ms</div>
   <div class="callout trap"><span class="label">Trap</span><p>Optimising what you suspect instead of what you measured. Here a natural guess was "<code>bill</code> is called 20,000 times, rewrite it", which would have saved at most 0.12 s of 2.1. In pandas the usual hotspot is a row-by-row <code>apply</code> or Python loop over rows; the fix is a vectorised column operation. Jupyter: <code>%prun</code>, <code>%lprun</code>.</p></div>
 
   <h2 id="pdg-mem"><span class="num">07</span>Memory with tracemalloc</h2>
+  <p>A program can be fast and still run out of memory, especially when it builds a whole result in memory instead of streaming it. The question is how much memory a piece of code allocates at its peak, and which line is responsible.</p>
   <p><code>tracemalloc</code> (standard library) records every memory allocation Python makes while it is running. <code>get_traced_memory()</code> returns (current, peak) bytes; <code>take_snapshot().statistics("lineno")</code> groups live allocations by the source line that made them.</p>
   <div class="fx" data-lang="py"># receipts.py
 from till import bill
@@ -597,7 +601,8 @@ mem.py:17: size=169 KiB, count=1, average=169 KiB</div>
   <div class="callout def"><span class="label">Definition</span><p><code>tracemalloc.start()</code> / <code>stop()</code>: begin/end tracing Python allocations. <code>get_traced_memory()</code> → (current, peak) bytes since start. <code>take_snapshot().statistics("lineno")</code>: live allocations grouped by line, largest first. <code>sys.getsizeof(obj)</code> gives one object's shallow size.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>tracemalloc sees only allocations made through Python's allocator; big NumPy/pandas buffers may be reported only partly (NumPy does report to tracemalloc; some C libraries don't). For whole-process memory use the OS view (<code>resource</code>, <code>psutil</code>, or memray). And tracing slows the program down: measure, then turn it off.</p></div>
 
-  <h2 id="pdg-log"><span class="num">08</span>Logging: What Happened in Production</h2>
+  <h2 id="pdg-log"><span class="num">08</span>The logging Module: Levels, Loggers, Handlers, Formatters</h2>
+  <p>Debuggers and profilers need someone at the keyboard. In production the program runs unattended, and the only evidence of what happened at 9 p.m. is what it wrote down while running. With <code>print</code> that record has no time, no severity, no source, and no way to keep details in a file while showing only problems on screen.</p>
   <p>The <code>logging</code> module is <code>print</code> done properly. Each message gets a <strong>level</strong> (how serious), a time, and the name of the part of the program that wrote it. You decide, in one place, which levels to keep and where each goes: the screen, a file, a log service.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>A hospital's patient chart versus shouting in the corridor. The chart records the time, who wrote the note and how urgent it is; the night nurse reads only urgent notes, the specialist reads everything. <code>print</code> is shouting: everyone hears everything, and nothing is kept.</p></div>
   <h3>Levels</h3>
@@ -797,7 +802,7 @@ def test_clean_order_logs_nothing(caplog):
   <div class="fx" data-lang="text">$ pytest -q test_bill_log.py
 ..                                                                       [100%]
 2 passed in 0.01s</div>
-  <p>This is also the fix for Dev's crash from section 01: convert at the boundary and leave a WARNING in the log (2 × 30 = 60, +5% = 63).</p>
+  <p>This is also the fix for Dev's crash from the traceback example: convert at the boundary and leave a WARNING in the log (2 × 30 = 60, +5% = 63).</p>
   <table class="tbl">
     <tr><th></th><th>print()</th><th>logging</th></tr>
     <tr><td>Severity / filtering</td><td>No</td><td>Levels; per-logger and per-handler thresholds</td></tr>
@@ -810,6 +815,7 @@ def test_clean_order_logs_nothing(caplog):
   <div class="callout trap"><span class="label">Trap</span><p><code>log.error(str(e))</code> loses the traceback; use <code>log.exception(...)</code>. Configuring handlers in library modules or more than once doubles every line. f-strings in debug logs pay the formatting cost even when dropped. And never log card numbers, tokens or passwords.</p></div>
 
   <h2 id="pdg-method"><span class="num">09</span>A Systematic Debugging Method</h2>
+  <p>Random poking can change a wrong number without proving the fix is right or that the bug cannot return. The method below turns a bug report ("Chen's bill was ₹52; the board says halves round up, so ₹53") into a fix you can trust.</p>
   <div class="flow"><span>1. reproduce</span><span>2. isolate</span><span>3. hypothesise + test the guess</span><span>4. fix</span><span>5. add a test, run the suite</span></div>
   <div class="callout anlg"><span class="label">Analogy</span><p>A doctor's method: confirm the symptom (reproduce), find which organ (isolate), form a diagnosis and order a test that would prove it wrong (hypothesise), treat (fix), and schedule a follow-up (regression test).</p></div>
   <h3>1. Reproduce: a failing test</h3>
@@ -838,7 +844,7 @@ FAILED tests/test_rounding.py::test_chen_rounds_half_up - AssertionError: ass...
 1 failed in 0.02s</div>
   <p>Reproduced in 0.02 s, every time. Now each attempt at a fix can be checked instantly.</p>
   <h3>2. Isolate: where is the wrong number made?</h3>
-  <p>Section 03's pdb session did this: sub = 50 ✓, discount = 0 ✓, after = 50 ✓, total = 52.5 ✓, <code>round(52.5)</code> = 52 ✗. The bug lives in one expression: <code>round(total)</code>. (For bugs that appeared after a change, <code>git bisect</code> isolates the guilty commit the same way: see <a class="xref" data-note="se_git">Git</a>.)</p>
+  <p>The pdb session above did this: sub = 50 ✓, discount = 0 ✓, after = 50 ✓, total = 52.5 ✓, <code>round(52.5)</code> = 52 ✗. The bug lives in one expression: <code>round(total)</code>. (For bugs that appeared after a change, <code>git bisect</code> isolates the guilty commit the same way: see <a class="xref" data-note="se_git">Git</a>.)</p>
   <h3>3. Hypothesise, then test the hypothesis</h3>
   <p>Hypothesis: Python's <code>round</code> rounds halves to the <em>even</em> neighbour (banker's rounding), not up. A hypothesis must make predictions that could fail: 0.5 → 0, 1.5 → 2, 2.5 → 2, 52.5 → 52, 53.5 → 54. And a second question for the fix: do floats hold these amounts exactly?</p>
   <div class="fx" data-lang="py">from decimal import Decimal
@@ -902,9 +908,9 @@ FAILED tests/test_tables.py::test_day_table - AssertionError: DataFrame.iloc[...
   <div class="callout def"><span class="label">Definition</span><p>The <strong>scientific debugging loop</strong>: reproduce the failure reliably (ideally as a test), isolate the smallest region that produces it, state a hypothesis that predicts observable results, test the prediction, fix, and keep the reproduction as a <strong>regression test</strong>. <strong>Round half up</strong> sends .5 away from zero for positives (52.5 → 53); <strong>round half to even</strong> (Python's <code>round</code>, IEEE default) sends it to the even neighbour to avoid bias over many roundings.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Fixing before reproducing ("I think it's the rounding, let me change it"): you can't tell whether the fix worked, or what else it changed. Here, the suite revealed four tests depending on the old rule; a silent change would have shifted the day's totals in reports nobody re-checked. And for money, <code>Decimal(float)</code> carries binary error; build Decimals from strings or keep amounts in integer paise.</p></div>
 
-  <h2 id="pdg-traps"><span class="num">11</span>Common Mistakes</h2>
+  <h2 id="pdg-traps"><span class="num">10</span>Common Mistakes</h2>
   <table class="tbl">
-    <tr><th>Mistake</th><th>Symptom at the till</th><th>Fix</th></tr>
+    <tr><th>Mistake</th><th>Symptom</th><th>Fix</th></tr>
     <tr><td>Reading tracebacks top-down</td><td>Staring at crash.py line 9</td><td>Bottom line first, then the frame above</td></tr>
     <tr><td>Fixing where it exploded</td><td><code>try/except</code> around <code>qty &lt; 0</code></td><td>Convert at the form (where "2" entered)</td></tr>
     <tr><td><code>print(qty)</code> without repr</td><td>Shows 2 for "2"</td><td><code>print(f"{qty=!r}")</code></td></tr>
