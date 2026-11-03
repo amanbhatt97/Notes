@@ -3,135 +3,45 @@ Object.assign(TOPIC_CONTENT, {
   "ml_tree_tuning": `<main>
   <h1>Tuning &amp; Production</h1>
   <div class="where"><span>Machine Learning</span><span>Tree-Based Models</span><span>Tuning &amp; Production</span></div>
-  <p class="lead">The model notes in this group each explained one algorithm. This note is about turning any of them into a model you can trust and ship: which hyperparameters actually matter for each model and why, how to search them (grid, random, successive halving, Bayesian with Optuna), early stopping, validating honestly (nested CV), rare classes, calibrated probabilities, categorical columns, business rules, model size and latency, saving and loading, and watching for drift after launch. It ends with a default recipe per model. The small calculations run on the running example of the whole tree group, the captain's 14-day cricket diary; every larger claim is run on the shared churn dataset (the same idea at scale) or a small purpose-built one, with real outputs.</p>
+  <p class="lead">Each model note in this group explained one algorithm and its settings. This note is about turning any of them into a model you can trust and ship: choosing the settings without fooling yourself, deciding how many trees to grow, searching efficiently, turning probabilities into decisions when mistakes have different costs, making those probabilities honest, handling categories and business rules, and finally saving the model, keeping it fast and watching it after launch. In real projects these steps decide whether a model works in production far more often than the choice between XGBoost and LightGBM does. The small calculations use the running example of the whole tree group, the cricket captain's 14-day diary; every larger claim is run on the shared 20,000-customer churn table or a small purpose-built dataset, with real outputs.</p>
 
-  <h2 id="mtt-fits" class="open"><span class="num">↖</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 600 324" width="600">
-<line x1="300" y1="28" x2="300" y2="42" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="300" y1="70" x2="300" y2="84" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="300" y1="112" x2="116" y2="132" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="300" y1="112" x2="330" y2="132" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="300" y1="112" x2="530" y2="132" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="116" y1="160" x2="62" y2="180" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="114.0" y1="194" x2="122.0" y2="194" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="330" y1="160" x2="272" y2="180" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="317.0" y1="194" x2="324.0" y2="194" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="392" y1="208" x2="300" y2="228" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="392" y1="208" x2="395" y2="228" stroke="currentColor" stroke-opacity="0.45"/>
-<line x1="392" y1="208" x2="490" y2="228" stroke="currentColor" stroke-opacity="0.45"/>
-<rect x="70" y="263" width="460" height="58" rx="8" fill="none" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.45"/>
-<text x="300" y="277" text-anchor="middle" class="tm" font-size="10">used by every model above</text>
-<rect x="225.0" y="0" width="150" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="300" y="18" text-anchor="middle" font-size="11">Map &amp; How to Choose</text>
-<rect x="235.0" y="42" width="130" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="300" y="60" text-anchor="middle" font-size="11">Decision Trees</text>
-<rect x="225.0" y="84" width="150" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="300" y="102" text-anchor="middle" font-size="11">Ensemble Learning</text>
-<rect x="61.0" y="132" width="110" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="116" y="150" text-anchor="middle" font-size="11">Bagging</text>
-<rect x="262.0" y="132" width="136" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="330" y="150" text-anchor="middle" font-size="11">How Boosting Works</text>
-<rect x="465.0" y="132" width="130" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="530" y="150" text-anchor="middle" font-size="11">Stacking &amp; Voting</text>
-<rect x="10.0" y="180" width="104" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="62" y="198" text-anchor="middle" font-size="11">Random Forest</text>
-<rect x="122.0" y="180" width="96" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="170" y="198" text-anchor="middle" font-size="11">Extra Trees</text>
-<rect x="227.0" y="180" width="90" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="272" y="198" text-anchor="middle" font-size="11">AdaBoost</text>
-<rect x="324.0" y="180" width="136" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="392" y="198" text-anchor="middle" font-size="11">Gradient Boosting</text>
-<rect x="257.5" y="228" width="85" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="300" y="246" text-anchor="middle" font-size="11">XGBoost</text>
-<rect x="352.5" y="228" width="85" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="395" y="246" text-anchor="middle" font-size="11">LightGBM</text>
-<rect x="447.5" y="228" width="85" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="490" y="246" text-anchor="middle" font-size="11">CatBoost</text>
-<rect x="90.0" y="286" width="200" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="190" y="304" text-anchor="middle" font-size="11">Feature Importance &amp; SHAP</text>
-<rect x="320.0" y="286" width="200" height="28" rx="6" class="fg sg" stroke-width="2.5"/>
-<text x="420" y="304" text-anchor="middle" font-size="11" font-weight="700">Tuning &amp; Production</text>
-</svg><figcaption>The Tree-Based Models group. This note (green) is in the bar at the bottom: it applies to every model above it.</figcaption></figure>
-  <ul>
-    <li><strong>Came from:</strong> every model note introduced its own knobs: depth and pruning in <a class="xref" data-note="ml_dtree">Decision Trees</a>, <code>max_features</code> in <a class="xref" data-note="ml_rf">Random Forest</a>, learning rate and rounds in <a class="xref" data-note="ml_gbm">Gradient Boosting</a>, λ/γ/min_child_weight in <a class="xref" data-note="ml_xgboost">XGBoost</a>, <code>num_leaves</code> in <a class="xref" data-note="ml_lightgbm">LightGBM</a>, <code>cat_features</code> in <a class="xref" data-note="ml_catboost">CatBoost</a>. What remained: which of these matter, how to set them without fooling yourself, and what else a real deployment needs. <a class="xref" data-note="ml_tree_explain">Feature Importance &amp; SHAP</a> gave the tools to decide which features to keep and watch.</li>
-    <li><strong>What this note adds:</strong> a tuning method (which knobs, which search, which validation) and the production checklist (imbalance, calibration, categoricals, constraints, size, saving, monitoring).</li>
-    <li><strong>Leads to:</strong> <a class="xref" data-note="ml_evaluation">Model Evaluation</a> (metrics, CV, calibration curves in depth), <a class="xref" data-note="mlops_mlflow">MLflow &amp; Experiment Tracking</a> (tracking tuning runs, model registry), <a class="xref" data-note="sd_serving">Feature Stores &amp; Online/Offline Serving</a> and <a class="xref" data-note="sd_monitoring">Monitoring, Drift &amp; Retraining</a> (the system around a deployed model). Nested CV builds on <a class="xref" data-note="ml_core">Core Concepts</a>.</li>
-  </ul>
-
-    <h2 id="mtt-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
-  <p>The whole note as one chain. Each step answers the question above it; its weakness raises the next question. Small numbers are from the captain's 14-day cricket diary, large ones from the 20,000-row churn data.</p>
-  <ol class="story">
-    <li><b>What tuning is</b><span>Q: training cannot choose max_depth itself; how do we? → Try settings and judge each on rows the model did not train on: on the diary, depth 1 gets 2 of 14 left-out days right, depths 2, 3 and unlimited all 10 of 14, while training accuracy climbs to 1.000. Which of the many knobs deserve that effort?</span></li>
-    <li><b>Which knobs matter</b><span>Q: what to search? → For boosters: learning rate with rounds, then tree and leaf size; for forests max_features and leaf size (lr 0.3 → 0.03: +2.3 points with 17× the trees). But picking the best of many scores is optimistic…</span></li>
-    <li><b>Honest validation (nested CV)</b><span>Q: how to tune and still report an honest number? → Inner CV chooses, outer folds report: 0.732 (tuning score) vs 0.705 (nested) vs 0.723 (fresh). With 5 knobs, how do we search?</span></li>
-    <li><b>Search strategies</b><span>Q: how to search within a budget? → Random beats grid (16 draws: 0.9411 vs 0.9389), halving screens many cheaply, Optuna learns where to look. The number of trees has a better tool…</span></li>
-    <li><b>Early stopping</b><span>Q: how many rounds? → Stop when validation loss has not improved for <em>patience</em> rounds: best round 204 (0.308) vs 0.752 at 3,000. All of this used balanced targets…</span></li>
-    <li><b>Class imbalance &amp; thresholds</b><span>Q: what if mistakes cost different amounts? → Pick the threshold from costs: on the diary, booking the ground costs ₹500 if nobody plays, a forfeited match ₹3,000, so book when P(play) &gt; 0.143: cost ₹2,500 instead of ₹3,500 at 0.5. That needs probabilities we can trust…</span></li>
-    <li><b>Calibration</b><span>Q: does "0.75" mean 75%? → Measure Brier and reliability: the diary forest says 0.36 on days that are played 20% of the time and 0.75 on days played 89%: squeezed toward the middle (ECE 0.147). Fix with Platt or isotonic. Real tables also have categories…</span></li>
-    <li><b>Categoricals, business rules, size, saving</b><span>Q: what else must a shipped model respect? → Leak-free category encodings, monotone constraints and custom losses, megabytes and milliseconds, files that reload identically. And after launch?</span></li>
-    <li><b>Monitoring &amp; drift</b><span>Q: is the world still like the training data? → PSI compares distributions: a monsoon month against the diary's humidity gives PSI 0.313, a major shift. Then: a default recipe per model.</span></li>
-  </ol>
-
-<h2 id="mtt-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="mtt-map"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">Tuning &amp; Production</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">Which knobs</div>
+        <div class="mm-title">Choosing settings</div>
         <ul>
-          <li><b>RF</b> — max_features, min_samples_leaf; n_estimators just "enough"</li>
-          <li><b>Boosters</b> — lr + rounds (early stopping) → tree size → leaf size → sampling → λ/α/γ</li>
-          <li>lr 0.3 → 0.03: 17× more trees, +2.3 points</li>
-          <li>num_leaves 4 / 63 / 255 → 0.851 / 0.877 / 0.873</li>
-          <li>💡 Biryani: flame and time are set before; taste a fresh plate</li>
+          <li>Hyperparameters are chosen on data the model did not train on</li>
+          <li>The best of many scores is optimistic: keep a test set or use nested CV</li>
+          <li>Boosters: learning rate + early stopping, then tree and leaf size</li>
+          <li>Forests: max_features, leaf size; trees just "enough"</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Search &amp; validation</div>
+        <div class="mm-title">Searching</div>
         <ul>
-          <li><b>Grid</b> explodes; <b>random</b>: 60 trials → 95% chance of top 5%</li>
-          <li>Churn: grid 0.9389 · random 0.9411 · Optuna 0.9415 test AUC</li>
-          <li><b>Halving</b> — 48 → 16 → 6 candidates on 1k → 3k → 9k rows</li>
-          <li><b>Optuna / TPE</b> — propose where l(x)/g(x) is high; prune</li>
-          <li><b>Nested CV</b> — outer reports, inner tunes; 0.732 (tuning) vs 0.705 (nested) vs 0.723 (fresh)</li>
-          <li>⚠ Preprocessing inside the folds (Pipeline)</li>
+          <li>Grid explodes; random covers important knobs better</li>
+          <li>Successive halving: many candidates on small budgets</li>
+          <li>Bayesian (Optuna / TPE): learns where to look</li>
+          <li>Early stopping picks the number of trees</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Early stopping</div>
+        <div class="mm-title">Decisions</div>
         <ul>
-          <li>Stop when val loss has not improved for <i>patience</i> rounds; keep best round</li>
-          <li>LightGBM: best 204 (0.308) vs round 3000 (0.752)</li>
-          <li><code>lgb.cv</code> → 587 rounds; refit on all data with ~same or +15%</li>
-          <li>⚠ ES validation score is optimistic</li>
+          <li>Rare classes: PR-AUC, not accuracy</li>
+          <li>Threshold = C_FP / (C_FP + C_FN)</li>
+          <li>Calibrate (Platt, isotonic) before using probabilities as money</li>
+          <li>Leak-free categories; monotone constraints; custom losses</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Imbalance &amp; calibration</div>
+        <div class="mm-title">Shipping</div>
         <ul>
-          <li>PR-AUC, not accuracy ("always no" = 0.950)</li>
-          <li>Threshold = C_FP / (C_FP + C_FN); tuned 0.13 → recall 0.176 → 0.344</li>
-          <li>scale_pos_weight = n_neg/n_pos multiplies odds by w</li>
-          <li>RF under-confident; isotonic ECE 0.110 → 0.019</li>
-          <li>Brier = mean (p − y)²</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Data &amp; rules</div>
-        <ul>
-          <li><b>Categoricals</b> — naive target mean leaks (train 0.877, test 0.741); CatBoost 0.765</li>
-          <li><b>Monotone constraints</b> — 42 → 0 wrong-direction steps</li>
-          <li><b>Custom loss</b> — supply g, h; under-forecast ×3 → cost 235 → 190</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Ship &amp; watch</div>
-        <ul>
-          <li><b>Size</b> — RF full depth 69 MB vs boosters 1–2 MB</li>
-          <li><b>Latency</b> — n_jobs=1 for single rows; boosters 1–3 ms</li>
-          <li><b>Save</b> — XGB json, LGBM txt, CatBoost cbm; joblib for sklearn (pin versions)</li>
-          <li><b>PSI</b> = Σ(a−e)ln(a/e); &lt;0.1 ok, &gt;0.25 major</li>
-          <li>Monitor quality → drift → predictions → performance</li>
+          <li>Forests are big; boosters are small and fast</li>
+          <li>Save in the library's own format; pin versions</li>
+          <li>PSI = Σ (a − e) ln(a / e): &lt; 0.1 stable, &gt; 0.25 major shift</li>
         </ul>
       </div>
     </div>
@@ -140,46 +50,33 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="mtt-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain</span></div></div>
-      <div class="rm-item rm-done" data-target="mtt-what"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">What Tuning Is</span><span class="rm-sub">Choosing depth on the diary</span></div></div>
-      <div class="rm-item rm-done" data-target="mtt-knobs"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Which Knobs Matter</span><span class="rm-sub">Per model, with runs</span></div></div>
-      <div class="rm-item rm-done" data-target="mtt-cv"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Validating Honestly</span><span class="rm-sub">CV and nested CV</span></div></div>
-      <div class="rm-item rm-done" data-target="mtt-search"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Search Strategies</span><span class="rm-sub">Grid, random, halving, Optuna</span></div></div>
-      <div class="rm-item rm-done" data-target="mtt-es"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Early Stopping</span><span class="rm-sub">Patience, CV, refitting</span></div></div>
-      <div class="rm-item rm-done" data-target="mtt-imb"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Class Imbalance</span><span class="rm-sub">Metrics, costs, thresholds</span></div></div>
-      <div class="rm-item rm-done" data-target="mtt-cal"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Probability Calibration</span><span class="rm-sub">Brier, reliability, Platt, isotonic</span></div></div>
-      <div class="rm-item rm-done" data-target="mtt-cat"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Categorical Columns</span><span class="rm-sub">One-hot, target, native, CatBoost</span></div></div>
-      <div class="rm-item rm-done" data-target="mtt-rules"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Business Rules</span><span class="rm-sub">Monotone constraints, custom loss</span></div></div>
-      <div class="rm-item rm-done" data-target="mtt-size"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Size &amp; Latency</span><span class="rm-sub">MB and milliseconds</span></div></div>
-      <div class="rm-item rm-done" data-target="mtt-save"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Saving &amp; Loading</span><span class="rm-sub">Formats that survive upgrades</span></div></div>
-      <div class="rm-item rm-done" data-target="mtt-drift"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Monitoring &amp; Drift</span><span class="rm-sub">PSI by hand</span></div></div>
-      <div class="rm-item rm-done" data-target="mtt-recipe"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Default Recipe per Model</span><span class="rm-sub">Start here</span></div></div>
-      <div class="rm-item rm-done" data-target="mtt-connect"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">From settings to a watched model</span></div></div>
-      <div class="rm-item rm-done" data-target="mtt-traps"><span class="rm-num">15</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">What costs teams the most</span></div></div>
-      <div class="rm-item rm-done" data-target="mtt-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note in 10 minutes</span></div></div>
-      <div class="rm-item rm-done" data-target="mtt-qa"><span class="rm-num">16</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
+      <div class="rm-item rm-done" data-target="mtt-what"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">What Tuning Is</span><span class="rm-sub">choosing a tree's depth for the diary</span></div></div>
+      <div class="rm-item rm-done" data-target="mtt-cv"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Validating Honestly</span><span class="rm-sub">holdout, cross-validation, nested CV</span></div></div>
+      <div class="rm-item rm-done" data-target="mtt-es"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Early Stopping</span><span class="rm-sub">letting validation choose the number of trees</span></div></div>
+      <div class="rm-item rm-done" data-target="mtt-knobs"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Which Knobs Matter</span><span class="rm-sub">per model, with runs and default recipes</span></div></div>
+      <div class="rm-item rm-done" data-target="mtt-search"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Search Strategies</span><span class="rm-sub">grid, random, halving, Bayesian</span></div></div>
+      <div class="rm-item rm-done" data-target="mtt-imb"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Rare Classes and Cost Thresholds</span><span class="rm-sub">from probabilities to decisions</span></div></div>
+      <div class="rm-item rm-done" data-target="mtt-cal"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Probability Calibration</span><span class="rm-sub">does 0.75 really mean 75%?</span></div></div>
+      <div class="rm-item rm-done" data-target="mtt-cat"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Categorical Columns</span><span class="rm-sub">one-hot, target encoding, native, CatBoost</span></div></div>
+      <div class="rm-item rm-done" data-target="mtt-rules"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Business Rules</span><span class="rm-sub">monotone constraints and custom losses</span></div></div>
+      <div class="rm-item rm-done" data-target="mtt-ship"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Size, Speed and Saving</span><span class="rm-sub">megabytes, milliseconds, files that reload</span></div></div>
+      <div class="rm-item rm-done" data-target="mtt-drift"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Monitoring and Drift</span><span class="rm-sub">noticing when the world changes</span></div></div>
+      <div class="rm-item rm-done" data-target="mtt-traps"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">what costs teams the most</span></div></div>
+      <div class="rm-item rm-done" data-target="mtt-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">knobs, formulas, recipes, gotchas</span></div></div>
+      <div class="rm-item rm-done" data-target="mtt-qa"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">tuning and production questions</span></div></div>
     </div>
   </div>
 
-  <h2 id="mtt-what"><span class="num">01</span>What Tuning Is (and Is Not)</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Every model note in this group introduced its own settings: depth, leaf size, learning rate, number of trees. Training learns the splits and leaf values, but who chooses these settings, and how do we know a choice is good?</p>
-  </div>
-  <p><strong>The need.</strong> Every model in this group has settings you choose before training: how deep a tree may grow, how many trees, how big a learning step. The model cannot learn these from the data by itself, because the training loss always prefers "deeper, more, bigger" (that just memorises). The right values depend on your data, so you must find them by trying candidates and judging each on data the model did not train on.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Parameters</strong> are learned by training: the split features, thresholds and leaf values of every tree. <strong>Hyperparameters</strong> are chosen before training and control how parameters are learned: <code>max_depth</code>, <code>n_estimators</code>, <code>learning_rate</code>, <code>min_samples_leaf</code>, … <strong>Tuning</strong> (hyperparameter optimisation) = searching for the hyperparameters that give the best score on held-out data.</p>
-  </div>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Cooking biryani. The rice absorbing water and spices is "training": it happens on its own once you start. The flame level, cooking time and amount of water are "hyperparameters": you set them before, and you only find the best values by cooking a few batches and tasting. Tasting from the same pot you seasoned while cooking (the training data) fools you; you need a fresh plate (validation data).</p>
-  </div>
-  <h3>The running example: choosing a tree's depth for the cricket diary</h3>
-  <p>The captain's 14-day diary (Outlook, Humidity, Wind → Play) from the whole tree group. One hyperparameter, <code>max_depth</code>, four candidate values. Training accuracy cannot choose (it always prefers deeper), so each candidate is judged by <strong>leave-one-day-out</strong>: train on 13 days, predict the 14th, repeat for every day.</p>
-<div class="fx" data-lang="py">import numpy as np, pandas as pd
-from play import df
+  <h2 id="mtt-what"><span class="num">01</span>What Tuning Is</h2>
+  <p>Every model in this group has settings you must choose before training starts: how deep a tree may grow, how many trees to build, how big a step each tree takes. Training cannot choose them for you, because the training data always prefers "deeper, more, bigger": a bigger model can always fit the training rows more closely, right up to memorising them. The good values depend on your data, so the only way to find them is to try candidates and judge each one on data the model did not train on.</p>
+  <p>This gives two kinds of number. <strong>Parameters</strong> are learnt by training: the split columns, thresholds and leaf values of every tree. <strong>Hyperparameters</strong> are chosen before training and control how the parameters are learnt: <code>max_depth</code>, <code>n_estimators</code>, <code>learning_rate</code>, <code>min_samples_leaf</code> and so on. <strong>Tuning</strong>, or hyperparameter optimisation, is the search for the hyperparameters that give the best score on held-out data. Cooking biryani is a good picture of the difference. The rice absorbing water and spices is the training: it happens by itself once you start. The flame, the cooking time and the amount of water are the hyperparameters: you set them beforehand, and you only find the best values by cooking a few batches and tasting. Tasting from the pot you have been seasoning while cooking fools you; you need a fresh plate.</p>
+  <p>Here is tuning in miniature on the diary. The model is a decision tree on the Outlook, Humidity and Wind columns, the hyperparameter is <code>max_depth</code>, and there are four candidates. Training accuracy cannot choose, so each candidate is judged by <strong>leave-one-day-out</strong>: train on 13 days, predict the 14th, and repeat until every day has been left out once.</p>
+  <div class="fx" data-lang="py">import numpy as np, pandas as pd
 from sklearn.tree import DecisionTreeClassifier
+from play import df
 X = pd.get_dummies(df[["Outlook", "Humidity", "Wind"]]).astype(int)      # the diary's word columns as 0/1
 y = (df.Play == "Yes").astype(int)
-def loo(model):                                    # leave-one-day-out accuracy: 14 fits, each scored on the day left out
+def loo(model):                     # leave-one-day-out: 14 fits, each scored on the day it did not see
     return np.mean([model.fit(X.drop(d), y.drop(d)).predict(X.loc[[d]])[0] == y[d] for d in X.index])
 for depth in [1, 2, 3, None]:
     m = DecisionTreeClassifier(max_depth=depth, random_state=0)
@@ -188,64 +85,16 @@ for depth in [1, 2, 3, None]:
 max_depth=2     training acc 0.857   leave-one-day-out acc 0.714
 max_depth=3     training acc 0.857   leave-one-day-out acc 0.714
 max_depth=None  training acc 1.000   leave-one-day-out acc 0.714</div>
-  <p>Training accuracy rises with depth (0.643 → 0.857 → 1.000), which says nothing about new days. Leave-one-day-out says depth 1 is hopeless (a single question, re-chosen on every 13-day sample, gets only 2 of the 14 left-out days right) and that depths 2, 3 and unlimited are tied at 10 of 14. With a tie, take the simplest: depth 2. That is tuning in miniature: candidates, an honest score on rows not used for training, and a rule for choosing. Everything else in this note is that loop made bigger, faster and safer.</p>
-  <p>Three facts that shape the rest of this note:</p>
-  <ol>
-    <li><strong>Few knobs matter a lot; most matter a little.</strong> For boosters, learning rate, number of trees and tree size dominate. For random forests, defaults are already close to the best. Spend your budget on the knobs that matter (section 02).</li>
-    <li><strong>The tuning score is optimistic.</strong> If you try 100 settings and keep the best validation score, part of that score is luck. You need a separate final check (section 03).</li>
-    <li><strong>Tuning is the last few points.</strong> On our churn data, a default random forest reaches test AUC 0.936 and the best tuned booster in section 04 about 0.941: half a point. Leakage, a wrong split or a missing feature changes it by ten. Fix the data and the validation design first.</li>
-  </ol>
-  <div class="bridge"><b>What this still can't tell us → next: Which knobs matter.</b> "A few knobs matter" is only useful if you know which ones, for which model, and in which direction they move bias and variance.</div>
+  <p>Training accuracy rises with depth, from 0.643 to 1.000, and says nothing about new days. Leave-one-day-out says depth 1 is hopeless (a single question, re-chosen on every 13-day sample, gets only 2 of the 14 left-out days right) and that depths 2, 3 and unlimited are tied at 10 of 14. When candidates tie, take the simplest: depth 2. That is the whole idea of tuning: candidates, an honest score on rows not used for training, and a rule for choosing. Everything else in this note makes that loop bigger, faster and safer.</p>
+  <p>Three facts shape what follows. First, a few knobs matter a lot and most matter a little, so the budget should go to the important ones (section 04). Second, the score of the winning candidate is optimistic: if you try a hundred settings and keep the best validation score, part of that score is luck (section 02). Third, tuning buys the last few points. On the churn data a default random forest and a carefully tuned booster differ by about half a point of AUC, while a leak, a wrong split or a missing feature can move the score by ten. Fix the data and the validation design first.</p>
 
-  <h2 id="mtt-knobs"><span class="num">02</span>Which Knobs Matter, Model by Model</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The diary had one knob and four values. Real boosters have a dozen knobs. Which ones actually move the score, for which model, and in which direction?</p>
-  </div>
-  <p>Every knob below does one of three jobs: <strong>make each tree simpler</strong> (lower variance, higher bias), <strong>make trees different from each other</strong> (lower correlation in averaging, less overfitting in boosting), or <strong>control how much each tree contributes</strong> (boosting's learning rate and number of rounds). "Impact" is how much the knob usually moves the score.</p>
-  <div style="overflow-x:auto"><table class="tbl">
-    <tr><th>Model</th><th>Knob</th><th>Impact</th><th>Effect of raising it</th><th>Typical range</th></tr>
-    <tr><td rowspan="4"><a class="xref" data-note="ml_dtree">Decision tree</a></td><td><code>max_depth</code></td><td>High</td><td>More complex, lower bias, higher variance</td><td>3–15</td></tr>
-    <tr><td><code>min_samples_leaf</code></td><td>High</td><td>Smoother, less overfitting</td><td>1–100 (or 0.1–2% of rows)</td></tr>
-    <tr><td><code>ccp_alpha</code></td><td>High</td><td>More pruning, smaller tree</td><td>pick from <code>cost_complexity_pruning_path</code></td></tr>
-    <tr><td><code>criterion</code></td><td>Low</td><td>Gini vs entropy rarely matters</td><td>gini</td></tr>
-    <tr><td rowspan="5"><a class="xref" data-note="ml_rf">Random forest</a> / <a class="xref" data-note="ml_extratrees">Extra Trees</a></td><td><code>max_features</code></td><td>Medium–high</td><td>Trees more alike (higher ρ), each stronger</td><td>sqrt, 0.3–0.5, log2</td></tr>
-    <tr><td><code>min_samples_leaf</code></td><td>Medium</td><td>Smoother trees, smaller model; can cost accuracy</td><td>1–10</td></tr>
-    <tr><td><code>n_estimators</code></td><td>Low after ~200</td><td>Lower variance, never overfits, slower</td><td>300–1000</td></tr>
-    <tr><td><code>max_depth</code> / <code>max_samples</code></td><td>Low–medium</td><td>Size/speed control</td><td>None / 0.5–1.0</td></tr>
-    <tr><td><code>class_weight</code></td><td>Imbalance only</td><td>Up-weights the rare class</td><td>balanced_subsample</td></tr>
-    <tr><td rowspan="3"><a class="xref" data-note="ml_adaboost">AdaBoost</a></td><td><code>n_estimators</code> × <code>learning_rate</code></td><td>High</td><td>More rounds/bigger steps fit more (and chase noise)</td><td>100–1000 × 0.05–1</td></tr>
-    <tr><td>base learner depth</td><td>High</td><td>Stumps are weak; depth 2–3 learns interactions</td><td>1–3</td></tr>
-    <tr><td colspan="3">Avoid with noisy labels</td></tr>
-    <tr><td rowspan="6"><a class="xref" data-note="ml_gbm">Gradient boosting</a> (sklearn GBM / HistGB)</td><td><code>learning_rate</code></td><td>Highest</td><td>Faster fitting, needs fewer trees, overfits sooner</td><td>0.01–0.1</td></tr>
-    <tr><td><code>n_estimators</code> / <code>max_iter</code></td><td>Highest</td><td>Let early stopping choose</td><td>up to several thousand</td></tr>
-    <tr><td><code>max_depth</code> / <code>max_leaf_nodes</code></td><td>High</td><td>Order of interactions each tree can learn</td><td>depth 3–8, leaves 15–63</td></tr>
-    <tr><td><code>min_samples_leaf</code></td><td>Medium</td><td>Smoother leaves</td><td>20–200</td></tr>
-    <tr><td><code>subsample</code></td><td>Medium</td><td>Stochastic GB: less overfit, faster</td><td>0.5–0.9</td></tr>
-    <tr><td><code>l2_regularization</code> (HistGB)</td><td>Low–medium</td><td>Shrinks leaf values</td><td>0–10</td></tr>
-    <tr><td rowspan="7"><a class="xref" data-note="ml_xgboost">XGBoost</a></td><td><code>eta</code> (<code>learning_rate</code>) + rounds</td><td>Highest</td><td>As above; always with early stopping</td><td>0.01–0.1</td></tr>
-    <tr><td><code>max_depth</code></td><td>High</td><td>Interaction order, complexity</td><td>4–10</td></tr>
-    <tr><td><code>min_child_weight</code></td><td>Medium–high</td><td>Minimum Hessian sum per leaf; blocks tiny leaves</td><td>1–20</td></tr>
-    <tr><td><code>subsample</code>, <code>colsample_bytree</code></td><td>Medium</td><td>Decorrelate trees, reduce overfitting</td><td>0.6–0.9</td></tr>
-    <tr><td><code>gamma</code></td><td>Low–medium</td><td>Minimum gain to keep a split</td><td>0–5</td></tr>
-    <tr><td><code>lambda</code>, <code>alpha</code></td><td>Low–medium</td><td>L2 / L1 shrinkage of leaf weights</td><td>0–10</td></tr>
-    <tr><td><code>scale_pos_weight</code></td><td>Imbalance only</td><td>Up-weights positives</td><td>n_neg / n_pos</td></tr>
-    <tr><td rowspan="5"><a class="xref" data-note="ml_lightgbm">LightGBM</a></td><td><code>learning_rate</code> + rounds</td><td>Highest</td><td>As above</td><td>0.01–0.1</td></tr>
-    <tr><td><code>num_leaves</code></td><td>High</td><td>Main complexity knob for leaf-wise trees</td><td>15–255 (keep &lt; 2^max_depth)</td></tr>
-    <tr><td><code>min_child_samples</code> (<code>min_data_in_leaf</code>)</td><td>High on small data</td><td>Blocks leaf-wise growth into tiny leaves</td><td>20–200</td></tr>
-    <tr><td><code>feature_fraction</code>, <code>bagging_fraction</code>+<code>bagging_freq</code></td><td>Medium</td><td>Decorrelate, speed</td><td>0.6–0.9</td></tr>
-    <tr><td><code>lambda_l1/l2</code>, <code>min_gain_to_split</code></td><td>Low–medium</td><td>Regularise leaves / splits</td><td>0–10</td></tr>
-    <tr><td rowspan="4"><a class="xref" data-note="ml_catboost">CatBoost</a></td><td><code>learning_rate</code> + <code>iterations</code></td><td>High</td><td>As above; auto learning rate if unset</td><td>0.02–0.1</td></tr>
-    <tr><td><code>depth</code></td><td>High</td><td>Symmetric tree depth</td><td>4–10 (default 6)</td></tr>
-    <tr><td><code>l2_leaf_reg</code></td><td>Medium</td><td>Leaf shrinkage</td><td>1–10 (default 3)</td></tr>
-    <tr><td><code>one_hot_max_size</code>, <code>border_count</code></td><td>Low</td><td>Category handling, histogram bins</td><td>defaults</td></tr>
-  </table></div>
-  <h3>Seeing it: random forest knobs on the churn data</h3>
-  <p>Fourteen days cannot show which knobs matter, so this section works at scale. The shared churn dataset (same as every note in this group): 20,000 customers, 12 columns from <code>make_classification</code> plus pure-noise columns <code>row_noise</code> and <code>coin_noise</code>, split 12,000 train / 3,000 validation / 5,000 test:</p>
-  <div class="fx" data-lang="py">import numpy as np, pandas as pd, time
+  <h2 id="mtt-cv"><span class="num">02</span>Validating Honestly</h2>
+  <p>Held-out data has two separate jobs: <strong>choosing</strong> the hyperparameters and <strong>reporting</strong> how good the final model is. If the same rows do both, the report is too optimistic, because you picked the setting that happened to do best on exactly those rows. It is like a teacher who sets an exam, lets the class practise on it, and then reports the marks on that same exam as the class's ability.</p>
+  <p>The simplest design, the <strong>holdout</strong>, splits the data three ways: train on the training set, choose on the validation set, and report once on the test set. It is fine with ten thousand rows or more. <strong>k-fold cross-validation</strong> (CV) scores each candidate by averaging over k folds, each fold taking a turn as the validation part, which is less noisy than one validation set; scikit-learn's <code>GridSearchCV(cv=5)</code> does this, and you still need a test set at the end. When rows are linked, the folds must respect that: the rows of one customer belong in one fold (<code>GroupKFold</code>), and for time series the model must always train on the past and validate on the future (<code>TimeSeriesSplit</code>). A wrong split leaks more than any tuning can gain.</p>
+  <p>On small data, setting aside a test set is costly, and that is where <strong>nested cross-validation</strong> is used. An outer loop of 5 folds is used only for reporting. Inside each outer training part, an inner 5-fold CV runs the whole tuning and picks a winner; the winner is retrained on that outer training part and scored on the outer fold it never saw. The five outer scores are honest, because those rows took no part in choosing. Nested CV may pick different settings in different outer folds; that is fine, because what it measures is how good <em>the whole procedure of tuning and then training</em> is, not one particular setting. The churn table, shared by every note in this group and imported below as <code>churn</code>, provides the rows:</p>
+  <div class="fx" data-lang="py">import numpy as np, pandas as pd
 from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split
-from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
-from sklearn.ensemble import RandomForestClassifier
 X, y = make_classification(n_samples=20000, n_features=12, n_informative=6, n_redundant=2,
                            n_clusters_per_class=3, class_sep=0.8, flip_y=0.05, random_state=7)
 X = pd.DataFrame(X, columns=[f"f{i}" for i in range(12)])
@@ -253,228 +102,50 @@ rng = np.random.default_rng(0)
 X["row_noise"] = rng.random(20000)               # pure noise, 20,000 different values
 X["coin_noise"] = rng.integers(0, 2, 20000)      # pure noise, only 0 or 1
 Xtmp, Xte, ytmp, yte = train_test_split(X, y, test_size=5000, stratify=y, random_state=0)
-Xtr, Xva, ytr, yva = train_test_split(Xtmp, ytmp, test_size=3000, stratify=ytmp, random_state=0)</div>
-  <p>Every churn code block below starts from this setup. First, the forest, one knob at a time:</p>
-  <div class="fx" data-lang="py">for mf in [1, "sqrt", 7, None]:
-    rf = RandomForestClassifier(n_estimators=200, max_features=mf, n_jobs=-1, random_state=0).fit(Xtr, ytr)
-    print(f"max_features={str(mf):5s}  val acc {rf.score(Xva, yva):.3f}")
-for leaf in [1, 5, 20, 100]:
-    rf = RandomForestClassifier(n_estimators=200, min_samples_leaf=leaf, n_jobs=-1, random_state=0).fit(Xtr, ytr)
-    print(f"min_samples_leaf={leaf:&lt;3d}  train acc {rf.score(Xtr, ytr):.3f}  val acc {rf.score(Xva, yva):.3f}")
-for n in [10, 50, 200, 500]:
-    rf = RandomForestClassifier(n_estimators=n, n_jobs=-1, random_state=0).fit(Xtr, ytr)
-    print(f"n_estimators={n:&lt;4d}  val acc {rf.score(Xva, yva):.3f}")</div>
-  <div class="fx" data-lang="text">max_features=1      val acc 0.844
-max_features=sqrt   val acc 0.881
-max_features=7      val acc 0.885
-max_features=None   val acc 0.885
-min_samples_leaf=1    train acc 1.000  val acc 0.881
-min_samples_leaf=5    train acc 0.963  val acc 0.873
-min_samples_leaf=20   train acc 0.897  val acc 0.858
-min_samples_leaf=100  train acc 0.825  val acc 0.816
-n_estimators=10    val acc 0.847
-n_estimators=50    val acc 0.872
-n_estimators=200   val acc 0.881
-n_estimators=500   val acc 0.879</div>
-  <ul>
-    <li><strong>max_features</strong>: 1 feature per split is too random (0.844); √14 ≈ 3 gives 0.881; 7 or all 14 give 0.885. On this data stronger, more alike trees win slightly. That is why it is worth a few values, never just the default.</li>
-    <li><strong>min_samples_leaf</strong>: 1 is best here (0.881). Bigger leaves smooth every tree and steadily lose accuracy (100 → 0.816) while shrinking the model a lot (section 10). Forests rely on deep trees; averaging handles the variance.</li>
-    <li><strong>n_estimators</strong>: 10 → 50 → 200 trees: 0.847 → 0.872 → 0.881, then flat (500: 0.879, within noise). More trees never hurt accuracy; they only cost time and memory.</li>
-  </ul>
-  <h3>Seeing it: learning rate and tree size in a booster</h3>
-  <p>The two knobs that matter most for any booster, changed one at a time on LightGBM, each run with early stopping (patience 100) choosing the number of trees:</p>
-  <div class="fx" data-lang="py">import lightgbm as lgb
-def fit(**kw):
-    m = lgb.LGBMClassifier(n_estimators=5000, verbose=-1, **kw)
-    m.fit(Xtr, ytr, eval_X=Xva, eval_y=yva, callbacks=[lgb.early_stopping(100, verbose=False)])
-    return m
-for lr in [0.3, 0.1, 0.03]:
-    m = fit(learning_rate=lr, num_leaves=31)
-    print(f"lr={lr:&lt;5} best trees {m.best_iteration_:5d}  test acc {m.score(Xte, yte):.3f}")
-for nl in [4, 15, 63, 255]:
-    m = fit(learning_rate=0.05, num_leaves=nl)
-    print(f"num_leaves={nl:&lt;4d} best trees {m.best_iteration_:5d}  train acc {m.score(Xtr, ytr):.3f}  test acc {m.score(Xte, yte):.3f}")</div>
-  <div class="fx" data-lang="text">lr=0.3   best trees    68  test acc 0.851
-lr=0.1   best trees   216  test acc 0.869
-lr=0.03  best trees  1154  test acc 0.874
-num_leaves=4    best trees  3476  train acc 0.913  test acc 0.851
-num_leaves=15   best trees  1116  train acc 0.966  test acc 0.864
-num_leaves=63   best trees   418  train acc 0.996  test acc 0.877
-num_leaves=255  best trees   124  train acc 1.000  test acc 0.873</div>
-  <p><strong>Learning rate:</strong> 10× smaller (0.3 → 0.03) needed about 17× more trees (68 → 1,154) and gained 2.3 points. Small steps average out the noise of each tree; the price is training time. <strong>Tree size:</strong> 4 leaves cannot combine enough features (0.851, even with 3,476 trees); 255 leaves memorise in 124 rounds (train 1.000) and slip on test; 63 is the sweet spot here.</p>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>Learning rate and number of trees are one knob in disguise: their product is roughly "how far the model moves". Fix the learning rate (0.05 is a good default), let early stopping choose the number of trees, and spend the search on tree size, leaf size and sampling.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Tuning <code>n_estimators</code> of a booster in a grid without early stopping wastes the budget and usually picks a wrong value for every other combination. Tuning <code>n_estimators</code> of a random forest at all is mostly pointless: pick "enough" (300–1000) and move on.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Validating honestly.</b> We just compared settings on the validation set. Every time we pick the best of several by that score, the score becomes a little optimistic. How do we tune and still report an honest number?</div>
-
-  <h2 id="mtt-cv"><span class="num">03</span>Validating Honestly: CV and Nested CV</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>On the diary, three depths tied at 10 of 14 and we picked one. If we report "10 of 14" as the model's quality, we used the same 14 scores to choose and to report. How optimistic is that, and how do we avoid it?</p>
-  </div>
-  <p>Two jobs need held-out data: <strong>choosing</strong> hyperparameters and <strong>reporting</strong> how good the final model is. If the same data does both, the report is biased upwards: you picked the setting that happened to do best on exactly those rows.</p>
-  <div class="cards">
-    <div><b>Holdout</b><p>Train / validation / test. Tune on validation, report on test once.</p><small>Simple; fine for 10k+ rows</small></div>
-    <div><b>k-fold CV for tuning</b><p>Each setting is scored by the average over k folds. Less noisy than one validation set.</p><small><code>GridSearchCV(cv=5)</code>; still needs a test set</small></div>
-    <div><b>Nested CV</b><p>Outer folds report; inner folds tune. Every outer score comes from rows the tuning never saw.</p><small>Small data; papers; model comparison</small></div>
-    <div><b>Grouped / time-ordered</b><p>Rows of one customer stay in one fold (<code>GroupKFold</code>); time series train on the past only (<code>TimeSeriesSplit</code>).</p><small>Wrong splits leak more than any tuning gains</small></div>
-  </div>
-  <h3>Nested CV by hand</h3>
-  <p>Outer loop: 5 folds. For outer fold 1, hold out its 20% of rows. On the other 80%, run the whole tuning (an inner 5-fold grid search over 96 settings) and pick a winner. Retrain the winner on that 80% and score it on the held-out 20%. That score is honest: those rows took no part in choosing. Repeat for the 5 outer folds and average. Cost: 5 outer × 96 settings × 5 inner = 2,400 fits instead of 480. The tuning may pick different settings in different outer folds; that is fine, because nested CV estimates how good <em>the tuning procedure</em> is, not one particular setting.</p>
-  <div class="fx" data-lang="py">from sklearn.model_selection import GridSearchCV, cross_val_score, StratifiedKFold
+Xtr, Xva, ytr, yva = train_test_split(Xtmp, ytmp, test_size=3000, stratify=ytmp, random_state=0)
+print("train", Xtr.shape, "validation", Xva.shape, "test", Xte.shape, " churn rate", round(y.mean(), 3))</div>
+  <div class="fx" data-lang="text">train (12000, 14) validation (3000, 14) test (5000, 14)  churn rate 0.502</div>
+  <p>The experiment takes only 800 training rows, because small data makes the optimism easy to see, and tunes a decision tree over 96 settings:</p>
+  <div class="fx" data-lang="py">from churn import Xtr, ytr, Xte, yte
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.model_selection import GridSearchCV, cross_val_score, StratifiedKFold
 Xs, ys = Xtr.iloc[:800], ytr[:800]                      # small data makes the optimism easy to see
 grid = {"max_depth": [2, 3, 4, 5, 6, 8, 10, None], "min_samples_leaf": [1, 2, 5, 10, 20, 40],
-        "criterion": ["gini", "entropy"]}               # 96 configs
+        "criterion": ["gini", "entropy"]}               # 8 * 6 * 2 = 96 settings
 inner = StratifiedKFold(5, shuffle=True, random_state=1)
 outer = StratifiedKFold(5, shuffle=True, random_state=2)
 gs = GridSearchCV(DecisionTreeClassifier(random_state=0), grid, cv=inner).fit(Xs, ys)
-print(f"non-nested: best CV accuracy of 96 configs = {gs.best_score_:.3f}  {gs.best_params_}")
+print(f"non-nested: best CV accuracy of 96 settings = {gs.best_score_:.3f}  {gs.best_params_}")
 nested = cross_val_score(GridSearchCV(DecisionTreeClassifier(random_state=0), grid, cv=inner), Xs, ys, cv=outer)
 print(f"nested CV : outer-fold scores {nested.round(3).tolist()}  mean {nested.mean():.3f}")
-print(f"fresh data: tuned tree on 5,000 test rows = {gs.score(Xte, yte):.3f}")
-print(f"fits: non-nested 96x5 = {96*5}; nested 5 x 96 x 5 = {5*96*5}")</div>
-  <div class="fx" data-lang="text">non-nested: best CV accuracy of 96 configs = 0.732  {'criterion': 'entropy', 'max_depth': 5, 'min_samples_leaf': 5}
+print(f"fresh data: the tuned tree on 5,000 test rows = {gs.score(Xte, yte):.3f}")</div>
+  <div class="fx" data-lang="text">non-nested: best CV accuracy of 96 settings = 0.732  {'criterion': 'entropy', 'max_depth': 5, 'min_samples_leaf': 5}
 nested CV : outer-fold scores [0.756, 0.656, 0.725, 0.681, 0.706]  mean 0.705
-fresh data: tuned tree on 5,000 test rows = 0.723
-fits: non-nested 96x5 = 480; nested 5 x 96 x 5 = 2400</div>
-  <p>On 800 rows, the best of 96 decision-tree settings scores 0.732 in its own cross-validation. Nested CV reports 0.705 (outer folds range 0.656–0.756: small data is noisy). Fresh test data gives 0.723. The non-nested number was optimistic; nested CV was a little pessimistic here because each outer fold trains on only 640 rows. The fresh number sits between them, and the gap shrinks as data grows. See <a class="xref" data-note="ml_core">Core Concepts</a> and <a class="xref" data-note="ml_evaluation">Model Evaluation</a> for the cross-validation basics.</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Any step that learns from data must happen inside the training folds: scaling, imputation, target encoding, feature selection, resampling (SMOTE), and early stopping. Put them in a <code>Pipeline</code> so <code>GridSearchCV</code> refits them per fold. Selecting features on all rows and then cross-validating is a classic leak.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Search strategies.</b> We know which knobs to search and how to score each candidate honestly. With 5 knobs and 5 values each that is 3,125 combinations. How do we search smartly within a budget?</div>
+fresh data: the tuned tree on 5,000 test rows = 0.723</div>
+  <p>The best of 96 settings scores 0.732 in its own cross-validation. Nested CV reports about 0.705, with outer folds ranging widely, as small data always does. Fresh data, the 5,000 test rows, gives 0.723. So the non-nested number was optimistic, and nested CV was slightly pessimistic here because each outer fold trained on only 640 rows; the truth sits between them, and the gap shrinks as data grows. The cost is high: 5 outer folds × 96 settings × 5 inner folds = 2,400 fits instead of 480. See <a class="xref" data-note="ml_core">Core Concepts</a> and <a class="xref" data-note="ml_evaluation">Model Evaluation</a> for the basics of cross-validation.</p>
+  <p>One rule applies to every design: any step that learns from data must happen inside the training folds. That includes scaling, filling missing values, target encoding, feature selection, oversampling and early stopping. Putting these steps in a <code>Pipeline</code> makes <code>GridSearchCV</code> refit them in every fold (see <a class="xref" data-note="ml_pipelines">Pipelines</a>). Selecting features on all the rows and then cross-validating is a classic leak that makes useless features look useful.</p>
 
-  <h2 id="mtt-search"><span class="num">04</span>Search Strategies: Grid, Random, Halving, Bayesian</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The diary's 4 candidates could all be tried. Four knobs with a handful of values each already give hundreds of combinations, each needing several fits. Which search finds a good setting within a budget?</p>
-  </div>
-  <h3>Grid search</h3>
-  <p>List values for each knob and try every combination. By hand: <code>num_leaves</code> ∈ {15, 63}, <code>min_child_samples</code> ∈ {10, 50}, <code>colsample_bytree</code> ∈ {0.6, 1.0}, <code>reg_lambda</code> ∈ {0, 5} → 2 × 2 × 2 × 2 = <strong>16 combinations</strong>; with 3-fold CV, 48 fits. Add one more knob with 4 values and it becomes 64 combinations, 192 fits. Grids explode exponentially with the number of knobs, and they waste trials: if only <code>num_leaves</code> really matters, 16 trials have tested just 2 values of it.</p>
-  <h3>Random search</h3>
-  <p>Draw each knob from a distribution (uniform, log-uniform for scales like λ or learning rate) for a fixed number of trials. Every trial tries a new value of <em>every</em> knob, so the important knob gets 16 different values in 16 trials. A useful fact (Bergstra &amp; Bengio, 2012): if the best 5% of the space counts as "good", each random trial hits it with probability 0.05, so n trials miss it with probability 0.95ⁿ. For n = 60: 0.95⁶⁰ = 0.046, so a <strong>95% chance</strong> of at least one good trial, regardless of how many knobs there are.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Looking for the best street food in a new city. A grid search eats at every stall on 4 fixed streets. A random search eats at 16 stalls spread across the whole city. If the best food is on a street the grid never visits, the grid can never find it.</p>
-  </div>
-  <h3>Successive halving (and Hyperband)</h3>
-  <p>Most bad settings are visibly bad early. So start many candidates on a small budget, keep the best third, give the survivors 3× more budget, and repeat. By hand with 48 candidates, factor 3, budget = training rows starting at 1,000: round 1 trains 48 candidates on 1,000 rows; round 2 trains the best 16 on 3,000; round 3 trains the best 6 on 9,000. A fourth round would need 27,000 rows and we only have 12,000, so it stops and keeps the best of those 6. Total cost ≈ 48·1k + 16·3k + 6·9k = 150k row-fits, about the same as 12 full-data fits, for 48 candidates. Hyperband runs several such brackets with different starting budgets.</p>
-  <h3>Bayesian optimisation (Optuna / TPE)</h3>
-  <p>Random search ignores what it has learnt. Bayesian optimisation keeps a model of "score as a function of hyperparameters" built from past trials and picks the next trial where improvement looks most likely. Optuna's default sampler, TPE (Tree-structured Parzen Estimator), splits past trials into the best ~10–25% ("good") and the rest ("bad"), estimates the density of each over every knob, l(x) for good and g(x) for bad, and proposes the x with the largest ratio l(x)/g(x): values common among good trials and rare among bad ones. The first ~10 trials are random to get started. Optuna can also <strong>prune</strong> trials whose intermediate scores look hopeless, and an objective can use early stopping inside each trial, so each trial gets its own best number of trees.</p>
-  <h3>All four on the churn data</h3>
-  <p>LightGBM, learning rate 0.05, searching the same four knobs. Grid, random and halving use 3-fold CV on the 12,000 training rows (300 trees per fit) and refit the winner on all of them; Optuna (next block) uses the validation set with early stopping inside each trial. Everything is finally scored on the same 5,000 test rows. Times come from a busy shared machine with one thread per model.</p>
-  <div class="fx" data-lang="py">import lightgbm as lgb
-from scipy.stats import randint, uniform, loguniform
-from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, StratifiedKFold
-from sklearn.experimental import enable_halving_search_cv
-from sklearn.model_selection import HalvingRandomSearchCV
-from sklearn.metrics import roc_auc_score
-cv = StratifiedKFold(3, shuffle=True, random_state=0)
-clean = lambda d: {k: round(float(v), 3) if isinstance(v, float) else int(v) for k, v in d.items()}
-base = lgb.LGBMClassifier(n_estimators=300, learning_rate=0.05, verbose=-1, n_jobs=2)
-
-grid = {"num_leaves": [15, 63], "min_child_samples": [10, 50],
-        "colsample_bytree": [0.6, 1.0], "reg_lambda": [0.0, 5.0]}           # 2*2*2*2 = 16 combos
-t0 = time.time()
-gs = GridSearchCV(base, grid, cv=cv, scoring="roc_auc").fit(Xtr, ytr)
-print(f"grid    : 16 configs  best CV AUC {gs.best_score_:.4f}  test AUC {roc_auc_score(yte, gs.predict_proba(Xte)[:,1]):.4f}  {time.time()-t0:.0f}s  {clean(gs.best_params_)}")
-
-dist = {"num_leaves": randint(8, 256), "min_child_samples": randint(5, 100),
-        "colsample_bytree": uniform(0.5, 0.5), "reg_lambda": loguniform(1e-3, 10)}
-t0 = time.time()
-rs = RandomizedSearchCV(base, dist, n_iter=16, cv=cv, scoring="roc_auc", random_state=0).fit(Xtr, ytr)
-bp = clean(rs.best_params_)
-print(f"random  : 16 configs  best CV AUC {rs.best_score_:.4f}  test AUC {roc_auc_score(yte, rs.predict_proba(Xte)[:,1]):.4f}  {time.time()-t0:.0f}s  {bp}")
-
-t0 = time.time()
-hs = HalvingRandomSearchCV(base, dist, n_candidates=48, factor=3, resource="n_samples",
-                           min_resources=1000, cv=cv, scoring="roc_auc", random_state=0).fit(Xtr, ytr)
-bp = clean(hs.best_params_)
-print(f"halving : 48 configs  rounds {hs.n_iterations_}  candidates per round {list(hs.n_candidates_)}  rows {list(hs.n_resources_)}")
-print(f"          best CV AUC {hs.best_score_:.4f}  test AUC {roc_auc_score(yte, hs.predict_proba(Xte)[:,1]):.4f}  {time.time()-t0:.0f}s  {bp}")</div>
-  <div class="fx" data-lang="text">grid    : 16 configs  best CV AUC 0.9312  test AUC 0.9389  307s  {'colsample_bytree': 1.0, 'min_child_samples': 10, 'num_leaves': 63, 'reg_lambda': 0.0}
-random  : 16 configs  best CV AUC 0.9337  test AUC 0.9411  330s  {'colsample_bytree': 0.985, 'min_child_samples': 16, 'num_leaves': 182, 'reg_lambda': 0.027}
-halving : 48 configs  rounds 3  candidates per round [48, 16, 6]  rows [1000, 3000, 9000]
-          best CV AUC 0.9282  test AUC 0.9411  476s  {'colsample_bytree': 0.985, 'min_child_samples': 16, 'num_leaves': 182, 'reg_lambda': 0.027}</div>
-  <ul>
-    <li><strong>Grid</strong> (16 combinations of 2 values each): best CV AUC 0.9312, test 0.9389. It could only try 63 leaves at most.</li>
-    <li><strong>Random</strong> (16 draws): best CV 0.9337, test 0.9411. With the same budget it found a better region (182 leaves, 16 rows per leaf), because <code>num_leaves</code> got 16 different values instead of 2.</li>
-    <li><strong>Halving</strong> (48 candidates, 3 rounds: 48 → 16 → 6 candidates on 1,000 → 3,000 → 9,000 rows): picked the same winner, test 0.9411. Its "best CV" (0.9282) is lower only because the last round scored on 9,000-row fits, not 12,000. It examined 3× more candidates than random search. (Same seed, so its first 16 candidates are the same draws random search used; the winner was among them.)</li>
-    <li>All differences are a few thousandths of AUC. The default-ish LightGBM in the recipe (section 13) already reaches 0.936.</li>
-  </ul>
-  <p>Now Optuna. The objective function trains one model with the suggested values, uses early stopping on the validation set (so each trial also finds its own number of trees), and returns validation AUC. TPE proposes the next values from the history.</p>
-  <div class="fx" data-lang="py">import lightgbm as lgb, optuna
-from sklearn.metrics import roc_auc_score
-optuna.logging.set_verbosity(optuna.logging.WARNING)
-def objective(trial):
-    params = {"num_leaves": trial.suggest_int("num_leaves", 8, 256, log=True),
-              "min_child_samples": trial.suggest_int("min_child_samples", 5, 100),
-              "colsample_bytree": trial.suggest_float("colsample_bytree", 0.5, 1.0),
-              "reg_lambda": trial.suggest_float("reg_lambda", 1e-3, 10, log=True)}
-    m = lgb.LGBMClassifier(n_estimators=2000, learning_rate=0.05, verbose=-1, n_jobs=2, **params)
-    m.fit(Xtr, ytr, eval_X=Xva, eval_y=yva, eval_metric="auc",
-          callbacks=[lgb.early_stopping(50, verbose=False)])
-    trial.set_user_attr("trees", m.best_iteration_)
-    return roc_auc_score(yva, m.predict_proba(Xva)[:, 1])
-t0 = time.time()
-study = optuna.create_study(direction="maximize", sampler=optuna.samplers.TPESampler(seed=0))
-study.optimize(objective, n_trials=30)
-bp = {k: round(v, 3) if isinstance(v, float) else v for k, v in study.best_params.items()}
-print(f"optuna  : 30 trials  best val AUC {study.best_value:.4f}  trees {study.best_trial.user_attrs['trees']}  {time.time()-t0:.0f}s  {bp}")
-vals = [t.value for t in study.trials]
-print("          best-so-far after trials 1,5,10,20,30:", [round(max(vals[:k]), 4) for k in [1, 5, 10, 20, 30]])
-m = lgb.LGBMClassifier(n_estimators=study.best_trial.user_attrs["trees"], learning_rate=0.05, verbose=-1,
-                       n_jobs=2, **study.best_params).fit(Xtr, ytr)
-print(f"          refit with best params -&gt; test AUC {roc_auc_score(yte, m.predict_proba(Xte)[:,1]):.4f}")</div>
-  <div class="fx" data-lang="text">optuna  : 30 trials  best val AUC 0.9435  trees 137  467s  {'num_leaves': 252, 'min_child_samples': 7, 'colsample_bytree': 0.926, 'reg_lambda': 0.004}
-          best-so-far after trials 1,5,10,20,30: [0.936, 0.9395, 0.9395, 0.9432, 0.9435]
-          refit with best params -&gt; test AUC 0.9415</div>
-  <ul>
-    <li><strong>The learning curve of the search:</strong> the best validation AUC after 1, 5, 10, 20 and 30 trials was 0.936, 0.9395, 0.9395, 0.9432, 0.9435. Most of the gain came in the first 20 trials, once TPE had enough history to focus on large <code>num_leaves</code> and small <code>min_child_samples</code>.</li>
-    <li><strong>Its winner</strong> (252 leaves, 7 rows per leaf, early-stopped at 137 trees) is a very different model from the grid's winner (63 leaves, 300 trees), yet both are good: the score surface is flat near the top, so many settings are nearly as good.</li>
-    <li><strong>Optimism again:</strong> 0.9435 was the best of 30 scores on the same validation rows that also chose each trial's number of trees. Refit and scored on the untouched test set it is 0.9415. Always report the test number.</li>
-  </ul>
+  <h2 id="mtt-es"><span class="num">03</span>Early Stopping</h2>
+  <p>One hyperparameter of a booster is special: the number of trees, also called rounds. A booster adds trees one at a time, each fitting what is left of the training error. After some point what is left is mostly noise, and the validation loss starts to rise. The right number of rounds depends on the learning rate, the tree size and the data, so it would have to be searched again for every combination of the other settings. <strong>Early stopping</strong> finds it during a single training run: after each round, compute the loss on a validation set and remember the best so far; if it has not improved for <em>patience</em> rounds in a row, stop and keep the model from the best round.</p>
+  <p>Here is the rule on a made-up but typical sequence (14 diary days are too few for a meaningful validation curve), with patience 3 and validation losses 0.52, 0.47, 0.44, 0.43, 0.431, 0.433, 0.436:</p>
   <table class="tbl">
-    <tr><th>Strategy</th><th>Uses past results?</th><th>Strength</th><th>Weakness</th><th>Use when</th></tr>
-    <tr><td>Grid</td><td>No</td><td>Simple, exhaustive, reproducible</td><td>Explodes with knobs; wastes trials on unimportant knobs</td><td>1–2 knobs, few values</td></tr>
-    <tr><td>Random</td><td>No</td><td>Covers important knobs well; trivially parallel</td><td>Keeps sampling bad regions</td><td>Default for 3+ knobs</td></tr>
-    <tr><td>Successive halving / Hyperband</td><td>Partly (drops losers)</td><td>Many candidates cheaply</td><td>Small budgets can mis-rank (some settings start slow)</td><td>Expensive models, big search spaces</td></tr>
-    <tr><td>Bayesian (TPE, GP)</td><td>Yes</td><td>Fewest trials for a good result; pruning</td><td>Sequential by nature; more machinery</td><td>Each trial is costly; 20–200 trials</td></tr>
+    <tr><th>round</th><th>validation loss</th><th>best so far</th><th>rounds without improvement</th><th>action</th></tr>
+    <tr><td>1–4</td><td>0.52, 0.47, 0.44, 0.43</td><td>0.43 (round 4)</td><td>0</td><td>continue</td></tr>
+    <tr><td>5</td><td>0.431</td><td>0.43 (round 4)</td><td>1</td><td>continue</td></tr>
+    <tr><td>6</td><td>0.433</td><td>0.43 (round 4)</td><td>2</td><td>continue</td></tr>
+    <tr><td>7</td><td>0.436</td><td>0.43 (round 4)</td><td>3</td><td>stop; keep 4 rounds</td></tr>
   </table>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Search ranges matter more than the search method. Use log scales for learning rate, λ and α (0.001 to 10, not 0 to 10 linearly), keep <code>num_leaves</code> &lt; 2^max_depth, and widen a range if the best value lands on its edge.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Early stopping.</b> One knob was deliberately left out of every search: the number of trees. Boosting has a better way to choose it than searching.</div>
-
-  <h2 id="mtt-es"><span class="num">05</span>Early Stopping</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Every search above fixed the number of boosting rounds. But the right number depends on the learning rate, tree size and data, and would have to be re-searched for every combination. Can a single training run find it?</p>
-  </div>
-  <p><strong>The need.</strong> A booster keeps fitting the remaining training error round after round; after some point that error is noise, and validation loss rises. The right number of rounds depends on the learning rate, tree size and data, so it would have to be re-searched for every combination. Early stopping finds it during a single training run.</p>
-  <h3>The rule, by hand</h3>
-  <p>After each round, compute the validation loss. Remember the best so far. If it has not improved for <em>patience</em> rounds, stop and keep the model from the best round. A made-up but typical sequence (14 diary days are too few for a meaningful validation curve): with patience 3 and validation losses 0.52, 0.47, 0.44, 0.43, 0.431, 0.433, 0.436:</p>
-  <table class="tbl">
-    <tr><th>round</th><th>val loss</th><th>best so far</th><th>rounds without improvement</th><th>action</th></tr>
-    <tr><td>1</td><td>0.52</td><td>0.52 (r1)</td><td>0</td><td>continue</td></tr>
-    <tr><td>2</td><td>0.47</td><td>0.47 (r2)</td><td>0</td><td>continue</td></tr>
-    <tr><td>3</td><td>0.44</td><td>0.44 (r3)</td><td>0</td><td>continue</td></tr>
-    <tr><td>4</td><td>0.43</td><td>0.43 (r4)</td><td>0</td><td>continue</td></tr>
-    <tr><td>5</td><td>0.431</td><td>0.43 (r4)</td><td>1</td><td>continue</td></tr>
-    <tr><td>6</td><td>0.433</td><td>0.43 (r4)</td><td>2</td><td>continue</td></tr>
-    <tr><td>7</td><td>0.436</td><td>0.43 (r4)</td><td>3</td><td><b>stop; keep 4 rounds</b></td></tr>
-  </table>
-  <p>Patience exists because validation loss is noisy: one bad round should not stop training. Typical patience: 50–200 rounds at learning rate 0.05.</p>
-  <h3>What happens without it</h3>
-  <p>A LightGBM run with no stopping (learning rate 0.1, 63 leaves), recording train and validation log loss after every one of 3,000 rounds:</p>
-  <div class="fx" data-lang="py">import lightgbm as lgb
-m = lgb.LGBMClassifier(n_estimators=3000, learning_rate=0.1, num_leaves=63, verbose=-1)
-m.fit(Xtr, ytr, eval_X=(Xtr, Xva), eval_y=(ytr, yva), eval_names=["train", "val"])
-tr = m.evals_result_["train"]["binary_logloss"]                  # loss per round
+  <p>Patience exists because validation loss is noisy and one bad round should not end training; at a learning rate of 0.05, a patience of 50 to 200 rounds is typical. To see what happens without it, the code trains a LightGBM booster for 3,000 rounds with no stopping and records the training and validation <strong>log loss</strong> (the average of −log of the probability given to the true class, so lower is better) after every round:</p>
+  <div class="fx" data-lang="py">import numpy as np, lightgbm as lgb
+from churn import Xtr, ytr, Xva, yva
+m = lgb.LGBMClassifier(n_estimators=3000, learning_rate=0.1, num_leaves=63, verbose=-1, random_state=0)
+m.fit(Xtr, ytr, eval_set=[(Xtr, ytr), (Xva, yva)], eval_names=["train", "val"])   # no early stopping
+tr = m.evals_result_["train"]["binary_logloss"]                  # log loss after every round
 va = m.evals_result_["val"]["binary_logloss"]
 best = int(np.argmin(va)) + 1
 for r in [10, 50, 100, best, 500, 1000, 3000]:
     print(f"round {r:4d}  train logloss {tr[r-1]:.3f}  val logloss {va[r-1]:.3f}")
-print("best round (min val loss):", best)
-np.save("es_curves.npy", np.array([tr, va]))</div>
+print("best round (lowest validation loss):", best)</div>
   <div class="fx" data-lang="text">round   10  train logloss 0.449  val logloss 0.464
 round   50  train logloss 0.250  val logloss 0.332
 round  100  train logloss 0.173  val logloss 0.317
@@ -482,69 +153,223 @@ round  204  train logloss 0.086  val logloss 0.308
 round  500  train logloss 0.013  val logloss 0.347
 round 1000  train logloss 0.000  val logloss 0.465
 round 3000  train logloss 0.000  val logloss 0.752
-best round (min val loss): 204</div>
+best round (lowest validation loss): 204</div>
   <figure class="viz"><svg viewBox="0 0 560 235" width="560">
 <line x1="50" y1="200" x2="515" y2="200" stroke="currentColor"/><line x1="50" y1="20" x2="50" y2="200" stroke="currentColor"/>
-<text x="44" y="204" text-anchor="end" class="tm" font-size="11">0</text><text x="44" y="152" text-anchor="end" class="tm" font-size="11">0.2</text><text x="44" y="101" text-anchor="end" class="tm" font-size="11">0.4</text><text x="44" y="50" text-anchor="end" class="tm" font-size="11">0.6</text>
+<text x="44" y="204" text-anchor="end" class="tm" font-size="11">0</text><text x="44" y="156" text-anchor="end" class="tm" font-size="11">0.2</text><text x="44" y="108" text-anchor="end" class="tm" font-size="11">0.4</text><text x="44" y="60" text-anchor="end" class="tm" font-size="11">0.6</text>
 <text x="50" y="216" text-anchor="middle" class="tm" font-size="11">1</text><text x="234" y="216" text-anchor="middle" class="tm" font-size="11">400</text><text x="418" y="216" text-anchor="middle" class="tm" font-size="11">800</text><text x="510" y="216" text-anchor="middle" class="tm" font-size="11">1000</text>
-<text x="280" y="232" text-anchor="middle" class="tm" font-size="12">boosting round (LightGBM, lr 0.1, 63 leaves)</text>
-<polyline points="50,32 51,56 53,72 54,84 56,94 57,101 58,107 60,112 61,116 62,119 64,123 68,131 73,136 78,141 82,145 87,149 91,153 96,156 110,164 124,171 137,176 143,178 151,180 165,183 179,186 193,189 207,191 220,192 234,194 248,195 262,196 276,197 289,197 303,198 317,198 331,198 345,199 359,199 372,199 386,199 400,199 414,200 428,200 441,200 455,200 469,200 483,200 497,200 510,200" fill="none" class="sb" stroke-width="2"/>
-<polyline points="50,32 51,55 53,70 54,81 56,89 57,95 58,100 60,103 61,106 62,108 64,110 68,114 73,115 78,116 82,116 87,117 91,118 96,118 110,119 124,120 137,120 143,121 151,121 165,120 179,119 193,119 207,118 220,116 234,115 248,113 262,113 276,111 289,110 303,109 317,107 331,105 345,104 359,102 372,100 386,98 400,97 414,95 428,93 441,90 455,89 469,87 483,85 497,83 510,80" fill="none" class="sr" stroke-width="2"/>
+<text x="280" y="232" text-anchor="middle" class="tm" font-size="12">boosting round (LightGBM, learning rate 0.1, 63 leaves)</text>
+<polyline points="50,44 50,52 51,59 51,66 52,71 52,76 53,81 53,85 54,89 54,92 56,105 59,115 61,122 63,127 66,131 68,135 70,137 73,140 75,142 77,145 79,147 82,149 84,150 86,152 89,154 91,156 93,157 96,159 100,161 109,166 119,171 128,174 137,177 146,180 155,182 165,184 174,186 183,188 192,189 201,191 211,192 220,193 229,194 238,195 248,195 257,196 266,196 275,197 284,197 294,198 303,198 312,198 321,198 330,199 340,199 349,199 358,199 367,199 376,199 386,199 395,199 404,199 413,200 423,200 432,200 441,200 450,200 459,200 469,200 478,200 487,200 496,200 505,200" fill="none" class="sb" stroke-width="2"/>
+<polyline points="50,43 50,51 51,58 51,64 52,69 52,74 53,79 53,82 54,86 54,89 56,100 59,108 61,113 63,116 66,118 68,119 70,120 73,120 75,121 77,121 79,122 82,122 84,122 86,122 89,123 91,123 93,124 96,124 100,124 109,124 119,125 128,126 137,126 146,126 155,126 165,125 174,125 183,124 192,124 201,124 211,123 220,122 229,121 238,120 248,119 257,119 266,118 275,117 284,116 294,116 303,115 312,114 321,113 330,112 340,111 349,110 358,109 367,108 376,106 386,105 395,104 404,103 413,102 423,101 432,99 441,98 450,96 459,95 469,94 478,93 487,92 496,90 505,89" fill="none" class="sr" stroke-width="2"/>
 <line x1="143" y1="25" x2="143" y2="200" class="sg" stroke-dasharray="4 3" stroke-width="2"/>
-<text x="150" y="40" class="tg" font-size="12">best round 204: val 0.308</text>
-<text x="400" y="72" class="tr" font-size="12">validation ↑ 0.465</text>
-<text x="400" y="190" class="tb" font-size="12">train → 0.000</text>
+<text x="150" y="40" class="tg" font-size="12">best round 204: validation 0.308</text>
+<text x="390" y="78" class="tr" font-size="12">validation ↑ 0.465</text>
+<text x="400" y="190" class="tb" font-size="12">training → 0.000</text>
 <text x="56" y="30" class="tm" font-size="11">log loss</text>
-</svg><figcaption>Training loss keeps falling; validation loss bottoms out at round 204 and then climbs as the model fits noise.</figcaption></figure>
-  <p>Validation loss bottoms out at round 204 (0.308) and then climbs to 0.752 by round 3,000 while training loss reaches 0. A model taken at round 3,000 is far worse than at 204.</p>
-  <h3>The API in each library</h3>
+</svg><figcaption>Training loss (blue) keeps falling towards zero; validation loss (red) bottoms out at round 204 and then climbs as the model fits noise. The first 1,000 of the 3,000 rounds are shown.</figcaption></figure>
+  <p>Follow the two lines in the figure. The blue training loss falls steadily and reaches zero: the model ends up memorising every training customer. The red validation loss falls at first, reaches its lowest point at the round marked by the dashed line, and then climbs, slowly at first and then steadily, as each new tree fits noise. By round 3,000 the validation loss is more than twice its best value, so a model taken at the end is far worse than the one at the best round, and early stopping would simply have kept that best one. Every library supports it:</p>
   <table class="tbl">
     <tr><th>Library</th><th>Early stopping</th><th>Best round</th></tr>
-    <tr><td>XGBoost</td><td><code>XGBClassifier(early_stopping_rounds=100, eval_metric="logloss")</code>, <code>fit(..., eval_set=[(Xva, yva)])</code></td><td><code>best_iteration</code></td></tr>
-    <tr><td>LightGBM</td><td><code>fit(..., eval_X=Xva, eval_y=yva, callbacks=[lgb.early_stopping(100)])</code></td><td><code>best_iteration_</code></td></tr>
-    <tr><td>CatBoost</td><td><code>CatBoostClassifier(early_stopping_rounds=100)</code>, <code>fit(..., eval_set=(Xva, yva))</code></td><td><code>get_best_iteration()</code></td></tr>
-    <tr><td>HistGradientBoosting</td><td><code>early_stopping=True, validation_fraction=0.1, n_iter_no_change=10</code> (carves its own split)</td><td><code>n_iter_</code></td></tr>
-    <tr><td>sklearn GradientBoosting</td><td><code>n_iter_no_change=10, validation_fraction=0.1</code></td><td><code>n_estimators_</code></td></tr>
+    <tr><td>XGBoost</td><td><code>XGBClassifier(early_stopping_rounds=100)</code>, <code>fit(X, y, eval_set=[(Xva, yva)])</code></td><td><code>best_iteration</code></td></tr>
+    <tr><td>LightGBM</td><td><code>fit(X, y, eval_set=[(Xva, yva)], callbacks=[lgb.early_stopping(100)])</code></td><td><code>best_iteration_</code></td></tr>
+    <tr><td>CatBoost</td><td><code>CatBoostClassifier(early_stopping_rounds=100)</code>, <code>fit(X, y, eval_set=(Xva, yva))</code></td><td><code>get_best_iteration()</code></td></tr>
+    <tr><td>HistGradientBoosting</td><td><code>early_stopping=True, n_iter_no_change=10, validation_fraction=0.1</code></td><td><code>n_iter_</code></td></tr>
   </table>
-  <h3>Early stopping with cross-validation, then refitting</h3>
-  <p>A single validation split gives a noisy best round. <code>lgb.cv</code> (and <code>xgb.cv</code>) run k folds in lock-step and stop when the <em>mean</em> fold loss stops improving. Then you refit on all training data with that many rounds (a bit more, since the final fit sees more rows):</p>
-  <div class="fx" data-lang="py">import lightgbm as lgb
+  <p>A single validation split gives a noisy best round. <code>lgb.cv</code> (and <code>xgb.cv</code>) run k folds side by side and stop when the <em>average</em> fold loss stops improving. You then refit on all the training data with that many rounds, or a little more, since the final fit sees more rows:</p>
+  <div class="fx" data-lang="py">import numpy as np, pandas as pd, lightgbm as lgb
+from churn import Xtr, ytr, Xva, yva, Xte, yte
 from sklearn.metrics import roc_auc_score
-dtr = lgb.Dataset(Xtr, ytr)
 params = {"objective": "binary", "learning_rate": 0.05, "num_leaves": 31, "verbose": -1, "seed": 0}
-cvres = lgb.cv(params, dtr, num_boost_round=3000, nfold=5, stratified=True, seed=0,
+cvres = lgb.cv(params, lgb.Dataset(Xtr, ytr), num_boost_round=3000, nfold=5, stratified=True, seed=0,
                callbacks=[lgb.early_stopping(50, verbose=False)])
 best = len(cvres["valid binary_logloss-mean"])
-print(f"5-fold CV early stopping: best rounds {best}, CV logloss {cvres['valid binary_logloss-mean'][-1]:.4f}")
+print(f"5-fold CV early stopping: best rounds {best}, mean CV logloss {cvres['valid binary_logloss-mean'][-1]:.4f}")
 Xall, yall = pd.concat([Xtr, Xva]), np.concatenate([ytr, yva])
 for rounds in [best, int(best * 1.15)]:
     m = lgb.train(params, lgb.Dataset(Xall, yall), num_boost_round=rounds)
     print(f"refit on train+val with {rounds} rounds -&gt; test AUC {roc_auc_score(yte, m.predict(Xte)):.4f}")</div>
-  <div class="fx" data-lang="text">5-fold CV early stopping: best rounds 587, CV logloss 0.3399
+  <div class="fx" data-lang="text">5-fold CV early stopping: best rounds 587, mean CV logloss 0.3399
 refit on train+val with 587 rounds -&gt; test AUC 0.9385
 refit on train+val with 675 rounds -&gt; test AUC 0.9389</div>
-  <p>5-fold CV picks 587 rounds. Refitting on train + validation (15,000 rows) with 587 or 15% more rounds gives test AUC 0.9385 and 0.9389: the exact count matters little near the optimum, which is why "about right" is good enough.</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>The validation set used for early stopping helped choose the model, so its score is optimistic. Report a separate test set. And when early stopping is used inside a hyperparameter search, the search's validation data must not be the test data.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Class imbalance.</b> All our runs so far used a balanced 50/50 target and the default 0.5 threshold. Real targets are often rare, and real mistakes cost different amounts.</div>
+  <p>Five-fold CV picks 587 rounds, and refitting on train plus validation with 587 or 15% more rounds gives almost the same test AUC: near the best point the exact count matters little, which is why "about right" is good enough. One caution: the validation rows used for early stopping helped choose the model, so their score is optimistic too, and when early stopping runs inside a hyperparameter search, its validation rows must never be the test rows.</p>
 
-  <h2 id="mtt-imb"><span class="num">06</span>Class Imbalance</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Accuracy treats every mistake as equally bad, and the default threshold 0.5 assumes it too. What if missing a positive costs far more than a false alarm, or positives are rare?</p>
-  </div>
-  <p><strong>The need.</strong> Fraud is 1 transaction in 1,000; serious churn might be 5 customers in 100. A model that always says "no" scores 95–99.9% accuracy and is useless. Trees are not broken by imbalance (they rank rare cases fine), but three things go wrong if you do nothing: accuracy hides failure, the default 0.5 threshold catches almost nobody, and leaf-size limits can stop trees from isolating the rare class.</p>
-  <h3>The levers, worked by hand</h3>
-  <ol>
-    <li><strong>Measure the right thing.</strong> Use PR-AUC (average precision) and recall/precision at your operating threshold, not accuracy. A random model's PR-AUC equals the positive rate (0.05 here), so 0.42 is a big improvement even though it looks low. (<a class="xref" data-note="ml_evaluation">Model Evaluation</a>.)</li>
-    <li><strong>Move the threshold using costs.</strong> Say a missed churner costs ₹2,000 of lost revenue and a retention offer costs ₹200. Offer when expected loss avoided &gt; cost: p · 2,000 &gt; 200 → p &gt; 0.1. In general, threshold = C_FP / (C_FP + C_FN) = 200 / 2,200 = <strong>0.091</strong>. The 0.5 default assumes both mistakes cost the same.</li>
-    <li><strong>Weight the rare class.</strong> <code>scale_pos_weight = n_neg / n_pos</code> (XGBoost/LightGBM) or <code>class_weight="balanced"</code> multiplies each positive row's gradient and Hessian by w, as if it appeared w times. With 5,977 negatives and 314 positives, w = <strong>19.0</strong>.</li>
-    <li><strong>Resample</strong> (undersample the majority, oversample or SMOTE the minority). Always inside the training folds only. With trees, weights usually do the same job more cheaply.</li>
-  </ol>
-  <p>Weighting changes the probabilities in a predictable way: the odds are multiplied by w. A row the unweighted model would score p = 0.05 (odds 0.05/0.95) becomes odds 19 × 0.0526 = 1.0, i.e. p′ = 0.5. To undo it: p = p′ / (p′ + w·(1 − p′)) = 0.5 / (0.5 + 19 × 0.5) = 0.05. So a weighted model's probabilities are not real probabilities until you correct or calibrate them (section 07).</p>
-  <h3>On the diary: when to book the ground</h3>
-  <p>The captain must book the ground in the morning. A booking nobody uses costs ₹500 (a false positive); a league match forfeited because nothing was booked costs ₹3,000 (a false negative). So book when P(play) &gt; C_FP / (C_FP + C_FN) = 500 / 3,500 = <strong>0.143</strong>, not 0.5. The probabilities come from a 200-tree random forest, each day predicted by a forest trained on the other 13 days:</p>
-<div class="fx" data-lang="py">import numpy as np, pandas as pd
+  <h2 id="mtt-knobs"><span class="num">04</span>Which Knobs Matter</h2>
+  <p>A booster has a dozen or more hyperparameters, and searching all of them wastes the budget. It helps to know that every knob does one of three jobs. Some make each tree <strong>simpler</strong> (lower variance, higher bias): maximum depth, number of leaves, minimum rows per leaf. Some make the trees <strong>different from each other</strong>, which helps averaging and slows over-fitting: the share of columns or rows each tree sees. And in boosting some control <strong>how much each tree contributes</strong>: the learning rate and the number of rounds. The table lists the knobs worth knowing per model, with how much they usually matter.</p>
+  <div style="overflow-x:auto"><table class="tbl">
+    <tr><th>Model</th><th>Knob</th><th>Impact</th><th>Raising it…</th><th>Typical range</th></tr>
+    <tr><td rowspan="3"><a class="xref" data-note="ml_dtree">Decision tree</a></td><td><code>max_depth</code></td><td>high</td><td>more complex: lower bias, higher variance</td><td>3–15</td></tr>
+    <tr><td><code>min_samples_leaf</code></td><td>high</td><td>smoother tree, less over-fitting</td><td>1–100</td></tr>
+    <tr><td><code>ccp_alpha</code></td><td>high</td><td>more pruning, smaller tree</td><td>from <code>cost_complexity_pruning_path</code></td></tr>
+    <tr><td rowspan="3"><a class="xref" data-note="ml_rf">Random forest</a> / <a class="xref" data-note="ml_extratrees">Extra Trees</a></td><td><code>max_features</code></td><td>medium–high</td><td>trees more alike, each stronger</td><td>sqrt, 0.3–0.5</td></tr>
+    <tr><td><code>min_samples_leaf</code></td><td>medium</td><td>smaller model, can cost accuracy</td><td>1–10</td></tr>
+    <tr><td><code>n_estimators</code></td><td>low after ~200</td><td>lower variance, never over-fits, slower</td><td>300–1000</td></tr>
+    <tr><td rowspan="4"><a class="xref" data-note="ml_gbm">Gradient boosting</a> (sklearn, HistGB)</td><td><code>learning_rate</code></td><td>highest</td><td>fewer trees needed, over-fits sooner</td><td>0.01–0.1</td></tr>
+    <tr><td><code>n_estimators</code> / <code>max_iter</code></td><td>highest</td><td>let early stopping choose</td><td>up to thousands</td></tr>
+    <tr><td><code>max_depth</code> / <code>max_leaf_nodes</code></td><td>high</td><td>deeper interactions per tree</td><td>depth 3–8, 15–63 leaves</td></tr>
+    <tr><td><code>min_samples_leaf</code>, <code>subsample</code></td><td>medium</td><td>smoother leaves; random rows per tree</td><td>20–200; 0.5–0.9</td></tr>
+    <tr><td rowspan="4"><a class="xref" data-note="ml_xgboost">XGBoost</a></td><td><code>learning_rate</code> + rounds</td><td>highest</td><td>as above, always with early stopping</td><td>0.01–0.1</td></tr>
+    <tr><td><code>max_depth</code></td><td>high</td><td>interaction order, complexity</td><td>4–10</td></tr>
+    <tr><td><code>min_child_weight</code></td><td>medium–high</td><td>blocks leaves with too little Hessian (too few rows)</td><td>1–20</td></tr>
+    <tr><td><code>subsample</code>, <code>colsample_bytree</code>, <code>gamma</code>, <code>lambda</code>, <code>alpha</code></td><td>low–medium</td><td>random rows/columns; minimum gain; L2/L1 on leaf values</td><td>0.6–0.9; 0–5; 0–10</td></tr>
+    <tr><td rowspan="3"><a class="xref" data-note="ml_lightgbm">LightGBM</a></td><td><code>learning_rate</code> + rounds</td><td>highest</td><td>as above</td><td>0.01–0.1</td></tr>
+    <tr><td><code>num_leaves</code></td><td>high</td><td>main complexity knob for leaf-wise trees</td><td>15–255</td></tr>
+    <tr><td><code>min_child_samples</code>, <code>feature_fraction</code>, <code>bagging_fraction</code></td><td>medium</td><td>blocks tiny leaves; random columns/rows</td><td>20–200; 0.6–0.9</td></tr>
+    <tr><td rowspan="2"><a class="xref" data-note="ml_catboost">CatBoost</a></td><td><code>learning_rate</code> + <code>iterations</code>, <code>depth</code></td><td>high</td><td>as above; symmetric tree depth</td><td>0.02–0.1; 4–10</td></tr>
+    <tr><td><code>l2_leaf_reg</code></td><td>medium</td><td>shrinks leaf values</td><td>1–10</td></tr>
+  </table></div>
+  <p>The diary cannot show which knobs matter, so this section works on churn. First the random forest, one knob at a time:</p>
+  <div class="fx" data-lang="py">from churn import Xtr, ytr, Xva, yva
+from sklearn.ensemble import RandomForestClassifier
+def rf(**kw):
+    return RandomForestClassifier(**{"n_estimators": 200, "n_jobs": 2, "random_state": 0, **kw}).fit(Xtr, ytr)
+for mf in [1, "sqrt", 7, None]:
+    print(f"max_features={str(mf):5s}      val acc {rf(max_features=mf).score(Xva, yva):.3f}")
+for leaf in [1, 5, 20, 100]:
+    m = rf(min_samples_leaf=leaf)
+    print(f"min_samples_leaf={leaf:&lt;4d} train acc {m.score(Xtr, ytr):.3f}  val acc {m.score(Xva, yva):.3f}")
+for n in [10, 50, 200, 500]:
+    print(f"n_estimators={n:&lt;4d}     val acc {rf(n_estimators=n).score(Xva, yva):.3f}")</div>
+  <div class="fx" data-lang="text">max_features=1          val acc 0.844
+max_features=sqrt       val acc 0.881
+max_features=7          val acc 0.885
+max_features=None       val acc 0.885
+min_samples_leaf=1    train acc 1.000  val acc 0.881
+min_samples_leaf=5    train acc 0.963  val acc 0.873
+min_samples_leaf=20   train acc 0.897  val acc 0.858
+min_samples_leaf=100  train acc 0.825  val acc 0.816
+n_estimators=10       val acc 0.847
+n_estimators=50       val acc 0.872
+n_estimators=200      val acc 0.881
+n_estimators=500      val acc 0.879</div>
+  <p>Using one random column per split is too random; the default √14 ≈ 3 is good, and 7 or all 14 columns are a little better on this data, because stronger, more alike trees win slightly here. That is why <code>max_features</code> is worth trying at a few values. Larger leaves smooth every tree and steadily lose accuracy, while making the model much smaller (section 10): forests rely on deep trees and let the averaging handle the variance. More trees help up to about 200 and then the score is flat within noise. More trees never hurt a forest's accuracy; they only cost time and memory.</p>
+  <p>Next the two knobs that matter most for any booster, the learning rate and the tree size, changed one at a time on LightGBM, with early stopping choosing the number of trees for every run:</p>
+  <div class="fx" data-lang="py">import lightgbm as lgb
+from churn import Xtr, ytr, Xva, yva, Xte, yte
+def fit(**kw):                                  # early stopping picks the number of trees every time
+    m = lgb.LGBMClassifier(n_estimators=5000, verbose=-1, random_state=0, **kw)
+    return m.fit(Xtr, ytr, eval_set=[(Xva, yva)], callbacks=[lgb.early_stopping(100, verbose=False)])
+for lr in [0.3, 0.1, 0.03]:
+    m = fit(learning_rate=lr, num_leaves=31)
+    print(f"learning_rate={lr:&lt;5} best trees {m.best_iteration_:5d}  test acc {m.score(Xte, yte):.3f}")
+for nl in [4, 15, 63, 255]:
+    m = fit(learning_rate=0.05, num_leaves=nl)
+    print(f"num_leaves={nl:&lt;4d}   best trees {m.best_iteration_:5d}  train acc {m.score(Xtr, ytr):.3f}  test acc {m.score(Xte, yte):.3f}")</div>
+  <div class="fx" data-lang="text">learning_rate=0.3   best trees    68  test acc 0.851
+learning_rate=0.1   best trees   216  test acc 0.869
+learning_rate=0.03  best trees  1154  test acc 0.874
+num_leaves=4      best trees  3476  train acc 0.913  test acc 0.851
+num_leaves=15     best trees  1116  train acc 0.966  test acc 0.864
+num_leaves=63     best trees   418  train acc 0.996  test acc 0.877
+num_leaves=255    best trees   124  train acc 1.000  test acc 0.873</div>
+  <p>A learning rate ten times smaller needed many times more trees and gained a couple of points of accuracy: small steps average out the noise of each tree, and the price is training time. With 4 leaves each tree cannot combine enough columns, and even thousands of trees fall short; with 255 leaves the model memorises the training rows within a hundred or so rounds and slips on test; a middle size such as 63 leaves is the sweet spot here. The lesson is that the learning rate and the number of trees are one knob in disguise, since their product is roughly how far the model moves. Fix the learning rate (0.05 is a good default), let early stopping choose the trees, and spend the search on tree size, leaf size and sampling. Searching <code>n_estimators</code> of a booster in a grid without early stopping wastes the budget, and tuning <code>n_estimators</code> of a forest at all is mostly pointless.</p>
+  <p>Because a few knobs dominate, sensible defaults go a long way. The recipes below are good starting points on most tables: start here, check the validation score, and only then tune the knobs marked high in the table above.</p>
+  <table class="tbl">
+    <tr><th>Model</th><th>Start with</th><th>Then tune</th></tr>
+    <tr><td>Decision tree</td><td><code>ccp_alpha</code> from the pruning path by CV, <code>min_samples_leaf</code> 5–20</td><td><code>max_depth</code>, <code>min_samples_leaf</code></td></tr>
+    <tr><td>Random forest</td><td>500 trees, <code>max_features="sqrt"</code>, <code>min_samples_leaf=1</code></td><td><code>max_features</code>, <code>min_samples_leaf</code></td></tr>
+    <tr><td>HistGradientBoosting</td><td>learning rate 0.05, many iterations with early stopping, 31 leaves</td><td><code>max_leaf_nodes</code>, <code>min_samples_leaf</code></td></tr>
+    <tr><td>XGBoost</td><td>learning rate 0.05, early stopping 100, depth 6, subsample and colsample 0.8</td><td>depth, <code>min_child_weight</code>, sampling, λ</td></tr>
+    <tr><td>LightGBM</td><td>learning rate 0.05, early stopping 100, 31 leaves, bagging and feature fraction 0.8</td><td><code>num_leaves</code>, <code>min_child_samples</code>, sampling</td></tr>
+    <tr><td>CatBoost</td><td>learning rate 0.05, early stopping 100, depth 6, <code>cat_features</code> set</td><td>depth, <code>l2_leaf_reg</code></td></tr>
+  </table>
+  <div class="fx" data-lang="py">import time, numpy as np, xgboost as xgb, lightgbm as lgb
+from catboost import CatBoostClassifier
+from churn import Xtr, ytr, Xva, yva, Xte, yte
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier, HistGradientBoostingClassifier
+from sklearn.metrics import roc_auc_score
+recipes = {
+  "Decision tree": (DecisionTreeClassifier(min_samples_leaf=5, ccp_alpha=3e-4, random_state=0), {}),
+  "Random forest": (RandomForestClassifier(n_estimators=500, max_features="sqrt", n_jobs=2, random_state=0), {}),
+  "HistGradientBoosting": (HistGradientBoostingClassifier(learning_rate=0.05, max_iter=3000, max_leaf_nodes=31,
+                           l2_regularization=1.0, early_stopping=True, n_iter_no_change=100, random_state=0), {}),
+  "XGBoost": (xgb.XGBClassifier(n_estimators=5000, learning_rate=0.05, max_depth=6, subsample=0.8,
+              colsample_bytree=0.8, early_stopping_rounds=100, n_jobs=1, random_state=0),
+              {"eval_set": [(Xva, yva)], "verbose": False}),
+  "LightGBM": (lgb.LGBMClassifier(n_estimators=5000, learning_rate=0.05, num_leaves=31, subsample=0.8, subsample_freq=1,
+               colsample_bytree=0.8, verbose=-1, random_state=0),
+               {"eval_set": [(Xva, yva)], "callbacks": [lgb.early_stopping(100, verbose=False)]}),
+  "CatBoost": (CatBoostClassifier(iterations=5000, learning_rate=0.05, depth=6, early_stopping_rounds=100,
+               verbose=False, random_seed=0), {"eval_set": (Xva, yva)}),
+}
+for name, (m, fit_kw) in recipes.items():
+    t0 = time.time(); m.fit(Xtr, ytr, **fit_kw)
+    p = m.predict_proba(Xte)[:, 1]
+    print(f"{name:21s} test acc {np.mean((p &gt; 0.5) == yte):.3f}  AUC {roc_auc_score(yte, p):.3f}  fit {time.time()-t0:5.1f}s")</div>
+  <div class="fx" data-lang="text">Decision tree         test acc 0.810  AUC 0.870  fit   1.1s
+Random forest         test acc 0.877  AUC 0.937  fit  56.1s
+HistGradientBoosting  test acc 0.869  AUC 0.935  fit  17.9s
+XGBoost               test acc 0.870  AUC 0.936  fit  24.0s
+LightGBM              test acc 0.874  AUC 0.936  fit  17.7s
+CatBoost              test acc 0.874  AUC 0.938  fit  67.2s</div>
+  <p>With no search at all, every ensemble recipe lands within a few thousandths of AUC of the others, and the single tree shows what the ensembles buy. From here, tuning is worth at most a few tenths of a point on this data; on harder data, with more rows, more interactions and more categories, the boosters usually pull ahead once tree size and sampling are tuned. (Fit times are approximate and come from a busy shared machine.)</p>
+
+  <h2 id="mtt-search"><span class="num">05</span>Search Strategies</h2>
+  <p>With the important knobs known and an honest score for each candidate, the remaining question is which candidates to try within a budget. <strong>Grid search</strong> lists a few values for each knob and tries every combination. With <code>num_leaves</code> in {15, 63}, <code>min_child_samples</code> in {10, 50}, <code>colsample_bytree</code> in {0.6, 1.0} and <code>reg_lambda</code> in {0, 5}, that is 2 × 2 × 2 × 2 = 16 combinations, or 48 fits with 3-fold CV. One more knob with 4 values makes it 64 combinations. Grids grow exponentially with the number of knobs, and they waste trials: if only <code>num_leaves</code> really matters, 16 trials have tested just 2 values of it.</p>
+  <p><strong>Random search</strong> draws each knob from a range (on a log scale for knobs like the learning rate or λ, whose useful values span several powers of ten) for a fixed number of trials. Every trial tries a new value of every knob, so the important knob gets 16 different values in 16 trials. There is a neat argument for it (Bergstra and Bengio, 2012): if the best 5% of all settings count as "good", each random trial lands there with probability 0.05, so n trials all miss with probability 0.95ⁿ. For n = 60 that is 0.046, a 95% chance of at least one good trial, however many knobs there are. Think of looking for the best street food in a new city: a grid eats at every stall on four fixed streets, while a random search eats at stalls spread across the whole city, and if the best stall is on a street the grid never visits, the grid can never find it.</p>
+  <p><strong>Successive halving</strong> uses the fact that most bad settings look bad early. Start many candidates on a small budget, keep the best third, give the survivors three times more budget, and repeat. With 48 candidates and a budget measured in training rows starting at 1,000: round 1 trains 48 candidates on 1,000 rows, round 2 the best 16 on 3,000, round 3 the best 6 on 9,000. That is about as much work as a dozen full fits, for 48 candidates. <strong>Hyperband</strong> runs several such brackets with different starting budgets, in case some good settings start slowly.</p>
+  <p><strong>Bayesian optimisation</strong> learns from earlier trials, which grid and random search ignore. It keeps a model of "score as a function of the hyperparameters" built from past trials and picks the next trial where improvement looks most likely. Optuna's default method, <strong>TPE</strong> (Tree-structured Parzen Estimator), splits the past trials into the best 10–25% ("good") and the rest ("bad"), estimates for each knob how its values are spread among good trials, l(x), and among bad ones, g(x), and proposes the value with the largest ratio l(x) / g(x): values common among good trials and rare among bad ones. The first ten or so trials are random, to get started. Optuna can also <strong>prune</strong> trials whose intermediate scores look hopeless.</p>
+  <p>Grid, random and halving search on churn, all with LightGBM at learning rate 0.05 and 200 trees, 3-fold CV on the training rows, the winner refitted on all of them and scored once on the test set:</p>
+  <div class="fx" data-lang="py">import time, lightgbm as lgb
+from scipy.stats import randint, uniform, loguniform
+from churn import Xtr, ytr, Xte, yte
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, StratifiedKFold
+from sklearn.experimental import enable_halving_search_cv
+from sklearn.model_selection import HalvingRandomSearchCV
+from sklearn.metrics import roc_auc_score
+cv = StratifiedKFold(3, shuffle=True, random_state=0)
+base = lgb.LGBMClassifier(n_estimators=200, learning_rate=0.05, verbose=-1, random_state=0)
+show = lambda d: {k: round(float(v), 3) if isinstance(v, float) else int(v) for k, v in sorted(d.items())}
+def report(name, s, t0):
+    print(f"{name:8s} best CV AUC {s.best_score_:.4f}  test AUC {roc_auc_score(yte, s.predict_proba(Xte)[:, 1]):.4f}"
+          f"  {time.time()-t0:.0f}s  {show(s.best_params_)}")
+grid = {"num_leaves": [15, 63], "min_child_samples": [10, 50],
+        "colsample_bytree": [0.6, 1.0], "reg_lambda": [0.0, 5.0]}            # 2*2*2*2 = 16 settings
+t0 = time.time(); report("grid", GridSearchCV(base, grid, cv=cv, scoring="roc_auc").fit(Xtr, ytr), t0)
+dist = {"num_leaves": randint(8, 256), "min_child_samples": randint(5, 100),
+        "colsample_bytree": uniform(0.5, 0.5), "reg_lambda": loguniform(1e-3, 10)}
+t0 = time.time()
+report("random", RandomizedSearchCV(base, dist, n_iter=16, cv=cv, scoring="roc_auc", random_state=0).fit(Xtr, ytr), t0)
+t0 = time.time()
+hs = HalvingRandomSearchCV(base, dist, n_candidates=48, factor=3, resource="n_samples", min_resources=1000,
+                           cv=cv, scoring="roc_auc", random_state=0).fit(Xtr, ytr)
+print(f"halving: candidates per round {list(hs.n_candidates_)} on {list(hs.n_resources_)} rows")
+report("halving", hs, t0)</div>
+  <div class="fx" data-lang="text">grid     best CV AUC 0.9303  test AUC 0.9366  185s  {'colsample_bytree': 1.0, 'min_child_samples': 10, 'num_leaves': 63, 'reg_lambda': 0.0}
+random   best CV AUC 0.9333  test AUC 0.9392  150s  {'colsample_bytree': 0.985, 'min_child_samples': 16, 'num_leaves': 182, 'reg_lambda': 0.027}
+halving: candidates per round [48, 16, 6] on [1000, 3000, 9000] rows
+halving  best CV AUC 0.9279  test AUC 0.9398  161s  {'colsample_bytree': 0.988, 'min_child_samples': 26, 'num_leaves': 209, 'reg_lambda': 0.001}</div>
+  <p>With the same budget of 16 settings, random search finds a better region than the grid, because <code>num_leaves</code> got 16 different values instead of 2, including much larger trees than the grid allowed. Successive halving examines three times as many candidates for a similar cost. (Its "best CV" is computed on the smaller last-round fits, so it is not directly comparable.) Notice that all the test scores differ by only a few thousandths of AUC: the score surface is flat near the top, so many settings are nearly as good, and the default recipe of section 04 is already close.</p>
+  <p>For Bayesian search, the objective function trains one model with the values Optuna suggests, uses early stopping on the validation set so that each trial finds its own number of trees, and returns the validation AUC. Optuna is not installed in the environment used for this page, so this code is shown checked for syntax only, without output:</p>
+  <div class="fx" data-lang="py">import lightgbm as lgb, optuna
+from churn import Xtr, ytr, Xva, yva
+from sklearn.metrics import roc_auc_score
+def objective(trial):
+    params = {"num_leaves": trial.suggest_int("num_leaves", 8, 256, log=True),
+              "min_child_samples": trial.suggest_int("min_child_samples", 5, 100),
+              "colsample_bytree": trial.suggest_float("colsample_bytree", 0.5, 1.0),
+              "reg_lambda": trial.suggest_float("reg_lambda", 1e-3, 10, log=True)}
+    m = lgb.LGBMClassifier(n_estimators=2000, learning_rate=0.05, verbose=-1, **params)
+    m.fit(Xtr, ytr, eval_set=[(Xva, yva)], callbacks=[lgb.early_stopping(50, verbose=False)])
+    trial.set_user_attr("trees", m.best_iteration_)          # each trial finds its own number of trees
+    return roc_auc_score(yva, m.predict_proba(Xva)[:, 1])
+study = optuna.create_study(direction="maximize", sampler=optuna.samplers.TPESampler(seed=0))
+study.optimize(objective, n_trials=30)
+print(study.best_value, study.best_params, study.best_trial.user_attrs["trees"])</div>
+
+  <p>The same caution applies to every search: the best validation score of 30 trials is optimistic, because those validation rows chose the winner (and its number of trees), so refit the winner and report it on the untouched test set. And the search ranges matter more than the search method: use log scales for the learning rate, λ and α (0.001 to 10, not 0 to 10 in equal steps), keep <code>num_leaves</code> below 2^<code>max_depth</code>, and widen a range when the best value lands on its edge.</p>
+  <table class="tbl">
+    <tr><th>Strategy</th><th>Learns from past trials?</th><th>Strength</th><th>Weakness</th><th>Use when</th></tr>
+    <tr><td>Grid</td><td>no</td><td>simple, exhaustive, reproducible</td><td>explodes with knobs; wastes trials</td><td>1–2 knobs</td></tr>
+    <tr><td>Random</td><td>no</td><td>covers important knobs well; parallel</td><td>keeps sampling bad regions</td><td>default for 3+ knobs</td></tr>
+    <tr><td>Halving / Hyperband</td><td>partly (drops losers)</td><td>many candidates cheaply</td><td>small budgets can mis-rank slow starters</td><td>expensive models, big spaces</td></tr>
+    <tr><td>Bayesian (TPE)</td><td>yes</td><td>fewest trials for a good result; pruning</td><td>sequential; more machinery</td><td>costly trials, 20–200 of them</td></tr>
+  </table>
+
+  <h2 id="mtt-imb"><span class="num">06</span>Rare Classes and Cost Thresholds</h2>
+  <p>So far every model predicted a probability and we turned it into a decision at 0.5. That rule quietly assumes two things: that both kinds of mistake cost the same, and that the classes are roughly balanced. In real problems neither is usually true. Fraud may be 1 transaction in 1,000; serious churn may be 5 customers in 100. A model that always says "no" then scores 95% to 99.9% accuracy and is useless.</p>
+  <p>Start with costs. A <strong>false positive</strong> is acting when you should not have; a <strong>false negative</strong> is failing to act when you should have. If a false positive costs C_FP and a false negative C_FN, acting on a case with probability p of being positive costs (1 − p) · C_FP on average, and not acting costs p · C_FN, so you should act whenever p · C_FN &gt; (1 − p) · C_FP, which rearranges to p &gt; C_FP / (C_FP + C_FN). That is the cost-based <strong>threshold</strong>. On the diary, the captain must book the ground each morning. A booking nobody uses costs ₹500 (a false positive); a league match forfeited because nothing was booked costs ₹3,000 (a false negative). So he should book whenever P(play) &gt; 500 / 3,500 = 0.143, not 0.5. The probabilities come from a 200-tree random forest, each day predicted by a forest trained on the other 13 days:</p>
+  <div class="fx" data-lang="py">import numpy as np, pandas as pd
 from play import df
 from sklearn.ensemble import RandomForestClassifier
 X = pd.get_dummies(df[["Outlook", "Humidity", "Wind"]]).astype(int)
@@ -552,32 +377,22 @@ y = (df.Play == "Yes").astype(int).values
 p = np.array([RandomForestClassifier(n_estimators=200, random_state=0).fit(X.drop(d), np.delete(y, i))
               .predict_proba(X.loc[[d]])[0, 1] for i, d in enumerate(X.index)])   # leave-one-day-out P(play)
 print(" ".join(f"{d}:{v:.2f}" for d, v in zip(df.index, p)))
-print(f"Brier = mean (p - y)^2 = {np.mean((p - y) ** 2):.3f}   (always 9/14: {np.mean((9/14 - y) ** 2):.3f})")
-for lo, hi in [(0, 0.5), (0.5, 1.01)]:
-    s = (p &gt;= lo) &amp; (p &lt; hi)
-    print(f"bin [{lo}, {min(hi, 1)}): {s.sum()} days, mean prediction {p[s].mean():.3f}, actual play rate {y[s].mean():.3f}")
-ece = sum(((p &gt;= lo) &amp; (p &lt; hi)).mean() * abs(p[(p &gt;= lo) &amp; (p &lt; hi)].mean() - y[(p &gt;= lo) &amp; (p &lt; hi)].mean())
-          for lo, hi in [(0, 0.5), (0.5, 1.01)])
-print(f"ECE (2 bins) = {ece:.3f}")
-c_fp, c_fn = 500, 3000                             # booked but nobody plays / not booked and the league match is forfeited
-t = c_fp / (c_fp + c_fn)
-for thr in [0.5, t]:
+c_fp, c_fn = 500, 3000            # booked but nobody plays / not booked and the league match is forfeited
+for thr in [0.5, c_fp / (c_fp + c_fn)]:
     book = p &gt;= thr
-    cost = c_fp * np.sum(book &amp; (y == 0)) + c_fn * np.sum(~book &amp; (y == 1))
-    print(f"threshold {thr:.2f}: book on {book.sum()} days, wasted bookings {np.sum(book &amp; (y == 0))}, missed matches {np.sum(~book &amp; (y == 1))}, cost Rs {cost}")</div>
+    wasted, missed = np.sum(book &amp; (y == 0)), np.sum(~book &amp; (y == 1))
+    print(f"threshold {thr:.3f}: book on {book.sum():2d} days, wasted bookings {wasted}, missed matches {missed},"
+          f" cost Rs {c_fp * wasted + c_fn * missed}")</div>
   <div class="fx" data-lang="text">D1:0.30 D2:0.34 D3:0.72 D4:0.43 D5:0.87 D6:0.84 D7:0.77 D8:0.28 D9:0.67 D10:0.85 D11:0.52 D12:0.54 D13:0.98 D14:0.46
-Brier = mean (p - y)^2 = 0.161   (always 9/14: 0.230)
-bin [0, 0.5): 5 days, mean prediction 0.362, actual play rate 0.200
-bin [0.5, 1): 9 days, mean prediction 0.751, actual play rate 0.889
-ECE (2 bins) = 0.147
-threshold 0.50: book on 9 days, wasted bookings 1, missed matches 1, cost Rs 3500
-threshold 0.14: book on 14 days, wasted bookings 5, missed matches 0, cost Rs 2500</div>
-  <p>At 0.5 the captain books on 9 days, wastes one booking (D6, P = 0.84, not played) and forfeits one match (D4, P = 0.43, played): ₹500 + ₹3,000 = <strong>₹3,500</strong>. At 0.143 he books every day (the lowest probability is 0.28), wastes 5 bookings and forfeits nothing: <strong>₹2,500</strong>. The model did not change; only the decision rule did. (Section 07 reads the Brier and calibration lines.)</p>
-  <h3>At scale: a 5%-positive version of the churn data</h3>
-  <p>We keep all stayers and only enough churners for a 5% churn rate in each split, then compare four options:</p>
-  <div class="fx" data-lang="py">import lightgbm as lgb
+threshold 0.500: book on  9 days, wasted bookings 1, missed matches 1, cost Rs 3500
+threshold 0.143: book on 14 days, wasted bookings 5, missed matches 0, cost Rs 2500</div>
+  <p>At the 0.5 threshold the captain wastes one booking and forfeits one match, ₹500 + ₹3,000. At 0.143 he books every day, because the lowest probability is above 0.143, wastes five bookings and forfeits nothing, which is cheaper overall. The model did not change at all; only the decision rule did.</p>
+  <p>Rare classes add three more points. First, measure the right thing: <strong>precision</strong> (of the cases you flagged, the share that were positive), <strong>recall</strong> (of the positive cases, the share you flagged) and <strong>PR-AUC</strong> (average precision, a summary of precision across all thresholds), not accuracy. A random model's PR-AUC equals the positive rate, so 0.42 on a 5% problem is a big improvement even though it looks low (<a class="xref" data-note="ml_evaluation">Model Evaluation</a>). Second, you can weight the rare class: <code>scale_pos_weight = n_neg / n_pos</code> in XGBoost and LightGBM, or <code>class_weight="balanced"</code> in scikit-learn, makes each positive row count w times in the loss. That multiplies the model's predicted odds by about w, so a row the unweighted model would score 0.05 (odds 0.05 / 0.95) scores about 0.5 with w = 19, and the original is recovered with p = p′ / (p′ + w(1 − p′)) = 0.5 / (0.5 + 19 × 0.5) = 0.05. A weighted model's outputs are therefore not real probabilities until corrected or calibrated. Third, resampling (dropping majority rows or duplicating minority rows) must happen only inside the training folds; with trees, weights usually do the same job more cheaply.</p>
+  <p>The churn data is turned into a 5% problem by keeping every stayer and only enough churners, and three options are compared on the test set: the plain model at 0.5, the weighted model at 0.5, and the plain model with its threshold chosen on validation to maximise F1 (the balance of precision and recall):</p>
+  <div class="fx" data-lang="py">import numpy as np, lightgbm as lgb
+from churn import Xtr, ytr, Xva, yva, Xte, yte
 from sklearn.metrics import roc_auc_score, average_precision_score, precision_score, recall_score
-def make_rare(Xd, yd, rate=0.05, seed=0):               # keep all 0s, only some 1s -&gt; 5% positives
+def make_rare(Xd, yd, rate=0.05, seed=0):          # keep every stayer, only enough churners for 5%
     r = np.random.default_rng(seed); pos = np.where(yd == 1)[0]; neg = np.where(yd == 0)[0]
     k = int(rate / (1 - rate) * len(neg)); keep = np.concatenate([neg, r.choice(pos, k, replace=False)])
     return Xd.iloc[keep], yd[keep]
@@ -587,10 +402,9 @@ print(f"train rows {len(ytr5)}, positives {npos} ({ytr5.mean():.1%}), scale_pos_
 print(f"always say 'stay': test accuracy {1 - yte5.mean():.3f}, recall 0.000")
 def report(name, p, thr):
     pred = p &gt;= thr
-    print(f"{name:28s} ROC-AUC {roc_auc_score(yte5, p):.3f}  PR-AUC {average_precision_score(yte5, p):.3f}  "
-          f"thr {thr:.2f}: precision {precision_score(yte5, pred):.3f} recall {recall_score(yte5, pred):.3f}  "
-          f"mean p {p.mean():.3f}")
-def best_thr(p, yv):                                    # threshold that maximises F1 on validation
+    print(f"{name:26s} PR-AUC {average_precision_score(yte5, p):.3f}  ROC-AUC {roc_auc_score(yte5, p):.3f}  "
+          f"at {thr:.2f}: precision {precision_score(yte5, pred):.3f} recall {recall_score(yte5, pred):.3f}  mean p {p.mean():.3f}")
+def best_f1_threshold(p, yv):                       # chosen on VALIDATION rows
     ts = np.linspace(0.05, 0.95, 91)
     f1 = [2 * precision_score(yv, p &gt;= t, zero_division=0) * recall_score(yv, p &gt;= t) /
           max(precision_score(yv, p &gt;= t, zero_division=0) + recall_score(yv, p &gt;= t), 1e-9) for t in ts]
@@ -600,119 +414,89 @@ plain = lgb.LGBMClassifier(**kw).fit(Xtr5, ytr5)
 wtd = lgb.LGBMClassifier(scale_pos_weight=nneg / npos, **kw).fit(Xtr5, ytr5)
 p0, p1 = plain.predict_proba(Xte5)[:, 1], wtd.predict_proba(Xte5)[:, 1]
 report("plain, threshold 0.5", p0, 0.5)
-report("scale_pos_weight, thr 0.5", p1, 0.5)
-t = best_thr(plain.predict_proba(Xva5)[:, 1], yva5)
-report("plain, threshold tuned on val", p0, t)
-rfw = RandomForestClassifier(n_estimators=300, min_samples_leaf=3, class_weight="balanced_subsample",
-                             n_jobs=-1, random_state=0).fit(Xtr5, ytr5)
-report("RF balanced_subsample, 0.5", rfw.predict_proba(Xte5)[:, 1], 0.5)
-print(f"true positive rate in test: {yte5.mean():.3f}")</div>
+report("scale_pos_weight, 0.5", p1, 0.5)
+report("plain, threshold from val", p0, best_f1_threshold(plain.predict_proba(Xva5)[:, 1], yva5))
+print(f"true churn rate in test: {yte5.mean():.3f}")</div>
   <div class="fx" data-lang="text">train rows 6291, positives 314 (5.0%), scale_pos_weight = 5977/314 = 19.0
 always say 'stay': test accuracy 0.950, recall 0.000
-plain, threshold 0.5         ROC-AUC 0.881  PR-AUC 0.425  thr 0.50: precision 0.605 recall 0.176  mean p 0.019
-scale_pos_weight, thr 0.5    ROC-AUC 0.870  PR-AUC 0.415  thr 0.50: precision 0.554 recall 0.275  mean p 0.041
-plain, threshold tuned on val ROC-AUC 0.881  PR-AUC 0.425  thr 0.13: precision 0.562 recall 0.344  mean p 0.019
-RF balanced_subsample, 0.5   ROC-AUC 0.888  PR-AUC 0.412  thr 0.50: precision 0.545 recall 0.046  mean p 0.076
-true positive rate in test: 0.050</div>
-  <ul>
-    <li><strong>"Always stay" gets 0.950 accuracy and catches nobody.</strong> That is why accuracy is not reported.</li>
-    <li><strong>Plain model at 0.5:</strong> precision 0.605 but recall only 0.176: it catches 1 churner in 6.</li>
-    <li><strong>scale_pos_weight = 19 at 0.5:</strong> recall rises to 0.275, but ROC-AUC and PR-AUC drop slightly (0.870 / 0.415): weighting moved the operating point, it did not improve the ranking.</li>
-    <li><strong>Plain model with the threshold tuned on validation (0.13):</strong> the best recall (0.344) at a precision (0.562) close to the others, with the best ranking metrics. Moving the threshold did more than reweighting, for free.</li>
-    <li><strong>Random forest with balanced_subsample:</strong> the best ROC-AUC (0.888) but recall 0.046 at 0.5: forest probabilities are averages that rarely reach 0.5 for rare classes. It too needs a lower threshold.</li>
-    <li><strong>Mean predicted probability</strong> vs the true rate 0.050: the plain booster says 0.019 (over-fitted: confident zeros on many real churners), the weighted one 0.041, the forest 0.076. None is calibrated; see the next section.</li>
-  </ul>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>For tree ensembles, imbalance is mainly a <em>decision</em> problem, not a <em>learning</em> problem. Train normally (or with mild weights), judge with PR-AUC, and pick the threshold from costs or a precision/recall target on validation data.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Oversampling (or SMOTE) before splitting puts copies of the same churner in train and validation, so validation looks brilliant. Resample only inside training folds (use an imbalanced-learn <code>Pipeline</code>), or just use weights. Also, a balanced random forest (imbalanced-learn's <code>BalancedRandomForestClassifier</code>, each tree on a balanced bootstrap) is an option when positives are extremely rare.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Probability calibration.</b> Thresholds and expected costs need probabilities you can trust: "0.3" should mean "30 of 100 such cases". The diary forest's probabilities, and the churn models' averages, suggest they are not.</div>
+plain, threshold 0.5       PR-AUC 0.425  ROC-AUC 0.881  at 0.50: precision 0.605 recall 0.176  mean p 0.019
+scale_pos_weight, 0.5      PR-AUC 0.415  ROC-AUC 0.870  at 0.50: precision 0.554 recall 0.275  mean p 0.041
+plain, threshold from val  PR-AUC 0.425  ROC-AUC 0.881  at 0.13: precision 0.562 recall 0.344  mean p 0.019
+true churn rate in test: 0.050</div>
+  <p>"Always stay" scores 0.950 accuracy and catches nobody, which is why accuracy is not reported. The plain model at 0.5 is precise but catches only about one churner in six. Weighting the churners raises recall, but its ranking metrics (PR-AUC and ROC-AUC) are slightly worse: weighting moved the operating point, it did not improve the ranking. The plain model with a lower threshold chosen on validation gets the best recall at similar precision, for free. Look also at the mean predicted probability against the true rate of 0.050: the plain booster is too low and the weighted one is closer but for the wrong reason; neither is calibrated. For tree ensembles, imbalance is mainly a <em>decision</em> problem rather than a <em>learning</em> problem: train normally or with mild weights, judge with PR-AUC, and choose the threshold from costs or from a precision or recall target on validation data. All of this assumes the probabilities can be trusted, which is the next question.</p>
 
   <h2 id="mtt-cal"><span class="num">07</span>Probability Calibration</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Section 06 turned probabilities into money. If the model says 0.75 for days that are played 89% of the time, those decisions are wrong. How do we measure whether probabilities are honest, and fix them?</p>
-  </div>
-  <p><strong>The need.</strong> A model is <strong>calibrated</strong> if, among all customers it scores 0.3, about 30% really churn. Ranking metrics (AUC) do not care about this; decisions do (expected profit, risk-based pricing, combining models, communicating risk). Tree ensembles are often mis-calibrated in known directions:</p>
-  <ul>
-    <li><strong>Random forests are under-confident</strong>: an average over trees reaches 0 or 1 only if every tree agrees, and bootstrap plus random features guarantee some disagree. Probabilities are pulled toward the middle.</li>
-    <li><strong>Boosters on log loss are usually close</strong>, but over-fitted or weighted boosters are not: weights shift probabilities (section 06), and many rounds push them toward 0 and 1.</li>
-  </ul>
-  <h3>Measuring it by hand: the diary forest</h3>
-  <p>Use the 14 leave-one-day-out probabilities printed in section 06 (D1 0.30, D2 0.34, D3 0.72, D4 0.43, D5 0.87, D6 0.84, D7 0.77, D8 0.28, D9 0.67, D10 0.85, D11 0.52, D12 0.54, D13 0.98, D14 0.46).</p>
-  <ul>
-    <li><strong>Brier score</strong> = mean of (p − y)². For example D6 (not played, p 0.84) adds 0.84² = 0.706, D13 (played, 0.98) adds 0.02² = 0.0004. The average over 14 days is <strong>0.161</strong>. Lower is better; always predicting the base rate 9/14 scores 0.230.</li>
-    <li><strong>Reliability table</strong> (2 bins): the 5 days below 0.5 average a prediction of 0.362 but only 1 of 5 was played (0.200); the 9 days at 0.5 or above average 0.751 but 8 of 9 were played (0.889). Low predictions are too high and high predictions too low: the forest is <em>squeezed toward the middle</em>, the classic random-forest pattern described above.</li>
-    <li><strong>Expected calibration error</strong> (ECE) = Σ (bin share) × |mean prediction − actual rate| = (5/14) × 0.162 + (9/14) × 0.138 = <strong>0.147</strong>.</li>
-  </ul>
-  <p>A <strong>reliability diagram</strong> plots mean prediction (x) against actual rate (y) per bin; a calibrated model lies on the diagonal. scikit-learn draws it with <code>CalibrationDisplay.from_estimator</code>.</p>
-  <h3>Fixing it</h3>
-  <div class="cards">
-    <div><b>Platt scaling (sigmoid)</b><p>Fit p = 1 / (1 + e^(A·s + B)) on held-out scores s. Two parameters: works with little data, assumes an S-shaped distortion.</p><small><code>method="sigmoid"</code></small></div>
-    <div><b>Isotonic regression</b><p>Fit any non-decreasing step function from score to probability. Flexible; needs a few thousand held-out rows or it overfits.</p><small><code>method="isotonic"</code></small></div>
-    <div><b>Never on training predictions</b><p>Calibrate on rows the model did not train on. <code>CalibratedClassifierCV(cv=5)</code> does this with cross-fitting.</p><small>Or <code>cv="prefit"</code>-style on a separate calibration set</small></div>
-  </div>
-  <div class="fx" data-lang="py">import lightgbm as lgb
+  <p>A model is <strong>calibrated</strong> if, among all the cases it scores 0.3, about 30% really are positive. Ranking metrics such as AUC do not care about this, because they only check that positives score higher than negatives. Decisions do care: the cost threshold of the previous section, expected profit, risk-based pricing and explaining risk to a customer all treat the number as a real probability. Think of a weather forecaster who says "70% chance of rain": if it rains on only 40% of such days, people stop trusting the forecast even if the forecaster ranks the days well.</p>
+  <p>Calibration is measured in three ways, shown first on the diary forest's 14 leave-one-day-out probabilities from the previous section. The <strong>Brier score</strong> is the mean of (p − y)², where y is 1 for a played day and 0 otherwise; lower is better, and always predicting the base rate 9/14 is the baseline to beat. A <strong>reliability table</strong> groups the predictions into bins and compares the average prediction in each bin with the actual rate; a calibrated model has them equal, and a <strong>reliability diagram</strong> plots one against the other, with calibrated models on the diagonal (scikit-learn draws it with <code>CalibrationDisplay</code>). The <strong>expected calibration error</strong> (ECE) summarises the table as Σ (share of rows in the bin) × |mean prediction − actual rate|.</p>
+  <div class="fx" data-lang="py">import numpy as np, pandas as pd
+from play import df
+from sklearn.ensemble import RandomForestClassifier
+X = pd.get_dummies(df[["Outlook", "Humidity", "Wind"]]).astype(int)
+y = (df.Play == "Yes").astype(int).values
+p = np.array([RandomForestClassifier(n_estimators=200, random_state=0).fit(X.drop(d), np.delete(y, i))
+              .predict_proba(X.loc[[d]])[0, 1] for i, d in enumerate(X.index)])   # same 14 probabilities as above
+print(f"Brier = mean (p - y)^2 = {np.mean((p - y) ** 2):.3f}   (always saying 9/14: {np.mean((9/14 - y) ** 2):.3f})")
+ece = 0
+for lo, hi in [(0, 0.5), (0.5, 1.01)]:
+    s = (p &gt;= lo) &amp; (p &lt; hi)
+    print(f"predictions in [{lo}, {min(hi, 1)}): {s.sum()} days, mean prediction {p[s].mean():.3f}, actual play rate {y[s].mean():.3f}")
+    ece += s.mean() * abs(p[s].mean() - y[s].mean())
+print(f"ECE (2 bins) = {ece:.3f}")</div>
+  <div class="fx" data-lang="text">Brier = mean (p - y)^2 = 0.161   (always saying 9/14: 0.230)
+predictions in [0, 0.5): 5 days, mean prediction 0.362, actual play rate 0.200
+predictions in [0.5, 1): 9 days, mean prediction 0.751, actual play rate 0.889
+ECE (2 bins) = 0.147</div>
+  <p>The forest beats the base rate on Brier score, so its probabilities carry information. But the reliability table shows a pattern: on days it scored below 0.5, it said about 0.36 on average while only 1 in 5 was played, and on days it scored 0.5 or more it said about 0.75 while 8 in 9 were played. Its low predictions are too high and its high predictions too low: the forest is <strong>squeezed towards the middle</strong>. That is the classic random-forest pattern, and it has a simple cause: a forest's probability is the average vote of its trees, and with random rows and random columns some trees always disagree, so the average rarely reaches 0 or 1. Boosters trained on log loss are usually close to calibrated, but weighted or heavily over-fitted boosters are not.</p>
+  <p>Calibration is fixed after training, by learning a mapping from the model's scores to probabilities on held-out rows. <strong>Platt scaling</strong> (<code>method="sigmoid"</code>) fits p = 1 / (1 + e^(A·s + B)) to the scores s: only two numbers, so it works with little data, but it assumes an S-shaped distortion. <strong>Isotonic regression</strong> (<code>method="isotonic"</code>) fits any non-decreasing step function from score to probability: more flexible, but it needs a few thousand held-out rows or it over-fits. Either must be fitted on rows the model did not train on; <code>CalibratedClassifierCV(cv=5)</code> does this by cross-fitting. On churn:</p>
+  <div class="fx" data-lang="py">import numpy as np, lightgbm as lgb
+from churn import Xtr, ytr, Xte, yte
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.calibration import CalibratedClassifierCV
-from sklearn.metrics import brier_score_loss, log_loss
+from sklearn.metrics import brier_score_loss
 def ece(y, p, bins=10):
-    idx = np.minimum((p * bins).astype(int), bins - 1); e = 0
-    for b in range(bins):
-        s = idx == b
-        if s.any(): e += s.mean() * abs(p[s].mean() - y[s].mean())
-    return e
+    idx = np.minimum((p * bins).astype(int), bins - 1)
+    return sum((idx == b).mean() * abs(p[idx == b].mean() - y[idx == b].mean()) for b in range(bins) if (idx == b).any())
 def table(y, p):
     idx = np.minimum((p * 5).astype(int), 4)
-    return " ".join(f"[{b/5:.1f}-{(b+1)/5:.1f}) pred {p[idx==b].mean():.2f} true {y[idx==b].mean():.2f} n={int((idx==b).sum())} |" for b in range(5) if (idx==b).any())
-rf = RandomForestClassifier(n_estimators=300, n_jobs=-1, random_state=0).fit(Xtr, ytr)
-lg = lgb.LGBMClassifier(n_estimators=480, learning_rate=0.05, verbose=-1).fit(Xtr, ytr)
-lgw = lgb.LGBMClassifier(n_estimators=480, learning_rate=0.05, scale_pos_weight=3, verbose=-1).fit(Xtr, ytr)
-models = {"RF": rf, "LightGBM": lg, "LightGBM weighted x3": lgw}
-for meth in ["sigmoid", "isotonic"]:
-    models[f"RF + {meth}"] = CalibratedClassifierCV(
-        RandomForestClassifier(n_estimators=300, n_jobs=-1, random_state=0), method=meth, cv=5).fit(Xtr, ytr)
-models["LGBM weighted + isotonic"] = CalibratedClassifierCV(
-    lgb.LGBMClassifier(n_estimators=480, learning_rate=0.05, scale_pos_weight=3, verbose=-1), method="isotonic", cv=5).fit(Xtr, ytr)
+    return " ".join(f"{p[idx==b].mean():.2f}-&gt;{y[idx==b].mean():.2f}" for b in range(5) if (idx == b).any())
+rf = lambda: RandomForestClassifier(n_estimators=200, n_jobs=2, random_state=0)
+lgw = lambda: lgb.LGBMClassifier(n_estimators=480, learning_rate=0.05, scale_pos_weight=3, verbose=-1, random_state=0)
+models = {"RF": rf().fit(Xtr, ytr),
+          "LightGBM": lgb.LGBMClassifier(n_estimators=480, learning_rate=0.05, verbose=-1, random_state=0).fit(Xtr, ytr),
+          "LightGBM weighted x3": lgw().fit(Xtr, ytr),
+          "RF + sigmoid (Platt)": CalibratedClassifierCV(rf(), method="sigmoid", cv=5).fit(Xtr, ytr),
+          "RF + isotonic": CalibratedClassifierCV(rf(), method="isotonic", cv=5).fit(Xtr, ytr),
+          "LGBM weighted + isotonic": CalibratedClassifierCV(lgw(), method="isotonic", cv=5).fit(Xtr, ytr)}
 for name, m in models.items():
     p = m.predict_proba(Xte)[:, 1]
-    print(f"{name:26s} Brier {brier_score_loss(yte, p):.4f}  logloss {log_loss(yte, p):.4f}  ECE {ece(yte, p):.4f}  acc {np.mean((p&gt;0.5)==yte):.3f}")
+    print(f"{name:25s} Brier {brier_score_loss(yte, p):.4f}  ECE {ece(yte, p):.4f}  acc {np.mean((p &gt; 0.5) == yte):.3f}")
+print("reliability, 5 bins (mean prediction -&gt; actual churn rate):")
 for name in ["RF", "RF + isotonic", "LightGBM weighted x3"]:
-    print(name, "-&gt;", table(yte, models[name].predict_proba(Xte)[:, 1]))</div>
-  <div class="fx" data-lang="text">RF                         Brier 0.1086  logloss 0.3666  ECE 0.1098  acc 0.877
-LightGBM                   Brier 0.0971  logloss 0.3259  ECE 0.0317  acc 0.874
-LightGBM weighted x3       Brier 0.1105  logloss 0.3574  ECE 0.0770  acc 0.844
-RF + sigmoid               Brier 0.0952  logloss 0.3219  ECE 0.0227  acc 0.878
-RF + isotonic              Brier 0.0955  logloss 0.3219  ECE 0.0185  acc 0.876
-LGBM weighted + isotonic   Brier 0.0950  logloss 0.3174  ECE 0.0243  acc 0.874
-RF -&gt; [0.0-0.2) pred 0.11 true 0.04 n=1174 | [0.2-0.4) pred 0.29 true 0.13 n=921 | [0.4-0.6) pred 0.50 true 0.48 n=764 | [0.6-0.8) pred 0.71 true 0.87 n=969 | [0.8-1.0) pred 0.88 true 0.96 n=1172 |
-RF + isotonic -&gt; [0.0-0.2) pred 0.07 true 0.06 n=1862 | [0.2-0.4) pred 0.29 true 0.27 n=433 | [0.4-0.6) pred 0.50 true 0.50 n=448 | [0.6-0.8) pred 0.71 true 0.77 n=424 | [0.8-1.0) pred 0.93 true 0.94 n=1833 |
-LightGBM weighted x3 -&gt; [0.0-0.2) pred 0.07 true 0.04 n=1378 | [0.2-0.4) pred 0.30 true 0.11 n=444 | [0.4-0.6) pred 0.50 true 0.26 n=408 | [0.6-0.8) pred 0.71 true 0.52 n=581 | [0.8-1.0) pred 0.94 true 0.91 n=2189 |</div>
-  <ul>
-    <li><strong>The raw forest</strong> has ECE 0.110. Its reliability rows show the classic under-confidence: when it says 0.11 the truth is 0.04, and when it says 0.71 the truth is 0.87. Its probabilities are squeezed toward the middle.</li>
-    <li><strong>Isotonic on the forest</strong>: ECE 0.019, Brier 0.1086 → 0.0955, log loss 0.367 → 0.322, accuracy unchanged (0.876–0.878). The forest's ranking was always good; only the probability scale was wrong. Sigmoid does almost as well here.</li>
-    <li><strong>The plain booster</strong> is already fairly calibrated (ECE 0.032).</li>
-    <li><strong>The booster weighted ×3</strong> over-predicts: when it says 0.50 only 26% churn. ECE 0.077, and accuracy at 0.5 drops to 0.844. Isotonic calibration repairs it (ECE 0.024, best Brier 0.0950).</li>
-  </ul>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Calibrating on the same rows used for early stopping or threshold selection reuses them a third time. With enough data, keep a separate calibration split; otherwise let <code>CalibratedClassifierCV</code> cross-fit. Also re-check calibration after deployment: drift breaks it before it breaks AUC.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Categorical columns.</b> So far every column was a number or a 0/1 flag. Real tables have text categories (city, plan, product) with hundreds of values, and how you feed them in can change both accuracy and leakage.</div>
+    print(f"  {name:21s}", table(yte, models[name].predict_proba(Xte)[:, 1]))</div>
+  <div class="fx" data-lang="text">RF                        Brier 0.1091  ECE 0.1078  acc 0.876
+LightGBM                  Brier 0.0971  ECE 0.0317  acc 0.874
+LightGBM weighted x3      Brier 0.1105  ECE 0.0770  acc 0.844
+RF + sigmoid (Platt)      Brier 0.0954  ECE 0.0238  acc 0.877
+RF + isotonic             Brier 0.0957  ECE 0.0213  acc 0.879
+LGBM weighted + isotonic  Brier 0.0950  ECE 0.0243  acc 0.874
+reliability, 5 bins (mean prediction -&gt; actual churn rate):
+  RF                    0.11-&gt;0.04 0.29-&gt;0.12 0.50-&gt;0.49 0.71-&gt;0.87 0.88-&gt;0.96
+  RF + isotonic         0.07-&gt;0.07 0.29-&gt;0.27 0.50-&gt;0.50 0.71-&gt;0.76 0.93-&gt;0.94
+  LightGBM weighted x3  0.07-&gt;0.04 0.30-&gt;0.11 0.50-&gt;0.26 0.71-&gt;0.52 0.94-&gt;0.91</div>
+  <p>The raw forest has a clearly worse ECE than the plain booster, and its reliability row shows the squeeze: where it predicts 0.11 the true rate is 0.04, and where it predicts 0.71 the truth is 0.87. After isotonic calibration the predictions match the true rates closely, the Brier score improves, and accuracy is unchanged, because the forest's ranking was always good and only its probability scale was wrong; Platt scaling does almost as well here. The booster weighted ×3 over-predicts (where it says 0.50 only about a quarter churn), and isotonic calibration repairs it too. Two practical cautions: calibrating on the same rows used for early stopping or threshold choice reuses them yet again, so with enough data keep a separate calibration split; and re-check calibration after deployment, because drift breaks calibration before it breaks AUC. More on calibration methods is in <a class="xref" data-note="ml_calibration">Probability Calibration</a>.</p>
 
-  <h2 id="mtt-cat"><span class="num">08</span>Categorical Columns: Your Options</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The diary's Outlook has three values and one-hot is fine. A city column with 1,000 values, half of them seen five times or fewer, is another matter. Which encoding is accurate and leak-free?</p>
-  </div>
+  <h2 id="mtt-cat"><span class="num">08</span>Categorical Columns</h2>
+  <p>So far every column was a number or a 0/1 flag. Real tables have text categories (city, plan, product) with hundreds of values, and how they are fed to a tree model changes both the accuracy and the risk of leakage. The diary's Outlook has three values, so turning it into three 0/1 columns is fine. A city column with 1,000 values, half of them seen five times or fewer, is another matter. There are five common options:</p>
   <table class="tbl">
     <tr><th>Option</th><th>How</th><th>Good for</th><th>Watch out</th></tr>
-    <tr><td>One-hot</td><td>One 0/1 column per category</td><td>Few categories (&lt; ~20)</td><td>Hundreds of sparse columns; each split isolates one category; slow</td></tr>
-    <tr><td>Ordinal codes</td><td>City → 0, 1, 2, … as a number</td><td>Ordered categories (S/M/L), or many trees can carve arbitrary codes</td><td>Imposes a fake order; needs more splits</td></tr>
-    <tr><td>Target encoding</td><td>Replace each category with the mean target of its rows</td><td>High cardinality</td><td>Leaks the row's own label unless cross-fitted / smoothed</td></tr>
-    <tr><td>Native (LightGBM, HistGB, XGBoost)</td><td>Library sorts categories by gradient statistics and finds the best grouping at each split</td><td>Medium cardinality</td><td>Can overfit rare categories (LightGBM <code>min_data_per_group</code>, <code>cat_smooth</code>); HistGB limited to ≤ 255 categories per column</td></tr>
-    <tr><td>CatBoost ordered target statistics</td><td>Target encoding where each row only sees earlier rows in a random order</td><td>Many / high-cardinality categoricals</td><td>Slower training</td></tr>
+    <tr><td>One-hot</td><td>one 0/1 column per category</td><td>few categories (&lt; ~20)</td><td>hundreds of sparse columns; each split isolates one category</td></tr>
+    <tr><td>Ordinal codes</td><td>city → 0, 1, 2, … as a number</td><td>ordered categories (S/M/L)</td><td>imposes a fake order; needs many splits</td></tr>
+    <tr><td>Target encoding</td><td>replace each category by the average target of its rows</td><td>many categories</td><td>leaks the row's own label unless cross-fitted</td></tr>
+    <tr><td>Native (LightGBM, HistGB, XGBoost)</td><td>the library groups categories by gradient statistics at each split</td><td>medium cardinality</td><td>can over-fit rare categories</td></tr>
+    <tr><td>CatBoost ordered target statistics</td><td>target encoding where each row only sees rows before it in a random order</td><td>many high-cardinality categoricals</td><td>slower training</td></tr>
   </table>
-  <p>A test where the choice matters: 30,000 customers, a <code>city</code> column with 1,000 possible cities (a few big ones, a long tail of tiny ones), each city with its own hidden churn tendency, plus tenure and bill.</p>
-  <div class="fx" data-lang="py">import numpy as np, pandas as pd, time, lightgbm as lgb
+  <p>The leak in plain target encoding deserves a sentence. If a city has a single customer and that customer churned, the city's average target is 1.0, which is exactly that customer's label, so the model learns "1.0 means churn" from a column that simply copies the answer. <strong>Cross-fitting</strong> fixes it the same way out-of-fold predictions fixed stacking: each row is encoded using averages computed on the other folds only. The test below has 30,000 customers, a <code>city</code> column with 1,000 possible cities (a few big ones and a long tail of tiny ones), each city with its own hidden churn tendency, plus tenure and bill:</p>
+  <div class="fx" data-lang="py">import numpy as np, pandas as pd, lightgbm as lgb
 from catboost import CatBoostClassifier
 from sklearn.preprocessing import OneHotEncoder, TargetEncoder
 from sklearn.metrics import roc_auc_score
@@ -729,67 +513,52 @@ vc = tr.city.value_counts()
 print(f"cities in train: {len(vc)}; biggest 3 have {vc.head(3).tolist()} rows; {(vc &lt;= 5).sum()} cities have 5 rows or fewer")
 num = ["tenure", "bill"]
 def run(name, Xa, Xb, model=None, **fit):
-    t0 = time.time()
     m = model or lgb.LGBMClassifier(n_estimators=300, learning_rate=0.05, verbose=-1, random_state=0)
     m.fit(Xa, ytr, **fit)
-    a_tr = roc_auc_score(ytr, m.predict_proba(Xa)[:, 1]); a_te = roc_auc_score(yte, m.predict_proba(Xb)[:, 1])
-    print(f"{name:34s} cols {Xa.shape[1]:5d}  train AUC {a_tr:.3f}  test AUC {a_te:.3f}  {time.time()-t0:5.1f}s")
+    print(f"{name:34s} train AUC {roc_auc_score(ytr, m.predict_proba(Xa)[:, 1]):.3f}"
+          f"  test AUC {roc_auc_score(yte, m.predict_proba(Xb)[:, 1]):.3f}")
 oh = OneHotEncoder(handle_unknown="ignore", sparse_output=False).fit(tr[["city"]])
-run("one-hot + LightGBM", np.hstack([oh.transform(tr[["city"]]), tr[num]]), np.hstack([oh.transform(te[["city"]]), te[num]]))
-run("ordinal codes + LightGBM", tr, te)
-means = pd.Series(ytr).groupby(tr.city.values).mean()       # naive: every row sees its own label
-a = np.column_stack([tr.city.map(means), tr[num]]); b = np.column_stack([te.city.map(means).fillna(ytr.mean()), te[num]])
-run("naive target mean (leaky) + LGBM", a, b)
+run("one-hot (963 columns)", np.hstack([oh.transform(tr[["city"]]), tr[num]]), np.hstack([oh.transform(te[["city"]]), te[num]]))
+run("city code as a number", tr, te)
+means = pd.Series(ytr).groupby(tr.city.values).mean()       # naive: every row's own label is in its city mean
+run("naive target mean (leaky)", np.column_stack([tr.city.map(means), tr[num]]),
+    np.column_stack([te.city.map(means).fillna(ytr.mean()), te[num]]))
 enc = TargetEncoder(random_state=0)                         # cross-fitted inside fit_transform
-a = np.hstack([enc.fit_transform(tr[["city"]], ytr), tr[num]]); b = np.hstack([enc.transform(te[["city"]]), te[num]])
-run("TargetEncoder (cross-fit) + LGBM", a, b)
+run("TargetEncoder (cross-fitted)", np.hstack([enc.fit_transform(tr[["city"]], ytr), tr[num]]),
+    np.hstack([enc.transform(te[["city"]]), te[num]]))
 trc, tec = tr.astype({"city": "category"}), te.astype({"city": "category"})
 tec["city"] = tec["city"].cat.set_categories(trc["city"].cat.categories)
 run("LightGBM native categorical", trc, tec)
-run("CatBoost native (ordered TS)", tr, te,
+run("CatBoost (ordered target stats)", tr, te,
     model=CatBoostClassifier(iterations=300, learning_rate=0.05, verbose=False, random_seed=0), cat_features=["city"])</div>
   <div class="fx" data-lang="text">cities in train: 963; biggest 3 have [4272, 1894, 1244] rows; 518 cities have 5 rows or fewer
-one-hot + LightGBM                 cols   965  train AUC 0.827  test AUC 0.753    3.6s
-ordinal codes + LightGBM           cols     3  train AUC 0.848  test AUC 0.738    2.3s
-naive target mean (leaky) + LGBM   cols     3  train AUC 0.877  test AUC 0.741    2.1s
-TargetEncoder (cross-fit) + LGBM   cols     3  train AUC 0.850  test AUC 0.750    2.3s
-LightGBM native categorical        cols     3  train AUC 0.868  test AUC 0.755    2.8s
-CatBoost native (ordered TS)       cols     3  train AUC 0.806  test AUC 0.765   12.9s</div>
-  <ul>
-    <li><strong>Over half the cities (518 of 963) have 5 rows or fewer.</strong> That long tail is where encodings differ.</li>
-    <li><strong>Naive target mean is the leakiest:</strong> highest train AUC (0.877) but only 0.741 test. A city with one churner gets the value 1.0 = its own label, so the model learns "1.0 means churn" from a lie.</li>
-    <li><strong>Cross-fitted TargetEncoder</strong> (each row encoded by a model of the other folds) removes the leak: train 0.850, test 0.750.</li>
-    <li><strong>One-hot</strong> (965 columns) and <strong>LightGBM native</strong> do fine here (0.753, 0.755); ordinal codes are weakest (0.738).</li>
-    <li><strong>CatBoost</strong> wins on test (0.765) with the <em>lowest</em> train AUC (0.806): the smallest train-test gap, because ordered target statistics never let a row see its own label. It also took the longest (12.9 s vs 2–4 s).</li>
-  </ul>
-  <p>Rules of thumb: few categories → one-hot or native; many categories and you want one library → CatBoost; elsewhere → cross-fitted target encoding (<code>sklearn.preprocessing.TargetEncoder</code>) or LightGBM native with <code>min_data_per_group</code> raised. Unseen categories at prediction time must map to something sensible (the encoders above use the global mean or an "unknown" bucket). The full story, with ordered statistics worked row by row, is in <a class="xref" data-note="ml_catboost">CatBoost</a>.</p>
-  <div class="bridge"><b>What this still can't tell us → next: Business rules.</b> The model can now be accurate, honest and calibrated, and still be unusable if it breaks a business rule or optimises the wrong cost.</div>
+one-hot (963 columns)              train AUC 0.827  test AUC 0.753
+city code as a number              train AUC 0.848  test AUC 0.738
+naive target mean (leaky)          train AUC 0.877  test AUC 0.741
+TargetEncoder (cross-fitted)       train AUC 0.850  test AUC 0.750
+LightGBM native categorical        train AUC 0.868  test AUC 0.755
+CatBoost (ordered target stats)    train AUC 0.806  test AUC 0.765</div>
+  <p>Over half the cities have five rows or fewer, and that long tail is where the encodings differ. The naive target mean has the highest training AUC and one of the lowest test AUCs, the signature of a leak. Cross-fitting removes the leak. One-hot and LightGBM's native handling do reasonably well, and plain codes are weakest. CatBoost wins on test with the <em>lowest</em> training AUC, so the smallest gap between the two, because its ordered statistics never let a row see its own label; it is also the slowest. Rules of thumb: few categories, one-hot or native; many categories, CatBoost, a cross-fitted target encoder (<code>sklearn.preprocessing.TargetEncoder</code>), or LightGBM native with its minimum-rows-per-category settings raised. Categories never seen in training must map to something sensible at prediction time, such as the global average or an "unknown" bucket. The ordered statistics are worked row by row in <a class="xref" data-note="ml_catboost">CatBoost</a>.</p>
 
-  <h2 id="mtt-rules"><span class="num">09</span>Business Rules: Monotone Constraints &amp; Custom Loss</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>An accurate, calibrated model can still say "more debt, less risk" in some region, or minimise squared error when under-forecasting costs three times more. How do we build such rules into the model itself?</p>
-  </div>
-  <h3>Monotone constraints</h3>
-  <p>A credit model must never say "more debt → lower risk", even if noise in the training data suggests it in some region. A regulator, or common sense, will reject it. <strong>Monotone constraints</strong> tell the booster: for this feature, predictions may only go up (+1) or only down (−1) as it increases, holding the others fixed. The library enforces it during split search (a split whose left/right leaf values would break the order is rejected or clipped).</p>
+  <h2 id="mtt-rules"><span class="num">09</span>Business Rules</h2>
+  <p>A model can be accurate, honest and calibrated and still be unusable because it breaks a rule the business or a regulator insists on. A credit model must never say "more debt means lower risk", even if noise in the training data suggests it somewhere. A <strong>monotone constraint</strong> tells the booster that for a given column, predictions may only go up (+1) or only go down (−1) as the column increases, with everything else held fixed. The library enforces it while choosing splits, rejecting any split whose leaf values would break the order. The example simulates loan applicants whose true risk rises with the debt ratio and falls with income, and checks the model's predicted risk at 100 small steps of debt ratio with income fixed:</p>
   <div class="fx" data-lang="py">import numpy as np, pandas as pd, lightgbm as lgb
 rng = np.random.default_rng(0); n = 3000
 debt_ratio = rng.uniform(0, 1, n); income = rng.normal(50, 15, n)
 risk = 1 / (1 + np.exp(-(-3 + 4 * debt_ratio - 0.02 * (income - 50))))
 y = (rng.random(n) &lt; risk).astype(int)
 X = pd.DataFrame({"debt_ratio": debt_ratio, "income": income})
-grid = pd.DataFrame({"debt_ratio": np.linspace(0, 1, 101), "income": 50.0})
+grid = pd.DataFrame({"debt_ratio": np.linspace(0, 1, 101), "income": 50.0})     # 100 small steps of debt
 for mc in [None, [1, -1]]:
-    m = lgb.LGBMClassifier(n_estimators=300, learning_rate=0.05, num_leaves=31, verbose=-1,
+    m = lgb.LGBMClassifier(n_estimators=300, learning_rate=0.05, verbose=-1, random_state=0,
                            monotone_constraints=mc).fit(X, y)
     p = m.predict_proba(grid)[:, 1]
-    drops = int((np.diff(p) &lt; -1e-9).sum())
     print(f"monotone_constraints={mc}: risk at debt 0.0/0.5/1.0 = {p[0]:.2f}/{p[50]:.2f}/{p[100]:.2f}; "
-          f"places where MORE debt gives LOWER risk: {drops} of 100")</div>
-  <div class="fx" data-lang="text">monotone_constraints=None: risk at debt 0.0/0.5/1.0 = 0.00/0.13/0.65; places where MORE debt gives LOWER risk: 42 of 100
-monotone_constraints=[1, -1]: risk at debt 0.0/0.5/1.0 = 0.03/0.31/0.77; places where MORE debt gives LOWER risk: 0 of 100</div>
-  <p>Without the constraint, on 100 small steps of debt ratio from 0 to 1 (income fixed at 50), the predicted risk goes <em>down</em> at 42 places: noise-driven wiggles. With <code>monotone_constraints=[1, -1]</code> (risk rises with debt, falls with income) there are 0 such places, and the curve still rises from 0.03 to 0.77. Available in XGBoost, LightGBM, CatBoost and scikit-learn's HistGradientBoosting (<code>monotonic_cst</code>).</p>
-  <h3>Custom loss</h3>
-  <p>A shop running out of stock loses 3× more than it loses from holding extra stock. Squared error treats both mistakes the same. Gradient boosting can optimise <em>any</em> differentiable loss: you only supply its gradient and Hessian per row (<a class="xref" data-note="ml_gbm">Gradient Boosting</a>, <a class="xref" data-note="ml_xgboost">XGBoost</a>). By hand: L = w·(y − F)² with w = 3 if y &gt; F (under-forecast) else 1. Then g = ∂L/∂F = −2w(y − F) and h = ∂²L/∂F² = 2w. For a row with y = 100, F = 90: g = −2·3·10 = −60, h = 6.</p>
+          f"steps where MORE debt gives LOWER risk: {int((np.diff(p) &lt; -1e-9).sum())} of 100")</div>
+  <div class="fx" data-lang="text">monotone_constraints=None: risk at debt 0.0/0.5/1.0 = 0.00/0.13/0.65; steps where MORE debt gives LOWER risk: 42 of 100
+monotone_constraints=[1, -1]: risk at debt 0.0/0.5/1.0 = 0.03/0.31/0.77; steps where MORE debt gives LOWER risk: 0 of 100</div>
+  <p>Without the constraint, the predicted risk goes <em>down</em> at 42 of the 100 steps: noise-driven wiggles that a regulator would reject and a customer could exploit. With <code>monotone_constraints=[1, -1]</code> (risk rises with debt, falls with income) there are none, and the curve still rises across the range. The same option exists in XGBoost, CatBoost and scikit-learn's HistGradientBoosting (<code>monotonic_cst</code>), usually at a small cost in accuracy.</p>
+  <p>The second kind of rule concerns the loss itself. For a shop, running out of stock may cost three times as much as holding extra stock, but squared error treats both mistakes the same. Gradient boosting can minimise any differentiable loss as long as you supply, for every row, its <strong>gradient</strong> g (the slope of the loss with respect to the prediction F) and its <strong>Hessian</strong> h (the curvature), as explained in <a class="xref" data-note="ml_xgboost">XGBoost</a>. For L = w · (y − F)² with w = 3 when y &gt; F (an under-forecast) and 1 otherwise, g = −2w(y − F) and h = 2w. For a row with demand y = 100 and forecast F = 90, that gives g = −2 × 3 × 10 = −60 and h = 6.</p>
   <div class="fx" data-lang="py">import numpy as np, lightgbm as lgb
 rng = np.random.default_rng(0); n = 5000
 X = rng.uniform(0, 10, (n, 2))
@@ -797,379 +566,192 @@ demand = 50 + 8 * X[:, 0] - 3 * X[:, 1] + rng.normal(0, 10, n)     # units sold 
 def under_costs_3x(y_true, y_pred):          # loss = 3*(y-F)^2 if we under-forecast, (y-F)^2 if over
     r = y_true - y_pred
     w = np.where(r &gt; 0, 3.0, 1.0)
-    grad = -2 * w * r                          # dL/dF
-    hess = 2 * w                               # d2L/dF2
-    return grad, hess
+    return -2 * w * r, 2 * w                   # gradient dL/dF and Hessian d2L/dF2 for every row
 Xtr, Xte, ytr, yte = X[:4000], X[4000:], demand[:4000], demand[4000:]
 for name, obj in [("squared error", "regression"), ("custom: under-forecast costs 3x", under_costs_3x)]:
-    m = lgb.LGBMRegressor(objective=obj, n_estimators=300, learning_rate=0.05, verbose=-1).fit(Xtr, ytr)
-    p = m.predict(Xte); r = yte - p
-    cost = np.mean(np.where(r &gt; 0, 3, 1) * r ** 2)
-    print(f"{name:32s} mean error {r.mean():+5.2f}  under-forecast on {np.mean(r &gt; 0):.0%} of days  business cost {cost:6.1f}")</div>
+    m = lgb.LGBMRegressor(objective=obj, n_estimators=300, learning_rate=0.05, verbose=-1, random_state=0).fit(Xtr, ytr)
+    r = yte - m.predict(Xte)
+    print(f"{name:32s} mean error {r.mean():+5.2f}  under-forecast on {np.mean(r &gt; 0):.0%} of days"
+          f"  business cost {np.mean(np.where(r &gt; 0, 3, 1) * r ** 2):6.1f}")</div>
   <div class="fx" data-lang="text">squared error                    mean error +0.89  under-forecast on 53% of days  business cost  235.4
 custom: under-forecast costs 3x  mean error -2.82  under-forecast on 40% of days  business cost  189.8</div>
-  <p>The squared-error model is unbiased (mean error +0.89) and under-forecasts on 53% of days. The custom model deliberately aims high (mean error −2.82, under-forecasts on only 40% of days) and the business cost falls from 235.4 to 189.8. The "worse" model by RMSE is the better model for the business.</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>With a custom objective, libraries stop starting from the average target and evaluate with their default metric, so also pass a matching custom evaluation metric for early stopping, and check that the model has enough rounds to move from 0 to the target scale.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Size &amp; latency.</b> The model is ready. Now it has to leave the notebook: it takes disk space and memory, and it must answer in milliseconds.</div>
+  <p>The squared-error model is unbiased and under-forecasts on about half the days. The custom model deliberately aims high, under-forecasts on fewer days, and the business cost falls by about a fifth. The "worse" model by ordinary error is the better model for the business. With a custom objective, also pass a matching custom evaluation metric for early stopping, since the library's default metric no longer measures what you care about.</p>
 
-  <h2 id="mtt-size"><span class="num">10</span>Model Size &amp; Latency</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>A model that wins on the test set may still be too big to ship or too slow to answer one request in time. How big and how fast are the different tree models, and how do we shrink them?</p>
-  </div>
-  <p>A tree is stored as arrays of nodes (feature, threshold, children, value). A fully grown classification tree on 12,000 rows has thousands of nodes; 300 of them is a lot of memory. Boosters use hundreds of small trees (31 leaves, depth 6), so they are usually 10–50× smaller. Prediction time is roughly (number of trees) × (depth): every row walks from root to leaf in every tree.</p>
-  <div class="fx" data-lang="py">import pickle, lightgbm as lgb, xgboost as xgb
+  <h2 id="mtt-ship"><span class="num">10</span>Size, Speed and Saving</h2>
+  <p>A model that wins on the test set still has to leave the notebook: it takes disk space and memory, it must answer requests in milliseconds, and it must load tomorrow on another machine with exactly the same predictions. A tree is stored as arrays of nodes (column, threshold, children, value). A fully grown classification tree on 12,000 rows has thousands of nodes, and a forest has hundreds of such trees, while a booster has hundreds of small trees of 31 leaves or depth 6. Prediction time is roughly the number of trees times the depth, since every row walks from the root to a leaf in every tree. The code measures pickled size, the time to predict one row (what an API serving one request sees) and the time to predict 5,000 rows:</p>
+  <div class="fx" data-lang="py">import pickle, time, lightgbm as lgb, xgboost as xgb
 from catboost import CatBoostClassifier
+from churn import Xtr, ytr, Xte, yte
+from sklearn.ensemble import RandomForestClassifier
 models = {
-  "RF 300 trees, full depth": RandomForestClassifier(n_estimators=300, n_jobs=-1, random_state=0),
-  "RF 300 trees, min_samples_leaf=20": RandomForestClassifier(n_estimators=300, min_samples_leaf=20, n_jobs=-1, random_state=0),
-  "LightGBM 480 trees, 31 leaves": lgb.LGBMClassifier(n_estimators=480, learning_rate=0.05, verbose=-1),
-  "XGBoost 440 trees, depth 6": xgb.XGBClassifier(n_estimators=440, learning_rate=0.05, max_depth=6),
-  "CatBoost 820 trees, depth 6": CatBoostClassifier(iterations=820, learning_rate=0.05, depth=6, verbose=False)}
+  "RF 300 trees, full depth":        RandomForestClassifier(n_estimators=300, n_jobs=1, random_state=0),
+  "RF 300 trees, min_samples_leaf=20": RandomForestClassifier(n_estimators=300, min_samples_leaf=20, n_jobs=1, random_state=0),
+  "LightGBM 480 trees, 31 leaves":   lgb.LGBMClassifier(n_estimators=480, learning_rate=0.05, verbose=-1),
+  "XGBoost 440 trees, depth 6":      xgb.XGBClassifier(n_estimators=440, learning_rate=0.05, max_depth=6, n_jobs=1),
+  "CatBoost 820 trees, depth 6":     CatBoostClassifier(iterations=820, learning_rate=0.05, depth=6, verbose=False)}
 one = Xte.iloc[[0]]
 for name, m in models.items():
     m.fit(Xtr, ytr)
     mb = len(pickle.dumps(m)) / 1e6
-    m.predict_proba(one)
+    m.predict_proba(one)                                       # warm-up call
     t0 = time.perf_counter()
     for _ in range(50): m.predict_proba(one)
     single = (time.perf_counter() - t0) / 50 * 1000
     t0 = time.perf_counter(); m.predict_proba(Xte); batch = (time.perf_counter() - t0) * 1000
-    acc = m.score(Xte, yte)
-    print(f"{name:36s} {mb:7.1f} MB  1 row {single:6.1f} ms  5,000 rows {batch:7.1f} ms  test acc {acc:.3f}")</div>
-  <div class="fx" data-lang="text">RF 300 trees, full depth                69.1 MB  1 row   55.1 ms  5,000 rows   276.0 ms  test acc 0.877
-RF 300 trees, min_samples_leaf=20       13.3 MB  1 row   55.4 ms  5,000 rows   423.6 ms  test acc 0.852
-LightGBM 480 trees, 31 leaves            1.6 MB  1 row    1.9 ms  5,000 rows   318.0 ms  test acc 0.874
-XGBoost 440 trees, depth 6               1.6 MB  1 row    3.3 ms  5,000 rows    69.0 ms  test acc 0.867
-CatBoost 820 trees, depth 6              0.9 MB  1 row    1.2 ms  5,000 rows    12.6 ms  test acc 0.872</div>
-  <ul>
-    <li><strong>Size:</strong> the full-depth forest pickles to 69 MB; forcing leaves of ≥ 20 rows cuts it to 13 MB but costs 2.5 points of accuracy. The boosters are 0.9–1.6 MB at about the forest's accuracy. CatBoost's symmetric trees store one (feature, threshold) per <em>level</em>, not per node, so they are the most compact.</li>
-    <li><strong>Single-row latency</strong> (what an API serving one request sees): ~55 ms for the forests, because <code>n_jobs=-1</code> starts a thread pool for every call; that overhead dwarfs the tree walking. For serving one row at a time, set <code>n_jobs=1</code> on the loaded model. The boosters answer in 1–3 ms.</li>
-    <li><strong>Batch latency</strong> (5,000 rows): CatBoost's symmetric trees vectorise well (13 ms); the others take 70–420 ms. These timings come from a busy shared machine with one thread per booster, so treat them as rough ratios.</li>
-  </ul>
-  <p>Ways to shrink and speed up, cheapest first: fewer trees (early stopping already helps; for forests, 200 trees are usually as good as 1,000), smaller trees (<code>min_samples_leaf</code>, <code>max_depth</code>, <code>num_leaves</code>), drop useless features (<a class="xref" data-note="ml_tree_explain">Feature Importance &amp; SHAP</a>), predict in batches, compile the trees (Treelite, ONNX Runtime, or the library's own C API), and use float32 inputs.</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Notebook latency is not production latency. Measure p50/p99 for one row and for your real batch size, with the same thread settings and feature pipeline as production; feature fetching often costs more than the model (<a class="xref" data-note="sd_serving">Feature Stores &amp; Online/Offline Serving</a>).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Saving &amp; loading.</b> The model is small and fast enough. It must also load again tomorrow, in another process or library version, with identical predictions.</div>
-
-  <h2 id="mtt-save"><span class="num">11</span>Saving &amp; Loading</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>A trained model lives in memory. How do we save it so that it reloads tomorrow, possibly on another machine or library version, with exactly the same predictions?</p>
-  </div>
-  <table class="tbl">
-    <tr><th>Model</th><th>Recommended format</th><th>Why</th></tr>
-    <tr><td>scikit-learn (trees, RF, ET, HistGB)</td><td><code>joblib.dump</code> / <code>pickle</code> (or <code>skops</code> for safer loading)</td><td>Simple; but tied to the exact scikit-learn / Python versions, and unpickling runs code, so only load files you trust</td></tr>
-    <tr><td>XGBoost</td><td><code>save_model("m.json")</code> or <code>.ubj</code></td><td>Stable, documented format; loads across versions and languages</td></tr>
-    <tr><td>LightGBM</td><td><code>booster_.save_model("m.txt")</code></td><td>Plain text, readable, loads in C++/Java/Python</td></tr>
-    <tr><td>CatBoost</td><td><code>save_model("m.cbm")</code> (also JSON, ONNX, C++/Python export)</td><td>Native binary; exports for other runtimes</td></tr>
-  </table>
-  <div class="fx" data-lang="py">import os, joblib, lightgbm as lgb, xgboost as xgb
+    print(f"{name:34s} {mb:6.1f} MB  1 row {single:5.1f} ms  5,000 rows {batch:6.0f} ms  test acc {m.score(Xte, yte):.3f}")</div>
+  <div class="fx" data-lang="text">RF 300 trees, full depth             69.1 MB  1 row 100.8 ms  5,000 rows   1016 ms  test acc 0.877
+RF 300 trees, min_samples_leaf=20    13.3 MB  1 row  83.8 ms  5,000 rows    816 ms  test acc 0.852
+LightGBM 480 trees, 31 leaves         1.6 MB  1 row   4.6 ms  5,000 rows    640 ms  test acc 0.874
+XGBoost 440 trees, depth 6            1.6 MB  1 row  10.0 ms  5,000 rows    189 ms  test acc 0.867
+CatBoost 820 trees, depth 6           0.9 MB  1 row   1.0 ms  5,000 rows     66 ms  test acc 0.872</div>
+  <p>The full-depth forest is by far the largest; forcing leaves of at least 20 rows shrinks it several times but costs accuracy. The boosters are a megabyte or two at about the forest's accuracy, and CatBoost's symmetric trees, which store one column and threshold per <em>level</em> rather than per node, are the most compact. Single-row latency is ten or more times lower for the boosters than for the scikit-learn forests, whose prediction loops over the 300 trees one by one with some Python overhead per tree, while the boosting libraries walk all their trees in compiled code. (Timings are approximate and come from a busy shared machine; treat them as rough ratios.) One more trap makes forests even slower: a forest loaded with <code>n_jobs=-1</code> starts a thread pool on every call, which for a single row costs more than walking the trees, so set <code>n_jobs=1</code> for one-row serving, as this code does. To shrink and speed up, cheapest first: fewer trees (early stopping; for forests, a few hundred trees are usually as good as a thousand), smaller trees, fewer columns (<a class="xref" data-note="ml_tree_explain">Feature Importance &amp; SHAP</a>), batch predictions, and compiled tree runtimes such as Treelite or ONNX Runtime. Measure real latency with your production thread settings and feature pipeline; fetching features often costs more than the model.</p>
+  <p>For saving, each library has a recommended format. scikit-learn models are saved with <code>joblib.dump</code> (a pickle), which is simple but tied to the exact scikit-learn and Python versions, and loading a pickle runs code, so never load one from an untrusted source. XGBoost saves to JSON (<code>save_model("m.json")</code>, or the binary <code>.ubj</code>), a documented format that loads across versions and languages. LightGBM saves a plain-text dump of every tree (<code>booster_.save_model("m.txt")</code>). CatBoost saves its own binary <code>.cbm</code> and can also export JSON or ONNX. The code saves and reloads one model of each kind and checks the predictions:</p>
+  <div class="fx" data-lang="py">import os, joblib, numpy as np, lightgbm as lgb, xgboost as xgb
 from catboost import CatBoostClassifier
+from churn import Xtr, ytr, Xte
+from sklearn.ensemble import RandomForestClassifier
 os.makedirs("models", exist_ok=True)
-rf = RandomForestClassifier(n_estimators=100, min_samples_leaf=5, n_jobs=-1, random_state=0).fit(Xtr, ytr)
-joblib.dump(rf, "models/rf.joblib", compress=3)
-rf2 = joblib.load("models/rf.joblib")
+rf = RandomForestClassifier(n_estimators=100, min_samples_leaf=5, random_state=0).fit(Xtr, ytr)
+joblib.dump(rf, "models/rf.joblib", compress=3);        rf2 = joblib.load("models/rf.joblib")
 lg = lgb.LGBMClassifier(n_estimators=300, learning_rate=0.05, verbose=-1).fit(Xtr, ytr)
-lg.booster_.save_model("models/lgb.txt")                    # plain text, readable, version-tolerant
-lg2 = lgb.Booster(model_file="models/lgb.txt")
+lg.booster_.save_model("models/lgb.txt");               lg2 = lgb.Booster(model_file="models/lgb.txt")
 xg = xgb.XGBClassifier(n_estimators=300, learning_rate=0.05, max_depth=6).fit(Xtr, ytr)
-xg.save_model("models/xgb.json")                            # also .ubj (binary JSON)
-xg2 = xgb.XGBClassifier(); xg2.load_model("models/xgb.json")
+xg.save_model("models/xgb.json");                       xg2 = xgb.XGBClassifier(); xg2.load_model("models/xgb.json")
 cb = CatBoostClassifier(iterations=300, verbose=False).fit(Xtr, ytr)
-cb.save_model("models/cb.cbm")
-cb2 = CatBoostClassifier(); cb2.load_model("models/cb.cbm")
-checks = {"RF joblib": (rf.predict_proba(Xte)[:, 1], rf2.predict_proba(Xte)[:, 1]),
-          "LightGBM txt": (lg.predict_proba(Xte)[:, 1], lg2.predict(Xte)),
-          "XGBoost json": (xg.predict_proba(Xte)[:, 1], xg2.predict_proba(Xte)[:, 1]),
-          "CatBoost cbm": (cb.predict_proba(Xte)[:, 1], cb2.predict_proba(Xte)[:, 1])}
-files = {"RF joblib": "rf.joblib", "LightGBM txt": "lgb.txt", "XGBoost json": "xgb.json", "CatBoost cbm": "cb.cbm"}
-for k, (a, b) in checks.items():
-    print(f"{k:13s} file {os.path.getsize('models/' + files[k]) / 1e6:5.2f} MB  max |difference| after reload {np.abs(a - b).max():.1e}")
-print(open("models/lgb.txt").read().splitlines()[0:3])</div>
-  <div class="fx" data-lang="text">RF joblib     file  3.20 MB  max |difference| after reload 3.3e-16
-LightGBM txt  file  1.03 MB  max |difference| after reload 0.0e+00
-XGBoost json  file  1.73 MB  max |difference| after reload 0.0e+00
-CatBoost cbm  file  0.34 MB  max |difference| after reload 0.0e+00
+cb.save_model("models/cb.cbm");                         cb2 = CatBoostClassifier(); cb2.load_model("models/cb.cbm")
+checks = {"rf.joblib": (rf.predict_proba(Xte)[:, 1], rf2.predict_proba(Xte)[:, 1]),
+          "lgb.txt":   (lg.predict_proba(Xte)[:, 1], lg2.predict(Xte)),
+          "xgb.json":  (xg.predict_proba(Xte)[:, 1], xg2.predict_proba(Xte)[:, 1]),
+          "cb.cbm":    (cb.predict_proba(Xte)[:, 1], cb2.predict_proba(Xte)[:, 1])}
+for f, (a, b) in checks.items():
+    print(f"{f:10s} {os.path.getsize('models/' + f) / 1e6:5.2f} MB   max |difference| after reload {np.abs(a - b).max():.1e}")
+print(open("models/lgb.txt").read().splitlines()[:3])</div>
+  <div class="fx" data-lang="text">rf.joblib   3.20 MB   max |difference| after reload 0.0e+00
+lgb.txt     1.03 MB   max |difference| after reload 0.0e+00
+xgb.json    1.73 MB   max |difference| after reload 0.0e+00
+cb.cbm      0.34 MB   max |difference| after reload 0.0e+00
 ['tree', 'version=v4', 'num_class=1']</div>
-  <p>All four reload with identical predictions (the forest differs by 3 × 10⁻¹⁶, floating-point noise). The last line shows the first lines of LightGBM's text file: a human-readable dump of every tree. Save alongside the model: the library versions, the exact feature list and order, the category mappings, the chosen threshold and calibrator, and the training data's date range. Tools like <a class="xref" data-note="mlops_mlflow">MLflow &amp; Experiment Tracking</a> do this bookkeeping for you (<code>mlflow.lightgbm.log_model</code>, <code>mlflow.xgboost.log_model</code>).</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>A pickled scikit-learn model may fail to load, or silently behave differently, after a library upgrade. Pin versions in the serving image, or retrain on upgrade. Never <code>pickle.load</code> a file from an untrusted source: it can execute arbitrary code.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Monitoring &amp; drift.</b> The model is shipped. But the world keeps changing after training: is today's data still like the data the model learnt from?</div>
+  <p>All four reload with exactly the same predictions (a largest difference of zero). The last line is the start of LightGBM's text file, a human-readable dump of the trees. Save more than the model: the library versions, the exact list and order of feature columns, the category mappings and preprocessing, the chosen threshold and calibrator, and the date range of the training data. Tools such as <a class="xref" data-note="mlops_mlflow">MLflow &amp; Experiment Tracking</a> do this bookkeeping for you.</p>
 
-  <h2 id="mtt-drift"><span class="num">12</span>Monitoring &amp; Drift</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The diary was written in a dry month. If the next month is the monsoon, will the model still work? How do we notice that the inputs have changed before the results go bad?</p>
-  </div>
-  <p>A deployed model decays. Customers change, prices rise, a new plan launches, an upstream team renames a field. Monitoring catches this before the business does. Watch four things, from fastest to slowest signal:</p>
-  <ol>
-    <li><strong>Data quality</strong>: missing rates, new categories, values outside the training range (trees cannot extrapolate: <a class="xref" data-note="ml_trees">The Tree Family</a>).</li>
-    <li><strong>Data drift</strong> (input distributions change): measured per feature, e.g. with PSI.</li>
-    <li><strong>Prediction drift</strong>: the distribution of scores or the share of "churn" decisions changes.</li>
-    <li><strong>Performance</strong>: AUC, precision/recall, calibration once true labels arrive (often weeks later). A drop with stable inputs points to <strong>concept drift</strong>: the relationship between inputs and target changed.</li>
-  </ol>
-  <h3>PSI by hand</h3>
-  <p>The <strong>Population Stability Index</strong> compares a feature's distribution in production (a) against training (e), using the same bins: PSI = Σ (aᵢ − eᵢ) · ln(aᵢ / eᵢ). On the diary first: its 14 humidity readings are the "training" distribution; a monsoon month brings far more humid days:</p>
-<div class="fx" data-lang="py">import numpy as np
+  <h2 id="mtt-drift"><span class="num">11</span>Monitoring and Drift</h2>
+  <p>A deployed model decays. Customers change, prices rise, a new plan launches, an upstream team renames a field. The diary was written in a dry month; if the next month is the monsoon, the model will meet weather it has barely seen. <strong>Drift</strong> is the general name for the world moving away from the training data, and monitoring exists to catch it before the business does. Four things are watched, from the fastest signal to the slowest: <strong>data quality</strong> (missing values, new categories, values outside the training range, which matters because trees cannot extrapolate beyond it); <strong>data drift</strong>, a change in the distribution of the inputs, measured per column; <strong>prediction drift</strong>, a change in the distribution of the scores or in the share of positive decisions; and <strong>performance</strong> (AUC, precision and recall, calibration), which can only be measured once true labels arrive, often weeks later. A drop in performance while the inputs look stable points to <strong>concept drift</strong>: the relationship between the inputs and the target itself has changed.</p>
+  <p>A car dashboard is a fair picture: the data-quality checks are the warning light (something is broken now), drift is the fuel gauge slowly moving, and performance is the mileage you only learn at the end of the trip. You need all of them because they arrive at different times.</p>
+  <p>The most common measure of data drift is the <strong>Population Stability Index</strong>. Bin a column using the training data, compute the share of rows in each bin at training time (e) and in production (a), and add up PSI = Σ (aᵢ − eᵢ) · ln(aᵢ / eᵢ) over the bins. Each term is zero when the shares match and grows as they move apart in either direction. On the diary, the 14 humidity readings are the training distribution, and an imagined monsoon month brings far more humid days:</p>
+  <div class="fx" data-lang="py">import numpy as np
 from play import df
 edges = [0, 75, 85, 91, 100]                       # humidity bins (%)
-e = np.histogram(df.HumPct, edges)[0] / 14         # the diary's share per bin (the "training" month)
-a = np.array([0.10, 0.20, 0.30, 0.40])             # a monsoon month: much more humid
-names = ["65-74", "75-84", "85-90", "91-100"]
-for k in range(4):
-    print(f"bin {names[k]:6s}: diary {e[k]:.3f}  new month {a[k]:.2f}  (a-e)*ln(a/e) = {(a[k]-e[k])*np.log(a[k]/e[k]):.4f}")
+e = np.histogram(df.HumPct, edges)[0] / 14         # the diary's share per bin: the "training" month
+a = np.array([0.10, 0.20, 0.30, 0.40])             # a monsoon month: far more humid days
+for k, name in enumerate(["65-74", "75-84", "85-90", "91-100"]):
+    print(f"bin {name:6s}: diary {e[k]:.3f}  new month {a[k]:.2f}  (a-e)*ln(a/e) = {(a[k]-e[k])*np.log(a[k]/e[k]):.4f}")
 print(f"PSI = {np.sum((a - e) * np.log(a / e)):.3f}")</div>
   <div class="fx" data-lang="text">bin 65-74 : diary 0.286  new month 0.10  (a-e)*ln(a/e) = 0.1950
 bin 75-84 : diary 0.214  new month 0.20  (a-e)*ln(a/e) = 0.0010
 bin 85-90 : diary 0.286  new month 0.30  (a-e)*ln(a/e) = 0.0007
 bin 91-100: diary 0.214  new month 0.40  (a-e)*ln(a/e) = 0.1159
 PSI = 0.313</div>
-  <p>By hand for the driest bin: the diary has 4 of 14 days (0.286) at 65–74% humidity, the new month only 10%: (0.10 − 0.286) · ln(0.10/0.286) = (−0.186) · (−1.050) = 0.195. The most humid bin contributes 0.116; the middle bins barely moved. PSI = <strong>0.313</strong>: a major shift. A model trained on the diary has seen only 3 days above 90% humidity and will be guessing on most monsoon days.</p>
-  <p>A second worked example, closer to churn: monthly bills, 4 bins:</p>
-  <table class="tbl">
-    <tr><th>bin (₹)</th><th>train share e</th><th>production share a</th><th>(a − e) · ln(a/e)</th></tr>
-    <tr><td>0–500</td><td>0.10</td><td>0.05</td><td>(−0.05) · ln(0.5) = 0.0347</td></tr>
-    <tr><td>500–1000</td><td>0.40</td><td>0.25</td><td>(−0.15) · ln(0.625) = 0.0705</td></tr>
-    <tr><td>1000–1500</td><td>0.40</td><td>0.45</td><td>(0.05) · ln(1.125) = 0.0059</td></tr>
-    <tr><td>1500+</td><td>0.10</td><td>0.25</td><td>(0.15) · ln(2.5) = 0.1374</td></tr>
-    <tr><td colspan="3"><b>PSI</b></td><td><b>0.248</b></td></tr>
-  </table>
-  <p>Common rule of thumb: PSI &lt; 0.1 stable, 0.1–0.25 moderate shift (investigate), &gt; 0.25 major shift (likely retrain). 0.248 is on the edge. The code repeats the table and then shows how PSI grows as the average bill slowly drifts up (10 quantile bins from training):</p>
+  <p>Check the driest bin by hand: the diary has 4 of 14 days (0.286) at 65–74% humidity, the new month only 10%, so the term is (0.10 − 0.286) × ln(0.10 / 0.286) = (−0.186) × (−1.050) = 0.195. The most humid bin adds 0.116, and the middle bins barely moved. The total is 0.313. The usual rule of thumb is PSI below 0.1 for a stable column, 0.1 to 0.25 for a moderate shift worth investigating, and above 0.25 for a major shift that probably needs retraining, so this is a major shift: a model trained on the diary has seen only three days above 90% humidity and would be guessing on most monsoon days. The second example shows how PSI grows as the average monthly bill slowly drifts upwards, using 10 bins of 10% each from the training data:</p>
   <div class="fx" data-lang="py">import numpy as np
 def psi(expected, actual, edges):
     e = np.histogram(expected, edges)[0] / len(expected)
     a = np.histogram(actual, edges)[0] / len(actual)
-    e, a = np.clip(e, 1e-4, None), np.clip(a, 1e-4, None)
-    return np.sum((a - e) * np.log(a / e)), e, a
-# hand example: bills in 4 bins
-edges = [0, 500, 1000, 1500, 10_000]
-train_bills = np.repeat([250, 750, 1250, 2000], [10, 40, 40, 10])     # 10% 40% 40% 10%
-prod_bills  = np.repeat([250, 750, 1250, 2000], [5, 25, 45, 25])      # 5% 25% 45% 25%
-v, e, a = psi(train_bills, prod_bills, edges)
-for i in range(4):
-    print(f"bin {i}: train {e[i]:.2f}  prod {a[i]:.2f}  (a-e)*ln(a/e) = {(a[i]-e[i])*np.log(a[i]/e[i]):.4f}")
-print(f"PSI = {v:.3f}")
-# a feature on the churn data: quantile bins from train, then a slow drift
+    e, a = np.clip(e, 1e-4, None), np.clip(a, 1e-4, None)      # avoid log(0) in empty bins
+    return np.sum((a - e) * np.log(a / e))
 rng = np.random.default_rng(0)
-train = rng.normal(800, 200, 20000)
-q = np.quantile(train, np.linspace(0, 1, 11)); q[0], q[-1] = -np.inf, np.inf
+train = rng.normal(800, 200, 20000)                              # monthly bills at training time
+q = np.quantile(train, np.linspace(0, 1, 11)); q[0], q[-1] = -np.inf, np.inf   # 10 bins of 10% each
 for shift in [0, 20, 60, 120]:
-    prod = rng.normal(800 + shift, 200, 5000)
-    print(f"mean bill +{shift:3d}: PSI {psi(train, prod, q)[0]:.3f}")</div>
-  <div class="fx" data-lang="text">bin 0: train 0.10  prod 0.05  (a-e)*ln(a/e) = 0.0347
-bin 1: train 0.40  prod 0.25  (a-e)*ln(a/e) = 0.0705
-bin 2: train 0.40  prod 0.45  (a-e)*ln(a/e) = 0.0059
-bin 3: train 0.10  prod 0.25  (a-e)*ln(a/e) = 0.1374
-PSI = 0.248
-mean bill +  0: PSI 0.003
-mean bill + 20: PSI 0.008
-mean bill + 60: PSI 0.092
-mean bill +120: PSI 0.306</div>
-  <p>A ₹20 shift in the average bill (0.1 standard deviations) gives PSI 0.008, nothing to worry about; ₹60 gives 0.092, close to the "investigate" line; ₹120 gives 0.306, a major shift. Use permutation importance or SHAP to decide which features to watch most closely: drift in a feature the model barely uses matters little; drift in f5 matters a lot.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A car's dashboard. Data quality is the check-engine light (something is broken now), drift is the fuel gauge slowly moving (things are changing), performance is the mileage you only learn at the end of the trip. You need all three because they arrive at different times.</p>
-  </div>
-  <p>When drift is confirmed: retrain on recent data (on a schedule or triggered by thresholds), re-check calibration and the threshold, compare the new model with the old one on the same recent holdout (a "champion vs challenger" check), and roll out gradually. The system-design side, with dashboards and alerting, is in <a class="xref" data-note="sd_monitoring">Monitoring, Drift &amp; Retraining</a> and <a class="xref" data-note="mlops_lifecycle">The ML Lifecycle</a>.</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>PSI on every feature every day produces false alarms (many features, small daily samples). Alert on the important features, use larger windows, and confirm with prediction drift and, when labels arrive, performance.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: A default recipe per model.</b> We have every piece: knobs, honest validation, search, early stopping, thresholds, calibration, encodings, rules, size, saving and monitoring. Where should you actually start for each model?</div>
+    print(f"average bill +{shift:3d}: PSI {psi(train, rng.normal(800 + shift, 200, 5000), q):.3f}")</div>
+  <div class="fx" data-lang="text">average bill +  0: PSI 0.003
+average bill + 20: PSI 0.008
+average bill + 60: PSI 0.092
+average bill +120: PSI 0.306</div>
+  <p>A shift of ₹20 in the average bill (a tenth of a standard deviation) is nothing to worry about; ₹60 approaches the "investigate" line; ₹120 is a major shift. Use permutation importance or SHAP to decide which columns to watch most closely: drift in a column the model barely uses matters little, while drift in its strongest column matters a lot. Computing PSI on every column every day produces false alarms, so alert on the important columns, use windows large enough to be stable, and confirm with prediction drift and, when labels arrive, performance. When drift is confirmed, retrain on recent data, re-check calibration and the threshold, compare the new model with the old one on the same recent holdout (a "champion versus challenger" test), and roll it out gradually. The system around this, with dashboards, alerts and retraining schedules, is covered in <a class="xref" data-note="sd_monitoring">Monitoring, Drift &amp; Retraining</a>.</p>
 
-  <h2 id="mtt-recipe"><span class="num">13</span>A Default Recipe per Model</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>With so many knobs and checks, where should you start for each model so that tuning is only the last step?</p>
-  </div>
-  <p>Starting points that are good on most tables. Begin here, check validation, then tune only the knobs marked in section 02.</p>
-  <div style="overflow-x:auto"><table class="tbl">
-    <tr><th>Model</th><th>Start with</th><th>Then tune</th><th>Do not bother</th></tr>
-    <tr><td>Decision tree</td><td><code>ccp_alpha</code> from the pruning path (by CV), <code>min_samples_leaf</code> 5–20</td><td><code>max_depth</code>, <code>min_samples_leaf</code></td><td>criterion</td></tr>
-    <tr><td>Random forest</td><td>500 trees, <code>max_features="sqrt"</code>, <code>min_samples_leaf=1</code>, <code>n_jobs=-1</code>, OOB on</td><td><code>max_features</code> (sqrt, 0.3, 0.5), <code>min_samples_leaf</code> (1, 3, 5)</td><td>n_estimators beyond "enough", criterion</td></tr>
-    <tr><td>Extra Trees</td><td>500 trees, sqrt, <code>min_samples_leaf</code> 1–2</td><td><code>max_features</code></td><td>bootstrap</td></tr>
-    <tr><td>HistGradientBoosting</td><td>lr 0.05, <code>max_iter</code> large + early stopping, 31 leaves, <code>l2_regularization=1</code></td><td><code>max_leaf_nodes</code>, <code>min_samples_leaf</code></td><td>max_bins</td></tr>
-    <tr><td>XGBoost</td><td>lr 0.05, ES 100, depth 6, subsample 0.8, colsample 0.8, <code>tree_method="hist"</code></td><td>depth, <code>min_child_weight</code>, sampling, λ/α, γ</td><td>max_delta_step (unless extreme imbalance)</td></tr>
-    <tr><td>LightGBM</td><td>lr 0.05, ES 100, 31 leaves, <code>min_child_samples=20</code>, bagging 0.8/1, feature_fraction 0.8</td><td><code>num_leaves</code>, <code>min_child_samples</code>, sampling, λ</td><td>max_bin (unless huge data)</td></tr>
-    <tr><td>CatBoost</td><td>lr 0.05 (or auto), ES 100, depth 6, <code>cat_features</code> set</td><td>depth, <code>l2_leaf_reg</code></td><td>most others</td></tr>
-  </table></div>
-  <div class="fx" data-lang="py">import xgboost as xgb, lightgbm as lgb
-from catboost import CatBoostClassifier
-from sklearn.ensemble import ExtraTreesClassifier, HistGradientBoostingClassifier
-from sklearn.metrics import roc_auc_score
-recipes = {
-  "Decision tree": (DecisionTreeClassifier(min_samples_leaf=5, ccp_alpha=3e-4, random_state=0), {}),
-  "Random forest": (RandomForestClassifier(n_estimators=500, max_features="sqrt", min_samples_leaf=1,
-                                           n_jobs=-1, random_state=0), {}),
-  "Extra Trees":   (ExtraTreesClassifier(n_estimators=500, max_features="sqrt", min_samples_leaf=2,
-                                         n_jobs=-1, random_state=0), {}),
-  "HistGradientBoosting": (HistGradientBoostingClassifier(learning_rate=0.05, max_iter=3000, max_leaf_nodes=31,
-                                         min_samples_leaf=20, l2_regularization=1.0, early_stopping=True,
-                                         n_iter_no_change=100, random_state=0), {}),
-  "XGBoost":  (xgb.XGBClassifier(n_estimators=5000, learning_rate=0.05, max_depth=6, min_child_weight=1,
-                                 subsample=0.8, colsample_bytree=0.8, reg_lambda=1.0, tree_method="hist",
-                                 early_stopping_rounds=100, eval_metric="logloss"),
-               {"eval_set": [(Xva, yva)], "verbose": False}),
-  "LightGBM": (lgb.LGBMClassifier(n_estimators=5000, learning_rate=0.05, num_leaves=31, min_child_samples=20,
-                                  subsample=0.8, subsample_freq=1, colsample_bytree=0.8, reg_lambda=1.0, verbose=-1),
-               {"eval_X": Xva, "eval_y": yva, "callbacks": [lgb.early_stopping(100, verbose=False)]}),
-  "CatBoost": (CatBoostClassifier(iterations=5000, learning_rate=0.05, depth=6, l2_leaf_reg=3,
-                                  early_stopping_rounds=100, verbose=False, random_seed=0),
-               {"eval_set": (Xva, yva)}),
-}
-for name, (m, fit_kw) in recipes.items():
-    t0 = time.time(); m.fit(Xtr, ytr, **fit_kw)
-    p = m.predict_proba(Xte)[:, 1]
-    trees = (getattr(m, "best_iteration", None) or getattr(m, "best_iteration_", None) or getattr(m, "n_iter_", None)
-             or (m.get_best_iteration() if name == "CatBoost" else None) or getattr(m, "n_estimators", 1))
-    print(f"{name:21s} test acc {np.mean((p &gt; 0.5) == yte):.3f}  AUC {roc_auc_score(yte, p):.3f}  trees {trees}  {time.time()-t0:5.1f}s")</div>
-  <div class="fx" data-lang="text">Decision tree         test acc 0.810  AUC 0.870  trees 1    0.8s
-Random forest         test acc 0.877  AUC 0.937  trees 500   33.8s
-Extra Trees           test acc 0.869  AUC 0.933  trees 500   13.5s
-HistGradientBoosting  test acc 0.869  AUC 0.935  trees 784    6.7s
-XGBoost               test acc 0.870  AUC 0.936  trees 612    5.4s
-LightGBM              test acc 0.875  AUC 0.936  trees 544    3.6s
-CatBoost              test acc 0.874  AUC 0.938  trees 733    9.5s</div>
-  <p>With no search at all, every ensemble recipe lands within about 0.005 AUC of the others (0.933–0.938), and early stopping chose 544–784 rounds for the boosters. The single tree (0.810 accuracy) shows what the ensembles buy. From here, tuning is worth at most a few tenths of a point on this data; on harder data (more rows, more interactions, more categoricals) the boosters usually pull ahead after tuning tree size and sampling.</p>
-  <div class="flow"><span>Clean data + honest split</span><span>RF baseline</span><span>Booster recipe + early stopping</span><span>Tune tree/leaf size, sampling (random search / Optuna)</span><span>Threshold + calibration</span><span>Test once</span><span>Save with metadata</span><span>Monitor drift</span></div>
-  <div class="bridge"><b>What this still can't tell us → next: How it all connects.</b> We have a recipe. How do all the steps of this note fit into one pipeline, and what does each protect against?</div>
+  <h2 id="mtt-traps"><span class="num">12</span>Common Mistakes</h2>
+  <p>The most common mistake is reporting the tuning score as the model's quality. The best of many validation scores is optimistic by construction: on 800 churn rows the best of 96 settings scored 0.732 in its own cross-validation and 0.723 on fresh data. Report a separate test set or nested CV, and touch the test set once.</p>
+  <p>The second is grid-searching the learning rate and the number of trees of a booster together. They are one knob in disguise; fix the learning rate, let early stopping pick the trees, and spend the search on tree size, leaf size and sampling. Close behind it is preprocessing outside the cross-validation loop: target encoding, feature selection, oversampling or scaling fitted on all the rows leaks into validation and makes everything look better than it is. Put those steps in a Pipeline.</p>
+  <p>The third family is about decisions. Judging a rare-class model by accuracy ("always no" scored 0.950) and leaving the threshold at 0.5 both ignore what the mistakes cost; use PR-AUC and set the threshold from C_FP / (C_FP + C_FN). Trusting weighted-booster or forest probabilities as they are is the next step of the same mistake: the weighted booster said 0.50 where only about a quarter churned, and forests are squeezed towards the middle, so calibrate on held-out rows before probabilities feed any money calculation.</p>
+  <p>The last family is about shipping. Naive target encoding of a high-cardinality column leaks labels (high training AUC, low test AUC); cross-fit it or use CatBoost. A full-depth forest of many megabytes behind a strict latency limit, served with <code>n_jobs=-1</code>, is slow for reasons that have nothing to do with the trees. And shipping without monitoring means finding out about drift from the business, weeks after the inputs moved.</p>
 
-    <h2 id="mtt-connect"><span class="num">14</span>How It All Connects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Knobs, CV, search, early stopping, thresholds, calibration, encodings, constraints, size, saving, drift: a checklist of separate chores, or one pipeline in which each step protects the next?</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 680 290" width="680">
-<defs><marker id="mtt-c9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="10" y="10" width="200" height="46" rx="7" class="fg sg" stroke-width="2"/><text x="110" y="29" text-anchor="middle" font-size="11.5" font-weight="700">honest split / CV</text><text x="110" y="46" text-anchor="middle" class="tm" font-size="10">diary: leave-one-day-out</text>
-<line x1="210" y1="33" x2="238" y2="33" stroke="currentColor" marker-end="url(#mtt-c9)"/>
-<rect x="240" y="10" width="200" height="46" rx="7" class="fb sb"/><text x="340" y="29" text-anchor="middle" font-size="11.5" font-weight="700">knobs + search</text><text x="340" y="46" text-anchor="middle" class="tm" font-size="10">depth 2 = 10/14; random &gt; grid</text>
-<line x1="440" y1="33" x2="468" y2="33" stroke="currentColor" marker-end="url(#mtt-c9)"/>
-<rect x="470" y="10" width="200" height="46" rx="7" class="fb sb"/><text x="570" y="29" text-anchor="middle" font-size="11.5" font-weight="700">early stopping (rounds)</text><text x="570" y="46" text-anchor="middle" class="tm" font-size="10">best round 204 of 3,000</text>
-<line x1="570" y1="56" x2="570" y2="88" stroke="currentColor" marker-end="url(#mtt-c9)"/>
-<rect x="470" y="90" width="200" height="46" rx="7" class="ft st"/><text x="570" y="109" text-anchor="middle" font-size="11.5" font-weight="700">calibration</text><text x="570" y="126" text-anchor="middle" class="tm" font-size="10">diary forest ECE 0.147</text>
-<line x1="470" y1="113" x2="442" y2="113" stroke="currentColor" marker-end="url(#mtt-c9)"/>
-<rect x="240" y="90" width="200" height="46" rx="7" class="ft st"/><text x="340" y="109" text-anchor="middle" font-size="11.5" font-weight="700">threshold from costs</text><text x="340" y="126" text-anchor="middle" class="tm" font-size="10">0.143: ₹2,500 vs ₹3,500</text>
-<line x1="240" y1="113" x2="212" y2="113" stroke="currentColor" marker-end="url(#mtt-c9)"/>
-<rect x="10" y="90" width="200" height="46" rx="7" class="fr sr"/><text x="110" y="109" text-anchor="middle" font-size="11.5" font-weight="700">report once on test</text><text x="110" y="126" text-anchor="middle" class="tm" font-size="10">0.732 tuned vs 0.723 fresh</text>
-<line x1="110" y1="136" x2="110" y2="168" stroke="currentColor" marker-end="url(#mtt-c9)"/>
-<rect x="10" y="170" width="660" height="40" rx="7" class="fv" stroke="currentColor" stroke-opacity="0.3"/><text x="340" y="195" text-anchor="middle" font-size="11">ship: leak-free categories · monotone rules / custom loss · size and latency · saved with versions and threshold</text>
-<line x1="340" y1="210" x2="340" y2="238" stroke="currentColor" marker-end="url(#mtt-c9)"/>
-<rect x="190" y="240" width="300" height="40" rx="7" class="fg sg"/><text x="340" y="265" text-anchor="middle" font-size="11">monitor: PSI (monsoon month 0.313) → retrain</text>
-<path d="M490,260 Q640,260 640,220" fill="none" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#mtt-c9)"/>
-</svg><figcaption>One pipeline: every choice is scored on rows it did not train on; the search spends its budget on the knobs that matter while early stopping sets the rounds; probabilities are calibrated before costs set the threshold; the test set is used once; the shipped model carries its settings and is watched for drift, which loops back to retraining.</figcaption></figure>
-  <table class="tbl"><caption>Every step, with its numbers</caption>
-    <tr><th>Step</th><th>Built from</th><th>Answers which question</th><th>Number</th><th>Watch</th></tr>
-    <tr><td>Held-out scoring</td><td>rows not used for fitting</td><td>is this setting good?</td><td>diary depth: LOO 2/14, 10/14, 10/14, 10/14</td><td>training score always prefers deeper</td></tr>
-    <tr><td>Nested CV</td><td>outer folds around inner tuning</td><td>how good is "tune, then train"?</td><td>0.705 vs tuning score 0.732</td><td>small data</td></tr>
-    <tr><td>Random / Bayesian search</td><td>sampled settings, history</td><td>which settings to try?</td><td>random 0.9411 vs grid 0.9389</td><td>log scales, range edges</td></tr>
-    <tr><td>Early stopping</td><td>validation loss per round</td><td>how many trees?</td><td>204 rounds (0.308) vs 0.752 at 3,000</td><td>its score is optimistic</td></tr>
-    <tr><td>Cost threshold</td><td>C_FP / (C_FP + C_FN)</td><td>when to act?</td><td>diary: 0.143, ₹2,500 vs ₹3,500</td><td>needs calibrated p</td></tr>
-    <tr><td>Calibration</td><td>Brier, reliability bins, Platt / isotonic</td><td>does 0.75 mean 75%?</td><td>diary forest: 0.751 said, 0.889 true; ECE 0.147</td><td>calibrate on held-out rows</td></tr>
-    <tr><td>Category encoding</td><td>one-hot / cross-fitted TE / CatBoost</td><td>leak-free categories?</td><td>naive TE: train 0.877, test 0.741</td><td>cross-fit</td></tr>
-    <tr><td>Monotone constraints</td><td>split search restricted by sign</td><td>does the model obey rules?</td><td>42 → 0 wrong-direction steps</td><td>small accuracy cost</td></tr>
-    <tr><td>PSI</td><td>Σ (a − e) ln(a/e)</td><td>has the input distribution moved?</td><td>monsoon humidity 0.313</td><td>&gt; 0.25 major</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>One sentence holds the note: <strong>every decision about a model (a setting, a number of trees, a threshold, a calibration map) must be made on data the model did not learn from, and checked again on data it will never have seen, both before shipping (a test set) and after (drift monitoring).</strong> Tuning itself is the last few points; the honesty of the loop is what makes those points real.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Common mistakes.</b> Knowing how the pipeline fits together, which mistakes cost teams the most?</div>
-
-<h2 id="mtt-traps"><span class="num">15</span>Common Mistakes</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We know the pipeline. Which mistakes in tuning and shipping tree models cost teams the most?</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: reporting the tuning score</span>
-    <p>The best of many validation scores is optimistic (0.732 vs 0.723 on fresh data in section 03). Report a separate test set or nested CV.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: grid-searching the learning rate and number of trees</span>
-    <p>Fix the learning rate, let early stopping pick the trees, and search the rest.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: preprocessing outside the CV loop</span>
-    <p>Target encoding, feature selection, SMOTE or scaling fitted on all rows leak into validation. Put them in a Pipeline.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: accuracy on imbalanced data, and the 0.5 threshold</span>
-    <p>"Always no" got 0.950 accuracy. Use PR-AUC, and choose the threshold from costs (C_FP / (C_FP + C_FN)).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: trusting weighted or forest probabilities as-is</span>
-    <p>Weighted boosters over-predict (said 0.50, truth 0.26); forests are squeezed toward the middle. Calibrate on held-out data before using probabilities in money calculations.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: naive target encoding</span>
-    <p>Train AUC 0.877, test 0.741: tiny categories leak their own labels. Cross-fit, or use CatBoost.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: a 70 MB forest behind a latency SLA</span>
-    <p>Measure size and single-row latency before choosing; set n_jobs=1 for single-row serving; prefer boosters or smaller trees when latency matters.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: shipping without monitoring</span>
-    <p>Inputs drift long before labels arrive. Track PSI on important features and the prediction distribution from day one.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Revision sheet.</b> The whole note on one page, for revising.</div>
-
-    <h2 id="mtt-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>The whole note on one sheet. Running example: the captain's 14-day cricket diary (Outlook, Humidity, Wind → Play, 9 of 14 played) for the hand calculations; the 20,000-row churn data (12,000 / 3,000 / 5,000) for everything at scale.</p>
-  <h3>The question ladder</h3>
-  <table class="tbl">
-    <tr><th>Step</th><th>Question</th><th>Answer</th><th>Weakness → next</th></tr>
-    <tr><td>What tuning is</td><td>who chooses settings?</td><td>held-out scores: diary depth 2 (10/14 left-out days)</td><td>which knobs?</td></tr>
-    <tr><td>Knobs</td><td>what to search?</td><td>boosters: lr + rounds, tree size, leaf size, sampling; forests: max_features, leaf size</td><td>best-of-many is optimistic</td></tr>
-    <tr><td>Nested CV</td><td>honest number?</td><td>0.732 tuned vs 0.705 nested vs 0.723 fresh</td><td>search cost</td></tr>
-    <tr><td>Search</td><td>how to search?</td><td>random &gt; grid; halving; Optuna/TPE</td><td>rounds need their own tool</td></tr>
-    <tr><td>Early stopping</td><td>how many rounds?</td><td>patience; best 204 vs 3,000</td><td>balanced targets only</td></tr>
-    <tr><td>Imbalance / costs</td><td>when to act?</td><td>threshold C_FP/(C_FP + C_FN); diary 0.143: ₹2,500 vs ₹3,500</td><td>needs honest p</td></tr>
-    <tr><td>Calibration</td><td>is p honest?</td><td>diary forest Brier 0.161, ECE 0.147; isotonic on churn RF 0.110 → 0.019</td><td>categories</td></tr>
-    <tr><td>Categoricals, rules, size, saving</td><td>shippable?</td><td>CatBoost 0.765; monotone 42 → 0; RF 69 MB vs 1–2 MB; JSON/txt/cbm</td><td>world changes</td></tr>
-    <tr><td>Drift</td><td>still valid?</td><td>PSI monsoon humidity 0.313</td><td>retrain</td></tr>
-  </table>
+  <h2 id="mtt-rev"><span class="num">R</span>Revision Sheet</h2>
+  <h3>Definitions</h3>
+  <ul>
+    <li><b>Parameter</b>: learnt by training (splits, thresholds, leaf values). <b>Hyperparameter</b>: chosen before training (depth, learning rate, number of trees).</li>
+    <li><b>Nested CV</b>: outer folds report, inner folds tune; estimates "tune, then train".</li>
+    <li><b>Early stopping</b>: stop when validation loss has not improved for <i>patience</i> rounds; keep the best round.</li>
+    <li><b>Calibrated</b>: among cases scored p, a share p are positive.</li>
+    <li><b>Monotone constraint</b>: prediction may only rise (+1) or fall (−1) with a column.</li>
+    <li><b>Drift</b>: data drift (inputs), prediction drift (scores), concept drift (input–target relationship).</li>
+  </ul>
   <h3>Formulas</h3>
   <table class="tbl">
-    <tr><th>Name</th><th>Formula</th><th>Symbols</th><th>Value</th></tr>
-    <tr><td>Random search hit</td><td>1 − (1 − q)ⁿ</td><td>q share of good space, n trials</td><td>q 0.05, n 60 → 0.954</td></tr>
-    <tr><td>Cost threshold</td><td>t = C_FP / (C_FP + C_FN)</td><td>costs of false positive / negative</td><td>500/3,500 = 0.143</td></tr>
-    <tr><td>Class weight</td><td>w = n_neg / n_pos; odds × w</td><td>—</td><td>5,977/314 = 19.0</td></tr>
-    <tr><td>Undo weighting</td><td>p = p′ / (p′ + w(1 − p′))</td><td>p′ weighted prediction</td><td>0.5 → 0.05 for w 19</td></tr>
-    <tr><td>Brier</td><td>mean (p − y)²</td><td>p predicted, y 0/1</td><td>diary 0.161 (base rate 0.230)</td></tr>
-    <tr><td>ECE</td><td>Σ bins (share) · |mean p − rate|</td><td>—</td><td>(5/14)·0.162 + (9/14)·0.138 = 0.147</td></tr>
-    <tr><td>PSI</td><td>Σ (aᵢ − eᵢ) ln(aᵢ/eᵢ)</td><td>a production share, e training share</td><td>0.313; &lt; 0.1 ok, &gt; 0.25 major</td></tr>
-    <tr><td>Custom loss</td><td>supply g = ∂L/∂F, h = ∂²L/∂F²</td><td>L = w(y − F)²</td><td>y 100, F 90, w 3: g −60, h 6</td></tr>
+    <tr><th>Name</th><th>Formula</th><th>Example</th></tr>
+    <tr><td>Random search hit rate</td><td>1 − (1 − q)ⁿ</td><td>q = 0.05, n = 60 → 0.954</td></tr>
+    <tr><td>Cost threshold</td><td>t = C_FP / (C_FP + C_FN)</td><td>500 / 3,500 = 0.143</td></tr>
+    <tr><td>Class weight</td><td>w = n_neg / n_pos; odds × w</td><td>5,977 / 314 = 19.0</td></tr>
+    <tr><td>Undo weighting</td><td>p = p′ / (p′ + w(1 − p′))</td><td>0.5 → 0.05 for w = 19</td></tr>
+    <tr><td>Brier score</td><td>mean (p − y)²</td><td>lower is better</td></tr>
+    <tr><td>ECE</td><td>Σ bins (share) · |mean p − actual rate|</td><td>0 = calibrated</td></tr>
+    <tr><td>PSI</td><td>Σ (aᵢ − eᵢ) ln(aᵢ / eᵢ)</td><td>monsoon humidity 0.313</td></tr>
+    <tr><td>Custom loss</td><td>supply g = ∂L/∂F, h = ∂²L/∂F²</td><td>L = 3(y − F)²: g = −60, h = 6 at y = 100, F = 90</td></tr>
   </table>
-  <h3>When to use, when not</h3>
-  <div class="cards">
-    <div><b>Holdout vs nested CV</b><p>Plenty of data: train / validation / test. Small data or comparing tuned models: nested CV.</p><small>Test set used once</small></div>
-    <div><b>Search</b><p>1–2 knobs: grid. 3+ knobs: random. Costly trials: Optuna with pruning. Many candidates: halving.</p><small>Never grid-search n_estimators of a booster</small></div>
-    <div><b>Decisions</b><p>Pick thresholds from costs on validation data; calibrate first if probabilities feed money.</p><small>Weights move the operating point, not the ranking</small></div>
-    <div><b>Production</b><p>Pin versions, save the threshold and calibrator, measure single-row latency, monitor PSI on important features.</p><small>Retrain on confirmed drift</small></div>
-  </div>
-  <div class="callout trap"><span class="label">Key traps</span>
-    <p>Reporting the tuning score; grid-searching learning rate and rounds; preprocessing outside the CV loop; accuracy and the 0.5 threshold on imbalanced data; trusting weighted or forest probabilities as-is; naive target encoding; a 70 MB forest behind a latency SLA; shipping without monitoring.</p>
-  </div>
-  <h3>Five rapid-fire checks</h3>
+  <h3>Which knob, which search</h3>
   <table class="tbl">
-    <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td>Wasted booking ₹500, forfeited match ₹3,000. Book when P(play) exceeds?</td><td>500/3,500 = 0.143</td></tr>
-    <tr><td>A model says 0.75 on days played 89% of the time. Over- or under-confident?</td><td>Under-confident (squeezed toward the middle), typical of forests</td></tr>
-    <tr><td>Depths 2, 3 and unlimited tie on leave-one-out. Which do you pick?</td><td>The simplest, depth 2</td></tr>
-    <tr><td>Why is the best validation score of 30 Optuna trials optimistic?</td><td>The same rows chose the winner (and its rounds); report a separate test score</td></tr>
-    <tr><td>PSI 0.313 on an important feature. What next?</td><td>Major shift: investigate, check performance when labels arrive, likely retrain</td></tr>
+    <tr><th>Situation</th><th>Do this</th></tr>
+    <tr><td>Random forest</td><td>500 trees, try <code>max_features</code> and <code>min_samples_leaf</code>; do not tune <code>n_estimators</code></td></tr>
+    <tr><td>Any booster</td><td>learning rate 0.05 + early stopping; tune tree size, leaf size, sampling</td></tr>
+    <tr><td>1–2 knobs</td><td>grid search</td></tr>
+    <tr><td>3+ knobs</td><td>random search; Optuna (TPE) when trials are costly; halving for many candidates</td></tr>
+    <tr><td>Small data / comparing tuned models</td><td>nested CV</td></tr>
+    <tr><td>Rare class</td><td>PR-AUC; threshold from costs on validation; mild weights at most</td></tr>
+    <tr><td>Probabilities used as money</td><td>calibrate (Platt with little data, isotonic with thousands of rows)</td></tr>
+    <tr><td>Many categories</td><td>CatBoost or cross-fitted target encoding</td></tr>
   </table>
+  <h3>Syntax</h3>
+  <div class="fx" data-lang="py">from sklearn.model_selection import RandomizedSearchCV, cross_val_score, GridSearchCV
+from sklearn.calibration import CalibratedClassifierCV
+import lightgbm as lgb
 
-<h2 id="mtt-qa"><span class="num">16</span>Questions &amp; Answers</h2>
+m = lgb.LGBMClassifier(n_estimators=5000, learning_rate=0.05, num_leaves=31)
+m.fit(Xtr, ytr, eval_set=[(Xva, yva)], callbacks=[lgb.early_stopping(100)])   # m.best_iteration_
+rs = RandomizedSearchCV(model, dist, n_iter=30, cv=5, scoring="roc_auc").fit(X, y)
+nested = cross_val_score(GridSearchCV(model, grid, cv=5), X, y, cv=5)         # nested CV
+cal = CalibratedClassifierCV(model, method="isotonic", cv=5).fit(X, y)
+lgb.LGBMClassifier(monotone_constraints=[1, -1])                               # rise with col 0, fall with col 1
+m.booster_.save_model("m.txt")                                                 # LightGBM text format</div>
+  <h3>Gotchas</h3>
+  <ul>
+    <li>The tuning score is optimistic; report a test set used once.</li>
+    <li>Every learnt preprocessing step goes inside the CV folds.</li>
+    <li>The early-stopping validation score is optimistic too.</li>
+    <li>Weights move the operating point, not the ranking; probabilities need correcting.</li>
+    <li>Forests are squeezed towards the middle; calibrate on held-out rows.</li>
+    <li>Pickles break across library versions and can run code; prefer native formats.</li>
+    <li>PSI on every column daily → false alarms; watch the important columns.</li>
+  </ul>
+
+  <h2 id="mtt-qa"><span class="num">13</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>Parameter vs hyperparameter: give two examples of each for a gradient-boosted model.</summary><div class="qa-body">Parameters (learned): each tree's split features and thresholds, and its leaf values. Hyperparameters (chosen): learning_rate, max_depth / num_leaves, n_estimators, subsample, reg_lambda.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Which hyperparameters matter most for a random forest, and which for a booster?</summary><div class="qa-body">Forest: max_features and min_samples_leaf; n_estimators just needs to be "enough" and never overfits. Booster: learning rate with the number of rounds (via early stopping), then tree size (max_depth / num_leaves), then leaf size (min_child_weight / min_child_samples), then row/column sampling, then L1/L2 and gamma.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why does random search usually beat grid search for the same budget?</summary><div class="qa-body">Usually only a few knobs matter. A grid with 4 values per knob tries only 4 distinct values of the important knob however many combinations it runs; random search tries a new value of every knob in every trial. And 60 random trials have a 1 − 0.95⁶⁰ ≈ 95% chance of landing in the top 5% of the space.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How does Bayesian optimisation (TPE / Optuna) choose the next trial?</summary><div class="qa-body">It builds a model of how the score depends on the hyperparameters from the trials so far. TPE splits past trials into "good" and "bad" groups, models the density of each, and proposes points where good/bad density is highest. It focuses trials on promising regions; pruning stops bad trials early.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is successive halving?</summary><div class="qa-body">Start many candidates on a small budget (few rows or rounds), keep the best 1/factor, give them factor× more budget, repeat. With 48 candidates, factor 3 and 1,000 starting rows: 48 → 16 → 6 candidates on 1,000 → 3,000 → 9,000 rows, then the best survivor wins. Most of the compute goes to the few good candidates.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is nested cross-validation and when do you need it?</summary><div class="qa-body">Outer folds estimate performance; inside each outer training part, an inner CV tunes hyperparameters. The outer score never sees rows used for choosing, so it is unbiased for "tune then train". Use it on small data or when comparing tuned models in a paper; with plenty of data a separate untouched test set does the job.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Early stopping chose 587 rounds with 5-fold CV. How many rounds do you use when you refit on all the data?</summary><div class="qa-body">About the same or slightly more, because more data supports a few more rounds; ~10–20% more is common. Here 587 and 675 rounds gave test AUC 0.9385 and 0.9389. Alternatively keep a small validation split and early-stop the final fit too.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you handle a 1-in-20 positive rate with LightGBM?</summary><div class="qa-body">Judge with PR-AUC and precision/recall, not accuracy. Train normally or with scale_pos_weight = n_neg/n_pos; choose the threshold from costs (C_FP/(C_FP+C_FN)) or a recall target on validation. In our run, tuning the threshold to 0.13 gave recall 0.344 vs 0.176 at 0.5, better than reweighting. Resample only inside training folds.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why are random forest probabilities poorly calibrated, and how do you fix them?</summary><div class="qa-body">They are averages over trees that rarely all agree, so they are pulled toward the middle (said 0.11 when truth 0.04, 0.71 when truth 0.87). Fix with Platt scaling (sigmoid) or isotonic regression fitted on held-out predictions, e.g. CalibratedClassifierCV(cv=5): ECE 0.110 → 0.019, accuracy unchanged.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does scale_pos_weight do to predicted probabilities?</summary><div class="qa-body">It multiplies the positive class's weight by w, which roughly multiplies the predicted odds by w. A true 5% becomes about 50% with w = 19. Correct with p = p′/(p′ + w(1−p′)) or recalibrate. Ranking (AUC) is mostly unchanged.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>A categorical column has 1,000 values, half with ≤ 5 rows. What are your options?</summary><div class="qa-body">CatBoost with cat_features (ordered target statistics), cross-fitted target encoding, or LightGBM native categorical with min_data_per_group/cat_smooth raised. Avoid naive target means (leaky: train AUC 0.877, test 0.741) and be careful with one-hot (thousands of sparse columns). In our run CatBoost won (0.765 test) with the smallest train-test gap.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How would you make a credit model respect "more debt never lowers risk"?</summary><div class="qa-body">Monotone constraints: +1 for debt, −1 for income, in XGBoost/LightGBM/CatBoost/HistGB. The split search rejects splits that break the order. In our demo the unconstrained curve decreased at 42 of 100 steps; constrained, at 0.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you save a LightGBM model for production, and what else must you save?</summary><div class="qa-body">booster_.save_model("m.txt") (text, portable), or via MLflow. Also save library versions, the exact feature list and order, category mappings, preprocessing, the decision threshold and calibrator, and the training data window. Avoid relying on pickles across library upgrades.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is PSI and how do you read it?</summary><div class="qa-body">Population Stability Index = Σ (a − e)·ln(a/e) over bins of a feature, comparing production shares a to training shares e. &lt; 0.1 stable, 0.1–0.25 investigate, &gt; 0.25 major shift. In our example a shift of the bill distribution gave 0.248.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do tuning and production connect back to the rest of the tree family?</summary><div class="qa-body">Every knob is one of the family's ideas: tree size and leaf size come from <a class="xref" data-note="ml_dtree">Decision Trees</a>; max_features and subsampling from the bagging branch (<a class="xref" data-note="ml_rf">Random Forest</a>); learning rate and early stopping from <a class="xref" data-note="ml_boosting">How Boosting Works</a>; λ, γ, min_child_weight from <a class="xref" data-note="ml_xgboost">XGBoost</a>; categorical handling from <a class="xref" data-note="ml_catboost">CatBoost</a>. Importance from <a class="xref" data-note="ml_tree_explain">Feature Importance &amp; SHAP</a> decides which features to keep and which to monitor.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why must calibration come before choosing a cost-based threshold?</summary><div class="qa-body">The rule "act when p &gt; C_FP/(C_FP + C_FN)" assumes p is a true probability. On the diary the forest says 0.36 for days that are played 20% of the time and 0.75 for days played 89%, so a threshold of 0.143 computed from costs would be applied to the wrong scale. Calibrate on held-out rows first (Platt or isotonic), then apply the cost threshold.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks if you choose max_depth on the diary by training accuracy?</summary><div class="qa-body">Training accuracy always rises with depth (0.643, 0.857, 0.857, 1.000), so it always picks the deepest tree, which memorises odd days like D6. Leave-one-day-out shows deeper trees are no better on new days than depth 2 (10 of 14 each). Every hyperparameter must be judged on rows the model did not train on, and the final number reported on rows used for neither.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: how do the ideas of the earlier tree notes reappear as knobs and checks here?</summary><div class="qa-body">Depth and leaf size are the decision-tree stopping rules; max_features and subsampling come from bagging and random forests; learning rate, rounds and early stopping from boosting; λ, γ and min_child_weight from XGBoost; num_leaves and min_data_in_leaf from LightGBM; leak-free category handling from CatBoost; and permutation importance and SHAP decide which features to keep and which to monitor for drift.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between a parameter and a hyperparameter?</summary><div class="qa-body">Parameters are learnt from the data during training, such as each tree's split columns, thresholds and leaf values. Hyperparameters are chosen before training and control how the parameters are learnt, such as the learning rate, maximum depth, number of leaves and number of trees. Hyperparameters are chosen by comparing candidates on held-out data.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Which hyperparameters matter most for a random forest, and which for a gradient booster?</summary><div class="qa-body">For a forest, <code>max_features</code> and <code>min_samples_leaf</code>; the number of trees only needs to be "enough", because more trees never over-fit. For a booster, the learning rate together with the number of rounds (chosen by early stopping), then tree size (depth or number of leaves), then leaf size (min_child_weight or min_child_samples), then row and column sampling, then L1/L2 and gamma.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why is the best cross-validation score from a hyperparameter search optimistic?</summary><div class="qa-body">The winner was chosen because it scored best on those particular rows, so part of its score is luck that will not repeat on new data. The more settings you try, the larger this selection bias. Report the final model on a test set that played no part in choosing, or use nested cross-validation.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is nested cross-validation and when do you need it?</summary><div class="qa-body">An outer CV loop estimates performance; inside each outer training part an inner CV tunes the hyperparameters. The outer scores come from rows that never influenced the choice, so they estimate how good "tune, then train" is. It is needed on small data or when comparing tuned models fairly; with plenty of data an untouched test set does the same job more cheaply.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does random search usually beat grid search for the same budget?</summary><div class="qa-body">Usually only a few knobs matter. A grid with 2 values per knob tests only 2 values of the important knob however many combinations it runs, while random search tries a new value of every knob in every trial. Also, 60 random trials have a 1 − 0.95⁶⁰ ≈ 95% chance of hitting the top 5% of the space, regardless of the number of knobs.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How does Bayesian optimisation with TPE choose the next trial?</summary><div class="qa-body">It splits the trials so far into a good group (the best 10–25%) and a bad group, estimates the density of each knob's values in each group, l(x) and g(x), and proposes values where l(x)/g(x) is largest, meaning common among good trials and rare among bad ones. The first trials are random to get started, and hopeless trials can be pruned early.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is successive halving?</summary><div class="qa-body">Start many candidates on a small budget (few rows or rounds), keep the best fraction (for example a third), give the survivors more budget, and repeat until one remains. With 48 candidates and factor 3: 48 on 1,000 rows, 16 on 3,000, 6 on 9,000. Most of the compute goes to the promising candidates; the risk is discarding settings that start slowly.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How does early stopping work, and how many rounds do you use when refitting on all the data?</summary><div class="qa-body">After each round the validation loss is computed; if it has not improved for a set number of rounds (the patience), training stops and the best round is kept. When refitting on all the data, use about the same number of rounds or slightly more, since more data supports a few more; 10–20% more is common, and near the optimum the exact count matters little.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why are the learning rate and the number of trees "one knob in disguise"?</summary><div class="qa-body">Their product is roughly how far the model moves from its starting point: halve the learning rate and you need about twice as many trees for the same fit. Smaller rates usually generalise a little better but cost training time. So fix the learning rate, let early stopping choose the trees, and search other knobs.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you handle a problem with 5% positives?</summary><div class="qa-body">Measure with PR-AUC and precision/recall instead of accuracy. Train normally or with a mild class weight (<code>scale_pos_weight = n_neg/n_pos</code>), then choose the decision threshold from the costs, C_FP / (C_FP + C_FN), or from a recall or precision target on validation data. Any resampling must happen inside the training folds only.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does <code>scale_pos_weight</code> do to the predicted probabilities?</summary><div class="qa-body">It counts each positive row w times in the loss, which multiplies the predicted odds by about w, so a true 5% becomes about 50% with w = 19. The ranking (AUC) barely changes, but the outputs are no longer real probabilities; correct them with p = p′/(p′ + w(1 − p′)) or recalibrate.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why are random-forest probabilities poorly calibrated, and how do you fix them?</summary><div class="qa-body">A forest's probability is the average vote of its trees, and random rows and columns make some trees always disagree, so the average rarely reaches 0 or 1: probabilities are squeezed towards the middle. Fix it with Platt scaling (a sigmoid with two parameters, good for small data) or isotonic regression (a flexible step function, needs thousands of rows), fitted on held-out predictions, for example with <code>CalibratedClassifierCV(cv=5)</code>. Accuracy is unchanged; the probability scale becomes honest.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why must calibration come before choosing a cost-based threshold?</summary><div class="qa-body">The rule "act when p &gt; C_FP / (C_FP + C_FN)" assumes p is a real probability. If the model says 0.75 for cases that are positive 89% of the time, the threshold is applied on the wrong scale and the decisions are not cost-optimal. Calibrate on held-out rows first, then apply the threshold.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>A categorical column has 1,000 values, half with five rows or fewer. What are your options?</summary><div class="qa-body">CatBoost with the column declared categorical (ordered target statistics), a cross-fitted target encoder, or LightGBM's native categorical handling with its minimum-rows-per-category settings raised. Avoid naive target means, which leak each row's own label into tiny categories, and be wary of one-hot, which creates a thousand sparse columns.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How would you make a credit model respect "more debt never lowers risk"?</summary><div class="qa-body">Use monotone constraints: +1 for debt and −1 for income, available in XGBoost, LightGBM, CatBoost and HistGradientBoosting. The split search then rejects splits that would make the prediction go the wrong way, so the rule holds everywhere, usually at a small cost in accuracy.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you train a booster on a loss the library does not provide?</summary><div class="qa-body">Write a function that returns, for every row, the gradient and the Hessian of the loss with respect to the prediction, and pass it as the objective. For L = w(y − F)², g = −2w(y − F) and h = 2w. Also supply a matching evaluation metric for early stopping.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you save a gradient-boosted model for production, and what else must you save?</summary><div class="qa-body">Use the library's native format: XGBoost JSON, LightGBM text, CatBoost <code>.cbm</code>; scikit-learn models with joblib only with pinned versions. Also save the library versions, the exact feature list and order, category mappings and preprocessing, the decision threshold and calibrator, and the training data window, ideally through a tool like MLflow.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is PSI and how do you read it?</summary><div class="qa-body">The Population Stability Index compares a column's distribution in production with training over the same bins: PSI = Σ (a − e)·ln(a/e). Below 0.1 is stable, 0.1–0.25 a moderate shift worth investigating, above 0.25 a major shift that usually calls for retraining. It measures input drift only; performance must be checked once labels arrive.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between data drift and concept drift?</summary><div class="qa-body">Data drift is a change in the distribution of the inputs, such as bills rising; it can be measured immediately, for example with PSI. Concept drift is a change in the relationship between inputs and target, such as the same bill now leading to more churn because a competitor launched; it shows up as falling performance once labels arrive, possibly with stable inputs.</div></details>
 </main>
 `
 });
