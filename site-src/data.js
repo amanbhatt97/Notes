@@ -34,7 +34,7 @@ const CATEGORIES = [
         {"key": "py_context",     "label": "Context Managers"}
       ]},
       {"key": "grp_py_conc", "label": "Concurrency", "children": [
-        {"key": "py_concurrency",     "label": "The Map: Concurrency in Python"},
+        {"key": "py_concurrency",     "label": "Concurrency vs Parallelism"},
         {"key": "py_threading",       "label": "Threads & the GIL"},
         {"key": "py_multiprocessing", "label": "Processes: multiprocessing"},
         {"key": "py_asyncio",         "label": "asyncio"}
