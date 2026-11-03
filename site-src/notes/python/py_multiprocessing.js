@@ -3,97 +3,63 @@ Object.assign(TOPIC_CONTENT, {
   "py_multiprocessing": `<main>
 <h1>Processes: multiprocessing</h1>
   <div class="where"><span>Python</span><span>Advanced Python</span><span>Concurrency</span><span>Processes</span></div>
-  <p class="lead">Threads could not plan QuickBite's routes any faster, because the GIL lets only one thread run Python code at a time. This note gets around the GIL the direct way: run several separate Python programs, <strong>processes</strong>, each with its own interpreter and its own GIL, so 4 route plans really run on 4 cores at once. Then it pays the bill honestly. Processes share nothing, so data must be packed (pickled) to travel; your file is re-imported in every child, which is why <code>if __name__ == "__main__":</code> is required; and starting processes and copying data costs real time, which we measure, along with the fix (<code>chunksize</code>). Finally: how processes talk (<code>Queue</code>, <code>Pipe</code>), how they share memory (<code>Value</code>, <code>Array</code>, <code>shared_memory</code>), and when not to use them at all. Every block was run; times vary between runs, so read them as ratios.</p>
-
-  <h2 id="mp-fits" class="open"><span class="num">★</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 640 150" width="640">
-    <defs><marker id="mp-a0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
-    <rect x="200" y="8" width="240" height="30" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="320" y="28" text-anchor="middle" font-size="12">Concurrency in Python: the map</text>
-    <line x1="320" y1="38" x2="110" y2="70" stroke="currentColor" stroke-opacity="0.45"/>
-    <line x1="320" y1="38" x2="320" y2="70" stroke="currentColor" stroke-opacity="0.45"/>
-    <line x1="320" y1="38" x2="530" y2="70" stroke="currentColor" stroke-opacity="0.45"/>
-    <rect x="20" y="70" width="180" height="34" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="110" y="92" text-anchor="middle" font-size="12">Threads &amp; the GIL</text>
-    <rect x="230" y="70" width="180" height="34" rx="6" class="fg sg" stroke-width="2.5"/><text x="320" y="92" text-anchor="middle" font-size="12" font-weight="700">Processes</text>
-    <rect x="440" y="70" width="180" height="34" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="530" y="92" text-anchor="middle" font-size="12">asyncio</text>
-    <line x1="200" y1="87" x2="226" y2="87" stroke="currentColor" marker-end="url(#mp-a0)"/>
-    <line x1="410" y1="87" x2="436" y2="87" stroke="currentColor" marker-end="url(#mp-a0)"/>
-    <text x="215" y="125" class="tm" font-size="11">GIL limit → own GIL each</text>
-    <text x="420" y="125" class="tm" font-size="11">run_in_executor uses a process pool</text>
-  </svg><figcaption>The Concurrency group. You are on the green note. It exists because of the GIL limit found in Threads; its process pool is reused by asyncio for the CPU-heavy part of QuickBite.</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: <a class="xref" data-note="py_threading">Threads &amp; the GIL</a></b><span>Threads overlapped the 20 menu waits (4.0 → 0.2 s), but 4 threads planned the 4 routes no faster than 1, because the GIL lets one thread at a time run Python bytecode. You also know <code>ThreadPoolExecutor</code>, <code>queue.Queue</code> and locks; this note has a twin of each.</span></li>
-    <li><b>This note adds: real parallelism with processes</b><span>Why processes beat the GIL (measured), <code>Process</code>, <code>Pool</code> and <code>ProcessPoolExecutor</code>, pickling and the <code>__main__</code> guard, the cost of start-up and data copying (and <code>chunksize</code>), <code>Queue</code>/<code>Pipe</code>, <code>Value</code>/<code>Array</code>/<code>shared_memory</code>, and when not to use processes.</span></li>
-    <li><b>Leads to: <a class="xref" data-note="py_asyncio">asyncio</a></b><span>Processes are expensive workers; you cannot have thousands. For many cheap waits, asyncio uses one thread, and hands CPU work to this note's process pool with <code>run_in_executor</code>.</span></li>
-  </ol>
-
-  <h2 id="mp-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
-  <p>The note as one chain. Numbers come from the running example: 4 riders × 9 stops, best route costs 40, 36, 35, 36; the 3-stop hand example costs 12.</p>
-  <ol class="story">
-    <li><b>Process</b><span>Q: how do we compute on 4 cores when threads cannot? → Separate Python programs, each with its own GIL: routes 1.75 s → 0.62 s, computed in 4 different processes. But do they share our variables like threads did?</span></li>
-    <li><b>Separate memory</b><span>Q: what does a child see? → A copy. The child's <code>menus_seen</code> became 1; the parent's stayed 0. Results must be sent back. Must we manage processes one by one?</span></li>
-    <li><b>Pool / ProcessPoolExecutor</b><span>Q: a ready-made pool? → <code>Pool.map</code> or <code>ProcessPoolExecutor</code> (the thread pool's twin): same 40, 36, 35, 36. How do arguments and results cross between separate memories?</span></li>
-    <li><b>Pickling</b><span>Q: how does data travel? → Turned into bytes (a menu = 38 bytes), sent, rebuilt. Functions travel by name, so a lambda cannot. And the child must find that name…</span></li>
-    <li><b>The __main__ guard</b><span>Q: why does every multiprocessing example have <code>if __name__ == "__main__":</code>? → With spawn, each child re-runs your file to find the functions; unguarded pool code then tries to start children of children: <code>RuntimeError</code>. So processes work. What do they cost?</span></li>
-    <li><b>Start-up and copying cost</b><span>Q: is a process free? → 20 processes ≈ 25 ms vs 20 threads ≈ 3 ms; 5000 tiny jobs: 0.01 s in a loop, 1.03 s in a pool, 0.02 s with <code>chunksize</code>; a 9.9 MB argument ≈ 10× slower than sending a number. How do long-running workers exchange messages?</span></li>
-    <li><b>Queue and Pipe</b><span>Q: how do processes talk while they run? → <code>mp.Queue</code> (many producers/consumers, poison pills) and <code>Pipe</code> (two ends). Every message is still pickled. Can they share memory instead?</span></li>
-    <li><b>Shared memory</b><span>Q: one copy, many processes? → <code>Value</code> / <code>Array</code> (with a lock: 200,000; without: 79,536) and <code>shared_memory</code> for numpy arrays (child added 10 to every fare, parent saw it). So when are processes the wrong tool?</span></li>
-    <li><b>When not to</b><span>Q: when do processes lose? → Waiting work (threads win 5×), tiny tasks, huge data, and numpy work (numpy alone beat 4 processes ≈ 24×).</span></li>
-  </ol>
+  <p class="lead">The <code>multiprocessing</code> module and <code>ProcessPoolExecutor</code> run Python code in several separate processes. Each process has its own interpreter and its own GIL, so CPU-bound pure-Python work really runs on several cores at once. Threads cannot do that on standard CPython: 4 threads computing take as long as 1. The price is isolation. Processes share no memory, so every argument and result is pickled and copied, worker functions must be importable (no lambdas), the entry point needs <code>if __name__ == "__main__":</code>, and start-up and copying overhead can make a pool slower than a plain loop. You meet this in PyTorch <code>DataLoader(num_workers=…)</code>, scikit-learn and joblib <code>n_jobs</code>, and parallel feature engineering or parsing. Code was run on CPython 3.13 on Linux with 4 cores; timings vary between runs and are approximate.</p>
 
   <h2 id="mp-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
-    <div class="mm-center">Processes</div>
+    <div class="mm-center">multiprocessing</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">Why</div>
+        <div class="mm-title">Why processes</div>
         <ul>
           <li>Own interpreter, own GIL, own memory → <b>true parallelism</b></li>
-          <li>Routes: 1.75 s → 0.62 s on 4 cores</li>
-          <li>💡 separate kitchens in separate buildings</li>
+          <li>Best speed-up ≈ number of cores, minus overhead</li>
+          <li>A crash is isolated: non-zero <code>exitcode</code></li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">APIs</div>
         <ul>
           <li><code>mp.Process(target=f, args=…)</code>, <code>start</code>, <code>join</code>, <code>exitcode</code></li>
-          <li><code>mp.Pool(4).map(f, xs)</code></li>
+          <li><code>mp.Pool(n)</code>: <code>map</code>, <code>imap</code>, <code>starmap</code>, <code>apply_async</code></li>
           <li><code>ProcessPoolExecutor</code>: <code>map</code>, <code>submit</code>, <code>as_completed</code></li>
-          <li>Globals NOT shared: child 1, parent 0</li>
+          <li>Globals are NOT shared</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Rules</div>
         <ul>
-          <li>Args and results are <b>pickled</b></li>
-          <li>Functions travel by name → top-level only, no lambdas</li>
-          <li><code>if __name__ == "__main__":</code> — children re-import the file (spawn)</li>
-          <li>Start methods: fork (Linux ≤ 3.13), spawn (macOS, Windows), forkserver (Linux 3.14+)</li>
+          <li>Arguments and results are <b>pickled</b></li>
+          <li>Functions pickle by name → top-level only, no lambdas</li>
+          <li><code>if __name__ == "__main__":</code> (spawn re-imports the file)</li>
+          <li>Start methods: fork, spawn, forkserver</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Costs</div>
         <ul>
-          <li>Start: 20 processes ≈ 25 ms vs 20 threads ≈ 3 ms</li>
-          <li>Tiny tasks: <code>chunksize</code>! 1.03 s → 0.02 s</li>
-          <li>Big args: 9.9 MB list 0.19 s vs 0.02 s</li>
-          <li>RAM: every process has its own copy</li>
+          <li>Start-up: ~ms (fork) to ~10 ms+ (spawn) per process</li>
+          <li>Per-task pickling: use <code>chunksize</code></li>
+          <li>Big arguments: copied per task, per worker</li>
+          <li>RAM: one interpreter per worker</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Talking &amp; sharing</div>
+        <div class="mm-title">IPC</div>
         <ul>
-          <li><code>mp.Queue</code> — many ↔ many, poison pill</li>
-          <li><code>Pipe</code> — exactly two ends</li>
-          <li><code>Value</code> / <code>Array</code> — shared C numbers; lock them</li>
-          <li><code>shared_memory</code> — zero-copy buffer for numpy; <code>close</code> + <code>unlink</code></li>
+          <li><code>mp.Queue</code>: many ↔ many, poison pills</li>
+          <li><code>mp.Pipe</code>: two ends</li>
+          <li><code>Value</code> / <code>Array</code>: shared C numbers + lock</li>
+          <li><code>shared_memory</code>: zero-copy buffer; <code>close</code> + <code>unlink</code></li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">When not</div>
         <ul>
-          <li>I/O-bound → threads/asyncio</li>
-          <li>numpy/pandas → vectorise (≈ 24× faster here)</li>
-          <li>Tiny jobs, huge per-task data</li>
+          <li>I/O-bound → threads / asyncio</li>
+          <li>numpy / pandas → vectorise</li>
+          <li>Tiny tasks, huge per-task data</li>
+          <li>Nested parallelism → oversubscription</li>
         </ul>
       </div>
     </div>
@@ -102,84 +68,56 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="mp-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain</span></div></div>
-      <div class="rm-item rm-done" data-target="mp-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Why Processes Beat the GIL</span><span class="rm-sub">Routes on 4 cores, measured</span></div></div>
-      <div class="rm-item rm-done" data-target="mp-process"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">A Process by Hand</span><span class="rm-sub">Separate memory</span></div></div>
-      <div class="rm-item rm-done" data-target="mp-pool"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Pools</span><span class="rm-sub">Pool and ProcessPoolExecutor</span></div></div>
-      <div class="rm-item rm-done" data-target="mp-pickle"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Pickling and the __main__ Guard</span><span class="rm-sub">How data and code travel</span></div></div>
-      <div class="rm-item rm-done" data-target="mp-cost"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">What Processes Cost</span><span class="rm-sub">Start-up, chunksize, copying</span></div></div>
-      <div class="rm-item rm-done" data-target="mp-ipc"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Queue and Pipe</span><span class="rm-sub">Messages between processes</span></div></div>
-      <div class="rm-item rm-done" data-target="mp-shared"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Shared Memory</span><span class="rm-sub">Value, Array, shared_memory</span></div></div>
-      <div class="rm-item rm-done" data-target="mp-when"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">When Not to Use Processes</span><span class="rm-sub">Measured counter-examples</span></div></div>
-      <div class="rm-item rm-done" data-target="mp-connect"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One table, one picture</span></div></div>
-      <div class="rm-item rm-done" data-target="mp-traps"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Symptoms and fixes</span></div></div>
-      <div class="rm-item rm-done" data-target="mp-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The note on one page</span></div></div>
-      <div class="rm-item rm-done" data-target="mp-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview and connection checks</span></div></div>
+      <div class="rm-item rm-done" data-target="mp-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Processes and the GIL: Real Parallelism</span><span class="rm-sub">CPU work on 4 cores, measured</span></div></div>
+      <div class="rm-item rm-done" data-target="mp-process"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">multiprocessing.Process and Memory Isolation</span><span class="rm-sub">start, join, exitcode, copies</span></div></div>
+      <div class="rm-item rm-done" data-target="mp-pool"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Process Pools: Pool and ProcessPoolExecutor</span><span class="rm-sub">map, starmap, submit</span></div></div>
+      <div class="rm-item rm-done" data-target="mp-pickle"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Pickling, Start Methods and the __main__ Guard</span><span class="rm-sub">fork, spawn, forkserver</span></div></div>
+      <div class="rm-item rm-done" data-target="mp-cost"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Overhead: Start-up, chunksize and Data Copying</span><span class="rm-sub">When pools lose to loops</span></div></div>
+      <div class="rm-item rm-done" data-target="mp-ipc"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Inter-Process Communication: Queue and Pipe</span><span class="rm-sub">Message passing, poison pills</span></div></div>
+      <div class="rm-item rm-done" data-target="mp-shared"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Shared Memory: Value, Array and shared_memory</span><span class="rm-sub">Zero-copy, locks return</span></div></div>
+      <div class="rm-item rm-done" data-target="mp-when"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">When Not to Use Processes</span><span class="rm-sub">I/O, tiny tasks, numpy</span></div></div>
+      <div class="rm-item rm-done" data-target="mp-traps"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Symptom and fix</span></div></div>
+      <div class="rm-item rm-done" data-target="mp-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">APIs, rules, costs, IPC</span></div></div>
+      <div class="rm-item rm-done" data-target="mp-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">Processes vs threads, pickling, guard</span></div></div>
     </div>
   </div>
 
-  <h2 id="mp-why"><span class="num">01</span>Why Processes Beat the GIL</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The GIL is one lock per interpreter, so threads inside one Python program can only take turns at calculation. How do we get 4 route plans to run on 4 cores at literally the same time?</p>
-  </div>
-  <h3>The running example, again</h3>
-  <p>All code imports from <code>quickbite.py</code> (introduced in <a class="xref" data-note="py_concurrency">the map</a>). The CPU-heavy job is <code>route_cost(stops)</code>: try all 9! = 362,880 orders of a rider's 9 stops and keep the shortest total distance. On three stops A (2, 1), B (5, 3), C (1, 4) from the depot (0, 0) it tries 6 orders and the best, A → C → B, costs 3 + 4 + 5 = 12.</p>
-  <div class="fx" data-lang="py">"""quickbite.py: the running example shared by all four Concurrency notes."""
-import asyncio, time, itertools
+  <h2 id="mp-why"><span class="num">01</span>Processes and the GIL: Real Parallelism</h2>
+  <p>The GIL is one lock per interpreter, so threads in one Python process can only take turns at running Python code. A <strong>process</strong> is a separate running program with its own memory, and each new Python process has its own interpreter and therefore its own GIL. Start several and the OS runs them on different cores at the same instant. The examples use this helper module; <code>route_cost</code> is the CPU-bound job, a brute-force search over all 9! = 362,880 orderings of 9 points.</p>
+  <div class="fx" data-lang="py">"""workload.py: one simulated I/O-bound job and one real CPU-bound job."""
+import asyncio, itertools, time
 
-RESTAURANTS = [f"R{i:02d}" for i in range(1, 21)]   # 20 restaurants: R01 ... R20
-LATENCY = 0.2                                      # every menu request waits 0.2 s
+RESTAURANTS = [f"R{i:02d}" for i in range(1, 21)]   # 20 IDs: R01 ... R20
+LATENCY = 0.2                                      # every request waits 0.2 s
 
 def fetch_menu(rid):
-    """I/O-bound: pretend network call. 0.2 s of pure waiting, then a small menu."""
-    time.sleep(LATENCY)                            # the restaurant's server is "thinking"
+    """I/O-bound: a blocking 'network call'. 0.2 s of waiting, then a small dict."""
+    time.sleep(LATENCY)
     return {"id": rid, "dishes": 3 + int(rid[1:]) % 5}
 
 async def fetch_menu_async(rid):
-    """The same request written for asyncio: the wait is an await, not a sleep."""
-    await asyncio.sleep(LATENCY)                   # pause here; the event loop runs others
+    """The same call written for asyncio: the wait is awaited, not slept."""
+    await asyncio.sleep(LATENCY)
     return {"id": rid, "dishes": 3 + int(rid[1:]) % 5}
 
-def dist(a, b):
-    """Blocks walked between two points on the city grid (Manhattan distance)."""
-    return abs(a[0] - b[0]) + abs(a[1] - b[1])
-
 def route_cost(stops, depot=(0, 0)):
-    """CPU-bound: try every order of the stops, return the shortest total distance."""
+    """CPU-bound: brute-force the shortest Manhattan path through all stops."""
     best = None
-    for order in itertools.permutations(stops):
+    for order in itertools.permutations(stops):    # 9 stops -&gt; 362,880 orders
         cost, here = 0, depot
-        for stop in order:
-            cost += dist(here, stop)
-            here = stop
+        for x, y in order:
+            cost += abs(here[0] - x) + abs(here[1] - y)
+            here = (x, y)
         if best is None or cost &lt; best:
             best = cost
     return best
 
-def make_rider(seed, n=9):
-    """One rider's batch of n drop-off points, generated the same way every run."""
-    return [((seed * 7 + i * 5) % 11, (seed * 3 + i * 7) % 13) for i in range(n)]
-
-RIDERS = [make_rider(s) for s in range(1, 5)]      # 4 riders, 9 stops each</div>
-  <h3>The idea in plain words</h3>
-  <p>If one interpreter can only run one thread's Python at a time, start <em>more interpreters</em>. A <strong>process</strong> is a running program with its own memory. Each new Python process has its own interpreter and therefore its own GIL. Four processes can run Python on four cores at the same instant, and the operating system spreads them across the cores for us.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Threads are cooks in one kitchen sharing one knife (the GIL): however many cooks, only one chops at a time. Processes are separate kitchens in separate buildings, each with its own knife: four kitchens chop four crates at once. The price: nothing is shared, so ingredients go back and forth by courier (pickling), and opening a kitchen takes time.</p></div>
-  <figure class="viz"><svg viewBox="0 0 600 190" width="600">
-    <defs><marker id="mp-ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
-    <rect x="10" y="60" width="180" height="70" rx="8" class="fb sb"/><text x="22" y="82">Main process</text><text x="22" y="100" class="tm">interpreter + GIL</text><text x="22" y="116" class="tm">own memory</text>
-    <rect x="420" y="10" width="170" height="62" rx="8" class="ft st"/><text x="432" y="32">Worker 1 · core 1</text><text x="432" y="52" class="tm">own GIL + memory</text>
-    <rect x="420" y="118" width="170" height="62" rx="8" class="ft st"/><text x="432" y="140">Worker 2 · core 2</text><text x="432" y="160" class="tm">own GIL + memory</text>
-    <line x1="190" y1="70" x2="416" y2="38" stroke="currentColor" stroke-width="1.5" marker-end="url(#mp-ah2)"/>
-    <line x1="190" y1="120" x2="416" y2="152" stroke="currentColor" stroke-width="1.5" marker-end="url(#mp-ah2)"/>
-    <text x="200" y="28" class="tm">arguments/results: pickled</text>
-    <rect x="245" y="75" width="140" height="42" rx="6" class="fv"/><text x="257" y="93">shared memory</text><text x="257" y="110" class="tm">no copy (section 07)</text>
-    <line x1="385" y1="96" x2="420" y2="66" stroke="currentColor" stroke-dasharray="3 3"/><line x1="385" y1="96" x2="420" y2="124" stroke="currentColor" stroke-dasharray="3 3"/>
-  </svg><figcaption>Separate programs, each with its own GIL and memory. Data crosses between them as pickled messages (solid arrows) or, for big arrays, by attaching to one shared memory block (dashed lines).</figcaption></figure>
-  <h3>Measured</h3>
-  <p>The same 4 route plans, first in a loop, then in a <code>ProcessPoolExecutor</code> with 4 worker processes (the API is the twin of <code>ThreadPoolExecutor</code>). Each job also returns <code>os.getpid()</code>, the operating system's ID number for the process it ran in. All the pool code sits under <code>if __name__ == "__main__":</code>; section 04 explains why that is required.</p>
+# 4 batches of 9 points each, generated deterministically
+RIDERS = [[((s * 7 + i * 5) % 11, (s * 3 + i * 7) % 13) for i in range(9)] for s in range(1, 5)]</div>
+  <p>The same 4 searches, first in a loop, then in a <code>ProcessPoolExecutor</code> with 4 workers. Each job also returns <code>os.getpid()</code>, the OS process ID it ran in. The pool code sits under <code>if __name__ == "__main__":</code> (section 04 explains why that is required).</p>
   <div class="fx" data-lang="py">import os, time
 from concurrent.futures import ProcessPoolExecutor
-from quickbite import RIDERS, route_cost
+from workload import RIDERS, route_cost
 
 def plan(i):                                   # runs inside a worker process
     return route_cost(RIDERS[i]), os.getpid()
@@ -195,91 +133,96 @@ if __name__ == "__main__":
     print(f"4 processes: {[c for c, _ in out]} in {time.perf_counter() - t:.2f}s")
     pids = {pid for _, pid in out}
     print(f"worker pids all differ from main: {os.getpid() not in pids}, distinct workers used: {len(pids)}")</div>
-  <div class="fx" data-lang="text">sequential : [40, 36, 35, 36] in 1.75s
-4 processes: [40, 36, 35, 36] in 0.62s
+  <div class="fx" data-lang="text">sequential : [40, 36, 35, 36] in 1.18s
+4 processes: [40, 36, 35, 36] in 0.34s
 worker pids all differ from main: True, distinct workers used: 4</div>
-  <p>About 2.8× faster (1.75 s → 0.62 s) with identical answers, and the PIDs prove the work ran in 4 different processes, none of them the main one. Compare <a class="xref" data-note="py_threading">Threads</a>, where 4 threads took as long as the loop. Why not a full 4×? Starting 4 processes and sending each its job costs a little, the 4 jobs are not exactly equal in size, and other programs on the machine share the cores. On idle cores with longer jobs the ratio gets closer to the core count, never above it.</p>
-  <div class="callout def"><span class="label">Definition</span><p>A <strong>process</strong> is an independent running program with its own memory space, scheduled by the operating system. In Python, each process runs its own interpreter with its own GIL, so CPU-bound Python code in <em>n</em> processes can use up to <em>n</em> cores. Best possible speed-up ≈ number of cores (<strong>parallelism</strong>), minus overheads.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Starting more processes than cores for CPU work. 16 processes on 4 cores do not compute faster than 4; they just take turns and use 4× the memory. <code>ProcessPoolExecutor()</code> defaults to <code>os.cpu_count()</code>; on a shared machine use fewer.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: A Process by Hand.</b> Threads shared every variable. Processes have "their own memory". What does that mean concretely when a child changes a global?</div>
+  <p>About 3.5× faster with identical answers, and the PIDs show the work ran in 4 different processes, none of them the parent. Threads gave no speed-up on the same job (<a class="xref" data-note="py_threading">Threads &amp; the GIL</a>). The ratio is below 4 because starting processes and sending each its job costs time, the jobs are not exactly equal, and other programs share the cores. It approaches the core count for long jobs on idle cores and never exceeds it.</p>
+  <figure class="viz"><svg viewBox="0 0 600 190" width="600">
+    <defs><marker id="mp-ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <rect x="10" y="60" width="180" height="70" rx="8" class="fb sb"/><text x="22" y="82">Main process</text><text x="22" y="100" class="tm">interpreter + GIL</text><text x="22" y="116" class="tm">own memory</text>
+    <rect x="420" y="10" width="170" height="62" rx="8" class="ft st"/><text x="432" y="32">Worker 1 · core 1</text><text x="432" y="52" class="tm">own GIL + memory</text>
+    <rect x="420" y="118" width="170" height="62" rx="8" class="ft st"/><text x="432" y="140">Worker 2 · core 2</text><text x="432" y="160" class="tm">own GIL + memory</text>
+    <line x1="190" y1="70" x2="416" y2="38" stroke="currentColor" stroke-width="1.5" marker-end="url(#mp-ah2)"/>
+    <line x1="190" y1="120" x2="416" y2="152" stroke="currentColor" stroke-width="1.5" marker-end="url(#mp-ah2)"/>
+    <text x="200" y="28" class="tm">arguments/results: pickled</text>
+    <rect x="245" y="75" width="140" height="42" rx="6" class="fv"/><text x="257" y="93">shared memory</text><text x="257" y="110" class="tm">no copy (section 07)</text>
+    <line x1="385" y1="96" x2="420" y2="66" stroke="currentColor" stroke-dasharray="3 3"/><line x1="385" y1="96" x2="420" y2="124" stroke="currentColor" stroke-dasharray="3 3"/>
+  </svg><figcaption>Separate programs, each with its own GIL and memory. Data crosses between them as pickled messages (solid arrows) or, for large arrays, through an explicitly shared memory block (dashed).</figcaption></figure>
+  <div class="callout def"><span class="label">Definition</span><p>A <strong>process</strong> is an independent running program with its own address space, scheduled by the OS. Each Python process runs its own interpreter with its own GIL, so CPU-bound Python code in <em>n</em> processes can use up to <em>n</em> cores. Best-case speed-up ≈ number of cores, minus overhead.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>More processes than cores for CPU work. 16 processes on 4 cores do not compute faster than 4; they take turns and use 4× the memory. <code>ProcessPoolExecutor()</code> defaults to <code>os.cpu_count()</code>; in containers check the CPU quota (<code>os.process_cpu_count()</code> in 3.13+ respects affinity) and use fewer on shared machines.</p></div>
 
-  <h2 id="mp-process"><span class="num">02</span>A Process by Hand</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>With threads, a worker could write into a shared dict and <code>main</code> saw it. If a child <em>process</em> changes a global variable, does the parent see the change?</p>
-  </div>
-  <p><code>multiprocessing.Process</code> mirrors <code>threading.Thread</code>: <code>Process(target=f, args=(…,))</code>, <code>start()</code>, <code>join()</code>. It adds <code>exitcode</code> (0 means the child ended normally) and <code>is_alive()</code>. The child below fetches R01's menu and adds 1 to a global counter.</p>
+  <h2 id="mp-process"><span class="num">02</span>multiprocessing.Process and Memory Isolation</h2>
+  <p><code>multiprocessing.Process</code> mirrors <code>threading.Thread</code>: <code>Process(target=f, args=(…,))</code>, <code>start()</code>, <code>join()</code>, plus <code>exitcode</code> (0 = normal exit) and <code>is_alive()</code>. The key difference is memory: the child works on its own copy of the program's state, so changes it makes are invisible to the parent.</p>
   <div class="fx" data-lang="py">import multiprocessing as mp
-from quickbite import fetch_menu
+from workload import fetch_menu
 
-menus_seen = 0                                 # a global in the parent
+counter = 0                                    # a global in the parent
 
 def child(rid):
-    global menus_seen
-    menu = fetch_menu(rid)
-    menus_seen += 1                            # changes the CHILD's copy
-    print(f"child  [{mp.current_process().name}] got {menu}, menus_seen = {menus_seen}")
+    global counter
+    result = fetch_menu(rid)
+    counter += 1                               # changes the CHILD's copy
+    print(f"child  [{mp.current_process().name}] got {result}, counter = {counter}")
 
 if __name__ == "__main__":
-    p = mp.Process(target=child, args=("R01",), name="kitchen-1")
+    p = mp.Process(target=child, args=("R01",), name="worker-1")
     print("parent: alive before start?", p.is_alive())
     p.start()                                  # a new Python process begins
     p.join()                                   # wait for it to exit
-    print("parent: exitcode", p.exitcode, "| parent's menus_seen =", menus_seen)</div>
+    print("parent: exitcode", p.exitcode, "| parent's counter =", counter)</div>
   <div class="fx" data-lang="text">parent: alive before start? False
-child  [kitchen-1] got {'id': 'R01', 'dishes': 4}, menus_seen = 1
-parent: exitcode 0 | parent's menus_seen = 0</div>
-  <p>The child saw <code>menus_seen = 1</code>; the parent, after the child finished, still had 0. When the child started, it got its <em>own copy</em> of the program's memory; its <code>+= 1</code> changed that copy, which disappeared when the child exited. Nothing flows back unless you send it.</p>
-  <table class="tbl"><caption>Thread vs process, side by side</caption>
+child  [worker-1] got {'id': 'R01', 'dishes': 4}, counter = 1
+parent: exitcode 0 | parent's counter = 0</div>
+  <p>The child saw <code>counter = 1</code>; the parent still had 0 after the child finished. The child's <code>+= 1</code> changed the child's copy, which disappeared when it exited. Nothing flows back unless you send it: a return value through a pool, a <code>Queue</code>, a <code>Pipe</code>, or shared memory.</p>
+  <table class="tbl"><caption>Thread vs process</caption>
     <tr><th></th><th>Thread</th><th>Process</th></tr>
     <tr><td>Memory</td><td>shared with all threads</td><td>own copy; nothing shared by default</td></tr>
     <tr><td>GIL</td><td>one for all threads</td><td>one per process</td></tr>
     <tr><td>CPU-bound Python</td><td>no speed-up</td><td>up to × cores</td></tr>
-    <tr><td>Getting results back</td><td>write to a shared variable</td><td>return value via a pool, Queue, Pipe, or shared memory</td></tr>
+    <tr><td>Results back</td><td>write to a shared variable</td><td>return value via pool, Queue, Pipe, shared memory</td></tr>
     <tr><td>Start-up cost</td><td>tiny</td><td>noticeable (section 05)</td></tr>
-    <tr><td>A crash</td><td>can corrupt shared state</td><td>isolated; parent sees a non-zero <code>exitcode</code></td></tr>
+    <tr><td>A crash</td><td>can corrupt shared state; segfault kills everything</td><td>isolated; parent sees a non-zero <code>exitcode</code></td></tr>
     <tr><td>Races</td><td>on any shared variable</td><td>only on what you explicitly share</td></tr>
   </table>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Photocopying a recipe book for a second kitchen. The second kitchen can scribble on its copy all day; your original is untouched. If you want their notes, they have to send them back.</p></div>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Process isolation</strong>: each process has its own address space; changes in one are invisible to others. Data moves between processes only through <strong>IPC</strong> (inter-process communication): return values, queues, pipes, shared memory, files, sockets.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Expecting a child to fill a global list or dict, as you would with threads. The parent's copy stays empty and no error tells you so. Return the result instead.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Pools.</b> Creating, starting and joining processes one by one, and finding a way to send results back, is fiddly. Is there a pool, like <code>ThreadPoolExecutor</code>, that returns results for us?</div>
+  <div class="callout def"><span class="label">Definition</span><p><strong>Process isolation</strong>: each process has its own address space; changes in one are invisible to others. Data moves between processes only through <strong>IPC</strong> (inter-process communication): return values, queues, pipes, shared memory, files, sockets. <code>p.terminate()</code> / <code>p.kill()</code> can stop a process from outside, unlike a thread (but skip its cleanup).</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Expecting a child to fill a global list or dict, as threads can. The parent's copy stays empty and no error says so. Return the result instead.</p></div>
 
-  <h2 id="mp-pool"><span class="num">03</span>Pools: Pool and ProcessPoolExecutor</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>How do we run <code>route_cost</code> over the 4 riders on 4 worker processes and simply get the 4 return values back?</p>
-  </div>
-  <p>Two APIs do it. <code>multiprocessing.Pool</code> is the older one, with <code>map</code>, <code>imap</code>, <code>starmap</code> and <code>apply_async</code>. <code>concurrent.futures.ProcessPoolExecutor</code> is the newer one, with exactly the interface you learned for threads: <code>map</code>, <code>submit</code>, futures and <code>as_completed</code>. Both start the workers, send each job, and pickle the return value back.</p>
+  <h2 id="mp-pool"><span class="num">03</span>Process Pools: Pool and ProcessPoolExecutor</h2>
+  <p>Managing processes one by one is fiddly. A <strong>pool</strong> keeps a fixed set of worker processes, sends them jobs from an internal queue and pickles the return values back. There are two APIs: the older <code>multiprocessing.Pool</code> (<code>map</code>, <code>imap</code>, <code>imap_unordered</code>, <code>starmap</code>, <code>apply_async</code>) and <code>concurrent.futures.ProcessPoolExecutor</code>, which has exactly the interface of <code>ThreadPoolExecutor</code>.</p>
   <div class="fx" data-lang="py">import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from quickbite import RIDERS, route_cost
+from workload import RIDERS, route_cost
 
 if __name__ == "__main__":
     with mp.Pool(processes=4) as pool:                 # the older API
         print("Pool.map            :", pool.map(route_cost, RIDERS))
+        print("Pool.starmap        :", pool.starmap(pow, [(2, 3), (3, 2)]))
     with ProcessPoolExecutor(max_workers=4) as ex:     # same interface as ThreadPoolExecutor
         print("Executor.map        :", list(ex.map(route_cost, RIDERS)))
         futs = {ex.submit(route_cost, s): n for n, s in enumerate(RIDERS, start=1)}
         print("submit+as_completed :", sorted((futs[f], f.result()) for f in as_completed(futs)))</div>
   <div class="fx" data-lang="text">Pool.map            : [40, 36, 35, 36]
+Pool.starmap        : [8, 9]
 Executor.map        : [40, 36, 35, 36]
 submit+as_completed : [(1, 40), (2, 36), (3, 35), (4, 36)]</div>
-  <p>The same four costs from all three. <code>Pool.map</code> and <code>Executor.map</code> return results in input order. With <code>submit</code> we kept a dict from each future to its rider number and sorted, because <code>as_completed</code> yields futures in finish order. Leaving each <code>with</code> block shuts the pool down.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A delivery company with a fixed fleet of 4 vans (workers). You hand the dispatcher a list of jobs; the dispatcher gives each free van the next job and hands you the results. You never deal with individual vans.</p></div>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Process pool</strong>: a fixed set of worker processes that take jobs from an internal queue and send results back. <code>ProcessPoolExecutor(max_workers=n)</code> (default: CPU count); <code>map(fn, *iterables, chunksize=1)</code>; <code>submit(fn, *args)</code> → Future. <code>mp.Pool(processes=n)</code>; <code>map</code>, <code>imap</code> (lazy), <code>imap_unordered</code>, <code>starmap</code> (several arguments), <code>apply_async</code>.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Creating a new pool inside a loop or for every request. Each pool starts fresh processes (section 05 measures the cost). Create one pool and reuse it for the whole run.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Pickling and the __main__ Guard.</b> The pool "sent" <code>route_cost</code> and the stops to other processes and got numbers back, between memories that share nothing. How? And why must the code sit under <code>if __name__ == "__main__":</code>?</div>
+  <p>Both <code>map</code>s return results in input order. <code>starmap</code> unpacks each tuple into arguments (<code>pow(2, 3)</code>, <code>pow(3, 2)</code>). With <code>submit</code> we kept a dict from each future to its input and sorted, because <code>as_completed</code> yields in finish order. Leaving each <code>with</code> block shuts the pool down.</p>
+  <table class="tbl">
+    <tr><th></th><th><code>mp.Pool</code></th><th><code>ProcessPoolExecutor</code></th></tr>
+    <tr><td>Interface</td><td><code>map</code>, <code>imap</code>, <code>imap_unordered</code>, <code>starmap</code>, <code>apply_async</code></td><td><code>map</code>, <code>submit</code> → Future, <code>as_completed</code>, <code>wait</code></td></tr>
+    <tr><td>Default <code>chunksize</code> for <code>map</code></td><td>computed automatically</td><td>1 (set it yourself)</td></tr>
+    <tr><td>Worker crash</td><td>can hang waiting for a result</td><td>raises <code>BrokenProcessPool</code></td></tr>
+    <tr><td>Fits with</td><td>older code</td><td><code>ThreadPoolExecutor</code>, asyncio's <code>run_in_executor</code></td></tr>
+  </table>
+  <div class="callout def"><span class="label">Definition</span><p><strong>Process pool</strong>: a fixed set of worker processes fed from a job queue. <code>ProcessPoolExecutor(max_workers=n, mp_context=None, initializer=None, initargs=(), max_tasks_per_child=None)</code>; <code>initializer</code> runs once per worker (e.g. load a model or open a file), <code>max_tasks_per_child</code> recycles workers to contain memory leaks.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Creating a new pool inside a loop or per request. Each pool starts fresh processes (section 05 measures the cost). Create one pool and reuse it.</p></div>
 
-  <h2 id="mp-pickle"><span class="num">04</span>Pickling and the __main__ Guard</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Two processes cannot look at each other's memory. So how does a list of stops get from the parent into a worker, and how does the worker know what <code>route_cost</code> is?</p>
-  </div>
-  <h3>Pickling: objects to bytes and back</h3>
-  <p>Anything sent to a worker (the function, its arguments) and anything sent back (the result) is turned into a string of bytes with Python's <code>pickle</code> module, sent through an operating-system pipe, and rebuilt on the other side. This is called <strong>pickling</strong> (serialising) and <strong>unpickling</strong>.</p>
+  <h2 id="mp-pickle"><span class="num">04</span>Pickling, Start Methods and the __main__ Guard</h2>
+  <p>Two processes cannot read each other's memory, so everything sent to a worker (the function and its arguments) and everything sent back (the result) is serialised with <code>pickle</code>, pushed through an OS pipe and rebuilt on the other side.</p>
   <div class="fx" data-lang="py">import pickle
-from quickbite import route_cost
+from workload import route_cost
 
-menu = {"id": "R01", "dishes": 4}
-data = pickle.dumps(menu)                      # object -&gt; bytes
+record = {"id": "R01", "dishes": 4}
+data = pickle.dumps(record)                    # object -&gt; bytes
 print(len(data), "bytes:", data[:24], "...")
 print("bytes -&gt; object:", pickle.loads(data))
 print("a function travels BY NAME:", pickle.dumps(route_cost))
@@ -289,11 +232,11 @@ except Exception as e:
     print(type(e).__name__ + ":", e)</div>
   <div class="fx" data-lang="text">38 bytes: b'\\x80\\x04\\x95\\x1b\\x00\\x00\\x00\\x00\\x00\\x00\\x00}\\x94(\\x8c\\x02id\\x94\\x8c\\x03R01' ...
 bytes -&gt; object: {'id': 'R01', 'dishes': 4}
-a function travels BY NAME: b'\\x80\\x04\\x95\\x1c\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x8c\\tquickbite\\x94\\x8c\\nroute_cost\\x94\\x93\\x94.'
-PicklingError: Can't pickle &lt;function &lt;lambda&gt; at 0x7f643a7071a0&gt;: attribute lookup &lt;lambda&gt; on __main__ failed</div>
-  <p>A menu dict became 38 bytes and came back equal. The interesting line is the function: its pickle contains just two names, <code>quickbite</code> and <code>route_cost</code>. <strong>Functions are not copied, they are pickled by name</strong>: "import <code>quickbite</code> and take its <code>route_cost</code>". The worker rebuilds it by importing. A lambda has no importable name (it is called <code>&lt;lambda&gt;</code>), so pickling it fails, and so does sending it to a pool:</p>
+a function travels BY NAME: b'\\x80\\x04\\x95\\x1b\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x8c\\x08workload\\x94\\x8c\\nroute_cost\\x94\\x93\\x94.'
+PicklingError: Can't pickle &lt;function &lt;lambda&gt; at 0x7f7b1efe71a0&gt;: attribute lookup &lt;lambda&gt; on __main__ failed</div>
+  <p>The dict became 38 bytes and came back equal. The function's pickle contains only two names, <code>workload</code> and <code>route_cost</code>: <strong>functions and classes are pickled by reference</strong> ("import <code>workload</code>, take <code>route_cost</code>"), and the worker rebuilds them by importing. A lambda has no importable name, so it cannot be pickled, and neither can it be sent to a pool:</p>
   <div class="fx" data-lang="py">from concurrent.futures import ProcessPoolExecutor
-from quickbite import RIDERS, route_cost
+from workload import RIDERS, route_cost
 
 if __name__ == "__main__":
     with ProcessPoolExecutor(max_workers=2) as ex:
@@ -301,36 +244,36 @@ if __name__ == "__main__":
             print(list(ex.map(lambda s: route_cost(s), RIDERS[:2])))
         except Exception as e:
             print(type(e).__name__ + ":", e)</div>
-  <div class="fx" data-lang="text">PicklingError: Can't pickle &lt;function &lt;lambda&gt; at 0x7f3e662b3240&gt;: attribute lookup &lt;lambda&gt; on __main__ failed</div>
-  <p>The rule that follows: <strong>the function you give a process pool must be defined at the top level of a module</strong>, not a lambda, not a function defined inside another function, not a method of an object that cannot be pickled. Arguments and return values must be picklable too (numbers, strings, lists, dicts, dataclasses, numpy arrays are; open files, sockets, locks and database connections are not).</p>
-  <h3>Why if __name__ == "__main__": is required</h3>
-  <p>How does a worker "import" the function if it is in the very script you are running? It imports your script. There are three ways to start a child process (<strong>start methods</strong>):</p>
+  <div class="fx" data-lang="text">PicklingError: Can't pickle &lt;function &lt;lambda&gt; at 0x7f51f0fddda0&gt;: attribute lookup &lt;lambda&gt; on __main__ failed</div>
+  <p>Rule: <strong>the worker function must be defined at module top level</strong>, so not a lambda, not a nested function, not a bound method of an unpicklable object. Arguments and results must be picklable too. Numbers, strings, lists, dicts, dataclasses and numpy arrays are; open files, sockets, locks, DB connections and generators are not. <code>functools.partial(top_level_fn, x=1)</code> is picklable and is the usual way to pass fixed extra arguments.</p>
+  <h3>Start methods</h3>
   <ul>
-    <li><strong>fork</strong>: the child is an exact copy of the parent at that moment, functions and all. Default on Linux up to Python 3.13 (this machine: it printed <code>fork</code> below).</li>
-    <li><strong>spawn</strong>: the child is a brand-new Python that <em>imports your main script</em> to find the functions. Default on macOS and Windows.</li>
-    <li><strong>forkserver</strong>: a clean helper process forks children on request. Default on Linux from Python 3.14.</li>
+    <li><strong>fork</strong>: the child is a copy of the parent at that moment, functions and all. Fast. Was the default on Linux up to 3.13 (printed below). Unsafe if the parent has threads (a lock held by another thread is copied in the locked state).</li>
+    <li><strong>spawn</strong>: the child is a fresh interpreter that <em>imports your main module</em> to find the functions. Slower, safer. Default on macOS and Windows.</li>
+    <li><strong>forkserver</strong>: a clean single-threaded server process forks children on request. Default on Linux from 3.14.</li>
   </ul>
-  <p>With spawn, the child runs your file from the top, but with <code>__name__</code> set to <code>"__mp_main__"</code> instead of <code>"__main__"</code>. Watch it happen: the script prints a line at the top, then starts two spawned children one after the other.</p>
+  <h3>Why <code>if __name__ == "__main__":</code> is required</h3>
+  <p>With spawn, a child runs your file from the top with <code>__name__</code> set to <code>"__mp_main__"</code>. The script below prints a line at the top, then starts two spawned children one after another:</p>
   <div class="fx" data-lang="py">import multiprocessing as mp
 
 print(f"top of the file runs, __name__ = {__name__!r}")
 
-def plan(rider):
-    print(f"   worker plans rider {rider}")
+def work(n):
+    print(f"   worker handles job {n}")
 
 if __name__ == "__main__":
     print("default start method here:", mp.get_start_method())
     ctx = mp.get_context("spawn")              # how macOS and Windows start children
-    kids = [ctx.Process(target=plan, args=(n,)) for n in (1, 2)]
+    kids = [ctx.Process(target=work, args=(n,)) for n in (1, 2)]
     for k in kids:
         k.start(); k.join()                    # one at a time, so the output is in order</div>
   <div class="fx" data-lang="text">top of the file runs, __name__ = '__main__'
 default start method here: fork
 top of the file runs, __name__ = '__mp_main__'
-   worker plans rider 1
+   worker handles job 1
 top of the file runs, __name__ = '__mp_main__'
-   worker plans rider 2</div>
-  <p>"top of the file runs" appeared three times: once in the parent (<code>__main__</code>) and once in each child (<code>__mp_main__</code>), before the child ran <code>plan</code>. Code under <code>if __name__ == "__main__":</code> ran only in the parent, because in the children the condition is false. Now remove the guard, so the pool-creating code is at the top level:</p>
+   worker handles job 2</div>
+  <p>The top line ran three times: in the parent and in each child, before the child ran <code>work</code>. Code under the guard ran only in the parent. Now remove the guard so the pool is created at top level:</p>
   <div class="fx" data-lang="py">import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor
 
@@ -344,28 +287,24 @@ with ProcessPoolExecutor(max_workers=2, mp_context=ctx) as ex:   # NO guard
   <div class="fx" data-lang="text">top of the file runs, __name__ = '__main__'
 top of the file runs, __name__ = '__mp_main__'
    [... traceback lines trimmed ...]
-RuntimeError: 
+RuntimeError:
         An attempt has been made to start a new process before the
         current process has finished its bootstrapping phase.
    [... traceback lines trimmed ...]
 top of the file runs, __name__ = '__mp_main__'
    [... traceback lines trimmed ...]
-RuntimeError: 
+RuntimeError:
         An attempt has been made to start a new process before the
         current process has finished its bootstrapping phase.
    [... traceback lines trimmed ...]
 concurrent.futures.process.BrokenProcessPool: A process in the process pool was terminated abruptly while the future was running or pending.</div>
-  <p>Each child re-ran the file, reached the pool code, and tried to start children of its own while it was still starting up; <code>multiprocessing</code> detects this and raises <code>RuntimeError</code> in the child, its message telling you to use the <code>__main__</code> idiom; the parent's pool then reports <code>BrokenProcessPool</code>. (We trimmed the long tracebacks; the remaining lines are verbatim.) Without that check you would get an explosion of processes. With fork the same script happens to work on Linux, which is exactly why code written on Linux breaks on a colleague's Mac: always use the guard.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Hiring a temp cook by sending them your whole recipe binder (spawn re-imports your file). If page one of the binder says "hire four temp cooks", every temp reads it and tries to hire four more. The guard is a note on that page: "only the head chef does this".</p></div>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Pickling</strong>: serialising an object to bytes (<code>pickle.dumps</code>) and back (<code>pickle.loads</code>). Functions and classes pickle by reference (module + qualified name). <strong>Start method</strong>: <code>fork</code>, <code>spawn</code> or <code>forkserver</code>; see <code>mp.get_start_method()</code>, choose with <code>mp.get_context("spawn")</code>. <strong>The guard</strong>: <code>if __name__ == "__main__":</code> keeps process-creating code from running when a child imports the main module.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Running process pools from a Jupyter notebook with spawn (macOS/Windows): functions defined in the notebook live in <code>__main__</code>, which the child cannot import, so you get pickling or attribute errors. Put the worker function in a <code>.py</code> module and import it, as QuickBite does with <code>quickbite.py</code>.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: What Processes Cost.</b> Every job now involves starting processes, pickling, sending through a pipe and unpickling. How much does that cost, and when does it eat the whole speed-up?</div>
+  <p>Each child re-ran the file, reached the pool code and tried to start processes of its own while still bootstrapping. <code>multiprocessing</code> detects that and raises <code>RuntimeError</code> in the child (its full message tells you to use the <code>__main__</code> idiom), and the parent's pool reports <code>BrokenProcessPool</code>. With fork the same script happens to work on Linux, which is why code written on Linux breaks on macOS, Windows, or Linux with Python 3.14. Always use the guard.</p>
+  <div class="callout def"><span class="label">Definition</span><p><strong>Pickling</strong>: serialising an object to bytes (<code>pickle.dumps</code>) and back (<code>pickle.loads</code>); functions and classes pickle by module + qualified name. <strong>Start method</strong>: <code>fork</code>, <code>spawn</code> or <code>forkserver</code>; query with <code>mp.get_start_method()</code>, choose with <code>mp.get_context("spawn")</code> or <code>mp.set_start_method</code> (once, under the guard). <strong>The guard</strong> keeps process-creating code from running when a child imports the main module.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Process pools in Jupyter on macOS/Windows (spawn): functions defined in the notebook live in <code>__main__</code>, which the child cannot import, so you get pickling or <code>AttributeError</code>s. Put the worker function in a <code>.py</code> module and import it.</p></div>
 
-  <h2 id="mp-cost"><span class="num">05</span>What Processes Cost</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Routes got 2.8× faster. Will processes speed up <em>any</em> CPU work? What happens with thousands of tiny jobs, or with jobs that need a lot of data?</p>
-  </div>
-  <h3>Cost 1: starting a process</h3>
+  <h2 id="mp-cost"><span class="num">05</span>Overhead: Start-up, chunksize and Data Copying</h2>
+  <p>Processes are not free. Three costs decide whether a pool helps: starting the workers, one pickled message per task, and copying the data each task needs.</p>
+  <h3>Starting processes</h3>
   <div class="fx" data-lang="py">import threading, multiprocessing as mp, time
 
 def nothing():
@@ -377,17 +316,24 @@ if __name__ == "__main__":
         workers = [make(target=nothing) for _ in range(20)]
         for w in workers: w.start()
         for w in workers: w.join()
-        print(f"start + join 20 {kind:&lt;7}: {(time.perf_counter() - t) * 1000:6.1f} ms")</div>
+        print(f"start + join 20 {kind:&lt;7}: {(time.perf_counter() - t) * 1000:6.1f} ms")
+    ctx = mp.get_context("spawn")
+    t = time.perf_counter()
+    workers = [ctx.Process(target=nothing) for _ in range(20)]
+    for w in workers: w.start()
+    for w in workers: w.join()
+    print(f"start + join 20 spawned: {(time.perf_counter() - t) * 1000:6.1f} ms")</div>
   <div class="fx" data-lang="text">start + join 20 thread :    2.8 ms
-start + join 20 process:   25.3 ms</div>
-  <p>Starting and joining 20 processes took about 9× as long as 20 threads (25 ms vs 3 ms here, with fork; spawn is slower still, because each child starts a fresh interpreter and re-imports your modules). Tens of milliseconds is nothing next to a 1.75 s job, but it is not free.</p>
-  <h3>Cost 2: one message per job (and the fix, chunksize)</h3>
-  <p>Now 5000 copies of the tiny 3-stop hand example (each answer 12). Each job takes microseconds. By default <code>ProcessPoolExecutor.map</code> sends each item as its own message: pickle, send, unpickle, compute, pickle the result, send, unpickle, 5000 times. <code>chunksize=k</code> sends k items per message.</p>
+start + join 20 process:   22.0 ms
+start + join 20 spawned:  296.1 ms</div>
+  <p>20 forked processes cost about 8× as much as 20 threads, and 20 spawned processes about 100×, because each spawned child boots a fresh interpreter and re-imports your modules (heavy imports like pandas or torch make this much worse). That is negligible next to a job of several seconds, but it is why you create one pool and reuse it.</p>
+  <h3>One message per task, and chunksize</h3>
+  <p>5000 copies of a tiny 3-stop problem; each takes microseconds. By default <code>ProcessPoolExecutor.map</code> sends each item as its own message: pickle, send, unpickle, compute, pickle the result, send back, 5000 times. <code>chunksize=k</code> sends k items per message.</p>
   <div class="fx" data-lang="py">import time
 from concurrent.futures import ProcessPoolExecutor
-from quickbite import route_cost
+from workload import route_cost
 
-TINY = [[(2, 1), (5, 3), (1, 4)]] * 5000       # 5000 copies of the 3-stop hand example
+TINY = [[(2, 1), (5, 3), (1, 4)]] * 5000       # 5000 copies of a 3-stop problem
 
 if __name__ == "__main__":
     t = time.perf_counter()
@@ -399,117 +345,108 @@ if __name__ == "__main__":
             out = list(ex.map(route_cost, TINY, chunksize=chunk))
         print(f"4 procs chunksize={chunk:&lt;4}: {time.perf_counter() - t:.2f}s  same answers: {out == seq}")</div>
   <div class="fx" data-lang="text">sequential          : 0.01s  (each answer 12)
-4 procs chunksize=1   : 1.03s  same answers: True
-4 procs chunksize=50  : 0.03s  same answers: True
+4 procs chunksize=1   : 0.92s  same answers: True
+4 procs chunksize=50  : 0.04s  same answers: True
 4 procs chunksize=1250: 0.02s  same answers: True</div>
-  <p>The loop took 0.01 s. The pool with one item per message took about 1 s: roughly 100× <em>slower</em> than doing nothing clever, because the messaging cost dwarfed the work. With <code>chunksize=50</code> there are 100 messages instead of 5000, and the time fell to 0.03 s; with 1250 (one chunk per worker) to 0.02 s. Still not faster than the loop: the whole job was too small to be worth parallelising. That is the lesson in both directions: <strong>batch tiny tasks, and do not parallelise work that is already fast</strong>. (<code>mp.Pool.map</code> picks a chunksize automatically; <code>ProcessPoolExecutor.map</code> defaults to 1.)</p>
-  <table class="tbl"><caption>5000 tiny jobs, by hand</caption>
-    <tr><th>chunksize</th><th>messages each way</th><th>measured</th></tr>
-    <tr><td>1</td><td>5000</td><td>1.03 s</td></tr>
-    <tr><td>50</td><td>5000 / 50 = 100</td><td>0.03 s</td></tr>
-    <tr><td>1250</td><td>5000 / 1250 = 4</td><td>0.02 s</td></tr>
-    <tr><td>(plain loop)</td><td>0</td><td>0.01 s</td></tr>
-  </table>
-  <h3>Cost 3: copying data</h3>
-  <p>QuickBite's order history is a list of 2 million numbers. Sending it to a worker means pickling ~10 MB, pushing it through a pipe and unpickling it. Compare sending the list with sending just one number and letting the worker get its own data.</p>
+  <p>With one item per message the pool was about 100× <em>slower</em> than the loop: messaging dwarfed the work. <code>chunksize=50</code> (100 messages instead of 5000) brought it to 0.04 s, and 1250 (one chunk per worker) to 0.02 s. Still not faster than the loop, because the whole job was too small to be worth parallelising. Batch tiny tasks, and do not parallelise work that is already fast.</p>
+  <h3>Copying data</h3>
+  <p>Sending a 2-million-element list to a worker means pickling about 10 MB, pushing it through a pipe and unpickling it. Compare that with sending a single number:</p>
   <div class="fx" data-lang="py">import pickle, time
 from concurrent.futures import ProcessPoolExecutor
 
-ORDERS = list(range(2_000_000))                # a big order history
+ROWS = list(range(2_000_000))                  # a large in-memory dataset
 
-def count_given(orders):                       # data travels with the call
-    return len(orders)
+def count_given(rows):                         # data travels with the call
+    return len(rows)
 
 def count_own(n):                              # only a small number travels
     return n
 
 if __name__ == "__main__":
     t = time.perf_counter()
-    size = len(pickle.dumps(ORDERS))
+    size = len(pickle.dumps(ROWS))
     print(f"pickled size: {size / 1e6:.1f} MB, pickling alone took {time.perf_counter() - t:.3f}s")
     with ProcessPoolExecutor(max_workers=1) as ex:
         ex.submit(count_own, 1).result()       # warm up: start the worker first
         t = time.perf_counter()
-        ex.submit(count_given, ORDERS).result()
+        ex.submit(count_given, ROWS).result()
         print(f"send the list : {time.perf_counter() - t:.3f}s")
         t = time.perf_counter()
         ex.submit(count_own, 2_000_000).result()
         print(f"send just 'n' : {time.perf_counter() - t:.3f}s")</div>
-  <div class="fx" data-lang="text">pickled size: 9.9 MB, pickling alone took 0.029s
-send the list : 0.191s
-send just 'n' : 0.017s</div>
-  <p>The worker was started first (a warm-up job) so that only the data transfer is timed. Sending the 9.9 MB list took about 10× longer than sending a number, and in a real pool every task that receives it pays again, and every worker holds its own copy in RAM. The fix: send small descriptions (a file path, a row range, an ID) and let each worker load its own slice, or use shared memory (section 07).</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Hiring four removal vans to move one teacup: by the time the vans arrive and are loaded, you could have carried it. And if each van must first receive the entire contents of your house to move one room, the vans are not saving time.</p></div>
-  <div class="callout def"><span class="label">Definition</span><p>Speed-up is worth it only when <strong>work per task ≫ overhead per task</strong> (pickling arguments and results + messaging) and total work ≫ pool start-up. <strong>chunksize</strong> amortises the per-message overhead over many items.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Passing a big pandas DataFrame to every task. Pickling it can cost more than the work, and each worker holds a copy (4 workers × a 2 GB frame = 8 GB). Pass paths or index ranges.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Queue and Pipe.</b> Pools are request/response: send a job, get a result. What about long-running workers that keep exchanging messages with the parent, like a route-planning service?</div>
+  <div class="fx" data-lang="text">pickled size: 9.9 MB, pickling alone took 0.027s
+send the list : 0.197s
+send just 'n' : 0.014s</div>
+  <p>The worker was warmed up first so only the transfer is timed. Sending the list took more than 10× as long as sending a number (it ranged from about 0.16 s to 0.8 s across runs), and in a real pool every task that receives it pays again and every worker holds a copy in RAM. Send small descriptions instead, such as a file path, a row range or an ID, and let each worker load its own slice. Alternatively, use shared memory (section 07) or an <code>initializer</code> that loads the data once per worker.</p>
+  <table class="tbl"><caption>Where the time goes</caption>
+    <tr><th>Cost</th><th>Measured here</th><th>Mitigation</th></tr>
+    <tr><td>Start-up</td><td>20 processes: ≈ 22 ms (fork), ≈ 300 ms (spawn)</td><td>one long-lived pool</td></tr>
+    <tr><td>Per-task messaging</td><td>5000 tiny tasks: 0.92 s vs loop 0.01 s</td><td><code>chunksize</code>, bigger tasks</td></tr>
+    <tr><td>Data copying</td><td>9.9 MB argument: ≈ 0.2 s vs 0.014 s</td><td>pass paths/ranges, shared memory, <code>initializer</code></td></tr>
+  </table>
+  <div class="callout def"><span class="label">Definition</span><p>A pool pays off only when <strong>work per task ≫ overhead per task</strong> (pickling arguments and results plus messaging) and total work ≫ pool start-up. <strong>chunksize</strong> spreads the per-message overhead over many items.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Passing a large pandas DataFrame to every task. Pickling can cost more than the work, and each worker holds a copy (4 workers × a 2 GB frame = 8 GB). Pass paths or index ranges.</p></div>
 
-  <h2 id="mp-ipc"><span class="num">06</span>Queue and Pipe</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>With threads we used <code>queue.Queue</code> to hand work between workers. Processes do not share memory, so that queue cannot be shared. What is the process version?</p>
-  </div>
-  <h3>multiprocessing.Queue: the same pattern across processes</h3>
-  <p><code>mp.Queue</code> looks exactly like <code>queue.Queue</code> (<code>put</code>, <code>get</code>), but each item is pickled and sent through a pipe to whichever process calls <code>get</code>. Two long-running planner processes take riders from <code>tasks</code> and put results on <code>results</code>, stopping at a <code>None</code> pill, just like the threaded fetchers.</p>
+  <h2 id="mp-ipc"><span class="num">06</span>Inter-Process Communication: Queue and Pipe</h2>
+  <p>Pools are request/response: send a job, get a result. Long-running workers that exchange a stream of messages with the parent use explicit channels. Both channels below pickle each message.</p>
+  <h3>multiprocessing.Queue</h3>
+  <p><code>mp.Queue</code> has the <code>queue.Queue</code> interface (<code>put</code>, <code>get</code>), but each item is pickled and sent through a pipe to whichever process calls <code>get</code>. Two workers take jobs from <code>tasks</code>, put results on <code>results</code>, and stop at a <code>None</code> pill.</p>
   <div class="fx" data-lang="py">import multiprocessing as mp
-from quickbite import RIDERS, route_cost
+from workload import RIDERS, route_cost
 
-def planner(tasks, results):
+def worker(tasks, results):
     while (job := tasks.get()) is not None:    # None = poison pill
         n, stops = job
         results.put((n, route_cost(stops), mp.current_process().name))
 
 if __name__ == "__main__":
     tasks, results = mp.Queue(), mp.Queue()
-    procs = [mp.Process(target=planner, args=(tasks, results), name=f"planner-{i}") for i in (1, 2)]
+    procs = [mp.Process(target=worker, args=(tasks, results), name=f"worker-{i}") for i in (1, 2)]
     for p in procs: p.start()
     for n, stops in enumerate(RIDERS, start=1):
         tasks.put((n, stops))
     for _ in procs: tasks.put(None)            # one pill per worker
-    out = sorted(results.get() for _ in RIDERS)
+    out = sorted(results.get() for _ in RIDERS)  # drain BEFORE joining
     for p in procs: p.join()
     for n, cost, who in out:
-        print(f"rider {n}: cost {cost}  (by {who})")</div>
-  <div class="fx" data-lang="text">rider 1: cost 40  (by planner-1)
-rider 2: cost 36  (by planner-2)
-rider 3: cost 35  (by planner-2)
-rider 4: cost 36  (by planner-1)</div>
-  <p>The same four costs, shared between two worker processes (which one took which rider varies between runs, so we sort the results). The pills go in after the real work, one per worker. We read all 4 results <em>before</em> joining the workers: a process that has put items on a queue may not exit until they are taken off, so joining first can hang.</p>
-  <h3>Pipe: exactly two ends</h3>
-  <p><code>mp.Pipe()</code> returns two connected ends. Whatever is <code>send</code>-ed on one end is <code>recv</code>-ed on the other (pickled on the way), in both directions.</p>
+        print(f"job {n}: cost {cost}  (by {who})")</div>
+  <div class="fx" data-lang="text">job 1: cost 40  (by worker-1)
+job 2: cost 36  (by worker-2)
+job 3: cost 35  (by worker-2)
+job 4: cost 36  (by worker-1)</div>
+  <p>Which worker took which job varies between runs, so the results are sorted. All results are read <em>before</em> joining: a process that has put items on a queue may not exit until they have been flushed, so joining first can deadlock.</p>
+  <h3>multiprocessing.Pipe</h3>
+  <p><code>mp.Pipe()</code> returns two connected <code>Connection</code> objects; whatever is <code>send</code>-ed on one end is <code>recv</code>-ed on the other, in both directions by default.</p>
   <div class="fx" data-lang="py">import multiprocessing as mp
-from quickbite import route_cost
+from workload import route_cost
 
-def courier(conn):
+def child(conn):
     stops = conn.recv()                        # wait for a message
     conn.send(route_cost(stops))               # answer on the same pipe
     conn.close()
 
 if __name__ == "__main__":
     here, there = mp.Pipe()                    # two connected ends
-    p = mp.Process(target=courier, args=(there,)); p.start()
+    p = mp.Process(target=child, args=(there,)); p.start()
     here.send([(2, 1), (5, 3), (1, 4)])
     print("child says the best route costs", here.recv())
     p.join()</div>
   <div class="fx" data-lang="text">child says the best route costs 12</div>
-  <p>The parent sent the three hand-example stops; the child computed 12 and sent it back on the same pipe.</p>
   <table class="tbl">
-    <tr><th>Channel</th><th>Shape</th><th>Cost</th><th>Pick when</th></tr>
-    <tr><td><code>mp.Queue</code></td><td>many producers ↔ many consumers</td><td>pickle each item; a background feeder thread</td><td>work queues, result collection</td></tr>
-    <tr><td><code>Pipe</code></td><td>exactly two ends, two-way</td><td>pickle; a little faster than Queue</td><td>parent ↔ one child conversations</td></tr>
-    <tr><td><code>Value</code> / <code>Array</code></td><td>typed C numbers in shared memory</td><td>no pickling; needs a lock</td><td>counters, flags, small result arrays</td></tr>
-    <tr><td><code>shared_memory</code></td><td>raw buffer attached by name</td><td>zero-copy</td><td>big numpy arrays read by many workers</td></tr>
+    <tr><th>Channel</th><th>Shape</th><th>Cost</th><th>Use for</th></tr>
+    <tr><td><code>mp.Queue</code></td><td>many producers ↔ many consumers</td><td>pickle per item; background feeder thread</td><td>work queues, collecting results</td></tr>
+    <tr><td><code>mp.Pipe</code></td><td>exactly two ends, duplex</td><td>pickle; a little faster than Queue</td><td>parent ↔ one child conversation</td></tr>
+    <tr><td><code>Value</code> / <code>Array</code></td><td>typed C values in shared memory</td><td>no pickling; needs a lock</td><td>counters, flags, small arrays</td></tr>
+    <tr><td><code>shared_memory</code></td><td>raw named buffer</td><td>zero-copy</td><td>large numpy arrays read by many workers</td></tr>
+    <tr><td><code>Manager()</code></td><td>proxy objects (dict, list) in a server process</td><td>every access is an IPC round trip: slow</td><td>convenience, small shared state</td></tr>
   </table>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A Queue is a post box many people drop letters into and many collect from. A Pipe is a private telephone line between two people. Either way, everything said is copied (pickled), never handed over physically.</p></div>
-  <div class="callout def"><span class="label">Definition</span><p><strong>mp.Queue</strong>: a process-safe FIFO built on a pipe plus locks; items are pickled. <strong>mp.Pipe(duplex=True)</strong>: a pair of <code>Connection</code> objects with <code>send</code>, <code>recv</code>, <code>poll</code>, <code>close</code>. Both are forms of <strong>message passing</strong>: processes share data by copying messages, not by sharing variables.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Joining a worker before draining its output queue, or forgetting a pill for one worker: both hang with no error. Drain first, then join; one pill per worker.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Shared Memory.</b> Every message is a copy. For a counter updated 200,000 times, or a large array many workers read, copying is wasteful. Can processes share one piece of memory after all?</div>
+  <div class="callout def"><span class="label">Definition</span><p><strong>mp.Queue</strong>: process-safe FIFO built on a pipe plus locks; items are pickled. <strong>mp.Pipe(duplex=True)</strong>: a pair of connections with <code>send</code>, <code>recv</code>, <code>poll</code>, <code>close</code>. Both are <strong>message passing</strong>: processes exchange copies, not shared variables.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Joining a worker before draining its output queue, or giving one worker no pill: both hang with no error. Drain first, then join; one pill per worker.</p></div>
 
-  <h2 id="mp-shared"><span class="num">07</span>Shared Memory</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Can several processes read and write the <em>same</em> memory, without pickling, and what problems from the threads note come back if they do?</p>
-  </div>
+  <h2 id="mp-shared"><span class="num">07</span>Shared Memory: Value, Array and shared_memory</h2>
+  <p>When copying is too expensive, as with a counter updated thousands of times or a large array many workers read, processes can map the same piece of memory. That removes the copying and brings back the race conditions of threads.</p>
   <h3>Value and Array</h3>
-  <p><code>mp.Value("i", 0)</code> creates one C integer (<code>"i"</code>; <code>"d"</code> would be a float) in memory that child processes can see; <code>mp.Array("i", 4)</code> creates 4 of them. They have a <code>.value</code> (or index access) and a built-in lock, <code>get_lock()</code>. Four processes each record 50,000 views, first without the lock, then with it; then four children each write one rider's cost into an Array slot.</p>
+  <p><code>mp.Value("i", 0)</code> is one C int in shared memory (<code>"d"</code> for a double); <code>mp.Array("i", 4)</code> is four. Both carry a lock, <code>get_lock()</code>. Four processes each add 50,000, without and with the lock; then four children each write one slot of an Array.</p>
   <div class="fx" data-lang="py">import multiprocessing as mp
 
 def count_views(v, n, use_lock):
@@ -535,43 +472,38 @@ if __name__ == "__main__":
     for p in ps: p.start()
     for p in ps: p.join()
     print("Array after children:", list(slots))</div>
-  <div class="fx" data-lang="text">Value, lock=False: 79536 / 200000
+  <div class="fx" data-lang="text">Value, lock=False: 83645 / 200000
 Value, lock=True : 200000 / 200000
 Array after children: [40, 36, 35, 36]</div>
-  <p>Without the lock: 79,536 of 200,000. The race condition from <a class="xref" data-note="py_threading">Threads &amp; the GIL</a> is back, and worse, because these are truly parallel processes on different cores (there is no GIL between processes). <code>v.value += 1</code> is still read, add, write. With <code>with v.get_lock():</code> (a lock is a context manager, <a class="xref" data-note="py_context">Context Managers</a>) it is exactly 200,000. The Array needed no lock, because each child wrote only its own slot.</p>
-  <h3>shared_memory: a zero-copy block for numpy</h3>
-  <p><code>multiprocessing.shared_memory.SharedMemory</code> creates a raw block of bytes with a name. Any process can attach to it by name and view it as a numpy array; nothing is pickled or copied. The parent stores the four route costs as fares, a child adds a 10-unit tip to every fare in place, and the parent sees the change.</p>
+  <p>Without the lock, less than half the updates survived. These processes run truly in parallel with no GIL between them, so <code>v.value += 1</code> (read, add, write) interleaves freely. With <code>with v.get_lock():</code> it is exactly 200,000. The Array needed no lock because each child wrote only its own slot.</p>
+  <h3>shared_memory for numpy arrays</h3>
+  <p><code>multiprocessing.shared_memory.SharedMemory</code> creates a named block of raw bytes. Any process can attach by name and view it as a numpy array; nothing is pickled or copied.</p>
   <div class="fx" data-lang="py">import multiprocessing as mp
 from multiprocessing import shared_memory
 import numpy as np
 
-def add_tip(name, shape):
+def add_ten(name, shape):
     shm = shared_memory.SharedMemory(name=name)               # attach by name
-    fares = np.ndarray(shape, dtype=np.float64, buffer=shm.buf)
-    fares += 10                                               # in place: no copy, no pickling
-    del fares
+    arr = np.ndarray(shape, dtype=np.float64, buffer=shm.buf)
+    arr += 10                                                 # in place: no copy, no pickling
+    del arr
     shm.close()
 
 if __name__ == "__main__":
     shm = shared_memory.SharedMemory(create=True, size=4 * 8)  # room for 4 float64
-    fares = np.ndarray((4,), dtype=np.float64, buffer=shm.buf)
-    fares[:] = [40, 36, 35, 36]                                # route costs as fares
-    p = mp.Process(target=add_tip, args=(shm.name, fares.shape)); p.start(); p.join()
-    print("parent sees after child:", fares)
-    del fares
+    arr = np.ndarray((4,), dtype=np.float64, buffer=shm.buf)
+    arr[:] = [40, 36, 35, 36]
+    p = mp.Process(target=add_ten, args=(shm.name, arr.shape)); p.start(); p.join()
+    print("parent sees after child:", arr)
+    del arr
     shm.close(); shm.unlink()                                  # free the block once</div>
   <div class="fx" data-lang="text">parent sees after child: [50. 46. 45. 46.]</div>
-  <p>The parent saw [50, 46, 45, 46]: the child changed the parent's data directly. The cleanup rules: every process calls <code>close()</code> when done with the block (we first <code>del</code> the numpy view, because it still points into it), and exactly one process calls <code>unlink()</code> at the end to free it.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Instead of photocopying the whiteboard for each kitchen, put one whiteboard in the corridor that all kitchens can write on. No copying, but now two cooks can write on the same spot at once, so you need a marker that only one can hold (the lock).</p></div>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Value(typecode, init)</strong> / <strong>Array(typecode, size)</strong>: ctypes objects in shared memory, with an associated lock (<code>get_lock()</code>). <strong>SharedMemory(create=True, size=…)</strong> / <strong>SharedMemory(name=…)</strong>: a named block; <code>.buf</code> is a memoryview; <code>close()</code> per process, <code>unlink()</code> once. Shared memory removes copying but brings back races, so coordinate writers.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Forgetting <code>unlink()</code> (the block outlives your program until reboot on some systems) or calling it while others still use the block. And treating <code>v.value += 1</code> as safe: it lost 60% of the updates above.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: When Not to Use Processes.</b> We can now run, feed and coordinate processes. When is all of this the wrong tool?</div>
+  <p>The child modified the parent's array directly. Cleanup rules: every process calls <code>close()</code> when done (after deleting numpy views into the buffer), and exactly one process calls <code>unlink()</code> at the end to free the block.</p>
+  <div class="callout def"><span class="label">Definition</span><p><strong>Value(typecode, init)</strong> / <strong>Array(typecode, size)</strong>: ctypes objects in shared memory with an associated lock (<code>get_lock()</code>). <strong>SharedMemory(create=True, size=…)</strong> / <strong>SharedMemory(name=…)</strong>: a named block; <code>.buf</code> is a memoryview; <code>close()</code> per process, <code>unlink()</code> once. Shared memory removes copying but re-introduces races: coordinate writers.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Forgetting <code>unlink()</code> (on Linux the block lives in <code>/dev/shm</code> until reboot) or calling it while others still use the block. And treating <code>v.value += 1</code> as safe: it lost more than half the updates above.</p></div>
 
   <h2 id="mp-when"><span class="num">08</span>When Not to Use Processes</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Processes gave real parallelism for route planning. Which jobs look like candidates but are actually faster without them?</p>
-  </div>
-  <p>One more measurement: the sum of i² for i below 2 million, three ways. Pure Python in one process, pure Python split over 4 processes, and numpy in one process (the data already in an array, as it would be in numpy work).</p>
+  <p>Processes pay off for CPU-bound pure-Python work split into sizeable tasks with small inputs and outputs. Many jobs that look like candidates are faster without them. One more measurement: the sum of i² for i below 2 million, in pure Python, in pure Python over 4 processes, and in numpy.</p>
   <div class="fx" data-lang="py">import time
 import numpy as np
 from concurrent.futures import ProcessPoolExecutor
@@ -592,140 +524,112 @@ if __name__ == "__main__":
     t = time.perf_counter(); c = int(x @ x)    # sum of x*x, done in C
     print(f"numpy, 1 process        : {time.perf_counter() - t:.3f}s")
     print("same answer:", a == b == c)</div>
-  <div class="fx" data-lang="text">pure Python, 1 process : 0.156s
-pure Python, 4 processes: 0.073s
-numpy, 1 process        : 0.003s
+  <div class="fx" data-lang="text">pure Python, 1 process : 0.112s
+pure Python, 4 processes: 0.055s
+numpy, 1 process        : 0.002s
 same answer: True</div>
-  <p>Four processes made the pure-Python loop about 2× faster. numpy, in a single process, was about 24× faster than the 4 processes, because it runs the loop in compiled C with no Python objects per number. If your work can be expressed as numpy/pandas operations, do that first; parallelise only what remains.</p>
-  <table class="tbl"><caption>When processes lose (all measured in this group)</caption>
-    <tr><th>Situation</th><th>Why processes lose</th><th>Evidence</th><th>Use instead</th></tr>
-    <tr><td>Waiting (I/O-bound)</td><td>waiting does not need a core; only 4 waits overlap</td><td>20 menus: processes 1.02 s, threads 0.20 s (<a class="xref" data-note="py_concurrency">map</a>)</td><td>threads or asyncio</td></tr>
-    <tr><td>Tiny tasks</td><td>messaging overhead per task</td><td>5000 tiny routes: 1.03 s vs loop 0.01 s</td><td>a loop, or big chunks</td></tr>
-    <tr><td>Huge data per task</td><td>pickling and copying</td><td>9.9 MB list: 0.19 s vs 0.02 s</td><td>send paths/ranges; shared memory</td></tr>
-    <tr><td>numpy / pandas work</td><td>C code is already fast (and often multi-core)</td><td>numpy 0.003 s vs 4 processes 0.073 s</td><td>vectorise</td></tr>
-    <tr><td>Very short scripts</td><td>pool start-up dominates</td><td>20 processes ≈ 25 ms to start</td><td>a loop</td></tr>
-    <tr><td>Memory-tight machines</td><td>each process has its own interpreter and data</td><td>(4 workers ≈ 4× RAM for copied data)</td><td>shared memory, fewer workers</td></tr>
+  <p>Four processes halved the pure-Python time (pool start-up ate the rest of the gain on a job this short). numpy in one process was about 25× faster than the 4 processes, because it runs the loop in compiled C with no Python object per number. Vectorise first; parallelise what cannot be vectorised.</p>
+  <table class="tbl"><caption>When processes lose</caption>
+    <tr><th>Situation</th><th>Why</th><th>Use instead</th></tr>
+    <tr><td>I/O-bound work</td><td>waiting needs no core; n processes overlap only n waits (20 × 0.2 s calls: 4 processes ≈ 1.0 s, 20 threads ≈ 0.2 s)</td><td>threads or asyncio</td></tr>
+    <tr><td>Tiny tasks</td><td>messaging overhead per task (0.92 s vs loop 0.01 s)</td><td>a loop, or big chunks</td></tr>
+    <tr><td>Huge data per task</td><td>pickling and copying, N copies in RAM</td><td>paths/ranges, shared memory, initializer</td></tr>
+    <tr><td>numpy / pandas work</td><td>C code is already fast and often multi-core (numpy 0.002 s vs 4 processes 0.055 s)</td><td>vectorise</td></tr>
+    <tr><td>Short scripts</td><td>pool start-up dominates (spawn ≈ 15 ms per process here)</td><td>a loop</td></tr>
+    <tr><td>Memory-tight machines</td><td>one interpreter plus data per worker</td><td>shared memory, fewer workers</td></tr>
   </table>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Opening extra kitchens pays off for a banquet, not for a cup of tea, not for waiting on deliveries, and not when a food processor (numpy) can do the chopping in seconds.</p></div>
-  <div class="callout def"><span class="label">Definition</span><p>Use processes when the work is <strong>CPU-bound, in pure Python, made of tasks that are each long compared with the overhead, with small inputs and outputs</strong>. QuickBite's route plans fit all four conditions.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Nesting parallelism: a process pool whose workers each call numpy or scikit-learn with all cores (<code>n_jobs=-1</code>) oversubscribes the CPU; 4 workers × 4 threads each fight over 4 cores. Set one level to 1 (for example <code>OMP_NUM_THREADS=1</code> in workers).</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: How It All Connects.</b> One picture of how processes, pickling, the guard, costs and sharing fit together.</div>
+  <div class="callout def"><span class="label">Definition</span><p>Use processes when the work is <strong>CPU-bound, in pure Python, made of tasks that are long compared with their overhead, with small inputs and outputs</strong>.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Nested parallelism: a process pool whose workers each call numpy/BLAS or scikit-learn with all cores (<code>n_jobs=-1</code>) oversubscribes the CPU, with 4 workers × 4 threads fighting over 4 cores. Set one level to 1 (e.g. <code>OMP_NUM_THREADS=1</code> in the workers).</p></div>
 
-  <h2 id="mp-connect"><span class="num">09</span>How It All Connects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Why does every rule in this note (pickling, the guard, chunksize, locks on Values) follow from one design choice?</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 680 260" width="680">
-    <defs><marker id="mp-a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
-    <rect x="230" y="8" width="220" height="40" rx="6" class="fb sb"/><text x="340" y="26" text-anchor="middle" font-size="12">separate processes</text><text x="340" y="41" text-anchor="middle" class="tm" font-size="10">own interpreter, own memory</text>
-    <line x1="280" y1="48" x2="130" y2="84" stroke="currentColor" marker-end="url(#mp-a9)"/>
-    <line x1="400" y1="48" x2="550" y2="84" stroke="currentColor" marker-end="url(#mp-a9)"/>
-    <rect x="40" y="86" width="180" height="40" rx="6" class="fg sg"/><text x="130" y="104" text-anchor="middle" font-size="12">own GIL each</text><text x="130" y="119" text-anchor="middle" class="tm" font-size="10">routes 1.75 → 0.62 s</text>
-    <rect x="460" y="86" width="180" height="40" rx="6" class="fr sr"/><text x="550" y="104" text-anchor="middle" font-size="12">nothing shared</text><text x="550" y="119" text-anchor="middle" class="tm" font-size="10">child 1, parent 0</text>
-    <line x1="510" y1="126" x2="400" y2="164" stroke="currentColor" marker-end="url(#mp-a9)"/>
-    <line x1="550" y1="126" x2="550" y2="164" stroke="currentColor" marker-end="url(#mp-a9)"/>
-    <line x1="600" y1="126" x2="650" y2="164" stroke="currentColor" marker-end="url(#mp-a9)"/>
-    <rect x="300" y="166" width="180" height="40" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="390" y="184" text-anchor="middle" font-size="12">pickling</text><text x="390" y="199" text-anchor="middle" class="tm" font-size="10">by name → top-level, guard</text>
-    <rect x="490" y="166" width="120" height="40" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="550" y="184" text-anchor="middle" font-size="12">Queue / Pipe</text><text x="550" y="199" text-anchor="middle" class="tm" font-size="10">messages</text>
-    <rect x="620" y="166" width="56" height="40" rx="6" class="fv"/><text x="648" y="190" text-anchor="middle" font-size="10">shared</text>
-    <line x1="390" y1="206" x2="300" y2="226" stroke="currentColor" marker-end="url(#mp-a9)"/>
-    <rect x="80" y="216" width="220" height="38" rx="6" class="fr sr"/><text x="190" y="233" text-anchor="middle" font-size="12">overhead per task</text><text x="190" y="247" text-anchor="middle" class="tm" font-size="10">chunksize, small arguments</text>
-    <line x1="648" y1="206" x2="648" y2="240" stroke="currentColor" marker-end="url(#mp-a9)"/><text x="520" y="252" class="tm" font-size="10">races return → lock Values</text>
-  </svg><figcaption>One choice, separate processes, has two consequences. Own GIL each gives parallelism (green). Nothing shared forces every exchange through pickled messages (hence top-level functions and the guard, and an overhead per task that chunksize and small arguments reduce), or through explicitly shared memory, where races come back and locks are needed again.</figcaption></figure>
-  <table class="tbl"><caption>Every concept on QuickBite</caption>
-    <tr><th>Concept</th><th>Built from</th><th>Answers which question</th><th>On the running example</th><th>When to use</th></tr>
-    <tr><td>Process</td><td>separate interpreter + memory</td><td>how to compute on many cores?</td><td>routes 1.75 → 0.62 s, 4 PIDs</td><td>CPU-bound pure Python</td></tr>
-    <tr><td>Isolation</td><td>separate address spaces</td><td>does the parent see child changes?</td><td>child 1, parent 0</td><td>(know it; send results back)</td></tr>
-    <tr><td>Pool / Executor</td><td>workers + job queue + pickling</td><td>results without plumbing?</td><td>40, 36, 35, 36 three ways</td><td>default way to use processes</td></tr>
-    <tr><td>Pickling</td><td><code>pickle</code>; functions by name</td><td>how does data travel?</td><td>menu = 38 bytes; lambda fails</td><td>every argument and result</td></tr>
-    <tr><td><code>__main__</code> guard</td><td>spawn re-imports main as <code>__mp_main__</code></td><td>why the idiom?</td><td>top line printed 3 times; unguarded → RuntimeError</td><td>every multiprocessing script</td></tr>
-    <tr><td>Start-up cost</td><td>creating interpreters</td><td>is a process free?</td><td>20 processes ≈ 25 ms vs threads ≈ 3 ms</td><td>reuse one pool</td></tr>
-    <tr><td>chunksize</td><td>several items per message</td><td>how to handle tiny tasks?</td><td>1.03 s → 0.02 s (loop: 0.01 s)</td><td>many small tasks</td></tr>
-    <tr><td>Data copying</td><td>pickle size</td><td>what do big arguments cost?</td><td>9.9 MB: 0.19 s vs 0.02 s</td><td>send paths, not data</td></tr>
-    <tr><td>Queue / Pipe</td><td>pipes + pickling</td><td>how do running workers talk?</td><td>2 planners, 4 riders; pipe → 12</td><td>long-lived workers</td></tr>
-    <tr><td>Value / Array</td><td>shared ctypes + lock</td><td>a shared counter?</td><td>no lock 79,536; lock 200,000</td><td>small shared state</td></tr>
-    <tr><td>shared_memory</td><td>named raw buffer</td><td>big arrays without copies?</td><td>fares +10 seen by parent</td><td>large numpy data</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span><p><strong>Processes trade shared memory for parallelism: each has its own GIL so Python can run on every core, but because nothing is shared, everything that crosses must be pickled (so functions must be importable, the main module must be guarded, and per-task overhead must be kept small), and whatever you do choose to share brings back the races and locks of threads.</strong></p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Common Mistakes.</b> The traps of this note in one list.</div>
-
-  <h2 id="mp-traps"><span class="num">10</span>Common Mistakes</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>When multiprocessing code fails or is slow, which mistake is behind each symptom?</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: missing <code>if __name__ == "__main__":</code></span><p>Works on Linux with fork, breaks with spawn (macOS, Windows, Linux from 3.14): <code>RuntimeError</code> about the bootstrapping phase, or a <code>BrokenProcessPool</code>.</p></div>
-  <div class="callout trap"><span class="label">Trap: unpicklable worker or arguments</span><p>Lambdas, nested functions, open files, locks, DB connections: <code>PicklingError</code>. Use top-level functions and plain data.</p></div>
-  <div class="callout trap"><span class="label">Trap: expecting globals to be shared</span><p>The child changes its copy; the parent sees nothing. Return results, or use a Queue / Value / shared memory.</p></div>
+  <h2 id="mp-traps"><span class="num">09</span>Common Mistakes</h2>
+  <div class="callout trap"><span class="label">Trap: missing <code>if __name__ == "__main__":</code></span><p>Works with fork, breaks with spawn/forkserver (macOS, Windows, Linux 3.14+): <code>RuntimeError</code> about the bootstrapping phase, or <code>BrokenProcessPool</code>.</p></div>
+  <div class="callout trap"><span class="label">Trap: unpicklable worker or arguments</span><p>Lambdas, nested functions, open files, locks, DB connections: <code>PicklingError</code>. Use top-level functions, <code>functools.partial</code>, plain data.</p></div>
+  <div class="callout trap"><span class="label">Trap: expecting globals to be shared</span><p>The child changes its own copy; the parent sees nothing. Return results, or use a Queue / Value / shared memory.</p></div>
   <div class="callout trap"><span class="label">Trap: thousands of tiny tasks with chunksize=1</span><p>100× slower than a loop. Raise <code>chunksize</code> or make tasks bigger.</p></div>
-  <div class="callout trap"><span class="label">Trap: shipping big data to every task</span><p>Pickling cost and N copies in RAM. Send paths or ranges; use shared memory.</p></div>
-  <div class="callout trap"><span class="label">Trap: unlocked <code>Value += 1</code></span><p>Lost updates (79,536 of 200,000). Use <code>with v.get_lock():</code>.</p></div>
+  <div class="callout trap"><span class="label">Trap: shipping big data with every task</span><p>Pickling cost and N copies in RAM. Send paths or ranges; use shared memory or an <code>initializer</code>.</p></div>
+  <div class="callout trap"><span class="label">Trap: unlocked <code>Value += 1</code></span><p>Lost updates. Use <code>with v.get_lock():</code>.</p></div>
   <div class="callout trap"><span class="label">Trap: joining before draining a Queue / missing pills</span><p>The program hangs silently.</p></div>
-  <div class="callout trap"><span class="label">Trap: processes for I/O or numpy work</span><p>Threads/asyncio for waiting, vectorised numpy for array maths.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: <a class="xref" data-note="py_asyncio">asyncio</a>.</b> Processes handle the computing; threads handled the waiting, at the cost of memory per thread and locks. Can one thread juggle all the waits by itself, and hand the computing to this note's process pool?</div>
+  <div class="callout trap"><span class="label">Trap: a new pool per call</span><p>Start-up paid every time (≈ 300 ms for 20 spawned processes here). Create one pool and reuse it.</p></div>
 
   <h2 id="mp-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>The note on one page. Running example: <code>route_cost</code> tries every order of a rider's stops (hand example A (2, 1), B (5, 3), C (1, 4) → 12; 4 riders × 9 stops → 40, 36, 35, 36).</p>
-  <h3>The question ladder</h3>
-  <table class="tbl">
-    <tr><th>Concept</th><th>Question</th><th>Answer in one line</th></tr>
-    <tr><td>Process</td><td>compute on 4 cores?</td><td>separate interpreters, own GIL each: 1.75 → 0.62 s</td></tr>
-    <tr><td>Isolation</td><td>does the parent see changes?</td><td>no: child 1, parent 0; send results back</td></tr>
-    <tr><td>Pools</td><td>results without plumbing?</td><td><code>ProcessPoolExecutor</code> / <code>mp.Pool</code>: <code>map</code>, <code>submit</code></td></tr>
-    <tr><td>Pickling</td><td>how does data travel?</td><td>to bytes and back; functions by name; no lambdas</td></tr>
-    <tr><td>Guard</td><td>why <code>__main__</code>?</td><td>spawn children re-import the file as <code>__mp_main__</code></td></tr>
-    <tr><td>Costs</td><td>is it free?</td><td>start-up, per-message pickling, data copies: <code>chunksize</code>, small args</td></tr>
-    <tr><td>Queue / Pipe</td><td>running workers talk?</td><td>pickled messages; pills; drain before join</td></tr>
-    <tr><td>Shared memory</td><td>one copy for all?</td><td><code>Value</code>/<code>Array</code> (lock them), <code>shared_memory</code> (close, unlink)</td></tr>
-    <tr><td>When not</td><td>when do processes lose?</td><td>I/O, tiny tasks, huge data, numpy work</td></tr>
-  </table>
-  <h3>Definitions and formulas</h3>
-  <table class="tbl">
-    <tr><th>Term</th><th>Meaning</th></tr>
-    <tr><td>Best-case speed-up</td><td>≈ number of cores (4 here) minus overhead; measured 2.8×</td></tr>
-    <tr><td>Worth it when</td><td>work per task ≫ pickling + messaging per task, and total work ≫ pool start-up</td></tr>
-    <tr><td>Messages with chunksize k</td><td>⌈tasks / k⌉: 5000 tasks, k = 50 → 100 messages</td></tr>
-    <tr><td>Pickling</td><td><code>pickle.dumps</code> / <code>loads</code>; functions and classes by module + name</td></tr>
-    <tr><td>Start methods</td><td>fork (copy parent; Linux ≤ 3.13 default), spawn (fresh interpreter, re-import; macOS/Windows), forkserver (Linux 3.14+ default)</td></tr>
-    <tr><td>IPC</td><td>inter-process communication: return values, Queue, Pipe, Value/Array, shared_memory</td></tr>
-  </table>
-  <h3>Measured numbers (ratios matter)</h3>
-  <table class="tbl">
-    <tr><th>Measurement</th><th>Result</th></tr>
-    <tr><td>4 routes: loop vs 4 processes</td><td>1.75 s vs 0.62 s</td></tr>
-    <tr><td>Start + join 20 threads vs 20 processes</td><td>2.8 ms vs 25.3 ms</td></tr>
-    <tr><td>5000 tiny jobs: loop / chunksize 1 / 50 / 1250</td><td>0.01 / 1.03 / 0.03 / 0.02 s</td></tr>
-    <tr><td>Send 9.9 MB list vs a number</td><td>0.19 s vs 0.02 s</td></tr>
-    <tr><td>Value += 1, 4 × 50,000: no lock / lock</td><td>79,536 / 200,000</td></tr>
-    <tr><td>Sum of squares: Python / 4 processes / numpy</td><td>0.156 / 0.073 / 0.003 s</td></tr>
-  </table>
-  <div class="cards">
-    <div><b>Use processes</b><p>Pure-Python CPU work in tasks that are long compared with their overhead, with small inputs and outputs.</p><small>route search, parsing, simulations</small></div>
-    <div><b>Avoid processes</b><p>Waiting work, tiny tasks, big per-task data, numpy-able maths, nested <code>n_jobs=-1</code>.</p><small>threads/asyncio, loops, vectorise</small></div>
-  </div>
-  <div class="callout trap"><span class="label">Key traps</span><p>No <code>__main__</code> guard; lambdas or nested functions as workers; expecting shared globals; <code>chunksize=1</code> with thousands of tasks; big DataFrames per task; unlocked <code>Value</code>; join before drain; forgetting <code>unlink</code>.</p></div>
-  <h3>Five rapid-fire checks</h3>
-  <table class="tbl">
-    <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td>Why can 4 processes compute in parallel when 4 threads cannot?</td><td>each process has its own interpreter and GIL</td></tr>
-    <tr><td>Why can't a lambda be sent to a process pool?</td><td>functions are pickled by importable name; a lambda has none</td></tr>
-    <tr><td>What is <code>__name__</code> in a spawned child running your main file?</td><td><code>"__mp_main__"</code></td></tr>
-    <tr><td>5000 tasks, chunksize 1250: how many messages?</td><td>4</td></tr>
-    <tr><td>Child does <code>counter += 100</code> on a global. Parent's counter?</td><td>unchanged (its own copy)</td></tr>
-  </table>
+  <h3>Why processes</h3>
+  <ul>
+    <li>One interpreter and one GIL per process → CPU-bound Python runs in parallel.</li>
+    <li>Speed-up ≤ number of cores; measured ≈ 3.5× on 4 cores (1.18 s → 0.34 s).</li>
+    <li>Isolation: no shared memory by default; a crash gives a non-zero <code>exitcode</code>.</li>
+  </ul>
+  <h3>APIs</h3>
+  <div class="fx" data-lang="py">p = mp.Process(target=f, args=(x,)); p.start(); p.join(); p.exitcode
 
-  <h2 id="mp-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+with mp.Pool(4) as pool:
+    pool.map(f, xs); pool.starmap(g, pairs); pool.imap_unordered(f, xs)
+
+with ProcessPoolExecutor(max_workers=4) as ex:
+    list(ex.map(f, xs, chunksize=100))
+    fut = ex.submit(f, x); fut.result()</div>
+  <h3>Pickling and the guard</h3>
+  <ul>
+    <li>Arguments, results and the function are pickled; functions/classes by module + name.</li>
+    <li>Worker must be top-level: no lambdas, nested functions; use <code>functools.partial</code>.</li>
+    <li>Unpicklable: open files, sockets, locks, DB connections, generators.</li>
+    <li>spawn/forkserver children import the main module as <code>__mp_main__</code> → guard with <code>if __name__ == "__main__":</code>.</li>
+  </ul>
+  <table class="tbl">
+    <tr><th>Start method</th><th>How</th><th>Default on</th></tr>
+    <tr><td>fork</td><td>copy of the parent; fast; unsafe with threads</td><td>Linux ≤ 3.13</td></tr>
+    <tr><td>spawn</td><td>fresh interpreter, re-imports main</td><td>macOS, Windows</td></tr>
+    <tr><td>forkserver</td><td>clean server forks children</td><td>Linux 3.14+</td></tr>
+  </table>
+  <h3>Overhead</h3>
+  <ul>
+    <li>Worth it when work per task ≫ pickling + messaging per task, and total work ≫ start-up.</li>
+    <li>Messages with chunksize k: ⌈tasks / k⌉. <code>Executor.map</code> default 1; <code>Pool.map</code> auto.</li>
+    <li>Measured: 20 processes start ≈ 22 ms (fork) / ≈ 300 ms (spawn) vs threads ≈ 3 ms; 5000 tiny tasks 0.92 s (chunksize 1) vs 0.02 s (1250) vs loop 0.01 s; 9.9 MB argument ≈ 0.2 s.</li>
+  </ul>
+  <h3>IPC and shared memory</h3>
+  <table class="tbl">
+    <tr><th>Tool</th><th>Notes</th></tr>
+    <tr><td><code>mp.Queue</code></td><td>many ↔ many; pickled; pills; drain before join</td></tr>
+    <tr><td><code>mp.Pipe</code></td><td>two ends; <code>send</code>/<code>recv</code></td></tr>
+    <tr><td><code>Value</code> / <code>Array</code></td><td>shared ctypes; <code>with v.get_lock():</code></td></tr>
+    <tr><td><code>shared_memory</code></td><td>named buffer, numpy view; <code>close()</code> each, <code>unlink()</code> once</td></tr>
+    <tr><td><code>Manager</code></td><td>proxied dict/list; slow</td></tr>
+  </table>
+  <h3>When not to</h3>
+  <ul>
+    <li>I/O-bound → threads/asyncio. numpy/pandas → vectorise (≈ 25× faster than 4 processes here).</li>
+    <li>Tiny tasks, huge per-task data, nested <code>n_jobs=-1</code>.</li>
+  </ul>
+  <h3>Gotchas</h3>
+  <ul>
+    <li>No guard → <code>RuntimeError</code> / <code>BrokenProcessPool</code> on spawn.</li>
+    <li>Globals changed in a child are not seen by the parent.</li>
+    <li>Unlocked <code>Value += 1</code> loses updates (no GIL between processes).</li>
+    <li>Jupyter + spawn: put workers in a <code>.py</code> module.</li>
+    <li>More workers than cores does not help CPU work.</li>
+  </ul>
+
+  <h2 id="mp-qa"><span class="num">10</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>Threads vs processes in Python: when each?</summary><div class="qa-body">Threads: I/O-bound work; cheap, shared memory, but one thread runs Python at a time (GIL). Processes: CPU-bound pure-Python work; real parallelism, but separate memory, start-up cost and pickling. QuickBite: threads for menus (0.20 s vs processes 1.02 s), processes for routes (0.62 s vs threads no faster than 1.75 s).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why might a ProcessPoolExecutor be slower than a plain loop?</summary><div class="qa-body">Overhead: starting processes, pickling arguments and results, one message per task. 5000 tiny tasks took 1.03 s in a pool vs 0.01 s in a loop. Fix with bigger tasks or <code>chunksize</code>, send paths not data, reuse the pool, and do not parallelise work that is already fast.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why do you need <code>if __name__ == "__main__":</code>?</summary><div class="qa-body">With spawn and forkserver, each child imports your main module (as <code>__mp_main__</code>) to find the worker function. Unguarded top-level code runs again in every child; if it creates a pool, children try to create processes while bootstrapping and <code>multiprocessing</code> raises <code>RuntimeError</code>. The guard limits that code to the parent.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What can and cannot be sent to a worker process?</summary><div class="qa-body">Anything picklable: numbers, strings, lists, dicts, tuples, dataclasses, numpy arrays, top-level functions and classes (by name). Not: lambdas, nested functions, open files, sockets, locks, DB connections, generators. Errors appear as <code>PicklingError</code> or <code>AttributeError</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you share a large numpy array with workers without copying it?</summary><div class="qa-body"><code>shared_memory.SharedMemory(create=True, size=…)</code>, wrap with <code>np.ndarray(shape, dtype, buffer=shm.buf)</code>, pass <code>shm.name</code>; workers attach by name. Every process calls <code>close()</code>; one calls <code>unlink()</code> at the end. Concurrent writers still need coordination.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>fork vs spawn?</summary><div class="qa-body">fork copies the running parent (fast, functions already present; risky if the parent has threads or open resources). spawn starts a fresh interpreter that imports the main module (slower, safer, needs the guard and picklable workers). Linux defaulted to fork up to 3.13 and uses forkserver from 3.14; macOS and Windows use spawn.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why do races come back with <code>mp.Value</code> when processes are "isolated"?</summary><div class="qa-body">A Value is deliberately placed in shared memory, so it is no longer isolated. <code>v.value += 1</code> is still read, add, write, and now processes run truly in parallel with no GIL between them, so updates interleave freely (79,536 of 200,000). Its lock restores correctness.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does <code>ProcessPoolExecutor</code> have the same API as <code>ThreadPoolExecutor</code>?</summary><div class="qa-body">Both implement <code>concurrent.futures.Executor</code>: a pool of workers fed from a job queue, returning Futures. Only the worker type differs, so switching between I/O-bound and CPU-bound work is often one word, and asyncio's <code>run_in_executor</code> accepts either.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks if you send the whole 9.9 MB order history with each of 1000 tasks?</summary><div class="qa-body">Each task pays the pickling and transfer (≈ 0.19 s measured, so minutes in total), each worker holds copies in RAM, and the speed-up from parallel computing is eaten by copying. Send each task an index range and let workers load their own slice, or put the data in shared memory once.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why is numpy often a better answer than processes?</summary><div class="qa-body">numpy runs the whole loop in compiled C without creating a Python object per element, so it removes the cost that processes only divide. Measured: numpy 0.003 s vs 4 processes 0.073 s vs 1 process 0.156 s. Processes are for the Python logic that cannot be vectorised, such as the permutation search in <code>route_cost</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>A worker process crashes. What happens?</summary><div class="qa-body">The crash is isolated: the parent survives. A raw <code>Process</code> shows a non-zero <code>exitcode</code>; a <code>ProcessPoolExecutor</code> marks itself broken and pending futures raise <code>BrokenProcessPool</code>; a normal Python exception inside a pool job is pickled back and re-raised by <code>future.result()</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Threads vs processes in Python: when do you use each?</summary><div class="qa-body">Threads for I/O-bound work: cheap, shared memory, and the GIL is released while waiting. Processes for CPU-bound pure-Python work: each has its own interpreter and GIL, so they run in parallel, at the cost of start-up time, memory and pickling all data that crosses between them.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How does multiprocessing get around the GIL?</summary><div class="qa-body">It does not remove the GIL; it runs several interpreters. Each process has its own GIL, so the OS can run Python bytecode in each on a different core simultaneously. The trade-off is that processes do not share memory, so communication goes through pickled messages or explicit shared memory.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why do you need <code>if __name__ == "__main__":</code> with multiprocessing?</summary><div class="qa-body">With the spawn and forkserver start methods, each child imports your main module (as <code>__mp_main__</code>) to find the worker function. Unguarded top-level code runs again in every child; if it creates processes, the children try to start processes while bootstrapping and <code>multiprocessing</code> raises <code>RuntimeError</code>. The guard confines that code to the parent. It is required on macOS and Windows and, from 3.14, on Linux by default.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why can't you pass a lambda to <code>ProcessPoolExecutor.map</code>?</summary><div class="qa-body">Functions are pickled by reference: module name plus qualified name, re-imported in the worker. A lambda (or nested function) has no importable name, so pickling fails with <code>PicklingError</code>. Use a top-level function, optionally wrapped in <code>functools.partial</code> for fixed arguments.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What can and cannot be sent to a worker process?</summary><div class="qa-body">Anything picklable: numbers, strings, lists, dicts, tuples, dataclasses, numpy arrays, top-level functions and classes. Not: lambdas, nested functions, open files, sockets, locks, database connections, generators. Unpicklable objects should be created inside the worker, for example in an <code>initializer</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>fork vs spawn vs forkserver?</summary><div class="qa-body">fork copies the running parent: fast, and functions and globals are already present, but unsafe if the parent has threads (locks held by other threads are copied locked). spawn starts a fresh interpreter that imports the main module: slower, safer, needs the guard and picklable workers. forkserver forks children from a clean single-threaded server. Linux defaulted to fork up to 3.13 and forkserver from 3.14; macOS and Windows use spawn.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>If a child process modifies a global variable, does the parent see it?</summary><div class="qa-body">No. The child has its own copy of memory (copied at fork, or rebuilt by importing under spawn); its changes vanish when it exits. Send results back through return values, a <code>Queue</code>/<code>Pipe</code>, or explicitly shared memory (<code>Value</code>, <code>Array</code>, <code>shared_memory</code>).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why might a <code>ProcessPoolExecutor</code> be slower than a plain loop?</summary><div class="qa-body">Overhead: starting processes, pickling arguments and results, and one message per task by default. 5000 tiny tasks took 0.92 s in a pool vs 0.01 s in a loop. Fix with <code>chunksize</code> or bigger tasks, send small arguments, reuse one pool, and do not parallelise work that is already fast.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does <code>chunksize</code> do?</summary><div class="qa-body">It groups k input items into one message to a worker, so pickling and IPC overhead is paid ⌈n / k⌉ times instead of n times. It matters for many small tasks; too large a chunk can unbalance load at the end. <code>Pool.map</code> picks one automatically; <code>ProcessPoolExecutor.map</code> defaults to 1.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span><code>multiprocessing.Pool</code> vs <code>ProcessPoolExecutor</code>?</summary><div class="qa-body">Both are process pools. <code>Pool</code> is older, with <code>map</code>, <code>imap</code>, <code>imap_unordered</code>, <code>starmap</code>, <code>apply_async</code> and automatic chunksize. <code>ProcessPoolExecutor</code> implements the <code>concurrent.futures.Executor</code> interface (Futures, <code>as_completed</code>), matches <code>ThreadPoolExecutor</code>, works with asyncio's <code>run_in_executor</code>, and raises <code>BrokenProcessPool</code> if a worker dies rather than hanging.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do processes communicate?</summary><div class="qa-body">Message passing: <code>mp.Queue</code> (many producers and consumers) and <code>mp.Pipe</code> (two ends), both pickling each message. Shared memory: <code>Value</code>/<code>Array</code> for small typed data with a lock, and <code>shared_memory.SharedMemory</code> for large buffers such as numpy arrays. <code>Manager</code> proxies give shared dicts and lists, but every access is an IPC round trip.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you share a large numpy array with workers without copying it?</summary><div class="qa-body">Create <code>shared_memory.SharedMemory(create=True, size=arr.nbytes)</code>, wrap it with <code>np.ndarray(shape, dtype, buffer=shm.buf)</code>, copy the data in once, and pass <code>shm.name</code>, shape and dtype to workers, which attach by name. Every process calls <code>close()</code>; one calls <code>unlink()</code> at the end. Concurrent writers still need coordination.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Processes are isolated, so why can <code>mp.Value</code> still have race conditions?</summary><div class="qa-body">A Value deliberately lives in shared memory, so it is no longer isolated. <code>v.value += 1</code> is still read, add, write, and processes run truly in parallel with no GIL between them, so updates interleave (more than half were lost in the demo). Wrap updates in <code>with v.get_lock():</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why must you drain a <code>multiprocessing.Queue</code> before joining the producer?</summary><div class="qa-body">A process that has put items on a queue uses a background feeder thread to flush them into the pipe; it does not exit until the buffered data has been consumed. Joining it before reading can deadlock: the parent waits for the child to exit, the child waits for the parent to read. Read all results first, then join.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What happens when a worker process crashes?</summary><div class="qa-body">The crash is isolated and the parent survives. A raw <code>Process</code> shows a non-zero (or negative signal) <code>exitcode</code>. A <code>ProcessPoolExecutor</code> marks itself broken and pending futures raise <code>BrokenProcessPool</code>. An ordinary Python exception inside a pool job is pickled back and re-raised by <code>future.result()</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How many worker processes should you use?</summary><div class="qa-body">For CPU-bound work, about the number of available cores (<code>os.cpu_count()</code>, or the container's CPU quota or affinity), fewer on shared machines or if each worker uses multi-threaded libraries. More workers than cores only add memory and context switching.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Is numpy a better answer than multiprocessing?</summary><div class="qa-body">Often. numpy runs the loop in compiled C with no Python object per element, removing the cost that processes only divide among cores: numpy took 0.002 s vs 0.055 s for 4 processes and 0.112 s for 1. Processes are for Python logic that cannot be vectorised, such as a permutation search. If you combine them, limit BLAS threads per worker to avoid oversubscription.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How would you parallelise feature engineering on a 20 GB CSV?</summary><div class="qa-body">First try vectorised pandas/polars or chunked reading, since that may be enough. If per-row Python logic is unavoidable, split the work by byte ranges, row ranges or files, and give each worker a path and range rather than data; workers read and process their own slice and write results to disk or return small aggregates. Use a <code>ProcessPoolExecutor</code> with about one worker per core, and combine results at the end. For larger scale, Dask or Spark.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Where do you meet multiprocessing in ML libraries?</summary><div class="qa-body">PyTorch <code>DataLoader(num_workers=n)</code> loads and augments batches in worker processes (hence picklable datasets and the main guard on Windows/macOS). scikit-learn and joblib <code>n_jobs</code> use the loky process backend. Hyperparameter searches and parallel feature extraction commonly use process pools.</div></details>
 </main>
 `
 });
