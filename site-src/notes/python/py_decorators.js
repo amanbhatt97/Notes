@@ -3,40 +3,7 @@ Object.assign(TOPIC_CONTENT, {
   "py_decorators": `<main>
 <h1>Closures &amp; Decorators</h1>
   <div class="where"><span>Python</span><span>Advanced Python</span><span>Advanced Python Functions</span><span>Closures &amp; Decorators</span></div>
-  <p class="lead">The <code>@something</code> line above a function looks like magic until you see that it is one ordinary assignment: <code>f = something(f)</code>. This note builds that line from the ground up, one need at a time: functions are objects you can pass around, an inner function can remember variables after its outer function has finished (a <strong>closure</strong>), and a closure that wraps another function is a <strong>decorator</strong>. Then the practical layer: <code>functools.wraps</code>, decorators that take options (<code>@retry(times=3)</code>), stacking, caching, registration and permission checks. The running example is the same Chai Corner order log as the rest of the group, and every piece of code was run with its real output shown.</p>
-
-  <h2 id="pd-fits" class="open"><span class="num">★</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 640 170" width="640">
-    <defs><marker id="pd-a0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
-    <rect x="230" y="8" width="180" height="30" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="320" y="28" text-anchor="middle" font-size="12">Advanced Python Functions: map</text>
-    <line x1="320" y1="38" x2="110" y2="70" stroke="currentColor" stroke-opacity="0.45"/>
-    <line x1="320" y1="38" x2="320" y2="70" stroke="currentColor" stroke-opacity="0.45"/>
-    <line x1="320" y1="38" x2="530" y2="70" stroke="currentColor" stroke-opacity="0.45"/>
-    <rect x="20" y="70" width="180" height="34" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="110" y="92" text-anchor="middle" font-size="12">Iterators &amp; Generators</text>
-    <rect x="230" y="70" width="180" height="34" rx="6" class="fg sg" stroke-width="2.5"/><text x="320" y="92" text-anchor="middle" font-size="12" font-weight="700">Closures &amp; Decorators</text>
-    <rect x="440" y="70" width="180" height="34" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="530" y="92" text-anchor="middle" font-size="12">Context Managers</text>
-    <path d="M320,104 Q420,150 520,108" fill="none" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#pd-a0)"/>
-    <text x="420" y="160" text-anchor="middle" class="tm" font-size="11">@contextmanager is itself a decorator</text>
-  </svg><figcaption>The Advanced Python Functions group. You are on the green note. Context Managers later uses a decorator, @contextmanager, to turn a generator into a with-block.</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: <a class="xref" data-note="py_fundamentals">Python Fundamentals</a> and <a class="xref" data-note="py_iterators">Iterators &amp; Generators</a></b><span>You can write functions with <code>*args</code>/<code>**kwargs</code>, defaults and <code>lambda</code>, and you know a generator is a function that keeps its local variables while paused. Left open: how do you add the same extra behaviour (timing, logging, retries) to many functions without pasting it into each? The group map, <a class="xref" data-note="py_advanced">Advanced Python Functions: the map</a>, set up the Chai Corner log and its <code>@timed</code> report.</span></li>
-    <li><b>This note adds: functions as values, closures, decorators</b><span>First-class functions, nested functions, scope (LEGB), closures and cells, <code>nonlocal</code>, late binding, decorators by hand and with <code>@</code>, when each part runs, <code>functools.wraps</code>, parameterised decorators, stacking, <code>lru_cache</code>, registration, auth checks, class-based decorators, <code>@dataclass</code> and <code>@property</code>.</span></li>
-    <li><b>Leads to: <a class="xref" data-note="py_context">Context Managers</a></b><span>A decorator wraps a <em>function call</em> with before/after code. A context manager wraps a <em>block of code</em> with setup/cleanup that runs even on errors, and <code>@contextmanager</code> (a decorator) builds one from a generator. Further on: <a class="xref" data-note="py_testing">Testing &amp; Debugging</a> (<code>@pytest.fixture</code>, <code>mock.patch</code>), <a class="xref" data-note="api_flask">Flask</a> and <a class="xref" data-note="api_fastapi">FastAPI</a> (<code>@app.route</code>, <code>@app.get</code>).</span></li>
-  </ol>
-
-  <h2 id="pd-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
-  <p>The whole note as one chain. Each idea answers the question above it, and its weakness raises the next question. Running example: the Chai Corner log (4 valid orders, 7 items, ₹225).</p>
-  <ol class="story">
-    <li><b>The problem</b><span>Q: how do I time <code>total_revenue</code> and <code>items_sold</code> without pasting timing code into each? → I can't yet: the extra code must sit <em>around</em> each function. To put code around a function I must be able to hand the function to other code…</span></li>
-    <li><b>Functions are objects</b><span>Q: can a function be handed around? → Yes: store it (<code>f = with_gst</code>), pass it (<code>apply_to_orders(with_gst, …)</code> → 63.0, 47.25, 94.5, 31.5), return it, keep it in a dict. But a returned inner function uses variables of a function that has already finished…</span></li>
-    <li><b>Closures</b><span>Q: where do those variables live? → In <strong>cells</strong> attached to the inner function: <code>make_tax(0.05)</code> and <code>make_tax(0.10)</code> remember 0.05 and 0.1 (₹236.25 vs ₹247.5). To <em>change</em> one, <code>nonlocal</code> (token counter 1, 2, 3). Trap: cells hold variables, not values (late binding). Now: can a closure hold a whole <em>function</em>?</span></li>
-    <li><b>Decorator</b><span>Q: can one function wrap another? → <code>logged(func)</code> returns a <code>wrapper</code> closure that remembers <code>func</code> and calls it in the middle; <code>@logged</code> means <code>f = logged(f)</code>. But the wrapped function now calls itself "wrapper"…</span></li>
-    <li><b>functools.wraps</b><span>Q: how do we keep the original's name, docstring and signature? → <code>@functools.wraps(func)</code> on the wrapper copies them and adds <code>__wrapped__</code>. Now a real <code>@timed</code>. But how do we pass options such as "retry 3 times"?</span></li>
-    <li><b>Decorator with arguments</b><span>Q: how does <code>@retry(times=3)</code> work? → One more layer: <code>retry(times=3)</code> runs first and returns the decorator. Three layers: options → function → call. The flaky till succeeds on try 3. But with <code>@timed</code> on top too, which runs first?</span></li>
-    <li><b>Stacking</b><span>Q: what order do several decorators apply and run in? → Bottom-up to apply, outside-in to run: timed-outside-retry measures 0.15 s for all three tries; retry-outside-timed prints three 0.05 s timings. What else are decorators used for?</span></li>
-    <li><b>Real-world decorators</b><span>Q: what problems do they solve in practice? → Caching (<code>lru_cache</code>: 100 price lookups, 3 real calls), registration (a command table), permission checks (Ravi is not a manager), class-based decorators with state, and decorators on classes (<code>@dataclass</code>) and methods (<code>@property</code>). And the price?</span></li>
-    <li><b>Traps</b><span>Q: what goes wrong? → Missing <code>return</code>s (→ <code>None</code>), calling instead of passing, missing <code>nonlocal</code>, late binding, missing <code>wraps</code>, forgotten brackets on <code>@retry()</code>, caching impure functions or unhashable arguments.</span></li>
-  </ol>
+  <p class="lead">A <strong>decorator</strong> is a function that takes a function and returns a replacement, usually a wrapper that runs extra code before and after calling the original. The <code>@deco</code> line above a <code>def</code> is shorthand for <code>f = deco(f)</code>. It works because of <strong>closures</strong>: an inner function keeps the outer variables it uses, including the original function, after the outer function has returned. Without decorators, behaviour needed by many functions, such as timing, logging, retries, caching and permission checks, gets pasted into each function body and drifts out of sync. You use them constantly in real code: <code>@app.get</code> in FastAPI, <code>@pytest.fixture</code>, <code>@functools.lru_cache</code>, <code>@torch.no_grad()</code>, <code>@dataclass</code>, <code>@property</code>. Code here was run on Python 3.13.</p>
 
   <h2 id="pd-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -45,11 +12,10 @@ Object.assign(TOPIC_CONTENT, {
       <div class="mm-branch">
         <div class="mm-title">Functions are objects</div>
         <ul>
-          <li><code>with_gst</code> = the function; <code>with_gst(225)</code> = run it (236.25)</li>
+          <li><code>f</code> = the function; <code>f()</code> = call it</li>
           <li>Store, pass, return, put in a dict</li>
           <li><b>Higher-order function</b>: takes or returns a function (<code>sorted(key=)</code>, <code>map</code>)</li>
           <li>⚠ <code>f(x)</code> passes the result, <code>f</code> passes the function</li>
-          <li>💡 a recipe card vs the dish</li>
         </ul>
       </div>
       <div class="mm-branch">
@@ -58,9 +24,8 @@ Object.assign(TOPIC_CONTENT, {
           <li>Inner function + the outer variables it uses, kept alive after outer returns</li>
           <li>Stored in <b>cells</b>: <code>__closure__</code>, names in <code>__code__.co_freevars</code></li>
           <li>Scope lookup <b>LEGB</b>: Local, Enclosing, Global, Builtins</li>
-          <li><b>nonlocal</b> to reassign (token counter); mutating needs nothing</li>
-          <li>⚠ Late binding: 3 buttons all "cold coffee"; fix <code>item=item</code></li>
-          <li>💡 a tiffin packed at home, eaten at the office</li>
+          <li><b>nonlocal</b> to reassign; mutating needs nothing</li>
+          <li>⚠ Late binding: value read at call time; fix with <code>x=x</code> or <code>partial</code></li>
         </ul>
       </div>
       <div class="mm-branch">
@@ -71,7 +36,6 @@ Object.assign(TOPIC_CONTENT, {
           <li>Decorator runs once at def time; wrapper on every call</li>
           <li>Wrapper: <code>*args, **kwargs</code> in, <code>return func(*args, **kwargs)</code></li>
           <li><b>functools.wraps</b>: keeps name, doc, signature, adds <code>__wrapped__</code></li>
-          <li>💡 a security guard at a door</li>
         </ul>
       </div>
       <div class="mm-branch">
@@ -80,17 +44,17 @@ Object.assign(TOPIC_CONTENT, {
           <li><code>@retry(times=3)</code>: factory(options) → decorator(func) → wrapper(args)</li>
           <li>Must write brackets: <code>@retry()</code></li>
           <li><code>@a @b def f</code> ≡ <code>f = a(b(f))</code>: apply bottom-up, run outside-in</li>
-          <li>timed over retry: 0.15 s total; retry over timed: 3 × 0.05 s</li>
+          <li>Order changes behaviour (timer outside vs inside retry)</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Real uses</div>
+        <div class="mm-title">Patterns</div>
         <ul>
           <li><b>timed</b> (perf_counter in try/finally), <b>retry</b> with backoff</li>
-          <li><b>lru_cache</b>: 100 lookups → 3 calls; fib(30) 0.1 s → 0.00003 s</li>
-          <li><b>Registration</b>: <code>@command("revenue")</code>, Flask <code>@app.route</code></li>
+          <li><b>lru_cache</b>: memoise pure functions</li>
+          <li><b>Registration</b>: return func unchanged (<code>@app.route</code>)</li>
           <li><b>Auth</b>: <code>@require_role("manager")</code></li>
-          <li>Class decorator with <code>__call__</code>; <code>@dataclass</code>, <code>@property</code></li>
+          <li>Class with <code>__call__</code> as decorator; <code>@dataclass</code>, <code>@property</code></li>
         </ul>
       </div>
       <div class="mm-branch">
@@ -109,27 +73,22 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="pd-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain</span></div></div>
-      <div class="rm-item rm-done" data-target="pd-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">The Problem</span><span class="rm-sub">The same extra code everywhere</span></div></div>
-      <div class="rm-item rm-done" data-target="pd-func"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Functions Are Objects</span><span class="rm-sub">Store, pass, return them</span></div></div>
-      <div class="rm-item rm-done" data-target="pd-clos"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Closures</span><span class="rm-sub">Cells, nonlocal, late binding</span></div></div>
-      <div class="rm-item rm-done" data-target="pd-deco"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Decorators by Hand, Then @</span><span class="rm-sub">f = deco(f)</span></div></div>
-      <div class="rm-item rm-done" data-target="pd-wraps"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">functools.wraps &amp; @timed</span><span class="rm-sub">Keep the original's identity</span></div></div>
-      <div class="rm-item rm-done" data-target="pd-args"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Decorators With Arguments</span><span class="rm-sub">Three layers, traced</span></div></div>
-      <div class="rm-item rm-done" data-target="pd-stack"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Stacking Decorators</span><span class="rm-sub">Apply bottom-up, run outside-in</span></div></div>
-      <div class="rm-item rm-done" data-target="pd-real"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Real-World Decorators</span><span class="rm-sub">Cache, register, auth, classes</span></div></div>
-      <div class="rm-item rm-done" data-target="pd-connect"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One diagram, one table</span></div></div>
-      <div class="rm-item rm-done" data-target="pd-traps"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Lost returns, names, brackets</span></div></div>
-      <div class="rm-item rm-done" data-target="pd-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note on one page</span></div></div>
-      <div class="rm-item rm-done" data-target="pd-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="pd-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Why Decorators: Cross-Cutting Concerns</span><span class="rm-sub">same code pasted into many functions</span></div></div>
+      <div class="rm-item rm-done" data-target="pd-func"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">First-Class Functions</span><span class="rm-sub">store, pass and return functions</span></div></div>
+      <div class="rm-item rm-done" data-target="pd-clos"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Closures and LEGB Scope</span><span class="rm-sub">cells, nonlocal, late binding</span></div></div>
+      <div class="rm-item rm-done" data-target="pd-deco"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Writing a Decorator: by Hand and with @</span><span class="rm-sub">f = deco(f), def time vs call time</span></div></div>
+      <div class="rm-item rm-done" data-target="pd-wraps"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">functools.wraps and a Timing Decorator</span><span class="rm-sub">keep name, docstring, signature</span></div></div>
+      <div class="rm-item rm-done" data-target="pd-args"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Decorators with Arguments</span><span class="rm-sub">three-layer factory, retry with backoff</span></div></div>
+      <div class="rm-item rm-done" data-target="pd-stack"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Stacking Decorators</span><span class="rm-sub">apply bottom-up, run outside-in</span></div></div>
+      <div class="rm-item rm-done" data-target="pd-real"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Decorator Patterns: Caching, Registration, Auth, Classes</span><span class="rm-sub">lru_cache, registries, class decorators</span></div></div>
+      <div class="rm-item rm-done" data-target="pd-traps"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">lost returns, names, brackets</span></div></div>
+      <div class="rm-item rm-done" data-target="pd-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">LEGB, templates, factories, gotchas</span></div></div>
+      <div class="rm-item rm-done" data-target="pd-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">closures, wraps, factories, stacking</span></div></div>
     </div>
   </div>
 
-  <h2 id="pd-why"><span class="num">01</span>The Problem: The Same Extra Code Everywhere</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Chai Corner's owner wants to know how long each report function takes. We have several such functions. How do we add timing to all of them without editing the inside of each one?</p>
-  </div>
-  <p>First the running example. The log is the same six-line file as in <a class="xref" data-note="py_iterators">Iterators &amp; Generators</a>; <code>read_orders</code> is the generator built there (it streams the file and skips the comment and the junk line).</p>
+  <h2 id="pd-why"><span class="num">01</span>Why Decorators: Cross-Cutting Concerns</h2>
+  <p>Some behaviour is needed by many unrelated functions: timing, logging, retries, caching, permission checks. Writing it inside each function buries the real logic and spreads identical code across the codebase. The examples use a small order log and the <code>read_orders</code> generator from <a class="xref" data-note="py_iterators">Iterators &amp; Generators</a>, which streams the file and skips the comment and junk lines.</p>
   <div class="fx" data-lang="py">with open("orders.log", "w") as f:
     f.write("# Chai Corner till log, Monday\\n09:01,masala chai,2,30\\n09:05,samosa,3,15\\n"
             "09:12,cold coffee,1,90\\ntill restarted\\n09:20,masala chai,1,30\\n")
@@ -144,7 +103,7 @@ def read_orders(path):                    # the generator from Iterators &amp; G
 
 print([(o["item"], o["qty"] * o["price"]) for o in read_orders("orders.log")])</div>
   <div class="fx" data-lang="text">[('masala chai', 60), ('samosa', 45), ('cold coffee', 90), ('masala chai', 30)]</div>
-  <p>Four orders: 60 + 45 + 90 + 30 = <strong>₹225</strong>, and 2 + 3 + 1 + 1 = <strong>7 items</strong>. Now the timing request, done the obvious way:</p>
+  <p>Four orders: 60 + 45 + 90 + 30 = <strong>₹225</strong>, and 2 + 3 + 1 + 1 = <strong>7 items</strong>. Adding timing to two report functions the obvious way:</p>
   <div class="fx" data-lang="py">import time
 
 def total_revenue(path):
@@ -163,20 +122,16 @@ print(total_revenue("orders.log"), items_sold("orders.log"))</div>
   <div class="fx" data-lang="text">total_revenue took 0.00004s
 items_sold took 0.00003s
 225 7</div>
-  <p>It works, but look at what happened. Each function's one real line (the <code>sum</code>) is now buried under three lines of timing that are identical apart from the name. With twenty report functions that is sixty pasted lines. Next week the owner asks for logging too: paste again. When the timing format changes, you edit twenty places, and you will miss one.</p>
-  <p>What we want: write the timing code <strong>once</strong>, then say "apply it to this function" with one short line, without touching the function's own code. That is a <strong>decorator</strong>. To build one we need three things the rest of this note supplies: functions you can pass around (02), inner functions that remember things (03), and a wrapper that calls the original in the middle (04).</p>
+  <p>It works, but look at what happened. Each function's one real line (the <code>sum</code>) is now buried under three lines of timing that are identical apart from the name. With twenty report functions that is sixty pasted lines. Add logging next week and you paste again. When the timing format changes, you edit twenty places, and you will miss one.</p>
+  <p>What we want is to write the timing code <strong>once</strong>, then apply it to a function with one short line, without touching the function's own code. That is a <strong>decorator</strong>. Building one needs three things: functions that can be passed around, inner functions that remember outer variables (closures), and a wrapper that calls the original in the middle.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>A security guard at an office door. The room inside (your function) is unchanged. But everyone who goes in now passes the guard first, who checks the ID and writes in the register, and notes when they leave. You can put the same kind of guard on twenty doors without rebuilding any room.</p></div>
   <div class="callout def"><span class="label">Definition</span><p>A <strong>cross-cutting concern</strong> is behaviour needed by many unrelated functions (timing, logging, retries, caching, permission checks) that is not part of any one function's job. Decorators exist to write a cross-cutting concern once and attach it anywhere.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>"Just call a helper at the top of each function" (<code>start_timer()</code> … <code>stop_timer()</code>) still edits every function, and forgets to stop the timer when the function raises an error in the middle. The extra code has to sit <em>around</em> the call, not inside the body.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Functions Are Objects.</b> To put code around a function, some other piece of code must be able to receive the function itself, hold it, and call it later. Can a function be handed around like a number or a list?</div>
 
-  <h2 id="pd-func"><span class="num">02</span>Functions Are Objects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We have only ever <em>called</em> functions: <code>with_gst(225)</code>. Can we instead give a function to another function, keep it in a variable, or get one back as a result?</p>
-  </div>
+  <h2 id="pd-func"><span class="num">02</span>First-Class Functions</h2>
   <p>In Python a function is an ordinary value, like a number or a list. The name <code>with_gst</code> without brackets is the function itself, an object sitting in memory. The brackets are what make the difference: <code>with_gst</code> means "the function"; <code>with_gst(225)</code> means "run it now and give me its result".</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>A recipe card versus the dish. <code>with_gst</code> is the recipe card: you can photocopy it, hand it to a friend, or post it to someone. <code>with_gst(225)</code> is cooking the dish from the card. Handing someone the card does not cook anything.</p></div>
-  <p>The code shows the four things you can do with a function value, on our orders (GST at 5%).</p>
+  <p>The code shows the four things you can do with a function value (GST at 5%).</p>
   <div class="fx" data-lang="py">def with_gst(amount):
     return round(amount * 1.05, 2)
 
@@ -212,12 +167,9 @@ except TypeError as e:
     print("TypeError:", e)</div>
   <div class="fx" data-lang="text">TypeError: 'float' object is not callable</div>
   <p><code>with_gst(10)</code> ran immediately and gave 10.5, so <code>apply_to_orders</code> tried to call the number 10.5. Same bug in real code: <code>Thread(target=work())</code> runs <code>work</code> in the main thread right away. Pass the name without brackets.</p>
-  <div class="bridge"><b>What this still can't tell us → next: Closures.</b> <code>pick_tax</code> returned an inner function that used nothing from outside. But a useful factory, say "make me a tax function for rate r", must return an inner function that uses <code>r</code>, a variable of the outer function, which has already finished. Where does that variable live?</div>
 
-  <h2 id="pd-clos"><span class="num">03</span>Closures</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Chai Corner needs "add 5% GST" and "add 10% service charge" functions, maybe more later. Writing one <code>def</code> per rate is repetitive; we want a function that <em>makes</em> rate functions. But once the maker returns, its local variables are normally thrown away. How does the made function still know its rate?</p>
-  </div>
+  <h2 id="pd-clos"><span class="num">03</span>Closures and LEGB Scope</h2>
+  <p>A function factory such as "make me a tax function for rate r" returns an inner function that uses <code>r</code>, a local variable of a function that has already returned. Normally a function's locals are discarded on return. Closures are how Python keeps them.</p>
   <p>Python notices that the inner function uses an outer variable, and keeps that variable alive, attached to the inner function. The inner function carries it around. A function bundled with the outer variables it needs is a <strong>closure</strong>.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>A tiffin box packed at home. Your mother (the outer function) packs dal and rice (the variables) in the morning and goes about her day. At 1 p.m. at the office (long after she "returned"), you open the tiffin and the food is there. The inner function leaves home carrying exactly the variables it needs.</p></div>
   <h3>Where does Python look for a name? LEGB</h3>
@@ -231,7 +183,7 @@ def outer():
 print(outer(), rate, len("abc"))          # len comes from Builtins</div>
   <div class="fx" data-lang="text">0.05 0.18 3</div>
   <p><code>inner</code> has no local <code>rate</code>, so Python looked in the enclosing <code>outer</code> and found 0.05, before ever reaching the global 0.18. <code>len</code> was found only in builtins. A closure is simply what keeps the <strong>E</strong> level alive after the outer function returns.</p>
-  <h3>A tax-function factory</h3>
+  <h3>Closure factories and __closure__ cells</h3>
   <div class="fx" data-lang="py">def make_tax(rate):
     def add_tax(amount):
         return round(amount * (1 + rate), 2)   # rate belongs to the OUTER function
@@ -264,8 +216,8 @@ False True</div>
     <tr><td><code>with_service(225)</code></td><td><code>rate</code> read from cell B</td><td>B: 0.1</td><td>247.5</td></tr>
   </table>
   <p>The printout confirms it: <code>co_freevars</code> lists the outer names the code uses (<code>('rate',)</code>), and <code>__closure__</code> holds one cell per name, 0.05 and 0.1. The two functions are different objects (<code>False</code>) that share the same compiled code (<code>True</code>): only the cells differ.</p>
-  <h3>Changing a remembered variable: nonlocal</h3>
-  <p>Chai Corner hands out token numbers. Each counter must remember its last number and <em>change</em> it on every call.</p>
+  <h3>Reassigning an enclosing variable: nonlocal</h3>
+  <p>A counter must remember its last number and <em>change</em> it on every call.</p>
   <div class="fx" data-lang="py">def make_token_counter(start=1):
     n = start - 1
     def next_token():
@@ -299,8 +251,8 @@ broken_counter()()</div>
 UnboundLocalError: cannot access local variable 'n' where it is not associated with a value</div>
   <p>Trace <code>front</code>: n starts at 0; calls give 1, 2, 3. <code>window</code> is a separate closure with its own n (499 → 500), so the fourth call to <code>front</code> continues at 4. The <code>nonlocal n</code> line is required: without it, <code>n += 1</code> makes Python treat <code>n</code> as a brand-new local variable of <code>next_token</code>, and reading it before assigning fails, as <code>broken_counter</code> shows (the error is shown as its last line). Reading an outer variable needs nothing; <em>reassigning</em> it needs <code>nonlocal</code>. Mutating an outer object (<code>book.append</code>) also needs nothing, because the name <code>book</code> is never reassigned.</p>
   <div class="callout def"><span class="label">Definition</span><p>A <strong>closure</strong> is a function object together with the variables from its enclosing function that it uses (its <strong>free variables</strong>), stored in <strong>cells</strong> (<code>func.__closure__</code>) and kept alive after the enclosing function returns. <strong>nonlocal x</strong> tells Python that assigning to <code>x</code> should change the enclosing function's <code>x</code>.</p></div>
-  <h3>The late-binding trap</h3>
-  <p>A cell holds the <em>variable</em>, not its value at the moment the function was made. The value is read when the function is <em>called</em>. A till screen that builds one button per menu item in a loop:</p>
+  <h3>Late binding in closures</h3>
+  <p>A cell holds the <em>variable</em>, not its value at the moment the function was made. The value is read when the function is <em>called</em>. For example, callbacks built in a loop:</p>
   <div class="fx" data-lang="py">items = ["masala chai", "samosa", "cold coffee"]
 buttons = [lambda: f"order {item}" for item in items]
 print([b() for b in buttons])             # all see the LAST item
@@ -316,13 +268,10 @@ print([b() for b in buttons])</div>
 ['order masala chai', 'order samosa', 'order cold coffee']</div>
   <p>All three lambdas share the one loop variable <code>item</code>. By the time they are called the loop is over and <code>item</code> is "cold coffee". A default argument (<code>item=item</code>) is evaluated when the lambda is <em>created</em>, so each lambda gets its own copy; <code>functools.partial</code> also freezes the value now.</p>
   <div class="callout trap"><span class="label">Trap</span><p>Late binding is a very common interview "what's the output?" question (<code>[lambda: i for i in range(3)]</code> → all return 2) and a real bug when building callbacks in a loop. Freeze the value with a default argument or <code>partial</code>.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Decorators.</b> A closure can remember a number (a rate) or a counter. Could it remember a whole <em>function</em>, say <code>total_revenue</code>, and call it in the middle of some extra code? That is exactly the "code around a function" we wanted in section 01.</div>
 
-  <h2 id="pd-deco"><span class="num">04</span>Decorators by Hand, Then With @</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We can pass a function in (02) and return an inner function that remembers outer variables (03). Can we combine the two so that the returned function does extra work and calls the original, and then put it in place of the original?</p>
-  </div>
-  <h3>Step 1: build it by hand, no @ yet</h3>
+  <h2 id="pd-deco"><span class="num">04</span>Writing a Decorator: by Hand and with @</h2>
+  <p>Combining the two previous ideas gives a decorator: pass a function in, return an inner function that does extra work and calls the original, and rebind the original name to that inner function.</p>
+  <h3>Wrapping by hand: f = deco(f)</h3>
   <p><code>logged</code> takes the original function as <code>func</code>, defines a <code>wrapper</code> that prints, calls <code>func</code>, prints the result and returns it, and returns that wrapper. Because <code>wrapper</code> uses <code>func</code>, <code>func</code> lives in a cell: the wrapper is a closure holding the original. Then we point the name <code>total_revenue</code> at the wrapper.</p>
   <div class="fx" data-lang="py">def logged(func):
     def wrapper(*args, **kwargs):
@@ -367,7 +316,7 @@ True</div>
     <rect x="410" y="120" width="190" height="36" rx="6" class="fg sg"/><text x="422" y="143">original function</text>
     <text x="330" y="174" class="tm">kept in the wrapper's cell as func</text>
   </svg><figcaption>A decorator only moves a name. Before, the name points at your function. After, it points at the wrapper, and the wrapper holds on to the original (dashed arrow) so it can call it in the middle.</figcaption></figure>
-  <h3>Step 2: the @ line is the same thing</h3>
+  <h3>The @ syntax</h3>
   <p>Writing <code>@logged</code> on the line above <code>def items_sold</code> is shorthand for writing <code>items_sold = logged(items_sold)</code> right after the function. Nothing more.</p>
   <div class="fx" data-lang="py">@logged                                   # exactly: items_sold = logged(items_sold)
 def items_sold(path):
@@ -391,7 +340,7 @@ calling bill args=('cold coffee',) kwargs={'tip': 10}
   bill returned 100
 100</div>
   <p><code>items_sold</code> gave 7. <code>bill</code> shows why the wrapper takes <code>*args, **kwargs</code>: it means "accept any positional and keyword arguments" and then pass them all on unchanged. The same <code>logged</code> fitted a one-argument function and a function with a default and a keyword-only argument (<code>args=('cold coffee',)</code>, <code>kwargs={'tip': 10}</code> → 90 + 10 = 100).</p>
-  <h3>When does each part run?</h3>
+  <h3>Definition time vs call time</h3>
   <p>There are two moments. The decorator function runs <strong>once</strong>, when Python reaches the <code>def</code> (usually when the module is imported). The wrapper runs on <strong>every call</strong>.</p>
   <div class="fx" data-lang="py">def announce(func):
     print(f"decorating {func.__name__}")      # runs ONCE, at def time
@@ -447,12 +396,9 @@ revenue_v2("orders.log")</div>
 None
 TypeError: 'NoneType' object is not callable</div>
   <p><code>revenue_v1("orders.log")</code> ran the original (which returned 225), but the wrapper threw the value away: <code>None</code>. <code>no_wrapper</code> returned nothing, so <code>revenue_v2 = no_wrapper(revenue_v2)</code> set the name to <code>None</code>, and calling it failed. A third slip, <code>return wrapper()</code> with brackets, calls the wrapper once at definition time.</p>
-  <div class="bridge"><b>What this still can't tell us → next: functools.wraps.</b> Look again at section 04's first output: after wrapping, <code>total_revenue.__name__</code> printed <code>wrapper</code>. The function has lost its name, and with it its docstring and signature. Logs, <code>help()</code> and frameworks will all see "wrapper". How do we keep the original's identity?</div>
 
-  <h2 id="pd-wraps"><span class="num">05</span>functools.wraps &amp; a Real @timed</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The name <code>total_revenue</code> now points at a function called <code>wrapper</code> with signature <code>(*args, **kwargs)</code> and no docstring. How do we make the wrapper look like the original from outside?</p>
-  </div>
+  <h2 id="pd-wraps"><span class="num">05</span>functools.wraps and a Timing Decorator</h2>
+  <p>After wrapping, the name <code>total_revenue</code> points at a function called <code>wrapper</code>, with signature <code>(*args, **kwargs)</code> and no docstring. Logs, <code>help()</code> and frameworks all see "wrapper".</p>
   <p><code>functools.wraps(func)</code> is itself a decorator, applied to the wrapper. It copies the original's <code>__name__</code>, <code>__qualname__</code>, <code>__doc__</code>, <code>__module__</code>, <code>__dict__</code> and annotations onto the wrapper, and adds <code>__wrapped__</code>, a link back to the original.</p>
   <div class="fx" data-lang="py">import functools, inspect
 
@@ -484,8 +430,8 @@ print(revenue_b.__wrapped__("orders.log"), hasattr(revenue_a, "__wrapped__"))</d
 revenue_b | Total rupees taken in the log at path. | (path: str) -&gt; int
 225 False</div>
   <p>Both decorated functions work. But <code>revenue_a</code> lost its identity: name "wrapper", docstring <code>None</code>, signature <code>(*args, **kwargs)</code>. <code>revenue_b</code>, with <code>@functools.wraps(func)</code>, reports its real name, docstring and signature <code>(path: str) -&gt; int</code> (<code>inspect.signature</code> follows <code>__wrapped__</code>). <code>revenue_b.__wrapped__</code> reaches the undecorated function, which tests use to call it without the extras. FastAPI, pytest and Click read signatures to decide what arguments to pass, so a missing <code>wraps</code> can break them.</p>
-  <h3>The timer decorator Chai Corner asked for</h3>
-  <p>Now section 01's request, written once. The timing goes in <code>try/finally</code> so it is reported even if the function raises an error.</p>
+  <h3>A @timed decorator</h3>
+  <p>The timing code from the first example, written once. It goes in <code>try/finally</code> so the time is reported even if the function raises an error.</p>
   <div class="fx" data-lang="py">import functools, time
 
 def timed(func):
@@ -522,12 +468,9 @@ Rs 225</div>
   <p>Three functions, one <code>@timed</code> line each, and the timing code exists in one place. (Your timings will differ: they are real measurements.) <code>slow_report</code> calls <code>total_revenue</code> inside it, so its call printed two lines: the inner timing first (0.0002 s), then the outer one (about 0.2 s, mostly the sleep). Each wrapper reports its own call.</p>
   <div class="callout def"><span class="label">Definition</span><p><strong>functools.wraps(func)</strong> is a decorator for wrappers that copies <code>__module__</code>, <code>__name__</code>, <code>__qualname__</code>, <code>__doc__</code>, <code>__annotations__</code> (and more) and updates <code>__dict__</code> from <code>func</code>, then sets <code>wrapper.__wrapped__ = func</code>. It is a shortcut for <code>functools.update_wrapper(wrapper, func)</code>.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Without <code>wraps</code>, two decorated Flask views are both named "wrapper" and Flask refuses to register the second ("View function mapping is overwriting an existing endpoint function"). Rule: always put <code>@functools.wraps(func)</code> on your wrapper.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Decorators With Arguments.</b> <code>@timed</code> has no options. A retry decorator needs some: how many tries, which errors, how long to wait. Where do options go when a decorator receives only one thing, the function?</div>
 
-  <h2 id="pd-args"><span class="num">06</span>Decorators With Arguments</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The till sends its log over flaky Wi-Fi; the fetch fails now and then. We want <code>@retry(times=3, exceptions=(ConnectionError,))</code>. A decorator is called with just the function. So who receives <code>times=3</code>?</p>
-  </div>
+  <h2 id="pd-args"><span class="num">06</span>Decorators with Arguments</h2>
+  <p>A retry decorator needs options: how many tries, which errors, how long to wait. A decorator is called with only the function, so the options need another layer: <code>@retry(times=3, exceptions=(ConnectionError,))</code>.</p>
   <p>Notice the brackets after <code>retry</code>. Python first <em>calls</em> <code>retry(times=3, …)</code>, and whatever that returns is used as the decorator. So <code>retry(…)</code> must <em>return a decorator</em>, which takes the function and returns a wrapper. That is three nested functions, each with one job, and each inner one is a closure over the outer ones' variables.</p>
   <div class="flow"><span>retry(times=3)</span><span>returns decorator</span><span>decorator(func)</span><span>returns wrapper</span><span>wrapper(*args) on each call</span></div>
   <div class="callout anlg"><span class="label">Analogy</span><p>A tailor's shop. First you give your measurements (the options: <code>times=3</code>). The shop makes a pattern for you (the decorator). The pattern is then used to stitch the cloth (your function) into a shirt (the wrapper). Measurements → pattern → shirt.</p></div>
@@ -610,12 +553,9 @@ TypeError: retry.&lt;locals&gt;.decorator() missing 1 required positional argume
   <p><code>parse_price("thirty")</code> failed on both tries; on the last one, <code>raise</code> with no argument re-raised the <em>original</em> <code>ValueError</code>, so the caller saw the real cause. With <code>@retry</code> and no brackets, Python called <code>retry(oops)</code>: the function landed in <code>times</code>, layer 1 returned <code>decorator</code>, and the name <code>oops</code> became that decorator. Calling <code>oops()</code> then called <code>decorator()</code> with no function: <code>TypeError</code>.</p>
   <div class="callout def"><span class="label">Definition</span><p>A <strong>parameterised decorator</strong> (decorator factory) is a function that takes options and returns a decorator: <code>@factory(opts)</code> above <code>def f</code> means <code>f = factory(opts)(f)</code>.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Retry only <em>temporary</em> errors (timeouts, HTTP 503, connection resets). Retrying a <code>ValueError</code> just repeats the same bug, as <code>parse_price</code> did. Retrying something that is not safe to repeat (a payment, an SMS) can do it twice. And with options you must write the brackets, even if empty: <code>@retry()</code>.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Stacking.</b> We want both: retry the flaky fetch <em>and</em> time it. Two decorator lines on one function. Which wraps which, and does the order change what we measure?</div>
 
   <h2 id="pd-stack"><span class="num">07</span>Stacking Decorators</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>With <code>@timed</code> and <code>@retry(…)</code> both above <code>fetch</code>, does <code>timed</code> measure the whole three-try fetch, or each try? What decides?</p>
-  </div>
+  <p>With <code>@timed</code> and <code>@retry(…)</code> both on one function, the order of the lines decides whether <code>timed</code> measures the whole retry loop or each try.</p>
   <p>Decorators are applied from the bottom up (the one nearest the <code>def</code> wraps first), so the top one ends up outermost. At call time they run from the outside in, like layers of an onion. A small example makes the order visible:</p>
   <div class="fx" data-lang="py">def tag(t):
     def deco(f):
@@ -633,7 +573,7 @@ def special():
 print(special())</div>
   <div class="fx" data-lang="text">&lt;b&gt;&lt;i&gt;masala chai&lt;/i&gt;&lt;/b&gt;</div>
   <p><code>@tag("b") @tag("i") def special</code> means <code>special = tag("b")(tag("i")(special))</code>. The i-wrapper was made first and sits inside; calling <code>special()</code> enters the b-wrapper, which calls the i-wrapper, which calls the real function. So <code>&lt;b&gt;</code> ends up outside.</p>
-  <h3>Order changes the meaning: timed and retry</h3>
+  <h3>Stacking order changes behaviour: timed and retry</h3>
   <p>Here the two orders are built with explicit calls (the same as two <code>@</code> lines). <code>flaky_till(2)</code> is a closure-made fetch function that fails twice, each try taking 0.05 s.</p>
   <div class="fx" data-lang="py">def flaky_till(fails):
     state = {"n": 0}                      # a closure remembers how many tries so far
@@ -675,14 +615,11 @@ layer 2: decorator(fetch) ran -&gt; returns wrapper
   </table>
   <div class="callout def"><span class="label">Definition</span><p><strong>Stacked decorators</strong>: <code>@a</code> <code>@b</code> <code>def f</code> means <code>f = a(b(f))</code>. Applied bottom-up at definition time; at call time <code>a</code>'s wrapper runs first and calls <code>b</code>'s wrapper, which calls <code>f</code>.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Order matters whenever decorators interact: an auth check placed <em>under</em> a cache may let a cached result reach an unauthorised user; <code>@app.route</code> must be the top decorator in Flask, or it registers the undecorated function.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Real-World Decorators.</b> We have the full mechanism. What do decorators actually do in production code, and are there decorators that don't wrap at all?</div>
 
-  <h2 id="pd-real"><span class="num">08</span>Real-World Decorators</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Timing and retrying are two uses. What other repeated jobs fit the "write once, attach with @" pattern, and can a decorator keep state, register a function, or be applied to a class?</p>
-  </div>
+  <h2 id="pd-real"><span class="num">08</span>Decorator Patterns: Caching, Registration, Auth, Classes</h2>
+  <p>Most production decorators fall into a few shapes: wrap and cache results, register the function somewhere and return it unchanged, check a condition before calling, or use a class instead of a closure. Decorators can also be applied to classes.</p>
   <h3>Caching: functools.lru_cache</h3>
-  <p>The till asks the menu server for an item's price on every order. The server is slow (0.05 s) and prices do not change during the day. <strong>Memoisation</strong> means remembering results: compute <code>menu_price("samosa")</code> once, then just look it up. <code>functools.lru_cache</code> is a decorator whose wrapper keeps a dict from arguments to results: a closure again.</p>
+  <p>Suppose every order needs an item price from a slow service (0.05 s) whose prices do not change during the day. <strong>Memoisation</strong> means remembering results: compute <code>menu_price("samosa")</code> once, then just look it up. <code>functools.lru_cache</code> is a decorator whose wrapper keeps a dict from arguments to results: a closure again.</p>
   <div class="fx" data-lang="py">import functools, time
 lookups = {"n": 0}
 
@@ -727,6 +664,7 @@ TypeError: unhashable type: 'list'</div>
     <li><code>maxsize=128</code> (the default) throws away the least recently used entries; <code>None</code> grows forever.</li>
     <li>On methods it keeps every <code>self</code> alive inside the cache; prefer <code>functools.cached_property</code> for per-object values.</li>
   </ul>
+  <p>More on <code>cache_info()</code>, eviction and the hashable-argument rule: <a class="xref" data-note="py_advanced">Functional Programming Tools</a>.</p>
   <h3>Registration: a decorator that does not wrap</h3>
   <p>A decorator may return the function <em>unchanged</em> after recording it somewhere. This is how Flask routes, pytest fixtures and plugin systems find your functions.</p>
   <div class="fx" data-lang="py">COMMANDS = {}
@@ -751,9 +689,9 @@ for name in ("revenue", "items"):
   <div class="fx" data-lang="text">['revenue', 'items']
 revenue -&gt; 225
 items -&gt; 7</div>
-  <p><code>command("revenue")</code> returned <code>register</code>, which stored the function in <code>COMMANDS</code> and gave it back untouched. The till can now dispatch typed commands by name: ₹225 and 7 items.</p>
+  <p><code>command("revenue")</code> returned <code>register</code>, which stored the function in <code>COMMANDS</code> and gave it back untouched. Commands can now be dispatched by name.</p>
   <h3>Permission checks</h3>
-  <p>Only a manager may give refunds. Rather than an <code>if</code> at the top of every sensitive function, the rule goes in one decorator:</p>
+  <p>Suppose only a manager may give refunds. Rather than an <code>if</code> at the top of every sensitive function, the rule goes in one decorator:</p>
   <div class="fx" data-lang="py">def require_role(role):
     def decorator(func):
         @functools.wraps(func)
@@ -818,46 +756,8 @@ Order(time='09:01', item='masala chai', qty=2, price=30)
   <p><code>CountCalls</code> counted 3 calls and, thanks to <code>update_wrapper</code>, still reports the name <code>items_today</code>. <code>Order</code> got a constructor and a readable repr for free; <code>o.amount</code> is read without brackets; the day's total is again ₹225. (See <a class="xref" data-note="py_oop">OOP</a> for <code>@staticmethod</code>, <code>@classmethod</code> and <code>@abstractmethod</code>, which are decorators too.)</p>
   <div class="callout def"><span class="label">Definition</span><p>Any callable that takes one object and returns a replacement can be used with <code>@</code>: a function, a class with <code>__call__</code>, or a factory call like <code>retry(…)</code>. <code>@</code> works above <code>def</code> and above <code>class</code>.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p><code>lru_cache</code> on an impure function (time, database, random) returns stale results; with unhashable arguments (lists, dicts, DataFrames) it raises <code>TypeError</code>; on instance methods it keeps objects alive forever.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: How It All Connects.</b> We have used functions-as-objects, closures, wrappers, factories and stacking. How exactly is each built from the one before?</div>
 
-  <h2 id="pd-connect"><span class="num">09</span>How It All Connects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Are first-class functions, closures and decorators three topics, or three floors of one building?</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 680 290" width="680">
-    <defs><marker id="pd-a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
-    <rect x="20" y="10" width="200" height="44" rx="6" class="fb sb"/><text x="120" y="29" text-anchor="middle" font-size="12">functions are objects</text><text x="120" y="45" text-anchor="middle" class="tm" font-size="10">store · pass · return</text>
-    <rect x="240" y="10" width="200" height="44" rx="6" class="fb sb"/><text x="340" y="29" text-anchor="middle" font-size="12">nested functions + LEGB</text><text x="340" y="45" text-anchor="middle" class="tm" font-size="10">inner reads outer names</text>
-    <line x1="120" y1="54" x2="220" y2="96" stroke="currentColor" marker-end="url(#pd-a9)"/>
-    <line x1="340" y1="54" x2="250" y2="96" stroke="currentColor" marker-end="url(#pd-a9)"/>
-    <rect x="130" y="98" width="220" height="44" rx="6" class="ft st"/><text x="240" y="117" text-anchor="middle" font-size="12">closure (cells, nonlocal)</text><text x="240" y="133" text-anchor="middle" class="tm" font-size="10">make_tax(0.05) remembers 0.05</text>
-    <line x1="240" y1="142" x2="240" y2="182" stroke="currentColor" marker-end="url(#pd-a9)"/>
-    <rect x="120" y="184" width="240" height="44" rx="6" class="fg sg"/><text x="240" y="203" text-anchor="middle" font-size="12">decorator: wrapper closure holds func</text><text x="240" y="219" text-anchor="middle" class="tm" font-size="10">@d ≡ f = d(f) · wraps keeps identity</text>
-    <line x1="360" y1="206" x2="420" y2="206" stroke="currentColor" marker-end="url(#pd-a9)"/>
-    <rect x="424" y="160" width="240" height="40" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="544" y="178" text-anchor="middle" font-size="12">factory: @retry(times=3)</text><text x="544" y="193" text-anchor="middle" class="tm" font-size="10">one more closure layer for options</text>
-    <rect x="424" y="210" width="240" height="40" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="544" y="228" text-anchor="middle" font-size="12">stacking: a(b(f))</text><text x="544" y="243" text-anchor="middle" class="tm" font-size="10">apply bottom-up · run outside-in</text>
-    <line x1="240" y1="228" x2="240" y2="256" stroke="currentColor" marker-end="url(#pd-a9)"/>
-    <text x="240" y="276" text-anchor="middle" class="tm" font-size="11">timed · retry · lru_cache · register · require_role · @contextmanager</text>
-  </svg><figcaption>Two plain facts (functions are values; inner functions can read outer names) combine into closures. A closure that holds a function and calls it in the middle is a decorator. Options add one more closure layer; stacking composes decorators. Every practical decorator is one of these shapes.</figcaption></figure>
-  <table class="tbl"><caption>Every concept on the same Chai Corner log</caption>
-    <tr><th>Concept</th><th>Built from</th><th>Answers which question</th><th>On the running example</th><th>When to use</th></tr>
-    <tr><td>First-class functions</td><td>functions are objects</td><td>can I hand a function to other code?</td><td><code>apply_to_orders(with_gst, …)</code> → 63.0, 47.25, 94.5, 31.5</td><td>callbacks, <code>key=</code>, dispatch tables</td></tr>
-    <tr><td>LEGB scope</td><td>nested functions</td><td>where is a name looked up?</td><td>inner sees 0.05 (enclosing), not 0.18 (global)</td><td>reading any nested code</td></tr>
-    <tr><td>Closure</td><td>returned inner function + cells</td><td>how does a made function keep its settings?</td><td><code>make_tax</code>: 236.25 vs 247.5</td><td>factories, callbacks with settings</td></tr>
-    <tr><td><code>nonlocal</code></td><td>closure + assignment</td><td>how do I change a remembered variable?</td><td>tokens 1, 2, 3, (500), 4</td><td>counters, accumulators</td></tr>
-    <tr><td>Decorator</td><td>closure holding <code>func</code></td><td>how do I add behaviour around many functions?</td><td><code>@logged</code>: 225, 7</td><td>any cross-cutting concern</td></tr>
-    <tr><td><code>functools.wraps</code></td><td>decorator applied to the wrapper</td><td>how do I keep the original's identity?</td><td>name <code>revenue_b</code>, signature <code>(path: str) -&gt; int</code></td><td>every wrapper you write</td></tr>
-    <tr><td>Decorator factory</td><td>closure returning a decorator</td><td>how do I pass options?</td><td><code>@retry(times=3)</code>: succeeds on try 3</td><td>configurable behaviour</td></tr>
-    <tr><td>Stacking</td><td>composition <code>a(b(f))</code></td><td>which runs first?</td><td>timed outside: 0.15 s; inside: 3 × 0.05 s</td><td>combining concerns</td></tr>
-    <tr><td><code>lru_cache</code>, registry, auth, class decorators</td><td>the patterns above</td><td>what is this used for?</td><td>3 real calls for 100 lookups; refund denied for Ravi</td><td>pure slow functions; plugins; access rules</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span><p>One sentence holds the note: <strong>because functions are objects, an inner function can be returned and keep the outer variables it uses (a closure); when one of those variables is another function, the inner function can run extra code around it, and <code>@d</code> is just shorthand for replacing <code>f</code> with that wrapper: <code>f = d(f)</code>.</strong> Compare the generator from <a class="xref" data-note="py_iterators">Iterators &amp; Generators</a>: a generator keeps its variables in a paused frame, a closure keeps them in cells; both are "functions with memory".</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Common Mistakes.</b> The mechanism is small, so the bugs are few and repeat everywhere. Here they are in one place.</div>
-
-  <h2 id="pd-traps"><span class="num">10</span>Common Mistakes</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Which slips with closures and decorators turn up again and again, and how does each show itself?</p>
-  </div>
+  <h2 id="pd-traps"><span class="num">09</span>Common Mistakes</h2>
   <div class="callout trap"><span class="label">Trap: calling instead of passing</span>
     <p><code>apply_to_orders(with_gst(10), …)</code>, <code>Thread(target=work())</code>, <code>sorted(xs, key=len())</code>: the brackets run the function now and pass its result (<code>'float' object is not callable</code>). Pass the name: <code>target=work</code>.</p>
   </div>
@@ -865,7 +765,7 @@ Order(time='09:01', item='masala chai', qty=2, price=30)
     <p><code>n += 1</code> inside the inner function → <code>UnboundLocalError</code>. Add <code>nonlocal n</code>. (Mutating, like <code>book.append(x)</code>, does not need it.)</p>
   </div>
   <div class="callout trap"><span class="label">Trap: late binding in loops</span>
-    <p>Three menu buttons all said "order cold coffee". Freeze the value: <code>lambda item=item: …</code> or <code>functools.partial</code>.</p>
+    <p>Lambdas created in a loop all see the loop variable's last value. Freeze the value: <code>lambda item=item: …</code> or <code>functools.partial</code>.</p>
   </div>
   <div class="callout trap"><span class="label">Trap: the wrapper loses the result or the name</span>
     <p>Missing <code>return func(*args, **kwargs)</code> → every call returns <code>None</code>. Missing <code>return wrapper</code> → the decorated name is <code>None</code>. Missing <code>@functools.wraps(func)</code> → name "wrapper", no docstring, signature <code>(*args, **kwargs)</code>, frameworks confused.</p>
@@ -882,77 +782,137 @@ Order(time='09:01', item='masala chai', qty=2, price=30)
   <div class="callout trap"><span class="label">Trap: lru_cache on the wrong function</span>
     <p>Unhashable arguments → <code>TypeError</code>. Impure functions → stale results. Instance methods → objects never freed. Unbounded <code>maxsize=None</code> with many distinct inputs → memory grows.</p>
   </div>
-  <div class="bridge"><b>What this still can't tell us → next: Context Managers.</b> <code>@timed</code> wraps a whole <em>function call</em>. But often the thing to wrap is a few lines in the middle of a function ("time just this block", "keep this file open just for these lines and close it even on error"). That needs the <code>with</code> statement, and <code>@contextmanager</code>, a decorator that turns a generator into one. Read <a class="xref" data-note="py_context">Context Managers</a>.</div>
 
   <h2 id="pd-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>The whole note on one sheet. Running example: Chai Corner's Monday log, four valid orders: chai 2 × 30 = 60, samosa 3 × 15 = 45, cold coffee 1 × 90 = 90, chai 1 × 30 = 30. Total ₹225, 7 items.</p>
-  <h3>The question ladder</h3>
+  <h3>First-class functions</h3>
+  <ul>
+    <li><code>f</code> is the function object; <code>f()</code> calls it. Pass <code>f</code>, not <code>f()</code> (<code>Thread(target=work)</code>).</li>
+    <li>Higher-order function: takes or returns a function. Every decorator is one.</li>
+  </ul>
+  <h3>Closures and scope</h3>
+  <ul>
+    <li>Name lookup <strong>LEGB</strong>: Local → Enclosing → Global → Builtins.</li>
+    <li>Closure = function + cells for its free variables, alive after the outer function returns. Inspect with <code>f.__code__.co_freevars</code> and <code>f.__closure__[i].cell_contents</code>.</li>
+    <li>Each call of the outer function creates new cells, so closures from different calls are independent.</li>
+    <li><code>nonlocal x</code>: needed to <em>reassign</em> an enclosing variable (<code>x += 1</code>). Without it you get <code>UnboundLocalError</code>. Reading or mutating (<code>lst.append</code>) needs nothing. <code>global x</code> is the module-level equivalent.</li>
+    <li>Late binding: cells hold variables, read at call time. <code>[lambda: i for i in range(3)]</code> → all return 2. Fix: <code>lambda i=i: i</code> or <code>functools.partial</code>.</li>
+  </ul>
+  <h3>Decorator mechanics</h3>
   <table class="tbl">
-    <tr><th>Concept</th><th>Question it answers</th><th>On our log</th><th>Weakness → next</th></tr>
-    <tr><td>The problem</td><td>add timing to many functions?</td><td>3 pasted lines per function</td><td>need to hand functions around</td></tr>
-    <tr><td>Functions are objects</td><td>pass/store/return a function?</td><td><code>with_gst</code>: 63.0, 47.25, 94.5, 31.5</td><td>returned inner function needs outer vars</td></tr>
-    <tr><td>Closure</td><td>where do outer vars live?</td><td>cells: 0.05 → 236.25, 0.1 → 247.5</td><td>can it hold a function?</td></tr>
-    <tr><td>nonlocal</td><td>change a remembered var?</td><td>tokens 1, 2, 3</td><td>—</td></tr>
-    <tr><td>Decorator</td><td>code around a function?</td><td><code>@logged</code>: 225</td><td>name becomes "wrapper"</td></tr>
-    <tr><td>wraps</td><td>keep identity?</td><td><code>(path: str) -&gt; int</code> kept</td><td>no options yet</td></tr>
-    <tr><td>Factory</td><td>pass options?</td><td><code>@retry(times=3)</code>: OK on try 3</td><td>combining two?</td></tr>
-    <tr><td>Stacking</td><td>order of several?</td><td>0.15 s vs 3 × 0.05 s</td><td>what are they used for?</td></tr>
-    <tr><td>Real uses</td><td>cache, register, auth, classes</td><td>100 lookups → 3 calls</td><td>traps</td></tr>
-  </table>
-  <h3>Definitions and "formulas"</h3>
-  <table class="tbl">
-    <tr><th>Written</th><th>Means exactly</th><th>Notes</th></tr>
-    <tr><td><code>f</code> vs <code>f()</code></td><td>the function object vs calling it</td><td>pass <code>f</code>, not <code>f()</code></td></tr>
-    <tr><td>LEGB</td><td>Local → Enclosing → Global → Builtins</td><td>order of name lookup</td></tr>
-    <tr><td>Closure</td><td>function + cells for its free variables</td><td><code>f.__closure__[i].cell_contents</code>, <code>f.__code__.co_freevars</code></td></tr>
-    <tr><td><code>nonlocal x</code></td><td>assignments to <code>x</code> change the enclosing <code>x</code></td><td>not needed to read or mutate</td></tr>
-    <tr><td><code>@d</code> <code>def f</code></td><td><code>f = d(f)</code></td><td><code>d</code> runs once, at def time</td></tr>
-    <tr><td><code>@d(opts)</code> <code>def f</code></td><td><code>f = d(opts)(f)</code></td><td>three layers: options → func → call</td></tr>
+    <tr><th>Written</th><th>Means</th><th>Notes</th></tr>
+    <tr><td><code>@d</code> <code>def f</code></td><td><code>f = d(f)</code></td><td><code>d</code> runs once, at def/import time</td></tr>
+    <tr><td><code>@d(opts)</code> <code>def f</code></td><td><code>f = d(opts)(f)</code></td><td>three layers: options → func → call args</td></tr>
     <tr><td><code>@a</code> <code>@b</code> <code>def f</code></td><td><code>f = a(b(f))</code></td><td>applied bottom-up, run outside-in</td></tr>
-    <tr><td>Wrapper template</td><td><code>@wraps(func)</code> <code>def wrapper(*args, **kwargs):</code> before; <code>result = func(*args, **kwargs)</code>; after; <code>return result</code></td><td>and the decorator ends with <code>return wrapper</code></td></tr>
-    <tr><td><code>functools.wraps(func)</code></td><td>copy name, qualname, doc, module, annotations, dict; set <code>__wrapped__</code></td><td>signature then follows <code>__wrapped__</code></td></tr>
-    <tr><td><code>lru_cache(maxsize)</code></td><td>dict from args to result inside the wrapper</td><td>hashable args, pure functions</td></tr>
+    <tr><td><code>@d</code> <code>class C</code></td><td><code>C = d(C)</code></td><td><code>@dataclass</code>, <code>@total_ordering</code></td></tr>
   </table>
-  <h3>When to use, when not</h3>
-  <div class="cards">
-    <div><b>Use a closure</b><p>A small function that needs a setting or a little private state (tax rate, counter).</p><small>bigger state → a class</small></div>
-    <div><b>Use a decorator</b><p>The same before/after behaviour on many functions: timing, logging, retry, caching, auth, registration.</p><small>always <code>@functools.wraps</code></small></div>
-    <div><b>Use a factory</b><p>The behaviour needs options (<code>times</code>, <code>role</code>, <code>maxsize</code>).</p><small>remember the brackets</small></div>
-    <div><b>Don't use a decorator</b><p>For logic used once, or when the extra code needs to sit in the middle of the body rather than around it.</p><small>wrap a block → context manager</small></div>
-  </div>
-  <div class="callout trap"><span class="label">Key traps</span>
-    <p>Calling instead of passing; <code>nonlocal</code> missing; late binding in loops; wrapper without <code>return</code>; decorator without <code>return wrapper</code>; no <code>wraps</code>; <code>@retry</code> without brackets; per-call work placed in the decorator body; wrong stacking order; caching impure functions or unhashable args.</p>
-  </div>
-  <h3>Five rapid-fire checks</h3>
-  <table class="tbl">
-    <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td><code>@a</code> <code>@b</code> <code>def f</code> as one assignment?</td><td><code>f = a(b(f))</code></td></tr>
-    <tr><td><code>[lambda: i for i in range(3)]</code>, each called?</td><td><code>2, 2, 2</code> (late binding)</td></tr>
-    <tr><td>Decorated function prints its <code>__name__</code> as "wrapper". Fix?</td><td><code>@functools.wraps(func)</code> on the wrapper</td></tr>
-    <tr><td>How many times does a decorator's own body run for 1000 calls?</td><td>Once, at definition; the wrapper runs 1000 times</td></tr>
-    <tr><td><code>make_tax(0.10)(225)</code>?</td><td>247.5</td></tr>
-  </table>
+  <div class="fx" data-lang="py">import functools
 
-  <h2 id="pd-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+def deco(func):
+    @functools.wraps(func)                 # keep __name__, __doc__, signature; add __wrapped__
+    def wrapper(*args, **kwargs):          # accept any signature
+        # before
+        result = func(*args, **kwargs)
+        # after
+        return result                      # don't lose the return value
+    return wrapper                         # don't forget this
+
+def factory(times=3):                      # decorator with arguments
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            ...                            # uses times and func from closures
+        return wrapper
+    return decorator</div>
+  <ul>
+    <li><code>functools.wraps(func)</code> = <code>update_wrapper(wrapper, func)</code>: copies <code>__module__</code>, <code>__name__</code>, <code>__qualname__</code>, <code>__doc__</code>, <code>__annotations__</code>, updates <code>__dict__</code>, sets <code>__wrapped__</code>. <code>inspect.signature</code> follows <code>__wrapped__</code>.</li>
+    <li>Put timing/cleanup in <code>try/finally</code> inside the wrapper so it runs when <code>func</code> raises.</li>
+    <li>Async functions need an <code>async def wrapper</code> that <code>await</code>s <code>func</code>.</li>
+  </ul>
+  <h3>Patterns</h3>
+  <table class="tbl">
+    <tr><th>Pattern</th><th>Shape</th><th>Examples</th></tr>
+    <tr><td>Wrap (before/after)</td><td>wrapper calls func</td><td>timing, logging, retry, <code>torch.no_grad</code></td></tr>
+    <tr><td>Memoise</td><td>wrapper with a dict keyed by args</td><td><code>lru_cache</code>, <code>cache</code> (hashable args, pure functions)</td></tr>
+    <tr><td>Register</td><td>record func, return it unchanged</td><td><code>@app.route</code>, plugin tables, <code>singledispatch.register</code></td></tr>
+    <tr><td>Guard</td><td>check, then call or raise</td><td><code>@login_required</code>, role checks, input validation</td></tr>
+    <tr><td>Class-based</td><td>class with <code>__init__(func)</code> + <code>__call__</code></td><td>decorators with state (call counts)</td></tr>
+    <tr><td>Class decorator</td><td>takes and returns a class</td><td><code>@dataclass</code>, <code>@total_ordering</code></td></tr>
+  </table>
+  <h3>Gotchas</h3>
+  <ul>
+    <li>Wrapper missing <code>return</code> → every call returns <code>None</code>.</li>
+    <li>Decorator missing <code>return wrapper</code> → the name becomes <code>None</code>; <code>return wrapper()</code> calls it at def time.</li>
+    <li>No <code>wraps</code> → name "wrapper", lost docstring/signature; Flask endpoint name clashes.</li>
+    <li><code>@factory</code> without brackets → the function lands in the first option; <code>TypeError</code> on call.</li>
+    <li>Per-call work placed in the decorator body runs only once, at import.</li>
+    <li>Stacking order matters: timer outside retry measures all tries; auth under a cache can leak cached results; <code>@app.route</code> goes on top.</li>
+    <li>Retry only transient, idempotent operations.</li>
+  </ul>
+
+  <h2 id="pd-qa"><span class="num">10</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>What does <code>@deco</code> above <code>def f</code> do, exactly?</summary><div class="qa-body">After the function is defined, Python runs <code>f = deco(f)</code>. The name <code>f</code> now points at whatever <code>deco</code> returned, usually a wrapper that holds the original in its closure. The decorator runs once at definition time; the wrapper runs on every call.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is a closure, and where are its variables stored?</summary><div class="qa-body">A function plus the variables of its enclosing function that it uses, kept alive after the enclosing function returns. They are stored in cell objects in <code>func.__closure__</code>; their names are in <code>func.__code__.co_freevars</code>. <code>make_tax(0.05)</code> returns a function whose cell holds 0.05.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>When do you need <code>nonlocal</code>?</summary><div class="qa-body">When an inner function <em>reassigns</em> a variable of the enclosing function (<code>n += 1</code>, <code>n = 5</code>). Without it Python treats <code>n</code> as a new local and raises <code>UnboundLocalError</code>. Reading, or mutating an object (<code>lst.append</code>), needs nothing.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Write a decorator that logs a function's name and arguments.</summary><div class="qa-body"><div class="fx" data-lang="py">def log_calls(func):
+  <details class="qa"><summary><span class="qmark">Q</span>What is a decorator?</summary><div class="qa-body">A callable that takes a function (or class) and returns a replacement, usually a wrapper that adds behaviour before and/or after calling the original. Decorators let you write cross-cutting concerns such as logging, timing, caching, retries and auth once and attach them to many functions without editing their bodies.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does <code>@deco</code> above <code>def f</code> do, exactly?</summary><div class="qa-body">After the function is defined, Python runs <code>f = deco(f)</code>. The name <code>f</code> now points at whatever <code>deco</code> returned, usually a wrapper that holds the original in its closure. The decorator runs once at definition (import) time; the wrapper runs on every call.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a closure, and where are its variables stored?</summary><div class="qa-body">A function plus the variables of its enclosing function that it uses, kept alive after the enclosing function returns. They are stored in cell objects in <code>func.__closure__</code>, and their names are in <code>func.__code__.co_freevars</code>. For example, <code>make_tax(0.05)</code> returns a function whose cell holds 0.05.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain the LEGB rule.</summary><div class="qa-body">When a name is read, Python looks in Local scope (the current function), then Enclosing function scopes (outer functions, innermost first), then Global (the module), then Builtins (<code>len</code>, <code>print</code>). Assignment inside a function creates a local name unless it is declared <code>global</code> or <code>nonlocal</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When do you need <code>nonlocal</code>? How is it different from <code>global</code>?</summary><div class="qa-body">When an inner function <em>reassigns</em> a variable of an enclosing function (<code>n += 1</code>). Without it Python treats <code>n</code> as a new local and raises <code>UnboundLocalError</code>. Reading, or mutating an object (<code>lst.append</code>), needs nothing. <code>global</code> targets a module-level name; <code>nonlocal</code> targets the nearest enclosing function's name.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What's the output? <code>fs = [lambda: i for i in range(3)]; print([f() for f in fs])</code></summary><div class="qa-body"><code>[2, 2, 2]</code>. All lambdas close over the same variable <code>i</code>, and its value is read when they are called, after the loop has ended (late binding). Fix it with a default argument <code>lambda i=i: i</code> or <code>functools.partial</code>, which capture the value at creation time.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Write a decorator that logs a function's name and arguments.</summary><div class="qa-body"><div class="fx" data-lang="py">import functools
+
+def log_calls(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         print(f"calling {func.__name__} args={args} kwargs={kwargs}")
         return func(*args, **kwargs)
-    return wrapper</div>On <code>bill("cold coffee", tip=10)</code> this prints <code>calling bill args=('cold coffee',) kwargs={'tip': 10}</code> and returns 100 (section 04 ran the same shape).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What breaks without <code>functools.wraps</code>?</summary><div class="qa-body"><code>__name__</code> becomes "wrapper", <code>__doc__</code> is lost, the signature shows <code>(*args, **kwargs)</code>. Logs and tracebacks are confusing, <code>help()</code> is useless, frameworks that inspect signatures or names (FastAPI, pytest, Flask endpoints) misbehave, and there is no <code>__wrapped__</code> to reach the original in tests.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why does a decorator with arguments need three nested functions?</summary><div class="qa-body"><code>@retry(times=3)</code> first <em>calls</em> <code>retry(times=3)</code>; that call must return the real decorator, which takes <code>func</code> and returns the wrapper. Factory (options) → decorator (function) → wrapper (call arguments). Each inner layer is a closure over the outer layers' variables.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>In what order do stacked decorators apply and run?</summary><div class="qa-body"><code>@a @b def f</code> means <code>f = a(b(f))</code>: <code>b</code> wraps first (bottom-up), but at call time <code>a</code>'s wrapper runs first (outside-in). <code>@timed</code> above <code>@retry</code> timed all three tries together (≈ 0.15 s); swapped, it timed each try (≈ 0.05 s).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why can't you write a decorator without closures?</summary><div class="qa-body">The wrapper is called later, long after the decorator has returned, yet it must still know which original function to call (and, for factories, the options). Those values live in the wrapper's closure cells. Without closures you would need a class with <code>__call__</code> storing <code>func</code> as an attribute, which is the class-based decorator, the same idea in different clothes.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks if functions were not first-class objects?</summary><div class="qa-body">You could not pass <code>total_revenue</code> into <code>logged</code>, nor return <code>wrapper</code> from it, nor rebind the name <code>total_revenue</code> to the wrapper. The whole <code>f = d(f)</code> step needs a function to be a value that can be passed, returned and assigned.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: how is a closure like a generator, and how is it different?</summary><div class="qa-body">Both are functions that keep variables between calls. A generator keeps its whole paused frame (locals + current line) and resumes mid-body; a closure keeps only the outer variables it uses, in cells, and each call runs its body from the top. Generators produce sequences; closures produce configured functions.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: when would you use a context manager instead of a decorator?</summary><div class="qa-body">When the thing to wrap is a block of lines inside a function rather than a whole function call, or when you need a value inside the block (<code>with open(p) as f</code>). <code>@contextmanager</code> objects can even be used both ways: as <code>with timer():</code> around a block and as <code>@timer()</code> around a function.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>When is <code>lru_cache</code> a bad idea?</summary><div class="qa-body">Impure functions (depend on time, DB, randomness: results go stale), unhashable arguments (lists, dicts, DataFrames → TypeError), unbounded <code>maxsize=None</code> with many distinct inputs (memory grows), and instance methods (the cache keeps <code>self</code> alive).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does a "registration" decorator return, and why?</summary><div class="qa-body">The original function, unchanged, after recording it in a table (<code>COMMANDS[name] = func</code>). It only needs the side effect at definition time; there is no per-call behaviour to add, so no wrapper. Flask's <code>@app.route</code> and pytest fixtures work this way.</div></details>
+    return wrapper</div>Key points: <code>*args, **kwargs</code> so it fits any signature, <code>return</code> the result, and <code>functools.wraps</code> to keep the original's metadata.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does <code>functools.wraps</code> do, and what breaks without it?</summary><div class="qa-body">It copies <code>__name__</code>, <code>__qualname__</code>, <code>__doc__</code>, <code>__module__</code> and <code>__annotations__</code> from the original to the wrapper, updates <code>__dict__</code>, and sets <code>__wrapped__</code>. Without it the function reports itself as "wrapper" with signature <code>(*args, **kwargs)</code>. Logs, <code>help()</code> and tracebacks become confusing, frameworks that inspect names or signatures (Flask endpoints, FastAPI, pytest) misbehave, and tests cannot reach the original via <code>__wrapped__</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does a decorator with arguments need three nested functions?</summary><div class="qa-body"><code>@retry(times=3)</code> first <em>calls</em> <code>retry(times=3)</code>. That call must return the real decorator, which takes <code>func</code> and returns the wrapper. So the layers are factory (options) → decorator (function) → wrapper (call arguments), and each inner layer is a closure over the outer layers' variables.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you write a decorator that works both as <code>@retry</code> and <code>@retry(times=5)</code>?</summary><div class="qa-body">Make the function the optional first positional argument and the options keyword-only. If <code>func</code> is <code>None</code>, the decorator was called with options, so return a decorator:<div class="fx" data-lang="py">def retry(func=None, *, times=3):
+    if func is None:                       # used as @retry(times=5)
+        return functools.partial(retry, times=times)
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        for attempt in range(1, times + 1):
+            try:
+                return func(*args, **kwargs)
+            except ConnectionError:
+                if attempt == times:
+                    raise
+    return wrapper</div></div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>In what order are stacked decorators applied and run? Predict the output of two stacked printing decorators.</summary><div class="qa-body"><div class="fx" data-lang="py">def deco(name):
+    def d(f):
+        print("applying", name)
+        def w():
+            print("enter", name)
+            return f()
+        return w
+    return d
+
+@deco("outer")
+@deco("inner")
+def hello():
+    print("hello")
+hello()</div><div class="fx" data-lang="text">applying inner
+applying outer
+enter outer
+enter inner
+hello</div>Decorators are applied bottom-up (<code>hello = outer(inner(hello))</code>), so "inner" is applied first. At call time the outermost wrapper runs first.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When does the code in a decorator run versus the code in the wrapper?</summary><div class="qa-body">The decorator body (outside the wrapper) runs once, when the <code>def</code> statement executes, usually at import time. That is where registration decorators like <code>@app.route</code> do their work. The wrapper body runs on every call. Per-call work placed in the decorator body therefore runs only once.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How would you write a decorator that keeps state, such as a call counter?</summary><div class="qa-body">Either a closure with a <code>nonlocal</code> counter (or an attribute on the wrapper, <code>wrapper.calls += 1</code>), or a class with <code>__init__(self, func)</code> and <code>__call__</code> storing <code>self.calls</code>, using <code>functools.update_wrapper(self, func)</code>. A class is clearer when the state or the API grows (reset methods, several counters). Note that a plain class decorator does not bind <code>self</code> when used on methods unless it implements <code>__get__</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you decorate an <code>async def</code> function?</summary><div class="qa-body">The wrapper must itself be <code>async def</code> and <code>await</code> the original; otherwise it returns the coroutine object without running or timing the actual work.<div class="fx" data-lang="py">def atimed(func):
+    @functools.wraps(func)
+    async def wrapper(*args, **kwargs):
+        t0 = time.perf_counter()
+        try:
+            return await func(*args, **kwargs)
+        finally:
+            print(f"{func.__name__} took {time.perf_counter() - t0:.2f}s")
+    return wrapper</div></div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a class decorator? Give examples.</summary><div class="qa-body">A decorator applied to a class: <code>@d class C</code> means <code>C = d(C)</code>. It usually inspects or modifies the class and returns it. <code>@dataclass</code> generates <code>__init__</code>/<code>__repr__</code>/<code>__eq__</code> from annotations, and <code>functools.total_ordering</code> fills in comparison methods. Separately, a <em>class used as a decorator</em> is a class with <code>__call__</code> that wraps a function.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Are <code>@property</code>, <code>@staticmethod</code> and <code>@classmethod</code> decorators?</summary><div class="qa-body">Yes. They are built-in classes applied with <code>@</code> that return descriptor objects. <code>property</code> turns a method into a computed attribute (with optional setter/deleter), <code>staticmethod</code> removes the implicit first argument, and <code>classmethod</code> passes the class instead of the instance. They work through the descriptor protocol (<code>__get__</code>), not by wrapping calls.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does a registration decorator return, and why?</summary><div class="qa-body">The original function, unchanged, after recording it in a table (<code>COMMANDS[name] = func</code>). It only needs the side effect at definition time; there is no per-call behaviour to add, so no wrapper. Flask's <code>@app.route</code>, pytest fixtures and plugin systems work this way.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When is <code>lru_cache</code> a bad idea?</summary><div class="qa-body">On impure functions (depending on time, a DB or randomness, so results go stale), with unhashable arguments (lists, dicts, DataFrames raise <code>TypeError</code>), with unbounded <code>maxsize=None</code> and many distinct inputs (memory grows), and on instance methods (the cache keeps <code>self</code> alive). See <a class="xref" data-note="py_advanced">Functional Programming Tools</a> for <code>cache_info()</code> and alternatives.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Decorator or context manager: how do you choose?</summary><div class="qa-body">Use a decorator when the behaviour wraps a whole function call every time. Use a context manager when it wraps a block of lines inside a function, needs to give a value to the block (<code>with open(p) as f</code>), or must release a resource. Objects built with <code>contextlib.contextmanager</code> (or subclassing <code>ContextDecorator</code>) can be used both ways.</div></details>
 </main>
 `
 });

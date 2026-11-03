@@ -3,63 +3,28 @@ Object.assign(TOPIC_CONTENT, {
   "py_iterators": `<main>
 <h1>Iterators &amp; Generators</h1>
   <div class="where"><span>Python</span><span>Advanced Python</span><span>Advanced Python Functions</span><span>Iterators &amp; Generators</span></div>
-  <p class="lead">Every <code>for</code> loop you have ever written quietly uses two tiny functions, <code>iter()</code> and <code>next()</code>. This note opens that up and builds on it, one need at a time: what an iterator is, how to write one as a class, why that is clumsy, how a <strong>generator</strong> (a function that can pause with <code>yield</code>) does the same job in a few lines, and why that pausing lets you process a file far bigger than your RAM. Everything is traced by hand on one small running example, the order log of a tea stall called Chai Corner, and every piece of code was run with its real output shown underneath.</p>
-
-  <h2 id="pi-fits" class="open"><span class="num">★</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 640 170" width="640">
-    <defs><marker id="pi-a0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
-    <rect x="230" y="8" width="180" height="30" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="320" y="28" text-anchor="middle" font-size="12">Advanced Python Functions: map</text>
-    <line x1="320" y1="38" x2="110" y2="70" stroke="currentColor" stroke-opacity="0.45"/>
-    <line x1="320" y1="38" x2="320" y2="70" stroke="currentColor" stroke-opacity="0.45"/>
-    <line x1="320" y1="38" x2="530" y2="70" stroke="currentColor" stroke-opacity="0.45"/>
-    <rect x="20" y="70" width="180" height="34" rx="6" class="fg sg" stroke-width="2.5"/><text x="110" y="92" text-anchor="middle" font-size="12" font-weight="700">Iterators &amp; Generators</text>
-    <rect x="230" y="70" width="180" height="34" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="320" y="92" text-anchor="middle" font-size="12">Closures &amp; Decorators</text>
-    <rect x="440" y="70" width="180" height="34" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="530" y="92" text-anchor="middle" font-size="12">Context Managers</text>
-    <path d="M110,104 Q320,165 524,108" fill="none" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#pi-a0)"/>
-    <text x="320" y="160" text-anchor="middle" class="tm" font-size="11">@contextmanager turns a generator into a context manager</text>
-  </svg><figcaption>The Advanced Python Functions group. You are on the green note. Its generators come back later: the Context Managers note builds a context manager out of a generator.</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: <a class="xref" data-note="py_fundamentals">Python Fundamentals</a>, <a class="xref" data-note="py_ds">Data Structures</a> and <a class="xref" data-note="py_oop">OOP</a></b><span>You can write loops, functions and classes, and you know that methods with double underscores (dunder methods such as <code>__init__</code>) are hooks Python calls for you. Left open: how can one <code>for</code> loop walk a list, a string, a dict and a 20 GB file, and what do you do when the data does not fit in memory? The group map, <a class="xref" data-note="py_advanced">Advanced Python Functions: the map</a>, introduced the Chai Corner log we use here.</span></li>
-    <li><b>This note adds: the iteration protocol and lazy data</b><span>Iterables and iterators, <code>iter()</code>/<code>next()</code>/<code>StopIteration</code>, the <code>for</code> loop taken apart, class iterators, generators and <code>yield</code>, generator expressions, lazy evaluation, pipelines, <code>yield from</code>/<code>send</code>, and the <code>itertools</code> toolbox.</span></li>
-    <li><b>Leads to: <a class="xref" data-note="py_decorators">Closures &amp; Decorators</a> and <a class="xref" data-note="py_context">Context Managers</a></b><span>A generator is a function that keeps its local variables between calls. A closure is another way for a function to keep variables, and it is what decorators are made of. Context managers then reuse the generator directly: <code>@contextmanager</code> runs your setup up to <code>yield</code> and your cleanup after it. Later, <a class="xref" data-note="py_concurrency">Concurrency &amp; Async</a> uses the same "pause and resume" idea for coroutines.</span></li>
-  </ol>
-
-  <h2 id="pi-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
-  <p>The whole note as one chain. Each idea answers the question above it, and its weakness raises the next question. Numbers come from the running example: Chai Corner's six-line log with four valid orders worth ₹225.</p>
-  <ol class="story">
-    <li><b>The for loop</b><span>Q: how does one <code>for</code> work on lists, strings, dicts and files? → It doesn't know any of them. It calls <code>iter()</code> once and <code>next()</code> again and again. So what are those two calls talking to?</span></li>
-    <li><b>Iterable vs iterator</b><span>Q: what does <code>iter()</code> return? → An <strong>iterator</strong>: a bookmark that hands out the next item on each <code>next()</code> and raises <code>StopIteration</code> at the end. A list is an <strong>iterable</strong>: it hands out a fresh bookmark each time. But the built-in types only walk raw lines; can we make an object that walks <em>orders</em>?</span></li>
-    <li><b>A class iterator</b><span>Q: how do we make our own thing loopable? → Write <code>__iter__</code> and <code>__next__</code>. <code>OrderReader</code> keeps <code>self.pos</code> and walks the log: pos 2, 3, 4, 6, then StopIteration. But that is 17 lines of manual bookkeeping for "give the next order"…</span></li>
-    <li><b>Generators and yield</b><span>Q: can the position be remembered for us? → A function with <code>yield</code> pauses instead of ending; its local variables <em>are</em> the bookmark. 9 lines, same four orders, same ₹225. But we still wrote a whole <code>def</code> for a one-line transformation…</span></li>
-    <li><b>Generator expressions</b><span>Q: is there a one-line form? → <code>(o["qty"] * o["price"] for o in orders(raw))</code>, summed to 225. Round brackets compute nothing until asked. Why does "until asked" matter?</span></li>
-    <li><b>Lazy evaluation</b><span>Q: what do we gain by not computing early? → Memory: 10 million amounts as a list peak at 409 MB, as a generator at 0.0005 MB. And endless sequences (token numbers) become safe. But real work is several steps, not one…</span></li>
-    <li><b>Pipelines</b><span>Q: can several lazy steps be chained? → read → parse → filter → take: the first three cold coffees in a billion-line log needed only 15 lines. But how do generators hand work to other generators, or receive values?</span></li>
-    <li><b>yield from, send, close</b><span>Q: how do generators delegate, talk back and clean up? → <code>yield from</code> hands over every item of another iterable (Monday + Tuesday = ₹335); <code>send</code> passes a value in (running totals 60, 105, 195, 225); <code>close</code> runs the <code>finally</code>. Must we write every stream tool ourselves?</span></li>
-    <li><b>itertools</b><span>Q: what is already built? → <code>islice</code>, <code>count</code>, <code>chain</code>, <code>accumulate</code> (60, 105, 195, 225), <code>groupby</code>, <code>tee</code>, <code>batched</code>, <code>pairwise</code>. All lazy, all iterator-in, iterator-out. And the price of laziness?</span></li>
-    <li><b>Traps</b><span>Q: what goes wrong? → Iterators are one-pass and fail silently (second <code>sum</code> = 0), have no <code>len</code>, are eaten by <code>in</code>, and a lazy generator can outlive its <code>with open</code>.</span></li>
-  </ol>
+  <p class="lead">An <strong>iterator</strong> is an object that hands out one item per <code>next()</code> call and raises <code>StopIteration</code> when it runs out. Every <code>for</code> loop, comprehension, <code>sum()</code> and <code>list()</code> uses that protocol. A <strong>generator</strong> is a function containing <code>yield</code> that implements the protocol for you: it pauses after each value with its local variables kept. Without them you would have to load a whole file or dataset into a list before working on it, which fails once the data is bigger than RAM. You will meet them in streaming large CSVs and logs, <code>pd.read_csv(chunksize=...)</code>, PyTorch <code>DataLoader</code>/<code>IterableDataset</code>, lazy ETL pipelines, and the coroutine machinery behind <code>async</code>/<code>await</code>. Code here was run on Python 3.13.</p>
 
   <h2 id="pi-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">Iterators &amp; Generators</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">How a for loop works</div>
+        <div class="mm-title">Iterator protocol</div>
         <ul>
-          <li><b>Iterable</b> — has <code>__iter__</code>; <code>iter(x)</code> gives a fresh iterator (list, str, dict, range)</li>
-          <li><b>Iterator</b> — has <code>__next__</code>; remembers its position; <code>__iter__</code> returns itself</li>
+          <li><b>Iterable</b>: has <code>__iter__</code>; <code>iter(x)</code> gives a fresh iterator (list, str, dict, range)</li>
+          <li><b>Iterator</b>: has <code>__next__</code>; remembers its position; <code>__iter__</code> returns itself</li>
           <li><code>for x in obj</code> = <code>it = iter(obj)</code>, then <code>next(it)</code> until <code>StopIteration</code></li>
           <li>File objects are iterators: one line per <code>next</code>, one pass only</li>
-          <li>💡 a book (iterable) and a bookmark (iterator)</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Class iterator</div>
         <ul>
-          <li><code>OrderReader</code>: <code>self.pos</code> is the bookmark</li>
-          <li><code>__next__</code> returns an order or raises <code>StopIteration</code></li>
-          <li>Trace on the log: pos 2, 3, 4, 6, then stop</li>
-          <li><code>OrderLog.__iter__</code> returns a new reader → many passes</li>
+          <li>Position stored on <code>self</code></li>
+          <li><code>__next__</code> returns an item or raises <code>StopIteration</code></li>
+          <li>Container's <code>__iter__</code> returns a new iterator → many passes</li>
+          <li><code>__iter__</code> written as a generator is the short form</li>
         </ul>
       </div>
       <div class="mm-branch">
@@ -67,29 +32,27 @@ Object.assign(TOPIC_CONTENT, {
         <ul>
           <li>Any <code>def</code> with <code>yield</code>; calling it runs <b>no</b> line</li>
           <li>Each <code>next()</code> runs to the next <code>yield</code>, then pauses</li>
-          <li>Locals survive the pause: the state machine for free</li>
+          <li>Locals and position survive the pause</li>
           <li>States: CREATED → SUSPENDED → CLOSED</li>
           <li><code>return v</code> ends it; v rides on <code>StopIteration.value</code></li>
-          <li>💡 a cricket match stopped for rain</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Lazy evaluation</div>
         <ul>
           <li><code>[ ]</code> builds now, <code>( )</code> builds on demand</li>
-          <li>10M items: list peak <b>409 MB</b>, generator <b>0.0005 MB</b></li>
+          <li>Generator object ≈ 200 bytes regardless of length</li>
           <li>Infinite streams are fine: take what you need with <code>islice</code></li>
-          <li>Pipeline: read → parse → filter → take; the last step pulls</li>
-          <li>Billion-line log, 3 cold coffees: 15 lines read</li>
+          <li>Pipeline: read → parse → filter → take; the consumer pulls</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">More generator tools</div>
+        <div class="mm-title">Generator methods</div>
         <ul>
-          <li><code>yield from it</code> — pass on every item of <code>it</code></li>
-          <li><code>x = yield v</code> + <code>g.send(x)</code> — two-way: running total 60 → 225</li>
-          <li><code>g.close()</code> → <code>finally</code> runs (cleanup)</li>
-          <li><b>itertools</b>: islice, count, chain, accumulate, groupby (sort first!), tee, batched, pairwise, takewhile</li>
+          <li><code>yield from it</code>: delegate to a sub-iterator</li>
+          <li><code>x = yield v</code> + <code>g.send(x)</code>: two-way; prime with <code>next</code></li>
+          <li><code>g.close()</code> → <code>GeneratorExit</code>, <code>finally</code> runs</li>
+          <li><b>itertools</b>: islice, count, chain, accumulate, groupby (sort first), tee, batched, pairwise, takewhile</li>
         </ul>
       </div>
       <div class="mm-branch">
@@ -108,28 +71,22 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="pi-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain</span></div></div>
-      <div class="rm-item rm-done" data-target="pi-for"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">How a for Loop Really Works</span><span class="rm-sub">iter, next, StopIteration</span></div></div>
-      <div class="rm-item rm-done" data-target="pi-class"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Writing Your Own Iterator</span><span class="rm-sub">__iter__ and __next__ by hand</span></div></div>
-      <div class="rm-item rm-done" data-target="pi-gen"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Generators: Functions That Pause</span><span class="rm-sub">yield traced line by line</span></div></div>
-      <div class="rm-item rm-done" data-target="pi-genexp"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Generator Expressions</span><span class="rm-sub">Round brackets are lazy</span></div></div>
-      <div class="rm-item rm-done" data-target="pi-lazy"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Lazy Evaluation &amp; Memory</span><span class="rm-sub">409 MB vs 200 bytes</span></div></div>
-      <div class="rm-item rm-done" data-target="pi-pipe"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Generator Pipelines</span><span class="rm-sub">Read → parse → filter → take</span></div></div>
-      <div class="rm-item rm-done" data-target="pi-more"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">yield from, send &amp; close</span><span class="rm-sub">Delegate, talk back, clean up</span></div></div>
-      <div class="rm-item rm-done" data-target="pi-tools"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">itertools Essentials</span><span class="rm-sub">The standard stream toolbox</span></div></div>
-      <div class="rm-item rm-done" data-target="pi-connect"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One diagram, one table</span></div></div>
-      <div class="rm-item rm-done" data-target="pi-traps"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">One-pass, len, closed files</span></div></div>
-      <div class="rm-item rm-done" data-target="pi-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note on one page</span></div></div>
-      <div class="rm-item rm-done" data-target="pi-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-for"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">The Iterator Protocol: How a for Loop Works</span><span class="rm-sub">iter, next, StopIteration</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-class"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Writing an Iterator Class</span><span class="rm-sub">__iter__ and __next__ by hand</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-gen"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Generator Functions and yield</span><span class="rm-sub">pause, resume, generator states</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-genexp"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Generator Expressions</span><span class="rm-sub">round brackets are lazy</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-lazy"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Lazy Evaluation and Memory Use</span><span class="rm-sub">tracemalloc, infinite streams</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-pipe"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Generator Pipelines</span><span class="rm-sub">chained generators, batching</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-more"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">yield from, send &amp; close</span><span class="rm-sub">delegate, receive values, clean up</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-tools"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">itertools Essentials</span><span class="rm-sub">accumulate, chain, groupby, tee, batched</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-traps"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">one-pass, len, closed files</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">protocol, yield, itertools, gotchas</span></div></div>
+      <div class="rm-item rm-done" data-target="pi-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">protocol, laziness, send, internals</span></div></div>
     </div>
   </div>
 
-  <h2 id="pi-for"><span class="num">01</span>How a for Loop Really Works</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>You can write <code>for x in …</code> over a list, a string, a dict, a range, a file. These are very different things: a list sits in memory, a file is on disk and is read line by line, a range never stores its numbers at all. How can one loop know how to walk through all of them?</p>
-  </div>
-  <h3>The running example: Chai Corner's order log</h3>
-  <p>Chai Corner is a small tea stall. Its till writes one line per order: time, item, quantity, unit price in rupees. Monday's log has six lines. Line 1 is a comment, line 5 is junk written when the till restarted, and the other four are real orders. We will use this same file in every section, and in the sibling notes.</p>
+  <h2 id="pi-for"><span class="num">01</span>The Iterator Protocol: How a for Loop Works</h2>
+  <p>One <code>for</code> statement walks a list in memory, a file on disk and a <code>range</code> that stores no numbers at all. It can do that because it does not know about any of those types. It relies on a two-method protocol that each type implements in its own way. The examples use a six-line till log: a comment line, a junk line and four orders of the form <code>time,item,qty,price</code>.</p>
   <div class="fx" data-lang="py">LOG = """# Chai Corner till log, Monday
 09:01,masala chai,2,30
 09:05,samosa,3,15
@@ -150,14 +107,6 @@ for n, line in enumerate(raw, start=1):
 4 '09:12,cold coffee,1,90'
 5 'till restarted'
 6 '09:20,masala chai,1,30'</div>
-  <table class="tbl"><caption>The four valid orders, worked by hand</caption>
-    <tr><th>Line</th><th>Time</th><th>Item</th><th>Qty × price</th><th>Amount</th><th>Running total</th></tr>
-    <tr><td>2</td><td>09:01</td><td>masala chai</td><td>2 × 30</td><td>60</td><td>60</td></tr>
-    <tr><td>3</td><td>09:05</td><td>samosa</td><td>3 × 15</td><td>45</td><td>105</td></tr>
-    <tr><td>4</td><td>09:12</td><td>cold coffee</td><td>1 × 90</td><td>90</td><td>195</td></tr>
-    <tr><td>6</td><td>09:20</td><td>masala chai</td><td>1 × 30</td><td>30</td><td><strong>225</strong></td></tr>
-  </table>
-  <p>The answer every section must reproduce: <strong>4 orders, 7 items, ₹225</strong>. Lines 1 and 5 must be skipped.</p>
   <h3>The idea in plain words</h3>
   <p>The loop does not know anything about lists or files. It only knows how to ask two questions. First it asks the object, "give me something that can walk through you". Then it asks that walker, again and again, "what is the next item?". When the walker says "no more", the loop stops. Every type that wants to work with <code>for</code> just answers those two questions in its own way.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>A book and a bookmark. The book is the thing you read (the <strong>iterable</strong>). The bookmark remembers where you are (the <strong>iterator</strong>). Each time you sit down you read the next page and move the bookmark forward. Five friends can read the same book with five bookmarks at different pages. A bookmark only moves forward; to start again you take a new bookmark.</p></div>
@@ -243,12 +192,8 @@ range -&gt; range_iterator [0, 1, 2]</div>
   <div class="callout def"><span class="label">Definition</span><p><strong>Iterable</strong>: an object with <code>__iter__</code> that returns an iterator (list, tuple, str, dict, set, range, file). <strong>Iterator</strong>: an object with <code>__next__</code> that returns the next item or raises <code>StopIteration</code>, and whose <code>__iter__</code> returns itself. <code>iter(x)</code> calls <code>x.__iter__()</code>; <code>next(it)</code> calls <code>it.__next__()</code>. This pair of rules is the <strong>iterator protocol</strong>. Every iterator is iterable; not every iterable is an iterator.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Used-up iterators fail silently: no error, just nothing. A file object, <code>zip(...)</code>, <code>map(...)</code>, <code>enumerate(...)</code> and every generator are iterators. Loop over one twice and the second loop does nothing.</p></div>
   <p>Where it matters: a PyTorch <code>DataLoader</code> is an iterable; each epoch's <code>for batch in loader</code> calls <code>iter()</code> and gets a fresh pass. <code>csv.reader(f)</code> is an iterator over a file iterator.</p>
-  <div class="bridge"><b>What this still can't tell us → next: Writing Your Own Iterator.</b> The built-in iterators hand us raw lines, junk and comments included. We want an object that hands out clean <em>orders</em>, one per <code>next()</code>, and works in a <code>for</code> loop like a list does.</div>
 
-  <h2 id="pi-class"><span class="num">02</span>Writing Your Own Iterator</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We know <code>for</code> only calls <code>iter()</code> and <code>next()</code>. So if we write those two hooks ourselves, can our own object be looped over? And what must it remember between calls?</p>
-  </div>
+  <h2 id="pi-class"><span class="num">02</span>Writing an Iterator Class</h2>
   <p>Python finds the two answers through two dunder methods: <code>iter(obj)</code> calls <code>obj.__iter__()</code>, and <code>next(it)</code> calls <code>it.__next__()</code>. So we write a class, <code>OrderReader</code>, whose <code>__next__</code> moves through the raw lines, skips the junk, and returns the next order as a dict. The only thing it must remember between calls is where it is: <code>self.pos</code>, the index of the next line to look at. When it runs out it must <code>raise StopIteration</code> itself.</p>
   <div class="fx" data-lang="py">class OrderReader:                        # an ITERATOR over raw log lines
     def __init__(self, lines):
@@ -291,7 +236,7 @@ second pass: []</div>
     <tr><td><code>list(r)</code></td><td>none</td><td>bookmark still at the end</td><td>6</td><td><code>[]</code></td></tr>
   </table>
   <p>Two things to see. The <code>for</code> loop did not restart: <code>__iter__</code> returned <code>self</code>, bookmark and all, so it carried on from pos 4 after our two manual <code>next</code> calls. And the second pass was empty, exactly like the list iterator and the file.</p>
-  <h3>An iterable that can be looped many times</h3>
+  <h3>Re-iterable containers: separate iterable and iterator</h3>
   <p>A list can be looped many times because its <code>__iter__</code> makes a <em>new</em> iterator each time. We copy that: <code>OrderLog</code> is an iterable whose <code>__iter__</code> opens the file and returns a fresh <code>OrderReader</code>.</p>
   <div class="fx" data-lang="py">class OrderLog:                           # an ITERABLE: hands out a fresh reader per loop
     def __init__(self, path):
@@ -308,18 +253,15 @@ for o in log:
 print("revenue:", total)</div>
   <div class="fx" data-lang="text">4 4
 revenue: 225</div>
-  <p>Both <code>list(log)</code> calls saw all 4 orders, and the loop gave ₹225, the hand answer. Iterable (the book, <code>OrderLog</code>) and iterator (the bookmark, <code>OrderReader</code>) are now two separate classes, just like <code>list</code> and <code>list_iterator</code>.</p>
+  <p>Both <code>list(log)</code> calls saw all 4 orders, and the loop gave ₹225. Iterable (the book, <code>OrderLog</code>) and iterator (the bookmark, <code>OrderReader</code>) are now two separate classes, just like <code>list</code> and <code>list_iterator</code>.</p>
   <div class="callout def"><span class="label">Definition</span><p>A <strong>class iterator</strong> implements <code>__iter__</code> (returning <code>self</code>) and <code>__next__</code> (returning the next item or raising <code>StopIteration</code>), and stores its position in instance attributes. A <strong>re-iterable</strong> container implements only <code>__iter__</code>, returning a new iterator each call.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Making a container its own iterator (putting <code>__next__</code> and <code>pos</code> on the container and returning <code>self</code> from <code>__iter__</code>). It then works once and silently returns nothing on the second loop, and two nested loops over it share one bookmark.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Generators.</b> <code>OrderReader</code> needed a class, two dunder methods, a <code>self.pos</code> counter, a <code>while</code> loop to skip lines and a manual <code>raise StopIteration</code>: 17 lines of bookkeeping to say "give the next clean order". Could Python remember our place for us?</div>
 
-  <h2 id="pi-gen"><span class="num">03</span>Generators: Functions That Pause</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>A normal function cannot remember its place: it runs top to bottom, <code>return</code> hands back one value, and all its local variables are thrown away. Next call starts again from line 1. So how could a plain function hand out orders one at a time, continuing where it left off?</p>
-  </div>
+  <h2 id="pi-gen"><span class="num">03</span>Generator Functions and yield</h2>
+  <p>A normal function runs top to bottom, and <code>return</code> discards its local variables, so it cannot hand out values one at a time and carry on where it stopped. The iterator class above works around that by storing its position on <code>self</code>. A generator lets the function itself pause.</p>
   <p>A <strong>generator function</strong> is a function that contains the word <code>yield</code>. <code>yield</code> works like a <code>return</code> that does not forget. It hands one value to the caller and then the function <strong>pauses</strong>: it freezes at that exact line, with all its local variables still holding their values. When the caller asks for the next value, the function <strong>resumes</strong> from the line just after the <code>yield</code>.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>A cricket match stopped for rain. Play halts at over 32.4 with the score at 187/4. Nobody restarts the match from ball one. When the rain stops, play resumes from the very next ball, same batsmen, same score. <code>yield</code> is the rain break; <code>next()</code> is "play resumes". A normal <code>return</code> is the match being abandoned: the scorecard is thrown away.</p></div>
-  <h3>return forgets, yield pauses</h3>
+  <h3>yield vs return</h3>
   <div class="fx" data-lang="py">def first_order(lines):                   # a normal function
     for line in lines:
         if line and not line.startswith("#"):
@@ -340,7 +282,7 @@ print(next(g))                            # continues where it paused: the NEXT 
 09:01,masala chai,2,30
 09:05,samosa,3,15</div>
   <p><code>first_order</code> returned the chai line twice: each call started from the top. <code>every_order</code>'s second <code>next</code> gave the <em>samosa</em> line: the function continued inside its <code>for</code> loop, with <code>line</code> and the loop's position kept.</p>
-  <h3>What "pausing" means concretely</h3>
+  <h3>The generator object</h3>
   <p>When you call a generator function, Python does <strong>not</strong> run its body. It creates a <strong>generator object</strong> holding three things: the function's code, its local variables, and a marker for "which line am I on". Each <code>next()</code> runs the code from the marker until it reaches a <code>yield</code>, moves the marker there, and returns the yielded value. Nothing is sleeping or waiting between calls; the object just sits in memory until someone calls <code>next()</code> again.</p>
   <figure class="viz"><svg viewBox="0 0 660 190" width="660">
     <defs><marker id="pi-a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
@@ -418,7 +360,7 @@ StopIteration</div>
     <tr><td>5th <code>next(g)</code></td><td>"resumed"; loop ends; "finished"; function returns</td><td>ended</td><td><code>StopIteration</code></td></tr>
   </table>
   <p>The <code>for</code> loop's position inside <code>raw</code> and every local variable were kept between calls. That is the "no bookkeeping" win: the generator's own local state <em>is</em> the bookmark. There is no <code>self.pos</code>, no class and no <code>raise StopIteration</code>; falling off the end of the function raises it for you.</p>
-  <h3>The quiet version, used from now on</h3>
+  <h3>A generator replacing the iterator class</h3>
   <div class="fx" data-lang="py">def orders(lines):                        # the same generator without the prints
     for line in lines:
         line = line.strip()
@@ -440,8 +382,8 @@ samosa       3 x 15 =  45  running total 105
 cold coffee  1 x 90 =  90  running total 195
 masala chai  1 x 30 =  30  running total 225
 revenue: 225</div>
-  <p>₹225, the hand answer, with the running totals 60, 105, 195, 225 from the table in section 01. In the loop the generator and the loop body take turns: the generator produces one order, the body adds it, then the generator resumes. A generator object is an iterator, so <code>for</code>, <code>list()</code>, <code>sum()</code>, <code>max()</code> all accept it.</p>
-  <h3>The state machine for free</h3>
+  <p>The running totals are 60, 105, 195 and 225. In the loop the generator and the loop body take turns: the generator produces one order, the body adds it, then the generator resumes. A generator object is an iterator, so <code>for</code>, <code>list()</code>, <code>sum()</code>, <code>max()</code> all accept it.</p>
+  <h3>Generator states: inspect.getgeneratorstate</h3>
   <p>A generator is a small machine with three states. <code>inspect.getgeneratorstate</code> shows the state, and <code>gi_frame.f_locals</code> shows the saved local variables, the exact things <code>OrderReader</code> had to store on <code>self</code> by hand.</p>
   <div class="fx" data-lang="py">import inspect
 g = orders(raw)
@@ -466,7 +408,19 @@ GEN_CLOSED | frame: None</div>
     <tr><td>Ending</td><td><code>raise StopIteration</code> by hand</td><td>automatic when the function ends</td></tr>
     <tr><td>Extra methods possible?</td><td>yes (e.g. <code>reset()</code>, <code>__len__</code>)</td><td>no, just <code>next</code>/<code>send</code>/<code>close</code></td></tr>
   </table>
-  <p>One more detail: <code>return</code> inside a generator ends it, and any value you return travels on the <code>StopIteration</code> (a <code>for</code> loop ignores it; <code>yield from</code> in section 07 receives it).</p>
+  <h3>A generator as a class's __iter__</h3>
+  <p>A class that should be re-iterable can still use a generator: write <code>__iter__</code> with <code>yield</code> in it. Each loop calls <code>__iter__</code>, which returns a fresh generator, so you get many passes and no separate iterator class.</p>
+  <div class="fx" data-lang="py">class Squares:
+    def __init__(self, n):
+        self.n = n
+    def __iter__(self):                   # a generator method: new generator per loop
+        for i in range(self.n):
+            yield i * i
+
+s = Squares(4)
+print(list(s), list(s))</div>
+  <div class="fx" data-lang="text">[0, 1, 4, 9] [0, 1, 4, 9]</div>
+  <p>One more detail: <code>return</code> inside a generator ends it, and any value you return travels on the <code>StopIteration</code> (a <code>for</code> loop ignores it; <code>yield from</code> receives it).</p>
   <div class="fx" data-lang="py">def two_then_stop():
     yield "chai"
     return "done"            # ends the generator; "done" rides on StopIteration
@@ -484,12 +438,8 @@ StopIteration, value = 'done'
 ['chai']</div>
   <div class="callout def"><span class="label">Definition</span><p><strong>Generator function</strong>: a <code>def</code> containing <code>yield</code>. Calling it returns a <strong>generator</strong>, an iterator whose <code>__next__</code> runs the body up to the next <code>yield</code>. <strong>yield</strong> hands out a value and suspends the function with its local state saved. Falling off the end or <code>return</code> raises <code>StopIteration</code> (the return value becomes <code>StopIteration.value</code>).</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>"I called my function and nothing happened." If the body contains <code>yield</code> anywhere, even in a branch that never runs, calling it only creates a generator; no line runs until you loop over it or call <code>next</code>. This bites people who add a <code>yield</code> into a function that also writes a file.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Generator Expressions.</b> Turning orders into amounts is one line of logic (<code>qty * price</code>), but so far it needs a whole <code>def</code> with a loop and a <code>yield</code>. Is there a short form?</div>
 
   <h2 id="pi-genexp"><span class="num">04</span>Generator Expressions</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>You know list comprehensions: <code>[o["qty"] * o["price"] for o in day]</code>. Is there an equally short way to write a <em>generator</em>, and what exactly is different about it?</p>
-  </div>
   <p>Swap the square brackets for round ones and you get a <strong>generator expression</strong>. A list comprehension builds the whole list right now. A generator expression builds nothing: it is a ready-made generator that computes each value only when asked.</p>
   <div class="fx" data-lang="py">amounts_list = [o["qty"] * o["price"] for o in orders(raw)]   # [ ]: the whole list, now
 amounts_gen = (o["qty"] * o["price"] for o in orders(raw))    # ( ): a generator, nothing computed yet
@@ -503,18 +453,14 @@ print(any(o["item"] == "cold coffee" for o in orders(raw)))</div>
 225
 (90, 'cold coffee')
 True</div>
-  <p>Line by line. The list printed as <code>[60, 45, 90, 30]</code> (the amounts column of our hand table); the round-bracket version is a <code>generator</code> and shows no values, because none exist yet. The first <code>sum</code> pulled all four amounts: 225. The second <code>sum</code> got 0: the generator was already used up, and it said so silently. When a generator expression is the only argument of a call, its own brackets can go: <code>sum(… for o in …)</code>. <code>max</code> compared (price, item) pairs and found cold coffee at ₹90; <code>any</code> stops pulling at the first <code>True</code>, here at the third order.</p>
+  <p>Line by line. The list printed as <code>[60, 45, 90, 30]</code>; the round-bracket version is a <code>generator</code> and shows no values, because none exist yet. The first <code>sum</code> pulled all four amounts: 225. The second <code>sum</code> got 0: the generator was already used up, and it said so silently. When a generator expression is the only argument of a call, its own brackets can go: <code>sum(… for o in …)</code>. <code>max</code> compared (price, item) pairs and found cold coffee at ₹90; <code>any</code> stops pulling at the first <code>True</code>, here at the third order.</p>
   <div class="callout def"><span class="label">Definition</span><p><strong>Generator expression</strong>: <code>(expr for x in iterable if cond)</code>. Same syntax as a list comprehension but in round brackets; it returns a generator that evaluates <code>expr</code> lazily, one item per <code>next()</code>.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>A generator expression is a generator: one pass only. Assigning it to a variable and using it twice gives the full answer once and an empty answer the second time (225, then 0 above).</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Lazy Evaluation.</b> On four orders, list and generator give the same 225. So why does "compute only when asked" matter at all?</div>
 
-  <h2 id="pi-lazy"><span class="num">05</span>Lazy Evaluation &amp; Memory</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>What does a list comprehension cost when the log has not 4 orders but 10 million? And what if the stream never ends at all?</p>
-  </div>
+  <h2 id="pi-lazy"><span class="num">05</span>Lazy Evaluation and Memory Use</h2>
   <p><code>sum([amount for …])</code> first builds a list holding every amount, then adds them up. Every one of those numbers is an object in RAM at the same moment, even though <code>sum</code> only ever needs one at a time. <strong>Lazy evaluation</strong> means: do not compute a value until somebody actually asks for it. <code>sum(amount for …)</code> asks for one amount, adds it, throws it away, asks for the next. At any moment only one exists.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>Chai Corner makes each cup when a customer orders it. It does not brew 500 cups at 6 a.m. and line them up. The list version is the 500-cup line-up: lots of counter space, and wasted if only 20 people come. The generator is brew-to-order.</p></div>
-  <h3>The same idea at scale: ten million amounts</h3>
+  <h3>Measuring memory: list vs generator</h3>
   <p>The code measures both versions with <code>tracemalloc</code>, a standard-library tool that records the peak memory Python allocated while a function ran. <code>x * x</code> stands in for "compute one order's amount".</p>
   <div class="fx" data-lang="py">import sys, tracemalloc, timeit
 N = 10_000_000                            # think: ten million order amounts
@@ -546,7 +492,7 @@ time gen:  0.60s</div>
   <p>The generator object itself is 200 bytes whether N is 10 or 10 billion: it stores only the recipe and the current position. The list version peaked at 409 MB. The generator was also a little faster here, because it never had to allocate that huge block. On small inputs a list comprehension is often slightly faster; the big wins of generators are memory and being able to stop early.</p>
   <div class="callout trap"><span class="label">Trap</span><p><code>sys.getsizeof(a_list)</code> reports only the list's array of pointers (about 89 MB here), not the integer objects it points to. Use <code>tracemalloc</code> to see real memory.</p></div>
   <h3>Infinite streams</h3>
-  <p>Because a generator runs only when asked, it can describe a sequence that never ends. Chai Corner's token counter is one: 1, 2, 3, … forever. As a normal function, <code>while True</code> would hang; as a generator it is safe, because the caller takes only what it needs. <code>itertools.islice(it, n)</code> means "take the first n items" of any iterator.</p>
+  <p>Because a generator runs only when asked, it can describe a sequence that never ends. A token counter is one: 1, 2, 3, … forever. As a normal function, <code>while True</code> would hang; as a generator it is safe, because the caller takes only what it needs. <code>itertools.islice(it, n)</code> means "take the first n items" of any iterator.</p>
   <div class="fx" data-lang="py">import itertools
 
 def token_numbers(start=1):              # the cafe's token counter: 1, 2, 3, ... forever
@@ -573,12 +519,9 @@ print(list(itertools.islice(fib(), 10)))</div>
     <tr><th>Use a list when</th><th>Use a generator when</th></tr>
     <tr><td>Data fits in memory and you need <code>len</code>, indexing <code>x[5]</code>, sorting, or more than one pass</td><td>Data is huge, streaming or infinite; one pass is enough; you may stop early</td></tr>
   </table>
-  <div class="bridge"><b>What this still can't tell us → next: Pipelines.</b> One lazy step is easy. Real work is several steps: read lines, parse them, keep some, take the first few. Do the steps stay lazy when chained, or does each one build a full list?</div>
 
   <h2 id="pi-pipe"><span class="num">06</span>Generator Pipelines</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Imagine the till log of a whole chain of tea stalls, a billion lines. We want just the first three cold coffee orders. With lists, step 1 would read all billion lines before step 2 starts. Can the steps be connected so that only the lines we need are ever read?</p>
-  </div>
+  <p>Real processing is several steps: read lines, parse them, keep some, take the first few. If each step builds a list, step 1 reads the entire input before step 2 starts. Chaining generators keeps every step lazy, so only the lines that are actually needed are read.</p>
   <p>With generators, you connect the steps like pipes. Each step pulls one item from the step before it, works on it, and passes it on. Nothing runs until the last step asks; then the demand travels backwards through the chain.</p>
   <figure class="viz"><svg viewBox="0 0 600 90" width="600">
     <defs><marker id="pi-a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
@@ -591,7 +534,7 @@ print(list(itertools.islice(fib(), 10)))</div>
     <line x1="422" y1="38" x2="456" y2="38" stroke="currentColor" marker-end="url(#pi-a3)"/>
     <text x="10" y="80" class="tm">data flows left to right; demand flows right to left, one line at a time</text>
   </svg><figcaption>An assembly line. islice asks only() for an item, only() asks orders(), orders() asks till_stream() for one line. A line travels through every stage before the next one is read.</figcaption></figure>
-  <p><code>till_stream</code> fakes the billion-line log, cycling through four menu items with a broken line every 7th line, and prints each line it reads so we can count. <code>orders</code> is our generator from section 03, unchanged: it does not care whether its input is a list, a file or another generator.</p>
+  <p><code>till_stream</code> fakes the billion-line log, cycling through four menu items with a broken line every 7th line, and prints each line it reads so we can count. <code>orders</code> is the generator defined earlier, unchanged: it does not care whether its input is a list, a file or another generator.</p>
   <div class="fx" data-lang="py">import itertools
 
 def till_stream():                        # stand-in for a chain's billion-line till log
@@ -630,7 +573,7 @@ print(list(itertools.islice(pipe, 2)))                # pull two more</div>
   read line 15
 [{'time': '09:11', 'item': 'cold coffee', 'qty': 3, 'price': 90}, {'time': '09:15', 'item': 'cold coffee', 'qty': 1, 'price': 90}]</div>
   <p>Step by step: building <code>pipe</code> printed nothing except our own "pipeline built". The first <code>next(pipe)</code> asked <code>only</code> for a row; it asked <code>orders</code>, which asked <code>till_stream</code> for a line. Lines 1 and 2 were chai and samosa, so <code>only</code> threw them away and kept asking; line 3 was the first cold coffee. <code>islice(pipe, 2)</code> then read lines 4–15: line 7 was "till restarted" and <code>orders</code> skipped it, line 11 and line 15 were cold coffees. Out of a billion lines, fifteen were read.</p>
-  <h3>Batches</h3>
+  <h3>Batching a stream: islice and itertools.batched</h3>
   <p>Training loops and database inserts want items in chunks. The same trick cuts any stream into batches without ever holding more than one batch. (The <code>:=</code> "walrus" operator assigns and tests in one go; the loop stops when a chunk comes back empty.)</p>
   <div class="fx" data-lang="py">def batches(it, size):                    # cut any stream into chunks
     it = iter(it)
@@ -647,12 +590,9 @@ print(list(itertools.batched(range(7), 3)))           # built in since Python 3.
   <div class="callout def"><span class="label">Definition</span><p>A <strong>generator pipeline</strong> is a chain of generators (or generator expressions) each consuming the previous one. It is <strong>pull-based</strong>: the consumer at the end drives the whole chain, so memory is about one item per stage and work stops as soon as the consumer stops.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>One eager step breaks the chain: a <code>list(...)</code>, <code>sorted(...)</code> or <code>len(list(...))</code> in the middle reads the entire input at that point. Sorting and grouping by key need all the data, so do them on a reduced stream or in chunks.</p></div>
   <p>Where you meet it: <code>pd.read_csv(path, chunksize=100_000)</code> returns an iterator of DataFrames; PyTorch <code>IterableDataset</code> and Hugging Face <code>load_dataset(..., streaming=True)</code> stream examples. Interviews: "how would you process a 50 GB file on an 8 GB machine?" Stream it through a generator pipeline or in chunks.</p>
-  <div class="bridge"><b>What this still can't tell us → next: yield from, send &amp; close.</b> Our generators only hand values <em>out</em>. How does one generator hand over all the items of another (Monday's log, then Tuesday's)? Can the caller send values <em>in</em>? And what happens to a file opened inside a generator if we stop early?</div>
 
   <h2 id="pi-more"><span class="num">07</span>yield from, send &amp; close</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>A week of logs is several files. Writing <code>for line in f: yield line</code> inside another loop is clumsy. And a running total needs a generator that <em>receives</em> each new amount. Do generators support delegation and two-way talk?</p>
-  </div>
+  <p>Generators can do more than hand values out. They can delegate to another iterable (<code>yield from</code>), receive values (<code>send</code>), and be stopped early with their cleanup still running (<code>close</code>).</p>
   <h3>yield from: hand over another iterable</h3>
   <p><code>yield from other</code> means "yield every item of <code>other</code>, one by one, then carry on". Here <code>read_file</code> streams a file's lines, and <code>week</code> streams the orders of several files as one stream.</p>
   <div class="fx" data-lang="py">with open("tue.log", "w") as f:
@@ -720,15 +660,11 @@ print(inspect.getgeneratorstate(g))</div>
   <div class="fx" data-lang="text"># Chai Corner till log, Monday
   cleanup ran
 GEN_CLOSED</div>
-  <p>We took one line and closed: "cleanup ran" printed, the state became CLOSED. This is the exact mechanism the <a class="xref" data-note="py_context">Context Managers</a> note relies on: a generator paused at <code>yield</code> inside <code>try/finally</code> is a ready-made "setup, pause, cleanup" machine.</p>
+  <p>We took one line and closed: "cleanup ran" printed, the state became CLOSED. This is the mechanism <code>@contextmanager</code> relies on (see <a class="xref" data-note="py_context">Context Managers</a>): a generator paused at <code>yield</code> inside <code>try/finally</code> is a ready-made "setup, pause, cleanup" machine.</p>
   <div class="callout def"><span class="label">Definition</span><p><strong>yield from it</strong>: delegate to a sub-iterator, yielding each of its items and returning its return value. <strong>g.send(v)</strong>: resume the generator, making the paused <code>yield</code> expression evaluate to <code>v</code>; returns the next yielded value. <strong>g.throw(exc)</strong>: raise <code>exc</code> at the paused <code>yield</code>. <strong>g.close()</strong>: raise <code>GeneratorExit</code> at the paused <code>yield</code> so cleanup runs.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p><code>g.send(5)</code> on a brand-new generator fails with <code>TypeError: can't send non-None value to a just-started generator</code>: there is no paused <code>yield</code> yet to receive it. Prime with <code>next(g)</code> first.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: itertools.</b> We have written <code>batches</code>, a token counter and a week-chainer by hand. Python ships a whole toolbox of such lazy building blocks. Which ones matter?</div>
 
   <h2 id="pi-tools"><span class="num">08</span>itertools Essentials</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Running totals, numbering, joining streams, taking a slice, grouping by item: must we write a generator for each, or are they already built and lazy?</p>
-  </div>
   <p>The <code>itertools</code> module is a set of generators written in C. Each takes iterators and returns an iterator, so they snap into pipelines. Here they all run on the same four orders.</p>
   <div class="fx" data-lang="py">import itertools, operator
 day = list(orders(raw))
@@ -760,9 +696,9 @@ groupby:    cold coffee -&gt; 1 sold
 groupby:    masala chai -&gt; 3 sold
 groupby:    samosa -&gt; 3 sold
 unsorted groupby: [('masala chai', 1), ('samosa', 1), ('cold coffee', 1), ('masala chai', 1)]</div>
-  <table class="tbl"><caption>What each tool did on our orders</caption>
-    <tr><th>Tool</th><th>Does</th><th>On Monday's orders</th></tr>
-    <tr><td><code>accumulate(xs)</code></td><td>running totals</td><td>60, 105, 195, 225 (the hand table)</td></tr>
+  <table class="tbl"><caption>What each tool does</caption>
+    <tr><th>Tool</th><th>Does</th><th>Result above</th></tr>
+    <tr><td><code>accumulate(xs)</code></td><td>running totals</td><td>60, 105, 195, 225</td></tr>
     <tr><td><code>count(start)</code></td><td>endless counter</td><td>tokens 101–104 zipped to the items</td></tr>
     <tr><td><code>chain(a, b)</code></td><td>one stream after another</td><td>Monday's 4 items then Tuesday's 2</td></tr>
     <tr><td><code>islice(it, start, stop)</code></td><td>slice any iterator</td><td>orders 1 and 2 (samosa, cold coffee)</td></tr>
@@ -775,52 +711,9 @@ unsorted groupby: [('masala chai', 1), ('samosa', 1), ('cold coffee', 1), ('masa
   <p>The last line is the classic trap: <code>groupby</code> only groups <em>neighbouring</em> equal keys. Unsorted, masala chai appeared as two separate groups of 1. Sort by the same key first (or use a dict/<code>Counter</code>).</p>
   <div class="callout def"><span class="label">Definition</span><p><strong>itertools</strong>: standard-library module of lazy iterator building blocks: infinite (<code>count</code>, <code>cycle</code>, <code>repeat</code>), terminating (<code>accumulate</code>, <code>chain</code>, <code>islice</code>, <code>takewhile</code>, <code>dropwhile</code>, <code>groupby</code>, <code>pairwise</code>, <code>batched</code>, <code>tee</code>, <code>zip_longest</code>) and combinatoric (<code>product</code>, <code>permutations</code>, <code>combinations</code>).</p></div>
   <div class="callout trap"><span class="label">Trap</span><p><code>tee</code> buffers every item one copy has seen and the other has not; if one copy runs far ahead, that buffer becomes the whole list you were trying to avoid. If you need two full passes, make a list.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: How It All Connects.</b> We now have protocol, class iterator, generator, expression, pipeline, delegation and toolbox. How are they built from each other?</div>
 
-  <h2 id="pi-connect"><span class="num">09</span>How It All Connects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Are iterators, generators, generator expressions, pipelines and itertools separate features, or layers of one idea?</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 680 300" width="680">
-    <defs><marker id="pi-a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
-    <rect x="250" y="8" width="180" height="40" rx="6" class="fb sb"/><text x="340" y="26" text-anchor="middle" font-size="12">iterator protocol</text><text x="340" y="41" text-anchor="middle" class="tm" font-size="10">__iter__ + __next__ + StopIteration</text>
-    <line x1="290" y1="48" x2="140" y2="86" stroke="currentColor" marker-end="url(#pi-a9)"/>
-    <line x1="340" y1="48" x2="340" y2="86" stroke="currentColor" marker-end="url(#pi-a9)"/>
-    <line x1="390" y1="48" x2="540" y2="86" stroke="currentColor" marker-end="url(#pi-a9)"/>
-    <rect x="50" y="88" width="180" height="40" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="140" y="106" text-anchor="middle" font-size="12">for loop</text><text x="140" y="121" text-anchor="middle" class="tm" font-size="10">calls iter once, next until stop</text>
-    <rect x="250" y="88" width="180" height="40" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="340" y="106" text-anchor="middle" font-size="12">class iterator</text><text x="340" y="121" text-anchor="middle" class="tm" font-size="10">OrderReader, self.pos</text>
-    <rect x="450" y="88" width="180" height="40" rx="6" class="ft st"/><text x="540" y="106" text-anchor="middle" font-size="12">generator (yield)</text><text x="540" y="121" text-anchor="middle" class="tm" font-size="10">protocol written for you</text>
-    <line x1="430" y1="108" x2="448" y2="108" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#pi-a9)"/>
-    <line x1="500" y1="128" x2="400" y2="170" stroke="currentColor" marker-end="url(#pi-a9)"/>
-    <line x1="540" y1="128" x2="540" y2="170" stroke="currentColor" marker-end="url(#pi-a9)"/>
-    <line x1="590" y1="128" x2="640" y2="170" stroke="currentColor" marker-end="url(#pi-a9)"/>
-    <rect x="300" y="172" width="170" height="40" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="385" y="190" text-anchor="middle" font-size="12">generator expression</text><text x="385" y="205" text-anchor="middle" class="tm" font-size="10">one-line generator</text>
-    <rect x="480" y="172" width="120" height="40" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="540" y="190" text-anchor="middle" font-size="12">send / yield from</text><text x="540" y="205" text-anchor="middle" class="tm" font-size="10">two-way, delegate</text>
-    <rect x="610" y="172" width="64" height="40" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="642" y="196" text-anchor="middle" font-size="11">close</text>
-    <line x1="385" y1="212" x2="300" y2="248" stroke="currentColor" marker-end="url(#pi-a9)"/>
-    <rect x="160" y="250" width="270" height="40" rx="6" class="fg sg"/><text x="295" y="268" text-anchor="middle" font-size="12">lazy pipelines + itertools</text><text x="295" y="283" text-anchor="middle" class="tm" font-size="10">read → parse → filter → take; 409 MB → 0.0005 MB</text>
-    <line x1="642" y1="212" x2="642" y2="270" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#pi-a9)"/>
-    <text x="560" y="290" class="tm" font-size="10">→ @contextmanager (Context Managers)</text>
-  </svg><figcaption>Everything grows from one protocol: "give me an iterator; give me the next item; StopIteration means done". The for loop consumes it, a class can implement it by hand, a generator implements it automatically, and everything below the generator (expressions, send, pipelines, itertools) is built from generators. close() leads straight into the Context Managers note.</figcaption></figure>
-  <table class="tbl"><caption>Every concept on the same Chai Corner log</caption>
-    <tr><th>Concept</th><th>Built from</th><th>Answers which question</th><th>On the running example</th><th>When to use</th></tr>
-    <tr><td>Iterator protocol</td><td><code>__iter__</code>, <code>__next__</code>, <code>StopIteration</code></td><td>how does for walk anything?</td><td><code>next(it)</code> × 3 then StopIteration</td><td>understanding every loop</td></tr>
-    <tr><td>Iterable vs iterator</td><td>protocol; fresh vs same bookmark</td><td>why can I loop a list twice but not a file?</td><td><code>iter(lines) is iter(lines)</code> False; file second pass <code>[]</code></td><td>deciding if data can be re-read</td></tr>
-    <tr><td>Class iterator</td><td>protocol + state on <code>self</code></td><td>how do I make my own loopable thing?</td><td>pos 2, 3, 4, 6 → 4 orders</td><td>iterators with extra methods or state</td></tr>
-    <tr><td>Generator</td><td>a function + <code>yield</code> (protocol automatic)</td><td>can Python keep my place for me?</td><td>9 lines, ₹225, states CREATED → SUSPENDED → CLOSED</td><td>almost every custom iterator</td></tr>
-    <tr><td>Generator expression</td><td>generator in one line</td><td>short form for map/filter?</td><td><code>sum(…)</code> = 225, second sum = 0</td><td>a single transformation</td></tr>
-    <tr><td>Lazy evaluation</td><td>generators pulling on demand</td><td>how to handle huge or endless data?</td><td>409 MB → 0.0005 MB; tokens 1, 2, 3 …</td><td>data bigger than RAM, streams</td></tr>
-    <tr><td>Pipeline</td><td>generators feeding generators</td><td>do several steps stay lazy?</td><td>3 cold coffees from 15 of 10⁹ lines</td><td>ETL, log processing, data loading</td></tr>
-    <tr><td><code>yield from</code> / <code>send</code> / <code>close</code></td><td>generator methods</td><td>delegate, receive values, clean up?</td><td>week ₹335; totals 60 → 225; "cleanup ran"</td><td>chaining sources; coroutines; resource cleanup</td></tr>
-    <tr><td>itertools</td><td>ready-made C generators</td><td>do I have to write these myself?</td><td>accumulate 60, 105, 195, 225</td><td>any stream manipulation</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span><p>One sentence holds the note: <strong>a <code>for</code> loop is just repeated <code>next()</code> on an iterator; a generator is the easy way to write an iterator because a paused function keeps its own place; and because nothing runs until someone calls <code>next()</code>, chains of generators process any amount of data one item at a time.</strong></p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Common Mistakes.</b> Laziness and one-pass behaviour are the source of the power and of almost every bug. Here are the bugs.</div>
-
-  <h2 id="pi-traps"><span class="num">10</span>Common Mistakes</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Iterators fail silently instead of raising errors. Which mistakes does that cause in real code, and what does each look like on our log?</p>
-  </div>
+  <h2 id="pi-traps"><span class="num">09</span>Common Mistakes</h2>
+  <p>Iterators fail silently instead of raising errors, which is what makes these bugs easy to miss.</p>
   <h3>1. Looping over an iterator twice</h3>
   <div class="fx" data-lang="py">rows = orders(raw)
 n = sum(1 for _ in rows)                  # first pass: counts the orders
@@ -868,71 +761,98 @@ print(next(lines_of_fixed("orders.log")))</div>
   <div class="callout trap"><span class="label">More traps in one line each</span>
     <p>A stray <code>yield</code> makes a function do nothing when called. <code>groupby</code> on unsorted data splits groups. <code>send</code> to an unprimed generator raises <code>TypeError</code>. A <code>list(...)</code> in the middle of a pipeline makes it eager. Modifying a list while iterating over it skips items. <code>zip</code> stops silently at the shortest input (use <code>zip(..., strict=True)</code> to get an error).</p>
   </div>
-  <div class="bridge"><b>What this still can't tell us → next: Closures &amp; Decorators.</b> A generator is a function that keeps its variables between calls. The next note meets a second way for a function to keep variables, the <strong>closure</strong>, and uses it to wrap extra behaviour (timing, retries) around functions like our <code>total_revenue</code>. Read <a class="xref" data-note="py_decorators">Closures &amp; Decorators</a>.</div>
 
   <h2 id="pi-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>The whole note on one sheet. Running example: Chai Corner's Monday log, six lines: a comment, chai 2 × 30, samosa 3 × 15, cold coffee 1 × 90, junk ("till restarted"), chai 1 × 30. Valid: 4 orders, 7 items, ₹225.</p>
-  <h3>The question ladder</h3>
+  <h3>Iterator protocol</h3>
+  <ul>
+    <li><strong>Iterable</strong>: <code>__iter__</code> returns an iterator (list, tuple, str, dict, set, range, file). Can usually be looped many times.</li>
+    <li><strong>Iterator</strong>: <code>__next__</code> returns the next item or raises <code>StopIteration</code>; <code>__iter__</code> returns <code>self</code>. One pass only.</li>
+    <li><code>for x in obj: body</code> ≡ <code>it = iter(obj)</code>; loop <code>try: x = next(it)</code> / <code>except StopIteration: break</code>; <code>body</code>.</li>
+    <li><code>iter(lst) is iter(lst)</code> → <code>False</code> (fresh each time); <code>iter(it) is it</code> → <code>True</code>.</li>
+    <li>Files, <code>map</code>, <code>filter</code>, <code>zip</code>, <code>enumerate</code>, generators are iterators. <code>range</code> is a lazy <em>sequence</em> (has <code>len</code>, indexing, O(1) <code>in</code>), not an iterator.</li>
+    <li><code>next(it, default)</code> returns <code>default</code> instead of raising.</li>
+  </ul>
+  <h3>Iterator classes</h3>
+  <ul>
+    <li>Iterator class: position on <code>self</code>, <code>__iter__</code> returns <code>self</code>, <code>__next__</code> raises <code>StopIteration</code> at the end.</li>
+    <li>Re-iterable container: <code>__iter__</code> returns a <em>new</em> iterator. Shortest form: write <code>__iter__</code> as a generator (<code>yield</code> inside it).</li>
+    <li>Don't make a container its own iterator: works once, nested loops share a position.</li>
+  </ul>
+  <h3>Generators</h3>
   <table class="tbl">
-    <tr><th>Concept</th><th>Question it answers</th><th>On our log</th><th>Weakness → next</th></tr>
-    <tr><td>for loop</td><td>how does one loop walk anything?</td><td><code>iter</code> once, <code>next</code> until StopIteration</td><td>what is the thing <code>iter</code> returns?</td></tr>
-    <tr><td>Iterable vs iterator</td><td>book vs bookmark?</td><td>list → new iterator each time; file is its own</td><td>built-ins give raw lines, not orders</td></tr>
-    <tr><td>Class iterator</td><td>make my own loopable object?</td><td>OrderReader: pos 2, 3, 4, 6</td><td>17 lines of bookkeeping</td></tr>
-    <tr><td>Generator</td><td>let Python keep my place?</td><td>9 lines, same 4 orders</td><td>still a full def for one line</td></tr>
-    <tr><td>Generator expression</td><td>one-line generator?</td><td>sum = 225, then 0</td><td>why does lazy matter?</td></tr>
-    <tr><td>Lazy evaluation</td><td>huge or endless data?</td><td>409 MB vs 0.0005 MB</td><td>several steps?</td></tr>
-    <tr><td>Pipeline</td><td>chain lazy steps?</td><td>15 of 10⁹ lines read</td><td>delegate / receive / clean up?</td></tr>
-    <tr><td>yield from, send, close</td><td>generator methods</td><td>week ₹335; totals → 225</td><td>don't rewrite common tools</td></tr>
-    <tr><td>itertools</td><td>ready-made lazy tools</td><td>accumulate 60, 105, 195, 225</td><td>one-pass traps</td></tr>
+    <tr><th>Syntax</th><th>Meaning</th></tr>
+    <tr><td><code>def g(): ... yield v</code></td><td>calling <code>g()</code> returns a generator; no body line runs yet</td></tr>
+    <tr><td><code>yield v</code></td><td>hand out <code>v</code>, pause with locals kept; resume after it on next <code>next()</code></td></tr>
+    <tr><td><code>return v</code> in a generator</td><td>ends it; <code>StopIteration.value == v</code></td></tr>
+    <tr><td><code>x = yield v</code> / <code>g.send(x)</code></td><td>two-way; <code>next(g)</code> ≡ <code>g.send(None)</code>; prime with <code>next</code> first</td></tr>
+    <tr><td><code>yield from it</code></td><td>yield every item of <code>it</code>, forward send/throw/close, evaluate to its return value</td></tr>
+    <tr><td><code>g.throw(exc)</code> / <code>g.close()</code></td><td>raise <code>exc</code> / <code>GeneratorExit</code> at the paused <code>yield</code>; <code>finally</code> runs</td></tr>
+    <tr><td><code>(expr for x in xs if c)</code></td><td>generator expression; lazy version of a list comprehension</td></tr>
   </table>
-  <h3>Definitions and "formulas"</h3>
+  <ul>
+    <li>States (<code>inspect.getgeneratorstate</code>): <code>GEN_CREATED</code> → <code>GEN_RUNNING</code>/<code>GEN_SUSPENDED</code> → <code>GEN_CLOSED</code>.</li>
+    <li>A <code>StopIteration</code> raised inside a generator body becomes <code>RuntimeError</code> (PEP 479); use <code>return</code>.</li>
+  </ul>
+  <h3>Lazy evaluation</h3>
   <table class="tbl">
-    <tr><th>Name</th><th>What Python actually does</th><th>Meaning of each part</th></tr>
-    <tr><td><code>for x in obj: body</code></td><td><code>it = iter(obj)</code>; loop: <code>try: x = next(it)</code> <code>except StopIteration: break</code>; <code>body</code></td><td><code>iter</code> calls <code>obj.__iter__()</code>; <code>next</code> calls <code>it.__next__()</code></td></tr>
-    <tr><td>Iterator</td><td><code>__next__</code> + <code>__iter__</code> returning <code>self</code></td><td>remembers a position; one pass</td></tr>
-    <tr><td>Iterable</td><td><code>__iter__</code> returning a new iterator</td><td>can be looped many times</td></tr>
-    <tr><td>Generator function</td><td>any <code>def</code> containing <code>yield</code></td><td>call → generator object; no body line runs</td></tr>
-    <tr><td><code>yield v</code></td><td>hand out <code>v</code>, pause, keep locals</td><td>resumes after the yield on the next <code>next()</code></td></tr>
-    <tr><td><code>x = yield v</code></td><td>as above, and <code>x</code> = value of the next <code>send</code></td><td><code>next(g)</code> ≡ <code>g.send(None)</code></td></tr>
-    <tr><td><code>yield from it</code></td><td><code>for v in it: yield v</code> (+ passes send/throw/close, returns its return value)</td><td>delegation</td></tr>
-    <tr><td><code>(expr for x in xs)</code></td><td>a generator</td><td>lazy version of <code>[expr for x in xs]</code></td></tr>
-    <tr><td><code>g.close()</code></td><td>raise <code>GeneratorExit</code> at the paused yield</td><td><code>finally</code> / <code>with</code> inside run</td></tr>
+    <tr><th></th><th>List <code>[...]</code></th><th>Generator <code>(...)</code></th></tr>
+    <tr><td>Memory</td><td>O(n): all items at once</td><td>O(1): one item (object ≈ 200 bytes)</td></tr>
+    <tr><td>Passes</td><td>many</td><td>one</td></tr>
+    <tr><td><code>len</code>, index, slice, sort</td><td>yes</td><td>no (<code>islice</code> for slicing)</td></tr>
+    <tr><td>Infinite data / stop early</td><td>no</td><td>yes</td></tr>
+    <tr><td>Speed on small data</td><td>often slightly faster</td><td>similar</td></tr>
   </table>
-  <h3>When to use, when not</h3>
-  <div class="cards">
-    <div><b>Use a generator</b><p>Big files, streams, infinite sequences, multi-step processing where each item can be handled alone, stopping early.</p><small>read → parse → filter → take</small></div>
-    <div><b>Use a list</b><p>Small data, need <code>len</code>, indexing, sorting, or two passes.</p><small><code>rows = list(gen)</code></small></div>
-    <div><b>Use a class iterator</b><p>When the iterator needs extra methods (reset, peek, length) or complex state that is clearer as attributes.</p><small>otherwise prefer a generator</small></div>
-    <div><b>Use itertools</b><p>Before writing any counter, chunker, chainer, running total or grouper by hand.</p><small>sort before groupby</small></div>
-  </div>
-  <div class="callout trap"><span class="label">Key traps</span>
-    <p>Second pass over an iterator is empty (silently); no <code>len</code>/indexing; <code>in</code> consumes; a stray <code>yield</code> stops the function running when called; returning a generator from inside <code>with open</code> → closed file; <code>groupby</code> needs sorted input; prime before <code>send</code>; <code>tee</code> can buffer everything.</p>
-  </div>
-  <h3>Five rapid-fire checks</h3>
+  <ul>
+    <li>Measure real memory with <code>tracemalloc</code>; <code>sys.getsizeof(list)</code> counts only the pointer array.</li>
+    <li>Pipelines are pull-based: nothing runs until the final consumer asks. One <code>list()</code>/<code>sorted()</code> in the middle makes everything before it eager.</li>
+    <li>Batches: <code>itertools.batched(it, n)</code> (3.12+) or <code>while chunk := list(islice(it, n)): yield chunk</code>.</li>
+  </ul>
+  <h3>itertools</h3>
   <table class="tbl">
-    <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td><code>g = (x for x in [60, 45, 90, 30])</code>; <code>sum(g), sum(g)</code>?</td><td><code>(225, 0)</code></td></tr>
-    <tr><td>What prints when you call a generator function that has a print on its first line?</td><td>Nothing; the print runs on the first <code>next()</code></td></tr>
-    <tr><td><code>iter(f) is f</code> for an open file?</td><td><code>True</code>: a file is its own iterator, so it is one-pass</td></tr>
-    <tr><td>Running-total generator: <code>next</code>, then <code>send(60)</code>, <code>send(45)</code>. Last result?</td><td>105</td></tr>
-    <tr><td>Peak memory, sum over 10M items: list vs generator?</td><td>About 409 MB vs about 0.0005 MB</td></tr>
+    <tr><th>Tool</th><th>Does</th></tr>
+    <tr><td><code>count</code>, <code>cycle</code>, <code>repeat</code></td><td>infinite streams</td></tr>
+    <tr><td><code>islice(it, start, stop, step)</code></td><td>slice any iterator</td></tr>
+    <tr><td><code>chain(a, b)</code> / <code>chain.from_iterable</code></td><td>concatenate / flatten one level</td></tr>
+    <tr><td><code>accumulate(xs, func)</code></td><td>running totals (or any running reduce)</td></tr>
+    <tr><td><code>takewhile</code> / <code>dropwhile</code></td><td>take / skip while a predicate holds</td></tr>
+    <tr><td><code>groupby(it, key)</code></td><td>groups of <em>consecutive</em> equal keys: sort first</td></tr>
+    <tr><td><code>pairwise</code>, <code>batched</code></td><td>neighbouring pairs; tuples of n</td></tr>
+    <tr><td><code>tee(it, n)</code></td><td>n independent iterators; buffers the gap</td></tr>
+    <tr><td><code>zip_longest</code>, <code>product</code>, <code>permutations</code>, <code>combinations</code></td><td>padding zip; combinatorics</td></tr>
   </table>
+  <h3>Gotchas</h3>
+  <ul>
+    <li>Second pass over an iterator is silently empty (<code>sum(g), sum(g)</code> → <code>(225, 0)</code>).</li>
+    <li>No <code>len()</code>/indexing on generators; <code>x in gen</code> consumes items up to the match.</li>
+    <li>A <code>yield</code> anywhere in a function makes calling it run nothing.</li>
+    <li><code>return (... for line in f)</code> inside <code>with open</code> → <code>ValueError: I/O operation on closed file</code>; use <code>yield from</code> inside the <code>with</code>.</li>
+    <li><code>send(non-None)</code> to a just-started generator → <code>TypeError</code>.</li>
+    <li><code>zip</code> stops silently at the shortest input; use <code>strict=True</code>.</li>
+    <li>Modifying a list while iterating over it skips items.</li>
+  </ul>
 
-  <h2 id="pi-qa"><span class="num">11</span>Questions &amp; Answers</h2>
+  <h2 id="pi-qa"><span class="num">10</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>What does a <code>for</code> loop actually do?</summary><div class="qa-body"><code>it = iter(obj)</code> (calls <code>obj.__iter__()</code>), then repeatedly <code>x = next(it)</code> (calls <code>it.__next__()</code>) and runs the body, until <code>next</code> raises <code>StopIteration</code>, which the loop catches silently and stops.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Iterable vs iterator?</summary><div class="qa-body">An iterable has <code>__iter__</code> and returns a fresh iterator each time (list, dict, str), so it can be looped many times. An iterator has <code>__next__</code>, remembers its position, and returns itself from <code>__iter__</code>, so it can be consumed only once. Every iterator is iterable; not every iterable is an iterator.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span><code>yield</code> vs <code>return</code>?</summary><div class="qa-body"><code>return</code> ends the function and throws away its local variables. <code>yield</code> hands back a value and <em>pauses</em>, keeping the local variables and the current line for the next <code>next()</code>. A <code>return</code> inside a generator ends it (raises StopIteration, carrying the return value).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does "a generator pauses" mean concretely?</summary><div class="qa-body">The generator object stores the function's code, its local variables (its frame) and the position of the last <code>yield</code>. Between <code>next()</code> calls nothing is running; the object just keeps that saved state in memory. The next <code>next()</code> continues from the line after that <code>yield</code> with the same variables. <code>inspect.getgeneratorstate</code> shows GEN_SUSPENDED.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What's the output? <code>g = (x for x in [1, 2, 3])</code>; <code>print(sum(g), list(g))</code></summary><div class="qa-body"><code>6 []</code>. <code>sum</code> uses up the generator; the second consumer gets nothing, with no error.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How would you process a 50 GB CSV on an 8 GB laptop?</summary><div class="qa-body">Never load it whole. Stream it: iterate the file line by line in a generator pipeline (read → parse → filter → aggregate), or use <code>pd.read_csv(path, chunksize=100_000)</code> and combine per-chunk results. Memory stays at about one chunk.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why do generators make class iterators mostly unnecessary?</summary><div class="qa-body">A class iterator must store its position on <code>self</code> and raise <code>StopIteration</code> by hand. A generator's paused frame already stores every local variable and the current line, and Python generates <code>__iter__</code>/<code>__next__</code>/<code>StopIteration</code> for it. <code>OrderReader</code> was 17 lines; <code>orders()</code> is 9, same output.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks in a pipeline if one stage is a list comprehension instead of a generator?</summary><div class="qa-body">That stage reads its entire input before passing anything on, so laziness is lost from that point back to the source: memory grows to the full data and early stopping no longer saves work. In the billion-line demo, <code>[r for r in rows if …]</code> would read all 10⁹ lines before the first cold coffee came out.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why is a generator's <code>close()</code> the bridge to context managers?</summary><div class="qa-body">A generator paused at <code>yield</code> inside <code>try/finally</code> is a "setup, pause, cleanup" machine: code before the yield is setup, the pause is where the caller works, and <code>finally</code> runs when the generator is resumed, closed or thrown an exception. <code>@contextmanager</code> uses exactly this to make a <code>with</code> block from a generator.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why does <code>return (line for line in f)</code> inside <code>with open(...) as f</code> fail?</summary><div class="qa-body">Returning leaves the <code>with</code> block, which closes the file. The generator expression has not read anything yet; its first <code>next</code> reads a closed file: <code>ValueError: I/O operation on closed file</code>. Make the function itself a generator (<code>yield from</code> inside the <code>with</code>) so it pauses while the file is open.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What do <code>send</code> and <code>yield from</code> do?</summary><div class="qa-body"><code>g.send(v)</code> resumes a paused generator and makes the <code>yield</code> expression evaluate to <code>v</code> (prime with <code>next</code> first). <code>yield from it</code> yields every item of <code>it</code>, forwards send/throw/close to it, and evaluates to its return value. Both are the roots of coroutines and <code>async</code>/<code>await</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why did <code>groupby</code> give masala chai twice?</summary><div class="qa-body"><code>itertools.groupby</code> groups only <em>consecutive</em> equal keys, because it is lazy and cannot look ahead. Our orders were chai, samosa, cold coffee, chai. Sort by the same key first, or count with a dict/<code>collections.Counter</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>When is a list better than a generator?</summary><div class="qa-body">When the data fits in memory and you need <code>len</code>, indexing, slicing, sorting, random access or more than one pass. Lists are also slightly faster for small data and easier to debug (you can print them).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does a <code>for</code> loop actually do?</summary><div class="qa-body"><code>it = iter(obj)</code> (calls <code>obj.__iter__()</code>), then repeatedly <code>x = next(it)</code> (calls <code>it.__next__()</code>) and runs the body, until <code>next</code> raises <code>StopIteration</code>. The loop catches that exception and stops without an error.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between an iterable and an iterator?</summary><div class="qa-body">An iterable has <code>__iter__</code> and returns a fresh iterator each time (list, dict, str), so it can be looped many times. An iterator has <code>__next__</code>, remembers its position, and returns itself from <code>__iter__</code>, so it can be consumed only once. Every iterator is iterable; not every iterable is an iterator.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Is <code>range</code> an iterator? Is a file?</summary><div class="qa-body"><code>range</code> is not: it is a lazy immutable sequence with <code>len</code>, indexing and O(1) membership (<code>iter(r) is r</code> is <code>False</code>), so it can be looped repeatedly. A file object is an iterator (<code>iter(f) is f</code>): each <code>next</code> reads a line, and a second loop gets nothing unless you <code>seek(0)</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you make your own class iterable?</summary><div class="qa-body">Implement <code>__iter__</code> so that it returns a new iterator. The simplest way is to write <code>__iter__</code> as a generator (<code>def __iter__(self): for x in self.items: yield x</code>). Alternatively, return an instance of a separate iterator class with <code>__next__</code>. Avoid returning <code>self</code> from a container, because then it can only be looped once.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span><code>yield</code> vs <code>return</code>?</summary><div class="qa-body"><code>return</code> ends the function and discards its local variables. <code>yield</code> hands back a value and <em>pauses</em>, keeping the local variables and the current position for the next <code>next()</code>. A <code>return</code> inside a generator ends it by raising <code>StopIteration</code>, which carries the return value in <code>.value</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What happens when you call a generator function?</summary><div class="qa-body">None of its body runs. Python creates a generator object holding the code, a frame for its locals, and the current position (state <code>GEN_CREATED</code>). The body runs only when you call <code>next()</code> or iterate, and then only up to the next <code>yield</code>. That is why a function that accidentally contains a <code>yield</code> "does nothing" when called.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What's the output? <code>g = (x for x in [1, 2, 3]); print(sum(g), list(g))</code></summary><div class="qa-body"><code>6 []</code>. <code>sum</code> exhausts the generator, and the second consumer gets nothing, with no error.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>List comprehension vs generator expression: when do you use each?</summary><div class="qa-body">A list comprehension builds all items now. It uses O(n) memory and supports <code>len</code>, indexing, sorting and repeated passes. A generator expression yields items on demand with O(1) memory, but allows only one pass. Use a generator for large or streamed data feeding a single consumer (<code>sum(x*x for x in data)</code>), and a list when you need the data more than once or it is small.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why can't you call <code>len()</code> on a generator?</summary><div class="qa-body">A generator produces values on demand and does not know how many it will produce until it runs to the end; it may even be infinite. To count, consume it with <code>sum(1 for _ in g)</code> (which uses it up) or materialise it with <code>list(g)</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How would you process a 50 GB CSV on an 8 GB laptop?</summary><div class="qa-body">Never load it whole. Stream it: iterate over the file line by line in a generator pipeline (read → parse → filter → aggregate), or use <code>pd.read_csv(path, chunksize=100_000)</code> and combine per-chunk results (sums, counts, partial aggregates). Memory stays at about one chunk. Steps that need all the data, such as sorting, are done on the reduced output or with an external sort.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does <code>yield from</code> do, and how is it different from <code>for x in it: yield x</code>?</summary><div class="qa-body">For plain iteration they are equivalent. <code>yield from</code> also forwards <code>send()</code>, <code>throw()</code> and <code>close()</code> to the sub-generator, and evaluates to the sub-generator's <code>return</code> value. That makes it the correct way to delegate to another generator, and it was the basis of pre-<code>async</code> coroutines.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does <code>send()</code> do, and why must a generator be primed?</summary><div class="qa-body"><code>g.send(v)</code> resumes the generator and makes the paused <code>yield</code> expression evaluate to <code>v</code>, then returns the next yielded value. A new generator has not reached any <code>yield</code> yet, so there is nowhere to deliver <code>v</code>. Call <code>next(g)</code> (or <code>g.send(None)</code>) first; otherwise you get <code>TypeError: can't send non-None value to a just-started generator</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What happens when a generator is closed early?</summary><div class="qa-body"><code>g.close()</code> (also called when the generator is garbage-collected) raises <code>GeneratorExit</code> at the paused <code>yield</code>, so <code>finally</code> blocks and <code>with</code> blocks inside the generator run their cleanup. If the generator catches it and yields again, Python raises <code>RuntimeError: generator ignored GeneratorExit</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What happens if code inside a generator raises <code>StopIteration</code>?</summary><div class="qa-body">Since Python 3.7 (PEP 479) it is converted to <code>RuntimeError: generator raised StopIteration</code>. Before that it would silently end the generator and hide bugs, for example a bare <code>next(other)</code> on an exhausted iterator. To end a generator, use <code>return</code>; when calling <code>next</code> inside one, use <code>next(it, default)</code> or catch the exception.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does <code>return (line for line in f)</code> inside <code>with open(...) as f</code> fail?</summary><div class="qa-body">Returning leaves the <code>with</code> block, which closes the file before the generator expression has read anything. Its first <code>next</code> raises <code>ValueError: I/O operation on closed file</code>. Make the function itself a generator (<code>yield from</code> inside the <code>with</code>) so it pauses while the file is still open.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does <code>itertools.groupby</code> return the same key twice?</summary><div class="qa-body">It groups only <em>consecutive</em> equal keys, because it is lazy and cannot look ahead. Sort by the same key first, or use a dict or <code>collections.Counter</code>/<code>defaultdict(list)</code> when you just need totals per key.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>You need to iterate over a generator twice. What are the options?</summary><div class="qa-body">(1) Materialise it with <code>list(gen)</code> if it fits in memory. (2) Recreate it by calling the generator function again. (3) Compute everything in one pass. (4) <code>itertools.tee(gen, 2)</code>, which buffers items that one copy has seen and the other has not, so it degrades to a list if the copies drift far apart.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What's the output? <code>g = (c for c in "abcd"); print("b" in g, list(g))</code></summary><div class="qa-body"><code>True ['c', 'd']</code>. Membership testing iterates until it finds a match, consuming <code>'a'</code> and <code>'b'</code> along the way.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do generators relate to <code>async</code>/<code>await</code> coroutines?</summary><div class="qa-body">Both are suspendable functions with a saved frame. Generator-based coroutines (<code>yield</code>/<code>send</code>/<code>yield from</code>) were how asyncio was first built. Native coroutines (<code>async def</code>, <code>await</code>) are a separate type built on the same suspend-and-resume machinery, with the event loop doing the resuming. See <a class="xref" data-note="py_asyncio">asyncio</a>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When would you write an iterator class instead of a generator?</summary><div class="qa-body">When the iterator needs extra methods or inspectable state (<code>peek()</code>, <code>reset()</code>, <code>__len__</code>, a progress counter), or must be picklable or checkpointed mid-stream (generators cannot be pickled). Otherwise a generator is shorter and less error-prone.</div></details>
 </main>
 `
 });
