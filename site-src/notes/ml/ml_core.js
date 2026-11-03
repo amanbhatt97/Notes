@@ -3,111 +3,45 @@ Object.assign(TOPIC_CONTENT, {
   "ml_core": `<main>
   <h1>Bias, Variance &amp; Generalization</h1>
   <div class="where"><span>Machine Learning</span><span>Foundations</span><span>Bias, Variance &amp; Generalization</span></div>
-  <p class="lead">A model is only useful on rows it has never seen. This note explains why a model that is perfect on its training data can fail on new data, and gives you the tools to measure, predict and fix that failure. You will meet underfitting and overfitting, model capacity, the bias–variance decomposition (derived line by line and checked by simulation), irreducible error, learning curves, validation curves, a diagnosis table for "high bias vs high variance", and the modern twist called double descent. The running example is the one used across the Foundations group: <strong>ten flats in Pune</strong> (area → price), plus four new flats sold the following month. Every formula is first worked by hand on those numbers; a sine-wave simulation then shows the same ideas where the truth is curved.</p>
+  <p class="lead">A model is only useful on rows it has never seen, and the previous note showed how to measure that honestly. This note explains <em>why</em> a model that looks perfect on its training data can fail on new data, and what to do about it. The central idea is the bias–variance trade-off: every model's error on new data is made of three parts, one from being too rigid, one from being too sensitive to the particular sample it learned from, and one that no model can remove. Knowing which part is hurting you tells you whether to collect more data, use a bigger model, add features or regularise, which saves weeks of wasted effort in real projects and is one of the most common topics in ML interviews. The running example is again <strong>ten flats in Pune</strong>, priced by area, plus four new flats sold the following month that we use as unseen data; a simulated sine wave shows the same ideas where the true pattern is curved.</p>
 
-  <h2 id="bv-fit" class="open"><span class="num">★</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 660 200" width="660">
-<defs><marker id="bv-a0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<text x="330" y="16" text-anchor="middle" class="tm" font-size="11">Machine Learning › Foundations</text>
-<rect x="20" y="32" width="170" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="105" y="57" text-anchor="middle" font-size="12.5">What is ML</text>
-<rect x="240" y="32" width="170" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="325" y="50" text-anchor="middle" font-size="12.5">Train/Val/Test</text><text x="325" y="65" text-anchor="middle" font-size="11" class="tm">&amp; Cross-Validation</text>
-<rect x="460" y="26" width="180" height="52" rx="8" class="fg sg" stroke-width="3"/><text x="550" y="47" text-anchor="middle" font-size="12.5" font-weight="700">Bias, Variance &amp;</text><text x="550" y="62" text-anchor="middle" font-size="12.5" font-weight="700">Generalization</text><text x="550" y="74" text-anchor="middle" font-size="10" class="tg">YOU ARE HERE</text>
-<line x1="190" y1="52" x2="238" y2="52" stroke="currentColor" marker-end="url(#bv-a0)"/>
-<line x1="410" y1="52" x2="458" y2="52" stroke="currentColor" marker-end="url(#bv-a0)"/>
-<line x1="550" y1="78" x2="550" y2="104" stroke="currentColor"/><line x1="550" y1="104" x2="95" y2="104" stroke="currentColor"/><line x1="95" y1="104" x2="95" y2="124" stroke="currentColor" marker-end="url(#bv-a0)"/>
-<rect x="20" y="126" width="150" height="40" rx="8" class="fb sb"/><text x="95" y="145" text-anchor="middle" font-size="12">Loss Functions &amp;</text><text x="95" y="159" text-anchor="middle" font-size="12">Gradient Descent</text>
-<rect x="185" y="126" width="140" height="40" rx="8" class="fb sb"/><text x="255" y="151" text-anchor="middle" font-size="12">Regularization</text>
-<rect x="340" y="126" width="140" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="410" y="151" text-anchor="middle" font-size="12">Feature Engineering</text>
-<rect x="495" y="126" width="145" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="567" y="145" text-anchor="middle" font-size="12">Pipelines &amp;</text><text x="567" y="159" text-anchor="middle" font-size="12">Data Leakage</text>
-<line x1="170" y1="146" x2="183" y2="146" stroke="currentColor" marker-end="url(#bv-a0)"/><line x1="325" y1="146" x2="338" y2="146" stroke="currentColor" marker-end="url(#bv-a0)"/><line x1="480" y1="146" x2="493" y2="146" stroke="currentColor" marker-end="url(#bv-a0)"/>
-<text x="330" y="190" text-anchor="middle" class="tm" font-size="11">Blue boxes are the direct next steps: how a model is fitted, and how to control its variance.</text>
-</svg><figcaption>The Foundations group of the ML track. This note explains the gap between training and test error that the split note taught you to measure.</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: <a class="xref" data-note="ml_splits">Train/Val/Test &amp; Cross-Validation</a></b><span>You learnt to hold data back and score a model on rows it never saw, because the training score lies. On our ten flats the line had training MSE 4.6 but LOOCV MSE 7.25, and a lookup table scored 0 on its training flats and 17.0 lakh on held-out ones. That note told you <em>how to measure</em> the gap. It did not explain <em>why</em> the gap exists, how big it should be, or what to do about it.</span></li>
-    <li><b>This note adds: the theory of generalization</b><span>Why a model fails on new data (bias, variance, noise), a formula that splits test error into those three parts, the knob that trades them (capacity), and two plots that tell you which problem you have (learning and validation curves), with a fix table for each.</span></li>
-    <li><b>Leads to: <a class="xref" data-note="ml_loss_gd">Loss Functions &amp; Gradient Descent</a> and <a class="xref" data-note="ml_regularization">Regularization</a></b><span>Every model is fitted by minimising a training loss, which is exactly the number that can lie. The next note shows what that loss is and how gradient descent minimises it (reaching price = 6 × area + 10 step by step). Regularization is the main tool for moving a model along the bias–variance curve on purpose. Every model family later (trees, kNN, SVMs, ensembles) is described by where it sits on that curve.</span></li>
-  </ol>
-  <p>You only need the idea of a mean and a variance (<a class="xref" data-note="st_descriptive">Descriptive Statistics</a>) and of an expected value (<a class="xref" data-note="st_probability">Probability</a>). Both are re-explained in one line where they are used.</p>
-
-  <h2 id="bv-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
-  <p>The whole note as one chain. Each concept answers the question above it; its weakness raises the next question. The numbers are from the ten flats A–J and the four new flats K–N.</p>
-  <ol class="story">
-    <li><b>Generalization</b><span>Q: what are we actually trying to be good at? → New flats, not the ten we trained on. The memoriser (1-NN) has training MSE 0 but 6.5 on the new flats; the line has 4.6 and 2.6. So why do flexible models fail on new data?</span></li>
-    <li><b>Underfitting and overfitting</b><span>Q: what are the two ways to fail? → Too rigid (always ₹67 lakh: train 301.6, new 273.5) or too flexible (degree 9: train 0, new 23.4). Three flats and a parabola show it by hand: train 0, error 1,849 on flat H. Is there one dial behind both?</span></li>
-    <li><b>Capacity</b><span>Q: what is the dial? → How many patterns a model family can fit: degree, depth, 1/k, 1/λ. Degree 9 has 10 coefficients for 10 flats, so it can always memorise. But why exactly does error go down then up as the dial turns?</span></li>
-    <li><b>Bias–variance decomposition</b><span>Q: what is test error made of? → Bias² + variance + noise. By hand at a 950 sq ft flat: 4 = 1 + 2 + 1. But the formula needs many training sets and the true rule, which we never have…</span></li>
-    <li><b>Simulation</b><span>Q: can we measure each part? → In a simulated "flats world" (price = 6 × area + 10 + noise): the mean has bias² 229.5, the line ≈ 0 bias and variance 0.70, degree 9 variance 26.2. What does that look like as capacity grows?</span></li>
-    <li><b>The trade-off curve</b><span>Q: where is the best capacity? → Bias² falls, variance rises, test error is U-shaped; the bottom is the sweet spot (degree 1 for flats, degree 3 for the sine). But the noise floor sits under every model. What is it?</span></li>
-    <li><b>Irreducible error</b><span>Q: how low can error go? → Down to the noise given the features. "Irreducible" is relative: adding locality cuts the flats' LOOCV MSE from 7.25 to 1.16. On real data we cannot simulate; which plots show bias and variance from one dataset?</span></li>
-    <li><b>Learning curves</b><span>Q: will more data help? → Vary the training size: the mean stays near 250 whatever n (bias), 1-NN keeps a gap (variance), the line drops to the noise floor 4. But that fixes the model; how do we pick capacity?</span></li>
-    <li><b>Validation curves</b><span>Q: which degree or k is best? → Vary one knob, score by CV: on the ten flats LOOCV MSE is 372 → 7.3 → 12.0 → … → 6,073 by degree, best at 1; kNN best at k = 2 (36.9). Now: what do we change next?</span></li>
-    <li><b>Diagnose and fix</b><span>Q: high bias or high variance, and what to do? → Avoidable bias = train − baseline, variance = val − train. Mean price: bias; 1-NN and degree 6: variance; the line: a small variance gap (2.7) that more data or regularization can close. But is "more capacity = more overfitting" always true?</span></li>
-    <li><b>Double descent</b><span>Q: why do huge models still generalise? → Past the point where parameters = rows (degree 9 for ten flats), minimum-norm solutions act as implicit regularization and test error can fall again. Next: how is the training loss itself defined and minimised? → <a class="xref" data-note="ml_loss_gd">Loss Functions &amp; Gradient Descent</a>.</span></li>
-  </ol>
-
-  <h2 id="bv-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="bv-map"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">Bias, Variance &amp; Generalization</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">Generalization</div>
+        <div class="mm-title">The goal</div>
         <ul>
-          <li><b>Goal</b> — low error on <em>new</em> rows from the same source, not on the training rows</li>
-          <li><b>Training error</b> (empirical risk) vs <b>test error</b> (true risk); <b>gap</b> = test − train</li>
-          <li>Flats: memoriser (1-NN) train MSE 0, new flats 6.5 · line: train 4.6, new 2.6</li>
-          <li>Needs <b>i.i.d.</b>: new rows come from the same distribution</li>
-          <li>💡 Mugging up last year's paper vs understanding the chapter</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Under / overfitting</div>
-        <ul>
-          <li><b>Underfit</b> — too simple; train and val both high, small gap</li>
-          <li><b>Overfit</b> — fits noise; train low, val much higher</li>
-          <li>Flats D, E, F: parabola train MSE 0, error² 1,849 on flat H</li>
-          <li>Sine demo: val MSE 0.592 (deg 0) → 0.122 (deg 5) → 0.701 (deg 9)</li>
-          <li><b>Capacity</b> — how many patterns a model can fit; degree, depth, 1/k, 1/λ, #params</li>
-          <li>n points → degree n−1 fits them exactly (degree 9 for 10 flats)</li>
+          <li><b>Generalization</b>: low error on new rows</li>
+          <li>Gap = test error − training error</li>
+          <li><b>Underfit</b>: both errors high; <b>overfit</b>: training low, test high</li>
+          <li><b>Capacity</b>: how many patterns a model can fit</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">The decomposition</div>
         <ul>
-          <li><b>E[(y − f̂)²] = Bias² + Variance + σ²</b></li>
-          <li><b>Bias</b> = f̄ − f: average model vs truth · <b>Variance</b> = E[(f̂ − f̄)²]: spread across training sets</li>
-          <li>By hand at 950 sq ft: preds 64, 66, 66, 68, truth 67, noise ±1 → 4 = 1 + 2 + 1</li>
-          <li>Flats world: mean bias² 229.5; line var 0.70; degree 9 var 26.2; 1-NN 3.49 + 3.95</li>
-          <li>Biased can win: shrink x̄ by c = 0.556 → MSE 0.80 → 0.44</li>
+          <li>Test MSE = <b>bias²</b> + <b>variance</b> + <b>noise</b></li>
+          <li>Bias: the average model misses the truth</li>
+          <li>Variance: models from different samples disagree</li>
+          <li>Noise: the floor no model beats with these features</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">The curve &amp; noise</div>
+        <div class="mm-title">Seeing it on real data</div>
         <ul>
-          <li>Capacity ↑ → bias² ↓, variance ↑ → test error is U-shaped</li>
-          <li>Sine sim: degree 3 best (0.117); degree 13 variance 3.06</li>
-          <li><b>Irreducible error σ²</b> — noise + missing features; floor for every model</li>
-          <li>Flats: add locality → LOOCV MSE 7.25 → 1.16; rent: add floor → RMSE 2,506 → 1,000</li>
-          <li>Classification: <b>Bayes error</b> = average of min(p, 1−p)</li>
+          <li><b>Learning curve</b>: error vs amount of data</li>
+          <li><b>Validation curve</b>: error vs one capacity knob</li>
+          <li>Avoidable bias = train − baseline; variance = val − train</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Diagnose with curves</div>
+        <div class="mm-title">Fixes</div>
         <ul>
-          <li><b>Learning curve</b> — error vs training size; high bias: both flat &amp; high, tiny gap; high variance: big gap that closes slowly</li>
-          <li>Flats world: mean stuck near 250; line → 4; 1-NN gap stays ≈ 8</li>
-          <li><b>Validation curve</b> — error vs one hyperparameter; flats LOOCV best at degree 1 (7.3), k = 2 (36.9)</li>
-          <li>Avoidable bias = train − baseline · variance = val − train</li>
-          <li>⚠ More data never fixes bias</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Fixes &amp; modern view</div>
-        <ul>
-          <li><b>High bias</b> → bigger model, more features, less regularization, train longer</li>
-          <li><b>High variance</b> → more data, regularize, simpler model, early stopping, bagging</li>
-          <li>Bagging cuts variance; boosting cuts bias</li>
-          <li><b>Double descent</b> — test error peaks at p = n (56.6) then falls again (0.96 at p = 300)</li>
-          <li>Ridge removes the peak (1.78 at p = n)</li>
+          <li>High bias: bigger model, better features, less regularisation</li>
+          <li>High variance: more data, regularise, simpler model, bagging</li>
+          <li>More data never fixes bias</li>
+          <li>Double descent: huge models can generalise again</li>
         </ul>
       </div>
     </div>
@@ -116,132 +50,80 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="bv-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain</span></div></div>
-      <div class="rm-item rm-done" data-target="bv-gen"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Generalization</span><span class="rm-sub">Ten flats, four new ones</span></div></div>
-      <div class="rm-item rm-done" data-target="bv-uo"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Under- &amp; Overfitting</span><span class="rm-sub">The polynomial demo</span></div></div>
-      <div class="rm-item rm-done" data-target="bv-cap"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Model Capacity</span><span class="rm-sub">The knob in every model</span></div></div>
-      <div class="rm-item rm-done" data-target="bv-derive"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">The Decomposition, Derived</span><span class="rm-sub">Bias² + variance + noise</span></div></div>
-      <div class="rm-item rm-done" data-target="bv-sim"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Estimating by Simulation</span><span class="rm-sub">2,000 sets of ten flats</span></div></div>
-      <div class="rm-item rm-done" data-target="bv-curve"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">The Trade-off Curve</span><span class="rm-sub">The U and the sweet spot</span></div></div>
-      <div class="rm-item rm-done" data-target="bv-noise"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Irreducible Error</span><span class="rm-sub">Noise, missing features, Bayes error</span></div></div>
-      <div class="rm-item rm-done" data-target="bv-lc"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Learning Curves</span><span class="rm-sub">Error vs amount of data</span></div></div>
-      <div class="rm-item rm-done" data-target="bv-vc"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Validation Curves</span><span class="rm-sub">Error vs one hyperparameter</span></div></div>
-      <div class="rm-item rm-done" data-target="bv-fix"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Diagnose &amp; Fix</span><span class="rm-sub">High bias vs high variance</span></div></div>
-      <div class="rm-item rm-done" data-target="bv-dd"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Double Descent</span><span class="rm-sub">The modern twist</span></div></div>
-      <div class="rm-item rm-done" data-target="bv-connect"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One diagram, one table</span></div></div>
-      <div class="rm-item rm-done" data-target="bv-compare"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Comparisons</span><span class="rm-sub">Model families on the curve</span></div></div>
-      <div class="rm-item rm-done" data-target="bv-traps"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Interview and code traps</span></div></div>
-      <div class="rm-item rm-done" data-target="bv-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note on one page</span></div></div>
-      <div class="rm-item rm-done" data-target="bv-qa"><span class="rm-num">15</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
+      <div class="rm-item rm-done" data-target="bv-gen"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Generalization</span><span class="rm-sub">what we are really trying to be good at</span></div></div>
+      <div class="rm-item rm-done" data-target="bv-uo"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Underfitting and Overfitting</span><span class="rm-sub">too rigid and too flexible</span></div></div>
+      <div class="rm-item rm-done" data-target="bv-cap"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Model Capacity</span><span class="rm-sub">the flexibility dial in every model</span></div></div>
+      <div class="rm-item rm-done" data-target="bv-derive"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">The Bias–Variance Decomposition</span><span class="rm-sub">splitting test error into three parts</span></div></div>
+      <div class="rm-item rm-done" data-target="bv-sim"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Measuring Bias and Variance</span><span class="rm-sub">simulating many training sets</span></div></div>
+      <div class="rm-item rm-done" data-target="bv-curve"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">The Bias–Variance Trade-off</span><span class="rm-sub">the U-curve and the sweet spot</span></div></div>
+      <div class="rm-item rm-done" data-target="bv-noise"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Irreducible Error</span><span class="rm-sub">noise, missing features, Bayes error</span></div></div>
+      <div class="rm-item rm-done" data-target="bv-lc"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Learning Curves</span><span class="rm-sub">will more data help?</span></div></div>
+      <div class="rm-item rm-done" data-target="bv-vc"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Validation Curves</span><span class="rm-sub">which setting of the knob?</span></div></div>
+      <div class="rm-item rm-done" data-target="bv-fix"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Diagnosing and Fixing</span><span class="rm-sub">high bias vs high variance</span></div></div>
+      <div class="rm-item rm-done" data-target="bv-dd"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Double Descent</span><span class="rm-sub">why huge models still work</span></div></div>
+      <div class="rm-item rm-done" data-target="bv-traps"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">choosing by training score, buying data</span></div></div>
+      <div class="rm-item rm-done" data-target="bv-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">formulas, fix table, curve reading</span></div></div>
+      <div class="rm-item rm-done" data-target="bv-qa"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">the questions interviewers ask on this topic</span></div></div>
     </div>
   </div>
 
-  <h2 id="bv-gen"><span class="num">01</span>Generalization: The Real Goal</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The previous note measured the gap honestly: the line's training MSE on the ten flats is 4.6, its leave-one-out MSE 7.25. But a measurement is not an explanation. What exactly are we trying to be good at, and why should a model that is good on its training rows ever be bad on new ones?</p>
-  </div>
-  <h3>The need</h3>
-  <p>The portal fitted its price model on last year's sales. Nobody cares how well it prices <em>those</em> flats: their prices are already known. The model is only worth money on <strong>next month's</strong> listings. The ability to do well on new rows from the same source is called <strong>generalization</strong>, and it is the only thing that matters in machine learning.</p>
-  <p>The difficulty: the model is built by making it good on the training rows. Being good on the training rows and being good on new rows are <em>not</em> the same thing. This whole note is about the difference.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Two students prepare for the board exam with last year's paper. Ravi mugs up every answer word for word. Asha understands each chapter. On last year's paper both score 100. On this year's paper, with new questions on the same syllabus, Asha still scores well and Ravi collapses. The training paper could not tell them apart. Only new questions can.</p>
-  </div>
-  <h3>Training error vs test error</h3>
-  <ul>
-    <li><strong>Training error</strong>: the average loss on the rows the model learnt from. Cheap to compute, and always too optimistic.</li>
-    <li><strong>Test (generalization) error</strong>: the average loss on new rows from the same source. This is what we want, but we can only estimate it on held-out data (<a class="xref" data-note="ml_splits">Train/Val/Test &amp; Cross-Validation</a>).</li>
-    <li><strong>Generalization gap</strong> = test error − training error. A large gap means the model learnt things about its training rows that are not true in general.</li>
-  </ul>
-  <h3>The running example: ten flats and four new ones</h3>
-  <p>The ten flats A–J (area x in hundreds of sq ft, price y in ₹ lakh) are the training rows. The following month four more flats sell, K to N; we keep them as new rows to test on.</p>
+  <h2 id="bv-gen"><span class="num">01</span>Generalization</h2>
+  <p>The portal fitted its price model on last year's sales. Nobody cares how well it prices <em>those</em> flats, because their prices are already known. The model only earns money on next month's listings. The ability of a model to do well on new rows from the same source is called <strong>generalization</strong>, and it is the only thing that really matters in machine learning. The difficulty is that a model is built by making it good on its training rows, and being good on the training rows is not the same thing as being good on new rows. This whole note is about the difference.</p>
+  <p>Think of two students preparing for an exam with last year's paper. Ravi learns every answer by heart, word for word. Asha works through each chapter until she understands it. On last year's paper both score 100. On this year's paper, with new questions on the same syllabus, Asha still does well and Ravi collapses. Last year's paper could not tell them apart; only new questions could.</p>
+  <p>Models behave the same way. The ten flats A–J (area in hundreds of sq ft, price in ₹ lakh) are our training rows, and the following month four more flats sell, which we keep as new rows to test on:</p>
   <table class="tbl">
     <tr><th></th><th colspan="10">training flats A–J</th><th colspan="4">new flats K–N</th></tr>
-    <tr><td>x (area)</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td><td>10</td><td>11</td><td>12</td><td>13</td><td>14</td><td>6.4</td><td>8.7</td><td>10.3</td><td>13.6</td></tr>
-    <tr><td>y (price)</td><td>38</td><td>49</td><td>53</td><td>56</td><td>67</td><td>68</td><td>73</td><td>83</td><td>87</td><td>96</td><td>47</td><td>64</td><td>70</td><td>93</td></tr>
+    <tr><td>area x</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td><td>10</td><td>11</td><td>12</td><td>13</td><td>14</td><td>6.4</td><td>8.7</td><td>10.3</td><td>13.6</td></tr>
+    <tr><td>price y</td><td>38</td><td>49</td><td>53</td><td>56</td><td>67</td><td>68</td><td>73</td><td>83</td><td>87</td><td>96</td><td>47</td><td>64</td><td>70</td><td>93</td></tr>
   </table>
-  <h3>Worked by hand: a memoriser vs a straight line</h3>
-  <p><strong>Model A, the memoriser.</strong> "For a new flat, copy the price of the flat with the closest area." On the training flats it returns the stored price, so every training error is 0. On the new flats: K (6.4) is closest to B (6) → predicts 49 (true 47, error −2); L (8.7) → E (9) → 67 (true 64, −3); M (10.3) → F (10) → 68 (true 70, +2); N (13.6) → J (14) → 96 (true 93, −3). Test MSE = (4 + 9 + 4 + 9)/4 = <strong>6.50</strong>.</p>
-  <p><strong>Model B, the straight line</strong> fitted by least squares in <a class="xref" data-note="ml_intro">What is Machine Learning</a>: price = 6 × area + 10, with training misses −2, 3, 1, −2, 3, −2, −3, 1, −1, 2, so training MSE = 46/10 = <strong>4.6</strong>.</p>
-  <table class="tbl">
-    <tr><th>new flat</th><th>x</th><th>y</th><th>line ŷ = 6x + 10</th><th>error</th><th>error²</th></tr>
-    <tr><td>K</td><td>6.4</td><td>47</td><td>48.4</td><td>−1.4</td><td>1.96</td></tr>
-    <tr><td>L</td><td>8.7</td><td>64</td><td>62.2</td><td>1.8</td><td>3.24</td></tr>
-    <tr><td>M</td><td>10.3</td><td>70</td><td>71.8</td><td>−1.8</td><td>3.24</td></tr>
-    <tr><td>N</td><td>13.6</td><td>93</td><td>91.6</td><td>1.4</td><td>1.96</td></tr>
-    <tr><td colspan="5"><strong>test MSE</strong> = 10.4 / 4</td><td><strong>2.60</strong></td></tr>
-  </table>
-  <p>The memoriser wins on training data (0 vs 4.6) and loses on new data (6.50 vs 2.60). If you had picked the model by training error, you would have picked the wrong one. The same check in code (a 1-nearest-neighbour regressor <em>is</em> the memoriser):</p>
+  <p>Compare Ravi and Asha as models. Ravi is the <strong>memoriser</strong>: "for a new flat, copy the price of the training flat with the closest area" (a 1-nearest-neighbour model). On the training flats it returns their own stored prices, so every training error is zero. For K (6.4) it copies B (6) and says 49, against a true 47; for L (8.7) it copies E and says 67 (true 64); for M (10.3) it copies F, 68 (true 70); for N (13.6) it copies J, 96 (true 93). The errors are −2, −3, +2, −3, whose squares average (4 + 9 + 4 + 9) / 4 = 6.5. Asha is the straight line price = 6 × area + 10 from <a class="xref" data-note="ml_intro">What is Machine Learning</a>, whose training MSE is 4.6.</p>
   <div class="fx" data-lang="py">import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.neighbors import KNeighborsRegressor
 
 X_tr = np.array([5, 6, 7, 8, 9, 10, 11, 12, 13, 14]).reshape(-1, 1)   # the ten flats A..J
 y_tr = np.array([38, 49, 53, 56, 67, 68, 73, 83, 87, 96])
-X_te = np.array([[6.4], [8.7], [10.3], [13.6]])                        # four new flats K, L, M, N
-y_te = np.array([47, 64, 70, 93])
+X_new = np.array([[6.4], [8.7], [10.3], [13.6]])                       # new flats K, L, M, N
+y_new = np.array([47, 64, 70, 93])
 
 memo = KNeighborsRegressor(n_neighbors=1).fit(X_tr, y_tr)   # "copy the price of the nearest flat"
 line = LinearRegression().fit(X_tr, y_tr)
-print("line: price = %.1f x area + %.1f" % (line.coef_[0], line.intercept_))
 for name, m in [("memoriser", memo), ("line", line)]:
     tr = ((m.predict(X_tr) - y_tr) ** 2).mean()
-    te = ((m.predict(X_te) - y_te) ** 2).mean()
-    print(f"{name:9s} new-flat preds={m.predict(X_te).round(1)}  train MSE={tr:.2f}  test MSE={te:.2f}  gap={te - tr:.2f}")</div>
-  <div class="fx" data-lang="text">line: price = 6.0 x area + 10.0
-memoriser new-flat preds=[49. 67. 68. 96.]  train MSE=0.00  test MSE=6.50  gap=6.50
-line      new-flat preds=[48.4 62.2 71.8 91.6]  train MSE=4.60  test MSE=2.60  gap=-2.00</div>
-  <p>The numbers match the hand tables. The line's gap is even negative here (test error 2.6 below training error 4.6): with only four new flats, luck plays a part, and these four happen to sit close to the line. On average over many test sets, test error is higher than training error, because the model was tuned to its own training rows; leave-one-out on the ten flats (7.25 vs 4.6) shows the usual direction.</p>
-  <h3>The assumption that makes generalization possible</h3>
-  <p>Nothing can predict truly new <em>kinds</em> of data. Learning from the past only works if the future looks like the past. The formal version: training rows and future rows are <strong>i.i.d.</strong>, independent and identically distributed draws from the same unknown distribution P(x, y). When that breaks (a new metro line, a pandemic, a policy change), test error on old held-out data stops predicting live error. That problem is called <strong>distribution shift</strong> (the drift of <a class="xref" data-note="ml_intro">What is Machine Learning</a>, section 05).</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>For a model f̂ and a loss L: the <strong>empirical risk</strong> (training error) is R̂(f̂) = (1/n) Σᵢ L(yᵢ, f̂(xᵢ)) over the n training rows. The <strong>true risk</strong> (generalization error) is R(f̂) = E<sub>(x,y)~P</sub>[L(y, f̂(x))], the expected loss on a fresh row from the same distribution. The <strong>generalization gap</strong> is R(f̂) − R̂(f̂). A model <strong>generalizes</strong> when its true risk is low, not merely its empirical risk.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"My model has 99% training accuracy, so it is good." Training accuracy can always be pushed to 100% by memorising (a 1-NN model or an unpruned tree does it automatically). Only a held-out or cross-validated score says anything about generalization.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Underfitting and Overfitting.</b> The memoriser failed by being too flexible. Can a model also fail by being too rigid? And is there one family of models where we can turn flexibility up and down and watch both failures?</div>
+    te = ((m.predict(X_new) - y_new) ** 2).mean()
+    print(f"{name:9s} predictions for K..N {m.predict(X_new).round(1)}  train MSE {tr:.2f}  new-flat MSE {te:.2f}")</div>
+  <div class="fx" data-lang="text">memoriser predictions for K..N [49. 67. 68. 96.]  train MSE 0.00  new-flat MSE 6.50
+line      predictions for K..N [48.4 62.2 71.8 91.6]  train MSE 4.60  new-flat MSE 2.60</div>
+  <p>The memoriser wins on the training data (0 against 4.6) and loses on the new flats (6.50 against 2.60). If you had picked the model by training error, you would have picked the wrong one. Two terms name what we measured. <strong>Training error</strong> is the average loss on the rows the model learned from; it is cheap to compute and always too optimistic. <strong>Test error</strong> (or generalization error) is the expected loss on new rows from the same source; it is what we care about, and we estimate it on held-out data. Their difference, test error minus training error, is the <strong>generalization gap</strong>: a large gap means the model learned things about its training rows that are not true in general. The line's gap is actually negative here (2.6 below 4.6), only because four test flats are a small, lucky sample; on average a model does worse on new rows than on its own, and leave-one-out on the ten flats (MSE 7.25 against 4.6, from the previous note) shows the usual direction.</p>
+  <p>All of this rests on one assumption: new rows come from the same source as the training rows. The formal phrase is that the rows are <strong>i.i.d.</strong>, independent and identically distributed draws from the same unknown distribution. Learning from the past only works if the future looks like the past. When that breaks, because a new metro line opens or a policy changes, error measured on old held-out data stops predicting live error; that is the drift described in <a class="xref" data-note="ml_intro">What is Machine Learning</a>. The rest of this note assumes the future does look like the past, and asks why some models still fail on it.</p>
 
   <h2 id="bv-uo"><span class="num">02</span>Underfitting and Overfitting</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We saw one failure: a memoriser that copies its training flats and stumbles on new ones. Is "too flexible" the only way to fail, or can a model also be too rigid, and how would each failure look in the numbers?</p>
-  </div>
-  <h3>Plain words</h3>
-  <p><strong>Underfitting</strong>: the model is too simple to capture the real pattern. It is wrong on training rows and on new rows, in a systematic way. <strong>Overfitting</strong>: the model is flexible enough to follow the random noise in its training rows. It looks excellent on them and fails on new rows. Between the two is a model flexible enough for the pattern but not for the noise.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A tailor making a shirt from one measurement session. Underfit: he sells you a "free size" shirt, wrong for everybody. Overfit: he records the exact shape you had after a heavy lunch, including the bulge, and the shirt never fits again. A good tailor measures the real shape and ignores today's accident.</p>
-  </div>
-  <h3>Worked by hand: three flats, three polynomials</h3>
-  <p>Take only three flats, D (8, 56), E (9, 67) and F (10, 68), and keep flat H (12, 83) as the new point. To keep the arithmetic small, measure area from 9: u = x − 9, so D, E, F sit at u = −1, 0, 1 and H at u = 3. Fit a polynomial of degree 0 (a constant), 1 (a line) and 2 (a parabola) by least squares.</p>
-  <ul>
-    <li><strong>Degree 0</strong>: the best constant is the mean, (56 + 67 + 68)/3 = 63.667. Training errors −7.667, 3.333, 4.333 → MSE = (58.78 + 11.11 + 18.78)/3 = 29.556. For H it predicts 63.67: error² (83 − 63.67)² = 373.8.</li>
-    <li><strong>Degree 1</strong>: ū = 0, slope = [(−1)(−7.667) + 0 + (1)(4.333)] / [1 + 0 + 1] = 12/2 = 6, intercept 63.667. Predictions 57.667, 63.667, 69.667; errors −1.667, 3.333, −1.667 → MSE = (2.78 + 11.11 + 2.78)/3 = 5.556. For H: 63.667 + 6 × 3 = 81.67, error² 1.78.</li>
-    <li><strong>Degree 2</strong> has 3 coefficients and there are 3 points, so it passes through all of them. Write y = a + b·u + c·u²: u = 0 gives a = 67; u = 1 gives 67 + b + c = 68; u = −1 gives 67 − b + c = 56. Adding the last two: 134 + 2c = 124, so c = −5 and b = 6. Training MSE = <strong>0</strong>. For H (u = 3): 67 + 18 − 45 = 40, error² (83 − 40)² = <strong>1,849</strong>.</li>
-  </ul>
+  <p>The memoriser failed by being too flexible: it followed every detail of its training flats. A model can also fail the opposite way. <strong>Underfitting</strong> means the model is too simple to capture the real pattern, so it is wrong on training rows and new rows alike, in a systematic way. <strong>Overfitting</strong> means the model is flexible enough to follow the random noise in its training rows, so it looks excellent on them and fails on new rows. In between is a model flexible enough for the pattern but not for the noise. A tailor makes the point well. Underfitting is selling you a "free size" shirt that fits nobody properly. Overfitting is measuring you just after a heavy lunch and cutting the shirt round the bulge, so it never fits again. A good tailor measures your real shape and ignores today's accident.</p>
+  <p>Polynomials give a clean way to watch both failures, because their flexibility is controlled by one number, the degree. Degree 0 is a constant, degree 1 a straight line, degree 2 a parabola, and each extra degree adds one more coefficient the curve can bend with. Start with just three flats, D (8, 56), E (9, 67) and F (10, 68), and keep flat H (12, 83) aside as the new point. To keep the arithmetic small, measure area from 9: u = x − 9, so D, E, F sit at u = −1, 0, 1 and H at u = 3.</p>
+  <p>The best constant (degree 0) is the mean, (56 + 67 + 68) / 3 = 63.67. Its training errors are −7.67, 3.33 and 4.33, an MSE of 29.6, and it predicts 63.67 for H, a squared error of (83 − 63.67)² = 373.8. The best line (degree 1) has slope [(−1)(−7.67) + 0 + (1)(4.33)] / [1 + 0 + 1] = 12 / 2 = 6 and intercept 63.67; its training MSE is 5.6 and it predicts 63.67 + 6 × 3 = 81.67 for H, a squared error of only 1.78. The parabola (degree 2) has three coefficients and there are three points, so it can pass through all of them exactly. Writing y = a + b·u + c·u², the point at u = 0 gives a = 67; u = 1 gives 67 + b + c = 68; u = −1 gives 67 − b + c = 56. Adding the last two, 134 + 2c = 124, so c = −5 and b = 6. Training MSE is 0, but for H it predicts 67 + 18 − 45 = 40, a squared error of 1,849.</p>
   <div class="fx" data-lang="py">import numpy as np
 x = np.array([8, 9, 10]); y = np.array([56, 67, 68])     # three flats D, E, F
 x_new, y_new = 12, 83                                     # flat H, not used for fitting
 for deg in [0, 1, 2]:
-    c = np.polyfit(x - 9, y, deg)                         # fit in u = x - 9 to keep numbers small
+    c = np.polyfit(x - 9, y, deg)                         # least squares in u = x - 9
     train = ((np.polyval(c, x - 9) - y) ** 2).mean()
     pred = np.polyval(c, x_new - 9)
-    print(f"degree {deg}: coefs={np.round(c, 3)}  train MSE={train:6.3f}  "
-          f"pred for H: {pred:6.2f}  error^2 on H={(pred - y_new) ** 2:8.2f}")</div>
-  <div class="fx" data-lang="text">degree 0: coefs=[63.667]  train MSE=29.556  pred for H:  63.67  error^2 on H=  373.78
-degree 1: coefs=[ 6.    63.667]  train MSE= 5.556  pred for H:  81.67  error^2 on H=    1.78
-degree 2: coefs=[-5.  6. 67.]  train MSE= 0.000  pred for H:  40.00  error^2 on H= 1849.00</div>
-  <p><code>np.polyfit</code> lists coefficients from the highest power down, so <code>[-5. 6. 67.]</code> is −5u² + 6u + 67, exactly what we solved. Training error falls steadily (29.6 → 5.6 → 0) as the degree grows. The error on the new flat does not: the "perfect" parabola, bending down to follow E's slightly high price and F's slightly low one, predicts a ₹40 lakh price for a 1,200 sq ft flat.</p>
-  <h3>All ten flats, degrees 0 to 9</h3>
-  <p>The same experiment on all ten flats, scored on the four new flats K–N:</p>
+    print(f"degree {deg}: coefs {np.round(c, 3)}  train MSE {train:6.3f}  "
+          f"prediction for H {pred:6.2f}  squared error {(pred - y_new) ** 2:8.2f}")</div>
+  <div class="fx" data-lang="text">degree 0: coefs [63.667]  train MSE 29.556  prediction for H  63.67  squared error   373.78
+degree 1: coefs [ 6.    63.667]  train MSE  5.556  prediction for H  81.67  squared error     1.78
+degree 2: coefs [-5.  6. 67.]  train MSE  0.000  prediction for H  40.00  squared error  1849.00</div>
+  <p><code>np.polyfit</code> lists coefficients from the highest power down, so <code>[-5. 6. 67.]</code> is −5u² + 6u + 67, exactly what we solved. Training error falls steadily as the degree grows (29.6, then 5.6, then 0), but the error on the new flat does not: the "perfect" parabola bends down to follow E's slightly high price and F's slightly low one, and ends up pricing a 1,200 sq ft flat at ₹40 lakh. The same experiment on all ten flats, scored on the four new flats K–N:</p>
   <div class="fx" data-lang="py">import numpy as np
-x_tr = np.array([5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);  y_tr = np.array([38, 49, 53, 56, 67, 68, 73, 83, 87, 96])
-x_te = np.array([6.4, 8.7, 10.3, 13.6]);               y_te = np.array([47, 64, 70, 93])   # flats K..N
+x_tr = np.array([5, 6, 7, 8, 9, 10, 11, 12, 13, 14]); y_tr = np.array([38, 49, 53, 56, 67, 68, 73, 83, 87, 96])
+x_new = np.array([6.4, 8.7, 10.3, 13.6]);             y_new = np.array([47, 64, 70, 93])   # flats K..N
 
 print("degree  train MSE  new-flat MSE   predictions for K, L, M, N")
 for d in range(10):
     p = np.polynomial.Polynomial.fit(x_tr, y_tr, d)       # least-squares polynomial of degree d
     tr = ((p(x_tr) - y_tr) ** 2).mean()
-    te = ((p(x_te) - y_te) ** 2).mean()
-    print(f"{d:6d} {tr:9.3f} {te:12.3f}   {np.round(p(x_te), 1)}")</div>
+    te = ((p(x_new) - y_new) ** 2).mean()
+    print(f"{d:6d} {tr:9.3f} {te:12.3f}   {np.round(p(x_new), 1)}")</div>
   <div class="fx" data-lang="text">degree  train MSE  new-flat MSE   predictions for K, L, M, N
      0   301.600      273.500   [67. 67. 67. 67.]
      1     4.600        2.600   [48.4 62.2 71.8 91.6]
@@ -253,41 +135,33 @@ for d in range(10):
      7     1.659        4.261   [49.5 63.3 69.7 89.8]
      8     0.527       32.484   [51.8 63.3 69.6 82.7]
      9     0.000       23.418   [55.3 64.6 68.3 97.6]</div>
-  <ul>
-    <li><strong>Degree 0</strong>: a constant ₹67 lakh. Training 301.6, new flats 273.5. <strong>Underfit</strong>: wrong everywhere, in the same direction for small and big flats.</li>
-    <li><strong>Degrees 1–3</strong>: training 3.3–4.6, new flats 2.2–2.6. <strong>Good fit</strong>. (Degree 3 edges out the line on these four flats; section 09 shows that with leave-one-out on all ten flats the line clearly wins, a reminder that four test flats are a noisy judge.)</li>
-    <li><strong>Degrees 8–9</strong>: training 0.5 and 0 (degree 9 has 10 coefficients for 10 flats, so it passes through every one), new flats 32.5 and 23.4. <strong>Overfit</strong>: degree 8 prices flat N at ₹82.7 lakh against a true ₹93 lakh.</li>
-  </ul>
-  <h3>The same idea at scale: a sine wave</h3>
-  <p>Ten flats are a small, nearly straight example. A bigger, controlled experiment shows the full shape when the truth is curved. Because we generate the data ourselves, we know the truth: y = sin(2πx) + noise, where the noise has standard deviation 0.3 (so variance σ² = 0.09). No model can get below MSE 0.09 on new data; that is the noise. This helper file is used by the sine simulations in the note:</p>
-  <div class="fx" data-lang="py"># sine.py
+  <p>Degree 0 always says ₹67 lakh: training MSE 301.6, new-flat MSE 273.5. That is underfitting, wrong for every flat that is not mid-sized, in the same direction for small and big flats. Degrees 1 to 3 have training errors of 3.3 to 4.6 and new-flat errors of 2.2 to 2.6: a good fit. (Degree 3 edges out the line on these four flats, but section 09 shows that leave-one-out on all ten flats clearly prefers the line; four test flats are a noisy judge.) Degrees 8 and 9 have training errors of 0.5 and exactly 0, because degree 9 has ten coefficients for ten flats and passes through every one, while their new-flat errors jump to 32.5 and 23.4. That is overfitting: degree 8 prices flat N at ₹82.7 lakh against a true ₹93 lakh.</p>
+  <p>The flats are nearly straight, so they show only part of the picture. A controlled experiment where the true pattern is curved shows the whole shape. We generate data ourselves from y = sin(2πx) + noise, with noise of standard deviation 0.3, so its variance is 0.09. Because we know the truth, we know that no model can get below an MSE of 0.09 on new data; that much is pure noise. This small helper file is used by every sine experiment in the note:</p>
+  <div class="fx" data-lang="py"># sine.py: a world where we know the truth
 import numpy as np
 
-def f(x):                                   # the true pattern (nobody knows it in real life)
+def f(x):                       # the true pattern (unknown in real life)
     return np.sin(2 * np.pi * x)
 
-SIGMA = 0.3                                 # noise std -&gt; irreducible error 0.09
+SIGMA = 0.3                     # noise standard deviation, so the noise variance is 0.09
 
 def sample(n, rng):
     x = rng.uniform(0, 1, n)
-    y = f(x) + rng.normal(0, SIGMA, n)
-    return x[:, None], y                    # X as a column, y as a vector</div>
-  <p>We take 10 training rows at evenly spaced x, plus 1,000 fresh validation rows, and fit polynomials of degree 0 to 9. <code>Polynomial.fit</code> is numpy's least-squares polynomial fit (it rescales x internally, which keeps high degrees numerically stable).</p>
+    return x[:, None], f(x) + rng.normal(0, SIGMA, n)</div>
+  <p>Take 10 training rows at evenly spaced x, 1,000 fresh rows to judge on, and fit polynomials of degree 0 to 9. (<code>Polynomial.fit</code> is NumPy's least-squares polynomial fit.)</p>
   <div class="fx" data-lang="py">import numpy as np
 from sine import f, SIGMA
 
 rng = np.random.default_rng(2)
-x_tr = np.linspace(0, 1, 10)                       # 10 training rows, evenly spaced
+x_tr = np.linspace(0, 1, 10)                       # 10 training rows
 y_tr = f(x_tr) + rng.normal(0, SIGMA, 10)
-x_val = rng.uniform(0, 1, 1000)                    # 1000 fresh rows to judge on
+x_val = rng.uniform(0, 1, 1000)                    # 1,000 fresh rows to judge on
 y_val = f(x_val) + rng.normal(0, SIGMA, 1000)
 
 print("degree  train MSE  val MSE")
 for d in range(10):
-    p = np.polynomial.Polynomial.fit(x_tr, y_tr, d)   # least-squares polynomial of degree d
-    tr = ((p(x_tr) - y_tr) ** 2).mean()
-    va = ((p(x_val) - y_val) ** 2).mean()
-    print(f"{d:6d} {tr:9.3f} {va:8.3f}")</div>
+    p = np.polynomial.Polynomial.fit(x_tr, y_tr, d)
+    print(f"{d:6d} {((p(x_tr) - y_tr) ** 2).mean():9.3f} {((p(x_val) - y_val) ** 2).mean():8.3f}")</div>
   <div class="fx" data-lang="text">degree  train MSE  val MSE
      0     0.361    0.592
      1     0.220    0.325
@@ -299,13 +173,8 @@ for d in range(10):
      7     0.060    0.145
      8     0.009    0.367
      9     0.000    0.701</div>
-  <p>Read the two columns like "practice marks" and "exam marks":</p>
-  <ul>
-    <li><strong>Degrees 0–2</strong>: both errors are high (0.33–0.59 on validation). A constant, a line and a parabola cannot make an S-shaped wave. <strong>Underfit.</strong> (For the flats a line was enough, because their truth is nearly straight: the right capacity depends on the pattern.)</li>
-    <li><strong>Degrees 3–5</strong>: training error ≈ 0.08, validation ≈ 0.12–0.13, close to the noise floor 0.09. <strong>Good fit.</strong></li>
-    <li><strong>Degrees 8–9</strong>: training error ≈ 0, validation 0.37 and 0.70. <strong>Overfit.</strong></li>
-  </ul>
-  <figure class="viz"><svg viewBox="0 0 640 232" width="640">
+  <p>Read the two columns like practice marks and exam marks. Degrees 0 to 2 have high error on both (validation 0.33 to 0.59): a constant, a line and a parabola cannot make an S-shaped wave, so they underfit. (For the flats a line was enough because their truth is nearly straight; the right flexibility depends on the pattern.) Degrees 3 to 5 have training error around 0.08 and validation around 0.12 to 0.13, close to the noise floor of 0.09: a good fit. Degrees 8 and 9 have training error near 0 and validation 0.37 and 0.70: overfit.</p>
+    <figure class="viz"><svg viewBox="0 0 640 232" width="640">
 <line x1="30" y1="180" x2="205" y2="180" stroke="currentColor" opacity="0.5"/>
 <line x1="30" y1="30" x2="30" y2="180" stroke="currentColor" opacity="0.5"/>
 <text x="30" y="194" text-anchor="middle" class="tm" font-size="10.5">0</text>
@@ -365,69 +234,29 @@ for d in range(10):
 <text x="527.5" y="22" text-anchor="middle" font-size="12.5" font-weight="700">degree 9: overfit</text>
 <text x="320" y="222" text-anchor="middle" class="tm" font-size="11">dots = 10 noisy training rows · dashed blue = true sine · solid = fitted polynomial</text>
 </svg><figcaption>The same 10 training rows, three models. Degree 1 misses the shape. Degree 3 follows the true sine closely. Degree 9 passes through every dot, including the noise, and swings wildly between them (it dives off the bottom of the chart near x = 0.05).</figcaption></figure>
-  <div class="cards">
-    <div><b>Underfitting</b><p>Training error high. Validation error high. Gap small.</p><small>Flats: always ₹67 lakh (301.6 / 273.5)</small></div>
-    <div><b>Good fit</b><p>Training error close to the noise level. Validation slightly above training.</p><small>Flats: the line (4.6 / 2.6)</small></div>
-    <div><b>Overfitting</b><p>Training error very low (often near 0). Validation error much higher. Gap large.</p><small>Flats: degree 9 (0 / 23.4)</small></div>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A model <strong>underfits</strong> when a more flexible model from the same family would lower <em>both</em> training and validation error. It <strong>overfits</strong> when a less flexible model (or the same model with more regularization) would raise training error but <em>lower</em> validation error. The point between, where validation error is lowest, is the best capacity for this amount of data.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"Overfitting means training error is low." Low training error is fine if validation error is also low (sine degree 3: 0.086 and 0.125). Overfitting is about the <em>gap</em> and about validation error rising as flexibility grows, not about any single number.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Model Capacity.</b> We used "degree" as the flexibility dial. Trees have depth, kNN has k, neural nets have layers. Is there one name for this dial, and how does it compare with the amount of data?</div>
+  <p>The figure draws three of these fits through the same ten dots, with the true sine dashed. The degree-1 line slices straight through the wave and misses its shape everywhere. The degree-3 curve follows the true sine closely while ignoring the scatter of individual dots. The degree-9 curve passes exactly through every dot, noise included, and swings wildly between them. That gives a practical way to name the failures: an underfit model has high training error, high validation error and a small gap between them; a good fit has training error near the noise level and validation slightly above; an overfit model has very low training error and a much higher validation error. Low training error on its own is not overfitting (degree 3 has 0.086 and 0.125, both fine); overfitting is about the gap, and about validation error rising as flexibility grows.</p>
 
   <h2 id="bv-cap"><span class="num">03</span>Model Capacity</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Degree 0 underfit the flats and degree 9 overfit them. Degree is one particular dial for polynomials. What is the general quantity it controls, what plays the same role in other models, and why does "how much is too much" depend on the number of flats?</p>
-  </div>
-  <h3>What capacity means</h3>
-  <p>The <strong>capacity</strong> of a model family is how many different patterns it is able to fit. A constant can fit only flat patterns. A line can fit any trend. A degree-9 polynomial can fit any 10 points exactly. More capacity means lower training error is possible, and also that noise can be fitted.</p>
-  <p>The rule from the three-flat example generalises: a polynomial with p coefficients can pass exactly through any p points (with different x values). So <strong>when the number of free parameters reaches the number of training rows, a model can usually memorise</strong>: degree 2 for three flats, degree 9 for ten. Capacity must always be judged <em>relative to the amount of data</em>: degree 9 overfits 10 flats but would be fine with 10,000.</p>
-  <h3>The capacity knob in every model</h3>
+  <p>We used the degree as the flexibility dial for polynomials. Trees have depth, k-nearest-neighbours has k, neural networks have layers. The general name for what all these dials control is <strong>capacity</strong>: how rich a set of patterns a model family is able to fit. A constant can only fit flat patterns, a line any trend, a degree-9 polynomial any ten points exactly. More capacity makes a lower training error possible, and it also makes it possible to fit noise. Think of a sculptor's tools: with only a saw you can cut blocks but never a face (too little capacity), and with a set of fine chisels you can carve a face, or, if you are careless, every crack in the stone.</p>
+  <p>The three-flat example contains a rule that holds far more generally: a polynomial with p coefficients can pass exactly through any p points, and more broadly, <strong>when the number of free parameters reaches the number of training rows, a model can usually memorise them</strong>. Degree 2 can memorise three flats; degree 9 can memorise ten. So capacity must always be judged relative to the amount of data: degree 9 overfits ten flats, but would be perfectly reasonable for ten thousand. The table lists the capacity dial in the models you will meet in this track.</p>
   <table class="tbl">
-    <tr><th>Model</th><th>Capacity goes UP when…</th><th>Too low → </th><th>Too high →</th></tr>
-    <tr><td>Polynomial regression</td><td>degree ↑</td><td>straight line through a curve; ₹67 lakh for every flat</td><td>wiggles through noise</td></tr>
-    <tr><td>Linear / logistic + penalty</td><td>λ (alpha) ↓, or C ↑</td><td>all weights squeezed to 0</td><td>huge weights</td></tr>
-    <tr><td><a class="xref" data-note="ml_knn">k-nearest neighbours</a></td><td><strong>k ↓</strong> (reversed!)</td><td>k = n predicts the global average (k = 10 for our flats: ₹67 lakh)</td><td>k = 1 memorises</td></tr>
-    <tr><td><a class="xref" data-note="ml_dtree">Decision tree</a></td><td>max_depth ↑, min_samples_leaf ↓</td><td>a stump</td><td>one leaf per row</td></tr>
-    <tr><td><a class="xref" data-note="ml_svm">SVM with RBF kernel</a></td><td>C ↑, gamma ↑</td><td>almost linear</td><td>an island around each point</td></tr>
+    <tr><th>Model</th><th>Capacity goes up when…</th><th>Too low</th><th>Too high</th></tr>
+    <tr><td>Polynomial regression</td><td>degree goes up</td><td>₹67 lakh for every flat</td><td>wiggles through the noise</td></tr>
+    <tr><td>Linear or logistic regression with a penalty</td><td>λ (alpha) goes down, or C goes up</td><td>all weights squeezed to 0</td><td>huge weights</td></tr>
+    <tr><td><a class="xref" data-note="ml_knn">k-nearest neighbours</a></td><td><strong>k goes down</strong> (reversed)</td><td>k = n predicts the overall average</td><td>k = 1 memorises</td></tr>
+    <tr><td><a class="xref" data-note="ml_dtree">Decision tree</a></td><td>max_depth up, min_samples_leaf down</td><td>a single split</td><td>one leaf per row</td></tr>
+    <tr><td><a class="xref" data-note="ml_svm">SVM with RBF kernel</a></td><td>C up, gamma up</td><td>almost linear</td><td>an island around each point</td></tr>
     <tr><td><a class="xref" data-note="ml_gbm">Gradient boosting</a></td><td>more trees, deeper trees, larger learning rate</td><td>too few rounds</td><td>fits noise late in training</td></tr>
-    <tr><td>Neural network</td><td>layers / units ↑, epochs ↑, dropout ↓</td><td>tiny network</td><td>memorises labels, even random ones</td></tr>
+    <tr><td>Neural network</td><td>more layers and units, more epochs, less dropout</td><td>a tiny network</td><td>memorises labels, even random ones</td></tr>
   </table>
-  <h3>A precise measure, briefly: VC dimension</h3>
-  <p>Learning theory measures the capacity of a classifier family by the largest number of points it can <strong>shatter</strong>, that is, label in every possible way. A straight line in 2D can separate 3 points (not on one line) under all 2³ = 8 labelings, but no line can produce the XOR labeling of 4 points at the corners of a square. So the VC dimension of lines in 2D is 3; in d dimensions a linear classifier has VC dimension d + 1. Classic bounds say the generalization gap shrinks roughly like √(capacity / n): more capacity needs more rows. You will not compute these bounds at work, but the shape of the statement is worth remembering.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Capacity</strong> (or complexity, flexibility) is the richness of the set of functions a learning algorithm can produce. It is controlled by the model family and its hyperparameters (degree, depth, k, λ, number of parameters, training time). The appropriate capacity depends on the number of training rows and the noise level.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"Capacity = number of parameters." Not always. Ridge regression has as many parameters as plain regression but less effective capacity. kNN has no trained parameters at all, yet k = 1 has huge capacity. Deep networks with millions of parameters can generalise well because training and regularization limit what they actually fit (section 11).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: The Bias–Variance Decomposition.</b> We can see that test error goes down then up as capacity grows. Why exactly? The answer is a formula that splits test error into three parts, each of which moves differently with capacity.</div>
+  <p>Learning theory has a precise measure of capacity for classifiers, the <strong>VC dimension</strong> (after Vapnik and Chervonenkis): the largest number of points the model family can <strong>shatter</strong>, that is, separate correctly under every possible way of labelling them. A straight line in two dimensions can separate three points (not on one line) under all 2³ = 8 labellings, but no line can separate four points at the corners of a square labelled like a chessboard. So lines in 2D have VC dimension 3, and a linear classifier in d dimensions has VC dimension d + 1. Classic results say the generalization gap shrinks roughly like √(capacity / n): more capacity needs more rows. You will not compute these bounds at work, but the shape of the statement is worth remembering.</p>
+  <p>Capacity is not simply the number of parameters, which is a common mistake. Ridge regression has as many parameters as plain linear regression but less effective capacity, because its penalty keeps the weights small. kNN has no trained parameters at all, yet with k = 1 its capacity is enormous. And deep networks with millions of parameters can generalise well, because the way they are trained limits what they actually fit; section 11 returns to this.</p>
 
-  <h2 id="bv-derive"><span class="num">04</span>The Bias–Variance Decomposition, Derived</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Test error falls and then rises as capacity grows. "Too rigid" and "too flexible" are words, not a mechanism. Can test error be split into parts, one that shrinks with capacity and one that grows, so that the U-shape follows from arithmetic?</p>
-  </div>
-  <h3>The setup: what is random?</h3>
-  <p>Imagine the data really comes from y = f(x) + ε, where f is the true pattern and ε is noise with mean 0 and variance σ². For flats: f is "the average price of a flat of this area" and ε is the luck of a particular sale (a motivated seller, a good negotiator). Your ten flats are one random sample. If the portal had recorded a <em>different</em> ten sales of the same sizes, it would have fitted a different line. So the fitted model f̂ is itself random: it depends on which training set D you happened to get. We write f̂<sub>D</sub>.</p>
-  <p>Fix one test input x. Two things are random when we score the model there:</p>
-  <ol>
-    <li>which training set D we got (so which f̂<sub>D</sub>(x) we predict), and</li>
-    <li>the noise ε in the test answer y = f(x) + ε.</li>
-  </ol>
-  <p>The <strong>average model</strong> is f̄(x) = E<sub>D</sub>[f̂<sub>D</sub>(x)]: train on very many training sets and average the predictions at x.</p>
-  <h3>Bias and variance in plain words</h3>
-  <ul>
-    <li><strong>Bias</strong> = f̄(x) − f(x): how far the <em>average</em> model is from the truth. A systematic error that more training sets cannot average away.</li>
-    <li><strong>Variance</strong> = E<sub>D</sub>[(f̂<sub>D</sub>(x) − f̄(x))²]: how much the models trained on different samples disagree with each other.</li>
-    <li><strong>Noise</strong> σ² = E[ε²]: how much y wobbles around f(x) even with x known exactly.</li>
-  </ul>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>An archer shooting at a target, where every arrow is a model trained on a different sample. Arrows tightly grouped but off-centre: high bias (the sight is bent). Arrows centred on average but scattered: high variance (shaky hands). Fixing the hands does not fix the sight.</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 560 138" width="560">
+  <h2 id="bv-derive"><span class="num">04</span>The Bias–Variance Decomposition</h2>
+  <p>As capacity grows, error on new data first falls and then rises. "Too rigid" and "too flexible" are descriptions, not an explanation. The explanation is a formula that splits test error into three parts, one that shrinks as capacity grows, one that grows, and one that never changes, so that the U-shape follows from simple arithmetic.</p>
+  <p>Start with the setup. Imagine the data truly comes from y = f(x) + ε, where f is the real pattern and ε is noise with average 0 and variance σ². For flats, f(x) is "the typical price of a flat of this area" and ε is the luck of a particular sale: a motivated seller, a good negotiator. Our ten flats are one random sample. If the portal had happened to record a <em>different</em> ten sales of the same sizes, it would have fitted a slightly different line. So the fitted model is itself random: it depends on which training set D we happened to get, and we write it f̂<sub>D</sub>. If we could train on very many training sets and average their predictions at a point x, we would get the <strong>average model</strong>, f̄(x).</p>
+  <p>With these pieces the three parts can be defined. <strong>Bias</strong> is f̄(x) − f(x), how far the <em>average</em> model is from the truth: a systematic error that would not go away even with endless training sets. <strong>Variance</strong> is the average of (f̂<sub>D</sub>(x) − f̄(x))² over training sets: how much models trained on different samples disagree with one another. <strong>Noise</strong> is σ², how much y wobbles around f(x) even when x is known exactly. An archer is the classic picture, where each arrow is a model trained on a different sample. Arrows grouped tightly but off-centre mean high bias: the sight is bent. Arrows centred on average but scattered mean high variance: the hands are shaky. Steadying the hands does not fix the sight.</p>
+    <figure class="viz"><svg viewBox="0 0 560 138" width="560">
     <g fill="none" stroke="currentColor" opacity="0.5">
       <circle cx="70" cy="60" r="40"/><circle cx="70" cy="60" r="26"/><circle cx="70" cy="60" r="12"/>
       <circle cx="210" cy="60" r="40"/><circle cx="210" cy="60" r="26"/><circle cx="210" cy="60" r="12"/>
@@ -440,94 +269,64 @@ for d in range(10):
     <g class="tr"><circle cx="512" cy="36" r="3.5"/><circle cx="525" cy="62" r="3.5"/><circle cx="498" cy="30" r="3.5"/><circle cx="520" cy="45" r="3.5"/><circle cx="505" cy="52" r="3.5"/></g>
     <g text-anchor="middle"><text x="70" y="116" class="tg">low bias</text><text x="70" y="130" class="tg">low variance</text><text x="210" y="116">low bias</text><text x="210" y="130" class="tr">high variance</text><text x="350" y="116" class="tr">high bias</text><text x="350" y="130">low variance</text><text x="490" y="116" class="tr">high bias</text><text x="490" y="130" class="tr">high variance</text></g>
   </svg><figcaption>Each dot is one model trained on a different sample; the centre is the truth f(x). Bias is where the group sits; variance is how spread out it is.</figcaption></figure>
-  <h3>By hand first: four models, two outcomes</h3>
-  <p>Take a 950 sq ft flat (x = 9.5). Suppose its true average price is f(9.5) = 6 × 9.5 + 10 = ₹67 lakh, and the actual sale price is 66 or 68 with equal chance (noise ±1, so σ² = 1). Four different sets of ten past sales gave four fitted models, predicting 64, 66, 66 and 68 for this flat.</p>
-  <p><strong>Direct expected error</strong>: average (y − prediction)² over all 4 × 2 equally likely combinations.</p>
+  <p>The four targets show the four combinations. In each one, the bullseye is the truth f(x) and each dot is the prediction of one model trained on a different sample: where the group sits is the bias, and how spread out it is, is the variance. Now a small example by hand. Take a 950 sq ft flat (x = 9.5) whose true typical price is f(9.5) = 6 × 9.5 + 10 = ₹67 lakh, and suppose the actual sale is 66 or 68 with equal chance (noise of ±1, so σ² = 1). Four different sets of ten past sales gave four fitted models, which predict 64, 66, 66 and 68 for this flat. The expected squared error is the average of (y − prediction)² over all 4 × 2 equally likely combinations:</p>
   <table class="tbl">
-    <tr><th>prediction</th><th>y = 66</th><th>y = 68</th><th>average</th></tr>
-    <tr><td>64</td><td>(66−64)² = 4</td><td>(68−64)² = 16</td><td>10</td></tr>
+    <tr><th>prediction</th><th>if y = 66</th><th>if y = 68</th><th>average</th></tr>
+    <tr><td>64</td><td>(66 − 64)² = 4</td><td>(68 − 64)² = 16</td><td>10</td></tr>
     <tr><td>66</td><td>0</td><td>4</td><td>2</td></tr>
     <tr><td>66</td><td>0</td><td>4</td><td>2</td></tr>
     <tr><td>68</td><td>4</td><td>0</td><td>2</td></tr>
-    <tr><td colspan="3"><strong>expected squared error</strong> = (10 + 2 + 2 + 2)/4</td><td><strong>4</strong></td></tr>
+    <tr><td colspan="3"><strong>expected squared error</strong> = (10 + 2 + 2 + 2) / 4</td><td><strong>4</strong></td></tr>
   </table>
-  <p><strong>The three parts</strong>:</p>
-  <ul>
-    <li>Average model f̄ = (64 + 66 + 66 + 68)/4 = 66. Bias = 66 − 67 = −1, so <strong>bias² = 1</strong>.</li>
-    <li>Variance = average of (prediction − 66)² = [(−2)² + 0² + 0² + 2²]/4 = 8/4 = <strong>2</strong>.</li>
-    <li>Noise = average of (y − 67)² = [1 + 1]/2 = <strong>1</strong>.</li>
-  </ul>
-  <p>1 + 2 + 1 = 4. The three parts add up exactly to the expected error. That is not a coincidence; the derivation below shows it always happens for squared error.</p>
+  <p>Now the three parts. The average model is (64 + 66 + 66 + 68) / 4 = 66, so the bias is 66 − 67 = −1 and the squared bias is 1. The variance is the average of (prediction − 66)², which is (4 + 0 + 0 + 4) / 4 = 2. The noise is the average of (y − 67)², which is 1. And 1 + 2 + 1 = 4, exactly the expected error.</p>
   <div class="fx" data-lang="py">import numpy as np
-f_x0 = 67                                  # true average price of a 950 sq ft flat: 6 x 9.5 + 10
-preds = np.array([64, 66, 66, 68])         # 4 models, one per training set of ten flats
-ys = np.array([66, 68])                    # the real sale price: 67 - 1 or 67 + 1, equally likely
+f_x = 67                                   # true average price of a 950 sq ft flat
+preds = np.array([64, 66, 66, 68])         # four models, one per training set
+ys = np.array([66, 68])                    # the actual sale: 67 - 1 or 67 + 1, equally likely
 
 errors = (ys[None, :] - preds[:, None]) ** 2      # every (model, outcome) pair
 print(errors)
-print("expected error  =", errors.mean())
-bias2 = (preds.mean() - f_x0) ** 2
-var = preds.var()                          # population variance: mean of squared deviations
-noise = ((ys - f_x0) ** 2).mean()
-print(f"bias^2 + var + noise = {bias2} + {var} + {noise} = {bias2 + var + noise}")</div>
+print("expected squared error =", errors.mean())
+bias2 = (preds.mean() - f_x) ** 2
+var = preds.var()                          # mean of squared deviations from the average model
+noise = ((ys - f_x) ** 2).mean()
+print(f"bias^2 + variance + noise = {bias2} + {var} + {noise} = {bias2 + var + noise}")</div>
   <div class="fx" data-lang="text">[[ 4 16]
  [ 0  4]
  [ 0  4]
  [ 4  0]]
-expected error  = 4.0
-bias^2 + var + noise = 1.0 + 2.0 + 1.0 = 4.0</div>
-  <p>The 4 × 2 matrix is the hand table (rows = models, columns = the two possible prices). Note <code>preds.var()</code>: numpy's default divides by n, the population variance, which is what the decomposition uses.</p>
-  <h3>The derivation, step by step</h3>
-  <p>We want E[(y − f̂<sub>D</sub>(x))²], averaged over training sets D and test noise ε. To keep the symbols short, write f = f(x), f̂ = f̂<sub>D</sub>(x), f̄ = f̄(x). The whole trick is "add and subtract the same thing, then expand a square", done twice.</p>
-  <p><strong>Step 1: separate the noise.</strong> Since y = f + ε:</p>
-  <div class="flow"><span>y − f̂ = (f − f̂) + ε</span><span>square: (f − f̂)² + 2ε(f − f̂) + ε²</span><span>take the average E[…]</span></div>
-  <p>The middle term: the test noise ε is new noise, independent of the training set (and so of f̂), and it has mean 0. The average of a product of independent things is the product of averages: E[2ε(f − f̂)] = 2·E[ε]·E[f − f̂] = 2·0·(…) = 0. The last term is E[ε²] = σ². So</p>
-  <p style="text-align:center"><strong>E[(y − f̂)²] = E[(f − f̂)²] + σ²</strong></p>
-  <p><strong>Step 2: separate bias and variance.</strong> Add and subtract the average model f̄ inside the first term:</p>
-  <div class="flow"><span>f − f̂ = (f − f̄) + (f̄ − f̂)</span><span>square: (f − f̄)² + 2(f − f̄)(f̄ − f̂) + (f̄ − f̂)²</span><span>take E over D</span></div>
-  <p>(f − f̄) does not depend on D: it is a fixed number. So the middle term averages to 2(f − f̄)·E[f̄ − f̂] = 2(f − f̄)·(f̄ − f̄) = 0, because the average of f̂ is f̄ by definition. The first term stays as (f − f̄)², the squared bias. The last term is E[(f̂ − f̄)²], the variance.</p>
-  <p><strong>Put together</strong>:</p>
-  <p style="text-align:center"><strong>E[(y − f̂(x))²] = (f̄(x) − f(x))² + E[(f̂(x) − f̄(x))²] + σ² = Bias² + Variance + Noise</strong></p>
-  <p>Averaging this over all test points x gives the same split for the whole test MSE. In the hand example: Step 1 says E[(f − f̂)²] = average of (67 − 64)², (67 − 66)², (67 − 66)², (67 − 68)² = (9 + 1 + 1 + 1)/4 = 3, plus σ² = 1 → 4. Step 2 splits the 3 into bias² 1 + variance 2.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>For y = f(x) + ε with E[ε] = 0, Var(ε) = σ², and a model f̂<sub>D</sub> trained on a random training set D, the expected squared prediction error at x is <strong>E<sub>D,ε</sub>[(y − f̂<sub>D</sub>(x))²] = Bias[f̂(x)]² + Var[f̂(x)] + σ²</strong>, with Bias[f̂(x)] = E<sub>D</sub>[f̂<sub>D</sub>(x)] − f(x) and Var[f̂(x)] = E<sub>D</sub>[(f̂<sub>D</sub>(x) − E<sub>D</sub>[f̂<sub>D</sub>(x)])²]. The identity is exact for squared error. For other losses (0-1, log loss) there are analogous but non-additive versions.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"Variance" here is <em>not</em> the variance of the predictions across different test rows, and not the variance of prices in the data. It is the variance of the prediction <em>at one fixed x</em> across different training sets. A model that predicts a very wiggly curve can still have low variance if it predicts the same wiggly curve every time.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Estimating Bias and Variance by Simulation.</b> The formula needs "many training sets" and the true f. In real life you have one set of ten flats and no f. But in a simulation we control both, so we can measure each term and watch it move with capacity.</div>
+expected squared error = 4.0
+bias^2 + variance + noise = 1.0 + 2.0 + 1.0 = 4.0</div>
+  <p>The 4 × 2 matrix is the hand table: rows are the four models, columns the two possible prices. <code>preds.var()</code> divides by the number of values, which is the definition the decomposition uses. The three parts adding up exactly is not a coincidence; for squared error it always happens, and the proof is two applications of one trick, "add and subtract the same thing, then expand a square". Write f, f̂ and f̄ for the three values at our point x.</p>
+  <p>Step 1 separates the noise. Since y = f + ε, the error is y − f̂ = (f − f̂) + ε, and squaring gives (f − f̂)² + 2ε(f − f̂) + ε². Now average. The test noise ε is fresh noise, unrelated to the training set and therefore to f̂, and its average is 0, so the middle term averages to 2 × 0 × (…) = 0. The last term averages to σ². So the expected error is the average of (f − f̂)², plus σ². Step 2 splits that first part. Add and subtract the average model: f − f̂ = (f − f̄) + (f̄ − f̂). Squaring gives (f − f̄)² + 2(f − f̄)(f̄ − f̂) + (f̄ − f̂)². The quantity (f − f̄) is a fixed number that does not depend on the training set, and the average of (f̄ − f̂) is zero by the very definition of f̄, so the middle term vanishes again. What remains is (f − f̄)², the squared bias, plus the average of (f̂ − f̄)², the variance. Putting both steps together:</p>
+  <p style="text-align:center"><strong>expected test error = (f̄(x) − f(x))² + E[(f̂(x) − f̄(x))²] + σ² = bias² + variance + noise</strong></p>
+  <p>In the hand example, step 1 gives the average of (67 − 64)², (67 − 66)², (67 − 66)², (67 − 68)², which is (9 + 1 + 1 + 1) / 4 = 3, plus σ² = 1, so 4; step 2 splits the 3 into bias² 1 and variance 2. Averaging over all test points x gives the same split for the whole test MSE. The identity is exact for squared error; for other losses, such as classification accuracy, similar decompositions exist but the parts no longer simply add up. Note carefully what "variance" means here, because interviewers check it: it is not the variance of prices in the data, and not how much the predictions vary from one row to another. It is how much the prediction at <em>one fixed x</em> changes when the model is trained on a different sample. A model that draws a very wiggly curve can still have low variance if it draws the same wiggly curve every time.</p>
 
-  <h2 id="bv-sim"><span class="num">05</span>Estimating Bias and Variance by Simulation</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The hand example invented four models. For the real candidates (the mean, the line, degree 9, the memoriser), how big is each part of the error? We cannot collect 2,000 alternative sets of ten sales in Pune, but we can simulate them.</p>
-  </div>
-  <h3>The recipe</h3>
-  <div class="flow"><span>Draw a training set (fresh noise)</span><span>Fit the model, predict on fixed test x's</span><span>Repeat R times</span><span>Average model f̄ = mean of the R predictions</span><span>bias² = (f̄ − f)², variance = spread of the R</span></div>
-  <h3>On the flats: a simulated "flats world"</h3>
-  <p>Suppose flat prices truly follow f(x) = 6x + 10 (our fitted line, promoted to "truth") with sale-to-sale noise of standard deviation ₹2 lakh (σ² = 4, close to the 4.6 we saw). Keep the ten areas 5 … 14 fixed and redraw only the noise each time ("fixed design"): 2,000 alternative sets of ten sales. For each candidate model, measure bias² and variance at 35 test areas between 5.25 and 13.75, and also the real expected test error directly, with fresh noisy prices, to check that bias² + variance + noise equals it.</p>
+  <h2 id="bv-sim"><span class="num">05</span>Measuring Bias and Variance</h2>
+  <p>The formula needs many training sets and the true f. In real life you have one set of ten flats and no f. But in a simulation we control both, so we can measure each part directly. The recipe is: draw a training set (fresh noise), fit the model, predict at fixed test points; repeat R times; the average of the R predictions is the average model; bias² is how far it is from f, and variance is how spread out the R predictions are.</p>
+  <p>Suppose flat prices truly follow f(x) = 6x + 10, our fitted line promoted to "truth", with sale-to-sale noise of standard deviation ₹2 lakh, so σ² = 4, close to the 4.6 we saw. Keep the ten areas 5 to 14 fixed, redraw only the prices 2,000 times, and measure each candidate at 35 areas between the flats. As a check, we also measure the expected test error directly against fresh noisy prices, to confirm that bias² + variance + noise equals it.</p>
   <div class="fx" data-lang="py">import numpy as np
 from sklearn.neighbors import KNeighborsRegressor
 
-def f(x):                                      # the "true" flat-price rule (unknown in real life)
+def f(x):                                      # the "true" price rule in this simulated world
     return 6 * x + 10
-SIGMA = 2.0                                    # noise std (luck, negotiation) -&gt; noise variance 4
+SIGMA = 2.0                                    # sale-to-sale luck: noise variance 4
 rng = np.random.default_rng(0)
 x_tr = np.arange(5, 15, dtype=float)           # the same ten areas as flats A..J
 x_te = np.linspace(5.25, 13.75, 35)            # test areas between them
-R = 2000                                       # 2,000 different "sets of ten sales"
+R = 2000                                       # 2,000 alternative sets of ten sales
 
 def fit_predict(model, y_tr):
-    if model == "1-NN":                         # copy the price of the nearest flat
+    if model == "1-NN":
         return KNeighborsRegressor(1).fit(x_tr[:, None], y_tr).predict(x_te[:, None])
-    return np.polynomial.Polynomial.fit(x_tr, y_tr, model)(x_te)   # polynomial of degree \`model\`
+    return np.polynomial.Polynomial.fit(x_tr, y_tr, model)(x_te)    # polynomial of this degree
 
 print("model     bias^2   variance  noise     sum    measured")
 for model in [0, 1, 3, 6, 9, "1-NN"]:
     P = np.empty((R, len(x_te)))
     for r in range(R):
-        y_tr = f(x_tr) + rng.normal(0, SIGMA, 10)          # a new set of ten sale prices
-        P[r] = fit_predict(model, y_tr)
-    avg = P.mean(axis=0)                                    # the "average model"
+        P[r] = fit_predict(model, f(x_tr) + rng.normal(0, SIGMA, 10))   # a new set of ten sales
+    avg = P.mean(axis=0)                                    # the average model
     bias2 = ((avg - f(x_te)) ** 2).mean()
     var = P.var(axis=0).mean()
     y_te = f(x_te) + rng.normal(0, SIGMA, (R, len(x_te)))   # fresh noisy prices
@@ -541,100 +340,38 @@ degree 3    0.001     1.240   4.00    5.241     5.249
 degree 6    0.003     2.616   4.00    6.619     6.610
 degree 9    0.001    26.231   4.00   30.232    30.045
 1-NN        3.489     3.947   4.00   11.436    11.423</div>
-  <ul>
-    <li><strong>The decomposition holds</strong>: "sum" and "measured" agree to about 0.3 or better in every row (simulation noise).</li>
-    <li><strong>Degree 0</strong> (always the average price): bias² 229.5, variance only 0.39. Every set of ten sales gives nearly the same average, ₹67 lakh, and it is wrong for every flat that is not mid-sized. Pure bias.</li>
-    <li><strong>Degree 1</strong>: bias² 0.000 (the line family contains the truth) and variance 0.70. Theory for a fitted line agrees: σ² × average of [1/n + (x − x̄)²/Σ(x − x̄)²] = 4 × 0.177 = 0.71.</li>
-    <li><strong>Degrees 3, 6, 9</strong>: bias stays ≈ 0 (they contain the line too), but variance climbs 1.24 → 2.62 → 26.2. The extra coefficients are only there to follow the noise. Degree 9 interpolates every set of ten noisy prices.</li>
-    <li><strong>1-NN</strong>: bias² 3.49 (copying a flat up to 0.5 hundred sq ft away misses the slope by up to 6 × 0.5 = ₹3 lakh) plus variance 3.95 (it copies that flat's noise too).</li>
-  </ul>
-  <h3>The same recipe at scale: the sine wave</h3>
-  <p>For the curved sine truth, keep 15 training x-locations fixed and redraw the noise 500 times:</p>
+  <p>First, the decomposition holds: the "sum" and "measured" columns agree to within simulation noise in every row. Degree 0, always the average price, has bias² of 229.5 and variance of only 0.39: every set of ten sales gives nearly the same average, about ₹67 lakh, and it is wrong for every flat that is not mid-sized. That is pure bias. Degree 1 has bias² of 0.000, because the line family contains the truth, and variance 0.70; theory for a fitted line agrees, giving σ² times the average of [1/n + (x − x̄)² / Σ(x − x̄)²] over the test areas, 4 × 0.177 = 0.71. Degrees 3, 6 and 9 also have no bias, since they can represent a line too, but their variance climbs from 1.24 to 2.62 to 26.2: the extra coefficients have nothing real to do, so they follow the noise, and degree 9 passes through every set of ten noisy prices. The 1-NN memoriser has some of both: bias² 3.49, because copying a flat up to 50 sq ft away misses the slope by up to 6 × 0.5 = ₹3 lakh, plus variance 3.95, because it copies that flat's noise too.</p>
+  <p>The same recipe on the curved sine truth, with 15 training rows at fixed places and 500 training sets, shows a fuller picture, because here even the line is biased:</p>
   <div class="fx" data-lang="py">import numpy as np
 from sine import f, SIGMA
 
 rng = np.random.default_rng(42)
-x_tr = np.linspace(0, 1, 15)                 # where the 15 training rows are measured
-x_te = np.linspace(0.02, 0.98, 50)           # 50 test locations
-R = 500                                      # 500 different training sets
-print("degree   bias^2   variance   noise   sum      measured test MSE")
+x_tr = np.linspace(0, 1, 15)                 # 15 training rows at fixed places
+x_te = np.linspace(0.02, 0.98, 50)
+R = 500                                      # 500 training sets
+print("degree   bias^2   variance   total (+ noise 0.09)")
 for d in [0, 1, 2, 3, 4, 5, 7, 9, 11, 13]:
-    P = np.empty((R, len(x_te)))
-    for r in range(R):
-        y_tr = f(x_tr) + rng.normal(0, SIGMA, len(x_tr))     # new noise = new training set
-        P[r] = np.polynomial.Polynomial.fit(x_tr, y_tr, d)(x_te)
-    avg = P.mean(axis=0)                                      # the "average model"
-    bias2 = ((avg - f(x_te)) ** 2).mean()
+    P = np.array([np.polynomial.Polynomial.fit(x_tr, f(x_tr) + rng.normal(0, SIGMA, 15), d)(x_te)
+                  for r in range(R)])
+    bias2 = ((P.mean(axis=0) - f(x_te)) ** 2).mean()
     var = P.var(axis=0).mean()
-    y_te = f(x_te) + rng.normal(0, SIGMA, (R, len(x_te)))     # fresh noisy answers
-    measured = ((y_te - P) ** 2).mean()
-    print(f"{d:6d} {bias2:9.4f} {var:9.4f} {SIGMA**2:8.3f} {bias2 + var + SIGMA**2:8.4f} {measured:10.4f}")</div>
-  <div class="fx" data-lang="text">degree   bias^2   variance   noise   sum      measured test MSE
-     0    0.5104    0.0062    0.090   0.6066     0.6045
-     1    0.2009    0.0108    0.090   0.3017     0.3030
-     2    0.1997    0.0163    0.090   0.3059     0.3059
-     3    0.0059    0.0206    0.090   0.1165     0.1166
-     4    0.0057    0.0242    0.090   0.1199     0.1207
-     5    0.0001    0.0297    0.090   0.1199     0.1208
-     7    0.0001    0.0415    0.090   0.1316     0.1302
-     9    0.0002    0.0618    0.090   0.1520     0.1527
-    11    0.0006    0.1503    0.090   0.2410     0.2438
-    13    0.0032    3.0622    0.090   3.1554     3.1605</div>
-  <h3>Reading the sine table</h3>
-  <ul>
-    <li><strong>The decomposition holds</strong>: "sum" and "measured test MSE" agree to about 0.003 in every row.</li>
-    <li><strong>Bias² falls</strong> as degree rises: 0.51 (a constant cannot follow a sine) → 0.20 (a line or parabola) → 0.006 (cubic) → ≈ 0 (degree 5+). A sine is very close to a degree-5 polynomial on [0, 1]. Unlike the flats, a line is <em>biased</em> here, because the truth is curved.</li>
-    <li><strong>Variance rises</strong>: 0.006 → 0.021 (degree 3) → 0.062 (degree 9) → 3.06 (degree 13, with 14 coefficients for 15 rows). Each extra coefficient is one more thing the noise can push around.</li>
-    <li><strong>Noise is constant</strong> at 0.09, whatever the model.</li>
-    <li><strong>Best total</strong> at degree 3 (0.117), with 5 close behind. That is the sweet spot for 15 rows.</li>
-  </ul>
-  <p>Why does bias creep up again for degree 11–13? Those fits are so unstable near the edges that even the average of 500 of them has not settled exactly on the sine. With infinitely many repeats it would go to 0.</p>
-  <h3>A biased estimator can beat an unbiased one</h3>
-  <p>The decomposition is not only about curves. It applies to estimating a single number, and it gives a surprising result: deliberately adding bias can <em>lower</em> the total error. Suppose the true mean is μ = 1, each observation has noise σ = 2, and you have n = 5 observations. The usual estimate is the sample mean x̄ (unbiased, variance σ²/n = 4/5 = 0.8). Now try the shrunk estimate c·x̄ for some c between 0 and 1.</p>
-  <ul>
-    <li>Bias = E[c·x̄] − μ = cμ − μ = (c − 1)μ, so bias² = (c − 1)²μ².</li>
-    <li>Variance = Var(c·x̄) = c²·σ²/n.</li>
-    <li>MSE = (c − 1)²·1 + c²·0.8.</li>
-  </ul>
-  <table class="tbl">
-    <tr><th>c</th><th>bias² = (c−1)²</th><th>variance = 0.8c²</th><th>MSE</th></tr>
-    <tr><td>1 (plain mean)</td><td>0</td><td>0.8</td><td>0.800</td></tr>
-    <tr><td>0.8</td><td>0.04</td><td>0.512</td><td>0.552</td></tr>
-    <tr><td>0.5</td><td>0.25</td><td>0.2</td><td>0.450</td></tr>
-    <tr><td>0 (always say 0)</td><td>1</td><td>0</td><td>1.000</td></tr>
-  </table>
-  <p>Setting the derivative of MSE to zero, 2(c − 1) + 1.6c = 0, gives the best c = 1/1.8 = 0.556 (in general c* = μ²/(μ² + σ²/n)), with MSE 0.444. Shrinking towards zero trades a little bias for a big cut in variance. Simulated with 200,000 repeated studies:</p>
-  <div class="fx" data-lang="py">import numpy as np
-mu, sigma, n = 1.0, 2.0, 5                  # true mean, noise std, sample size
-rng = np.random.default_rng(0)
-samples = rng.normal(mu, sigma, (200_000, n))   # 200,000 repeated studies of 5 rows
-xbar = samples.mean(axis=1)
-c_best = mu**2 / (mu**2 + sigma**2 / n)
-for c in [1.0, 0.8, c_best, 0.5, 0.0]:
-    est = c * xbar                           # shrink the sample mean towards 0
-    bias2 = (est.mean() - mu) ** 2
-    var = est.var()
-    mse = ((est - mu) ** 2).mean()
-    theory = (c - 1) ** 2 * mu**2 + c**2 * sigma**2 / n
-    print(f"c={c:.3f}  bias^2={bias2:.3f}  var={var:.3f}  MSE={mse:.3f}  formula={theory:.3f}")</div>
-  <div class="fx" data-lang="text">c=1.000  bias^2=0.000  var=0.798  MSE=0.798  formula=0.800
-c=0.800  bias^2=0.039  var=0.511  MSE=0.550  formula=0.552
-c=0.556  bias^2=0.197  var=0.246  MSE=0.443  formula=0.444
-c=0.500  bias^2=0.249  var=0.200  MSE=0.449  formula=0.450
-c=0.000  bias^2=1.000  var=0.000  MSE=1.000  formula=1.000</div>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>This is regularization in miniature. <a class="xref" data-note="ml_ridge_lasso">Ridge regression</a> shrinks every coefficient towards 0 in exactly this spirit: the coefficients become biased, their variance drops more, and test error goes down. <a class="xref" data-note="ml_regularization">Regularization</a> does it to the flats' slope. "Unbiased" is not the same as "best". (In practice c* depends on the unknown μ, which is why λ is tuned by cross-validation.)</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>You cannot compute bias and variance on a real dataset this way, because you do not know f and you have only one training set. On real data you see their <em>symptoms</em>: training error (mostly bias) and the train–validation gap (mostly variance). Sections 08–10 turn those symptoms into a diagnosis. Bootstrap resampling can approximate the variance term, but not the bias.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: The Trade-off Curve.</b> We have the tables; now the picture. Plotting the three terms against capacity gives the most famous figure in machine learning.</div>
+    print(f"{d:6d} {bias2:9.4f} {var:9.4f} {bias2 + var + SIGMA**2:10.4f}")</div>
+  <div class="fx" data-lang="text">degree   bias^2   variance   total (+ noise 0.09)
+     0    0.5104    0.0062     0.6066
+     1    0.2001    0.0106     0.3007
+     2    0.2000    0.0159     0.3058
+     3    0.0059    0.0205     0.1165
+     4    0.0056    0.0235     0.1191
+     5    0.0001    0.0292     0.1193
+     7    0.0001    0.0412     0.1313
+     9    0.0001    0.0641     0.1542
+    11    0.0008    0.1549     0.2457
+    13    0.0013    3.2717     3.3630</div>
+  <p>Bias² falls as the degree rises: 0.51 for a constant, which cannot follow a wave at all, 0.20 for a line or a parabola, 0.006 for a cubic, and essentially zero from degree 5, because on this range a sine is very close to a degree-5 polynomial. Unlike in the flats world, the line is <em>biased</em> here, because the truth is curved. Variance rises the whole way: 0.006 at degree 0, 0.021 at degree 3, 0.064 at degree 9, and 3.27 at degree 13, which has 14 coefficients for 15 rows. Each extra coefficient is one more thing the noise can push around. The noise, 0.09, is the same for every model. The best total is at degree 3 (0.1165), with degrees 4 and 5 close behind: that is the right capacity for 15 rows of this pattern.</p>
 
-  <h2 id="bv-curve"><span class="num">06</span>The Trade-off Curve</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The tables show bias² falling and variance rising as degree grows, for the flats (229.5 → 0, 0.39 → 26.2) and for the sine. Where exactly is the best capacity, and what moves it?</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 620 265" width="620">
+  <h2 id="bv-curve"><span class="num">06</span>The Bias–Variance Trade-off</h2>
+  <p>Plot the three parts against capacity and you get the most famous figure in machine learning.</p>
+    <figure class="viz"><svg viewBox="0 0 620 265" width="620">
 <line x1="80" y1="215" x2="580" y2="215" stroke="currentColor" opacity="0.5"/>
 <line x1="80" y1="25" x2="80" y2="215" stroke="currentColor" opacity="0.5"/>
 <text x="80" y="229" text-anchor="middle" class="tm" font-size="10.5">0</text>
@@ -699,128 +436,59 @@ c=0.000  bias^2=1.000  var=0.000  MSE=1.000  formula=1.000</div>
 <text x="330" y="245" text-anchor="middle" class="tm" font-size="11">polynomial degree (model capacity) →</text>
 <text x="26" y="120" text-anchor="middle" class="tm" font-size="11" transform="rotate(-90 26 120)">error (log scale)</text>
 <text x="470" y="104" class="tm" font-size="11">noise σ² = 0.09</text>
-</svg><figcaption>The sine simulation table, drawn on a log scale. Blue: bias² falls with capacity. Red: variance rises. Black: their sum plus noise, the expected test error, is lowest at degree 3. The dashed line is the noise floor that no model can go below.</figcaption></figure>
-  <p>Follow the blue line from left to right: more capacity, less bias. Follow the red line: more capacity, more variance. The black total is their sum plus the constant noise, so it first falls (bias shrinking faster than variance grows), flattens, then rises (variance growing faster). The bottom of the black curve is the <strong>sweet spot</strong>. For the flats world the same curve is steeper and simpler: total 233.9 at degree 0, a minimum of 4.70 at degree 1, then 5.24, 6.62 and 30.2 at degrees 3, 6 and 9, because the truth is a straight line and every extra coefficient only adds variance.</p>
-  <h3>Why a trade-off, in one sentence each</h3>
-  <ul>
-    <li>A rigid model makes the <strong>same mistake</strong> on every training set: high bias, low variance (always ₹67 lakh).</li>
-    <li>A flexible model makes a <strong>different mistake</strong> on every training set: low bias, high variance (degree 9 chases each set's noise).</li>
-    <li>With a fixed amount of data you cannot make both small by choosing capacity alone; you choose the balance.</li>
-  </ul>
-  <h3>Things that move the whole curve</h3>
-  <table class="tbl">
-    <tr><th>Change</th><th>Effect on bias</th><th>Effect on variance</th><th>Effect on the sweet spot</th></tr>
-    <tr><td>More training rows</td><td>none</td><td>↓ (about 1/n for simple models)</td><td>moves right: you can afford more capacity</td></tr>
-    <tr><td>Less noise (better labels)</td><td>none</td><td>↓</td><td>moves right, floor drops</td></tr>
-    <tr><td>Better features (locality for flats)</td><td>↓ (the pattern becomes simpler)</td><td>often ↓</td><td>lower curve overall</td></tr>
-    <tr><td>Regularization (λ ↑)</td><td>↑</td><td>↓</td><td>a finer dial than degree</td></tr>
-    <tr><td><a class="xref" data-note="ml_bagging">Bagging</a> (average many models)</td><td>≈ same</td><td>↓↓</td><td>lets you use high-capacity models safely</td></tr>
-    <tr><td><a class="xref" data-note="ml_boosting">Boosting</a> (add models in sequence)</td><td>↓↓</td><td>↑ slowly</td><td>builds capacity step by step</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>The trade-off is between bias and variance <em>for a fixed amount of data and a fixed model family</em>. Ensembles bend that rule: a random forest keeps the low bias of deep trees and averages away much of their variance. That is why the <a class="xref" data-note="ml_ensembles">ensemble</a> notes start from this decomposition.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Drawing the U with the minimum at "bias² = variance". The best point is where the <em>slopes</em> cancel (bias² falling as fast as variance rises), not where the two curves cross. In the sine table they cross between degrees 2 and 3 by luck; in the flats world bias² is already 0 at degree 1 while variance is 0.70, and degree 1 is still best.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Irreducible Error.</b> The noise term σ² sat under every model like a floor (4 in the flats world, 0.09 for the sine). What is it really made of, and is it truly impossible to remove?</div>
+</svg><figcaption>The sine simulation table, drawn on a log scale (from a run with the same settings). Blue: bias² falls with capacity. Red: variance rises. Black: their sum plus noise, the expected test error, is lowest at degree 3. The dashed line is the noise floor that no model can go below.</figcaption></figure>
+  <p>Follow the blue line from left to right: more capacity, less bias. Follow the red line: more capacity, more variance. The black total is their sum plus the constant noise, so it first falls, while bias shrinks faster than variance grows, then flattens, then rises, once variance grows faster. The bottom of the black curve is the <strong>sweet spot</strong>, the best capacity for this amount of data. For the flats world the curve is simpler: the total is 233.9 at degree 0, a minimum of 4.70 at degree 1, then 5.24, 6.62 and 30.2 at degrees 3, 6 and 9, because the truth is a straight line and every extra coefficient only adds variance.</p>
+  <p>The reason it is a trade-off can be put in one sentence for each side. A rigid model makes the <em>same</em> mistake on every training set: high bias, low variance, like always saying ₹67 lakh. A flexible model makes a <em>different</em> mistake on every training set: low bias, high variance, like degree 9 chasing each set's noise. With a fixed amount of data and a fixed family of models, you cannot make both small by turning the capacity dial; you can only choose the balance. A common mistake is to think the best point is where the bias² and variance curves cross. It is where their <em>slopes</em> cancel, where bias² is falling exactly as fast as variance is rising; in the flats world bias² is already 0 at degree 1 while variance is 0.70, and degree 1 is still best.</p>
+  <p>Some changes move the whole curve rather than a point along it. More training rows lower the variance (roughly in proportion to 1/n for simple models) without touching the bias, so the sweet spot moves to the right and you can afford more capacity. Less noise, from cleaner labels, lowers both the variance and the floor. Better features, such as locality for the flats, make the pattern simpler and so lower bias and often variance too. Regularization, which adds a penalty for large weights, raises bias a little and lowers variance a lot, giving a finer dial than the degree (<a class="xref" data-note="ml_regularization">Regularization</a>). And ensembles bend the rule itself: <a class="xref" data-note="ml_bagging">bagging</a>, which averages many models trained on resampled data, keeps the low bias of deep trees while averaging away much of their variance, which is why a random forest works; <a class="xref" data-note="ml_boosting">boosting</a> goes the other way, starting from simple high-bias models and reducing bias step by step.</p>
+  <p>The trade-off has a surprising consequence: deliberately adding bias can <em>lower</em> the total error. It already shows up when estimating a single number. Suppose the true mean is μ = 1, each observation has noise σ = 2, and you have n = 5 observations. The usual estimate is the sample mean x̄, which is unbiased and has variance σ²/n = 4/5 = 0.8, so its MSE is 0.8. Now try the shrunk estimate c·x̄ for some c between 0 and 1. Its bias is cμ − μ = (c − 1)μ, so bias² is (c − 1)², and its variance is c² × 0.8, so its MSE is (c − 1)² + 0.8c². At c = 0.8 that is 0.04 + 0.512 = 0.552, already much better than 0.8. Setting the derivative to zero, 2(c − 1) + 1.6c = 0, gives the best c = 1/1.8 = 0.556, with MSE 0.444. Shrinking towards zero trades a little bias for a large cut in variance. A simulation of 200,000 repeated studies agrees:</p>
+  <div class="fx" data-lang="py">import numpy as np
+mu, sigma, n = 1.0, 2.0, 5                       # true mean, noise SD, sample size
+rng = np.random.default_rng(0)
+xbar = rng.normal(mu, sigma, (200_000, n)).mean(axis=1)   # 200,000 repeated studies of 5 rows
+c_best = mu**2 / (mu**2 + sigma**2 / n)
+for c in [1.0, 0.8, c_best, 0.5, 0.0]:
+    est = c * xbar                               # shrink the sample mean towards 0
+    print(f"c={c:.3f}  bias^2={(est.mean() - mu) ** 2:.3f}  var={est.var():.3f}  MSE={((est - mu) ** 2).mean():.3f}")</div>
+  <div class="fx" data-lang="text">c=1.000  bias^2=0.000  var=0.798  MSE=0.798
+c=0.800  bias^2=0.039  var=0.511  MSE=0.550
+c=0.556  bias^2=0.197  var=0.246  MSE=0.443
+c=0.500  bias^2=0.249  var=0.200  MSE=0.449
+c=0.000  bias^2=1.000  var=0.000  MSE=1.000</div>
+  <p>The plain mean (c = 1) has no bias and MSE 0.798; c = 0.556 has bias² 0.197 but variance only 0.246, for an MSE of 0.443, the best in the table; c = 0, "always say 0", has no variance and is all bias. This is regularization in miniature. <a class="xref" data-note="ml_ridge_lasso">Ridge regression</a> shrinks every coefficient towards zero in exactly this spirit: the coefficients become biased, their variance drops by more, and test error goes down. "Unbiased" is not the same as "best". In practice the best amount of shrinkage depends on unknown quantities, which is why the penalty strength is tuned by cross-validation.</p>
 
   <h2 id="bv-noise"><span class="num">07</span>Irreducible Error</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Even the best line on the flats misses each sale by about ₹2 lakh, and no amount of capacity tuning removes that. Is that error a law of nature, or is it something we simply have not measured?</p>
-  </div>
-  <h3>Where it comes from</h3>
-  <ul>
-    <li><strong>Measurement noise</strong>: an area recorded as carpet area for one flat and built-up area for another, a typo in a form, two valuers disagreeing.</li>
-    <li><strong>Missing information</strong>: the answer depends on something you did not record (locality, floor, age, the view from the balcony).</li>
-    <li><strong>True randomness</strong>: whether a keen buyer happened to visit that week, how hard the seller negotiated.</li>
-  </ul>
-  <h3>Worked by hand: identical rows, different answers</h3>
-  <p>Suppose four flats in the portal's data have exactly the same recorded features (650 sq ft, 2 rooms, same society). Their monthly rents are ₹14,000, ₹16,000, ₹15,000 and ₹15,000. Any model sees the same input for all four, so it must give them the same prediction. The best single number under squared error is their mean, ₹15,000, and even then the errors are −1,000, +1,000, 0, 0 (in ₹), so MSE = (1,000² + 1,000² + 0 + 0)/4 = 500,000, RMSE ≈ ₹707. No model, however clever, can do better on these four rows <em>with these features</em>.</p>
-  <h3>"Irreducible" is relative to your features: the flats</h3>
-  <p>With area as the only feature, the line's leftover misses on our ten flats are −2, 3, 1, −2, 3, −2, −3, 1, −1, 2. Look at them by locality: the Baner flats (B, E, H, J) missed by +3, +3, +1, +2, the Hadapsar flats (A, D, G) by −2, −2, −3. Much of the "noise" is a feature we did not give the model. Add two 0/1 columns for locality (Hadapsar is the baseline):</p>
+  <p>The noise term σ² sat under every model like a floor: 4 in the flats world, 0.09 for the sine. It is called the <strong>irreducible error</strong>, the error that even the best possible model would make with the information it is given. It comes from three places. There is measurement noise: an area recorded as carpet area for one flat and built-up area for another, a typo, two valuers disagreeing. There is missing information: the price depends on things we did not record, such as the floor, the view or the condition. And there is genuine randomness: whether a keen buyer happened to visit that week, how hard the seller bargained.</p>
+  <p>Here is the idea at its simplest. Suppose four flats in the portal's data have exactly the same recorded features: 650 sq ft, two rooms, the same housing society. Their monthly rents are ₹14,000, ₹16,000, ₹15,000 and ₹15,000. Any model sees the same input for all four, so it must give all four the same prediction. The best single number under squared error is their mean, ₹15,000, and even that misses by −1,000, +1,000, 0 and 0, an MSE of 500,000. No model, however clever, can do better on these rows <em>with these features</em>.</p>
+  <p>The words "with these features" matter, because "irreducible" is relative to what the model is told. With area as the only feature, the line's leftover misses on our ten flats are −2, 3, 1, −2, 3, −2, −3, 1, −1, 2. Look at them by locality: the Baner flats (B, E, H, J) missed by +3, +3, +1, +2, and the Hadapsar flats (A, D, G) by −2, −2, −3. A large part of what looked like noise is a feature we did not give the model. Add two 0/1 columns for locality, with Hadapsar as the baseline:</p>
   <div class="fx" data-lang="py">import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import LeaveOneOut, cross_val_predict
 
 area  = np.array([5, 6, 7, 8, 9, 10, 11, 12, 13, 14])
 price = np.array([38, 49, 53, 56, 67, 68, 73, 83, 87, 96])
-loc   = np.array(list("HBKHBKHBKB"))          # Hadapsar, Baner, Kothrud
+loc   = np.array(list("HBKHBKHBKB"))                 # Hadapsar, Baner, Kothrud
 baner, kothrud = (loc == "B").astype(float), (loc == "K").astype(float)   # Hadapsar = both 0
 
 for name, X in [("area only", np.c_[area]), ("area + locality", np.c_[area, baner, kothrud])]:
     fit = LinearRegression().fit(X, price)
     loo = cross_val_predict(LinearRegression(), X, price, cv=LeaveOneOut())
-    print(f"{name:16s} coef {fit.coef_.round(2)}  train MSE {((fit.predict(X) - price)**2).mean():.3f}"
-          f"  LOOCV MSE {((loo - price)**2).mean():.3f}")</div>
+    print(f"{name:16s} coef {fit.coef_.round(2)}  train MSE {((fit.predict(X) - price) ** 2).mean():.3f}"
+          f"  LOOCV MSE {((loo - price) ** 2).mean():.3f}")</div>
   <div class="fx" data-lang="text">area only        coef [6.]  train MSE 4.600  LOOCV MSE 7.255
 area + locality  coef [5.78 5.09 2.11]  train MSE 0.445  LOOCV MSE 1.155</div>
-  <p>The coefficients say: ₹5.78 lakh per 100 sq ft, plus ₹5.09 lakh in Baner and ₹2.11 lakh in Kothrud compared with Hadapsar. The honest (leave-one-out) error falls from 7.26 to 1.16, a drop of 84%. No tuning of the area-only model could have done that: its floor was set by the missing column. (The fall in <em>training</em> error, 4.6 to 0.445, would mean little on its own; the LOOCV number is what proves it.)</p>
-  <h3>The same idea at scale: rent and floor</h3>
-  <p>A simulation: rent = 10 × size + 800 × floor + noise (noise std ₹1,000). Suppose we forgot to record the floor. Then the floor's effect becomes part of the noise from the model's point of view. Floor is a whole number from 0 to 9, whose variance is (10² − 1)/12 = 8.25, so the extra noise variance is 800² × 8.25 = 5,280,000. Total noise variance = 5,280,000 + 1,000² = 6,280,000, and the best possible RMSE is √6,280,000 ≈ ₹2,506.</p>
-  <div class="fx" data-lang="py">import numpy as np
-from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split
-
-rng = np.random.default_rng(0)
-n = 20_000
-size = rng.uniform(500, 2000, n)             # flat size (sq ft), we record it
-floor = rng.integers(0, 10, n)               # floor number, we FORGOT to record it
-rent = 10 * size + 800 * floor + rng.normal(0, 1000, n)    # true rule + pure noise (std 1000)
-
-for cols, name in [([size], "size only"), ([size, floor], "size + floor")]:
-    X = np.column_stack(cols)
-    X_tr, X_te, y_tr, y_te = train_test_split(X, rent, test_size=0.5, random_state=0)
-    m = LinearRegression().fit(X_tr, y_tr)
-    rmse = np.sqrt(((m.predict(X_te) - y_te) ** 2).mean())
-    print(f"{name:13s} test RMSE = {rmse:7.0f}")
-print("theory, size only   :", round(np.sqrt(800**2 * 8.25 + 1000**2)))   # Var(floor 0..9) = 8.25
-print("theory, size + floor:", 1000)</div>
-  <div class="fx" data-lang="text">size only     test RMSE =    2534
-size + floor  test RMSE =    1019
-theory, size only   : 2506
-theory, size + floor: 1000</div>
-  <p>Both models are as good as linear regression can be (the true rule is linear), and both sit on their theoretical floor (2,534 vs 2,506 and 1,019 vs 1,000, the small excess is estimation noise). Adding one feature cut the "irreducible" error by 60%.</p>
-  <h3>Classification: the Bayes error</h3>
-  <p>For classification, the same idea is the <strong>Bayes error rate</strong>. If, among flats with a given profile, 80% sell within 30 days, then the best possible rule says "sells fast" for all of them and is still wrong 20% of the time. In general the Bayes classifier predicts the most likely class at each x, and its error at x is min(p, 1 − p) for two classes.</p>
-  <table class="tbl">
-    <tr><th>Profile (equally common)</th><th>P(sells within 30 days)</th><th>best prediction</th><th>unavoidable error</th></tr>
-    <tr><td>old, cheap per sq ft</td><td>0.9</td><td>fast</td><td>0.1</td></tr>
-    <tr><td>average</td><td>0.5</td><td>either</td><td>0.5</td></tr>
-    <tr><td>new, premium</td><td>0.2</td><td>slow</td><td>0.2</td></tr>
-    <tr><td colspan="3"><strong>Bayes error</strong> = (0.1 + 0.5 + 0.2)/3</td><td><strong>0.267</strong></td></tr>
-  </table>
-  <p>A model with 27% error on this data is perfect, and a model with 10% error on it is leaking information or being scored wrongly. Knowing roughly where the floor is (an expert valuer's error is a common proxy) tells you how much improvement is even possible.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>The <strong>irreducible error</strong> is the expected loss of the best possible predictor given the available features: σ² = E[(y − E[y | x])²] for squared error, and the <strong>Bayes error</strong> E<sub>x</sub>[1 − max<sub>k</sub> P(y = k | x)] for 0-1 loss. No model using the same features can beat it; new features or better labels can lower it.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Calling all remaining error "noise" too early. If training error is still far above what a domain expert achieves, or the leftover misses line up with a column you have (like locality), the error is probably <em>reducible</em> bias, not noise. Conversely, a validation score far below the plausible floor is a red flag for <a class="xref" data-note="ml_pipelines">data leakage</a>.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Learning Curves.</b> On real data we cannot simulate 2,000 training sets. We need plots built from one dataset that still reveal whether bias or variance is the bigger problem. The first one varies the amount of data.</div>
+  <p>The coefficients say ₹5.78 lakh per 100 sq ft, plus ₹5.09 lakh for Baner and ₹2.11 lakh for Kothrud compared with Hadapsar. The honest leave-one-out error falls from 7.25 to 1.16, a drop of 84%. No tuning of the area-only model could have done that, because its floor was set by the missing column. (The fall in <em>training</em> error, 4.6 to 0.445, would mean little on its own; adding columns always lowers training error. The leave-one-out number is what proves the gain is real.) So when a model seems stuck at a floor, the first question is whether some information it needs is missing.</p>
+  <p>For classification the same idea is called the <strong>Bayes error</strong>. Suppose that among flats with a certain profile, 80% sell within 30 days. The best possible rule says "sells fast" for all of them and is still wrong 20% of the time. In general the ideal classifier predicts the most likely class at each x, and for two classes its error at x is the smaller of p and 1 − p. If there were three equally common profiles with P(sells fast) of 0.9, 0.5 and 0.2, the best possible error rate would be (0.1 + 0.5 + 0.2) / 3 = 0.267. A model with 27% error on such data is perfect, and a model with 10% is almost certainly leaking information or being scored wrongly. Knowing roughly where the floor is, often from how well a human expert does, tells you how much improvement is even possible. Two opposite warnings follow. Do not call remaining error "noise" too early: if training error is far above what experts achieve, or the leftover misses line up with a column you have, the error is probably reducible bias. And a validation score far <em>below</em> any plausible floor is a red flag for <a class="xref" data-note="ml_pipelines">data leakage</a>, not a reason to celebrate.</p>
 
   <h2 id="bv-lc"><span class="num">08</span>Learning Curves</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Bias and variance were measured in a simulation where we knew the truth. The portal only has its own sales. Should it spend money collecting more sales data? Which plot, built from real data, answers "will more rows help?"</p>
-  </div>
-  <h3>What a learning curve is</h3>
-  <p>Train the same model on growing subsets of the training data (say 5, 10, 20, … rows). For each size, record the training error (on the rows used) and the validation error (on held-out rows). Plot both against the training size. That is a <strong>learning curve</strong>.</p>
-  <p>What to expect, by reasoning alone:</p>
-  <ul>
-    <li><strong>Training error rises</strong> with more rows: memorising 5 flats is easy, memorising 160 is hard.</li>
-    <li><strong>Validation error falls</strong> with more rows: more data means less variance.</li>
-    <li>Both approach the same level: the error the model family can achieve with unlimited data, which is bias² + noise.</li>
-  </ul>
-  <p>So the <strong>height</strong> where the curves meet shows bias (plus noise), and the <strong>gap</strong> between them shows variance.</p>
-  <h3>In the flats world</h3>
-  <p>Draw n sales from the flats world (areas spread between 500 and 1,400 sq ft, price = 6 × area + 10 + noise with SD 2), fit three models, score on 2,000 fresh sales, and average over 50 training sets of each size:</p>
+  <p>Bias and variance were measured in simulations where we knew the truth. On real data we cannot draw 2,000 training sets, so we need plots made from one dataset that still reveal which problem we have. The first one answers a very practical question: should we spend money collecting more data? A <strong>learning curve</strong> trains the same model on growing subsets of the training data, say 5, 10, 20 and more rows, records the training error and the validation error at each size, and plots both against the training size.</p>
+  <p>We can predict its shape by reasoning alone. Training error <em>rises</em> as rows are added, because memorising 5 flats is easy and memorising 160 is hard. Validation error <em>falls</em>, because more data means less variance. Both approach the same level, the error the model family would reach with unlimited data, which is bias² plus noise. So the <strong>height</strong> at which the two curves meet shows bias (plus noise), and the <strong>gap</strong> between them shows variance. Here it is in the flats world, for three models, each averaged over 50 training sets per size and scored on 2,000 fresh sales:</p>
   <div class="fx" data-lang="py">import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.dummy import DummyRegressor
 from sklearn.neighbors import KNeighborsRegressor
 
 rng = np.random.default_rng(0)
-def sample(n):                                  # n sales from the flats "world": price = 6 x area + 10 + noise
+def sample(n):                                  # n sales from the flats world: 6 x area + 10 + noise
     x = rng.uniform(5, 14, n)
     return x[:, None], 6 * x + 10 + rng.normal(0, 2, n)
 X_val, y_val = sample(2000)                     # a big validation set
@@ -856,13 +524,7 @@ line (right shape)
   n=  40  train MSE=   0.00  val MSE=   8.92  gap=  8.92
   n=  80  train MSE=   0.00  val MSE=   8.28  gap=  8.28
   n= 160  train MSE=   0.00  val MSE=   8.02  gap=  8.02</div>
-  <ul>
-    <li><strong>Mean (too simple)</strong>: validation error stays around 250 from 40 rows on, and training error rises to meet it. 160 sales are no better than 40. High bias: more data is wasted.</li>
-    <li><strong>Line (right shape)</strong>: the gap closes from 4.76 to about 0.2 and both curves settle at 4, the noise floor σ² = 4. At our n = 10, the gap of 1.73 is the variance we saw as LOOCV 7.25 vs training 4.6.</li>
-    <li><strong>1-NN (memoriser)</strong>: training error is always 0, and the validation error falls (46 → 8) but levels off near 8 = 2σ², never meeting the training curve. The gap that does not close is the signature of a model that copies noise.</li>
-  </ul>
-  <h3>The same idea at scale: the sine wave</h3>
-  <p><code>learning_curve</code> takes a model, the data, a list of training sizes and a cross-validation splitter. For each split and size it fits on the first n training rows and scores on the validation part. We use 20 random 80/20 splits and report the median, which is steadier than the mean when one tiny fit explodes.</p>
+  <p>The average-price predictor, too simple for the pattern, has validation error stuck around 250 from 40 rows onwards, with training error rising to meet it: 160 sales are no better than 40. That is high bias, and more data is wasted on it. The line, which has the right shape, starts with a gap of 4.76 at 5 rows that closes to about 0.2, and both curves settle at 4, the noise floor; at our n = 10 the gap of 1.73 is the variance we saw as leave-one-out 7.25 against training 4.6. The 1-NN memoriser always has zero training error, and its validation error falls from 46 to 8 but levels off near 8, twice the noise variance, because it copies one neighbour's noise; the gap never closes. The same plot at a larger scale on the sine data, using scikit-learn's <code>learning_curve</code>, which fits on the first n training rows of each split and scores on the validation part:</p>
   <div class="fx" data-lang="py">import numpy as np
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import PolynomialFeatures, StandardScaler
@@ -872,14 +534,10 @@ from sine import sample
 
 X, y = sample(600, np.random.default_rng(1))
 cv = ShuffleSplit(n_splits=20, test_size=0.2, random_state=0)   # 20 random 80/20 splits
-sizes = [15, 30, 60, 120, 240, 480]
-models = {
-    "degree 1 (too simple)": make_pipeline(PolynomialFeatures(1), StandardScaler(), LinearRegression()),
-    "degree 12 (very flexible)": make_pipeline(PolynomialFeatures(12), StandardScaler(), LinearRegression()),
-}
-for name, model in models.items():
-    n, tr, va = learning_curve(model, X, y, train_sizes=sizes, cv=cv,
-                               scoring="neg_mean_squared_error", n_jobs=1)
+for name, d in [("degree 1 (too simple)", 1), ("degree 12 (very flexible)", 12)]:
+    model = make_pipeline(PolynomialFeatures(d), StandardScaler(), LinearRegression())
+    n, tr, va = learning_curve(model, X, y, train_sizes=[15, 30, 60, 120, 240, 480], cv=cv,
+                               scoring="neg_mean_squared_error")
     print(name)
     for k in range(len(n)):
         trm, vam = -np.median(tr[k]), -np.median(va[k])   # median over the 20 splits
@@ -898,7 +556,7 @@ degree 12 (very flexible)
   n= 120  train MSE= 0.088  val MSE=  0.109  gap= 0.021
   n= 240  train MSE= 0.094  val MSE=  0.105  gap= 0.011
   n= 480  train MSE= 0.097  val MSE=  0.102  gap= 0.005</div>
-  <figure class="viz"><svg viewBox="0 0 650 235" width="650">
+    <figure class="viz"><svg viewBox="0 0 650 235" width="650">
 <line x1="55" y1="190" x2="295" y2="190" stroke="currentColor" opacity="0.5"/>
 <line x1="55" y1="30" x2="55" y2="190" stroke="currentColor" opacity="0.5"/>
 <text x="55" y="204" text-anchor="middle" class="tm" font-size="10.5">15</text>
@@ -982,31 +640,10 @@ degree 12 (very flexible)
 <text x="505" y="22" text-anchor="middle" font-size="12.5" font-weight="700">degree 12: HIGH VARIANCE at small n</text>
 <text x="392" y="150" class="tm" font-size="11">noise</text>
 </svg><figcaption>Left: a line on sine data. The curves meet quickly at about 0.29, far above the noise floor 0.09: more data cannot help, the model is too simple. Right: a degree-12 polynomial. A huge gap at small n that closes as data grows, ending near the noise floor: more data helped a lot.</figcaption></figure>
-  <h3>How to read a learning curve</h3>
-  <table class="tbl">
-    <tr><th>What you see</th><th>Diagnosis</th><th>Will more data help?</th></tr>
-    <tr><td>Both curves flat and close together, high above the target error</td><td>high bias</td><td>No. Mean price: ~250 at 40 or 160 sales. Sine degree 1: 0.292 at 480 rows, same as at 60.</td></tr>
-    <tr><td>Training error far below validation; gap shrinking as n grows</td><td>high variance</td><td>Yes. Line on flats: gap 4.76 → 0.19. Sine degree 12: gap 2.03 → 0.005.</td></tr>
-    <tr><td>Big gap that is <em>not</em> shrinking at the right edge</td><td>variance, and data alone will be slow</td><td>Some (1-NN stays at a gap of 8); also regularize or change model</td></tr>
-    <tr><td>Both curves close together near the target error</td><td>good fit</td><td>Little</td></tr>
-    <tr><td>Validation better than training at every size</td><td>suspicious</td><td>Check for leakage, or for regularization / dropout that is only active in training</td></tr>
-  </table>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A <strong>learning curve</strong> plots training and validation error (or score) of a fixed model configuration against the number of training examples. The value the curves converge to estimates the model family's asymptotic error (bias² + noise); the gap at a given n estimates the variance-driven part of the generalization gap at that n.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Two traps in sklearn. (1) <code>scoring="neg_mean_squared_error"</code> returns <em>negative</em> numbers so that "higher is better"; flip the sign before plotting. (2) <code>learning_curve</code> takes the first n rows of each training fold, so with sorted data (by date, by area) use a shuffled splitter, or the small subsets are not representative.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Validation Curves.</b> A learning curve fixes the model and varies the data. The opposite plot fixes the data and varies one capacity knob. That is how you actually choose degree, depth, k or λ.</div>
+  <p>On the left, a line on sine data: the curves meet quickly at about 0.29, far above the noise floor of 0.09, and stay there from 60 rows to 480. More data cannot help; the model is too simple. On the right, a degree-12 polynomial: a huge gap at 15 rows (2.06 against 0.03) that closes steadily as data grows, ending at about 0.10, near the floor. More data helped a lot. Reading a learning curve therefore comes down to a few patterns. Both curves flat, close together and high above the target error mean high bias, and more data will not help. Training far below validation, with the gap shrinking as n grows, means high variance, and more data will help. A big gap that is <em>not</em> shrinking at the right edge means variance that data alone will fix only slowly, so also regularise or change the model. Both curves close together near the target mean a good fit. And validation better than training at every size is suspicious: check for leakage, or for regularization such as dropout that is only switched on during training. When building learning curves on sorted data, shuffle first, or the small subsets are not representative.</p>
 
   <h2 id="bv-vc"><span class="num">09</span>Validation Curves</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Learning curves tell us whether more data helps a fixed model. But the portal has the ten flats it has. On exactly that data, which degree or which k should it use, measured honestly rather than by training error?</p>
-  </div>
-  <h3>What a validation curve is</h3>
-  <p>Pick one hyperparameter that controls capacity. For each value, compute cross-validated training and validation error. Plot both against the hyperparameter. It is the U-curve of section 06, measured on real data instead of simulated.</p>
-  <h3>On the ten flats</h3>
-  <p>With ten rows, leave-one-out (<a class="xref" data-note="ml_splits">Train/Val/Test &amp; CV</a>, section 09) is the natural validation: each value of the knob is fitted ten times on nine flats.</p>
+  <p>A learning curve fixes the model and varies the amount of data. The opposite plot fixes the data and varies one capacity knob, and it is how you actually choose a degree, a depth, a k or a penalty. A <strong>validation curve</strong> picks one hyperparameter, computes cross-validated training and validation error for each of its values, and plots both against it. It is the U-curve of section 06, measured on real data instead of simulated. With only ten flats, leave-one-out (<a class="xref" data-note="ml_splits">Train/Val/Test &amp; Cross-Validation</a>) is the natural validation: each value of the knob is fitted ten times on nine flats and tested on the tenth.</p>
   <div class="fx" data-lang="py">import numpy as np
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.model_selection import validation_curve, LeaveOneOut
@@ -1014,21 +651,18 @@ from sklearn.model_selection import validation_curve, LeaveOneOut
 x = np.array([5, 6, 7, 8, 9, 10, 11, 12, 13, 14], dtype=float)   # the ten flats
 y = np.array([38, 49, 53, 56, 67, 68, 73, 83, 87, 96], dtype=float)
 
-# Knob 1: polynomial degree, scored by leave-one-out (10 fits per degree)
-print("degree:      ", "  ".join(f"{d:7d}" for d in range(8)))
-train, loo = [], []
+train, loo = [], []                           # knob 1: polynomial degree, scored by leave-one-out
 for d in range(8):
     train.append(((np.polynomial.Polynomial.fit(x, y, d)(x) - y) ** 2).mean())
-    errs = [(np.polynomial.Polynomial.fit(np.delete(x, i), np.delete(y, i), d)(x[i]) - y[i]) ** 2
-            for i in range(10)]
-    loo.append(np.mean(errs))
+    loo.append(np.mean([(np.polynomial.Polynomial.fit(np.delete(x, i), np.delete(y, i), d)(x[i]) - y[i]) ** 2
+                        for i in range(10)]))
+print("degree:      ", "  ".join(f"{d:7d}" for d in range(8)))
 print("  train MSE: ", "  ".join(f"{v:7.1f}" for v in train))
 print("  LOOCV MSE: ", "  ".join(f"{v:7.1f}" for v in loo))
 
-# Knob 2: k in kNN (capacity goes DOWN as k goes up)
-ks = list(range(1, 10))
+ks = list(range(1, 10))                       # knob 2: k in kNN (capacity goes DOWN as k goes up)
 tr, va = validation_curve(KNeighborsRegressor(), x[:, None], y, param_name="n_neighbors", param_range=ks,
-                          cv=LeaveOneOut(), scoring="neg_mean_squared_error", n_jobs=1)
+                          cv=LeaveOneOut(), scoring="neg_mean_squared_error")
 print("kNN k:       ", "  ".join(f"{k:7d}" for k in ks))
 print("  train MSE: ", "  ".join(f"{v:7.1f}" for v in np.abs(tr.mean(1))))
 print("  LOOCV MSE: ", "  ".join(f"{v:7.1f}" for v in np.abs(va.mean(1))))</div>
@@ -1038,208 +672,70 @@ print("  LOOCV MSE: ", "  ".join(f"{v:7.1f}" for v in np.abs(va.mean(1))))</div>
 kNN k:              1        2        3        4        5        6        7        8        9
   train MSE:      0.0     15.7     21.7     40.7     62.9     96.8    148.7    210.0    297.9
   LOOCV MSE:     61.1     36.9     59.8     78.4    107.3    149.7    212.3    277.4    372.3</div>
-  <ul>
-    <li><strong>Degree</strong>: training error only falls (301.6 → 1.7), as it must. The LOOCV error is a sharp U with its bottom at <strong>degree 1</strong> (7.3), then 12.0, 10.0, 19.2, 38.0 and an explosion to 613.9 and 6,073 at degrees 6 and 7, where nine flats leave almost no room between coefficients and points. On ten flats the straight line is the right capacity.</li>
-    <li><strong>kNN</strong>: the axis runs the other way. k = 1 is the memoriser (train 0, LOOCV 61.1), k = 2 is best (36.9), and k = 9 averages all nine other flats: LOOCV 372.3, exactly the mean predictor's leave-one-out error. Every kNN setting is far worse than the line, because averaging neighbours flattens the clear slope at the edges.</li>
-  </ul>
-  <h3>The same idea at scale: trees and kNN on 200 sine rows</h3>
+  <p>Training error only ever falls as the degree grows (301.6 down to 1.7), as it must. The leave-one-out error is a sharp U with its bottom at degree 1 (7.3), then 12.0, 10.0, 19.2 and 38.0, and an explosion to 614 and 6,073 at degrees 6 and 7, where nine flats leave almost no room between coefficients and points. On ten flats the straight line is the right capacity, which settles the question that four new flats could not. For kNN the axis runs the other way. k = 1 is the memoriser (training 0, leave-one-out 61.1), k = 2 is best (36.9), and k = 9 averages all nine other flats, giving 372.3, exactly the average predictor's leave-one-out error. Every kNN setting is far worse than the line, because averaging neighbours flattens the slope at the edges. A larger example, tree depth on 200 sine rows with 5-fold CV:</p>
   <div class="fx" data-lang="py">import numpy as np
 from sklearn.tree import DecisionTreeRegressor
-from sklearn.neighbors import KNeighborsRegressor
 from sklearn.model_selection import validation_curve, KFold
 from sine import sample
 
 X, y = sample(200, np.random.default_rng(3))
-cv = KFold(5, shuffle=True, random_state=0)
-
 depths = [1, 2, 3, 4, 5, 6, 8, 12, 20]
 tr, va = validation_curve(DecisionTreeRegressor(random_state=0), X, y, param_name="max_depth",
-                          param_range=depths, cv=cv, scoring="neg_mean_squared_error", n_jobs=1)
-print("tree max_depth:  ", "  ".join(f"{d:5d}" for d in depths))
-print("  train MSE:     ", "  ".join(f"{v:5.3f}" for v in np.abs(tr.mean(1))))
-print("  val MSE:       ", "  ".join(f"{v:5.3f}" for v in np.abs(va.mean(1))))
+                          param_range=depths, cv=KFold(5, shuffle=True, random_state=0),
+                          scoring="neg_mean_squared_error")
+print("max_depth: ", "  ".join(f"{d:5d}" for d in depths))
+print("train MSE: ", "  ".join(f"{v:5.3f}" for v in -tr.mean(1)))
+print("val MSE:   ", "  ".join(f"{v:5.3f}" for v in -va.mean(1)))</div>
+  <div class="fx" data-lang="text">max_depth:      1      2      3      4      5      6      8     12     20
+train MSE:  0.177  0.125  0.078  0.065  0.055  0.043  0.025  0.005  0.000
+val MSE:    0.203  0.133  0.104  0.107  0.119  0.135  0.154  0.176  0.184</div>
+  <p>Depths 1 and 2 underfit (validation 0.203 and 0.133). Depth 3 is best at 0.104, close to the noise floor of 0.09. From depth 4 on, training error keeps falling while validation error rises, reaching 0.184 at depth 20, where training error is 0 because every leaf holds a single row. Two cautions apply to every validation curve. The validation error at the chosen value is slightly optimistic, because you picked the minimum of several noisy numbers (the selection bias of the previous note), so report the final model on an untouched test set or with nested cross-validation. And when two values are within noise of each other, prefer the simpler one; this is often called the one-standard-error rule.</p>
 
-ks = [1, 2, 3, 5, 10, 20, 40, 80, 160]
-tr, va = validation_curve(KNeighborsRegressor(), X, y, param_name="n_neighbors",
-                          param_range=ks, cv=cv, scoring="neg_mean_squared_error", n_jobs=1)
-print("knn n_neighbors: ", "  ".join(f"{k:5d}" for k in ks))
-print("  train MSE:     ", "  ".join(f"{v:5.3f}" for v in np.abs(tr.mean(1))))
-print("  val MSE:       ", "  ".join(f"{v:5.3f}" for v in np.abs(va.mean(1))))</div>
-  <div class="fx" data-lang="text">tree max_depth:       1      2      3      4      5      6      8     12     20
-  train MSE:      0.177  0.125  0.078  0.065  0.055  0.043  0.025  0.005  0.000
-  val MSE:        0.203  0.133  0.104  0.107  0.119  0.135  0.154  0.176  0.184
-knn n_neighbors:      1      2      3      5     10     20     40     80    160
-  train MSE:      0.000  0.042  0.057  0.069  0.079  0.091  0.117  0.152  0.601
-  val MSE:        0.184  0.134  0.121  0.107  0.099  0.099  0.121  0.156  0.603</div>
-  <figure class="viz"><svg viewBox="0 0 600 240" width="600">
-<line x1="60" y1="195" x2="560" y2="195" stroke="currentColor" opacity="0.5"/>
-<line x1="60" y1="25" x2="60" y2="195" stroke="currentColor" opacity="0.5"/>
-<text x="60" y="209" text-anchor="middle" class="tm" font-size="10.5">1</text>
-<line x1="60" y1="195" x2="60" y2="198" stroke="currentColor" opacity="0.5"/>
-<text x="86.3" y="209" text-anchor="middle" class="tm" font-size="10.5">2</text>
-<line x1="86.3" y1="195" x2="86.3" y2="198" stroke="currentColor" opacity="0.5"/>
-<text x="112.6" y="209" text-anchor="middle" class="tm" font-size="10.5">3</text>
-<line x1="112.6" y1="195" x2="112.6" y2="198" stroke="currentColor" opacity="0.5"/>
-<text x="138.9" y="209" text-anchor="middle" class="tm" font-size="10.5">4</text>
-<line x1="138.9" y1="195" x2="138.9" y2="198" stroke="currentColor" opacity="0.5"/>
-<text x="165.3" y="209" text-anchor="middle" class="tm" font-size="10.5">5</text>
-<line x1="165.3" y1="195" x2="165.3" y2="198" stroke="currentColor" opacity="0.5"/>
-<text x="191.6" y="209" text-anchor="middle" class="tm" font-size="10.5">6</text>
-<line x1="191.6" y1="195" x2="191.6" y2="198" stroke="currentColor" opacity="0.5"/>
-<text x="244.2" y="209" text-anchor="middle" class="tm" font-size="10.5">8</text>
-<line x1="244.2" y1="195" x2="244.2" y2="198" stroke="currentColor" opacity="0.5"/>
-<text x="349.5" y="209" text-anchor="middle" class="tm" font-size="10.5">12</text>
-<line x1="349.5" y1="195" x2="349.5" y2="198" stroke="currentColor" opacity="0.5"/>
-<text x="560" y="209" text-anchor="middle" class="tm" font-size="10.5">20</text>
-<line x1="560" y1="195" x2="560" y2="198" stroke="currentColor" opacity="0.5"/>
-<text x="55" y="198.5" text-anchor="end" class="tm" font-size="10.5">0</text>
-<line x1="57" y1="195" x2="60" y2="195" stroke="currentColor" opacity="0.5"/>
-<text x="55" y="159.9" text-anchor="end" class="tm" font-size="10.5">0.05</text>
-<line x1="57" y1="156.4" x2="60" y2="156.4" stroke="currentColor" opacity="0.5"/>
-<text x="55" y="121.2" text-anchor="end" class="tm" font-size="10.5">0.1</text>
-<line x1="57" y1="117.7" x2="60" y2="117.7" stroke="currentColor" opacity="0.5"/>
-<text x="55" y="82.6" text-anchor="end" class="tm" font-size="10.5">0.15</text>
-<line x1="57" y1="79.1" x2="60" y2="79.1" stroke="currentColor" opacity="0.5"/>
-<text x="55" y="44" text-anchor="end" class="tm" font-size="10.5">0.2</text>
-<line x1="57" y1="40.5" x2="60" y2="40.5" stroke="currentColor" opacity="0.5"/>
-<line x1="60" y1="125.5" x2="560" y2="125.5" stroke="currentColor" stroke-dasharray="4 3" opacity="0.6"/>
-<text x="558" y="121.5" text-anchor="end" class="tm" font-size="10.5">noise 0.09</text>
-<line x1="112.6" y1="25" x2="112.6" y2="195" stroke-dasharray="3 3" class="sg"/>
-<text x="116.6" y="35" class="tm" font-size="10.5">best depth = 3</text>
-<polyline points="60,58.2 86.3,98.4 112.6,134.7 138.9,144.8 165.3,152.5 191.6,161.8 244.2,175.7 349.5,191.1 560,195" fill="none" class="sb" stroke-width="2"/>
-<circle cx="60" cy="58.2" r="3" class="tb"/>
-<circle cx="86.3" cy="98.4" r="3" class="tb"/>
-<circle cx="112.6" cy="134.7" r="3" class="tb"/>
-<circle cx="138.9" cy="144.8" r="3" class="tb"/>
-<circle cx="165.3" cy="152.5" r="3" class="tb"/>
-<circle cx="191.6" cy="161.8" r="3" class="tb"/>
-<circle cx="244.2" cy="175.7" r="3" class="tb"/>
-<circle cx="349.5" cy="191.1" r="3" class="tb"/>
-<circle cx="560" cy="195" r="3" class="tb"/>
-<text x="470" y="180" class="tb" font-size="11.5">train MSE</text>
-<polyline points="60,38.1 86.3,92.2 112.6,114.6 138.9,112.3 165.3,103 191.6,90.7 244.2,76 349.5,59 560,52.8" fill="none" class="sr" stroke-width="2"/>
-<circle cx="60" cy="38.1" r="3" class="tr"/>
-<circle cx="86.3" cy="92.2" r="3" class="tr"/>
-<circle cx="112.6" cy="114.6" r="3" class="tr"/>
-<circle cx="138.9" cy="112.3" r="3" class="tr"/>
-<circle cx="165.3" cy="103" r="3" class="tr"/>
-<circle cx="191.6" cy="90.7" r="3" class="tr"/>
-<circle cx="244.2" cy="76" r="3" class="tr"/>
-<circle cx="349.5" cy="59" r="3" class="tr"/>
-<circle cx="560" cy="52.8" r="3" class="tr"/>
-<text x="450" y="50" class="tr" font-size="11.5">validation MSE</text>
-<text x="310" y="225" text-anchor="middle" class="tm" font-size="11">max_depth of a decision tree →</text>
-<text x="26" y="110" text-anchor="middle" class="tm" font-size="11" transform="rotate(-90 26 110)">MSE</text>
-<text x="66" y="180" class="tm" font-size="11">← underfit</text>
-<text x="300" y="40" class="tm" font-size="11">overfit →</text>
-</svg><figcaption>Decision-tree depth on 200 sine rows. Training error falls to 0 as depth grows; validation error is lowest at depth 3 and then climbs as the tree starts carving out single noisy rows.</figcaption></figure>
-  <h3>Reading it</h3>
-  <ul>
-    <li><strong>Trees</strong>: depth 1–2 underfit (val 0.203, 0.133). Depth 3 is best (0.104, close to the noise floor 0.09). From depth 4 on, training error keeps falling but validation rises, reaching 0.184 at depth 20 where training error is 0: every leaf holds one row.</li>
-    <li><strong>kNN</strong>: k = 1 is the memoriser (train 0.000, val 0.184). k = 10–20 is best (0.099). k = 160 averages 160 of the 160 training rows in each fold, i.e. predicts nearly the global mean: train and val both ≈ 0.60, pure underfitting. With 200 rows the best k is larger than with our ten flats: more data affords smoother averaging.</li>
-  </ul>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A <strong>validation curve</strong> plots training and cross-validated error against the values of one hyperparameter, with everything else fixed. The value with the lowest validation error is the estimate of the best capacity; the training curve shows how much of the improvement on the right side is just memorisation.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>The validation error at the chosen value is <em>optimistically biased</em>: you picked the minimum of several noisy numbers. Report the final model's performance on an untouched test set, or use nested cross-validation (<a class="xref" data-note="ml_splits">Train/Val/Test &amp; CV</a>). And when two values are within noise of each other, prefer the simpler model (the "one standard error rule").</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Diagnosing and Fixing.</b> We can now measure symptoms. The last practical step: turn the numbers into a decision about what to change next.</div>
-
-  <h2 id="bv-fix"><span class="num">10</span>Diagnosing and Fixing: High Bias vs High Variance</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We have training errors, validation errors and curves. Given three numbers for a model, how do we decide whether its problem is bias or variance, and which fix to try first?</p>
-  </div>
-  <h3>Three numbers</h3>
-  <p>A quick diagnosis needs only three error numbers:</p>
-  <ol>
-    <li><strong>Baseline error</strong>: the best error you could hope for (expert or human-level error, a strong existing system, or an estimate of the noise floor).</li>
-    <li><strong>Training error</strong>.</li>
-    <li><strong>Validation error</strong>.</li>
-  </ol>
-  <p>Then <strong>avoidable bias ≈ training − baseline</strong>, and <strong>variance ≈ validation − training</strong>. Whichever is larger is the problem to work on first.</p>
-  <h3>Worked by hand: four projects</h3>
+  <h2 id="bv-fix"><span class="num">10</span>Diagnosing and Fixing</h2>
+  <p>The curves give symptoms; the last step is turning them into a decision about what to change. A quick diagnosis needs only three numbers. The <strong>baseline error</strong> is the best error you could hope for: an expert's error, a strong existing system, or an estimate of the noise floor. Then the training error and the validation error. <strong>Avoidable bias</strong> is training error minus baseline, how far the model is from what is achievable even on the rows it learned from. <strong>Variance</strong> is validation error minus training error, how much worse it does on unseen rows. Whichever is larger is the problem to work on first. A doctor works the same way: the symptoms decide the medicine, and giving cough syrup for a broken arm wastes time.</p>
   <table class="tbl">
-    <tr><th>Project (error %)</th><th>baseline</th><th>train</th><th>val</th><th>avoidable bias</th><th>variance</th><th>verdict</th></tr>
+    <tr><th>Project (error %)</th><th>baseline</th><th>train</th><th>validation</th><th>avoidable bias</th><th>variance</th><th>verdict</th></tr>
     <tr><td>A</td><td>1</td><td>9</td><td>10</td><td>8</td><td>1</td><td>high bias</td></tr>
     <tr><td>B</td><td>1</td><td>2</td><td>12</td><td>1</td><td>10</td><td>high variance</td></tr>
-    <tr><td>C</td><td>1</td><td>9</td><td>20</td><td>8</td><td>11</td><td>both (fix variance first, then bias)</td></tr>
+    <tr><td>C</td><td>1</td><td>9</td><td>20</td><td>8</td><td>11</td><td>both</td></tr>
     <tr><td>D</td><td>1</td><td>1.5</td><td>2</td><td>0.5</td><td>0.5</td><td>good fit</td></tr>
   </table>
-  <p>Note project A: if the baseline were 8% instead of 1% (a very noisy problem), the same 9% / 10% would be a good fit. The baseline decides whether training error is "high".</p>
-  <h3>On the flats</h3>
-  <p>Take an expert valuer's typical miss of about ₹2 lakh as the baseline (MSE 4), and the training and LOOCV errors from section 09:</p>
-  <div class="fx" data-lang="py">def diagnose(base_err, train_err, val_err, tol=0.5):
-    avoidable_bias = train_err - base_err     # how far training is from the best possible
+  <p>Project A shows why the baseline matters: if it were 8% instead of 1% (a very noisy problem), the same 9% and 10% would be a good fit. On the flats, take an expert valuer's typical miss of about ₹2 lakh, an MSE of 4, as the baseline, and the training and leave-one-out errors from section 09:</p>
+  <div class="fx" data-lang="py">def diagnose(baseline, train_err, val_err):
+    avoidable_bias = train_err - baseline     # how far training is from the best achievable
     variance = val_err - train_err            # how much worse on unseen rows
-    if avoidable_bias &lt; tol and variance &lt; tol:
-        verdict = "good fit"
-    elif avoidable_bias &gt;= variance:
-        verdict = "mainly HIGH BIAS -&gt; bigger model / better features / less regularisation"
-    else:
-        verdict = "mainly HIGH VARIANCE -&gt; more data / regularise / simpler model"
-    return round(avoidable_bias, 3), round(variance, 3), verdict
+    verdict = "mainly BIAS" if avoidable_bias &gt;= variance else "mainly VARIANCE"
+    return round(avoidable_bias, 1), round(variance, 1), verdict
 
-# The ten flats: training MSE and LOOCV MSE from section 09; baseline = an expert valuer, about ±2 lakh (MSE 4)
-expert = 4.0
+expert = 4.0                                  # an expert valuer misses by about 2 lakh: MSE 4
 for name, tr, va in [("mean price", 301.6, 372.3), ("line", 4.6, 7.3), ("degree 6", 2.7, 613.9), ("1-NN", 0.0, 61.1)]:
-    print(f"{name:10s}", diagnose(expert, tr, va))
-# The sine polynomials of section 02 (baseline = noise 0.09)
-for name, tr, va in [("sine deg 1", 0.220, 0.325), ("sine deg 3", 0.086, 0.125), ("sine deg 9", 0.000, 0.701)]:
-    print(f"{name:10s}", diagnose(0.09, tr, va, tol=0.05))</div>
-  <div class="fx" data-lang="text">mean price (297.6, 70.7, 'mainly HIGH BIAS -&gt; bigger model / better features / less regularisation')
-line       (0.6, 2.7, 'mainly HIGH VARIANCE -&gt; more data / regularise / simpler model')
-degree 6   (-1.3, 611.2, 'mainly HIGH VARIANCE -&gt; more data / regularise / simpler model')
-1-NN       (-4.0, 61.1, 'mainly HIGH VARIANCE -&gt; more data / regularise / simpler model')
-sine deg 1 (0.13, 0.105, 'mainly HIGH BIAS -&gt; bigger model / better features / less regularisation')
-sine deg 3 (-0.004, 0.039, 'good fit')
-sine deg 9 (-0.09, 0.701, 'mainly HIGH VARIANCE -&gt; more data / regularise / simpler model')</div>
-  <ul>
-    <li><strong>Mean price</strong>: avoidable bias 297.6 dominates. Fix: a more flexible model (any slope at all).</li>
-    <li><strong>Degree 6 and 1-NN</strong>: training error <em>below</em> the expert baseline (negative avoidable bias, only possible by fitting noise) and a huge variance gap. Fix: a simpler model.</li>
-    <li><strong>The line</strong>: avoidable bias only 0.6, variance 2.7. Its remaining problem is the variance of fitting two numbers on nine or ten flats. Fixes: more sales, or a little <a class="xref" data-note="ml_regularization">regularization</a>, or better features (locality cut LOOCV to 1.16 in section 07).</li>
-    <li><strong>The sine polynomials</strong> of section 02 (baseline = noise 0.09) come out as before: degree 1 high bias, degree 3 a good fit, degree 9 high variance.</li>
-  </ul>
-  <h3>The fix table</h3>
-  <table class="tbl">
-    <tr><th>High bias (underfitting): try</th><th>High variance (overfitting): try</th></tr>
-    <tr><td>A more flexible model (higher degree, deeper trees, bigger network, kernel SVM)</td><td>More training data (or data augmentation)</td></tr>
-    <tr><td>Better or more features (locality, interactions, see <a class="xref" data-note="ml_features">Feature Engineering</a>)</td><td>Stronger <a class="xref" data-note="ml_regularization">regularization</a> (larger λ, smaller C, dropout)</td></tr>
-    <tr><td>Less regularization (smaller λ, larger C)</td><td>A simpler model or fewer features (feature selection)</td></tr>
-    <tr><td>Train longer (more epochs, more boosting rounds)</td><td>Early stopping</td></tr>
-    <tr><td>Boosting (adds capacity step by step)</td><td>Bagging / random forest (averages variance away)</td></tr>
-    <tr><td><em>Will not help:</em> more data of the same kind</td><td><em>Will not help:</em> a bigger model, training longer</td></tr>
-  </table>
-  <div class="flow"><span>Is train error near baseline?</span><span>No → fix bias, repeat</span><span>Yes → is val near train?</span><span>No → fix variance, repeat</span><span>Yes → check once on the test set</span></div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Collecting more data for a high-bias model. It is the most expensive mistake on this page: months of data collection, and the learning curve of section 08 shows the result in advance (the mean predictor stays near 250 with 40 or 160 sales; sine degree 1 stays at 0.29 with 60 or 480 rows).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Double Descent.</b> Everything so far says "too much capacity hurts" (degree 9 on ten flats). Yet modern neural networks have far more parameters than training rows and generalise well. The classic U-curve is not the whole story.</div>
+    print(f"{name:10s}", diagnose(expert, tr, va))</div>
+  <div class="fx" data-lang="text">mean price (297.6, 70.7, 'mainly BIAS')
+line       (0.6, 2.7, 'mainly VARIANCE')
+degree 6   (-1.3, 611.2, 'mainly VARIANCE')
+1-NN       (-4.0, 61.1, 'mainly VARIANCE')</div>
+  <p>The average price has avoidable bias 297.6 dominating its variance gap: it needs more capacity, any slope at all. Degree 6 and 1-NN have training error <em>below</em> the expert baseline, which is only possible by fitting noise, and huge variance gaps: they need less capacity. The line has avoidable bias of only 0.6 and a variance gap of 2.7: its remaining problem is the variance of estimating two numbers from ten flats, so more sales, a little <a class="xref" data-note="ml_regularization">regularization</a>, or a better feature (locality cut its leave-one-out error to 1.16 in section 07) would help.</p>
+  <p>The fixes follow directly from the decomposition. For <strong>high bias</strong> (underfitting): use a more flexible model (higher degree, deeper trees, a bigger network, a kernel), add better or more features, reduce regularization, train longer, or use boosting, which adds capacity step by step. More data of the same kind will not help. For <strong>high variance</strong> (overfitting): get more training data or use data augmentation, strengthen regularization, use a simpler model or fewer features, stop training early, or use bagging and random forests to average the variance away. A bigger model or longer training will not help. The workflow is a loop: is training error near the baseline? If not, fix bias and repeat. If so, is validation error near training error? If not, fix variance and repeat. If both are close, check once on the test set. The single most expensive mistake on this page is collecting more data for a high-bias model, which can take months; the learning curve shows the outcome in advance, as the average predictor stuck near 250 at both 40 and 160 sales showed.</p>
 
-  <h2 id="bv-dd"><span class="num">11</span>Double Descent (Brief)</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>On the flats, degree 9 (10 coefficients for 10 rows) was the worst model we tried. If "parameters ≥ rows" is always a disaster, how do networks with millions of parameters trained on thousands of rows work at all?</p>
-  </div>
-  <h3>The observation</h3>
-  <p>Keep increasing capacity past the point where the model can fit the training data exactly (the <strong>interpolation threshold</strong>, about "parameters = rows"; degree 9 for our ten flats). The classic picture says test error keeps rising. In many settings it instead peaks right at the threshold and then <em>falls again</em>, sometimes below the best point of the classic U. This is called <strong>double descent</strong>.</p>
-  <p>A small linear demonstration: the target depends a little on each of 300 features, but we have only 40 training rows. The model sees the first p features. When p &gt; 40 there are infinitely many weight vectors that fit the training rows exactly; <code>np.linalg.lstsq</code> returns the one with the smallest length (the <strong>minimum-norm</strong> solution). We also fit ridge regression with λ = 5 at every p.</p>
+  <h2 id="bv-dd"><span class="num">11</span>Double Descent</h2>
+  <p>Everything so far says too much capacity hurts: degree 9, with ten coefficients for ten flats, was the worst model we tried. Yet modern neural networks have far more parameters than training rows and still generalise well. The classic U-curve is not the whole story. Keep increasing capacity past the point where the model can fit the training data exactly, called the <strong>interpolation threshold</strong> (roughly "parameters = rows", degree 9 for ten flats). The classic picture says test error keeps rising. In many settings it instead peaks right at the threshold and then <em>falls again</em>, sometimes below the best point of the classic U. This is called <strong>double descent</strong>.</p>
+  <p>A small linear demonstration shows it. The target depends a little on each of 300 features, but there are only 40 training rows, and the model sees only the first p features. When p is more than 40 there are infinitely many weight vectors that fit the training rows exactly, and <code>np.linalg.lstsq</code> returns the one with the smallest total size, called the <strong>minimum-norm</strong> solution. Ridge regression, which adds a penalty λ on the size of the weights, is fitted alongside for comparison.</p>
   <div class="fx" data-lang="py">import numpy as np
 
-D, n_train, n_test = 300, 40, 2000           # 300 real causes, only 40 training rows
+D, n_train, n_test = 300, 40, 2000            # 300 real causes, only 40 training rows
 ps = [5, 10, 20, 30, 35, 40, 45, 50, 70, 100, 200, 300]
 res = {p: [] for p in ps}
 for seed in range(30):                        # 30 repeats, report the median
     rng = np.random.default_rng(seed)
     beta = rng.normal(0, 1, D) / np.sqrt(D)  # every feature matters a little
-    X_tr = rng.normal(size=(n_train, D)); X_te = rng.normal(size=(n_test, D))
+    X_tr, X_te = rng.normal(size=(n_train, D)), rng.normal(size=(n_test, D))
     y_tr = X_tr @ beta + rng.normal(0, 0.3, n_train)
     y_te = X_te @ beta + rng.normal(0, 0.3, n_test)
-    for p in ps:                              # model sees only the first p features
+    for p in ps:                              # the model sees only the first p features
         A, B = X_tr[:, :p], X_te[:, :p]
-        w, *_ = np.linalg.lstsq(A, y_tr, rcond=None)              # min-norm solution if p &gt; n
-        w_r = np.linalg.solve(A.T @ A + 5.0 * np.eye(p), A.T @ y_tr)  # ridge, lambda = 5
-        res[p].append((((A @ w - y_tr) ** 2).mean(), ((B @ w - y_te) ** 2).mean(),
-                       ((B @ w_r - y_te) ** 2).mean()))
+        w, *_ = np.linalg.lstsq(A, y_tr, rcond=None)                    # minimum-norm fit if p &gt; n
+        w_r = np.linalg.solve(A.T @ A + 5.0 * np.eye(p), A.T @ y_tr)    # ridge, lambda = 5
+        res[p].append((((A @ w - y_tr) ** 2).mean(), ((B @ w - y_te) ** 2).mean(), ((B @ w_r - y_te) ** 2).mean()))
 print("  p   train MSE   test MSE   ridge test MSE")
 for p in ps:
     v = np.median(np.array(res[p]), axis=0)
@@ -1257,269 +753,98 @@ for p in ps:
  100      0.000      1.410        1.331
  200      0.000      1.082        1.075
  300      0.000      0.962        0.961</div>
-  <figure class="viz"><svg viewBox="0 0 620 250" width="620">
-<line x1="60" y1="205" x2="580" y2="205" stroke="currentColor" opacity="0.5"/>
-<line x1="60" y1="25" x2="60" y2="205" stroke="currentColor" opacity="0.5"/>
-<text x="60" y="219" text-anchor="middle" class="tm" font-size="10.5">5</text>
-<line x1="60" y1="205" x2="60" y2="208" stroke="currentColor" opacity="0.5"/>
-<text x="148" y="219" text-anchor="middle" class="tm" font-size="10.5">10</text>
-<line x1="148" y1="205" x2="148" y2="208" stroke="currentColor" opacity="0.5"/>
-<text x="236.1" y="219" text-anchor="middle" class="tm" font-size="10.5">20</text>
-<line x1="236.1" y1="205" x2="236.1" y2="208" stroke="currentColor" opacity="0.5"/>
-<text x="324.1" y="219" text-anchor="middle" class="tm" font-size="10.5">40</text>
-<line x1="324.1" y1="205" x2="324.1" y2="208" stroke="currentColor" opacity="0.5"/>
-<text x="440.5" y="219" text-anchor="middle" class="tm" font-size="10.5">100</text>
-<line x1="440.5" y1="205" x2="440.5" y2="208" stroke="currentColor" opacity="0.5"/>
-<text x="580" y="219" text-anchor="middle" class="tm" font-size="10.5">300</text>
-<line x1="580" y1="205" x2="580" y2="208" stroke="currentColor" opacity="0.5"/>
-<text x="55" y="208.5" text-anchor="end" class="tm" font-size="10.5">0</text>
-<line x1="57" y1="205" x2="60" y2="205" stroke="currentColor" opacity="0.5"/>
-<text x="55" y="163.5" text-anchor="end" class="tm" font-size="10.5">2</text>
-<line x1="57" y1="160" x2="60" y2="160" stroke="currentColor" opacity="0.5"/>
-<text x="55" y="118.5" text-anchor="end" class="tm" font-size="10.5">4</text>
-<line x1="57" y1="115" x2="60" y2="115" stroke="currentColor" opacity="0.5"/>
-<text x="55" y="73.5" text-anchor="end" class="tm" font-size="10.5">6</text>
-<line x1="57" y1="70" x2="60" y2="70" stroke="currentColor" opacity="0.5"/>
-<text x="55" y="28.5" text-anchor="end" class="tm" font-size="10.5">8</text>
-<line x1="57" y1="25" x2="60" y2="25" stroke="currentColor" opacity="0.5"/>
-<line x1="324.1" y1="25" x2="324.1" y2="205" stroke-dasharray="3 3" class="sg"/>
-<polyline points="60,184.9 148,188.6 236.1,195.6 287.6,200.5 307.1,203.4 324.1,205 339.1,205 352.4,205 395.2,205 440.5,205 528.5,205 580,205" fill="none" class="sb" stroke-width="2"/>
-<circle cx="60" cy="184.9" r="3" class="tb"/>
-<circle cx="148" cy="188.6" r="3" class="tb"/>
-<circle cx="236.1" cy="195.6" r="3" class="tb"/>
-<circle cx="287.6" cy="200.5" r="3" class="tb"/>
-<circle cx="307.1" cy="203.4" r="3" class="tb"/>
-<circle cx="324.1" cy="205" r="3" class="tb"/>
-<circle cx="339.1" cy="205" r="3" class="tb"/>
-<circle cx="352.4" cy="205" r="3" class="tb"/>
-<circle cx="395.2" cy="205" r="3" class="tb"/>
-<circle cx="440.5" cy="205" r="3" class="tb"/>
-<circle cx="528.5" cy="205" r="3" class="tb"/>
-<circle cx="580" cy="205" r="3" class="tb"/>
-<text x="330" y="196" class="tb" font-size="11.5">train MSE (hits 0 at p = n)</text>
-<polyline points="60,178.1 148,175.1 236.1,159.7 287.6,115.9 307.1,70.5 324.1,25 339.1,39.5 352.4,104.8 395.2,159.3 440.5,173.3 528.5,180.7 580,183.4" fill="none" class="sr" stroke-width="2"/>
-<circle cx="60" cy="178.1" r="3" class="tr"/>
-<circle cx="148" cy="175.1" r="3" class="tr"/>
-<circle cx="236.1" cy="159.7" r="3" class="tr"/>
-<circle cx="287.6" cy="115.9" r="3" class="tr"/>
-<circle cx="307.1" cy="70.5" r="3" class="tr"/>
-<circle cx="324.1" cy="25" r="3" class="tr"/>
-<circle cx="339.1" cy="39.5" r="3" class="tr"/>
-<circle cx="352.4" cy="104.8" r="3" class="tr"/>
-<circle cx="395.2" cy="159.3" r="3" class="tr"/>
-<circle cx="440.5" cy="173.3" r="3" class="tr"/>
-<circle cx="528.5" cy="180.7" r="3" class="tr"/>
-<circle cx="580" cy="183.4" r="3" class="tr"/>
-<text x="70" y="45" class="tr" font-size="11.5">test MSE (peak 56.6, clipped)</text>
-<text x="320" y="235" text-anchor="middle" class="tm" font-size="11">number of parameters p (log scale)</text>
-<text x="26" y="115" text-anchor="middle" class="tm" font-size="11" transform="rotate(-90 26 115)">MSE</text>
-<text x="75" y="120" class="tm" font-size="11">classic U</text>
-<text x="470" y="150" class="tm" font-size="11">second descent</text>
-<text x="400" y="100" class="tg" font-size="11">p = n = 40 (threshold)</text>
-</svg><figcaption>Plain least squares: the classic U on the left (best near p = 5), a spike exactly where p equals the number of rows, then a second descent that ends lower (0.96 at p = 300) than the first minimum (1.20).</figcaption></figure>
-  <h3>Why it happens</h3>
+  <p>On the left of the table is the classic U: test error is lowest with few features (1.20 at p = 5) and climbs as p approaches 40, while training error falls towards zero. At p = 40, where the number of features equals the number of rows, training error is exactly 0 and test error spikes to 56.6. Then, as p keeps growing, test error falls again, to 2.03 at p = 70, 1.08 at p = 200 and 0.96 at p = 300, lower than the first minimum. The ridge column never spikes: 1.78 at p = 40.</p>
+  <p>Why does this happen? At p = n there is exactly one weight vector that fits all 40 rows, noise included, and to hit every noisy point it needs enormous weights, so its variance explodes; degree 9 on ten flats is the same situation, one curve forced through ten noisy prices. Beyond p = n many weight vectors fit the rows, and the minimum-norm choice spreads the fit thinly over many features and keeps every weight small, which acts as a hidden, <em>implicit</em> regularization; the more features there are, the smaller the weights need to be, so the variance falls again. With explicit regularization the spike disappears. Double descent does not overturn the bias–variance trade-off; it shows that "number of parameters" is a poor measure of capacity. What matters is the effective capacity of the solution the training procedure actually picks, and gradient descent started from zero on a least-squares problem converges to exactly the minimum-norm solution, which is one reason heavily over-parameterised networks still generalise. For classical tabular models such as polynomials, trees, kNN and boosting, the ordinary U-curve is still what you will see, so always check with a validation curve.</p>
+
+  <h2 id="bv-traps"><span class="num">12</span>Common Mistakes</h2>
+  <p>The first mistake is choosing a model by its training score. Training error always favours the most flexible model: the memoriser (training MSE 0) lost to the line, and degree 9 (training MSE 0) lost to degree 1. In code it looks harmless:</p>
+  <div class="fx" data-lang="py">print("chosen by training error:", min(range(10), key=lambda d: train_mse[d]))
+print("chosen by leave-one-out: ", min(range(8), key=lambda d: loo_mse[d]))</div>
+  <div class="fx" data-lang="text">chosen by training error: 9
+chosen by leave-one-out:  1</div>
+  <p>Training error picks degree 9, the curve that passes through every flat; leave-one-out error, measured on rows each fit did not train on, picks the line. The same mistake in disguise is tuning on the test set: picking the degree or depth with the best test score turns the test set into a validation set, and on the four new flats degree 3 "won" by luck. Choose with a validation split or cross-validation, and use the test set once at the end.</p>
+  <p>The second mistake is treating more data as a universal fix. More data shrinks variance only. A high-bias model's learning curve is already flat: the average predictor sat near 250 with 40 or 160 sales. Check the learning curve before paying for data.</p>
+  <p>The third is mixing up the meaning of "variance". Model variance is the spread of the prediction at a fixed x across different training sets, not the variance of prices, of a feature, or of predictions across rows. Close to it is getting the kNN direction backwards: small k means high capacity and high variance, large k means low capacity and high bias (k = 9 on ten flats is the average predictor). Interviewers ask this precisely because it runs opposite to most knobs.</p>
+  <p>Finally, judging errors without a baseline: 9% training error is high bias if experts get 1%, and a good fit if the Bayes error is 8%. A score that beats any plausible floor usually means leakage, such as a feature computed from the target, duplicates across the split, or scaling fitted on all the data. In scikit-learn, remember that scorers like <code>neg_mean_squared_error</code> return negative numbers, so flip the sign before plotting, or the best model looks worst. And remember that parameter count is not capacity in either direction: a regularised model with many parameters can have low effective capacity, and 1-NN, with none, has the most.</p>
+
+  <h2 id="bv-rev"><span class="num">R</span>Revision Sheet</h2>
+  <h3>Running example</h3>
+  <p>Ten flats, area x (100 sq ft) → price y (₹ lakh): A (5, 38), B (6, 49), C (7, 53), D (8, 56), E (9, 67), F (10, 68), G (11, 73), H (12, 83), I (13, 87), J (14, 96); line price = 6x + 10, training MSE 4.6, leave-one-out MSE 7.25. New flats: K (6.4, 47), L (8.7, 64), M (10.3, 70), N (13.6, 93).</p>
+  <h3>Definitions</h3>
   <ul>
-    <li><strong>At p = n</strong> there is exactly one weight vector that fits all 40 rows, including their noise. To hit every noisy point it needs enormous weights, so its variance explodes (median test MSE 56.6). Degree 9 on ten flats is the same situation: one curve through ten noisy prices.</li>
-    <li><strong>Beyond p = n</strong> many weight vectors fit the rows. The minimum-norm choice spreads the fit thinly over many features and keeps weights small: an <em>implicit</em> regularization. The more features, the smaller the norm needed, so variance falls again.</li>
-    <li><strong>With explicit regularization</strong> (the ridge column) the spike disappears: 1.78 at p = 40 instead of 56.6. Properly tuned regularization largely removes double descent.</li>
+    <li><b>Generalization</b>: low expected loss on new rows from the same distribution. <b>Gap</b> = test error − training error.</li>
+    <li><b>Underfitting</b>: a more flexible model would lower both errors. <b>Overfitting</b>: a less flexible one would raise training error but lower validation error.</li>
+    <li><b>Capacity</b>: the richness of patterns a model family can fit (degree, depth, 1/k, 1/λ), judged relative to the number of rows.</li>
+    <li><b>Bias</b>: f̄(x) − f(x), the average model's distance from the truth. <b>Variance</b>: E[(f̂(x) − f̄(x))²], disagreement between models trained on different samples.</li>
+    <li><b>Irreducible error</b>: error of the best possible predictor with these features; <b>Bayes error</b> for classification.</li>
+    <li><b>Learning curve</b>: train and validation error vs training size. <b>Validation curve</b>: vs one hyperparameter.</li>
+    <li><b>Double descent</b>: test error peaks at parameters ≈ rows and falls again for minimum-norm solutions.</li>
   </ul>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>Double descent does not overturn bias–variance; it shows that "number of parameters" is a poor measure of capacity. What matters is the effective capacity of the solution the training procedure actually picks (minimum norm, early-stopped gradient descent, weight decay). Gradient descent started from zero on a linear least-squares problem converges to exactly that minimum-norm solution, which is one reason heavily over-parameterised networks still generalise.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"Double descent means overfitting is a myth, just make models bigger." For classical tabular models (polynomials, trees, kNN, boosting) the U-curve still describes what you will see, and the peak region is real and dangerous. Always check with a validation curve.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: How It All Connects.</b> Generalization, capacity, bias, variance, noise, learning curves, validation curves, the fix table and double descent: how are they built from each other, and which one answers which question?</div>
-
-  <h2 id="bv-connect"><span class="num">12</span>How It All Connects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We have a formula, two simulations, two kinds of curve, a diagnosis rule and a modern exception. Are these separate tools, or one argument told several ways?</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 680 330" width="680">
-<defs><marker id="bv-c9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="230" y="8" width="220" height="44" rx="7" class="fb sb"/><text x="340" y="27" text-anchor="middle" font-size="11.5" font-weight="700">test error (generalization)</text><text x="340" y="43" text-anchor="middle" class="tm" font-size="10">memoriser 6.5 vs line 2.6 on K–N</text>
-<line x1="280" y1="52" x2="110" y2="86" stroke="currentColor" marker-end="url(#bv-c9)"/><line x1="340" y1="52" x2="340" y2="86" stroke="currentColor" marker-end="url(#bv-c9)"/><line x1="400" y1="52" x2="570" y2="86" stroke="currentColor" marker-end="url(#bv-c9)"/>
-<rect x="20" y="88" width="180" height="44" rx="7" class="fb sb"/><text x="110" y="107" text-anchor="middle" font-size="11.5" font-weight="700">bias²</text><text x="110" y="123" text-anchor="middle" class="tm" font-size="10">mean: 229.5 · line: 0</text>
-<rect x="250" y="88" width="180" height="44" rx="7" class="fb sb"/><text x="340" y="107" text-anchor="middle" font-size="11.5" font-weight="700">variance</text><text x="340" y="123" text-anchor="middle" class="tm" font-size="10">line 0.70 · degree 9: 26.2</text>
-<rect x="480" y="88" width="180" height="44" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="570" y="107" text-anchor="middle" font-size="11.5" font-weight="700">noise σ² (floor)</text><text x="570" y="123" text-anchor="middle" class="tm" font-size="10">relative to features</text>
-<line x1="110" y1="132" x2="250" y2="166" stroke="currentColor" marker-end="url(#bv-c9)"/><line x1="340" y1="132" x2="340" y2="166" stroke="currentColor" marker-end="url(#bv-c9)"/>
-<rect x="210" y="168" width="260" height="44" rx="7" class="ft st"/><text x="340" y="187" text-anchor="middle" font-size="11.5" font-weight="700">capacity knob → U-shaped test error</text><text x="340" y="203" text-anchor="middle" class="tm" font-size="10">flats: best at degree 1 (4.70)</text>
-<line x1="570" y1="132" x2="570" y2="166" stroke="currentColor" marker-end="url(#bv-c9)"/>
-<rect x="490" y="168" width="170" height="44" rx="7" class="fg sg"/><text x="575" y="187" text-anchor="middle" font-size="11.5" font-weight="700">better features</text><text x="575" y="203" text-anchor="middle" class="tm" font-size="10">locality: LOOCV 7.25 → 1.16</text>
-<line x1="260" y1="212" x2="130" y2="246" stroke="currentColor" marker-end="url(#bv-c9)"/><line x1="420" y1="212" x2="530" y2="246" stroke="currentColor" marker-end="url(#bv-c9)"/>
-<rect x="20" y="248" width="220" height="44" rx="7" class="fg sg"/><text x="130" y="267" text-anchor="middle" font-size="11.5" font-weight="700">learning curve (vary n)</text><text x="130" y="283" text-anchor="middle" class="tm" font-size="10">mean stuck ~250; line → 4</text>
-<rect x="420" y="248" width="240" height="44" rx="7" class="fg sg"/><text x="540" y="267" text-anchor="middle" font-size="11.5" font-weight="700">validation curve (vary knob)</text><text x="540" y="283" text-anchor="middle" class="tm" font-size="10">LOOCV: degree 1 = 7.3, k = 2 = 36.9</text>
-<line x1="240" y1="270" x2="268" y2="290" stroke="currentColor" marker-end="url(#bv-c9)"/><line x1="420" y1="270" x2="412" y2="290" stroke="currentColor" marker-end="url(#bv-c9)"/>
-<rect x="270" y="280" width="140" height="44" rx="7" class="fr sr"/><text x="340" y="299" text-anchor="middle" font-size="11.5" font-weight="700">diagnose &amp; fix</text><text x="340" y="315" text-anchor="middle" class="tm" font-size="10">bias = train − base</text>
-</svg><figcaption>One formula drives the note. Test error = bias² + variance + noise. The capacity knob trades the first two (the U), features lower the third, and the two curves are the real-data way to see which term dominates, leading to the fix table. Double descent is what happens when the knob is "number of parameters" but the solution is implicitly regularized.</figcaption></figure>
-  <table class="tbl"><caption>Every concept on the same flats</caption>
-    <tr><th>Concept</th><th>Built from</th><th>Answers which question</th><th>Value on our flats</th><th>When to use</th></tr>
-    <tr><td>Generalization gap</td><td>test error − training error</td><td>does good on training mean good on new?</td><td>memoriser 0 → 6.5; line 4.6 → 2.6 (4 flats), 7.25 (LOO)</td><td>every model you report</td></tr>
-    <tr><td>Under / overfitting</td><td>train and val errors together</td><td>which way did it fail?</td><td>degree 0: 301.6 / 273.5; degree 9: 0 / 23.4</td><td>naming the failure</td></tr>
-    <tr><td>Capacity</td><td>model family + hyperparameters</td><td>what is the dial?</td><td>degree 9 = 10 coefficients = 10 flats</td><td>comparing models, choosing knobs</td></tr>
-    <tr><td>Bias²</td><td>average model − truth, squared</td><td>is the model family wrong on average?</td><td>mean 229.5; line 0.000; 1-NN 3.49</td><td>explaining underfitting</td></tr>
-    <tr><td>Variance</td><td>spread of predictions over training sets</td><td>how much does luck of the sample move it?</td><td>line 0.70; degree 6: 2.62; degree 9: 26.2</td><td>explaining overfitting</td></tr>
-    <tr><td>Noise σ²</td><td>E[(y − E[y|x])²]</td><td>how low can error go with these features?</td><td>4 in the flats world; locality cuts LOOCV 7.25 → 1.16</td><td>setting expectations, spotting leaks</td></tr>
-    <tr><td>Trade-off curve</td><td>bias² + variance + noise vs capacity</td><td>where is the best capacity?</td><td>4.70 at degree 1, 30.2 at degree 9</td><td>the mental model behind every knob</td></tr>
-    <tr><td>Learning curve</td><td>train/val error vs n</td><td>will more data help?</td><td>mean ~250 flat; line gap 4.76 → 0.19</td><td>before buying or labelling data</td></tr>
-    <tr><td>Validation curve</td><td>train/CV error vs one knob</td><td>which value of the knob?</td><td>LOOCV best: degree 1 (7.3), k = 2 (36.9)</td><td>tuning any hyperparameter</td></tr>
-    <tr><td>Diagnosis</td><td>baseline, train, val</td><td>bias or variance first?</td><td>line: bias 0.6, variance 2.7</td><td>deciding the next experiment</td></tr>
-    <tr><td>Double descent</td><td>min-norm fits past p = n</td><td>why do huge models still work?</td><td>degree 9 = the threshold for ten flats</td><td>over-parameterised models</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>One sentence holds the note: <strong>test error is bias² + variance + noise; capacity trades the first two, features lower the third, and learning and validation curves are how you see which one you are fighting.</strong> On the ten flats: the mean is all bias, degree 9 and 1-NN are all variance, and the line is limited mainly by the noise it cannot see without the locality column.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Comparisons.</b> Where do the common model families sit on this map, and how do the two diagnostic plots differ?</div>
-
-  <h2 id="bv-compare"><span class="num">13</span>Comparisons</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We met polynomials, kNN and trees along the way. Before meeting each family in its own note, where does each typically sit on the bias–variance map, and which knob moves it?</p>
-  </div>
-  <h3>Where common models sit</h3>
+  <h3>Formulas</h3>
   <table class="tbl">
-    <tr><th>Model</th><th>Typical bias</th><th>Typical variance</th><th>Main capacity knob</th></tr>
-    <tr><td><a class="xref" data-note="ml_regression">Linear / logistic regression</a></td><td>high (if the pattern bends); ≈ 0 for our flats</td><td>low</td><td>features, λ</td></tr>
-    <tr><td><a class="xref" data-note="ml_naivebayes">Naive Bayes</a></td><td>high (independence assumption)</td><td>very low</td><td>smoothing</td></tr>
-    <tr><td><a class="xref" data-note="ml_knn">kNN</a></td><td>low at small k</td><td>high at small k</td><td>k (reversed)</td></tr>
-    <tr><td><a class="xref" data-note="ml_dtree">Deep decision tree</a></td><td>low</td><td>very high</td><td>depth, leaf size, pruning</td></tr>
-    <tr><td><a class="xref" data-note="ml_rf">Random forest</a></td><td>low (deep trees)</td><td>reduced by averaging</td><td>max_features, leaf size</td></tr>
-    <tr><td><a class="xref" data-note="ml_gbm">Gradient boosting</a></td><td>starts high, reduced each round</td><td>grows with rounds</td><td>rounds × learning rate, depth</td></tr>
-    <tr><td><a class="xref" data-note="ml_svm">RBF SVM</a></td><td>depends on C, gamma</td><td>depends on C, gamma</td><td>C, gamma</td></tr>
+    <tr><th>Name</th><th>Formula</th><th>Example</th></tr>
+    <tr><td>Decomposition</td><td>E[(y − f̂)²] = (f̄ − f)² + E[(f̂ − f̄)²] + σ²</td><td>predictions 64, 66, 66, 68; truth 67; noise ±1: 4 = 1 + 2 + 1</td></tr>
+    <tr><td>Variance of a fitted line at x</td><td>σ² [1/n + (x − x̄)² / Σ(x − x̄)²]</td><td>averaged over test areas: 4 × 0.177 = 0.71</td></tr>
+    <tr><td>Shrinkage</td><td>MSE(c·x̄) = (c − 1)²μ² + c²σ²/n</td><td>μ = 1, σ = 2, n = 5: best c = 0.556, MSE 0.444</td></tr>
+    <tr><td>Bayes error (2 classes)</td><td>E[min(p, 1 − p)]</td><td>(0.1 + 0.5 + 0.2) / 3 = 0.267</td></tr>
+    <tr><td>Diagnosis</td><td>avoidable bias = train − baseline; variance = val − train</td><td>line: 0.6 and 2.7</td></tr>
   </table>
-  <h3>The two diagnostic plots</h3>
-  <table class="tbl">
-    <tr><th></th><th>Learning curve</th><th>Validation curve</th></tr>
-    <tr><td>x-axis</td><td>number of training rows</td><td>one hyperparameter</td></tr>
-    <tr><td>Held fixed</td><td>model and hyperparameters</td><td>dataset size</td></tr>
-    <tr><td>Answers</td><td>"will more data help?"</td><td>"which capacity is best?"</td></tr>
-    <tr><td>High bias looks like</td><td>curves meet early, high up</td><td>both errors high at the chosen value; the best value is at the "flexible" end of the range</td></tr>
-    <tr><td>High variance looks like</td><td>wide gap closing slowly</td><td>validation rising while training keeps falling</td></tr>
-    <tr><td>sklearn</td><td><code>learning_curve</code>, <code>LearningCurveDisplay</code></td><td><code>validation_curve</code>, <code>ValidationCurveDisplay</code></td></tr>
-  </table>
-  <h3>Bias vs variance in one table</h3>
+  <h3>Bias vs variance</h3>
   <table class="tbl">
     <tr><th></th><th>Bias</th><th>Variance</th><th>Irreducible error</th></tr>
     <tr><td>Meaning</td><td>average model is wrong</td><td>models disagree across samples</td><td>noise given the features</td></tr>
-    <tr><td>Symptom</td><td>high training error</td><td>train–val gap</td><td>a floor nobody beats</td></tr>
-    <tr><td>Shrinks with more data?</td><td>no</td><td>yes</td><td>no</td></tr>
-    <tr><td>Shrinks with more capacity?</td><td>yes</td><td>no (grows)</td><td>no</td></tr>
-    <tr><td>Shrinks with better features?</td><td>often</td><td>sometimes</td><td>yes</td></tr>
+    <tr><td>Symptom</td><td>high training error</td><td>train–validation gap</td><td>a floor nobody beats</td></tr>
+    <tr><td>More data</td><td>no help</td><td>helps</td><td>no help</td></tr>
+    <tr><td>More capacity</td><td>helps</td><td>hurts</td><td>no help</td></tr>
+    <tr><td>Better features</td><td>often helps</td><td>sometimes</td><td>helps</td></tr>
+    <tr><td>Typical fixes</td><td>bigger model, features, less regularisation, boosting</td><td>data, regularisation, simpler model, early stopping, bagging</td><td>new features, cleaner labels</td></tr>
   </table>
-  <div class="bridge"><b>What this still can't tell us → next: Common Mistakes.</b> The ideas are simple to state and easy to misuse. Which mistakes come up most in code and in interviews?</div>
+  <h3>Where common models sit</h3>
+  <table class="tbl">
+    <tr><th>Model</th><th>Bias</th><th>Variance</th><th>Knob</th></tr>
+    <tr><td>Linear / logistic regression</td><td>high if the pattern bends</td><td>low</td><td>features, λ</td></tr>
+    <tr><td>Naive Bayes</td><td>high</td><td>very low</td><td>smoothing</td></tr>
+    <tr><td>kNN</td><td>low at small k</td><td>high at small k</td><td>k (reversed)</td></tr>
+    <tr><td>Deep decision tree</td><td>low</td><td>very high</td><td>depth, leaf size</td></tr>
+    <tr><td>Random forest</td><td>low</td><td>reduced by averaging</td><td>max_features, leaf size</td></tr>
+    <tr><td>Gradient boosting</td><td>reduced each round</td><td>grows with rounds</td><td>rounds × learning rate, depth</td></tr>
+  </table>
+  <h3>Syntax</h3>
+  <div class="fx" data-lang="py">from sklearn.model_selection import learning_curve, validation_curve
+n, tr, va = learning_curve(model, X, y, train_sizes=[0.1, 0.3, 1.0], cv=cv,
+                           scoring="neg_mean_squared_error")          # flip the sign!
+tr, va = validation_curve(model, X, y, param_name="max_depth", param_range=[1, 3, 5, 10],
+                          cv=cv, scoring="neg_mean_squared_error")</div>
+  <h3>Gotchas</h3>
+  <ul>
+    <li>Training error always prefers the most flexible model.</li>
+    <li>More data fixes variance, never bias.</li>
+    <li>Model variance is across training sets at a fixed x, not across rows.</li>
+    <li>kNN's knob is reversed: small k = high variance.</li>
+    <li>Judge errors against a baseline; beating the floor means leakage.</li>
+    <li>The sweet spot is where slopes cancel, not where the curves cross.</li>
+  </ul>
 
-  <h2 id="bv-traps"><span class="num">14</span>Common Mistakes</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Knowing the decomposition does not stop you from picking the memoriser or buying data for a high-bias model. Which slips are most common, and what did each look like on the flats?</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: choosing a model by training score</span>
-    <p>The memoriser (train MSE 0) lost to a straight line, and degree 9 (train MSE 0) lost to degree 1. Training error always favours the most flexible model.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: more data as the universal fix</span>
-    <p>It shrinks variance only. A high-bias model's learning curve is already flat; the mean predictor sat near 250 with 40 or 160 sales.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: mixing up the meaning of "variance"</span>
-    <p>Model variance is the spread of predictions at a fixed x across training sets, not the variance of prices, of a feature, or of predictions across rows.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: the kNN direction</span>
-    <p>Small k = high capacity = high variance; large k = low capacity = high bias (k = 9 on ten flats is the mean predictor). Interviewers ask this precisely because it is the reverse of most knobs.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: tuning on the test set</span>
-    <p>Picking the depth or degree with the best test score turns the test set into a validation set; its score is no longer an honest estimate. On the four new flats degree 3 "won" by luck; use a validation split or CV for choosing, and the test set once at the end.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: judging a gap without a baseline</span>
-    <p>9% training error is high bias if experts get 1% and a good fit if the Bayes error is 8%. Always estimate the floor.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: scores that beat the floor</span>
-    <p>Validation error below any plausible noise level usually means leakage (a feature computed from the target, duplicates across the split, scaling fitted on all data). Investigate before celebrating.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: forgetting the sign in sklearn</span>
-    <p><code>neg_mean_squared_error</code> and friends are negative. Plotting them unflipped makes the "best" model look worst.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: "parameters = capacity" in both directions</span>
-    <p>A regularized model with many parameters can have low effective capacity (ridge, min-norm, early stopping), and a model with no parameters (1-NN) can have maximal capacity.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: the Revision Sheet, then <a class="xref" data-note="ml_loss_gd">Loss Functions &amp; Gradient Descent</a>.</b> Every model here was fitted by minimising a training loss (squared error), with a formula. What is a loss, why squared, which others exist, and how does a model minimise one when there is no formula?</div>
-
-  <h2 id="bv-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>The whole note on one page. Running example: ten flats, area x (100 sq ft) → price y (₹ lakh): A (5, 38), B (6, 49), C (7, 53), D (8, 56), E (9, 67), F (10, 68), G (11, 73), H (12, 83), I (13, 87), J (14, 96); fitted line price = 6x + 10 (training MSE 4.6). Four new flats: K (6.4, 47), L (8.7, 64), M (10.3, 70), N (13.6, 93).</p>
-  <h3>The question ladder</h3>
-  <table class="tbl">
-    <tr><th>Concept</th><th>Question it answers</th><th>Answer on our flats</th><th>Weakness → next</th></tr>
-    <tr><td>Generalization</td><td>what is the goal?</td><td>new flats: memoriser 6.5, line 2.6</td><td>why do flexible models fail?</td></tr>
-    <tr><td>Under/overfitting</td><td>two ways to fail?</td><td>degree 0: 301.6/273.5; degree 9: 0/23.4</td><td>one dial behind both?</td></tr>
-    <tr><td>Capacity</td><td>what is the dial?</td><td>degree 9 = 10 coefs for 10 flats</td><td>why the U?</td></tr>
-    <tr><td>Decomposition</td><td>what is test error made of?</td><td>4 = 1 + 2 + 1 at 950 sq ft</td><td>needs many training sets</td></tr>
-    <tr><td>Simulation</td><td>how big is each part?</td><td>mean bias² 229.5; line var 0.70; deg 9 var 26.2</td><td>where is the best?</td></tr>
-    <tr><td>Trade-off curve</td><td>best capacity?</td><td>degree 1 (4.70)</td><td>what is the floor?</td></tr>
-    <tr><td>Irreducible error</td><td>how low can it go?</td><td>locality: LOOCV 7.25 → 1.16</td><td>can't simulate real data</td></tr>
-    <tr><td>Learning curve</td><td>will more data help?</td><td>mean ~250 flat; line → 4; 1-NN gap ~8</td><td>which knob value?</td></tr>
-    <tr><td>Validation curve</td><td>which knob value?</td><td>degree 1 (7.3); k = 2 (36.9)</td><td>what to change?</td></tr>
-    <tr><td>Diagnose &amp; fix</td><td>bias or variance first?</td><td>line: 0.6 vs 2.7 → variance</td><td>is bigger always worse?</td></tr>
-    <tr><td>Double descent</td><td>why huge models work</td><td>threshold at degree 9</td><td>how is the loss minimised?</td></tr>
-  </table>
-  <h3>Definitions</h3>
-  <table class="tbl">
-    <tr><th>Term</th><th>Meaning</th></tr>
-    <tr><td>Generalization, gap</td><td>Low expected loss on new rows from the same distribution; gap = test error − training error.</td></tr>
-    <tr><td>Underfitting / overfitting</td><td>A more flexible model would lower both errors / a less flexible one would raise training error but lower validation error.</td></tr>
-    <tr><td>Capacity</td><td>The richness of functions a model family can fit (degree, depth, 1/k, 1/λ, parameters relative to rows).</td></tr>
-    <tr><td>Bias</td><td>f̄(x) − f(x): how far the average model (over training sets) is from the truth.</td></tr>
-    <tr><td>Variance</td><td>E[(f̂(x) − f̄(x))²]: how much models from different training sets disagree at the same x.</td></tr>
-    <tr><td>Irreducible error, Bayes error</td><td>The error of the best possible predictor with these features; lowered only by new features or cleaner labels.</td></tr>
-    <tr><td>Learning curve / validation curve</td><td>Train and validation error against training size / against one hyperparameter.</td></tr>
-    <tr><td>Avoidable bias, variance (diagnosis)</td><td>Training − baseline error; validation − training error.</td></tr>
-    <tr><td>Double descent</td><td>Test error peaks at the interpolation threshold (parameters ≈ rows) and falls again beyond it for minimum-norm solutions.</td></tr>
-  </table>
-  <h3>Formulas</h3>
-  <table class="tbl">
-    <tr><th>Name</th><th>Formula</th><th>Symbols and our numbers</th></tr>
-    <tr><td>Empirical / true risk</td><td>R̂ = (1/n) Σ L(yᵢ, f̂(xᵢ)); R = E[L(y, f̂(x))]</td><td>line: R̂ = 4.6; LOOCV estimate of R 7.25</td></tr>
-    <tr><td>Decomposition</td><td>E[(y − f̂)²] = (f̄ − f)² + E[(f̂ − f̄)²] + σ²</td><td>f truth, f̂ fitted model, f̄ average model, σ² noise: 1 + 2 + 1 = 4</td></tr>
-    <tr><td>Line variance</td><td>σ² [1/n + (x − x̄)²/Σ(x − x̄)²]</td><td>averaged over test areas: 4 × 0.177 = 0.71 (simulated 0.70)</td></tr>
-    <tr><td>Shrinkage</td><td>MSE(c·x̄) = (c − 1)²μ² + c²σ²/n; c* = μ²/(μ² + σ²/n)</td><td>μ = 1, σ = 2, n = 5: c* = 0.556, MSE 0.444</td></tr>
-    <tr><td>Bayes error (2 classes)</td><td>E[min(p, 1 − p)]</td><td>(0.1 + 0.5 + 0.2)/3 = 0.267</td></tr>
-    <tr><td>Diagnosis</td><td>avoidable bias = train − baseline; variance = val − train</td><td>line with baseline 4: 0.6 and 2.7</td></tr>
-    <tr><td>Interpolation</td><td>p coefficients fit any p points exactly</td><td>degree 2 through D, E, F: 67 + 6u − 5u²; H → 40</td></tr>
-  </table>
-  <h3>When to use, when not</h3>
-  <div class="cards">
-    <div><b>Learning curve</b><p>Before collecting or labelling more data: if both curves are flat and high, more data is wasted; if the gap is shrinking, it will help.</p><small>Shuffle before taking subsets</small></div>
-    <div><b>Validation curve</b><p>To choose degree, depth, k, λ or C on the data you have, with CV (LOO for tiny data). Not for reporting: the minimum is optimistic.</p><small>Prefer the simpler value within noise</small></div>
-    <div><b>Fix high bias with</b><p>More capacity, better features, less regularization, longer training, boosting. Not with more data of the same kind.</p><small>Mean price → a line</small></div>
-    <div><b>Fix high variance with</b><p>More data, regularization, simpler models, early stopping, bagging. Not with a bigger model.</p><small>Degree 9 → degree 1</small></div>
-  </div>
-  <div class="callout trap"><span class="label">Key traps</span>
-    <p>Choosing by training error; buying data for a high-bias model; confusing model variance with data variance; reversing the kNN knob; tuning on the test set; judging errors without a baseline; celebrating scores below the noise floor (leakage); forgetting the negative sign of sklearn losses; equating parameter count with capacity.</p>
-  </div>
-  <h3>Five rapid-fire checks</h3>
-  <table class="tbl">
-    <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td>Predictions 64, 66, 66, 68; truth 67; noise ±1. Bias², variance, noise?</td><td>1, 2, 1 (total 4)</td></tr>
-    <tr><td>Parabola through D (8, 56), E (9, 67), F (10, 68): prediction for H at 12?</td><td>67 + 6·3 − 5·9 = 40 (true 83)</td></tr>
-    <tr><td>Train MSE 0, LOOCV 61.1 (1-NN). Bias or variance?</td><td>Variance (memorising)</td></tr>
-    <tr><td>Learning curves meet early at ~250 for the mean predictor. Buy more data?</td><td>No: high bias; add a slope (more capacity)</td></tr>
-    <tr><td>Adding locality cut LOOCV from 7.25 to 1.16. Which term fell?</td><td>The "irreducible" noise for the area-only model (missing feature)</td></tr>
-  </table>
-
-  <h2 id="bv-qa"><span class="num">15</span>Questions &amp; Answers</h2>
+  <h2 id="bv-qa"><span class="num">13</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>What is generalization, and why can't training error measure it?</summary><div class="qa-body">Generalization is low expected loss on new rows from the same distribution (the true risk). Training error is computed on the rows the model was fitted to, so it rewards memorisation: on the flats a 1-NN memoriser had training MSE 0 but 6.5 on four new flats, while the line had 4.6 and 2.6. Only held-out data or cross-validation estimates true risk.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Write the bias–variance decomposition and explain each term.</summary><div class="qa-body">E[(y − f̂(x))²] = (E[f̂(x)] − f(x))² + E[(f̂(x) − E[f̂(x)])²] + σ². Bias²: how far the average model (over many training sets) is from the truth. Variance: how much models trained on different samples disagree at x. σ²: noise in y given x, which no model can remove.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Derive it. Why do the cross terms vanish?</summary><div class="qa-body">Write y − f̂ = (f − f̂) + ε and expand; E[ε(f − f̂)] = 0 because test noise is independent of the training set and has mean 0, leaving E[(f − f̂)²] + σ². Then write f − f̂ = (f − f̄) + (f̄ − f̂) and expand; (f − f̄) is a constant and E[f̄ − f̂] = 0 by the definition of f̄, so the cross term is 0, leaving (f − f̄)² + E[(f̂ − f̄)²].</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Four models predict 64, 66, 66, 68 for a 950 sq ft flat whose true average price is 67; the sale is 66 or 68 with equal chance. Compute the expected error and its parts.</summary><div class="qa-body">Mean prediction 66 → bias² = 1. Variance = (4 + 0 + 0 + 4)/4 = 2. Noise = 1. Total 4, which matches the direct average of (y − pred)² over the 8 combinations: (10 + 2 + 2 + 2)/4 = 4.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you tell underfitting from overfitting in practice?</summary><div class="qa-body">Compare training error, validation error and a baseline. Underfitting: training error well above the baseline and validation close to training (always ₹67 lakh: 301.6 and 273.5). Overfitting: training error low (possibly below the noise floor) and validation much higher (degree 9: 0 and 23.4). Learning and validation curves show the same across data sizes and hyperparameter values.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Your learning curves converge quickly to a high error. What do you do, and what don't you do?</summary><div class="qa-body">That is high bias. Increase capacity (more flexible model, more or better features, less regularization, more training rounds). Do not spend effort on more data: a converged learning curve shows extra rows will not move the error (the mean predictor sat near 250 from 40 to 160 sales; sine degree 1 stayed at 0.29 from 60 to 480 rows).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do k in kNN, depth in a tree and λ in ridge each move bias and variance?</summary><div class="qa-body">kNN: smaller k → lower bias, higher variance (k = 1 memorises; k = 9 on ten flats is the mean). Tree: deeper → lower bias, higher variance. Ridge: larger λ → higher bias, lower variance. Only kNN's knob runs "backwards" relative to capacity.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is irreducible error, and can it ever be reduced?</summary><div class="qa-body">It is the error of the best possible predictor given the features: σ² = E[(y − E[y|x])²] (or the Bayes error for classification). No model can beat it with the same features, but new features or cleaner labels can lower it: adding locality cut the flats' LOOCV MSE from 7.25 to 1.16, and adding floor cut the rent RMSE floor from about 2,506 to 1,000.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Can a biased estimator be better than an unbiased one? Give an example.</summary><div class="qa-body">Yes. Estimating μ = 1 with n = 5 noisy observations (σ = 2): the sample mean has MSE 0.8. Shrinking it, 0.556·x̄, adds bias² 0.197 but cuts variance to 0.247, for MSE 0.444. Ridge regression, lasso and early stopping all exploit this trade.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is model capacity, and is it the same as the number of parameters?</summary><div class="qa-body">Capacity is the richness of the functions a model can fit (VC dimension is one formal measure: d + 1 for linear classifiers in d dimensions). It is related to but not equal to the parameter count: ridge has the same parameters as OLS but lower effective capacity; 1-NN has no parameters but maximal capacity; trained deep nets have far fewer effective degrees of freedom than parameters.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is double descent and why does it happen?</summary><div class="qa-body">Test error versus number of parameters shows the classic U, a spike at the interpolation threshold (parameters ≈ rows, degree 9 for ten flats), then a second decrease. At the threshold the only interpolating solution needs huge weights (test MSE 56.6 in the demo); past it, minimum-norm solutions spread the fit and act as implicit regularization (0.96 at p = 300). Explicit ridge removes the spike (1.78 at p = n).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why did the line beat the 1-NN memoriser on the flats, in bias–variance terms?</summary><div class="qa-body">The line's family contains the (simulated) truth, so its bias² is 0 and its variance is small (0.70) because two numbers are estimated from ten flats. 1-NN has bias² 3.49 (it copies a neighbour up to 50 sq ft away, missing the slope) and variance 3.95 (it copies that neighbour's noise). Total 4.70 vs 11.44 in the flats world.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why do random forests average many deep trees instead of using one shallow tree?</summary><div class="qa-body">A shallow tree has high bias; a deep tree has low bias but high variance. Averaging B trees whose errors are not perfectly correlated divides the variance part (ρσ² + (1 − ρ)σ²/B) while leaving bias almost unchanged. So the forest keeps the low bias and loses much of the variance. Boosting goes the other way: it starts from high-bias stumps and reduces bias round by round.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks if you skip the previous note's honest splits when drawing these curves?</summary><div class="qa-body">Learning and validation curves are only as honest as their validation error. Score them on training rows and every curve says "more capacity is better" (degree 9: 0). Score them with a leaky or lucky split (four new flats crowned degree 3) and the sweet spot moves. The curves are built from the CV of <a class="xref" data-note="ml_splits">Train/Val/Test &amp; CV</a>; LOO on the ten flats is what made degree 1 clearly best.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: how does regularization relate to this note, and what will the next notes add?</summary><div class="qa-body">Regularization adds a penalty on model complexity to the training loss, moving the model towards higher bias and lower variance with a continuous dial λ chosen by a validation curve or CV (the line's 2.7 variance gap on ten flats is its target). The <a class="xref" data-note="ml_loss_gd">loss and gradient descent</a> note shows what the training loss is and how it is minimised; the <a class="xref" data-note="ml_regularization">regularization</a> note adds the penalty term and shows L1 vs L2 behaviour.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Your validation error is lower than your training error. List possible reasons.</summary><div class="qa-body">Small or easy validation set (luck: our line had 2.6 on four new flats vs 4.6 on training); regularization active only during training (dropout, data augmentation); training error measured during an epoch while weights were still changing; or leakage from validation into training features. Check with more folds and inspect the pipeline.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Is there a bias–variance decomposition for classification accuracy?</summary><div class="qa-body">Not an additive one. For 0-1 loss, variance can even help when the average model is wrong (it sometimes flips to the right answer) and hurt when it is right. Several definitions exist (Domingos, Kohavi–Wolpert), but the clean sum Bias² + Var + σ² holds only for squared error. The qualitative lessons (capacity trade-off, averaging cuts variance) still apply, and for probabilistic classifiers you can apply the squared-error version to predicted probabilities (Brier score).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is generalization, and why can't training error measure it?</summary><div class="qa-body">Generalization is low expected error on new data from the same distribution. Training error is computed on the rows the model was fitted to, so it rewards memorising: a 1-nearest-neighbour model has zero training error but did worse on new flats (6.5) than a straight line (2.6). Only held-out data or cross-validation estimates generalization.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What are underfitting and overfitting, and how do you recognise each?</summary><div class="qa-body">Underfitting: the model is too simple, so training and validation errors are both high and close together. Overfitting: the model fits noise, so training error is low and validation error much higher. Compare both errors with a baseline, and look at learning and validation curves.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain the bias–variance trade-off.</summary><div class="qa-body">Expected test error splits into bias² (the average model's distance from the truth), variance (how much models trained on different samples disagree) and irreducible noise. Increasing capacity lowers bias but raises variance, so test error is U-shaped in capacity and the best model balances the two for the amount of data available.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Write the decomposition and explain why the cross terms vanish.</summary><div class="qa-body">E[(y − f̂)²] = (f̄ − f)² + E[(f̂ − f̄)²] + σ². Writing y − f̂ = (f − f̂) + ε, the cross term vanishes because test noise has mean zero and is independent of the training set. Writing f − f̂ = (f − f̄) + (f̄ − f̂), the cross term vanishes because f − f̄ is a constant and E[f̄ − f̂] = 0 by the definition of f̄.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Four models predict 64, 66, 66, 68; the truth is 67; the outcome is 66 or 68 equally often. Compute bias², variance and noise.</summary><div class="qa-body">Average prediction 66, so bias² = 1. Variance = (4 + 0 + 0 + 4) / 4 = 2. Noise = 1. Total 4, which matches the direct average of (y − prediction)² over the eight combinations.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Which models typically have high bias, and which high variance?</summary><div class="qa-body">High bias: linear models on curved patterns, Naive Bayes, shallow trees, kNN with large k, heavily regularised models. High variance: deep unpruned trees, kNN with k = 1, high-degree polynomials, large networks without regularisation. Random forests reduce the variance of deep trees; boosting reduces the bias of shallow ones.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do k in kNN, depth in a tree and λ in ridge move bias and variance?</summary><div class="qa-body">Smaller k: lower bias, higher variance. Deeper tree: lower bias, higher variance. Larger λ: higher bias, lower variance. kNN's knob runs backwards relative to capacity, which is a common trick question.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is irreducible error? Can it ever be reduced?</summary><div class="qa-body">It is the error of the best possible predictor given the features, from noise, missing information and randomness (the Bayes error for classification). No model can beat it with the same features, but new features or cleaner labels lower it: adding locality cut the flats' leave-one-out MSE from 7.25 to 1.16.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a learning curve, and how do you read it?</summary><div class="qa-body">Training and validation error plotted against training-set size. If both are high and meet early, the model has high bias and more data will not help. If there is a large gap that shrinks with more data, the model has high variance and more data will help. The level where they meet estimates bias² plus noise.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Your learning curves converge quickly to a high error. What do you do?</summary><div class="qa-body">It is high bias, so increase capacity: a more flexible model, better or more features, less regularisation, or longer training. Do not collect more data; the converged curve shows it will not move the error.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Learning curve vs validation curve?</summary><div class="qa-body">A learning curve varies the amount of training data with the model fixed and answers "will more data help?". A validation curve varies one hyperparameter with the data fixed and answers "which capacity is best?". Both plot training and cross-validated error.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How would you decide whether to work on bias or variance first?</summary><div class="qa-body">Compare three errors: a baseline (expert or best achievable), training and validation. Avoidable bias is training minus baseline; variance is validation minus training. Work on the larger one, then repeat. The baseline matters: 9% training error is high bias if experts get 1%, but fine if the noise floor is 8%.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Can a biased estimator be better than an unbiased one?</summary><div class="qa-body">Yes. Shrinking the sample mean of 5 noisy observations (μ = 1, σ = 2) by a factor of 0.556 adds bias² of about 0.2 but cuts variance from 0.8 to about 0.25, lowering MSE from 0.8 to 0.44. Ridge, lasso and early stopping all use this trade.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Is model capacity the same as the number of parameters?</summary><div class="qa-body">No. Ridge has the same parameters as ordinary least squares but lower effective capacity; 1-NN has no parameters but maximal capacity; trained networks have far fewer effective degrees of freedom than parameters. VC dimension is one formal measure (d + 1 for linear classifiers in d dimensions).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does bagging reduce variance, and boosting reduce bias?</summary><div class="qa-body">Bagging averages many high-variance models trained on resampled data; averaging B models whose errors are not perfectly correlated shrinks the variance while leaving bias almost unchanged. Boosting adds weak, high-bias models in sequence, each fixing the errors of the previous ones, so bias falls round by round (and variance slowly rises).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is double descent?</summary><div class="qa-body">Test error versus number of parameters shows the classic U, a spike at the interpolation threshold (parameters ≈ rows), then a second fall. At the threshold the only exact fit needs huge weights; beyond it, minimum-norm solutions spread the fit and act as implicit regularisation. Explicit regularisation such as ridge removes the spike.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Your validation error is lower than your training error. What could explain it?</summary><div class="qa-body">A small or easy validation set (luck), regularisation active only during training (dropout, augmentation), training error recorded while weights were still changing, or leakage from validation into training features. Check with more folds and inspect the pipeline.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Is there a bias–variance decomposition for classification accuracy?</summary><div class="qa-body">Not an additive one. For 0-1 loss, variance can even help when the average model is wrong, and several competing definitions exist. The clean sum bias² + variance + noise holds only for squared error, but the practical lessons (the capacity trade-off, averaging reduces variance) still apply.</div></details>
 </main>
 `
 });
