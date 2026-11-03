@@ -3,110 +3,45 @@ Object.assign(TOPIC_CONTENT, {
   "dsa_tries": `<main>
 <h1>Tries</h1>
   <div class="where"><span>DSA</span><span>Trees &amp; graphs</span><span>Tries</span></div>
-  <p class="lead">A trie (say "try") is a tree of letters. Words that start the same share the same path, so "which dishes start with <em>pa</em>?" is answered by walking two steps, not by scanning every word. It powers autocomplete, spell-check and word-grid puzzles. This note builds it from one need, <b>Biteful's search box over 100,000 dish names</b>, used as the running example throughout: the trie node, insert / search / startsWith traced, the cost and memory bill, autocomplete with counts and rankings, Word Search II (a trie steering the backtracking search from the previous notes), Replace Words, then the Pythonic shortcuts, patterns and classic problems. Every output is a real run (Python 3.13).</p>
+  <p class="lead">A trie (pronounced "try") is a tree that stores words letter by letter, so that words which start the same way share the same path. That one idea makes "which words start with <em>pa</em>?" a walk of two steps instead of a scan of every word, which is why tries sit behind search-box autocomplete, spell checkers, IP routing tables and word-puzzle solvers. In interviews they appear whenever a problem talks about prefixes, a dictionary of words, or many words searched at once. The running example is Biteful's search box: as a customer types "p", "pa", "pan", the app must show matching dishes from a list of 100,000 dish names, instantly, after every key press. We start with the obvious list-based solution, see why it is too slow, build a trie from scratch, and then add autocomplete, ranking, grid search and the other patterns one at a time on the same menu.</p>
 
-  <h2 id="dsa-tri-fits" class="open"><span class="num">★</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 640 262" width="640">
-<defs><marker id="dsa-tri-ga" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="60" y="6" width="520" height="36" rx="8" fill="none" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.5"/>
-<text x="320" y="22" text-anchor="middle" class="tm" font-size="10">came from</text>
-<text x="320" y="36" text-anchor="middle" font-size="11">Trees (nodes, DFS) · Hashing (dict children) · Backtracking (grid search) · DP (sharing work)</text>
-<line x1="320" y1="42" x2="320" y2="60" stroke="currentColor" marker-end="url(#dsa-tri-ga)"/>
-<rect x="190" y="62" width="260" height="44" rx="8" class="fg sg" stroke-width="2.5"/>
-<text x="320" y="80" text-anchor="middle" font-size="12" font-weight="700">Tries</text>
-<text x="320" y="96" text-anchor="middle" class="tg" font-size="10">YOU ARE HERE · words sharing prefixes</text>
-<line x1="320" y1="106" x2="110" y2="136" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#dsa-tri-ga)"/>
-<line x1="320" y1="106" x2="320" y2="136" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#dsa-tri-ga)"/>
-<line x1="320" y1="106" x2="530" y2="136" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#dsa-tri-ga)"/>
-<rect x="20" y="138" width="180" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="110" y="155" text-anchor="middle" font-size="12">Bit Manipulation</text>
-<text x="110" y="170" text-anchor="middle" class="tm" font-size="10">XOR trie: bits as letters</text>
-<rect x="230" y="138" width="180" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="320" y="155" text-anchor="middle" font-size="12">Advanced Structures</text>
-<text x="320" y="170" text-anchor="middle" class="tm" font-size="10">segment / Fenwick trees</text>
-<rect x="440" y="138" width="180" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="530" y="155" text-anchor="middle" font-size="12">Vector search (GenAI)</text>
-<text x="530" y="170" text-anchor="middle" class="tm" font-size="10">search beyond prefixes</text>
-<line x1="320" y1="178" x2="320" y2="208" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#dsa-tri-ga)"/>
-<rect x="60" y="210" width="520" height="44" rx="8" fill="none" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.5"/>
-<text x="320" y="227" text-anchor="middle" class="tm" font-size="10">practice</text>
-<text x="320" y="245" text-anchor="middle" font-size="11">Problem Tracker → Tries: 25 problems, from Counting Words With a Given Prefix to Palindrome Pairs</text>
-</svg><figcaption>Reading order for this stretch: Graphs → Backtracking → Dynamic Programming → <b>Tries</b>. A trie is a tree (Trees), its children live in a dict (Hashing), and its hardest problem steers a backtracking grid search (Backtracking).</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: <a class="xref" data-note="dsa_dp">Dynamic Programming</a>, <a class="xref" data-note="dsa_backtrack">Backtracking</a> and <a class="xref" data-note="dsa_trees">Trees</a></b><span>DP saved work by sharing answers between overlapping subproblems. Search boxes have a different overlap: thousands of words share their first letters. Trees gave nodes and DFS; <a class="xref" data-note="dsa_hashing">Hashing</a> showed that a set answers "is this exact word stored?" in O(1) but knows nothing about prefixes; Backtracking's Word Search found one word in a grid at a time.</span></li>
-    <li><b>This note adds: the prefix tree</b><span>A node per prefix, insert / search / startsWith in O(L), autocomplete with counts and rankings, Word Search II (trie + backtracking), shortest-root matching (Replace Words), wildcards, and when a sorted list with <code>bisect</code> is the lighter answer.</span></li>
-    <li><b>Leads to: <a class="xref" data-note="dsa_bits">Bit Manipulation</a> and <a class="xref" data-note="dsa_advanced">Advanced Data Structures</a></b><span>A binary trie stores numbers bit by bit to find the maximum XOR pair; segment and Fenwick trees are other "tree over the keys" structures. Practise in the <a class="xref" data-note="dsa_problems">Problem Tracker</a>; the dict and <code>setdefault</code> tricks are in <a class="xref" data-note="py_dicts_sets">Dicts &amp; Sets</a>, recursion in <a class="xref" data-note="py_functions">Python Functions</a>.</span></li>
-  </ol>
-
-  <h2 id="dsa-tri-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
-  <p>The whole note as one chain. Each concept answers the question above it; its weakness raises the next. Running example: Biteful's dish search; small menu <b>dal, dalia, dosa, pav</b> for hand traces, <b>paneer, papad, pasta, pav, poha, dal, dalia, dosa</b> (with today's order counts) for autocomplete, and 100,000 made-up dish names for timing.</p>
-  <ol class="story">
-    <li><b>Prefix search</b><span>Q: as a customer types "p", "pa", "pan"…, which dishes match? → a list scan checks every name on every key press: 434 ms for 120 presses over 100,000 names; a set cannot answer prefixes at all. Can similar names be stored together?</span></li>
-    <li><b>The trie node</b><span>Q: what structure keeps "dal", "dalia", "dosa" together? → a tree of letters: a node per prefix, children by letter, and an end flag ("dal" ends mid-path to "dalia"). How do we build and query it?</span></li>
-    <li><b>insert / search / startsWith</b><span>Q: how do the three operations walk? → insert creates missing nodes (dalia reuses d, a, l), search needs the end flag (search "da" False), startsWith does not (True): each O(L). What does that cost against a set, and in memory?</span></li>
-    <li><b>Cost &amp; memory</b><span>Q: is it worth it? → prefix queries O(L) instead of O(N·L), but 100,000 names cost ~84 MB as a Python trie vs ~7 MB as a list. Now the real feature: suggestions as you type…</span></li>
-    <li><b>Autocomplete</b><span>Q: list, count and rank the dishes under "pa"? → walk to the node, DFS below it (paneer, papad, pasta, pav), passing counts (4), top-k by orders (paneer 90, pav 75), and safe delete. Next: many words searched on a grid at once…</span></li>
-    <li><b>Word Search II</b><span>Q: which of a list of dish names hide in the promo puzzle? → one backtracking DFS per cell, steered by the trie: dal, dosa, masala, sam; on 2,680 words, 7 ms instead of 138 ms for one search per word. Last pattern: stopping at the first word on the path…</span></li>
-    <li><b>Replace Words</b><span>Q: tag each order line with its shortest base dish? → walk and return at the first end flag: "pavbhaji dalmakhani paneertikka" → "pav dal pan". Then the Pythonic shortcuts, patterns and classics.</span></li>
-  </ol>
-
-  <h2 id="dsa-tri-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="dsa-tri-map"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">Tries</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">Idea</div>
+        <div class="mm-title">The idea</div>
         <ul>
-          <li><b>Prefix tree</b> — one node per prefix; each edge is one letter</li>
-          <li>"dal", "dalia", "dosa" share the path from d</li>
-          <li><b>Root</b> = empty prefix · <b>end flag</b> = a whole word stops here</li>
-          <li>💡 dictionary thumb tabs, at every depth</li>
-          <li>Scan 434 ms vs trie 0.06 ms for 120 key presses</li>
+          <li>A tree of letters: each edge is one letter, each node is a prefix</li>
+          <li>Words with the same start share one path</li>
+          <li>The <b>end flag</b> marks nodes where a whole word stops</li>
+          <li>Prefix questions cost O(L), whatever the number of words</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Node &amp; operations</div>
+        <div class="mm-title">Core operations</div>
         <ul>
-          <li><code>children = {}</code>, <code>end = False</code></li>
-          <li><b>insert</b>: walk, create missing, set end — O(L)</li>
-          <li><b>search</b>: walk + end flag · <b>startsWith</b>: walk only</li>
-          <li>⚠ search("da") False, startsWith("da") True</li>
+          <li><b>insert</b>: walk, create missing children, set end</li>
+          <li><b>search</b>: walk, then check the end flag</li>
+          <li><b>startsWith</b>: walk only</li>
+          <li>All O(L); a set is lighter if you only need exact lookups</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">vs set / bisect</div>
+        <div class="mm-title">Extra fields, extra powers</div>
         <ul>
-          <li>Set: exact O(L), prefix = scan all</li>
-          <li>Trie: prefix O(L), independent of N</li>
-          <li>⚠ memory: ~84 MB vs ~7 MB for 100k names</li>
-          <li>Sorted list + <code>bisect</code>: light, static lists</li>
+          <li><code>passing</code> count: "how many start with p?" in O(L)</li>
+          <li>Top-k list per node: suggestions per key press</li>
+          <li>Delete with counts: cut unused branches only</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Autocomplete</div>
+        <div class="mm-title">Patterns</div>
         <ul>
-          <li>Walk to prefix, DFS below: paneer, papad, pasta, pav</li>
-          <li><code>passing</code> count → "how many start with pa?" in O(L)</li>
-          <li>Top-k by orders; store top-k per node for speed</li>
-          <li>Delete: cut branch at passing 0, else unset end</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Word Search II &amp; roots</div>
-        <ul>
-          <li>Trie + grid backtracking; stop when no child</li>
-          <li><code>node.pop("$")</code> records once; prune empty branches</li>
-          <li>Puzzle: dal, dosa, masala, sam</li>
-          <li><b>Replace Words</b>: first end flag on the path</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Patterns &amp; classics</div>
-        <ul>
-          <li>"prefix", "starts with", "autocomplete", "wildcard"</li>
-          <li>Wildcard "." → branch into every child</li>
-          <li>Bitwise trie → max XOR</li>
-          <li>208 Implement · 211 Add &amp; Search · 1268 Suggestions</li>
+          <li>Walk then collect: autocomplete</li>
+          <li>Trie + grid DFS: Word Search II</li>
+          <li>First end flag on the path: Replace Words</li>
+          <li>"." wildcard: branch into every child</li>
         </ul>
       </div>
     </div>
@@ -115,139 +50,61 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="dsa-tri-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain</span></div></div>
-      <div class="rm-item rm-done" data-target="dsa-tri-need"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Prefix Search over 100k Dishes</span><span class="rm-sub">Why a list or set is slow</span></div></div>
-      <div class="rm-item rm-done" data-target="dsa-tri-idea"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">The Trie Node</span><span class="rm-sub">Letters on edges, end flags</span></div></div>
-      <div class="rm-item rm-done" data-target="dsa-tri-impl"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">insert, search, startsWith</span><span class="rm-sub">Built from scratch, traced</span></div></div>
-      <div class="rm-item rm-done" data-target="dsa-tri-cost"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Trie vs Hash Set</span><span class="rm-sub">Big-O and the memory bill</span></div></div>
-      <div class="rm-item rm-done" data-target="dsa-tri-more"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Autocomplete</span><span class="rm-sub">Count, rank, delete</span></div></div>
-      <div class="rm-item rm-done" data-target="dsa-tri-wsii"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Word Search II</span><span class="rm-sub">Trie + backtracking</span></div></div>
-      <div class="rm-item rm-done" data-target="dsa-tri-replace"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Replace Words</span><span class="rm-sub">First end flag on the path</span></div></div>
-      <div class="rm-item rm-done" data-target="dsa-tri-python"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">The Pythonic Way</span><span class="rm-sub">Nested dicts, defaultdict, bisect</span></div></div>
-      <div class="rm-item rm-done" data-target="dsa-tri-patterns"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Choosing the Pattern</span><span class="rm-sub">Trigger words and templates</span></div></div>
-      <div class="rm-item rm-done" data-target="dsa-tri-problems"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Classic Problems</span><span class="rm-sub">208, 211, 14, 1268 tested</span></div></div>
-      <div class="rm-item rm-done" data-target="dsa-tri-traps"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">End flag, deletes, memory</span></div></div>
-      <div class="rm-item rm-done" data-target="dsa-tri-connect"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One diagram, one table</span></div></div>
-      <div class="rm-item rm-done" data-target="dsa-tri-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The note on one page</span></div></div>
-      <div class="rm-item rm-done" data-target="dsa-tri-qa"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview and connection checks</span></div></div>
+      <div class="rm-item rm-done" data-target="dsa-tri-need"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">The Prefix Search Problem</span><span class="rm-sub">why a list or a set is not enough</span></div></div>
+      <div class="rm-item rm-done" data-target="dsa-tri-idea"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">What a Trie Is</span><span class="rm-sub">letters on edges, prefixes as nodes, the end flag</span></div></div>
+      <div class="rm-item rm-done" data-target="dsa-tri-impl"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">insert, search and startsWith</span><span class="rm-sub">building a trie from scratch, traced</span></div></div>
+      <div class="rm-item rm-done" data-target="dsa-tri-cost"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Cost, Memory and Alternatives</span><span class="rm-sub">trie vs set vs sorted list</span></div></div>
+      <div class="rm-item rm-done" data-target="dsa-tri-more"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Autocomplete</span><span class="rm-sub">list, count, rank and delete</span></div></div>
+      <div class="rm-item rm-done" data-target="dsa-tri-python"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Tries as Nested Dicts</span><span class="rm-sub">the short form used in interviews</span></div></div>
+      <div class="rm-item rm-done" data-target="dsa-tri-wsii"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Word Search II</span><span class="rm-sub">a trie steering a grid search</span></div></div>
+      <div class="rm-item rm-done" data-target="dsa-tri-replace"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Replace Words</span><span class="rm-sub">stopping at the shortest stored prefix</span></div></div>
+      <div class="rm-item rm-done" data-target="dsa-tri-wild"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Wildcard Search</span><span class="rm-sub">"." matches any letter</span></div></div>
+      <div class="rm-item rm-done" data-target="dsa-tri-patterns"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Choosing the Pattern</span><span class="rm-sub">trigger words, one skeleton</span></div></div>
+      <div class="rm-item rm-done" data-target="dsa-tri-problems"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Classic Problems</span><span class="rm-sub">what to practise, in order</span></div></div>
+      <div class="rm-item rm-done" data-target="dsa-tri-traps"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">end flags, deletes, phantom nodes</span></div></div>
+      <div class="rm-item rm-done" data-target="dsa-tri-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">operations, costs, traps</span></div></div>
+      <div class="rm-item rm-done" data-target="dsa-tri-qa"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">the questions interviewers ask on tries</span></div></div>
     </div>
   </div>
 
-  <h2 id="dsa-tri-need"><span class="num">01</span>Prefix Search over 100k Dish Names</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Biteful's search box must show matching dishes after every key press: "p", then "pa", then "pan". With 100,000 dish names across all restaurants, and a new query every key press, how do we find every name that <em>starts with</em> what has been typed, fast?</p>
-  </div>
-  <p>What would plain Python do? Keep the names in a list (or a set) and check every one:</p>
-<div class="fx" data-lang="py">dishes = ["dal", "dalia", "dosa", "dhokla", "paneer", "papad", "pasta", "pav", "poha", "samosa"]
+  <h2 id="dsa-tri-need"><span class="num">01</span>The Prefix Search Problem</h2>
+  <p>Biteful's search box has one job: after every key press, show the dishes whose names start with what the customer has typed so far. Type "p" and you see paneer, papad, pasta, pav and poha; type "pa" and poha disappears. The question the program must answer is called a <strong>prefix query</strong>: given a string p (the <strong>prefix</strong>, meaning the first few letters of a word), find every stored word that begins with p. Let us see how far plain Python gets with it.</p>
+  <p>The obvious approach is to keep the dish names in a list and check each one with <code>startswith</code>:</p>
+  <div class="fx" data-lang="py">dishes = ["dal", "dalia", "dosa", "dhokla", "paneer", "papad", "pasta", "pav", "poha", "samosa"]
 
-def starts_with_scan(words, prefix):     # what a list or set forces you to do
+def starts_with_scan(words, prefix):     # check every stored name
     return [w for w in words if w.startswith(prefix)]
 
 print(starts_with_scan(dishes, "pa"))
 print(starts_with_scan(dishes, "d"), starts_with_scan(dishes, "z"))
-menu_set = set(dishes)
-print("pav" in menu_set, "pa" in menu_set)   # a set knows whole words only</div>
+
+menu = set(dishes)
+print("pav" in menu, "pa" in menu)       # a set knows whole words only</div>
   <div class="fx" data-lang="text">['paneer', 'papad', 'pasta', 'pav']
 ['dal', 'dalia', 'dosa', 'dhokla'] []
 True False</div>
-  <p>Correct, but every key press scans all N names, and each check compares up to L letters: O(N·L) per key. A hash set does not help: it answers "is <em>pav</em> on the menu?" in one step, but "pa" is not a stored word, and the set has no idea which stored words <em>begin</em> with "pa", because hashing scatters similar words randomly. At Biteful's scale:</p>
-<div class="fx" data-lang="py">import random, time
-random.seed(7)
-parts = ["pa", "ne", "er", "dal", "do", "sa", "ma", "ka", "ti", "ra", "bha", "ji", "po", "ha", "ch", "ole"]
-names = set()
-while len(names) &lt; 100_000:                     # 100,000 distinct made-up dish names
-    names.add("".join(random.choice(parts) for _ in range(random.randint(2, 6))))
-names = sorted(names)
-print("dish names:", len(names), "e.g.", sorted(names)[:3])
+  <p>The answers are right, but look at how they are produced. To find the four "pa" dishes, the function checked all ten names. With N names of up to L letters each, every key press costs O(N · L), because each of the N names is compared letter by letter. Biteful has 100,000 dish names, and a customer typing "paneer" sends six queries in a couple of seconds, from thousands of customers at once. Every query re-reads the entire list, and it gets slower with every dish a restaurant adds.</p>
+  <p>The last line shows why the usual speed-up, a hash set, does not help. A set answers "is <em>pav</em> on the menu?" in one step, because it hashes the whole word and jumps straight to it. But "pa" is not a word on the menu, so <code>"pa" in menu</code> is simply False. Hashing deliberately scatters similar strings to unrelated places, so "paneer" and "papad" end up nowhere near each other, and the set has no way to say which stored words <em>begin</em> with "pa" except by checking every one. A set is excellent for exact lookups and useless for prefix questions.</p>
+  <p>What we want is a structure where words that start the same way are stored together, so that going from "p" to "pa" narrows the search instead of restarting it. Think of a printed dictionary with thumb tabs. To find words starting with "pa" you do not read every page: you open the P tab, then flip to where "pa" begins, and every word you want is right there in one block. A trie is that tab system, with a tab for every letter at every depth. The next section shows what it looks like.</p>
 
-root = {}                                       # a dict-of-dicts trie; "#" = count below
-for w in names:
-    node = root
-    for ch in w:
-        node = node.setdefault(ch, {"#": 0})
-        node["#"] += 1
+  <h2 id="dsa-tri-idea"><span class="num">02</span>What a Trie Is</h2>
+  <p>A <strong>trie</strong> (from re<em>trie</em>val, also called a <strong>prefix tree</strong>) is a tree that stores words as paths, one letter per step. The top node, the <strong>root</strong>, stands for "nothing typed yet". Each edge going down is labelled with one letter, so walking down d → a → l spells "dal". Words that start the same way share the same first steps: "dal", "dalia" and "dosa" all go through the single d node, and "dal" and "dalia" share the whole path d → a → l. Here is the trie for four dishes:</p>
+  <figure class="viz"><svg viewBox="0 0 600 340" width="600"><line x1="300" y1="30" x2="200" y2="85" stroke="currentColor"/><line x1="300" y1="30" x2="430" y2="85" stroke="currentColor"/><line x1="200" y1="85" x2="150" y2="140" stroke="currentColor"/><line x1="200" y1="85" x2="260" y2="140" stroke="currentColor"/><line x1="150" y1="140" x2="150" y2="195" stroke="currentColor"/><line x1="150" y1="195" x2="150" y2="250" stroke="currentColor"/><line x1="150" y1="250" x2="150" y2="305" stroke="currentColor"/><line x1="260" y1="140" x2="260" y2="195" stroke="currentColor"/><line x1="260" y1="195" x2="260" y2="250" stroke="currentColor"/><line x1="430" y1="85" x2="430" y2="140" stroke="currentColor"/><line x1="430" y1="140" x2="430" y2="195" stroke="currentColor"/><circle cx="300" cy="30" r="16" class="fs sb"/><text x="300" y="34" text-anchor="middle">·</text><circle cx="200" cy="85" r="16" class="fb sb"/><text x="200" y="89" text-anchor="middle">d</text><circle cx="430" cy="85" r="16" class="fb sb"/><text x="430" y="89" text-anchor="middle">p</text><circle cx="150" cy="140" r="16" class="fb sb"/><text x="150" y="144" text-anchor="middle">a</text><circle cx="260" cy="140" r="16" class="fb sb"/><text x="260" y="144" text-anchor="middle">o</text><circle cx="150" cy="195" r="16" class="fg sg"/><text x="150" y="199" text-anchor="middle">l</text><circle cx="150" cy="250" r="16" class="fb sb"/><text x="150" y="254" text-anchor="middle">i</text><circle cx="150" cy="305" r="16" class="fg sg"/><text x="150" y="309" text-anchor="middle">a</text><circle cx="260" cy="195" r="16" class="fb sb"/><text x="260" y="199" text-anchor="middle">s</text><circle cx="260" cy="250" r="16" class="fg sg"/><text x="260" y="254" text-anchor="middle">a</text><circle cx="430" cy="140" r="16" class="fb sb"/><text x="430" y="144" text-anchor="middle">a</text><circle cx="430" cy="195" r="16" class="fg sg"/><text x="430" y="199" text-anchor="middle">v</text><text x="322" y="34" class="tm">root = "" (empty prefix)</text><text x="180" y="72" text-anchor="end" class="tb">"d" shared by 3 dishes</text><text x="172" y="199" class="tg">dal</text><text x="172" y="309" class="tg">dalia</text><text x="282" y="254" class="tg">dosa</text><text x="452" y="199" class="tg">pav</text><text x="470" y="300" text-anchor="middle" class="tm">green = end flag True</text></svg><figcaption>The trie for dal, dalia, dosa and pav. The four words have 15 letters, but the trie has only 11 letter nodes, because shared starts are stored once. Green nodes are where a whole dish name ends.</figcaption></figure>
+  <p>Two facts about this picture explain everything that follows. First, every node stands for a prefix: the letters on the path from the root down to it. The node reached by d → a stands for "da", and everything below it is a word starting with "da". That is why a prefix query becomes easy: walk down the letters of the prefix, and the answer is the whole subtree under the node you land on. The walk takes as many steps as the prefix has letters, no matter whether the trie holds ten words or ten million.</p>
+  <p>Second, reaching a node does not mean a word exists there. "da" is a node, but no dish is called "da"; it exists only because "dal" and "dalia" pass through it. And "dal" is a real dish even though the path carries on to "dalia". The tree's shape cannot tell these cases apart, so every node carries one extra bit called the <strong>end flag</strong>: True only at nodes where a stored word finishes (the green ones). Forgetting this flag is the most common trie bug, and we will see it again.</p>
+  <p>Notice also where the letters live. In a trie the letter belongs to the edge, not to the node: a node simply holds a mapping from each next letter to the child node it leads to. The root has no letter at all, because it stands for the empty prefix "". So a <strong>trie node</strong> needs exactly two fields: <code>children</code>, a dict from letter to child node (a dict means only letters actually used take space), and <code>end</code>, the end flag. Later sections add optional extras such as counts, but these two are the whole structure.</p>
 
-def count_scan(prefix):                          # check every name: O(N * L)
-    return sum(1 for w in names if w.startswith(prefix))
-
-def count_trie(prefix):                          # walk len(prefix) steps: O(L)
-    node = root
-    for ch in prefix:
-        node = node.get(ch)
-        if node is None:
-            return 0
-    return node["#"]
-
-queries = ["p", "pa", "pan", "pane", "panee", "paneer"] * 20     # 120 key presses
-for f in (count_scan, count_trie):
-    t = time.perf_counter()
-    res = [f(q) for q in queries]
-    ms = (time.perf_counter() - t) * 1000
-    print(f"{f.__name__:11} {ms:9.2f} ms for {len(queries)} key presses | counts {res[:6]}")</div>
-  <div class="fx" data-lang="text">dish names: 100000 e.g. ['bhabha', 'bhabhabha', 'bhabhabhadalbha']
-count_scan     434.40 ms for 120 key presses | counts [12534, 6299, 389, 389, 25, 25]
-count_trie       0.06 ms for 120 key presses | counts [12534, 6299, 389, 389, 25, 25]</div>
-  <p>The scan takes about 3.6 ms per key press, and it gets slower with every new dish. The trie answer (built in the next sections) walks at most 6 letters per query and returns the same counts in microseconds, whatever N is. Notice also how quickly the matches narrow: 12,534 names start with "p", 25 with "panee".</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A printed dictionary with thumb tabs. You don't read every page to find words starting with "pa". You open the "P" tab, then flip to where "pa" begins, and every word you want is right there, together. A trie is that tab system, one tab per letter, at every depth.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A <strong>prefix query</strong> asks for (or counts, or checks the existence of) every stored key that begins with a given string p. With a list or hash set it costs O(N · |p|); a structure that groups keys by their first letters can answer in O(|p|) plus the size of the answer.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"A set is O(1), so use a set." That is true only for exact lookups. The moment the question says "starts with", a set degrades to a full scan.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: The Trie Node.</b> We need words that start the same to be stored together, so that going from "p" to "pa" narrows the search instead of restarting it. What does such a structure look like?</div>
-
-  <h2 id="dsa-tri-idea"><span class="num">02</span>The Trie Node</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>"dal", "dalia" and "dosa" all start with d; "dal" and "dalia" share three letters. How do we store words so that a shared start is stored once, and how do we still know that "dal" is a dish but "da" is not?</p>
-  </div>
-  <p>Store words as paths in a tree. The root means "nothing typed yet". Each edge is one letter. Walking down d → a → l spells "dal". Words with the same start share the same first steps, so "dal", "dalia" and "dosa" all use the d node once, and "dal" and "dalia" share d → a → l.</p>
-  <figure class="viz"><svg viewBox="0 0 600 340" width="600"><line x1="300" y1="30" x2="200" y2="85" stroke="currentColor"/><line x1="300" y1="30" x2="430" y2="85" stroke="currentColor"/><line x1="200" y1="85" x2="150" y2="140" stroke="currentColor"/><line x1="200" y1="85" x2="260" y2="140" stroke="currentColor"/><line x1="150" y1="140" x2="150" y2="195" stroke="currentColor"/><line x1="150" y1="195" x2="150" y2="250" stroke="currentColor"/><line x1="150" y1="250" x2="150" y2="305" stroke="currentColor"/><line x1="260" y1="140" x2="260" y2="195" stroke="currentColor"/><line x1="260" y1="195" x2="260" y2="250" stroke="currentColor"/><line x1="430" y1="85" x2="430" y2="140" stroke="currentColor"/><line x1="430" y1="140" x2="430" y2="195" stroke="currentColor"/><circle cx="300" cy="30" r="16" class="fs sb"/><text x="300" y="34" text-anchor="middle">·</text><circle cx="200" cy="85" r="16" class="fb sb"/><text x="200" y="89" text-anchor="middle">d</text><circle cx="430" cy="85" r="16" class="fb sb"/><text x="430" y="89" text-anchor="middle">p</text><circle cx="150" cy="140" r="16" class="fb sb"/><text x="150" y="144" text-anchor="middle">a</text><circle cx="260" cy="140" r="16" class="fb sb"/><text x="260" y="144" text-anchor="middle">o</text><circle cx="150" cy="195" r="16" class="fg sg"/><text x="150" y="199" text-anchor="middle">l</text><circle cx="150" cy="250" r="16" class="fb sb"/><text x="150" y="254" text-anchor="middle">i</text><circle cx="150" cy="305" r="16" class="fg sg"/><text x="150" y="309" text-anchor="middle">a</text><circle cx="260" cy="195" r="16" class="fb sb"/><text x="260" y="199" text-anchor="middle">s</text><circle cx="260" cy="250" r="16" class="fg sg"/><text x="260" y="254" text-anchor="middle">a</text><circle cx="430" cy="140" r="16" class="fb sb"/><text x="430" y="144" text-anchor="middle">a</text><circle cx="430" cy="195" r="16" class="fg sg"/><text x="430" y="199" text-anchor="middle">v</text><text x="322" y="34" class="tm">root = "" (empty prefix)</text><text x="180" y="72" text-anchor="end" class="tb">"d" shared by 3 dishes</text><text x="172" y="199" class="tg">dal</text><text x="172" y="309" class="tg">dalia</text><text x="282" y="254" class="tg">dosa</text><text x="452" y="199" class="tg">pav</text><text x="470" y="300" text-anchor="middle" class="tm">green = end flag True</text></svg><figcaption>The trie for dal, dalia, dosa, pav. 15 letters in the words, but only 11 letter nodes, because shared starts (d; d-a-l) are stored once. Green nodes are where a whole dish name ends; "dal" ends in the middle of the path to "dalia".</figcaption></figure>
-  <p>Two things to notice:</p>
-  <ul>
-    <li>Every node stands for a <strong>prefix</strong>: the letters on the path from the root to it. The node under d → a means "da".</li>
-    <li>Reaching a node does not mean a word exists. "da" is a node, but no dish is called "da". So each node carries an <strong>end flag</strong>: True only where a stored word finishes. "dal" needs it because the path keeps going to "dalia".</li>
-  </ul>
-  <p>So a node needs exactly two fields: its children (letter → next node; a Python dict, so only letters actually used take space) and the end flag.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Trie</strong> (from re<em>trie</em>val): a tree where each edge holds one character, each node represents the prefix spelled from the root, and a flag marks nodes where a complete key ends. Also called a <strong>prefix tree</strong>. A <strong>trie node</strong> = <code>children</code> (char → node) + <code>end</code> (bool), plus optional extras (counts, the word, top-k list).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Putting the letter <em>inside</em> the node and forgetting the root. In a trie the letter belongs to the edge (the dict key); the root has no letter and stands for "". This is why <code>startsWith("")</code> is always True.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: insert, search, startsWith.</b> We have the shape. How exactly does a word get added, and how do the two questions "is this a dish?" and "does any dish start with this?" walk the tree differently?</div>
-
-  <h2 id="dsa-tri-impl"><span class="num">03</span>insert, search, startsWith (Traced)</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Starting from an empty root, how do dal, dalia, dosa, pav go in, which nodes are created and which are reused, and why does search("da") say no while startsWith("da") says yes?</p>
-  </div>
-  <ul>
-    <li><strong>insert(word)</strong>: start at the root. For each letter, go to that child, creating it if missing. At the last node, set <code>end = True</code>.</li>
-    <li><strong>search(word)</strong>: walk the letters. Fall off (missing child) → False. Reach the end → return the end flag.</li>
-    <li><strong>startsWith(prefix)</strong>: same walk, but reaching the end is enough. The flag does not matter.</li>
-  </ul>
-  <div class="callout pred"><span class="label">Trigger words</span>
-    <p>"implement a trie / prefix tree", "dictionary of words with insert and lookup", "count words with prefix", "starts with", "is prefix of".</p>
-  </div>
-  <div class="flow"><span>node = root</span><span>for ch in word: create/follow children[ch]</span><span>insert: end = True · search: return end · startsWith: return True</span><span>fell off → False</span></div>
-  <h3>Inserting, by hand</h3>
-  <table class="tbl out"><caption>+ = node created, = = existing node reused</caption>
-    <tr><th>insert</th><th>d</th><th>a / o / p</th><th>…</th><th>end flag set on</th><th>new nodes</th></tr>
-    <tr><td>dal</td><td>+d</td><td>+a</td><td>+l</td><td>l (dal)</td><td>3</td></tr>
-    <tr><td>dalia</td><td>=d</td><td>=a</td><td>=l +i +a</td><td>a (dalia)</td><td>2</td></tr>
-    <tr><td>dosa</td><td>=d</td><td>+o</td><td>+s +a</td><td>a (dosa)</td><td>3</td></tr>
-    <tr><td>pav</td><td>+p</td><td>+a</td><td>+v</td><td>v (pav)</td><td>3</td></tr>
-  </table>
-<div class="fx" data-lang="py">class TrieNode:
+  <h2 id="dsa-tri-impl"><span class="num">03</span>insert, search and startsWith</h2>
+  <p>A trie needs three operations, and they are all the same walk from the root with a different ending. To <strong>insert</strong> a word, start at the root and, for each letter, go to the child for that letter, creating it if it does not exist yet; at the last node, set the end flag. To <strong>search</strong> for a whole word, walk its letters; if a child is missing you have "fallen off" the trie and the answer is False; if you reach the end, the answer is the last node's end flag. To ask <strong>startsWith</strong> (does any stored word begin with this prefix?), do the same walk, but reaching the end is enough, because the node exists only if some word passes through it.</p>
+  <p>Before running code, trace the inserts by hand on an empty trie. Inserting "dal" creates three nodes (d, a, l) and sets the flag on l. Inserting "dalia" walks the existing d, a and l, then creates i and a, and sets the flag on the new a. Inserting "dosa" reuses only d and creates o, s and a. Inserting "pav" shares nothing and creates three nodes. The code below prints <code>+</code> for a created node and <code>=</code> for a reused one, so you can check this trace against it:</p>
+  <div class="fx" data-lang="py">class TrieNode:
     def __init__(self):
         self.children = {}      # letter -&gt; TrieNode
         self.end = False        # True if a whole word stops here
 
 class Trie:
     def __init__(self):
-        self.root = TrieNode()  # empty node: stands for the empty prefix ""
+        self.root = TrieNode()  # stands for the empty prefix ""
 
     def insert(self, word):
         node, steps = self.root, []
@@ -257,8 +114,8 @@ class Trie:
                 steps.append(f"+{ch}")
             else:
                 steps.append(f"={ch}")           # shared prefix: reuse the node
-            node = node.children[ch]             # walk down one letter
-        node.end = True                          # mark: a word ends here
+            node = node.children[ch]
+        node.end = True                          # a word ends here
         print(f"insert {word:6} {' '.join(steps)}")
 
     def _walk(self, s):         # follow s letter by letter; None if we fall off
@@ -269,11 +126,11 @@ class Trie:
                 return None
         return node
 
-    def search(self, word):     # whole word stored?
+    def search(self, word):     # is this whole word stored?
         node = self._walk(word)
         return node is not None and node.end
 
-    def startsWith(self, prefix):   # any word begins with prefix?
+    def startsWith(self, prefix):   # does any stored word begin with prefix?
         return self._walk(prefix) is not None
 
 t = Trie()
@@ -281,121 +138,88 @@ for w in ["dal", "dalia", "dosa", "pav"]:
     t.insert(w)
 print("search dal:", t.search("dal"), "| search da:", t.search("da"),
       "| startsWith da:", t.startsWith("da"), "| startsWith dh:", t.startsWith("dh"))
-print("search dalia:", t.search("dalia"), "| search dalias:", t.search("dalias"),
-      "| startsWith '':", t.startsWith(""), "| search '':", t.search(""))</div>
+print("search dalias:", t.search("dalias"), "| startsWith '':", t.startsWith(""),
+      "| search '':", t.search(""))</div>
   <div class="fx" data-lang="text">insert dal    +d +a +l
 insert dalia  =d =a =l +i +a
 insert dosa   =d +o +s +a
 insert pav    +p +a +v
 search dal: True | search da: False | startsWith da: True | startsWith dh: False
-search dalia: True | search dalias: False | startsWith '': True | search '': False</div>
-  <figure class="viz"><svg viewBox="0 0 600 270" width="600"><text x="100" y="18" text-anchor="middle" class="tb">search("dal")</text><text x="300" y="18" text-anchor="middle" class="tb">search("da")</text><text x="500" y="18" text-anchor="middle" class="tb">startsWith("dh")</text><line x1="100" y1="45" x2="100" y2="210" stroke="currentColor"/><circle cx="100" cy="45" r="15" class="fs sb"/><text x="100" y="49" text-anchor="middle">·</text><circle cx="100" cy="100" r="15" class="fb sb"/><text x="100" y="104" text-anchor="middle">d</text><circle cx="100" cy="155" r="15" class="fb sb"/><text x="100" y="159" text-anchor="middle">a</text><circle cx="100" cy="210" r="15" class="fg sg"/><text x="100" y="214" text-anchor="middle">l</text><text x="122" y="214" class="tg">end = True</text><text x="100" y="252" text-anchor="middle" class="tg">→ True</text><line x1="300" y1="45" x2="300" y2="155" stroke="currentColor"/><circle cx="300" cy="45" r="15" class="fs sb"/><text x="300" y="49" text-anchor="middle">·</text><circle cx="300" cy="100" r="15" class="fb sb"/><text x="300" y="104" text-anchor="middle">d</text><circle cx="300" cy="155" r="15" class="fr sr"/><text x="300" y="159" text-anchor="middle">a</text><text x="322" y="159" class="tr">end = False</text><text x="300" y="232" text-anchor="middle" class="tr">search → False</text><text x="300" y="252" text-anchor="middle" class="tg">startsWith → True</text><line x1="500" y1="45" x2="500" y2="100" stroke="currentColor"/><line x1="500" y1="100" x2="500" y2="155" class="sr" stroke-dasharray="4 3"/><circle cx="500" cy="45" r="15" class="fs sb"/><text x="500" y="49" text-anchor="middle">·</text><circle cx="500" cy="100" r="15" class="fb sb"/><text x="500" y="104" text-anchor="middle">d</text><circle cx="500" cy="155" r="15" fill="none" class="sr" stroke-dasharray="4 3"/><text x="500" y="159" text-anchor="middle" class="tr">h?</text><text x="522" y="159" class="tr">missing</text><text x="500" y="252" text-anchor="middle" class="tr">fell off → False</text></svg><figcaption>Three walks in the dal/dalia/dosa/pav trie. A word is found only if the walk finishes AND the last node has the end flag. startsWith only needs the walk to finish.</figcaption></figure>
-  <table class="tbl out"><caption>The queries, step by step</caption>
-    <tr><th>query</th><th>walk</th><th>last node's end</th><th>result</th></tr>
-    <tr><td>search("dal")</td><td>root → d → a → l</td><td>True</td><td>True</td></tr>
-    <tr><td>search("da")</td><td>root → d → a</td><td>False</td><td>False</td></tr>
-    <tr><td>startsWith("da")</td><td>root → d → a</td><td>(not checked)</td><td>True</td></tr>
-    <tr><td>startsWith("dh")</td><td>root → d → no child h</td><td>–</td><td>False (fell off)</td></tr>
-    <tr><td>search("dalias")</td><td>… → a → no child s</td><td>–</td><td>False</td></tr>
-  </table>
-  <p>The second print line shows edge cases: <code>startsWith("")</code> is True because the root always exists; <code>search("")</code> is False because nobody inserted the empty word.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>For a word or prefix of length L: <strong>insert, search and startsWith are O(L) time</strong>, independent of the number of stored words N. Insert adds at most L nodes, so total space is O(total letters) in the worst case (no shared prefixes).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Writing <code>search</code> as "return True if the walk finishes" makes <code>search("da")</code> True. That is <code>startsWith</code>, not <code>search</code>. The end flag is the whole difference between the two.</p>
-  </div>
-  <div class="callout pred"><span class="label">Practice in the tracker</span>
-    <p><a class="xref" data-note="dsa_problems">Problem Tracker</a> → Tries: <b>2185 Counting Words With a Given Prefix</b>, <b>208 Implement Trie (Prefix Tree)</b>, <b>3043 Find the Length of the Longest Common Prefix</b>.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Trie vs Hash Set.</b> Every operation is O(L). A set's exact lookup is also O(L) (it hashes L letters). So what exactly do we gain, and what do all these node objects cost in memory?</div>
+search dalias: False | startsWith '': True | search '': False</div>
+  <p>The four insert lines match the hand trace exactly: "dalia" reused three nodes and created two. Now look at the queries. <code>search("dal")</code> walks root → d → a → l and finds the end flag set, so True. <code>search("da")</code> walks root → d → a successfully, but the a node's end flag is False, so the answer is False: "da" is a prefix of stored words but not a word itself. <code>startsWith("da")</code> does the same walk and does not look at the flag, so it returns True. <code>startsWith("dh")</code> reaches d, finds no child h, and falls off, so False. <code>search("dalias")</code> falls off after "dalia". The last line shows two edge cases interviewers like: <code>startsWith("")</code> is True because the walk takes zero steps and the root always exists, while <code>search("")</code> is False because nobody inserted the empty word.</p>
+  <p>The whole difference between <code>search</code> and <code>startsWith</code> is that one line checking <code>node.end</code>. If you forget it, <code>search("da")</code> returns True, and your "search" has silently become "startsWith".</p>
+  <p>The cost of all three operations is <strong>O(L)</strong> time, where L is the length of the word or prefix: one dict lookup per letter, and the number of stored words N never appears. Insert creates at most L new nodes, so the total space is at most O(total letters of all words), and less when words share prefixes. In an interview, "implement a trie", "a dictionary that supports insert and prefix lookup", or "count words with a given prefix" all mean exactly this class.</p>
 
-  <h2 id="dsa-tri-cost"><span class="num">04</span>Trie vs Hash Set: Cost and Memory</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Which questions does a trie answer faster than a set or a sorted list, and is it cheaper or more expensive to store 100,000 dish names this way?</p>
-  </div>
-  <p>L is the length of the word or prefix you ask about, N the number of stored words. A trie's cost does not depend on N at all: finding "pav" among 10 names or 10 crore names is the same three steps.</p>
+  <h2 id="dsa-tri-cost"><span class="num">04</span>Cost, Memory and Alternatives</h2>
+  <p>An honest interview answer about tries has to cover what they cost, not only what they do. Start with time. A Python set also does an exact lookup in O(L), because it must hash all L letters of the word, so for "is this exact word stored?" the trie wins nothing. The trie wins on every question that involves prefixes, and the table below compares it with a set and with a third option, a sorted list searched with <code>bisect</code> (binary search):</p>
   <table class="tbl">
-    <tr><th>Question</th><th>Python set</th><th>Sorted list + bisect</th><th>Trie</th></tr>
-    <tr><td>Add a word</td><td>O(L) to hash it</td><td>O(N) shift</td><td>O(L)</td></tr>
+    <tr><th>Question</th><th>Hash set</th><th>Sorted list + bisect</th><th>Trie</th></tr>
+    <tr><td>Add a word</td><td>O(L)</td><td>O(N) to shift elements</td><td>O(L)</td></tr>
     <tr><td>Is this exact word stored?</td><td>O(L)</td><td>O(L log N)</td><td>O(L)</td></tr>
-    <tr><td>Does any word start with p?</td><td>O(N·L) scan</td><td>O(L log N)</td><td><strong>O(L)</strong></td></tr>
-    <tr><td>List all k words starting with p</td><td>O(N·L) scan</td><td>O(L log N + output)</td><td>O(L + size of that subtree)</td></tr>
-    <tr><td>Words in sorted order</td><td>O(N log N) sort</td><td>already sorted</td><td>DFS, children in order</td></tr>
-    <tr><td>Shortest stored prefix of a word</td><td>try every prefix: O(L²)</td><td>awkward</td><td><strong>O(L)</strong>, stop at the first end flag</td></tr>
+    <tr><td>Does any word start with p?</td><td>O(N · L) scan</td><td>O(L log N)</td><td>O(L)</td></tr>
+    <tr><td>List the k words starting with p</td><td>O(N · L) scan</td><td>O(L log N + k)</td><td>O(L + size of the subtree)</td></tr>
+    <tr><td>Shortest stored prefix of a word</td><td>try every prefix, O(L²)</td><td>awkward</td><td>O(L), stop at the first end flag</td></tr>
     <tr><td>Memory</td><td>the words</td><td>the words</td><td>one object per distinct prefix</td></tr>
   </table>
-  <h3>The memory bill</h3>
-  <p>Sharing prefixes saves letters, but every node is a Python object with its own dict:</p>
-<div class="fx" data-lang="py">import random, tracemalloc
-random.seed(7)
+  <p>The memory row is where tries hurt in Python. Sharing prefixes sounds like it should save space, and in letters it does. But each node is a full Python object with its own dict, which costs a few hundred bytes, while a letter inside an ordinary string costs one byte. Measuring both on Biteful's 100,000 dish names (the exact megabytes are approximate and vary by Python version):</p>
+  <div class="fx" data-lang="py">import tracemalloc
+# (Trie is the class from the previous section, without the prints)
+
 def count_nodes(node):
     return 1 + sum(count_nodes(c) for c in node.children.values())
 
-words = ["paneer", "papad", "pasta", "pav", "paratha", "pakora"]
+small = ["paneer", "papad", "pasta", "pav", "paratha", "pakora"]
 t = Trie()
-for w in words:
+for w in small:
     t.insert(w)
-print("letters typed :", sum(len(w) for w in words))
-print("trie nodes    :", count_nodes(t.root) - 1)    # minus the empty root
+print("6 dishes:", sum(map(len, small)), "letters -&gt;", count_nodes(t.root) - 1, "nodes")
 
-parts = ["pa", "ne", "er", "dal", "do", "sa", "ma", "ka", "ti", "ra", "bha", "ji", "po", "ha", "ch", "ole"]
-names = set()
-while len(names) &lt; 100_000:                     # 100,000 distinct made-up dish names
-    names.add("".join(random.choice(parts) for _ in range(random.randint(2, 6))))
-names = sorted(names)
+names = make_names()                 # 100,000 made-up dish names
 tracemalloc.start()
-as_list = list(names); m1 = tracemalloc.get_traced_memory()[0]
 big = Trie()
 for w in names:
     big.insert(w)
-m2 = tracemalloc.get_traced_memory()[0]
+trie_bytes = tracemalloc.get_traced_memory()[0]
 tracemalloc.stop()
-print(f"100,000 names: {sum(map(len, names)):,} letters, {count_nodes(big.root) - 1:,} trie nodes")
-print(f"trie memory ~{(m2 - m1) / 1e6:.0f} MB vs the list itself (pointers) ~{m1 / 1e6:.1f} MB + strings ~{sum(len(w) + 49 for w in names) / 1e6:.1f} MB")</div>
-  <div class="fx" data-lang="text">letters typed : 32
-trie nodes    : 22
-100,000 names: 1,091,258 letters, 340,184 trie nodes
-trie memory ~84 MB vs the list itself (pointers) ~0.8 MB + strings ~6.0 MB</div>
-  <p>Six "pa…" dishes: 32 letters became 22 nodes. Sounds like a win. But at Biteful's scale, 1.09 million letters became 340,184 nodes taking about 84 MB, against about 7 MB for the plain list of strings: roughly 12× more. In Python each node is an object plus a dict, a few hundred bytes, while a letter inside a string costs 1 byte. Words with few shared starts (random IDs) make it worse.</p>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>Choose a trie for its <em>queries</em> (prefix search, shortest/longest prefix match, walking letter by letter with backtracking), not to save memory. If you only need exact lookups, a set is simpler and lighter. Ways to shrink a trie: <code>__slots__</code> on the node class, a 26-slot array instead of a dict (fast but wasteful when sparse), or a <strong>compressed trie (radix tree)</strong> that stores a run like "neer" on one edge.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>Trie space = O(number of distinct prefixes) nodes ≤ O(total letters), times the per-node overhead (in Python, hundreds of bytes). A <strong>radix tree</strong> merges every chain of single-child nodes into one edge labelled with a string.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: claiming a trie saves memory</span>
-    <p>In Python each node is a heavy object. A trie saves <em>time</em> on prefix questions; it usually costs memory. Say so in interviews.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Autocomplete.</b> startsWith only says yes or no. The search box must <em>list</em> the matching dishes, say how many there are, rank them by popularity, and stay correct when a restaurant removes a dish.</div>
+strings = sum(len(w) + 49 for w in names) + 8 * len(names)   # str objects + list pointers
+print(f"100,000 names: {sum(map(len, names)):,} letters -&gt; {count_nodes(big.root) - 1:,} nodes")
+print(f"trie ~{trie_bytes / 1e6:.0f} MB vs plain list of strings ~{strings / 1e6:.0f} MB")</div>
+  <div class="fx" data-lang="text">6 dishes: 32 letters -&gt; 22 nodes
+100,000 names: 1,091,258 letters -&gt; 340,184 nodes
+trie ~84 MB vs plain list of strings ~7 MB</div>
+  <p>For six "pa…" dishes, 32 letters became 22 nodes, which looks like a saving. At Biteful's scale, 1.09 million letters became 340,184 nodes using roughly 84 MB, against roughly 7 MB for the same names kept as a plain list of strings: about twelve times more. Words with few shared starts, such as random IDs, make the ratio worse. So you choose a trie for its <em>queries</em>, never to save memory, and you should say so in an interview. If memory matters, there are known ways to shrink one: <code>__slots__</code> on the node class, a fixed 26-slot array instead of a dict (fast, but wasteful when most slots are empty), or a <strong>compressed trie</strong> (also called a radix tree), which merges every chain of single-child nodes into one edge labelled with a string, so "neer" becomes one edge instead of four nodes.</p>
+  <p>The middle column of the table deserves its own look, because it often beats a trie for a fixed word list. If the names are sorted, all names starting with "pa" sit in one unbroken block, just like the dictionary's thumb-tab section. <code>bisect.bisect_left(words, prefix)</code> finds the first position where the prefix could be inserted, which is exactly the start of that block, in O(log N) comparisons. Then you read forward while names still start with the prefix:</p>
+  <div class="fx" data-lang="py">import bisect
 
-  <h2 id="dsa-tri-more"><span class="num">05</span>Autocomplete: List, Count, Rank, Delete</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The customer types "pa". Show every matching dish in order, the number of matches, the two most-ordered ones first, and keep all of that right after "pasta" is taken off the menu.</p>
-  </div>
-  <p>Each extra feature is a small field on the node:</p>
-  <ul>
-    <li><strong>Autocomplete</strong>: walk to the prefix node, then DFS below it, collecting every node with the end flag. Visiting children in sorted order gives alphabetical results.</li>
-    <li><strong>Count words with a prefix</strong>: every node keeps <code>passing</code>, the number of stored words whose path goes through it. Increase it on insert. The answer is the prefix node's count, O(L).</li>
-    <li><strong>Top suggestions</strong>: store a frequency (orders today) at word ends and pick the best k.</li>
-    <li><strong>Delete</strong>: walk down decreasing <code>passing</code>. If a child's count drops to 0, no other word needs that branch: cut it off and stop. If the walk finishes, the word was a prefix of others ("dal" inside "dalia"), so only unset its end flag.</li>
-  </ul>
-  <div class="callout pred"><span class="label">Trigger words</span>
-    <p>"autocomplete", "type-ahead", "suggestions after each character", "top 3 products", "sum / count of words with prefix", "map sum".</p>
-  </div>
-  <div class="flow"><span>walk to the prefix node (O(L))</span><span>DFS below it, collect end nodes</span><span>count = node.passing</span><span>rank by freq; delete via passing counts</span></div>
-  <table class="tbl out"><caption>Today's menu and orders</caption>
-    <tr><th>dish</th><td>paneer</td><td>papad</td><td>pasta</td><td>pav</td><td>poha</td><td>dal</td><td>dalia</td><td>dosa</td></tr>
-    <tr><th>orders</th><td>90</td><td>40</td><td>40</td><td>75</td><td>12</td><td>60</td><td>8</td><td>95</td></tr>
-  </table>
-<div class="fx" data-lang="py">import heapq
+words = sorted(["paneer", "papad", "pasta", "pav", "poha", "dal", "dosa"])
+
+def with_prefix(prefix):
+    i = bisect.bisect_left(words, prefix)        # first word &gt;= prefix
+    out = []
+    while i &lt; len(words) and words[i].startswith(prefix):
+        out.append(words[i])                     # the matches sit in one block
+        i += 1
+    return out
+
+print(words)
+print(with_prefix("pa"), with_prefix("d"), with_prefix("q"))</div>
+  <div class="fx" data-lang="text">['dal', 'dosa', 'paneer', 'papad', 'pasta', 'pav', 'poha']
+['paneer', 'papad', 'pasta', 'pav'] ['dal', 'dosa'] []</div>
+  <p>The "pa" block is found and read off directly, "d" gives its two names, and "q" finds an empty block. This uses no extra memory beyond the list itself. Its weakness is change: inserting a new name into a sorted list shifts everything after it, O(N), so it suits a menu that is rebuilt once a night, not one that changes every second. The practical rule is: exact lookups only, use a set; a static list with plain prefix lookups, use sort plus <code>bisect</code>; words that change often, or a search that must walk letter by letter and decide something at each step (counts, rankings, grids, wildcards, shortest-prefix matches), use a trie. The rest of this note is about that last group.</p>
+
+  <h2 id="dsa-tri-more"><span class="num">05</span>Autocomplete</h2>
+  <p><code>startsWith</code> only says yes or no. Biteful's search box needs much more: it must list the matching dishes, show how many there are, put the most-ordered ones first, and stay correct when a restaurant takes a dish off the menu. Each of these becomes a small addition to the trie, and together they are what interviewers mean by <strong>autocomplete</strong> (also called type-ahead).</p>
+  <p>Listing is the easy one. Walk down to the node for the typed prefix, then do a depth-first search (DFS, the "go as deep as possible, then back up" walk from <a class="xref" data-note="dsa_trees">Trees</a>) of everything below it, collecting each node whose end flag is set. If the DFS visits children in alphabetical order, the results come out alphabetical too.</p>
+  <p>Counting could be done the same way, by listing and taking the length, but that visits the whole subtree. Instead, give every node a counter called <code>passing</code>: the number of stored words whose path goes through this node. Insert increases the counter on every node along the word's path. Then "how many dishes start with pa?" is just: walk to the "pa" node and read its counter, O(L). Ranking needs one more field, <code>freq</code>, holding today's order count at each word's end node, so we can pick the best k matches.</p>
+  <p>Deleting is the subtle one, because other words may share the path. Deleting "dal" must not remove the nodes "dalia" uses; deleting "dalia" must not remove "dal". The <code>passing</code> counts solve it: walk down the word decreasing each count. If some child's count drops to 0, no other word uses that branch any more, so cut the whole branch off at that point and stop. If the walk reaches the end without that happening, the word was a prefix of other words, so only unset its end flag. Today's menu, with orders, is paneer 90, papad 40, pasta 40, pav 75, poha 12, dal 60, dalia 8 and dosa 95:</p>
+  <div class="fx" data-lang="py">import heapq
 
 class Node:
     def __init__(self):
         self.children = {}
         self.end = False
         self.passing = 0         # how many stored dishes go through this node
-        self.freq = 0            # orders today, for ranking suggestions
+        self.freq = 0            # orders today, used for ranking
 
 class DishSearch:
     def __init__(self):
@@ -411,7 +235,7 @@ class DishSearch:
 
     def insert(self, word, freq=0):
         node = self._walk(word)
-        if node and node.end:                    # already stored: just update
+        if node and node.end:                    # already stored: only update
             node.freq = freq
             return
         node = self.root
@@ -425,23 +249,7 @@ class DishSearch:
         node = self._walk(prefix)
         return node.passing if node else 0
 
-    def delete(self, word):
-        node = self._walk(word)
-        if node is None or not node.end:
-            return False
-        node = self.root
-        node.passing -= 1
-        for ch in word:
-            child = node.children[ch]
-            child.passing -= 1
-            if child.passing == 0:               # no other dish uses this branch
-                del node.children[ch]            # cut it off in one go
-                return True
-            node = child
-        node.end = False                         # dish was a prefix of others
-        return True
-
-    def autocomplete(self, prefix):              # all dishes, alphabetical
+    def autocomplete(self, prefix):              # every match, alphabetical
         out = []
         def dfs(node, path):
             if node.end:
@@ -457,57 +265,129 @@ class DishSearch:
         return heapq.nsmallest(k, self.autocomplete(prefix),
                                key=lambda w: (-self._walk(w).freq, w))
 
+    def delete(self, word):
+        node = self._walk(word)
+        if node is None or not node.end:
+            return False                         # not a stored dish
+        node = self.root
+        node.passing -= 1
+        for ch in word:
+            child = node.children[ch]
+            child.passing -= 1
+            if child.passing == 0:               # no other dish uses this branch
+                del node.children[ch]            # cut the whole branch off
+                return True
+            node = child
+        node.end = False                         # dish was a prefix of another
+        return True
+
 ds = DishSearch()
-for dish, orders in [("paneer", 90), ("papad", 40), ("pasta", 40), ("pav", 75), ("poha", 12),
-                     ("dal", 60), ("dalia", 8), ("dosa", 95)]:
+for dish, orders in [("paneer", 90), ("papad", 40), ("pasta", 40), ("pav", 75),
+                     ("poha", 12), ("dal", 60), ("dalia", 8), ("dosa", 95)]:
     ds.insert(dish, orders)
 print(ds.autocomplete("pa"), ds.count_prefix("pa"), ds.count_prefix("p"))
-print(ds.top("pa", 2), ds.top("p", 3), ds.top("d", 3))
-print(ds.delete("pasta"), ds.delete("pasta"), ds.autocomplete("pa"), ds.count_prefix("pa"))
+print(ds.top("pa", 2), ds.top("p", 3))
+print(ds.delete("pasta"), ds.delete("pasta"), ds.autocomplete("pa"))
 print(ds.delete("da"), ds.delete("dal"), ds.autocomplete("da"), ds.count_prefix(""))</div>
   <div class="fx" data-lang="text">['paneer', 'papad', 'pasta', 'pav'] 4 5
-['paneer', 'pav'] ['paneer', 'pav', 'papad'] ['dosa', 'dal', 'dalia']
-True False ['paneer', 'papad', 'pav'] 3
+['paneer', 'pav'] ['paneer', 'pav', 'papad']
+True False ['paneer', 'papad', 'pav']
 False True ['dalia'] 6</div>
-  <p>Reading the output: "pa" matches 4 dishes, "p" 5. Ranked by orders, paneer (90) and pav (75) lead; for "p" the third is papad, which ties pasta at 40 and wins alphabetically. Deleting "pasta" twice gives True then False. Deleting "da" is False because it was never a dish, only a prefix. Deleting "dal" keeps "dalia" (only the end flag is unset). The root's count is the number of dishes left: 6.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Autocomplete</strong> with a trie: O(L) to reach the prefix node plus O(size of its subtree) to list the matches. Storing a <code>passing</code> count per node answers "how many?" in O(L); storing the best k words per node answers "top k" in O(L).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Inserting the same word twice. Without the "already stored" check, <code>passing</code> counts go up twice and delete leaves a ghost count behind. Decide: either ignore duplicates (as here) or keep a per-word counter at the end node.</p>
-  </div>
-  <p><code>top</code> above collects every match and then picks k: fine for one restaurant's menu. Search engines with millions of words store the best k words <strong>in every node</strong> instead, so a key press costs O(L) no matter how many words match. That is Search Suggestions System (section 10).</p>
-  <div class="callout pred"><span class="label">Practice in the tracker</span>
-    <p><a class="xref" data-note="dsa_problems">Problem Tracker</a> → Tries: <b>677 Map Sum Pairs</b> (sum stored per node), <b>2416 Sum of Prefix Scores of Strings</b> (passing counts), <b>1268 Search Suggestions System</b>.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Word Search II.</b> So far a single walk followed a typed prefix. Biteful's promo puzzle asks the reverse: given a whole list of dish names, which can be traced in a letter grid? Backtracking found one word per search; with many words that repeats the same paths.</div>
+  <p>Read the output line by line. "pa" matches four dishes in alphabetical order, <code>count_prefix("pa")</code> is 4 and <code>count_prefix("p")</code> is 5 (poha joins). Ranked by orders, paneer (90) and pav (75) lead "pa"; for "p" the third place goes to papad, which ties pasta at 40 and wins on the alphabetical tie-break. Deleting "pasta" returns True and then False the second time, because it is gone. Deleting "da" is False because "da" was never a dish, only a prefix. Deleting "dal" succeeds and leaves "dalia" intact, because the walk reached the end of "dal" with counts still above zero and only unset its flag. Finally the root's counter is the number of dishes left on the menu: 6.</p>
+  <p>Now the payoff. Here is the "how many dishes start with what has been typed?" question on all 100,000 names, answered once by scanning the list and once by the trie, for 120 key presses (timings are approximate and depend on the machine):</p>
+  <div class="fx" data-lang="py">from autobase import DishSearch
+import time
+# (DishSearch is the class above; make_names builds the 100,000 made-up names)
 
-  <h2 id="dsa-tri-wsii"><span class="num">06</span>Word Search II: Trie + Backtracking</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The Backtracking note searched the promo puzzle for one word at a time. With a list of dish names, running one grid search per word re-walks the same cells again and again ("dosa" and "dosas" begin the same). Can one search find all of them?</p>
-  </div>
-  <p>Put all words in a trie and run <strong>one</strong> backtracking DFS from each cell, moving on the grid and in the trie together. The trie node says which letters can come next; if the next cell's letter is not a child, stop: no word goes that way. Mark the cell while it is on the path, unmark on the way back (exactly the Backtracking template).</p>
-  <div class="callout pred"><span class="label">Trigger words</span>
-    <p>"find all words from a list in a grid / board", "many patterns in one text", "stream of characters, does any word end here", "concatenated words".</p>
-  </div>
-  <div class="flow"><span>build a trie of all words</span><span>DFS from each cell with the trie node</span><span>"$" here → record, pop it</span><span>mark → neighbours that are children → unmark</span><span>prune empty branches</span></div>
-  <table class="tbl out"><caption>The promo puzzle (from the Backtracking note)</caption>
+names = make_names()
+ds = DishSearch()
+for w in names:
+    ds.insert(w)
+
+def count_scan(prefix):                      # O(N * L): check every name
+    return sum(1 for w in names if w.startswith(prefix))
+
+presses = ["p", "pa", "pan", "pane", "panee", "paneer"] * 20     # 120 key presses
+for f in (count_scan, ds.count_prefix):
+    t = time.perf_counter()
+    res = [f(q) for q in presses]
+    ms = (time.perf_counter() - t) * 1000
+    print(f"{f.__name__:12} {ms:8.2f} ms for 120 key presses | counts {res[:6]}")</div>
+  <div class="fx" data-lang="text">count_scan     726.77 ms for 120 key presses | counts [12534, 6299, 389, 389, 25, 25]
+count_prefix     0.06 ms for 120 key presses | counts [12534, 6299, 389, 389, 25, 25]</div>
+  <p>Both give identical counts (12,534 names start with "p", 25 with "panee"), but the scan takes hundreds of milliseconds, a few milliseconds per key press, while the trie answers all 120 queries in well under a millisecond. The scan grows with every dish added; the trie's cost depends only on the length of what was typed.</p>
+  <p>There is one remaining weakness: <code>top</code> collects every match and then picks the best k. For "p" on 100,000 names that means collecting 12,534 words to show three. Real search engines avoid this by storing the best k words <strong>inside every node</strong> while building the trie. Then each key press just moves one node down and reads a ready-made list. If the words are inserted in sorted order, the first three words that pass through a node are its three alphabetically smallest, which is exactly LeetCode's "Search Suggestions System":</p>
+  <div class="fx" data-lang="py">def build_suggestions(products):
+    root = {}
+    for p in sorted(products):                   # sorted: the first 3 seen are the best 3
+        node = root
+        for ch in p:
+            node = node.setdefault(ch, {"#": []})
+            if len(node["#"]) &lt; 3:
+                node["#"].append(p)              # every node keeps its own top 3
+    return root
+
+def suggestions(root, typed):
+    out, node = [], root
+    for ch in typed:
+        node = node.get(ch) if node else None    # once we fall off, stay off
+        out.append(node["#"] if node else [])
+    return out
+
+root = build_suggestions(["paneer", "papad", "pasta", "pav", "poha", "pakora"])
+for i, row in enumerate(suggestions(root, "pas"), 1):
+    print(f"{'pas'[:i]:4}", row)
+print(suggestions(root, "qa"))</div>
+  <div class="fx" data-lang="text">p    ['pakora', 'paneer', 'papad']
+pa   ['pakora', 'paneer', 'papad']
+pas  ['pasta']
+[[], []]</div>
+  <p>Each typed prefix reads its node's list directly: "p" and "pa" both show pakora, paneer, papad, and "pas" shows only pasta. Typing "q" falls off at once, and the code stays "off" for every later letter, so both answers are empty lists. The price is memory (k words referenced from every node) in exchange for O(1) work per key press after the walk. Recognise this whole family in interviews by the words "autocomplete", "suggestions after each character", "top 3", "count / sum of words with prefix" (Map Sum Pairs stores a sum in each node instead of a count).</p>
+
+  <h2 id="dsa-tri-python"><span class="num">06</span>Tries as Nested Dicts</h2>
+  <p>The node class makes the structure easy to see, but in interviews most people write a trie with no class at all. Since a node is really "a dict of children plus an end flag", you can make each node <em>be</em> a dict, and store the end flag as a special key in the same dict. The key <code>"$"</code> works well because it can never be a letter of a dish name, and it is convenient to store the whole word under it, so that whoever reaches the end node knows which word it was:</p>
+  <div class="fx" data-lang="py">from collections import defaultdict
+
+def make_trie(words):
+    root = {}
+    for w in words:
+        node = root
+        for ch in w:
+            node = node.setdefault(ch, {})   # child for ch, created if missing
+        node["$"] = w                        # end marker; it also stores the word
+    return root
+
+print(make_trie(["dal", "dalia", "pav"]))
+
+Tree = lambda: defaultdict(Tree)             # every missing key makes a new level
+t = Tree()
+for w in ["dal", "dosa"]:
+    node = t
+    for ch in w:
+        node = node[ch]
+    node["$"] = True
+print(sorted(t["d"]), "x" in t["d"])         # 'in' only looks
+t["d"]["x"]                                  # a plain read...
+print(sorted(t["d"]))                        # ...created a node for 'x'</div>
+  <div class="fx" data-lang="text">{'d': {'a': {'l': {'$': 'dal', 'i': {'a': {'$': 'dalia'}}}}}, 'p': {'a': {'v': {'$': 'pav'}}}}
+['a', 'o'] False
+['a', 'o', 'x']</div>
+  <p>The printed structure is the same trie as the picture in section 02, written as nested dicts: d leads to a, a leads to l, and the l dict holds both <code>'$': 'dal'</code> (a word ends here) and the child <code>'i'</code> (the path continues to "dalia"). The whole insert loop is one line, <code>node = node.setdefault(ch, {})</code>, which returns the child for <code>ch</code>, creating an empty one first if it is missing.</p>
+  <p>The second half shows an even shorter version and its trap. <code>Tree = lambda: defaultdict(Tree)</code> makes a dict that creates a new empty level whenever a missing key is read, so <code>node = node[ch]</code> both walks and builds. That is neat for inserting, and dangerous for searching: the plain read <code>t["d"]["x"]</code> in the code silently created a node for "x", as the last line shows. A search written with <code>node[ch]</code> on such a trie grows the trie with every miss and soon reports that every prefix exists. When reading, always test with <code>ch in node</code> or <code>node.get(ch)</code>, as the first line of the output does. The nested-dict form is what the next three sections use.</p>
+
+  <h2 id="dsa-tri-wsii"><span class="num">07</span>Word Search II</h2>
+  <p>Biteful runs a promo puzzle: a grid of letters, and customers win a coupon for every dish name they can trace by moving up, down, left or right, without using a cell twice in one word. The <a class="xref" data-note="dsa_backtrack">Backtracking</a> note solved the one-word version, "Word Search": start from each cell and run a DFS that marks a cell when it joins the path and unmarks it on the way back. Here the question is the reverse: given a whole list of dish names, which of them are in the grid?</p>
+  <table class="tbl"><caption>The promo puzzle</caption>
     <tr><th></th><th>c0</th><th>c1</th><th>c2</th><th>c3</th></tr>
     <tr><th>r0</th><td>d</td><td>a</td><td>l</td><td>v</td></tr>
     <tr><th>r1</th><td>o</td><td>s</td><td>a</td><td>i</td></tr>
     <tr><th>r2</th><td>m</td><td>a</td><td>h</td><td>d</td></tr>
   </table>
-  <table class="tbl out"><caption>Traced from cell (0,0) "d" with words dosa, dal, dosas, …</caption>
-    <tr><th>cell</th><th>trie node</th><th>action</th></tr>
-    <tr><td>(0,0) d</td><td>"d"</td><td>children a, o; neighbours: (1,0) o is a child → go</td></tr>
-    <tr><td>(1,0) o</td><td>"do"</td><td>child s; neighbour (1,1) s → go</td></tr>
-    <tr><td>(1,1) s</td><td>"dos"</td><td>child a; neighbours (2,1) a, (0,1) a, (1,2) a → try (2,1)</td></tr>
-    <tr><td>(2,1) a</td><td>"dosa"</td><td>"$" → record <b>dosa</b>; child s ("dosas") but no unused s nearby → back</td></tr>
-    <tr><td>back at (0,0)</td><td>"d"</td><td>neighbour (0,1) a → "da" → (0,2) l → "dal": record <b>dal</b></td></tr>
-  </table>
-<div class="fx" data-lang="py">def find_words(board, words):
+  <p>The brute force runs the one-word search once per dish name. That repeats a huge amount of work: "dosa" and "dosas" begin with the same four letters, so their searches walk exactly the same cells, and with thousands of names most of the grid is walked thousands of times. The key insight is to put all the names into one trie and run a <strong>single</strong> backtracking search that moves on the grid and in the trie at the same time. At each cell, the current trie node says which letters can come next. If a neighbouring cell's letter is not a child of that node, no dish name continues that way, so the search does not even step there. If the node has the <code>"$"</code> end marker, a whole name has just been traced.</p>
+  <p>Trace it from the top-left d. The trie node for "d" has children a and o. The cell below holds o, a child, so step there; the node is now "do". Its only child is s, and (1,1) holds s, so step there: "dos". From "dos" the child is a, and three neighbouring cells hold a; try (2,1) first: the node "dosa" has the end marker, so record <strong>dosa</strong>. It also has a child s (for "dosas"), but there is no unused s next to (2,1), so back up. Eventually the search returns to d, tries the neighbour a at (0,1), then l at (0,2), and records <strong>dal</strong>. Here is the code:</p>
+  <div class="fx" data-lang="py">def find_words(board, words):
     root = {}
-    for w in words:                                # trie of dicts, "$" = word
+    for w in words:                                # trie of dicts, "$" = word ends
         node = root
         for ch in w:
             node = node.setdefault(ch, {})
@@ -520,13 +400,13 @@ False True ['dalia'] 6</div>
         node = parent[ch]
         if "$" in node:
             found.append(node.pop("$"))            # record once, then forget it
-        board[r][c] = "#"                          # choose: mark visited on this path
+        board[r][c] = "#"                          # choose: mark cell as on the path
         for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):
             nr, nc = r + dr, c + dc
             if 0 &lt;= nr &lt; rows and 0 &lt;= nc &lt; cols and board[nr][nc] in node:
-                dfs(nr, nc, node)                  # explore only letters the trie allows
+                dfs(nr, nc, node)                  # only letters the trie allows
         board[r][c] = ch                           # un-choose (backtrack)
-        if not node:                               # branch fully used up:
+        if not node:                               # branch used up completely:
             parent.pop(ch)                         # prune it from the trie
 
     for r in range(rows):
@@ -537,18 +417,15 @@ False True ['dalia'] 6</div>
 
 puzzle = [list("dalv"), list("osai"), list("mahd")]       # Biteful's promo puzzle
 print(sorted(find_words(puzzle, ["dosa", "dal", "masala", "dosas", "vada", "halva", "sam"])))
-print(["".join(row) for row in puzzle])                   # restored
-board = [list("oaan"), list("etae"), list("ihkr"), list("iflv")]   # LeetCode 212's example
-print(sorted(find_words(board, ["oath", "pea", "eat", "rain"])))
-print(find_words([list("ab"), list("cd")], ["abdc", "abcd", "ab", "dcba"]))
-print(find_words([list("a")], ["a", "aa"]))</div>
+print(["".join(row) for row in puzzle])                   # board restored
+print(find_words([list("ab"), list("cd")], ["abdc", "ab"]))</div>
   <div class="fx" data-lang="text">['dal', 'dosa', 'masala', 'sam']
 ['dalv', 'osai', 'mahd']
-['eat', 'oath']
-['ab', 'abdc']
-['a']</div>
-  <p>dal, dosa, masala and sam are found; dosas (only one s), vada and halva are not. The board is restored after the search. Three tricks make it fast: the trie stops dead paths early; <code>node.pop("$")</code> records each word once; and removing trie branches that are used up keeps later searches from walking them again. How much faster, on a 12 × 12 board with a few thousand candidate words:</p>
-<div class="fx" data-lang="py">import random, time
+['ab', 'abdc']</div>
+  <p>Four dish names are in the puzzle: dal, dosa, masala and sam. "dosas" is not (the grid has only one s), and neither are vada or halva. The second line shows the board restored to its original letters, because every cell is unmarked on the way back, which is the backtracking "un-choose" step. The third line is a small but important case: after recording "ab", the search must keep going, because "abdc" continues along the same path. That is why the code records the word and carries on instead of returning.</p>
+  <p>Three details make this fast. The trie check <code>board[nr][nc] in node</code> stops dead-end paths before they start. <code>node.pop("$")</code> records each word once, so a name that can be traced two different ways is not reported twice. And when a trie branch has been completely used up (all its words found), <code>parent.pop(ch)</code> deletes it, so later searches from other cells do not walk it again. How much does this matter? On a random 12 × 12 board with a few thousand candidate words (timings are approximate):</p>
+  <div class="fx" data-lang="py">import random, time
+# (find_words is the function above)
 
 def exist(board, word):                            # one backtracking search per word
     R, C = len(board), len(board[0])
@@ -565,182 +442,60 @@ def exist(board, word):                            # one backtracking search per
 
 random.seed(3)
 board = [[random.choice("aadlmopsv") for _ in range(12)] for _ in range(12)]
-words = list({"".join(random.choice("aadlmopsv") for _ in range(random.randint(3, 7))) for _ in range(3000)})
+words = list({"".join(random.choice("aadlmopsv") for _ in range(random.randint(3, 7)))
+              for _ in range(3000)})
 t = time.perf_counter(); a = sorted(w for w in words if exist([row[:] for row in board], w)); t1 = time.perf_counter() - t
 t = time.perf_counter(); b = sorted(find_words([row[:] for row in board], words)); t2 = time.perf_counter() - t
-print(f"{len(words)} words on a 12x12 board: found {len(a)}; same answer: {a == b}")
-print(f"one search per word: {t1*1000:7.1f} ms | one trie-guided search: {t2*1000:7.1f} ms")</div>
-  <div class="fx" data-lang="text">2680 words on a 12x12 board: found 768; same answer: True
-one search per word:   138.1 ms | one trie-guided search:     7.4 ms</div>
-  <p>Same 768 words found either way; one trie-guided search is about 18× faster than one backtracking search per word, because shared prefixes are walked once. Worst case O(R·C·4·3<sup>L−1</sup>) for longest word L, but pruning makes it far faster in practice.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Word Search II</strong>: trie of the word list + backtracking DFS on the grid where each step must follow a trie child. Time O(R·C·4·3<sup>L−1</sup>) worst case; space O(total letters) for the trie + O(L) recursion.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Stopping the DFS when a word is found. "ab" and "abdc" share a path; after recording "ab", keep going. Also: the same word can be traced twice; without removing <code>"$"</code> it appears twice in the result.</p>
-  </div>
-  <div class="callout pred"><span class="label">Practice in the tracker</span>
-    <p><a class="xref" data-note="dsa_problems">Problem Tracker</a> → Tries: <b>212 Word Search II</b>, <b>1032 Stream of Characters</b> (trie of reversed words), <b>472 Concatenated Words</b> (trie + DFS over cut points).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Replace Words.</b> Word Search II needed the <em>whole</em> word to match. Sometimes we want the opposite: walk a long word and stop at the <em>first</em> stored word met on the way, its shortest stored prefix.</div>
+print(f"{len(words)} words, 12x12 board: found {len(a)}; same answer: {a == b}")
+print(f"one search per word: {t1*1000:6.1f} ms | one trie-guided search: {t2*1000:5.1f} ms")</div>
+  <div class="fx" data-lang="text">2680 words, 12x12 board: found 768; same answer: True
+one search per word:  115.7 ms | one trie-guided search:   6.6 ms</div>
+  <p>Both methods find the same 768 words, but the single trie-guided search is well over ten times faster, because shared prefixes are walked once for all words instead of once per word. The worst-case time is O(R · C · 4 · 3<sup>L−1</sup>) for an R × C grid and longest word L (four directions for the first step, at most three afterwards because you cannot step back onto the cell you came from), but pruning makes real runs far faster; the trie takes O(total letters) space. Recognise this pattern when a problem asks to find <em>all</em> words from a list in a grid or a text, or to check a stream of characters against many words at once.</p>
 
-  <h2 id="dsa-tri-replace"><span class="num">07</span>Replace Words: First End Flag on the Path</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Order lines arrive as free text: "pavbhaji dalmakhani paneertikka masaladosa". The kitchen dashboard groups them by base dish (pav, dal, paneer…). For each word, which is the <em>shortest</em> base dish name it starts with, if any?</p>
-  </div>
-  <p>Build a trie of the base names (the "roots"). Walk each word letter by letter; the first node with an end flag is the shortest root, so return it at once. If you fall off the trie first, no root matches: keep the word unchanged.</p>
-  <div class="callout pred"><span class="label">Trigger words</span>
-    <p>"shortest root / prefix", "replace with its prefix", "is any word a prefix of another", "remove sub-folders", "short encoding".</p>
-  </div>
-  <div class="flow"><span>walk the word in the roots trie</span><span>end flag here → return the root</span><span>missing child → keep the word</span></div>
-  <table class="tbl out"><caption>Roots: pav, dal, paneer, pan</caption>
+  <h2 id="dsa-tri-replace"><span class="num">08</span>Replace Words</h2>
+  <p>Word Search II needed a whole word to match. Some problems want the opposite: walk along a long word and stop at the <em>first</em> stored word you meet. Biteful's kitchen dashboard receives order lines as free text, such as "pavbhaji dalmakhani paneertikka", and wants to group them by base dish. The base dishes (called <strong>roots</strong> in the LeetCode version, "Replace Words") are pav, dal, paneer and pan. For each word in the order line, the task is to replace it with the shortest root it starts with, or leave it unchanged if none matches.</p>
+  <p>The brute force tries every prefix of the word, "p", "pa", "pav", … and checks each one in a set of roots. That is L lookups per word, and each lookup builds a new prefix string of up to L letters, so O(L²) per word. With a trie of roots it is one walk: follow the word's letters, and the first node you reach that has an end flag is the shortest root, so return it immediately. If you fall off the trie first, no root matches.</p>
+  <table class="tbl"><caption>Roots: pav, dal, paneer, pan</caption>
     <tr><th>word</th><th>walk</th><th>first end flag</th><th>output</th></tr>
     <tr><td>pavbhaji</td><td>p → a → v</td><td>at "pav"</td><td>pav</td></tr>
     <tr><td>dalmakhani</td><td>d → a → l</td><td>at "dal"</td><td>dal</td></tr>
-    <tr><td>paneertikka</td><td>p → a → n</td><td>at "pan" (before "paneer")</td><td>pan</td></tr>
-    <tr><td>masaladosa</td><td>no child m at the root</td><td>–</td><td>masaladosa</td></tr>
+    <tr><td>paneertikka</td><td>p → a → n</td><td>at "pan", before "paneer"</td><td>pan</td></tr>
+    <tr><td>masaladosa</td><td>no child m at the root</td><td>none</td><td>masaladosa</td></tr>
   </table>
-<div class="fx" data-lang="py">def replace_words(roots, sentence):
+  <div class="fx" data-lang="py">def replace_words(roots, sentence):
     trie = {}
     for r in roots:
         node = trie
         for ch in r:
             node = node.setdefault(ch, {})
         node["$"] = r
+
     def shortest_root(word):
         node = trie
         for ch in word:
             if "$" in node:
-                return node["$"]               # first (shortest) root on the way
+                return node["$"]       # first (shortest) root met on the way
             if ch not in node:
-                return word                    # no root matches: keep the word
+                return word            # fell off: no root matches
             node = node[ch]
-        return node.get("$", word)
+        return node.get("$", word)     # the word itself may be a root
+
     return " ".join(shortest_root(w) for w in sentence.split())
 
-# Biteful tags each order line with its base dish
-print(replace_words(["pav", "dal", "paneer", "pan"], "pavbhaji dalmakhani paneertikka masaladosa dal"))
-print(replace_words(["cat", "bat", "rat"], "the cattle was rattled by the battery"))
-print(replace_words(["a", "b", "c"], "aadsfasf absbs bbab cadsfafs"))
-print(replace_words(["ab", "abc"], "abc ab a"))</div>
+print(replace_words(["pav", "dal", "paneer", "pan"],
+                    "pavbhaji dalmakhani paneertikka masaladosa dal"))
+print(replace_words(["cat", "bat", "rat"], "the cattle was rattled by the battery"))</div>
   <div class="fx" data-lang="text">pav dal pan masaladosa dal
-the cat was rat by the bat
-a a b c
-ab ab a</div>
-  <p>"paneertikka" becomes "pan", not "paneer": the walk meets the shorter root first, which is exactly what the problem asks. O(total letters in roots + sentence). The brute force tries every prefix of every word in a set, O(L²) per word because each slice builds a new string.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Shortest-prefix match</strong>: walk the query in a trie of keys and return at the first node whose end flag is set. O(L) per query. The longest-prefix match (IP routing) keeps walking and remembers the last end flag seen.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Checking the end flag only after the loop. Then "paneertikka" would never stop at "pan"; you would return the root only if the whole word were a root. Check the flag at every step, before moving on.</p>
-  </div>
-  <div class="callout pred"><span class="label">Practice in the tracker</span>
-    <p><a class="xref" data-note="dsa_problems">Problem Tracker</a> → Tries: <b>648 Replace Words</b>, <b>1233 Remove Sub-Folders from the Filesystem</b>, <b>720 Longest Word in Dictionary</b> (every prefix must end a word).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: The Pythonic Way.</b> We wrote node classes for clarity. Interview code is shorter with nested dicts, and sometimes a sorted list with <code>bisect</code> answers prefix queries with no trie at all.</div>
+the cat was rat by the bat</div>
+  <p>The output matches the table, and the LeetCode example on the second line works the same way. Note "paneertikka" becomes "pan", not "paneer": the walk meets the shorter root first, which is exactly what "shortest root" asks for. The important detail in the code is that the end-flag check happens at <em>every step, before moving on</em>; if you checked only after the loop, the walk would never stop early at "pan". The cost is O(total letters in the roots) to build plus O(L) per word. A close cousin is <strong>longest-prefix match</strong>, used by internet routers to choose a route for an IP address: keep walking instead of stopping, remember the last end flag you passed, and return that one when you fall off. Problem wording that points here: "shortest root", "replace with its prefix", "is any word a prefix of another", "remove sub-folders".</p>
 
-  <h2 id="dsa-tri-python"><span class="num">08</span>The Pythonic Way</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Python has no trie in the standard library. What is the shortest correct way to write one, and when can we skip it entirely?</p>
-  </div>
-  <p>In interviews, many people skip the node class and use nested dicts directly. Same structure, less code:</p>
-<div class="fx" data-lang="py">import bisect
-from collections import defaultdict
+  <h2 id="dsa-tri-wild"><span class="num">09</span>Wildcard Search</h2>
+  <p>Suppose Biteful lets staff search with a wildcard: "p.v" should match any three-letter dish starting with p and ending with v, where the dot stands for exactly one unknown letter. With a list you would compare every word of the right length letter by letter. With a trie, the normal walk handles every ordinary letter by following one child, and only the dot is new: at a dot you do not know which child to follow, so you try <strong>all</strong> of them, and the search succeeds if any branch succeeds. The single walk turns into a small DFS.</p>
+  <figure class="viz"><svg viewBox="0 0 600 255" width="600"><text x="300" y="16" text-anchor="middle" class="tb">search(".ad") in a trie of bad, dad, mad</text><line x1="300" y1="40" x2="180" y2="95" class="sg" stroke-width="2"/><line x1="300" y1="40" x2="300" y2="95" class="sg" stroke-width="2"/><line x1="300" y1="40" x2="420" y2="95" class="sg" stroke-width="2"/><line x1="180" y1="95" x2="180" y2="150" stroke="currentColor"/><line x1="300" y1="95" x2="300" y2="150" stroke="currentColor"/><line x1="420" y1="95" x2="420" y2="150" stroke="currentColor"/><line x1="180" y1="150" x2="180" y2="205" stroke="currentColor"/><line x1="300" y1="150" x2="300" y2="205" stroke="currentColor"/><line x1="420" y1="150" x2="420" y2="205" stroke="currentColor"/><circle cx="300" cy="40" r="15" class="fs sb"/><text x="300" y="44" text-anchor="middle">·</text><circle cx="180" cy="95" r="15" class="fb sb"/><text x="180" y="99" text-anchor="middle">b</text><circle cx="300" cy="95" r="15" class="fb sb"/><text x="300" y="99" text-anchor="middle">d</text><circle cx="420" cy="95" r="15" class="fb sb"/><text x="420" y="99" text-anchor="middle">m</text><circle cx="180" cy="150" r="15" class="fb sb"/><text x="180" y="154" text-anchor="middle">a</text><circle cx="300" cy="150" r="15" class="fb sb"/><text x="300" y="154" text-anchor="middle">a</text><circle cx="420" cy="150" r="15" class="fb sb"/><text x="420" y="154" text-anchor="middle">a</text><circle cx="180" cy="205" r="15" class="fg sg"/><text x="180" y="209" text-anchor="middle">d</text><circle cx="300" cy="205" r="15" class="fg sg"/><text x="300" y="209" text-anchor="middle">d</text><circle cx="420" cy="205" r="15" class="fg sg"/><text x="420" y="209" text-anchor="middle">d</text><text x="20" y="72" class="tg">"." → try all</text><text x="20" y="154" class="tm">"a" → one child</text><text x="20" y="209" class="tm">"d" → end?</text><text x="445" y="209" class="tg">yes → True</text><text x="300" y="245" text-anchor="middle" class="tm">the first branch that succeeds stops the search</text></svg><figcaption>At the root the query has a dot, so all three children are tried; below that, "a" and "d" each follow exactly one child. The b branch already succeeds, so the other two are never needed.</figcaption></figure>
+  <p>The picture shows the classic LeetCode example: the dot fans out to b, d and m, and each branch then follows the fixed letters "a" and "d" one child at a time, checking the end flag at the bottom. Here is LeetCode's "Design Add and Search Words Data Structure" on Biteful's dishes, reusing the <code>TrieNode</code> class:</p>
+  <div class="fx" data-lang="py"># (TrieNode is the node class from section 03)
 
-# 1. dict of dicts: the whole trie is nested dicts, "$" marks a word end
-def make_trie(words):
-    root = {}
-    for w in words:
-        node = root
-        for ch in w:
-            node = node.setdefault(ch, {})   # get the child, creating it if missing
-        node["$"] = w                        # store the word itself at its end
-    return root
-
-print(make_trie(["dal", "dalia", "pav"]))
-
-# 2. self-building trie: every missing key creates a new level automatically
-Tree = lambda: defaultdict(Tree)
-t = Tree()
-for w in ["dal", "dosa"]:
-    node = t
-    for ch in w:
-        node = node[ch]
-    node["$"] = True
-print(list(t["d"]), "x" in t["d"])
-
-# 3. no trie at all: sorted list + bisect finds the prefix block in O(log n)
-words = sorted(["paneer", "papad", "pasta", "pav", "poha", "dal", "dosa"])
-def with_prefix(prefix):
-    i = bisect.bisect_left(words, prefix)          # first word &gt;= prefix
-    out = []
-    while i &lt; len(words) and words[i].startswith(prefix):
-        out.append(words[i])
-        i += 1
-    return out
-print(words, with_prefix("pa"), with_prefix("q"))</div>
-  <div class="fx" data-lang="text">{'d': {'a': {'l': {'$': 'dal', 'i': {'a': {'$': 'dalia'}}}}}, 'p': {'a': {'v': {'$': 'pav'}}}}
-['a', 'o'] False
-['dal', 'dosa', 'paneer', 'papad', 'pasta', 'pav', 'poha'] ['paneer', 'papad', 'pasta', 'pav'] []</div>
-  <div class="cards">
-    <div><b>Nested dicts</b><p><code>node = node.setdefault(ch, {})</code> is the whole insert loop. A special key like <code>"$"</code> is the end flag and can hold the word.</p><small>Pick a key that can't be a letter</small></div>
-    <div><b>defaultdict trie</b><p>One line, and children appear by themselves.</p><small>⚠ Even reading <code>t["x"]</code> creates a node; test with <code>in</code></small></div>
-    <div><b>sorted + bisect</b><p>All words with a prefix sit in one block of a sorted list. <code>bisect_left</code> finds its start in O(log N).</p><small>Best when the word list doesn't change</small></div>
-  </div>
-  <p>Practical rule: for a static list and simple prefix lookups, sort + <code>bisect</code> is shortest and uses least memory. Reach for a trie when you walk letter by letter and need to stop or branch at each step (wildcards, grids, shortest-root match), or when words are added all the time.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A <strong>dict-of-dicts trie</strong> represents each node as a dict from letters to child dicts, with a reserved key (here <code>"$"</code>) for the end marker. It is the same trie as the class version, written with built-ins.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: end marker that is also a letter</span>
-    <p>Using <code>"*"</code> or <code>"#"</code> as the end key breaks when the input may contain that character. Pick something impossible for the input, or use a node class.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Choosing the Pattern.</b> We have seen walk-then-collect, trie + grid DFS and first-end-on-path. Which words in a problem point to which, and what other trie patterns exist (wildcards, XOR)?</div>
-
-  <h2 id="dsa-tri-patterns"><span class="num">09</span>Choosing the Pattern</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Facing a new problem with a dictionary of words, how do we know a trie helps, and which walk to write?</p>
-  </div>
-  <table class="tbl">
-    <tr><th>Signal words</th><th>Pattern</th><th>Shape of the code</th><th>Section</th></tr>
-    <tr><td>"prefix", "starts with", "autocomplete", "type-ahead"</td><td><strong>Walk then collect</strong></td><td>Walk to prefix node; DFS for ends, or read a stored count / top-k list</td><td>03, 05</td></tr>
-    <tr><td>"find all words from a list in a grid / string"</td><td><strong>Trie + DFS together</strong></td><td>Move on the grid and in the trie at the same time; stop when the trie has no child</td><td>06</td></tr>
-    <tr><td>"shortest root", "replace with prefix", "is any word a prefix of"</td><td><strong>First end on the path</strong></td><td>Walk the word; return at the first end flag</td><td>07</td></tr>
-    <tr><td>"wildcard", "." matches any letter</td><td><strong>Branching search</strong></td><td>On "." loop over all children; otherwise follow one</td><td>10</td></tr>
-    <tr><td>"longest common prefix", "longest word built one letter at a time"</td><td><strong>Single-path walk</strong></td><td>Walk while there is exactly one child (and no end)</td><td>10</td></tr>
-    <tr><td>"lexicographical order of numbers", "k-th smallest in dictionary order"</td><td><strong>Implicit trie</strong></td><td>Treat numbers as digit strings; DFS in digit order without building nodes</td><td>–</td></tr>
-    <tr><td>"maximum XOR of two numbers"</td><td><strong>Bitwise trie</strong></td><td>Insert numbers as 32 bits; for each, greedily take the opposite bit</td><td>see <a class="xref" data-note="dsa_bits">Bits</a></td></tr>
-  </table>
-  <figure class="viz"><svg viewBox="0 0 600 255" width="600"><text x="300" y="16" text-anchor="middle" class="tb">search(".ad") in a trie of bad, dad, mad</text><line x1="300" y1="40" x2="180" y2="95" class="sg" stroke-width="2"/><line x1="300" y1="40" x2="300" y2="95" class="sg" stroke-width="2"/><line x1="300" y1="40" x2="420" y2="95" class="sg" stroke-width="2"/><line x1="180" y1="95" x2="180" y2="150" stroke="currentColor"/><line x1="300" y1="95" x2="300" y2="150" stroke="currentColor"/><line x1="420" y1="95" x2="420" y2="150" stroke="currentColor"/><line x1="180" y1="150" x2="180" y2="205" stroke="currentColor"/><line x1="300" y1="150" x2="300" y2="205" stroke="currentColor"/><line x1="420" y1="150" x2="420" y2="205" stroke="currentColor"/><circle cx="300" cy="40" r="15" class="fs sb"/><text x="300" y="44" text-anchor="middle">·</text><circle cx="180" cy="95" r="15" class="fb sb"/><text x="180" y="99" text-anchor="middle">b</text><circle cx="300" cy="95" r="15" class="fb sb"/><text x="300" y="99" text-anchor="middle">d</text><circle cx="420" cy="95" r="15" class="fb sb"/><text x="420" y="99" text-anchor="middle">m</text><circle cx="180" cy="150" r="15" class="fb sb"/><text x="180" y="154" text-anchor="middle">a</text><circle cx="300" cy="150" r="15" class="fb sb"/><text x="300" y="154" text-anchor="middle">a</text><circle cx="420" cy="150" r="15" class="fb sb"/><text x="420" y="154" text-anchor="middle">a</text><circle cx="180" cy="205" r="15" class="fg sg"/><text x="180" y="209" text-anchor="middle">d</text><circle cx="300" cy="205" r="15" class="fg sg"/><text x="300" y="209" text-anchor="middle">d</text><circle cx="420" cy="205" r="15" class="fg sg"/><text x="420" y="209" text-anchor="middle">d</text><text x="20" y="72" class="tg">"." → try all</text><text x="20" y="154" class="tm">"a" → one child</text><text x="20" y="209" class="tm">"d" → end?</text><text x="445" y="209" class="tg">yes → True</text><text x="300" y="245" text-anchor="middle" class="tm">the first branch that succeeds stops the search (any() short-circuits)</text></svg><figcaption>A wildcard turns the single walk into a small DFS. Each "." multiplies the paths to try by the number of children, so many dots on a big trie get slow.</figcaption></figure>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Building a trie for a problem that only needs exact membership ("is this word in the dictionary?"). A set is simpler, lighter and just as fast.</p>
-  </div>
-  <div class="callout pred"><span class="label">Practice in the tracker</span>
-    <p><a class="xref" data-note="dsa_problems">Problem Tracker</a> → Tries: <b>386 Lexicographical Numbers</b> (implicit trie), <b>421 Maximum XOR of Two Numbers in an Array</b> (bitwise trie), <b>820 Short Encoding of Words</b> (trie of reversed words).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Classic Problems.</b> The patterns, applied to the exact interview problems: the LeetCode class interface, wildcard search, longest common prefix and per-keystroke suggestions.</div>
-
-  <h2 id="dsa-tri-problems"><span class="num">10</span>Classic Problems</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Do the templates hold up on the standard interview problems, with their call formats and edge cases (empty strings, no match, words that are prefixes of others)?</p>
-  </div>
-  <p>Already solved above: <b>Word Search II</b> (section 06) and <b>Replace Words</b> (section 07).</p>
-  <h3>1. Implement Trie (LeetCode 208)</h3>
-  <p>Exactly the <code>Trie</code> class from section 03 (without the print). LeetCode calls methods by name from two lists; this driver replays their sample.</p>
-<div class="fx" data-lang="py">ops  = ["Trie", "insert", "search", "search", "startsWith", "insert", "search"]
-args = [[], ["apple"], ["apple"], ["app"], ["app"], ["app"], ["app"]]
-out = []
-for op, a in zip(ops, args):
-    if op == "Trie":
-        trie = Trie(); out.append(None)
-    else:
-        out.append(getattr(trie, op)(*a))
-print(out)</div>
-  <div class="fx" data-lang="text">[None, None, True, False, True, None, True]</div>
-  <p>"app" is not found until it is inserted, even though "apple" already passes through its nodes. That is the end flag doing its job. Each operation O(L); space O(total letters).</p>
-
-  <h3>2. Design Add and Search Words (LeetCode 211)</h3>
-  <p>Like a trie, but <code>search</code> may contain <code>.</code>, which matches any one letter. Normal letters follow one child; a dot tries every child (the diagram above).</p>
-<div class="fx" data-lang="py">class WordDictionary:
+class WordDictionary:
     def __init__(self):
         self.root = TrieNode()
 
@@ -762,217 +517,201 @@ print(out)</div>
         return dfs(self.root, 0)
 
 wd = WordDictionary()
-for w in ["bad", "dad", "mad"]:
+for w in ["dal", "dosa", "pav", "poha"]:
     wd.addWord(w)
-print([wd.search(q) for q in ["pad", "bad", ".ad", "b..", "b.", "...", "...."]])</div>
-  <div class="fx" data-lang="text">[False, True, True, True, False, True, False]</div>
-  <p>addWord O(L). search O(L) with no dots; with dots, the worst case is O(26<sup>d</sup> · L) for d dots, though real tries are sparse. <code>"b."</code> fails because no word of length 2 exists; <code>"...."</code> fails on length 4.</p>
+for q in ["pav", "p.v", "d..", "p..a", "d.l.", "....."]:
+    print(f"{q:5}", wd.search(q))</div>
+  <div class="fx" data-lang="text">pav   True
+p.v   True
+d..   True
+p..a  True
+d.l.  False
+..... False</div>
+  <p>"p.v" matches pav and "p..a" matches poha. "d.." matches dal, because the dot at position two tries both a (from dal and dalia) and o (from dosa), and the a branch ends on a word after three letters. "d.l." fails because the only four-letter path that fits, d → a → l → i, ends on "dali", which is not a word; and "....." fails because no dish has five letters. The length of the query matters as much as the letters: the search succeeds only if it ends exactly on an end flag.</p>
+  <p>Without dots the cost is O(L), as before. Each dot can multiply the number of paths by the number of children at that depth, up to 26, so the worst case is O(26<sup>d</sup> · L) for d dots. In practice tries are sparse and <code>any()</code> stops at the first success, so it is much faster, but a query of all dots on a big trie really does visit everything of that length. Problem wording: "wildcard", "'.' matches any letter", "pattern search in a dictionary".</p>
 
-  <h3>3. Longest Common Prefix (LeetCode 14)</h3>
-  <p>The longest start shared by every string. In the trie, the common prefix is the path from the root while there is <strong>exactly one child</strong> and no word has ended. Interviewers also accept the direct column scan, which is simpler and uses O(1) extra space.</p>
-<div class="fx" data-lang="py">def lcp_trie(strs):
-    if not strs:
-        return ""
+  <h2 id="dsa-tri-patterns"><span class="num">10</span>Choosing the Pattern</h2>
+  <p>Every pattern in this note is the same walk from the root, with a different rule for what to do along the way and when to stop. Search stops at the end of the word and checks the flag. startsWith stops at the end and ignores the flag. Autocomplete stops at the end of the prefix and then collects the whole subtree below. Replace Words stops at the first end flag it passes. Wildcard search branches into every child at a dot. Word Search II replaces "the next letter of the word" with "the letter in a neighbouring cell". Once you see that, a new trie problem is mostly a question of which stopping rule it wants. This skeleton shows three of the rules on one small trie:</p>
+  <div class="fx" data-lang="py">def build(words):
+    root = {}
+    for w in words:
+        node = root
+        for ch in w:
+            node = node.setdefault(ch, {})
+        node["$"] = w
+    return root
+
+def walk(root, s, on_end_flag=None):
+    """The one loop behind every trie pattern: follow s letter by letter."""
+    node = root
+    for ch in s:
+        if on_end_flag and "$" in node:
+            return on_end_flag(node)         # stop early (shortest root)
+        if ch not in node:
+            return None                      # fell off: nothing goes this way
+        node = node[ch]
+    return node                              # the node for s
+
+def collect(node):                           # everything below a node
+    out = [node["$"]] if "$" in node else []
+    for ch in sorted(k for k in node if k != "$"):
+        out += collect(node[ch])
+    return out
+
+menu = build(["dal", "dalia", "dosa", "pav", "paneer"])
+n = walk(menu, "dal")
+print("search dal:", n is not None and "$" in n)              # exact word
+print("startsWith pa:", walk(menu, "pa") is not None)         # prefix exists
+print("autocomplete d:", collect(walk(menu, "d")))            # walk, then collect
+print("shortest root of dalmakhani:", walk(menu, "dalmakhani", lambda nd: nd["$"]))</div>
+  <div class="fx" data-lang="text">search dal: True
+startsWith pa: True
+autocomplete d: ['dal', 'dalia', 'dosa']
+shortest root of dalmakhani: dal</div>
+  <p>One <code>walk</code> function answered four different questions: an exact search (walk, then check <code>"$"</code>), a prefix check (walk, then check that the node exists), autocomplete (walk, then collect everything below) and shortest root (walk with an early stop at the first end marker). When a problem arrives, the first job is to recognise from its wording that a trie helps at all, and then which rule to apply. This table maps the usual trigger words to the pattern and its cost:</p>
+  <table class="tbl">
+    <tr><th>Trigger words in the problem</th><th>Pattern</th><th>What the walk does</th><th>Cost</th></tr>
+    <tr><td>"implement a trie", "insert and search", "starts with"</td><td>Basic trie</td><td>walk; check the end flag (search) or not (prefix)</td><td>O(L) per operation</td></tr>
+    <tr><td>"autocomplete", "suggestions", "top 3", "count / sum of words with prefix"</td><td>Walk then collect</td><td>walk to the prefix node; DFS below, or read a stored count / top-k list</td><td>O(L + matches), or O(L) with stored extras</td></tr>
+    <tr><td>"find all words from a list in a grid", "stream of characters"</td><td>Trie + DFS together</td><td>move on the grid and in the trie at once; stop when no child</td><td>O(R · C · 4 · 3<sup>L−1</sup>) worst case</td></tr>
+    <tr><td>"shortest root", "replace with prefix", "is any word a prefix of another"</td><td>First end flag on the path</td><td>walk; return at the first end flag</td><td>O(L) per word</td></tr>
+    <tr><td>"wildcard", "'.' matches any letter"</td><td>Branching search</td><td>at a dot, try every child</td><td>O(26<sup>d</sup> · L) worst case</td></tr>
+    <tr><td>"longest common prefix", "longest word built one letter at a time"</td><td>Single-path walk</td><td>walk while there is exactly one child (and no end flag)</td><td>O(total letters)</td></tr>
+    <tr><td>"maximum XOR of two numbers"</td><td>Bitwise trie</td><td>store numbers as bits; greedily step to the opposite bit</td><td>O(32) per number</td></tr>
+    <tr><td>"lexicographical order of numbers 1..n"</td><td>Implicit trie</td><td>DFS over digits 0–9 without building nodes</td><td>O(n)</td></tr>
+  </table>
+  <p>Two rows need a word of explanation. A <strong>bitwise trie</strong> treats each number as a 32-letter word over the alphabet {0, 1}; to find the partner that gives the largest XOR with a number, walk from the highest bit and always step to the opposite bit when that child exists (details in <a class="xref" data-note="dsa_bits">Bit Manipulation</a>). An <strong>implicit trie</strong> is a trie you never build: listing 1 to n in dictionary order (1, 10, 11, …, 2, …) is a DFS over a tree whose children are "append a digit", generated on the fly. Finally, the opposite signal matters as much: if a problem only asks "is this exact word in the dictionary?", a set is simpler, lighter and just as fast, and building a trie is a mistake.</p>
+
+  <h2 id="dsa-tri-problems"><span class="num">11</span>Classic Problems</h2>
+  <p>The <a class="xref" data-note="dsa_problems">Problem Tracker</a> lists the trie problems; this section is the order in which to practise them and what each one adds. Start with <b>208 Implement Trie</b>, which is exactly the class from section 03; LeetCode replays a list of method calls such as <code>insert("apple")</code>, <code>search("app")</code>, <code>startsWith("app")</code>, and the point of its sample is that "app" is not found until it is inserted, even though "apple" already passes through its nodes. <b>2185 Counting Words With a Given Prefix</b> and <b>3043 Find the Length of the Longest Common Prefix</b> are warm-ups on the same walk.</p>
+  <p>Next comes the autocomplete group: <b>677 Map Sum Pairs</b> (store a running sum in each node instead of a count), <b>2416 Sum of Prefix Scores of Strings</b> (the <code>passing</code> count from section 05, summed along each word's path) and <b>1268 Search Suggestions System</b> (top three per node, or sort plus <code>bisect</code>; say both in an interview). Then <b>211 Design Add and Search Words</b>, which is section 09's wildcard search. Then the "first end flag" group: <b>648 Replace Words</b>, <b>1233 Remove Sub-Folders from the Filesystem</b> (a folder is removed if one of its prefixes, split on "/", is already a stored folder) and <b>720 Longest Word in Dictionary</b> (every prefix of the answer must itself end a word, so the walk may only pass through end-flag nodes).</p>
+  <p>The hard problems combine a trie with another technique. <b>212 Word Search II</b> is section 07. <b>1032 Stream of Characters</b> stores the words <em>reversed</em> and walks backwards over the most recent letters, so "does any word end here?" becomes a prefix question. <b>472 Concatenated Words</b> combines a trie with a DFS over cut points (dynamic programming helps), <b>421 Maximum XOR of Two Numbers</b> is the bitwise trie, and <b>336 Palindrome Pairs</b> is the hardest of the set. One classic deserves code here because it shows the single-path walk, <b>14 Longest Common Prefix</b>: the common prefix of all words is the path from the root while there is exactly one child and no word has ended yet.</p>
+  <div class="fx" data-lang="py"># (Trie is the class from section 03)
+
+def lcp_trie(strs):
     t = Trie()
     for s in strs:
         t.insert(s)
     node, prefix = t.root, []
-    while len(node.children) == 1 and not node.end:   # one road, no word stops here
+    while len(node.children) == 1 and not node.end:   # one road, and no word stops
         ch, node = next(iter(node.children.items()))
         prefix.append(ch)
     return "".join(prefix)
 
 def lcp_scan(strs):                                   # simpler: compare column by column
-    if not strs:
-        return ""
     for i, ch in enumerate(strs[0]):
         if any(i == len(s) or s[i] != ch for s in strs[1:]):
             return strs[0][:i]
     return strs[0]
 
-for strs in [["flower", "flow", "flight"], ["dog", "racecar", "car"], ["inter", "interview", "internet"], ["a"], ["", "b"]]:
+for strs in [["paneer", "panipuri", "pantua"], ["dal", "dalia"], ["dosa", "pav"]]:
     print(strs, repr(lcp_trie(strs)), repr(lcp_scan(strs)))</div>
-  <div class="fx" data-lang="text">['flower', 'flow', 'flight'] 'fl' 'fl'
-['dog', 'racecar', 'car'] '' ''
-['inter', 'interview', 'internet'] 'inter' 'inter'
-['a'] 'a' 'a'
-['', 'b'] '' ''</div>
-  <p>Both O(S) for S total characters. The <code>not node.end</code> check matters for <code>["inter", "interview"]</code>: after "inter" a word ends, so the common prefix cannot go further. The trie version shines when many LCP questions are asked about the same word set. Library one-liner: <code>os.path.commonprefix(strs)</code>.</p>
+  <div class="fx" data-lang="text">['paneer', 'panipuri', 'pantua'] 'pan' 'pan'
+['dal', 'dalia'] 'dal' 'dal'
+['dosa', 'pav'] '' ''</div>
+  <p>For "paneer", "panipuri" and "pantua" the walk follows p, a, n, then reaches a node with three children (e, i, t) and stops: "pan". For "dal" and "dalia" it stops after "dal" because a word ends there, even though there is only one child; without the <code>not node.end</code> check it would wrongly return "dal" plus more. Both versions cost O(total letters). Interviewers usually accept the simpler column scan, which needs no extra space; the trie version pays off when many prefix questions are asked about the same set of words.</p>
 
-  <h3>4. Search Suggestions System (LeetCode 1268)</h3>
-  <p>After each letter typed of <code>search_word</code>, return up to 3 products that start with what has been typed so far, in alphabetical order. This is Biteful's search box with a fixed k = 3: insert products in sorted order and let each node keep the first 3 that pass through it. Then each key press just reads a list.</p>
-  <table class="tbl out"><caption>Products: mobile, moneypot, monitor, mouse, mousepad (sorted)</caption>
-    <tr><th>typed</th><th>node keeps</th></tr>
-    <tr><td>m</td><td>mobile, moneypot, monitor</td></tr>
-    <tr><td>mo</td><td>mobile, moneypot, monitor</td></tr>
-    <tr><td>mou</td><td>mouse, mousepad</td></tr>
-    <tr><td>mous, mouse</td><td>mouse, mousepad</td></tr>
-  </table>
-<div class="fx" data-lang="py">import bisect
+  <h2 id="dsa-tri-traps"><span class="num">12</span>Common Mistakes</h2>
+  <p>The most common trie bug is forgetting the end flag in <code>search</code>. Reaching a node proves only that some word passes through it, so a search that returns True whenever the walk finishes is really <code>startsWith</code>:</p>
+  <div class="fx" data-lang="py"># (Trie is the class from section 03)
 
-def suggested_products(products, search_word):
-    root = {}
-    for p in sorted(products):                   # sorted, so first 3 seen = best 3
-        node = root
-        for ch in p:
-            node = node.setdefault(ch, {"#": []})
-            if len(node["#"]) &lt; 3:
-                node["#"].append(p)              # each node keeps its top 3
-    out, node = [], root
-    for ch in search_word:
-        node = node.get(ch, {}) if node else {}  # once we fall off, stay off
-        out.append(node.get("#", []) if node else [])
-    return out
+def search_wrong(t, word):
+    return t._walk(word) is not None             # forgets the end flag
 
-def suggested_bisect(products, search_word):     # no trie: sort + binary search
-    products.sort()
-    out, prefix = [], ""
-    for ch in search_word:
-        prefix += ch
-        i = bisect.bisect_left(products, prefix)
-        out.append([p for p in products[i:i + 3] if p.startswith(prefix)])
-    return out
+def search(t, word):
+    node = t._walk(word)
+    return node is not None and node.end         # a word must end here
 
-prods = ["mobile", "mouse", "moneypot", "monitor", "mousepad"]
-for row in suggested_products(prods, "mouse"):
-    print(row)
-print(suggested_products(["havana"], "tatiana"), suggested_bisect(["havana"], "havana")[-1])
-print(suggested_products(prods, "mouse") == suggested_bisect(prods, "mouse"))</div>
-  <div class="fx" data-lang="text">['mobile', 'moneypot', 'monitor']
-['mobile', 'moneypot', 'monitor']
-['mouse', 'mousepad']
-['mouse', 'mousepad']
-['mouse', 'mousepad']
-[[], [], [], [], [], [], []] ['havana']
-True</div>
-  <p>Trie: O(S log N) to sort, O(S) to build, O(L) to answer all key presses. The bisect version needs no trie at all: the 3 answers are the 3 words right after the insertion point, if they still start with the prefix. Both are accepted; say both. For "tatiana" vs "havana", the first letter already falls off, so every answer is empty.</p>
-  <div class="callout pred"><span class="label">Practice in the tracker</span>
-    <p><a class="xref" data-note="dsa_problems">Problem Tracker</a> → Tries: <b>208 Implement Trie (Prefix Tree)</b>, <b>211 Design Add and Search Words Data Structure</b>, <b>1268 Search Suggestions System</b>, <b>2452 Words Within Two Edits of Dictionary</b>.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Common Mistakes.</b> Trie code is short; its bugs hide in the end flag, in deletes, and in reads that quietly create nodes.</div>
-
-  <h2 id="dsa-tri-traps"><span class="num">11</span>Common Mistakes</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Which slips make a trie answer "yes" for prefixes that are not words, lose words on delete, or grow while you only read it?</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: forgetting the end flag</span>
-    <p>Reaching a node only proves a prefix exists. <code>search</code> must also check <code>node.end</code>. Mark the end on the last node, not on the root or the node before it.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: deleting too much</span>
-    <p>Deleting "dal" must not remove the nodes "dalia" uses; deleting "dalia" must not unset "dal". Only cut branches nobody else passes through (the <code>passing</code> count), otherwise just unset the flag.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: defaultdict lookups that create nodes</span>
-    <p>With a <code>defaultdict</code> trie, <code>node[ch]</code> in a search silently adds the letter. Your trie grows during reads and <code>startsWith</code> starts returning True for everything. Use <code>ch in node</code> or <code>node.get(ch)</code> when reading.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: not restoring the grid / not removing found words</span>
-    <p>In Word Search II, forgetting to unmark a cell breaks later searches; forgetting <code>pop("$")</code> reports a word twice.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: claiming a trie saves memory</span>
-    <p>84 MB vs about 7 MB for 100,000 names. A trie saves <em>time</em> on prefix questions, not memory.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: How It All Connects.</b> Seven ideas built on one node with two fields. How does each build on the last, and what did each produce for Biteful's search box?</div>
-
-  <h2 id="dsa-tri-connect"><span class="num">12</span>How It All Connects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Seen together: which ideas are the core structure, which are walks over it, and which borrow from earlier notes (Trees, Hashing, Backtracking)?</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 660 300" width="660">
-<defs><marker id="dsa-tri-a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="10" y="10" width="200" height="44" rx="7" class="fr sr"/><text x="110" y="29" text-anchor="middle" font-size="11.5" font-weight="700">prefix search is slow</text><text x="110" y="45" text-anchor="middle" class="tm" font-size="10">scan 434 ms / 120 presses</text>
-<line x1="210" y1="32" x2="238" y2="32" stroke="currentColor" marker-end="url(#dsa-tri-a9)"/>
-<rect x="240" y="10" width="180" height="44" rx="7" class="fb sb"/><text x="330" y="29" text-anchor="middle" font-size="11.5" font-weight="700">trie node</text><text x="330" y="45" text-anchor="middle" class="tm" font-size="10">children dict + end flag</text>
-<line x1="420" y1="32" x2="458" y2="32" stroke="currentColor" marker-end="url(#dsa-tri-a9)"/>
-<rect x="460" y="10" width="190" height="44" rx="7" class="fb sb"/><text x="555" y="29" text-anchor="middle" font-size="11.5" font-weight="700">insert / search / startsWith</text><text x="555" y="45" text-anchor="middle" class="tm" font-size="10">O(L); "da": False / True</text>
-<line x1="555" y1="54" x2="555" y2="86" stroke="currentColor" marker-end="url(#dsa-tri-a9)"/>
-<rect x="460" y="88" width="190" height="44" rx="7" class="ft st"/><text x="555" y="107" text-anchor="middle" font-size="11.5" font-weight="700">cost &amp; memory</text><text x="555" y="123" text-anchor="middle" class="tm" font-size="10">fast prefixes, ~12× memory</text>
-<line x1="510" y1="132" x2="110" y2="168" stroke="currentColor" marker-end="url(#dsa-tri-a9)"/>
-<line x1="540" y1="132" x2="330" y2="168" stroke="currentColor" marker-end="url(#dsa-tri-a9)"/>
-<line x1="570" y1="132" x2="555" y2="168" stroke="currentColor" marker-end="url(#dsa-tri-a9)"/>
-<rect x="10" y="170" width="200" height="50" rx="7" class="fg sg"/><text x="110" y="190" text-anchor="middle" font-size="11" font-weight="700">autocomplete (walk + DFS)</text><text x="110" y="207" text-anchor="middle" class="tm" font-size="10">pa → 4 dishes; top paneer, pav</text>
-<rect x="240" y="170" width="180" height="50" rx="7" class="fg sg"/><text x="330" y="190" text-anchor="middle" font-size="11" font-weight="700">Word Search II</text><text x="330" y="207" text-anchor="middle" class="tm" font-size="10">trie + backtracking: 4 found</text>
-<rect x="460" y="170" width="190" height="50" rx="7" class="fg sg"/><text x="555" y="190" text-anchor="middle" font-size="11" font-weight="700">Replace Words</text><text x="555" y="207" text-anchor="middle" class="tm" font-size="10">first end flag: pav, dal, pan</text>
-<rect x="240" y="250" width="180" height="44" rx="7" class="fv"/><text x="330" y="269" text-anchor="middle" font-size="11.5" font-weight="700">Backtracking note</text><text x="330" y="285" text-anchor="middle" class="tm" font-size="10">mark / explore / unmark</text>
-<line x1="330" y1="250" x2="330" y2="222" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#dsa-tri-a9)"/>
-<rect x="10" y="250" width="200" height="44" rx="7" class="fv"/><text x="110" y="269" text-anchor="middle" font-size="11.5" font-weight="700">Trees note</text><text x="110" y="285" text-anchor="middle" class="tm" font-size="10">DFS below a node</text>
-<line x1="110" y1="250" x2="110" y2="222" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#dsa-tri-a9)"/>
-</svg><figcaption>One node type with two fields supports three O(L) walks. Everything after that is a walk with a different stopping rule: collect the whole subtree (autocomplete), follow the grid (Word Search II), or stop at the first end flag (Replace Words). Dashed arrows: ideas borrowed from earlier notes.</figcaption></figure>
-  <table class="tbl"><caption>Every concept on Biteful's dish search</caption>
-    <tr><th>Concept</th><th>Built from</th><th>Answers which question</th><th>Value on the running example</th><th>When to use</th></tr>
-    <tr><td>Prefix search need</td><td>list / set scan</td><td>why not a list or set?</td><td>434 ms vs 0.06 ms for 120 presses</td><td>diagnosing slow "starts with"</td></tr>
-    <tr><td>Trie node</td><td>tree + dict + end flag</td><td>how to store shared starts?</td><td>dal, dalia, dosa, pav → 11 nodes for 15 letters</td><td>any word set with prefix queries</td></tr>
-    <tr><td>insert / search / startsWith</td><td>a walk from the root</td><td>is it a word? a prefix?</td><td>search("da") False, startsWith("da") True</td><td>Implement Trie</td></tr>
-    <tr><td>Cost &amp; memory</td><td>node count × overhead</td><td>worth it?</td><td>~84 MB vs ~7 MB for 100k names</td><td>choosing trie vs set vs bisect</td></tr>
-    <tr><td>Autocomplete</td><td>walk + DFS + counts</td><td>list, count, rank, delete?</td><td>pa → paneer, papad, pasta, pav; 4; top 2 paneer, pav</td><td>search boxes</td></tr>
-    <tr><td>Word Search II</td><td>trie + grid backtracking</td><td>which words hide in a grid?</td><td>dal, dosa, masala, sam; 18× faster at scale</td><td>many words, one board</td></tr>
-    <tr><td>Replace Words</td><td>walk + first end flag</td><td>shortest stored prefix?</td><td>pavbhaji → pav, paneertikka → pan</td><td>roots, sub-folders</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span><p>One sentence holds the note: <strong>a trie turns "which words start with p?" into a walk of |p| steps by storing every prefix once as a node; each pattern is the same walk with a different rule for what to do along the way (stop at the end flag, collect the subtree, follow a grid, branch on a wildcard).</strong></p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Revision Sheet</b>, then <a class="xref" data-note="dsa_bits">Bit Manipulation</a>: a trie whose "letters" are the bits of numbers (0 or 1) finds the pair with the largest XOR by always stepping to the opposite bit. Bits themselves, and the masks used in bitmask DP, are the next topic.</div>
+t = Trie()
+t.insert("dal")
+print("wrong:", search_wrong(t, "da"), "| right:", search(t, "da"), search(t, "dal"))</div>
+  <div class="fx" data-lang="text">wrong: True | right: False True</div>
+  <p>With "dal" stored, the wrong version says "da" is a dish. The fix is the one extra condition. A related slip is setting the flag on the wrong node: it belongs on the node reached after the <em>last</em> letter, not on the root or the node before.</p>
+  <p>The second mistake is deleting too much. Removing the nodes of "dal" also destroys "dalia", and unsetting flags along the way of "dalia" wrongly removes "dal". Only cut a branch when its <code>passing</code> count says no other word uses it; otherwise only unset the end flag, as in section 05. Inserting the same word twice causes a similar problem: the counts go up twice and a later delete leaves a ghost count, so check whether the word is already stored first (or keep a per-word counter at the end node).</p>
+  <p>The third is the <code>defaultdict</code> trie that grows while you read it. <code>node[ch]</code> on a <code>defaultdict</code> creates the missing child, so a search for "x" adds an x node and later <code>startsWith("x")</code> says True. Use <code>ch in node</code> or <code>node.get(ch)</code> whenever you are only looking. In the same spirit, the end-marker key of a nested-dict trie must be something that can never be a letter of the input; <code>"#"</code> breaks the moment a word contains "#".</p>
+  <p>In Word Search II, two slips are typical: forgetting to restore the cell after exploring it (later searches then see "#" instead of a letter and miss words), and forgetting to remove <code>"$"</code> after recording a word (it is then reported once for every way it can be traced). Stopping the search after the first word found on a path is also wrong, because a longer word may continue along the same path ("ab" and "abdc").</p>
+  <p>Finally, two judgement mistakes. Building a trie when the problem only needs exact membership adds code and memory for nothing; use a set. And claiming that a trie "saves memory because prefixes are shared" is wrong in Python: 100,000 names took about 84 MB as a trie and about 7 MB as a list. A trie saves time on prefix questions, not space.</p>
 
   <h2 id="dsa-tri-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>The whole note on one page. Running example: Biteful's dish search. Hand traces on <b>dal, dalia, dosa, pav</b>; autocomplete on <b>paneer 90, papad 40, pasta 40, pav 75, poha 12, dal 60, dalia 8, dosa 95</b> (orders today); 100,000 made-up names for timing; promo puzzle dalv / osai / mahd.</p>
-  <h3>The question ladder</h3>
-  <table class="tbl">
-    <tr><th>Concept</th><th>Question</th><th>On the dish search</th><th>Weakness → next</th></tr>
-    <tr><td>Prefix search</td><td>which names start with p?</td><td>scan 3.6 ms per key press</td><td>set can't do prefixes</td></tr>
-    <tr><td>Trie node</td><td>store shared starts once?</td><td>11 nodes for 15 letters</td><td>how to build/query</td></tr>
-    <tr><td>insert / search / startsWith</td><td>word? prefix?</td><td>"da": False / True</td><td>worth the memory?</td></tr>
-    <tr><td>Cost &amp; memory</td><td>trie vs set vs bisect</td><td>O(L) prefix; ~12× memory</td><td>need lists and rankings</td></tr>
-    <tr><td>Autocomplete</td><td>list, count, rank, delete</td><td>pa: 4 dishes; paneer, pav</td><td>many words in a grid</td></tr>
-    <tr><td>Word Search II</td><td>all words in a board</td><td>dal, dosa, masala, sam</td><td>shortest prefix instead</td></tr>
-    <tr><td>Replace Words</td><td>shortest root</td><td>pav, dal, pan</td><td>→ Pythonic forms, patterns</td></tr>
-  </table>
+  <h3>Definitions</h3>
+  <ul>
+    <li><b>Prefix query</b>: find, count or check the stored words that begin with a string p.</li>
+    <li><b>Trie / prefix tree</b>: a tree where each edge is one letter, each node is the prefix spelled from the root, and an end flag marks complete words.</li>
+    <li><b>Root</b>: the node for the empty prefix ""; it has no letter.</li>
+    <li><b>End flag</b>: True at nodes where a stored word finishes; it separates "dal" (a word) from "da" (just a prefix).</li>
+    <li><b>passing count</b>: number of stored words through a node; gives prefix counts in O(L) and safe deletes.</li>
+    <li><b>Compressed trie / radix tree</b>: chains of single-child nodes merged into one string-labelled edge.</li>
+    <li><b>Bitwise trie</b>: numbers stored as bit strings; used for maximum XOR.</li>
+  </ul>
   <h3>Operations and costs</h3>
   <table class="tbl">
     <tr><th>Operation</th><th>How</th><th>Time</th></tr>
-    <tr><td>insert(w)</td><td>walk, create missing children, end = True</td><td>O(L)</td></tr>
+    <tr><td>insert(w)</td><td>walk, create missing children, set end</td><td>O(L)</td></tr>
     <tr><td>search(w)</td><td>walk; fell off → False; else node.end</td><td>O(L)</td></tr>
     <tr><td>startsWith(p)</td><td>walk; fell off → False; else True</td><td>O(L)</td></tr>
-    <tr><td>count_prefix(p)</td><td>walk; read node.passing</td><td>O(L)</td></tr>
-    <tr><td>autocomplete(p)</td><td>walk; DFS below, collect end nodes (sorted children = alphabetical)</td><td>O(L + subtree)</td></tr>
-    <tr><td>delete(w)</td><td>walk decreasing passing; cut child at 0, else unset end</td><td>O(L)</td></tr>
+    <tr><td>count with prefix</td><td>walk; read passing</td><td>O(L)</td></tr>
+    <tr><td>autocomplete(p)</td><td>walk; DFS below, collect end nodes</td><td>O(L + subtree)</td></tr>
+    <tr><td>top-k per key press</td><td>store k words in every node</td><td>O(1) per key after the walk</td></tr>
+    <tr><td>delete(w)</td><td>walk decreasing passing; cut at 0, else unset end</td><td>O(L)</td></tr>
     <tr><td>shortest root</td><td>walk; return at first end flag</td><td>O(L)</td></tr>
     <tr><td>wildcard search</td><td>"." → try every child</td><td>O(26<sup>d</sup> · L)</td></tr>
-    <tr><td>Word Search II</td><td>grid DFS following trie children; pop "$"; prune</td><td>O(R·C·4·3<sup>L−1</sup>)</td></tr>
+    <tr><td>Word Search II</td><td>grid DFS following trie children; pop "$"; prune</td><td>O(R · C · 4 · 3<sup>L−1</sup>)</td></tr>
   </table>
-  <p>Symbols: L = length of the word or prefix, N = number of stored words, d = number of "." wildcards, R × C = grid size, S = total letters. Space: O(S) nodes, each a few hundred bytes in Python.</p>
-  <div class="cards">
-    <div><b>Use a trie</b><p>Prefix queries on a changing word set, autocomplete with counts/rankings, shortest/longest prefix match, wildcards, many words searched in one grid or stream.</p><small>Biteful's search box; Word Search II; Replace Words.</small></div>
-    <div><b>Avoid a trie</b><p>Exact membership only (use a set); a static list with simple prefix queries (sorted list + bisect); tight memory budgets in Python.</p><small>84 MB vs ~7 MB for 100k names.</small></div>
-  </div>
-  <h3>Key traps</h3>
-  <ul>
-    <li>search without the end flag = startsWith.</li>
-    <li>Delete must not cut branches other words use (passing counts) and must not unset a longer word.</li>
-    <li><code>defaultdict</code> reads create nodes; use <code>in</code> / <code>.get</code>.</li>
-    <li>End marker key must not be a possible letter.</li>
-    <li>Word Search II: keep going after a match, pop "$" once, restore the cell.</li>
-  </ul>
-  <h3>Five rapid-fire checks</h3>
-  <ol>
-    <li>With dal and dalia stored, search("dal") and search("dali")? → True (end flag on l) and False (node exists, no end flag).</li>
-    <li>Why can't a set answer "starts with pa" quickly? → Hashing scatters similar words; "pa" is not a stored key, so every word must be scanned.</li>
-    <li>How do you count dishes starting with "pa" in O(L)? → Keep a passing count on every node, increment on insert, read it at the prefix node (4).</li>
-    <li>Why is Word Search II faster with a trie? → Shared prefixes are walked once for all words, and paths stop as soon as no word continues.</li>
-    <li>What does Replace Words return for "paneertikka" with roots pan and paneer? → "pan": the walk meets the shorter root's end flag first.</li>
-  </ol>
+  <p>Space: O(total letters) nodes at most, each a few hundred bytes in Python. L = word or prefix length, d = number of dots, R × C = grid size.</p>
+  <h3>Trie, set or sorted list?</h3>
+  <table class="tbl">
+    <tr><th>Need</th><th>Use</th><th>Why</th></tr>
+    <tr><td>Exact membership only</td><td>set</td><td>same O(L), far less memory</td></tr>
+    <tr><td>Static list, simple prefix lookups</td><td>sorted list + <code>bisect</code></td><td>O(log N) to find the block, no extra memory</td></tr>
+    <tr><td>Changing words, counts, rankings, grids, wildcards, shortest prefix</td><td>trie</td><td>prefix queries in O(L), decisions at every letter</td></tr>
+  </table>
+  <h3>Syntax</h3>
+  <div class="fx" data-lang="py">root = {}
+for w in words:                          # build: nested dicts, "$" = end
+    node = root
+    for ch in w:
+        node = node.setdefault(ch, {})
+    node["$"] = w
 
-  <h2 id="dsa-tri-qa"><span class="num">13</span>Questions &amp; Answers</h2>
+def walk(s):                             # the walk every pattern uses
+    node = root
+    for ch in s:
+        if ch not in node:               # 'in', never node[ch] on a defaultdict
+            return None
+        node = node[ch]
+    return node
+
+found = walk("dal") is not None and "$" in walk("dal")   # search
+prefix_ok = walk("pa") is not None                        # startsWith</div>
+  <h3>Gotchas</h3>
+  <ul>
+    <li>search without the end flag is startsWith.</li>
+    <li>Delete must not cut branches other words use, nor unset a longer word.</li>
+    <li><code>defaultdict</code> reads create nodes; test with <code>in</code> or <code>.get</code>.</li>
+    <li>The end-marker key must not be a possible letter.</li>
+    <li>Word Search II: keep going after a match, pop "$", restore the cell.</li>
+    <li>A trie saves time on prefix questions, not memory (84 MB vs 7 MB for 100k names).</li>
+  </ul>
+
+  <h2 id="dsa-tri-qa"><span class="num">13</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>What does one trie node represent, and what does it store?</summary><div class="qa-body">A node represents the prefix spelled by the letters on the path from the root to it. It stores its children (letter → node, a dict or a 26-slot array) and an end flag saying whether a stored word finishes exactly there. Extras like counts or the word itself are optional.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between search and startsWith?</summary><div class="qa-body">Both walk the letters and fail if a child is missing. startsWith returns True as soon as the walk finishes. search also requires the final node's end flag to be True. With "dalia" stored, search("dal") is False unless "dal" was inserted too, and startsWith("dal") is True.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Time and space of insert, search, startsWith?</summary><div class="qa-body">O(L) time each, where L is the length of the word or prefix, independent of how many words are stored. Insert adds at most L nodes. Total space is O(total letters) in the worst case (no shared prefixes), times the per-node overhead.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Hash set or trie: when do you pick which?</summary><div class="qa-body">Exact membership only → set: same O(L) and much less memory. Prefix queries, autocomplete, shortest/longest prefix match, sorted listing, or letter-by-letter search with pruning (grids, wildcards) → trie. For a static list with simple prefix queries, a sorted list with bisect is a lighter middle ground.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you delete a word without breaking others?</summary><div class="qa-body">First confirm the word exists. Walk down decreasing a per-node passing count; when a child's count hits 0, delete that child and stop, since no other word uses that branch. If the walk completes, the word is a prefix of others ("dal" under "dalia"), so just set end to False.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you count the words that start with a prefix in O(L)?</summary><div class="qa-body">Keep a counter in every node, incremented on each insert as the word passes through. Walk to the prefix node and read its counter. Without counters you would DFS the whole subtree.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why is Word Search II faster with a trie than searching each word separately?</summary><div class="qa-body">Words share prefixes, so one DFS per cell explores all words at once instead of repeating the same paths per word. The trie also stops a path the moment no word continues with that letter, and removing found words and empty branches prunes further (138 ms vs 7 ms in the measured run).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How does the "." wildcard change search, and what does it cost?</summary><div class="qa-body">At a ".", the search tries every child recursively and succeeds if any branch succeeds. Without dots it is O(L). Each dot can multiply the work by up to 26, so the worst case is O(26<sup>d</sup> · L) for d dots.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How would you return the top 3 suggestions for every key press quickly?</summary><div class="qa-body">Store the best 3 words (alphabetical or by frequency) in every node at insert time. Each key press then moves one node down and reads its list: O(1) per key after the build. Alternative for a fixed list: sort it and use bisect to find the first word ≥ prefix, then take up to 3 that still match.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why might a dict-of-children be preferred over an array of 26 in Python?</summary><div class="qa-body">Most nodes have only one or two children, so 26 slots per node waste memory, and Python lists of None are not cheap. A dict stores only real children and works for any alphabet (Unicode, digits, spaces in dish names). An array is faster in C/Java for a fixed small alphabet.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is a compressed trie (radix tree)?</summary><div class="qa-body">A trie where chains of single-child nodes are merged into one edge holding a string ("neer" instead of four nodes). Same queries, far fewer nodes. Used in routers' IP lookup tables and some key-value stores.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does a trie need the end flag when a tree from the Trees note did not?</summary><div class="qa-body">In a trie the nodes are prefixes, and every prefix of a stored word exists as a node whether or not it is a word itself. The structure alone cannot tell "dal" (a dish) from "da" (just a prefix); the end flag carries that one bit of information.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: how does Word Search II combine this note with Backtracking?</summary><div class="qa-body">The grid walk is the Backtracking template (mark the cell, explore 4 neighbours, unmark). The trie decides which neighbours are worth exploring (only letters that are children of the current trie node) and when a word is complete (the "$" end marker). Without the trie it is one backtracking search per word.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks if you implement autocomplete on a hash set instead?</summary><div class="qa-body">Every key press must scan all N words with startswith (O(N·L)), counts need a full scan, and ranking means sorting all matches each time: 434 ms vs 0.06 ms for 120 presses over 100,000 names in the measured run. A set has no notion of "words near this prefix".</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a trie and what problem does it solve?</summary><div class="qa-body">A trie is a tree that stores strings letter by letter, so strings with a common start share one path. It makes prefix questions ("which words start with pa?") cost O(length of the prefix) instead of a scan over every stored word. It is used for autocomplete, spell checking, IP routing and word-search puzzles.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does a trie node represent, and what does it store?</summary><div class="qa-body">A node represents the prefix spelled by the letters on the path from the root to it. It stores its children (letter → child node, usually a dict or a 26-slot array) and an end flag saying whether a stored word finishes exactly there. Counts, the word itself or a top-k list are optional extras.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does a trie need an end flag?</summary><div class="qa-body">Every prefix of a stored word exists as a node, whether or not it is a word itself. With "dal" and "dalia" stored, the node for "dali" exists but "dali" is not a word, and "dal" is a word even though the path continues. The structure alone cannot tell these apart; the end flag carries that one bit.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between search and startsWith?</summary><div class="qa-body">Both walk the letters and return False if a child is missing. startsWith returns True as soon as the walk finishes. search additionally requires the last node's end flag to be True. With only "dalia" stored, search("dal") is False and startsWith("dal") is True.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What are the time and space costs of insert, search and startsWith?</summary><div class="qa-body">Each is O(L) time, where L is the length of the word or prefix, independent of how many words are stored. Insert creates at most L nodes, so total space is O(total letters) in the worst case (no shared prefixes), multiplied by the per-node overhead.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Hash set or trie: how do you choose?</summary><div class="qa-body">For exact membership only, a set: it is also O(L) and uses far less memory. For prefix queries, autocomplete, counts by prefix, shortest or longest prefix matching, wildcards, or letter-by-letter search with pruning, a trie. For a static word list with simple prefix lookups, a sorted list with bisect is a lighter middle ground.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Does a trie save memory compared with storing the words in a list?</summary><div class="qa-body">Usually not in Python. Shared prefixes save letters, but each node is an object with a dict costing hundreds of bytes, while a letter in a string costs one byte. In the measured run, 100,000 names took about 84 MB as a trie and about 7 MB as a list. Tries save time on prefix questions, not memory; radix trees, arrays or __slots__ reduce the overhead.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How would you count the words starting with a prefix in O(L)?</summary><div class="qa-body">Keep a counter in every node, incremented on insert for each node along the word's path. To answer, walk to the prefix node and read its counter. Without counters you would have to DFS the whole subtree below the prefix.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you delete a word without breaking other words?</summary><div class="qa-body">First confirm the word is stored. Walk down decreasing each node's passing count; when a child's count reaches 0, no other word uses that branch, so delete that child and stop. If the walk finishes, the word is a prefix of others ("dal" under "dalia"), so only set its end flag to False.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How would you return the top 3 suggestions for every key press quickly?</summary><div class="qa-body">Store the best three words in every node while building the trie (insert in sorted order for alphabetical results, or keep the three most frequent). Each key press then moves one node down and reads its list, so the work after building is O(1) per key. For a fixed list, an alternative is to sort it and use bisect to find the first word at or after the prefix, then take up to three that still match.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why is Word Search II faster with a trie than searching for each word separately?</summary><div class="qa-body">Words share prefixes, so a single DFS per cell explores all words at once instead of walking the same paths once per word. The trie also stops a path as soon as no word continues with the next letter, and removing found words and empty branches prunes further. In the measured run it was well over ten times faster.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How does a "." wildcard change the search, and what does it cost?</summary><div class="qa-body">At a dot the search cannot choose one child, so it recursively tries every child and succeeds if any branch succeeds; ordinary letters still follow one child. Without dots it is O(L). Each dot can multiply the work by up to 26, so the worst case is O(26^d · L) for d dots.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you find the shortest root of a word, and how does longest-prefix match differ?</summary><div class="qa-body">Walk the word in a trie of roots and return at the first node with an end flag; fall off and there is no root. Checking the flag at every step is what makes it the shortest. Longest-prefix match, used in IP routing, keeps walking, remembers the last end flag seen, and returns that when the walk ends or falls off.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Dict of children or an array of 26: which would you use?</summary><div class="qa-body">In Python, a dict: most nodes have one or two children, so 26 slots per node waste memory, and a dict works for any alphabet (digits, spaces, Unicode). In C++ or Java with a fixed lowercase alphabet, an array is faster because indexing is cheaper than hashing.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a compressed trie (radix tree), and why use one?</summary><div class="qa-body">It merges every chain of single-child nodes into one edge labelled with a string, so "neer" is one edge instead of four nodes. It answers the same queries with far fewer nodes, so it uses much less memory. Routers' IP lookup tables and some databases use radix trees.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How can a trie find the maximum XOR of two numbers in an array?</summary><div class="qa-body">Store each number as a 32-bit string in a binary trie. For each number, walk from the highest bit and at each level step to the child with the opposite bit if it exists, because a 1 in a high position of the XOR outweighs everything below it. That gives the best partner in O(32), so the whole array takes O(32 · n).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How would you detect, in a stream of characters, whether any word from a list just ended?</summary><div class="qa-body">Insert the words reversed into a trie. After each new character, walk the trie backwards over the most recent characters (newest first); if you pass an end flag, some word ends at the current position. The walk is at most the length of the longest word, so each character costs O(max word length).</div></details>
 </main>
 `
 });
