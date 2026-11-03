@@ -3,65 +3,44 @@ Object.assign(TOPIC_CONTENT, {
   "py_files": `<main>
 <h1>Files &amp; Data Formats</h1>
   <div class="where"><span>Python</span><span>Fundamentals</span><span>Programs Meet the Real World</span><span>Files &amp; Data Formats</span></div>
-  <p class="lead">Variables live in memory and vanish when the process exits; files are how data enters a program and how results survive until the next run or reach another program. Getting the layers right matters: the wrong mode silently empties a file, a missing <code>encoding=</code> turns "₹" into "â‚¹" on Windows, <code>read()</code> on a 20 GB log exhausts memory, and <code>split(",")</code> corrupts any CSV with a quoted comma. On top of raw files sit the data formats you meet daily in DS/ML and backend work: CSV for spreadsheets, JSON for APIs and summaries, YAML for configs, pickle for Python-only caches (and its security hole), and Parquet for large typed tables. Code was run on Python 3.13; Parquet examples in a virtual environment with pandas 3.0.6 and pyarrow 26.</p>
+  <p class="lead">Everything a program keeps in variables disappears the moment it ends; files are how data gets into a program from outside and how results survive until tomorrow or reach another program. Working with files has two layers. The lower layer is about getting bytes in and out safely: naming the file, choosing the right mode so you do not empty it by accident, decoding the bytes with the right encoding, reading big files without running out of memory, and always closing them. The upper layer is about <em>formats</em>, the agreements about what the bytes mean: CSV for spreadsheets, JSON for APIs, YAML for settings, pickle for Python-only caches and Parquet for large tables. Our running example is one day of orders from a chai stall, a 351-byte CSV file with six good rows and three bad ones. We will read it, clean it, and save the results in every format, so you can see what each one keeps, loses and costs. Parquet examples were run with pandas 3.1 and pyarrow 26 installed in a virtual environment.</p>
 
-  <h2 id="pfl-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="pfl-map"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">Files &amp; Data Formats</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">Paths &amp; open</div>
+        <div class="mm-title">Getting at files</div>
         <ul>
-          <li><code>Path("data") / "x.csv"</code>; <code>.name .stem .suffix .parent</code></li>
-          <li><code>glob</code>, <code>mkdir(parents=True, exist_ok=True)</code>, <code>exists</code></li>
-          <li>Modes: r (default), w (empties!), a (append), x (create only), b (binary)</li>
-          <li>Writes are buffered until flush/close</li>
+          <li><code>Path("data") / "x.csv"</code> builds paths safely</li>
+          <li>Modes: r (default), w (empties!), a, x, plus b for bytes</li>
+          <li>Writes are buffered until flush or close</li>
+          <li><code>with open(...)</code> always closes</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Bytes &amp; encodings</div>
+        <div class="mm-title">Bytes and text</div>
         <ul>
-          <li>Disk holds bytes; text mode decodes/encodes for you</li>
-          <li>₹ = 3 bytes in UTF-8 (e2 82 b9)</li>
-          <li>Always <code>encoding="utf-8"</code>; Excel CSV → <code>"utf-8-sig"</code></li>
-          <li>⚠ wrong encoding: mojibake or UnicodeDecodeError</li>
+          <li>Disks hold bytes; text mode encodes and decodes</li>
+          <li>Always pass <code>encoding="utf-8"</code> (<code>"utf-8-sig"</code> for Excel)</li>
+          <li>Wrong encoding: mojibake or <code>UnicodeDecodeError</code></li>
+          <li><code>for line in f</code>: constant memory, one pass</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Reading safely</div>
+        <div class="mm-title">Text formats</div>
         <ul>
-          <li><code>for line in f</code>: one line at a time, constant memory</li>
-          <li>A file is an iterator: one pass only</li>
-          <li><code>with open(...)</code> = try/finally close</li>
-          <li>⚠ <code>f.read()</code> on a 20 GB file</li>
+          <li>CSV: tables, all strings; use the csv module, <code>newline=""</code></li>
+          <li>JSON: nested data; tuple → list, int key → str, no dates</li>
+          <li>YAML: human-edited config; <code>safe_load</code>; NO → False</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">CSV &amp; JSON</div>
+        <div class="mm-title">Binary formats</div>
         <ul>
-          <li>csv.reader/DictReader understand quotes; open with <code>newline=""</code></li>
-          <li>⚠ <code>line.split(",")</code> breaks quoted commas</li>
-          <li>CSV gives only strings → parse yourself</li>
-          <li>json dump/load (file) vs dumps/loads (string)</li>
-          <li>⚠ tuple→list, int key→str, date/set/Decimal → TypeError</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">pickle &amp; YAML</div>
-        <ul>
-          <li>pickle: any Python object, exact; binary mode</li>
-          <li>⚠ loading can run code; needs the same classes/versions</li>
-          <li>YAML: human-edited config; <code>yaml.safe_load</code></li>
-          <li>⚠ YAML 1.1: NO → False, 1.10 → 1.1; quote them</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Parquet &amp; choosing</div>
-        <ul>
-          <li>Columnar, typed, compressed; needs pyarrow</li>
-          <li>Read only some columns / filtered rows</li>
-          <li>1M rows: 24.8 MB CSV → 5.7 MB; one column ~0.008 s</li>
-          <li>Choose by: readable? typed? fast/small? safe?</li>
+          <li>pickle: any Python object, but loading can run code</li>
+          <li>Parquet: typed columns, compressed, read only what you need</li>
+          <li>Choose by reader, shape, size and trust</li>
         </ul>
       </div>
     </div>
@@ -70,27 +49,25 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="pfl-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Files and Persistence</span><span class="rm-sub">Memory vs disk, the sample CSV</span></div></div>
-      <div class="rm-item rm-done" data-target="pfl-path"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Paths with pathlib</span><span class="rm-sub">Join, split, glob, mkdir</span></div></div>
-      <div class="rm-item rm-done" data-target="pfl-open"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">open() and File Modes</span><span class="rm-sub">r, w, a, x and buffering</span></div></div>
-      <div class="rm-item rm-done" data-target="pfl-bin"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Text vs Binary Mode</span><span class="rm-sub">str vs bytes, encode/decode</span></div></div>
-      <div class="rm-item rm-done" data-target="pfl-enc"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Encodings</span><span class="rm-sub">UTF-8, mojibake, the BOM</span></div></div>
-      <div class="rm-item rm-done" data-target="pfl-lazy"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Reading Large Files Line by Line</span><span class="rm-sub">File iterators, memory measured</span></div></div>
-      <div class="rm-item rm-done" data-target="pfl-with"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">with: Closing Files Reliably</span><span class="rm-sub">Context manager vs leaked handle</span></div></div>
-      <div class="rm-item rm-done" data-target="pfl-csv"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">CSV and the csv Module</span><span class="rm-sub">Quoting, DictReader, DictWriter</span></div></div>
-      <div class="rm-item rm-done" data-target="pfl-json"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">JSON</span><span class="rm-sub">dump/load and type changes</span></div></div>
-      <div class="rm-item rm-done" data-target="pfl-pickle"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">pickle</span><span class="rm-sub">Exact objects, code execution risk</span></div></div>
-      <div class="rm-item rm-done" data-target="pfl-yaml"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">YAML for Configuration</span><span class="rm-sub">safe_load and type surprises</span></div></div>
-      <div class="rm-item rm-done" data-target="pfl-parquet"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Parquet: Columnar Files</span><span class="rm-sub">Typed, compressed, column reads</span></div></div>
-      <div class="rm-item rm-done" data-target="pfl-choose"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Choosing a File Format</span><span class="rm-sub">Five formats compared</span></div></div>
-      <div class="rm-item rm-done" data-target="pfl-traps"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">File-handling bugs and fixes</span></div></div>
-      <div class="rm-item rm-done" data-target="pfl-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">Syntax, tables and gotchas</span></div></div>
-      <div class="rm-item rm-done" data-target="pfl-qa"><span class="rm-num">15</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">Basic to advanced, with answers</span></div></div>
+      <div class="rm-item rm-done" data-target="pfl-path"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Files and Paths</span><span class="rm-sub">why files exist and how to name them</span></div></div>
+      <div class="rm-item rm-done" data-target="pfl-open"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">open() and File Modes</span><span class="rm-sub">reading, writing, appending, buffering</span></div></div>
+      <div class="rm-item rm-done" data-target="pfl-enc"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Text, Bytes and Encodings</span><span class="rm-sub">how characters become bytes and back</span></div></div>
+      <div class="rm-item rm-done" data-target="pfl-lazy"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Reading Large Files Line by Line</span><span class="rm-sub">file objects as iterators, memory measured</span></div></div>
+      <div class="rm-item rm-done" data-target="pfl-with"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Closing Files with with</span><span class="rm-sub">no leaked files, even after an error</span></div></div>
+      <div class="rm-item rm-done" data-target="pfl-csv"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">CSV</span><span class="rm-sub">tables as text, quoting, reading and writing</span></div></div>
+      <div class="rm-item rm-done" data-target="pfl-json"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">JSON</span><span class="rm-sub">nested data, and what changes on the way</span></div></div>
+      <div class="rm-item rm-done" data-target="pfl-pickle"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">pickle</span><span class="rm-sub">exact Python objects, and the security hole</span></div></div>
+      <div class="rm-item rm-done" data-target="pfl-yaml"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">YAML for Configuration</span><span class="rm-sub">settings people edit, and its surprises</span></div></div>
+      <div class="rm-item rm-done" data-target="pfl-parquet"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Parquet</span><span class="rm-sub">columnar files for big tables</span></div></div>
+      <div class="rm-item rm-done" data-target="pfl-choose"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Choosing a File Format</span><span class="rm-sub">the same data in five formats</span></div></div>
+      <div class="rm-item rm-done" data-target="pfl-traps"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">emptied files, closed files, half-written files</span></div></div>
+      <div class="rm-item rm-done" data-target="pfl-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">modes, encodings, formats, gotchas</span></div></div>
+      <div class="rm-item rm-done" data-target="pfl-qa"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">the questions interviewers ask on files</span></div></div>
     </div>
   </div>
 
-  <h2 id="pfl-why"><span class="num">01</span>Files and Persistence</h2>
-  <p>A running program keeps its variables in <strong>memory</strong>, which belongs to one process and is emptied when it exits. Two runs share nothing:</p>
+  <h2 id="pfl-path"><span class="num">01</span>Files and Paths</h2>
+  <p>A running program keeps its variables in <strong>memory</strong> (RAM). Memory is fast, but it belongs to one running program and is wiped when that program ends. Two runs of Python share nothing:</p>
   <div class="fx" data-lang="text">$ python3 -c "revenue = 230; print('run 1: revenue =', revenue)"
 run 1: revenue = 230
 $ python3 -c "print('run 2: revenue =', revenue)"
@@ -99,7 +76,8 @@ Traceback (most recent call last):
     print('run 2: revenue =', revenue)
                               ^^^^^^^
 NameError: name 'revenue' is not defined. Did you mean: 'reversed'?</div>
-  <p>A <strong>file</strong> is a named sequence of bytes kept by the operating system. It survives the process and a reboot, and other programs (Excel, a dashboard, another script) can read it. Most examples below read this 351-byte order sheet, <code>data/orders_2026-10-19.csv</code>; note that Ben's note contains a comma and is therefore quoted, and the last three rows hold bad values.</p>
+  <p>The first run knew that revenue was 230; the second run has never heard of it. If the chai stall's daily total is to be seen tomorrow, by a dashboard, by the accountant's spreadsheet or by another script, it has to be written somewhere that outlives the program. That is what a <strong>file</strong> is: a named sequence of bytes that the operating system keeps on disk. It survives the program, survives a reboot, and can be read by any other program. Keeping data beyond the life of the program that made it is called <strong>persistence</strong>. A file is like a notebook left on the shelf: the person who wrote in it can go home, and someone else can pick it up the next day. A <strong>format</strong>, such as CSV or JSON, is the agreement about how to read what is written in the notebook.</p>
+  <p>Most examples on this page read this file, <code>data/orders_2026-10-19.csv</code>. Notice two things: Ben's note contains a comma, so it is wrapped in double quotes, and the last three rows contain bad values (a word for a quantity, a missing price, a negative quantity).</p>
   <div class="fx" data-lang="text">order_id,time,customer,item,qty,price,note
 1,08:05,Asha,masala chai,2,20,
 2,08:12,Ben,samosa,3,15,"extra chutney, no onion"
@@ -110,10 +88,7 @@ NameError: name 'revenue' is not defined. Did you mean: 'reversed'?</div>
 7,09:03,Esha,samosa,two,15,
 8,09:10,Farid,cold coffee,1,,
 9,09:20,Gita,masala chai,-1,20,refund?</div>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Persistence</strong> means data outliving the process that created it. A <strong>file</strong> is a named sequence of bytes in the file system; a <strong>format</strong> (CSV, JSON, Parquet …) is an agreement about what those bytes mean.</p></div>
-
-  <h2 id="pfl-path"><span class="num">02</span>Paths with pathlib</h2>
-  <p>A <strong>path</strong> names a file. Building paths by gluing strings is fragile (forgotten separators, <code>/</code> vs <code>\\</code>), so <code>pathlib.Path</code> turns a path into an object: <code>/</code> joins parts with the right separator for the OS, and the object knows its name, extension and folder. A <strong>relative</strong> path starts from the current working directory; an <strong>absolute</strong> path starts from the root.</p>
+  <p>Before you can open a file you have to name it, and the name is a <strong>path</strong>: the list of folders leading to the file, ending with the file's name. A <strong>relative</strong> path such as <code>data/orders_2026-10-19.csv</code> starts from the program's current working folder; an <strong>absolute</strong> path starts from the top of the file system, such as <code>/home/asha/chaistall/data/...</code>. Building paths by joining strings is error-prone: it is easy to forget a separator, and Windows uses <code>\\</code> where Linux and macOS use <code>/</code>. The standard library's <strong>pathlib</strong> solves this by turning a path into an object, <code>Path</code>, that knows how to join itself with <code>/</code> and can tell you its parts. Think of it as the difference between writing an address as one long scribble and filling in a form with separate boxes for street, city and postcode.</p>
   <div class="fx" data-lang="py">from pathlib import Path
 
 print("data" + "orders_2026-10-19.csv")            # gluing strings: slash forgotten
@@ -136,21 +111,21 @@ orders_2026-10-19.parquet | 2026-10-19
 ['orders_2026-10-18.csv', 'orders_2026-10-19.csv']
 out/archive True
 True</div>
-  <p>String gluing produced <code>dataorders_…</code> with no error, just a file that does not exist. <code>.name</code>, <code>.stem</code>, <code>.suffix</code> and <code>.parent</code> split the path; <code>with_suffix</code> swaps the extension; <code>glob</code> lists matching files; <code>mkdir(parents=True, exist_ok=True)</code> creates the folder and its parents and does not complain if they exist; <code>resolve()</code> makes the path absolute.</p>
-  <div class="callout def"><span class="label">Definition</span><p><code>pathlib.Path</code> represents a file-system path. <code>p / "x"</code> joins; <code>.name .stem .suffix .parent</code> split; <code>.exists() .is_file() .is_dir() .stat()</code> ask the OS; <code>.glob(pattern)</code> / <code>.rglob(pattern)</code> list matches (rglob recursively); <code>.mkdir(parents=True, exist_ok=True)</code> creates folders; <code>.read_text()</code> / <code>.write_text()</code> are one-line helpers; <code>.unlink()</code> deletes.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Relative paths depend on where you <em>start</em> the program, not where the script is. In real tools, take paths as command-line arguments or build them from <code>Path(__file__).parent</code>.</p></div>
+  <p>The first line shows the problem: gluing two strings produced <code>dataorders_2026-10-19.csv</code>, with no error, just the name of a file that does not exist. With <code>Path</code>, the <code>/</code> operator joined the parts correctly. The next lines take the path apart: <code>.name</code> is the full file name, <code>.stem</code> the name without its extension, <code>.suffix</code> the extension and <code>.parent</code> the folder. <code>.exists()</code> and <code>.stat().st_size</code> asked the operating system about the real file (it is 351 bytes). <code>with_suffix</code> built the name of a matching Parquet file, and <code>removeprefix</code> pulled the date out of the name. <code>glob("orders_*.csv")</code> listed every matching file in the folder, here two days of orders. <code>mkdir(parents=True, exist_ok=True)</code> created the <code>out/archive</code> folder, including <code>out</code> if it was missing, without complaining if it already existed. Finally <code>resolve()</code> turned the relative path into an absolute one.</p>
+  <p>One warning about relative paths: they are relative to the folder you were in when you <em>started</em> the program, not the folder the script is stored in. A script that works when run from its own folder can fail when a scheduler starts it from somewhere else. Real tools take paths as command-line arguments (see <a class="xref" data-note="py_io">Input, Output &amp; Command-Line Programs</a>) or build them from <code>Path(__file__).parent</code>, the folder containing the script.</p>
 
-  <h2 id="pfl-open"><span class="num">03</span>open() and File Modes</h2>
-  <p><code>open(path, mode, encoding=…)</code> asks the OS for a connection to a file and returns a <strong>file object</strong> with <code>read</code>, <code>write</code> and <code>close</code>. The <strong>mode</strong> declares intent, and getting it wrong can destroy data:</p>
+  <h2 id="pfl-open"><span class="num">02</span>open() and File Modes</h2>
+  <p>To read or write a file, a program asks the operating system for access with the built-in <strong>open</strong> function. It returns a <strong>file object</strong>, a Python object connected to the file, with methods such as <code>read</code>, <code>write</code> and <code>close</code>. The second argument to <code>open</code> is the <strong>mode</strong>, which declares what you intend to do. The mode matters more than it looks, because one of them destroys data:</p>
   <table class="tbl">
-    <tr><th>mode</th><th>meaning</th><th>file missing</th><th>file exists</th></tr>
+    <tr><th>mode</th><th>meaning</th><th>if the file is missing</th><th>if the file exists</th></tr>
     <tr><td><code>"r"</code> (default)</td><td>read</td><td>FileNotFoundError</td><td>read from the start</td></tr>
     <tr><td><code>"w"</code></td><td>write</td><td>creates it</td><td><strong>empties it first</strong></td></tr>
     <tr><td><code>"a"</code></td><td>append</td><td>creates it</td><td>writes go at the end</td></tr>
     <tr><td><code>"x"</code></td><td>exclusive create</td><td>creates it</td><td>FileExistsError</td></tr>
-    <tr><td>add <code>"b"</code></td><td>binary: bytes, no decoding</td><td colspan="2">e.g. <code>"rb"</code>, <code>"wb"</code> (section 04)</td></tr>
-    <tr><td>add <code>"+"</code></td><td>read and write</td><td colspan="2">rarely needed; e.g. <code>"r+"</code></td></tr>
+    <tr><td>add <code>"b"</code></td><td>binary: bytes, no decoding</td><td colspan="2">e.g. <code>"rb"</code>, <code>"wb"</code> (section 03)</td></tr>
+    <tr><td>add <code>"+"</code></td><td>read and write</td><td colspan="2">rarely needed, e.g. <code>"r+"</code></td></tr>
   </table>
+  <p>Think of the modes as instructions to a clerk handling a register. "r" means "let me read it". "w" means "give me a blank register with this name", and if one already exists, its pages are torn out. "a" means "let me add entries at the end". "x" means "start a new register, but refuse if one with that name already exists". Here is each one used on an import log:</p>
   <div class="fx" data-lang="py">from pathlib import Path
 
 log = Path("out/import_log.txt")
@@ -171,32 +146,31 @@ except FileExistsError as e:
 try:
     open("out/no_such_day.csv")                    # r (default): must exist
 except FileNotFoundError as e:
-    print("r -&gt;", e)
-
-f = open("out/unsaved.txt", "w", encoding="utf-8")
-f.write("6 orders, Rs 230\\n")
-print("size on disk before close:", Path("out/unsaved.txt").stat().st_size)
-f.close()
-print("size on disk after close: ", Path("out/unsaved.txt").stat().st_size)</div>
+    print("r -&gt;", e)</div>
   <div class="fx" data-lang="text">2026-10-19 import started
 2026-10-19 6 orders, Rs 230, 3 rejected
 ---
 2026-10-20 import started
 ---
 x -&gt; FileExistsError
-r -&gt; [Errno 2] No such file or directory: 'out/no_such_day.csv'
-size on disk before close: 0
-size on disk after close:  17</div>
-  <p><code>"w"</code> created the log; <code>"a"</code> appended; <code>"w"</code> again wiped both lines. <code>"x"</code> refused an existing file (good for archives that must never be overwritten), and reading a missing file raised <code>FileNotFoundError</code>.</p>
-  <p>The last lines show <strong>buffering</strong>: <code>f.write</code> put 17 characters into an in-memory buffer and the file on disk still had 0 bytes until <code>close()</code> (or <code>flush()</code>). Writing in large chunks is much faster, but a file that is never closed may never receive its last writes.</p>
-  <div class="callout def"><span class="label">Definition</span><p><code>open(file, mode="r", encoding=None, newline=None)</code> returns a file object. Text modes return <code>str</code> and use an encoding; binary modes (<code>"b"</code>) return <code>bytes</code>. Writes are buffered until <code>flush()</code> or <code>close()</code> (and even then the OS may cache them; <code>os.fsync</code> forces them to the device). Every opened file must be closed.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p><code>open(path, "w")</code> on the file you meant to read empties it before you read a single line. Open inputs with <code>"r"</code> and write outputs under a different name.</p></div>
-
-  <h2 id="pfl-bin"><span class="num">04</span>Text vs Binary Mode</h2>
-  <p>Disks store bytes (0–255), while Python strings hold Unicode characters. In <strong>text mode</strong> (<code>"r"</code>, <code>"w"</code>) Python <em>encodes</em> characters to bytes on write and <em>decodes</em> bytes to characters on read. In <strong>binary mode</strong> (<code>"rb"</code>, <code>"wb"</code>) there is no conversion and you get raw <code>bytes</code>. CSV, JSON and YAML are text; pickle, Parquet and images are binary.</p>
+r -&gt; [Errno 2] No such file or directory: 'out/no_such_day.csv'</div>
+  <p><code>"w"</code> created the log with one line, and <code>"a"</code> added a second line at the end. Then <code>"w"</code> was used again for the next day, and both of yesterday's lines were gone: opening with <code>"w"</code> empties the file immediately, before you write anything. <code>"x"</code> refused to touch the existing log and raised <code>FileExistsError</code>, which makes it the right mode for archives that must never be overwritten. And reading a file that does not exist raised <code>FileNotFoundError</code>. (The <code>with</code> statement used here closes the file at the end of the block; section 05 explains it.)</p>
+  <p>There is one more thing to know about writing. When you call <code>f.write</code>, the text does not go to the disk straight away. It goes into a <strong>buffer</strong>, an area of memory that collects writes so they can be sent to the disk in large, efficient chunks, much as a shop collects letters in a sack before taking them to the post office. The buffer is written out when it fills up, when you call <code>f.flush()</code>, or when the file is closed:</p>
   <div class="fx" data-lang="py">from pathlib import Path
 
-line = "Asha: 2 masala chai ₹40\\n"
+f = open("out/unsaved.txt", "w", encoding="utf-8")
+f.write("6 orders, Rs 230\\n")
+print("size on disk before close:", Path("out/unsaved.txt").stat().st_size)
+f.close()
+print("size on disk after close: ", Path("out/unsaved.txt").stat().st_size)</div>
+  <div class="fx" data-lang="text">size on disk before close: 0
+size on disk after close:  17</div>
+  <p>After <code>write</code>, the file on disk was still 0 bytes long; the 17 characters were sitting in the buffer. Only <code>close()</code> pushed them to the file. This is why a file that is never closed can lose its last writes, for example if the program crashes. (Even after <code>close</code>, the operating system may keep the data in its own cache for a moment; <code>os.fsync</code> forces it onto the physical disk, which matters for files that must survive a power cut.)</p>
+
+  <h2 id="pfl-enc"><span class="num">03</span>Text, Bytes and Encodings</h2>
+  <p>A disk does not store letters. It stores <strong>bytes</strong>, numbers from 0 to 255. Python strings, on the other hand, hold characters, including ones like "₹" and "é". Something has to translate between the two, and that translation is called an <strong>encoding</strong>: a rule that says which bytes represent which character. Turning characters into bytes is <em>encoding</em>, and turning bytes back into characters is <em>decoding</em>. Think of it like Morse code: the sender and the receiver must use the same code table, or the message comes out as nonsense.</p>
+  <p>When you open a file in <strong>text mode</strong> (<code>"r"</code>, <code>"w"</code>), Python does this translation for you, using the encoding you pass with <code>encoding=</code>, so you read and write <code>str</code>. In <strong>binary mode</strong> (<code>"rb"</code>, <code>"wb"</code>) there is no translation at all and you read and write raw <code>bytes</code>. Text formats such as CSV, JSON and YAML are opened in text mode; pickle, Parquet and images are binary. Here a receipt line is written as text and read back as bytes:</p>
+  <div class="fx" data-lang="py">line = "Asha: 2 masala chai ₹40\\n"
 with open("out/receipt.txt", "w", encoding="utf-8") as f:
     n = f.write(line)
 print("characters written:", n)
@@ -211,44 +185,45 @@ bytes on disk: 26
 b'Asha: 2 masala chai \\xe2\\x82\\xb940\\n'
 b'\\xe2\\x82\\xb940' -&gt; ₹40
 str bytes</div>
-  <p>24 characters became 26 bytes: every ASCII character is one byte in UTF-8, but "₹" is three (<code>\\xe2\\x82\\xb9</code>). Same file, two views: <code>str</code> in text mode, <code>bytes</code> in binary mode. Details of UTF-8: <a class="xref" data-note="py_strings">Strings</a>.</p>
-  <div class="callout def"><span class="label">Definition</span><p><code>bytes</code> is an immutable sequence of integers 0–255; <code>str</code> is a sequence of Unicode code points. <code>s.encode(enc)</code> → bytes; <code>b.decode(enc)</code> → str. Text-mode files do this automatically with their <code>encoding</code>, and also translate newlines (<code>\\r\\n</code> ↔ <code>\\n</code>) unless <code>newline=""</code>.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Opening a binary file (pickle, Parquet, image) in text mode fails with a decode error or corrupts it on write. And <code>len(text)</code> is not the file size.</p></div>
-
-  <h2 id="pfl-enc"><span class="num">05</span>Encodings: UTF-8, Mojibake and the BOM</h2>
-  <p>An <strong>encoding</strong> is the rule mapping characters to bytes; the reader must use the same rule as the writer. <strong>UTF-8</strong> encodes every character and is the standard for files and the web; legacy encodings (<code>cp1252</code>, <code>latin-1</code>, <code>ascii</code>) cover a few hundred. Without <code>encoding=</code>, Python uses the OS default: UTF-8 on Linux and macOS, often cp1252 on Windows. The receipt above decoded four ways:</p>
-  <div class="fx" data-lang="py">import csv, locale
+  <p>The line has 24 characters, but the file holds 26 bytes. The encoding used was <strong>UTF-8</strong>, today's standard for files and the web, which can represent every character in every language. It uses one byte for each plain English letter, digit and symbol, and more bytes for other characters: "₹" took three, <code>\\xe2\\x82\\xb9</code>. Decoding those three bytes with UTF-8 gave "₹40" back. So the same file has two views: a <code>str</code> in text mode and <code>bytes</code> in binary mode, and <code>len()</code> of the text is not the size of the file. (More on how UTF-8 works in <a class="xref" data-note="py_strings">Strings</a>.)</p>
+  <p>What happens if the reader uses a different rule from the writer? Older encodings such as <code>cp1252</code> (common on Windows) and <code>ascii</code> only know a few hundred characters or fewer. Here the same UTF-8 receipt is decoded four ways:</p>
+  <div class="fx" data-lang="py">import locale
 from pathlib import Path
 
 p = Path("out/receipt.txt")                          # written as UTF-8 above
 print("default here:", locale.getpreferredencoding(False))
 print("utf-8 :", p.read_text(encoding="utf-8"), end="")
-print("cp1252:", p.read_text(encoding="cp1252"), end="")       # wrong key: mojibake
+print("cp1252:", p.read_text(encoding="cp1252"), end="")       # wrong rule: mojibake
 try:
     p.read_text(encoding="ascii")
 except UnicodeDecodeError as e:
     print("ascii : UnicodeDecodeError:", e)
-print("ascii+replace:", p.read_text(encoding="ascii", errors="replace"), end="")
+print("ascii+replace:", p.read_text(encoding="ascii", errors="replace"), end="")</div>
+  <div class="fx" data-lang="text">default here: UTF-8
+utf-8 : Asha: 2 masala chai ₹40
+cp1252: Asha: 2 masala chai â‚¹40
+ascii : UnicodeDecodeError: 'ascii' codec can't decode byte 0xe2 in position 20: ordinal not in range(128)
+ascii+replace: Asha: 2 masala chai ���40</div>
+  <p>With UTF-8, the line reads correctly. With cp1252, there is no error at all, but each of the three bytes of "₹" was decoded as a separate character, giving "â‚¹". This garbage is called <strong>mojibake</strong> (Japanese for "character transformation"), and it is dangerous precisely because nothing fails; the wrong text flows on into your reports. ASCII only knows bytes up to 127, so it raised a <code>UnicodeDecodeError</code> at byte <code>0xe2</code>. Passing <code>errors="replace"</code> hides the error by substituting "�", but the data is lost.</p>
+  <p>The first line of output explains why this bites people. Without an <code>encoding=</code> argument, Python uses the operating system's default, which is UTF-8 on Linux and macOS but often cp1252 on Windows. Code that never mentions an encoding works on your laptop and produces mojibake or crashes on a colleague's machine. The rule is simple: in text mode, always write <code>encoding="utf-8"</code>. (Python 3.15 makes UTF-8 the default everywhere; today you can opt in with <code>python -X utf8</code>.)</p>
+  <p>There is one special case you will meet with spreadsheets. When Excel saves "CSV UTF-8", it puts three invisible bytes at the very start of the file, called a <strong>BOM</strong> (byte order mark), to announce that the file is UTF-8:</p>
+  <div class="fx" data-lang="py">import csv
+from pathlib import Path
 
 Path("out/from_excel.csv").write_text("order_id,customer\\n1,Asha\\n", encoding="utf-8-sig")
+print(Path("out/from_excel.csv").read_bytes()[:12])
 with open("out/from_excel.csv", newline="", encoding="utf-8") as f:
     print(next(csv.DictReader(f)))
 with open("out/from_excel.csv", newline="", encoding="utf-8-sig") as f:
     print(next(csv.DictReader(f)))</div>
-  <div class="fx" data-lang="text">default here: utf-8
-utf-8 : Asha: 2 masala chai ₹40
-cp1252: Asha: 2 masala chai â‚¹40
-ascii : UnicodeDecodeError: 'ascii' codec can't decode byte 0xe2 in position 20: ordinal not in range(128)
-ascii+replace: Asha: 2 masala chai ���40
+  <div class="fx" data-lang="text">b'\\xef\\xbb\\xbforder_id,'
 {'\\ufefforder_id': '1', 'customer': 'Asha'}
 {'order_id': '1', 'customer': 'Asha'}</div>
-  <p>cp1252 raises no error but turns each of ₹'s three bytes into its own character, "â‚¹": <strong>mojibake</strong>, dangerous precisely because nothing fails. ASCII cannot decode byte 0xe2 and raises <code>UnicodeDecodeError</code>; <code>errors="replace"</code> hides the error but loses data ("�").</p>
-  <p>The last two lines are the Excel trap. "CSV UTF-8" from Excel starts with a 3-byte <strong>BOM</strong> (byte order mark). Read as plain <code>"utf-8"</code>, it becomes <code>\\ufeff</code> glued to the first column name, so <code>row["order_id"]</code> raises <code>KeyError</code>. <code>"utf-8-sig"</code> strips the BOM if present.</p>
-  <div class="callout def"><span class="label">Definition</span><p>UTF-8 uses 1 byte for ASCII and 2–4 bytes for other characters. <code>errors="strict"</code> (default) raises on invalid bytes; <code>"replace"</code> substitutes "�"; <code>"ignore"</code> drops them. <code>"utf-8-sig"</code> also strips a leading BOM. Python 3.15 makes UTF-8 the default everywhere (UTF-8 mode, <code>python -X utf8</code> today).</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Code without <code>encoding=</code> works on your laptop and breaks on a Windows colleague's machine. Always write <code>encoding="utf-8"</code> in text mode (<code>"utf-8-sig"</code> for Excel CSVs).</p></div>
+  <p>The raw bytes begin with <code>\\xef\\xbb\\xbf</code>, the BOM. Read with plain <code>"utf-8"</code>, the BOM becomes an invisible character <code>\\ufeff</code> glued to the first column name, so the key is <code>'\\ufefforder_id'</code> and <code>row["order_id"]</code> would raise a <code>KeyError</code> even though the header clearly says "order_id". The encoding <code>"utf-8-sig"</code> strips a BOM if there is one, and the key comes out clean. Use it for any CSV that may have come from Excel.</p>
 
-  <h2 id="pfl-lazy"><span class="num">06</span>Reading Large Files Line by Line</h2>
-  <p><code>f.read()</code> builds one string the size of the whole file, which fails once files exceed available memory. A text file object is an <strong>iterator</strong> over its lines: each <code>next(f)</code> reads just enough to return one line, so <code>for line in f</code> keeps only one line plus a small buffer in memory (<a class="xref" data-note="py_iterators">Iterators &amp; Generators</a> covers the protocol).</p>
+  <h2 id="pfl-lazy"><span class="num">04</span>Reading Large Files Line by Line</h2>
+  <p>The simplest way to read a file is <code>f.read()</code>, which returns the whole file as one string. That is fine for our 351-byte sheet, but a year of logs or a full data export can be many gigabytes, bigger than the computer's memory. Reading it all at once then fails, or slows the machine to a crawl. You would not photocopy an entire encyclopedia to look something up on each page; you would turn the pages one at a time.</p>
+  <p>Python's file objects support exactly this. A text file object is an <strong>iterator</strong> over its lines: each time you ask it for the next item, it reads just enough of the file to return one more line. A <code>for</code> loop asks for the next item automatically, so <code>for line in f</code> holds only one line (plus a small buffer) in memory at a time. (<a class="xref" data-note="py_iterators">Iterators &amp; Generators</a> explains the iterator protocol in detail.)</p>
   <div class="fx" data-lang="py">from pathlib import Path
 
 src = Path("data/orders_2026-10-19.csv")
@@ -267,8 +242,8 @@ with open(src, encoding="utf-8") as f:
 9 8,09:10,Farid,cold coffee,1,,
 10 9,09:20,Gita,masala chai,-1,20,refund?
 lines after the loop: []</div>
-  <p>The file is its own iterator, remembers its position (the loop continued after the header), and is single-pass: after the loop, <code>list(f)</code> is empty. To read again, reopen or <code>f.seek(0)</code>. Each line keeps its trailing <code>"\\n"</code>.</p>
-  <h3>Memory: read() vs iteration, measured</h3>
+  <p>The first line confirms that the file object is its own iterator. <code>next(f)</code> read exactly one line, the header, including its trailing <code>"\\n"</code>; every line keeps its newline, which is why the loop strips it before printing. The <code>for</code> loop then continued from line 2, because the file object remembers its position. And after the loop, <code>list(f)</code> was empty: a file iterator goes through the file once, and when it reaches the end it is used up. To read again, open the file again or call <code>f.seek(0)</code> to go back to the start.</p>
+  <p>How much difference does this make? The program below writes a million order lines, about 36 MB, then measures the peak memory used by <code>read()</code> and by a loop, using the standard <code>tracemalloc</code> module, which tracks memory allocated by Python:</p>
   <div class="fx" data-lang="py">import tracemalloc
 from pathlib import Path
 
@@ -297,19 +272,19 @@ big.unlink()</div>
   <div class="fx" data-lang="text">35.9 MB on disk
 read(): 1000001 lines, peak 71.8 MB
 loop  : 1000001 lines, peak 0.022 MB</div>
-  <p><code>read()</code> peaked at about twice the file size (decoding builds the whole string); the loop peaked at 0.022 MB and would stay there for a 50 GB file.</p>
+  <p><code>read()</code> peaked at about 72 MB, twice the file size, because the bytes and the decoded string both existed for a moment. The loop peaked at about 0.02 MB, and it would stay at that level for a 50 GB file, because it never holds more than one line. Both counted the same 1,000,001 lines.</p>
   <table class="tbl">
-    <tr><th>call</th><th>returns</th><th>memory</th></tr>
-    <tr><td><code>f.read()</code></td><td>whole file as one str</td><td>O(file)</td></tr>
-    <tr><td><code>f.read(n)</code></td><td>next n characters (bytes in "b" mode)</td><td>O(n)</td></tr>
-    <tr><td><code>f.readline()</code></td><td>next line, <code>""</code> at end of file</td><td>O(line)</td></tr>
-    <tr><td><code>f.readlines()</code> / <code>list(f)</code></td><td>list of all lines</td><td>O(file)</td></tr>
-    <tr><td><code>for line in f</code></td><td>one line per iteration</td><td>O(line)</td></tr>
+    <tr><th>call</th><th>returns</th><th>memory used</th></tr>
+    <tr><td><code>f.read()</code></td><td>the whole file as one string</td><td>grows with the file</td></tr>
+    <tr><td><code>f.read(n)</code></td><td>the next n characters (bytes in binary mode)</td><td>n</td></tr>
+    <tr><td><code>f.readline()</code></td><td>the next line, <code>""</code> at the end of the file</td><td>one line</td></tr>
+    <tr><td><code>f.readlines()</code> / <code>list(f)</code></td><td>a list of all lines</td><td>grows with the file</td></tr>
+    <tr><td><code>for line in f</code></td><td>one line per loop</td><td>one line</td></tr>
   </table>
-  <div class="callout trap"><span class="label">Trap</span><p><code>f.read()</code>, <code>f.readlines()</code> and <code>list(f)</code> all load everything. Use them only on files you know are small; for logs and data dumps, iterate. Binary files without lines: read fixed-size chunks with <code>f.read(1 &lt;&lt; 20)</code> in a loop.</p></div>
+  <p>So use <code>read()</code>, <code>readlines()</code> and <code>list(f)</code> only on files you know are small, and iterate over everything else. Binary files have no lines; to process a large one, read fixed-size chunks with <code>f.read(1_048_576)</code> in a loop until it returns empty bytes.</p>
 
-  <h2 id="pfl-with"><span class="num">07</span>with: Closing Files Reliably</h2>
-  <p>An exception raised mid-loop skips any <code>f.close()</code> at the bottom of the code, leaking the OS file handle and possibly losing buffered writes. <code>with open(…) as f:</code> is the standard shorthand for "open, run the block, close in a <code>finally</code>". The file object is a <strong>context manager</strong> (<a class="xref" data-note="py_context">Context Managers</a> shows how to write your own).</p>
+  <h2 id="pfl-with"><span class="num">05</span>Closing Files with with</h2>
+  <p>Every file you open uses an operating-system resource called a <strong>file handle</strong>, and there is a limit to how many a program may hold. Closing a file returns the handle and, as section 02 showed, writes out the buffer. The obvious approach is to call <code>f.close()</code> at the end, but an exception in the middle skips that line, as the first half of this program shows:</p>
   <div class="fx" data-lang="py">src = "data/orders_2026-10-19.csv"
 
 f = open(src, encoding="utf-8")                     # no with
@@ -334,12 +309,11 @@ f.close()</div>
 without with, closed? False
 bad row: 7,09:03,Esha,samosa,two,15,
 with with,    closed? True</div>
-  <p>Without <code>with</code>, the file stayed open after the error; repeat that in a long-running service and it eventually fails with "Too many open files". With <code>with</code>, it was closed even though the block ended in an exception. Several files can share one statement: <code>with open(a) as src, open(b, "w") as dst:</code>.</p>
-  <div class="callout def"><span class="label">Definition</span><p><code>with EXPR as name: BLOCK</code> calls <code>EXPR.__enter__()</code>, binds the result to <code>name</code>, runs <code>BLOCK</code>, then always calls <code>__exit__</code>, which for files closes them. Equivalent to <code>f = open(…); try: BLOCK finally: f.close()</code>.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Returning a lazy generator over <code>f</code> from inside a <code>with</code> block: the file is closed when the function returns, and the caller's loop fails with "I/O operation on closed file". Yield from inside the <code>with</code> instead (see <a class="xref" data-note="py_iterators">Iterators</a>).</p></div>
+  <p>In the first half, the loop raised a <code>ValueError</code> at Esha's row, the error was handled, and the file was still open afterwards (<code>closed</code> is <code>False</code>): the handle leaked. In a long-running service this happens on every bad file, until the program fails with "Too many open files". The second half uses a <strong>with</strong> statement instead. <code>with open(...) as g:</code> opens the file, runs the indented block, and closes the file when the block is left for <em>any</em> reason, including an exception. That is why <code>g.closed</code> is <code>True</code> even though the block ended with an error.</p>
+  <p>This works because a file object is a <strong>context manager</strong>: an object that knows how to set something up at the start of a <code>with</code> block and tidy it up at the end. It is like a hotel room door that locks itself when it closes behind you; you do not have to remember. Writing <code>with open(path) as f:</code> is equivalent to opening the file and closing it in a <code>finally</code> block, just shorter and impossible to forget. Several files can share one statement: <code>with open(src) as fin, open(dst, "w") as fout:</code>. (<a class="xref" data-note="py_context">Context Managers</a> shows how to write your own.) From here on, every example opens files with <code>with</code>.</p>
 
-  <h2 id="pfl-csv"><span class="num">08</span>CSV and the csv Module</h2>
-  <p><strong>CSV</strong> stores a table as text: a header line, then one line per row, values separated by commas. A value containing a comma, quote or newline is wrapped in double quotes, and inner quotes are doubled (<code>""</code>). The <code>csv</code> module implements these rules; <code>str.split</code> does not.</p>
+  <h2 id="pfl-csv"><span class="num">06</span>CSV</h2>
+  <p>With the mechanics in place, we can turn to formats. <strong>CSV</strong> (comma-separated values) stores a table as plain text: a header line with the column names, then one line per row, with the values separated by commas. It is what spreadsheets export, what many systems produce, and what our order sheet is. The format has one complication. If a value itself contains a comma, a double quote or a line break, the value is wrapped in double quotes, and any double quote inside it is written twice (<code>""</code>). Ben's note, <code>"extra chutney, no onion"</code>, is quoted for exactly this reason. That rule is why splitting each line at commas, the obvious approach, is wrong:</p>
   <div class="fx" data-lang="py">import csv
 from pathlib import Path
 
@@ -362,8 +336,8 @@ print(repr(rows[0]["qty"]), repr(rows[7]["price"]))  # everything is text; empty
 9 rows
 {'order_id': '2', 'time': '08:12', 'customer': 'Ben', 'item': 'samosa', 'qty': '3', 'price': '15', 'note': 'extra chutney, no onion'}
 '2' ''</div>
-  <p>The naive split gave 8 pieces for 7 columns, cutting the note in two and shifting every later column. <code>csv.reader</code> returned 7 fields; <code>csv.DictReader</code> keys each row by the header. Every value is a <code>str</code> and an empty cell is <code>''</code>: CSV has no types, so converting and validating is your job (see <a class="xref" data-note="py_exceptions">Exceptions</a> for a per-row validator).</p>
-  <h3>Writing CSV</h3>
+  <p>Splitting Ben's line at commas gave 8 pieces for 7 columns: the note was cut in two, the quote marks stayed attached, and if this were a longer table every later column would be shifted by one. The standard <strong>csv</strong> module implements the quoting rules, and <code>csv.reader</code> returned the correct 7 fields. <code>csv.DictReader</code> goes one step further: it uses the header line as keys, so each row becomes a dictionary and you can write <code>row["qty"]</code> instead of remembering that quantity is column 4. It read 9 rows, and Ben's note came through intact.</p>
+  <p>The last line shows CSV's biggest limitation: it has no types. Every value is a string, so the quantity is <code>'2'</code>, not 2, and an empty cell, like Farid's missing price, is the empty string <code>''</code>. Converting and validating values is always your job. Writing works the same way in reverse, with <code>csv.DictWriter</code>, and it takes care of quoting automatically:</p>
   <div class="fx" data-lang="py">import csv
 from pathlib import Path
 
@@ -387,9 +361,8 @@ print(back[2])</div>
 10,"qty -1, note says ""refund?"""
 
 {'line': '10', 'reason': 'qty -1, note says "refund?"'}</div>
-  <p>The writer quoted only values that needed it and doubled inner quotes; reading back restored the exact text (but <code>line</code> came back as the string <code>'10'</code>). Open CSV files with <code>newline=""</code>: the csv module handles line endings itself, and without it Windows gets a blank line after every row.</p>
-  <h3>A complete CSV reader with per-row validation</h3>
-  <p>Combining a path, <code>with</code>, UTF-8, <code>newline=""</code>, the lazy <code>DictReader</code>, file line numbers (<code>start=2</code>, since line 1 is the header) and the <code>BadRowError</code> classes from <a class="xref" data-note="py_exceptions">Exceptions</a>; if more than half the rows are bad, the file itself is suspect:</p>
+  <p>The first reason needed no quotes and got none. The second contained a comma, so it was quoted. The third contained a comma and double quotes, so it was quoted and each inner quote was doubled. Reading the file back restored the exact original text, although the line number came back as the string <code>'10'</code>. Notice the <code>newline=""</code> argument in every <code>open</code> for CSV: the csv module handles line endings itself, and without this argument Windows ends up with a blank line after every row, and line breaks inside quoted values can be mangled.</p>
+  <p>Putting the pieces together gives a complete, robust reader. This is the <code>read_orders</code> function of the <code>chaistall</code> package (the package structure is explained in <a class="xref" data-note="py_modules">Modules, Packages &amp; Environments</a>). It uses a path, <code>with</code>, UTF-8, <code>newline=""</code>, the lazy <code>DictReader</code>, file line numbers that start at 2 because line 1 is the header, and the <code>BadRowError</code> exceptions from <a class="xref" data-note="py_exceptions">Exceptions &amp; Error Handling</a> to skip bad rows while remembering why. If more than half the rows are bad, the file itself is probably wrong, so it gives up:</p>
   <div class="fx" data-lang="py">"""chaistall/storage.py: read the day's CSV; skip bad rows but remember why."""
 import csv
 import logging
@@ -403,7 +376,7 @@ log = logging.getLogger(__name__)
 def read_orders(path, max_bad_share=0.5):
     good, rejected = [], []
     with open(path, newline="", encoding="utf-8") as f:
-        for line, row in enumerate(csv.DictReader(f), start=2):
+        for line, row in enumerate(csv.DictReader(f), start=2):   # line 1 is the header
             try:
                 good.append(parse_row(row, line))
             except BadRowError as e:
@@ -425,11 +398,11 @@ WARNING chaistall.storage: skipped line 9, price: is empty
 WARNING chaistall.storage: skipped line 10, qty: -1 must be positive
 6 good, 3 rejected, revenue 230
 {'order_id': '2', 'time': '08:12', 'customer': 'Ben', 'item': 'samosa', 'qty': 3, 'price': 15, 'note': 'extra chutney, no onion', 'amount': 45}</div>
-  <div class="callout def"><span class="label">Definition</span><p><code>csv.reader(f)</code> yields each row as a list of strings; <code>csv.DictReader(f)</code> yields dicts keyed by the header; <code>csv.writer</code> / <code>csv.DictWriter</code> write rows, quoting as needed. Options: <code>delimiter=";"</code> or <code>"\\t"</code>, <code>quotechar</code>, <code>quoting=csv.QUOTE_ALL</code>. CSV has no types, no nesting and no standard for missing values.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p><code>line.split(",")</code> and <code>",".join(values)</code> are not CSV. And <code>pd.read_csv</code> <em>guesses</em> types: one "two" in a column keeps the whole column as text (section 12 shows it).</p></div>
+  <p>The three bad rows were logged as warnings with their line numbers and reasons, the six good ones were converted (Ben's row now has the integers 3 and 15 and a computed amount of 45), and the revenue is the correct 230. Every later section starts from these <code>good</code> and <code>rejected</code> lists.</p>
 
-  <h2 id="pfl-json"><span class="num">09</span>JSON</h2>
-  <p><strong>JSON</strong> holds nested data (objects <code>{"key": value}</code>, arrays, strings, numbers, <code>true/false</code>, <code>null</code>), is readable by every language and by humans, and is the format of web APIs. The <code>json</code> module converts both ways. Memory aid: functions with an <strong>s</strong> work on <strong>s</strong>trings (<code>dumps</code>, <code>loads</code>); without it, on files (<code>dump</code>, <code>load</code>).</p>
+  <h2 id="pfl-json"><span class="num">07</span>JSON</h2>
+  <p>CSV is good for flat tables, but our day's summary is not a table: it has a date, a few totals, a breakdown by item and by customer, and a list of rejected rows. It is <em>nested</em> data, dictionaries inside dictionaries. <strong>JSON</strong> (JavaScript Object Notation) is the standard text format for such data. It has objects (<code>{"key": value}</code>, like Python dicts), arrays (like lists), strings, numbers, <code>true</code>/<code>false</code> and <code>null</code>. It is easy for people to read, every programming language can parse it, and almost every web API speaks it.</p>
+  <p>Python's <strong>json</strong> module converts between Python objects and JSON text. A memory aid for its four main functions: the ones ending in <strong>s</strong> work with <strong>s</strong>trings (<code>dumps</code>, <code>loads</code>), and the ones without work with files (<code>dump</code>, <code>load</code>). The <code>summarise</code> function in <code>chaistall/report.py</code> builds the summary dictionary:</p>
   <div class="fx" data-lang="py">"""chaistall/report.py: summarise good orders; write the JSON summary and the Parquet archive."""
 import json
 from collections import Counter
@@ -478,8 +451,21 @@ print(back == summary)</div>
 2026-10-19 str 230 {'Asha': 65, 'Ben': 85, 'Chen': 20, 'Dia': 60}
 {"masala chai": 5, "samosa": 3, "ginger chai": 1, "bun maska": 2}
 False</div>
-  <p>JSON has no date type, so <code>dumps</code> refused it; <code>default=str</code> stores <code>str(obj)</code> for unknown types. The date comes back as a <code>str</code>, so <code>back == summary</code> is <code>False</code>: JSON is a translation, not a copy.</p>
-  <h3>What JSON changes or cannot store</h3>
+  <p>The first attempt failed: JSON has no date type, so <code>dumps</code> raised a <code>TypeError</code> for the <code>date</code> object. The <code>default=str</code> argument fixes that by telling <code>json</code> "for any object you do not understand, store <code>str(obj)</code> instead". The file was then written and read back: revenue and the per-customer totals arrived intact, and <code>dumps</code> produced a JSON string. But look at the date: it came back as the <em>string</em> <code>'2026-10-19'</code>, not a <code>date</code>. That is why <code>back == summary</code> is <code>False</code>. JSON is a translation into a smaller vocabulary, like translating a poem into a language with fewer words: the meaning survives, but some details have to be rewritten. With <code>indent=2</code> the file is pleasant to read:</p>
+  <div class="fx" data-lang="text">$ head -12 out/summary_2026-10-19.json
+{
+  "date": "2026-10-19",
+  "orders": 6,
+  "revenue": 230,
+  "by_item": {
+    "masala chai": 5,
+    "samosa": 3,
+    "ginger chai": 1,
+    "bun maska": 2
+  },
+  "by_customer": {
+    "Asha": 65,</div>
+  <p>Which details change? The program below sends one value of each awkward type through a round trip:</p>
   <div class="fx" data-lang="py">import json
 from datetime import date
 from decimal import Decimal
@@ -515,16 +501,16 @@ date     -&gt; TypeError: Object of type date is not JSON serializable
 Decimal  -&gt; TypeError: Object of type Decimal is not JSON serializable
 "₹40"
 allow_nan=False -&gt; Out of range float values are not JSON compliant: nan</div>
-  <table class="tbl"><caption>Python → JSON → Python</caption>
-    <tr><th>Python value</th><th>JSON text</th><th>comes back as</th><th>fix</th></tr>
+  <table class="tbl">
+    <tr><th>Python value</th><th>written as</th><th>comes back as</th><th>what to do</th></tr>
     <tr><td>tuple <code>("Asha", 2)</code></td><td>array</td><td><strong>list</strong></td><td>convert after loading</td></tr>
-    <tr><td>int key <code>{8: …}</code></td><td>string key <code>"8"</code></td><td><strong>str</strong> key</td><td>convert keys after loading</td></tr>
-    <tr><td>None / True</td><td>null / true</td><td>None / True</td><td>—</td></tr>
-    <tr><td>"₹40"</td><td><code>"\\u20b940"</code></td><td>"₹40"</td><td><code>ensure_ascii=False</code> to keep ₹ readable</td></tr>
-    <tr><td>float("nan")</td><td><code>NaN</code> (not valid JSON!)</td><td>nan in Python only</td><td><code>allow_nan=False</code>; write null</td></tr>
-    <tr><td>set, date, Decimal</td><td>— TypeError</td><td>—</td><td><code>default=</code> function, or convert first</td></tr>
+    <tr><td>int key <code>{8: ...}</code></td><td>string key <code>"8"</code></td><td><strong>str</strong> key</td><td>convert keys after loading</td></tr>
+    <tr><td>None / True</td><td>null / true</td><td>None / True</td><td>nothing</td></tr>
+    <tr><td>"₹40"</td><td><code>"\\u20b940"</code></td><td>"₹40"</td><td><code>ensure_ascii=False</code> keeps ₹ readable</td></tr>
+    <tr><td>float("nan")</td><td><code>NaN</code> (not valid JSON)</td><td>nan, in Python only</td><td><code>allow_nan=False</code>; write null instead</td></tr>
+    <tr><td>set, date, Decimal</td><td>TypeError</td><td>nothing</td><td>a <code>default=</code> function, or convert first</td></tr>
   </table>
-  <p>Python writes <code>NaN</code> and reads it back, but the JSON standard has no NaN, so a JavaScript client or strict parser rejects the whole document; <code>allow_nan=False</code> makes that an error at write time. For full control over unknown types pass a function as <code>default</code>:</p>
+  <p>The NaN row deserves a second look. Python happily writes <code>NaN</code> and reads it back, but the JSON standard has no such value, so a JavaScript client or a strict parser will reject the <em>whole</em> document. <code>allow_nan=False</code> turns that into an error at write time, where you can fix it. For full control over unknown types, pass your own function as <code>default</code>. It is called for every object <code>json</code> cannot handle and must return something it can, or raise <code>TypeError</code>:</p>
   <div class="fx" data-lang="py">import json
 from datetime import date, datetime
 
@@ -535,13 +521,25 @@ def to_json(obj):
         return sorted(obj)
     raise TypeError(f"cannot serialise {type(obj).__name__}")
 
-print(json.dumps({"day": date(2026, 10, 19), "tags": {"b", "a"}}, default=to_json))</div>
-  <div class="fx" data-lang="text">{"day": "2026-10-19", "tags": ["a", "b"]}</div>
-  <div class="callout def"><span class="label">Definition</span><p><code>json.dump(obj, f)</code> / <code>json.dumps(obj)</code> serialise dict, list, tuple, str, int, float, bool and None; <code>json.load(f)</code> / <code>json.loads(s)</code> parse. Options: <code>indent=2</code>, <code>ensure_ascii=False</code>, <code>default=func</code>, <code>allow_nan=False</code>, <code>sort_keys=True</code>. One JSON document per file; for large record streams use <strong>JSON Lines</strong> (one object per line, read lazily).</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Assuming a JSON round trip returns the same object: tuples → lists, int keys → strings, dates → strings, numpy numbers fail. Convert explicitly at the boundary.</p></div>
+text = json.dumps({"day": date(2026, 10, 19), "tags": {"b", "a"}}, default=to_json)
+print(text)
+back = json.loads(text)
+print(date.fromisoformat(back["day"]))              # turning it back is your job</div>
+  <div class="fx" data-lang="text">{"day": "2026-10-19", "tags": ["a", "b"]}
+2026-10-19</div>
+  <p>The date was written in the standard ISO format and the set as a sorted list. Turning them back into a <code>date</code> and a set after loading is up to you, as the last line shows with <code>date.fromisoformat</code>.</p>
+  <p>A JSON file normally holds one document, which has to be read entirely before it can be used. For long streams of records, such as logs or event data, the common variant is <strong>JSON Lines</strong>: one JSON object per line, which can be read lazily with the line-by-line loop from section 04:</p>
+  <div class="fx" data-lang="py">import json
 
-  <h2 id="pfl-pickle"><span class="num">10</span>pickle</h2>
-  <p><strong>pickle</strong> serialises (almost) any Python object to bytes and back exactly: dates, tuples, sets, your own classes, trained models. It is the right tool when the only reader is your own Python code, and a dangerous one otherwise. Files are binary (<code>"wb"</code>, <code>"rb"</code>).</p>
+with open("out/orders.jsonl", "w", encoding="utf-8") as f:
+    for o in [{"customer": "Asha", "qty": 2}, {"customer": "Ben", "qty": 3}]:
+        f.write(json.dumps(o) + "\\n")              # one JSON object per line
+with open("out/orders.jsonl", encoding="utf-8") as f:
+    print(sum(json.loads(line)["qty"] for line in f))   # read lazily, line by line</div>
+  <div class="fx" data-lang="text">5</div>
+
+  <h2 id="pfl-pickle"><span class="num">08</span>pickle</h2>
+  <p>JSON could not store our date, set or tuple without help. Sometimes you want to save a Python object <em>exactly</em> as it is and load it back later in Python, for example to cache an expensive result between runs. <strong>pickle</strong> is the standard-library module for this. "Pickling" an object turns it into bytes that record how to rebuild it, and "unpickling" rebuilds it. It handles almost anything: dates, tuples, sets, your own classes, even trained machine-learning models. Pickle files are binary, so they are opened with <code>"wb"</code> and <code>"rb"</code>.</p>
   <div class="fx" data-lang="py">import logging, pickle
 from datetime import date
 from chaistall.storage import read_orders
@@ -556,11 +554,13 @@ with open("out/day_cache.pkl", "rb") as f:
     back = pickle.load(f)
 print(back == cache)                                # exact round trip
 print(type(back["day"]).__name__, type(back["lines_rejected"]).__name__)
-print(open("out/day_cache.pkl", "rb").read()[:20])  # not text</div>
+with open("out/day_cache.pkl", "rb") as f:
+    print(f.read()[:20])                            # not text</div>
   <div class="fx" data-lang="text">True
 date tuple
 b'\\x80\\x04\\x95\\x08\\x02\\x00\\x00\\x00\\x00\\x00\\x00}\\x94(\\x8c\\x03day\\x94'</div>
-  <h3>The class must exist when loading</h3>
+  <p>The round trip was exact: <code>back == cache</code> is <code>True</code>, and the date and the tuple came back as a <code>date</code> and a <code>tuple</code>, which JSON could not manage. The first bytes of the file show that it is not text at all. This is the right tool when the only program that will ever read the file is your own Python code. It is a dangerous tool in every other case, for two reasons.</p>
+  <p>The first reason is fragility. A pickle does not contain your class's code, only its <em>name</em> and where to find it. Here one program saves an <code>Order</code> object and a second program, which does not define <code>Order</code>, tries to load it:</p>
   <div class="fx" data-lang="py">import pickle
 from dataclasses import dataclass
 
@@ -581,8 +581,8 @@ with open("out/order.pkl", "rb") as f:
     print(pickle.load(f))                           # this program has no Order class
           ~~~~~~~~~~~^^^
 AttributeError: Can't get attribute 'Order' on &lt;module '__main__' from 'pickle_load_elsewhere.py'&gt;</div>
-  <p>A pickle stores the class's <em>name</em> ("Order in module __main__"), not its code. Renaming or moving a class, or upgrading a library whose internals changed, breaks old pickles.</p>
-  <h3>Loading a pickle can run any code</h3>
+  <p>Loading failed because the pickle said "rebuild an <code>Order</code> from the module <code>__main__</code>", and this program's <code>__main__</code> has no <code>Order</code>. The same failure happens when you rename or move a class, or when a library you pickled objects from changes its internals in a new version. Pickles are therefore unsuitable for long-term storage.</p>
+  <p>The second reason is far more serious. Because a pickle contains instructions for rebuilding an object, it can contain the instruction "to rebuild me, call this function with these arguments", and that function can be <em>anything</em>. A class controls this with a special method called <code>__reduce__</code>. Here is what an attacker could send you:</p>
   <div class="fx" data-lang="py">import pickle
 
 class Evil:                                         # what an attacker would send
@@ -595,12 +595,10 @@ print(len(payload), "bytes, looks harmless")
 pickle.loads(payload)                               # just LOADING runs it</div>
   <div class="fx" data-lang="text">80 bytes, looks harmless
 PWNED: this shell command ran on load</div>
-  <p>A pickle can say "to rebuild me, call this function with these arguments", and <code>__reduce__</code> lets the object pick <em>any</em> function, here <code>os.system</code>. Loading 80 bytes ran a shell command.</p>
-  <div class="callout def"><span class="label">Definition</span><p><code>pickle.dump(obj, f)</code> / <code>pickle.load(f)</code> (binary files) and <code>dumps</code> / <code>loads</code> (bytes) record how to rebuild an object; loading imports the named classes and calls the recorded functions. Lambdas, open files, sockets and locks cannot be pickled. <code>joblib</code> (scikit-learn models) and <code>torch.save</code> use pickle inside.</p></div>
-  <div class="callout trap"><span class="label">Trap: security</span><p>Never unpickle data from an untrusted source (downloads, uploads, emails), and do not use pickle for exchange or long-term storage. Use JSON or Parquet for data and safe formats (safetensors, ONNX) for model weights.</p></div>
+  <p>Simply <em>loading</em> 80 harmless-looking bytes ran a shell command. A real attacker would delete files or steal credentials instead of printing a message. Unpickling untrusted data is like plugging in a USB stick you found in the car park: the danger is not in what you do with it afterwards, it is in plugging it in at all. So never unpickle data from anyone you do not fully trust: downloads, uploads, emails, or "model files" from the internet. This applies to <code>joblib.load</code> and full-pickle <code>torch.load</code> too, since both use pickle inside. Use JSON or Parquet for data, and safe formats such as safetensors or ONNX for model weights. A few things cannot be pickled at all, such as lambdas, open files, sockets and locks.</p>
 
-  <h2 id="pfl-yaml"><span class="num">11</span>YAML for Configuration</h2>
-  <p>Settings that humans edit (thresholds, menus, hyper-parameters) should not live in code. <strong>YAML</strong> is a text format designed for that: nesting by indentation, <code>key: value</code>, lists with <code>-</code> or <code>[…]</code>, and <code># comments</code> (JSON has none). It is the usual format for CI pipelines, Docker Compose, Kubernetes and ML training configs. It needs <code>pip install pyyaml</code>, imported as <code>yaml</code>. A settings file:</p>
+  <h2 id="pfl-yaml"><span class="num">09</span>YAML for Configuration</h2>
+  <p>Some files are written by people rather than programs: the stall's menu prices, the threshold for rejecting a file, the days it is open. These settings should not live in the code, because changing a price should not require a programmer. JSON could hold them, but it is fussy to edit by hand (every string needs quotes, no trailing commas) and it does not allow comments. <strong>YAML</strong> is a text format designed for human-edited configuration: nesting is shown by indentation, values are written <code>key: value</code>, lists use <code>-</code> or <code>[...]</code>, and <code>#</code> starts a comment. It is the usual format for CI pipelines, Docker Compose, Kubernetes and machine-learning training configs. Python reads it with the third-party PyYAML package (<code>pip install pyyaml</code>, imported as <code>yaml</code>). Here is the stall's settings file:</p>
   <div class="fx" data-lang="text"># Chai Corner importer settings
 outlet: Chai Corner
 outlet_code: NO            # "North Office"
@@ -632,12 +630,11 @@ open_days:
 - mon
 - sat
 safe_load refused: ConstructorError</div>
-  <p>The menu is a dict, the threshold a float, the days a list. Two surprises: <code>NO</code> became <code>False</code> (PyYAML follows YAML 1.1, where yes/no/on/off are booleans: the "Norway problem"), and <code>1.10</code> became the float <code>1.1</code>. Quoting fixes both. YAML tags can construct arbitrary Python objects, the same danger as pickle; <code>safe_load</code> refuses them.</p>
-  <div class="callout def"><span class="label">Definition</span><p><code>yaml.safe_load(text_or_file)</code> parses YAML into dict, list, str, int, float, bool, None and dates; <code>yaml.safe_dump(obj)</code> writes it. "Safe" means only plain types are built. <code>yaml.load</code> with an unsafe loader can build any object. Alternatives for config: TOML (<code>tomllib</code> in the standard library, read-only) and environment variables.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Unquoted <code>NO</code>, <code>yes</code>, <code>off</code> become booleans and <code>1.10</code> becomes 1.1; quote codes and versions. Always <code>safe_load</code>. YAML is for small human-edited files, not data.</p></div>
+  <p>Most of it worked as hoped: the menu became a dictionary, the threshold a float and the open days a list. But two values are surprising. The outlet code <code>NO</code>, meant as "North Office", became <code>False</code>, and the schema version <code>1.10</code> became the float <code>1.1</code>. PyYAML follows version 1.1 of the YAML rules, in which <code>yes</code>, <code>no</code>, <code>on</code> and <code>off</code> are booleans; this is known as "the Norway problem", because the country code for Norway is NO. And anything that looks like a number is read as one, so a version string loses its trailing zero. The fix is simply to put quotes around such values, as the third line shows.</p>
+  <p>The last line is about safety. YAML has a feature called tags that can ask the loader to construct arbitrary Python objects, including calling functions, which is the same danger as pickle. <code>yaml.safe_load</code> only builds plain types (dicts, lists, strings, numbers, booleans, dates and <code>None</code>) and refused the malicious tag. Always use <code>safe_load</code> and <code>safe_dump</code>. YAML is meant for small, hand-edited files, not for data. A simpler alternative for configuration is TOML, which Python can read with the built-in <code>tomllib</code> module and which is used by <code>pyproject.toml</code>.</p>
 
-  <h2 id="pfl-parquet"><span class="num">12</span>Parquet: Columnar Files</h2>
-  <p>For large tables CSV is slow to parse, loses types and forces reading every byte even when you need one column. <strong>Parquet</strong> is a binary format that stores a table <em>column by column</em>; each column records its type (int64, string, date …) and is compressed, and per-chunk min/max statistics let readers skip rows. A reader fetches only the columns it needs. In Python it is used through pandas (or polars, Spark, DuckDB) with the <strong>pyarrow</strong> engine.</p>
+  <h2 id="pfl-parquet"><span class="num">10</span>Parquet</h2>
+  <p>Now imagine the chai stall becomes a chain of thirty outlets, and a year of orders is a million rows. CSV starts to hurt in three ways. Every number has to be parsed from text on every read, which is slow. Types are lost, so one bad cell can turn a whole column into text. And to answer a question about one column, such as total quantity sold, a reader must still read every byte of every row. <strong>Parquet</strong> is a binary file format built for large tables that fixes all three. Its key idea is to store the table <em>column by column</em> rather than row by row; this is called a <strong>columnar</strong> format.</p>
   <figure class="viz"><svg viewBox="0 0 560 160" width="560">
 <text x="10" y="16" class="tm" font-size="11">CSV: row by row, all text</text>
 <rect x="10" y="26" width="230" height="22" class="fs" stroke="currentColor"/><text x="16" y="42" font-size="11">1,Asha,masala chai,2,20</text>
@@ -650,23 +647,16 @@ safe_load refused: ConstructorError</div>
 <rect x="460" y="26" width="90" height="70" class="fg sg" stroke-width="3"/><text x="466" y="44" font-size="11">qty</text><text x="466" y="62" class="tm" font-size="10">int64</text><text x="466" y="80" class="tm" font-size="10">2 3 1 …</text>
 <text x="290" y="120" class="tg" font-size="11">read just this column</text>
 <text x="290" y="140" class="tm" font-size="10.5">+ min/max stats per chunk → skip rows</text>
-</svg><figcaption>Row-oriented text (CSV) vs column-oriented binary (Parquet).</figcaption></figure>
-  <h3>Parquet needs an engine</h3>
-  <p>With pandas installed but no pyarrow, writing Parquet fails:</p>
-  <div class="fx" data-lang="py">import pandas as pd
-pd.DataFrame({"qty": [2, 3]}).to_parquet("out/x.parquet")</div>
-  <div class="fx" data-lang="text">Traceback (most recent call last):
-  File "no_engine.py", line 2, in &lt;module&gt;
+</svg><figcaption>Row-oriented text (CSV) versus column-oriented binary (Parquet).</figcaption></figure>
+  <p>On the left, CSV keeps each order together on one line, so the quantities are scattered across the whole file and can only be found by reading everything. On the right, Parquet keeps all customers together, all items together and all quantities together, each column with a declared type such as <code>int64</code>. A question about quantity reads only the highlighted <code>qty</code> block. Because similar values sit side by side, each column also compresses very well (an item column with four distinct names can be stored as a small dictionary plus codes). Parquet also stores the minimum and maximum of each column for each chunk of rows, so a reader looking for, say, outlet 7 can skip chunks that cannot contain it. A library catalogue works the same way: if you want every book by one author, you go to the author index, not along every shelf.</p>
+  <p>In Python, Parquet is usually used through pandas (or polars, DuckDB or Spark), and pandas needs an <strong>engine</strong> library, normally <strong>pyarrow</strong>, to read and write it. Without one, it fails immediately:</p>
+  <div class="fx" data-lang="py">import pandas as pd                                  # installed, but pyarrow is not
+try:
     pd.DataFrame({"qty": [2, 3]}).to_parquet("out/x.parquet")
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
-  ... (frames inside pandas trimmed) ...
-ImportError: Unable to find a usable engine; tried using: 'pyarrow', 'fastparquet'.
-A suitable version of pyarrow or fastparquet is required for parquet support.
-Trying to import the above resulted in these errors:
- - \`Import pyarrow\` failed. pyarrow is required for parquet support. Use pip or conda to install the pyarrow package.
- - \`Import fastparquet\` failed. fastparquet is required for parquet support. Use pip or conda to install the fastparquet package.</div>
-  <p>The examples below were run in a virtual environment with <code>pip install pandas pyarrow</code>; see <a class="xref" data-note="py_modules">Modules, Packages &amp; Environments</a> for venvs and pinning.</p>
-  <h3>Writing, reading, selecting columns and filtering</h3>
+except ImportError as e:
+    print("ImportError:", str(e).splitlines()[0])</div>
+  <div class="fx" data-lang="text">ImportError: Unable to find a usable engine; tried using: 'pyarrow', 'fastparquet'.</div>
+  <p>The remaining examples were run in a virtual environment with <code>pip install pandas pyarrow</code> (see <a class="xref" data-note="py_modules">Modules, Packages &amp; Environments</a> for how environments work). Here the six good orders are saved as Parquet, read back, read partially, and compared with reading the CSV directly in pandas:</p>
   <div class="fx" data-lang="py">import logging
 import pandas as pd
 from chaistall.storage import read_orders
@@ -698,8 +688,7 @@ print(csv_again["qty"].dtype, "&lt;- the CSV column has 'two' in it, so pandas k
 1     Chen      20
 2      Ben      40
 str &lt;- the CSV column has 'two' in it, so pandas keeps text</div>
-  <p>Types survive the round trip (<code>int64</code>, no re-parsing). <code>columns=</code> reads only two columns and <code>filters=</code> pushes the row filter into the reader. The last line shows the CSV problem in pandas: one "two" keeps the whole qty column as text.</p>
-  <h3>Size and speed at a million rows</h3>
+  <p>The table came back with its types: quantity, price and amount are <code>int64</code>, with no parsing needed. The partial read asked for only two columns and only the masala chai rows, and the reader applied the filter itself, giving three rows. The last line shows the CSV problem in pandas: because one cell in the CSV's quantity column says "two", pandas guessed the whole column was text. With Parquet, the type is written in the file, so there is no guessing. To see the size and speed difference, here is a year of synthetic orders, a million rows (timings are approximate and vary by machine):</p>
   <div class="fx" data-lang="py">import os, time
 import numpy as np, pandas as pd
 
@@ -722,13 +711,11 @@ print(f"read all: csv {a:.2f}s, parquet {b:.2f}s; one parquet column {c:.3f}s")
 os.remove("out/year.csv"); os.remove("out/year.parquet")</div>
   <div class="fx" data-lang="text">out/year.csv       24.8 MB
 out/year.parquet    5.7 MB
-read all: csv 0.46s, parquet 0.37s; one parquet column 0.008s</div>
-  <p>About 4× smaller. Reading everything was only somewhat faster here (timings vary by machine), but reading one column took under a hundredth of a second because the other columns were never touched: the typical analytics query.</p>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Parquet</strong> is a columnar, typed, compressed binary table format. In pandas: <code>df.to_parquet(path, index=False)</code> and <code>pd.read_parquet(path, columns=[…], filters=[(col, op, value)])</code>; needs <code>pyarrow</code> (or <code>fastparquet</code>). It is the standard file format for data lakes, Spark and ML datasets; a directory of Parquet files partitioned by a column (e.g. <code>date=2026-10-19/</code>) is a common dataset layout.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Parquet is not for tiny files or humans: you cannot open it in a text editor, and for six rows it is bigger than CSV (section 13). Files are immutable: appending a row means writing a new file (e.g. one per day).</p></div>
+read all: csv 0.06s, parquet 0.24s; one parquet column 0.008s</div>
+  <p>The Parquet file is about four times smaller than the CSV. Reading the entire table is not where Parquet shines: both full reads took a fraction of a second here, and which one wins depends on the machine and the data. Reading <em>one column</em> is where it shines: under a hundredth of a second, because the other four columns were never touched. That is the typical analytics query, which is why Parquet is the standard file format for data lakes, Spark and machine-learning datasets, often as a folder of files split by a column such as date. Its limits are the mirror image of CSV's strengths: you cannot open it in a text editor, it carries a fixed overhead that makes it larger than CSV for tiny tables, and a file cannot be appended to, so new data goes into new files, for example one per day.</p>
 
-  <h2 id="pfl-choose"><span class="num">13</span>Choosing a File Format</h2>
-  <p>The same six orders (with a <code>date</code> column) saved in every format and loaded back, run in the virtual environment:</p>
+  <h2 id="pfl-choose"><span class="num">11</span>Choosing a File Format</h2>
+  <p>Every format so far has kept something and lost something. To see them side by side, the program below saves the same six orders, each with a <code>date</code> column, in all five formats, loads them back, and reports the file size and the types that came back:</p>
   <div class="fx" data-lang="py">import csv, json, logging, os, pickle
 from datetime import date
 import pandas as pd, yaml
@@ -745,13 +732,16 @@ with open("out/c.csv", newline="", encoding="utf-8") as f:
     back_csv = list(csv.DictReader(f))
 with open("out/c.json", "w", encoding="utf-8") as f:
     json.dump(rows, f, default=str)
-back_json = json.load(open("out/c.json", encoding="utf-8"))
+with open("out/c.json", encoding="utf-8") as f:
+    back_json = json.load(f)
 with open("out/c.yaml", "w", encoding="utf-8") as f:
     yaml.safe_dump(rows, f)
-back_yaml = yaml.safe_load(open("out/c.yaml", encoding="utf-8"))
+with open("out/c.yaml", encoding="utf-8") as f:
+    back_yaml = yaml.safe_load(f)
 with open("out/c.pkl", "wb") as f:
     pickle.dump(rows, f)
-back_pkl = pickle.load(open("out/c.pkl", "rb"))
+with open("out/c.pkl", "rb") as f:
+    back_pkl = pickle.load(f)
 pd.DataFrame(rows).to_parquet("out/c.parquet", index=False)
 back_pq = pd.read_parquet("out/c.parquet").to_dict("records")
 
@@ -767,127 +757,150 @@ json        446  int          str
 yaml        374  int          date
 pickle      334  int          date
 parquet    2747  int          date</div>
-  <p>CSV returns only strings; JSON keeps numbers but not dates; YAML and pickle keep both; Parquet keeps everything but has a fixed schema/statistics overhead (2,747 bytes for six rows) that pays off only on large tables.</p>
-  <table class="tbl"><caption>Format comparison</caption>
-    <tr><th>format</th><th>human-readable?</th><th>keeps types?</th><th>fast &amp; small at scale?</th><th>safe to load from strangers?</th><th>best for</th></tr>
+  <p>CSV is the smallest, but everything came back as a string, even the quantity. JSON kept the integer quantity but turned the date into a string. YAML and pickle kept both. Parquet also kept both, but at 2,747 bytes for six rows it is the largest, because every file carries its schema and statistics; that fixed cost only pays off on large tables like the million-row example. No format wins everywhere, so the choice depends on four questions: <em>who reads it</em> (a person, a program in another language, or only your own Python), <em>what shape</em> it has (flat table, nested data or arbitrary objects), <em>how big</em> it is, and <em>whether you trust its source</em>.</p>
+  <table class="tbl">
+    <tr><th>format</th><th>human-readable?</th><th>keeps types?</th><th>fast and small at scale?</th><th>safe to load from strangers?</th><th>best for</th></tr>
     <tr><td>CSV</td><td>yes (and Excel)</td><td>no, all text</td><td>no</td><td>yes</td><td>small flat tables, exchange with people and spreadsheets</td></tr>
     <tr><td>JSON</td><td>yes</td><td>partly (no dates, sets, tuples)</td><td>no</td><td>yes</td><td>nested data, APIs, summaries</td></tr>
-    <tr><td>YAML</td><td>yes, with comments</td><td>partly (has dates; NO/1.10 traps)</td><td>no</td><td>with <code>safe_load</code> only</td><td>human-edited configuration</td></tr>
+    <tr><td>YAML</td><td>yes, with comments</td><td>partly (has dates; NO and 1.10 traps)</td><td>no</td><td>with <code>safe_load</code> only</td><td>human-edited configuration</td></tr>
     <tr><td>pickle</td><td>no</td><td>exactly, any object</td><td>fair</td><td><strong>no</strong></td><td>short-lived caches between your own Python programs</td></tr>
     <tr><td>Parquet</td><td>no</td><td>yes (typed columns)</td><td>yes (columnar, compressed)</td><td>yes</td><td>big tables, archives, analytics</td></tr>
   </table>
-  <div class="callout def"><span class="label">Definition</span><p>Choose a format by its <strong>reader</strong> (human, another language, your own Python), its <strong>shape</strong> (flat table, nested, object), its <strong>size</strong>, and its <strong>trust boundary</strong> (does it come from someone you do not control?).</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Using one format for everything: pickles for exchange (unsafe, version-fragile), CSV for a year of data (slow, untyped), JSON for configs that need comments.</p></div>
 
-  <h2 id="pfl-traps"><span class="num">14</span>Common Mistakes</h2>
-  <div class="callout trap"><span class="label">Trap: "w" on the wrong file</span><p>Empties it before you read a byte. Read with "r", write to a new name; use "x" for files that must never be overwritten.</p></div>
-  <div class="callout trap"><span class="label">Trap: no encoding</span><p>Works on Linux, mojibake or UnicodeDecodeError on Windows. Always <code>encoding="utf-8"</code> ("utf-8-sig" for Excel CSVs).</p></div>
-  <div class="callout trap"><span class="label">Trap: no with</span><p>Leaked handles on errors; buffered writes never reach disk.</p></div>
-  <div class="callout trap"><span class="label">Trap: read() on big files</span><p>Memory grows with the file; iterate over lines instead.</p></div>
-  <div class="callout trap"><span class="label">Trap: split(",") for CSV</span><p>Breaks on quoted commas and shifts every later column. Use the csv module; open with <code>newline=""</code>.</p></div>
-  <div class="callout trap"><span class="label">Trap: trusting CSV types</span><p>Everything is a string; pandas guesses, and one bad cell turns a column into text. Parse and validate explicitly, or pass <code>dtype=</code>.</p></div>
-  <div class="callout trap"><span class="label">Trap: JSON round-trip assumptions</span><p>Tuples → lists, int keys → strings, dates need <code>default=</code>, NaN is not valid JSON.</p></div>
-  <div class="callout trap"><span class="label">Trap: loading untrusted pickles</span><p>Runs arbitrary code. Pickle only for your own short-lived caches.</p></div>
-  <div class="callout trap"><span class="label">Trap: yaml.load and unquoted NO / 1.10</span><p>Use <code>safe_load</code>; quote codes and versions.</p></div>
-  <div class="callout trap"><span class="label">Trap: half-written output files</span><p>A crash mid-write leaves a truncated file that the next job reads as valid. Write to a temporary file in the same folder, then <code>os.replace(tmp, path)</code>, which is atomic.</p></div>
-  <div class="callout trap"><span class="label">Trap: relative paths</span><p>They depend on the folder you start in. Take paths as arguments or build from <code>Path(__file__).parent</code>.</p></div>
+  <h2 id="pfl-traps"><span class="num">12</span>Common Mistakes</h2>
+  <p>The most destructive file mistake takes one character. Opening a file with <code>"w"</code> when you meant to read it empties the file at once, before your code has read a single line:</p>
+  <div class="fx" data-lang="py">from pathlib import Path
+
+src = Path("out/orders_copy.csv")
+print("before:", src.stat().st_size, "bytes")
+with open(src, "w", encoding="utf-8") as f:        # meant "r": the file is emptied at once
+    pass
+print("after: ", src.stat().st_size, "bytes")</div>
+  <div class="fx" data-lang="text">before: 351 bytes
+after:  0 bytes</div>
+  <p>351 bytes became 0 the moment <code>open</code> ran; there was no <code>write</code> at all. Open inputs with <code>"r"</code> (the default), write outputs to a different file, and use <code>"x"</code> for files that must never be overwritten.</p>
+  <p>A subtler mistake combines lazy reading with <code>with</code>. A function that opens a file in a <code>with</code> block and <em>returns</em> a lazy generator over its lines looks fine, but the file is closed the moment the function returns, before anyone has read a line:</p>
+  <div class="fx" data-lang="py">def lines(path):
+    with open(path, encoding="utf-8") as f:
+        return (line.strip() for line in f)        # lazy: nothing read yet
+
+try:
+    for line in lines("data/orders_2026-10-19.csv"):
+        print(line)
+except ValueError as e:
+    print("ValueError:", e)
+
+def lines_fixed(path):
+    with open(path, encoding="utf-8") as f:
+        yield from (line.strip() for line in f)    # the file stays open while we yield
+
+print(sum(1 for _ in lines_fixed("data/orders_2026-10-19.csv")), "lines")</div>
+  <div class="fx" data-lang="text">ValueError: I/O operation on closed file.
+10 lines</div>
+  <p>The caller's loop failed with "I/O operation on closed file". The fix is to make the function itself a generator with <code>yield from</code>, so the <code>with</code> block stays open while the caller is still consuming lines; the fixed version counted all 10 lines.</p>
+  <p>A third mistake is leaving half-written files behind. If a program crashes in the middle of writing a summary, the file is left truncated, and the next job may read it as if it were complete. The safe pattern is to write to a temporary file in the same folder and then rename it over the target with <code>os.replace</code>, which on the same file system happens in a single step: readers see either the old file or the new one, never half of one.</p>
+  <div class="fx" data-lang="py">import json, os, tempfile
+from pathlib import Path
+
+def write_json_atomic(obj, path):
+    path = Path(path)
+    fd, tmp = tempfile.mkstemp(dir=path.parent, suffix=".tmp")   # same folder as the target
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        json.dump(obj, f)
+        f.flush()
+        os.fsync(f.fileno())                        # make sure the bytes reached the disk
+    os.replace(tmp, path)                           # atomic: old file or new file, never half
+
+write_json_atomic({"date": "2026-10-19", "revenue": 230}, "out/summary.json")
+print(Path("out/summary.json").read_text(encoding="utf-8"))</div>
+  <div class="fx" data-lang="text">{"date": "2026-10-19", "revenue": 230}</div>
+  <p>The rest of the common mistakes have been demonstrated earlier on this page. Leaving out <code>encoding=</code> gives code that works on Linux and produces mojibake or <code>UnicodeDecodeError</code> on Windows. Opening files without <code>with</code> leaks handles on errors and can lose buffered writes. Calling <code>read()</code> on a big file uses memory in proportion to its size; iterate instead. Splitting CSV lines at commas breaks quoted values; use the csv module with <code>newline=""</code>. Trusting CSV types is a mistake because everything is a string and pandas guesses; convert explicitly or pass <code>dtype=</code>. Assuming a JSON round trip returns the same object ignores tuples becoming lists, integer keys becoming strings and dates needing <code>default=</code>. Loading pickles from untrusted sources runs arbitrary code. And <code>yaml.load</code> or unquoted <code>NO</code> and <code>1.10</code> in YAML give unsafe loading and wrong types.</p>
 
   <h2 id="pfl-rev"><span class="num">R</span>Revision Sheet</h2>
-  <h3>Paths and open()</h3>
+  <h3>Key terms</h3>
   <ul>
-    <li><code>Path("data") / "x.csv"</code>; <code>.name .stem .suffix .parent</code>; <code>.glob("*.csv")</code>, <code>.rglob</code>; <code>.mkdir(parents=True, exist_ok=True)</code>; <code>.read_text(encoding=…)</code>.</li>
-    <li><code>open(path, mode, encoding="utf-8", newline=…)</code>. Modes: <code>r</code> read (must exist) · <code>w</code> truncate/create · <code>a</code> append · <code>x</code> create, fail if exists · <code>b</code> binary · <code>+</code> read/write.</li>
-    <li>Writes are buffered: data reaches the file on <code>flush()</code>/<code>close()</code>; <code>os.fsync</code> forces it to disk.</li>
+    <li><b>Persistence</b>: data outliving the program; a <b>file</b> is a named sequence of bytes; a <b>format</b> says what the bytes mean.</li>
+    <li><b>Path</b>: relative (from the starting folder) or absolute (from the root); <code>pathlib.Path</code>.</li>
+    <li><b>Mode</b>: r read, w empty and write, a append, x create only, b binary, + read and write.</li>
+    <li><b>Buffer</b>: writes are collected in memory until <code>flush()</code> or <code>close()</code>.</li>
+    <li><b>Encoding</b>: the rule mapping characters to bytes; UTF-8 is the standard; wrong rule → <b>mojibake</b> or <code>UnicodeDecodeError</code>.</li>
+    <li><b>BOM</b>: 3 bytes Excel puts at the start of UTF-8 CSVs; use <code>"utf-8-sig"</code>.</li>
+    <li><b>Context manager</b>: object used with <code>with</code> that sets up and always tidies up; files close themselves.</li>
+    <li><b>Columnar format</b>: stores each column together (Parquet); read only needed columns.</li>
   </ul>
-  <h3>Text, bytes, encodings</h3>
-  <ul>
-    <li>Text mode: <code>str</code>, encodes/decodes with <code>encoding</code>. Binary mode: raw <code>bytes</code>.</li>
-    <li><code>"₹40"</code>: 3 characters, 5 bytes in UTF-8 (₹ = <code>e2 82 b9</code>).</li>
-    <li>Wrong decoder → mojibake ("â‚¹") or <code>UnicodeDecodeError</code>. Excel BOM → <code>\\ufeff</code> in first header; use <code>"utf-8-sig"</code>.</li>
-    <li>Default encoding is platform-dependent (cp1252 on many Windows setups) → always pass it.</li>
-  </ul>
-  <h3>Reading and closing</h3>
+  <h3>Syntax</h3>
+  <div class="fx" data-lang="py">from pathlib import Path
+src = Path("data") / "orders.csv"            # .name .stem .suffix .parent .exists()
+Path("out").mkdir(parents=True, exist_ok=True)
+
+with open(src, encoding="utf-8") as f:       # text, read
+    for line in f: ...                       # lazy, one pass, keeps "\\n"
+with open("out/log.txt", "a", encoding="utf-8") as f:
+    f.write("line\\n")
+with open("out/cache.pkl", "rb") as f: ...   # binary
+
+with open(src, newline="", encoding="utf-8") as f:
+    rows = list(csv.DictReader(f))           # all values are str
+with open(dst, "w", newline="", encoding="utf-8") as f:
+    w = csv.DictWriter(f, fieldnames=["line", "reason"])
+    w.writeheader(); w.writerows(rows)
+
+json.dump(obj, f, indent=2, ensure_ascii=False, default=str); json.load(f)
+json.dumps(obj); json.loads(text)            # the "s" = string
+pickle.dump(obj, f); pickle.load(f)          # only trusted data!
+cfg = yaml.safe_load(text)
+df.to_parquet(p, index=False); pd.read_parquet(p, columns=[...], filters=[...])</div>
+  <h3>Reading calls</h3>
   <table class="tbl">
     <tr><th>call</th><th>memory</th><th>note</th></tr>
-    <tr><td><code>for line in f</code></td><td>O(line)</td><td>lazy, single pass, keeps <code>\\n</code></td></tr>
-    <tr><td><code>f.readline()</code></td><td>O(line)</td><td><code>""</code> at EOF</td></tr>
-    <tr><td><code>f.read()</code>, <code>readlines()</code>, <code>list(f)</code></td><td>O(file)</td><td>small files only</td></tr>
-    <tr><td><code>f.read(n)</code></td><td>O(n)</td><td>chunks for binary files</td></tr>
+    <tr><td><code>for line in f</code></td><td>one line</td><td>lazy, single pass</td></tr>
+    <tr><td><code>f.readline()</code></td><td>one line</td><td><code>""</code> at end of file</td></tr>
+    <tr><td><code>f.read()</code>, <code>readlines()</code>, <code>list(f)</code></td><td>whole file</td><td>small files only</td></tr>
+    <tr><td><code>f.read(n)</code></td><td>n</td><td>chunks for binary files</td></tr>
   </table>
-  <p><code>with open(…) as f:</code> = open + <code>try/finally: f.close()</code>; closes even on exceptions.</p>
-  <h3>CSV</h3>
-  <ul>
-    <li><code>csv.reader</code> → lists, <code>csv.DictReader</code> → dicts, all <code>str</code>; empty cell = <code>''</code>.</li>
-    <li><code>csv.DictWriter(f, fieldnames=…)</code>, <code>writeheader()</code>, <code>writerows()</code>; quotes values with <code>,</code> <code>"</code> or newline, doubles inner quotes.</li>
-    <li>Always <code>newline=""</code> and an explicit encoding.</li>
-  </ul>
-  <h3>JSON</h3>
-  <ul>
-    <li><code>dump/load</code> = file, <code>dumps/loads</code> = string. Options: <code>indent</code>, <code>ensure_ascii=False</code>, <code>default=</code>, <code>allow_nan=False</code>, <code>sort_keys</code>.</li>
-    <li>tuple → list; int key → str; set/date/Decimal → TypeError unless <code>default=</code>; NaN written as invalid <code>NaN</code>.</li>
-  </ul>
-  <h3>pickle and YAML</h3>
-  <ul>
-    <li>pickle: <code>"wb"/"rb"</code>; exact for any object; needs the same classes on load; <strong>loading can execute code</strong>; no lambdas/files/locks.</li>
-    <li>YAML: <code>yaml.safe_load</code> / <code>safe_dump</code>; comments allowed; NO/yes/off → bool, 1.10 → 1.1 unless quoted.</li>
-  </ul>
-  <h3>Parquet and format choice</h3>
-  <ul>
-    <li>Columnar, typed, compressed, column pruning + row-group statistics; <code>df.to_parquet(p, index=False)</code>, <code>pd.read_parquet(p, columns=[…], filters=[…])</code>; needs pyarrow.</li>
-    <li>1M rows: CSV 24.8 MB vs Parquet 5.7 MB; one column ≈ 0.008 s.</li>
-  </ul>
+  <h3>Formats</h3>
   <table class="tbl">
-    <tr><th>need</th><th>format</th></tr>
-    <tr><td>table for people / Excel</td><td>CSV</td></tr>
-    <tr><td>nested data, API, other languages</td><td>JSON (JSON Lines for streams)</td></tr>
-    <tr><td>human-edited config</td><td>YAML / TOML</td></tr>
-    <tr><td>big table for analytics / ML</td><td>Parquet</td></tr>
-    <tr><td>exact Python object, own use only</td><td>pickle</td></tr>
+    <tr><th>need</th><th>format</th><th>watch out for</th></tr>
+    <tr><td>table for people or Excel</td><td>CSV</td><td>all strings; quoting; BOM</td></tr>
+    <tr><td>nested data, APIs, other languages</td><td>JSON (JSON Lines for streams)</td><td>tuple → list, int key → str, no dates, NaN</td></tr>
+    <tr><td>human-edited config</td><td>YAML / TOML</td><td><code>safe_load</code>; NO → False, 1.10 → 1.1</td></tr>
+    <tr><td>big table for analytics or ML</td><td>Parquet</td><td>needs pyarrow; not human-readable</td></tr>
+    <tr><td>exact Python object, own use only</td><td>pickle</td><td>loading runs code; class must exist</td></tr>
   </table>
   <h3>Gotchas</h3>
   <ul>
-    <li><code>"w"</code> truncates immediately.</li>
+    <li><code>"w"</code> empties the file the moment it is opened.</li>
     <li>No <code>encoding=</code> → platform-dependent bugs.</li>
-    <li><code>split(",")</code> is not CSV; CSV has no types.</li>
-    <li>A file iterator is exhausted after one loop.</li>
+    <li><code>len(text)</code> is not the file size: "₹" is 3 bytes in UTF-8.</li>
+    <li>A file iterator is used up after one loop; reopen or <code>seek(0)</code>.</li>
     <li>Returning a generator from inside <code>with</code> → "I/O operation on closed file".</li>
+    <li><code>split(",")</code> is not CSV; open CSVs with <code>newline=""</code>.</li>
     <li>Never unpickle untrusted data; never <code>yaml.load</code> untrusted YAML.</li>
-    <li>Atomic writes: temp file + <code>os.replace</code>.</li>
+    <li>Safe writes: temporary file in the same folder, then <code>os.replace</code>.</li>
   </ul>
 
-  <h2 id="pfl-qa"><span class="num">15</span>Interview Questions</h2>
+  <h2 id="pfl-qa"><span class="num">13</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between modes "r", "w", "a" and "x"?</summary><div class="qa-body">"r" reads and requires the file to exist. "w" creates the file or <em>empties</em> an existing one, then writes. "a" creates or appends at the end. "x" creates only and raises <code>FileExistsError</code> if it exists. Add "b" for binary and "+" for read/write.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why use <code>with open(...)</code>? What happens if you never close a file?</summary><div class="qa-body"><code>with</code> closes the file on every path, including exceptions; it is shorthand for try/finally. An unclosed file leaks an OS handle (eventually "Too many open files") and may lose buffered writes. CPython often closes it when the object is garbage-collected, with a <code>ResourceWarning</code>, but that is an implementation detail and not guaranteed on PyPy or at interpreter exit.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between <code>read()</code>, <code>readline()</code>, <code>readlines()</code> and iterating over a file?</summary><div class="qa-body"><code>read()</code> returns the whole file as one string; <code>readline()</code> returns the next line (<code>""</code> at end of file); <code>readlines()</code> returns a list of all lines. Iterating (<code>for line in f</code>) yields one line at a time with constant memory. Only iteration and <code>readline()</code> are safe on files larger than memory.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How would you process a 20 GB log file in Python?</summary><div class="qa-body">Open it with an explicit encoding and iterate line by line, keeping only running aggregates: memory stays constant (0.022 MB for a 36 MB file in the measurement above, versus 71.8 MB for <code>read()</code>). For a CSV of that size use <code>pd.read_csv(..., chunksize=…, usecols=[…], dtype=…)</code> or convert it once to Parquet; for parallelism split by byte ranges or use multiprocessing.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between text mode and binary mode?</summary><div class="qa-body">Text mode returns and accepts <code>str</code>, encoding/decoding with the file's encoding and translating newlines. Binary mode returns and accepts <code>bytes</code> with no conversion. Use binary for pickle, Parquet, images, and when you need exact bytes (hashing, network transfer).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does this print? <code>print(len("₹40"), len("₹40".encode("utf-8")))</code></summary><div class="qa-body"><code>3 5</code>. The string has three characters; in UTF-8 "₹" takes three bytes and each digit one. File sizes are in bytes, so they are not equal to <code>len()</code> of the text.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is mojibake, and why should you always pass <code>encoding=</code>?</summary><div class="qa-body">Mojibake is garbage text produced by decoding bytes with the wrong encoding, e.g. UTF-8 "₹" read as cp1252 becomes "â‚¹", with no error raised. Without <code>encoding=</code>, Python uses the platform default (UTF-8 on Linux/macOS, often cp1252 on Windows), so the same code behaves differently across machines.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>A CSV exported from Excel gives <code>KeyError: 'order_id'</code> although the header clearly says order_id. Why?</summary><div class="qa-body">Excel's "CSV UTF-8" starts with a byte order mark. Decoded as plain "utf-8" it becomes the character <code>\\ufeff</code> at the start of the first column name, so the key is really <code>'\\ufefforder_id'</code>. Open with <code>encoding="utf-8-sig"</code>, which strips it.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why not parse CSV with <code>line.split(",")</code>, and why open CSV files with <code>newline=""</code>?</summary><div class="qa-body">Values may contain commas, quotes or newlines, which CSV protects with quotes; <code>split</code> cuts <code>"extra chutney, no onion"</code> into two fields and shifts every later column. The csv module implements the quoting rules. <code>newline=""</code> lets the csv module handle line endings itself, so quoted newlines are preserved and Windows does not get blank rows.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between <code>json.dump</code> and <code>json.dumps</code>, and what changes in a JSON round trip?</summary><div class="qa-body"><code>dump</code>/<code>load</code> work with file objects; <code>dumps</code>/<code>loads</code> with strings. In a round trip tuples become lists, non-string keys become strings, and <code>NaN</code> is written as a non-standard token; sets, dates, <code>Decimal</code> and numpy scalars raise <code>TypeError</code> unless you convert them or pass <code>default=</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you serialise a <code>datetime</code> or a custom object to JSON?</summary><div class="qa-body">Pass a function as <code>default</code>, called for any object json cannot handle:<div class="fx" data-lang="py">def to_json(obj):
-    if isinstance(obj, (date, datetime)):
-        return obj.isoformat()
-    if isinstance(obj, set):
-        return sorted(obj)
-    raise TypeError(f"cannot serialise {type(obj).__name__}")
-
-json.dumps({"day": date(2026, 10, 19), "tags": {"b", "a"}}, default=to_json)
-# '{"day": "2026-10-19", "tags": ["a", "b"]}'</div>Alternatively subclass <code>json.JSONEncoder</code> and override <code>default</code>, or convert to dicts first (<code>dataclasses.asdict</code>, pydantic's <code>model_dump_json</code>). Loading needs explicit parsing back (<code>date.fromisoformat</code>).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>pickle vs JSON: when would you use each?</summary><div class="qa-body">JSON is text, language-neutral, safe to load and human-readable, but supports only basic types. pickle stores almost any Python object exactly, but is Python-only, tied to class names and library versions, and unsafe to load from untrusted sources. Use JSON for exchange and storage; pickle only for short-lived caches between your own Python processes.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Is it safe to load a pickled model someone sent you?</summary><div class="qa-body">No. Unpickling calls whatever function the pickle names via <code>__reduce__</code>; an 80-byte payload ran a shell command on load in the example above. The same applies to <code>joblib.load</code> and <code>torch.load</code> with full unpickling. Load only trusted pickles; share weights in safe formats (safetensors, ONNX) and data as Parquet/JSON.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why <code>yaml.safe_load</code>, and what are YAML's type surprises?</summary><div class="qa-body"><code>safe_load</code> constructs only plain types; unsafe loaders can construct arbitrary Python objects from tags like <code>!!python/object/apply:os.system</code>. Type surprises in YAML 1.1 (PyYAML): <code>NO</code>, <code>yes</code>, <code>on</code>, <code>off</code> become booleans and <code>1.10</code> becomes the float 1.1. Quote such values.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is a columnar format, and why is Parquet preferred over CSV for analytics?</summary><div class="qa-body">A columnar format stores all values of a column together. Analytics queries usually touch a few columns, so a reader can skip the rest (column pruning) and skip row groups using min/max statistics (predicate pushdown). Similar values side by side compress well (24.8 MB CSV → 5.7 MB here), and columns are typed, so no re-parsing and no "one bad cell turns the column into text". CSV remains better for small hand-offs to people.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you read a large CSV with pandas without running out of memory?</summary><div class="qa-body">Read only needed columns (<code>usecols</code>), give compact dtypes (<code>dtype={"qty": "int32"}</code>, <code>category</code> for repeated strings), and process in chunks:<div class="fx" data-lang="py">total = 0
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between modes "r", "w", "a" and "x"?</summary><div class="qa-body">"r" reads and requires the file to exist. "w" creates the file, or empties an existing one immediately, and then writes. "a" creates the file if needed and adds writes at the end. "x" creates a new file and raises <code>FileExistsError</code> if it already exists. Add "b" for binary and "+" for reading and writing.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why use <code>with open(...)</code>? What happens if you never close a file?</summary><div class="qa-body"><code>with</code> closes the file on every path out of the block, including exceptions; it is shorthand for try/finally. An unclosed file leaks an operating-system handle, eventually causing "Too many open files", and may lose buffered writes. CPython often closes it when the object is garbage-collected, but that is an implementation detail and not guaranteed.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between <code>read()</code>, <code>readline()</code>, <code>readlines()</code> and iterating over a file?</summary><div class="qa-body"><code>read()</code> returns the whole file as one string; <code>readline()</code> returns the next line, or <code>""</code> at the end; <code>readlines()</code> returns a list of all lines. Iterating with <code>for line in f</code> yields one line at a time with constant memory. Only iteration and <code>readline()</code> are safe on files larger than memory.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How would you process a 20 GB log file in Python?</summary><div class="qa-body">Open it with an explicit encoding and iterate line by line, keeping only running totals, so memory stays constant (about 0.02 MB in the measurement on this page, versus 72 MB for <code>read()</code> on a 36 MB file). For a CSV that size, use <code>pd.read_csv</code> with <code>chunksize</code>, <code>usecols</code> and <code>dtype</code>, or convert it once to Parquet. For parallelism, split the work by file or byte range across processes.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between text mode and binary mode?</summary><div class="qa-body">Text mode reads and writes <code>str</code>, encoding and decoding with the file's encoding and translating line endings. Binary mode reads and writes <code>bytes</code> with no conversion. Use binary for pickle, Parquet, images, and whenever you need the exact bytes, such as hashing a file.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does <code>print(len("₹40"), len("₹40".encode("utf-8")))</code> print?</summary><div class="qa-body"><code>3 5</code>. The string has three characters; in UTF-8 "₹" takes three bytes and each digit one. File sizes are measured in bytes, so they are generally not equal to <code>len()</code> of the text.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is mojibake, and why should you always pass <code>encoding=</code>?</summary><div class="qa-body">Mojibake is garbled text produced by decoding bytes with the wrong encoding; for example UTF-8 "₹" read as cp1252 becomes "â‚¹", with no error raised. Without <code>encoding=</code>, Python uses the platform's default, UTF-8 on Linux and macOS but often cp1252 on Windows, so the same code behaves differently on different machines.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>A CSV exported from Excel gives <code>KeyError: 'order_id'</code> although the header says order_id. Why?</summary><div class="qa-body">Excel's "CSV UTF-8" starts with a byte order mark. Decoded as plain "utf-8", it becomes the invisible character <code>\\ufeff</code> at the start of the first column name, so the real key is <code>'\\ufefforder_id'</code>. Open the file with <code>encoding="utf-8-sig"</code>, which strips the BOM.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why not parse CSV with <code>line.split(",")</code>, and why open CSV files with <code>newline=""</code>?</summary><div class="qa-body">Values can contain commas, quotes or line breaks, which CSV protects with double quotes; <code>split</code> cuts <code>"extra chutney, no onion"</code> into two fields and shifts every later column. The csv module implements the quoting rules. <code>newline=""</code> lets the csv module handle line endings itself, so line breaks inside quoted values survive and Windows does not get blank rows.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between <code>json.dump</code> and <code>json.dumps</code>, and what changes in a JSON round trip?</summary><div class="qa-body"><code>dump</code> and <code>load</code> work with file objects; <code>dumps</code> and <code>loads</code> work with strings. In a round trip, tuples become lists, non-string dictionary keys become strings, and NaN is written as a non-standard token. Sets, dates, <code>Decimal</code> and NumPy numbers raise <code>TypeError</code> unless you convert them or pass <code>default=</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you serialise a <code>datetime</code> or a custom object to JSON?</summary><div class="qa-body">Pass a function as <code>default</code>; json calls it for every object it cannot handle, and it must return something serialisable or raise <code>TypeError</code>. For dates, return <code>obj.isoformat()</code>; for sets, a sorted list. Alternatives are subclassing <code>json.JSONEncoder</code> or converting to plain dicts first (<code>dataclasses.asdict</code>, pydantic's <code>model_dump</code>). Loading requires parsing the values back, for example with <code>date.fromisoformat</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>pickle vs JSON: when would you use each?</summary><div class="qa-body">JSON is text, language-neutral, human-readable and safe to load, but supports only basic types. pickle stores almost any Python object exactly, but it is Python-only, depends on class names and library versions, and is unsafe to load from untrusted sources. Use JSON for exchange and storage, and pickle only for short-lived caches between your own Python programs.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Is it safe to load a pickled model someone sent you?</summary><div class="qa-body">No. Unpickling calls whatever function the pickle names through <code>__reduce__</code>; on this page an 80-byte pickle ran a shell command just by being loaded. The same applies to <code>joblib.load</code> and full-pickle <code>torch.load</code>. Load only pickles you created or fully trust, and share model weights in safe formats such as safetensors or ONNX.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why <code>yaml.safe_load</code>, and what are YAML's type surprises?</summary><div class="qa-body"><code>safe_load</code> builds only plain types; the full loader can construct arbitrary Python objects from tags such as <code>!!python/object/apply:os.system</code>, which allows code execution. Under the YAML 1.1 rules PyYAML follows, unquoted <code>NO</code>, <code>yes</code>, <code>on</code> and <code>off</code> become booleans and <code>1.10</code> becomes the float 1.1. Quote such values.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a columnar format, and why is Parquet preferred over CSV for analytics?</summary><div class="qa-body">A columnar format stores all values of a column together. Analytics queries usually touch a few columns, so a reader can skip the rest, and per-chunk minimum and maximum statistics let it skip rows too. Similar values side by side compress well (24.8 MB of CSV became 5.7 MB of Parquet on this page), and columns are typed, so there is no re-parsing and no "one bad cell turns the column into text". CSV remains better for small files people will open.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you read a large CSV with pandas without running out of memory?</summary><div class="qa-body">Read only the columns you need with <code>usecols</code>, give compact types with <code>dtype</code> (for example <code>"int32"</code>, or <code>"category"</code> for repeated strings), and process the file in pieces with <code>chunksize</code>, which returns an iterator of DataFrames:<div class="fx" data-lang="py">total = 0
 for chunk in pd.read_csv("big.csv", usecols=["qty"], dtype={"qty": "int32"}, chunksize=100_000):
-    total += chunk["qty"].sum()</div>Better still, convert to Parquet once, or use a lazy engine (polars, DuckDB) that streams the file.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you write a file so readers never see a half-written version?</summary><div class="qa-body">Write to a temporary file in the same directory, flush and <code>os.fsync</code> it, then <code>os.replace(tmp, path)</code>. The rename is atomic on the same file system, so readers see either the old file or the complete new one:<div class="fx" data-lang="py">fd, tmp = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
-with os.fdopen(fd, "w", encoding="utf-8") as f:
-    f.write(text); f.flush(); os.fsync(f.fileno())
-os.replace(tmp, path)</div></div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why does iterating over a file a second time give nothing?</summary><div class="qa-body">A file object is its own iterator and keeps a current position; after the first loop it is at end of file, so a second loop (or <code>list(f)</code>) yields nothing. Reopen the file or call <code>f.seek(0)</code>. Related trap: returning a generator over <code>f</code> from inside a <code>with</code> block fails with "I/O operation on closed file", because the file closes when the function returns.</div></details>
+    total += chunk["qty"].sum()</div>Better still, convert it to Parquet once, or use a streaming engine such as polars or DuckDB.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you write a file so that readers never see a half-written version?</summary><div class="qa-body">Write to a temporary file in the same folder, flush it and call <code>os.fsync</code>, then rename it over the target with <code>os.replace(tmp, path)</code>. The rename is atomic on the same file system, so readers see either the old complete file or the new complete file, never a partial one.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does looping over a file a second time give nothing?</summary><div class="qa-body">A file object is its own iterator and remembers its position; after the first loop it is at the end of the file, so a second loop or <code>list(f)</code> yields nothing. Reopen the file or call <code>f.seek(0)</code>. A related trap is returning a generator over <code>f</code> from inside a <code>with</code> block, which fails with "I/O operation on closed file".</div></details>
 </main>
 `
 });
