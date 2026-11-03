@@ -3,99 +3,44 @@ Object.assign(TOPIC_CONTENT, {
   "ml_reg_metrics": `<main>
   <h1>Regression Metrics</h1>
   <div class="where"><span>Machine Learning</span><span>Model Evaluation</span><span>Regression Metrics</span></div>
-  <p class="lead">When a model predicts a number (orders, price, delivery time), there is no confusion matrix: every prediction is wrong by some amount, and the question is how to add those amounts up. This note follows one tiffin kitchen's forecast for six days and computes every standard regression metric on those same six numbers, by hand: the residual and bias, MAE, MSE and RMSE (and why the mean and the median are the "best constants" behind them), median absolute error and max error, R² derived from scratch (and why it can be negative), adjusted R², MAPE and its three traps, sMAPE and WAPE, MASE, and RMSLE. Then it shows which to use when, how to read residuals, why every number needs a baseline next to it, and how to compute it all in scikit-learn.</p>
+  <p class="lead">A regression model predicts a number: tomorrow's orders, a house price, a delivery time. Unlike a classifier, it is almost never exactly right, so the question is not "right or wrong?" but "wrong by how much, and does that matter?". A regression metric is a rule for adding up many errors of different sizes and signs into one number, and each rule quietly encodes a view about which errors hurt most, so choosing the wrong one picks the wrong model. The running example is a small tiffin kitchen that cooks each morning from a model's forecast of the day's orders. Every metric is first worked out by hand on one six-day week of that kitchen, and then the same kitchen is studied at realistic scale to show residual analysis and baselines.</p>
 
-  <h2 id="rm-fit" class="open"><span class="num">★</span>Where this fits</h2>
-  <ol class="story">
-    <li><b>Came from: <a class="xref" data-note="ml_evaluation">Classification Metrics</a> and <a class="xref" data-note="ml_regression">Linear Regression</a></b><span>The classification note judged yes/no answers by counting four kinds of right and wrong. The regression note fitted a line by minimising squared error and printed R² and RMSE in passing. Left open: with a numeric target, how do you summarise many errors of different sizes and signs into one honest number, and which number?</span></li>
-    <li><b>This note: Regression Metrics</b><span>Every standard error summary, each built to fix a weakness of the previous one: average size of error (MAE), punishing big misses (RMSE), robustness (MedAE), comparison with a baseline (R²), fairness to model size (adjusted R²), percentages (MAPE, sMAPE, WAPE), scale-free comparison with a naive forecast (MASE), and relative errors (RMSLE). Plus residual analysis and baselines.</span></li>
-    <li><b>Leads to: <a class="xref" data-note="ml_calibration">Thresholds &amp; Calibration</a>, <a class="xref" data-note="ml_reg_diag">Assumptions &amp; Diagnostics</a> and <a class="xref" data-note="ml_ts_ml">ML Forecasting</a></b><span>The last note of this group turns classifier scores into decisions and honest probabilities. Residual plots from here are the starting point of regression diagnostics, and MASE, WAPE and pinball loss are the everyday metrics of forecasting.</span></li>
-  </ol>
-  <figure class="viz"><svg viewBox="0 0 660 150" width="660">
-<defs><marker id="rm-a0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<text x="330" y="16" text-anchor="middle" class="tm" font-size="11">Machine Learning › Model Evaluation</text>
-<rect x="20" y="40" width="190" height="56" rx="8" class="fb sb"/><text x="115" y="62" text-anchor="middle" font-size="13">Classification Metrics</text><text x="115" y="80" text-anchor="middle" class="tm" font-size="10.5">F1, AUC, log loss</text>
-<rect x="235" y="34" width="190" height="68" rx="8" class="ft st" stroke-width="3"/><text x="330" y="58" text-anchor="middle" font-size="13" font-weight="700">Regression Metrics</text><text x="330" y="75" text-anchor="middle" class="tm" font-size="10.5">MAE, RMSE, R², MAPE</text><text x="330" y="92" text-anchor="middle" class="tb" font-size="10">YOU ARE HERE</text>
-<rect x="450" y="40" width="190" height="56" rx="8" class="fg sg"/><text x="545" y="62" text-anchor="middle" font-size="13">Thresholds &amp; Calibration</text><text x="545" y="80" text-anchor="middle" class="tm" font-size="10.5">cut-offs, reliability</text>
-<line x1="210" y1="68" x2="233" y2="68" stroke="currentColor" marker-end="url(#rm-a0)"/><line x1="425" y1="68" x2="448" y2="68" stroke="currentColor" marker-end="url(#rm-a0)"/>
-<text x="330" y="132" text-anchor="middle" class="tm" font-size="10.5">Brier score (classification) = MSE of probabilities: the bridge between the two notes</text>
-</svg><figcaption>The Model Evaluation group. This note is the numeric-target twin of Classification Metrics.</figcaption></figure>
-  <p>You need: mean, median and squared deviations (<a class="xref" data-note="st_descriptive">Descriptive Statistics</a>), what a held-out test set is (<a class="xref" data-note="ml_splits">Train/Val/Test</a>), and a fitted regression model (<a class="xref" data-note="ml_regression">Linear Regression</a>). Natural log is used once, for RMSLE.</p>
-
-  <h2 id="rm-ladder" class="open"><span class="num">★</span>The Question Ladder</h2>
-  <p>The whole note is one chain of questions about the same six days of tiffin orders (real: 20, 25, 30, 35, 40, 60; forecast: 22, 24, 33, 30, 41, 50). Each metric answers the question above it, and its weakness raises the next question.</p>
-  <ol class="story">
-    <li><b>Residual and bias (ME)</b><span>Q: how wrong was each day? → e = y − ŷ: −2, +1, −3, +5, −1, +10. Their mean, +1.67, says we under-forecast on average. But positive and negative misses cancel, so a terrible model can have zero bias…</span></li>
-    <li><b>MAE</b><span>Q: how big is a typical miss, ignoring direction? → mean |e| = 22/6 = 3.67 orders. But a 10-order miss counts only twice a 5-order miss, though running out of food on Saturday hurts far more…</span></li>
-    <li><b>MSE and RMSE</b><span>Q: how do we punish big misses more? → square them: MSE = 140/6 = 23.3, RMSE = 4.83 orders. But now one freak day (a festival) can dominate the whole number…</span></li>
-    <li><b>Median absolute error and max error</b><span>Q: what does a typical day look like, ignoring freak days, and what was the worst? → MedAE = 2.5, max = 10. But none of these says whether 3.67 is good: good compared with what?…</span></li>
-    <li><b>R²</b><span>Q: how much better than the dumbest forecast ("always 35") are we? → 1 − 140/1000 = 0.86. But R² never goes down when you add features, even useless ones…</span></li>
-    <li><b>Adjusted R²</b><span>Q: is the gain worth the extra features? → 0.825 with 1 feature, 0.650 if it took 3. But all of these are in "orders", so a 3-order miss means the same at 20 orders and at 2,000…</span></li>
-    <li><b>MAPE</b><span>Q: how big is the miss as a percentage? → 9.58%. But it explodes on quiet days, is infinite at zero, and rewards under-forecasting…</span></li>
-    <li><b>sMAPE and WAPE</b><span>Q: a percentage that survives small values? → sMAPE 9.86%, WAPE = 22/210 = 10.48%. But a percentage still does not say whether forecasting is even hard for this series…</span></li>
-    <li><b>MASE</b><span>Q: are we better than "tomorrow = today"? → 3.67 / 7.4 = 0.50: half the naive error. But it, too, treats a miss of 10 on 20 like a miss of 10 on 1,000…</span></li>
-    <li><b>RMSLE</b><span>Q: what if relative (ratio) errors matter and under-forecasting is worse? → RMSE of log(1 + y) = 0.111. Then: which to pick, how to read the residuals behind any of them, and which baseline to compare with.</span></li>
-  </ol>
-  <div class="bridge"><b>What this still can't tell us.</b> The ladder is the plot; each step is worked by hand in the sections below. <b>→ next: the Mind Map, then 01 Residuals</b></div>
-
-  <h2 id="rm-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="rm-map"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">Regression Metrics</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">Residuals</div>
-        <ul>
-          <li><b>e = y − ŷ</b>: −2, +1, −3, +5, −1, +10 (Mon–Sat)</li>
-          <li><b>ME (bias)</b> = mean e = +1.67 → under-forecasting</li>
-          <li>Signs cancel → never use ME alone</li>
-          <li>💡 A dart player: bias = where the cluster sits, MAE = how far darts land</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
         <div class="mm-title">Size of error</div>
         <ul>
-          <li><b>MAE</b> = mean |e| = 3.67 · best constant = <b>median</b></li>
-          <li><b>MSE</b> = mean e² = 23.3 · <b>RMSE</b> = 4.83 · best constant = <b>mean</b></li>
-          <li>RMSE ≥ MAE always; ratio 1.32 → 1.91 after one 40-order miss</li>
-          <li><b>MedAE</b> = 2.5 (robust) · <b>max error</b> = 10 (worst case)</li>
-          <li>Saturday: 45% of Σ|e| but 71% of Σe²</li>
+          <li>Residual e = y − ŷ; mean of e = <b>bias</b></li>
+          <li><b>MAE</b> = mean |e| (best constant: median)</li>
+          <li><b>RMSE</b> = √mean e² (best constant: mean); punishes big misses</li>
+          <li><b>MedAE</b> ignores freak days; <b>max error</b> = worst day</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Compared with a baseline</div>
+        <div class="mm-title">Against a baseline</div>
         <ul>
-          <li><b>R²</b> = 1 − SS_res/SS_tot = 1 − 140/1000 = 0.86</li>
-          <li>SS_tot = misses of "always the mean (35)"</li>
-          <li>0 = no better than the mean · negative = worse (reversed forecast: −1.86)</li>
-          <li><b>Adjusted R²</b> = 1 − (1−R²)(n−1)/(n−p−1): 0.825 (p=1), 0.650 (p=3)</li>
-          <li>Explained variance ignores bias (+10 shift: R² 0.46, EV 0.88)</li>
+          <li><b>R²</b> = 1 − SS_res/SS_tot: vs always predicting the mean</li>
+          <li>Can be negative; adjusted R² charges for features</li>
+          <li><b>MASE</b> = MAE / naive forecast's MAE; &lt; 1 beats naive</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Percentages</div>
+        <div class="mm-title">Relative errors</div>
         <ul>
-          <li><b>MAPE</b> = mean |e|/|y| = 9.58% · sklearn returns 0.0958</li>
-          <li>⚠ quiet day (1 order, forecast 4) → 51%; y = 0 → huge; favours low forecasts</li>
-          <li><b>sMAPE</b> = mean 2|e|/(|y|+|ŷ|) = 9.86%, capped at 200%, still asymmetric</li>
-          <li><b>WAPE</b> = Σ|e|/Σ|y| = 22/210 = 10.48% — volume-weighted, safe</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Scale-free &amp; relative</div>
-        <ul>
-          <li><b>MASE</b> = MAE / MAE of naive on training = 3.67/7.4 = 0.50; &lt; 1 beats naive</li>
-          <li><b>RMSLE</b> = RMSE of ln(1+y) = 0.111; ratios, punishes under-forecasts more</li>
-          <li>RMSLE ⇔ fit on log1p target; back-transform predicts a median (bias)</li>
-          <li>Pinball loss (quantiles), Poisson deviance (counts): brief</li>
+          <li><b>MAPE</b>: explodes near 0, favours low forecasts</li>
+          <li><b>WAPE</b> = Σ|e| / Σy: safe percentage</li>
+          <li><b>RMSLE</b>: ratio errors; <b>pinball</b>: asymmetric costs</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Using metrics well</div>
         <ul>
-          <li>Always beside a <b>baseline</b>: mean, median, naive, seasonal naive</li>
-          <li>Kitchen test: seasonal naive MAE 8.78 vs linear 5.68 vs mean 10.33</li>
-          <li><b>Residual plots</b>: patterns by weekday, festival, funnel → model is missing something</li>
-          <li>sklearn scorers are <code>neg_…</code> (it maximises) · R² on test uses the test mean</li>
+          <li>Match the metric to the cost of an error</li>
+          <li>Always beside a baseline (seasonal naive for weekly data)</li>
+          <li>Residuals by group reveal what averages hide</li>
+          <li>sklearn scorers are <code>neg_…</code></li>
         </ul>
       </div>
     </div>
@@ -104,46 +49,42 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="rm-ladder"><span class="rm-num">★</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">Every metric as an answer</span></div></div>
-      <div class="rm-item rm-done" data-target="rm-resid"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Residuals and Bias</span><span class="rm-sub">The six-day example</span></div></div>
-      <div class="rm-item rm-done" data-target="rm-mae"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">MAE</span><span class="rm-sub">Average miss; the median</span></div></div>
-      <div class="rm-item rm-done" data-target="rm-mse"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">MSE and RMSE</span><span class="rm-sub">Punishing big misses; the mean</span></div></div>
-      <div class="rm-item rm-done" data-target="rm-robust"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">MedAE and Max Error</span><span class="rm-sub">Typical day, worst day</span></div></div>
-      <div class="rm-item rm-done" data-target="rm-r2"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">R²</span><span class="rm-sub">Derived; why it can be negative</span></div></div>
-      <div class="rm-item rm-done" data-target="rm-adj"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Adjusted R²</span><span class="rm-sub">Paying for features</span></div></div>
-      <div class="rm-item rm-done" data-target="rm-mape"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">MAPE and Its Traps</span><span class="rm-sub">Zero, small values, asymmetry</span></div></div>
-      <div class="rm-item rm-done" data-target="rm-smape"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">sMAPE and WAPE</span><span class="rm-sub">Safer percentages</span></div></div>
-      <div class="rm-item rm-done" data-target="rm-mase"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">MASE</span><span class="rm-sub">Versus the naive forecast</span></div></div>
-      <div class="rm-item rm-done" data-target="rm-rmsle"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">RMSLE</span><span class="rm-sub">Relative errors and log targets</span></div></div>
-      <div class="rm-item rm-done" data-target="rm-choose"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Which Metric When</span><span class="rm-sub">Train loss vs report metric</span></div></div>
-      <div class="rm-item rm-done" data-target="rm-resan"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Residual Analysis</span><span class="rm-sub">What the errors are telling you</span></div></div>
-      <div class="rm-item rm-done" data-target="rm-base"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Baseline Models</span><span class="rm-sub">Mean, median, naive, seasonal</span></div></div>
-      <div class="rm-item rm-done" data-target="rm-api"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">scikit-learn API</span><span class="rm-sub">Functions and neg_ scorers</span></div></div>
-      <div class="rm-item rm-done" data-target="rm-connect"><span class="rm-num">15</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One diagram, one table</span></div></div>
-      <div class="rm-item rm-done" data-target="rm-traps"><span class="rm-num">16</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Traps in interviews and code</span></div></div>
-      <div class="rm-item rm-done" data-target="rm-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note in 10 minutes</span></div></div>
-      <div class="rm-item rm-done" data-target="rm-qa"><span class="rm-num">17</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
+      <div class="rm-item rm-done" data-target="rm-resid"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Residuals and Bias</span><span class="rm-sub">how wrong each day, and which way</span></div></div>
+      <div class="rm-item rm-done" data-target="rm-mae"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Mean Absolute Error</span><span class="rm-sub">the typical miss, and the median</span></div></div>
+      <div class="rm-item rm-done" data-target="rm-mse"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">MSE, RMSE and Robust Alternatives</span><span class="rm-sub">punishing big misses, and freak days</span></div></div>
+      <div class="rm-item rm-done" data-target="rm-r2"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">R² and Adjusted R²</span><span class="rm-sub">compared with always guessing the mean</span></div></div>
+      <div class="rm-item rm-done" data-target="rm-mape"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Percentage Errors: MAPE, sMAPE, WAPE</span><span class="rm-sub">errors relative to the day's size</span></div></div>
+      <div class="rm-item rm-done" data-target="rm-mase"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">MASE</span><span class="rm-sub">compared with "tomorrow = today"</span></div></div>
+      <div class="rm-item rm-done" data-target="rm-rmsle"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">RMSLE and Pinball Loss</span><span class="rm-sub">ratio errors and lopsided costs</span></div></div>
+      <div class="rm-item rm-done" data-target="rm-choose"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Which Metric When</span><span class="rm-sub">training loss vs reporting metric</span></div></div>
+      <div class="rm-item rm-done" data-target="rm-resan"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Residual Analysis</span><span class="rm-sub">what the errors are telling you</span></div></div>
+      <div class="rm-item rm-done" data-target="rm-base"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Baselines and scikit-learn</span><span class="rm-sub">skill scores, neg_ scorers, CV</span></div></div>
+      <div class="rm-item rm-done" data-target="rm-traps"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">RMSE averaging, R² as accuracy, MAPE at zero</span></div></div>
+      <div class="rm-item rm-done" data-target="rm-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">formulas, values, when to use which</span></div></div>
+      <div class="rm-item rm-done" data-target="rm-qa"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">the questions interviewers ask</span></div></div>
     </div>
   </div>
 
-  <h2 id="rm-resid"><span class="num">01</span>Residuals and Bias: the Running Example</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>A classifier is either right or wrong on a row, so we could count. A forecast of 33 tiffins when 30 were ordered is neither right nor wrong: it is off by some amount. Before we can summarise a model, we need a clear number for "how wrong, and in which direction" on each single day.</p></div>
-  <h3>The story</h3>
-  <p>A small tiffin kitchen cooks the day's meals in the morning, using a model's forecast of orders. Cook too few and customers go hungry (lost sales, angry regulars). Cook too many and food is thrown away. Here is one week (Monday to Saturday; the kitchen is closed on Sunday that week): what the model forecast and what was really ordered. Every metric in this note is computed on these six pairs.</p>
-  <table class="tbl"><caption>The running example: six days of tiffin orders</caption>
+  <h2 id="rm-resid"><span class="num">01</span>Residuals and Bias</h2>
+  <p>A classifier is right or wrong on a row, so its mistakes can be counted. A forecast of 33 tiffins when 30 were ordered is neither: it is off by some amount. Before we can summarise a model, we need a clear number for "how wrong, and in which direction" on each single day.</p>
+  <p>Here is the kitchen's week. Each morning it cooks from the model's forecast; cooking too few leaves customers hungry, cooking too many wastes food. The table shows what the model forecast and what was really ordered from Monday to Saturday (the kitchen was closed on Sunday that week):</p>
+  <table class="tbl">
     <tr><th>Day</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sum</th></tr>
     <tr><td>real orders y</td><td>20</td><td>25</td><td>30</td><td>35</td><td>40</td><td>60</td><td>210</td></tr>
     <tr><td>forecast ŷ</td><td>22</td><td>24</td><td>33</td><td>30</td><td>41</td><td>50</td><td>200</td></tr>
   </table>
-  <div class="fx" data-lang="py"># week.py - one week of a tiffin kitchen: real orders vs the model's forecast (used all through this note)
+  <p>We keep these numbers in a small module that later blocks import. It also holds the six days before this week, which section 06 needs:</p>
+  <div class="fx" data-lang="py"># week.py - one week of a tiffin kitchen: real orders vs the model's forecast
 import numpy as np
 days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-y    = np.array([20, 25, 30, 35, 40, 60], dtype=float)   # real orders
-yhat = np.array([22, 24, 33, 30, 41, 50], dtype=float)   # model's forecast
-history = np.array([14, 22, 17, 28, 24, 33], dtype=float) # the 6 days BEFORE (training period), for MASE</div>
-  <p>(<code>history</code> holds the six days before this week; it is needed only for MASE in section 09.)</p>
-  <h3>The residual</h3>
-  <p>For each day, the <strong>residual</strong> (or error) is actual minus predicted: e = y − ŷ. A positive residual means we forecast too low (under-forecast: cooked too little); a negative one means too high.</p>
+y    = np.array([20, 25, 30, 35, 40, 60], dtype=float)    # real orders
+yhat = np.array([22, 24, 33, 30, 41, 50], dtype=float)    # model's forecast
+history = np.array([14, 22, 17, 28, 24, 33], dtype=float) # the 6 days BEFORE this week (for MASE)
+
+if __name__ == "__main__":
+    print("real total", y.sum(), " forecast total", yhat.sum())</div>
+  <div class="fx" data-lang="text">real total 210.0  forecast total 200.0</div>
+  <p>For each day the <strong>residual</strong>, or error, is the actual value minus the predicted value: e = y − ŷ. A positive residual means the forecast was too low (the kitchen cooked too little); a negative one means it was too high. In the figure, blue is what happened, green is the forecast, and each red stick is a residual. Saturday's miss of +10 is clearly the largest.</p>
   <figure class="viz"><svg viewBox="0 0 640 250" width="640">
 <line x1="60" y1="215" x2="600" y2="215" stroke="currentColor" opacity="0.5"/>
 <line x1="60" y1="25" x2="60" y2="215" stroke="currentColor" opacity="0.5"/>
@@ -189,215 +130,82 @@ history = np.array([14, 22, 17, 28, 24, 33], dtype=float) # the 6 days BEFORE (t
 <line x1="60" y1="135.8" x2="600" y2="135.8" stroke="currentColor" stroke-dasharray="4 3" opacity="0.5"/><text x="596" y="130.8" text-anchor="end" class="tm" font-size="10.5">mean of y = 35</text>
 <circle cx="80" cy="12" r="5" class="fb sb"/><text x="90" y="16" font-size="11">real orders y</text><circle cx="200" cy="12" r="5" class="fg sg"/><text x="210" y="16" font-size="11">forecast ŷ</text><line x1="310" y1="7" x2="310" y2="18" class="sr" stroke-width="3"/><text x="318" y="16" font-size="11">residual e = y − ŷ</text>
 </svg><figcaption>The six days. Blue: what really happened; green: the forecast; red stick: the residual. Saturday's miss (+10) is by far the largest. The dashed line is the mean of the real orders (35), which section 05 uses as the baseline.</figcaption></figure>
+  <p>The code builds the three columns, e, |e| and e², that every metric in the next sections is made from, and prints the first few metrics so we can check them by hand as we go:</p>
   <div class="fx" data-lang="py">import numpy as np
 from week import days, y, yhat
 from sklearn.metrics import mean_absolute_error, mean_squared_error, root_mean_squared_error
 
 e = y - yhat                                   # residual = actual - predicted
-print(" day   y   ŷ   e=y-ŷ  |e|   e²")
+print(" day   y   ŷ   e   |e|   e²")
 for d, a, b, r in zip(days, y, yhat, e):
-    print(f" {d}  {a:3.0f} {b:3.0f}  {r:5.0f}  {abs(r):3.0f}  {r*r:4.0f}")
-print(f"sums              {e.sum():5.0f}  {np.abs(e).sum():3.0f}  {(e**2).sum():4.0f}")
-print(f"\\nME   (bias)  = {e.mean():.3f}")
-print(f"MAE  = 22/6  = {np.abs(e).mean():.3f}   sklearn {mean_absolute_error(y, yhat):.3f}")
-print(f"MSE  = 140/6 = {(e**2).mean():.3f}  sklearn {mean_squared_error(y, yhat):.3f}")
-print(f"RMSE = √MSE  = {np.sqrt((e**2).mean()):.3f}   sklearn {root_mean_squared_error(y, yhat):.3f}")</div>
-  <div class="fx" data-lang="text"> day   y   ŷ   e=y-ŷ  |e|   e²
- Mon   20  22     -2    2     4
- Tue   25  24      1    1     1
- Wed   30  33     -3    3     9
- Thu   35  30      5    5    25
- Fri   40  41     -1    1     1
- Sat   60  50     10   10   100
-sums                 10   22   140
+    print(f" {d}  {a:3.0f} {b:3.0f} {r:3.0f}  {abs(r):3.0f}  {r*r:4.0f}")
+print(f" sum          {e.sum():3.0f}  {np.abs(e).sum():3.0f}  {(e**2).sum():4.0f}")
+print(f"ME (bias) = {e.mean():.3f}")
+print(f"MAE  = {mean_absolute_error(y, yhat):.3f}")
+print(f"MSE  = {mean_squared_error(y, yhat):.3f}")
+print(f"RMSE = {root_mean_squared_error(y, yhat):.3f}")</div>
+  <div class="fx" data-lang="text"> day   y   ŷ   e   |e|   e²
+ Mon   20  22  -2    2     4
+ Tue   25  24   1    1     1
+ Wed   30  33  -3    3     9
+ Thu   35  30   5    5    25
+ Fri   40  41  -1    1     1
+ Sat   60  50  10   10   100
+ sum           10   22   140
+ME (bias) = 1.667
+MAE  = 3.667
+MSE  = 23.333
+RMSE = 4.830</div>
+  <p>The residuals are −2, +1, −3, +5, −1, +10, and they add up to 10. Their plain average is the <strong>mean error</strong>, also called the <strong>bias</strong>: ME = 10 / 6 = +1.67. It answers the question "does the model lean one way?": on average this model forecasts 1.67 tiffins too few. A bias far from zero is worth knowing about, because it is cheap to fix (shift every forecast) and usually points to something systematic, such as a growth trend or a holiday effect the model has missed.</p>
+  <p>But bias is useless as a measure of accuracy, because positive and negative errors cancel. A model that is off by +20 one day and −20 the next has zero bias while being wildly wrong. Think of a darts player: bias is where the centre of the cluster of darts sits relative to the bullseye, while accuracy is how far the darts land from the bullseye on average. A player can be perfectly centred and still spray darts all over the board. To measure the size of the errors we have to remove the sign before averaging, and there are two natural ways to do it: take the absolute value, or square. Each leads to a family of metrics. One more warning about bias: a least-squares model with an intercept has a mean residual of exactly 0 on its own training data, so measure bias on held-out data and per segment, where Saturdays may always be under-forecast and Mondays always over-forecast even when the overall bias is zero.</p>
 
-ME   (bias)  = 1.667
-MAE  = 22/6  = 3.667   sklearn 3.667
-MSE  = 140/6 = 23.333  sklearn 23.333
-RMSE = √MSE  = 4.830   sklearn 4.830</div>
-  <p>The table's three columns (e, |e|, e²) are the raw material for every metric in sections 01–05. Check by hand: residuals −2 + 1 − 3 + 5 − 1 + 10 = 10.</p>
-  <h3>Mean error (bias)</h3>
-  <p>The plain average of the residuals is the <strong>mean error</strong> or <strong>bias</strong>: ME = 10 / 6 = <strong>+1.67</strong> orders. It answers "do we lean one way?": on average this model forecasts 1.67 tiffins too few. A bias far from 0 is a cheap fix (shift every forecast) and a sign of something systematic (a trend the model has not caught, a missing holiday effect).</p>
-  <p>But bias is useless as an accuracy measure: errors of +20 and −20 average to 0. A model that is wildly wrong in both directions can have zero bias. We need to remove the sign before averaging. There are two natural ways: take the absolute value (section 02) or square (section 03).</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A dart player. Bias is where the centre of the cluster sits relative to the bullseye. Accuracy (MAE, RMSE) is how far darts land from the bullseye on average. A player can be perfectly centred and still spray darts all over the board.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>For n predictions, the <strong>residual</strong> eᵢ = yᵢ − ŷᵢ. The <strong>mean error</strong> (bias) ME = (1/n) Σ eᵢ. Some libraries and textbooks define the error as ŷ − y, which flips the sign of ME; always say which you use.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>A model trained by least squares with an intercept has ME exactly 0 on its training data, so a zero training bias proves nothing. Measure bias on held-out data, and per segment (weekday, region): the overall bias can be 0 while Saturdays are always under-forecast and Mondays always over-forecast.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us.</b> Bias says which way we lean, not how big the misses are, because signs cancel. <b>→ next: 02 MAE, the average size of a miss</b></div>
-
-  <h2 id="rm-mae"><span class="num">02</span>Mean Absolute Error (MAE)</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>The residuals are −2, +1, −3, +5, −1, +10, and their mean (+1.67) hides how big they are because the signs cancel. How far off is a typical forecast, in orders, whatever the direction?</p></div>
-  <h3>By hand</h3>
-  <p>Drop the signs and average: |e| = 2, 1, 3, 5, 1, 10. Sum = 22. <strong>MAE = 22 / 6 = 3.67 orders</strong>. In words: "on a typical day the forecast is off by about 3.7 tiffins". That sentence is why managers like MAE: it is in the units of the target and needs no explanation.</p>
-  <h3>Each unit of error costs the same</h3>
-  <p>In MAE, a 10-order miss counts exactly twice a 5-order miss, and five 2-order misses count the same as one 10-order miss. That is right when the cost of an error grows in a straight line with its size (each wasted tiffin costs ₹40, whatever else happened that day).</p>
-  <h3>The best constant under MAE is the median</h3>
-  <p>Suppose the model could only output one number c for every day. Which c gives the smallest MAE? Think of the six real values on a line: 20, 25, 30, 35, 40, 60. Move c one order to the right. Every value to the right of c gets 1 closer, every value to the left gets 1 farther. If more values sit on the right, the total drops, so keep moving. You stop when the values are balanced: half on each side. That point is the <strong>median</strong>. With an even count (six values) any c between the two middle values (30 and 35) gives the same MAE.</p>
-  <div class="fx" data-lang="py"># if a model could only predict ONE number c for every day, which c is best under each metric?
+  <h2 id="rm-mae"><span class="num">02</span>Mean Absolute Error</h2>
+  <p>The simplest way to remove the sign is to take the absolute value of each residual and average. That is the <strong>mean absolute error</strong> (MAE). The absolute errors are 2, 1, 3, 5, 1, 10, which sum to 22, so MAE = 22 / 6 = 3.67 orders, matching the output above. In words: "on a typical day the forecast is off by about 3.7 tiffins". That sentence is why managers like MAE. It is in the same units as the target and needs no explanation.</p>
+  <p>MAE charges every unit of error the same. A 10-order miss counts exactly twice as much as a 5-order miss, and five 2-order misses count the same as one 10-order miss. That is the right view when the cost of an error grows in a straight line with its size, for example when every wasted tiffin costs ₹40 whatever else happened that day.</p>
+  <p>MAE has a less obvious property that explains a lot of its behaviour. Suppose a model could only output one number c for every day; which c gives the smallest MAE? Picture the six real values on a line: 20, 25, 30, 35, 40, 60. If you move c one order to the right, every value to the right of c gets 1 closer and every value to the left gets 1 farther away. While more values sit on the right, the total keeps dropping, so you keep moving. You stop when the values are balanced, half on each side. That point is the <strong>median</strong>. Six friends living along one road who want a meeting point with the least total walking should meet at the middle friend's house, not at the average position, because the friend who lives far out of town pulls the average but not the median.</p>
+  <div class="fx" data-lang="py"># if a model could only predict ONE number c for every day, which c is best?
 import numpy as np
 from week import y
-cs = np.arange(15, 65.01, 0.5)
-mse = [np.mean((y - c) ** 2) for c in cs]
-mae = [np.mean(np.abs(y - c)) for c in cs]
-print("mean of y   =", y.mean(), "   median of y =", np.median(y))
-print("best c for MSE:", cs[np.argmin(mse)], "  MSE there =", round(min(mse), 3))
-print("best c for MAE:", cs[np.argmin(mae)], "-", cs[np.flatnonzero(np.isclose(mae, min(mae)))[-1]],
-      "(a flat stretch)  MAE there =", round(min(mae), 3))
-for c in [30, 32.5, 35]:
-    print(f"c={c:&lt;5}: MSE={np.mean((y-c)**2):7.3f}  MAE={np.mean(np.abs(y-c)):.3f}")</div>
-  <div class="fx" data-lang="text">mean of y   = 35.0    median of y = 32.5
-best c for MSE: 35.0   MSE there = 166.667
-best c for MAE: 30.0 - 35.0 (a flat stretch)  MAE there = 10.0
-c=30   : MSE=191.667  MAE=10.000
-c=32.5 : MSE=172.917  MAE=10.000
-c=35   : MSE=166.667  MAE=10.000</div>
-  <p>Any c from 30 to 35 gives MAE = 10, exactly as the balancing argument says. (The MSE lines are for section 03.) This is why a model trained to minimise absolute error predicts something like the <em>conditional median</em>, and why MAE is robust: the median does not care how far out the extreme values are.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Six friends live along one road and want a meeting point that minimises the total walking distance. The best spot is the middle friend's house (the median), not the average position: the friend who lives far out of town drags the average but not the median.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>MAE</strong> = (1/n) Σ |yᵢ − ŷᵢ|. Units: same as y. Range [0, ∞). Minimised by the median of y among constant predictions. sklearn: <code>mean_absolute_error</code>; scorer <code>"neg_mean_absolute_error"</code>.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>MAE's value depends on the scale of y: an MAE of 3.67 is excellent for a kitchen selling 2,000 tiffins a day and poor for one selling 5. Never compare MAE across series of different sizes; use a percentage (section 07–08) or MASE (section 09).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us.</b> MAE treats Saturday's 10-order miss as only twice as bad as Thursday's 5. For a kitchen, running out by 10 tiffins on the busiest day may be far worse than that. <b>→ next: 03 MSE and RMSE, which punish big misses more</b></div>
+print("mean of y =", y.mean(), "  median of y =", np.median(y))
+for c in [25, 30, 32.5, 35, 40]:
+    print(f"c={c:&lt;5}: MAE={np.mean(np.abs(y - c)):6.3f}   MSE={np.mean((y - c) ** 2):7.3f}")</div>
+  <div class="fx" data-lang="text">mean of y = 35.0   median of y = 32.5
+c=25   : MAE=11.667   MSE=266.667
+c=30   : MAE=10.000   MSE=191.667
+c=32.5 : MAE=10.000   MSE=172.917
+c=35   : MAE=10.000   MSE=166.667
+c=40   : MAE=11.667   MSE=191.667</div>
+  <p>With an even number of values, any c between the two middle ones (30 and 35) gives the same MAE, and the output shows exactly that: MAE is 10.000 at 30, 32.5 and 35, and higher outside that range. (The MSE column is for the next section.) This is why a model trained to minimise absolute error ends up predicting something like the conditional median, and why MAE is fairly robust to outliers: the median does not care how far out the extreme values are. MAE does have one big limitation: it is in the units of the target, so an MAE of 3.67 is superb for a kitchen selling 2,000 tiffins a day and poor for one selling 5. Never compare MAE across series of different sizes; sections 05 and 06 give scale-free alternatives.</p>
 
-  <h2 id="rm-mse"><span class="num">03</span>MSE and RMSE</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>MAE = 3.67 counts every order of error equally. We cannot yet express "one huge miss is worse than several small ones adding up to the same total".</p></div>
-  <h3>By hand</h3>
-  <p>Square each residual instead of taking its absolute value: e² = 4, 1, 9, 25, 1, 100. Sum = 140.</p>
-  <ul>
-    <li><strong>MSE</strong> (mean squared error) = 140 / 6 = <strong>23.33</strong>. Units: orders² ("squared tiffins"), which nobody can picture.</li>
-    <li><strong>RMSE</strong> (root mean squared error) = √23.33 = <strong>4.83 orders</strong>. Taking the root brings the units back to orders.</li>
-  </ul>
-  <h3>Who dominates the total</h3>
-  <figure class="viz"><svg viewBox="0 0 660 240" width="660">
-<line x1="60" y1="205" x2="310" y2="205" stroke="currentColor" opacity="0.5"/>
-<line x1="60" y1="25" x2="60" y2="205" stroke="currentColor" opacity="0.5"/>
-<text x="60" y="219" text-anchor="middle" class="tm" font-size="10.5">-10</text>
-<line x1="60" y1="205" x2="60" y2="208" stroke="currentColor" opacity="0.5"/>
-<text x="122.5" y="219" text-anchor="middle" class="tm" font-size="10.5">-5</text>
-<line x1="122.5" y1="205" x2="122.5" y2="208" stroke="currentColor" opacity="0.5"/>
-<text x="185" y="219" text-anchor="middle" class="tm" font-size="10.5">0</text>
-<line x1="185" y1="205" x2="185" y2="208" stroke="currentColor" opacity="0.5"/>
-<text x="247.5" y="219" text-anchor="middle" class="tm" font-size="10.5">5</text>
-<line x1="247.5" y1="205" x2="247.5" y2="208" stroke="currentColor" opacity="0.5"/>
-<text x="310" y="219" text-anchor="middle" class="tm" font-size="10.5">10</text>
-<line x1="310" y1="205" x2="310" y2="208" stroke="currentColor" opacity="0.5"/>
-<text x="55" y="208.5" text-anchor="end" class="tm" font-size="10.5">0</text>
-<line x1="57" y1="205" x2="60" y2="205" stroke="currentColor" opacity="0.5"/>
-<text x="55" y="118.5" text-anchor="end" class="tm" font-size="10.5">50</text>
-<line x1="57" y1="115" x2="60" y2="115" stroke="currentColor" opacity="0.5"/>
-<text x="55" y="28.5" text-anchor="end" class="tm" font-size="10.5">100</text>
-<line x1="57" y1="25" x2="60" y2="25" stroke="currentColor" opacity="0.5"/>
-<polyline points="60,25 61.2,26.8 62.5,28.6 63.8,30.4 65,32.2 66.2,34 67.5,35.8 68.7,37.6 70,39.4 71.2,41.2 72.5,43 73.8,44.8 75,46.6 76.2,48.4 77.5,50.2 78.8,52 80,53.8 81.2,55.6 82.5,57.4 83.8,59.2 85,61 86.2,62.8 87.5,64.6 88.8,66.4 90,68.2 91.2,70 92.5,71.8 93.8,73.6 95,75.4 96.2,77.2 97.5,79 98.8,80.8 100,82.6 101.2,84.4 102.5,86.2 103.8,88 105,89.8 106.2,91.6 107.5,93.4 108.8,95.2 110,97 111.2,98.8 112.5,100.6 113.8,102.4 115,104.2 116.2,106 117.5,107.8 118.8,109.6 120,111.4 121.2,113.2 122.5,115 123.8,116.8 125,118.6 126.2,120.4 127.5,122.2 128.8,124 130,125.8 131.2,127.6 132.5,129.4 133.8,131.2 135,133 136.2,134.8 137.5,136.6 138.8,138.4 140,140.2 141.2,142 142.5,143.8 143.8,145.6 145,147.4 146.2,149.2 147.5,151 148.8,152.8 150,154.6 151.2,156.4 152.5,158.2 153.8,160 155,161.8 156.2,163.6 157.5,165.4 158.8,167.2 160,169 161.2,170.8 162.5,172.6 163.8,174.4 165,176.2 166.2,178 167.5,179.8 168.8,181.6 170,183.4 171.2,185.2 172.5,187 173.8,188.8 175,190.6 176.2,192.4 177.5,194.2 178.8,196 180,197.8 181.2,199.6 182.5,201.4 183.8,203.2 185,205 186.3,203.2 187.5,201.4 188.8,199.6 190,197.8 191.2,196 192.5,194.2 193.8,192.4 195,190.6 196.2,188.8 197.5,187 198.8,185.2 200,183.4 201.3,181.6 202.5,179.8 203.8,178 205,176.2 206.3,174.4 207.5,172.6 208.8,170.8 210,169 211.3,167.2 212.5,165.4 213.8,163.6 215,161.8 216.2,160 217.5,158.2 218.8,156.4 220,154.6 221.2,152.8 222.5,151 223.8,149.2 225,147.4 226.2,145.6 227.5,143.8 228.8,142 230,140.2 231.2,138.4 232.5,136.6 233.8,134.8 235,133 236.3,131.2 237.5,129.4 238.8,127.6 240,125.8 241.2,124 242.5,122.2 243.8,120.4 245,118.6 246.2,116.8 247.5,115 248.8,113.2 250,111.4 251.2,109.6 252.5,107.8 253.8,106 255,104.2 256.2,102.4 257.5,100.6 258.8,98.8 260,97 261.2,95.2 262.5,93.4 263.8,91.6 265,89.8 266.2,88 267.5,86.2 268.8,84.4 270,82.6 271.2,80.8 272.5,79 273.8,77.2 275,75.4 276.2,73.6 277.5,71.8 278.8,70 280,68.2 281.2,66.4 282.5,64.6 283.8,62.8 285,61 286.2,59.2 287.5,57.4 288.8,55.6 290,53.8 291.2,52 292.5,50.2 293.8,48.4 295,46.6 296.2,44.8 297.5,43 298.8,41.2 300,39.4 301.2,37.6 302.5,35.8 303.8,34 305,32.2 306.2,30.4 307.5,28.6 308.8,26.8 310,25" fill="none" class="sb" stroke-width="2.5"/>
-<polyline points="60,25 61.2,28.6 62.5,32.1 63.8,35.6 65,39.1 66.2,42.6 67.5,46 68.7,49.3 70,52.6 71.2,55.9 72.5,59.2 73.8,62.4 75,65.6 76.2,68.8 77.5,71.9 78.8,74.9 80,78 81.2,81 82.5,84 83.8,86.9 85,89.8 86.2,92.7 87.5,95.5 88.8,98.3 90,101 91.2,103.8 92.5,106.4 93.8,109.1 95,111.7 96.2,114.3 97.5,116.8 98.8,119.3 100,121.8 101.2,124.2 102.5,126.6 103.8,128.9 105,131.3 106.2,133.6 107.5,135.8 108.8,138 110,140.2 111.2,142.3 112.5,144.4 113.8,146.5 115,148.6 116.2,150.6 117.5,152.5 118.8,154.4 120,156.3 121.2,158.2 122.5,160 123.8,161.8 125,163.5 126.2,165.2 127.5,166.9 128.8,168.6 130,170.2 131.2,171.7 132.5,173.2 133.8,174.7 135,176.2 136.2,177.6 137.5,179 138.8,180.4 140,181.7 141.2,182.9 142.5,184.2 143.8,185.4 145,186.6 146.2,187.7 147.5,188.8 148.8,189.9 150,190.9 151.2,191.9 152.5,192.8 153.8,193.8 155,194.6 156.2,195.5 157.5,196.3 158.8,197.1 160,197.8 161.2,198.5 162.5,199.2 163.8,199.8 165,200.4 166.2,200.9 167.5,201.5 168.8,202 170,202.4 171.2,202.8 172.5,203.2 173.8,203.5 175,203.8 176.2,204.1 177.5,204.4 178.8,204.6 180,204.7 181.2,204.8 182.5,204.9 183.8,205 185,205 186.3,205 187.5,204.9 188.8,204.8 190,204.7 191.2,204.6 192.5,204.4 193.8,204.1 195,203.8 196.2,203.5 197.5,203.2 198.8,202.8 200,202.4 201.3,202 202.5,201.5 203.8,200.9 205,200.4 206.3,199.8 207.5,199.2 208.8,198.5 210,197.8 211.3,197.1 212.5,196.3 213.8,195.5 215,194.6 216.2,193.8 217.5,192.8 218.8,191.9 220,190.9 221.2,189.9 222.5,188.8 223.8,187.7 225,186.6 226.2,185.4 227.5,184.2 228.8,182.9 230,181.7 231.2,180.4 232.5,179 233.8,177.6 235,176.2 236.3,174.7 237.5,173.2 238.8,171.7 240,170.2 241.2,168.6 242.5,166.9 243.8,165.2 245,163.5 246.2,161.8 247.5,160 248.8,158.2 250,156.3 251.2,154.4 252.5,152.5 253.8,150.6 255,148.6 256.2,146.5 257.5,144.4 258.8,142.3 260,140.2 261.2,138 262.5,135.8 263.8,133.6 265,131.3 266.2,128.9 267.5,126.6 268.8,124.2 270,121.8 271.2,119.3 272.5,116.8 273.8,114.3 275,111.7 276.2,109.1 277.5,106.4 278.8,103.8 280,101 281.2,98.3 282.5,95.5 283.8,92.7 285,89.8 286.2,86.9 287.5,84 288.8,81 290,78 291.2,74.9 292.5,71.9 293.8,68.8 295,65.6 296.2,62.4 297.5,59.2 298.8,55.9 300,52.6 301.2,49.3 302.5,46 303.8,42.6 305,39.1 306.2,35.6 307.5,32.1 308.8,28.6 310,25" fill="none" class="sr" stroke-width="2.5"/>
-<text x="185" y="235" text-anchor="middle" class="tm" font-size="11">error e</text>
-<text x="185" y="17" text-anchor="middle" font-size="12.5" font-weight="700">penalty for one error</text>
-<text x="140" y="56" class="tr" font-size="11">red: e² (MSE)</text><text x="140" y="72" class="tb" font-size="11">blue: 10·|e| (MAE)</text>
-<rect x="390" y="188.6" width="16" height="16.4" class="fb sb"/><rect x="407" y="199.9" width="16" height="5.1" class="fr sr"/>
-<text x="406" y="220" text-anchor="middle" class="tm" font-size="10.5">Mon</text>
-<rect x="430" y="196.8" width="16" height="8.2" class="fb sb"/><rect x="447" y="203.7" width="16" height="1.3" class="fr sr"/>
-<text x="446" y="220" text-anchor="middle" class="tm" font-size="10.5">Tue</text>
-<rect x="470" y="180.5" width="16" height="24.5" class="fb sb"/><rect x="487" y="193.4" width="16" height="11.6" class="fr sr"/>
-<text x="486" y="220" text-anchor="middle" class="tm" font-size="10.5">Wed</text>
-<rect x="510" y="164.1" width="16" height="40.9" class="fb sb"/><rect x="527" y="172.9" width="16" height="32.1" class="fr sr"/>
-<text x="526" y="220" text-anchor="middle" class="tm" font-size="10.5">Thu</text>
-<rect x="550" y="196.8" width="16" height="8.2" class="fb sb"/><rect x="567" y="203.7" width="16" height="1.3" class="fr sr"/>
-<text x="566" y="220" text-anchor="middle" class="tm" font-size="10.5">Fri</text>
-<rect x="590" y="123.2" width="16" height="81.8" class="fb sb"/><rect x="607" y="76.4" width="16" height="128.6" class="fr sr"/>
-<text x="606" y="220" text-anchor="middle" class="tm" font-size="10.5">Sat</text>
-<line x1="385" y1="205" x2="630" y2="205" stroke="currentColor" opacity="0.5"/>
-<text x="510" y="17" text-anchor="middle" font-size="12.5" font-weight="700">share of the total</text>
-<text x="395" y="40" class="tb" font-size="10.5">blue: Σ|e| share, Sat 45%</text><text x="395" y="55" class="tr" font-size="10.5">red: Σe² share, Sat 71%</text>
-</svg><figcaption>Left: the penalty for one error. Small errors are cheaper under squaring, big ones much dearer. Right: each day's share of the total. Saturday is 45% of Σ|e| but 71% of Σe².</figcaption></figure>
-  <p>Saturday alone contributes 100 of the 140 squared units. Squaring turns "Saturday is the worst day" into "Saturday is most of the score". That is exactly what you want if big misses are disproportionately costly, and exactly what you do not want if Saturday was a data-entry error.</p>
-  <h3>The best constant under MSE is the mean</h3>
-  <p>For a constant forecast c, MSE(c) = (1/n) Σ (yᵢ − c)². Take the derivative and set it to 0: −(2/n) Σ (yᵢ − c) = 0 ⇒ Σ yᵢ = n·c ⇒ c = mean(y) = 210/6 = 35. The output of section 02 confirms it: MSE is smallest (166.67) at c = 35. And that minimum, 166.67 = 1000/6, is the variance of y: <strong>the MSE of the best constant forecast is the variance of the target</strong>. Remember the 1000; it returns as SS_tot in section 05.</p>
-  <h3>RMSE versus MAE</h3>
-  <ul>
-    <li><strong>RMSE ≥ MAE, always.</strong> The root of a mean of squares is at least the mean (a property of averages, the power-mean inequality). Equality holds only if every |e| is the same.</li>
-    <li><strong>The ratio is a warning light.</strong> Here RMSE/MAE = 4.83/3.67 = 1.32. If all errors were equal it would be 1.0; the bigger the ratio, the more the total comes from a few large misses. Section 04 shows it jumping to 1.91 after one freak day.</li>
-    <li><strong>Upper bound.</strong> RMSE ≤ √n · MAE (reached when a single day carries all the error).</li>
-  </ul>
-  <h3>Why models are trained on MSE</h3>
-  <p>MSE is smooth (its derivative 2e exists everywhere, unlike |e| at 0), so gradient descent and the closed-form normal equation work (<a class="xref" data-note="ml_loss_gd">Loss Functions &amp; Gradient Descent</a>, <a class="xref" data-note="ml_regression">Linear Regression</a>). If the errors are Gaussian, minimising MSE is the same as maximising likelihood. So MSE is the natural <em>training</em> loss; RMSE is its human-readable <em>report</em>.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A traffic fine that grows with the square of your excess speed: 10 km/h over costs ₹100, 20 over costs ₹400, 40 over costs ₹1,600. Many small slips are cheap; one wild drive is ruinous.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>MSE</strong> = (1/n) Σ (yᵢ − ŷᵢ)². <strong>RMSE</strong> = √MSE, in the units of y. Minimised by the mean of y among constants; MSE of that constant = Var(y). sklearn: <code>mean_squared_error</code>, <code>root_mean_squared_error</code>; scorers <code>"neg_mean_squared_error"</code>, <code>"neg_root_mean_squared_error"</code>.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>RMSE is not "the average error". Saying "we are off by 4.83 tiffins a day on average" is wrong; that is MAE (3.67). And averaging RMSE across folds or series is not the RMSE of the pooled data: average the MSEs, then take the root.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us.</b> Because squaring lets one day dominate, RMSE can be ruined by a single freak day, and neither MAE nor RMSE says what a typical day or the worst day looks like. <b>→ next: 04 Median absolute error and max error</b></div>
-
-  <h2 id="rm-robust"><span class="num">04</span>Median Absolute Error and Max Error</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>RMSE (4.83) is pulled up mostly by Saturday. If Saturday was a festival or a typo, how good is the model on an ordinary day? And separately: what is the single worst miss we must plan for?</p></div>
-  <h3>By hand</h3>
-  <p>Sort the absolute errors: 1, 1, 2, 3, 5, 10. The <strong>median absolute error</strong> is the middle value; with six values, the average of the 3rd and 4th: (2 + 3)/2 = <strong>2.5 orders</strong>. Half the days are off by 2.5 or less. The <strong>max error</strong> is simply the largest: <strong>10 orders</strong> (Saturday).</p>
-  <h3>A freak day: who notices?</h3>
-  <p>Suppose Saturday had been a festival: 60 orders, but the model said 20. One residual becomes 40 instead of 10.</p>
+  <h2 id="rm-mse"><span class="num">03</span>MSE, RMSE and Robust Alternatives</h2>
+  <p>MAE treats Saturday's 10-order miss as only twice as bad as Thursday's 5. For a kitchen, running out by 10 tiffins on the busiest day may be far worse than twice as bad: regulars go elsewhere and the reviews turn sour. If big misses are disproportionately costly, we want a metric that punishes them disproportionately. The second way to remove the sign does exactly that: square each residual.</p>
+  <p>The squared errors are 4, 1, 9, 25, 1 and 100, which sum to 140. The <strong>mean squared error</strong> (MSE) is 140 / 6 = 23.33. Its units are "squared tiffins", which nobody can picture, so we usually take the square root to get back to orders: the <strong>root mean squared error</strong> (RMSE) is √23.33 = 4.83 orders. Think of a traffic fine that grows with the square of your excess speed: 10 km/h over costs ₹100, 20 over costs ₹400 and 40 over costs ₹1,600. Many small slips are cheap; one wild drive is ruinous. Look at who dominates the total: Saturday alone contributes 100 of the 140 squared units, 71% of the total, while it was only 45% of the absolute errors. Squaring turns "Saturday is the worst day" into "Saturday is most of the score".</p>
+  <p>MSE also has a best constant, and it is the <strong>mean</strong>. For a constant forecast c, MSE(c) = (1/n) Σ (yᵢ − c)². Setting its derivative to zero gives −(2/n) Σ (yᵢ − c) = 0, so c = mean(y) = 35. The earlier output confirms it: MSE is smallest, 166.67, at c = 35. That minimum is also the variance of y, which is worth remembering: the MSE of the best constant forecast is the variance of the target. So a model trained on squared error predicts the conditional mean, and a model trained on absolute error predicts the conditional median.</p>
+  <p>Because squaring makes RMSE sensitive to the biggest misses, RMSE is always at least as large as MAE, with equality only when every error has the same size. The ratio RMSE/MAE is therefore a handy warning light: here it is 4.83 / 3.67 = 1.32, and the larger it gets, the more of the total comes from a few large misses. To see how strongly one day can matter, suppose Saturday had been a festival with 60 orders, but the model said 20, a 40-order miss. Two more summaries help here. The <strong>median absolute error</strong> (MedAE) is the middle value of the absolute errors, which describes a typical day while ignoring freak days; sorting 1, 1, 2, 3, 5, 10, it is (2 + 3)/2 = 2.5. The <strong>max error</strong> is simply the largest absolute error, the worst case you must plan for; here it is 10.</p>
   <div class="fx" data-lang="py">import numpy as np
 from week import y, yhat
-from sklearn.metrics import (median_absolute_error, max_error, mean_absolute_error,
-                             root_mean_squared_error)
+from sklearn.metrics import (mean_absolute_error, root_mean_squared_error,
+                             median_absolute_error, max_error)
 
-ae = np.abs(y - yhat)
-print("|e| sorted:", np.sort(ae), " -&gt; median of 2 and 3 =", np.median(ae))
-print(f"MedAE = {median_absolute_error(y, yhat):.2f}   max error = {max_error(y, yhat):.0f}")
+festival = yhat.copy(); festival[5] = 20        # Saturday: 60 real orders, model said 20
+for name, f in [("normal week", yhat), ("festival miss", festival)]:
+    mae, rmse = mean_absolute_error(y, f), root_mean_squared_error(y, f)
+    print(f"{name:14s} MAE={mae:5.2f}  RMSE={rmse:5.2f}  MedAE={median_absolute_error(y, f):4.2f}  "
+          f"max={max_error(y, f):3.0f}  RMSE/MAE={rmse / mae:.2f}")</div>
+  <div class="fx" data-lang="text">normal week    MAE= 3.67  RMSE= 4.83  MedAE=2.50  max= 10  RMSE/MAE=1.32
+festival miss  MAE= 8.67  RMSE=16.53  MedAE=2.50  max= 40  RMSE/MAE=1.91</div>
+  <p>One bad day multiplied MAE by 2.4 (3.67 to 8.67) and RMSE by 3.4 (4.83 to 16.53), and the RMSE/MAE ratio jumped from 1.32 to 1.91. MedAE did not move at all, because the median ignores how extreme the extreme value is, while max error reacts only to that one day. Think of judging a delivery service: MedAE says "a typical order is 2.5 minutes late", max error says "the worst order was 40 minutes late", and you need the first to describe the service and the second to decide whether you can promise a time.</p>
+  <p>Which of these is "right" depends on whether the festival day is noise or business. If it was a data-entry error, RMSE is being ruined by garbage and a robust metric is wiser. If festivals really happen and really cost money, a metric that ignores them will happily choose a model that fails every festival. MSE remains the usual <em>training</em> loss for practical reasons: it is smooth (its derivative 2e exists everywhere, unlike |e| at zero), so gradient descent and the normal equation work, and if errors are Gaussian, minimising it is the same as maximising likelihood (<a class="xref" data-note="ml_loss_gd">Loss Functions &amp; Gradient Descent</a>). RMSE is its human-readable report. But RMSE is not "the average error": the average miss is MAE.</p>
 
-print("\\nSaturday was a festival: 60 real orders, but suppose the model said 20 (a 40-order miss)")
-y2 = yhat.copy(); y2[5] = 20
-for name, f in [("original forecast", yhat), ("festival miss", y2)]:
-    print(f"{name:18s} MAE={mean_absolute_error(y, f):5.2f}  RMSE={root_mean_squared_error(y, f):5.2f}  "
-          f"MedAE={median_absolute_error(y, f):4.2f}  max={max_error(y, f):4.0f}  RMSE/MAE={root_mean_squared_error(y, f)/mean_absolute_error(y, f):.2f}")</div>
-  <div class="fx" data-lang="text">|e| sorted: [ 1.  1.  2.  3.  5. 10.]  -&gt; median of 2 and 3 = 2.5
-MedAE = 2.50   max error = 10
-
-Saturday was a festival: 60 real orders, but suppose the model said 20 (a 40-order miss)
-original forecast  MAE= 3.67  RMSE= 4.83  MedAE=2.50  max=  10  RMSE/MAE=1.32
-festival miss      MAE= 8.67  RMSE=16.53  MedAE=2.50  max=  40  RMSE/MAE=1.91</div>
-  <p>By hand for the festival case: |e| = 2, 1, 3, 5, 1, 40, so MAE = 52/6 = 8.67; e² sum = 4 + 1 + 9 + 25 + 1 + 1600 = 1640, so RMSE = √(1640/6) = 16.53. One bad day multiplied MAE by 2.4 and RMSE by 3.4, while MedAE did not move at all (2.5): the median ignores how extreme the extreme value is. The RMSE/MAE ratio jumped from 1.32 to 1.91, flagging that one day dominates.</p>
-  <table class="tbl">
-    <tr><th>Metric</th><th>Normal week</th><th>Festival miss</th><th>Reacts to the one bad day?</th></tr>
-    <tr><td>MedAE</td><td>2.50</td><td>2.50</td><td>Not at all</td></tr>
-    <tr><td>MAE</td><td>3.67</td><td>8.67</td><td>In proportion</td></tr>
-    <tr><td>RMSE</td><td>4.83</td><td>16.53</td><td>Strongly</td></tr>
-    <tr><td>Max error</td><td>10</td><td>40</td><td>Only to it</td></tr>
-  </table>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Judging a delivery service. MedAE: "a typical order is 2.5 minutes late". Max error: "the worst order was 40 minutes late". You need the first to describe the service and the second to decide whether you can promise a time.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Median absolute error</strong> = median(|yᵢ − ŷᵢ|), robust to a minority of huge errors. <strong>Max error</strong> = maxᵢ |yᵢ − ŷᵢ|, the worst case. sklearn: <code>median_absolute_error</code>, <code>max_error</code>.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Robust is not always good. If festival days really happen and really cost money, a metric that ignores them (MedAE) will happily select a model that fails on every festival. Decide whether extreme days are noise or business before choosing a robust metric. Max error depends on a single row and grows with test-set size; use it as a check, not a model-selection score.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us.</b> We have four sizes of error (3.67, 4.83, 2.5, 10), but no way to say whether 3.67 is good. Good compared with what? <b>→ next: 05 R², which compares the model with the simplest possible forecast</b></div>
-
-  <h2 id="rm-r2"><span class="num">05</span>R²: Compared with Always Guessing the Mean</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>MAE 3.67 and RMSE 4.83 are in orders. Is that good? It depends on how much the orders move around: if every day were 35, an RMSE of 4.83 would be awful; if days ranged from 0 to 500, it would be superb. We need a score that compares the model's errors with how hard the series is to predict.</p></div>
-  <h3>The baseline: always predict the mean</h3>
-  <p>The laziest forecast that still uses the data is "every day = the average day", 35 orders. Section 03 showed that this constant minimises squared error among all constants, so it is the fair "know-nothing" benchmark. Its squared misses are the deviations of y from its mean:</p>
+  <h2 id="rm-r2"><span class="num">04</span>R² and Adjusted R²</h2>
+  <p>MAE of 3.67 and RMSE of 4.83 are in orders. Are they good? That depends on how much the orders move around. If every day had exactly 35 orders, an RMSE of 4.83 would be awful; if days ranged from 0 to 500, it would be superb. We need a score that compares the model's errors with how hard the series is to predict in the first place.</p>
+  <p>The fair "know-nothing" benchmark is the forecast "every day equals the average day", 35 orders, since we just saw that this constant has the smallest squared error of any constant. Its squared misses are the squared deviations of y from its mean, and their sum is called the <strong>total sum of squares</strong>, SS_tot. The model's squared misses add up to the <strong>residual sum of squares</strong>, SS_res:</p>
   <table class="tbl">
     <tr><th>Day</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sum</th></tr>
-    <tr><td>y − 35</td><td>−15</td><td>−10</td><td>−5</td><td>0</td><td>+5</td><td>+25</td><td>0</td></tr>
-    <tr><td>(y − 35)²</td><td>225</td><td>100</td><td>25</td><td>0</td><td>25</td><td>625</td><td><strong>SS_tot = 1000</strong></td></tr>
-    <tr><td>model's e²</td><td>4</td><td>1</td><td>9</td><td>25</td><td>1</td><td>100</td><td><strong>SS_res = 140</strong></td></tr>
+    <tr><td>(y − 35)²</td><td>225</td><td>100</td><td>25</td><td>0</td><td>25</td><td>625</td><td>SS_tot = 1000</td></tr>
+    <tr><td>model's e²</td><td>4</td><td>1</td><td>9</td><td>25</td><td>1</td><td>100</td><td>SS_res = 140</td></tr>
   </table>
-  <h3>Deriving R²</h3>
-  <p>SS_tot ("total sum of squares") is how much squared error you get by knowing nothing. SS_res ("residual sum of squares") is how much is left with the model. The share of the baseline's error that the model removed is:</p>
-  <p><strong>R² = 1 − SS_res / SS_tot = 1 − 140 / 1000 = 0.86</strong></p>
-  <p>Read it as "the model removes 86% of the squared error of the mean forecast", or in the textbook phrase, "explains 86% of the variance of y". Divide top and bottom by n and the formula becomes R² = 1 − MSE(model) / MSE(mean) = 1 − MSE / Var(y): R² is just MSE rescaled by the target's variance, which makes it unit-free and comparable across targets.</p>
+  <p><strong>R²</strong>, the coefficient of determination, is the share of the baseline's squared error that the model removed: R² = 1 − SS_res / SS_tot = 1 − 140 / 1000 = 0.86. Read it as "the model removes 86% of the squared error of always forecasting the mean", or in the textbook phrase, "explains 86% of the variance of y". Dividing top and bottom by n shows that R² = 1 − MSE / Var(y): it is just MSE rescaled by the target's variance, which makes it unit-free. Think of a student's exam compared with simply writing the class average for every answer: R² says how much of the gap between "average" and "perfect" the student closed. The figure shows the two sets of misses side by side, red sticks for the mean forecast and green sticks for the model.</p>
   <figure class="viz"><svg viewBox="0 0 660 255" width="660">
 <line x1="50" y1="200" x2="310" y2="200" stroke="currentColor" opacity="0.5"/>
 <line x1="50" y1="30" x2="50" y2="200" stroke="currentColor" opacity="0.5"/>
@@ -466,130 +274,51 @@ from sklearn.metrics import r2_score, explained_variance_score
 
 ss_res = np.sum((y - yhat) ** 2)                  # model's squared misses
 ss_tot = np.sum((y - y.mean()) ** 2)              # misses of "always predict the mean (35)"
-print("deviations from mean:", y - y.mean())
-print(f"SS_res = {ss_res:.0f}   SS_tot = {ss_tot:.0f}")
 r2 = 1 - ss_res / ss_tot
-print(f"R² = 1 - {ss_res:.0f}/{ss_tot:.0f} = {r2:.3f}   sklearn {r2_score(y, yhat):.3f}")
-n, p = len(y), 1                                  # suppose the model used p = 1 feature
-print(f"adjusted R² (p=1) = 1 - (1-R²)(n-1)/(n-p-1) = {1 - (1-r2)*(n-1)/(n-p-1):.3f}")
-print(f"adjusted R² (p=3) = {1 - (1-r2)*(n-1)/(n-3-1):.3f}")
+print(f"SS_res = {ss_res:.0f}   SS_tot = {ss_tot:.0f}   R² = {r2:.3f}   sklearn {r2_score(y, yhat):.3f}")
+n = len(y)
+for p in [1, 3]:
+    print(f"adjusted R² with p={p} features = {1 - (1 - r2) * (n - 1) / (n - p - 1):.3f}")
 
-print("\\nthree other forecasts:")
 for name, f in [("predict the mean 35", np.full(6, 35.0)),
                 ("forecast + 10 (biased)", yhat + 10),
                 ("reversed forecast", yhat[::-1])]:
     print(f"{name:24s} R²={r2_score(y, f):7.3f}   explained variance={explained_variance_score(y, f):7.3f}")</div>
-  <div class="fx" data-lang="text">deviations from mean: [-15. -10.  -5.   0.   5.  25.]
-SS_res = 140   SS_tot = 1000
-R² = 1 - 140/1000 = 0.860   sklearn 0.860
-adjusted R² (p=1) = 1 - (1-R²)(n-1)/(n-p-1) = 0.825
-adjusted R² (p=3) = 0.650
-
-three other forecasts:
+  <div class="fx" data-lang="text">SS_res = 140   SS_tot = 1000   R² = 0.860   sklearn 0.860
+adjusted R² with p=1 features = 0.825
+adjusted R² with p=3 features = 0.650
 predict the mean 35      R²=  0.000   explained variance=  0.000
 forecast + 10 (biased)   R²=  0.460   explained variance=  0.877
 reversed forecast        R²= -1.860   explained variance= -1.843</div>
-  <h3>What values R² can take</h3>
-  <ul>
-    <li><strong>R² = 1</strong>: perfect, SS_res = 0.</li>
-    <li><strong>R² = 0</strong>: no better than the mean. "predict the mean 35" scores exactly 0.000 above, by construction.</li>
-    <li><strong>R² &lt; 0</strong>: <em>worse</em> than the mean. The reversed forecast (Saturday's 50 given to Monday, and so on) scores −1.86: its squared error is 2.86 times the baseline's. There is no lower limit. On the data a linear-regression model was <em>trained</em> on (with an intercept), R² cannot go below 0, because the mean is one of the lines it could have chosen; on new data, or for any other model, it can. So "R² is between 0 and 1" is only true in-sample.</li>
-  </ul>
-  <h3>R² vs explained variance</h3>
-  <p>The biased forecast (every forecast + 10) has R² 0.46, but <code>explained_variance_score</code> says 0.877. Explained variance = 1 − Var(residuals)/Var(y): it subtracts the mean residual first, so it forgives a constant bias. Shifting all forecasts by +10 makes every day worse, and R² notices; explained variance does not. Prefer R² for evaluation; the two agree only when the mean residual is 0.</p>
-  <h3>R² on the test set uses the test mean</h3>
-  <p>sklearn's <code>r2_score(y_test, pred)</code> builds SS_tot from the mean of <em>y_test</em>. A model that predicts the training mean will usually score slightly below 0 on a test set whose mean differs (section 13 shows −0.098 on the kitchen data). Also, R² depends on how varied the test set is: the same model gets a lower R² on a test set with a narrow range of y, although its errors did not change. Compare R² only on the same test set.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A student's exam score compared with the class average. R² says how much of the gap between "the average student" and perfection this student closed. Negative R² is a student who did worse than simply writing the class average for every answer.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>R²</strong> (coefficient of determination) = 1 − SS_res/SS_tot, where SS_res = Σ(yᵢ − ŷᵢ)² and SS_tot = Σ(yᵢ − ȳ)². Range (−∞, 1]. For least-squares linear regression with intercept, evaluated on its training data, R² equals the squared correlation between y and ŷ. sklearn: <code>r2_score</code>, scorer <code>"r2"</code>; <code>LinearRegression().score(X, y)</code> also returns R².</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>A high R² does not mean good forecasts. With a strongly trending series, even a poor model gets R² 0.95 because the mean is a terrible baseline. And R² says nothing about bias or about the size of errors in units: report RMSE or MAE beside it.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us.</b> On training data, adding any column, even random noise, can only lower SS_res, so R² never goes down as a model grows. R² cannot tell a real improvement from a model that is just bigger. <b>→ next: 06 Adjusted R²</b></div>
+  <p>The first line confirms the hand calculation. The three other forecasts show what R² can and cannot do. Predicting the mean scores exactly 0, by construction: R² = 0 means "no better than the mean". The reversed forecast (Saturday's 50 given to Monday, and so on) scores −1.86, because its squared error is 2.86 times the baseline's. <strong>R² can be negative</strong> and has no lower limit. The common statement "R² is between 0 and 1" is true only for a least-squares linear model with an intercept, evaluated on its own training data, because the flat line at the mean is one of the lines it could have chosen; on new data, or for any other model, R² can go below zero. The biased forecast (every value + 10) shows a related trap. Its R² is 0.46, but <code>explained_variance_score</code> says 0.877, because explained variance subtracts the mean residual first and so forgives a constant bias. Shifting every forecast by 10 makes every day worse, and R² notices while explained variance does not, so prefer R² for evaluation.</p>
+  <p>R² has another weakness. On training data, adding any column to a linear model, even pure noise, can only lower SS_res, so R² never decreases as the model grows. With 6 days of data, an R² of 0.86 from 1 feature is impressive, but from 4 features the model has almost as many knobs as data points. <strong>Adjusted R²</strong> corrects for this by charging for each feature: Adjusted R² = 1 − (1 − R²) · (n − 1)/(n − p − 1), where n is the number of rows and p the number of features. It comes from replacing the two sums of squares by unbiased variance estimates, each divided by its degrees of freedom. A tailor who charges for every measurement is a fair picture: a suit that fits well after 3 measurements beats one that fits slightly better after 30. By hand, with p = 1: 1 − 0.14 × 5/4 = 0.825; with p = 3: 1 − 0.14 × 5/2 = 0.650, as printed. A new feature raises adjusted R² only if it reduces the unexplained part by more than its cost. Adjusted R² is an in-sample correction for linear models with a clear number of features; for trees or boosting, judge on held-out data instead (<a class="xref" data-note="ml_splits">Train/Val/Test &amp; CV</a>).</p>
+  <p>Two last cautions. A high R² does not mean good forecasts: on a strongly trending series even a poor model gets R² 0.95, because the mean is a terrible baseline for a trend. And R² depends on how varied the test set is, so compare R² values only on the same test set, and always report RMSE or MAE beside it.</p>
 
-  <h2 id="rm-adj"><span class="num">06</span>Adjusted R²</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>R² = 0.86. If the kitchen's model used 1 feature to get there, that is impressive with 6 days of data; if it used 4 features, it has nearly as many knobs as data points and could fit almost anything. Plain R² cannot tell the two apart.</p></div>
-  <h3>The idea</h3>
-  <p>Replace the two sums of squares by their unbiased variance estimates, dividing each by its degrees of freedom: SS_res by (n − p − 1) (n rows minus p slopes minus 1 intercept) and SS_tot by (n − 1). Each feature then "costs" a degree of freedom:</p>
-  <p><strong>Adjusted R² = 1 − (1 − R²) · (n − 1)/(n − p − 1)</strong></p>
-  <h3>By hand</h3>
-  <ul>
-    <li>p = 1 feature: 1 − 0.14 × 5/4 = 1 − 0.175 = <strong>0.825</strong>.</li>
-    <li>p = 3 features: 1 − 0.14 × 5/2 = 1 − 0.35 = <strong>0.650</strong>.</li>
-  </ul>
-  <p>Same R², very different verdicts (both in the output of section 05). A new feature raises adjusted R² only if it reduces (1 − R²) by more than the penalty grows; roughly, if its t-statistic in a linear regression exceeds 1 in absolute value. Adjusted R² can be negative, and with p close to n it becomes unstable.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A tailor who charges for every measurement taken. A suit that fits well after 3 measurements beats one that fits slightly better after 30.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Adjusted R²</strong> = 1 − [SS_res/(n − p − 1)] / [SS_tot/(n − 1)] = 1 − (1 − R²)(n − 1)/(n − p − 1), with n rows and p predictors. sklearn has no function for it (compute it); statsmodels prints it as "Adj. R-squared" (<a class="xref" data-note="ml_regression">Linear Regression</a>).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Adjusted R² is an in-sample correction for linear models with a clear p. For trees, boosting or regularized models, "number of features" is not the number of degrees of freedom; judge them on held-out data or cross-validation instead (<a class="xref" data-note="ml_splits">Train/Val/Test &amp; CV</a>).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us.</b> R², MAE and RMSE are all in units (or squared units) of orders. A 3-order miss is a disaster at 5 orders and nothing at 2,000, and none of these metrics says which. <b>→ next: 07 MAPE, the error as a percentage</b></div>
-
-  <h2 id="rm-mape"><span class="num">07</span>MAPE and Its Traps</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>The owner runs two kitchens: ours (about 35 orders a day) and a big one (about 2,000). MAE 3.67 here and MAE 40 there: which forecast is better? Errors in orders cannot be compared across sizes. We need the error relative to the size of the day.</p></div>
-  <h3>By hand</h3>
-  <p>Divide each absolute error by the real value, then average: the <strong>mean absolute percentage error</strong>.</p>
+  <h2 id="rm-mape"><span class="num">05</span>Percentage Errors: MAPE, sMAPE and WAPE</h2>
+  <p>The kitchen's owner runs two kitchens: ours, with about 35 orders a day, and a big one with about 2,000. An MAE of 3.67 here and 40 there: which forecast is better? Errors in orders cannot be compared across sizes. We need the error relative to the size of the day.</p>
+  <p>The best-known answer is the <strong>mean absolute percentage error</strong> (MAPE): divide each absolute error by the real value, then average. The six percentage errors are 10%, 4%, 10%, 14.3%, 2.5% and 16.7%, and their mean is 9.58%: "the forecast is typically off by about 10% of the day's orders". That is easy to explain and comparable across kitchens. Note that scikit-learn returns 0.0958, a fraction, not 9.58. But MAPE has three serious traps, and the code shows all three:</p>
   <div class="fx" data-lang="py">import numpy as np
-from week import days, y, yhat
-from sklearn.metrics import mean_absolute_percentage_error
+from week import y, yhat
+from sklearn.metrics import mean_absolute_percentage_error as mape
 
-pe = np.abs(y - yhat) / np.abs(y)                     # each miss as a share of the real value
-for d, a, b, q in zip(days, y, yhat, pe):
-    print(f"{d}: |{a:.0f} - {b:.0f}| / {a:.0f} = {q:.4f}")
-print(f"MAPE = mean = {pe.mean()*100:.3f}%    sklearn {mean_absolute_percentage_error(y, yhat)*100:.3f}%  (sklearn returns a fraction)")
+print("percentage errors:", np.round(np.abs(y - yhat) / y * 100, 1))
+print(f"MAPE = {mape(y, yhat):.4f}   (sklearn returns a fraction)")
 
-print("\\nTrap 1: a quiet day. Add Sunday: 1 real order, forecast 4")
-y7, f7 = np.r_[y, 1.0], np.r_[yhat, 4.0]
-print(f"MAE  {np.abs(y-yhat).mean():.3f} -&gt; {np.abs(y7-f7).mean():.3f}     "
-      f"MAPE {mean_absolute_percentage_error(y, yhat)*100:.2f}% -&gt; {mean_absolute_percentage_error(y7, f7)*100:.2f}%")
-print("a day with 0 orders: sklearn MAPE =", f"{mean_absolute_percentage_error([0, 10], [1, 10]):.3e}", "(divides by machine epsilon)")
+y7, f7 = np.r_[y, 1.0], np.r_[yhat, 4.0]           # add a quiet Sunday: 1 real order, forecast 4
+print(f"with quiet Sunday: MAE {np.abs(y - yhat).mean():.2f} -&gt; {np.abs(y7 - f7).mean():.2f}   "
+      f"MAPE {mape(y, yhat):.1%} -&gt; {mape(y7, f7):.1%}")
 
-print("\\nTrap 2: asymmetry. Real value 100:")
-for f in [50, 150, 200, 0]:
-    print(f"  forecast {f:3d}: APE = {abs(100-f)/100:.0%}")
-print("Real value 50 forecast 100 vs real 100 forecast 50 (same miss of 50):",
-      f"{abs(50-100)/50:.0%} vs {abs(100-50)/100:.0%}")
-
-print("\\nTrap 3: MAPE pulls forecasts LOW. Two days with 10 and 100 orders; one constant forecast c for both:")
-two = np.array([10.0, 100.0])
-for c in [10, 30, 55, 100]:
-    print(f"  c={c:3d}: MAPE={np.mean(np.abs(two - c) / two):.0%}   MSE={np.mean((two - c) ** 2):6.0f}")</div>
-  <div class="fx" data-lang="text">Mon: |20 - 22| / 20 = 0.1000
-Tue: |25 - 24| / 25 = 0.0400
-Wed: |30 - 33| / 30 = 0.1000
-Thu: |35 - 30| / 35 = 0.1429
-Fri: |40 - 41| / 40 = 0.0250
-Sat: |60 - 50| / 60 = 0.1667
-MAPE = mean = 9.575%    sklearn 9.575%  (sklearn returns a fraction)
-
-Trap 1: a quiet day. Add Sunday: 1 real order, forecast 4
-MAE  3.667 -&gt; 3.571     MAPE 9.58% -&gt; 51.06%
-a day with 0 orders: sklearn MAPE = 2.252e+15 (divides by machine epsilon)
-
-Trap 2: asymmetry. Real value 100:
-  forecast  50: APE = 50%
-  forecast 150: APE = 50%
-  forecast 200: APE = 100%
-  forecast   0: APE = 100%
-Real value 50 forecast 100 vs real 100 forecast 50 (same miss of 50): 100% vs 50%
-
-Trap 3: MAPE pulls forecasts LOW. Two days with 10 and 100 orders; one constant forecast c for both:
-  c= 10: MAPE=45%   MSE=  4050
-  c= 30: MAPE=135%   MSE=  2650
-  c= 55: MAPE=248%   MSE=  2025
-  c=100: MAPE=450%   MSE=  4050</div>
-  <p>The six percentage errors are 10%, 4%, 10%, 14.3%, 2.5%, 16.7%; their mean is <strong>MAPE = 9.58%</strong>: "the forecast is off by about 10% of the day's orders". Easy to explain and comparable across kitchens. Note that sklearn returns 0.0958, a fraction, not 9.58.</p>
-  <h3>Trap 1: small and zero actuals</h3>
-  <p>Add one quiet Sunday: 1 real order, forecast 4. The miss is only 3 tiffins, and MAE barely changes (3.67 → 3.57). But that day's percentage error is 3/1 = 300%, and MAPE jumps from 9.58% to <strong>51%</strong>. One tiny day now dominates the whole metric. With a real value of 0 the percentage is infinite; sklearn divides by machine epsilon and returns about 2 × 10¹⁵. Electricity load at night, sales of slow items, and intermittent demand all hit this trap.</p>
-  <h3>Trap 2: asymmetry</h3>
-  <p>For a real value of 100, forecasting 50 is a 50% error and forecasting 150 is a 50% error: fine. But forecasting 200 is 100% and forecasting 0 is also 100%; an under-forecast can never cost more than 100%, while an over-forecast has no upper limit. And the same 50-order miss costs 100% if the truth was 50 but only 50% if the truth was 100.</p>
+two = np.array([10.0, 100.0])                       # two days, one constant forecast c for both
+for c in [10, 55, 100]:
+    print(f"days 10 and 100, forecast c={c:3d}: MAPE={np.mean(np.abs(two - c) / two):.0%}")</div>
+  <div class="fx" data-lang="text">percentage errors: [10.   4.  10.  14.3  2.5 16.7]
+MAPE = 0.0958   (sklearn returns a fraction)
+with quiet Sunday: MAE 3.67 -&gt; 3.57   MAPE 9.6% -&gt; 51.1%
+days 10 and 100, forecast c= 10: MAPE=45%
+days 10 and 100, forecast c= 55: MAPE=248%
+days 10 and 100, forecast c=100: MAPE=450%</div>
+  <p>The first trap is small and zero actual values. Add one quiet Sunday with 1 real order and a forecast of 4. The miss is only 3 tiffins and MAE barely changes (3.67 to 3.57), but that day's percentage error is 3/1 = 300%, and MAPE jumps from 9.6% to 51%. One tiny day now dominates the metric, and a real value of 0 makes it infinite. Electricity load at night, slow-selling items and intermittent demand all fall into this trap.</p>
+  <p>The second trap is asymmetry. For a real value of 100, forecasting 0 is a 100% error, the worst an under-forecast can ever do, but forecasting 200 is also 100% and forecasting 300 is 200%: over-forecasts have no upper limit. The figure shows this: the blue MAPE line is capped at 100% on the left of the true value and keeps rising on the right.</p>
   <figure class="viz"><svg viewBox="0 0 640 250" width="640">
 <line x1="60" y1="205" x2="580" y2="205" stroke="currentColor" opacity="0.5"/>
 <line x1="60" y1="25" x2="60" y2="205" stroke="currentColor" opacity="0.5"/>
@@ -621,206 +350,79 @@ Trap 3: MAPE pulls forecasts LOW. Two days with 10 and 100 orders; one constant 
 <text x="16" y="115" text-anchor="middle" class="tm" font-size="11" transform="rotate(-90 16 115)">error for this day</text>
 <text x="170" y="46" class="tb" font-size="11">blue: APE (MAPE term), no upper limit</text><text x="170" y="62" class="tg" font-size="11">green: sMAPE term, at most 200%</text>
 </svg><figcaption>The error charged for one day whose real value is 100. The APE (blue) is capped at 100% for under-forecasts (left of 100) but unbounded for over-forecasts. The sMAPE term (green) is capped at 200% but penalises under-forecasts more.</figcaption></figure>
-  <h3>Trap 3: MAPE rewards forecasting low</h3>
-  <p>Because each error is divided by the actual value, errors on small days weigh more. Two days with 10 and 100 orders and one constant forecast c: c = 10 gives MAPE (0 + 90%)/2 = 45%, the lowest possible, while c = 55 (the MSE-best mean) gives 248%. A model trained or tuned on MAPE learns to forecast low, which for a kitchen means running out of food.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A shopkeeper judging staff by "percentage of stock-count error". Counting 2 pens when there were 1 is a 100% error and counting 1,010 when there were 1,000 is 1%. The pen counter looks fifty times worse while being off by one item.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>MAPE</strong> = (1/n) Σ |yᵢ − ŷᵢ| / |yᵢ| (× 100 for %). Undefined when any yᵢ = 0; dominated by small yᵢ; biased toward under-forecasts. sklearn: <code>mean_absolute_percentage_error</code> (returns a fraction); scorer <code>"neg_mean_absolute_percentage_error"</code>.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>If your data can contain zeros or near-zeros, do not use MAPE, or at least report it only above a written-down floor (e.g. days with ≥ 5 orders). And never average MAPE across series of very different sizes to judge the business: a 50% error on a tiny product counts as much as a 50% error on the bestseller.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us.</b> MAPE gives percentages but breaks on quiet days and leans toward low forecasts. Is there a percentage that survives small values? <b>→ next: 08 sMAPE and WAPE</b></div>
-
-  <h2 id="rm-smape"><span class="num">08</span>sMAPE and WAPE</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>MAPE = 9.58% on a normal week, but one quiet Sunday pushed it to 51%. We still want a percentage (to compare kitchens), but one that a single tiny day cannot wreck.</p></div>
-  <h3>sMAPE: divide by the average of truth and forecast</h3>
-  <p>The "symmetric" MAPE divides each error by the mean of |y| and |ŷ| instead of |y| alone: term = 2|e| / (|y| + |ŷ|).</p>
-  <h3>WAPE: total error over total volume</h3>
-  <p>The weighted absolute percentage error divides the <em>sum</em> of absolute errors by the <em>sum</em> of actuals: WAPE = Σ|e| / Σ|y|. It is MAPE in which each day is weighted by its size; equivalently, it is MAE divided by the mean of y.</p>
+  <p>The third trap follows from the first two: <strong>MAPE rewards forecasting low</strong>. With two days of 10 and 100 orders and one constant forecast for both, forecasting 10 gives MAPE (0 + 90%)/2 = 45%, the lowest possible, while 55, the mean, gives 248%. A model tuned on MAPE learns to forecast low, which for a kitchen means running out of food. Think of a shopkeeper judging staff by "percentage stock-count error": counting 2 pens when there was 1 is a 100% error, while counting 1,010 boxes when there were 1,000 is 1%, so the pen counter looks a hundred times worse while being off by a single item.</p>
+  <p>Two alternatives fix parts of this. The <strong>symmetric MAPE</strong> (sMAPE) divides each error by the average of the actual and the forecast, 2|e| / (|y| + |ŷ|), which caps each term at 200%; despite its name it is still not symmetric (it now charges under-forecasts more, the green line in the figure), and it has several competing definitions, so always state the formula. The <strong>weighted absolute percentage error</strong> (WAPE) divides the <em>total</em> absolute error by the <em>total</em> actual volume: Σ|e| / Σ|y| = 22 / 210. It is MAPE in which each day is weighted by its size, or equivalently MAE divided by the mean of y, so it has no asymmetry and copes with individual zero days.</p>
   <div class="fx" data-lang="py">import numpy as np
-from week import days, y, yhat
+from week import y, yhat
 
-s = 2 * np.abs(y - yhat) / (np.abs(y) + np.abs(yhat))
-for d, a, b, q in zip(days, y, yhat, s):
-    print(f"{d}: 2·|{a:.0f}-{b:.0f}| / ({a:.0f}+{b:.0f}) = {q:.4f}")
-print(f"sMAPE = {s.mean()*100:.3f}%")
+smape = np.mean(2 * np.abs(y - yhat) / (np.abs(y) + np.abs(yhat)))
 wape = np.abs(y - yhat).sum() / np.abs(y).sum()
-print(f"WAPE  = Σ|e| / Σy = 22 / 210 = {wape*100:.3f}%")
+print(f"sMAPE = {smape:.2%}   WAPE = 22/210 = {wape:.2%}")
+print("quiet Sunday (real 1, forecast 4): APE 300%, sMAPE term", f"{2 * 3 / 5:.0%},",
+      "WAPE with Sunday", f"{(22 + 3) / (210 + 1):.2%}")</div>
+  <div class="fx" data-lang="text">sMAPE = 9.86%   WAPE = 22/210 = 10.48%
+quiet Sunday (real 1, forecast 4): APE 300%, sMAPE term 120%, WAPE with Sunday 11.85%</div>
+  <p>On the normal week the three percentages are close (MAPE 9.58%, sMAPE 9.86%, WAPE 10.48%). On the quiet Sunday the sMAPE term is 120% instead of 300%, better but still large, while WAPE barely moves, from 10.48% to 11.85%, because a 3-tiffin miss is 3 tiffins out of 211 whatever day it happened on. WAPE is the safe default for demand, retail and energy reporting; MAPE should be used only when actual values are never near zero.</p>
 
-print("\\nsMAPE is not symmetric either (real 100):")
-for f in [50, 150]:
-    print(f"  forecast {f}: sMAPE = {2*abs(100-f)/(100+f):.1%}")
-print("quiet Sunday (real 1, forecast 4): APE =", f"{abs(1-4)/1:.0%}", " sMAPE term =", f"{2*3/5:.0%}",
-      " WAPE with Sunday =", f"{(22+3)/(210+1):.2%}")</div>
-  <div class="fx" data-lang="text">Mon: 2·|20-22| / (20+22) = 0.0952
-Tue: 2·|25-24| / (25+24) = 0.0408
-Wed: 2·|30-33| / (30+33) = 0.0952
-Thu: 2·|35-30| / (35+30) = 0.1538
-Fri: 2·|40-41| / (40+41) = 0.0247
-Sat: 2·|60-50| / (60+50) = 0.1818
-sMAPE = 9.861%
-WAPE  = Σ|e| / Σy = 22 / 210 = 10.476%
-
-sMAPE is not symmetric either (real 100):
-  forecast 50: sMAPE = 66.7%
-  forecast 150: sMAPE = 40.0%
-quiet Sunday (real 1, forecast 4): APE = 300%  sMAPE term = 120%  WAPE with Sunday = 11.85%</div>
-  <p>By hand: sMAPE terms 4/42, 2/49, 6/63, 10/65, 2/81, 20/110 average to <strong>9.86%</strong>. WAPE = 22/210 = <strong>10.48%</strong> (= MAE 3.67 / mean 35). On the quiet Sunday the sMAPE term is 120% instead of 300%: better, but still large. WAPE barely moves (10.48% → 11.85%), because a 3-tiffin miss is 3 tiffins out of 211, whatever day it happened on.</p>
-  <table class="tbl">
-    <tr><th></th><th>MAPE</th><th>sMAPE</th><th>WAPE</th></tr>
-    <tr><td>Running week</td><td>9.58%</td><td>9.86%</td><td>10.48%</td></tr>
-    <tr><td>Divides by</td><td>each |y|</td><td>each (|y|+|ŷ|)/2</td><td>total Σ|y|</td></tr>
-    <tr><td>y = 0 possible?</td><td>No (infinite)</td><td>Yes, unless ŷ = 0 too</td><td>Yes, if Σy &gt; 0</td></tr>
-    <tr><td>Range</td><td>0 to ∞</td><td>0 to 200%</td><td>0 to ∞</td></tr>
-    <tr><td>Asymmetry</td><td>Over-forecasts unbounded</td><td>Under-forecasts cost more</td><td>None (it is a scaled MAE)</td></tr>
-    <tr><td>Best for</td><td>Large, never-small series</td><td>Forecast competitions (M3)</td><td>Demand, retail, energy; business reporting</td></tr>
-  </table>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>WAPE is a shop's monthly "items miscounted ÷ items in stock". A miscount on a slow item and on a bestseller count the same per item, so the bestseller's volume naturally dominates, which is usually what the business feels.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>sMAPE</strong> = (1/n) Σ 2|yᵢ − ŷᵢ| / (|yᵢ| + |ŷᵢ|). <strong>WAPE</strong> (also MAD/mean ratio) = Σ|yᵢ − ŷᵢ| / Σ|yᵢ| = MAE / mean(|y|). Neither is in sklearn; both are one line of numpy.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"sMAPE" has several definitions (some without the 2, giving 0–100%). Always print the formula you used. Despite its name, sMAPE is not symmetric: forecasting 50 for 100 costs 66.7%, forecasting 150 costs 40%.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us.</b> A percentage says how big the errors are, not whether forecasting this series is hard. 10% might be brilliant for a chaotic series and lazy for a steady one. <b>→ next: 09 MASE, which compares with the naive forecast</b></div>
-
-  <h2 id="rm-mase"><span class="num">09</span>MASE: Compared with the Naive Forecast</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>WAPE = 10.48%. Is that good for this kitchen? If orders barely change day to day, "tomorrow = today" might already be within 3%; if they jump around, 10% may be excellent. We need a scale-free score anchored to the simplest sensible forecast for a time series.</p></div>
-  <h3>The idea</h3>
-  <p>The <strong>naive forecast</strong> says "tomorrow will be like today". Measure how wrong it was on the training period (the six days before our week), and use that as the yardstick. MASE = MAE of the model ÷ in-sample MAE of the naive forecast.</p>
-  <h3>By hand</h3>
-  <p>History: 14, 22, 17, 28, 24, 33. The naive one-step errors are the day-to-day changes: |22−14| = 8, |17−22| = 5, |28−17| = 11, |24−28| = 4, |33−24| = 9. Their mean: 37/5 = <strong>7.4</strong>. MASE = 3.67 / 7.4 = <strong>0.50</strong>.</p>
+  <h2 id="rm-mase"><span class="num">06</span>MASE</h2>
+  <p>A WAPE of 10.48% says how big the errors are, but not whether forecasting this series is hard. If orders barely change from day to day, "tomorrow will be like today" might already be within 3%, and 10% would be lazy; if they jump around, 10% may be excellent. For time series we want a score anchored to the simplest sensible forecast.</p>
+  <p>That forecast is the <strong>naive forecast</strong>: tomorrow equals today. The <strong>mean absolute scaled error</strong> (MASE) divides the model's MAE by the MAE that the naive forecast achieved on the training period. MASE below 1 means the model beats the naive forecast; above 1 means it is worse. It is like judging a weather forecaster against "tomorrow's weather = today's weather": in a place where the weather barely changes that is hard to beat, and MASE grades on that curve. For the kitchen, the six days before our week had 14, 22, 17, 28, 24 and 33 orders. The naive one-step errors are the day-to-day changes, 8, 5, 11, 4 and 9, whose mean is 37/5 = 7.4. So MASE = 3.67 / 7.4 = 0.50:</p>
   <div class="fx" data-lang="py">import numpy as np
 from week import y, yhat, history
 
 naive_steps = np.abs(np.diff(history))           # how wrong "tomorrow = today" was on the training days
-print("history:", history, " |day-to-day changes|:", naive_steps)
 scale = naive_steps.mean()
 mae = np.abs(y - yhat).mean()
-print(f"scale = mean = {naive_steps.sum():.0f}/{len(naive_steps)} = {scale:.2f}")
-print(f"MASE  = MAE / scale = {mae:.3f} / {scale:.2f} = {mae/scale:.3f}")
+print("history:", history, " day-to-day changes:", naive_steps, " scale =", scale)
+print(f"MASE = {mae:.3f} / {scale:.2f} = {mae / scale:.3f}")</div>
+  <div class="fx" data-lang="text">history: [14. 22. 17. 28. 24. 33.]  day-to-day changes: [ 8.  5. 11.  4.  9.]  scale = 7.4
+MASE = 3.667 / 7.40 = 0.495</div>
+  <p>A MASE of 0.50 means the model's typical miss is half the typical miss of "tomorrow = today". The scale is taken from the training period rather than the test period so that it does not depend on the test errors and exists even for a one-day forecast. Because both numerator and denominator are MAEs in the same units, MASE is unit-free, works when some actual values are zero, and does not favour low forecasts; Rob Hyndman proposed it in 2006 as a general-purpose forecast accuracy measure. For data with a weekly pattern, the fair yardstick is the <strong>seasonal naive</strong> forecast, "the same day last week", whose scale is the mean of |y_t − y_{t−7}|; section 10 shows how much that choice matters. MASE only makes sense for ordered data: for houses or customers there is no "yesterday", so use R² or a skill score against the mean or median instead. MASE is not in scikit-learn; it is in forecasting libraries and is a few lines of numpy (see <a class="xref" data-note="ml_ts_ml">ML Forecasting</a>).</p>
 
-# the naive forecast on the test week itself: each day = the day before (Monday uses the last history day, 33)
-naive = np.r_[history[-1], y[:-1]]
-print("naive forecast for the test week:", naive, f" its MAE = {np.abs(y - naive).mean():.3f}",
-      f" its MASE = {np.abs(y - naive).mean()/scale:.3f}")</div>
-  <div class="fx" data-lang="text">history: [14. 22. 17. 28. 24. 33.]  |day-to-day changes|: [ 8.  5. 11.  4.  9.]
-scale = mean = 37/5 = 7.40
-MASE  = MAE / scale = 3.667 / 7.40 = 0.495
-naive forecast for the test week: [33. 20. 25. 30. 35. 40.]  its MAE = 8.833  its MASE = 1.194</div>
-  <p>MASE 0.50: the model's typical miss is half the typical miss of "tomorrow = today" (as measured on the training days). MASE &lt; 1 beats that yardstick; MASE &gt; 1 is worse than it. The naive forecast applied to the test week itself has MASE 1.19 (it was even worse that week than in training). For weekly-seasonal data, use the <strong>seasonal naive</strong> forecast ("same day last week") as the yardstick: scale = mean |y_t − y_{t−7}|.</p>
-  <p>Why the training period, not the test period? The scale must not depend on the test errors, and it is defined even for a one-day test horizon. Because the scale is an MAE in the same units as the model's MAE, MASE is unit-free, works with zeros in y (unless the series is completely constant), and is symmetric. Rob Hyndman proposed it in 2006 as the general-purpose forecast accuracy measure; it is covered in practice in <a class="xref" data-note="ml_ts_ml">ML Forecasting</a> and <a class="xref" data-note="ml_timeseries">Time Series Basics</a>.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Judging a weather forecaster against "tomorrow's weather = today's weather". In a place where the weather barely changes, beating that is hard; in a place where it swings daily, it is easy. MASE grades on that curve.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>MASE</strong> = MAE(test) / [ (1/(T − m)) Σ_{t=m+1}^{T} |y_t − y_{t−m}| ], where the denominator is computed on the training series of length T and m is the season length (m = 1 for plain naive, m = 7 for weekly). Not in sklearn; sktime and statsforecast provide it.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>MASE is only meaningful for ordered data (time series). For cross-sectional data (houses, customers) there is no "yesterday"; use R², or a skill score against the mean or median baseline (section 13).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us.</b> MASE, MAE and RMSE all measure absolute differences: a miss of 10 on a 20-order day counts like a miss of 10 on a 1,000-order day. When it is the <em>ratio</em> that matters, and when cooking too little is worse than cooking too much, we need yet another view. <b>→ next: 10 RMSLE</b></div>
-
-  <h2 id="rm-rmsle"><span class="num">10</span>RMSLE: Relative Errors</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>Some targets span orders of magnitude (house prices, bakery orders from 5 to 5,000). For them, forecasting 20 when the truth is 10 should count like forecasting 2,000 when the truth is 1,000: both are "double". No metric so far measures error as a ratio while staying well behaved at small values.</p></div>
-  <h3>The idea</h3>
-  <p>Take logs first. ln(1 + y) − ln(1 + ŷ) = ln[(1 + y)/(1 + ŷ)], a log-ratio, so equal ratios give equal errors. The "+1" keeps y = 0 allowed. Then compute RMSE on that scale:</p>
-  <p><strong>RMSLE</strong> = √[ (1/n) Σ (ln(1 + yᵢ) − ln(1 + ŷᵢ))² ]</p>
+  <h2 id="rm-rmsle"><span class="num">07</span>RMSLE and Pinball Loss</h2>
+  <p>MAE, RMSE and MASE all measure absolute differences, so a miss of 10 on a 20-order day counts the same as a miss of 10 on a 1,000-order day. For targets that span orders of magnitude, such as house prices or bakery orders from 5 to 5,000, it is the <em>ratio</em> that matters: forecasting 20 when the truth is 10 should count like forecasting 2,000 when the truth is 1,000, since both are "double".</p>
+  <p>The trick is to take logarithms first, because ln(1 + y) − ln(1 + ŷ) = ln[(1 + y)/(1 + ŷ)] is a log-ratio, so equal ratios give equal errors. The "+1" keeps a real value of 0 allowed. Computing RMSE on that scale gives the <strong>root mean squared log error</strong>: RMSLE = √[(1/n) Σ (ln(1 + yᵢ) − ln(1 + ŷᵢ))²]. Think of a stock trader who thinks in percentages: a ₹10 drop on a ₹20 share is a disaster, the same ₹10 on a ₹2,000 share is noise. RMSLE thinks like the trader, RMSE like an accountant counting rupees.</p>
   <div class="fx" data-lang="py">import numpy as np
-from week import days, y, yhat
-from sklearn.metrics import root_mean_squared_log_error, root_mean_squared_error
+from week import y, yhat
+from sklearn.metrics import root_mean_squared_log_error, mean_pinball_loss
 
-d = np.log1p(y) - np.log1p(yhat)                 # ln(1+y) - ln(1+ŷ) = ln((1+y)/(1+ŷ))
-for dd, a, b, v in zip(days, y, yhat, d):
-    print(f"{dd}: ln({a+1:.0f}/{b+1:.0f}) = {v:+.4f}   squared {v*v:.5f}")
-print(f"RMSLE = √(mean) = √({np.mean(d**2):.5f}) = {np.sqrt(np.mean(d**2)):.4f}   sklearn {root_mean_squared_log_error(y, yhat):.4f}")
-print(f"same as RMSE on log1p scale: {root_mean_squared_error(np.log1p(y), np.log1p(yhat)):.4f}")
-
-print("\\nRMSLE cares about ratios, RMSE about absolute size (a miss of 10 each time):")
-for a, b in [(20, 10), (20, 30), (1000, 990)]:
+print(f"RMSLE = {root_mean_squared_log_error(y, yhat):.4f}")
+for a, b in [(20, 10), (20, 30), (1000, 990)]:       # each forecast misses by 10
     v = np.log1p(a) - np.log1p(b)
-    print(f"  real {a:4d}, forecast {b:4d}: squared error {(a-b)**2:4d}   squared log error ({v:+.3f})² = {v*v:.4f}")</div>
-  <div class="fx" data-lang="text">Mon: ln(21/23) = -0.0910   squared 0.00828
-Tue: ln(26/25) = +0.0392   squared 0.00154
-Wed: ln(31/34) = -0.0924   squared 0.00853
-Thu: ln(36/31) = +0.1495   squared 0.02236
-Fri: ln(41/42) = -0.0241   squared 0.00058
-Sat: ln(61/51) = +0.1790   squared 0.03206
-RMSLE = √(mean) = √(0.01222) = 0.1106   sklearn 0.1106
-same as RMSE on log1p scale: 0.1106
+    print(f"real {a:4d}, forecast {b:4d}: squared error {(a - b)**2}   squared log error {v * v:.4f}")
 
-RMSLE cares about ratios, RMSE about absolute size (a miss of 10 each time):
-  real   20, forecast   10: squared error  100   squared log error (+0.647)² = 0.4181
-  real   20, forecast   30: squared error  100   squared log error (-0.389)² = 0.1517
-  real 1000, forecast  990: squared error  100   squared log error (+0.010)² = 0.0001</div>
-  <p>By hand: Monday ln(21/23) = −0.091, Saturday ln(61/51) = +0.179, and so on; the mean of the squares is 0.0122 and its root is <strong>RMSLE = 0.111</strong>. As a rough reading, the forecast is typically off by about 11% in ratio terms (e^0.111 ≈ 1.12).</p>
-  <h3>Two properties shown in the last three lines</h3>
-  <ul>
-    <li><strong>Size-free:</strong> a 10-order miss at 1,000 costs 0.0001, at 20 it costs 0.15–0.42. RMSE charges 100 to all three.</li>
-    <li><strong>Under-forecasts cost more:</strong> real 20, forecast 10 (half) costs 0.418; forecast 30 (+50%) costs 0.152. In log space, halving is as far as doubling. Useful when running out is worse than over-supply (a kitchen, inventory).</li>
-  </ul>
-  <h3>RMSLE and log targets</h3>
-  <p>RMSLE equals the RMSE of the model on log(1 + y), so the natural way to optimise it is to train on log(1 + y) and transform predictions back with exp(·) − 1 (<code>TransformedTargetRegressor</code>). One catch: the back-transformed prediction estimates something like the median, not the mean, so it is biased low in the original units. Section 12 shows this on the kitchen data.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A stock trader thinks in percentages: a ₹10 drop on a ₹20 share is a disaster, the same ₹10 on a ₹2,000 share is noise. RMSLE thinks like the trader; RMSE thinks like an accountant counting rupees.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>RMSLE</strong> = √(mean (log1p(y) − log1p(ŷ))²); requires y, ŷ &gt; −1 (in practice ≥ 0). sklearn: <code>root_mean_squared_log_error</code>, <code>mean_squared_log_error</code> (raise an error for negative values); scorer <code>"neg_root_mean_squared_log_error"</code>.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>RMSLE fails if a model predicts a negative value (a linear model can): clip predictions at 0 first. And RMSLE ignores absolute size by design: a model that is off by 20% on the biggest customer costs the same as 20% on the smallest, which may not be what the business wants.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us.</b> We now have ten metrics for one week. Which should the kitchen actually use to pick a model, and how do they line up? <b>→ next: 11 Which Metric When</b></div>
+print(f"pinball loss q=0.9: {mean_pinball_loss(y, yhat, alpha=0.9):.3f}   q=0.5: {mean_pinball_loss(y, yhat, alpha=0.5):.3f}")</div>
+  <div class="fx" data-lang="text">RMSLE = 0.1106
+real   20, forecast   10: squared error 100   squared log error 0.4181
+real   20, forecast   30: squared error 100   squared log error 0.1517
+real 1000, forecast  990: squared error 100   squared log error 0.0001
+pinball loss q=0.9: 2.500   q=0.5: 1.833</div>
+  <p>The week's RMSLE is 0.111, which roughly means the forecast is typically off by about 11% in ratio terms (e^0.111 ≈ 1.12). The three comparison lines each miss by 10 orders and so all have squared error 100, but their squared log errors differ enormously. A 10-order miss at 1,000 costs 0.0001, while at 20 it costs 0.15 to 0.42: RMSLE is size-free. And at 20, forecasting 10 (half) costs 0.418 while forecasting 30 (one and a half times) costs only 0.152: in log space halving is as far as doubling, so <strong>under-forecasts cost more</strong> than over-forecasts of the same size. That suits a kitchen, where running out is worse than leftovers. The natural way to optimise RMSLE is to train on log(1 + y) and transform predictions back with exp(·) − 1; section 09 shows one catch with that. Predictions must be non-negative, so clip a linear model's output at 0 first.</p>
+  <p>When the costs are lopsided in a known ratio, there is a more direct tool. Suppose running out is 9 times worse than leftovers. The <strong>pinball loss</strong>, or quantile loss, at level q charges an under-forecast of size e by q·e and an over-forecast by (1 − q)·e. With q = 0.9, under-forecasting is charged 9 times as much as over-forecasting, and the forecast that minimises this loss is the 90th percentile of demand: cook enough to cover 9 days out of 10. On the week, the under-forecasts are 1 + 5 + 10 = 16 orders, charged 0.9 each (14.4), and the over-forecasts are 2 + 3 + 1 = 6, charged 0.1 each (0.6), so the loss is 15 / 6 = 2.50, as printed. At q = 0.5 both sides are charged equally and the loss is exactly half the MAE (1.833). The general rule is q = (cost of an under-forecast) / (sum of both costs). Pinball loss is the standard way to score quantile forecasts and prediction intervals (<a class="xref" data-note="ml_ts_ml">ML Forecasting</a>).</p>
 
-  <h2 id="rm-choose"><span class="num">11</span>Which Metric When</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>On the same six days we have ME +1.67, MAE 3.67, RMSE 4.83, MedAE 2.5, max 10, R² 0.86, MAPE 9.58%, sMAPE 9.86%, WAPE 10.48%, MASE 0.50 and RMSLE 0.111. They answer different questions, and on another model they could rank differently. Which one should drive the decision?</p></div>
-  <h3>Start from the cost of an error</h3>
-  <p>As with classification (<a class="xref" data-note="ml_evaluation">Classification Metrics</a>, section 11), ask what an error of a given size costs the business, then pick the metric whose penalty has the same shape:</p>
+  <h2 id="rm-choose"><span class="num">08</span>Which Metric When</h2>
+  <p>On the same six days we now have ME +1.67, MAE 3.67, RMSE 4.83, MedAE 2.5, max error 10, R² 0.86, MAPE 9.58%, WAPE 10.48%, MASE 0.50, RMSLE 0.111 and pinball 2.50. They answer different questions, and on another pair of models they could rank them differently. As with classification (<a class="xref" data-note="ml_evaluation">Classification Metrics</a>), the way to choose is to ask what an error of a given size costs the business, and pick the metric whose penalty has the same shape. Choosing a metric is like choosing a referee: one who fines every foul equally (MAE), one who fines dangerous fouls far more (RMSE), and one who ignores a single freak incident (MedAE) will pick different winners from the same match.</p>
   <table class="tbl">
-    <tr><th>If the cost of a miss…</th><th>Use</th><th>Week value</th><th>Best constant / what it targets</th></tr>
-    <tr><td>grows in proportion to its size</td><td>MAE (or WAPE to compare sizes)</td><td>3.67 (10.48%)</td><td>median</td></tr>
-    <tr><td>grows faster than its size (big misses are disasters)</td><td>RMSE / MSE</td><td>4.83</td><td>mean</td></tr>
+    <tr><th>If the cost of a miss…</th><th>Use</th><th>Week</th><th>Targets</th></tr>
+    <tr><td>grows in proportion to its size</td><td>MAE (WAPE to compare sizes)</td><td>3.67 (10.48%)</td><td>median</td></tr>
+    <tr><td>grows faster than its size</td><td>RMSE / MSE</td><td>4.83</td><td>mean</td></tr>
     <tr><td>should ignore rare freak days</td><td>MedAE</td><td>2.5</td><td>median of errors</td></tr>
-    <tr><td>has a hard limit (must never exceed X)</td><td>max error, or a high quantile of |e|</td><td>10</td><td>worst case</td></tr>
-    <tr><td>is relative to the size of the day</td><td>WAPE (safe), MAPE (only if y never small), RMSLE (ratios)</td><td>10.48%, 9.58%, 0.111</td><td>MAPE: a low-biased value</td></tr>
-    <tr><td>needs comparing across many series</td><td>MASE, WAPE</td><td>0.50</td><td>vs naive</td></tr>
-    <tr><td>is asymmetric (running out worse than leftovers)</td><td>pinball (quantile) loss at q &gt; 0.5, or RMSLE</td><td>pinball q=0.9: 2.50</td><td>the q-th quantile</td></tr>
-    <tr><td>you must explain "share of variation captured"</td><td>R² (plus RMSE)</td><td>0.86</td><td>mean baseline</td></tr>
+    <tr><td>has a hard limit</td><td>max error, or a high quantile of |e|</td><td>10</td><td>worst case</td></tr>
+    <tr><td>is relative to the size of the day</td><td>WAPE; MAPE only if y is never small; RMSLE for ratios</td><td>10.48%, 9.58%, 0.111</td><td></td></tr>
+    <tr><td>must be compared across many series</td><td>MASE, WAPE</td><td>0.50</td><td>vs naive</td></tr>
+    <tr><td>is lopsided (running out worse)</td><td>pinball loss at q &gt; 0.5</td><td>2.50 at q = 0.9</td><td>q-th quantile</td></tr>
+    <tr><td>you must explain "share of variation captured"</td><td>R², with RMSE beside it</td><td>0.86</td><td>vs mean</td></tr>
   </table>
-  <h3>Training loss vs reporting metric</h3>
-  <p>The loss a model <em>minimises</em> and the metric you <em>report</em> should point at the same target. A model trained on squared error predicts the conditional <strong>mean</strong>; scored on MAE (which prefers the median) it is slightly handicapped on skewed data. A model trained on absolute error predicts the <strong>median</strong>. A model trained on pinball loss at q = 0.9 predicts the 90th percentile: cook enough to cover 9 days out of 10. Most libraries let you choose: <code>HistGradientBoostingRegressor(loss="absolute_error" | "squared_error" | "quantile" | "poisson")</code> (<a class="xref" data-note="ml_gbm">Gradient Boosting</a>).</p>
-  <h3>Two more metrics, briefly</h3>
-  <ul>
-    <li><strong>Pinball (quantile) loss</strong> at level q: an under-forecast of size e costs q·e, an over-forecast costs (1 − q)·e. On the week at q = 0.9: under-forecasts (1 + 5 + 10) × 0.9 = 14.4, over-forecasts (2 + 3 + 1) × 0.1 = 0.6, total 15/6 = <strong>2.50</strong>. At q = 0.5 it is half the MAE (1.83). It scores quantile forecasts and prediction intervals (<a class="xref" data-note="ml_ts_ml">ML Forecasting</a>).</li>
-    <li><strong>Poisson / Tweedie deviance</strong>: for counts and non-negative skewed targets (claims, orders), the deviance of the matching distribution; <code>mean_poisson_deviance</code>, <code>mean_tweedie_deviance</code>. D² scores (<code>d2_absolute_error_score</code> = 1 − MAE/MAE of the median, 0.633 on the week) generalise R² to these losses.</li>
-  </ul>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Choosing a metric is choosing a referee. A referee who fines every foul equally (MAE), one who fines dangerous fouls far more (RMSE), one who ignores a single freak incident (MedAE): the same match produces different winners. Pick the referee whose rules match what the league cares about.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A metric is <strong>consistent</strong> for a target statistic if, in expectation, it is minimised by forecasting that statistic: MSE for the mean, MAE for the median, pinball loss at q for the q-quantile. Train and evaluate with metrics consistent for the same statistic.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Reporting five metrics and choosing the model that wins on the most of them is not a method. Fix one primary metric before modelling (from the business cost), keep the others as diagnostics.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us.</b> Every metric is an average, so it hides <em>where</em> the model goes wrong (which days, which sizes). <b>→ next: 12 Residual Analysis</b></div>
+  <p>The "Targets" column carries an important idea. A metric is <strong>consistent</strong> for a statistic if, on average, the forecast that minimises it is that statistic: MSE is minimised by the mean, MAE by the median, and pinball loss at q by the q-th quantile. So the loss a model is <em>trained</em> on and the metric you <em>report</em> should point at the same target. A model trained on squared error predicts the mean; if you then judge it on MAE, which prefers the median, it is slightly handicapped on skewed data, and if you judge it on MAPE, a lower forecast would score better. Most libraries let you choose the training loss to match: for example <code>HistGradientBoostingRegressor(loss="absolute_error" | "squared_error" | "quantile" | "poisson")</code> (<a class="xref" data-note="ml_gbm">Gradient Boosting</a>). For counts and non-negative skewed targets, the Poisson or Tweedie deviance (<code>mean_poisson_deviance</code>) is the matching metric. Finally, reporting five metrics and choosing whichever model wins the most of them is not a method: fix one primary metric from the business cost before modelling, and keep the others as diagnostics.</p>
 
-  <h2 id="rm-resan"><span class="num">12</span>Residual Analysis</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>MAE 3.67 says how big the errors are on average. It cannot say that Saturday is always under-forecast, or that errors grow on busy days. Those patterns are what tell you how to improve the model, and a single number throws them away.</p></div>
-  <h3>On the six days, by eye</h3>
-  <p>The residuals are −2, +1, −3, +5, −1, +10. Two things stand out: the two biggest residuals are positive (Thursday, Saturday) and they are on the busier days. With six points this is only a hint, so look at the same kitchen at realistic scale.</p>
-  <h3>The same kitchen at scale</h3>
-  <p>Two years of daily orders for the kitchen (synthetic, with weekday pattern, festivals and slow growth); the last 120 days are the test period. A linear regression uses weekday, festival flag, trend, yesterday's orders and last week's orders:</p>
+  <h2 id="rm-resan"><span class="num">09</span>Residual Analysis</h2>
+  <p>Every metric is an average, so it hides <em>where</em> the model goes wrong. MAE 3.67 cannot tell you that Saturdays are always under-forecast or that errors grow on busy days, yet those patterns are exactly what tells you how to improve the model. A doctor does not stop at "average temperature is normal"; she looks at when the fever spikes, because the pattern points to the cause. <strong>Residual analysis</strong> is that habit for models: looking at the residuals on held-out data, overall, by group, against the size of the forecast and over time, to find structure the model missed.</p>
+  <p>On the six days there is a hint: the two biggest residuals, Thursday and Saturday, are both positive and both on busy days. Six points are too few to trust, so here is the same kitchen at realistic scale: two years of synthetic daily orders with a weekday pattern, festivals and slow growth, where the last 120 days are the test period:</p>
   <div class="fx" data-lang="py"># kitchen.py - the same tiffin kitchen at realistic scale: 730 days of orders (synthetic)
 import numpy as np, pandas as pd
 rng = np.random.default_rng(0)
 days = pd.date_range("2024-01-01", periods=730, freq="D")
-dow = days.dayofweek.values                                  # 0 = Monday
+dow = days.day_of_week.values                                 # 0 = Monday
 festival = rng.random(730) &lt; 0.03                            # about 11 festival days a year
 level = 30 + 0.01 * np.arange(730)                           # slow growth
 orders = level * np.array([0.8, 0.9, 1.0, 1.0, 1.1, 1.5, 0.6])[dow] * np.where(festival, 1.8, 1.0)
@@ -828,43 +430,38 @@ orders = np.round(rng.poisson(orders)).astype(float)
 df = pd.DataFrame({"orders": orders, "dow": dow, "festival": festival.astype(int), "t": np.arange(730)}, index=days)
 df["lag1"], df["lag7"] = df.orders.shift(1), df.orders.shift(7)
 df = df.dropna()
-train, test = df.iloc[:-120], df.iloc[-120:]                 # last 120 days are the test period</div>
+train, test = df.iloc[:-120], df.iloc[-120:]                 # last 120 days are the test period
+
+if __name__ == "__main__":
+    print(len(train), "training days,", len(test), "test days")</div>
+  <div class="fx" data-lang="text">603 training days, 120 test days</div>
+  <p>A linear regression uses weekday, a festival flag, the trend and the orders from yesterday and from the same day last week. Instead of stopping at one metric, we look at the residuals in groups:</p>
   <div class="fx" data-lang="py">import numpy as np, pandas as pd
 from kitchen import train, test
 from sklearn.linear_model import LinearRegression
 
 def design(d):                                    # weekday dummies + festival + trend + lags
     return pd.get_dummies(d.dow, prefix="d").join(d[["festival", "t", "lag1", "lag7"]]).astype(float)
-model = LinearRegression().fit(design(train), train.orders)
-fit = model.predict(design(test))
-res = test.orders.values - fit                    # residual = actual - predicted
-print(f"mean residual (bias) = {res.mean():+.2f}   std = {res.std():.2f}")
-r = pd.DataFrame({"res": res, "fit": fit, "dow": test.dow.values, "festival": test.festival.values})
-print("\\nmean residual by weekday (0=Mon):"); print(r.groupby("dow").res.agg(["mean", "count"]).round(2).T)
-print("\\nfestival days vs normal days:"); print(r.groupby("festival").res.agg(["mean", "count"]).round(2))
-r["fit_bin"] = pd.cut(r.fit, [0, 30, 40, 50, 200])
-print("\\nspread of residuals by size of forecast (funnel check):")
-print(r.groupby("fit_bin", observed=True).res.agg(["std", "count"]).round(2))</div>
-  <div class="fx" data-lang="text">mean residual (bias) = +0.77   std = 7.23
-
-mean residual by weekday (0=Mon):
-dow        0      1      2      3      4      5      6
-mean   -1.64   0.92   1.72   1.66   2.24   3.68  -3.16
-count  17.00  18.00  17.00  17.00  17.00  17.00  17.00
-
-festival days vs normal days:
-          mean  count
-festival             
-0         0.57    116
-1         6.76      4
-
-spread of residuals by size of forecast (funnel check):
+fit = LinearRegression().fit(design(train), train.orders).predict(design(test))
+r = pd.DataFrame({"res": test.orders.values - fit, "fit": fit,
+                  "dow": test.dow.values, "festival": test.festival.values})
+print(f"mean residual (bias) = {r.res.mean():+.2f}")
+print("mean residual by weekday (0=Mon):", r.groupby("dow").res.mean().round(2).tolist())
+print("mean residual, normal vs festival:", r.groupby("festival").res.mean().round(2).tolist())
+r["size"] = pd.cut(r.fit, [0, 30, 40, 50, 200])
+print("spread (std) of residuals by forecast size:")
+print(r.groupby("size", observed=True).res.agg(["std", "count"]).round(2))</div>
+  <div class="fx" data-lang="text">mean residual (bias) = +0.77
+mean residual by weekday (0=Mon): [-1.64, 0.92, 1.72, 1.66, 2.24, 3.68, -3.16]
+mean residual, normal vs festival: [0.57, 6.76]
+spread (std) of residuals by forecast size:
              std  count
-fit_bin                
+size                   
 (0, 30]     5.19     33
 (30, 40]    6.34     64
 (40, 50]   15.94      3
 (50, 200]   9.21     20</div>
+  <p>The overall bias is small, +0.77, but the groups tell a different story. Saturdays are under-forecast by 3.68 on average and Sundays over-forecast by 3.16; festival days are under-forecast by 6.76. And the spread of the residuals grows with the size of the forecast, from a standard deviation of about 5 for small forecasts to 9 to 16 for big ones. A spread that grows with size is called <strong>heteroscedasticity</strong>, and on a plot of residuals against forecasts it looks like a funnel. The figure shows the 120 test residuals: Saturdays (green) sit mostly above zero, Sundays (teal) mostly below, festivals (red) are under-forecast, and the cloud widens to the right.</p>
   <figure class="viz"><svg viewBox="0 0 640 255" width="640">
 <line x1="60" y1="215" x2="580" y2="215" stroke="currentColor" opacity="0.5"/>
 <line x1="60" y1="25" x2="60" y2="215" stroke="currentColor" opacity="0.5"/>
@@ -1017,23 +614,13 @@ fit_bin
 <circle cx="218" cy="133.4" r="3.5" class="fb sb" fill-opacity="0.7"/>
 <circle cx="380" cy="38" r="4" class="fr sr"/><text x="388" y="42" font-size="10.5">festival</text><circle cx="480" cy="38" r="4" class="fg sg"/><text x="488" y="42" font-size="10.5">Saturday</text><circle cx="380" cy="56" r="4" class="ft st"/><text x="388" y="60" font-size="10.5">Sunday</text><circle cx="480" cy="56" r="4" class="fb sb"/><text x="488" y="60" font-size="10.5">Mon–Fri</text>
 </svg><figcaption>Residuals of the linear model on the 120 test days against its forecast. Saturdays (green, right) sit mostly above zero, Sundays (teal, left) mostly below, festivals (red) are under-forecast, and the cloud widens as the forecast grows.</figcaption></figure>
-  <p>What the residuals say, and what each pattern means:</p>
-  <table class="tbl">
-    <tr><th>Look at</th><th>Seen here</th><th>Meaning</th><th>Fix</th></tr>
-    <tr><td>Mean residual</td><td>+0.77</td><td>Slight overall under-forecast</td><td>Check trend features</td></tr>
-    <tr><td>Mean residual by group</td><td>Sat +3.68, Sun −3.16; festival +6.76</td><td>The model adds a fixed weekday effect, but the real effect scales with the level (it is multiplicative)</td><td>Log target, or interactions (weekday × level)</td></tr>
-    <tr><td>Spread vs fitted value</td><td>std 5.2 for small forecasts, 9–16 for big ones</td><td>Errors grow with size (heteroscedasticity, a "funnel")</td><td>Log target; judge with WAPE / RMSLE; intervals that widen</td></tr>
-    <tr><td>Residual vs time</td><td>(check) runs of same sign</td><td>Autocorrelation: information left in recent errors</td><td>Lag features (<a class="xref" data-note="ml_ts_ml">ML Forecasting</a>)</td></tr>
-    <tr><td>Histogram / Q-Q of residuals</td><td>(check) long right tail</td><td>A few big misses (festivals) dominate RMSE</td><td>Event features; robust loss</td></tr>
-  </table>
-  <h3>Acting on it: a log target</h3>
-  <p>The funnel and the "Saturday effect grows with size" both say the effects are multiplicative, which a log target turns into additive ones:</p>
+  <p>All these patterns point to the same cause. The model adds a fixed amount for Saturday, but in the real kitchen Saturday multiplies the level of orders, and a fixed amount cannot capture a multiplication. A log target turns multiplicative effects into additive ones, so it is the natural fix:</p>
   <div class="fx" data-lang="py"># the residuals said "effects are multiplicative": fit on log(1 + orders) instead
 import numpy as np, pandas as pd
 from kitchen import train, test
 from sklearn.linear_model import LinearRegression
 from sklearn.compose import TransformedTargetRegressor
-from sklearn.metrics import mean_absolute_error, root_mean_squared_error, root_mean_squared_log_error
+from sklearn.metrics import mean_absolute_error
 
 def design(d):
     X = pd.get_dummies(d.dow, prefix="d").join(d[["festival", "t"]]).astype(float)
@@ -1045,284 +632,163 @@ for name, m in [("plain target", plain), ("log1p target", logm)]:
     f = m.predict(design(test))
     res = test.orders.values - f
     by_dow = pd.Series(res).groupby(test.dow.values).mean().round(1).tolist()
-    print(f"{name:13s} MAE={mean_absolute_error(test.orders, f):.2f}  RMSE={root_mean_squared_error(test.orders, f):.2f}  "
-          f"RMSLE={root_mean_squared_log_error(test.orders, np.clip(f, 0, None)):.4f}  bias={res.mean():+.2f}")
-    print(f"{'':13s} mean residual Mon..Sun = {by_dow}")</div>
-  <div class="fx" data-lang="text">plain target  MAE=5.67  RMSE=7.27  RMSLE=0.1948  bias=+0.79
-              mean residual Mon..Sun = [-1.7, 0.9, 1.8, 1.7, 2.3, 3.7, -3.2]
-log1p target  MAE=5.58  RMSE=7.09  RMSLE=0.1869  bias=+1.45
-              mean residual Mon..Sun = [-0.8, 1.8, 2.5, 2.3, 2.9, 2.9, -1.4]</div>
-  <p>(Both models here use logged lag features, so the plain model's MAE differs slightly from above.) MAE, RMSE and RMSLE all improve a little, and the Saturday/Sunday imbalance shrinks (3.7/−3.2 → 2.9/−1.4). But the overall bias grew from +0.79 to +1.45: transforming a log-scale prediction back with exp gives roughly the conditional <em>median</em>, which for right-skewed counts is below the mean. If the kitchen needs unbiased totals (for buying ingredients), it must correct for this (e.g. multiply by a factor fitted on validation data). A metric table alone would have hidden this trade-off; residuals showed it. Formal tests (Breusch–Pagan, Durbin–Watson, Q-Q plots) are in <a class="xref" data-note="ml_reg_diag">Assumptions &amp; Diagnostics</a>.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A doctor does not stop at "average temperature is normal". She looks at when the fever spikes (nights? after meals?), because the pattern points to the cause. Residual plots are the pattern; the metric is the average temperature.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Residual analysis</strong> is the inspection of eᵢ = yᵢ − ŷᵢ on held-out data: their mean (bias), their mean per segment, their spread against the fitted value (heteroscedasticity), against time (autocorrelation) and their distribution (tails). A good model leaves residuals that look like structureless noise.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Do residual analysis on validation or test data. Training residuals of a flexible model (a deep tree, boosting) look perfect because the model memorised them.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us.</b> The linear model's MAE on the kitchen test period is 5.68. Is that good? Without the score of a simple baseline on the same 120 days, the number means nothing. <b>→ next: 13 Baseline Models</b></div>
+    print(f"{name}: MAE={mean_absolute_error(test.orders, f):.2f}  bias={res.mean():+.2f}  Mon..Sun={by_dow}")</div>
+  <div class="fx" data-lang="text">plain target: MAE=5.67  bias=+0.79  Mon..Sun=[-1.7, 0.9, 1.8, 1.7, 2.3, 3.7, -3.2]
+log1p target: MAE=5.58  bias=+1.45  Mon..Sun=[-0.8, 1.8, 2.5, 2.3, 2.9, 2.9, -1.4]</div>
+  <p>The log model improves MAE slightly (5.67 to 5.58) and shrinks the Saturday and Sunday imbalance (3.7 and −3.2 become 2.9 and −1.4). (Both models here use logged lag features, so the plain model's numbers differ slightly from the previous block.) But the overall bias grew from +0.79 to +1.45. Transforming a log-scale prediction back with exp gives roughly the conditional <em>median</em>, which for right-skewed counts sits below the mean, so totals come out too low. If the kitchen needs unbiased totals for buying ingredients, it must correct for this, for example by multiplying by a factor fitted on validation data. A table of metrics alone would have hidden this trade-off; the residuals showed it. Two habits make residual analysis trustworthy: do it on validation or test data, because a flexible model's training residuals look perfect; and also plot residuals against time, where runs of the same sign mean information is left in recent errors. Formal tests are covered in <a class="xref" data-note="ml_reg_diag">Assumptions &amp; Diagnostics</a>.</p>
 
-  <h2 id="rm-base"><span class="num">13</span>Baseline Models</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>R² compared our six-day forecast with the mean, and MASE with the naive forecast. But for a real project, which baselines should every model beat, and by how much does the linear model actually beat them on the kitchen data?</p></div>
-  <h3>The usual suspects</h3>
-  <ul>
-    <li><strong>Mean of train</strong>: the MSE-best constant (R² compares with this, using the test mean).</li>
-    <li><strong>Median of train</strong>: the MAE-best constant.</li>
-    <li><strong>Naive</strong> (time series): tomorrow = today.</li>
-    <li><strong>Seasonal naive</strong>: same day last week (or last year).</li>
-    <li>For cross-sectional data: a one-feature model (price per m² × area), or yesterday's production model.</li>
-  </ul>
+  <h2 id="rm-base"><span class="num">10</span>Baselines and scikit-learn</h2>
+  <p>The linear model's MAE on the kitchen's test period is about 5.7. Is that good? Without the score of a simple model on the same 120 days, the number means nothing. A <strong>baseline</strong> is a trivial or existing model scored on exactly the same test rows with the same metric. Medicine works the same way: a new drug is tested against a placebo and against the current best drug, never against nothing. The usual baselines are the mean of the training target (the MSE-best constant, which R² compares against), the median (the MAE-best constant), the naive forecast, and the seasonal naive forecast:</p>
   <div class="fx" data-lang="py">import numpy as np, pandas as pd
 from kitchen import train, test
 from sklearn.dummy import DummyRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import HistGradientBoostingRegressor
-from sklearn.metrics import (mean_absolute_error, root_mean_squared_error, r2_score,
-                             mean_absolute_percentage_error, median_absolute_error)
+from sklearn.metrics import mean_absolute_error, root_mean_squared_error, r2_score
 
 feats = ["dow", "festival", "t", "lag1", "lag7"]
 Xtr, ytr, Xte, yte = train[feats], train.orders, test[feats], test.orders
-X1 = pd.get_dummies(Xtr.dow, prefix="d").join(Xtr.drop(columns="dow")).astype(float)
-X2 = pd.get_dummies(Xte.dow, prefix="d").join(Xte.drop(columns="dow")).astype(float)
+dummies = lambda X: pd.get_dummies(X.dow, prefix="d").join(X.drop(columns="dow")).astype(float)
 preds = {
-    "mean of train": DummyRegressor(strategy="mean").fit(Xtr, ytr).predict(Xte),
-    "median of train": DummyRegressor(strategy="median").fit(Xtr, ytr).predict(Xte),
-    "naive (yesterday)": test.lag1.values,
+    "mean of train":        DummyRegressor(strategy="mean").fit(Xtr, ytr).predict(Xte),
+    "naive (yesterday)":    test.lag1.values,
     "seasonal naive (-7d)": test.lag7.values,
-    "linear regression": LinearRegression().fit(X1, ytr).predict(X2),
-    "gradient boosting": HistGradientBoostingRegressor(random_state=0).fit(Xtr, ytr).predict(Xte),
+    "linear regression":    LinearRegression().fit(dummies(Xtr), ytr).predict(dummies(Xte)),
+    "gradient boosting":    HistGradientBoostingRegressor(random_state=0).fit(Xtr, ytr).predict(Xte),
 }
 scale = np.abs(np.diff(ytr.values)).mean()                   # MASE scale from the training period
-wape = lambda a, f: np.abs(a - f).sum() / np.abs(a).sum()
-print(f"test days {len(yte)}, mean orders {yte.mean():.1f}, MASE scale {scale:.2f}")
-print(f"{'model':21s}{'MAE':&gt;6s}{'RMSE':&gt;7s}{'MedAE':&gt;7s}{'R²':&gt;7s}{'MAPE':&gt;7s}{'WAPE':&gt;7s}{'MASE':&gt;6s}")
+print(f"{'model':21s}{'MAE':&gt;6s}{'RMSE':&gt;7s}{'R²':&gt;8s}{'MASE':&gt;6s}")
 for name, f in preds.items():
     print(f"{name:21s}{mean_absolute_error(yte, f):6.2f}{root_mean_squared_error(yte, f):7.2f}"
-          f"{median_absolute_error(yte, f):7.2f}{r2_score(yte, f):7.3f}{mean_absolute_percentage_error(yte, f):7.1%}"
-          f"{wape(yte, f):7.1%}{mean_absolute_error(yte, f)/scale:6.2f}")</div>
-  <div class="fx" data-lang="text">test days 120, mean orders 37.1, MASE scale 12.00
-model                   MAE   RMSE  MedAE     R²   MAPE   WAPE  MASE
-mean of train         10.33  14.21   8.00 -0.098  28.5%  27.8%  0.86
-median of train       10.78  14.87   8.00 -0.203  28.3%  29.0%  0.90
-naive (yesterday)     14.30  19.22   9.50 -1.009  48.1%  38.5%  1.19
-seasonal naive (-7d)   8.78  12.57   6.00  0.141  24.8%  23.7%  0.73
-linear regression      5.68   7.27   4.62  0.713  16.7%  15.3%  0.47
-gradient boosting      7.21   9.96   5.76  0.461  21.3%  19.4%  0.60</div>
-  <p>Reading the table:</p>
-  <ul>
-    <li><strong>Seasonal naive</strong> (MAE 8.78, MASE 0.73) is the baseline to beat, much better than plain naive (14.30, worse than the constant mean!) because Saturday follows Friday and Monday follows Sunday. Choosing the wrong baseline makes any model look good.</li>
-    <li><strong>The mean of train has R² −0.098</strong> on the test period: R² uses the test mean (higher, because orders grow), so even the "R² = 0 model" scores below 0 out of sample.</li>
-    <li><strong>Linear regression</strong> beats seasonal naive by about 35% in MAE (8.78 → 5.68) and has R² 0.71. That relative improvement is the honest headline, often written as a <strong>skill score</strong>: 1 − MAE_model / MAE_baseline = 1 − 5.68/8.78 = 0.35.</li>
-    <li><strong>Gradient boosting</strong> loses to the linear model here: with a trend, trees cannot extrapolate beyond the training range (<a class="xref" data-note="ml_dtree">Decision Trees</a>). Only a baseline table makes that visible.</li>
-    <li>The columns agree on the order of the top three (linear, boosting, seasonal naive). Mean and median of train swap places: MAE and RMSE prefer the mean (10.33 vs 10.78), MAPE prefers the median (28.3% vs 28.5%), a small live example of MAPE preferring lower forecasts. MAPE is above WAPE for every model because quiet Sundays carry large percentage errors.</li>
-  </ul>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A new medicine is tested against a placebo and against the current best drug, never against nothing. Baselines are the placebo (mean) and the current drug (seasonal naive).</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A <strong>baseline</strong> is a trivial or existing model scored on exactly the same test rows with the same metric. A <strong>skill score</strong> = 1 − score(model)/score(baseline) (for error metrics) is the fraction of the baseline's error removed; R² is the skill score of MSE against the mean, MASE is a ratio against the naive forecast. sklearn: <code>DummyRegressor(strategy="mean" | "median" | "quantile" | "constant")</code>.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>For time series, a random train/test split lets the "baseline" and the model peek at neighbouring days and makes everything look better. Split by time (train before test), as the kitchen code does (<a class="xref" data-note="ml_splits">Train/Val/Test &amp; CV</a>).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us.</b> We computed everything with hand-written numpy and a few sklearn calls. For model selection inside cross-validation we need the full list of functions and the scorer names. <b>→ next: 14 scikit-learn API</b></div>
+          f"{r2_score(yte, f):8.3f}{mean_absolute_error(yte, f) / scale:6.2f}")</div>
+  <div class="fx" data-lang="text">model                   MAE   RMSE      R²  MASE
+mean of train         10.33  14.21  -0.098  0.86
+naive (yesterday)     14.30  19.22  -1.009  1.19
+seasonal naive (-7d)   8.78  12.57   0.141  0.73
+linear regression      5.68   7.27   0.713  0.47
+gradient boosting      7.21   9.96   0.461  0.60</div>
+  <p>The seasonal naive forecast (MAE 8.78, MASE 0.73) is the baseline to beat. It is much better than plain naive, which at 14.30 is even worse than the constant mean, because Saturday follows Friday and Monday follows Sunday, so "same as yesterday" is badly wrong at both ends of the week. Choosing a weak baseline makes any model look good. Notice that the mean of the training data scores R² −0.098 on the test period: scikit-learn's <code>r2_score</code> builds SS_tot from the mean of the <em>test</em> values, which is higher because orders grow, so even the "R² = 0 model" scores below zero out of sample. Linear regression beats seasonal naive by about 35%. That relative improvement is the honest headline, and it has a name: a <strong>skill score</strong>, 1 − score(model) / score(baseline) = 1 − 5.68 / 8.78 = 0.35. R² is the skill score of MSE against the mean, and MASE is a ratio against the naive forecast. Gradient boosting loses to the linear model here, because with a trend, trees cannot predict values beyond the range they saw in training (<a class="xref" data-note="ml_dtree">Decision Trees</a>); only a baseline table makes that visible. For time series, always split by time as this code does: a random split lets models and baselines peek at neighbouring days.</p>
+  <p>To use these metrics inside model selection, you pass scorer names to <code>cross_val_score</code>, <code>cross_validate</code> or <code>GridSearchCV</code>. Those tools always <em>maximise</em> a score, so error metrics are exposed negated: <code>"neg_mean_absolute_error"</code> returns −MAE:</p>
+  <div class="fx" data-lang="py">import numpy as np
+from kitchen import train
+from sklearn.ensemble import HistGradientBoostingRegressor
+from sklearn.model_selection import cross_validate, TimeSeriesSplit
 
-  <h2 id="rm-api"><span class="num">14</span>scikit-learn Regression Metrics API</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>We know what each metric means. We have not yet seen which sklearn function computes it, what name to pass as <code>scoring=</code> in cross-validation, and why those names start with "neg_".</p></div>
+X, y = train[["dow", "festival", "t", "lag1", "lag7"]], train.orders
+r = cross_validate(HistGradientBoostingRegressor(random_state=0), X, y, cv=TimeSeriesSplit(4),
+                   scoring=["neg_mean_absolute_error", "r2"])
+print("raw scores :", np.round(r["test_neg_mean_absolute_error"], 2))
+print("fold MAE   :", np.round(-r["test_neg_mean_absolute_error"], 2))
+print("fold R²    :", np.round(r["test_r2"], 3))</div>
+  <div class="fx" data-lang="text">raw scores : [-5.28 -6.45 -5.36 -6.63]
+fold MAE   : [5.28 6.45 5.36 6.63]
+fold R²    : [0.524 0.361 0.647 0.384]</div>
+  <p>The raw scores come back negative, and you flip the sign to report them; "higher is better" still holds, so −5.28 beats −6.63. The four time-ordered folds give MAE between 5.3 and 6.6 and R² between 0.36 and 0.65, and that spread is as informative as the average. The main functions and their scorer names are:</p>
   <table class="tbl">
     <tr><th>Metric</th><th>Function</th><th>Scorer string</th></tr>
     <tr><td>MAE</td><td><code>mean_absolute_error</code></td><td><code>neg_mean_absolute_error</code></td></tr>
     <tr><td>MSE / RMSE</td><td><code>mean_squared_error</code> / <code>root_mean_squared_error</code></td><td><code>neg_mean_squared_error</code> / <code>neg_root_mean_squared_error</code></td></tr>
-    <tr><td>MedAE</td><td><code>median_absolute_error</code></td><td><code>neg_median_absolute_error</code></td></tr>
-    <tr><td>Max error</td><td><code>max_error</code></td><td><code>neg_max_error</code></td></tr>
+    <tr><td>MedAE / max error</td><td><code>median_absolute_error</code> / <code>max_error</code></td><td><code>neg_median_absolute_error</code> / <code>neg_max_error</code></td></tr>
     <tr><td>R² / explained variance</td><td><code>r2_score</code> / <code>explained_variance_score</code></td><td><code>r2</code> / <code>explained_variance</code></td></tr>
-    <tr><td>MAPE</td><td><code>mean_absolute_percentage_error</code> (fraction)</td><td><code>neg_mean_absolute_percentage_error</code></td></tr>
-    <tr><td>MSLE / RMSLE</td><td><code>mean_squared_log_error</code> / <code>root_mean_squared_log_error</code></td><td><code>neg_mean_squared_log_error</code> / <code>neg_root_mean_squared_log_error</code></td></tr>
-    <tr><td>Pinball, Poisson, Tweedie, D²</td><td><code>mean_pinball_loss</code>, <code>mean_poisson_deviance</code>, <code>mean_tweedie_deviance</code>, <code>d2_*_score</code></td><td>via <code>make_scorer</code> or <code>neg_mean_poisson_deviance</code></td></tr>
-    <tr><td>sMAPE, WAPE, MASE, adjusted R²</td><td>not in sklearn: write them</td><td><code>make_scorer(f, greater_is_better=False)</code></td></tr>
+    <tr><td>MAPE (a fraction)</td><td><code>mean_absolute_percentage_error</code></td><td><code>neg_mean_absolute_percentage_error</code></td></tr>
+    <tr><td>RMSLE</td><td><code>root_mean_squared_log_error</code></td><td><code>neg_root_mean_squared_log_error</code></td></tr>
+    <tr><td>Pinball, Poisson deviance</td><td><code>mean_pinball_loss</code>, <code>mean_poisson_deviance</code></td><td>via <code>make_scorer</code>, <code>neg_mean_poisson_deviance</code></td></tr>
+    <tr><td>sMAPE, WAPE, MASE, adjusted R²</td><td>not in scikit-learn: write them</td><td><code>make_scorer(f, greater_is_better=False)</code></td></tr>
   </table>
+
+  <h2 id="rm-traps"><span class="num">11</span>Common Mistakes</h2>
+  <p>A quiet but common mistake is averaging RMSE across cross-validation folds or across product series and calling the result "the RMSE". Because of the square root, the average of RMSEs is not the RMSE of all the errors pooled together:</p>
   <div class="fx" data-lang="py">import numpy as np
 from week import y, yhat
-from kitchen import train
-from sklearn.metrics import (get_scorer_names, mean_pinball_loss, mean_poisson_deviance,
-                             d2_absolute_error_score, explained_variance_score, r2_score)
-from sklearn.ensemble import HistGradientBoostingRegressor
-from sklearn.model_selection import cross_validate, TimeSeriesSplit
+from sklearn.metrics import root_mean_squared_error
 
-print([s for s in get_scorer_names() if s.startswith("neg_") and "error" in s or s in ("r2", "explained_variance")])
-
-# a few more metrics on the running week
-print(f"pinball loss, q=0.9: {mean_pinball_loss(y, yhat, alpha=0.9):.3f}   q=0.5 (= MAE/2): {mean_pinball_loss(y, yhat, alpha=0.5):.3f}")
-print(f"Poisson deviance: {mean_poisson_deviance(y, yhat):.3f}   D² (absolute error): {d2_absolute_error_score(y, yhat):.3f}")
-
-X, yy = train[["dow", "festival", "t", "lag1", "lag7"]], train.orders
-r = cross_validate(HistGradientBoostingRegressor(random_state=0), X, yy, cv=TimeSeriesSplit(4), n_jobs=1,
-                   scoring=["neg_mean_absolute_error", "neg_root_mean_squared_error", "r2"])
-print("fold MAE :", np.round(-r["test_neg_mean_absolute_error"], 2), " (negated back: sklearn maximises -MAE)")
-print("fold RMSE:", np.round(-r["test_neg_root_mean_squared_error"], 2))
-print("fold R²  :", np.round(r["test_r2"], 3))</div>
-  <div class="fx" data-lang="text">['explained_variance', 'neg_max_error', 'neg_mean_absolute_error', 'neg_mean_absolute_percentage_error', 'neg_mean_squared_error', 'neg_mean_squared_log_error', 'neg_median_absolute_error', 'neg_root_mean_squared_error', 'neg_root_mean_squared_log_error', 'r2']
-pinball loss, q=0.9: 2.500   q=0.5 (= MAE/2): 1.833
-Poisson deviance: 0.534   D² (absolute error): 0.633
-fold MAE : [5.28 6.45 5.36 6.63]  (negated back: sklearn maximises -MAE)
-fold RMSE: [6.79 9.75 6.65 9.71]
-fold R²  : [0.524 0.361 0.647 0.384]</div>
-  <p>sklearn's model-selection tools always <em>maximise</em> a score, so error metrics are exposed negated: "neg_mean_absolute_error" returns −MAE, and you flip the sign to report it. The four <code>TimeSeriesSplit</code> folds give MAE between 5.3 and 6.6 and R² between 0.36 and 0.65: the spread across folds is as informative as the average. The pinball and D² values match the hand calculations of section 11.</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p><code>regressor.score(X, y)</code> returns R², not MAE. And with "neg_" scorers, "higher is better" still holds: −3.2 beats −5.1. Forgetting the sign is the most common bug in hand-written model-comparison tables.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us.</b> We have met each metric separately. How are they all built from the same residuals and baselines, and which one answers which question? <b>→ next: 15 How It All Connects</b></div>
-
-  <h2 id="rm-connect"><span class="num">15</span>How It All Connects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>Each metric was introduced to fix the previous one's weakness. We have not yet seen, in one picture, that every one of them is built from the same six residuals, plus at most one baseline.</p></div>
-  <figure class="viz"><svg viewBox="0 0 660 330" width="660">
-<defs><marker id="rm-a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="180" y="10" width="300" height="42" rx="8" class="fv" stroke="currentColor" stroke-opacity="0.4"/><text x="330" y="28" text-anchor="middle" font-size="12.5" font-weight="700">residuals e = y − ŷ</text><text x="330" y="44" text-anchor="middle" font-size="11">−2, +1, −3, +5, −1, +10</text>
-<line x1="220" y1="52" x2="70" y2="86" stroke="currentColor" marker-end="url(#rm-a1)"/><line x1="290" y1="52" x2="240" y2="86" stroke="currentColor" marker-end="url(#rm-a1)"/><line x1="370" y1="52" x2="435" y2="86" stroke="currentColor" marker-end="url(#rm-a1)"/><line x1="440" y1="52" x2="585" y2="86" stroke="currentColor" marker-end="url(#rm-a1)"/>
-<rect x="15" y="88" width="110" height="44" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="70" y="106" text-anchor="middle" font-size="11">keep the sign</text><text x="70" y="123" text-anchor="middle" font-size="11" font-weight="700">ME +1.67</text>
-<rect x="135" y="88" width="210" height="44" rx="8" class="fb sb"/><text x="240" y="106" text-anchor="middle" font-size="11">|e|: mean, median, max</text><text x="240" y="123" text-anchor="middle" font-size="11" font-weight="700">MAE 3.67 · MedAE 2.5 · max 10</text>
-<rect x="355" y="88" width="160" height="44" rx="8" class="fr sr"/><text x="435" y="106" text-anchor="middle" font-size="11">e²: mean, then √</text><text x="435" y="123" text-anchor="middle" font-size="11" font-weight="700">MSE 23.3 · RMSE 4.83</text>
-<rect x="525" y="88" width="120" height="44" rx="8" class="ft st"/><text x="585" y="106" text-anchor="middle" font-size="11">log ratios²</text><text x="585" y="123" text-anchor="middle" font-size="11" font-weight="700">RMSLE 0.111</text>
-<line x1="180" y1="132" x2="90" y2="168" stroke="currentColor" marker-end="url(#rm-a1)"/><line x1="240" y1="132" x2="250" y2="168" stroke="currentColor" marker-end="url(#rm-a1)"/><line x1="300" y1="132" x2="400" y2="168" stroke="currentColor" marker-end="url(#rm-a1)"/>
-<line x1="470" y1="132" x2="560" y2="168" stroke="currentColor" marker-end="url(#rm-a1)"/>
-<rect x="15" y="170" width="150" height="44" rx="8" class="fb" stroke="currentColor" stroke-opacity="0.3"/><text x="90" y="188" text-anchor="middle" font-size="11">÷ each y, average</text><text x="90" y="205" text-anchor="middle" font-size="11" font-weight="700">MAPE 9.58%</text>
-<rect x="175" y="170" width="150" height="44" rx="8" class="fb" stroke="currentColor" stroke-opacity="0.3"/><text x="250" y="188" text-anchor="middle" font-size="11">Σ|e| ÷ Σy</text><text x="250" y="205" text-anchor="middle" font-size="11" font-weight="700">WAPE 10.48%</text>
-<rect x="335" y="170" width="140" height="44" rx="8" class="fg" stroke="currentColor" stroke-opacity="0.3"/><text x="405" y="188" text-anchor="middle" font-size="11">MAE ÷ naive 7.4</text><text x="405" y="205" text-anchor="middle" font-size="11" font-weight="700">MASE 0.50</text>
-<rect x="485" y="170" width="160" height="44" rx="8" class="fg" stroke="currentColor" stroke-opacity="0.3"/><text x="565" y="188" text-anchor="middle" font-size="11">1 − 140 ÷ 1000</text><text x="565" y="205" text-anchor="middle" font-size="11" font-weight="700">R² 0.86</text>
-<line x1="90" y1="214" x2="90" y2="234" stroke="currentColor" stroke-dasharray="3 3" marker-end="url(#rm-a1)"/>
-<rect x="15" y="236" width="150" height="44" rx="8" class="fb" stroke="currentColor" stroke-opacity="0.3"/><text x="90" y="254" text-anchor="middle" font-size="11">÷ (y + ŷ)/2 each</text><text x="90" y="271" text-anchor="middle" font-size="11" font-weight="700">sMAPE 9.86%</text>
-<line x1="565" y1="214" x2="565" y2="234" stroke="currentColor" marker-end="url(#rm-a1)"/>
-<rect x="485" y="236" width="160" height="44" rx="8" class="fg" stroke="currentColor" stroke-opacity="0.3"/><text x="565" y="254" text-anchor="middle" font-size="11">charge p features</text><text x="565" y="271" text-anchor="middle" font-size="11" font-weight="700">adj. R² 0.825</text>
-<text x="330" y="304" text-anchor="middle" class="tm" font-size="10.5">blue: from |e| · red: from e² · teal: log ratios · green: ÷ a baseline</text>
-<text x="330" y="322" text-anchor="middle" class="tm" font-size="10.5">dashed: sMAPE repairs MAPE's division by small y</text>
-</svg><figcaption>Every regression metric of this note, built from the six residuals. Moving down a column means dividing by something: the size of each day, the total volume, or a baseline's error.</figcaption></figure>
-  <h3>One table on the running week</h3>
-  <table class="tbl">
-    <tr><th>Metric</th><th>Built from</th><th>Week</th><th>Question it answers</th><th>Weakness → next</th><th>Robust to one freak day?</th><th>Units</th></tr>
-    <tr><td>ME (bias)</td><td>mean e</td><td>+1.67</td><td>Which way do we lean?</td><td>Signs cancel</td><td>No</td><td>orders</td></tr>
-    <tr><td>MAE</td><td>mean |e|</td><td>3.67</td><td>Typical miss size</td><td>Big misses not special</td><td>Medium</td><td>orders</td></tr>
-    <tr><td>MSE / RMSE</td><td>mean e², √</td><td>23.3 / 4.83</td><td>Miss size, big ones weighted more</td><td>One day dominates</td><td>No</td><td>orders², orders</td></tr>
-    <tr><td>MedAE / max</td><td>median / max of |e|</td><td>2.5 / 10</td><td>Typical day / worst day</td><td>No reference point</td><td>Yes / no</td><td>orders</td></tr>
-    <tr><td>R²</td><td>1 − SS_res / SS_tot</td><td>0.86</td><td>Better than the mean, by how much?</td><td>Never falls with more features</td><td>No</td><td>none</td></tr>
-    <tr><td>Adjusted R²</td><td>R² with df penalty</td><td>0.825</td><td>Worth the features?</td><td>Still in-sample, still units-blind</td><td>No</td><td>none</td></tr>
-    <tr><td>MAPE</td><td>mean |e|/y</td><td>9.58%</td><td>Miss as % of the day</td><td>Explodes near 0; low bias</td><td>No</td><td>%</td></tr>
-    <tr><td>sMAPE / WAPE</td><td>2|e|/(y+ŷ) / Σ|e|/Σy</td><td>9.86% / 10.48%</td><td>% that survives small days</td><td>Not anchored to difficulty</td><td>Medium</td><td>%</td></tr>
-    <tr><td>MASE</td><td>MAE / naive MAE</td><td>0.50</td><td>Better than "tomorrow = today"?</td><td>Absolute, not relative</td><td>Medium</td><td>none</td></tr>
-    <tr><td>RMSLE</td><td>RMSE of log1p</td><td>0.111</td><td>Ratio error, under-forecasts worse</td><td>Ignores absolute size</td><td>Medium</td><td>log units</td></tr>
-  </table>
-  <h3>Identities worth remembering</h3>
-  <ul>
-    <li>RMSE = √MSE ≥ MAE; RMSE/MAE = 1 only if all |e| are equal.</li>
-    <li>MSE of the mean forecast = Var(y) = SS_tot/n (1000/6 = 166.7); R² = 1 − MSE/Var(y).</li>
-    <li>WAPE = MAE / mean(y) = 3.67/35. MASE = MAE / (naive MAE). Both are MAE divided by something.</li>
-    <li>RMSLE = RMSE on log1p(y). Pinball loss at q = 0.5 = MAE/2. D²_abs = 1 − MAE / MAE(median).</li>
-    <li>Brier score in <a class="xref" data-note="ml_evaluation">Classification Metrics</a> = MSE with y ∈ {0, 1} and ŷ = a probability.</li>
-  </ul>
-  <div class="bridge"><b>What this still can't tell us.</b> Knowing how the metrics fit together does not stop the classic mistakes in using them. <b>→ next: 16 Common Mistakes</b></div>
-
-  <h2 id="rm-traps"><span class="num">16</span>Common Mistakes</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>Which errors in using these metrics show up again and again in code reviews and interviews?</p></div>
-  <div class="cards">
-    <div><b>RMSE called "average error"</b><p>The average miss is MAE (3.67), not RMSE (4.83).</p><small>Section 03</small></div>
-    <div><b>R² read as accuracy</b><p>R² 0.86 is not "86% correct"; it is the share of the mean forecast's squared error removed.</p><small>Section 05</small></div>
-    <div><b>"R² is between 0 and 1"</b><p>Only in-sample for least squares with intercept. Out of sample it can be any negative number (−1.86).</p><small>Section 05</small></div>
-    <div><b>MAPE with small or zero actuals</b><p>One quiet day took MAPE from 9.6% to 51%. Use WAPE or MASE.</p><small>Section 07</small></div>
-    <div><b>Comparing MAE across series</b><p>MAE is in units; a kitchen 50× bigger has a 50× bigger MAE. Use WAPE or MASE.</p><small>Sections 08–09</small></div>
-    <div><b>No baseline</b><p>"MAE 5.68" means nothing until the seasonal naive's 8.78 sits beside it.</p><small>Section 13</small></div>
-    <div><b>Wrong baseline</b><p>Plain naive (14.3) made every model look great; seasonal naive (8.78) is the honest bar.</p><small>Section 13</small></div>
-    <div><b>Training loss ≠ report metric</b><p>A model trained on MSE predicts the mean; scoring it on MAPE rewards a lower forecast.</p><small>Section 11</small></div>
-    <div><b>Forgetting the neg_ sign</b><p>sklearn scorers return −MAE; flip it before reporting, and remember −3 &gt; −5.</p><small>Section 14</small></div>
-    <div><b>Averaging RMSE over folds</b><p>Average the MSEs then take the root, or report the mean ± spread clearly.</p><small>Section 03</small></div>
-    <div><b>Only one number</b><p>Averages hide segment bias (Saturday +3.7). Always look at residuals by group.</p><small>Section 12</small></div>
-    <div><b>Log target, unbiased totals?</b><p>exp of a log-scale prediction is roughly a median: totals come out low (bias +0.79 → +1.45).</p><small>Section 12</small></div>
-  </div>
-  <div class="bridge"><b>What this still can't tell us.</b> To revise everything above in ten minutes, use the sheet below. <b>→ next: Revision Sheet, then 17 Questions &amp; Answers</b></div>
+folds = [(y[:3], yhat[:3]), (y[3:], yhat[3:])]           # pretend the week is two CV folds
+per_fold = [root_mean_squared_error(a, b) for a, b in folds]
+print("RMSE per fold:", np.round(per_fold, 3), " average of RMSEs:", round(np.mean(per_fold), 3))
+print("RMSE of pooled errors:", round(root_mean_squared_error(y, yhat), 3))
+print("root of averaged MSEs:", round(np.sqrt(np.mean([r ** 2 for r in per_fold])), 3))</div>
+  <div class="fx" data-lang="text">RMSE per fold: [2.16  6.481]  average of RMSEs: 4.32
+RMSE of pooled errors: 4.83
+root of averaged MSEs: 4.83</div>
+  <p>Splitting the week into two "folds" gives RMSEs of 2.16 and 6.48, whose average is 4.32, but the RMSE of all six errors is 4.83. Averaging the MSEs first and then taking the root gives the correct 4.83 when the folds are the same size. Either do that, or clearly report "mean of fold RMSEs".</p>
+  <p>Other mistakes are about interpretation. Calling RMSE "the average error" is wrong; the average miss is MAE (3.67, not 4.83). Reading R² as accuracy is wrong: R² 0.86 is not "86% correct" but the share of the mean forecast's squared error removed. Believing R² must lie between 0 and 1 fails out of sample, where the reversed forecast scored −1.86. Using MAPE when actual values can be small or zero lets one quiet day take MAPE from 9.6% to 51%; use WAPE or MASE. Comparing MAE across series of different sizes compares their sizes, not their forecasts. Reporting a metric without a baseline, or with the wrong baseline (plain naive instead of seasonal naive), makes any model look good. Training on one loss and reporting a metric that targets a different statistic, such as an MSE-trained model judged on MAPE, rewards the wrong forecasts. Forgetting the sign of <code>neg_</code> scorers produces upside-down comparison tables, and <code>regressor.score(X, y)</code> returns R², not MAE. And trusting one overall number hides segment problems, like the overall bias of +0.77 that hid Saturdays at +3.7 and Sundays at −3.2.</p>
 
   <h2 id="rm-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>The whole note on one page. Running example: a tiffin kitchen's forecast for six days. Real orders y = 20, 25, 30, 35, 40, 60 (sum 210, mean 35); forecast ŷ = 22, 24, 33, 30, 41, 50; residuals e = y − ŷ = −2, +1, −3, +5, −1, +10. The six days before (for MASE): 14, 22, 17, 28, 24, 33.</p>
-  <h3>The question ladder in one line each</h3>
-  <ol>
-    <li><strong>Residual / bias</strong>: how wrong each day, and which way do we lean? ME = +1.67.</li>
-    <li><strong>MAE</strong>: typical size of a miss, ignoring direction: 3.67 orders.</li>
-    <li><strong>MSE / RMSE</strong>: punish big misses more: 23.3 orders², 4.83 orders.</li>
-    <li><strong>MedAE / max</strong>: typical day, ignoring freak days (2.5); worst day (10).</li>
-    <li><strong>R²</strong>: how much better than always predicting the mean: 0.86.</li>
-    <li><strong>Adjusted R²</strong>: still better after paying for features: 0.825 (p = 1).</li>
-    <li><strong>MAPE</strong>: miss as a percentage: 9.58%; breaks on small values.</li>
-    <li><strong>sMAPE / WAPE</strong>: percentages that survive small days: 9.86% / 10.48%.</li>
-    <li><strong>MASE</strong>: better than the naive forecast? 0.50 = half its error.</li>
-    <li><strong>RMSLE</strong>: ratio errors, under-forecasts weigh more: 0.111.</li>
-  </ol>
-  <h3>Every formula</h3>
+  <h3>Running example</h3>
+  <p>Real orders y = 20, 25, 30, 35, 40, 60 (sum 210, mean 35); forecast ŷ = 22, 24, 33, 30, 41, 50; residuals e = y − ŷ = −2, +1, −3, +5, −1, +10. Previous six days (for MASE): 14, 22, 17, 28, 24, 33.</p>
+  <h3>Formulas and values</h3>
   <table class="tbl">
-    <tr><th>Metric</th><th>Formula</th><th>Symbols</th><th>Week (by hand)</th></tr>
-    <tr><td>Residual</td><td>eᵢ = yᵢ − ŷᵢ</td><td>y real, ŷ forecast</td><td>−2, +1, −3, +5, −1, +10</td></tr>
-    <tr><td>ME</td><td>(1/n) Σ eᵢ</td><td>n = 6</td><td>10/6 = +1.67</td></tr>
-    <tr><td>MAE</td><td>(1/n) Σ |eᵢ|</td><td></td><td>22/6 = 3.67</td></tr>
-    <tr><td>MSE</td><td>(1/n) Σ eᵢ²</td><td></td><td>140/6 = 23.33</td></tr>
-    <tr><td>RMSE</td><td>√MSE</td><td></td><td>4.83</td></tr>
-    <tr><td>MedAE</td><td>median |eᵢ|</td><td></td><td>(2 + 3)/2 = 2.5</td></tr>
-    <tr><td>Max error</td><td>max |eᵢ|</td><td></td><td>10</td></tr>
-    <tr><td>R²</td><td>1 − Σeᵢ² / Σ(yᵢ − ȳ)²</td><td>ȳ = mean of y</td><td>1 − 140/1000 = 0.86</td></tr>
-    <tr><td>Adjusted R²</td><td>1 − (1 − R²)(n − 1)/(n − p − 1)</td><td>p = number of features</td><td>1 − 0.14·5/4 = 0.825</td></tr>
-    <tr><td>MAPE</td><td>(1/n) Σ |eᵢ|/|yᵢ|</td><td></td><td>(10 + 4 + 10 + 14.3 + 2.5 + 16.7)/6 = 9.58%</td></tr>
-    <tr><td>sMAPE</td><td>(1/n) Σ 2|eᵢ| / (|yᵢ| + |ŷᵢ|)</td><td></td><td>9.86%</td></tr>
-    <tr><td>WAPE</td><td>Σ|eᵢ| / Σ|yᵢ|</td><td></td><td>22/210 = 10.48%</td></tr>
-    <tr><td>MASE</td><td>MAE / mean|y_t − y_{t−m}| (training)</td><td>m = season length (1 here)</td><td>3.67/7.4 = 0.50</td></tr>
-    <tr><td>RMSLE</td><td>√[(1/n) Σ (ln(1 + yᵢ) − ln(1 + ŷᵢ))²]</td><td></td><td>√0.0122 = 0.111</td></tr>
-    <tr><td>Pinball loss</td><td>(1/n) Σ max(q·eᵢ, (q − 1)·eᵢ)</td><td>q = target quantile</td><td>q = 0.9: 15/6 = 2.50</td></tr>
+    <tr><th>Metric</th><th>Formula</th><th>Week</th></tr>
+    <tr><td>ME (bias)</td><td>(1/n) Σ eᵢ</td><td>10/6 = +1.67</td></tr>
+    <tr><td>MAE</td><td>(1/n) Σ |eᵢ|</td><td>22/6 = 3.67</td></tr>
+    <tr><td>MSE / RMSE</td><td>(1/n) Σ eᵢ² / √MSE</td><td>140/6 = 23.33 / 4.83</td></tr>
+    <tr><td>MedAE / max error</td><td>median |eᵢ| / max |eᵢ|</td><td>2.5 / 10</td></tr>
+    <tr><td>R²</td><td>1 − Σeᵢ² / Σ(yᵢ − ȳ)²</td><td>1 − 140/1000 = 0.86</td></tr>
+    <tr><td>Adjusted R²</td><td>1 − (1 − R²)(n − 1)/(n − p − 1)</td><td>0.825 (p = 1), 0.650 (p = 3)</td></tr>
+    <tr><td>MAPE</td><td>(1/n) Σ |eᵢ|/|yᵢ|</td><td>9.58%</td></tr>
+    <tr><td>sMAPE</td><td>(1/n) Σ 2|eᵢ| / (|yᵢ| + |ŷᵢ|)</td><td>9.86%</td></tr>
+    <tr><td>WAPE</td><td>Σ|eᵢ| / Σ|yᵢ| = MAE / mean(y)</td><td>22/210 = 10.48%</td></tr>
+    <tr><td>MASE</td><td>MAE / mean |y_t − y_{t−m}| on training data</td><td>3.67/7.4 = 0.50</td></tr>
+    <tr><td>RMSLE</td><td>√[(1/n) Σ (ln(1 + yᵢ) − ln(1 + ŷᵢ))²]</td><td>0.111</td></tr>
+    <tr><td>Pinball loss at q</td><td>(1/n) Σ max(q·eᵢ, (q − 1)·eᵢ)</td><td>2.50 at q = 0.9</td></tr>
+    <tr><td>Skill score</td><td>1 − score(model)/score(baseline)</td><td>kitchen: 1 − 5.68/8.78 = 0.35</td></tr>
   </table>
   <h3>Key facts</h3>
   <ul>
-    <li>The best constant forecast under MSE is the <strong>mean</strong> (35); under MAE the <strong>median</strong> (anything from 30 to 35 here); under MAPE a <strong>low</strong> value.</li>
-    <li>MSE of the mean forecast = variance of y, so R² = 1 − MSE / Var(y).</li>
-    <li>R² = 0 means "as good as the mean"; negative means worse; out of sample it has no lower limit. sklearn's test R² uses the test mean.</li>
-    <li>RMSE ≥ MAE. A large RMSE/MAE ratio (1.32 → 1.91 after one festival miss) means a few big errors dominate.</li>
-    <li>One festival miss of 40: MAE 3.67 → 8.67, RMSE 4.83 → 16.53, MedAE unchanged at 2.5.</li>
+    <li>Best constant: mean for MSE, median for MAE, q-th quantile for pinball, a low value for MAPE.</li>
+    <li>MSE of the mean forecast = Var(y), so R² = 1 − MSE/Var(y).</li>
+    <li>RMSE ≥ MAE; a large RMSE/MAE ratio means a few big misses dominate (1.32 → 1.91 after one festival).</li>
+    <li>R² = 0 means as good as the mean; it can be any negative number out of sample; test R² uses the test mean.</li>
+    <li>Explained variance forgives constant bias; R² does not.</li>
+    <li>RMSLE = RMSE on log1p scale; back-transformed log predictions are roughly medians (biased low).</li>
   </ul>
-  <h3>When to use which</h3>
-  <div class="cards">
-    <div><b>MAE / WAPE</b><p>Default for business reporting: in units (or % of volume), linear cost, easy to explain, robust-ish.</p><small>Targets the median</small></div>
-    <div><b>RMSE</b><p>When big misses are disproportionately costly, and to match a model trained on squared error.</p><small>Sensitive to outliers</small></div>
-    <div><b>R²</b><p>To say how much of the variation the model captures, on one fixed test set; always with RMSE beside it.</p><small>Not comparable across test sets</small></div>
-    <div><b>MAPE</b><p>Only when actuals are never near zero and stakeholders insist on percentages.</p><small>Biased low</small></div>
-    <div><b>MASE</b><p>Comparing forecast accuracy across many time series of different sizes; &lt; 1 beats naive.</p><small>Time series only</small></div>
-    <div><b>RMSLE / pinball</b><p>RMSLE for ratio errors on wide-range targets; pinball for quantile forecasts and asymmetric costs.</p><small>Pick q from the cost ratio</small></div>
-  </div>
-  <h3>The traps to remember</h3>
+  <h3>Which metric when</h3>
+  <table class="tbl">
+    <tr><th>Metric</th><th>Use when</th><th>Watch out</th></tr>
+    <tr><td>MAE / WAPE</td><td>Default business reporting; linear cost</td><td>MAE is scale-dependent</td></tr>
+    <tr><td>RMSE</td><td>Big misses disproportionately costly</td><td>Outliers dominate</td></tr>
+    <tr><td>R²</td><td>Share of variation captured, one test set</td><td>Not accuracy; not comparable across test sets</td></tr>
+    <tr><td>MAPE</td><td>Actuals never near zero</td><td>Biased low; infinite at 0</td></tr>
+    <tr><td>MASE</td><td>Many time series of different sizes</td><td>Time series only</td></tr>
+    <tr><td>RMSLE / pinball</td><td>Ratio errors / asymmetric costs</td><td>Clip negatives; pick q from costs</td></tr>
+  </table>
+  <h3>Syntax</h3>
+  <div class="fx" data-lang="py">from sklearn.metrics import (mean_absolute_error, root_mean_squared_error, r2_score,
+                             mean_absolute_percentage_error, mean_pinball_loss)
+from sklearn.dummy import DummyRegressor
+mae = mean_absolute_error(y, pred); rmse = root_mean_squared_error(y, pred)
+r2 = r2_score(y, pred)                        # uses the mean of y passed in
+wape = abs(y - pred).sum() / abs(y).sum()
+base = DummyRegressor(strategy="mean").fit(X_tr, y_tr)   # always score a baseline
+cross_val_score(model, X, y, scoring="neg_mean_absolute_error")   # negated: flip the sign</div>
+  <h3>Gotchas</h3>
   <ul>
-    <li>RMSE is not the average error; R² is not accuracy; MAPE explodes near zero.</li>
-    <li>Every metric needs a baseline beside it; for weekly data that is the seasonal naive (kitchen: 8.78 vs model 5.68).</li>
-    <li>sklearn scorers are negated (<code>neg_mean_absolute_error</code>) and <code>mean_absolute_percentage_error</code> returns a fraction.</li>
-    <li>Look at residuals by segment: an overall bias of +0.77 hid Saturday +3.7 and Sunday −3.2.</li>
+    <li>RMSE is not the average error; R² is not accuracy.</li>
+    <li>MAPE explodes on small or zero values and favours low forecasts.</li>
+    <li>Average MSEs then take the root; never average RMSEs.</li>
+    <li>Always beside a baseline; for weekly data, the seasonal naive.</li>
+    <li>Look at residuals by segment; overall bias hides group bias.</li>
   </ul>
-  <h3>Five rapid-fire checks</h3>
-  <details class="qa"><summary><span class="qmark">Q</span>Errors 2, 1, 3, 5, 1, 10 (absolute). MAE, RMSE, MedAE?</summary><div class="qa-body">MAE 22/6 = 3.67; RMSE √(140/6) = 4.83; MedAE (2 + 3)/2 = 2.5.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>SS_res 140, SS_tot 1000, n = 6, p = 1. R² and adjusted R²?</summary><div class="qa-body">R² = 0.86; adjusted = 1 − 0.14 × 5/4 = 0.825.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Which constant minimises MSE, and which minimises MAE?</summary><div class="qa-body">The mean minimises MSE; the median minimises MAE.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Real 1 order, forecast 4. Absolute error and APE?</summary><div class="qa-body">3 orders, 300%: one quiet day can dominate MAPE.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>MASE = 1.2. Good or bad?</summary><div class="qa-body">Bad: the model's MAE is 20% worse than the naive forecast's in-sample MAE.</div></details>
 
-  <h2 id="rm-qa"><span class="num">17</span>Questions &amp; Answers</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span><p>Can you now answer, with numbers, the questions an interviewer asks about regression metrics?</p></div>
+  <h2 id="rm-qa"><span class="num">12</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>Real 20, 25, 30, 35, 40, 60; forecast 22, 24, 33, 30, 41, 50. Compute ME, MAE, RMSE and R².</summary><div class="qa-body">e = −2, 1, −3, 5, −1, 10. ME = 10/6 = 1.67. MAE = 22/6 = 3.67. MSE = 140/6 = 23.3, RMSE = 4.83. Mean of y = 35, SS_tot = 225 + 100 + 25 + 0 + 25 + 625 = 1000, R² = 1 − 140/1000 = 0.86.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>MAE vs RMSE: when do you use each, and what does a large gap between them tell you?</summary><div class="qa-body">MAE when each unit of error costs the same and outliers should not dominate (it targets the median). RMSE when big misses cost disproportionately more, or to match an MSE-trained model (it targets the mean). RMSE ≥ MAE always; a large ratio means a few big errors dominate (1.32 → 1.91 after one 40-order miss).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Prove that the mean minimises MSE and say what minimises MAE.</summary><div class="qa-body">d/dc (1/n)Σ(yᵢ − c)² = −(2/n)Σ(yᵢ − c) = 0 ⇒ c = ȳ; the second derivative 2 &gt; 0 confirms a minimum. For MAE, moving c right lowers the loss by 1/n for every point to the right and raises it for every point to the left, so the minimum is where half the points are on each side: the median.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Derive R² and explain why it can be negative.</summary><div class="qa-body">R² = 1 − SS_res/SS_tot compares the model's squared error with that of always predicting the mean. If the model's squared error exceeds the mean forecast's, the ratio is above 1 and R² is negative (a reversed forecast gave −1.86). In-sample least squares with an intercept cannot do worse than the mean (it could pick the flat line), but out of sample or for other models it can.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why adjusted R², and how does it change when you add a useless feature?</summary><div class="qa-body">Plain in-sample R² never decreases when a feature is added. Adjusted R² = 1 − (1 − R²)(n − 1)/(n − p − 1) charges for each feature, so a useless feature (tiny R² gain) lowers it; a feature raises it only if its |t| &gt; 1. Same R² 0.86 gives 0.825 with p = 1 and 0.650 with p = 3 on 6 rows.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why is MAPE dangerous for demand or energy forecasting? What do you use instead?</summary><div class="qa-body">It divides by the actual value: near-zero actuals give huge percentages (one quiet day: 9.6% → 51%), zero gives infinity, and it penalises over-forecasts without limit while under-forecasts cap at 100%, so it favours low forecasts (with days of 10 and 100, the MAPE-best constant is 10). Use WAPE (Σ|e|/Σy), MASE, or MAPE above a floor.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is MASE and how do you read 0.5 and 1.2?</summary><div class="qa-body">MAE of the model divided by the in-sample MAE of the naive (or seasonal naive) forecast on the training series. 0.5: half the naive forecast's typical error (our week: 3.67/7.4). 1.2: 20% worse than naive, so the model is not worth it. Scale-free, works with zeros, for time series.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>When would you choose RMSLE, and what does training for it look like?</summary><div class="qa-body">When the target spans orders of magnitude and relative errors matter, or under-forecasting is worse than over-forecasting (halving costs more than +50%). Optimise it by fitting on log1p(y) and back-transforming with expm1; remember the back-transformed prediction is roughly a median, biased low for totals. Clip negative predictions first.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>R² vs explained variance score: when do they differ?</summary><div class="qa-body">Explained variance uses Var(residuals), which ignores a constant bias; R² uses the raw squared residuals. Shifting every forecast by +10 dropped R² to 0.46 while explained variance stayed 0.877. They agree only if the mean residual is 0.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Your model's MAE is 5.68. Is that good?</summary><div class="qa-body">Only relative to baselines on the same test rows: mean of train 10.33, naive 14.30, seasonal naive 8.78. The model removes 35% of the seasonal naive's error (skill score 0.35), R² 0.71, MASE 0.47. Report it that way, with the spread across time-series CV folds (5.3 to 6.6).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What do you look for in residual plots, and what did the kitchen's show?</summary><div class="qa-body">Bias overall and per segment, spread vs fitted value (funnel = heteroscedasticity), patterns over time (autocorrelation), heavy tails. The kitchen's linear model under-forecast Saturdays (+3.7) and festivals (+6.8), over-forecast Sundays (−3.2), and errors widened on busy days: signs of multiplicative effects, pointing to a log target or interactions.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why does sklearn call it neg_mean_absolute_error?</summary><div class="qa-body">Model-selection tools (cross_val_score, GridSearchCV) always maximise the score. Error metrics are negated so that larger is better; flip the sign when reporting.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>(Connection) How does R² relate to null accuracy and AP baselines in classification?</summary><div class="qa-body">All three compare the model with a know-nothing baseline: R² with "always the mean" (R² = 0), accuracy with "always the majority class" (null accuracy), AP with the positive rate (<a class="xref" data-note="ml_evaluation">Classification Metrics</a>). A metric without its baseline cannot be judged.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>(Connection) How is the Brier score a regression metric, and why does that matter for the next note?</summary><div class="qa-body">Brier = mean (p − y)² with y ∈ {0, 1}: the MSE of probabilities. Like MSE it is minimised by the true conditional mean, here P(y = 1 | x), which is why it rewards calibrated probabilities. <a class="xref" data-note="ml_calibration">Thresholds &amp; Calibration</a> splits it into a calibration part and a sharpness part.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>(Connection) Which training loss would you choose for the kitchen if running out is 9 times worse than leftovers?</summary><div class="qa-body">Pinball (quantile) loss at q = 9/(9 + 1) = 0.9: the model then forecasts the 90th percentile of demand, so it runs out on about 1 day in 10. Evaluate with the same pinball loss (2.50 on the week). In gradient boosting: <code>loss="quantile", quantile=0.9</code> (<a class="xref" data-note="ml_gbm">Gradient Boosting</a>).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a residual, and why is the mean residual not a measure of accuracy?</summary><div class="qa-body">A residual is actual minus predicted, y − ŷ. Its mean is the bias, which says whether the model leans high or low. Positive and negative errors cancel, so a model that is wildly wrong in both directions can have zero bias; to measure size you must remove the sign with absolute values or squares.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>MAE vs RMSE: when do you use each?</summary><div class="qa-body">MAE when every unit of error costs the same and outliers should not dominate; it targets the median. RMSE when big misses are disproportionately costly, or to match a model trained on squared error; it targets the mean. RMSE is always at least MAE, and a large gap means a few big errors dominate.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Show that the mean minimises MSE and say what minimises MAE.</summary><div class="qa-body">The derivative of (1/n)Σ(yᵢ − c)² with respect to c is −(2/n)Σ(yᵢ − c); setting it to zero gives c = mean(y), and the second derivative is positive. For MAE, moving c lowers the loss for points on one side and raises it for the other, so the minimum is where half the points lie on each side: the median.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does R² measure, and how can it be negative?</summary><div class="qa-body">R² = 1 − SS_res/SS_tot compares the model's squared error with that of always predicting the mean. If the model's squared error is larger than the mean forecast's, the ratio exceeds 1 and R² is negative. In-sample least squares with an intercept cannot do worse than the mean, but on new data or for other models it can, with no lower limit.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why use adjusted R², and what happens to it when you add a useless feature?</summary><div class="qa-body">In-sample R² never decreases when a feature is added, even pure noise. Adjusted R² = 1 − (1 − R²)(n − 1)/(n − p − 1) charges for each feature, so a useless feature lowers it. It applies to linear models with a clear feature count; for other models use held-out data.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between R² and explained variance?</summary><div class="qa-body">Explained variance uses the variance of the residuals, which subtracts their mean, so it ignores a constant bias. R² uses the raw squared residuals. Shifting every forecast up by 10 lowers R² but leaves explained variance unchanged; they agree only when the mean residual is zero.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why is MAPE dangerous, and what do you use instead?</summary><div class="qa-body">It divides by the actual value, so small actuals produce huge percentages and zero gives infinity. Over-forecasts are unbounded while under-forecasts cap at 100%, so it favours low forecasts. Use WAPE (total absolute error over total actual), MASE, or MAPE only above a stated floor.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is MASE and how do you read 0.5 and 1.2?</summary><div class="qa-body">The model's MAE divided by the in-sample MAE of the naive (or seasonal naive) forecast on the training series. 0.5 means half the naive forecast's typical error; 1.2 means 20% worse than naive, so the model is not worth using. It is scale-free, handles zeros and suits comparing many time series.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When would you choose RMSLE?</summary><div class="qa-body">When the target spans orders of magnitude and relative errors matter, or when under-forecasting is worse than over-forecasting, since halving costs more than a 50% overshoot in log space. Optimise it by training on log1p(y) and back-transforming with expm1, remembering that the result is roughly a median and biased low for totals.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Running out of stock is 9 times worse than leftovers. Which loss do you train and evaluate with?</summary><div class="qa-body">Pinball (quantile) loss at q = 9/(9 + 1) = 0.9, which makes the model forecast the 90th percentile of demand, so it runs out on about 1 day in 10. In gradient boosting this is <code>loss="quantile"</code> with the quantile set to 0.9; evaluate with the same pinball loss.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why should the training loss and the reporting metric agree?</summary><div class="qa-body">Each loss is minimised by a particular statistic: MSE by the mean, MAE by the median, pinball by a quantile. A model trained for the mean but judged on MAE or MAPE is optimised for a different target and can lose to a worse model that happens to aim at the right statistic.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Your model's MAE is 5.7. Is that good?</summary><div class="qa-body">Only relative to baselines on the same test rows. For the kitchen, the mean scored 10.3, naive 14.3 and seasonal naive 8.8, so the model removes about 35% of the seasonal naive's error (skill score 0.35). Report it that way, with the spread across time-ordered CV folds.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What do you look for in residual plots?</summary><div class="qa-body">Overall bias and bias per segment (weekday, region), spread against the fitted value (a funnel means heteroscedasticity), patterns over time (autocorrelation), and heavy tails. In the kitchen, Saturdays and festivals were under-forecast and errors widened on busy days, pointing to multiplicative effects and a log target.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does a model trained on a log target under-predict totals?</summary><div class="qa-body">Exponentiating the mean of log(y) gives roughly the median of y, not its mean, and for right-skewed targets the median is below the mean. The fix is a correction factor fitted on validation data, or a loss on the original scale such as Poisson deviance.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does scikit-learn call it neg_mean_absolute_error?</summary><div class="qa-body">Model-selection tools such as cross_val_score and GridSearchCV always maximise the score. Error metrics are negated so that larger is better; you flip the sign when reporting.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why can't you average RMSE across folds?</summary><div class="qa-body">The square root is not linear, so the mean of fold RMSEs differs from the RMSE of the pooled errors (4.32 vs 4.83 in the example). Average the MSEs and then take the root, or explicitly report the mean of fold RMSEs.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How is the Brier score related to regression metrics?</summary><div class="qa-body">The Brier score is the MSE of predicted probabilities against 0/1 labels. Like MSE it is minimised by the true conditional mean, here P(y = 1 | x), which is why it rewards calibrated probabilities (<a class="xref" data-note="ml_calibration">Thresholds &amp; Calibration</a>).</div></details>
 </main>
 `
 });
