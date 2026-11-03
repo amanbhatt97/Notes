@@ -258,7 +258,7 @@ Chen 50 52</div>
   <div class="callout def"><span class="label">Definition</span>
     <p><strong>Parameters</strong> are the names in a function definition; <strong>arguments</strong> are the values supplied in a call. Arguments bind to parameters <strong>positionally</strong> (left to right) and then by <strong>keyword</strong> (by name). A parameter with a <strong>default value</strong> (<code>p=v</code>) is optional; parameters with defaults must come after those without.</p>
   </div>
-  <div class="callout trap"><span class="label">Trap</span><p>Swapped positional arguments give wrong answers without an error: <code>with_tax(0.12, 175.5)</code> is 0.12 + 21.06. For anything beyond the first one or two obvious inputs, pass by keyword; keyword-only parameters (next section) <em>force</em> callers to.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Swapped positional arguments give wrong answers without an error: <code>with_tax(0.12, 175.5)</code> is 0.12 + 21.06. For anything beyond the first one or two obvious inputs, pass by keyword; keyword-only parameters <em>force</em> callers to.</p></div>
 
   <h2 id="pfn-default"><span class="num">04</span>Mutable Default Arguments</h2>
   <p>A default value is created once, when <code>def</code> runs, not on each call. With an immutable default that is harmless; with a list or dict it means every call shares one object.</p>

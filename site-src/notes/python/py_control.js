@@ -354,7 +354,7 @@ print("subtotal:", subtotal)</div>
 skip samosa (out of stock)
 billed cold coffee
 subtotal: 150</div>
-  <p><code>continue</code> abandons the rest of the current round (the samosa is not added) and goes straight to the next item. The subtotal is 60 + 90 = 150. Note <code>out_of_stock</code> is a <strong>set</strong> (curly braces, no duplicates, fast <code>in</code>; see <a class="xref" data-note="py_ds">Data Structures</a>).</p>
+  <p><code>continue</code> abandons the rest of the current round (the samosa is not added) and goes straight to the next item. The subtotal is 60 + 90 = 150. Note <code>out_of_stock</code> is a <strong>set</strong> (curly braces, no duplicates, fast <code>in</code>; see <a class="xref" data-note="py_dicts_sets">Dicts &amp; Sets</a>).</p>
   <h3>The Loop else Clause</h3>
   <p>Python has one rare extra: a <code>for</code> or <code>while</code> loop can have an <code>else:</code> block. It runs only when the loop finished <strong>without</strong> hitting <code>break</code>. That is exactly "the search found nothing", without needing a <code>found = False</code> flag.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>You search your school bag for a pen. Found it → stop searching (break). Checked every pocket and nothing → "else: borrow one".</p></div>
@@ -478,7 +478,7 @@ done with Ben
 Chen ordered vada pav
 done with Chen</div>
   <h3>Counting the work</h3>
-  <p>Every combo of one drink and one snack: 2 drinks × 2 snacks = 4 rounds of the inner block. In general an outer loop of n items around an inner loop of m items runs the inner block n × m times. Two nested loops over the same 10,000 customers is 100 million rounds; that is why "avoid nested loops over big data" is common advice (<a class="xref" data-note="py_ds">Data Structures</a> shows how a dict or set removes the inner loop).</p>
+  <p>Every combo of one drink and one snack: 2 drinks × 2 snacks = 4 rounds of the inner block. In general an outer loop of n items around an inner loop of m items runs the inner block n × m times. Two nested loops over the same 10,000 customers is 100 million rounds; that is why "avoid nested loops over big data" is common advice (<a class="xref" data-note="py_dicts_sets">Dicts &amp; Sets</a> shows how a dict or set removes the inner loop).</p>
   <div class="fx" data-lang="py">drinks = ["masala chai", "cold coffee"]
 snacks = ["samosa", "vada pav"]
 combos = 0

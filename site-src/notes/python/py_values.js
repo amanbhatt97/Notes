@@ -155,7 +155,7 @@ print(True + True, isinstance(True, int))</div>
 1267650600228229401496703205376
 2 True</div>
   <ul>
-    <li><code>&lt;class 'int'&gt;</code> is how Python names a type. "Class" is Python's word for a type (you will build your own in <a class="xref" data-note="py_oop">OOP</a>).</li>
+    <li><code>&lt;class 'int'&gt;</code> is how Python names a type. "Class" is Python's word for a type (you will build your own in <a class="xref" data-note="py_classes">Classes &amp; Objects</a>).</li>
     <li><code>"15" * 3</code> gives <code>151515</code>: the text repeated three times, not 45.</li>
     <li><code>/</code> always gives a float, even for 6 / 2 = 3.0. (Whole-number division is <code>//</code>.)</li>
     <li><code>2 ** 100</code> is a 31-digit number, printed exactly. Python ints grow as large as memory allows.</li>
@@ -192,7 +192,7 @@ print(len(s), len(b), b)
 print(b.decode("utf-8"))</div>
   <div class="fx" data-lang="text">4 5 b'caf\\xc3\\xa9'
 café</div>
-  <p>You rarely touch bytes directly until you read files or call web APIs; <a class="xref" data-note="py_io">Exceptions, Files &amp; Packages</a> picks this up.</p>
+  <p>You rarely touch bytes directly until you read files or call web APIs; <a class="xref" data-note="py_files">Files &amp; Data Formats</a> picks this up.</p>
   <div class="callout def"><span class="label">Definition</span>
     <p>A <strong>type</strong> (class) defines a set of values and the operations allowed on them. The basic built-in types are <code>int</code>, <code>float</code>, <code>bool</code> (a subtype of int), <code>str</code>, <code>bytes</code> and <code>NoneType</code>. <code>type(x)</code> returns the type; <code>isinstance(x, T)</code> asks "is x a T (or a subtype of T)?". Python is <strong>strongly typed</strong> (no silent conversions between unrelated types) and <strong>dynamically typed</strong> (types belong to objects, not to names).</p>
   </div>
@@ -221,7 +221,7 @@ print(id(price_chai) == id(old_price))</div>
 False</div>
   <p>After step 2, <code>is</code> is True and the ids are equal: one object, two labels. After step 3 the ids differ: <code>price_chai</code> moved, <code>old_price</code> did not. Assignment never copies an object and never changes one; it only moves a label.</p>
   <h3>Mutating vs Rebinding</h3>
-  <p>With a list (an ordered collection, written with square brackets; full story in <a class="xref" data-note="py_ds">Data Structures</a>), something new can happen. You can change the list itself, for example add an item, without moving any label. This is called <strong>mutating</strong> it. Moving a label to a different object is called <strong>rebinding</strong>. Here two names share one list:</p>
+  <p>With a list (an ordered collection, written with square brackets; full story in <a class="xref" data-note="py_lists_tuples">Lists &amp; Tuples</a>), something new can happen. You can change the list itself, for example add an item, without moving any label. This is called <strong>mutating</strong> it. Moving a label to a different object is called <strong>rebinding</strong>. Here two names share one list:</p>
   <table class="tbl"><caption>Trace: mutate vs rebind</caption>
     <tr><th>Step</th><th>Line</th><th>Kind</th><th>order →</th><th>kitchen →</th></tr>
     <tr><td>1</td><td><code>order = ["chai", "chai", "samosa"]</code></td><td>bind</td><td>list L1</td><td>—</td></tr>
@@ -414,7 +414,7 @@ TypeError: 'tuple' object does not support item assignment
   <div class="callout def"><span class="label">Definition</span>
     <p>An object is <strong>mutable</strong> if its value can change while its identity stays the same (list, dict, set, bytearray); otherwise it is <strong>immutable</strong> (int, float, bool, str, bytes, tuple, frozenset, None). Operations that "modify" an immutable object return a new object. An object is <strong>hashable</strong> if it has a hash that never changes during its lifetime; only hashable objects can be dict keys or set items.</p>
   </div>
-  <div class="callout trap"><span class="label">Trap</span><p>Immutability is only one level deep. A tuple cannot swap its items, but a list inside it can still change, and such a tuple cannot be a dict key. And <code>b = a</code> plus <code>b.append(...)</code> changes <code>a</code>'s list; copy first (<code>a.copy()</code>; nested data needs <code>copy.deepcopy</code>, see <a class="xref" data-note="py_ds">Data Structures</a>).</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Immutability is only one level deep. A tuple cannot swap its items, but a list inside it can still change, and such a tuple cannot be a dict key. And <code>b = a</code> plus <code>b.append(...)</code> changes <code>a</code>'s list; copy first (<code>a.copy()</code>; nested data needs <code>copy.deepcopy</code>, see <a class="xref" data-note="py_lists_tuples">Lists &amp; Tuples</a>).</p></div>
 
   <h2 id="pv-conv"><span class="num">05</span>Type Conversion and Its Traps</h2>
   <p>Data arrives as the wrong type all the time: numbers as text from forms and files, floats that must become whole amounts, flags sent as the string "False". Conversion is easy; the traps are in what it silently does.</p>
@@ -638,7 +638,7 @@ print(15 in prices.values())</div>
 True
 True False
 True</div>
-  <p>Speed differs: <code>in</code> on a list checks items one by one, so the time grows with the number of items, written <strong>O(n)</strong>. A set or dict jumps straight to the answer using the hash, the same time no matter how many items, written <strong>O(1)</strong>. For 4 items it does not matter; for a million customer ids it decides whether your code takes a second or an hour (details in <a class="xref" data-note="py_ds">Data Structures</a>).</p>
+  <p>Speed differs: <code>in</code> on a list checks items one by one, so the time grows with the number of items, written <strong>O(n)</strong>. A set or dict jumps straight to the answer using the hash, the same time no matter how many items, written <strong>O(1)</strong>. For 4 items it does not matter; for a million customer ids it decides whether your code takes a second or an hour (details in <a class="xref" data-note="py_dicts_sets">Dicts &amp; Sets</a>).</p>
   <h3>Bitwise operators (brief)</h3>
   <p><strong>Bitwise</strong> operators work on the binary digits of integers, one position at a time. <code>5 &amp; 3</code>: 5 is <code>101</code>, 3 is <code>011</code>; keep positions where both are 1 → <code>001</code> = 1. <code>~x</code> is <code>-(x+1)</code>. You need them for flags and masks, and, much more often, for filters in numpy and pandas.</p>
   <div class="fx" data-lang="py">print(5 &amp; 3, 5 | 3, 5 ^ 3, ~5, 5 &lt;&lt; 1, 5 &gt;&gt; 1)

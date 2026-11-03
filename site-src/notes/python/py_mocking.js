@@ -3,7 +3,7 @@ Object.assign(TOPIC_CONTENT, {
   "py_mocking": `<main>
 <h1>Mocks &amp; Test Doubles</h1>
   <div class="where"><span>Python</span><span>Making Code Trustworthy</span><span>Mocks &amp; Test Doubles</span></div>
-  <p class="lead">Chai Corner's till now takes card and UPI payments: <code>checkout</code> bills the order and calls a payment <strong>gateway</strong> over the internet. Testing that for real is slow, flaky and costs money. A <strong>test double</strong> is a stand-in object that plays the gateway's part during a test. This note builds the idea up one need at a time: why we fake the outside world, the kinds of doubles (stub, fake, mock, spy), Python's <code>unittest.mock</code> (<code>Mock</code>, <code>MagicMock</code>, <code>autospec</code>), <code>return_value</code> and <code>side_effect</code>, <code>patch</code> and the famous "patch where it's used, not where it's defined" trap reproduced, asserting calls, pytest's <code>monkeypatch</code>, dependency injection as the cleaner alternative, and the over-mocking trap. Every run shown is real (Python 3.13, pytest 9.1; folder paths shortened to <code>~/chai</code>).</p>
+  <p class="lead">A <strong>test double</strong> is an object that stands in for a real dependency during a test: a payment gateway, an HTTP API, a database, the clock. Code that talks to the outside world cannot be unit-tested as-is: real calls are slow, fail when the network does, may cost money or charge real cards, and cannot be made to time out on demand, so retry and error paths go untested. Python's <code>unittest.mock</code> (<code>Mock</code>, <code>MagicMock</code>, <code>patch</code>, <code>autospec</code>) and pytest's <code>monkeypatch</code> provide the replacements; dependency injection makes them easy to insert. In backend and ML systems this is how you test code that calls model-serving endpoints, feature stores, cloud storage or third-party APIs. The classic interview trap, "patch where it's looked up, not where it's defined", is reproduced below. Runs are real (Python 3.13, pytest 9.1; paths shortened to <code>~/chai</code>).</p>
 
   <h2 id="pmk-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
@@ -13,13 +13,14 @@ Object.assign(TOPIC_CONTENT, {
         <div class="mm-title">Why</div>
         <ul>
           <li>Real gateway: <b>slow</b> (2 s), <b>flaky</b> (network), <b>costly</b>, <b>non-repeatable</b></li>
-          <li>Test <em>our</em> logic: ₹184 → 18400 paise → receipt</li>
-          <li>💡 a stunt double for the dangerous scene</li>
+          <li>Error paths (timeouts, declines) only testable with a double</li>
+          <li>Unit tests must be fast, independent, repeatable</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Kinds of doubles</div>
         <ul>
+          <li><b>Dummy</b> — fills a parameter</li>
           <li><b>Stub</b> — canned answer</li>
           <li><b>Fake</b> — small working version (in-memory gateway)</li>
           <li><b>Mock</b> — records calls, you assert on them</li>
@@ -31,6 +32,7 @@ Object.assign(TOPIC_CONTENT, {
         <ul>
           <li><code>Mock()</code> — any attribute, any call</li>
           <li><code>MagicMock</code> — also <code>len</code>, <code>iter</code>, <code>with</code>…</li>
+          <li><code>AsyncMock</code>, <code>mock_open</code>, <code>Mock(wraps=f)</code></li>
           <li><code>create_autospec</code> / <code>autospec=True</code> — real signature</li>
           <li><code>return_value</code>, <code>side_effect</code></li>
         </ul>
@@ -47,7 +49,7 @@ Object.assign(TOPIC_CONTENT, {
       <div class="mm-branch">
         <div class="mm-title">Asserting calls</div>
         <ul>
-          <li><code>assert_called_once_with(18400, "tok_asha")</code></li>
+          <li><code>assert_called_once_with(*args)</code></li>
           <li><code>assert_not_called()</code> — no money moved</li>
           <li><code>call_count</code>, <code>call_args</code>, <code>call_args_list</code></li>
         </ul>
@@ -67,20 +69,18 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="pmk-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain</span></div></div>
-      <div class="rm-item rm-done" data-target="pmk-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Why Fake the Outside World</span><span class="rm-sub">A 2-second failing test</span></div></div>
-      <div class="rm-item rm-done" data-target="pmk-kinds"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Test Doubles</span><span class="rm-sub">Stub, fake, mock, spy</span></div></div>
-      <div class="rm-item rm-done" data-target="pmk-mock"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Mock &amp; MagicMock</span><span class="rm-sub">Ready-made doubles, autospec</span></div></div>
-      <div class="rm-item rm-done" data-target="pmk-se"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">return_value &amp; side_effect</span><span class="rm-sub">Timeouts and retries</span></div></div>
-      <div class="rm-item rm-done" data-target="pmk-patch"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">patch: Where to Patch</span><span class="rm-sub">The trap, reproduced</span></div></div>
-      <div class="rm-item rm-done" data-target="pmk-calls"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Asserting Calls</span><span class="rm-sub">Paise, not rupees</span></div></div>
-      <div class="rm-item rm-done" data-target="pmk-mp"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">monkeypatch</span><span class="rm-sub">pytest's own swapper</span></div></div>
-      <div class="rm-item rm-done" data-target="pmk-di"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Dependency Injection</span><span class="rm-sub">Pass the gateway in</span></div></div>
-      <div class="rm-item rm-done" data-target="pmk-over"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">The Over-Mocking Trap</span><span class="rm-sub">A green test, a wrong bill</span></div></div>
-      <div class="rm-item rm-done" data-target="pmk-connect"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">Diagram + table</span></div></div>
-      <div class="rm-item rm-done" data-target="pmk-traps"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Patching pitfalls</span></div></div>
-      <div class="rm-item rm-done" data-target="pmk-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The note in 10 minutes</span></div></div>
-      <div class="rm-item rm-done" data-target="pmk-qa"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
+      <div class="rm-item rm-done" data-target="pmk-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Why Test Doubles</span><span class="rm-sub">Slow, flaky, costly dependencies</span></div></div>
+      <div class="rm-item rm-done" data-target="pmk-kinds"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Kinds of Test Doubles</span><span class="rm-sub">Dummy, stub, fake, mock, spy</span></div></div>
+      <div class="rm-item rm-done" data-target="pmk-mock"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Mock, MagicMock, create_autospec</span><span class="rm-sub">Recording doubles and real signatures</span></div></div>
+      <div class="rm-item rm-done" data-target="pmk-se"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">return_value and side_effect</span><span class="rm-sub">Exceptions, sequences, testing retries</span></div></div>
+      <div class="rm-item rm-done" data-target="pmk-patch"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">patch: Where to Patch</span><span class="rm-sub">Where used vs defined, autospec</span></div></div>
+      <div class="rm-item rm-done" data-target="pmk-calls"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Asserting Calls</span><span class="rm-sub">assert_called_once_with, call_args_list</span></div></div>
+      <div class="rm-item rm-done" data-target="pmk-mp"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">pytest monkeypatch</span><span class="rm-sub">setattr, setenv, automatic undo</span></div></div>
+      <div class="rm-item rm-done" data-target="pmk-di"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Dependency Injection</span><span class="rm-sub">Pass the dependency in, use a fake</span></div></div>
+      <div class="rm-item rm-done" data-target="pmk-over"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Over-Mocking</span><span class="rm-sub">Mock the boundary only</span></div></div>
+      <div class="rm-item rm-done" data-target="pmk-traps"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Patching pitfalls</span></div></div>
+      <div class="rm-item rm-done" data-target="pmk-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">API, patch rules, gotchas</span></div></div>
+      <div class="rm-item rm-done" data-target="pmk-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">Doubles, patch, DI, over-mocking</span></div></div>
     </div>
   </div>
 
@@ -413,7 +413,7 @@ FAILED test_autospec.py::test_autospec_mock - TypeError: missing a required a...
   <div class="callout trap"><span class="label">Trap</span><p>Patching where a function is defined instead of where it is looked up. Symptom: the "mocked" test is slow, hits the network, or the mock's <code>call_count</code> is 0. Fix: patch <code>"module_under_test.name"</code>.</p></div>
 
   <h2 id="pmk-calls"><span class="num">06</span>Asserting Calls: assert_called_once_with and call_args_list</h2>
-  <p>A mock records every call. You can read the record (<code>call_count</code>, <code>call_args</code>, <code>call_args_list</code>) or use its assertion methods, which raise with a clear message on mismatch.</p>
+  <p>A return value can look right while the side effect is wrong: if <code>checkout</code> sent 184 instead of 18400 paise, the receipt would still say ₹184 but the bank would charge ₹1.84. A stub cannot catch that because it ignores its arguments; a mock can. A mock records every call. You can read the record (<code>call_count</code>, <code>call_args</code>, <code>call_args_list</code>) or use its assertion methods, which raise with a clear message on mismatch.</p>
   <div class="fx" data-lang="py"># test_calls.py
 from unittest.mock import patch, call
 import pytest
@@ -632,7 +632,111 @@ FAILED test_till_app.py::test_two_customers - AssertionError: assert [(20300,...
     <tr><td>Fake drifts from reality</td><td>Fake says "ok", bank says "OK"</td><td>Few sandbox integration tests</td></tr>
   </table>
 
-@@REVQA@@
+  <h2 id="pmk-rev"><span class="num">R</span>Revision Sheet</h2>
+  <h3>Why test doubles</h3>
+  <ul>
+    <li>External dependencies (network, DB, clock, randomness, paid APIs) make tests <b>slow</b>, <b>flaky</b>, <b>costly/harmful</b> and <b>uncontrollable</b> (can't force a timeout).</li>
+    <li><b>SUT</b> = code under test; <b>dependency</b> = what it calls; <b>test double</b> = replacement during a test.</li>
+  </ul>
+  <h3>Kinds of doubles</h3>
+  <table class="tbl">
+    <tr><th>Double</th><th>Does</th><th>You check</th></tr>
+    <tr><td>Dummy</td><td>Fills a parameter, unused</td><td>nothing</td></tr>
+    <tr><td>Stub</td><td>Canned answers</td><td>SUT's result</td></tr>
+    <tr><td>Fake</td><td>Working lightweight version (in-memory DB/gateway)</td><td>Fake's <b>state</b> (state verification)</td></tr>
+    <tr><td>Mock</td><td>Records calls, answers as configured</td><td>The <b>calls</b> (behaviour verification)</td></tr>
+    <tr><td>Spy</td><td>Wraps the real object, records calls</td><td>Calls, with real behaviour: <code>Mock(wraps=f)</code></td></tr>
+  </table>
+  <h3>unittest.mock</h3>
+  <ul>
+    <li><code>Mock()</code>: any attribute (auto-created child mocks), any call, all recorded. <code>MagicMock</code>: + magic methods (<code>len</code>, <code>iter</code>, <code>with</code>, comparisons). <code>patch</code> uses MagicMock by default.</li>
+    <li><code>create_autospec(obj)</code> / <code>patch(..., autospec=True)</code>: real signature and attributes enforced. <code>Mock(spec=Cls)</code>: attributes only.</li>
+    <li><code>AsyncMock</code> for <code>async def</code> (<code>await_count</code>, <code>assert_awaited_once_with</code>); <code>mock_open(read_data=...)</code> for <code>open</code>.</li>
+  </ul>
+  <h3>return_value and side_effect</h3>
+  <ul>
+    <li><code>return_value=v</code>: every call returns v.</li>
+    <li><code>side_effect=</code> exception (raise every call) · iterable (one item per call; exception items raised; <code>StopIteration</code> when exhausted) · function (called with same args, its result returned). Wins over return_value.</li>
+  </ul>
+  <h3>patch</h3>
+  <ul>
+    <li><code>with patch("pkg.mod.name", return_value=v) as m:</code> · <code>@patch("pkg.mod.name")</code> (mock passed as extra arg; bottom decorator → first arg) · <code>patch.object(obj, "attr")</code> · <code>patch.dict(os.environ, {...})</code>. Always restored afterwards.</li>
+    <li><b>Patch where the name is looked up</b>: <code>from gateway import charge</code> in <code>checkout.py</code> → <code>patch("checkout.charge")</code>. <code>import gateway</code> + <code>gateway.charge()</code> → <code>patch("gateway.charge")</code>.</li>
+    <li>Built-in/C types can't be patched in place (<code>datetime.datetime.now</code> → TypeError): patch the module's name, inject a clock, or use freezegun/time-machine.</li>
+  </ul>
+  <h3>Asserting calls</h3>
+  <table class="tbl">
+    <tr><th>Method / attribute</th><th>Passes when</th></tr>
+    <tr><td><code>assert_called()</code> / <code>assert_called_once()</code></td><td>≥ 1 call / exactly 1</td></tr>
+    <tr><td><code>assert_called_with(*a, **k)</code></td><td>The <b>last</b> call matched</td></tr>
+    <tr><td><code>assert_called_once_with(*a, **k)</code></td><td>Exactly one call, matching</td></tr>
+    <tr><td><code>assert_any_call(*a, **k)</code></td><td>Some call matched</td></tr>
+    <tr><td><code>assert_not_called()</code></td><td>Never called</td></tr>
+    <tr><td><code>call_count</code>, <code>call_args</code>, <code>call_args_list == [call(...)]</code></td><td>Read the record yourself</td></tr>
+  </table>
+  <h3>monkeypatch vs patch</h3>
+  <table class="tbl">
+    <tr><th></th><th><code>unittest.mock.patch</code></th><th>pytest <code>monkeypatch</code></th></tr>
+    <tr><td>Target</td><td>Dotted string</td><td>Object + attribute name</td></tr>
+    <tr><td>Default replacement</td><td>MagicMock</td><td>Whatever you pass</td></tr>
+    <tr><td>Extras</td><td><code>patch.dict</code>, <code>patch.object</code></td><td><code>setenv</code>, <code>delenv</code>, <code>setitem</code>, <code>chdir</code>, <code>syspath_prepend</code></td></tr>
+    <tr><td>Undo</td><td>End of with/decorated function</td><td>End of the test</td></tr>
+  </table>
+  <h3>Dependency injection and where to stop</h3>
+  <ul>
+    <li>DI: pass collaborators in (<code>Till(gateway)</code>, <code>f(x, now=None)</code>); tests pass a fake, production passes the real one; no patch strings.</li>
+    <li>Mock the boundary (network, DB, clock, randomness, email, paid APIs); keep your own logic, data structures and pandas real.</li>
+    <li>Prefer fake + state check over mock + call check when both work; check calls when the call <em>is</em> the behaviour (amount charged, email sent, nothing charged for bad input).</li>
+    <li>Keep fakes honest with a few integration tests against a real sandbox.</li>
+  </ul>
+  <h3>Gotchas</h3>
+  <ul>
+    <li>Patching where defined → real dependency still called, <code>call_count == 0</code>.</li>
+    <li>Plain mocks accept typos (<code>m.chrage</code>) and outdated signatures → use autospec.</li>
+    <li>Mocking your own logic → green tests, wrong results.</li>
+    <li>Swapping by bare assignment → leaks into later tests.</li>
+    <li>side_effect list shorter than calls → <code>StopIteration</code>.</li>
+    <li>Stacked <code>@patch</code>: arguments in bottom-up order.</li>
+    <li>Asserting only the return value when the side effect is what matters (184 vs 18400 paise).</li>
+  </ul>
+
+  <h2 id="pmk-qa"><span class="num">11</span>Interview Questions</h2>
+  <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a test double, and why mock external services in unit tests?</summary><div class="qa-body">An object that replaces a real dependency during a test. External services make unit tests slow (seconds per call), flaky (network, outages), costly or harmful (fees, real charges, real emails), and uncontrollable (you can't make them time out on demand, so error paths go untested). With a double, the test is fast and repeatable and checks your logic, not the third party.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Stub vs fake vs mock vs spy?</summary><div class="qa-body">Stub: returns canned answers, you check your code's result. Fake: a working lightweight implementation (in-memory repository or gateway), you check its state afterwards. Mock: records interactions, you assert on the calls (behaviour verification). Spy: wraps the real object and records calls while the real behaviour runs (<code>Mock(wraps=real)</code>). A dummy just fills an unused parameter.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Mock vs MagicMock?</summary><div class="qa-body">Both accept any attribute and any call and record calls. MagicMock also preconfigures magic methods (<code>__len__</code>, <code>__iter__</code>, <code>__enter__</code>/<code>__exit__</code>, comparisons), so it can stand in for containers and context managers: <code>len(Mock())</code> raises TypeError, <code>len(MagicMock())</code> is 0. <code>patch</code> creates a MagicMock by default.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span><code>return_value</code> vs <code>side_effect</code>?</summary><div class="qa-body"><code>return_value</code>: the same value on every call. <code>side_effect</code>: an exception to raise on every call, an iterable giving one result per call (exception items are raised), or a function called with the same arguments whose result is returned. If both are set, <code>side_effect</code> wins. Use it to simulate timeouts, retries and argument-dependent answers.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span><span>What does this print?
+<div class="fx" data-lang="py">from unittest.mock import Mock
+m = Mock(side_effect=[1, ValueError("boom"), 3])
+print(m())
+try:
+    m()
+except ValueError as e:
+    print("raised", e)
+print(m())
+print(m.call_count)
+try:
+    m()
+except StopIteration:
+    print("StopIteration")</div></span></summary><div class="qa-body"><div class="fx" data-lang="text">1
+raised boom
+3
+3
+StopIteration</div>Each call consumes one item; an exception item is raised instead of returned. The call that raised still counts, so <code>call_count</code> is 3. A fourth call finds the iterable exhausted and raises <code>StopIteration</code>, which in real tests shows up as a confusing error far from the cause: give exactly as many items as expected calls.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Your module does <code>from gateway import charge</code>. You patch <code>"gateway.charge"</code> and the real gateway is still called. Why, and what is the fix?</summary><div class="qa-body">The import created a second name, <code>yourmodule.charge</code>, bound to the real function at import time. <code>patch</code> rebinds only <code>gateway.charge</code>; your code looks up <code>yourmodule.charge</code>. Patch where the name is looked up: <code>patch("yourmodule.charge")</code>. If the code did <code>import gateway</code> and calls <code>gateway.charge(...)</code>, then <code>patch("gateway.charge")</code> works because the lookup goes through the module attribute at call time.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>With stacked <code>@patch</code> decorators, in which order do the mocks arrive?</summary><div class="qa-body">Bottom-up: decorators apply from the innermost (closest to the function) outward, so the bottom <code>@patch</code> provides the first mock argument. <code>@patch("app.send_email")</code> above <code>@patch("app.charge")</code> gives <code>def test(mock_charge, mock_send_email)</code>. Getting this wrong silently swaps your asserts between mocks.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does autospec protect you from?</summary><div class="qa-body">Drift between the mock and the real API. A plain Mock accepts any attribute (a typo like <code>m.chrage</code> returns a child mock) and any arguments, so tests stay green when the real signature changes. <code>autospec=True</code> / <code>create_autospec(obj)</code> builds a mock with the real attributes and signatures, so calls the real object would reject raise <code>TypeError</code>, e.g. "missing a required argument: 'idempotency_key'".</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you assert that a dependency was called correctly, or not at all?</summary><div class="qa-body"><code>m.assert_called_once_with(18400, "tok_asha")</code> (exactly one call with those arguments), <code>m.assert_called_with(...)</code> (the last call), <code>m.assert_any_call(...)</code>, <code>m.assert_not_called()</code>; or compare <code>m.call_args_list</code> with a list of <code>call(...)</code> objects and check <code>m.call_count</code>. Use these when the call is the behaviour: the amount charged, an email sent, nothing charged for invalid input.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you mock <code>datetime.now()</code>?</summary><div class="qa-body"><code>patch("datetime.datetime.now")</code> fails: <code>TypeError: cannot set 'now' attribute of immutable type 'datetime.datetime'</code>. Options: patch the name in your module (<code>patch("mymodule.datetime")</code> with a mock whose <code>now.return_value</code> is fixed), inject the time or a clock function as a parameter (cleanest), or use a library such as freezegun or time-machine that freezes time globally.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How would you unit-test a function that calls a REST API with <code>requests</code>?</summary><div class="qa-body">Patch the name your module uses: <code>with patch("mymodule.requests.get") as get:</code> then set <code>get.return_value.status_code = 200</code> and <code>get.return_value.json.return_value = {...}</code>; assert on your function's result and <code>get.assert_called_once_with(url, timeout=5)</code>. Use <code>side_effect=requests.Timeout</code> for the error path. Alternatives: the <code>responses</code> library (or <code>respx</code> for httpx) to stub at the HTTP level, or inject a client object and pass a fake. Keep a few integration tests against a sandbox.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you mock an async function, a file read, or an environment variable?</summary><div class="qa-body">Async: <code>AsyncMock(return_value=...)</code>; awaiting it returns the value, and <code>await_count</code> / <code>assert_awaited_once_with</code> check it (<code>patch</code> auto-uses AsyncMock for <code>async def</code> targets). File: <code>patch("builtins.open", mock_open(read_data="id,amount\\n1,184\\n"))</code>, though writing a real file to <code>tmp_path</code> is often simpler. Env var: <code>monkeypatch.setenv("KEY", "v")</code> or <code>patch.dict(os.environ, {"KEY": "v"})</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span><code>patch</code> vs pytest's <code>monkeypatch</code>?</summary><div class="qa-body"><code>patch</code> (standard library) takes a dotted string, inserts a MagicMock by default, works as a context manager or decorator in any framework, and has <code>patch.object</code>/<code>patch.dict</code>. <code>monkeypatch</code> (pytest fixture) sets whatever value you give on an object/attribute pair, also handles env vars, dict items, cwd and <code>sys.path</code>, and undoes everything at test teardown. Same "where it's looked up" rule for both.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is dependency injection, and why does it make testing easier?</summary><div class="qa-body">Passing collaborators into a component (constructor or function parameters) instead of the component importing or constructing them. Tests hand in a fake or mock; production hands in the real implementation. There are no patch strings tied to import details, dependencies are visible in the signature, and swapping implementations (a different payment provider) needs no code change. pytest fixtures are DI for tests.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is over-mocking, and how do you avoid it?</summary><div class="qa-body">Replacing collaborators that are part of the behaviour under test, so the test only checks wiring between mocks. Symptoms: tests pass when the logic is broken (a mocked <code>bill</code> hid a ₹203 overcharge) and fail on harmless refactors. Avoid it by mocking only at the system boundary (network, DB, clock, randomness, paid APIs), keeping your own functions real, and asserting results or state rather than internal call sequences.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>State verification vs behaviour verification: which do you prefer?</summary><div class="qa-body">State verification checks results or a fake's state afterwards (<code>gateway.charges == [(18400, "tok_asha")]</code>); behaviour verification checks the calls made on a mock. Prefer state verification: it is less coupled to how the code is written and survives refactors. Use behaviour verification when the interaction itself is the requirement and has no observable state, such as "send exactly one email" or "never call the gateway for an invalid order".</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you keep a fake or mock from drifting away from the real service?</summary><div class="qa-body">Use <code>autospec</code> so signatures are enforced; keep one shared fake, small and close to the real contract; run a few integration or contract tests against the real service's sandbox (or record real responses with a tool like VCR.py) so a change in the real API breaks a test; and review fakes when the dependency's version changes.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you spy on a real function, i.e. let it run but record calls?</summary><div class="qa-body"><code>spy = Mock(wraps=real_func)</code>: calling <code>spy(21)</code> runs <code>real_func(21)</code> and returns its result while recording <code>call(21)</code>. With patch: <code>patch("mod.func", wraps=mod.func)</code> or <code>patch.object(obj, "method", wraps=obj.method)</code>. Useful to check a cache prevents repeated calls while the real computation still happens.</div></details>
 </main>
 `
 });
