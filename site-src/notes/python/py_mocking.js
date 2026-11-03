@@ -203,7 +203,7 @@ except TypeError as e:
 print("MagicMock len:", len(MagicMock()))   # MagicMock also fakes len(), iteration, with...</div>
   <div class="fx" data-lang="text">{'status': 'ok', 'txn_id': 'T-001'}
 1 call(18400, 'tok_asha')
-&lt;Mock name='mock.chrage' id='139878646558608'&gt;
+&lt;Mock name='mock.chrage' id='139750458306448'&gt;
 Mock: object of type 'Mock' has no len()
 MagicMock len: 0</div>
   <p>Line by line: calling the mock returned the canned dictionary. <code>call_count</code> is 1, and <code>call_args</code> shows the exact arguments of the last call, <code>call(18400, 'tok_asha')</code>. Then a deliberate typo: <code>pay.chrage</code> instead of <code>pay.charge</code>. A real object would raise <code>AttributeError</code>; the mock just invented a child mock called <code>mock.chrage</code>. That flexibility is what makes mocks convenient, and also what makes them dangerous: code that calls a method which does not exist on the real gateway will still pass its tests. Finally, <code>len(Mock())</code> fails, because a plain Mock does not support Python's special "magic" methods such as <code>__len__</code>, <code>__iter__</code> or <code>__enter__</code> (see <a class="xref" data-note="py_dunder">Dunder Methods</a>). <code>MagicMock</code> is a Mock with those already set up, so it can stand in for a list, a file or anything used in a <code>with</code> statement; <code>len(MagicMock())</code> is 0.</p>
@@ -278,7 +278,7 @@ def test_gives_up_after_three_timeouts():
         assert fake.call_count == 3</div>
   <div class="fx" data-lang="text">$ pytest -q test_retry.py
 ..                                                                       [100%]
-2 passed in 0.04s</div>
+2 passed in 0.03s</div>
   <p>Both paths of the retry logic are tested in a few hundredths of a second, with timeouts produced exactly when we wanted them. (The line <code>patch("checkout.charge")</code> is what put the mock into <code>checkout</code>; why it must be that exact string is the subject of the next section.) One caution: if a <code>side_effect</code> list runs out because the code calls the mock more times than the list has items, the mock raises <code>StopIteration</code>, a confusing error far from the real cause. Give exactly as many items as calls you expect, and assert <code>call_count</code>.</p>
 
   <h2 id="pmk-patch"><span class="num">05</span>patch and Where to Patch</h2>
@@ -349,7 +349,7 @@ def test_module_style_import(fake):               # decorator form: the mock arr
     fake.assert_called_once_with(18400, "tok_asha")</div>
   <div class="fx" data-lang="text">$ pytest -q -s test_patch_v2.py
 .
-1 passed in 0.03s</div>
+1 passed in 0.04s</div>
   <p>No "!! REAL" line this time: the mock was used. This test also shows the decorator form of <code>patch</code>: the mock is passed to the test function as an extra argument. (With several stacked <code>@patch</code> decorators, the one closest to the function provides the first argument.) The rule never changes, and it is one of the most common interview questions about mocking: <strong>patch the name where the code under test looks it up, at the moment it looks it up</strong>. If the module does <code>from gateway import charge</code>, patch <code>"yourmodule.charge"</code>; if it does <code>import gateway</code> and calls <code>gateway.charge()</code>, patch <code>"gateway.charge"</code>. Two related tools: <code>patch.object(some_object, "attribute")</code> takes the object itself rather than a string, and <code>patch.dict(os.environ, {...})</code> temporarily changes entries in a dictionary.</p>
   <p>Autospec matters most when combined with <code>patch</code>. Suppose the bank updates its API so that <code>charge</code> now requires a third argument, <code>idempotency_key</code>, which stops a retried payment being taken twice. Nobody has updated <code>checkout</code> yet, so production will crash. Here are two tests, one with a plain mock and one with <code>autospec=True</code>, run before and after the bank's change:</p>
   <div class="fx" data-lang="py"># test_autospec.py
@@ -368,7 +368,7 @@ def test_autospec_mock():
         assert checkout(ASHA, "tok_asha")["amount"] == 184</div>
   <div class="fx" data-lang="text">$ pytest -q test_autospec.py
 ..                                                                       [100%]
-2 passed in 0.02s
+2 passed in 0.03s
 $ pytest -q --tb=line test_autospec.py
 .F                                                                       [100%]
 =================================== FAILURES ===================================
@@ -376,7 +376,7 @@ E   TypeError: missing a required argument: 'idempotency_key'
 /usr/local/lib/python3.13/inspect.py:3229: TypeError: missing a required argument: 'idempotency_key'
 =========================== short test summary info ============================
 FAILED test_autospec.py::test_autospec_mock - TypeError: missing a required a...
-1 failed, 1 passed in 0.03s</div>
+1 failed, 1 passed in 0.04s</div>
   <p>Before the change both pass. After the change (the second run, with the new <code>gateway.py</code>), the plain mock is still green, because a plain mock accepts any arguments, while production would fail. The autospec mock checked the call against the real signature and failed with exactly the error production would raise: <code>missing a required argument: 'idempotency_key'</code>. Using <code>autospec=True</code> costs nothing and keeps your doubles honest.</p>
 
   <h2 id="pmk-calls"><span class="num">06</span>Asserting Calls</h2>
@@ -406,7 +406,7 @@ def test_retry_calls_with_same_arguments():
     assert fake.call_args_list == [call(18400, "tok_asha"), call(18400, "tok_asha")]</div>
   <div class="fx" data-lang="text">$ pytest -q test_calls.py
 ...                                                                      [100%]
-3 passed in 0.03s</div>
+3 passed in 0.05s</div>
   <p>The three tests check three different things about the calls. The first checks that the gateway was called exactly once, with 18400 paise and Asha's card. The second checks something that did <em>not</em> happen: an invalid order must be refused before any money moves, so the gateway must never be called. The third compares the whole history of calls, <code>call_args_list</code>, with a list built from <code>call(...)</code> objects, confirming the retry sent identical arguments both times. Now break the code: someone "simplifies" <code>checkout</code> to <code>charge(amount, card)</code>, forgetting the multiplication by 100.</p>
   <div class="fx" data-lang="text">$ pytest -q --tb=line test_calls.py::test_charges_asha_in_paise
 F                                                                        [100%]
@@ -588,7 +588,7 @@ E   AssertionError: assert [(20300, 'tok...0, 'tok_ben')] == [(18400, 'tok...0, 
 ~/chai/test_till_app.py:20: AssertionError: assert [(20300, 'tok...0, 'tok_ben')] == [(18400, 'tok...0, 'tok_ben')]
 =========================== short test summary info ============================
 FAILED test_till_app.py::test_two_customers - AssertionError: assert [(20300,...
-1 failed, 2 passed in 0.04s</div>
+1 failed, 2 passed in 0.03s</div>
   <p>Before the bug, all three tests pass. After it, the middle line confirms the real bill is now 203, and the run shows the difference between the two styles: the first dot is the over-mocked test, still <strong>green</strong> while Asha is overcharged by ₹19. It only checked that <code>checkout</code> passes a mocked 184 to a mocked gateway, which proves nothing about the bill. The DI test, with a fake gateway and the <em>real</em> <code>bill</code>, caught it immediately: 20300 paise charged instead of 18400. It is like a driving test where the examiner replaces the car, the road and the driver with cardboard cut-outs: everything "passes", and nothing was tested.</p>
   <p><strong>Over-mocking</strong> means replacing collaborators that are part of the behaviour being tested, so the test only verifies the wiring between mocks. Its two symptoms are tests that pass when the logic is broken and tests that fail when harmless code is reorganised, because they mirror the implementation line by line. The cure is to draw a line where your code meets the outside world and put doubles only on the far side of it. Mock the payment gateway, HTTP APIs, email and SMS, the clock, randomness, and slow or paid services. Keep real your own functions, data structures, pandas operations and pure calculations. When both would work, prefer a fake with a state check over a mock with call checks, and assert on results whenever you can.</p>
 

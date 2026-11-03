@@ -142,7 +142,7 @@ E        +  where 158 = bill([('masala chai', 5, 30)])
 test_till.py:14: AssertionError
 =========================== short test summary info ============================
 FAILED test_till.py::test_exactly_150_gets_discount - AssertionError: assert ...
-1 failed, 2 passed in 0.01s</div>
+1 failed, 2 passed in 0.03s</div>
   <p>The dots stand for passing tests and the <code>F</code> for a failure. The two typical orders still pass, but the boundary test fails, and the summary says why: the till now charges 158 for five chai instead of 142, because a ₹150 order no longer gets its discount. The mistake was caught within a second of being made, next to the change that caused it. A bug like this, where something that used to work stops working after a change, is called a <strong>regression</strong>, and catching regressions is the first and biggest reason tests exist.</p>
   <p>Think of the safety checks a pilot runs before every flight. The plane flew fine yesterday, but the checklist is run anyway, every time, because the cost of the check is tiny and the cost of a missed fault is huge. A test suite is that checklist for code. It also gives you three other things. It makes <em>refactoring</em> safe: you can restructure code, split functions or speed up a loop, and if the same tests still pass, the behaviour has not changed. It is <em>documentation that cannot go out of date</em>: <code>test_exactly_150_gets_discount</code> states the rule "₹150 counts" more precisely than any comment, and if the rule changes, the test fails instead of silently lying. And it pushes you towards better design, because code that is hard to test (it reads the clock inside, mixes file handling with arithmetic, depends on global variables) is usually hard to change too.</p>
   <p>A few words that will appear everywhere: the collection of all a project's tests is its <strong>test suite</strong>; the program that finds and runs them (pytest, or Python's built-in unittest) is the <strong>test runner</strong>; and the code a test is checking is called the <strong>system under test</strong>.</p>
@@ -164,7 +164,7 @@ def save_day(bills, path):
 def load_day(path):
     """Read the CSV back into {customer: amount}."""
     with open(path, newline="") as f:
-        return {row["customer"]: row["amount"] for row in csv.DictReader(f)}</div>
+        return {row["customer"]: int(row["amount"]) for row in csv.DictReader(f)}</div>
   <div class="fx" data-lang="py"># test_store.py
 from till import bill
 from store import save_day, load_day
@@ -194,34 +194,9 @@ plugins: cov-7.1.0
 collecting ... collected 2 items
 
 test_store.py::test_bill_for_ben PASSED                                  [ 50%]
-test_store.py::test_day_survives_csv_round_trip FAILED                   [100%]
+test_store.py::test_day_survives_csv_round_trip PASSED                   [100%]
 
-=================================== FAILURES ===================================
-_______________________ test_day_survives_csv_round_trip _______________________
-
-tmp_path = PosixPath('/tmp/pytest-of-root/pytest-8/test_day_survives_csv_round_tr0')
-
-    def test_day_survives_csv_round_trip(tmp_path):     # tmp_path: a fresh empty folder
-        bills = {name: bill(lines) for name, lines in ORDERS.items()}
-        path = tmp_path / "day.csv"
-        save_day(bills, path)
-&gt;       assert load_day(path) == bills                  # {'Asha': 184, 'Ben': 74}
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-E       AssertionError: assert {'Asha': '184', 'Ben': '74'} == {'Asha': 184, 'Ben': 74}
-E
-E         Differing items:
-E         {'Asha': '184'} != {'Asha': 184}
-E         {'Ben': '74'} != {'Ben': 74}
-E
-E         Full diff: (-: missing in left side, +: extra in left side)
-E           {...
-E
-E         ...Full output truncated, use '-vv' to show
-
-test_store.py:19: AssertionError
-=========================== short test summary info ============================
-FAILED test_store.py::test_day_survives_csv_round_trip - AssertionError: asse...
-========================= 1 failed, 1 passed in 0.03s ==========================</div>
+============================== 2 passed in 0.03s ===============================</div>
   <p>Both pass. To see why the integration test earns its place, suppose someone deletes the <code>int(...)</code> in <code>load_day</code>, so the amounts come back as the text the CSV file contains:</p>
   <div class="fx" data-lang="text">$ pytest -q --tb=short test_store.py
 .F                                                                       [100%]
@@ -238,7 +213,7 @@ E     {'Asha': '184'} != {'Asha': 184}
 E     Use -v to get more diff
 =========================== short test summary info ============================
 FAILED test_store.py::test_day_survives_csv_round_trip - AssertionError: asse...
-1 failed, 1 passed in 0.02s</div>
+1 failed, 1 passed in 0.04s</div>
   <p>The unit test still passes, because <code>bill</code> is fine. The integration test fails, and the message shows exactly what went wrong: <code>'184'</code> in quotes, a string, where the number 184 was expected. That is the kind of bug integration tests exist for: the wiring between pieces, such as file formats, data types, database queries and serialisation, rather than the logic inside one function.</p>
   <p>Two more names describe a test's purpose rather than its size. A <strong>regression test</strong> pins down a specific bug that was fixed, so that it cannot come back unnoticed: when a bug is reported, you first write a test that reproduces it, then fix the code, and keep the test forever (the whole workflow is traced in <a class="xref" data-note="py_debugging">Debugging, Profiling &amp; Logging</a>). The boundary test from the first section is exactly that kind of guard. A <strong>smoke test</strong> is a quick, shallow "does it even start?" check run straight after a deployment, before the slower suites: the app starts, its health page answers, the model file loads. The name comes from electronics, where the first test of a new circuit board was to switch it on and see whether smoke came out.</p>
   <table class="tbl">
@@ -295,12 +270,12 @@ def test_ends_at_17():
     assert is_happy_hour(datetime(2026, 1, 1, 17, 0)) is False</div>
   <p>Here is the same file run twice: once normally, and once with the computer's clock moved into the afternoon. <code>TZ=UTC-…</code> tells that one command to use a time zone several hours ahead, so its local clock reads mid-afternoon; nothing in the code changed.</p>
   <div class="fx" data-lang="text">$ date +%H:%M
-06:02
+06:20
 $ pytest -q --tb=line test_happy.py
 .....                                                                    [100%]
 5 passed in 0.01s
 $ TZ=UTC-9 date +%H:%M
-15:02
+15:20
 $ TZ=UTC-9 pytest -q --tb=line test_happy.py
 F....                                                                    [100%]
 =================================== FAILURES ===================================
@@ -351,7 +326,7 @@ test_bill_cases.py::test_bill[at-150] PASSED                             [ 66%]
 test_bill_cases.py::test_bill[empty] PASSED                              [ 83%]
 test_bill_cases.py::test_negative_qty_is_refused PASSED                  [100%]
 
-============================== 6 passed in 0.02s ===============================</div>
+============================== 6 passed in 0.03s ===============================</div>
   <p>All six cases pass with the correct code. Now put the <code>&gt;</code> bug back in and run the same file again:</p>
   <div class="fx" data-lang="text">$ pytest -q --tb=no -rf test_bill_cases.py
 ...F..                                                                   [100%]
@@ -442,7 +417,7 @@ def test_fit_line_recovers_planted_rule():
     assert intercept == pytest.approx(220, abs=5)</div>
   <div class="fx" data-lang="text">$ pytest -q test_forecast.py
 ......                                                                   [100%]
-6 passed in 0.27s</div>
+6 passed in 0.26s</div>
   <p>All six pass. The split test checks the single most important property in ML evaluation: the train and test row numbers do not overlap, which is what "no leakage" means. The model test deserves a closer look. We generated 200 fake days where cups = 220 − 3 × temperature, plus random noise, so we know the true slope is −3 and the true intercept is 220. Here is what the line fit actually found:</p>
   <div class="fx" data-lang="py">import numpy as np
 from forecast import fit_line
@@ -486,7 +461,7 @@ Name      Stmts   Miss Branch BrPart  Cover   Missing
 till.py      15      2      6      2    81%   13, 22
 -----------------------------------------------------
 TOTAL        15      2      6      2    81%
-1 passed in 0.02s</div>
+1 passed in 0.03s</div>
   <p>Read the report from left to right. <code>till.py</code> has 15 statements, and 2 of them never ran during the test (<code>Miss</code>). The <code>Branch</code> and <code>BrPart</code> columns count decisions: the file has 6 possible branch directions, and 2 were taken only partly (an <code>if</code> that only ever went one way). <code>Missing</code> names the lines: line 13 is <code>return 0</code>, the no-discount path, which Asha's ₹195 order never takes; line 22 is the <code>raise</code> that refuses negative quantities, which no test ever triggered. That is the real value of coverage: it pointed straight at two rules nobody had tested.</p>
   <p>There are two common measures. <strong>Line coverage</strong> (also called statement coverage) is the share of lines that ran. <strong>Branch coverage</strong> is stricter: every decision must have gone both ways. The difference matters for an <code>if</code> without an <code>else</code>. Picture <code>if express: fee *= 2</code> where every test uses express delivery: every line runs, so line coverage is 100%, but the "not express" path was never tried. Branch coverage reports that missed direction, which is why it is the better measure to switch on (<code>--cov-branch</code>).</p>
   <p>Now the crucial limit. Add tests for Ben (the no-discount path) and the negative quantity (the <code>raise</code>), then put the <code>&gt;</code> bug back into the discount rule:</p>
@@ -513,7 +488,7 @@ Name      Stmts   Miss Branch BrPart  Cover   Missing
 till.py      15      0      6      0   100%
 -----------------------------------------------------
 TOTAL        15      0      6      0   100%
-3 passed in 0.03s</div>
+3 passed in 0.02s</div>
   <p>100% line coverage, 100% branch coverage, all tests green, and the till is still overcharging every ₹150 order. Every line ran and every branch went both ways, but no test ran the discount line <em>with a subtotal of exactly 150</em>. Coverage records which lines ran; it says nothing about whether the right inputs were used, or whether the results were checked at all. A test with no <code>assert</code> produces exactly the same report as a good one. A security guard's patrol log works the same way: it proves every corridor was walked, not that anyone looked inside the rooms.</p>
   <p>So use coverage to find untested code, then write real tests for it, and treat a coverage threshold in CI (say 80% on new code) as a floor, never as proof of quality. To measure test quality more directly there is <strong>mutation testing</strong> (tools such as mutmut): it makes small deliberate changes to your code, such as turning <code>&gt;=</code> into <code>&gt;</code>, runs the suite against each changed version, and reports every change that no test caught. Our <code>&gt;</code> bug is exactly the kind of "mutant" it would generate, and the suite above would let it survive.</p>
 

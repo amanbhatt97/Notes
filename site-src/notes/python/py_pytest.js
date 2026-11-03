@@ -124,7 +124,7 @@ test_till.py::test_big_order_gets_discount PASSED                        [ 33%]
 test_till.py::test_small_order_pays_full_price PASSED                    [ 66%]
 test_till.py::test_exactly_150_gets_discount PASSED                      [100%]
 
-============================== 3 passed in 0.02s ===============================</div>
+============================== 3 passed in 0.03s ===============================</div>
   <p>A lot happened in that fraction of a second, and it is worth knowing the steps because every pytest run follows them. First comes <strong>discovery</strong>: pytest searched the folder (and the folders below it) for files named <code>test_*.py</code> or <code>*_test.py</code>, found <code>test_till.py</code>, and imported it, which also ran its <code>from till import bill</code> line, so <code>till.py</code> must be importable from there (see <a class="xref" data-note="py_modules">Modules</a>). Next comes <strong>collection</strong>: inside the file it gathered every function whose name starts with <code>test</code>, giving "collected 3 items"; the lists <code>asha</code> and <code>ben</code> are ordinary variables, not tests. Then it <strong>ran</strong> each test by calling it with no arguments. The rule for passing is simple: a test that returns without raising any exception passes; a test that raises (a failed <code>assert</code> or any other error) fails. Finally it <strong>reported</strong>: one line per test with its percentage of progress, and a summary with the total time. Three tests in 0.02 seconds is why people can afford to run the whole suite after every small change.</p>
   <p>The header lines tell you which Python and pytest were used and which folder pytest treated as the project root (<code>rootdir</code>). Each test also has a full name, its <strong>node id</strong>: the file, two colons and the function, for example <code>test_till.py::test_exactly_150_gets_discount</code>. You can pass a node id to run just that one test. The flags you will use daily are few:</p>
   <table class="tbl">
@@ -261,7 +261,7 @@ test_bill_cases.py::test_bill[at-150] PASSED                             [ 66%]
 test_bill_cases.py::test_bill[at-145] PASSED                             [ 83%]
 test_bill_cases.py::test_bill[empty] PASSED                              [100%]
 
-============================== 6 passed in 0.02s ===============================</div>
+============================== 6 passed in 0.03s ===============================</div>
   <p>One function, six tests, each reported under its own name: <code>test_bill[asha]</code>, <code>test_bill[at-150]</code> and so on. Think of a teacher with one marking scheme and a pile of answer sheets: the scheme is written once, and every sheet gets its own mark, so one wrong sheet does not stop the others being marked. Now put the <code>&gt;</code> bug back:</p>
   <div class="fx" data-lang="text">$ pytest -q --tb=line test_bill_cases.py
 ...F..                                                                   [100%]
@@ -311,7 +311,7 @@ def test_order_starts_empty(order):
 [fresh empty order] .[fresh empty order] .[fresh empty order] .
 [close menu file]
 
-3 passed in 0.02s</div>
+3 passed in 0.01s</div>
   <p>Follow it step by step. The first test, <code>test_add_chai</code>, needs <code>menu</code>; none exists yet for this file, so pytest runs <code>menu</code> up to its <code>yield</code>, printing "open menu file once", and hands the dictionary to the test. The test also needs <code>order</code>, a function-scoped fixture, so pytest runs it and prints "fresh empty order". The test adds two chai (60, plus 5% = 63) and passes: the first dot. For the second test, pytest <em>reuses</em> the same menu but builds a <em>new</em> order, which is why the test can assert that the chai from the first test is not there. The third test gets yet another fresh order. After the last test in the file, pytest resumes <code>menu</code> after its <code>yield</code>, printing "close menu file".</p>
   <p>What goes wrong with the wrong scope? Change <code>order</code> to <code>scope="module"</code>, so all three tests share one list:</p>
   <div class="fx" data-lang="text">$ pytest -q -s --tb=line test_scope.py
@@ -430,10 +430,10 @@ PASSED
 ============================== 3 passed in 0.03s ===============================
 $ pytest -q -m "not integration"
 ..                                                                       [100%]
-2 passed, 1 deselected in 0.02s
+2 passed, 1 deselected in 0.01s
 $ pytest -q -m integration
 .                                                                        [100%]
-1 passed, 2 deselected in 0.02s</div>
+1 passed, 2 deselected in 0.04s</div>
   <p>The header shows that pytest found <code>pytest.ini</code> (<code>configfile</code>) and searched only <code>tests/</code> (<code>testpaths</code>). Both test files received <code>orders</code> without importing it. <code>tmp_path</code> was a fresh folder named after the test; the CSV it holds has a header and three rows; and reading it back gave numbers equal to the originals, not the strings <code>"184"</code> that a CSV file actually contains, which is the classic bug this test exists to catch. <code>-m "not integration"</code> ran the two fast tests and <em>deselected</em> the file test; <code>-m integration</code> ran only that one. Teams use this to run the fast unit tests on every save and the slower layers in CI.</p>
   <p>pytest also has built-in markers for tests that should not run, or are expected to fail:</p>
   <div class="fx" data-lang="py"># test_markers.py
@@ -454,7 +454,7 @@ s.x                                                                      [100%]
 =========================== short test summary info ============================
 SKIPPED [1] test_markers.py:5: gateway sandbox is down
 XFAIL test_markers.py::test_half_up - known rounding bug, issue 12
-1 passed, 1 skipped, 1 xfailed in 0.02s</div>
+1 passed, 1 skipped, 1 xfailed in 0.01s</div>
   <p>The progress line <code>s.x</code> reads: skipped, passed, expected failure. <code>skip</code> never runs the test; <code>skipif</code> skips only when its condition is true, here on Windows, so on Linux the test ran and passed; <code>xfail</code> runs the test but expects it to fail, documenting a known bug without turning the suite red. <code>-rsx</code> asked for the reasons of skipped (s) and xfailed (x) tests in the summary. If an <code>xfail</code> test unexpectedly passes, pytest reports it as <code>X</code> (XPASS); <code>xfail(strict=True)</code> turns that into a failure, so you notice when a known bug has been fixed and the marker should be removed.</p>
 
   <h2 id="pyt-cov"><span class="num">07</span>Coverage with pytest-cov</h2>
@@ -469,7 +469,7 @@ Name      Stmts   Miss  Cover   Missing
 till.py      22      1    95%   22
 ---------------------------------------
 TOTAL        22      1    95%
-3 passed in 0.04s</div>
+3 passed in 0.05s</div>
   <p><code>till.py</code> has 22 statements, 1 of which never ran: line 22. In the current <code>till.py</code> that is the <code>raise ValueError(...)</code> line of the guard. None of the tests in <code>tests/</code> ever passes a negative quantity, so the guard has never fired. Adding the two <code>pytest.raises</code> tests from <code>test_errors.py</code> to the run closes the gap:</p>
   <div class="fx" data-lang="text">$ pytest -q --cov=till --cov-report=term-missing tests test_errors.py
 .....                                                                    [100%]
@@ -481,7 +481,7 @@ Name      Stmts   Miss  Cover   Missing
 till.py      22      0   100%
 ---------------------------------------
 TOTAL        22      0   100%
-5 passed in 0.04s</div>
+5 passed in 0.05s</div>
   <p>Now every line ran: 100%. It is tempting to read that number as "fully tested". Watch what happens when the <code>&gt;</code> bug goes back into <code>discount</code> and the same five tests run:</p>
   <div class="fx" data-lang="text">$ pytest -q --cov=till --cov-report=term-missing tests test_errors.py
 .....                                                                    [100%]
@@ -582,11 +582,11 @@ E       [right]: float64
 test_tables.py:14: AssertionError
 =========================== short test summary info ============================
 FAILED test_tables.py::test_day_table - AssertionError: Attributes of DataFra...
-1 failed, 1 passed in 0.26s</div>
+1 failed, 1 passed in 0.30s</div>
   <p>The values in the two tables are numerically equal (74 and 74.0), but writing <code>74.0</code> made the expected <code>bill</code> column a float column, while the function produces whole numbers. <code>assert_frame_equal</code> reports exactly that: column <code>bill</code>, dtype <code>int64</code> on the left, <code>float64</code> on the right. That strictness is useful, because a column that silently changes type is often the first sign of a bug upstream (a missing value turns an integer column into floats). With <code>74</code> written as a whole number, the test passes:</p>
   <div class="fx" data-lang="text">$ pytest -q test_tables.py
 ..                                                                       [100%]
-2 passed in 0.24s</div>
+2 passed in 0.37s</div>
   <p>The second test checks a promise in the function's docstring, that it never changes its input. Tests that check such promises are often called <strong>contract tests</strong>. For NumPy arrays the equivalent comparison is <code>np.testing.assert_allclose(actual, expected, rtol=..., atol=...)</code>.</p>
   <p>Models trained on random data need a third approach, because their exact output changes with the data, the random seed and even the library version. Three habits make them testable. Fix the randomness with a <strong>seed</strong> so every run sees the same data. Train on synthetic data where you <strong>planted</strong> the answer, such as "cold coffee sells when temperature plus half the group size is above zero". And assert a <strong>threshold</strong> rather than an exact score: <code>assert accuracy &gt; 0.9</code>, never <code>assert accuracy == 0.9632</code>. A library update that moves the score from 0.97 to 0.98 should not break the build, while a real bug, such as shuffled labels or the wrong column, drops a classifier to around 0.5 and fails clearly. A worked, runnable example of a planted-signal test is in <a class="xref" data-note="py_testing">Software Testing Fundamentals</a>, and model evaluation in production is covered in <a class="xref" data-note="mlops_deploy">MLOps</a>.</p>
 
@@ -656,7 +656,7 @@ E   ImportError: cannot import name 'split' from 'till' (~/chai/till.py)
 =========================== short test summary info ============================
 ERROR test_split.py
 !!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
-1 error in 0.08s</div>
+1 error in 0.10s</div>
   <p>Red, for the expected reason: <code>split</code> does not exist yet, so importing it fails. Notice this is reported as an <em>error</em> during collection, not a test failure, because the file could not even be imported. <strong>Green</strong>, with the simplest code that could work:</p>
   <div class="fx" data-lang="py">def split(total, people):
     return [total // people] * people</div>
@@ -688,7 +688,7 @@ E         Use -v to get more diff
 test_split.py:8: AssertionError
 =========================== short test summary info ============================
 FAILED test_split.py::test_split_uneven_shares_add_up - assert [61, 61, 61] =...
-1 failed, 1 passed in 0.02s</div>
+1 failed, 1 passed in 0.01s</div>
   <p>pytest even explains the difference between the two lists: at index 0, 61 instead of 62. Our simple version loses a rupee. <strong>Green</strong>: work out how many rupees are left over, and give one extra to that many people.</p>
   <div class="fx" data-lang="py">def split(total, people):
     share = total // people
@@ -734,7 +734,7 @@ FAILED test_split.py::test_split_needs_at_least_one_person - ZeroDivisionErro...
     return [share + 1] * extra + [share] * (people - extra)</div>
   <div class="fx" data-lang="text">$ pytest -q test_split.py
 ...                                                                      [100%]
-3 passed in 0.01s</div>
+3 passed in 0.03s</div>
   <p>Finally, with the code in shape, we check the rules over many inputs at once. Two stacked <code>parametrize</code> decorators produce every combination of 5 totals and 4 group sizes, 20 tests, and each one checks the three rules of a fair split rather than one exact answer. Tests like these, which check a rule that must hold for many inputs, are called <strong>property tests</strong>:</p>
   <div class="fx" data-lang="py"># test_split.py
 import pytest
@@ -789,7 +789,7 @@ FFF.                                                                     [100%]
 FAILED test_design.py::test_everything - AssertionError: assert 158 == 142
 FAILED test_design.py::test_discount_starts_at_150 - AssertionError: assert 1...
 FAILED test_design.py::test_negative_qty_is_refused - Failed: DID NOT RAISE V...
-3 failed, 1 passed in 0.02s</div>
+3 failed, 1 passed in 0.01s</div>
   <p><code>test_everything</code> stopped at its first failing assert and reported only the boundary bug; the missing guard was invisible inside it. The three small tests reported both bugs, each by name, and showed that the empty-order behaviour still works. With one big test you would fix the first bug, run again, and only then discover the second. A car with one "something is wrong" light behaves the same way, compared with separate oil, battery and brake lights. Several asserts about the <em>same</em> result are fine; separate behaviours deserve separate tests, or a <code>parametrize</code> table.</p>
   <p>The other frequent mistakes have appeared along the way. Test files or functions without the <code>test_</code> prefix are silently ignored; "collected 0 items" is the clue. Expected values computed by the code under test make a test that can never fail; work them out by hand. A test that has never been seen failing may not be able to fail; break the code once on purpose. <code>pytest.raises(Exception)</code> passes on any error, including typos; name the exact exception. A mutable fixture with a wide scope leaks state between tests, as the shared order list did. Tests that write files into the project folder collide and leave litter; use <code>tmp_path</code>. Floats compared with <code>==</code> fail on harmless rounding noise; use <code>pytest.approx</code>. Treating 100% coverage as proof hides bugs like the <code>&gt;</code> one. And unit tests that call real networks or paid services are slow and flaky; replace those dependencies with test doubles (<a class="xref" data-note="py_mocking">Mocks &amp; Test Doubles</a>).</p>
 
