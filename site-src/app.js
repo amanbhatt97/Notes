@@ -1687,7 +1687,7 @@ function exportDoc(keys, title, forPrint) {
   var box = document.createElement('div');
   var body = keys.map(function(k) {
     box.innerHTML = TOPIC_CONTENT[k];
-    box.querySelectorAll('.roadmap-wrap, .reveal-all').forEach(function(x) { x.remove(); });
+    box.querySelectorAll('.roadmap-wrap, .reveal-all, .mindmap, h2[id$="-map"], .where').forEach(function(x) { x.remove(); });
     box.querySelectorAll('details').forEach(function(d) { d.setAttribute('open', ''); });
     box.querySelectorAll('a.xref[data-note]').forEach(function(a) {
       if (inSet[a.dataset.note]) a.setAttribute('href', '#n-' + a.dataset.note);
@@ -1707,7 +1707,7 @@ function exportDoc(keys, title, forPrint) {
     '.ex-wrap{max-width:900px;margin:0 auto}' +
     '.ex-note+.ex-note,.ex-cover+.ex-note{break-before:page;page-break-before:always;margin-top:48px}' +
     '.ex-toc{line-height:2}.ex-toc a{color:var(--blue)}' +
-    '@media print{body.export{padding:0}.code-frame,figure,table,details.qa,.callout{break-inside:avoid}' +
+    '@media print{html{font-size:12.5px}body.export{padding:0}.code-bar{display:none}.code-frame{margin:8px 0}.topic-content{padding:0}.code-frame,figure,table,details.qa,.callout{break-inside:avoid}' +
     '*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}';
   return '<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1"><title>' + exportEsc(title) + '</title>' +

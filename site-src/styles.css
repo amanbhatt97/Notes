@@ -1386,3 +1386,15 @@ ol.story li span{display:block;font-size:13.5px;line-height:1.55;color:var(--ink
 .ov-dl span{margin-right:4px}
 .ov-dl button{border:1px solid var(--border);background:var(--s1);color:var(--ink2);border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer}
 .ov-dl button:hover{border-color:var(--blue);color:var(--blue)}
+
+/* Note trees: compact, structured notes with connector lines */
+.topic-content ul.tree,.topic-content ul.tree ul{list-style:none;margin:0;padding:0}
+.topic-content ul.tree{margin:10px 0 14px}
+.topic-content ul.tree ul{margin-left:14px}
+.topic-content ul.tree li{position:relative;padding:2px 0 2px 18px;margin:0;line-height:1.6}
+.topic-content ul.tree li::before{content:'';position:absolute;left:0;top:0;bottom:0;border-left:1px solid var(--border)}
+.topic-content ul.tree li:last-child::before{bottom:auto;height:.95em}
+.topic-content ul.tree li::after{content:'';position:absolute;left:0;top:.95em;width:12px;border-top:1px solid var(--border)}
+.topic-content ul.tree > li{padding-top:3px;padding-bottom:3px}
+.topic-content ul.tree b{color:var(--ink)}
+.topic-content .tbl.tight td,.topic-content .tbl.tight th{padding:6px 10px}
