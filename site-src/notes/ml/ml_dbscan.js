@@ -3,122 +3,45 @@ Object.assign(TOPIC_CONTENT, {
   "ml_dbscan": `<main>
   <h1>DBSCAN &amp; HDBSCAN</h1>
   <div class="where"><span>Machine Learning</span><span>Clustering</span><span>DBSCAN &amp; HDBSCAN</span></div>
-  <p class="lead">DBSCAN defines a cluster as a crowded region: points that have many neighbours close by, chained together, with lonely points left out as noise. It needs no number of clusters, follows any shape, and finds outliers as a side effect. This note follows one running example from start to finish, twelve tea stalls on a town map: it labels their core, border and noise points by hand, traces the expansion procedure step by step, rebuilds DBSCAN from scratch to match scikit-learn exactly, shows how to choose eps from a k-distance plot, and then fixes DBSCAN's big weakness (one radius for every density) with HDBSCAN, whose core distances, mutual reachability distances, condensed tree and stability scores are all worked by hand on the same twelve stalls. OPTICS, the third member of the family, reads the same stalls as a reachability plot, and a final section shows how every quantity is built from the one before.</p>
+  <p class="lead">DBSCAN is a clustering method that defines a cluster as a crowded region of points, and treats points standing alone in empty space as noise that belongs to no cluster at all. That one idea fixes the three things that make K-Means awkward in real work: you do not have to choose the number of clusters in advance, clusters can be any shape (a curved road, a ring, a river bank), and outliers are flagged instead of being forced into a group. It is the standard tool for things like finding hotspots in GPS pings, grouping text embeddings, or separating real customer groups from one-off oddballs. Its weakness is that it uses one fixed radius for the whole map, and HDBSCAN, its modern successor built into scikit-learn, removes that weakness. The whole page uses one small running example, twelve tea stalls on a town map, so that every quantity (core points, k-distances, HDBSCAN's tree, OPTICS' plot) is computed on stalls you already know.</p>
 
-  <h2 id="db-fit" class="open"><span class="num">★</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 660 240" width="660">
-<defs><marker id="db-fa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<text x="330" y="16" text-anchor="middle" class="tm" font-size="11">Machine Learning › Clustering</text>
-<rect x="245" y="26" width="170" height="44" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.45"/>
-<text x="330" y="45" text-anchor="middle" font-size="12.5">The Idea &amp; Distances</text><text x="330" y="61" text-anchor="middle" class="tm" font-size="10.5">what "similar" means</text>
-<line x1="280" y1="70" x2="95" y2="104" stroke="currentColor" marker-end="url(#db-fa)"/>
-<line x1="310" y1="70" x2="255" y2="104" stroke="currentColor" marker-end="url(#db-fa)"/>
-<line x1="350" y1="70" x2="415" y2="104" stroke="currentColor" marker-end="url(#db-fa)"/>
-<line x1="380" y1="70" x2="570" y2="104" stroke="currentColor" marker-end="url(#db-fa)"/>
-<rect x="20" y="106" width="150" height="46" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.45"/>
-<text x="95" y="126" text-anchor="middle" font-size="12.5">K-Means</text><text x="95" y="142" text-anchor="middle" class="tm" font-size="10.5">centroid</text>
-<rect x="180" y="106" width="150" height="46" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.45"/>
-<text x="255" y="126" text-anchor="middle" font-size="12.5">Hierarchical</text><text x="255" y="142" text-anchor="middle" class="tm" font-size="10.5">merge tree</text>
-<rect x="340" y="102" width="150" height="54" rx="8" class="fb sb" stroke-width="3"/>
-<text x="415" y="124" text-anchor="middle" font-size="12.5" font-weight="700">DBSCAN &amp; HDBSCAN</text><text x="415" y="142" text-anchor="middle" class="tb" font-size="10.5">YOU ARE HERE · density</text>
-<rect x="500" y="106" width="140" height="46" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.45"/>
-<text x="570" y="126" text-anchor="middle" font-size="12.5">Gaussian Mixtures</text><text x="570" y="142" text-anchor="middle" class="tm" font-size="10.5">distribution</text>
-<line x1="95" y1="152" x2="300" y2="190" stroke="currentColor" marker-end="url(#db-fa)"/>
-<line x1="255" y1="152" x2="315" y2="190" stroke="currentColor" marker-end="url(#db-fa)"/>
-<line x1="415" y1="156" x2="345" y2="190" stroke="currentColor" marker-end="url(#db-fa)"/>
-<line x1="570" y1="152" x2="360" y2="190" stroke="currentColor" marker-end="url(#db-fa)"/>
-<rect x="245" y="192" width="170" height="40" rx="8" class="ft st"/>
-<text x="330" y="216" text-anchor="middle" font-size="12.5">Evaluating Clusters</text>
-<line x1="170" y1="129" x2="178" y2="129" stroke="currentColor" stroke-dasharray="2 2"/>
-<line x1="330" y1="129" x2="338" y2="129" stroke="currentColor" stroke-dasharray="2 2"/>
-</svg><figcaption>The Clustering group. Four families of algorithms grow out of the idea of distance; each of them is judged with the tools in Evaluating Clusters. DBSCAN is the density family.</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: <a class="xref" data-note="ml_kmeans">K-Means</a> and <a class="xref" data-note="ml_hierarchical">Hierarchical Clustering</a></b><span>K-Means needs k in advance, cuts every pair of clusters with a straight line (so it fails on moons and rings), and forces every outlier into some cluster where it drags the centre. Single-linkage hierarchical clustering can follow curved shapes, but one stray point between two groups chains them together. What was left open: a method that follows any shape, does not need k, and is not fooled by a few stray points.</span></li>
-    <li><b>This note adds: density</b><span>A cluster is a region where points are packed tightly; points in empty space are noise. Two knobs (eps and min_samples) define "packed". You will label core, border and noise points by hand, run the expansion procedure, choose eps with a k-distance plot, see why one eps fails when clusters have different densities, and learn how HDBSCAN (and OPTICS) remove that limit.</span></li>
-    <li><b>Leads to: <a class="xref" data-note="ml_gmm">Gaussian Mixture Models</a> and <a class="xref" data-note="ml_cluster_eval">Evaluating Clusters</a></b><span>DBSCAN gives hard yes/no labels and no model of the data. Gaussian mixtures describe each cluster as a probability cloud and give soft memberships. Evaluating Clusters explains how to score any of these results, including why silhouette is unfair to DBSCAN's curved clusters.</span></li>
-  </ol>
-  <p>You should know what Euclidean distance is and why features must be scaled before measuring it (<a class="xref" data-note="ml_clustering">The Idea &amp; Distances</a>), and roughly how K-Means works (<a class="xref" data-note="ml_kmeans">K-Means</a>). Both are re-explained in a line where they are used.</p>
-
-
-  <h2 id="db-ladder" class="open"><span class="num">★</span>The Question Ladder</h2>
-  <p>This note is one chain of questions. Each idea answers the question left by the one before it, and each answer raises the next question. All of them are computed on the same twelve tea stalls.</p>
-  <ol class="story">
-    <li><b>Density instead of centres</b><span>Q: how do we find groups of any shape, without choosing k, and leave loners out? → A cluster is a crowded region; lonely points are noise. But "crowded" is vague…</span></li>
-    <li><b>eps and min_samples</b><span>Q: when is a point in a crowd? → Count the points within radius eps; crowded if the count reaches min_samples (stall D: 5 ≥ 4). But some points are on the edge of a crowd without being crowded themselves…</span></li>
-    <li><b>Core, border and noise points</b><span>Q: what do we do with edge points and loners? → Core = crowded, border = inside a core's circle, noise = neither (E border, K noise). But a cluster is much wider than one circle…</span></li>
-    <li><b>Reachability and connectivity</b><span>Q: which crowded points belong to the same cluster? → Those linked by a chain of core points (A → D → E). But a program needs a procedure, not a definition…</span></li>
-    <li><b>The expansion procedure</b><span>Q: how does an algorithm find the clusters? → Flood-fill from each unlabelled core point. But everything depends on eps and min_samples, which we chose by looking at a map…</span></li>
-    <li><b>The k-distance plot</b><span>Q: how do we choose eps without seeing the data? → Sort each point's distance to its min_samples-th neighbour; eps at the knee. But is DBSCAN actually better than K-Means?…</span></li>
-    <li><b>Shapes and noise vs K-Means</b><span>Q: where does density win and where does it lose? → It wins on curves and noise, loses slightly on round blobs. But all those clusters had the same density…</span></li>
-    <li><b>The varying-density problem</b><span>Q: can one eps serve tight and loose clusters? → No: any single radius shatters one or merges the other. So we need every eps at once…</span></li>
-    <li><b>HDBSCAN</b><span>Q: how do we try every eps and keep the right clusters? → Core distance → mutual reachability → minimum spanning tree → condensed tree → stability. But the result hides the density structure inside a tree…</span></li>
-    <li><b>OPTICS</b><span>Q: can we see the density structure as one picture? → The reachability plot: valleys are clusters, a cut at eps is DBSCAN. Then: how do we use all this in practice, and how do the pieces fit together?</span></li>
-  </ol>
-
-  <h2 id="db-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="db-map"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">DBSCAN &amp; HDBSCAN</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">1 · The idea</div>
+        <div class="mm-title">The idea</div>
         <ul>
-          <li><b>Cluster</b> = a dense region; clusters are separated by sparse space</li>
-          <li><b>No k</b>, any shape, outliers labelled <b>−1</b> (noise)</li>
-          <li>Running example: 12 tea stalls → 2 markets, loners K and L = noise (K-Means forced them in)</li>
-          <li>Moons + 15 junk rows: K-Means ARI 0.461, DBSCAN <b>0.993</b> and 10 junk rows flagged</li>
-          <li>DBSCAN = "Density-Based Spatial Clustering of Applications with Noise" (Ester et al., 1996)</li>
-          <li>💡 India at night from space: cities are bright crowded patches, a lone village light is noise</li>
+          <li>Cluster = dense region; separated by sparse space</li>
+          <li>No k, any shape, loners labelled <b>−1</b> (noise)</li>
+          <li>Two knobs: radius <b>eps</b> and count <b>min_samples</b></li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">2 · Definitions</div>
+        <div class="mm-title">DBSCAN</div>
         <ul>
-          <li><b>N_eps(p)</b> = all points within distance eps of p (p included)</li>
-          <li><b>Core</b>: |N_eps(p)| ≥ min_samples · <b>Border</b>: not core, but inside a core's eps-ball · <b>Noise</b>: neither</li>
-          <li><b>Directly reachable</b> q from p: p core and q ∈ N_eps(p) (not symmetric)</li>
-          <li><b>Reachable</b>: a chain of directly-reachable steps · <b>Connected</b>: both reachable from one core</li>
-          <li><b>Cluster</b> = a maximal set of density-connected points</li>
+          <li><b>Core</b>: ≥ min_samples points within eps (itself counted)</li>
+          <li><b>Border</b>: not core, inside a core's circle; <b>noise</b>: neither</li>
+          <li>Clusters grow by chaining core points; border points never spread</li>
+          <li>Choose eps at the knee of the sorted k-distance plot</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">3 · The procedure</div>
+        <div class="mm-title">HDBSCAN</div>
         <ul>
-          <li>Find every point's eps-neighbourhood, mark core points</li>
-          <li>Take an unlabelled core point, start cluster c, flood-fill: neighbours join; only <b>core</b> neighbours spread further</li>
-          <li>Leftover points = noise (−1)</li>
-          <li>Core points and noise: deterministic. Border point between two clusters: goes to whichever reaches it first (row order)</li>
-          <li>Cost: O(n log n) with a tree index for small eps, O(n²) worst; memory grows with neighbour pairs</li>
+          <li>Fixes "one eps for every density"</li>
+          <li>Core distance → mutual reachability → MST → condensed tree</li>
+          <li>Keeps the most <b>stable</b> clusters; gives membership strengths</li>
+          <li>Main knob: <b>min_cluster_size</b></li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">4 · Choosing knobs</div>
+        <div class="mm-title">Practice</div>
         <ul>
-          <li><b>min_samples</b>: ≥ d + 1; rule of thumb 2·d; bigger for noisy data</li>
-          <li><b>k-distance plot</b>: each point's distance to its min_samples-th neighbour (self counted), sorted; eps at the knee</li>
-          <li>A point is core ⇔ its k-distance ≤ eps</li>
-          <li>Moons: knee ≈ 0.20; eps 0.1 shatters (21 clusters), <b>0.3 → 2</b>, 0.8 → 1</li>
-          <li>⚠ Scale features first; eps is in the units of the data</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">5 · HDBSCAN</div>
-        <ul>
-          <li>Problem: one eps cannot fit tight and loose clusters (best DBSCAN ARI 0.952 only at one lucky eps)</li>
-          <li><b>Core distance</b> core_k(p) · <b>mutual reachability</b> = max(core(a), core(b), d(a,b))</li>
-          <li>MST on mutual reachability → single-linkage tree → <b>condensed tree</b> (drop splits smaller than min_cluster_size)</li>
-          <li>λ = 1/distance; <b>stability</b> = Σ (λ_leave − λ_birth); pick clusters by excess of mass</li>
-          <li>Knobs: <b>min_cluster_size</b> (main), min_samples (how conservative); 3 clouds: ARI 0.913–0.962</li>
-          <li>Gives <b>probabilities_</b> (strength of membership)</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">6 · OPTICS &amp; practice</div>
-        <ul>
-          <li><b>OPTICS</b>: orders points, records reachability distance; valleys of the reachability plot = clusters; a horizontal cut = DBSCAN at that eps</li>
-          <li>Geo data: metric="haversine", radians, eps = km / 6371</li>
-          <li>No <code>predict</code>: assign a new point to the nearest core point within eps</li>
-          <li>High dimensions: distances concentrate → reduce first (PCA/UMAP)</li>
-          <li>Silhouette is unfair to curved clusters; judge with plots and DBCV</li>
+          <li>Scale features first; eps is in feature units</li>
+          <li>No <code>predict</code>: nearest core point within eps</li>
+          <li>Geo data: haversine, eps = km / 6371</li>
+          <li>High dimensions: reduce (PCA/UMAP) first</li>
         </ul>
       </div>
     </div>
@@ -127,79 +50,63 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="db-ladder"><span class="rm-num">★</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The whole note as one chain</span></div></div>
-      <div class="rm-item rm-done" data-target="db-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Why Density?</span><span class="rm-sub">Where K-Means breaks</span></div></div>
-      <div class="rm-item rm-done" data-target="db-defs"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">eps, min_samples &amp; Point Types</span><span class="rm-sub">Core, border, noise, reachability</span></div></div>
-      <div class="rm-item rm-done" data-target="db-hand"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Labelling by Hand</span><span class="rm-sub">Twelve points, every distance</span></div></div>
-      <div class="rm-item rm-done" data-target="db-expand"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">The Expansion Procedure</span><span class="rm-sub">Trace, scratch code, border order</span></div></div>
-      <div class="rm-item rm-done" data-target="db-eps"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Choosing eps &amp; min_samples</span><span class="rm-sub">k-distance plot by hand</span></div></div>
-      <div class="rm-item rm-done" data-target="db-shapes"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Shapes &amp; Noise vs K-Means</span><span class="rm-sub">Moons, rings, blobs</span></div></div>
-      <div class="rm-item rm-done" data-target="db-varying"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">The Varying-Density Problem</span><span class="rm-sub">Why one radius fails</span></div></div>
-      <div class="rm-item rm-done" data-target="db-hdbscan"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">HDBSCAN</span><span class="rm-sub">Mutual reachability, condensed tree, stability</span></div></div>
-      <div class="rm-item rm-done" data-target="db-optics"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">OPTICS</span><span class="rm-sub">Reachability plots</span></div></div>
-      <div class="rm-item rm-done" data-target="db-practice"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Parameters &amp; Practice</span><span class="rm-sub">sklearn, geo data, new points, cost</span></div></div>
-      <div class="rm-item rm-done" data-target="db-connect"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">Every quantity on the stalls</span></div></div>
-      <div class="rm-item rm-done" data-target="db-compare"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Comparisons</span><span class="rm-sub">vs K-Means, hierarchical, GMM</span></div></div>
-      <div class="rm-item rm-done" data-target="db-traps"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">What goes wrong in practice</span></div></div>
-      <div class="rm-item rm-done" data-target="db-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note on one page</span></div></div>
-      <div class="rm-item rm-done" data-target="db-qa"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style checks</span></div></div>
+      <div class="rm-item rm-done" data-target="db-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Why Density-Based Clustering</span><span class="rm-sub">twelve tea stalls, and where K-Means goes wrong</span></div></div>
+      <div class="rm-item rm-done" data-target="db-points"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Core, Border and Noise Points</span><span class="rm-sub">eps, min_samples, every stall labelled by hand</span></div></div>
+      <div class="rm-item rm-done" data-target="db-grow"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">How Clusters Grow</span><span class="rm-sub">reachability and the expansion procedure</span></div></div>
+      <div class="rm-item rm-done" data-target="db-eps"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Choosing eps and min_samples</span><span class="rm-sub">the k-distance plot</span></div></div>
+      <div class="rm-item rm-done" data-target="db-shapes"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Where DBSCAN Wins and Where It Fails</span><span class="rm-sub">odd shapes, and clusters of different density</span></div></div>
+      <div class="rm-item rm-done" data-target="db-hdbscan"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">HDBSCAN</span><span class="rm-sub">every eps at once, keep the stable clusters</span></div></div>
+      <div class="rm-item rm-done" data-target="db-optics"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">OPTICS</span><span class="rm-sub">the density structure as one picture</span></div></div>
+      <div class="rm-item rm-done" data-target="db-practice"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">DBSCAN in Practice</span><span class="rm-sub">parameters, geo data, new points, cost</span></div></div>
+      <div class="rm-item rm-done" data-target="db-compare"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Choosing a Clustering Method</span><span class="rm-sub">density methods vs K-Means, hierarchical, GMM</span></div></div>
+      <div class="rm-item rm-done" data-target="db-traps"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">scaling, −1, one eps for all</span></div></div>
+      <div class="rm-item rm-done" data-target="db-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">definitions, formulas, the stalls' numbers</span></div></div>
+      <div class="rm-item rm-done" data-target="db-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">the questions interviewers ask on density clustering</span></div></div>
     </div>
   </div>
 
-  <h2 id="db-why"><span class="num">01</span>Why Density-Based Clustering?</h2>
-  <p><strong>The question we can't answer yet.</strong> K-Means can split the town's tea stalls into k groups, but it needs k in advance, it can only draw straight borders, and it has no way to say "this stall belongs to no group". How do we find groups of any shape, without choosing k, and leave the loners out?</p>
-  <h3>The running example: 12 tea stalls</h3>
-  <p>Throughout this note we use one small map: 12 tea stalls in a town, with positions in kilometres. Every concept (neighbourhoods, core points, k-distances, HDBSCAN's core distances, OPTICS' reachability) is computed on these same 12 points, so you can watch each new number being built from the previous ones.</p>
+  <h2 id="db-why"><span class="num">01</span>Why Density-Based Clustering</h2>
+  <p>Imagine you have a map of the twelve tea stalls in a small town, with each stall's position in kilometres. Looking at the map, anyone can see the structure: five stalls (A to E) crowd around the railway station, five more (F to J) crowd around the college, and two stalls, K and L, stand on their own out on the highway. A good clustering method should say exactly that: two markets, and two loners that belong to neither.</p>
   <table class="tbl">
     <tr><th>Stall</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>F</th><th>G</th><th>H</th><th>I</th><th>J</th><th>K</th><th>L</th></tr>
     <tr><td>(x, y) km</td><td>(1,1)</td><td>(2,1)</td><td>(1,2)</td><td>(2,2)</td><td>(3,2)</td><td>(6,5)</td><td>(7,5)</td><td>(6,6)</td><td>(7,6)</td><td>(8,7)</td><td>(4,9)</td><td>(10,1)</td></tr>
   </table>
-  <p>By eye: a market near the station (A–E), a market near the college (F–J), and two lonely stalls on the highway (K and L). A good method should say exactly that: two groups and two loners.</p>
-  <h3>What K-Means does with the stalls</h3>
-  <div class="fx" data-lang="py">P = np.array([[1, 1], [2, 1], [1, 2], [2, 2], [3, 2],
-              [6, 5], [7, 5], [6, 6], [7, 6], [8, 7],
-              [4, 9], [10, 1]], dtype=float)          # the 12 tea stalls A..L, in km
+  <p>The method most people reach for first is K-Means (see <a class="xref" data-note="ml_kmeans">K-Means</a>), which places k centres and sends every point to its nearest centre. Here is what it does with the stalls for k = 2 and k = 3:</p>
+  <div class="fx" data-lang="py">import numpy as np
+from sklearn.cluster import KMeans, DBSCAN
+
+P = np.array([[1, 1], [2, 1], [1, 2], [2, 2], [3, 2],      # station market A..E
+              [6, 5], [7, 5], [6, 6], [7, 6], [8, 7],      # college market F..J
+              [4, 9], [10, 1]], dtype=float)               # lonely stalls K, L   (km)
 names = list("ABCDEFGHIJKL")
 for k in (2, 3):
     lab = KMeans(n_clusters=k, n_init=10, random_state=0).fit_predict(P)
     print(f"K-Means k={k}:", " ".join(f"{n}={l}" for n, l in zip(names, lab)))</div>
   <div class="fx" data-lang="text">K-Means k=2: A=1 B=1 C=1 D=1 E=1 F=0 G=0 H=0 I=0 J=0 K=0 L=0
 K-Means k=3: A=0 B=0 C=0 D=0 E=0 F=1 G=1 H=1 I=1 J=1 K=1 L=2</div>
-  <p>With k = 2, K-Means puts the two highway stalls K and L into the college market, because every stall must join its nearest centre; they also drag that centre away from the real market. With k = 3 it gives the lonely stall L a "group" of its own and still forces K into the college market. Neither answer says "K and L are loners". That one rule (every point joins its nearest centre) causes three problems:</p>
-  <ul>
-    <li><strong>Shapes.</strong> The border between two K-Means clusters is always a straight line halfway between their centres. A banana-shaped or ring-shaped group cannot be described by one centre.</li>
-    <li><strong>Outliers.</strong> Every row must belong to some cluster, and it drags that cluster's centre toward itself.</li>
-    <li><strong>k.</strong> You must say how many clusters there are before you start, which is usually the thing you wanted to learn.</li>
-  </ul>
-  <h3>The idea in plain words</h3>
-  <p>Look at where the points are <em>crowded</em>. A cluster is a region where points are packed close together. Two clusters are separated by a gap of empty (or nearly empty) space. A point sitting alone in empty space belongs to no cluster at all: it is <strong>noise</strong>. Nothing in this definition mentions a centre or a shape, so the clusters can be any shape, and nothing mentions k, so the number of clusters comes out of the data.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A photo of India at night taken from space. Delhi and Mumbai are bright patches of crowded lights; their suburbs glow less but are attached to the city. A single village light in the middle of nowhere belongs to no city. Nobody drew a circle around a city centre: a city is simply where the lights are packed together, whatever its shape.</p>
-  </div>
-  <h3>The same idea at scale</h3>
-  <p>Two interlocking half-moons (300 points) plus 15 junk rows scattered at random. After scaling, K-Means with k = 2 and DBSCAN with eps = 0.3, min_samples = 5 (both knobs are explained in the next section) are compared with the adjusted Rand index (ARI): 1 means the found groups match the true moons exactly, about 0 means no better than random (details in <a class="xref" data-note="ml_cluster_eval">Evaluating Clusters</a>).</p>
-  <div class="fx" data-lang="py">import numpy as np
-from sklearn.datasets import make_moons
+  <p>With k = 2 the station market is cluster 1 and everything else is cluster 0, so the two highway stalls K and L have been added to the college market, and they drag its centre away from where the stalls really are. With k = 3 K-Means gives the lonely stall L a "market" of its own and still pushes K into the college market. Neither answer says what we can see: K and L are loners.</p>
+  <p>The cause is the one rule K-Means is built on, "every point joins its nearest centre", and it leads to three separate problems. Every point must belong to some cluster, so outliers are forced in and distort the result. The border between two clusters is always a straight line halfway between their centres, so a banana-shaped or ring-shaped group cannot be described. And you must choose k before you start, although the number of groups is usually the very thing you wanted to find out.</p>
+  <p><strong>Density-based clustering</strong> starts from a different definition of a cluster: a cluster is a region where points are packed closely together, and clusters are separated by regions of empty or nearly empty space. A point sitting alone in empty space belongs to no cluster; it is called <strong>noise</strong>. Notice what this definition does not mention. It says nothing about a centre, so clusters can be any shape, and it says nothing about k, so the number of clusters comes out of the data.</p>
+  <p>Think of a photograph of India taken from space at night. Delhi and Mumbai show up as bright patches of crowded lights, with suburbs glowing more faintly at their edges, while a single village light far from any city belongs to no city at all. Nobody drew a circle around a city centre to decide where Delhi ends: a city is simply the place where the lights are packed together, whatever its shape. DBSCAN, which stands for "Density-Based Spatial Clustering of Applications with Noise" (Ester and colleagues, 1996), finds clusters in exactly this way.</p>
+  <p>The difference becomes dramatic on shapes that K-Means cannot draw. Below are two interlocking half-moons of 300 points with 15 junk rows scattered at random. Both methods run on scaled data; DBSCAN's two settings, <code>eps</code> and <code>min_samples</code>, are explained in the next section. To score the results we use the <strong>adjusted Rand index</strong> (ARI), which compares found groups with the true ones: 1 means a perfect match and about 0 means no better than random (see <a class="xref" data-note="ml_cluster_eval">Evaluating Clusters</a>).</p>
+  <div class="fx" data-lang="py">from sklearn.datasets import make_moons
 from sklearn.preprocessing import StandardScaler
-from sklearn.cluster import KMeans, DBSCAN
 from sklearn.metrics import adjusted_rand_score
 
 Xm, ym = make_moons(n_samples=300, noise=0.06, random_state=0)
 rng = np.random.default_rng(1)
 junk = rng.uniform(low=[-1.5, -1.0], high=[2.5, 1.5], size=(15, 2))   # 15 scattered junk rows
 X = StandardScaler().fit_transform(np.vstack([Xm, junk]))
-y = np.r_[ym, [-1] * 15]                      # truth: 0/1 = moon, -1 = junk
+y = np.r_[ym, [-1] * 15]                    # truth: 0/1 = which moon, -1 = junk
 moon = y &gt;= 0
 
 km = KMeans(n_clusters=2, n_init=10, random_state=0).fit_predict(X)
 db = DBSCAN(eps=0.3, min_samples=5).fit_predict(X)
-print("KMeans: clusters", len(set(km)), "| ARI on moon rows", round(adjusted_rand_score(y[moon], km[moon]), 3),
-      "| junk rows flagged: 0 of 15 (it has no 'noise' label)")
-print("DBSCAN: clusters", len(set(db) - {-1}), "| ARI on moon rows", round(adjusted_rand_score(y[moon], db[moon]), 3),
+print("K-Means: ARI on moon rows", round(adjusted_rand_score(y[moon], km[moon]), 3), "| junk rows flagged: 0 of 15")
+print("DBSCAN : ARI on moon rows", round(adjusted_rand_score(y[moon], db[moon]), 3),
       "| junk rows flagged:", (db[~moon] == -1).sum(), "of 15 | moon rows flagged:", (db[moon] == -1).sum())</div>
-  <div class="fx" data-lang="text">KMeans: clusters 2 | ARI on moon rows 0.461 | junk rows flagged: 0 of 15 (it has no 'noise' label)
-DBSCAN: clusters 2 | ARI on moon rows 0.993 | junk rows flagged: 10 of 15 | moon rows flagged: 1</div>
-  <p>K-Means scores 0.461 on the moon rows: it cuts both moons with a straight line, and all 15 junk rows were pushed into a moon. DBSCAN recovers the two moons almost perfectly (0.993), marks 10 of the 15 junk rows as noise (the other 5 happened to land inside or right next to a moon, where they really are indistinguishable from moon points), and wrongly calls only 1 of the 300 moon rows noise. Nobody told DBSCAN there were two clusters.</p>
+  <div class="fx" data-lang="text">K-Means: ARI on moon rows 0.461 | junk rows flagged: 0 of 15
+DBSCAN : ARI on moon rows 0.993 | junk rows flagged: 10 of 15 | moon rows flagged: 1</div>
   <figure class="viz"><svg viewBox="0 0 640 230" width="640">
 <text x="160" y="16" text-anchor="middle" font-size="12.5">KMeans, k = 2</text>
 <text x="480" y="16" text-anchor="middle" font-size="12.5">DBSCAN, eps = 0.3, min_samples = 5</text>
@@ -209,61 +116,27 @@ DBSCAN: clusters 2 | ARI on moon rows 0.993 | junk rows flagged: 10 of 15 | moon
 <text x="160" y="224" text-anchor="middle" class="tm" font-size="11">straight cut; every junk row forced into a moon</text>
 <text x="480" y="224" text-anchor="middle" class="tm" font-size="11">follows each moon; hollow grey circles = noise (−1)</text>
 </svg><figcaption>The same 315 rows (300 moon points + 15 junk points, scaled). Colours are the cluster labels each algorithm returned.</figcaption></figure>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>DBSCAN is not "better than K-Means" in general. On round, well-separated blobs of similar size K-Means is faster, simpler and at least as accurate (section 06 shows K-Means winning on blobs). Density methods win when the shapes are odd, when there is noise to throw away, or when you do not know k.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> "crowded" is still a vague word. Is stall E, with only two stalls close by, in a crowd or not? <b>Next: eps, min_samples and the three kinds of point.</b></div>
+  <p>K-Means scores only 0.461 on the moon rows: it cuts both moons with one straight line, as the left panel shows, and every junk row was pushed into a moon because it has no way to say "none of the above". DBSCAN recovers the two moons almost perfectly (0.993), labels 10 of the 15 junk rows as noise, and wrongly calls only 1 of the 300 moon points noise. The other 5 junk rows happened to land inside or right next to a moon, where nothing could tell them apart from real moon points. Nobody told DBSCAN that there were two clusters.</p>
+  <p>This does not make DBSCAN "better than K-Means" in general. On round, well-separated groups of similar size, K-Means is faster, simpler and at least as accurate, as section 05 will show. Density methods win when shapes are irregular, when there is noise you want to throw away, or when you do not know how many groups to expect. To use one well, we first need to turn the vague word "crowded" into something a computer can check.</p>
 
-  <h2 id="db-defs"><span class="num">02</span>The Two Knobs and the Three Kinds of Point</h2>
-  <p><strong>The question we can't answer yet.</strong> We want "a cluster is a crowded region", but a computer needs a yes/no test for "this point is in a crowd", and a rule for which crowded points belong together.</p>
-  <h3>eps and min_samples</h3>
-  <p>DBSCAN turns "crowded" into a count. Draw a circle of radius <strong>eps</strong> (epsilon, a small distance) around a point and count how many points fall inside, the point itself included. If the count reaches <strong>min_samples</strong>, the point lives in a crowded spot. For the stalls we use eps = 1.5 km and min_samples = 4: "a stall is in a crowd if at least 4 stalls, itself included, are within 1.5 km".</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>eps-neighbourhood</strong> of a point p: N_eps(p) = { q : dist(p, q) ≤ eps }. It always contains p itself (distance 0).<br><strong>Density</strong> at p, in DBSCAN's sense, is just |N_eps(p)|, the number of points in that ball.</p>
-  </div>
-  <p>On the stalls: D's 1.5 km circle holds D, A, B, C and E (5 stalls); E's holds E, B and D (3); K's holds only K (1). Section 03 does all twelve.</p>
-  <h3>Core, border, noise</h3>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Core point</strong>: |N_eps(p)| ≥ min_samples. It sits in a crowded spot.<br><strong>Border point</strong>: not core itself, but inside the eps-ball of at least one core point. It sits on the edge of a crowd.<br><strong>Noise point</strong>: neither core nor border. Nothing crowded is near it. scikit-learn gives it the label −1.</p>
-  </div>
-  <p>So D (5 ≥ 4) is core; E (3 &lt; 4) is not core, but it lies inside D's circle, so it is border; K is alone, so it is noise.</p>
-  <p>An important convention: in scikit-learn (and in the original paper), min_samples <strong>counts the point itself</strong>. min_samples = 4 means "the point plus at least 3 others". Some books and libraries count only the others; always check before comparing numbers.</p>
-  <h3>Reachability and connectivity: how points chain into a cluster</h3>
-  <p>A cluster can be long and curved, much wider than one eps-ball. It forms by chaining: a core point "reaches" its neighbours; if one of those neighbours is also core, it reaches its own neighbours, and so on. Formally:</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Directly density-reachable</strong>: q is directly reachable from p if p is a core point and q ∈ N_eps(p).<br><strong>Density-reachable</strong>: q is reachable from p if there is a chain p = p₁, p₂, …, pₙ = q where each step is directly reachable (so every point in the chain except possibly the last is core).<br><strong>Density-connected</strong>: p and q are connected if some core point o reaches both of them.<br><strong>Cluster</strong>: a non-empty set C that is <em>maximal</em> (if p ∈ C and q is reachable from p, then q ∈ C) and <em>connected</em> (every pair in C is density-connected). Points in no cluster are noise.</p>
-  </div>
-  <p>On the stalls: E is directly reachable from D (D is core, E is in D's circle), but D is <em>not</em> directly reachable from E (E is not core, so it cannot start a step). Reachability is <strong>not symmetric</strong>. Now A and E: A reaches D (A core, D in A's circle) and D reaches E, so E is reachable from A. And two border points at opposite ends of a cluster cannot reach each other at all, yet they belong together because one core point in the middle reaches both. "Connected" is the symmetric relation that glues the whole cluster together.</p>
-  <div class="cards">
-    <div><b>Core</b><p>Crowded. Can start a cluster and pass it on to its neighbours.</p><small>count ≥ min_samples · stalls A B C D F G H I</small></div>
-    <div><b>Border</b><p>On the edge of a crowd. Joins a cluster but never spreads it.</p><small>count &lt; min_samples, but near a core · stalls E J</small></div>
-    <div><b>Noise</b><p>Alone. Belongs to no cluster.</p><small>label −1 · stalls K L</small></div>
-  </div>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>Only core points pass the cluster along. That is what stops DBSCAN from chaining two clusters together through a thin line of stray points (the weakness of single-linkage clustering): a stray point between two groups is at best a border point, and border points are dead ends.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> we checked D, E and K; we have not checked every stall or seen the groups appear. <b>Next: label all twelve stalls by hand.</b></div>
-
-  <h2 id="db-hand"><span class="num">03</span>Labelling Points by Hand</h2>
-  <p><strong>The question we can't answer yet.</strong> We have the definitions, but which of the 12 stalls are core, border and noise, and which groups do they form?</p>
-  <h3>Step 1: the distances that matter</h3>
-  <p>On a grid, three distances keep appearing. Side by side (one step across or up): √(1² + 0²) = 1. Diagonal neighbour: √(1² + 1²) = √2 ≈ 1.414. Knight's move (2 across, 1 up): √(2² + 1²) = √5 ≈ 2.236. With eps = 1.5, side and diagonal neighbours count, knight's moves do not.</p>
+  <h2 id="db-points"><span class="num">02</span>Core, Border and Noise Points</h2>
+  <p>"A cluster is a crowded region" is a nice sentence, but a program needs a yes-or-no test for "this point is in a crowd". DBSCAN's test is a count. Draw a circle of radius <strong>eps</strong> (short for epsilon, the Greek letter mathematicians use for a small distance) around a point, and count how many points fall inside it, the point itself included. If the count reaches <strong>min_samples</strong>, the point is in a crowded spot. The set of points inside the circle is called the point's <strong>eps-neighbourhood</strong>, written N_eps(p) = { q : distance(p, q) ≤ eps }. For the stalls we use eps = 1.5 km and min_samples = 4, which reads: "a stall is in a crowd if at least 4 stalls, itself included, lie within 1.5 km of it".</p>
+  <p>Counting like this sorts every point into one of three kinds. A <strong>core point</strong> has at least min_samples points in its eps-neighbourhood: it sits in a crowded spot. A <strong>border point</strong> does not have enough neighbours to be core itself, but it lies inside the circle of at least one core point: it sits on the edge of a crowd. A <strong>noise point</strong> is neither: nothing crowded is near it, and scikit-learn gives it the label −1. A school playground is a good picture. Children standing in the middle of a big group are core; a child standing at the edge of the group, close to some of its members but with only one or two others nearby, is border; a child standing alone by the gate is noise.</p>
+  <p>Let us label all twelve stalls by hand. On a grid three distances keep appearing: a stall one step across or up is √(1² + 0²) = 1 km away; a diagonal neighbour is √(1² + 1²) = √2 ≈ 1.414 km away; a "knight's move" neighbour (two across, one up) is √(2² + 1²) = √5 ≈ 2.236 km away. With eps = 1.5, side and diagonal neighbours are inside the circle and knight's moves are not.</p>
   <table class="tbl">
-    <tr><th>Stall</th><th>Distances to nearby stalls (km)</th><th>Within 1.5?</th><th>Count (incl. itself)</th><th>Type</th></tr>
+    <tr><th>Stall</th><th>Nearby stalls and distances (km)</th><th>Within 1.5</th><th>Count (incl. itself)</th><th>Kind</th></tr>
     <tr><td>A (1,1)</td><td>B 1, C 1, D 1.414, E 2.236</td><td>B, C, D</td><td>4</td><td>core</td></tr>
     <tr><td>B (2,1)</td><td>A 1, D 1, C 1.414, E 1.414</td><td>A, C, D, E</td><td>5</td><td>core</td></tr>
     <tr><td>C (1,2)</td><td>A 1, D 1, B 1.414, E 2</td><td>A, B, D</td><td>4</td><td>core</td></tr>
     <tr><td>D (2,2)</td><td>B 1, C 1, E 1, A 1.414</td><td>A, B, C, E</td><td>5</td><td>core</td></tr>
-    <tr><td>E (3,2)</td><td>D 1, B 1.414, C 2, A 2.236</td><td>B, D</td><td>3</td><td><strong>border</strong> (3 &lt; 4, but B and D are core)</td></tr>
-    <tr><td>F (6,5)</td><td>G 1, H 1, I 1.414, J 2.828</td><td>G, H, I</td><td>4</td><td>core</td></tr>
-    <tr><td>G (7,5)</td><td>F 1, I 1, H 1.414, J 2.236</td><td>F, H, I</td><td>4</td><td>core</td></tr>
-    <tr><td>H (6,6)</td><td>F 1, I 1, G 1.414, J 2.236</td><td>F, G, I</td><td>4</td><td>core</td></tr>
+    <tr><td>E (3,2)</td><td>D 1, B 1.414, C 2, A 2.236</td><td>B, D</td><td>3</td><td>border (B and D are core)</td></tr>
+    <tr><td>F, G, H</td><td>three neighbours at 1, 1 and 1.414</td><td>3 each</td><td>4</td><td>core</td></tr>
     <tr><td>I (7,6)</td><td>G 1, H 1, F 1.414, J 1.414</td><td>F, G, H, J</td><td>5</td><td>core</td></tr>
-    <tr><td>J (8,7)</td><td>I 1.414, G 2.236, H 2.236</td><td>I</td><td>2</td><td><strong>border</strong> (I is core)</td></tr>
-    <tr><td>K (4,9)</td><td>H 3.606, I 4.243, F 4.472, J 4.472</td><td>none</td><td>1</td><td><strong>noise</strong></td></tr>
-    <tr><td>L (10,1)</td><td>G 5, F 5.657, I 5.831</td><td>none</td><td>1</td><td><strong>noise</strong></td></tr>
+    <tr><td>J (8,7)</td><td>I 1.414, G 2.236, H 2.236</td><td>I</td><td>2</td><td>border (I is core)</td></tr>
+    <tr><td>K (4,9)</td><td>nearest is H at 3.606</td><td>none</td><td>1</td><td>noise</td></tr>
+    <tr><td>L (10,1)</td><td>nearest is G at 5</td><td>none</td><td>1</td><td>noise</td></tr>
   </table>
-  <p>Read the E row slowly, because it is the subtle one. E has only 3 stalls in its circle (itself, B and D), one short of min_samples = 4, so E is not core. But E lies inside the circles of B and D, which are core, so E is a border point. J is the same story with only I. K and L have nobody within 1.5 km, so no core point can reach them: noise.</p>
+  <p>Read the E row slowly, because it is the subtle one. E has only 3 stalls in its circle (itself, B and D), one short of min_samples = 4, so E is not core. But E lies inside the circles of B and D, which are core, so E is a border point rather than noise. J is the same story with only I nearby. K and L have nobody within 1.5 km, so no core point can reach them: they are noise. The figure shows these circles on the map.</p>
   <figure class="viz"><svg viewBox="0 0 640 320" width="640">
 <line x1="40" y1="300" x2="40" y2="31.19999999999999" stroke="currentColor" stroke-opacity="0.07"/>
 <text x="40" y="314" text-anchor="middle" class="tm" font-size="10">0</text>
@@ -340,170 +213,108 @@ DBSCAN: clusters 2 | ARI on moon rows 0.993 | junk rows flagged: 10 of 15 | moon
 <circle cx="66" cy="70" r="6" class="fg sg"/><text x="78" y="74" font-size="11.5">border (near a core)</text>
 <circle cx="66" cy="88" r="6" class="fs" stroke="currentColor"/><text x="78" y="92" font-size="11.5">noise (near no core)</text>
 </svg><figcaption>The 12 tea stalls (grid units = km). Dashed rings are eps = 1.5 km around D and I (blue, both core), E (green, border: only 3 stalls inside) and K (grey, noise: alone). The rings look oval only because the two axes are drawn at different scales.</figcaption></figure>
-  <h3>Step 2: chain the core points into clusters</h3>
-  <p>A, B, C, D are core and each lies in another's circle, so they chain into one cluster; E hangs on as its border. F, G, H, I chain into a second cluster; J hangs on as its border. The closest pair across the two markets, E and F, are √(3² + 3²) = 4.243 km apart, far more than eps, so the markets stay separate. Result: cluster 0 = {A, B, C, D, E}, cluster 1 = {F, G, H, I, J}, noise = {K, L}. Exactly the answer we wanted by eye, and nobody asked for two clusters.</p>
-  <h3>Check it in code</h3>
-  <p>The code builds the full 12 × 12 distance matrix with numpy broadcasting (<code>P[:, None, :] - P[None, :, :]</code> subtracts every point from every other point), marks which pairs are within eps, counts each row, and applies the three definitions.</p>
+  <p>The same labelling in code takes four lines. <code>P[:, None, :] - P[None, :, :]</code> uses numpy broadcasting to subtract every stall from every other stall, giving the full 12 × 12 table of distances; comparing it with eps marks which pairs are close, and summing each row gives each stall's count.</p>
   <div class="fx" data-lang="py">eps, min_samples = 1.5, 4
-
-D = np.sqrt(((P[:, None, :] - P[None, :, :]) ** 2).sum(-1))   # every pairwise distance
-N = D &lt;= eps                        # N[i, j] is True if j lies in i's eps-neighbourhood
-count = N.sum(1)                    # neighbourhood size, the point itself included
+D = np.sqrt(((P[:, None, :] - P[None, :, :]) ** 2).sum(-1))   # 12 x 12 matrix of distances
+N = D &lt;= eps                        # N[i, j] is True if stall j is inside stall i's circle
+count = N.sum(1)                    # how many stalls in each circle, the stall itself included
 core = count &gt;= min_samples
 for i, nm in enumerate(names):
     others = "".join(names[j] for j in np.where(N[i])[0] if j != i)
     kind = "core" if core[i] else ("border" if N[i][core].any() else "noise")
-    print(f"{nm} ({P[i,0]:.0f},{P[i,1]:.0f})  others within eps: {others or '-':5s} count={count[i]}  -&gt; {kind}")</div>
-  <div class="fx" data-lang="text">A (1,1)  others within eps: BCD   count=4  -&gt; core
-B (2,1)  others within eps: ACDE  count=5  -&gt; core
-C (1,2)  others within eps: ABD   count=4  -&gt; core
-D (2,2)  others within eps: ABCE  count=5  -&gt; core
-E (3,2)  others within eps: BD    count=3  -&gt; border
-F (6,5)  others within eps: GHI   count=4  -&gt; core
-G (7,5)  others within eps: FHI   count=4  -&gt; core
-H (6,6)  others within eps: FGI   count=4  -&gt; core
-I (7,6)  others within eps: FGHJ  count=5  -&gt; core
-J (8,7)  others within eps: I     count=2  -&gt; border
-K (4,9)  others within eps: -     count=1  -&gt; noise
-L (10,1)  others within eps: -     count=1  -&gt; noise</div>
-  <p>Every row matches the hand table. Now the same data through scikit-learn. <code>labels_</code> holds the cluster of each point and <code>core_sample_indices_</code> lists which rows were core:</p>
-  <div class="fx" data-lang="py">db = DBSCAN(eps=1.5, min_samples=4).fit(P)
-print("labels:", " ".join(f"{n}={l}" for n, l in zip(names, db.labels_)))
-print("core  :", "".join(names[i] for i in db.core_sample_indices_))</div>
+    print(f"{nm}  others within eps: {others or '-':5s} count={count[i]}  -&gt; {kind}")</div>
+  <div class="fx" data-lang="text">A  others within eps: BCD   count=4  -&gt; core
+B  others within eps: ACDE  count=5  -&gt; core
+C  others within eps: ABD   count=4  -&gt; core
+D  others within eps: ABCE  count=5  -&gt; core
+E  others within eps: BD    count=3  -&gt; border
+F  others within eps: GHI   count=4  -&gt; core
+G  others within eps: FHI   count=4  -&gt; core
+H  others within eps: FGI   count=4  -&gt; core
+I  others within eps: FGHJ  count=5  -&gt; core
+J  others within eps: I     count=2  -&gt; border
+K  others within eps: -     count=1  -&gt; noise
+L  others within eps: -     count=1  -&gt; noise</div>
+  <p>Every row matches the hand table. scikit-learn's <code>DBSCAN</code> gives the same answer: <code>labels_</code> holds each point's cluster number (−1 for noise) and <code>core_sample_indices_</code> lists the rows that were core.</p>
+  <div class="fx" data-lang="py">db12 = DBSCAN(eps=1.5, min_samples=4).fit(P)
+print("labels:", " ".join(f"{n}={l}" for n, l in zip(names, db12.labels_)))
+print("core  :", "".join(names[i] for i in db12.core_sample_indices_))</div>
   <div class="fx" data-lang="text">labels: A=0 B=0 C=0 D=0 E=0 F=1 G=1 H=1 I=1 J=1 K=-1 L=-1
 core  : ABCDFGHI</div>
-  <p>Same answer: E and J are in their clusters but are not in the core list, K and L are −1.</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Two easy slips by hand. (1) Forgetting to count the point itself: E has 2 <em>other</em> stalls nearby, and 3 including itself; comparing the wrong number with min_samples flips its type. (2) Calling a border point noise because it is not dense: a point with a small count is noise only if no core point has it in its circle.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> by hand we simply "saw" which core points chain together. A program on a million rows needs a systematic way to grow each cluster. <b>Next: the expansion procedure.</b></div>
+  <p>E and J are in clusters but missing from the core list, because they are border points, and K and L are −1. The stall markets came out as cluster 0 and cluster 1 even though we never asked for two clusters.</p>
+  <p>One convention trips people up constantly. In scikit-learn and in the original paper, min_samples <em>counts the point itself</em>, so min_samples = 4 means "the point plus at least 3 others". Some books and other libraries count only the others. E has 2 other stalls nearby and 3 including itself; compare the wrong number with min_samples and its kind flips. Always check which convention a source uses before comparing numbers.</p>
 
-  <h2 id="db-expand"><span class="num">04</span>The Expansion Procedure</h2>
-  <p><strong>The question we can't answer yet.</strong> Section 03 says <em>what</em> the clusters are. How does an algorithm <em>find</em> them, visiting each point a limited number of times?</p>
-  <h3>Plain words</h3>
-  <p>Think of spreading news through a crowd. Pick a person standing in a crowded spot who has not heard the news yet: a new cluster starts. Everyone within arm's reach hears it and joins the cluster. Anyone among them who is also standing in a crowded spot passes it on to the people within their reach. People standing alone on the edge hear it but tell nobody. When no one new hears it, that cluster is finished; look for another crowded person who has not heard anything, and start the next cluster.</p>
-  <div class="flow"><span>Compute every eps-neighbourhood</span><span>Mark core points</span><span>Next unlabelled core point → new cluster</span><span>Flood-fill: neighbours join; core ones spread</span><span>Leftovers = noise (−1)</span></div>
-  <h3>Pseudocode</h3>
-  <ol>
-    <li>For every point p, find N_eps(p). Mark p as core if |N_eps(p)| ≥ min_samples.</li>
-    <li>Set every label to −1 and a cluster counter c = 0.</li>
-    <li>For each point i in row order: if i is already labelled or is not core, skip it. Otherwise give i label c and put it in a queue.</li>
-    <li>While the queue is not empty: take out a point p. For every q in N_eps(p) that is still −1, give q label c; if q is core, add q to the queue.</li>
-    <li>When the queue is empty, c = c + 1 and continue step 3.</li>
-  </ol>
-  <h3>Traced by hand on the twelve stalls</h3>
-  <table class="tbl">
-    <tr><th>Step</th><th>Take out</th><th>Its neighbours still −1</th><th>They get</th><th>Queue after</th></tr>
-    <tr><td>start</td><td colspan="4">A is the first unlabelled core point → cluster 0 starts, queue = [A]</td></tr>
-    <tr><td>1</td><td>A</td><td>B, C, D</td><td>0 (all core → queued)</td><td>B C D</td></tr>
-    <tr><td>2</td><td>B</td><td>E (A, C, D already 0)</td><td>0 (E is border → not queued)</td><td>C D</td></tr>
-    <tr><td>3</td><td>C</td><td>none</td><td>–</td><td>D</td></tr>
-    <tr><td>4</td><td>D</td><td>none (E already has label 0)</td><td>–</td><td>empty → cluster 0 done</td></tr>
-    <tr><td>start</td><td colspan="4">B, C, D, E are labelled; F is the next unlabelled core → cluster 1, queue = [F]</td></tr>
-    <tr><td>5</td><td>F</td><td>G, H, I</td><td>1 (all core)</td><td>G H I</td></tr>
-    <tr><td>6–7</td><td>G, H</td><td>none</td><td>–</td><td>I</td></tr>
-    <tr><td>8</td><td>I</td><td>J</td><td>1 (border)</td><td>empty → cluster 1 done</td></tr>
-    <tr><td>end</td><td colspan="4">J is labelled; K and L are not core and were never reached → stay −1</td></tr>
-  </table>
-  <h3>From scratch, matching scikit-learn</h3>
-  <p>The function below is the pseudocode line by line. <code>neigh[i]</code> is the eps-neighbourhood of point i. The <code>deque</code> is a first-in-first-out queue. When <code>names</code> is passed it prints one line per point taken out of the queue, so you can compare it with the hand trace.</p>
+  <h2 id="db-grow"><span class="num">03</span>How Clusters Grow</h2>
+  <p>A single eps-circle is small, but a cluster can be long and curved, far wider than one circle: the tips of one moon in section 01 are many times eps apart. So DBSCAN needs a rule that links circles together into one cluster. The rule is chaining. A core point "reaches" every point in its circle. If one of those points is also core, it reaches the points in its own circle, and so on, so the cluster spreads from crowd to crowd like news passing through a packed room.</p>
+  <p>The formal names for this are worth knowing because interviewers use them. A point q is <strong>directly density-reachable</strong> from p if p is a core point and q is inside p's circle. q is <strong>density-reachable</strong> from p if there is a chain of such steps from p to q, which means every point in the chain except possibly the last must be core. Two points are <strong>density-connected</strong> if some core point reaches both of them. Finally, a <strong>cluster</strong> is a largest-possible set of density-connected points: everything reachable from its core points is included, and every pair in it is connected.</p>
+  <p>Why three words instead of one? Because reaching is one-directional. On the stalls, E is directly reachable from D (D is core and E is in D's circle), but D is not reachable from E, because E is not core and a step can only start from a core point. Two border points at opposite ends of a cluster cannot reach each other at all. Yet they clearly belong together, because a core point in the middle reaches both of them, and "connected" is the symmetric relation that captures this. For example, A and E are 2.236 km apart, more than eps, but A reaches D and D reaches E, so both are in the same cluster. eps is the size of one step, not the size of a cluster.</p>
+  <p>This one-way rule is also what makes DBSCAN robust. Only core points pass the cluster along, and border points are dead ends. So a thin line of stray points between two groups cannot chain them into one cluster: each stray point is at best a border point, and the chain stops there. Single-linkage hierarchical clustering (see <a class="xref" data-note="ml_hierarchical">Hierarchical Clustering</a>) has no such protection, which is why one stray point can merge two of its clusters.</p>
+  <p>To turn the definition into an algorithm, DBSCAN uses a flood fill, much like the paint-bucket tool in a drawing program. First it finds every point's eps-neighbourhood and marks the core points. Then it walks through the points in row order. When it finds a core point that has no label yet, it starts a new cluster with it and puts it in a queue. It repeatedly takes a point out of the queue and gives the cluster's label to every unlabelled point in its circle; any of those that are core are added to the queue, so they spread the cluster further, while border points are labelled and go no further. When the queue is empty that cluster is complete, and the walk continues to look for the next unlabelled core point. Whatever is still unlabelled at the end is noise.</p>
+  <p>Here is that procedure written out line by line. The <code>deque</code> is a first-in-first-out queue, and when stall names are passed it prints one line each time a point is taken out of the queue, so you can follow it on the map.</p>
   <div class="fx" data-lang="py">from collections import deque
 
 def dbscan_scratch(X, eps, min_samples, names=None):
     n = len(X)
     D = np.sqrt(((X[:, None, :] - X[None, :, :]) ** 2).sum(-1))
-    neigh = [np.where(D[i] &lt;= eps)[0] for i in range(n)]      # eps-neighbourhoods (self included)
+    neigh = [np.where(D[i] &lt;= eps)[0] for i in range(n)]      # every eps-neighbourhood
     core = np.array([len(nb) &gt;= min_samples for nb in neigh])
-    labels = np.full(n, -1)                                   # everyone starts as "noise / unvisited"
+    labels = np.full(n, -1)                                   # everyone starts as -1
     c = 0
     for i in range(n):
         if labels[i] != -1 or not core[i]:
             continue                                          # only an unlabelled CORE point starts a cluster
         labels[i] = c
         queue = deque([i])
-        while queue:                                          # expand: breadth-first over core points
+        while queue:
             p = queue.popleft()
             new = [q for q in neigh[p] if labels[q] == -1]
             for q in new:
                 labels[q] = c                                 # core or border: joins cluster c
                 if core[q]:
-                    queue.append(q)                           # only core points spread the cluster further
+                    queue.append(q)                           # only core points spread the cluster
             if names:
-                print(f"  cluster {c}: pop {names[p]} -&gt; claims {''.join(names[q] for q in new) or '-':5s}"
+                print(f"  cluster {c}: take {names[p]} -&gt; claims {''.join(names[q] for q in new) or '-':4s}"
                       f" queue now {''.join(names[q] for q in queue) or 'empty'}")
         c += 1
     return labels
 
-lab = dbscan_scratch(P, 1.5, 4, names)
-print("scratch:", lab)
-print("sklearn:", DBSCAN(eps=1.5, min_samples=4).fit_predict(P))</div>
-  <div class="fx" data-lang="text">  cluster 0: pop A -&gt; claims BCD   queue now BCD
-  cluster 0: pop B -&gt; claims E     queue now CD
-  cluster 0: pop C -&gt; claims -     queue now D
-  cluster 0: pop D -&gt; claims -     queue now empty
-  cluster 1: pop F -&gt; claims GHI   queue now GHI
-  cluster 1: pop G -&gt; claims -     queue now HI
-  cluster 1: pop H -&gt; claims -     queue now I
-  cluster 1: pop I -&gt; claims J     queue now empty
+print("scratch:", dbscan_scratch(P, 1.5, 4, names))
+print("sklearn:", DBSCAN(eps=1.5, min_samples=4).fit_predict(P))
+print("same on the 315 moon rows:", np.array_equal(dbscan_scratch(X, 0.3, 5), DBSCAN(eps=0.3, min_samples=5).fit_predict(X)))</div>
+  <div class="fx" data-lang="text">  cluster 0: take A -&gt; claims BCD  queue now BCD
+  cluster 0: take B -&gt; claims E    queue now CD
+  cluster 0: take C -&gt; claims -    queue now D
+  cluster 0: take D -&gt; claims -    queue now empty
+  cluster 1: take F -&gt; claims GHI  queue now GHI
+  cluster 1: take G -&gt; claims -    queue now HI
+  cluster 1: take H -&gt; claims -    queue now I
+  cluster 1: take I -&gt; claims J    queue now empty
 scratch: [ 0  0  0  0  0  1  1  1  1  1 -1 -1]
-sklearn: [ 0  0  0  0  0  1  1  1  1  1 -1 -1]</div>
-  <p>The printed steps are exactly the hand table, and the labels match scikit-learn. On a bigger test, the 315 moon-and-junk rows from section 01:</p>
-  <div class="fx" data-lang="py">lab_s = dbscan_scratch(X, 0.3, 5)
-lab_k = DBSCAN(eps=0.3, min_samples=5).fit_predict(X)
-print("identical to sklearn on the 315 moon rows:", np.array_equal(lab_s, lab_k))</div>
-  <div class="fx" data-lang="text">identical to sklearn on the 315 moon rows: True</div>
-  <h3>Is DBSCAN deterministic?</h3>
-  <p>Almost. Core points and noise points never depend on the order of the rows: being core is a count, and being noise means no core point is near. The only order-dependent thing is a <strong>border point that lies within eps of core points from two different clusters</strong>. It can only take one label, and it takes the label of whichever cluster's flood-fill reaches it first. Our stalls have no such point (E only touches the station market, J only the college market), so here is a tiny one-dimensional example: two groups at 0–1 and 4–5, and one point at 2.5 that is exactly eps = 1.5 away from the core point 1 and from the core point 4.</p>
-  <div class="fx" data-lang="py">x1 = np.array([0, 0.5, 1, 2.5, 4, 4.5, 5])[:, None]      # the row at 2.5 sits between two groups
+sklearn: [ 0  0  0  0  0  1  1  1  1  1 -1 -1]
+same on the 315 moon rows: True</div>
+  <p>Follow the printout. A is the first unlabelled core point, so cluster 0 starts at A, which claims B, C and D (all core, so all join the queue). B then claims E, but E is a border point, so it is labelled and not queued. C and D find nobody new, the queue empties, and cluster 0 is {A, B, C, D, E}. The walk moves on: B, C, D and E are already labelled, F is the next unlabelled core point, and cluster 1 grows from F the same way, with I finally claiming the border stall J. K and L are never reached and stay −1. The result matches scikit-learn exactly, and so does the run on the 315 moon rows, which shows the small function really is the algorithm.</p>
+  <p>Is the result always the same? Almost. Being core is just a count, and being noise means no core point is nearby, so neither depends on the order of the rows. The one exception is a border point that lies within eps of core points from <em>two different</em> clusters. It can only take one label, and it takes the label of whichever cluster's flood fill reaches it first. The stalls have no such point, so here is a tiny one-dimensional case: two groups at 0–1 and 4–5, and one point at 2.5 that is exactly 1.5 away from the core point 1 and the core point 4.</p>
+  <div class="fx" data-lang="py">x1 = np.array([0, 0.5, 1, 2.5, 4, 4.5, 5])[:, None]     # the point 2.5 sits between two groups
 for order in ([0, 1, 2, 3, 4, 5, 6], [6, 5, 4, 3, 2, 1, 0]):
     lab = DBSCAN(eps=1.5, min_samples=4).fit_predict(x1[order])
     pos = order.index(3)
-    print("row order", order, "-&gt; labels", lab, "| the 2.5 row gets", lab[pos],
-          "| it joined the group containing", x1[order][lab == lab[pos]].ravel().tolist())</div>
-  <div class="fx" data-lang="text">row order [0, 1, 2, 3, 4, 5, 6] -&gt; labels [0 0 0 0 1 1 1] | the 2.5 row gets 0 | it joined the group containing [0.0, 0.5, 1.0, 2.5]
-row order [6, 5, 4, 3, 2, 1, 0] -&gt; labels [0 0 0 0 1 1 1] | the 2.5 row gets 0 | it joined the group containing [5.0, 4.5, 4.0, 2.5]</div>
-  <p>With the rows in their natural order, the left group is found first and the 2.5 point joins it. Reverse the rows, and the right group (now listed first) claims it instead. Only this one point changed sides; everything else is identical.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>DBSCAN output = the density-connected groups of core points (unique), plus each border point attached to one of the clusters whose core points reach it (order-dependent if several do), plus noise (unique). A variant called <strong>DBSCAN*</strong> drops border points entirely (treats them as noise), which makes the result fully deterministic; HDBSCAN builds on DBSCAN*.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>A cluster can contain points that are much more than eps apart. A and E are 2.236 km apart with eps = 1.5, yet both are in cluster 0, because the chain A → D → E links them. In the moons, the two tips of one moon are many times eps apart. eps is the size of one step, not the size of a cluster.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> we chose eps = 1.5 km and min_samples = 4 by looking at a map. On real data with 20 columns nobody can look. <b>Next: choosing eps and min_samples with the k-distance plot.</b></div>
+    print("rows in order", order, "-&gt; 2.5 joins the group",
+          sorted(x1[order][lab == lab[pos]].ravel().tolist()))</div>
+  <div class="fx" data-lang="text">rows in order [0, 1, 2, 3, 4, 5, 6] -&gt; 2.5 joins the group [0.0, 0.5, 1.0, 2.5]
+rows in order [6, 5, 4, 3, 2, 1, 0] -&gt; 2.5 joins the group [2.5, 4.0, 4.5, 5.0]</div>
+  <p>In the natural row order, the left group is found first and claims the 2.5 point; with the rows reversed the right group comes first and claims it. Nothing else changes. A variant called <strong>DBSCAN*</strong> avoids this by treating all border points as noise, which makes the result fully deterministic; HDBSCAN, in section 06, is built on DBSCAN*.</p>
 
-  <h2 id="db-eps"><span class="num">05</span>Choosing eps and min_samples</h2>
-  <p><strong>The question we can't answer yet.</strong> The whole result depends on eps and min_samples. Where should they come from when we cannot see the data?</p>
-  <h3>min_samples first</h3>
-  <p>min_samples decides how much evidence a point needs to count as "crowded". Common guidance:</p>
-  <ul>
-    <li><strong>At least d + 1</strong> for d features. With min_samples = 1 every point is core and DBSCAN becomes plain single-linkage clustering cut at eps (no noise at all); with 2 it is almost the same.</li>
-    <li><strong>About 2 · d</strong> is the usual starting point. Our stalls have d = 2, so 4 is exactly the rule of thumb (it is also what the original authors suggested for 2-D data).</li>
-    <li><strong>Larger</strong> for noisy or large data sets: more evidence is needed before a region counts as a crowd, so more stray points become noise and small accidental clusters disappear.</li>
-  </ul>
-  <h3>The k-distance idea</h3>
-  <p>Once min_samples = k is fixed, look at each point's distance to its k-th nearest neighbour, counting the point itself as the first. Call it the point's <strong>k-distance</strong>. Here is the key link: <strong>a point is core exactly when its k-distance ≤ eps</strong>, because "the k-th closest point is within eps" means "at least k points are within eps". So if you sort all the k-distances, you see at a glance what fraction of points would be core for any eps you might pick.</p>
-  <p>Inside a cluster, points have small, similar k-distances. Noise points sit far from everything and have large ones. Sorted, the curve stays low and flat for crowded points and then shoots up for the lonely ones. eps should go at the bend (the "knee" or "elbow").</p>
-  <h3>By hand on the twelve stalls (k = 4)</h3>
-  <p>For each stall, list the distances to the others from smallest up (they are already in the section 03 table); the k-distance is the 3rd one, because the stall itself is the 1st neighbour at distance 0.</p>
-  <table class="tbl">
-    <tr><th>Stall</th><th>Sorted distances to others</th><th>3rd other = 4-distance</th><th>≤ 1.5 → core?</th></tr>
-    <tr><td>D</td><td>1, 1, 1, 1.414 …</td><td>1.000</td><td>yes</td></tr>
-    <tr><td>A, B, C, F, G, H, I</td><td>1, 1, 1.414 …</td><td>1.414</td><td>yes</td></tr>
-    <tr><td>E</td><td>1, 1.414, 2 …</td><td>2.000</td><td>no</td></tr>
-    <tr><td>J</td><td>1.414, 2.236, 2.236</td><td>2.236</td><td>no</td></tr>
-    <tr><td>K</td><td>3.606, 4.243, 4.472</td><td>4.472</td><td>no</td></tr>
-    <tr><td>L</td><td>5, 5.657, 5.831</td><td>5.831</td><td>no</td></tr>
-  </table>
-  <p>Sorted: 1.0, then seven values of 1.414, then 2.0, 2.236, 4.472, 5.831. The knee is between 1.414 and 2.0, so any eps in [1.414, 2.0) gives the same core points; our 1.5 sits inside that range. Notice that the k-distance plot does not tell border from noise (E and K both have large k-distances); that is decided afterwards by whether a core point is nearby.</p>
+  <h2 id="db-eps"><span class="num">04</span>Choosing eps and min_samples</h2>
+  <p>So far we chose eps = 1.5 km and min_samples = 4 by looking at a map. Real data with twenty columns cannot be looked at, and the whole result depends on these two numbers, so we need a systematic way to choose them.</p>
+  <p>Choose min_samples first, because it decides how much evidence a point needs before it counts as crowded. It should be at least d + 1 for d features: with min_samples = 1 every point is core, there is no noise at all, and DBSCAN turns into plain single-linkage clustering. The usual starting point is about 2 × d; the stalls have d = 2 columns, so 4 is exactly the rule of thumb. For noisy or very large data sets use a larger value, so that small accidental clumps of points stop counting as clusters.</p>
+  <p>With min_samples = k fixed, look at each point's distance to its k-th nearest point, counting the point itself as the first. This is called the point's <strong>k-distance</strong>, and it has one very useful property: <em>a point is core exactly when its k-distance is at most eps</em>. That is just a restatement of the definition, because "my k-th closest point is within eps" means "at least k points are within eps". So if you sort everyone's k-distances, you can see at a glance what fraction of the points would be core for any eps you might pick.</p>
+  <p>For the stalls with k = 4, the k-distance is the third-smallest distance to another stall (the first "neighbour" is the stall itself at distance 0). D has three stalls at 1 km, so its 4-distance is 1.0. A, B, C, F, G, H and I have two at 1 km and one at 1.414, so theirs is 1.414. E's third neighbour is C at 2, J's is 2.236, K's is 4.472 and L's is 5.831. scikit-learn's <code>NearestNeighbors</code> computes the same thing; asking it for <code>n_neighbors=4</code> on the training points themselves returns each stall plus its three nearest, which is exactly DBSCAN's convention.</p>
   <div class="fx" data-lang="py">from sklearn.neighbors import NearestNeighbors
-dist, _ = NearestNeighbors(n_neighbors=4).fit(P).kneighbors(P)   # 4 = min_samples; column 0 is the point itself
-kd = dist[:, -1]                                                  # distance to the 3rd OTHER point
-for nm, v in sorted(zip(names, kd), key=lambda t: t[1]):
-    print(f"{nm}: {v:.3f}", end="   ")
-print()</div>
-  <div class="fx" data-lang="text">D: 1.000   A: 1.414   B: 1.414   C: 1.414   F: 1.414   G: 1.414   H: 1.414   I: 1.414   E: 2.000   J: 2.236   K: 4.472   L: 5.831   </div>
-  <p><code>NearestNeighbors(n_neighbors=4).kneighbors(P)</code> returns, for each training point, its 4 nearest points; since the query points are the training points, the first one is the point itself at distance 0. That is why <code>n_neighbors = min_samples</code> gives exactly DBSCAN's convention. Keep this column of numbers in mind: in section 08 the very same numbers come back under the name "core distance".</p>
-  <h3>What different eps values do to the stalls</h3>
+dist, _ = NearestNeighbors(n_neighbors=4).fit(P).kneighbors(P)   # 4 = min_samples; column 0 is the stall itself
+kd = dist[:, -1]
+print("  ".join(f"{nm}:{v:.3f}" for nm, v in sorted(zip(names, kd), key=lambda t: t[1])))</div>
+  <div class="fx" data-lang="text">D:1.000  A:1.414  B:1.414  C:1.414  F:1.414  G:1.414  H:1.414  I:1.414  E:2.000  J:2.236  K:4.472  L:5.831</div>
+  <p>Sorted, the values sit on a low plateau (1.0 and seven values of 1.414) and then jump: 2.0, 2.236, 4.472, 5.831. Points inside a crowd have small, similar k-distances; lonely points have large ones. eps belongs just after the plateau, at the bend in the sorted curve that people call the <strong>knee</strong>. Any eps from 1.414 up to just below 2.0 makes exactly the same eight stalls core, and our 1.5 is inside that range. Notice that the k-distances alone cannot tell a border point from noise (E and K both have large values); that is decided afterwards by whether a core point is nearby. Here is what happens to the stalls as eps moves through the sorted values:</p>
   <div class="fx" data-lang="py">for e in (1.0, 1.5, 2.0, 2.5, 4.5):
     lab = DBSCAN(eps=e, min_samples=4).fit_predict(P)
     print(f"eps={e:&lt;4}", " ".join(f"{n}={l:2d}" for n, l in zip(names, lab)))</div>
@@ -512,26 +323,8 @@ eps=1.5  A= 0 B= 0 C= 0 D= 0 E= 0 F= 1 G= 1 H= 1 I= 1 J= 1 K=-1 L=-1
 eps=2.0  A= 0 B= 0 C= 0 D= 0 E= 0 F= 1 G= 1 H= 1 I= 1 J= 1 K=-1 L=-1
 eps=2.5  A= 0 B= 0 C= 0 D= 0 E= 0 F= 1 G= 1 H= 1 I= 1 J= 1 K=-1 L=-1
 eps=4.5  A= 0 B= 0 C= 0 D= 0 E= 0 F= 0 G= 0 H= 0 I= 0 J= 0 K= 0 L=-1</div>
-  <table class="tbl">
-    <tr><th>eps</th><th>What happened</th><th>Read from the k-distances</th></tr>
-    <tr><td>1.0</td><td>Only D is core (its 4-distance is 1.0). Cluster 0 = D plus B, C, E; A and the whole college market become noise.</td><td>Below the plateau of 1.414: almost nothing is core</td></tr>
-    <tr><td>1.5, 2.0</td><td>The right answer: two markets, K and L noise</td><td>Just above the plateau</td></tr>
-    <tr><td>2.5</td><td>Same labels, but now E (2.0) and J (2.236) are core too</td><td>Still below K's 4.472</td></tr>
-    <tr><td>4.5</td><td>E–F (4.243) is now within eps: the two markets merge, K (4.472) joins; only L is noise</td><td>Past the knee: too big</td></tr>
-  </table>
-  <h3>On the moons</h3>
-  <p>For a larger set we sort the 315 k-distances (k = 5) and find the knee automatically with a simple rule: draw a straight line from the first to the last point of the sorted curve and take the point farthest below that line.</p>
-  <div class="fx" data-lang="py">dist, _ = NearestNeighbors(n_neighbors=5).fit(X).kneighbors(X)
-kd = np.sort(dist[:, -1])                       # the sorted k-distance curve (k = min_samples = 5)
-print("percentiles 50/80/90/95/98:", np.percentile(kd, [50, 80, 90, 95, 98]).round(3))
-
-# knee = point of the curve farthest from the straight line joining its two ends
-i = np.arange(len(kd))
-line = kd[0] + (kd[-1] - kd[0]) * i / (len(kd) - 1)
-knee = np.argmax(line - kd)
-print("knee at row", knee, "of", len(kd), "-&gt; eps about", round(kd[knee], 3))</div>
-  <div class="fx" data-lang="text">percentiles 50/80/90/95/98: [0.116 0.153 0.177 0.258 0.659]
-knee at row 296 of 315 -&gt; eps about 0.202</div>
+  <p>At eps = 1.0 only D is core (its 4-distance is exactly 1.0), so cluster 0 is D plus its circle (B, C, E), stall A becomes noise, and the whole college market disappears. From 1.5 to 2.5 the answer is the right one; at 2.5 E and J have also become core, which changes nothing visible. At 4.5 the gap between the markets (E to F is 4.243 km) is inside one circle, so the two markets merge and K joins them; only L is still noise. A range of eps over which the answer does not change, like 1.5 to 2.5 here, is a good sign that the structure is real.</p>
+  <p>On larger data you look at the curve instead of a table. For the 315 moon-and-junk rows with k = 5 the sorted k-distances look like this:</p>
   <figure class="viz"><svg viewBox="0 0 600 240" width="600">
 <line x1="60" y1="190" x2="560" y2="190" stroke="currentColor"/><line x1="60" y1="20" x2="60" y2="190" stroke="currentColor"/>
 <line x1="60" y1="190" x2="560" y2="190" stroke="currentColor" stroke-opacity="0.1"/><text x="54" y="194" text-anchor="end" class="tm" font-size="10">0</text>
@@ -546,137 +339,85 @@ knee at row 296 of 315 -&gt; eps about 0.202</div>
 <text x="72" y="32" class="tm" font-size="11">distance to 5th neighbour (self counted)</text>
 <text x="554" y="130" text-anchor="end" class="tm" font-size="11">junk rows: far from everyone</text>
 </svg><figcaption>The sorted k-distance curve on the moons-plus-junk data. Flat for crowded rows, then a sharp rise for the lonely ones. eps goes at the bend.</figcaption></figure>
-  <p>Half the points have a 5-distance of 0.116 or less; 95% are below 0.258; then the curve rockets (98th percentile 0.659) because of the junk rows. The automatic knee lands at 0.202. Treat the knee as the <em>lower end</em> of a search range, then try a few values above it and look at the result. A grid of eps and min_samples shows what each choice does:</p>
-  <div class="fx" data-lang="py">print("eps   min_samples=3          min_samples=5          min_samples=10")
+  <p>A simple automatic way to find the knee is to draw a straight line from the first to the last point of the sorted curve and take the point that lies farthest below that line:</p>
+  <div class="fx" data-lang="py">dist, _ = NearestNeighbors(n_neighbors=5).fit(X).kneighbors(X)
+kd = np.sort(dist[:, -1])                         # sorted k-distances, k = min_samples = 5
+print("percentiles 50/80/90/95/98:", np.percentile(kd, [50, 80, 90, 95, 98]).round(3))
+i = np.arange(len(kd))                            # knee = point farthest below the line joining the ends
+line = kd[0] + (kd[-1] - kd[0]) * i / (len(kd) - 1)
+knee = np.argmax(line - kd)
+print("knee at row", knee, "of", len(kd), "-&gt; eps about", round(kd[knee], 3))</div>
+  <div class="fx" data-lang="text">percentiles 50/80/90/95/98: [0.116 0.153 0.177 0.258 0.659]
+knee at row 296 of 315 -&gt; eps about 0.202</div>
+  <p>Half the points have a 5-distance of 0.116 or less and 95% are below 0.258; after that the curve shoots up (the 98th percentile is 0.659) because of the junk rows. The automatic knee lands at 0.202. Treat the knee as the lower end of a search range rather than the final answer, and try a small grid of values around it:</p>
+  <div class="fx" data-lang="py">print("eps   min_samples=3     min_samples=5     min_samples=10")
 for e in (0.1, 0.2, 0.3, 0.5, 0.8):
     row = []
     for m in (3, 5, 10):
         l = DBSCAN(eps=e, min_samples=m).fit_predict(X)
-        row.append(f"k={len(set(l) - {-1}):2d} noise={(l == -1).sum():3d}  ")
-    print(f"{e:&lt;5}", " ".join(row))</div>
-  <div class="fx" data-lang="text">eps   min_samples=3          min_samples=5          min_samples=10
-0.1   k=33 noise= 50   k=21 noise=158   k= 0 noise=315  
-0.2   k= 2 noise= 13   k= 3 noise= 14   k= 9 noise= 43  
-0.3   k= 2 noise= 10   k= 2 noise= 11   k= 2 noise= 12  
-0.5   k= 1 noise=  7   k= 1 noise=  7   k= 2 noise=  7  
-0.8   k= 1 noise=  2   k= 1 noise=  2   k= 1 noise=  3  </div>
-  <p>Read it column by column. With min_samples = 5: eps = 0.1 shatters the data into 21 little clusters and 158 noise points (most points are not core); eps = 0.2 (the knee) gives 3 clusters (one moon tip is cut off); eps = 0.3 gives the right 2 clusters with 11 noise points; eps = 0.5 and above bridges the two moons into one (for min_samples 3 and 5). min_samples = 3 is more forgiving (at eps = 0.1 only 50 rows are noise, spread over 33 tiny clusters); min_samples = 10 is more demanding (at eps = 0.1 nothing is core, so all 315 rows are noise, and at 0.2 there are still 9 fragments). In the 0.3 row all three settings agree on 2 clusters: a region of the grid where the answer does not change when you nudge the knobs is a good sign, just like the range 1.5–2.0 for the stalls.</p>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>eps is measured in the units of your features. For the stalls it is kilometres. After <code>StandardScaler</code>, 0.3 means "0.3 standard deviations". Without scaling, a feature measured in rupees and one measured in years would need completely different radii, and one eps cannot serve both. Scale first (see <a class="xref" data-note="ml_features">Feature Engineering</a>), then choose eps.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>The k-distance plot is computed with one fixed min_samples. If you change min_samples, recompute the plot; the knee moves (bigger k → larger k-distances → larger eps).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> we can now run DBSCAN well. But is it really better than K-Means in general, or only on the stalls and the moons? <b>Next: shapes and noise, head to head.</b></div>
+        row.append(f"k={len(set(l) - {-1}):2d} noise={(l == -1).sum():3d}")
+    print(f"{e:&lt;5}", "   ".join(row))</div>
+  <div class="fx" data-lang="text">eps   min_samples=3     min_samples=5     min_samples=10
+0.1   k=33 noise= 50   k=21 noise=158   k= 0 noise=315
+0.2   k= 2 noise= 13   k= 3 noise= 14   k= 9 noise= 43
+0.3   k= 2 noise= 10   k= 2 noise= 11   k= 2 noise= 12
+0.5   k= 1 noise=  7   k= 1 noise=  7   k= 2 noise=  7
+0.8   k= 1 noise=  2   k= 1 noise=  2   k= 1 noise=  3</div>
+  <p>Read it column by column. With min_samples = 5, eps = 0.1 shatters the data into 21 little clusters with 158 noise points, because most points are not core at that radius; eps = 0.2 (the knee) gives 3 clusters because one moon tip is cut off; eps = 0.3 gives the right 2 clusters with 11 noise points; and from 0.5 the two moons are bridged into one. A smaller min_samples is more forgiving (at eps = 0.1 only 50 rows are noise, but spread over 33 tiny clusters), and a larger one is stricter (at eps = 0.1 nothing is core and all 315 rows are noise). In the 0.3 row all three settings agree on 2 clusters: just as with the stalls, a region where nudging the knobs does not change the answer is the one to trust. If you change min_samples, recompute the k-distance plot, because a larger k gives larger k-distances and moves the knee to a larger eps.</p>
+  <p>Finally, remember that eps is measured in the units of your features. For the stalls it is kilometres; after <code>StandardScaler</code> it is "standard deviations". If one feature is in rupees and another in years, no single radius can be right in both directions, so scale the features first (see <a class="xref" data-note="ml_features">Feature Engineering</a>) and then choose eps.</p>
 
-  <h2 id="db-shapes"><span class="num">06</span>Arbitrary Shapes and Noise vs K-Means</h2>
-  <p><strong>The question we can't answer yet.</strong> On the stalls DBSCAN gave the right two markets and flagged K and L, while K-Means forced them in. Does that advantage hold on other shapes, and where does K-Means still win?</p>
-  <p>Three classic data sets, each scaled, each clustered by K-Means (given the true k) and by DBSCAN (eps = 0.3, min_samples = 5, the same settings everywhere):</p>
+  <h2 id="db-shapes"><span class="num">05</span>Where DBSCAN Wins and Where It Fails</h2>
+  <p>The moons in section 01 were one data set. To see the general pattern, here are three classic shapes, each scaled, each clustered by K-Means (given the true k) and by DBSCAN with the same settings everywhere (eps = 0.3, min_samples = 5):</p>
   <div class="fx" data-lang="py">from sklearn.datasets import make_circles, make_blobs
-from sklearn.cluster import HDBSCAN
 sets = {
     "moons":   make_moons(n_samples=400, noise=0.06, random_state=0),
     "circles": make_circles(n_samples=400, noise=0.05, factor=0.45, random_state=0),
     "blobs":   make_blobs(n_samples=400, centers=3, cluster_std=0.6, random_state=2),
 }
-print(f"{'data':8s} {'KMeans ARI':&gt;10s} {'DBSCAN ARI':&gt;10s} {'DBSCAN k':&gt;8s} {'noise':&gt;5s}")
+print(f"{'data':8s} {'K-Means ARI':&gt;11s} {'DBSCAN ARI':&gt;10s} {'DBSCAN k':&gt;8s} {'noise':&gt;5s}")
 for name, (Xd, yd) in sets.items():
     Xd = StandardScaler().fit_transform(Xd)
-    k = len(set(yd))
-    a = KMeans(n_clusters=k, n_init=10, random_state=0).fit_predict(Xd)
+    a = KMeans(n_clusters=len(set(yd)), n_init=10, random_state=0).fit_predict(Xd)
     b = DBSCAN(eps=0.3, min_samples=5).fit_predict(Xd)
-    print(f"{name:8s} {adjusted_rand_score(yd, a):10.3f} {adjusted_rand_score(yd, b):10.3f} "
+    print(f"{name:8s} {adjusted_rand_score(yd, a):11.3f} {adjusted_rand_score(yd, b):10.3f} "
           f"{len(set(b) - {-1}):8d} {(b == -1).sum():5d}")</div>
-  <div class="fx" data-lang="text">data     KMeans ARI DBSCAN ARI DBSCAN k noise
-moons         0.475      1.000        2     0
-circles      -0.003      1.000        2     0
-blobs         0.985      0.952        3     5</div>
-  <table class="tbl">
-    <tr><th>Data</th><th>What it looks like</th><th>K-Means</th><th>DBSCAN</th><th>Why</th></tr>
-    <tr><td>stalls</td><td>two square markets + 2 loners</td><td>groups right, loners forced in</td><td><strong>groups right, loners = noise</strong></td><td>K-Means has no noise label</td></tr>
-    <tr><td>moons</td><td>two interlocking half-circles</td><td>0.475</td><td><strong>1.000</strong></td><td>a straight cut cannot separate them; chaining follows each curve</td></tr>
-    <tr><td>circles</td><td>a small ring inside a big ring</td><td>−0.003</td><td><strong>1.000</strong></td><td>both rings have the same centre, so K-Means has nothing to work with; chaining follows each ring</td></tr>
-    <tr><td>blobs</td><td>three round clouds</td><td><strong>0.985</strong></td><td>0.952</td><td>K-Means' home ground; DBSCAN calls 5 edge points noise, which costs it a little</td></tr>
-  </table>
-  <p>K-Means gets a <em>negative</em> ARI on the circles: slightly worse than random labelling. It cut both rings in half with one straight line. DBSCAN is perfect on both curved data sets with no k given. On the blobs, K-Means wins slightly: the points DBSCAN called noise are really cluster members in thin outer regions.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>K-Means is like drawing school catchment areas: everyone goes to the nearest school, so the boundaries are straight lines between schools. DBSCAN is like tracing a river: you follow the water wherever it bends, and dry land is left out.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Calling every noise point an anomaly. DBSCAN's −1 means "not in a dense region at this eps", which includes legitimate rows at the thin edges of clusters (the 5 blob points above). For anomaly detection proper, a dedicated method (Isolation Forest, Local Outlier Factor, or HDBSCAN's outlier scores) usually works better.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> both stall markets had the same density, and so did the moons and rings. What if one cluster is tight and another is loose? <b>Next: the varying-density problem.</b></div>
-
-  <h2 id="db-varying"><span class="num">07</span>The Varying-Density Problem</h2>
-  <p><strong>The question we can't answer yet.</strong> DBSCAN uses <em>one</em> eps for the whole map. Can one radius be right for a packed city centre and a spread-out suburb at the same time?</p>
-  <h3>Seen on the stalls</h3>
-  <p>Look again at the eps table of section 05. At eps = 1.0 the station market partly survives (D is extra-crowded: four stalls within 1 km) while the college market disappears completely: all its stalls became noise, although by eye it is just as much a market. Two groups differing only slightly in tightness already get very different treatment from one radius. Real data is far less kind.</p>
-  <h3>At scale</h3>
-  <p>Three clouds: a tight one (spread 0.3, 300 points), a loose one (spread 1.5, 300 points) and a medium one (spread 0.6, 100 points).</p>
-  <div class="fx" data-lang="py">Xv, yv = make_blobs(n_samples=[300, 300, 100], centers=[[0, 0], [6, 0], [3, 5]],
+  <div class="fx" data-lang="text">data     K-Means ARI DBSCAN ARI DBSCAN k noise
+moons          0.475      1.000        2     0
+circles       -0.003      1.000        2     0
+blobs          0.985      0.952        3     5</div>
+  <p>On the moons and on two rings, one inside the other, DBSCAN is perfect without being told k, because chaining from core point to core point simply follows each curve. K-Means scores 0.475 on the moons and a slightly <em>negative</em> ARI on the rings, which is worse than random labelling: both rings have the same centre, so any straight cut slices both rings in half. On three round blobs the roles reverse. This is K-Means' home ground and it scores 0.985, while DBSCAN scores 0.952 because it labels 5 points in the thin outer edges of the blobs as noise, although they really belong to a blob. A useful picture is that K-Means draws school catchment areas, where everyone goes to the nearest school and the boundaries are straight lines, while DBSCAN traces a river, following the water wherever it bends and leaving the dry land out.</p>
+  <p>Those blob edge points also show that DBSCAN's −1 does not mean "anomaly". It means "not in a dense region at this eps", and that includes perfectly ordinary rows at the thin edges of clusters. If finding anomalies is the actual goal, a dedicated method such as Isolation Forest or Local Outlier Factor usually works better.</p>
+  <p>DBSCAN's real weakness appears when clusters have different densities. It uses one eps for the whole map, and one radius cannot be right for a packed city centre and a spread-out suburb at the same time. You can already see a hint of this on the stalls: at eps = 1.0 the station market partly survived, because D has four stalls within 1 km, while the college market vanished completely, although by eye it is just as much a market. Real data is far less kind. Here are three clouds with very different spreads, a tight one (spread 0.3, 300 points), a loose one (spread 1.5, 300 points) and a medium one (spread 0.6, 100 points):</p>
+  <div class="fx" data-lang="py">from sklearn.cluster import HDBSCAN
+Xv, yv = make_blobs(n_samples=[300, 300, 100], centers=[[0, 0], [6, 0], [3, 5]],
                     cluster_std=[0.3, 1.5, 0.6], random_state=1)          # tight, loose, medium
 for e in (0.2, 0.4, 0.7, 1.0, 1.5):
     l = DBSCAN(eps=e, min_samples=5).fit_predict(Xv)
     print(f"DBSCAN eps={e:&lt;4} clusters={len(set(l) - {-1}):2d} noise={(l == -1).sum():3d} "
           f"ARI={adjusted_rand_score(yv, l):.3f}")
-h = HDBSCAN(min_cluster_size=20, copy=True).fit(Xv)
-l = h.labels_
-print(f"HDBSCAN min_cluster_size=20  clusters={len(set(l) - {-1})} noise={(l == -1).sum()} "
-      f"ARI={adjusted_rand_score(yv, l):.3f}")</div>
+l = HDBSCAN(min_cluster_size=20, copy=True).fit_predict(Xv)
+print(f"HDBSCAN (no eps)  clusters={len(set(l) - {-1})} noise={(l == -1).sum()} ARI={adjusted_rand_score(yv, l):.3f}")</div>
   <div class="fx" data-lang="text">DBSCAN eps=0.2  clusters=13 noise=288 ARI=0.704
 DBSCAN eps=0.4  clusters= 5 noise= 95 ARI=0.796
 DBSCAN eps=0.7  clusters= 3 noise= 16 ARI=0.952
 DBSCAN eps=1.0  clusters= 2 noise=  8 ARI=0.334
 DBSCAN eps=1.5  clusters= 1 noise=  0 ARI=0.000
-HDBSCAN min_cluster_size=20  clusters=3 noise=30 ARI=0.913</div>
-  <figure class="viz"><svg viewBox="0 0 640 230" width="640">
-<text x="160" y="16" text-anchor="middle" font-size="12.5">DBSCAN, eps = 0.4</text>
-<text x="480" y="16" text-anchor="middle" font-size="12.5">HDBSCAN, min_cluster_size = 20</text>
-<circle cx="44" cy="136" r="2.2" class="fb sb"/><circle cx="36" cy="138" r="2.2" class="fb sb"/><circle cx="193" cy="111" r="2.2" class="fr sr"/><circle cx="114" cy="50" r="2.2" class="fg sg"/><circle cx="45" cy="144" r="2.2" class="fb sb"/><circle cx="47" cy="136" r="2.2" class="fb sb"/><circle cx="42" cy="138" r="2.2" class="fb sb"/><circle cx="166" cy="132" r="2.2" class="fr sr"/><circle cx="194" cy="116" r="2.2" class="fr sr"/><circle cx="126" cy="53" r="2.2" class="fg sg"/><circle cx="35" cy="133" r="2.2" class="fb sb"/><circle cx="46" cy="138" r="2.2" class="fb sb"/><circle cx="53" cy="134" r="2.2" class="fb sb"/><circle cx="176" cy="167" r="2.2" class="fr sr"/><circle cx="44" cy="132" r="2.2" class="fb sb"/><circle cx="195" cy="141" r="2.2" class="fr sr"/><circle cx="107" cy="53" r="2.2" class="fg sg"/><circle cx="185" cy="128" r="2.2" class="fr sr"/><circle cx="41" cy="140" r="2.2" class="fb sb"/><circle cx="124" cy="57" r="2.2" class="fg sg"/><circle cx="136" cy="142" r="2.2" class="fr sr"/><circle cx="42" cy="128" r="2.2" class="fb sb"/><circle cx="233" cy="129" r="2.2" class="fr sr"/><circle cx="103" cy="55" r="2.2" class="fg sg"/><circle cx="40" cy="135" r="2.2" class="fb sb"/><circle cx="54" cy="142" r="2.2" class="fb sb"/><circle cx="201" cy="182" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="109" cy="128" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="110" cy="125" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="47" cy="132" r="2.2" class="fb sb"/><circle cx="40" cy="128" r="2.2" class="fb sb"/><circle cx="195" cy="119" r="2.2" class="fr sr"/><circle cx="119" cy="62" r="2.2" class="fg sg"/><circle cx="183" cy="88" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="45" cy="141" r="2.2" class="fb sb"/><circle cx="51" cy="139" r="2.2" class="fb sb"/><circle cx="47" cy="131" r="2.2" class="fb sb"/><circle cx="39" cy="134" r="2.2" class="fb sb"/><circle cx="193" cy="157" r="2.2" class="fr sr"/><circle cx="223" cy="110" r="2.2" class="fr sr"/><circle cx="50" cy="136" r="2.2" class="fb sb"/><circle cx="112" cy="116" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="216" cy="149" r="2.2" class="fr sr"/><circle cx="181" cy="133" r="2.2" class="fr sr"/><circle cx="237" cy="142" r="2.2" class="fr sr"/><circle cx="148" cy="148" r="2.2" class="fr sr"/><circle cx="45" cy="141" r="2.2" class="fb sb"/><circle cx="46" cy="136" r="2.2" class="fb sb"/><circle cx="192" cy="146" r="2.2" class="fr sr"/><circle cx="140" cy="147" r="2.2" class="fr sr"/><circle cx="236" cy="163" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="106" cy="50" r="2.2" class="fg sg"/><circle cx="46" cy="135" r="2.2" class="fb sb"/><circle cx="28" cy="143" r="2.2" class="fb sb"/><circle cx="40" cy="134" r="2.2" class="fb sb"/><circle cx="32" cy="136" r="2.2" class="fb sb"/><circle cx="153" cy="139" r="2.2" class="fr sr"/><circle cx="143" cy="116" r="2.2" class="fr sr"/><circle cx="191" cy="142" r="2.2" class="fr sr"/><circle cx="98" cy="47" r="2.2" class="fg sg"/><circle cx="203" cy="119" r="2.2" class="fr sr"/><circle cx="43" cy="126" r="2.2" class="fb sb"/><circle cx="217" cy="107" r="2.2" class="fr sr"/><circle cx="133" cy="63" r="2.2" class="fg sg"/><circle cx="42" cy="138" r="2.2" class="fb sb"/><circle cx="272" cy="147" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="37" cy="134" r="2.2" class="fb sb"/><circle cx="44" cy="137" r="2.2" class="fb sb"/><circle cx="219" cy="141" r="2.2" class="fr sr"/><circle cx="110" cy="49" r="2.2" class="fg sg"/><circle cx="39" cy="140" r="2.2" class="fb sb"/><circle cx="185" cy="132" r="2.2" class="fr sr"/><circle cx="111" cy="55" r="2.2" class="fg sg"/><circle cx="175" cy="124" r="2.2" class="fr sr"/><circle cx="57" cy="140" r="2.2" class="fb sb"/><circle cx="53" cy="135" r="2.2" class="fb sb"/><circle cx="34" cy="136" r="2.2" class="fb sb"/><circle cx="38" cy="131" r="2.2" class="fb sb"/><circle cx="49" cy="140" r="2.2" class="fb sb"/><circle cx="163" cy="145" r="2.2" class="fr sr"/><circle cx="47" cy="128" r="2.2" class="fb sb"/><circle cx="168" cy="94" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="94" cy="44" r="2.2" class="fg sg"/><circle cx="220" cy="165" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="106" cy="64" r="2.2" class="fg sg"/><circle cx="48" cy="147" r="2.2" class="fb sb"/><circle cx="41" cy="133" r="2.2" class="fb sb"/><circle cx="196" cy="159" r="2.2" class="fr sr"/><circle cx="34" cy="127" r="2.2" class="fb sb"/><circle cx="143" cy="96" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="31" cy="131" r="2.2" class="fb sb"/><circle cx="245" cy="147" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="168" cy="163" r="2.2" class="fr sr"/><circle cx="238" cy="157" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="42" cy="129" r="2.2" class="fb sb"/><circle cx="41" cy="126" r="2.2" class="fb sb"/><circle cx="97" cy="53" r="2.2" class="fg sg"/><circle cx="298" cy="150" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="41" cy="137" r="2.2" class="fb sb"/><circle cx="37" cy="132" r="2.2" class="fb sb"/><circle cx="95" cy="61" r="2.2" class="fg sg"/><circle cx="106" cy="72" r="2.2" class="fg sg"/><circle cx="45" cy="137" r="2.2" class="fb sb"/><circle cx="175" cy="129" r="2.2" class="fr sr"/><circle cx="147" cy="146" r="2.2" class="fr sr"/><circle cx="202" cy="159" r="2.2" class="fr sr"/><circle cx="38" cy="130" r="2.2" class="fb sb"/><circle cx="32" cy="136" r="2.2" class="fb sb"/><circle cx="187" cy="118" r="2.2" class="fr sr"/><circle cx="216" cy="119" r="2.2" class="fr sr"/><circle cx="162" cy="161" r="2.2" class="fr sr"/><circle cx="209" cy="161" r="2.2" class="fr sr"/><circle cx="206" cy="147" r="2.2" class="fr sr"/><circle cx="203" cy="144" r="2.2" class="fr sr"/><circle cx="208" cy="120" r="2.2" class="fr sr"/><circle cx="209" cy="152" r="2.2" class="fr sr"/><circle cx="197" cy="152" r="2.2" class="fr sr"/><circle cx="49" cy="134" r="2.2" class="fb sb"/><circle cx="249" cy="169" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="43" cy="133" r="2.2" class="fb sb"/><circle cx="223" cy="151" r="2.2" class="fr sr"/><circle cx="43" cy="137" r="2.2" class="fb sb"/><circle cx="196" cy="116" r="2.2" class="fr sr"/><circle cx="41" cy="140" r="2.2" class="fb sb"/><circle cx="213" cy="132" r="2.2" class="fr sr"/><circle cx="194" cy="140" r="2.2" class="fr sr"/><circle cx="38" cy="134" r="2.2" class="fb sb"/><circle cx="101" cy="39" r="2.2" class="fg sg"/><circle cx="153" cy="153" r="2.2" class="fr sr"/><circle cx="196" cy="132" r="2.2" class="fr sr"/><circle cx="119" cy="73" r="2.2" class="fg sg"/><circle cx="42" cy="143" r="2.2" class="fb sb"/><circle cx="44" cy="139" r="2.2" class="fb sb"/><circle cx="196" cy="139" r="2.2" class="fr sr"/><circle cx="40" cy="131" r="2.2" class="fb sb"/><circle cx="93" cy="63" r="2.2" class="fg sg"/><circle cx="167" cy="147" r="2.2" class="fr sr"/><circle cx="222" cy="141" r="2.2" class="fr sr"/><circle cx="46" cy="137" r="2.2" class="fb sb"/><circle cx="169" cy="171" r="2.2" class="fr sr"/><circle cx="42" cy="133" r="2.2" class="fb sb"/><circle cx="40" cy="140" r="2.2" class="fb sb"/><circle cx="116" cy="62" r="2.2" class="fg sg"/><circle cx="144" cy="124" r="2.2" class="fr sr"/><circle cx="42" cy="137" r="2.2" class="fb sb"/><circle cx="102" cy="138" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="40" cy="137" r="2.2" class="fb sb"/><circle cx="49" cy="132" r="2.2" class="fb sb"/><circle cx="119" cy="60" r="2.2" class="fg sg"/><circle cx="198" cy="141" r="2.2" class="fr sr"/><circle cx="199" cy="133" r="2.2" class="fr sr"/><circle cx="63" cy="132" r="2.2" class="fb sb"/><circle cx="210" cy="118" r="2.2" class="fr sr"/><circle cx="44" cy="133" r="2.2" class="fb sb"/><circle cx="122" cy="72" r="2.2" class="fg sg"/><circle cx="123" cy="61" r="2.2" class="fg sg"/><circle cx="46" cy="131" r="2.2" class="fb sb"/><circle cx="215" cy="134" r="2.2" class="fr sr"/><circle cx="36" cy="133" r="2.2" class="fb sb"/><circle cx="180" cy="102" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="144" cy="138" r="2.2" class="fr sr"/><circle cx="149" cy="140" r="2.2" class="fr sr"/><circle cx="52" cy="135" r="2.2" class="fb sb"/><circle cx="214" cy="114" r="2.2" class="fr sr"/><circle cx="187" cy="139" r="2.2" class="fr sr"/><circle cx="42" cy="135" r="2.2" class="fb sb"/><circle cx="46" cy="135" r="2.2" class="fb sb"/><circle cx="46" cy="137" r="2.2" class="fb sb"/><circle cx="130" cy="148" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="51" cy="135" r="2.2" class="fb sb"/><circle cx="113" cy="59" r="2.2" class="fg sg"/><circle cx="34" cy="136" r="2.2" class="fb sb"/><circle cx="33" cy="133" r="2.2" class="fb sb"/><circle cx="115" cy="63" r="2.2" class="fg sg"/><circle cx="45" cy="136" r="2.2" class="fb sb"/><circle cx="169" cy="124" r="2.2" class="fr sr"/><circle cx="114" cy="59" r="2.2" class="fg sg"/><circle cx="134" cy="47" r="2.2" class="fg sg"/><circle cx="40" cy="139" r="2.2" class="fb sb"/><circle cx="101" cy="128" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="126" cy="50" r="2.2" class="fg sg"/><circle cx="199" cy="130" r="2.2" class="fr sr"/><circle cx="32" cy="128" r="2.2" class="fb sb"/><circle cx="46" cy="134" r="2.2" class="fb sb"/><circle cx="180" cy="133" r="2.2" class="fr sr"/><circle cx="127" cy="150" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="33" cy="139" r="2.2" class="fb sb"/><circle cx="205" cy="162" r="2.2" class="fr sr"/><circle cx="116" cy="56" r="2.2" class="fg sg"/><circle cx="202" cy="108" r="2.2" class="fr sr"/><circle cx="49" cy="140" r="2.2" class="fb sb"/><circle cx="31" cy="138" r="2.2" class="fb sb"/><circle cx="54" cy="136" r="2.2" class="fb sb"/><circle cx="40" cy="130" r="2.2" class="fb sb"/><circle cx="176" cy="193" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="39" cy="129" r="2.2" class="fb sb"/><circle cx="177" cy="153" r="2.2" class="fr sr"/><circle cx="137" cy="167" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="34" cy="132" r="2.2" class="fb sb"/><circle cx="48" cy="132" r="2.2" class="fb sb"/><circle cx="164" cy="140" r="2.2" class="fr sr"/><circle cx="154" cy="107" r="2.2" class="fv"/><circle cx="33" cy="125" r="2.2" class="fb sb"/><circle cx="59" cy="137" r="2.2" class="fb sb"/><circle cx="175" cy="136" r="2.2" class="fr sr"/><circle cx="210" cy="138" r="2.2" class="fr sr"/><circle cx="147" cy="158" r="2.2" class="fr sr"/><circle cx="147" cy="132" r="2.2" class="fr sr"/><circle cx="218" cy="139" r="2.2" class="fr sr"/><circle cx="50" cy="136" r="2.2" class="fb sb"/><circle cx="45" cy="139" r="2.2" class="fb sb"/><circle cx="180" cy="141" r="2.2" class="fr sr"/><circle cx="41" cy="142" r="2.2" class="fb sb"/><circle cx="46" cy="139" r="2.2" class="fb sb"/><circle cx="41" cy="136" r="2.2" class="fb sb"/><circle cx="50" cy="128" r="2.2" class="fb sb"/><circle cx="38" cy="136" r="2.2" class="fb sb"/><circle cx="204" cy="132" r="2.2" class="fr sr"/><circle cx="48" cy="133" r="2.2" class="fb sb"/><circle cx="77" cy="54" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="37" cy="136" r="2.2" class="fb sb"/><circle cx="94" cy="117" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="30" cy="132" r="2.2" class="fb sb"/><circle cx="172" cy="156" r="2.2" class="fr sr"/><circle cx="42" cy="131" r="2.2" class="fb sb"/><circle cx="150" cy="140" r="2.2" class="fr sr"/><circle cx="44" cy="127" r="2.2" class="fb sb"/><circle cx="104" cy="82" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="149" cy="139" r="2.2" class="fr sr"/><circle cx="120" cy="40" r="2.2" class="fg sg"/><circle cx="50" cy="134" r="2.2" class="fb sb"/><circle cx="45" cy="131" r="2.2" class="fb sb"/><circle cx="130" cy="140" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="191" cy="177" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="33" cy="132" r="2.2" class="fb sb"/><circle cx="132" cy="110" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="100" cy="65" r="2.2" class="fg sg"/><circle cx="46" cy="138" r="2.2" class="fb sb"/><circle cx="196" cy="140" r="2.2" class="fr sr"/><circle cx="221" cy="152" r="2.2" class="fr sr"/><circle cx="43" cy="135" r="2.2" class="fb sb"/><circle cx="118" cy="76" r="2.2" class="fg sg"/><circle cx="124" cy="63" r="2.2" class="fg sg"/><circle cx="133" cy="42" r="2.2" class="fg sg"/><circle cx="99" cy="64" r="2.2" class="fg sg"/><circle cx="194" cy="138" r="2.2" class="fr sr"/><circle cx="39" cy="136" r="2.2" class="fb sb"/><circle cx="192" cy="135" r="2.2" class="fr sr"/><circle cx="52" cy="139" r="2.2" class="fb sb"/><circle cx="104" cy="52" r="2.2" class="fg sg"/><circle cx="27" cy="145" r="2.2" class="fb sb"/><circle cx="173" cy="156" r="2.2" class="fr sr"/><circle cx="45" cy="128" r="2.2" class="fb sb"/><circle cx="159" cy="148" r="2.2" class="fr sr"/><circle cx="210" cy="150" r="2.2" class="fr sr"/><circle cx="185" cy="124" r="2.2" class="fr sr"/><circle cx="222" cy="111" r="2.2" class="fr sr"/><circle cx="107" cy="145" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="202" cy="131" r="2.2" class="fr sr"/><circle cx="194" cy="141" r="2.2" class="fr sr"/><circle cx="165" cy="135" r="2.2" class="fr sr"/><circle cx="203" cy="82" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="148" cy="146" r="2.2" class="fr sr"/><circle cx="212" cy="168" r="2.2" class="ft st"/><circle cx="43" cy="137" r="2.2" class="fb sb"/><circle cx="116" cy="65" r="2.2" class="fg sg"/><circle cx="47" cy="139" r="2.2" class="fb sb"/><circle cx="37" cy="137" r="2.2" class="fb sb"/><circle cx="88" cy="146" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="180" cy="92" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="173" cy="116" r="2.2" class="fr sr"/><circle cx="39" cy="138" r="2.2" class="fb sb"/><circle cx="214" cy="94" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="236" cy="81" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="177" cy="142" r="2.2" class="fr sr"/><circle cx="232" cy="115" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="30" cy="140" r="2.2" class="fb sb"/><circle cx="87" cy="164" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="176" cy="115" r="2.2" class="fr sr"/><circle cx="155" cy="92" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="42" cy="133" r="2.2" class="fb sb"/><circle cx="107" cy="57" r="2.2" class="fg sg"/><circle cx="236" cy="156" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="136" cy="134" r="2.2" class="fr sr"/><circle cx="180" cy="112" r="2.2" class="fr sr"/><circle cx="122" cy="65" r="2.2" class="fg sg"/><circle cx="193" cy="141" r="2.2" class="fr sr"/><circle cx="38" cy="134" r="2.2" class="fb sb"/><circle cx="39" cy="130" r="2.2" class="fb sb"/><circle cx="160" cy="136" r="2.2" class="fr sr"/><circle cx="157" cy="110" r="2.2" class="fv"/><circle cx="150" cy="129" r="2.2" class="fr sr"/><circle cx="42" cy="141" r="2.2" class="fb sb"/><circle cx="184" cy="112" r="2.2" class="fr sr"/><circle cx="47" cy="138" r="2.2" class="fb sb"/><circle cx="107" cy="32" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="199" cy="142" r="2.2" class="fr sr"/><circle cx="45" cy="128" r="2.2" class="fb sb"/><circle cx="225" cy="161" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="239" cy="116" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="45" cy="135" r="2.2" class="fb sb"/><circle cx="200" cy="136" r="2.2" class="fr sr"/><circle cx="145" cy="128" r="2.2" class="fr sr"/><circle cx="75" cy="125" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="48" cy="135" r="2.2" class="fb sb"/><circle cx="38" cy="132" r="2.2" class="fb sb"/><circle cx="46" cy="139" r="2.2" class="fb sb"/><circle cx="202" cy="125" r="2.2" class="fr sr"/><circle cx="174" cy="147" r="2.2" class="fr sr"/><circle cx="40" cy="137" r="2.2" class="fb sb"/><circle cx="49" cy="143" r="2.2" class="fb sb"/><circle cx="119" cy="57" r="2.2" class="fg sg"/><circle cx="187" cy="123" r="2.2" class="fr sr"/><circle cx="46" cy="140" r="2.2" class="fb sb"/><circle cx="240" cy="103" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="41" cy="140" r="2.2" class="fb sb"/><circle cx="116" cy="57" r="2.2" class="fg sg"/><circle cx="127" cy="122" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="125" cy="54" r="2.2" class="fg sg"/><circle cx="41" cy="131" r="2.2" class="fb sb"/><circle cx="28" cy="134" r="2.2" class="fb sb"/><circle cx="44" cy="138" r="2.2" class="fb sb"/><circle cx="39" cy="142" r="2.2" class="fb sb"/><circle cx="120" cy="143" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="127" cy="42" r="2.2" class="fg sg"/><circle cx="38" cy="133" r="2.2" class="fb sb"/><circle cx="116" cy="31" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="115" cy="65" r="2.2" class="fg sg"/><circle cx="128" cy="172" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="119" cy="59" r="2.2" class="fg sg"/><circle cx="40" cy="129" r="2.2" class="fb sb"/><circle cx="50" cy="127" r="2.2" class="fb sb"/><circle cx="96" cy="69" r="2.2" class="fg sg"/><circle cx="29" cy="134" r="2.2" class="fb sb"/><circle cx="53" cy="133" r="2.2" class="fb sb"/><circle cx="214" cy="147" r="2.2" class="fr sr"/><circle cx="187" cy="169" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="41" cy="137" r="2.2" class="fb sb"/><circle cx="121" cy="60" r="2.2" class="fg sg"/><circle cx="40" cy="143" r="2.2" class="fb sb"/><circle cx="186" cy="149" r="2.2" class="fr sr"/><circle cx="51" cy="133" r="2.2" class="fb sb"/><circle cx="34" cy="135" r="2.2" class="fb sb"/><circle cx="44" cy="142" r="2.2" class="fb sb"/><circle cx="42" cy="133" r="2.2" class="fb sb"/><circle cx="180" cy="155" r="2.2" class="fr sr"/><circle cx="190" cy="159" r="2.2" class="fr sr"/><circle cx="34" cy="135" r="2.2" class="fb sb"/><circle cx="130" cy="57" r="2.2" class="fg sg"/><circle cx="100" cy="69" r="2.2" class="fg sg"/>
-<circle cx="364" cy="136" r="2.2" class="fr sr"/><circle cx="356" cy="138" r="2.2" class="fr sr"/><circle cx="513" cy="111" r="2.2" class="fg sg"/><circle cx="434" cy="50" r="2.2" class="fb sb"/><circle cx="365" cy="144" r="2.2" class="fr sr"/><circle cx="367" cy="136" r="2.2" class="fr sr"/><circle cx="362" cy="138" r="2.2" class="fr sr"/><circle cx="486" cy="132" r="2.2" class="fg sg"/><circle cx="514" cy="116" r="2.2" class="fg sg"/><circle cx="446" cy="53" r="2.2" class="fb sb"/><circle cx="355" cy="133" r="2.2" class="fr sr"/><circle cx="366" cy="138" r="2.2" class="fr sr"/><circle cx="373" cy="134" r="2.2" class="fr sr"/><circle cx="496" cy="167" r="2.2" class="fg sg"/><circle cx="364" cy="132" r="2.2" class="fr sr"/><circle cx="515" cy="141" r="2.2" class="fg sg"/><circle cx="427" cy="53" r="2.2" class="fb sb"/><circle cx="505" cy="128" r="2.2" class="fg sg"/><circle cx="361" cy="140" r="2.2" class="fr sr"/><circle cx="444" cy="57" r="2.2" class="fb sb"/><circle cx="456" cy="142" r="2.2" class="fg sg"/><circle cx="362" cy="128" r="2.2" class="fr sr"/><circle cx="553" cy="129" r="2.2" class="fg sg"/><circle cx="423" cy="55" r="2.2" class="fb sb"/><circle cx="360" cy="135" r="2.2" class="fr sr"/><circle cx="374" cy="142" r="2.2" class="fr sr"/><circle cx="521" cy="182" r="2.2" class="fg sg"/><circle cx="429" cy="128" r="2.2" class="fr sr"/><circle cx="430" cy="125" r="2.2" class="fg sg"/><circle cx="367" cy="132" r="2.2" class="fr sr"/><circle cx="360" cy="128" r="2.2" class="fr sr"/><circle cx="515" cy="119" r="2.2" class="fg sg"/><circle cx="439" cy="62" r="2.2" class="fb sb"/><circle cx="503" cy="88" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="365" cy="141" r="2.2" class="fr sr"/><circle cx="371" cy="139" r="2.2" class="fr sr"/><circle cx="367" cy="131" r="2.2" class="fr sr"/><circle cx="359" cy="134" r="2.2" class="fr sr"/><circle cx="513" cy="157" r="2.2" class="fg sg"/><circle cx="543" cy="110" r="2.2" class="fg sg"/><circle cx="370" cy="136" r="2.2" class="fr sr"/><circle cx="432" cy="116" r="2.2" class="fg sg"/><circle cx="536" cy="149" r="2.2" class="fg sg"/><circle cx="501" cy="133" r="2.2" class="fg sg"/><circle cx="557" cy="142" r="2.2" class="fg sg"/><circle cx="468" cy="148" r="2.2" class="fg sg"/><circle cx="365" cy="141" r="2.2" class="fr sr"/><circle cx="366" cy="136" r="2.2" class="fr sr"/><circle cx="512" cy="146" r="2.2" class="fg sg"/><circle cx="460" cy="147" r="2.2" class="fg sg"/><circle cx="556" cy="163" r="2.2" class="fg sg"/><circle cx="426" cy="50" r="2.2" class="fb sb"/><circle cx="366" cy="135" r="2.2" class="fr sr"/><circle cx="348" cy="143" r="2.2" class="fr sr"/><circle cx="360" cy="134" r="2.2" class="fr sr"/><circle cx="352" cy="136" r="2.2" class="fr sr"/><circle cx="473" cy="139" r="2.2" class="fg sg"/><circle cx="463" cy="116" r="2.2" class="fg sg"/><circle cx="511" cy="142" r="2.2" class="fg sg"/><circle cx="418" cy="47" r="2.2" class="fb sb"/><circle cx="523" cy="119" r="2.2" class="fg sg"/><circle cx="363" cy="126" r="2.2" class="fr sr"/><circle cx="537" cy="107" r="2.2" class="fg sg"/><circle cx="453" cy="63" r="2.2" class="fb sb"/><circle cx="362" cy="138" r="2.2" class="fr sr"/><circle cx="592" cy="147" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="357" cy="134" r="2.2" class="fr sr"/><circle cx="364" cy="137" r="2.2" class="fr sr"/><circle cx="539" cy="141" r="2.2" class="fg sg"/><circle cx="430" cy="49" r="2.2" class="fb sb"/><circle cx="359" cy="140" r="2.2" class="fr sr"/><circle cx="505" cy="132" r="2.2" class="fg sg"/><circle cx="431" cy="55" r="2.2" class="fb sb"/><circle cx="495" cy="124" r="2.2" class="fg sg"/><circle cx="377" cy="140" r="2.2" class="fr sr"/><circle cx="373" cy="135" r="2.2" class="fr sr"/><circle cx="354" cy="136" r="2.2" class="fr sr"/><circle cx="358" cy="131" r="2.2" class="fr sr"/><circle cx="369" cy="140" r="2.2" class="fr sr"/><circle cx="483" cy="145" r="2.2" class="fg sg"/><circle cx="367" cy="128" r="2.2" class="fr sr"/><circle cx="488" cy="94" r="2.2" class="fg sg"/><circle cx="414" cy="44" r="2.2" class="fb sb"/><circle cx="540" cy="165" r="2.2" class="fg sg"/><circle cx="426" cy="64" r="2.2" class="fb sb"/><circle cx="368" cy="147" r="2.2" class="fr sr"/><circle cx="361" cy="133" r="2.2" class="fr sr"/><circle cx="516" cy="159" r="2.2" class="fg sg"/><circle cx="354" cy="127" r="2.2" class="fr sr"/><circle cx="463" cy="96" r="2.2" class="fb sb"/><circle cx="351" cy="131" r="2.2" class="fr sr"/><circle cx="565" cy="147" r="2.2" class="fg sg"/><circle cx="488" cy="163" r="2.2" class="fg sg"/><circle cx="558" cy="157" r="2.2" class="fg sg"/><circle cx="362" cy="129" r="2.2" class="fr sr"/><circle cx="361" cy="126" r="2.2" class="fr sr"/><circle cx="417" cy="53" r="2.2" class="fb sb"/><circle cx="618" cy="150" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="361" cy="137" r="2.2" class="fr sr"/><circle cx="357" cy="132" r="2.2" class="fr sr"/><circle cx="415" cy="61" r="2.2" class="fb sb"/><circle cx="426" cy="72" r="2.2" class="fb sb"/><circle cx="365" cy="137" r="2.2" class="fr sr"/><circle cx="495" cy="129" r="2.2" class="fg sg"/><circle cx="467" cy="146" r="2.2" class="fg sg"/><circle cx="522" cy="159" r="2.2" class="fg sg"/><circle cx="358" cy="130" r="2.2" class="fr sr"/><circle cx="352" cy="136" r="2.2" class="fr sr"/><circle cx="507" cy="118" r="2.2" class="fg sg"/><circle cx="536" cy="119" r="2.2" class="fg sg"/><circle cx="482" cy="161" r="2.2" class="fg sg"/><circle cx="529" cy="161" r="2.2" class="fg sg"/><circle cx="526" cy="147" r="2.2" class="fg sg"/><circle cx="523" cy="144" r="2.2" class="fg sg"/><circle cx="528" cy="120" r="2.2" class="fg sg"/><circle cx="529" cy="152" r="2.2" class="fg sg"/><circle cx="517" cy="152" r="2.2" class="fg sg"/><circle cx="369" cy="134" r="2.2" class="fr sr"/><circle cx="569" cy="169" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="363" cy="133" r="2.2" class="fr sr"/><circle cx="543" cy="151" r="2.2" class="fg sg"/><circle cx="363" cy="137" r="2.2" class="fr sr"/><circle cx="516" cy="116" r="2.2" class="fg sg"/><circle cx="361" cy="140" r="2.2" class="fr sr"/><circle cx="533" cy="132" r="2.2" class="fg sg"/><circle cx="514" cy="140" r="2.2" class="fg sg"/><circle cx="358" cy="134" r="2.2" class="fr sr"/><circle cx="421" cy="39" r="2.2" class="fb sb"/><circle cx="473" cy="153" r="2.2" class="fg sg"/><circle cx="516" cy="132" r="2.2" class="fg sg"/><circle cx="439" cy="73" r="2.2" class="fb sb"/><circle cx="362" cy="143" r="2.2" class="fr sr"/><circle cx="364" cy="139" r="2.2" class="fr sr"/><circle cx="516" cy="139" r="2.2" class="fg sg"/><circle cx="360" cy="131" r="2.2" class="fr sr"/><circle cx="413" cy="63" r="2.2" class="fb sb"/><circle cx="487" cy="147" r="2.2" class="fg sg"/><circle cx="542" cy="141" r="2.2" class="fg sg"/><circle cx="366" cy="137" r="2.2" class="fr sr"/><circle cx="489" cy="171" r="2.2" class="fg sg"/><circle cx="362" cy="133" r="2.2" class="fr sr"/><circle cx="360" cy="140" r="2.2" class="fr sr"/><circle cx="436" cy="62" r="2.2" class="fb sb"/><circle cx="464" cy="124" r="2.2" class="fg sg"/><circle cx="362" cy="137" r="2.2" class="fr sr"/><circle cx="422" cy="138" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="360" cy="137" r="2.2" class="fr sr"/><circle cx="369" cy="132" r="2.2" class="fr sr"/><circle cx="439" cy="60" r="2.2" class="fb sb"/><circle cx="518" cy="141" r="2.2" class="fg sg"/><circle cx="519" cy="133" r="2.2" class="fg sg"/><circle cx="383" cy="132" r="2.2" class="fr sr"/><circle cx="530" cy="118" r="2.2" class="fg sg"/><circle cx="364" cy="133" r="2.2" class="fr sr"/><circle cx="442" cy="72" r="2.2" class="fb sb"/><circle cx="443" cy="61" r="2.2" class="fb sb"/><circle cx="366" cy="131" r="2.2" class="fr sr"/><circle cx="535" cy="134" r="2.2" class="fg sg"/><circle cx="356" cy="133" r="2.2" class="fr sr"/><circle cx="500" cy="102" r="2.2" class="fg sg"/><circle cx="464" cy="138" r="2.2" class="fg sg"/><circle cx="469" cy="140" r="2.2" class="fg sg"/><circle cx="372" cy="135" r="2.2" class="fr sr"/><circle cx="534" cy="114" r="2.2" class="fg sg"/><circle cx="507" cy="139" r="2.2" class="fg sg"/><circle cx="362" cy="135" r="2.2" class="fr sr"/><circle cx="366" cy="135" r="2.2" class="fr sr"/><circle cx="366" cy="137" r="2.2" class="fr sr"/><circle cx="450" cy="148" r="2.2" class="fg sg"/><circle cx="371" cy="135" r="2.2" class="fr sr"/><circle cx="433" cy="59" r="2.2" class="fb sb"/><circle cx="354" cy="136" r="2.2" class="fr sr"/><circle cx="353" cy="133" r="2.2" class="fr sr"/><circle cx="435" cy="63" r="2.2" class="fb sb"/><circle cx="365" cy="136" r="2.2" class="fr sr"/><circle cx="489" cy="124" r="2.2" class="fg sg"/><circle cx="434" cy="59" r="2.2" class="fb sb"/><circle cx="454" cy="47" r="2.2" class="fb sb"/><circle cx="360" cy="139" r="2.2" class="fr sr"/><circle cx="421" cy="128" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="446" cy="50" r="2.2" class="fb sb"/><circle cx="519" cy="130" r="2.2" class="fg sg"/><circle cx="352" cy="128" r="2.2" class="fr sr"/><circle cx="366" cy="134" r="2.2" class="fr sr"/><circle cx="500" cy="133" r="2.2" class="fg sg"/><circle cx="447" cy="150" r="2.2" class="fg sg"/><circle cx="353" cy="139" r="2.2" class="fr sr"/><circle cx="525" cy="162" r="2.2" class="fg sg"/><circle cx="436" cy="56" r="2.2" class="fb sb"/><circle cx="522" cy="108" r="2.2" class="fg sg"/><circle cx="369" cy="140" r="2.2" class="fr sr"/><circle cx="351" cy="138" r="2.2" class="fr sr"/><circle cx="374" cy="136" r="2.2" class="fr sr"/><circle cx="360" cy="130" r="2.2" class="fr sr"/><circle cx="496" cy="193" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="359" cy="129" r="2.2" class="fr sr"/><circle cx="497" cy="153" r="2.2" class="fg sg"/><circle cx="457" cy="167" r="2.2" class="fg sg"/><circle cx="354" cy="132" r="2.2" class="fr sr"/><circle cx="368" cy="132" r="2.2" class="fr sr"/><circle cx="484" cy="140" r="2.2" class="fg sg"/><circle cx="474" cy="107" r="2.2" class="fg sg"/><circle cx="353" cy="125" r="2.2" class="fr sr"/><circle cx="379" cy="137" r="2.2" class="fr sr"/><circle cx="495" cy="136" r="2.2" class="fg sg"/><circle cx="530" cy="138" r="2.2" class="fg sg"/><circle cx="467" cy="158" r="2.2" class="fg sg"/><circle cx="467" cy="132" r="2.2" class="fg sg"/><circle cx="538" cy="139" r="2.2" class="fg sg"/><circle cx="370" cy="136" r="2.2" class="fr sr"/><circle cx="365" cy="139" r="2.2" class="fr sr"/><circle cx="500" cy="141" r="2.2" class="fg sg"/><circle cx="361" cy="142" r="2.2" class="fr sr"/><circle cx="366" cy="139" r="2.2" class="fr sr"/><circle cx="361" cy="136" r="2.2" class="fr sr"/><circle cx="370" cy="128" r="2.2" class="fr sr"/><circle cx="358" cy="136" r="2.2" class="fr sr"/><circle cx="524" cy="132" r="2.2" class="fg sg"/><circle cx="368" cy="133" r="2.2" class="fr sr"/><circle cx="397" cy="54" r="2.2" class="fb sb"/><circle cx="357" cy="136" r="2.2" class="fr sr"/><circle cx="414" cy="117" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="350" cy="132" r="2.2" class="fr sr"/><circle cx="492" cy="156" r="2.2" class="fg sg"/><circle cx="362" cy="131" r="2.2" class="fr sr"/><circle cx="470" cy="140" r="2.2" class="fg sg"/><circle cx="364" cy="127" r="2.2" class="fr sr"/><circle cx="424" cy="82" r="2.2" class="fb sb"/><circle cx="469" cy="139" r="2.2" class="fg sg"/><circle cx="440" cy="40" r="2.2" class="fb sb"/><circle cx="370" cy="134" r="2.2" class="fr sr"/><circle cx="365" cy="131" r="2.2" class="fr sr"/><circle cx="450" cy="140" r="2.2" class="fg sg"/><circle cx="511" cy="177" r="2.2" class="fg sg"/><circle cx="353" cy="132" r="2.2" class="fr sr"/><circle cx="452" cy="110" r="2.2" class="fg sg"/><circle cx="420" cy="65" r="2.2" class="fb sb"/><circle cx="366" cy="138" r="2.2" class="fr sr"/><circle cx="516" cy="140" r="2.2" class="fg sg"/><circle cx="541" cy="152" r="2.2" class="fg sg"/><circle cx="363" cy="135" r="2.2" class="fr sr"/><circle cx="438" cy="76" r="2.2" class="fb sb"/><circle cx="444" cy="63" r="2.2" class="fb sb"/><circle cx="453" cy="42" r="2.2" class="fb sb"/><circle cx="419" cy="64" r="2.2" class="fb sb"/><circle cx="514" cy="138" r="2.2" class="fg sg"/><circle cx="359" cy="136" r="2.2" class="fr sr"/><circle cx="512" cy="135" r="2.2" class="fg sg"/><circle cx="372" cy="139" r="2.2" class="fr sr"/><circle cx="424" cy="52" r="2.2" class="fb sb"/><circle cx="347" cy="145" r="2.2" class="fr sr"/><circle cx="493" cy="156" r="2.2" class="fg sg"/><circle cx="365" cy="128" r="2.2" class="fr sr"/><circle cx="479" cy="148" r="2.2" class="fg sg"/><circle cx="530" cy="150" r="2.2" class="fg sg"/><circle cx="505" cy="124" r="2.2" class="fg sg"/><circle cx="542" cy="111" r="2.2" class="fg sg"/><circle cx="427" cy="145" r="2.2" class="fg sg"/><circle cx="522" cy="131" r="2.2" class="fg sg"/><circle cx="514" cy="141" r="2.2" class="fg sg"/><circle cx="485" cy="135" r="2.2" class="fg sg"/><circle cx="523" cy="82" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="468" cy="146" r="2.2" class="fg sg"/><circle cx="532" cy="168" r="2.2" class="fg sg"/><circle cx="363" cy="137" r="2.2" class="fr sr"/><circle cx="436" cy="65" r="2.2" class="fb sb"/><circle cx="367" cy="139" r="2.2" class="fr sr"/><circle cx="357" cy="137" r="2.2" class="fr sr"/><circle cx="408" cy="146" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="500" cy="92" r="2.2" class="fg sg"/><circle cx="493" cy="116" r="2.2" class="fg sg"/><circle cx="359" cy="138" r="2.2" class="fr sr"/><circle cx="534" cy="94" r="2.2" class="fg sg"/><circle cx="556" cy="81" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="497" cy="142" r="2.2" class="fg sg"/><circle cx="552" cy="115" r="2.2" class="fg sg"/><circle cx="350" cy="140" r="2.2" class="fr sr"/><circle cx="407" cy="164" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="496" cy="115" r="2.2" class="fg sg"/><circle cx="475" cy="92" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="362" cy="133" r="2.2" class="fr sr"/><circle cx="427" cy="57" r="2.2" class="fb sb"/><circle cx="556" cy="156" r="2.2" class="fg sg"/><circle cx="456" cy="134" r="2.2" class="fg sg"/><circle cx="500" cy="112" r="2.2" class="fg sg"/><circle cx="442" cy="65" r="2.2" class="fb sb"/><circle cx="513" cy="141" r="2.2" class="fg sg"/><circle cx="358" cy="134" r="2.2" class="fr sr"/><circle cx="359" cy="130" r="2.2" class="fr sr"/><circle cx="480" cy="136" r="2.2" class="fg sg"/><circle cx="477" cy="110" r="2.2" class="fg sg"/><circle cx="470" cy="129" r="2.2" class="fg sg"/><circle cx="362" cy="141" r="2.2" class="fr sr"/><circle cx="504" cy="112" r="2.2" class="fg sg"/><circle cx="367" cy="138" r="2.2" class="fr sr"/><circle cx="427" cy="32" r="2.2" class="fb sb"/><circle cx="519" cy="142" r="2.2" class="fg sg"/><circle cx="365" cy="128" r="2.2" class="fr sr"/><circle cx="545" cy="161" r="2.2" class="fg sg"/><circle cx="559" cy="116" r="2.2" class="fg sg"/><circle cx="365" cy="135" r="2.2" class="fr sr"/><circle cx="520" cy="136" r="2.2" class="fg sg"/><circle cx="465" cy="128" r="2.2" class="fg sg"/><circle cx="395" cy="125" r="2.2" class="fr sr"/><circle cx="368" cy="135" r="2.2" class="fr sr"/><circle cx="358" cy="132" r="2.2" class="fr sr"/><circle cx="366" cy="139" r="2.2" class="fr sr"/><circle cx="522" cy="125" r="2.2" class="fg sg"/><circle cx="494" cy="147" r="2.2" class="fg sg"/><circle cx="360" cy="137" r="2.2" class="fr sr"/><circle cx="369" cy="143" r="2.2" class="fr sr"/><circle cx="439" cy="57" r="2.2" class="fb sb"/><circle cx="507" cy="123" r="2.2" class="fg sg"/><circle cx="366" cy="140" r="2.2" class="fr sr"/><circle cx="560" cy="103" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="361" cy="140" r="2.2" class="fr sr"/><circle cx="436" cy="57" r="2.2" class="fb sb"/><circle cx="447" cy="122" r="2.2" class="fg sg"/><circle cx="445" cy="54" r="2.2" class="fb sb"/><circle cx="361" cy="131" r="2.2" class="fr sr"/><circle cx="348" cy="134" r="2.2" class="fr sr"/><circle cx="364" cy="138" r="2.2" class="fr sr"/><circle cx="359" cy="142" r="2.2" class="fr sr"/><circle cx="440" cy="143" r="2.2" class="fg sg"/><circle cx="447" cy="42" r="2.2" class="fb sb"/><circle cx="358" cy="133" r="2.2" class="fr sr"/><circle cx="436" cy="31" r="2.2" class="fb sb"/><circle cx="435" cy="65" r="2.2" class="fb sb"/><circle cx="448" cy="172" r="2.2" class="fs" stroke="currentColor" stroke-width="0.8"/><circle cx="439" cy="59" r="2.2" class="fb sb"/><circle cx="360" cy="129" r="2.2" class="fr sr"/><circle cx="370" cy="127" r="2.2" class="fr sr"/><circle cx="416" cy="69" r="2.2" class="fb sb"/><circle cx="349" cy="134" r="2.2" class="fr sr"/><circle cx="373" cy="133" r="2.2" class="fr sr"/><circle cx="534" cy="147" r="2.2" class="fg sg"/><circle cx="507" cy="169" r="2.2" class="fg sg"/><circle cx="361" cy="137" r="2.2" class="fr sr"/><circle cx="441" cy="60" r="2.2" class="fb sb"/><circle cx="360" cy="143" r="2.2" class="fr sr"/><circle cx="506" cy="149" r="2.2" class="fg sg"/><circle cx="371" cy="133" r="2.2" class="fr sr"/><circle cx="354" cy="135" r="2.2" class="fr sr"/><circle cx="364" cy="142" r="2.2" class="fr sr"/><circle cx="362" cy="133" r="2.2" class="fr sr"/><circle cx="500" cy="155" r="2.2" class="fg sg"/><circle cx="510" cy="159" r="2.2" class="fg sg"/><circle cx="354" cy="135" r="2.2" class="fr sr"/><circle cx="450" cy="57" r="2.2" class="fb sb"/><circle cx="420" cy="69" r="2.2" class="fb sb"/>
-<line x1="320" y1="26" x2="320" y2="206" stroke="currentColor" stroke-opacity="0.2"/>
-<text x="160" y="224" text-anchor="middle" class="tm" font-size="11">one radius: the loose cloud shatters into noise and bits</text>
-<text x="480" y="224" text-anchor="middle" class="tm" font-size="11">each cloud judged at its own density</text>
-</svg><figcaption>Three clouds with different spreads (0.3, 1.5, 0.6). Every second point drawn. Grey hollow points are noise.</figcaption></figure>
-  <p>Small eps (0.2, 0.4): the loose cloud breaks into many fragments and hundreds of noise points. Large eps (1.0, 1.5): the tight and medium clouds merge with the loose one. Only eps = 0.7 happens to land on 3 clusters (ARI 0.952), and you could not have known that without the true labels. HDBSCAN, with no eps at all, finds the 3 clouds (ARI 0.913) and calls 30 thin-edge points noise.</p>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>Choosing eps is choosing one horizontal slice through a "density landscape". Clusters of different heights need different slices. HDBSCAN looks at all slices at once and picks, for each region, the slice where that cluster is most stable.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> how can one algorithm try "every eps" at once, and how does it decide which clusters to keep? <b>Next: HDBSCAN.</b></div>
+HDBSCAN (no eps)  clusters=3 noise=30 ARI=0.913</div>
+  <p>With a small eps (0.2, 0.4) the tight cloud is found but the loose cloud falls apart into fragments and hundreds of noise points. With a large eps (1.0, 1.5) the loose cloud is held together but the tight and medium clouds merge into it. Only eps = 0.7 happens to land on three clusters (ARI 0.952), and you could not have known that without the true labels. The last line is a preview of the fix: HDBSCAN, which has no eps at all, finds the three clouds (ARI 0.913) and calls 30 thin-edge points noise.</p>
+  <p>A helpful way to picture the problem is to imagine the density of points as a landscape, with hills where points are crowded and valleys where they are sparse. Choosing eps is like choosing one water level and calling every island that sticks out a cluster. A tight cluster is a tall, narrow hill and a loose cluster is a low, wide one, so no single water level shows both of them as separate islands. What we would like is to look at every water level and pick, for each region, the level at which its cluster stands out best. That is exactly what HDBSCAN does.</p>
 
-  <h2 id="db-hdbscan"><span class="num">08</span>HDBSCAN</h2>
-  <p><strong>The question we can't answer yet.</strong> We need DBSCAN's result for every eps at once, plus a rule that picks, region by region, the clusters worth keeping.</p>
-  <h3>The idea in plain words</h3>
-  <p>HDBSCAN (Hierarchical DBSCAN, Campello, Moulavi and Sander, 2013) runs DBSCAN at every possible eps simultaneously. As eps shrinks from huge to tiny, the data first forms one big cluster, which then splits into smaller ones, which lose points or split again, until everything is noise. HDBSCAN records this whole history as a tree, simplifies it, and keeps the clusters that <strong>survive the longest</strong> as eps shrinks. A real cluster persists over a wide range of eps; an accidental clump appears and vanishes quickly.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Islands in a falling sea. Picture the density of points as a landscape of hills (crowded) and valleys (sparse), with the sea level as eps. At high sea level only one big island peeks out; as the water drops, it reveals separate islands, and some islands show two peaks. HDBSCAN keeps the islands that stay distinct for the longest stretch of falling water, whatever their height.</p>
-  </div>
-  <p>Four steps make this precise. We do each by hand on the 12 stalls, with min_samples = 4 (as before) and min_cluster_size = 3 (a "market" needs at least 3 stalls).</p>
-  <h3>Step 1: core distance (you already computed it)</h3>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Core distance</strong> core_k(p) = the distance from p to its k-th nearest point, counting p itself (k = min_samples). It is the smallest eps at which p would be a DBSCAN core point, and it is large where points are sparse.</p>
-  </div>
-  <p>This is exactly the k-distance column of section 05: D = 1.0; A, B, C, F, G, H, I = 1.414; E = 2.0; J = 2.236; K = 4.472; L = 5.831. Nothing new to compute; only a new name.</p>
-  <h3>Step 2: mutual reachability distance</h3>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Mutual reachability distance</strong> d_mr(a, b) = max( core_k(a), core_k(b), d(a, b) ).<br>Two points count as "close" only if they are close to each other <em>and</em> both live in crowded places. Dense points keep their normal distances; sparse points are pushed away from everyone.</p>
-  </div>
-  <table class="tbl">
-    <tr><th>Pair</th><th>core(a)</th><th>core(b)</th><th>d(a, b)</th><th>d_mr = max</th><th>Effect</th></tr>
-    <tr><td>A–B</td><td>1.414</td><td>1.414</td><td>1</td><td>1.414</td><td>raised slightly to the crowd's scale</td></tr>
-    <tr><td>B–E</td><td>1.414</td><td>2</td><td>1.414</td><td>2</td><td>E is on the edge: pushed out a bit</td></tr>
-    <tr><td>G–J</td><td>1.414</td><td>2.236</td><td>2.236</td><td>2.236</td><td>unchanged</td></tr>
-    <tr><td>E–F</td><td>2</td><td>1.414</td><td>4.243</td><td>4.243</td><td>the gap between the markets</td></tr>
-    <tr><td>H–K</td><td>1.414</td><td>4.472</td><td>3.606</td><td>4.472</td><td>K is lonely: pushed from 3.6 to 4.5</td></tr>
-    <tr><td>G–L</td><td>1.414</td><td>5.831</td><td>5</td><td>5.831</td><td>L is lonely: pushed from 5 to 5.8</td></tr>
-  </table>
-  <h3>Step 3: minimum spanning tree and the cluster hierarchy</h3>
-  <p>Connect all 12 stalls with the cheapest set of 11 edges that links everyone (a <strong>minimum spanning tree</strong>, MST), using d_mr as the cost. Then remove edges from the most expensive down; each removal is "eps dropping below that value":</p>
+  <h2 id="db-hdbscan"><span class="num">06</span>HDBSCAN</h2>
+  <p><strong>HDBSCAN</strong> (Hierarchical DBSCAN; Campello, Moulavi and Sander, 2013) runs DBSCAN at every possible eps at once and keeps, region by region, the clusters that last the longest. Picture the density landscape again with the sea slowly falling. At a high sea level (a huge eps) only one big island shows: everything is one cluster. As the water drops (eps shrinks), the island splits into separate islands, some islands lose their beaches (points drop out as noise), and eventually everything is under water. HDBSCAN records this whole history as a tree and keeps the islands that stay distinct for the longest stretch of falling water, whatever their height. A real cluster persists over a wide range of eps; an accidental clump appears and vanishes almost at once.</p>
+  <p>Four steps make this precise. We work each of them by hand on the twelve stalls with min_samples = 4 as before, plus a new setting, <strong>min_cluster_size</strong> = 3, meaning "a market needs at least 3 stalls".</p>
+  <p>The first step is the <strong>core distance</strong> of each point: its distance to its k-th nearest point, counting itself, with k = min_samples. You have already computed these, because they are exactly the k-distances of section 04: D = 1.0; A, B, C, F, G, H, I = 1.414; E = 2.0; J = 2.236; K = 4.472; L = 5.831. In DBSCAN terms, a point's core distance is the smallest eps at which it would be a core point, so it is small inside crowds and large for loners.</p>
+  <p>The second step changes how distance is measured so that loners are pushed away from everyone. The <strong>mutual reachability distance</strong> between a and b is</p>
+  <p>d_mr(a, b) = max( core(a), core(b), d(a, b) ),</p>
+  <p>the largest of the two core distances and the ordinary distance. Two points count as close only if they are close to each other <em>and</em> both live in crowded places. For points inside a crowd nothing much changes: A and B are 1 km apart, both have core distance 1.414, so d_mr(A, B) = 1.414, just raised to the crowd's own scale. For a loner it changes a lot: H and K are 3.606 km apart, but K's core distance is 4.472, so d_mr(H, K) = max(1.414, 4.472, 3.606) = 4.472. K has been pushed further away because it lives in empty space. Similarly B to E becomes 2.0 (E is on the edge) and G to L becomes 5.831. The gap between the markets, E to F at 4.243, is unchanged because it is already larger than both core distances.</p>
+  <p>The third step builds the hierarchy. Connect all twelve stalls using the cheapest set of 11 links that joins everyone, with d_mr as the cost of each link. This is called a <strong>minimum spanning tree</strong> (MST). Then remove links from the most expensive downwards; each removal corresponds to eps falling below that link's length, and shows what DBSCAN would see at that eps. The code computes the core distances, the mutual reachability matrix and the MST, and then runs scikit-learn's <code>HDBSCAN</code>:</p>
   <div class="fx" data-lang="py">from scipy.sparse.csgraph import minimum_spanning_tree
-k = 4                                                     # min_samples (the point itself counts)
-core_d = np.sort(D, axis=1)[:, k - 1]                     # k-th smallest distance in each row = core distance
+k = 4                                                     # min_samples (the stall itself counts)
+core_d = np.sort(D, axis=1)[:, k - 1]                     # core distance = k-distance
 mr = np.maximum(np.maximum(core_d[:, None], core_d[None, :]), D)   # mutual reachability matrix
-print("core distance:", " ".join(f"{n}={v:.3f}" for n, v in zip(names, core_d)))
 mst = minimum_spanning_tree(mr).tocoo()                   # cheapest tree linking all 12 stalls
 edges = sorted(zip(mst.data, mst.row, mst.col), reverse=True)
 print("MST edges, most expensive first:")
@@ -684,34 +425,21 @@ print("  " + ", ".join(f"{names[i]}-{names[j]} {w:.3f}" for w, i, j in edges))
 h12 = HDBSCAN(min_cluster_size=3, min_samples=4, copy=True).fit(P)
 print("labels       :", " ".join(f"{n}={v}" for n, v in zip(names, h12.labels_)))
 print("probabilities:", " ".join(f"{n}={v:.3f}" for n, v in zip(names, h12.probabilities_)))</div>
-  <div class="fx" data-lang="text">core distance: A=1.414 B=1.414 C=1.414 D=1.000 E=2.000 F=1.414 G=1.414 H=1.414 I=1.414 J=2.236 K=4.472 L=5.831
-MST edges, most expensive first:
+  <div class="fx" data-lang="text">MST edges, most expensive first:
   F-L 5.831, F-K 4.472, E-F 4.243, G-J 2.236, B-E 2.000, F-I 1.414, F-H 1.414, F-G 1.414, A-D 1.414, A-C 1.414, A-B 1.414
 labels       : A=0 B=0 C=0 D=0 E=0 F=1 G=1 H=1 I=1 J=1 K=-1 L=-1
 probabilities: A=1.000 B=1.000 C=1.000 D=1.000 E=0.707 F=1.000 G=1.000 H=1.000 I=1.000 J=0.632 K=0.000 L=0.000</div>
-  <p>(With ties the MST may pick a different but equally cheap edge, for example F–L instead of G–L, both 5.831; the hierarchy is the same.)</p>
+  <p>(When there are ties, the MST may show a different but equally cheap link, for example F–L instead of G–L, both 5.831; the hierarchy is the same.) Now remove the links in order. HDBSCAN measures "time" with λ = 1 / distance, so λ starts near 0 at a huge eps and grows as eps shrinks.</p>
   <table class="tbl">
-    <tr><th>Remove edges at d_mr</th><th>λ = 1/d</th><th>What happens</th></tr>
-    <tr><td>5.831 (F–L)</td><td>0.171</td><td>L falls off alone. One stall is smaller than min_cluster_size = 3, so it is not a new cluster: L simply <em>leaves</em> as noise.</td></tr>
-    <tr><td>4.472 (F–K)</td><td>0.224</td><td>K falls off alone: noise.</td></tr>
-    <tr><td>4.243 (E–F)</td><td>0.236</td><td>{A–E} and {F–J} separate. Both have ≥ 3 stalls → a <strong>true split</strong>: two clusters are born.</td></tr>
-    <tr><td>2.236 (G–J)</td><td>0.447</td><td>J drops off the college market (leaves); the cluster continues as {F, G, H, I}.</td></tr>
+    <tr><th>Remove link at d_mr</th><th>λ = 1/d</th><th>What happens</th></tr>
+    <tr><td>5.831 (F–L)</td><td>0.171</td><td>L drops off alone. One stall is less than min_cluster_size, so this is not a new cluster: L simply leaves as noise.</td></tr>
+    <tr><td>4.472 (F–K)</td><td>0.224</td><td>K drops off alone: noise.</td></tr>
+    <tr><td>4.243 (E–F)</td><td>0.236</td><td>{A–E} and {F–J} separate. Both have at least 3 stalls, so this is a real split: two clusters are born.</td></tr>
+    <tr><td>2.236 (G–J)</td><td>0.447</td><td>J drops off the college market; the cluster carries on as {F, G, H, I}.</td></tr>
     <tr><td>2.000 (B–E)</td><td>0.5</td><td>E drops off the station market.</td></tr>
-    <tr><td>1.414 (the square edges)</td><td>0.707</td><td>Both squares fall apart into single stalls; both clusters end.</td></tr>
+    <tr><td>1.414 (the square links)</td><td>0.707</td><td>Both squares fall apart into single stalls; both clusters end.</td></tr>
   </table>
-  <p>This is exactly single-linkage clustering (see <a class="xref" data-note="ml_hierarchical">Hierarchical Clustering</a>) run on mutual reachability distances. Rows like "J drops off" are what min_cluster_size is for: a split that sheds fewer than min_cluster_size points is not treated as two clusters, only as the parent getting smaller. This simplified tree is the <strong>condensed tree</strong>.</p>
-  <h3>Step 4: stability and choosing the clusters</h3>
-  <p>HDBSCAN measures time in λ = 1 / distance, so λ grows as eps shrinks (λ = 0 at infinite eps). A point p "leaves" a cluster at λ_p, and the cluster is "born" at λ_birth.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Stability</strong> of a cluster C = Σ over its points p of (λ_p − λ_birth(C)): the total "lifetime" of the cluster's points. Many points staying for a long range of eps → high stability.<br><strong>Excess-of-mass selection</strong>: walking up from the leaves, keep a cluster if its own stability is larger than the sum of the stabilities of its selected children; otherwise keep the children. Selected clusters may not overlap.</p>
-  </div>
-  <table class="tbl">
-    <tr><th>Cluster</th><th>Born at</th><th>Points leave at</th><th>Stability</th></tr>
-    <tr><td>{A,B,C,D,E}</td><td>λ = 1/4.243 = 0.236</td><td>E at 0.5; A, B, C, D at 0.707</td><td>(0.5 − 0.236) + 4 × (0.707 − 0.236) = 0.264 + 1.886 = <strong>2.150</strong></td></tr>
-    <tr><td>{F,G,H,I,J}</td><td>0.236</td><td>J at 0.447; F, G, H, I at 0.707</td><td>(0.447 − 0.236) + 4 × 0.471 = 0.211 + 1.886 = <strong>2.097</strong></td></tr>
-  </table>
-  <p>Neither cluster has child clusters, so both are kept (the root, "everything", is not allowed to be a cluster by default). Result: {A–E} is cluster 0, {F–J} is cluster 1, K and L are noise: the same as DBSCAN with eps = 1.5, but found without choosing eps.</p>
-  <p>HDBSCAN also reports a <strong>membership strength</strong> per point: λ_p divided by the largest λ in that point's cluster. E left at λ = 0.5 while its cluster lasted to 0.707, so its strength is 0.5 / 0.707 = 0.707. J: 0.447 / 0.707 = 0.632. The square stalls are 1. These match the probabilities printed above; DBSCAN's "border point" has become a number.</p>
+  <p>This is single-linkage clustering run on mutual reachability distances. The rows where one stall "drops off" show what min_cluster_size is for: a split that sheds fewer than min_cluster_size points is not treated as two clusters, only as the parent cluster getting smaller. The tree simplified in this way is called the <strong>condensed tree</strong>.</p>
   <figure class="viz"><svg viewBox="0 0 600 250" width="600">
 <line x1="60" y1="30" x2="60" y2="220" stroke="currentColor"/>
 <text x="54" y="34" text-anchor="end" class="tm" font-size="10">λ=0</text>
@@ -736,68 +464,47 @@ probabilities: A=1.000 B=1.000 C=1.000 D=1.000 E=0.707 F=1.000 G=1.000 H=1.000 I
 <text x="200" y="240" text-anchor="middle" class="tb" font-size="11">stability 2.150 → selected</text>
 <text x="440" y="240" text-anchor="middle" class="tr" font-size="11">stability 2.097 → selected</text>
 </svg><figcaption>The condensed tree of the 12 stalls, drawn as an icicle: width ≈ number of stalls still in the cluster, height = how long (in λ) it lasts. Stability is the area of each coloured shape below its birth line.</figcaption></figure>
-  <h3>The knobs on real data</h3>
-  <p><strong>min_cluster_size</strong> is the main knob: the smallest group you are willing to call a cluster. <strong>min_samples</strong> (defaults to min_cluster_size) sets the k in core distance: larger values make the algorithm more conservative, pushing more points to noise. On the three clouds of section 07:</p>
+  <p>The fourth step chooses which clusters to keep. Each cluster gets a <strong>stability</strong> score, the total lifetime of its points inside it: stability(C) = Σ (λ_p − λ_birth), summed over its points p, where λ_birth is when the cluster was born and λ_p is when point p left it. Many points staying for a long range of eps means high stability, which is the area of the shapes in the figure. For the station market, born at λ = 1/4.243 = 0.236, E leaves at 0.5 and A, B, C, D last until 0.707, so stability = (0.5 − 0.236) + 4 × (0.707 − 0.236) = 0.264 + 1.886 = 2.150. For the college market, J leaves at 0.447, so stability = 0.211 + 1.886 = 2.097. Selection then walks up the tree from the leaves: a parent cluster is kept if its own stability is larger than the total stability of its chosen children, and otherwise the children are kept instead. This rule is called <strong>excess of mass</strong>. Here neither market has child clusters, and by default the root ("everything is one cluster") is not allowed, so both markets are kept: {A–E} is cluster 0, {F–J} is cluster 1, and K and L are noise. That is the same result as DBSCAN with eps = 1.5, but found without choosing eps.</p>
+  <p>HDBSCAN also gives every point a <strong>membership strength</strong> in <code>probabilities_</code>: the λ at which the point left its cluster divided by the largest λ in that cluster. E left at λ = 0.5 while its cluster lasted to 0.707, so its strength is 0.5 / 0.707 = 0.707; J's is 0.447 / 0.707 = 0.632; the square stalls are 1; noise is 0. These are exactly the probabilities printed above. DBSCAN's yes-or-no "border point" has become a number, which is useful in reports: a customer with strength 0.2 can be flagged as an uncertain member of their segment.</p>
+  <p><code>min_cluster_size</code> is HDBSCAN's main knob: the smallest group you are willing to call a cluster. <code>min_samples</code> (which defaults to min_cluster_size) is the k used for core distances, and it controls how conservative the algorithm is: larger values make core distances larger, so more points end up as noise. On the three clouds of section 05:</p>
   <div class="fx" data-lang="py">for mcs, ms in [(5, None), (20, None), (60, None), (20, 5), (20, 40)]:
-    l = HDBSCAN(min_cluster_size=mcs, min_samples=ms, copy=True).fit_predict(Xv)
+    h = HDBSCAN(min_cluster_size=mcs, min_samples=ms, copy=True).fit(Xv)
+    l, p = h.labels_, h.probabilities_
     print(f"min_cluster_size={mcs:&lt;3} min_samples={str(ms):4s} -&gt; clusters={len(set(l) - {-1})} "
-          f"noise={(l == -1).sum():3d} ARI={adjusted_rand_score(yv, l):.3f}")
-l = HDBSCAN(min_cluster_size=20, cluster_selection_method="leaf", copy=True).fit_predict(Xv)
-print(f"cluster_selection_method='leaf'      -&gt; clusters={len(set(l) - {-1})} noise={(l == -1).sum():3d} "
-      f"ARI={adjusted_rand_score(yv, l):.3f}")</div>
-  <div class="fx" data-lang="text">min_cluster_size=5   min_samples=None -&gt; clusters=4 noise= 39 ARI=0.896
-min_cluster_size=20  min_samples=None -&gt; clusters=3 noise= 30 ARI=0.913
-min_cluster_size=60  min_samples=None -&gt; clusters=3 noise= 71 ARI=0.845
-min_cluster_size=20  min_samples=5    -&gt; clusters=3 noise= 14 ARI=0.962
-min_cluster_size=20  min_samples=40   -&gt; clusters=3 noise= 52 ARI=0.875
-cluster_selection_method='leaf'      -&gt; clusters=3 noise= 30 ARI=0.913</div>
-  <p>min_cluster_size = 5 lets one small accidental clump count as a fourth cluster; 20 and 60 both find the 3 clouds (60 is stricter, so more thin-edge points become noise). Lowering min_samples to 5 keeps min_cluster_size = 20 but makes core distances smaller, so fewer points are noise (14) and ARI rises to 0.962. min_samples = 40 is very conservative (52 noise). <code>cluster_selection_method="leaf"</code> picks the leaves of the condensed tree instead of the most stable clusters, which gives many small homogeneous clusters on data with sub-structure (here the same 3).</p>
-  <h3>Soft information: probabilities</h3>
-  <div class="fx" data-lang="py">h = HDBSCAN(min_cluster_size=20, copy=True).fit(Xv)
-p = h.probabilities_
-print("rows with probability 1.0 (deep inside):", (p == 1).sum())
-print("rows in a cluster but weak (0 &lt; p &lt; 0.3):", ((p &gt; 0) &amp; (p &lt; 0.3)).sum())
-print("noise rows (p = 0):", (p == 0).sum())</div>
-  <div class="fx" data-lang="text">rows with probability 1.0 (deep inside): 60
-rows in a cluster but weak (0 &lt; p &lt; 0.3): 29
-noise rows (p = 0): 30</div>
-  <p>Every clustered point gets a strength between 0 and 1. 29 points are in a cluster but only weakly: they are good candidates for "unsure" in a business report. Other useful HDBSCAN settings: <code>cluster_selection_epsilon</code> (merge clusters closer than this distance, useful when HDBSCAN produces many tiny clusters in a dense region), <code>max_cluster_size</code>, <code>allow_single_cluster=True</code> (allow the answer "it is all one cluster"), and <code>store_centers="centroid"</code> or <code>"medoid"</code>.</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>HDBSCAN removes eps but not judgement. min_cluster_size still decides what counts as a cluster (5 gave a fake fourth cluster above), and a large share of noise (30–50% is common on real data) is normal behaviour, not a bug. If you must label everyone, assign noise points afterwards to the nearest cluster and report them separately.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> HDBSCAN hides the eps scale inside a tree. Can we <em>see</em> the density structure as one picture, and still cut it at an eps of our choice? <b>Next: OPTICS.</b></div>
+          f"noise={(l == -1).sum():3d} ARI={adjusted_rand_score(yv, l):.3f}  weak members (0&lt;p&lt;0.3)={((p &gt; 0) &amp; (p &lt; 0.3)).sum()}")</div>
+  <div class="fx" data-lang="text">min_cluster_size=5   min_samples=None -&gt; clusters=4 noise= 39 ARI=0.896  weak members (0&lt;p&lt;0.3)=3
+min_cluster_size=20  min_samples=None -&gt; clusters=3 noise= 30 ARI=0.913  weak members (0&lt;p&lt;0.3)=29
+min_cluster_size=60  min_samples=None -&gt; clusters=3 noise= 71 ARI=0.845  weak members (0&lt;p&lt;0.3)=6
+min_cluster_size=20  min_samples=5    -&gt; clusters=3 noise= 14 ARI=0.962  weak members (0&lt;p&lt;0.3)=38
+min_cluster_size=20  min_samples=40   -&gt; clusters=3 noise= 52 ARI=0.875  weak members (0&lt;p&lt;0.3)=11</div>
+  <p>min_cluster_size = 5 lets one small accidental clump count as a fourth cluster. 20 and 60 both find the three clouds, with 60 stricter, so more thin-edge points become noise. Keeping min_cluster_size = 20 but lowering min_samples to 5 shrinks the core distances, so only 14 rows are noise and ARI rises to 0.962; min_samples = 40 is very conservative and calls 52 rows noise. The last column counts rows that are in a cluster but only weakly (strength below 0.3), the natural "unsure" group for a business report. Other useful settings are <code>cluster_selection_method="leaf"</code> (take the leaves of the condensed tree, giving many small, tight clusters), <code>cluster_selection_epsilon</code> (merge clusters closer than this distance), and <code>allow_single_cluster=True</code> (allow the answer "it is all one group").</p>
+  <p>HDBSCAN removes eps but not judgement. min_cluster_size still decides what counts as a cluster, as the fake fourth cluster shows, and a large share of noise (30–50% is common on real data) is normal behaviour rather than a bug. If every row must get a segment, assign the noise points to their nearest cluster afterwards and report them separately as low-confidence.</p>
 
-  <h2 id="db-optics"><span class="num">09</span>OPTICS (brief)</h2>
-  <p><strong>The question we can't answer yet.</strong> We would like one picture that shows every cluster at every density, from which any DBSCAN result can be read off.</p>
-  <p>OPTICS ("Ordering Points To Identify the Clustering Structure", Ankerst et al., 1999) visits the points in a special order: always next the point that is easiest to reach from what has been visited so far. For each point it records a <strong>reachability distance</strong>, built from the same core distances as HDBSCAN. Plotting reachability in visiting order gives a <strong>reachability plot</strong>: clusters appear as valleys (points reached cheaply one after another), and the walls between valleys are the jumps from one cluster to the next.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Reachability distance</strong> of q from p: reach(q | p) = max( core_k(p), d(p, q) ). (Mutual reachability takes the max with <em>both</em> core distances; OPTICS uses only the one it comes from.) OPTICS repeatedly moves to the unvisited point with the smallest reachability from any visited point and records that value. A horizontal cut at height eps on the reachability plot gives the DBSCAN clustering at that eps (up to border-point details).</p>
-  </div>
-  <p>On the twelve stalls with min_samples = 4:</p>
+  <h2 id="db-optics"><span class="num">07</span>OPTICS</h2>
+  <p>HDBSCAN hides the density structure inside a tree. <strong>OPTICS</strong> ("Ordering Points To Identify the Clustering Structure"; Ankerst and colleagues, 1999), an older member of the same family, turns it into a single picture from which DBSCAN's answer for any eps can be read. It visits the points in a special order, always moving next to the unvisited point that is easiest to reach from the points visited so far, and for each point records how expensive that step was. The cost of reaching q from p is the <strong>reachability distance</strong>, reach(q | p) = max( core(p), d(p, q) ). It is like mutual reachability, but uses only the core distance of the point you come from.</p>
+  <p>Plotting these recorded costs in visiting order gives the <strong>reachability plot</strong>. While OPTICS walks around inside a cluster, every step is cheap, so the plot stays low: clusters appear as valleys. When it has to leave a cluster and jump to the next one, the step is expensive and the plot shows a tall wall. On the twelve stalls:</p>
   <div class="fx" data-lang="py">from sklearn.cluster import OPTICS, cluster_optics_dbscan
 op = OPTICS(min_samples=4, max_eps=np.inf).fit(P)
-print("order        :", " ".join(names[i] for i in op.ordering_))
-print("reachability :", " ".join(f"{op.reachability_[i]:.2f}" for i in op.ordering_))
-print("core distance:", " ".join(f"{op.core_distances_[i]:.2f}" for i in op.ordering_))
+print("order        :", "    ".join(names[i] for i in op.ordering_))
+print("reachability :", " ".join(f"{op.reachability_[i]:4.2f}" for i in op.ordering_))
 lab15 = cluster_optics_dbscan(reachability=op.reachability_, core_distances=op.core_distances_,
                               ordering=op.ordering_, eps=1.5)
 print("cut at eps=1.5:", " ".join(f"{n}={v}" for n, v in zip(names, lab15)))</div>
-  <div class="fx" data-lang="text">order        : A B C D E F G H I J K L
-reachability : inf 1.41 1.41 1.41 1.00 4.24 1.41 1.41 1.41 1.41 3.61 5.00
-core distance: 1.41 1.41 1.41 1.00 2.00 1.41 1.41 1.41 1.41 2.24 4.47 5.83
+  <div class="fx" data-lang="text">order        : A    B    C    D    E    F    G    H    I    J    K    L
+reachability :  inf 1.41 1.41 1.41 1.00 4.24 1.41 1.41 1.41 1.41 3.61 5.00
 cut at eps=1.5: A=0 B=0 C=0 D=0 E=0 F=1 G=1 H=1 I=1 J=1 K=-1 L=-1</div>
-  <p>Read it as a walk. Start at A (no predecessor: inf). B, C, D are reached at 1.41 (A's core distance). E is reached from D at max(1.0, 1) = 1.00. Then the cheapest next step is F, at max(core E = 2, d(E, F) = 4.243) = 4.24: a tall wall, we are leaving the station market. G, H, I at 1.41 form the college valley, J at 1.41 from I. K is reached from H at max(1.414, 3.606) = 3.61, and L from G at max(1.414, 5) = 5.00: two more walls. Cutting at eps = 1.5 marks every reachability above 1.5 as "something new starts here" and reproduces DBSCAN's labels exactly.</p>
-  <p>On the three clouds, one OPTICS run gives the plot below. Its automatic "xi" method detects valleys by the steepness of their walls (<code>xi</code> = minimum relative drop):</p>
+  <p>Read it as a walk. It starts at A, which has no predecessor (inf). B, C and D are each reached at 1.41, A's core distance. E is reached from D at max(1.0, 1) = 1.00. The cheapest next step is then F, at max(core(E) = 2, d(E, F) = 4.243) = 4.24: a tall wall, because we are leaving the station market. G, H and I at 1.41 form the college valley, and J is reached from I at 1.41. K is reached from H at max(1.414, 3.606) = 3.61, and L from G at max(1.414, 5) = 5.00: two more walls. Now draw a horizontal line at height eps = 1.5. Every value above the line means "something new starts here", and cutting there reproduces DBSCAN's labels for eps = 1.5 exactly. A cut at any other height gives DBSCAN at that eps, without running anything again.</p>
+  <p>On the three clouds of section 05, one OPTICS run gives the plot below. Its automatic "xi" method finds valleys by the steepness of their walls (<code>xi</code> is the minimum relative drop that counts as a wall):</p>
   <div class="fx" data-lang="py">op = OPTICS(min_samples=30, xi=0.05, min_cluster_size=30).fit(Xv)
 l = op.labels_
 print(f"OPTICS xi=0.05: clusters={len(set(l) - {-1})} noise={(l == -1).sum()} ARI={adjusted_rand_score(yv, l):.3f}")
 for e in (0.4, 1.0):
     l = cluster_optics_dbscan(reachability=op.reachability_, core_distances=op.core_distances_,
                               ordering=op.ordering_, eps=e)
-    print(f"same OPTICS run, cut at eps={e}: clusters={len(set(l) - {-1})} noise={(l == -1).sum()}")</div>
+    print(f"same run, cut at eps={e}: clusters={len(set(l) - {-1})} noise={(l == -1).sum()}")</div>
   <div class="fx" data-lang="text">OPTICS xi=0.05: clusters=3 noise=4 ARI=0.946
-same OPTICS run, cut at eps=0.4: clusters=2 noise=395
-same OPTICS run, cut at eps=1.0: clusters=3 noise=60</div>
+same run, cut at eps=0.4: clusters=2 noise=395
+same run, cut at eps=1.0: clusters=3 noise=60</div>
   <figure class="viz"><svg viewBox="0 0 620 230" width="620">
 <line x1="50" y1="185" x2="600" y2="185" stroke="currentColor"/><line x1="50" y1="15" x2="50" y2="185" stroke="currentColor"/>
 <text x="44" y="189" text-anchor="end" class="tm" font-size="10">0</text>
@@ -1511,62 +1218,44 @@ same OPTICS run, cut at eps=1.0: clusters=3 noise=60</div>
 <text x="596" y="96" text-anchor="end" font-size="11">cut at eps = 1.0</text>
 <text x="325.0" y="203" text-anchor="middle" class="tm" font-size="11">points in OPTICS order (700 rows) · bar height = reachability distance · colour = xi cluster</text>
 </svg><figcaption>The reachability plot of the three-cloud data. Each valley is a cluster: the deep narrow one is the tight cloud, the wide shallow one is the loose cloud. A horizontal cut at any eps reproduces DBSCAN at that eps.</figcaption></figure>
-  <p>The xi method finds the three clouds (ARI 0.946) from one run, and the same run can be cut at any eps afterwards without recomputation. The catch: xi is a fussy knob (small changes in xi and min_samples change the result a lot), and OPTICS is slower than DBSCAN. In practice HDBSCAN has mostly replaced it, but the reachability plot is still the best picture of a data set's density structure.</p>
-  <div class="bridge"><b>What this still can't tell us →</b> the practical details: every parameter, distances other than straight lines, how to label a new stall, cost, and high dimensions. <b>Next: parameters and practice.</b></div>
+  <p>The plot shows the varying-density problem directly: the tight cloud is a deep, narrow valley and the loose cloud a wide, shallow one, so no single horizontal cut suits all three: at 0.4 only the bottoms of the deep valleys lie below the line, leaving 2 clusters and 395 of the 700 rows as noise, while at 1.0 all three valleys appear but 60 rows on the loose cloud's slopes are still noise. The xi method looks at walls rather than one height, so it finds the three clouds (ARI 0.946). The catch is that xi is a fussy knob and OPTICS is slower than DBSCAN, so in practice HDBSCAN has largely replaced it; but the reachability plot is still the best single picture of a data set's density structure.</p>
 
-  <h2 id="db-practice"><span class="num">10</span>Parameters and Practice</h2>
-  <p><strong>The question we can't answer yet.</strong> We understand the algorithms. What do we need to know to use them on real data without nasty surprises?</p>
-  <h3>scikit-learn DBSCAN</h3>
+  <h2 id="db-practice"><span class="num">08</span>DBSCAN in Practice</h2>
+  <p>Using these methods on real data raises practical questions that the algorithm itself does not answer: what every parameter does, how to handle distances that are not straight lines, how to label a new point, and what the cost is. scikit-learn's DBSCAN has these parameters:</p>
   <table class="tbl">
     <tr><th>Parameter</th><th>Default</th><th>Meaning</th></tr>
     <tr><td><code>eps</code></td><td>0.5</td><td>neighbourhood radius, in feature units; the knob that matters most</td></tr>
-    <tr><td><code>min_samples</code></td><td>5</td><td>points (including itself) needed within eps to be core</td></tr>
-    <tr><td><code>metric</code></td><td>"euclidean"</td><td>any sklearn/scipy distance: "manhattan", "cosine", "haversine", or "precomputed" (pass an n × n distance matrix)</td></tr>
-    <tr><td><code>algorithm</code></td><td>"auto"</td><td>neighbour search: "ball_tree", "kd_tree", "brute"</td></tr>
-    <tr><td><code>leaf_size</code>, <code>p</code>, <code>metric_params</code></td><td>30, None, None</td><td>tree tuning; p = Minkowski power</td></tr>
+    <tr><td><code>min_samples</code></td><td>5</td><td>points within eps (itself included) needed to be core</td></tr>
+    <tr><td><code>metric</code></td><td>"euclidean"</td><td>any distance, e.g. "manhattan", "cosine", "haversine", or "precomputed" with an n × n distance matrix</td></tr>
+    <tr><td><code>algorithm</code>, <code>leaf_size</code></td><td>"auto", 30</td><td>how neighbours are searched: "ball_tree", "kd_tree", "brute"</td></tr>
     <tr><td><code>n_jobs</code></td><td>None</td><td>parallel neighbour search</td></tr>
-    <tr><td><code>fit(X, sample_weight=…)</code></td><td>–</td><td>a row with weight w counts as w points when testing for core</td></tr>
   </table>
+  <p>After fitting, <code>labels_</code> holds the clusters, <code>core_sample_indices_</code> the rows that were core, and <code>components_</code> a copy of the core points themselves. <code>fit</code> also accepts <code>sample_weight</code>: a row with weight w counts as w points when testing whether a point is core, which is a compact way to say "this row stands for many identical rows".</p>
   <div class="fx" data-lang="py">db = DBSCAN(eps=0.3, min_samples=5).fit(X)
 print("labels_[:8]             ", db.labels_[:8])
 print("core_sample_indices_[:8]", db.core_sample_indices_[:8])
-print("components_.shape       ", db.components_.shape, "(the core points themselves)")
-w = np.ones(len(P)); w[10] = 4                       # stall K counts as 4 stalls (say, 4 carts parked together)
-print("stall labels with K weighted 4:", DBSCAN(eps=1.5, min_samples=4).fit_predict(P, sample_weight=w))</div>
+print("components_.shape       ", db.components_.shape)
+w = np.ones(len(P)); w[10] = 4                 # stall K is really 4 carts parked together
+print("stalls with K weighted 4:", DBSCAN(eps=1.5, min_samples=4).fit_predict(P, sample_weight=w))</div>
   <div class="fx" data-lang="text">labels_[:8]              [0 0 1 0 0 1 0 0]
 core_sample_indices_[:8] [0 1 2 3 4 5 6 7]
-components_.shape        (303, 2) (the core points themselves)
-stall labels with K weighted 4: [ 0  0  0  0  0  1  1  1  1  1  2 -1]</div>
-  <p><code>components_</code> holds copies of the 303 core points of the moons. The last line is the stalls: if stall K is really 4 carts parked together, weight 4 makes its own count 4 ≥ min_samples, so K becomes core and forms a third cluster on its own. Sample weights are a way to say "this row is really many identical rows".</p>
-  <h3>Non-Euclidean distances: a geographic example</h3>
-  <p>Our stalls used flat-map kilometres. For real latitude/longitude, Euclidean distance on degrees is wrong (a degree of longitude shrinks toward the poles). Use the great-circle (haversine) distance: inputs in radians as [lat, lon], and eps in radians, so divide kilometres by the Earth's radius (6371 km).</p>
+components_.shape        (303, 2)
+stalls with K weighted 4: [ 0  0  0  0  0  1  1  1  1  1  2 -1]</div>
+  <p>The moons have 303 core points out of 315. In the last line, stall K has been given weight 4, as if four carts were parked at that spot. Its own count is now 4, which reaches min_samples, so K becomes core and forms a third cluster on its own.</p>
+  <p>The stalls used flat-map kilometres, but real locations come as latitude and longitude, and straight-line distance on degrees is wrong because a degree of longitude shrinks towards the poles. The right distance is the great-circle or <strong>haversine</strong> distance along the Earth's surface. scikit-learn expects [latitude, longitude] in radians, and gives the distance in radians too, so eps in kilometres must be divided by the Earth's radius, 6371 km:</p>
   <div class="fx" data-lang="py">cities = {"Connaught Pl": (28.6315, 77.2167), "Karol Bagh": (28.6519, 77.1909),
           "Lajpat Nagar": (28.5677, 77.2433), "Saket": (28.5245, 77.2066),
           "Bandra": (19.0596, 72.8295), "Andheri": (19.1136, 72.8697),
           "Dadar": (19.0178, 72.8478), "Colaba": (18.9067, 72.8147),
           "Shimla": (31.1048, 77.1734)}
 rad = np.radians(list(cities.values()))               # haversine wants [lat, lon] in radians
-km_per_rad = 6371.0
-geo = DBSCAN(eps=25 / km_per_rad, min_samples=3, metric="haversine",
-             algorithm="ball_tree").fit_predict(rad)  # eps = 25 km
-for name, l in zip(cities, geo):
-    print(f"{name:13s} {l}")</div>
-  <div class="fx" data-lang="text">Connaught Pl  0
-Karol Bagh    0
-Lajpat Nagar  0
-Saket         0
-Bandra        1
-Andheri       1
-Dadar         1
-Colaba        1
-Shimla        -1</div>
-  <p>With eps = 25 km and min_samples = 3, the four Delhi localities form one cluster, the four Mumbai localities another, and Shimla (over 250 km from either) is noise. Notice how natural eps becomes when the distance has real units.</p>
-  <h3>Scaling and feature choice</h3>
-  <p>DBSCAN uses one radius in every direction, so all features must be on comparable scales (StandardScaler or RobustScaler) unless they share real units (like the kilometres of the stalls). Categorical features need a suitable distance (for example Gower, see <a class="xref" data-note="ml_clustering">The Idea &amp; Distances</a>) passed as <code>metric="precomputed"</code>.</p>
-  <h3>New points: there is no predict</h3>
-  <p>DBSCAN has <code>fit_predict</code> but no <code>predict</code>: the clusters are defined by the training points themselves. The standard way to label a new point follows the definition: it belongs to a cluster if it lies within eps of one of that cluster's <em>core</em> points (it would be a border point), otherwise it is noise. Three new stalls open:</p>
-  <div class="fx" data-lang="py">db12 = DBSCAN(eps=1.5, min_samples=4).fit(P)
-cores = P[db12.core_sample_indices_]                       # the 8 core stalls A B C D F G H I
+geo = DBSCAN(eps=25 / 6371.0, min_samples=3,          # eps = 25 km / Earth's radius
+             metric="haversine", algorithm="ball_tree").fit_predict(rad)
+print("  ".join(f"{name}={l}" for name, l in zip(cities, geo)))</div>
+  <div class="fx" data-lang="text">Connaught Pl=0  Karol Bagh=0  Lajpat Nagar=0  Saket=0  Bandra=1  Andheri=1  Dadar=1  Colaba=1  Shimla=-1</div>
+  <p>With eps = 25 km and min_samples = 3, the four Delhi localities form one cluster, the four Mumbai localities another, and Shimla, over 250 km from either, is noise. Notice how natural eps becomes when the distance has real units: "localities within 25 km". This is why DBSCAN is the classic tool for GPS hotspots and delivery zones. For categorical or mixed features, compute a suitable distance yourself (for example Gower distance, see <a class="xref" data-note="ml_clustering">The Idea &amp; Distances</a>) and pass it with <code>metric="precomputed"</code>.</p>
+  <p>DBSCAN has <code>fit_predict</code> but no <code>predict</code>, because the clusters are defined by the training points themselves rather than by a formula such as a centre. The natural way to label a new point follows the definition: it joins a cluster if it lies within eps of one of that cluster's core points (it would be a border point), and otherwise it is noise. Three new stalls open:</p>
+  <div class="fx" data-lang="py">cores = P[db12.core_sample_indices_]                       # the 8 core stalls
 core_lab = db12.labels_[db12.core_sample_indices_]
 nn = NearestNeighbors(n_neighbors=1).fit(cores)
 
@@ -1580,238 +1269,140 @@ for p, l in zip(new, dbscan_predict(new)):
   <div class="fx" data-lang="text">(2, 3) -&gt; 0
 (5, 5) -&gt; 1
 (9, 9) -&gt; -1</div>
-  <p>(2, 3) is 1 km from core stall D → station market. (5, 5) is 1 km from core stall F → college market. (9, 9) is far from every core stall → noise. (HDBSCAN offers <code>approximate_predict</code> only in the separate <code>hdbscan</code> package, not in scikit-learn's version; the same nearest-core idea works there.)</p>
-  <h3>Cost: time and memory</h3>
-  <p>The work is dominated by the neighbourhood queries. With a tree index and a small eps, each query is about O(log n), so the total is about O(n log n). With a large eps (or in high dimensions, where tree indexes stop helping), each query returns a big share of the data and the cost tends to O(n²). scikit-learn's implementation also <strong>stores every neighbourhood</strong>, so memory grows with the number of neighbour pairs (on the 315 moon rows):</p>
+  <p>(2, 3) is 1 km from core stall D, so it joins the station market; (5, 5) is 1 km from core stall F, so it joins the college market; (9, 9) is far from every core stall, so it is noise. Note that this only labels new points; it does not let a new point become core and change the clusters, which would require refitting.</p>
+  <p>The cost of DBSCAN is dominated by finding neighbourhoods. With a tree index and a small eps each search is fast, roughly O(log n), so the total is about O(n log n). With a large eps, or in many dimensions where tree indexes stop helping, each search returns a big share of the data and the cost tends towards O(n²). scikit-learn also <em>stores</em> every neighbourhood, so memory grows with the number of neighbour pairs:</p>
   <div class="fx" data-lang="py">for e in (0.3, 1.0, 3.0):
     nn_e = NearestNeighbors(radius=e).fit(X)
     total = sum(len(a) for a in nn_e.radius_neighbors(X, return_distance=False))
-    print(f"eps={e}: neighbour pairs stored = {total:6d}  (all pairs would be {len(X)**2})")</div>
-  <div class="fx" data-lang="text">eps=0.3: neighbour pairs stored =   5109  (all pairs would be 99225)
-eps=1.0: neighbour pairs stored =  20823  (all pairs would be 99225)
-eps=3.0: neighbour pairs stored =  86215  (all pairs would be 99225)</div>
-  <p>At eps = 3 nearly every pair is stored (86,215 of 99,225). On a million rows that would not fit in memory. If eps is too large, the first symptom is often a memory error, not a bad clustering. HDBSCAN costs about O(n log n) for low-dimensional data with tree indexes and O(n²) in the worst case, without needing eps.</p>
-  <h3>High dimensions</h3>
-  <p>In 50 or 500 dimensions, all pairwise distances become similar ("distance concentration", see <a class="xref" data-note="ml_dimred">Curse of Dimensionality</a>), so a ball of radius eps holds either almost nobody or almost everybody; density loses its meaning. The usual recipe for embeddings, documents or images is to reduce dimensions first (PCA to ~20–50, or <a class="xref" data-note="ml_umap">UMAP</a> to ~5–10) and then run HDBSCAN. UMAP + HDBSCAN is a very common pipeline for clustering text embeddings.</p>
-  <h3>DBSCAN and single linkage</h3>
-  <p>A useful fact for interviews: the DBSCAN* clusters (core points only) at radius eps are exactly the connected pieces you get by cutting the single-linkage tree on mutual reachability distances (k = min_samples) at height eps. On the stalls: cut the MST of section 08 at 1.5 and the pieces with more than one stall are {A, B, C, D} and {F, G, H, I}, the DBSCAN core points. With min_samples = 1 or 2, core distances are 0 or the nearest-neighbour distance, so DBSCAN becomes ordinary single linkage cut at eps. That is why HDBSCAN can be described as "single linkage on mutual reachability, plus a smart way to cut".</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Judging DBSCAN with silhouette. Silhouette rewards round, compact clusters and does not know what to do with noise (you must drop the −1 points first, which flatters the result). A perfect moon clustering can score lower than K-Means' wrong straight cut. Use plots, cluster profiles and, if needed, a density-based score such as DBCV (see <a class="xref" data-note="ml_cluster_eval">Evaluating Clusters</a>).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> we have met many pieces (counts, k-distances, core distances, reachabilities, stabilities). How do they all fit together? <b>Next: how it all connects.</b></div>
+    print(f"eps={e}: neighbour pairs stored = {total:6d}  (all pairs = {len(X)**2})")</div>
+  <div class="fx" data-lang="text">eps=0.3: neighbour pairs stored =   5109  (all pairs = 99225)
+eps=1.0: neighbour pairs stored =  20823  (all pairs = 99225)
+eps=3.0: neighbour pairs stored =  86215  (all pairs = 99225)</div>
+  <p>At eps = 3 nearly every pair is stored (86,215 of 99,225). On a million rows that would never fit in memory, so the first symptom of an eps that is too large is often a memory error rather than a bad clustering. HDBSCAN costs about O(n log n) on low-dimensional data and needs no eps.</p>
+  <p>High-dimensional data needs special care. In 50 or 500 dimensions all pairwise distances become similar, an effect called distance concentration (see <a class="xref" data-note="ml_dimred">Curse of Dimensionality</a>), so a ball of radius eps contains either almost nobody or almost everybody and "density" loses its meaning. The standard recipe for text embeddings, images and similar data is to reduce dimensions first, with PCA to about 20–50 or <a class="xref" data-note="ml_umap">UMAP</a> to about 5–10, and then run HDBSCAN. UMAP followed by HDBSCAN is one of the most common pipelines for clustering documents.</p>
+  <p>There is also a neat connection to hierarchical clustering that interviewers like. The DBSCAN* clusters (core points only) at radius eps are exactly the pieces you get by cutting the single-linkage tree built on mutual reachability distances at height eps. On the stalls, cutting the MST of section 06 at 1.5 leaves {A, B, C, D} and {F, G, H, I}, which are DBSCAN's core points. That is why HDBSCAN is often summarised as "single linkage on mutual reachability, plus a smart way to cut the tree".</p>
+  <p>Finally, judging a DBSCAN result needs care. The popular silhouette score rewards round, compact clusters and does not know what to do with noise, so a perfect moon clustering can score lower than K-Means' wrong straight cut. Use plots, cluster profiles and, if needed, a density-based score such as DBCV (see <a class="xref" data-note="ml_cluster_eval">Evaluating Clusters</a>).</p>
 
-  <h2 id="db-connect"><span class="num">11</span>How It All Connects</h2>
-  <p><strong>The question we can't answer yet.</strong> Each section added one idea to answer the previous one's weakness. Seen together, which quantities are built from which, and which one should you reach for?</p>
-  <figure class="viz"><svg viewBox="0 0 680 300" width="680">
-<defs><marker id="db-ca" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="270" y="10" width="140" height="36" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="340" y="33" text-anchor="middle" font-size="12">distance d(p, q)</text>
-<rect x="40" y="80" width="170" height="40" rx="7" class="fb sb"/><text x="125" y="98" text-anchor="middle" font-size="12">eps-ball count</text><text x="125" y="113" text-anchor="middle" class="tm" font-size="10">|N_eps(p)|</text>
-<rect x="255" y="80" width="170" height="40" rx="7" class="fb sb"/><text x="340" y="98" text-anchor="middle" font-size="12">k-distance</text><text x="340" y="113" text-anchor="middle" class="tm" font-size="10">= core distance</text>
-<rect x="470" y="80" width="190" height="40" rx="7" class="fv"/><text x="565" y="98" text-anchor="middle" font-size="12">reachability</text><text x="565" y="113" text-anchor="middle" class="tm" font-size="10">max(core(p), d)</text>
-<line x1="300" y1="46" x2="150" y2="78" stroke="currentColor" marker-end="url(#db-ca)"/>
-<line x1="340" y1="46" x2="340" y2="78" stroke="currentColor" marker-end="url(#db-ca)"/>
-<line x1="380" y1="46" x2="540" y2="78" stroke="currentColor" marker-end="url(#db-ca)"/>
-<line x1="425" y1="100" x2="468" y2="100" stroke="currentColor" marker-end="url(#db-ca)"/>
-<line x1="253" y1="100" x2="212" y2="100" stroke="currentColor" stroke-dasharray="3 3" marker-end="url(#db-ca)"/>
-<text x="232" y="94" text-anchor="middle" class="tm" font-size="9.5">≤ eps ⇔</text>
-<rect x="40" y="150" width="170" height="40" rx="7" class="fb sb"/><text x="125" y="168" text-anchor="middle" font-size="12">core / border / noise</text><text x="125" y="183" text-anchor="middle" class="tm" font-size="10">count ≥ min_samples?</text>
-<rect x="255" y="150" width="170" height="40" rx="7" class="fr sr"/><text x="340" y="168" text-anchor="middle" font-size="12">mutual reachability</text><text x="340" y="183" text-anchor="middle" class="tm" font-size="10">max(core a, core b, d)</text>
-<rect x="470" y="150" width="190" height="40" rx="7" class="fv"/><text x="565" y="168" text-anchor="middle" font-size="12">reachability plot</text><text x="565" y="183" text-anchor="middle" class="tm" font-size="10">valleys = clusters</text>
-<line x1="125" y1="120" x2="125" y2="148" stroke="currentColor" marker-end="url(#db-ca)"/>
-<line x1="340" y1="120" x2="340" y2="148" stroke="currentColor" marker-end="url(#db-ca)"/>
-<line x1="565" y1="120" x2="565" y2="148" stroke="currentColor" marker-end="url(#db-ca)"/>
-<rect x="40" y="220" width="170" height="40" rx="7" class="fb sb" stroke-width="2.5"/><text x="125" y="238" text-anchor="middle" font-size="12" font-weight="700">DBSCAN clusters</text><text x="125" y="253" text-anchor="middle" class="tm" font-size="10">chain core points</text>
-<rect x="255" y="220" width="170" height="40" rx="7" class="fr sr" stroke-width="2.5"/><text x="340" y="238" text-anchor="middle" font-size="12" font-weight="700">HDBSCAN clusters</text><text x="340" y="253" text-anchor="middle" class="tm" font-size="10">MST → condensed tree → stability</text>
-<rect x="470" y="220" width="190" height="40" rx="7" class="fv" stroke-width="2.5"/><text x="565" y="238" text-anchor="middle" font-size="12" font-weight="700">OPTICS clusters</text><text x="565" y="253" text-anchor="middle" class="tm" font-size="10">xi, or a cut at eps</text>
-<line x1="125" y1="190" x2="125" y2="218" stroke="currentColor" marker-end="url(#db-ca)"/>
-<line x1="340" y1="190" x2="340" y2="218" stroke="currentColor" marker-end="url(#db-ca)"/>
-<line x1="565" y1="190" x2="565" y2="218" stroke="currentColor" marker-end="url(#db-ca)"/>
-<line x1="468" y1="240" x2="212" y2="240" stroke="currentColor" stroke-dasharray="4 3"/>
-<text x="340" y="285" text-anchor="middle" class="tm" font-size="10.5">dashed: a cut of the reachability plot (or of the HDBSCAN tree) at height eps gives DBSCAN at that eps</text>
-</svg><figcaption>Everything is built from one distance. The k-distance of DBSCAN is the core distance of HDBSCAN and OPTICS; the three algorithms differ only in what they do with it.</figcaption></figure>
-  <h3>Every quantity on the running example</h3>
-  <div class="fx" data-lang="py">from sklearn.cluster import OPTICS
-op12 = OPTICS(min_samples=4).fit(P)
-dbl = DBSCAN(eps=1.5, min_samples=4).fit(P)
-is_core = np.zeros(12, bool); is_core[dbl.core_sample_indices_] = True
-print("stall count@1.5  k-dist=core-dist  DBSCAN-type  DBSCAN  OPTICS-reach  HDBSCAN  strength")
-for i, n in enumerate(names):
-    t = "core" if is_core[i] else ("border" if dbl.labels_[i] != -1 else "noise")
-    r = op12.reachability_[i]
-    print(f"  {n}      {count[i]}        {core_d[i]:6.3f}          {t:7s}   {dbl.labels_[i]:3d}     "
-          f"{('inf' if np.isinf(r) else f'{r:.3f}'):&gt;6s}     {h12.labels_[i]:3d}     {h12.probabilities_[i]:.3f}")</div>
-  <div class="fx" data-lang="text">stall count@1.5  k-dist=core-dist  DBSCAN-type  DBSCAN  OPTICS-reach  HDBSCAN  strength
-  A      4         1.414          core        0        inf       0     1.000
-  B      5         1.414          core        0      1.414       0     1.000
-  C      4         1.414          core        0      1.414       0     1.000
-  D      5         1.000          core        0      1.414       0     1.000
-  E      3         2.000          border      0      1.000       0     0.707
-  F      4         1.414          core        1      4.243       1     1.000
-  G      4         1.414          core        1      1.414       1     1.000
-  H      4         1.414          core        1      1.414       1     1.000
-  I      5         1.414          core        1      1.414       1     1.000
-  J      2         2.236          border      1      1.414       1     0.632
-  K      1         4.472          noise      -1      3.606      -1     0.000
-  L      1         5.831          noise      -1      5.000      -1     0.000</div>
-  <p>Read across one row to see the chain. Stall E: 3 stalls in its 1.5 km circle → its 4-distance is 2.0 &gt; 1.5 → not core, but near core D → border, cluster 0 → in HDBSCAN it leaves its cluster at λ = 1/2 while the core lasts to 1/1.414 → strength 0.707. Stall K: 1 in its circle → 4-distance 4.472 → noise in DBSCAN, falls off the root in HDBSCAN (strength 0), reached by a 3.61 wall in OPTICS.</p>
-  <table class="tbl">
-    <tr><th>Concept</th><th>Built from</th><th>Answers the question</th><th>On the stalls</th><th>Sensitive to</th></tr>
-    <tr><td>eps-ball count</td><td>distance, eps</td><td>How crowded is this point?</td><td>D 5, E 3, K 1</td><td>eps, scaling</td></tr>
-    <tr><td>core / border / noise</td><td>count, min_samples</td><td>Is it in a crowd, on its edge, or alone?</td><td>8 core, E J border, K L noise</td><td>both knobs</td></tr>
-    <tr><td>reachable / connected</td><td>core points + eps-balls</td><td>Which crowded points belong together?</td><td>A → D → E</td><td>eps</td></tr>
-    <tr><td>expansion procedure</td><td>reachability</td><td>How does a program find the clusters?</td><td>2 flood-fills from A and F</td><td>row order (shared border only)</td></tr>
-    <tr><td>k-distance</td><td>distance, min_samples</td><td>Which eps makes which points core?</td><td>knee between 1.414 and 2.0</td><td>min_samples</td></tr>
-    <tr><td>core distance</td><td>= k-distance</td><td>From which eps on is p core?</td><td>same column</td><td>min_samples</td></tr>
-    <tr><td>mutual reachability</td><td>core distances + distance</td><td>How far apart are two points, counting sparseness?</td><td>H–K 3.606 → 4.472</td><td>min_samples</td></tr>
-    <tr><td>MST / condensed tree</td><td>mutual reachability, min_cluster_size</td><td>What happens at every eps?</td><td>split at 4.243</td><td>min_cluster_size</td></tr>
-    <tr><td>stability</td><td>λ = 1/d along the tree</td><td>Which clusters are real?</td><td>2.150 and 2.097</td><td>min_cluster_size</td></tr>
-    <tr><td>membership strength</td><td>λ_p / λ_max</td><td>How firmly is p in its cluster?</td><td>E 0.707, J 0.632</td><td>–</td></tr>
-    <tr><td>OPTICS reachability</td><td>core distance of predecessor + distance</td><td>What does the density structure look like?</td><td>walls 4.24, 3.61, 5.00</td><td>min_samples, xi</td></tr>
-  </table>
-  <h3>When to use which</h3>
-  <table class="tbl">
-    <tr><th>Situation</th><th>Use</th><th>Why</th></tr>
-    <tr><td>eps has a real meaning (metres, seconds) and densities are similar</td><td>DBSCAN</td><td>simple, fast, interpretable radius</td></tr>
-    <tr><td>Unknown scale or clusters of different densities</td><td>HDBSCAN</td><td>no eps; picks each cluster at its own density; gives strengths</td></tr>
-    <tr><td>You want to see the density structure, or try many eps cheaply</td><td>OPTICS</td><td>one run, any cut</td></tr>
-    <tr><td>Round blobs, k known, very large data</td><td>K-Means instead</td><td>faster; density adds nothing</td></tr>
-    <tr><td>Overlapping clusters that need probabilities</td><td>GMM instead</td><td>density methods need gaps</td></tr>
-  </table>
-  <div class="bridge"><b>What this still can't tell us →</b> how the density family compares with K-Means, hierarchical clustering and GMMs on every practical axis. <b>Next: comparisons.</b></div>
-
-  <h2 id="db-compare"><span class="num">12</span>Comparisons</h2>
-  <p><strong>The question we can't answer yet.</strong> Given a new data set, how do we choose between the density methods and the other clustering families?</p>
-  <h3>The density family</h3>
+  <h2 id="db-compare"><span class="num">09</span>Choosing a Clustering Method</h2>
+  <p>Within the density family the choice is usually simple. Use plain DBSCAN when eps has a real meaning, such as metres or seconds, and the clusters have similar densities: it is simple, fast and easy to explain. Use HDBSCAN as the default otherwise, especially when you have no feel for the scale or clusters have different densities; it needs no eps and gives membership strengths. Use OPTICS when you want to see the density structure or cut the same run at several eps values.</p>
   <table class="tbl">
     <tr><th></th><th>DBSCAN</th><th>HDBSCAN</th><th>OPTICS</th></tr>
     <tr><td>Main knobs</td><td>eps, min_samples</td><td>min_cluster_size (min_samples)</td><td>min_samples, xi (or a cut eps)</td></tr>
-    <tr><td>Varying density</td><td>No: one eps</td><td><strong>Yes</strong></td><td>Yes (xi), or one cut</td></tr>
-    <tr><td>Output</td><td>labels</td><td>labels + probabilities + tree</td><td>labels + reachability plot</td></tr>
+    <tr><td>Different densities</td><td>no: one eps</td><td>yes</td><td>yes (xi)</td></tr>
+    <tr><td>Output</td><td>labels</td><td>labels + strengths + tree</td><td>labels + reachability plot</td></tr>
     <tr><td>Deterministic</td><td>except shared border points</td><td>yes</td><td>yes</td></tr>
-    <tr><td>Speed</td><td>fast (small eps)</td><td>fast-ish</td><td>slowest</td></tr>
-    <tr><td>Use when</td><td>you understand the scale (eps in km, in seconds…)</td><td>default choice for density clustering</td><td>you want to see the density structure</td></tr>
+    <tr><td>Speed</td><td>fast with small eps</td><td>fast</td><td>slowest</td></tr>
   </table>
-  <h3>Against the other families</h3>
+  <p>Against the other clustering families, the deciding questions are the shape of the clusters, whether there is noise, whether you know k, and whether you need probabilities. <a class="xref" data-note="ml_kmeans">K-Means</a> is the right choice for round clusters of similar size, especially on millions of rows. <a class="xref" data-note="ml_gmm">Gaussian mixture models</a> are right when clusters are elliptical or overlap, because density methods need a gap of empty space between clusters and GMMs give honest probabilities where groups blur together. <a class="xref" data-note="ml_hierarchical">Hierarchical clustering</a> is right on small data when you want a full tree of groups within groups.</p>
   <table class="tbl">
     <tr><th></th><th>K-Means</th><th>Hierarchical (single link)</th><th>DBSCAN / HDBSCAN</th><th>GMM</th></tr>
-    <tr><td>Needs k</td><td>yes</td><td>no (cut later)</td><td>no</td><td>yes (choose with BIC)</td></tr>
+    <tr><td>Needs k</td><td>yes</td><td>no (cut later)</td><td>no</td><td>yes (BIC helps)</td></tr>
     <tr><td>Cluster shape</td><td>round, similar size</td><td>any (chains)</td><td>any</td><td>ellipses</td></tr>
-    <tr><td>Noise / outliers</td><td>forced into clusters</td><td>forced in; can chain clusters</td><td><strong>labelled −1</strong></td><td>low density, still assigned</td></tr>
-    <tr><td>Soft membership</td><td>no</td><td>no</td><td>HDBSCAN: strength</td><td><strong>yes, probabilities</strong></td></tr>
-    <tr><td>New points</td><td>predict</td><td>no</td><td>nearest core point</td><td>predict / predict_proba</td></tr>
-    <tr><td>Scale</td><td>millions</td><td>~10–20k (n² memory)</td><td>~10⁵–10⁶ with small eps</td><td>~10⁵</td></tr>
-    <tr><td>Main weakness</td><td>shapes, outliers, k</td><td>chaining, memory</td><td>one eps (DBSCAN), high dims</td><td>k, local optima, Gaussian shape</td></tr>
+    <tr><td>Outliers</td><td>forced in</td><td>forced in; can chain clusters</td><td>labelled −1</td><td>low density, still assigned</td></tr>
+    <tr><td>Soft membership</td><td>no</td><td>no</td><td>HDBSCAN strengths</td><td>yes, probabilities</td></tr>
+    <tr><td>New points</td><td>predict</td><td>no</td><td>nearest core point</td><td>predict, predict_proba</td></tr>
+    <tr><td>Typical size</td><td>millions</td><td>~10–20 thousand</td><td>~10⁵–10⁶</td><td>~10⁵</td></tr>
+    <tr><td>Main weakness</td><td>shapes, outliers, k</td><td>chaining, memory</td><td>one eps (DBSCAN), high dimensions</td><td>k, local optima, Gaussian shape</td></tr>
   </table>
-  <p>Notes on the neighbours: <a class="xref" data-note="ml_kmeans">K-Means</a> · <a class="xref" data-note="ml_hierarchical">Hierarchical</a> · <a class="xref" data-note="ml_gmm">Gaussian Mixture Models</a>.</p>
-  <div class="bridge"><b>What this still can't tell us →</b> what typically goes wrong when people apply these methods. <b>Next: common mistakes.</b></div>
 
-  <h2 id="db-traps"><span class="num">13</span>Common Mistakes</h2>
-  <p><strong>The question we can't answer yet.</strong> We know how the methods work; which errors do people actually make with them?</p>
-  <div class="callout trap"><span class="label">Trap: not scaling</span>
-    <p>eps is one radius in every direction. If income is in rupees and age in years, the ball is effectively a thin slab along the age axis and income alone decides neighbourhoods. Scale (or use features with shared real units, like the stalls' kilometres) before choosing eps.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: copying eps from somewhere else</span>
-    <p>eps = 0.5 (the default) means nothing for your data. Choose it from a k-distance plot on <em>your</em> scaled features, then check a small grid around it.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: off-by-one in min_samples</span>
-    <p>scikit-learn counts the point itself. Other tools (and some textbooks' "MinPts") may not. Stall E has 3 stalls in its circle including itself; with "others only" counting it would be 2.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: counting −1 as a cluster</span>
-    <p><code>len(set(labels))</code> includes −1. Use <code>len(set(labels) - {-1})</code> for the number of clusters, and drop −1 rows before computing metrics like silhouette (and say that you did).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: expecting one eps to handle different densities</span>
-    <p>If the k-distance plot has several plateaus, or a grid search never gives a stable answer, the clusters have different densities. Switch to HDBSCAN rather than hunting for a magic eps.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: running on raw high-dimensional embeddings</span>
-    <p>In hundreds of dimensions density is meaningless and runtime explodes. Reduce first (PCA, UMAP), then cluster.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: treating noise as anomalies without checking</span>
-    <p>Noise includes ordinary rows from the thin edges of clusters. Use outlier scores (GLOSH in the hdbscan package, LOF, Isolation Forest) when anomalies are the goal.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: a huge eps on a big data set</span>
-    <p>scikit-learn stores all neighbourhoods. With a large eps that is nearly n² pairs and the process runs out of memory. Start small and increase.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us →</b> nothing new; time to compress the whole note into one sheet. <b>Next: the revision sheet.</b></div>
+  <h2 id="db-traps"><span class="num">10</span>Common Mistakes</h2>
+  <p>The most damaging mistake is running DBSCAN on unscaled features. eps is one radius in every direction, so if one column is in rupees and another in years, the circle is effectively a thin sliver and the large-unit column alone decides who is a neighbour. Here are the moon rows again with the second column multiplied by 1000, as if it had been recorded in different units:</p>
+  <div class="fx" data-lang="py">Xraw = np.vstack([Xm, junk]) * [1, 1000]          # same moons, but column 2 is now in "rupees"
+for name, Z in [("raw", Xraw), ("scaled", StandardScaler().fit_transform(Xraw))]:
+    l = DBSCAN(eps=0.3, min_samples=5).fit_predict(Z)
+    print(f"{name:6s}: clusters={len(set(l) - {-1}):3d}  noise={(l == -1).sum()}")</div>
+  <div class="fx" data-lang="text">raw   : clusters=  0  noise=315
+scaled: clusters=  2  noise=11</div>
+  <p>On the raw data no point has 5 neighbours within 0.3, because the second column's distances are now in the hundreds, so all 315 rows become noise. After scaling, the same eps gives the two moons. A related mistake is copying an eps from a tutorial or keeping the default of 0.5: eps means nothing outside the data it was chosen for. Choose it from a k-distance plot on your own scaled features and check a small grid around it.</p>
+  <p>A second common slip is counting the noise label as a cluster. <code>labels_</code> contains −1 for noise, so the obvious way of counting clusters is off by one:</p>
+  <div class="fx" data-lang="py">lab = DBSCAN(eps=1.5, min_samples=4).fit_predict(P)
+print("len(set(labels))        =", len(set(lab)), "  (wrong: counts -1)")
+print("len(set(labels) - {-1}) =", len(set(lab) - {-1}))</div>
+  <div class="fx" data-lang="text">len(set(labels))        = 3   (wrong: counts -1)
+len(set(labels) - {-1}) = 2</div>
+  <p>Use <code>len(set(labels) - {-1})</code>. In the same spirit, drop the −1 rows before computing scores such as silhouette, and say that you did, because scoring only the confident points flatters the result.</p>
+  <p>Beyond these, a few mistakes come from expecting too much of the method. Hunting for a "magic eps" when clusters have different densities wastes time: if the k-distance plot has several plateaus or no eps gives a stable answer, switch to HDBSCAN. Running density clustering on raw embeddings with hundreds of dimensions gives meaningless densities and slow runs; reduce dimensions first. Treating every noise point as an anomaly is wrong, because noise includes ordinary rows at the thin edges of clusters. Forgetting that scikit-learn's min_samples counts the point itself makes comparisons with other tools off by one. And a large eps on a big data set can exhaust memory before it produces any answer, so start small and increase.</p>
 
   <h2 id="db-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>A complete summary of the note. The running example is 12 tea stalls (km): station market A(1,1) B(2,1) C(1,2) D(2,2) E(3,2), college market F(6,5) G(7,5) H(6,6) I(7,6) J(8,7), and two loners K(4,9), L(10,1). Settings: eps = 1.5, min_samples = 4, min_cluster_size = 3.</p>
-  <h3>The question ladder in one line each</h3>
-  <ol class="story">
-    <li><b>Density instead of centres</b><span>K-Means needs k, cuts straight lines and forces loners in (K and L joined the college market). A cluster should instead be a crowded region, and loners noise.</span></li>
-    <li><b>eps and min_samples</b><span>"Crowded" = at least min_samples points (itself included) within radius eps. D has 5, E 3, K 1.</span></li>
-    <li><b>Core, border, noise</b><span>Core if the count reaches min_samples; border if not, but inside a core's ball; noise otherwise. Stalls: 8 core, E and J border, K and L noise.</span></li>
-    <li><b>Reachability and connectivity</b><span>Clusters chain through core points only (A → D → E); "connected" makes the relation symmetric.</span></li>
-    <li><b>Expansion procedure</b><span>Flood-fill from each unlabelled core point; core neighbours spread, border neighbours stop. Only a border point shared by two clusters depends on row order.</span></li>
-    <li><b>k-distance plot</b><span>Point is core ⇔ its k-distance ≤ eps; put eps at the knee (stalls: between 1.414 and 2.0).</span></li>
-    <li><b>Shapes vs K-Means</b><span>DBSCAN wins on moons (1.000 vs 0.475) and rings (1.000 vs −0.003), K-Means on round blobs (0.985 vs 0.952).</span></li>
-    <li><b>Varying density</b><span>One eps cannot fit tight and loose clusters (eps 1.0 kept part of one market and erased the other).</span></li>
-    <li><b>HDBSCAN</b><span>Core distance → mutual reachability → MST → condensed tree → stability; keeps each cluster at its own density, adds membership strengths.</span></li>
-    <li><b>OPTICS</b><span>Reachability plot: valleys are clusters, a cut at eps is DBSCAN.</span></li>
-  </ol>
-  <h3>Definitions and formulas</h3>
+  <h3>Key ideas</h3>
+  <ul>
+    <li><b>Density-based clustering</b>: a cluster is a crowded region; clusters are separated by sparse space; lone points are <b>noise</b> (label −1). No k needed, any shape.</li>
+    <li><b>eps-neighbourhood</b> N_eps(p) = all points within distance eps of p, p included.</li>
+    <li><b>Core</b>: |N_eps(p)| ≥ min_samples. <b>Border</b>: not core, inside a core point's circle. <b>Noise</b>: neither.</li>
+    <li><b>Directly reachable</b>: q in the circle of core point p (one-way). <b>Reachable</b>: a chain of such steps. <b>Connected</b>: both reachable from one core point. <b>Cluster</b>: a maximal connected set.</li>
+    <li>Only core points spread a cluster, so stray points cannot chain two clusters together.</li>
+    <li>Order dependence: only a border point within eps of two clusters' core points. <b>DBSCAN*</b> treats border points as noise.</li>
+  </ul>
+  <h3>Choosing knobs</h3>
+  <ul>
+    <li>min_samples ≥ d + 1, about 2·d, larger for noisy data. min_samples = 1 → single linkage, no noise.</li>
+    <li><b>k-distance</b> = distance to the k-th nearest point, itself counted (k = min_samples). A point is core ⇔ k-distance ≤ eps.</li>
+    <li>Sort k-distances; put eps at the knee; check a small grid for a stable answer. Scale features first.</li>
+  </ul>
+  <h3>HDBSCAN and OPTICS formulas</h3>
   <table class="tbl">
-    <tr><th>Term</th><th>Formula / rule</th><th>Symbols in plain words</th></tr>
-    <tr><td>eps-neighbourhood</td><td>N_eps(p) = { q : d(p, q) ≤ eps }</td><td>all points within radius eps of p, p included</td></tr>
-    <tr><td>Core point</td><td>|N_eps(p)| ≥ min_samples</td><td>|·| = number of points</td></tr>
-    <tr><td>Border point</td><td>not core, and p ∈ N_eps(c) for some core c</td><td>on the edge of a crowd</td></tr>
-    <tr><td>Noise</td><td>neither; label −1</td><td>alone</td></tr>
-    <tr><td>Directly reachable</td><td>p core and q ∈ N_eps(p)</td><td>one step, must start at a core point</td></tr>
-    <tr><td>Connected</td><td>some core o reaches both p and q</td><td>symmetric glue of a cluster</td></tr>
-    <tr><td>k-distance = core distance</td><td>core_k(p) = distance to k-th nearest point, self counted (k = min_samples)</td><td>p is core ⇔ core_k(p) ≤ eps</td></tr>
-    <tr><td>Mutual reachability</td><td>d_mr(a, b) = max(core_k(a), core_k(b), d(a, b))</td><td>pushes sparse points away</td></tr>
-    <tr><td>OPTICS reachability</td><td>reach(q | p) = max(core_k(p), d(p, q))</td><td>p = the point q is reached from</td></tr>
-    <tr><td>λ</td><td>λ = 1 / distance</td><td>grows as eps shrinks</td></tr>
-    <tr><td>Stability</td><td>S(C) = Σ_{p ∈ C} (λ_p − λ_birth(C))</td><td>λ_p = when p leaves C; λ_birth = when C appears</td></tr>
-    <tr><td>Membership strength</td><td>λ_p / max λ in the cluster</td><td>1 = deep inside, near 0 = on the fringe</td></tr>
+    <tr><th>Quantity</th><th>Formula</th><th>Meaning</th></tr>
+    <tr><td>Core distance</td><td>core_k(p) = k-distance</td><td>smallest eps at which p is core</td></tr>
+    <tr><td>Mutual reachability</td><td>max(core(a), core(b), d(a, b))</td><td>pushes sparse points away</td></tr>
+    <tr><td>λ</td><td>1 / distance</td><td>grows as eps shrinks</td></tr>
+    <tr><td>Stability</td><td>Σ over points (λ_p − λ_birth)</td><td>total lifetime of a cluster's points</td></tr>
+    <tr><td>Membership strength</td><td>λ_p / max λ in the cluster</td><td>1 = deep inside, 0 = noise</td></tr>
+    <tr><td>OPTICS reachability</td><td>max(core(p), d(p, q))</td><td>cost of stepping from p to q</td></tr>
   </table>
-  <h3>The running example's numbers</h3>
+  <p>HDBSCAN pipeline: core distances → mutual reachability → minimum spanning tree (single linkage) → condensed tree (ignore splits smaller than min_cluster_size) → keep clusters by excess of mass (stability). OPTICS: valleys of the reachability plot are clusters; a horizontal cut at eps = DBSCAN at that eps.</p>
+  <h3>The stalls (eps = 1.5, min_samples = 4)</h3>
   <table class="tbl">
     <tr><th>Stall</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>F</th><th>G</th><th>H</th><th>I</th><th>J</th><th>K</th><th>L</th></tr>
-    <tr><td>count @ 1.5</td><td>4</td><td>5</td><td>4</td><td>5</td><td>3</td><td>4</td><td>4</td><td>4</td><td>5</td><td>2</td><td>1</td><td>1</td></tr>
-    <tr><td>4-distance</td><td>1.414</td><td>1.414</td><td>1.414</td><td>1.000</td><td>2.000</td><td>1.414</td><td>1.414</td><td>1.414</td><td>1.414</td><td>2.236</td><td>4.472</td><td>5.831</td></tr>
+    <tr><td>count</td><td>4</td><td>5</td><td>4</td><td>5</td><td>3</td><td>4</td><td>4</td><td>4</td><td>5</td><td>2</td><td>1</td><td>1</td></tr>
+    <tr><td>4-distance</td><td>1.414</td><td>1.414</td><td>1.414</td><td>1.0</td><td>2.0</td><td>1.414</td><td>1.414</td><td>1.414</td><td>1.414</td><td>2.236</td><td>4.472</td><td>5.831</td></tr>
     <tr><td>DBSCAN</td><td>0 core</td><td>0 core</td><td>0 core</td><td>0 core</td><td>0 border</td><td>1 core</td><td>1 core</td><td>1 core</td><td>1 core</td><td>1 border</td><td>−1</td><td>−1</td></tr>
-    <tr><td>HDBSCAN strength</td><td>1</td><td>1</td><td>1</td><td>1</td><td>0.707</td><td>1</td><td>1</td><td>1</td><td>1</td><td>0.632</td><td>0 (noise)</td><td>0 (noise)</td></tr>
+    <tr><td>HDBSCAN strength</td><td>1</td><td>1</td><td>1</td><td>1</td><td>0.707</td><td>1</td><td>1</td><td>1</td><td>1</td><td>0.632</td><td>0</td><td>0</td></tr>
   </table>
-  <p>MST edges cut from the top: L leaves at 5.831, K at 4.472, the markets split at 4.243 (λ 0.236), J leaves at 2.236, E at 2.0, the squares end at 1.414 (λ 0.707). Stabilities 2.150 and 2.097. eps sweep: 1.0 → only D core; 1.5–2.5 → right answer; 4.5 → markets merge.</p>
-  <h3>When to use, when not to</h3>
-  <div class="cards">
-    <div><b>Use DBSCAN</b><p>Odd shapes, noise to discard, unknown k, and a radius with real meaning (km, seconds).</p><small>Choose eps from a k-distance plot</small></div>
-    <div><b>Use HDBSCAN</b><p>Default for density clustering, especially with clusters of different densities or no feel for scale.</p><small>Main knob: min_cluster_size</small></div>
-    <div><b>Use OPTICS</b><p>To see the density structure, or cut at many eps from one run.</p><small>xi is fussy</small></div>
-    <div><b>Avoid</b><p>Raw high-dimensional data, unscaled features, overlapping clusters with no density gap, huge eps on big data.</p><small>Reduce dims; scale; consider GMM</small></div>
-  </div>
-  <h3>Key traps</h3>
-  <div class="callout trap"><span class="label">Remember</span>
-    <p>Scale features first. min_samples counts the point itself in scikit-learn. −1 is not a cluster. Noise is not automatically an anomaly. One eps cannot fit several densities. There is no predict: use the nearest core point within eps. Silhouette is unfair to curved clusters. A big eps can exhaust memory.</p>
-  </div>
-  <h3>Five rapid-fire checks</h3>
-  <table class="tbl">
-    <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td>With eps = 1.5, min_samples = 4, why is E border and not core?</td><td>Only 3 stalls (itself, B, D) are within 1.5; but it lies in core D's circle.</td></tr>
-    <tr><td>What is the link between the k-distance plot and core points?</td><td>A point is core exactly when its k-distance (k = min_samples) ≤ eps.</td></tr>
-    <tr><td>d_mr(H, K) if core(H) = 1.414, core(K) = 4.472, d = 3.606?</td><td>max(1.414, 4.472, 3.606) = 4.472.</td></tr>
-    <tr><td>Stability of a cluster born at λ 0.2 whose 3 points all leave at λ 0.5?</td><td>3 × (0.5 − 0.2) = 0.9.</td></tr>
-    <tr><td>Which DBSCAN output can depend on row order?</td><td>Only a border point within eps of core points of two different clusters.</td></tr>
-  </table>
+  <h3>Syntax</h3>
+  <div class="fx" data-lang="py">from sklearn.cluster import DBSCAN, HDBSCAN, OPTICS
+from sklearn.neighbors import NearestNeighbors
 
+Xs = StandardScaler().fit_transform(X)                     # always scale first
+kd = NearestNeighbors(n_neighbors=5).fit(Xs).kneighbors(Xs)[0][:, -1]   # k-distances; plot sorted
+db = DBSCAN(eps=0.3, min_samples=5).fit(Xs)
+db.labels_, db.core_sample_indices_                        # -1 = noise
+n_clusters = len(set(db.labels_) - {-1})
 
-  <h2 id="db-qa"><span class="num">14</span>Questions &amp; Answers</h2>
+h = HDBSCAN(min_cluster_size=20, min_samples=5).fit(Xs)
+h.labels_, h.probabilities_                                # membership strength
+
+DBSCAN(eps=25 / 6371, min_samples=3, metric="haversine",   # lat/lon in radians
+       algorithm="ball_tree").fit(np.radians(latlon))</div>
+  <h3>Gotchas</h3>
+  <ul>
+    <li>Scale features; eps is in feature units. Don't copy eps from elsewhere.</li>
+    <li>min_samples counts the point itself in scikit-learn.</li>
+    <li>−1 is noise, not a cluster: <code>len(set(labels) - {-1})</code>.</li>
+    <li>One eps cannot fit several densities → HDBSCAN.</li>
+    <li>Noise ≠ anomaly; no <code>predict</code> (use nearest core point within eps).</li>
+    <li>High dimensions: reduce first. Huge eps: memory blows up. Silhouette is unfair to curved clusters.</li>
+  </ul>
+
+  <h2 id="db-qa"><span class="num">11</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>Explain DBSCAN in three sentences.</summary><div class="qa-body">A point is core if at least min_samples points (itself included) lie within distance eps. Clusters are grown by chaining core points that lie in each other's eps-balls; non-core points within eps of a core point join as border points. Everything else is noise (label −1), and the number of clusters comes out of the data.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Define core, border and noise points. Can a border point start a cluster?</summary><div class="qa-body">Core: |N_eps(p)| ≥ min_samples. Border: not core, but within eps of a core point. Noise: neither. A border point cannot start or extend a cluster, because reachability steps must start from a core point; this is what stops thin bridges of stray points from merging clusters.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why is "density-connected" needed when we already have "density-reachable"?</summary><div class="qa-body">Reachability is not symmetric: a core point reaches a border point, but not the other way round, and two border points never reach each other. Density-connected (both reachable from some common core point) is symmetric and ties together all points of one cluster, including border points at opposite ends.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you choose eps and min_samples?</summary><div class="qa-body">Pick min_samples first (≥ d + 1, typically 2·d, larger for noisy data). Then plot the sorted distances to each point's min_samples-th nearest neighbour (self counted). Points with k-distance ≤ eps are exactly the core points, so put eps at the knee where the curve shoots up, and check a small grid around it for a stable answer. Scale features first.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Is DBSCAN deterministic?</summary><div class="qa-body">Core points and noise are fully determined by the data. A border point within eps of core points from two different clusters is assigned to whichever cluster reaches it first, so its label can change with row order. DBSCAN* (and HDBSCAN) avoid this by treating border points differently.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does DBSCAN become with min_samples = 1?</summary><div class="qa-body">Every point is core, so there is no noise, and clusters are the connected components of the graph "points within eps", which is single-linkage hierarchical clustering cut at height eps.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>When does DBSCAN fail, and what do you use instead?</summary><div class="qa-body">(1) Clusters of different densities: one eps cannot fit all; use HDBSCAN or OPTICS. (2) High dimensions: distances concentrate; reduce with PCA/UMAP first. (3) Unscaled or mixed-type features: scale or use a proper distance. (4) Very large data with large eps: memory blows up. (5) Overlapping clusters with no density gap: nothing density-based can separate them; consider a GMM.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is the mutual reachability distance and why does HDBSCAN use it?</summary><div class="qa-body">d_mr(a, b) = max(core_k(a), core_k(b), d(a, b)), where core_k is the distance to the k-th nearest neighbour. It leaves dense regions unchanged and pushes points in sparse regions away from everyone, so single linkage on d_mr is robust to noise and does not chain clusters through stray points.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How does HDBSCAN decide which clusters to keep?</summary><div class="qa-body">It builds the single-linkage tree on mutual reachability, condenses it by ignoring splits that shed fewer than min_cluster_size points, and measures each cluster's stability Σ(λ_p − λ_birth) with λ = 1/distance. Bottom-up, a parent is kept if its stability beats the sum of its selected children's; otherwise the children are kept (excess of mass). "leaf" selection keeps the leaves instead.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>HDBSCAN marks 40% of your customers as noise. Is something wrong?</summary><div class="qa-body">Not necessarily: HDBSCAN is conservative and keeps only clearly dense groups. Lower min_samples (min_cluster_size stays) to make it less conservative, check that features are scaled and dimensions reduced, and if every customer needs a segment, assign noise points to their nearest cluster afterwards and flag them as low-confidence.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How would you cluster GPS pings of delivery drivers to find hotspots?</summary><div class="qa-body">DBSCAN (or HDBSCAN) with metric="haversine", inputs as radians [lat, lon], eps = desired radius in km / 6371, ball_tree index. eps then has a physical meaning ("pings within 200 m"), noise pings are dropped automatically, and hotspots of any shape (along a road, around a mall) are found without choosing k.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is OPTICS's reachability plot and how is it related to DBSCAN?</summary><div class="qa-body">OPTICS orders points by always visiting next the point with the smallest reachability distance max(core(p), d(p, q)) from the visited set, and plots those distances in order. Valleys are clusters; a horizontal cut at height eps gives the DBSCAN result for that eps, so one OPTICS run summarises DBSCAN at every eps.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why can silhouette prefer K-Means over a perfect DBSCAN result on moons?</summary><div class="qa-body">Silhouette compares average distances within and between clusters, so it rewards compact, round, well-separated clusters. Each moon is long and curved, so points at its tips are far from many points of their own cluster and close to the other moon: a low silhouette. A straight K-Means cut makes rounder halves and can score higher while being wrong. Use density-based validation (DBCV) or visual checks.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>(Connection) How is the k-distance plot of DBSCAN related to HDBSCAN?</summary><div class="qa-body">They use the same number. The k-distance of a point (distance to its min_samples-th neighbour, self counted) is HDBSCAN's core distance: the smallest eps at which that point would be a DBSCAN core point. HDBSCAN builds mutual reachability distances from it and then effectively considers every eps at once instead of the single eps you would pick at the knee.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>(Connection) DBSCAN called stall E a border point. What does HDBSCAN say about it, and why?</summary><div class="qa-body">HDBSCAN puts E in the same cluster but with strength 0.707. E's core distance is 2.0, so it leaves its cluster at λ = 1/2 = 0.5, while the cluster's core stalls last until λ = 1/1.414 = 0.707; 0.5/0.707 = 0.707. The yes/no border label has become a degree of membership.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain DBSCAN in a few sentences.</summary><div class="qa-body">DBSCAN defines clusters as dense regions. A point is core if at least min_samples points (itself included) lie within distance eps of it. Clusters grow by chaining core points that lie in each other's eps-circles; non-core points within eps of a core point join as border points, and everything else is noise with label −1. The number of clusters comes out of the data and clusters can have any shape.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What are core, border and noise points? Can a border point extend a cluster?</summary><div class="qa-body">Core: at least min_samples points within eps. Border: fewer than that, but inside some core point's circle. Noise: neither. A border point cannot start or extend a cluster, because reachability steps must start from a core point. That is what stops a thin line of stray points from chaining two clusters together.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What are the advantages of DBSCAN over K-Means?</summary><div class="qa-body">It does not need k, it finds clusters of any shape (moons, rings, roads) instead of only convex ones, and it labels outliers as noise instead of forcing them into a cluster where they distort the centre. K-Means is still better for round, similar-sized clusters and for very large data, and it can predict new points directly.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why do we need "density-connected" as well as "density-reachable"?</summary><div class="qa-body">Reachability is one-directional: a core point reaches a border point but not the other way round, and two border points never reach each other. Density-connected means both points are reachable from some common core point; it is symmetric, so it ties together all points of one cluster, including border points at opposite ends.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you choose eps and min_samples?</summary><div class="qa-body">Choose min_samples first: at least d + 1, typically about 2·d, larger for noisy data. Then compute each point's distance to its min_samples-th nearest neighbour (itself counted), sort these k-distances and plot them. A point is core exactly when its k-distance ≤ eps, so put eps at the knee where the curve shoots up, then check a small grid around it for a stable answer. Scale the features first.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What happens if eps is too small or too large?</summary><div class="qa-body">Too small: few points are core, so clusters break into many fragments and most points become noise. Too large: separate clusters get bridged and merge, eventually into one cluster with no noise, and memory use can explode because every neighbourhood is stored.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Is DBSCAN deterministic?</summary><div class="qa-body">Almost. Core points and noise depend only on the data. A border point within eps of core points from two different clusters goes to whichever cluster reaches it first, so its label can depend on row order. DBSCAN* removes this by treating border points as noise.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does DBSCAN become with min_samples = 1?</summary><div class="qa-body">Every point is core, so there is no noise, and clusters are the connected groups of the graph "points within eps of each other". That is single-linkage hierarchical clustering cut at height eps.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When does DBSCAN fail, and what would you use instead?</summary><div class="qa-body">With clusters of different densities, because one eps cannot fit them all: use HDBSCAN or OPTICS. In high dimensions, because distances concentrate: reduce with PCA or UMAP first. With unscaled or mixed-type features: scale or use a proper precomputed distance. With overlapping clusters that have no density gap: no density method can separate them, so consider a Gaussian mixture.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the mutual reachability distance and why does HDBSCAN use it?</summary><div class="qa-body">d_mr(a, b) = max(core(a), core(b), d(a, b)), where core is the distance to the min_samples-th nearest neighbour. It leaves distances inside dense regions roughly unchanged and pushes points in sparse regions away from everyone. Single linkage on this distance is therefore robust to noise and does not chain clusters through stray points.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How does HDBSCAN decide which clusters to keep?</summary><div class="qa-body">It builds a single-linkage tree on mutual reachability distances, condenses it by ignoring splits that shed fewer than min_cluster_size points, and scores each cluster's stability as the sum over its points of (λ_leave − λ_birth), with λ = 1/distance. Walking up from the leaves, a parent is kept if its stability beats the total of its selected children; otherwise the children are kept. This is called excess-of-mass selection.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What are HDBSCAN's main parameters?</summary><div class="qa-body">min_cluster_size is the main one: the smallest group that counts as a cluster. min_samples (default equal to min_cluster_size) sets the k for core distances and controls how conservative it is: larger means more noise. cluster_selection_method ("eom" or "leaf") and cluster_selection_epsilon fine-tune how clusters are picked from the tree.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>HDBSCAN labels 40% of your customers as noise. Is something wrong?</summary><div class="qa-body">Not necessarily: HDBSCAN is conservative and keeps only clearly dense groups. Check that features are scaled and dimensions reduced, lower min_samples to make it less strict, and if every customer needs a segment, assign the noise points to their nearest cluster afterwards and flag them as low-confidence using the membership strengths.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is OPTICS's reachability plot and how does it relate to DBSCAN?</summary><div class="qa-body">OPTICS visits points by always moving to the unvisited point with the smallest reachability distance max(core(p), d(p, q)), and plots those distances in visiting order. Valleys are clusters and tall walls are jumps between clusters. A horizontal cut at height eps gives the DBSCAN result for that eps, so one OPTICS run summarises DBSCAN at every eps.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you assign a new point to a DBSCAN cluster?</summary><div class="qa-body">DBSCAN has no predict method because clusters are defined by the training points. Find the nearest core point; if it is within eps, give the new point that core point's cluster (it would be a border point), otherwise label it noise. A nearest-neighbour index on the core points makes this fast.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How would you cluster GPS pings of delivery drivers to find hotspots?</summary><div class="qa-body">DBSCAN or HDBSCAN with metric="haversine", inputs as [latitude, longitude] in radians, eps = desired radius in km divided by 6371, and a ball-tree index. eps then has a physical meaning ("pings within 200 m"), stray pings are dropped as noise, and hotspots of any shape, such as along a road, are found without choosing k.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the time and memory complexity of DBSCAN?</summary><div class="qa-body">It is dominated by neighbourhood searches. With a tree index and a small eps in low dimensions it is about O(n log n); with a large eps or high dimensions it tends to O(n²). scikit-learn stores every neighbourhood, so memory grows with the number of neighbour pairs, which approaches n² for a large eps.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why can silhouette prefer K-Means over a correct DBSCAN result on moon-shaped data?</summary><div class="qa-body">Silhouette compares average distances within and between clusters, so it rewards compact, round, well-separated clusters. A long curved moon has points far from many members of their own cluster and close to the other moon, so it scores low, while K-Means' straight cut makes rounder halves and can score higher while being wrong. Use plots or a density-based score such as DBCV instead.</div></details>
 </main>
 `
 });
