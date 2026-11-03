@@ -40,7 +40,7 @@ const CATEGORIES = [
         {"key": "py_asyncio",         "label": "asyncio"}
       ]},
       {"key": "grp_py_test", "label": "Testing & Debugging", "children": [
-        {"key": "py_testing",   "label": "The Map: Making Code Trustworthy"},
+        {"key": "py_testing",   "label": "Testing Fundamentals"},
         {"key": "py_pytest",    "label": "Testing with pytest"},
         {"key": "py_mocking",   "label": "Mocks & Test Doubles"},
         {"key": "py_debugging", "label": "Debugging, Profiling & Logging"}
