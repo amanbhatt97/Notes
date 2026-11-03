@@ -3,116 +3,44 @@ Object.assign(TOPIC_CONTENT, {
   "ml_ridge_lasso": `<main>
   <h1>Ridge, Lasso &amp; Elastic Net</h1>
   <div class="where"><span>Machine Learning</span><span>Regression</span><span>Ridge, Lasso &amp; Elastic Net</span></div>
-  <p class="lead">Ordinary least squares breaks down when columns are correlated, duplicated, numerous or useless: weights swing wildly, signs flip, and test error explodes. Ridge, lasso and elastic net fix this by adding a price for large weights to the loss. This note works everything by hand on the six houses of the Regression group, whose size and bedrooms are 0.968 correlated (VIF 16): ridge's closed form (XᵀX + λI)⁻¹Xᵀy solved as a 2×2 system and explained through the eigen-directions of the data, exactly why and when lasso sets a weight to zero (soft-thresholding derived in one dimension), coordinate descent traced sweep by sweep, elastic net's mix, how each treats correlated features, why standardisation is required, choosing α by cross-validation and reading coefficient paths. Larger datasets (two temperature sensors, 442 diabetes patients, 200 noise columns) show the same ideas at scale.</p>
+  <p class="lead">Ordinary least squares picks the weights that fit the training data best and has no other preference. That works when the columns are few and clearly different, but real tables often contain columns that are duplicated, strongly correlated, far too many, or simply useless, and then least squares produces huge, unstable weights that change sign when a single row is removed. Ridge, lasso and elastic net fix this with one idea: add a price for large weights to the loss, so the model has to earn every weight it uses. Ridge shrinks all weights smoothly, lasso can switch columns off completely, and elastic net mixes the two; these same penalties reappear in logistic regression, SVMs, boosting and neural networks. The running example is the six houses from <a class="xref" data-note="ml_regression">Linear Regression</a>, whose size and bedroom count move almost in step (correlation 0.968), so least squares cannot tell how to split the credit between them. The diabetes dataset and a few simulated tables show the same ideas at a larger scale.</p>
 
-  <h2 id="rl-fit" class="open"><span class="num">★</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 640 235" width="640">
-<defs><marker id="rl-a0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="30" y="10" width="170" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="115" y="35" text-anchor="middle" font-size="13">Linear Regression</text>
-<rect x="235" y="10" width="170" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="320" y="35" text-anchor="middle" font-size="13">Polynomial &amp; Basis</text>
-<rect x="440" y="10" width="170" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="525" y="35" text-anchor="middle" font-size="13">Regularization (idea)</text>
-<rect x="215" y="92" width="210" height="54" rx="8" class="fb sb" stroke-width="3"/><text x="320" y="115" text-anchor="middle" font-size="13.5" font-weight="700">Ridge, Lasso &amp; Elastic Net</text><text x="320" y="133" text-anchor="middle" font-size="11" class="tb">YOU ARE HERE</text>
-<line x1="115" y1="50" x2="250" y2="90" stroke="currentColor" marker-end="url(#rl-a0)"/><line x1="320" y1="50" x2="320" y2="90" stroke="currentColor" marker-end="url(#rl-a0)"/><line x1="525" y1="50" x2="390" y2="90" stroke="currentColor" marker-end="url(#rl-a0)"/>
-<text x="140" y="80" font-size="10.5" class="tm">unstable weights</text><text x="328" y="74" font-size="10.5" class="tm">too many columns</text><text x="450" y="80" font-size="10.5" class="tm">penalty, general</text>
-<rect x="30" y="180" width="180" height="40" rx="8" class="fg sg"/><text x="120" y="205" text-anchor="middle" font-size="12.5">Logistic Regression (C)</text>
-<rect x="230" y="180" width="180" height="40" rx="8" class="fg sg"/><text x="320" y="205" text-anchor="middle" font-size="12.5">Feature selection (L1)</text>
-<rect x="430" y="180" width="180" height="40" rx="8" class="fg sg"/><text x="520" y="205" text-anchor="middle" font-size="12.5">SVM, nets: weight decay</text>
-<line x1="270" y1="146" x2="140" y2="178" stroke="currentColor" marker-end="url(#rl-a0)"/><line x1="320" y1="146" x2="320" y2="178" stroke="currentColor" marker-end="url(#rl-a0)"/><line x1="370" y1="146" x2="500" y2="178" stroke="currentColor" marker-end="url(#rl-a0)"/>
-</svg><figcaption>Three roads lead here: unstable OLS weights, the column explosion of polynomial features, and the general idea of regularization. The same L1/L2 penalties reappear in logistic regression, feature selection, SVMs and neural networks.</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: <a class="xref" data-note="ml_regression">Linear Regression</a>, <a class="xref" data-note="ml_reg_diag">Assumptions &amp; Diagnostics</a>, <a class="xref" data-note="ml_polyreg">Polynomial &amp; Basis Functions</a> and <a class="xref" data-note="ml_regularization">Regularization</a></b><span>OLS minimises the squared error and nothing else. On the six houses it priced 100 sq ft at 6.21 lakh and a bedroom at 2.92 lakh, but the diagnostics note measured a VIF of 16: size and bedrooms move together (correlation 0.968), so rooms' SE was 5.5 and p = 0.63. The polynomial note added size², size³ … and saw degree 5 need a weight of 2,257 to thread six houses. With correlated or numerous columns OLS gives huge, unstable weights; with more columns than rows it has infinitely many perfect fits. The Regularization note gave the general cure, "add a penalty for complexity"; it left the concrete models for here.</span></li>
-    <li><b>This note adds: the three standard penalised linear models, completely</b><span>Ridge (L2 penalty, closed form, shrinks smoothly), lasso (L1 penalty, exact zeros, built-in feature selection), elastic net (a mix that keeps correlated groups together). How each is solved, how each behaves with correlated columns, why you must standardise, how to choose α by cross-validation, and how to read coefficient paths.</span></li>
-    <li><b>Leads to: <a class="xref" data-note="ml_classification">Logistic Regression</a> and beyond</b><span>Logistic regression uses exactly these penalties (sklearn's <code>C</code> = 1/α, <code>penalty='l1'|'l2'|'elasticnet'</code>). L1 is one of the embedded feature-selection methods in <a class="xref" data-note="ml_dimred">Curse of Dimensionality &amp; Feature Selection</a>. The L2 penalty is "weight decay" in neural networks and the margin term in <a class="xref" data-note="ml_svm">Support Vector Machines</a>; XGBoost's <code>reg_lambda</code> / <code>reg_alpha</code> are the same idea on leaf weights.</span></li>
-  </ol>
-  <h3>The Regression group as one ladder</h3>
-  <table class="tbl">
-    <tr><th>Step</th><th>Note</th><th>On the six houses</th><th>Leaves open</th></tr>
-    <tr><td>1</td><td><a class="xref" data-note="ml_regression">Linear Regression</a></td><td>price = −16 + 7·size; with bedrooms −14.58 + 6.21·size + 2.92·rooms</td><td>can we trust the SEs?</td></tr>
-    <tr><td>2</td><td><a class="xref" data-note="ml_reg_diag">Assumptions &amp; Diagnostics</a></td><td>residual smile; VIF 16 for size and rooms; F most influential</td><td>fix the shape; fix the collinearity</td></tr>
-    <tr><td>3</td><td><a class="xref" data-note="ml_polyreg">Polynomial &amp; Basis Functions</a></td><td>58.66 + 7z + 0.2009z²; degree 5 needs weights of 2,257</td><td>tame many, correlated columns</td></tr>
-    <tr><td>4</td><td><strong>Ridge, Lasso &amp; Elastic Net</strong> (this)</td><td>ridge λ = 5: size 6.09, rooms 1.74 (stable); lasso α = 2: size 6.83, rooms 0</td><td>→ penalties reappear in classification, trees, nets</td></tr>
-  </table>
-  <p>You should know the normal equation w = (XᵀX)⁻¹Xᵀy (<a class="xref" data-note="ml_regression">Linear Regression</a>), what a derivative is (<a class="xref" data-note="m_calculus">Calculus</a>), and k-fold cross-validation (<a class="xref" data-note="ml_splits">Train/Val/Test &amp; Cross-Validation</a>). Each is recalled where used. The data, recalled: houses A–F with size 6, 8, 10, 12, 14, 16 (hundreds of sq ft), bedrooms 1, 2, 2, 3, 3, 4 and price 28, 40, 53, 66, 79, 100 lakh. Centred: size − 11 = −5, −3, −1, 1, 3, 5; rooms − 2.5 = −1.5, −0.5, −0.5, 0.5, 0.5, 1.5; price − 61 = −33, −21, −8, 5, 18, 39. Their sums of products: S₁₁ = 70, S₁₂ = 19, S₂₂ = 5.5, S₁y = 490, S₂y = 134.</p>
-
-  <h2 id="rl-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
-  <p>The whole note as one chain. Each concept answers the question above it; its weakness raises the next question.</p>
-  <ol class="story">
-    <li><b>Where OLS breaks</b><span>Q: why can't we trust size 6.21 and rooms 2.92? → Size entered twice makes XᵀX singular (det 0); near-twins make it nearly so: leaving one house out moves rooms anywhere from −1.67 to +5.58. We need a rule that prefers small, sensible weights.</span></li>
-    <li><b>Ridge (L2)</b><span>Q: how do we get a unique, stable answer? → Minimise SSE + λΣw²: w = (XᵀX + λI)⁻¹Xᵀy. λ = 5 gives size 6.09, rooms 1.74. But how does it decide what to shrink?</span></li>
-    <li><b>How ridge shrinks</b><span>Q: which parts of the answer does ridge distrust? → The data's directions: "bigger with more rooms" (eigenvalue 75.2) keeps 94%, "more rooms, same size" (0.32) keeps 6% at λ = 5; effective df 1.0. But no weight ever reaches exactly 0…</span></li>
-    <li><b>Lasso (L1)</b><span>Q: can a penalty switch a column fully off? → Charge Σ|w| instead: the diamond's corners sit on the axes. But what exact rule makes a weight 0?</span></li>
-    <li><b>Soft-thresholding</b><span>Q: when does lasso kill a weight? → In 1-D, w = S(ρ, α)/s: size alone shrinks 7 → 6.14 → 3.57 and dies once α ≥ ρ = 81.67. With several correlated columns, how is it computed?</span></li>
-    <li><b>Coordinate descent</b><span>Q: how do we solve lasso with two or more columns? → Soft-threshold one weight at a time: α = 2 gives [6.83, 0] in one sweep (rooms off); α = 0.1 creeps toward [6.55, 1.64], closing only 6% of the gap per sweep because the twins fight. Lasso keeps one twin; can we keep groups?</span></li>
-    <li><b>Elastic net</b><span>Q: zeros and grouping together? → Subtract, then divide: w = S(ρ, αr)/(s + α(1 − r)), size 4.60 at α = 10, r = 0.5. So how do the four models really treat size and rooms?</span></li>
-    <li><b>Correlated features</b><span>Q: who gets the credit? → Standardised: OLS [21.2, 2.8] and unstable, ridge [12.5, 9.6] shares, lasso [20.2, 1.7] favours size, elastic net [7.9, 7.3] shares and shrinks. Every fit was standardised first. Why?</span></li>
-    <li><b>Standardisation</b><span>Q: do units matter? → Yes: Ridge(70) gives 3.5 lakh per 100 sq ft with size in hundreds of sq ft but 7.0 with size in sq ft. Standardise, inside a pipeline. Then which α?</span></li>
-    <li><b>Choosing α</b><span>Q: how strong a penalty? → Cross-validate: on six houses leave-one-out picks small α (0.08 ridge); on diabetes the 1-SE rule keeps 4 of 10 features; with 200 noise columns lasso scores 0.485 where OLS scores −0.26. Can we see every α at once?</span></li>
-    <li><b>Coefficient paths</b><span>Q: how does each weight move with α? → Lasso: size enters at α = 23.9, rooms only below 5.4; ridge: both glide together. How is all this used in practice? → sklearn knobs and variants.</span></li>
-  </ol>
-
-  <h2 id="rl-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="rl-map"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">Ridge, Lasso &amp; Elastic Net</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">1 · Why OLS fails</div>
+        <div class="mm-title">Why OLS fails</div>
         <ul>
-          <li>Size twice → XᵀX = [[70, 70], [70, 70]], det 0, no inverse</li>
-          <li>Size &amp; rooms (r 0.968): drop one house → rooms −1.67 … 5.58</li>
-          <li>p ≥ n → infinitely many perfect fits; noise columns → test R² −0.26</li>
-          <li>💡 Fix: charge a price for big weights; fit must earn every weight</li>
+          <li>Duplicate columns: XᵀX has no inverse</li>
+          <li>Near-twins: weights swing (bedrooms −1.67 … 5.58)</li>
+          <li>Too many / useless columns: memorises noise</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">2 · Ridge (L2)</div>
+        <div class="mm-title">Ridge (L2)</div>
         <ul>
-          <li>min ||y − Xw||² + λ||w||² → <b>w = (XᵀX + λI)⁻¹Xᵀy</b></li>
-          <li>1-D: w = Σxy / (Σx² + λ) — divides, never 0</li>
-          <li>Houses: λ = 0, 1, 5, 20 → [6.21, 2.92], [6.36, 2.03], [6.09, 1.74], [5.14, 1.42]</li>
-          <li>+λI makes XᵀX invertible (eigenvalues d² → d² + λ)</li>
-          <li>Shrinks direction j by d²ⱼ/(d²ⱼ + λ): 0.938 and 0.060 at λ = 5; df 1.0</li>
-          <li>Intercept not penalised; Gaussian prior (MAP)</li>
+          <li>min ‖y − Xw‖² + λ‖w‖² → w = (XᵀX + λI)⁻¹Xᵀy</li>
+          <li><b>Divides</b>: shrinks smoothly, never exactly 0</li>
+          <li>Shrinks weak data directions most: d² / (d² + λ)</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">3 · Lasso (L1)</div>
+        <div class="mm-title">Lasso (L1) &amp; Elastic Net</div>
         <ul>
-          <li>sklearn: min (1/2n)||y − Xw||² + α||w||₁; no closed form</li>
-          <li>1-D: <b>w = S(ρ, α) / s</b>, S = sign(ρ)·max(|ρ| − α, 0) — subtracts</li>
-          <li>Houses: ρ = 81.67, s = 11.67: α = 10 → 6.14, 40 → 3.57, ≥ 81.67 → 0</li>
-          <li>Geometry: diamond corners lie on the axes</li>
-          <li><b>Coordinate descent</b>: α = 2 → [6.83, 0]; α = 0.1 → [6.55, 1.64]</li>
-          <li>Laplace prior (MAP); at most n non-zeros when p &gt; n</li>
+          <li>Lasso: (1/2n)‖y − Xw‖² + α‖w‖₁, no closed form</li>
+          <li><b>Subtracts</b>: soft-threshold S(ρ, α) → exact zeros</li>
+          <li>Solved by coordinate descent</li>
+          <li>Elastic net: subtract then divide; keeps correlated groups</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">4 · Elastic Net</div>
+        <div class="mm-title">In practice</div>
         <ul>
-          <li>α·r·||w||₁ + α(1 − r)/2·||w||², r = <code>l1_ratio</code></li>
-          <li>1-D: w = S(ρ, αr) / (s + α(1 − r)) — subtract, then divide</li>
-          <li>Houses: α = 10, r = 0.5 → 4.60 (lasso 6.14)</li>
-          <li>Zeros + grouping of correlated features</li>
-          <li>r = 1 lasso; r → 0 ridge with Ridge-alpha = n·α (60 ↔ 10)</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">5 · Behaviour</div>
-        <ul>
-          <li><b>Correlated twins</b> (standardised houses): OLS [21.2, 2.8] · ridge [12.5, 9.6] · lasso [20.2, 1.7]</li>
-          <li>Identical columns: ridge splits exactly evenly (3.475 each); lasso's split is arbitrary</li>
-          <li><b>Standardise first</b>: Ridge(70) → 3.5 per 100 sq ft vs 7.0 with sq ft</li>
-          <li>Ridge coefficients can grow first (size 6.21 → 6.36 at λ = 1)</li>
-          <li>⚠ Lasso selection ≠ causation; unstable with twins</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">6 · Choosing α &amp; using it</div>
-        <ul>
-          <li><code>RidgeCV</code> (fast leave-one-out), <code>LassoCV</code>, <code>ElasticNetCV</code> → <code>alpha_</code></li>
-          <li>Houses LOO: ridge α 0.08, lasso α 0.14 (six rows support little shrinkage)</li>
-          <li>1-SE rule: diabetes 10 → 4 features, same test R² (0.487 → 0.481)</li>
-          <li>210 columns (200 noise): OLS −0.258 · Ridge 0.366 · Lasso 0.485 with 6 kept</li>
-          <li>Paths: houses size enters at α 23.9, rooms at 5.4</li>
+          <li>Always standardise, inside a pipeline</li>
+          <li>Choose α by cross-validation (RidgeCV, LassoCV); 1-SE rule</li>
+          <li>Correlated twins: ridge shares, lasso picks one</li>
+          <li>Intercept never penalised; α scales differ between classes</li>
         </ul>
       </div>
     </div>
@@ -121,70 +49,50 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="rl-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain</span></div></div>
-      <div class="rm-item rm-done" data-target="rl-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Where OLS Breaks</span><span class="rm-sub">Duplicates, twins, too many columns</span></div></div>
-      <div class="rm-item rm-done" data-target="rl-ridge"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Ridge Regression</span><span class="rm-sub">Closed form derived and solved by hand</span></div></div>
-      <div class="rm-item rm-done" data-target="rl-shrink"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">How Ridge Shrinks</span><span class="rm-sub">Eigen-directions, df, the path</span></div></div>
-      <div class="rm-item rm-done" data-target="rl-lasso"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Lasso Regression</span><span class="rm-sub">Objective and geometry</span></div></div>
-      <div class="rm-item rm-done" data-target="rl-soft"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Why Lasso Gives Zeros</span><span class="rm-sub">Soft-thresholding in 1-D</span></div></div>
-      <div class="rm-item rm-done" data-target="rl-cd"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Coordinate Descent</span><span class="rm-sub">Sweeps by hand</span></div></div>
-      <div class="rm-item rm-done" data-target="rl-enet"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Elastic Net</span><span class="rm-sub">Mixing L1 and L2</span></div></div>
-      <div class="rm-item rm-done" data-target="rl-corr"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Correlated Features</span><span class="rm-sub">Ridge shares, lasso picks one</span></div></div>
-      <div class="rm-item rm-done" data-target="rl-std"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Standardization</span><span class="rm-sub">Why units change the answer</span></div></div>
-      <div class="rm-item rm-done" data-target="rl-alpha"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Choosing α</span><span class="rm-sub">RidgeCV, LassoCV, 1-SE rule</span></div></div>
-      <div class="rm-item rm-done" data-target="rl-path"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Coefficient Paths</span><span class="rm-sub">Reading the plots</span></div></div>
-      <div class="rm-item rm-done" data-target="rl-sklearn"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">sklearn &amp; Variants</span><span class="rm-sub">Every knob, related models</span></div></div>
-      <div class="rm-item rm-done" data-target="rl-connect"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One loss, three penalties</span></div></div>
-      <div class="rm-item rm-done" data-target="rl-compare"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">Comparison</span><span class="rm-sub">OLS vs ridge vs lasso vs ENet</span></div></div>
-      <div class="rm-item rm-done" data-target="rl-traps"><span class="rm-num">15</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Scaling, leakage, over-reading zeros</span></div></div>
-      <div class="rm-item rm-done" data-target="rl-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note in 10 minutes</span></div></div>
-      <div class="rm-item rm-done" data-target="rl-qa"><span class="rm-num">16</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
+      <div class="rm-item rm-done" data-target="rl-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Where Least Squares Breaks</span><span class="rm-sub">duplicates, near-twins, too many columns</span></div></div>
+      <div class="rm-item rm-done" data-target="rl-ridge"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Ridge Regression</span><span class="rm-sub">a squared price on weights, solved by formula</span></div></div>
+      <div class="rm-item rm-done" data-target="rl-shrink"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">How Ridge Shrinks</span><span class="rm-sub">which parts of the answer it distrusts</span></div></div>
+      <div class="rm-item rm-done" data-target="rl-lasso"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Lasso and Exact Zeros</span><span class="rm-sub">an absolute price, and the soft threshold</span></div></div>
+      <div class="rm-item rm-done" data-target="rl-cd"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Coordinate Descent</span><span class="rm-sub">how lasso is actually solved</span></div></div>
+      <div class="rm-item rm-done" data-target="rl-enet"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Elastic Net</span><span class="rm-sub">mixing the two penalties</span></div></div>
+      <div class="rm-item rm-done" data-target="rl-corr"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Correlated Features</span><span class="rm-sub">ridge shares, lasso picks one</span></div></div>
+      <div class="rm-item rm-done" data-target="rl-std"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Why Standardisation Is Required</span><span class="rm-sub">units change a penalised model</span></div></div>
+      <div class="rm-item rm-done" data-target="rl-alpha"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Choosing α by Cross-Validation</span><span class="rm-sub">RidgeCV, LassoCV, the 1-SE rule</span></div></div>
+      <div class="rm-item rm-done" data-target="rl-path"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Coefficient Paths</span><span class="rm-sub">every α at once</span></div></div>
+      <div class="rm-item rm-done" data-target="rl-practice"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Choosing a Model in Practice</span><span class="rm-sub">sklearn settings, variants, comparison</span></div></div>
+      <div class="rm-item rm-done" data-target="rl-traps"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">scaling, α scales, reading zeros</span></div></div>
+      <div class="rm-item rm-done" data-target="rl-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">formulas, numbers, comparison</span></div></div>
+      <div class="rm-item rm-done" data-target="rl-qa"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">what interviewers ask about penalties</span></div></div>
     </div>
   </div>
 
-  <h2 id="rl-why"><span class="num">01</span>Where Ordinary Least Squares Breaks</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Linear Regression gave the houses price = −14.58 + 6.21·size + 2.92·rooms, and the diagnostics note warned that size and bedrooms are near-twins (VIF 16). How bad is that in practice, and what happens in the extreme case where a column is an exact copy?</p>
-  </div>
-  <h3>The need</h3>
-  <p>OLS picks the weights that make the squared error on the training rows as small as possible, with no other preference. That is fine when the columns carry clearly different information and there are many more rows than columns. Real tables often break those conditions:</p>
-  <table class="tbl">
-    <tr><th>Situation</th><th>Example</th><th>What OLS does</th></tr>
-    <tr><td>Duplicate columns</td><td>floor area from the sale deed and from the municipal record</td><td>XᵀX has no inverse: infinitely many equally good answers</td></tr>
-    <tr><td>Highly correlated columns</td><td>size and bedrooms, two temperature sensors, x and x², two cholesterol tests</td><td>large or opposite weights that change with a few new rows</td></tr>
-    <tr><td>More columns than rows (p ≥ n)</td><td>genes, text words, polynomial features (degree 5 on six houses)</td><td>fits training data perfectly, predicts badly</td></tr>
-    <tr><td>Many useless columns</td><td>a feature store with 200 columns, 10 useful</td><td>gives every noise column a weight, memorises noise</td></tr>
-  </table>
-  <h3>By hand: a duplicated column</h3>
-  <p>Suppose the dealer's sheet has the floor area twice (deed and municipal record), both equal to size. Use the centred size z = −5, −3, −1, 1, 3, 5 for both columns and the centred price. The normal equation needs (XᵀX)⁻¹. Each entry of XᵀX is a sum of products of two columns: Σz·z = 70 for every pair, so XᵀX = [[70, 70], [70, 70]], whose determinant is 70·70 − 70·70 = <strong>0</strong>. A matrix with zero determinant has no inverse. In plain words: w₁ = 7, w₂ = 0 fits exactly as well as w₁ = 0, w₂ = 7, or w₁ = 107, w₂ = −100. The data cannot choose.</p>
+  <h2 id="rl-why"><span class="num">01</span>Where Least Squares Breaks</h2>
+  <p>The six houses from the Regression notes have a size (in hundreds of sq ft: 6, 8, 10, 12, 14, 16), a number of bedrooms (1, 2, 2, 3, 3, 4) and a price in lakh (28, 40, 53, 66, 79, 100). Least squares with both inputs gave price = −14.58 + 6.21·size + 2.92·bedrooms. The trouble is that bigger flats have more bedrooms, so the two columns tell almost the same story, and <a class="xref" data-note="ml_reg_diag">Assumptions &amp; Diagnostics</a> measured a VIF of 16 for them. To see how bad that can get, start with the extreme case: the dealer's spreadsheet holds the floor area twice, once from the sale deed and once from the municipal record, and the two columns are identical.</p>
+  <p>Least squares solves the normal equation w = (XᵀX)⁻¹Xᵀy, which needs the inverse of XᵀX. With centred size z = −5, −3, −1, 1, 3, 5 in both columns, every entry of XᵀX is Σz·z = 70, so XᵀX = [[70, 70], [70, 70]]. Its determinant is 70·70 − 70·70 = 0, and a matrix with zero determinant has no inverse. In plain words, w₁ = 7, w₂ = 0 fits the data exactly as well as w₁ = 0, w₂ = 7, or w₁ = 107, w₂ = −100. The data cannot choose.</p>
   <div class="fx" data-lang="py">import numpy as np
-from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
-
+from sklearn.linear_model import LinearRegression, Ridge
 size = np.array([6, 8, 10, 12, 14, 16.0])        # houses A-F, hundreds of sq ft
 rooms = np.array([1, 2, 2, 3, 3, 4.0])           # bedrooms
 price = np.array([28, 40, 53, 66, 79, 100.0])    # lakh rupees
 z, yc = size - size.mean(), price - price.mean() # centred size and price
-
-X = np.c_[z, z]                                  # size entered twice (deed area and municipal area)
-print("X^T X =", (X.T @ X).tolist(), " det =", round(np.linalg.det(X.T @ X), 6) + 0.0, " X^T y =", (X.T @ yc).tolist())
+X = np.c_[z, z]                                  # size entered twice
+print("X^T X =", (X.T @ X).tolist(), " det =", round(np.linalg.det(X.T @ X), 6) + 0.0)
 try:
     np.linalg.inv(X.T @ X)
 except np.linalg.LinAlgError as e:
     print("inverse fails:", e)
-print("OLS via lstsq (the smallest of infinitely many answers):", LinearRegression(fit_intercept=False).fit(X, yc).coef_.round(3))
+print("LinearRegression quietly returns:", LinearRegression(fit_intercept=False).fit(X, yc).coef_.round(3))
 for lam in [1, 10]:
-    w = np.linalg.solve(X.T @ X + lam * np.eye(2), X.T @ yc)
-    print(f"ridge lambda={lam}: by formula {w.round(3)}  sklearn {Ridge(alpha=lam, fit_intercept=False).fit(X, yc).coef_.round(3)}  sum {w.sum():.3f}")</div>
-  <div class="fx" data-lang="text">X^T X = [[70.0, 70.0], [70.0, 70.0]]  det = 0.0  X^T y = [490.0, 490.0]
+    w = np.linalg.solve(X.T @ X + lam * np.eye(2), X.T @ yc)     # add lambda to the diagonal
+    print(f"with lambda={lam} on the diagonal: w = {w.round(3)}, total {w.sum():.3f}")</div>
+  <div class="fx" data-lang="text">X^T X = [[70.0, 70.0], [70.0, 70.0]]  det = 0.0
 inverse fails: Singular matrix
-OLS via lstsq (the smallest of infinitely many answers): [3.5 3.5]
-ridge lambda=1: by formula [3.475 3.475]  sklearn [3.475 3.475]  sum 6.950
-ridge lambda=10: by formula [3.267 3.267]  sklearn [3.267 3.267]  sum 6.533</div>
-  <p>The inverse fails exactly as the hand calculation said. <code>LinearRegression</code> does not crash because it uses a least-squares solver that quietly returns the smallest of the infinitely many answers (3.5 each); that hides the problem rather than solving it. Adding λ to the diagonal (the ridge fix, next section) makes the matrix invertible, and the answer is unique and sensible: the two copies share the weight equally. The hand version for λ = 1: XᵀX + I = [[71, 70], [70, 71]], determinant 71² − 70² = 141, inverse (1/141)·[[71, −70], [−70, 71]]; Xᵀy = [490, 490]; so w = (1/141)·[71·490 − 70·490, −70·490 + 71·490] = [490/141, 490/141] = [3.475, 3.475]. The total 6.95 is a little under the true 7: that small shortfall is the bias ridge accepts in exchange for a unique answer.</p>
-  <h3>By hand: near-twins are fragile</h3>
-  <p>Size and bedrooms are not copies, but nearly: correlation 0.968. The 2×2 system 70w₁ + 19w₂ = 490, 19w₁ + 5.5w₂ = 134 has determinant 24, against 385 if the columns were unrelated. A small determinant means the answer is sensitive to small changes in the data. Test it: refit with one house left out at a time.</p>
-  <div class="fx" data-lang="py">X2 = np.c_[size, rooms]
-print("all six houses : size, rooms =", LinearRegression().fit(X2, price).coef_.round(2))
+LinearRegression quietly returns: [3.5 3.5]
+with lambda=1 on the diagonal: w = [3.475 3.475], total 6.950
+with lambda=10 on the diagonal: w = [3.267 3.267], total 6.533</div>
+  <p>The inverse fails, exactly as the hand calculation said. <code>LinearRegression</code> does not crash, because it uses a solver that quietly returns the smallest of the infinitely many answers (3.5 each); that hides the problem rather than solving it. The last two lines preview the cure. Adding a number λ to the diagonal of XᵀX makes it invertible: with λ = 1 it becomes [[71, 70], [70, 71]], whose determinant is 71² − 70² = 141, and the answer is unique, 3.475 for each copy. The total, 6.95, is slightly below the true 7. That small shortfall is the price we pay for a unique answer.</p>
+  <p>Size and bedrooms are not exact copies, but they are close (correlation 0.968), and closeness is enough to cause trouble. The 2 × 2 system has determinant 24, compared with 385 if the columns were unrelated, and a small determinant means the answer is very sensitive to small changes in the data. Let us test that by refitting with one house left out each time:</p>
+  <div class="fx" data-lang="py">print("all six houses : size, rooms =", LinearRegression().fit(X2, price).coef_.round(2))
 for i, h in enumerate("ABCDEF"):                 # refit without one house at a time
     keep = np.arange(6) != i
     print(f"without house {h}: size, rooms =", LinearRegression().fit(X2[keep], price[keep]).coef_.round(2))</div>
@@ -195,134 +103,63 @@ without house C: size, rooms = [6.29 2.58]
 without house D: size, rooms = [5.54 5.58]
 without house E: size, rooms = [ 7.67 -1.67]
 without house F: size, rooms = [ 6.57 -0.67]</div>
-  <p>The value of a bedroom swings from −1.67 (without E) to +5.58 (without D), and changes sign. The value of 100 sq ft moves from 5.54 to 7.67. Removing one flat out of six rewrites the price list. Yet every one of these fits predicts the remaining houses well: the data knows "bigger flats with more rooms cost more", but not how to split the credit between the two.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Two brothers did a school project together and the teacher must split 20 marks between them. With no other information, "20 and 0", "10 and 10" and "120 and −100" all add up. OLS has no opinion and may pick anything. A penalty on big marks is a rule like "prefer small, even numbers": it picks 10 and 10.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Ill-posed / ill-conditioned least squares</strong>: XᵀX is singular (columns linearly dependent, or p &gt; n) or nearly singular (columns highly correlated). The OLS solution is then not unique, or unique but extremely sensitive to small changes in the data (high variance). <strong>Regularization</strong> adds a penalty that makes the problem well-posed by preferring small weights.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>sklearn and numpy will usually not warn you. A model with a negative bedroom weight, or weights like [−37.7, 22.7] on two near-identical blood tests, runs fine and even scores fine on training data. Look at the coefficients, the condition number or the VIFs (<a class="xref" data-note="ml_reg_diag">Assumptions &amp; Diagnostics</a>) before trusting individual weights.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Ridge regression.</b> We need a precise rule that prefers small weights, and a way to solve it. The simplest such rule charges the squares of the weights.</div>
+  <p>The value of a bedroom swings from −1.67 (without house E) to +5.58 (without house D): removing one flat out of six changes its sign. Yet every one of these fits predicts the remaining houses well. The data clearly says "bigger flats with more bedrooms cost more", but it cannot say how to split the credit between size and bedrooms, so least squares picks a split almost at random. This is called an <strong>ill-conditioned</strong> problem: XᵀX is singular or nearly singular, so the least-squares answer is not unique, or is unique but extremely sensitive to the data (it has high variance).</p>
+  <p>Think of two brothers who did a school project together, and a teacher who must split 20 marks between them with no other information. "20 and 0", "10 and 10" and "120 and −100" all add up to 20. Least squares has no opinion and may pick any of them. A rule such as "prefer small, even numbers" picks 10 and 10. That rule is a penalty on large weights, and adding one is called <strong>regularization</strong>. The same breakdown happens whenever columns are duplicated (two measurements of the same thing), highly correlated (x and x², two temperature sensors, two cholesterol tests), more numerous than the rows (genes, words, high-degree polynomial features), or mostly useless (a feature store with 200 columns of which 10 matter). scikit-learn will not warn you in any of these cases, so look at the coefficients and the VIFs before trusting individual weights.</p>
 
-  <h2 id="rl-ridge"><span class="num">02</span>Ridge Regression (L2)</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>OLS has no opinion about how to split credit between size and bedrooms, so tiny data changes flip the split. What precise rule would make the answer unique and stable, and can we still solve it with a formula?</p>
-  </div>
-  <h3>Plain words</h3>
-  <p>Ridge minimises <em>error + λ × (sum of squared weights)</em>. Every weight now has a cost. A weight survives at a large value only if it reduces the squared error by more than it costs. λ (sklearn calls it <code>alpha</code>) sets the exchange rate: λ = 0 is plain OLS, a huge λ pushes every weight toward 0, so the model predicts the average price.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A percentage tax on weights. Big weights pay a lot, small ones a little, and the tax is never more than the weight is worth, so nobody is wiped out entirely. Everyone just gets smaller.</p>
-  </div>
-  <h3>Deriving the closed form</h3>
-  <p>Write the ridge loss in matrix form, with X the (centred) feature table, y the (centred) target, w the weights:</p>
-  <p style="text-align:center"><strong>L(w) = (y − Xw)ᵀ(y − Xw) + λ·wᵀw</strong></p>
-  <p>Step 1, expand: L = yᵀy − 2wᵀXᵀy + wᵀXᵀXw + λwᵀw. Step 2, take the derivative with respect to w (the same rules as for numbers: the derivative of −2wb is −2b, of w·a·w is 2aw): ∂L/∂w = −2Xᵀy + 2XᵀXw + 2λw. Step 3, set it to zero at the minimum: XᵀXw + λw = Xᵀy, i.e. (XᵀX + λI)w = Xᵀy. Step 4, solve:</p>
-  <p style="text-align:center"><strong>ŵ_ridge = (XᵀX + λI)⁻¹ Xᵀy</strong></p>
-  <p>Compared with OLS, the only change is "+ λ" on the diagonal of XᵀX. With one feature everything is a number: <strong>w = Σxy / (Σx² + λ)</strong>. For size alone: 490/(70 + λ). The penalty sits in the denominator, so the weight is <em>divided</em> down: it shrinks toward 0 as λ grows but never reaches it. The loss is a sum of a convex bowl and a strictly convex bowl (λ &gt; 0), so there is exactly one minimum.</p>
-  <h3>Worked by hand: size and bedrooms</h3>
-  <p>Centred size and bedrooms, centred price (raw units: size in hundreds of sq ft, rooms as a count). From the sums recalled above, XᵀX = [[70, 19], [19, 5.5]] and Xᵀy = [490, 134]. For a 2 × 2 matrix [[a, b], [b, d]] the inverse is (1/(ad − b²))·[[d, −b], [−b, a]].</p>
-  <table class="tbl out"><caption>Ridge by hand: (XᵀX + λI)⁻¹ Xᵀy with Xᵀy = [490, 134]</caption>
-    <tr><th>λ</th><th>XᵀX + λI</th><th>det</th><th>w_size</th><th>w_rooms</th></tr>
-    <tr><td>0 (OLS)</td><td>[[70, 19], [19, 5.5]]</td><td>385 − 361 = 24</td><td>(5.5·490 − 19·134)/24 = 149/24 = <strong>6.208</strong></td><td>(70·134 − 19·490)/24 = 70/24 = <strong>2.917</strong></td></tr>
-    <tr><td>1</td><td>[[71, 19], [19, 6.5]]</td><td>461.5 − 361 = 100.5</td><td>(3185 − 2546)/100.5 = <strong>6.358</strong></td><td>(9514 − 9310)/100.5 = <strong>2.030</strong></td></tr>
-    <tr><td>5</td><td>[[75, 19], [19, 10.5]]</td><td>787.5 − 361 = 426.5</td><td>(5145 − 2546)/426.5 = <strong>6.094</strong></td><td>(10050 − 9310)/426.5 = <strong>1.735</strong></td></tr>
-    <tr><td>20</td><td>[[90, 19], [19, 25.5]]</td><td>2295 − 361 = 1934</td><td>(12495 − 2546)/1934 = <strong>5.144</strong></td><td>(12060 − 9310)/1934 = <strong>1.422</strong></td></tr>
-  </table>
-  <p>Three things to notice. (1) The determinant grows fast (24 → 100.5 → 426.5): adding λ moves the system away from singular, which is exactly why the answers stop swinging. (2) The total size ||w||² falls (47.05 → 44.55 → 40.15 → 28.49) while the training error rises (RSS 31.1 → 31.9 → 44.8 → 183): ridge deliberately fits the training data worse. (3) w_size <em>grew</em> from 6.208 to 6.358 at λ = 1 before shrinking. Ridge shrinks the length of the weight vector, not necessarily every single weight; section 03 explains why.</p>
-  <div class="fx" data-lang="py">Xc = np.c_[z, rooms - rooms.mean()]                    # centred size and rooms
-A, b = Xc.T @ Xc, Xc.T @ yc
+  <h2 id="rl-ridge"><span class="num">02</span>Ridge Regression</h2>
+  <p><strong>Ridge regression</strong> minimises the squared error plus λ times the sum of the squared weights:</p>
+  <p style="text-align:center"><strong>L(w) = ‖y − Xw‖² + λ·Σwⱼ²</strong></p>
+  <p>Every weight now has a cost. A weight can only stay large if it reduces the squared error by more than its cost. λ (lambda, called <code>alpha</code> in scikit-learn) sets the exchange rate between the two: λ = 0 gives plain least squares, and a huge λ pushes every weight toward zero, so the model ends up predicting the average price for every flat. The penalty Σwⱼ² is the squared length of the weight vector, also written ‖w‖₂², which is why ridge is called an <strong>L2 penalty</strong>. Think of it as a percentage tax on weights: big weights pay a lot, small ones a little, so everyone gets smaller but nobody is wiped out completely.</p>
+  <p>Ridge has a formula for its answer, and deriving it takes four short steps. Expand the loss: L = yᵀy − 2wᵀXᵀy + wᵀXᵀXw + λwᵀw. Take the derivative with respect to w, using the same rules as for ordinary numbers: ∂L/∂w = −2Xᵀy + 2XᵀXw + 2λw. Set it to zero at the minimum: (XᵀX + λI)w = Xᵀy. Solve:</p>
+  <p style="text-align:center"><strong>ŵ = (XᵀX + λI)⁻¹ Xᵀy</strong></p>
+  <p>Compared with least squares, the only change is "+ λ" on the diagonal of XᵀX, the same fix we used for the duplicated column. With a single feature everything is just numbers: w = Σxy / (Σx² + λ). The penalty sits in the denominator, so the weight is divided down as λ grows, but it never reaches zero. And because XᵀX + λI is always invertible for λ &gt; 0, ridge always has exactly one answer, even with duplicate columns or more columns than rows.</p>
+  <p>Now size and bedrooms together, centred, in their raw units. From the centred sums, XᵀX = [[70, 19], [19, 5.5]] and Xᵀy = [490, 134]. A 2 × 2 matrix [[a, b], [b, d]] has inverse (1 / (ad − b²))·[[d, −b], [−b, a]], so for λ = 5 the matrix is [[75, 19], [19, 10.5]], its determinant is 787.5 − 361 = 426.5, and the weights are w_size = (10.5·490 − 19·134) / 426.5 = 6.094 and w_rooms = (75·134 − 19·490) / 426.5 = 1.735. The code repeats this for several values of λ and compares with scikit-learn:</p>
+  <div class="fx" data-lang="py">A, b = Xc.T @ Xc, Xc.T @ yc                             # centred size and rooms, centred price
 print("X^T X =", A.tolist(), " X^T y =", b.tolist())
 for lam in [0, 1, 5, 20, 100]:
-    w = np.linalg.solve(A + lam * np.eye(2), b)        # (X^T X + lam I)^-1 X^T y
-    sk = Ridge(alpha=lam, fit_intercept=False).fit(Xc, yc).coef_ if lam else w
-    print(f"lambda={lam:&lt;4} formula w={w.round(3)}  sklearn w={sk.round(3)}  ||w||^2={w @ w:7.3f}  RSS={np.sum((yc - Xc @ w)**2):8.3f}")
-
-d2, V = np.linalg.eigh(A)                               # eigenvalues d^2 and directions of X^T X
-print("eigenvalues of X^T X:", d2.round(3), "  directions (columns):", V.round(4).tolist())
-for lam in [0, 5, 20]:
-    f = d2 / (d2 + lam)
-    print(f"lambda={lam:&lt;3} shrink factors {f.round(4)}  effective df = {f.sum():.3f}")</div>
+    w = np.linalg.solve(A + lam * np.eye(2), b)        # (X^T X + lambda I)^-1 X^T y
+    sk = Ridge(alpha=lam, fit_intercept=False).fit(Xc, yc).coef_
+    print(f"lambda={lam:&lt;4} formula {w.round(3)}  sklearn {sk.round(3)}  ||w||^2={w @ w:6.2f}  RSS={np.sum((yc - Xc @ w)**2):7.1f}")</div>
   <div class="fx" data-lang="text">X^T X = [[70.0, 19.0], [19.0, 5.5]]  X^T y = [490.0, 134.0]
-lambda=0    formula w=[6.208 2.917]  sklearn w=[6.208 2.917]  ||w||^2= 47.050  RSS=  31.083
-lambda=1    formula w=[6.358 2.03 ]  sklearn w=[6.358 2.03 ]  ||w||^2= 44.547  RSS=  31.930
-lambda=5    formula w=[6.094 1.735]  sklearn w=[6.094 1.735]  ||w||^2= 40.145  RSS=  44.824
-lambda=20   formula w=[5.144 1.422]  sklearn w=[5.144 1.422]  ||w||^2= 28.485  RSS= 183.069
-lambda=100  formula w=[2.797 0.766]  sklearn w=[2.797 0.766]  ||w||^2=  8.409  RSS=1150.021
-eigenvalues of X^T X: [ 0.319 75.181]   directions (columns): [[0.2631, -0.9648], [-0.9648, -0.2631]]
-lambda=0   shrink factors [1. 1.]  effective df = 2.000
-lambda=5   shrink factors [0.06   0.9376]  effective df = 0.998
-lambda=20  shrink factors [0.0157 0.7899]  effective df = 0.806</div>
-  <p>Formula, hand table and sklearn agree at every λ. (Ignore the last four lines for now; they are section 03.) <code>fit_intercept=False</code> because our data is already centred; sklearn's <code>Ridge</code> minimises exactly ||y − Xw||² + α||w||², so its <code>alpha</code> is our λ.</p>
-  <h3>The intercept is not penalised</h3>
-  <p>Shrinking the intercept toward 0 would make predictions depend on where zero happens to be (prices in lakh or in rupees, size from 0 or from 600 sq ft). So ridge penalises only the slopes. In practice sklearn centres X and y, solves the ridge problem on the centred data, and then sets b₀ = ȳ − x̄ᵀw. Here is Ridge(5) on the raw, uncentred houses:</p>
-  <div class="fx" data-lang="py">m = Ridge(alpha=5).fit(np.c_[size, rooms], price)      # raw, uncentred houses; fit_intercept=True
+lambda=0    formula [6.208 2.917]  sklearn [6.208 2.917]  ||w||^2= 47.05  RSS=   31.1
+lambda=1    formula [6.358 2.03 ]  sklearn [6.358 2.03 ]  ||w||^2= 44.55  RSS=   31.9
+lambda=5    formula [6.094 1.735]  sklearn [6.094 1.735]  ||w||^2= 40.14  RSS=   44.8
+lambda=20   formula [5.144 1.422]  sklearn [5.144 1.422]  ||w||^2= 28.49  RSS=  183.1
+lambda=100  formula [2.797 0.766]  sklearn [2.797 0.766]  ||w||^2=  8.41  RSS= 1150.0</div>
+  <p>The formula and scikit-learn agree at every λ. Three things are worth noticing. First, the training error (RSS) rises as λ grows, from 31.1 to 44.8 at λ = 5: ridge deliberately fits the training data a little worse, in exchange for weights that do not swing. Second, the total size of the weights ‖w‖² falls steadily. Third, w_size actually <em>rose</em> from 6.208 to 6.358 at λ = 1 before shrinking. Ridge shrinks the weight vector as a whole, not necessarily every single weight; the next section explains why.</p>
+  <p>One detail matters in practice: the intercept is never penalised. Shrinking it toward zero would make predictions depend on where zero happens to be, for example whether prices are recorded in lakh or in rupees. So scikit-learn centres X and y, solves the ridge problem on the centred data, and then sets the intercept to b₀ = ȳ − x̄·w:</p>
+  <div class="fx" data-lang="py">m = Ridge(alpha=5).fit(X2, price)                      # raw houses, intercept fitted (not penalised)
 print("weights", m.coef_.round(3), " intercept", round(m.intercept_, 3),
-      " = ybar - xbar.w =", round(price.mean() - np.array([size.mean(), rooms.mean()]) @ m.coef_, 3))
+      " = ybar - xbar.w =", round(price.mean() - X2.mean(0) @ m.coef_, 3))
 Xb = np.c_[np.ones(6), size, rooms]
-naive = np.linalg.solve(Xb.T @ Xb + 5 * np.eye(3), Xb.T @ price)
-print("if the intercept were penalised too:", naive.round(3))</div>
+print("if the intercept were penalised too:", np.linalg.solve(Xb.T @ Xb + 5 * np.eye(3), Xb.T @ price).round(3))</div>
   <div class="fx" data-lang="text">weights [6.094 1.735]  intercept -10.369  = ybar - xbar.w = -10.369
 if the intercept were penalised too: [-1.04   5.265  1.997]</div>
-  <p>The slopes are the hand values [6.094, 1.735], and the intercept is 61 − (11 × 6.094 + 2.5 × 1.735) = 61 − 67.03 − 4.34 = −10.37, exactly ȳ − x̄ᵀw. Penalising the intercept as well (the naive version, adding λ to all three diagonal entries) gives a different, worse model: intercept −1.04 instead of −10.37, size 5.27 instead of 6.09, bedrooms 2.00 instead of 1.74, because the model now prefers a small intercept over a correct fit, and tilts the slopes to make up for it.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Ridge regression</strong> (Hoerl &amp; Kennard, 1970; also Tikhonov regularization): ŵ = argmin ||y − Xw||² + λ||w||₂², with ||w||₂² = Σwⱼ² and the intercept unpenalised. Closed form ŵ = (XᵀX + λI)⁻¹Xᵀy on centred data, unique for any λ &gt; 0 even when XᵀX is singular. Equivalent constrained form: minimise ||y − Xw||² subject to Σwⱼ² ≤ t, where each λ corresponds to some budget t.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>sklearn's estimators do not share one scale for α. <code>Ridge</code> uses ||y − Xw||² + α||w||² (no 1/n). <code>Lasso</code> and <code>ElasticNet</code> use (1/2n)||y − Xw||² + …. So "α = 1" means very different strengths in the two, and changes with n for one but not the other. Never copy an α from one class to another.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: How ridge shrinks.</b> We saw ridge shrink, but not <em>how</em>: why did w_size grow first, and which parts of the data does ridge trust less? The answer is in the eigenvectors of XᵀX.</div>
+  <p>On the raw houses, <code>Ridge(alpha=5)</code> returns exactly the hand weights 6.094 and 1.735, and its intercept −10.369 equals ȳ − x̄·w = 61 − (11 × 6.094 + 2.5 × 1.735). If we wrongly add λ to the intercept's diagonal entry as well, the model becomes worse: it pulls the intercept toward zero (−1.04) and tilts the slopes (5.27 and 2.00) to compensate. One more warning before moving on: scikit-learn's <code>Ridge</code> minimises ‖y − Xw‖² + α‖w‖² with no division by n, while <code>Lasso</code> and <code>ElasticNet</code> divide the squared error by 2n. So "α = 1" means very different strengths in different classes, and you must never copy an α from one to another.</p>
 
   <h2 id="rl-shrink"><span class="num">03</span>How Ridge Shrinks</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Ridge with λ = 5 cut the bedroom weight from 2.92 to 1.74 but barely touched size (6.21 → 6.09), and at λ = 1 size even rose. What is ridge actually shrinking, if not each weight equally?</p>
-  </div>
-  <h3>Directions in the data</h3>
-  <p>The matrix XᵀX describes how spread out the data is in each direction. Its eigenvectors are the principal directions (the same ones <a class="xref" data-note="ml_pca">PCA</a> finds) and its eigenvalues d² say how much spread there is along each. Adding λI adds λ to every eigenvalue and leaves the directions unchanged. The result: along a direction with spread d², ridge keeps a fraction</p>
+  <p>Ridge with λ = 5 cut the bedroom weight from 2.92 to 1.74 but barely touched size (6.21 to 6.09), and at λ = 1 the size weight even rose. To understand this we need to look at the data along its natural directions rather than along the columns.</p>
+  <p>Every dataset varies more in some directions than in others. The six houses vary a lot along "a bigger flat with proportionally more bedrooms", because that is how they differ from one another. They hardly vary at all along "more bedrooms in the same floor area": the only information about that comes from B and C both having 2 bedrooms at different sizes, and D and E both having 3. Mathematically these directions are the <strong>eigenvectors</strong> of XᵀX (the same directions PCA finds), and each comes with an <strong>eigenvalue</strong> d² that measures how much the data spreads along it. Adding λI to XᵀX adds λ to every eigenvalue and leaves the directions unchanged. The result is that along a direction with spread d², ridge keeps the fraction</p>
   <p style="text-align:center"><strong>shrink factor = d² / (d² + λ)</strong></p>
-  <p>of the OLS answer. Directions with lots of spread (d² ≫ λ) keep almost everything. Directions with little spread (d² ≪ λ), where the data says very little and OLS was guessing, are shrunk almost to 0.</p>
-  <h3>By hand on the houses</h3>
-  <p>Eigenvalues of [[70, 19], [19, 5.5]]: solve det(XᵀX − μI) = (70 − μ)(5.5 − μ) − 361 = μ² − 75.5μ + 24 = 0, so μ = (75.5 ± √(5700.25 − 96))/2 = (75.5 ± 74.86)/2 = <strong>75.18</strong> and <strong>0.319</strong>. The big one's direction is u₁ = (0.965, 0.263): "a bigger flat with proportionally more rooms", the way the six houses actually vary. The small one's is u₂ = (−0.263, 0.965): "more rooms in the same floor area", a combination the six houses barely vary in (B and C both have 2 rooms at different sizes, D and E both 3; that is all the data has).</p>
-  <table class="tbl out"><caption>Ridge λ = 5, worked in the eigen-directions</caption>
-    <tr><th>direction</th><th>d²</th><th>shrink d²/(d² + 5)</th><th>OLS component uᵀ[6.208, 2.917]</th><th>ridge component</th></tr>
-    <tr><td>u₁ = (0.965, 0.263)</td><td>75.18</td><td>75.18 / 80.18 = 0.938</td><td>5.990 + 0.767 = 6.757</td><td>6.757 × 0.938 = 6.335</td></tr>
-    <tr><td>u₂ = (−0.263, 0.965)</td><td>0.319</td><td>0.319 / 5.319 = 0.060</td><td>−1.633 + 2.814 = 1.181</td><td>1.181 × 0.060 = 0.071</td></tr>
-  </table>
-  <p>Back to (w_size, w_rooms): 6.335·(0.965, 0.263) + 0.071·(−0.263, 0.965) = (6.112 − 0.019, 1.667 + 0.068) = <strong>(6.094, 1.735)</strong>, the same answer as the matrix inverse. Now the puzzle is clear. OLS's [6.208, 2.917] has a sizeable component (1.181) along the weak direction u₂, which says "rooms up, size <em>down</em>". That component is the unreliable part (it is what flipped when we dropped one house). Ridge keeps only 6% of it. Removing most of its negative size part lets w_size <em>rise</em> at small λ, while the vector as a whole shrinks.</p>
-  <h3>Effective degrees of freedom</h3>
-  <p>OLS with p columns uses p degrees of freedom. Ridge uses fewer: <strong>df(λ) = Σⱼ d²ⱼ / (d²ⱼ + λ)</strong>, the sum of the shrink factors. For λ = 5: 0.938 + 0.060 = <strong>0.998</strong>. The two-weight ridge model has the flexibility of about one free weight, which is honest: the six houses only really inform one direction. λ is a smooth dial between p (λ = 0) and 0 (λ → ∞), unlike "drop a column", which jumps by whole numbers. These are the last lines of the code output above (eigenvalues 0.319, 75.181; df 2.000, 0.998, 0.806).</p>
-  <h3>The shrinkage path</h3>
-  <p>Plotting each weight against λ gives the ridge path: all weights glide smoothly toward 0, never touching it. On the houses: [6.21, 2.92] → [6.36, 2.03] (λ = 1) → [6.09, 1.74] (λ = 5) → [5.14, 1.42] (λ = 20) → [2.80, 0.77] (λ = 100). Section 11 draws paths on standardised data.</p>
-  <h3>Why trading bias for variance pays</h3>
-  <p>Shrinking adds bias: the λ = 5 weights are not the OLS weights, and if the truth really were [6.21, 2.92] we would be off. But it removes variance: the weak direction u₂, which swung from −1.67 to +5.58 for rooms when one house was dropped, is mostly ignored. Expected test error = bias² + variance + noise (derived in <a class="xref" data-note="ml_core">Bias, Variance &amp; Generalization</a>). There is always some λ &gt; 0 at which the drop in variance beats the rise in bias squared (a classic result by Hoerl and Kennard), which is why a well-tuned ridge rarely loses to OLS on new data.</p>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>Ridge is "OLS that trusts each direction of the data in proportion to how much the data actually varies in it". Correlated columns create a direction with almost no variation (their difference: "more rooms, same size", eigenvalue 0.319). OLS puts large, unstable weight there; ridge nearly ignores it. That is the whole cure for multicollinearity.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>With the SVD X = UDVᵀ, ridge predictions are ŷ = Σⱼ uⱼ · d²ⱼ/(d²ⱼ + λ) · uⱼᵀy: each principal component of y is kept with factor d²ⱼ/(d²ⱼ + λ). <strong>Bayesian view</strong>: ridge is the most likely w (MAP estimate) when each weight has a Normal(0, σ²/λ) prior, i.e. "I believe weights are small and Gaussian" (see <a class="xref" data-note="ml_regularization">Regularization</a>).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Ridge never produces exact zeros, so it is not a feature selector. "Ridge shrank this weight to 0.002" means "small", not "removed": the column is still needed at prediction time. If you need fewer columns, you need an L1 penalty.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Lasso.</b> Ridge keeps every column. With 200 columns of which 10 matter, or a bedroom count that adds little once size is known, we would like a model that switches the useless ones fully off. Changing the square to an absolute value does exactly that.</div>
+  <p>of the least-squares answer. Directions with lots of spread (d² much bigger than λ) keep almost everything. Directions with little spread, where the data says very little and least squares was effectively guessing, are shrunk almost to zero. Think of a judge listening to two witnesses: one saw the event clearly from close up, the other glimpsed it from far away in the dark. A sensible judge does not ignore either, but trusts each in proportion to how much they could actually see. Ridge trusts each direction of the data in proportion to how much the data varies along it.</p>
+  <div class="fx" data-lang="py">d2, V = np.linalg.eigh(Xc.T @ Xc)                      # eigenvalues and directions of X^T X
+print("eigenvalues:", d2.round(3), " directions (columns):", V.round(3).tolist())
+for lam in [0, 5, 20]:
+    f = d2 / (d2 + lam)                                # fraction kept along each direction
+    print(f"lambda={lam:&lt;3} shrink factors {f.round(3)}  effective df = {f.sum():.3f}")</div>
+  <div class="fx" data-lang="text">eigenvalues: [ 0.319 75.181]  directions (columns): [[0.263, -0.965], [-0.965, -0.263]]
+lambda=0   shrink factors [1. 1.]  effective df = 2.000
+lambda=5   shrink factors [0.06  0.938]  effective df = 0.998
+lambda=20  shrink factors [0.016 0.79 ]  effective df = 0.806</div>
+  <p>For the houses the two eigenvalues are 75.18 and 0.319. The big one belongs to the direction (0.965, 0.263), "bigger and roomier", and the tiny one to (−0.263, 0.965), "more bedrooms, same size". At λ = 5, ridge keeps 75.18 / 80.18 = 0.938 of the first direction and only 0.319 / 5.319 = 0.060 of the second. Now the puzzle is solved. The least-squares answer [6.208, 2.917] contains a sizeable component along the weak direction, which says "bedrooms up, size down". That component is the unreliable part, the one that flipped when we dropped a house. Ridge removes 94% of it, and since that component carried a negative amount of size, removing it lets w_size rise slightly at small λ even as the whole vector shrinks.</p>
+  <p>The sum of the shrink factors is called the <strong>effective degrees of freedom</strong> of the model. Least squares with p columns uses p degrees of freedom; ridge at λ = 5 uses 0.938 + 0.060 = 0.998, about one. That is an honest summary: the six houses really only inform one direction. Unlike dropping a column, which changes the degrees of freedom in whole steps, λ is a smooth dial between p (at λ = 0) and 0 (as λ → ∞).</p>
+  <p>Why is it worth accepting a biased answer? The expected error on new data is bias² + variance + noise (see <a class="xref" data-note="ml_core">Bias, Variance &amp; Generalization</a>). Shrinking adds some bias, because the λ = 5 weights are not the least-squares weights. But it removes a lot of variance, because the weak direction that swung wildly between samples is mostly ignored. A classic result by Hoerl and Kennard shows that there is always some λ &gt; 0 at which the drop in variance outweighs the rise in bias², which is why a well-tuned ridge rarely loses to least squares on new data. Two further facts complete the picture. In Bayesian terms, ridge gives the most probable weights when each weight is believed in advance to follow a normal distribution centred at zero (see <a class="xref" data-note="ml_regularization">Regularization</a>). And ridge never produces exact zeros: a weight of 0.002 is small but the column is still used, so ridge is not a feature selector. For that we need a different penalty.</p>
 
-  <h2 id="rl-lasso"><span class="num">04</span>Lasso Regression (L1)</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Ridge shrinks the bedroom weight but never to exactly 0, so the model always needs every column. Is there a penalty that can decide "this column is not worth keeping" and remove it completely?</p>
-  </div>
-  <h3>The objective</h3>
-  <p>Lasso (Tibshirani, 1996: "least absolute shrinkage and selection operator") charges the <em>absolute values</em> of the weights. sklearn writes it as</p>
-  <p style="text-align:center"><strong>min over w: (1/2n)·||y − Xw||² + α·Σ|wⱼ|</strong></p>
-  <p>The 1/(2n) only rescales α (so the same α means about the same thing whatever the number of rows); the minimiser is the same as for ||y − Xw||² + 2nα·Σ|wⱼ|. The intercept is again not penalised.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A fixed fee instead of a percentage tax. Every feature that wants a non-zero weight must pay the same flat fee α per unit of weight, however small its contribution. Features whose contribution is worth less than the fee drop out completely: they end up with nothing.</p>
-  </div>
-  <h3>Why there is no closed form</h3>
-  <p>For ridge we took the derivative and set it to 0. |w| has no derivative at w = 0: the slope jumps from −1 (left) to +1 (right), a sharp corner. That corner is exactly what makes lasso useful (it is where the weights get stuck at 0), and it is also why there is no one-line formula for several features. In one dimension we can still solve it by hand (next section); for many dimensions we use coordinate descent (section 06) or LARS.</p>
-  <h3>The geometry: diamonds have corners</h3>
-  <p>The constrained form is "minimise the squared error, but stay inside a budget region". For lasso the region |w₁| + |w₂| ≤ t is a diamond whose corners sit on the axes; for ridge w₁² + w₂² ≤ t it is a circle. The error's contour lines are ellipses around the OLS answer (for size and rooms they are long thin ellipses, stretched along the weak direction u₂). Grow the ellipses until they first touch the region. A circle has no special points, so it is touched somewhere generic, with both weights non-zero. A diamond sticks out at its corners, so the ellipse usually touches a corner first, and at a corner one weight is exactly 0. In higher dimensions the L1 ball has even more corners and edges, so even more weights land on 0.</p>
+  <h2 id="rl-lasso"><span class="num">04</span>Lasso and Why It Gives Exact Zeros</h2>
+  <p>Ridge keeps every column. With 200 columns of which 10 matter, or a bedroom count that adds little once size is known, we would like a model that switches useless columns fully off. <strong>Lasso</strong> (Least Absolute Shrinkage and Selection Operator) does this by charging the absolute values of the weights instead of their squares. scikit-learn writes it as</p>
+  <p style="text-align:center"><strong>(1/2n)·‖y − Xw‖² + α·Σ|wⱼ|</strong></p>
+  <p>The 1/(2n) only rescales α so that the same α means roughly the same thing whatever the number of rows. The penalty Σ|wⱼ| is written ‖w‖₁, so lasso is an <strong>L1 penalty</strong>, and the intercept is again not penalised. Think of a fixed fee instead of a percentage tax: every feature that wants a non-zero weight pays the same fee per unit of weight however little it contributes, and features whose contribution is worth less than the fee drop out entirely.</p>
+  <p>Lasso has no formula like ridge's. For ridge we took the derivative and set it to zero, but |w| has no derivative at w = 0: its slope jumps from −1 to +1 there, a sharp corner. That corner is exactly what makes lasso useful, because weights get stuck at it, and it is also why there is no one-line solution. A picture helps first. Lasso can equivalently be written as "minimise the squared error while keeping |w₁| + |w₂| within a budget". That allowed region is a diamond whose corners lie on the axes; for ridge, w₁² + w₂² ≤ budget is a circle. The squared error's contour lines are ellipses around the least-squares answer. Grow the ellipses until they first touch the allowed region:</p>
   <figure class="viz"><svg viewBox="0 -8 540 240" width="540">
 <line x1="20" y1="120" x2="240" y2="120" stroke="currentColor"/><line x1="130" y1="20" x2="130" y2="210" stroke="currentColor"/>
 <text x="236" y="136" class="tm" font-size="12">w₁</text><text x="136" y="206" class="tm" font-size="12">w₂</text>
@@ -341,66 +178,25 @@ if the intercept were penalised too: [-1.04   5.265  1.997]</div>
 <circle cx="430" cy="74" r="5" class="fg sg"/><text x="440" y="90" class="tg" font-size="12">both ≠ 0</text>
 <text x="410" y="226" text-anchor="middle" font-size="13">L2: w₁² + w₂² ≤ t</text>
 </svg><figcaption>Error contours (red) grow from the OLS solution until they touch the allowed region. The L1 diamond is usually first touched at a corner, where one weight is exactly 0; the L2 circle at a point where both are non-zero.</figcaption></figure>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Lasso</strong>: ŵ = argmin (1/2n)||y − Xw||² + α||w||₁, with ||w||₁ = Σ|wⱼ|. Convex but not differentiable at wⱼ = 0. Its solutions are <strong>sparse</strong> (many exact zeros), so it does estimation and feature selection at once. When p &gt; n it keeps at most n non-zero weights. Bayesian view: the MAP estimate under a Laplace (double-exponential) prior, which has a sharp peak at 0.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>The diamond picture explains <em>that</em> zeros appear but not <em>which</em> weight becomes 0 or at what α. For real reasoning (and interviews) use the 1-D soft-threshold formula in the next section: it gives the exact α at which a weight dies.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Soft-thresholding.</b> "Corners" is a picture. What is the actual rule that sets a weight to exactly 0, and at what α does it happen?</div>
-
-  <h2 id="rl-soft"><span class="num">05</span>Why Lasso Sets Weights to Zero: Soft-Thresholding</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Take the simplest case, price on size alone. As the lasso fee α rises, how exactly does the size weight fall from 7, and at precisely which α does it hit 0?</p>
-  </div>
-  <h3>The pull on one weight</h3>
-  <p>During fitting, the penalty pulls every weight toward 0. The size of the pull is the slope of the penalty. Ridge's penalty λw² has slope 2λw: proportional to w, so it fades as w gets small. Lasso's penalty α|w| has slope α (for w ≠ 0): the same size however small w is. With α = λ = 1:</p>
-  <table class="tbl out"><caption>Penalty pull on a weight</caption>
-    <tr><th>current w</th><th>L2 pull 2λw</th><th>L1 pull α</th></tr>
-    <tr><td>4</td><td>8</td><td>1</td></tr>
-    <tr><td>1</td><td>2</td><td>1</td></tr>
-    <tr><td>0.25</td><td>0.5</td><td>1</td></tr>
-    <tr><td>0.01</td><td>0.02 (almost nothing)</td><td>1 (still full strength)</td></tr>
-  </table>
-  <p>Near 0, the ridge pull vanishes, so a weak weight settles at a small non-zero value. The lasso pull stays at full strength all the way down; if the data's push on the weight is weaker than α, nothing can hold the weight up, and it lands on exactly 0.</p>
-  <h3>Deriving the 1-D solution</h3>
-  <p>One centred feature x and centred target y. Write ρ = (1/n)Σxᵢyᵢ (how strongly x and y move together, "the data's push") and s = (1/n)Σxᵢ² (x's spread). The lasso loss is f(w) = (1/2n)Σ(yᵢ − w·xᵢ)² + α|w|. The smooth part has derivative −ρ + s·w. Now three cases:</p>
-  <table class="tbl">
-    <tr><th>Case</th><th>Set derivative to 0</th><th>Solution</th><th>Consistent only if</th></tr>
-    <tr><td>w &gt; 0 (|w|' = +1)</td><td>−ρ + s·w + α = 0</td><td>w = (ρ − α) / s</td><td>ρ &gt; α</td></tr>
-    <tr><td>w &lt; 0 (|w|' = −1)</td><td>−ρ + s·w − α = 0</td><td>w = (ρ + α) / s</td><td>ρ &lt; −α</td></tr>
-    <tr><td>w = 0 (corner)</td><td>0 must lie in [−ρ − α, −ρ + α] (the range of slopes at the corner)</td><td>w = 0</td><td>|ρ| ≤ α</td></tr>
-  </table>
-  <p>All three fit into one formula:</p>
-  <p style="text-align:center"><strong>w = S(ρ, α) / s,   where S(ρ, α) = sign(ρ) · max(|ρ| − α, 0)</strong></p>
-  <p>S is the <strong>soft-threshold</strong> operator: move ρ toward 0 by α, and stop at 0 if you would cross it. Compare: OLS is w = ρ / s; ridge (in this scaling) is w = ρ / (s + λ), dividing; lasso <em>subtracts</em> α first. Subtracting is what reaches zero.</p>
-  <h3>Worked by hand: price on size</h3>
-  <p>Centred sums: Σdx·dy = 490, Σdx² = 70, n = 6. So ρ = 490/6 = 81.667, s = 70/6 = 11.667, and the OLS slope ρ/s = 7.</p>
-  <table class="tbl out"><caption>Lasso slope w = max(81.667 − α, 0) / 11.667</caption>
-    <tr><th>α</th><th>|ρ| − α</th><th>w</th><th>case</th></tr>
-    <tr><td>10</td><td>71.667</td><td>71.667 / 11.667 = <strong>6.143</strong></td><td>w &gt; 0</td></tr>
-    <tr><td>40</td><td>41.667</td><td>41.667 / 11.667 = <strong>3.571</strong></td><td>w &gt; 0</td></tr>
-    <tr><td>80</td><td>1.667</td><td>1.667 / 11.667 = <strong>0.143</strong></td><td>w &gt; 0</td></tr>
-    <tr><td>81.67</td><td>−0.003 → 0</td><td><strong>0</strong></td><td>corner</td></tr>
-    <tr><td>90</td><td>−8.333 → 0</td><td><strong>0</strong></td><td>corner</td></tr>
-  </table>
-  <p>Check α = 90 the long way. Try w &gt; 0: w = (81.667 − 90)/11.667 = −0.71, which is not &gt; 0, contradiction. Try w &lt; 0: w = (81.667 + 90)/11.667 = 14.7, not &lt; 0, contradiction. Only the corner is left, and indeed |ρ| = 81.667 ≤ 90. So w = 0: at this fee, size is not worth including and the model predicts 61 lakh for every flat. The critical value is α = |ρ| = 81.667: above it the weight is dead. (In sklearn's scaling, the largest useful α for a whole dataset is α_max = maxⱼ |xⱼᵀy| / n; above it every weight is 0, and <code>LassoCV</code> starts its grid there.) Notice also that every surviving weight is the OLS weight minus α/s = α/11.667: lasso shifts weights down by a constant, it does not scale them.</p>
-  <div class="fx" data-lang="py">def soft_threshold(rho, lam):
-    return np.sign(rho) * max(abs(rho) - lam, 0.0)
-
-n = 6
-rho, s = (z @ yc) / n, (z @ z) / n                    # (1/n) sum dx*dy  and  (1/n) sum dx^2
-print(f"rho = {rho:.3f}  s = {s:.3f}  OLS slope = rho/s = {rho / s:.3f}")
+  <p>A circle has no special points, so the ellipse touches it somewhere ordinary, where both weights are non-zero. A diamond sticks out at its corners, so the ellipse usually touches a corner first, and at a corner one weight is exactly zero. In more dimensions the L1 region has even more corners and edges, so even more weights land on zero.</p>
+  <p>The picture shows that zeros appear, but not when. For that, look at the pull each penalty exerts on a weight during fitting, which is the slope of the penalty. Ridge's penalty λw² has slope 2λw, proportional to w, so the pull fades as the weight gets small: at w = 4 it is 8λ, at w = 0.01 only 0.02λ. A weak weight therefore settles at a small non-zero value. Lasso's penalty α|w| has slope α whatever the size of w, so the pull stays at full strength all the way down. If the data's push on a weight is weaker than α, nothing can hold the weight up, and it lands on exactly zero.</p>
+  <p>We can make this exact for one feature. Let ρ = (1/n)Σxᵢyᵢ be how strongly the centred x and y move together (the data's push on the weight) and s = (1/n)Σxᵢ² be x's spread. Least squares gives w = ρ / s. For lasso, the derivative of the smooth part is −ρ + s·w, and we consider three cases. If w &gt; 0 the penalty adds +α, so w = (ρ − α) / s, which is only consistent if ρ &gt; α. If w &lt; 0 it adds −α, so w = (ρ + α) / s, consistent only if ρ &lt; −α. Otherwise, when |ρ| ≤ α, the only consistent answer is the corner, w = 0. All three cases fit into one formula:</p>
+  <p style="text-align:center"><strong>w = S(ρ, α) / s, &nbsp; where S(ρ, α) = sign(ρ) · max(|ρ| − α, 0)</strong></p>
+  <p>S is called the <strong>soft-threshold</strong> function: move ρ toward zero by α, and stop at zero if you would cross it. Compare the three models in one line each: least squares divides ρ by s; ridge divides by something larger; lasso <em>subtracts</em> α first. Subtracting is what reaches zero.</p>
+  <p>For price on size alone, Σdx·dy = 490, Σdx² = 70 and n = 6, so ρ = 81.667 and s = 11.667 (and ρ / s = 7, the least-squares slope). At α = 10 the lasso slope is (81.667 − 10) / 11.667 = 6.143; at α = 40 it is 3.571; and once α reaches 81.667 the slope is exactly zero and the model predicts 61 lakh for every flat.</p>
+  <div class="fx" data-lang="py">n = 6
+rho, s = (z @ yc) / n, (z @ z) / n                     # the data's push, and x's spread
+print(f"rho = {rho:.3f}  s = {s:.3f}  OLS slope rho/s = {rho / s:.3f}")
 for a in [10, 40, 80, 81.67, 90]:
     hand = soft_threshold(rho, a) / s
     skl = Lasso(alpha=a).fit(size[:, None], price).coef_[0]
-    print(f"alpha={a:&lt;6} hand w = S({rho:.3f}, {a}) / {s:.3f} = {hand:.3f}   sklearn {skl:.3f}")</div>
-  <div class="fx" data-lang="text">rho = 81.667  s = 11.667  OLS slope = rho/s = 7.000
-alpha=10     hand w = S(81.667, 10) / 11.667 = 6.143   sklearn 6.143
-alpha=40     hand w = S(81.667, 40) / 11.667 = 3.571   sklearn 3.571
-alpha=80     hand w = S(81.667, 80) / 11.667 = 0.143   sklearn 0.143
-alpha=81.67  hand w = S(81.667, 81.67) / 11.667 = 0.000   sklearn 0.000
-alpha=90     hand w = S(81.667, 90) / 11.667 = 0.000   sklearn 0.000</div>
+    print(f"alpha={a:&lt;6} hand w = {hand:.3f}   sklearn {skl:.3f}")</div>
+  <div class="fx" data-lang="text">rho = 81.667  s = 11.667  OLS slope rho/s = 7.000
+alpha=10     hand w = 6.143   sklearn 6.143
+alpha=40     hand w = 3.571   sklearn 3.571
+alpha=80     hand w = 0.143   sklearn 0.143
+alpha=81.67  hand w = 0.000   sklearn 0.000
+alpha=90     hand w = 0.000   sklearn 0.000</div>
   <figure class="viz"><svg viewBox="0 0 560 260" width="560">
 <line x1="40" y1="130" x2="520" y2="130" stroke="currentColor"/><line x1="280" y1="15" x2="280" y2="245" stroke="currentColor"/>
 <text x="516" y="146" text-anchor="end" class="tm" font-size="11">ρ (data's push, OLS ∝ ρ)</text><text x="288" y="24" class="tm" font-size="11">fitted w</text>
@@ -415,358 +211,186 @@ alpha=90     hand w = S(81.667, 90) / 11.667 = 0.000   sklearn 0.000</div>
 <text x="380" y="40" class="tr" font-size="11">hard threshold: keep or kill</text>
 <text x="280" y="122" text-anchor="middle" class="tb" font-size="11">dead zone |ρ| ≤ α → w = 0</text>
 </svg><figcaption>Three ways to shrink one weight, as a function of the data's push ρ. OLS (dashed) is a straight line. Ridge (teal) scales it down, never reaching 0. Lasso (blue) is flat at 0 in the dead zone and then runs parallel to OLS, shifted by α (soft threshold). Best-subset selection is a hard threshold (red): unchanged or zero.</figcaption></figure>
-  <p>Read the picture as a summary of the whole note: ridge <em>divides</em> every weight by the same factor; lasso <em>subtracts</em> the same amount from every weight's push, which kills weak ones and also biases strong ones down by α/s (the blue line is below the dashed one even for large ρ). That last fact is why lasso's surviving weights are a bit too small, and why variants like the relaxed or adaptive lasso exist (section 12).</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Soft-thresholding</strong>: S(z, γ) = sign(z)·max(|z| − γ, 0). The 1-D lasso solution is w = S(ρ, α)/s; with standardised x (s = 1) it is just S(ρ, α). For orthonormal columns (XᵀX = nI) every lasso weight is the soft-thresholded OLS weight, every ridge weight is the OLS weight divided by (1 + λ/n), and best-subset is the hard-thresholded OLS weight.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"Lasso shrinks big weights less" is wrong. It subtracts the same α/s from every surviving weight (in the orthonormal case), big or small. Ridge is the one whose absolute shrinkage grows with the weight. What is true: lasso's <em>relative</em> shrinkage is small for big weights.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Coordinate descent.</b> One weight can be solved by hand. With size and bedrooms together, the two weights interact through their correlation. How does the computer actually find the lasso solution?</div>
+  <p>The hand values and scikit-learn agree. The figure summarises how each method treats one weight as the data's push ρ grows: ridge scales it down, lasso is flat at zero in a "dead zone" and then runs parallel to least squares, shifted down by α. Notice the consequence: every weight that survives lasso is also reduced by the same amount α/s, so lasso's kept weights are biased toward zero. (In the dataset-wide version, the smallest α at which every weight is zero is α_max = maxⱼ |xⱼᵀy| / n, and <code>LassoCV</code> starts its search there.) In Bayesian terms, lasso gives the most probable weights under a Laplace prior, a distribution with a sharp peak at zero.</p>
 
-  <h2 id="rl-cd"><span class="num">06</span>Coordinate Descent</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The 1-D formula needs "the data's push" ρ on a weight. With two correlated columns, size's push depends on how much bedrooms already explains, and vice versa. How do we untangle them without a closed form?</p>
-  </div>
-  <h3>The idea</h3>
-  <p>We can solve lasso exactly for one weight if the others are held fixed: it is the 1-D problem again, with y replaced by "what the other features have not explained yet". So: cycle through the weights one at a time, solving each 1-D problem exactly, and repeat the sweep until nothing changes. Because the lasso loss is convex and the non-smooth part splits into separate |wⱼ| terms, this simple loop converges to the global minimum. It is what sklearn's <code>Lasso</code> and <code>ElasticNet</code> use.</p>
-  <div class="flow"><span>Start w = 0</span><span>For feature j: residual without j</span><span>ρⱼ = (1/n)·xⱼ · residual</span><span>wⱼ = S(ρⱼ, α) / sⱼ</span><span>Next j; repeat sweeps until stable</span></div>
-  <h3>Worked by hand: size and bedrooms</h3>
-  <p>Centred size (x₁) and bedrooms (x₂), centred price, raw units. s₁ = (1/6)·70 = 11.667 and s₂ = (1/6)·5.5 = 0.917. The push on each weight uses the sums we know: with the other weight fixed, ρ₁ = (490 − 19·w₂)/6 and ρ₂ = (134 − 19·w₁)/6.</p>
-  <table class="tbl out"><caption>Coordinate descent for lasso, α = 2</caption>
-    <tr><th>step</th><th>ρ = (1/6)·x · residual</th><th>S(ρ, 2)</th><th>new weight</th><th>w after</th></tr>
-    <tr><td>sweep 1, w_size</td><td>(490 − 0)/6 = 81.667</td><td>79.667</td><td>79.667 / 11.667 = 6.829</td><td>[6.829, 0]</td></tr>
-    <tr><td>sweep 1, w_rooms</td><td>(134 − 19 × 6.829)/6 = 4.257/6 = 0.710</td><td>0 (|0.710| ≤ 2)</td><td>0</td><td>[6.829, 0]</td></tr>
-    <tr><td>sweep 2</td><td>same numbers again</td><td></td><td></td><td>converged</td></tr>
-  </table>
-  <p>Once size has explained what it can, bedrooms' remaining push (0.71) is below the fee, so <strong>bedrooms is switched off</strong> and the model is price = 6.83 per 100 sq ft. Lasso picked one twin. Now a much smaller fee, α = 0.1:</p>
-  <table class="tbl out"><caption>Coordinate descent for lasso, α = 0.1</caption>
-    <tr><th>step</th><th>ρ</th><th>S(ρ, 0.1)</th><th>new weight</th><th>w after</th></tr>
-    <tr><td>sweep 1, w_size</td><td>490/6 = 81.667</td><td>81.567</td><td>6.991</td><td>[6.991, 0]</td></tr>
-    <tr><td>sweep 1, w_rooms</td><td>(134 − 19 × 6.991)/6 = 0.194</td><td>0.094</td><td>0.094 / 0.917 = 0.102</td><td>[6.991, 0.102]</td></tr>
-    <tr><td>sweep 2, w_size</td><td>(490 − 19 × 0.102)/6 = 81.343</td><td>81.243</td><td>6.964</td><td>[6.964, 0.102]</td></tr>
-    <tr><td>sweep 2, w_rooms</td><td>(134 − 19 × 6.964)/6 = 0.282</td><td>0.182</td><td>0.198</td><td>[6.964, 0.198]</td></tr>
-    <tr><td>sweep 3, w_size</td><td>81.039</td><td>80.939</td><td>6.938</td><td>[6.938, 0.198]</td></tr>
-    <tr><td>sweep 3, w_rooms</td><td>0.364</td><td>0.264</td><td>0.288</td><td>[6.938, 0.288]</td></tr>
-  </table>
-  <p>The weights creep, and slowly. Find the fixed point directly: at convergence w_size = (81.667 − 3.167w_rooms − 0.1)/11.667 and w_rooms = (22.333 − 3.167w_size − 0.1)/0.917. Substituting one into the other: <strong>w = [6.546, 1.642]</strong>. After three sweeps we are only at [6.938, 0.288]. Each sweep closes just 6% of the remaining gap, because size and bedrooms explain almost the same thing: every time one weight moves, it takes away most of the other's push. The fraction left after each sweep is r² = 361/385 = 0.938, the squared correlation.</p>
+  <h2 id="rl-cd"><span class="num">05</span>Coordinate Descent</h2>
+  <p>One weight can be solved by hand with the soft threshold. With size and bedrooms together, the two weights interact: how much size can still explain depends on what bedrooms already explains, and vice versa. Lasso has no closed-form answer for several features, so scikit-learn uses <strong>coordinate descent</strong>: hold all weights but one fixed, solve that one-weight problem exactly with the soft threshold, move to the next weight, and keep sweeping through the weights until nothing changes. Because the lasso loss is convex (a single bowl) and its corners belong to separate weights, this simple loop reaches the global minimum. Think of tuning a radio with two knobs, one coarse and one fine: you adjust one until the sound is best, then the other, then the first again, until neither adjustment helps.</p>
+  <p>For weight j, the push is computed on the residual that the other features have left unexplained: ρⱼ = (1/n)·xⱼ·(y − Σ<sub>k≠j</sub> xₖwₖ), and the update is wⱼ = S(ρⱼ, α) / sⱼ. For the houses, s_size = 70/6 = 11.667 and s_rooms = 5.5/6 = 0.917. With α = 2 and both weights starting at zero, the first update gives size its full push 81.667, so w_size = (81.667 − 2) / 11.667 = 6.829. Then bedrooms' push, after size has explained what it can, is (134 − 19 × 6.829) / 6 = 0.710, which is below the fee of 2, so bedrooms stays at exactly zero. The second sweep repeats the same numbers, so we have converged: lasso picked one of the twins.</p>
   <div class="fx" data-lang="py">def lasso_cd(X, y, alpha, sweeps=200, verbose=0):
     """Minimise (1/2n)||y - Xw||^2 + alpha*||w||_1 by cyclic coordinate descent."""
     n, p = X.shape
     w = np.zeros(p)
-    zz = (X ** 2).sum(0) / n                          # (1/n) sum x_j^2 for each column
+    s = (X ** 2).sum(0) / n                           # (1/n) sum x_j^2 for each column
     for sweep in range(1, sweeps + 1):
         for j in range(p):
             r_j = y - X @ w + X[:, j] * w[j]          # residual ignoring feature j
             rho_j = X[:, j] @ r_j / n                 # how much j could still explain
-            w[j] = soft_threshold(rho_j, alpha) / zz[j]
+            w[j] = soft_threshold(rho_j, alpha) / s[j]
             if sweep &lt;= verbose:
-                print(f"  sweep {sweep}, w{j+1}: rho={rho_j:.4f} -&gt; w = {np.round(w, 4)}")
+                print(f"  sweep {sweep}, w{j+1}: rho={rho_j:.3f} -&gt; w = {np.round(w, 3)}")
     return w
-
-for a, sw, show in [(2, 200, 2), (0.1, 200, 3)]:
+for a, show in [(2, 1), (0.1, 3)]:
     print(f"alpha = {a}")
-    w = lasso_cd(Xc, yc, a, sweeps=sw, verbose=show)
-    print(f"  after {sw} sweeps: {w.round(4)}   sklearn: {Lasso(alpha=a, fit_intercept=False, max_iter=100_000, tol=1e-10).fit(Xc, yc).coef_.round(4)}")</div>
+    w = lasso_cd(Xc, yc, a, verbose=show)
+    sk = Lasso(alpha=a, fit_intercept=False, max_iter=100_000, tol=1e-10).fit(Xc, yc).coef_
+    print(f"  after 200 sweeps: {w.round(3)}   sklearn: {sk.round(3)}")</div>
   <div class="fx" data-lang="text">alpha = 2
-  sweep 1, w1: rho=81.6667 -&gt; w = [6.8286 0.    ]
-  sweep 1, w2: rho=0.7095 -&gt; w = [6.8286 0.    ]
-  sweep 2, w1: rho=81.6667 -&gt; w = [6.8286 0.    ]
-  sweep 2, w2: rho=0.7095 -&gt; w = [6.8286 0.    ]
-  after 200 sweeps: [6.8286 0.    ]   sklearn: [6.8286 0.    ]
+  sweep 1, w1: rho=81.667 -&gt; w = [6.829 0.   ]
+  sweep 1, w2: rho=0.710 -&gt; w = [6.829 0.   ]
+  after 200 sweeps: [6.829 0.   ]   sklearn: [6.829 0.   ]
 alpha = 0.1
-  sweep 1, w1: rho=81.6667 -&gt; w = [6.9914 0.    ]
-  sweep 1, w2: rho=0.1938 -&gt; w = [6.9914 0.1023]
-  sweep 2, w1: rho=81.3426 -&gt; w = [6.9637 0.1023]
-  sweep 2, w2: rho=0.2818 -&gt; w = [6.9637 0.1983]
-  sweep 3, w1: rho=81.0387 -&gt; w = [6.9376 0.1983]
-  sweep 3, w2: rho=0.3642 -&gt; w = [6.9376 0.2883]
-  after 200 sweeps: [6.5458 1.6417]   sklearn: [6.5458 1.6417]</div>
-  <p>Every printed ρ and weight matches the hand tables, and after 200 sweeps both versions reach sklearn's answer. sklearn stops when the <em>duality gap</em> (a certificate of how far from optimal it is) falls below <code>tol</code>, not after a fixed number of sweeps; we set a tight <code>tol</code> so the two agree to four decimals.</p>
-  <h3>Practical details</h3>
-  <table class="tbl">
-    <tr><th>Detail</th><th>What it means</th></tr>
-    <tr><td>Convergence check</td><td>sklearn stops when the duality gap falls below <code>tol</code> (scaled by ||y||²); a <code>ConvergenceWarning</code> means raise <code>max_iter</code>, standardise, or increase α</td></tr>
-    <tr><td><code>selection='random'</code></td><td>update features in random order instead of cyclic; often faster with many correlated columns</td></tr>
-    <tr><td>Warm starts along a path</td><td>solve for the largest α first (all zeros), then use each solution to start the next smaller α; this is why computing a whole path costs little more than one fit</td></tr>
-    <tr><td>Active set</td><td>features at 0 stay at 0 cheaply; most work is on the few non-zero ones</td></tr>
-    <tr><td>Alternatives</td><td>LARS (least angle regression) computes the exact piecewise-linear lasso path; proximal gradient (ISTA/FISTA) uses the same soft-threshold step for huge problems; <code>SGDRegressor(penalty='l1')</code> for streaming data</td></tr>
-  </table>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Cyclic coordinate descent for lasso</strong>: repeat for j = 1..p: rⱼ = y − Σ_{k≠j} xₖwₖ, ρⱼ = xⱼᵀrⱼ / n, wⱼ ← S(ρⱼ, α) / (xⱼᵀxⱼ / n). For elastic net the update is wⱼ ← S(ρⱼ, αr) / (xⱼᵀxⱼ/n + α(1 − r)).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>With very correlated features, coordinate descent can take many sweeps (each update undoes part of the previous one; 94% of the gap survived each sweep for size and bedrooms) and may stop early with a warning. The answer is then near-optimal in loss but the split between twins can be off. Standardise, increase <code>max_iter</code>, and do not read meaning into the exact split.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Elastic net.</b> Lasso selects, ridge stabilises. What if correlated features should be kept <em>together</em> but useless ones still dropped? Mix the two penalties.</div>
+  sweep 1, w1: rho=81.667 -&gt; w = [6.991 0.   ]
+  sweep 1, w2: rho=0.194 -&gt; w = [6.991 0.102]
+  sweep 2, w1: rho=81.343 -&gt; w = [6.964 0.102]
+  sweep 2, w2: rho=0.282 -&gt; w = [6.964 0.198]
+  sweep 3, w1: rho=81.039 -&gt; w = [6.938 0.198]
+  sweep 3, w2: rho=0.364 -&gt; w = [6.938 0.288]
+  after 200 sweeps: [6.546 1.642]   sklearn: [6.546 1.642]</div>
+  <p>With α = 2 the code reproduces the hand numbers and converges in one sweep. With a much smaller fee, α = 0.1, bedrooms enters, but look how slowly the weights creep: after three sweeps they are [6.938, 0.288], while the true answer, reached after 200 sweeps and confirmed by scikit-learn, is [6.546, 1.642]. Each sweep closes only about 6% of the remaining gap, because size and bedrooms explain almost the same thing: every time one weight moves, it takes away most of the other's push. The fraction of the gap left after each sweep is the squared correlation, 0.938.</p>
+  <p>This is why coordinate descent can need many sweeps on correlated data and why scikit-learn sometimes prints a <code>ConvergenceWarning</code>. scikit-learn stops when a measure of distance from the optimum (the duality gap) falls below <code>tol</code>, not after a fixed number of sweeps. If you see the warning, standardise the features, raise <code>max_iter</code>, or use a larger α. Two tricks make it fast in practice: <code>selection='random'</code> updates features in random order, which often helps with correlated columns, and <strong>warm starts</strong> solve for the largest α first (where every weight is zero) and use each answer to start the next smaller α, so computing a whole range of α values costs little more than one fit. Other solvers exist too: LARS computes the exact lasso path for every α, and proximal gradient methods use the same soft-threshold step on very large problems.</p>
 
-  <h2 id="rl-enet"><span class="num">07</span>Elastic Net</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>At α = 2 lasso dropped bedrooms entirely and gave all the credit to size, an arbitrary choice between twins. Can one penalty produce zeros for useless columns but still share credit among correlated useful ones?</p>
-  </div>
-  <h3>The objective</h3>
-  <p>Elastic net (Zou &amp; Hastie, 2005) adds both penalties. sklearn's form, with r = <code>l1_ratio</code>:</p>
-  <p style="text-align:center"><strong>(1/2n)·||y − Xw||² + α·r·||w||₁ + α·(1 − r)/2·||w||²</strong></p>
-  <p>α is the total strength; r is the mix. r = 1 is lasso; r = 0 is ridge (on sklearn's 1/(2n) scale); values in between give sparse solutions that also treat correlated features as a group.</p>
-  <h3>Deriving the 1-D solution</h3>
-  <p>Same setup as lasso. For w &gt; 0 the derivative is −ρ + s·w + αr + α(1 − r)·w = 0, so w = (ρ − αr) / (s + α(1 − r)). The other cases follow as before, giving</p>
-  <p style="text-align:center"><strong>w = S(ρ, α·r) / (s + α·(1 − r))</strong></p>
-  <p>In words: <em>subtract</em> (the L1 part, which can make it 0), then <em>divide</em> (the L2 part, extra shrinkage). Both behaviours in one line.</p>
-  <h3>Worked by hand: price on size again</h3>
-  <p>ρ = 81.667, s = 11.667. With α = 10, r = 0.5: subtract αr = 5 → 76.667; divide by s + α(1 − r) = 11.667 + 5 = 16.667 → <strong>4.600</strong>. Pure lasso at the same α gave 6.143, so the L2 part shrank it further. With α = 40, r = 0.5: (81.667 − 20) / (11.667 + 20) = 61.667 / 31.667 = <strong>1.947</strong>. With r almost 0: 81.667 / (11.667 + 10) = <strong>3.769</strong>, a ridge answer. Check: sklearn's <code>Ridge</code> (no 1/n) gives 490 / (70 + λ); 490 / (70 + 60) = 3.769 needs λ = 60 = n·α. That is the scale difference warned about in section 02.</p>
-  <div class="fx" data-lang="py">print("alpha  l1_ratio  hand w = S(rho, a*r) / (s + a*(1-r))   sklearn")
-for a, r in [(10, 1.0), (10, 0.5), (10, 0.0001), (40, 0.5)]:
-    hand = max(rho - a * r, 0) / (s + a * (1 - r))
-    skl = ElasticNet(alpha=a, l1_ratio=r, max_iter=100_000).fit(size[:, None], price).coef_[0]
-    print(f"{a:&gt;5}  {r:&lt;8}  {hand:.3f}                                {skl:.3f}")
-print("Ridge(alpha=60) on size:", Ridge(alpha=60).fit(size[:, None], price).coef_.round(3), " = 490 / (70 + 60) =", round(490 / 130, 3))</div>
-  <div class="fx" data-lang="text">alpha  l1_ratio  hand w = S(rho, a*r) / (s + a*(1-r))   sklearn
-   10  1.0       6.143                                6.143
-   10  0.5       4.600                                4.600
-   10  0.0001    3.769                                3.769
-   40  0.5       1.947                                1.947
-Ridge(alpha=60) on size: [3.769]  = 490 / (70 + 60) = 3.769</div>
-  <h3>Why the mix helps</h3>
-  <table class="tbl">
-    <tr><th>Lasso's weakness</th><th>How the L2 part fixes it</th></tr>
-    <tr><td>From a group of correlated features it keeps one, arbitrarily (size kept, bedrooms dropped)</td><td>The squared penalty is cheapest when weight is spread evenly (1² + 1² = 2 &lt; 2² + 0² = 4), so correlated features enter and leave together (the "grouping effect")</td></tr>
-    <tr><td>When p &gt; n it can keep at most n features</td><td>Elastic net can keep more than n</td></tr>
-    <tr><td>Selection jumps around between bootstrap samples</td><td>The strictly convex L2 part makes the solution unique and more stable</td></tr>
-  </table>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Elastic net</strong>: ŵ = argmin (1/2n)||y − Xw||² + αr||w||₁ + α(1 − r)/2·||w||₂², 0 ≤ r ≤ 1. Strictly convex for r &lt; 1 (unique solution), sparse for r &gt; 0. Typical grids: r ∈ {0.1, 0.5, 0.7, 0.9, 0.95, 0.99, 1}, with α chosen per r by CV.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p><code>l1_ratio</code> close to 0 makes coordinate descent slow and unreliable; sklearn's documentation says values ≤ 0.01 are not reliable and points to <code>Ridge</code> for pure L2. Also, the elastic net shrinks twice (once per penalty). Zou &amp; Hastie suggested rescaling the weights by (1 + λ₂) to undo the double shrinkage; sklearn returns the un-rescaled ("naive") version, so its kept weights look smaller than lasso's at a similar sparsity.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Correlated features.</b> We have claimed that ridge shares weight between correlated features and lasso picks one. Time to see all four models side by side on size and bedrooms, then at scale.</div>
+  <h2 id="rl-enet"><span class="num">06</span>Elastic Net</h2>
+  <p>At α = 2 lasso dropped bedrooms and gave all the credit to size. With twins like these, which one survives is close to arbitrary, and lasso has two other limits: when there are more columns than rows it can keep at most n of them, and its selection tends to jump around between samples. <strong>Elastic net</strong> fixes this by adding both penalties. scikit-learn writes it as</p>
+  <p style="text-align:center"><strong>(1/2n)·‖y − Xw‖² + α·r·‖w‖₁ + α·(1 − r)/2·‖w‖²</strong></p>
+  <p>where α is the total strength and r, called <code>l1_ratio</code>, is the mix: r = 1 is pure lasso, r = 0 is pure ridge, and values in between give models that are sparse but treat correlated features as a group. The squared part is the reason for that grouping: spreading a weight evenly costs less under L2 (1² + 1² = 2) than putting it all on one feature (2² + 0² = 4), so correlated features tend to enter and leave together.</p>
+  <p>The one-feature solution follows the same three cases as lasso, and comes out as w = S(ρ, α·r) / (s + α·(1 − r)). In words: subtract first (the L1 part, which can produce zero), then divide (the L2 part, extra shrinkage). For price on size with α = 10 and r = 0.5: subtract 5 from 81.667 to get 76.667, then divide by 11.667 + 5 = 16.667, giving 4.600, smaller than pure lasso's 6.143 at the same α. With α = 40 and r = 0.5: (81.667 − 20) / (11.667 + 20) = 1.947.</p>
+  <div class="fx" data-lang="py">rho, s = (z @ yc) / 6, (z @ z) / 6
+for a, r in [(10, 1.0), (10, 0.5), (40, 0.5)]:
+    hand = max(rho - a * r, 0) / (s + a * (1 - r))     # subtract, then divide
+    skl = ElasticNet(alpha=a, l1_ratio=r).fit(size[:, None], price).coef_[0]
+    print(f"alpha={a:&lt;3} l1_ratio={r:&lt;4} hand {hand:.3f}   sklearn {skl:.3f}")</div>
+  <div class="fx" data-lang="text">alpha=10  l1_ratio=1.0  hand 6.143   sklearn 6.143
+alpha=10  l1_ratio=0.5  hand 4.600   sklearn 4.600
+alpha=40  l1_ratio=0.5  hand 1.947   sklearn 1.947</div>
+  <p>All three hand values match. Elastic net is the usual choice when you expect groups of correlated useful features, or many more columns than rows; a typical search tries l1_ratio values such as 0.1, 0.5, 0.9, 0.95 and 1, with α tuned for each. Very small l1_ratio values (below about 0.01) make the solver slow and unreliable, and for pure L2 you should simply use <code>Ridge</code>.</p>
 
-  <h2 id="rl-corr"><span class="num">08</span>Correlated Features: Ridge Shares, Lasso Picks One</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Size and bedrooms carry overlapping information. Who should get the credit, and how do OLS, ridge, lasso and elastic net each answer when we compare them fairly (on standardised columns) and check how stable each answer is?</p>
-  </div>
-  <h3>By hand: exact copies</h3>
-  <p>Back to the duplicated size column from section 01. <strong>Ridge</strong>: the loss treats w₁ and w₂ symmetrically (swapping them changes nothing) and has a single minimum (strictly convex), so the minimum must have w₁ = w₂. We computed 3.475 each. For any w₁ + w₂ = c the fit is the same, and w₁² + w₂² is smallest when they are equal (3.5² + 3.5² = 24.5 vs 7² + 0² = 49): ridge spreads weight evenly. <strong>Lasso</strong>: for any split with the same sign, |w₁| + |w₂| = |c| is the same (|3.5| + |3.5| = |7| + |0| = 7), so every split is equally good. The solver just returns one of them; cyclic coordinate descent hands everything to whichever copy it updates first.</p>
-  <h3>Near-twins: size and bedrooms, side by side</h3>
-  <p>Now the four models on the six houses, with both columns standardised (mean 0, SD 1, section 09 explains why), so each weight means "lakh per one standard deviation". To see stability, each model is also refitted six times, leaving one house out each time.</p>
-  <div class="fx" data-lang="py">from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import make_pipeline
-models = {"OLS": LinearRegression(), "Ridge a=1": Ridge(alpha=1), "Lasso a=2": Lasso(alpha=2),
+  <h2 id="rl-corr"><span class="num">07</span>Correlated Features: Ridge Shares, Lasso Picks One</h2>
+  <p>We have claimed that ridge shares weight between correlated features and lasso picks one. With exact copies the reason is simple. For ridge, any split w₁ + w₂ = c gives the same fit, and w₁² + w₂² is smallest when the two are equal (3.5² + 3.5² = 24.5 against 7² + 0² = 49), so ridge splits evenly, which is the 3.475 each we saw. For lasso, |w₁| + |w₂| is the same for every split with the same sign (3.5 + 3.5 = 7 + 0), so every split is equally good and the solver just returns one of them.</p>
+  <p>Now the four models on the six houses side by side. To compare them fairly both columns are standardised first (section 08 explains why), so each weight means "lakh per one standard deviation". To see how stable each answer is, each model is also refitted six times with one house left out:</p>
+  <div class="fx" data-lang="py">models = {"OLS": LinearRegression(), "Ridge a=1": Ridge(alpha=1), "Lasso a=2": Lasso(alpha=2),
           "ENet a=2 r=.5": ElasticNet(alpha=2, l1_ratio=0.5)}
-print("weights per 1 SD of size and rooms (standardised):")
+print("weights per 1 SD of size and rooms:")
 for name, m in models.items():
     rows = [make_pipeline(StandardScaler(), m).fit(X2, price)[-1].coef_]
     for i in range(6):                                  # leave one house out
         keep = np.arange(6) != i
         rows.append(make_pipeline(StandardScaler(), m).fit(X2[keep], price[keep])[-1].coef_)
     rows = np.array(rows)
-    print(f"{name:14s} all six {np.array2string(rows[0].round(1), separator=', '):14s}"
-          f"  without one house: size {rows[1:, 0].min():5.1f}..{rows[1:, 0].max():5.1f}, rooms {rows[1:, 1].min():5.1f}..{rows[1:, 1].max():5.1f}")</div>
-  <div class="fx" data-lang="text">weights per 1 SD of size and rooms (standardised):
-OLS            all six [21.2,  2.8]    without one house: size  16.9.. 26.4, rooms  -1.7..  5.7
-Ridge a=1      all six [12.5,  9.6]    without one house: size  10.3.. 13.0, rooms   6.1.. 11.0
-Lasso a=2      all six [20.2,  1.7]    without one house: size  15.9.. 22.7, rooms   0.0..  4.6
-ENet a=2 r=.5  all six [7.9, 7.3]      without one house: size   6.1..  8.6, rooms   5.1..  8.2</div>
-  <p>OLS gives size 21.2 and bedrooms 2.8 per SD, but leaving out one house moves bedrooms anywhere from −1.7 to 5.7. <strong>Ridge</strong> (α = 1) shares the credit (12.5 and 9.6: "bigger, roomier flats cost more", split nearly evenly) and the leave-one-out ranges are narrow (size 10.3–13.0). <strong>Lasso</strong> (α = 2) gives most of the credit to size (20.2) and little to bedrooms (1.7); in some leave-one-out fits bedrooms is exactly 0. <strong>Elastic net</strong> shares like ridge (7.9, 7.3) and, at this strong α, shrinks both. Every model's predictions are similar; what changes is the explanation.</p>
-  <h3>The same idea at scale: two temperature sensors</h3>
-  <p>Sensor B is sensor A plus tiny noise (correlation 0.9999); the target depends on the true temperature with total effect 3 per degree. Each model is refit on three bootstrap resamples of 100 days to see how stable the weights are.</p>
+    print(f"{name:14s} all six {np.array2string(rows[0].round(1), separator=', '):13s}"
+          f" without one house: size {rows[1:, 0].min():4.1f}..{rows[1:, 0].max():4.1f}, rooms {rows[1:, 1].min():4.1f}..{rows[1:, 1].max():4.1f}")</div>
+  <div class="fx" data-lang="text">weights per 1 SD of size and rooms:
+OLS            all six [21.2,  2.8]  without one house: size 16.9..26.4, rooms -1.7.. 5.7
+Ridge a=1      all six [12.5,  9.6]  without one house: size 10.3..13.0, rooms  6.1..11.0
+Lasso a=2      all six [20.2,  1.7]  without one house: size 15.9..22.7, rooms  0.0.. 4.6
+ENet a=2 r=.5  all six [7.9, 7.3]    without one house: size  6.1.. 8.6, rooms  5.1.. 8.2</div>
+  <p>Least squares gives size 21.2 and bedrooms 2.8 per standard deviation, but leaving out one house moves bedrooms anywhere from −1.7 to 5.7. Ridge (α = 1) shares the credit, 12.5 and 9.6, and its leave-one-out ranges are narrow. Lasso (α = 2) gives most of the credit to size (20.2) and little to bedrooms (1.7), and in some leave-one-out fits bedrooms is exactly zero. Elastic net shares like ridge and, at this strong α, shrinks both. The predictions of all four are similar; what changes is the explanation.</p>
+  <p>The same pattern is clearer with near-perfect twins. Below, sensor B is a copy of temperature sensor A plus tiny noise (correlation 0.9999), and the target depends on temperature with a true total effect of 3 per degree. Each model is refitted on three bootstrap resamples of 100 days:</p>
   <div class="fx" data-lang="py">import numpy as np
 from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
-
 rng = np.random.default_rng(1)
 temp_a = rng.normal(25, 5, 100)                  # sensor A, degrees C
 temp_b = temp_a + rng.normal(0, 0.05, 100)       # sensor B: a near-copy of A
-yt = 3 * temp_a + rng.normal(0, 3, 100)          # true total effect: 3 per degree
-Xt = np.c_[temp_a, temp_b]
-print("corr(A, B) =", round(np.corrcoef(temp_a, temp_b)[0, 1], 5))
+y = 3 * temp_a + rng.normal(0, 3, 100)           # true total effect: 3 per degree
+X = np.c_[temp_a, temp_b]
 models = {"OLS": LinearRegression(), "Ridge": Ridge(alpha=10),
           "Lasso": Lasso(alpha=1), "ENet": ElasticNet(alpha=1, l1_ratio=0.5)}
 for name, m in models.items():
     row = []
     for b in range(3):                           # 3 bootstrap resamples of the rows
         idx = rng.integers(0, 100, 100)
-        w = m.fit(Xt[idx], yt[idx]).coef_
+        w = m.fit(X[idx], y[idx]).coef_
         row.append(f"[{w[0]:5.1f}, {w[1]:5.1f}]")
     print(f"{name:6s}", "  ".join(row))
-
-# same data, only the column ORDER changes
 lasso = Lasso(alpha=1, max_iter=100_000)
-print("Lasso on [A, B]:", lasso.fit(Xt, yt).coef_.round(2),
-      "  Lasso on [B, A]:", lasso.fit(Xt[:, ::-1], yt).coef_.round(2))</div>
-  <div class="fx" data-lang="text">corr(A, B) = 0.99993
-OLS    [ -3.8,   6.8]  [ -3.7,   6.7]  [ -0.4,   3.4]
+print("Lasso on [A, B]:", lasso.fit(X, y).coef_.round(2), "  on [B, A]:", lasso.fit(X[:, ::-1], y).coef_.round(2))</div>
+  <div class="fx" data-lang="text">OLS    [ -3.8,   6.8]  [ -3.7,   6.7]  [ -0.4,   3.4]
 Ridge  [  1.5,   1.5]  [  1.6,   1.4]  [  1.6,   1.4]
 Lasso  [  2.9,   0.0]  [  3.0,   0.0]  [  2.9,   0.0]
 ENet   [  1.5,   1.5]  [  1.5,   1.5]  [  1.4,   1.4]
-Lasso on [A, B]: [2.94 0.  ]   Lasso on [B, A]: [0.68 2.25]</div>
-  <p>Every pair adds up to about 3, the true total. OLS splits it wildly with a negative weight on one sensor ([−3.8, 6.8]), and the split changes from sample to sample. Ridge and elastic net share it evenly ([1.5, 1.5]) and stably. Lasso gives almost everything to one sensor ([2.9, 0]). The last line shows how fragile that choice is: the same data with the columns listed in the other order gives a different split ([0.68, 2.25] for [B, A]). Near-ties are decided by tiny noise and solver details.</p>
-  <h3>The same idea on real data: the diabetes dataset</h3>
-  <p>442 patients, 10 standardised measurements (age, sex, BMI, blood pressure, six blood tests s1–s6), target = disease progression after a year. s1 and s2 are two cholesterol measures with correlation 0.897.</p>
+Lasso on [A, B]: [2.94 0.  ]   on [B, A]: [0.68 2.25]</div>
+  <p>Every pair adds up to about 3, the true total. Least squares splits it wildly, with a negative weight on one sensor, and the split changes from sample to sample. Ridge and elastic net share it evenly and stably at about [1.5, 1.5]. Lasso gives almost everything to one sensor. The last line shows how fragile that choice is: the same data with the columns listed in the opposite order gives a different split, because near-ties are decided by tiny noise and solver details.</p>
+  <p>On real data the effect looks like this. The diabetes dataset has 442 patients, 10 standardised measurements (age, sex, BMI, blood pressure and six blood tests s1 to s6) and a measure of disease progression after one year. Tests s1 and s2 are two cholesterol measures with correlation 0.897:</p>
   <div class="fx" data-lang="py">import numpy as np, pandas as pd
 from sklearn.datasets import load_diabetes
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 from sklearn.model_selection import cross_val_score
-from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
+from sklearn.linear_model import LinearRegression, Ridge, Lasso
 X, y = load_diabetes(return_X_y=True, as_frame=True)          # 442 patients, 10 features
 print("corr(s1, s2) =", round(X.s1.corr(X.s2), 3))
-models = {"OLS": LinearRegression(), "Ridge a=10": Ridge(alpha=10),
-          "Lasso a=1": Lasso(alpha=1), "ENet a=1 r=.5": ElasticNet(alpha=1, l1_ratio=0.5)}
+models = {"OLS": LinearRegression(), "Ridge a=10": Ridge(alpha=10), "Lasso a=1": Lasso(alpha=1)}
 coefs, cv = {}, {}
 for name, m in models.items():
     pipe = make_pipeline(StandardScaler(), m)
     coefs[name] = pipe.fit(X, y)[-1].coef_
-    cv[name] = cross_val_score(pipe, X, y, cv=5).mean()
+    cv[name] = round(float(cross_val_score(pipe, X, y, cv=5).mean()), 3)
 print(pd.DataFrame(coefs, index=X.columns).round(1) + 0.0)
-print("5-fold CV R2:", {k: round(float(v), 3) for k, v in cv.items()})</div>
+print("5-fold CV R2:", cv)</div>
   <div class="fx" data-lang="text">corr(s1, s2) = 0.897
-      OLS  Ridge a=10  Lasso a=1  ENet a=1 r=.5
-age  -0.5        -0.3        0.0            0.6
-sex -11.4       -10.9       -9.3           -5.7
-bmi  24.7        24.6       24.8           18.1
-bp   15.4        15.1       14.1           11.4
-s1  -37.7       -11.3       -4.8           -0.2
-s2   22.7         1.8        0.0           -2.4
-s3    4.8        -6.6      -10.6           -8.2
-s4    8.4         5.6        0.0            5.3
-s5   35.7        25.3       24.4           15.4
-s6    3.2         3.5        2.6            5.1
-5-fold CV R2: {'OLS': 0.482, 'Ridge a=10': 0.481, 'Lasso a=1': 0.482, 'ENet a=1 r=.5': 0.458}</div>
-  <p>OLS gives the cholesterol twins large opposite weights (−37.7 and +22.7) that mostly cancel, the classic multicollinearity signature. Ridge pulls them to −11.3 and +1.8. Lasso drops s2 entirely (and age and s4), and elastic net pushes s1 and s2 to small values of the same size. The cross-validated R² barely changes (0.48 for all but the strongly penalised elastic net): the penalties changed the <em>explanation</em> much more than the <em>predictions</em>. Ridge's s3 even changed sign (4.8 → −6.6): with correlated columns, individual OLS signs are not trustworthy.</p>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>Correlated features share credit. OLS shares it erratically, ridge shares it evenly, lasso gives it to one, elastic net shares it among a few. None of them can tell you which twin is "the real cause" (is it the floor area or the bedroom count that buyers pay for?): that is a question for domain knowledge or experiments, not for a penalty.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"Lasso set bedrooms (or s2) to zero, so it does not matter" is wrong. Bedrooms carries almost the same information as size; lasso only needed one of them. Drop size and lasso would happily use bedrooms. Check selection stability over resamples (stability selection) before claiming a feature is irrelevant.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: The standardization requirement.</b> Every comparison above standardised the columns first, while the hand calculations used size in hundreds of sq ft and rooms as a count. Is standardising a habit or a requirement?</div>
+      OLS  Ridge a=10  Lasso a=1
+age  -0.5        -0.3        0.0
+sex -11.4       -10.9       -9.3
+bmi  24.7        24.6       24.8
+bp   15.4        15.1       14.1
+s1  -37.7       -11.3       -4.8
+s2   22.7         1.8        0.0
+s3    4.8        -6.6      -10.6
+s4    8.4         5.6        0.0
+s5   35.7        25.3       24.4
+s6    3.2         3.5        2.6
+5-fold CV R2: {'OLS': 0.482, 'Ridge a=10': 0.481, 'Lasso a=1': 0.482}</div>
+  <p>Least squares gives the cholesterol twins large opposite weights, −37.7 and +22.7, which mostly cancel: the classic signature of multicollinearity. Ridge pulls them to −11.3 and +1.8, and lasso drops s2 (and age and s4) entirely. Yet the cross-validated R² is 0.48 for all three. The penalties changed the explanation much more than the predictions, and ridge even flipped the sign of s3. So with correlated columns, individual least-squares signs are not trustworthy, and a lasso zero does not mean a feature is irrelevant: it may just be redundant with a twin that was kept. Which twin is "the real cause" is a question for domain knowledge or experiments, not for a penalty.</p>
 
-  <h2 id="rl-std"><span class="num">09</span>The Standardization Requirement</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>OLS gives the same predictions whether size is in square feet or hundreds of square feet; only the weight's number changes (7 vs 0.07). Is that still true once a penalty charges for the size of that number?</p>
-  </div>
-  <h3>By hand: units change the penalty</h3>
-  <p>Size in hundreds of sq ft has OLS weight 7; the same size in sq ft has weight 0.07. Same information, same predictions. But the penalty sees only the number: ridge charges 7² = 49 in one case and 0.07² = 0.0049 in the other; lasso charges 7 versus 0.07. Purely because of units, the penalty is 10,000 (L2) or 100 (L1) times larger for the hundreds-of-sq-ft version. By hand for ridge with λ = 70, one feature, w = Σxy / (Σx² + λ):</p>
-  <ul>
-    <li>Size in hundreds of sq ft: Σxy = 490, Σx² = 70 → w = 490 / (70 + 70) = <strong>3.5</strong> lakh per 100 sq ft: halved.</li>
-    <li>Size in sq ft: every x is 100 times larger, so Σxy = 49,000 and Σx² = 700,000 → w = 49,000 / 700,070 = 0.069993 per sq ft = <strong>6.999</strong> per 100 sq ft: untouched.</li>
-  </ul>
-  <p>The same λ, the same data, a completely different model. Lasso (α = 10) does the same, more gently: 6.143 vs 6.991 per 100 sq ft.</p>
-  <div class="fx" data-lang="py">for unit, col in [("size in 100 sq ft", size), ("size in sq ft", size * 100)]:
-    las = Lasso(alpha=10).fit(col[:, None], price).coef_[0]
+  <h2 id="rl-std"><span class="num">08</span>Why Standardisation Is Required</h2>
+  <p>Least squares does not care about units. Measure size in square feet instead of hundreds of square feet and its weight changes from 7 to 0.07, but the predictions are identical. A model with this property is called <strong>scale-equivariant</strong>. Penalised models are not, because the penalty only sees the number: ridge charges 7² = 49 for the first version and 0.07² = 0.0049 for the second, 10,000 times less, purely because of units.</p>
+  <p>By hand, with ridge at λ = 70 on size alone, w = Σxy / (Σx² + λ). In hundreds of sq ft, w = 490 / (70 + 70) = 3.5 lakh per 100 sq ft: the weight is halved. In sq ft every x is 100 times larger, so Σxy = 49,000 and Σx² = 700,000, and w = 49,000 / 700,070 = 0.069993 per sq ft, which is 6.999 per 100 sq ft: almost untouched. Same data, same λ, a completely different model. Think of a shop that charges a flat fee per digit on a price tag: the same item would cost far more to label in paise than in rupees, which has nothing to do with the item.</p>
+  <div class="fx" data-lang="py">for unit, col, per100 in [("size in 100 sq ft", size, 1), ("size in sq ft", size * 100, 100)]:
     rid = Ridge(alpha=70).fit(col[:, None], price).coef_[0]
-    per100 = 1 if unit.endswith("100 sq ft") else 100
-    print(f"{unit:18s} lasso(10) w = {las:.5f} -&gt; per 100 sq ft {las * per100:.3f}   ridge(70) w = {rid:.5f} -&gt; per 100 sq ft {rid * per100:.3f}")
-std = make_pipeline(StandardScaler(), Lasso(alpha=10))
-print("standardised first: per-SD weight", round(std.fit(size[:, None], price)[-1].coef_[0], 3),
+    las = Lasso(alpha=10).fit(col[:, None], price).coef_[0]
+    print(f"{unit:18s} ridge(70) per 100 sq ft {rid * per100:.3f}   lasso(10) per 100 sq ft {las * per100:.3f}")
+std = make_pipeline(StandardScaler(), Ridge(alpha=70))
+print("standardised first, per-SD weight:", round(std.fit(size[:, None], price)[-1].coef_[0], 3),
       "(sq ft:", round(std.fit(100 * size[:, None], price)[-1].coef_[0], 3), ")")</div>
-  <div class="fx" data-lang="text">size in 100 sq ft  lasso(10) w = 6.14286 -&gt; per 100 sq ft 6.143   ridge(70) w = 3.50000 -&gt; per 100 sq ft 3.500
-size in sq ft      lasso(10) w = 0.06991 -&gt; per 100 sq ft 6.991   ridge(70) w = 0.06999 -&gt; per 100 sq ft 6.999
-standardised first: per-SD weight 13.91 (sq ft: 13.91 )</div>
-  <p>With a <code>StandardScaler</code> first, both unit choices give exactly the same model (13.91 lakh per standard deviation of size): standardising puts every column on a common scale (mean 0, standard deviation 1), so the penalty compares like with like. The same idea at scale, with income in lakh vs crore in a 200-person spending model:</p>
-  <div class="fx" data-lang="py">import numpy as np
-from sklearn.linear_model import Lasso
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
+  <div class="fx" data-lang="text">size in 100 sq ft  ridge(70) per 100 sq ft 3.500   lasso(10) per 100 sq ft 6.143
+size in sq ft      ridge(70) per 100 sq ft 6.999   lasso(10) per 100 sq ft 6.991
+standardised first, per-SD weight: 1.888 (sq ft: 1.888 )</div>
+  <p>Ridge halves the weight in one unit and leaves it alone in the other, and lasso shows the same effect more gently (6.143 against 6.991). With a <code>StandardScaler</code> first, both unit choices give exactly the same model, 1.888 lakh per standard deviation of size. <strong>Standardising</strong> means rescaling each column to mean 0 and standard deviation 1, so the penalty compares like with like. It is required for ridge, lasso and elastic net (unless all columns already share a meaningful unit), and the scaler must sit inside a pipeline so that each cross-validation fold computes its own means and standard deviations (see <a class="xref" data-note="ml_pipelines">Pipelines &amp; Data Leakage</a>). The target y does not need scaling, because the unpenalised intercept absorbs its mean. After standardising, a coefficient means "the effect of one standard deviation"; divide it by the column's standard deviation to get the effect per original unit. Tree models do not need any of this, because they are unaffected by scale.</p>
 
-rng = np.random.default_rng(0)
-n = 200
-income_lakh = rng.uniform(3, 30, n)                  # yearly income, lakh rupees
-age = rng.uniform(22, 60, n)                          # years
-spend = 2.0 * income_lakh + 0.5 * age + rng.normal(0, 5, n)   # monthly spend, thousand rupees
-
-for unit, inc in [("income in lakh", income_lakh), ("income in crore", income_lakh / 100)]:
-    X = np.c_[inc, age]
-    raw = Lasso(alpha=1).fit(X, spend).coef_
-    std = make_pipeline(StandardScaler(), Lasso(alpha=1)).fit(X, spend)[-1].coef_
-    print(f"{unit:16s} raw lasso w = {raw.round(3)}   standardised lasso w = {std.round(3)}")</div>
-  <div class="fx" data-lang="text">income in lakh   raw lasso w = [1.978 0.52 ]   standardised lasso w = [15.166  4.73 ]
-income in crore  raw lasso w = [47.844  0.463]   standardised lasso w = [15.166  4.73 ]</div>
-  <p>In lakh, lasso's income weight is 1.978 (truth 2, barely shrunk). In crore it is 47.844, which is 0.478 per lakh: shrunk by 76%, because the large weight paid a large fee. Standardised, both versions are identical (15.166 per SD).</p>
-  <table class="tbl">
-    <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td>Standardise for ridge / lasso / elastic net?</td><td>Yes, always (unless all columns already share a meaningful unit)</td></tr>
-    <tr><td>Where?</td><td>Inside a <code>Pipeline</code>, so each CV fold computes its own mean and std (no leakage: <a class="xref" data-note="ml_pipelines">Pipelines &amp; Data Leakage</a>)</td></tr>
-    <tr><td>The target y?</td><td>Not required; the intercept absorbs its mean</td></tr>
-    <tr><td>One-hot dummies (locality)?</td><td>Debated: scaling them makes rare categories' weights cheaper to use. Common practice: standardise everything for simplicity, or leave dummies as 0/1 and accept the penalty favours common levels</td></tr>
-    <tr><td>Reading coefficients after scaling</td><td>"Effect of one standard deviation"; divide by the column's std to get per-unit effects (13.91 / 3.42 = 4.07 lakh per 100 sq ft)</td></tr>
-    <tr><td>Trees, boosting?</td><td>No need; they are scale-free (<a class="xref" data-note="ml_dtree">Decision Trees</a>)</td></tr>
-  </table>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A model is <strong>scale-equivariant</strong> if rescaling a column by c just rescales its weight by 1/c and leaves predictions unchanged. OLS is; ridge, lasso and elastic net are not, because their penalties depend on the size of the weights. Standardising (z = (x − mean)/std) restores a fair comparison.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Fitting the scaler on all rows before cross-validation leaks validation-fold information into training and makes the CV score slightly optimistic. Put the scaler and the model in one pipeline and cross-validate the pipeline. sklearn removed the old <code>normalize=True</code> option from these models (version 1.2) and asks you to use a <code>StandardScaler</code> in a pipeline instead.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Choosing α by cross-validation.</b> Everything depends on α, and we have been picking it by hand (1, 2, 5, 10). How do we pick it properly?</div>
-
-  <h2 id="rl-alpha"><span class="num">10</span>Choosing α by Cross-Validation</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>λ = 5 gave stable house weights and α = 2 dropped bedrooms, but those were our choices. Training error always prefers no penalty at all. What objective procedure picks the penalty strength?</p>
-  </div>
-  <h3>The idea</h3>
-  <p>α is a hyperparameter: too small and we are back to OLS's variance, too large and every weight is crushed (bias). The training error always prefers α = 0, so we choose α by cross-validation: try a grid of values (on a log scale, since α can sensibly range over many orders of magnitude), score each with k-fold CV on the training data, keep the best. sklearn has estimators that do this internally and efficiently:</p>
-  <table class="tbl">
-    <tr><th>Estimator</th><th>How it searches</th><th>After fit</th></tr>
-    <tr><td><code>RidgeCV(alphas=...)</code></td><td>Default: exact leave-one-out CV computed in one shot from one decomposition of X (the LOO residual is eᵢ / (1 − hᵢᵢ), where hᵢᵢ is the row's leverage under the ridge hat matrix, the same shortcut the polynomial note used). Or pass <code>cv=5</code></td><td><code>alpha_</code>, <code>best_score_</code></td></tr>
-    <tr><td><code>LassoCV(cv=...)</code></td><td>Builds a grid of 100 α's from α_max (all weights 0) down to α_max/1000, fits the whole path per fold with warm starts</td><td><code>alpha_</code>, <code>alphas_</code>, <code>mse_path_</code> (α × folds)</td></tr>
-    <tr><td><code>ElasticNetCV(l1_ratio=[...], cv=...)</code></td><td>Same, for each r in the list</td><td><code>alpha_</code>, <code>l1_ratio_</code>, <code>mse_path_</code></td></tr>
-    <tr><td><code>LassoLarsIC(criterion='bic')</code></td><td>No CV: picks α by AIC/BIC along the LARS path; fast, assumes n &gt; p</td><td><code>alpha_</code></td></tr>
-    <tr><td><code>GridSearchCV(pipe, {'ridge__alpha': ...})</code></td><td>Generic; needed when α must be tuned together with other steps (polynomial degree, etc.)</td><td><code>best_params_</code></td></tr>
-  </table>
-  <h3>On the six houses</h3>
+  <h2 id="rl-alpha"><span class="num">09</span>Choosing α by Cross-Validation</h2>
+  <p>So far we picked λ = 5 and α = 2 by hand. α is a <strong>hyperparameter</strong>, a setting chosen before training rather than learned from it. Too small and we are back to least squares' variance; too large and every weight is crushed, which is bias. Training error always prefers α = 0, so it cannot choose. Instead we use cross-validation (see <a class="xref" data-note="ml_splits">Train/Val/Test &amp; Cross-Validation</a>): try a grid of α values spaced on a log scale (because sensible values range over several orders of magnitude), score each with k-fold cross-validation on the training data, and keep the best. scikit-learn has estimators that do this efficiently: <code>RidgeCV</code> computes exact leave-one-out error for every α from a single matrix decomposition, using the same leverage shortcut as in <a class="xref" data-note="ml_polyreg">Polynomial &amp; Basis Functions</a>; <code>LassoCV</code> and <code>ElasticNetCV</code> build a grid of 100 α values from α_max downward and fit the whole path in each fold with warm starts. After fitting, the chosen value is in <code>alpha_</code>. First the six houses:</p>
   <div class="fx" data-lang="py">from sklearn.linear_model import RidgeCV, LassoCV
 from sklearn.model_selection import LeaveOneOut
 rcv = make_pipeline(StandardScaler(), RidgeCV(alphas=np.logspace(-3, 3, 61))).fit(X2, price)[-1]
 print(f"RidgeCV (leave-one-out) alpha_ = {rcv.alpha_:.3f}  weights {rcv.coef_.round(2)}")
-lcv = make_pipeline(StandardScaler(), LassoCV(cv=LeaveOneOut(), n_jobs=1)).fit(X2, price)[-1]
+lcv = make_pipeline(StandardScaler(), LassoCV(cv=LeaveOneOut())).fit(X2, price)[-1]
 print(f"LassoCV (leave-one-out) alpha_ = {lcv.alpha_:.3f}  weights {lcv.coef_.round(2)}")</div>
   <div class="fx" data-lang="text">RidgeCV (leave-one-out) alpha_ = 0.079  weights [18.41  5.43]
 LassoCV (leave-one-out) alpha_ = 0.137  weights [21.17  2.69]</div>
-  <p>Leave-one-out CV on six houses picks small penalties (ridge α = 0.08, lasso α = 0.14), close to OLS. That is an honest answer: with six rows, CV cannot measure the variance reduction well enough to justify heavy shrinkage, and every left-out end house (A or F) forces an extrapolation that dominates the score. Penalties earn their keep when columns are many relative to rows, which the next two experiments show at scale.</p>
-  <h3>The one-standard-error rule</h3>
-  <p>CV scores are noisy. Often a range of α's score within noise of the best, and the largest of them gives a simpler, sparser model. The rule: compute the mean CV error and its standard error (std across folds / √k) for every α; take the minimum; then choose the <em>largest</em> α whose mean error is at most min + 1 SE.</p>
+  <p>Leave-one-out cross-validation picks small penalties, ridge α = 0.08 and lasso α = 0.14, so both models stay close to least squares. That is an honest answer: with six rows, cross-validation cannot measure the variance reduction well enough to justify heavy shrinkage. Penalties earn their keep when columns are many relative to rows.</p>
+  <p>Cross-validation scores are themselves noisy, and often a whole range of α values scores within noise of the best. The <strong>one-standard-error rule</strong> picks the largest α (the simplest model) whose mean cross-validation error is within one standard error of the minimum, where the standard error is the standard deviation across folds divided by √k. On the diabetes data:</p>
   <div class="fx" data-lang="py">import numpy as np
 from sklearn.datasets import load_diabetes
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split, KFold
-from sklearn.linear_model import LinearRegression, RidgeCV, LassoCV, ElasticNetCV, Lasso
+from sklearn.linear_model import LassoCV, Lasso
 from sklearn.metrics import r2_score
-
-X, y = load_diabetes(return_X_y=True, as_frame=True)
+X, y = load_diabetes(return_X_y=True)
 Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=0.25, random_state=42)
 cv = KFold(5, shuffle=True, random_state=0)
-
-models = {
-    "OLS":          LinearRegression(),
-    "RidgeCV":      RidgeCV(alphas=np.logspace(-3, 3, 25)),                  # efficient leave-one-out
-    "LassoCV":      LassoCV(cv=cv, n_jobs=1)          ,
-    "ElasticNetCV": ElasticNetCV(l1_ratio=[0.1, 0.5, 0.9, 1.0], cv=cv, n_jobs=1),
-}
-for name, m in models.items():
-    p = make_pipeline(StandardScaler(), m).fit(Xtr, ytr)
-    est = p[-1]
-    extra = f"alpha_={est.alpha_:.4g}" if hasattr(est, "alpha_") else ""
-    if hasattr(est, "l1_ratio_"): extra += f"  l1_ratio_={est.l1_ratio_}"
-    print(f"{name:13s} test R2 {r2_score(yte, p.predict(Xte)):.3f}  nonzero {int((est.coef_ != 0).sum()):2d}/10  {extra}")
-
-# the one-standard-error rule on the lasso CV curve
-lcv = make_pipeline(StandardScaler(), LassoCV(cv=cv, n_jobs=1)).fit(Xtr, ytr)[-1]
-mean, se = lcv.mse_path_.mean(1), lcv.mse_path_.std(1) / np.sqrt(cv.get_n_splits())
+p = make_pipeline(StandardScaler(), LassoCV(cv=cv)).fit(Xtr, ytr)
+lcv = p[-1]
+mean, se = lcv.mse_path_.mean(1), lcv.mse_path_.std(1) / np.sqrt(5)
 best = mean.argmin()
-a_1se = lcv.alphas_[mean &lt;= mean[best] + se[best]].max()       # alphas_ run large -&gt; small
+a_1se = lcv.alphas_[mean &lt;= mean[best] + se[best]].max()       # largest alpha within 1 SE
 p1 = make_pipeline(StandardScaler(), Lasso(alpha=a_1se)).fit(Xtr, ytr)
-print(f"min-CV alpha {lcv.alphas_[best]:.3f} (CV MSE {mean[best]:.0f} +/- {se[best]:.0f});"
-      f" 1-SE alpha {a_1se:.3f} -&gt; test R2 {r2_score(yte, p1.predict(Xte)):.3f}, nonzero {int((p1[-1].coef_ != 0).sum())}/10")</div>
-  <div class="fx" data-lang="text">OLS           test R2 0.485  nonzero 10/10  
-RidgeCV       test R2 0.486  nonzero 10/10  alpha_=1.778
-LassoCV       test R2 0.487  nonzero 10/10  alpha_=0.1404
-ElasticNetCV  test R2 0.489  nonzero 10/10  alpha_=0.09195  l1_ratio_=0.5
-min-CV alpha 0.140 (CV MSE 3117 +/- 281); 1-SE alpha 9.237 -&gt; test R2 0.481, nonzero 4/10</div>
-  <p>On the 10 clean diabetes features, all four models land at test R² ≈ 0.49: with 331 training rows and 10 reasonable columns, OLS is not in trouble and the CV-chosen α's are small (lasso's 0.14 keeps all 10). The 1-SE rule changes the picture: α = 9.24 keeps only 4 features at test R² 0.481 versus 0.487. Most practitioners would take the 4-feature model: almost the same accuracy, much simpler to explain and to maintain. By hand: the minimum mean CV MSE was 3117 with standard error 281, so any α with CV MSE ≤ 3398 was acceptable, and 9.24 was the largest such α.</p>
-  <h3>When regularization really pays: 200 noise columns</h3>
-  <p>The clean data hides the benefit. Add 200 columns of pure random numbers to the 10 real ones (a realistic "feature store" situation) and compare on the held-out test set.</p>
+print(f"min-CV alpha {lcv.alpha_:.3f}: CV MSE {mean[best]:.0f} +/- {se[best]:.0f}, "
+      f"test R2 {r2_score(yte, p.predict(Xte)):.3f}, nonzero {int((lcv.coef_ != 0).sum())}/10")
+print(f"1-SE alpha   {a_1se:.3f}: test R2 {r2_score(yte, p1.predict(Xte)):.3f}, nonzero {int((p1[-1].coef_ != 0).sum())}/10")</div>
+  <div class="fx" data-lang="text">min-CV alpha 0.140: CV MSE 3117 +/- 281, test R2 0.487, nonzero 10/10
+1-SE alpha   9.237: test R2 0.481, nonzero 4/10</div>
+  <p>The minimum cross-validation error, 3117 with a standard error of 281, is reached at α = 0.14, which keeps all 10 features and scores test R² 0.487. Any α with error up to 3117 + 281 = 3398 counts as equally good, and the largest such α is 9.24, which keeps only 4 features at test R² 0.481. Most practitioners would take the 4-feature model: almost the same accuracy and much simpler to explain and maintain.</p>
+  <p>Ten clean features hide the real benefit of penalties. Add 200 columns of pure random numbers to the 10 real ones, a realistic situation in a large feature store, and compare on a held-out test set:</p>
   <div class="fx" data-lang="py">import numpy as np
 from sklearn.datasets import load_diabetes
 from sklearn.model_selection import train_test_split
@@ -778,89 +402,56 @@ X, y = load_diabetes(return_X_y=True)
 rng = np.random.default_rng(0)
 Xn = np.c_[X, rng.normal(size=(len(X), 200))]                  # 10 real + 200 noise columns
 Xtr, Xte, ytr, yte = train_test_split(Xn, y, test_size=0.25, random_state=42)
-models = {"OLS": LinearRegression(),
-          "RidgeCV": RidgeCV(alphas=np.logspace(-3, 3, 13)),
-          "LassoCV": LassoCV(cv=5, random_state=0, n_jobs=1),
-          "ElasticNetCV": ElasticNetCV(l1_ratio=[.2, .5, .8, 1], cv=5, random_state=0, n_jobs=1)}
+models = {"OLS": LinearRegression(), "RidgeCV": RidgeCV(alphas=np.logspace(-3, 3, 13)),
+          "LassoCV": LassoCV(cv=5, random_state=0),
+          "ElasticNetCV": ElasticNetCV(l1_ratio=[.2, .5, .8, 1], cv=5, random_state=0)}
 for name, m in models.items():
     p = make_pipeline(StandardScaler(), m).fit(Xtr, ytr)
     print(f"{name:12s} test R2 {r2_score(yte, p.predict(Xte)):6.3f}   nonzero weights {int((p[-1].coef_ != 0).sum()):3d}/210")
-print("ElasticNetCV chose l1_ratio =", p[-1].l1_ratio_)
-lasso = make_pipeline(StandardScaler(), LassoCV(cv=5, random_state=0, n_jobs=1)).fit(Xtr, ytr)[-1]
-print("Lasso kept columns:", np.flatnonzero(lasso.coef_).tolist())</div>
+print("ElasticNetCV chose l1_ratio =", p[-1].l1_ratio_)</div>
   <div class="fx" data-lang="text">OLS          test R2 -0.258   nonzero weights 210/210
 RidgeCV      test R2  0.366   nonzero weights 210/210
 LassoCV      test R2  0.485   nonzero weights   6/210
 ElasticNetCV test R2  0.485   nonzero weights   6/210
-ElasticNetCV chose l1_ratio = 1.0
-Lasso kept columns: [2, 3, 6, 8, 132, 140]</div>
-  <p>OLS has to fit 210 weights from 331 rows; it memorises noise and scores −0.258 on test, worse than predicting the average. Ridge recovers to 0.366 but still carries 210 non-zero weights. Lasso keeps 6 columns and scores 0.485, as good as the models that only ever saw the 10 real columns. The kept columns 2, 3, 6, 8 are bmi, bp, s3 and s5, the strongest real signals; two noise columns (132 and 140) slipped in by chance. ElasticNetCV chose <code>l1_ratio = 1.0</code>, pure lasso, because sparsity is what this data needs.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Regularization path + CV</strong>: compute the solution for a decreasing sequence α₁ &gt; α₂ &gt; … (warm-started), estimate the CV error at each, and pick α by minimum CV error or by the 1-SE rule. The final model is refit on all training data at the chosen α; its test score is the honest estimate.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Picking α on the test set, or reporting the CV score of the chosen α as the expected performance. The CV score of the best of 100 α's is slightly optimistic; keep a test set (or use nested CV) for the final number. And a grid that ends at its best value (the best α is the first or last one tried) means the grid was too narrow: extend it.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Coefficient path plots.</b> One α gives one model. A path shows all α's at once and tells you which features are strong, which enter late, and where the twins trade places.</div>
+ElasticNetCV chose l1_ratio = 1.0</div>
+  <p>Least squares has to fit 210 weights from 331 rows. It memorises noise and scores −0.258 on the test set, worse than predicting the average for everyone. Ridge recovers to 0.366 but still carries 210 non-zero weights. Lasso keeps 6 columns and scores 0.485, as good as models that only ever saw the 10 real columns. (Its 6 columns include the strongest real signals, plus a couple of noise columns that correlated with the target by chance.) <code>ElasticNetCV</code> chose l1_ratio = 1.0, pure lasso, because sparsity is what this data needs. Once α is chosen, refit on all the training data and report the test score; the cross-validation score of the best of 100 α values is slightly optimistic. And if the chosen α is at the edge of your grid, extend the grid.</p>
 
-  <h2 id="rl-path"><span class="num">11</span>Coefficient Path Plots</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We have looked at a handful of α values one at a time. What does the whole story look like as α slides from "everything zero" to "plain OLS", and what can that picture tell us that a single fit cannot?</p>
-  </div>
-  <p>A coefficient path plots every weight (y-axis) against α (x-axis, log scale). By convention α decreases to the right, so the model starts empty (or tiny) on the left and grows to OLS on the right. <code>lasso_path</code> computes the lasso path efficiently; for ridge we simply refit at each α. First the six houses, standardised:</p>
+  <h2 id="rl-path"><span class="num">10</span>Coefficient Paths</h2>
+  <p>A single α gives a single model. A <strong>coefficient path</strong> shows every weight as α slides from "everything zero" to plain least squares, and it reveals which features are strong, which enter late and where correlated twins trade places. By convention α is on a log scale and decreases from left to right. A feature enters the lasso path at the α equal to its push when all weights are zero, |xⱼᵀy| / n. For the standardised houses:</p>
   <div class="fx" data-lang="py">from sklearn.linear_model import lasso_path
-Zs = StandardScaler().fit_transform(X2); yc6 = price - price.mean()
-print("alpha_max = max|x_j . y| / n =", np.round(np.abs(Zs.T @ yc6) / 6, 3), "-&gt; size enters first")
-alphas, coefs, _ = lasso_path(Zs, yc6, alphas=[30, 20, 10, 5.4, 5, 2, 0.5, 0.01])
+Zs = StandardScaler().fit_transform(X2)
+print("entry point |x_j . y| / n =", np.round(np.abs(Zs.T @ yc) / 6, 2))
+alphas, coefs, _ = lasso_path(Zs, yc, alphas=[30, 20, 10, 5.4, 2, 0.01])
 for a, c in zip(alphas, coefs.T):
-    r = Ridge(alpha=a).fit(Zs, yc6).coef_
-    print(f"alpha {a:5}: lasso size {c[0]:6.2f} rooms {c[1]:5.2f}   |  ridge size {r[0]:6.2f} rooms {r[1]:5.2f}")</div>
-  <div class="fx" data-lang="text">alpha_max = max|x_j . y| / n = [23.91  23.326] -&gt; size enters first
-alpha  30.0: lasso size   0.00 rooms  0.00   |  ridge size   3.45 rooms  3.33
-alpha  20.0: lasso size   3.91 rooms  0.00   |  ridge size   4.54 rooms  4.37
-alpha  10.0: lasso size  13.91 rooms  0.00   |  ridge size   6.67 rooms  6.33
-alpha   5.4: lasso size  18.49 rooms  0.02   |  ridge size   8.55 rooms  7.92
-alpha   5.0: lasso size  18.69 rooms  0.23   |  ridge size   8.77 rooms  8.09
-alpha   2.0: lasso size  20.22 rooms  1.75   |  ridge size  11.06 rooms  9.46
-alpha   0.5: lasso size  20.98 rooms  2.51   |  ridge size  14.05 rooms  8.98
-alpha  0.01: lasso size  21.23 rooms  2.76   |  ridge size  20.74 rooms  3.24</div>
-  <p>By hand, the entry point of each feature is its push with all weights at 0: α_max = |xⱼᵀy|/n = 23.91 for size and 23.33 for bedrooms (they are almost equally correlated with price). Size enters first, at α = 23.91. Once size is in, bedrooms' remaining push is tiny, so it waits until α ≈ 5.4, and even at α = 0.01 lasso's weights (21.2, 2.8) are essentially OLS's. Ridge instead brings both in from the start, almost equal (3.45 and 3.33 at α = 30), and lets them separate only as α falls: at α = 0.01 it is close to OLS too (20.7, 3.2). The same idea at scale, on the 10 diabetes features:</p>
+    r = Ridge(alpha=a).fit(Zs, yc).coef_
+    print(f"alpha {a:5}: lasso size {c[0]:6.2f} rooms {c[1]:5.2f}  |  ridge size {r[0]:6.2f} rooms {r[1]:5.2f}")</div>
+  <div class="fx" data-lang="text">entry point |x_j . y| / n = [23.91 23.33]
+alpha  30.0: lasso size   0.00 rooms  0.00  |  ridge size   3.45 rooms  3.33
+alpha  20.0: lasso size   3.91 rooms  0.00  |  ridge size   4.54 rooms  4.37
+alpha  10.0: lasso size  13.91 rooms  0.00  |  ridge size   6.67 rooms  6.33
+alpha   5.4: lasso size  18.49 rooms  0.02  |  ridge size   8.55 rooms  7.92
+alpha   2.0: lasso size  20.22 rooms  1.75  |  ridge size  11.06 rooms  9.46
+alpha  0.01: lasso size  21.23 rooms  2.76  |  ridge size  20.74 rooms  3.24</div>
+  <p>Size's push is 23.91 and bedrooms' is 23.33; they are almost equally correlated with price, but size enters first, at α = 23.91. Once size is in, bedrooms' remaining push is tiny, so bedrooms waits until α ≈ 5.4, and only near α = 0 do both weights approach least squares (21.2 and 2.8). Between α = 20 and α = 10, the size weight rises by exactly 10 (3.91 to 13.91): the lasso path is piecewise linear, changing direction only where a feature enters or leaves. Ridge behaves differently: both weights grow together from the start (3.45 and 3.33 at α = 30) and only separate as α becomes small. The same on the 10 diabetes features:</p>
   <div class="fx" data-lang="py">import numpy as np
 from sklearn.datasets import load_diabetes
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import lasso_path, Ridge
-
+from sklearn.linear_model import lasso_path
 X, y = load_diabetes(return_X_y=True, as_frame=True)
 names = list(X.columns)
 Xs = StandardScaler().fit_transform(X); yc = y - y.mean()
-
 alphas, coefs, _ = lasso_path(Xs, yc, alphas=np.logspace(2, -2, 200))   # large -&gt; small alpha
-first = [alphas[np.flatnonzero(coefs[j])[0]] if coefs[j].any() else 0 for j in range(10)]
+first = [alphas[np.flatnonzero(coefs[j])[0]] for j in range(10)]
 order = sorted(range(10), key=lambda j: -first[j])
-print("order features enter the lasso path (alpha at entry):")
-print("  " + ", ".join(f"{names[j]} ({first[j]:.1f})" for j in order))
-for a in [30, 10, 3, 1, 0.1]:
+print("entry order:", ", ".join(f"{names[j]} ({first[j]:.1f})" for j in order))
+for a in [30, 10, 1, 0.1]:
     k = np.argmin(abs(alphas - a))
-    print(f"alpha {a:&gt;4}: nonzero {int((coefs[:, k] != 0).sum()):2d}  " +
-          " ".join(f"{names[j]}={coefs[j, k]:.1f}" for j in range(10) if coefs[j, k] != 0))
-print("ridge s1, s2 as alpha grows:")
-for a in [0.01, 1, 10, 100, 1000, 10000]:
-    w = Ridge(alpha=a).fit(Xs, yc).coef_
-    print(f"  alpha {a:&gt;7}: s1 {w[4]:7.1f}  s2 {w[5]:6.1f}  bmi {w[2]:5.1f}  ||w|| {np.linalg.norm(w):6.1f}")</div>
-  <div class="fx" data-lang="text">order features enter the lasso path (alpha at entry):
-  bmi (43.5), s5 (41.5), bp (20.7), s3 (15.0), sex (5.9), s6 (4.1), s1 (3.3), s4 (0.9), s2 (0.3), age (0.2)
-alpha   30: nonzero  2  bmi=11.4 s5=8.5
-alpha   10: nonzero  4  bmi=22.6 bp=6.9 s3=-3.2 s5=19.6
-alpha    3: nonzero  7  sex=-5.9 bmi=24.4 bp=12.3 s1=-0.7 s3=-9.5 s5=21.9 s6=0.8
-alpha    1: nonzero  7  sex=-9.4 bmi=24.8 bp=14.1 s1=-4.9 s3=-10.6 s5=24.5 s6=2.6
-alpha  0.1: nonzero  9  age=-0.3 sex=-11.2 bmi=24.9 bp=15.2 s1=-26.4 s2=13.7 s4=7.1 s5=31.6 s6=3.2
-ridge s1, s2 as alpha grows:
-  alpha    0.01: s1   -37.6  s2   22.6  bmi  24.7  ||w||   65.4
-  alpha       1: s1   -30.1  s2   16.7  bmi  24.8  ||w||   57.5
-  alpha      10: s1   -11.3  s2    1.8  bmi  24.6  ||w||   42.6
-  alpha     100: s1    -2.1  s2   -3.7  bmi  21.4  ||w||   34.8
-  alpha    1000: s1     1.1  s2    0.0  bmi   9.9  ||w||   17.4
-  alpha   10000: s1     0.6  s2    0.4  bmi   1.8  ||w||    3.6</div>
+    print(f"alpha {a:&gt;4}: " + " ".join(f"{names[j]}={coefs[j, k]:.1f}" for j in range(10) if coefs[j, k] != 0))</div>
+  <div class="fx" data-lang="text">entry order: bmi (43.5), s5 (41.5), bp (20.7), s3 (15.0), sex (5.9), s6 (4.1), s1 (3.3), s4 (0.9), s2 (0.3), age (0.2)
+alpha   30: bmi=11.4 s5=8.5
+alpha   10: bmi=22.6 bp=6.9 s3=-3.2 s5=19.6
+alpha    1: sex=-9.4 bmi=24.8 bp=14.1 s1=-4.9 s3=-10.6 s5=24.5 s6=2.6
+alpha  0.1: age=-0.3 sex=-11.2 bmi=24.9 bp=15.2 s1=-26.4 s2=13.7 s4=7.1 s5=31.6 s6=3.2</div>
   <figure class="viz"><svg viewBox="0 0 640 275" width="640">
 <line x1="60" y1="130" x2="580" y2="130" stroke="currentColor" stroke-opacity="0.5"/><line x1="60" y1="20" x2="60" y2="240" stroke="currentColor"/><line x1="60" y1="240" x2="580" y2="240" stroke="currentColor"/>
 <text x="52" y="24" text-anchor="end" class="tm" font-size="11">+40</text><text x="52" y="134" text-anchor="end" class="tm" font-size="11">0</text><text x="52" y="244" text-anchor="end" class="tm" font-size="11">−40</text>
@@ -880,260 +471,110 @@ ridge s1, s2 as alpha grows:
 <text x="70" y="36" class="tm" font-size="11">bmi, s5 enter first (α ≈ 43)</text>
 <text x="420" y="205" class="tr" font-size="11">s1 dives as s2 enters</text>
 </svg><figcaption>Lasso path on the standardised diabetes data. Each line is one coefficient. Every coefficient is exactly 0 until its entry point, then the paths are piecewise linear. The cholesterol twins s1 (red) and s2 (teal) stay small until the very end, then split apart in opposite directions as α → 0 (the OLS solution).</figcaption></figure>
-  <figure class="viz"><svg viewBox="0 0 640 275" width="640">
-<line x1="60" y1="130" x2="580" y2="130" stroke="currentColor" stroke-opacity="0.5"/><line x1="60" y1="20" x2="60" y2="240" stroke="currentColor"/><line x1="60" y1="240" x2="580" y2="240" stroke="currentColor"/>
-<text x="52" y="24" text-anchor="end" class="tm" font-size="11">+40</text><text x="52" y="134" text-anchor="end" class="tm" font-size="11">0</text><text x="52" y="244" text-anchor="end" class="tm" font-size="11">−40</text>
-<text x="60" y="256" text-anchor="middle" class="tm" font-size="11">10⁴</text><text x="147" y="256" text-anchor="middle" class="tm" font-size="11">10³</text><text x="233" y="256" text-anchor="middle" class="tm" font-size="11">100</text><text x="320" y="256" text-anchor="middle" class="tm" font-size="11">10</text><text x="407" y="256" text-anchor="middle" class="tm" font-size="11">1</text><text x="493" y="256" text-anchor="middle" class="tm" font-size="11">0.1</text><text x="580" y="256" text-anchor="middle" class="tm" font-size="11">0.01</text>
-<text x="320" y="271" text-anchor="middle" class="tm" font-size="12">ridge α (log scale, decreasing →)</text>
-<polyline points="60,129 69,128 78,128 86,128 95,127 104,127 113,126 122,126 131,126 139,126 148,126 157,126 166,126 175,126 183,126 192,127 201,127 210,128 219,128 227,129 236,129 245,129 254,130 263,130 272,130 280,130 289,130 298,130 307,131 316,131 324,131 333,131 342,131 351,131 360,131 368,131 377,131 386,131 395,131 404,131 413,131 421,131 430,131 439,131 448,131 457,131 465,131 474,131 483,131 492,131 501,131 509,131 518,131 527,131 536,131 545,131 554,131 562,131 571,131 580,131" fill="none" stroke="currentColor" stroke-opacity="0.35" stroke-width="1.2"/>
-<polyline points="60,130 69,130 78,130 86,130 95,130 104,131 113,131 122,132 131,132 139,133 148,135 157,136 166,138 175,140 183,142 192,144 201,147 210,149 219,150 227,152 236,154 245,155 254,156 263,157 272,158 280,158 289,159 298,159 307,160 316,160 324,160 333,160 342,161 351,161 360,161 368,161 377,161 386,161 395,161 404,161 413,161 421,161 430,161 439,161 448,161 457,161 465,161 474,161 483,161 492,161 501,161 509,161 518,161 527,161 536,161 545,161 554,161 562,161 571,161 580,161" fill="none" stroke="currentColor" stroke-opacity="0.35" stroke-width="1.2"/>
-<polyline points="60,125 69,124 78,123 86,121 95,119 104,117 113,115 122,112 131,109 139,106 148,102 157,99 166,95 175,91 183,87 192,84 201,81 210,78 219,75 227,73 236,71 245,69 254,67 263,66 272,65 280,64 289,64 298,63 307,63 316,62 324,62 333,62 342,62 351,62 360,62 368,62 377,62 386,62 395,62 404,62 413,62 421,62 430,62 439,62 448,62 457,62 465,62 474,62 483,62 492,62 501,62 509,62 518,62 527,62 536,62 545,62 554,62 562,62 571,62 580,62" fill="none" class="sb" stroke-width="2.2"/>
-<polyline points="60,126 69,126 78,125 86,123 95,122 104,121 113,119 122,117 131,115 139,113 148,111 157,109 166,106 175,104 183,102 192,100 201,98 210,97 219,95 227,94 236,93 245,92 254,91 263,91 272,90 280,90 289,89 298,89 307,89 316,89 324,88 333,88 342,88 351,88 360,88 368,88 377,88 386,88 395,88 404,88 413,88 421,88 430,88 439,88 448,88 457,88 465,88 474,88 483,88 492,88 501,88 509,88 518,88 527,88 536,88 545,88 554,88 562,88 571,88 580,88" fill="none" stroke="currentColor" stroke-opacity="0.35" stroke-width="1.2"/>
-<polyline points="60,128 69,128 78,128 86,128 95,127 104,127 113,127 122,127 131,127 139,127 148,127 157,128 166,128 175,129 183,130 192,131 201,132 210,133 219,134 227,135 236,136 245,137 254,139 263,141 272,143 280,145 289,148 298,151 307,155 316,159 324,163 333,169 342,174 351,180 360,186 368,191 377,197 386,202 395,207 404,211 413,215 421,218 430,221 439,224 448,225 457,227 465,228 474,229 483,230 492,231 501,231 509,232 518,232 527,233 536,233 545,233 554,233 562,233 571,233 580,233" fill="none" class="sr" stroke-width="2.2"/>
-<polyline points="60,129 69,129 78,128 86,128 95,128 104,128 113,128 122,128 131,129 139,129 148,130 157,131 166,132 175,133 183,135 192,136 201,137 210,138 219,139 227,140 236,140 245,140 254,140 263,139 272,138 280,137 289,135 298,133 307,130 316,127 324,123 333,119 342,115 351,110 360,106 368,101 377,97 386,92 395,89 404,85 413,82 421,80 430,77 439,76 448,74 457,73 465,72 474,71 483,70 492,70 501,69 509,69 518,69 527,68 536,68 545,68 554,68 562,68 571,68 580,68" fill="none" class="st" stroke-width="2.2"/>
-<polyline points="60,133 69,134 78,135 86,136 95,137 104,138 113,139 122,141 131,142 139,144 148,145 157,147 166,148 175,149 183,151 192,152 201,153 210,153 219,154 227,154 236,155 245,155 254,155 263,155 272,154 280,154 289,153 298,152 307,151 316,149 324,147 333,145 342,143 351,140 360,138 368,135 377,133 386,131 395,128 404,127 413,125 421,123 430,122 439,121 448,120 457,120 465,119 474,119 483,118 492,118 501,118 509,118 518,117 527,117 536,117 545,117 554,117 562,117 571,117 580,117" fill="none" stroke="currentColor" stroke-opacity="0.35" stroke-width="1.2"/>
-<polyline points="60,127 69,126 78,125 86,124 95,123 104,122 113,121 122,120 131,119 139,118 148,117 157,116 166,115 175,115 183,114 192,114 201,114 210,114 219,114 227,114 236,114 245,114 254,115 263,115 272,115 280,115 289,115 298,115 307,115 316,115 324,114 333,114 342,114 351,113 360,112 368,112 377,111 386,111 395,110 404,109 413,109 421,109 430,108 439,108 448,108 457,108 465,107 474,107 483,107 492,107 501,107 509,107 518,107 527,107 536,107 545,107 554,107 562,107 571,107 580,107" fill="none" stroke="currentColor" stroke-opacity="0.35" stroke-width="1.2"/>
-<polyline points="60,125 69,124 78,123 86,122 95,120 104,118 113,116 122,114 131,111 139,108 148,106 157,103 166,100 175,97 183,94 192,91 201,88 210,85 219,83 227,80 236,78 245,76 254,74 263,72 272,70 280,69 289,67 298,65 307,63 316,61 324,59 333,57 342,55 351,52 360,50 368,48 377,46 386,44 395,42 404,40 413,39 421,37 430,36 439,36 448,35 457,34 465,34 474,33 483,33 492,33 501,33 509,32 518,32 527,32 536,32 545,32 554,32 562,32 571,32 580,32" fill="none" class="sg" stroke-width="2.2"/>
-<polyline points="60,127 69,126 78,126 86,125 95,124 104,123 113,122 122,120 131,119 139,118 148,117 157,116 166,116 175,115 183,115 192,115 201,115 210,116 219,116 227,117 236,117 245,118 254,118 263,119 272,119 280,119 289,120 298,120 307,120 316,120 324,120 333,121 342,121 351,121 360,121 368,121 377,121 386,121 395,121 404,121 413,121 421,121 430,121 439,121 448,121 457,121 465,121 474,121 483,121 492,121 501,121 509,121 518,121 527,121 536,121 545,121 554,121 562,121 571,121 580,121" fill="none" stroke="currentColor" stroke-opacity="0.35" stroke-width="1.2"/>
-<text x="586" y="58" class="tb" font-size="11">bmi</text><text x="586" y="36" class="tg" font-size="11">s5</text><text x="586" y="236" class="tr" font-size="11">s1</text><text x="586" y="80" class="tm" font-size="11">s2</text>
-<text x="70" y="36" class="tm" font-size="11">all non-zero, all tiny</text>
-</svg><figcaption>Ridge path on the same data. No coefficient is ever exactly 0; all grow smoothly as α falls. s1 and s2 stay close together until α ≈ 10, then split into the large opposite OLS values.</figcaption></figure>
-  <h3>How to read a path</h3>
-  <table class="tbl">
-    <tr><th>What you see</th><th>What it means</th><th>Houses / diabetes</th></tr>
-    <tr><td>Early entry (left)</td><td>Strong, unique signal: worth paying a large fee for</td><td>size (α = 23.9); bmi (43.5) and s5 (41.5)</td></tr>
-    <tr><td>Late entry (right)</td><td>Weak or redundant given the others</td><td>bedrooms (5.4); s2 (0.3), age (0.2)</td></tr>
-    <tr><td>Two lines diverging in opposite directions near α → 0</td><td>Correlated pair; OLS's split is unstable</td><td>s1 → −37.6, s2 → +22.6</td></tr>
-    <tr><td>Sign change along the path</td><td>The effect depends on which other variables are in; do not trust the sign alone</td><td>ridge s1: +1.1 at α = 1000, −37.6 at α = 0.01</td></tr>
-    <tr><td>Flat plateau</td><td>That α range does not change the model much; CV score also flat</td><td>lasso α 1–3: 7 features, small changes</td></tr>
-  </table>
-  <p>The lasso path is <strong>piecewise linear</strong>: between the α's where some feature enters or leaves, every non-zero weight changes linearly in α (which is what LARS exploits; size alone grows by exactly 1 per unit drop in α between 20 and 10: 3.91 → 13.91). A feature can also <em>leave</em> the lasso path after entering, when a correlated feature takes over its role.</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Path plots are only comparable across features if the columns were standardised; otherwise a line's height mostly reflects its units. And entry order is a statement about this dataset's correlations, not a ranking of causal importance (size entered before bedrooms by a margin of 23.91 vs 23.33).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: scikit-learn in practice and variants.</b> The concepts are complete. What remains is the practical toolbox: every sklearn parameter, and the related models you will meet.</div>
+  <p>BMI and s5 enter first, at α ≈ 43 and 41, so they are the strongest, most independent signals; blood pressure and s3 follow. The cholesterol twins s1 and s2 enter late and stay small until α is tiny, then split apart in opposite directions (−26.4 and +13.7 at α = 0.1), heading for least squares' large opposite values. When reading a path, an early entry means a strong, unique signal; a late entry means weak or redundant given the others; two lines diverging in opposite directions near the right edge mean a correlated pair whose split is unstable; and a sign change along the path means the effect depends on which other variables are in the model. Paths are only comparable across features when the columns were standardised, and entry order describes this dataset's correlations, not causal importance.</p>
 
-  <h2 id="rl-sklearn"><span class="num">12</span>scikit-learn in Practice and Variants</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Which sklearn knobs matter for these three models, and which related models (adaptive, relaxed and group lasso, kernel ridge, penalised logistic regression) are built from the same pieces?</p>
-  </div>
-  <h3>The estimators and their key parameters</h3>
+  <h2 id="rl-practice"><span class="num">11</span>Choosing a Model in Practice</h2>
+  <p>The four models differ in a handful of ways that are worth having in one table:</p>
   <table class="tbl">
-    <tr><th>Parameter</th><th>Ridge</th><th>Lasso / ElasticNet</th><th>Meaning and advice</th></tr>
-    <tr><td><code>alpha</code></td><td>λ on ||y − Xw||² (no 1/n)</td><td>α on (1/2n)||y − Xw||²</td><td>Penalty strength; tune on a log grid by CV</td></tr>
-    <tr><td><code>l1_ratio</code></td><td>–</td><td>ElasticNet only: r ∈ [0, 1]</td><td>Mix; 1 = lasso</td></tr>
-    <tr><td><code>fit_intercept</code></td><td colspan="2">True: centre, do not penalise the intercept</td><td>Leave True unless data is centred</td></tr>
-    <tr><td><code>solver</code></td><td>'auto', 'cholesky', 'svd', 'lsqr', 'sparse_cg', 'sag', 'saga', 'lbfgs'</td><td>coordinate descent (fixed)</td><td>Ridge: 'auto' is fine; 'sag'/'saga' for very large n</td></tr>
-    <tr><td><code>max_iter</code>, <code>tol</code></td><td>for iterative solvers</td><td>sweeps / duality-gap tolerance</td><td>Raise <code>max_iter</code> on a <code>ConvergenceWarning</code></td></tr>
-    <tr><td><code>selection</code></td><td>–</td><td>'cyclic' or 'random'</td><td>'random' can converge faster with correlated features</td></tr>
-    <tr><td><code>positive</code></td><td>yes</td><td>yes</td><td>Force all weights ≥ 0 (prices, mixture proportions)</td></tr>
-    <tr><td><code>warm_start</code></td><td>–</td><td>yes</td><td>Reuse the previous solution as the start (manual paths)</td></tr>
-    <tr><td><code>precompute</code></td><td>–</td><td>use a precomputed XᵀX (Gram matrix)</td><td>Faster when n ≫ p</td></tr>
-    <tr><td>Multi-output y</td><td>yes</td><td>yes; <code>MultiTaskLasso</code> selects the same features for all outputs</td><td></td></tr>
-  </table>
-  <h3>Related models you should recognise</h3>
-  <table class="tbl">
-    <tr><th>Model</th><th>Idea</th><th>When</th></tr>
-    <tr><td><code>LogisticRegression(penalty, C)</code></td><td>Same L1 / L2 / elastic-net penalties on the log-loss; C = 1/α (bigger C = <em>weaker</em> penalty); L2 by default</td><td>Classification: <a class="xref" data-note="ml_classification">Logistic Regression</a></td></tr>
-    <tr><td><code>SGDRegressor(penalty='l2'|'l1'|'elasticnet')</code></td><td>Penalised linear model trained by stochastic gradient descent</td><td>Very large or streaming data</td></tr>
-    <tr><td>Kernel ridge</td><td>Ridge with the kernel trick: ridge on RBF / polynomial basis functions without building them</td><td>Smooth nonlinear regression, small n</td></tr>
-    <tr><td>Adaptive lasso</td><td>Per-feature penalty weights 1/|ŵ_OLS| so strong features are shrunk less</td><td>Better selection consistency</td></tr>
-    <tr><td>Relaxed lasso</td><td>Use lasso to choose features, then refit OLS (or a lighter lasso) on them</td><td>Removes lasso's shrinkage bias on kept weights</td></tr>
-    <tr><td>Group lasso</td><td>Penalise groups (e.g. all dummies of one category, or all spline columns of one input) so they enter or leave together</td><td>Categorical features (locality), spline bases</td></tr>
-    <tr><td>Best subset / stepwise</td><td>Choose k features by search (hard threshold)</td><td>Small p; lasso is the convex relaxation of best subset</td></tr>
-    <tr><td>Principal component regression</td><td>Keep the top principal directions, drop the rest (shrink factor 1 or 0)</td><td>Compare: ridge shrinks directions smoothly (0.938 and 0.060 on the houses)</td></tr>
-  </table>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>p-values and confidence intervals from ordinary OLS formulas are not valid for ridge or lasso coefficients, and are not valid for an OLS refit on lasso-selected features either (the selection used the same data). If you need inference after selection, use sample splitting (select on one half, fit and test on the other) or dedicated post-selection inference methods.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: How it all connects.</b> We have three penalties, two solvers, a scaling rule and a tuning method. How do they hang together?</div>
-
-  <h2 id="rl-connect"><span class="num">13</span>How It All Connects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Ridge, lasso, elastic net, eigen-directions, soft-thresholding, coordinate descent, standardisation, cross-validation and paths: a toolbox of separate tricks, or one idea with a few consequences?</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 680 360" width="680">
-<defs><marker id="rl-a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="240" y="8" width="200" height="40" rx="7" class="fb sb"/><text x="340" y="26" text-anchor="middle" font-size="11.5" font-weight="700">OLS loss ||y − Xw||²</text><text x="340" y="41" text-anchor="middle" class="tm" font-size="10">no preference among weights</text>
-<line x1="280" y1="48" x2="110" y2="78" stroke="currentColor" marker-end="url(#rl-a9)"/><line x1="340" y1="48" x2="340" y2="78" stroke="currentColor" marker-end="url(#rl-a9)"/><line x1="400" y1="48" x2="570" y2="78" stroke="currentColor" marker-end="url(#rl-a9)"/>
-<rect x="10" y="80" width="200" height="40" rx="7" class="fr sr"/><text x="110" y="98" text-anchor="middle" font-size="11" font-weight="700">duplicate column</text><text x="110" y="113" text-anchor="middle" class="tm" font-size="10">[[70, 70], [70, 70]], det 0</text>
-<rect x="240" y="80" width="200" height="40" rx="7" class="fr sr"/><text x="340" y="98" text-anchor="middle" font-size="11" font-weight="700">near-twins (r 0.968)</text><text x="340" y="113" text-anchor="middle" class="tm" font-size="10">rooms −1.67 … 5.58 by house</text>
-<rect x="470" y="80" width="200" height="40" rx="7" class="fr sr"/><text x="570" y="98" text-anchor="middle" font-size="11" font-weight="700">many / useless columns</text><text x="570" y="113" text-anchor="middle" class="tm" font-size="10">200 noise: test R² −0.26</text>
-<line x1="110" y1="120" x2="110" y2="150" stroke="currentColor" marker-end="url(#rl-a9)"/><line x1="340" y1="120" x2="340" y2="150" stroke="currentColor" marker-end="url(#rl-a9)"/><line x1="570" y1="120" x2="570" y2="150" stroke="currentColor" marker-end="url(#rl-a9)"/>
-<text x="350" y="142" class="tm" font-size="10">+ a price on weights</text>
-<rect x="10" y="152" width="200" height="44" rx="7" class="ft st"/><text x="110" y="171" text-anchor="middle" font-size="11.5" font-weight="700">ridge: + λΣw²</text><text x="110" y="187" text-anchor="middle" class="tm" font-size="10">(XᵀX + λI)⁻¹Xᵀy: [6.09, 1.74]</text>
-<rect x="240" y="152" width="200" height="44" rx="7" class="ft st"/><text x="340" y="171" text-anchor="middle" font-size="11.5" font-weight="700">elastic net: both</text><text x="340" y="187" text-anchor="middle" class="tm" font-size="10">S(ρ, αr)/(s + α(1 − r)): 4.60</text>
-<rect x="470" y="152" width="200" height="44" rx="7" class="ft st"/><text x="570" y="171" text-anchor="middle" font-size="11.5" font-weight="700">lasso: + αΣ|w|</text><text x="570" y="187" text-anchor="middle" class="tm" font-size="10">S(ρ, α)/s: 6.14; 0 if α ≥ 81.67</text>
-<line x1="110" y1="196" x2="110" y2="226" stroke="currentColor" marker-end="url(#rl-a9)"/><line x1="340" y1="196" x2="340" y2="226" stroke="currentColor" marker-end="url(#rl-a9)"/><line x1="570" y1="196" x2="570" y2="226" stroke="currentColor" marker-end="url(#rl-a9)"/>
-<rect x="10" y="228" width="200" height="44" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="110" y="247" text-anchor="middle" font-size="11" font-weight="700">divides each direction</text><text x="110" y="263" text-anchor="middle" class="tm" font-size="10">keep 0.938 and 0.060; df 1.0</text>
-<rect x="240" y="228" width="200" height="44" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="340" y="247" text-anchor="middle" font-size="11" font-weight="700">zeros + grouping</text><text x="340" y="263" text-anchor="middle" class="tm" font-size="10">shares size and rooms (7.9, 7.3)</text>
-<rect x="470" y="228" width="200" height="44" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="570" y="247" text-anchor="middle" font-size="11" font-weight="700">subtracts → exact zeros</text><text x="570" y="263" text-anchor="middle" class="tm" font-size="10">CD: [6.83, 0] at α = 2</text>
-<line x1="110" y1="272" x2="200" y2="300" stroke="currentColor" marker-end="url(#rl-a9)"/><line x1="340" y1="272" x2="340" y2="300" stroke="currentColor" marker-end="url(#rl-a9)"/><line x1="570" y1="272" x2="480" y2="300" stroke="currentColor" marker-end="url(#rl-a9)"/>
-<rect x="60" y="302" width="180" height="44" rx="7" class="fg sg"/><text x="150" y="321" text-anchor="middle" font-size="11" font-weight="700">standardise first</text><text x="150" y="337" text-anchor="middle" class="tm" font-size="10">Ridge(70): 3.5 vs 7.0</text>
-<rect x="250" y="302" width="180" height="44" rx="7" class="fg sg"/><text x="340" y="321" text-anchor="middle" font-size="11" font-weight="700">choose α by CV</text><text x="340" y="337" text-anchor="middle" class="tm" font-size="10">1-SE: 10 → 4 features</text>
-<rect x="440" y="302" width="180" height="44" rx="7" class="fg sg"/><text x="530" y="321" text-anchor="middle" font-size="11" font-weight="700">read the path</text><text x="530" y="337" text-anchor="middle" class="tm" font-size="10">size at α 23.9, rooms 5.4</text>
-</svg><figcaption>One idea, three penalties. OLS has no preference among weights, so duplicates, near-twins and useless columns break it. Adding a price on weights fixes all three: the squared price divides (ridge), the absolute price subtracts and can reach zero (lasso), the mix does both (elastic net). Because a price on a number depends on its units, standardise; because the price's size is a choice, cross-validate; the path shows every choice at once.</figcaption></figure>
-  <table class="tbl"><caption>Every concept on the same six houses</caption>
-    <tr><th>Concept</th><th>Built from</th><th>Answers</th><th>Our houses</th><th>Use when</th></tr>
-    <tr><td>Ill-conditioning</td><td>det(XᵀX), VIF</td><td>why are OLS weights unstable?</td><td>det 24 of 385; rooms −1.67 … 5.58</td><td>diagnosing</td></tr>
-    <tr><td>Ridge closed form</td><td>OLS + λI on the diagonal</td><td>unique, stable weights?</td><td>λ = 5: [6.094, 1.735]</td><td>many small effects, collinearity</td></tr>
-    <tr><td>Eigen-shrinkage</td><td>d²/(d² + λ)</td><td>what does ridge distrust?</td><td>0.938 (size + rooms), 0.060 (rooms vs size)</td><td>explaining ridge</td></tr>
-    <tr><td>Effective df</td><td>Σ d²/(d² + λ)</td><td>how flexible is the model?</td><td>0.998 at λ = 5</td><td>comparing with OLS</td></tr>
-    <tr><td>Unpenalised intercept</td><td>b₀ = ȳ − x̄ᵀw</td><td>where does b₀ come from?</td><td>−10.37 at λ = 5</td><td>always</td></tr>
-    <tr><td>Soft-threshold</td><td>S(ρ, α)/s</td><td>when is a weight exactly 0?</td><td>size: 6.14 (α 10), 0 once α ≥ 81.67</td><td>reasoning about lasso</td></tr>
-    <tr><td>Coordinate descent</td><td>one soft-threshold per weight, repeated</td><td>how to solve lasso?</td><td>α = 2: [6.83, 0]; α = 0.1 → [6.55, 1.64], 6% per sweep</td><td>lasso / ENet fitting</td></tr>
-    <tr><td>Elastic net</td><td>subtract then divide</td><td>zeros and grouping?</td><td>4.60 at α = 10, r = 0.5</td><td>correlated useful groups</td></tr>
-    <tr><td>Correlated features</td><td>symmetry of the penalty</td><td>who gets credit?</td><td>ridge [12.5, 9.6], lasso [20.2, 1.7]</td><td>interpreting weights</td></tr>
-    <tr><td>Standardisation</td><td>z = (x − mean)/sd</td><td>do units matter?</td><td>Ridge(70): 3.5 vs 7.0 per 100 sq ft</td><td>always before a penalty</td></tr>
-    <tr><td>CV for α</td><td>LOO / k-fold error per α</td><td>how strong a penalty?</td><td>LOO: ridge 0.08, lasso 0.14</td><td>always</td></tr>
-    <tr><td>Path</td><td>solutions over an α grid</td><td>what happens for every α?</td><td>size enters at 23.9, rooms at 5.4</td><td>feature ranking, debugging</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>One sentence holds the note: <strong>add a price on the size of the weights, and the model must earn every weight; a squared price shrinks every weight smoothly (ridge), an absolute price can set weights to exactly zero (lasso), and a mix does both (elastic net).</strong> Everything else follows from that price: it needs comparable units (standardise), its size must be chosen honestly (CV), and following it from high to low shows the whole family of models (the path).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Comparison.</b> A single table to decide between OLS, ridge, lasso and elastic net.</div>
-
-  <h2 id="rl-compare"><span class="num">14</span>Comparison</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Faced with a new dataset, which of the four models should you start with, and what will each do differently?</p>
-  </div>
-  <table class="tbl">
-    <tr><th></th><th>OLS</th><th>Ridge (L2)</th><th>Lasso (L1)</th><th>Elastic Net</th></tr>
-    <tr><td>Penalty</td><td>none</td><td>λΣw²</td><td>αΣ|w|</td><td>αrΣ|w| + α(1 − r)/2·Σw²</td></tr>
-    <tr><td>Solution</td><td>(XᵀX)⁻¹Xᵀy</td><td>(XᵀX + λI)⁻¹Xᵀy</td><td>no closed form; coordinate descent / LARS</td><td>coordinate descent</td></tr>
-    <tr><td>1-D formula</td><td>ρ / s</td><td>divide: Σxy / (Σx² + λ)</td><td>subtract: S(ρ, α) / s</td><td>subtract then divide</td></tr>
+    <tr><th></th><th>OLS</th><th>Ridge</th><th>Lasso</th><th>Elastic net</th></tr>
+    <tr><td>Penalty</td><td>none</td><td>λΣw²</td><td>αΣ|w|</td><td>both, mixed by l1_ratio</td></tr>
+    <tr><td>Solution</td><td>(XᵀX)⁻¹Xᵀy</td><td>(XᵀX + λI)⁻¹Xᵀy</td><td>coordinate descent / LARS</td><td>coordinate descent</td></tr>
+    <tr><td>One weight</td><td>ρ / s</td><td>divides</td><td>subtracts (soft threshold)</td><td>subtracts, then divides</td></tr>
     <tr><td>Exact zeros</td><td>no</td><td>no</td><td>yes</td><td>yes</td></tr>
-    <tr><td>Correlated features</td><td>erratic, opposite signs</td><td>shares evenly</td><td>picks one, arbitrarily</td><td>shares within groups</td></tr>
-    <tr><td>Unique solution</td><td>only if XᵀX invertible</td><td>always (λ &gt; 0)</td><td>not always (exact ties)</td><td>always (r &lt; 1)</td></tr>
-    <tr><td>p &gt; n</td><td>fails</td><td>works</td><td>keeps ≤ n features</td><td>works, can keep &gt; n</td></tr>
+    <tr><td>Correlated twins</td><td>erratic, opposite signs</td><td>shares evenly</td><td>keeps one, arbitrarily</td><td>shares within groups</td></tr>
+    <tr><td>More columns than rows</td><td>fails</td><td>works</td><td>keeps at most n</td><td>works, can keep more</td></tr>
     <tr><td>Needs scaling</td><td>no</td><td>yes</td><td>yes</td><td>yes</td></tr>
-    <tr><td>Bias / variance</td><td>unbiased, high variance</td><td>some bias, lower variance</td><td>bias on kept weights, lower variance</td><td>between</td></tr>
-    <tr><td>Bayesian prior</td><td>flat</td><td>Gaussian</td><td>Laplace</td><td>mix of the two</td></tr>
-    <tr><td>Best when</td><td>few, distinct, informative columns, n ≫ p</td><td>many small effects, multicollinearity</td><td>few strong effects among many useless columns</td><td>groups of correlated useful columns, p ≫ n</td></tr>
-    <tr><td>Six houses (standardised)</td><td>[21.2, 2.8], unstable</td><td>α 1: [12.5, 9.6]</td><td>α 2: [20.2, 1.7]</td><td>α 2, r 0.5: [7.9, 7.3]</td></tr>
-    <tr><td>Diabetes + 200 noise test R²</td><td>−0.258</td><td>0.366</td><td>0.485 (6 kept)</td><td>0.485 (chose r = 1)</td></tr>
+    <tr><td>Best when</td><td>few distinct columns, n ≫ p, need p-values</td><td>many small real effects, collinearity</td><td>few strong effects among many useless</td><td>groups of correlated useful columns</td></tr>
   </table>
-  <p>Relation to neighbours: <a class="xref" data-note="ml_regularization">Regularization</a> is the general principle (penalties, early stopping, dropout, pruning); <a class="xref" data-note="ml_polyreg">Polynomial &amp; Basis Functions</a> is the most common reason you suddenly have too many columns; <a class="xref" data-note="ml_dimred">feature selection</a> offers non-penalty alternatives (filters, RFE); <a class="xref" data-note="ml_pca">PCA</a> regression keeps or drops whole directions, where ridge shrinks them smoothly.</p>
-  <div class="bridge"><b>What this still can't tell us → next: Common mistakes.</b> The classic ways these models are misused.</div>
+  <p>In scikit-learn the settings that matter are few. <code>alpha</code> is the strength, tuned on a log grid; <code>l1_ratio</code> is elastic net's mix; <code>fit_intercept=True</code> (the default) centres the data and leaves the intercept unpenalised; <code>max_iter</code> and <code>tol</code> control the iterative solvers; <code>positive=True</code> forces all weights to be non-negative, useful for prices or mixture proportions; and Ridge's <code>solver</code> can stay on <code>'auto'</code>. The same penalties appear in other estimators: <code>LogisticRegression</code> uses L1, L2 or elastic net with <code>C</code> = 1/α, so a larger C means a <em>weaker</em> penalty (see <a class="xref" data-note="ml_classification">Logistic Regression</a>); <code>SGDRegressor(penalty=...)</code> applies them to streaming data; and kernel ridge regression is ridge applied to RBF basis functions without building the columns.</p>
+  <p>A few variants are worth recognising by name. The <strong>adaptive lasso</strong> gives each feature its own penalty weight (larger for features that looked weak in a first fit), which improves selection. The <strong>relaxed lasso</strong> uses lasso only to choose the features, then refits them with little or no penalty to remove lasso's shrinkage bias. The <strong>group lasso</strong> penalises predefined groups, such as all the dummy columns of one category, so that they enter or leave together. And <strong>principal component regression</strong> keeps or drops whole data directions (shrink factor 1 or 0), whereas ridge shrinks them smoothly. Finally, p-values and confidence intervals from the ordinary least-squares formulas are not valid for penalised coefficients, nor for a least-squares refit on lasso-selected features, because the selection used the same data. If you need inference after selection, select on one half of the data and test on the other.</p>
 
-  <h2 id="rl-traps"><span class="num">15</span>Common Mistakes</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Which errors with penalised models show up most in interviews and production code?</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: not standardising</span>
-    <p>Penalties depend on units: Ridge(70) halved the size weight in hundreds of sq ft and left it untouched in sq ft; income in crore was shrunk 76%, in lakh 1%. Put <code>StandardScaler</code> and the model in one <code>Pipeline</code>.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: scaling outside cross-validation</span>
-    <p>Fitting the scaler (or <code>PolynomialFeatures</code> knots, imputers…) on all rows before CV leaks information. Cross-validate the whole pipeline; tune with <code>step__alpha</code> names.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: copying α between estimators</span>
-    <p><code>Ridge</code> has no 1/n, <code>Lasso</code>/<code>ElasticNet</code> have 1/(2n), <code>LogisticRegression</code> uses C = 1/α. ElasticNet with r → 0 equals Ridge only at Ridge-α = n·α (60 for α = 10 on six houses).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: reading lasso zeros as "irrelevant"</span>
-    <p>A zero can mean "useless" or "redundant with a correlated feature that was kept" (bedrooms vs size, s2 vs s1), and noise columns can be kept by chance (132, 140). Treat lasso's selection as a shortlist and check stability across resamples.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: penalising the intercept</span>
-    <p>Hand-rolled solutions that add λ to the whole diagonal, including the intercept, give wrong slopes (houses at λ = 5: size 5.27 and bedrooms 2.00 instead of 6.09 and 1.74, intercept −1.04 instead of −10.37). Centre first or exclude the intercept from the penalty.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: ignoring ConvergenceWarning</span>
-    <p>Lasso and elastic net on unscaled or highly correlated data converge slowly (size and bedrooms: 94% of the gap left after each sweep); stopped early, the split between twins is wrong (after 3 sweeps [6.94, 0.29] vs the optimum [6.55, 1.64]). Standardise and raise <code>max_iter</code>.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: too narrow an α grid</span>
-    <p>If the chosen α is at the edge of the grid, the true optimum is probably outside it. Use a wide log grid (e.g. 10⁻⁴ to 10⁴ for ridge) or let <code>LassoCV</code> build it from α_max.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: OLS p-values on penalised or selected models</span>
-    <p>Standard errors from the OLS formula are not valid for ridge/lasso weights or for refits after lasso selection. Use sample splitting or post-selection inference if you need p-values.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: the Revision Sheet.</b> Compress the whole note into one page.</div>
+  <h2 id="rl-traps"><span class="num">12</span>Common Mistakes</h2>
+  <p>The first mistake is not standardising. Section 08 showed Ridge(70) halving the size weight when size was in hundreds of sq ft and leaving it untouched in sq ft. The penalty then favours whichever columns happen to be measured in large units, and both the selected features and the chosen α reflect units rather than information. The fix is always the same pipeline: <code>make_pipeline(StandardScaler(), Lasso(alpha=...))</code>. A close relative is scaling outside cross-validation: fitting the scaler on all rows before cross-validating leaks the validation rows' statistics into training, so cross-validate the whole pipeline.</p>
+  <p>The second is copying α between estimators. Ridge has no 1/n in its loss; Lasso and ElasticNet divide by 2n; LogisticRegression uses C, the inverse. So the same number means different strengths:</p>
+  <div class="fx" data-lang="py">X = size[:, None]
+print("Ridge(alpha=10)                    :", Ridge(alpha=10).fit(X, price).coef_.round(3))
+print("ElasticNet(alpha=10, l1_ratio~0)   :", ElasticNet(alpha=10, l1_ratio=1e-4).fit(X, price).coef_.round(3))
+print("Ridge(alpha=60) = Ridge(n * 10)    :", Ridge(alpha=60).fit(X, price).coef_.round(3))</div>
+  <div class="fx" data-lang="text">Ridge(alpha=10)                    : [6.125]
+ElasticNet(alpha=10, l1_ratio~0)   : [3.769]
+Ridge(alpha=60) = Ridge(n * 10)    : [3.769]</div>
+  <p>Ridge(10) barely shrinks the size weight (6.125), while an elastic net that is almost pure ridge at α = 10 shrinks it to 3.769, which matches Ridge at α = 60 = n × 10. Always tune α separately for each estimator.</p>
+  <p>The third is reading a lasso zero as "irrelevant". A zero can mean useless, or it can mean redundant with a correlated feature that was kept (bedrooms against size, s2 against s1), and with many columns some pure-noise columns get kept by chance. Treat lasso's selection as a shortlist and check how stable it is across bootstrap resamples before claiming anything about a feature.</p>
+  <p>The fourth is penalising the intercept in a hand-written solution by adding λ to the whole diagonal. On the houses at λ = 5 that gave slopes 5.27 and 2.00 and intercept −1.04 instead of 6.09, 1.74 and −10.37. Centre the data first or leave the intercept out of the penalty.</p>
+  <p>The fifth is ignoring a <code>ConvergenceWarning</code>. Lasso on unscaled or highly correlated data converges slowly (only 6% of the gap closed per sweep for size and bedrooms), and if it stops early the split between twins is wrong. Standardise and raise <code>max_iter</code>. Finally, avoid too narrow an α grid (if the best α is at the edge, extend it) and do not report ordinary p-values for penalised coefficients.</p>
 
   <h2 id="rl-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>The whole note on one sheet. Running example: six houses, size (hundreds of sq ft) 6, 8, 10, 12, 14, 16, bedrooms 1, 2, 2, 3, 3, 4, price (lakh) 28, 40, 53, 66, 79, 100. Centred sums: S₁₁ = 70, S₁₂ = 19, S₂₂ = 5.5, S₁y = 490, S₂y = 134; correlation of size and bedrooms 0.968 (VIF 16).</p>
-  <h3>The question ladder</h3>
-  <table class="tbl">
-    <tr><th>Concept</th><th>Question it answers</th><th>Answer on our houses</th><th>Weakness → next</th></tr>
-    <tr><td>OLS breaks</td><td>why distrust 6.21 and 2.92?</td><td>duplicate: det 0; twins: rooms −1.67 … 5.58</td><td>need a preference</td></tr>
-    <tr><td>Ridge</td><td>unique, stable weights?</td><td>λ = 5: [6.094, 1.735]</td><td>what does it shrink?</td></tr>
-    <tr><td>Eigen-shrinkage</td><td>which parts are distrusted?</td><td>keep 0.938 and 0.060; df 1.0</td><td>never exactly 0</td></tr>
-    <tr><td>Lasso</td><td>switch columns off?</td><td>diamond corners</td><td>exact rule?</td></tr>
-    <tr><td>Soft-threshold</td><td>when is w = 0?</td><td>S(81.67, α)/11.67: 6.14, 3.57, 0 at α ≥ 81.67</td><td>several features?</td></tr>
-    <tr><td>Coordinate descent</td><td>how to solve lasso?</td><td>α 2: [6.83, 0]; α 0.1: [6.55, 1.64]</td><td>picks one twin</td></tr>
-    <tr><td>Elastic net</td><td>zeros and grouping?</td><td>4.60 at α 10, r 0.5</td><td>compare all models</td></tr>
-    <tr><td>Correlated features</td><td>who gets credit?</td><td>ridge shares, lasso favours size</td><td>units?</td></tr>
-    <tr><td>Standardisation</td><td>do units matter?</td><td>3.5 vs 7.0 per 100 sq ft</td><td>which α?</td></tr>
-    <tr><td>CV for α</td><td>how strong?</td><td>LOO small α; 1-SE 10 → 4 features</td><td>see all α</td></tr>
-    <tr><td>Paths</td><td>every α at once?</td><td>size at 23.9, rooms at 5.4</td><td>practice: sklearn</td></tr>
-  </table>
+  <h3>Definitions</h3>
+  <ul>
+    <li><b>Ill-conditioned least squares</b>: XᵀX singular or nearly so (duplicates, correlated columns, p ≥ n) → weights not unique or very unstable.</li>
+    <li><b>Regularization</b>: adding a penalty on weight size to the loss so the model must earn every weight.</li>
+    <li><b>Ridge (L2)</b>: min ‖y − Xw‖² + λ‖w‖²; shrinks smoothly; never exactly zero.</li>
+    <li><b>Lasso (L1)</b>: min (1/2n)‖y − Xw‖² + α‖w‖₁; exact zeros; feature selection.</li>
+    <li><b>Elastic net</b>: L1 + L2 mixed by l1_ratio; zeros plus grouping of correlated features.</li>
+    <li><b>Soft threshold</b>: S(ρ, α) = sign(ρ)·max(|ρ| − α, 0).</li>
+    <li><b>Effective degrees of freedom</b>: Σ d²/(d² + λ); p at λ = 0, → 0 as λ grows.</li>
+    <li><b>Coefficient path</b>: every weight plotted against α.</li>
+  </ul>
   <h3>Formulas</h3>
   <table class="tbl">
-    <tr><th>Name</th><th>Formula</th><th>Symbols</th></tr>
-    <tr><td>Ridge</td><td>min ||y − Xw||² + λ||w||²; ŵ = (XᵀX + λI)⁻¹Xᵀy; 1-D: Σxy/(Σx² + λ)</td><td>λ = sklearn Ridge alpha; X, y centred</td></tr>
-    <tr><td>2×2 inverse</td><td>[[a, b], [b, d]]⁻¹ = (1/(ad − b²))·[[d, −b], [−b, a]]</td><td>for hand work</td></tr>
-    <tr><td>Eigen-shrinkage</td><td>keep d²ⱼ/(d²ⱼ + λ) of the OLS component along direction j</td><td>d²ⱼ eigenvalues of XᵀX</td></tr>
-    <tr><td>Effective df</td><td>df(λ) = Σⱼ d²ⱼ/(d²ⱼ + λ)</td><td>p at λ = 0, → 0 as λ → ∞</td></tr>
-    <tr><td>Intercept</td><td>b₀ = ȳ − x̄ᵀw</td><td>not penalised</td></tr>
-    <tr><td>Lasso</td><td>min (1/2n)||y − Xw||² + α||w||₁</td><td>α = sklearn Lasso alpha</td></tr>
-    <tr><td>Soft-threshold</td><td>S(ρ, α) = sign(ρ)·max(|ρ| − α, 0); 1-D: w = S(ρ, α)/s</td><td>ρ = (1/n)Σxy, s = (1/n)Σx²</td></tr>
-    <tr><td>Coordinate descent</td><td>wⱼ ← S(xⱼᵀrⱼ/n, α) / (xⱼᵀxⱼ/n), rⱼ = y − Σ_{k≠j}xₖwₖ</td><td>cycle until stable</td></tr>
-    <tr><td>Elastic net</td><td>(1/2n)||y − Xw||² + αr||w||₁ + α(1 − r)/2·||w||²; 1-D: S(ρ, αr)/(s + α(1 − r))</td><td>r = l1_ratio</td></tr>
-    <tr><td>Scale link</td><td>ElasticNet(α, r → 0) = Ridge(n·α)</td><td>n rows</td></tr>
-    <tr><td>Lasso α_max</td><td>maxⱼ |xⱼᵀy|/n</td><td>above it every weight is 0</td></tr>
+    <tr><th>Model</th><th>General</th><th>One feature (ρ = Σxy/n, s = Σx²/n)</th></tr>
+    <tr><td>OLS</td><td>(XᵀX)⁻¹Xᵀy</td><td>ρ / s</td></tr>
+    <tr><td>Ridge</td><td>(XᵀX + λI)⁻¹Xᵀy</td><td>Σxy / (Σx² + λ)</td></tr>
+    <tr><td>Lasso</td><td>coordinate descent: wⱼ ← S(ρⱼ, α)/sⱼ</td><td>S(ρ, α) / s</td></tr>
+    <tr><td>Elastic net</td><td>wⱼ ← S(ρⱼ, αr) / (sⱼ + α(1 − r))</td><td>S(ρ, αr) / (s + α(1 − r))</td></tr>
   </table>
-  <h3>The running example's numbers</h3>
+  <p>Ridge keeps d²/(d² + λ) of each eigen-direction. Intercept b₀ = ȳ − x̄·w, never penalised. Lasso α_max = maxⱼ|xⱼᵀy|/n. ElasticNet(α, r → 0) = Ridge(n·α).</p>
+  <h3>The six houses</h3>
   <table class="tbl">
-    <tr><th>Model</th><th>Weights (size, rooms)</th><th>Note</th></tr>
-    <tr><td>OLS, centred raw units</td><td>6.208, 2.917</td><td>det 24; RSS 31.1</td></tr>
-    <tr><td>Ridge λ = 1 / 5 / 20</td><td>6.358, 2.030 / 6.094, 1.735 / 5.144, 1.422</td><td>size rises first</td></tr>
-    <tr><td>Size twice, ridge λ = 1</td><td>3.475, 3.475</td><td>even split; total 6.95</td></tr>
-    <tr><td>Lasso, size only</td><td>α 10: 6.143; α 40: 3.571; α ≥ 81.67: 0</td><td>ρ 81.667, s 11.667</td></tr>
-    <tr><td>Lasso CD α = 2 / 0.1</td><td>6.829, 0 / 6.546, 1.642</td><td>r² = 0.938 of the gap left per sweep</td></tr>
-    <tr><td>Elastic net α 10, r 0.5 (size only)</td><td>4.600</td><td>Ridge(60) = 3.769</td></tr>
-    <tr><td>Standardised: OLS / ridge 1 / lasso 2 / ENet 2</td><td>21.2, 2.8 / 12.5, 9.6 / 20.2, 1.7 / 7.9, 7.3</td><td>per SD</td></tr>
+    <tr><th>Model</th><th>Weights (size, rooms)</th></tr>
+    <tr><td>OLS (centred, raw units)</td><td>6.208, 2.917 (determinant 24)</td></tr>
+    <tr><td>Ridge λ = 1 / 5 / 20</td><td>6.358, 2.030 / 6.094, 1.735 / 5.144, 1.422</td></tr>
+    <tr><td>Size entered twice, ridge λ = 1</td><td>3.475, 3.475</td></tr>
+    <tr><td>Lasso on size only, α = 10 / 40 / ≥ 81.67</td><td>6.143 / 3.571 / 0</td></tr>
+    <tr><td>Lasso α = 2 / 0.1</td><td>6.829, 0 / 6.546, 1.642</td></tr>
+    <tr><td>Elastic net, size only, α 10, r 0.5</td><td>4.600</td></tr>
+    <tr><td>Standardised: OLS / ridge 1 / lasso 2</td><td>21.2, 2.8 / 12.5, 9.6 / 20.2, 1.7</td></tr>
   </table>
-  <h3>When to use, when not</h3>
-  <div class="cards">
-    <div><b>Ridge</b><p>Many small real effects, multicollinearity, prediction is the goal; you want every column kept but stable.</p><small>RidgeCV, fast leave-one-out</small></div>
-    <div><b>Lasso</b><p>A few strong effects among many useless columns; you want a sparse, explainable model.</p><small>LassoCV; check stability</small></div>
-    <div><b>Elastic net</b><p>Groups of correlated useful columns, or p ≫ n; when unsure, tune l1_ratio.</p><small>ElasticNetCV</small></div>
-    <div><b>Plain OLS</b><p>Few distinct columns, n ≫ p, and you need classical p-values.</p><small>Penalties void OLS p-values</small></div>
-  </div>
-  <div class="callout trap"><span class="label">Key traps</span>
-    <p>Not standardising; scaling outside CV; copying α across estimators; reading lasso zeros as irrelevance; penalising the intercept; ignoring convergence warnings; too narrow an α grid; OLS p-values on penalised models.</p>
-  </div>
-  <h3>Five rapid-fire checks</h3>
-  <table class="tbl">
-    <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td>XᵀX = [[70, 19], [19, 5.5]], Xᵀy = [490, 134], λ = 5: ridge weights?</td><td>det 426.5 → [(10.5·490 − 19·134)/426.5, (75·134 − 19·490)/426.5] = [6.094, 1.735]</td></tr>
-    <tr><td>ρ = 81.667, s = 11.667, α = 40: lasso weight?</td><td>(81.667 − 40)/11.667 = 3.571</td></tr>
-    <tr><td>Same, elastic net with r = 0.5?</td><td>(81.667 − 20)/(11.667 + 20) = 1.947</td></tr>
-    <tr><td>Eigenvalues 75.18 and 0.319, λ = 5: effective df?</td><td>0.938 + 0.060 = 0.998</td></tr>
-    <tr><td>Why does lasso zero bedrooms at α = 2 but ridge never does?</td><td>Lasso subtracts a fixed fee: bedrooms' push after size (0.71) is below 2. Ridge only divides, so a non-zero push always leaves a non-zero weight</td></tr>
-  </table>
-  <div class="bridge"><b>What this still can't tell us → next: Questions &amp; answers.</b> Test yourself; then the same penalties continue in <a class="xref" data-note="ml_classification">Logistic Regression</a>.</div>
+  <h3>Syntax</h3>
+  <div class="fx" data-lang="py">import numpy as np
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import Ridge, Lasso, ElasticNet, RidgeCV, LassoCV, ElasticNetCV
 
-  <h2 id="rl-qa"><span class="num">16</span>Questions &amp; Answers</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Can you solve each model by hand on the houses and explain why each step needs the one before it?</p>
-  </div>
+ridge = make_pipeline(StandardScaler(), RidgeCV(alphas=np.logspace(-3, 3, 25)))
+lasso = make_pipeline(StandardScaler(), LassoCV(cv=5))
+enet  = make_pipeline(StandardScaler(), ElasticNetCV(l1_ratio=[.1, .5, .9, 1], cv=5))
+# after fit: model[-1].alpha_, model[-1].coef_ ; lasso_path(X, y) for paths</div>
+  <h3>Gotchas</h3>
+  <ul>
+    <li>Standardise, inside a pipeline; never scale before cross-validation.</li>
+    <li>α means different things in Ridge, Lasso/ElasticNet (1/2n) and LogisticRegression (C = 1/α).</li>
+    <li>Ridge never gives zeros; lasso zeros can mean "redundant", not "useless".</li>
+    <li>Ridge shrinks the vector, so a single weight can grow or change sign along the path.</li>
+    <li>Penalised coefficients have no valid OLS p-values.</li>
+  </ul>
+
+  <h2 id="rl-qa"><span class="num">13</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>Derive the ridge closed-form solution.</summary><div class="qa-body">L(w) = ||y − Xw||² + λ||w||². Gradient: −2Xᵀ(y − Xw) + 2λw. Set to 0: (XᵀX + λI)w = Xᵀy, so w = (XᵀX + λI)⁻¹Xᵀy. With one feature: w = Σxy / (Σx² + λ) (size alone: 490/(70 + λ)). The intercept is excluded from the penalty (centre the data first).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why does ridge always have a unique solution, even with duplicate columns or p &gt; n?</summary><div class="qa-body">XᵀX is positive semi-definite with eigenvalues d² ≥ 0. Adding λI makes every eigenvalue d² + λ ≥ λ &gt; 0, so XᵀX + λI is invertible. Equivalently, the loss becomes strictly convex. For size entered twice, [[70, 70], [70, 70]] (det 0) becomes [[71, 70], [70, 71]] (det 141) at λ = 1, giving [3.475, 3.475].</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why does lasso produce exact zeros and ridge does not?</summary><div class="qa-body">Algebra: the 1-D lasso solution is S(ρ, α)/s = sign(ρ)·max(|ρ| − α, 0)/s, which is exactly 0 whenever |ρ| ≤ α; ridge is ρ/(s + λ), never 0 unless ρ = 0. Intuition: the L1 pull has constant size α even for tiny weights, the L2 pull 2λw fades near 0. Geometry: the L1 ball has corners on the axes.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Price on size: ρ = 81.667, s = 11.667. What is the lasso slope at α = 10, and at what α does it become 0?</summary><div class="qa-body">(81.667 − 10)/11.667 = 6.143. It becomes 0 once α ≥ |ρ| = 81.667. Above that, both the w &gt; 0 and w &lt; 0 cases contradict themselves and only the corner w = 0 satisfies the optimality condition |ρ| ≤ α.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Explain coordinate descent for lasso, and why it is slow on size and bedrooms.</summary><div class="qa-body">Start from w = 0. For each feature j in turn, compute the residual without j, ρⱼ = xⱼ·residual/n, and set wⱼ = S(ρⱼ, α)/(xⱼᵀxⱼ/n). Repeat sweeps until the duality gap is below tol. It converges because the loss is convex and the non-smooth part is separable. With correlated columns each update steals the other's push: only 1 − r² = 6% of the gap closes per sweep (α = 0.1: [6.94, 0.29] after 3 sweeps vs the optimum [6.55, 1.64]).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Two features are almost identical. What do OLS, ridge, lasso and elastic net do?</summary><div class="qa-body">OLS: unstable, often large opposite weights (sensors [−3.8, 6.8]; houses: bedrooms −1.67 to 5.58 depending on which house is left out). Ridge: splits the effect evenly because Σw² is smallest for an even split (houses [12.5, 9.6] per SD). Lasso: gives (almost) all to one ([20.2, 1.7]; sensors [2.9, 0]); which one is arbitrary. Elastic net: shares like ridge while still able to zero useless features.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why must features be standardised for ridge and lasso but not for OLS?</summary><div class="qa-body">OLS is scale-equivariant: rescaling a column rescales its weight and predictions do not change. Penalties depend on weight size, so a column in large units (small weight) is penalised less than the same information in small units (large weight). Ridge(70) on size: 3.5 lakh per 100 sq ft with size in hundreds, 7.0 with size in sq ft. Standardising makes the penalty compare like with like.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you choose α? What is the one-standard-error rule?</summary><div class="qa-body">Cross-validate a log-spaced grid inside a pipeline: RidgeCV (fast leave-one-out), LassoCV / ElasticNetCV (path + k-fold), or GridSearchCV. 1-SE rule: take the largest α whose mean CV error is within one standard error of the minimum. On diabetes it cut 10 features to 4 for a test R² change of 0.487 → 0.481. On six houses LOO picks small α: too few rows to justify heavy shrinkage.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is the effective number of degrees of freedom of ridge?</summary><div class="qa-body">df(λ) = Σⱼ d²ⱼ/(d²ⱼ + λ), where d²ⱼ are the eigenvalues of XᵀX. It falls smoothly from p (λ = 0) to 0. On the houses (eigenvalues 75.18 and 0.319) at λ = 5: 0.938 + 0.060 = 0.998, about one free weight.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Can a ridge coefficient increase as λ increases? Can it change sign?</summary><div class="qa-body">Yes to both. Ridge shrinks the weight vector along each eigen-direction, not each coordinate. On the houses, w_size went 6.208 → 6.358 (λ = 1) → 6.094 → 5.144, because the distrusted direction "more rooms, same size" carried a negative size part. On diabetes, ridge s1 is +1.1 at α = 1000 and −37.6 at α = 0.01. Only the norm ||w|| is guaranteed to decrease.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>When would you choose ridge, lasso or elastic net?</summary><div class="qa-body">Ridge: many features each with a small real effect, multicollinearity, prediction is the goal. Lasso: you expect a few strong features among many useless ones and want a sparse, explainable model. Elastic net: like lasso but with groups of correlated useful features, or p ≫ n; when unsure, tune l1_ratio by CV (it picked 1.0 on the noise-column data).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What are the Bayesian interpretations of ridge and lasso?</summary><div class="qa-body">Both are MAP estimates under a Gaussian likelihood. Ridge: Normal(0, τ²) prior on each weight (λ = σ²/τ²). Lasso: Laplace prior, which has a sharp peak at 0 and puts more mass there, giving exact zeros at the mode. Elastic net: a product of both.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How is α in sklearn's Lasso related to C in LogisticRegression and to alpha in Ridge?</summary><div class="qa-body">Lasso/ElasticNet: α multiplies the penalty on a (1/2n)-scaled squared error. Ridge: α multiplies the penalty on the unscaled squared error (ElasticNet with r → 0 equals Ridge with Ridge-α = n·α: α = 10 on six houses ↔ Ridge 60). LogisticRegression: C is the inverse strength, roughly 1/α; larger C = weaker regularization.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why is the intercept not penalised, and how does sklearn handle it?</summary><div class="qa-body">Penalising it would make predictions depend on the origin of y and x (lakh vs rupees, size from 0 or from 600 sq ft), which is meaningless. sklearn centres X and y, solves for the slopes, then sets b₀ = ȳ − x̄ᵀw (−10.37 for the houses at λ = 5). Penalising it wrongly pulled the intercept to −1.04 and bent the slopes to 5.27 (size) and 2.00 (bedrooms).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: what did the diagnostics note's VIF of 16 predict about this note?</summary><div class="qa-body">VIF = 1/(1 − r²) = 385/24, and 24 is the determinant of the size–rooms system. A large VIF means XᵀX has a tiny eigenvalue (0.319), i.e. a direction the data barely varies in. OLS's weights are unstable along it (bedrooms −1.67 to 5.58); ridge keeps only d²/(d² + λ) = 6% of it at λ = 5, and lasso sets the weaker twin to zero. High VIF is the symptom; the penalty is the treatment.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: how does this note finish the polynomial note's story?</summary><div class="qa-body">Polynomial features are correlated (size and size²: 0.991) and numerous (degree 5 on six houses fits exactly with a weight of 2,257). Rather than choosing the degree, keep the columns and penalise: Ridge(0.1) on degree 5 gave a gentle, quadratic-like curve (max weight 11.5, 121 lakh at 1,800 sq ft). Standardise the powers first, and choose α by cross-validation, as here.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks if you skip the scaler but keep the penalty?</summary><div class="qa-body">The penalty starts favouring whichever columns happen to be measured in large units (small weights are cheap). Size in sq ft would escape ridge entirely while bedrooms (a small count, so a large weight) would be crushed; the selected features and the CV-chosen α then reflect units, not information. Predictions change too, unlike in OLS.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Lasso kept 6 of 210 columns, including 2 pure-noise columns. Why, and what would you do?</summary><div class="qa-body">With 200 noise columns, a couple will correlate with y by chance in the training rows, enough to beat α. Lasso's selection is not consistent when features are many and correlated. Check stability over bootstrap resamples, use the 1-SE α (sparser), or adaptive/relaxed lasso; validate the final features on fresh data.</div></details>
-  <div class="bridge"><b>What this still can't tell us → next: <a class="xref" data-note="ml_classification">Logistic Regression</a>.</b> The Regression group is complete: fit (Linear Regression), check (Diagnostics), bend (Polynomial), tame (this note). All four predicted a number. When the target is yes/no, the weighted sum passes through a sigmoid, the squared loss becomes log-loss, and exactly these L1/L2 penalties return as <code>C</code>.</div>
+  <details class="qa"><summary><span class="qmark">Q</span>What problem do ridge and lasso solve?</summary><div class="qa-body">They stop least squares from producing huge, unstable weights when columns are correlated, duplicated, numerous or useless. Adding a penalty on weight size makes the problem well-posed, trades a little bias for a large drop in variance, and usually improves accuracy on new data. Lasso also performs feature selection.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Derive the ridge closed-form solution.</summary><div class="qa-body">L(w) = ‖y − Xw‖² + λ‖w‖². The gradient is −2Xᵀ(y − Xw) + 2λw. Setting it to zero gives (XᵀX + λI)w = Xᵀy, so w = (XᵀX + λI)⁻¹Xᵀy. With one feature it reduces to Σxy / (Σx² + λ). The intercept is excluded from the penalty by centring the data first.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does ridge always have a unique solution, even with duplicate columns or p &gt; n?</summary><div class="qa-body">XᵀX has eigenvalues d² ≥ 0, some of which may be zero. Adding λI makes every eigenvalue at least λ &gt; 0, so XᵀX + λI is invertible, and the loss becomes strictly convex with a single minimum. For a duplicated column, [[70, 70], [70, 70]] (determinant 0) becomes [[71, 70], [70, 71]] at λ = 1, and the weight is split evenly.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does lasso produce exact zeros and ridge does not?</summary><div class="qa-body">Algebraically, the one-feature lasso solution is S(ρ, α)/s, which is exactly zero whenever |ρ| ≤ α, while ridge is ρ/(s + λ), which is zero only if ρ is. Intuitively, the L1 pull has constant size α even for tiny weights, while the L2 pull 2λw fades near zero. Geometrically, the L1 constraint region is a diamond with corners on the axes, and the error contours usually touch it at a corner.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is soft-thresholding?</summary><div class="qa-body">S(ρ, α) = sign(ρ)·max(|ρ| − α, 0): move ρ toward zero by α and stop at zero. It is the exact lasso solution for one feature (divided by the feature's spread s) and the update used by coordinate descent. With orthonormal columns every lasso weight is the soft-thresholded least-squares weight.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How is lasso solved, given there is no closed form?</summary><div class="qa-body">Usually by cyclic coordinate descent: for each feature in turn, compute its push on the residual left by the others, ρⱼ, and set wⱼ = S(ρⱼ, α)/sⱼ; repeat until the duality gap is below a tolerance. It converges because the loss is convex and the non-smooth part separates by feature. LARS and proximal gradient methods are alternatives.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Two features are almost identical. What do OLS, ridge, lasso and elastic net do?</summary><div class="qa-body">OLS gives unstable, often large opposite weights that change between samples. Ridge splits the effect evenly, because Σw² is smallest for an even split. Lasso gives (almost) all of it to one feature, and which one is essentially arbitrary. Elastic net shares like ridge while still being able to zero out useless features.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why must features be standardised for ridge and lasso but not for OLS?</summary><div class="qa-body">OLS is scale-equivariant: rescaling a column rescales its weight and leaves predictions unchanged. A penalty depends on the size of the weights, so a column in large units (with a small weight) is penalised less than the same information in small units. Ridge(70) on the houses halved the size weight in hundreds of sq ft but left it untouched in sq ft. Standardising puts every column on the same footing.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you choose α? What is the one-standard-error rule?</summary><div class="qa-body">Cross-validate a log-spaced grid of α inside a pipeline, using RidgeCV, LassoCV, ElasticNetCV or GridSearchCV. The one-standard-error rule picks the largest α whose mean cross-validation error is within one standard error of the minimum, giving a simpler model with almost the same accuracy (on diabetes, 4 features instead of 10 for a test R² change of 0.487 to 0.481).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does ridge actually shrink?</summary><div class="qa-body">It shrinks the least-squares solution along each eigen-direction of XᵀX by the factor d²/(d² + λ). Directions in which the data varies a lot are kept almost entirely; directions with little variation, where OLS was guessing, are shrunk almost to zero. Correlated columns create exactly such a weak direction (their difference), which is why ridge cures multicollinearity.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Can a ridge coefficient increase as λ increases?</summary><div class="qa-body">Yes. Ridge guarantees that the length of the weight vector shrinks, not every coordinate. On the houses the size weight went 6.208 → 6.358 at λ = 1 before falling, because the distrusted direction "more bedrooms, same size" carried a negative amount of size. Coefficients can even change sign along the path.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What are the effective degrees of freedom of ridge?</summary><div class="qa-body">df(λ) = Σⱼ d²ⱼ/(d²ⱼ + λ), the sum of the shrink factors. It falls smoothly from p at λ = 0 to 0 as λ grows. On the houses at λ = 5 it is 0.938 + 0.060 ≈ 1, so the two-weight ridge model has the flexibility of about one free weight.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When would you choose ridge, lasso or elastic net?</summary><div class="qa-body">Ridge when many features each have a small real effect, or there is strong multicollinearity and prediction is the goal. Lasso when you expect a few strong features among many useless ones and want a sparse, explainable model. Elastic net when there are groups of correlated useful features or many more features than rows; if unsure, tune l1_ratio by cross-validation.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What are the Bayesian interpretations of ridge and lasso?</summary><div class="qa-body">Both are maximum a posteriori estimates under a Gaussian likelihood. Ridge corresponds to a normal prior centred at zero on each weight; lasso corresponds to a Laplace prior, which has a sharp peak at zero and therefore puts the most probable value of weak weights exactly at zero. Elastic net combines both.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why is the intercept not penalised?</summary><div class="qa-body">Penalising it would make predictions depend on the origin of the measurements (prices in lakh or rupees, size from 0 or from 600 sq ft), which is meaningless. scikit-learn centres X and y, solves for the slopes, then sets b₀ = ȳ − x̄·w.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How is α in Lasso related to C in LogisticRegression and alpha in Ridge?</summary><div class="qa-body">Lasso and ElasticNet multiply the penalty against a (1/2n)-scaled squared error; Ridge multiplies it against the unscaled squared error, so ElasticNet with l1_ratio near 0 at α equals Ridge at n·α. LogisticRegression uses C, roughly the inverse of α: a larger C means a weaker penalty.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Lasso kept 6 of 210 columns, including some pure-noise columns. Why, and what would you do?</summary><div class="qa-body">With 200 noise columns, a few will correlate with the target by chance in the training rows, enough to beat α. Lasso's selection is not reliable when features are many and correlated. Check stability across bootstrap resamples, use the one-standard-error α for a sparser model, consider adaptive or relaxed lasso, and validate the chosen features on fresh data.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Can you report p-values for lasso coefficients?</summary><div class="qa-body">Not with the ordinary least-squares formulas, and not by refitting OLS on the lasso-selected features with the same data, because the selection step used that data and the resulting p-values are too optimistic. Use sample splitting (select on one half, test on the other) or dedicated post-selection inference methods.</div></details>
 </main>
 `
 });
