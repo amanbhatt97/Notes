@@ -3,72 +3,44 @@ Object.assign(TOPIC_CONTENT, {
   "py_testing": `<main>
 <h1>Software Testing Fundamentals</h1>
   <div class="where"><span>Python</span><span>Making Code Trustworthy</span><span>Software Testing Fundamentals</span></div>
-  <p class="lead">An automated test is a small program that runs your code on an input whose correct answer you already know and fails loudly if the answer changes. Without tests, every edit is a gamble: a one-character change (<code>&gt;=</code> to <code>&gt;</code>) can silently break behaviour that worked for months, and nobody notices until a user or a dashboard does. Tests are what make refactoring, dependency upgrades and "quick fixes" safe, and in DS/ML work they are what stop a broken feature transform or a leaky train/test split from reaching a model in production. The ideas here apply to any framework: kinds of tests, the test pyramid, what makes a unit test good, which cases to pick, how to test data and ML code, TDD, and what coverage really measures. The tooling is in <a class="xref" data-note="py_pytest">Testing with pytest</a>, isolating external services in <a class="xref" data-note="py_mocking">Mocks &amp; Test Doubles</a>, and finding the cause of a failure in <a class="xref" data-note="py_debugging">Debugging, Profiling &amp; Logging</a>. Code was run on Python 3.13 with pytest 9.2.</p>
+  <p class="lead">Software testing is the habit of writing small programs that check your real program gives the answers it should. Every working program changes over time: someone fixes a bug, tidies a function, upgrades a library, and each change can quietly break something that worked yesterday. Automated tests catch those breaks seconds after they happen instead of weeks later, when a customer or a wrong dashboard number finds them, and in data and ML work they are what stop a broken feature transform or a leaky train/test split from reaching a model in production. This page builds the ideas from zero: what a test is, the kinds of tests, how many of each to keep, what makes a test trustworthy, how to choose test cases, how to test data and ML code, test-driven development, and what code coverage really measures. One running example is used throughout: the till of a small tea stall, Chai Corner, whose billing rules we will test, break on purpose, and test again.</p>
 
-  <h2 id="pt-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="pt-map"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">Software Testing</div>
     <div class="mm-branches">
       <div class="mm-branch">
         <div class="mm-title">Why test</div>
         <ul>
-          <li><b>Regression</b>: behaviour that used to work breaks after a change</li>
-          <li>Tests make <b>refactoring</b> safe: same tests, new code</li>
-          <li>Tests document intended behaviour as runnable examples</li>
-          <li>Cheapest when the code is small and fresh</li>
+          <li>A <b>test</b> runs code on a case whose answer you know</li>
+          <li>A <b>regression</b> is old behaviour broken by a new change</li>
+          <li>Tests make changing code safe</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Kinds of tests</div>
+        <div class="mm-title">Kinds and pyramid</div>
         <ul>
-          <li><b>Unit</b>: one function/class, no I/O, ms</li>
-          <li><b>Integration</b>: your code + real file/DB/service</li>
+          <li><b>Unit</b>: one function, no I/O</li>
+          <li><b>Integration</b>: your code + real files, DB, services</li>
           <li><b>End-to-end</b>: the whole system as a user sees it</li>
-          <li><b>Regression</b>: pins a fixed bug; <b>smoke</b>: "does it start?"</li>
+          <li>Many unit, fewer integration, few E2E</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Test pyramid</div>
+        <div class="mm-title">Good tests</div>
         <ul>
-          <li>Many unit, fewer integration, fewest E2E</li>
-          <li>Lower = faster, cheaper, more precise failures</li>
-          <li>Anti-pattern: ice-cream cone (mostly E2E/manual)</li>
+          <li>FIRST: Fast, Isolated, Repeatable, Self-checking, Timely</li>
+          <li>Arrange, Act, Assert; one behaviour per test</li>
+          <li>Pass the clock, randomness and I/O in as parameters</li>
+          <li>Boundaries: test both sides of every edge</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Good unit test (FIRST)</div>
+        <div class="mm-title">Data, TDD, coverage</div>
         <ul>
-          <li><b>F</b>ast · <b>I</b>solated · <b>R</b>epeatable</li>
-          <li><b>S</b>elf-checking (assert, no eyeballing) · <b>T</b>imely</li>
-          <li>Arrange · Act · Assert; one behaviour per test</li>
-          <li>Inject time, randomness and I/O so tests control them</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">What to test</div>
-        <ul>
-          <li>Happy path · edge cases · error paths</li>
-          <li><b>Boundary value analysis</b>: both sides of every edge</li>
-          <li><b>Equivalence partitioning</b>: one value per class</li>
-          <li>Expected values worked out by hand, never by the code</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">ML / data code</div>
-        <ul>
-          <li>Validate input batches (schema, nulls, ranges)</li>
-          <li>Transforms: exact properties with float tolerance</li>
-          <li>Fixed seeds; models: planted signal + threshold</li>
-          <li><code>pytest.approx</code>, <code>np.testing.assert_allclose</code></li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">TDD &amp; coverage</div>
-        <ul>
-          <li>Red → green → refactor</li>
-          <li>Coverage = which lines/branches ran, not whether they were checked</li>
-          <li>Branch coverage &gt; line coverage</li>
-          <li>⚠ 100% coverage ≠ correct</li>
+          <li>Data: validate batches, seed randomness, tolerances</li>
+          <li>TDD: red → green → refactor</li>
+          <li>Coverage shows what never ran, not what was checked</li>
         </ul>
       </div>
     </div>
@@ -77,272 +49,337 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="pt-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Why Automated Tests</span><span class="rm-sub">Regressions, refactoring, living documentation</span></div></div>
-      <div class="rm-item rm-done" data-target="pt-kinds"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Kinds of Tests</span><span class="rm-sub">Unit, integration, E2E, regression, smoke</span></div></div>
-      <div class="rm-item rm-done" data-target="pt-pyramid"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">The Test Pyramid</span><span class="rm-sub">How many of each kind</span></div></div>
-      <div class="rm-item rm-done" data-target="pt-first"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Properties of a Good Unit Test</span><span class="rm-sub">FIRST, AAA, controlling time</span></div></div>
-      <div class="rm-item rm-done" data-target="pt-what"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">What to Test</span><span class="rm-sub">Happy path, edges, errors, boundaries</span></div></div>
-      <div class="rm-item rm-done" data-target="pt-ml"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Testing ML and Data Code</span><span class="rm-sub">Validation, seeds, tolerances, models</span></div></div>
-      <div class="rm-item rm-done" data-target="pt-tdd"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Test-Driven Development</span><span class="rm-sub">Red, green, refactor</span></div></div>
-      <div class="rm-item rm-done" data-target="pt-cov"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Code Coverage</span><span class="rm-sub">Line vs branch, what it misses</span></div></div>
-      <div class="rm-item rm-done" data-target="pt-traps"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Tests that protect nothing</span></div></div>
-      <div class="rm-item rm-done" data-target="pt-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">Definitions, rules, gotchas</span></div></div>
-      <div class="rm-item rm-done" data-target="pt-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">Fundamentals to design questions</span></div></div>
+      <div class="rm-item rm-done" data-target="pt-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Why Automated Tests</span><span class="rm-sub">checking by hand, and the bug it misses</span></div></div>
+      <div class="rm-item rm-done" data-target="pt-kinds"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Kinds of Tests</span><span class="rm-sub">unit, integration, end-to-end, regression, smoke</span></div></div>
+      <div class="rm-item rm-done" data-target="pt-pyramid"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">The Test Pyramid</span><span class="rm-sub">how many tests of each kind to keep</span></div></div>
+      <div class="rm-item rm-done" data-target="pt-first"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">What Makes a Good Unit Test</span><span class="rm-sub">FIRST, Arrange-Act-Assert, flaky tests</span></div></div>
+      <div class="rm-item rm-done" data-target="pt-what"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Choosing Test Cases</span><span class="rm-sub">partitions, boundaries, edge cases, errors</span></div></div>
+      <div class="rm-item rm-done" data-target="pt-ml"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Testing Data and ML Code</span><span class="rm-sub">validation, seeds, tolerances, planted signals</span></div></div>
+      <div class="rm-item rm-done" data-target="pt-tdd"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Test-Driven Development</span><span class="rm-sub">writing the test before the code</span></div></div>
+      <div class="rm-item rm-done" data-target="pt-cov"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Code Coverage</span><span class="rm-sub">what it measures and what it cannot</span></div></div>
+      <div class="rm-item rm-done" data-target="pt-traps"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">tests that can never fail</span></div></div>
+      <div class="rm-item rm-done" data-target="pt-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">definitions, tables, gotchas</span></div></div>
+      <div class="rm-item rm-done" data-target="pt-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">fundamentals to design questions</span></div></div>
     </div>
   </div>
 
   <h2 id="pt-why"><span class="num">01</span>Why Automated Tests</h2>
-  <p>Running code once and looking at the output checks only the inputs you happened to try, only once. An automated test writes the check down as code, with the expected answer worked out by hand, so a machine can repeat it after every change in milliseconds.</p>
-  <div class="fx" data-lang="py"># pricing.py
-def discount(subtotal):
-    """Whole-rupee discount: 10% off orders of 150 or more."""
-    return subtotal // 10 if subtotal &gt;= 150 else 0</div>
-  <div class="fx" data-lang="py"># test_pricing.py
-from pricing import discount
+  <p>Chai Corner's till has three billing rules. Add up the price of everything ordered (the <em>subtotal</em>). If the subtotal is ₹150 or more, take 10% off. Then add 5% GST and round to whole rupees. Here is the module that does it; this same file is the code we will be testing for the rest of the page:</p>
+  <div class="fx" data-lang="py"># till.py
+"""Chai Corner till: the billing rules."""
+GST = 0.05
 
-def test_no_discount_below_threshold():
-    assert discount(149) == 0
+def subtotal(lines):
+    """Add up qty * price over the lines of one order."""
+    return sum(qty * price for item, qty, price in lines)
 
-def test_discount_at_threshold():
-    assert discount(150) == 15          # the boundary itself
+def discount(sub):
+    """10% off when the subtotal is 150 or more."""
+    if sub &gt;= 150:
+        return sub * 0.10
+    return 0
 
-def test_discount_above_threshold():
-    assert discount(200) == 20</div>
-  <div class="fx" data-lang="text">$ pytest -q test_pricing.py
-...                                                                      [100%]
-3 passed in 0.01s</div>
-  <p>Now someone "tidies" the condition to <code>subtotal &gt; 150</code>. Typical orders (149, 200) still behave the same, so a manual check would pass. The boundary test does not:</p>
-  <div class="fx" data-lang="text">$ pytest -q test_pricing.py
-.F.                                                                      [100%]
+def with_tax(amount):
+    return amount + amount * GST
+
+def bill(lines):
+    """Final bill in whole rupees. Refuses negative quantities."""
+    for item, qty, price in lines:
+        if qty &lt; 0:
+            raise ValueError(f"qty must be non-negative, got {qty} for {item!r}")
+    sub = subtotal(lines)
+    return round(with_tax(sub - discount(sub)))</div>
+  <p>How do you know this code is right? The natural first step is to run it on a couple of orders and look at the answers:</p>
+  <div class="fx" data-lang="py"># "testing" by hand: run it and look
+from till import bill
+print(bill([("masala chai", 2, 30), ("samosa", 3, 15), ("cold coffee", 1, 90)]))
+print(bill([("masala chai", 1, 30), ("vada pav", 2, 20)]))</div>
+  <div class="fx" data-lang="text">184
+74</div>
+  <p>Asha ordered 2 chai, 3 samosas and a cold coffee: 60 + 45 + 90 = 195, minus 19.50 discount is 175.50, plus 5% GST is 184.275, which rounds to 184. Ben's order is 30 + 40 = 70, no discount, plus GST is 73.50, which rounds to 74. Both answers are right, so it is tempting to call the code "tested". But that check has three weaknesses. It only covered the two orders we happened to try. It lives in our heads, so nobody will repeat it after the next change. And it relied on a person looking at the numbers and knowing what they should be.</p>
+  <p>An <strong>automated test</strong> fixes all three. It is a small piece of code that runs your code on an input whose correct answer you have worked out by hand, and checks the actual answer against it, so a machine can repeat the check after every change in a fraction of a second. In Python the usual tool for running tests is <strong>pytest</strong>: you write ordinary functions whose names start with <code>test_</code>, and inside them you use the plain <code>assert</code> statement, which does nothing when its condition is true and raises an error when it is false. (pytest itself is taught in <a class="xref" data-note="py_pytest">Testing with pytest</a>; here it is just the tool that runs our checks.)</p>
+  <div class="fx" data-lang="py"># test_till.py
+from till import bill
+
+def test_big_order_gets_discount():
+    asha = [("masala chai", 2, 30), ("samosa", 3, 15), ("cold coffee", 1, 90)]
+    assert bill(asha) == 184          # 195 - 19.5 = 175.5, + 5% = 184.275
+
+def test_small_order_pays_full_price():
+    ben = [("masala chai", 1, 30), ("vada pav", 2, 20)]
+    assert bill(ben) == 74            # 70, no discount, + 5% = 73.5
+
+def test_exactly_150_gets_discount():
+    five_chai = [("masala chai", 5, 30)]
+    assert bill(five_chai) == 142     # 150 - 15 = 135, + 5% = 141.75</div>
+  <p>The third test is the interesting one. Five chai cost exactly ₹150, which sits right on the edge of the discount rule. The expected value is worked out by hand in the comment: 150 minus 15 is 135, plus 5% is 141.75, which rounds to 142. Running the tests:</p>
+  <div class="fx" data-lang="text">$ pytest -v test_till.py
+============================= test session starts ==============================
+platform linux -- Python 3.13.18, pytest-9.2.0, pluggy-1.7.0 -- ~/chai/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: ~/chai
+plugins: cov-7.1.0
+collecting ... collected 3 items
+
+test_till.py::test_big_order_gets_discount PASSED                        [ 33%]
+test_till.py::test_small_order_pays_full_price PASSED                    [ 66%]
+test_till.py::test_exactly_150_gets_discount PASSED                      [100%]
+
+============================== 3 passed in 0.02s ===============================</div>
+  <p>pytest found the file, ran the three functions, and each one passed. Now imagine that a few months later someone "tidies" the discount rule and types <code>sub &gt; 150</code> instead of <code>sub &gt;= 150</code>. It is a one-character change and the code still looks perfectly reasonable. Asha and Ben are nowhere near the edge, so if we checked by hand again with their orders, everything would look fine. The tests tell a different story:</p>
+  <div class="fx" data-lang="text">$ pytest -q test_till.py
+..F                                                                      [100%]
 =================================== FAILURES ===================================
-__________________________ test_discount_at_threshold __________________________
+________________________ test_exactly_150_gets_discount ________________________
 
-    def test_discount_at_threshold():
-&gt;       assert discount(150) == 15          # the boundary itself
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^
-E       assert 0 == 15
-E        +  where 0 = discount(150)
+    def test_exactly_150_gets_discount():
+        five_chai = [("masala chai", 5, 30)]
+&gt;       assert bill(five_chai) == 142     # 150 - 15 = 135, + 5% = 141.75
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: assert 158 == 142
+E        +  where 158 = bill([('masala chai', 5, 30)])
 
-test_pricing.py:7: AssertionError
+test_till.py:14: AssertionError
 =========================== short test summary info ============================
-FAILED test_pricing.py::test_discount_at_threshold - assert 0 == 15
-1 failed, 2 passed in 0.02s</div>
-  <p>That is the core value of tests. Concretely they give you:</p>
-  <ul>
-    <li><b>Regression protection.</b> Behaviour that worked stays working; a break shows up seconds after the change, next to the change, instead of weeks later in production.</li>
-    <li><b>Safe refactoring.</b> You can restructure code (rename, split functions, swap a list for a set, vectorise a loop) and know it still does the same thing, because the same tests still pass.</li>
-    <li><b>Executable documentation.</b> <code>test_discount_at_threshold</code> states the rule "150 counts" more precisely than a comment, and it cannot go out of date without failing.</li>
-    <li><b>Better design.</b> Code that is hard to test (hidden globals, I/O mixed into logic, reading the clock internally) is usually hard to change too; writing tests pushes you toward small pure functions.</li>
-    <li><b>Confidence to deploy.</b> CI runs the suite on every push, so "does main still work?" has an automatic answer.</li>
-  </ul>
-  <div class="callout def"><span class="label">Definition</span><p>A <strong>test</strong> runs code on an input with a known correct output and checks the actual output against it. A <strong>regression</strong> is a bug in behaviour that previously worked. A <strong>test suite</strong> is the collection of tests for a project, normally run together by a <strong>test runner</strong> (pytest, unittest).</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>"I ran it and it looked fine" is not a test: it only covered the cases you tried, it is not repeated, and bugs cluster at the edges (exactly 150, zero, empty, negative) that manual checks rarely include.</p></div>
+FAILED test_till.py::test_exactly_150_gets_discount - AssertionError: assert ...
+1 failed, 2 passed in 0.01s</div>
+  <p>The dots stand for passing tests and the <code>F</code> for a failure. The two typical orders still pass, but the boundary test fails, and the summary says why: the till now charges 158 for five chai instead of 142, because a ₹150 order no longer gets its discount. The mistake was caught within a second of being made, next to the change that caused it. A bug like this, where something that used to work stops working after a change, is called a <strong>regression</strong>, and catching regressions is the first and biggest reason tests exist.</p>
+  <p>Think of the safety checks a pilot runs before every flight. The plane flew fine yesterday, but the checklist is run anyway, every time, because the cost of the check is tiny and the cost of a missed fault is huge. A test suite is that checklist for code. It also gives you three other things. It makes <em>refactoring</em> safe: you can restructure code, split functions or speed up a loop, and if the same tests still pass, the behaviour has not changed. It is <em>documentation that cannot go out of date</em>: <code>test_exactly_150_gets_discount</code> states the rule "₹150 counts" more precisely than any comment, and if the rule changes, the test fails instead of silently lying. And it pushes you towards better design, because code that is hard to test (it reads the clock inside, mixes file handling with arithmetic, depends on global variables) is usually hard to change too.</p>
+  <p>A few words that will appear everywhere: the collection of all a project's tests is its <strong>test suite</strong>; the program that finds and runs them (pytest, or Python's built-in unittest) is the <strong>test runner</strong>; and the code a test is checking is called the <strong>system under test</strong>.</p>
 
-  <h2 id="pt-kinds"><span class="num">02</span>Kinds of Tests: Unit, Integration, End-to-End, Regression, Smoke</h2>
-  <p>Tests are classified by how much of the system they exercise. The bigger the scope, the more realistic the test, and the slower, flakier and less precise its failures become.</p>
-  <table class="tbl">
-    <tr><th>Kind</th><th>Exercises</th><th>Typical speed</th><th>Catches</th><th>Example</th></tr>
-    <tr><td><b>Unit</b></td><td>One function or class, in isolation, no real I/O</td><td>µs–ms</td><td>Logic bugs: wrong formula, wrong branch</td><td><code>normalise_email(" A@B.com ") == "a@b.com"</code></td></tr>
-    <tr><td><b>Integration</b></td><td>Your code together with a real collaborator: file system, database, another module, a queue</td><td>10 ms – seconds</td><td>Wiring bugs: formats, types, SQL, paths, serialisation</td><td>Save users to JSON, load them back</td></tr>
-    <tr><td><b>End-to-end (E2E)</b></td><td>The whole deployed system through its real interface (HTTP API, UI, CLI)</td><td>seconds – minutes</td><td>"Does the feature work for a user?"</td><td>POST an order, check the receipt and the DB row</td></tr>
-    <tr><td><b>Regression</b></td><td>Any level; pins a specific bug that was fixed</td><td>(any)</td><td>The same bug coming back</td><td><code>test_empty_cart_total_is_zero_issue_142</code></td></tr>
-    <tr><td><b>Smoke</b></td><td>A few broad, shallow checks that the build starts at all</td><td>seconds</td><td>Broken deploys, missing config, import errors</td><td>App starts; <code>/health</code> returns 200; model file loads</td></tr>
-  </table>
-  <p>The difference between unit and integration is easiest to see side by side. The module mixes pure logic with file I/O:</p>
-  <div class="fx" data-lang="py"># users.py
-import json
+  <h2 id="pt-kinds"><span class="num">02</span>Kinds of Tests</h2>
+  <p>The tests above call one function, <code>bill</code>, with a list of tuples and check the number that comes back. Nothing else is involved: no files, no database, no network. But the till does more than calculate. At closing time it saves the day's bills to a CSV file, and tomorrow's accounting job reads that file back. A bug there, such as writing the amounts as text, would not be caught by any of our <code>bill</code> tests, because they never touch a file. Different bugs live at different levels of a program, so tests are grouped by how much of the system they exercise.</p>
+  <p>A <strong>unit test</strong> checks one small piece of code, usually one function or class, on its own, without real files, databases or network. It runs in microseconds, and when it fails it points straight at the function that is wrong. An <strong>integration test</strong> checks that pieces work together, or that your code works with a real piece of infrastructure: does what we write to a file come back the same when we read it? An <strong>end-to-end test</strong> (E2E) drives the whole finished system the way a user would, for example by placing an order through the real web page and checking the receipt and the saved record. Building a bicycle is a good picture of the three: you bench-test each part (does the brake lever squeeze, does the chain hold), then check parts fitted together (does the brake actually stop the wheel), and finally take the finished bike for one ride around the block.</p>
+  <p>Here is the module that saves and loads the day's bills, followed by one test of each of the first two kinds:</p>
+  <div class="fx" data-lang="py"># store.py
+import csv
 
-def normalise_email(email):
-    """Pure logic: no files, no network."""
-    return email.strip().lower()
+def save_day(bills, path):
+    """Write {customer: amount} to a CSV file."""
+    with open(path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["customer", "amount"])
+        writer.writerows(bills.items())
 
-def save_user(path, name, email):
-    """Touches the file system: read, append, write back."""
-    users = json.loads(path.read_text()) if path.exists() else []
-    users.append({"name": name, "email": normalise_email(email)})
-    path.write_text(json.dumps(users))
+def load_day(path):
+    """Read the CSV back into {customer: amount}."""
+    with open(path, newline="") as f:
+        return {row["customer"]: row["amount"] for row in csv.DictReader(f)}</div>
+  <div class="fx" data-lang="py"># test_store.py
+from till import bill
+from store import save_day, load_day
 
-def load_users(path):
-    return json.loads(path.read_text())</div>
-  <div class="fx" data-lang="py"># test_users.py
-from users import normalise_email, save_user, load_users
+ORDERS = {
+    "Asha": [("masala chai", 2, 30), ("samosa", 3, 15), ("cold coffee", 1, 90)],
+    "Ben":  [("masala chai", 1, 30), ("vada pav", 2, 20)],
+}
 
-# UNIT test: one function, pure input -&gt; output, microseconds
-def test_normalise_email():
-    assert normalise_email("  Asha@Example.COM ") == "asha@example.com"
+# UNIT test: one function, no files, runs in microseconds
+def test_bill_for_ben():
+    assert bill(ORDERS["Ben"]) == 74
 
-# INTEGRATION test: our code + a real file system (tmp_path = fresh temp folder)
-def test_save_then_load_round_trip(tmp_path):
-    db = tmp_path / "users.json"
-    save_user(db, "Asha", " Asha@Example.com")
-    save_user(db, "Ben", "ben@example.com")
-    assert load_users(db) == [
-        {"name": "Asha", "email": "asha@example.com"},
-        {"name": "Ben", "email": "ben@example.com"},
-    ]</div>
-  <div class="fx" data-lang="text">$ pytest -v test_users.py
-...
+# INTEGRATION test: our code + the real file system
+def test_day_survives_csv_round_trip(tmp_path):     # tmp_path: a fresh empty folder
+    bills = {name: bill(lines) for name, lines in ORDERS.items()}
+    path = tmp_path / "day.csv"
+    save_day(bills, path)
+    assert load_day(path) == bills                  # {'Asha': 184, 'Ben': 74}</div>
+  <p>The first test is a unit test: it calls <code>bill</code> alone. The second is an integration test: it really writes a file and really reads it back. <code>tmp_path</code> is a helper pytest provides, a brand-new empty folder for this one test, so the test never collides with other tests or leaves files lying around in the project.</p>
+  <div class="fx" data-lang="text">$ pytest -v test_store.py
+============================= test session starts ==============================
+platform linux -- Python 3.13.18, pytest-9.2.0, pluggy-1.7.0 -- ~/chai/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: ~/chai
+plugins: cov-7.1.0
 collecting ... collected 2 items
 
-test_users.py::test_normalise_email PASSED                               [ 50%]
-test_users.py::test_save_then_load_round_trip PASSED                     [100%]
+test_store.py::test_bill_for_ben PASSED                                  [ 50%]
+test_store.py::test_day_survives_csv_round_trip FAILED                   [100%]
 
-============================== 2 passed in 0.02s ===============================</div>
-  <p>The unit test pins the normalisation rule and would point straight at <code>normalise_email</code> if it broke. The integration test proves the pieces fit: JSON is written and read back, appending keeps earlier users, and normalisation is applied on the way in. It would catch a bug the unit test cannot, such as overwriting the file instead of appending. An E2E test would go further, through the real API that calls <code>save_user</code>.</p>
-  <p>A <strong>regression test</strong> is how a bug fix ends: reproduce the reported bug as a failing test, fix the code, keep the test forever (the workflow is traced in <a class="xref" data-note="py_debugging">Debugging, Profiling &amp; Logging</a>). A <strong>smoke test</strong> is a quick go/no-go check, usually run right after a deploy, before the slower suites.</p>
-  <div class="callout def"><span class="label">Definition</span><p><strong>System under test (SUT)</strong>: the code a test is checking. <strong>Unit test</strong>: tests one unit in isolation from slow or external dependencies (replaced by test doubles if needed, see <a class="xref" data-note="py_mocking">Mocks</a>). <strong>Integration test</strong>: tests the interaction between units, or between your code and real infrastructure. <strong>E2E test</strong>: tests a complete user flow through the deployed system.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Integration tests that use shared real resources (the team database, a production API, a real payment gateway) are slow, flaky and can damage data. Use throwaway resources: <code>tmp_path</code>, an in-memory SQLite database, a Docker container started for the test run, or a provider's sandbox account.</p></div>
+=================================== FAILURES ===================================
+_______________________ test_day_survives_csv_round_trip _______________________
+
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-8/test_day_survives_csv_round_tr0')
+
+    def test_day_survives_csv_round_trip(tmp_path):     # tmp_path: a fresh empty folder
+        bills = {name: bill(lines) for name, lines in ORDERS.items()}
+        path = tmp_path / "day.csv"
+        save_day(bills, path)
+&gt;       assert load_day(path) == bills                  # {'Asha': 184, 'Ben': 74}
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: assert {'Asha': '184', 'Ben': '74'} == {'Asha': 184, 'Ben': 74}
+E
+E         Differing items:
+E         {'Asha': '184'} != {'Asha': 184}
+E         {'Ben': '74'} != {'Ben': 74}
+E
+E         Full diff: (-: missing in left side, +: extra in left side)
+E           {...
+E
+E         ...Full output truncated, use '-vv' to show
+
+test_store.py:19: AssertionError
+=========================== short test summary info ============================
+FAILED test_store.py::test_day_survives_csv_round_trip - AssertionError: asse...
+========================= 1 failed, 1 passed in 0.03s ==========================</div>
+  <p>Both pass. To see why the integration test earns its place, suppose someone deletes the <code>int(...)</code> in <code>load_day</code>, so the amounts come back as the text the CSV file contains:</p>
+  <div class="fx" data-lang="text">$ pytest -q --tb=short test_store.py
+.F                                                                       [100%]
+=================================== FAILURES ===================================
+_______________________ test_day_survives_csv_round_trip _______________________
+test_store.py:19: in test_day_survives_csv_round_trip
+    assert load_day(path) == bills                  # {'Asha': 184, 'Ben': 74}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError: assert {'Asha': '184', 'Ben': '74'} == {'Asha': 184, 'Ben': 74}
+E
+E     Differing items:
+E     {'Ben': '74'} != {'Ben': 74}
+E     {'Asha': '184'} != {'Asha': 184}
+E     Use -v to get more diff
+=========================== short test summary info ============================
+FAILED test_store.py::test_day_survives_csv_round_trip - AssertionError: asse...
+1 failed, 1 passed in 0.02s</div>
+  <p>The unit test still passes, because <code>bill</code> is fine. The integration test fails, and the message shows exactly what went wrong: <code>'184'</code> in quotes, a string, where the number 184 was expected. That is the kind of bug integration tests exist for: the wiring between pieces, such as file formats, data types, database queries and serialisation, rather than the logic inside one function.</p>
+  <p>Two more names describe a test's purpose rather than its size. A <strong>regression test</strong> pins down a specific bug that was fixed, so that it cannot come back unnoticed: when a bug is reported, you first write a test that reproduces it, then fix the code, and keep the test forever (the whole workflow is traced in <a class="xref" data-note="py_debugging">Debugging, Profiling &amp; Logging</a>). The boundary test from the first section is exactly that kind of guard. A <strong>smoke test</strong> is a quick, shallow "does it even start?" check run straight after a deployment, before the slower suites: the app starts, its health page answers, the model file loads. The name comes from electronics, where the first test of a new circuit board was to switch it on and see whether smoke came out.</p>
+  <table class="tbl">
+    <tr><th>Kind</th><th>Exercises</th><th>Typical speed</th><th>Catches</th></tr>
+    <tr><td>Unit</td><td>One function or class, no real I/O</td><td>microseconds to ms</td><td>Logic bugs: wrong formula, wrong branch</td></tr>
+    <tr><td>Integration</td><td>Your code plus a real file, database or other module</td><td>ms to seconds</td><td>Wiring bugs: formats, types, queries</td></tr>
+    <tr><td>End-to-end</td><td>The whole deployed system through its real interface</td><td>seconds to minutes</td><td>"Does the feature work for a user?"</td></tr>
+    <tr><td>Regression</td><td>Any level; pins a fixed bug</td><td>any</td><td>The same bug returning</td></tr>
+    <tr><td>Smoke</td><td>A few broad, shallow checks after a deploy</td><td>seconds</td><td>Broken builds, missing configuration</td></tr>
+  </table>
+  <p>One warning about integration tests: point them at throwaway resources, never shared real ones. A test that writes to the team's database or charges a real payment gateway is slow, fails whenever the network does, and can damage real data. Use <code>tmp_path</code>, an in-memory SQLite database, a container started just for the test run, or a provider's sandbox account. When a unit test needs to talk to something external, the external part is replaced by a stand-in called a test double, which is the subject of <a class="xref" data-note="py_mocking">Mocks &amp; Test Doubles</a>.</p>
 
   <h2 id="pt-pyramid"><span class="num">03</span>The Test Pyramid</h2>
-  <p>The pyramid is a rule of thumb for how many tests of each kind to keep: lots of fast unit tests at the base, fewer integration tests, and only a handful of E2E tests at the top. The reason is cost per test and precision of failure.</p>
-  <figure class="viz"><svg viewBox="0 0 560 170" width="560">
-    <polygon points="230,15 290,60 170,60" class="fr"/><text x="207" y="52">E2E</text>
-    <polygon points="170,64 290,64 350,108 110,108" class="fv"/><text x="190" y="92">Integration</text>
-    <polygon points="110,112 350,112 410,156 50,156" class="fg"/><text x="210" y="140">Unit</text>
-    <text x="300" y="40" class="tm">few · slow · realistic</text>
-    <text x="360" y="92" class="tm">real files, DB, services</text>
-    <text x="418" y="140" class="tm">many · ms each</text>
-  </svg><figcaption>Width = how many tests of that kind you keep. Moving up: more realistic, slower, flakier, and a failure says less about where the bug is.</figcaption></figure>
+  <p>If end-to-end tests are the most realistic, why not write only those? Because realism has a price. An E2E test of the till would start a web server, open a browser, click through an order and read the receipt: several seconds per test, with plenty of chances to fail for reasons unrelated to our code (a slow page load, a port already in use). Worse, when it fails, it only says "something in the ordering flow is broken"; someone still has to dig to find out whether the bug is in <code>bill</code>, in the CSV code or in the web page. A unit test of <code>bill</code> takes a millisecond, never fails by accident, and when it fails it names the exact function and input.</p>
+  <p>The <strong>test pyramid</strong> is the rule of thumb that follows from this: keep many fast unit tests at the base, fewer integration tests in the middle, and only a handful of end-to-end tests at the top. The shape is about cost. Each bug should be caught at the cheapest level that is able to catch it: a rule inside one function belongs in a unit test; "the file tonight's job writes can be read by tomorrow's job" needs an integration test; "a customer can actually place an order" needs one or two E2E tests.</p>
   <table class="tbl">
     <tr><th></th><th>Unit</th><th>Integration</th><th>End-to-end</th></tr>
-    <tr><td>Share of suite (typical)</td><td>~70–80%</td><td>~15–25%</td><td>~5%</td></tr>
-    <tr><td>Speed</td><td>ms</td><td>10 ms – s</td><td>s – min</td></tr>
-    <tr><td>Flakiness</td><td>None if written well</td><td>Some (timing, ports, containers)</td><td>Highest (network, UI timing, data)</td></tr>
-    <tr><td>When it fails, you know…</td><td>The exact function and input</td><td>Which boundary broke</td><td>"Something in the flow"</td></tr>
-    <tr><td>Run</td><td>On every save / commit</td><td>On every push (CI)</td><td>Before release / nightly</td></tr>
+    <tr><td>Rough share of a suite</td><td>most (often 70–80%)</td><td>some (15–25%)</td><td>few (around 5%)</td></tr>
+    <tr><td>Speed</td><td>milliseconds</td><td>ms to seconds</td><td>seconds to minutes</td></tr>
+    <tr><td>Fails by accident</td><td>almost never</td><td>sometimes (timing, ports)</td><td>most often (network, UI timing)</td></tr>
+    <tr><td>When it fails you know</td><td>the exact function and input</td><td>which connection broke</td><td>"something in the flow"</td></tr>
+    <tr><td>Usually run</td><td>on every save</td><td>on every push</td><td>before a release, or nightly</td></tr>
   </table>
-  <p>The inverted shape, the <strong>ice-cream cone</strong> (mostly manual or E2E tests, few unit tests), gives a suite that takes an hour, fails randomly, and when red needs a person to work out what broke. People stop running it. The opposite failure is only unit tests with heavy mocking, where every unit passes but they do not fit together; the integration layer exists for that.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Building a bicycle: thousands of bench checks on individual parts (the brake squeezes, the chain links hold), a few checks of parts fitted together (brake on the wheel), and one ride around the block before it ships.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Treating the percentages as targets. The pyramid is about cost: push each check down to the cheapest level that can catch the bug. A rule in one function belongs in a unit test; "the CSV the job writes can be read by the next job" needs an integration test.</p></div>
+  <p>The opposite shape has a name too: the <strong>ice-cream cone</strong>, a suite made mostly of manual checks and E2E tests with very few unit tests. It takes an hour to run, fails randomly, and when it is red a person has to investigate what broke. People stop running it, and then it protects nothing. The percentages in the table are not targets to hit; they are what tends to happen when you push every check down to the cheapest level that can catch the bug.</p>
 
-  <h2 id="pt-first"><span class="num">04</span>Properties of a Good Unit Test (FIRST)</h2>
-  <p>A test is only useful if people run it constantly and believe it when it fails. The FIRST mnemonic lists what that requires.</p>
-  <table class="tbl">
-    <tr><th>Letter</th><th>Property</th><th>Means</th><th>Breaks it</th></tr>
-    <tr><td><b>F</b></td><td>Fast</td><td>Milliseconds, so the whole suite runs on every change</td><td>Network calls, <code>sleep</code>, training a real model</td></tr>
-    <tr><td><b>I</b></td><td>Isolated / independent</td><td>No dependence on other tests or their order; fresh state each time</td><td>Shared mutable globals, a test that needs another to run first</td></tr>
-    <tr><td><b>R</b></td><td>Repeatable</td><td>Same result every run, on any machine, at any time</td><td><code>datetime.now()</code>, unseeded randomness, real APIs, local file paths</td></tr>
-    <tr><td><b>S</b></td><td>Self-checking (self-validating)</td><td>Passes or fails by itself via <code>assert</code>; nobody reads output</td><td>Tests that only <code>print</code>, or call code without asserting</td></tr>
-    <tr><td><b>T</b></td><td>Timely</td><td>Written with (or before) the code, not months later</td><td>"We'll add tests after the release"</td></tr>
-  </table>
-  <p>Repeatability is the property most often broken by accident. The usual fix is to make the uncontrollable input a parameter, so the test can pass a fixed value:</p>
-  <div class="fx" data-lang="py"># greet.py
+  <h2 id="pt-first"><span class="num">04</span>What Makes a Good Unit Test</h2>
+  <p>A test is only useful if two things are true: people run it all the time, and they believe it when it fails. A test that takes a minute will not be run after every change. A test that fails now and then for no reason teaches everyone to ignore red. Experienced testers summarise what a trustworthy unit test needs with the letters <strong>FIRST</strong>. It is <strong>Fast</strong>, taking milliseconds, so the whole suite can run constantly. It is <strong>Isolated</strong>: it does not depend on other tests or on the order they run in, and it starts from fresh state every time. It is <strong>Repeatable</strong>: same result on every run, on any machine, at any time of day. It is <strong>Self-checking</strong>: it decides pass or fail by itself with an <code>assert</code>, so nobody has to read printed output. And it is <strong>Timely</strong>: written together with the code (or just before it), not months later when nobody remembers the rules.</p>
+  <p>Repeatability is the property most often broken by accident, so it is worth seeing fail. Chai Corner runs a happy hour: chai is half price from 15:00 to 16:59. The function that decides whether it is happy hour needs to know the time. If it simply read the clock inside, any test of it would depend on when the test was run. So it takes the time as a parameter, and only reads the clock when nobody passed one in:</p>
+  <div class="fx" data-lang="py"># happy.py
 from datetime import datetime
 
-def greeting(now=None):
-    """'now' is a parameter, so a test can pass a fixed time."""
+def is_happy_hour(now=None):
+    """Chai is half price from 15:00 to 16:59. 'now' can be passed in."""
     now = now or datetime.now()
-    return "Good morning" if now.hour &lt; 12 else "Good afternoon"</div>
-  <div class="fx" data-lang="py"># test_greet.py
+    return 15 &lt;= now.hour &lt; 17</div>
+  <p>The first test below ignores that parameter and lets the function read the real clock. The other four pass in fixed times on both sides of each edge of the happy-hour window:</p>
+  <div class="fx" data-lang="py"># test_happy.py
 from datetime import datetime
-from greet import greeting
+from happy import is_happy_hour
 
-# NOT repeatable: passes before noon, fails after
-def test_greeting_bad():
-    assert greeting() == "Good morning"
+def test_happy_hour_uses_real_clock():          # NOT repeatable
+    assert is_happy_hour() is False             # true only outside 15:00-16:59
 
-# Repeatable and self-checking: fixed inputs, exact expected values
-def test_greeting_morning():
-    assert greeting(datetime(2026, 1, 1, 11, 59)) == "Good morning"
+def test_just_before():                          # repeatable: the time is fixed
+    assert is_happy_hour(datetime(2026, 1, 1, 14, 59)) is False
 
-def test_greeting_afternoon():
-    assert greeting(datetime(2026, 1, 1, 12, 0)) == "Good afternoon"</div>
-  <div class="fx" data-lang="text">$ date; pytest -q test_greet.py
-Tue Nov  3 05:03:40 UTC 2026
-...                                                                      [100%]
-3 passed in 0.01s</div>
-  <p>All three passed because the run happened at 05:03. The same suite run after noon fails <code>test_greeting_bad</code> with no code change: a <strong>flaky</strong> test. The two good tests also pin the boundary (11:59 vs 12:00) and pass at any hour. The same pattern applies to randomness (pass a seed or an <code>rng</code>), I/O (pass a path or a client object) and external services (pass a gateway; this is dependency injection, covered with test doubles in <a class="xref" data-note="py_mocking">Mocks</a>).</p>
-  <h3>Arrange–Act–Assert</h3>
-  <p>Lay each test out in three parts: <b>Arrange</b> the inputs, <b>Act</b> by calling the code once, <b>Assert</b> on the result. One test checks one behaviour, and its name says which (<code>test_discount_at_threshold</code>, not <code>test_discount_2</code>). Several asserts on the same result are fine; checking three unrelated rules in one test means the first failure hides the other two.</p>
-  <div class="callout def"><span class="label">Definition</span><p>A <strong>flaky test</strong> passes and fails on the same code depending on time, order, timing or environment. A <strong>deterministic</strong> test always gives the same result for the same code.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Re-running flaky tests until they go green. A test that is red one run in ten teaches the team to ignore red. Find the hidden input (clock, randomness, order, network, shared state) and control it.</p></div>
+def test_starts_at_15():
+    assert is_happy_hour(datetime(2026, 1, 1, 15, 0)) is True
 
-  <h2 id="pt-what"><span class="num">05</span>What to Test: Happy Path, Edge Cases, Error Paths, Boundaries</h2>
-  <p>You cannot test every input, so choose inputs that are most likely to reveal bugs. Two classic techniques do this systematically. <strong>Equivalence partitioning</strong> splits the input space into classes the code should treat the same way and takes one value from each. <strong>Boundary value analysis</strong> then tests each edge between classes from both sides, because off-by-one errors (<code>&gt;</code> vs <code>&gt;=</code>, <code>&lt;</code> vs <code>&lt;=</code>, <code>range(n)</code> vs <code>range(n + 1)</code>) live there.</p>
-  <table class="tbl">
-    <tr><th>Category</th><th>What it covers</th><th>Typical cases</th></tr>
-    <tr><td><b>Happy path</b></td><td>Normal, valid use</td><td>One representative per equivalence class</td></tr>
-    <tr><td><b>Boundaries</b></td><td>Where behaviour changes</td><td>min, min+1, max−1, max; each threshold and its neighbours</td></tr>
-    <tr><td><b>Edge cases</b></td><td>Unusual but valid input</td><td>Empty list/string/DataFrame, single element, zero, duplicates, unicode, very large values, NaN</td></tr>
-    <tr><td><b>Error paths</b></td><td>Invalid input and failures</td><td>Wrong type, out of range, missing key/file, dependency raising; assert the <em>specific</em> exception</td></tr>
-  </table>
-  <p>Applied to a grading function with classes A (90–100), B (75–89), C (50–74), F (0–49):</p>
-  <div class="fx" data-lang="py"># grades.py
-def grade(score):
-    """A: 90-100, B: 75-89, C: 50-74, F: 0-49."""
-    if not isinstance(score, (int, float)):
-        raise TypeError(f"score must be a number, got {type(score).__name__}")
-    if not 0 &lt;= score &lt;= 100:
-        raise ValueError(f"score must be in 0..100, got {score}")
-    if score &gt;= 90:
-        return "A"
-    if score &gt;= 75:
-        return "B"
-    if score &gt;= 50:
-        return "C"
-    return "F"</div>
-  <div class="fx" data-lang="py"># test_grades.py
-import pytest
-from grades import grade
+def test_last_minute():
+    assert is_happy_hour(datetime(2026, 1, 1, 16, 59)) is True
 
-# happy path: one typical value per class (equivalence partitions)
-@pytest.mark.parametrize("score, expected", [(95, "A"), (80, "B"), (60, "C"), (20, "F")])
-def test_typical(score, expected):
-    assert grade(score) == expected
-
-# boundaries: both sides of every edge, plus the ends of the range
-@pytest.mark.parametrize("score, expected", [
-    (0, "F"), (49, "F"), (50, "C"), (74, "C"),
-    (75, "B"), (89, "B"), (90, "A"), (100, "A"),
-])
-def test_boundaries(score, expected):
-    assert grade(score) == expected
-
-# error paths: invalid input must be refused, with the right exception
-@pytest.mark.parametrize("bad", [-1, 101])
-def test_out_of_range(bad):
-    with pytest.raises(ValueError, match="0..100"):
-        grade(bad)
-
-def test_wrong_type():
-    with pytest.raises(TypeError):
-        grade("90")</div>
-  <div class="fx" data-lang="text">$ pytest -q test_grades.py
-...............                                                          [100%]
-15 passed in 0.02s</div>
-  <p>Introduce an off-by-one (<code>score &gt; 75</code>) and only one test notices, a boundary test; every happy-path test still passes because 80 is nowhere near the edge:</p>
-  <div class="fx" data-lang="text">$ pytest -q --tb=no -rf test_grades.py
-........F......                                                          [100%]
+def test_ends_at_17():
+    assert is_happy_hour(datetime(2026, 1, 1, 17, 0)) is False</div>
+  <p>Here is the same file run twice: once normally, and once with the computer's clock moved into the afternoon. <code>TZ=UTC-…</code> tells that one command to use a time zone several hours ahead, so its local clock reads mid-afternoon; nothing in the code changed.</p>
+  <div class="fx" data-lang="text">$ date +%H:%M
+06:02
+$ pytest -q --tb=line test_happy.py
+.....                                                                    [100%]
+5 passed in 0.01s
+$ TZ=UTC-9 date +%H:%M
+15:02
+$ TZ=UTC-9 pytest -q --tb=line test_happy.py
+F....                                                                    [100%]
+=================================== FAILURES ===================================
+E   assert True is False
+     +  where True = is_happy_hour()
+~/chai/test_happy.py:6: assert True is False
 =========================== short test summary info ============================
-FAILED test_grades.py::test_boundaries[75-B] - AssertionError: assert 'C' == 'B'
-1 failed, 14 passed in 0.01s</div>
-  <p>(<code>parametrize</code> turns each row into its own test; see <a class="xref" data-note="py_pytest">Testing with pytest</a>.) Two more rules for choosing what to test: test <b>behaviour through the public interface</b>, not private helpers or the order of internal calls, so refactors don't break tests; and work out <b>expected values by hand</b> from the specification, never by calling the code under test (<code>assert grade(x) == grade(x)</code> can never fail).</p>
-  <div class="callout trap"><span class="label">Trap</span><p>Broad error assertions. <code>pytest.raises(Exception)</code> also passes on a <code>TypeError</code> caused by a typo in the test. Assert the exact exception type, and use <code>match=</code> to check the message.</p></div>
+FAILED test_happy.py::test_happy_hour_uses_real_clock - assert True is False
+1 failed, 4 passed in 0.01s</div>
+  <p>The first run happened in the early morning, so the real-clock test passed along with the others. In the second run, the clock said it was happy hour, and the very same test failed, with no change to any code. A test that passes or fails on the same code depending on the time, the order tests run in, the network, or anything else outside the code is called a <strong>flaky test</strong>, and it is poison for a team: once tests fail randomly, real failures get dismissed as "probably that flaky one again". The four other tests passed in both runs because they never look at the clock. They are <strong>deterministic</strong>: same code, same result, always.</p>
+  <p>The cure is always the same idea. Find the input the test cannot control, the clock, randomness, a file path, a network service, and make it something the caller passes in. In production the real thing is passed (or used by default); in a test a fixed value is passed. For randomness that means passing a seed or a random generator; for files, passing a path; for external services, passing an object that the test can replace with a stand-in. This is called <strong>dependency injection</strong>, and it is developed fully in <a class="xref" data-note="py_mocking">Mocks &amp; Test Doubles</a>.</p>
+  <p>The layout inside a good test has a name too: <strong>Arrange, Act, Assert</strong>. First arrange the inputs (build the order), then act by calling the code once (<code>bill(five_chai)</code>), then assert on the result. Each test checks one behaviour, and its name says which one: <code>test_exactly_150_gets_discount</code> tells you what broke the moment it fails, while <code>test_bill_2</code> tells you nothing. Several asserts about the <em>same</em> result are fine; checking three unrelated rules in one test is not, because the first failing assert stops the test and hides whether the other two rules still work.</p>
 
-  <h2 id="pt-ml"><span class="num">06</span>Testing ML and Data Code</h2>
-  <p>Data and ML code fails in quieter ways than application code: a pipeline that silently drops rows, a scaler that turns a constant column into NaN, a split that leaks test rows into training, or a model that trains fine on shuffled labels. Nothing crashes; the metric is just wrong. Four habits make this code testable.</p>
-  <ol>
-    <li><b>Validate data at the boundary.</b> Check every incoming batch for schema (required columns, dtypes), nulls, value ranges and label sets, and fail or alert before training or scoring. Libraries such as pandera, Great Expectations or pydantic do this declaratively; a plain function works too.</li>
-    <li><b>Test transforms as pure functions with exact properties.</b> Feature engineering, cleaning and scaling are deterministic: test output shape, invariants (mean 0, std 1, no NaN, row count unchanged, input not mutated) and the edge cases (empty, constant, single row, all-NaN column).</li>
-    <li><b>Control randomness.</b> Pass a seed (or an <code>rng</code>) into anything random: splits, sampling, initialisation. With a fixed seed a test sees the same data every run.</li>
-    <li><b>Test models by behaviour, with tolerances.</b> Do not assert an exact score. Plant a known signal in synthetic data and assert the model recovers it within a tolerance or beats a threshold; check output contracts (probabilities in [0, 1] summing to 1, output shape); and for neural nets, check the model can overfit a tiny batch (loss drops to near zero), which catches wiring bugs cheaply.</li>
-  </ol>
-  <div class="fx" data-lang="py"># features.py
+  <h2 id="pt-what"><span class="num">05</span>Choosing Test Cases</h2>
+  <p>You can never test every possible order. The till accepts any list of items and quantities, which means an endless number of inputs. So testing is really the skill of picking the few inputs most likely to expose a bug. Testing only "normal" orders is the classic mistake: we saw in the first section that the <code>&gt;</code> bug left Asha and Ben untouched and only showed up at exactly ₹150.</p>
+  <p>Two standard techniques make the choice systematic. <strong>Equivalence partitioning</strong> means splitting all possible inputs into groups that the code should treat the same way, then testing one representative from each group, because if the code handles one member of a group correctly it almost certainly handles the rest. For the till the groups are: orders below ₹150 (no discount), orders of ₹150 or more (discount), the empty order, and invalid orders such as a negative quantity. <strong>Boundary value analysis</strong> then adds tests right at the edges between groups, on both sides, because that is where off-by-one mistakes live: <code>&gt;</code> instead of <code>&gt;=</code>, <code>&lt;</code> instead of <code>&lt;=</code>, <code>range(n)</code> instead of <code>range(n + 1)</code>. Every price on the menu is a multiple of 5, so the closest possible orders to the edge are ₹145 and ₹150.</p>
+  <p>A useful picture is a lift with a sign saying "maximum 8 people". A sensible inspector does not test it with 3 people and call it done. They test with 8 (should work), with 9 (should refuse), and with nobody at all, because those are the cases where a badly built lift would get it wrong.</p>
+  <p>Edge cases are inputs that are unusual but valid: the empty order, a single item, a quantity of zero, a very large order. Error paths are invalid inputs that the code should refuse: here, a negative quantity must raise a <code>ValueError</code>. Below, each group and each edge gets one test. <code>parametrize</code> is a pytest feature that runs the same test once per row of a table, reporting each row as its own test; it is explained in <a class="xref" data-note="py_pytest">Testing with pytest</a>. The ₹145 row works out as 90 + 40 + 15 = 145, no discount, plus 5% = 152.25, which rounds to 152.</p>
+  <div class="fx" data-lang="py"># test_bill_cases.py
+import pytest
+from till import bill
+
+@pytest.mark.parametrize("lines, expected", [
+    ([("masala chai", 1, 30), ("vada pav", 2, 20)], 74),          # below 150: typical
+    ([("masala chai", 2, 30), ("samosa", 3, 15), ("cold coffee", 1, 90)], 184),  # above
+    ([("cold coffee", 1, 90), ("vada pav", 2, 20), ("samosa", 1, 15)], 152),     # 145: edge
+    ([("masala chai", 5, 30)], 142),                               # exactly 150: edge
+    ([], 0),                                                       # empty order
+], ids=["below", "above", "at-145", "at-150", "empty"])
+def test_bill(lines, expected):
+    assert bill(lines) == expected
+
+def test_negative_qty_is_refused():
+    with pytest.raises(ValueError, match="non-negative"):
+        bill([("samosa", -2, 15)])</div>
+  <div class="fx" data-lang="text">$ pytest -v test_bill_cases.py
+============================= test session starts ==============================
+platform linux -- Python 3.13.18, pytest-9.2.0, pluggy-1.7.0 -- ~/chai/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: ~/chai
+plugins: cov-7.1.0
+collecting ... collected 6 items
+
+test_bill_cases.py::test_bill[below] PASSED                              [ 16%]
+test_bill_cases.py::test_bill[above] PASSED                              [ 33%]
+test_bill_cases.py::test_bill[at-145] PASSED                             [ 50%]
+test_bill_cases.py::test_bill[at-150] PASSED                             [ 66%]
+test_bill_cases.py::test_bill[empty] PASSED                              [ 83%]
+test_bill_cases.py::test_negative_qty_is_refused PASSED                  [100%]
+
+============================== 6 passed in 0.02s ===============================</div>
+  <p>All six cases pass with the correct code. Now put the <code>&gt;</code> bug back in and run the same file again:</p>
+  <div class="fx" data-lang="text">$ pytest -q --tb=no -rf test_bill_cases.py
+...F..                                                                   [100%]
+=========================== short test summary info ============================
+FAILED test_bill_cases.py::test_bill[at-150] - AssertionError: assert 158 == 142
+1 failed, 5 passed in 0.01s</div>
+  <p>Exactly one test notices, the one sitting on the boundary. The typical "below" and "above" orders, and even the ₹145 order just under the edge, all pass, because none of them has a subtotal of exactly 150. If our table had contained only typical orders, this bug would have shipped. That is the practical meaning of boundary value analysis: the edge cases are where a test suite earns its keep.</p>
+  <p>Two more rules for choosing what to test. First, work out expected values <em>by hand</em> from the rules, never by running the code under test: a test that asserts <code>bill(order) == bill(order)</code>, or that pastes in whatever the code printed, can never catch a mistake in the code. Second, test behaviour through the public interface, what <code>bill</code> returns for an order, rather than private helper functions or the order in which the code calls things internally. Tests tied to internals break every time someone harmlessly reorganises the code, and people stop trusting them. And when checking for an error, check for the <em>specific</em> exception (here <code>ValueError</code>, with <code>match=</code> checking the message), not just "some exception": the Common Mistakes section shows a broad check passing on a typo.</p>
+
+  <h2 id="pt-ml"><span class="num">06</span>Testing Data and ML Code</h2>
+  <p>Data and machine-learning code fails differently from billing code. A billing bug usually gives a visibly wrong number or a crash. A data bug usually gives <em>no</em> error at all: a cleaning step silently drops rows, a scaling step turns a constant column into NaN ("not a number"), the train/test split lets some test rows leak into training so the model looks better than it is. Nothing crashes; the final metric is just wrong, and nobody notices for weeks. Testing data code is about turning those silent failures into loud ones.</p>
+  <p>Chai Corner wants to forecast how many cups of chai it will sell from the day's temperature, because on hot days people buy cold coffee instead. The forecasting module has four small functions: one checks a batch of incoming data, one rescales a column, one splits rows into training and test sets, and one fits the simplest possible model, a straight line.</p>
+  <div class="fx" data-lang="py"># forecast.py
 import numpy as np
 import pandas as pd
 
 def validate(df):
-    """Return a list of problems with an input batch (empty list = OK)."""
-    problems = []
-    missing = {"age", "income", "label"} - set(df.columns)
+    """Return a list of problems with a day's sales data (empty list = OK)."""
+    missing = {"temp_c", "cups"} - set(df.columns)
     if missing:
         return [f"missing columns: {sorted(missing)}"]
-    if df["age"].isna().any():
-        problems.append("age has nulls")
-    if not df["age"].dropna().between(0, 120).all():
-        problems.append("age out of range 0..120")
-    if not set(df["label"].unique()) &lt;= {0, 1}:
-        problems.append("label is not binary")
+    problems = []
+    if df["cups"].isna().any():
+        problems.append("cups has nulls")
+    if (df["cups"].dropna() &lt; 0).any():
+        problems.append("cups is negative")
+    if not df["temp_c"].between(-10, 50).all():
+        problems.append("temp_c out of range -10..50")
     return problems
 
 def standardise(x):
@@ -352,231 +389,249 @@ def standardise(x):
     return np.zeros_like(x) if std == 0 else (x - x.mean()) / std
 
 def split_indices(n, test_frac, seed):
+    """Shuffle row numbers 0..n-1 and cut them into train and test."""
     rng = np.random.default_rng(seed)
     idx = rng.permutation(n)
     k = int(n * test_frac)
     return idx[k:], idx[:k]
 
 def fit_line(x, y):
-    """Least-squares slope and intercept."""
-    A = np.column_stack([x, np.ones_like(x)])
-    (slope, intercept), *_ = np.linalg.lstsq(A, y, rcond=None)
+    """Least-squares slope and intercept: y is roughly slope * x + intercept."""
+    slope, intercept = np.polyfit(x, y, 1)
     return slope, intercept</div>
-  <div class="fx" data-lang="py"># test_features.py
+  <p>Each function calls for a slightly different testing habit, and the test file below has one group per habit. The first habit is to <strong>validate data at the boundary</strong>: check every incoming batch for the columns you need, missing values (nulls), impossible values and wrong types, and refuse it before it reaches training or a report. Here a temperature of 85 °C and a negative number of cups are clearly bad data. (Libraries such as pandera and Great Expectations let you declare such checks; a plain function works too.) The second habit is to <strong>test transforms by their exact properties</strong>: a standardised column must have mean 0 and standard deviation 1, and the awkward edge case, a column where every value is the same, must not turn into NaN through a division by zero. The third is to <strong>control randomness with a seed</strong>: a seed is the starting value of a random-number generator, and the same seed always produces the same "random" sequence, so a test sees identical data on every run. The fourth is to <strong>test a model by its behaviour, with a tolerance</strong>: make fake data where you planted the answer yourself, train on it, and check the model finds that answer again, approximately.</p>
+  <div class="fx" data-lang="py"># test_forecast.py
 import numpy as np
 import pandas as pd
 import pytest
-from features import validate, standardise, split_indices, fit_line
+from forecast import validate, standardise, split_indices, fit_line
 
-# 1. data validation: bad batches are reported, good ones pass
+# 1. validation: a bad batch is reported, a good one passes
 def test_validate_flags_bad_batch():
-    bad = pd.DataFrame({"age": [25, -3, None], "income": [1, 2, 3], "label": [0, 1, 2]})
-    assert validate(bad) == ["age has nulls", "age out of range 0..120", "label is not binary"]
+    bad = pd.DataFrame({"temp_c": [31, 85, 29], "cups": [120, None, -4]})
+    assert validate(bad) == ["cups has nulls", "cups is negative", "temp_c out of range -10..50"]
 
 def test_validate_accepts_good_batch():
-    good = pd.DataFrame({"age": [25, 40], "income": [10, 20], "label": [0, 1]})
+    good = pd.DataFrame({"temp_c": [31, 24], "cups": [120, 160]})
     assert validate(good) == []
 
-# 2. transforms: exact properties, compared with a float tolerance
-def test_standardise_mean_0_std_1():
-    z = standardise([2.0, 4.0, 6.0, 8.0])
+# 2. a transform: exact properties, compared with a float tolerance
+def test_standardise_gives_mean_0_std_1():
+    z = standardise([20.0, 25.0, 30.0, 35.0])
     assert z.mean() == pytest.approx(0.0, abs=1e-12)
     assert z.std() == pytest.approx(1.0)
 
 def test_standardise_constant_column_is_not_nan():
-    assert np.array_equal(standardise([5, 5, 5]), [0.0, 0.0, 0.0])
+    assert np.array_equal(standardise([28, 28, 28]), [0.0, 0.0, 0.0])
 
-# 3. randomness: a fixed seed makes the split reproducible
-def test_split_reproducible_and_disjoint():
-    tr1, te1 = split_indices(100, 0.2, seed=0)
-    tr2, te2 = split_indices(100, 0.2, seed=0)
-    assert np.array_equal(tr1, tr2) and np.array_equal(te1, te2)
-    assert len(tr1) == 80 and len(te1) == 20
-    assert set(tr1).isdisjoint(te1)
+# 3. randomness: a fixed seed makes the split repeatable, and no row leaks
+def test_split_is_repeatable_and_disjoint():
+    train1, test1 = split_indices(100, 0.2, seed=0)
+    train2, test2 = split_indices(100, 0.2, seed=0)
+    assert np.array_equal(train1, train2) and np.array_equal(test1, test2)
+    assert len(train1) == 80 and len(test1) == 20
+    assert set(train1).isdisjoint(test1)
 
-# 4. models: plant a known rule, assert it is recovered within a tolerance
-def test_fit_line_recovers_planted_slope():
+# 4. a model: plant a known rule in fake data, check it is found again
+def test_fit_line_recovers_planted_rule():
     rng = np.random.default_rng(42)
-    x = rng.uniform(0, 10, size=200)
-    y = 3.0 * x + 2.0 + rng.normal(0, 0.5, size=200)   # true slope 3, intercept 2
-    slope, intercept = fit_line(x, y)
-    assert slope == pytest.approx(3.0, abs=0.1)
-    assert intercept == pytest.approx(2.0, abs=0.3)</div>
-  <div class="fx" data-lang="text">$ pytest -q test_features.py
+    temp = rng.uniform(10, 40, size=200)
+    cups = 220 - 3.0 * temp + rng.normal(0, 5, size=200)   # planted: slope -3, intercept 220
+    slope, intercept = fit_line(temp, cups)
+    assert slope == pytest.approx(-3.0, abs=0.2)
+    assert intercept == pytest.approx(220, abs=5)</div>
+  <div class="fx" data-lang="text">$ pytest -q test_forecast.py
 ......                                                                   [100%]
-6 passed in 0.23s</div>
-  <p>The fitted values were slope 3.033 and intercept 1.845: close to the planted 3 and 2, but not equal, because of the noise. An exact assertion would fail; the tolerance accepts noise while still failing if the fit were broken (shuffled <code>y</code>, wrong column order). The split test checks the property that matters most in ML, that train and test indices are disjoint, i.e. no leakage.</p>
-  <h3>Floats need tolerances</h3>
+6 passed in 0.27s</div>
+  <p>All six pass. The split test checks the single most important property in ML evaluation: the train and test row numbers do not overlap, which is what "no leakage" means. The model test deserves a closer look. We generated 200 fake days where cups = 220 − 3 × temperature, plus random noise, so we know the true slope is −3 and the true intercept is 220. Here is what the line fit actually found:</p>
+  <div class="fx" data-lang="py">import numpy as np
+from forecast import fit_line
+rng = np.random.default_rng(42)
+temp = rng.uniform(10, 40, size=200)
+cups = 220 - 3.0 * temp + rng.normal(0, 5, size=200)
+slope, intercept = fit_line(temp, cups)
+print(f"slope {slope:.3f}, intercept {intercept:.2f}")</div>
+  <div class="fx" data-lang="text">slope -2.890, intercept 217.36</div>
+  <p>A slope of −2.89 and an intercept of 217.4: close to the planted −3 and 220, but not equal, because of the noise. An exact assertion such as <code>slope == -3.0</code> would fail on perfectly correct code, while the tolerance (<code>pytest.approx(-3.0, abs=0.2)</code> means "within 0.2 of −3") accepts the noise but would still fail if the fit were broken, for example if someone passed the columns in the wrong order. Think of a tailor checking a sleeve against a pattern: a millimetre either way is fine, but five centimetres means the cut was wrong.</p>
+  <p>Tolerances are needed even for simple arithmetic, because computers store most decimal fractions inexactly in binary (the details are in <a class="xref" data-note="py_values">Values</a>):</p>
   <div class="fx" data-lang="py">import pytest
-print(0.1 + 0.2 == 0.3, 0.1 + 0.2, 0.1 + 0.2 == pytest.approx(0.3))</div>
-  <div class="fx" data-lang="text">False 0.30000000000000004 True</div>
-  <p>Binary floats cannot represent most decimals exactly (<a class="xref" data-note="py_values">Values</a>), so computed floats are compared with a tolerance: <code>pytest.approx</code> (default relative tolerance 1e-6), <code>math.isclose</code>, <code>np.testing.assert_allclose(actual, expected, rtol=…, atol=…)</code> for arrays, and <code>pd.testing.assert_frame_equal</code> for DataFrames (it also checks dtypes, index and column order).</p>
-  <table class="tbl"><caption>Testing transforms vs testing models</caption>
-    <tr><th></th><th>Transforms / pipelines</th><th>Models</th></tr>
-    <tr><td>Nature</td><td>Deterministic functions</td><td>Statistical, trained on random data</td></tr>
-    <tr><td>Assert</td><td>Exact values, shapes, invariants (± float tolerance)</td><td>Thresholds, recovered planted signal, output contracts</td></tr>
-    <tr><td>Speed</td><td>Unit tests, ms</td><td>Small synthetic data in unit tests; full evaluation in a separate pipeline</td></tr>
-    <tr><td>Examples</td><td>No NaN after imputation; row count kept; input not mutated; train/test disjoint</td><td>Accuracy &gt; 0.9 on planted rule; probabilities sum to 1; overfits 10 samples; prediction invariant to irrelevant feature</td></tr>
-  </table>
-  <div class="callout trap"><span class="label">Trap</span><p>Asserting an exact metric (<code>assert acc == 0.9632</code>). A library upgrade or a different BLAS changes the last digits and breaks the build for no real reason. Assert a threshold that a real bug (labels shuffled, leakage removed, wrong feature) would clearly violate.</p></div>
+print(0.1 + 0.2)
+print(0.1 + 0.2 == 0.3)
+print(0.1 + 0.2 == pytest.approx(0.3))</div>
+  <div class="fx" data-lang="text">0.30000000000000004
+False
+True</div>
+  <p><code>0.1 + 0.2</code> is stored as 0.30000000000000004, so comparing it to 0.3 with <code>==</code> gives <code>False</code>. <code>pytest.approx</code> compares within a small relative tolerance (one part in a million by default) and says the values are equal. For NumPy arrays the equivalent is <code>np.testing.assert_allclose(actual, expected, rtol=..., atol=...)</code>, and for whole pandas tables, <code>pd.testing.assert_frame_equal</code>, which also checks column types, index and column order. The same thinking applies to model scores: never assert an exact accuracy such as 0.9632, because a library upgrade can change the last digits; assert a threshold, such as "accuracy above 0.9 on data with a planted rule", that a real bug (shuffled labels, wrong feature) would clearly break.</p>
 
-  <h2 id="pt-tdd"><span class="num">07</span>Test-Driven Development (TDD)</h2>
-  <p>TDD writes the test before the code, in a tight loop: <b>red</b> (write one small test for the next behaviour; run it; watch it fail for the expected reason), <b>green</b> (write the simplest code that makes it pass), <b>refactor</b> (clean up code and tests while everything stays green). Then the next behaviour.</p>
-  <div class="flow"><span>red: failing test</span><span>green: simplest pass</span><span>refactor: tidy, stay green</span><span>next behaviour</span></div>
-  <ul>
-    <li><b>Why the red step matters.</b> Watching the test fail proves it can fail, i.e. it actually checks something. A test that was never red may be misnamed (never collected), assert nothing, or compare the code with itself.</li>
-    <li><b>Benefits.</b> Every behaviour has a test by construction; the design is driven by how the code is called, which tends to give small, decoupled functions; the refactor step is safe.</li>
-    <li><b>Costs and limits.</b> Slower at first; awkward for exploratory work (notebooks, research spikes, UI layout) where you don't yet know the desired behaviour. A common pragmatic rule: explore freely, then write tests before the code is shared or depended on, and always write the failing test first when fixing a bug.</li>
-  </ul>
-  <p>A full TDD trace (three red/green loops for a bill-splitting function, then a refactor with property tests) is in <a class="xref" data-note="py_pytest">Testing with pytest</a>.</p>
-  <div class="callout trap"><span class="label">Trap</span><p>Writing many tests before any code. TDD is one failing test at a time; a batch of red tests makes each step large and the failure messages noisy.</p></div>
+  <h2 id="pt-tdd"><span class="num">07</span>Test-Driven Development</h2>
+  <p>Every test we have written so far came after the code. That has a hidden weakness: we only saw each test pass. A test that has never been seen failing might not be able to fail at all. Its name might not start with <code>test_</code>, so it never runs; it might call the code but assert nothing; it might compare the code's answer with itself. In the first section we only trusted the boundary test because we watched it go red when we broke the rule.</p>
+  <p><strong>Test-driven development</strong> (TDD) builds that check into the way code is written, by writing the test <em>before</em> the code, in a tight loop of three steps. <strong>Red</strong>: write one small test for the next piece of behaviour you want, run it, and watch it fail, ideally for the reason you expect ("there is no such function yet", or "returned 0, expected 15"). <strong>Green</strong>: write the simplest code that makes that test pass, even if it is crude. <strong>Refactor</strong>: now that the behaviour is pinned by a test, tidy the code (better names, less repetition, a clearer algorithm) while running the tests after every change to make sure they stay green. Then pick the next small behaviour and repeat.</p>
+  <p>It works like a tailor who marks the measurements on the cloth before cutting. The marks say exactly what "fits" means before any cutting starts, the cutting follows the marks, and later trimming never changes the measurements. In TDD the tests are the marks: they say what "correct" means before the code exists.</p>
+  <p>The loop has real benefits. Every piece of behaviour has a test by construction, and every test has been seen to fail, so none of them is decorative. Writing the test first forces you to decide how the code will be <em>called</em> before deciding how it works, which tends to produce small functions with clear inputs and outputs. And the refactor step is safe, because the tests are already there. It also has costs. It feels slower at first, and it fits poorly with exploratory work such as a notebook analysis or a research prototype, where you do not yet know what the right behaviour is. A common, practical rule is: explore freely, then write tests before the code is shared or other code depends on it, and when fixing a bug, always write the failing test first. A complete red-green-refactor trace, building a bill-splitting function one rule at a time, is in <a class="xref" data-note="py_pytest">Testing with pytest</a>.</p>
 
-  <h2 id="pt-cov"><span class="num">08</span>Code Coverage: What It Does and Doesn't Tell You</h2>
-  <p><strong>Coverage</strong> measures which parts of the code were executed while the tests ran. It is good at one thing: finding code that no test touches. It says nothing about whether the code that did run was checked correctly.</p>
-  <div class="fx" data-lang="py"># shipping.py
-def shipping_fee(weight_kg, express=False):
-    if weight_kg &lt;= 0:
-        raise ValueError("weight must be positive")
-    fee = 50 if weight_kg &lt;= 1 else 50 + 20 * (weight_kg - 1)
-    if express:
-        fee *= 2
-    return fee</div>
-  <div class="fx" data-lang="py"># test_shipping.py
-from shipping import shipping_fee
+  <h2 id="pt-cov"><span class="num">08</span>Code Coverage</h2>
+  <p>Once a project has many tests, a natural question is: which parts of the code are not tested at all? Reading every test to find out is impractical. <strong>Code coverage</strong> answers it automatically: a coverage tool watches the program while the tests run and records which lines (and which branches of each <code>if</code>) were executed. The usual tool in Python is the <code>coverage</code> package, used through the pytest plugin pytest-cov. Suppose the till had only one test, Asha's order:</p>
+  <div class="fx" data-lang="py"># test_cov_one.py
+from till import bill
 
-def test_heavy_express():
-    assert shipping_fee(3, express=True) == 180      # (50 + 2*20) * 2</div>
-  <div class="fx" data-lang="text">$ pytest -q --cov=shipping --cov-report=term-missing
+def test_asha():
+    assert bill([("masala chai", 2, 30), ("samosa", 3, 15), ("cold coffee", 1, 90)]) == 184</div>
+  <div class="fx" data-lang="text">$ pytest -q test_cov_one.py --cov=till --cov-branch --cov-report=term-missing
 .                                                                        [100%]
 ================================ tests coverage ================================
 _______________ coverage: platform linux, python 3.13.18-final-0 _______________
 
-Name          Stmts   Miss  Cover   Missing
--------------------------------------------
-shipping.py       7      1    86%   3
--------------------------------------------
-TOTAL             7      1    86%
-1 passed in 0.02s
-$ pytest -q --cov=shipping --cov-branch --cov-report=term-missing
-...
-Name          Stmts   Miss Branch BrPart  Cover   Missing
----------------------------------------------------------
-shipping.py       7      1      4      2    73%   3, 5-&gt;7
----------------------------------------------------------
-TOTAL             7      1      4      2    73%</div>
-  <p>Read it. <b>Line coverage</b> (86%) reports line 3, the <code>raise</code>, as never run: the error path is untested. <b>Branch coverage</b> (<code>--cov-branch</code>, 73%) also reports <code>5-&gt;7</code>: the <code>if express:</code> on line 5 never took its False branch, so non-express pricing is untested even though every line of it "ran". And neither report flags line 4: the light-parcel branch of the conditional expression (<code>50 if weight_kg &lt;= 1</code>) was never exercised, but coverage counts the whole line as covered because it executed. Coverage tools track lines and statement-level branches, not every path through an expression.</p>
-  <table class="tbl">
-    <tr><th>Coverage tells you</th><th>Coverage does not tell you</th></tr>
-    <tr><td>Which lines/branches no test executed</td><td>Whether executed code was asserted on at all</td></tr>
-    <tr><td>Dead or unreachable code</td><td>Whether the right inputs (boundaries) were used</td></tr>
-    <tr><td>Error handlers that never fire in tests</td><td>Whether the expected values are correct</td></tr>
-    <tr><td>A trend over time (coverage dropping on new code)</td><td>Missing behaviour: code that should exist but doesn't is never "uncovered"</td></tr>
-  </table>
-  <p>A test that calls <code>shipping_fee(3, express=True)</code> without any <code>assert</code> produces exactly the same coverage report. Use coverage to find gaps, then write real checks for them; treat a threshold in CI (say 80% on new code) as a floor, not a goal. <strong>Mutation testing</strong> (mutmut, cosmic-ray) measures test quality more directly: it makes small changes to the code (<code>&gt;=</code> → <code>&gt;</code>) and reports which changes no test catches.</p>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Line (statement) coverage</strong> = executed statements ÷ all statements. <strong>Branch coverage</strong> additionally requires every decision (<code>if</code>, loop condition) to have gone both ways. In Python: <code>pytest --cov=pkg --cov-branch --cov-report=term-missing</code> (pytest-cov) or <code>coverage run -m pytest</code> then <code>coverage report -m</code>.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Chasing 100% with assertion-free tests or tests of trivial getters. The number goes up, protection does not. 100% coverage with the <code>&gt;=</code>/<code>&gt;</code> bug is easy: a test at 200 runs the line without ever checking 150.</p></div>
+Name      Stmts   Miss Branch BrPart  Cover   Missing
+-----------------------------------------------------
+till.py      15      2      6      2    81%   13, 22
+-----------------------------------------------------
+TOTAL        15      2      6      2    81%
+1 passed in 0.02s</div>
+  <p>Read the report from left to right. <code>till.py</code> has 15 statements, and 2 of them never ran during the test (<code>Miss</code>). The <code>Branch</code> and <code>BrPart</code> columns count decisions: the file has 6 possible branch directions, and 2 were taken only partly (an <code>if</code> that only ever went one way). <code>Missing</code> names the lines: line 13 is <code>return 0</code>, the no-discount path, which Asha's ₹195 order never takes; line 22 is the <code>raise</code> that refuses negative quantities, which no test ever triggered. That is the real value of coverage: it pointed straight at two rules nobody had tested.</p>
+  <p>There are two common measures. <strong>Line coverage</strong> (also called statement coverage) is the share of lines that ran. <strong>Branch coverage</strong> is stricter: every decision must have gone both ways. The difference matters for an <code>if</code> without an <code>else</code>. Picture <code>if express: fee *= 2</code> where every test uses express delivery: every line runs, so line coverage is 100%, but the "not express" path was never tried. Branch coverage reports that missed direction, which is why it is the better measure to switch on (<code>--cov-branch</code>).</p>
+  <p>Now the crucial limit. Add tests for Ben (the no-discount path) and the negative quantity (the <code>raise</code>), then put the <code>&gt;</code> bug back into the discount rule:</p>
+  <div class="fx" data-lang="py"># test_cov_more.py
+import pytest
+from till import bill
+
+def test_asha():
+    assert bill([("masala chai", 2, 30), ("samosa", 3, 15), ("cold coffee", 1, 90)]) == 184
+
+def test_ben():
+    assert bill([("masala chai", 1, 30), ("vada pav", 2, 20)]) == 74
+
+def test_negative_qty():
+    with pytest.raises(ValueError):
+        bill([("samosa", -2, 15)])</div>
+  <div class="fx" data-lang="text">$ pytest -q test_cov_more.py --cov=till --cov-branch --cov-report=term-missing
+...                                                                      [100%]
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.13.18-final-0 _______________
+
+Name      Stmts   Miss Branch BrPart  Cover   Missing
+-----------------------------------------------------
+till.py      15      0      6      0   100%
+-----------------------------------------------------
+TOTAL        15      0      6      0   100%
+3 passed in 0.03s</div>
+  <p>100% line coverage, 100% branch coverage, all tests green, and the till is still overcharging every ₹150 order. Every line ran and every branch went both ways, but no test ran the discount line <em>with a subtotal of exactly 150</em>. Coverage records which lines ran; it says nothing about whether the right inputs were used, or whether the results were checked at all. A test with no <code>assert</code> produces exactly the same report as a good one. A security guard's patrol log works the same way: it proves every corridor was walked, not that anyone looked inside the rooms.</p>
+  <p>So use coverage to find untested code, then write real tests for it, and treat a coverage threshold in CI (say 80% on new code) as a floor, never as proof of quality. To measure test quality more directly there is <strong>mutation testing</strong> (tools such as mutmut): it makes small deliberate changes to your code, such as turning <code>&gt;=</code> into <code>&gt;</code>, runs the suite against each changed version, and reports every change that no test caught. Our <code>&gt;</code> bug is exactly the kind of "mutant" it would generate, and the suite above would let it survive.</p>
 
   <h2 id="pt-traps"><span class="num">09</span>Common Mistakes</h2>
-  <table class="tbl">
-    <tr><th>Mistake</th><th>Symptom</th><th>Fix</th></tr>
-    <tr><td>Only happy-path tests</td><td>Off-by-one bugs at thresholds pass</td><td>Boundary values, empty input, error paths</td></tr>
-    <tr><td>Expected value computed by the code</td><td>Test can never fail</td><td>Work expectations out by hand from the spec</td></tr>
-    <tr><td>Test never seen failing</td><td>Green forever, protects nothing</td><td>Break the code once on purpose (or TDD)</td></tr>
-    <tr><td>Hidden inputs: clock, randomness, network</td><td>Flaky tests; "works on my machine"</td><td>Inject them; fixed seeds; test doubles</td></tr>
-    <tr><td>Tests depend on each other / shared state</td><td>Pass alone, fail in the suite (or vice versa)</td><td>Fresh fixtures per test; no module-level mutable state</td></tr>
-    <tr><td>Many unrelated asserts in one test</td><td>First failure hides the others</td><td>One behaviour per test; parametrize</td></tr>
-    <tr><td>Testing implementation details</td><td>Tests break on every refactor</td><td>Assert public behaviour and results</td></tr>
-    <tr><td>Over-mocking your own code</td><td>Green tests, broken logic</td><td>Mock only external boundaries (<a class="xref" data-note="py_mocking">Mocks</a>)</td></tr>
-    <tr><td><code>==</code> on floats; exact model scores</td><td>Fails on harmless numeric noise</td><td><code>pytest.approx</code>, <code>assert_allclose</code>, thresholds</td></tr>
-    <tr><td>Coverage as the goal</td><td>High %, bugs still ship</td><td>Use it to find untested code, not as proof</td></tr>
-    <tr><td>Fixing a bug without a test</td><td>The same bug returns</td><td>Failing test first, then fix, keep the test</td></tr>
-    <tr><td>Ice-cream-cone suite</td><td>Slow, flaky, ignored</td><td>Push checks down to unit level</td></tr>
-  </table>
+  <p>The most dangerous tests are the ones that pass no matter what. All four tests below are run against the till <em>with</em> the <code>&gt;</code> bug in it. Only one of them deserves to exist:</p>
+  <div class="fx" data-lang="py"># test_mistakes.py
+import pytest
+from till import bill
+
+FIVE_CHAI = [("masala chai", 5, 30)]          # subtotal exactly 150
+
+def test_no_assert():
+    bill(FIVE_CHAI)                           # runs the code, checks nothing
+
+def test_expected_from_the_code():
+    expected = bill(FIVE_CHAI)                # "expected" value computed by the code itself
+    assert bill(FIVE_CHAI) == expected
+
+def test_too_broad():
+    with pytest.raises(Exception):            # any exception at all will do...
+        bil(FIVE_CHAI)                        # ...including this NameError from a typo
+
+def test_worked_out_by_hand():
+    assert bill(FIVE_CHAI) == 142             # 150 - 15 = 135, + 5% = 141.75</div>
+  <div class="fx" data-lang="text">$ pytest -q --tb=no -rA test_mistakes.py
+...F                                                                     [100%]
+=========================== short test summary info ============================
+PASSED test_mistakes.py::test_no_assert
+PASSED test_mistakes.py::test_expected_from_the_code
+PASSED test_mistakes.py::test_too_broad
+FAILED test_mistakes.py::test_worked_out_by_hand - AssertionError: assert 158...
+1 failed, 3 passed in 0.01s</div>
+  <p>Three of the four tests passed against broken code. <code>test_no_assert</code> runs <code>bill</code> but checks nothing, so it can only fail if the code crashes. <code>test_expected_from_the_code</code> computes its "expected" value by calling the code under test, so it compares the buggy answer, 158, with itself. <code>test_too_broad</code> expects "any exception" and gets one: a <code>NameError</code>, because <code>bil</code> is a typo, so the test passes without ever calling the till. Only the last test, with 142 worked out by hand, failed, which is exactly what a test should do when the code is wrong.</p>
+  <p>The fix for each is short. Every test needs an <code>assert</code> on a value worked out by hand from the rules. An exception check should name the exact exception type and, ideally, part of its message (<code>pytest.raises(ValueError, match="non-negative")</code>). And every new test should be seen failing once, by breaking the code on purpose, before you trust it.</p>
+  <p>The other common mistakes are about design rather than single tests. Hidden inputs such as the clock, unseeded randomness or a real network make tests flaky; pass them in instead. Tests that share mutable state (a module-level list that each test appends to) pass alone and fail in the full suite, or the reverse; give each test fresh data. Replacing your own logic with mocks makes tests pass while the logic is broken; replace only the external boundary (<a class="xref" data-note="py_mocking">Mocks &amp; Test Doubles</a>). Comparing floats or model scores with <code>==</code> fails on harmless noise; use tolerances and thresholds. Fixing a bug without first writing a test that reproduces it lets the same bug return next month. And treating a coverage percentage as the goal produces many tests that run code without checking it.</p>
 
   <h2 id="pt-rev"><span class="num">R</span>Revision Sheet</h2>
-  <h3>Why automated tests</h3>
+  <h3>Core definitions</h3>
   <ul>
-    <li><b>Test</b>: run code on input with known answer, assert. <b>Regression</b>: previously working behaviour breaks after a change.</li>
-    <li>Benefits: regression protection, safe refactoring, executable documentation, pushes toward testable (pure, decoupled) design, CI confidence.</li>
+    <li><b>Test</b>: code that runs your code on an input with a known correct answer and asserts the result.</li>
+    <li><b>Regression</b>: behaviour that used to work, broken by a later change. Tests catch it right after the change.</li>
+    <li><b>Test suite</b>: all a project's tests. <b>Test runner</b>: finds and runs them (pytest, unittest). <b>System under test</b>: the code being checked.</li>
+    <li>Benefits: regression protection, safe refactoring, documentation that cannot go stale, pressure towards testable design.</li>
   </ul>
   <h3>Kinds of tests</h3>
   <table class="tbl">
     <tr><th>Kind</th><th>Scope</th><th>Speed</th><th>Catches</th></tr>
-    <tr><td>Unit</td><td>One function/class, no real I/O</td><td>ms</td><td>Logic bugs</td></tr>
-    <tr><td>Integration</td><td>Code + real file/DB/service/module</td><td>10 ms – s</td><td>Wiring, formats, SQL, serialisation</td></tr>
-    <tr><td>End-to-end</td><td>Whole deployed system via its real interface</td><td>s – min</td><td>User-visible flows</td></tr>
-    <tr><td>Regression</td><td>Any; pins a fixed bug</td><td>—</td><td>Bug returning</td></tr>
-    <tr><td>Smoke</td><td>Shallow "does it start / respond"</td><td>s</td><td>Broken build/deploy/config</td></tr>
+    <tr><td>Unit</td><td>One function/class, no real I/O</td><td>µs–ms</td><td>Logic bugs</td></tr>
+    <tr><td>Integration</td><td>Code + real file/DB/service/module</td><td>ms–s</td><td>Wiring: formats, types, queries</td></tr>
+    <tr><td>End-to-end</td><td>Whole system via its real interface</td><td>s–min</td><td>User-visible flows</td></tr>
+    <tr><td>Regression</td><td>Any; pins a fixed bug</td><td>any</td><td>The bug returning</td></tr>
+    <tr><td>Smoke</td><td>Shallow "does it start?" after deploy</td><td>s</td><td>Broken build or config</td></tr>
   </table>
-  <h3>Test pyramid</h3>
+  <h3>Pyramid and good tests</h3>
   <ul>
-    <li>Many unit (~70–80%) → fewer integration (~15–25%) → few E2E (~5%). Lower = faster, deterministic, precise failures.</li>
-    <li>Anti-pattern: <b>ice-cream cone</b> (mostly E2E/manual). Push each check to the cheapest level that can catch the bug.</li>
+    <li>Pyramid: many unit, fewer integration, few E2E. Catch each bug at the cheapest level. Anti-pattern: <b>ice-cream cone</b>.</li>
+    <li><b>FIRST</b>: Fast, Isolated, Repeatable, Self-checking, Timely.</li>
+    <li><b>Arrange, Act, Assert</b>; one behaviour per test; the name states the behaviour.</li>
+    <li><b>Flaky</b>: same code, different results (clock, randomness, network, order, shared state). Fix by passing those inputs in (<code>is_happy_hour(now)</code>), never by re-running.</li>
   </ul>
-  <h3>Good unit tests</h3>
+  <h3>Choosing cases</h3>
   <ul>
-    <li><b>FIRST</b>: Fast, Isolated (independent), Repeatable, Self-checking, Timely.</li>
-    <li><b>AAA</b>: Arrange, Act, Assert. One behaviour per test; descriptive names.</li>
-    <li>Make hidden inputs parameters: <code>greeting(now=None)</code>, <code>split(n, seed)</code>, <code>Till(gateway)</code>.</li>
-    <li><b>Flaky</b> = same code, different results; fix the cause, never just re-run.</li>
+    <li><b>Equivalence partitioning</b>: one representative per group the code treats alike.</li>
+    <li><b>Boundary value analysis</b>: both sides of every edge (₹145 and ₹150). Off-by-one bugs only show here.</li>
+    <li>Edge cases: empty, single, zero, huge. Error paths: assert the specific exception and message.</li>
+    <li>Expected values by hand; test public behaviour, not internals.</li>
   </ul>
-  <h3>What to test</h3>
+  <h3>Data and ML code</h3>
   <ul>
-    <li>Happy path (one per equivalence class), boundaries (both sides of each edge, min/max), edge cases (empty, single, zero, NaN, duplicates, unicode, huge), error paths (exact exception + message).</li>
-    <li>Test behaviour via the public interface; expected values by hand.</li>
-    <li>Off-by-one bugs are only caught by boundary tests (<code>score &gt; 75</code> failed only <code>[75-B]</code>).</li>
+    <li>Validate incoming batches: columns, nulls, ranges, types.</li>
+    <li>Transforms: exact properties (mean 0, std 1, no NaN, row count, constant column handled).</li>
+    <li>Seeds wherever randomness enters; assert train and test are disjoint (no leakage).</li>
+    <li>Models: planted signal + tolerance, thresholds, never exact scores.</li>
+    <li>Floats: <code>pytest.approx</code>, <code>np.testing.assert_allclose</code>, <code>pd.testing.assert_frame_equal</code>. <code>0.1 + 0.2 == 0.3</code> is <code>False</code>.</li>
   </ul>
-  <h3>ML and data code</h3>
+  <h3>TDD and coverage</h3>
   <ul>
-    <li>Validate batches: schema, dtypes, nulls, ranges, label set (pandera / Great Expectations / plain checks).</li>
-    <li>Transforms: exact invariants (shape, no NaN, mean 0/std 1, input not mutated, constant column handled).</li>
-    <li>Seeds everywhere randomness enters; assert train/test disjoint (no leakage).</li>
-    <li>Models: planted signal + tolerance/threshold; output contracts; overfit a tiny batch. Never exact scores.</li>
-    <li>Floats: <code>x == pytest.approx(y)</code>, <code>np.testing.assert_allclose(a, b, rtol, atol)</code>, <code>pd.testing.assert_frame_equal</code>. <code>0.1 + 0.2 == 0.3</code> is <code>False</code>.</li>
+    <li>TDD: <b>red</b> (one failing test) → <b>green</b> (simplest pass) → <b>refactor</b> (stay green). Proves each test can fail.</li>
+    <li>Line coverage: share of lines run. Branch coverage: every decision both ways (<code>--cov-branch</code>).</li>
+    <li>Coverage finds untested code; 100% coverage with the <code>&gt;</code> bug still passed. Mutation testing checks whether tests catch small changes.</li>
   </ul>
-  <h3>TDD</h3>
-  <ul>
-    <li>Red (one failing test, fails for the right reason) → green (simplest pass) → refactor (stay green).</li>
-    <li>Red step proves the test can fail. Less useful for exploration; always use it for bug fixes.</li>
-  </ul>
-  <h3>Coverage</h3>
-  <ul>
-    <li>Line coverage = executed statements / total; branch coverage = every decision both ways (<code>--cov-branch</code>; reports like <code>5-&gt;7</code>).</li>
-    <li>Finds untested code; cannot show assertions exist, inputs are good, or expectations are right. Conditional expressions on one line count as covered.</li>
-    <li>Mutation testing (mutmut) measures whether tests catch small code changes.</li>
-    <li><code>pytest --cov=pkg --cov-branch --cov-report=term-missing</code>.</li>
-  </ul>
+  <div class="fx" data-lang="py">def test_exactly_150_gets_discount():          # Arrange, Act, Assert
+    five_chai = [("masala chai", 5, 30)]       # arrange
+    result = bill(five_chai)                   # act
+    assert result == 142                       # assert, value worked out by hand
+
+# pytest -q                                    run all tests
+# pytest --cov=till --cov-branch --cov-report=term-missing</div>
   <h3>Gotchas</h3>
   <ul>
-    <li>"Ran it, looked fine" is not a test.</li>
-    <li><code>assert f(x) == f(x)</code> and tests with no assert never fail.</li>
-    <li><code>pytest.raises(Exception)</code> is too broad.</li>
-    <li>Clock, randomness, network and shared state make tests flaky.</li>
-    <li>Mock external boundaries only; keep your own logic real.</li>
-    <li>100% coverage ≠ correct.</li>
+    <li>"I ran it and it looked fine" is not a test.</li>
+    <li>No assert, or expected value computed by the code: the test can never fail.</li>
+    <li><code>pytest.raises(Exception)</code> passes on typos; name the exact exception.</li>
+    <li>Only typical inputs miss off-by-one bugs.</li>
+    <li>100% coverage does not mean correct.</li>
   </ul>
 
   <h2 id="pt-qa"><span class="num">10</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>Why write automated tests at all?</summary><div class="qa-body">To catch regressions immediately after the change that caused them, to make refactoring and dependency upgrades safe, and to document intended behaviour as runnable examples. They also enable CI: every push is checked automatically. Manual checks cover only what you remember to try, once.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between a unit test and an integration test?</summary><div class="qa-body">A unit test checks one function or class in isolation, with no real I/O, and runs in milliseconds; a failure points at that unit. An integration test checks that components work together, or that your code works with real infrastructure (file system, database, another service). Integration tests catch wiring bugs (formats, SQL, serialisation) that unit tests cannot, at the cost of speed and some flakiness.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What are regression tests and smoke tests?</summary><div class="qa-body">A regression test pins behaviour, typically a bug that was fixed, so it cannot silently come back: reproduce the bug as a failing test, fix, keep the test. A smoke test is a small, shallow check that a build or deployment basically works (the app starts, a health endpoint returns 200, the model file loads), run before the slower suites.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Explain the test pyramid.</summary><div class="qa-body">Keep many fast unit tests at the base, fewer integration tests in the middle, and few end-to-end tests at the top. Lower levels are faster, deterministic and give precise failures; higher levels are realistic but slow, flaky and vague when they fail. The inverted "ice-cream cone" (mostly E2E/manual) produces slow, flaky suites that people stop running.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What makes a good unit test?</summary><div class="qa-body">FIRST: fast, isolated (no dependence on other tests or order), repeatable (same result anywhere, any time), self-checking (asserts, no human reads output), timely (written with the code). Plus: arrange–act–assert layout, one behaviour per test, a name that states the behaviour, and expected values derived from the spec.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is a flaky test and how do you fix one?</summary><div class="qa-body">A test that passes and fails on the same code. Common causes: reading the clock, unseeded randomness, real network calls, timing/sleeps in async code, shared mutable state or test-order dependence, and environment differences (paths, timezones, locale). Fix the cause: inject time and randomness, seed, replace external services with doubles, give each test fresh state. Retrying hides the problem.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you choose test cases for a function?</summary><div class="qa-body">Equivalence partitioning: one representative per class of inputs the code treats alike. Boundary value analysis: both sides of every threshold and the ends of valid ranges, where off-by-one bugs live. Edge cases: empty, single element, zero, negative, NaN, duplicates, very large. Error paths: invalid types/values must raise the specific exception. For a grading function with B at 75–89, test 74, 75, 89, 90, not just 80.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Should tests check implementation details, such as which helper functions were called?</summary><div class="qa-body">Generally no. Test observable behaviour through the public interface (return values, state changes, outputs to external systems). Tests coupled to internals break on harmless refactors, so people stop trusting them, while still possibly missing real bugs. Checking calls is appropriate at external boundaries where the call itself is the behaviour (the payment gateway was charged once with the right amount).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does code coverage measure, and does 100% coverage mean the code is correct?</summary><div class="qa-body">It measures which lines (line coverage) or decision outcomes (branch coverage) were executed during the tests. It does not mean correct: a test with no assertion gives the same coverage, boundaries may never be tested, expected values may be wrong, and missing functionality is never "uncovered". Use it to find untested code, not to certify quality.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Line coverage vs branch coverage?</summary><div class="qa-body">Line coverage counts executed statements. Branch coverage also requires each decision to go both ways: an <code>if</code> with no <code>else</code> that is always True in tests has 100% line coverage but a missed branch (coverage.py reports it as e.g. <code>5-&gt;7</code>). Branch coverage is stricter and usually what you should enable (<code>--cov-branch</code>).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is TDD, and when would you not use it?</summary><div class="qa-body">Test-driven development: write a small failing test (red), the simplest code to pass it (green), then refactor with the tests as a safety net. It guarantees every behaviour is tested and every test has been seen to fail. It fits poorly with exploratory work (notebooks, research spikes, unclear requirements); there, explore first and add tests before the code is shared. For bug fixes, always write the failing test first.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does <code>print(0.1 + 0.2 == 0.3)</code> print, and how should such a comparison be written in a test?</summary><div class="qa-body"><code>False</code>: the sum is <code>0.30000000000000004</code> because these decimals are not exact in binary. In tests use <code>assert 0.1 + 0.2 == pytest.approx(0.3)</code>, <code>math.isclose</code>, or <code>np.testing.assert_allclose</code> for arrays. For money, avoid floats: integer cents/paise or <code>Decimal</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you test code that uses randomness?</summary><div class="qa-body">Make the randomness an input: pass a seed or an <code>np.random.Generator</code>, and use a fixed seed in tests so results repeat. Then assert properties that must hold for any seed (sizes, disjoint splits, values in range), and for statistical behaviour use a tolerance or threshold. Never rely on global unseeded state such as <code>random.random()</code> inside the function.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How would you test a data pipeline or feature-engineering code?</summary><div class="qa-body">Treat each transform as a pure function and unit-test it on small hand-built DataFrames: exact output values, shape and row count, dtypes, no NaN introduced, input not mutated, and edge cases (empty frame, constant column, all-null column, unseen category). Add validation checks on real input batches (schema, ranges, nulls, label set), and an integration test that runs the pipeline end to end on a small fixture file. Compare frames with <code>pd.testing.assert_frame_equal</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you test an ML model when its output is not exactly predictable?</summary><div class="qa-body">Test behaviour, not exact numbers: train on synthetic data with a planted rule and assert the metric beats a threshold or the parameters are recovered within a tolerance; check output contracts (shape, probabilities in [0, 1] summing to 1); check the model can overfit a tiny batch; invariance tests (prediction unchanged by an irrelevant feature) and directional tests (higher income should not lower a credit score). Full evaluation on held-out data is a separate pipeline step, not a unit test.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you test code that calls an external API or database?</summary><div class="qa-body">In unit tests, replace the external dependency with a test double (stub, fake or mock), ideally passed in via dependency injection, so tests are fast, repeatable and can simulate errors and timeouts. Then keep a few integration tests against a real but disposable instance (a Docker database, the provider's sandbox) to verify the double matches reality. Details in <a class="xref" data-note="py_mocking">Mocks &amp; Test Doubles</a>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>You fix a bug reported in production. What is the workflow?</summary><div class="qa-body">Reproduce it as the smallest failing test; confirm it fails for the reported reason; isolate the cause (debugger, logs); fix with the smallest change; run the new test and the whole suite; keep the test as a regression test. If old tests now fail, decide whether they encoded the old (wrong) behaviour and update them deliberately.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is mutation testing?</summary><div class="qa-body">A tool (mutmut, cosmic-ray) makes small changes to your code, such as <code>&gt;=</code> to <code>&gt;</code>, <code>+</code> to <code>-</code>, or returning <code>None</code>, and runs the suite for each "mutant". A mutant that survives (all tests still pass) reveals a weak spot. It measures whether tests actually check behaviour, which coverage cannot, but it is slow, so it is usually run on critical modules.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Your test suite takes 40 minutes and fails randomly. What would you do?</summary><div class="qa-body">Measure first (<code>pytest --durations=20</code>) and track which tests flake. Push checks down the pyramid: replace slow E2E tests of pure logic with unit tests; replace real network calls with doubles; fix flaky causes (time, randomness, order, shared state). Mark slow integration tests and run them on push rather than on every save; parallelise with pytest-xdist; use cheaper fixtures (module/session scope for read-only expensive setup).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why write automated tests at all?</summary><div class="qa-body">To catch regressions seconds after the change that caused them, to make refactoring and library upgrades safe, and to document intended behaviour as runnable examples that cannot go out of date. Manual checks cover only the cases you remember to try, once. Automated tests also let CI check every push.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a regression?</summary><div class="qa-body">A bug in behaviour that used to work, introduced by a later change. For example, changing <code>&gt;=</code> to <code>&gt;</code> in a discount rule stops ₹150 orders getting their discount. A regression test pins the correct behaviour so the same break is caught immediately if it happens again.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between a unit test and an integration test?</summary><div class="qa-body">A unit test checks one function or class on its own, with no real I/O, runs in milliseconds, and when it fails points straight at that unit. An integration test checks that pieces work together, or that your code works with real infrastructure such as files or a database. Integration tests catch wiring bugs, like amounts coming back from a CSV as strings, that unit tests cannot see.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What are end-to-end tests and smoke tests?</summary><div class="qa-body">An end-to-end test drives the whole deployed system through its real interface, as a user would, such as placing an order on the website and checking the receipt. A smoke test is a quick, shallow check run right after a deployment that the system starts at all: the app boots, a health endpoint answers, the model file loads.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain the test pyramid.</summary><div class="qa-body">Keep many fast unit tests at the base, fewer integration tests in the middle and a few end-to-end tests at the top. Lower levels are faster, deterministic and give precise failures; higher levels are realistic but slow, flaky and vague when they fail. The rule is to catch each bug at the cheapest level that can catch it. The inverted "ice-cream cone" produces slow, flaky suites that people stop running.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What makes a good unit test?</summary><div class="qa-body">FIRST: fast, isolated from other tests, repeatable on any machine at any time, self-checking with asserts, and written at the same time as the code. Also an Arrange-Act-Assert layout, one behaviour per test, a name that states the behaviour, and expected values worked out by hand from the specification.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a flaky test, and how do you fix one?</summary><div class="qa-body">A test that passes and fails on the same code. Common causes are reading the real clock, unseeded randomness, real network calls, timing in async code, shared state between tests, and environment differences such as time zones. Fix the cause by passing time and randomness in as parameters, seeding, replacing external services with test doubles and giving each test fresh state. Re-running until green only hides it.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you choose test cases for a function?</summary><div class="qa-body">Split inputs into groups the code should treat alike and test one representative per group (equivalence partitioning). Test both sides of every edge between groups (boundary value analysis), since off-by-one bugs live there. Add edge cases such as empty or single-element inputs, and error paths that must raise a specific exception. For a discount that starts at ₹150, test 145 and 150, not just 70 and 195.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why must expected values be worked out by hand?</summary><div class="qa-body">If the expected value comes from running the code under test, the test compares the code with itself and can never fail, even when the code is wrong. Working the answer out from the specification is what lets a test disagree with buggy code.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Should tests check implementation details, such as which helper functions were called?</summary><div class="qa-body">Generally no. Test observable behaviour through the public interface: return values, state changes, outputs. Tests tied to internals break on harmless refactors, so people stop trusting them. Checking calls is right at external boundaries where the call itself is the behaviour, such as "the payment gateway was charged once with the right amount".</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does <code>print(0.1 + 0.2 == 0.3)</code> print, and how should a test compare floats?</summary><div class="qa-body"><code>False</code>, because the sum is stored as 0.30000000000000004; most decimal fractions are not exact in binary. In tests use <code>pytest.approx</code>, <code>math.isclose</code>, or <code>np.testing.assert_allclose</code> for arrays. For money, avoid floats altogether with integer paise or <code>Decimal</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you test code that uses randomness?</summary><div class="qa-body">Make the randomness an input: pass a seed or a random generator, and use a fixed seed in tests so the data repeats. Then assert properties that hold for any seed, such as sizes and disjoint train/test splits, and use tolerances or thresholds for statistical results. Never rely on unseeded global randomness inside the function.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How would you test a data pipeline or feature-engineering code?</summary><div class="qa-body">Treat each transform as a pure function and test it on small hand-built tables: exact values, shape and row count, types, no NaN introduced, input not modified, and edge cases such as an empty frame or a constant column. Validate real incoming batches for columns, nulls and ranges. Add one integration test that runs the pipeline end to end on a small sample file.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you test an ML model when its output is not exactly predictable?</summary><div class="qa-body">Test behaviour, not exact numbers. Train on synthetic data with a planted rule and check the model recovers it within a tolerance or beats a threshold; check output contracts such as probabilities between 0 and 1 that sum to 1; check a neural network can overfit a tiny batch. Full evaluation on held-out data is a separate pipeline step, not a unit test.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is TDD, and when would you not use it?</summary><div class="qa-body">Test-driven development: write a small failing test (red), the simplest code that passes it (green), then tidy the code while the tests stay green (refactor). It guarantees every behaviour has a test and every test has been seen to fail. It fits poorly with exploratory work like notebooks or prototypes where the right behaviour is unknown; there, explore first and add tests before the code is shared. For bug fixes, always write the failing test first.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does code coverage measure? Does 100% coverage mean the code is correct?</summary><div class="qa-body">It measures which lines (line coverage) or decision outcomes (branch coverage) ran during the tests. It does not mean correct: a test without asserts gives the same coverage, boundary inputs may never be used, and missing features are never "uncovered". A suite with 100% branch coverage can still miss a <code>&gt;=</code> versus <code>&gt;</code> bug. Use coverage to find untested code.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Line coverage versus branch coverage?</summary><div class="qa-body">Line coverage counts executed statements. Branch coverage also requires every decision to go both ways: an <code>if</code> without an <code>else</code> that is always true in tests has full line coverage but a missed branch. Branch coverage is stricter and is the one to enable (<code>--cov-branch</code>).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is mutation testing?</summary><div class="qa-body">A tool such as mutmut makes small changes to your code (<code>&gt;=</code> to <code>&gt;</code>, <code>+</code> to <code>-</code>, returning <code>None</code>) and runs the suite against each changed version. A change that no test catches reveals a weak spot. It measures whether tests actually check behaviour, which coverage cannot, but it is slow, so it is usually run on critical modules.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Your test suite takes 40 minutes and fails randomly. What would you do?</summary><div class="qa-body">Measure first: find the slowest tests (<code>pytest --durations=20</code>) and track which ones flake. Push checks down the pyramid by replacing slow end-to-end tests of pure logic with unit tests, replace real network calls with test doubles, and fix flaky causes such as time, randomness and shared state. Then run slow integration tests separately and run tests in parallel.</div></details>
 </main>
 `
 });

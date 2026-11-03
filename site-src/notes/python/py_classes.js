@@ -3,83 +3,42 @@ Object.assign(TOPIC_CONTENT, {
   "py_classes": `<main>
 <h1>Classes &amp; Objects</h1>
   <div class="where"><span>Python</span><span>Object-Oriented Python</span><span>Classes &amp; Objects</span></div>
-  <p class="lead">A class defines a new type: it names the data each object carries (attributes) and the functions allowed to change it (methods), so the two cannot drift apart the way a dict and a set of loose functions do. Without classes, nothing stops code from editing a record directly and breaking its rules, and every kind of record is just an unlabelled dict. Python's class machinery is small but has sharp edges: <code>self</code> is an explicit parameter, <code>__init__</code> fills an object that already exists, class attributes are shared by every instance, and privacy is only a naming convention. Every scikit-learn estimator, PyTorch module and dataclass or pydantic config in a DS/ML codebase is built from these pieces. Code here was run on Python 3.13.</p>
+  <p class="lead">In <a class="xref" data-note="py_oop">OOP Concepts in Python</a> we built a <code>BankAccount</code> class and learned what a class, an object, <code>__init__</code>, <code>self</code> and a method are. That is enough to write working classes, but real Python code uses a handful of further tools that decide where data is stored, how objects are created and how much control a class has over its own attributes. This page goes one level deeper: the difference between data stored on the class and data stored on each object, the three kinds of method, alternative ways to build objects, properties that check every new value, dataclasses that write the boring code for you, and <code>__slots__</code> for saving memory. These are exactly the pieces you meet when you read a scikit-learn estimator, a PyTorch module or a configuration class, and they are favourite interview topics. We keep working on the same bank, with Asha, Ben and friends, so every new idea is added to an account class you already know.</p>
 
-  <h2 id="pc-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="pc-map"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">Classes &amp; Objects</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">Class &amp; object</div>
+        <div class="mm-title">Where data lives</div>
         <ul>
-          <li><b>Class</b> — blueprint: which data, which behaviour; <b>object / instance</b> — one thing built from it</li>
-          <li><b>Attribute</b> — data on an object (<code>asha.balance</code>); <b>method</b> — function on the class (<code>asha.deposit(50)</code>)</li>
-          <li>Each object keeps its own data; methods are stored once, on the class</li>
+          <li><b>Instance attribute</b>: <code>self.x</code>, one per object, in <code>vars(obj)</code></li>
+          <li><b>Class attribute</b>: written in the class body, shared by all objects</li>
+          <li>Reading searches object → class → parents; writing through an object always writes on the object</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">self</div>
+        <div class="mm-title">Creating objects</div>
         <ul>
-          <li><code>asha.deposit(50)</code> → <code>Account.deposit(asha, 50)</code></li>
-          <li><code>asha.deposit</code> is a <b>bound method</b> = function + object</li>
-          <li><code>self</code> is only a name for the first parameter; read it as "my"</li>
-          <li>⚠ Forgot <code>self</code> → "takes 0 positional arguments but 1 was given"</li>
+          <li><code>BankAccount(...)</code> = <code>__new__</code> (empty object) + <code>__init__</code> (fill it)</li>
+          <li><code>__init__</code> validates and must return <code>None</code></li>
+          <li><code>@classmethod</code> alternative constructors return <code>cls(...)</code></li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">__init__</div>
+        <div class="mm-title">Three kinds of method</div>
         <ul>
-          <li><code>Account("Asha", 100)</code> = <code>__new__</code> (empty object) + <code>__init__</code> (fill it)</li>
-          <li>Validate there: negative opening balance → ValueError</li>
-          <li>Default arguments give optional data (<code>balance=0</code>)</li>
-          <li>⚠ <code>__init__</code> must return None</li>
+          <li><b>Instance</b> gets <code>self</code>: one object's data</li>
+          <li><b>Class</b> gets <code>cls</code>: the class itself</li>
+          <li><b>Static</b> gets nothing: a helper that belongs with the class</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Attributes</div>
+        <div class="mm-title">Controlling attributes</div>
         <ul>
-          <li><b>Instance</b> — in <code>vars(obj)</code>, per object; <b>class</b> — in <code>vars(Class)</code>, shared</li>
-          <li>Lookup: object → class → parents</li>
-          <li><code>asha.bank = "X"</code> makes a NEW instance attribute (shadowing)</li>
-          <li>⚠ <code>history = []</code> on the class is shared by all accounts</li>
-          <li>⚠ <code>self.count += 1</code> writes an instance attribute; use <code>Class.count</code></li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Three kinds of methods</div>
-        <ul>
-          <li><b>Instance</b> (<code>self</code>) — uses this object's data</li>
-          <li><b>@classmethod</b> (<code>cls</code>) — other constructors (<code>from_csv</code>), class-wide settings; returns the subclass</li>
-          <li><b>@staticmethod</b> (nothing) — helper that belongs with the class</li>
-          <li>⚠ Hard-coding <code>Account(...)</code> in a factory breaks subclasses; use <code>cls(...)</code></li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Encapsulation</div>
-        <ul>
-          <li><b>Invariant</b> — a rule that must always hold: balance ≥ 0</li>
-          <li><code>_x</code> — convention "internal"; <code>__x</code> — renamed <code>_Class__x</code></li>
-          <li>Mangling prevents clashes with subclasses; it is not security</li>
-          <li>⚠ <code>obj.__x = …</code> from outside makes an unrelated attribute</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">@property</div>
-        <ul>
-          <li>Looks like an attribute, runs a method; no setter → read-only</li>
-          <li>Setter validates or cleans (<code>"  asha k"</code> → <code>"Asha K"</code>)</li>
-          <li>Computed values (<code>is_empty</code>)</li>
-          <li>Start with a plain attribute; switch to a property later without changing callers</li>
-          <li>⚠ Getter that reads <code>self.balance</code> → RecursionError; store in <code>self._balance</code></li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Dataclasses</div>
-        <ul>
-          <li><code>@dataclass</code> writes <code>__init__</code>, <code>__repr__</code>, <code>__eq__</code> from typed fields</li>
-          <li><code>frozen=True</code> → read-only and hashable; <code>order=True</code> → sortable</li>
-          <li><code>field(default_factory=list)</code>, <code>compare=False</code>, <code>__post_init__</code> for checks</li>
-          <li>⚠ <code>history: list = []</code> is rejected with ValueError</li>
+          <li><code>@property</code> + setter: checks every new value, keeps attribute syntax</li>
+          <li><code>@dataclass</code>: writes <code>__init__</code>, <code>__repr__</code>, <code>__eq__</code></li>
+          <li><code>__slots__</code>: fixed attribute names, less memory, typos refused</li>
         </ul>
       </div>
     </div>
@@ -88,608 +47,549 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="pc-bundle"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Defining a Class</span><span class="rm-sub">class, attributes, methods, objects</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-self"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">self and Bound Methods</span><span class="rm-sub">obj.m() is Class.m(obj)</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-init"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">__init__ and __new__</span><span class="rm-sub">create, then initialise; validation</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-attrs"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Instance vs Class Attributes</span><span class="rm-sub">lookup order, shadowing, shared list</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-methods"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Instance, Class and Static Methods</span><span class="rm-sub">self, cls, alternative constructors</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-encap"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Encapsulation and Name Mangling</span><span class="rm-sub">_x convention, __x → _Class__x</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-prop"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">@property</span><span class="rm-sub">read-only, setters, computed values</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-dc"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Dataclasses</span><span class="rm-sub">@dataclass, field(), frozen, order</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-example"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Worked Example: a Complete Account Class</span><span class="rm-sub">all features in one class</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-traps"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">shared state, self, recursion</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">rules, syntax, gotchas</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">self, __init__, attributes, dataclasses</span></div></div>
+      <div class="rm-item rm-done" data-target="pc-attrs"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Class and Instance Attributes</span><span class="rm-sub">data shared by all accounts vs data each account owns</span></div></div>
+      <div class="rm-item rm-done" data-target="pc-init"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">How an Object Is Created</span><span class="rm-sub">__new__ makes it, __init__ fills it</span></div></div>
+      <div class="rm-item rm-done" data-target="pc-methods"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Instance, Class and Static Methods</span><span class="rm-sub">what each kind of method receives</span></div></div>
+      <div class="rm-item rm-done" data-target="pc-alt"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Alternative Constructors</span><span class="rm-sub">building objects from a CSV line with cls</span></div></div>
+      <div class="rm-item rm-done" data-target="pc-prop"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Properties with Setters</span><span class="rm-sub">checking every new value</span></div></div>
+      <div class="rm-item rm-done" data-target="pc-dc"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Dataclasses</span><span class="rm-sub">let Python write the boring methods</span></div></div>
+      <div class="rm-item rm-done" data-target="pc-slots"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">__slots__</span><span class="rm-sub">fixed attributes and less memory</span></div></div>
+      <div class="rm-item rm-done" data-target="pc-all"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Putting It Together</span><span class="rm-sub">the complete account class</span></div></div>
+      <div class="rm-item rm-done" data-target="pc-traps"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">shared defaults, recursion, unchecked types</span></div></div>
+      <div class="rm-item rm-done" data-target="pc-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">definitions, tables, syntax</span></div></div>
+      <div class="rm-item rm-done" data-target="pc-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">attributes, methods, properties, dataclasses</span></div></div>
     </div>
   </div>
 
-  <h2 id="pc-bundle"><span class="num">01</span>Defining a Class: Attributes and Methods</h2>
-  <h3>Without a class: a dict and loose functions</h3>
-  <p>A class keeps a piece of data and the rules for changing it together. To see why that matters, here is an account written without one: a dict for the data and functions for the rule <em>a balance can never go below zero</em>.</p>
-  <div class="fx" data-lang="py"># Without a class: data in dicts, rules in loose functions
-asha = {"owner": "Asha", "balance": 100}
-ben = {"owner": "Ben", "balance": 50}
+  <h2 id="pc-attrs"><span class="num">01</span>Class and Instance Attributes</h2>
+  <p>Every account in our bank has its own owner and its own balance, and we already know how to store those: <code>self.owner = owner</code> inside <code>__init__</code>. But some information is not personal to one account. Every account belongs to the same bank, so the bank's name is the same for all of them. And the bank may want to know how many accounts it has opened in total, a number that belongs to the bank as a whole rather than to Asha or Ben. Storing the bank's name separately on every account would waste space and, worse, the copies could drift apart. We need a place to keep data that is shared by all the objects of a class.</p>
+  <p>Python has exactly such a place. A variable written directly inside the class body, outside any method, is a <strong>class attribute</strong>: a single value stored once, on the class itself, and shared by every object made from it. A value stored with <code>self.something = ...</code> is an <strong>instance attribute</strong>: it is stored on one particular object, and each object has its own. Think of the passbooks a bank hands out. Each passbook has the customer's balance written inside it, different for every customer; that is an instance attribute. The bank's name is printed once on the sign above the door; that is a class attribute. Ask any customer which bank they use, and they look up at the same sign.</p>
+  <p>To see where each kind of value lives, we use <code>vars(obj)</code>, which shows the dictionary in which an object keeps its own attributes (Python stores it in a hidden attribute called <code>__dict__</code>). <code>vars(BankAccount)</code> shows the class's own dictionary in the same way.</p>
+  <div class="fx" data-lang="py">class BankAccount:
+    bank_name = "Python Bank"          # class attribute: ONE value, stored on the class
+    accounts_opened = 0                # class attribute: a counter shared by all accounts
 
-def deposit(acc, amount):
-    acc["balance"] += amount
-
-def withdraw(acc, amount):
-    if amount &gt; acc["balance"]:
-        raise ValueError("insufficient funds")
-    acc["balance"] -= amount
-
-deposit(asha, 50)
-withdraw(asha, 30)
-print("Asha after the rules:", asha["balance"])
-
-asha["balance"] -= 500          # someone skips withdraw() ...
-ben["balnce"] = 0               # ... and someone mistypes a key
-print("Asha now:", asha["balance"])
-print("Ben now: ", ben)</div>
-  <div class="fx" data-lang="text">Asha after the rules: 120
-Asha now: -380
-Ben now:  {'owner': 'Ben', 'balance': 50, 'balnce': 0}</div>
-  <p>The functions work: Asha's balance is 120 after the rules. Then two lines break everything without any error. The first changes the balance directly and skips the "no overdraft" check, so Asha is at −380. The second has a typo, <code>"balnce"</code>, and a dict happily makes a new key: Ben's dict now has a junk key, and his real balance is untouched. The data (the dict) and the rules (the functions) are separate things that merely happen to be used together. As a program grows to hundreds of functions and many kinds of records, nothing says which function belongs to which dict.</p>
-  <h3>Defining the class</h3>
-  <p>A <strong>class</strong> is a new type you design. It says what data each thing of that type has and what that thing can do. An <strong>object</strong> (also called an <strong>instance</strong>) is one thing built from the class, with its own data. Asha's account and Ben's account are two objects of one class, <code>Account</code>.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>An architect's drawing and the houses built from it. The drawing (class) is made once; each house (object) has its own furniture (data). Painting one house changes neither the drawing nor the other houses.</p></div>
-  <p>Before the code, read the shape. <code>class Account:</code> starts the blueprint. Inside it, every <code>def</code> is a <strong>method</strong>, a function that belongs to the class. <code>__init__</code> is a special method that Python runs when you build a new account; it stores the starting data. Every method's first parameter is <code>self</code>, which means "the account being worked on" (explained in the next section). <code>self.balance = balance</code> stores a value on the object; such a value is called an <strong>attribute</strong>.</p>
-  <div class="fx" data-lang="py">class Account:
     def __init__(self, owner, balance):
-        self.owner = owner          # data that belongs to THIS account
+        self.owner = owner             # instance attributes: each object gets its own
+        self.balance = balance
+        BankAccount.accounts_opened += 1
+
+asha = BankAccount("Asha", 1000)
+ben = BankAccount("Ben", 500)
+print(asha.bank_name, "|", ben.bank_name, "|", BankAccount.bank_name)
+print(vars(asha))
+print(vars(ben))
+print("bank_name" in vars(asha), "bank_name" in vars(BankAccount))
+print("accounts opened:", BankAccount.accounts_opened)</div>
+  <div class="fx" data-lang="text">Python Bank | Python Bank | Python Bank
+{'owner': 'Asha', 'balance': 1000}
+{'owner': 'Ben', 'balance': 500}
+False True
+accounts opened: 2</div>
+  <p>All three ways of reading <code>bank_name</code> print "Python Bank", yet <code>vars(asha)</code> contains only <code>owner</code> and <code>balance</code>. The name of the bank is not stored on Asha's object at all; it is in <code>vars(BankAccount)</code>. The counter was updated through the class name, <code>BankAccount.accounts_opened += 1</code>, so both accounts added to the same single number, and it reached 2.</p>
+  <p>How, then, does <code>asha.bank_name</code> find a value that is not on Asha's object? When you read an attribute, Python searches in a fixed order: first the object's own dictionary, then the class, then the class's parents (and finally the built-in <code>object</code> that every class ultimately comes from). It stops at the first place where it finds the name. For <code>asha.balance</code> the search ends at the first step, on the object. For <code>asha.bank_name</code> the object has nothing, so Python looks in <code>BankAccount</code> and finds it there. This is also how methods are found: <code>deposit</code> is not stored on each account but on the class, and the same search reaches it. If the name is nowhere, you get an <code>AttributeError</code>.</p>
+  <p>Reading searches upward, but writing does not. Assigning through an object always writes onto that object, even if the class already has an attribute of the same name. This produces a behaviour called <strong>shadowing</strong>: the new instance attribute hides the class attribute, but only for that one object.</p>
+  <div class="fx" data-lang="py">asha.bank_name = "Asha's Bank"         # assigning through an object...
+print(asha.bank_name, "|", ben.bank_name, "|", BankAccount.bank_name)
+print(vars(asha))                      # ...created a NEW attribute on asha only
+
+del asha.bank_name                     # remove it, and lookup falls back to the class
+print(asha.bank_name)
+
+BankAccount.bank_name = "PyBank"       # change the class attribute itself
+print(asha.bank_name, "|", ben.bank_name)</div>
+  <div class="fx" data-lang="text">Asha's Bank | Python Bank | Python Bank
+{'owner': 'Asha', 'balance': 1000, 'bank_name': "Asha's Bank"}
+Python Bank
+PyBank | PyBank</div>
+  <p>After <code>asha.bank_name = "Asha's Bank"</code>, Asha sees her own value while Ben and the class still say "Python Bank", and <code>vars(asha)</code> now contains a new <code>bank_name</code> key. The class attribute was not changed at all; it was merely hidden from Asha. Deleting Asha's attribute uncovers the class value again. To change the value for everyone, you must assign through the class, as the last lines do: after <code>BankAccount.bank_name = "PyBank"</code>, both accounts read the new name.</p>
+  <p>This read-up, write-here rule is the reason for two classic bugs. The first concerns counters. Suppose we update the counter through <code>self</code> instead of through the class:</p>
+  <div class="fx" data-lang="py">class BankAccount:
+    accounts_opened = 0
+
+    def __init__(self, owner, balance):
+        self.owner = owner
+        self.balance = balance
+        self.accounts_opened += 1      # BUG: reads the class value, WRITES an instance attribute
+
+asha = BankAccount("Asha", 1000)
+ben = BankAccount("Ben", 500)
+print(BankAccount.accounts_opened, asha.accounts_opened, vars(ben))</div>
+  <div class="fx" data-lang="text">0 1 {'owner': 'Ben', 'balance': 500, 'accounts_opened': 1}</div>
+  <p>The class counter is still 0, while each account carries its own private value of 1. The line <code>self.accounts_opened += 1</code> is shorthand for <code>self.accounts_opened = self.accounts_opened + 1</code>. The right-hand side reads the attribute, the search reaches the class and finds 0, and adding 1 gives 1. But the assignment on the left writes through the object, so it creates a new instance attribute instead of updating the class. Every account does the same and the shared counter never moves. Shared values must be changed through the class: <code>BankAccount.accounts_opened += 1</code>, or <code>type(self).accounts_opened += 1</code> if subclasses should keep their own counts.</p>
+  <p>The second bug is its mirror image, and <a class="xref" data-note="py_oop">OOP Concepts in Python</a> showed it with a shopping cart: a list written in the class body is shared by every object. Now we can see exactly why.</p>
+  <div class="fx" data-lang="py">class BankAccount:
+    history = []                       # BUG: one list, stored on the class
+
+    def __init__(self, owner, balance):
+        self.owner = owner
         self.balance = balance
 
-    def deposit(self, amount):      # behaviour, stored next to the data
+    def deposit(self, amount):
         self.balance += amount
+        self.history.append((self.owner, amount))   # changes the class's list in place
 
-    def withdraw(self, amount):
-        if amount &gt; self.balance:
-            raise ValueError("insufficient funds")
-        self.balance -= amount
+asha, ben = BankAccount("Asha", 1000), BankAccount("Ben", 500)
+asha.deposit(200)
+print(ben.history)
+print(asha.history is ben.history is BankAccount.history)</div>
+  <div class="fx" data-lang="text">[('Asha', 200)]
+True</div>
+  <p>Ben never deposited anything, yet his history contains Asha's deposit, and the last line confirms that <code>asha.history</code>, <code>ben.history</code> and <code>BankAccount.history</code> are one and the same list. Inside <code>deposit</code>, <code>self.history</code> is only <em>read</em>: the search finds the list on the class, and <code>.append()</code> changes that list in place. No assignment happens, so no instance attribute is ever created. Put the two bugs side by side and the rule becomes clear. With the counter, assigning through <code>self</code> created a private copy when we wanted a shared value. With the list, modifying through <code>self</code> changed the shared object when we wanted a private one. Numbers cannot be changed in place (they are <em>immutable</em>, see <a class="xref" data-note="py_values">Values &amp; Types</a>), while lists can, and that difference decides which bug you get.</p>
+  <p>The practical rule follows. Use class attributes for constants and genuine class-wide settings, such as the bank's name or a minimum opening balance. Create anything that belongs to one object, and especially anything mutable like a list or dict, on <code>self</code> inside <code>__init__</code>.</p>
 
-asha = Account("Asha", 100)        # build one object from the class
-ben = Account("Ben", 50)           # and another
-asha.deposit(50)
-asha.withdraw(30)
-print(asha.owner, asha.balance)
-print(ben.owner, ben.balance)
-print(type(asha).__name__, isinstance(asha, Account), asha is ben)
-ben.withdraw(80)</div>
-  <div class="fx" data-lang="text">Asha 120
-Ben 50
-Account True False
-ValueError: insufficient funds</div>
-  <p>After the code. <code>Account("Asha", 100)</code> built one object and <code>Account("Ben", 50)</code> another; each has its own <code>owner</code> and <code>balance</code>. <code>asha.deposit(50)</code> called the method on Asha's object only. <code>type(asha).__name__</code> is <code>Account</code>: the class really is a new type, just like <code>int</code> or <code>list</code>. <code>asha is ben</code> is False: two separate objects. The last line, Ben withdrawing 80, raised <code>ValueError: insufficient funds</code>, because the rule now travels with the data. The direct write <code>asha.balance = -500</code> is still possible; encapsulation and properties close that door.</p>
-  <figure class="viz"><svg viewBox="0 0 560 200" width="560">
-    <defs><marker id="pc-a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
-    <rect x="20" y="40" width="200" height="120" rx="6" class="fb sb"/>
-    <text x="32" y="62" font-weight="bold">class Account</text>
-    <text x="32" y="86">__init__(self, owner, balance)</text>
-    <text x="32" y="106">deposit(self, amount)</text>
-    <text x="32" y="126">withdraw(self, amount)</text>
-    <text x="32" y="148" class="tm">methods: stored once</text>
-    <line x1="222" y1="80" x2="318" y2="48" stroke="currentColor" marker-end="url(#pc-a1)"/>
-    <line x1="222" y1="122" x2="318" y2="150" stroke="currentColor" marker-end="url(#pc-a1)"/>
-    <text x="238" y="102" class="tm">Account(...)</text>
-    <rect x="320" y="16" width="220" height="62" rx="6" class="fg sg"/>
-    <text x="332" y="38" font-weight="bold">asha</text>
-    <text x="332" y="60">owner="Asha", balance=120</text>
-    <rect x="320" y="122" width="220" height="62" rx="6" class="fg sg"/>
-    <text x="332" y="144" font-weight="bold">ben</text>
-    <text x="332" y="166">owner="Ben", balance=50</text>
-  </svg><figcaption>One class, many objects. Each object keeps its own data. The methods live once, on the class, and work on whichever object they are called on.</figcaption></figure>
-  <div class="callout def"><span class="label">Definition</span><p>A <strong>class</strong> is a user-defined type that groups data (attributes) with the functions that operate on it (methods). An <strong>object</strong> or <strong>instance</strong> is a value of that type, created by calling the class like a function: <code>Account("Asha", 100)</code>. Bundling data with its behaviour is the first idea of object-oriented programming.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>A class does not by itself protect anything. This version still lets anyone write <code>asha.balance = -500</code>. Bundling is step one; protecting the rule (encapsulation) is a separate step.</p></div>
-
-  <h2 id="pc-self"><span class="num">02</span>self and Bound Methods</h2>
-  <p><code>self</code> is the object the method was called on. When you write <code>asha.deposit(50)</code>, Python finds <code>deposit</code> on the class and calls it with <code>asha</code> slipped in as the first argument. Nothing more magical happens.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A cashier serves every customer with the same procedure. The first thing she does is take your passbook. <code>self</code> is that passbook: the same procedure, applied to whichever account was handed over.</p></div>
-  <h3>The desugaring, traced</h3>
-  <table class="tbl">
-    <tr><th>Step</th><th>What Python does for <code>asha.deposit(50)</code></th></tr>
-    <tr><td>1</td><td>Look for <code>deposit</code> in Asha's own data, <code>vars(asha)</code> = <code>{'owner': 'Asha', 'balance': 100}</code>. Not there.</td></tr>
-    <tr><td>2</td><td>Look in the class, <code>vars(Account)</code>. Found: a plain function <code>deposit(self, amount)</code>.</td></tr>
-    <tr><td>3</td><td>Because it was reached through an object, wrap it as a <strong>bound method</strong>: the function plus <code>asha</code>.</td></tr>
-    <tr><td>4</td><td>Calling the bound method with <code>(50)</code> calls the function with <code>(asha, 50)</code>. Inside, <code>self</code> is <code>asha</code>, so <code>self.balance += amount</code> changes 100 → 150.</td></tr>
-  </table>
-  <p>The code below calls the method both ways and then looks at the objects involved. Watch for the words <code>function</code> and <code>bound method</code> in the output.</p>
-  <div class="fx" data-lang="py">asha = Account("Asha", 100)
-asha.deposit(50)                   # what you write
-Account.deposit(asha, 50)          # what Python actually runs
-print(asha.balance)
-
-print(Account.deposit)             # a plain function stored on the class
-print(asha.deposit)                # a "bound method": that function + asha
-m = asha.deposit
-print(m.__func__ is Account.deposit, m.__self__ is asha)
-print("deposit" in vars(Account), "deposit" in vars(asha))</div>
-  <div class="fx" data-lang="text">200
-&lt;function Account.deposit at 0x7fbeaa6dab60&gt;
-&lt;bound method Account.deposit of &lt;__main__.Account object at 0x7fbeaa6b5310&gt;&gt;
-True True
-True False</div>
-  <p>After the code. The balance went 100 → 150 → 200: both calls did the same thing. <code>Account.deposit</code> printed as a plain <code>function</code>; <code>asha.deposit</code> printed as a <code>bound method</code> of an Account object. A bound method remembers two things, the function (<code>__func__</code>) and the object (<code>__self__</code>), and both checks print True. Finally, <code>deposit</code> is in <code>vars(Account)</code> but not in <code>vars(asha)</code>: methods are stored once, on the class, never copied into each object.</p>
-  <div class="callout def"><span class="label">Definition</span><p><code>obj.method(args)</code> is shorthand for <code>type(obj).method(obj, args)</code>. The first parameter receives the object; by convention it is named <code>self</code>, but the name is not a keyword. A <strong>bound method</strong> is the object returned by <code>obj.method</code>: the function with its first argument already filled in.</p></div>
-  <h3>When self is missing</h3>
-  <p>Because Python always passes the object, a method written without a parameter for it fails on the first call:</p>
-  <div class="fx" data-lang="py">class Broken:
-    def greet():                   # forgot the self parameter
-        return "hi"
-
-Broken().greet()</div>
-  <div class="fx" data-lang="text">TypeError: Broken.greet() takes 0 positional arguments but 1 was given</div>
-  <p>Read the message literally: <code>greet</code> takes 0 arguments, but Python gave it 1 (the object). This message almost always means a missing <code>self</code>.</p>
-  <div class="callout trap"><span class="label">Trap</span><p>Inside a method, a bare <code>balance</code> is a local variable, not the object's attribute. Always write <code>self.balance</code>. Forgetting <code>self.</code> on an assignment creates a local that vanishes when the method returns, with no error.</p></div>
-
-  <h2 id="pc-init"><span class="num">03</span>__init__ and __new__: Creating an Object</h2>
-  <p>Calling a class does two steps. First Python makes a new, empty object (a method called <code>__new__</code> does this; you almost never write it). Then it calls <code>__init__</code> on that empty object with your arguments, and <code>__init__</code> fills in the attributes. <code>__init__</code> is often called the <strong>constructor</strong>, although strictly it is the <em>initialiser</em>: the object already exists when it runs.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Opening an account at a branch. The clerk first takes a blank passbook from the drawer (<code>__new__</code>), then writes your name and opening deposit in it (<code>__init__</code>). A clerk who refuses to write a negative opening deposit is validation inside <code>__init__</code>.</p></div>
-  <p>The version below prints the object's attributes at the start and the end of <code>__init__</code>, so you can watch it being filled. <code>balance=0</code> is a default argument, so the balance is optional.</p>
-  <div class="fx" data-lang="py">class Account:
+  <h2 id="pc-init"><span class="num">02</span>How an Object Is Created: __new__ and __init__</h2>
+  <p>We have been calling <code>__init__</code> "the constructor", as most people do. Strictly speaking that is not quite right, and knowing the real sequence explains several things: why <code>__init__</code> receives an object that already exists, why it is not allowed to return anything, and how an object that fails a check never comes into existence.</p>
+  <p>When you write <code>BankAccount("Asha", 1000)</code>, Python performs two separate steps. First it calls a method named <code>__new__</code>, which creates a brand-new, completely empty object of the right class. Then it calls <code>__init__</code> on that empty object, passing your arguments, and <code>__init__</code> fills in the attributes. Only after both steps does Python hand the object back to you. So <code>__new__</code> is the real <strong>constructor</strong>, the part that creates the object, and <code>__init__</code> is the <strong>initialiser</strong>, the part that sets it up. Opening an account at a branch works the same way: the clerk first takes a blank passbook from the drawer, and only then writes your name and opening deposit into it. You almost never write <code>__new__</code> yourself, because the version every class inherits from <code>object</code> does the job.</p>
+  <p>The class below prints the object's attributes at the start and end of <code>__init__</code>, so you can watch it being filled. It also refuses a negative opening balance, and then repeats the two steps by hand to show that nothing else is hidden inside the call:</p>
+  <div class="fx" data-lang="py">class BankAccount:
     def __init__(self, owner, balance=0):
         print("  __init__ starts, attributes so far:", vars(self))
         if balance &lt; 0:
             raise ValueError("opening balance cannot be negative")
         self.owner = owner
         self.balance = balance
-        print("  __init__ ends,   attributes now:   ", vars(self))
+        print("  __init__ ends, attributes now:", vars(self))
 
-    def deposit(self, amount):
-        self.balance += amount
+print("BankAccount('Asha', 1000):")
+asha = BankAccount("Asha", 1000)
 
-    def withdraw(self, amount):
-        if amount &gt; self.balance:
-            raise ValueError("insufficient funds")
-        self.balance -= amount
+print("The same two steps by hand:")
+obj = BankAccount.__new__(BankAccount)     # step 1: make an EMPTY object
+print("  after __new__:", vars(obj))
+BankAccount.__init__(obj, "Ben", 500)      # step 2: fill it in
 
-print("Account('Asha', 100):")
-asha = Account("Asha", 100)
-print("Account('Chitra') uses the default balance:")
-chitra = Account("Chitra")</div>
-  <div class="fx" data-lang="text">Account('Asha', 100):
-  __init__ starts, attributes so far: {}
-  __init__ ends,   attributes now:    {'owner': 'Asha', 'balance': 100}
-Account('Chitra') uses the default balance:
-  __init__ starts, attributes so far: {}
-  __init__ ends,   attributes now:    {'owner': 'Chitra', 'balance': 0}</div>
-  <p>At the start of <code>__init__</code> the object is empty: <code>{}</code>. By the end it holds owner and balance. For Chitra, who passed no balance, the default 0 was used. The same two steps can be done by hand, which proves there is nothing hidden:</p>
-  <div class="fx" data-lang="py">obj = Account.__new__(Account)     # step 1: make an EMPTY object
-print("after __new__ :", vars(obj))
-Account.__init__(obj, "Asha", 100) # step 2: fill it in
-print("after __init__:", vars(obj), type(obj).__name__)</div>
-  <div class="fx" data-lang="text">after __new__ : {}
-  __init__ starts, attributes so far: {}
-  __init__ ends,   attributes now:    {'owner': 'Asha', 'balance': 100}
-after __init__: {'owner': 'Asha', 'balance': 100} Account</div>
-  <p><code>Account.__new__(Account)</code> returned an empty Account; calling <code>Account.__init__</code> on it filled it in (its trace lines appear in the middle). <code>Account("Asha", 100)</code> does exactly these two calls. Two consequences follow:</p>
-  <div class="fx" data-lang="py">try:
-    Account("Ben", -50)
+try:
+    BankAccount("Chen", -50)
 except ValueError as e:
-    print("ValueError:", e)
-
-class Weird:
+    print("ValueError:", e)</div>
+  <div class="fx" data-lang="text">BankAccount('Asha', 1000):
+  __init__ starts, attributes so far: {}
+  __init__ ends, attributes now: {'owner': 'Asha', 'balance': 1000}
+The same two steps by hand:
+  after __new__: {}
+  __init__ starts, attributes so far: {}
+  __init__ ends, attributes now: {'owner': 'Ben', 'balance': 500}
+  __init__ starts, attributes so far: {}
+ValueError: opening balance cannot be negative</div>
+  <p>When <code>__init__</code> starts, the object already exists but is empty: <code>{}</code>. By the time it ends, it holds <code>owner</code> and <code>balance</code>. The manual version does the same: <code>BankAccount.__new__(BankAccount)</code> returns an empty object, and calling <code>BankAccount.__init__</code> on it fills in Ben's details. That is all that <code>BankAccount("Ben", 500)</code> does. The last part shows why <code>__init__</code> is the natural place for checks: Chen's negative balance raised a <code>ValueError</code> half-way through <code>__init__</code>, so the call never finished and no half-built account was ever handed back to the program.</p>
+  <p>Two more consequences follow from this sequence:</p>
+  <div class="fx" data-lang="py">class Weird:
     def __init__(self):
-        return 42                  # __init__ must return None
+        return 42                      # __init__ is not allowed to return a value
 
-Weird()</div>
-  <div class="fx" data-lang="text">  __init__ starts, attributes so far: {}
-ValueError: opening balance cannot be negative
-TypeError: __init__() should return None, not 'int'</div>
-  <p>The check in <code>__init__</code> stopped Ben's account from ever existing with −50: an object that fails validation is never handed back. And <code>__init__</code> must return <code>None</code>: the result of <code>Account(...)</code> is the object, not whatever <code>__init__</code> returns, so Python rejects any other return value.</p>
-  <div class="callout def"><span class="label">Definition</span><p><code>Class(args)</code> calls <code>Class.__new__(Class)</code> to create an instance, then <code>instance.__init__(args)</code> to initialise it, and returns the instance. <code>__init__</code> sets the instance attributes and is the natural place to validate arguments; it must return <code>None</code>.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Attributes created outside <code>__init__</code> (in some later method) do not exist until that method runs; reading them earlier raises <code>AttributeError</code>. Create every attribute in <code>__init__</code>, even if only as <code>None</code> or <code>[]</code>, so every object has the same shape.</p></div>
+try:
+    Weird()
+except TypeError as e:
+    print("TypeError:", e)
 
-  <h2 id="pc-attrs"><span class="num">04</span>Instance vs Class Attributes</h2>
-  <p>An <strong>instance attribute</strong> is stored in one object (set with <code>self.x = …</code>, usually in <code>__init__</code>). A <strong>class attribute</strong> is written directly in the class body and stored once, on the class. Reading <code>asha.bank</code> first looks in Asha's object, and if the name is not there, looks in the class.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Each passbook has its own balance written inside (instance attribute). The bank's name is printed once, on the branch signboard (class attribute). Ask any customer "which bank?" and, unless they have scribbled something else in their own passbook, they read the signboard.</p></div>
-  <div class="fx" data-lang="py">class Account:
-    bank = "PocketBank"            # class attribute: ONE value, on the class
-    accounts_opened = 0
-
-    def __init__(self, owner, balance=0):
-        self.owner = owner         # instance attributes: one copy per object
-        self.balance = balance
-        Account.accounts_opened += 1
-
-asha, ben = Account("Asha", 100), Account("Ben", 50)
-print(asha.bank, ben.bank, Account.bank)
-print(vars(asha))
-print("bank" in vars(asha), "bank" in vars(Account))
-print("accounts opened:", Account.accounts_opened)</div>
-  <div class="fx" data-lang="text">PocketBank PocketBank PocketBank
-{'owner': 'Asha', 'balance': 100}
-False True
-accounts opened: 2</div>
-  <p>All three ways of reading <code>bank</code> give PocketBank, yet <code>vars(asha)</code> holds only owner and balance: <code>bank</code> is in <code>vars(Account)</code>, not in the object. The counter was changed through the class (<code>Account.accounts_opened += 1</code>), so both accounts added to the same number: 2.</p>
-  <h3>Lookup order, traced</h3>
-  <table class="tbl">
-    <tr><th>Expression</th><th>1. in <code>vars(asha)</code>?</th><th>2. in <code>vars(Account)</code>?</th><th>Result</th></tr>
-    <tr><td><code>asha.balance</code></td><td>yes: 100</td><td>(not checked)</td><td>100</td></tr>
-    <tr><td><code>asha.bank</code></td><td>no</td><td>yes: "PocketBank"</td><td>"PocketBank"</td></tr>
-    <tr><td><code>asha.deposit</code></td><td>no</td><td>yes: a function</td><td>bound method</td></tr>
-    <tr><td><code>asha.colour</code></td><td>no</td><td>no (then parent classes, then <code>object</code>)</td><td>AttributeError</td></tr>
-  </table>
-  <p>Reading searches upward. <strong>Writing does not</strong>: assigning through an object always writes into that object.</p>
-  <div class="fx" data-lang="py">asha.bank = "AshaBank"             # assignment through an object makes a NEW instance attribute
-print(asha.bank, "|", ben.bank, "|", Account.bank)
-print(vars(asha))
-del asha.bank                      # remove it: lookup falls back to the class again
-print(asha.bank)</div>
-  <div class="fx" data-lang="text">AshaBank | PocketBank | PocketBank
-{'owner': 'Asha', 'balance': 100, 'bank': 'AshaBank'}
-PocketBank</div>
-  <p><code>asha.bank = "AshaBank"</code> did not change the class; it created a new instance attribute that <em>shadows</em> (hides) the class one, for Asha only. Ben and the class still say PocketBank. Deleting Asha's attribute uncovers the class value again.</p>
-  <h3>The shared-mutable trap, traced</h3>
-  <p>Now add a per-account transaction history. A tempting first try puts <code>history = []</code> in the class body, next to <code>bank</code>.</p>
-  <div class="fx" data-lang="py">class Account:
-    history = []                   # BUG: one list shared by every account
-
-    def __init__(self, owner, balance=0):
-        self.owner, self.balance = owner, balance
-
-    def deposit(self, amount):
-        self.balance += amount
-        self.history.append((self.owner, "deposit", amount))
-
-asha, ben = Account("Asha", 100), Account("Ben", 50)
-asha.deposit(50)
-print("Ben's history:", ben.history)
-print(asha.history is ben.history is Account.history)</div>
-  <div class="fx" data-lang="text">Ben's history: [('Asha', 'deposit', 50)]
-True</div>
-  <p>Ben never deposited anything, yet his history shows Asha's deposit. Trace <code>asha.deposit(50)</code>:</p>
-  <table class="tbl">
-    <tr><th>Step</th><th>What happens</th><th>Where the list lives</th></tr>
-    <tr><td>1</td><td><code>self.history</code>: not in <code>vars(asha)</code> → found on the class</td><td>one list, on <code>Account</code></td></tr>
-    <tr><td>2</td><td><code>.append(...)</code> <em>changes that list in place</em>; no assignment, so no new instance attribute</td><td>still the class's list</td></tr>
-    <tr><td>3</td><td><code>ben.history</code>: not in <code>vars(ben)</code> → the same class list</td><td>Ben sees Asha's entry</td></tr>
-  </table>
-  <p>The last line printed True: <code>asha.history</code>, <code>ben.history</code> and <code>Account.history</code> are one object. The opposite mistake happens with a number:</p>
-  <div class="fx" data-lang="py">class Account:
-    accounts_opened = 0
-
-    def __init__(self, owner):
+class BankAccount:
+    def __init__(self, owner, balance):
         self.owner = owner
-        self.accounts_opened += 1  # BUG: reads the class value, WRITES an instance attribute
+        self.balance = balance
 
-asha, ben = Account("Asha"), Account("Ben")
-print(Account.accounts_opened, asha.accounts_opened, vars(ben))</div>
-  <div class="fx" data-lang="text">0 1 {'owner': 'Ben', 'accounts_opened': 1}</div>
-  <p><code>self.accounts_opened += 1</code> means <code>self.accounts_opened = self.accounts_opened + 1</code>. The read finds the class's 0, but the write is an assignment through the object, so it creates an instance attribute with 1 on each account. The class counter stays 0. Ints cannot be changed in place (they are <em>immutable</em>, see <a class="xref" data-note="py_values">Values &amp; Types</a>), so the list trap and the counter trap are mirror images: mutating a shared object leaks to everyone; rebinding a name creates a private copy.</p>
-  <div class="fx" data-lang="py">class Account:
-    def __init__(self, owner, balance=0):
-        self.owner, self.balance = owner, balance
-        self.history = []          # a fresh list for EACH account
+    def freeze(self):
+        self.frozen = True             # attribute created only when freeze() runs
+
+ben = BankAccount("Ben", 500)
+try:
+    print(ben.frozen)
+except AttributeError as e:
+    print("AttributeError:", e)</div>
+  <div class="fx" data-lang="text">TypeError: __init__() should return None, not 'int'
+AttributeError: 'BankAccount' object has no attribute 'frozen'</div>
+  <p>The result of <code>BankAccount(...)</code> is always the object created by <code>__new__</code>, not whatever <code>__init__</code> returns, so a return value from <code>__init__</code> would be meaningless and Python rejects it with "should return None". The second example shows why every attribute should be created in <code>__init__</code>: <code>frozen</code> only appears when <code>freeze()</code> runs, so reading it on an account that was never frozen fails. If every attribute is set in <code>__init__</code>, even if only to <code>None</code>, <code>False</code> or an empty list, every object of the class has the same shape and code that uses it does not have to guess.</p>
+  <p>The rare occasions for writing <code>__new__</code> come when the object must be decided before it exists. The most common case is a subclass of an immutable built-in type such as <code>int</code>, <code>str</code> or <code>tuple</code>. Their value is fixed the moment the object is created, so by the time <code>__init__</code> runs it is too late to change it:</p>
+  <div class="fx" data-lang="py">class Paise(int):                      # int is immutable: its value is fixed in __new__
+    def __new__(cls, rupees):
+        return super().__new__(cls, round(rupees * 100))
+
+p = Paise(12.5)                        # ₹12.50 stored as 1250 paise
+print(p, p + 1, isinstance(p, int), type(p).__name__)</div>
+  <div class="fx" data-lang="text">1250 1251 True Paise</div>
+  <p><code>Paise(12.5)</code> converted rupees to paise inside <code>__new__</code>, and the result is a real integer, 1250, that supports arithmetic and passes <code>isinstance(p, int)</code>. Apart from immutable types, <code>__new__</code> is used for patterns that must control which object is returned, such as a singleton (one shared instance), which appears in <a class="xref" data-note="py_inheritance">Inheritance, Polymorphism &amp; Design</a>.</p>
+
+  <h2 id="pc-methods"><span class="num">03</span>Instance, Class and Static Methods</h2>
+  <p>In <a class="xref" data-note="py_oop">OOP Concepts in Python</a> we saw that <code>asha.deposit(200)</code> is turned by Python into <code>BankAccount.deposit(asha, 200)</code>, which is how <code>self</code> receives the account. To understand the other kinds of method, it helps to look at the object that makes this possible. When you write <code>asha.deposit</code> without brackets, Python finds the function on the class and wraps it together with <code>asha</code> into a small object called a <strong>bound method</strong>: the function plus the object it should work on, with the first argument already filled in.</p>
+  <div class="fx" data-lang="py">class BankAccount:
+    def __init__(self, owner, balance):
+        self.owner = owner
+        self.balance = balance
 
     def deposit(self, amount):
         self.balance += amount
-        self.history.append(("deposit", amount))
 
-asha, ben = Account("Asha", 100), Account("Ben", 50)
-asha.deposit(50)
-print("Asha:", asha.history, "| Ben:", ben.history)</div>
-  <div class="fx" data-lang="text">Asha: [('deposit', 50)] | Ben: []</div>
-  <p>The fix: create the list in <code>__init__</code>, so each call makes a fresh one. Now Asha has her deposit and Ben has an empty history.</p>
-  <div class="callout def"><span class="label">Definition</span><p>An <strong>instance attribute</strong> lives in the object's <code>__dict__</code> (shown by <code>vars(obj)</code>); a <strong>class attribute</strong> lives in the class's <code>__dict__</code> and is shared by all instances. Attribute <em>lookup</em> searches the instance, then the class, then its parent classes; attribute <em>assignment</em> through an instance always writes to the instance.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Never put a list, dict or set in the class body unless you truly want one shared object. Use class attributes for constants (<code>bank = "PocketBank"</code>, <code>min_opening = 10</code>), and change shared counters through the class name (<code>Account.count += 1</code>) or <code>type(self)</code>.</p></div>
+asha = BankAccount("Asha", 1000)
+print(BankAccount.deposit)             # through the class: a plain function
+print(asha.deposit)                    # through an object: a "bound method"
 
-  <h2 id="pc-methods"><span class="num">05</span>Instance, Class and Static Methods</h2>
-  <p>There are three kinds of method, told apart by what they receive first. An <strong>instance method</strong> (the normal kind) receives the object, <code>self</code>. A <strong>class method</strong>, marked <code>@classmethod</code>, receives the class itself, by convention named <code>cls</code>; its usual job is to build objects in another way. A <strong>static method</strong>, marked <code>@staticmethod</code>, receives nothing extra; it is a plain function kept inside the class because it belongs there. (A line starting with <code>@</code> is a <strong>decorator</strong>, which changes the function below it; <a class="xref" data-note="py_decorators">Decorators</a> shows how they work inside.)</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A bank branch. Instance method: the cashier updating <em>your</em> passbook. Class method: the account-opening desk, which makes a new passbook from a filled-in form. Static method: the note-counting machine on the desk, which belongs to the branch but knows nothing about any customer.</p></div>
-  <table class="tbl">
-    <tr><th>Kind</th><th>First parameter</th><th>Can use</th><th>Typical job</th></tr>
-    <tr><td>Instance</td><td><code>self</code> (the account)</td><td>this object's data + class data</td><td><code>deposit</code>, <code>withdraw</code></td></tr>
-    <tr><td><code>@classmethod</code></td><td><code>cls</code> (the class it was called on)</td><td>class data; can build objects with <code>cls(...)</code></td><td><code>from_csv("Asha, 100")</code>, <code>set_min_opening(20)</code></td></tr>
-    <tr><td><code>@staticmethod</code></td><td>none</td><td>only its own arguments</td><td><code>is_valid_amount(-5)</code></td></tr>
-  </table>
-  <p>The class below has all three. <code>min_opening = 10</code> is a class attribute (the smallest opening deposit); <code>__init__</code> reads it through <code>self</code>, which matters in a moment.</p>
-  <div class="fx" data-lang="py">class Account:
-    bank = "PocketBank"
-    min_opening = 10
+m = asha.deposit                       # take the method without calling it
+print(m.__func__ is BankAccount.deposit, m.__self__ is asha)
+m(200)                                 # it still remembers which account it belongs to
+print(asha.balance)
+print("deposit" in vars(BankAccount), "deposit" in vars(asha))</div>
+  <div class="fx" data-lang="text">&lt;function BankAccount.deposit at 0x7fcea21a51c0&gt;
+&lt;bound method BankAccount.deposit of &lt;__main__.BankAccount object at 0x7fcea24e30e0&gt;&gt;
+True True
+1200
+True False</div>
+  <p>Reached through the class, <code>BankAccount.deposit</code> is printed as a plain <code>function</code>. Reached through Asha's account, it is a <code>bound method</code>. The bound method remembers two things, the function in <code>__func__</code> and the account in <code>__self__</code>, and both checks print <code>True</code>. Because it carries the account with it, we could store it in a variable <code>m</code> and call <code>m(200)</code> later, and it still deposited into Asha's account, taking her to 1200. The last line confirms that the method is stored once, on the class, and never copied into each object.</p>
+  <p>Most methods are of this ordinary kind, called <strong>instance methods</strong>: they receive the object as <code>self</code> because they work on that one object's data. But not every job concerns one account. Sometimes a method needs the class rather than any particular object, for example to change a bank-wide rule. And sometimes a function needs neither, such as a check that an amount is a positive number, yet it clearly belongs with the account code. Python offers a kind of method for each case, chosen with a <strong>decorator</strong>, a line starting with <code>@</code> placed above a function to change how it behaves (<a class="xref" data-note="py_decorators">Decorators</a> explains how they work inside).</p>
+  <p>A <strong>class method</strong>, marked <code>@classmethod</code>, receives the class itself as its first argument instead of an object; by convention that parameter is called <code>cls</code>. A <strong>static method</strong>, marked <code>@staticmethod</code>, receives no automatic first argument at all; it is an ordinary function that simply lives inside the class. A bank branch makes the difference concrete. The cashier who updates your passbook is doing an instance method: the work is about your account. The manager who changes the minimum opening balance for the whole branch is doing a class method: the work is about the branch's rules, not any one customer. The note-counting machine on the desk is a static method: it belongs to the branch, but it knows nothing about customers or rules; you give it notes and it counts them.</p>
+  <div class="fx" data-lang="py">class BankAccount:
+    min_opening = 100                           # class attribute: smallest opening deposit
 
-    def __init__(self, owner, balance=0):
+    def __init__(self, owner, balance):
         if balance &lt; self.min_opening:
             raise ValueError(f"opening balance must be at least {self.min_opening}")
-        self.owner, self.balance = owner, balance
+        self.owner = owner
+        self.balance = balance
 
-    def deposit(self, amount):                 # instance method: needs THIS account
+    def deposit(self, amount):                  # instance method: works on ONE account
         if not self.is_valid_amount(amount):
             raise ValueError(f"bad amount: {amount!r}")
         self.balance += amount
 
     @classmethod
-    def from_csv(cls, line):                   # class method: another way to BUILD one
-        owner, balance = line.split(",")
-        return cls(owner.strip(), int(balance))
-
-    @classmethod
-    def set_min_opening(cls, amount):          # class method: change class-wide data
+    def set_min_opening(cls, amount):           # class method: works on the CLASS
         cls.min_opening = amount
 
     @staticmethod
-    def is_valid_amount(amount):               # static method: a helper, needs neither
+    def is_valid_amount(amount):                # static method: needs neither
         return isinstance(amount, (int, float)) and amount &gt; 0
 
-asha = Account.from_csv("Asha, 100")
-print(asha.owner, asha.balance, type(asha).__name__)
-print(Account.is_valid_amount(50), Account.is_valid_amount(-5), asha.is_valid_amount("10"))
-print(Account.from_csv)
-print(Account.is_valid_amount)
+asha = BankAccount("Asha", 1000)
+print(BankAccount.is_valid_amount(50), BankAccount.is_valid_amount(-5), asha.is_valid_amount("10"))
 try:
     asha.deposit(-5)
 except ValueError as e:
-    print("ValueError:", e)</div>
-  <div class="fx" data-lang="text">Asha 100 Account
-True False False
-&lt;bound method Account.from_csv of &lt;class '__main__.Account'&gt;&gt;
-&lt;function Account.is_valid_amount at 0x7fbeaa6db7e0&gt;
-ValueError: bad amount: -5</div>
-  <p>After the code. <code>Account.from_csv("Asha, 100")</code> split the line, converted <code>"100"</code> to an int and returned <code>cls(...)</code>, a normal Account. The static method answered True, False, False without any account (and also works when called through one, <code>asha.is_valid_amount</code>). The two printed method objects show the difference: <code>from_csv</code> is a <em>bound method of the class</em> (the class was slipped in as <code>cls</code>, just as an object is slipped in as <code>self</code>), while <code>is_valid_amount</code> is a plain function with nothing slipped in. <code>deposit(-5)</code> used the static helper and refused the amount.</p>
-  <h3>Why cls and not the class name</h3>
-  <p>A child class (see <a class="xref" data-note="py_inheritance">Inheritance</a>), such as a student account that allows a 0 opening balance, inherits <code>from_csv</code>. Because <code>cls</code> is whichever class the method was called on, the child gets the right type back. A version that hard-codes <code>Account(...)</code> does not:</p>
-  <div class="fx" data-lang="py">class StudentAccount(Account):     # a child class: inherits everything from Account
+    print("ValueError:", e)
+
+BankAccount.set_min_opening(500)               # the bank raises its minimum
+try:
+    BankAccount("Ben", 200)
+except ValueError as e:
+    print("ValueError:", e)
+
+print(BankAccount.set_min_opening)
+print(BankAccount.is_valid_amount)</div>
+  <div class="fx" data-lang="text">True False False
+ValueError: bad amount: -5
+ValueError: opening balance must be at least 500
+&lt;bound method BankAccount.set_min_opening of &lt;class '__main__.BankAccount'&gt;&gt;
+&lt;function BankAccount.is_valid_amount at 0x7f89c4fa5300&gt;</div>
+  <p>The static method <code>is_valid_amount</code> answered <code>True</code>, <code>False</code>, <code>False</code> without needing any account; it can be called through the class or through an object, and <code>deposit</code> uses it to refuse −5. The class method <code>set_min_opening(500)</code> changed <code>min_opening</code> on the class, so the very next account, Ben's with 200, was refused because the rule is now 500 for everybody. The two printed method objects show what each kind receives. <code>set_min_opening</code> is a bound method <em>of the class</em>: Python slipped the class in as <code>cls</code>, exactly as it slips an object in as <code>self</code>. <code>is_valid_amount</code> is a plain function with nothing slipped in.</p>
+  <p>Choosing between them is a matter of asking what the method needs. If it uses the object's data, it is an instance method. If it needs the class, to read or change class-wide settings or to create new objects, it is a class method. If it needs neither but is only meaningful together with this class, it is a static method. And if a helper needs neither and is useful elsewhere too, it is often better as an ordinary function at module level. The most important use of class methods, creating objects in a different way, deserves its own section.</p>
+
+  <h2 id="pc-alt"><span class="num">04</span>Alternative Constructors</h2>
+  <p>A class has only one <code>__init__</code>, and Python does not allow several versions of it with different parameters (there is no <em>overloading</em> as in Java). Yet data often arrives in different shapes. Our bank might receive new accounts as lines of a CSV file, such as <code>"Asha, 1000"</code>. We could make every caller split and convert the text before calling <code>BankAccount(...)</code>, but then the same parsing code would be repeated everywhere, and a change of format would mean finding every copy.</p>
+  <p>The usual solution is an <strong>alternative constructor</strong>: a class method that accepts the data in another form, converts it, and then calls the class to build the object. It is like a bank that accepts account applications either at the counter or on a printed form: the form desk reads the form, fills in the same details, and hands them to the same account-opening procedure. By convention these methods are named <code>from_something</code>.</p>
+  <div class="fx" data-lang="py">class BankAccount:
+    min_opening = 100
+
+    def __init__(self, owner, balance):
+        if balance &lt; self.min_opening:
+            raise ValueError(f"opening balance must be at least {self.min_opening}")
+        self.owner = owner
+        self.balance = balance
+
+    @classmethod
+    def from_csv(cls, line):                    # "Asha, 1000"  -&gt;  a BankAccount
+        owner, balance = line.split(",")
+        return cls(owner.strip(), int(balance))
+
+rows = ["Asha, 1000", "Ben, 500"]               # e.g. lines read from a file
+accounts = [BankAccount.from_csv(r) for r in rows]
+for acc in accounts:
+    print(type(acc).__name__, acc.owner, acc.balance)</div>
+  <div class="fx" data-lang="text">BankAccount Asha 1000
+BankAccount Ben 500</div>
+  <p><code>BankAccount.from_csv("Asha, 1000")</code> split the line at the comma, stripped the spaces, converted <code>"1000"</code> to an integer and then called <code>cls(...)</code>, which runs the normal <code>__new__</code> and <code>__init__</code>. The result is an ordinary <code>BankAccount</code>, checked by the same opening rule as any other. You have used this pattern already in the standard library: <code>dict.fromkeys(...)</code>, <code>datetime.fromisoformat("2024-01-31")</code> and pandas' <code>pd.DataFrame.from_dict(...)</code> are all alternative constructors.</p>
+  <p>Why does <code>from_csv</code> call <code>cls(...)</code> rather than simply <code>BankAccount(...)</code>? The answer appears as soon as there is a subclass (a child class, see <a class="xref" data-note="py_oop">OOP Concepts in Python</a>). Suppose the bank adds student accounts, which may be opened with nothing in them. The student class inherits <code>from_csv</code>, and when it is called as <code>StudentAccount.from_csv(...)</code>, <code>cls</code> is <code>StudentAccount</code>. A version that names a class directly loses that information:</p>
+  <div class="fx" data-lang="py">class StudentAccount(BankAccount):              # students may open an account with 0
     min_opening = 0
 
-dev = StudentAccount.from_csv("Dev, 0")
+dev = StudentAccount.from_csv("Dev, 0")         # inherited from_csv, called on the child
 print(type(dev).__name__, dev.owner, dev.balance)
 
-class Hardcoded(Account):
+class HardcodedAccount(BankAccount):
     @classmethod
     def from_csv(cls, line):
         owner, balance = line.split(",")
-        return Account(owner.strip(), int(balance))   # BUG: ignores cls
+        return HardcodedAccount(owner.strip(), int(balance))  # BUG: names a class instead of cls
 
-class StudentAccount2(Hardcoded):
+class HardcodedStudent(HardcodedAccount):
     min_opening = 0
 
 try:
-    StudentAccount2.from_csv("Dev, 0")
+    HardcodedStudent.from_csv("Eve, 0")
 except ValueError as e:
     print("ValueError:", e)</div>
   <div class="fx" data-lang="text">StudentAccount Dev 0
-ValueError: opening balance must be at least 10</div>
-  <p><code>StudentAccount.from_csv("Dev, 0")</code> returned a StudentAccount, and its <code>min_opening</code> of 0 allowed the empty account. The hard-coded version built a plain <code>Account</code>, so the parent's minimum of 10 applied and Dev was refused. Real alternative constructors work this way: <code>dict.fromkeys</code>, <code>datetime.fromisoformat</code>, <code>pd.DataFrame.from_dict</code>.</p>
-  <div class="callout def"><span class="label">Definition</span><p>An <strong>instance method</strong> receives the instance as its first argument. A <strong>class method</strong> (<code>@classmethod</code>) receives the class it was called on, so it is used for <em>alternative constructors</em> and class-wide state. A <strong>static method</strong> (<code>@staticmethod</code>) receives no implicit argument; it is a namespaced helper.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>A static method that needs the class's data is really a class method in disguise. And a "helper" that needs neither class nor instance and is used elsewhere too is often better as a module-level function. Static methods are for helpers that belong with this class only.</p></div>
+ValueError: opening balance must be at least 100</div>
+  <p><code>StudentAccount.from_csv("Dev, 0")</code> returned a <code>StudentAccount</code>, and the child's own <code>min_opening</code> of 0 allowed Dev's empty account. In the second family, <code>from_csv</code> names <code>HardcodedAccount</code> instead of using <code>cls</code>, so even when called on <code>HardcodedStudent</code> it builds a <code>HardcodedAccount</code>, whose minimum is still 100, and Eve is refused. The child's rule was silently ignored. An alternative constructor should therefore always build its result with <code>cls(...)</code>, so that it keeps working for every subclass.</p>
 
-  <h2 id="pc-encap"><span class="num">06</span>Encapsulation: _name and __name Mangling</h2>
-  <p>Encapsulation keeps an object's data internal so it changes only through methods that keep its <strong>invariant</strong>, a rule about the data that must hold at every moment (here, <code>balance ≥ 0</code>). Without it, the invariant is one assignment away from broken:</p>
-  <div class="fx" data-lang="py">class Account:
-    def __init__(self, owner, balance=0):
-        self.owner, self.balance = owner, balance
-
-    def withdraw(self, amount):
-        if amount &gt; self.balance:
-            raise ValueError("insufficient funds")
-        self.balance -= amount
-
-asha = Account("Asha", 120)
-asha.balance = -500                # nothing stops this line
-print(asha.balance)</div>
-  <div class="fx" data-lang="text">-500</div>
-  <p>Python has no truly private attributes. It has two naming tools instead.</p>
-  <ul>
-    <li><strong>One underscore</strong>, <code>_balance</code>: a convention that means "internal, not part of the public interface". Python changes nothing; other programmers (and linters) respect it.</li>
-    <li><strong>Two underscores</strong>, <code>__balance</code> (and not ending in two underscores): Python <em>renames</em> it inside the class body to <code>_Account__balance</code>. This is called <strong>name mangling</strong>.</li>
-  </ul>
-  <div class="callout anlg"><span class="label">Analogy</span><p>An ATM. You deposit and withdraw through buttons that follow rules; you cannot reach into the cash box. A single underscore is a "Staff only" sign on an unlocked door. Double underscore is moving the door to a different corridor: harder to stumble into, but a determined person with the floor plan can still find it.</p></div>
-  <div class="fx" data-lang="py">class Account:
-    def __init__(self, owner, balance=0):
+  <h2 id="pc-prop"><span class="num">05</span>Properties with Setters</h2>
+  <p>In <a class="xref" data-note="py_oop">OOP Concepts in Python</a> we made the balance read-only with <code>@property</code>, so the only way to change it was through <code>deposit</code> and <code>withdraw</code>. But some attributes should be changeable, just not to any value at all. An account's owner can change their name, for example after marriage, yet an empty name should never be accepted. With a plain attribute, nothing checks the value:</p>
+  <div class="fx" data-lang="py">class BankAccount:
+    def __init__(self, owner, balance):
         self.owner = owner
-        self._fee_waived = False   # one underscore: "internal, please don't touch"
-        self.__balance = balance   # two underscores: renamed by Python
+        self._balance = balance
 
-    def withdraw(self, amount):
-        if amount &gt; self.__balance:
-            raise ValueError("insufficient funds")
-        self.__balance -= amount
-
-    def get_balance(self):
-        return self.__balance
-
-asha = Account("Asha", 120)
-asha.withdraw(20)
-print(vars(asha))
-print(asha.get_balance(), asha._Account__balance)
-try:
-    asha.__balance
-except AttributeError as e:
-    print("AttributeError:", e)
-asha.__balance = -500              # creates a NEW, unrelated attribute
-print(asha.get_balance(), vars(asha))</div>
-  <div class="fx" data-lang="text">{'owner': 'Asha', '_fee_waived': False, '_Account__balance': 100}
-100 100
-AttributeError: 'Account' object has no attribute '__balance'
-100 {'owner': 'Asha', '_fee_waived': False, '_Account__balance': 100, '__balance': -500}</div>
-  <p>After the code. <code>vars(asha)</code> shows the real stored name, <code>_Account__balance</code>, holding 100 after the withdrawal of 20. The method <code>get_balance</code> reads it (inside the class, <code>self.__balance</code> is rewritten to <code>self._Account__balance</code>). From outside, <code>asha.__balance</code> is not found, but the mangled name works, which proves this is not security. The last two lines are the classic surprise: assigning <code>asha.__balance = -500</code> from <em>outside</em> the class is not mangled, so it creates a brand-new attribute literally called <code>__balance</code>. The real balance stays 100 and the invariant survives.</p>
-  <h3>What mangling is actually for</h3>
-  <p>Mangling exists so that a child class can use the same name without overwriting the parent's data by accident:</p>
-  <div class="fx" data-lang="py">class AuditedAccount(Account):
-    def __init__(self, owner, balance=0):
-        super().__init__(owner, balance)       # run the parent's __init__ first
-        self.__balance = "audit copy"          # becomes _AuditedAccount__balance
-
-a = AuditedAccount("Ben", 50)
-print(vars(a))
-print(a.get_balance())                         # the parent's data is untouched</div>
-  <div class="fx" data-lang="text">{'owner': 'Ben', '_fee_waived': False, '_Account__balance': 50, '_AuditedAccount__balance': 'audit copy'}
-50</div>
-  <p>Both classes wrote <code>self.__balance</code>, but they are stored under different names, <code>_Account__balance</code> and <code>_AuditedAccount__balance</code>, so the parent's real balance (50) is untouched. Use double underscores for this purpose only; for "internal" use a single underscore.</p>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Encapsulation</strong>: hiding an object's internal state and exposing only operations that keep its invariants. In Python it is by convention: <code>_name</code> marks internal attributes; <code>__name</code> inside a class body is mangled to <code>_ClassName__name</code> to avoid clashes in subclasses.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Name mangling is not access control. <code>obj._Account__balance</code> always works. And encapsulation is not abstraction: encapsulation protects <em>data</em> (who may change it); abstraction simplifies the <em>interface</em> (what a caller needs to know). Abstraction and ABCs are covered in <a class="xref" data-note="py_inheritance">Inheritance, Polymorphism &amp; Design</a>.</p></div>
-
-  <h2 id="pc-prop"><span class="num">07</span>@property: Getters, Setters and Read-only Attributes</h2>
-  <p>A <strong>property</strong> is a method that is used like an attribute. The <strong>getter</strong>, written under <code>@property</code>, runs when you read <code>obj.name</code>. An optional <strong>setter</strong>, written under <code>@name.setter</code>, runs when you assign <code>obj.name = value</code>, and can check or clean the value. A property with no setter is read-only. The real value is stored under a different name, usually with one underscore (<code>_balance</code>).</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A bank counter window. You just "hand over money", but the cashier checks the note before it goes in. From your side it is one simple action; behind the glass, rules run.</p></div>
-  <p>In the class below, <code>balance</code> is read-only, <code>owner</code> has a setter that strips spaces, refuses an empty name and capitalises it, and <code>is_empty</code> is computed on every read. Note that <code>__init__</code> itself writes <code>self.owner = owner</code>, so even the first value goes through the setter.</p>
-  <div class="fx" data-lang="py">class Account:
-    def __init__(self, owner, balance=0):
-        self.owner = owner                     # goes through the owner setter below
-        self._balance = 0
-        if balance:
-            self.deposit(balance)
+asha = BankAccount("Asha", 1000)
+asha.owner = "   "                  # an empty name: nothing stops it
+print(repr(asha.owner))</div>
+  <div class="fx" data-lang="text">'   '</div>
+  <p>The owner is now three spaces, and no error appeared. We could add a <code>set_owner()</code> method with the check inside, as Java programmers do, but then every existing line that says <code>asha.owner = ...</code> would have to be rewritten, and nothing would stop someone from still assigning the attribute directly.</p>
+  <p>A <strong>property</strong> solves this without changing how the attribute is used. It is a pair of methods that Python runs automatically when the attribute is read or assigned. The <strong>getter</strong>, written under <code>@property</code>, runs when code reads <code>asha.owner</code>. The <strong>setter</strong>, written under <code>@owner.setter</code>, runs when code assigns <code>asha.owner = value</code>, and it can check or clean the value before storing it. Because the property uses the name <code>owner</code> itself, the real value has to be stored under a different name, by convention the same name with a leading underscore, <code>_owner</code>. Think of a bank counter window. From your side you simply hand over a form; behind the glass, the cashier checks it before anything is written into the records. The caller sees a simple action, but rules run every time.</p>
+  <div class="fx" data-lang="py">class BankAccount:
+    def __init__(self, owner, balance):
+        self.owner = owner                     # goes through the setter below
+        self._balance = balance
 
     @property
-    def balance(self):                         # read like an attribute ...
-        return self._balance                   # ... but no setter: read-only
-
-    @property
-    def owner(self):
+    def owner(self):                           # getter: runs on  asha.owner
         return self._owner
 
     @owner.setter
-    def owner(self, name):                     # runs on every  obj.owner = ...
+    def owner(self, name):                     # setter: runs on  asha.owner = ...
         name = name.strip()
         if not name:
             raise ValueError("owner name cannot be empty")
         self._owner = name.title()
 
     @property
-    def is_empty(self):                        # computed on every read
+    def balance(self):                         # getter only: read-only (as in OOP Concepts)
+        return self._balance
+
+    @property
+    def is_empty(self):                        # computed fresh on every read
         return self._balance == 0
 
-    def deposit(self, amount):
-        if amount &lt;= 0:
-            raise ValueError("deposit must be positive")
-        self._balance += amount
-
-    def withdraw(self, amount):
-        if amount &gt; self._balance:
-            raise ValueError("insufficient funds")
-        self._balance -= amount
-
-asha = Account("  asha rao ", 100)
-asha.deposit(50); asha.withdraw(30)
+asha = BankAccount("  asha rao ", 1000)
 print(asha.owner, asha.balance, asha.is_empty)
-try:
-    asha.balance = 1_000_000
-except AttributeError as e:
-    print("AttributeError:", e)
 try:
     asha.owner = "   "
 except ValueError as e:
     print("ValueError:", e)
 asha.owner = "asha k"
-print(asha.owner, vars(asha))</div>
-  <div class="fx" data-lang="text">Asha Rao 120 False
-AttributeError: property 'balance' of 'Account' object has no setter
+print(asha.owner)
+print(vars(asha))
+
+asha.__dict__["owner"] = "Hacker"              # sneak a value straight into the object's storage
+print(asha.owner)                              # the property still wins</div>
+  <div class="fx" data-lang="text">Asha Rao 1000 False
 ValueError: owner name cannot be empty
-Asha K {'_owner': 'Asha K', '_balance': 120}</div>
-  <p>After the code. The name <code>"  asha rao "</code> was cleaned to <code>Asha Rao</code> by the setter during <code>__init__</code>. The balance reads as 120 with plain attribute syntax. Assigning to it fails with "property 'balance' … has no setter". An empty name is refused; <code>"asha k"</code> becomes <code>Asha K</code>. <code>vars(asha)</code> shows where the data really lives: <code>_owner</code> and <code>_balance</code>. The properties themselves live on the class.</p>
-  <h3>Why a property wins the lookup: data descriptors</h3>
-  <p>Normal attribute lookup checks the object first. A property is the exception: it is a special kind of class attribute (a <em>data descriptor</em>) that Python checks <em>before</em> the object's own data. That is why <code>asha.balance = …</code> cannot sneak a value into <code>vars(asha)</code>: the property intercepts both reading and writing.</p>
-  <h3>Adding a property later without breaking callers</h3>
-  <p>Start every class with plain attributes. If a rule appears later ("owner names must not be empty"), turn the attribute into a property with a setter. Every caller that wrote <code>acc.owner = …</code> keeps working, and now goes through the check. In Java you would have to write <code>getOwner()</code>/<code>setOwner()</code> from day one; in Python you do not.</p>
-  <div class="fx" data-lang="py">class Loop:
+Asha K
+{'_owner': 'Asha K', '_balance': 1000}
+Asha K</div>
+  <p>The name <code>"  asha rao "</code> came out as <code>Asha Rao</code>. Notice that <code>__init__</code> itself writes <code>self.owner = owner</code>, so even the very first value went through the setter: there is no way to create an account with an unchecked name. Assigning three spaces raised a <code>ValueError</code>, and <code>"asha k"</code> was cleaned to <code>Asha K</code>. The balance is still read-only, and <code>is_empty</code> shows a third use of properties: a value that is computed fresh every time it is read, so it can never be out of date. <code>vars(asha)</code> shows where the data really lives, under <code>_owner</code> and <code>_balance</code>; the properties themselves are stored on the class.</p>
+  <p>The last two lines reveal something about how properties work. We forced a value called <code>owner</code> straight into the object's own dictionary, and yet <code>asha.owner</code> still printed "Asha K". Normally the object's own dictionary is searched before the class, as we saw in the first section. A property is an exception. It belongs to a special group of class attributes called <strong>data descriptors</strong>, objects that define what happens on both reading and writing, and Python checks data descriptors on the class <em>before</em> it looks in the object. That is why a property cannot be bypassed by an attribute of the same name on the object, and why assigning <code>asha.owner = ...</code> always goes through the setter.</p>
+  <p>Properties also explain why Python code rarely uses <code>get_x()</code> and <code>set_x()</code> methods. You can start every class with plain attributes. If a rule appears months later, you turn the attribute into a property, and every line that already reads or assigns it keeps working, now with the check in place. The one rule to remember is that the getter and setter must use the underscore name. If they use the property's own name, each call triggers itself again:</p>
+  <div class="fx" data-lang="py">class BankAccount:
+    def __init__(self, balance):
+        self.balance = balance          # calls the setter, which calls itself...
+
     @property
     def balance(self):
-        return self.balance        # BUG: reads itself, forever
+        return self.balance             # BUG: reads itself
 
-Loop().balance</div>
+    @balance.setter
+    def balance(self, value):
+        self.balance = value            # BUG: assigns itself
+
+try:
+    BankAccount(1000)
+except RecursionError as e:
+    print("RecursionError:", e)</div>
   <div class="fx" data-lang="text">RecursionError: maximum recursion depth exceeded</div>
-  <p>This is the most common property bug. The getter is named <code>balance</code> and reads <code>self.balance</code>, which calls the getter again, forever, until Python gives up. Store the value under another name (<code>self._balance</code>).</p>
-  <div class="callout def"><span class="label">Definition</span><p><code>@property</code> turns a method into a managed attribute: reading calls the getter, <code>@x.setter</code> handles assignment, <code>@x.deleter</code> handles <code>del</code>. A property without a setter is read-only. Properties are data descriptors, so they take precedence over the instance's <code>__dict__</code>.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Keep getters cheap and free of side effects. <code>acc.balance</code> looks like a plain read, so a getter that queries a database or changes state surprises everyone who reads the calling code.</p></div>
+  <p>Inside the setter, <code>self.balance = value</code> calls the setter again, which calls it again, and so on until Python gives up with a <code>RecursionError</code>. Storing the value in <code>self._balance</code> fixes it. Finally, keep getters cheap and free of surprises: <code>asha.balance</code> looks like reading a plain value, so a getter that queries a database or changes state would mislead everyone reading the calling code.</p>
 
-  <h2 id="pc-dc"><span class="num">08</span>Dataclasses: @dataclass, field() and frozen</h2>
-  <p>A <strong>dataclass</strong> is a class where you only list the fields with their types, and the decorator <code>@dataclass</code> writes <code>__init__</code>, <code>__repr__</code> (how it prints) and <code>__eq__</code> (how <code>==</code> compares) for you. (<code>__repr__</code> and <code>__eq__</code> are dunder methods; see <a class="xref" data-note="py_dunder">Dunder Methods</a>.)</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A pre-printed bank slip. You only decide the boxes (kind, amount, note); the printing press makes the slip, the same way every time.</p></div>
-  <div class="fx" data-lang="py">class TransactionPlain:            # writing the boring methods by hand
+  <h2 id="pc-dc"><span class="num">06</span>Dataclasses</h2>
+  <p>Our bank needs to record each transaction: what kind it was, how much, and perhaps a note. A transaction is mostly data, and a class for it needs the same boring methods every time: an <code>__init__</code> that copies each argument onto <code>self</code>, a <code>__repr__</code> so that it prints something readable instead of a memory address, and an <code>__eq__</code> so that two transactions with the same details compare equal. (These special methods are explained fully in <a class="xref" data-note="py_dunder">Dunder Methods &amp; the Data Model</a>.) Writing them by hand is tedious, and every new field means editing all three in step.</p>
+  <p>A <strong>dataclass</strong> is a class in which you only list the fields with their types, and the <code>@dataclass</code> decorator writes those methods for you. It is like a pre-printed bank slip: you decide which boxes the slip should have, and the printing press produces the slip the same way every time. The field list uses <strong>type annotations</strong>, the <code>name: type</code> syntax, which is how the decorator knows which fields exist and in what order.</p>
+  <div class="fx" data-lang="py">class TransactionByHand:               # the boring methods, written by hand
     def __init__(self, kind, amount, note=""):
-        self.kind, self.amount, self.note = kind, amount, note
+        self.kind = kind
+        self.amount = amount
+        self.note = note
+
     def __repr__(self):
-        return f"TransactionPlain(kind={self.kind!r}, amount={self.amount!r}, note={self.note!r})"
+        return f"TransactionByHand(kind={self.kind!r}, amount={self.amount!r}, note={self.note!r})"
+
     def __eq__(self, other):
         return (self.kind, self.amount, self.note) == (other.kind, other.amount, other.note)
 
 from dataclasses import dataclass
 
 @dataclass
-class Transaction:                 # the same three methods, generated
+class Transaction:                     # the same three methods, generated
     kind: str
     amount: int
     note: str = ""
 
-print(TransactionPlain("deposit", 50))
-print(Transaction("deposit", 50))
-print(Transaction("deposit", 50) == Transaction("deposit", 50))</div>
-  <div class="fx" data-lang="text">TransactionPlain(kind='deposit', amount=50, note='')
-Transaction(kind='deposit', amount=50, note='')
-True</div>
-  <p>Eight lines by hand, four lines with <code>@dataclass</code>, and the same behaviour: both print every field, and two Transactions with the same fields compare equal. The type annotations (<code>kind: str</code>) are what tells the decorator which fields exist; Python does not check the types at runtime.</p>
-  <h3>Options you will use</h3>
-  <div class="flow"><span>Declare typed fields</span><span>@dataclass</span><span>__init__, __repr__, __eq__ generated</span><span>+ order / frozen on request</span></div>
-  <p><code>frozen=True</code> makes objects unchangeable after creation (and therefore hashable, so they can go into a set or be dict keys). <code>order=True</code> also writes <code>&lt;</code>, <code>&gt;</code> and friends, comparing the fields in order like a tuple. <code>field(compare=False)</code> leaves a field out of comparisons.</p>
+print(TransactionByHand("deposit", 200))
+print(Transaction("deposit", 200))
+print(Transaction("deposit", 200) == Transaction("deposit", 200))
+print(Transaction("deposit", "two hundred"))   # type hints are NOT checked</div>
+  <div class="fx" data-lang="text">TransactionByHand(kind='deposit', amount=200, note='')
+Transaction(kind='deposit', amount=200, note='')
+True
+Transaction(kind='deposit', amount='two hundred', note='')</div>
+  <p>The hand-written class needed nine lines of code; the dataclass needs five, and they behave the same way: both print every field, and two <code>Transaction("deposit", 200)</code> objects compare equal. The last line is an important warning. The annotation says <code>amount: int</code>, but the dataclass happily accepted the text "two hundred". Annotations tell the decorator which fields exist and tell tools such as editors and type checkers what is intended, but Python does not check them when the program runs. For data that comes from users, files or web APIs, you either check values yourself or use a validation library such as <strong>pydantic</strong>.</p>
+  <p>The decorator accepts options that change what it generates. A transaction, once recorded, should never change, and <code>frozen=True</code> makes every field read-only after creation. Frozen objects can also be <em>hashed</em>, which means they can be stored in a set or used as dictionary keys. <code>order=True</code> additionally writes the comparison operators <code>&lt;</code>, <code>&gt;</code> and friends, comparing the fields in order, like comparing tuples. The <code>field()</code> function sets options for one field: <code>compare=False</code> leaves that field out of comparisons.</p>
   <div class="fx" data-lang="py">from dataclasses import dataclass, field, FrozenInstanceError
 
 @dataclass(frozen=True, order=True)
 class Transaction:
-    amount: int                    # order=True compares fields in this order
-    kind: str = field(compare=False)
+    amount: int                        # order=True compares fields in this order
+    kind: str = field(compare=False)   # left out of ==, &lt; and hashing
     note: str = field(default="", compare=False)
 
-t1, t2, t3 = Transaction(100, "open"), Transaction(50, "deposit"), Transaction(30, "withdraw")
+t1 = Transaction(1000, "open")
+t2 = Transaction(200, "deposit")
+t3 = Transaction(300, "withdraw")
 print(sorted([t1, t2, t3]))
-print(t2 &gt; t3, len({t1, t2, Transaction(50, "deposit")}))
+print(t2 &lt; t3, len({t1, t2, Transaction(200, "deposit")}))
 try:
-    t1.amount = 1_000
+    t1.amount = 1_000_000
 except FrozenInstanceError as e:
     print("FrozenInstanceError:", e)</div>
-  <div class="fx" data-lang="text">[Transaction(amount=30, kind='withdraw', note=''), Transaction(amount=50, kind='deposit', note=''), Transaction(amount=100, kind='open', note='')]
+  <div class="fx" data-lang="text">[Transaction(amount=200, kind='deposit', note=''), Transaction(amount=300, kind='withdraw', note=''), Transaction(amount=1000, kind='open', note='')]
 True 2
 FrozenInstanceError: cannot assign to field 'amount'</div>
-  <p>After the code. Sorting compared only <code>amount</code> (the other fields have <code>compare=False</code>), so 30 &lt; 50 &lt; 100. The set holds 2 items because the two <code>Transaction(50, "deposit")</code> are equal and hash the same. Assigning to a frozen field raised <code>FrozenInstanceError</code>, which is what you want for a ledger entry that must never change.</p>
-  <h3>A whole Account as a dataclass</h3>
-  <p>A dataclass is still a normal class: it can have methods. <code>field(default_factory=list)</code> calls <code>list()</code> for each new object, the dataclass version of creating the list in <code>__init__</code>. <code>__post_init__</code> runs right after the generated <code>__init__</code>, the place for validation.</p>
-  <div class="fx" data-lang="py">@dataclass
-class Account:
-    owner: str
-    balance: int = 0
-    history: list = field(default_factory=list)   # a NEW list per object
-
-    def __post_init__(self):                       # runs right after the generated __init__
-        if self.balance &lt; 0:
-            raise ValueError("opening balance cannot be negative")
-        self.history.append(Transaction(self.balance, "open"))
-
-    def deposit(self, amount):
-        self.balance += amount
-        self.history.append(Transaction(amount, "deposit"))
-
-asha, ben = Account("Asha", 100), Account("Ben", 50)
-asha.deposit(50)
-print(asha)
-print(ben)</div>
-  <div class="fx" data-lang="text">Account(owner='Asha', balance=150, history=[Transaction(amount=100, kind='open', note=''), Transaction(amount=50, kind='deposit', note='')])
-Account(owner='Ben', balance=50, history=[Transaction(amount=50, kind='open', note='')])</div>
-  <p>Each account has its own history: Asha's has the opening and the deposit, Ben's only the opening. The shared-list trap cannot happen, because dataclasses refuse a mutable default outright:</p>
-  <div class="fx" data-lang="py">try:
-    @dataclass
-    class Bad:
-        history: list = []
-except ValueError as e:
-    print("ValueError:", e)</div>
-  <div class="fx" data-lang="text">ValueError: mutable default &lt;class 'list'&gt; for field history is not allowed: use default_factory</div>
-  <div class="callout def"><span class="label">Definition</span><p><code>@dataclass</code> (module <code>dataclasses</code>) generates <code>__init__</code>, <code>__repr__</code> and <code>__eq__</code> from annotated class fields. Options: <code>frozen=True</code> (immutable, hashable), <code>order=True</code> (comparison methods), <code>slots=True</code> (less memory). <code>field()</code> sets per-field options such as <code>default_factory</code> and <code>compare</code>; <code>__post_init__</code> runs after initialisation.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Dataclasses do not validate types: <code>Transaction("deposit", "fifty")</code> is accepted. For data from users, files or APIs, validate in <code>__post_init__</code> or use <strong>pydantic</strong>. And a dataclass with real invariants (like the balance rule) still needs encapsulation: a public <code>balance</code> field can be assigned freely.</p></div>
-
-  <h2 id="pc-example"><span class="num">09</span>Worked Example: a Complete Account Class</h2>
-  <p>One class using every feature above: a class attribute, per-instance state created in <code>__init__</code>, an alternative constructor, a static helper, read-only properties over protected data, and frozen dataclass records.</p>
-  <div class="fx" data-lang="py">from dataclasses import dataclass
+  <p>Sorting compared only <code>amount</code>, because the other two fields have <code>compare=False</code>, so the transactions came out as 200, 300, 1000. The set contains 2 items, not 3, because the two deposits of 200 are equal and therefore count as one. And assigning to <code>t1.amount</code> raised <code>FrozenInstanceError</code>, which is exactly what you want for a ledger entry that must never be edited.</p>
+  <p>A dataclass is still a normal class, so it can have methods of its own. Two more features make it practical for something like an account. <code>field(default_factory=list)</code> gives each new object a fresh list by calling <code>list()</code> every time, the dataclass equivalent of writing <code>self.history = []</code> in <code>__init__</code>. And a method named <code>__post_init__</code>, if you write one, runs straight after the generated <code>__init__</code>, which makes it the place for checks.</p>
+  <div class="fx" data-lang="py">from dataclasses import dataclass, field
 
 @dataclass(frozen=True)
 class Transaction:
     kind: str
     amount: int
 
-class Account:
-    bank = "PocketBank"                           # class attribute (shared)
+@dataclass
+class BankAccount:
+    owner: str
+    balance: int = 0
+    history: list = field(default_factory=list)   # a NEW list for every account
 
-    def __init__(self, owner, balance=0):
-        self.owner = owner                        # instance attributes (per object)
+    def __post_init__(self):                       # runs right after the generated __init__
+        if self.balance &lt; 0:
+            raise ValueError("opening balance cannot be negative")
+        self.history.append(Transaction("open", self.balance))
+
+    def deposit(self, amount):
+        self.balance += amount
+        self.history.append(Transaction("deposit", amount))
+
+asha, ben = BankAccount("Asha", 1000), BankAccount("Ben", 500)
+asha.deposit(200)
+print(asha)
+print(ben)
+try:
+    BankAccount("Chen", -50)
+except ValueError as e:
+    print("ValueError:", e)
+
+try:
+    @dataclass
+    class Bad:
+        history: list = []                         # a shared list: refused
+except ValueError as e:
+    print("ValueError:", e)</div>
+  <div class="fx" data-lang="text">BankAccount(owner='Asha', balance=1200, history=[Transaction(kind='open', amount=1000), Transaction(kind='deposit', amount=200)])
+BankAccount(owner='Ben', balance=500, history=[Transaction(kind='open', amount=500)])
+ValueError: opening balance cannot be negative
+ValueError: mutable default &lt;class 'list'&gt; for field history is not allowed: use default_factory</div>
+  <p>Asha's history holds her opening transaction and her deposit, while Ben's holds only his opening: each account got its own list. Chen's negative balance was caught by <code>__post_init__</code>. The last example shows that dataclasses protect you from the shared-list bug of the first section: writing <code>history: list = []</code> is refused outright, with a message telling you to use <code>default_factory</code>.</p>
+  <p>Dataclasses are ideal for objects that are mainly a bundle of named values: records, configuration objects, results returned from a function. They are less suitable when a class has strict rules about how its data may change. Our account dataclass, for example, has a public <code>balance</code> field that anyone can assign, so the "no overdrawing" rule is not protected. For such classes you either combine a dataclass with properties or write the class by hand, as we do in the final section.</p>
+
+  <h2 id="pc-slots"><span class="num">07</span>__slots__</h2>
+  <p>Every ordinary object carries its own dictionary, the <code>__dict__</code> we have been inspecting with <code>vars()</code>. That dictionary is what makes Python objects so flexible: you can add any attribute to any object at any moment. But flexibility has two costs. A dictionary takes memory, which starts to matter when a program creates millions of small objects, such as one per transaction in a year of bank data. And since any name can be added, a misspelled attribute is silently accepted, the same "balanse" problem that <a class="xref" data-note="py_oop">OOP Concepts in Python</a> showed with plain dictionaries.</p>
+  <p>Declaring <strong><code>__slots__</code></strong> in a class tells Python the complete list of attribute names its objects will ever have. Python then gives each object a fixed set of storage places for exactly those names, instead of a dictionary. Compare a notebook with a printed form. In a notebook you can write anything anywhere, which is flexible but bulky; a form has one box for each field it expects, takes less paper, and has no room for anything else.</p>
+  <div class="fx" data-lang="py">class WithDict:                        # a normal class: every object has a __dict__
+    def __init__(self, owner, balance):
+        self.owner = owner
+        self.balance = balance
+
+class WithSlots:                       # fixed storage for exactly these two names
+    __slots__ = ("owner", "balance")
+    def __init__(self, owner, balance):
+        self.owner = owner
+        self.balance = balance
+
+a = WithDict("Asha", 1000)
+b = WithSlots("Asha", 1000)
+a.balnce = 0                           # typo: silently creates a new attribute
+print(vars(a))
+try:
+    b.balnce = 0                       # the same typo is refused
+except AttributeError as e:
+    print("AttributeError:", e)
+print(hasattr(a, "__dict__"), hasattr(b, "__dict__"))</div>
+  <div class="fx" data-lang="text">{'owner': 'Asha', 'balance': 1000, 'balnce': 0}
+AttributeError: 'WithSlots' object has no attribute 'balnce' and no __dict__ for setting new attributes
+True False</div>
+  <p>The ordinary object accepted the typo <code>balnce</code> and quietly gained a third attribute. The slotted object refused it with an <code>AttributeError</code>, saying it has no attribute of that name and no <code>__dict__</code> in which to create one. The last line confirms that slotted objects really have no dictionary. Now the memory difference, measured with the standard <code>tracemalloc</code> module while creating 100,000 objects of each kind:</p>
+  <div class="fx" data-lang="py">import tracemalloc
+
+def bytes_per_object(cls, n=100_000):
+    tracemalloc.start()
+    objs = [cls("Asha", 1000) for _ in range(n)]
+    size, _ = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    return size / n
+
+print(f"with __dict__ : {bytes_per_object(WithDict):.0f} bytes per object")
+print(f"with __slots__: {bytes_per_object(WithSlots):.0f} bytes per object")</div>
+  <div class="fx" data-lang="text">with __dict__ : 96 bytes per object
+with __slots__: 56 bytes per object</div>
+  <p>On this machine each slotted object used roughly 40 percent less memory. The exact numbers are approximate and vary with the Python version and the number of attributes, but the saving is real and grows with the number of objects. For a handful of accounts it is irrelevant; for millions of records it can decide whether the data fits in memory.</p>
+  <p><code>__slots__</code> has trade-offs that you should know before using it. Objects can no longer receive new attributes, which is the point, but it also rules out tricks that depend on <code>__dict__</code>. Default values cannot be written as class attributes with the same names as slots. And the benefit only holds if every class in a family declares slots, as this shows:</p>
+  <div class="fx" data-lang="py">class Child(WithSlots):                # forgot to declare __slots__ in the child
+    pass
+
+c = Child("Ben", 500)
+c.anything = 1                         # works again: the child has a __dict__
+print(vars(c))
+
+from dataclasses import dataclass
+
+@dataclass(slots=True)                 # dataclasses can write __slots__ for you
+class Transaction:
+    kind: str
+    amount: int
+
+t = Transaction("deposit", 200)
+try:
+    t.amout = 300
+except AttributeError as e:
+    print("AttributeError:", e)</div>
+  <div class="fx" data-lang="text">{'anything': 1}
+AttributeError: 'Transaction' object has no attribute 'amout' and no __dict__ for setting new attributes</div>
+  <p>The child class did not declare <code>__slots__</code>, so its objects got a dictionary back, and <code>c.anything = 1</code> worked. A child that wants to stay dictionary-free must declare <code>__slots__</code> itself, even if only as an empty tuple <code>()</code> when it adds no new attributes. The second example shows the easy route for dataclasses: <code>@dataclass(slots=True)</code> writes <code>__slots__</code> for you from the field list, so the misspelled <code>amout</code> is refused. In everyday code you rarely need slots; reach for them when you create very large numbers of objects or when catching misspelled attributes is worth the loss of flexibility.</p>
+
+  <h2 id="pc-all"><span class="num">08</span>Putting It Together: the Complete Account Class</h2>
+  <p>Here is our bank account with every idea from this page in one class. The comments mark which idea each part uses.</p>
+  <div class="fx" data-lang="py">from dataclasses import dataclass
+
+@dataclass(frozen=True, slots=True)
+class Transaction:                                # an unchangeable record
+    kind: str
+    amount: int
+
+class BankAccount:
+    __slots__ = ("_owner", "_balance", "_history")  # fixed storage, typos refused
+    bank_name = "Python Bank"                     # class attribute (shared, read-only use)
+    min_opening = 100
+
+    def __init__(self, owner, balance):
+        if balance &lt; self.min_opening:
+            raise ValueError(f"opening balance must be at least {self.min_opening}")
+        self.owner = owner                        # through the property setter
         self._balance = 0
-        self._history = []                        # fresh list per account
-        self.deposit(balance, kind="open")
+        self._history = []                        # a fresh list per account
+        self._apply("open", balance)
 
     @classmethod
     def from_csv(cls, line):                      # alternative constructor
@@ -697,152 +597,204 @@ class Account:
         return cls(owner.strip(), int(balance))
 
     @staticmethod
-    def _check(amount):                           # helper
-        if not isinstance(amount, int) or amount &lt; 0:
+    def _check(amount):                           # helper: needs neither self nor cls
+        if not isinstance(amount, int) or amount &lt;= 0:
             raise ValueError(f"bad amount: {amount!r}")
 
     @property
-    def balance(self):                            # read-only view of the protected data
+    def owner(self):
+        return self._owner
+
+    @owner.setter
+    def owner(self, name):                        # validated on every assignment
+        name = name.strip()
+        if not name:
+            raise ValueError("owner name cannot be empty")
+        self._owner = name.title()
+
+    @property
+    def balance(self):                            # read-only
         return self._balance
 
     @property
-    def history(self):
-        return tuple(self._history)               # a copy the caller cannot change
+    def history(self):                            # a copy the caller cannot change
+        return tuple(self._history)
 
-    def deposit(self, amount, kind="deposit"):
-        self._check(amount)
-        self._balance += amount
+    def _apply(self, kind, amount):
+        self._balance += amount if kind != "withdraw" else -amount
         self._history.append(Transaction(kind, amount))
+
+    def deposit(self, amount):
+        self._check(amount)
+        self._apply("deposit", amount)
 
     def withdraw(self, amount):
         self._check(amount)
         if amount &gt; self._balance:
-            raise ValueError("insufficient funds")
-        self._balance -= amount
-        self._history.append(Transaction("withdraw", amount))
+            raise ValueError("Not enough money")
+        self._apply("withdraw", amount)
 
-asha = Account.from_csv("Asha, 100")
-asha.deposit(50)
-asha.withdraw(30)
-ben = Account("Ben", 50)
-try:
-    ben.withdraw(80)
-except ValueError as e:
-    print("Ben:", e)
-print(asha.owner, asha.balance, asha.bank)
+class StudentAccount(BankAccount):
+    __slots__ = ()                                # keep the child dict-free too
+    min_opening = 0
+
+asha = BankAccount.from_csv("  asha , 1000")
+asha.deposit(200)
+asha.withdraw(300)
+dev = StudentAccount.from_csv("dev, 0")
+print(asha.owner, asha.balance, asha.bank_name)
 for t in asha.history:
-    print(" ", t)</div>
-  <div class="fx" data-lang="text">Ben: insufficient funds
-Asha 120 PocketBank
-  Transaction(kind='open', amount=100)
-  Transaction(kind='deposit', amount=50)
-  Transaction(kind='withdraw', amount=30)</div>
-  <p>The account was built by the class method from a CSV line; every change went through a validated method; <code>balance</code> is a read-only property over <code>_balance</code>; and <code>history</code> returns a tuple of frozen records, so callers can read it but neither append to it nor edit an entry.</p>
-  <h2 id="pc-traps"><span class="num">10</span>Common Mistakes</h2>
-  <div class="callout trap"><span class="label">Trap: a mutable class attribute</span><p>Symptom: one object's data shows up in another (Ben's history has Asha's deposit). Cause: <code>history = []</code> in the class body. Fix: create it in <code>__init__</code>, or <code>field(default_factory=list)</code>.</p></div>
-  <div class="callout trap"><span class="label">Trap: <code>self.count += 1</code> for a shared counter</span><p>Symptom: the class counter stays 0 while every object has its own 1. Fix: <code>Account.count += 1</code> or <code>type(self).count += 1</code>.</p></div>
-  <div class="callout trap"><span class="label">Trap: forgetting <code>self</code></span><p>In the signature: "takes 0 positional arguments but 1 was given". In the body: a bare <code>balance = …</code> makes a local variable and the object never changes.</p></div>
-  <div class="callout trap"><span class="label">Trap: hard-coding the class in a classmethod</span><p><code>return Account(...)</code> returns the parent type for every child class. Use <code>cls(...)</code>.</p></div>
-  <div class="callout trap"><span class="label">Trap: treating <code>__x</code> as private or secure</span><p>It is renamed, not hidden: <code>obj._Account__x</code> works. Use one underscore for "internal"; use two only to avoid name clashes with subclasses.</p></div>
-  <div class="callout trap"><span class="label">Trap: a property that reads itself</span><p><code>return self.balance</code> inside the <code>balance</code> getter recurses until RecursionError. Store the data in <code>self._balance</code>.</p></div>
-  <div class="callout trap"><span class="label">Trap: a mutable default argument in <code>__init__</code></span><p><code>def __init__(self, history=[])</code> shares one list across every call, the same bug as the class attribute in a new place (see <a class="xref" data-note="py_functions">Functions</a>). Use <code>history=None</code> and <code>self.history = history if history is not None else []</code>.</p></div>
+    print("  ", t)
+print(type(dev).__name__, dev.owner, dev.balance)
+
+try:
+    asha.withdraw(5000)                           # the rule still holds
+except ValueError as e:
+    print("ValueError:", e)
+try:
+    asha.balnce = 0                               # a typo, caught by __slots__
+except AttributeError as e:
+    print("AttributeError:", e)</div>
+  <div class="fx" data-lang="text">Asha 900 Python Bank
+   Transaction(kind='open', amount=1000)
+   Transaction(kind='deposit', amount=200)
+   Transaction(kind='withdraw', amount=300)
+StudentAccount Dev 0
+ValueError: Not enough money
+AttributeError: 'BankAccount' object has no attribute 'balnce' and no __dict__ for setting new attributes</div>
+  <p>Read it from the top. <code>Transaction</code> is a frozen, slotted dataclass: each record is small and can never be edited. <code>BankAccount</code> declares <code>__slots__</code> for its three internal attributes, so a misspelled name such as <code>balnce</code> is refused, as the last line of output shows. <code>bank_name</code> and <code>min_opening</code> are class attributes shared by all accounts, while each account's owner, balance and history are created in <code>__init__</code>, the history as a fresh list per account. <code>from_csv</code> is an alternative constructor that returns <code>cls(...)</code>, so <code>StudentAccount.from_csv("dev, 0")</code> produced a <code>StudentAccount</code> that obeyed the student rule of a zero minimum. <code>_check</code> is a static helper, because checking an amount needs neither the account nor the class. <code>owner</code> is a property with a setter, so the messy input <code>"  asha "</code> became <code>Asha</code>. <code>balance</code> is read-only, and <code>history</code> returns a tuple copy, so callers can read the records but cannot append to or remove from the real list. Asha opened with 1000, deposited 200 and withdrew 300, ending at 900, and the attempt to withdraw 5000 was still refused by the rule from <a class="xref" data-note="py_oop">OOP Concepts in Python</a>. Note also <code>__slots__ = ()</code> in <code>StudentAccount</code>, which keeps the child free of a dictionary, as the previous section explained.</p>
+
+  <h2 id="pc-traps"><span class="num">09</span>Common Mistakes</h2>
+  <p>The mutable default argument is a close relative of the shared class-attribute list, and it catches experienced programmers too. Default values in a function's parameter list are created once, when the <code>def</code> line runs, not each time the function is called (see <a class="xref" data-note="py_functions">Functions</a>). So a default list in <code>__init__</code> is shared by every object that relies on the default:</p>
+  <div class="fx" data-lang="py">class BankAccount:
+    def __init__(self, owner, history=[]):     # BUG: the default list is made ONCE
+        self.owner = owner
+        self.history = history
+
+asha, ben = BankAccount("Asha"), BankAccount("Ben")
+asha.history.append("deposit 200")
+print(ben.history, asha.history is ben.history)
+
+class BankAccountFixed:
+    def __init__(self, owner, history=None):   # None means "make me a new list"
+        self.owner = owner
+        self.history = history if history is not None else []
+
+asha, ben = BankAccountFixed("Asha"), BankAccountFixed("Ben")
+asha.history.append("deposit 200")
+print(ben.history)</div>
+  <div class="fx" data-lang="text">['deposit 200'] True
+[]</div>
+  <p>Asha's deposit appeared in Ben's history, and <code>asha.history is ben.history</code> is <code>True</code>, because both accounts received the same default list. The fix is to use <code>None</code> as the default and create a new list inside the method when no list was passed. In a dataclass, <code>field(default_factory=list)</code> does the same job.</p>
+  <p>A property whose getter or setter uses its own name instead of the underscore name recurses forever, as we saw with <code>RecursionError</code> in the properties section. Whenever you write <code>@property def balance</code>, the body should read and write <code>self._balance</code>.</p>
+  <p>Changing a shared counter through <code>self</code> (<code>self.accounts_opened += 1</code>) creates an instance attribute on each object and leaves the class value untouched; change it through the class. Naming the class inside a class method (<code>return BankAccount(...)</code>) makes every subclass get a parent object back; return <code>cls(...)</code>. And creating attributes outside <code>__init__</code> leaves objects with different shapes, so an attribute that "usually" exists raises <code>AttributeError</code> on the objects where the creating method never ran.</p>
+  <p>Finally, two misunderstandings about dataclasses. The type annotations are not checked: <code>Transaction("deposit", "two hundred")</code> is accepted. And an ordinary (not frozen) dataclass is not hashable, because it defines equality by value while its fields can change; trying to put one in a set raises <code>TypeError: unhashable type</code>. Use <code>frozen=True</code> when the objects must go into sets or be used as dictionary keys.</p>
 
   <h2 id="pc-rev"><span class="num">R</span>Revision Sheet</h2>
-  <h3>Class and object</h3>
+  <h3>Definitions</h3>
   <ul>
-    <li><b>Class</b>: user-defined type grouping attributes (data) and methods (functions). <b>Object/instance</b>: a value of that type, made by calling the class: <code>Account("Asha", 100)</code>.</li>
-    <li>Methods live once, on the class (<code>"deposit" in vars(Account)</code>); data lives on each instance (<code>vars(asha)</code>).</li>
-    <li>A class is a type like <code>int</code>: <code>type(asha) is Account</code>, <code>isinstance(asha, Account)</code>.</li>
+    <li><b>Instance attribute</b>: stored on one object (<code>self.x = ...</code>), visible in <code>vars(obj)</code>.</li>
+    <li><b>Class attribute</b>: written in the class body, stored once on the class, shared by all objects.</li>
+    <li><b>Shadowing</b>: an instance attribute hiding a class attribute of the same name, for that object only.</li>
+    <li><b>Constructor</b> (<code>__new__</code>) creates the empty object; <b>initialiser</b> (<code>__init__</code>) fills it and must return <code>None</code>.</li>
+    <li><b>Bound method</b>: <code>obj.method</code>, the function plus the object (<code>__func__</code>, <code>__self__</code>).</li>
+    <li><b>Class method</b>: <code>@classmethod</code>, receives the class as <code>cls</code>. <b>Static method</b>: <code>@staticmethod</code>, receives nothing automatically.</li>
+    <li><b>Alternative constructor</b>: a class method that builds an object from another form of data and returns <code>cls(...)</code>.</li>
+    <li><b>Property</b>: getter (and optional setter) run on attribute read/assignment; a <b>data descriptor</b>, so it wins over the object's own dictionary.</li>
+    <li><b>Dataclass</b>: <code>@dataclass</code> writes <code>__init__</code>, <code>__repr__</code>, <code>__eq__</code> from annotated fields.</li>
+    <li><b><code>__slots__</code></b>: fixed list of attribute names; no per-object <code>__dict__</code>.</li>
   </ul>
-  <h3>self and method calls</h3>
-  <ul>
-    <li><code>obj.m(a)</code> ≡ <code>type(obj).m(obj, a)</code>. <code>self</code> is just the first parameter's conventional name.</li>
-    <li><code>obj.m</code> is a <b>bound method</b>: <code>m.__func__</code> (the function) + <code>m.__self__</code> (the object).</li>
-    <li>Missing <code>self</code> in the signature → <code>takes 0 positional arguments but 1 was given</code>. Bare <code>balance = …</code> in a method is a local.</li>
-  </ul>
-  <h3>__init__ and __new__</h3>
-  <ul>
-    <li><code>C(a)</code> ≡ <code>o = C.__new__(C); o.__init__(a); return o</code>. <code>__new__</code> creates, <code>__init__</code> initialises.</li>
-    <li><code>__init__</code> must return <code>None</code> (else <code>TypeError</code>). Validate arguments there; create every attribute there.</li>
-    <li>Override <code>__new__</code> only for immutable subclasses (<code>class Money(int)</code>), singletons, caching.</li>
-  </ul>
-  <h3>Instance vs class attributes</h3>
+  <h3>Attribute lookup</h3>
   <table class="tbl">
-    <tr><th></th><th>Instance attribute</th><th>Class attribute</th></tr>
-    <tr><td>Created by</td><td><code>self.x = v</code></td><td><code>x = v</code> in class body</td></tr>
-    <tr><td>Stored in</td><td><code>vars(obj)</code> / <code>obj.__dict__</code></td><td><code>vars(C)</code></td></tr>
-    <tr><td>Shared?</td><td>no</td><td>yes, by all instances</td></tr>
-    <tr><td>Use for</td><td>per-object state</td><td>constants, true class-wide settings</td></tr>
+    <tr><th>Operation</th><th>Where Python looks or writes</th></tr>
+    <tr><td>read <code>obj.x</code></td><td>data descriptors (properties) on the class → <code>vars(obj)</code> → class → parents → <code>AttributeError</code></td></tr>
+    <tr><td>write <code>obj.x = v</code></td><td>the property's setter if <code>x</code> is a property, otherwise always <code>vars(obj)</code></td></tr>
+    <tr><td><code>obj.lst.append(v)</code></td><td>a read: changes whatever list the search finds (possibly the class's)</td></tr>
   </table>
-  <ul>
-    <li><b>Read</b>: data descriptors (properties) on the class → <code>vars(obj)</code> → class → parents (MRO) → <code>AttributeError</code>.</li>
-    <li><b>Write</b> <code>obj.x = v</code> always writes to <code>vars(obj)</code> (shadows a class attribute), unless <code>x</code> is a property.</li>
-    <li>Shared counter: <code>Account.count += 1</code> or <code>type(self).count += 1</code>, never <code>self.count += 1</code>.</li>
-  </ul>
-  <h3>Instance, class and static methods</h3>
+  <h3>Three kinds of method</h3>
   <table class="tbl">
-    <tr><th>Kind</th><th>Receives</th><th>Use for</th></tr>
-    <tr><td>instance</td><td><code>self</code></td><td>behaviour using the object's data</td></tr>
-    <tr><td><code>@classmethod</code></td><td><code>cls</code> (class it was called on)</td><td>alternative constructors (<code>from_csv</code>, <code>dict.fromkeys</code>), class-wide state</td></tr>
-    <tr><td><code>@staticmethod</code></td><td>nothing</td><td>helper that belongs with the class</td></tr>
+    <tr><th>Kind</th><th>Receives</th><th>Use for</th><th>Example</th></tr>
+    <tr><td>instance</td><td><code>self</code></td><td>work on one object's data</td><td><code>deposit</code></td></tr>
+    <tr><td><code>@classmethod</code></td><td><code>cls</code></td><td>class-wide settings, alternative constructors</td><td><code>from_csv</code>, <code>set_min_opening</code></td></tr>
+    <tr><td><code>@staticmethod</code></td><td>nothing</td><td>helper that belongs with the class</td><td><code>is_valid_amount</code></td></tr>
   </table>
-  <p>Alternative constructors must return <code>cls(...)</code>, not the class name, so subclasses get their own type.</p>
-  <h3>Encapsulation</h3>
-  <ul>
-    <li>No access modifiers. <code>_x</code> = internal by convention. <code>__x</code> in class <code>C</code> → stored as <code>_C__x</code> (name mangling; only inside the class body; names ending in <code>__</code> are not mangled).</li>
-    <li>Mangling prevents clashes with subclass attributes; it is not security (<code>obj._C__x</code> works).</li>
-    <li><code>obj.__x = v</code> from outside the class creates an unrelated attribute literally named <code>__x</code>.</li>
-  </ul>
-  <h3>@property</h3>
-  <div class="fx" data-lang="py">@property
-def balance(self):            # read: obj.balance
-    return self._balance
-@balance.setter
-def balance(self, v):         # write: obj.balance = v  (omit for read-only)
-    ...</div>
-  <ul>
-    <li>No setter → assignment raises <code>AttributeError: property 'balance' of 'Account' object has no setter</code>.</li>
-    <li>Properties are data descriptors: they win over the instance <code>__dict__</code>.</li>
-    <li>Store the value under another name (<code>_balance</code>); reading <code>self.balance</code> inside the getter → <code>RecursionError</code>.</li>
-    <li>Start with plain attributes; switch to a property later without changing callers. Keep getters cheap.</li>
-  </ul>
-  <h3>Dataclasses</h3>
-  <ul>
-    <li><code>@dataclass</code> generates <code>__init__</code>, <code>__repr__</code>, <code>__eq__</code> from annotated fields; types are not checked.</li>
-    <li><code>frozen=True</code> → assignment raises <code>FrozenInstanceError</code>, and the class is hashable. <code>order=True</code> → <code>&lt; &lt;= &gt; &gt;=</code> comparing fields as a tuple. <code>slots=True</code> → less memory, no new attributes.</li>
-    <li>Plain <code>@dataclass</code> (eq, not frozen) sets <code>__hash__ = None</code>: unhashable.</li>
-    <li><code>field(default_factory=list)</code> for mutable defaults (a bare <code>[]</code> raises <code>ValueError</code>); <code>field(compare=False)</code>; <code>__post_init__</code> for validation.</li>
-  </ul>
+  <h3>Dataclass options</h3>
+  <table class="tbl">
+    <tr><th>Option</th><th>Effect</th></tr>
+    <tr><td><code>frozen=True</code></td><td>fields read-only (<code>FrozenInstanceError</code>); objects hashable</td></tr>
+    <tr><td><code>order=True</code></td><td>adds <code>&lt; &lt;= &gt; &gt;=</code>, comparing fields like a tuple</td></tr>
+    <tr><td><code>slots=True</code></td><td>generates <code>__slots__</code></td></tr>
+    <tr><td><code>field(default_factory=list)</code></td><td>fresh mutable default per object</td></tr>
+    <tr><td><code>field(compare=False)</code></td><td>field ignored by <code>==</code>, ordering and hashing</td></tr>
+    <tr><td><code>__post_init__</code></td><td>runs after the generated <code>__init__</code>; put checks here</td></tr>
+  </table>
+  <h3>Syntax</h3>
+  <div class="fx" data-lang="py">from dataclasses import dataclass, field
+
+class BankAccount:
+    __slots__ = ("_owner", "_balance")    # fixed attributes
+    min_opening = 100                     # class attribute
+
+    def __init__(self, owner, balance):   # initialiser
+        self.owner = owner                # goes through the setter
+        self._balance = balance
+
+    @classmethod
+    def from_csv(cls, line):              # alternative constructor
+        owner, bal = line.split(",")
+        return cls(owner.strip(), int(bal))
+
+    @staticmethod
+    def is_valid(amount):                 # helper
+        return amount &gt; 0
+
+    @property
+    def owner(self):                      # getter
+        return self._owner
+
+    @owner.setter
+    def owner(self, name):                # setter with a check
+        if not name.strip():
+            raise ValueError("empty name")
+        self._owner = name.strip()
+
+@dataclass(frozen=True)
+class Transaction:
+    kind: str
+    amount: int
+    note: str = field(default="", compare=False)</div>
   <h3>Gotchas</h3>
   <ul>
-    <li>Mutable class attribute (<code>history = []</code>) is shared by all instances.</li>
-    <li><code>self.count += 1</code> on a class counter creates an instance attribute; the class value stays 0.</li>
-    <li>Mutable default argument <code>def __init__(self, history=[])</code> is shared across calls; use <code>None</code>.</li>
-    <li>Hard-coding <code>Account(...)</code> in a classmethod returns the parent type for subclasses.</li>
-    <li>Property getter reading its own name recurses forever.</li>
-    <li>Attributes created outside <code>__init__</code> may not exist yet → <code>AttributeError</code>.</li>
+    <li>A list or dict in the class body is shared by all objects; create it in <code>__init__</code>.</li>
+    <li><code>self.count += 1</code> creates an instance attribute; use <code>ClassName.count += 1</code>.</li>
+    <li><code>def __init__(self, history=[])</code> shares one list; default to <code>None</code>.</li>
+    <li>Class methods must return <code>cls(...)</code>, not the class name.</li>
+    <li>Property bodies must use <code>self._name</code>, or they recurse forever.</li>
+    <li>Dataclass annotations are not checked; plain dataclasses are unhashable.</li>
+    <li>A subclass without <code>__slots__</code> gets a <code>__dict__</code> back.</li>
   </ul>
 
-  <h2 id="pc-qa"><span class="num">11</span>Interview Questions</h2>
+  <h2 id="pc-qa"><span class="num">10</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between a class and an object?</summary><div class="qa-body">A class is a user-defined type: it declares which data its objects hold and which methods they support. An object (instance) is one value of that type with its own data, created by calling the class. Methods are stored once on the class and shared; instance data is stored on each object.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is <code>self</code>?</summary><div class="qa-body">The instance a method was called on, passed automatically as the first argument. <code>asha.deposit(50)</code> runs <code>Account.deposit(asha, 50)</code>. <code>self</code> is a naming convention, not a keyword; Python makes it explicit because methods are ordinary functions stored on the class.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is a bound method?</summary><div class="qa-body">The object you get from <code>obj.method</code> (without calling it): the function plus the instance, stored as <code>__func__</code> and <code>__self__</code>. Calling it passes the instance as the first argument. A new bound method object is created on each access, so <code>a.m == a.m</code> is True but <code>a.m is a.m</code> is False.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Is <code>__init__</code> a constructor? How does it differ from <code>__new__</code>?</summary><div class="qa-body"><code>__new__</code> is the constructor: a static method that creates and returns the new, empty instance. <code>__init__</code> is the initialiser: it receives that instance and sets its attributes, and must return <code>None</code>. You override <code>__new__</code> only for immutable types (subclassing <code>int</code>, <code>str</code>, <code>tuple</code>), singletons or instance caching.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What happens if <code>__init__</code> returns a value?</summary><div class="qa-body"><code>TypeError: __init__() should return None, not 'int'</code>. The result of <code>Class(...)</code> is the instance created by <code>__new__</code>, so any other return value from <code>__init__</code> is an error.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Instance attribute vs class attribute: where does each live, and how does lookup work?</summary><div class="qa-body">Instance attributes live in the object's <code>__dict__</code>; class attributes in the class's <code>__dict__</code>, shared by all instances. Reading <code>obj.x</code> checks data descriptors on the class (properties), then the instance, then the class and its parents in MRO order. Writing <code>obj.x = v</code> always writes to the instance, shadowing any class attribute of that name.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does this print? <code>class A: x = 1</code>; <code>a, b = A(), A()</code>; <code>a.x = 2</code>; <code>A.x = 3</code>; <code>print(a.x, b.x, A.x)</code></summary><div class="qa-body"><code>2 3 3</code>. <code>a.x = 2</code> created an instance attribute on <code>a</code> that shadows the class attribute. <code>b</code> has no instance attribute, so it reads the class attribute, which was changed to 3.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does this print? <code>class A: n = 0</code> with <code>def __init__(self): self.n += 1</code>; then <code>A(); a = A(); print(A.n, a.n)</code></summary><div class="qa-body"><code>0 1</code>. <code>self.n += 1</code> is <code>self.n = self.n + 1</code>: the read finds the class's 0, but the assignment creates an instance attribute with 1. The class counter never changes. Use <code>A.n += 1</code> or <code>type(self).n += 1</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why is a list as a class attribute (or as a default argument) a bug?</summary><div class="qa-body">It is created once, when the class body (or the <code>def</code>) runs, and every instance shares that single list, so appending through one instance shows up in all of them. With <code>def __init__(self, history=[])</code>, <code>a.history is b.history</code> is True. Create the list per object: <code>self.history = []</code>, or <code>history=None</code> then <code>history if history is not None else []</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Instance vs class vs static method: when do you use each?</summary><div class="qa-body">Instance method (<code>self</code>) for behaviour that uses the object's data. <code>@classmethod</code> (<code>cls</code>) for alternative constructors such as <code>from_csv</code> or <code>datetime.fromisoformat</code>, and for class-wide settings. <code>@staticmethod</code> for a helper that needs neither but belongs with the class; if other modules use it too, make it a module-level function.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why should an alternative constructor return <code>cls(...)</code> rather than the class name?</summary><div class="qa-body">Subclasses inherit the classmethod, and <code>cls</code> is whichever class it was called on. <code>StudentAccount.from_csv(...)</code> then returns a <code>StudentAccount</code> with the child's settings. Hard-coding <code>Account(...)</code> returns a parent instance and silently ignores the child's rules.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is name mangling, and is it a security feature?</summary><div class="qa-body">Inside a class body, <code>__x</code> (two leading underscores, not two trailing) is renamed to <code>_ClassName__x</code>. Its purpose is to stop a subclass from overwriting a base class's attribute by reusing the name. It is not security: <code>obj._Account__x</code> still works. A single underscore is the usual "internal" marker.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>When would you use <code>@property</code>, and what can go wrong?</summary><div class="qa-body">To make an attribute read-only, to validate or normalise on assignment, or to compute a value on read, all while callers keep attribute syntax, so it can be added later without breaking them. Pitfalls: a getter that reads <code>self.balance</code> inside the <code>balance</code> property recurses until <code>RecursionError</code> (store the value in <code>self._balance</code>), and slow or side-effecting getters surprise readers.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why does a property take priority over an instance attribute with the same name?</summary><div class="qa-body">A property is a <strong>data descriptor</strong>: a class attribute that defines <code>__get__</code> and <code>__set__</code>. Attribute lookup checks data descriptors on the type before the instance <code>__dict__</code>, so both reading and assigning go through the property. Plain methods are non-data descriptors (only <code>__get__</code>), which is why an instance attribute can shadow a method.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does <code>@dataclass</code> generate, and what do <code>frozen</code>, <code>order</code> and <code>slots</code> add?</summary><div class="qa-body">It generates <code>__init__</code>, <code>__repr__</code> and <code>__eq__</code> from the annotated fields. <code>frozen=True</code> blocks assignment (raising <code>FrozenInstanceError</code>) and generates <code>__hash__</code>; <code>order=True</code> adds <code>&lt; &lt;= &gt; &gt;=</code> comparing the fields as a tuple; <code>slots=True</code> adds <code>__slots__</code> for lower memory and no stray attributes. <code>__post_init__</code> runs after the generated <code>__init__</code> for validation.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Is a regular <code>@dataclass</code> hashable?</summary><div class="qa-body">No. With the default <code>eq=True</code> and <code>frozen=False</code>, the dataclass sets <code>__hash__ = None</code>, because an object that compares by value but can change would break sets and dicts. <code>@dataclass(frozen=True)</code> makes it hashable by its fields; <code>unsafe_hash=True</code> forces a hash on a mutable class (rarely a good idea).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Dataclass vs NamedTuple vs pydantic model?</summary><div class="qa-body"><code>NamedTuple</code>: an immutable tuple with named fields, unpackable and indexable, lightweight. <code>@dataclass</code>: a normal class with generated boilerplate; mutable by default, can have methods, no runtime type checks. pydantic <code>BaseModel</code>: validates and converts types at runtime and serialises to JSON, the right choice for data from users, files and APIs (FastAPI uses it).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is <code>__slots__</code> for?</summary><div class="qa-body">Declaring <code>__slots__ = ("x", "y")</code> replaces the per-instance <code>__dict__</code> with fixed storage for those names. Instances use noticeably less memory (useful for millions of small objects) and assigning any other attribute raises <code>AttributeError</code>, which also catches typos. The trade-off: no dynamic attributes, and every class in a hierarchy must declare slots to get the benefit.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between a class attribute and an instance attribute?</summary><div class="qa-body">An instance attribute is set on <code>self</code>, usually in <code>__init__</code>, and each object has its own copy in its <code>__dict__</code>. A class attribute is written in the class body and stored once on the class, so all objects share it. Reading <code>obj.x</code> finds an instance attribute first and falls back to the class attribute.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does this print? <code>class A: x = 1</code>; <code>a, b = A(), A()</code>; <code>a.x = 2</code>; <code>A.x = 3</code>; <code>print(a.x, b.x, A.x)</code></summary><div class="qa-body"><code>2 3 3</code>. <code>a.x = 2</code> created an instance attribute on <code>a</code> that shadows the class attribute. <code>b</code> has no attribute of its own, so it reads the class attribute, which was changed to 3.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>A class has <code>count = 0</code> and <code>__init__</code> does <code>self.count += 1</code>. After creating two objects, what are <code>A.count</code> and <code>a.count</code>?</summary><div class="qa-body"><code>0</code> and <code>1</code>. <code>self.count += 1</code> means <code>self.count = self.count + 1</code>: the read finds the class's 0, but the assignment creates an instance attribute on each object. The class value never changes. Use <code>A.count += 1</code> or <code>type(self).count += 1</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why is a list as a class attribute usually a bug?</summary><div class="qa-body">The list is created once, when the class body runs, and every object that reads it through <code>self</code> reaches that same list. Appending through one object changes the shared list, so the change appears in all objects. Per-object lists must be created in <code>__init__</code> with <code>self.items = []</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Is <code>__init__</code> a constructor? How does it differ from <code>__new__</code>?</summary><div class="qa-body"><code>__new__</code> is the actual constructor: it creates and returns a new, empty object. <code>__init__</code> is the initialiser: it receives that object and sets its attributes, and must return <code>None</code>. Calling <code>C(args)</code> runs <code>__new__</code> then <code>__init__</code>. You override <code>__new__</code> mainly for subclasses of immutable types (<code>int</code>, <code>str</code>, <code>tuple</code>) or to control which object is returned, as in a singleton.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What happens if <code>__init__</code> returns a value?</summary><div class="qa-body">Python raises <code>TypeError: __init__() should return None, not 'int'</code>. The result of calling a class is the object made by <code>__new__</code>, so a return value from <code>__init__</code> has no meaning and is rejected.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a bound method?</summary><div class="qa-body">The object you get from <code>obj.method</code> without calling it. It packages the function (<code>__func__</code>) with the object (<code>__self__</code>), so calling it passes the object as the first argument automatically. That is how <code>asha.deposit(200)</code> becomes <code>BankAccount.deposit(asha, 200)</code>, and why a method can be stored in a variable and called later.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain instance, class and static methods and when to use each.</summary><div class="qa-body">An instance method receives the object as <code>self</code> and works on its data. A class method (<code>@classmethod</code>) receives the class as <code>cls</code>; use it for alternative constructors and class-wide settings. A static method (<code>@staticmethod</code>) receives nothing automatically; use it for a helper that belongs with the class but needs neither the object nor the class.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is an alternative constructor, and why should it return <code>cls(...)</code>?</summary><div class="qa-body">A class method that builds an object from a different form of input, such as <code>from_csv("Asha, 1000")</code>, <code>dict.fromkeys</code> or <code>datetime.fromisoformat</code>. It should return <code>cls(...)</code> because <code>cls</code> is whichever class the method was called on, so subclasses get an object of their own type with their own rules. Naming the class directly returns a parent object for every subclass.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Does Python support constructor overloading?</summary><div class="qa-body">No. A class has one <code>__init__</code>; a second definition simply replaces the first. Python handles different inputs with default arguments, keyword arguments, or alternative constructors written as class methods.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is <code>@property</code>, and why is it preferred over getter and setter methods?</summary><div class="qa-body">A property makes method calls look like attribute access: the getter runs on <code>obj.x</code> and the setter, if defined, on <code>obj.x = v</code>. It lets you add validation, read-only access or computed values later without changing any calling code, so you can start with plain attributes. Java-style <code>get_x()</code>/<code>set_x()</code> methods force that decision up front and make the calling code noisier.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does a property take priority over an instance attribute of the same name?</summary><div class="qa-body">A property is a data descriptor, a class attribute that defines behaviour for both getting and setting. Python's attribute lookup checks data descriptors on the class before the object's <code>__dict__</code>, so both reading and assigning go through the property. Ordinary methods define only getting, which is why an instance attribute can shadow a method but not a property.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does this property cause a <code>RecursionError</code>? <code>@property def balance(self): return self.balance</code></summary><div class="qa-body">Reading <code>self.balance</code> inside the getter calls the getter again, which reads <code>self.balance</code> again, forever. The value must be stored under a different name, conventionally <code>self._balance</code>, and the getter and setter must use that name.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does <code>@dataclass</code> generate, and what do <code>frozen</code> and <code>order</code> add?</summary><div class="qa-body">It generates <code>__init__</code>, <code>__repr__</code> and <code>__eq__</code> from the annotated fields. <code>frozen=True</code> makes fields read-only after creation (assignment raises <code>FrozenInstanceError</code>) and makes objects hashable. <code>order=True</code> adds <code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&gt;=</code>, comparing the fields in order like tuples.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you give a dataclass a list field, and where do you put validation?</summary><div class="qa-body">Use <code>field(default_factory=list)</code>, which calls <code>list()</code> for each new object; a bare <code>= []</code> is refused with a <code>ValueError</code>. Validation goes in <code>__post_init__</code>, which runs right after the generated <code>__init__</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Is a regular dataclass hashable? Are its types checked?</summary><div class="qa-body">Neither. A dataclass with the default <code>eq=True</code> and <code>frozen=False</code> sets <code>__hash__</code> to <code>None</code>, because an object that compares by value but can change would break sets and dicts; use <code>frozen=True</code> to make it hashable. Type annotations are not checked at run time, so wrong types are accepted; use <code>__post_init__</code> checks or pydantic for validation.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Dataclass vs NamedTuple vs pydantic model?</summary><div class="qa-body">A <code>NamedTuple</code> is an immutable tuple with named fields: lightweight, indexable and unpackable. A dataclass is a normal class with generated methods: mutable by default, can have methods, no run-time type checks. A pydantic model validates and converts data at run time and serialises to JSON, which makes it the right choice for data from users, files and APIs.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is <code>__slots__</code>, and what are its trade-offs?</summary><div class="qa-body"><code>__slots__</code> lists the only attribute names a class's objects can have, and Python stores them in fixed places instead of a per-object <code>__dict__</code>. Objects use noticeably less memory and misspelled attributes raise <code>AttributeError</code>. The costs: no new attributes at run time, no class-level defaults with slot names, and every class in a hierarchy must declare <code>__slots__</code> (or a subclass gets a <code>__dict__</code> back).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When would you choose a plain class, a dataclass, or a class with properties?</summary><div class="qa-body">A dataclass suits objects that are mainly named data, such as records, configuration and results. A hand-written class with properties suits objects with rules that must always hold, like an account whose balance may only change through deposits and withdrawals. The two can be combined, but a public dataclass field cannot protect an invariant on its own.</div></details>
 </main>
 `
 });
