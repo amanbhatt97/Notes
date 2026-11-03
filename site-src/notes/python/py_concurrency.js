@@ -104,7 +104,7 @@ if __name__ == "__main__":
     t = time.perf_counter()
     print("rider 1 best route:", route_cost(RIDERS[0]), f"in {time.perf_counter() - t:.2f}s")</div>
   <div class="fx" data-lang="text">{'id': 'R01', 'dishes': 4} in 0.20s
-rider 1 best route: 40 in 0.30s</div>
+rider 1 best route: 40 in 0.38s</div>
   <p>One menu took 0.2 s, all of it waiting, and one route search took a fraction of a second of real calculation. Now let us do the whole of each job sequentially, timing it with <code>time.perf_counter()</code>, which reads a clock that measures real elapsed time:</p>
   <div class="fx" data-lang="py">import time
 from workload import RESTAURANTS, RIDERS, fetch_menu, route_cost
@@ -116,8 +116,8 @@ print(f"waiting job  : {len(menus)} menus, {sum(m['dishes'] for m in menus)} dis
 t = time.perf_counter()
 costs = [route_cost(s) for s in RIDERS]               # 4 route searches, one after another
 print(f"computing job: best routes {costs}, {time.perf_counter() - t:.2f}s")</div>
-  <div class="fx" data-lang="text">waiting job  : 20 menus, 100 dishes, 4.00s
-computing job: best routes [40, 36, 35, 36], 1.22s</div>
+  <div class="fx" data-lang="text">waiting job  : 20 menus, 100 dishes, 4.01s
+computing job: best routes [40, 36, 35, 36], 1.05s</div>
   <p>The waiting job took 20 × 0.2 = 4 seconds, and almost every one of those seconds was spent doing nothing. The computing job took around one second (this number moves a little between runs, because the computer is also doing other things; the 4.00 never moves, because it is pure waiting). Remember the two correct answers, 100 dishes and best routes <code>[40, 36, 35, 36]</code>: every faster version on this page must produce exactly the same results.</p>
   <figure class="viz"><svg viewBox="0 0 600 110" width="600">
     <text x="10" y="18" class="tm">Sequential requests: 20 waits laid end to end (first 8 shown)</text>
@@ -186,7 +186,7 @@ def measure(label, job):
 measure("waiting", lambda: [fetch_menu(r) for r in RESTAURANTS])
 measure("computing", lambda: [route_cost(s) for s in RIDERS])</div>
   <div class="fx" data-lang="text">waiting   wall 4.00s  cpu 0.00s  cpu/wall = 0%
-computing wall 1.19s  cpu 1.17s  cpu/wall = 98%</div>
+computing wall 1.04s  cpu 1.01s  cpu/wall = 97%</div>
   <p>The two jobs could hardly be more different. The waiting job ran for about 4 seconds of wall time but used almost no CPU time at all, so its ratio is close to 0%: it was asleep the whole time. The computing job's CPU time is almost equal to its wall time, a ratio near 100%: the core was busy every moment. (The <code>lambda</code> simply wraps each job in a small function so that <code>measure</code> can run it between its two clock readings.)</p>
   <p>These two shapes have names. Code whose running time is dominated by waiting for input/output is called <strong>I/O-bound</strong>: a faster CPU would barely help it, because the CPU was not the bottleneck. Code whose running time is dominated by calculation is called <strong>CPU-bound</strong>: here a faster CPU, or more cores working together, helps directly.</p>
   <table class="tbl"><caption>Reading the ratio</caption>
@@ -217,9 +217,9 @@ if __name__ == "__main__":
     p = multiprocessing.Process(target=where_am_i, args=("a new process",))
     p.start(); p.join()                              # a different process altogether</div>
   <div class="fx" data-lang="text">CPU cores on this machine: 4
-main program     process id 3236, thread MainThread
-a new thread     process id 3236, thread helper
-a new process    process id 3238, thread MainThread</div>
+main program     process id 9053, thread MainThread
+a new thread     process id 9053, thread helper
+a new process    process id 9055, thread MainThread</div>
   <p>The new thread reports the <em>same</em> process ID as the main program: it is a second worker inside the same kitchen, sharing its memory. The new process reports a <em>different</em> process ID: it is a separate program with its own memory and its own main thread. This difference, shared memory versus separate memory, is the main practical difference between Python's <code>threading</code> and <code>multiprocessing</code> modules. Threads are cheap to start and can share data freely, but they must be careful not to corrupt it. Processes are expensive to start and must copy data between them, but they cannot corrupt each other.</p>
   <p>In most programming languages, the story would end here: put four threads on four cores and you get four times the computing power. In Python, there is one more piece, and it changes the answer.</p>
 
@@ -281,17 +281,17 @@ if __name__ == "__main__":
         return list(await asyncio.gather(*map(route_cost_async, RIDERS)))
     timed("asyncio", lambda: asyncio.run(all_cpu()))</div>
   <div class="fx" data-lang="text">waiting job: 20 requests x 0.2 s
-  sequential  4.01s   100
-  threads     0.21s   100
-  processes   1.02s   100
+  sequential  4.00s   100
+  threads     0.20s   100
+  processes   1.01s   100
   asyncio     0.20s   100
 computing job: 4 route searches
-  sequential  1.04s   [40, 36, 35, 36]
-  threads     1.16s   [40, 36, 35, 36]
-  processes   0.29s   [40, 36, 35, 36]
-  asyncio     1.05s   [40, 36, 35, 36]</div>
+  sequential  1.05s   [40, 36, 35, 36]
+  threads     1.10s   [40, 36, 35, 36]
+  processes   0.39s   [40, 36, 35, 36]
+  asyncio     1.02s   [40, 36, 35, 36]</div>
   <p>Every version produced the same answers, so the only question is speed, and the results match the theory closely. For the waiting job, threads and asyncio both cut 4 seconds to about 0.2 seconds, the time of a single wait, because all twenty waits overlapped. Four processes managed only about 1 second: each process can wait for only one request at a time, so 20 requests took 5 rounds of 0.2 seconds, plus the time to start the processes. Using whole processes just to wait is wasteful.</p>
-  <p>For the computing job the picture flips. Threads were no faster than the sequential loop, and often a little slower, because they took turns holding the GIL and paid a small cost at every hand-over. The asyncio version was no faster either: its tasks never reach an <code>await</code>, so each one runs to completion before the next can start, which is just a sequential loop with extra steps. Only the 4 processes helped, running the searches about two to three times faster. That is less than the ideal 4×, because starting processes and sending each its work takes time and the four searches are not exactly equal in size.</p>
+  <p>For the computing job the picture flips. Threads were no faster than the sequential loop, and often a little slower, because they took turns holding the GIL and paid a small cost at every hand-over. The asyncio version was no faster either: its tasks never reach an <code>await</code>, so each one runs to completion before the next can start, which is just a sequential loop with extra steps. Only the 4 processes helped, running the searches roughly two and a half to three and a half times faster depending on the run. That is less than the ideal 4×, because starting processes and sending each its work takes time and the four searches are not exactly equal in size.</p>
   <table class="tbl"><caption>The three models side by side</caption>
     <tr><th></th><th>threading</th><th>multiprocessing</th><th>asyncio</th></tr>
     <tr><td>Gives</td><td>concurrency</td><td>parallelism</td><td>concurrency</td></tr>
@@ -331,8 +331,8 @@ if __name__ == "__main__":
         print("result():", fut.result())              # waits until the value is ready
         futs = {ex.submit(fetch_menu, r): r for r in ["R01", "R02", "R03"]}
         print("as_completed:", sorted(futs[f] for f in as_completed(futs)))</div>
-  <div class="fx" data-lang="text">ThreadPoolExecutor   waiting 0.21s   computing 1.21s  [40, 36, 35, 36]
-ProcessPoolExecutor  waiting 0.24s   computing 0.44s  [40, 36, 35, 36]
+  <div class="fx" data-lang="text">ThreadPoolExecutor   waiting 0.21s   computing 1.13s  [40, 36, 35, 36]
+ProcessPoolExecutor  waiting 0.24s   computing 0.37s  [40, 36, 35, 36]
 finished right after submit? False
 result(): {'id': 'R07', 'dishes': 5}
 as_completed: ['R01', 'R02', 'R03']</div>
@@ -439,8 +439,8 @@ if __name__ == "__main__":
         pooled = list(ex.map(double, nums, chunksize=5_000))   # better, still pointless
         print(f"pool, chunks of 5000: {time.perf_counter() - t:.3f}s")</div>
   <div class="fx" data-lang="text">plain loop          : 0.001s
-pool, one per task  : 3.665s
-pool, chunks of 5000: 0.006s</div>
+pool, one per task  : 2.334s
+pool, chunks of 5000: 0.019s</div>
   <p>Doubling 20,000 numbers takes about a millisecond in a plain loop. Sending them to a process pool one at a time took seconds, thousands of times slower, because each tiny job paid the full cost of a round trip between processes. Grouping the work into chunks with <code>chunksize</code> removed most of that overhead, yet the pool was still slower than the loop, because the whole job was simply too small to be worth sharing out. Processes pay off only when each job does substantial work.</p>
   <p>Finally, there are mistakes that belong to each model in detail: updating shared data from several threads without a lock (<a class="xref" data-note="py_threading">Threads &amp; the GIL</a>), forgetting the <code>if __name__ == "__main__":</code> guard or passing a lambda to a process pool (<a class="xref" data-note="py_multiprocessing">Processes</a>), and choosing asyncio because it sounds modern while the code still depends on blocking libraries (<a class="xref" data-note="py_asyncio">asyncio</a>).</p>
 
@@ -474,7 +474,7 @@ pool, chunks of 5000: 0.006s</div>
     <tr><td>Memory</td><td>shared</td><td>separate, copied</td><td>shared, one thread</td></tr>
     <tr><td>Danger</td><td>races, deadlocks</td><td>overhead, pickling, <code>__main__</code> guard</td><td>blocking the loop</td></tr>
   </table>
-  <p>Measured on 4 cores (approximate): waiting job 20 × 0.2 s: sequential 4.0 s, threads 0.2 s, 4 processes 1.0 s, asyncio 0.2 s. Computing job: sequential ≈ 1 s, threads ≈ 1 s, 4 processes ≈ 0.4 s, asyncio ≈ 1 s.</p>
+  <p>Measured on 4 cores (approximate): waiting job 20 × 0.2 s: sequential 4.0 s, threads 0.2 s, 4 processes 1.0 s, asyncio 0.2 s. Computing job: sequential ≈ 1 s, threads ≈ 1 s, 4 processes ≈ 0.3–0.45 s, asyncio ≈ 1 s.</p>
   <h3>concurrent.futures</h3>
   <div class="fx" data-lang="py">from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 

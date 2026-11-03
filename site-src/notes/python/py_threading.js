@@ -104,7 +104,7 @@ if __name__ == "__main__":
     t = time.perf_counter()
     print("rider 1 best route:", route_cost(RIDERS[0]), f"in {time.perf_counter() - t:.2f}s")</div>
   <div class="fx" data-lang="text">{'id': 'R01', 'dishes': 4} in 0.20s
-rider 1 best route: 40 in 0.27s</div>
+rider 1 best route: 40 in 0.34s</div>
   <p>Now let us fetch all twenty menus the obvious way, one after another:</p>
   <div class="fx" data-lang="py">import time
 from workload import RESTAURANTS, fetch_menu
@@ -201,8 +201,8 @@ threads = [threading.Thread(target=worker, args=(i,)) for i in range(4)]
 for th in threads: th.start()
 for th in threads: th.join()
 print(f"4 threads:     {costs} in {time.perf_counter() - t:.2f}s")</div>
-  <div class="fx" data-lang="text">one at a time: [40, 36, 35, 36] in 0.96s
-4 threads:     [40, 36, 35, 36] in 1.15s</div>
+  <div class="fx" data-lang="text">one at a time: [40, 36, 35, 36] in 0.97s
+4 threads:     [40, 36, 35, 36] in 1.06s</div>
   <p>The answers are identical, and the time is not better at all; often it is slightly worse. Four threads on four cores did the work no faster than one. The reason is the <strong>Global Interpreter Lock</strong>, or <strong>GIL</strong>.</p>
   <p>A <strong>lock</strong> is an object that only one thread can hold at a time; any other thread that wants it has to wait until it is released. The standard Python interpreter, CPython, has one special lock, the GIL, and its rule is that a thread must hold the GIL in order to run Python code. There is one GIL per process, so only one thread in a process can be running Python code at any moment, however many cores the machine has. Imagine a kitchen with one recipe book, where nobody may cook without reading from it. Four cooks can be in the kitchen, but only the one holding the book is actually cooking. A cook who is just waiting for the oven can put the book down for someone else, but a cook who is busy chopping keeps hold of it.</p>
   <p>Why build such a restriction into the language? It comes from how CPython manages memory. Every object keeps a <strong>reference count</strong>: a number saying how many names, list slots and other places currently refer to it. When the count reaches zero, nothing can use the object any more, and CPython frees its memory. You can see the counter for yourself:</p>
@@ -289,11 +289,11 @@ def run(n=200_000, k=4):
 
 for _ in range(4):
     print("4 threads x 200,000 views:", run(), "/ 800000")</div>
-  <div class="fx" data-lang="text">4 threads x 200,000 views: 800000 / 800000
-4 threads x 200,000 views: 759584 / 800000
-4 threads x 200,000 views: 613055 / 800000
-4 threads x 200,000 views: 800000 / 800000</div>
-  <p>Most runs lose a large number of updates, and the amount differs every time; a run may even come out correct by luck. That is what makes race conditions so dangerous: the code can pass every test and still be wrong, then fail in production under a different load. You might also find that a bare <code>views += 1</code> in a tight loop happens to give the right total on some CPython versions. That is only because this interpreter happens not to switch threads at that exact point; it is an implementation detail, not a promise, and it breaks on other versions, on the free-threaded build, or as soon as any function call is added. Treat every read-modify-write of shared data as unsafe.</p>
+  <div class="fx" data-lang="text">4 threads x 200,000 views: 709219 / 800000
+4 threads x 200,000 views: 800000 / 800000
+4 threads x 200,000 views: 695056 / 800000
+4 threads x 200,000 views: 574421 / 800000</div>
+  <p>Look at how the totals differ. Some runs lose tens of thousands of updates, by a different amount each time, while others come out exactly right purely by luck. That is what makes race conditions so dangerous: the code can pass every test and still be wrong, then fail in production under a different load. You might also find that a bare <code>views += 1</code> in a tight loop happens to give the right total on some CPython versions. That is only because this interpreter happens not to switch threads at that exact point; it is an implementation detail, not a promise, and it breaks on other versions, on the free-threaded build, or as soon as any function call is added. Treat every read-modify-write of shared data as unsafe.</p>
   <p>Some vocabulary is useful here. A piece of code that touches shared data and must not be interleaved with other threads is called a <strong>critical section</strong>. An operation is <strong>atomic</strong> if no other thread can ever see it half-finished. In CPython, a single built-in operation such as <code>my_list.append(x)</code> or <code>my_dict[key] = value</code> is effectively atomic, but any sequence of steps, such as read-add-write, is not. Making a sequence behave as if it were atomic is the job of a lock.</p>
 
   <h2 id="th-lock"><span class="num">06</span>Locks: Lock and RLock</h2>
@@ -317,7 +317,7 @@ for th in ts: th.start()
 for th in ts: th.join()
 print(f"with a lock: {views} / 800000 in {time.perf_counter() - t:.2f}s")
 print("lock is free again:", not lock.locked())</div>
-  <div class="fx" data-lang="text">with a lock: 800000 / 800000 in 0.14s
+  <div class="fx" data-lang="text">with a lock: 800000 / 800000 in 0.11s
 lock is free again: True</div>
   <p>Exactly 800,000, every run. While one thread is between reading and writing <code>views</code>, every other thread is waiting at <code>with lock:</code>, so from their point of view the read, add and write happen as one indivisible step. The price is that the locked code runs one thread at a time and each acquire and release costs a little, so locked sections should be kept as short as possible. In particular, never do slow work such as a network request while holding a lock: every other thread would queue behind it, and twenty threads would become sequential again. Do the slow work first, then lock only the shared update.</p>
   <p>A plain <code>Lock</code> has one surprising property: it does not remember which thread holds it. If the thread that holds it tries to acquire it again, it simply waits, for itself, forever. That happens quite naturally when one method that takes a lock calls another method that takes the same lock. The demo below runs each version in a daemon thread and gives it one second, so that the stuck version does not hang the whole program:</p>
@@ -506,7 +506,7 @@ for workers in (1, 5, 20):
           f"first {menus[0]['id']}, last {menus[-1]['id']}, {time.perf_counter() - t:.2f}s")</div>
   <div class="fx" data-lang="text">max_workers= 1: 100 dishes, first R01, last R20, 4.01s
 max_workers= 5: 100 dishes, first R01, last R20, 0.80s
-max_workers=20: 100 dishes, first R01, last R20, 0.21s</div>
+max_workers=20: 100 dishes, first R01, last R20, 0.20s</div>
   <p>The timing rule holds again: 1 worker means 20 rounds (about 4 seconds), 5 workers means 4 rounds (about 0.8 seconds), and 20 workers means 1 round (about 0.2 seconds). <code>map</code> also returns results in the same order as the inputs (first R01, last R20), whatever order the requests actually finished in, and the return values come straight back to us with no shared slots to manage.</p>
   <p>For more control there is <code>ex.submit(fn, *args)</code>, which schedules a single call and immediately returns a <strong>Future</strong>: an object that stands for a result that does not exist yet, like the numbered receipt you get when you order at a takeaway counter. Later you exchange it for the real result with <code>future.result()</code>, which waits if necessary and either returns the value or raises the exception the job raised. The companion function <code>as_completed(futures)</code> hands futures back in the order they <em>finish</em>. Below, three requests take different times and one of them fails:</p>
   <div class="fx" data-lang="py">import time

@@ -104,7 +104,7 @@ if __name__ == "__main__":
     t = time.perf_counter()
     print("rider 1 best route:", route_cost(RIDERS[0]), f"in {time.perf_counter() - t:.2f}s")</div>
   <div class="fx" data-lang="text">{'id': 'R01', 'dishes': 4} in 0.20s
-rider 1 best route: 40 in 0.28s</div>
+rider 1 best route: 40 in 0.26s</div>
   <p>Now let us plan all four riders' routes, first one at a time and then with a <code>ProcessPoolExecutor</code> of 4 worker processes. A pool is a team of worker processes that share out a list of jobs; we will look at pools properly in section 03, and for now <code>ex.map(plan, range(4))</code> simply means "run <code>plan(0)</code> to <code>plan(3)</code> using the workers". Each job also reports <code>os.getpid()</code>, the process ID the operating system gave to the process that ran it, so we can see where the work happened. The code that starts processes sits under <code>if __name__ == "__main__":</code>; section 05 explains why that line is needed.</p>
   <div class="fx" data-lang="py">import os, time
 from concurrent.futures import ProcessPoolExecutor
@@ -125,10 +125,10 @@ if __name__ == "__main__":
     pids = {pid for _, pid in out}
     print(f"main process id {os.getpid()}; worker ids differ from it: {os.getpid() not in pids}; "
           f"workers used: {len(pids)}")</div>
-  <div class="fx" data-lang="text">one at a time: [40, 36, 35, 36] in 1.54s
-4 processes  : [40, 36, 35, 36] in 0.43s
-main process id 6649; worker ids differ from it: True; workers used: 4</div>
-  <p>The answers are identical, and the time dropped to a fraction of the original: about three to four times faster on 4 cores. The process IDs prove that the work really ran in 4 different processes, none of them the main program. The same job with 4 threads gave no speed-up at all (<a class="xref" data-note="py_threading">Threads &amp; the GIL</a>). The speed-up is a little below 4 because starting the processes and sending each its job takes time, the four searches are not exactly the same size, and other programs share the cores. For long jobs on an otherwise idle machine it gets close to the number of cores, but it can never exceed it.</p>
+  <div class="fx" data-lang="text">one at a time: [40, 36, 35, 36] in 1.09s
+4 processes  : [40, 36, 35, 36] in 0.35s
+main process id 10633; worker ids differ from it: True; workers used: 4</div>
+  <p>The answers are identical, and the time dropped to a fraction of the original: several times faster on 4 cores (between about two and a half and three and a half times across repeated runs; the exact figure moves around). The process IDs prove that the work really ran in 4 different processes, none of them the main program. The same job with 4 threads gave no speed-up at all (<a class="xref" data-note="py_threading">Threads &amp; the GIL</a>). The speed-up is a little below 4 because starting the processes and sending each its job takes time, the four searches are not exactly the same size, and other programs share the cores. For long jobs on an otherwise idle machine it gets close to the number of cores, but it can never exceed it.</p>
   <figure class="viz"><svg viewBox="0 0 600 190" width="600">
     <defs><marker id="mp-ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <rect x="10" y="60" width="180" height="70" rx="8" class="fb sb"/><text x="22" y="82">Main process</text><text x="22" y="100" class="tm">interpreter + GIL</text><text x="22" y="116" class="tm">own memory</text>
@@ -317,9 +317,9 @@ if __name__ == "__main__":
         for w in workers: w.start()
         for w in workers: w.join()
         print(f"start + join 20 {kind:&lt;17}: {(time.perf_counter() - t) * 1000:6.1f} ms")</div>
-  <div class="fx" data-lang="text">start + join 20 threads          :    3.4 ms
-start + join 20 forked processes :   21.3 ms
-start + join 20 spawned processes:  312.3 ms</div>
+  <div class="fx" data-lang="text">start + join 20 threads          :    2.9 ms
+start + join 20 forked processes :   20.6 ms
+start + join 20 spawned processes:  269.8 ms</div>
   <p>Twenty forked processes cost several times as much as twenty threads, and twenty spawned processes cost around a hundred times as much, because each spawned child starts an interpreter from scratch and re-imports your code (heavy imports such as pandas or PyTorch make this much worse). A third of a second is nothing next to a job that runs for a minute, but it is a disaster if you pay it for every small batch. That is why you create one pool and keep using it.</p>
   <p>The second cost is per job. By default, <code>ProcessPoolExecutor.map</code> sends each item as its own message: pickle the arguments, send them through a pipe, unpickle, compute, pickle the result, send it back, unpickle. That round trip takes far longer than a tiny calculation. The experiment below uses 5000 copies of a tiny 3-stop route, each solved in microseconds. The <code>chunksize</code> argument tells <code>map</code> to send several items in each message:</p>
   <div class="fx" data-lang="py">import time
@@ -338,7 +338,7 @@ if __name__ == "__main__":
             out = list(ex.map(route_cost, TINY, chunksize=chunk))
         print(f"4 procs, chunksize={chunk:&lt;4}: {time.perf_counter() - t:.2f}s  same answers: {out == seq}")</div>
   <div class="fx" data-lang="text">plain loop           : 0.01s  (each answer 12)
-4 procs, chunksize=1   : 0.95s  same answers: True
+4 procs, chunksize=1   : 0.93s  same answers: True
 4 procs, chunksize=50  : 0.03s  same answers: True
 4 procs, chunksize=1250: 0.02s  same answers: True</div>
   <p>With one item per message, the pool was around a hundred times <em>slower</em> than a plain loop: the messaging completely swamped the work. Sending 50 items per message (100 messages instead of 5000) removed most of the overhead, and 1250 per message (one big chunk per worker) removed nearly all of it. Even so, the pool never beat the loop, because the whole job was too small to be worth sharing out in the first place. The lesson has two halves: batch tiny tasks with <code>chunksize</code>, and do not parallelise work that is already fast. (The older <code>mp.Pool.map</code> chooses a chunk size automatically; the executor's default is 1.)</p>
@@ -366,9 +366,9 @@ if __name__ == "__main__":
         t = time.perf_counter()
         ex.submit(count_own, 2_000_000).result()
         print(f"send just 'n' : {time.perf_counter() - t:.3f}s")</div>
-  <div class="fx" data-lang="text">pickled size: 9.9 MB, pickling alone took 0.062s
-send the list : 0.869s
-send just 'n' : 0.015s</div>
+  <div class="fx" data-lang="text">pickled size: 9.9 MB, pickling alone took 0.026s
+send the list : 0.196s
+send just 'n' : 0.023s</div>
   <p>The list pickled to about 10 MB, and sending it took many times longer than sending one number (this varies a lot between runs, but the gap is always large). In a real pool, every job that receives such an argument pays that cost again, and every worker holds its own copy in memory, so four workers each given a 2 GB DataFrame need 8 GB. The fix is to send small descriptions instead of data: a file path, a range of row numbers, or an ID, and let each worker load its own slice. Alternatively, use an <code>initializer</code> that loads the data once per worker, or shared memory (section 08).</p>
   <table class="tbl"><caption>Where the time goes</caption>
     <tr><th>Cost</th><th>Size here (approximate)</th><th>How to reduce it</th></tr>
@@ -462,7 +462,7 @@ if __name__ == "__main__":
     for p in ps: p.start()
     for p in ps: p.join()
     print("Array after children:", list(slots))</div>
-  <div class="fx" data-lang="text">Value, lock=False: 90242 / 200000
+  <div class="fx" data-lang="text">Value, lock=False: 93070 / 200000
 Value, lock=True : 200000 / 200000
 Array after children: [40, 36, 35, 36]</div>
   <p>Without the lock, more than half of the updates were lost. <code>v.value += 1</code> is still three steps (read, add, write), and these processes run truly in parallel on different cores, with no GIL between them, so their steps interleave constantly. This is exactly the race condition from the threads page, made worse by real parallelism. With <code>with v.get_lock():</code> around the update, the total is exactly 200,000. The Array needed no lock because each child wrote only its own slot, so no two processes ever touched the same number.</p>
@@ -511,11 +511,11 @@ if __name__ == "__main__":
     t = time.perf_counter(); c = int(x @ x)    # sum of x*x, done in compiled C
     print(f"numpy, 1 process        : {time.perf_counter() - t:.3f}s")
     print("same answer:", a == b == c)</div>
-  <div class="fx" data-lang="text">pure Python, 1 process  : 0.081s
-pure Python, 4 processes: 0.051s
+  <div class="fx" data-lang="text">pure Python, 1 process  : 0.077s
+pure Python, 4 processes: 0.064s
 numpy, 1 process        : 0.002s
 same answer: True</div>
-  <p>Four processes made the pure-Python version roughly twice as fast; on a job this short, the pool's start-up ate the rest of the possible gain. But numpy, in a single process, was dozens of times faster than the four processes together. numpy stores the numbers in a compact array and runs the whole loop in compiled C code, with no Python object per number, which removes the very cost that processes can only divide between cores. Whenever a calculation can be expressed as whole-array operations, that is, <strong>vectorised</strong>, do that first, and parallelise only what cannot be vectorised, such as our route search.</p>
+  <p>Four processes made the pure-Python version faster, but well short of four times faster: on a job this short, starting the pool ate much of the possible gain. Meanwhile numpy, in a single process, was well over ten times faster than the four processes together (typically twenty times or more). numpy stores the numbers in a compact array and runs the whole loop in compiled C code, with no Python object per number, which removes the very cost that processes can only divide between cores. Whenever a calculation can be expressed as whole-array operations, that is, <strong>vectorised</strong>, do that first, and parallelise only what cannot be vectorised, such as our route search.</p>
   <table class="tbl"><caption>When processes lose</caption>
     <tr><th>Situation</th><th>Why</th><th>Use instead</th></tr>
     <tr><td>Waiting (I/O-bound) work</td><td>waiting needs no core; n processes overlap only n waits (20 requests: 4 processes about 1 s, 20 threads about 0.2 s)</td><td>threads or asyncio</td></tr>
@@ -564,7 +564,7 @@ if __name__ == "__main__":
         for batch in range(10):
             list(ex.map(score, range(batch * 100, batch * 100 + 100), chunksize=25))
     print(f"one reused pool   : {time.perf_counter() - t:.2f}s")</div>
-  <div class="fx" data-lang="text">new pool per batch: 0.09s
+  <div class="fx" data-lang="text">new pool per batch: 0.10s
 one reused pool   : 0.02s</div>
   <p>The work was identical, but starting a fresh pool ten times took several times as long as reusing one pool. With spawn, or with heavy imports, the difference is far larger. Create the pool once, near the top of your program, and pass it to the code that needs it.</p>
   <p>The remaining mistakes have all appeared earlier on this page. Expecting a child to fill a global list or dict leaves the parent's copy empty without any error; return the result instead. Sending thousands of tiny jobs with the default <code>chunksize=1</code> can be a hundred times slower than a loop. Passing a big dataset with every job costs time and memory; send paths or ranges. Updating a shared <code>Value</code> with <code>+= 1</code> without its lock loses updates. Joining a worker before draining its output queue, or giving a worker no poison pill, makes the program hang silently. And using more workers than cores for CPU work adds memory without adding speed.</p>
@@ -607,7 +607,7 @@ with ProcessPoolExecutor(max_workers=4) as ex:      # under if __name__ == "__ma
     <li>Start-up: forked processes several × threads; spawned processes around 100 × threads.</li>
     <li><code>chunksize=k</code>: ⌈jobs ÷ k⌉ messages. <code>Executor.map</code> default 1; <code>Pool.map</code> automatic.</li>
     <li>Big arguments are copied per job and per worker: send paths or ranges.</li>
-    <li>Speed-up ≤ number of cores (about 3–4× on 4 cores for the route job).</li>
+    <li>Speed-up ≤ number of cores (about 2.5–3.5× on 4 cores for the route job).</li>
   </ul>
   <h3>IPC and shared memory</h3>
   <table class="tbl">
@@ -647,7 +647,7 @@ with ProcessPoolExecutor(max_workers=4) as ex:      # under if __name__ == "__ma
   <details class="qa"><summary><span class="qmark">Q</span>Why must you read all results from a <code>multiprocessing.Queue</code> before joining the workers?</summary><div class="qa-body">A process that has put items on a queue uses a background thread to push them into the underlying pipe, and it cannot exit until that data has been taken out. If the parent joins first, the parent waits for the child to exit while the child waits for the parent to read: a deadlock. Read everything, then join.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What happens when a worker process crashes?</summary><div class="qa-body">The crash stays in that process and the parent survives. A raw <code>Process</code> shows a non-zero (or negative, for a signal) <code>exitcode</code>. A <code>ProcessPoolExecutor</code> marks itself broken and pending futures raise <code>BrokenProcessPool</code>. An ordinary Python exception inside a pool job is pickled back and raised again by <code>future.result()</code>.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>How many worker processes should you use?</summary><div class="qa-body">For CPU-bound work, about the number of cores this process may use (<code>os.cpu_count()</code>, or <code>os.process_cpu_count()</code> in 3.13+, or the container's CPU quota), fewer on shared machines or when each worker uses multi-threaded libraries. More workers than cores only add memory use and switching.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Is numpy a better answer than multiprocessing?</summary><div class="qa-body">Often, yes. numpy runs the loop in compiled C with no Python object per element, removing the cost that processes can only divide among cores: in the demo numpy in one process was dozens of times faster than 4 processes of pure Python. Processes are for Python logic that cannot be vectorised, such as a permutation search. If you combine them, limit numpy's own threads in each worker to avoid oversubscription.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Is numpy a better answer than multiprocessing?</summary><div class="qa-body">Often, yes. numpy runs the loop in compiled C with no Python object per element, removing the cost that processes can only divide among cores: in the demo numpy in one process was well over ten times faster than 4 processes of pure Python. Processes are for Python logic that cannot be vectorised, such as a permutation search. If you combine them, limit numpy's own threads in each worker to avoid oversubscription.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>How would you parallelise feature engineering on a 20 GB CSV file?</summary><div class="qa-body">First try vectorised pandas or polars with chunked reading, which may be enough. If per-row Python logic is unavoidable, split the file by byte ranges, row ranges or into several files, and give each worker a path and range rather than data; each worker reads and processes its own slice and writes results to disk or returns small summaries. Use a <code>ProcessPoolExecutor</code> with about one worker per core and combine at the end. For much larger data, use Dask or Spark.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Where do you meet multiprocessing in machine-learning libraries?</summary><div class="qa-body">PyTorch's <code>DataLoader(num_workers=n)</code> loads and augments batches in worker processes, which is why datasets must be picklable and scripts need the main guard on Windows and macOS. scikit-learn and joblib's <code>n_jobs</code> use a process backend. Hyperparameter searches and parallel feature extraction commonly use process pools.</div></details>
 </main>
