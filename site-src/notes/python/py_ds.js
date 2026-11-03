@@ -3,68 +3,43 @@ Object.assign(TOPIC_CONTENT, {
   "py_ds": `<main>
 <h1>Choosing a Collection</h1>
   <div class="where"><span>Python</span><span>Collections</span><span>Choosing a Collection</span></div>
-  <p class="lead">Python ships a handful of built-in containers (list, tuple, dict, set, str) and a standard-library toolbox around them (<code>collections</code>, <code>heapq</code>, <code>bisect</code>, <code>array</code>). They differ on a few properties: ordered or not, mutable or not, duplicates or not, hashable or not, and which operations are O(1). Picking the wrong one rarely breaks correctness; it breaks performance, typically a membership test on a list inside a loop or a list used as a queue, which turns linear code quadratic. Interviewers probe exactly this ("which data structure would you use and why?"), and in DS/ML and backend code the choice decides whether a script handles a million rows in seconds or hours. Code here was run on Python 3.13.</p>
+  <p class="lead">By now you have met Python's built-in containers one at a time: lists and tuples in <a class="xref" data-note="py_lists_tuples">Lists &amp; Tuples</a>, dicts and sets in <a class="xref" data-note="py_dicts_sets">Dicts &amp; Sets</a>, and strings in <a class="xref" data-note="py_strings">Strings</a>. This page is about choosing between them, and about the standard-library tools that fill the gaps they leave: <code>deque</code> for queues, <code>heapq</code> for "always give me the most urgent item", <code>bisect</code> for searching sorted data, a few more members of <code>collections</code>, and typed arrays for large amounts of numbers. Choosing badly rarely makes a program wrong; it makes it slow, typically through a membership test on a list inside a loop or a list used as a queue, and "which data structure would you use here, and why?" is one of the most common interview questions there is. We keep the chai stall from the earlier pages, with its menu, its six morning orders and its four customer bills, and add a queue at the counter, a pile of order tickets, discount tiers and settings.</p>
 
-  <h2 id="pc-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="pc-map"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">Choosing a Collection</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">Sequences</div>
+        <div class="mm-title">The deciding questions</div>
         <ul>
-          <li><b>list</b>: ordered, mutable, duplicates; dynamic array of references</li>
-          <li><b>tuple</b>: ordered, immutable; hashable if items are</li>
-          <li><b>str</b>: immutable sequence of code points</li>
-          <li>Index O(1); <code>in</code> O(n)</li>
-          <li>list append/pop at end O(1)*; front O(n)</li>
+          <li>What do I do most: index, search, add at front, find the smallest?</li>
+          <li>Ordered? Changeable? Duplicates? Must it be a key?</li>
+          <li>Pick the container that makes the common operation cheap</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Hash-based</div>
+        <div class="mm-title">Built-ins</div>
         <ul>
-          <li><b>dict</b>: key → value, keys unique + hashable, insertion-ordered</li>
-          <li><b>set</b>: unique hashable items, no order</li>
-          <li><b>frozenset</b>: immutable, hashable set</li>
-          <li>get/set/del/<code>in</code> O(1) average, O(n) worst</li>
-          <li>No positions: <code>s[0]</code> → TypeError</li>
+          <li><b>list</b>: ordered items, stack; <b>tuple</b>: fixed record, key</li>
+          <li><b>dict</b>: lookup by key; <b>set</b>: uniqueness, fast <code>in</code></li>
+          <li><b>str</b>: text</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">collections</div>
+        <div class="mm-title">Standard library</div>
         <ul>
-          <li><b>deque</b>: O(1) both ends; <code>maxlen</code> window; O(n) middle</li>
-          <li><b>Counter</b>: counts, <code>most_common</code></li>
-          <li><b>defaultdict</b>: missing key → <code>factory()</code></li>
-          <li><b>OrderedDict</b>: <code>move_to_end</code>, order-aware ==</li>
-          <li><b>namedtuple</b>, <b>ChainMap</b> (layered lookups)</li>
+          <li><b>deque</b>: O(1) at both ends, <code>maxlen</code> for last k</li>
+          <li><b>heapq</b>: smallest first, O(log n) push/pop, top-k</li>
+          <li><b>bisect</b>: O(log n) search in a sorted list</li>
+          <li><b>OrderedDict</b>: LRU; <b>ChainMap</b>: layered settings</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">heapq &amp; bisect</div>
+        <div class="mm-title">Scale</div>
         <ul>
-          <li><b>heapq</b>: min-heap on a list; push/pop O(log n); heapify O(n)</li>
-          <li>Top-k: <code>nlargest(k, xs)</code> O(n log k)</li>
-          <li>Max-heap: push negated keys</li>
-          <li><b>bisect</b>: binary search on sorted list O(log n); insort O(n)</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Arrays</div>
-        <ul>
-          <li>list = pointers to boxed objects (~32 B per float)</li>
-          <li><b>array.array</b>: typed C values, 8 B per double</li>
-          <li><b>numpy</b>: typed + vectorised ops in C</li>
-          <li>Numeric bulk work → numpy / pandas</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Choosing</div>
-        <ul>
-          <li>Lookup by key → dict · seen? / unique → set</li>
-          <li>Fixed record / composite key → tuple</li>
-          <li>Ordered, growing → list · queue → deque</li>
-          <li>Priority / top-k → heapq · sorted search → bisect</li>
-          <li>⚠ <code>in</code> on a list inside a loop = O(n·m)</li>
+          <li>Many numbers → NumPy (compact, vectorised)</li>
+          <li><code>in</code> on a list inside a loop → O(n²)</li>
+          <li>Heap is not sorted; only <code>heap[0]</code> is the minimum</li>
         </ul>
       </div>
     </div>
@@ -73,28 +48,29 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="pc-props"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Built-in Containers Compared</span><span class="rm-sub">Ordered, mutable, duplicates, hashable, indexed</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-bigo"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Big-O of Common Operations</span><span class="rm-sub">list, tuple, dict, set, deque side by side</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-choose"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">How to Choose</span><span class="rm-sub">Decision guide and nested shapes</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-deque"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">collections.deque</span><span class="rm-sub">Queues, sliding windows, BFS</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-coll"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">The collections Module</span><span class="rm-sub">Counter, defaultdict, OrderedDict, namedtuple, ChainMap</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-heap"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">heapq &amp; bisect</span><span class="rm-sub">Priority queues, top-k, sorted search</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-array"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Arrays vs Lists</span><span class="rm-sub">array module, NumPy, memory</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-traps"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Wrong container, hidden O(n²)</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">Property and Big-O tables, decision rules</span></div></div>
-      <div class="rm-item rm-done" data-target="pc-qa"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">18 questions on data-structure choice</span></div></div>
+      <div class="rm-item rm-done" data-target="pc-props"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">The Built-ins Side by Side</span><span class="rm-sub">the yes/no properties that tell them apart</span></div></div>
+      <div class="rm-item rm-done" data-target="pc-bigo"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">What Each Operation Costs</span><span class="rm-sub">one Big-O table for every container</span></div></div>
+      <div class="rm-item rm-done" data-target="pc-choose"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">How to Choose</span><span class="rm-sub">from the job to the container, and nesting them</span></div></div>
+      <div class="rm-item rm-done" data-target="pc-deque"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">deque</span><span class="rm-sub">queues, recent items and breadth-first search</span></div></div>
+      <div class="rm-item rm-done" data-target="pc-heap"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">heapq</span><span class="rm-sub">priority queues and top-k</span></div></div>
+      <div class="rm-item rm-done" data-target="pc-bisect"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">bisect</span><span class="rm-sub">fast searching in sorted data</span></div></div>
+      <div class="rm-item rm-done" data-target="pc-coll"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">OrderedDict and ChainMap</span><span class="rm-sub">LRU caches and layered settings</span></div></div>
+      <div class="rm-item rm-done" data-target="pc-array"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Arrays vs Lists</span><span class="rm-sub">array and NumPy for lots of numbers</span></div></div>
+      <div class="rm-item rm-done" data-target="pc-traps"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">positions in dicts, lost duplicates, habits</span></div></div>
+      <div class="rm-item rm-done" data-target="pc-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">properties, costs, task-to-container table</span></div></div>
+      <div class="rm-item rm-done" data-target="pc-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">"which data structure would you use?"</span></div></div>
     </div>
   </div>
 
-  <h2 id="pc-props"><span class="num">01</span>Built-in Containers Compared</h2>
-  <p>Every container choice comes down to a few yes/no properties. Is it <strong>ordered</strong> (does it remember positions)? Is it <strong>mutable</strong>? Does it allow <strong>duplicates</strong>? Is it <strong>hashable</strong> (can it be a dict key or set member)? Can you <strong>index</strong> it by position? Python can answer some of these directly:</p>
+  <h2 id="pc-props"><span class="num">01</span>The Built-ins Side by Side</h2>
+  <p>Every container choice starts with a few yes-or-no questions about the data. Does the order of the items matter (is the container <strong>ordered</strong>)? Will the data change after it is created (should the container be <strong>mutable</strong>)? Can the same value appear twice (are <strong>duplicates</strong> allowed)? Will the container itself need to be a dictionary key or a set item (must it be <strong>hashable</strong>)? And do you need to reach items by position? Each of the earlier pages answered these questions for one type; here they are side by side. Python can even answer some of them for us. Below, each container holds a piece of the stall's data:</p>
   <div class="fx" data-lang="py">samples = {
-    "list":      [3, 1, 3],
-    "tuple":     (3, 1, 3),
-    "set":       {3, 1, 3},
-    "frozenset": frozenset({3, 1, 3}),
-    "dict":      {"a": 3, "b": 1},
-    "str":       "313",
+    "list":      ["Asha", "Ben", "Asha"],               # names in order of arrival
+    "tuple":     ("Asha", "masala chai", 2),            # one order record
+    "set":       {"Asha", "Ben", "Asha"},               # distinct customers
+    "frozenset": frozenset({"Asha", "Ben"}),            # a table's group, usable as a key
+    "dict":      {"masala chai": 20, "samosa": 15},     # item -&gt; price
+    "str":       "Asha: 2 masala chai",                 # a line of text
 }
 for kind, obj in samples.items():
     try:
@@ -102,282 +78,248 @@ for kind, obj in samples.items():
     except TypeError:
         hashable = "no"
     mutable = "yes" if any(hasattr(obj, m) for m in ("append", "add", "update")) else "no"
-    print(f"{kind:9} len={len(obj)}  mutable={mutable:3}  hashable={hashable}")</div>
-  <div class="fx" data-lang="text">list      len=3  mutable=yes  hashable=no
-tuple     len=3  mutable=no   hashable=yes
-set       len=2  mutable=yes  hashable=no
-frozenset len=2  mutable=no   hashable=yes
-dict      len=2  mutable=yes  hashable=no
-str       len=3  mutable=no   hashable=yes</div>
-  <p><code>hash(obj)</code> succeeds only for hashable objects; having <code>append</code>, <code>add</code> or <code>update</code> means the object can change in place. The set and frozenset report <code>len=2</code> because the duplicate 3 was dropped on creation.</p>
-  <table class="tbl"><caption>Built-in containers by property</caption>
+    print(f"{kind:9} len={len(obj):2}  mutable={mutable:3}  hashable={hashable}")</div>
+  <div class="fx" data-lang="text">list      len= 3  mutable=yes  hashable=no
+tuple     len= 3  mutable=no   hashable=yes
+set       len= 2  mutable=yes  hashable=no
+frozenset len= 2  mutable=no   hashable=yes
+dict      len= 2  mutable=yes  hashable=no
+str       len=19  mutable=no   hashable=yes</div>
+  <p>The loop tests each container in two ways. If <code>hash(obj)</code> succeeds, the object is hashable and could be a dict key; if it raises <code>TypeError</code>, it cannot. And if the object has an <code>append</code>, <code>add</code> or <code>update</code> method, it can be changed in place. The list, set and dict are mutable and therefore unhashable; the tuple, frozenset and string are immutable and hashable. Notice the lengths too: the list keeps both "Asha" entries (length 3), but the set silently dropped the duplicate (length 2). The full comparison is below.</p>
+  <table class="tbl">
     <tr><th></th><th>list</th><th>tuple</th><th>str</th><th>set</th><th>frozenset</th><th>dict</th></tr>
-    <tr><td>Literal</td><td><code>[a, b]</code></td><td><code>(a, b)</code>, <code>a,</code></td><td><code>"ab"</code></td><td><code>{a, b}</code>, <code>set()</code></td><td><code>frozenset(it)</code></td><td><code>{k: v}</code>, <code>{}</code></td></tr>
-    <tr><td>Ordered</td><td>yes</td><td>yes</td><td>yes</td><td>no</td><td>no</td><td>insertion order (3.7+)</td></tr>
+    <tr><td>Written as</td><td><code>[a, b]</code></td><td><code>(a, b)</code>, <code>a,</code></td><td><code>"ab"</code></td><td><code>{a, b}</code>, <code>set()</code></td><td><code>frozenset(it)</code></td><td><code>{k: v}</code>, <code>{}</code></td></tr>
+    <tr><td>Ordered</td><td>yes</td><td>yes</td><td>yes</td><td>no</td><td>no</td><td>insertion order</td></tr>
     <tr><td>Mutable</td><td>yes</td><td>no</td><td>no</td><td>yes</td><td>no</td><td>yes</td></tr>
     <tr><td>Duplicates</td><td>yes</td><td>yes</td><td>yes</td><td>no</td><td>no</td><td>keys no, values yes</td></tr>
-    <tr><td>Hashable (can be a key)</td><td>no</td><td>if all items are</td><td>yes</td><td>no</td><td>yes</td><td>no</td></tr>
-    <tr><td>Indexed by position</td><td>yes</td><td>yes</td><td>yes</td><td>no</td><td>no</td><td>no (by key)</td></tr>
+    <tr><td>Hashable (can be a key)</td><td>no</td><td>if its items are</td><td>yes</td><td>no</td><td>yes</td><td>no</td></tr>
+    <tr><td>Access by position</td><td>yes</td><td>yes</td><td>yes</td><td>no</td><td>no</td><td>no (by key)</td></tr>
     <tr><td>Items must be hashable</td><td>no</td><td>no</td><td>—</td><td>yes</td><td>yes</td><td>keys only</td></tr>
   </table>
-  <figure class="viz"><svg viewBox="0 0 660 290" width="660">
-<defs><marker id="pc-a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="250" y="8" width="160" height="40" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="330" y="26" text-anchor="middle" font-size="11.5" font-weight="700">built-in containers</text><text x="330" y="41" text-anchor="middle" class="tm" font-size="10">two underlying designs</text>
-<line x1="300" y1="48" x2="170" y2="80" stroke="currentColor" marker-end="url(#pc-a9)"/><line x1="360" y1="48" x2="490" y2="80" stroke="currentColor" marker-end="url(#pc-a9)"/>
-<rect x="40" y="82" width="260" height="44" rx="7" class="fb sb"/><text x="170" y="101" text-anchor="middle" font-size="11.5" font-weight="700">sequence: positions 0 … n−1</text><text x="170" y="117" text-anchor="middle" class="tm" font-size="10">index O(1) · in = scan O(n)</text>
-<rect x="360" y="82" width="260" height="44" rx="7" class="fb sb"/><text x="490" y="101" text-anchor="middle" font-size="11.5" font-weight="700">hash table: slot from hash(key)</text><text x="490" y="117" text-anchor="middle" class="tm" font-size="10">lookup O(1) · keys must be hashable</text>
-<line x1="90" y1="126" x2="70" y2="160" stroke="currentColor" marker-end="url(#pc-a9)"/><line x1="170" y1="126" x2="190" y2="160" stroke="currentColor" marker-end="url(#pc-a9)"/><line x1="250" y1="126" x2="310" y2="160" stroke="currentColor" marker-end="url(#pc-a9)"/>
-<line x1="450" y1="126" x2="440" y2="160" stroke="currentColor" marker-end="url(#pc-a9)"/><line x1="540" y1="126" x2="570" y2="160" stroke="currentColor" marker-end="url(#pc-a9)"/>
-<rect x="10" y="162" width="110" height="44" rx="7" class="ft st"/><text x="65" y="181" text-anchor="middle" font-size="11.5" font-weight="700">list</text><text x="65" y="197" text-anchor="middle" class="tm" font-size="10">mutable</text>
-<rect x="135" y="162" width="110" height="44" rx="7" class="ft st"/><text x="190" y="181" text-anchor="middle" font-size="11.5" font-weight="700">tuple</text><text x="190" y="197" text-anchor="middle" class="tm" font-size="10">immutable</text>
-<rect x="260" y="162" width="110" height="44" rx="7" class="ft st"/><text x="315" y="181" text-anchor="middle" font-size="11.5" font-weight="700">str</text><text x="315" y="197" text-anchor="middle" class="tm" font-size="10">immutable text</text>
-<rect x="385" y="162" width="110" height="44" rx="7" class="fg sg"/><text x="440" y="181" text-anchor="middle" font-size="11.5" font-weight="700">set</text><text x="440" y="197" text-anchor="middle" class="tm" font-size="10">keys only</text>
-<rect x="510" y="162" width="130" height="44" rx="7" class="fg sg"/><text x="575" y="181" text-anchor="middle" font-size="11.5" font-weight="700">dict</text><text x="575" y="197" text-anchor="middle" class="tm" font-size="10">key → value</text>
-<path d="M190,206 C190,250 420,250 430,208" fill="none" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#pc-a9)"/>
-<path d="M315,206 C320,262 560,262 570,208" fill="none" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#pc-a9)"/>
-<text x="330" y="282" text-anchor="middle" class="tm" font-size="10.5">immutable tuples and strings are hashable → they can be set items and dict keys</text>
-</svg><figcaption>Two designs underlie the built-ins. Sequences store items by position (fast by index, slow to search); hash tables store items by hash (fast to find, no positions). Immutability is the bridge: only values that cannot change can be hashed, so tuples and strings supply the keys for sets and dicts.</figcaption></figure>
-  <div class="callout def"><span class="label">Definition</span><p>A <strong>container</strong> holds references to other objects. <strong>Sequences</strong> (list, tuple, str, range) are ordered and indexed by integer position. A <strong>set</strong> is an unordered collection of unique hashable items. A <strong>mapping</strong> (dict) associates unique hashable keys with values. <strong>Hashable</strong>: has a hash that never changes during its lifetime, and equal objects have equal hashes.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p><em>Ordered</em> is not <em>sorted</em>: a list keeps the order you inserted, it does not sort itself. And a dict's insertion order does not give it positions: <code>d[0]</code> looks up the key <code>0</code> and raises KeyError if absent. Containers hold references, not copies, so nesting a mutable object in two places shares it (see <a class="xref" data-note="py_lists_tuples">Lists &amp; Tuples</a> on shallow vs deep copy).</p></div>
+  <p>The table shows that the built-ins come from two basic designs. Lists, tuples and strings are <strong>sequences</strong>: items stored in positions, fast to reach by index and slow to search. Sets and dicts are <strong>hash tables</strong>: items stored by their hash, fast to search and with no positions. Immutability links the two families, because only values that cannot change can be hashed, so tuples and strings are what supply the keys for dicts and sets. Two words in the table are easy to misread. "Ordered" is not the same as "sorted": a list keeps the order you put things in; it never sorts itself. And a dict's insertion order does not give it positions: <code>d[0]</code> looks up the key 0, it does not fetch the first entry.</p>
 
-  <h2 id="pc-bigo"><span class="num">02</span>Big-O of Common Operations</h2>
-  <p>The second half of the decision is cost: the right container is the one whose cheap operations are the ones your code performs most. These are average-case costs in CPython (n = number of elements):</p>
-  <table class="tbl"><caption>Time complexity by container (average case)</caption>
+  <h2 id="pc-bigo"><span class="num">02</span>What Each Operation Costs</h2>
+  <p>The properties tell you which containers are <em>allowed</em> for your data; the costs tell you which one is <em>fast</em> for what your code actually does. As a reminder of the notation: O(1) means the time does not grow with the number of items n, O(log n) means it grows very slowly (doubling n adds one step), O(n) means it grows in proportion to n, and O(n log n) is the cost of a good sort. "Amortised" means occasionally expensive but constant on average, as with <code>list.append</code>. The table gathers the average costs of the common operations for every container on this page.</p>
+  <table class="tbl">
     <tr><th>Operation</th><th>list</th><th>tuple</th><th>dict</th><th>set</th><th>deque</th></tr>
-    <tr><td>Index <code>x[i]</code></td><td>O(1)</td><td>O(1)</td><td>— (by key O(1))</td><td>—</td><td>O(1) at ends, O(n) middle</td></tr>
-    <tr><td>Append at end</td><td>O(1)*</td><td>— (new tuple O(n))</td><td><code>d[k] = v</code> O(1)*</td><td><code>add</code> O(1)*</td><td><code>append</code> O(1)</td></tr>
-    <tr><td>Insert at front</td><td><code>insert(0, x)</code> O(n)</td><td>—</td><td>—</td><td>—</td><td><code>appendleft</code> O(1)</td></tr>
-    <tr><td>Pop end</td><td><code>pop()</code> O(1)</td><td>—</td><td><code>popitem()</code> O(1)</td><td><code>pop()</code> O(1) (arbitrary)</td><td><code>pop()</code> O(1)</td></tr>
-    <tr><td>Pop front</td><td><code>pop(0)</code> O(n)</td><td>—</td><td>—</td><td>—</td><td><code>popleft()</code> O(1)</td></tr>
-    <tr><td>Membership <code>x in c</code></td><td>O(n)</td><td>O(n)</td><td>O(1) keys</td><td>O(1)</td><td>O(n)</td></tr>
-    <tr><td>Delete</td><td><code>remove(x)</code> O(n), <code>del l[i]</code> O(n−i)</td><td>—</td><td><code>del d[k]</code> O(1)</td><td><code>discard(x)</code> O(1)</td><td><code>remove(x)</code> O(n)</td></tr>
-    <tr><td>Iterate / copy</td><td>O(n)</td><td>O(n)</td><td>O(n)</td><td>O(n)</td><td>O(n)</td></tr>
-    <tr><td>Sort</td><td>O(n log n)</td><td><code>sorted()</code> O(n log n)</td><td><code>sorted(d)</code> O(n log n)</td><td><code>sorted(s)</code> O(n log n)</td><td>—</td></tr>
+    <tr><td>Read by index <code>x[i]</code></td><td>O(1)</td><td>O(1)</td><td>by key O(1)</td><td>—</td><td>O(1) at ends, O(n) in middle</td></tr>
+    <tr><td>Add at the end</td><td><code>append</code> O(1)*</td><td>— (new tuple, O(n))</td><td><code>d[k] = v</code> O(1)*</td><td><code>add</code> O(1)*</td><td><code>append</code> O(1)</td></tr>
+    <tr><td>Add at the front</td><td><code>insert(0, x)</code> O(n)</td><td>—</td><td>—</td><td>—</td><td><code>appendleft</code> O(1)</td></tr>
+    <tr><td>Remove from the end</td><td><code>pop()</code> O(1)</td><td>—</td><td><code>popitem()</code> O(1)</td><td><code>pop()</code> O(1), arbitrary item</td><td><code>pop()</code> O(1)</td></tr>
+    <tr><td>Remove from the front</td><td><code>pop(0)</code> O(n)</td><td>—</td><td>—</td><td>—</td><td><code>popleft()</code> O(1)</td></tr>
+    <tr><td>Membership <code>x in c</code></td><td>O(n)</td><td>O(n)</td><td>O(1) (keys)</td><td>O(1)</td><td>O(n)</td></tr>
+    <tr><td>Delete a value</td><td><code>remove(x)</code> O(n)</td><td>—</td><td><code>del d[k]</code> O(1)</td><td><code>discard(x)</code> O(1)</td><td><code>remove(x)</code> O(n)</td></tr>
+    <tr><td>Loop over / copy</td><td>O(n)</td><td>O(n)</td><td>O(n)</td><td>O(n)</td><td>O(n)</td></tr>
   </table>
-  <p>* amortised: the underlying array or hash table is occasionally resized, but the cost averages out to O(1). Dict and set operations degrade to O(n) only when many keys collide. Two rows matter most in practice, membership and front removal, so measure them:</p>
-  <div class="fx" data-lang="py">from collections import deque
-import timeit
-n = 100_000
-data = list(range(n))
-as_list, as_set, as_dict = data, set(data), dict.fromkeys(data)
-for label, box in [("list", as_list), ("set", as_set), ("dict", as_dict)]:
-    t = timeit.timeit(lambda: (n - 1) in box, number=200) / 200
-    print(f"'in' on {label:4}: {t * 1e6:8.2f} us")
+  <p>* amortised: the underlying array or hash table is occasionally resized. Dict and set operations are O(1) on average; they degrade to O(n) only when many keys collide, which a good hash function makes practically impossible.</p>
+  <p>Two rows decide most real choices, and both were measured on the earlier pages. Membership: with 100,000 ids, <code>in</code> on a list took hundreds of microseconds while <code>in</code> on a set took well under one, thousands of times faster, and checking 20,000 customers against a list of regulars dropped from about a second to about a millisecond after one conversion to a set (<a class="xref" data-note="py_dicts_sets">Dicts &amp; Sets</a>). Front removal: draining 100,000 items with <code>list.pop(0)</code> took most of a second, while <code>deque.popleft()</code> took a few milliseconds (<a class="xref" data-note="py_lists_tuples">Lists &amp; Tuples</a>). Neither mistake changes the answer; both turn a linear program into a quadratic one, which is why they survive testing on small data and fail in production.</p>
 
-def drain_list():
-    q = list(range(n))
-    while q:
-        q.pop(0)              # shifts every remaining element
-def drain_deque():
-    q = deque(range(n))
-    while q:
-        q.popleft()           # O(1)
-print(f"list.pop(0) x {n:,}:     {timeit.timeit(drain_list, number=1):.2f} s")
-print(f"deque.popleft() x {n:,}: {timeit.timeit(drain_deque, number=1):.3f} s")</div>
-  <div class="fx" data-lang="text">'in' on list:   652.42 us
-'in' on set :     0.08 us
-'in' on dict:     0.10 us
-list.pop(0) x 100,000:     0.80 s
-deque.popleft() x 100,000: 0.005 s</div>
-  <p>The list scans up to 100,000 items (the target is last, its worst case); set and dict hash the value and check one slot, several thousand times faster. Draining a list from the front is O(n²) in total because each <code>pop(0)</code> shifts every remaining pointer; the deque is O(n) in total. Absolute times vary by machine; the ratios do not.</p>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Big-O</strong> describes how work grows with input size n. O(1): constant. O(log n): grows very slowly (binary search). O(n): proportional. O(n log n): efficient sorting. O(n²): doubling n quadruples the time. <strong>Amortised</strong> O(1): an occasional expensive step averaged over many cheap ones.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>A list that is "only" O(n) per membership check becomes O(n·m) when the check runs inside a loop over m items. This is the classic hidden quadratic: convert to a set once, outside the loop (measured in <a class="xref" data-note="py_dicts_sets">Dicts &amp; Sets</a>: about 1 s down to about 1 ms).</p></div>
-
-  <h2 id="pc-choose"><span class="num">03</span>How to Choose: a Decision Guide</h2>
-  <p>Ask what your code does most often with the data, then pick the container that makes that operation cheap and whose rules (order, mutability, uniqueness, hashability) match the meaning of the data.</p>
-  <ol>
-    <li><strong>Look things up by a key or id?</strong> → <code>dict</code>. Only need "seen it?" or uniqueness → <code>set</code>. Need a set as a key → <code>frozenset</code>.</li>
-    <li><strong>A fixed bundle of different fields</strong> (a record, a coordinate, a composite key, several return values)? → <code>tuple</code>; <code>namedtuple</code> or a frozen <code>dataclass</code> when fields deserve names.</li>
-    <li><strong>Many items of the same kind, order matters, size changes?</strong> → <code>list</code>. Adding/removing at the front too → <code>deque</code>.</li>
-    <li><strong>Always need the smallest/largest next?</strong> → <code>heapq</code>. <strong>Keep data sorted and search it?</strong> → sorted list + <code>bisect</code>.</li>
-    <li><strong>Counting or grouping?</strong> → <code>Counter</code> / <code>defaultdict</code>.</li>
-    <li><strong>Millions of numbers, vector maths?</strong> → NumPy array or pandas.</li>
-    <li><strong>Text?</strong> → <code>str</code> (see <a class="xref" data-note="py_strings">Strings</a>).</li>
-  </ol>
-  <table class="tbl"><caption>Task → container</caption>
+  <h2 id="pc-choose"><span class="num">03</span>How to Choose</h2>
+  <p>The method is always the same: ask what your code does most often with the data, choose the container that makes that operation cheap, and check that its rules (order, mutability, uniqueness, hashability) match what the data means. Think of a kitchen. Spoons go in a drawer you can grab from, spices on a labelled rack you can find by name, and orders on a spike where the oldest is at the bottom. Nobody keeps everything in one big box; each storage choice follows from how the thing is used.</p>
+  <p>Applied to code, a handful of questions settle most cases. If you look things up by a name or id, use a <code>dict</code>; if you only need to know whether you have seen something, or need each item once, use a <code>set</code>, and a <code>frozenset</code> when that group must itself be a key. If you have a fixed bundle of different fields, such as one order, a coordinate, a composite key or several return values, use a <code>tuple</code>, or a <code>namedtuple</code> or frozen dataclass when the fields deserve names. If you have many items of the same kind whose order matters and whose number changes, use a <code>list</code>; if items also have to be added or removed at the front, use a <code>deque</code>. If you always need the smallest or most urgent item next, use <code>heapq</code>; if you keep data sorted and search it, use a sorted list with <code>bisect</code>. For counting and grouping, use <code>Counter</code> and <code>defaultdict</code>. For millions of numbers with arithmetic on all of them, use a NumPy array. For text, use <code>str</code>. The table turns this into a lookup.</p>
+  <table class="tbl">
     <tr><th>Task</th><th>Use</th><th>Why</th></tr>
-    <tr><td>Rows of a table, in order</td><td><code>list</code> of tuples / dicts</td><td>ordered, growable</td></tr>
+    <tr><td>Rows of a table, in order</td><td><code>list</code> of tuples or dicts</td><td>ordered, growable</td></tr>
     <tr><td>Config, JSON, id → record</td><td><code>dict</code></td><td>O(1) by key</td></tr>
-    <tr><td>Dedupe, "visited", compare id lists</td><td><code>set</code></td><td>O(1) membership, set algebra</td></tr>
-    <tr><td>Composite key <code>(user, day)</code></td><td><code>tuple</code></td><td>hashable</td></tr>
-    <tr><td>Word / label frequencies</td><td><code>Counter</code></td><td>counting + <code>most_common</code></td></tr>
-    <tr><td>Group rows by key</td><td><code>defaultdict(list)</code></td><td>no missing-key checks</td></tr>
-    <tr><td>FIFO queue, BFS, last k events</td><td><code>deque</code> / <code>deque(maxlen=k)</code></td><td>O(1) both ends</td></tr>
-    <tr><td>Stack (LIFO), DFS</td><td><code>list</code> (<code>append</code>/<code>pop</code>)</td><td>O(1) at the end</td></tr>
-    <tr><td>Priority queue, top-k, scheduling</td><td><code>heapq</code></td><td>O(log n) push/pop</td></tr>
-    <tr><td>Search / insert in sorted data, bucketing</td><td><code>bisect</code></td><td>O(log n) search</td></tr>
-    <tr><td>Layered settings (CLI &gt; env &gt; defaults)</td><td><code>ChainMap</code></td><td>lookup through several dicts</td></tr>
-    <tr><td>Large numeric arrays</td><td>NumPy / <code>array</code></td><td>compact, vectorised</td></tr>
+    <tr><td>Remove duplicates, "visited", compare groups</td><td><code>set</code></td><td>O(1) membership, set algebra</td></tr>
+    <tr><td>Composite key such as (customer, item)</td><td><code>tuple</code></td><td>hashable</td></tr>
+    <tr><td>Frequencies</td><td><code>Counter</code></td><td>counting, <code>most_common</code></td></tr>
+    <tr><td>Group records by a key</td><td><code>defaultdict(list)</code></td><td>no missing-key checks</td></tr>
+    <tr><td>First-in first-out queue, BFS, last k items</td><td><code>deque</code>, <code>deque(maxlen=k)</code></td><td>O(1) at both ends</td></tr>
+    <tr><td>Stack (last-in first-out), DFS</td><td><code>list</code> with <code>append</code>/<code>pop</code></td><td>O(1) at the end</td></tr>
+    <tr><td>Priority queue, top-k, scheduling</td><td><code>heapq</code></td><td>O(log n) push and pop</td></tr>
+    <tr><td>Search sorted data, assign to bands</td><td><code>bisect</code></td><td>O(log n) search</td></tr>
+    <tr><td>Layered settings</td><td><code>ChainMap</code></td><td>looks through several dicts in turn</td></tr>
+    <tr><td>Large numeric arrays</td><td>NumPy, <code>array</code></td><td>compact, vectorised</td></tr>
   </table>
-  <h3>Real data nests containers</h3>
-  <p>Most real structures are containers of containers. The four shapes you meet most:</p>
+  <p>Real data is rarely one container; it is containers inside containers, and the same questions apply at each level. Here are the four nested shapes you will meet most often, all built from the stall's six orders:</p>
   <div class="fx" data-lang="py">from collections import defaultdict, Counter
-events = [("u1", "click"), ("u2", "view"), ("u1", "view"), ("u3", "click"), ("u1", "click")]
+items_by_customer = defaultdict(list)                  # dict of lists: grouping
+for name, item, qty in orders:
+    items_by_customer[name].append(item)
+print(dict(items_by_customer))
 
-by_user = defaultdict(list)                          # dict of lists: grouping
-for user, action in events:
-    by_user[user].append(action)
-print(dict(by_user))
+pairs = {(name, item) for name, item, qty in orders}   # set of tuples: distinct combinations
+print(len(pairs), ("Ben", "samosa") in pairs)
 
-pairs = {(u, a) for u, a in events}                  # set of tuples: distinct combinations
-print(len(pairs), ("u1", "click") in pairs)
-
-rows = [{"user": u, "action": a} for u, a in events] # list of dicts: JSON / DataFrame shape
+rows = [{"customer": n, "item": i, "qty": q} for n, i, q in orders]   # list of dicts
 print(rows[0])
 
-print(Counter(a for _, a in events).most_common())  # Counter: frequencies</div>
-  <div class="fx" data-lang="text">{'u1': ['click', 'view', 'click'], 'u2': ['view'], 'u3': ['click']}
-4 True
-{'user': 'u1', 'action': 'click'}
-[('click', 3), ('view', 2)]</div>
-  <ul>
-    <li><strong>Dict of lists</strong> (<code>defaultdict(list)</code>): grouping, "actions per user".</li>
-    <li><strong>Set of tuples</strong>: distinct combinations; tuples work because they are hashable, lists would raise TypeError.</li>
-    <li><strong>List of dicts</strong>: the shape of JSON records and of <code>pd.DataFrame(rows)</code> (<a class="xref" data-note="da_pandas">Pandas</a>).</li>
-    <li><strong>Counter</strong>: a dict specialised for counting.</li>
-  </ul>
-  <p>For depth on each built-in, see <a class="xref" data-note="py_lists_tuples">Lists &amp; Tuples</a> (slicing, costs, copies, unpacking), <a class="xref" data-note="py_dicts_sets">Dicts &amp; Sets</a> (hashing, CRUD, set algebra) and <a class="xref" data-note="py_strings">Strings</a> (methods, Unicode, regex).</p>
-  <div class="callout trap"><span class="label">Trap</span><p>Choosing by habit (everything a list) works on test data and fails at scale. The usual offenders: membership tests on lists, lists used as queues, lists of (key, value) pairs scanned as lookup tables, and relying on set order for output.</p></div>
+print(Counter(item for _, item, _ in orders).most_common(2))          # Counter: frequencies</div>
+  <div class="fx" data-lang="text">{'Asha': ['masala chai', 'ginger chai'], 'Ben': ['samosa', 'masala chai'], 'Chen': ['masala chai'], 'Dia': ['bun maska']}
+6 True
+{'customer': 'Asha', 'item': 'masala chai', 'qty': 2}
+[('masala chai', 3), ('samosa', 1)]</div>
+  <p>A <strong>dict of lists</strong> groups records under a key: each customer's items, in order. A <strong>set of tuples</strong> holds distinct combinations, and it only works because tuples are hashable; a set of lists would raise <code>TypeError</code>. Here it answers "did Ben ever order samosa?" in O(1). A <strong>list of dicts</strong> is the shape of JSON records and of a table of rows, which is exactly what <code>pd.DataFrame(rows)</code> expects (<a class="xref" data-note="da_pandas">Pandas</a>). And a <strong>Counter</strong> counts how often each order line names an item. In each case the outer container was chosen for how the collection is used, and the inner one for how each element is used.</p>
 
-  <h2 id="pc-deque"><span class="num">04</span>collections.deque</h2>
-  <p>A <code>deque</code> (double-ended queue, pronounced "deck") supports O(1) appends and pops at <em>both</em> ends. A list is a contiguous array, so the front is expensive; a deque is a doubly linked list of fixed-size blocks, so neither end requires shifting. Use it for FIFO queues, BFS, and sliding windows.</p>
+  <h2 id="pc-deque"><span class="num">04</span>deque</h2>
+  <p>Customers queue at the counter and are served in the order they arrived: first in, first out. A list handles the arriving end well (<code>append</code> is O(1)) but the serving end badly, because <code>pop(0)</code> shifts every remaining reference in its array. A <strong>deque</strong> (short for "double-ended queue", pronounced "deck") is a sequence designed so that adding and removing at <em>both</em> ends is O(1). Inside, it is not one continuous array but a chain of fixed-size blocks linked to each other, so the front can grow or shrink without moving anything else. Think of a train: you can couple or uncouple carriages at either end without touching the ones in the middle.</p>
   <div class="fx" data-lang="py">from collections import deque
-q = deque([1, 2, 3])
-q.append(4)          # right end
-q.appendleft(0)      # left end
-print(q)
-print(q.pop(), q.popleft(), q)
-q.rotate(1)          # move the last element to the front
-print(q)
+queue = deque(["Asha", "Ben", "Chen"])
+queue.append("Dia")              # joins at the back
+queue.appendleft("Esha")         # Esha only needs change: goes to the front
+print(queue)
+served = queue.popleft()         # serve from the front: O(1)
+print(served, queue)
+queue.rotate(1)                  # move the last person to the front
+print(queue)
 
-recent = deque(maxlen=3)            # keeps only the last 3 items
-for event in ["a", "b", "c", "d", "e"]:
-    recent.append(event)            # the oldest is dropped automatically
-print(recent, list(recent))
-
-def bfs(graph, start):              # breadth-first search uses a FIFO queue
+recent = deque(maxlen=3)         # only the last 3 orders are kept
+for name, item, qty in orders:
+    recent.append(item)          # the oldest is dropped automatically
+print(recent)</div>
+  <div class="fx" data-lang="text">deque(['Esha', 'Asha', 'Ben', 'Chen', 'Dia'])
+Esha deque(['Asha', 'Ben', 'Chen', 'Dia'])
+deque(['Dia', 'Asha', 'Ben', 'Chen'])
+deque(['masala chai', 'bun maska', 'masala chai'], maxlen=3)</div>
+  <p>The first part shows the four end operations: <code>append</code> and <code>pop</code> work on the right-hand end, <code>appendleft</code> and <code>popleft</code> on the left, all in constant time. Esha jumped to the front with <code>appendleft</code> and was served first by <code>popleft</code>. <code>rotate(1)</code> moved the last person, Dia, round to the front; a negative number rotates the other way. The second part shows a feature lists do not have at all. A deque created with <code>maxlen=3</code> is a bounded buffer: once it holds three items, each new append silently drops the oldest from the other end. After all six orders, it holds the last three items ordered. This is the standard tool for "the last k events", moving averages and keeping the tail of a log.</p>
+  <p>The same first-in first-out behaviour is the heart of <strong>breadth-first search</strong> (BFS), a classic algorithm that explores a network level by level: first everything one step away, then everything two steps away, and so on. Suppose a delivery helper starts at the chai stall and the lanes connect stalls like this:</p>
+  <div class="fx" data-lang="py">from collections import deque
+lanes = {"chai": ["bakery", "fruit"], "bakery": ["press"], "fruit": ["press", "tailor"],
+         "press": [], "tailor": []}
+def bfs(graph, start):
     seen, order, frontier = {start}, [], deque([start])
     while frontier:
-        node = frontier.popleft()
-        order.append(node)
-        for nxt in graph[node]:
-            if nxt not in seen:
+        place = frontier.popleft()           # oldest discovered first
+        order.append(place)
+        for nxt in graph[place]:
+            if nxt not in seen:              # set: O(1) "visited?" check
                 seen.add(nxt)
                 frontier.append(nxt)
     return order
-graph = {"A": ["B", "C"], "B": ["D"], "C": ["D", "E"], "D": [], "E": []}
-print(bfs(graph, "A"))</div>
-  <div class="fx" data-lang="text">deque([0, 1, 2, 3, 4])
-4 0 deque([1, 2, 3])
-deque([3, 1, 2])
-deque(['c', 'd', 'e'], maxlen=3) ['c', 'd', 'e']
-['A', 'B', 'C', 'D', 'E']</div>
-  <ul>
-    <li><code>append</code>/<code>pop</code> work on the right, <code>appendleft</code>/<code>popleft</code> on the left, all O(1). <code>extend</code>/<code>extendleft</code> add many.</li>
-    <li><code>rotate(k)</code> shifts elements k steps to the right (negative k to the left).</li>
-    <li><code>deque(maxlen=k)</code> is a bounded buffer: appending to a full deque silently discards from the opposite end. Ideal for "last k events", moving averages and log tails.</li>
-    <li>BFS pops from the left and pushes to the right; with a list, every <code>pop(0)</code> would be O(n).</li>
-  </ul>
-  <div class="callout def"><span class="label">Definition</span><p><code>collections.deque(iterable=(), maxlen=None)</code>: a thread-safe, memory-efficient sequence with O(1) <code>append</code>, <code>appendleft</code>, <code>pop</code>, <code>popleft</code>. Indexing is O(1) at either end but O(n) towards the middle; it does not support slicing.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Do not replace every list with a deque: random access <code>d[i]</code> in the middle is O(n), and there is no <code>sort</code> or slicing. For a stack (push/pop at one end only) a plain list is just as fast. For producer/consumer queues between threads use <code>queue.Queue</code>, which adds blocking and locking.</p></div>
+print(bfs(lanes, "chai"))</div>
+  <div class="fx" data-lang="text">['chai', 'bakery', 'fruit', 'press', 'tailor']</div>
+  <p>The deque holds places discovered but not yet visited, and <code>popleft</code> always takes the one discovered earliest, which is what makes the search go level by level: the chai stall, then its two neighbours (bakery and fruit), then the places two lanes away (press and tailor). Notice that the function uses three containers, each chosen for its job: a dict for the map (look up a place's neighbours), a set for "already seen" (fast membership), and a deque for the frontier (first in, first out). With a list and <code>pop(0)</code> in place of the deque, every step would cost O(n). Graph algorithms are covered in <a class="xref" data-note="dsa_graphs">DSA: Graphs</a>.</p>
+  <p>A deque is not a better list in every way. Reaching an item in the middle, <code>d[i]</code>, is O(n), because Python has to walk along the blocks; it has no slicing and no <code>sort</code>. For a stack, where you only add and remove at one end, a plain list is just as fast. And for queues shared between threads, use <code>queue.Queue</code>, which adds the locking and waiting that threads need.</p>
 
-  <h2 id="pc-coll"><span class="num">05</span>The collections Module: Counter, defaultdict, OrderedDict, namedtuple, ChainMap</h2>
-  <p>The <code>collections</code> module provides specialised containers built on the basic ones. Each removes boilerplate for one common pattern:</p>
-  <div class="fx" data-lang="py">from collections import Counter, defaultdict, OrderedDict, namedtuple, ChainMap
+  <h2 id="pc-heap"><span class="num">05</span>heapq</h2>
+  <p>Now the kitchen. Order tickets arrive in any order, but the cook should always make whichever order is due soonest. One option is to keep a list and sort it after every new ticket, but sorting costs O(n log n) each time. Another is to scan the whole list for the minimum before every order, O(n) each time. What we want is a structure that hands out the smallest item quickly and accepts new items quickly, without keeping everything fully sorted. That structure is a <strong>heap</strong>, also called a <strong>priority queue</strong>.</p>
+  <p>Python's <code>heapq</code> module keeps a <strong>binary min-heap</strong> inside an ordinary list. The list is arranged so that every item is less than or equal to the two items "below" it, which sit at positions <code>2i + 1</code> and <code>2i + 2</code>. That one rule guarantees that the smallest item is always at position 0, but it says nothing about the order of the rest. Think of a sports league's knockout bracket drawn upside down: the overall winner is guaranteed to be at the top, and each match winner is better than the two players below it, but the bracket is not a full ranking. Pushing a new item puts it at the end and swaps it upward past any larger parent; popping removes the top, moves the last item there and swaps it downward. Each of these walks one path through a tree of height about log₂ n, so both take O(log n).</p>
+  <div class="fx" data-lang="py">import heapq
+tickets = []                                          # (minutes until due, customer, item)
+heapq.heappush(tickets, (6, "Ben", "samosa"))
+heapq.heappush(tickets, (2, "Asha", "masala chai"))
+heapq.heappush(tickets, (9, "Dia", "bun maska"))
+heapq.heappush(tickets, (4, "Chen", "masala chai"))
+heapq.heappush(tickets, (3, "Asha", "ginger chai"))
+print(tickets)                                        # NOT sorted
+print("next up:", tickets[0])                         # but the smallest is always first
+while tickets:
+    print(heapq.heappop(tickets))                     # comes out in order</div>
+  <div class="fx" data-lang="text">[(2, 'Asha', 'masala chai'), (3, 'Asha', 'ginger chai'), (9, 'Dia', 'bun maska'), (6, 'Ben', 'samosa'), (4, 'Chen', 'masala chai')]
+next up: (2, 'Asha', 'masala chai')
+(2, 'Asha', 'masala chai')
+(3, 'Asha', 'ginger chai')
+(4, 'Chen', 'masala chai')
+(6, 'Ben', 'samosa')
+(9, 'Dia', 'bun maska')</div>
+  <p>Look at the list printed after the pushes. It is not sorted, yet the ticket due in 2 minutes is at position 0, and if you check the rule, every item is no larger than the items at <code>2i + 1</code> and <code>2i + 2</code>. <code>tickets[0]</code> peeks at the next order in O(1) without removing it. Popping repeatedly then returns the tickets in order of urgency, 2, 3, 4, 6, 9, each pop costing O(log n). The entries are tuples, and tuples compare their first item first, so the minutes decide the order; this <code>(priority, data)</code> pattern is how a heap becomes a priority queue.</p>
+  <p>That tuple comparison has a catch. If two tickets have the same priority, Python moves on to compare their second items, and if those cannot be compared, the push fails. The usual fix is to put a running counter in the middle, so ties are broken by arrival order and the data is never compared:</p>
+  <div class="fx" data-lang="py">import heapq, itertools
+tickets = []
+heapq.heappush(tickets, (5, {"customer": "Ben"}))
+try:
+    heapq.heappush(tickets, (5, {"customer": "Dia"}))  # same priority: compares the dicts
+except TypeError as e:
+    print("TypeError:", e)
 
-words = "the cat and the hat and the bat".split()
-c = Counter(words)
-print(c.most_common(2), c["dog"], c.total())
+arrival = itertools.count()                            # 0, 1, 2, ...
+tickets = []
+for who in ["Ben", "Dia", "Asha"]:
+    heapq.heappush(tickets, (5, next(arrival), {"customer": who}))
+print([heapq.heappop(tickets)[2]["customer"] for _ in range(3)])</div>
+  <div class="fx" data-lang="text">TypeError: '&lt;' not supported between instances of 'dict' and 'dict'
+['Ben', 'Dia', 'Asha']</div>
+  <p>The first attempt fails because two dicts cannot be compared with <code>&lt;</code>. With the counter, equal priorities are decided by the unique arrival number, so the dicts are never compared, and equal-priority tickets come out first come, first served.</p>
+  <p>Three more heap tools come up constantly. <code>heapify</code> turns an existing list into a heap in place in O(n), faster than pushing items one by one. <code>nlargest(k, ...)</code> and <code>nsmallest(k, ...)</code> return the top k items in about O(n log k), which beats sorting everything when k is small; they accept a <code>key</code> like <code>sorted</code>. And because <code>heapq</code> only offers a min-heap, the standard trick for a max-heap is to push negated numbers:</p>
+  <div class="fx" data-lang="py">import heapq
+print(heapq.nlargest(2, bills.items(), key=lambda kv: kv[1]))   # top 2 customers
+print(heapq.nsmallest(2, menu, key=menu.get))                  # 2 cheapest items
+amounts = list(bills.values())
+max_heap = [-a for a in amounts]                               # negate for a max-heap
+heapq.heapify(max_heap)                                        # O(n), in place
+print(-heapq.heappop(max_heap), -heapq.heappop(max_heap))</div>
+  <div class="fx" data-lang="text">[('Ben', 85), ('Asha', 65)]
+['samosa', 'masala chai']
+85 65</div>
+  <p>The two biggest bills are Ben's 85 and Asha's 65, and the two cheapest items are samosa and masala chai. In the max-heap, the largest amount becomes the most negative number, so it sits at the top and pops first; negating it again gives back 85, then 65. Heap-based interview patterns, such as "kth largest element" and "merge k sorted lists", are covered in <a class="xref" data-note="dsa_heaps">DSA: Heaps</a>.</p>
 
-graph = defaultdict(set)
-for a, b in [("x", "y"), ("x", "z"), ("y", "z")]:
-    graph[a].add(b)
-print({k: sorted(v) for k, v in graph.items()})
+  <h2 id="pc-bisect"><span class="num">06</span>bisect</h2>
+  <p>The stall gives discounts by bill size: nothing below ₹50, 5% from ₹50, 10% from ₹80, and 15% from ₹100. Given a bill, which tier is it in? An <code>if/elif</code> chain works for three cutoffs but becomes unmanageable with fifty, and scanning a list of cutoffs is O(n). Because the cutoffs are sorted, we can do much better with <strong>binary search</strong>: look at the middle cutoff, decide whether the bill is above or below it, and throw away the half that cannot contain the answer. Each step halves the remaining range, so a million cutoffs need only about 20 steps, which is O(log n). It is how you find a word in a paper dictionary: open in the middle, see whether your word comes before or after, and repeat on the correct half.</p>
+  <p>Python's <code>bisect</code> module does binary search on a sorted list. <code>bisect_right(cutoffs, x)</code> returns the position where <code>x</code> would be inserted to keep the list sorted, placing it after any equal values, which is exactly "how many cutoffs are less than or equal to x". That count is the tier number:</p>
+  <div class="fx" data-lang="py">import bisect
+cutoffs = [50, 80, 100]              # sorted tier boundaries in rupees
+rates = [0, 5, 10, 15]               # one more rate than cutoffs
+def discount(bill):
+    return rates[bisect.bisect_right(cutoffs, bill)]
+for who, bill in bills.items():
+    print(who, bill, f"{discount(bill)}%")
+print(bisect.bisect_left(cutoffs, 80), bisect.bisect_right(cutoffs, 80))   # exactly on a cutoff</div>
+  <div class="fx" data-lang="text">Asha 65 5%
+Ben 85 10%
+Chen 20 0%
+Dia 60 5%
+1 2</div>
+  <p>Chen's ₹20 is below every cutoff, so <code>bisect_right</code> returns 0 and the rate is 0%. Dia's ₹60 is above one cutoff, giving 5%; Asha's ₹65 also gets 5%; Ben's ₹85 is above two cutoffs, giving 10%. The last line shows the difference between the two versions for a value that equals a cutoff: <code>bisect_left</code> places 80 <em>before</em> the existing 80 (position 1), <code>bisect_right</code> places it <em>after</em> (position 2). Since the rule is "10% from ₹80", a bill of exactly 80 should count the 80 cutoff as passed, so <code>bisect_right</code> is the right choice here. Choosing left or right is always a question of which side a tie belongs to.</p>
+  <p>Binary search also answers range questions on sorted data. If we keep the day's bill amounts in a sorted list, <code>insort</code> adds a new bill in the right place, and two bisects count how many bills fall in a range:</p>
+  <div class="fx" data-lang="py">import bisect
+amounts = sorted(bills.values())                # [20, 60, 65, 85]
+bisect.insort(amounts, 70)                      # insert, keeping the list sorted
+print(amounts)
+lo, hi = bisect.bisect_left(amounts, 60), bisect.bisect_right(amounts, 80)
+print("bills from 60 to 80:", hi - lo, amounts[lo:hi])</div>
+  <div class="fx" data-lang="text">[20, 60, 65, 70, 85]
+bills from 60 to 80: 3 [60, 65, 70]</div>
+  <p>The new bill of 70 went between 65 and 85. Finding the range 60 to 80 took two binary searches, and their difference, 3, is the number of bills inside it. One cost is easy to overlook: <code>insort</code> <em>finds</em> the position in O(log n), but inserting into a list still shifts everything after it, which is O(n). A sorted list with <code>bisect</code> is ideal when you search often and insert rarely; if you insert constantly, a heap (when you only need the minimum) or a dedicated sorted-container library is a better fit. Binary search as an interview technique is covered in <a class="xref" data-note="dsa_binsearch">DSA: Binary Search</a>.</p>
 
-lru = OrderedDict(a=1, b=2, c=3)
-lru.move_to_end("a")                # mark "a" as most recently used
-lru.popitem(last=False)             # evict the least recently used ("b")
-print(list(lru))
+  <h2 id="pc-coll"><span class="num">07</span>OrderedDict and ChainMap</h2>
+  <p>The <code>collections</code> module provides specialised containers, each built on the basic ones to remove the boilerplate of one common pattern. You have already met most of them: <code>Counter</code> for counting and <code>defaultdict</code> for grouping in <a class="xref" data-note="py_dicts_sets">Dicts &amp; Sets</a>, <code>namedtuple</code> in <a class="xref" data-note="py_lists_tuples">Lists &amp; Tuples</a>, and <code>deque</code> above. Two remain, and each solves a problem that comes up in interviews and in real systems.</p>
+  <p>The first problem is a cache. Suppose looking up a customer's loyalty record is slow (it comes from a server), so the stall keeps the most recent lookups in memory, but only a limited number of them. When the cache is full and a new customer arrives, which entry should be thrown out? The usual answer is the <strong>least recently used</strong> one, giving an <strong>LRU cache</strong>. Since Python 3.7 a plain dict remembers insertion order, but an <code>OrderedDict</code> adds two methods that make LRU easy: <code>move_to_end(key)</code> marks an entry as just used, and <code>popitem(last=False)</code> removes the oldest entry. Think of a short shelf by the till: whenever a record is used it goes back on the right-hand end, and when the shelf is full the record on the far left, untouched the longest, is filed away.</p>
+  <div class="fx" data-lang="py">from collections import OrderedDict
+cache = OrderedDict()
+def lookup(name, capacity=2):
+    if name in cache:
+        cache.move_to_end(name)              # mark as most recently used
+        return f"{name}: hit"
+    cache[name] = bills[name]                # pretend this was a slow fetch
+    if len(cache) &gt; capacity:
+        old, _ = cache.popitem(last=False)   # evict the least recently used
+        return f"{name}: miss, evicted {old}"
+    return f"{name}: miss"
+for name in ["Asha", "Ben", "Asha", "Chen", "Ben"]:
+    print(lookup(name), list(cache))</div>
+  <div class="fx" data-lang="text">Asha: miss ['Asha']
+Ben: miss ['Asha', 'Ben']
+Asha: hit ['Ben', 'Asha']
+Chen: miss, evicted Ben ['Asha', 'Chen']
+Ben: miss, evicted Asha ['Chen', 'Ben']</div>
+  <p>Follow the cache contents on the right. Asha and Ben are fetched and stored. When Asha is looked up again it is a hit, and <code>move_to_end</code> moves her to the right-hand, most-recent end, so Ben is now the oldest. Chen's arrival overflows the capacity of 2, so the least recently used entry, Ben, is evicted, even though he was added after Asha. When Ben comes back he is a miss again and Asha, now the oldest, is evicted. Both operations are O(1). For caching the results of a function, the standard library already provides this as a decorator, <code>functools.lru_cache</code>, covered in <a class="xref" data-note="py_decorators">Decorators</a>.</p>
+  <p>The second problem is layered settings. The stall chain has default settings, the branch overrides some of them, and today's special rules override a few more. Merging these into one dict copies data and loses track of where each value came from. A <code>ChainMap</code> instead keeps the dicts separate and searches them in order, returning the first match. It is like asking the shift manager first, then the branch manager, then the head office rulebook, and taking the first answer you get:</p>
+  <div class="fx" data-lang="py">from collections import ChainMap
+defaults = {"tax": 0.05, "opens": "07:00", "currency": "Rs"}
+branch   = {"opens": "06:30"}
+today    = {"tax": 0.0}                         # tax holiday
+settings = ChainMap(today, branch, defaults)    # search today, then branch, then defaults
+print(settings["tax"], settings["opens"], settings["currency"])
+settings["opens"] = "08:00"                     # writes go to the FIRST dict only
+print(today, branch["opens"])
+print(dict(settings))</div>
+  <div class="fx" data-lang="text">0.0 06:30 Rs
+{'tax': 0.0, 'opens': '08:00'} 06:30
+{'tax': 0.0, 'opens': '08:00', 'currency': 'Rs'}</div>
+  <p>The tax comes from <code>today</code>, the opening time from <code>branch</code>, and the currency from <code>defaults</code>, without copying or merging anything. Writing through the ChainMap changes only the first dict, so the late opening was recorded in <code>today</code> and the branch's own setting is untouched. <code>dict(settings)</code> flattens the view into one ordinary dict when you need it. The same pattern appears in command-line tools (command-line flags over environment variables over defaults) and in how Python itself looks up names through nested scopes.</p>
 
-Point = namedtuple("Point", "x y")
-p = Point(3, 4)
-print(p, p.x, p[1], p._replace(x=0))
-
-defaults = {"lr": 0.01, "epochs": 10, "device": "cpu"}
-env      = {"device": "cuda"}
-cli      = {"epochs": 50}
-cfg = ChainMap(cli, env, defaults)  # lookups search cli, then env, then defaults
-print(cfg["lr"], cfg["epochs"], cfg["device"])
-print(dict(cfg))</div>
-  <div class="fx" data-lang="text">[('the', 3), ('and', 2)] 0 8
-{'x': ['y', 'z'], 'y': ['z']}
-['c', 'a']
-Point(x=3, y=4) 3 4 Point(x=0, y=4)
-0.01 50 cuda
-{'lr': 0.01, 'epochs': 50, 'device': 'cuda'}</div>
-  <table class="tbl"><caption>collections at a glance</caption>
-    <tr><th>Type</th><th>What it is</th><th>Use for</th></tr>
-    <tr><td><code>Counter</code></td><td>dict subclass: item → count; missing → 0</td><td>frequencies, <code>most_common(k)</code>, multiset maths (<code>+ - &amp; |</code>), <code>total()</code></td></tr>
-    <tr><td><code>defaultdict(factory)</code></td><td>dict subclass calling <code>factory()</code> for missing keys</td><td>grouping (<code>list</code>), sums (<code>int</code>), adjacency sets (<code>set</code>)</td></tr>
-    <tr><td><code>OrderedDict</code></td><td>dict with order-aware equality and reordering</td><td>LRU caches (<code>move_to_end</code>, <code>popitem(last=False)</code>)</td></tr>
-    <tr><td><code>namedtuple</code></td><td>tuple subclass with named fields</td><td>light immutable records; <code>_replace</code>, <code>_asdict</code></td></tr>
-    <tr><td><code>ChainMap</code></td><td>view over several dicts, searched in order</td><td>layered config (CLI over env over defaults), nested scopes</td></tr>
-    <tr><td><code>deque</code></td><td>double-ended queue</td><td>see above</td></tr>
-  </table>
-  <p>In the ChainMap example, <code>lr</code> comes from defaults, <code>epochs</code> from the CLI layer and <code>device</code> from the environment layer, without copying or merging any dict. Writes go to the first mapping only. Details of Counter and defaultdict, including the "reading a missing key inserts it" trap, are in <a class="xref" data-note="py_dicts_sets">Dicts &amp; Sets</a>; namedtuple is covered in <a class="xref" data-note="py_lists_tuples">Lists &amp; Tuples</a>.</p>
-  <div class="callout trap"><span class="label">Trap</span><p>Since Python 3.7 a plain dict keeps insertion order, so <code>OrderedDict</code> is only needed for its extra methods or order-sensitive equality. And a <code>defaultdict</code> passed to code that expects KeyError can hide bugs: convert with <code>dict(d)</code> at the boundary.</p></div>
-
-  <h2 id="pc-heap"><span class="num">06</span>heapq and bisect</h2>
-  <p><code>heapq</code> and <code>bisect</code> are not new container types: they are algorithms that operate on a plain list kept in a special order. <code>heapq</code> keeps a <em>binary min-heap</em> (the smallest item is always at index 0); <code>bisect</code> does binary search on a <em>sorted</em> list.</p>
-  <div class="fx" data-lang="py">import heapq, bisect
-nums = [7, 2, 9, 4, 1, 8]
-heap = []
-for x in nums:
-    heapq.heappush(heap, x)          # O(log n)
-print(heap[0], [heapq.heappop(heap) for _ in range(3)])   # smallest first
-print(heapq.nsmallest(2, nums), heapq.nlargest(2, nums))
-
-tasks = [(2, "write"), (1, "fix bug"), (3, "refactor")]
-heapq.heapify(tasks)                 # O(n), in place
-print(heapq.heappop(tasks))          # tuples compare by priority first
-
-max_heap = [-x for x in nums]        # heapq is a min-heap: negate for max
-heapq.heapify(max_heap)
-print(-heapq.heappop(max_heap))
-
-scores = [10, 20, 30, 40]
-print(bisect.bisect_left(scores, 25), bisect.bisect_right(scores, 30))
-bisect.insort(scores, 25)            # keeps the list sorted (O(n) shift)
-print(scores)
-def grade(score, cutoffs=[60, 70, 80, 90], letters="FDCBA"):
-    return letters[bisect.bisect_right(cutoffs, score)]
-print([grade(s) for s in [55, 60, 75, 99]])</div>
-  <div class="fx" data-lang="text">1 [1, 2, 4]
-[1, 2] [9, 8]
-(1, 'fix bug')
-9
-2 3
-[10, 20, 25, 30, 40]
-['F', 'D', 'C', 'A']</div>
-  <ul>
-    <li><strong>heapq</strong>: <code>heappush</code>/<code>heappop</code> O(log n), <code>heap[0]</code> peeks the minimum in O(1), <code>heapify</code> builds a heap in place in O(n). Tuples compare element by element, so <code>(priority, item)</code> works as a priority queue. There is no max-heap API: push negated keys.</li>
-    <li><strong>Top-k</strong>: <code>nlargest(k, xs)</code> / <code>nsmallest(k, xs)</code> run in O(n log k), better than sorting everything when k is small.</li>
-    <li><strong>bisect</strong>: <code>bisect_left</code>/<code>bisect_right</code> return the insertion point in O(log n); <code>insort</code> inserts while keeping order, but the insertion itself shifts elements, so it is O(n). Typical uses: bucketing a score against cutoffs, range counts in sorted data, maintaining a sorted list with few inserts.</li>
-  </ul>
-  <p>Interview patterns built on these (Kth largest, merge K sorted lists, binary search on the answer) are in <a class="xref" data-note="dsa_heaps">DSA: Heaps</a> and <a class="xref" data-note="dsa_binsearch">DSA: Binary Search</a>; queue and monotonic-deque patterns in <a class="xref" data-note="dsa_stacks">DSA: Stacks &amp; Queues</a>.</p>
-  <div class="callout trap"><span class="label">Trap</span><p>If two heap entries have equal priority, Python compares the next tuple element; when that is a dict or a custom object, <code>heappush</code> raises <code>TypeError: '&lt;' not supported</code>. Add a tie-breaking counter: <code>(priority, next(counter), item)</code>. And a heap is only partially ordered: <code>heap</code> printed is not sorted, only <code>heap[0]</code> is guaranteed to be the minimum.</p></div>
-
-  <h2 id="pc-array"><span class="num">07</span>Arrays vs Lists: the array Module and NumPy</h2>
-  <p>A Python list stores pointers to separate, fully fledged Python objects. For a million floats that means a million float objects (24 bytes each) plus an 8-byte pointer per slot. Typed arrays store raw machine values side by side instead:</p>
+  <h2 id="pc-array"><span class="num">08</span>Arrays vs Lists</h2>
+  <p>Suppose the stall chain records cups sold per day at every branch for years, a million numbers, and wants to apply arithmetic to all of them. A list can hold them, but it is a poor fit. A Python list stores <em>references</em>, and every number it refers to is a full Python object with its own type information and reference count: a float object takes 24 bytes, plus the 8-byte reference to it in the list. A <strong>typed array</strong> stores the raw numbers themselves, side by side, all of the same type, the way a spreadsheet column would. Think of the difference between a filing cabinet with a separate labelled folder for every number and a single printed table of numbers.</p>
   <div class="fx" data-lang="py">import sys, array, timeit
 import numpy as np
 n = 1_000_000
 as_list = [float(i) for i in range(n)]
-as_array = array.array("d", as_list)        # typed: raw C doubles
+as_array = array.array("d", as_list)        # "d" = C double: 8 bytes each
 as_np = np.arange(n, dtype=np.float64)
 
 list_bytes = sys.getsizeof(as_list) + sum(sys.getsizeof(x) for x in as_list)
-print(f"list : {list_bytes / 1e6:5.1f} MB  (pointers + one float object each)")
+print(f"list : {list_bytes / 1e6:5.1f} MB  (references + one float object each)")
 print(f"array: {sys.getsizeof(as_array) / 1e6:5.1f} MB")
 print(f"numpy: {as_np.nbytes / 1e6:5.1f} MB")
 
@@ -385,98 +327,113 @@ t_list = timeit.timeit(lambda: [x * 2 for x in as_list], number=5) / 5
 t_np = timeit.timeit(lambda: as_np * 2, number=5) / 5
 print(f"double every element: list {t_list * 1000:.1f} ms, numpy {t_np * 1000:.2f} ms")
 try:
-    as_array.append("x")
+    as_array.append("chai")
 except TypeError as e:
     print("TypeError:", e)</div>
-  <div class="fx" data-lang="text">list :  32.4 MB  (pointers + one float object each)
+  <div class="fx" data-lang="text">list :  32.4 MB  (references + one float object each)
 array:   8.0 MB
 numpy:   8.0 MB
-double every element: list 54.6 ms, numpy 1.05 ms
+double every element: list 54.7 ms, numpy 0.96 ms
 TypeError: must be real number, not str</div>
-  <ul>
-    <li><strong>list</strong>: about 32 MB for a million floats, because each element is a boxed object; operations run in the interpreter loop, one object at a time.</li>
-    <li><strong>array.array</strong> (stdlib): a typed, compact sequence (8 bytes per double, here 8 MB) that rejects values of the wrong type. Good for compact storage and binary I/O; arithmetic is still element by element in Python.</li>
-    <li><strong>NumPy ndarray</strong>: same compact layout plus vectorised operations implemented in C, here about 50× faster for doubling every element. Use it (or pandas, built on it) for any bulk numeric work.</li>
-  </ul>
-  <div class="callout trap"><span class="label">Trap</span><p>Converting between lists and NumPy arrays inside a loop, or iterating over a NumPy array element by element in Python, throws away the advantage. Keep data in arrays and use vectorised operations. Also note that slicing a NumPy array returns a <em>view</em> sharing memory, while slicing a list returns a copy.</p></div>
+  <p>The list needs about four times as much memory as the arrays, because of the separate object behind every number. The standard library's <code>array.array</code> stores the same million values in 8 MB, 8 bytes each, and refuses values of the wrong type, as the last line shows. But arithmetic on an <code>array.array</code> still happens one element at a time in Python. A NumPy array has the same compact layout and adds <strong>vectorised</strong> operations: <code>as_np * 2</code> runs a single loop written in C over the raw numbers, which here was dozens of times faster than the list comprehension (times are approximate). For any serious numeric work, use NumPy, or pandas, which is built on it.</p>
+  <p>Two warnings. The speed only comes from operating on whole arrays at once: looping over a NumPy array element by element in Python, or converting between lists and arrays inside a loop, throws the advantage away. And NumPy slicing behaves differently from list slicing: slicing a list makes a copy, while slicing a NumPy array returns a <em>view</em> that shares memory with the original, so changing the slice changes the array.</p>
 
-  <h2 id="pc-traps"><span class="num">08</span>Common Mistakes</h2>
-  <div class="callout trap"><span class="label">Trap: list for membership tests</span><p><code>if x in big_list</code> inside a loop is O(n·m). Build a set once, outside the loop.</p></div>
-  <div class="callout trap"><span class="label">Trap: list as a queue</span><p><code>pop(0)</code> and <code>insert(0, x)</code> shift every element. Use <code>deque.popleft()</code> / <code>appendleft()</code>.</p></div>
-  <div class="callout trap"><span class="label">Trap: list of pairs as a lookup table</span><p>Scanning <code>[(key, value), …]</code> for every lookup is O(n) each. Use a dict.</p></div>
-  <div class="callout trap"><span class="label">Trap: expecting positions in a set or dict</span><p><code>my_set[0]</code> → TypeError; <code>d[0]</code> looks up the key 0. Use <code>sorted(...)</code> or <code>list(...)</code> when you need positions.</p></div>
-  <div class="callout trap"><span class="label">Trap: relying on set order</span><p>Set iteration order depends on hashes and, for strings, changes between runs. Sort before printing, comparing outputs or writing files.</p></div>
-  <div class="callout trap"><span class="label">Trap: unhashable keys</span><p>Lists, dicts and sets cannot be dict keys or set items. Use tuples, strings, numbers or frozensets.</p></div>
-  <div class="callout trap"><span class="label">Trap: <code>{}</code> for an empty set</span><p><code>{}</code> is an empty dict. Use <code>set()</code>.</p></div>
-  <div class="callout trap"><span class="label">Trap: sorting repeatedly to get the minimum</span><p>Calling <code>sorted()</code> or <code>min()</code> after every insert is O(n log n) or O(n) per step. A heap gives O(log n) push and pop.</p></div>
-  <div class="callout trap"><span class="label">Trap: Python lists for heavy numeric work</span><p>A list of floats is a list of boxed objects. Use NumPy or pandas for vector maths.</p></div>
+  <h2 id="pc-traps"><span class="num">09</span>Common Mistakes</h2>
+  <p>The two most expensive mistakes have already been measured: a membership test on a list inside a loop (build a set once, outside the loop) and a list used as a queue (use a <code>deque</code>). Close behind is expecting positions from containers that do not have them. A dict is ordered, and a set prints in some order, so it is tempting to ask for "the first one":</p>
+  <div class="fx" data-lang="py">customers = {"Asha", "Ben", "Chen", "Dia"}
+try:
+    customers[0]
+except TypeError as e:
+    print("TypeError:", e)
+try:
+    menu[0]
+except KeyError as e:
+    print("KeyError:", e)
+print(next(iter(menu)), sorted(customers)[0])</div>
+  <div class="fx" data-lang="text">TypeError: 'set' object is not subscriptable
+KeyError: 0
+masala chai Asha</div>
+  <p>A set has no positions at all, so indexing it is a <code>TypeError</code>. A dict does accept square brackets, but <code>menu[0]</code> means "the value stored under the key 0", which does not exist, so it is a <code>KeyError</code>. If you need the first key in insertion order, <code>next(iter(d))</code> gives it; if you need a position-based view of a set, sort it first, which also fixes the fact that a set's order can change between runs.</p>
+  <p>Another mistake is choosing a set because "the data has duplicates I don't want", when the duplicates actually carry information:</p>
+  <div class="fx" data-lang="py">from collections import Counter
+visits = [name for name, item, qty in orders]
+print(len(set(visits)), "distinct customers")
+print(Counter(visits), "&lt;- the set threw these counts away")</div>
+  <div class="fx" data-lang="text">4 distinct customers
+Counter({'Asha': 2, 'Ben': 2, 'Chen': 1, 'Dia': 1}) &lt;- the set threw these counts away</div>
+  <p>The set correctly says there are 4 distinct customers, but it discarded the fact that Asha and Ben each came twice. If you will later need "how many times", use a <code>Counter</code>, which gives the distinct items (its keys) and the counts together. The remaining mistakes are habits: using lists for everything because they are familiar; scanning a list of (key, value) pairs instead of using a dict; sorting the whole list again after every insert just to get the minimum, where a heap gives O(log n); writing <code>{}</code> for an empty set (it is a dict; use <code>set()</code>); putting lists into sets or using them as keys (use tuples); and doing heavy numeric work on Python lists instead of NumPy arrays.</p>
 
   <h2 id="pc-rev"><span class="num">R</span>Revision Sheet</h2>
   <h3>Properties</h3>
   <table class="tbl">
-    <tr><th></th><th>list</th><th>tuple</th><th>str</th><th>set</th><th>frozenset</th><th>dict</th></tr>
-    <tr><td>Ordered</td><td>yes</td><td>yes</td><td>yes</td><td>no</td><td>no</td><td>insertion</td></tr>
-    <tr><td>Mutable</td><td>yes</td><td>no</td><td>no</td><td>yes</td><td>no</td><td>yes</td></tr>
-    <tr><td>Duplicates</td><td>yes</td><td>yes</td><td>yes</td><td>no</td><td>no</td><td>keys no</td></tr>
-    <tr><td>Hashable</td><td>no</td><td>if items are</td><td>yes</td><td>no</td><td>yes</td><td>no</td></tr>
-    <tr><td>Indexed</td><td>yes</td><td>yes</td><td>yes</td><td>no</td><td>no</td><td>by key</td></tr>
+    <tr><th></th><th>Ordered</th><th>Mutable</th><th>Duplicates</th><th>Hashable</th><th>By position</th></tr>
+    <tr><td>list</td><td>yes</td><td>yes</td><td>yes</td><td>no</td><td>yes</td></tr>
+    <tr><td>tuple</td><td>yes</td><td>no</td><td>yes</td><td>if items are</td><td>yes</td></tr>
+    <tr><td>str</td><td>yes</td><td>no</td><td>yes</td><td>yes</td><td>yes</td></tr>
+    <tr><td>set / frozenset</td><td>no</td><td>yes / no</td><td>no</td><td>no / yes</td><td>no</td></tr>
+    <tr><td>dict</td><td>insertion</td><td>yes</td><td>keys no</td><td>no</td><td>no (by key)</td></tr>
   </table>
-  <h3>Big-O</h3>
+  <h3>Costs to remember</h3>
+  <ul>
+    <li><code>x in list</code> O(n); <code>x in set</code> / <code>dict</code> O(1) average.</li>
+    <li><code>list.pop(0)</code>, <code>insert(0, x)</code> O(n); <code>deque.popleft()</code>, <code>appendleft</code> O(1).</li>
+    <li><code>heappush</code> / <code>heappop</code> O(log n); <code>heap[0]</code> O(1); <code>heapify</code> O(n); <code>nlargest(k)</code> O(n log k).</li>
+    <li><code>bisect</code> O(log n); <code>insort</code> O(n) because of the shift.</li>
+    <li><code>deque[i]</code> in the middle O(n).</li>
+  </ul>
+  <h3>Which tool</h3>
   <table class="tbl">
-    <tr><th>Operation</th><th>list</th><th>dict / set</th><th>deque</th><th>heapq (list)</th></tr>
-    <tr><td>Index</td><td>O(1)</td><td>key O(1)</td><td>ends O(1), middle O(n)</td><td>min <code>h[0]</code> O(1)</td></tr>
-    <tr><td>Add at end</td><td>O(1)*</td><td>O(1)*</td><td>O(1)</td><td>push O(log n)</td></tr>
-    <tr><td>Add/remove at front</td><td>O(n)</td><td>—</td><td>O(1)</td><td>pop min O(log n)</td></tr>
-    <tr><td>Pop end</td><td>O(1)</td><td>popitem O(1)</td><td>O(1)</td><td>—</td></tr>
-    <tr><td><code>x in c</code></td><td>O(n)</td><td>O(1)</td><td>O(n)</td><td>O(n)</td></tr>
-    <tr><td>Delete by value/key</td><td>O(n)</td><td>O(1)</td><td>O(n)</td><td>—</td></tr>
+    <tr><th>Need</th><th>Use</th></tr>
+    <tr><td>Lookup by key</td><td><code>dict</code></td></tr>
+    <tr><td>Uniqueness, fast <code>in</code></td><td><code>set</code> (<code>frozenset</code> as a key)</td></tr>
+    <tr><td>Fixed record, composite key</td><td><code>tuple</code>, <code>namedtuple</code></td></tr>
+    <tr><td>Ordered, growing items; stack</td><td><code>list</code></td></tr>
+    <tr><td>Queue, BFS, last k</td><td><code>deque</code>, <code>deque(maxlen=k)</code></td></tr>
+    <tr><td>Smallest / most urgent next, top-k</td><td><code>heapq</code></td></tr>
+    <tr><td>Search sorted data, bands</td><td><code>bisect</code></td></tr>
+    <tr><td>Count / group</td><td><code>Counter</code> / <code>defaultdict</code></td></tr>
+    <tr><td>LRU cache; layered config</td><td><code>OrderedDict</code>; <code>ChainMap</code></td></tr>
+    <tr><td>Bulk numbers</td><td>NumPy</td></tr>
   </table>
-  <p>* amortised. Dict/set worst case O(n) with heavy collisions. <code>heapify</code> O(n); <code>nlargest(k)</code> O(n log k); <code>bisect</code> O(log n), <code>insort</code> O(n); sort O(n log n).</p>
-  <h3>Decision rules</h3>
-  <ul>
-    <li>Lookup by key → <code>dict</code>; seen/unique → <code>set</code>; set as a key → <code>frozenset</code>.</li>
-    <li>Fixed record, composite key, multiple returns → <code>tuple</code> / <code>namedtuple</code>.</li>
-    <li>Ordered, growing, indexed → <code>list</code>; stack → list <code>append</code>/<code>pop</code>.</li>
-    <li>Queue, BFS, sliding window → <code>deque</code> (<code>maxlen=k</code>).</li>
-    <li>Counting → <code>Counter</code>; grouping → <code>defaultdict(list)</code>; layered config → <code>ChainMap</code>; LRU → <code>OrderedDict</code> or <code>functools.lru_cache</code>.</li>
-    <li>Priority / top-k → <code>heapq</code> (min-heap; negate for max; tie-break counter).</li>
-    <li>Sorted search / bucketing → <code>bisect</code>.</li>
-    <li>Bulk numbers → NumPy (compact, vectorised); compact typed storage → <code>array.array</code>.</li>
-  </ul>
-  <h3>Nested shapes</h3>
-  <ul>
-    <li>List of tuples: table rows · dict of lists: groups · set of tuples: distinct combinations · list of dicts: JSON / DataFrame records.</li>
-  </ul>
+  <h3>Syntax</h3>
+  <div class="fx" data-lang="py">q = deque(); q.append(x); q.appendleft(x); q.popleft(); deque(maxlen=3)
+heapq.heappush(h, (prio, next(counter), item)); heapq.heappop(h); h[0]
+heapq.heapify(xs); heapq.nlargest(k, xs, key=f); heappush(h, -x)   # max-heap
+bisect.bisect_right(cutoffs, x); bisect.bisect_left(xs, x); bisect.insort(xs, x)
+od.move_to_end(k); od.popitem(last=False)
+ChainMap(today, branch, defaults)
+np.array(xs) * 2; array.array("d", xs)</div>
   <h3>Gotchas</h3>
   <ul>
-    <li><code>in</code> on a list inside a loop → O(n·m); list <code>pop(0)</code> in a loop → O(n²).</li>
-    <li>Sets and dicts have no positions; set order is not stable across runs.</li>
-    <li>Only hashable objects can be keys/set items; <code>{}</code> is a dict.</li>
-    <li>heap entries with equal priority compare the next field → TypeError for dicts/objects.</li>
-    <li>deque middle indexing is O(n); <code>insort</code> is O(n).</li>
-    <li>List slices copy; NumPy slices are views.</li>
+    <li>A heap is not sorted; only <code>heap[0]</code> is guaranteed to be the minimum.</li>
+    <li>Equal heap priorities compare the next tuple item; add a counter tie-breaker.</li>
+    <li><code>heapq</code> is a min-heap only; negate for max.</li>
+    <li><code>bisect_left</code> vs <code>bisect_right</code> differ only for equal values.</li>
+    <li>Sets and dicts have no positions; <code>d[0]</code> looks up the key 0.</li>
+    <li>A set drops counts; use <code>Counter</code> if counts matter.</li>
+    <li>NumPy slices are views; list slices are copies.</li>
   </ul>
 
-  <h2 id="pc-qa"><span class="num">09</span>Interview Questions</h2>
+  <h2 id="pc-qa"><span class="num">10</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>Compare list, tuple, set and dict.</summary><div class="qa-body">list: ordered, mutable, duplicates, O(1) index, O(n) membership. tuple: ordered, immutable, hashable if its items are, slightly smaller and faster to create. set: unordered, mutable, unique hashable items, O(1) average membership. dict: key → value mapping with unique hashable keys, O(1) average lookup, insertion-ordered since 3.7. Sets and dicts are hash tables; lists and tuples are arrays of references.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>When would you use a tuple instead of a list?</summary><div class="qa-body">For fixed-size records where each position has a meaning (coordinates, database rows, multiple return values), for dict keys and set members (tuples are hashable when their items are, lists never), and to signal that data must not change. Use a list for a homogeneous collection whose length changes.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Which objects can be dict keys or set elements, and why?</summary><div class="qa-body">Only hashable objects: int, float, str, bytes, bool, None, frozenset, and tuples whose elements are all hashable (plus user classes with a consistent <code>__hash__</code>/<code>__eq__</code>). The hash decides where the entry is stored; if a key could change, its hash would change and the entry would become unreachable. Lists, dicts and sets are mutable and unhashable.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Your code checks <code>if user_id in seen_ids</code> inside a loop over a million events and it is slow. Why, and how do you fix it?</summary><div class="qa-body"><code>seen_ids</code> is probably a list, so each check is an O(n) scan and the loop is O(n·m). Make it a set (built once, outside the loop): each check becomes O(1) average and the loop O(n + m). On 100,000 ids the measured difference per check is several thousand times.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you implement a stack and a queue in Python?</summary><div class="qa-body">Stack (LIFO): a list with <code>append</code> and <code>pop()</code>, both O(1) at the end. Queue (FIFO): <code>collections.deque</code> with <code>append</code> and <code>popleft()</code>, both O(1); a list would make <code>pop(0)</code> O(n). For queues shared between threads use <code>queue.Queue</code>, which blocks and locks; for asyncio, <code>asyncio.Queue</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is a deque and what are its trade-offs?</summary><div class="qa-body">A double-ended queue implemented as a doubly linked list of fixed-size blocks: O(1) append and pop at both ends, optional <code>maxlen</code> for a bounded buffer, thread-safe appends/pops. The trade-off is O(n) indexing towards the middle and no slicing or sorting, so it is not a general list replacement.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How would you keep only the last 1,000 log lines in memory?</summary><div class="qa-body"><code>recent = deque(maxlen=1000)</code> and <code>recent.append(line)</code>. Once full, each append discards the oldest line from the other end in O(1). A list with <code>pop(0)</code> would be O(n) per line, and slicing <code>lines[-1000:]</code> repeatedly copies.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you implement a priority queue? What about equal priorities?</summary><div class="qa-body">Use <code>heapq</code> on a list of <code>(priority, item)</code> tuples: <code>heappush</code> and <code>heappop</code> are O(log n) and <code>heap[0]</code> is the minimum. With equal priorities, tuple comparison falls through to the item, which raises <code>TypeError</code> for dicts or objects without ordering. Insert a monotonically increasing counter, <code>(priority, next(counter), item)</code>, which also keeps FIFO order among equal priorities. For a max-heap, negate the priority.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Find the k largest elements of a list of n numbers. What is the complexity?</summary><div class="qa-body"><code>heapq.nlargest(k, xs)</code>: keeps a heap of size k, O(n log k) time and O(k) space. <code>sorted(xs, reverse=True)[:k]</code> is O(n log n). For k = 1 just use <code>max</code> (O(n)); when k is close to n, sorting is fine. For counts, <code>Counter.most_common(k)</code> uses the same heap approach.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does <code>heapify</code> do, and is a heap a sorted list?</summary><div class="qa-body"><code>heapq.heapify(xs)</code> rearranges a list in place into a binary min-heap in O(n): every parent is ≤ its children (<code>xs[i] &lt;= xs[2i+1]</code> and <code>xs[2i+2]</code>). It is not sorted; only <code>xs[0]</code> is guaranteed to be the smallest. Popping all items one by one yields sorted order (heapsort, O(n log n)).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is <code>bisect</code> used for?</summary><div class="qa-body">Binary search on a sorted list: <code>bisect_left</code>/<code>bisect_right</code> return the insertion index in O(log n), and <code>insort</code> inserts while keeping the list sorted (O(log n) search but O(n) shift). Uses: mapping a score to a grade band (<code>letters[bisect_right(cutoffs, score)]</code>), counting values in a range, finding the nearest timestamp. Since 3.10 they accept a <code>key=</code> argument.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span><code>Counter</code> vs <code>defaultdict(int)</code>?</summary><div class="qa-body">Both give 0 for missing keys. <code>Counter</code> adds counting features: construct from an iterable, <code>most_common(k)</code>, <code>total()</code>, and multiset arithmetic (<code>+</code>, <code>-</code>, <code>&amp;</code>, <code>|</code>); reading a missing key does not insert it. <code>defaultdict(int)</code> is a general dict that inserts 0 on first access; it is the more general tool (you can use any factory), Counter is clearer for frequencies.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is <code>ChainMap</code> for?</summary><div class="qa-body">It presents several dicts as one mapping, searching them in order without copying: <code>ChainMap(cli_args, env_vars, defaults)</code> returns the CLI value if present, else the env value, else the default. Writes and deletes affect only the first mapping. It is useful for layered configuration and for modelling nested scopes (e.g. in an interpreter); <code>new_child()</code> pushes a new layer.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How would you implement an LRU cache?</summary><div class="qa-body">In production, <code>functools.lru_cache(maxsize=…)</code> or <code>functools.cache</code>. By hand: an <code>OrderedDict</code>; on get, <code>move_to_end(key)</code>; on put, insert and, if over capacity, <code>popitem(last=False)</code> to evict the least recently used, all O(1). The language-agnostic version is a hash map plus a doubly linked list. The cache key must be hashable, which is why <code>lru_cache</code> rejects list arguments.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>list vs <code>array.array</code> vs NumPy array?</summary><div class="qa-body">A list stores pointers to boxed Python objects of any type (a million floats took about 32 MB). <code>array.array</code> stores raw typed values compactly (8 MB for a million doubles) and rejects other types, but arithmetic is still done in Python. A NumPy array is also compact and typed, and adds vectorised operations implemented in C (doubling a million elements: ~1 ms vs ~55 ms for a list comprehension), broadcasting, and the whole scientific stack. Use lists for general heterogeneous collections, NumPy for numeric bulk work.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you remove duplicates while preserving order? And count distinct items?</summary><div class="qa-body">Preserve order: <code>list(dict.fromkeys(xs))</code> (dict keys are unique and insertion-ordered). Distinct count: <code>len(set(xs))</code>. <code>list(set(xs))</code> dedupes but loses order. All are O(n) and require hashable items.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Which data structure would you use to represent a graph, and for BFS?</summary><div class="qa-body">An adjacency list: <code>dict</code> of node → list (or <code>set</code>, for O(1) edge checks and no duplicates), often a <code>defaultdict(list)</code> while building. BFS uses a <code>deque</code> as the frontier (<code>popleft</code> O(1)) and a <code>set</code> of visited nodes; DFS can use a list as a stack or recursion. Dijkstra adds a <code>heapq</code> priority queue keyed by distance.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why is a set's or dict's lookup O(1) only "on average"?</summary><div class="qa-body">Both are hash tables: lookup hashes the key, jumps to a slot and compares a few candidates. The table is kept less than about 2/3 full and the hash spreads keys, so the expected number of probes is constant. If many keys collide (a bad custom <code>__hash__</code> or adversarial input), probes grow towards n and lookup degrades to O(n). Details in <a class="xref" data-note="py_dicts_sets">Dicts &amp; Sets</a>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Compare list, tuple, set and dict.</summary><div class="qa-body">A list is ordered, mutable, allows duplicates and is accessed by position; membership is O(n). A tuple is the same but immutable, so it is hashable when its items are. A set is unordered, mutable, holds unique hashable items and has O(1) membership. A dict maps unique hashable keys to values, keeps insertion order and looks up by key in O(1). Choose by what the code does most: index, search, or look up by key.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When would you use a tuple instead of a list?</summary><div class="qa-body">For a fixed record where each position has a meaning, such as a coordinate or one database row, for returning several values from a function, and whenever the value must be hashable, such as a composite dict key <code>(customer, item)</code> or a set of pairs. Immutability also documents that the data should not change, and tuples are slightly smaller and faster to create.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Which objects can be dict keys or set elements, and why?</summary><div class="qa-body">Only hashable objects, whose hash never changes and where equal objects have equal hashes: numbers, strings, bytes, frozensets, and tuples made of hashable items. Lists, dicts and sets are mutable, so they have no hash. The reason is that a hash table files each key in a slot chosen from its hash; if the key changed, later lookups would search the wrong slot.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Your code checks <code>if user_id in seen_ids</code> inside a loop over a million events and it is slow. Why, and how do you fix it?</summary><div class="qa-body"><code>seen_ids</code> is probably a list, so each check scans it, O(n), and the whole loop becomes O(n × m). Convert it to a set once, before the loop, and each check becomes O(1) on average, making the loop linear. Do not convert inside the loop, which rebuilds the set every time.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you implement a stack and a queue in Python?</summary><div class="qa-body">A stack (last in, first out) is a plain list: <code>append</code> to push and <code>pop()</code> to pop, both O(1). A queue (first in, first out) should be a <code>collections.deque</code>: <code>append</code> to enqueue and <code>popleft()</code> to dequeue, both O(1). Using <code>list.pop(0)</code> for a queue is O(n) per removal. Between threads, use <code>queue.Queue</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a deque and what are its trade-offs?</summary><div class="qa-body">A double-ended queue implemented as a linked chain of fixed-size blocks, giving O(1) <code>append</code>, <code>appendleft</code>, <code>pop</code> and <code>popleft</code>. The trade-offs are that indexing into the middle is O(n), there is no slicing or <code>sort</code>, and it uses slightly more memory per item than a list. It also offers <code>rotate</code> and a <code>maxlen</code> bound.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How would you keep only the last 1,000 log lines in memory?</summary><div class="qa-body"><code>deque(maxlen=1000)</code>. Each <code>append</code> is O(1), and once the deque is full, appending automatically drops the oldest line from the other end. A list with <code>pop(0)</code> would be O(n) per line, and slicing the list every time would copy it.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you implement a priority queue? What about equal priorities?</summary><div class="qa-body">Use <code>heapq</code> on a list, pushing <code>(priority, item)</code> tuples: <code>heappush</code> and <code>heappop</code> are O(log n), and <code>heap[0]</code> peeks at the smallest. Equal priorities make Python compare the items, which fails for dicts or custom objects, so push <code>(priority, next(counter), item)</code> with <code>itertools.count()</code>; that also makes equal priorities first come, first served. For a max-heap, negate the priority.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Find the k largest elements of a list of n numbers. What is the complexity?</summary><div class="qa-body"><code>heapq.nlargest(k, xs)</code> keeps a heap of size k while scanning, so it runs in O(n log k) time and O(k) memory. Sorting and slicing, <code>sorted(xs)[-k:]</code>, is O(n log n). When k is close to n, sorting is just as good; when k is 1, use <code>max</code>, which is O(n).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does <code>heapify</code> do, and is a heap a sorted list?</summary><div class="qa-body"><code>heapq.heapify(xs)</code> rearranges a list in place, in O(n), so that every item is less than or equal to its children at positions <code>2i + 1</code> and <code>2i + 2</code>. That guarantees only that <code>xs[0]</code> is the minimum; the rest is partially ordered, not sorted. To get sorted output you pop repeatedly, which is heapsort, O(n log n).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is <code>bisect</code> used for?</summary><div class="qa-body">Binary search on a sorted list in O(log n): <code>bisect_left</code> and <code>bisect_right</code> return the insertion point before or after equal items, and <code>insort</code> inserts while keeping order (O(n) because of the shift). Typical uses are mapping a value to a band (grades, discount tiers), counting items in a range of sorted data, and keeping a sorted list that is searched often but changed rarely.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span><code>Counter</code> vs <code>defaultdict(int)</code>?</summary><div class="qa-body">Both treat missing keys as 0 for counting. <code>Counter</code> adds counting tools: build directly from an iterable, <code>most_common(k)</code>, arithmetic between counters, and <code>total()</code>; and reading a missing key does not insert it. <code>defaultdict(int)</code> is a plain dict with a default factory, and reading a missing key does insert it. Use <code>Counter</code> for frequencies and <code>defaultdict</code> for general accumulation.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is <code>ChainMap</code> for?</summary><div class="qa-body">It groups several dicts into one view that searches them in order and returns the first match, without copying or merging. It suits layered configuration (command-line flags over environment variables over defaults) and nested scopes. Writes and deletions affect only the first dict.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How would you implement an LRU cache?</summary><div class="qa-body">Use an <code>OrderedDict</code>. On a hit, <code>move_to_end(key)</code> marks the entry as most recently used; on a miss, insert it, and if the size exceeds the capacity, <code>popitem(last=False)</code> evicts the least recently used. Both are O(1). The general structure behind it is a hash map plus a doubly linked list. For caching a function's results, use <code>functools.lru_cache</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>list vs <code>array.array</code> vs NumPy array?</summary><div class="qa-body">A list holds references to separate Python objects of any type: flexible, but about 32 bytes per float. <code>array.array</code> stores raw values of one type compactly (8 bytes per double) but still processes them one at a time in Python. A NumPy array is equally compact and adds vectorised operations in C, typically tens of times faster for arithmetic. Use NumPy or pandas for numeric data.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you remove duplicates while keeping order? And count distinct items?</summary><div class="qa-body">Keep order with <code>list(dict.fromkeys(xs))</code>, which is O(n) because dict keys are unique and ordered; <code>list(set(xs))</code> loses the order. Count distinct items with <code>len(set(xs))</code>. If you also need how often each appears, use <code>Counter(xs)</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Which data structures would you use to represent a graph and run BFS?</summary><div class="qa-body">An adjacency list: a dict from each node to a list (or set) of its neighbours, often a <code>defaultdict(list)</code>. For BFS, use a <code>deque</code> as the frontier, with <code>popleft</code> to take the oldest node, and a set of visited nodes for O(1) checks. The whole search is O(V + E). For DFS, use a list as a stack, or recursion.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why is a set's or dict's lookup O(1) only "on average"?</summary><div class="qa-body">A lookup hashes the key and probes a few slots. If many keys collide, the probe sequence gets long, and in the worst case, when every key collides, a lookup is O(n). Python keeps the table under about two-thirds full and uses well-mixed (and, for strings, randomly salted) hashes, so long probe chains practically never happen.</div></details>
 </main>
 `
 });
