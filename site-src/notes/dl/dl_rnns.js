@@ -3,132 +3,46 @@ Object.assign(TOPIC_CONTENT, {
   "dl_rnns": `<main>
   <h1>RNNs &amp; Sequential Models</h1>
   <div class="where"><span>Deep Learning</span><span>RNNs &amp; Sequential</span></div>
-  <p class="lead">A recurrent neural network (RNN) reads data in order, one piece at a time, and keeps a small memory of what it has read so far. This note follows <strong>one running example</strong> all the way through: a three-word review on a food-delivery app, <strong>"chai not good"</strong>. On it we see why ordinary networks lose word order, push the review through an RNN cell by hand for three steps, train it with backpropagation through time, watch the gradient vanish, compute one LSTM step and one GRU step by hand, translate the review with an encoder–decoder and measure that design's bottleneck (which motivates attention), read it in both directions, and finally batch reviews of different lengths. All code ran here (NumPy, PyTorch 2.14 CPU, single thread).</p>
+  <p class="lead">A recurrent neural network, or RNN, is a network that reads its input in order, one piece at a time, and carries a small memory from each step to the next. That makes it the natural tool for data where order is the meaning: sentences, speech, sensor readings, a shop's hourly sales. Recurrent networks were the standard models for language before Transformers, the ideas behind them (shared weights over time, gating, encoder and decoder) still run through modern models, and "explain vanishing gradients and the LSTM" remains one of the most common deep-learning interview questions. The whole page follows one example: a food-delivery app wants to flag unhappy customers from short reviews, and our review is three words, <strong>"chai not good"</strong>. We will push it through an RNN by hand, train it, watch the gradient vanish, fix that with LSTM and GRU gates, translate it, batch it, and finally train a small PyTorch LSTM that learns what "not" does.</p>
 
-  <h2 id="dr-fit" class="open"><span class="num">★</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 660 190" width="660">
-<defs><marker id="dr-a0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="10" y="20" width="150" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="85" y="41" text-anchor="middle" font-size="12">Neurons · Backprop</text><text x="85" y="58" text-anchor="middle" class="tm" font-size="10">· Training</text>
-<rect x="10" y="115" width="150" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="85" y="136" text-anchor="middle" font-size="12">CNNs</text><text x="85" y="153" text-anchor="middle" class="tm" font-size="10">sharing over space</text>
-<rect x="245" y="65" width="160" height="56" rx="8" class="fg sg" stroke-width="3"/><text x="325" y="88" text-anchor="middle" font-size="13" font-weight="700">RNNs</text><text x="325" y="107" text-anchor="middle" class="tg" font-size="10.5">YOU ARE HERE · sharing over time</text>
-<rect x="490" y="20" width="160" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="570" y="41" text-anchor="middle" font-size="12">Attention</text><text x="570" y="58" text-anchor="middle" class="tm" font-size="10">fixes the bottleneck</text>
-<rect x="490" y="115" width="160" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="570" y="136" text-anchor="middle" font-size="12">Transformers</text><text x="570" y="153" text-anchor="middle" class="tm" font-size="10">attention only, no recurrence</text>
-<line x1="160" y1="45" x2="243" y2="85" stroke="currentColor" marker-end="url(#dr-a0)"/><line x1="160" y1="140" x2="243" y2="103" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#dr-a0)"/>
-<line x1="405" y1="85" x2="488" y2="48" stroke="currentColor" marker-end="url(#dr-a0)"/><line x1="570" y1="70" x2="570" y2="113" stroke="currentColor" marker-end="url(#dr-a0)"/>
-<text x="330" y="182" text-anchor="middle" class="tm" font-size="10.5">time series (hourly orders) and text (reviews) both enter here</text>
-</svg><figcaption>RNNs bring the Deep Learning track from fixed-size grids to sequences of any length; their weakest point (the bottleneck) is the reason attention exists.</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: <a class="xref" data-note="dl_neurons">Neurons &amp; MLPs</a>, <a class="xref" data-note="dl_backprop">Backpropagation</a>, <a class="xref" data-note="dl_training">Training</a>, <a class="xref" data-note="dl_cnns">CNNs</a></b><span>We can train networks on fixed-size inputs, and the CNN taught us to share one set of weights across positions in space. Left open: text, speech and time series (<a class="xref" data-note="ml_timeseries">Time Series Basics</a>) arrive in order and with any length, which neither an MLP nor a CNN handles naturally.</span></li>
-    <li><b>This note adds: weight sharing over time</b><span>A hidden state carried from step to step (the RNN), how to train it (BPTT), why it forgets (vanishing gradients), the gated cells that remember (LSTM, GRU), and how to turn one sequence into another (seq2seq), in both directions, in batches.</span></li>
-    <li><b>Leads to: <a class="xref" data-note="dl_attention">Attention Mechanisms</a></b><span>Seq2seq squeezes the whole input into one fixed vector, and accuracy collapses on long inputs. Attention lets the decoder look back at every input step; dropping recurrence altogether gives <a class="xref" data-note="transformers">Transformers</a>. Word vectors like ours come from <a class="xref" data-note="nlp">NLP Foundations</a>.</span></li>
-  </ol>
-
-  <h2 id="dr-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
-  <p>The whole note as one chain. Each concept answers the question above it; its weakness raises the next question. Numbers are from our review "chai not good".</p>
-  <ol class="story">
-    <li><b>Sequences</b><span>Q: why can't the networks we have read a review? → Order is meaning ("good, not bad" vs "bad, not good" have the same word counts) and length varies (3 words, then 300). We need a model that reads in order with weights that don't depend on length…</span></li>
-    <li><b>The RNN cell</b><span>Q: how can one set of weights read any length, in order? → Carry a memory h, update it word by word: h<sub>t</sub> = tanh(W<sub>xh</sub>x<sub>t</sub> + W<sub>hh</sub>h<sub>t−1</sub> + b). "chai not good" gives h₃ = [0.057, 0.938]; reversed words give a different h₃. But how do weights used at every step learn?</span></li>
-    <li><b>Backprop through time</b><span>Q: how do shared weights get a gradient? → Unroll the loop and add up one gradient piece per step: 0.478 + 0.129 + 0 = 0.6065, exactly autograd's answer. But each step back multiplies the gradient by w·(1 − h²): 0.338, then 0.085…</span></li>
-    <li><b>Vanishing &amp; exploding gradients</b><span>Q: what happens to that product over 60 words? → It vanishes (step 1's influence 3×10⁻¹⁷) or explodes (2.6×10¹¹, fixed by clipping). Vanishing has no clip; the memory itself must change…</span></li>
-    <li><b>LSTM</b><span>Q: how can memory survive many steps? → A separate cell state edited by gates: c<sub>t</sub> = f·c<sub>t−1</sub> + i·c̃. On "chai": f = 0.769, i = 0.646, c̃ = 0.716 → c₁ = 0.462, h₁ = 0.227. Works, but 4 weight blocks and 2 states are heavy…</span></li>
-    <li><b>GRU</b><span>Q: can we keep the gating with less machinery? → One state, two gates, h = (1 − z)·h + z·h̃: h₁ = 0.358; 25% fewer weights. Now we can read a review well, but how do we produce a whole new sequence, e.g. translate it?</span></li>
-    <li><b>Seq2seq encoder–decoder</b><span>Q: how do we map "chai not good" to "chai achhi nahi hai" (different length, different word order)? → Encoder RNN → one context vector → decoder RNN writes word by word, trained with teacher forcing. But everything passes through that one vector…</span></li>
-    <li><b>The bottleneck</b><span>Q: does one fixed vector hold a long input? → No: on a reversal task accuracy falls from 1.00 (5 tokens) to 0.54 (30 tokens). This is what attention fixes (next note). One more weakness first: the encoder reads only left to right…</span></li>
-    <li><b>Bidirectional RNNs</b><span>Q: when the encoder reads "not", how can it know what is negated? → A second RNN reads right to left; concatenate: "chai" now carries [0.46, 0.38, −0.05, 0.74]. Only when the whole sequence is available. And real batches mix reviews of different lengths…</span></li>
-    <li><b>Padding &amp; packing</b><span>Q: how do we batch 3-, 2- and 1-word reviews? → Pad to a rectangle, then pack so the RNN stops at each true length (padded h = [−0.119, …] wrong; packed = alone = [−0.25, 0.033, −0.179]).</span></li>
-  </ol>
-
-  <h2 id="dr-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="dr-map"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">RNNs &amp; Sequential</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">Why sequence models</div>
+        <div class="mm-title">The RNN</div>
         <ul>
-          <li><b>Sequence</b> — text, audio, reviews, hourly orders, sensor data: order matters, length varies</li>
-          <li><b>MLP</b> — fixed input size; bag-of-words makes "good, not bad" = "bad, not good"</li>
-          <li><b>CNN</b> — sees only a local window</li>
-          <li><b>Need</b> — read step by step and carry a memory</li>
+          <li>Order matters and length varies: bag of words loses both</li>
+          <li><b>h<sub>t</sub> = tanh(W<sub>xh</sub>x<sub>t</sub> + W<sub>hh</sub>h<sub>t−1</sub> + b)</b>, h<sub>0</sub> = 0</li>
+          <li>Same weights at every step: any length, fixed parameter count</li>
+          <li>Trained by <b>BPTT</b>: unroll, backprop, sum gradients over steps</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Vanilla RNN</div>
+        <div class="mm-title">Why it forgets</div>
         <ul>
-          <li><b>h<sub>t</sub> = tanh(W<sub>xh</sub>x<sub>t</sub> + W<sub>hh</sub>h<sub>t−1</sub> + b)</b>; y<sub>t</sub> = W<sub>hy</sub>h<sub>t</sub></li>
-          <li><b>h<sub>0</sub></b> = zeros; hidden state = running summary</li>
-          <li><b>Weight sharing</b> — same W at every step → any length, fixed params</li>
-          <li>"chai not good": h₁=[.46,.38] → h₂=[−.24,.76] → h₃=[.06,.94]</li>
-          <li><b>Shapes</b> — many→one (last h), many→many (every h), seq2seq</li>
-          <li>💡 A scorer updating one scoreboard ball by ball</li>
+          <li>Gradient to step 1 = product of many per-step factors</li>
+          <li>Factors &lt; 1 → <b>vanishing</b>; &gt; 1 → <b>exploding</b></li>
+          <li>Exploding: clip the gradient norm</li>
+          <li>Vanishing: change the cell (gates)</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">BPTT</div>
+        <div class="mm-title">Gated cells</div>
         <ul>
-          <li><b>Unroll</b> into T copies, backprop like a T-layer net</li>
-          <li><b>Grad of W</b> = sum of one contribution per step</li>
-          <li>∂h<sub>t</sub>/∂h<sub>t−1</sub> = W<sub>hh</sub>ᵀ·diag(1−h<sub>t</sub>²) (scalar: w·(1−h²))</li>
-          <li><b>Truncated BPTT</b> — backprop only k steps; <code>h.detach()</code> between chunks</li>
+          <li><b>LSTM</b>: cell state c, gates forget, input, output</li>
+          <li>c<sub>t</sub> = f⊙c<sub>t−1</sub> + i⊙c̃: edit, don't rewrite</li>
+          <li><b>GRU</b>: one state, update and reset gates, 25% fewer weights</li>
+          <li>Set the LSTM forget-gate bias to 1 or more</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Vanishing / exploding</div>
+        <div class="mm-title">Using RNNs</div>
         <ul>
-          <li>Gradient = product of T factors: 0.5⁶⁰ ≈ 1e-18, 1.5⁶⁰ ≈ 4e10</li>
-          <li><b>Vanish</b> (factors &lt; 1) → early steps learn nothing</li>
-          <li><b>Explode</b> (&gt; 1) → NaN; fix: <b>clip_grad_norm_</b></li>
-          <li>Clipping can't fix vanishing → change the architecture</li>
-          <li>Demo, 60 steps: RNN influence of step 1 = 3e-17</li>
-          <li>💡 A whisper passed down a 60-person train coach</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">LSTM</div>
-        <ul>
-          <li><b>Cell state c<sub>t</sub></b> — conveyor belt, updated by + not matmul</li>
-          <li><b>Forget</b> f = σ(·), <b>input</b> i = σ(·), <b>candidate</b> c̃ = tanh(·), <b>output</b> o = σ(·)</li>
-          <li><b>c<sub>t</sub> = f⊙c<sub>t−1</sub> + i⊙c̃</b>; <b>h<sub>t</sub> = o⊙tanh(c<sub>t</sub>)</b></li>
-          <li><b>∂c<sub>t</sub>/∂c<sub>t−1</sub> = f</b> → gradient survives when f ≈ 1 (0.99⁵⁰ = 0.61)</li>
-          <li>⚠ Default init still decays; <b>forget bias 1–3</b> keeps step 1 at 1e-1</li>
-          <li>PyTorch gate order: i, f, g, o · params 4·(h(x+h)+2h)</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">GRU</div>
-        <ul>
-          <li><b>No cell state</b>; 2 gates: <b>update z</b>, <b>reset r</b></li>
-          <li><b>h<sub>t</sub> = (1−z)⊙h<sub>t−1</sub> + z⊙h̃</b> — blend old and new</li>
-          <li>3 blocks vs LSTM's 4 → 25% fewer params, faster</li>
-          <li>⚠ PyTorch writes it with z and 1−z swapped</li>
-          <li><b>Choose</b> — GRU first; LSTM for very long sequences</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Bidirectional</div>
-        <ul>
-          <li><b>Two RNNs</b> — left→right and right→left; concat [h→, h←]</li>
-          <li>Every position sees past and future</li>
-          <li><b>Use</b> — NER, tagging, classification, encoders</li>
-          <li>⚠ Not for streaming or generation · output size doubles</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Seq2seq &amp; bottleneck</div>
-        <ul>
-          <li><b>Encoder</b> → final h = context vector → <b>Decoder</b> writes output</li>
-          <li><b>Teacher forcing</b> — feed the true previous token in training</li>
-          <li><b>Bottleneck</b> — whole input squeezed into one vector</li>
-          <li>Toy reverse task: 1.00 at length 5 → 0.54 at length 30</li>
-          <li><b>Fix</b> → attention: look at <em>all</em> encoder states</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Practice &amp; today</div>
-        <ul>
-          <li><b>Shapes</b> — (batch, seq, feat) with <code>batch_first=True</code></li>
-          <li><b>Padding</b> — pack_padded_sequence, else h_n reads the pads</li>
-          <li><b>Transformers win</b> — parallel training, direct token links</li>
-          <li><b>RNNs fit</b> — streaming O(1)/step, edge devices, small time series; state-space models (Mamba) revive the idea</li>
+          <li>Many→one, many→many, seq2seq (encoder → context → decoder)</li>
+          <li>Seq2seq bottleneck: one vector for the whole input → attention</li>
+          <li>Bidirectional: past and future, never for streaming</li>
+          <li>Batches: pad, then pack; <code>batch_first=True</code></li>
         </ul>
       </div>
     </div>
@@ -137,86 +51,58 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="dr-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain</span></div></div>
-      <div class="rm-item rm-done" data-target="dr-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Why Sequence Models</span><span class="rm-sub">Order and variable length</span></div></div>
-      <div class="rm-item rm-done" data-target="dr-rnn"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">The RNN, Step by Hand</span><span class="rm-sub">"chai not good" through one cell</span></div></div>
-      <div class="rm-item rm-done" data-target="dr-bptt"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Backprop Through Time</span><span class="rm-sub">How the shared weights learn</span></div></div>
-      <div class="rm-item rm-done" data-target="dr-vg"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Vanishing &amp; Exploding</span><span class="rm-sub">Why RNNs forget, in numbers</span></div></div>
-      <div class="rm-item rm-done" data-target="dr-lstm"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">LSTM Gates</span><span class="rm-sub">Forget, input, output, by hand</span></div></div>
-      <div class="rm-item rm-done" data-target="dr-gru"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">GRU vs LSTM</span><span class="rm-sub">Two gates instead of three</span></div></div>
-      <div class="rm-item rm-done" data-target="dr-s2s"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Seq2seq &amp; the Bottleneck</span><span class="rm-sub">Why attention was needed</span></div></div>
-      <div class="rm-item rm-done" data-target="dr-bi"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Bidirectional RNNs</span><span class="rm-sub">Past and future context</span></div></div>
-      <div class="rm-item rm-done" data-target="dr-practice"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Padding &amp; RNNs Today</span><span class="rm-sub">Batches, packing, vs Transformers</span></div></div>
-      <div class="rm-item rm-done" data-target="dr-connect"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One memory, many fixes</span></div></div>
-      <div class="rm-item rm-done" data-target="dr-traps"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Shapes, pads, clipping, gate order</span></div></div>
-      <div class="rm-item rm-done" data-target="dr-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note in 10 minutes</span></div></div>
-      <div class="rm-item rm-done" data-target="dr-qa"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
+      <div class="rm-item rm-done" data-target="dr-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Why Sequences Need Memory</span><span class="rm-sub">what goes wrong when order is thrown away</span></div></div>
+      <div class="rm-item rm-done" data-target="dr-rnn"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">The RNN Cell, Step by Step</span><span class="rm-sub">"chai not good" through one cell, by hand</span></div></div>
+      <div class="rm-item rm-done" data-target="dr-bptt"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Backpropagation Through Time</span><span class="rm-sub">how weights used at every step learn</span></div></div>
+      <div class="rm-item rm-done" data-target="dr-vg"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Vanishing and Exploding Gradients</span><span class="rm-sub">why a plain RNN forgets, in numbers</span></div></div>
+      <div class="rm-item rm-done" data-target="dr-lstm"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">LSTM: A Memory With Gates</span><span class="rm-sub">forget, input and output gates by hand</span></div></div>
+      <div class="rm-item rm-done" data-target="dr-gru"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">GRU: The Lighter Gated Cell</span><span class="rm-sub">two gates, one state, and how it compares</span></div></div>
+      <div class="rm-item rm-done" data-target="dr-tasks"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Sequence Tasks and Bidirectional RNNs</span><span class="rm-sub">one label, a label per word, both directions</span></div></div>
+      <div class="rm-item rm-done" data-target="dr-s2s"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Seq2seq and Its Bottleneck</span><span class="rm-sub">translating a review, and why attention came next</span></div></div>
+      <div class="rm-item rm-done" data-target="dr-pack"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Padding and Packing</span><span class="rm-sub">batching reviews of different lengths</span></div></div>
+      <div class="rm-item rm-done" data-target="dr-train"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Training an LSTM in PyTorch</span><span class="rm-sub">a model that learns what "not" does</span></div></div>
+      <div class="rm-item rm-done" data-target="dr-traps"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">shapes, pads, detach, gate order</span></div></div>
+      <div class="rm-item rm-done" data-target="dr-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">formulas, comparisons, gotchas</span></div></div>
+      <div class="rm-item rm-done" data-target="dr-qa"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">the RNN questions interviewers ask</span></div></div>
     </div>
   </div>
 
-  <h2 id="dr-why"><span class="num">01</span>Why Sequence Models</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>An MLP takes a fixed list of numbers; a CNN takes a fixed-size grid. A customer review is neither: it is words in a particular order, and the next review may be ten times longer. What goes wrong if we force a review into the networks we already have?</p>
-  </div>
-  <h3>The running example</h3>
-  <p>A food-delivery app collects short reviews and wants to flag unhappy customers. Our review is three words: <strong>"chai not good"</strong>. The model must notice that "not" flips "good". Two facts about such data shape this whole note. First, <strong>order matters</strong>: "good, not bad" and "bad, not good" use exactly the same words and mean opposite things. Second, <strong>length varies</strong>: the next review is "chai was cold and the delivery took one hour", and the one after that is a paragraph. (The same is true of the app's hourly order counts, a time series: the order of the hours is the information, and the history keeps growing.)</p>
-  <p>A normal neural network (an MLP) wants a fixed number of input numbers, always in the same slots. The common trick for text is a <strong>bag of words</strong>: count how many times each word appears. That gives a fixed-size vector, but it throws the order away. Watch:</p>
-<div class="fx" data-lang="py">import numpy as np
+  <h2 id="dr-why"><span class="num">01</span>Why Sequences Need Memory</h2>
+  <p>The networks from the earlier notes, the multilayer perceptron (MLP) of <a class="xref" data-note="dl_neurons">Neurons, Layers &amp; Activations</a> and the CNN of <a class="xref" data-note="dl_cnns">CNNs</a>, both expect an input of a fixed size: a fixed list of numbers, or a fixed grid of pixels. A customer review is neither. It is a list of words in a particular order, and the next review may be ten times longer. Two facts about this kind of data shape the whole page. First, <strong>order carries meaning</strong>: "good, not bad" and "bad, not good" use exactly the same words and mean opposite things. Second, <strong>length varies</strong>: our review has three words, the next one might have thirty.</p>
+  <p>The usual trick for squeezing text into a fixed-size input is a <strong>bag of words</strong>: count how many times each vocabulary word appears, and use the counts as the input. That gives the same number of inputs for every review, whatever its length. Let us see what it does to word order:</p>
+  <div class="fx" data-lang="py">import numpy as np
 vocab = ["good", "not", "bad"]
-def bag(review):
+def bag(review):                                   # count each vocabulary word
     words = review.replace(",", "").split()
-    return np.array([words.count(w) for w in vocab])   # one count per vocab word
-print(bag("good, not bad"), bag("bad, not good"))
-print("same input to an MLP?", np.array_equal(bag("good, not bad"), bag("bad, not good")))</div>
-  <div class="fx" data-lang="text">[1 1 1] [1 1 1]
-same input to an MLP? True</div>
-  <p>The function <code>bag</code> turns each review into three counts. Both reviews give <code>[1 1 1]</code>, so any model that only sees these counts must give the same answer to a happy customer and an unhappy one. The order was the meaning, and it is gone.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Listening to cricket commentary on the radio. You never hear the whole match at once. Each ball updates the picture in your head: score, wickets, who is on strike. "Four!" means something very different at 20 for 5 than at 180 for 1. You understand the ball only because you carried the memory of the balls before it.</p>
-  </div>
-  <p>So we want a model that reads one item at a time, in order, and carries a memory forward. That is exactly what a recurrent network does. Compare the options:</p>
-  <table class="tbl">
-    <tr><th>Model</th><th>Variable length?</th><th>Uses order?</th><th>Long-range context?</th></tr>
-    <tr><td>MLP on bag of words</td><td>Yes, but by losing order</td><td>No</td><td>No</td></tr>
-    <tr><td>MLP on a fixed window</td><td>No (fixed slots)</td><td>Yes, inside the window</td><td>No</td></tr>
-    <tr><td>1-D CNN</td><td>Yes</td><td>Locally</td><td>Only within its window</td></tr>
-    <tr><td>RNN</td><td>Yes</td><td>Yes</td><td>In theory; in practice limited (see 04)</td></tr>
-  </table>
-  <p>"The bank by the river" vs "the bank where I deposit money": the meaning of "bank" depends on a word that may be far away. In a long review, "the chai, which my friend had praised so much last week, was not good" puts "not" eight words away from "chai". A window of 2 words cannot see it. A memory that runs along the whole sentence can.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A <strong>sequence</strong> is an ordered list x<sub>1</sub>, x<sub>2</sub>, …, x<sub>T</sub>. Each position is a <strong>time step</strong> (even for words, which are not about clock time). T is the sequence length. A <strong>sequence model</strong> is any model that reads the items in order and lets earlier items affect how later ones are understood.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"Just make the MLP input bigger" does not solve it. A 500-slot MLP has separate weights for "word in slot 3" and "word in slot 300", so a pattern learned at the start of a sentence does not transfer to the end, and a 501-word review does not fit at all.</p>
-  </div>
-  <p>Where this matters: sentiment and intent detection, speech recognition, next-word keyboards, fraud detection on a stream of card swipes, demand forecasting (hourly orders), sensor monitoring. Interviews ask "why not an MLP for text?" to check you know about order and variable length.</p>
-  <div class="bridge"><b>What this still can't tell us → next: The RNN cell.</b> We know what we need (read in order, carry a memory, same weights at every step), but not the actual formula, or what "memory" looks like as numbers.</div>
+    return np.array([words.count(w) for w in vocab])
 
-  <h2 id="dr-rnn"><span class="num">02</span>The RNN, Step by Hand</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>How can one fixed set of weights read "chai not good" (3 words) and a 300-word review alike, and end up with a summary that depends on the order of the words?</p>
-  </div>
-  <p>The need: one model that can read 3 words or 300 words with the same set of weights. The idea in plain words: keep a small vector called the <strong>hidden state</strong> h, the model's memory. Start with h = all zeros. For each new word, mix the word with the old memory, squash the result, and that becomes the new memory. Then move to the next word. The same small formula, with the same weights, is applied at every step.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>The scorer at a gully cricket match has one small scoreboard, not a notebook of every ball. After each ball she looks at the old scoreboard and the new ball, and writes the new scoreboard. She uses the same rules for ball 1 and ball 100. The scoreboard is h; the rules are the weights.</p>
-  </div>
-  <p>The formula: <strong>h<sub>t</sub> = tanh(W<sub>xh</sub>·x<sub>t</sub> + W<sub>hh</sub>·h<sub>t−1</sub> + b)</strong>. W<sub>xh</sub> says how the new input feeds the memory. W<sub>hh</sub> says how the old memory feeds the new memory. <strong>tanh</strong> squashes every number into −1…1, so the memory can't grow without limit.</p>
-  <h3>Worked example: "chai not good"</h3>
-  <p>To keep it small, each word is a vector of 2 numbers (in a real model these come from an embedding layer and have 100+ numbers), and the hidden state also has 2 numbers. We pick the weights by hand:</p>
+print(bag("good, not bad"), bag("bad, not good"))
+print("identical input?", np.array_equal(bag("good, not bad"), bag("bad, not good")))</div>
+  <div class="fx" data-lang="text">[1 1 1] [1 1 1]
+identical input? True</div>
+  <p>Both reviews become <code>[1 1 1]</code>, one "good", one "not", one "bad". Any model that only sees these counts must give a happy customer and an unhappy customer exactly the same answer. The order was the meaning, and the bag of words threw it away. Making the MLP input bigger, with one slot per word position, does not help much either: a 500-slot MLP has separate weights for "word in slot 3" and "word in slot 300", so a pattern learned at the start of a sentence does not carry over to the end, and a 501-word review does not fit at all. A 1-D CNN slides the same small filter along the sentence, which keeps order inside its window, but it only sees a few neighbouring words at a time, so in "the chai, which my friend had praised so much last week, was not good" the word "not" is too far from "chai" for a small window.</p>
+  <p>Think about how you follow cricket commentary on the radio. You never hear the whole match at once. Each ball updates the picture in your head: the score, the wickets, who is batting. "Four!" means something quite different at 20 for 5 than at 180 for 1, and you know which situation you are in only because you carried a memory of the earlier balls. You also use the same understanding of cricket for ball 1 as for ball 300.</p>
+  <p>That is exactly what we want from a model. A <strong>sequence</strong> is an ordered list of items x<sub>1</sub>, x<sub>2</sub>, …, x<sub>T</sub>, where each position is called a <strong>time step</strong> (even for words, which have nothing to do with clock time) and T is the length. A <strong>sequence model</strong> is a model that reads the items in order and lets earlier items change how later ones are understood. The simplest way to build one is to read one item at a time, keep a running memory, and use the same weights at every step. That is the recurrent neural network.</p>
   <table class="tbl">
-    <tr><th>Piece</th><th>Value</th></tr>
-    <tr><td>Word vectors</td><td>chai = [1, 0], not = [0, 1], good = [1, 1]</td></tr>
-    <tr><td>W<sub>xh</sub> (input → hidden)</td><td>[[0.5, −0.5], [0.3, 0.8]]</td></tr>
-    <tr><td>W<sub>hh</sub> (hidden → hidden)</td><td>[[0.4, 0.2], [−0.3, 0.6]]</td></tr>
-    <tr><td>b</td><td>[0, 0.1] · h<sub>0</sub> = [0, 0]</td></tr>
+    <tr><th>Model</th><th>Any length?</th><th>Uses order?</th><th>Links far-apart words?</th></tr>
+    <tr><td>MLP on a bag of words</td><td>yes, by dropping order</td><td>no</td><td>no</td></tr>
+    <tr><td>MLP on fixed word slots</td><td>no</td><td>yes</td><td>only within its slots</td></tr>
+    <tr><td>1-D CNN</td><td>yes</td><td>inside its window</td><td>only within the window</td></tr>
+    <tr><td>RNN</td><td>yes</td><td>yes</td><td>in principle (section 04 shows the catch)</td></tr>
   </table>
-  <table class="tbl out"><caption>Trace: one row per word (a = W<sub>xh</sub>x + W<sub>hh</sub>h<sub>t−1</sub> + b, then h = tanh(a))</caption>
-    <tr><th>t</th><th>word x</th><th>W<sub>xh</sub>·x</th><th>W<sub>hh</sub>·h<sub>t−1</sub></th><th>a</th><th>h<sub>t</sub> = tanh(a)</th></tr>
+
+  <h2 id="dr-rnn"><span class="num">02</span>The RNN Cell, Step by Step</h2>
+  <p>We need one model that can read 3 words or 300 words with the same set of weights and that ends up with a summary that depends on the order of the words. The RNN does this with a vector called the <strong>hidden state</strong>, written h, which is the model's memory. It starts as all zeros. For each new word, the network mixes the word with the old memory, squashes the result into a fixed range, and that becomes the new memory. Then it moves to the next word and does exactly the same thing again with exactly the same weights. The piece of the network that performs one such update is called the <strong>RNN cell</strong>.</p>
+  <p>Picture the scorer at a local cricket match. She does not keep a notebook of every ball; she has one small scoreboard. After each ball she looks at the old scoreboard and at what just happened, and writes the new scoreboard. She uses the same rules for ball 1 and ball 100. The scoreboard is the hidden state, and her rules are the weights.</p>
+  <p>As a formula, the update at step t is <strong>h<sub>t</sub> = tanh(W<sub>xh</sub>·x<sub>t</sub> + W<sub>hh</sub>·h<sub>t−1</sub> + b)</strong>. Here x<sub>t</sub> is the vector for the word at step t, W<sub>xh</sub> is a weight matrix that says how the new input feeds into the memory, W<sub>hh</sub> is a weight matrix that says how the old memory feeds into the new memory, and b is a bias. <strong>tanh</strong> (hyperbolic tangent) squashes every number into the range −1 to 1, so the memory cannot grow without limit however long the review is. The word "recurrent" refers to the fact that h<sub>t−1</sub>, the cell's own previous output, comes back in as an input.</p>
+  <p>To make every number checkable, we keep things tiny. Each word is a vector of 2 numbers (in a real model these come from an embedding layer and have a hundred or more numbers), the hidden state also has 2 numbers, and we pick the weights by hand: chai = [1, 0], not = [0, 1], good = [1, 1]; W<sub>xh</sub> = [[0.5, −0.5], [0.3, 0.8]]; W<sub>hh</sub> = [[0.4, 0.2], [−0.3, 0.6]]; b = [0, 0.1]; h<sub>0</sub> = [0, 0]. The table follows the review through the cell, one row per word.</p>
+  <table class="tbl">
+    <tr><th>t</th><th>word x<sub>t</sub></th><th>W<sub>xh</sub>·x<sub>t</sub></th><th>W<sub>hh</sub>·h<sub>t−1</sub></th><th>sum + b</th><th>h<sub>t</sub> = tanh(sum)</th></tr>
     <tr><td>1</td><td>chai [1, 0]</td><td>[0.5, 0.3]</td><td>[0, 0] (empty memory)</td><td>[0.5, 0.4]</td><td>[0.462, 0.380]</td></tr>
-    <tr><td>2</td><td>not [0, 1]</td><td>[−0.5, 0.8]</td><td>[0.4·0.462 + 0.2·0.380, −0.3·0.462 + 0.6·0.380] = [0.261, 0.089]</td><td>[−0.239, 0.989]</td><td>[−0.235, 0.757]</td></tr>
+    <tr><td>2</td><td>not [0, 1]</td><td>[−0.5, 0.8]</td><td>[0.261, 0.089]</td><td>[−0.239, 0.989]</td><td>[−0.235, 0.757]</td></tr>
     <tr><td>3</td><td>good [1, 1]</td><td>[0, 1.1]</td><td>[0.058, 0.525]</td><td>[0.058, 1.725]</td><td>[0.057, 0.938]</td></tr>
   </table>
-  <p>Read row 2 slowly. The new memory depends on "not" (first column) <em>and</em> on what was remembered about "chai" (second column). By step 3, h<sub>3</sub> carries a trace of all three words: [0.057, 0.938] is the RNN's whole summary of the review. A classifier on top of it would decide "unhappy customer or not".</p>
+  <p>Read row 2 slowly. The new memory depends on "not" (the third column) <em>and</em> on what was remembered about "chai" (the fourth column, 0.4·0.462 + 0.2·0.380 = 0.261 for the first number). By step 3 the hidden state carries a trace of all three words, so h<sub>3</sub> = [0.057, 0.938] is the RNN's whole summary of the review. A small classifier on top of it would decide "unhappy customer or not". Drawing the same cell once per word, as below, is called <strong>unrolling</strong> the RNN: it is still one cell with one set of weights, shown at three moments in time.</p>
   <figure class="viz"><svg viewBox="0 0 600 225" width="600">
 <defs><marker id="dr-ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
 <g text-anchor="middle">
@@ -234,96 +120,67 @@ same input to an MLP? True</div>
 <line x1="160" y1="175" x2="160" y2="131"/><line x1="320" y1="175" x2="320" y2="131"/><line x1="480" y1="175" x2="480" y2="131"/>
 <line x1="160" y1="83" x2="160" y2="44"/><line x1="320" y1="83" x2="320" y2="44"/><line x1="480" y1="83" x2="480" y2="44"/>
 </g>
-</svg><figcaption>The same cell (same W<sub>xh</sub>, W<sub>hh</sub>, b) drawn three times: this is "unrolling" the RNN over time. The hidden state carries memory left to right. Numbers from the trace above.</figcaption></figure>
-  <p>Now the same thing in numpy. The loop below does exactly the table: for each word, compute the input part, the memory part, add them, apply tanh.</p>
+</svg><figcaption>The RNN unrolled over "chai not good". Each box is the same cell with the same W<sub>xh</sub>, W<sub>hh</sub> and b. The horizontal arrows carry the memory from one word to the next; the vertical arrows show each step's hidden state.</figcaption></figure>
+  <p>The same calculation in NumPy is a short loop. For each word it computes the input part and the memory part, adds them with the bias, and applies tanh:</p>
   <div class="fx" data-lang="py">import numpy as np
-emb = {"chai":    np.array([1.0, 0.0]),     # toy 2-number word vectors
-       "not": np.array([0.0, 1.0]),
+emb = {"chai": np.array([1.0, 0.0]),     # toy 2-number word vectors
+       "not":  np.array([0.0, 1.0]),
        "good": np.array([1.0, 1.0])}
-Wxh = np.array([[0.5, -0.5],             # input  -&gt; hidden  (2x2)
+Wxh = np.array([[0.5, -0.5],             # input  -&gt; hidden
                 [0.3,  0.8]])
-Whh = np.array([[0.4,  0.2],             # hidden -&gt; hidden  (2x2)
+Whh = np.array([[0.4,  0.2],             # hidden -&gt; hidden
                 [-0.3, 0.6]])
 b   = np.array([0.0, 0.1])
 
 h = np.zeros(2)                          # h0: empty memory
 for t, word in enumerate(["chai", "not", "good"], start=1):
-    x = emb[word]
-    from_input  = Wxh @ x
+    from_input  = Wxh @ emb[word]
     from_memory = Whh @ h
-    a = from_input + from_memory + b     # pre-activation
-    h = np.tanh(a)                       # new memory
-    print(f"t={t} {word:5s} Wxh@x={from_input.round(3)}  Whh@h={from_memory.round(3)}  a={a.round(3)}  h={h.round(3)}")</div>
-  <div class="fx" data-lang="text">t=1 chai  Wxh@x=[0.5 0.3]  Whh@h=[0. 0.]  a=[0.5 0.4]  h=[0.462 0.38 ]
-t=2 not   Wxh@x=[-0.5  0.8]  Whh@h=[0.261 0.089]  a=[-0.239  0.989]  h=[-0.235  0.757]
-t=3 good  Wxh@x=[0.  1.1]  Whh@h=[0.058 0.525]  a=[0.058 1.725]  h=[0.057 0.938]</div>
-  <p>The output matches the hand trace digit for digit. The key line is <code>h = np.tanh(a)</code>: the variable <code>h</code> is overwritten every step, and the next step reads it through <code>Whh @ h</code>. That reuse of <code>h</code> is the "recurrent" in RNN. Notice also that <code>Wxh</code> and <code>Whh</code> never change inside the loop: that is <strong>weight sharing over time</strong>.</p>
-  <p>Does order now matter? Feed the same three words in another order. A bag of words could not tell the difference; the RNN can:</p>
-<div class="fx" data-lang="py">def summary(words):
+    h = np.tanh(from_input + from_memory + b)      # the new memory replaces the old
+    print(f"t={t} {word:5s} Wxh@x={from_input.round(3)}  Whh@h={from_memory.round(3)}  h={h.round(3)}")</div>
+  <div class="fx" data-lang="text">t=1 chai  Wxh@x=[0.5 0.3]  Whh@h=[0. 0.]  h=[0.462 0.38 ]
+t=2 not   Wxh@x=[-0.5  0.8]  Whh@h=[0.261 0.089]  h=[-0.235  0.757]
+t=3 good  Wxh@x=[0.  1.1]  Whh@h=[0.058 0.525]  h=[0.057 0.938]</div>
+  <p>The output matches the hand table digit for digit. Two lines carry the whole idea. <code>h = np.tanh(...)</code> overwrites the memory at every step, and the next step reads it back through <code>Whh @ h</code>; that reuse is the "recurrent" part. And <code>Wxh</code> and <code>Whh</code> never change inside the loop: the same weights serve every position, which is called <strong>weight sharing over time</strong>. It is the same idea as a CNN sharing one filter across every position of an image, applied along time instead of space, and it is why the loop would run unchanged on a 300-word review.</p>
+  <p>Does the RNN now notice word order, which the bag of words could not? Feed it the same three words in different orders:</p>
+  <div class="fx" data-lang="py">def summary(words):                      # the whole RNN: a loop that overwrites h
     h = np.zeros(2)
     for w in words:
         h = np.tanh(Wxh @ emb[w] + Whh @ h + b)
     return h
-print("chai not good -&gt;", summary(["chai", "not", "good"]).round(3))
-print("good not chai -&gt;", summary(["good", "not", "chai"]).round(3))
-print("not good chai -&gt;", summary(["not", "good", "chai"]).round(3))</div>
-  <div class="fx" data-lang="text">chai not good -&gt; [0.057 0.938]
-good not chai -&gt; [0.499 0.773]
-not good chai -&gt; [0.586 0.752]</div>
-  <p>Three orders, three different final memories, from the same three word vectors and the same weights. The function <code>summary</code> is the whole RNN: a loop that overwrites <code>h</code>. It would run unchanged on a 300-word review.</p>
-  <p>PyTorch's <code>nn.RNN</code> runs this same loop in fast C++ code. Copy our weights into it and it must give the same numbers:</p>
-  <div class="fx" data-lang="py">import torch, torch.nn as nn
-rnn = nn.RNN(input_size=2, hidden_size=2, batch_first=True)
-with torch.no_grad():                         # copy our hand-made weights in
+
+for order in (["chai", "not", "good"], ["good", "not", "chai"], ["not", "good", "chai"]):
+    print(" ".join(order).ljust(14), "-&gt;", summary(order).round(3))</div>
+  <div class="fx" data-lang="text">chai not good  -&gt; [0.057 0.938]
+good not chai  -&gt; [0.499 0.773]
+not good chai  -&gt; [0.586 0.752]</div>
+  <p>Three orders give three different final memories, from the same word vectors and the same weights. The function <code>summary</code> is the whole RNN, a loop that overwrites <code>h</code>, and order now matters because each word is mixed into a memory that already contains the words before it.</p>
+  <p>In practice you do not write this loop yourself. PyTorch's <code>nn.RNN</code> runs the same recurrence in optimised C++ code. If we copy our hand-picked weights into it, it must produce our numbers:</p>
+  <div class="fx" data-lang="py">rnn = nn.RNN(input_size=2, hidden_size=2, batch_first=True)
+with torch.no_grad():                          # copy our hand-picked weights in
     rnn.weight_ih_l0.copy_(torch.tensor(Wxh))
     rnn.weight_hh_l0.copy_(torch.tensor(Whh))
     rnn.bias_ih_l0.copy_(torch.tensor(b))
-    rnn.bias_hh_l0.zero_()                    # PyTorch has two biases; we use one
+    rnn.bias_hh_l0.zero_()                     # PyTorch keeps two biases; we use one
 
-x = torch.tensor([[[1.0, 0.0],                # chai
-                   [0.0, 1.0],                # not
-                   [1.0, 1.0]]])              # good   shape (batch=1, seq=3, features=2)
+x = torch.tensor([[[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]]])   # chai, not, good: (batch=1, seq=3, features=2)
 out, h_n = rnn(x)
-print("out shape", tuple(out.shape), " h_n shape", tuple(h_n.shape))
+print("out", tuple(out.shape), " h_n", tuple(h_n.shape))
 print(out[0].detach().numpy().round(3))
-print("last step == h_n:", torch.allclose(out[:, -1], h_n[0]))</div>
-  <div class="fx" data-lang="text">out shape (1, 3, 2)  h_n shape (1, 1, 2)
+print("last row of out == h_n:", torch.allclose(out[:, -1], h_n[0]))</div>
+  <div class="fx" data-lang="text">out (1, 3, 2)  h_n (1, 1, 2)
 [[ 0.462  0.38 ]
  [-0.235  0.757]
  [ 0.057  0.938]]
-last step == h_n: True</div>
-  <p>Two return values, and beginners mix them up. <code>out</code> holds h at <em>every</em> step (shape: batch, steps, hidden), here our three rows. <code>h_n</code> holds only the <em>last</em> h (shape: layers, batch, hidden). <code>weight_ih_l0</code> is our W<sub>xh</sub> and <code>weight_hh_l0</code> is W<sub>hh</sub>; "l0" means layer 0.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Recurrence</strong>: h<sub>t</sub> = tanh(W<sub>xh</sub>x<sub>t</sub> + W<sub>hh</sub>h<sub>t−1</sub> + b), with h<sub>0</sub> = 0. <strong>Hidden state</strong> h<sub>t</sub>: the running summary of x<sub>1</sub>…x<sub>t</sub>. <strong>Output</strong> (when needed): y<sub>t</sub> = W<sub>hy</sub>h<sub>t</sub>, a normal linear layer on top. <strong>Unrolling</strong>: drawing the loop as T copies of the cell that share weights.</p>
-  </div>
-  <p>What you do with the hidden states depends on the task:</p>
-  <div class="cards">
-    <div><b>Many → one</b><p>Sentiment of a review: put a linear layer on the last h only.</p><small>Classification</small></div>
-    <div><b>Many → many (aligned)</b><p>A tag per word: a linear layer on every h<sub>t</sub>.</p><small>NER, POS tagging</small></div>
-    <div><b>Many → many (seq2seq)</b><p>Translate: an encoder RNN, then a decoder RNN.</p><small>Section 07</small></div>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p><code>nn.RNN</code>, <code>nn.LSTM</code> and <code>nn.GRU</code> expect (seq, batch, features) by default. If your tensor is (batch, seq, features), pass <code>batch_first=True</code>. Forgetting it gives no error when batch and seq sizes happen to be compatible: the model silently reads across the batch instead of along the sentence.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Backprop through time.</b> We picked W<sub>xh</sub> and W<sub>hh</sub> by hand. In a real model they must be learned, but each weight was used at step 1, step 2 and step 3. Which step does its gradient come from?</div>
+last row of out == h_n: True</div>
+  <p>The three rows are our h<sub>1</sub>, h<sub>2</sub> and h<sub>3</sub>. An RNN layer returns two things, and beginners often mix them up. <code>out</code> holds the hidden state at <em>every</em> step, with shape (batch, steps, hidden) when <code>batch_first=True</code>. <code>h_n</code> holds only the <em>last</em> hidden state, with shape (layers, batch, hidden); the last line confirms it equals the last row of <code>out</code>. PyTorch calls W<sub>xh</sub> <code>weight_ih_l0</code> (input to hidden, layer 0) and W<sub>hh</sub> <code>weight_hh_l0</code>, and it keeps two bias vectors where the formula has one, which is why we zeroed the second. The flag <code>batch_first=True</code> says our tensor is laid out as (batch, sequence, features); without it PyTorch assumes (sequence, batch, features), a trap we return to in Common Mistakes.</p>
+  <p>When a prediction is needed at each step, for example a tag for every word, a normal linear layer is placed on top of each hidden state: y<sub>t</sub> = W<sub>hy</sub>·h<sub>t</sub>. For a single prediction about the whole review, the linear layer goes on the last hidden state only. Section 07 looks at these task shapes.</p>
 
-  <h2 id="dr-bptt"><span class="num">03</span>Training: Backprop Through Time</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Backpropagation (<a class="xref" data-note="dl_backprop">Backpropagation</a>) gives every weight its own gradient, layer by layer. In an RNN the same W<sub>hh</sub> is reused at every step of "chai not good". How do we compute its gradient?</p>
-  </div>
-  <p>The need: we know how backprop trains a feed-forward network layer by layer. But in an RNN the same W<sub>hh</sub> is used at step 1, step 2 and step 3. Which step does its gradient come from? The answer is simple once the RNN is unrolled: the unrolled picture is just a deep network with T layers that happen to share weights. Run normal backprop on it. Every place a weight was used gives one piece of gradient, and the pieces are <strong>added up</strong>.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A kirana shop's month-end cash is ₹500 short. The owner walks back through the daily register, day 30, day 29, …, asking "how much did this day's entry push the final total off?". The same cashier (the shared weight) worked every day, so his total blame is the sum of his blame on each day.</p>
-  </div>
-  <h3>Worked example with one number</h3>
-  <p>To keep every number checkable, squeeze each word of our review into a single number (chai = 1, not = 0.5, good = −1; any three numbers would do) and the memory into a single number too.</p>
-  <p>Shrink the RNN to one hidden number: h<sub>t</sub> = tanh(w·h<sub>t−1</sub> + u·x<sub>t</sub>), with w = 0.5, u = 1, inputs x = 1, 0.5, −1. Let the "loss" simply be h<sub>3</sub>. Forward pass: h<sub>1</sub> = tanh(1) = 0.762, h<sub>2</sub> = tanh(0.381 + 0.5) = 0.707, h<sub>3</sub> = tanh(0.354 − 1) = −0.569.</p>
-  <p>Backward. The derivative of tanh is 1 − h², so one step back multiplies by <strong>w·(1 − h<sub>t</sub>²)</strong>:</p>
-  <ol>
-    <li>∂h<sub>3</sub>/∂h<sub>2</sub> = w·(1 − h<sub>3</sub>²) = 0.5 × (1 − 0.324) = <strong>0.338</strong></li>
-    <li>∂h<sub>2</sub>/∂h<sub>1</sub> = w·(1 − h<sub>2</sub>²) = 0.5 × (1 − 0.5) = 0.25</li>
-    <li>∂h<sub>3</sub>/∂h<sub>1</sub> = 0.338 × 0.25 = <strong>0.085</strong> (chain rule: multiply along the path)</li>
-  </ol>
+  <h2 id="dr-bptt"><span class="num">03</span>Backpropagation Through Time</h2>
+  <p>We picked W<sub>xh</sub> and W<sub>hh</sub> by hand, but a real RNN must learn them with gradient descent, which needs the gradient of the loss with respect to each weight. <a class="xref" data-note="dl_backprop">Loss &amp; Backpropagation</a> showed how to get gradients in a feed-forward network, layer by layer. The new difficulty is that an RNN uses the same W<sub>hh</sub> at step 1, step 2 and step 3. Which step does its gradient come from?</p>
+  <p>The answer becomes simple once you look at the unrolled picture. Unrolled over three words, the RNN is just a three-layer feed-forward network whose layers happen to share their weights. So we run ordinary backpropagation on the unrolled network. Every place where a shared weight was used produces one piece of gradient, and because the weight is the same at each place, the pieces are <strong>added up</strong>. This is called <strong>backpropagation through time</strong>, or <strong>BPTT</strong>: unroll the RNN over the sequence, backpropagate through the unrolled graph, and sum each shared weight's gradient over all time steps.</p>
+  <p>Think of a shop whose cash is ₹500 short at the end of the month. The owner walks back through the daily register, day 30, day 29, and so on, asking how much each day's entries pushed the final total off. The same cashier worked every day, so his total share of the blame is the sum of his share on each day. The cashier is the shared weight.</p>
+  <p>To follow every number, shrink the RNN to a single hidden number: h<sub>t</sub> = tanh(w·h<sub>t−1</sub> + u·x<sub>t</sub>), with w = 0.5 and u = 1. Squeeze each word of the review into one number too: chai = 1, not = 0.5, good = −1. To keep the arithmetic short, let the "loss" simply be h<sub>3</sub>. The forward pass gives h<sub>1</sub> = tanh(1) = 0.762, h<sub>2</sub> = tanh(0.5·0.762 + 0.5) = 0.707 and h<sub>3</sub> = tanh(0.5·0.707 − 1) = −0.569. Going backward, the chain rule says that to pass the gradient from h<sub>t</sub> back to h<sub>t−1</sub> we multiply by the derivative of tanh, which is 1 − h<sub>t</sub>², and by w. So every step back multiplies the gradient by <strong>w·(1 − h<sub>t</sub>²)</strong>. From h<sub>3</sub> to h<sub>2</sub> that is 0.5 × (1 − 0.324) = 0.338. From h<sub>2</sub> to h<sub>1</sub> it is 0.5 × (1 − 0.5) = 0.25, so the gradient reaching h<sub>1</sub> is 0.338 × 0.25 = 0.085.</p>
   <figure class="viz"><svg viewBox="0 0 600 170" width="600">
 <defs><marker id="dr-ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
 <marker id="dr-ar5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="tr" fill="currentColor"/></marker></defs>
@@ -334,61 +191,46 @@ last step == h_n: True</div>
 <circle cx="525" cy="55" r="26" class="fr sr"/><text x="525" y="52">h₃</text><text x="525" y="67" class="tm">−0.569</text>
 <text x="150" y="40" class="tm">forward</text>
 <text x="450" y="128" class="tr">× 0.338</text><text x="300" y="128" class="tr">× 0.25</text>
-<text x="300" y="160" class="tr">∂h₃/∂h₁ = 0.338 × 0.25 = 0.085: already small after 2 steps</text>
+<text x="300" y="160" class="tr">gradient reaching h₁ = 0.338 × 0.25 = 0.085</text>
 </g>
 <g stroke="currentColor" marker-end="url(#dr-ar4)"><line x1="101" y1="55" x2="197" y2="55"/><line x1="251" y1="55" x2="347" y2="55"/><line x1="401" y1="55" x2="497" y2="55"/></g>
 <g fill="none" class="sr" stroke-width="1.6" marker-end="url(#dr-ar5)"><path d="M520,82 Q450,120 382,84"/><path d="M370,82 Q300,120 232,84"/></g>
-</svg><figcaption>Forward (black): memory flows right. Backward (red): the gradient flows left and is multiplied by w·(1 − h²) at every step.</figcaption></figure>
-  <p>The code below does the backward pass by hand, then checks it with PyTorch's autograd (automatic differentiation). For ∂h<sub>3</sub>/∂w it walks back from step 3 to step 1, records how much w contributed at each step, and adds the pieces.</p>
+</svg><figcaption>Forward (black), the memory flows right. Backward (red), the gradient flows left and is multiplied by w·(1 − h²) at every step, so it is already down to 0.085 after two steps.</figcaption></figure>
+  <p>The code does the backward pass by hand, walking from step 3 back to step 1. At each step it records how much w contributed there (the gradient arriving at that step, times the h<sub>t−1</sub> that w multiplied), and then checks the sum against PyTorch's autograd:</p>
   <div class="fx" data-lang="py">import numpy as np, torch
 w, u = 0.5, 1.0
-xs = [1.0, 0.5, -1.0]
-hs = [0.0]                                  # forward, keeping every h (BPTT needs them)
+xs = [1.0, 0.5, -1.0]                       # chai, not, good squeezed to one number each
+hs = [0.0]                                  # forward pass, keeping every h (BPTT needs them)
 for x in xs:
     hs.append(np.tanh(w * hs[-1] + u * x))
 print("h:", np.round(hs, 3))
 
-d = [1 - h**2 for h in hs]                  # tanh'(a_t) = 1 - h_t^2
-dh3_dh2 = d[3] * w
-dh3_dh1 = d[3] * w * d[2] * w
-print(f"dh3/dh2 = {dh3_dh2:.3f}   dh3/dh1 = {dh3_dh1:.3f}")
-
-contrib, carry = [], 1.0                    # carry = dh3/dh_t, walking backwards
+parts, carry = [], 1.0                      # carry = dh3/dh_t while walking backwards
 for t in (3, 2, 1):
-    carry_a = carry * d[t]                  # dh3/da_t
-    contrib.append(carry_a * hs[t - 1])     # a_t uses w * h_{t-1}
-    carry = carry_a * w                     # pass back to h_{t-1}
-print("per-step parts (t=3,2,1):", np.round(contrib, 3), " sum =", round(sum(contrib), 4))
+    carry_a = carry * (1 - hs[t] ** 2)      # through tanh: slope 1 - h^2
+    parts.append(carry_a * hs[t - 1])       # w was used here, multiplied by h_(t-1)
+    carry = carry_a * w                     # one step further back
+    print(f"t={t}: gradient reaching h_{t-1} = {carry:.3f}")
+print("parts of dh3/dw (t=3,2,1):", np.round(parts, 3), " sum =", round(sum(parts), 4))
 
-wt = torch.tensor(w, requires_grad=True)    # the same with autograd
+wt = torch.tensor(w, requires_grad=True)    # the same thing with autograd
 h = torch.tensor(0.0)
 for x in xs:
     h = torch.tanh(wt * h + u * x)
 h.backward()
 print("autograd dh3/dw =", round(wt.grad.item(), 4))</div>
   <div class="fx" data-lang="text">h: [ 0.     0.762  0.707 -0.569]
-dh3/dh2 = 0.338   dh3/dh1 = 0.085
-per-step parts (t=3,2,1): [0.478 0.129 0.   ]  sum = 0.6065
+t=3: gradient reaching h_2 = 0.338
+t=2: gradient reaching h_1 = 0.085
+t=1: gradient reaching h_0 = 0.018
+parts of dh3/dw (t=3,2,1): [0.478 0.129 0.   ]  sum = 0.6065
 autograd dh3/dw = 0.6065</div>
-  <p>Three things to see. The list <code>hs</code> keeps every hidden state, because the backward pass needs them: that is why RNN training memory grows with sequence length. The loop variable <code>carry</code> is multiplied by <code>w * (1 - h²)</code> at every step back, which is the shrinking you will meet in section 04. And the three <code>contrib</code> parts add up to exactly what autograd computes: the gradient of a shared weight is the sum over time steps. (The t = 1 part is 0 only because h<sub>0</sub> = 0.)</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>BPTT (backpropagation through time)</strong>: unroll the RNN over the sequence, run ordinary backprop on the unrolled graph, and sum each shared weight's gradient over all steps. <strong>Truncated BPTT</strong>: for very long streams, cut the sequence into chunks of k steps and backprop only inside a chunk, while still passing the hidden state forward.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>With truncated BPTT you carry h from one chunk to the next. If you don't call <code>h = h.detach()</code> between chunks, PyTorch keeps the whole history in the graph, memory grows every batch, and the second <code>backward()</code> raises "Trying to backward through the graph a second time".</p>
-  </div>
-  <p>Interviews ask "how is an RNN trained?" The expected answer: unroll, backprop, gradients summed over time, plus truncated BPTT for long streams.</p>
-  <div class="bridge"><b>What this still can't tell us → next: Vanishing &amp; exploding gradients.</b> Going back just two steps multiplied the signal by 0.338 and then 0.25, leaving 0.085. A real review has 60 words, not 3. What happens to a product of 59 such factors?</div>
+  <p>The lines "gradient reaching h_2 = 0.338" and "h_1 = 0.085" are the two factors from the hand calculation. The three pieces of ∂h<sub>3</sub>/∂w, one per step, are 0.478, 0.129 and 0, and their sum, 0.6065, is exactly what autograd computes: the gradient of a shared weight is the sum over time steps. (The step-1 piece is 0 only because h<sub>0</sub> = 0, so w had nothing to multiply there.) Notice also that the forward loop keeps every hidden state in the list <code>hs</code>, because the backward pass needs them. That is why training an RNN uses memory proportional to the sequence length.</p>
+  <p>For a very long stream, such as a whole book or months of sensor data, unrolling everything is too expensive. <strong>Truncated BPTT</strong> cuts the stream into chunks of, say, 50 steps. The hidden state is still carried forward from chunk to chunk so the memory continues, but backpropagation stops at the chunk boundary. In PyTorch this is done by calling <code>h = h.detach()</code> before each chunk, which keeps the numbers in h but cuts the link to the earlier computation. Section 11 shows what happens if you forget it.</p>
 
-  <h2 id="dr-vg"><span class="num">04</span>Vanishing &amp; Exploding Gradients</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>In a 60-word review where the important word ("not") is at the start, can a loss computed at the end still teach the network anything about word 1?</p>
-  </div>
-  <p>In section 03, after only two steps back, the signal was already 0.085 of its size. That came from multiplying by a factor below 1 twice. Now imagine 60 steps. The gradient that tells step 1 "change like this" has to pass through 59 multiplications. If the factors are below 1, it shrinks towards zero (<strong>vanishing</strong>). If they are above 1, it blows up (<strong>exploding</strong>). Either way, early steps can't learn properly.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A message whispered from person to person down a 60-seat train coach: by the last seat, the first person's words are gone (vanishing). The opposite is a rumour that every person exaggerates a little: "a small fight" becomes "a riot" by seat 60 (exploding).</p>
-  </div>
-  <p>The plain arithmetic of repeated multiplication shows how fast this goes:</p>
+  <h2 id="dr-vg"><span class="num">04</span>Vanishing and Exploding Gradients</h2>
+  <p>In the last section, after only two steps back the gradient was 0.085 of its original size, because we multiplied by a factor below 1 twice. Now imagine a review of 60 words where the important word is near the start. The gradient that tells step 1 how to change must pass back through 59 such multiplications. If the factors are mostly below 1, the product shrinks towards zero; this is the <strong>vanishing gradient</strong> problem. If they are mostly above 1, the product blows up; this is the <strong>exploding gradient</strong> problem. Either way, the early steps of a long sequence cannot learn properly.</p>
+  <p>It is like a message whispered from person to person down a 60-seat train coach: by the last seat, the first person's words have faded to nothing. The opposite is a rumour that every person exaggerates a little, so "a small argument" becomes "a riot" by seat 60. The plain arithmetic of repeated multiplication shows how fast both happen:</p>
   <div class="fx" data-lang="py">for factor in (0.5, 0.9, 1.0, 1.1, 1.5):
     print(f"factor {factor}:  after 10 steps {factor**10:9.3g}   after 60 steps {factor**60:9.3g}")</div>
   <div class="fx" data-lang="text">factor 0.5:  after 10 steps  0.000977   after 60 steps  8.67e-19
@@ -396,69 +238,40 @@ factor 0.9:  after 10 steps     0.349   after 60 steps    0.0018
 factor 1.0:  after 10 steps         1   after 60 steps         1
 factor 1.1:  after 10 steps      2.59   after 60 steps       304
 factor 1.5:  after 10 steps      57.7   after 60 steps  3.68e+10</div>
-  <p>Only a factor of exactly 1 survives. Even 0.9, which looks harmless, leaves 0.2% after 60 steps. In a real RNN the factor is a matrix, W<sub>hh</sub>ᵀ times the tanh slopes (1 − h²), and the tanh slope is at most 1, which pushes things further toward vanishing.</p>
-  <p>Now a real measurement. We build a vanilla RNN and two LSTMs (section 05) over 60 steps, put a loss on the <em>last</em> output only, and ask: how big is the gradient with respect to each input step? A big number means "this step can still influence the loss and learn".</p>
-  <div class="fx" data-lang="py">import torch, torch.nn as nn
-torch.manual_seed(0)
+  <p>Only a factor of exactly 1 survives 60 steps. Even 0.9, which looks harmless, leaves 0.2% after 60 steps, and 1.1 grows 300-fold. In a real RNN the per-step factor is a matrix, W<sub>hh</sub>ᵀ multiplied by the tanh slopes (1 − h²), rather than one number. The tanh slope is never more than 1, which pushes the product further towards vanishing. When W<sub>hh</sub> stretches vectors by more than 1 (its largest stretch factor, the spectral radius, is above 1) the product can explode instead.</p>
+  <p>Here is the effect measured on a real PyTorch RNN with 32 hidden units. We feed it a random 60-step sequence, make the loss depend only on the <em>last</em> output, and ask how large the gradient of that loss is with respect to each input step. A large number means that step can still influence the loss, and so can still learn from it:</p>
+  <div class="fx" data-lang="py">torch.manual_seed(0)
 T, H = 60, 32
-rnn, lstm, lstm_f = nn.RNN(8, H, batch_first=True), nn.LSTM(8, H, batch_first=True), nn.LSTM(8, H, batch_first=True)
-with torch.no_grad():                       # gate order in PyTorch: input, forget, cell, output
-    lstm_f.bias_ih_l0[H:2*H].fill_(3.0)     # forget gate starts near sigmoid(3) = 0.95
-for name, cell in [("RNN", rnn), ("LSTM", lstm), ("LSTM f-bias=3", lstm_f)]:
-    x = torch.randn(1, T, 8, requires_grad=True)
-    out, _ = cell(x)
-    out[0, -1].sum().backward()                    # loss depends on the LAST step only
-    g = x.grad[0].norm(dim=1)                      # influence of each input step on it
-    print(f"{name:13s} t=60 {g[-1]:.0e}  t=50 {g[-11]:.0e}  t=40 {g[-21]:.0e}  t=20 {g[-41]:.0e}  t=1 {g[0]:.0e}")</div>
-  <div class="fx" data-lang="text">RNN           t=60 2e+00  t=50 2e-03  t=40 3e-06  t=20 4e-12  t=1 3e-17
-LSTM          t=60 4e-01  t=50 3e-03  t=40 4e-05  t=20 9e-09  t=1 1e-12
-LSTM f-bias=3 t=60 4e-01  t=50 1e-01  t=40 1e-01  t=20 4e-02  t=1 1e-01</div>
-  <figure class="viz"><svg viewBox="0 0 600 240" width="600">
-<g stroke="currentColor" stroke-opacity="0.25"><line x1="60" y1="29" x2="560" y2="29"/><line x1="60" y1="67" x2="560" y2="67"/><line x1="60" y1="105" x2="560" y2="105"/><line x1="60" y1="143" x2="560" y2="143"/><line x1="60" y1="181" x2="560" y2="181"/></g>
-<line x1="60" y1="190" x2="560" y2="190" stroke="currentColor"/>
-<g class="tm" text-anchor="end"><text x="54" y="33">1</text><text x="54" y="71">1e-4</text><text x="54" y="109">1e-8</text><text x="54" y="147">1e-12</text><text x="54" y="185">1e-16</text></g>
-<g class="tm" text-anchor="middle"><text x="60" y="206">t=1</text><text x="221" y="206">20</text><text x="391" y="206">40</text><text x="475" y="206">50</text><text x="560" y="206">60</text></g>
-<text x="310" y="228" text-anchor="middle" class="tm">input step t (loss is computed at step 60)</text>
-<polyline points="60,185 221,137 391,82 475,55 560,27" fill="none" class="sr" stroke-width="2.5"/>
-<polyline points="60,143 221,105 391,71 475,53 560,33" fill="none" stroke="currentColor" stroke-dasharray="5 4" stroke-width="2"/>
-<polyline points="60,39 221,43 391,39 475,39 560,33" fill="none" class="sg" stroke-width="2.5"/>
-<text x="120" y="176" class="tr">vanilla RNN</text>
-<text x="90" y="95">LSTM, default init</text>
-<text x="120" y="56" class="tg">LSTM, forget bias = 3</text>
-</svg><figcaption>Size of |∂loss/∂x<sub>t</sub>| (log scale): how much step t can still influence a loss at step 60. Data from the run above.</figcaption></figure>
-  <p>Read the RNN row from right to left: 2 at the last step, 0.002 ten steps back, and 3×10⁻¹⁷ at step 1. That is effectively zero: whatever happened at step 1 cannot be learned from a loss at step 60. The line <code>out[0, -1].sum().backward()</code> makes the loss depend only on the last step, and <code>x.grad[0].norm(dim=1)</code> measures each step's share. Keep the green line in mind; section 05 explains it.</p>
-  <h3>Exploding: clip the gradient</h3>
-  <p>Exploding is the easier half. If the gradient norm (its overall length) is huge, scale the whole gradient down to a maximum length before the optimizer step. Direction is kept; only the size is capped.</p>
+rnn = nn.RNN(8, H, batch_first=True)
+x = torch.randn(1, T, 8, requires_grad=True)      # one random 60-step sequence
+out, _ = rnn(x)
+out[0, -1].sum().backward()                       # a loss that depends on the LAST step only
+g = x.grad[0].norm(dim=1)                         # how much each input step affects that loss
+for t in (60, 50, 40, 20, 1):
+    print(f"step {t:2d}: {g[t - 1]:.0e}")</div>
+  <div class="fx" data-lang="text">step 60: 2e+00
+step 50: 4e-03
+step 40: 7e-06
+step 20: 2e-11
+step  1: 6e-17</div>
+  <p>Read the numbers from the end backwards. The last step has a gradient of about 2, ten steps earlier it is 0.004, and at step 1 it is 6×10⁻¹⁷, which for training purposes is zero. Whatever happened at step 1 cannot be learned from a loss at step 60. The line <code>out[0, -1].sum().backward()</code> makes the loss depend on the last step only, and <code>x.grad[0].norm(dim=1)</code> measures each input step's share of the gradient. This is the real reason plain RNNs struggle with long-range dependencies such as "not" at word 2 deciding the meaning of word 50.</p>
+  <p>Exploding gradients are the easier half to fix. If the gradient's overall length (its norm) is huge, we scale the whole gradient down to a chosen maximum length before the optimizer step. The direction stays the same; only the size is capped. This is called <strong>gradient clipping</strong>:</p>
   <div class="fx" data-lang="py">torch.manual_seed(1)
-big = nn.RNN(8, H, batch_first=True)
+big = nn.RNN(8, 32, batch_first=True)
 with torch.no_grad():
     big.weight_hh_l0.mul_(8.0)                     # make W_hh far too large
-x = torch.randn(4, T, 8)
-out, _ = big(x)
+out, _ = big(torch.randn(4, 60, 8))
 (out ** 2).sum().backward()                        # any loss
 before = nn.utils.clip_grad_norm_(big.parameters(), max_norm=1.0)
 after = torch.sqrt(sum((p.grad ** 2).sum() for p in big.parameters()))
-print(f"grad norm before clip {before:.2e}  after clip {after:.2f}")</div>
-  <div class="fx" data-lang="text">grad norm before clip 2.59e+11  after clip 1.00</div>
-  <p><code>clip_grad_norm_</code> returns the norm it found (2.6×10¹¹, which would wreck the weights in one step) and rescales the gradients in place so the new norm is 1.0. In a training loop it goes between <code>loss.backward()</code> and <code>optimizer.step()</code>.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Vanishing gradient</strong>: ∂h<sub>T</sub>/∂h<sub>1</sub> = product of T−1 Jacobians W<sub>hh</sub>ᵀ·diag(1 − h<sub>t</sub>²) shrinks exponentially when their size (spectral radius, the biggest stretch factor of W<sub>hh</sub>) is below 1. <strong>Exploding gradient</strong>: the same product grows exponentially when it is above 1. <strong>Gradient clipping</strong>: rescale the gradient so its norm is at most a threshold.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Clipping fixes exploding, not vanishing. You can cap a huge number; you can't recover a signal that has shrunk to 10⁻¹⁷. Vanishing needs a different design: gates (LSTM/GRU) or attention.</p>
-  </div>
-  <p>Why it matters: this is the reason plain RNNs are rarely used, and "explain vanishing gradients in RNNs" is one of the most common deep-learning interview questions.</p>
-  <p>The same problem appears in deep feed-forward networks (see <a class="xref" data-note="dl_training">Training</a> and the ResNet section of <a class="xref" data-note="dl_cnns">CNNs</a>); an RNN unrolled over 60 words simply <em>is</em> a 60-layer network that reuses one weight matrix, which makes it worse.</p>
-  <div class="bridge"><b>What this still can't tell us → next: LSTM gates.</b> Clipping caps the explosions, but nothing can rescue a signal of 10⁻¹⁷. The memory must be redesigned so that information (and its gradient) can pass many steps without being squashed every time.</div>
+print(f"gradient norm before clipping {before:.2e}   after {after:.2f}")</div>
+  <div class="fx" data-lang="text">gradient norm before clipping 2.59e+11   after 1.00</div>
+  <p>We deliberately made W<sub>hh</sub> eight times too large, and the gradient norm came out at 2.6×10¹¹, big enough to wreck every weight in one update. <code>clip_grad_norm_</code> returns the norm it found and rescales the gradients in place so the new norm is exactly 1.0. In a training loop it goes between <code>loss.backward()</code> and <code>optimizer.step()</code>, and almost every RNN training script uses it.</p>
+  <p>Vanishing gradients have no such fix. You can cap a huge number, but you cannot recover a signal that has already shrunk to 10⁻¹⁷. The same problem appears in very deep feed-forward networks (see <a class="xref" data-note="dl_training">Training Well</a>); an RNN unrolled over 60 words simply <em>is</em> a 60-layer network that reuses one weight matrix, which makes it worse. The cure has to be a different design for the memory itself, one where information and its gradient can pass many steps without being squashed at each one. That design is the LSTM.</p>
 
-  <h2 id="dr-lstm"><span class="num">05</span>LSTM Gates</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The plain RNN rewrites its whole memory through a matrix and a tanh at every word, so "not" at word 1 is forgotten by word 60. How can a cell keep something for many steps, and still decide when to forget it?</p>
-  </div>
-  <p>The need: the plain RNN rewrites its whole memory at every step through a matrix multiply and a tanh, so old information (and its gradient) fades. The LSTM (long short-term memory) idea in plain words: keep a <strong>second</strong> memory line, the <strong>cell state</strong> c, that is changed only by gentle edits: erase a little, add a little. Three <strong>gates</strong> decide the edits. A gate is just a number between 0 and 1 (a sigmoid output) that is multiplied in: 0 means "block", 1 means "let everything through".</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A shopkeeper's credit register (khata). Each evening she decides three things: which old entries to strike off (forget gate), which new entries to write (input gate), and which entries to read out when a customer asks (output gate). Most entries are simply left alone from day to day. A plain RNN would copy the entire register onto a new page every evening, with small copying errors each time.</p>
-  </div>
+  <h2 id="dr-lstm"><span class="num">05</span>LSTM: A Memory With Gates</h2>
+  <p>The plain RNN rewrites its entire memory at every step by pushing it through a matrix multiply and a tanh, and that repeated rewriting is what makes old information, and its gradient, fade. The <strong>LSTM</strong>, short for long short-term memory (Hochreiter and Schmidhuber, 1997), adds a second memory line called the <strong>cell state</strong>, written c, which is changed only by gentle edits: erase a little, add a little. What to erase, what to add and what to show are decided by three <strong>gates</strong>. A gate is simply a number between 0 and 1, produced by a sigmoid function, that is multiplied into a signal: 0 means "block everything" and 1 means "let everything through".</p>
+  <p>Think of a shopkeeper's credit register, the book where she notes what each regular customer owes. Each evening she makes three decisions: which old entries to strike off (the forget gate), which new entries to write in (the input gate), and which entries to read out when a customer asks (the output gate). Most entries are simply left alone from day to day. A plain RNN, by contrast, would copy the whole register onto a fresh page every evening, making small copying errors each time, until after a few weeks the oldest entries are unreadable.</p>
   <figure class="viz"><svg viewBox="0 0 600 270" width="600">
 <defs><marker id="dr-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
 <rect x="70" y="25" width="450" height="200" rx="10" fill="none" stroke="currentColor" stroke-opacity="0.4"/>
@@ -491,52 +304,37 @@ print(f"grad norm before clip {before:.2e}  after clip {after:.2f}")</div>
 <line x1="120" y1="258" x2="120" y2="212" marker-end="url(#dr-ar2)"/>
 </g>
 <text x="20" y="204">h(t−1)</text><text x="128" y="256">x(t)</text><text x="545" y="152">h(t)</text>
-</svg><figcaption>Gates (σ, 0 to 1) are valves on the green cell-state belt: f erases, i·c̃ writes, o chooses what to expose as h. All four boxes read the same inputs: h(t−1) and x(t).</figcaption></figure>
+</svg><figcaption>One LSTM step. The green line along the top is the cell state. The forget gate f multiplies it (erase), the input gate i times the candidate c̃ is added to it (write), and the output gate o decides how much of tanh(c) leaves as the hidden state h. All four boxes read the same two inputs, h(t−1) and x(t).</figcaption></figure>
+  <p>Walk through the figure from left to right. All four boxes at the bottom look at the same two things, the previous hidden state h<sub>t−1</sub> and the current input x<sub>t</sub>, each through its own weights. Three of them use a sigmoid σ, which maps any number into 0…1, so they are gates. The fourth uses tanh, which maps into −1…1, and produces the <strong>candidate</strong> c̃, the new information that might be written. On the belt, the old cell state is first multiplied by the forget gate, then the input gate times the candidate is added. Finally the output gate decides how much of the (squashed) cell state to expose as the new hidden state. The symbol ⊙ below means element-by-element multiplication.</p>
   <table class="tbl">
-    <tr><th>Piece</th><th>Equation (all read h<sub>t−1</sub> and x<sub>t</sub>)</th><th>Plain words</th></tr>
-    <tr><td>Forget gate</td><td>f = σ(W<sub>f</sub>[h, x] + b<sub>f</sub>)</td><td>How much old memory to keep (1 = all)</td></tr>
-    <tr><td>Input gate</td><td>i = σ(W<sub>i</sub>[h, x] + b<sub>i</sub>)</td><td>How much new info to write</td></tr>
-    <tr><td>Candidate</td><td>c̃ = tanh(W<sub>c</sub>[h, x] + b<sub>c</sub>)</td><td>What the new info is (−1 to 1)</td></tr>
-    <tr><td>Cell update</td><td><strong>c<sub>t</sub> = f ⊙ c<sub>t−1</sub> + i ⊙ c̃</strong></td><td>Erase a little, add a little</td></tr>
-    <tr><td>Output gate</td><td>o = σ(W<sub>o</sub>[h, x] + b<sub>o</sub>); <strong>h<sub>t</sub> = o ⊙ tanh(c<sub>t</sub>)</strong></td><td>What to reveal now</td></tr>
+    <tr><th>Piece</th><th>Equation</th><th>In plain words</th></tr>
+    <tr><td>Forget gate</td><td>f = σ(W<sub>f</sub>[h<sub>t−1</sub>, x<sub>t</sub>] + b<sub>f</sub>)</td><td>how much old memory to keep (1 = all of it)</td></tr>
+    <tr><td>Input gate</td><td>i = σ(W<sub>i</sub>[h<sub>t−1</sub>, x<sub>t</sub>] + b<sub>i</sub>)</td><td>how much of the new information to write</td></tr>
+    <tr><td>Candidate</td><td>c̃ = tanh(W<sub>c</sub>[h<sub>t−1</sub>, x<sub>t</sub>] + b<sub>c</sub>)</td><td>what the new information is</td></tr>
+    <tr><td>Cell update</td><td><strong>c<sub>t</sub> = f ⊙ c<sub>t−1</sub> + i ⊙ c̃</strong></td><td>erase a little, add a little</td></tr>
+    <tr><td>Output</td><td>o = σ(W<sub>o</sub>[h<sub>t−1</sub>, x<sub>t</sub>] + b<sub>o</sub>); <strong>h<sub>t</sub> = o ⊙ tanh(c<sub>t</sub>)</strong></td><td>what to reveal at this step</td></tr>
   </table>
-  <p>σ is the sigmoid, 1/(1 + e<sup>−z</sup>), which maps any number to 0…1. ⊙ means element-by-element multiply.</p>
-  <h3>Worked example: one LSTM step by hand</h3>
-  <p>Same sentence "chai not good", same word vectors, but now a single hidden number so every gate is one number. Each gate has a weight on h, two weights on x, and a bias. Forget gate: 0.5, [0.2, −0.4], bias 1. Input: 0.3, [0.6, 0.4], 0. Candidate: −0.2, [0.9, −0.7], 0. Output: 0.4, [0.1, 0.5], 0. Start h = 0, c = 0. Step 1, x = "chai" = [1, 0]:</p>
-  <table class="tbl out"><caption>Step 1 traced</caption>
-    <tr><th>Piece</th><th>Inside (w<sub>h</sub>·h + w<sub>x</sub>·x + b)</th><th>After squash</th></tr>
-    <tr><td>f</td><td>0 + 0.2 + 1 = 1.2</td><td>σ(1.2) = 0.769</td></tr>
-    <tr><td>i</td><td>0 + 0.6 + 0 = 0.6</td><td>σ(0.6) = 0.646</td></tr>
-    <tr><td>c̃</td><td>0 + 0.9 + 0 = 0.9</td><td>tanh(0.9) = 0.716</td></tr>
-    <tr><td>o</td><td>0 + 0.1 + 0 = 0.1</td><td>σ(0.1) = 0.525</td></tr>
-    <tr><td>c<sub>1</sub></td><td colspan="2">f·c<sub>0</sub> + i·c̃ = 0.769·0 + 0.646·0.716 = <strong>0.462</strong></td></tr>
-    <tr><td>h<sub>1</sub></td><td colspan="2">o·tanh(c<sub>1</sub>) = 0.525 · 0.432 = <strong>0.227</strong></td></tr>
-  </table>
-  <p>The code runs all three words with exactly these weights, then copies them into PyTorch's <code>nn.LSTM</code> to confirm:</p>
-  <div class="fx" data-lang="py">import numpy as np
-def sigmoid(z): return 1 / (1 + np.exp(-z))
-emb = {"chai": np.array([1.0, 0.0]), "not": np.array([0.0, 1.0]), "good": np.array([1.0, 1.0])}
-# each gate: weight on h_prev, weights on x (2 numbers), bias
-W = {"f": (0.5,  np.array([0.2, -0.4]), 1.0),    # forget gate (bias 1 -&gt; starts "keep")
+  <p>Let us push "chai" through one LSTM step by hand. To keep each gate a single number, the hidden state and cell state have size 1, so each gate has one weight on h, two weights on x (because our word vectors have two numbers) and a bias. The forget gate has weights 0.5 and [0.2, −0.4] and bias 1; the input gate 0.3, [0.6, 0.4], bias 0; the candidate −0.2, [0.9, −0.7], bias 0; the output gate 0.4, [0.1, 0.5], bias 0. We start with h = 0 and c = 0, and x = chai = [1, 0]. The forget gate's inside is 0 + 0.2 + 1 = 1.2, so f = σ(1.2) = 0.769. The input gate gives σ(0.6) = 0.646, the candidate tanh(0.9) = 0.716, and the output gate σ(0.1) = 0.525. The new cell state is c<sub>1</sub> = 0.769·0 + 0.646·0.716 = 0.462, and the new hidden state is h<sub>1</sub> = 0.525·tanh(0.462) = 0.525·0.432 = 0.227. The code repeats this for all three words and then loads the same weights into PyTorch's <code>nn.LSTM</code>:</p>
+  <div class="fx" data-lang="py"># each gate: (weight on h_prev, weights on x, bias)
+W = {"f": (0.5,  np.array([0.2, -0.4]), 1.0),    # forget gate (bias 1: starts by keeping)
      "i": (0.3,  np.array([0.6,  0.4]), 0.0),    # input gate
      "g": (-0.2, np.array([0.9, -0.7]), 0.0),    # candidate c~
      "o": (0.4,  np.array([0.1,  0.5]), 0.0)}    # output gate
 def pre(k, h, x):
-    wh, wx, b = W[k]
-    return wh * h + wx @ x + b
+    wh, wx, bias = W[k]
+    return wh * h + wx @ x + bias
 
 h, c = 0.0, 0.0
 for t, word in enumerate(["chai", "not", "good"], 1):
     x = emb[word]
-    f = sigmoid(pre("f", h, x)); i = sigmoid(pre("i", h, x))
-    g = np.tanh(pre("g", h, x)); o = sigmoid(pre("o", h, x))
+    f, i = sigmoid(pre("f", h, x)), sigmoid(pre("i", h, x))
+    g, o = np.tanh(pre("g", h, x)), sigmoid(pre("o", h, x))
     c = f * c + i * g                  # erase a little, write a little
-    h = o * np.tanh(c)                 # expose part of the memory
+    h = o * np.tanh(c)                 # show part of the memory
     print(f"t={t} {word:5s} f={f:.3f} i={i:.3f} c~={g:+.3f} o={o:.3f} -&gt; c={c:+.3f} h={h:+.3f}")
 
-import torch, torch.nn as nn
-lstm = nn.LSTM(2, 1, batch_first=True)
-order = ["i", "f", "g", "o"]           # PyTorch's gate order
+lstm = nn.LSTM(2, 1, batch_first=True)           # PyTorch with the same weights
+order = ["i", "f", "g", "o"]                     # PyTorch's gate order
 with torch.no_grad():
     lstm.weight_ih_l0.copy_(torch.tensor(np.stack([W[k][1] for k in order])))
     lstm.weight_hh_l0.copy_(torch.tensor([[W[k][0]] for k in order]))
@@ -548,50 +346,69 @@ print("PyTorch h:", out[0, :, 0].detach().numpy().round(3), " c_n:", round(c_n.i
 t=2 not   f=0.671 i=0.615 c~=-0.632 o=0.644 -&gt; c=-0.078 h=-0.050
 t=3 good  f=0.685 i=0.728 c~=+0.207 o=0.641 -&gt; c=+0.097 h=+0.062
 PyTorch h: [ 0.227 -0.05   0.062]  c_n: 0.097</div>
-  <p>Row 1 is the hand trace. At step 2, "not" brings a negative candidate (−0.632); the forget gate keeps 67% of the old +0.462 and the input gate writes 61.5% of the new −0.632, giving c = −0.078. The two lines that matter are <code>c = f * c + i * g</code> and <code>h = o * np.tanh(c)</code>. PyTorch prints the same h, which proves its LSTM is this formula. Note the list <code>order</code>: PyTorch stacks the gates as input, forget, cell (g), output.</p>
-  <h3>Why this fixes vanishing</h3>
-  <p>Look at the cell update again: c<sub>t</sub> = f ⊙ c<sub>t−1</sub> + i ⊙ c̃. Going back one step, the gradient along the belt is multiplied by f, a plain number per dimension that the network learns, not by a matrix and a tanh slope. If the network learns f ≈ 1 for something worth remembering, the signal passes almost unchanged:</p>
-  <div class="fx" data-lang="py">h_rnn, c_lstm = 1.0, 1.0
+  <p>Row 1 is our hand calculation. At step 2, "not" produces a negative candidate, −0.632. The forget gate keeps 67% of the old +0.462 and the input gate writes 61.5% of the new −0.632, so the cell state swings to −0.078: the memory has registered the negation. The two lines that define an LSTM are <code>c = f * c + i * g</code> and <code>h = o * np.tanh(c)</code>, and PyTorch prints the same hidden states, so its LSTM is exactly this formula. Note the list <code>order</code>: PyTorch stores the four weight blocks stacked in the order input, forget, cell candidate (which it calls g), output. That matters whenever you load or initialise weights by hand.</p>
+  <p>Why does this cure vanishing gradients? Look again at the cell update, c<sub>t</sub> = f ⊙ c<sub>t−1</sub> + i ⊙ c̃. Going back one step along the belt, the gradient is multiplied by f, a plain number per dimension that the network itself controls, instead of by a weight matrix and a tanh slope. If the network learns f ≈ 1 for something worth remembering, the value and its gradient pass almost unchanged. Compare storing one value for 50 steps in each kind of memory:</p>
+  <div class="fx" data-lang="py">import numpy as np
+h_rnn, c_lstm = 1.0, 1.0                 # store the value 1.0 and carry it for 50 steps
 for step in range(50):
-    h_rnn = np.tanh(0.9 * h_rnn)       # plain RNN: squash and multiply every step
-    c_lstm = 0.99 * c_lstm + 0.0       # LSTM: forget gate 0.99, input gate 0
+    h_rnn = np.tanh(0.9 * h_rnn)         # plain RNN: multiply and squash every step
+    c_lstm = 0.99 * c_lstm + 0.0         # LSTM cell: forget gate 0.99, input gate 0
 print(f"after 50 steps  RNN memory {h_rnn:.4f}   LSTM cell {c_lstm:.4f}")</div>
   <div class="fx" data-lang="text">after 50 steps  RNN memory 0.0026   LSTM cell 0.6050</div>
-  <p>The same value stored for 50 steps: the RNN keeps 0.26% of it, the LSTM cell keeps 60%. This is also the green line in section 04: with the forget bias set to 3, f starts near σ(3) = 0.95, and step 1 keeps an influence of 0.1 instead of 10⁻¹².</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>LSTM</strong> (Hochreiter &amp; Schmidhuber, 1997): an RNN cell with a cell state c updated additively, c<sub>t</sub> = f⊙c<sub>t−1</sub> + i⊙c̃, and output h<sub>t</sub> = o⊙tanh(c<sub>t</sub>). Since ∂c<sub>t</sub>/∂c<sub>t−1</sub> = f (element-wise), the cell state is a gradient highway, the same idea as the "+x" skip connection in ResNet.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>An LSTM is not automatically long-memory. With default init, f starts around 0.5, and in our run step 1's influence was still 10⁻¹². Initialise the forget-gate bias to 1 (common) or higher so memory is "on" at the start of training.</p>
-  </div>
-  <p>How big are these layers? The next code counts parameters and shows output shapes for a real-sized input: a batch of 32 sequences, 50 steps each, 128 features per step, hidden size 256.</p>
+  <p>The plain RNN keeps 0.26% of the value; the LSTM cell with a forget gate of 0.99 keeps 60%. The additive update turns the cell state into a "gradient highway", the same idea as the "+x" skip connection in ResNet (see <a class="xref" data-note="dl_cnns">CNNs</a>), which lets gradients flow through very deep networks.</p>
+  <p>There is a catch, and it is worth knowing for interviews. An LSTM is not long-memory automatically. With PyTorch's default initialisation the forget gate starts around 0.5, which still halves the signal at every step. The fix is to start the forget-gate bias at a positive value, commonly 1 and sometimes up to 3, so that at the start of training the gate is "open" and memory is kept by default. The experiment from section 04, repeated with an LSTM and with an LSTM whose forget bias is 3:</p>
+  <div class="fx" data-lang="py">T, H = 60, 32
+def influence(make, forget_bias=None):
+    torch.manual_seed(0)
+    cell = make(8, H, batch_first=True)
+    if forget_bias is not None:
+        with torch.no_grad():                    # PyTorch gate order: input, forget, cell, output
+            cell.bias_ih_l0[H:2*H].fill_(forget_bias)
+    x = torch.randn(1, T, 8, requires_grad=True)
+    out, _ = cell(x)
+    out[0, -1].sum().backward()
+    g = x.grad[0].norm(dim=1)
+    return "  ".join(f"t={t}: {g[t - 1]:.0e}" for t in (60, 50, 40, 20, 1))
+
+print("RNN            ", influence(nn.RNN))
+print("LSTM           ", influence(nn.LSTM))
+print("LSTM f-bias = 3", influence(nn.LSTM, forget_bias=3.0))</div>
+  <div class="fx" data-lang="text">RNN             t=60: 2e+00  t=50: 4e-03  t=40: 7e-06  t=20: 2e-11  t=1: 6e-17
+LSTM            t=60: 4e-01  t=50: 9e-04  t=40: 7e-06  t=20: 2e-09  t=1: 4e-13
+LSTM f-bias = 3 t=60: 2e-01  t=50: 7e-02  t=40: 7e-02  t=20: 4e-02  t=1: 5e-02</div>
+  <figure class="viz"><svg viewBox="0 0 600 240" width="600">
+<g stroke="currentColor" stroke-opacity="0.25"><line x1="60" y1="29" x2="560" y2="29"/><line x1="60" y1="67" x2="560" y2="67"/><line x1="60" y1="105" x2="560" y2="105"/><line x1="60" y1="143" x2="560" y2="143"/><line x1="60" y1="181" x2="560" y2="181"/></g>
+<line x1="60" y1="190" x2="560" y2="190" stroke="currentColor"/>
+<g class="tm" text-anchor="end"><text x="54" y="33">1</text><text x="54" y="71">1e-4</text><text x="54" y="109">1e-8</text><text x="54" y="147">1e-12</text><text x="54" y="185">1e-16</text></g>
+<g class="tm" text-anchor="middle"><text x="60" y="206">t=1</text><text x="221" y="206">20</text><text x="391" y="206">40</text><text x="475" y="206">50</text><text x="560" y="206">60</text></g>
+<text x="310" y="228" text-anchor="middle" class="tm">input step t (the loss is computed at step 60)</text>
+<polyline points="60,183 221,131 391,78 475,52 560,26" fill="none" class="sr" stroke-width="2.5"/>
+<polyline points="60,147 221,112 391,78 475,58 560,33" fill="none" stroke="currentColor" stroke-dasharray="5 4" stroke-width="2"/>
+<polyline points="60,41 221,42 391,40 475,40 560,36" fill="none" class="sg" stroke-width="2.5"/>
+<text x="230" y="160" class="tr">plain RNN</text>
+<text x="80" y="125">LSTM, default init</text>
+<text x="120" y="62" class="tg">LSTM, forget bias = 3</text>
+</svg><figcaption>Size of the gradient reaching each input step (log scale), from the run above. The plain RNN (red) and the default LSTM (dashed) both fall off steeply; the LSTM with a forget bias of 3 (green) stays almost flat, so step 1 can still learn.</figcaption></figure>
+  <p>The default LSTM is a little better than the plain RNN but still down to 4×10⁻¹³ at step 1. With the forget bias at 3 the gate starts near σ(3) = 0.95, and step 1 keeps a gradient of 0.05, eleven orders of magnitude more. During training the network can then learn to close the gate wherever forgetting is useful.</p>
+  <p>Gates cost parameters. Each gate and the candidate has its own full weight block, so an LSTM layer has four times the weights of a plain RNN layer of the same size. Here are the three layer types at a realistic size, 128 input features and 256 hidden units, on a batch of 32 sequences of 50 steps:</p>
   <div class="fx" data-lang="py">torch.manual_seed(0)
 x = torch.randn(32, 50, 128)                     # (batch, seq_len, features)
-n = lambda m: sum(p.numel() for p in m.parameters())
-for name, m in [("RNN", nn.RNN(128, 256, batch_first=True)),
-                ("GRU", nn.GRU(128, 256, batch_first=True)),
-                ("LSTM", nn.LSTM(128, 256, batch_first=True))]:
-    out, state = m(x)
-    hn = state[0] if isinstance(state, tuple) else state     # LSTM returns (h_n, c_n)
-    print(f"{name:4s} params {n(m):&gt;7,}  output {tuple(out.shape)}  h_n {tuple(hn.shape)}")</div>
-  <div class="fx" data-lang="text">RNN  params  98,816  output (32, 50, 256)  h_n (1, 32, 256)
-GRU  params 296,448  output (32, 50, 256)  h_n (1, 32, 256)
-LSTM params 395,264  output (32, 50, 256)  h_n (1, 32, 256)</div>
-  <p>One RNN block is 256·128 (W<sub>xh</sub>) + 256·256 (W<sub>hh</sub>) + 2·256 (two biases) = 98,816. A GRU has 3 such blocks and an LSTM 4 (one per gate plus the candidate): 4 × 98,816 = 395,264. All three return <code>out</code> of shape (32, 50, 256), one h per step, and <code>h_n</code> of shape (layers × directions, batch, hidden). The <code>isinstance</code> line is needed because only the LSTM returns a pair (h_n, c_n).</p>
-  <div class="bridge"><b>What this still can't tell us → next: GRU.</b> The LSTM remembers, but it carries two state vectors and four weight blocks (395,264 weights in our 128 → 256 layer). Can the same gating idea be done more cheaply?</div>
+count = lambda m: sum(p.numel() for p in m.parameters())
+for name, layer in [("RNN", nn.RNN(128, 256, batch_first=True)),
+                    ("GRU", nn.GRU(128, 256, batch_first=True)),
+                    ("LSTM", nn.LSTM(128, 256, batch_first=True))]:
+    out, state = layer(x)
+    h_n = state[0] if name == "LSTM" else state   # the LSTM returns a pair (h_n, c_n)
+    print(f"{name:4s} params {count(layer):&gt;7,}  out {tuple(out.shape)}  h_n {tuple(h_n.shape)}")</div>
+  <div class="fx" data-lang="text">RNN  params  98,816  out (32, 50, 256)  h_n (1, 32, 256)
+GRU  params 296,448  out (32, 50, 256)  h_n (1, 32, 256)
+LSTM params 395,264  out (32, 50, 256)  h_n (1, 32, 256)</div>
+  <p>One plain RNN block has 256·128 (W<sub>xh</sub>) + 256·256 (W<sub>hh</sub>) + 2·256 (PyTorch's two biases) = 98,816 weights. The LSTM has four such blocks, 395,264, and the GRU of the next section has three. All three return <code>out</code> of shape (32, 50, 256), one hidden state per step, and <code>h_n</code> of shape (layers × directions, batch, hidden). Only the LSTM returns a pair, <code>(h_n, c_n)</code>, because it carries the cell state as well.</p>
 
-  <h2 id="dr-gru"><span class="num">06</span>GRU vs LSTM</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Is the LSTM's machinery (separate cell, three gates, four weight blocks) all necessary, or can a simpler gated cell remember "not" just as well?</p>
-  </div>
-  <p>The need: the LSTM works, but it carries two state vectors and four weight blocks, which is slow on long sequences and heavy for small datasets. The GRU (gated recurrent unit, 2014) asks: can we keep the "gentle edit" idea with less machinery? Its plain idea: one state h only, and one dial z that decides "how much of the old memory do I replace with the new candidate?". Keep (1 − z) of the old, take z of the new. A second dial r (reset) decides how much of the old memory the candidate may look at when it is built.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Updating your phone's contact for a friend who moved city. The update dial z says how much of the old entry to overwrite (z = 0: keep it all, z = 1: replace it all). The reset dial r says whether to even look at the old entry while writing the new one: for a brand-new topic you ignore it (r ≈ 0).</p>
-  </div>
-  <div class="callout def"><span class="label">GRU equations</span>
-    <p>z = σ(W<sub>z</sub>[h<sub>t−1</sub>, x<sub>t</sub>]) update · r = σ(W<sub>r</sub>[h<sub>t−1</sub>, x<sub>t</sub>]) reset · h̃ = tanh(W[r ⊙ h<sub>t−1</sub>, x<sub>t</sub>]) candidate · <strong>h<sub>t</sub> = (1 − z) ⊙ h<sub>t−1</sub> + z ⊙ h̃</strong></p>
-  </div>
-  <p>Same sentence, one hidden number, hand-picked weights (z: 0.4, [0.5, 0.3], bias −0.5; r: −0.3, [0.2, 0.7], 0; candidate: 0.8, [0.9, −0.6], 0). Step 1 by hand with h<sub>0</sub> = 0 and x = [1, 0]: z = σ(0.5 − 0.5) = σ(0) = 0.5. r = σ(0.2) = 0.550. h̃ = tanh(0.8·(0.55·0) + 0.9) = tanh(0.9) = 0.716. Then h<sub>1</sub> = (1 − 0.5)·0 + 0.5·0.716 = <strong>0.358</strong>: half old (nothing), half new.</p>
+  <h2 id="dr-gru"><span class="num">06</span>GRU: The Lighter Gated Cell</h2>
+  <p>The LSTM remembers well, but it carries two state vectors and four weight blocks, which makes it slower and more data-hungry. The <strong>GRU</strong>, or gated recurrent unit (Cho et al., 2014), keeps the "edit, don't rewrite" idea with less machinery. It has only one state, h, and two gates. The <strong>update gate</strong> z decides how much of the old memory to replace with new content: keep (1 − z) of the old, take z of the new. The <strong>reset gate</strong> r decides how much of the old memory the new content is allowed to look at when it is being built.</p>
+  <p>Think of updating a friend's entry in your phone's contacts after they move city. The update dial says how much of the old entry to overwrite: z = 0 keeps it all, z = 1 replaces it all. The reset dial says whether to look at the old entry at all while writing the new one; for a completely new topic you would ignore it (r near 0).</p>
+  <p>In equations: z = σ(W<sub>z</sub>[h<sub>t−1</sub>, x<sub>t</sub>]), r = σ(W<sub>r</sub>[h<sub>t−1</sub>, x<sub>t</sub>]), the candidate h̃ = tanh(W[r ⊙ h<sub>t−1</sub>, x<sub>t</sub>]), and the new state <strong>h<sub>t</sub> = (1 − z) ⊙ h<sub>t−1</sub> + z ⊙ h̃</strong>. With the hand-picked weights in the code (update gate: weight 0.4 on h, [0.5, 0.3] on x, bias −0.5; reset gate: −0.3, [0.2, 0.7], bias 0; candidate: 0.8, [0.9, −0.6], bias 0) step 1 works out as follows. With h<sub>0</sub> = 0 and x = chai = [1, 0], z = σ(0.5 − 0.5) = σ(0) = 0.5 and r = σ(0.2) = 0.550. The candidate is tanh(0.8·(0.55·0) + 0.9) = tanh(0.9) = 0.716. So h<sub>1</sub> = (1 − 0.5)·0 + 0.5·0.716 = 0.358, half old memory (which was empty) and half new.</p>
   <div class="fx" data-lang="py">W = {"z": (0.4,  np.array([0.5,  0.3]), -0.5),   # update gate
      "r": (-0.3, np.array([0.2,  0.7]),  0.0),   # reset gate
      "n": (0.8,  np.array([0.9, -0.6]),  0.0)}   # candidate h~
@@ -606,27 +423,55 @@ for t, word in enumerate(["chai", "not", "good"], 1):
   <div class="fx" data-lang="text">t=1 chai  z=0.500 r=0.550 h~=+0.716 -&gt; h=+0.358
 t=2 not   z=0.486 r=0.644 h~=-0.393 -&gt; h=-0.007
 t=3 good  z=0.574 r=0.711 h~=+0.288 -&gt; h=+0.162</div>
-  <p>Step 1 matches the hand calculation. At step 2 the candidate for "not" is −0.393 and z ≈ 0.49, so the new h is roughly the average of +0.358 and −0.393, which is about 0. The line <code>h = (1 - z) * h + z * h_new</code> is the whole GRU: a blend, so when z is near 0 the old memory passes through untouched, just like an LSTM forget gate near 1.</p>
+  <p>Step 1 matches the hand calculation. At step 2 the candidate for "not" is −0.393 and z is about 0.49, so the new state is roughly the average of +0.358 and −0.393, which is close to 0. The line <code>h = (1 - z) * h + z * h_new</code> is the whole GRU: a blend between old and new. When z is near 0 the old memory passes through untouched, which plays the same role as an LSTM forget gate near 1, so the GRU gets the same gradient-highway benefit.</p>
   <table class="tbl">
     <tr><th></th><th>LSTM</th><th>GRU</th></tr>
-    <tr><td>State</td><td>h and separate cell c</td><td>h only</td></tr>
+    <tr><td>State</td><td>hidden state h and a separate cell state c</td><td>hidden state h only</td></tr>
     <tr><td>Gates</td><td>3 (forget, input, output)</td><td>2 (update, reset)</td></tr>
     <tr><td>Weight blocks</td><td>4</td><td>3</td></tr>
-    <tr><td>Params (128 → 256)</td><td>395,264</td><td>296,448 (−25%)</td></tr>
-    <tr><td>Speed</td><td>Slower</td><td>Faster</td></tr>
-    <tr><td>Pick when</td><td>Very long sequences, need fine memory control</td><td>Smaller data, tight budget; try first</td></tr>
+    <tr><td>Parameters, 128 → 256</td><td>395,264</td><td>296,448 (25% fewer)</td></tr>
+    <tr><td>Speed</td><td>slower</td><td>faster</td></tr>
+    <tr><td>Good first choice when</td><td>sequences are very long, memory must be controlled finely</td><td>data is small or compute is tight</td></tr>
   </table>
-  <p>In benchmarks neither wins consistently. A practical rule: start with a GRU because it trains faster, and try an LSTM if the task needs very long memory.</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Papers and libraries write the GRU two ways. PyTorch's docs use h<sub>t</sub> = (1 − z)⊙n + z⊙h<sub>t−1</sub>, so its z means "keep old", the opposite of the formula above. PyTorch also applies r after the matrix multiply on h. The model is equally powerful either way; just don't copy weights between conventions without flipping.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Seq2seq.</b> With an RNN, LSTM or GRU we can read a review and classify it. But the app also wants to show reviews in Hindi: the output is a <em>new sequence</em>, of a different length and in a different word order. One label per review is not enough.</div>
+  <p>In published comparisons neither cell wins consistently. A practical rule is to start with a GRU because it trains faster, and try an LSTM if the task needs very long memory. One detail trips people up: papers and libraries write the GRU two ways. PyTorch's documentation uses h<sub>t</sub> = (1 − z) ⊙ n + z ⊙ h<sub>t−1</sub>, so its z means "keep the old", the opposite of the formula above, and it applies r after the matrix multiply on h. Both versions are equally powerful; just do not copy weights between conventions without flipping.</p>
 
-  <h2 id="dr-s2s"><span class="num">07</span>Seq2seq Encoder-Decoder &amp; Its Bottleneck</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>How do we turn "chai not good" (3 words) into "chai achhi nahi hai" (4 words, with the negation moved to the end)? A tag per input word cannot do it: the output has its own length and order.</p>
-  </div>
-  <p>The idea (sequence-to-sequence, 2014): use two RNNs. The <strong>encoder</strong> reads the whole input; its final hidden state is a single vector c, the "context vector". For our review, c is h₃: in the toy RNN of section 02, [0.057, 0.938]. The <strong>decoder</strong> starts from c and writes the output one token at a time, feeding each token it wrote back in as the next input, until it writes an end token.</p>
+  <h2 id="dr-tasks"><span class="num">07</span>Sequence Tasks and Bidirectional RNNs</h2>
+  <p>An RNN gives you a hidden state at every step. What you do with those states depends on the shape of the task, and interviewers like to ask about the three common shapes. In a <strong>many-to-one</strong> task the whole sequence gets one label, such as "is this review unhappy?"; you put a classifier on the last hidden state (or on an average of all of them). In a <strong>many-to-many aligned</strong> task every input step gets its own label, such as tagging each word as a dish name or not (named-entity recognition) or as a noun or verb (part-of-speech tagging); you put the same classifier on every hidden state. In a <strong>sequence-to-sequence</strong> task the output is a new sequence with its own length and order, such as a translation; that needs two RNNs and gets its own section next.</p>
+  <p>For aligned tasks a one-direction RNN has a blind spot. At step t it has read only words 1 to t. When it reaches "not" it has no idea whether "good", "bad" or "cold" follows, and when it reads "chai" it does not know the review is about to turn negative. In "Bank of England announced…", the word that tells you "Bank" is the central bank arrives after it. A <strong>bidirectional RNN</strong> fixes this by running two separate RNNs over the same sequence, one left to right and one right to left, and joining (concatenating) their two hidden states at each position. Every position then has a summary of what came before it and of what comes after it.</p>
+  <p>It is how you fill in a blank in an exam question: "The ____ was so spicy I drank three glasses of water." You read the whole sentence, including the part after the blank, before writing "biryani". Here is our review through a bidirectional RNN. The forward direction is our RNN from section 02; the backward direction has its own weights and reads "good, not, chai", and its states are then flipped back so they line up with the words:</p>
+  <div class="fx" data-lang="py">def run_rnn(words, Wxh, Whh, b):
+    h, states = np.zeros(2), []
+    for w in words:
+        h = np.tanh(Wxh @ emb[w] + Whh @ h + b)
+        states.append(h)
+    return states
+
+fwd_W = (Wxh, Whh, b)                                         # the RNN from before
+bwd_W = (np.array([[-0.2, 0.7], [0.6, 0.1]]), np.array([[0.3, -0.1], [0.2, 0.5]]), np.zeros(2))
+words = ["chai", "not", "good"]
+fwd = run_rnn(words, *fwd_W)                    # reads chai, not, good
+bwd = run_rnn(words[::-1], *bwd_W)[::-1]        # reads good, not, chai; then re-aligned
+for w, f, bk in zip(words, fwd, bwd):
+    print(f"{w:5s} fwd={f.round(2)}  bwd={bk.round(2)}  joined={np.concatenate([f, bk]).round(2)}")</div>
+  <div class="fx" data-lang="text">chai  fwd=[0.46 0.38]  bwd=[-0.05  0.74]  joined=[ 0.46  0.38 -0.05  0.74]
+not   fwd=[-0.23  0.76]  bwd=[0.65 0.46]  joined=[-0.23  0.76  0.65  0.46]
+good  fwd=[0.06 0.94]  bwd=[0.46 0.6 ]  joined=[0.06 0.94 0.46 0.6 ]</div>
+  <p>Look at the "chai" row. Its forward state has seen only "chai" (it is h<sub>1</sub> from section 02). Its backward state was the last one computed in the right-to-left pass, so it has already read "good" and "not". The joined vector has 4 numbers: a bidirectional layer doubles the size of its output. The two <code>[::-1]</code> slices do the work: the first reverses the words for the backward RNN, the second reverses its states so that row 1 belongs to "chai" again.</p>
+  <p>In PyTorch it is a single flag. Here is a 2-layer bidirectional LSTM on a batch of 32 sequences of 50 steps with 128 features each:</p>
+  <div class="fx" data-lang="py">torch.manual_seed(0)
+x = torch.randn(32, 50, 128)                     # (batch, seq_len, features)
+bi = nn.LSTM(128, 128, num_layers=2, batch_first=True, bidirectional=True)
+out, (h_n, c_n) = bi(x)
+print("out", tuple(out.shape), "  h_n", tuple(h_n.shape))
+sentence_vec = torch.cat([h_n[-2], h_n[-1]], dim=1)   # top layer: last forward + last backward
+print("classifier input", tuple(sentence_vec.shape))</div>
+  <div class="fx" data-lang="text">out (32, 50, 256)   h_n (4, 32, 128)
+classifier input (32, 256)</div>
+  <p><code>out</code> has 256 features per step, 128 from the forward direction and 128 from the backward one. <code>h_n</code> has 4 rows, one for each (layer, direction) pair, ordered layer 0 forward, layer 0 backward, layer 1 forward, layer 1 backward. So <code>h_n[-2]</code> and <code>h_n[-1]</code> are the top layer's final forward and backward states, and joining them gives the usual sentence vector for a classifier.</p>
+  <p>The limit of a bidirectional RNN follows directly from how it works: it needs the whole sequence before it can produce anything. That is fine for classifying a finished review, tagging a sentence or encoding a sentence for translation. It is impossible for live speech recognition, real-time forecasting or generating text, where the future does not exist yet. Using one there anyway is a form of data leakage: the model trains and validates beautifully because it peeks at the future, then cannot run in production.</p>
+
+  <h2 id="dr-s2s"><span class="num">08</span>Seq2seq and Its Bottleneck</h2>
+  <p>The app also wants to show reviews in Hindi: "chai not good" should become "chai achhi nahi hai". The output has a different length (four words instead of three) and a different word order (the negation "nahi" moves near the end), so a label per input word cannot do it. The <strong>sequence-to-sequence</strong> model, or <strong>seq2seq</strong> (Sutskever et al., 2014), solves this with two RNNs. The <strong>encoder</strong> reads the whole input, and its final hidden state becomes a single vector called the <strong>context vector</strong>. The <strong>decoder</strong> starts from that vector and writes the output one token at a time, feeding each token it has written back in as its next input, until it writes a special end token. Generating one token at a time from your own previous outputs like this is called <strong>autoregressive</strong> generation.</p>
   <figure class="viz"><svg viewBox="0 0 620 200" width="620">
 <defs><marker id="dr-ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
 <text x="105" y="22" text-anchor="middle">Encoder</text><text x="450" y="22" text-anchor="middle">Decoder</text>
@@ -645,280 +490,249 @@ t=3 good  z=0.574 r=0.711 h~=+0.288 -&gt; h=+0.162</div>
 <line x1="342" y1="138" x2="342" y2="108"/><line x1="422" y1="138" x2="422" y2="108"/><line x1="502" y1="138" x2="502" y2="108"/><line x1="582" y1="138" x2="582" y2="108"/>
 <line x1="342" y1="68" x2="342" y2="56"/><line x1="422" y1="68" x2="422" y2="56"/><line x1="502" y1="68" x2="502" y2="56"/><line x1="582" y1="68" x2="582" y2="56"/>
 </g>
-<text x="310" y="190" text-anchor="middle" class="tm">decoder input = previous target word (teacher forcing in training); "nahi" (not) must come from c alone</text>
-</svg><figcaption>The whole review must squeeze through the single red vector c. To write "nahi" at step 3 the decoder must still find "not" inside c. Long inputs don't fit.</figcaption></figure>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A translator at a government office who must listen to a whole paragraph once, close the file, and then translate from memory without looking back. A short phrase is fine. A long paragraph comes out with pieces missing. That "close the file" rule is the bottleneck.</p>
-  </div>
-  <p>During training, what does the decoder get as input at each step? Its own guesses would be garbage early on, and one bad guess would derail every later step. So we feed it the <strong>true</strong> previous token. This is <strong>teacher forcing</strong>. Our toy task is "reverse a list of digits"; the helper below builds one training example and shows the three tensors involved:</p>
+<text x="310" y="190" text-anchor="middle" class="tm">each decoder input is the previous target word; to write "nahi" the decoder must still find "not" inside c</text>
+</svg><figcaption>Seq2seq: the encoder (blue) reads the review, everything it learned passes through the single red context vector c, and the decoder (teal) writes the Hindi words one at a time, starting from a start symbol &lt;s&gt;.</figcaption></figure>
+  <p>Follow the figure from left to right. The encoder reads "chai", "not", "good" and hands over only its last hidden state c (with the toy RNN of section 02 that would be h<sub>3</sub> = [0.057, 0.938]). The decoder starts from c, reads a start symbol and writes "chai", reads "chai" and writes "achhi", and so on. By the time it must write "nahi", the only place "not" can still exist is somewhere inside c.</p>
+  <p>During training, what should the decoder receive as its input at each step? Early in training its own guesses are rubbish, and a single wrong word would derail every later step. So we feed it the <strong>true</strong> previous word from the target instead of its own guess. This is called <strong>teacher forcing</strong>. The page uses a toy task that is easy to generate and score: "reverse a list of digits". The helper builds one training example and shows the three tensors involved:</p>
   <div class="fx" data-lang="py">import torch
 torch.manual_seed(0)
-V, BOS = 12, 1                                  # tokens 2..11 are "digits", 1 = start symbol
+V, BOS = 12, 1                                  # tokens 2..11 are digits, 1 = start symbol
 def batch(n, L):
-    src = torch.randint(2, V, (n, L)); tgt = src.flip(1)          # task: reverse the sequence
-    return src, torch.cat([torch.full((n, 1), BOS), tgt[:, :-1]], 1), tgt
-src, tgt_in, tgt = batch(1, 5)
-print("source        ", src[0].tolist())
-print("target        ", tgt[0].tolist())
-print("decoder input ", tgt_in[0].tolist(), " &lt;- BOS, then the true previous token")</div>
-  <div class="fx" data-lang="text">source         [6, 11, 5, 2, 5]
-target         [5, 2, 5, 11, 6]
-decoder input  [1, 5, 2, 5, 11]  &lt;- BOS, then the true previous token</div>
-  <p>The decoder input is the target shifted right by one, with a start symbol (BOS, "beginning of sequence") in front. At step 2 the decoder sees 5 (the true first answer) and must predict 2. The line <code>tgt[:, :-1]</code> drops the last target token, because nothing comes after it.</p>
-  <h3>Measuring the bottleneck</h3>
-  <p>Experiment: a GRU encoder-decoder (hidden size 64) learns to reverse random digit lists, trained on lengths 4–30 for 3,000 Adam steps. Then it is tested on fresh lists of fixed lengths. The full code is in the <a class="xref" data-note="dl_attention">Attention</a> note, where the same model is rerun with attention added.</p>
-  <table class="tbl out"><caption>Per-token accuracy, seq2seq without attention (real run; chance = 0.10)</caption>
-    <tr><th>Length</th><th>5</th><th>10</th><th>20</th><th>30</th></tr>
-    <tr><td>Accuracy</td><td>1.00</td><td>0.93</td><td>0.69</td><td>0.54</td></tr>
+    src = torch.randint(2, V, (n, L))
+    tgt = src.flip(1)                           # the task: reverse the sequence
+    dec_in = torch.cat([torch.full((n, 1), BOS), tgt[:, :-1]], 1)   # BOS + target shifted right
+    return src, dec_in, tgt
+
+src, dec_in, tgt = batch(1, 5)
+print("source       ", src[0].tolist())
+print("target       ", tgt[0].tolist())
+print("decoder input", dec_in[0].tolist())</div>
+  <div class="fx" data-lang="text">source        [6, 11, 5, 2, 5]
+target        [5, 2, 5, 11, 6]
+decoder input [1, 5, 2, 5, 11]</div>
+  <p>The decoder input is the target shifted right by one place, with the start symbol (1, often called BOS for "beginning of sequence") in front. At decoder step 2 it sees 5, the true first answer, and must predict 2. The slice <code>tgt[:, :-1]</code> drops the last target token because nothing is predicted after it. Teacher forcing makes training fast and stable, but it creates a mismatch called <strong>exposure bias</strong>: at test time the decoder sees its own, possibly wrong, previous outputs, a situation it never practised. Scheduled sampling, which gradually mixes the model's own guesses into training, is one remedy.</p>
+  <p>Seq2seq has a deeper weakness, visible in the red box of the figure. However long the input is, everything the decoder will ever know about it must fit into one fixed-size vector. This is the <strong>bottleneck</strong>. Think of a translator who must listen to a whole paragraph once, close the file, and then translate entirely from memory: a short phrase comes out fine, a long paragraph comes out with pieces missing. We can measure it. A GRU encoder-decoder with a 64-number hidden state is trained to reverse random digit lists of length 4 to 20 for 800 steps, then tested on fresh lists of fixed lengths. The full code is in the <a class="xref" data-note="dl_attention">Attention Mechanisms</a> note, where the same model is rerun with attention added.</p>
+  <table class="tbl">
+    <tr><th>Input length</th><th>5</th><th>10</th><th>15</th><th>20</th></tr>
+    <tr><td>Per-token accuracy, seq2seq without attention</td><td>0.98</td><td>0.80</td><td>0.63</td><td>0.53</td></tr>
   </table>
-  <p>Same model, same training lengths. Five digits fit easily into 64 numbers; thirty digits don't, and accuracy falls towards half. The fix is to let the decoder look back at <em>every</em> encoder state, not just the last one, and choose which to read at each step. That is <strong>attention</strong>.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Seq2seq</strong> (Sutskever et al., 2014): encoder RNN → context vector c = final hidden state → decoder RNN that generates tokens autoregressively (each output is fed back as the next input). <strong>Teacher forcing</strong>: during training feed the ground-truth previous token. <strong>Exposure bias</strong>: at test time the model sees its own, possibly wrong, outputs, which it never practised on.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Reading the training loss alone hides the bottleneck, because training mixes short and long examples. Always evaluate by length bucket, as in the table, to see where a sequence model breaks.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Bidirectional RNNs.</b> The real fix for the bottleneck is attention (<a class="xref" data-note="dl_attention">next note</a>): let the decoder look back at every encoder state. Before that, one more weakness of the encoder itself: it reads left to right, so when it reaches "not" it has no idea what is being negated.</div>
+  <p>Same model, same training. Five digits fit easily into 64 numbers; twenty do not, and accuracy falls to about half (guessing would give 0.10). The information was available, because the encoder computed a hidden state for every input step, but seq2seq threw all of them away except the last. The fix is to let the decoder look back at every encoder state and choose which ones to read at each output step. That is <strong>attention</strong>, the subject of <a class="xref" data-note="dl_attention">Attention Mechanisms</a>, and dropping the RNN entirely in favour of attention gives the <a class="xref" data-note="transformers">Transformers</a> behind today's language models.</p>
 
-  <h2 id="dr-bi"><span class="num">08</span>Bidirectional RNNs</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>A left-to-right RNN at word t has read only words 1…t. At "not" it does not yet know whether "good", "bad" or "cold" follows. How can every position know about the words after it too?</p>
-  </div>
-  <p>The idea: run <strong>two</strong> RNNs. One reads left to right, one reads right to left. At each position, glue (concatenate) their two hidden states. Now every position has a summary of what came before and what comes after. In "Bank of England announced…" the word "England" tells you "Bank" is the central bank, but it arrives after "Bank"; in our review, "good" arrives after "not".</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Filling in a blank in an exam question: "The ____ was so spicy I drank three glasses of water." You read the whole sentence, including the part after the blank, before you write "biryani". A bidirectional RNN reads both sides before deciding.</p>
-  </div>
-  <p>Worked example with our toy RNN. The forward pass is the one from section 02. The backward pass uses its own weights and reads "good, not, chai"; its states are then flipped back so they line up with the words.</p>
-  <div class="fx" data-lang="py">def run_rnn(words, Wxh, Whh, b):
-    h, states = np.zeros(2), []
-    for w in words:
-        h = np.tanh(Wxh @ emb[w] + Whh @ h + b)
-        states.append(h)
-    return states
-
-fwd_W = (np.array([[0.5, -0.5], [0.3, 0.8]]), np.array([[0.4, 0.2], [-0.3, 0.6]]), np.array([0.0, 0.1]))
-bwd_W = (np.array([[-0.2, 0.7], [0.6, 0.1]]), np.array([[0.3, -0.1], [0.2, 0.5]]), np.zeros(2))
-
-words = ["chai", "not", "good"]
-fwd = run_rnn(words, *fwd_W)                    # reads chai -&gt; not -&gt; good
-bwd = run_rnn(words[::-1], *bwd_W)[::-1]        # reads good -&gt; not -&gt; chai, then re-align
-for w, f, b in zip(words, fwd, bwd):
-    print(f"{w:5s} fwd={f.round(2)}  bwd={b.round(2)}  concat={np.concatenate([f, b]).round(2)}")</div>
-  <div class="fx" data-lang="text">chai  fwd=[0.46 0.38]  bwd=[-0.05  0.74]  concat=[ 0.46  0.38 -0.05  0.74]
-not   fwd=[-0.23  0.76]  bwd=[0.65 0.46]  concat=[-0.23  0.76  0.65  0.46]
-good  fwd=[0.06 0.94]  bwd=[0.46 0.6 ]  concat=[0.06 0.94 0.46 0.6 ]</div>
-  <p>Look at the "chai" row. Its forward state has seen only "chai". Its backward state was computed last in the right-to-left pass, so it has read "good" and "not" too. The concatenated vector has 4 numbers: hidden size doubles. The key line is <code>words[::-1]</code> to read backwards and the second <code>[::-1]</code> to line the states up with the words again. This is what Bahdanau's attention model used as its encoder: every encoder state describes its word <em>in the context of the whole review</em>.</p>
-  <p>In PyTorch it is one flag. Here a 2-layer bidirectional LSTM on the same (32, 50, 128) batch:</p>
-  <div class="fx" data-lang="py">x = torch.randn(32, 50, 128)                     # (batch, seq_len, features) as in section 05
-bi = nn.LSTM(128, 128, num_layers=2, batch_first=True, bidirectional=True)
-out, (hn, cn) = bi(x)
-print("BiLSTM output", tuple(out.shape), " h_n", tuple(hn.shape))
-last = torch.cat([hn[-2], hn[-1]], dim=1)        # final fwd + final bwd of top layer
-print("classifier input", tuple(last.shape))</div>
-  <div class="fx" data-lang="text">BiLSTM output (32, 50, 256)  h_n (4, 32, 128)
-classifier input (32, 256)</div>
-  <p><code>out</code> has 256 features per step: 128 forward + 128 backward. <code>h_n</code> has 4 rows: 2 layers × 2 directions, ordered layer 0 forward, layer 0 backward, layer 1 forward, layer 1 backward. So <code>hn[-2]</code> and <code>hn[-1]</code> are the top layer's final forward and backward states, the usual input to a sentence classifier.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Bidirectional RNN</strong>: two independent RNNs over the same sequence in opposite directions; the representation at step t is [h→<sub>t</sub>; h←<sub>t</sub>]. Used in NER, part-of-speech tagging, sentence classification, and as the encoder in Bahdanau's attention model and in ELMo.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Bidirectional needs the whole sequence up front. Fine for tagging, classification and seq2seq encoders; impossible for live speech-to-text or text generation, where the future doesn't exist yet. Using one there is a classic "data leakage" mistake: great validation score, broken in production.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Padding &amp; packing.</b> All our examples were one review at a time. Training uses batches, and the reviews in a batch have different lengths (3 words, 2 words, 1 word). How do we put them in one tensor without corrupting the memory?</div>
-
-  <h2 id="dr-practice"><span class="num">09</span>Padding, Packing &amp; RNNs Today</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>GPUs need rectangular batches. Our reviews have 3, 2 and 1 words. If we fill the short ones with filler, does the RNN's final memory still mean what we think it means?</p>
-  </div>
-  <p>The need: GPUs want rectangular batches, but sentences have different lengths. The usual fix is <strong>padding</strong>: add a filler token (id 0, "&lt;pad&gt;") to the short sentences until all have the same length. The problem: a plain RNN does not know the pads are fake. It keeps reading them and updating h, so the "last hidden state" of a short sentence is really "the state after reading some pads".</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Three students' answer sheets stapled into equal-size bundles with blank pages added. If the examiner keeps "reading" the blank pages and lets them change the marks, the short answers get unfair scores. Packing tells the examiner exactly where each answer ends.</p>
-  </div>
-  <p>Worked example: three reviews of length 3, 2 and 1: "chai not good", "very cold", "late". Each word becomes an id from a small vocabulary. We run review 3 alone (the correct answer), then inside a padded batch the naive way, then the packed way.</p>
-<div class="fx" data-lang="py">from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
+  <h2 id="dr-pack"><span class="num">09</span>Padding and Packing</h2>
+  <p>So far we have fed one review at a time. Training uses batches, because a GPU is fastest when it processes many examples together as one rectangular tensor. But reviews have different lengths. The usual fix is <strong>padding</strong>: add a filler token, by convention id 0 and written &lt;pad&gt;, to the end of the shorter reviews until all have the same length. The problem is that a plain RNN does not know the pads are fake. It keeps reading them and updating its memory, so the "final hidden state" of a short review is really "the state after reading the review and then some filler".</p>
+  <p>Imagine three students' answer sheets stapled into equal-size bundles, with blank pages added to the short ones. If the examiner keeps "reading" the blank pages and lets them change the marks, the short answers are scored unfairly. <strong>Packing</strong> tells the examiner exactly where each answer ends. In PyTorch, <code>pack_padded_sequence</code> takes the padded batch together with each review's true length and produces a packed object that the RNN processes so that each sequence stops at its real last step. Here are three reviews of length 3, 2 and 1, run three ways: the one-word review "late" on its own (the correct answer), then inside a padded batch without packing, then packed:</p>
+  <div class="fx" data-lang="py">from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
 torch.manual_seed(0)
-emb = nn.Embedding(10, 4, padding_idx=0)       # id 0 = &lt;pad&gt;
-rnn = nn.GRU(4, 3, batch_first=True)
 ids_of = {"&lt;pad&gt;": 0, "not": 2, "very": 4, "chai": 5, "good": 7, "late": 8, "cold": 9}
+embed = nn.Embedding(10, 4, padding_idx=0)      # id 0 is the padding token
+gru = nn.GRU(4, 3, batch_first=True)
+
 reviews = ["chai not good", "very cold", "late"]
-sents = [torch.tensor([ids_of[w] for w in r.split()]) for r in reviews]   # 3, 2, 1 words
-lengths = torch.tensor([len(s) for s in sents])
-ids = pad_sequence(sents, batch_first=True, padding_value=0)
+seqs = [torch.tensor([ids_of[w] for w in r.split()]) for r in reviews]
+lengths = torch.tensor([len(s) for s in seqs])
+ids = pad_sequence(seqs, batch_first=True, padding_value=0)
 print(ids)
 
-out, h_pad = rnn(emb(ids))                       # naive: RNN also reads the pads
-packed = pack_padded_sequence(emb(ids), lengths, batch_first=True, enforce_sorted=False)
-_, h_packed = rnn(packed)                        # packed: stops at each real length
+_, h_padded = gru(embed(ids))                                      # also reads the pads
+packed = pack_padded_sequence(embed(ids), lengths, batch_first=True, enforce_sorted=False)
+_, h_packed = gru(packed)                                          # stops at each true length
+_, h_alone = gru(embed(seqs[2][None]))                             # "late" on its own
 
-alone, _ = rnn(emb(sents[2][None]))              # review 3 ("late") run on its own
-print("review 3 alone :", alone[0, -1].detach().numpy().round(3))
-print("padded  h_n    :", h_pad[0, 2].detach().numpy().round(3))
-print("packed  h_n    :", h_packed[0, 2].detach().numpy().round(3))</div>
+print("late alone :", h_alone[0, 0].detach().numpy().round(3))
+print("padded     :", h_padded[0, 2].detach().numpy().round(3))
+print("packed     :", h_packed[0, 2].detach().numpy().round(3))</div>
   <div class="fx" data-lang="text">tensor([[5, 2, 7],
         [4, 9, 0],
         [8, 0, 0]])
-review 3 alone : [-0.25   0.033 -0.179]
-padded  h_n    : [-0.119 -0.117 -0.252]
-packed  h_n    : [-0.25   0.033 -0.179]</div>
-  <p><code>pad_sequence</code> builds the rectangle: the one-word review "late" becomes <code>[8, 0, 0]</code>. The naive run gives a different final state for it, because the GRU read two pad vectors after "late". <code>pack_padded_sequence</code> takes the true <code>lengths</code>, so the RNN stops each review at its real end, and the packed result matches the "alone" result exactly. <code>enforce_sorted=False</code> lets you pass reviews in any order.</p>
-  <h3>RNN or Transformer?</h3>
-  <table class="tbl">
-    <tr><th></th><th>RNN / LSTM / GRU</th><th>Transformer (attention)</th></tr>
-    <tr><td>Training</td><td>Sequential: step t waits for step t−1</td><td>All positions in parallel</td></tr>
-    <tr><td>Path between token 1 and token n</td><td>n − 1 steps (gradient fades)</td><td>1 step (direct link)</td></tr>
-    <tr><td>Cost of a new token at inference</td><td>O(1): update h</td><td>Grows with context length</td></tr>
-    <tr><td>Memory for long context</td><td>Fixed size h</td><td>O(n²) scores, KV cache grows</td></tr>
-    <tr><td>Best at</td><td>Streaming, tiny devices, small time-series data</td><td>Language, large data, long-range links</td></tr>
-  </table>
-  <p>Today almost every language model is a Transformer. RNNs still appear in on-device keyword spotting ("Hey Google"), sensor and IoT streams, some forecasting models, and the newer linear-time recurrent models (state-space models such as Mamba, and RWKV) bring the "fixed-size memory, O(1) per step" idea back at scale.</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Using <code>out[:, -1]</code> as "the last hidden state" in a padded batch gives the state at the last <em>padded</em> position. Use <code>h_n</code> from a packed sequence, or index <code>out</code> at <code>lengths - 1</code> for each row.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: How it all connects.</b> We have met ten ideas. How do they hang together, and which weakness led to which fix?</div>
+late alone : [-0.25   0.033 -0.179]
+padded     : [-0.119 -0.117 -0.252]
+packed     : [-0.25   0.033 -0.179]</div>
+  <p><code>pad_sequence</code> builds the rectangle: "late" becomes <code>[8, 0, 0]</code>. Without packing, the GRU reads two pad vectors after "late" and its final state for that review comes out as [−0.119, −0.117, −0.252], which is simply wrong. With packing, the result matches running "late" alone exactly. <code>enforce_sorted=False</code> lets you pass reviews in any order (older code had to sort them by length), and <code>padding_idx=0</code> in the embedding keeps the pad vector fixed at zeros so it never gets trained. If you use <code>out</code> rather than <code>h_n</code>, remember that in a padded batch <code>out[:, -1]</code> is the state at the last <em>padded</em> position; for the real last state, use <code>h_n</code> from a packed run or pick <code>out</code> at position <code>length − 1</code> for each review.</p>
 
-  <h2 id="dr-connect"><span class="num">10</span>How It All Connects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>RNN, BPTT, vanishing gradients, clipping, LSTM, GRU, seq2seq, bottleneck, bidirectional, packing: a list of tricks, or one idea and its consequences?</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 680 320" width="680">
-<defs><marker id="dr-a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="10" y="10" width="170" height="44" rx="7" class="fr sr"/><text x="95" y="29" text-anchor="middle" font-size="11.5" font-weight="700">bag of words / MLP</text><text x="95" y="45" text-anchor="middle" class="tm" font-size="10">order lost: [1 1 1] = [1 1 1]</text>
-<line x1="180" y1="32" x2="218" y2="32" stroke="currentColor" marker-end="url(#dr-a9)"/>
-<rect x="220" y="10" width="220" height="44" rx="7" class="fb sb"/><text x="330" y="29" text-anchor="middle" font-size="11.5" font-weight="700">RNN: h_t = tanh(Wx_t + Uh_t−1)</text><text x="330" y="45" text-anchor="middle" class="tm" font-size="10">h₃ = [0.057, 0.938]</text>
-<line x1="440" y1="32" x2="478" y2="32" stroke="currentColor" marker-end="url(#dr-a9)"/>
-<rect x="480" y="10" width="190" height="44" rx="7" class="fb sb"/><text x="575" y="29" text-anchor="middle" font-size="11.5" font-weight="700">BPTT</text><text x="575" y="45" text-anchor="middle" class="tm" font-size="10">sum over steps: 0.6065</text>
-<line x1="575" y1="54" x2="575" y2="84" stroke="currentColor" marker-end="url(#dr-a9)"/>
-<rect x="450" y="86" width="220" height="44" rx="7" class="fr sr"/><text x="560" y="105" text-anchor="middle" font-size="11.5" font-weight="700">product of factors per step</text><text x="560" y="121" text-anchor="middle" class="tm" font-size="10">vanish 3e-17 · explode 2.6e11</text>
-<line x1="450" y1="108" x2="398" y2="108" stroke="currentColor" marker-end="url(#dr-a9)"/>
-<rect x="250" y="86" width="146" height="44" rx="7" class="ft st"/><text x="323" y="105" text-anchor="middle" font-size="11.5" font-weight="700">clip (exploding)</text><text x="323" y="121" text-anchor="middle" class="tm" font-size="10">norm → 1.0</text>
-<line x1="560" y1="130" x2="560" y2="160" stroke="currentColor" marker-end="url(#dr-a9)"/>
-<rect x="450" y="162" width="220" height="44" rx="7" class="fg sg"/><text x="560" y="181" text-anchor="middle" font-size="11.5" font-weight="700">gates: LSTM / GRU</text><text x="560" y="197" text-anchor="middle" class="tm" font-size="10">c = f·c + i·c̃ : 0.462 · h = 0.358</text>
-<line x1="450" y1="184" x2="398" y2="184" stroke="currentColor" marker-end="url(#dr-a9)"/>
-<rect x="190" y="162" width="206" height="44" rx="7" class="fb sb"/><text x="293" y="181" text-anchor="middle" font-size="11.5" font-weight="700">seq2seq encoder → c → decoder</text><text x="293" y="197" text-anchor="middle" class="tm" font-size="10">chai not good → chai achhi nahi hai</text>
-<line x1="190" y1="184" x2="158" y2="184" stroke="currentColor" marker-end="url(#dr-a9)"/>
-<rect x="10" y="162" width="146" height="44" rx="7" class="fr sr"/><text x="83" y="181" text-anchor="middle" font-size="11.5" font-weight="700">bottleneck</text><text x="83" y="197" text-anchor="middle" class="tm" font-size="10">1.00 → 0.54 at length 30</text>
-<line x1="83" y1="206" x2="83" y2="240" stroke="currentColor" marker-end="url(#dr-a9)"/>
-<rect x="10" y="242" width="180" height="40" rx="7" class="fv" stroke="currentColor" stroke-opacity="0.3"/><text x="100" y="267" text-anchor="middle" font-size="11">→ attention (next note)</text>
-<line x1="293" y1="206" x2="293" y2="240" stroke="currentColor" marker-end="url(#dr-a9)"/>
-<rect x="210" y="242" width="170" height="40" rx="7" class="ft st"/><text x="295" y="260" text-anchor="middle" font-size="11.5" font-weight="700">bidirectional encoder</text><text x="295" y="275" text-anchor="middle" class="tm" font-size="10">"chai" sees "not good"</text>
-<rect x="400" y="242" width="270" height="40" rx="7" class="ft st"/><text x="535" y="260" text-anchor="middle" font-size="11.5" font-weight="700">padding + packing for batches</text><text x="535" y="275" text-anchor="middle" class="tm" font-size="10">packed h = alone h</text>
-<text x="340" y="308" text-anchor="middle" class="tm" font-size="10.5">one idea: a memory updated with the same weights at every step</text>
-</svg><figcaption>Everything follows from carrying one memory forward with shared weights: training it means summing over steps (BPTT), which multiplies factors (vanishing/exploding), which forces gated memories (LSTM, GRU); using that memory as the only link between two sequences creates the bottleneck that attention removes.</figcaption></figure>
-  <table class="tbl"><caption>Every concept on the same review, "chai not good"</caption>
-    <tr><th>Concept</th><th>Built from</th><th>Answers which question</th><th>Value on our review</th><th>When to use</th></tr>
-    <tr><td>Bag of words</td><td>word counts</td><td>fixed-size input for text?</td><td>"good, not bad" = "bad, not good" = [1 1 1]</td><td>quick baselines where order matters little</td></tr>
-    <tr><td>RNN cell</td><td>W<sub>xh</sub>x + W<sub>hh</sub>h + b, tanh</td><td>read in order, any length?</td><td>h₁ [0.462, 0.380], h₂ [−0.235, 0.757], h₃ [0.057, 0.938]</td><td>short sequences, teaching, streaming</td></tr>
-    <tr><td>BPTT</td><td>backprop on the unrolled loop</td><td>how do shared weights learn?</td><td>∂h₃/∂w = 0.478 + 0.129 + 0 = 0.6065</td><td>always (truncated for long streams)</td></tr>
-    <tr><td>Vanishing / exploding</td><td>product of w·(1 − h²) factors</td><td>why do RNNs forget?</td><td>0.338 → 0.085 after 2 steps; 3e-17 after 60</td><td>diagnosing long-range failures</td></tr>
-    <tr><td>Clipping</td><td>rescale gradient norm</td><td>stop explosions?</td><td>2.6e11 → 1.0</td><td>every RNN training loop</td></tr>
-    <tr><td>LSTM</td><td>cell state + 3 gates</td><td>keep memory for many steps?</td><td>step 1: c 0.462, h 0.227</td><td>long sequences, precise memory</td></tr>
-    <tr><td>GRU</td><td>one state + 2 gates</td><td>same, cheaper?</td><td>step 1: h 0.358; 25% fewer weights</td><td>first try, smaller data</td></tr>
-    <tr><td>Seq2seq</td><td>encoder RNN + decoder RNN</td><td>sequence in, new sequence out?</td><td>c = h₃ → "chai achhi nahi hai"</td><td>translation, summarisation (pre-attention)</td></tr>
-    <tr><td>Bottleneck</td><td>one fixed vector c</td><td>does c hold a long input?</td><td>accuracy 1.00 (5) → 0.54 (30)</td><td>the reason for attention</td></tr>
-    <tr><td>Bidirectional</td><td>two RNNs, concatenated</td><td>context from both sides?</td><td>"chai" = [0.46, 0.38, −0.05, 0.74]</td><td>tagging, classification, encoders; never streaming</td></tr>
-    <tr><td>Padding + packing</td><td>pad ids + true lengths</td><td>batches of mixed lengths?</td><td>"late": packed h = alone h</td><td>every batched RNN</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>One sentence holds the note: <strong>an RNN is one memory vector updated by the same weights at every step.</strong> Sharing makes it work for any length; the repeated update makes gradients a long product (vanishing/exploding); gates replace "rewrite" by "edit" so memory survives; and because the memory is a single fixed vector, using it as the only bridge between two sequences creates the bottleneck that attention removes.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Common mistakes.</b> The ideas are connected; now the traps that catch people in code and interviews.</div>
+  <h2 id="dr-train"><span class="num">10</span>Training an LSTM in PyTorch</h2>
+  <p>Time to put the pieces together and train a real model end to end. We go back to the problem from section 01: can a model learn that "not" flips the meaning of the word after it, something a bag of words cannot represent? We generate synthetic reviews, which keeps the run fast and the answer known. Each review has a few filler words, plus either one opinion word, possibly negated ("not good"), or the pattern "good not bad", where the word after "not" is flipped so the review is happy overall. Every "good not bad" has a matching "bad not good" with the opposite label and exactly the same words, so word counts alone cannot separate them.</p>
+  <div class="fx" data-lang="py">import random, torch
+random.seed(0)
+FILL = ["chai", "samosa", "dosa", "was", "the", "very", "today", "really"]
+POS, NEG = ["good", "tasty", "great"], ["bad", "cold", "awful"]
+vocab = ["&lt;pad&gt;", "not"] + FILL + POS + NEG
+idx = {w: i for i, w in enumerate(vocab)}
+
+def make_review():
+    a, b = random.sample([random.choice(POS), random.choice(NEG)], 2)   # one good word, one bad word
+    if random.random() &lt; 0.5:                      # one opinion, maybe negated: "not good"
+        negated = random.random() &lt; 0.5
+        core, happy = (["not", a] if negated else [a]), (a in POS) != negated
+    else:                                          # "good not bad": the word after "not" is flipped
+        core, happy = [a, "not", b], a in POS
+    words = random.choices(FILL, k=random.randint(1, 4)) + core + random.choices(FILL, k=random.randint(0, 3))
+    return words, int(happy)
+# --- examples
+for _ in range(4):
+    words, happy = make_review()
+    print(happy, " ".join(words))</div>
+  <div class="fx" data-lang="text">1 was today dosa was tasty not cold the
+1 dosa very tasty not bad was chai
+1 today tasty
+0 samosa dosa today awful not good really</div>
+  <p>The label is 1 for a happy customer and 0 for an unhappy one. "tasty not cold" is happy, while "awful not good" is unhappy, even though both contain one positive word, one negative word and "not". Now the model. It follows the many-to-one shape from section 07: an embedding layer turns word ids into 16-number vectors, an LSTM with 32 hidden units reads them (packed, as in section 09), and a linear layer on the last hidden state outputs two scores, unhappy and happy. As a baseline, the same training loop is run on a bag-of-words model that sums the word vectors, which ignores order, and then passes the sum through a small MLP. Both train for 300 steps of 64 reviews with the Adam optimizer and gradient clipping, and both are tested on 2,000 fresh reviews. The whole run takes a few seconds on a CPU.</p>
+  <div class="fx" data-lang="py">import torch.nn as nn
+from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
+
+def encode(batch):                                 # list of (words, label) -&gt; padded tensors
+    seqs = [torch.tensor([idx[w] for w in ws]) for ws, _ in batch]
+    lengths = torch.tensor([len(s) for s in seqs])
+    return pad_sequence(seqs, batch_first=True), lengths, torch.tensor([y for _, y in batch])
+
+class ReviewLSTM(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.emb = nn.Embedding(len(vocab), 16, padding_idx=0)
+        self.lstm = nn.LSTM(16, 32, batch_first=True)
+        self.head = nn.Linear(32, 2)               # unhappy / happy
+    def forward(self, ids, lengths):
+        packed = pack_padded_sequence(self.emb(ids), lengths, batch_first=True, enforce_sorted=False)
+        _, (h_n, _) = self.lstm(packed)
+        return self.head(h_n[-1])                  # many-to-one: last real hidden state
+
+class BagOfWords(nn.Module):                       # baseline: sums word vectors, ignores order
+    def __init__(self):
+        super().__init__()
+        self.emb = nn.EmbeddingBag(len(vocab), 16, mode="sum", padding_idx=0)
+        self.mlp = nn.Sequential(nn.Linear(16, 32), nn.ReLU(), nn.Linear(32, 2))
+    def forward(self, ids, lengths):
+        return self.mlp(self.emb(ids))
+
+test = encode([make_review() for _ in range(2000)])
+for Model in (BagOfWords, ReviewLSTM):
+    torch.manual_seed(0)
+    model = Model()
+    opt = torch.optim.Adam(model.parameters(), lr=0.01)
+    for step in range(1, 301):
+        ids, lengths, y = encode([make_review() for _ in range(64)])
+        loss = nn.functional.cross_entropy(model(ids, lengths), y)
+        opt.zero_grad(); loss.backward()
+        nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        opt.step()
+    with torch.no_grad():
+        acc = (model(test[0], test[1]).argmax(1) == test[2]).float().mean().item()
+        probe = encode([(r.split(), 0) for r in ["chai not good", "good not bad", "bad not good"]])
+        p_happy = model(probe[0], probe[1]).softmax(1)[:, 1]
+    print(f"{Model.__name__:10s} test accuracy {acc:.3f}   P(happy): chai not good {p_happy[0]:.2f}, "
+          f"good not bad {p_happy[1]:.2f}, bad not good {p_happy[2]:.2f}")</div>
+  <div class="fx" data-lang="text">BagOfWords test accuracy 0.746   P(happy): chai not good 0.03, good not bad 0.58, bad not good 0.58
+ReviewLSTM test accuracy 1.000   P(happy): chai not good 0.00, good not bad 1.00, bad not good 0.00</div>
+  <p>The bag-of-words model reaches about 75%: it gets the one-opinion reviews right (it can learn that "not" plus a positive word means unhappy) but is reduced to a coin toss on the two-opinion reviews, giving "good not bad" and "bad not good" the identical probability 0.58, because for it they are the same input. The LSTM reaches 100% on the test set and assigns "good not bad" a happy probability of 1.00 and "bad not good" 0.00: it has learned, purely from examples, that what matters is which word comes after "not". The important lines are <code>pack_padded_sequence</code> (so pads never touch the memory), <code>h_n[-1]</code> (the last real hidden state of the top layer, used as the review's summary) and <code>clip_grad_norm_</code> (the standard guard against exploding gradients from section 04). The training loop itself is the ordinary PyTorch loop from <a class="xref" data-note="dl_pytorch">PyTorch</a>; nothing about it is special to RNNs.</p>
+  <p>Where do RNNs stand today? For language, Transformers have replaced them almost everywhere, because attention connects any two words in one step instead of through a long chain, and because a Transformer processes all positions of a training sentence in parallel while an RNN must wait for step t−1 before computing step t. RNNs still have one strong advantage: to process a new step they only update a fixed-size hidden state, so the cost per step is constant however long the stream has run. That keeps them useful for streaming data, on-device models such as wake-word detection, sensor and IoT streams, and small time-series datasets (see <a class="xref" data-note="ml_timeseries">Time Series Forecasting</a>), and recent "linear-time" sequence models such as state-space models (Mamba) and RWKV bring this fixed-memory idea back at large scale.</p>
 
   <h2 id="dr-traps"><span class="num">11</span>Common Mistakes</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Which RNN bugs are silent (the code runs, the numbers are wrong), and how do you catch each one?</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: forgetting batch_first</span>
-    <p>PyTorch RNN layers default to (seq, batch, features). Feeding (batch, seq, features) without <code>batch_first=True</code> reads across examples instead of along time. Check <code>out.shape</code> once on a toy batch.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: mixing up out and h_n</span>
-    <p><code>out</code> is the top layer's h at every step: (batch, seq, hidden × directions). <code>h_n</code> is the last step of every layer and direction: (layers × directions, batch, hidden). For classification use the top layer's <code>h_n</code> (both directions if bidirectional).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: letting the RNN read padding</span>
-    <p>Pads change h. Use <code>pack_padded_sequence</code>, or gather the output at each true length. Also set <code>padding_idx</code> in the embedding so the pad vector stays zero.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: no gradient clipping</span>
-    <p>RNN training without <code>clip_grad_norm_</code> can spike to NaN after hours. Clip to around 1.0 (common range 0.5–5) between <code>backward()</code> and <code>step()</code>.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: not detaching the carried hidden state</span>
-    <p>In truncated BPTT (language models over a long text), call <code>h = h.detach()</code> before each new chunk, or memory grows and backward fails.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: bidirectional where the future is unknown</span>
-    <p>Live forecasting or generation with a bi-RNN leaks the future in training and can't run in production.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: wrong gate order when loading weights</span>
-    <p>PyTorch stacks the LSTM gates as input, forget, cell, output. Hand-written code or other libraries may use another order, and GRU conventions flip z. To set the forget bias in PyTorch, fill slice <code>[H:2H]</code>, not <code>[0:H]</code> (that is the input gate).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: the Revision Sheet,</b> then <a class="xref" data-note="dl_attention">Attention Mechanisms</a>, which removes the bottleneck by letting the decoder look at every word of the review.</div>
+  <p>The most dangerous RNN bug is silent. PyTorch's recurrent layers assume the input is laid out as (sequence, batch, features) unless you pass <code>batch_first=True</code>. If your tensor is (batch, sequence, features) and the two sizes happen to match, nothing crashes:</p>
+  <div class="fx" data-lang="py">torch.manual_seed(0)
+x = torch.randn(4, 4, 8)                         # 4 reviews, 4 steps each: (batch, seq, features)
+wrong = nn.GRU(8, 16)                            # forgot batch_first=True
+right = nn.GRU(8, 16, batch_first=True)
+right.load_state_dict(wrong.state_dict())        # identical weights
+out_w, _ = wrong(x); out_r, _ = right(x)
+print("shapes:", tuple(out_w.shape), tuple(out_r.shape))
+print("same numbers?", torch.allclose(out_w, out_r))</div>
+  <div class="fx" data-lang="text">shapes: (4, 4, 16) (4, 4, 16)
+same numbers? False</div>
+  <p>Both layers have identical weights and both outputs have the same shape, yet the numbers differ, because the layer without <code>batch_first</code> treated the four reviews as four time steps and read <em>across</em> the batch instead of along each review. The model will still train, just badly. Always print <code>out.shape</code> once on a toy batch whose batch size differs from its sequence length.</p>
+  <p>A second classic error appears with truncated BPTT on a long stream. If the hidden state carried from one chunk to the next is not detached, PyTorch tries to backpropagate into a chunk whose graph has already been freed:</p>
+  <div class="fx" data-lang="py">torch.manual_seed(0)
+rnn, head = nn.RNN(1, 8, batch_first=True), nn.Linear(8, 1)
+stream = torch.randn(1, 30, 1)                   # one long series, trained in chunks of 10 steps
+for fix in (False, True):
+    h = torch.zeros(1, 1, 8)
+    try:
+        for start in range(0, 30, 10):
+            if fix:
+                h = h.detach()                   # keep the values, cut the history
+            out, h = rnn(stream[:, start:start + 10], h)
+            head(out).pow(2).mean().backward()
+        print("with detach: all chunks trained")
+    except RuntimeError as e:
+        print("without detach:", str(e).split(".")[0])</div>
+  <div class="fx" data-lang="text">without detach: Trying to backward through the graph a second time (or directly access saved tensors after they have already been freed)
+with detach: all chunks trained</div>
+  <p>The fix is one line, <code>h = h.detach()</code> at the start of every chunk: the numbers in h are kept, so the memory continues, but the gradient path back into the previous chunk is cut.</p>
+  <p>Several more mistakes are worth knowing by name. Mixing up <code>out</code> and <code>h_n</code>: <code>out</code> is the top layer's state at every step, shape (batch, seq, hidden × directions); <code>h_n</code> is the last step of every layer and direction, shape (layers × directions, batch, hidden). Letting the RNN read padding, which section 09 showed silently changes the final state of short sequences. Training without gradient clipping, which can run fine for hours and then spike to NaN; clip to a norm of around 1 (typical range 0.5 to 5). Setting the LSTM forget bias in the wrong slice: PyTorch's gate order is input, forget, cell, output, so the forget bias is <code>bias[H:2*H]</code>, not <code>bias[:H]</code>, which is the input gate. Expecting gradient clipping to fix vanishing gradients, which it cannot. And using a bidirectional RNN for streaming or generation, where it trains on a future that will not exist in production.</p>
 
   <h2 id="dr-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>The whole note on one sheet. Running example: the review "chai not good"; toy word vectors chai = [1, 0], not = [0, 1], good = [1, 1]; toy RNN W<sub>xh</sub> = [[0.5, −0.5], [0.3, 0.8]], W<sub>hh</sub> = [[0.4, 0.2], [−0.3, 0.6]], b = [0, 0.1], h₀ = [0, 0].</p>
-  <h3>The question ladder</h3>
-  <table class="tbl">
-    <tr><th>Concept</th><th>Question it answers</th><th>On our review</th><th>Weakness → next</th></tr>
-    <tr><td>Sequence data</td><td>why not an MLP?</td><td>bag-of-words can't tell "good, not bad" from "bad, not good"</td><td>need ordered reading</td></tr>
-    <tr><td>RNN</td><td>read any length in order?</td><td>h₃ = [0.057, 0.938]; other orders → other h₃</td><td>how to train shared weights?</td></tr>
-    <tr><td>BPTT</td><td>gradient of a shared weight?</td><td>0.478 + 0.129 + 0 = 0.6065</td><td>factors multiply</td></tr>
-    <tr><td>Vanishing / exploding</td><td>long-range learning?</td><td>0.085 after 2 steps; 3e-17 after 60</td><td>memory must change</td></tr>
-    <tr><td>LSTM</td><td>memory that survives?</td><td>c₁ = 0.462, h₁ = 0.227</td><td>heavy</td></tr>
-    <tr><td>GRU</td><td>cheaper gating?</td><td>h₁ = 0.358</td><td>only reads, can't write a sequence</td></tr>
-    <tr><td>Seq2seq</td><td>sequence → sequence?</td><td>chai not good → chai achhi nahi hai</td><td>one vector c</td></tr>
-    <tr><td>Bottleneck</td><td>does c hold long inputs?</td><td>1.00 → 0.54 (length 5 → 30)</td><td>→ attention</td></tr>
-    <tr><td>Bidirectional</td><td>context from the right?</td><td>"chai" sees "not good"</td><td>needs the whole sequence</td></tr>
-    <tr><td>Padding / packing</td><td>mixed-length batches?</td><td>packed h of "late" = alone</td><td>—</td></tr>
-  </table>
+  <h3>Key terms</h3>
+  <ul>
+    <li><b>Sequence</b>: ordered items x<sub>1</sub> … x<sub>T</sub>; each position is a <b>time step</b>.</li>
+    <li><b>Hidden state</b> h<sub>t</sub>: the RNN's running summary of x<sub>1</sub> … x<sub>t</sub>; h<sub>0</sub> = 0.</li>
+    <li><b>Weight sharing over time</b>: the same W<sub>xh</sub>, W<sub>hh</sub>, b at every step, so any length works with a fixed parameter count.</li>
+    <li><b>Unrolling</b>: drawing the loop as one copy of the cell per step.</li>
+    <li><b>BPTT</b>: backprop through the unrolled graph; shared-weight gradients are summed over steps. <b>Truncated BPTT</b>: backprop only within chunks, <code>h.detach()</code> between them.</li>
+    <li><b>Vanishing / exploding gradient</b>: the gradient to early steps is a product of per-step factors W<sub>hh</sub>ᵀ·diag(1 − h²), which shrinks or grows exponentially.</li>
+    <li><b>Gradient clipping</b>: rescale the gradient so its norm is at most a threshold; fixes exploding only.</li>
+    <li><b>Gate</b>: a sigmoid output (0 to 1) multiplied into a signal.</li>
+    <li><b>Seq2seq</b>: encoder RNN → context vector → decoder RNN; <b>teacher forcing</b> feeds the true previous token in training; <b>exposure bias</b> is the train/test mismatch it causes.</li>
+    <li><b>Bidirectional RNN</b>: forward and backward RNNs, states concatenated.</li>
+    <li><b>Packing</b>: tells the RNN each sequence's true length so it ignores padding.</li>
+  </ul>
   <h3>Formulas</h3>
   <table class="tbl">
-    <tr><th>Name</th><th>Formula</th><th>Symbols</th></tr>
-    <tr><td>RNN</td><td>h<sub>t</sub> = tanh(W<sub>xh</sub>x<sub>t</sub> + W<sub>hh</sub>h<sub>t−1</sub> + b); y<sub>t</sub> = W<sub>hy</sub>h<sub>t</sub></td><td>x<sub>t</sub> word vector, h<sub>t</sub> memory, h<sub>0</sub> = 0</td></tr>
-    <tr><td>One step back</td><td>∂h<sub>t</sub>/∂h<sub>t−1</sub> = W<sub>hh</sub>ᵀ·diag(1 − h<sub>t</sub>²) (scalar: w·(1 − h²))</td><td>tanh′ = 1 − h²</td></tr>
-    <tr><td>BPTT</td><td>∂L/∂W = Σ<sub>t</sub> (piece of the gradient from step t)</td><td>shared weight → sum over steps</td></tr>
-    <tr><td>Clipping</td><td>g ← g · min(1, max_norm / ‖g‖)</td><td>‖g‖ global gradient norm</td></tr>
-    <tr><td>LSTM</td><td>f, i, o = σ(W[h<sub>t−1</sub>, x<sub>t</sub>] + b); c̃ = tanh(…); c<sub>t</sub> = f⊙c<sub>t−1</sub> + i⊙c̃; h<sub>t</sub> = o⊙tanh(c<sub>t</sub>)</td><td>σ sigmoid (0–1), ⊙ element-wise product</td></tr>
-    <tr><td>GRU</td><td>z, r = σ(…); h̃ = tanh(W[r⊙h<sub>t−1</sub>, x<sub>t</sub>]); h<sub>t</sub> = (1 − z)⊙h<sub>t−1</sub> + z⊙h̃</td><td>z update, r reset</td></tr>
-    <tr><td>Params</td><td>RNN: h(x + h) + 2h; GRU ×3; LSTM ×4</td><td>x input size, h hidden size (two bias vectors in PyTorch)</td></tr>
-    <tr><td>Bidirectional</td><td>h<sub>t</sub> = [h→<sub>t</sub>; h←<sub>t</sub>]</td><td>size doubles</td></tr>
+    <tr><th>Name</th><th>Formula</th></tr>
+    <tr><td>RNN</td><td>h<sub>t</sub> = tanh(W<sub>xh</sub>x<sub>t</sub> + W<sub>hh</sub>h<sub>t−1</sub> + b); y<sub>t</sub> = W<sub>hy</sub>h<sub>t</sub></td></tr>
+    <tr><td>One step back</td><td>∂h<sub>t</sub>/∂h<sub>t−1</sub> = W<sub>hh</sub>ᵀ·diag(1 − h<sub>t</sub>²); scalar: w·(1 − h²)</td></tr>
+    <tr><td>Clipping</td><td>g ← g · min(1, max_norm / ‖g‖)</td></tr>
+    <tr><td>LSTM</td><td>f, i, o = σ(W[h<sub>t−1</sub>, x<sub>t</sub>] + b); c̃ = tanh(…); c<sub>t</sub> = f⊙c<sub>t−1</sub> + i⊙c̃; h<sub>t</sub> = o⊙tanh(c<sub>t</sub>)</td></tr>
+    <tr><td>GRU</td><td>z, r = σ(…); h̃ = tanh(W[r⊙h<sub>t−1</sub>, x<sub>t</sub>]); h<sub>t</sub> = (1 − z)⊙h<sub>t−1</sub> + z⊙h̃</td></tr>
+    <tr><td>Parameters (PyTorch)</td><td>RNN block = h·(x + h) + 2h; GRU = 3 blocks; LSTM = 4 blocks</td></tr>
   </table>
-  <h3>When to use, when not</h3>
-  <div class="cards">
-    <div><b>Use an RNN / GRU / LSTM</b><p>Streaming data (one step at a time, O(1) memory), small time-series datasets, on-device models, short sequences.</p><small>GRU first; LSTM for long memory</small></div>
-    <div><b>Prefer attention / Transformers</b><p>Language with long-range links, large data, when training must be parallel.</p><small>See the Attention note</small></div>
-    <div><b>Bidirectional</b><p>Whenever the whole sequence is known at prediction time: tagging, classification, encoders.</p><small>Never for live forecasting or generation</small></div>
-    <div><b>Always</b><p>Clip gradients; pack padded batches; initialise the LSTM forget bias to 1 or more.</p><small>batch_first=True</small></div>
-  </div>
-  <div class="callout trap"><span class="label">Key traps</span>
-    <p>Forgetting <code>batch_first</code>; mixing up <code>out</code> and <code>h_n</code>; letting the RNN read pads; no clipping; not detaching the carried state in truncated BPTT; bidirectional when the future is unknown; wrong gate order (PyTorch: i, f, g, o); thinking clipping fixes vanishing.</p>
-  </div>
-  <h3>Five rapid-fire checks</h3>
+  <h3>Comparisons</h3>
   <table class="tbl">
-    <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td>h₀ = [0, 0], x = "chai" = [1, 0]: what is h₁ of the toy RNN?</td><td>tanh([0.5, 0.3] + [0, 0.1]) = tanh([0.5, 0.4]) = [0.462, 0.380]</td></tr>
-    <tr><td>Factors 0.338 and 0.25 on the way back: ∂h₃/∂h₁?</td><td>0.338 × 0.25 = 0.085</td></tr>
-    <tr><td>Does gradient clipping fix vanishing gradients?</td><td>No, only exploding; vanishing needs gates or attention</td></tr>
-    <tr><td>LSTM with f = 0.769, c₀ = 0, i = 0.646, c̃ = 0.716: c₁?</td><td>0.769·0 + 0.646·0.716 = 0.462</td></tr>
-    <tr><td>Params of nn.LSTM(10, 20)?</td><td>4 × (20·10 + 20·20 + 20 + 20) = 2,560</td></tr>
+    <tr><th></th><th>RNN</th><th>LSTM</th><th>GRU</th><th>Transformer</th></tr>
+    <tr><td>Memory</td><td>h, rewritten each step</td><td>h + cell c, edited by gates</td><td>h, blended by gates</td><td>attention over all positions</td></tr>
+    <tr><td>Long-range learning</td><td>poor (vanishing)</td><td>good</td><td>good</td><td>direct, one step</td></tr>
+    <tr><td>Weights (vs RNN)</td><td>1×</td><td>4×</td><td>3×</td><td>n/a</td></tr>
+    <tr><td>Training</td><td>sequential</td><td>sequential</td><td>sequential</td><td>parallel over positions</td></tr>
+    <tr><td>Cost per new step</td><td>constant</td><td>constant</td><td>constant</td><td>grows with context</td></tr>
   </table>
+  <h3>Syntax</h3>
+  <div class="fx" data-lang="py">lstm = nn.LSTM(input_size, hidden, num_layers=1, batch_first=True, bidirectional=False)
+out, (h_n, c_n) = lstm(x)            # x: (batch, seq, feat); out: (batch, seq, hidden*dirs)
+                                     # h_n, c_n: (layers*dirs, batch, hidden); GRU/RNN return just h_n
+packed = pack_padded_sequence(emb(ids), lengths, batch_first=True, enforce_sorted=False)
+_, (h_n, _) = lstm(packed)           # stops at each true length
+nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)   # between backward() and step()
+with torch.no_grad():
+    lstm.bias_ih_l0[H:2*H].fill_(1.0)  # forget-gate bias (gate order: i, f, g, o)
+h = h.detach()                       # truncated BPTT: between chunks</div>
+  <h3>Gotchas</h3>
+  <ul>
+    <li>Default layout is (seq, batch, feat); pass <code>batch_first=True</code> or the model silently reads across the batch.</li>
+    <li>Pads change the hidden state: pack, and set <code>padding_idx</code>.</li>
+    <li>Clipping fixes exploding gradients, not vanishing ones.</li>
+    <li>A default-initialised LSTM still forgets: set the forget bias to 1 or more.</li>
+    <li>Bidirectional only when the whole sequence is known at prediction time.</li>
+    <li>PyTorch's GRU writes z as "keep old", the reverse of many papers.</li>
+  </ul>
 
-  <h2 id="dr-qa"><span class="num">12</span>Questions &amp; Answers</h2>
+  <h2 id="dr-qa"><span class="num">12</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>Why not use an MLP on a bag of words for text?</summary><div class="qa-body">A bag of words throws away order ("good, not bad" = "bad, not good"), and an MLP needs a fixed input size, so it can't take variable-length text with order intact. An RNN reads in order with shared weights and handles any length.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Write the vanilla RNN update and explain weight sharing.</summary><div class="qa-body">h<sub>t</sub> = tanh(W<sub>xh</sub>x<sub>t</sub> + W<sub>hh</sub>h<sub>t−1</sub> + b), h<sub>0</sub> = 0. The same W<sub>xh</sub>, W<sub>hh</sub> are used at every step, so the model handles any length with a fixed number of parameters, and a pattern learned at one position works at every position.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>With W<sub>xh</sub> = I (identity), W<sub>hh</sub> = 0, b = 0, what is h<sub>t</sub>?</summary><div class="qa-body">h<sub>t</sub> = tanh(x<sub>t</sub>): no memory at all, each step only sees its own input. W<sub>hh</sub> is what makes the network recurrent.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is BPTT?</summary><div class="qa-body">Backpropagation through time: unroll the RNN over the sequence, run ordinary backprop on the unrolled graph, and sum each shared weight's gradient over all time steps. Truncated BPTT limits the backward pass to chunks of k steps for long streams.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why does vanishing gradient hit RNNs harder than feed-forward nets?</summary><div class="qa-body">A length-500 sequence unrolls into a 500-layer graph, and the <em>same</em> W<sub>hh</sub> is multiplied in at every step, so ∂h<sub>T</sub>/∂h<sub>1</sub> is a product of ~500 similar Jacobians: it shrinks (or grows) exponentially. Feed-forward nets are shallower and use skips/normalisation; a vanilla RNN has neither.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Exploding vs vanishing: how do you fix each?</summary><div class="qa-body">Exploding: gradient clipping (clip the global norm, e.g. to 1.0). Vanishing: no clipping equivalent; use gated cells (LSTM/GRU), good init (forget bias, orthogonal W<sub>hh</sub>), shorter BPTT windows, or attention/Transformers.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Explain LSTM's cell state and why it enables long memory.</summary><div class="qa-body">c<sub>t</sub> = f ⊙ c<sub>t−1</sub> + i ⊙ c̃ is an additive update. Its gradient ∂c<sub>t</sub>/∂c<sub>t−1</sub> = f is element-wise and learned. With f ≈ 1 the gradient passes nearly unchanged across many steps (0.99⁵⁰ ≈ 0.61): a gradient highway, like ResNet's skip.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does each LSTM gate do? Why sigmoid for gates, tanh for the candidate?</summary><div class="qa-body">Forget: keep how much old memory. Input: how much new info to write. Output: how much of tanh(c) to expose as h. Sigmoid gives 0–1, a soft valve. tanh gives −1 to 1, so the candidate can add or subtract from memory and stays bounded.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How many parameters in nn.LSTM(input_size=10, hidden_size=20)?</summary><div class="qa-body">4 blocks × (20·10 + 20·20 + 20 + 20) = 4 × 640 = <strong>2,560</strong> (PyTorch keeps two bias vectors). A GRU is 3 × 640 = 1,920, a vanilla RNN 640.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>GRU or LSTM: which would you pick?</summary><div class="qa-body">Start with GRU: 25% fewer params, faster, usually as good on small/medium data. Try LSTM for very long sequences or if GRU underperforms. Neither dominates; tune both if it matters.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>When can't you use a bidirectional RNN?</summary><div class="qa-body">When future inputs aren't available at prediction time: streaming speech recognition, real-time forecasting, autoregressive text generation. It's fine for classification, tagging and encoders.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is the seq2seq bottleneck and what fixed it?</summary><div class="qa-body">The encoder compresses the whole input into one fixed-size vector, so long inputs lose information (our toy: 1.00 accuracy at length 5, 0.54 at length 30). Attention (Bahdanau 2014) lets the decoder build a fresh weighted mix of all encoder states at each step.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is teacher forcing and its downside?</summary><div class="qa-body">In training, feed the ground-truth previous token to the decoder instead of its own prediction. Faster and stabler, but at inference the model sees its own (possibly wrong) outputs, a mismatch called exposure bias. Mitigation: scheduled sampling.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you batch sentences of different lengths for an RNN?</summary><div class="qa-body">Pad to the longest with a pad id (and <code>padding_idx</code> in the embedding), then <code>pack_padded_sequence</code> with the true lengths so the RNN stops at each sentence's real end. Otherwise the final hidden state is polluted by pads.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>When would you still use an RNN over a Transformer?</summary><div class="qa-body">Streaming/online prediction (O(1) work and memory per new step), very long streams where O(n²) attention is too costly, tiny edge devices, and small time-series datasets. Otherwise Transformers win: parallel training and direct links between any two positions.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does sharing weights over time create the vanishing-gradient problem?</summary><div class="qa-body">Because the same W<sub>hh</sub> is applied at every step, the gradient from step T back to step 1 is a product of T − 1 factors of the same kind (W<sub>hh</sub>ᵀ·diag(1 − h²)). Products of many similar numbers below 1 vanish exponentially (0.338 × 0.25 = 0.085 after two steps of our review; 3×10⁻¹⁷ after 60). A feed-forward net has different weights per layer and is usually shallower.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does the LSTM need an additive cell update, and what would break with c<sub>t</sub> = tanh(W·c<sub>t−1</sub>)?</summary><div class="qa-body">With an additive update c<sub>t</sub> = f·c<sub>t−1</sub> + i·c̃, the backward factor is just f, which the network can hold near 1 (0.99⁵⁰ = 0.61 survives). With c<sub>t</sub> = tanh(W·c<sub>t−1</sub>) we are back to a plain RNN: every step multiplies by W and a tanh slope, so memory and gradient fade (0.26% left after 50 steps in our demo).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does seq2seq lead directly to attention, and what does attention keep that seq2seq throws away?</summary><div class="qa-body">Seq2seq keeps only the encoder's final state c and discards h₁ … h<sub>T−1</sub>, so every input word must survive inside one fixed vector (accuracy 0.54 at length 30). Attention keeps every encoder state and lets each decoder step take a fresh weighted average of them: to write "nahi" it can look straight at "not".</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks if you skip packing but use a bidirectional RNN?</summary><div class="qa-body">Worse than the one-direction case: the backward RNN starts reading at the end of the padded row, so for a short review it reads all the pads <em>first</em> and every backward state of the real words is polluted. Packing makes the backward pass start at each review's true last word.</div></details>
-
-</main>`
+  <details class="qa"><summary><span class="qmark">Q</span>Why not use an MLP on a bag of words for text?</summary><div class="qa-body">A bag of words throws away order, so "good, not bad" and "bad, not good" become the same input, and an MLP needs a fixed input size, so it cannot take variable-length text with order intact. An RNN reads the words in order with the same weights at every step, so it handles any length and its summary depends on order.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Write the vanilla RNN update. What does weight sharing give you?</summary><div class="qa-body">h<sub>t</sub> = tanh(W<sub>xh</sub>x<sub>t</sub> + W<sub>hh</sub>h<sub>t−1</sub> + b), with h<sub>0</sub> = 0. Because the same weights are used at every step, the model works on any length with a fixed number of parameters, and a pattern learned at one position applies at every position.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>If W<sub>hh</sub> = 0, what kind of model is the RNN?</summary><div class="qa-body">h<sub>t</sub> = tanh(W<sub>xh</sub>x<sub>t</sub> + b): each step sees only its own input, so there is no memory at all. It becomes an MLP applied to each word separately. W<sub>hh</sub> is what makes the network recurrent.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is backpropagation through time?</summary><div class="qa-body">Unroll the RNN over the sequence so it looks like a deep feed-forward network with shared weights, run ordinary backpropagation on it, and add up each shared weight's gradient over all time steps. Truncated BPTT backpropagates only within fixed-length chunks of a long stream while still carrying the hidden state forward.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain the vanishing gradient problem in RNNs.</summary><div class="qa-body">The gradient from a loss at step T back to step 1 is a product of T − 1 per-step factors, each W<sub>hh</sub>ᵀ times the tanh slopes (at most 1). When these factors are smaller than 1, the product shrinks exponentially, so early steps receive almost no gradient and long-range dependencies cannot be learned. In our 60-step test, step 1 got a gradient of about 10⁻¹⁷.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why do RNNs suffer from vanishing gradients more than typical feed-forward networks?</summary><div class="qa-body">An RNN unrolled over 500 steps is effectively a 500-layer network, and it multiplies by the same W<sub>hh</sub> at every layer, so the factors do not vary and the product decays (or grows) exponentially. Feed-forward networks are usually much shallower and use tools such as residual connections and normalisation that a plain RNN lacks.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you handle exploding and vanishing gradients?</summary><div class="qa-body">Exploding: gradient clipping by global norm (for example to 1.0), plus a sensible initialisation. Vanishing: clipping cannot help; use gated cells (LSTM, GRU) with a positive forget-gate bias, orthogonal or identity-like initialisation of W<sub>hh</sub>, shorter dependencies, or attention.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does each LSTM gate do?</summary><div class="qa-body">The forget gate decides how much of the old cell state to keep, the input gate decides how much of the new candidate to write, and the output gate decides how much of tanh(c) to expose as the hidden state. The cell update is c<sub>t</sub> = f⊙c<sub>t−1</sub> + i⊙c̃ and the output is h<sub>t</sub> = o⊙tanh(c<sub>t</sub>).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does the LSTM's cell state help with vanishing gradients?</summary><div class="qa-body">The cell state is updated additively, so the gradient from c<sub>t</sub> to c<sub>t−1</sub> is just the forget gate f, element by element, rather than a weight matrix times a tanh slope. If the network keeps f near 1, information and gradient pass through many steps almost unchanged, like a skip connection in ResNet. With f = 0.99, 60% of a value survives 50 steps.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why do LSTM gates use sigmoid while the candidate uses tanh?</summary><div class="qa-body">A gate must act as a valve between "closed" and "open", and sigmoid gives exactly 0 to 1. The candidate is content to add to memory, which may need to push values up or down, and tanh gives −1 to 1, centred on zero and bounded so the cell does not blow up.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why initialise the LSTM forget-gate bias to 1 or more?</summary><div class="qa-body">With a zero bias the forget gate starts near σ(0) = 0.5, which halves the memory every step, so early in training the LSTM forgets almost as fast as a plain RNN. A bias of 1 to 3 starts the gate near 0.73 to 0.95, so memory is kept by default and gradients reach early steps; in our test step 1's gradient rose from about 10⁻¹³ to 0.05.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How many parameters does nn.LSTM(input_size=10, hidden_size=20) have?</summary><div class="qa-body">One block is 20·10 (input weights) + 20·20 (hidden weights) + 20 + 20 (PyTorch's two biases) = 640. An LSTM has four blocks, so 2,560. A GRU of the same size has 1,920 and a plain RNN 640.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>GRU vs LSTM: what is the difference and which would you choose?</summary><div class="qa-body">The GRU merges the cell and hidden state into one, and uses two gates (update and reset) instead of three, so it has three weight blocks instead of four: about 25% fewer parameters and faster training. Accuracy is usually similar; start with a GRU and try an LSTM for very long sequences or if the GRU underperforms.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between out and h_n in PyTorch's RNN layers?</summary><div class="qa-body"><code>out</code> contains the top layer's hidden state at every time step, shape (batch, seq, hidden × directions) with batch_first. <code>h_n</code> contains only the final step's hidden state for every layer and direction, shape (layers × directions, batch, hidden). Use <code>out</code> for per-step tasks such as tagging and <code>h_n</code> for whole-sequence tasks such as classification.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When can you not use a bidirectional RNN?</summary><div class="qa-body">Whenever future inputs are not available at prediction time: streaming speech recognition, real-time forecasting and autoregressive text generation. It is fine for classification, tagging and seq2seq encoders, where the whole input is known.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is teacher forcing, and what problem does it cause?</summary><div class="qa-body">During training the decoder is fed the true previous target token instead of its own prediction, which makes training faster and more stable. At inference it must consume its own, possibly wrong, outputs, a situation it never practised; this mismatch is called exposure bias and can be reduced with scheduled sampling.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the seq2seq bottleneck and how was it solved?</summary><div class="qa-body">The encoder compresses the entire input into one fixed-size context vector, so long inputs lose information; in our toy test accuracy fell from 0.98 at length 5 to 0.53 at length 20. Attention (Bahdanau et al., 2014) solved it by letting the decoder compute a fresh weighted combination of all encoder states at every output step.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you batch sequences of different lengths for an RNN?</summary><div class="qa-body">Pad them to the longest length with a pad id (and set <code>padding_idx</code> in the embedding), then call <code>pack_padded_sequence</code> with the true lengths so the RNN stops at each sequence's real end. Without packing, the final hidden state of short sequences includes the effect of the pads.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why did Transformers replace RNNs, and when would you still use an RNN?</summary><div class="qa-body">Transformers connect any two positions in one step (no gradient decay through time) and train in parallel over all positions, so they scale far better with data and hardware. RNNs still make sense for streaming or on-device models, because each new step costs a constant amount of compute and memory, and for small time-series datasets.</div></details>
+</main>
+`
 });
