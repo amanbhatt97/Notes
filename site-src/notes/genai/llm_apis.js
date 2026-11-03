@@ -280,28 +280,28 @@ with httpx.stream("POST", "http://127.0.0.1:8765/v1/messages", json=body, header
             data = json.loads(line[5:])
             if "delta" in data:                # the payload that carries new content
                 print("        delta:", data["delta"])</div>
-  <div class="fx" data-lang="text"> 0.30s event: message_start
+  <div class="fx" data-lang="text"> 0.29s event: message_start
  0.30s event: content_block_start
  0.30s event: content_block_delta
         delta: {'type': 'text_delta', 'text': 'Let '}
- 0.35s event: content_block_delta
+ 0.34s event: content_block_delta
         delta: {'type': 'text_delta', 'text': 'me '}
- 0.40s event: content_block_delta
+ 0.39s event: content_block_delta
         delta: {'type': 'text_delta', 'text': 'check '}
- 0.45s event: content_block_delta
+ 0.44s event: content_block_delta
         delta: {'type': 'text_delta', 'text': 'order '}
- 0.50s event: content_block_delta
+ 0.49s event: content_block_delta
         delta: {'type': 'text_delta', 'text': '101.'}
- 0.55s event: content_block_stop
- 0.55s event: content_block_start
- 0.55s event: content_block_delta
+ 0.54s event: content_block_stop
+ 0.54s event: content_block_start
+ 0.54s event: content_block_delta
         delta: {'type': 'input_json_delta', 'partial_json': '{"order_id":'}
- 0.60s event: content_block_delta
+ 0.59s event: content_block_delta
         delta: {'type': 'input_json_delta', 'partial_json': ' 101}'}
- 0.65s event: content_block_stop
- 0.65s event: message_delta
+ 0.64s event: content_block_stop
+ 0.64s event: message_delta
         delta: {'stop_reason': 'tool_use', 'stop_sequence': None}
- 0.65s event: message_stop</div>
+ 0.64s event: message_stop</div>
   <p>The order of events is always the same. <code>message_start</code> carries the message id, model and input usage. Then, for each content block, there is a <code>content_block_start</code>, several <code>content_block_delta</code> events carrying the new pieces (each piece is a <strong>delta</strong>), and a <code>content_block_stop</code>. Finally <code>message_delta</code> carries the stop reason and final output usage, and <code>message_stop</code> ends the stream. Text arrives as <code>text_delta</code> pieces. The tool call's arguments arrive as <code>input_json_delta</code> fragments, <code>'{"order_id":'</code> and then <code>' 101}'</code>, which are not valid JSON until joined, so never act on half-streamed tool arguments. The first event arrives after about 0.3 seconds (the practice server's simulated thinking time) and then a piece every 0.05 seconds.</p>
   <p>In practice the SDK assembles the events for you:</p>
   <div class="fx" data-lang="py">import time, anthropic
@@ -320,9 +320,9 @@ total = time.perf_counter() - t0
 print(f"\\nfirst text after {first:.2f}s, finished after {total:.2f}s")
 print(final.stop_reason, final.usage.output_tokens, "output tokens")</div>
   <div class="fx" data-lang="text">(mock) I can't see order 101: no order data or tool was given to me.
-first text after 0.29s, finished after 1.02s
+first text after 0.31s, finished after 1.02s
 end_turn 21 output tokens</div>
-  <p><code>stream.text_stream</code> yields only the text pieces, which are printed as they arrive (<code>end=""</code> keeps them on one line and <code>flush=True</code> shows them immediately). <code>get_final_message()</code> returns the complete message with its <code>stop_reason</code> and <code>usage</code>, exactly like a non-streamed call, and that is what code should parse. The first text appeared after 0.3 seconds and the reply finished after about a second; without streaming the user would have seen nothing for that whole second. Use streaming for chat interfaces and long outputs (SDKs also refuse very long non-streamed requests because the connection could time out), and remember that it makes replies <em>feel</em> faster without making them faster.</p>
+  <p><code>stream.text_stream</code> yields only the text pieces, which are printed as they arrive (<code>end=""</code> keeps them on one line and <code>flush=True</code> shows them immediately). <code>get_final_message()</code> returns the complete message with its <code>stop_reason</code> and <code>usage</code>, exactly like a non-streamed call, and that is what code should parse. The first text appeared after about 0.3 seconds and the reply finished after about a second; without streaming the user would have seen nothing for that whole second. Use streaming for chat interfaces and long outputs (SDKs also refuse very long non-streamed requests because the connection could time out), and remember that it makes replies <em>feel</em> faster without making them faster.</p>
 
   <h2 id="la-tools"><span class="num">05</span>Tool Calling</h2>
   <p>Every reply so far has admitted that it cannot see order 101. A model can only produce text, and the order's status lives in Biteful's database. In <a class="xref" data-note="prompting">Prompt Engineering</a> we solved this by pasting the record into the prompt by hand, but that only works when we know in advance which data the question needs. <strong>Tool calling</strong> (also called function calling) lets the model itself decide that it needs data, and ask for it.</p>
@@ -490,7 +490,7 @@ except anthropic.APIStatusError as e:          # any other HTTP error status
   <div class="fx" data-lang="text">max_retries=3: succeeded after 2.3s -&gt; (mock) I can't see order 101: no order d
 max_retries=1: RateLimitError 429 retry-after = 1
 400 BadRequestError: messages: first message must use the user role</div>
-  <p>With <code>max_retries=3</code>, the SDK waited out two 429 responses, about a second each as <code>retry-after</code> asked, and succeeded on the third attempt, 2.3 seconds in total and invisible to the calling code. With <code>max_retries=1</code>, the second 429 surfaces as a <code>RateLimitError</code>, and your code decides what to do: queue the job, or tell the user to try again shortly. The invalid conversation (its first message is from the assistant) comes back as a 400; no retry could fix it, so it is caught and logged. The <code>except</code> clauses go from the most specific error to the most general.</p>
+  <p>With <code>max_retries=3</code>, the SDK waited out two 429 responses, about a second each as <code>retry-after</code> asked, and succeeded on the third attempt, roughly 2.3 seconds in total (timings on this page are approximate and vary between runs) and invisible to the calling code. With <code>max_retries=1</code>, the second 429 surfaces as a <code>RateLimitError</code>, and your code decides what to do: queue the job, or tell the user to try again shortly. The invalid conversation (its first message is from the assistant) comes back as a 400; no retry could fix it, so it is caught and logged. The <code>except</code> clauses go from the most specific error to the most general.</p>
   <p>How long should a retry wait? The standard answer is <strong>exponential backoff with jitter</strong>. "Exponential backoff" means the maximum wait doubles after each failure (1, 2, 4, 8 seconds…, up to a cap), giving an overloaded service more and more room to recover. "Jitter" means each client picks a random wait between zero and that maximum, so that thousands of clients that failed at the same moment do not all retry at the same moment too:</p>
   <div class="fx" data-lang="py">import random
 
@@ -546,11 +546,11 @@ async def main():
     print("first two results:", results[:2])
 
 asyncio.run(main())</div>
-  <div class="fx" data-lang="text">concurrency  1: 10 tickets in 3.44s
+  <div class="fx" data-lang="text">concurrency  1: 10 tickets in 3.49s
 concurrency  5: 10 tickets in 0.69s
 concurrency 10: 10 tickets in 0.36s
 first two results: ['{"order_id": 100, "due_time": "20:10"}', '{"order_id": 101, "due_time": "20:11"}']</div>
-  <p>One at a time, ten calls of about 0.3 seconds each take 3.44 seconds. Five at a time makes two waves, about 0.7 seconds. Ten at a time is one wave, about 0.35 seconds. The results keep the input order, so <code>results[i]</code> belongs to <code>TICKETS[i]</code>. Exact timings vary from run to run, but the shape does not: total time is roughly the number of waves times the time per call. Raising concurrency beyond your rate limit just turns speed into 429 errors, which is why the semaphore and the retries from section 07 are designed together. Also make sure to use the async client inside async code; the ordinary client blocks the whole event loop while it waits.</p>
+  <p>One at a time, ten calls of about 0.3 seconds each take about 3.4 seconds. Five at a time makes two waves, about 0.7 seconds. Ten at a time is one wave, about 0.35 seconds. The results keep the input order, so <code>results[i]</code> belongs to <code>TICKETS[i]</code>. Exact timings vary from run to run, but the shape does not: total time is roughly the number of waves times the time per call. Raising concurrency beyond your rate limit just turns speed into 429 errors, which is why the semaphore and the retries from section 07 are designed together. Also make sure to use the async client inside async code; the ordinary client blocks the whole event loop while it waits.</p>
   <p>When nobody is waiting for the answers, there is a cheaper option. A provider's <strong>Batch API</strong> accepts a large file of requests, processes them in the background (usually within an hour, at most within 24 hours) and charges half price. The results come back in no particular order, each tagged with the <code>custom_id</code> you gave its request, so you match them by that id. Biteful's 2,000 nightly review summaries are a perfect batch job: $30 a day on Opus 5.5 would become $15. Use async concurrency for work someone is waiting on, and the Batch API for nightly jobs, evaluations and backfills.</p>
 
   <h2 id="la-cache"><span class="num">09</span>Caching</h2>
