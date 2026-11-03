@@ -173,7 +173,7 @@ False</div>
   <div class="callout trap"><span class="label">Trap</span><p>Inherit only for a true is-a. "A savings account is an account" is true. "An account is a list of transactions" is not: an account <em>has</em> a list. Inheriting from <code>list</code> would give the account <code>sort</code>, <code>pop</code> and <code>clear</code>, which could wipe the history. Composition, covered below, is the alternative.</p></div>
 
   <h2 id="pi-super"><span class="num">02</span>Overriding and super()</h2>
-  <p>In plain words: writing a method in the child with the <em>same name</em> as a parent method is called <strong>overriding</strong>. Lookup finds the child's version first, so the parent's is skipped. If the child still wants the parent's version to run as part of its own, it calls <code>super().method(...)</code>, which means "the same method, from the next class up".</p>
+  <p>Writing a method in the child with the <em>same name</em> as a parent method is called <strong>overriding</strong>. Lookup finds the child's version first, so the parent's is skipped. If the child still wants the parent's version to run as part of its own, it calls <code>super().method(...)</code>, which means "the same method, from the next class up".</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>A branch manager adds a local rule ("savings: at most ₹500 per withdrawal"), checks it, and then sends the request on to head office's standard procedure. <code>super()</code> is "send it on to head office".</p></div>
   <h3>super().__init__, traced</h3>
   <p>The child below prints the object's attributes at three moments, so you can watch the parent and child each fill in their part.</p>

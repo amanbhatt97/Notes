@@ -84,9 +84,9 @@ Object.assign(TOPIC_CONTENT, {
     </div>
   </div>
 
-  <h2 id="pmk-why"><span class="num">01</span>Why Fake the Outside World</h2>
-  <h3>The running example</h3>
-  <p>The till from <a class="xref" data-note="py_pytest">Testing with pytest</a> (<code>till.py</code>: <code>bill(asha) == 184</code>, Ben 74, Chen 52) gains two modules. <code>gateway.py</code> talks to the bank. In real life it sends an HTTPS request; in this note's sandbox there is no bank, so it imitates one honestly: it waits 2 seconds like a network round-trip and then fails.</p>
+  <h2 id="pmk-why"><span class="num">01</span>Why Test Doubles: External Dependencies in Tests</h2>
+  <p>Unit tests must be fast, repeatable and runnable anywhere. Code that calls the network, a database, the clock or a paid API breaks all three, and it cannot be made to fail on demand, so its error-handling paths go untested. The fix is to replace the external dependency during the test.</p>
+  <p>The example: a billing function <code>bill(lines)</code> (from <a class="xref" data-note="py_pytest">Testing with pytest</a>; e.g. an order of 2 chai, 3 samosa and 1 cold coffee bills ₹184) and a <code>checkout</code> that charges a payment gateway. <code>gateway.py</code> stands in for a real HTTPS client: since there is no bank in this sandbox, it waits 2 seconds like a network round-trip and then fails.</p>
   <div class="fx" data-lang="py"># gateway.py
 """Stand-in for the real UPI/card payment gateway.
 In real life charge() sends an HTTPS request to the bank: slow, needs the
@@ -149,7 +149,7 @@ FAILED test_checkout_real.py::test_checkout_asha - ConnectionError: pay.chaic...
   <div class="callout def"><span class="label">Definition</span><p>The <strong>system under test</strong> is the code we are checking (<code>checkout</code>). A <strong>dependency</strong> is something it calls that we don't want to test right now (the gateway). A <strong>test double</strong> is any object that replaces a dependency during a test.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>"Just retry the flaky test" hides the problem. A test that is red one run in ten trains everyone to ignore red. Remove the outside world from unit tests; test the real integration separately, deliberately, in a sandbox account.</p></div>
 
-  <h2 id="pmk-kinds"><span class="num">02</span>Test Doubles: Stub, Fake, Mock, Spy</h2>
+  <h2 id="pmk-kinds"><span class="num">02</span>Kinds of Test Doubles: Dummy, Stub, Fake, Mock, Spy</h2>
   <p>Before any library, write two doubles by hand. A <strong>stub</strong> just answers. A <strong>fake</strong> is a small working version with simple rules (here: cards starting <code>tok_bad</code> are declined) that remembers what happened. To use them we rebind the name <code>checkout.charge</code>, and put the real one back in a <code>finally</code> so other code is never left with a stand-in.</p>
   <div class="fx" data-lang="py"># doubles.py
 import checkout, gateway
@@ -206,9 +206,9 @@ restored: True</div>
   </table>
   <div class="callout anlg"><span class="label">Analogy</span><p>Rehearsing a play without the lead actor. A cardboard cut-out (dummy) just stands there; a stand-in reading the lines (stub) gives the cues; an understudy who knows the whole part (fake) can act whole scenes; a stage manager taking notes on every cue (mock) can tell you afterwards who said what, when.</p></div>
   <div class="callout def"><span class="label">Definition</span><p><strong>Stub</strong>: returns predefined data. <strong>Fake</strong>: a simplified but working implementation (in-memory DB, fake gateway). <strong>Mock</strong>: a double that records interactions so the test can verify them. <strong>Spy</strong>: records calls while delegating to the real object. Checking a fake's state is <strong>state verification</strong>; checking a mock's calls is <strong>behaviour verification</strong>.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Swapping by hand without <code>finally</code>: if the test fails between the swap and the restore, every later test silently uses the stub. That is why the tools in sections 05 and 07 exist: they always undo the swap.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Swapping by hand without <code>finally</code>: if the test fails between the swap and the restore, every later test silently uses the stub. That is why <code>patch</code> and <code>monkeypatch</code> exist: they always undo the swap.</p></div>
 
-  <h2 id="pmk-mock"><span class="num">03</span>Mock and MagicMock</h2>
+  <h2 id="pmk-mock"><span class="num">03</span>unittest.mock: Mock, MagicMock and create_autospec</h2>
   <p><code>unittest.mock.Mock</code> is an object that accepts any call and any attribute. Calling it returns <code>return_value</code>; every call is recorded in <code>call_count</code>, <code>call_args</code> and <code>call_args_list</code>. Any attribute you touch is created on the spot as another Mock. <code>MagicMock</code> is the same plus Python's "magic" methods (<code>__len__</code>, <code>__iter__</code>, <code>__enter__</code>…, see <a class="xref" data-note="py_dunder">Dunder Methods</a>), so it can stand in for lists, files and context managers.</p>
   <div class="fx" data-lang="py"># mock_basics.py
 from unittest.mock import Mock, MagicMock, create_autospec
@@ -241,7 +241,7 @@ autospec: missing a required argument: 'card'</div>
   <p>Line by line: the call returned the canned dict; the mock recorded one call with <code>(18400, 'tok_asha')</code>. <code>pay.chrage</code>, a typo for "charge", did not raise: Mock invented a child mock. That flexibility is the danger: code calling a method that doesn't exist on the real gateway would pass its tests. <code>len(Mock())</code> fails because plain Mock doesn't support magic methods; <code>MagicMock</code> returns 0. <code>create_autospec(charge)</code> builds a mock with the real function's signature, so calling it without a <code>card</code> is rejected exactly as the real one would.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>A Mock is an actor who will improvise any line you throw at them. Great for rehearsal, dangerous if the script has typos: they'll happily answer to "Mr. Chrage". An autospec mock has learned the real script and stops you when you go off it.</p></div>
   <div class="callout def"><span class="label">Definition</span><p><code>Mock(**kw)</code>: callable double; unknown attributes become child mocks; calls are recorded. <code>MagicMock</code>: Mock with magic methods preconfigured. <code>create_autospec(obj)</code> / <code>patch(..., autospec=True)</code>: a mock constrained to <code>obj</code>'s attributes and call signatures. <code>Mock(spec=Cls)</code> restricts attributes only.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Plain mocks drift away from reality. If the gateway's <code>charge</code> gains a required argument, every test using a plain Mock stays green while production breaks. Section 05 shows this happening, and <code>autospec=True</code> catching it.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Plain mocks drift away from reality. If the gateway's <code>charge</code> gains a required argument, every test using a plain Mock stays green while production breaks. The <code>patch</code> section below shows this happening, and <code>autospec=True</code> catching it.</p></div>
 
   <h2 id="pmk-se"><span class="num">04</span>return_value and side_effect</h2>
   <p><code>return_value</code> gives the same answer on every call. <code>side_effect</code> overrides it and comes in three flavours: an <b>exception</b> (every call raises it), an <b>iterable</b> (one item per call; exception items are raised), or a <b>function</b> (called with the same arguments; its result is returned).</p>
@@ -306,14 +306,14 @@ def test_gives_up_after_three_timeouts():
   <div class="fx" data-lang="text">$ pytest -q test_retry.py
 ..                                                                       [100%]
 2 passed in 0.04s</div>
-  <p>Both paths of the retry logic, tested in 0.04 s, with a timeout produced exactly when we wanted it. (<code>patch("checkout.charge")</code> is how the mock got into <code>checkout</code>; the next section explains why that exact string.)</p>
+  <p>Both paths of the retry logic, tested in 0.04 s, with a timeout produced exactly when we wanted it. (<code>patch("checkout.charge")</code> is how the mock got into <code>checkout</code>; why that exact string is explained next.)</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>A cricket bowling machine. <code>return_value</code> bowls the same ball every time; <code>side_effect</code> is the programmed over: a bouncer, then a yorker, then a full toss, so the batter (your code) can practise every case on cue.</p></div>
   <div class="callout def"><span class="label">Definition</span><p><code>mock.return_value</code>: the value every call returns. <code>mock.side_effect</code>: an exception (class or instance) to raise, an iterable of successive results (raising <code>StopIteration</code> when exhausted), or a callable whose return value becomes the result. If set, <code>side_effect</code> wins over <code>return_value</code> (unless the callable returns <code>mock.DEFAULT</code>).</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>A <code>side_effect</code> list shorter than the number of calls ends with <code>StopIteration</code>, a confusing error far from the cause. Give exactly as many items as calls you expect, and assert <code>call_count</code>.</p></div>
 
-  <h2 id="pmk-patch"><span class="num">05</span>patch: Patch Where It's Used</h2>
+  <h2 id="pmk-patch"><span class="num">05</span>patch: Patch Where the Name Is Looked Up</h2>
   <p><code>unittest.mock.patch("module.name")</code> temporarily rebinds <code>name</code> inside <code>module</code> to a MagicMock (or to <code>new=</code> whatever you give), and restores the original when the <code>with</code> block or decorated test ends. It is a context manager and a decorator in one. The question is which module.</p>
-  <h3>The trap, reproduced</h3>
+  <h3>Patching where defined vs where used</h3>
   <div class="fx" data-lang="py"># test_patch_where.py
 from unittest.mock import patch
 from checkout import checkout
@@ -412,7 +412,7 @@ FAILED test_autospec.py::test_autospec_mock - TypeError: missing a required a...
   <div class="callout def"><span class="label">Definition</span><p><code>patch(target, new=DEFAULT, autospec=None, **kw)</code>: <code>target</code> is the dotted path <code>"package.module.name"</code> to rebind; by default the replacement is a <code>MagicMock</code> configured with <code>**kw</code> (e.g. <code>return_value</code>). Usable as <code>with patch(...) as m:</code>, as <code>@patch(...)</code> (mock passed as an extra argument, bottom decorator first), or via <code>patch.object(obj, "attr")</code>.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Patching where a function is defined instead of where it is looked up. Symptom: the "mocked" test is slow, hits the network, or the mock's <code>call_count</code> is 0. Fix: patch <code>"module_under_test.name"</code>.</p></div>
 
-  <h2 id="pmk-calls"><span class="num">06</span>Asserting Calls</h2>
+  <h2 id="pmk-calls"><span class="num">06</span>Asserting Calls: assert_called_once_with and call_args_list</h2>
   <p>A mock records every call. You can read the record (<code>call_count</code>, <code>call_args</code>, <code>call_args_list</code>) or use its assertion methods, which raise with a clear message on mismatch.</p>
   <div class="fx" data-lang="py"># test_calls.py
 from unittest.mock import patch, call
@@ -465,7 +465,7 @@ FAILED test_calls.py::test_charges_asha_in_paise - AssertionError: expected c...
   <div class="callout def"><span class="label">Definition</span><p><strong>Behaviour verification</strong>: asserting on the interactions between the code under test and a dependency (which calls, with which arguments, how many times), as opposed to <strong>state verification</strong> (asserting on results or on a fake's state).</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Misspelt assertion methods once passed silently by creating a child mock. Python 3 now refuses them: <code>Mock().assert_called_once_wiht(1)</code> raises <code>AttributeError: 'assert_called_once_wiht' is not a valid assertion</code>. But a misspelt <em>non-assert</em> attribute (<code>pay.chrage</code>) is still accepted, so use <code>autospec</code> and see each test fail once.</p></div>
 
-  <h2 id="pmk-mp"><span class="num">07</span>monkeypatch: pytest's Swapper</h2>
+  <h2 id="pmk-mp"><span class="num">07</span>pytest monkeypatch</h2>
   <p>The built-in <code>monkeypatch</code> fixture (from <a class="xref" data-note="py_pytest">pytest fixtures</a>) offers <code>setattr(obj, "name", value)</code>, <code>setenv</code>/<code>delenv</code>, <code>setitem</code>, <code>chdir</code> and more. Every change is reverted when the test ends, pass or fail. The "where it's used" rule is the same: set the attribute on the module that looks it up.</p>
   <div class="fx" data-lang="py"># test_monkeypatch.py
 import checkout, gateway
@@ -489,7 +489,7 @@ def test_runs_after_and_sees_the_real_one():
   <div class="fx" data-lang="text">$ pytest -q test_monkeypatch.py
 ..                                                                       [100%]
 2 passed in 0.01s</div>
-  <p>The second test proves the cleanup: after the first test, <code>checkout.charge</code> is the real function again and the env var is gone. That is the hand-written <code>try/finally</code> of section 02, done for you.</p>
+  <p>The second test proves the cleanup: after the first test, <code>checkout.charge</code> is the real function again and the env var is gone. That is the hand-written <code>try/finally</code> swap from the stub/fake example, done for you.</p>
   <table class="tbl">
     <tr><th></th><th><code>unittest.mock.patch</code></th><th><code>monkeypatch</code></th></tr>
     <tr><td>Comes from</td><td>Standard library</td><td>pytest fixture</td></tr>
@@ -502,7 +502,7 @@ def test_runs_after_and_sees_the_real_one():
   <div class="callout def"><span class="label">Definition</span><p><strong>Monkeypatching</strong> is changing an attribute of a module, class or object at runtime. pytest's <code>monkeypatch</code> fixture records each change and reverts it at teardown.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Monkeypatching outside a test (in a module's import code or a helper) has no automatic undo and leaks into every later test. Keep swaps inside fixtures or tests.</p></div>
 
-  <h2 id="pmk-di"><span class="num">08</span>Dependency Injection: the Cleaner Alternative</h2>
+  <h2 id="pmk-di"><span class="num">08</span>Dependency Injection</h2>
   <p><strong>Dependency injection (DI)</strong>: instead of a function importing its dependency, the dependency is passed in, as a parameter or (as here) when an object is created. The code says "give me something with a <code>.charge(amount_paise, card)</code> method"; production passes the real gateway, tests pass a fake. No patch strings, no import tricks.</p>
   <div class="fx" data-lang="py"># till_app.py
 from till import bill
@@ -570,7 +570,8 @@ ConnectionError: pay.chaicorner.example: network unreachable</div>
   <div class="callout def"><span class="label">Definition</span><p><strong>Dependency injection</strong>: a component receives its collaborators from outside (constructor or function parameters) rather than creating or importing them itself. Tests inject doubles; production injects real implementations. pytest fixtures are themselves DI for tests.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>A fake that drifts from the real thing (the real gateway starts returning <code>"status": "OK"</code> in capitals) gives false confidence. Keep fakes tiny, share one fake across tests, and run a few integration tests against the bank's sandbox to keep the fake honest.</p></div>
 
-  <h2 id="pmk-over"><span class="num">09</span>The Over-Mocking Trap</h2>
+  <h2 id="pmk-over"><span class="num">09</span>Over-Mocking</h2>
+  <p>Doubles are for the outside world. Replacing your own logic as well makes tests pass while that logic is broken.</p>
   <p>Here is a test that patches both the gateway <em>and</em> our own <code>bill</code>:</p>
   <div class="fx" data-lang="py"># test_overmocked.py
 from unittest.mock import patch
@@ -584,7 +585,7 @@ def test_checkout_overmocked(fake_bill, fake_charge):
     assert checkout(ASHA, "tok_asha") == {"amount": 184, "txn": "T-1"}
     fake_bill.assert_called_once_with(ASHA)
     fake_charge.assert_called_once_with(18400, "tok_asha")</div>
-  <p>Now a real bug: someone types the discount as 1% instead of 10% (and <code>&gt;</code> for <code>&gt;=</code>). By hand: 195 − 1.95 = 193.05, × 1.05 = 202.70 → Asha is charged ₹203 instead of ₹184. Run the over-mocked test and the DI test from section 08 against the buggy till:</p>
+  <p>Now a real bug: someone types the discount as 1% instead of 10% (and <code>&gt;</code> for <code>&gt;=</code>). By hand: 195 − 1.95 = 193.05, × 1.05 = 202.70 → Asha is charged ₹203 instead of ₹184. Run the over-mocked test and the dependency-injection test (fake gateway, real <code>bill</code>) against the buggy code:</p>
   <div class="fx" data-lang="text">$ python3 -c "from till import bill; print(bill([('masala chai', 2, 30), ('samosa', 3, 15), ('cold coffee', 1, 90)]))"
 203
 $ pytest -q --tb=line test_overmocked.py test_till_app.py
@@ -618,9 +619,9 @@ FAILED test_till_app.py::test_two_customers - AssertionError: assert [(20300,...
   <div class="callout def"><span class="label">Definition</span><p><strong>Over-mocking</strong>: replacing collaborators that are part of the behaviour under test, so the test verifies the wiring between mocks instead of real results. Symptoms: tests that pass with broken logic and break on harmless refactors.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>A test whose asserts are only <code>assert_called_with</code> on mocks of your own code mirrors the implementation line by line. Rename a helper and it fails; break the arithmetic and it passes. Assert on results whenever you can.</p></div>
 
-  <h2 id="pmk-traps"><span class="num">11</span>Common Mistakes</h2>
+  <h2 id="pmk-traps"><span class="num">10</span>Common Mistakes</h2>
   <table class="tbl">
-    <tr><th>Mistake</th><th>Symptom at the till</th><th>Fix</th></tr>
+    <tr><th>Mistake</th><th>Symptom</th><th>Fix</th></tr>
     <tr><td>Patch where defined</td><td>"!! REAL gateway called", 2 s, ConnectionError</td><td><code>patch("checkout.charge")</code></td></tr>
     <tr><td>No autospec</td><td>Green tests, production TypeError on new argument</td><td><code>autospec=True</code> / <code>create_autospec</code></td></tr>
     <tr><td>Mocking your own logic</td><td>₹203 bill, green test</td><td>Mock only the boundary</td></tr>
