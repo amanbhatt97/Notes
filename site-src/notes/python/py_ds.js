@@ -364,6 +364,7 @@ print([grade(s) for s in [55, 60, 75, 99]])</div>
     <li><strong>Top-k</strong>: <code>nlargest(k, xs)</code> / <code>nsmallest(k, xs)</code> run in O(n log k), better than sorting everything when k is small.</li>
     <li><strong>bisect</strong>: <code>bisect_left</code>/<code>bisect_right</code> return the insertion point in O(log n); <code>insort</code> inserts while keeping order, but the insertion itself shifts elements, so it is O(n). Typical uses: bucketing a score against cutoffs, range counts in sorted data, maintaining a sorted list with few inserts.</li>
   </ul>
+  <p>Interview patterns built on these (Kth largest, merge K sorted lists, binary search on the answer) are in <a class="xref" data-note="dsa_heaps">DSA: Heaps</a> and <a class="xref" data-note="dsa_binsearch">DSA: Binary Search</a>; queue and monotonic-deque patterns in <a class="xref" data-note="dsa_stacks">DSA: Stacks &amp; Queues</a>.</p>
   <div class="callout trap"><span class="label">Trap</span><p>If two heap entries have equal priority, Python compares the next tuple element; when that is a dict or a custom object, <code>heappush</code> raises <code>TypeError: '&lt;' not supported</code>. Add a tie-breaking counter: <code>(priority, next(counter), item)</code>. And a heap is only partially ordered: <code>heap</code> printed is not sorted, only <code>heap[0]</code> is guaranteed to be the minimum.</p></div>
 
   <h2 id="pc-array"><span class="num">07</span>Arrays vs Lists: the array Module and NumPy</h2>
