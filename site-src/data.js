@@ -220,7 +220,7 @@ const CATEGORIES = [
     {"key": "sd_cases", "label": "Case Studies"}
   ] },
   { key: "genai", label: "Generative AI", emoji: "\u2728", tag: "Advanced", blurb: "Transformers \u00b7 RAG \u00b7 LangGraph \u00b7 Agents", hue: 290, topics: [
-    {"key": "genai_roadmap", "label": "Start Here: The Learning Path"},
+    {"key": "genai_roadmap", "label": "The Big Picture"},
     {"key": "grp_genai_found", "label": "Foundations", "children": [
       {"key": "nlp",          "label": "NLP Foundations"},
       {"key": "transformers", "label": "Transformers"},
