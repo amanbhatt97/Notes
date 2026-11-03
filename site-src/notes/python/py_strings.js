@@ -5,53 +5,6 @@ Object.assign(TOPIC_CONTENT, {
   <div class="where"><span>Python</span><span>Collections</span><span>Strings</span></div>
   <p class="lead">Data rarely arrives as neat tuples and dicts. It arrives as text: a WhatsApp message, a log line, a CSV row, "Asha: 2 masala chai ₹40". A Python string is a sequence of characters that cannot change, so everything you learnt about sequences (indexing, slicing, <code>in</code>, loops) works on it unchanged. This note builds on that: string methods that cut a line into parts, f-strings and format specs that print a receipt, why <code>+</code> in a loop is slow and <code>join</code> is not, what Unicode, code points and bytes are (traced byte by byte on "chai ₹"), and a light introduction to regular expressions for lines too messy for <code>split</code>. The running example is the same Chai Corner morning as the rest of the group, now as the six raw text lines the orders came from; the last section turns them into the list, tuples, dict, set and Counter of the earlier notes. Run on Python 3.13.</p>
 
-  <h2 id="pst-fits" class="open"><span class="num">★</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 640 262" width="640">
-<defs><marker id="pst-ga" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="120" y="6" width="400" height="36" rx="8" fill="none" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.5"/>
-<text x="320" y="22" text-anchor="middle" class="tm" font-size="10">came from</text>
-<text x="320" y="36" text-anchor="middle" font-size="11">Fundamentals · Values &amp; Types · Control Flow · Functions</text>
-<line x1="320" y1="42" x2="320" y2="60" stroke="currentColor" marker-end="url(#pst-ga)"/>
-<line x1="320" y1="100" x2="110" y2="130" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#pst-ga)"/>
-<line x1="320" y1="100" x2="320" y2="130" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#pst-ga)"/>
-<line x1="320" y1="100" x2="530" y2="130" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#pst-ga)"/>
-<line x1="200" y1="152" x2="228" y2="152" stroke="currentColor" stroke-dasharray="3 3" marker-end="url(#pst-ga)"/>
-<line x1="410" y1="152" x2="438" y2="152" stroke="currentColor" stroke-dasharray="3 3" marker-end="url(#pst-ga)"/>
-<rect x="210" y="62" width="220" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="320" y="79" text-anchor="middle" font-size="12" font-weight="400">Python Collections: the map</text>
-<text x="320" y="94" text-anchor="middle" class="tm" font-size="10">which container, and why</text>
-<rect x="20" y="132" width="180" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="110" y="149" text-anchor="middle" font-size="12" font-weight="400">Lists &amp; Tuples</text>
-<text x="110" y="164" text-anchor="middle" class="tm" font-size="10">order · fixed records</text>
-<rect x="230" y="132" width="180" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="320" y="149" text-anchor="middle" font-size="12" font-weight="400">Dicts &amp; Sets</text>
-<text x="320" y="164" text-anchor="middle" class="tm" font-size="10">lookup by key · unique</text>
-<rect x="440" y="132" width="180" height="40" rx="8" class="fg sg" stroke-width="2.5"/>
-<text x="530" y="149" text-anchor="middle" font-size="12" font-weight="700">Strings</text>
-<text x="530" y="164" text-anchor="middle" class="tg" font-size="10">YOU ARE HERE · text is a sequence too</text>
-<line x1="320" y1="172" x2="320" y2="208" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#pst-ga)"/>
-<rect x="60" y="210" width="520" height="44" rx="8" fill="none" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.5"/>
-<text x="320" y="227" text-anchor="middle" class="tm" font-size="10">leads to</text>
-<text x="320" y="245" text-anchor="middle" font-size="11">Iterators &amp; Generators · OOP · DSA: Arrays, Hashing · Pandas</text>
-</svg><figcaption>The Python Collections group. Read the map first, then left to right: each note answers a question the one before could not. The dotted arrows are the reading order.</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: <a class="xref" data-note="py_dicts_sets">Dicts &amp; Sets</a></b><span>We looked prices up by name, counted with Counter and grouped with defaultdict, always starting from a ready-made list of order tuples. Two things were taken for granted: that names like "samosa" are values we can hash and compare, and that someone had already turned the stall's text into tuples. <a class="xref" data-note="py_lists_tuples">Lists &amp; Tuples</a> gave us indexing and slicing, which strings reuse exactly; <a class="xref" data-note="py_values">Values &amp; Types</a> introduced <code>str</code> as an immutable type.</span></li>
-    <li><b>This note adds: text as data</b><span>How to take text apart (slicing, methods, regex), how to put it together (join, f-strings), and how text becomes bytes on disk and on the network (Unicode, UTF-8).</span></li>
-    <li><b>Leads to: <a class="xref" data-note="py_iterators">Iterators &amp; Generators</a></b><span>Reading a file line by line is iteration; the group map <a class="xref" data-note="py_ds">Python Collections</a> ties all four notes together. Further on: <a class="xref" data-note="dsa_arrays">Arrays &amp; Strings</a> (two pointers, sliding windows on strings), <a class="xref" data-note="da_pandas">Pandas</a> (the <code>.str</code> accessor applies these same methods to a whole column), and <a class="xref" data-note="nlp">NLP Foundations</a> (tokenising text).</span></li>
-  </ol>
-
-  <h2 id="pst-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
-  <p>The whole note as one chain. Each concept answers the question above it; its weakness raises the next question. Numbers come from the running example.</p>
-  <ol class="story">
-    <li><b>str as an immutable sequence</b><span>Q: what is "Asha: 2 masala chai ₹40" to Python? → 23 characters in order: <code>line[0]</code> is "A", <code>"chai" in line</code> is True. It cannot change: <code>line[0] = "a"</code> raises TypeError; <code>upper()</code> returns a new string. How do we cut out the parts?</span></li>
-    <li><b>Slicing</b><span>Q: how do we take a piece? → The list rules: <code>line[:4]</code> "Asha", <code>line[8:19]</code> "masala chai". But positions change from line to line ("Ben" has 3 letters)…</span></li>
-    <li><b>Methods</b><span>Q: how do we cut by content, not position? → <code>split(": ")</code>, <code>split()</code>, <code>strip</code>, <code>join</code>, <code>find</code>, <code>replace</code>: the line becomes ("Asha", "masala chai", 2, 40); all six sum to ₹230. Now how do we print a neat receipt?</span></li>
-    <li><b>f-strings &amp; format specs</b><span>Q: how do we put values into text, aligned and rounded? → <code>f"{who:&lt;10}{rs:&gt;6}{rs/230:&gt;8.1%}"</code>: Ben 85 37.0%. But building a long text piece by piece with <code>+</code>…</span></li>
-    <li><b>join vs + in a loop</b><span>Q: why is <code>s = s + piece</code> slow? → Each <code>+</code> copies the whole string so far: 6 names → 97 characters written instead of 27; 20,000 pieces → about 20 ms vs about 0.2 ms. And so far every character was plain English…</span></li>
-    <li><b>Unicode, bytes, encodings</b><span>Q: what is "₹", and why is "chai ₹" 6 characters but 8 bytes? → Each character is a code point (₹ = U+20B9 = 8377); UTF-8 stores it as 3 bytes E2 82 B9. Decode with the wrong codec and you get "chai â‚¹". Finally, real order lines are messy: "Ben : 3 samosa", "asha:1 ginger chai  ₹25"…</span></li>
-    <li><b>Regular expressions</b><span>Q: how do we describe the <em>shape</em> of a line instead of its exact characters? → <code>(\\w+)\\s*:\\s*(\\d+)\\s+(.+?)\\s+₹\\s*(\\d+)</code> parses all six messy lines; <code>findall</code>, groups, <code>sub</code>. Then the stall's whole day closes in one script: text → tuples → dict → set → Counter.</span></li>
-  </ol>
-
   <h2 id="pst-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">Strings</div>
@@ -123,7 +76,6 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="pst-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain</span></div></div>
       <div class="rm-item rm-done" data-target="pst-seq"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Text Is a Sequence</span><span class="rm-sub">Immutable characters in order</span></div></div>
       <div class="rm-item rm-done" data-target="pst-slice"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Slicing Text</span><span class="rm-sub">One order line traced</span></div></div>
       <div class="rm-item rm-done" data-target="pst-methods"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">String Methods</span><span class="rm-sub">split, strip, join, find, replace</span></div></div>
@@ -132,7 +84,6 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="pst-uni"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Unicode, Bytes &amp; Encodings</span><span class="rm-sub">"chai ₹" byte by byte</span></div></div>
       <div class="rm-item rm-done" data-target="pst-re"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Regex: a Light Intro</span><span class="rm-sub">Parsing messy lines</span></div></div>
       <div class="rm-item rm-done" data-target="pst-build"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Hands-on: Close the Day</span><span class="rm-sub">Text → every collection</span></div></div>
-      <div class="rm-item rm-done" data-target="pst-connect"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One picture, one table</span></div></div>
       <div class="rm-item rm-done" data-target="pst-traps"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Traps in code and interviews</span></div></div>
       <div class="rm-item rm-done" data-target="pst-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note in 10 minutes</span></div></div>
       <div class="rm-item rm-done" data-target="pst-qa"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
@@ -140,9 +91,6 @@ Object.assign(TOPIC_CONTENT, {
   </div>
 
   <h2 id="pst-seq"><span class="num">01</span>Text Is a Sequence</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The previous notes started from a tidy list of tuples. But Chai Corner's orders come in as text messages on the stall's phone. Before we can split them apart, what <em>is</em> a piece of text to Python, and which of the list tools already work on it?</p>
-  </div>
   <h3>The running example</h3>
   <p>The six orders of the morning, exactly as typed by the helper (in section 07 we meet the messier real version):</p>
   <div class="fx" data-lang="py">LINES = [
@@ -184,12 +132,8 @@ False Asha: 2 masala chai ₹40!</div>
   <p>Assigning to a position raises TypeError, exactly as for a tuple. <code>upper()</code> did not change <code>line</code>; it returned a new string. Even <code>line = line + "!"</code> does not change the old string: it builds a new object (different <code>id</code>) and moves the name <code>line</code> to it, the "names are tags" idea from <a class="xref" data-note="py_fundamentals">Python Fundamentals</a>. Immutability is also why strings can be dict keys and set items (<a class="xref" data-note="py_dicts_sets">Dicts &amp; Sets</a>).</p>
   <div class="callout def"><span class="label">Definition</span><p>A <strong>str</strong> is an immutable sequence of Unicode code points (section 06). It supports indexing, slicing, <code>len</code>, <code>in</code> (substring test), iteration, <code>+</code> (concatenation) and <code>*</code> (repetition); all methods return new objects.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p><code>line.upper()</code> on its own line does nothing useful: the result is thrown away. Write <code>line = line.upper()</code>. (The opposite of the list trap, where <code>q = q.sort()</code> loses the list.)</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Slicing Text.</b> We can read one character. To get the customer, the item or the amount we need whole stretches of the line.</div>
 
   <h2 id="pst-slice"><span class="num">02</span>Slicing Text</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>"Asha" is the first four characters; "masala chai" sits somewhere in the middle; the amount is at the end. How do we cut those stretches out?</p>
-  </div>
   <p>Exactly as with lists: <code>s[start:stop:step]</code>, stop not included, negative positions from the end. Here are the positions of our line:</p>
   <table class="tbl">
     <tr><th>char</th><td>A</td><td>s</td><td>h</td><td>a</td><td>:</td><td>␣</td><td>2</td><td>␣</td><td>m</td><td>…</td><td>i</td><td>␣</td><td>₹</td><td>4</td><td>0</td></tr>
@@ -209,12 +153,8 @@ print(colon, line[:colon], "|", line[colon + 2:])</div>
   <div class="callout anlg"><span class="label">Analogy</span><p>Cutting a ribbon at numbered marks. It works perfectly for one ribbon; for the next ribbon you first have to find where the knot is.</p></div>
   <div class="callout def"><span class="label">Definition</span><p>For a str, <code>s[i]</code> returns a 1-character string and <code>s[a:b:c]</code> a new string, with the same index and clamping rules as every sequence (IndexError for a bad index, never for a slice).</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Hard-coded positions break as soon as the data varies ("Ben" is shorter than "Asha"). Slice by positions only for fixed-width formats (dates "2024-05-01"[:4]); otherwise cut by content (next section).</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: String Methods.</b> We need to cut by <em>what</em> the text contains (the colon, the spaces, the ₹), not by where it happens to sit.</div>
 
   <h2 id="pst-methods"><span class="num">03</span>String Methods: split, strip, join, find, replace</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Each line has the shape "name: qty item ₹amount". How do we turn it into the tuple ("Asha", "masala chai", 2, 40) whatever the length of each part?</p>
-  </div>
   <h3>Parsing one line, step by step</h3>
   <div class="fx" data-lang="py">line = "Asha: 2 masala chai ₹40"
 name, rest = line.split(": ")            # split on ": " -&gt; exactly two pieces here
@@ -286,12 +226,8 @@ print(sum(o[3] for o in orders))</div>
   <div class="callout anlg"><span class="label">Analogy</span><p><code>split</code> is tearing a perforated sheet of tickets at every perforation; <code>join</code> is taping a stack of tickets back into one strip, with a piece of tape (the separator) between each pair.</p></div>
   <div class="callout def"><span class="label">Definition</span><p><code>str.split(sep=None, maxsplit=-1)</code>: list of pieces; with sep=None splits on runs of whitespace and drops empty pieces. <code>sep.join(iterable_of_str)</code>: one string with sep between items (every item must be a str). <code>str.find(sub)</code> → index or −1; <code>str.index(sub)</code> → index or ValueError.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p><code>",".join([1, 2, 3])</code> raises TypeError: join needs strings. Use <code>",".join(map(str, nums))</code>. And <code>if s.find("x"):</code> is wrong: find returns 0 (falsy) for a match at the start and −1 (truthy) for "not found". Use <code>if "x" in s</code>.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: f-strings &amp; Format Specs.</b> We can take text apart. The owner also wants text <em>out</em>: a receipt with names aligned, rupees right-aligned, shares as percentages.</div>
 
   <h2 id="pst-fmt"><span class="num">04</span>f-strings &amp; Format Specs</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Gluing <code>"Bill for " + name + ": " + str(amount)</code> is clumsy, needs <code>str()</code> everywhere, and cannot align columns or round numbers. How do we put values into text neatly?</p>
-  </div>
   <p>An <strong>f-string</strong> has an <code>f</code> before the quotes; anything inside <code>{ }</code> is a Python expression whose value is inserted. After a colon you can add a <strong>format spec</strong>, a short rule like "2 decimals" or "right-align in 6 spaces".</p>
   <div class="fx" data-lang="py">name, item, qty, amount = "Asha", "masala chai", 2, 40
 print("Bill for " + name + ": " + str(qty) + " x " + item + " = Rs " + str(amount))  # clumsy
@@ -333,12 +269,8 @@ TOTAL        230</div>
   <div class="callout anlg"><span class="label">Analogy</span><p>A pre-printed bill book: the blanks are the braces, and the format spec is the instruction printed under each blank ("amount, 2 decimals, right side").</p></div>
   <div class="callout def"><span class="label">Definition</span><p>An <strong>f-string</strong> (formatted string literal) <code>f"…{expr!conv:spec}…"</code> evaluates each <code>expr</code> at run time, optionally converts it (<code>!r</code> repr, <code>!s</code> str), and formats it with the format-spec mini-language <code>[[fill]align][sign][width][,|_][.precision][type]</code>. <code>{expr=}</code> also prints the expression text.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Format money for display only: compute with numbers, format at the end. <code>f"{0.1 + 0.2:.2f}"</code> shows 0.30 but the float is still 0.30000000000000004; for real money use integers (paise) or <code>decimal.Decimal</code>. And never build SQL or shell commands with f-strings from user input (injection).</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Why + in a Loop Is Slow.</b> A receipt for 6 customers is fine. A day's report of 20,000 lines built piece by piece with <code>+</code> gets mysteriously slow. Why, if strings are so simple?</div>
 
   <h2 id="pst-join"><span class="num">05</span>Why "+" in a Loop Is Slow (and join Is Not)</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Immutability has a cost we have not counted yet. If a string can never grow, what actually happens each time we write <code>s = s + piece</code> in a loop?</p>
-  </div>
   <h3>Counted by hand</h3>
   <p>Because the old string cannot be extended, <code>s + piece</code> allocates a brand-new string and copies every character of <code>s</code> into it, then the piece. Build "Asha,Ben,Asha,Chen,Dia,Ben," that way and count the characters written:</p>
   <div class="fx" data-lang="py">pieces = ["Asha", "Ben", "Asha", "Chen", "Dia", "Ben"]
@@ -374,12 +306,8 @@ concat 18.44 ms, join 0.17 ms</div>
   <div class="callout anlg"><span class="label">Analogy</span><p>Writing a growing list of names on a whiteboard that cannot be erased or extended: for every new name you fetch a new, bigger board and copy all the old names first. join is measuring the final list first and writing it once on a board of the right size.</p></div>
   <div class="callout def"><span class="label">Definition</span><p>Repeated concatenation of immutable sequences in a loop costs O(n²) in total; collecting the parts in a list (O(1) amortised append) and calling <code>"".join(parts)</code> once costs O(total length). The same applies to tuples (<code>t = t + (x,)</code>).</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>The slow version still gives the right answer, so the bug only shows on big inputs. In a loop that builds text, append pieces to a list and join at the end; for files, write each piece directly (<code>f.write</code>).</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Unicode, Bytes &amp; Encodings.</b> We have treated every character as one simple thing. But "₹" is not on a typewriter, and the order file on disk is just bytes. How does "chai ₹" become bytes, and why does it sometimes come back as "chai â‚¹"?</div>
 
   <h2 id="pst-uni"><span class="num">06</span>Unicode, Bytes &amp; Encodings</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>A disk, a network socket and a CSV file store only bytes, numbers from 0 to 255. There are far more than 256 characters in the world (₹, é, हिंदी, ☕). So what is a character to Python, and how does it travel as bytes?</p>
-  </div>
   <h3>Plain words</h3>
   <ul>
     <li><strong>Unicode</strong> is one world-wide list that gives every character a number, its <strong>code point</strong>, written U+ and hex: "c" is U+0063 (99), "₹" is U+20B9 (8377). A Python <code>str</code> is a sequence of code points.</li>
@@ -471,12 +399,8 @@ True</div>
   <div class="callout anlg"><span class="label">Analogy</span><p>Code points are the words of a message; an encoding is the alphabet of the telegraph used to send it. Send in Morse, read as semaphore, and you get nonsense, though every signal arrived.</p></div>
   <div class="callout def"><span class="label">Definition</span><p><strong>Code point</strong>: the integer Unicode assigns to a character (0 to 0x10FFFF); <code>ord(ch)</code> and <code>chr(n)</code> convert. <strong>Encoding</strong>: a reversible map from code points to bytes; UTF-8 uses 1 byte for U+0000–U+007F, 2 for up to U+07FF, 3 for up to U+FFFF, 4 above. <strong>bytes</strong>: an immutable sequence of integers 0–255.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p><code>len(s)</code> counts code points, not bytes and not what a reader sees as "letters": "chai ₹" is 6 code points and 8 UTF-8 bytes, and an emoji with a skin-tone modifier is 2 code points. Limits like "max 255 bytes" must be checked on <code>len(s.encode())</code>.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Regex: a Light Intro.</b> Our <code>split(": ")</code> parser assumed perfectly typed lines. The helper on a busy morning types "Ben : 3 samosa", "asha:1 ginger chai  ₹25" and "₹ 60". How do we parse lines whose spacing varies?</div>
 
   <h2 id="pst-re"><span class="num">07</span>Regular Expressions: a Light Intro</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Here are the real lines. <code>split(": ")</code> breaks on three of them: a space before the colon, no space after it, a space after ₹. We cannot list every possible spacing. We need to describe the <em>shape</em> of a line: "a word, maybe spaces, a colon, maybe spaces, a number, …".</p>
-  </div>
   <div class="fx" data-lang="py">RAW = [
     "Asha: 2 masala chai ₹40",
     "Ben : 3 samosa ₹45",
@@ -573,12 +497,8 @@ print(re.findall("\\bchai\\b", "masala chai"), re.findall(r"\\bchai\\b", "masala
   <p>In a normal string <code>"\\b"</code> is one character, the backspace control code (0x08), so the pattern <code>"\\bchai\\b"</code> looks for backspaces and finds nothing. In a <strong>raw string</strong> <code>r"\\b"</code> the backslash stays a backslash, and the regex engine sees "word boundary". Always write patterns as raw strings.</p>
   <div class="callout def"><span class="label">Definition</span><p>A <strong>regular expression</strong> is a pattern describing a set of strings. <code>re.search(p, s)</code> → first match object or None; <code>re.match</code> anchors at the start; <code>re.fullmatch</code> anchors at both ends; <code>re.findall</code> → list of matches (or of group tuples); <code>re.sub(p, repl, s)</code> → new string; <code>re.compile(p)</code> → reusable pattern object. A match object offers <code>group()</code>, <code>groups()</code>, <code>groupdict()</code>, <code>start()</code>, <code>end()</code>, <code>span()</code>.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Greedy <code>.+</code> grabs as much as it can, so <code>(.+)\\s+₹</code> would work here but <code>"(.+),"</code> on "a,b,c" captures "a,b". Use the lazy <code>.+?</code> or a class like <code>[^,]+</code>. And do not use regex where a method is clearer: <code>s.startswith("Ben")</code> beats <code>re.match("Ben", s)</code>. Regex is for shapes; HTML and JSON have real parsers.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Hands-on: Close the Day.</b> Each tool works alone. The stall's real job is one pipeline: raw text in, every collection of this group filled, a checked receipt out.</div>
 
   <h2 id="pst-build"><span class="num">08</span>Hands-on: Close the Day</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We have built the same numbers four times in four notes: the order list, the menu dict, the customer set, the Counter and the bills. Can one short script take the messy text lines and produce all of them, checking every amount against the menu on the way?</p>
-  </div>
   <p>The plan, one container per job, exactly as the map note <a class="xref" data-note="py_ds">Python Collections</a> laid out: regex to parse each line (str) → a tuple per order in a list → prices from the menu dict to check the typed amount → a set of customers → a Counter of items sold → a defaultdict of bills → an f-string receipt.</p>
   <div class="fx" data-lang="py">import re
 from collections import Counter, defaultdict
@@ -622,49 +542,8 @@ TOTAL      230</div>
   <div class="callout anlg"><span class="label">Analogy</span><p>Closing the till at night: read the order slips (text), file each as a record (tuple), price it from the board (dict), note who came (set), tally the items (Counter), total each tab (defaultdict) and print the day's sheet (f-string).</p></div>
   <div class="callout def"><span class="label">Definition</span><p><strong>Parsing</strong>: turning text into structured values (here, str → tuple of str and int). <strong>Validation</strong>: checking the parsed values against known facts (amount = qty × price). Always do both before analysing data.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Not normalising text (case, spaces, Unicode form) before using it as a key splits one entity into several ("asha" vs "Asha", "bun  maska" vs "bun maska", "café" vs "café"). Normalise first, then count.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: How It All Connects.</b> One picture and one table to hold every string idea together.</div>
-
-  <h2 id="pst-connect"><span class="num">09</span>How It All Connects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Sequence rules, methods, f-strings, join, Unicode, regex: how is each one built on the others?</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 660 270" width="660">
-<defs><marker id="pst-a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="220" y="8" width="220" height="44" rx="7" class="fb sb"/><text x="330" y="27" text-anchor="middle" font-size="11.5" font-weight="700">str = immutable sequence</text><text x="330" y="43" text-anchor="middle" class="tm" font-size="10">of Unicode code points</text>
-<line x1="260" y1="52" x2="100" y2="88" stroke="currentColor" marker-end="url(#pst-a9)"/><line x1="330" y1="52" x2="330" y2="88" stroke="currentColor" marker-end="url(#pst-a9)"/><line x1="400" y1="52" x2="560" y2="88" stroke="currentColor" marker-end="url(#pst-a9)"/>
-<rect x="10" y="90" width="180" height="44" rx="7" class="ft st"/><text x="100" y="109" text-anchor="middle" font-size="11.5" font-weight="700">index &amp; slice</text><text x="100" y="125" text-anchor="middle" class="tm" font-size="10">same as list/tuple</text>
-<rect x="240" y="90" width="180" height="44" rx="7" class="fr sr"/><text x="330" y="109" text-anchor="middle" font-size="11.5" font-weight="700">immutable</text><text x="330" y="125" text-anchor="middle" class="tm" font-size="10">new string every time</text>
-<rect x="470" y="90" width="180" height="44" rx="7" class="ft st"/><text x="560" y="109" text-anchor="middle" font-size="11.5" font-weight="700">code points → bytes</text><text x="560" y="125" text-anchor="middle" class="tm" font-size="10">UTF-8: ₹ = E2 82 B9</text>
-<line x1="100" y1="134" x2="100" y2="168" stroke="currentColor" marker-end="url(#pst-a9)"/><line x1="300" y1="134" x2="230" y2="168" stroke="currentColor" marker-end="url(#pst-a9)"/><line x1="360" y1="134" x2="420" y2="168" stroke="currentColor" marker-end="url(#pst-a9)"/><line x1="330" y1="134" x2="330" y2="168" stroke="currentColor" marker-end="url(#pst-a9)"/>
-<rect x="10" y="170" width="170" height="44" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="95" y="189" text-anchor="middle" font-size="11" font-weight="700">methods: cut by content</text><text x="95" y="205" text-anchor="middle" class="tm" font-size="10">split · strip · find · replace</text>
-<rect x="190" y="170" width="90" height="44" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="235" y="189" text-anchor="middle" font-size="11" font-weight="700">hashable</text><text x="235" y="205" text-anchor="middle" class="tm" font-size="10">dict keys</text>
-<rect x="290" y="170" width="90" height="44" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="335" y="189" text-anchor="middle" font-size="11" font-weight="700">join, not +</text><text x="335" y="205" text-anchor="middle" class="tm" font-size="10">O(n) vs O(n²)</text>
-<rect x="390" y="170" width="120" height="44" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="450" y="189" text-anchor="middle" font-size="11" font-weight="700">f-strings</text><text x="450" y="205" text-anchor="middle" class="tm" font-size="10">values → text</text>
-<line x1="95" y1="214" x2="150" y2="236" stroke="currentColor" marker-end="url(#pst-a9)"/>
-<rect x="150" y="226" width="250" height="40" rx="7" class="fg sg"/><text x="275" y="244" text-anchor="middle" font-size="11" font-weight="700">regex: cut by shape</text><text x="275" y="259" text-anchor="middle" class="tm" font-size="10">when the content varies</text>
-<line x1="560" y1="134" x2="560" y2="226" stroke="currentColor" marker-end="url(#pst-a9)"/>
-<rect x="430" y="228" width="220" height="38" rx="7" class="fr sr"/><text x="540" y="251" text-anchor="middle" font-size="11">wrong codec → mojibake</text>
-</svg><figcaption>One object, an immutable sequence of code points, explains the whole note. "Sequence" gives indexing and slicing; "immutable" gives new strings from every method, hashability, and the cost of +; "code points" gives Unicode and encodings. Methods cut by content; regex cuts by shape when content varies.</figcaption></figure>
-  <table class="tbl"><caption>Every concept on Chai Corner's order lines</caption>
-    <tr><th>Concept</th><th>Built from</th><th>Answers</th><th>On our lines</th><th>Use when</th></tr>
-    <tr><td>str as sequence</td><td>list/tuple rules</td><td>what is text?</td><td>len 23; <code>"chai" in line</code></td><td>always</td></tr>
-    <tr><td>Immutability</td><td>like tuples</td><td>can it change?</td><td><code>line[0] = "a"</code> → TypeError</td><td>reason for keys and for join</td></tr>
-    <tr><td>Slicing</td><td>cuts between characters</td><td>fixed positions</td><td><code>[:4]</code> Asha, <code>[8:19]</code> masala chai</td><td>fixed-width formats</td></tr>
-    <tr><td>Methods</td><td>sequence + search</td><td>cut by content</td><td>("Asha", "masala chai", 2, 40); total 230</td><td>clean, regular text</td></tr>
-    <tr><td>f-strings</td><td>expressions + format specs</td><td>values into text</td><td>Ben 85 37.0%</td><td>any output</td></tr>
-    <tr><td>join vs +</td><td>immutability</td><td>building text fast</td><td>97 chars copied vs 26; ~20 ms vs ~0.2 ms</td><td>text built in a loop</td></tr>
-    <tr><td>Unicode/UTF-8</td><td>code points + bytes</td><td>text ↔ bytes</td><td>"chai ₹": 6 chars, 8 bytes</td><td>files, network, APIs</td></tr>
-    <tr><td>Normalisation</td><td>Unicode equivalence</td><td>same-looking text equal?</td><td>café 4 vs 5 code points</td><td>before comparing/keys</td></tr>
-    <tr><td>Regex</td><td>a pattern language</td><td>cut by shape</td><td>all 6 messy lines parsed</td><td>varying spacing/format</td></tr>
-    <tr><td>Close the day</td><td>everything above + all collections</td><td>text → data</td><td>4 customers, top masala chai 5, ₹230</td><td>any real data pipeline</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span><p>One sentence holds the note: <strong>a string is an immutable sequence of code points.</strong> "Sequence" means every list skill works; "immutable" means every operation makes a new string (so join beats +, and strings make good keys); "code points" means characters are numbers that must be encoded into bytes with an agreed rule.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Common Mistakes</b>, then back to the group map <a class="xref" data-note="py_ds">Python Collections</a> to see all four notes side by side, and on to <a class="xref" data-note="py_iterators">Iterators &amp; Generators</a>, where reading a file line by line becomes a lazy stream.</div>
 
   <h2 id="pst-traps"><span class="num">10</span>Common Mistakes</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Which string habits cause real bugs, and what does each look like?</p>
-  </div>
   <div class="callout trap"><span class="label">Trap: forgetting that methods return new strings</span><p><code>s.strip()</code> alone does nothing to s. Write <code>s = s.strip()</code>.</p></div>
   <div class="callout trap"><span class="label">Trap: + in a loop</span><p>O(n²) copying. Collect parts in a list and <code>"".join(parts)</code>.</p></div>
   <div class="callout trap"><span class="label">Trap: find in an if</span><p><code>if s.find(x):</code> is True for "not found" (−1) and False for "found at 0". Use <code>in</code>.</p></div>
@@ -675,7 +554,6 @@ TOTAL      230</div>
   <div class="callout trap"><span class="label">Trap: regex without a raw string</span><p><code>"\\b"</code> is a backspace. Use <code>r"\\b"</code>.</p></div>
   <div class="callout trap"><span class="label">Trap: re.match when you meant search</span><p>match only tries position 0. Use search to scan, fullmatch to validate.</p></div>
   <div class="callout trap"><span class="label">Trap: greedy .*</span><p><code>(.+),</code> captures up to the <em>last</em> comma. Use <code>.+?</code> or <code>[^,]+</code>.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Revision Sheet.</b> Everything in this note, condensed to one page.</div>
 
   <h2 id="pst-rev"><span class="num">R</span>Revision Sheet</h2>
   <p>The whole note on one sheet. Running example: six order lines, "Asha: 2 masala chai ₹40", "Ben: 3 samosa ₹45", "Asha: 1 ginger chai ₹25", "Chen: 1 masala chai ₹20", "Dia: 2 bun maska ₹60", "Ben: 2 masala chai ₹40"; the messy versions "Ben : 3 samosa ₹45", "asha:1 ginger chai  ₹25", "Dia: 2 bun maska ₹ 60".</p>

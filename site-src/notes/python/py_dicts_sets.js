@@ -5,57 +5,6 @@ Object.assign(TOPIC_CONTENT, {
   <div class="where"><span>Python</span><span>Collections</span><span>Dicts &amp; Sets</span></div>
   <p class="lead">A dict finds a value by its name ("what does a samosa cost?") and a set answers "is this one here?" ("has Esha come today?"), both in the same tiny time whether they hold ten items or ten million. They do it with one trick, hashing, and this note teaches that trick first, by hand, on an eight-slot table. Then everything else follows from it: why lookup is O(1), why keys must be hashable, dict create/read/update/delete, <code>get</code> and <code>setdefault</code>, iteration order, dict comprehensions, <code>Counter</code> and <code>defaultdict</code>, set operations, a measured list-vs-set race, and the traps. The running example is the same Chai Corner morning as the rest of the group: six orders, a menu of four prices, and the set of customers. Run on Python 3.13.</p>
 
-  <h2 id="pds-fits" class="open"><span class="num">★</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 640 262" width="640">
-<defs><marker id="pds-ga" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="120" y="6" width="400" height="36" rx="8" fill="none" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.5"/>
-<text x="320" y="22" text-anchor="middle" class="tm" font-size="10">came from</text>
-<text x="320" y="36" text-anchor="middle" font-size="11">Fundamentals · Values &amp; Types · Control Flow · Functions</text>
-<line x1="320" y1="42" x2="320" y2="60" stroke="currentColor" marker-end="url(#pds-ga)"/>
-<line x1="320" y1="100" x2="110" y2="130" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#pds-ga)"/>
-<line x1="320" y1="100" x2="320" y2="130" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#pds-ga)"/>
-<line x1="320" y1="100" x2="530" y2="130" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#pds-ga)"/>
-<line x1="200" y1="152" x2="228" y2="152" stroke="currentColor" stroke-dasharray="3 3" marker-end="url(#pds-ga)"/>
-<line x1="410" y1="152" x2="438" y2="152" stroke="currentColor" stroke-dasharray="3 3" marker-end="url(#pds-ga)"/>
-<rect x="210" y="62" width="220" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="320" y="79" text-anchor="middle" font-size="12" font-weight="400">Python Collections: the map</text>
-<text x="320" y="94" text-anchor="middle" class="tm" font-size="10">which container, and why</text>
-<rect x="20" y="132" width="180" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="110" y="149" text-anchor="middle" font-size="12" font-weight="400">Lists &amp; Tuples</text>
-<text x="110" y="164" text-anchor="middle" class="tm" font-size="10">order · fixed records</text>
-<rect x="230" y="132" width="180" height="40" rx="8" class="fg sg" stroke-width="2.5"/>
-<text x="320" y="149" text-anchor="middle" font-size="12" font-weight="700">Dicts &amp; Sets</text>
-<text x="320" y="164" text-anchor="middle" class="tg" font-size="10">YOU ARE HERE · lookup by key · unique</text>
-<rect x="440" y="132" width="180" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="530" y="149" text-anchor="middle" font-size="12" font-weight="400">Strings</text>
-<text x="530" y="164" text-anchor="middle" class="tm" font-size="10">text is a sequence too</text>
-<line x1="320" y1="172" x2="320" y2="208" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#pds-ga)"/>
-<rect x="60" y="210" width="520" height="44" rx="8" fill="none" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.5"/>
-<text x="320" y="227" text-anchor="middle" class="tm" font-size="10">leads to</text>
-<text x="320" y="245" text-anchor="middle" font-size="11">Iterators &amp; Generators · OOP · DSA: Arrays, Hashing · Pandas</text>
-</svg><figcaption>The Python Collections group. Read the map first, then left to right: each note answers a question the one before could not. The dotted arrows are the reading order.</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: <a class="xref" data-note="py_lists_tuples">Lists &amp; Tuples</a></b><span>We can store the six orders in a list and each order as a tuple. But a list finds things only by position, or by scanning every item, and the last section there ended on a promise: a tuple is hashable, so it can be a dict key. The map note <a class="xref" data-note="py_ds">Python Collections</a> placed this note on the need "look up by name / is it there?".</span></li>
-    <li><b>This note adds: the hash-based containers</b><span>dict (key → value) and set (keys only). How hashing works, what it costs, how to read, write, count and group with them, and how to combine sets.</span></li>
-    <li><b>Leads to: <a class="xref" data-note="py_strings">Strings</a></b><span>Our menu keys and customer names are strings, and the orders actually arrive as text lines like "Asha: 2 masala chai ₹40". The next note pulls those lines apart. Further on: <a class="xref" data-note="dsa_hashing">DSA: Hashing</a> uses dicts and sets for interview patterns (two-sum, group anagrams), <a class="xref" data-note="py_oop">OOP</a> shows how to make your own objects hashable (<code>__hash__</code>, <code>__eq__</code>), and <a class="xref" data-note="da_pandas">Pandas</a> builds DataFrames from dicts and uses hash tables inside <code>groupby</code> and <code>merge</code>.</span></li>
-  </ol>
-
-  <h2 id="pds-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
-  <p>The whole note as one chain. Each concept answers the question above it; its weakness raises the next question. Numbers come from the running example.</p>
-  <ol class="story">
-    <li><b>The lookup problem</b><span>Q: what does a bun maska cost? → With a list of (item, price) pairs we scan: 4 comparisons for bun maska, 4 to learn vada pav is missing. For n items, n steps. Can we jump straight to the answer?</span></li>
-    <li><b>Hashing</b><span>Q: how can a key tell us where it is stored? → Turn it into a number and take the remainder by the table size: "bun maska" → 882 → slot 2. "samosa" also wants slot 4 (taken by masala chai), so it tries slot 5: a collision. But is this really constant time, and are there rules?</span></li>
-    <li><b>O(1) lookup &amp; hashable keys</b><span>Q: why is it fast, and what can be a key? → Lookup costs one hash plus a few slot checks, whatever the size: a few dozen nanoseconds for 10 keys and for a million. It only works if a key's hash never changes, so keys must be hashable; a key that changes gets lost. Now, how do we use a dict day to day?</span></li>
-    <li><b>Dict CRUD</b><span>Q: how do we create, read, update and delete? → <code>menu["samosa"]</code>, <code>menu[k] = v</code>, <code>del</code>, <code>pop</code>, <code>|</code>. But reading a missing key raises KeyError, which happens constantly when totals start from nothing…</span></li>
-    <li><b>get &amp; setdefault</b><span>Q: how do we read with a fallback, or create on first use? → <code>totals.get(name, 0) + …</code> gives Asha 65, Ben 85, Chen 20, Dia 60. Then: in what order do we get them back when we loop?</span></li>
-    <li><b>Iteration order &amp; views</b><span>Q: what does a loop over a dict give, and in what order? → Keys, in insertion order (guaranteed since 3.7); <code>.items()</code> for pairs; never change the size while looping. But building a dict with a loop is wordy…</span></li>
-    <li><b>Dict comprehensions</b><span>Q: one line for a whole dict? → <code>{item: round(p * 1.05) for item, p in menu.items()}</code>. And the most common dict jobs, counting and grouping, still need get/setdefault boilerplate…</span></li>
-    <li><b>Counter &amp; defaultdict</b><span>Q: counting and grouping without boilerplate? → <code>Counter</code>: masala chai 5, samosa 3; <code>defaultdict(list)</code>: Asha → [masala chai, ginger chai]. Now: what if we need only the keys, no values?</span></li>
-    <li><b>Sets &amp; set operations</b><span>Q: unique customers, and who came both days? → <code>set(names)</code> = 4 customers; today &amp; yesterday = {Ben, Dia}; today − yesterday = {Asha, Chen}. How much faster is "is it there?" really?</span></li>
-    <li><b>Membership speed, measured</b><span>Q: list vs set for <code>in</code>? → On 100,000 ids the set was thousands of times faster; a list inside a loop turned a 1 ms job into a 1 s job. What can still go wrong?</span></li>
-    <li><b>Traps</b><span>Q: where do dicts and sets bite? → Mutating while iterating, mutable keys, <code>1 == True</code> sharing a key, <code>hash()</code> changing between runs, <code>{}</code> being a dict, lost order in <code>list(set(x))</code>.</span></li>
-  </ol>
-
   <h2 id="pds-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">Dicts &amp; Sets</div>
@@ -130,7 +79,6 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="pds-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain</span></div></div>
       <div class="rm-item rm-done" data-target="pds-need"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">The Lookup Problem</span><span class="rm-sub">Why scanning is not enough</span></div></div>
       <div class="rm-item rm-done" data-target="pds-hash"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Hashing by Hand</span><span class="rm-sub">An 8-slot table traced</span></div></div>
       <div class="rm-item rm-done" data-target="pds-o1"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">O(1) &amp; Hashable Keys</span><span class="rm-sub">Why fast, why immutable</span></div></div>
@@ -142,16 +90,12 @@ Object.assign(TOPIC_CONTENT, {
       <div class="rm-item rm-done" data-target="pds-set"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Sets &amp; Set Operations</span><span class="rm-sub">Today vs yesterday</span></div></div>
       <div class="rm-item rm-done" data-target="pds-speed"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Membership Speed</span><span class="rm-sub">List vs set, measured</span></div></div>
       <div class="rm-item rm-done" data-target="pds-traps"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Traps, Demonstrated</span><span class="rm-sub">Where dicts and sets bite</span></div></div>
-      <div class="rm-item rm-done" data-target="pds-connect"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One picture, one table</span></div></div>
       <div class="rm-item rm-done" data-target="pds-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note in 10 minutes</span></div></div>
       <div class="rm-item rm-done" data-target="pds-qa"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
     </div>
   </div>
 
   <h2 id="pds-need"><span class="num">01</span>The Lookup Problem</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The orders list from <a class="xref" data-note="py_lists_tuples">Lists &amp; Tuples</a> tells us Asha had 2 masala chai, but not what she owes: for that we need each item's price. Prices are looked up by <em>name</em>, not by position. With only lists, how fast can we answer "what does a bun maska cost?"</p>
-  </div>
   <h3>The running example</h3>
   <p>Chai Corner, Monday morning. Six orders <code>(customer, item, qty)</code>, and a menu of four prices in rupees:</p>
   <table class="tbl"><caption>The running example</caption>
@@ -186,12 +130,8 @@ vada pav -&gt; (None, 4)</div>
   <div class="callout anlg"><span class="label">Analogy</span><p>Finding a phone number in a notebook where names were written in the order you met people. You read from the top every time. What you want is the contacts app: type the name, get the number.</p></div>
   <div class="callout def"><span class="label">Definition</span><p><strong>Linear search</strong>: compare the target with each element in turn until found or the end is reached. O(n) comparisons in the worst case; it is what <code>x in list</code>, <code>list.index</code> and <code>list.remove</code> do.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Sorting the list and using binary search (<code>bisect</code>) gets you to O(log n), but every insert must keep the order (O(n)). Hashing gets O(1) for both lookup and insert, which is why Python's dict and set use it.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Hashing by Hand.</b> We want the key itself to say where its value is stored, so we can jump there instead of searching. How can a word like "samosa" become a shelf number?</div>
 
   <h2 id="pds-hash"><span class="num">02</span>Hashing by Hand</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Positions are fast (a list jumps to slot i in one step). Names are what we have. If we could turn every name into a position, a name lookup would be as fast as an index. How do we do that, and what happens when two names want the same position?</p>
-  </div>
   <h3>Plain words</h3>
   <p>A dict keeps an array of <strong>slots</strong> (say 8). To store a key, Python computes a number from the key, its <strong>hash</strong>, and takes the remainder after dividing by the number of slots: <code>hash(key) % 8</code> is a slot number from 0 to 7. The key and value go into that slot. To look the key up later, compute the same number, go straight to that slot, and check the key there.</p>
   <div class="callout anlg"><span class="label">Analogy</span><p>A railway cloakroom. You hand in a bag and get a token; the token number says which shelf the bag is on. Coming back, the attendant walks straight to that shelf. Nobody checks every shelf.</p></div>
@@ -321,12 +261,8 @@ for i in range(12):
   <p>A real dict also keeps spare room: when its table is about 2/3 full it moves to a bigger one (here at the 6th and 11th keys: an 8-slot table holds 5 keys, 16 slots hold 10). Collisions stay rare because the table is never crowded. Inside CPython, the slot table holds only small numbers pointing into a separate, compact list of (hash, key, value) entries kept in insertion order. That second list is why <code>list(menu)</code> comes back in the order you inserted, a guarantee since Python 3.7 (section 06).</p>
   <div class="callout def"><span class="label">Definition</span><p>A <strong>hash table</strong> stores entries in an array of slots, placing each key at a slot computed from <code>hash(key)</code>. A <strong>hash function</strong> maps a key to an integer; equal keys must map to equal integers. A <strong>collision</strong> is two different keys mapped to the same slot; <strong>open addressing</strong> (what CPython uses) resolves it by probing other slots of the same array. The <strong>load factor</strong> (used slots ÷ total slots) is kept below about 2/3 by resizing.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>The toy hash (sum of codes) is a bad real hash: "listen" and "silent" have the same letters, so the same sum, and would always collide. Real hash functions scramble every bit. Never write your own for production; use <code>hash()</code> inside a process and <code>hashlib</code> when the number must be the same across runs (section 11).</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: O(1) &amp; Hashable Keys.</b> We traced lookups of 1 and 2 steps on 4 keys. Does that stay true for a million keys? And what happens if a key changes after it has been filed on a shelf?</div>
 
   <h2 id="pds-o1"><span class="num">03</span>Why Lookup Is O(1), and Why Keys Must Be Hashable</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The table worked on four items. The claims we hear are bigger: "dict lookup is constant time" and "lists can't be keys". Why is the first true (and when is it false)? And why is the second a rule rather than a limitation?</p>
-  </div>
   <h3>Why O(1)</h3>
   <p>A lookup does three things: compute the hash (depends on the key's length, not on the dict's size), jump to one slot (one array index), and compare a few keys along the probe path. Because the table is kept less than 2/3 full and a good hash spreads keys evenly, the expected number of slots checked is a small constant, whether the dict has 10 keys or 10 million. Measured:</p>
   <div class="fx" data-lang="py">import timeit
@@ -364,12 +300,8 @@ False
   <div class="callout anlg"><span class="label">Analogy</span><p>Your cloakroom token is written in pencil and someone rubs out the 4 and writes 7. The attendant now walks to shelf 7. Your bag is still on shelf 4, but nobody will ever look there.</p></div>
   <div class="callout def"><span class="label">Definition</span><p>An object is <strong>hashable</strong> if <code>hash(obj)</code> never changes during its lifetime and <code>a == b</code> implies <code>hash(a) == hash(b)</code>. Hashable built-ins: int, float, complex, str, bytes, bool, None, frozenset, and tuples whose items are all hashable. Not hashable: list, dict, set, bytearray. Dict keys and set items must be hashable; dict <em>values</em> can be anything.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>The rule is "equal ⇒ same hash", not the other way round. Different keys may share a hash (a collision), and that is fine, because the dict always confirms with <code>==</code>. If you define <code>__eq__</code> on your own class, define a matching <code>__hash__</code> from immutable fields (or Python sets <code>__hash__</code> to None and the objects become unhashable).</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Dict CRUD.</b> We know how a dict works inside. Now the everyday question: how do we create one, read from it, change it and delete from it, and what happens at the edges (missing keys, clashing merges)?</div>
 
   <h2 id="pds-crud"><span class="num">04</span>Dict CRUD: Create, Read, Update, Delete</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The stall's menu changes: a new item arrives, a price goes up, an item is dropped. Which operations do each job, and which ones crash on a missing key?</p>
-  </div>
   <p>A <strong>dict</strong> (dictionary) stores pairs <strong>key → value</strong>. Keys are unique and hashable; values can be anything and can repeat. It is written <code>{key: value, …}</code>.</p>
   <div class="fx" data-lang="py">menu = {"masala chai": 20, "ginger chai": 25, "samosa": 15}          # Create: literal
 print(dict(zip(["samosa", "bun maska"], [15, 30])))               # Create: from two lists
@@ -415,12 +347,8 @@ print(menu)</div>
   <div class="callout anlg"><span class="label">Analogy</span><p>The menu board on the wall: each line is "item — price". You can add a line, change a price, rub a line out. Two items cannot share a line name; two items can share a price.</p></div>
   <div class="callout def"><span class="label">Definition</span><p>A <strong>dict</strong> is a mutable mapping from hashable keys to arbitrary values, implemented as a hash table that preserves insertion order. <code>d[k]</code>, <code>d[k] = v</code>, <code>del d[k]</code>, <code>k in d</code> are O(1) on average; <code>len(d)</code> is O(1).</p></div>
   <div class="callout trap"><span class="label">Trap</span><p><code>k in d</code> checks <em>keys</em> only: <code>20 in menu</code> is False even though 20 is a price. Use <code>20 in menu.values()</code> (which is an O(n) scan).</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: get &amp; setdefault.</b> To total each customer's bill we must add to a value that does not exist yet the first time we see that customer, and <code>d[k]</code> crashes on missing keys. How do we read with a fallback?</div>
 
   <h2 id="pds-get"><span class="num">05</span>get &amp; setdefault</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>"How much does each customer owe?" Walking the orders, the first time we meet Asha there is no total to add to. Checking <code>if name in totals</code> every time works but doubles the code. Is there a one-step "read, or use a default"?</p>
-  </div>
   <h3>get: read with a default</h3>
   <p><code>d.get(k, default)</code> returns <code>d[k]</code> if the key exists, otherwise <code>default</code> (None if not given). It never adds the key. Here each order adds qty × price to the customer's total, starting from 0:</p>
   <div class="fx" data-lang="py">menu = {"masala chai": 20, "ginger chai": 25, "samosa": 15, "bun maska": 30}
@@ -457,12 +385,8 @@ None not on menu</div>
   <div class="callout anlg"><span class="label">Analogy</span><p><code>get</code>: "what's Asha's tab? If she has none, call it zero" (nothing written down). <code>setdefault</code>: "give me Asha's page in the ledger; if she has no page, open a blank one for her first".</p></div>
   <div class="callout def"><span class="label">Definition</span><p><code>dict.get(key, default=None)</code> → <code>d[key]</code> if key in d else default; never modifies d. <code>dict.setdefault(key, default=None)</code> → <code>d[key]</code> if present, else sets <code>d[key] = default</code> and returns it.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p><code>setdefault(k, [])</code> builds a new empty list on every call, even when the key exists and it is thrown away. Harmless for small data; for heavy defaults use <code>defaultdict</code> (section 08), which only builds one when needed.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Iteration Order &amp; Views.</b> We have a dict of four totals. To print a receipt we must loop over it. What exactly does a loop over a dict give us, and in what order?</div>
 
   <h2 id="pds-iter"><span class="num">06</span>Iteration Order &amp; Views</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Hashing scatters keys over slots (masala chai on 4, ginger chai on 1). Will a loop give them back in that scattered order? And can we print customers from the biggest bill down?</p>
-  </div>
   <div class="fx" data-lang="py">totals = {"Asha": 65, "Ben": 85, "Chen": 20, "Dia": 60}
 for name in totals:                      # iterating a dict gives its KEYS
     print(name, end=" ")
@@ -518,12 +442,8 @@ print({n: r for n, r in totals.items() if r &gt;= 50})   # or build a new dict</
   <div class="callout anlg"><span class="label">Analogy</span><p>Reading names off a queue while people join and leave it: you lose your place. Photograph the queue first (<code>list(d)</code>), then work from the photo.</p></div>
   <div class="callout def"><span class="label">Definition</span><p>Iterating a dict yields its keys in insertion order; re-assigning an existing key keeps its position; deleting and re-inserting moves it to the end. <code>dict.keys()/values()/items()</code> return dynamic view objects reflecting later changes.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Sets do <em>not</em> keep insertion order: their printed order depends on hash values, so with string items it can differ from run to run. Never rely on the order of a set; sort it for output.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Dict Comprehensions.</b> We keep building new dicts with "empty dict, loop, if, assign": prices with tax, only the chai items, the filtered totals. Lists had comprehensions; do dicts?</div>
 
   <h2 id="pds-comp"><span class="num">07</span>Dict Comprehensions</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The owner wants a price list with 5% GST added, a chai-only board, and a "price → item" lookup. Each is a whole new dict made from the old one. Can we say each in one line, as list comprehensions did for lists?</p>
-  </div>
   <p>A <strong>dict comprehension</strong> is the same idea as a list comprehension (<a class="xref" data-note="py_lists_tuples">Lists &amp; Tuples</a>, section 04) with curly brackets and a <code>key: value</code> expression in front. Desugared: <code>out = {}</code>, then <code>for … : if … : out[key] = value</code>.</p>
   <div class="fx" data-lang="py">menu = {"masala chai": 20, "ginger chai": 25, "samosa": 15, "bun maska": 30}
 print({item: round(price * 1.05) for item, price in menu.items()})          # +5% GST
@@ -544,12 +464,8 @@ print(line_totals)</div>
   <div class="callout anlg"><span class="label">Analogy</span><p>Writing a new menu board from the old one in one go: "for every item on the board, write the item and its price plus 5%".</p></div>
   <div class="callout def"><span class="label">Definition</span><p><code>{k_expr: v_expr for target in iterable if cond}</code> builds a new dict; if two iterations produce the same key, the last value wins. The set comprehension <code>{expr for …}</code> looks similar but has no colon.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p><code>{}</code> with nothing inside is an empty <em>dict</em>; <code>{x for x in xs}</code> is a set and <code>{x: 1 for x in xs}</code> a dict. The colon decides.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Counter &amp; defaultdict.</b> The two most common dict jobs are counting ("how many of each item?") and grouping ("which items per customer?"), and both still need the get/setdefault dance. The standard library has containers made for exactly these.</div>
 
   <h2 id="pds-coll"><span class="num">08</span>Counter &amp; defaultdict</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>"What sold most?" and "what did each customer order?" are counting and grouping. With a plain dict we keep writing <code>d.get(k, 0) + 1</code> and <code>d.setdefault(k, []).append(x)</code>. Can the dict itself know what a missing key should start as?</p>
-  </div>
   <h3>Counter: a dict for counting</h3>
   <p><code>collections.Counter</code> is a dict whose missing keys read as 0, plus counting tools.</p>
   <div class="fx" data-lang="py">from collections import Counter
@@ -589,12 +505,8 @@ print(items_by_customer["Zoya"], "Zoya" in items_by_customer)   # a READ creates
   <div class="callout anlg"><span class="label">Analogy</span><p>A tally sheet where every possible item already has a 0 next to it (Counter), and a filing cabinet that grows a fresh empty folder the moment you ask for a name it has not seen (defaultdict).</p></div>
   <div class="callout def"><span class="label">Definition</span><p><code>Counter</code>: a dict subclass mapping items to counts; missing keys return 0; <code>most_common(k)</code>, <code>update</code>, <code>+ − &amp; |</code>. <code>defaultdict(default_factory)</code>: a dict subclass that, on <code>d[k]</code> for a missing k, sets <code>d[k] = default_factory()</code> and returns it.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>With a defaultdict, use <code>k in d</code> or <code>d.get(k)</code> to <em>check</em>, never <code>d[k]</code>: reading inserts. Convert with <code>dict(d)</code> before handing it to code that expects KeyErrors.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Sets &amp; Set Operations.</b> Sometimes we do not need a value at all, only the keys: "who are today's customers?", "who came both days?". A dict with dummy values would work, but Python has a dedicated container.</div>
 
   <h2 id="pds-set"><span class="num">09</span>Sets &amp; Set Operations</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The names column has six entries but only four people. "How many different customers?", "who came both Monday and Sunday?", "who stopped coming?" are questions about membership, not about values or positions.</p>
-  </div>
   <h3>Plain words</h3>
   <p>A <strong>set</strong> is a hash table with keys only: each item is stored once, there is no order, and <code>in</code> is O(1). Its two jobs: remove duplicates, and answer "is x here?" fast. Like dict keys, set items must be hashable.</p>
   <div class="fx" data-lang="py">names = [name for name, item, qty in orders]
@@ -669,12 +581,8 @@ TypeError: unhashable type: 'list'</div>
   </ul>
   <div class="callout def"><span class="label">Definition</span><p>A <strong>set</strong> is a mutable, unordered collection of distinct hashable objects, implemented as a hash table without values: <code>add</code>, <code>discard</code>, <code>in</code> O(1) average; union/intersection/difference cost about the sizes of the sets involved. <strong>frozenset</strong> is its immutable, hashable counterpart.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p><code>set("chai")</code> is {'c', 'h', 'a', 'i'}: a string is a sequence of characters. To make a one-item set use <code>{"chai"}</code> or <code>set(["chai"])</code>.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Membership Speed, Measured.</b> We keep saying "O(1) vs O(n)". On four customers nobody can tell the difference. How big is the gap on real data, and where does it bite in real code?</div>
 
   <h2 id="pds-speed"><span class="num">10</span>Membership Speed, Measured</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Is "set lookup is faster" a detail or a big deal? Scale the stall up to a chain: 100,000 customer ids. How long does "is this id here?" take with a list, and with a set?</p>
-  </div>
   <div class="fx" data-lang="py">import timeit
 n = 100_000
 ids_list = list(range(n))
@@ -709,12 +617,8 @@ set inside loop:  0.0013 s</div>
   <div class="callout anlg"><span class="label">Analogy</span><p>Checking 20,000 visitors against a printed guest list by reading it top to bottom each time, versus a doorman who knows every guest by face.</p></div>
   <div class="callout def"><span class="label">Definition</span><p><code>x in list</code> / <code>x in tuple</code>: O(n) linear search. <code>x in set</code> / <code>x in dict</code>: O(1) average hash lookup. Building a set from n items: O(n), worth it as soon as you check membership more than a handful of times.</p></div>
   <div class="callout trap"><span class="label">Trap</span><p>Converting inside the loop (<code>if c in set(regulars)</code>) rebuilds the set every time and is even slower than the list. Build it once, outside.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Traps, Demonstrated.</b> Hashing gives speed and rules. Most bugs with dicts and sets come from forgetting one of the rules. Which ones, and what do they look like?</div>
 
   <h2 id="pds-traps"><span class="num">11</span>Traps, Demonstrated</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We have seen two traps already (changing size while looping, keys that change). What do the others look like when they happen?</p>
-  </div>
   <h3>Equal keys share one slot</h3>
   <div class="fx" data-lang="py">print({1: "int", 1.0: "float", True: "bool"})
 print({0, False, 0.0, "0"})</div>
@@ -736,48 +640,6 @@ for u in ["Asha", "Ben", "Chen", "Dia", "Esha", "Faiz"]:
   <div class="callout trap"><span class="label">Trap: relying on set order</span><p><code>list(set(xs))</code> loses the original order, and string sets may print differently each run. Use <code>dict.fromkeys</code> to dedupe in order, <code>sorted</code> for display.</p></div>
   <div class="callout trap"><span class="label">Trap: reading a defaultdict inserts</span><p><code>d["Zoya"]</code> on a defaultdict creates Zoya. Check with <code>in</code> or <code>get</code>.</p></div>
   <div class="callout def"><span class="label">Definition</span><p><code>hashlib.md5(b).hexdigest()</code> (or sha256) is a deterministic digest of bytes: the same input gives the same output on every machine and run, unlike <code>hash()</code> on str/bytes, which is salted per process (controlled by <code>PYTHONHASHSEED</code>).</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: How It All Connects.</b> One trick (hashing) and many tools. One picture and one table should now hold them together.</div>
-
-  <h2 id="pds-connect"><span class="num">12</span>How It All Connects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Hashing, O(1), hashability, CRUD, get/setdefault, order, comprehensions, Counter, defaultdict, sets, the speed race and the traps: how is each built from the one before?</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 660 300" width="660">
-<defs><marker id="pds-a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="10" y="10" width="170" height="44" rx="7" class="fr sr"/><text x="95" y="29" text-anchor="middle" font-size="11.5" font-weight="700">linear search</text><text x="95" y="45" text-anchor="middle" class="tm" font-size="10">list of pairs: up to n steps</text>
-<line x1="180" y1="32" x2="238" y2="32" stroke="currentColor" marker-end="url(#pds-a9)"/>
-<rect x="240" y="10" width="180" height="44" rx="7" class="fb sb"/><text x="330" y="29" text-anchor="middle" font-size="11.5" font-weight="700">hashing</text><text x="330" y="45" text-anchor="middle" class="tm" font-size="10">slot = hash(key) % size</text>
-<line x1="420" y1="32" x2="478" y2="32" stroke="currentColor" marker-end="url(#pds-a9)"/>
-<rect x="480" y="10" width="170" height="44" rx="7" class="fb sb"/><text x="565" y="29" text-anchor="middle" font-size="11.5" font-weight="700">collisions → probe</text><text x="565" y="45" text-anchor="middle" class="tm" font-size="10">samosa 4 → 5</text>
-<line x1="300" y1="54" x2="200" y2="88" stroke="currentColor" marker-end="url(#pds-a9)"/><line x1="360" y1="54" x2="460" y2="88" stroke="currentColor" marker-end="url(#pds-a9)"/>
-<rect x="90" y="90" width="210" height="44" rx="7" class="ft st"/><text x="195" y="109" text-anchor="middle" font-size="11.5" font-weight="700">O(1) average lookup</text><text x="195" y="125" text-anchor="middle" class="tm" font-size="10">table ≤ 2/3 full; worst O(n)</text>
-<rect x="360" y="90" width="210" height="44" rx="7" class="ft st"/><text x="465" y="109" text-anchor="middle" font-size="11.5" font-weight="700">keys must be hashable</text><text x="465" y="125" text-anchor="middle" class="tm" font-size="10">a changing key gets lost</text>
-<line x1="195" y1="134" x2="120" y2="168" stroke="currentColor" marker-end="url(#pds-a9)"/><line x1="330" y1="134" x2="330" y2="168" stroke="currentColor" marker-end="url(#pds-a9)"/><line x1="465" y1="134" x2="540" y2="168" stroke="currentColor" marker-end="url(#pds-a9)"/>
-<rect x="10" y="170" width="220" height="44" rx="7" class="fg sg"/><text x="120" y="189" text-anchor="middle" font-size="11.5" font-weight="700">dict: key → value</text><text x="120" y="205" text-anchor="middle" class="tm" font-size="10">CRUD · get · setdefault · order</text>
-<rect x="245" y="170" width="170" height="44" rx="7" class="fg sg"/><text x="330" y="189" text-anchor="middle" font-size="11.5" font-weight="700">set: keys only</text><text x="330" y="205" text-anchor="middle" class="tm" font-size="10">unique · | &amp; − ^</text>
-<rect x="430" y="170" width="220" height="44" rx="7" class="fr sr"/><text x="540" y="189" text-anchor="middle" font-size="11.5" font-weight="700">traps</text><text x="540" y="205" text-anchor="middle" class="tm" font-size="10">1 == True · salted hash() · mutating</text>
-<line x1="70" y1="214" x2="70" y2="246" stroke="currentColor" marker-end="url(#pds-a9)"/><line x1="170" y1="214" x2="200" y2="246" stroke="currentColor" marker-end="url(#pds-a9)"/><line x1="330" y1="214" x2="380" y2="246" stroke="currentColor" marker-end="url(#pds-a9)"/>
-<rect x="10" y="248" width="120" height="44" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="70" y="267" text-anchor="middle" font-size="11" font-weight="700">comprehensions</text><text x="70" y="283" text-anchor="middle" class="tm" font-size="10">{k: v for …}</text>
-<rect x="140" y="248" width="170" height="44" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="225" y="267" text-anchor="middle" font-size="11" font-weight="700">Counter · defaultdict</text><text x="225" y="283" text-anchor="middle" class="tm" font-size="10">missing key → 0 / [ ]</text>
-<rect x="320" y="248" width="200" height="44" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="420" y="267" text-anchor="middle" font-size="11" font-weight="700">fast membership</text><text x="420" y="283" text-anchor="middle" class="tm" font-size="10">set vs list: thousands of ×</text>
-</svg><figcaption>Everything grows from one fix for one problem: linear search is slow, so let the key compute its own slot. That gives O(1) lookup and, as its price, the hashability rule. A dict stores values in those slots, a set stores only keys; the tools and traps hang off those two.</figcaption></figure>
-  <table class="tbl"><caption>Every concept on the Chai Corner morning</caption>
-    <tr><th>Concept</th><th>Built from</th><th>Answers</th><th>On our data</th><th>Use when</th></tr>
-    <tr><td>Linear search</td><td>a list of pairs</td><td>find by name (slowly)</td><td>bun maska: 4 steps</td><td>tiny data only</td></tr>
-    <tr><td>Hashing</td><td>hash % slots, probing</td><td>where is the key stored?</td><td>samosa → 4 → 5</td><td>(inside every dict/set)</td></tr>
-    <tr><td>O(1) lookup</td><td>hashing + spare room</td><td>is it fast at any size?</td><td>10 vs 10⁶ keys: same ns</td><td>any lookup-heavy code</td></tr>
-    <tr><td>Hashable</td><td>stable hash + equality</td><td>what can be a key?</td><td>changed Table key lost</td><td>choosing key types</td></tr>
-    <tr><td>Dict CRUD</td><td>hash table with values</td><td>store and change by name</td><td><code>menu["samosa"]</code> = 15</td><td>menus, configs, records</td></tr>
-    <tr><td>get / setdefault</td><td>CRUD + default</td><td>missing keys</td><td>bills 65, 85, 20, 60 → 230</td><td>totals, grouping</td></tr>
-    <tr><td>Order &amp; views</td><td>compact entries list</td><td>loop order</td><td>Asha, Ben, Chen, Dia</td><td>receipts, reports</td></tr>
-    <tr><td>Dict comprehension</td><td>loop + assign</td><td>a new dict in one line</td><td>GST prices 21, 26, 16, 32</td><td>transform/filter/invert</td></tr>
-    <tr><td>Counter</td><td>dict, missing → 0</td><td>how many of each?</td><td>masala chai 5, samosa 3</td><td>frequencies, top-k</td></tr>
-    <tr><td>defaultdict</td><td>dict + factory</td><td>group without setup</td><td>Asha → [masala, ginger]</td><td>grouping, nested counts</td></tr>
-    <tr><td>Set &amp; operations</td><td>hash table, no values</td><td>unique? both? only one?</td><td>4 customers; both days Ben, Dia</td><td>dedupe, compare id lists</td></tr>
-    <tr><td>Membership speed</td><td>O(1) vs O(n)</td><td>does it matter?</td><td>list ~1 s vs set ~1 ms in a loop</td><td>any <code>in</code> inside a loop</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span><p>One sentence holds the note: <strong>a dict or set lets the key compute where it lives, so finding it costs O(1), on the condition that the key never changes.</strong> Speed comes from the first half, every rule (hashable keys, no resizing during loops, equal values share a key) from the second.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Revision Sheet</b>, then <a class="xref" data-note="py_strings">Strings</a>: our keys and names are strings, and the orders actually arrive as lines of text that must be split and parsed before any of this can run.</div>
 
   <h2 id="pds-rev"><span class="num">R</span>Revision Sheet</h2>
   <p>The whole note on one sheet. Running example: orders (Asha, masala chai, 2), (Ben, samosa, 3), (Asha, ginger chai, 1), (Chen, masala chai, 1), (Dia, bun maska, 2), (Ben, masala chai, 2); menu masala chai 20, ginger chai 25, samosa 15, bun maska 30; yesterday's customers Ben, Dia, Esha.</p>

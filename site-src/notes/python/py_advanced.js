@@ -1,89 +1,56 @@
-// notes/python/py_advanced.js — Advanced Python Functions: the map
+// notes/python/py_advanced.js — Functional Programming Tools
 Object.assign(TOPIC_CONTENT, {
   "py_advanced": `<main>
-<h1>Advanced Python Functions: the map</h1>
-  <div class="where"><span>Python</span><span>Advanced Python</span><span>Advanced Python Functions: the map</span></div>
-  <p class="lead">Start here. Iterators, generators, closures, decorators and context managers are usually taught as five separate tricks, each with its own diagram and code. They are not separate. Each one exists because ordinary functions and loops hit a specific wall, and each is built out of the one before it. This short note gives you the whole picture before the details: <strong>why</strong> these features exist (three pains in one small program), the <strong>family tree</strong> that connects them, the order to read the three child notes in, and one running example, Chai Corner's order log, that all three notes reuse. The details, traced line by line, live in <a class="xref" data-note="py_iterators">Iterators &amp; Generators</a>, <a class="xref" data-note="py_decorators">Closures &amp; Decorators</a> and <a class="xref" data-note="py_context">Context Managers</a>.</p>
-
-  <h2 id="pa-fits" class="open"><span class="num">★</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 640 150" width="640">
-    <defs><marker id="pa-a0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
-    <rect x="215" y="8" width="210" height="32" rx="6" class="fg sg" stroke-width="2.5"/><text x="320" y="29" text-anchor="middle" font-size="12" font-weight="700">Advanced Python Functions: map</text>
-    <line x1="320" y1="40" x2="110" y2="72" stroke="currentColor" stroke-opacity="0.45"/>
-    <line x1="320" y1="40" x2="320" y2="72" stroke="currentColor" stroke-opacity="0.45"/>
-    <line x1="320" y1="40" x2="530" y2="72" stroke="currentColor" stroke-opacity="0.45"/>
-    <rect x="20" y="72" width="180" height="34" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="110" y="94" text-anchor="middle" font-size="12">1 · Iterators &amp; Generators</text>
-    <rect x="230" y="72" width="180" height="34" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="320" y="94" text-anchor="middle" font-size="12">2 · Closures &amp; Decorators</text>
-    <rect x="440" y="72" width="180" height="34" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="530" y="94" text-anchor="middle" font-size="12">3 · Context Managers</text>
-    <line x1="200" y1="89" x2="226" y2="89" stroke="currentColor" marker-end="url(#pa-a0)"/>
-    <line x1="410" y1="89" x2="436" y2="89" stroke="currentColor" marker-end="url(#pa-a0)"/>
-    <text x="320" y="135" text-anchor="middle" class="tm" font-size="11">read in this order: each note uses the one before it</text>
-  </svg><figcaption>The Advanced Python Functions group. You are on the green map note; the three child notes are read left to right.</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: <a class="xref" data-note="py_fundamentals">Python Fundamentals</a>, <a class="xref" data-note="py_io">Exceptions, Files &amp; Packages</a> and <a class="xref" data-note="py_oop">OOP</a></b><span>You can write functions (with <code>*args</code>, <code>**kwargs</code>, defaults), loops, <code>try/except/finally</code>, open files, and classes with dunder methods. Left open: plain functions run start to finish and forget everything, loops seem to "just work" on anything, and cleanup is something you must remember to write.</span></li>
-    <li><b>This note adds: the map</b><span>Why the five features exist, how they grow out of each other, one running example shared by the whole group, and the reading order. No feature is taught in depth here.</span></li>
-    <li><b>Leads to: <a class="xref" data-note="py_iterators">Iterators &amp; Generators</a></b><span>The first child note. Then <a class="xref" data-note="py_decorators">Closures &amp; Decorators</a> and <a class="xref" data-note="py_context">Context Managers</a>. After the group: <a class="xref" data-note="py_concurrency">Concurrency &amp; Async</a> (coroutines grew out of generators; <code>with lock:</code>) and <a class="xref" data-note="py_testing">Testing &amp; Debugging</a> (fixtures, <code>mock.patch</code>).</span></li>
-  </ol>
-
-  <h2 id="pa-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
-  <p>The whole group as one chain. Each idea answers the question above it; its weakness raises the next question. The link at the end of each line is the note that teaches it. Numbers come from the running example (section 01): Chai Corner's six-line log, 4 valid orders, 7 items, ₹225.</p>
-  <ol class="story">
-    <li><b>for loop → iterator protocol</b><span>Q: how does one <code>for</code> walk a list, a dict and a file? → It calls <code>iter()</code> once and <code>next()</code> until <code>StopIteration</code>. Can our own object hand out orders that way? <a class="xref" data-note="py_iterators">Iterators &amp; Generators</a></span></li>
-    <li><b>Class iterator</b><span>Q: how do we make our own loopable object? → <code>__iter__</code> + <code>__next__</code> with <code>self.pos</code>. Works, but 17 lines of bookkeeping… <a class="xref" data-note="py_iterators">Iterators &amp; Generators</a></span></li>
-    <li><b>Generator</b><span>Q: can Python remember our place for us? → <code>yield</code> pauses the function with its variables kept: 9 lines, same ₹225. <a class="xref" data-note="py_iterators">Iterators &amp; Generators</a></span></li>
-    <li><b>Lazy pipelines</b><span>Q: what does pausing buy? → Data flows one item at a time: 10 million values in 0.0005 MB instead of 409 MB; a billion-line log searched by reading 15 lines. Now a different wall: the same timing code is pasted into every function… <a class="xref" data-note="py_iterators">Iterators &amp; Generators</a></span></li>
-    <li><b>Functions are objects</b><span>Q: can a function be handed to other code? → Store, pass, return it. A returned inner function needs variables of a finished function… <a class="xref" data-note="py_decorators">Closures &amp; Decorators</a></span></li>
-    <li><b>Closure</b><span>Q: where do those variables live? → In cells attached to the inner function (<code>make_tax(0.05)</code> remembers 0.05). Can a closure hold a whole function? <a class="xref" data-note="py_decorators">Closures &amp; Decorators</a></span></li>
-    <li><b>Decorator</b><span>Q: how do we add code around many functions without editing them? → A wrapper closure that calls the original; <code>@timed</code> ≡ <code>f = timed(f)</code>. Options (<code>@retry(times=3)</code>) add a layer. But a decorator wraps a whole call; what about a few lines that must clean up even on error? <a class="xref" data-note="py_decorators">Closures &amp; Decorators</a></span></li>
-    <li><b>with &amp; context managers</b><span>Q: how do we guarantee cleanup of a block? → <code>__enter__</code>/<code>__exit__</code>, called by <code>with</code> on every exit path: the log is closed even when "till restarted" raises. Writing a class each time is heavy… <a class="xref" data-note="py_context">Context Managers</a></span></li>
-    <li><b>@contextmanager</b><span>Q: shorter? → A generator (pause at <code>yield</code>, cleanup in <code>finally</code>) turned into a context manager by a decorator. The three branches meet. <a class="xref" data-note="py_context">Context Managers</a></span></li>
-  </ol>
+<h1>Functional Programming Tools</h1>
+  <div class="where"><span>Python</span><span>Advanced Python</span><span>Functional Programming Tools</span></div>
+  <p class="lead">Python functions are objects, so you can pass them into other functions, return them, and store them in dicts. A small toolkit is built on that: <code>map</code>/<code>filter</code>/<code>reduce</code>, <code>key=</code> functions for sorting and ranking, the <code>operator</code> module, and <code>functools</code> (<code>partial</code>, <code>lru_cache</code>, <code>singledispatch</code>). Without these tools you end up writing a near-identical loop each time you sort by a different column, recompute an expensive pure function thousands of times, or grow an <code>isinstance</code> chain that has to be edited whenever a new type turns up. In DS/ML and backend code they show up as sort keys on records, <code>itemgetter</code> on rows, cached feature lookups, configurable callbacks built with <code>partial</code>, and pure transformation steps that are easy to test. Code here was run on Python 3.13.</p>
 
   <h2 id="pa-map" class="open"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
-    <div class="mm-center">Advanced Python Functions</div>
+    <div class="mm-center">Functional Tools</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">Why they exist</div>
+        <div class="mm-title">Functions as values</div>
         <ul>
-          <li>Data too big to load at once → <b>generators</b></li>
-          <li>Same extra code around many functions → <b>decorators</b></li>
-          <li>Cleanup skipped by an error → <b>context managers</b></li>
+          <li>First-class: store, pass, return</li>
+          <li>Higher-order: takes or returns a function</li>
+          <li><code>lambda</code>: one expression, no statements</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Iteration branch</div>
+        <div class="mm-title">Transform &amp; reduce</div>
         <ul>
-          <li><code>for</code> = <code>iter()</code> + <code>next()</code> + <code>StopIteration</code></li>
-          <li>Iterable (book) vs iterator (bookmark)</li>
-          <li>Generator: <code>yield</code> pauses, locals kept</li>
-          <li>Lazy pipelines, <code>itertools</code></li>
+          <li><code>map</code>/<code>filter</code> return lazy one-pass iterators</li>
+          <li>Comprehensions usually clearer than map + lambda</li>
+          <li><code>functools.reduce(f, xs, init)</code>; prefer <code>sum</code>/<code>max</code>/<code>any</code>/<code>all</code></li>
+          <li><code>any</code>/<code>all</code> short-circuit; <code>all([])</code> is True</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Function branch</div>
+        <div class="mm-title">Key functions</div>
         <ul>
-          <li>Functions are objects</li>
-          <li>Closure: inner function + cells</li>
-          <li>Decorator: <code>@d</code> ≡ <code>f = d(f)</code>; <code>functools.wraps</code></li>
-          <li>Factories <code>@retry(times=3)</code>; stacking <code>a(b(f))</code></li>
+          <li><code>sorted</code>/<code>min</code>/<code>max</code>(<code>key=</code>)</li>
+          <li>Tuple keys for multi-column sorts</li>
+          <li>Sort is stable</li>
+          <li><code>itemgetter</code>, <code>attrgetter</code>, <code>methodcaller</code></li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Resource branch</div>
+        <div class="mm-title">functools</div>
         <ul>
-          <li><code>try/finally</code> → <code>with</code></li>
-          <li><code>__enter__</code> / <code>__exit__(type, exc, tb)</code>; True = swallow</li>
-          <li><code>@contextmanager</code> = generator + decorator</li>
-          <li><code>ExitStack</code>, locks, transactions</li>
+          <li><code>partial</code>: freeze some arguments</li>
+          <li><code>lru_cache</code>/<code>cache</code>: memoise; args must be hashable</li>
+          <li><code>.cache_info()</code>, <code>.cache_clear()</code></li>
+          <li><code>singledispatch</code>: overload on first arg's type</li>
+          <li><code>total_ordering</code>: <code>__eq__</code> + one comparison</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">One shared idea</div>
+        <div class="mm-title">Style</div>
         <ul>
-          <li>Each is syntax that calls <b>your</b> code at the right moment</li>
-          <li><code>for</code> → <code>__iter__</code>/<code>__next__</code>; <code>@</code> → your decorator; <code>with</code> → <code>__enter__</code>/<code>__exit__</code></li>
-          <li>Generators and closures are both "functions with memory"</li>
+          <li>Pure function: output depends only on input, no side effects</li>
+          <li>Return new data instead of mutating arguments</li>
+          <li>Immutable types: tuple, frozenset, frozen dataclass</li>
         </ul>
       </div>
     </div>
@@ -92,361 +59,537 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="pa-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The group as one chain</span></div></div>
-      <div class="rm-item rm-done" data-target="pa-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Why These Features Exist</span><span class="rm-sub">Three pains, one small program</span></div></div>
-      <div class="rm-item rm-done" data-target="pa-example"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">The Same Program, Fixed</span><span class="rm-sub">All three features together</span></div></div>
-      <div class="rm-item rm-done" data-target="pa-tree"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">The Family Tree</span><span class="rm-sub">Three roots, one meeting point</span></div></div>
-      <div class="rm-item rm-done" data-target="pa-syntax"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Syntax That Calls Your Code</span><span class="rm-sub">for, @ and with, spied on</span></div></div>
-      <div class="rm-item rm-done" data-target="pa-order"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Reading Order</span><span class="rm-sub">What each note answers</span></div></div>
-      <div class="rm-item rm-done" data-target="pa-connect"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One table for the group</span></div></div>
-      <div class="rm-item rm-done" data-target="pa-traps"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">One per feature</span></div></div>
-      <div class="rm-item rm-done" data-target="pa-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The group on one page</span></div></div>
-      <div class="rm-item rm-done" data-target="pa-qa"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Connection questions</span></div></div>
+      <div class="rm-item rm-done" data-target="pa-hof"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">First-Class and Higher-Order Functions</span><span class="rm-sub">pass, return and store functions</span></div></div>
+      <div class="rm-item rm-done" data-target="pa-mapfilter"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">map, filter and Comprehensions</span><span class="rm-sub">lazy iterators vs list comprehensions</span></div></div>
+      <div class="rm-item rm-done" data-target="pa-reduce"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">functools.reduce, any and all</span><span class="rm-sub">folding, initial value, short-circuit</span></div></div>
+      <div class="rm-item rm-done" data-target="pa-lambda"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">lambda and Its Limits</span><span class="rm-sub">one expression, when to use def</span></div></div>
+      <div class="rm-item rm-done" data-target="pa-key"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Key Functions: sorted, min, max</span><span class="rm-sub">key=, tuple keys, stability</span></div></div>
+      <div class="rm-item rm-done" data-target="pa-operator"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">The operator Module</span><span class="rm-sub">itemgetter, attrgetter, methodcaller</span></div></div>
+      <div class="rm-item rm-done" data-target="pa-partial"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">functools.partial</span><span class="rm-sub">freeze arguments, build callbacks</span></div></div>
+      <div class="rm-item rm-done" data-target="pa-cache"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Memoisation: lru_cache and cache</span><span class="rm-sub">cache_info, eviction, hashable args</span></div></div>
+      <div class="rm-item rm-done" data-target="pa-dispatch"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">singledispatch and total_ordering</span><span class="rm-sub">type-based overloads, comparison methods</span></div></div>
+      <div class="rm-item rm-done" data-target="pa-pure"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Pure Functions, Side Effects and Immutability</span><span class="rm-sub">no mutation, frozen dataclasses</span></div></div>
+      <div class="rm-item rm-done" data-target="pa-traps"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">exhausted map, stale cache, sort()</span></div></div>
+      <div class="rm-item rm-done" data-target="pa-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">syntax, rules and gotchas</span></div></div>
+      <div class="rm-item rm-done" data-target="pa-qa"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">map vs comprehension, caching, purity</span></div></div>
     </div>
   </div>
 
-  <h2 id="pa-why"><span class="num">01</span>Why These Features Exist</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>With plain functions, loops and <code>try/except</code> you can already write any program. So why does Python need generators, decorators and context managers at all? What goes wrong without them?</p>
-  </div>
-  <h3>The running example: Chai Corner's order log</h3>
-  <p>Chai Corner is a small tea stall. Its till writes one line per order: time, item, quantity, unit price in rupees. Monday's log has six lines. Line 1 is a comment and line 5 is junk the till wrote when it restarted; the other four are orders. Every note in this group uses this file.</p>
-  <div class="fx" data-lang="py">LOG = """# Chai Corner till log, Monday
-09:01,masala chai,2,30
-09:05,samosa,3,15
-09:12,cold coffee,1,90
-till restarted
-09:20,masala chai,1,30
-"""
-with open("orders.log", "w") as f:
-    f.write(LOG)
-print(LOG, end="")</div>
-  <div class="fx" data-lang="text"># Chai Corner till log, Monday
-09:01,masala chai,2,30
-09:05,samosa,3,15
-09:12,cold coffee,1,90
-till restarted
-09:20,masala chai,1,30</div>
-  <table class="tbl"><caption>The answer every note reproduces</caption>
-    <tr><th>Time</th><th>Item</th><th>Qty × price</th><th>Amount</th></tr>
-    <tr><td>09:01</td><td>masala chai</td><td>2 × 30</td><td>60</td></tr>
-    <tr><td>09:05</td><td>samosa</td><td>3 × 15</td><td>45</td></tr>
-    <tr><td>09:12</td><td>cold coffee</td><td>1 × 90</td><td>90</td></tr>
-    <tr><td>09:20</td><td>masala chai</td><td>1 × 30</td><td>30</td></tr>
-    <tr><td colspan="2"><strong>4 orders</strong></td><td><strong>7 items</strong></td><td><strong>₹225</strong></td></tr>
+  <h2 id="pa-hof"><span class="num">01</span>First-Class and Higher-Order Functions</h2>
+  <p>In Python a function is an ordinary object of type <code>function</code>. A name like <code>apply_discount</code> refers to it, and you call it with <code>apply_discount(...)</code>. Being <strong>first-class</strong> means it can go anywhere a value can: into a variable, a list, a dict, an argument or a return value. A <strong>higher-order function</strong> takes a function as an argument, returns one, or does both. Higher-order functions let you write the loop once and pass in the part that changes.</p>
+  <div class="fx" data-lang="py">def apply_discount(price):
+    return round(price * 0.9, 2)
+
+def apply_all(func, prices):          # higher-order: takes a function
+    return [func(p) for p in prices]
+
+def make_scaler(factor):              # higher-order: returns a function
+    def scale(x):
+        return x * factor
+    return scale
+
+prices = [30, 15, 90]
+print(apply_all(apply_discount, prices))
+double = make_scaler(2)
+print(apply_all(double, prices))
+ops = {"discount": apply_discount, "double": double}   # dispatch table
+print(ops["double"](45), type(double).__name__, double.__name__)</div>
+  <div class="fx" data-lang="text">[27.0, 13.5, 81.0]
+[60, 30, 180]
+90 function scale</div>
+  <p><code>make_scaler</code> returns an inner function that still remembers <code>factor</code> after <code>make_scaler</code> has returned. That inner function is a closure. Closures and the decorators built on them are covered in <a class="xref" data-note="py_decorators">Closures &amp; Decorators</a>, and the basics of passing and returning functions in <a class="xref" data-note="py_functions">Functions</a>.</p>
+  <div class="callout def"><span class="label">Definition</span><p><strong>First-class function</strong>: a function that is a value like any other. <strong>Higher-order function</strong>: one that takes and/or returns functions, for example <code>map</code>, <code>filter</code>, <code>sorted(key=)</code>, <code>functools.partial</code> and every decorator.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Pass the function, not a call to it: <code>apply_all(apply_discount, prices)</code>. Writing <code>apply_all(apply_discount(30), prices)</code> passes the number 27.0, and the call then fails with <code>TypeError: 'float' object is not callable</code>.</p></div>
+
+  <h2 id="pa-mapfilter"><span class="num">02</span>map, filter and Comprehensions</h2>
+  <p><code>map(f, xs)</code> applies <code>f</code> to every item and <code>filter(pred, xs)</code> keeps the items for which <code>pred</code> is truthy. In Python 3 both return <strong>lazy iterators</strong>, not lists. Nothing is computed until you consume the iterator, and it can be consumed only once.</p>
+  <div class="fx" data-lang="py">nums = [3, -1, 4, -1, 5, -9, 2]
+m = map(abs, nums)
+print(m)
+print(list(m))
+print(list(m))                                   # already exhausted
+print(list(filter(lambda n: n &gt; 0, nums)))
+print([n for n in nums if n &gt; 0])                # same, as a comprehension
+print(list(map(str.upper, ["a", "b"])))          # existing function: map reads well
+print(list(map(lambda n: n * n, filter(lambda n: n &gt; 0, nums))))
+print([n * n for n in nums if n &gt; 0])            # same, much clearer
+print(list(map(pow, [2, 3, 4], [5, 2, 1])))      # several iterables in parallel
+print(list(filter(None, [0, 1, "", "x", None, [], [0]])))   # None = keep truthy</div>
+  <div class="fx" data-lang="text">&lt;map object at 0x7fec5969a650&gt;
+[3, 1, 4, 1, 5, 9, 2]
+[]
+[3, 4, 5, 2]
+[3, 4, 5, 2]
+['A', 'B']
+[9, 16, 25, 4]
+[9, 16, 25, 4]
+[32, 9, 4]
+[1, 'x', [0]]</div>
+  <table class="tbl"><caption>Which to use</caption>
+    <tr><th>Situation</th><th>Clearer choice</th><th>Why</th></tr>
+    <tr><td>Apply an existing named function</td><td><code>map(str.strip, lines)</code></td><td>no throwaway variable or lambda</td></tr>
+    <tr><td>Needs a lambda</td><td><code>[x * 2 for x in xs]</code></td><td>the lambda adds a function call per item and noise</td></tr>
+    <tr><td>Transform and filter together</td><td><code>[f(x) for x in xs if cond(x)]</code></td><td>one expression instead of nested map/filter</td></tr>
+    <tr><td>Large or streamed input, consumed once</td><td>generator expression <code>(f(x) for x in xs)</code> or <code>map</code></td><td>lazy, constant memory</td></tr>
+    <tr><td>Several input sequences in parallel</td><td><code>map(f, xs, ys)</code></td><td>stops at the shortest, like <code>zip</code></td></tr>
   </table>
-  <h3>The obvious first attempt</h3>
-  <p>The owner wants the day's revenue and wants to know how long the report takes. Here is how a beginner writes it.</p>
-  <div class="fx" data-lang="py">import time
+  <p>For performance, <code>map</code> with a built-in function implemented in C (<code>map(int, tokens)</code>) is slightly faster than a comprehension. <code>map</code> with a <code>lambda</code> is usually slightly <em>slower</em> than the equivalent comprehension because it calls a Python function for every item. In most code the difference is negligible, so choose whichever reads better. Laziness and one-pass iterators are covered in depth in <a class="xref" data-note="py_iterators">Iterators &amp; Generators</a>.</p>
+  <div class="callout trap"><span class="label">Trap</span><p>A <code>map</code> or <code>filter</code> object is exhausted after one pass. The second <code>list(m)</code> above returned <code>[]</code> with no error. If you need the results twice, store them with <code>list(...)</code> first.</p></div>
 
-def total_revenue(path):
-    t0 = time.perf_counter()                 # pain 2: timing pasted into the function
-    f = open(path)                           # pain 3: who closes this if an error happens?
-    lines = f.readlines()                    # pain 1: the WHOLE file loaded into memory
-    total = 0
-    for line in lines:
-        time_, item, qty, price = line.strip().split(",")
-        total += int(qty) * int(price)
-    f.close()
-    print(f"took {time.perf_counter() - t0:.4f}s")
-    return total
+  <h2 id="pa-reduce"><span class="num">03</span>functools.reduce, any and all</h2>
+  <p><code>functools.reduce(f, xs, initial)</code> folds a sequence into one value. It starts with an accumulator (the initial value, or the first item if none is given), then sets <code>acc = f(acc, x)</code> for each item. It was moved out of the built-ins in Python 3 because a plain loop or a dedicated built-in is usually clearer.</p>
+  <div class="fx" data-lang="py">from functools import reduce
+import operator
 
+nums = [3, 1, 4, 1, 5]
+print(reduce(lambda acc, x: acc + x, nums))      # ((((3+1)+4)+1)+5)
+print(reduce(operator.mul, nums, 1))             # product
+print(reduce(operator.mul, [], 1))               # empty input: returns initial
 try:
-    total_revenue("orders.log")
-except ValueError as e:
-    print("ValueError:", e)</div>
-  <div class="fx" data-lang="text">ValueError: not enough values to unpack (expected 4, got 2)</div>
-  <p>It crashed on line 1 (the comment splits into 2 parts, not 4), and that crash exposes all three problems at once:</p>
-  <table class="tbl"><caption>Three pains in one function</caption>
-    <tr><th>Pain</th><th>In the code</th><th>What goes wrong</th><th>The feature that fixes it</th></tr>
-    <tr><td>1. Everything in memory</td><td><code>f.readlines()</code></td><td>Fine for 6 lines; a year of logs from 500 stalls does not fit in RAM. And we only ever need one line at a time.</td><td><strong>Iterators &amp; generators</strong>: hand out one item at a time</td></tr>
-    <tr><td>2. Pasted extra code</td><td><code>t0 = …</code>, <code>print(f"took …")</code></td><td>Every report function needs the same timing lines; the real logic is buried; and here the error skipped the timing print entirely.</td><td><strong>Decorators</strong>: write the timing once, attach with <code>@timed</code></td></tr>
-    <tr><td>3. Cleanup skipped</td><td><code>f.close()</code> after the loop</td><td>The <code>ValueError</code> jumped past <code>close()</code>: the file stayed open. On a server this leaks a handle per request.</td><td><strong>Context managers</strong>: <code>with</code> guarantees cleanup</td></tr>
+    reduce(operator.add, [])
+except TypeError as e:
+    print("TypeError:", e)
+dicts = [{"a": 1}, {"b": 2}, {"a": 3}]
+print(reduce(lambda acc, d: acc | d, dicts, {}))  # merge dicts, later wins
+print(sum(nums), max(nums), min(nums))           # dedicated reducers
+print(any(n &gt; 4 for n in nums), all(n &gt; 0 for n in nums))
+print(any([]), all([]))</div>
+  <div class="fx" data-lang="text">14
+60
+1
+TypeError: reduce() of empty iterable with no initial value
+{'a': 3, 'b': 2}
+14 5 1
+True True
+False True</div>
+  <p>Prefer a built-in reducer when one exists: <code>sum</code>, <code>max</code>, <code>min</code>, <code>any</code>, <code>all</code>, <code>math.prod</code>, <code>"".join</code>. <code>reduce</code> is reasonable when the combining step is a named function (<code>operator.or_</code> over sets, merging configs). If you find yourself writing a multi-line lambda for <code>reduce</code>, use a loop instead.</p>
+  <h3>any and all short-circuit</h3>
+  <p><code>any</code> stops at the first truthy item and <code>all</code> at the first falsy one. That only saves work if you pass a <em>generator expression</em>. A list comprehension builds the whole list first.</p>
+  <div class="fx" data-lang="py">def check(n):
+    print("checking", n)
+    return n &gt; 2
+
+print(any(check(n) for n in [1, 3, 5]))      # generator: stops at 3
+print(any([check(n) for n in [1, 3, 5]]))    # list: checks everything first</div>
+  <div class="fx" data-lang="text">checking 1
+checking 3
+True
+checking 1
+checking 3
+checking 5
+True</div>
+  <div class="callout trap"><span class="label">Trap</span><p><code>all([])</code> is <code>True</code> (vacuous truth) and <code>any([])</code> is <code>False</code>. A validation like <code>all(row_ok(r) for r in rows)</code> passes when <code>rows</code> is empty, so check for emptiness separately if an empty input is an error. Always give <code>reduce</code> an initial value when the input may be empty.</p></div>
+
+  <h2 id="pa-lambda"><span class="num">04</span>lambda and Its Limits</h2>
+  <p><code>lambda args: expression</code> creates an anonymous function object inline. It is meant for short throwaway functions passed to <code>key=</code>, <code>map</code>, <code>filter</code> or callbacks. Its body is a single <em>expression</em>, whose value is returned automatically. The syntax and the late-binding trap are covered in <a class="xref" data-note="py_functions">Functions</a>. Here the focus is where lambda stops being the right tool.</p>
+  <div class="fx" data-lang="py">square = lambda x: x * x
+print(square(4), square.__name__)
+def square2(x): return x * x
+print(square2.__name__)
+
+rows = [("asha", "b", 3), ("ravi", "a", 1), ("meena", "b", 7)]
+print(sorted(rows, key=lambda row: (row[1], -row[2])))   # good use: inline key
+sign = lambda n: "neg" if n &lt; 0 else "non-neg"           # conditional expression is allowed
+print(sign(-2))</div>
+  <div class="fx" data-lang="text">16 &lt;lambda&gt;
+square2
+[('ravi', 'a', 1), ('meena', 'b', 7), ('asha', 'b', 3)]
+neg</div>
+  <table class="tbl"><caption>Limits of lambda</caption>
+    <tr><th>Limit</th><th>Consequence</th></tr>
+    <tr><td>One expression only: no statements (<code>=</code>, <code>return</code>, <code>if</code>/<code>for</code> blocks, <code>try</code>, <code>raise</code>)</td><td>anything non-trivial needs <code>def</code></td></tr>
+    <tr><td>Name is always <code>&lt;lambda&gt;</code></td><td>tracebacks and profilers show <code>&lt;lambda&gt;</code>, not a useful name</td></tr>
+    <tr><td>No docstring, awkward type hints</td><td>harder to document and test</td></tr>
+    <tr><td>Cannot be pickled by the standard <code>pickle</code></td><td>fails when passed to <code>multiprocessing</code> workers; use a module-level <code>def</code></td></tr>
+    <tr><td>Captures variables by reference (late binding)</td><td>lambdas made in a loop all see the last value; freeze with <code>i=i</code> or <code>partial</code></td></tr>
   </table>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Think of the stall itself. A good stall brews each cup to order instead of brewing 500 at dawn (generators). It puts one cashier at the door instead of asking every cook to also take money (decorators). And its gas valve shuts automatically when the stall closes, even if the cook leaves in a hurry (context managers).</p></div>
-  <div class="callout def"><span class="label">Definition</span><p>The three families: <strong>iteration</strong> (iterators, generators, lazy pipelines) controls <em>how data flows</em> into code; <strong>function wrapping</strong> (first-class functions, closures, decorators) controls <em>what happens around a call</em>; <strong>resource management</strong> (<code>with</code>, context managers) controls <em>what happens around a block, on every exit</em>.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Fixing the crash with a bare <code>try/except</code> around the loop hides pain 3 rather than fixing it: the program no longer crashes, but the file is still left open and the timing still missing. Each pain needs its own tool.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: The Same Program, Fixed.</b> We know which tool fixes which pain. What does the program look like with all three applied, and which line belongs to which feature?</div>
+  <div class="callout trap"><span class="label">Trap</span><p><code>square = lambda x: x * x</code> is discouraged by PEP 8. If you give a function a name, use <code>def</code>, which gets a real <code>__name__</code> and can have a docstring. Also do not wrap an existing function in a lambda: <code>key=lambda s: len(s)</code> is just <code>key=len</code>.</p></div>
 
-  <h2 id="pa-example"><span class="num">02</span>The Same Program, Fixed</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>What does the Chai Corner report look like when it streams the file, times itself without pasted code, and can never leave the file open?</p>
-  </div>
-  <p>Here is the finished program. Do not worry about understanding every line yet: each child note builds one part of it from scratch. Read the comments to see which feature is where.</p>
-  <div class="fx" data-lang="py">import functools, time
-from contextlib import contextmanager
+  <h2 id="pa-key"><span class="num">05</span>Key Functions: sorted, min, max</h2>
+  <p><code>sorted</code>, <code>list.sort</code>, <code>min</code>, <code>max</code>, <code>heapq.nsmallest</code> and <code>itertools.groupby</code> accept a <code>key</code> function. It is called <em>once per item</em>, and the items are then compared by the key's results. This replaces the old pattern of writing comparison functions. Python's sort (Timsort) is <strong>stable</strong>: items with equal keys keep their original order.</p>
+  <div class="fx" data-lang="py">words = ["banana", "Apple", "cherry", "fig"]
+print(sorted(words))                      # uppercase sorts before lowercase
+print(sorted(words, key=str.lower))       # case-insensitive
+print(sorted(words, key=len))             # stable: banana stays before cherry
+print(sorted(words, key=len, reverse=True))
+print(max(words, key=len), min(words, key=len))
 
-# 1. GENERATOR: hand out one clean order at a time (Iterators &amp; Generators)
-def read_orders(path):
-    with open(path) as f:                    # 3. CONTEXT MANAGER: file closed whatever happens
-        for line in f:                       #    the file itself is an iterator
-            parts = line.strip().split(",")
-            if len(parts) != 4 or parts[0].startswith("#"):
-                continue                     # skip the comment and the junk line
-            time_, item, qty, price = parts
-            yield {"time": time_, "item": item, "qty": int(qty), "price": int(price)}
+scores = {"asha": 82, "ravi": 95, "meena": 78}
+print(max(scores, key=scores.get))        # key with the highest value
+print(sorted(scores.items(), key=lambda kv: kv[1], reverse=True))
 
-# 2. DECORATOR: timing written once, attached with one line (Closures &amp; Decorators)
-def timed(func):
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        t0 = time.perf_counter()
-        try:
-            return func(*args, **kwargs)
-        finally:
-            print(f"[timed] {func.__name__} took {time.perf_counter() - t0:.4f}s")
-    return wrapper
+people = [("asha", 30), ("ravi", 25), ("meena", 30)]
+print(sorted(people, key=lambda p: (-p[1], p[0])))   # age desc, then name asc
+print(max([], default=None))              # no ValueError on empty input</div>
+  <div class="fx" data-lang="text">['Apple', 'banana', 'cherry', 'fig']
+['Apple', 'banana', 'cherry', 'fig']
+['fig', 'Apple', 'banana', 'cherry']
+['banana', 'cherry', 'Apple', 'fig']
+banana fig
+ravi
+[('ravi', 95), ('asha', 82), ('meena', 78)]
+[('asha', 30), ('meena', 30), ('ravi', 25)]
+None</div>
+  <p>For multi-column sorts, return a tuple from the key. Tuples compare element by element. Negate numeric fields to reverse just that column. For a non-numeric column in the opposite direction, rely on stability and sort twice, secondary key first: <code>xs.sort(key=name); xs.sort(key=dept, reverse=True)</code>.</p>
+  <div class="callout trap"><span class="label">Trap</span><p><code>list.sort()</code> sorts in place and returns <code>None</code>, so <code>xs = xs.sort()</code> loses your list. Use <code>sorted(xs)</code> for a new list. Also, <code>max(empty)</code> raises <code>ValueError</code> unless you pass <code>default=</code>.</p></div>
 
-# 3b. @contextmanager: a GENERATOR turned into a with-block by a DECORATOR (Context Managers)
-@contextmanager
-def section(title):
-    print(f"== {title} ==")
-    try:
-        yield
-    finally:
-        print(f"== end of {title} ==")
-
-@timed
-def total_revenue(path):
-    return sum(o["qty"] * o["price"] for o in read_orders(path))   # generator expression
-
-@timed
-def items_sold(path):
-    return sum(o["qty"] for o in read_orders(path))
-
-with section("Monday report"):
-    print("revenue:", total_revenue("orders.log"))
-    print("items:  ", items_sold("orders.log"))</div>
-  <div class="fx" data-lang="text">== Monday report ==
-[timed] total_revenue took 0.0001s
-revenue: 225
-[timed] items_sold took 0.0001s
-items:   7
-== end of Monday report ==</div>
-  <p>₹225 and 7 items, the hand answers. The junk lines were skipped, each function timed itself, the whole report sat inside a titled section, and the file was opened and closed twice (once per report function) without a single <code>close()</code> in sight.</p>
-  <table class="tbl"><caption>Which line is which feature, and which note teaches it</caption>
-    <tr><th>Code</th><th>Feature</th><th>What it does here</th><th>Taught in</th></tr>
-    <tr><td><code>for line in f</code></td><td>iterator</td><td>a file hands out one line per <code>next()</code></td><td><a class="xref" data-note="py_iterators">Iterators &amp; Generators</a> §01</td></tr>
-    <tr><td><code>yield {...}</code> in <code>read_orders</code></td><td>generator</td><td>pauses after each order; nothing is read until someone asks</td><td><a class="xref" data-note="py_iterators">Iterators &amp; Generators</a> §03</td></tr>
-    <tr><td><code>sum(o["qty"] * … for o in …)</code></td><td>generator expression</td><td>one amount at a time into <code>sum</code></td><td><a class="xref" data-note="py_iterators">Iterators &amp; Generators</a> §04</td></tr>
-    <tr><td><code>def timed(func): … return wrapper</code></td><td>closure + decorator</td><td>the wrapper remembers <code>func</code> and times each call</td><td><a class="xref" data-note="py_decorators">Closures &amp; Decorators</a> §03–04</td></tr>
-    <tr><td><code>@functools.wraps(func)</code></td><td>decorator on the wrapper</td><td>the timing line prints the real name, <code>total_revenue</code></td><td><a class="xref" data-note="py_decorators">Closures &amp; Decorators</a> §05</td></tr>
-    <tr><td><code>@timed</code></td><td>decorator syntax</td><td><code>total_revenue = timed(total_revenue)</code></td><td><a class="xref" data-note="py_decorators">Closures &amp; Decorators</a> §04</td></tr>
-    <tr><td><code>with open(path) as f</code></td><td>context manager</td><td>file closed on every exit, even mid-generator</td><td><a class="xref" data-note="py_context">Context Managers</a> §02–03</td></tr>
-    <tr><td><code>@contextmanager def section</code></td><td>generator + decorator = context manager</td><td>prints the title, pauses at <code>yield</code> for the body, prints the end in <code>finally</code></td><td><a class="xref" data-note="py_context">Context Managers</a> §05</td></tr>
-  </table>
-  <div class="callout def"><span class="label">Definition</span><p>The three features compose: a <strong>generator</strong> can contain a <code>with</code> (the file stays open while it is paused); a <strong>decorator</strong> can wrap a function that consumes a generator; and <code>@contextmanager</code> is a decorator applied to a generator to produce a context manager.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>The <code>with open</code> sits <em>inside</em> the generator on purpose. Putting it in a normal function that <em>returns</em> a generator expression would close the file before anything is read; <a class="xref" data-note="py_iterators">Iterators &amp; Generators</a> §10 shows the resulting error.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: The Family Tree.</b> We can point at each feature in the code. But how did each one grow out of a simpler idea, and where do the branches meet?</div>
-
-  <h2 id="pa-tree"><span class="num">03</span>The Family Tree</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Five features, three notes. Which ideas are the roots, which are built on top of which, and why is <code>@contextmanager</code> taught last?</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 700 330" width="700">
-    <defs><marker id="pa-a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
-    <text x="110" y="16" text-anchor="middle" class="tb" font-size="12">iteration</text>
-    <text x="350" y="16" text-anchor="middle" class="tb" font-size="12">function wrapping</text>
-    <text x="590" y="16" text-anchor="middle" class="tb" font-size="12">resources</text>
-    <rect x="20" y="26" width="180" height="36" rx="6" class="fb sb"/><text x="110" y="49" text-anchor="middle" font-size="12">for loops</text>
-    <rect x="260" y="26" width="180" height="36" rx="6" class="fb sb"/><text x="350" y="49" text-anchor="middle" font-size="12">functions are objects</text>
-    <rect x="500" y="26" width="180" height="36" rx="6" class="fb sb"/><text x="590" y="49" text-anchor="middle" font-size="12">try / finally</text>
-    <line x1="110" y1="62" x2="110" y2="84" stroke="currentColor" marker-end="url(#pa-a1)"/>
-    <line x1="350" y1="62" x2="350" y2="84" stroke="currentColor" marker-end="url(#pa-a1)"/>
-    <line x1="590" y1="62" x2="590" y2="84" stroke="currentColor" marker-end="url(#pa-a1)"/>
-    <rect x="20" y="86" width="180" height="36" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="110" y="109" text-anchor="middle" font-size="12">iterator protocol</text>
-    <rect x="260" y="86" width="180" height="36" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="350" y="109" text-anchor="middle" font-size="12">closures</text>
-    <rect x="500" y="86" width="180" height="36" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="590" y="109" text-anchor="middle" font-size="12">with statement</text>
-    <line x1="110" y1="122" x2="110" y2="144" stroke="currentColor" marker-end="url(#pa-a1)"/>
-    <line x1="350" y1="122" x2="350" y2="144" stroke="currentColor" marker-end="url(#pa-a1)"/>
-    <line x1="590" y1="122" x2="590" y2="144" stroke="currentColor" marker-end="url(#pa-a1)"/>
-    <rect x="20" y="146" width="180" height="36" rx="6" class="ft st"/><text x="110" y="169" text-anchor="middle" font-size="12">generators (yield)</text>
-    <rect x="260" y="146" width="180" height="36" rx="6" class="ft st"/><text x="350" y="169" text-anchor="middle" font-size="12">decorators (@)</text>
-    <rect x="500" y="146" width="180" height="36" rx="6" class="ft st"/><text x="590" y="163" text-anchor="middle" font-size="12">context managers</text><text x="590" y="177" text-anchor="middle" class="tm" font-size="10">__enter__ / __exit__</text>
-    <line x1="110" y1="182" x2="110" y2="204" stroke="currentColor" marker-end="url(#pa-a1)"/>
-    <line x1="350" y1="182" x2="350" y2="204" stroke="currentColor" marker-end="url(#pa-a1)"/>
-    <rect x="20" y="206" width="180" height="36" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="110" y="222" text-anchor="middle" font-size="12">lazy pipelines</text><text x="110" y="236" text-anchor="middle" class="tm" font-size="10">genexp · itertools</text>
-    <rect x="260" y="206" width="180" height="36" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="350" y="222" text-anchor="middle" font-size="12">factories &amp; stacking</text><text x="350" y="236" text-anchor="middle" class="tm" font-size="10">@retry(times=3) · wraps</text>
-    <path d="M200,164 Q330,290 460,290" fill="none" stroke="currentColor" stroke-dasharray="5 3" marker-end="url(#pa-a1)"/>
-    <line x1="350" y1="242" x2="440" y2="276" stroke="currentColor" stroke-dasharray="5 3" marker-end="url(#pa-a1)"/>
-    <line x1="590" y1="182" x2="570" y2="276" stroke="currentColor" stroke-dasharray="5 3" marker-end="url(#pa-a1)"/>
-    <rect x="460" y="278" width="220" height="40" rx="6" class="fg sg" stroke-width="2"/><text x="570" y="296" text-anchor="middle" font-size="12" font-weight="700">@contextmanager</text><text x="570" y="311" text-anchor="middle" class="tm" font-size="10">generator + decorator → context manager</text>
-  </svg><figcaption>Three roots (blue): for loops, functions as objects, try/finally. Each grows a middle layer and a main feature (teal). The dashed arrows show where the branches meet: @contextmanager takes a generator (left branch), is itself a decorator (middle branch) and produces a context manager (right branch). That is why it is taught last.</figcaption></figure>
-  <h3>Branch 1: for loops → iterators → generators → pipelines</h3>
-  <p>A <code>for</code> loop is really "call <code>iter()</code> once, then <code>next()</code> until <code>StopIteration</code>". That pair of calls is the <strong>iterator protocol</strong>. You can implement it with a class, but you have to store the position yourself. A <strong>generator</strong> implements it for you: a function with <code>yield</code> pauses, and its paused local variables <em>are</em> the position. Because a paused generator computes nothing until asked, chaining generators gives <strong>lazy pipelines</strong> that handle any amount of data one item at a time.</p>
-  <h3>Branch 2: functions are objects → closures → decorators</h3>
-  <p>A function is a value: it can be passed in, returned and stored. A function returned from inside another function keeps the outer variables it uses in <strong>cells</strong>; that is a <strong>closure</strong>. When the remembered variable is itself a function, the inner function can run extra code and call it in the middle: a <strong>decorator</strong>. <code>@d</code> is just <code>f = d(f)</code>. Options need one more closure layer (<code>@retry(times=3)</code>), and several decorators stack.</p>
-  <h3>Branch 3: try/finally → with → context managers</h3>
-  <p><code>try/finally</code> guarantees cleanup but must be written at every use. The <code>with</code> statement moves that <code>try/finally</code> into the resource object: <code>__enter__</code> sets up, <code>__exit__</code> cleans up on every exit path and can even swallow an error by returning <code>True</code>. Such an object is a <strong>context manager</strong>.</p>
-  <h3>Where the branches meet</h3>
-  <p>A generator paused at <code>yield</code> inside <code>try/finally</code> already has the shape "set up, pause while someone works, clean up". <code>@contextmanager</code> is a decorator that wraps such a generator into an object with <code>__enter__</code> (run to the <code>yield</code>) and <code>__exit__</code> (resume, or throw the error in at the <code>yield</code>). It needs all three branches, so it comes at the end.</p>
-  <div class="callout def"><span class="label">Definition</span><p>Two kinds of "function with memory" underlie the group: a <strong>generator</strong> keeps its whole paused frame (local variables and current line) between <code>next()</code> calls; a <strong>closure</strong> keeps the specific outer variables it uses, in cells, between calls. Context managers then use the first, and decorators the second.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Learning the branches out of order. Decorators without closures look like magic; <code>@contextmanager</code> without generators looks like magic. If a feature seems magical, step one level up its branch in the tree.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Syntax That Calls Your Code.</b> The tree shows what is built from what. Is there one common pattern behind <code>for</code>, <code>@</code> and <code>with</code> themselves?</div>
-
-  <h2 id="pa-syntax"><span class="num">04</span>Syntax That Calls Your Code</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p><code>for</code>, <code>@</code> and <code>with</code> look like three unrelated keywords. What do they actually do when Python runs them?</p>
-  </div>
-  <p>Each is a short piece of syntax that calls methods of <em>your</em> objects at the right moments. To see it, here is one object that implements all three protocols and prints whenever Python calls one of its methods.</p>
-  <div class="fx" data-lang="py">class Spy:
-    """Reports every protocol method Python calls on it."""
-    def __iter__(self):                      # for: called once
-        print("  for  -&gt; __iter__")
-        self.n = 0
-        return self
-    def __next__(self):                      # for: called per item
-        self.n += 1
-        print(f"  for  -&gt; __next__ #{self.n}")
-        if self.n &gt; 2:
-            raise StopIteration
-        return self.n
-    def __enter__(self):                     # with: on the way in
-        print("  with -&gt; __enter__")
-        return self
-    def __exit__(self, *exc):                # with: on the way out, always
-        print("  with -&gt; __exit__", exc)
-        return False
-    def __call__(self, func):                # @: called once with the function
-        print(f"  @    -&gt; __call__({func.__name__})")
-        return func
-
-spy = Spy()
-for x in spy:
-    print("  body got", x)
-with spy:
-    print("  inside with")
-@spy
-def report():
-    pass</div>
-  <div class="fx" data-lang="text">  for  -&gt; __iter__
-  for  -&gt; __next__ #1
-  body got 1
-  for  -&gt; __next__ #2
-  body got 2
-  for  -&gt; __next__ #3
-  with -&gt; __enter__
-  inside with
-  with -&gt; __exit__ (None, None, None)
-  @    -&gt; __call__(report)</div>
-  <table class="tbl out"><caption>What each piece of syntax called</caption>
-    <tr><th>Syntax</th><th>Methods called</th><th>When</th><th>On the Spy</th></tr>
-    <tr><td><code>for x in obj</code></td><td><code>__iter__</code> once, <code>__next__</code> repeatedly</td><td>until <code>__next__</code> raises <code>StopIteration</code></td><td>iter, next #1 → 1, next #2 → 2, next #3 → stop</td></tr>
-    <tr><td><code>with obj:</code></td><td><code>__enter__</code>, then <code>__exit__</code></td><td>before the block; after it on every exit path</td><td>exit received <code>(None, None, None)</code>: no error</td></tr>
-    <tr><td><code>@obj</code> above <code>def f</code></td><td><code>obj(f)</code> (here <code>__call__</code>)</td><td>once, when the <code>def</code> runs</td><td><code>__call__(report)</code>, before any call to <code>report</code></td></tr>
-  </table>
-  <p>So none of the three is magic. Python defines the moments (start of a loop, each step, entering and leaving a block, defining a function); you supply the code that runs at those moments. Generators and <code>@contextmanager</code> are just convenient ways to write that code without a class.</p>
-  <div class="callout def"><span class="label">Definition</span><p>A <strong>protocol</strong> is a set of dunder methods that a piece of syntax calls: the iterator protocol (<code>__iter__</code>, <code>__next__</code>) for <code>for</code>; the context-manager protocol (<code>__enter__</code>, <code>__exit__</code>) for <code>with</code>; and plain callability (<code>__call__</code>, which every function has) for <code>@</code>. See <a class="xref" data-note="py_oop">OOP</a> for dunder methods in general.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Using the syntax on an object without the protocol: <code>for x in 5</code> → <code>TypeError: 'int' object is not iterable</code>; <code>with 5:</code> → <code>TypeError</code> (does not support the context manager protocol); <code>@5</code> → <code>'int' object is not callable</code>.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Reading Order.</b> We have the why, the tree and the common pattern. What exactly does each child note cover, and in which order should they be read?</div>
-
-  <h2 id="pa-order"><span class="num">05</span>Reading Order: What Each Note Answers</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Which note first, what will each one teach, and what should you be able to do after each?</p>
-  </div>
-  <h3>1. <a class="xref" data-note="py_iterators">Iterators &amp; Generators</a></h3>
-  <p><strong>Answers pain 1</strong> (everything in memory). The <code>for</code> loop taken apart and traced; iterable vs iterator; <code>OrderReader</code>, a class iterator over the log; the same thing as a 9-line generator, traced <code>next()</code> by <code>next()</code>; generator expressions; lazy evaluation (409 MB vs 0.0005 MB); pipelines over a billion-line log; <code>yield from</code>, <code>send</code>, <code>close</code>; <code>itertools</code>; one-pass traps. <em>After it you can</em> stream any file or data source through a chain of generators.</p>
-  <h3>2. <a class="xref" data-note="py_decorators">Closures &amp; Decorators</a></h3>
-  <p><strong>Answers pain 2</strong> (pasted extra code). Functions as objects; LEGB scope; closures and cells (<code>make_tax</code>); <code>nonlocal</code> (token counter); late binding; decorators by hand and with <code>@</code>, when each part runs; <code>functools.wraps</code>; <code>@timed</code>; <code>@retry(times=3)</code> with its three layers traced; stacking order; <code>lru_cache</code>, registration, permission checks, class decorators. <em>After it you can</em> write and read any decorator, including ones with options.</p>
-  <h3>3. <a class="xref" data-note="py_context">Context Managers</a></h3>
-  <p><strong>Answers pain 3</strong> (cleanup skipped). The leak shown and measured; <code>try/finally</code>; <code>with</code> desugared; <code>__enter__</code>/<code>__exit__</code> and their three arguments; suppressing errors; <code>@contextmanager</code> (with a working mini-implementation built from a generator and a decorator); transactions; <code>ExitStack</code>; locks, sqlite3, temporary settings. <em>After it you can</em> make any resource safe with <code>with</code>.</p>
-  <table class="tbl"><caption>The three notes at a glance</caption>
-    <tr><th>Note</th><th>Pain it fixes</th><th>Needs first</th><th>Key result on the log</th></tr>
-    <tr><td>Iterators &amp; Generators</td><td>data too big for memory</td><td>loops, functions, classes</td><td>₹225 from a 9-line generator; 15 of 10⁹ lines read</td></tr>
-    <tr><td>Closures &amp; Decorators</td><td>same code pasted around many functions</td><td>functions, <code>*args</code>/<code>**kwargs</code></td><td><code>@timed</code>, <code>@retry</code> succeeds on try 3</td></tr>
-    <tr><td>Context Managers</td><td>cleanup skipped by errors</td><td><code>try/finally</code>; generators; decorators</td><td>file closed despite "till restarted"; ROLLBACK keeps the ledger at ₹225</td></tr>
-  </table>
-  <div class="callout def"><span class="label">Definition</span><p>Recommended order: Iterators &amp; Generators → Closures &amp; Decorators → Context Managers. Notes 1 and 2 are independent of each other; note 3 uses both (its <code>@contextmanager</code> section needs generators and decorators).</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Skipping straight to "how to write a decorator" templates. Without closures the template (<code>def wrapper</code> inside <code>def deco</code>, <code>return wrapper</code>) is memorised, not understood, and the first variation (options, stacking) breaks it.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: How It All Connects.</b> One table that places every concept of the group on the running example.</div>
-
-  <h2 id="pa-connect"><span class="num">06</span>How It All Connects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Can the whole group be held in one table: what each concept is built from, which question it answers, and what it gave on Chai Corner's log?</p>
-  </div>
-  <table class="tbl"><caption>Every concept of the group on the same log</caption>
-    <tr><th>Concept</th><th>Built from</th><th>Answers which question</th><th>On the running example</th><th>When to use</th></tr>
-    <tr><td>Iterator protocol</td><td><code>__iter__</code>, <code>__next__</code>, <code>StopIteration</code></td><td>how does <code>for</code> walk anything?</td><td>a file hands out the 6 lines one by one</td><td>always (every loop)</td></tr>
-    <tr><td>Generator</td><td>function + <code>yield</code></td><td>can Python keep my place?</td><td><code>read_orders</code>: 4 orders, ₹225</td><td>custom streams</td></tr>
-    <tr><td>Lazy pipeline</td><td>generators chained</td><td>how to handle data bigger than RAM?</td><td>15 of 10⁹ lines read; 0.0005 MB vs 409 MB</td><td>files, ETL, data loading</td></tr>
-    <tr><td>First-class functions</td><td>functions are objects</td><td>can code receive a function?</td><td><code>apply_to_orders(with_gst, …)</code></td><td>callbacks, <code>key=</code></td></tr>
-    <tr><td>Closure</td><td>inner function + cells</td><td>how does a made function keep settings?</td><td><code>make_tax(0.05)(225)</code> = 236.25</td><td>factories, counters</td></tr>
-    <tr><td>Decorator</td><td>closure holding <code>func</code></td><td>how to add code around many functions?</td><td><code>@timed</code> on both report functions</td><td>timing, logging, retry, cache, auth</td></tr>
-    <tr><td>Context manager</td><td><code>try/finally</code> inside an object</td><td>how to guarantee cleanup of a block?</td><td>log closed despite <code>ValueError</code></td><td>files, locks, transactions, settings</td></tr>
-    <tr><td><code>@contextmanager</code></td><td>generator + decorator</td><td>shorter context managers?</td><td><code>section("Monday report")</code></td><td>most custom managers</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span><p>One sentence holds the group: <strong>Python lets your code run at three kinds of moment, at each step of a loop (iterators, made easy by generators), around each call of a function (decorators, made possible by closures), and on entering and leaving a block (context managers, made easy by generators plus a decorator), so that data can stream, extra behaviour can be written once, and cleanup can never be forgotten.</strong></p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Common Mistakes.</b> One trap per feature, so you recognise them before meeting them in the child notes.</div>
-
-  <h2 id="pa-traps"><span class="num">07</span>Common Mistakes Across the Group</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Which single mistake is most typical for each feature, and where is it explained?</p>
-  </div>
+  <h2 id="pa-operator"><span class="num">06</span>The operator Module: itemgetter, attrgetter, methodcaller</h2>
+  <p>The <code>operator</code> module provides named functions for Python's operators (<code>add</code>, <code>mul</code>, <code>or_</code>, <code>neg</code>, …) and three factories that build small accessor functions. They replace the most common lambdas, read more clearly, can be pickled, and run slightly faster because they are implemented in C.</p>
   <table class="tbl">
-    <tr><th>Feature</th><th>Typical mistake</th><th>Symptom</th><th>Details</th></tr>
-    <tr><td>Iterators</td><td>looping over an iterator twice</td><td>second loop silently does nothing (sum = 0)</td><td><a class="xref" data-note="py_iterators">Iterators &amp; Generators</a> §10</td></tr>
-    <tr><td>Generators</td><td>expecting a function with <code>yield</code> to run when called</td><td>nothing happens until you iterate</td><td><a class="xref" data-note="py_iterators">Iterators &amp; Generators</a> §03</td></tr>
-    <tr><td>Closures</td><td>late binding in a loop</td><td>every callback sees the last value</td><td><a class="xref" data-note="py_decorators">Closures &amp; Decorators</a> §03</td></tr>
-    <tr><td>Decorators</td><td>wrapper without <code>return</code> / without <code>wraps</code></td><td>calls return <code>None</code> / name is "wrapper"</td><td><a class="xref" data-note="py_decorators">Closures &amp; Decorators</a> §04–05</td></tr>
-    <tr><td>Context managers</td><td><code>@contextmanager</code> without <code>try/finally</code></td><td>cleanup skipped when the body raises</td><td><a class="xref" data-note="py_context">Context Managers</a> §05</td></tr>
-    <tr><td>Generators + with</td><td>returning a lazy generator out of <code>with open</code></td><td><code>ValueError: I/O operation on closed file</code></td><td><a class="xref" data-note="py_iterators">Iterators &amp; Generators</a> §10</td></tr>
+    <tr><th>Factory</th><th>Returns a function equivalent to</th><th>Typical use</th></tr>
+    <tr><td><code>itemgetter("k")</code></td><td><code>lambda x: x["k"]</code></td><td>dict rows, tuples, <code>sorted(rows, key=itemgetter("salary"))</code></td></tr>
+    <tr><td><code>itemgetter(0, 2)</code></td><td><code>lambda x: (x[0], x[2])</code></td><td>multi-column keys, picking fields</td></tr>
+    <tr><td><code>attrgetter("a.b")</code></td><td><code>lambda x: x.a.b</code></td><td>objects, dataclasses, ORM rows</td></tr>
+    <tr><td><code>methodcaller("split", ",")</code></td><td><code>lambda x: x.split(",")</code></td><td>calling a method on each item</td></tr>
   </table>
-  <div class="bridge"><b>What this still can't tell us → next: the child notes.</b> This map only names the ideas. Start with <a class="xref" data-note="py_iterators">Iterators &amp; Generators</a>, where the <code>for</code> loop is taken apart on the Chai Corner log.</div>
+  <div class="fx" data-lang="py">from operator import itemgetter, attrgetter, methodcaller
+from dataclasses import dataclass
+
+rows = [{"name": "asha", "dept": "ml", "salary": 120},
+        {"name": "ravi", "dept": "be", "salary": 95},
+        {"name": "meena", "dept": "ml", "salary": 140}]
+print([r["name"] for r in sorted(rows, key=itemgetter("salary"))])
+print(sorted(rows, key=itemgetter("dept", "salary"))[0]["name"])
+get_pair = itemgetter("name", "salary")
+print(get_pair(rows[0]))
+print(itemgetter(1)(["a", "b", "c"]), itemgetter(slice(0, 2))("abc"))
+
+@dataclass
+class Model:
+    name: str
+    auc: float
+
+models = [Model("lr", 0.81), Model("xgb", 0.88), Model("rf", 0.85)]
+print(max(models, key=attrgetter("auc")).name)
+
+print(list(map(methodcaller("strip"), ["  a ", "b  "])))
+print(list(map(methodcaller("split", ","), ["1,2", "3,4"])))</div>
+  <div class="fx" data-lang="text">['ravi', 'asha', 'meena']
+ravi
+('asha', 120)
+b ab
+xgb
+['a', 'b']
+[['1', '2'], ['3', '4']]</div>
+  <p>The plain operator functions are useful wherever a two-argument function is expected:</p>
+  <div class="fx" data-lang="py">import operator
+from functools import reduce
+print(operator.add(2, 3), operator.mul(4, 5), operator.neg(7))
+print(reduce(operator.or_, [{1}, {2}, {1, 3}]))          # union of many sets
+print(list(map(operator.mul, [1, 2, 3], [10, 20, 30])))  # element-wise product</div>
+  <div class="fx" data-lang="text">5 20 -7
+{1, 2, 3}
+[10, 40, 90]</div>
+  <div class="callout trap"><span class="label">Trap</span><p><code>itemgetter</code> with one argument returns a single value, but with two or more it returns a <em>tuple</em>. Code that unpacks the result breaks if the number of fields changes from 2 to 1.</p></div>
+
+  <h2 id="pa-partial"><span class="num">07</span>functools.partial</h2>
+  <p><code>partial(f, *args, **kwargs)</code> returns a new callable with some arguments already filled in. Use it when an API expects a function of fewer arguments than yours takes: a <code>key=</code>, a <code>map</code> step, a callback, or a <code>multiprocessing</code> worker. The fixed values are bound when <code>partial</code> runs, so it does not have the late-binding problem that lambdas in a loop have.</p>
+  <div class="fx" data-lang="py">from functools import partial
+
+def power(base, exp):
+    return base ** exp
+
+square = partial(power, exp=2)
+cube = partial(power, exp=3)
+print(square(5), cube(2))
+print(square.func.__name__, square.args, square.keywords)   # inspectable
+
+parse_bin = partial(int, base=2)
+print(parse_bin("1011"))
+print(list(map(partial(round, ndigits=1), [3.14159, 2.71828])))
+
+callbacks = [partial(print, "clicked", i) for i in range(3)]   # i frozen per partial
+for cb in callbacks:
+    cb()</div>
+  <div class="fx" data-lang="text">25 8
+power () {'exp': 2}
+11
+[3.1, 2.7]
+clicked 0
+clicked 1
+clicked 2</div>
+  <div class="callout def"><span class="label">Definition</span><p><code>partial</code> vs <code>lambda</code>: <code>partial(power, exp=2)</code> and <code>lambda b: power(b, exp=2)</code> behave the same when called. The <code>partial</code> version freezes values immediately, exposes <code>.func</code>/<code>.args</code>/<code>.keywords</code>, and can be pickled when <code>power</code> is a module-level function. For bound methods, <code>functools.partialmethod</code> does the same inside a class body.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Positional arguments given to <code>partial</code> fill from the left. <code>partial(power, 2)</code> fixes <code>base=2</code>, not <code>exp</code>. Use keywords to fix a later parameter, but then callers must not pass that parameter again positionally (<code>square(5, 3)</code> → <code>TypeError: power() got multiple values for argument 'exp'</code>).</p></div>
+
+  <h2 id="pa-cache"><span class="num">08</span>Memoisation: lru_cache and cache</h2>
+  <p><code>functools.lru_cache</code> is a decorator that stores results in a dict keyed by the call's arguments. Repeated calls with the same arguments return the stored result without running the function. That turns exponential recursions like naive Fibonacci into linear ones, and makes repeated expensive lookups free. <code>maxsize</code> bounds the cache. When it is full, the <em>least recently used</em> entry is evicted. <code>functools.cache</code> (3.9+) is <code>lru_cache(maxsize=None)</code>: unbounded and a little faster.</p>
+  <div class="fx" data-lang="py">from functools import lru_cache, cache
+
+@lru_cache(maxsize=128)
+def fib(n):
+    return n if n &lt; 2 else fib(n - 1) + fib(n - 2)
+
+print(fib(80))
+print(fib.cache_info())          # 81 distinct n computed once each
+fib(80)
+print(fib.cache_info())          # one more hit, no new misses
+fib.cache_clear()
+print(fib.cache_info())
+
+@cache                           # 3.9+: same as lru_cache(maxsize=None)
+def total(items):
+    print("computing", items)
+    return sum(items)
+
+print(total((1, 2, 3)), total((1, 2, 3)))   # second call is a hit
+print(total.cache_info())
+try:
+    total([1, 2, 3])             # lists are unhashable
+except TypeError as e:
+    print("TypeError:", e)</div>
+  <div class="fx" data-lang="text">23416728348467685
+CacheInfo(hits=78, misses=81, maxsize=128, currsize=81)
+CacheInfo(hits=79, misses=81, maxsize=128, currsize=81)
+CacheInfo(hits=0, misses=0, maxsize=128, currsize=0)
+computing (1, 2, 3)
+6 6
+CacheInfo(hits=1, misses=1, maxsize=None, currsize=1)
+TypeError: unhashable type: 'list'</div>
+  <p><code>cache_info()</code> returns <code>hits</code>, <code>misses</code>, <code>maxsize</code> and <code>currsize</code>. Check it in production to confirm the cache is actually being hit: a low hit ratio means you pay the memory without the speedup. Eviction with a small cache looks like this:</p>
+  <div class="fx" data-lang="py">from functools import lru_cache
+
+@lru_cache(maxsize=2)
+def f(x):
+    return x * 10
+
+for x in [1, 2, 1, 3, 2]:   # miss, miss, hit, miss (evicts 2), miss
+    f(x)
+print(f.cache_info())</div>
+  <div class="fx" data-lang="text">CacheInfo(hits=1, misses=4, maxsize=2, currsize=2)</div>
+  <table class="tbl"><caption>Rules for caching safely</caption>
+    <tr><th>Rule</th><th>Why</th></tr>
+    <tr><td>All arguments must be hashable</td><td>they form a dict key; pass tuples/frozensets, not lists/dicts/DataFrames</td></tr>
+    <tr><td>Function should be pure</td><td>results depending on time, random numbers, files or a DB go stale</td></tr>
+    <tr><td>Do not mutate a returned object</td><td>the cache hands the <em>same</em> object to every later caller</td></tr>
+    <tr><td>Bound <code>maxsize</code> when inputs are unbounded</td><td><code>cache</code>/<code>maxsize=None</code> grows forever</td></tr>
+    <tr><td>Avoid on instance methods</td><td><code>self</code> is part of the key, so the cache keeps every instance alive; use <code>functools.cached_property</code> or a per-instance dict</td></tr>
+    <tr><td><code>f(1)</code> and <code>f(x=1)</code> are different keys</td><td>keyword vs positional calls are cached separately; <code>typed=True</code> also separates <code>1</code> and <code>1.0</code></td></tr>
+  </table>
+  <p>How a decorator like this is built (a wrapper closure holding the dict) is shown in <a class="xref" data-note="py_decorators">Closures &amp; Decorators</a>.</p>
+  <div class="callout trap"><span class="label">Trap</span><p>A cached function that returns a list or dict hands every caller the same object. If one caller appends to it, every later "cached" result includes that change. Return a tuple or frozen structure, or copy it before mutating.</p></div>
+
+  <h2 id="pa-dispatch"><span class="num">09</span>singledispatch and total_ordering</h2>
+  <h3>functools.singledispatch</h3>
+  <p><code>@singledispatch</code> turns a function into a <strong>generic function</strong> that picks an implementation based on the type of its <em>first</em> argument. It replaces long <code>if isinstance(...) elif isinstance(...)</code> chains. New types can be supported by registering an implementation, even from another module, without editing the original function. The type comes from the parameter annotation or from <code>register(type)</code>. Lookup follows the class hierarchy (MRO), so subclasses use their parent's implementation.</p>
+  <div class="fx" data-lang="py">from functools import singledispatch
+from decimal import Decimal
+
+@singledispatch
+def to_json(value):                      # fallback for unregistered types
+    raise TypeError(f"cannot serialise {type(value).__name__}")
+
+@to_json.register
+def _(value: int):
+    return str(value)
+
+@to_json.register
+def _(value: Decimal):
+    return f'"{value}"'
+
+@to_json.register(list)
+def _(value):
+    return "[" + ", ".join(to_json(v) for v in value) + "]"
+
+print(to_json(3))
+print(to_json([1, Decimal("2.50"), True]))   # bool is a subclass of int
+try:
+    to_json(1.5)
+except TypeError as e:
+    print("TypeError:", e)</div>
+  <div class="fx" data-lang="text">3
+[1, "2.50", True]
+TypeError: cannot serialise float</div>
+  <p><code>True</code> was dispatched to the <code>int</code> implementation because <code>bool</code> subclasses <code>int</code>. Register <code>bool</code> separately if it needs different output. For methods, use <code>functools.singledispatchmethod</code>, which dispatches on the first argument after <code>self</code>.</p>
+  <h3>functools.total_ordering</h3>
+  <p>A class decorator: define <code>__eq__</code> and one of <code>__lt__</code>, <code>__le__</code>, <code>__gt__</code>, <code>__ge__</code>, and it fills in the other three. Useful for value objects that need to be sorted (versions, priorities). Comparison dunders are covered in <a class="xref" data-note="py_dunder">Dunder Methods</a>.</p>
+  <div class="fx" data-lang="py">from functools import total_ordering
+
+@total_ordering
+class Version:
+    def __init__(self, major, minor):
+        self.major, self.minor = major, minor
+    def __eq__(self, other):
+        return (self.major, self.minor) == (other.major, other.minor)
+    def __lt__(self, other):
+        return (self.major, self.minor) &lt; (other.major, other.minor)
+    def __repr__(self):
+        return f"v{self.major}.{self.minor}"
+
+a, b = Version(1, 2), Version(1, 10)
+print(a &lt; b, a &gt;= b, a &lt;= b, b &gt; a)      # &gt;=, &lt;=, &gt; were generated
+print(sorted([Version(2, 0), a, b]))</div>
+  <div class="fx" data-lang="text">True False True True
+[v1.2, v1.10, v2.0]</div>
+  <div class="callout trap"><span class="label">Trap</span><p>The generated methods are slower than hand-written ones because each goes through an extra call. For simple records, <code>@dataclass(order=True)</code> generates all comparisons from the fields instead.</p></div>
+
+  <h2 id="pa-pure"><span class="num">10</span>Pure Functions, Side Effects and Immutability</h2>
+  <p>A <strong>pure function</strong> returns a value that depends only on its arguments and has no side effects: it does not mutate its inputs, write to globals, print, touch files, or call the network. Pure functions are easy to test (input → expected output, no setup or mocks), safe to cache, safe to run in parallel, and safe to call twice. Real programs need side effects, so the usual design keeps a pure core of transformations and pushes I/O to the edges.</p>
+  <div class="fx" data-lang="py">def add_tax_impure(prices):
+    for i in range(len(prices)):
+        prices[i] = round(prices[i] * 1.05, 2)   # mutates the caller's list
+    return prices
+
+def add_tax_pure(prices):
+    return [round(p * 1.05, 2) for p in prices]  # new list, input untouched
+
+menu = [30, 15, 90]
+print(add_tax_pure(menu), menu)
+print(add_tax_impure(menu), menu)
+print(add_tax_impure(menu), menu)      # called twice: taxed twice
+
+frozen = (30, 15, 90)
+try:
+    frozen[0] = 0
+except TypeError as e:
+    print("TypeError:", e)</div>
+  <div class="fx" data-lang="text">[31.5, 15.75, 94.5] [30, 15, 90]
+[31.5, 15.75, 94.5] [31.5, 15.75, 94.5]
+[33.08, 16.54, 99.23] [33.08, 16.54, 99.23]
+TypeError: 'tuple' object does not support item assignment</div>
+  <p>Immutability enforces the "don't mutate" rule at the type level. Use <code>tuple</code> instead of <code>list</code>, <code>frozenset</code> instead of <code>set</code>, <code>types.MappingProxyType</code> for a read-only view of a dict, and frozen dataclasses for records. To "change" an immutable record, create a modified copy.</p>
+  <div class="fx" data-lang="py">from dataclasses import dataclass, replace, FrozenInstanceError
+
+@dataclass(frozen=True)
+class Config:
+    lr: float
+    epochs: int
+
+base = Config(lr=0.01, epochs=10)
+fast = replace(base, lr=0.1)               # new object, base unchanged
+print(base, fast)
+try:
+    base.lr = 1.0
+except FrozenInstanceError as e:
+    print("FrozenInstanceError:", e)
+print(hash(base) == hash(Config(0.01, 10)))   # hashable: usable as a cache key</div>
+  <div class="fx" data-lang="text">Config(lr=0.01, epochs=10) Config(lr=0.1, epochs=10)
+FrozenInstanceError: cannot assign to field 'lr'
+True</div>
+  <div class="callout anlg"><span class="label">Analogy</span><p>A pure function is like a calculator key: the same input always gives the same output, and pressing it does not change anything else. An impure function is like a vending machine. The result depends on its internal stock, and each use changes that stock.</p></div>
+  <div class="callout trap"><span class="label">Trap</span><p>Immutability is shallow. A tuple holding a list (<code>([1, 2], 3)</code>) cannot be re-bound, but the inner list can still be appended to, and such a tuple is unhashable. A frozen dataclass with a list field has the same problem.</p></div>
+
+  <h2 id="pa-traps"><span class="num">11</span>Common Mistakes</h2>
+  <div class="fx" data-lang="py">nums = [1, 2, 3]
+m = map(lambda x: x * 2, nums)
+print(sum(m), sum(m))             # 1. map/filter are one-pass
+r = nums.sort()
+print(r)                          # 2. list.sort() returns None
+
+from functools import lru_cache
+import random
+@lru_cache
+def roll():                       # 3. caching an impure function
+    return random.randint(1, 10**9)
+print(roll() == roll())
+
+funcs = [lambda: i for i in range(3)]
+print([f() for f in funcs])       # 4. late binding in lambdas</div>
+  <div class="fx" data-lang="text">12 0
+None
+True
+[2, 2, 2]</div>
+  <table class="tbl">
+    <tr><th>Mistake</th><th>Symptom</th><th>Fix</th></tr>
+    <tr><td>Reusing a <code>map</code>/<code>filter</code> object</td><td>second use is empty, no error</td><td><code>list(...)</code> once, or recreate it</td></tr>
+    <tr><td><code>xs = xs.sort()</code></td><td><code>xs</code> becomes <code>None</code></td><td><code>xs.sort()</code> or <code>xs = sorted(xs)</code></td></tr>
+    <tr><td><code>lru_cache</code> on impure functions</td><td>stale or constant results</td><td>cache only pure functions; add a TTL cache otherwise</td></tr>
+    <tr><td>Lambdas created in a loop</td><td>all return the last value</td><td><code>lambda i=i: i</code> or <code>partial(f, i)</code></td></tr>
+    <tr><td><code>reduce</code> on possibly empty input, no initial</td><td><code>TypeError</code></td><td>pass an initial value</td></tr>
+    <tr><td><code>any([...])</code> with a list comprehension</td><td>no short-circuit, all items evaluated</td><td>pass a generator expression</td></tr>
+    <tr><td><code>max(seq)</code> on empty data</td><td><code>ValueError</code></td><td><code>max(seq, default=None)</code></td></tr>
+    <tr><td>Nested <code>map(lambda…, filter(lambda…))</code></td><td>hard to read</td><td>one comprehension</td></tr>
+    <tr><td>Passing <code>f()</code> instead of <code>f</code></td><td><code>'X' object is not callable</code></td><td>pass the function object</td></tr>
+    <tr><td>Lambda sent to <code>multiprocessing</code></td><td><code>PicklingError</code></td><td>module-level <code>def</code> or <code>partial</code> of one</td></tr>
+  </table>
 
   <h2 id="pa-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>The group on one sheet. Running example: Chai Corner's Monday log (comment, chai 2 × 30, samosa 3 × 15, cold coffee 1 × 90, "till restarted", chai 1 × 30) → 4 orders, 7 items, ₹225.</p>
-  <h3>The ladder in one line each</h3>
+  <h3>First-class and higher-order functions</h3>
+  <ul>
+    <li>Functions are objects: store in variables/dicts, pass as arguments, return from functions.</li>
+    <li>Higher-order = takes and/or returns a function: <code>map</code>, <code>filter</code>, <code>sorted(key=)</code>, <code>partial</code>, decorators.</li>
+    <li>Pass <code>f</code>, not <code>f()</code>.</li>
+  </ul>
+  <h3>map, filter, reduce vs comprehensions</h3>
   <table class="tbl">
-    <tr><th>Concept</th><th>Question</th><th>Answer in one line</th></tr>
-    <tr><td><code>for</code> / iterator</td><td>how does a loop walk anything?</td><td><code>iter()</code> once, <code>next()</code> until <code>StopIteration</code></td></tr>
-    <tr><td>Generator</td><td>can Python keep my place?</td><td><code>yield</code> pauses with locals kept; calling runs nothing</td></tr>
-    <tr><td>Lazy pipeline</td><td>data bigger than memory?</td><td>chained generators; the consumer pulls one item through</td></tr>
-    <tr><td>Functions are objects</td><td>can a function be passed?</td><td><code>f</code> is the function, <code>f()</code> calls it</td></tr>
-    <tr><td>Closure</td><td>where do outer variables live?</td><td>in cells attached to the inner function</td></tr>
-    <tr><td>Decorator</td><td>code around many functions?</td><td><code>@d</code> ≡ <code>f = d(f)</code>; wrapper calls the original; use <code>wraps</code></td></tr>
-    <tr><td>Context manager</td><td>guaranteed cleanup?</td><td><code>with</code> calls <code>__enter__</code>, then <code>__exit__</code> on every exit</td></tr>
-    <tr><td><code>@contextmanager</code></td><td>shorter?</td><td>before <code>yield</code> = enter, <code>finally</code> = exit</td></tr>
+    <tr><th>Tool</th><th>Returns</th><th>Prefer when</th></tr>
+    <tr><td><code>map(f, xs, ...)</code></td><td>lazy iterator, one pass</td><td><code>f</code> already exists (<code>map(int, tokens)</code>)</td></tr>
+    <tr><td><code>filter(pred, xs)</code> / <code>filter(None, xs)</code></td><td>lazy iterator</td><td><code>pred</code> already exists; <code>None</code> keeps truthy items</td></tr>
+    <tr><td><code>[f(x) for x in xs if c(x)]</code></td><td>list</td><td>a lambda would be needed; transform + filter</td></tr>
+    <tr><td><code>(f(x) for x in xs)</code></td><td>generator</td><td>big data, single pass</td></tr>
+    <tr><td><code>reduce(f, xs, init)</code></td><td>one value</td><td>no built-in exists; always give <code>init</code></td></tr>
   </table>
-  <h3>Syntax and what it means</h3>
+  <ul>
+    <li>Built-in reducers first: <code>sum</code>, <code>max</code>, <code>min</code>, <code>any</code>, <code>all</code>, <code>math.prod</code>, <code>str.join</code>.</li>
+    <li><code>any</code>/<code>all</code> short-circuit with a generator; <code>any([]) == False</code>, <code>all([]) == True</code>.</li>
+  </ul>
+  <h3>lambda</h3>
+  <ul>
+    <li><code>lambda args: expr</code>: single expression, implicit return, name <code>&lt;lambda&gt;</code>.</li>
+    <li>No statements, no docstring, not picklable, late-binding in loops.</li>
+    <li>Don't assign a lambda to a name (PEP 8); don't wrap a function (<code>key=len</code>, not <code>key=lambda s: len(s)</code>).</li>
+  </ul>
+  <h3>Key functions</h3>
+  <ul>
+    <li><code>sorted(xs, key=f, reverse=False)</code>, <code>min/max(xs, key=f, default=...)</code>. Key is called once per item.</li>
+    <li>Multi-column: <code>key=lambda r: (r.dept, -r.salary)</code>. Stable sort: sort by secondary key, then primary.</li>
+    <li><code>max(d, key=d.get)</code> gives the dict key with the largest value.</li>
+    <li><code>list.sort()</code> returns <code>None</code>.</li>
+  </ul>
+  <h3>operator</h3>
+  <ul>
+    <li><code>itemgetter("k")</code> → <code>x["k"]</code>; <code>itemgetter(0, 2)</code> → tuple.</li>
+    <li><code>attrgetter("a.b")</code> → <code>x.a.b</code>; <code>methodcaller("m", arg)</code> → <code>x.m(arg)</code>.</li>
+    <li><code>operator.add/mul/or_/neg</code> for <code>reduce</code> and <code>map</code>. C-implemented and picklable.</li>
+  </ul>
+  <h3>functools</h3>
   <table class="tbl">
-    <tr><th>Written</th><th>Means</th></tr>
-    <tr><td><code>for x in obj: body</code></td><td><code>it = iter(obj)</code>; repeat <code>x = next(it)</code>; body; stop at <code>StopIteration</code></td></tr>
-    <tr><td><code>def g(): … yield v</code></td><td>calling <code>g()</code> returns a generator; each <code>next</code> runs to the next <code>yield</code></td></tr>
-    <tr><td><code>(expr for x in xs)</code></td><td>lazy version of <code>[expr for x in xs]</code></td></tr>
-    <tr><td><code>@d</code> <code>def f</code></td><td><code>f = d(f)</code>, once, at definition</td></tr>
-    <tr><td><code>@d(opts)</code> <code>def f</code></td><td><code>f = d(opts)(f)</code></td></tr>
-    <tr><td><code>with m as x: body</code></td><td><code>x = m.__enter__()</code>; body; <code>m.__exit__(type, exc, tb)</code> always; true return swallows</td></tr>
+    <tr><th>Tool</th><th>What it does</th><th>Remember</th></tr>
+    <tr><td><code>partial(f, *a, **kw)</code></td><td>freezes arguments now</td><td>positional fills from left; <code>.func/.args/.keywords</code></td></tr>
+    <tr><td><code>lru_cache(maxsize=128, typed=False)</code></td><td>memoise, evict least recently used</td><td>hashable args, pure function; <code>.cache_info()</code>, <code>.cache_clear()</code></td></tr>
+    <tr><td><code>cache</code> (3.9+)</td><td><code>lru_cache(maxsize=None)</code></td><td>unbounded memory</td></tr>
+    <tr><td><code>cached_property</code></td><td>compute attribute once per instance</td><td>use instead of <code>lru_cache</code> on methods</td></tr>
+    <tr><td><code>singledispatch</code></td><td>overload on first arg's type</td><td><code>@f.register</code> with annotation or type; follows MRO (bool → int)</td></tr>
+    <tr><td><code>total_ordering</code></td><td>fills missing comparisons</td><td>define <code>__eq__</code> + one of <code>&lt; &lt;= &gt; &gt;=</code></td></tr>
+    <tr><td><code>reduce(f, xs, init)</code></td><td>left fold</td><td>empty without init → <code>TypeError</code></td></tr>
   </table>
-  <h3>Which tool for which pain</h3>
-  <div class="cards">
-    <div><b>Data too big / streaming</b><p>Generators and generator expressions, chained into pipelines; <code>itertools</code>.</p><small>one pass only</small></div>
-    <div><b>Same before/after code on many functions</b><p>A decorator (with <code>functools.wraps</code>); a factory if it needs options.</p><small><code>@timed</code>, <code>@retry(times=3)</code></small></div>
-    <div><b>Something must be released</b><p>A context manager: <code>with</code>; write one with <code>@contextmanager</code> and <code>try/finally</code>.</p><small>files, locks, transactions</small></div>
-    <div><b>A few lines need timing / setup</b><p>A context manager around the block; a decorator only if it is the whole function.</p><small><code>with timer("x"):</code></small></div>
-  </div>
-  <div class="callout trap"><span class="label">Key traps</span>
-    <p>Iterators are one-pass and fail silently; a <code>yield</code> anywhere makes a function lazy; late binding in loops; wrappers must <code>return</code> the result and use <code>wraps</code>; <code>@contextmanager</code> needs <code>try/finally</code> around <code>yield</code>; never return a lazy generator out of a <code>with open</code>.</p>
-  </div>
-  <h3>Five rapid-fire checks</h3>
-  <table class="tbl">
-    <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td>Which two methods does a <code>for</code> loop call?</td><td><code>__iter__</code> (once) and <code>__next__</code> (per item)</td></tr>
-    <tr><td><code>@timed</code> above <code>def total_revenue</code> as an assignment?</td><td><code>total_revenue = timed(total_revenue)</code></td></tr>
-    <tr><td>What does a context manager's <code>__exit__</code> get when the block raised <code>ValueError</code>?</td><td>(<code>ValueError</code>, the exception object, the traceback)</td></tr>
-    <tr><td>Which feature is built from a generator plus a decorator?</td><td><code>@contextmanager</code></td></tr>
-    <tr><td>Revenue of the Chai Corner log?</td><td>60 + 45 + 90 + 30 = ₹225</td></tr>
-  </table>
+  <h3>Pure functions and immutability</h3>
+  <ul>
+    <li>Pure: same input → same output, no side effects. Easy to test, cache and parallelise.</li>
+    <li>Return new data; don't mutate arguments.</li>
+    <li>Immutable: <code>tuple</code>, <code>frozenset</code>, <code>MappingProxyType</code>, <code>@dataclass(frozen=True)</code> + <code>replace()</code>. Immutability is shallow.</li>
+  </ul>
+  <h3>Gotchas</h3>
+  <ul>
+    <li><code>map</code>/<code>filter</code> results are empty on the second pass.</li>
+    <li><code>lru_cache</code>: unhashable args → <code>TypeError</code>; impure → stale; mutable return values are shared.</li>
+    <li>Lambdas in a loop see the last loop value.</li>
+    <li><code>reduce</code> needs an initial value for possibly-empty input; <code>max</code> needs <code>default=</code>.</li>
+    <li>Lambdas cannot be pickled for <code>multiprocessing</code>.</li>
+  </ul>
 
-  <h2 id="pa-qa"><span class="num">08</span>Questions &amp; Answers</h2>
+  <h2 id="pa-qa"><span class="num">12</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>In one sentence each: why do generators, decorators and context managers exist?</summary><div class="qa-body">Generators: to produce data one item at a time so it never has to fit in memory. Decorators: to write behaviour needed around many functions (timing, retry, caching) once. Context managers: to guarantee cleanup of a resource on every way out of a block, including errors.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why must you understand closures before decorators?</summary><div class="qa-body">A decorator returns a wrapper that is called later, after the decorator has finished, yet still has to call the original function. The original lives in the wrapper's closure cell. Without closures the wrapper could not remember which function it wraps.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why is <code>@contextmanager</code> built on a generator rather than a normal function?</summary><div class="qa-body">A context manager has to run setup, then pause while the <code>with</code> body runs, then resume for cleanup with its state intact. A normal function cannot pause; a generator pauses at <code>yield</code> with its locals kept, and its <code>finally</code> runs when it is resumed or thrown an exception.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: what do a generator and a closure have in common, and how do they differ?</summary><div class="qa-body">Both are functions that keep variables between calls. A generator keeps its entire paused frame and resumes mid-body on each <code>next()</code>; a closure keeps only the outer variables it uses (in cells) and runs from the top on each call.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks in the Chai Corner program if you remove the <code>with</code> from <code>read_orders</code>?</summary><div class="qa-body">The file would be closed only when the generator object is garbage-collected, or never if a reference lingers. If a consumer stops early or a parse error is raised mid-file, the handle leaks; on a server handling many logs, handles run out.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Decorator or context manager: how do you choose?</summary><div class="qa-body">Decorator when the extra behaviour wraps a whole function call every time. Context manager when it wraps a block of lines, needs to hand a value into the block (<code>as f</code>), or must clean up a resource. <code>@contextmanager</code> objects can serve as both.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What do <code>for</code>, <code>@</code> and <code>with</code> have in common?</summary><div class="qa-body">Each is syntax that calls your code at fixed moments: <code>for</code> calls <code>__iter__</code>/<code>__next__</code>, <code>@</code> calls the decorator with the function once at definition, <code>with</code> calls <code>__enter__</code>/<code>__exit__</code> around a block. The Spy object in section 04 printed each call.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Where will you meet these in data and ML work?</summary><div class="qa-body">Generators: <code>pd.read_csv(chunksize=…)</code>, PyTorch <code>DataLoader</code>/<code>IterableDataset</code>, streaming datasets. Decorators: <code>@app.get</code> (FastAPI), <code>@pytest.fixture</code>, <code>@lru_cache</code>, <code>@torch.no_grad()</code>, <code>@dataclass</code>. Context managers: <code>with open</code>, <code>with torch.no_grad():</code>, <code>with mlflow.start_run():</code>, <code>with engine.begin()</code>, <code>with lock:</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does "functions are first-class objects" mean in Python?</summary><div class="qa-body">A function is a normal object: you can assign it to a variable, store it in a list or dict, pass it as an argument, return it from another function, and give it attributes. This is what makes <code>key=</code> functions, callbacks, dispatch tables and decorators possible.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a higher-order function? Give examples from the standard library.</summary><div class="qa-body">A function that takes a function as an argument or returns one. Examples: <code>map</code>, <code>filter</code>, <code>sorted</code>/<code>min</code>/<code>max</code> with <code>key=</code>, <code>functools.reduce</code>, <code>functools.partial</code>, and any decorator such as <code>functools.lru_cache</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span><code>map</code>/<code>filter</code> vs list comprehensions: which do you use?</summary><div class="qa-body">A comprehension when a lambda would be needed or when you transform and filter together, because it is more readable and usually as fast or faster. <code>map</code> when applying an existing function, for example <code>map(int, line.split())</code>, which is slightly faster with C built-ins. Note that <code>map</code>/<code>filter</code> return lazy iterators; the lazy equivalent of a comprehension is a generator expression.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does this print? <code>m = map(str.upper, ["a", "b"]); print(list(m), list(m))</code></summary><div class="qa-body"><code>['A', 'B'] []</code>. In Python 3, <code>map</code> returns an iterator, and the first <code>list()</code> exhausts it. Store <code>list(m)</code> if you need the values twice.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does <code>functools.reduce</code> do, and why isn't it a built-in anymore?</summary><div class="qa-body">It folds an iterable into one value: <code>acc = f(acc, x)</code> for each item, starting from <code>initial</code> or the first item. It was moved to <code>functools</code> in Python 3 because most uses are clearer as a loop or a dedicated built-in (<code>sum</code>, <code>max</code>, <code>any</code>, <code>math.prod</code>). Without an initial value it raises <code>TypeError</code> on empty input.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What are the limitations of <code>lambda</code>?</summary><div class="qa-body">Only a single expression: no assignments, loops, <code>try</code> or <code>return</code> statements. It has no name (<code>&lt;lambda&gt;</code> in tracebacks), no docstring, cannot be pickled (so it fails with <code>multiprocessing</code>), and captures variables late. Use it for short inline <code>key=</code>/callback functions; otherwise use <code>def</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is printed? <code>fs = [lambda x: x * i for i in range(3)]; print([f(10) for f in fs])</code></summary><div class="qa-body"><code>[20, 20, 20]</code>. Each lambda looks up <code>i</code> when it is called, and by then the loop has finished with <code>i == 2</code>. Fix with a default argument <code>lambda x, i=i: x * i</code> or <code>partial(operator.mul, i)</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you sort a list of dicts by one field descending and another ascending?</summary><div class="qa-body">Use a tuple key and negate the numeric field: <code>sorted(rows, key=lambda r: (-r["salary"], r["name"]))</code>. If the descending field is not numeric, use stability: sort by the secondary key first, then <code>sort(key=primary, reverse=True)</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Is Python's sort stable, and why does it matter?</summary><div class="qa-body">Yes. <code>sorted</code> and <code>list.sort</code> (Timsort) keep items with equal keys in their original order. This lets you sort by several keys in multiple passes (least significant first) and keeps a previous ordering, such as by timestamp, within ties. Timsort is O(n log n) worst case and O(n) on already-sorted data.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What are <code>itemgetter</code>, <code>attrgetter</code> and <code>methodcaller</code>, and why use them over lambdas?</summary><div class="qa-body">Factories in <code>operator</code> that return accessor functions: <code>itemgetter("k")</code> ≈ <code>lambda x: x["k"]</code>, <code>attrgetter("a")</code> ≈ <code>lambda x: x.a</code>, <code>methodcaller("strip")</code> ≈ <code>lambda x: x.strip()</code>. They are clearer, implemented in C (slightly faster), picklable, and support several fields at once (<code>itemgetter(0, 2)</code> returns a tuple).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is <code>functools.partial</code>? How is it different from a lambda?</summary><div class="qa-body"><code>partial(f, *args, **kw)</code> returns a callable with some arguments pre-filled, e.g. <code>partial(int, base=2)</code>. Unlike a lambda it binds the values immediately (no late-binding bug), exposes <code>.func</code>, <code>.args</code> and <code>.keywords</code>, and is picklable when <code>f</code> is, so it works with <code>multiprocessing.Pool.map</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How does <code>lru_cache</code> work, and how do you check that it is helping?</summary><div class="qa-body">It wraps the function with a dict keyed by the arguments (a hashable key built from args and kwargs) plus a recency-ordered linked list. A hit returns the stored result; a miss calls the function, stores the result, and evicts the least recently used entry if <code>maxsize</code> is exceeded. <code>f.cache_info()</code> shows <code>hits</code>, <code>misses</code>, <code>maxsize</code> and <code>currsize</code>; <code>f.cache_clear()</code> empties it.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does <code>@lru_cache</code> raise <code>TypeError: unhashable type: 'list'</code>, and how do you fix it?</summary><div class="qa-body">The arguments become a dict key, so they must be hashable. Lists, dicts, sets and DataFrames are not. Convert to <code>tuple</code>/<code>frozenset</code> (or a frozen dataclass) before calling, or cache on a hashable identifier (a file path, an ID) instead of the object itself.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When should you not use <code>lru_cache</code>?</summary><div class="qa-body">On impure functions (time, randomness, DB or API calls whose data changes), where results go stale. Also avoid it with huge numbers of distinct inputs and <code>maxsize=None</code> (memory grows without bound), when it returns mutable objects that callers modify (shared state), and on instance methods (it keeps every <code>self</code> alive; use <code>cached_property</code> or a per-instance cache).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span><code>lru_cache(maxsize=None)</code> vs <code>functools.cache</code> vs <code>cached_property</code>?</summary><div class="qa-body"><code>cache</code> (3.9+) is exactly <code>lru_cache(maxsize=None)</code>: unbounded, with no LRU bookkeeping, so slightly faster. <code>lru_cache(maxsize=N)</code> bounds memory. <code>cached_property</code> computes a method's value once per instance and stores it in the instance <code>__dict__</code>, so it is freed with the instance.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is <code>functools.singledispatch</code> used for?</summary><div class="qa-body">To write a generic function whose implementation is chosen by the type of the first argument, replacing <code>isinstance</code> chains. Decorate a base function, then add <code>@f.register</code> implementations per type (via annotation or <code>register(type)</code>). Dispatch follows the MRO, so <code>bool</code> uses the <code>int</code> implementation unless <code>bool</code> is registered. Use <code>singledispatchmethod</code> for methods.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does <code>@total_ordering</code> do?</summary><div class="qa-body">Given <code>__eq__</code> and one ordering method (<code>__lt__</code>, <code>__le__</code>, <code>__gt__</code> or <code>__ge__</code>), it generates the remaining comparison methods so objects can be fully compared and sorted. The generated methods are a bit slower; <code>@dataclass(order=True)</code> is an alternative for field-based ordering.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a pure function, and why does it matter in data pipelines?</summary><div class="qa-body">A function whose output depends only on its inputs and which has no side effects (no mutation of inputs, globals, I/O). Pure steps are trivial to unit test, safe to cache, safe to retry, and safe to run in parallel across processes. Pipelines usually keep transformations pure and isolate reading and writing at the edges.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is printed? <code>def f(xs): xs.append(1); return xs</code> then <code>a = []; f(a); f(a); print(a)</code></summary><div class="qa-body"><code>[1, 1]</code>. The function mutates the caller's list, which is a side effect, so every call changes <code>a</code>. A pure version returns a new list: <code>return xs + [1]</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you make data immutable in Python? Is a tuple fully immutable?</summary><div class="qa-body">Use <code>tuple</code>, <code>frozenset</code>, <code>MappingProxyType</code> (read-only dict view), <code>@dataclass(frozen=True)</code> or <code>NamedTuple</code>. Immutability is shallow: a tuple cannot be re-bound element-wise, but a list inside it can still be mutated, and such a tuple is unhashable (<code>hash(([1], 2))</code> raises <code>TypeError</code>).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do <code>any</code> and <code>all</code> behave on empty input and with a list comprehension vs a generator?</summary><div class="qa-body"><code>any([])</code> is <code>False</code>, <code>all([])</code> is <code>True</code> (vacuous truth). Both short-circuit, stopping at the first truthy/falsy item, but only a generator expression benefits. A list comprehension evaluates every element before <code>any</code> sees the list.</div></details>
 </main>
 `
 });
