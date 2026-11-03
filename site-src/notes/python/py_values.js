@@ -86,7 +86,7 @@ print(id(item))                   # 2. which object: its identity
 print(item)                       # 3. what it holds: its value
 print(len(item), item.upper(), item + "s")</div>
   <div class="fx" data-lang="text">&lt;class 'str'&gt;
-140625012180624
+140142661977744
 samosa
 6 SAMOSA samosas</div>
   <p><code>type(item)</code> reports <code>&lt;class 'str'&gt;</code>: the object is a string, Python's type for text ("class" is Python's word for a type). <code>id(item)</code> reports a long number that is the object's identity; in CPython it is the object's address in memory, so you will see a different number on your machine and on every run. What matters about the id is that one object keeps the same id for its whole life, so two names with equal ids refer to one and the same object. The last line uses three things that the str type allows: <code>len</code> counts its characters (6), <code>.upper()</code> gives a capitalised copy, and <code>+</code> joins text. These operations work because the object is a string; a number does not have <code>.upper()</code>. That is the practical meaning of "the type decides what you can do".</p>
@@ -485,8 +485,8 @@ for _ in range(100):
     999_999 in ids_set            # jumps straight to the answer
 t2 = time.perf_counter()
 print(f"list: {t1 - t0:.3f} s   set: {t2 - t1:.6f} s")</div>
-  <div class="fx" data-lang="text">list: 0.705 s   set: 0.000022 s</div>
-  <p>A hundred lookups in the list took around half a second, because each one walked through up to a million items; the same lookups in a set took a few microseconds. If your code repeatedly asks "is this id in that collection?", turning the collection into a set first is one of the cheapest big speed-ups in Python (more in <a class="xref" data-note="py_dicts_sets">Dicts &amp; Sets</a>).</p>
+  <div class="fx" data-lang="text">list: 0.509 s   set: 0.000009 s</div>
+  <p>A hundred lookups in the list took a sizeable fraction of a second, because each one walked through up to a million items; the same lookups in a set took a few microseconds. If your code repeatedly asks "is this id in that collection?", turning the collection into a set first is one of the cheapest big speed-ups in Python (more in <a class="xref" data-note="py_dicts_sets">Dicts &amp; Sets</a>).</p>
   <p>Finally, the <strong>bitwise</strong> operators work on the binary digits of integers, one position at a time: <code>&amp;</code> (and), <code>|</code> (or), <code>^</code> (exclusive or), <code>~</code> (not), and <code>&lt;&lt;</code> and <code>&gt;&gt;</code> (shift left and right). For example, 5 is 101 in binary and 3 is 011; keeping only the positions where both have a 1 gives 001, so <code>5 &amp; 3</code> is 1:</p>
   <div class="fx" data-lang="py">print(5 &amp; 3, 5 | 3, 5 ^ 3, ~5)
 print(bin(5), bin(3), bin(5 &amp; 3))</div>
