@@ -294,7 +294,7 @@ scores x2: 0-1 0.0   hinge 0.00   log-loss 0.083</div>
   <h2 id="lg-cost"><span class="num">06</span>The Cost Surface and Convexity</h2>
   <p>A loss scores one prediction. Training, however, does not change predictions directly; it changes the parameters, and the predictions follow. During training the data are fixed and the parameters move, so it helps to read the cost as a function of the parameters. For a line ŷ = w·x + b with squared loss on the ten flats:</p>
   <p style="text-align:center">J(w, b) = (1/n) Σ (w·xᵢ + b − yᵢ)²</p>
-  <p>Every pair (w, b) is a point on a map, and J is the height of the ground at that point. Training means finding the lowest point of this landscape. Let us measure the height at a few places, all of them lines met in earlier notes:</p>
+  <p>Every pair (w, b) is a point on a map, and J is the height of the ground at that point. Training means finding the lowest point of this landscape. Let us measure the height at a few places, all of them lines met in earlier notes (from here on, <code>area</code> and <code>price</code> are the ten flats' arrays from the first code block):</p>
   <div class="fx" data-lang="py">import numpy as np
 
 def J(w, b):                                           # mean squared error of the line w*x + b
