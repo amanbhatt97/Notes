@@ -185,7 +185,7 @@ const CATEGORIES = [
   ] },
   { key: "dl", label: "Deep Learning", emoji: "\ud83e\udde0", tag: "Core", blurb: "PyTorch \u00b7 CNNs \u00b7 RNNs \u00b7 Attention", hue: 325, topics: [
     {"key": "grp_dl_nn", "label": "Neural Network Foundations", "children": [
-      {"key": "dl_foundations", "label": "The Map: Neural Networks"},
+      {"key": "dl_foundations", "label": "Neural Networks: The Big Picture"},
       {"key": "dl_neurons",     "label": "Neurons, Layers & Activations"},
       {"key": "dl_backprop",    "label": "Loss & Backpropagation"},
       {"key": "dl_training",    "label": "Training Well"}
