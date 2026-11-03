@@ -3,107 +3,42 @@ Object.assign(TOPIC_CONTENT, {
   "multiagent": `<main>
 <h1>Multi-Agent Systems &amp; MCP</h1>
   <div class="where"><span>Generative AI</span><span>Agents</span><span>Multi-Agent Systems &amp; MCP</span></div>
-  <p class="lead">Biteful's support agent from <a class="xref" data-note="agent_build">Build an Agent from Scratch</a> handles Asha's late order 101 with three tools. Now the company wants it to handle everything: refunds, riders, cancellations, addresses, coupons, wallets, menus, allergens. Twelve tools, four rulebooks, one prompt. This note follows the need from "one agent is getting crowded" to <strong>roles and handoffs</strong>, the three classic shapes (<strong>supervisor, swarm, pipeline</strong>) plus parallel workers, how agents <strong>share state and pass messages</strong>, the ways they <strong>fail to coordinate</strong> (each reproduced), how tools are shared across agents and teams with <strong>MCP</strong> (and agents across companies with <strong>A2A</strong>), and finally <strong>when all this is overkill</strong>.</p>
-  <div class="callout def"><span class="label">No API bill: what is real, what is a stand-in</span>
-    <p>Every block ran in order like a notebook (Python 3.13, langgraph 1.2, mcp 2.2). No paid API is called. Every "model" is a labelled <strong>stand-in</strong>: a <code>FakeClient</code> whose <code>play</code> function returns scripted turns in the Messages API shape (it reads the system prompt to know which agent is speaking), a <code>ScriptedRouter</code> for the supervisor, and <code>Worker</code> objects standing in for whole sub-agents. Real: the order data, the refund ledger and complaint log, the handoff loop and allow-lists, the LangGraph supervisor graph, parallel threads, pydantic validation, the caps and checks, a real MCP server and client talking JSON-RPC over stdio. Model-call counts are counted from the runs; where a stand-in worker replaces a sub-agent, its calls are counted as one per tool call plus one answer (what a ReAct worker would make).</p>
-  </div>
+  <p class="lead">A multi-agent system is a group of LLM agents, each with its own instructions, tools and context, that cooperate on one job; MCP (the Model Context Protocol) is the open standard that lets any agent or AI app use tools written by someone else. Both matter because real products outgrow a single agent: more tools, more rules and more teams pile up, and you need ways to split the work and to share tools without rewriting every connector. They are also heavily oversold, so knowing when <em>not</em> to split is a favourite interview topic. Our running example continues from <a class="xref" data-note="agent_build">Build an Agent from Scratch</a> and <a class="xref" data-note="langgraph">LangGraph</a>: Biteful's support agent, which refunds Asha's order 101 (₹282, 50 minutes late), is now asked to run the whole support desk. We will split it into specialists, try the classic team shapes on Asha's two-problem message "Order 101 came 50 minutes late and the rider was rude", reproduce the ways teams fail, then share Biteful's order tools through a real MCP server. Every "model" below is a scripted stand-in, so no API key is needed; the data, ledger, loops, LangGraph graph, threads, validation and MCP server are all real code that was run.</p>
 
-  <h2 id="ma-fit" class="open"><span class="num">★</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 680 170" width="680">
-<defs><marker id="ma-f0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="10" y="10" width="160" height="44" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="90" y="29" text-anchor="middle" font-size="12">Build an Agent</text><text x="90" y="45" text-anchor="middle" class="tm" font-size="10">one loop, three tools</text>
-<rect x="10" y="62" width="160" height="44" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="90" y="81" text-anchor="middle" font-size="12">LangGraph</text><text x="90" y="97" text-anchor="middle" class="tm" font-size="10">state, nodes, Command</text>
-<rect x="10" y="114" width="160" height="44" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="90" y="133" text-anchor="middle" font-size="12">asyncio</text><text x="90" y="149" text-anchor="middle" class="tm" font-size="10">async clients (MCP)</text>
-<rect x="250" y="55" width="180" height="56" rx="8" class="fg sg" stroke-width="3"/><text x="340" y="78" text-anchor="middle" font-size="13" font-weight="700">Multi-Agent &amp; MCP</text><text x="340" y="97" text-anchor="middle" class="tg" font-size="10.5">YOU ARE HERE</text>
-<rect x="510" y="15" width="160" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="590" y="36" text-anchor="middle" font-size="12">Evaluation</text><text x="590" y="53" text-anchor="middle" class="tm" font-size="10">is the team better?</text>
-<rect x="510" y="105" width="160" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="590" y="126" text-anchor="middle" font-size="12">Capstone</text><text x="590" y="143" text-anchor="middle" class="tm" font-size="10">ship one agent well</text>
-<line x1="170" y1="32" x2="248" y2="72" stroke="currentColor" marker-end="url(#ma-f0)"/><line x1="170" y1="84" x2="248" y2="84" stroke="currentColor" marker-end="url(#ma-f0)"/><line x1="170" y1="136" x2="248" y2="98" stroke="currentColor" marker-end="url(#ma-f0)"/>
-<line x1="430" y1="75" x2="508" y2="42" stroke="currentColor" marker-end="url(#ma-f0)"/><line x1="430" y1="92" x2="508" y2="128" stroke="currentColor" marker-end="url(#ma-f0)"/>
-</svg><figcaption>Several agents built from the single-agent loop, wired with LangGraph or plain code, sharing tools over MCP; evaluation decides whether the team beats one agent.</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: <a class="xref" data-note="agent_build">Build an Agent from Scratch</a> and <a class="xref" data-note="langgraph">LangGraph</a></b><span>One tested agent (get_order, refund, notify) that refunds Asha's order 101 in four model calls; a graph runtime with state, nodes, conditional edges, <code>Command</code>, checkpoints and interrupts. Left open: what happens when one agent must cover the whole support desk, and how other teams' agents reuse its tools.</span></li>
-    <li><b>This note adds: teams of agents</b><span>Roles, handoffs, supervisor / swarm / pipeline / parallel workers, structured briefs, four coordination failures and their fixes, MCP servers and clients, A2A, and a measured "is it worth it?" on the same Biteful requests.</span></li>
-    <li><b>Leads to: <a class="xref" data-note="llm_evals">Evaluation &amp; Observability</a>, <a class="xref" data-note="llm_prod">Guardrails, Cost &amp; Deployment</a>, <a class="xref" data-note="agent_capstone">the capstone</a></b><span>Measuring whether a team beats a single agent; defending MCP servers and multi-agent writes; and shipping one well-built agent end to end.</span></li>
-  </ol>
-
-  <h2 id="ma-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
-  <p>The whole note as one chain of needs. Two running requests from Asha: "Order 101 came 50 minutes late. I want my money back." and the two-problem version "Order 101 came 50 minutes late and the rider was rude. I want my money back."</p>
-  <ol class="story">
-    <li><b>One agent, twelve tools</b><span>Q: why not one agent for the whole desk? → Measured: 531 tokens of tool schemas on every call (vs 180), 2.3 look-alike tools per request (vs 1.5), 6 write tools reachable from any question (vs 3). How do we split it?</span></li>
-    <li><b>Roles &amp; handoffs</b><span>Q: what is an agent "role", and how does a customer move between roles? → Role = prompt + allowed tools; a handoff is a tool that changes the active agent. Triage can't refund (blocked), transfers to refunds, which pays Rs 282. But who decides the order of work when there are two problems?</span></li>
-    <li><b>Supervisor vs swarm vs pipeline</b><span>Q: who controls the flow? → Supervisor: a router after every step (10 model calls). Swarm: agents hand off peer to peer (6). Pipeline: fixed stages in code (4). Same end state. Some work is independent, though…</span></li>
-    <li><b>Parallel workers</b><span>Q: can agents work at the same time? → Orchestrator-workers: the lead finds orders 101 and 103, two workers check them in parallel (4 calls). The lead's context: 450 words instead of 45,000. But what do agents actually pass to each other?</span></li>
-    <li><b>Shared state &amp; messaging</b><span>Q: what crosses between agents? → Shared state (only final messages; the supervisor saw 1, 2, 3, 4) or a structured brief: a <code>Handoff</code> model with <code>constraints</code>; a sloppy brief is rejected. What goes wrong when they coordinate badly?</span></li>
-    <li><b>Coordination failures</b><span>Q: how do teams fail? → Reproduced: ping-pong (6 transfers, no answer), lossy handoff (refund to a closed UPI account), duplicate action (Rs 322 paid on Rs 282), a same-model critic that approves a wrong amount. Fixes: caps, structured briefs, one owner per write, critics with real checks. Every team rewired its own tools, too…</span></li>
-    <li><b>MCP</b><span>Q: how do many agents and apps share tools? → One server per system, one client per app: N + M connectors instead of N × M. A real Biteful MCP server answered <code>initialize</code>, <code>tools/list</code>, <code>tools/call</code>, <code>resources/read</code>. And agents owned by other companies?</span></li>
-    <li><b>A2A</b><span>Q: how does our agent hand a task to a partner's agent? → Agent Card + a task lifecycle (working → input-required → completed). Time to build a real team…</span></li>
-    <li><b>Build it: weekly complaints brief</b><span>Q: when does a team clearly help? → Two researchers in parallel, a writer with no tools, a citation check that caught an invented [T-19]. So when should we <em>not</em> do this?</span></li>
-    <li><b>When multi-agent is overkill</b><span>Q: is it worth it? → Asha's two-problem request: one agent 4 calls, pipeline 4, swarm 6, supervisor 10, same end state. Split only for breadth, separation or ownership.</span></li>
-  </ol>
-
-  <h2 id="ma-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="ma-map"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">Multi-Agent &amp; MCP</div>
     <div class="mm-branches">
       <div class="mm-branch">
         <div class="mm-title">Why split</div>
         <ul>
-          <li><b>12 tools</b> — 531 schema tokens/call, look-alikes, 6 writes in reach</li>
-          <li><b>Split for</b> breadth · separation · ownership</li>
-          <li><b>Context isolation</b> — lead 450 words vs 45,000</li>
-          <li>⚠ Costs multiply (≈15× tokens for a research team)</li>
+          <li>One agent with many tools: more tokens per call, look-alike tools, every write in reach</li>
+          <li>Split only for breadth, separation or ownership</li>
+          <li>Teams cost several times more tokens</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Roles &amp; handoffs</div>
+        <div class="mm-title">How teams work</div>
         <ul>
-          <li><b>Role</b> = system prompt + allowed tools</li>
-          <li><b>Handoff</b> = transfer tool that changes <code>active</code></li>
-          <li><b>Allow-list</b> enforced by the harness</li>
+          <li><b>Role</b> = prompt + allowed tools; <b>handoff</b> = a transfer tool</li>
+          <li><b>Supervisor</b> (router decides), <b>swarm</b> (agents decide), <b>pipeline</b> (code decides)</li>
+          <li><b>Orchestrator-workers</b>: parallel workers with fresh contexts</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Patterns</div>
+        <div class="mm-title">Keeping teams correct</div>
         <ul>
-          <li><b>Supervisor</b> — router after every step (10 calls)</li>
-          <li><b>Swarm</b> — peer handoffs (6)</li>
-          <li><b>Pipeline</b> — fixed stages (4)</li>
-          <li><b>Orchestrator-workers</b> — parallel, fresh contexts</li>
+          <li>Pass only final results, in a checked schema</li>
+          <li>One owner per write; caps in the data layer</li>
+          <li>Step budgets; critics that check real data</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">State &amp; messages</div>
+        <div class="mm-title">Protocols</div>
         <ul>
-          <li><b>Shared state</b> — only final messages cross</li>
-          <li><b>Structured brief</b> — pydantic Handoff with constraints</li>
-          <li><b>Self-contained</b> — workers share no memory</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Failures</div>
-        <ul>
-          <li><b>Ping-pong</b> → step cap</li>
-          <li><b>Lossy handoff</b> → structured brief</li>
-          <li><b>Duplicate action</b> → one owner, refund cap</li>
-          <li><b>Same-model critic</b> → critic with a real check</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">MCP &amp; A2A</div>
-        <ul>
-          <li><b>MCP</b> — host · client · server; tools, resources, prompts</li>
-          <li><b>JSON-RPC</b> — initialize → tools/list → tools/call</li>
-          <li><b>stdio</b> (local) · <b>Streamable HTTP</b> (remote)</li>
-          <li><b>A2A</b> — agent ↔ agent: Agent Card, task lifecycle</li>
-          <li>⚠ MCP is not a security layer</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">When</div>
-        <ul>
-          <li><b>One agent first</b>; workflow if fixed</li>
-          <li><b>Team</b> when independent, wide, separated or owned by others</li>
-          <li><b>Measure</b> vs the single-agent baseline</li>
+          <li><b>MCP</b>: host, client, server; tools, resources, prompts; JSON-RPC</li>
+          <li>stdio for local servers, Streamable HTTP for remote</li>
+          <li><b>A2A</b>: agent to agent; Agent Card + task lifecycle</li>
         </ul>
       </div>
     </div>
@@ -112,29 +47,25 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="ma-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">One Agent, Twelve Tools</span><span class="rm-sub">What crowding costs, measured</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-roles"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Roles &amp; Handoffs</span><span class="rm-sub">Prompt + tools; transfer tools</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-patterns"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Supervisor, Swarm, Pipeline</span><span class="rm-sub">Same request, three shapes</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-parallel"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Parallel Workers</span><span class="rm-sub">Orchestrator-workers, isolation</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-state"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Shared State &amp; Messaging</span><span class="rm-sub">What crosses between agents</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-fail"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Coordination Failures</span><span class="rm-sub">Four, reproduced and fixed</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-mcp"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">MCP: Why &amp; How</span><span class="rm-sub">N × M → N + M</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-mcpbuild"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">MCP: Build &amp; Connect</span><span class="rm-sub">A Biteful server, raw JSON-RPC</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-a2a"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">A2A in Brief</span><span class="rm-sub">Agents across companies</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-build"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Build It: Complaints Brief</span><span class="rm-sub">Researchers + writer + check</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-overkill"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">When Multi-Agent Is Overkill</span><span class="rm-sub">Calls and context, compared</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-connect"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One diagram, one table</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-traps"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Org charts, leaks, budgets</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note on one page</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-qa"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Interview-style and connection checks</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Why Split One Agent?</span><span class="rm-sub">what a crowded agent costs, measured</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-roles"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Roles and Handoffs</span><span class="rm-sub">what makes agents different, and how control moves</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-patterns"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Supervisor, Swarm and Pipeline</span><span class="rm-sub">three ways to decide who works next</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-parallel"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Parallel Workers</span><span class="rm-sub">orchestrator-workers and context isolation</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-state"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">What Crosses Between Agents</span><span class="rm-sub">shared state and structured briefs</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-fail"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Coordination Failures</span><span class="rm-sub">four team bugs, reproduced and fixed</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-mcp"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">MCP: Sharing Tools</span><span class="rm-sub">why a standard, and how it is organised</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-mcpbuild"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Building an MCP Server</span><span class="rm-sub">a Biteful server, and the raw JSON-RPC</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-a2a"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">A2A: Agents Talking to Agents</span><span class="rm-sub">handing tasks to another company's agent</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-build"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">A Team That Helps</span><span class="rm-sub">the weekly complaints brief</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-overkill"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">When Multi-Agent Is Overkill</span><span class="rm-sub">the single-agent baseline</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-traps"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">org charts, leaks, budgets</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">patterns, MCP, numbers, gotchas</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-qa"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">what interviewers ask about agent teams and MCP</span></div></div>
     </div>
   </div>
 
-  <h2 id="ma-why"><span class="num">01</span>One Agent, Twelve Tools</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Our agent refunds Asha's order with three tools. The company now wants one agent for the whole desk: twelve tools and the rulebooks of refunds, delivery and food safety in one prompt. Why not? What actually gets worse as one agent grows, and can we measure it without a model?</p>
-  </div>
-  <p>Here are the twelve tools a do-everything support agent would carry, with the descriptions it would read, and ten typical customer messages with the tool each one needs. Below, the same tools split into three specialists of four tools each.</p>
+  <h2 id="ma-why"><span class="num">01</span>Why Split One Agent?</h2>
+  <p>Our agent handles late orders with three tools: look up an order, refund it, and message the customer. Now Biteful wants one agent for the entire support desk. That means many more tools (tracking riders, cancelling orders, changing addresses, coupons, wallets, menus, allergens) and several rulebooks (refunds, delivery, food safety) all in one system prompt. Before deciding whether to split, it helps to see concretely what gets worse as one agent grows. Here are the twelve tools a do-everything agent would carry, with the descriptions it would read, ten typical customer messages paired with the right tool, and the same twelve tools divided between three specialists:</p>
   <div class="fx" data-lang="py">import re
 
 TOOLS = {   # 12 tools, as one "do-everything" support agent would see them
@@ -183,7 +114,7 @@ REQUESTS = [  # (what the customer wrote, the right tool)
     ("How late was order 102?", "get_order"),
     ("When does Dosa Hut close tonight?", "restaurant_hours"),
 ]</div>
-  <p><code>lookalikes</code> is a crude, deterministic way to ask "how confusable are these tools for this message?": the tools whose description shares almost as many words with the message as the best one. A real model understands far more than shared words, but it faces the same pressure: every call, it must tell apart every description it was given. Now measure what we can measure without a model:</p>
+  <p>The function <code>lookalikes</code> needs a word of explanation. It is a crude, deterministic way of asking "how confusable are these tools for this message?": it returns the tools whose description shares almost as many words with the message as the best match does. A real model understands far more than shared words, but it faces the same pressure on every call: it must tell apart every tool description it was given. Now we measure three things that do not need a model at all: how many tokens the tool list costs on every call (estimated as characters divided by four), how many look-alike tools each request faces, and how many tools that <em>change</em> something (refund, cancel, change address and so on, called <strong>write tools</strong>) any message can reach:</p>
   <div class="fx" data-lang="py">import json
 team_of = {t: team for team, names in TEAMS.items() for t in names}
 def schema_tokens(names):          # what the tool list costs on EVERY model call
@@ -208,33 +139,15 @@ print(f"{'write tools in reach':22}{len(WRITES):&gt;11}{max(len(WRITES &amp; set
 tool schemas/call          531 tok      180 tok
 look-alikes/request           2.3         1.5
 write tools in reach            6           3</div>
-  <p>Read the example first. For "Order 101 arrived 50 minutes late, I want my money back", four of the twelve tools look relevant: <code>get_order</code> and <code>refund</code> (right), but also <code>apply_coupon</code> and <code>wallet_balance</code> (they talk about money too). Inside the orders specialist only the two right ones remain. Then the table: the tool list alone costs about 531 tokens on <em>every</em> model call for the big agent, 180 for a specialist; there are 2.3 look-alikes per request instead of 1.5; and any message, even "does the dosa contain nuts?", reaches an agent that holds 6 write tools (refund, cancel, change address…) instead of at most 3.</p>
-  <div class="cards">
-    <div><b>Cost per call</b><p>Every schema and every rulebook is resent on every lap.</p><small>531 vs 180 tokens of schemas</small></div>
-    <div><b>Confusion</b><p>Overlapping descriptions compete: refund vs coupon vs wallet.</p><small>2.3 vs 1.5 look-alikes</small></div>
-    <div><b>Conflicting rules</b><p>"Be generous with refunds" next to "never guess about allergens".</p><small>one prompt, many voices</small></div>
-    <div><b>Blast radius</b><p>A prompt injection in a menu question can reach the refund tool.</p><small>6 vs 3 write tools</small></div>
-  </div>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A restaurant with one person doing everything: taking orders, cooking, billing, cleaning, handling complaints. It works at five tables. At fifty, things get mixed up, and the person who can open the cash drawer is also the one any customer can talk to. Restaurants split into roles: host, kitchen, cashier.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A <strong>multi-agent system</strong>: several LLM agents, each with its own prompt, tools and context, cooperating on one job. <strong>Specialisation</strong>: giving each agent a narrow role so it sees fewer tools and one rulebook.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Concluding "always split". Splitting adds a routing decision (which can itself be wrong), more model calls, and hand-overs that lose information. A real model with 12 well-described tools is often fine. Section 11 measures the price.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Roles &amp; handoffs.</b> If we split the desk into specialists, what exactly is a "role" in code, and how does Asha's conversation get from the agent that greets her to the one that can refund?</div>
+  <p>Start with the example. For "Order 101 arrived 50 minutes late, I want my money back", four of the twelve tools look relevant: <code>get_order</code> and <code>refund</code>, which are right, and also <code>apply_coupon</code> and <code>wallet_balance</code>, because they talk about money too. Inside the orders specialist, only the two right ones remain. The table shows the general picture: the tool list alone costs about 531 tokens on <em>every</em> model call for the big agent against 180 for a specialist; requests face 2.3 look-alikes on average instead of 1.5; and any message at all, even "does the dosa contain nuts?", reaches an agent holding 6 write tools instead of at most 3. That last number matters for security: if a message contains a <strong>prompt injection</strong> (text crafted to trick the model into doing something it should not), the damage it can do is limited by the tools the agent holds. On top of these, rulebooks for different domains start to conflict in one prompt: "be generous with refunds" sits next to "never guess about allergens".</p>
+  <p>Think of a small restaurant where one person takes orders, cooks, handles the till and deals with complaints. At five tables it works. At fifty, orders get mixed up, and the person any customer can talk to is also the person who can open the cash drawer. Bigger restaurants split into roles (host, kitchen, cashier) so each person has a narrow job and only the cashier touches money.</p>
+  <p>That is the idea of a <strong>multi-agent system</strong>: several LLM agents, each with its own prompt, tools and context, cooperating on one job. Giving each agent a narrow role is called <strong>specialisation</strong>; each specialist sees fewer tools and one rulebook. But splitting is not free. It adds a routing decision, which can itself be wrong; it adds model calls; and every hand-over between agents can lose information. A real model with twelve well-described tools is often perfectly fine. So the right attitude is "split when there is a measured reason", and section 11 measures the price. First we need to know what an agent "role" actually is in code.</p>
 
-  <h2 id="ma-roles"><span class="num">02</span>Roles &amp; Handoffs</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We want a triage agent that greets, a refunds agent that pays, a delivery agent that files rider complaints. What makes them different agents if they share one model, and how is control passed from one to the next so the refunds agent talks to Asha directly?</p>
-  </div>
-  <p>A <strong>role</strong> is just two things: a system prompt (instructions) and the set of tools that agent may use. The trick for passing control: a <strong>handoff is a tool</strong> (<code>transfer_to_refunds</code>) whose only effect is to change which role is <code>active</code>. The next model call then uses the new role's prompt. Every call sends the same tool list (old <code>tool_use</code> blocks in history stay valid and the prompt cache stays warm); the harness enforces each role's allow-list.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A bank call centre. The IVR hears "card blocked" and transfers you to the cards team; the cards team now owns the call and the IVR is gone. The IVR physically can't unblock your card, however nicely you ask.</p>
-  </div>
-  <p>First the shared pieces: a stand-in client that knows which agent is speaking from the system prompt, and Biteful's data and tools.</p>
+  <h2 id="ma-roles"><span class="num">02</span>Roles and Handoffs</h2>
+  <p>Suppose we split the desk into a triage agent that greets the customer, a refunds agent that can pay, and a delivery agent that files rider complaints. If all three use the same model, what makes them different agents? The answer is surprisingly small. A <strong>role</strong> is just two things: a system prompt (the instructions) and the set of tools that agent is allowed to use. Sometimes a role also has its own model, for example a cheaper one for triage.</p>
+  <p>The second question is how a conversation moves from one role to another, so that the refunds agent ends up talking to Asha directly. The standard trick is that a <strong>handoff is a tool</strong>. Triage is given a tool called <code>transfer_to_refunds</code>, and the only effect of calling it is to change which role is <strong>active</strong>. On the next lap of the agent loop, the harness (your code that runs the loop) uses the new role's system prompt. Every call still sends the same full tool list, which keeps old tool calls in the history valid and lets the provider's prompt cache stay warm; the harness enforces each role's <strong>allow-list</strong>, refusing to run any tool the active role is not allowed to use.</p>
+  <p>A bank's phone line works like this. The automated menu hears "card blocked" and transfers you to the cards team, who now own the call. However nicely you ask the menu, it cannot unblock your card, because it has no access to the card system.</p>
+  <p>First, the shared pieces used throughout this page. <code>FakeClient</code> is a stand-in for the model API: it returns responses in the same shape as the Anthropic Messages API (content blocks with <code>type</code> "text" or "tool_use", and a <code>stop_reason</code>), and it records every call so we can count them. The scripted <code>play</code> function it is given can look at the system prompt to know which agent is speaking. Below it are Biteful's data and three real tools, plus a refund <code>LEDGER</code> and a complaints log, so we can always check what actually happened:</p>
   <div class="fx" data-lang="py">from types import SimpleNamespace as NS
 import itertools, json, threading
 
@@ -243,7 +156,7 @@ def text(t):          return NS(type="text", text=t)
 def call(name, **a):  return NS(type="tool_use", id=f"toolu_{next(_ids):02d}", name=name, input=a)
 
 class FakeClient:
-    """STAND-IN for the model API (same response shape). \`play(request)\` returns the
+    """STAND-IN for the model API (same response shape). play(request) returns the
     content blocks for one turn; it can look at the system prompt to know WHO is speaking."""
     def __init__(self, play):
         self.play, self.calls = play, []
@@ -268,7 +181,7 @@ def refund(order_id, amount, reason="late", to="UPI"):
 def file_complaint(order_id, about):
     COMPLAINTS.append((order_id, about))
     return f"Complaint C-{len(COMPLAINTS)} filed about the {about} on order {order_id}."</div>
-  <p>Now the roles and the handoff loop. Triage is scripted to misbehave first: it tries to refund directly, which its role doesn't allow.</p>
+  <p>Now the roles and the loop. <code>AGENTS</code> defines each role as a system prompt plus an allowed set of tool names. <code>chat</code> is the ordinary agent loop from Build an Agent from Scratch with two additions: before running a tool it checks the active role's allow-list, and when the tool is a transfer it changes <code>active</code> instead of calling a function. To show that the allow-list matters, triage is scripted to misbehave first: it tries to refund directly, which its prompt forbids.</p>
   <div class="fx" data-lang="py">def transfer(to):
     return {"name": f"transfer_to_{to}", "description": f"Hand the conversation to the {to} agent.",
             "input_schema": {"type": "object", "properties": {}}}
@@ -340,25 +253,13 @@ print("active:", active, "| messages:", len(msgs), "| ledger:", LEDGER)</div>
   [refunds] refund              -&gt; Refunded Rs 282 for 101 (late) to UPI.
 reply : Done: Rs 282 refunded for order 101 (50 minutes late).
 active: refunds | messages: 10 | ledger: [(101, 282, 'late', 'UPI')]</div>
-  <p>Line 1: triage asked for <code>refund</code>; the allow-list check (<code>b.name not in agent["allowed"]</code>) returned an error result instead of running it. Line 2: triage transferred, so <code>active</code> became <code>"refunds"</code>. Lines 3–4: on the next laps the refunds prompt was used; it looked up 101 and paid Rs 282. The function returned <code>active="refunds"</code>: store it with the session so Asha's next message goes straight to refunds.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Role</strong>: an agent's instructions + allowed tools (+ often its own model). <strong>Handoff</strong>: control of the conversation moves from one agent to another, via a transfer tool. <strong>Allow-list</strong>: the harness only runs tools listed for the active role.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Relying on the prompt "Never act yourself" to keep triage from refunding. It tried anyway; only the allow-list stopped it. Roles are enforced in code.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Supervisor, swarm, pipeline.</b> Asha's second message has two problems: a late order (refunds) and a rude rider (delivery). Who decides that both specialists work, in which order, and who writes the final reply?</div>
+  <p>Follow the printed lines. In line 1 triage asked for <code>refund</code>; the check <code>b.name not in agent["allowed"]</code> caught it, and instead of running the refund the harness returned an error result to the model. In line 2 triage called the transfer tool, so <code>active</code> became <code>"refunds"</code>. On the next laps the refunds prompt was used: it looked up order 101 and paid ₹282, and the ledger shows exactly one refund. The function returns <code>active="refunds"</code> so the app can store it with the session, and Asha's next message goes straight to the refunds agent.</p>
+  <p>The most important lesson is in line 1. The triage prompt said "Never act yourself", and triage tried anyway. Prompts are advice; only code is a boundary. A role's limits are real only if the harness enforces them.</p>
 
-  <h2 id="ma-patterns"><span class="num">03</span>Supervisor, Swarm, Pipeline</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>"Order 101 came 50 minutes late and the rider was rude. I want my money back." needs a refund <em>and</em> a complaint. Should a manager agent route the work, should the specialists pass it along among themselves, or should code fix the order of stages? What does each cost on this exact request?</p>
-  </div>
-  <p>Three classic shapes, all run on the same request, all ending in the same world state (one refund of Rs 282, one rider complaint), so the only differences are control and cost.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p><strong>Supervisor</strong>: a newspaper desk editor; every hand-over passes through the editor's desk. <strong>Swarm</strong>: a hospital ward where the nurse sends you to the doctor, who sends you to radiology, with no central desk. <strong>Pipeline</strong>: an assembly line; the stations and their order are fixed.</p>
-  </div>
-  <h3>Supervisor (LangGraph)</h3>
-  <p>A <strong>supervisor</strong> node picks the next worker; each worker runs, writes only its final message into shared state, and returns control. The graph is a function that <em>receives</em> the router and workers, so tests can pass stand-ins (in production: <code>router = llm.with_structured_output(Route)</code> and workers built with <code>create_agent</code>).</p>
+  <h2 id="ma-patterns"><span class="num">03</span>Supervisor, Swarm and Pipeline</h2>
+  <p>Asha's second message has two problems: "Order 101 came 50 minutes late and the rider was rude. I want my money back." It needs a refund <em>and</em> a rider complaint. Someone must decide that both specialists work, in what order, and who writes the final reply. There are three classic answers to "who decides what runs next?", and we will run all three on this exact message. All three end in the same world state, one refund of ₹282 and one rider complaint, so the only differences are how control flows and what it costs.</p>
+  <p>In the <strong>supervisor</strong> pattern, a central routing agent decides which worker runs next, and every worker hands control back to it when done. In the <strong>swarm</strong> pattern (also called the handoff pattern), there is no manager: each agent does its part and transfers directly to the next agent it thinks should continue. In a <strong>pipeline</strong>, your code fixes the stages and their order in advance. A newspaper is a good picture of the first: every story passes through the editor's desk, and the editor decides who works on it next. A hospital visit is like the second: the nurse sends you to the doctor, who sends you to radiology, with no central desk. An assembly line is the third: the stations and their order never change.</p>
+  <p>We build the supervisor with LangGraph, because its <code>Command</code> object lets a node update the state <em>and</em> choose the next node in one return value. The supervisor node asks a router which worker should run; each worker node runs its agent, writes only its <em>final</em> message into the shared state, and sends control back to the supervisor. The graph-building function receives the router and workers as arguments, so we can pass stand-ins here; in production the router would be <code>llm.with_structured_output(Route)</code> (a model forced to answer with a <code>Route</code> object) and each worker a full agent built with <code>create_agent</code>. Our stand-in workers run the real tools and count model calls the way a real tool-using worker would make them: one per tool call plus one for the answer.</p>
   <div class="fx" data-lang="py">from typing import Literal
 from pydantic import BaseModel
 from langchain_core.messages import AIMessage
@@ -419,7 +320,7 @@ workers = {"refunds": Worker(refunds_act), "delivery": Worker(delivery_act), "wr
 final = build_supervisor_graph(router, workers).invoke({"messages": [("user", TWO_PROBLEMS)]})
 for m in final["messages"]:
     print(f"  {m.type:5} {m.name or '':9} {m.content[:70]}")
-END = {"supervisor": (LEDGER.copy(), COMPLAINTS.copy())}
+RESULTS = {"supervisor": (LEDGER.copy(), COMPLAINTS.copy())}
 sup_calls = router.calls + sum(w.model_calls for w in workers.values())
 print("model calls:", router.calls, "supervisor +", sum(w.model_calls for w in workers.values()),
       "worker =", sup_calls, "| ledger:", LEDGER, "| complaints:", COMPLAINTS)</div>
@@ -432,9 +333,8 @@ supervisor saw 4 msgs -&gt; FINISH
   ai    delivery  Complaint C-1 filed about the rider on order 101.
   ai    writer    Sorry, Asha! Refunded Rs 282 for 101 (late) to UPI. Complaint C-1 file
 model calls: 4 supervisor + 6 worker = 10 | ledger: [(101, 282, 'late', 'UPI')] | complaints: [(101, 'rider')]</div>
-  <p>The supervisor ran four times and saw 1, 2, 3, then 4 messages: the question plus one final message per finished worker. Each worker node returned <code>Command(update=…, goto="supervisor")</code> (a node choosing the next node itself, from <a class="xref" data-note="langgraph">LangGraph</a>). The writer read the two workers' results from shared state and composed the reply. Model calls: 4 for routing + 6 inside the workers (refunds: 2 tools + answer; delivery: 1 + answer; writer: 1) = <strong>10</strong>.</p>
-  <h3>Swarm (peer-to-peer handoffs)</h3>
-  <p>No manager: each agent does its part and <em>hands off</em> to the next with the transfer tools from section 02. The refunds agent notices the rider complaint and transfers to delivery itself.</p>
+  <p>The supervisor ran four times and saw 1, 2, 3 and then 4 messages: the customer's message plus one final message per finished worker. That count is deliberate. Inside each worker there was tool chatter (requests and raw results, stood in for by the <code>scratch</code> messages), but only the final line was returned, so the supervisor's context stayed short. The writer then read the two workers' results from shared state and composed the reply. Total model calls: 4 for routing plus 6 inside the workers (refunds made 2 tool calls and an answer, delivery 1 and an answer, the writer just 1), giving <strong>10</strong>.</p>
+  <p>The swarm reuses the <code>chat</code> loop and transfer tools from section 02. This time the refunds agent, after paying, notices the rider complaint and transfers to delivery itself:</p>
   <div class="fx" data-lang="py">LEDGER.clear(); COMPLAINTS.clear()
 script = {
     "triage":   [[call("transfer_to_refunds")]],
@@ -450,7 +350,7 @@ client = FakeClient(play)
 active, resp = chat(client, [{"role": "user", "content": TWO_PROBLEMS}])
 print("reply:", resp.content[-1].text)
 swarm_calls = len(client.calls)
-END["swarm"] = (LEDGER.copy(), COMPLAINTS.copy())
+RESULTS["swarm"] = (LEDGER.copy(), COMPLAINTS.copy())
 print("model calls:", swarm_calls, "| ends with:", active, "| ledger:", LEDGER, "| complaints:", COMPLAINTS)</div>
   <div class="fx" data-lang="text">  [triage ] transfer_to_refunds -&gt; Transferred.
   [refunds] get_order           -&gt; {"order_id": 101, "customer": "asha", "total": 282
@@ -459,9 +359,8 @@ print("model calls:", swarm_calls, "| ends with:", active, "| ledger:", LEDGER, 
   [delivery] file_complaint      -&gt; Complaint C-1 filed about the rider on order 101.
 reply: Sorry, Asha! Rs 282 is refunded for order 101, and we've filed a complaint about the rider.
 model calls: 6 | ends with: delivery | ledger: [(101, 282, 'late', 'UPI')] | complaints: [(101, 'rider')]</div>
-  <p>Triage → refunds (look up, pay) → delivery (file complaint, answer Asha). <strong>6</strong> model calls, and the conversation ends with delivery active. Nobody re-reads the whole state after each step, which is why it is cheaper; but nobody checks the overall plan either.</p>
-  <h3>Pipeline (fixed stages)</h3>
-  <p>When the stages are always the same (classify → resolve each issue → draft → check), code can fix the order. Each stage is one prompted call (stand-ins here), and the final check is plain code.</p>
+  <p>The path was triage → refunds (look up, pay) → delivery (file the complaint, answer Asha), using <strong>6</strong> model calls, and the conversation ends with delivery active. It is cheaper than the supervisor because nobody re-reads the overall situation after every step. The flip side is that nobody owns the overall plan either: if refunds had forgotten about the rider, no one would have noticed.</p>
+  <p>When the stages are always the same (classify the problems, resolve each one, draft a reply, check it), code can simply fix the order. Each stage below stands in for one prompted model call, and the final check is plain code, not a model:</p>
   <div class="fx" data-lang="py"># Pipeline: a FIXED sequence of stages. Each stage stands in for one prompted model call.
 def classify(msg):                                   # stage 1: what problems are there?
     issues = []
@@ -482,36 +381,24 @@ issues = classify(TWO_PROBLEMS)
 results = [RESOLVERS[kind](oid) for kind, oid in issues]
 reply = draft(results)
 pipe_calls = 1 + len(issues) + 1                     # classify + one per resolver + draft
-END["pipeline"] = (LEDGER.copy(), COMPLAINTS.copy())
+RESULTS["pipeline"] = (LEDGER.copy(), COMPLAINTS.copy())
 print("issues :", issues)
 print("reply  :", reply)
 print("qa ok  :", qa(reply), "| model calls:", pipe_calls, "| ledger:", LEDGER, "| complaints:", COMPLAINTS)</div>
   <div class="fx" data-lang="text">issues : [('late', 101), ('rider', 101)]
 reply  : Sorry, Asha! Refunded Rs 282 for 101 (late) to UPI. Complaint C-1 filed about the rider on order 101.
 qa ok  : True | model calls: 4 | ledger: [(101, 282, 'late', 'UPI')] | complaints: [(101, 'rider')]</div>
-  <p>Classify found two issues; code dispatched each to its resolver; the draft was checked in code (mentions Rs 282 and order 101). <strong>4</strong> model calls. A pipeline is really a <em>workflow</em> of agents (<a class="xref" data-note="agentic">Agent Fundamentals</a>): cheapest and most predictable, but it can't handle an issue type nobody anticipated.</p>
+  <p>The classifier found two issues, code sent each to its resolver, and the draft passed a check that it mentions ₹282 and order 101. That took <strong>4</strong> model calls. A pipeline is really a <em>workflow</em> in the sense of <a class="xref" data-note="agentic">Agent Fundamentals</a>: the cheapest and most predictable design, but it cannot cope with a kind of problem nobody anticipated, because there is no stage for it.</p>
   <table class="tbl">
     <tr><th>Pattern</th><th>Who decides what runs next</th><th>Model calls here</th><th>Good for</th><th>Watch out for</th></tr>
-    <tr><td><strong>Supervisor</strong></td><td>A routing agent, after every step</td><td>10</td><td>Varied tasks, central control, audit</td><td>Cost; a bottleneck that re-reads everything</td></tr>
-    <tr><td><strong>Swarm</strong></td><td>The current agent, via handoff tools</td><td>6</td><td>Conversations that move between experts</td><td>Ping-pong; nobody owns the whole plan</td></tr>
-    <tr><td><strong>Pipeline</strong></td><td>Your code: fixed stages</td><td>4</td><td>Same steps every time</td><td>Unanticipated cases</td></tr>
+    <tr><td>Supervisor</td><td>A routing agent, after every step</td><td>10</td><td>Varied tasks, central control, audit trail</td><td>Cost; the supervisor becomes a bottleneck</td></tr>
+    <tr><td>Swarm</td><td>The current agent, by calling a handoff tool</td><td>6</td><td>Conversations that move between experts</td><td>Ping-pong; nobody owns the whole plan</td></tr>
+    <tr><td>Pipeline</td><td>Your code, in a fixed order</td><td>4</td><td>The same steps every time</td><td>Cases nobody anticipated</td></tr>
   </table>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Supervisor pattern</strong>: a central agent routes work to workers and gets control back after each. <strong>Swarm (handoff) pattern</strong>: agents transfer control directly to each other. <strong>Pipeline</strong>: a fixed sequence of agent stages.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Passing each worker's full transcript back to the supervisor. Its context fills with tool chatter (here 6 scratch messages were kept out), which defeats the point of having workers.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Parallel workers.</b> All three ran the work one after another. When Asha's message mentions two orders, the checks are independent. Can several agents work at the same time, and what does that do to each agent's context?</div>
 
-  <h2 id="ma-parallel"><span class="num">04</span>Parallel Workers (Orchestrator-Workers)</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Asha writes "Both my orders 101 and 103 came really late!" The two checks don't depend on each other. Can a lead agent discover the sub-tasks at runtime, run workers at the same time, and keep its own context small?</p>
-  </div>
-  <p>In <strong>orchestrator-workers</strong>, a lead agent splits the job at runtime and calls a <code>delegate</code> tool once per sub-task, in one turn. The harness runs one <strong>worker</strong> per call, each with a <em>fresh</em> context (only its task) and often a cheaper model, in parallel; all results go back to the lead in one message.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A manager sends two analysts to check two branches. Each reads the branch's files; the manager reads two one-line memos and decides. It works because the branches are independent.</p>
-  </div>
+  <h2 id="ma-parallel"><span class="num">04</span>Parallel Workers</h2>
+  <p>All three patterns ran their work one step after another. Now Asha writes "Both my orders 101 and 103 came really late!" Checking order 101 does not depend on checking order 103, so there is no reason to do them in sequence. And sometimes the sub-tasks are not known in advance: someone has to read the message and discover that there are two orders.</p>
+  <p>The <strong>orchestrator-workers</strong> pattern handles this. A lead agent (the orchestrator) reads the request, splits it at run time into sub-tasks, and calls a <code>delegate</code> tool once per sub-task, all in the same turn. The harness runs one <strong>worker</strong> per call, in parallel. Each worker starts with a <em>fresh</em> context containing only its task, not the whole conversation, and often uses a cheaper model. All results go back to the lead in one message, and the lead merges them. A manager who sends two analysts to check two branch offices works the same way: each analyst reads that branch's files, and the manager reads two one-line memos and decides.</p>
   <figure class="viz"><svg viewBox="0 0 560 215" width="560">
     <defs><marker id="ma-ah1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <rect x="190" y="8" width="180" height="46" rx="6" class="fv"/><text x="280" y="27" text-anchor="middle">Lead (Opus)</text><text x="280" y="45" text-anchor="middle" class="tm">plans · merges</text>
@@ -525,7 +412,8 @@ qa ok  : True | model calls: 4 | ledger: [(101, 282, 'late', 'UPI')] | complaint
     <rect x="390" y="114" width="160" height="54" rx="6" class="fb sb"/><text x="470" y="136" text-anchor="middle">Worker 3</text><text x="470" y="156" text-anchor="middle" class="tm">reads 60 pages</text>
     <line x1="20" y1="196" x2="50" y2="196" stroke="currentColor"/><text x="56" y="200">delegate(task)</text>
     <line x1="230" y1="196" x2="260" y2="196" stroke="currentColor" stroke-dasharray="4 3"/><text x="266" y="200">≤150-word summary</text>
-  </svg><figcaption>One lead, many fresh contexts. Raw pages stay with the workers; only summaries travel up.</figcaption></figure>
+  </svg><figcaption>One lead, many fresh contexts. The raw pages stay with the workers; only short summaries travel up to the lead.</figcaption></figure>
+  <p>The figure shows the shape: solid arrows are <code>delegate</code> calls going down, dashed arrows are short summaries coming back. Here it is in code. <code>run_worker</code> makes one model call whose only message is the task; <code>lead_agent</code> is a normal loop whose single tool is <code>delegate</code>, and it runs all delegate calls of one turn through a <code>ThreadPoolExecutor</code> (a pool of threads, so the workers' API calls overlap in time). The stand-in lead finds the order numbers in Asha's message; the stand-in workers really look the orders up:</p>
   <div class="fx" data-lang="py">from concurrent.futures import ThreadPoolExecutor
 
 DELEGATE = {"name": "delegate", "description": "Give one self-contained sub-task to a worker "
@@ -574,8 +462,8 @@ print(lead_agent(client, "Both my orders 101 and 103 came really late!"))
 print("model calls:", ["worker" if c.startswith("Worker") else "lead" for c in client.calls])</div>
   <div class="fx" data-lang="text">Both qualify: 101: 50 min late, eligible, Rs 282; 103: 70 min late, eligible, Rs 1250
 model calls: ['lead', 'worker', 'worker', 'lead']</div>
-  <p>Lap 1: the lead found two order numbers and returned two <code>delegate</code> calls in one turn. The harness ran both workers in a <code>ThreadPoolExecutor</code>; each worker saw only "Check order 101 against the 45-minute rule" (or 103), really looked the order up, and replied in one line. Lap 2: the lead got both results in one message and merged them. Four model calls: lead, worker, worker, lead.</p>
-  <p>The real reason to do this is <strong>context isolation</strong>. Suppose each sub-task needs a lot of raw reading, like a weekly review of complaint tickets from three cities:</p>
+  <p>On the first lap the lead found two order numbers and returned two <code>delegate</code> calls in one turn. The harness ran both workers at once; each saw only "Check order 101 against the 45-minute rule" (or 103), looked the order up and replied in one line. On the second lap the lead received both results in a single message and merged them: both orders qualify. The call log reads lead, worker, worker, lead.</p>
+  <p>Speed is a nice side effect, but the real reason for this pattern is <strong>context isolation</strong>: each worker's raw material stays in that worker's context, and only a short result reaches the lead. To see why that matters, imagine a weekly review of complaint tickets from three cities, where each city has about 50 pages of raw tickets:</p>
   <div class="fx" data-lang="py"># Weekly review: complaint tickets from 3 cities, ~50 pages (300 words) of raw tickets each
 PAGES, WORDS_PER_PAGE, SUMMARY = 50, 300, 150
 cities = ["Mumbai", "Pune", "Bengaluru"]
@@ -591,23 +479,12 @@ print(f"total words processed: {single_ctx} vs {total} (+{total - single_ctx} fo
   <div class="fx" data-lang="text">one agent   : context  45000 words
 lead+workers: lead context  450 words, each worker 15000 words
 total words processed: 45000 vs 45450 (+450 for the hops)</div>
-  <p>The lead's context fell from 45,000 words to 450: only summaries travel up. The total work didn't shrink (it grew by the summaries), but no single context is overloaded, and a short, focused context is where models reason best.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Orchestrator-workers</strong>: a lead LLM decomposes a task at runtime, delegates sub-tasks to workers with fresh contexts, and merges their outputs. <strong>Context isolation</strong>: a worker's raw material stays in its own context; only a short result returns.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Vague delegation ("look into the orders") makes workers duplicate each other or miss things. The lead's instructions must demand distinct scopes and a required output shape.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Shared state &amp; messaging.</b> Workers return one line; supervisors read final messages. What exactly should cross between agents, in what format, so that nothing the customer said gets lost on the way?</div>
+  <p>A single agent would have to hold all 45,000 words in its own context. With workers, each holds 15,000 and the lead holds just 450, the three summaries. Notice that the total work did not shrink; it grew slightly, by the summaries. The gain is that no single context is overloaded, and models reason best over short, focused contexts. The weakness of the pattern is vague delegation: "look into the orders" makes workers overlap or miss things, so the lead's instructions should demand distinct scopes and a required output shape.</p>
 
-  <h2 id="ma-state"><span class="num">05</span>Shared State &amp; Messaging</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Agents don't share memory: each has its own context. Asha writes "Please refund to my Biteful wallet, my UPI account is closed." When triage hands her to refunds, how does that instruction travel, and how do we notice if it didn't?</p>
-  </div>
-  <p>Two ways agents communicate. <strong>Shared state</strong> (a blackboard): one structure all agents read and write, like LangGraph's <code>MessagesState</code> in the supervisor graph, where we chose to write only each worker's final message. <strong>Message passing</strong>: an explicit brief from one agent to the next (a delegate task, a handoff summary). Either way, the safest content is <strong>structured</strong>: a schema that names every field the receiver needs, checked in code.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A hospital shift change. A verbal "bed 4 is fine" loses the allergy; a handover form with a mandatory "allergies" box doesn't, and a form with that box empty is sent back.</p>
-  </div>
+  <h2 id="ma-state"><span class="num">05</span>What Crosses Between Agents</h2>
+  <p>Agents do not share memory. Each one sees only its own context. So everything one agent knows that another needs must be passed across explicitly, and anything left out simply does not exist for the receiver. Asha now writes "Order 101 was 50 minutes late. Please refund to my Biteful wallet, my UPI account is closed." When triage hands her over to refunds, how does the wallet instruction travel, and how would we notice if it did not?</p>
+  <p>Agents communicate in two ways. With <strong>shared state</strong>, sometimes called a blackboard, there is one data structure every agent reads and writes; LangGraph's <code>MessagesState</code> in the supervisor graph was one, and we chose to let each worker write only its final message into it. With <strong>message passing</strong>, one agent sends another an explicit brief, like the delegate tasks in section 04. Either way, the safest content is <strong>structured</strong>: a schema that names every field the receiver needs, checked in code before anyone acts on it. A hospital shift change shows why. A spoken "bed 4 is fine" can lose the patient's allergy; a handover form with a mandatory "allergies" box does not, and a form with that box empty is sent back.</p>
+  <p>We use pydantic, the data-validation library, to define the brief as a class. <code>Literal</code> restricts <code>issue</code> to known values, and <code>constraints</code> is required, so the sender must write down everything the customer asked for that has to survive the hand-over:</p>
   <div class="fx" data-lang="py">from pydantic import BaseModel, ValidationError
 
 class Handoff(BaseModel):            # the CONTRACT between triage and a specialist
@@ -630,30 +507,11 @@ except ValidationError as e:
   <div class="fx" data-lang="text">free text : Refund order 101, it was late.
 structured: {"customer":"asha","order_id":101,"issue":"late","constraints":["refund to Biteful wallet, not UPI"]}
 rejected  : [('order_id', 'int_parsing'), ('constraints', 'missing')]</div>
-  <p>The free-text brief a hurried triage writes, "Refund order 101, it was late.", is accurate and still loses the one thing Asha cared about. The <code>Handoff</code> model has a required <code>constraints</code> list, so the brief carries "refund to Biteful wallet, not UPI". And a sloppy brief (order id "one-oh-one", no constraints) is rejected by pydantic with two named errors, before any agent acts on it.</p>
-  <table class="tbl">
-    <tr><th>What crosses</th><th>Example here</th><th>Rule</th></tr>
-    <tr><td>Final results only</td><td>Supervisor saw 1, 2, 3, 4 messages; 6 scratch messages stayed inside workers</td><td>Never pass a worker's whole transcript</td></tr>
-    <tr><td>Structured brief</td><td><code>Handoff(customer, order_id, issue, constraints)</code></td><td>Validate before acting; required constraint field</td></tr>
-    <tr><td>Self-contained tasks</td><td>"Check order 101 against the 45-minute rule"</td><td>The worker knows nothing else</td></tr>
-    <tr><td>Shared facts</td><td>The refund ledger, the complaint log</td><td>One source of truth that every agent checks</td></tr>
-  </table>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Shared state / blackboard</strong>: a data structure every agent reads and writes. <strong>Message passing</strong>: agents communicate only through explicit messages. <strong>Structured handoff</strong>: messages that follow a schema checked in code.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Briefs that assume shared memory: "continue from what we discussed" sent to a worker with a fresh context. Every brief must be self-contained.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Coordination failures.</b> We have roles, patterns and briefs. What do multi-agent runs look like when coordination goes wrong, and which of the fixes we've seen actually stop each failure?</div>
+  <p>The free-text brief a hurried triage agent writes, "Refund order 101, it was late.", is accurate and still loses the one thing Asha cared about. The structured brief carries "refund to Biteful wallet, not UPI" in its <code>constraints</code> field. And a sloppy brief, with the order id written as "one-oh-one" and no constraints at all, is rejected by pydantic with two named errors (<code>int_parsing</code> for the id, <code>missing</code> for the constraints) before any agent acts on it. In the next section we will see what happens to the money when the free-text brief is used.</p>
+  <p>The rules that follow from this are simple. Pass final results, never a worker's whole transcript, which would flood the receiver with tool chatter. Make every brief self-contained; "continue from what we discussed" means nothing to a worker with a fresh context. Use a schema with required fields for anything that must survive. And keep facts such as the refund ledger in one shared source of truth that every agent checks, rather than in agents' memories.</p>
 
   <h2 id="ma-fail"><span class="num">06</span>Coordination Failures</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>A single agent can loop or misread an argument. A team adds new ways to fail: agents passing the customer back and forth, a constraint lost between agents, two agents both paying, a "checker" agent that checks nothing. What does each look like on Biteful's ledger?</p>
-  </div>
-  <p>Four failures, each reproduced with stand-ins that behave the way the failing agents would, then fixed.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A relay team that drops the baton (lossy hand-over), two runners who both run the third leg (duplicate), two who keep waving each other on (ping-pong), and a coach who says "great run!" without looking at the clock (useless critic).</p>
-  </div>
+  <p>A single agent can loop or misread an argument. A team adds new ways to fail, in which every agent behaves correctly according to its own instructions but the combined result is wrong. This is called a <strong>coordination failure</strong>. Picture a relay team: one runner drops the baton (a lossy hand-over), two runners both run the third leg (a duplicate action), two keep waving each other on and nobody runs (ping-pong), and the coach shouts "great run!" without looking at the clock (a useless critic). The code below reproduces the first three on Biteful's ledger, using stand-ins that behave the way failing agents do, and then applies the fixes:</p>
   <div class="fx" data-lang="py"># 1. PING-PONG: triage and refunds keep handing the customer back and forth
 script = {"triage": [[call("transfer_to_refunds")]] * 5,
           "refunds": [[call("transfer_to_triage")]] * 5}
@@ -699,12 +557,10 @@ lossy, free-text brief  : [(101, 282, 'late', 'UPI')] &lt;- a CLOSED account
 lossy, structured brief : [(101, 282, 'late', 'wallet')]
 duplicate  : [(101, 282, 'late', 'UPI'), (101, 40, 'missing coffee', 'UPI')] -&gt; Rs 322 paid on a Rs 282 order
 with cap   : Blocked: Rs 282 already refunded for 101 (total Rs 282). | ledger: [(101, 282, 'late', 'UPI')]</div>
-  <ul>
-    <li><strong>Ping-pong</strong>: triage sends Asha to refunds, refunds sends her back, six times; only <code>max_steps</code> ended it, with no answer. Fix: a step cap per conversation, and transfer descriptions that say when <em>not</em> to transfer.</li>
-    <li><strong>Lossy handoff</strong>: given the free-text brief, the refunds specialist sent Rs 282 to the closed UPI account; given the structured brief, to the wallet. Fix: structured briefs with a constraints field (section 05).</li>
-    <li><strong>Duplicate action</strong>: for "late and the coffee was missing", the refunds agent paid the full Rs 282 (which already covers the coffee) and an items agent paid Rs 40 more: Rs 322 on a Rs 282 order. Fix: one owner for each kind of write, plus a data rule that total refunds per order can't exceed the order total (<code>capped_refund</code> blocked the second payment).</li>
-  </ul>
-  <p>The fourth failure is a <strong>critic</strong> that adds nothing. A popular idea: add a second agent to check the first one's reply. It helps only if the critic knows something the writer didn't.</p>
+  <p><strong>Ping-pong</strong>: triage sent Asha to refunds, refunds sent her back, and this repeated until the loop's <code>max_steps</code> cap of 6 stopped it, with no answer for the customer. The fixes are a step cap per conversation (and a total budget across all agents, since each agent's own cap does not stop transfers between agents) and transfer-tool descriptions that say when <em>not</em> to transfer.</p>
+  <p><strong>Lossy handoff</strong>: the stand-in refunds specialist does exactly what its brief says. Given the free-text brief, it refunded ₹282 to UPI, which is the closed account. Given the structured brief from section 05, it refunded to the wallet. The fix is structured briefs with a constraints field.</p>
+  <p><strong>Duplicate action</strong>: for "late, and the coffee was missing", the refunds agent paid the full ₹282, which already includes the coffee, and a separate items agent paid ₹40 for the coffee as well: ₹322 refunded on a ₹282 order. Each agent was right by its own rules. The fix has two layers: give each kind of write exactly one owner (only the refunds agent pays), and add a rule in the data layer that every write must pass. <code>capped_refund</code> refuses any payment that would take the total refunded above the order total, and it blocked the second payment.</p>
+  <p>The fourth failure concerns a popular idea: add a <strong>critic</strong>, a second agent (or program) that checks the first one's output and sends feedback. It sounds like it must help, but a critic only helps if it knows something the writer did not. Below, the writer's first draft says ₹280 instead of ₹282:</p>
   <div class="fx" data-lang="py"># 4. A CRITIC that knows nothing new vs a critic with a real check
 drafts = ["Sorry, Asha! We refunded Rs 280 for order 101.",           # writer, draft 1
           "Sorry, Asha! We refunded Rs 282 for order 101."]           # draft 2, after feedback
@@ -719,53 +575,19 @@ for n, d in enumerate(drafts, 1):
     print(f"draft {n}: same-model critic: {same_model_critic(d):12} | ledger critic: {ledger_critic(d)}")</div>
   <div class="fx" data-lang="text">draft 1: same-model critic: Looks good!  | ledger critic: Ledger says Rs 282 for 101
 draft 2: same-model critic: Looks good!  | ledger critic: OK</div>
-  <p>Draft 1 says Rs 280; the ledger says 282. A same-model critic re-reading the draft with no new information tends to agree ("Looks good!"). The ledger critic compares every "Rs X for order N" claim with the ledger and returns feedback a writer can act on; draft 2 passes.</p>
-  <div class="cards">
-    <div><b>Critic / evaluator</b><p>Draft, check against criteria, loop until pass.</p><small>Needs a real check (ledger, tests, sources)</small></div>
-    <div><b>Debate</b><p>Agents answer, see each other's answers, revise; a judge picks.</p><small>Some gains on reasoning; costly</small></div>
-    <div><b>Hierarchical</b><p>Supervisors of supervisors.</p><small>Only for very large tasks</small></div>
-  </div>
+  <p>The same-model critic, standing in for the same model re-reading the same draft with no new information, says "Looks good!" to both drafts, including the wrong one. The ledger critic extracts every "Rs X for order N" claim, compares it with the ledger, and returns feedback a writer can act on ("Ledger says Rs 282 for 101"); the corrected second draft passes. Critics are worth their tokens when they bring real information: the ledger, test results, the retrieved sources, or a different model. A practical check is to measure how often your critic rejects anything; if it almost never does, it is costing money and adding nothing. The same reasoning applies to other multi-agent ideas you will hear about, such as debate (agents argue and a judge picks) and hierarchies of supervisors: they can help on some tasks, they always cost more, and they need measuring.</p>
   <table class="tbl">
     <tr><th>Failure</th><th>On Biteful</th><th>Fix</th></tr>
     <tr><td>Ping-pong / runaway</td><td>6 transfers, no answer</td><td>Step and token budget per conversation; "when not to transfer"</td></tr>
-    <tr><td>Lossy handoff</td><td>Refund to a closed account</td><td>Structured briefs with constraints, validated</td></tr>
-    <tr><td>Duplicate action</td><td>Rs 322 paid on Rs 282</td><td>One owner per write; caps and idempotency in the data layer</td></tr>
-    <tr><td>Useless critic</td><td>"Looks good!" to Rs 280</td><td>Critics with information: ledger, tests, sources</td></tr>
-    <tr><td>Errors compound</td><td>A worker's wrong "fact" becomes the lead's premise</td><td>Workers cite sources; verify in code</td></tr>
+    <tr><td>Lossy handoff</td><td>Refund sent to a closed account</td><td>Structured briefs with constraints, validated</td></tr>
+    <tr><td>Duplicate action</td><td>₹322 paid on a ₹282 order</td><td>One owner per write; caps and idempotency in the data layer</td></tr>
+    <tr><td>Useless critic</td><td>"Looks good!" to ₹280</td><td>Critics that check real data</td></tr>
+    <tr><td>Compounding errors</td><td>A worker's wrong "fact" becomes the lead's premise</td><td>Workers cite sources; verify in code</td></tr>
   </table>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Coordination failure</strong>: each agent behaves "correctly" for its own instructions, but the team's combined result is wrong. <strong>Critic</strong>: an agent or program that grades another's output and returns feedback.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Calling a system "self-verifying" because it has a same-model critic. Measure how often the critic rejects anything; if almost never, it costs tokens and adds nothing.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: MCP.</b> Inside our team every agent calls the same Python functions. But the restaurant-partner app, the analytics agent and next year's voice bot all need "look up order 101" too, each written by a different team. Must each one rewrite the connector?</div>
 
-  <h2 id="ma-mcp"><span class="num">07</span>MCP: Why &amp; How</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Biteful's order lookup is needed by the support agents, the restaurant-partner assistant and an internal analytics agent, and those agents also need GitHub, Slack and the wiki. Without a standard, how many connectors does that take, and what does a standard look like on the wire?</p>
-  </div>
-  <p>Every agent needs tools: the order database, GitHub, Slack, the wiki. Without a standard, each AI app writes its own connector for each system: 5 apps and 20 systems is 100 connectors, each with its own bugs, auth and schema format. The <strong>Model Context Protocol (MCP)</strong> fixes this with one shared protocol: each system ships one MCP <strong>server</strong>, each app implements one MCP <strong>client</strong>, and any app can use any server: 5 + 20 = 25.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>USB-C. Laptops don't need a special port per device. Where the analogy breaks: a USB device can't trick your laptop with words, but an MCP server's tool descriptions go straight into the model's prompt.</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 560 190" width="560">
-    <text x="10" y="18">Without MCP: 3×4 = 12</text><text x="300" y="18">With MCP: 3+4 = 7</text>
-    <g stroke="currentColor" opacity="0.55">
-      <line x1="70" y1="56" x2="200" y2="46"/><line x1="70" y1="56" x2="200" y2="86"/><line x1="70" y1="56" x2="200" y2="126"/><line x1="70" y1="56" x2="200" y2="166"/>
-      <line x1="70" y1="106" x2="200" y2="46"/><line x1="70" y1="106" x2="200" y2="86"/><line x1="70" y1="106" x2="200" y2="126"/><line x1="70" y1="106" x2="200" y2="166"/>
-      <line x1="70" y1="156" x2="200" y2="46"/><line x1="70" y1="156" x2="200" y2="86"/><line x1="70" y1="156" x2="200" y2="126"/><line x1="70" y1="156" x2="200" y2="166"/>
-      <line x1="360" y1="56" x2="400" y2="106"/><line x1="360" y1="106" x2="400" y2="106"/><line x1="360" y1="156" x2="400" y2="106"/>
-      <line x1="448" y1="106" x2="490" y2="46"/><line x1="448" y1="106" x2="490" y2="86"/><line x1="448" y1="106" x2="490" y2="126"/><line x1="448" y1="106" x2="490" y2="166"/>
-    </g>
-    <g class="fb sb"><rect x="20" y="45" width="50" height="22" rx="4"/><rect x="20" y="95" width="50" height="22" rx="4"/><rect x="20" y="145" width="50" height="22" rx="4"/>
-      <rect x="310" y="45" width="50" height="22" rx="4"/><rect x="310" y="95" width="50" height="22" rx="4"/><rect x="310" y="145" width="50" height="22" rx="4"/></g>
-    <g class="fg sg"><rect x="200" y="35" width="50" height="22" rx="4"/><rect x="200" y="75" width="50" height="22" rx="4"/><rect x="200" y="115" width="50" height="22" rx="4"/><rect x="200" y="155" width="50" height="22" rx="4"/>
-      <rect x="490" y="35" width="50" height="22" rx="4"/><rect x="490" y="75" width="50" height="22" rx="4"/><rect x="490" y="115" width="50" height="22" rx="4"/><rect x="490" y="155" width="50" height="22" rx="4"/></g>
-    <circle cx="424" cy="106" r="24" class="fv"/><text x="424" y="110" text-anchor="middle">MCP</text>
-    <g text-anchor="middle"><text x="45" y="60">app</text><text x="45" y="110">app</text><text x="45" y="160">app</text><text x="335" y="60">app</text><text x="335" y="110">app</text><text x="335" y="160">app</text>
-      <text x="225" y="50">tool</text><text x="225" y="90">tool</text><text x="225" y="130">tool</text><text x="225" y="170">tool</text><text x="515" y="50">tool</text><text x="515" y="90">tool</text><text x="515" y="130">tool</text><text x="515" y="170">tool</text></g>
-  </svg><figcaption>Every line is a connector someone must write. At 5 apps × 20 systems: 100 vs 25.</figcaption></figure>
+  <h2 id="ma-mcp"><span class="num">07</span>MCP: Sharing Tools</h2>
+  <p>Inside our team, every agent calls the same Python functions. But Biteful's order lookup is also needed by the restaurant-partner assistant, an internal analytics agent and next year's voice bot, each built by a different team, and all of those agents also want GitHub, Slack and the company wiki. Without a standard, each AI application writes its own connector for each system, with its own authentication, bugs and tool-schema format. With 5 applications and 20 systems, that is 5 × 20 = 100 connectors to build and maintain.</p>
+  <p>The <strong>Model Context Protocol (MCP)</strong> is an open standard for connecting AI applications to tools and data. Each system ships one MCP <strong>server</strong>, each application implements one MCP <strong>client</strong>, and any application can then use any server. The 100 connectors become 5 + 20 = 25. This is usually summarised as turning an N × M problem into N + M. USB-C is the common analogy: laptops do not need a special port for every device, because everyone agreed on one plug. The analogy breaks in one important place, which we return to below: a USB device cannot trick your laptop with words, but an MCP server's tool descriptions go straight into your model's prompt.</p>
   <figure class="viz"><svg viewBox="0 0 600 200" width="600">
     <defs><marker id="ma-ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <rect x="10" y="10" width="222" height="180" rx="8" class="fs" stroke="currentColor"/>
@@ -774,9 +596,9 @@ draft 2: same-model critic: Looks good!  | ledger critic: OK</div>
     <rect x="114" y="76" width="106" height="34" rx="6" class="fb sb"/><text x="167" y="97" text-anchor="middle">client 1</text>
     <rect x="114" y="132" width="106" height="34" rx="6" class="fb sb"/><text x="167" y="153" text-anchor="middle">client 2</text>
     <rect x="290" y="76" width="140" height="34" rx="6" class="ft st"/><text x="360" y="97" text-anchor="middle">server: github</text>
-    <rect x="290" y="132" width="140" height="34" rx="6" class="ft st"/><text x="360" y="153" text-anchor="middle">server: kb</text>
+    <rect x="290" y="132" width="140" height="34" rx="6" class="ft st"/><text x="360" y="153" text-anchor="middle">server: orders</text>
     <rect x="480" y="76" width="110" height="34" rx="6" class="fg sg"/><text x="535" y="97" text-anchor="middle">GitHub API</text>
-    <rect x="480" y="132" width="110" height="34" rx="6" class="fg sg"/><text x="535" y="153" text-anchor="middle">files / DB</text>
+    <rect x="480" y="132" width="110" height="34" rx="6" class="fg sg"/><text x="535" y="153" text-anchor="middle">order DB</text>
     <g stroke="currentColor" fill="none">
       <line x1="94" y1="93" x2="112" y2="93"/><line x1="94" y1="149" x2="112" y2="149"/>
       <line x1="224" y1="93" x2="286" y2="93" marker-start="url(#ma-ah2)" marker-end="url(#ma-ah2)"/>
@@ -785,46 +607,23 @@ draft 2: same-model critic: Looks good!  | ledger critic: OK</div>
     </g>
     <text x="255" y="60" text-anchor="middle" class="tb">JSON-RPC</text>
     <text x="255" y="86" text-anchor="middle" class="tm" font-size="11">HTTP</text><text x="255" y="142" text-anchor="middle" class="tm" font-size="11">stdio</text>
-  </svg><figcaption>One client per server inside the host. The server talks to the real system and never needs to know which LLM is used.</figcaption></figure>
-  <p>Three roles. The <strong>host</strong> is the AI app (Claude Desktop, Claude Code, your support app): it owns the LLM, the UI and user consent. Inside it, one <strong>client</strong> per server holds a connection. The <strong>server</strong> is a small program that exposes capabilities and talks to the real system. A session, step by step (we run exactly this in the next section):</p>
-  <table class="tbl out"><caption>One MCP session</caption>
-    <tr><th>#</th><th>Client sends</th><th>Server replies</th></tr>
-    <tr><td>1</td><td><code>initialize</code> (protocol version, capabilities)</td><td>server name, version, capabilities (tools, resources, prompts)</td></tr>
-    <tr><td>2</td><td><code>notifications/initialized</code> (no reply expected)</td><td>–</td></tr>
-    <tr><td>3</td><td><code>tools/list</code></td><td>each tool's name, description, JSON schema</td></tr>
-    <tr><td>4</td><td><code>tools/call</code> {name, arguments}</td><td>content blocks + <code>isError</code></td></tr>
-  </table>
+  </svg><figcaption>One client per server inside the host. Each server talks to its real system and never needs to know which LLM the host uses.</figcaption></figure>
+  <p>MCP has three roles, and the figure shows how they fit. The <strong>host</strong> is the AI application the user works in, such as Claude Desktop, Claude Code or your own support app; it owns the LLM, the user interface and the user's consent. Inside the host there is one <strong>client</strong> per server, each holding one connection. The <strong>server</strong> is a small program that exposes capabilities and talks to the real system (the GitHub API, the order database). Client and server exchange messages in <strong>JSON-RPC 2.0</strong>, a simple format where a request has an <code>id</code>, a <code>method</code> name and <code>params</code>, and the reply carries the same <code>id</code> with either a <code>result</code> or an <code>error</code>. A message without an <code>id</code> is a <strong>notification</strong> and gets no reply.</p>
+  <p>A session always follows the same steps, and we will run exactly these in the next section. The client sends <code>initialize</code> with its protocol version and capabilities, and the server replies with its name and what it offers. The client sends the notification <code>notifications/initialized</code>. Then it can call <code>tools/list</code> to get each tool's name, description and JSON schema, and <code>tools/call</code> with a tool name and arguments, which returns content blocks and an <code>isError</code> flag. A server can offer three kinds of things, called primitives, and the client side offers three more:</p>
   <table class="tbl">
     <tr><th>Primitive</th><th>Offered by</th><th>Who decides to use it</th><th>Biteful example</th></tr>
-    <tr><td><strong>Tools</strong></td><td>Server</td><td>The model</td><td><code>get_order(order_id)</code></td></tr>
-    <tr><td><strong>Resources</strong></td><td>Server</td><td>The app / user (read-only data by URI)</td><td><code>policy://late-orders</code></td></tr>
-    <tr><td><strong>Prompts</strong></td><td>Server</td><td>The user (templates, slash commands)</td><td>"Reply about a late order"</td></tr>
-    <tr><td><strong>Sampling</strong></td><td>Client</td><td>Server asks the host's LLM for a completion</td><td>Server needs a summary, has no API key</td></tr>
-    <tr><td><strong>Elicitation</strong></td><td>Client</td><td>Server asks the user mid-task</td><td>"Which order did you mean?"</td></tr>
-    <tr><td><strong>Roots</strong></td><td>Client</td><td>Host tells the server which folders it may touch</td><td><code>file:///srv/biteful/exports</code></td></tr>
+    <tr><td>Tools</td><td>Server</td><td>The model, during its reasoning</td><td><code>get_order(order_id)</code></td></tr>
+    <tr><td>Resources</td><td>Server</td><td>The application or user: read-only data addressed by a URI</td><td><code>policy://late-orders</code></td></tr>
+    <tr><td>Prompts</td><td>Server</td><td>The user, as templates or slash commands</td><td>"Reply about a late order"</td></tr>
+    <tr><td>Sampling</td><td>Client</td><td>The server asks the host's LLM for a completion</td><td>A server needs a summary but has no API key</td></tr>
+    <tr><td>Elicitation</td><td>Client</td><td>The server asks the user a question mid-task</td><td>"Which order did you mean?"</td></tr>
+    <tr><td>Roots</td><td>Client</td><td>The host tells the server which folders it may touch</td><td><code>file:///srv/biteful/exports</code></td></tr>
   </table>
-  <table class="tbl">
-    <tr><th></th><th>stdio</th><th>Streamable HTTP</th></tr>
-    <tr><td>How</td><td>Host starts the server as a subprocess; JSON-RPC over stdin/stdout</td><td>Server is a web service at one endpoint (e.g. <code>/mcp</code>); can stream</td></tr>
-    <tr><td>Use for</td><td>Local tools: files, git, a local DB</td><td>Remote, shared, multi-user servers</td></tr>
-    <tr><td>Auth</td><td>The user's machine permissions</td><td>OAuth 2.1 / tokens</td></tr>
-  </table>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>MCP</strong>: an open standard for connecting AI applications to tools and data. <strong>JSON-RPC 2.0</strong>: a request has <code>id</code>, <code>method</code>, <code>params</code>; the reply carries the same <code>id</code> and a <code>result</code> or <code>error</code>. The older "HTTP + SSE" transport is deprecated; use Streamable HTTP for remote servers.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: MCP is not a security layer</span>
-    <p>A malicious or compromised server can put instructions in tool descriptions or results ("tool poisoning"). Install servers only from sources you trust, give them least privilege, and keep human approval for risky actions (<a class="xref" data-note="llm_prod">Guardrails, Cost &amp; Deployment</a>).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: MCP: build &amp; connect.</b> That's the protocol on paper. What does a Biteful MCP server look like in code, and what really travels over stdin and stdout?</div>
+  <p>Messages travel over one of two <strong>transports</strong>. With <strong>stdio</strong>, the host starts the server as a child process on the same machine and they exchange JSON-RPC lines over the process's standard input and output; this is used for local tools such as files, git or a local database, and security comes from the user's own machine permissions. With <strong>Streamable HTTP</strong>, the server is a web service with one endpoint (often <code>/mcp</code>) that many users can share, it can stream responses, and it is secured with OAuth 2.1 or tokens. An older "HTTP + SSE" transport is deprecated; new remote servers use Streamable HTTP.</p>
+  <p>Now the broken part of the USB-C analogy. MCP is a way to connect things, not a security layer. A malicious or compromised server can hide instructions in its tool descriptions or results, which the model reads as part of its prompt; this is called <strong>tool poisoning</strong>. Install servers only from sources you trust, give each the least privilege it needs, and keep human approval for risky actions (see <a class="xref" data-note="llm_prod">Guardrails, Cost &amp; Deployment</a>).</p>
 
-  <h2 id="ma-mcpbuild"><span class="num">08</span>MCP: Build &amp; Connect</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>How little code is a server that exposes <code>get_order</code>, the refund policy and a reply template to any MCP host, and can we see the handshake and the tool call as raw JSON?</p>
-  </div>
-  <p>Writing a server should be the easy part: the point is that each system writes one. The official Python SDK (<code>pip install "mcp[cli]"</code>) turns decorated functions into capabilities: type hints become the JSON schema, docstrings become descriptions, exactly like <code>@tool</code> in <a class="xref" data-note="agent_build">Build an Agent from Scratch</a>.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Opening a counter in a mall food court. Follow the mall's standard (menu board, token system, payment terminal) and any customer who knows the mall can order from you.</p>
-  </div>
+  <h2 id="ma-mcpbuild"><span class="num">08</span>Building an MCP Server</h2>
+  <p>The whole point of MCP is that each system writes its server once, so writing one should be easy, and with the official Python SDK (<code>pip install "mcp[cli]"</code>) it is. You decorate ordinary functions, and the SDK turns them into capabilities: type hints become the JSON schema and docstrings become the descriptions, exactly as <code>@tool</code> did in <a class="xref" data-note="agent_build">Build an Agent from Scratch</a>. Here is a complete Biteful server exposing one tool, one resource and one prompt:</p>
   <div class="fx" data-lang="py"># file: biteful_server.py  (a minimal MCP server: Biteful's order tools for ANY agent)
 from mcp.server.mcpserver import MCPServer
 
@@ -853,7 +652,8 @@ def late_order_reply(order_id: int) -&gt; str:
 
 if __name__ == "__main__":
     mcp.run()          # stdio by default; mcp.run(transport="streamable-http") for HTTP</div>
-  <p>Three decorators, three primitives: <code>@mcp.tool()</code> (the model may call it), <code>@mcp.resource("policy://{name}")</code> (the app reads it by URI), <code>@mcp.prompt()</code> (a template the user picks). <code>mcp.run()</code> serves over stdio. <em>Version note:</em> this is <code>mcp</code> 2.x (<code>MCPServer</code>); most tutorials show 1.x, <code>from mcp.server.fastmcp import FastMCP</code>, with the same decorators. Test it from a plain MCP client, no LLM involved:</p>
+  <p>The three decorators match the three server primitives. <code>@mcp.tool()</code> makes <code>get_order</code> something the model may call. <code>@mcp.resource("policy://{name}")</code> makes each policy section readable by URI, with <code>{name}</code> filled from the address. <code>@mcp.prompt()</code> offers a template a user can pick. <code>mcp.run()</code> serves over stdio by default. A version note, because tutorials differ: this is the 2.x SDK, whose class is <code>MCPServer</code>; most older tutorials show 1.x, <code>from mcp.server.fastmcp import FastMCP</code>, with the same decorators.</p>
+  <p>To test a server you do not need an LLM at all, only an MCP client. The SDK's <code>Client</code> starts the server as a subprocess, performs the handshake, and gives you <code>list_tools</code> and <code>call_tool</code>. The client API is asynchronous (see <a class="xref" data-note="py_asyncio">asyncio</a>), hence <code>async with</code> and <code>await</code>:</p>
   <div class="fx" data-lang="py">import asyncio, sys
 from mcp import Client, StdioServerParameters
 
@@ -871,7 +671,7 @@ asyncio.run(main())</div>
   <div class="fx" data-lang="text">tools: [('get_order', 'Look up a Biteful order: restaurant, total, ')]
 call : Order 101: {'restaurant': 'Dosa Hut', 'total': 282, 'minutes_late': 50}
 miss : No order 999.</div>
-  <p><code>Client(params)</code> started <code>biteful_server.py</code> as a subprocess, did the handshake, listed one tool and called it twice (101 found; 999 not). To demystify the protocol, the same session with <em>no SDK on the client side</em>: JSON lines written to the server's stdin.</p>
+  <p>The client listed one tool, with the docstring as its description, and called it twice: order 101 was found, and order 999 produced the server's "No order" message as a normal result. To remove any mystery about what the SDK is doing, here is the same kind of session with <em>no SDK on the client side</em>: we start the server ourselves and write JSON-RPC messages, one per line, to its standard input. <code>send</code> writes one message and, if it is a request (it has an <code>id</code>), reads one line of reply:</p>
   <div class="fx" data-lang="py"># MCP without any SDK on the client side: JSON-RPC messages, one per line, over stdin/stdout.
 import subprocess, sys
 
@@ -899,31 +699,16 @@ r = send({"jsonrpc": "2.0", "id": 4, "method": "resources/read",
           "params": {"uri": "policy://late-orders"}})
 print("4 resources/read -&gt;", r["result"]["contents"][0]["text"])
 server.stdin.close(); server.wait()</div>
-  <div class="fx" data-lang="text">1 initialize -&gt;  biteful-orders | capabilities: ['experimental', 'prompts', 'resources', 'tools']
+  <div class="fx" data-lang="text">1 initialize -&gt;  biteful-orders | capabilities: ['prompts', 'resources', 'tools']
 2 tools/list -&gt;  get_order {"order_id": {"title": "Order Id", "type": "integer"}}
 3 tools/call -&gt;  Order 102: {'restaurant': 'Pizza Planet', 'total': 450, 'minutes_late': 35} | isError: False
 4 resources/read -&gt; More than 45 minutes late: Biteful refunds the full order amount.</div>
-  <p>This is the session table from section 07, for real. <code>send</code> writes one JSON object per line and, for requests (those with an <code>id</code>), reads one line back. The server answered <code>initialize</code> with its name and capabilities, listed <code>get_order</code> with a schema generated from <code>order_id: int</code>, ran it for order 102 (35 minutes late; <code>isError: False</code>), and served the late-order policy as a resource.</p>
-  <h3>Three ways a host uses it</h3>
-  <p><strong>1. An existing host.</strong> Claude Code: <code>claude mcp add biteful-orders -- python biteful_server.py</code>. Claude Desktop reads a config file entry <code>"mcpServers": {"biteful-orders": {"command": "python", "args": ["/path/to/biteful_server.py"]}}</code>.</p>
-  <p><strong>2. Your own host app.</strong> Open a client session as above, call <code>list_tools()</code>, convert each tool to your model's tool format, and when the model calls one, forward it with <code>call_tool</code>. SDK helpers do the conversion (the Anthropic SDK's MCP helpers; <code>langchain-mcp-adapters</code> for LangChain/LangGraph agents).</p>
-  <p><strong>3. A remote server, no client code.</strong> For a server on Streamable HTTP, model APIs offer an MCP connector: you pass the server URL in the request and the provider's side connects to it. Check your provider's docs for the current parameter names.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>stdio transport</strong>: the host launches the server and talks over its standard input/output. <code>mcp.run(transport="streamable-http")</code> serves over HTTP instead; clients connect to the server's <code>/mcp</code> endpoint.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Printing debug output to stdout in a stdio server. stdout <em>is</em> the protocol channel, so a stray <code>print</code> corrupts the JSON stream. Log to stderr.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: A2A.</b> MCP connects an agent to tools we control. When Asha's rider complaint must go to the delivery partner's own agent, which investigates for an hour and may ask us questions, we're not calling a function; we're briefing another company's agent.</div>
+  <p>This is the session from section 07, for real. Message 1, <code>initialize</code>, was answered with the server's name and its capabilities: prompts, resources and tools, because our server defined one of each. Then came the <code>notifications/initialized</code> notification, which got no reply because it has no id. Message 2, <code>tools/list</code>, returned <code>get_order</code> with a schema generated from the type hint <code>order_id: int</code>. Message 3 ran the tool for order 102 (35 minutes late) with <code>isError: False</code>. Message 4 read the late-orders policy as a resource. One practical consequence of stdio is worth remembering: standard output <em>is</em> the protocol channel, so a stray <code>print</code> in a stdio server corrupts the JSON stream. Servers must log to standard error.</p>
+  <p>There are three common ways to put such a server to use. First, an existing host: in Claude Code you run <code>claude mcp add biteful-orders -- python biteful_server.py</code>, and Claude Desktop reads an entry like <code>"mcpServers": {"biteful-orders": {"command": "python", "args": ["/path/to/biteful_server.py"]}}</code> from its config file. Second, your own host application: open a client session as above, call <code>list_tools()</code>, convert each tool into your model API's tool format, and whenever the model calls one, forward the call with <code>call_tool</code> and return the result; helper libraries do the conversion (the Anthropic SDK's MCP helpers, or <code>langchain-mcp-adapters</code> for LangChain and LangGraph agents). Third, for a remote server on Streamable HTTP, model APIs offer an MCP connector, where you pass the server's URL in the API request and the provider connects to it for you; check your provider's documentation for the current parameter names.</p>
 
-  <h2 id="ma-a2a"><span class="num">09</span>A2A in Brief</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Biteful's riders come from a logistics partner, SwiftRide, which runs its own incident agent. How does our delivery agent find it, hand it Asha's rider complaint, and follow a task that may pause to ask for input?</p>
-  </div>
-  <p><strong>A2A (Agent2Agent)</strong>, an open protocol started by Google, standardises how agents discover each other, hand over tasks, and follow their progress. Two pieces matter most. The <strong>Agent Card</strong> is a visiting card at a well-known URL. The <strong>task lifecycle</strong> is a small state machine: a task can go from <code>working</code> to <code>input-required</code> and back, but a <code>completed</code> task can't start working again.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Hiring a CA firm. You find them by their visiting card, hand over a task, they sometimes call you ("send Form 16"), and finally deliver. You never see how they work inside.</p>
-  </div>
+  <h2 id="ma-a2a"><span class="num">09</span>A2A: Agents Talking to Agents</h2>
+  <p>MCP connects an agent to tools you control: you call a function and get an answer. But Biteful's riders come from a logistics partner, SwiftRide, which runs its own incident agent. When Asha's rider complaint goes to SwiftRide, Biteful is not calling a function. It is briefing another company's agent, which will reason on its own, may take an hour, may come back with questions, and whose internals Biteful cannot see.</p>
+  <p><strong>A2A (Agent2Agent)</strong> is an open protocol, started by Google, for exactly this: how agents discover each other, hand over tasks and follow their progress. Two pieces matter most. An <strong>Agent Card</strong> is a small JSON document an agent publishes at a well-known URL, listing its skills, its endpoint and how to authenticate; it is the agent's visiting card. The <strong>task lifecycle</strong> is a small state machine that every task follows: it is submitted, then working, and it may move to <code>input-required</code> (the remote agent needs something from you) and back to working, until it ends as completed or failed. Hiring an accounting firm is a close analogy: you find them through their card, hand over a job, they sometimes call to ask for a document, and eventually they deliver, without you ever seeing how they work inside.</p>
   <div class="fx" data-lang="py"># An Agent Card: what a partner's agent publishes at a well-known URL (simplified)
 card = {"name": "swiftride-dispatch", "url": "https://agents.swiftride.example/a2a",
         "skills": [{"id": "rider_incident", "description": "Investigate a rider complaint"}],
@@ -950,24 +735,12 @@ print(" -&gt; ".join(run(["working", "completed", "working"])))</div>
   <div class="fx" data-lang="text">card: swiftride-dispatch | skills: ['rider_incident'] | endpoint: https://agents.swiftride.example/a2a
 submitted -&gt; working -&gt; input-required -&gt; working -&gt; completed
 submitted -&gt; working -&gt; completed -&gt; ILLEGAL(working)</div>
-  <p>The first run is a legal path: SwiftRide's agent needed input once (say, the order's delivery photo), got it, and completed. The second tried to move a completed task back to working, and the <code>NEXT</code> table rejected it. Your client should enforce the same rules, so a buggy partner can't confuse your system. Messages carry the conversation; <strong>artifacts</strong> are the outputs (a report, a refund decision). It runs over HTTP with JSON-RPC and streaming, like MCP's remote transport.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>A2A</strong>: a protocol for an agent to call another, opaque agent. <strong>Agent Card</strong>: JSON listing skills, endpoint and auth. MCP = agent ↔ tools; A2A = agent ↔ agent. An A2A agent may use MCP tools internally.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Using A2A for your own internal tools. If you control both sides and it is a function call, MCP (or a plain tool) is simpler.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Build it.</b> We have all the parts. What does a team look like on a job where splitting clearly helps: a wide job with lots of raw reading, independent parts, and a write-up whose sources must be checked?</div>
+  <p>The card tells our delivery agent that SwiftRide's agent offers a <code>rider_incident</code> skill at a given endpoint. The <code>NEXT</code> table encodes which moves are legal. The first run is a legal path: SwiftRide's agent needed input once (say, the delivery photo), received it, and completed. The second tried to move a completed task back to working, and the table rejected it. Your client should enforce these rules itself, so a buggy partner cannot confuse your system. In A2A, messages carry the conversation and <strong>artifacts</strong> are the outputs, such as a report or a decision; like MCP's remote transport, it runs over HTTP with JSON-RPC and streaming.</p>
+  <p>The short way to remember the difference: MCP is agent ↔ tools, A2A is agent ↔ agent. They work together, since an A2A agent may well use MCP tools internally. If you control both sides and the thing on the other side is really a function, MCP or a plain tool is simpler than A2A.</p>
 
-  <h2 id="ma-build"><span class="num">10</span>Build It: The Weekly Complaints Brief</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Every Monday, support leads want "this week's top complaint themes" with ticket ids as evidence. It needs searching many tickets on separate themes, then one clean write-up. Can a team do it with researchers in parallel and a writer who can't invent sources?</p>
-  </div>
-  <p>Two <strong>researchers</strong> (search tool, own messy contexts) run in parallel on two themes and return structured findings: <code>{claim, source}</code>, validated with pydantic. The <strong>writer</strong> has no tools and sees only the findings. Finally plain code checks that every <code>[T-…]</code> citation in the brief came from a finding.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A news desk. Field reporters gather quotes with each source's name; the editor writes only from their notes; before printing, a fact-checker confirms every quote has a named source in the notes.</p>
-  </div>
-  <div class="flow"><span>Themes</span><span>Researchers (parallel, search tool)</span><span>Validated findings</span><span>Writer (no tools)</span><span>Citation check</span><span>Brief</span></div>
+  <h2 id="ma-build"><span class="num">10</span>A Team That Helps</h2>
+  <p>So far a team has not clearly beaten one agent on Asha's requests. Here is a job where splitting genuinely helps. Every Monday, support leads want "this week's top complaint themes" with ticket ids as evidence. The job has the three properties that favour a team: it is wide (many tickets to read), its parts are independent (different themes), and its output has a checkable property (every cited ticket must exist in the evidence).</p>
+  <p>The design: two <strong>researcher</strong> agents, each with a ticket-search tool and its own messy context, run in parallel on two themes and return structured findings, each a <code>{claim, source}</code> pair validated with pydantic. A <strong>writer</strong> agent has no tools at all and sees only the findings. Finally, plain code checks that every <code>[T-…]</code> citation in the written brief came from some finding. Giving each agent only the tools it needs, here none for the writer, is called <strong>least privilege</strong>: text injected into a ticket cannot make the writer do anything, because it has nothing to do things with. A newsroom works the same way: reporters collect quotes with each source's name, the editor writes only from their notes, and before printing a fact-checker confirms every quote has a named source.</p>
   <div class="fx" data-lang="py"># research_team: researcher sub-agents (search tool, own context) -&gt; writer (no tools)
 TICKETS = {   # this week's support tickets (stand-in for a ticket search index)
     "T-11": "Order 101 Dosa Hut 50 minutes late in rain; refunded Rs 282.",
@@ -1025,7 +798,7 @@ def research_team(client, question, sub_questions):
     brief = writer(client, question, findings)
     bad = check_citations(brief, findings)
     return brief if not bad else brief + f"\\n[unverified citations: {bad}]"</div>
-  <p>Key lines. <code>Report.model_validate_json</code> turns each researcher's final text into checked data: a malformed report fails loudly instead of being passed along. <code>writer</code> gets no <code>tools</code>, so injected text in tickets can't make it act. <code>check_citations</code> lists every cited id not present in any finding. Now a run with stand-ins: researchers really read their search observation and build findings from it; the writer cites three real sources and invents one.</p>
+  <p>Three lines carry the design. <code>Report.model_validate_json</code> turns a researcher's final text into checked data, so a malformed report fails loudly instead of being passed along. <code>writer</code> is called without any <code>tools</code>. And <code>check_citations</code> lists every cited id that does not appear in any finding. Now a run. The stand-in researchers really read their search results and build findings from them; the stand-in writer cites three real sources and invents one, which is exactly the kind of mistake real models make:</p>
   <div class="fx" data-lang="py">RAW_SEEN, FOUND = [], {}                                   # what each researcher context held
 def play_team(req):                                       # STAND-INs for researchers and writer
     msgs = req["messages"]
@@ -1053,20 +826,10 @@ Research: missing wrong item refunded        -&gt; ['T-13', 'T-14', 'T-11']
 Late deliveries led complaints, often in rain or road closures [T-11] [T-12]. Missing items were refunded per item [T-13]. Rain delays rose 30% [T-19].
 [unverified citations: ['T-19']]
 model calls: 5 (2 researchers x 2 laps + 1 writer)</div>
-  <p>The searches found T-12, T-11, T-15 (late theme) and T-13, T-14, T-11 (missing-items theme); each researcher reported its top two. The brief cited T-11, T-12 and T-13 (all in the findings) and T-19, which no researcher ever found: the code check flagged it. That line turns "the writer might hallucinate a source" into a check that fails. Five model calls in total.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Structured handoff</strong>: agents exchange schema-checked data, not free text. <strong>Least privilege</strong>: each agent gets only the tools it needs (the writer gets none).</p>
-  </div>
-  <div class="callout pred"><span class="label">Extend it</span>
-    <p>(1) Let a lead write the themes with a <code>delegate</code> tool (section 04). (2) Add the ledger-style critic from section 06 for numbers. (3) Serve <code>search_tickets</code> from an MCP server. Then measure: is the brief better than one agent with the same tool, and at what token cost?</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: When multi-agent is overkill.</b> The team worked here. On Asha's simple two-problem request, all four designs reached the same end state. What did the extra agents cost, and when is a single agent simply better?</div>
+  <p>The late-delivery search returned T-12, T-11 and T-15, the missing-item search T-13, T-14 and T-11, and each researcher reported its top two as findings. The brief cited T-11, T-12 and T-13, all present in the findings, and T-19, which no researcher ever found; the citation check flagged it as unverified. That one line of code turns "the writer might make up a source" from a worry into a check that fails visibly. The whole run took 5 model calls: two laps for each researcher and one for the writer. Natural extensions would be to let a lead agent choose the themes with a <code>delegate</code> tool, add a ledger-style critic for numbers, and serve <code>search_tickets</code> from an MCP server, and then measure whether the brief is actually better than one agent with the same tool, and at what token cost.</p>
 
   <h2 id="ma-overkill"><span class="num">11</span>When Multi-Agent Is Overkill</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We built supervisors, swarms, pipelines and research teams. For Asha's request, did any of them do better than one agent with three tools? What decides whether the extra agents pay for themselves?</p>
-  </div>
-  <p>Run the same two-problem request through a single agent with all three tools, and put it next to the earlier runs:</p>
+  <p>We have built supervisors, swarms, pipelines and a research team. The honest question is whether any of them did better than one agent on Asha's request. To answer it we need a <strong>single-agent baseline</strong>: the simplest design that can do the task, measured the same way. Here is one agent holding all three tools, run on the same two-problem message, next to the earlier results:</p>
   <div class="fx" data-lang="py">AGENTS["solo"] = {"system": "Solo: you handle everything yourself.",
                   "allowed": {"get_order", "refund", "file_complaint"}}
 LEDGER.clear(); COMPLAINTS.clear()
@@ -1076,11 +839,11 @@ script = {"solo": [[call("get_order", order_id=101)], [call("refund", order_id=1
 client = FakeClient(play)
 chat(client, [{"role": "user", "content": TWO_PROBLEMS}], active="solo")
 solo_calls = len(client.calls)
-END["one agent"] = (LEDGER.copy(), COMPLAINTS.copy())
+RESULTS["one agent"] = (LEDGER.copy(), COMPLAINTS.copy())
 print(f"{'design':12}{'model calls':&gt;12}  end state (refunds | complaints)")
 for name, n in [("one agent", solo_calls), ("pipeline", pipe_calls), ("swarm", swarm_calls),
                 ("supervisor", sup_calls)]:
-    refunds, complaints = END[name]
+    refunds, complaints = RESULTS[name]
     print(f"{name:12}{n:&gt;12}  {[(o, a) for o, a, _, _ in refunds]} | {complaints}")
 print("weekly report: biggest researcher context", max(RAW_SEEN), "chars of raw results; "
       "one agent would hold", sum(RAW_SEEN))</div>
@@ -1093,159 +856,98 @@ pipeline               4  [(101, 282)] | [(101, 'rider')]
 swarm                  6  [(101, 282)] | [(101, 'rider')]
 supervisor            10  [(101, 282)] | [(101, 'rider')]
 weekly report: biggest researcher context 211 chars of raw results; one agent would hold 419</div>
-  <p>Every design produced the same end state: one Rs 282 refund for 101 and one rider complaint. The single agent and the pipeline took 4 model calls, the swarm 6, the supervisor 10: two and a half times the calls for an identical result. (And each of those calls resends its own prompt and tools, so tokens grow faster than calls.) For the weekly brief, the split did buy something: no context held more than 211 characters of raw results instead of 419; with five tickets that hardly matters, with five thousand it is the whole point.</p>
-  <figure class="viz"><svg viewBox="0 0 520 120" width="520">
-    <text x="8" y="31">chat</text><rect x="100" y="16" width="25" height="22" class="fs" stroke="currentColor"/><text x="131" y="31">1×</text>
-    <text x="8" y="65">one agent</text><rect x="100" y="50" width="100" height="22" class="fb sb"/><text x="206" y="65">≈4×</text>
-    <text x="8" y="99">multi-agent</text><rect x="100" y="84" width="375" height="22" class="fr sr"/><text x="481" y="99">≈15×</text>
-  </svg><figcaption>Tokens per task (Anthropic's research system). Every agent re-reads its own instructions and context, so cost multiplies.</figcaption></figure>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>You don't form a committee to answer one customer's email. Committees earn their cost on big, separable jobs, or when different people must sign off different parts.</p>
-  </div>
-  <div class="callout intu"><span class="label">Decision rule</span>
-    <p>Start with <strong>one agent</strong> (or a workflow, see <a class="xref" data-note="agentic">Agent Fundamentals</a>). Split only if at least one is true: <strong>Breadth</strong>: independent sub-tasks whose raw material would overflow one context (the weekly brief). <strong>Separation</strong>: parts need different tools or permissions (a menu bot must never hold the refund tool). <strong>Ownership</strong>: different teams or companies build and run the agents (SwiftRide via A2A). And the task must be worth several times the tokens; check it against the single-agent baseline on an eval set (<a class="xref" data-note="llm_evals">Evaluation &amp; Observability</a>).</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Single-agent baseline</strong>: the simplest design that can do the task, measured on the same eval set; any multi-agent design must beat it on quality per cost.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"Planner, coder, tester, reviewer agents" because it looks like an org chart. Role-play doesn't make a model smarter; for tightly coupled work, splitting loses context and multiplies calls. A favourite interview question.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: How it all connects.</b> Eleven ideas about teams of agents. How does each grow from the previous one, and which question does each answer on Asha's requests?</div>
+  <p>Every design produced the same end state: one ₹282 refund for order 101 and one rider complaint. The single agent and the pipeline used 4 model calls, the swarm 6 and the supervisor 10, so the supervisor spent two and a half times the calls for an identical result. Tokens grow even faster than calls, because every call resends that agent's own prompt and tools. Anthropic has reported that its multi-agent research system uses roughly 15 times the tokens of a plain chat, against about 4 times for a single agent. For the weekly brief, though, the split did buy something real: no context held more than 211 characters of raw results, where one agent would have held 419. With five tickets that hardly matters; with five thousand it is the whole point.</p>
+  <p>You would not form a committee to answer one customer's email; committees earn their cost on big, separable jobs, or when different people must sign off different parts. That gives the decision rule. Start with one agent, or a fixed workflow if the steps never change (see <a class="xref" data-note="agentic">Agent Fundamentals</a>). Split only when at least one of these is true. <strong>Breadth</strong>: independent sub-tasks whose raw material would overflow one context, like the weekly brief. <strong>Separation</strong>: parts need different tools or permissions, like a menu bot that must never hold the refund tool. <strong>Ownership</strong>: different teams or companies build and run the agents, like SwiftRide over A2A. Even then, the task must be valuable enough to justify several times the tokens, and the team must beat the single-agent baseline on an eval set (<a class="xref" data-note="llm_evals">Evaluation &amp; Observability</a>).</p>
+  <p>The classic wrong design, and a favourite interview question, is "planner, coder, tester and reviewer agents" because it looks like a team's org chart. Giving a model a job title does not make it smarter, and for tightly coupled work like coding, where every step depends on the others, splitting loses context at every hand-over and multiplies calls. Split by independent sub-tasks, permissions or ownership, never by job title.</p>
 
-  <h2 id="ma-connect"><span class="num">12</span>How It All Connects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Roles, handoffs, supervisors, swarms, pipelines, workers, briefs, caps, critics, MCP, A2A: a zoo of patterns, or a few ideas combined in different ways?</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 680 280" width="680">
-<defs><marker id="ma-c0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="250" y="8" width="180" height="40" rx="8" class="fr sr"/><text x="340" y="25" text-anchor="middle" font-size="12" font-weight="700">One agent, 12 tools</text><text x="340" y="40" text-anchor="middle" font-size="9.5" class="tm">cost · look-alikes · blast radius</text>
-<line x1="340" y1="48" x2="340" y2="66" stroke="currentColor" marker-end="url(#ma-c0)"/>
-<rect x="230" y="68" width="220" height="40" rx="8" class="fb sb"/><text x="340" y="85" text-anchor="middle" font-size="12" font-weight="700">Roles</text><text x="340" y="100" text-anchor="middle" font-size="9.5" class="tm">prompt + allowed tools (+ model)</text>
-<line x1="280" y1="108" x2="95" y2="136" stroke="currentColor" marker-end="url(#ma-c0)"/><line x1="320" y1="108" x2="255" y2="136" stroke="currentColor" marker-end="url(#ma-c0)"/><line x1="360" y1="108" x2="425" y2="136" stroke="currentColor" marker-end="url(#ma-c0)"/><line x1="400" y1="108" x2="585" y2="136" stroke="currentColor" marker-end="url(#ma-c0)"/>
-<rect x="10" y="138" width="150" height="44" rx="8" class="fv"/><text x="85" y="157" text-anchor="middle" font-size="11.5">Supervisor</text><text x="85" y="172" text-anchor="middle" font-size="9.5" class="tm">router decides · 10 calls</text>
-<rect x="180" y="138" width="150" height="44" rx="8" class="fv"/><text x="255" y="157" text-anchor="middle" font-size="11.5">Swarm</text><text x="255" y="172" text-anchor="middle" font-size="9.5" class="tm">handoff tools · 6 calls</text>
-<rect x="350" y="138" width="150" height="44" rx="8" class="fv"/><text x="425" y="157" text-anchor="middle" font-size="11.5">Pipeline</text><text x="425" y="172" text-anchor="middle" font-size="9.5" class="tm">code decides · 4 calls</text>
-<rect x="520" y="138" width="150" height="44" rx="8" class="fv"/><text x="595" y="157" text-anchor="middle" font-size="11.5">Parallel workers</text><text x="595" y="172" text-anchor="middle" font-size="9.5" class="tm">fresh contexts · 450 vs 45,000</text>
-<rect x="10" y="212" width="320" height="40" rx="8" class="ft st"/><text x="170" y="229" text-anchor="middle" font-size="11.5">What crosses: final results, structured briefs</text><text x="170" y="244" text-anchor="middle" font-size="9.5" class="tm">fixes lossy handoffs; checks: caps, owners, real critics</text>
-<rect x="350" y="212" width="320" height="40" rx="8" class="fg sg"/><text x="510" y="229" text-anchor="middle" font-size="11.5">Shared tools: MCP · other agents: A2A</text><text x="510" y="244" text-anchor="middle" font-size="9.5" class="tm">N + M connectors · Agent Card + task lifecycle</text>
-<line x1="85" y1="182" x2="120" y2="210" stroke="currentColor" marker-end="url(#ma-c0)"/><line x1="255" y1="182" x2="220" y2="210" stroke="currentColor" marker-end="url(#ma-c0)"/><line x1="425" y1="182" x2="460" y2="210" stroke="currentColor" marker-end="url(#ma-c0)"/><line x1="595" y1="182" x2="560" y2="210" stroke="currentColor" marker-end="url(#ma-c0)"/>
-<text x="340" y="272" text-anchor="middle" font-size="10" class="tm">all of it measured against the single-agent baseline (section 11)</text>
-</svg><figcaption>Crowding motivates roles; roles combine into four shapes that differ only in who decides what runs next; every shape needs the same discipline about what crosses between agents, and shares tools and agents through MCP and A2A.</figcaption></figure>
-  <table class="tbl"><caption>Every concept on Asha's requests</caption>
-    <tr><th>Concept</th><th>Built from</th><th>Answers which question</th><th>Value on our example</th><th>When to use</th></tr>
-    <tr><td>Crowded single agent</td><td>12 tools, 4 rulebooks</td><td>why split at all?</td><td>531 vs 180 schema tokens; 2.3 vs 1.5 look-alikes; 6 vs 3 writes</td><td>to decide whether to split</td></tr>
-    <tr><td>Role</td><td>prompt + allow-list</td><td>what makes agents different?</td><td>triage can't refund (blocked)</td><td>any split</td></tr>
-    <tr><td>Handoff</td><td>transfer tool + <code>active</code></td><td>how does control move?</td><td>triage → refunds → Rs 282</td><td>conversations between experts</td></tr>
-    <tr><td>Supervisor</td><td>router + workers + shared state</td><td>who orders the work?</td><td>10 calls; saw 1, 2, 3, 4 messages</td><td>varied tasks needing central control</td></tr>
-    <tr><td>Swarm</td><td>handoffs between peers</td><td>can agents pass work on?</td><td>6 calls; ends at delivery</td><td>customer-facing flows</td></tr>
-    <tr><td>Pipeline</td><td>fixed stages in code</td><td>is the order fixed?</td><td>4 calls; QA in code</td><td>same steps every time</td></tr>
-    <tr><td>Parallel workers</td><td>delegate tool + threads</td><td>can work run at once?</td><td>101 + 103 checked in parallel; lead 450 words</td><td>wide, independent sub-tasks</td></tr>
-    <tr><td>Structured brief</td><td>pydantic schema</td><td>what crosses, intact?</td><td>wallet constraint kept; sloppy brief rejected</td><td>every hand-over</td></tr>
-    <tr><td>Failure fixes</td><td>caps, owners, data rules, real critics</td><td>how do teams fail?</td><td>6 transfers; closed account; Rs 322; "Looks good!" to Rs 280</td><td>always</td></tr>
-    <tr><td>MCP</td><td>host · client · server, JSON-RPC</td><td>how are tools shared?</td><td>get_order(102) over stdio</td><td>tools used by many apps</td></tr>
-    <tr><td>A2A</td><td>Agent Card + task states</td><td>how do companies' agents work together?</td><td>SwiftRide: working → input-required → completed</td><td>opaque partner agents</td></tr>
-    <tr><td>Overkill check</td><td>single-agent baseline</td><td>is the team worth it?</td><td>4 vs 10 calls, same end state</td><td>before every split</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p><strong>Every multi-agent design is one question asked three times: who decides what runs next (a router, the current agent, or your code), what crosses between agents (only results, in a checked shape), and who owns each write (exactly one).</strong> Get those right and the pattern names are details; get them wrong and adding agents adds failures.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Common mistakes.</b> The ideas are few; the mistakes repeat.</div>
-
-  <h2 id="ma-traps"><span class="num">13</span>Common Mistakes</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Which multi-agent mistakes show up again and again, and what does each cost?</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: splitting by job title</span>
-    <p>Planner, coder, tester, reviewer agents for tightly coupled work. Split by independent sub-tasks, permissions or ownership, never by org chart. Compare against a single-agent baseline.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: briefs that assume shared memory</span>
-    <p>"Continue from what we discussed" sent to a worker with a fresh context. Every brief is self-contained and structured.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: leaking worker scratch work</span>
-    <p>Returning a worker's whole transcript to the lead. Return only the final, short, preferably structured answer.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: two owners for one write</span>
-    <p>Refunds agent and items agent both allowed to pay for the same order: Rs 322 on Rs 282. One owner per write, and a cap in the data layer.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: no global budget</span>
-    <p>Each agent has a step cap, but agents can keep transferring to each other. Add a total step, token or time budget per conversation.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: trusting MCP servers blindly</span>
-    <p>A server's descriptions and results go straight into your model's prompt. Trusted sources, least privilege, approvals for writes.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: testing only end to end</span>
-    <p>A five-agent run that fails tells you little. Test each role and the routing with stand-ins (as in this note), then evaluate the whole.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: the Revision Sheet,</b> then <a class="xref" data-note="llm_evals">Evaluation &amp; Observability</a> to measure whether a team beats one agent, and <a class="xref" data-note="agent_capstone">the capstone</a> to ship one agent end to end.</div>
+  <h2 id="ma-traps"><span class="num">12</span>Common Mistakes</h2>
+  <p>The first mistake is splitting by job title rather than by need, as just described: planner, coder, tester and reviewer agents for tightly coupled work, with no comparison against one agent. Always build the single-agent baseline first and make the team beat it.</p>
+  <p>The second is briefs that assume shared memory. A worker starts with a fresh context, so "continue from what we discussed" or "refund it like we said" gives it nothing. Every brief must be self-contained, and anything that must survive belongs in a required field of a schema, as the wallet constraint did in section 05.</p>
+  <p>The third is the opposite problem: sending too much. Returning a worker's entire transcript, with every tool call and raw result, to the lead or supervisor floods its context and throws away the benefit of having workers. Return only the final, short, preferably structured answer, as the supervisor graph did (it saw 4 messages, not the 10 that the workers produced).</p>
+  <p>The fourth is giving two agents the power to make the same write, which produced ₹322 refunded on a ₹282 order. Give each kind of write one owner, and put the hard rule (total refunds never exceed the order total) in the data layer where every agent must pass it.</p>
+  <p>The fifth is relying on per-agent step caps alone. Each agent may stop after 10 steps, but agents can keep transferring to each other indefinitely, as the ping-pong run showed. Add a global step, token or time budget per conversation.</p>
+  <p>The sixth is trusting MCP servers blindly. Their tool descriptions and results go straight into your model's prompt, so a poisoned server can steer your agent. Use trusted sources, least privilege and approvals for writes, and remember that in a stdio server a stray <code>print</code> breaks the protocol.</p>
+  <p>The last is testing only end to end. When a five-agent run fails, it tells you little about which part failed. Test each role, each handoff and the routing with stand-ins, as this page does, and then evaluate the whole system on realistic cases.</p>
 
   <h2 id="ma-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>The whole note on one sheet. <strong>Running example</strong>: Biteful support. Asha's requests: "Order 101 came 50 minutes late. I want my money back." and "…late and the rider was rude." Order 101: Rs 282, 50 minutes late (refund in full); 103: Rs 1,250, 70 minutes late. Tools: <code>get_order</code>, <code>refund</code>, <code>file_complaint</code>. Roles: triage, refunds, delivery (+ writer, items in some runs). Every model is a labelled stand-in; data, ledger, loops, graphs, threads, validation and the MCP server are real.</p>
-  <h3>The question ladder</h3>
+  <h3>Key terms</h3>
+  <ul>
+    <li><b>Multi-agent system</b>: several LLM agents, each with its own prompt, tools and context, cooperating on one job.</li>
+    <li><b>Role</b>: system prompt + allowed tools (+ sometimes its own model). <b>Allow-list</b>: the harness only runs tools the active role may use.</li>
+    <li><b>Handoff</b>: a transfer tool that changes the active agent; the new agent then talks to the user.</li>
+    <li><b>Supervisor</b>: a router agent picks the next worker after every step. <b>Swarm</b>: agents hand off to each other directly. <b>Pipeline</b>: fixed stages in code.</li>
+    <li><b>Orchestrator-workers</b>: a lead splits the job at run time; workers with fresh contexts run in parallel.</li>
+    <li><b>Context isolation</b>: raw material stays in the worker; only a short result returns.</li>
+    <li><b>Coordination failure</b>: each agent is right by its own rules, the team result is wrong.</li>
+    <li><b>MCP</b>: open standard connecting AI apps (hosts, with one client per server) to tool servers over JSON-RPC.</li>
+    <li><b>A2A</b>: protocol for an agent to hand tasks to another, opaque agent; Agent Card + task lifecycle.</li>
+  </ul>
+  <h3>Patterns compared (Asha's two-problem request)</h3>
   <table class="tbl">
-    <tr><th>Concept</th><th>Question it answers</th><th>On Asha's requests</th><th>Gap → next</th></tr>
-    <tr><td>One agent, 12 tools</td><td>why split?</td><td>531 vs 180 tokens; 2.3 vs 1.5 look-alikes; 6 vs 3 writes</td><td>how to split?</td></tr>
-    <tr><td>Roles &amp; handoffs</td><td>what is a role; how does control move?</td><td>triage blocked from refund; transfer; Rs 282 paid</td><td>two problems: who orders?</td></tr>
-    <tr><td>Supervisor / swarm / pipeline</td><td>who decides next?</td><td>10 / 6 / 4 calls, same end state</td><td>independent work?</td></tr>
-    <tr><td>Parallel workers</td><td>work at once?</td><td>101 + 103 in parallel; lead 450 vs 45,000 words</td><td>what crosses?</td></tr>
-    <tr><td>State &amp; messaging</td><td>what passes between agents?</td><td>Handoff with constraints; sloppy brief rejected</td><td>how do teams fail?</td></tr>
-    <tr><td>Coordination failures</td><td>team-level bugs?</td><td>ping-pong; closed account; Rs 322; "Looks good!"</td><td>shared tools?</td></tr>
-    <tr><td>MCP</td><td>share tools across apps?</td><td>Biteful server: initialize, tools/list, tools/call, resources/read</td><td>other companies' agents?</td></tr>
-    <tr><td>A2A</td><td>agent ↔ agent?</td><td>SwiftRide card; legal vs illegal task moves</td><td>when does a team help?</td></tr>
-    <tr><td>Build it</td><td>a team that helps?</td><td>2 researchers + writer; [T-19] flagged; 5 calls</td><td>when not?</td></tr>
-    <tr><td>Overkill</td><td>worth it?</td><td>4 vs 10 calls, same result</td><td>→ evals, capstone</td></tr>
+    <tr><th>Design</th><th>Who decides next</th><th>Model calls</th><th>Use when</th></tr>
+    <tr><td>One agent</td><td>The model, alone</td><td>4</td><td>The default</td></tr>
+    <tr><td>Pipeline</td><td>Your code</td><td>4</td><td>Same steps every time</td></tr>
+    <tr><td>Swarm</td><td>Current agent via handoff</td><td>6</td><td>Conversations moving between experts</td></tr>
+    <tr><td>Supervisor</td><td>Router agent each step</td><td>10</td><td>Varied jobs needing central control</td></tr>
+    <tr><td>Orchestrator-workers</td><td>Lead, at run time</td><td>lead, worker, worker, lead</td><td>Wide, independent, reading-heavy work</td></tr>
   </table>
-  <h3>Definitions and numbers</h3>
+  <h3>MCP essentials</h3>
   <table class="tbl">
-    <tr><th>Term</th><th>Meaning</th></tr>
-    <tr><td>Role</td><td>System prompt + allowed tools (+ model) for one agent.</td></tr>
-    <tr><td>Handoff</td><td>A transfer tool that changes the active agent; the new agent talks to the user.</td></tr>
-    <tr><td>Supervisor</td><td>Router agent decides after every step; workers return final results to shared state.</td></tr>
-    <tr><td>Swarm</td><td>Agents hand off to each other directly; no central controller.</td></tr>
-    <tr><td>Pipeline</td><td>Fixed stages in code; a workflow of agents.</td></tr>
-    <tr><td>Orchestrator-workers</td><td>Lead splits at runtime; workers with fresh contexts run in parallel.</td></tr>
-    <tr><td>Context isolation</td><td>Lead context = sub-tasks × summary size (3 × 150 = 450 words) instead of all raw reading (3 × 50 × 300 = 45,000).</td></tr>
-    <tr><td>N × M → N + M</td><td>Connectors without / with MCP: 5 apps × 20 systems = 100 vs 5 + 20 = 25.</td></tr>
-    <tr><td>MCP roles</td><td>Host (app + LLM + consent), client (one per server), server (tools, resources, prompts).</td></tr>
-    <tr><td>A2A</td><td>Agent Card (skills, endpoint, auth) + task lifecycle (submitted → working ⇄ input-required → completed / failed).</td></tr>
+    <tr><th>Topic</th><th>Fact</th></tr>
+    <tr><td>Why</td><td>N × M connectors → N + M (5 apps × 20 systems: 100 → 25)</td></tr>
+    <tr><td>Roles</td><td>Host (app, LLM, consent) · client (one per server) · server (talks to the real system)</td></tr>
+    <tr><td>Session</td><td><code>initialize</code> → <code>notifications/initialized</code> → <code>tools/list</code> → <code>tools/call</code></td></tr>
+    <tr><td>Server primitives</td><td>Tools (model decides) · resources (app reads by URI) · prompts (user picks)</td></tr>
+    <tr><td>Client primitives</td><td>Sampling · elicitation · roots</td></tr>
+    <tr><td>Transports</td><td>stdio (local subprocess) · Streamable HTTP (remote, OAuth); HTTP+SSE deprecated</td></tr>
   </table>
-  <h3>When to use, when not</h3>
-  <div class="cards">
-    <div><b>One agent</b><p>Default; coupled work; few tools.</p><small>4 calls for Asha</small></div>
-    <div><b>Pipeline</b><p>Same stages every time.</p><small>Cheapest team</small></div>
-    <div><b>Swarm</b><p>Conversations that move between experts.</p><small>Cap transfers</small></div>
-    <div><b>Supervisor</b><p>Varied multi-step jobs needing central control.</p><small>Most calls</small></div>
-    <div><b>Parallel workers</b><p>Wide, independent, reading-heavy tasks.</p><small>Context isolation</small></div>
-    <div><b>MCP / A2A</b><p>Tools many apps need / agents other teams run.</p><small>Not a security layer</small></div>
-  </div>
-  <div class="callout trap"><span class="label">Key traps</span>
-    <p>Org-chart splits; briefs assuming shared memory; leaking worker transcripts; two owners for one write; no global budget; trusting MCP servers blindly; testing only end to end.</p>
-  </div>
-  <h3>Five rapid-fire checks</h3>
-  <table class="tbl">
-    <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td>Triage calls <code>refund</code>. What happens?</td><td>Allow-list blocks it; the model gets an error result; it should transfer instead</td></tr>
-    <tr><td>Supervisor run: router calls + worker calls?</td><td>4 + 6 = 10 (refunds 3, delivery 2, writer 1)</td></tr>
-    <tr><td>Refunds agent pays Rs 282; items agent pays Rs 40 for the coffee. Fix?</td><td>One owner for refunds; cap total refunds per order at the order total (second payment blocked)</td></tr>
-    <tr><td>Which MCP message comes right after the <code>initialize</code> reply?</td><td><code>notifications/initialized</code> (a notification: no id, no reply)</td></tr>
-    <tr><td>One agent and a supervisor team give the same end state. Which do you ship?</td><td>The single agent: 4 vs 10 calls; split only for breadth, separation or ownership</td></tr>
-  </table>
+  <h3>Syntax</h3>
+  <div class="fx" data-lang="py">from mcp.server.mcpserver import MCPServer     # 1.x: from mcp.server.fastmcp import FastMCP
+mcp = MCPServer("biteful-orders")
 
-  <h2 id="ma-qa"><span class="num">14</span>Questions &amp; Answers</h2>
+@mcp.tool()
+def get_order(order_id: int) -&gt; str: ...       # type hints -&gt; schema, docstring -&gt; description
+
+@mcp.resource("policy://{name}")
+def policy(name: str) -&gt; str: ...
+
+mcp.run()                                      # stdio; transport="streamable-http" for remote
+
+# client side
+async with Client(StdioServerParameters(command="python", args=["biteful_server.py"])) as c:
+    tools = await c.list_tools()
+    res = await c.call_tool("get_order", {"order_id": 101})</div>
+  <h3>Gotchas</h3>
+  <ul>
+    <li>Roles are enforced by the harness's allow-list, not by the prompt.</li>
+    <li>Pass only final results; briefs must be self-contained and schema-checked.</li>
+    <li>One owner per write, caps in the data layer; a global budget stops ping-pong.</li>
+    <li>A critic only helps if it checks real data.</li>
+    <li>MCP is not a security layer (tool poisoning); stdio servers log to stderr, never stdout.</li>
+    <li>Split only for breadth, separation or ownership, and beat the single-agent baseline.</li>
+  </ul>
+
+  <h2 id="ma-qa"><span class="num">13</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>Your manager wants a "planner, coder, tester, reviewer" multi-agent system for a coding assistant. What do you say?</summary><div class="qa-body">Start with one agent that can plan, edit and run tests. Coding sub-tasks share context and depend on each other, so splitting loses information and multiplies tokens. Add a separate agent only for a measured gap (e.g. an isolated reviewer with fresh context) and compare against the single-agent baseline on an eval set.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What gets worse as one agent accumulates tools?</summary><div class="qa-body">Every call carries every schema and rulebook (531 vs 180 tokens of schemas in our desk); more overlapping descriptions compete for each decision (refund vs coupon vs wallet); instructions for different domains conflict; and any message, including injected text, can reach every write tool.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Supervisor vs swarm vs pipeline: who decides what runs next in each?</summary><div class="qa-body">Supervisor: a routing agent, after every step (central control, most calls). Swarm: the current agent, by calling a handoff tool (cheaper, nobody owns the plan). Pipeline: your code, in a fixed order (cheapest, can't handle unexpected cases).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you implement a sub-agent with only a chat API?</summary><div class="qa-body">Expose it to the lead as a tool (<code>delegate(task)</code>). When called, run a fresh model call with only the task as context (often a cheaper model) and return its short answer as the tool result. Several delegate calls in one turn run in parallel; all results go back in one message.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>When is a critic agent useful, and when is it wasted?</summary><div class="qa-body">Useful when it has information the writer lacked: the ledger, tests, retrieved sources, a different model. Wasted when it is the same model re-reading the same draft ("Looks good!" to Rs 280). Measure how often it rejects drafts.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What problem does MCP solve? Explain N × M.</summary><div class="qa-body">Without a standard, each of N AI apps writes a connector for each of M systems: N × M integrations. With MCP each app implements one client and each system ships one server: N + M. Any MCP host can use any MCP server.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Tools vs resources vs prompts in MCP?</summary><div class="qa-body">Tools are actions the <em>model</em> chooses to call (<code>get_order</code>). Resources are read-only data by URI that the <em>application</em> loads (<code>policy://late-orders</code>). Prompts are templates the <em>user</em> picks.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What actually goes over the wire in a stdio MCP session?</summary><div class="qa-body">JSON-RPC 2.0 objects, one per line, on the server's stdin/stdout: <code>initialize</code>, the <code>notifications/initialized</code> notification, then requests like <code>tools/list</code> and <code>tools/call</code>, each answered with a reply carrying the same <code>id</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>MCP vs A2A?</summary><div class="qa-body">MCP connects an agent to tools and data it directly controls. A2A connects an agent to another, opaque agent (often another company's) with its own reasoning, long-running tasks and requests for input. An A2A agent may use MCP tools internally.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why do handoffs need allow-lists, when each role's prompt already says what it may do?</summary><div class="qa-body">All roles share one model and, for cache and history validity, one tool list; the prompt is only advice. Our triage tried to refund despite "Never act yourself"; only the harness's allow-list stopped it. The role boundary is real only if code enforces it.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does context isolation require structured briefs?</summary><div class="qa-body">Isolation means the worker sees only its brief, not the conversation. Anything the brief omits doesn't exist for the worker: the free-text brief lost "refund to wallet" and the money went to a closed account. A schema with a required constraints field makes the omission impossible to miss.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks if two specialists can write to the same thing without a shared check?</summary><div class="qa-body">Each acts correctly by its own instructions and the total is wrong: full refund Rs 282 plus coffee Rs 40 = Rs 322. The fix comes from single-agent design (idempotency, data-layer caps) applied across agents: one owner per write and a rule in the data layer that every agent's write must pass.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: how does the supervisor pattern map onto LangGraph?</summary><div class="qa-body">Shared state = <code>MessagesState</code>; supervisor = a node that returns <code>Command(goto=…)</code> chosen by a structured-output router; each worker = a node (often a whole <code>create_agent</code> graph) that writes only its final message and returns <code>Command(goto="supervisor")</code>; checkpoints and interrupts work exactly as for one agent.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a multi-agent system, and why would you build one?</summary><div class="qa-body">It is a set of LLM agents, each with its own prompt, tools and context, cooperating on one job. Reasons to build one are breadth (independent sub-tasks whose material would overflow one context), separation (parts need different tools or permissions) and ownership (different teams or companies run the agents). Otherwise a single agent is usually cheaper and just as good.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What gets worse as one agent accumulates tools?</summary><div class="qa-body">Every call carries every tool schema and rulebook, so cost per call rises. Overlapping descriptions compete for each decision (refund vs coupon vs wallet), so tool choice gets less reliable. Instructions from different domains conflict, and any message, including injected text, can reach every write tool, which increases the damage a prompt injection can do.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a "role", and how is a handoff implemented?</summary><div class="qa-body">A role is a system prompt plus the set of tools the agent may use, sometimes with its own model. A handoff is a tool such as <code>transfer_to_refunds</code> whose only effect is to change which role is active, so the next model call uses the new role's prompt. The harness enforces each role's allow-list, because the prompt alone does not stop a model from trying other tools.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Supervisor vs swarm vs pipeline: who decides what runs next in each?</summary><div class="qa-body">In a supervisor system, a routing agent decides after every step, which gives central control but costs the most calls. In a swarm, the current agent decides by calling a handoff tool, which is cheaper but nobody owns the overall plan. In a pipeline, your code fixes the stages, which is cheapest and most predictable but cannot handle cases nobody anticipated.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How would you implement a supervisor in LangGraph?</summary><div class="qa-body">Use <code>MessagesState</code> as shared state. The supervisor is a node that asks a structured-output router for the next worker and returns <code>Command(goto=...)</code>. Each worker is a node, often a whole <code>create_agent</code> graph, that runs, writes only its final message into state, and returns <code>Command(goto="supervisor")</code>. Checkpoints and interrupts work exactly as for a single agent.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you implement a sub-agent using only a chat API?</summary><div class="qa-body">Expose it to the lead as a tool, for example <code>delegate(task)</code>. When the lead calls it, make a fresh model call whose only message is the task, often with a cheaper model, and return its short answer as the tool result. Several delegate calls in one turn can run in parallel, and all results go back to the lead in one message.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is context isolation, and why is it the main benefit of orchestrator-workers?</summary><div class="qa-body">Each worker keeps its raw material in its own context and returns only a short summary, so the lead's context holds summaries instead of everything. In our example the lead held 450 words instead of 45,000. Total work does not shrink, but no single context is overloaded, and models reason better over short, focused contexts.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why should agents pass structured briefs rather than free text?</summary><div class="qa-body">A worker sees only its brief, so anything left out does not exist for it. Our free-text brief "Refund order 101, it was late" dropped the customer's request to refund to the wallet, and the money went to a closed account. A schema with required fields, validated before acting, makes omissions visible and rejects malformed briefs.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Name four coordination failures and their fixes.</summary><div class="qa-body">Ping-pong (agents transferring back and forth): a per-conversation step budget and clear "when not to transfer" rules. Lossy handoff: structured briefs with a constraints field. Duplicate action (two agents paying for the same thing): one owner per write and caps in the data layer. Useless critic: a critic that checks real data such as a ledger, tests or sources.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When is a critic agent useful, and when is it wasted?</summary><div class="qa-body">It is useful when it has information the writer lacked: the ledger, test results, retrieved sources or a different model. It is wasted when it is the same model re-reading the same draft, which tends to agree ("Looks good!" to a wrong amount). Measure how often the critic rejects drafts; if almost never, remove it.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What problem does MCP solve? Explain N × M.</summary><div class="qa-body">Without a standard, each of N AI applications writes its own connector for each of M systems, giving N × M integrations with different auth, schemas and bugs. With MCP each application implements one client and each system ships one server, so N + M pieces cover every combination. Any MCP host can then use any MCP server.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain host, client and server in MCP.</summary><div class="qa-body">The host is the AI application the user works in; it owns the LLM, the UI and user consent. Inside it, one client per server maintains a connection. The server is a separate program that exposes tools, resources and prompts and talks to the real system, without needing to know which LLM is used.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between tools, resources and prompts in MCP?</summary><div class="qa-body">Tools are actions the model chooses to call, such as <code>get_order</code>. Resources are read-only data identified by a URI that the application or user decides to load, such as <code>policy://late-orders</code>. Prompts are reusable templates the user picks, often shown as slash commands.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What actually goes over the wire in a stdio MCP session?</summary><div class="qa-body">JSON-RPC 2.0 messages, one JSON object per line, on the server process's stdin and stdout. The client sends <code>initialize</code>, then the <code>notifications/initialized</code> notification (no id, no reply), then requests like <code>tools/list</code> and <code>tools/call</code>, each answered by a reply with the same id. Because stdout is the channel, servers must log to stderr.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When would you use stdio and when Streamable HTTP?</summary><div class="qa-body">stdio is for local servers the host starts as a subprocess, such as file, git or local database tools; security comes from the user's machine permissions. Streamable HTTP is for remote, shared, multi-user servers reachable at a URL, secured with OAuth or tokens. The older HTTP+SSE transport is deprecated.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Is MCP a security boundary? What is tool poisoning?</summary><div class="qa-body">No. MCP standardises connections but does not make a server trustworthy. Tool poisoning is when a malicious or compromised server places instructions in its tool descriptions or results, which the model reads as part of its prompt. Defend with trusted sources, least privilege and human approval for risky actions.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>MCP vs A2A?</summary><div class="qa-body">MCP connects an agent to tools and data it controls: call a function, get a result. A2A connects an agent to another, opaque agent, often run by another company, with its own reasoning and long-running tasks that can pause for input. They combine: an A2A agent can use MCP tools internally.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Your manager wants "planner, coder, tester, reviewer" agents for a coding assistant. What do you say?</summary><div class="qa-body">Start with one agent that can plan, edit and run tests, because coding steps are tightly coupled and splitting loses context at every hand-over while multiplying tokens. Add a separate agent only for a measured gap, for example an isolated reviewer with a fresh context, and compare it against the single-agent baseline on an eval set.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>A team and a single agent reach the same result on your test set. Which do you ship?</summary><div class="qa-body">The single agent. In our example both reached the same end state, but the supervisor used 10 model calls against 4, and tokens grow even faster. A team is justified only when it beats the baseline on quality per cost, or when breadth, separation or ownership requires it.</div></details>
 </main>
 `
 });
