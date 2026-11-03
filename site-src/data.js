@@ -14,7 +14,7 @@ const CATEGORIES = [
         {"key": "py_strings",      "label": "Strings"}
       ]},
       {"key": "grp_py_io", "label": "I/O, Errors & Packages", "children": [
-        {"key": "py_io",           "label": "The Map: Programs Meet the Real World"},
+        {"key": "py_io",           "label": "Input, Output & CLI Programs"},
         {"key": "py_exceptions",   "label": "Exceptions & Error Handling"},
         {"key": "py_files",        "label": "Files & Data Formats"},
         {"key": "py_modules",      "label": "Modules, Packages & Environments"}
