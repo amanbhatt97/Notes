@@ -320,6 +320,7 @@ function showHome() {
   buildRoadmapGrid();
   window.scrollTo({ top: 0, behavior: 'instant' });
   onScroll();
+  navSet('');
   if (window.innerWidth <= 800 && sbOpen) toggleSidebar();
 }
 
@@ -349,7 +350,7 @@ function loadTopic(key, cat) {
   try { hoistMindMap(_tc); addSectionTools(_tc); } catch (e) { console.error(e); }
   // Cross-references between notes: <a class="xref" data-note="key">Title</a>
   _tc.querySelectorAll('a.xref[data-note]').forEach(function(x) {
-    x.setAttribute('href', '#');
+    x.setAttribute('href', '#' + x.dataset.note);
     x.onclick = function(e) { e.preventDefault(); loadTopic(x.dataset.note); };
   });
   var probApp = _tc.querySelector('#probApp');
@@ -384,6 +385,7 @@ function loadTopic(key, cat) {
   // Rebuild search on first load
   if (searchIndex.length === 0) rebuildSearchIndex();
 
+  navSet('#' + key);
   if (window.innerWidth <= 800 && sbOpen) toggleSidebar();
 }
 
@@ -448,6 +450,7 @@ function appendPrevNext(container, cat, key) {
     b.className = 'note-nav-btn ' + x[1];
     if (t) {
       b.innerHTML = '<small>' + x[2] + '</small><span>' + t.label + '</span>';
+      b.dataset.note = t.key;
       b.onclick = function() { loadTopic(t.key, cat); };
     }
     nav.appendChild(b);
@@ -472,6 +475,7 @@ function renderCrumbs(cat, path) {
     var b = document.createElement('button');
     b.className = 'crumb';
     b.textContent = l.label;
+    b.dataset.ov = cat.key + (l.group ? '/' + l.group : '');
     b.onclick = function() { showOverview(cat.key, l.group); };
     el.appendChild(b);
   });
@@ -550,7 +554,12 @@ function showOverview(catKey, groupKey) {
   tp.className = 'topic-page visible';
   setAccent(tp, cat);
   var tc = document.getElementById('topicContent');
-  var html = '<h1>' + (groupKey ? node.label : cat.emoji + ' ' + cat.label) + '</h1><div class="ov-list">';
+  var dlCount = flatTopics(node.children || []).filter(function(t) { return exportable(t.key); }).length;
+  var html = '<h1>' + (groupKey ? node.label : cat.emoji + ' ' + cat.label) + '</h1>' +
+    (dlCount ? '<div class="ov-dl"><span>Download all ' + dlCount + ' note' + (dlCount > 1 ? 's' : '') + ' in this ' + (groupKey ? 'section' : 'subject') + '</span>' +
+      '<button data-dl="pdf" title="Opens a print view: choose Save as PDF">⬇ PDF</button>' +
+      '<button data-dl="html" title="One self-contained HTML file that works offline">⬇ HTML</button></div>' : '') +
+    '<div class="ov-list">';
   (node.children || []).forEach(function(t) {
     if (t.divider) return;
     if (t.children) {
@@ -568,6 +577,13 @@ function showOverview(catKey, groupKey) {
   tc.querySelectorAll('[data-group]').forEach(function(b) {
     b.onclick = function() { showOverview(cat.key, b.dataset.group); };
   });
+  tc.querySelectorAll('[data-dl]').forEach(function(b) {
+    b.onclick = function() {
+      var keys = flatTopics(node.children || []).map(function(t) { return t.key; }).filter(exportable);
+      exportNotes(keys, groupKey ? node.label : cat.label, b.dataset.dl);
+    };
+  });
+  navSet('#ov/' + cat.key + (groupKey ? '/' + groupKey : ''));
   renderCrumbs(cat, path);
   document.getElementById('tbName').textContent = 'Overview';
   document.querySelectorAll('.sb-cat, .sb-group').forEach(function(b) { b.classList.remove('active'); });
@@ -626,6 +642,7 @@ function buildHero() {
   var leaf = null;
   CATEGORIES.some(function(c) { leaf = flatTopics(c.topics).find(function(t) { return t.key === target; }); return leaf; });
   btn.innerHTML = (last ? 'Continue: ' : 'Start with ') + '<b>' + (leaf ? leaf.label : target) + '</b> →';
+  btn.dataset.note = target;
   btn.onclick = function() { loadTopic(target); };
 }
 
@@ -711,7 +728,7 @@ function buildPhaseTree() {
         '<span class="syl-caret">▸</span>' +
         '<span class="syl-topic-name">' + cleanName + '</span>' +
         starTag +
-        (hasNote ? '<span class="syl-open">read →</span>' : '');
+        (hasNote ? '<span class="syl-open" data-note="' + topic.note + '">read →</span>' : '');
 
       // Toggle subtopics on row click; open note on "read" click
       topicEl.addEventListener('click', function(e) {
@@ -916,7 +933,7 @@ function performSearch(query) {
     return;
   }
   res.innerHTML = matches.map(function(m) {
-    return '<div class="search-result" onclick="loadTopic(\'' + m.item.key + '\',\'' + m.item.catKey + '\');document.getElementById(\'searchResults\').innerHTML=\'\';document.getElementById(\'searchInput\').value=\'\';">' +
+    return '<div class="search-result" data-note="' + m.item.key + '" onclick="loadTopic(\'' + m.item.key + '\',\'' + m.item.catKey + '\');document.getElementById(\'searchResults\').innerHTML=\'\';document.getElementById(\'searchInput\').value=\'\';">' +
       '<div class="sr-top"><span class="sr-emoji">' + m.item.emoji + '</span>' +
       '<span class="sr-label">' + m.item.label + '</span>' +
       '<span class="sr-cat">' + m.item.catLabel + '</span></div>' +
@@ -1551,7 +1568,7 @@ window.addEventListener('scroll', onScroll, { passive: true });
 // ── Boot ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
   buildSidebar();
-  showHome();
+  if (!routeHash()) showHome();
   rebuildSearchIndex();
 
   // Search input
@@ -1589,3 +1606,134 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
+
+
+// ── Links: every note and overview has its own #hash on the same page ───────
+// Plain click navigates in place; Ctrl/Cmd-click or middle-click opens it in a new tab.
+var navRouting = false;
+function navSet(hash) {
+  if (navRouting) return;
+  var cur = location.hash || '';
+  if (cur === hash || (!hash && (cur === '' || cur === '#'))) return;
+  history.pushState(null, '', location.pathname + location.search + hash);
+}
+// Open whatever the current #hash names. Returns false if there is nothing to open.
+function routeHash() {
+  var h = decodeURIComponent((location.hash || '').slice(1));
+  if (!h) return false;
+  navRouting = true;
+  try {
+    if (h.indexOf('ov/') === 0) {
+      var parts = h.split('/');
+      if (!CATEGORIES.some(function(c) { return c.key === parts[1]; })) return false;
+      showOverview(parts[1], parts[2] || null);
+      return true;
+    }
+    if (TOPIC_CONTENT[h]) { loadTopic(h); return true; }
+    return false;
+  } finally { navRouting = false; }
+}
+window.addEventListener('popstate', function() {
+  if (!routeHash()) { navRouting = true; try { showHome(); } finally { navRouting = false; } }
+});
+function catOfGroup(g) {
+  return CATEGORIES.find(function(c) { return groupPath(c.topics, g); });
+}
+// Where a clicked element leads, as a #hash (null if it isn't a navigation link).
+function navDest(el) {
+  if (!el || !el.closest) return null;
+  var e;
+  if ((e = el.closest('[data-note]'))) return TOPIC_CONTENT[e.dataset.note] ? '#' + e.dataset.note : null;
+  if ((e = el.closest('[data-open]'))) return TOPIC_CONTENT[e.dataset.open] ? '#' + e.dataset.open : null;
+  if ((e = el.closest('.sb-topic[data-key]'))) return TOPIC_CONTENT[e.dataset.key] ? '#' + e.dataset.key : null;
+  if ((e = el.closest('[data-ov]'))) return '#ov/' + e.dataset.ov;
+  if ((e = el.closest('.sb-group[data-group-key], .ov-group-title[data-group]'))) {
+    var g = e.dataset.groupKey || e.dataset.group, c = catOfGroup(g);
+    return c ? '#ov/' + c.key + '/' + g : null;
+  }
+  if ((e = el.closest('.sb-cat[data-cat-key], .track[data-cat]'))) return '#ov/' + (e.dataset.catKey || e.dataset.cat);
+  if (el.closest('#sbHome, #tbLogo, .topic-bar-back')) return '#';
+  return null;
+}
+function navNewTab(e) {
+  var middle = e.type === 'auxclick' && e.button === 1;
+  if (!middle && !(e.type === 'click' && e.button === 0 && (e.ctrlKey || e.metaKey))) return;
+  var d = navDest(e.target);
+  if (!d) return;
+  e.preventDefault();
+  e.stopPropagation();
+  window.open(location.pathname + location.search + (d === '#' ? '' : d), '_blank');
+}
+document.addEventListener('click', navNewTab, true);
+document.addEventListener('auxclick', navNewTab, true);
+
+// ── Download: one note, a section, or a whole subject ───────────────────────
+// Builds one self-contained HTML document (all sections open, answers shown).
+// "pdf" opens it in a print view (choose Save as PDF); "html" saves the file.
+function exportable(key) {
+  var h = TOPIC_CONTENT[key];
+  return !!h && h.indexOf('id="probApp"') < 0;
+}
+function noteLabel(key) {
+  var leaf = null;
+  CATEGORIES.some(function(c) { leaf = flatTopics(c.topics).find(function(t) { return t.key === key; }); return leaf; });
+  return leaf ? leaf.label : key;
+}
+function exportEsc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function exportDoc(keys, title, forPrint) {
+  var css = Array.prototype.map.call(document.querySelectorAll('style'), function(s) { return s.textContent; }).join('\n');
+  var inSet = {};
+  keys.forEach(function(k) { inSet[k] = true; });
+  var box = document.createElement('div');
+  var body = keys.map(function(k) {
+    box.innerHTML = TOPIC_CONTENT[k];
+    box.querySelectorAll('.roadmap-wrap, .reveal-all').forEach(function(x) { x.remove(); });
+    box.querySelectorAll('details').forEach(function(d) { d.setAttribute('open', ''); });
+    box.querySelectorAll('a.xref[data-note]').forEach(function(a) {
+      if (inSet[a.dataset.note]) a.setAttribute('href', '#n-' + a.dataset.note);
+      else a.removeAttribute('href');
+      a.removeAttribute('data-note');
+    });
+    highlightCode(box);
+    box.querySelectorAll('.code-copy').forEach(function(x) { x.remove(); });
+    return '<section class="ex-note" id="n-' + k + '">' + box.innerHTML + '</section>';
+  }).join('\n');
+  var toc = keys.length > 1
+    ? '<section class="ex-cover"><h1>' + exportEsc(title) + '</h1><p class="lead">' + keys.length + ' notes · DS·ML Notes</p><ol class="ex-toc">' +
+      keys.map(function(k) { return '<li><a href="#n-' + k + '">' + noteLabel(k) + '</a></li>'; }).join('') + '</ol></section>'
+    : '';
+  var extra = 'html,body{height:auto!important;overflow:visible!important}' +
+    'body.export{display:block;padding:32px 16px;background:var(--bg)}body.export::before{display:none}' +
+    '.ex-wrap{max-width:900px;margin:0 auto}' +
+    '.ex-note+.ex-note,.ex-cover+.ex-note{break-before:page;page-break-before:always;margin-top:48px}' +
+    '.ex-toc{line-height:2}.ex-toc a{color:var(--blue)}' +
+    '@media print{body.export{padding:0}.code-frame,figure,table,details.qa,.callout{break-inside:avoid}' +
+    '*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}';
+  return '<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1"><title>' + exportEsc(title) + '</title>' +
+    '<style>' + css + '\n' + extra + '</style></head><body class="export"><main class="topic-content ex-wrap">' +
+    toc + body + '</main>' +
+    (forPrint ? '<script>window.addEventListener("load",function(){setTimeout(function(){window.print()},400)});<\/script>' : '') +
+    '</body></html>';
+}
+function exportNotes(keys, title, mode) {
+  keys = keys.filter(exportable);
+  if (!keys.length) return;
+  var blob = new Blob([exportDoc(keys, title, mode === 'pdf')], { type: 'text/html' });
+  var url = URL.createObjectURL(blob);
+  if (mode === 'pdf') {
+    var w = window.open(url, '_blank');
+    if (!w) alert('Allow pop-ups for this site to open the print view, then choose "Save as PDF".');
+  } else {
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = title.replace(/[\\/:*?"<>|]+/g, '-').trim() + '.html';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+  setTimeout(function() { URL.revokeObjectURL(url); }, 60000);
+}
+function downloadCurrent(mode) {
+  if (activeTopic) exportNotes([activeTopic], noteLabel(activeTopic), mode);
+}

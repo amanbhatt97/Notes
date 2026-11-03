@@ -1380,3 +1380,9 @@ ol.story li span{display:block;font-size:13.5px;line-height:1.55;color:var(--ink
 .rev-fold{margin-top:12px;border:1px dashed var(--border);border-radius:12px;padding:6px 12px}
 .rev-fold summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--ink2)}
 .rev-card .rev-auto .mm-center{display:none}
+
+/* Download bar on overview pages */
+.ov-dl{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:-4px 0 22px;font-size:13px;color:var(--ink2)}
+.ov-dl span{margin-right:4px}
+.ov-dl button{border:1px solid var(--border);background:var(--s1);color:var(--ink2);border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer}
+.ov-dl button:hover{border-color:var(--blue);color:var(--blue)}
