@@ -111,10 +111,10 @@ cos(hot, spicy) = 0.707  cos(hot, warm) = 0.707</div>
     <path d="M420,88 Q445,50 470,88" fill="none" class="sb" opacity="0.6"/>
     <path d="M420,88 Q470,30 520,88" fill="none" class="sb" opacity="0.6"/>
     <path d="M470,88 Q495,50 520,88" fill="none" class="sb" opacity="0.6"/>
-    <circle cx="370" cy="96" r="15" class="fb sb"/><text x="370" y="100" text-anchor="middle" font-size="10">curry</text>
-    <circle cx="420" cy="96" r="15" class="fb sb"/><text x="420" y="100" text-anchor="middle" font-size="10">was</text>
-    <circle cx="470" cy="96" r="15" class="fb sb"/><text x="470" y="100" text-anchor="middle" font-size="10">too</text>
-    <circle cx="520" cy="96" r="15" class="fb sb"/><text x="520" y="100" text-anchor="middle" font-size="10">hot</text>
+    <circle cx="370" cy="96" r="15" style="fill:var(--bg)"/><circle cx="370" cy="96" r="15" class="fb sb"/><text x="370" y="100" text-anchor="middle" font-size="10">curry</text>
+    <circle cx="420" cy="96" r="15" style="fill:var(--bg)"/><circle cx="420" cy="96" r="15" class="fb sb"/><text x="420" y="100" text-anchor="middle" font-size="10">was</text>
+    <circle cx="470" cy="96" r="15" style="fill:var(--bg)"/><circle cx="470" cy="96" r="15" class="fb sb"/><text x="470" y="100" text-anchor="middle" font-size="10">too</text>
+    <circle cx="520" cy="96" r="15" style="fill:var(--bg)"/><circle cx="520" cy="96" r="15" class="fb sb"/><text x="520" y="100" text-anchor="middle" font-size="10">hot</text>
     <text x="350" y="134" class="tm">"hot" reaches "curry" in 1 step (red)</text>
   </svg><figcaption>An RNN passes one memory vector along the chain; a Transformer links every pair of tokens directly and in parallel.</figcaption></figure>
   <p>The figure shows the difference. On the left, information from "curry" reaches "hot" only after passing through "was" and "too", fading at each step. On the right, every token is linked directly to every other token, so "hot" can read "curry" in a single step (the red arc), and all the links can be computed at the same time. Think of an RNN as a clerk who reads an order slip one word at a time, eyes closed in between, keeping a sticky-note summary; a Transformer lays the whole slip on the counter and lets every word look at every other word at once. That design is the <strong>Transformer</strong>, introduced in the 2017 paper "Attention Is All You Need": a network built only from attention and small per-token networks, with no recurrence. The price is that n tokens make n² pairs: 4 tokens give 16, but 1,000 tokens give a million per layer, which is why long inputs are expensive (<a class="xref" data-note="llm_basics">How LLMs Work</a>).</p>

@@ -101,9 +101,9 @@ WHERE o.order_id = 109;</div>
     <g stroke="currentColor" marker-end="url(#dt-ar1)"><line x1="373" y1="51" x2="388" y2="51"/><line x1="373" y1="83" x2="388" y2="83"/><line x1="373" y1="115" x2="388" y2="115"/></g>
     <text x="527" y="18" text-anchor="middle" font-weight="bold" font-size="12" class="tb">Graph</text>
     <g stroke="currentColor" marker-end="url(#dt-ar1)"><line x1="502" y1="60" x2="545" y2="88"/><line x1="502" y1="138" x2="545" y2="112"/></g>
-    <circle cx="485" cy="52" r="20" class="fb"/><text x="485" y="56" text-anchor="middle">Farah</text>
-    <circle cx="485" cy="145" r="20" class="fb"/><text x="485" y="149" text-anchor="middle">Ben</text>
-    <circle cx="565" cy="100" r="24" class="fg"/><text x="565" y="104" text-anchor="middle" font-size="9">Biryani Bros</text>
+    <circle cx="485" cy="52" r="20" style="fill:var(--bg)"/><circle cx="485" cy="52" r="20" class="fb"/><text x="485" y="56" text-anchor="middle">Farah</text>
+    <circle cx="485" cy="145" r="20" style="fill:var(--bg)"/><circle cx="485" cy="145" r="20" class="fb"/><text x="485" y="149" text-anchor="middle">Ben</text>
+    <circle cx="565" cy="100" r="24" style="fill:var(--bg)"/><circle cx="565" cy="100" r="24" class="fg"/><text x="565" y="104" text-anchor="middle" font-size="9">Biryani Bros</text>
     <text x="522" y="66" class="tm" font-size="9">ORDERED</text>
     <text x="75" y="190" text-anchor="middle" class="tm">JOIN on keys</text>
     <text x="232" y="190" text-anchor="middle" class="tm">whole object, 1 read</text>
@@ -457,7 +457,7 @@ ROLLBACK
     <rect x="370" y="30" width="170" height="54" rx="8" class="fb sb"/>
     <text x="455" y="52" text-anchor="middle" font-weight="bold">Replica B</text><text x="455" y="70" text-anchor="middle" font-size="10" class="tm">just sold it: stock = 0</text>
     <line x1="230" y1="57" x2="370" y2="57" stroke="currentColor" stroke-dasharray="5 4"/>
-    <circle cx="300" cy="57" r="13" class="fr sr"/><text x="300" y="62" text-anchor="middle" font-weight="bold" class="tr">✗</text>
+    <circle cx="300" cy="57" r="13" style="fill:var(--bg)"/><circle cx="300" cy="57" r="13" class="fr sr"/><text x="300" y="62" text-anchor="middle" font-weight="bold" class="tr">✗</text>
     <text x="300" y="98" text-anchor="middle" font-size="10" class="tr">network partition</text>
     <g stroke="currentColor" marker-end="url(#dt-ar2)"><line x1="120" y1="84" x2="120" y2="128"/><line x1="170" y1="84" x2="380" y2="128"/></g>
     <rect x="20" y="130" width="260" height="60" rx="8" class="fg sg"/>

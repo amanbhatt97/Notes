@@ -111,12 +111,12 @@ always say 'on time':       0.52</div>
 <line x1="78" y1="150" x2="222" y2="45"/><line x1="78" y1="150" x2="222" y2="110"/><line x1="78" y1="150" x2="222" y2="175"/>
 <line x1="258" y1="45" x2="402" y2="110"/><line x1="258" y1="110" x2="402" y2="110"/><line x1="258" y1="175" x2="402" y2="110"/>
 </g>
-<circle cx="60" cy="70" r="18" class="fb sb"/><text x="60" y="74" text-anchor="middle" font-size="11">far</text>
-<circle cx="60" cy="150" r="18" class="fb sb"/><text x="60" y="154" text-anchor="middle" font-size="11">rain</text>
-<circle cx="240" cy="45" r="18" class="ft st"/><text x="240" y="49" text-anchor="middle" font-size="11">h₁</text>
-<circle cx="240" cy="110" r="18" class="ft st"/><text x="240" y="114" text-anchor="middle" font-size="11">h₂</text>
-<circle cx="240" cy="175" r="18" class="ft st"/><text x="240" y="179" text-anchor="middle" font-size="11">h₃</text>
-<circle cx="420" cy="110" r="18" class="fv sb"/><text x="420" y="114" text-anchor="middle" font-size="11">out</text>
+<circle cx="60" cy="70" r="18" style="fill:var(--bg)"/><circle cx="60" cy="70" r="18" class="fb sb"/><text x="60" y="74" text-anchor="middle" font-size="11">far</text>
+<circle cx="60" cy="150" r="18" style="fill:var(--bg)"/><circle cx="60" cy="150" r="18" class="fb sb"/><text x="60" y="154" text-anchor="middle" font-size="11">rain</text>
+<circle cx="240" cy="45" r="18" style="fill:var(--bg)"/><circle cx="240" cy="45" r="18" class="ft st"/><text x="240" y="49" text-anchor="middle" font-size="11">h₁</text>
+<circle cx="240" cy="110" r="18" style="fill:var(--bg)"/><circle cx="240" cy="110" r="18" class="ft st"/><text x="240" y="114" text-anchor="middle" font-size="11">h₂</text>
+<circle cx="240" cy="175" r="18" style="fill:var(--bg)"/><circle cx="240" cy="175" r="18" class="ft st"/><text x="240" y="179" text-anchor="middle" font-size="11">h₃</text>
+<circle cx="420" cy="110" r="18" style="fill:var(--bg)"/><circle cx="420" cy="110" r="18" class="fv sb"/><text x="420" y="114" text-anchor="middle" font-size="11">out</text>
 <line x1="438" y1="110" x2="470" y2="110" stroke="currentColor"/><text x="476" y="106" font-size="11">P(late)</text><text x="476" y="122" class="tm" font-size="10">sigmoid</text>
 <text x="60" y="210" text-anchor="middle" class="tm" font-size="10.5">input layer</text>
 <text x="240" y="210" text-anchor="middle" class="tm" font-size="10.5">hidden layer</text>

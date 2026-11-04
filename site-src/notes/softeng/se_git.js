@@ -925,18 +925,18 @@ top item: masala chai (5 sold)
       <line x1="345" y1="120" x2="365" y2="120"/><line x1="395" y1="120" x2="415" y2="120"/><line x1="445" y1="120" x2="475" y2="120"/><line x1="505" y1="120" x2="535" y2="120"/>
     </g>
     <line x1="300" y1="30" x2="300" y2="180" stroke="currentColor" stroke-dasharray="3 4"/>
-    <circle cx="30" cy="120" r="15" class="fb sb"/><text x="30" y="125" text-anchor="middle" font-size="10">…</text>
-    <circle cx="70" cy="120" r="15" class="fb sb"/><text x="70" y="125" text-anchor="middle" font-size="9">d4ed</text>
-    <circle cx="110" cy="60" r="15" class="ft st"/><text x="110" y="65" text-anchor="middle">C</text>
-    <circle cx="170" cy="60" r="15" class="ft st"/><text x="170" y="65" text-anchor="middle">D</text>
-    <circle cx="210" cy="120" r="15" class="fb sb"/><text x="210" y="125" text-anchor="middle">E</text>
-    <circle cx="250" cy="120" r="17" class="fg sg"/><text x="250" y="125" text-anchor="middle">M</text>
+    <circle cx="30" cy="120" r="15" style="fill:var(--bg)"/><circle cx="30" cy="120" r="15" class="fb sb"/><text x="30" y="125" text-anchor="middle" font-size="10">…</text>
+    <circle cx="70" cy="120" r="15" style="fill:var(--bg)"/><circle cx="70" cy="120" r="15" class="fb sb"/><text x="70" y="125" text-anchor="middle" font-size="9">d4ed</text>
+    <circle cx="110" cy="60" r="15" style="fill:var(--bg)"/><circle cx="110" cy="60" r="15" class="ft st"/><text x="110" y="65" text-anchor="middle">C</text>
+    <circle cx="170" cy="60" r="15" style="fill:var(--bg)"/><circle cx="170" cy="60" r="15" class="ft st"/><text x="170" y="65" text-anchor="middle">D</text>
+    <circle cx="210" cy="120" r="15" style="fill:var(--bg)"/><circle cx="210" cy="120" r="15" class="fb sb"/><text x="210" y="125" text-anchor="middle">E</text>
+    <circle cx="250" cy="120" r="17" style="fill:var(--bg)"/><circle cx="250" cy="120" r="17" class="fg sg"/><text x="250" y="125" text-anchor="middle">M</text>
     <text x="280" y="160" text-anchor="end" class="tm">M = 37fdc99, 2 parents</text>
-    <circle cx="330" cy="120" r="15" class="fb sb"/><text x="330" y="125" text-anchor="middle" font-size="10">…</text>
-    <circle cx="380" cy="120" r="15" class="fb sb"/><text x="380" y="125" text-anchor="middle" font-size="9">d4ed</text>
-    <circle cx="430" cy="120" r="15" class="fb sb"/><text x="430" y="125" text-anchor="middle">E</text>
-    <circle cx="490" cy="120" r="15" class="ft st"/><text x="490" y="125" text-anchor="middle">C'</text>
-    <circle cx="550" cy="120" r="15" class="ft st"/><text x="550" y="125" text-anchor="middle">D'</text>
+    <circle cx="330" cy="120" r="15" style="fill:var(--bg)"/><circle cx="330" cy="120" r="15" class="fb sb"/><text x="330" y="125" text-anchor="middle" font-size="10">…</text>
+    <circle cx="380" cy="120" r="15" style="fill:var(--bg)"/><circle cx="380" cy="120" r="15" class="fb sb"/><text x="380" y="125" text-anchor="middle" font-size="9">d4ed</text>
+    <circle cx="430" cy="120" r="15" style="fill:var(--bg)"/><circle cx="430" cy="120" r="15" class="fb sb"/><text x="430" y="125" text-anchor="middle">E</text>
+    <circle cx="490" cy="120" r="15" style="fill:var(--bg)"/><circle cx="490" cy="120" r="15" class="ft st"/><text x="490" y="125" text-anchor="middle">C'</text>
+    <circle cx="550" cy="120" r="15" style="fill:var(--bg)"/><circle cx="550" cy="120" r="15" class="ft st"/><text x="550" y="125" text-anchor="middle">D'</text>
     <text x="520" y="160" text-anchor="middle" class="tm">C' = f6d1553, D' = 1240ffd</text>
   </svg><figcaption>Merge keeps the true shape and adds M. Rebase replays C and D on top of E as new commits C', D'.</figcaption></figure>
   <div class="callout anlg"><span class="label">Analogy</span>

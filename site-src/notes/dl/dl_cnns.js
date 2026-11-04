@@ -545,7 +545,7 @@ AlexNet first conv, 224 in, K=11 P=2 S=4 -&gt; 55</div>
 <text x="400" y="82" text-anchor="middle">conv-BN-ReLU</text>
 <rect x="330" y="118" width="140" height="34" rx="6" class="fb sb"/>
 <text x="400" y="140" text-anchor="middle">conv-BN → F(x)</text>
-<circle cx="400" cy="178" r="12" class="fg sg"/>
+<circle cx="400" cy="178" r="12" style="fill:var(--bg)"/><circle cx="400" cy="178" r="12" class="fg sg"/>
 <text x="400" y="183" text-anchor="middle">+</text>
 <g stroke="currentColor" marker-end="url(#dc-ar3)"><line x1="400" y1="50" x2="400" y2="58"/><line x1="400" y1="94" x2="400" y2="116"/><line x1="400" y1="152" x2="400" y2="164"/><line x1="400" y1="190" x2="400" y2="203"/></g>
 <path d="M408,40 H530 V178 H414" fill="none" class="sg" stroke-width="2.5" marker-end="url(#dc-ar3)"/>

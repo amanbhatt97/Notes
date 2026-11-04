@@ -185,10 +185,10 @@ last row of out == h_n: True</div>
 <defs><marker id="dr-ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
 <marker id="dr-ar5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="tr" fill="currentColor"/></marker></defs>
 <g text-anchor="middle">
-<circle cx="75" cy="55" r="26" class="fb sb"/><text x="75" y="52">h₀</text><text x="75" y="67" class="tm">0</text>
-<circle cx="225" cy="55" r="26" class="fb sb"/><text x="225" y="52">h₁</text><text x="225" y="67" class="tm">0.762</text>
-<circle cx="375" cy="55" r="26" class="fb sb"/><text x="375" y="52">h₂</text><text x="375" y="67" class="tm">0.707</text>
-<circle cx="525" cy="55" r="26" class="fr sr"/><text x="525" y="52">h₃</text><text x="525" y="67" class="tm">−0.569</text>
+<circle cx="75" cy="55" r="26" style="fill:var(--bg)"/><circle cx="75" cy="55" r="26" class="fb sb"/><text x="75" y="52">h₀</text><text x="75" y="67" class="tm">0</text>
+<circle cx="225" cy="55" r="26" style="fill:var(--bg)"/><circle cx="225" cy="55" r="26" class="fb sb"/><text x="225" y="52">h₁</text><text x="225" y="67" class="tm">0.762</text>
+<circle cx="375" cy="55" r="26" style="fill:var(--bg)"/><circle cx="375" cy="55" r="26" class="fb sb"/><text x="375" y="52">h₂</text><text x="375" y="67" class="tm">0.707</text>
+<circle cx="525" cy="55" r="26" style="fill:var(--bg)"/><circle cx="525" cy="55" r="26" class="fr sr"/><text x="525" y="52">h₃</text><text x="525" y="67" class="tm">−0.569</text>
 <text x="150" y="40" class="tm">forward</text>
 <text x="450" y="128" class="tr">× 0.338</text><text x="300" y="128" class="tr">× 0.25</text>
 <text x="300" y="160" class="tr">gradient reaching h₁ = 0.338 × 0.25 = 0.085</text>
@@ -278,11 +278,11 @@ print(f"gradient norm before clipping {before:.2e}   after {after:.2f}")</div>
 <line x1="20" y1="50" x2="575" y2="50" class="sg" stroke-width="3" marker-end="url(#dr-ar2)"/>
 <text x="20" y="40" class="tg">c(t−1)</text><text x="545" y="40" class="tg">c(t)</text>
 <text x="300" y="40" text-anchor="middle" class="tm">cell state: the conveyor belt</text>
-<circle cx="170" cy="50" r="12" class="fs" stroke="currentColor"/><text x="170" y="55" text-anchor="middle">×</text>
-<circle cx="300" cy="50" r="12" class="fs" stroke="currentColor"/><text x="300" y="55" text-anchor="middle">+</text>
-<circle cx="300" cy="110" r="12" class="fs" stroke="currentColor"/><text x="300" y="115" text-anchor="middle">×</text>
+<circle cx="170" cy="50" r="12" style="fill:var(--bg)"/><circle cx="170" cy="50" r="12" class="fs" stroke="currentColor"/><text x="170" y="55" text-anchor="middle">×</text>
+<circle cx="300" cy="50" r="12" style="fill:var(--bg)"/><circle cx="300" cy="50" r="12" class="fs" stroke="currentColor"/><text x="300" y="55" text-anchor="middle">+</text>
+<circle cx="300" cy="110" r="12" style="fill:var(--bg)"/><circle cx="300" cy="110" r="12" class="fs" stroke="currentColor"/><text x="300" y="115" text-anchor="middle">×</text>
 <rect x="440" y="95" width="50" height="26" rx="5" class="ft st"/><text x="465" y="113" text-anchor="middle">tanh</text>
-<circle cx="465" cy="160" r="12" class="fs" stroke="currentColor"/><text x="465" y="165" text-anchor="middle">×</text>
+<circle cx="465" cy="160" r="12" style="fill:var(--bg)"/><circle cx="465" cy="160" r="12" class="fs" stroke="currentColor"/><text x="465" y="165" text-anchor="middle">×</text>
 <g text-anchor="middle">
 <rect x="148" y="160" width="44" height="28" rx="5" class="fr sr"/><text x="170" y="179">σ</text>
 <rect x="238" y="160" width="44" height="28" rx="5" class="fb sb"/><text x="260" y="179">σ</text>

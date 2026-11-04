@@ -120,11 +120,11 @@ share late: 0.489</div>
   <p>That scoring rule is an artificial <strong>neuron</strong>: a unit that multiplies each input by a number saying how important it is, adds the results together with one extra fixed number, and passes the total through a simple function that makes the decision. The importance numbers are called <strong>weights</strong> (written w), the extra number is called the <strong>bias</strong> (written b, and it plays the role of the pass mark), and the deciding function is called the <strong>activation</strong>. Written as a formula, the neuron computes a score z = w₁x₁ + w₂x₂ + b, then an output a = σ(z), where σ stands for whichever activation is used. The original 1958 version, the <strong>perceptron</strong>, used the simplest possible activation: output 1 if z ≥ 0, otherwise 0.</p>
   <figure class="viz"><svg viewBox="0 0 520 170" width="520">
 <defs><marker id="dn-a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
-<circle cx="40" cy="40" r="18" class="fb sb"/><text x="40" y="45" text-anchor="middle" font-size="11">far</text>
-<circle cx="40" cy="125" r="18" class="fb sb"/><text x="40" y="130" text-anchor="middle" font-size="11">rain</text>
+<circle cx="40" cy="40" r="18" style="fill:var(--bg)"/><circle cx="40" cy="40" r="18" class="fb sb"/><text x="40" y="45" text-anchor="middle" font-size="11">far</text>
+<circle cx="40" cy="125" r="18" style="fill:var(--bg)"/><circle cx="40" cy="125" r="18" class="fb sb"/><text x="40" y="130" text-anchor="middle" font-size="11">rain</text>
 <line x1="58" y1="45" x2="148" y2="78" stroke="currentColor" marker-end="url(#dn-a1)"/><text x="90" y="52" class="tm">w₁ = 1</text>
 <line x1="58" y1="120" x2="148" y2="92" stroke="currentColor" marker-end="url(#dn-a1)"/><text x="90" y="128" class="tm">w₂ = 1</text>
-<circle cx="178" cy="85" r="28" class="ft st"/><text x="178" y="82" text-anchor="middle">Σ + b</text><text x="178" y="98" text-anchor="middle" class="tm" font-size="10">b = −1.5</text>
+<circle cx="178" cy="85" r="28" style="fill:var(--bg)"/><circle cx="178" cy="85" r="28" class="ft st"/><text x="178" y="82" text-anchor="middle">Σ + b</text><text x="178" y="98" text-anchor="middle" class="tm" font-size="10">b = −1.5</text>
 <line x1="206" y1="85" x2="246" y2="85" stroke="currentColor" marker-end="url(#dn-a1)"/>
 <rect x="248" y="65" width="70" height="40" rx="6" class="fv sb"/><text x="283" y="90" text-anchor="middle">z ≥ 0 ?</text>
 <line x1="318" y1="85" x2="350" y2="85" stroke="currentColor" marker-end="url(#dn-a1)"/><text x="356" y="90">output 0 or 1</text>
