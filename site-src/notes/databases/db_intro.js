@@ -171,13 +171,13 @@ INSERT INTO orders VALUES (111, 1, 10, now(), 'delivred', 240, 30);</div>
 LINE 1: ...TO orders VALUES (111, 1, 10, now(), 'delivered', 'abc', 30)...
                                                              ^
 ERROR:  new row for relation "orders" violates check constraint "orders_amount_check"
-DETAIL:  Failing row contains (111, 1, 10, 2026-11-04 10:36:42.317547+05:30, delivered, -5.00, 30).
+DETAIL:  Failing row contains (111, 1, 10, 2026-11-04 10:41:57.983558+05:30, delivered, -5.00, 30).
 ERROR:  duplicate key value violates unique constraint "orders_pkey"
 DETAIL:  Key (order_id)=(101) already exists.
 ERROR:  insert or update on table "orders" violates foreign key constraint "orders_customer_id_fkey"
 DETAIL:  Key (customer_id)=(99) is not present in table "customers".
 ERROR:  new row for relation "orders" violates check constraint "orders_status_check"
-DETAIL:  Failing row contains (111, 1, 10, 2026-11-04 10:36:42.319742+05:30, delivred, 240.00, 30).</div>
+DETAIL:  Failing row contains (111, 1, 10, 2026-11-04 10:41:57.985145+05:30, delivred, 240.00, 30).</div>
   <p>All five were refused, each with a precise reason. The first is a type error: "abc" is not a number, and PostgreSQL even points at the offending value. The second breaks the <code>CHECK</code> constraint <code>amount &gt; 0</code>. The third reuses order id 101, which violates the primary key. The fourth names customer 99, who does not exist, so the foreign key refuses it. The fifth misspells "delivered", and the status check catches it. A spreadsheet would have accepted all five, and you would have found out weeks later when a report looked strange.</p>
   <p>Think of an invigilator at the exam hall door who checks every answer sheet for a roll number before accepting it, rather than letting the teacher discover missing roll numbers after results are published. The database checks at the door. Data that obeys its rules is said to have <strong>integrity</strong>, and constraints are how a database guarantees it.</p>
   <p>Why not just check inputs in the app? Because the app is only one of the doors into the database. A one-off Python script, a data engineer's manual fix and a second service written by another team all skip the app's checks. Only rules stored in the database itself guard every door. The full set of constraints (NOT NULL, UNIQUE, CHECK, PRIMARY KEY, FOREIGN KEY, DEFAULT) is covered in <a class="xref" data-note="sql_relational">Relational Model</a>. Constraints judge one row at a time, though. They cannot help when two perfectly valid changes collide, which is the problem the next section solves.</p>
@@ -216,8 +216,8 @@ cur.execute("SELECT left_count FROM coupons")
 print("coupons left:", cur.fetchone()[0], "| desserts given:", len(winners))</div>
   <div class="fx" data-lang="text">A sees 1 left
 B sees 1 left
-B got the coupon
 A got the coupon
+B got the coupon
 coupons left: 0 | desserts given: 2</div>
   <p>Both customers got a dessert from a single coupon. Both read "1 left" before either had written anything, both decided "yes", and both wrote <code>left_count = 0</code>. This is the lost update from section 01 again, now inside a database. The data ended up valid (0 coupons left, no constraint broken), but the business lost a dessert. The problem is that "read, decide, write" was three separate steps, and another customer's steps were allowed to slip in between them.</p>
   <p>The fix uses two ideas. A <strong>transaction</strong> is a group of database steps that the DBMS treats as one unit: either all of them take effect or none of them do. It starts with <code>BEGIN</code> and ends with <code>COMMIT</code> (make it permanent) or <code>ROLLBACK</code> (undo all of it). And while a transaction changes a row, it holds a <strong>lock</strong> on that row: any other transaction that wants to change the same row must wait until the first one commits or rolls back. Think of the single bathroom key at a petrol pump. Whoever holds the key goes in; the next person waits at the door until the key comes back. Nobody walks in on anybody.</p>
@@ -340,7 +340,7 @@ SELECT * FROM orders WHERE status = 'pending';</div>
    Rows Removed by Filter: 9
    Buffers: shared hit=1
  Planning:
-   Buffers: shared hit=73
+   Buffers: shared hit=77
 (6 rows)</div>
   <p>The scan used exactly one page of table data (<code>Buffers: shared hit=1</code>), found in memory, and threw away 9 of the 10 rows because only one order is pending. The separate "Planning" line counts pages the planner itself read from the system catalogue to understand the query; ignore it for now. On a one-page table, nothing could be cheaper than this. But Biteful will not stay at ten orders.</p>
   <p>To see what happens at scale, the next block builds a copy of the table with 200,000 synthetic orders using <code>generate_series</code> (a function that produces the numbers 1, 2, 3 … up to a limit), then looks up one order by id, first without and then with an index:</p>
@@ -384,11 +384,11 @@ CREATE INDEX
    Index Cond: (order_id = 177777)
    Buffers: shared hit=1 read=3
  Planning:
-   Buffers: shared hit=15 read=1
+   Buffers: shared hit=17 read=1
 (5 rows)</div>
   <p>The table now fills 1,920 pages. Without an index, the plan is a Seq Scan: it touched all 1,920 pages (<code>shared hit=1920</code>) and threw away 199,999 rows to find the one we wanted. After <code>CREATE INDEX</code>, the plan becomes an <strong>Index Scan</strong> that touched only 4 pages (<code>hit=1 read=3</code>; three of them came from disk because the index was brand new and not yet cached). That is the difference between reading the whole table and reading a few pages, and on a real table of a hundred million rows it is the difference between minutes and milliseconds.</p>
   <p>An <strong>index</strong> is a separate, sorted data structure that maps a column's values to the addresses of the rows that hold them. PostgreSQL's default kind is a <strong>B-tree</strong>, a shallow tree of sorted pages: the top page says which page below covers which range of ids, and after three or four steps you reach the row's address. It works exactly like the index at the back of a textbook: instead of reading all 500 pages to find "photosynthesis", you look it up and jump straight to page 212. Biteful's real <code>orders</code> table already has one, created automatically for its primary key.</p>
-  <p>Indexes are not free. Each one takes disk space, and every insert, update and delete must update every index on the table as well as the table itself, so a table with ten indexes makes writes noticeably slower. And as the small-table case showed, an index does not help when the table is tiny or when the query wants most of the rows anyway, because then reading everything in order is cheaper than jumping around. Choosing which indexes to build is a core skill covered in <a class="xref" data-note="sql_optimization">Indexes &amp; Performance</a>.</p>
+  <p>Indexes are not free. Each one takes disk space, and every insert, update and delete must update every index on the table as well as the table itself, so a table with ten indexes makes writes noticeably slower. And an index does not help when the table is tiny or when the query wants most of the rows anyway, because then reading everything in order is cheaper than jumping around. Choosing which indexes to build is a core skill covered in <a class="xref" data-note="sql_optimization">Indexes &amp; Performance</a>.</p>
 
   <h2 id="di-wal"><span class="num">07</span>The Write-Ahead Log</h2>
   <p>Pages are changed in memory, in the buffer cache, and written back to their place on disk later. That raises a frightening question. When the app tells a customer "order placed", has the order actually reached the disk? If the power fails a second later, is it lost? Writing every changed 8 KB page to its home on disk before answering would be slow, because those pages are scattered all over the disk; worse, a power cut in the middle of writing a page could leave it half old and half new, which is corruption.</p>
@@ -407,9 +407,9 @@ print("WAL position after :", after)
 print("log bytes for one INSERT:", cur.fetchone()[0])
 cur.execute("SHOW synchronous_commit")
 print("synchronous_commit =", cur.fetchone()[0])</div>
-  <div class="fx" data-lang="text">WAL position before: 0/B9A55328
-WAL position after : 0/B9A55460
-log bytes for one INSERT: 312
+  <div class="fx" data-lang="text">WAL position before: 1/A1DCB88
+WAL position after : 1/A1DCD18
+log bytes for one INSERT: 400
 synchronous_commit = on</div>
   <p><code>pg_current_wal_lsn()</code> returns the current end of the log as an <strong>LSN</strong> (log sequence number), which is simply a byte position written in hexadecimal. Subtracting the position before the INSERT from the position after gives the size of everything logged for it: the new row, its entry in the primary-key index, and the commit record, a few hundred bytes in total (the exact number varies a little from run to run). <code>synchronous_commit = on</code> is the default setting that makes every commit wait until its log records are flushed to disk.</p>
   <figure class="viz"><svg viewBox="0 0 600 170" width="600">
