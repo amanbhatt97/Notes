@@ -3,139 +3,79 @@ Object.assign(TOPIC_CONTENT, {
   "sql_transactions": `<main>
   <h1>Transactions &amp; Concurrency</h1>
   <div class="where"><span>Databases</span><span>SQL</span><span>Transactions &amp; Concurrency</span></div>
-  <p class="lead">What stops a database from selling the last samosa twice, losing money halfway through an order, or forgetting an order after a power cut, when thousands of people use it at once. The whole note follows ONE running example: <strong>Biteful</strong> (the food-delivery company from <a class="xref" data-note="sql_joins">JOINs</a> and <a class="xref" data-note="sql_optimization">Indexes &amp; Performance</a>) plus three small tables for this story: a <code>menu</code> where Biryani Bros has exactly <strong>1 Samosa</strong> left, <code>wallets</code> for Ben (₹500) and Farah (₹300), and <code>riders</code> with Ravi and Sara on duty in Mumbai. Every two-person scene below was run with <strong>two real connections</strong> to PostgreSQL 16 driven from one Python script, and every step is printed in the order it really happened. Where another engine differs, it is said, and marked when it was not run here.</p>
+  <p class="lead">Every earlier note ran one statement at a time for one user. Real databases are used by thousands of people at the same moment, real operations take several statements, and real servers crash. This page explains how a database keeps data correct under all three: <strong>transactions</strong> that make several changes succeed or fail together, the <strong>ACID</strong> guarantees, the bugs that appear when two sessions work at once, the <strong>isolation levels</strong> and <strong>locks</strong> that prevent them, and what changes when the data is copied or split across several servers. These are the mechanisms behind every payment, booking and stock counter you will ever build, and a favourite interview topic. The running example is <strong>Biteful</strong>, the food-delivery company from <a class="xref" data-note="sql_joins">JOINs</a>, with three small extra tables: a <code>menu</code> where Biryani Bros has exactly one Samosa left, <code>wallets</code> holding ₹500 for Ben and ₹300 for Farah, and <code>riders</code> with Ravi and Sara on duty in Mumbai. Every two-person scene below was run on PostgreSQL 16 with two real connections driven from one Python script, and the steps are printed in the order they really happened.</p>
 
-  <h2 id="st-fit" class="open"><span class="num">★</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 660 150" width="660">
-<defs><marker id="st-a0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="10" y="20" width="120" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="70" y="41" text-anchor="middle" font-size="12">SQL queries</text><text x="70" y="58" text-anchor="middle" class="tm" font-size="10">one user, right answer</text>
-<line x1="130" y1="45" x2="148" y2="45" stroke="currentColor" marker-end="url(#st-a0)"/>
-<rect x="150" y="20" width="120" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="210" y="41" text-anchor="middle" font-size="12">Indexes</text><text x="210" y="58" text-anchor="middle" class="tm" font-size="10">one user, fast</text>
-<line x1="270" y1="45" x2="288" y2="45" stroke="currentColor" marker-end="url(#st-a0)"/>
-<rect x="290" y="20" width="140" height="50" rx="8" class="fg sg" stroke-width="3"/><text x="360" y="41" text-anchor="middle" font-size="12" font-weight="700">Transactions</text><text x="360" y="59" text-anchor="middle" class="tg" font-size="10">YOU ARE HERE</text>
-<line x1="430" y1="45" x2="448" y2="45" stroke="currentColor" marker-end="url(#st-a0)"/>
-<rect x="450" y="20" width="95" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="497" y="41" text-anchor="middle" font-size="12">Modeling</text><text x="497" y="58" text-anchor="middle" class="tm" font-size="10">table design</text>
-<line x1="545" y1="45" x2="563" y2="45" stroke="currentColor" marker-end="url(#st-a0)"/>
-<rect x="565" y="20" width="85" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="607" y="41" text-anchor="middle" font-size="12">NoSQL</text><text x="607" y="58" text-anchor="middle" class="tm" font-size="10">MongoDB</text>
-<text x="10" y="105" class="tm" font-size="10.5">Earlier notes assumed one person at a time. Here many people read and write the same rows at the same moment,</text>
-<text x="10" y="123" class="tm" font-size="10.5">machines crash, and one server stops being enough. Correctness under all three is what this note is about.</text>
-</svg><figcaption>The SQL group of the Databases track. Queries were right and fast for one user; now they must stay right for thousands at once.</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: one user at a time</b><span><a class="xref" data-note="sql_fundamentals">SQL Fundamentals</a> taught INSERT, UPDATE and constraints; <a class="xref" data-note="sql_optimization">Indexes &amp; Performance</a> showed that an UPDATE writes a <em>new row version</em> and that VACUUM cleans the old ones. Nobody else was ever using the database at the same moment.</span></li>
-    <li><b>This note adds: many users, failures and many machines</b><span>Transactions and ACID; the anomalies two concurrent sessions cause; isolation levels that prevent them; MVCC (why those row versions exist); locks and deadlocks; then replicas, sharding and when a NoSQL store is a better fit.</span></li>
-    <li><b>Leads to: <a class="xref" data-note="sql_modeling">Data Modeling</a></b><span>Good table design reduces how much transactions must protect (one fact in one place means one row to lock). The NoSQL trade-offs at the end continue in <a class="xref" data-note="db_types">Types of Databases</a> and <a class="xref" data-note="mongo_design">MongoDB Schema Design</a>.</span></li>
-  </ol>
-
-  <h2 id="st-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
-  <p>The whole note as one chain. Each concept answers the question above it; its weakness raises the next question. Running example: Ben and Farah both tap "order Samosa" at Biryani Bros, which has 1 left.</p>
-  <ol class="story">
-    <li><b>The last samosa</b><span>Q: what goes wrong when an order takes several statements and two people order at once? → a failure halfway leaves stock taken but no payment; two buyers both succeed for 1 samosa. We need "all or nothing"…</span></li>
-    <li><b>Transaction</b><span>Q: how do we make 4 statements count as one? → BEGIN … COMMIT / ROLLBACK; after an error everything is undone. But what exactly does the database promise about a transaction?</span></li>
-    <li><b>ACID</b><span>Q: what are the guarantees? → Atomicity (all or nothing), Consistency (constraints hold), Isolation (others don't see half-done work), Durability (survives a crash, shown with a real crash). Isolation is the slippery one: how isolated?</span></li>
-    <li><b>Anomalies</b><span>Q: what can two concurrent sessions do to each other? → five named bugs reproduced: dirty read (impossible in PostgreSQL), non-repeatable read, phantom, lost update (two samosas sold), write skew (no rider left on duty). How do we choose which to prevent?</span></li>
-    <li><b>Isolation levels</b><span>Q: which level prevents which bug? → a verified table: READ COMMITTED allows 4, REPEATABLE READ stops 3 more except write skew, SERIALIZABLE stops all by aborting one side. But how can a snapshot show old values while someone else changes them?</span></li>
-    <li><b>MVCC</b><span>Q: how do readers see a stable picture without blocking writers? → every UPDATE writes a new version; xmin/xmax say which transactions can see which version. But two <em>writers</em> on the same row still can't both win…</span></li>
-    <li><b>Locks and SELECT … FOR UPDATE</b><span>Q: how do we make the second buyer wait and re-check? → row locks; FOR UPDATE locks while reading; the samosa sells exactly once. But waiting can go in a circle…</span></li>
-    <li><b>Deadlock</b><span>Q: what if A waits for B while B waits for A? → reproduced; PostgreSQL kills one after 1 s; prevent by locking in a fixed order. All this is one server. What if it dies, or can't keep up with reads?</span></li>
-    <li><b>Replication and read replicas</b><span>Q: how do we get copies for safety and read traffic? → a real streaming standby; writes on the primary, reads anywhere, but replicas lag (shown by pausing replay). Writes still go to one machine…</span></li>
-    <li><b>Sharding</b><span>Q: what if writes or data outgrow one machine? → split rows across servers by a key; a transfer across shards is no longer one transaction. Maybe a different kind of database fits better…</span></li>
-    <li><b>SQL vs NoSQL</b><span>Q: when do we give up some of these guarantees on purpose? → trade-off table: schema, joins, transactions, scaling, consistency.</span></li>
-  </ol>
-
-  <h2 id="st-map" class="open"><span class="num">★</span>Mind Map</h2>
-<div class="mindmap">
-  <div class="mm-center">Transactions &amp; Concurrency</div>
-  <div class="mm-branches">
-    <div class="mm-branch">
-      <div class="mm-title">Transactions</div>
-      <ul>
-        <li><b>BEGIN … COMMIT / ROLLBACK</b> — many statements, one unit</li>
-        <li><b>Error → aborted</b>; COMMIT then acts as ROLLBACK</li>
-        <li><b>SAVEPOINT</b> — undo part of a transaction</li>
-        <li>⚠ <b>Autocommit</b> — each statement alone</li>
-      </ul>
-    </div>
-    <div class="mm-branch">
-      <div class="mm-title">ACID</div>
-      <ul>
-        <li><b>A</b> all or nothing · <b>C</b> constraints hold</li>
-        <li><b>I</b> no half-done work visible · <b>D</b> survives crash (WAL)</li>
-        <li>💡 cart: pay for everything or put it all back</li>
-      </ul>
-    </div>
-    <div class="mm-branch">
-      <div class="mm-title">Anomalies</div>
-      <ul>
-        <li><b>Dirty read</b> — never in PostgreSQL</li>
-        <li><b>Non-repeatable</b> — same row, new value</li>
-        <li><b>Phantom</b> — same filter, new rows</li>
-        <li><b>Lost update</b> — read-compute-write overwrites</li>
-        <li><b>Write skew</b> — different rows, broken rule</li>
-      </ul>
-    </div>
-    <div class="mm-branch">
-      <div class="mm-title">Isolation levels</div>
-      <ul>
-        <li><b>READ COMMITTED</b> (default) — fresh snapshot per statement</li>
-        <li><b>REPEATABLE READ</b> — one snapshot per transaction</li>
-        <li><b>SERIALIZABLE</b> — aborts one side (40001) → retry</li>
-      </ul>
-    </div>
-    <div class="mm-branch">
-      <div class="mm-title">MVCC &amp; locks</div>
-      <ul>
-        <li><b>xmin / xmax</b> — creating / deleting transaction</li>
-        <li>Readers never block writers; VACUUM removes dead versions</li>
-        <li><b>FOR UPDATE</b> — lock while reading; <b>SKIP LOCKED</b> for queues</li>
-        <li><b>Deadlock</b> — cycle → one killed; lock in fixed order</li>
-      </ul>
-    </div>
-    <div class="mm-branch">
-      <div class="mm-title">Scaling</div>
-      <ul>
-        <li><b>Replica</b> — WAL stream; reads only; ⚠ lag</li>
-        <li><b>Sharding</b> — rows split by key across servers; cross-shard = no single transaction</li>
-        <li><b>NoSQL</b> — trade joins/transactions for flexible schema and scale-out</li>
-      </ul>
+  <h2 id="st-map"><span class="num">★</span>Mind Map</h2>
+  <div class="mindmap">
+    <div class="mm-center">Transactions &amp; Concurrency</div>
+    <div class="mm-branches">
+      <div class="mm-branch">
+        <div class="mm-title">Transactions and ACID</div>
+        <ul>
+          <li><b>BEGIN … COMMIT / ROLLBACK</b>: many statements, one unit</li>
+          <li><b>Atomicity</b> all or nothing · <b>Consistency</b> constraints hold</li>
+          <li><b>Isolation</b> others don't see half-done work · <b>Durability</b> survives a crash (WAL)</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Anomalies</div>
+        <ul>
+          <li><b>Dirty read</b>: see uncommitted data (never in PostgreSQL)</li>
+          <li><b>Non-repeatable read</b>: same row, new value</li>
+          <li><b>Phantom</b>: same filter, new rows</li>
+          <li><b>Lost update</b> and <b>write skew</b>: decisions on stale reads</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Isolation and MVCC</div>
+        <ul>
+          <li><b>READ COMMITTED</b> (default): snapshot per statement</li>
+          <li><b>REPEATABLE READ</b>: one snapshot per transaction</li>
+          <li><b>SERIALIZABLE</b>: aborts one side → retry on 40001</li>
+          <li><b>MVCC</b>: row versions with xmin/xmax; VACUUM cleans up</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">Locks</div>
+        <ul>
+          <li><b>FOR UPDATE</b>: lock while reading; second writer waits and re-reads</li>
+          <li><b>UPDATE … WHERE stock &gt; 0</b>: check and change in one step</li>
+          <li><b>Optimistic</b>: version column, no lock held</li>
+          <li><b>Deadlock</b>: wait cycle → one aborted; lock in a fixed order</li>
+        </ul>
+      </div>
+      <div class="mm-branch">
+        <div class="mm-title">More than one server</div>
+        <ul>
+          <li><b>Replica</b>: WAL streamed and replayed; read-only; lag</li>
+          <li><b>Sharding</b>: rows split by key; no single transaction across shards</li>
+          <li><b>CAP</b>: during a network split choose consistency or availability</li>
+        </ul>
+      </div>
     </div>
   </div>
-</div>
 
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="st-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain</span></div></div>
-      <div class="rm-item rm-done" data-target="st-samosa"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">The Last Samosa</span><span class="rm-sub">Half-done work, double sale</span></div></div>
-      <div class="rm-item rm-done" data-target="st-txn"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Transactions</span><span class="rm-sub">BEGIN, COMMIT, ROLLBACK</span></div></div>
-      <div class="rm-item rm-done" data-target="st-acid"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">ACID, Each Shown</span><span class="rm-sub">Including a real crash</span></div></div>
-      <div class="rm-item rm-done" data-target="st-anom"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Anomalies</span><span class="rm-sub">Two real sessions</span></div></div>
-      <div class="rm-item rm-done" data-target="st-iso"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Isolation Levels</span><span class="rm-sub">Verified table</span></div></div>
-      <div class="rm-item rm-done" data-target="st-mvcc"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">MVCC</span><span class="rm-sub">xmin, xmax, versions</span></div></div>
-      <div class="rm-item rm-done" data-target="st-locks"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Locks &amp; FOR UPDATE</span><span class="rm-sub">One samosa, one sale</span></div></div>
-      <div class="rm-item rm-done" data-target="st-dead"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Deadlock</span><span class="rm-sub">Reproduced and prevented</span></div></div>
-      <div class="rm-item rm-done" data-target="st-repl"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Replication</span><span class="rm-sub">A real standby, real lag</span></div></div>
-      <div class="rm-item rm-done" data-target="st-shard"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Sharding</span><span class="rm-sub">Splitting rows across servers</span></div></div>
-      <div class="rm-item rm-done" data-target="st-nosql"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">SQL vs NoSQL</span><span class="rm-sub">Trade-offs</span></div></div>
-      <div class="rm-item rm-done" data-target="st-connect"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One picture</span></div></div>
-      <div class="rm-item rm-done" data-target="st-traps"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Checklist</span></div></div>
-      <div class="rm-item rm-done" data-target="st-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note in 15 minutes</span></div></div>
-      <div class="rm-item rm-done" data-target="st-qa"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
+      <div class="rm-item rm-done" data-target="st-txn"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Transactions</span><span class="rm-sub">making several statements succeed or fail together</span></div></div>
+      <div class="rm-item rm-done" data-target="st-acid"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">ACID</span><span class="rm-sub">the four promises, each shown, including a real crash</span></div></div>
+      <div class="rm-item rm-done" data-target="st-anom"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Concurrency Anomalies</span><span class="rm-sub">what two sessions at once can do to each other</span></div></div>
+      <div class="rm-item rm-done" data-target="st-iso"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Isolation Levels</span><span class="rm-sub">which level prevents which anomaly</span></div></div>
+      <div class="rm-item rm-done" data-target="st-mvcc"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">MVCC</span><span class="rm-sub">many versions of one row</span></div></div>
+      <div class="rm-item rm-done" data-target="st-locks"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Locks and FOR UPDATE</span><span class="rm-sub">making the second buyer wait</span></div></div>
+      <div class="rm-item rm-done" data-target="st-optim"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Optimistic Locking</span><span class="rm-sub">detecting conflicts instead of preventing them</span></div></div>
+      <div class="rm-item rm-done" data-target="st-dead"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Deadlocks</span><span class="rm-sub">two sessions waiting for each other</span></div></div>
+      <div class="rm-item rm-done" data-target="st-repl"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Replication</span><span class="rm-sub">copies of the database, and replication lag</span></div></div>
+      <div class="rm-item rm-done" data-target="st-shard"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Sharding and Distributed Data</span><span class="rm-sub">splitting rows across servers, CAP, NoSQL</span></div></div>
+      <div class="rm-item rm-done" data-target="st-traps"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">the concurrency bugs found in real code</span></div></div>
+      <div class="rm-item rm-done" data-target="st-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">definitions, levels table, lock tools</span></div></div>
+      <div class="rm-item rm-done" data-target="st-qa"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">the questions interviewers ask on transactions</span></div></div>
     </div>
   </div>
 
-  <h2 id="st-samosa"><span class="num">01</span>Two People Order the Last Samosa</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Every earlier note ran one statement at a time for one user. But placing a Biteful order is <em>several</em> statements (take the stock, create the order, add its line, take the money), and at 8 pm hundreds of people place orders at the same moment. What can go wrong between those statements, and between those people?</p>
-  </div>
-  <p>The running example. Besides the usual Biteful tables, three small ones:</p>
-  <div class="fx" data-lang="sql">SELECT * FROM menu ORDER BY restaurant_id, item;
-SELECT w.customer_id, c.name, w.balance FROM wallets w JOIN customers c USING (customer_id);
-SELECT * FROM riders ORDER BY rider_id;</div>
-  <table class="tbl out"><caption>menu</caption><tr><th>restaurant_id</th><th>item</th><th>price</th><th>stock</th></tr><tr><td>11</td><td>Chicken Biryani</td><td>350.00</td><td>20</td></tr><tr><td>11</td><td>Samosa</td><td>40.00</td><td>1</td></tr><tr><td>13</td><td>Buddha Bowl</td><td>310.00</td><td>5</td></tr></table>
-  <table class="tbl out"><caption>wallets</caption><tr><th>customer_id</th><th>name</th><th>balance</th></tr><tr><td>2</td><td>Ben</td><td>500.00</td></tr><tr><td>6</td><td>Farah</td><td>300.00</td></tr></table>
-  <table class="tbl out"><caption>riders</caption><tr><th>rider_id</th><th>name</th><th>city</th><th>on_duty</th></tr><tr><td>1</td><td>Ravi</td><td>Mumbai</td><td>t</td></tr><tr><td>2</td><td>Sara</td><td>Mumbai</td><td>t</td></tr><tr><td>3</td><td>Imran</td><td>Pune</td><td>t</td></tr></table>
-  <h3>Problem 1: a failure halfway</h3>
-  <p>Farah (wallet ₹300) orders one Chicken Biryani (₹350). The app runs four statements, one after another, each saved immediately (that is the default <strong>autocommit</strong> mode: every statement is its own little unit):</p>
+  <h2 id="st-txn"><span class="num">01</span>Transactions: All or Nothing</h2>
+  <p>Placing a Biteful order is not one statement but several: take one item from the menu's stock, create the order, add its order line, and take the money from the customer's wallet. Normally each statement is saved the moment it finishes. This default behaviour is called <strong>autocommit</strong>: every statement is its own little unit of work. Let us see what that means when something goes wrong halfway. Farah, who has ₹300, orders a Chicken Biryani costing ₹350:</p>
   <div class="fx" data-lang="sql">UPDATE menu SET stock = stock - 1 WHERE restaurant_id = 11 AND item = 'Chicken Biryani';
 INSERT INTO orders VALUES (111, 6, 11, now(), 'pending', 350, NULL);
 INSERT INTO order_items VALUES (111, 'Chicken Biryani', 1, 350);
@@ -143,58 +83,34 @@ UPDATE wallets SET balance = balance - 350 WHERE customer_id = 6;
 SELECT item, stock FROM menu WHERE item = 'Chicken Biryani';
 SELECT order_id, customer_id, amount, status FROM orders WHERE order_id = 111;
 SELECT customer_id, balance FROM wallets WHERE customer_id = 6;</div>
-  <div class="fx" data-lang="text">UPDATE 1</div>
-  <div class="fx" data-lang="text">INSERT 0 1</div>
-  <div class="fx" data-lang="text">INSERT 0 1</div>
-  <div class="fx" data-lang="text">ERROR:  new row for relation "wallets" violates check constraint "wallets_balance_check"
-DETAIL:  Failing row contains (6, -50.00).</div>
-  <table class="tbl out"><caption>After the four statements: stock taken</caption><tr><th>item</th><th>stock</th></tr><tr><td>Chicken Biryani</td><td>19</td></tr></table>
-  <table class="tbl out"><caption>order created</caption><tr><th>order_id</th><th>customer_id</th><th>amount</th><th>status</th></tr><tr><td>111</td><td>6</td><td>350.00</td><td>pending</td></tr></table>
-  <table class="tbl out"><caption>wallet untouched</caption><tr><th>customer_id</th><th>balance</th></tr><tr><td>6</td><td>300.00</td></tr></table>
-  <p>Trace it: statements 1–3 succeeded and were saved. Statement 4 failed, because the <code>CHECK (balance &gt;= 0)</code> constraint refuses ₹300 − ₹350 = −₹50. Result: stock went 20 → 19, an order exists, and nobody paid. Biteful just gave away a biryani. The database did exactly what it was told, one statement at a time.</p>
-  <h3>Problem 2: two people at once</h3>
-  <p>Now Ben and Farah both tap "order Samosa" at the same second. The app logic is the obvious one: read the stock; if it is above 0, write stock − 1 and create the order. Two real connections, A (Ben) and B (Farah), each step printed in the order it ran (the helper <code>sessions.py</code> is shown in section 04):</p>
-  <div class="fx" data-lang="py">from sessions import Session
-A, B = Session('A'), Session('B')          # A = Ben's request, B = Farah's request
+  <div class="fx" data-lang="text">UPDATE 1
+INSERT 0 1
+INSERT 0 1
+ERROR:  new row for relation "wallets" violates check constraint "wallets_balance_check"
+DETAIL:  Failing row contains (6, -50.00).
+      item       | stock
+-----------------+-------
+ Chicken Biryani |    19
+(1 row)
 
-A.run("SELECT stock FROM menu WHERE item = 'Samosa'")          # Ben's app sees 1
-B.run("SELECT stock FROM menu WHERE item = 'Samosa'")          # Farah's app sees 1
-A.run("UPDATE menu SET stock = 0 WHERE item = 'Samosa'")       # 1 - 1
-A.run("INSERT INTO orders VALUES (111, 2, 11, now(), 'pending', 40, NULL)")
-B.run("UPDATE menu SET stock = 0 WHERE item = 'Samosa'")       # 1 - 1
-B.run("INSERT INTO orders VALUES (112, 6, 11, now(), 'pending', 40, NULL)")
-A.run("SELECT count(*) FROM orders WHERE order_id IN (111, 112)")</div>
-  <div class="fx" data-lang="text"> 1 A  SELECT stock FROM menu WHERE item = 'Samosa'                     → 1
- 2 B  SELECT stock FROM menu WHERE item = 'Samosa'                     → 1
- 3 A  UPDATE menu SET stock = 0 WHERE item = 'Samosa'                  → UPDATE 1
- 4 A  INSERT INTO orders VALUES (111, 2, 11, now(), 'pending', 40, NULL) → INSERT 0 1
- 5 B  UPDATE menu SET stock = 0 WHERE item = 'Samosa'                  → UPDATE 1
- 6 B  INSERT INTO orders VALUES (112, 6, 11, now(), 'pending', 40, NULL) → INSERT 0 1
- 7 A  SELECT count(*) FROM orders WHERE order_id IN (111, 112)         → 2</div>
-  <p>Both read 1 before either wrote, so both decided "there is one left". Two orders, one samosa. Neither statement was wrong on its own; the problem is the <em>gap</em> between reading and writing, and another person acting inside that gap.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Two waiters each glance at the cake counter, see one slice, and each promise it to their table. Nobody lied; they just looked at the same moment.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Concurrency</strong>: several sessions (connections, each one user's or request's line to the database) running statements at overlapping times. <strong>Autocommit</strong>: the default mode where each statement is saved as soon as it finishes. Problem 1 needs a way to group statements; problem 2 needs rules for what one session may see of another's work.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"It works when I test it." Both bugs need bad timing: a failure at statement 4, or two requests within milliseconds. They pass every single-user test and appear on sale day.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: transactions.</b> For problem 1 we need to tell the database "these four statements belong together: all of them or none of them".</div>
+ order_id | customer_id | amount | status
+----------+-------------+--------+---------
+      111 |           6 | 350.00 | pending
+(1 row)
 
-  <h2 id="st-txn"><span class="num">02</span>Transactions: BEGIN, COMMIT, ROLLBACK</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Farah's order left stock taken and no payment, because each statement was saved on its own. How do we make the four statements succeed or fail as <em>one</em>?</p>
-  </div>
-  <p>A <strong>transaction</strong> is a group of statements the database treats as a single unit. <code>BEGIN</code> opens it; <code>COMMIT</code> saves all its changes at once; <code>ROLLBACK</code> throws all of them away. The same order, inside a transaction:</p>
+ customer_id | balance
+-------------+---------
+           6 |  300.00
+(1 row)</div>
+  <p>The first three statements succeeded and were saved. The fourth failed, because the wallets table has the rule <code>CHECK (balance &gt;= 0)</code> and ₹300 − ₹350 would be −₹50. Look at the result: the stock went from 20 to 19, an order exists, and nobody paid. Biteful has just given away a biryani. The database did exactly what it was told, one statement at a time; the problem is that these four statements only make sense <em>together</em>, and nothing told the database so.</p>
+  <p>A <strong>transaction</strong> is a group of statements that the database treats as one indivisible unit: either all of them take effect, or none of them do. <code>BEGIN</code> starts a transaction, <code>COMMIT</code> makes all of its changes permanent at once, and <code>ROLLBACK</code> throws all of them away. Think of a shopping cart. You add items one by one, then either pay for everything (COMMIT) or walk away, and every item goes back on the shelf (ROLLBACK); nobody else sees what is in your cart until you pay. Here is the same order inside a transaction:</p>
   <div class="fx" data-lang="sql">BEGIN;
 UPDATE menu SET stock = stock - 1 WHERE restaurant_id = 11 AND item = 'Chicken Biryani';
 INSERT INTO orders VALUES (111, 6, 11, now(), 'pending', 350, NULL);
 INSERT INTO order_items VALUES (111, 'Chicken Biryani', 1, 350);
 UPDATE wallets SET balance = balance - 350 WHERE customer_id = 6;
 SELECT stock FROM menu WHERE item = 'Chicken Biryani';
-ROLLBACK;
+COMMIT;
 SELECT stock FROM menu WHERE item = 'Chicken Biryani';
 SELECT count(*) AS order_111 FROM orders WHERE order_id = 111;</div>
   <div class="fx" data-lang="text">BEGIN
@@ -205,17 +121,16 @@ ERROR:  new row for relation "wallets" violates check constraint "wallets_balanc
 DETAIL:  Failing row contains (6, -50.00).
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 ROLLBACK
- stock 
+ stock
 -------
     20
 (1 row)
 
- order_111 
+ order_111
 -----------
          0
 (1 row)</div>
-  <p>Read the output top to bottom. The first three statements succeed. The wallet UPDATE fails. From that moment the transaction is <strong>aborted</strong>: PostgreSQL refuses every further command ("current transaction is aborted, commands ignored until end of transaction block") until you end it. <code>ROLLBACK</code> undoes the stock change and both inserts: stock is 20 again and order 111 doesn't exist. Nothing half-done remains. (If you type <code>COMMIT</code> on an aborted transaction, PostgreSQL performs a ROLLBACK and says so.)</p>
-  <p>And the successful case, Ben (₹500) ordering the same biryani:</p>
+  <p>Read the output from the top. The first three statements succeed and the wallet update fails, exactly as before. But from that moment the transaction is <strong>aborted</strong>: PostgreSQL refuses every further statement in it ("current transaction is aborted, commands ignored until end of transaction block") until the transaction ends, so the SELECT is not even run. Then something important happens: we typed <code>COMMIT</code>, but PostgreSQL answered <code>ROLLBACK</code>. A failed transaction cannot be committed, so ending it always undoes it. Afterwards the stock is back to 20 and order 111 does not exist. Nothing half-done remains. And here is the successful case, Ben with ₹500 ordering the same biryani:</p>
   <div class="fx" data-lang="sql">BEGIN;
 UPDATE menu SET stock = stock - 1 WHERE restaurant_id = 11 AND item = 'Chicken Biryani';
 INSERT INTO orders VALUES (111, 2, 11, now(), 'pending', 350, NULL);
@@ -231,21 +146,17 @@ INSERT 0 1
 INSERT 0 1
 UPDATE 1
 COMMIT
- stock | ben_wallet | lines 
+ stock | ben_wallet | lines
 -------+------------+-------
     19 |     150.00 |     1
 (1 row)</div>
-  <p>All four changes became visible together at COMMIT: stock 19, Ben's wallet 150, one order line.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A shopping cart. You add items (statements), then either pay for everything (COMMIT) or walk away and every item goes back on the shelf (ROLLBACK). Nobody else sees your cart until you pay.</p>
-  </div>
-  <h3>SAVEPOINT: undo only part</h3>
-  <p>A <strong>savepoint</strong> is a checkpoint inside a transaction. Ben's order should keep its biryani line even if an extra item he tapped no longer exists on the menu:</p>
+  <p>All four changes became visible together at COMMIT: stock 19, Ben's wallet ₹150, one order line.</p>
+  <p>Sometimes you want to undo only part of a transaction. A <strong>savepoint</strong> is a named checkpoint inside a transaction that you can roll back to without abandoning the whole thing. Suppose Ben's app adds an optional extra item, and that insert fails because of a bug; the main order should still go through:</p>
   <div class="fx" data-lang="sql">BEGIN;
 INSERT INTO orders VALUES (111, 2, 11, now(), 'pending', 350, NULL);
 INSERT INTO order_items VALUES (111, 'Chicken Biryani', 1, 350);
 SAVEPOINT extras;
-INSERT INTO order_items VALUES (999, 'Raita', 1, 50);   -- typo: order 999 doesn't exist
+INSERT INTO order_items VALUES (999, 'Raita', 1, 50);   -- typo: there is no order 999
 ROLLBACK TO SAVEPOINT extras;
 COMMIT;
 SELECT order_id, item FROM order_items WHERE order_id = 111;</div>
@@ -257,243 +168,144 @@ ERROR:  insert or update on table "order_items" violates foreign key constraint 
 DETAIL:  Key (order_id)=(999) is not present in table "orders".
 ROLLBACK
 COMMIT
- order_id |      item       
+ order_id |      item
 ----------+-----------------
       111 | Chicken Biryani
 (1 row)</div>
-  <p>The foreign-key error aborted only the work after the savepoint; <code>ROLLBACK TO SAVEPOINT</code> rewound to it, and the order with its biryani line committed.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A <strong>transaction</strong> is a sequence of statements executed as one unit: <code>BEGIN</code> … <code>COMMIT</code> (make all changes permanent and visible) or <code>ROLLBACK</code> (discard all). After an error inside it, the transaction is <strong>aborted</strong> until ROLLBACK (or ROLLBACK TO a savepoint).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: autocommit in tools vs drivers</span>
-    <p>In psql, without BEGIN, each statement is its own transaction, so two separate UPDATEs in a script are <em>not</em> atomic. Python's psycopg does the opposite by default: it opens a transaction for you and nothing is saved until <code>conn.commit()</code> (our demos pass <code>autocommit=True</code> and write BEGIN/COMMIT explicitly, so the SQL reads like psql).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: ACID.</b> "All or nothing" fixed problem 1. But what exactly does a database promise about a transaction: that constraints hold, that others don't see it half-done, that it survives a crash? Those promises have names.</div>
+  <p>The foreign-key error aborted only the work after the savepoint. <code>ROLLBACK TO SAVEPOINT extras</code> rewound the transaction to that point and made it usable again, and COMMIT saved the order with its biryani line.</p>
+  <p>One practical detail trips many people up: tools differ in their default. In psql, a statement without BEGIN is committed immediately, so two UPDATEs in a script are <em>not</em> atomic unless you wrap them in BEGIN and COMMIT. Python's database drivers (psycopg2, psycopg) do the opposite: they open a transaction automatically, and nothing is saved until you call <code>conn.commit()</code>, which is why forgetting the commit "loses" data. (The scripts on this page switch the driver to autocommit and write BEGIN and COMMIT explicitly, so the SQL reads the same as in psql.)</p>
 
-  <h2 id="st-acid"><span class="num">03</span>ACID, Each Promise Shown</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>A transaction is "a unit", but a unit of what, exactly? If the server crashes one millisecond after COMMIT, is Ben's order still there? While Ben's transaction is running, can Farah see its half-done stock change? We need the precise list of promises.</p>
-  </div>
-  <p>Databases describe the promises with four letters, <strong>ACID</strong>. Each one below is shown on Biteful, not just stated.</p>
-  <table class="tbl">
-    <tr><th>Letter</th><th>Promise</th><th>Failure it prevents</th><th>How PostgreSQL keeps it</th></tr>
-    <tr><td><strong>Atomicity</strong></td><td>All statements apply, or none</td><td>Biryani taken, wallet not charged</td><td>Undo on ROLLBACK/abort; WAL on crash</td></tr>
-    <tr><td><strong>Consistency</strong></td><td>Every commit leaves all constraints true</td><td>Negative wallet, order for a missing customer</td><td>CHECK, FOREIGN KEY, UNIQUE, NOT NULL</td></tr>
-    <tr><td><strong>Isolation</strong></td><td>Concurrent transactions don't see each other's unfinished work</td><td>Farah sees stock 0 from Ben's order that later fails</td><td>MVCC snapshots and locks (sections 05–07)</td></tr>
-    <tr><td><strong>Durability</strong></td><td>Once COMMIT returns, the change survives a crash</td><td>"Order placed!", then lost in a power cut</td><td>Write-ahead log (WAL) flushed to disk at COMMIT</td></tr>
-  </table>
-  <h3>A: atomicity, even if the app dies mid-transaction</h3>
-  <p>Section 02 showed ROLLBACK after an error. Atomicity also covers the app simply disappearing: session A takes the samosa inside a transaction, then its connection drops (the app crashed) before COMMIT.</p>
-  <div class="fx" data-lang="py">from sessions import Session
-A, B = Session('A'), Session('B')
+  <h2 id="st-acid"><span class="num">02</span>ACID</h2>
+  <p>"A unit of work" sounds simple, but a database actually makes four separate promises about every transaction, and they are known by their initials, <strong>ACID</strong>. <strong>Atomicity</strong> means all of the transaction's changes happen, or none do. <strong>Consistency</strong> means every committed transaction leaves the data obeying all the rules the database knows about, such as CHECK, FOREIGN KEY, UNIQUE and NOT NULL constraints. <strong>Isolation</strong> means transactions running at the same time do not see each other's unfinished work. <strong>Durability</strong> means that once COMMIT has returned, the change survives a crash. Each one is worth seeing on Biteful rather than just memorising.</p>
+  <p>Atomicity covers more than errors. If the application itself crashes in the middle of a transaction, the database must undo whatever it had done so far. Here session A takes the last samosa inside a transaction, and then its connection disappears before COMMIT, as if the app server had crashed:</p>
+  <div class="fx" data-lang="py">A, B = Session('A'), Session('B')
 A.run("BEGIN")
 A.run("UPDATE menu SET stock = 0 WHERE item = 'Samosa'")
-A.conn.close()                                    # the app crashes: no COMMIT, connection gone
-print("   A  (connection closed without COMMIT)")
+A.conn.close()                                   # the app crashes: no COMMIT, connection gone
+print("    A  (connection closed without COMMIT)")
 B.run("SELECT stock FROM menu WHERE item = 'Samosa'")</div>
-  <div class="fx" data-lang="text"> 1 A  BEGIN                                                            → BEGIN
- 2 A  UPDATE menu SET stock = 0 WHERE item = 'Samosa'                  → UPDATE 1
-   A  (connection closed without COMMIT)
- 3 B  SELECT stock FROM menu WHERE item = 'Samosa'                     → 1</div>
-  <p>The uncommitted change vanished with the connection: stock is still 1.</p>
-  <h3>C: consistency, enforced by constraints</h3>
+  <div class="fx" data-lang="text"> 1 A  BEGIN                                                          → BEGIN
+ 2 A  UPDATE menu SET stock = 0 WHERE item = 'Samosa'                → UPDATE 1
+    A  (connection closed without COMMIT)
+ 3 B  SELECT stock FROM menu WHERE item = 'Samosa'                   → 1</div>
+  <p>The uncommitted change vanished with the connection: the samosa stock is still 1. Consistency is enforced by constraints. Farah tries to pay ₹400 out of ₹300, and an order is created for customer 99, who does not exist:</p>
   <div class="fx" data-lang="sql">UPDATE wallets SET balance = balance - 400 WHERE customer_id = 6;
 INSERT INTO orders VALUES (111, 99, 11, now(), 'pending', 40, NULL);
 SELECT customer_id, balance FROM wallets ORDER BY customer_id;</div>
   <div class="fx" data-lang="text">ERROR:  new row for relation "wallets" violates check constraint "wallets_balance_check"
-DETAIL:  Failing row contains (6, -100.00).</div>
-  <div class="fx" data-lang="text">ERROR:  insert or update on table "orders" violates foreign key constraint "orders_customer_id_fkey"
-DETAIL:  Key (customer_id)=(99) is not present in table "customers".</div>
-  <table class="tbl out"><caption>Nothing changed</caption><tr><th>customer_id</th><th>balance</th></tr><tr><td>2</td><td>500.00</td></tr><tr><td>6</td><td>300.00</td></tr></table>
-  <p>Farah's ₹300 − ₹400 breaks the CHECK; customer 99 doesn't exist, so the foreign key refuses the order. The database will not commit a state that breaks a rule it knows. (It only knows the rules you declared: "at least one rider on duty" is not a constraint here, which section 04 exploits.)</p>
-  <h3>I: isolation, unfinished work is invisible</h3>
-  <div class="fx" data-lang="py">from sessions import Session
-A, B = Session('A'), Session('B')
+DETAIL:  Failing row contains (6, -100.00).
+ERROR:  insert or update on table "orders" violates foreign key constraint "orders_customer_id_fkey"
+DETAIL:  Key (customer_id)=(99) is not present in table "customers".
+ customer_id | balance
+-------------+---------
+           2 |  500.00
+           6 |  300.00
+(2 rows)</div>
+  <p>The CHECK constraint refuses the negative balance, the foreign key refuses the order for a missing customer, and the wallets are unchanged. Note that the database can only enforce rules you have declared. A business rule like "at least one rider must stay on duty in Mumbai" is not a constraint here, and section 03 shows two transactions breaking it. Isolation means unfinished work is invisible to others:</p>
+  <div class="fx" data-lang="py">A, B = Session('A'), Session('B')
 A.run("BEGIN")
 A.run("UPDATE menu SET stock = 0 WHERE item = 'Samosa'")
-B.run("SELECT stock FROM menu WHERE item = 'Samosa'")      # A has not committed
+B.run("SELECT stock FROM menu WHERE item = 'Samosa'")         # A has not committed yet
 A.run("COMMIT")
 B.run("SELECT stock FROM menu WHERE item = 'Samosa'")</div>
-  <div class="fx" data-lang="text"> 1 A  BEGIN                                                            → BEGIN
- 2 A  UPDATE menu SET stock = 0 WHERE item = 'Samosa'                  → UPDATE 1
- 3 B  SELECT stock FROM menu WHERE item = 'Samosa'                     → 1
- 4 A  COMMIT                                                           → COMMIT
- 5 B  SELECT stock FROM menu WHERE item = 'Samosa'                     → 0</div>
-  <p>While A's transaction is open, B still sees 1; it sees 0 only after A commits. How strong this protection is (does B's <em>own</em> transaction keep seeing 1?) is the subject of sections 04–05.</p>
-  <h3>D: durability, survive a real crash</h3>
-  <p>Before COMMIT returns, PostgreSQL writes a description of the changes to the <strong>write-ahead log</strong> (WAL) and forces it to disk; the table pages themselves may be written later. After a crash, it replays the WAL. We test it for real on this note's own PostgreSQL server: commit an order, then kill the server with <code>-m immediate</code> (no clean shutdown, like pulling the plug on the database process), restart it, and look.</p>
+  <div class="fx" data-lang="text"> 1 A  BEGIN                                                          → BEGIN
+ 2 A  UPDATE menu SET stock = 0 WHERE item = 'Samosa'                → UPDATE 1
+ 3 B  SELECT stock FROM menu WHERE item = 'Samosa'                   → 1
+ 4 A  COMMIT                                                         → COMMIT
+ 5 B  SELECT stock FROM menu WHERE item = 'Samosa'                   → 0</div>
+  <p>While A's transaction is open, B still sees stock 1. Only after A commits does B see 0. How strong this protection is, for example whether B's own transaction would keep seeing 1, is what isolation levels decide, and it is the subject of sections 03 and 04.</p>
+  <p>Durability needs a mechanism, because writing every changed table page to disk at every commit would be very slow. PostgreSQL instead uses a <strong>write-ahead log</strong> (WAL): before COMMIT returns, it appends a compact description of the changes to the log and forces that log onto the disk. The table pages themselves are written later, in the background. If the server crashes, it replays the log on restart and redoes any change whose pages were not yet written. Think of a shopkeeper who writes each sale in a bound register before handing over the goods: if the shop is flooded at midday, the register says exactly which sales happened, and the shelves can be put right from it. We can test this for real on a private test server: commit an order, kill the server with <code>-m immediate</code> (no clean shutdown, the closest thing to pulling the plug), start it again, and look.</p>
   <div class="fx" data-lang="text">export PATH=/usr/lib/postgresql/16/bin:$PATH
-DATA=/var/lib/postgresql/sqlnotes_adv          # this server's data directory
+DATA=/var/lib/postgresql/notes_b4_pg            # data directory of a private test server
+SOCK=/var/lib/postgresql/notes_b4_sock
+OPTS="-p 5494 -k $SOCK -c listen_addresses=''"
+export PGHOST=$SOCK PGPORT=5494 PGUSER=postgres PGDATABASE=notes_b4
 psql -X -c "INSERT INTO orders VALUES (111, 2, 11, now(), 'pending', 40, NULL)"   # committed
-runuser -u postgres -- pg_ctl -D $DATA stop -m immediate                         # crash
-runuser -u postgres -- pg_ctl -D $DATA -l $DATA.log -w start \\
-  -o "-p 5491 -k $DATA-sock -c listen_addresses='' -c max_parallel_workers_per_gather=0 -c jit=off" &gt; /dev/null
-tail -n 12 $DATA.log | grep -E "not properly shut down|redo starts|redo done|ready to accept" | sed 's/.*LOG: */LOG: /' 
+runuser -u postgres -- pg_ctl -D $DATA stop -m immediate                          # crash: no clean shutdown
+runuser -u postgres -- pg_ctl -D $DATA -l $DATA.log -w start -o "$OPTS" &gt; /dev/null
+grep -E "not properly shut down|redo starts|redo done|ready to accept" $DATA.log | tail -n 4 | sed 's/.*LOG: */LOG: /'
 psql -X -c "SELECT order_id, customer_id, amount, status FROM orders WHERE order_id = 111"</div>
   <div class="fx" data-lang="text">INSERT 0 1
 waiting for server to shut down.... done
 server stopped
 LOG: database system was not properly shut down; automatic recovery in progress
-LOG: redo starts at 0/C9365D90
-LOG: redo done at 0/C97B3100 system usage: CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.01 s
+LOG: redo starts at 0/14EF3E0
+LOG: redo done at 0/1951B60 system usage: CPU: user: 0.01 s, system: 0.00 s, elapsed: 0.01 s
 LOG: database system is ready to accept connections
- order_id | customer_id | amount | status  
+ order_id | customer_id | amount | status
 ----------+-------------+--------+---------
       111 |           2 |  40.00 | pending
 (1 row)</div>
-  <p>The server log shows the recovery: "not properly shut down; automatic recovery in progress", then <em>redo</em> (replaying the WAL from the last checkpoint), and order 111 is there. Because COMMIT waited for the WAL to reach disk, the order survives even though the server died before writing table pages normally.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A shopkeeper writes each sale in a bound register <em>before</em> handing over the goods. If the shop burns down mid-day, the register (WAL) says exactly which sales happened; the shelves (table pages) can be rebuilt from it.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>ACID</strong>: Atomicity (all or nothing), Consistency (declared constraints hold after every commit), Isolation (concurrent transactions don't interfere, to a configurable degree), Durability (committed data survives crashes; in PostgreSQL via the WAL flushed at COMMIT).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>The C in ACID (constraints hold) is not the C in CAP (every replica returns the latest write, section 09). Same letter, different meaning. And durability can be traded away: <code>synchronous_commit = off</code> makes COMMIT return before the WAL flush, risking the last fraction of a second of commits on a crash.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: concurrency anomalies.</b> Isolation looked simple: B didn't see A's uncommitted 0. But the samosa double-sale from section 01 involved no uncommitted reads at all. What exactly can two sessions still do to each other?</div>
+  <p>The server log shows the recovery: "not properly shut down; automatic recovery in progress", then "redo", which is the replay of the WAL, and order 111 is there. Because COMMIT waited for the log to reach the disk, the order survived even though the server died before writing its table pages normally. (Durability can be traded for speed: with <code>synchronous_commit = off</code>, COMMIT returns before the log is flushed, and a crash can lose the last fraction of a second of commits. That is acceptable for, say, analytics events, never for payments.)</p>
+  <p>One more warning about the letters: the C in ACID (constraints hold) has nothing to do with the C in the CAP theorem (all copies of the data agree), which appears in section 10. Interviewers sometimes check whether you know the difference.</p>
 
-  <h2 id="st-anom"><span class="num">04</span>Concurrency Anomalies, Reproduced</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Transactions keep half-done work private. Yet two well-behaved transactions running at the same time can still produce results that no one-at-a-time order would. Which kinds of interference exist, and which one sold the samosa twice?</p>
-  </div>
-  <p>Each kind of interference is called an <strong>anomaly</strong>. All five below were reproduced with two real connections at PostgreSQL's default level, READ COMMITTED, unless stated. The helper that drives the sessions:</p>
-  <details><summary>sessions.py: two real connections, steps printed in time order</summary>
-  <div class="fx" data-lang="text">"""Drive several real PostgreSQL connections and print every step in time order.
-
-Each Session is its own connection (like two people with their own psql window).
-Autocommit is on, so transactions are controlled with plain SQL: BEGIN / COMMIT / ROLLBACK.
-A statement that has to wait for a lock is started in a background thread (start),
-and its result is printed when it finishes (finish).
-"""
-import threading, time
-import psycopg
-from psycopg import sql
-
-STEP = [0]
-
-def show(rows):
-    if isinstance(rows, str):
-        return rows
-    if len(rows) == 1 and len(rows[0]) == 1:
-        return str(rows[0][0])
-    return ', '.join('(' + ', '.join(str(v) for v in r) + ')' for r in rows)
-
-def log(who, q, result):
-    STEP[0] += 1
-    q = ' '.join(q.split())
-    print(f"{STEP[0]:&gt;2} {who:&lt;2} {q:&lt;64} → {result}")
-
-class Session:
-    def __init__(self, name, **conninfo):
-        self.name = name
-        self.conn = psycopg.connect(autocommit=True, **conninfo)
-        self.conn.execute(sql.SQL("SET application_name = {}").format(sql.Literal(name)))
-
-    def _exec(self, q):
-        try:
-            cur = self.conn.execute(q)
-            return show(cur.fetchall()) if cur.description else cur.statusmessage
-        except psycopg.Error as e:
-            return 'ERROR: ' + e.diag.message_primary
-
-    def run(self, q):
-        result = self._exec(q)
-        log(self.name, q, result)
-        return result
-
-    def start(self, q):
-        """Run q in the background (it may block on a lock)."""
-        box = {}
-        t = threading.Thread(target=lambda: box.setdefault('r', self._exec(q)))
-        t.start()
-        time.sleep(0.3)
-        state = 'still running: waiting for a lock' if t.is_alive() else 'finished'
-        log(self.name, q, '... ' + state)
-        return (t, box, q)
-
-    def finish(self, job):
-        t, box, q = job
-        t.join()
-        log(self.name, '(the waiting statement)', 'now returns: ' + box['r'])
-        return box['r']</div>
-  </details>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Two people editing the same shared spreadsheet. One reads a cell, the other changes it, the first still has the old number in their head. Every anomaly is a version of that.</p>
-  </div>
-  <h3>1. Dirty read: seeing uncommitted data (impossible in PostgreSQL)</h3>
-  <p>A <strong>dirty read</strong> is reading another transaction's change before it commits, a change that may then be rolled back. The SQL standard allows it at READ UNCOMMITTED, so we ask for exactly that:</p>
-  <div class="fx" data-lang="py">from sessions import Session
-A, B = Session('A'), Session('B')
+  <h2 id="st-anom"><span class="num">03</span>Concurrency Anomalies</h2>
+  <p>Transactions keep half-done work private. But now consider two well-behaved transactions running at the same moment. Ben and Farah both tap "order Samosa" at Biryani Bros in the same second, and only one samosa is left. Each app reads the stock, sees 1, and writes the stock as 0 and creates an order. Can both succeed? Problems like this, where transactions running at the same time produce a result that would be impossible if they had run one after the other, are called <strong>concurrency anomalies</strong>. "One after the other" is the gold standard and is called a <strong>serial</strong> order: if Ben's order had run first and Farah's second, Farah's app would have seen stock 0 and refused. There are five classic anomalies, and all five can be reproduced with two real sessions. Unless stated otherwise, these run at PostgreSQL's default isolation level, READ COMMITTED. Think of two people editing the same shared spreadsheet: one reads a cell, the other changes it, and the first still has the old number in their head. Every anomaly is a version of that.</p>
+  <p>A <strong>dirty read</strong> is reading another transaction's change before it has committed, a change that might still be rolled back, so you could act on data that never officially existed. The SQL standard permits it at its weakest level, READ UNCOMMITTED, so we ask for exactly that:</p>
+  <div class="fx" data-lang="py">A, B = Session('A'), Session('B')
 B.run("BEGIN")
-B.run("UPDATE menu SET stock = 0 WHERE item = 'Samosa'")           # not committed
+B.run("UPDATE menu SET stock = 0 WHERE item = 'Samosa'")       # not committed
 A.run("BEGIN ISOLATION LEVEL READ UNCOMMITTED")
 A.run("SELECT stock FROM menu WHERE item = 'Samosa'")
 B.run("ROLLBACK")
 A.run("COMMIT")</div>
-  <div class="fx" data-lang="text"> 1 B  BEGIN                                                            → BEGIN
- 2 B  UPDATE menu SET stock = 0 WHERE item = 'Samosa'                  → UPDATE 1
- 3 A  BEGIN ISOLATION LEVEL READ UNCOMMITTED                           → BEGIN
- 4 A  SELECT stock FROM menu WHERE item = 'Samosa'                     → 1
- 5 B  ROLLBACK                                                         → ROLLBACK
- 6 A  COMMIT                                                           → COMMIT</div>
-  <p>A saw 1, the committed value, even at READ UNCOMMITTED: PostgreSQL treats READ UNCOMMITTED as READ COMMITTED and never shows uncommitted data. (SQL Server and MySQL do allow dirty reads at READ UNCOMMITTED per their documentation; not run here.)</p>
-  <h3>2. Non-repeatable read: same row, new value</h3>
-  <p>The kitchen screen opens a transaction, reads the samosa stock to plan, and reads it again a moment later:</p>
-  <div class="fx" data-lang="py">from sessions import Session
-A, B = Session('A'), Session('B')
-A.run("BEGIN")                                                     # READ COMMITTED (default)
+  <div class="fx" data-lang="text"> 1 B  BEGIN                                                          → BEGIN
+ 2 B  UPDATE menu SET stock = 0 WHERE item = 'Samosa'                → UPDATE 1
+ 3 A  BEGIN ISOLATION LEVEL READ UNCOMMITTED                         → BEGIN
+ 4 A  SELECT stock FROM menu WHERE item = 'Samosa'                   → 1
+ 5 B  ROLLBACK                                                       → ROLLBACK
+ 6 A  COMMIT                                                         → COMMIT</div>
+  <p>A saw 1, the committed value, even at READ UNCOMMITTED. PostgreSQL never shows uncommitted data at any level; it quietly treats READ UNCOMMITTED as READ COMMITTED. (SQL Server and MySQL do allow dirty reads at READ UNCOMMITTED, according to their documentation; that was not run here.)</p>
+  <p>A <strong>non-repeatable read</strong> is reading the same row twice in one transaction and getting different values, because another transaction committed a change in between. The kitchen screen opens a transaction, reads the samosa stock, and reads it again a moment later:</p>
+  <div class="fx" data-lang="py">A, B = Session('A'), Session('B')
+A.run("BEGIN")                                                 # READ COMMITTED, the default
 A.run("SELECT stock FROM menu WHERE item = 'Samosa'")
-B.run("UPDATE menu SET stock = 5 WHERE item = 'Samosa'")           # autocommit: committed now
+B.run("UPDATE menu SET stock = 5 WHERE item = 'Samosa'")       # autocommit: committed at once
 A.run("SELECT stock FROM menu WHERE item = 'Samosa'")
 A.run("COMMIT")</div>
-  <div class="fx" data-lang="text"> 1 A  BEGIN                                                            → BEGIN
- 2 A  SELECT stock FROM menu WHERE item = 'Samosa'                     → 1
- 3 B  UPDATE menu SET stock = 5 WHERE item = 'Samosa'                  → UPDATE 1
- 4 A  SELECT stock FROM menu WHERE item = 'Samosa'                     → 5
- 5 A  COMMIT                                                           → COMMIT</div>
-  <p>Same question, same transaction, two answers (1, then 5): at READ COMMITTED each <em>statement</em> sees everything committed before it started. Fine for a quick lookup; wrong for a report whose numbers must add up.</p>
-  <h3>3. Phantom read: same filter, new rows</h3>
-  <div class="fx" data-lang="py">from sessions import Session
-A, B = Session('A'), Session('B')
+  <div class="fx" data-lang="text"> 1 A  BEGIN                                                          → BEGIN
+ 2 A  SELECT stock FROM menu WHERE item = 'Samosa'                   → 1
+ 3 B  UPDATE menu SET stock = 5 WHERE item = 'Samosa'                → UPDATE 1
+ 4 A  SELECT stock FROM menu WHERE item = 'Samosa'                   → 5
+ 5 A  COMMIT                                                         → COMMIT</div>
+  <p>Same question, same transaction, two answers: 1, then 5. At READ COMMITTED each <em>statement</em> sees everything committed before that statement started, so a later statement can see newer data. That is fine for a quick lookup, and wrong for a report whose numbers must add up across several queries.</p>
+  <p>A <strong>phantom read</strong> is similar, but instead of an existing row changing, a <em>new</em> row appears that matches the same filter:</p>
+  <div class="fx" data-lang="py">A, B = Session('A'), Session('B')
 A.run("BEGIN")
 A.run("SELECT count(*) FROM orders WHERE status = 'pending'")
 B.run("INSERT INTO orders VALUES (111, 2, 11, now(), 'pending', 40, NULL)")
 A.run("SELECT count(*) FROM orders WHERE status = 'pending'")
 A.run("COMMIT")</div>
-  <div class="fx" data-lang="text"> 1 A  BEGIN                                                            → BEGIN
- 2 A  SELECT count(*) FROM orders WHERE status = 'pending'             → 1
+  <div class="fx" data-lang="text"> 1 A  BEGIN                                                          → BEGIN
+ 2 A  SELECT count(*) FROM orders WHERE status = 'pending'           → 1
  3 B  INSERT INTO orders VALUES (111, 2, 11, now(), 'pending', 40, NULL) → INSERT 0 1
- 4 A  SELECT count(*) FROM orders WHERE status = 'pending'             → 2
- 5 A  COMMIT                                                           → COMMIT</div>
-  <p>No existing row changed; a <em>new</em> row matching the filter appeared (a "phantom"), so the count went 1 → 2. (Order 110 was the only pending order.)</p>
-  <h3>4. Lost update: the samosa sold twice</h3>
-  <p>Section 01 again, now with both requests inside transactions, and with the second writer forced to touch the row while the first holds it:</p>
-  <div class="fx" data-lang="py">from sessions import Session
-A, B = Session('A'), Session('B')
+ 4 A  SELECT count(*) FROM orders WHERE status = 'pending'           → 2
+ 5 A  COMMIT                                                         → COMMIT</div>
+  <p>No existing row changed, but the count of pending orders went from 1 to 2 because B inserted a matching row (a "phantom") and committed. Now the samosa. A <strong>lost update</strong> happens when two transactions read the same value, each computes a new value from what it read, and the second write overwrites the first without taking it into account:</p>
+  <div class="fx" data-lang="py">A, B = Session('A'), Session('B')                              # A = Ben's request, B = Farah's
 A.run("BEGIN"); B.run("BEGIN")
-A.run("SELECT stock FROM menu WHERE item = 'Samosa'")              # Ben's app: 1 left
-B.run("SELECT stock FROM menu WHERE item = 'Samosa'")              # Farah's app: 1 left
-A.run("UPDATE menu SET stock = 0 WHERE item = 'Samosa'")           # app computed 1 - 1
-job = B.start("UPDATE menu SET stock = 0 WHERE item = 'Samosa'")   # same row: must wait for A
+A.run("SELECT stock FROM menu WHERE item = 'Samosa'")          # Ben's app sees 1 left
+B.run("SELECT stock FROM menu WHERE item = 'Samosa'")          # Farah's app sees 1 left
+A.run("UPDATE menu SET stock = 0 WHERE item = 'Samosa'")       # app computed 1 - 1
+job = B.start("UPDATE menu SET stock = 0 WHERE item = 'Samosa'")   # same row: waits for A
 A.run("INSERT INTO orders VALUES (111, 2, 11, now(), 'pending', 40, NULL)")
 A.run("COMMIT")
 B.finish(job)
 B.run("INSERT INTO orders VALUES (112, 6, 11, now(), 'pending', 40, NULL)")
 B.run("COMMIT")
 A.run("SELECT count(*) FROM orders WHERE order_id IN (111, 112)")</div>
-  <div class="fx" data-lang="text"> 1 A  BEGIN                                                            → BEGIN
- 2 B  BEGIN                                                            → BEGIN
- 3 A  SELECT stock FROM menu WHERE item = 'Samosa'                     → 1
- 4 B  SELECT stock FROM menu WHERE item = 'Samosa'                     → 1
- 5 A  UPDATE menu SET stock = 0 WHERE item = 'Samosa'                  → UPDATE 1
- 6 B  UPDATE menu SET stock = 0 WHERE item = 'Samosa'                  → ... still running: waiting for a lock
+  <div class="fx" data-lang="text"> 1 A  BEGIN                                                          → BEGIN
+ 2 B  BEGIN                                                          → BEGIN
+ 3 A  SELECT stock FROM menu WHERE item = 'Samosa'                   → 1
+ 4 B  SELECT stock FROM menu WHERE item = 'Samosa'                   → 1
+ 5 A  UPDATE menu SET stock = 0 WHERE item = 'Samosa'                → UPDATE 1
+ 6 B  UPDATE menu SET stock = 0 WHERE item = 'Samosa'                → ... waiting
  7 A  INSERT INTO orders VALUES (111, 2, 11, now(), 'pending', 40, NULL) → INSERT 0 1
- 8 A  COMMIT                                                           → COMMIT
- 9 B  (the waiting statement)                                          → now returns: UPDATE 1
+ 8 A  COMMIT                                                         → COMMIT
+ 9 B  (the waiting statement)                                        → now returns: UPDATE 1
 10 B  INSERT INTO orders VALUES (112, 6, 11, now(), 'pending', 40, NULL) → INSERT 0 1
-11 B  COMMIT                                                           → COMMIT
-12 A  SELECT count(*) FROM orders WHERE order_id IN (111, 112)         → 2</div>
+11 B  COMMIT                                                         → COMMIT
+12 A  SELECT count(*) FROM orders WHERE order_id IN (111, 112)       → 2</div>
   <figure class="viz"><svg viewBox="0 0 600 170" width="600">
     <defs><marker id="st-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <text x="0" y="34" font-weight="bold">A</text><text x="0" y="94" font-weight="bold">B</text>
@@ -507,133 +319,109 @@ A.run("SELECT count(*) FROM orders WHERE order_id IN (111, 112)")</div>
     <text x="365" y="132" text-anchor="middle">1</text><text x="515" y="132" text-anchor="middle" class="tr">2 (only 1 existed)</text>
     <line x1="30" y1="150" x2="590" y2="150" stroke="currentColor" marker-end="url(#st-ar)"/><text x="590" y="166" text-anchor="end" font-size="10" class="tm">time</text>
   </svg><figcaption>Both read 1 before either wrote; B's write is based on a value that was already out of date.</figcaption></figure>
-  <p>Step by step: both apps read 1. A writes 0. B tries to write the same row and <em>waits</em> (A holds the row's write lock until it finishes). A commits. B's UPDATE then goes ahead and writes 0, the value its app computed from a stale read. Two orders for one samosa. The database protected the row from simultaneous writes; it could not know B's "0" was computed from an old read. This is the <strong>lost update</strong>, the most common concurrency bug in real apps.</p>
-  <h3>5. Write skew: two different rows, one broken rule</h3>
-  <p>Biteful's rule: at least one rider must stay on duty in Mumbai. Ravi and Sara are both on duty and both want to go home. Each app checks "is someone else on duty?" and then updates only its own row:</p>
-  <div class="fx" data-lang="py">from sessions import Session
-A, B = Session('A'), Session('B')                                  # A = Ravi's app, B = Sara's app
+  <p>Follow the steps. Both apps read 1. A writes 0. B tries to write the same row and has to <em>wait</em>, because A holds that row's write lock until it finishes (locks are section 06). A commits, B's UPDATE goes ahead and writes 0, the value its app calculated from its earlier, now stale, read. Two orders exist for one samosa. The database did protect the row from two simultaneous writes, but it had no way to know that B's "0" was computed from an old value. The lost update is the most common concurrency bug in real applications, because "read a value into the app, compute, write it back" is the most natural way to write code.</p>
+  <p>The last anomaly is the subtlest. Biteful's rule is that at least one rider must stay on duty in Mumbai. Ravi and Sara are both on duty and both want to go home. Each app checks "is someone else on duty?" and, if so, updates only its own row. This time even REPEATABLE READ, a stronger level, is used:</p>
+  <div class="fx" data-lang="py">A, B = Session('A'), Session('B')                              # A = Ravi's app, B = Sara's app
 A.run("BEGIN ISOLATION LEVEL REPEATABLE READ"); B.run("BEGIN ISOLATION LEVEL REPEATABLE READ")
-A.run("SELECT count(*) FROM riders WHERE city = 'Mumbai' AND on_duty")   # 2: OK for Ravi to leave
-B.run("SELECT count(*) FROM riders WHERE city = 'Mumbai' AND on_duty")   # 2: OK for Sara to leave
+A.run("SELECT count(*) FROM riders WHERE city = 'Mumbai' AND on_duty")   # 2, so Ravi may leave
+B.run("SELECT count(*) FROM riders WHERE city = 'Mumbai' AND on_duty")   # 2, so Sara may leave
 A.run("UPDATE riders SET on_duty = false WHERE name = 'Ravi'")
 B.run("UPDATE riders SET on_duty = false WHERE name = 'Sara'")
 A.run("COMMIT"); B.run("COMMIT")
 A.run("SELECT count(*) FROM riders WHERE city = 'Mumbai' AND on_duty")</div>
-  <div class="fx" data-lang="text"> 1 A  BEGIN ISOLATION LEVEL REPEATABLE READ                            → BEGIN
- 2 B  BEGIN ISOLATION LEVEL REPEATABLE READ                            → BEGIN
- 3 A  SELECT count(*) FROM riders WHERE city = 'Mumbai' AND on_duty    → 2
- 4 B  SELECT count(*) FROM riders WHERE city = 'Mumbai' AND on_duty    → 2
- 5 A  UPDATE riders SET on_duty = false WHERE name = 'Ravi'            → UPDATE 1
- 6 B  UPDATE riders SET on_duty = false WHERE name = 'Sara'            → UPDATE 1
- 7 A  COMMIT                                                           → COMMIT
- 8 B  COMMIT                                                           → COMMIT
- 9 A  SELECT count(*) FROM riders WHERE city = 'Mumbai' AND on_duty    → 0</div>
-  <p>Nobody is on duty in Mumbai, even at REPEATABLE READ. No row was written twice, so no row lock conflicted; each transaction's check was true <em>in its snapshot</em>. Together they broke a rule neither broke alone.</p>
-  <table class="tbl"><caption>The five anomalies on one page</caption>
+  <div class="fx" data-lang="text"> 1 A  BEGIN ISOLATION LEVEL REPEATABLE READ                          → BEGIN
+ 2 B  BEGIN ISOLATION LEVEL REPEATABLE READ                          → BEGIN
+ 3 A  SELECT count(*) FROM riders WHERE city = 'Mumbai' AND on_duty  → 2
+ 4 B  SELECT count(*) FROM riders WHERE city = 'Mumbai' AND on_duty  → 2
+ 5 A  UPDATE riders SET on_duty = false WHERE name = 'Ravi'          → UPDATE 1
+ 6 B  UPDATE riders SET on_duty = false WHERE name = 'Sara'          → UPDATE 1
+ 7 A  COMMIT                                                         → COMMIT
+ 8 B  COMMIT                                                         → COMMIT
+ 9 A  SELECT count(*) FROM riders WHERE city = 'Mumbai' AND on_duty  → 0</div>
+  <p>Nobody is on duty in Mumbai. No row was written twice, so no lock conflict occurred; each transaction's check was true in the data it saw, and each changed a <em>different</em> row. Together they broke a rule that neither broke alone. This is <strong>write skew</strong>: two transactions read overlapping data, make decisions from it, and write different rows. Notice that every anomaly from non-repeatable read onwards happened <em>inside</em> transactions. A transaction gives you all-or-nothing; how far it is shielded from other transactions is a separate setting, the isolation level.</p>
+  <table class="tbl">
     <tr><th>Anomaly</th><th>What happens</th><th>Biteful scene</th></tr>
-    <tr><td>Dirty read</td><td>See another's uncommitted change</td><td>Never in PostgreSQL (A saw 1)</td></tr>
-    <tr><td>Non-repeatable read</td><td>Same row read twice, different values</td><td>Samosa stock 1 then 5</td></tr>
-    <tr><td>Phantom read</td><td>Same filter, different set of rows</td><td>Pending orders 1 then 2</td></tr>
-    <tr><td>Lost update</td><td>Read-compute-write overwrites another's write</td><td>Two orders, one samosa</td></tr>
-    <tr><td>Write skew</td><td>Two transactions write different rows based on the same read; a rule breaks</td><td>No rider on duty</td></tr>
+    <tr><td>Dirty read</td><td>See another transaction's uncommitted change</td><td>Never in PostgreSQL (A saw 1)</td></tr>
+    <tr><td>Non-repeatable read</td><td>Same row read twice, different values</td><td>Samosa stock 1, then 5</td></tr>
+    <tr><td>Phantom read</td><td>Same filter, different set of rows</td><td>Pending orders 1, then 2</td></tr>
+    <tr><td>Lost update</td><td>A write based on a stale read overwrites another write</td><td>Two orders, one samosa</td></tr>
+    <tr><td>Write skew</td><td>Two transactions write different rows based on the same read; a rule breaks</td><td>No rider left on duty</td></tr>
   </table>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A <strong>concurrency anomaly</strong> is a result of concurrent transactions that no serial (one-after-another) order of the same transactions could produce. "Serial" is the gold standard: if Ben's and Farah's orders had run one after the other, the second would have seen stock 0 and refused.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Thinking "I used a transaction, so I'm safe". All of 2–5 happened <em>inside</em> transactions. A transaction gives all-or-nothing; how much it is shielded from others is a separate setting.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: isolation levels.</b> We have five named bugs. Preventing all of them always would make sessions wait or fail more often. Which setting prevents which bug, and what does each cost?</div>
 
-  <h2 id="st-iso"><span class="num">05</span>Isolation Levels: Which Level Prevents What (Verified)</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Four of the five anomalies happened at the default level. The SQL standard defines stronger <strong>isolation levels</strong>. Which anomalies does each actually stop in PostgreSQL, and what does it do instead of letting the anomaly through?</p>
-  </div>
-  <p>Instead of copying a table from a book, we ran all five scenarios at all four levels, each with two real connections, and recorded what happened:</p>
-  <div class="fx" data-lang="text">anomaly             READ UNCOMMITTED   READ COMMITTED     REPEATABLE READ    SERIALIZABLE       
-dirty read          prevented          prevented          prevented          prevented          
-non-repeatable read happens            happens            prevented          prevented          
-phantom read        happens            happens            prevented          prevented          
-lost update         happens            happens            prevented (error)  prevented (error)  
-write skew          happens            happens            happens            prevented (error)  </div>
-  <details><summary>matrix.py: the script that produced this table</summary>
-  <div class="fx" data-lang="text">import psycopg
+  <h2 id="st-iso"><span class="num">04</span>Isolation Levels</h2>
+  <p>Preventing every anomaly all the time would make transactions wait for each other, or fail, much more often, so databases let you choose how much protection each transaction gets. That choice is the <strong>isolation level</strong>, set with <code>BEGIN ISOLATION LEVEL …</code>. The SQL standard defines four: READ UNCOMMITTED, READ COMMITTED, REPEATABLE READ and SERIALIZABLE, from weakest to strongest. Rather than copy a table from a textbook, the script below runs all five anomaly scenarios at all four levels in PostgreSQL, each time with two fresh connections and fresh tables, and records what happened:</p>
+  <div class="fx" data-lang="py">import psycopg2
 
-def conn():
-    return psycopg.connect(autocommit=True)
+def connect():
+    c = psycopg2.connect(dbname="notes_b4"); c.autocommit = True
+    return c
 
-admin, A, B = conn(), conn(), conn()
-def q(c, sql):
+A, B = connect(), connect()
+
+def q(conn, sql):
+    """Run one statement; return its single value, 'ok', or 'ERROR'."""
+    cur = conn.cursor()
     try:
-        cur = c.execute(sql)
+        cur.execute(sql)
         return cur.fetchone()[0] if cur.description else 'ok'
-    except psycopg.Error as e:
+    except psycopg2.Error:
         return 'ERROR'
 
-def reset():
-    for c in (A, B):
-        q(c, "ROLLBACK")
-    admin.execute("UPDATE menu SET stock = 20 WHERE item = 'Chicken Biryani'")
-    admin.execute("UPDATE riders SET on_duty = true")
-    admin.execute("DELETE FROM orders WHERE order_id &gt; 110")
+STOCK = "SELECT stock FROM menu WHERE item = 'Chicken Biryani'"
 
 def dirty_read(level):
-    reset()
     q(B, "BEGIN"); q(B, "UPDATE menu SET stock = 99 WHERE item = 'Chicken Biryani'")
-    q(A, f"BEGIN ISOLATION LEVEL {level}")
-    seen = q(A, "SELECT stock FROM menu WHERE item = 'Chicken Biryani'")
+    q(A, f"BEGIN ISOLATION LEVEL {level}"); seen = q(A, STOCK)
     q(B, "ROLLBACK"); q(A, "COMMIT")
     return 'happens' if seen == 99 else 'prevented'
 
 def non_repeatable(level):
-    reset()
-    q(A, f"BEGIN ISOLATION LEVEL {level}")
-    r1 = q(A, "SELECT stock FROM menu WHERE item = 'Chicken Biryani'")
+    q(A, f"BEGIN ISOLATION LEVEL {level}"); first = q(A, STOCK)
     q(B, "UPDATE menu SET stock = 15 WHERE item = 'Chicken Biryani'")
-    r2 = q(A, "SELECT stock FROM menu WHERE item = 'Chicken Biryani'")
-    q(A, "COMMIT")
-    return 'happens' if r1 != r2 else 'prevented'
+    second = q(A, STOCK); q(A, "COMMIT")
+    return 'happens' if first != second else 'prevented'
 
 def phantom(level):
-    reset()
-    q(A, f"BEGIN ISOLATION LEVEL {level}")
-    r1 = q(A, "SELECT count(*) FROM orders WHERE status = 'pending'")
+    count = "SELECT count(*) FROM orders WHERE status = 'pending'"
+    q(A, f"BEGIN ISOLATION LEVEL {level}"); first = q(A, count)
     q(B, "INSERT INTO orders VALUES (111, 2, 11, now(), 'pending', 40, NULL)")
-    r2 = q(A, "SELECT count(*) FROM orders WHERE status = 'pending'")
-    q(A, "COMMIT")
-    return 'happens' if r1 != r2 else 'prevented'
+    second = q(A, count); q(A, "COMMIT")
+    return 'happens' if first != second else 'prevented'
 
 def lost_update(level):
-    reset()
     q(A, f"BEGIN ISOLATION LEVEL {level}"); q(B, f"BEGIN ISOLATION LEVEL {level}")
-    a = q(A, "SELECT stock FROM menu WHERE item = 'Chicken Biryani'")
-    b = q(B, "SELECT stock FROM menu WHERE item = 'Chicken Biryani'")
+    a, b = q(A, STOCK), q(B, STOCK)                      # both read 20
     q(A, f"UPDATE menu SET stock = {a - 1} WHERE item = 'Chicken Biryani'"); q(A, "COMMIT")
-    w = q(B, f"UPDATE menu SET stock = {b - 1} WHERE item = 'Chicken Biryani'"); c = q(B, "COMMIT")
-    final = q(admin, "SELECT stock FROM menu WHERE item = 'Chicken Biryani'")
-    return 'happens' if final == 19 and w != 'ERROR' else ('prevented (error)' if w == 'ERROR' else 'prevented')
+    w = q(B, f"UPDATE menu SET stock = {b - 1} WHERE item = 'Chicken Biryani'"); q(B, "COMMIT")
+    return 'prevented (error)' if w == 'ERROR' else 'happens'
 
 def write_skew(level):
-    reset()
+    on_duty = "SELECT count(*) FROM riders WHERE city = 'Mumbai' AND on_duty"
     q(A, f"BEGIN ISOLATION LEVEL {level}"); q(B, f"BEGIN ISOLATION LEVEL {level}")
-    q(A, "SELECT count(*) FROM riders WHERE city = 'Mumbai' AND on_duty")
-    q(B, "SELECT count(*) FROM riders WHERE city = 'Mumbai' AND on_duty")
+    q(A, on_duty); q(B, on_duty)
     q(A, "UPDATE riders SET on_duty = false WHERE name = 'Ravi'")
     q(B, "UPDATE riders SET on_duty = false WHERE name = 'Sara'")
-    ca = q(A, "COMMIT"); cb = q(B, "COMMIT")
-    left = q(admin, "SELECT count(*) FROM riders WHERE city = 'Mumbai' AND on_duty")
-    return 'happens' if left == 0 else 'prevented (error)'
+    q(A, "COMMIT"); q(B, "COMMIT")
+    return 'happens' if q(A, on_duty) == 0 else 'prevented (error)'
 
-tests = [('dirty read', dirty_read), ('non-repeatable read', non_repeatable), ('phantom read', phantom),
-         ('lost update', lost_update), ('write skew', write_skew)]
+tests = [('dirty read', dirty_read), ('non-repeatable read', non_repeatable),
+         ('phantom read', phantom), ('lost update', lost_update), ('write skew', write_skew)]
 levels = ['READ UNCOMMITTED', 'READ COMMITTED', 'REPEATABLE READ', 'SERIALIZABLE']
-print(f"{'anomaly':&lt;20}" + ''.join(f"{l:&lt;19}" for l in levels))
-for name, fn in tests:
-    print(f"{name:&lt;20}" + ''.join(f"{fn(l):&lt;19}" for l in levels))</div>
-  </details>
-  <p>"prevented (error)" means PostgreSQL did not let the anomaly through but also did not silently fix it: the second transaction got an error. At REPEATABLE READ, B's update in the lost-update scene fails like this:</p>
-  <div class="fx" data-lang="py">from sessions import Session
-A, B = Session('A'), Session('B')
+print(f"{'':20}" + ''.join(f"{l:&lt;19}" for l in levels))
+for name, test in tests:
+    cells = []
+    for level in levels:
+        reset()                                          # fresh tables for every cell
+        cells.append(test(level))
+    print(f"{name:&lt;20}" + ''.join(f"{c:&lt;19}" for c in cells))</div>
+  <div class="fx" data-lang="text">                    READ UNCOMMITTED   READ COMMITTED     REPEATABLE READ    SERIALIZABLE
+dirty read          prevented          prevented          prevented          prevented
+non-repeatable read happens            happens            prevented          prevented
+phantom read        happens            happens            prevented          prevented
+lost update         happens            happens            prevented (error)  prevented (error)
+write skew          happens            happens            happens            prevented (error)</div>
+  <p>"prevented (error)" means PostgreSQL did not let the anomaly through, but it did not silently fix it either: one transaction received an error instead. At REPEATABLE READ, the second writer in the samosa scene fails like this:</p>
+  <div class="fx" data-lang="py">A, B = Session('A'), Session('B')
 A.run("BEGIN ISOLATION LEVEL REPEATABLE READ"); B.run("BEGIN ISOLATION LEVEL REPEATABLE READ")
 A.run("SELECT stock FROM menu WHERE item = 'Samosa'")
 B.run("SELECT stock FROM menu WHERE item = 'Samosa'")
@@ -642,18 +430,17 @@ job = B.start("UPDATE menu SET stock = 0 WHERE item = 'Samosa'")
 A.run("COMMIT")
 B.finish(job)
 B.run("ROLLBACK")</div>
-  <div class="fx" data-lang="text"> 1 A  BEGIN ISOLATION LEVEL REPEATABLE READ                            → BEGIN
- 2 B  BEGIN ISOLATION LEVEL REPEATABLE READ                            → BEGIN
- 3 A  SELECT stock FROM menu WHERE item = 'Samosa'                     → 1
- 4 B  SELECT stock FROM menu WHERE item = 'Samosa'                     → 1
- 5 A  UPDATE menu SET stock = 0 WHERE item = 'Samosa'                  → UPDATE 1
- 6 B  UPDATE menu SET stock = 0 WHERE item = 'Samosa'                  → ... still running: waiting for a lock
- 7 A  COMMIT                                                           → COMMIT
- 8 B  (the waiting statement)                                          → now returns: ERROR: could not serialize access due to concurrent update
- 9 B  ROLLBACK                                                         → ROLLBACK</div>
-  <p>and in the write-skew scene at SERIALIZABLE, the second COMMIT fails:</p>
-  <div class="fx" data-lang="py">from sessions import Session
-A, B = Session('A'), Session('B')
+  <div class="fx" data-lang="text"> 1 A  BEGIN ISOLATION LEVEL REPEATABLE READ                          → BEGIN
+ 2 B  BEGIN ISOLATION LEVEL REPEATABLE READ                          → BEGIN
+ 3 A  SELECT stock FROM menu WHERE item = 'Samosa'                   → 1
+ 4 B  SELECT stock FROM menu WHERE item = 'Samosa'                   → 1
+ 5 A  UPDATE menu SET stock = 0 WHERE item = 'Samosa'                → UPDATE 1
+ 6 B  UPDATE menu SET stock = 0 WHERE item = 'Samosa'                → ... waiting
+ 7 A  COMMIT                                                         → COMMIT
+ 8 B  (the waiting statement)                                        → now returns: ERROR: could not serialize access due to concurrent update
+ 9 B  ROLLBACK                                                       → ROLLBACK</div>
+  <p>B waited for A's lock as before, but when A committed, B did not go ahead with its stale write. Its transaction is working from a snapshot taken before A's change, and writing over a row that someone else changed since that snapshot would be a lost update, so PostgreSQL raises "could not serialize access due to concurrent update". Write skew needs the strongest level. At SERIALIZABLE, the second rider's COMMIT is refused:</p>
+  <div class="fx" data-lang="py">A, B = Session('A'), Session('B')
 A.run("BEGIN ISOLATION LEVEL SERIALIZABLE"); B.run("BEGIN ISOLATION LEVEL SERIALIZABLE")
 A.run("SELECT count(*) FROM riders WHERE city = 'Mumbai' AND on_duty")
 B.run("SELECT count(*) FROM riders WHERE city = 'Mumbai' AND on_duty")
@@ -661,77 +448,78 @@ A.run("UPDATE riders SET on_duty = false WHERE name = 'Ravi'")
 B.run("UPDATE riders SET on_duty = false WHERE name = 'Sara'")
 A.run("COMMIT"); B.run("COMMIT")
 A.run("SELECT name FROM riders WHERE city = 'Mumbai' AND on_duty")</div>
-  <div class="fx" data-lang="text"> 1 A  BEGIN ISOLATION LEVEL SERIALIZABLE                               → BEGIN
- 2 B  BEGIN ISOLATION LEVEL SERIALIZABLE                               → BEGIN
- 3 A  SELECT count(*) FROM riders WHERE city = 'Mumbai' AND on_duty    → 2
- 4 B  SELECT count(*) FROM riders WHERE city = 'Mumbai' AND on_duty    → 2
- 5 A  UPDATE riders SET on_duty = false WHERE name = 'Ravi'            → UPDATE 1
- 6 B  UPDATE riders SET on_duty = false WHERE name = 'Sara'            → UPDATE 1
- 7 A  COMMIT                                                           → COMMIT
- 8 B  COMMIT                                                           → ERROR: could not serialize access due to read/write dependencies among transactions
- 9 A  SELECT name FROM riders WHERE city = 'Mumbai' AND on_duty        → Sara</div>
-  <p>Sara stays on duty. The application is expected to <strong>retry</strong> the failed transaction from the start (error code SQLSTATE <code>40001</code>, "serialization failure"); on retry, Sara's app sees only 1 rider on duty and refuses. A retry loop, run for real:</p>
-  <div class="fx" data-lang="py">import psycopg
-from psycopg import errors
+  <div class="fx" data-lang="text"> 1 A  BEGIN ISOLATION LEVEL SERIALIZABLE                             → BEGIN
+ 2 B  BEGIN ISOLATION LEVEL SERIALIZABLE                             → BEGIN
+ 3 A  SELECT count(*) FROM riders WHERE city = 'Mumbai' AND on_duty  → 2
+ 4 B  SELECT count(*) FROM riders WHERE city = 'Mumbai' AND on_duty  → 2
+ 5 A  UPDATE riders SET on_duty = false WHERE name = 'Ravi'          → UPDATE 1
+ 6 B  UPDATE riders SET on_duty = false WHERE name = 'Sara'          → UPDATE 1
+ 7 A  COMMIT                                                         → COMMIT
+ 8 B  COMMIT                                                         → ERROR: could not serialize access due to read/write dependencies among transactions
+ 9 A  SELECT name FROM riders WHERE city = 'Mumbai' AND on_duty      → Sara</div>
+  <p>Sara stays on duty. PostgreSQL implements SERIALIZABLE with a technique called <strong>Serializable Snapshot Isolation</strong> (SSI): it tracks which data each transaction read and wrote, and if the combination could not have happened in any serial order, it aborts one of the transactions. The application is expected to catch this error, which has the code SQLSTATE <code>40001</code> ("serialization failure"), and <strong>retry</strong> the whole transaction from the beginning. On the retry, the transaction sees the new data and makes a different decision. Here is a real retry loop:</p>
+  <div class="fx" data-lang="py">import psycopg2
+from psycopg2 import errors
 
-def go_off_duty(conn, name, other):
-    """One attempt; raises SerializationFailure if PostgreSQL aborts it."""
-    with conn.transaction():
-        conn.execute("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
-        n = conn.execute("SELECT count(*) FROM riders WHERE city = 'Mumbai' AND on_duty").fetchone()[0]
-        if other: other()                                  # the other rider acts in the same moment
+def connect():
+    c = psycopg2.connect(dbname="notes_b4"); c.autocommit = True
+    return c
+
+def go_off_duty(conn, name, meanwhile=None):
+    """One attempt at the whole transaction. Raises SerializationFailure if PostgreSQL aborts it."""
+    cur = conn.cursor()
+    cur.execute("BEGIN ISOLATION LEVEL SERIALIZABLE")
+    try:
+        cur.execute("SELECT count(*) FROM riders WHERE city = 'Mumbai' AND on_duty")
+        n = cur.fetchone()[0]
+        if meanwhile:
+            meanwhile()                      # the other rider acts at this very moment
         if n &lt; 2:
+            cur.execute("COMMIT")
             return f"{name}: only {n} on duty, staying"
-        conn.execute("UPDATE riders SET on_duty = false WHERE name = %s", (name,))
+        cur.execute("UPDATE riders SET on_duty = false WHERE name = %s", (name,))
+        cur.execute("COMMIT")
         return f"{name}: went off duty"
+    except errors.SerializationFailure:
+        cur.execute("ROLLBACK")
+        raise
 
-ravi, sara = psycopg.connect(autocommit=True), psycopg.connect(autocommit=True)
+ravi, sara = connect(), connect()
 for attempt in (1, 2, 3):
     try:
-        # Sara's transaction starts, and Ravi's whole transaction runs and commits inside it
-        print(go_off_duty(sara, 'Sara', other=(lambda: print(go_off_duty(ravi, 'Ravi', None))) if attempt == 1 else None))
+        # on the first attempt, Ravi's whole transaction runs inside Sara's
+        other = (lambda: print(go_off_duty(ravi, "Ravi"))) if attempt == 1 else None
+        print(go_off_duty(sara, "Sara", other))
         break
     except errors.SerializationFailure as e:
-        print(f"Sara attempt {attempt}: {e.sqlstate} {e.diag.message_primary} -&gt; retry")
-print(ravi.execute("SELECT name FROM riders WHERE city = 'Mumbai' AND on_duty").fetchall())</div>
+        print(f"Sara attempt {attempt}: {e.pgcode} {e.diag.message_primary} -&gt; retry")
+
+cur = ravi.cursor()
+cur.execute("SELECT name FROM riders WHERE city = 'Mumbai' AND on_duty")
+print("on duty now:", cur.fetchall())</div>
   <div class="fx" data-lang="text">Ravi: went off duty
 Sara attempt 1: 40001 could not serialize access due to read/write dependencies among transactions -&gt; retry
 Sara: only 1 on duty, staying
-[('Sara',)]</div>
-  <table class="tbl"><caption>Summary of the verified table (PostgreSQL 16)</caption>
-    <tr><th>Level</th><th>Snapshot taken</th><th>Dirty</th><th>Non-repeatable</th><th>Phantom</th><th>Lost update</th><th>Write skew</th></tr>
+on duty now: [('Sara',)]</div>
+  <p>On Sara's first attempt, Ravi's entire transaction ran and committed in the middle of hers, so her COMMIT failed with 40001. The loop retried; this time her transaction saw only one rider on duty and she stayed. A retry loop is not optional at SERIALIZABLE: serialization failures are expected behaviour, and without retries users simply see errors.</p>
+  <p>The levels differ in one basic way, which section 05 explains: when the transaction takes its <strong>snapshot</strong>, its frozen picture of the committed data. At <strong>READ COMMITTED</strong>, the default in PostgreSQL, SQL Server and Oracle, every statement takes a fresh snapshot, so each statement sees everything committed before it began. At <strong>REPEATABLE READ</strong>, the transaction takes one snapshot at its first query and reads from it until the end, so repeated reads always agree; in PostgreSQL this is called <strong>snapshot isolation</strong>. At <strong>SERIALIZABLE</strong>, the transaction also has one snapshot, plus SSI's dependency tracking. Think of studying in a room. At READ COMMITTED the door is open and you notice every change as it happens. At REPEATABLE READ you work from a photograph of the room taken when you came in. At SERIALIZABLE it looks as if only one person is ever in the room, and if two people's work could not have happened one after the other, one of them is asked to start again.</p>
+  <table class="tbl">
+    <tr><th>Level (PostgreSQL)</th><th>Snapshot</th><th>Dirty</th><th>Non-repeatable</th><th>Phantom</th><th>Lost update</th><th>Write skew</th></tr>
     <tr><td>READ UNCOMMITTED</td><td>behaves as READ COMMITTED</td><td>No</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
-    <tr><td><strong>READ COMMITTED</strong> (default)</td><td>per statement</td><td>No</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
-    <tr><td>REPEATABLE READ</td><td>per transaction (first query)</td><td>No</td><td>No</td><td>No</td><td>No (error)</td><td>Yes</td></tr>
-    <tr><td>SERIALIZABLE</td><td>per transaction + dependency tracking</td><td>No</td><td>No</td><td>No</td><td>No (error)</td><td>No (error)</td></tr>
+    <tr><td>READ COMMITTED (default)</td><td>per statement</td><td>No</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>REPEATABLE READ</td><td>per transaction</td><td>No</td><td>No</td><td>No</td><td>No (error)</td><td>Yes</td></tr>
+    <tr><td>SERIALIZABLE</td><td>per transaction + SSI</td><td>No</td><td>No</td><td>No</td><td>No (error)</td><td>No (error)</td></tr>
   </table>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Studying in a room. READ COMMITTED: the door is open and you notice every change as it happens. REPEATABLE READ: you work from a photo of the room taken when you came in. SERIALIZABLE: it looks as if only one person is ever in the room; if two people's work could not have happened one after the other, one of them is asked to start again.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>An <strong>isolation level</strong> sets how much a transaction is shielded from concurrent ones (<code>BEGIN ISOLATION LEVEL …</code>). <strong>Snapshot isolation</strong> (PostgreSQL's REPEATABLE READ): the transaction reads one consistent snapshot. <strong>Serializable</strong>: the outcome equals some serial order; PostgreSQL achieves it by aborting a transaction that would break that (SSI), so the application must retry on 40001.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: engines differ</span>
-    <p>PostgreSQL's REPEATABLE READ prevents phantoms (stricter than the SQL standard requires) and raises an error on lost updates. MySQL InnoDB's default is REPEATABLE READ and, per its documentation, a plain UPDATE there reads the latest committed row rather than failing; we did not run MySQL here. Never assume concurrency code is portable; test it on your engine.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: MVCC.</b> At REPEATABLE READ, session A kept seeing stock 1 after B committed 5. There is only one samosa row. Where does A's old value come from, and how can that work without making B wait?</div>
+  <p>Two cautions. First, engines differ. The SQL standard only says which anomalies each level must prevent at minimum; PostgreSQL's REPEATABLE READ is stricter than required (it prevents phantoms) and raises an error on lost updates. MySQL's InnoDB uses REPEATABLE READ as its default, and according to its documentation a plain UPDATE there reads the latest committed row instead of failing, so the samosa scene behaves differently; that was not run here. Never assume concurrency code is portable between databases. Second, in practice most applications stay at READ COMMITTED and protect the few places that need it with the locking techniques of the next sections; REPEATABLE READ is common for reports that must see one consistent picture, and SERIALIZABLE for rules that span several rows, provided the code retries.</p>
 
-  <h2 id="st-mvcc"><span class="num">06</span>MVCC: Many Versions of One Row</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>A REPEATABLE READ transaction kept reading stock 1 while another session committed 5. If the table held only one copy of the samosa row, either the reader would have to wait for the writer, or it would see the new value. It did neither. How?</p>
-  </div>
-  <p>PostgreSQL never overwrites a row in place. An UPDATE writes a <strong>new version</strong> of the row and marks the old version as replaced; both stay in the table for a while (<a class="xref" data-note="sql_optimization">Indexes &amp; Performance</a> section 02 watched the ctid move). Each version carries two hidden numbers:</p>
-  <ul>
-    <li><code>xmin</code>: the id of the transaction that <em>created</em> this version.</li>
-    <li><code>xmax</code>: the id of the transaction that <em>deleted or replaced</em> it (0 if none yet).</li>
-  </ul>
-  <p>Each transaction (or, at READ COMMITTED, each statement) takes a <strong>snapshot</strong>: the list of transactions that had committed when it started. A version is visible to you if its xmin committed before your snapshot and its xmax did not. Watch it on the Buddha Bowl row (stock 5), with B updating it while A has an open REPEATABLE READ transaction:</p>
-  <div class="fx" data-lang="py">from sessions import Session
-A, B = Session('A'), Session('B')
+  <h2 id="st-mvcc"><span class="num">05</span>MVCC: Many Versions of One Row</h2>
+  <p>At REPEATABLE READ, session A kept reading the old samosa stock after B had committed a new one, and B did not have to wait for A. If the table held only one copy of each row, that would be impossible: either the reader would have to wait for the writer, or it would see the new value. PostgreSQL, like Oracle, MySQL's InnoDB and most modern databases, solves this with <strong>MVCC</strong>, multi-version concurrency control: an UPDATE never overwrites a row in place. It writes a <strong>new version</strong> of the row and marks the old version as replaced, and both versions stay in the table for a while (the <a class="xref" data-note="sql_optimization">Indexes &amp; Performance</a> note watched a row's address change on UPDATE). Think of the page history of a Wikipedia article: an edit creates a new revision, and someone already reading the old revision is not interrupted.</p>
+  <p>To know which version each transaction should see, every row version carries two hidden numbers. <code>xmin</code> is the id of the transaction that created this version, and <code>xmax</code> is the id of the transaction that deleted or replaced it (0 if nobody has). Each transaction, or each statement at READ COMMITTED, takes a <strong>snapshot</strong>, which records which transactions had committed when it was taken. A version is visible to you if the transaction that created it had committed before your snapshot, and the transaction that replaced it (if any) had not. Watch this on the Buddha Bowl row, which has stock 5, while B updates it and A has an open REPEATABLE READ transaction:</p>
+  <div class="fx" data-lang="py">A, B = Session('A'), Session('B')
 A.run("BEGIN ISOLATION LEVEL REPEATABLE READ")
 A.run("SELECT xmin, xmax, ctid, stock FROM menu WHERE item = 'Buddha Bowl'")
 B.run("BEGIN")
-B.run("SELECT pg_current_xact_id()")                                    # B's transaction id
+B.run("SELECT pg_current_xact_id()")                                 # B's transaction id
 B.run("UPDATE menu SET stock = 4 WHERE item = 'Buddha Bowl'")
 B.run("SELECT xmin, xmax, ctid, stock FROM menu WHERE item = 'Buddha Bowl'")
 A.run("SELECT xmin, xmax, ctid, stock FROM menu WHERE item = 'Buddha Bowl'")
@@ -739,29 +527,29 @@ B.run("COMMIT")
 A.run("SELECT xmin, xmax, ctid, stock FROM menu WHERE item = 'Buddha Bowl'")
 A.run("COMMIT")
 A.run("SELECT xmin, xmax, ctid, stock FROM menu WHERE item = 'Buddha Bowl'")</div>
-  <div class="fx" data-lang="text"> 1 A  BEGIN ISOLATION LEVEL REPEATABLE READ                            → BEGIN
- 2 A  SELECT xmin, xmax, ctid, stock FROM menu WHERE item = 'Buddha Bowl' → (1404, 0, (0,3), 5)
- 3 B  BEGIN                                                            → BEGIN
- 4 B  SELECT pg_current_xact_id()                                      → 1912
- 5 B  UPDATE menu SET stock = 4 WHERE item = 'Buddha Bowl'             → UPDATE 1
- 6 B  SELECT xmin, xmax, ctid, stock FROM menu WHERE item = 'Buddha Bowl' → (1912, 0, (0,4), 4)
- 7 A  SELECT xmin, xmax, ctid, stock FROM menu WHERE item = 'Buddha Bowl' → (1404, 1912, (0,3), 5)
- 8 B  COMMIT                                                           → COMMIT
- 9 A  SELECT xmin, xmax, ctid, stock FROM menu WHERE item = 'Buddha Bowl' → (1404, 1912, (0,3), 5)
-10 A  COMMIT                                                           → COMMIT
-11 A  SELECT xmin, xmax, ctid, stock FROM menu WHERE item = 'Buddha Bowl' → (1912, 0, (0,4), 4)</div>
-  <p>Trace the numbers. The original version sits at ctid (0,3), created by the transaction that loaded the data (its xmin). B's UPDATE creates a new version at a new ctid with <code>xmin</code> = B's id and stock 4, and stamps B's id into the old version's <code>xmax</code>. A, whose snapshot was taken before B started, keeps reading the old version (stock 5, xmax = B's id) even after B commits, because B is not in A's snapshot. Once A finishes, a fresh statement sees the new version (stock 4, xmax 0). Nobody waited. Both versions are physically in the page:</p>
-  <div class="fx" data-lang="py">import psycopg
-c = psycopg.connect(autocommit=True)
-c.execute("CREATE EXTENSION IF NOT EXISTS pageinspect")
-q = """SELECT lp AS slot, t_xmin AS xmin, t_xmax AS xmax, t_ctid AS points_to
-       FROM heap_page_items(get_raw_page('menu', 0)) WHERE lp_flags = 1"""
-print("before VACUUM:", c.execute(q).fetchall())
-c.execute("VACUUM menu")
-print("after VACUUM: ", c.execute(q).fetchall())</div>
-  <div class="fx" data-lang="text">before VACUUM: [(1, '1404', '0', '(0,1)'), (2, '1404', '0', '(0,2)'), (3, '1404', '1912', '(0,4)'), (4, '1912', '0', '(0,4)')]
-after VACUUM:  [(1, '1404', '0', '(0,1)'), (2, '1404', '0', '(0,2)'), (4, '1912', '0', '(0,4)')]</div>
-  <p>Before VACUUM: slot 3 is the old Buddha Bowl version (xmax = B's id, its <code>t_ctid</code> pointing at its replacement), alongside the live versions. After VACUUM: the old version is gone, because no running transaction could still need it.</p>
+  <div class="fx" data-lang="text"> 1 A  BEGIN ISOLATION LEVEL REPEATABLE READ                          → BEGIN
+ 2 A  SELECT xmin, xmax, ctid, stock FROM menu WHERE item = 'Buddha Bowl' → (19866, 0, (0,3), 5)
+ 3 B  BEGIN                                                          → BEGIN
+ 4 B  SELECT pg_current_xact_id()                                    → 19878
+ 5 B  UPDATE menu SET stock = 4 WHERE item = 'Buddha Bowl'           → UPDATE 1
+ 6 B  SELECT xmin, xmax, ctid, stock FROM menu WHERE item = 'Buddha Bowl' → (19878, 0, (0,4), 4)
+ 7 A  SELECT xmin, xmax, ctid, stock FROM menu WHERE item = 'Buddha Bowl' → (19866, 19878, (0,3), 5)
+ 8 B  COMMIT                                                         → COMMIT
+ 9 A  SELECT xmin, xmax, ctid, stock FROM menu WHERE item = 'Buddha Bowl' → (19866, 19878, (0,3), 5)
+10 A  COMMIT                                                         → COMMIT
+11 A  SELECT xmin, xmax, ctid, stock FROM menu WHERE item = 'Buddha Bowl' → (19878, 0, (0,4), 4)</div>
+  <p>Follow the numbers. At step 2 the row's only version sits at address (0,3), created by the transaction that loaded the data, with xmax 0. At step 5 B updates it. B now sees a new version at (0,4) with <code>xmin</code> equal to B's own transaction id and stock 4. At step 7, A still sees the old version with stock 5, but its <code>xmax</code> now holds B's id: the old version has been marked as replaced by B. Even after B commits (step 9), A keeps reading the old version, because B was not committed when A's snapshot was taken. Only once A finishes does a fresh statement see the new version, with stock 4. Nobody waited for anybody. Both versions are physically in the table page, as the raw page shows:</p>
+  <div class="fx" data-lang="py">import psycopg2
+c = psycopg2.connect(dbname="notes_b4"); c.autocommit = True
+cur = c.cursor()
+look = """SELECT lp AS slot, t_xmin AS xmin, t_xmax AS xmax, t_ctid AS points_to
+          FROM heap_page_items(get_raw_page('menu', 0)) WHERE lp_flags = 1"""
+cur.execute(look); print("before VACUUM:", cur.fetchall())
+cur.execute("VACUUM menu")
+cur.execute(look); print("after VACUUM: ", cur.fetchall())</div>
+  <div class="fx" data-lang="text">before VACUUM: [(1, '19866', '0', '(0,1)'), (2, '19866', '0', '(0,2)'), (3, '19866', '19878', '(0,4)'), (4, '19878', '0', '(0,4)')]
+after VACUUM:  [(1, '19866', '0', '(0,1)'), (2, '19866', '0', '(0,2)'), (4, '19878', '0', '(0,4)')]</div>
+  <p>Before VACUUM, slot 3 holds the old Buddha Bowl version with B's id as xmax, and its <code>points_to</code> leads to its replacement in slot 4. After VACUUM, the old version is gone, because no running transaction could still need it.</p>
   <figure class="viz"><svg viewBox="0 0 600 170" width="600">
     <defs><marker id="st-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <rect x="158" y="10" width="236" height="56" rx="6" class="fs" stroke="currentColor" stroke-dasharray="4 3" stroke-opacity=".5"/>
@@ -770,7 +558,7 @@ after VACUUM:  [(1, '1404', '0', '(0,1)'), (2, '1404', '0', '(0,2)'), (4, '1912'
     <text x="276" y="61" text-anchor="middle" font-size="10" class="tr">dead once B commits and A ends</text>
     <rect x="158" y="98" width="236" height="56" rx="6" class="fg sg"/>
     <text x="276" y="118" text-anchor="middle">v2 · stock 4</text>
-    <text x="276" y="136" text-anchor="middle" font-size="10" class="tm">new ctid · xmin = B · xmax 0</text>
+    <text x="276" y="136" text-anchor="middle" font-size="10" class="tm">ctid (0,4) · xmin = B · xmax 0</text>
     <line x1="276" y1="66" x2="276" y2="96" stroke="currentColor" marker-end="url(#st-ar2)"/><text x="284" y="86" font-size="10" class="tm">UPDATE by B</text>
     <rect x="0" y="22" width="130" height="34" rx="6" class="fb sb"/><text x="65" y="36" text-anchor="middle" font-size="11">A's snapshot</text><text x="65" y="50" text-anchor="middle" font-size="10" class="tm">taken before B</text>
     <line x1="130" y1="39" x2="156" y2="39" stroke="currentColor" marker-end="url(#st-ar2)"/>
@@ -780,162 +568,155 @@ after VACUUM:  [(1, '1404', '0', '(0,1)'), (2, '1404', '0', '(0,2)'), (4, '1912'
     <line x1="430" y1="39" x2="396" y2="39" stroke="currentColor" marker-end="url(#st-ar2)"/>
     <text x="512" y="74" text-anchor="middle" font-size="10" class="tm">only when no snapshot</text><text x="512" y="87" text-anchor="middle" font-size="10" class="tm">can still see it</text>
   </svg><figcaption>One logical row, two physical versions. Each snapshot reads the version that was committed when it was taken.</figcaption></figure>
-  <h3>The cost: a long transaction blocks clean-up</h3>
-  <p>VACUUM may only remove a dead version when <em>no</em> snapshot could still see it. One forgotten open transaction (a notebook that ran BEGIN and went to lunch) pins every version created after it:</p>
-  <div class="fx" data-lang="py">import psycopg
-lunch = psycopg.connect(autocommit=True)
-lunch.execute("BEGIN ISOLATION LEVEL REPEATABLE READ")
-lunch.execute("SELECT count(*) FROM menu")                     # snapshot taken, then left open
+  <p>The figure sums it up: one logical row, two physical versions, and each snapshot pointed at the version that was committed when the snapshot was taken. This also explains the isolation levels: they differ mainly in <em>when</em> the snapshot is taken, per statement or per transaction. The famous consequence of MVCC is that <strong>readers never block writers and writers never block readers</strong>. Two writers on the same row still conflict, though, because there can only be one "next version" of a row; that is what locks handle (section 06).</p>
+  <p>MVCC has a cost: dead versions pile up until VACUUM removes them, and VACUUM may only remove a version when <em>no</em> snapshot could still see it. So one forgotten open transaction, for example a notebook that ran BEGIN and then the user went to lunch, prevents the clean-up of every version that became dead after its snapshot was taken:</p>
+  <div class="fx" data-lang="py">import psycopg2
 
-app = psycopg.connect(autocommit=True)
-for s in (19, 18, 17):
+def connect():
+    c = psycopg2.connect(dbname="notes_b4"); c.autocommit = True
+    return c
+
+lunch = connect().cursor()
+lunch.execute("BEGIN ISOLATION LEVEL REPEATABLE READ")
+lunch.execute("SELECT count(*) FROM menu")          # snapshot taken... and left open
+
+app_conn = connect(); app = app_conn.cursor()
+for s in (19, 18, 17):                              # three ordinary updates = three dead versions
     app.execute("UPDATE menu SET stock = %s WHERE item = 'Chicken Biryani'", (s,))
 
-msgs = []
-app.add_notice_handler(lambda d: msgs.append(d.message_primary))
-app.execute("VACUUM (VERBOSE) menu")
-def tuples_line():
-    return [line for m in msgs for line in m.split('\\n') if line.startswith('tuples:')][0]
-print("lunch transaction open:", tuples_line())
+def vacuum_report():
+    app_conn.notices.clear()
+    app.execute("VACUUM (VERBOSE) menu")
+    return [l.strip() for n in app_conn.notices for l in n.splitlines() if l.strip().startswith('tuples:')][0]
+
+print("lunch transaction open:", vacuum_report())
 lunch.execute("COMMIT")
-msgs.clear(); app.execute("VACUUM (VERBOSE) menu")
-print("after it commits:      ", tuples_line())</div>
+print("after it commits:      ", vacuum_report())</div>
   <div class="fx" data-lang="text">lunch transaction open: tuples: 0 removed, 6 remain, 3 are dead but not yet removable
 after it commits:       tuples: 3 removed, 3 remain, 0 are dead but not yet removable</div>
-  <p>With the idle transaction open: 3 dead versions "not yet removable". After it ends: removed. On a busy table, an open transaction left for hours means millions of unremovable versions (<strong>bloat</strong>): bigger tables, slower scans.</p>
-  <div class="cards">
-    <div><b>Readers vs writers</b><p>Never block each other: each reads its snapshot's version.</p></div>
-    <div><b>Writer vs writer</b><p>Same row still waits: there can be only one next version (section 07).</p></div>
-    <div><b>VACUUM</b><p>Removes versions no snapshot can see; blocked by long transactions.</p></div>
-  </div>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Wikipedia page history. An edit creates a new revision; someone reading the old revision is not interrupted. Old revisions are cleared out only when nobody is reading them.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>MVCC</strong> (multi-version concurrency control): writes create new row versions stamped with <code>xmin</code>/<code>xmax</code> transaction ids; every transaction reads the versions visible to its <strong>snapshot</strong>. Isolation levels differ only in <em>when</em> the snapshot is taken (per statement or per transaction). VACUUM reclaims dead versions.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Sessions sitting "idle in transaction" (check <code>pg_stat_activity.state</code>). They hold back VACUUM for the whole database. Set <code>idle_in_transaction_session_timeout</code>, and never keep a transaction open while waiting for a user or an API call.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: locks and SELECT … FOR UPDATE.</b> MVCC lets readers and writers ignore each other. But two writers on the samosa row cannot both create "the next version", and a reader that is about to write (read stock, then decide) needs to stop others from writing in between. That is what locks are for.</div>
+  <p>With the idle transaction open, VACUUM reports three dead versions that are "not yet removable". As soon as it ends, they are removed. On a busy table, a transaction left open for hours means millions of unremovable versions, which is called <strong>bloat</strong>: tables grow, scans read more pages, and everything slows down. You can spot such sessions in <code>pg_stat_activity</code> with the state "idle in transaction", and the setting <code>idle_in_transaction_session_timeout</code> kills them automatically. The lesson for application code is: never keep a transaction open while waiting for a user, a network call or anything slow.</p>
 
-  <h2 id="st-locks"><span class="num">07</span>Locks and SELECT … FOR UPDATE</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The lost update happened because Farah's app read the stock, then Ben's order took the samosa, then Farah's app wrote a value computed from its stale read. At READ COMMITTED nothing stopped the read from going stale. How do we make the second buyer <em>wait</em> until the first is done, and then see the truth?</p>
-  </div>
-  <p>Every UPDATE or DELETE takes a <strong>row lock</strong> on the rows it changes, held until COMMIT or ROLLBACK; a second writer on the same row waits (we saw B wait in section 04). <code>SELECT … FOR UPDATE</code> takes that same lock while <em>reading</em>: "I'm reading this because I'm about to change it". Ben and Farah again, now with FOR UPDATE, and a third connection C watching who is waiting:</p>
-  <div class="fx" data-lang="py">from sessions import Session
-A, B, C = Session('A'), Session('B'), Session('C')
+  <h2 id="st-locks"><span class="num">06</span>Locks and SELECT … FOR UPDATE</h2>
+  <p>The lost update happened because Farah's app read the stock, then Ben's order took the samosa, and then Farah's app wrote a value computed from its stale read. At READ COMMITTED nothing stopped her read from going stale. What we want is for the second buyer to <em>wait</em> until the first has finished, and then see the truth. That is the job of a <strong>lock</strong>, a marker that gives one transaction temporary exclusive rights over something, so that others who want conflicting rights must wait.</p>
+  <p>Every UPDATE or DELETE automatically takes a <strong>row lock</strong> on each row it changes, and holds it until the transaction commits or rolls back; we saw B wait on it in section 03. The statement <code>SELECT … FOR UPDATE</code> takes that same lock while <em>reading</em>, which tells the database "I am reading this row because I am about to change it". Think of a trial room in a shop: you lock the door while you are inside, and everyone else waits outside until you come out. Here are Ben and Farah again, now using FOR UPDATE, with a third connection C looking at what each session is doing:</p>
+  <div class="fx" data-lang="py">A, B, C = Session('A'), Session('B'), Session('C')
 A.run("BEGIN"); B.run("BEGIN")
 A.run("SELECT stock FROM menu WHERE item = 'Samosa' FOR UPDATE")          # Ben locks the row: 1 left
 job = B.start("SELECT stock FROM menu WHERE item = 'Samosa' FOR UPDATE")  # Farah must wait
-C.run("SELECT application_name, wait_event_type FROM pg_stat_activity WHERE application_name IN ('A','B') ORDER BY 1")
+C.run("SELECT application_name, wait_event_type FROM pg_stat_activity WHERE application_name IN ('A', 'B') ORDER BY 1")
 A.run("UPDATE menu SET stock = 0 WHERE item = 'Samosa'")
 A.run("INSERT INTO orders VALUES (111, 2, 11, now(), 'pending', 40, NULL)")
 A.run("COMMIT")
 B.finish(job)                                                             # Farah's read returns now
-B.run("ROLLBACK")                                                         # her app sees 0: "sold out"
+B.run("ROLLBACK")                                                         # her app sees 0: sold out
 C.run("SELECT count(*) FROM orders WHERE order_id IN (111, 112)")</div>
-  <div class="fx" data-lang="text"> 1 A  BEGIN                                                            → BEGIN
- 2 B  BEGIN                                                            → BEGIN
- 3 A  SELECT stock FROM menu WHERE item = 'Samosa' FOR UPDATE          → 1
- 4 B  SELECT stock FROM menu WHERE item = 'Samosa' FOR UPDATE          → ... still running: waiting for a lock
- 5 C  SELECT application_name, wait_event_type FROM pg_stat_activity WHERE application_name IN ('A','B') ORDER BY 1 → (A, Client), (B, Lock)
- 6 A  UPDATE menu SET stock = 0 WHERE item = 'Samosa'                  → UPDATE 1
+  <div class="fx" data-lang="text"> 1 A  BEGIN                                                          → BEGIN
+ 2 B  BEGIN                                                          → BEGIN
+ 3 A  SELECT stock FROM menu WHERE item = 'Samosa' FOR UPDATE        → 1
+ 4 B  SELECT stock FROM menu WHERE item = 'Samosa' FOR UPDATE        → ... waiting
+ 5 C  SELECT application_name, wait_event_type FROM pg_stat_activity WHERE application_name IN ('A', 'B') ORDER BY 1 → (A, Client), (B, Lock)
+ 6 A  UPDATE menu SET stock = 0 WHERE item = 'Samosa'                → UPDATE 1
  7 A  INSERT INTO orders VALUES (111, 2, 11, now(), 'pending', 40, NULL) → INSERT 0 1
- 8 A  COMMIT                                                           → COMMIT
- 9 B  (the waiting statement)                                          → now returns: 0
-10 B  ROLLBACK                                                         → ROLLBACK
-11 C  SELECT count(*) FROM orders WHERE order_id IN (111, 112)         → 1</div>
-  <p>Trace it: A's FOR UPDATE locks the row. B's FOR UPDATE on the same row waits (C sees <code>wait_event_type = Lock</code> for B). A sells the samosa and commits, releasing the lock. B's read then returns the <em>new</em> committed stock, 0, so Farah's app says "sold out". One samosa, one order. (At READ COMMITTED, a statement that waited on a lock re-reads the latest committed version of the row before continuing.)</p>
-  <h3>Even simpler: let one UPDATE check and change</h3>
-  <p>When the decision is just "only if stock is above 0", put the check inside the UPDATE. The row lock plus re-check happen inside one statement:</p>
-  <div class="fx" data-lang="py">from sessions import Session
-A, B = Session('A'), Session('B')
+ 8 A  COMMIT                                                         → COMMIT
+ 9 B  (the waiting statement)                                        → now returns: 0
+10 B  ROLLBACK                                                       → ROLLBACK
+11 C  SELECT count(*) FROM orders WHERE order_id IN (111, 112)       → 1</div>
+  <p>A's FOR UPDATE locks the samosa row and returns 1. B's FOR UPDATE on the same row has to wait, and C can see it: B's <code>wait_event_type</code> is <code>Lock</code>. A sells the samosa and commits, which releases the lock. B's read then returns, and it returns the <em>new</em> committed stock, 0, so Farah's app says "sold out". One samosa, one order. The key detail is that at READ COMMITTED, a statement that had to wait for a row lock re-reads the latest committed version of that row before continuing, so B never works with stale data.</p>
+  <p>When the decision is as simple as "only if there is stock left", there is an even simpler and very common pattern: put the check inside the UPDATE itself, so that checking and changing happen in one statement under one row lock:</p>
+  <div class="fx" data-lang="py">A, B = Session('A'), Session('B')
 A.run("BEGIN"); B.run("BEGIN")
 A.run("UPDATE menu SET stock = stock - 1 WHERE item = 'Samosa' AND stock &gt; 0")
 job = B.start("UPDATE menu SET stock = stock - 1 WHERE item = 'Samosa' AND stock &gt; 0")
 A.run("COMMIT")
 B.finish(job)                       # UPDATE 0: no row matched any more, so the app says "sold out"
 B.run("ROLLBACK")</div>
-  <div class="fx" data-lang="text"> 1 A  BEGIN                                                            → BEGIN
- 2 B  BEGIN                                                            → BEGIN
+  <div class="fx" data-lang="text"> 1 A  BEGIN                                                          → BEGIN
+ 2 B  BEGIN                                                          → BEGIN
  3 A  UPDATE menu SET stock = stock - 1 WHERE item = 'Samosa' AND stock &gt; 0 → UPDATE 1
- 4 B  UPDATE menu SET stock = stock - 1 WHERE item = 'Samosa' AND stock &gt; 0 → ... still running: waiting for a lock
- 5 A  COMMIT                                                           → COMMIT
- 6 B  (the waiting statement)                                          → now returns: UPDATE 0
- 7 B  ROLLBACK                                                         → ROLLBACK</div>
-  <p><code>UPDATE 1</code> for Ben, <code>UPDATE 0</code> for Farah: after waiting, B re-evaluated <code>stock &gt; 0</code> on the committed row (stock 0) and changed nothing. The app checks the row count. This is the standard fix for counters, stock and seat bookings.</p>
-  <h3>SKIP LOCKED: a dispatch queue</h3>
-  <p>Biteful's dispatchers pull pending orders to assign riders. With plain FOR UPDATE, every dispatcher would queue behind the same first row. <code>SKIP LOCKED</code> makes each one skip rows another holds and take the next free one:</p>
-  <div class="fx" data-lang="py">from sessions import Session
-A, B = Session('A'), Session('B')
+ 4 B  UPDATE menu SET stock = stock - 1 WHERE item = 'Samosa' AND stock &gt; 0 → ... waiting
+ 5 A  COMMIT                                                         → COMMIT
+ 6 B  (the waiting statement)                                        → now returns: UPDATE 0
+ 7 B  ROLLBACK                                                       → ROLLBACK</div>
+  <p>Ben's statement reports <code>UPDATE 1</code>: one row changed. Farah's waited, then re-evaluated <code>stock &gt; 0</code> on the committed row, found stock 0, and changed nothing: <code>UPDATE 0</code>. The application checks the number of rows changed and tells Farah the samosa is sold out. This "conditional atomic update" is the standard fix for counters, stock levels, seat bookings and wallet balances, and it needs no special isolation level.</p>
+  <p>Locks are also useful for work queues. Biteful's dispatchers each pick the next pending order and assign a rider. With plain FOR UPDATE, every dispatcher would queue up behind whoever locked the first pending order. Adding <code>SKIP LOCKED</code> makes each one skip rows already locked by someone else and take the next free one:</p>
+  <div class="fx" data-lang="py">A, B = Session('A'), Session('B')                  # two dispatchers
 A.run("INSERT INTO orders VALUES (111, 2, 11, now(), 'pending', 40, NULL), (112, 6, 11, now(), 'pending', 40, NULL)")
 A.run("BEGIN"); B.run("BEGIN")
 A.run("SELECT order_id FROM orders WHERE status = 'pending' ORDER BY order_id LIMIT 1 FOR UPDATE SKIP LOCKED")
 B.run("SELECT order_id FROM orders WHERE status = 'pending' ORDER BY order_id LIMIT 1 FOR UPDATE SKIP LOCKED")
 A.run("COMMIT"); B.run("COMMIT")</div>
   <div class="fx" data-lang="text"> 1 A  INSERT INTO orders VALUES (111, 2, 11, now(), 'pending', 40, NULL), (112, 6, 11, now(), 'pending', 40, NULL) → INSERT 0 2
- 2 A  BEGIN                                                            → BEGIN
- 3 B  BEGIN                                                            → BEGIN
+ 2 A  BEGIN                                                          → BEGIN
+ 3 B  BEGIN                                                          → BEGIN
  4 A  SELECT order_id FROM orders WHERE status = 'pending' ORDER BY order_id LIMIT 1 FOR UPDATE SKIP LOCKED → 110
  5 B  SELECT order_id FROM orders WHERE status = 'pending' ORDER BY order_id LIMIT 1 FOR UPDATE SKIP LOCKED → 111
- 6 A  COMMIT                                                           → COMMIT
- 7 B  COMMIT                                                           → COMMIT</div>
-  <p>A got 110, B got 111, nobody waited, nobody got the same order.</p>
-  <h3>Optimistic locking: no lock while a human is typing</h3>
-  <p>Two admins open Biteful's menu editor and change the samosa price. A database lock can't be held across minutes of typing and two web requests. Instead, each row carries a <code>version</code>; the save only succeeds if the version is still the one the admin loaded. Both admins loaded price 40, version 1; the first saves 45, the second saves 50:</p>
+ 6 A  COMMIT                                                         → COMMIT
+ 7 B  COMMIT                                                         → COMMIT</div>
+  <p>A got order 110 and B got 111; nobody waited and nobody took the same order. (The related option <code>NOWAIT</code> raises an error immediately instead of waiting, useful when waiting is pointless.)</p>
+  <p>Rows are not the only things that get locked. Every statement also takes a <strong>table lock</strong> in some mode. Ordinary SELECTs, INSERTs and UPDATEs take weak modes that do not conflict with each other, which is why thousands of sessions can use one table at once. But most ALTER TABLE commands need an ACCESS EXCLUSIVE lock, which conflicts with everything, even plain reads. This creates a classic production incident:</p>
+  <div class="fx" data-lang="py">A, B, C = Session('A'), Session('B'), Session('C')
+A.run("BEGIN")
+A.run("SELECT count(*) FROM menu")                               # a report, still open
+job_b = B.start("ALTER TABLE menu ADD COLUMN spicy boolean")     # needs an exclusive table lock
+job_c = C.start("SELECT stock FROM menu WHERE item = 'Samosa'")  # an ordinary customer read
+A.run("COMMIT")
+B.finish(job_b)
+C.finish(job_c)</div>
+  <div class="fx" data-lang="text"> 1 A  BEGIN                                                          → BEGIN
+ 2 A  SELECT count(*) FROM menu                                      → 3
+ 3 B  ALTER TABLE menu ADD COLUMN spicy boolean                      → ... waiting
+ 4 C  SELECT stock FROM menu WHERE item = 'Samosa'                   → ... waiting
+ 5 A  COMMIT                                                         → COMMIT
+ 6 B  (the waiting statement)                                        → now returns: ALTER TABLE
+ 7 C  (the waiting statement)                                        → now returns: 1</div>
+  <p>A is a long report holding an ordinary read lock on menu. B's ALTER TABLE needs the exclusive lock, so it waits for A. Then C, a simple customer read that does not conflict with A at all, also waits, because it is queued behind B's pending exclusive request. Until A finishes, every new query on the table piles up behind the ALTER TABLE. On a busy website this looks like a sudden outage caused by a "harmless" schema change. The usual protection is to run schema changes with a short <code>lock_timeout</code>, so the ALTER gives up and retries later instead of blocking everyone.</p>
+  <p>Locks have limits, too. FOR UPDATE can only lock rows that exist and that the query reads. It does not stop write skew unless you lock all the rows the decision was based on (for the riders, both Ravi's and Sara's rows), and it cannot lock rows that do not exist yet, so it cannot prevent a phantom insert. For those cases the answers are SERIALIZABLE with retries, or a constraint that makes the rule part of the schema.</p>
+
+  <h2 id="st-optim"><span class="num">07</span>Optimistic Locking</h2>
+  <p>Row locks work well when transactions are short. But consider two Biteful admins who both open the menu editor at the same time to change the samosa's price. Each loads the form, thinks for a minute, and clicks Save. A database lock cannot be held across minutes of human thinking and two separate web requests; the lock would block other users the whole time, and the web request that took it has long finished. Yet without protection, the second admin's save silently overwrites the first one's: a lost update spread over minutes.</p>
+  <p><strong>Optimistic locking</strong> (or optimistic concurrency control) handles this by detecting conflicts instead of preventing them. Each row carries a <code>version</code> number. The form remembers the version it loaded, and the save only succeeds if the row still has that version, bumping it at the same time. Both admins loaded price 40 at version 1; the first saves 45, then the second saves 50:</p>
   <div class="fx" data-lang="sql">ALTER TABLE menu ADD COLUMN version INT NOT NULL DEFAULT 1;
+-- both admins loaded: price 40, version 1
 UPDATE menu SET price = 45, version = version + 1 WHERE item = 'Samosa' AND version = 1;
 UPDATE menu SET price = 50, version = version + 1 WHERE item = 'Samosa' AND version = 1;
 SELECT item, price, version FROM menu WHERE item = 'Samosa';</div>
-  <div class="fx" data-lang="text">UPDATE 1</div>
-  <div class="fx" data-lang="text">UPDATE 0</div>
-  <table class="tbl out"><caption>Final row</caption><tr><th>item</th><th>price</th><th>version</th></tr><tr><td>Samosa</td><td>45.00</td><td>2</td></tr></table>
-  <p>The first save matched version 1 and bumped it to 2 (<code>UPDATE 1</code>). The second looked for version 1, found 2, and changed nothing (<code>UPDATE 0</code>): the app tells that admin "someone changed this; reload". No lock was held while anyone typed.</p>
+  <div class="fx" data-lang="text">ALTER TABLE
+UPDATE 1
+UPDATE 0
+  item  | price | version
+--------+-------+---------
+ Samosa | 45.00 |       2
+(1 row)</div>
+  <p>The first save found version 1, changed the price and bumped the version to 2 (<code>UPDATE 1</code>). The second save looked for version 1, found 2, and changed nothing (<code>UPDATE 0</code>), so the application tells that admin "someone else changed this item; please reload". No lock was held while anyone was typing. Think of a shared document editor that warns "this file has changed since you opened it" when you try to save. The name comes from the assumption: <em>optimistic</em> locking assumes conflicts are rare and pays only when one happens (with a retry), while <em>pessimistic</em> locking, FOR UPDATE, assumes conflicts are likely and makes everyone wait in turn. Many ORMs support a version column out of the box.</p>
   <table class="tbl">
-    <tr><th></th><th>Pessimistic (FOR UPDATE)</th><th>Optimistic (version column)</th></tr>
-    <tr><td>Assumes</td><td>Conflicts are likely</td><td>Conflicts are rare</td></tr>
-    <tr><td>Best for</td><td>Hot rows: last samosa, seat booking</td><td>Edit forms, profiles</td></tr>
-    <tr><td>Cost</td><td>Waiting; deadlock risk</td><td>Retries when a conflict happens</td></tr>
-    <tr><td>Across HTTP requests?</td><td>No</td><td>Yes: the version travels with the form</td></tr>
+    <tr><th></th><th>Pessimistic (FOR UPDATE, conditional UPDATE)</th><th>Optimistic (version column)</th></tr>
+    <tr><td>Assumes</td><td>conflicts are likely</td><td>conflicts are rare</td></tr>
+    <tr><td>Best for</td><td>hot rows: last samosa, seat booking, wallet</td><td>edit forms, profiles, settings</td></tr>
+    <tr><td>Cost</td><td>waiting; risk of deadlocks</td><td>a retry when a conflict happens</td></tr>
+    <tr><td>Works across web requests</td><td>no</td><td>yes: the version travels with the form</td></tr>
   </table>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A trial room: you lock the door while changing (FOR UPDATE); others wait outside. Optimistic locking is a shared document that warns "this file changed since you opened it" when you save.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A <strong>row lock</strong> is taken by UPDATE, DELETE and <code>SELECT … FOR UPDATE</code> (also <code>FOR SHARE</code> and weaker modes) and held until the transaction ends; conflicting lockers wait. <strong>SKIP LOCKED</strong> skips locked rows; <strong>NOWAIT</strong> errors instead of waiting. <strong>Optimistic concurrency control</strong> detects conflicts at write time with a version check instead of locking.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>FOR UPDATE locks only rows that exist and match. It does not stop write skew on "count of riders on duty" unless you lock the rows you counted (both riders), and it cannot lock rows that don't exist yet (a phantom insert). For those: SERIALIZABLE, or a constraint.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: deadlock.</b> Locks make sessions wait. A session waiting for a lock may itself hold locks. What if two sessions end up waiting for each other?</div>
 
-  <h2 id="st-dead"><span class="num">08</span>Deadlock, Reproduced and Prevented</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Ben sends Farah ₹50 for her share of a shared order while, at the same moment, Farah sends Ben ₹30. Each transfer locks the payer's wallet first, then the receiver's. What happens when each holds the lock the other needs next?</p>
-  </div>
-  <div class="fx" data-lang="py">from sessions import Session
-A, B = Session('A'), Session('B')                  # A: Ben pays Farah 50, B: Farah pays Ben 30
+  <h2 id="st-dead"><span class="num">08</span>Deadlocks</h2>
+  <p>Locks make sessions wait, and a session that is waiting may itself be holding locks. That opens the door to a circle of waiting. Ben sends Farah ₹50 for her share of a group order while, at the same moment, Farah sends Ben ₹30. Each transfer subtracts from the payer's wallet first and then adds to the receiver's:</p>
+  <div class="fx" data-lang="py">A, B = Session('A'), Session('B')                  # A: Ben pays Farah 50, B: Farah pays Ben 30
 A.run("BEGIN"); B.run("BEGIN")
-A.run("UPDATE wallets SET balance = balance - 50 WHERE customer_id = 2")    # A locks Ben
-B.run("UPDATE wallets SET balance = balance - 30 WHERE customer_id = 6")    # B locks Farah
-job = A.start("UPDATE wallets SET balance = balance + 50 WHERE customer_id = 6")  # A waits for Farah
-B.run("UPDATE wallets SET balance = balance + 30 WHERE customer_id = 2")    # B waits for Ben: cycle!
+A.run("UPDATE wallets SET balance = balance - 50 WHERE customer_id = 2")         # A locks Ben
+B.run("UPDATE wallets SET balance = balance - 30 WHERE customer_id = 6")         # B locks Farah
+job = A.start("UPDATE wallets SET balance = balance + 50 WHERE customer_id = 6") # A waits for Farah
+B.run("UPDATE wallets SET balance = balance + 30 WHERE customer_id = 2")         # B waits for Ben: a cycle
 A.finish(job)
 A.run("ROLLBACK"); B.run("COMMIT")
 A.run("SELECT customer_id, balance FROM wallets ORDER BY customer_id")</div>
-  <div class="fx" data-lang="text"> 1 A  BEGIN                                                            → BEGIN
- 2 B  BEGIN                                                            → BEGIN
- 3 A  UPDATE wallets SET balance = balance - 50 WHERE customer_id = 2  → UPDATE 1
- 4 B  UPDATE wallets SET balance = balance - 30 WHERE customer_id = 6  → UPDATE 1
- 5 A  UPDATE wallets SET balance = balance + 50 WHERE customer_id = 6  → ... still running: waiting for a lock
- 6 B  UPDATE wallets SET balance = balance + 30 WHERE customer_id = 2  → UPDATE 1
- 7 A  (the waiting statement)                                          → now returns: ERROR: deadlock detected
- 8 A  ROLLBACK                                                         → ROLLBACK
- 9 B  COMMIT                                                           → COMMIT
-10 A  SELECT customer_id, balance FROM wallets ORDER BY customer_id    → (2, 530.00), (6, 270.00)</div>
-  <p>Trace it. A holds Ben's row and waits for Farah's. B holds Farah's row and asks for Ben's: a cycle, neither can ever proceed. After <code>deadlock_timeout</code> (1 second by default) PostgreSQL's deadlock detector found the cycle and aborted one transaction (here A, with "deadlock detected"); that released Ben's row, so B's statement (which had been waiting) completed and B committed: Farah 270, Ben 530. A's transfer must be retried.</p>
+  <div class="fx" data-lang="text"> 1 A  BEGIN                                                          → BEGIN
+ 2 B  BEGIN                                                          → BEGIN
+ 3 A  UPDATE wallets SET balance = balance - 50 WHERE customer_id = 2 → UPDATE 1
+ 4 B  UPDATE wallets SET balance = balance - 30 WHERE customer_id = 6 → UPDATE 1
+ 5 A  UPDATE wallets SET balance = balance + 50 WHERE customer_id = 6 → ... waiting
+ 6 B  UPDATE wallets SET balance = balance + 30 WHERE customer_id = 2 → UPDATE 1
+ 7 A  (the waiting statement)                                        → now returns: ERROR: deadlock detected
+ 8 A  ROLLBACK                                                       → ROLLBACK
+ 9 B  COMMIT                                                         → COMMIT
+10 A  SELECT customer_id, balance FROM wallets ORDER BY customer_id  → (2, 530.00), (6, 270.00)</div>
   <figure class="viz"><svg viewBox="0 0 600 170" width="600">
     <defs><marker id="st-ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <rect x="40" y="60" width="130" height="44" rx="8" class="fb sb"/><text x="105" y="80" text-anchor="middle" font-weight="bold">A</text><text x="105" y="95" text-anchor="middle" font-size="10" class="tm">Ben pays Farah</text>
@@ -946,15 +727,15 @@ A.run("SELECT customer_id, balance FROM wallets ORDER BY customer_id")</div>
     <line x1="170" y1="98" x2="238" y2="136" class="sr" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#st-ar3)"/><text x="150" y="134" font-size="11" class="tr">waits</text>
     <line x1="430" y1="98" x2="362" y2="136" class="sg" stroke-width="2.5"/><text x="420" y="134" font-size="11" class="tg">holds</text>
     <line x1="430" y1="66" x2="362" y2="30" class="sr" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#st-ar3)"/><text x="420" y="40" font-size="11" class="tr">waits</text>
-    <text x="300" y="87" text-anchor="middle" font-size="11" class="tr">cycle → one is killed</text>
-  </svg><figcaption>A wait-for cycle. Locking wallets in one fixed order (lower customer_id first) makes the cycle impossible.</figcaption></figure>
-  <p>The fix: every transfer locks the two wallets in the <strong>same order</strong>, lower customer_id first, whichever direction the money goes. Same two transfers:</p>
-  <div class="fx" data-lang="py">from sessions import Session
-A, B = Session('A'), Session('B')
+    <text x="300" y="87" text-anchor="middle" font-size="11" class="tr">cycle → one is aborted</text>
+  </svg><figcaption>A wait-for cycle: each transaction holds the lock the other needs next.</figcaption></figure>
+  <p>Trace it with the figure. A holds the lock on Ben's wallet and waits for Farah's. B holds the lock on Farah's wallet and then asks for Ben's. Now each is waiting for the other, and neither can ever continue. This is a <strong>deadlock</strong>: a cycle of transactions, each waiting for a lock that another in the cycle holds. Think of two cars meeting head-on on a one-lane bridge, each waiting for the other to reverse. PostgreSQL does not wait forever: when a session has waited longer than <code>deadlock_timeout</code> (1 second by default), it checks for cycles, and if it finds one it aborts one of the transactions with "deadlock detected" (SQLSTATE <code>40P01</code>). Here it chose A. That released Ben's wallet, so B's waiting statement completed and B committed: Farah ends with ₹270 and Ben with ₹530. A's transfer must be retried by the application.</p>
+  <p>Deadlocks are not bugs in the database; they come from the order in which your code takes locks. The cure is to make every transaction take its locks in the <strong>same order</strong>. If every transfer locks the two wallets in ascending customer_id order, whichever direction the money flows, a cycle becomes impossible, just as a rule "always enter the bridge from the east end" means cars never meet head-on:</p>
+  <div class="fx" data-lang="py">A, B = Session('A'), Session('B')
 lock_both = "SELECT customer_id FROM wallets WHERE customer_id IN (2, 6) ORDER BY customer_id FOR UPDATE"
 A.run("BEGIN"); B.run("BEGIN")
 A.run(lock_both)                                   # A locks Ben (2), then Farah (6)
-job = B.start(lock_both)                           # B wants Ben (2) first: waits, holding nothing
+job = B.start(lock_both)                           # B also wants Ben first: waits, holding nothing
 A.run("UPDATE wallets SET balance = balance - 50 WHERE customer_id = 2")
 A.run("UPDATE wallets SET balance = balance + 50 WHERE customer_id = 6")
 A.run("COMMIT")
@@ -963,340 +744,213 @@ B.run("UPDATE wallets SET balance = balance - 30 WHERE customer_id = 6")
 B.run("UPDATE wallets SET balance = balance + 30 WHERE customer_id = 2")
 B.run("COMMIT")
 A.run("SELECT customer_id, balance FROM wallets ORDER BY customer_id")</div>
-  <div class="fx" data-lang="text"> 1 A  BEGIN                                                            → BEGIN
- 2 B  BEGIN                                                            → BEGIN
+  <div class="fx" data-lang="text"> 1 A  BEGIN                                                          → BEGIN
+ 2 B  BEGIN                                                          → BEGIN
  3 A  SELECT customer_id FROM wallets WHERE customer_id IN (2, 6) ORDER BY customer_id FOR UPDATE → (2), (6)
- 4 B  SELECT customer_id FROM wallets WHERE customer_id IN (2, 6) ORDER BY customer_id FOR UPDATE → ... still running: waiting for a lock
- 5 A  UPDATE wallets SET balance = balance - 50 WHERE customer_id = 2  → UPDATE 1
- 6 A  UPDATE wallets SET balance = balance + 50 WHERE customer_id = 6  → UPDATE 1
- 7 A  COMMIT                                                           → COMMIT
- 8 B  (the waiting statement)                                          → now returns: (2), (6)
- 9 B  UPDATE wallets SET balance = balance - 30 WHERE customer_id = 6  → UPDATE 1
-10 B  UPDATE wallets SET balance = balance + 30 WHERE customer_id = 2  → UPDATE 1
-11 B  COMMIT                                                           → COMMIT
-12 A  SELECT customer_id, balance FROM wallets ORDER BY customer_id    → (2, 480.00), (6, 320.00)</div>
-  <p>B waited while holding nothing, so no cycle could form. Both transfers succeeded: Ben 500 − 50 + 30 = 480, Farah 300 + 50 − 30 = 320.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Two cars meet on a one-lane bridge from opposite ends; each waits for the other to reverse. A traffic rule "always enter from the east end first" means they never meet head-on.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A <strong>deadlock</strong> is a cycle of transactions each waiting for a lock another holds. PostgreSQL checks for cycles after <code>deadlock_timeout</code> and aborts one with SQLSTATE <code>40P01</code>. Prevent by acquiring locks in a consistent order and keeping transactions short; still catch the error and retry.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Deadlocks are not bugs in the database; they are a property of your locking order. Retrying blindly without fixing the order turns them into a steady stream of 1-second stalls under load.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: replication and read replicas.</b> Everything so far protects data on one server. If that server's disk dies, or a million users' reads exceed what it can serve, one machine is not enough. How do we keep copies, and what do the copies cost in correctness?</div>
+ 4 B  SELECT customer_id FROM wallets WHERE customer_id IN (2, 6) ORDER BY customer_id FOR UPDATE → ... waiting
+ 5 A  UPDATE wallets SET balance = balance - 50 WHERE customer_id = 2 → UPDATE 1
+ 6 A  UPDATE wallets SET balance = balance + 50 WHERE customer_id = 6 → UPDATE 1
+ 7 A  COMMIT                                                         → COMMIT
+ 8 B  (the waiting statement)                                        → now returns: (2), (6)
+ 9 B  UPDATE wallets SET balance = balance - 30 WHERE customer_id = 6 → UPDATE 1
+10 B  UPDATE wallets SET balance = balance + 30 WHERE customer_id = 2 → UPDATE 1
+11 B  COMMIT                                                         → COMMIT
+12 A  SELECT customer_id, balance FROM wallets ORDER BY customer_id  → (2, 480.00), (6, 320.00)</div>
+  <p>B asked for Ben's wallet first, just like A, so it waited <em>while holding nothing</em>, and no cycle could form. When A committed, B got both locks and finished. Both transfers succeeded: Ben has 500 − 50 + 30 = ₹480 and Farah 300 + 50 − 30 = ₹320. Alongside a consistent lock order, keep transactions short (fewer locks held for less time) and still catch 40P01 and retry, because deadlocks can arise in ways that are hard to foresee, for example through foreign-key checks.</p>
 
   <h2 id="st-repl"><span class="num">09</span>Replication and Read Replicas</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Durability survives a crash of the process, not the loss of the machine. And Biteful's "My orders" screen is read a hundred times for every order placed. Can we keep a live copy of the database on another server, and send reads there?</p>
-  </div>
-  <p>Section 03's WAL is a complete, ordered log of every change. <strong>Streaming replication</strong> ships that log to another server, a <strong>standby</strong> (replica), which replays it and so holds the same data a moment later. The original is the <strong>primary</strong>; only it accepts writes. We built a real standby of this note's server (on the same machine, port 5492, standing in for a second server):</p>
+  <p>Everything so far protects data on one server. Durability survives a crash of the database process, but not the loss of the machine itself. And Biteful's "My orders" screen is read a hundred times for every order placed, so one server may not be able to answer all the reads. Both problems are solved by keeping live copies of the database on other servers. <strong>Replication</strong> does exactly this, and PostgreSQL builds it on the WAL from section 02: the log is already a complete, ordered record of every change, so <strong>streaming replication</strong> sends it to another server, called a <strong>standby</strong> or <strong>replica</strong>, which replays it and so holds the same data a moment later. The original server is the <strong>primary</strong>, and only it accepts writes. Here a real standby of the private test server is created on another port, standing in for a second machine:</p>
   <div class="fx" data-lang="text">export PATH=/usr/lib/postgresql/16/bin:$PATH
-SOCK=/var/lib/postgresql/sqlnotes_adv-sock
-REPLICA=/var/lib/postgresql/sqlnotes_adv_replica
-# 1. copy the primary's files; -R writes the "I am a standby of 5491" settings
-runuser -u postgres -- pg_basebackup -h $SOCK -p 5491 -D $REPLICA -R -X stream -c fast
-# 2. start the copy as a standby on port 5492
-runuser -u postgres -- pg_ctl -D $REPLICA -l $REPLICA.log -w start -o "-p 5492 -k $SOCK" &gt; /dev/null
-psql -X -p 5492 -c "SELECT pg_is_in_recovery() AS is_standby"
-psql -X -p 5491 -c "SELECT application_name, state, sync_state FROM pg_stat_replication"</div>
-  <div class="fx" data-lang="text"> is_standby 
+SOCK=/var/lib/postgresql/notes_b4_sock
+REPLICA=/var/lib/postgresql/notes_b4_replica
+# 1. copy the primary's files; -R writes the settings that say "I am a standby of port 5494"
+runuser -u postgres -- pg_basebackup -h $SOCK -p 5494 -U postgres -D $REPLICA -R -X stream -c fast
+# 2. start the copy as a standby on port 5495
+runuser -u postgres -- pg_ctl -D $REPLICA -l $REPLICA.log -w start -o "-p 5495 -k $SOCK -c listen_addresses=''" &gt; /dev/null
+psql -X -h $SOCK -p 5495 -U postgres -d notes_b4 -c "SELECT pg_is_in_recovery() AS is_standby"
+psql -X -h $SOCK -p 5494 -U postgres -d notes_b4 -c "SELECT application_name, state, sync_state FROM pg_stat_replication"</div>
+  <div class="fx" data-lang="text"> is_standby
 ------------
  t
 (1 row)
 
- application_name |   state   | sync_state 
+ application_name |   state   | sync_state
 ------------------+-----------+------------
  walreceiver      | streaming | async
 (1 row)</div>
-  <p>The standby says it is "in recovery" (continuously replaying WAL); the primary lists one streaming replica, asynchronous. Now the behaviour that matters, with P = a connection to the primary and R = a connection to the replica:</p>
+  <p>The standby reports that it is "in recovery", meaning it is continuously replaying WAL, and the primary lists one streaming replica in asynchronous mode. Now the behaviour that matters, with P connected to the primary and R to the replica:</p>
   <div class="fx" data-lang="py">import time
 from sessions import Session
-P, R = Session('P', port=5491), Session('R', port=5492)
+sock = "/var/lib/postgresql/notes_b4_sock"
+P = Session('P', host=sock, port=5494, user="postgres")         # the primary
+R = Session('R', host=sock, port=5495, user="postgres")         # the replica
 P.run("UPDATE menu SET stock = 15 WHERE item = 'Chicken Biryani'")
 time.sleep(0.5)
-R.run("SELECT stock FROM menu WHERE item = 'Chicken Biryani'")          # the change arrived
-R.run("UPDATE menu SET stock = 14 WHERE item = 'Chicken Biryani'")      # replicas are read-only
-# make lag visible: pause WAL replay on the replica, as a slow or busy replica would be
-R.run("SELECT pg_wal_replay_pause()")
-P.run("UPDATE menu SET stock = 10 WHERE item = 'Chicken Biryani'")      # Ben's order on the primary
+R.run("SELECT stock FROM menu WHERE item = 'Chicken Biryani'")           # the change arrived
+R.run("UPDATE menu SET stock = 14 WHERE item = 'Chicken Biryani'")       # replicas are read-only
+R.run("SELECT pg_wal_replay_pause()")              # make lag visible: the replica stops applying WAL
+P.run("UPDATE menu SET stock = 10 WHERE item = 'Chicken Biryani'")       # Ben's order on the primary
 time.sleep(0.5)
-R.run("SELECT stock FROM menu WHERE item = 'Chicken Biryani'")          # stale read!
+R.run("SELECT stock FROM menu WHERE item = 'Chicken Biryani'")           # stale read!
 R.run("SELECT pg_last_wal_receive_lsn() &gt; pg_last_wal_replay_lsn() AS behind")
 R.run("SELECT pg_wal_replay_resume()")
 time.sleep(0.5)
 R.run("SELECT stock FROM menu WHERE item = 'Chicken Biryani'")</div>
-  <div class="fx" data-lang="text"> 1 P  UPDATE menu SET stock = 15 WHERE item = 'Chicken Biryani'        → UPDATE 1
- 2 R  SELECT stock FROM menu WHERE item = 'Chicken Biryani'            → 15
- 3 R  UPDATE menu SET stock = 14 WHERE item = 'Chicken Biryani'        → ERROR: cannot execute UPDATE in a read-only transaction
- 4 R  SELECT pg_wal_replay_pause()                                     → 
- 5 P  UPDATE menu SET stock = 10 WHERE item = 'Chicken Biryani'        → UPDATE 1
- 6 R  SELECT stock FROM menu WHERE item = 'Chicken Biryani'            → 15
+  <div class="fx" data-lang="text"> 1 P  UPDATE menu SET stock = 15 WHERE item = 'Chicken Biryani'      → UPDATE 1
+ 2 R  SELECT stock FROM menu WHERE item = 'Chicken Biryani'          → 15
+ 3 R  UPDATE menu SET stock = 14 WHERE item = 'Chicken Biryani'      → ERROR: cannot execute UPDATE in a read-only transaction
+ 4 R  SELECT pg_wal_replay_pause()                                   →
+ 5 P  UPDATE menu SET stock = 10 WHERE item = 'Chicken Biryani'      → UPDATE 1
+ 6 R  SELECT stock FROM menu WHERE item = 'Chicken Biryani'          → 15
  7 R  SELECT pg_last_wal_receive_lsn() &gt; pg_last_wal_replay_lsn() AS behind → True
- 8 R  SELECT pg_wal_replay_resume()                                    → 
- 9 R  SELECT stock FROM menu WHERE item = 'Chicken Biryani'            → 10</div>
-  <p>Trace it: the replica received the change to 15 within half a second; it refused a write ("read-only transaction"). With replay paused (standing in for a replica that is busy or far away), the primary committed 10 while the replica still answered 15: it had <em>received</em> the WAL but not yet <em>replayed</em> it. After resuming, 10. That gap is <strong>replication lag</strong>. A user who places an order (primary) and immediately opens "My orders" (replica) may not see it.</p>
+ 8 R  SELECT pg_wal_replay_resume()                                  →
+ 9 R  SELECT stock FROM menu WHERE item = 'Chicken Biryani'          → 10</div>
+  <p>Trace it. The replica received the change to 15 within half a second, and it refused a write ("read-only transaction"). Then we paused the replica's replay of the WAL, standing in for a replica that is overloaded or far away. The primary committed 10, but the replica still answered 15: it had received the log but not yet applied it. After resuming, it answered 10. That delay is <strong>replication lag</strong>, and it has a very visible consequence: a user who places an order (written on the primary) and immediately opens "My orders" (read from a replica) may not see the order they just placed. Think of a head office and its branch notice boards: decisions are made at head office and then posted to the branches by courier, so for a while after a change a branch can still show yesterday's notice.</p>
   <figure class="viz"><svg viewBox="0 0 600 160" width="600">
     <defs><marker id="st-ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <rect x="0" y="56" width="100" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity=".4"/><text x="50" y="75" text-anchor="middle">app servers</text><text x="50" y="91" text-anchor="middle" font-size="10" class="tm">many clients</text>
     <line x1="100" y1="78" x2="138" y2="78" stroke="currentColor" marker-end="url(#st-ar4)"/>
-    <rect x="140" y="56" width="110" height="44" rx="6" class="fv"/><text x="195" y="75" text-anchor="middle">pooler</text><text x="195" y="91" text-anchor="middle" font-size="10" class="tm">few real conns</text>
+    <rect x="140" y="56" width="110" height="44" rx="6" class="fv"/><text x="195" y="75" text-anchor="middle">pooler</text><text x="195" y="91" text-anchor="middle" font-size="10" class="tm">few real connections</text>
     <line x1="250" y1="70" x2="308" y2="34" stroke="currentColor" marker-end="url(#st-ar4)"/><text x="262" y="40" font-size="10" class="tm">writes</text>
     <line x1="250" y1="88" x2="308" y2="122" stroke="currentColor" marker-end="url(#st-ar4)"/><text x="262" y="124" font-size="10" class="tm">reads</text>
-    <rect x="310" y="12" width="120" height="44" rx="6" class="fb sb"/><text x="370" y="38" text-anchor="middle" font-weight="bold">Primary 5491</text>
-    <rect x="310" y="100" width="120" height="44" rx="6" class="ft st"/><text x="370" y="126" text-anchor="middle">Replica 5492</text>
+    <rect x="310" y="12" width="120" height="44" rx="6" class="fb sb"/><text x="370" y="38" text-anchor="middle" font-weight="bold">Primary</text>
+    <rect x="310" y="100" width="120" height="44" rx="6" class="ft st"/><text x="370" y="126" text-anchor="middle">Replica</text>
     <rect x="470" y="100" width="120" height="44" rx="6" class="ft st" stroke-dasharray="4 3"/><text x="530" y="126" text-anchor="middle">more replicas…</text>
     <line x1="370" y1="56" x2="370" y2="98" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#st-ar4)"/>
     <line x1="420" y1="56" x2="500" y2="98" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#st-ar4)"/>
     <text x="445" y="32" font-size="10" class="tm">WAL stream (async)</text><text x="445" y="46" font-size="10" class="tr">lag: ms … s</text>
-  </svg><figcaption>Replicas scale reads and give a standby for failover. Every write still lands on one primary.</figcaption></figure>
-  <ul>
-    <li><strong>Read-your-writes</strong>: after a user writes, send that user's reads to the primary for a few seconds (or wait until the replica has replayed past the write's WAL position).</li>
-    <li><strong>Synchronous replication</strong> (<code>synchronous_standby_names</code>) makes COMMIT wait until a standby has the WAL: no committed data lost if the primary dies, at the cost of slower commits.</li>
-    <li><strong>Failover</strong>: if the primary dies, a standby is promoted (<code>pg_ctl promote</code>) to become the new primary.</li>
-    <li><strong>Connection pooling</strong> (PgBouncer): each PostgreSQL connection is a separate server process, so thousands of app connections are funnelled into a few dozen real ones.</li>
-  </ul>
-  <div class="fx" data-lang="text"># clean up: stop and delete the standby
-export PATH=/usr/lib/postgresql/16/bin:$PATH
-runuser -u postgres -- pg_ctl -D /var/lib/postgresql/sqlnotes_adv_replica -m fast stop
-rm -rf /var/lib/postgresql/sqlnotes_adv_replica</div>
-  <div class="fx" data-lang="text">waiting for server to shut down.... done
-server stopped</div>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A head office (primary) and branch notice boards (replicas). Changes are decided at head office and then posted to the branches by courier. Branches answer most questions, but for a few minutes after a change a branch can still show yesterday's notice.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Replication</strong> keeps copies of a database on other servers by streaming the WAL. A <strong>read replica</strong> (hot standby) serves read-only queries. <strong>Replication lag</strong> is how far a replica's replayed state is behind the primary. Asynchronous replication can lose the last commits on failover; synchronous cannot, but slows commits.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Sending every read to replicas, including "read then decide then write" logic. Checking samosa stock on a lagging replica and then ordering on the primary reintroduces the lost update across machines. Reads that feed a write belong on the primary, inside the transaction.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: sharding.</b> Replicas multiply read capacity, but every write still goes to the one primary, and every replica stores the whole database. When the writes or the data itself outgrow one machine, the data must be split.</div>
+  </svg><figcaption>Replicas scale reads and provide a standby for failover. Every write still lands on one primary.</figcaption></figure>
+  <p>The figure shows the usual layout. Writes go to the primary; reads can go to any replica; the WAL flows from the primary to every replica. Each design decision around it follows from lag. A common fix for the "my order is missing" problem is <strong>read-your-writes</strong> routing: after a user writes, send that user's reads to the primary for a few seconds. <strong>Synchronous replication</strong> makes COMMIT wait until at least one standby has the WAL, so no committed data is lost if the primary dies, at the cost of slower commits; the default asynchronous mode is faster but can lose the last few commits on failover. <strong>Failover</strong> means promoting a standby to become the new primary when the old one dies. And because each PostgreSQL connection is a separate server process, large applications put a <strong>connection pooler</strong> such as PgBouncer in front, funnelling thousands of app connections into a few dozen real ones.</p>
+  <p>The most important rule is about correctness: never make a decision on a replica and then write on the primary. Checking samosa stock on a lagging replica and then ordering on the primary reintroduces the lost update, this time across machines. Reads that feed a write belong on the primary, inside the same transaction as the write.</p>
 
-  <h2 id="st-shard"><span class="num">10</span>Sharding: Splitting Rows Across Servers</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Biteful goes national: 50 million customers, orders pouring in all day. One primary can't take all the writes, and the data no longer fits on one machine. How do we split it, and which guarantees from sections 02–08 survive the split?</p>
-  </div>
-  <p><strong>Sharding</strong> splits the rows of a table across several independent database servers (<strong>shards</strong>), each owning part of the data, chosen by a <strong>shard key</strong>. Biteful shards by <code>customer_id</code>: even ids on shard 0, odd ids on shard 1. Traced on the 7 customers: shard 0 gets Ben (2), Dia (4), Farah (6); shard 1 gets Asha (1), Chen (3), Esha (5), Gita (7). Each customer's orders live on that customer's shard. We simulate two servers with two separate databases (two connections that share no transactions), and the application does the routing:</p>
-  <div class="fx" data-lang="py">import psycopg
-admin = psycopg.connect(dbname='postgres', autocommit=True)
-for s in (0, 1):
-    admin.execute(f"DROP DATABASE IF EXISTS shard_{s}")
-    admin.execute(f"CREATE DATABASE shard_{s}")
-shards = [psycopg.connect(dbname=f'shard_{s}', autocommit=True) for s in (0, 1)]
+
+  <h2 id="st-shard"><span class="num">10</span>Sharding and Distributed Data</h2>
+  <p>Replicas multiply read capacity, but every write still goes to one primary, and every replica stores the whole database. When Biteful grows to tens of millions of customers with orders pouring in all day, one primary may not keep up with the writes, or the data may not fit on one machine. The data then has to be split. <strong>Sharding</strong> divides the rows of a table across several independent database servers, called <strong>shards</strong>, each owning part of the data. Which shard a row lives on is decided by a <strong>shard key</strong>. Biteful shards by <code>customer_id</code>: even ids on shard 0 and odd ids on shard 1, so each customer's wallet and orders live together on one shard. Two separate databases stand in for two servers here, and the application does the routing:</p>
+  <div class="fx" data-lang="py">import psycopg2
+
+admin = psycopg2.connect(dbname="postgres"); admin.autocommit = True
+for s in (0, 1):                                    # two databases stand in for two servers
+    admin.cursor().execute(f"DROP DATABASE IF EXISTS notes_b4_shard{s}")
+    admin.cursor().execute(f"CREATE DATABASE notes_b4_shard{s}")
+shards = [psycopg2.connect(dbname=f"notes_b4_shard{s}") for s in (0, 1)]
 for db in shards:
-    db.execute("CREATE TABLE wallets (customer_id INT PRIMARY KEY, balance NUMERIC CHECK (balance &gt;= 0))")
+    db.autocommit = True
+    db.cursor().execute("CREATE TABLE wallets (customer_id INT PRIMARY KEY, balance NUMERIC CHECK (balance &gt;= 0))")
 
-def shard_for(customer_id):          # the routing rule lives in the app (or a proxy)
-    return shards[customer_id % 2]
+def shard_for(customer_id):                         # the routing rule lives in the app (or a proxy)
+    return shards[customer_id % 2].cursor()
+
+def total():                                        # a query across customers must ask every shard
+    s = 0
+    for db in shards:
+        cur = db.cursor(); cur.execute("SELECT coalesce(sum(balance), 0) FROM wallets"); s += cur.fetchone()[0]
+    return s
 
 shard_for(2).execute("INSERT INTO wallets VALUES (2, 500)")    # Ben  -&gt; shard 0
 shard_for(1).execute("INSERT INTO wallets VALUES (1, 400)")    # Asha -&gt; shard 1
+cur = shard_for(2); cur.execute("SELECT balance FROM wallets WHERE customer_id = 2")
+print("Ben's wallet (one shard):", cur.fetchone()[0])
+print("total of all wallets (both shards):", total())
 
-# a single-customer query goes to one shard
-print("Ben's wallet:", shard_for(2).execute("SELECT balance FROM wallets WHERE customer_id = 2").fetchone()[0])
-# a query across customers must ask every shard and combine the answers in the app
-total = sum(db.execute("SELECT coalesce(sum(balance), 0) FROM wallets").fetchone()[0] for db in shards)
-print("total of all wallets (asked both shards):", total)
-
-# Ben pays Asha 100: two shards = two separate transactions
+# Ben pays Asha 100: two shards means two separate transactions
 shard_for(2).execute("UPDATE wallets SET balance = balance - 100 WHERE customer_id = 2")   # commits on shard 0
-try:
-    raise ConnectionError("app crashed before crediting Asha on shard 1")
-except ConnectionError as e:
-    print("!", e)
-total = sum(db.execute("SELECT coalesce(sum(balance), 0) FROM wallets").fetchone()[0] for db in shards)
-print("total after the crash:", total, "(100 vanished: no transaction spans both shards)")</div>
-  <div class="fx" data-lang="text">Ben's wallet: 500
-total of all wallets (asked both shards): 900
-! app crashed before crediting Asha on shard 1
-total after the crash: 800 (100 vanished: no transaction spans both shards)</div>
-  <p>Single-shard work (Ben's wallet) stays simple and fast. Cross-shard reads need a fan-out to every shard. And the transfer from Ben (shard 0) to Asha (shard 1) is two separate transactions: the crash in between lost ₹100, exactly the atomicity failure transactions solved on one server. Real systems use two-phase commit, sagas with compensating steps, or choose the shard key so that things that change together live together.</p>
-  <table class="tbl">
-    <tr><th></th><th>Partitioning (<a class="xref" data-note="sql_optimization">Indexes</a> §11)</th><th>Replication (§09)</th><th>Sharding</th></tr>
-    <tr><td>What</td><td>Split a table inside one server</td><td>Full copies on several servers</td><td>Split rows across servers</td></tr>
-    <tr><td>Scales</td><td>Big-table maintenance, pruning</td><td>Reads, availability</td><td>Writes and data size</td></tr>
-    <tr><td>Costs</td><td>Little: still one database</td><td>Lag; writes still on one primary</td><td>Cross-shard joins/transactions, rebalancing, routing</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Choosing a shard key</span>
-    <p>Pick the key most queries filter on and that spreads load evenly: <code>customer_id</code> keeps each customer's orders on one shard. <code>city</code> would put all of Mumbai's 8 pm rush on one shard (a hot shard); <code>ordered_at</code> would send every new order to the newest shard.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Sharding</strong> (horizontal partitioning across servers) assigns each row to one shard by a shard key (range or hash). It scales writes and storage, but transactions, joins, unique constraints and foreign keys no longer work across shards without extra machinery (Citus, Vitess, distributed SQL databases).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Sharding too early. It is the most expensive step on the scaling ladder (tune queries and indexes → bigger machine → pooling → read replicas → partitioning → sharding). Most apps never need it.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: SQL vs NoSQL.</b> Once data is spread over many machines, some relational guarantees become expensive anyway. Some databases are designed around that from the start. When is giving up joins or multi-row transactions the right trade?</div>
+print("! the app crashes before crediting Asha on shard 1")
+print("total after the crash:", total())</div>
+  <div class="fx" data-lang="text">Ben's wallet (one shard): 500
+total of all wallets (both shards): 900
+! the app crashes before crediting Asha on shard 1
+total after the crash: 800</div>
+  <p>Work on one customer stays simple and fast: Ben's wallet is read from one shard. Work across customers needs a "fan-out": the total of all wallets had to ask every shard and add the answers in the application. And the transfer from Ben (shard 0) to Asha (shard 1) became two separate transactions on two separate servers, so the crash between them made ₹100 disappear. That is precisely the atomicity failure transactions solved on one server, back again. Real systems handle cross-shard changes with <strong>two-phase commit</strong> (a coordinator first asks every shard to prepare, and only tells them all to commit once every shard has promised it can), with <strong>sagas</strong> (a chain of local transactions, each with a compensating action that undoes it if a later step fails), or, best of all, by choosing a shard key so that data that changes together lives together.</p>
+  <p>Choosing the shard key is the most important sharding decision. A good key is one that most queries filter on and that spreads the load evenly. <code>customer_id</code> keeps each customer's data on one shard. <code>city</code> would put all of Mumbai's 8 pm rush on one shard, creating a <strong>hot shard</strong>, and <code>ordered_at</code> would send every new order to the newest shard. Sharding also gives up things that one database provides for free: joins, UNIQUE constraints and foreign keys across shards, and moving data when shards are added (rebalancing). Tools like Citus and Vitess, and distributed SQL databases like CockroachDB, take on much of this work. Even so, sharding is the most expensive step on the scaling ladder, which usually goes: tune queries and indexes, use a bigger machine, add a connection pooler, add read replicas, partition big tables, and only then shard. Most applications never need it. Note the difference from <strong>partitioning</strong> (<a class="xref" data-note="sql_optimization">Indexes &amp; Performance</a>), which splits a table into pieces inside one server, and from replication, which copies everything.</p>
+  <p>Once data lives on several machines connected by a network, a deeper trade-off appears, described by the <strong>CAP theorem</strong>. If the network breaks and the machines cannot talk to each other (a <em>partition</em>), the system must choose: refuse some requests until the copies can agree again (<strong>consistency</strong>), or keep answering from whatever copy is reachable, even if its data may be stale (<strong>availability</strong>). The stale replica read in section 09 is the availability choice in miniature. A relational primary chooses consistency for writes. Many NoSQL databases, which are non-relational stores such as MongoDB, Cassandra and DynamoDB, were designed from the start to shard by key and stay available, and in exchange they offer weaker guarantees: often atomicity only within one document or key, and <em>eventual consistency</em> between copies. That is a good trade for a session cache, an activity feed or event logs, and a risky one for wallets and stock, where the samosa and wallet problems of this page do not disappear; they become the application's job. <a class="xref" data-note="db_types">Types of Databases</a> compares the families in detail.</p>
 
-  <h2 id="st-nosql"><span class="num">11</span>SQL vs NoSQL: The Trade-offs</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We have seen what ACID transactions, joins and constraints give us, and what they cost when the data is split across machines. Document stores, key-value stores and wide-column stores make different choices. Which problems are they better at, and what do you give up?</p>
-  </div>
-  <p><strong>NoSQL</strong> is an umbrella for non-relational databases: document stores (MongoDB), key-value stores (Redis, DynamoDB), wide-column stores (Cassandra) and graph databases (Neo4j). <a class="xref" data-note="db_types">Types of Databases</a> introduces each; here we compare them on the axes this note built.</p>
-  <table class="tbl">
-    <tr><th>Axis</th><th>Relational (PostgreSQL, MySQL)</th><th>Typical NoSQL</th></tr>
-    <tr><td>Data shape</td><td>Fixed schema; one fact in one place; joins reassemble</td><td>Flexible documents or key → value; data stored the way it is read (often duplicated)</td></tr>
-    <tr><td>Transactions</td><td>Multi-row, multi-table ACID by default</td><td>Often single-document/single-key atomicity; multi-document transactions exist in some (MongoDB 4.0+) but cost more</td></tr>
-    <tr><td>Consistency across copies</td><td>Primary + replicas; strong on the primary</td><td>Often tunable or eventual consistency across replicas</td></tr>
-    <tr><td>Scaling writes</td><td>One primary; sharding is add-on work (§10)</td><td>Many are built to shard by key from day one</td></tr>
-    <tr><td>Queries</td><td>Ad-hoc SQL, joins, aggregates over anything</td><td>Fast for access patterns designed in advance; ad-hoc joins limited</td></tr>
-    <tr><td>Biteful fit</td><td>Orders, wallets, stock: money and counts that must add up</td><td>Session cache (key-value), menu documents, event logs, recommendations</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">CAP in one paragraph</span>
-    <p>When a network failure splits replicas apart (a <em>partition</em>), a distributed database must choose: refuse some requests until the copies can agree (consistency) or answer from whatever copy is reachable, possibly stale (availability). The stale replica read in section 09 is the "A" choice in miniature. Relational primaries choose consistency for writes; many NoSQL systems let you choose per request.</p>
-  </div>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A bank ledger vs a notice board. The ledger (SQL) has strict columns and every entry must balance; slow to reorganise, never wrong. The notice board (NoSQL) takes any sheet in any format and copies go up in every branch quickly; great for announcements, risky for account balances.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>Choose <strong>relational</strong> when correctness across rows matters (money, stock, bookings) and queries are varied. Choose a <strong>NoSQL</strong> store when the access pattern is known and simple (by key, by document), the schema varies, and horizontal scale or availability outweighs multi-row transactions. Many systems use both. (<a class="xref" data-note="mongo_design">MongoDB Schema Design</a> shows modelling for access patterns.)</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"NoSQL scales, SQL doesn't" as a slogan. A well-indexed PostgreSQL primary with replicas serves very large apps; the samosa and wallet problems of this note don't disappear in a NoSQL store, they become the application's job.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: how it all connects.</b> Twelve ideas: are they a list, or one story?</div>
-
-  <h2 id="st-connect"><span class="num">12</span>How It All Connects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Transactions, ACID, five anomalies, four levels, MVCC, locks, deadlocks, replicas, shards, NoSQL: how does each one follow from the one before?</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 720 300" width="720">
-<defs><marker id="st-a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<g font-size="10.5">
-<rect x="10" y="20" width="150" height="50" rx="8" class="fr sr"/><text x="85" y="40" text-anchor="middle" font-weight="700">failure halfway</text><text x="85" y="57" text-anchor="middle" class="tm">biryani, no payment</text>
-<line x1="160" y1="45" x2="193" y2="45" stroke="currentColor" marker-end="url(#st-a9)"/>
-<rect x="195" y="20" width="150" height="50" rx="8" class="fb sb"/><text x="270" y="40" text-anchor="middle" font-weight="700">transaction · A, C, D</text><text x="270" y="57" text-anchor="middle" class="tm">undo + constraints + WAL</text>
-<rect x="10" y="105" width="150" height="50" rx="8" class="fr sr"/><text x="85" y="125" text-anchor="middle" font-weight="700">two at once</text><text x="85" y="142" text-anchor="middle" class="tm">2 orders, 1 samosa</text>
-<line x1="160" y1="130" x2="193" y2="130" stroke="currentColor" marker-end="url(#st-a9)"/>
-<rect x="195" y="105" width="150" height="50" rx="8" class="fb sb"/><text x="270" y="125" text-anchor="middle" font-weight="700">I: isolation levels</text><text x="270" y="142" text-anchor="middle" class="tm">which anomalies allowed</text>
-<line x1="345" y1="120" x2="378" y2="100" stroke="currentColor" marker-end="url(#st-a9)"/>
-<line x1="345" y1="140" x2="378" y2="160" stroke="currentColor" marker-end="url(#st-a9)"/>
-<rect x="380" y="70" width="150" height="50" rx="8" class="fg sg"/><text x="455" y="90" text-anchor="middle" font-weight="700">MVCC (readers)</text><text x="455" y="107" text-anchor="middle" class="tm">snapshots, xmin/xmax</text>
-<rect x="380" y="140" width="150" height="50" rx="8" class="fg sg"/><text x="455" y="160" text-anchor="middle" font-weight="700">locks (writers)</text><text x="455" y="177" text-anchor="middle" class="tm">FOR UPDATE → deadlock</text>
-<line x1="530" y1="95" x2="563" y2="95" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#st-a9)"/>
-<rect x="565" y="70" width="145" height="50" rx="8" class="fv" stroke="currentColor" stroke-opacity="0.4"/><text x="637" y="90" text-anchor="middle">VACUUM / bloat</text><text x="637" y="107" text-anchor="middle" class="tm">cost of versions</text>
-<line x1="270" y1="70" x2="270" y2="103" stroke="currentColor" stroke-dasharray="4 3"/>
-<rect x="10" y="215" width="200" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="110" y="235" text-anchor="middle" font-weight="700">WAL → replicas</text><text x="110" y="252" text-anchor="middle" class="tm">reads scale, lag appears</text>
-<line x1="210" y1="240" x2="243" y2="240" stroke="currentColor" marker-end="url(#st-a9)"/>
-<rect x="245" y="215" width="200" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="345" y="235" text-anchor="middle" font-weight="700">sharding</text><text x="345" y="252" text-anchor="middle" class="tm">writes scale, transactions split</text>
-<line x1="445" y1="240" x2="478" y2="240" stroke="currentColor" marker-end="url(#st-a9)"/>
-<rect x="480" y="215" width="230" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="595" y="235" text-anchor="middle" font-weight="700">NoSQL trade-offs</text><text x="595" y="252" text-anchor="middle" class="tm">give up joins/multi-row ACID by design</text>
-<text x="10" y="290" class="tm">Top: guarantees on one server. Bottom: what happens to those guarantees when there is more than one server.</text>
-</g>
-</svg><figcaption>Two problems (failure halfway, two at once) drive everything: transactions fix the first; isolation (built from MVCC for readers and locks for writers) fixes the second; the WAL that gives durability also feeds replicas; splitting data across machines weakens the guarantees again.</figcaption></figure>
-  <table class="tbl"><caption>Every concept on the same running example</caption>
-    <tr><th>Concept</th><th>Built from</th><th>Answers which question</th><th>Value on the running example</th><th>Use when</th></tr>
-    <tr><td>Transaction</td><td>BEGIN/COMMIT/ROLLBACK</td><td>several statements as one?</td><td>Farah's failed biryani order fully undone (stock back to 20)</td><td>any multi-statement change</td></tr>
-    <tr><td>Atomicity</td><td>undo + aborted state</td><td>all or nothing, even if the app dies?</td><td>closed connection → samosa stock still 1</td><td>always (automatic)</td></tr>
-    <tr><td>Consistency</td><td>constraints</td><td>can bad data commit?</td><td>wallet −₹100 and customer 99 refused</td><td>declare every rule you can</td></tr>
-    <tr><td>Isolation</td><td>snapshots + locks</td><td>do others see half-done work?</td><td>B saw 1 until A committed 0</td><td>pick a level per transaction</td></tr>
-    <tr><td>Durability</td><td>WAL flushed at COMMIT</td><td>survive a crash?</td><td>order 111 there after an immediate stop</td><td>always (don't disable lightly)</td></tr>
-    <tr><td>Anomalies</td><td>interleaved transactions</td><td>what can go wrong concurrently?</td><td>stock 1→5; pending 1→2; 2 samosas; 0 riders</td><td>to reason about any concurrent code</td></tr>
-    <tr><td>Isolation levels</td><td>when snapshots are taken + SSI</td><td>which anomalies to prevent?</td><td>verified 5 × 4 table</td><td>RC default; RR for reports; SERIALIZABLE for rules across rows</td></tr>
-    <tr><td>MVCC</td><td>row versions, xmin/xmax</td><td>how do readers see a stable past?</td><td>A read stock 5 (old version) after B committed 4</td><td>understand bloat, long transactions</td></tr>
-    <tr><td>Row locks / FOR UPDATE</td><td>lock on write or read-for-write</td><td>how does the second buyer wait?</td><td>Farah waits, then sees 0; UPDATE … stock &gt; 0 → UPDATE 0</td><td>read-then-write on hot rows</td></tr>
-    <tr><td>Optimistic locking</td><td>version column</td><td>conflicts across web requests?</td><td>second admin: UPDATE 0</td><td>rare conflicts, edit forms</td></tr>
-    <tr><td>Deadlock</td><td>locks + waiting cycles</td><td>what if waits form a circle?</td><td>"deadlock detected" vs fixed order: 480 / 320</td><td>lock in a consistent order</td></tr>
-    <tr><td>Replication</td><td>WAL shipped and replayed</td><td>copies for reads and failover?</td><td>replica 15 while primary 10 (paused replay)</td><td>read scaling, HA</td></tr>
-    <tr><td>Sharding</td><td>rows split by key</td><td>writes beyond one server?</td><td>₹100 lost across shards</td><td>last resort for write scale</td></tr>
-    <tr><td>NoSQL</td><td>different data/consistency models</td><td>when to trade guarantees?</td><td>cache, documents vs wallets</td><td>known access patterns, flexible schema</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>One sentence: <strong>a transaction makes several changes one unit (atomic, constrained, durable via the WAL); isolation decides how much concurrent units can see of each other, built from MVCC snapshots for readers and locks for writers; and every step beyond one server (replicas, shards) trades some of these guarantees for scale.</strong> When a concurrency bug appears, ask: what did each session read, when was its snapshot taken, and what lock (if any) protected the gap between read and write?</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: common mistakes.</b> Which slips cause real incidents?</div>
-
-  <h2 id="st-traps"><span class="num">13</span>Common Mistakes</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Concurrency bugs pass every test and appear under load. Which ones should you look for in code review?</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: read in the app, write a computed value</span><p><code>SELECT stock</code> then <code>UPDATE … SET stock = :computed</code> sold two samosas. Use <code>SET stock = stock - 1 WHERE stock &gt; 0</code> or FOR UPDATE.</p></div>
-  <div class="callout trap"><span class="label">Trap: separate statements without BEGIN</span><p>Autocommit saved the stock change and the order but not the payment.</p></div>
-  <div class="callout trap"><span class="label">Trap: assuming REPEATABLE READ prevents everything</span><p>Write skew sent both riders home at REPEATABLE READ. Use SERIALIZABLE (with retries), lock the rows you read, or a constraint.</p></div>
-  <div class="callout trap"><span class="label">Trap: SERIALIZABLE without a retry loop</span><p>40001 errors are expected behaviour; without retries users see failures.</p></div>
-  <div class="callout trap"><span class="label">Trap: idle in transaction</span><p>An open snapshot blocked VACUUM ("3 are dead but not yet removable"). Never hold a transaction open across user input or API calls.</p></div>
-  <div class="callout trap"><span class="label">Trap: locking in different orders</span><p>Ben→Farah and Farah→Ben deadlocked. Lock by ascending id.</p></div>
-  <div class="callout trap"><span class="label">Trap: deciding on a replica, writing on the primary</span><p>The replica said 15 while the primary had 10. Reads that feed writes go to the primary.</p></div>
-  <div class="callout trap"><span class="label">Trap: cross-shard "transactions" as two commits</span><p>₹100 vanished between shards. Co-locate related data or use sagas / two-phase commit.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: the revision sheet.</b> Everything above on one page.</div>
+  <h2 id="st-traps"><span class="num">11</span>Common Mistakes</h2>
+  <p>Concurrency bugs pass every single-user test and appear only under load, so they are worth recognising on sight. The most common one is reading a value into the application, computing a new value, and writing it back: <code>SELECT stock</code>, then <code>UPDATE … SET stock = :computed</code>. That is exactly what sold two samosas in section 03. The fix is to let the database do the arithmetic and the check in one statement, <code>SET stock = stock - 1 WHERE … AND stock &gt; 0</code>, and look at the row count, or to read with FOR UPDATE.</p>
+  <p>The second is running related statements without a transaction. In autocommit mode Farah's order saved the stock change and the order but not the payment (section 01). Any change that spans more than one statement belongs between BEGIN and COMMIT. The opposite slip, in Python drivers, is forgetting <code>conn.commit()</code>, so the work is silently rolled back when the connection closes.</p>
+  <p>The third is assuming a stronger isolation level fixes everything. REPEATABLE READ still let both riders go home (write skew). And SERIALIZABLE without a retry loop just turns anomalies into errors that users see; 40001 and 40P01 errors are normal and must be retried.</p>
+  <p>The fourth is holding transactions open too long: across user input, across a slow API call, or in an idle notebook. An open snapshot blocked VACUUM in section 05, and held locks make everyone else wait. Related to this, a schema change on a busy table without <code>lock_timeout</code> can queue every query behind it (section 06).</p>
+  <p>The fifth is taking locks in different orders in different code paths, which is what made the two wallet transfers deadlock; always lock rows in one consistent order, such as ascending id. And finally, two distributed mistakes: deciding on a replica and writing on the primary (the replica said 15 while the primary had 10), and treating two commits on two shards as one transaction (₹100 vanished).</p>
 
   <h2 id="st-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>The whole note on one sheet. Running example: Biteful plus <code>menu</code> (Biryani Bros: Samosa 1 left at ₹40, Chicken Biryani 20 at ₹350; Green Bowl: Buddha Bowl 5), <code>wallets</code> (Ben ₹500, Farah ₹300) and <code>riders</code> (Ravi and Sara on duty in Mumbai; rule: at least one must stay). Sessions A and B are two real connections.</p>
-  <h3>The question ladder</h3>
-  <table class="tbl">
-    <tr><th>Concept</th><th>Question it answers</th><th>On the running example</th><th>Weakness → next</th></tr>
-    <tr><td>Last samosa</td><td>what goes wrong?</td><td>stock taken, no payment; 2 orders for 1 samosa</td><td>need all-or-nothing → transaction</td></tr>
-    <tr><td>Transaction</td><td>group statements</td><td>error → aborted → ROLLBACK, stock back to 20</td><td>what exactly is promised? → ACID</td></tr>
-    <tr><td>ACID</td><td>the four promises</td><td>closed conn undone; CHECK refuses; B sees 1; order survives crash</td><td>how isolated? → anomalies</td></tr>
-    <tr><td>Anomalies</td><td>what concurrency breaks</td><td>1→5; 1→2 rows; 2 samosas; 0 riders</td><td>which to stop? → levels</td></tr>
-    <tr><td>Isolation levels</td><td>which level stops which</td><td>RC 4 allowed; RR stops 3 (lost update = error); SER stops all</td><td>how do snapshots work? → MVCC</td></tr>
-    <tr><td>MVCC</td><td>stable reads without blocking</td><td>old version (stock 5, xmax = B) still read by A</td><td>writers still conflict → locks</td></tr>
-    <tr><td>Locks, FOR UPDATE</td><td>make the 2nd writer wait and re-check</td><td>Farah waits, sees 0; UPDATE 0</td><td>waiting in circles → deadlock</td></tr>
-    <tr><td>Deadlock</td><td>cyclic waits</td><td>Ben↔Farah transfers; fixed order → 480 / 320</td><td>one server only → replicas</td></tr>
-    <tr><td>Replication</td><td>copies for reads, failover</td><td>replica read-only; 15 vs 10 while paused</td><td>writes on one box → sharding</td></tr>
-    <tr><td>Sharding</td><td>split rows across servers</td><td>₹100 lost between two shards</td><td>maybe different model → NoSQL</td></tr>
-    <tr><td>SQL vs NoSQL</td><td>when to trade guarantees</td><td>wallets in SQL; cache/documents in NoSQL</td><td>→ <a class="xref" data-note="sql_modeling">Data Modeling</a></td></tr>
-  </table>
   <h3>Definitions</h3>
+  <ul>
+    <li><b>Transaction</b>: statements executed as one unit; <code>BEGIN</code> … <code>COMMIT</code> (keep all) or <code>ROLLBACK</code> (discard all). After an error it is aborted; COMMIT then performs ROLLBACK.</li>
+    <li><b>Autocommit</b>: each statement is its own transaction (psql default). Python drivers open a transaction implicitly; call <code>commit()</code>.</li>
+    <li><b>Savepoint</b>: checkpoint inside a transaction; <code>ROLLBACK TO SAVEPOINT</code> undoes only the work after it.</li>
+    <li><b>ACID</b>: Atomicity (all or nothing), Consistency (declared constraints hold), Isolation (concurrent transactions don't see unfinished work), Durability (committed data survives crashes, via the WAL flushed at COMMIT).</li>
+    <li><b>WAL</b>: write-ahead log; changes logged and flushed before COMMIT returns; replayed after a crash; streamed to replicas.</li>
+    <li><b>MVCC</b>: UPDATE writes a new row version; <code>xmin</code> = creating transaction, <code>xmax</code> = replacing one; each snapshot sees the versions committed when it was taken; VACUUM removes dead versions.</li>
+    <li><b>Row lock</b>: taken by UPDATE, DELETE, <code>SELECT … FOR UPDATE</code>; held to transaction end. <b>SKIP LOCKED</b> skips locked rows; <b>NOWAIT</b> errors instead of waiting.</li>
+    <li><b>Deadlock</b>: cycle of waits; one transaction aborted (40P01) after <code>deadlock_timeout</code>.</li>
+    <li><b>Replica</b>: read-only copy fed by WAL. <b>Lag</b>: how far behind it is. <b>Shard</b>: server holding part of the rows, chosen by the <b>shard key</b>.</li>
+  </ul>
+  <h3>Anomalies and isolation levels (PostgreSQL, verified)</h3>
   <table class="tbl">
-    <tr><th>Term</th><th>Meaning</th></tr>
-    <tr><td>Transaction</td><td>BEGIN … COMMIT/ROLLBACK; one unit; aborted after an error until ROLLBACK</td></tr>
-    <tr><td>ACID</td><td>Atomicity (all or nothing), Consistency (constraints hold), Isolation (concurrent transactions shielded), Durability (WAL on disk at COMMIT)</td></tr>
-    <tr><td>Dirty / non-repeatable / phantom</td><td>see uncommitted data / same row different value / same filter different rows</td></tr>
-    <tr><td>Lost update / write skew</td><td>a write based on a stale read overwrites another / two writes to different rows break a rule</td></tr>
-    <tr><td>READ COMMITTED / REPEATABLE READ / SERIALIZABLE</td><td>snapshot per statement / per transaction / per transaction + abort on dangerous dependency (retry on 40001)</td></tr>
-    <tr><td>MVCC, xmin, xmax</td><td>row versions; creating / replacing transaction id; visibility by snapshot; VACUUM removes dead versions</td></tr>
-    <tr><td>Row lock, FOR UPDATE, SKIP LOCKED</td><td>held to transaction end; lock while reading; skip rows others hold</td></tr>
-    <tr><td>Deadlock</td><td>cycle of waits; one aborted (40P01) after deadlock_timeout; prevent with a fixed lock order</td></tr>
-    <tr><td>Replica, lag</td><td>read-only copy fed by WAL; how far behind it is</td></tr>
-    <tr><td>Shard, shard key</td><td>a server holding part of the rows; the column that decides which</td></tr>
+    <tr><th>Level</th><th>Snapshot</th><th>Dirty</th><th>Non-repeatable</th><th>Phantom</th><th>Lost update</th><th>Write skew</th></tr>
+    <tr><td>READ UNCOMMITTED</td><td>= READ COMMITTED</td><td>No</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>READ COMMITTED (default)</td><td>per statement</td><td>No</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>REPEATABLE READ</td><td>per transaction</td><td>No</td><td>No</td><td>No</td><td>No (error)</td><td>Yes</td></tr>
+    <tr><td>SERIALIZABLE</td><td>per transaction + SSI</td><td>No</td><td>No</td><td>No</td><td>No (error)</td><td>No (error)</td></tr>
   </table>
-  <h3>When to use, when not</h3>
-  <div class="cards">
-    <div><b>Atomic UPDATE … WHERE</b><p>Counters, stock, seats: check and change in one statement.</p><small>Check the row count (UPDATE 0 = refused)</small></div>
-    <div><b>FOR UPDATE</b><p>Read a row, decide in code, then write it, in one short transaction.</p><small>Not across user think-time</small></div>
-    <div><b>Version column</b><p>Edit forms across HTTP requests; rare conflicts.</p><small>Not for hot rows (endless retries)</small></div>
-    <div><b>REPEATABLE READ</b><p>Reports needing one consistent picture.</p><small>Does not stop write skew</small></div>
-    <div><b>SERIALIZABLE</b><p>Rules spanning several rows (on-duty riders).</p><small>Needs a retry loop</small></div>
-    <div><b>Replicas</b><p>Read-heavy screens, failover.</p><small>Not for reads that feed writes</small></div>
-  </div>
-  <div class="callout trap"><span class="label">Key traps</span>
-    <p>Read-compute-write in the app; statements without BEGIN; trusting REPEATABLE READ against write skew; no retry on 40001/40P01; idle-in-transaction sessions; inconsistent lock order; deciding on a lagging replica; cross-shard "transactions"; engine differences (PostgreSQL never dirty-reads; MySQL defaults to REPEATABLE READ).</p>
-  </div>
-  <h3>Five rapid-fire checks</h3>
+  <ul>
+    <li><b>Dirty read</b>: see uncommitted data. <b>Non-repeatable</b>: same row, new value. <b>Phantom</b>: same filter, new rows.</li>
+    <li><b>Lost update</b>: write based on a stale read overwrites another write. <b>Write skew</b>: two transactions write different rows from the same read and break a rule.</li>
+    <li>Serialization failure = SQLSTATE 40001 → retry the whole transaction.</li>
+  </ul>
+  <h3>Choosing a tool</h3>
   <table class="tbl">
-    <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td><code>BEGIN; INSERT …; SELECT 1/0; INSERT …; COMMIT;</code>: how many rows saved?</td><td>None: after the error COMMIT performs ROLLBACK</td></tr>
-    <tr><td>Can a PostgreSQL session ever see uncommitted data?</td><td>No, not even at READ UNCOMMITTED</td></tr>
-    <tr><td>Lowest PostgreSQL level that stops the lost update?</td><td>REPEATABLE READ (second writer gets a serialization error)</td></tr>
-    <tr><td>Lowest level that stops write skew?</td><td>SERIALIZABLE</td></tr>
-    <tr><td>What does xmax ≠ 0 on a visible row version mean?</td><td>Some transaction replaced/deleted it, but that transaction isn't visible to your snapshot (not committed, or committed after it)</td></tr>
+    <tr><th>Situation</th><th>Tool</th></tr>
+    <tr><td>Counter, stock, seats, balance</td><td><code>UPDATE … SET x = x - 1 WHERE … AND x &gt; 0</code>, check row count</td></tr>
+    <tr><td>Read a row, decide in code, write it</td><td><code>SELECT … FOR UPDATE</code> in a short transaction</td></tr>
+    <tr><td>Edit form across web requests</td><td>optimistic locking with a version column</td></tr>
+    <tr><td>Rule across several rows</td><td>SERIALIZABLE + retry, lock all rows read, or a constraint</td></tr>
+    <tr><td>Report that must add up</td><td>REPEATABLE READ</td></tr>
+    <tr><td>Work queue with many workers</td><td><code>FOR UPDATE SKIP LOCKED</code></td></tr>
+    <tr><td>Transfers between two rows</td><td>lock in a fixed order (ascending id); retry on 40P01</td></tr>
   </table>
+  <h3>Syntax</h3>
+  <div class="fx" data-lang="sql">BEGIN ISOLATION LEVEL REPEATABLE READ;      -- or READ COMMITTED / SERIALIZABLE
+SAVEPOINT s1;  ROLLBACK TO SAVEPOINT s1;
+SELECT stock FROM menu WHERE item = 'Samosa' FOR UPDATE;          -- lock while reading
+SELECT order_id FROM orders WHERE status = 'pending'
+  ORDER BY order_id LIMIT 1 FOR UPDATE SKIP LOCKED;               -- queue
+UPDATE menu SET stock = stock - 1 WHERE item = 'Samosa' AND stock &gt; 0;   -- atomic check
+UPDATE menu SET price = 45, version = version + 1
+  WHERE item = 'Samosa' AND version = 1;                          -- optimistic
+SET lock_timeout = '2s';                                          -- before risky DDL
+COMMIT;</div>
+  <h3>Gotchas</h3>
+  <ul>
+    <li>PostgreSQL never dirty-reads; MySQL InnoDB defaults to REPEATABLE READ and behaves differently on updates.</li>
+    <li>REPEATABLE READ does not stop write skew.</li>
+    <li>Idle-in-transaction sessions block VACUUM → bloat.</li>
+    <li>ALTER TABLE waits for an exclusive lock and queues every query behind it.</li>
+    <li>FOR UPDATE cannot lock rows that don't exist yet.</li>
+    <li>ACID's C (constraints) ≠ CAP's C (copies agree).</li>
+    <li>Replicas lag: reads that feed writes go to the primary.</li>
+  </ul>
 
-  <h2 id="st-qa"><span class="num">14</span>Questions &amp; Answers</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Can you explain, out loud and without notes, why each mechanism exists and what goes wrong without it?</p>
-  </div>
+  <h2 id="st-qa"><span class="num">12</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>In one line each: what do BEGIN, COMMIT and ROLLBACK do?</summary><div class="qa-body"><code>BEGIN</code> starts a transaction (statements treated as one unit). <code>COMMIT</code> makes all its changes permanent and visible together. <code>ROLLBACK</code> discards all of them.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Explain ACID with a Biteful order.</summary><div class="qa-body">Atomicity: stock, order, line and payment all happen or none (Farah's failed order left nothing). Consistency: <code>CHECK (balance &gt;= 0)</code> and foreign keys hold after commit. Isolation: Farah never sees Ben's half-finished order. Durability: once "order placed" is returned, a crash can't lose it (the WAL is on disk; order 111 survived an immediate stop).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What's the output? <code>BEGIN; INSERT INTO t VALUES (1); SELECT 1/0; INSERT INTO t VALUES (2); COMMIT;</code> then <code>SELECT count(*) FROM t</code> (t was empty).</summary><div class="qa-body">0. After the error the transaction is aborted; the second INSERT is rejected, and COMMIT on an aborted transaction performs a ROLLBACK, undoing row 1 too.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Non-repeatable read vs phantom read?</summary><div class="qa-body">Non-repeatable: the same row has a new value on the second read (samosa stock 1 → 5, an UPDATE committed in between). Phantom: the same filter returns a different set of rows (pending orders 1 → 2, an INSERT committed in between).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Two users click "Buy" on the last item and both succeed. Fix it.</summary><div class="qa-body">Make check and change one statement: <code>UPDATE menu SET stock = stock - 1 WHERE item = 'Samosa' AND stock &gt; 0</code>; the second buyer waits for the first's row lock, re-checks, and gets UPDATE 0 → "sold out". Alternatives: <code>SELECT … FOR UPDATE</code> then decide, or REPEATABLE READ / SERIALIZABLE with retries.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is write skew, and which isolation level prevents it?</summary><div class="qa-body">Two transactions read overlapping data, then write different rows, together breaking a rule (Ravi and Sara both left duty). No row is written twice, so REPEATABLE READ allows it. SERIALIZABLE prevents it by aborting one (40001); alternatively lock the rows you counted (FOR UPDATE) or encode the rule as a constraint.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Your service uses SERIALIZABLE and sometimes gets "could not serialize access". Is that a bug?</summary><div class="qa-body">No, it's the design: PostgreSQL aborted a transaction that would have broken serializability. Retry the whole transaction (our loop: Sara's attempt 1 failed, attempt 2 saw only one rider and stayed).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Explain MVCC with xmin and xmax. Why does a long-running transaction hurt PostgreSQL?</summary><div class="qa-body">An UPDATE writes a new version (xmin = updater) and stamps the old one's xmax; each snapshot sees the version committed when it was taken, so readers don't block writers. A long-open transaction keeps an old snapshot alive, so VACUUM can't remove newer dead versions ("dead but not yet removable"): bloat.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Write the query for several dispatchers to pull pending orders without double-assigning.</summary><div class="qa-body"><code>SELECT order_id FROM orders WHERE status = 'pending' ORDER BY order_id LIMIT 1 FOR UPDATE SKIP LOCKED</code> inside a transaction, then mark it assigned and COMMIT. In our run A got 110 and B got 111 without waiting.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do deadlocks happen in a wallet-transfer service, and how do you prevent them?</summary><div class="qa-body">Ben→Farah locks Ben then Farah; Farah→Ben locks Farah then Ben; each waits for the other. PostgreSQL aborts one after deadlock_timeout. Prevent by locking both wallets in ascending id order (our fixed run finished with 480 / 320), keep transactions short, retry on 40P01.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Optimistic or pessimistic locking for (a) editing a menu description in an admin form, (b) the last samosa?</summary><div class="qa-body">(a) Optimistic: rare conflicts and a human is typing; a version column turns a conflict into UPDATE 0 → reload. (b) Pessimistic or an atomic conditional UPDATE: conflicts are constant, optimistic would retry endlessly.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>A user places an order, refreshes "My orders", and it's missing. What happened?</summary><div class="qa-body">Replication lag: the write went to the primary, the read to an async replica that hadn't replayed it yet (our paused replica said 15 while the primary had 10). Fix with read-your-writes routing or waiting for the replica's replay position.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Partitioning vs replication vs sharding?</summary><div class="qa-body">Partitioning splits a table inside one server (pruning, cheap retention). Replication copies the whole database to more servers (reads, failover; lag). Sharding splits rows across servers (write and storage scale; lose easy cross-shard joins and transactions).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does REPEATABLE READ need MVCC?</summary><div class="qa-body">REPEATABLE READ promises the same answers for the whole transaction while others keep committing. Without old versions, the only way would be to block every writer until the reader finishes. MVCC keeps the old version (stock 5, xmax = B) so the reader sees its snapshot and the writer proceeds.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: MVCC means readers don't block writers. Why do we still need locks?</summary><div class="qa-body">Two writers to the same row can't both create "the next version", and a read that will feed a write (samosa stock) must not go stale before the write. Row locks (implicit in UPDATE, explicit with FOR UPDATE) serialize writers and make the second one re-read the committed row.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: how does the WAL link durability and replication?</summary><div class="qa-body">The WAL is written and flushed before COMMIT returns, which is what let order 111 survive the crash (redo). The same log, streamed to another server and replayed, is exactly what a replica is. One mechanism, two uses.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks if you skip transactions once you shard?</summary><div class="qa-body">You can't skip them by choice, that's the point: a transfer between customers on different shards is two independent commits, so a crash in between broke atomicity (₹100 vanished). Everything section 02 gave for free must be rebuilt (two-phase commit, sagas) or avoided by choosing a shard key that keeps related rows together.</div></details>
-  <div class="bridge"><b>What this still can't tell us → next: <a class="xref" data-note="sql_modeling">Data Modeling</a>.</b> Transactions protect whatever tables we have. But if Biteful kept everything in one giant spreadsheet-like table, a customer's city would be stored in every order, and one change would mean many rows to update and lock. How should the tables be designed in the first place?</div>
-</main>`
+  <details class="qa"><summary><span class="qmark">Q</span>What is a transaction?</summary><div class="qa-body">A transaction is a group of statements that the database executes as one unit: either all of their changes are made permanent with COMMIT, or none are, with ROLLBACK. It exists because real operations, like placing an order and charging a wallet, take several statements that only make sense together. If anything fails in the middle, the database undoes the whole group.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain ACID with an example.</summary><div class="qa-body">For a food order: Atomicity means taking stock, creating the order and charging the wallet all happen or none do. Consistency means constraints such as "balance can't go negative" and foreign keys hold after every commit. Isolation means another customer never sees the half-finished order. Durability means once "order placed" is confirmed, a crash cannot lose it, because the change is in the write-ahead log on disk.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does this leave in table t (initially empty)? <code>BEGIN; INSERT INTO t VALUES (1); SELECT 1/0; INSERT INTO t VALUES (2); COMMIT;</code></summary><div class="qa-body">Nothing. The division by zero aborts the transaction, the second INSERT is rejected, and COMMIT on an aborted transaction performs a ROLLBACK, which also undoes the first row. PostgreSQL even replies "ROLLBACK" to the COMMIT.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between a dirty read, a non-repeatable read and a phantom read?</summary><div class="qa-body">A dirty read sees another transaction's uncommitted change. A non-repeatable read reads the same row twice in one transaction and gets different values because someone committed an update in between. A phantom read runs the same filter twice and gets a different set of rows because someone inserted or deleted matching rows in between.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Name the four SQL isolation levels and what each prevents.</summary><div class="qa-body">READ UNCOMMITTED allows dirty reads (except in PostgreSQL, where it acts as READ COMMITTED). READ COMMITTED prevents dirty reads; each statement sees data committed before it started. REPEATABLE READ also prevents non-repeatable reads (and in PostgreSQL phantoms and lost updates too), by using one snapshot for the whole transaction. SERIALIZABLE prevents all anomalies, making the result equal to some one-at-a-time order, by aborting a transaction when necessary.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a lost update? How do you prevent it?</summary><div class="qa-body">Two transactions read the same value, each computes a new value from it, and the second write overwrites the first, so one change is lost; two buyers both get the last item. Prevent it with an atomic conditional update (<code>SET stock = stock - 1 WHERE stock &gt; 0</code>), with <code>SELECT … FOR UPDATE</code> before deciding, with optimistic locking via a version column, or with REPEATABLE READ or SERIALIZABLE, where PostgreSQL raises an error you retry.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is write skew, and which level prevents it?</summary><div class="qa-body">Two transactions read overlapping data, each decides based on it, and each writes a different row, so together they break a rule neither broke alone, such as both on-duty riders going home. No row is written twice, so REPEATABLE READ allows it. SERIALIZABLE prevents it by aborting one transaction; alternatives are locking all the rows the decision read, or expressing the rule as a constraint.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Your application gets "could not serialize access" errors at SERIALIZABLE. Is that a bug?</summary><div class="qa-body">No. It is how serializable isolation works in PostgreSQL: rather than make transactions wait, it lets them run and aborts one when their combination could not have happened serially. The application must catch SQLSTATE 40001 and retry the whole transaction from the start; on retry it sees the new data and decides correctly.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is MVCC, and why does it mean readers don't block writers?</summary><div class="qa-body">Multi-version concurrency control keeps several versions of a row: an UPDATE writes a new version stamped with its transaction id (xmin) and marks the old one as replaced (xmax). Each transaction reads the versions that were committed when its snapshot was taken. So a reader keeps reading the old version while a writer creates the new one, and neither waits for the other; only two writers on the same row conflict.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why is a long-running or idle transaction harmful in PostgreSQL?</summary><div class="qa-body">Its snapshot might still need old row versions, so VACUUM cannot remove any version that died after the snapshot was taken, anywhere in the database. Dead versions accumulate (bloat), tables and indexes grow, and queries slow down. It may also hold locks that block others. Keep transactions short and use idle_in_transaction_session_timeout.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does SELECT … FOR UPDATE do? When would you use SKIP LOCKED?</summary><div class="qa-body">It reads rows and locks them as if they were being updated, so other transactions that try to lock or modify them wait until this transaction ends; at READ COMMITTED the waiter then re-reads the latest committed row. SKIP LOCKED makes a query skip rows other transactions have locked, which is ideal for job queues where several workers each grab the next free job without waiting or double-processing.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Optimistic vs pessimistic locking: which and when?</summary><div class="qa-body">Pessimistic locking (FOR UPDATE, conditional updates) prevents conflicts by making others wait; it suits hot rows with frequent conflicts, like stock or seat bookings, inside short transactions. Optimistic locking detects conflicts at save time with a version column (UPDATE … WHERE version = :loaded, then check the row count); it suits rare conflicts and edits that span user think-time and several web requests.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a deadlock, how does the database handle it, and how do you prevent it?</summary><div class="qa-body">A deadlock is a cycle of transactions each waiting for a lock another holds, such as two opposite wallet transfers each holding one wallet. PostgreSQL detects the cycle after deadlock_timeout and aborts one transaction with SQLSTATE 40P01 so the others can continue. Prevent it by taking locks in a consistent order (for example ascending id), keeping transactions short, and retrying when it still happens.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Row locks vs table locks: why can an ALTER TABLE take a site down?</summary><div class="qa-body">Ordinary reads and writes take weak table locks that don't conflict with each other, plus row locks on the rows they change. Most ALTER TABLE commands need an ACCESS EXCLUSIVE table lock, so they wait for any open transaction on the table, and every new query then queues behind the waiting ALTER. Use a short lock_timeout for schema changes and avoid long transactions.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How does the database guarantee durability?</summary><div class="qa-body">Through write-ahead logging: before COMMIT returns, the change is appended to the WAL and the log is flushed to disk; data pages are written later. After a crash the database replays the WAL from the last checkpoint and redoes committed changes, as the order surviving an immediate shutdown showed. Turning off synchronous_commit trades a small window of possible loss for speed.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is replication lag, and how do you deal with it?</summary><div class="qa-body">It is the delay between a commit on the primary and its appearance on an asynchronous replica. A user may write and then not see their own change if the read goes to a replica. Handle it with read-your-writes routing (send that user's reads to the primary for a while), waiting for the replica to catch up to a WAL position, or synchronous replication where it matters; and never base writes on replica reads.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Replication vs partitioning vs sharding?</summary><div class="qa-body">Replication copies the whole database to other servers, which scales reads and provides failover, but writes still go to one primary. Partitioning splits a large table into pieces inside one server, which helps pruning and data retention. Sharding splits rows across several servers by a shard key, which scales writes and storage but loses easy cross-shard joins, constraints and transactions.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you keep a money transfer correct when the two accounts are on different shards?</summary><div class="qa-body">A single local transaction can't span two servers, so a crash between the two updates breaks atomicity. Options are two-phase commit, where a coordinator gets every shard to prepare before telling all of them to commit; a saga, a sequence of local transactions with compensating actions to undo earlier steps on failure; or avoiding the problem by choosing a shard key that keeps data that changes together on the same shard.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does the CAP theorem say, and how does it relate to choosing SQL or NoSQL?</summary><div class="qa-body">When a network partition separates the nodes of a distributed database, it must choose between consistency (refusing requests until copies agree) and availability (answering, possibly with stale data). Relational databases with a single primary favour consistency and offer multi-row ACID transactions. Many NoSQL stores are built to shard and stay available, offering per-document atomicity and eventual consistency, which suits caches, feeds and logs better than money or stock.</div></details>
+</main>
+`
 });
