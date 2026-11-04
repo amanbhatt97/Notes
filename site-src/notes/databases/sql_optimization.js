@@ -79,26 +79,26 @@ Object.assign(TOPIC_CONTENT, {
   <div class="fx" data-lang="sql">EXPLAIN ANALYZE
 SELECT order_id, ordered_at, amount FROM orders
 WHERE customer_id = 1 ORDER BY ordered_at DESC;</div>
-  <div class="fx" data-lang="text">Sort  (cost=1.15..1.16 rows=3 width=17) (actual time=0.058..0.059 rows=3 loops=1)
+  <div class="fx" data-lang="text">Sort  (cost=1.15..1.16 rows=3 width=17) (actual time=0.082..0.083 rows=3 loops=1)
   Sort Key: ordered_at DESC
   Sort Method: quicksort  Memory: 25kB
-  -&gt;  Seq Scan on orders  (cost=0.00..1.12 rows=3 width=17) (actual time=0.014..0.018 rows=3 loops=1)
+  -&gt;  Seq Scan on orders  (cost=0.00..1.12 rows=3 width=17) (actual time=0.012..0.014 rows=3 loops=1)
         Filter: (customer_id = 1)
         Rows Removed by Filter: 7
-Planning Time: 0.392 ms
-Execution Time: 0.106 ms</div>
+Planning Time: 0.290 ms
+Execution Time: 0.119 ms</div>
   <p>The whole query took well under a tenth of a millisecond. Now the same query, word for word, on Biteful after it has grown: 100,000 customers and 1,000,000 orders, one order every 30 seconds from March 2025 to February 2026. Asha is still customer 1, and at this size she has 12 orders.</p>
   <div class="fx" data-lang="sql">EXPLAIN ANALYZE
 SELECT order_id, ordered_at, amount FROM orders
 WHERE customer_id = 1 ORDER BY ordered_at DESC;</div>
-  <div class="fx" data-lang="text">Sort  (cost=21845.19..21845.22 rows=11 width=18) (actual time=58.597..58.600 rows=12 loops=1)
+  <div class="fx" data-lang="text">Sort  (cost=21845.19..21845.22 rows=11 width=18) (actual time=76.382..76.384 rows=12 loops=1)
   Sort Key: ordered_at DESC
   Sort Method: quicksort  Memory: 25kB
-  -&gt;  Seq Scan on orders  (cost=0.00..21845.00 rows=11 width=18) (actual time=0.127..58.558 rows=12 loops=1)
+  -&gt;  Seq Scan on orders  (cost=0.00..21845.00 rows=11 width=18) (actual time=0.119..76.335 rows=12 loops=1)
         Filter: (customer_id = 1)
         Rows Removed by Filter: 999988
-Planning Time: 0.343 ms
-Execution Time: 58.645 ms</div>
+Planning Time: 0.332 ms
+Execution Time: 76.433 ms</div>
   <p>Two lines tell the story. <code>Rows Removed by Filter: 999988</code> says the database looked at a million rows in order to keep 12. And <code>Execution Time</code> went from a few hundredths of a millisecond to tens of milliseconds, roughly in proportion to the size of the table. Asha's 12 rows did not become harder to return. The work grew with the <em>table</em>, not with the <em>answer</em>.</p>
   <p>Think of a shop that keeps every bill ever written in one big box, in the order the bills were written. With 10 bills, finding Asha's takes a glance. With a million bills, the clerk must pick up every single one, because nothing in the box tells him where Asha's are. He is not slow at reading bills; there are simply too many to read. A database without the right index is in exactly that position.</p>
   <p>Sixty milliseconds may not sound like much, but it is sixty milliseconds of a server's full attention. If a thousand people open "My orders" in the same second, that is a full minute of database work arriving every second, and the server falls behind. So <strong>query performance</strong>, which simply means how much work the database does to produce a result, matters as soon as a table grows. The important idea is that the SQL fixes the <em>answer</em>, but not the <em>work</em>: the same query can read almost nothing or the whole table, depending on how the data is stored and which indexes exist. This is also why a query that is fast on a developer's small test table can be painfully slow in production. The rest of the page is about controlling that work.</p>
@@ -168,16 +168,16 @@ SELECT ctid, order_id, amount FROM orders WHERE order_id = 110;</div>
   Filter: (customer_id = 1)</div>
   <p>The planner's figure, <code>cost=0.00..21845.00</code>, is exactly our hand calculation. The first number is the cost before the first row can come out (a scan can produce rows immediately, so 0); the second is the cost to finish. Notice that nothing in the formula depends on how many rows <em>match</em>. Asking for Asha's 12 orders costs the same as asking for everyone's. Adding <code>BUFFERS</code> to EXPLAIN ANALYZE counts the pages that were actually touched:</p>
   <div class="fx" data-lang="sql">EXPLAIN (ANALYZE, BUFFERS) SELECT count(*) FROM orders WHERE customer_id = 1;</div>
-  <div class="fx" data-lang="text">Aggregate  (cost=21845.03..21845.04 rows=1 width=8) (actual time=57.823..57.824 rows=1 loops=1)
+  <div class="fx" data-lang="text">Aggregate  (cost=21845.03..21845.04 rows=1 width=8) (actual time=77.975..77.977 rows=1 loops=1)
   Buffers: shared hit=2112 read=7233
-  -&gt;  Seq Scan on orders  (cost=0.00..21845.00 rows=11 width=0) (actual time=0.126..57.805 rows=12 loops=1)
+  -&gt;  Seq Scan on orders  (cost=0.00..21845.00 rows=11 width=0) (actual time=0.163..77.956 rows=12 loops=1)
         Filter: (customer_id = 1)
         Rows Removed by Filter: 999988
         Buffers: shared hit=2112 read=7233
 Planning:
   Buffers: shared hit=60
-Planning Time: 0.258 ms
-Execution Time: 57.892 ms</div>
+Planning Time: 0.330 ms
+Execution Time: 78.059 ms</div>
   <p><code>Buffers: shared hit=… read=…</code> counts pages: <em>hit</em> means the page was already in PostgreSQL's memory cache, <em>read</em> means it had to be fetched from the operating system or the disk. Add the two and you get 9,345, every page of the table, in order to count 12 rows. If the table doubles, the cost and the time double too. That straight-line growth is the problem the rest of this page solves.</p>
   <p>Two words from this section are used constantly in performance work. <strong>Selectivity</strong> is the fraction of rows a condition keeps: Asha's 12 out of 1,000,000 is a selectivity of 0.0012%, which is very selective. A Seq Scan wastes almost all of its effort when a condition is this selective, and an index will help enormously. When a condition keeps most of the table, the Seq Scan is the right plan anyway. Also note that cost units are not milliseconds: compare the costs of different plans for the same query, never a cost with a time.</p>
 
@@ -255,21 +255,21 @@ FROM bt_page_items('orders_customer_idx', 1) LIMIT 3;</div>
   <div class="fx" data-lang="sql">EXPLAIN (ANALYZE, BUFFERS)
 SELECT order_id, ordered_at, amount FROM orders
 WHERE customer_id = 1 ORDER BY ordered_at DESC;</div>
-  <div class="fx" data-lang="text">Sort  (cost=47.71..47.73 rows=11 width=18) (actual time=0.229..0.231 rows=12 loops=1)
+  <div class="fx" data-lang="text">Sort  (cost=47.71..47.73 rows=11 width=18) (actual time=0.127..0.128 rows=12 loops=1)
   Sort Key: ordered_at DESC
   Sort Method: quicksort  Memory: 25kB
   Buffers: shared hit=10 read=8
-  -&gt;  Bitmap Heap Scan on orders  (cost=4.51..47.52 rows=11 width=18) (actual time=0.069..0.178 rows=12 loops=1)
+  -&gt;  Bitmap Heap Scan on orders  (cost=4.51..47.52 rows=11 width=18) (actual time=0.034..0.098 rows=12 loops=1)
         Recheck Cond: (customer_id = 1)
         Heap Blocks: exact=12
         Buffers: shared hit=7 read=8
-        -&gt;  Bitmap Index Scan on orders_customer_idx  (cost=0.00..4.51 rows=11 width=0) (actual time=0.042..0.042 rows=12 loops=1)
+        -&gt;  Bitmap Index Scan on orders_customer_idx  (cost=0.00..4.51 rows=11 width=0) (actual time=0.019..0.019 rows=12 loops=1)
               Index Cond: (customer_id = 1)
               Buffers: shared hit=3
 Planning:
   Buffers: shared hit=95
-Planning Time: 0.568 ms
-Execution Time: 0.337 ms</div>
+Planning Time: 0.327 ms
+Execution Time: 0.185 ms</div>
   <p>A plan is a tree of steps called <strong>nodes</strong>. Each node receives rows from the nodes indented beneath it (marked with <code>-&gt;</code>), does its job, and passes rows up to its parent. So a plan is read <strong>inside-out</strong>: the most deeply indented node runs first. Read this one from the bottom up. The <code>Bitmap Index Scan on orders_customer_idx</code> walks the B-tree for <code>customer_id = 1</code>, our three-page search (<code>Buffers: shared hit=3</code>), and collects the 12 row addresses into a bitmap, which is a checklist of heap pages to visit. Its bracket <code>(cost=0.00..4.51 rows=11 ...)</code> is the planner's guess before running: a tiny cost and about 11 rows. The second bracket <code>(actual time=… rows=12 loops=1)</code> is what really happened: the time to the first and last row in milliseconds, the real number of rows (12, so the guess of 11 was close), and how many times the node ran.</p>
   <p>Above it, the <code>Bitmap Heap Scan on orders</code> visits the pages on the checklist in physical order, each once (<code>Heap Blocks: exact=12</code>), and fetches the rows. <code>Recheck Cond</code> means it re-tests the condition on each fetched row; that is only needed when memory is short and the bitmap has to remember whole pages instead of exact rows, but the line is always printed. Finally <code>Sort</code> puts the 12 rows newest first, in memory. The total is about 15 to 20 pages instead of 9,345, and the execution time drops from tens of milliseconds to a fraction of a millisecond.</p>
   <p>Why a "bitmap" scan and not a plain index scan? A plain <strong>Index Scan</strong> walks the index and fetches each row from the heap immediately, in index order. That is ideal for very few rows, or when the index order itself is useful (for ORDER BY, as section 05 shows). For a moderate number of rows on scattered pages, PostgreSQL often prefers to collect all the addresses first, sort them by page and read each page once, which is the bitmap approach; it can also combine two indexes this way (BitmapAnd, BitmapOr). The scan nodes you will meet most often are these:</p>
@@ -285,32 +285,32 @@ Execution Time: 0.337 ms</div>
 SELECT c.city, count(*) FROM orders o JOIN customers c ON c.customer_id = o.customer_id
 WHERE o.ordered_at &gt;= '2026-02-14' AND o.ordered_at &lt; '2026-02-15'
 GROUP BY c.city;</div>
-  <div class="fx" data-lang="text">GroupAggregate  (cost=27490.42..27512.55 rows=4 width=15) (actual time=113.619..113.891 rows=4 loops=1)
+  <div class="fx" data-lang="text">GroupAggregate  (cost=27490.42..27512.55 rows=4 width=15) (actual time=137.725..138.074 rows=4 loops=1)
   Group Key: c.city
-  -&gt;  Sort  (cost=27490.42..27497.78 rows=2945 width=7) (actual time=113.506..113.654 rows=2880 loops=1)
+  -&gt;  Sort  (cost=27490.42..27497.78 rows=2945 width=7) (actual time=137.592..137.777 rows=2880 loops=1)
         Sort Key: c.city
         Sort Method: quicksort  Memory: 147kB
-        -&gt;  Hash Join  (cost=2968.00..27320.73 rows=2945 width=7) (actual time=110.369..113.027 rows=2880 loops=1)
+        -&gt;  Hash Join  (cost=2968.00..27320.73 rows=2945 width=7) (actual time=133.742..137.000 rows=2880 loops=1)
               Hash Cond: (o.customer_id = c.customer_id)
-              -&gt;  Seq Scan on orders o  (cost=0.00..24345.00 rows=2945 width=4) (actual time=76.898..78.415 rows=2880 loops=1)
+              -&gt;  Seq Scan on orders o  (cost=0.00..24345.00 rows=2945 width=4) (actual time=93.790..95.657 rows=2880 loops=1)
                     Filter: ((ordered_at &gt;= '2026-02-14 00:00:00+05:30'::timestamp with time zone) AND (ordered_at &lt; '2026-02-15 00:00:00+05:30'::timestamp with time zone))
                     Rows Removed by Filter: 997120
-              -&gt;  Hash  (cost=1718.00..1718.00 rows=100000 width=11) (actual time=32.704..32.705 rows=100000 loops=1)
+              -&gt;  Hash  (cost=1718.00..1718.00 rows=100000 width=11) (actual time=39.230..39.231 rows=100000 loops=1)
                     Buckets: 131072  Batches: 1  Memory Usage: 5420kB
-                    -&gt;  Seq Scan on customers c  (cost=0.00..1718.00 rows=100000 width=11) (actual time=0.038..12.642 rows=100000 loops=1)
-Planning Time: 0.807 ms
-Execution Time: 115.222 ms</div>
+                    -&gt;  Seq Scan on customers c  (cost=0.00..1718.00 rows=100000 width=11) (actual time=0.020..15.462 rows=100000 loops=1)
+Planning Time: 0.765 ms
+Execution Time: 139.757 ms</div>
   <p>Inside-out: the Seq Scan on orders reads every page and keeps one day's 2,880 orders (there is no index on <code>ordered_at</code> yet). Next to it, the Seq Scan on customers feeds a <strong>Hash</strong> node, which builds an in-memory lookup table of all 100,000 customers (about 5 MB). The <strong>Hash Join</strong> then looks up each of the 2,880 orders in that table. <strong>Sort</strong> orders the joined rows by city, and <strong>GroupAggregate</strong> counts each run of equal cities. To find the expensive step, look at the <code>actual time</code> of each node: almost all of the time is spent in the Seq Scan on orders, so an index on <code>ordered_at</code> is the fix (section 07 adds one).</p>
   <p>The most useful habit when reading any plan is to compare, for each node, the <strong>estimated rows</strong> (<code>rows=</code> in the first bracket) with the <strong>actual rows</strong> (<code>rows=</code> in the second). When they are close, the planner understood the data and its choices are probably sensible. When they differ by ten times or more, the plan was chosen for data that does not exist, and that node is where to start investigating (section 08).</p>
   <p>One warning: EXPLAIN ANALYZE really executes the statement. On an UPDATE or DELETE it changes data, so wrap it in a transaction and roll it back:</p>
   <div class="fx" data-lang="sql">BEGIN;
 EXPLAIN ANALYZE DELETE FROM order_items WHERE order_id = 101;
 ROLLBACK;</div>
-  <div class="fx" data-lang="text">Delete on order_items  (cost=0.42..8.44 rows=0 width=0) (actual time=0.080..0.080 rows=0 loops=1)
-  -&gt;  Index Scan using order_items_pkey on order_items  (cost=0.42..8.44 rows=1 width=6) (actual time=0.047..0.048 rows=1 loops=1)
+  <div class="fx" data-lang="text">Delete on order_items  (cost=0.42..8.44 rows=0 width=0) (actual time=0.073..0.073 rows=0 loops=1)
+  -&gt;  Index Scan using order_items_pkey on order_items  (cost=0.42..8.44 rows=1 width=6) (actual time=0.046..0.047 rows=1 loops=1)
         Index Cond: (order_id = 101)
-Planning Time: 0.389 ms
-Execution Time: 0.148 ms</div>
+Planning Time: 0.435 ms
+Execution Time: 0.135 ms</div>
   <p>The plan shows the delete happening (it found the row through the primary key index of <code>order_items</code>), but because of the ROLLBACK the row is still there afterwards:</p>
   <div class="fx" data-lang="sql">SELECT count(*) FROM order_items WHERE order_id = 101;</div>
   <div class="fx" data-lang="text"> count
@@ -355,39 +355,39 @@ EXPLAIN (ANALYZE, BUFFERS)
 SELECT order_id, ordered_at, amount FROM orders
 WHERE customer_id = 1 AND ordered_at &gt;= '2026-01-01'
 ORDER BY ordered_at DESC;</div>
-  <div class="fx" data-lang="text">Index Scan Backward using orders_cust_time_idx on orders  (cost=0.42..12.46 rows=2 width=18) (actual time=0.018..0.024 rows=3 loops=1)
+  <div class="fx" data-lang="text">Index Scan Backward using orders_cust_time_idx on orders  (cost=0.42..12.46 rows=2 width=18) (actual time=0.020..0.025 rows=3 loops=1)
   Index Cond: ((customer_id = 1) AND (ordered_at &gt;= '2026-01-01 00:00:00+05:30'::timestamp with time zone))
   Buffers: shared hit=4 read=3
 Planning:
-  Buffers: shared hit=78 read=1 dirtied=1
+  Buffers: shared hit=78 read=1
 Planning Time: 0.337 ms
-Execution Time: 0.060 ms</div>
+Execution Time: 0.062 ms</div>
   <p><code>Index Scan Backward</code> means the database jumped to the end of Asha's 2026 slice and walked the leaves backwards, so rows came out newest first and there is <strong>no Sort node</strong>. Both conditions appear in <code>Index Cond</code>, which means both narrowed the search inside the index itself; only seven pages were touched. The leading column alone still uses the index:</p>
   <div class="fx" data-lang="sql">EXPLAIN (ANALYZE, BUFFERS)
 SELECT order_id, ordered_at, amount FROM orders WHERE customer_id = 1;</div>
-  <div class="fx" data-lang="text">Bitmap Heap Scan on orders  (cost=4.51..47.52 rows=11 width=18) (actual time=0.032..0.079 rows=12 loops=1)
+  <div class="fx" data-lang="text">Bitmap Heap Scan on orders  (cost=4.51..47.52 rows=11 width=18) (actual time=0.056..0.105 rows=12 loops=1)
   Recheck Cond: (customer_id = 1)
   Heap Blocks: exact=12
   Buffers: shared hit=15
-  -&gt;  Bitmap Index Scan on orders_cust_time_idx  (cost=0.00..4.51 rows=11 width=0) (actual time=0.024..0.024 rows=12 loops=1)
+  -&gt;  Bitmap Index Scan on orders_cust_time_idx  (cost=0.00..4.51 rows=11 width=0) (actual time=0.046..0.046 rows=12 loops=1)
         Index Cond: (customer_id = 1)
         Buffers: shared hit=3
 Planning:
   Buffers: shared hit=90
-Planning Time: 0.432 ms
-Execution Time: 0.169 ms</div>
+Planning Time: 0.417 ms
+Execution Time: 0.182 ms</div>
   <p>But the second column alone cannot, exactly as the phone book predicted:</p>
   <div class="fx" data-lang="sql">EXPLAIN (ANALYZE, BUFFERS)
 SELECT order_id, customer_id FROM orders
 WHERE ordered_at &gt;= '2026-02-14' AND ordered_at &lt; '2026-02-15';</div>
-  <div class="fx" data-lang="text">Seq Scan on orders  (cost=0.00..24345.00 rows=2945 width=8) (actual time=72.337..74.086 rows=2880 loops=1)
+  <div class="fx" data-lang="text">Seq Scan on orders  (cost=0.00..24345.00 rows=2945 width=8) (actual time=59.874..61.047 rows=2880 loops=1)
   Filter: ((ordered_at &gt;= '2026-02-14 00:00:00+05:30'::timestamp with time zone) AND (ordered_at &lt; '2026-02-15 00:00:00+05:30'::timestamp with time zone))
   Rows Removed by Filter: 997120
   Buffers: shared hit=2312 read=7033
 Planning:
   Buffers: shared hit=90
-Planning Time: 1.061 ms
-Execution Time: 74.307 ms</div>
+Planning Time: 0.336 ms
+Execution Time: 61.225 ms</div>
   <p>Asking for one day's orders without a customer falls back to a Seq Scan over every page, because one day's orders are spread across all 100,000 customer slices of the index.</p>
   <p>Does the order of the columns really matter, if the index contains the same two columns either way? We can measure it. An index on <code>(ordered_at, customer_id)</code> is sorted by time first, so "since 1 January" picks one large slice containing every customer's orders since then, and customer 1's rows are sprinkled through it. To force the planner to use the reversed index, we hide the good index inside a transaction (index changes in PostgreSQL are transactional, so ROLLBACK brings it back):</p>
   <div class="fx" data-lang="sql">CREATE INDEX orders_time_cust_idx ON orders (ordered_at, customer_id);
@@ -399,13 +399,13 @@ WHERE customer_id = 1 AND ordered_at &gt;= '2026-01-01'
 ORDER BY ordered_at DESC;
 ROLLBACK;                                  -- the good index comes back
 DROP INDEX orders_time_cust_idx;</div>
-  <div class="fx" data-lang="text">Index Scan Backward using orders_time_cust_idx on orders  (cost=0.42..3608.89 rows=2 width=18) (actual time=0.435..6.764 rows=3 loops=1)
+  <div class="fx" data-lang="text">Index Scan Backward using orders_time_cust_idx on orders  (cost=0.42..3608.89 rows=2 width=18) (actual time=0.262..9.498 rows=3 loops=1)
   Index Cond: ((ordered_at &gt;= '2026-01-01 00:00:00+05:30'::timestamp with time zone) AND (customer_id = 1))
-  Buffers: shared hit=6 read=557
+  Buffers: shared hit=6 read=557 written=124
 Planning:
   Buffers: shared hit=74 read=1
-Planning Time: 0.317 ms
-Execution Time: 6.802 ms</div>
+Planning Time: 0.284 ms
+Execution Time: 9.531 ms</div>
   <p>The answer is the same three rows, but the reversed index can only <em>seek</em> on <code>ordered_at</code>; the condition <code>customer_id = 1</code> has to be checked on every index entry since 1 January, which is roughly 140,000 entries. Buffers jump from 7 to over 500 and the time grows many times. The rule that follows is short: <strong>put columns tested with equality first, and the range or sort column last</strong>. With <code>(customer_id, ordered_at)</code> the equality picks one customer's small slice and the range trims it; reversed, the range picks a huge slice and the equality filters inside it.</p>
   <p>A common alternative is to create one single-column index per column and hope the database combines them. PostgreSQL can combine two indexes with a BitmapAnd, but that is slower than one composite index shaped for the query, and it can never deliver rows already sorted for <code>ORDER BY … LIMIT</code>. Also remember that an index on <code>(a, b)</code> makes a separate index on <code>(a)</code> unnecessary, but it does not replace an index on <code>(b)</code>.</p>
 
@@ -416,40 +416,40 @@ Execution Time: 6.802 ms</div>
 EXPLAIN (ANALYZE, BUFFERS)
 SELECT order_id, ordered_at, amount FROM orders
 WHERE customer_id = 1 ORDER BY ordered_at DESC;</div>
-  <div class="fx" data-lang="text">Index Only Scan Backward using orders_cust_time_cov on orders  (cost=0.42..4.62 rows=11 width=18) (actual time=0.029..0.031 rows=12 loops=1)
+  <div class="fx" data-lang="text">Index Only Scan Backward using orders_cust_time_cov on orders  (cost=0.42..4.62 rows=11 width=18) (actual time=0.026..0.029 rows=12 loops=1)
   Index Cond: (customer_id = 1)
   Heap Fetches: 0
   Buffers: shared hit=1 read=3
 Planning:
-  Buffers: shared hit=91 read=1 dirtied=5
-Planning Time: 0.369 ms
-Execution Time: 0.062 ms</div>
+  Buffers: shared hit=91 read=1
+Planning Time: 0.315 ms
+Execution Time: 0.060 ms</div>
   <p><code>Index Only Scan</code> with <code>Heap Fetches: 0</code> means the table was never read: the whole answer came from about four index pages. There is a catch, though, and it comes from the row versions of section 02. An index entry does not know whether the row version it points to is visible to the current transaction; only the heap knows that. So PostgreSQL keeps a small <strong>visibility map</strong>, one bit per heap page, meaning "every row on this page is visible to everyone". When the bit is set, an index-only scan may trust the index; when it is not set, the scan must visit the heap page to check. VACUUM is what sets these bits. Watch what happens after touching Asha's 12 rows with an UPDATE that changes nothing:</p>
   <div class="fx" data-lang="sql">UPDATE orders SET amount = amount WHERE customer_id = 1;
 EXPLAIN (ANALYZE, BUFFERS)
 SELECT order_id, ordered_at, amount FROM orders
 WHERE customer_id = 1 ORDER BY ordered_at DESC;</div>
-  <div class="fx" data-lang="text">Index Only Scan Backward using orders_cust_time_cov on orders  (cost=0.42..4.62 rows=11 width=18) (actual time=0.013..0.069 rows=12 loops=1)
+  <div class="fx" data-lang="text">Index Only Scan Backward using orders_cust_time_cov on orders  (cost=0.42..4.62 rows=11 width=18) (actual time=0.012..0.068 rows=12 loops=1)
   Index Cond: (customer_id = 1)
   Heap Fetches: 24
   Buffers: shared hit=28
 Planning:
   Buffers: shared hit=20
-Planning Time: 0.084 ms
-Execution Time: 0.083 ms</div>
+Planning Time: 0.092 ms
+Execution Time: 0.150 ms</div>
   <p>Heap Fetches jumped from 0 to 24. The 12 updated heap pages lost their "all visible" bit, and because <code>amount</code> is stored in the index, each UPDATE also added a new index entry, so the index now holds 24 entries for Asha (12 for the dead old versions and 12 for the new ones), and every one has to be checked against its heap page. Running VACUUM removes the dead versions and sets the bits again:</p>
   <div class="fx" data-lang="sql">VACUUM orders;
 EXPLAIN (ANALYZE, BUFFERS)
 SELECT order_id, ordered_at, amount FROM orders
 WHERE customer_id = 1 ORDER BY ordered_at DESC;</div>
-  <div class="fx" data-lang="text">Index Only Scan Backward using orders_cust_time_cov on orders  (cost=0.42..8.62 rows=11 width=18) (actual time=0.026..0.028 rows=12 loops=1)
+  <div class="fx" data-lang="text">Index Only Scan Backward using orders_cust_time_cov on orders  (cost=0.42..8.62 rows=11 width=18) (actual time=0.022..0.025 rows=12 loops=1)
   Index Cond: (customer_id = 1)
   Heap Fetches: 0
   Buffers: shared hit=4
 Planning:
   Buffers: shared hit=57
-Planning Time: 0.293 ms
-Execution Time: 0.072 ms</div>
+Planning Time: 0.318 ms
+Execution Time: 0.071 ms</div>
   <p>Back to <code>Heap Fetches: 0</code>. Autovacuum normally keeps the visibility map up to date in the background, but on a table with heavy updates where autovacuum falls behind, you will see high Heap Fetches and the covering index quietly stops saving work. The other way to lose the benefit is to ask for columns the index does not have. <code>SELECT *</code> needs every column, so it can never be covered:</p>
   <div class="fx" data-lang="sql">EXPLAIN SELECT * FROM orders WHERE customer_id = 1 ORDER BY ordered_at DESC;</div>
   <div class="fx" data-lang="text">Sort  (cost=47.71..47.73 rows=11 width=39)
@@ -465,49 +465,49 @@ Execution Time: 0.072 ms</div>
   <div class="fx" data-lang="sql">CREATE INDEX orders_time_idx ON orders (ordered_at);
 EXPLAIN (ANALYZE, BUFFERS)
 SELECT count(*) FROM orders WHERE ordered_at::date = '2026-02-14';</div>
-  <div class="fx" data-lang="text">Aggregate  (cost=24357.50..24357.51 rows=1 width=8) (actual time=105.889..105.891 rows=1 loops=1)
+  <div class="fx" data-lang="text">Aggregate  (cost=24357.50..24357.51 rows=1 width=8) (actual time=136.012..136.014 rows=1 loops=1)
   Buffers: shared hit=2547 read=6798
-  -&gt;  Seq Scan on orders  (cost=0.00..24345.00 rows=5000 width=0) (actual time=103.655..105.714 rows=2880 loops=1)
+  -&gt;  Seq Scan on orders  (cost=0.00..24345.00 rows=5000 width=0) (actual time=134.117..135.852 rows=2880 loops=1)
         Filter: ((ordered_at)::date = '2026-02-14'::date)
         Rows Removed by Filter: 997120
         Buffers: shared hit=2547 read=6798
 Planning:
-  Buffers: shared hit=90 read=1 dirtied=2
-Planning Time: 0.394 ms
-Execution Time: 105.942 ms</div>
+  Buffers: shared hit=90 read=1
+Planning Time: 0.438 ms
+Execution Time: 136.078 ms</div>
   <p>A Seq Scan over every page, even though a perfect index exists. The reason lies in what the index is sorted by: the raw timestamps, such as 2026-02-13 23:59:30, 2026-02-14 00:00:00, 2026-02-14 00:00:30 and so on. The condition asks about <code>ordered_at::date</code>, a value computed from each row, and the index has no list of computed dates. To answer, the database must compute the date of every row and compare it, which means reading every row. Now ask the same question as a range of raw timestamps:</p>
   <div class="fx" data-lang="sql">EXPLAIN (ANALYZE, BUFFERS)
 SELECT count(*) FROM orders
 WHERE ordered_at &gt;= '2026-02-14' AND ordered_at &lt; '2026-02-15';</div>
-  <div class="fx" data-lang="text">Aggregate  (cost=106.69..106.70 rows=1 width=8) (actual time=0.470..0.471 rows=1 loops=1)
+  <div class="fx" data-lang="text">Aggregate  (cost=106.69..106.70 rows=1 width=8) (actual time=0.499..0.500 rows=1 loops=1)
   Buffers: shared hit=3 read=9
-  -&gt;  Index Only Scan using orders_time_idx on orders  (cost=0.42..99.33 rows=2945 width=0) (actual time=0.026..0.320 rows=2880 loops=1)
+  -&gt;  Index Only Scan using orders_time_idx on orders  (cost=0.42..99.33 rows=2945 width=0) (actual time=0.023..0.344 rows=2880 loops=1)
         Index Cond: ((ordered_at &gt;= '2026-02-14 00:00:00+05:30'::timestamp with time zone) AND (ordered_at &lt; '2026-02-15 00:00:00+05:30'::timestamp with time zone))
         Heap Fetches: 0
         Buffers: shared hit=3 read=9
 Planning:
   Buffers: shared hit=131 read=3
-Planning Time: 0.507 ms
-Execution Time: 0.523 ms</div>
+Planning Time: 0.520 ms
+Execution Time: 0.552 ms</div>
   <p>The same 2,880 orders, now found with an index range read of about a dozen pages in under a millisecond. The two conditions mean exactly the same thing to a human; the difference is only in their <em>shape</em>. A condition is called <strong>sargable</strong> (from "Search ARGument ABLE") when an index can be used to find the matching rows, which in practice means the indexed column appears <em>bare</em> on one side of a comparison the index understands (<code>=</code>, <code>&lt;</code>, <code>&gt;</code>, BETWEEN, a prefix LIKE). Think of a dictionary, which is sorted by the word. "Words starting with <em>ma</em>" is quick to find. "Words whose last letter is <em>a</em>" means reading the whole dictionary, even though it is the same book. Wrapping a column in a function turns the first kind of question into the second. The rule is: leave the column alone and do the work on the constant side. (The half-open range <code>&gt;= day AND &lt; next day</code> is also safer than BETWEEN, which would include midnight of the next day, as <a class="xref" data-note="sql_fundamentals">SQL Fundamentals</a> showed.)</p>
   <p>Text has the same problem. Users type "asha", "Asha" or "ASHA", so a login query lowercases the column before comparing, and an ordinary index on <code>name</code> cannot help, because it stores "Asha", not "asha":</p>
   <div class="fx" data-lang="sql">CREATE INDEX customers_name_idx ON customers (name);
 EXPLAIN ANALYZE SELECT customer_id FROM customers WHERE lower(name) = 'asha';</div>
-  <div class="fx" data-lang="text">Seq Scan on customers  (cost=0.00..2218.00 rows=500 width=4) (actual time=0.032..42.360 rows=1 loops=1)
+  <div class="fx" data-lang="text">Seq Scan on customers  (cost=0.00..2218.00 rows=500 width=4) (actual time=0.031..22.030 rows=1 loops=1)
   Filter: (lower(name) = 'asha'::text)
   Rows Removed by Filter: 99999
-Planning Time: 0.267 ms
-Execution Time: 42.390 ms</div>
+Planning Time: 0.224 ms
+Execution Time: 22.057 ms</div>
   <p>Here we cannot move the function to the other side, because the stored names have mixed case. The solution is an <strong>expression index</strong>, which indexes the result of the expression itself. The query must then use exactly the same expression:</p>
   <div class="fx" data-lang="sql">CREATE INDEX customers_lower_name_idx ON customers (lower(name));
 EXPLAIN ANALYZE SELECT customer_id FROM customers WHERE lower(name) = 'asha';</div>
-  <div class="fx" data-lang="text">Bitmap Heap Scan on customers  (cost=8.17..699.61 rows=500 width=4) (actual time=0.020..0.021 rows=1 loops=1)
+  <div class="fx" data-lang="text">Bitmap Heap Scan on customers  (cost=8.17..699.61 rows=500 width=4) (actual time=0.022..0.022 rows=1 loops=1)
   Recheck Cond: (lower(name) = 'asha'::text)
   Heap Blocks: exact=1
-  -&gt;  Bitmap Index Scan on customers_lower_name_idx  (cost=0.00..8.04 rows=500 width=0) (actual time=0.015..0.015 rows=1 loops=1)
+  -&gt;  Bitmap Index Scan on customers_lower_name_idx  (cost=0.00..8.04 rows=500 width=0) (actual time=0.017..0.017 rows=1 loops=1)
         Index Cond: (lower(name) = 'asha'::text)
-Planning Time: 0.270 ms
-Execution Time: 0.045 ms</div>
+Planning Time: 0.352 ms
+Execution Time: 0.050 ms</div>
   <p>From a Seq Scan of 100,000 names to an index lookup of one row. Two more ways of hiding a column are common in real code:</p>
   <div class="fx" data-lang="sql">EXPLAIN SELECT order_id FROM orders WHERE customer_id + 0 = 1;
 EXPLAIN SELECT customer_id FROM customers WHERE name LIKE '%Kapoor';</div>
@@ -553,38 +553,38 @@ FROM generate_series(1, 300000) g;
 EXPLAIN ANALYZE
 SELECT c.city, count(*) FROM orders_promo o JOIN customers c ON c.customer_id = o.customer_id
 WHERE o.amount = 199 GROUP BY c.city;</div>
-  <div class="fx" data-lang="text">GroupAggregate  (cost=28518.49..28518.61 rows=4 width=15) (actual time=594.431..631.116 rows=5 loops=1)
+  <div class="fx" data-lang="text">GroupAggregate  (cost=28518.49..28518.61 rows=4 width=15) (actual time=638.645..675.657 rows=5 loops=1)
   Group Key: c.city
-  -&gt;  Sort  (cost=28518.49..28518.52 rows=10 width=7) (actual time=580.901..608.999 rows=300007 loops=1)
+  -&gt;  Sort  (cost=28518.49..28518.52 rows=10 width=7) (actual time=619.649..651.662 rows=300007 loops=1)
         Sort Key: c.city
         Sort Method: external merge  Disk: 3256kB
-        -&gt;  Nested Loop  (cost=0.29..28518.33 rows=10 width=7) (actual time=53.825..527.344 rows=300007 loops=1)
-              -&gt;  Seq Scan on orders_promo o  (cost=0.00..28435.22 rows=10 width=4) (actual time=53.778..170.606 rows=300007 loops=1)
+        -&gt;  Nested Loop  (cost=0.29..28518.33 rows=10 width=7) (actual time=80.666..568.541 rows=300007 loops=1)
+              -&gt;  Seq Scan on orders_promo o  (cost=0.00..28435.22 rows=10 width=4) (actual time=80.589..226.177 rows=300007 loops=1)
                     Filter: (amount = '199'::numeric)
                     Rows Removed by Filter: 999993
               -&gt;  Index Scan using customers_pkey on customers c  (cost=0.29..8.31 rows=1 width=11) (actual time=0.001..0.001 rows=1 loops=300007)
                     Index Cond: (customer_id = o.customer_id)
-Planning Time: 0.445 ms
-Execution Time: 631.485 ms</div>
+Planning Time: 0.635 ms
+Execution Time: 676.014 ms</div>
   <p>Find the node where estimate and reality disagree. The Seq Scan on orders_promo expected <code>rows=10</code>, because according to the old statistics ₹199.00 is one rare amount among a hundred thousand different ones, but it produced 300,007 rows. Every decision above that node was made for 10 rows. A <strong>Nested Loop</strong> join, which looks up each order's customer one at a time through the customers primary key, is a fine plan for 10 rows, but here it ran 300,007 lookups (<code>loops=300007</code>), and the sort, sized for 10 rows, spilled to disk. Now refresh the statistics and run the identical query:</p>
   <div class="fx" data-lang="sql">ANALYZE orders_promo;
 EXPLAIN ANALYZE
 SELECT c.city, count(*) FROM orders_promo o JOIN customers c ON c.customer_id = o.customer_id
 WHERE o.amount = 199 GROUP BY c.city;</div>
-  <div class="fx" data-lang="text">HashAggregate  (cost=33716.84..33716.88 rows=4 width=15) (actual time=346.079..346.084 rows=5 loops=1)
+  <div class="fx" data-lang="text">HashAggregate  (cost=33694.70..33694.74 rows=4 width=15) (actual time=278.447..278.453 rows=5 loops=1)
   Group Key: c.city
   Batches: 1  Memory Usage: 24kB
-  -&gt;  Hash Join  (cost=2968.00..32216.64 rows=300040 width=7) (actual time=108.307..296.476 rows=300007 loops=1)
+  -&gt;  Hash Join  (cost=2968.00..32209.02 rows=297137 width=7) (actual time=79.925..237.328 rows=300007 loops=1)
         Hash Cond: (o.customer_id = c.customer_id)
-        -&gt;  Seq Scan on orders_promo o  (cost=0.00..28461.00 rows=300040 width=4) (actual time=72.986..182.298 rows=300007 loops=1)
+        -&gt;  Seq Scan on orders_promo o  (cost=0.00..28461.00 rows=297137 width=4) (actual time=55.387..153.436 rows=300007 loops=1)
               Filter: (amount = '199'::numeric)
               Rows Removed by Filter: 999993
-        -&gt;  Hash  (cost=1718.00..1718.00 rows=100000 width=11) (actual time=34.740..34.741 rows=100000 loops=1)
+        -&gt;  Hash  (cost=1718.00..1718.00 rows=100000 width=11) (actual time=24.045..24.047 rows=100000 loops=1)
               Buckets: 131072  Batches: 1  Memory Usage: 5420kB
-              -&gt;  Seq Scan on customers c  (cost=0.00..1718.00 rows=100000 width=11) (actual time=0.015..13.173 rows=100000 loops=1)
-Planning Time: 0.544 ms
-Execution Time: 346.162 ms</div>
-  <p>The estimate is now close to 300,000, so the planner builds one hash table of customers and streams all the orders through it: a Hash Join and an in-memory HashAggregate, and the query runs about twice as fast. Nothing changed except the statistics. Think of a cab app that believes a road is empty because its traffic data is from last night: its route is perfect for the data it has and terrible for the jam you are actually in. ANALYZE refreshes the traffic data.</p>
+              -&gt;  Seq Scan on customers c  (cost=0.00..1718.00 rows=100000 width=11) (actual time=0.011..8.917 rows=100000 loops=1)
+Planning Time: 0.462 ms
+Execution Time: 278.525 ms</div>
+  <p>The estimate is now close to 300,000, so the planner builds one hash table of customers and streams all the orders through it: a Hash Join and an in-memory HashAggregate, and the query takes roughly half the time. Nothing changed except the statistics. Think of a cab app that believes a road is empty because its traffic data is from last night: its route is perfect for the data it has and terrible for the jam you are actually in. ANALYZE refreshes the traffic data.</p>
   <p>This gives a practical debugging recipe. Run EXPLAIN ANALYZE, and find the lowest node where estimated and actual rows differ by ten times or more: that is where the plan went wrong. The first fix is to run <code>ANALYZE</code> on the table, and after any bulk load or large batch update you should run it yourself rather than wait for autovacuum. If the estimate is still wrong, the usual causes are a very skewed column (raise its statistics target so ANALYZE stores more detail), two columns whose values are related, like city and postcode (<code>CREATE STATISTICS</code> lets the planner learn the relationship), or a non-sargable condition that the planner cannot estimate.</p>
 
   <h2 id="so-types"><span class="num">09</span>Other Index Types</h2>
@@ -597,22 +597,22 @@ Execution Time: 346.162 ms</div>
 (1 row)</div>
   <p>A search for names containing "kapoor" becomes "rows that contain all of kap, apo, poo and oor", which the GIN index answers by intersecting its lists. Without it, the search is a Seq Scan of every customer:</p>
   <div class="fx" data-lang="sql">EXPLAIN ANALYZE SELECT count(*) FROM customers WHERE name ILIKE '%kapoor%';</div>
-  <div class="fx" data-lang="text">Aggregate  (cost=1983.99..1984.00 rows=1 width=8) (actual time=40.542..40.543 rows=1 loops=1)
-  -&gt;  Seq Scan on customers  (cost=0.00..1968.00 rows=6396 width=0) (actual time=0.023..40.180 rows=6602 loops=1)
+  <div class="fx" data-lang="text">Aggregate  (cost=1983.99..1984.00 rows=1 width=8) (actual time=42.440..42.441 rows=1 loops=1)
+  -&gt;  Seq Scan on customers  (cost=0.00..1968.00 rows=6396 width=0) (actual time=0.022..42.039 rows=6602 loops=1)
         Filter: (name ~~* '%kapoor%'::text)
         Rows Removed by Filter: 93398
-Planning Time: 0.486 ms
-Execution Time: 40.608 ms</div>
+Planning Time: 0.436 ms
+Execution Time: 42.513 ms</div>
   <div class="fx" data-lang="sql">CREATE INDEX customers_name_trgm ON customers USING gin (name gin_trgm_ops);
 EXPLAIN ANALYZE SELECT count(*) FROM customers WHERE name ILIKE '%kapoor%';</div>
-  <div class="fx" data-lang="text">Aggregate  (cost=885.82..885.83 rows=1 width=8) (actual time=6.229..6.230 rows=1 loops=1)
-  -&gt;  Bitmap Heap Scan on customers  (cost=71.88..869.83 rows=6396 width=0) (actual time=1.313..5.885 rows=6602 loops=1)
+  <div class="fx" data-lang="text">Aggregate  (cost=885.82..885.83 rows=1 width=8) (actual time=5.794..5.796 rows=1 loops=1)
+  -&gt;  Bitmap Heap Scan on customers  (cost=71.88..869.83 rows=6396 width=0) (actual time=1.100..5.460 rows=6602 loops=1)
         Recheck Cond: (name ~~* '%kapoor%'::text)
         Heap Blocks: exact=718
-        -&gt;  Bitmap Index Scan on customers_name_trgm  (cost=0.00..70.28 rows=6396 width=0) (actual time=1.191..1.191 rows=6602 loops=1)
+        -&gt;  Bitmap Index Scan on customers_name_trgm  (cost=0.00..70.28 rows=6396 width=0) (actual time=1.012..1.013 rows=6602 loops=1)
               Index Cond: (name ~~* '%kapoor%'::text)
-Planning Time: 0.511 ms
-Execution Time: 6.282 ms</div>
+Planning Time: 0.461 ms
+Execution Time: 5.846 ms</div>
   <p>The GIN index turns the scan of 100,000 names into a Bitmap Index Scan. The gain here is moderate, because about one customer in fifteen really is a Kapoor and the database still has to visit many heap pages to fetch them; for a rarer search term the difference is far larger. GIN indexes are also how PostgreSQL indexes JSONB documents, arrays and full-text search. Their weakness is that they are expensive to update, so they suit columns that are read far more than written.</p>
   <p>A <strong>BRIN</strong> index (Block Range INdex) takes the opposite approach: instead of listing every row, it stores only the smallest and largest value for each range of 128 pages. Our orders arrive in time order, so page 0 holds March 2025 and the last page holds February 2026, and each block range covers a narrow window of time. To find 14 February, BRIN skips every block range whose minimum and maximum do not include that day and reads the rest, rechecking each row. Think of archive boxes labelled "1–4 Feb", "4–8 Feb": to find 14 February you open only the boxes whose labels cover it.</p>
   <div class="fx" data-lang="sql">CREATE INDEX orders_time_brin ON orders USING brin (ordered_at);
@@ -621,33 +621,33 @@ DROP INDEX orders_time_idx;                -- hide the B-tree so the BRIN is use
 EXPLAIN (ANALYZE, BUFFERS)
 SELECT count(*) FROM orders WHERE ordered_at &gt;= '2026-02-14' AND ordered_at &lt; '2026-02-15';
 ROLLBACK;</div>
-  <div class="fx" data-lang="text">Aggregate  (cost=10039.38..10039.39 rows=1 width=8) (actual time=1.389..1.389 rows=1 loops=1)
+  <div class="fx" data-lang="text">Aggregate  (cost=10039.38..10039.39 rows=1 width=8) (actual time=1.328..1.329 rows=1 loops=1)
   Buffers: shared hit=134
-  -&gt;  Bitmap Heap Scan on orders  (cost=12.77..10032.01 rows=2945 width=0) (actual time=0.795..1.234 rows=2880 loops=1)
+  -&gt;  Bitmap Heap Scan on orders  (cost=12.77..10032.01 rows=2945 width=0) (actual time=0.726..1.150 rows=2880 loops=1)
         Recheck Cond: ((ordered_at &gt;= '2026-02-14 00:00:00+05:30'::timestamp with time zone) AND (ordered_at &lt; '2026-02-15 00:00:00+05:30'::timestamp with time zone))
         Rows Removed by Index Recheck: 10878
         Heap Blocks: lossy=129
         Buffers: shared hit=134
-        -&gt;  Bitmap Index Scan on orders_time_brin  (cost=0.00..12.03 rows=13514 width=0) (actual time=0.029..0.029 rows=1290 loops=1)
+        -&gt;  Bitmap Index Scan on orders_time_brin  (cost=0.00..12.03 rows=13514 width=0) (actual time=0.034..0.035 rows=1290 loops=1)
               Index Cond: ((ordered_at &gt;= '2026-02-14 00:00:00+05:30'::timestamp with time zone) AND (ordered_at &lt; '2026-02-15 00:00:00+05:30'::timestamp with time zone))
               Buffers: shared hit=5
 Planning:
   Buffers: shared hit=115
-Planning Time: 0.337 ms
-Execution Time: 1.459 ms</div>
+Planning Time: 0.361 ms
+Execution Time: 1.447 ms</div>
   <p><code>Heap Blocks: lossy</code> means BRIN can only say "somewhere in these pages", so the database reads the whole block range and throws away the rows that do not match (<code>Rows Removed by Index Recheck</code>). That is more work than the B-tree did, but it still read only about 130 pages out of 9,345, and the index itself is tiny, as the size table below shows. BRIN only works when the column follows the physical order of the table; on a shuffled column every block range would span all dates and nothing could be skipped.</p>
   <p>A <strong>partial index</strong> contains only the rows that match a WHERE clause. Biteful's kitchen dashboard only ever shows pending orders, about 1% of the table, so there is no point indexing the other 99%:</p>
   <div class="fx" data-lang="sql">CREATE INDEX orders_pending_idx ON orders (ordered_at) WHERE status = 'pending';
 EXPLAIN (ANALYZE, BUFFERS)
 SELECT order_id, ordered_at FROM orders
 WHERE status = 'pending' AND ordered_at &gt;= '2026-02-14';</div>
-  <div class="fx" data-lang="text">Index Scan using orders_pending_idx on orders  (cost=0.29..12.15 rows=163 width=12) (actual time=0.016..0.150 rows=194 loops=1)
+  <div class="fx" data-lang="text">Index Scan using orders_pending_idx on orders  (cost=0.29..12.15 rows=163 width=12) (actual time=0.020..0.124 rows=194 loops=1)
   Index Cond: (ordered_at &gt;= '2026-02-14 00:00:00+05:30'::timestamp with time zone)
   Buffers: shared hit=109 read=3
 Planning:
-  Buffers: shared hit=161 read=1 dirtied=3
-Planning Time: 0.390 ms
-Execution Time: 0.178 ms</div>
+  Buffers: shared hit=156 read=1
+Planning Time: 0.564 ms
+Execution Time: 0.162 ms</div>
   <p>The planner can use a partial index only when the query's WHERE clause implies the index's WHERE clause; here both say <code>status = 'pending'</code>. Any index type can be made partial, and partial indexes are the right answer for questions like "index the rare value of a boolean column".</p>
   <p>Finally, a <strong>hash index</strong> stores a hash code of each value and answers only <code>=</code>: no ranges and no sorting.</p>
   <div class="fx" data-lang="sql">CREATE INDEX orders_cust_hash ON orders USING hash (customer_id);
@@ -696,16 +696,16 @@ ANALYZE orders_part;
 EXPLAIN (ANALYZE, BUFFERS)
 SELECT count(*), sum(amount) FROM orders_part
 WHERE ordered_at &gt;= '2026-02-14' AND ordered_at &lt; '2026-02-15';</div>
-  <div class="fx" data-lang="text">Aggregate  (cost=1363.04..1363.05 rows=1 width=40) (actual time=5.311..5.312 rows=1 loops=1)
+  <div class="fx" data-lang="text">Aggregate  (cost=1362.59..1362.60 rows=1 width=40) (actual time=3.892..3.893 rows=1 loops=1)
   Buffers: shared hit=518
-  -&gt;  Seq Scan on orders_2026_02 orders_part  (cost=0.00..1348.41 rows=2924 width=6) (actual time=3.025..4.942 rows=2880 loops=1)
+  -&gt;  Seq Scan on orders_2026_02 orders_part  (cost=0.00..1348.41 rows=2835 width=6) (actual time=2.182..3.607 rows=2880 loops=1)
         Filter: ((ordered_at &gt;= '2026-02-14 00:00:00+05:30'::timestamp with time zone) AND (ordered_at &lt; '2026-02-15 00:00:00+05:30'::timestamp with time zone))
         Rows Removed by Filter: 52481
         Buffers: shared hit=518
 Planning:
   Buffers: shared hit=89 read=3
-Planning Time: 0.361 ms
-Execution Time: 5.341 ms</div>
+Planning Time: 0.305 ms
+Execution Time: 3.924 ms</div>
   <p>Only <code>orders_2026_02</code> appears in the plan; the other eleven months were pruned while planning, without reading a single page of them. Inside February the database still did a Seq Scan, since we created no index on the partitions, but of about 500 pages instead of 9,345. Partitioning only helps queries that filter on the partition key, though. Asha's query filters on customer, not on time:</p>
   <div class="fx" data-lang="sql">EXPLAIN SELECT order_id FROM orders_part WHERE customer_id = 1;</div>
   <div class="fx" data-lang="text">Append  (cost=0.00..21853.11 rows=22 width=4)
@@ -743,10 +743,10 @@ DROP TABLE orders_2025_03;</div>
 CREATE INDEX
 Timing is on.
 DELETE 63359
-Time: 27.247 ms
+Time: 29.165 ms
 DROP TABLE
-Time: 3.870 ms</div>
-  <p>The DELETE removed about 64,000 rows in hundreds of milliseconds and left 64,000 dead row versions for VACUUM to clean up; dropping the partition removed the same month in a few milliseconds by deleting a file. Partitioning is a tool for very large tables, hundreds of millions of rows with time-based queries or retention, not a substitute for indexes; each partition still needs its own indexes for queries inside it, and thousands of tiny partitions slow down planning.</p>
+Time: 2.367 ms</div>
+  <p>The DELETE had to find and mark about 63,000 rows one by one, took several times longer than the DROP, and left 63,000 dead row versions for VACUUM to clean up; dropping the partition removed the same month by deleting a file. On a table a hundred times bigger, that difference becomes minutes against milliseconds. Partitioning is a tool for very large tables, hundreds of millions of rows with time-based queries or retention, not a substitute for indexes; each partition still needs its own indexes for queries inside it, and thousands of tiny partitions slow down planning.</p>
   <p>Pruning skips whole months, but inside a month PostgreSQL still reads entire rows, every column of every row, even for <code>sum(amount)</code>, which needs one column out of seven. That is a consequence of being a <strong>row store</strong>: each page holds complete rows, which is perfect for the app's typical work of fetching or updating one order. Analytical databases such as BigQuery, Snowflake, Redshift, ClickHouse and DuckDB are <strong>column stores</strong>: they store each column separately and compressed, so a report summing <code>amount</code> over every order reads only the amount column, a small fraction of the bytes. The price is that fetching or updating one whole row means touching every column's storage. This is the basis of the split between <strong>OLTP</strong> (online transaction processing: many small reads and writes of whole rows, the app's own database) and <strong>OLAP</strong> (online analytical processing: big scans over a few columns, the reporting warehouse). <a class="xref" data-note="db_types">Types of Databases</a> runs the same query in a real column store and shows the difference; for this page, remember that partitions skip <em>rows</em> by range and column stores skip <em>columns</em>, two more ways of touching fewer pages.</p>
 
   <h2 id="so-cost"><span class="num">11</span>The Cost of Indexes</h2>
@@ -777,8 +777,8 @@ for t in ("w0", "w5"):
                     WHERE c.relname = '{t}'""")
     n_idx, idx_size, heap = cur.fetchone()
     print(f"{t}: {n_idx} indexes, insert 200,000 rows: {ms:6.0f} ms   table {heap}, indexes {idx_size}")</div>
-  <div class="fx" data-lang="text">w0: 0 indexes, insert 200,000 rows:    272 ms   table 15 MB, indexes 0 bytes
-w5: 5 indexes, insert 200,000 rows:   1646 ms   table 15 MB, indexes 30 MB</div>
+  <div class="fx" data-lang="text">w0: 0 indexes, insert 200,000 rows:    172 ms   table 15 MB, indexes 0 bytes
+w5: 5 indexes, insert 200,000 rows:   2367 ms   table 15 MB, indexes 30 MB</div>
   <p>The same rows took several times longer to insert with five indexes, and the indexes take twice as much space as the table itself. Reads got faster, every write got slower, and memory now has to cache index pages as well as table pages. That is the trade-off behind every indexing decision.</p>
   <p>In practice this leads to a few habits. Index what the important queries filter, join and sort on, confirmed with EXPLAIN rather than guessed. Remove indexes that are never used: PostgreSQL counts index scans in <code>pg_stat_user_indexes</code>, and an index whose <code>idx_scan</code> stays at 0 costs writes and gives nothing. Remove redundant ones, such as an index on <code>(customer_id)</code> next to one on <code>(customer_id, ordered_at)</code>. For a large bulk load, it is often faster to drop secondary indexes, load the data, and rebuild them once. And on write-heavy tables, such as an event log or a table of order-status changes, be especially careful: there, too many indexes can make inserts the bottleneck. (One detail: an UPDATE that changes no indexed column can often skip index maintenance entirely, a PostgreSQL optimisation called a HOT update, which is one more reason not to index or INCLUDE columns that change often.)</p>
 
@@ -786,17 +786,17 @@ w5: 5 indexes, insert 200,000 rows:   1646 ms   table 15 MB, indexes 30 MB</div>
   <p>With the right indexes and fresh statistics each query is cheap, yet applications can still be slow because of the <em>shape</em> of the queries they send. Two patterns cause most of this, and no index can fix either.</p>
   <p>The first is <strong>OFFSET pagination</strong>. Biteful's admin panel lists all orders, 20 per page, with <code>LIMIT 20 OFFSET n</code>. <code>OFFSET 900000</code> means "produce the first 900,020 rows in order and throw away the first 900,000", and even using the primary key index the database has to step over every one of the skipped rows:</p>
   <div class="fx" data-lang="sql">EXPLAIN ANALYZE SELECT * FROM orders ORDER BY order_id LIMIT 20 OFFSET 900000;</div>
-  <div class="fx" data-lang="text">Limit  (cost=31796.01..31796.71 rows=20 width=39) (actual time=169.509..169.516 rows=20 loops=1)
-  -&gt;  Index Scan using orders_pkey on orders  (cost=0.42..35328.85 rows=1000000 width=39) (actual time=0.019..137.320 rows=900020 loops=1)
-Planning Time: 0.512 ms
-Execution Time: 169.546 ms</div>
+  <div class="fx" data-lang="text">Limit  (cost=31796.01..31796.71 rows=20 width=39) (actual time=208.123..208.128 rows=20 loops=1)
+  -&gt;  Index Scan using orders_pkey on orders  (cost=0.42..35328.85 rows=1000000 width=39) (actual time=0.016..170.505 rows=900020 loops=1)
+Planning Time: 0.555 ms
+Execution Time: 208.164 ms</div>
   <p>The index scan produced <code>rows=900020</code> in order to return 20. Page 1 is instant and page 45,000 is slow, and every page gets slower the deeper you go. <strong>Keyset pagination</strong> (also called seek pagination) fixes this by remembering the last key shown and asking for the next 20 after it:</p>
   <div class="fx" data-lang="sql">EXPLAIN ANALYZE SELECT * FROM orders WHERE order_id &gt; 900000 ORDER BY order_id LIMIT 20;</div>
-  <div class="fx" data-lang="text">Limit  (cost=0.42..1.18 rows=20 width=39) (actual time=0.040..0.046 rows=20 loops=1)
-  -&gt;  Index Scan using orders_pkey on orders  (cost=0.42..3679.86 rows=97136 width=39) (actual time=0.039..0.042 rows=20 loops=1)
+  <div class="fx" data-lang="text">Limit  (cost=0.42..1.18 rows=20 width=39) (actual time=0.052..0.058 rows=20 loops=1)
+  -&gt;  Index Scan using orders_pkey on orders  (cost=0.42..3679.86 rows=97136 width=39) (actual time=0.051..0.054 rows=20 loops=1)
         Index Cond: (order_id &gt; 900000)
-Planning Time: 0.808 ms
-Execution Time: 0.090 ms</div>
+Planning Time: 0.840 ms
+Execution Time: 0.132 ms</div>
   <p>The B-tree jumps straight to <code>order_id &gt; 900000</code> and reads exactly 20 rows, and every page costs the same however deep it is. Think of OFFSET as counting 900,000 lines from the start of a book every time you want to turn a page, and keyset as using a bookmark. Keyset pagination needs a unique sort order: if you sort by <code>ordered_at</code>, add the id as a tie-breaker, as in <code>WHERE (ordered_at, order_id) &lt; (:last_time, :last_id) ORDER BY ordered_at DESC, order_id DESC</code>, with an index on those two columns. Its limitation is that it gives "next" and "previous" pages but no "jump to page 500", which is why infinite-scroll feeds use it.</p>
   <p>The second pattern is the <strong>N+1 query problem</strong>. Code fetches a list of customers with one query, then loops over them and runs one more query per customer to get their orders: N+1 queries in total. Each query is a round trip from the application to the database and back, with sending, parsing, planning and returning, and when each answer is tiny that fixed cost per trip dominates. Here it is measured on 2,000 customers over a local connection (over a real network each trip costs more):</p>
   <div class="fx" data-lang="py">import time, psycopg2
@@ -821,8 +821,8 @@ one_ms = (time.perf_counter() - t) * 1000
 
 print(f"N+1 loop : {len(ids)} queries, {loop_ms:5.0f} ms, Asha has {counts[1]} orders")
 print(f"one query:    1 query,   {one_ms:5.0f} ms, Asha has {rows[1]} orders")</div>
-  <div class="fx" data-lang="text">N+1 loop : 2000 queries,   167 ms, Asha has 12 orders
-one query:    1 query,       8 ms, Asha has 12 orders</div>
+  <div class="fx" data-lang="text">N+1 loop : 2000 queries,   176 ms, Asha has 12 orders
+one query:    1 query,      11 ms, Asha has 12 orders</div>
   <p>The same numbers either way, but one query with <code>= ANY(%s)</code> and GROUP BY replaced 2,000 round trips and was many times faster. Think of needing ten items from a shop and walking there ten times, one item per trip. ORMs, the libraries that map database rows to objects (Django, SQLAlchemy and others), cause N+1 silently through <em>lazy loading</em>, where touching <code>customer.orders</code> inside a loop sends a query each time. The fixes are eager loading (<code>select_related</code>/<code>prefetch_related</code> in Django, <code>joinedload</code>/<code>selectinload</code> in SQLAlchemy), a JOIN, or a single query over the whole list of ids.</p>
 
   <h2 id="so-traps"><span class="num">13</span>Common Mistakes</h2>
