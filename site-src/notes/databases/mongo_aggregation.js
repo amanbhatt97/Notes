@@ -3,99 +3,45 @@ Object.assign(TOPIC_CONTENT, {
   "mongo_aggregation": `<main>
   <h1>Aggregation Pipeline</h1>
   <div class="where"><span>Databases</span><span>MongoDB</span><span>Aggregation Pipeline</span></div>
-  <p class="lead"><a class="xref" data-note="mongo_basics">Documents &amp; CRUD</a> stored Biteful's orders as documents and taught <code>find</code>. But <code>find</code> only <em>returns</em> documents: it cannot add amounts per restaurant, count lines per item, or bring a customer's name in from another collection. The <strong>aggregation pipeline</strong> does that work inside the database, as a chain of small stages. This note builds the pipeline one stage at a time, each one forced by a question the previous stage cannot answer, on the same Biteful documents (7 customers, 5 restaurants, 10 orders with 15 embedded lines). Every pipeline ran on a real <strong>MongoDB 8.0.23</strong> server, every SQL comparison on <strong>PostgreSQL 17</strong> with the SQL notes' tables, and every output is real.</p>
+  <p class="lead">The <strong>aggregation pipeline</strong> is MongoDB's tool for computing answers across many documents: totals per restaurant, quantities per item, averages, rankings, and joins with other collections. <code>find</code>, from <a class="xref" data-note="mongo_basics">Documents &amp; CRUD</a>, can only pick documents and fields; the pipeline transforms them, step by step, inside the database, so that only the small answer travels to your application. It is what reports, dashboards and analytics on MongoDB are built from, and it is MongoDB's counterpart to SQL's <code>GROUP BY</code> and <code>JOIN</code>. The running example is the same Biteful data as before (7 customers, 5 restaurants and 10 orders, each order embedding its lines, 15 lines in all), and the note builds the pipeline one stage at a time, each stage added because the previous ones cannot answer the next question. As in the previous note, commands are written in mongosh syntax and their outputs come from running the equivalent pymongo code against <strong>mongomock</strong>, an in-memory stand-in for a MongoDB server; SQL comparisons ran on a real PostgreSQL 16 database.</p>
 
-  <h2 id="ma-fit" class="open"><span class="num">★</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 660 160" width="660">
-<defs><marker id="ma-a0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="10" y="20" width="140" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="80" y="41" text-anchor="middle" font-size="12">SQL notes</text><text x="80" y="58" text-anchor="middle" class="tm" font-size="10">GROUP BY, JOIN</text>
-<line x1="150" y1="45" x2="178" y2="45" stroke="currentColor" marker-end="url(#ma-a0)"/>
-<rect x="180" y="20" width="140" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="250" y="41" text-anchor="middle" font-size="12">Documents &amp; CRUD</text><text x="250" y="58" text-anchor="middle" class="tm" font-size="10">store, find, update</text>
-<line x1="320" y1="45" x2="348" y2="45" stroke="currentColor" marker-end="url(#ma-a0)"/>
-<rect x="350" y="20" width="140" height="50" rx="8" class="fg sg" stroke-width="3"/><text x="420" y="41" text-anchor="middle" font-size="12" font-weight="700">Aggregation</text><text x="420" y="59" text-anchor="middle" class="tg" font-size="10">YOU ARE HERE</text>
-<line x1="490" y1="45" x2="518" y2="45" stroke="currentColor" marker-end="url(#ma-a0)"/>
-<rect x="520" y="20" width="130" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="585" y="41" text-anchor="middle" font-size="12">Schema Design</text><text x="585" y="58" text-anchor="middle" class="tm" font-size="10">embed, index, scale</text>
-<text x="20" y="108" class="tm" font-size="10.5">find answers "which documents?". The pipeline answers "what do they add up to, per group, joined with what?"</text>
-<text x="20" y="126" class="tm" font-size="10.5">Every SQL idea you know (WHERE, GROUP BY, HAVING, JOIN, ORDER BY) reappears as a stage, in the order you write it.</text>
-</svg><figcaption>The MongoDB group of the Databases track. The pipeline is MongoDB's answer to SQL's SELECT … GROUP BY … JOIN.</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: documents and find</b><span><a class="xref" data-note="mongo_basics">Documents &amp; CRUD</a> loaded Biteful as documents (each order embeds its <code>items</code>) and taught filters, projections, sort and limit. From the SQL side you already know <code>GROUP BY</code> and aggregates (<a class="xref" data-note="sql_fundamentals">SQL Fundamentals</a>) and joins with their fan-out trap (<a class="xref" data-note="sql_joins">JOINs</a>).</span></li>
-    <li><b>This note adds: computing across documents</b><span>The pipeline as an assembly line; <code>$match</code>, <code>$group</code> (traced by hand), <code>$project</code>/<code>$addFields</code>, <code>$sort</code>/<code>$limit</code>, <code>$unwind</code> (one order becomes n lines), <code>$lookup</code> (the join), a brief look at <code>$facet</code>, <code>$bucket</code> and window functions, a full SQL → pipeline mapping, and the performance rules measured on 200,000 orders.</span></li>
-    <li><b>Leads to: <a class="xref" data-note="mongo_design">Schema Design</a></b><span>Many pipelines here exist only because of how the documents are shaped: <code>$unwind</code> because lines are embedded, <code>$lookup</code> because customers are referenced. Schema design decides that shape on purpose, and adds the indexes that make <code>$match</code> fast (the same B-tree ideas as <a class="xref" data-note="sql_optimization">Indexes &amp; Performance</a>).</span></li>
-  </ol>
-
-  <h2 id="ma-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
-  <p>The whole note as one chain. Each stage answers the question above it, and its limit raises the next question. All numbers come from Biteful's 10 orders.</p>
-  <ol class="story">
-    <li><b>The pipeline</b><span>Q: "revenue per restaurant" — <code>find</code> returns 7 delivered orders but cannot add them per restaurant or join names → a list of stages, each feeding the next, run inside the database. Which stage goes first?</span></li>
-    <li><b>$match</b><span>Q: how do we keep only the documents that matter? → the same filter as <code>find</code>, as a stage: 10 orders → 7 delivered. Now we have the right documents but still one per order…</span></li>
-    <li><b>$group</b><span>Q: one answer <em>per restaurant</em> → bins by a key, folded with accumulators: Biryani Bros 3 orders / ₹1,230, Pizza Point 2 / ₹900, Dosa Hut 2 / ₹500, traced by hand. But some numbers we need are not stored in any field…</span></li>
-    <li><b>$project / $addFields</b><span>Q: compute new fields (line totals, IST hour, "lunch or dinner") → expressions: <code>$map</code> rebuilds every order's bill, and all 10 match <code>amount</code>. Results now come out in arbitrary order…</span></li>
-    <li><b>$sort / $limit</b><span>Q: "top 2 restaurants", "each customer's latest order" → sort, cut, and <code>$first</code> after a sort. All of this works per order. But the items are <em>inside</em> an array…</span></li>
-    <li><b>$unwind</b><span>Q: "revenue per item" → split each order into one document per line: order 102 → 2 documents, 10 orders → 15 lines (exactly SQL's <code>order_items</code>). Chicken Biryani leads with ₹700. Names, though, live in other collections…</span></li>
-    <li><b>$lookup</b><span>Q: customer and restaurant names → a left outer join that attaches matches as an array: Gita gets <code>[]</code> and 0 orders, exactly like SQL's LEFT JOIN. Some questions want several summaries or bands at once…</span></li>
-    <li><b>$facet / $bucket / windows</b><span>Q: several summaries in one pass, histograms, running totals → <code>$facet</code> (3 answers, 1 document), <code>$bucket</code> (2 / 5 / 3 orders by amount band), <code>$setWindowFields</code> (Chen 520 → 780). Now every SQL clause has a stage…</span></li>
-    <li><b>SQL → pipeline mapping</b><span>Q: how do I translate a SQL query I already know? → WHERE→$match, JOIN→$lookup+$unwind, GROUP BY→$group, HAVING→$match after, ORDER BY→$sort; revenue per cuisine matches Postgres exactly. On 10 orders all of this is instant; on 200,000…</span></li>
-    <li><b>Performance</b><span>Q: why is the same pipeline fast or slow? → only the first stages can use an index (200,000 → 20,000 documents read), the optimizer moves some <code>$match</code>es but not on computed fields, blocking stages have a memory limit and spill to disk (<code>allowDiskUse</code>). Then: shape the data so pipelines stay short → <a class="xref" data-note="mongo_design">Schema Design</a>.</span></li>
-  </ol>
-
-  <h2 id="ma-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="ma-map"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">Aggregation Pipeline</div>
     <div class="mm-branches">
       <div class="mm-branch">
         <div class="mm-title">The idea</div>
         <ul>
-          <li><b>Need</b> — find can't group or join</li>
-          <li><b>Pipeline</b> — array of stages; output of one feeds the next</li>
-          <li><b>"$field"</b> = value · <b>"$$var"</b> = variable · "text" = text</li>
-          <li>💡 a packing line: each station sees only what it is handed</li>
+          <li>An array of stages; each stage's output feeds the next</li>
+          <li><code>"$field"</code> = a value, <code>"$$var"</code> = a variable</li>
+          <li>No <code>$sort</code> at the end = no promised order</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Filter &amp; group</div>
+        <div class="mm-title">Core stages</div>
         <ul>
-          <li><b>$match</b> — find's filter as a stage; put it first</li>
-          <li><b>$group</b> — <code>_id</code> = key; accumulators <code>$sum $avg $min $max $push $addToSet $first</code></li>
-          <li><b>HAVING</b> = <code>$match</code> after <code>$group</code></li>
-          <li>⚠ after $group only <code>_id</code> + accumulators exist</li>
-          <li>⚠ <code>$sum</code> skips "450" (text) silently</li>
+          <li><code>$match</code> filters (put it first)</li>
+          <li><code>$group</code>: <code>_id</code> = key, accumulators fold each group</li>
+          <li><code>$project</code> keeps listed fields; <code>$addFields</code> adds</li>
+          <li><code>$sort</code>, <code>$limit</code>; <code>$first</code> needs a sort before it</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Reshape &amp; order</div>
+        <div class="mm-title">Arrays and joins</div>
         <ul>
-          <li><b>$project</b> keeps only listed fields; <b>$addFields</b> adds</li>
-          <li><code>$map $filter $cond $ifNull $size $hour</code> (with timezone)</li>
-          <li><b>$sort $limit $skip $count</b>; <code>$first</code> needs a sort</li>
+          <li><code>$unwind</code>: one order → one document per line</li>
+          <li>Count after unwinding counts lines, not orders</li>
+          <li><code>$lookup</code>: left join into an array</li>
+          <li><code>$lookup</code> + <code>$unwind</code> = inner join</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Arrays &amp; joins</div>
+        <div class="mm-title">Beyond and performance</div>
         <ul>
-          <li><b>$unwind</b> — 1 order → n lines (10 → 15)</li>
-          <li>⚠ count after unwind counts lines (Asha 5, not 3)</li>
-          <li>⚠ empty arrays vanish unless <code>preserveNullAndEmptyArrays</code></li>
-          <li><b>$lookup</b> — left join into an array; Gita → <code>[]</code></li>
-          <li><b>$lookup + $unwind</b> = inner join (11 → 10)</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Extras</div>
-        <ul>
-          <li><b>$facet</b> — several sub-pipelines, one output document</li>
-          <li><b>$bucket</b> — bands, lower bound included</li>
-          <li><b>$setWindowFields</b> — running totals, ranks (SQL OVER)</li>
-          <li><b>$out / $merge</b> — write results to a collection</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Performance</div>
-        <ul>
-          <li><b>Index</b> helps only the first stages: 200,000 → 20,000 docs</li>
-          <li>Optimizer moves <code>$match</code> before <code>$unwind</code>, not on computed fields</li>
-          <li><b>$sort + $limit</b> → top-k sort</li>
-          <li><b>100 MB</b> per blocking stage → <code>allowDiskUse</code> spills</li>
+          <li><code>$facet</code>, <code>$bucket</code>, <code>$setWindowFields</code></li>
+          <li>Only the first stages can use an index</li>
+          <li>Blocking stages (<code>$sort</code>, <code>$group</code>) have a memory limit</li>
+          <li>Aggregate in MongoDB, reshape in pandas</li>
         </ul>
       </div>
     </div>
@@ -104,30 +50,26 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="ma-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-idea"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">The Pipeline Idea</span><span class="rm-sub">find can't group or join</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-match"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">$match</span><span class="rm-sub">Filter first</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-group"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">$group</span><span class="rm-sub">Traced by hand</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-shape"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">$project &amp; $addFields</span><span class="rm-sub">Compute new fields</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-sort"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">$sort &amp; $limit</span><span class="rm-sub">Top-N, latest per customer</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-unwind"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">$unwind</span><span class="rm-sub">1 order → n lines</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-lookup"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">$lookup</span><span class="rm-sub">The join, traced</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-facet"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">$facet, $bucket, Windows</span><span class="rm-sub">Briefly</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-sql"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">SQL → Pipeline</span><span class="rm-sub">Clause-by-clause mapping</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-perf"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Performance</span><span class="rm-sub">$match early, indexes, allowDiskUse</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-py"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">From Python</span><span class="rm-sub">Pipeline to pandas</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-connect"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One stream, many stations</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-traps"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Wrong numbers, no errors</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note in 10 minutes</span></div></div>
-      <div class="rm-item rm-done" data-target="ma-qa"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Write-the-pipeline drills</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-idea"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Why find Is Not Enough</span><span class="rm-sub">the pipeline as an assembly line</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-match"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">$match</span><span class="rm-sub">choosing which documents enter</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-group"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">$group and Accumulators</span><span class="rm-sub">one answer per group, traced by hand</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-shape"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">$project and $addFields</span><span class="rm-sub">computing values no field stores</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-sort"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">$sort, $limit and $first</span><span class="rm-sub">top-N and "latest per customer"</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-unwind"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">$unwind</span><span class="rm-sub">one order becomes one document per line</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-lookup"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">$lookup</span><span class="rm-sub">joining another collection</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-facet"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">$facet, $bucket and Windows</span><span class="rm-sub">several summaries, bands, running totals</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-sql"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Translating SQL into a Pipeline</span><span class="rm-sub">clause by clause, in execution order</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-perf"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Pipeline Performance</span><span class="rm-sub">indexes, stage order, memory limits</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-py"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Pipelines from Python</span><span class="rm-sub">from pipeline to pandas</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-traps"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">wrong numbers, no errors</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">stages, accumulators, SQL mapping</span></div></div>
+      <div class="rm-item rm-done" data-target="ma-qa"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">what interviewers ask about aggregation</span></div></div>
     </div>
   </div>
 
-  <h2 id="ma-idea"><span class="num">01</span>find Can't Group or Join: The Pipeline Idea</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Biteful's owner asks: "How much revenue did each restaurant make from delivered orders?" With <a class="xref" data-note="mongo_basics">find</a> we can fetch the delivered orders. Then what?</p>
-  </div>
-  <div class="fx" data-lang="js">db.orders.find({ status: "delivered" }, { restaurant_id: 1, amount: 1 })</div>
+  <h2 id="ma-idea"><span class="num">01</span>Why find Is Not Enough</h2>
+  <p>Biteful's owner asks a simple business question: how much revenue did each restaurant make from delivered orders? With <code>find</code> we can fetch the delivered orders and the two fields we care about:</p>
+  <div class="fx" data-lang="mongo">db.orders.find({ status: "delivered" }, { restaurant_id: 1, amount: 1 })</div>
   <div class="fx" data-lang="text">[
   { _id: 101, restaurant_id: 10, amount: 240 },
   { _id: 102, restaurant_id: 11, amount: 450 },
@@ -137,9 +79,9 @@ Object.assign(TOPIC_CONTENT, {
   { _id: 108, restaurant_id: 10, amount: 260 },
   { _id: 109, restaurant_id: 11, amount: 600 }
 ]</div>
-  <p>Seven documents, one per order. The answer is still three steps away: put orders 101 and 108 together (restaurant 10), add 240 + 260; do the same for 11 and 12; then look up the restaurant names in another collection. <code>find</code> can do none of that. Pulling all orders into Python works for 10 orders; for 10 million it ships gigabytes over the network to compute three numbers the database could have computed in place.</p>
-  <p>The <strong>aggregation pipeline</strong> lets the database do the work. You write a list of <strong>stages</strong>. Each stage does one small job (filter, group, reshape, sort, join). Documents enter the first stage; its output is the input of the second; what leaves the last stage is the answer. Here is the smallest useful one: delivered orders per customer.</p>
-  <div class="fx" data-lang="js">db.orders.aggregate([
+  <p>That gives seven documents, one per order, but the answer is still several steps away. Orders 101 and 108 belong to restaurant 10 and must be added (240 + 260); the same has to be done for restaurants 11 and 12; and the restaurant names live in a different collection. <code>find</code> can do none of that, because it can only choose documents and fields, never combine them. Pulling all the orders into Python and adding them there works for 10 orders. For 10 million it means shipping gigabytes over the network to compute three numbers that the database could have computed where the data already sits.</p>
+  <p>The <strong>aggregation pipeline</strong> lets the database do that work. You write an array of <strong>stages</strong>, and each stage does one small job: filter documents, group them, reshape them, sort them, or join them with another collection. Documents flow into the first stage, its output becomes the input of the second, and whatever leaves the last stage is the answer. Here is a small but complete pipeline that counts delivered orders per customer:</p>
+  <div class="fx" data-lang="mongo">db.orders.aggregate([
   { $match: { status: "delivered" } },
   { $group: { _id: "$customer_id", orders: { $sum: 1 } } },
   { $sort: { _id: 1 } }
@@ -150,10 +92,8 @@ Object.assign(TOPIC_CONTENT, {
   { _id: 3, orders: 2 },
   { _id: 6, orders: 1 }
 ]</div>
-  <p>Trace it. <code>$match</code> keeps the 7 delivered orders. <code>$group</code> puts them in bins by <code>customer_id</code>: bin 1 gets 101 and 104, bin 2 gets 102 and 106, bin 3 gets 103 and 108, bin 6 gets 109. <code>$sum: 1</code> adds 1 per document in a bin, which is a count. <code>$sort</code> fixes the output order. Dia, Esha and Gita have no delivered orders, so they have no bin at all.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A mango-packing line. Station 1 throws out bruised mangoes (<code>$match</code>). Station 2 cuts crates open into single mangoes (<code>$unwind</code>). Station 3 sorts them into bins by variety and counts each bin (<code>$group</code>). Station 4 lines up the bins, biggest first (<code>$sort</code>). Each worker sees only what the previous worker handed over, never the original truck.</p>
-  </div>
+  <p>Follow the documents through it. <code>$match</code> keeps the 7 delivered orders. <code>$group</code> then puts them into bins by <code>customer_id</code>: bin 1 receives orders 101 and 104, bin 2 receives 102 and 106, bin 3 receives 103 and 108, and bin 6 receives 109. Inside each bin, <code>$sum: 1</code> adds 1 per document, which is simply a count. Finally <code>$sort</code> puts the bins in a fixed order. Dia, Esha and Gita have no delivered orders, so they get no bin at all; a group only exists if at least one document lands in it.</p>
+  <p>A good picture is a mango-packing line. The first worker throws out bruised mangoes; the second cuts crates open into single mangoes; the third sorts them into bins by variety and counts each bin; the fourth lines the bins up, biggest first. Each worker sees only what the previous worker hands over, never the original truck, and the order of the workers matters. A pipeline works the same way, and the figure shows one with the real document counts for a question we will answer in section 06, revenue per item.</p>
   <figure class="viz"><svg viewBox="0 0 640 150" width="640">
     <defs><marker id="ma-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <g text-anchor="middle">
@@ -165,58 +105,53 @@ Object.assign(TOPIC_CONTENT, {
     </g>
     <g stroke="currentColor"><line x1="100" y1="48" x2="128" y2="48" marker-end="url(#ma-ar)"/><line x1="230" y1="48" x2="258" y2="48" marker-end="url(#ma-ar)"/><line x1="360" y1="48" x2="388" y2="48" marker-end="url(#ma-ar)"/><line x1="490" y1="48" x2="518" y2="48" marker-end="url(#ma-ar)"/></g>
     <g text-anchor="middle" font-size="11"><text x="50" y="100">10 orders</text><text x="180" y="100">7 orders</text><text x="310" y="100" class="tr">11 lines</text><text x="440" y="100">9 items</text><text x="575" y="100">top 4</text></g>
-    <text x="0" y="132" font-size="10" class="tm">Revenue per item (section 06): the stream shrinks, grows at $unwind, shrinks again at $group. Indexes help only where the line reads the collection.</text>
-  </svg><figcaption>A pipeline is a stream of documents through stations. The counts are the real ones for "revenue per item" on Biteful.</figcaption></figure>
-  <p>One symbol matters everywhere. Inside a stage, <code>"$status"</code> means "the value of the <code>status</code> field of the current document", while <code>"status"</code> is just the word. On an array, <code>"$items.item"</code> gives the list of all item names:</p>
-  <div class="fx" data-lang="js">db.orders.aggregate([ { $match: { _id: 101 } }, { $project: { a: "status", b: "$status", c: "$items.item" } } ])</div>
-  <div class="fx" data-lang="text">[ { _id: 101, a: 'status', b: 'delivered', c: [ 'Masala Dosa' ] } ]</div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Aggregation pipeline</strong>: <code>db.collection.aggregate([stage, stage, …])</code>, an array of stages run in order. <strong>Stage</strong>: <code>{ $stageName: { … } }</code>, takes a stream of documents and emits a new stream. <strong>Field path</strong>: <code>"$field"</code> or <code>"$a.b"</code>, a value from the current document.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: output order</span>
-    <p>Without a <code>$sort</code>, the order of a pipeline's output is not guaranteed. A report that "always came out in order" in testing can come out shuffled in production. Every result in this note is sorted on purpose.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: $match.</b> We have the shape of a pipeline. The first station decides which documents enter the line at all, and getting it right (and first) matters both for correct numbers and for speed.</div>
+    <text x="0" y="132" font-size="10" class="tm">The stream shrinks at $match, grows at $unwind, shrinks again at $group. Only the first stage reads the collection itself.</text>
+  </svg><figcaption>A pipeline is a stream of documents through stations; the counts under each station are how many documents leave it.</figcaption></figure>
+  <p>Notice how the number of documents changes as they move: 10 orders enter, 7 survive the filter, they turn into 11 line documents at <code>$unwind</code>, collapse into 9 item groups at <code>$group</code>, and the last stage keeps 4. Keeping track of "what does one document mean at this point?" is the key skill in writing pipelines, and we will come back to it.</p>
+  <p>One piece of notation is used everywhere inside stages. A string that starts with a dollar sign, such as <code>"$status"</code>, is a <strong>field path</strong>: it means "the value of the <code>status</code> field in the current document". Through an array, <code>"$items.item"</code> gives the list of all item names. A plain string is just text, and if you ever need a literal string that starts with <code>$</code>, or want to make "this is text" explicit, <code>$literal</code> says so:</p>
+  <div class="fx" data-lang="mongo">db.orders.aggregate([
+  { $match: { _id: 108 } },
+  { $project: { a: { $literal: "status" }, b: "$status", c: "$items.item" } }
+])</div>
+  <div class="fx" data-lang="text">[
+  {
+    _id: 108,
+    a: 'status',
+    b: 'delivered',
+    c: [ 'Masala Dosa', 'Filter Coffee' ]
+  }
+]</div>
+  <p>For order 108, <code>a</code> is the word "status", <code>b</code> is the value of the status field ("delivered"), and <code>c</code> is the array of the order's two item names. One more rule before we start: without a <code>$sort</code> stage, the order of a pipeline's output is not guaranteed. A report that "always came out in order" during testing can come out shuffled in production, which is why every pipeline in this note ends with a sort.</p>
 
-  <h2 id="ma-match"><span class="num">02</span>$match: Filter First</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Revenue must count delivered orders only; cancelled 105 and 107 and pending 110 would inflate it. How do we keep only the right documents before anything else happens?</p>
-  </div>
-  <p><code>$match</code> takes exactly the filter document you used with <code>find</code>: equality, <code>$in</code>, <code>$ne</code>, dot notation into arrays, <code>$elemMatch</code>, all of it. Documents that pass go to the next stage; the rest are dropped. A tiny helper stage, <code>$count: "name"</code>, replaces the stream with one document holding the count, handy for checking each step.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>The gatekeeper at a wedding hall checking invitations. Whoever gets past him is fed; whoever doesn't never reaches the kitchen. Putting him at the gate (first) is cheaper than checking guests after dinner.</p>
-  </div>
-  <div class="fx" data-lang="js">db.orders.aggregate([ { $match: { status: "delivered" } }, { $count: "delivered" } ])
+  <h2 id="ma-match"><span class="num">02</span>$match</h2>
+  <p>Revenue should count delivered orders only; including the cancelled orders 105 and 107 and the pending order 110 would inflate it. The first job of almost every pipeline is therefore to decide which documents enter at all. <strong>$match</strong> keeps the documents that satisfy a filter and drops the rest, and the filter is written in exactly the same language as <code>find</code>: equality, <code>$in</code>, <code>$ne</code>, dot notation into arrays, <code>$elemMatch</code>, all of it. Think of the gatekeeper at a wedding hall checking invitations: whoever gets past him is fed, whoever does not never reaches the kitchen, and checking at the gate is far cheaper than checking guests after dinner.</p>
+  <p>A small helper stage, <code>$count: "name"</code>, replaces the whole stream with a single document holding the number of documents that reached it, which makes it handy for checking what each step lets through:</p>
+  <div class="fx" data-lang="mongo">db.orders.aggregate([ { $match: { status: "delivered" } }, { $count: "delivered" } ])
 db.orders.aggregate([ { $match: { "items.item": "Masala Dosa", status: { $ne: "cancelled" } } }, { $count: "n" } ])
 db.orders.aggregate([ { $match: { $expr: { $gt: ["$amount", 400] } } }, { $count: "over_400" } ])</div>
   <div class="fx" data-lang="text">[ { delivered: 7 } ]
 [ { n: 3 } ]
 [ { over_400: 3 } ]</div>
-  <p>7 delivered orders. 3 non-cancelled orders contain a Masala Dosa (101, 108, 110). The third shows <code>$expr</code>, which lets a <code>$match</code> use aggregation expressions (here <code>amount &gt; 400</code>, written as an expression: 102, 103, 109). <code>$expr</code> is needed when you compare two fields of the same document, e.g. <code>{ $expr: { $ne: ["$amount", "$lines_total"] } }</code>.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>$match</strong>: keep documents that satisfy a query filter (same language as <code>find</code>). <strong>$count</strong>: output one document <code>{ name: n }</code>. <strong>$expr</strong>: use expressions (field-to-field comparisons, arithmetic) inside a match.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: forgetting the filter changes the business answer</span>
-    <p>Without <code>$match</code>, "revenue" silently includes cancelled and pending orders: ₹3,510 instead of ₹2,630 on Biteful. The pipeline runs fine either way; decide which orders count before you write the first stage.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: $group.</b> We have the 7 right documents, but still one per order. The owner wants one line <em>per restaurant</em>: orders, revenue, average delivery time. That needs putting documents into bins and folding each bin into numbers.</div>
+  <p>Seven orders were delivered. Three orders that were not cancelled contain a Masala Dosa (101, 108 and 110). The third pipeline shows <code>$expr</code>, which lets a <code>$match</code> use aggregation expressions instead of query operators; here it computes <code>amount &gt; 400</code>, which is true for orders 102, 103 and 109. You rarely need <code>$expr</code> for a simple comparison like this one, but it is essential when one field must be compared with another field of the same document, such as <code>{ $expr: { $gt: ["$delivery_minutes", "$promised_minutes"] } }</code>.</p>
+  <p>Forgetting the <code>$match</code> does not cause an error; it silently changes the business answer:</p>
+  <div class="fx" data-lang="mongo">db.orders.aggregate([ { $group: { _id: null, revenue: { $sum: "$amount" } } } ])
+db.orders.aggregate([ { $match: { status: "delivered" } },
+                      { $group: { _id: null, revenue: { $sum: "$amount" } } } ])</div>
+  <div class="fx" data-lang="text">[ { _id: null, revenue: 3510 } ]
+[ { _id: null, revenue: 2630 } ]</div>
+  <p>Without the filter, "revenue" is ₹3,510; with it, ₹2,630. Both pipelines run without complaint, which is exactly why the decision about which orders count has to be made consciously, before writing the first stage. (These two pipelines also show a convenient trick for <code>$group</code>, explained next: an <code>_id</code> of <code>null</code> puts every document into one single group, giving a grand total.)</p>
 
-  <h2 id="ma-group"><span class="num">03</span>$group, Traced by Hand</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>"Revenue per restaurant" is a <em>per-something</em> question. In SQL it is <code>GROUP BY restaurant_id</code> with <code>SUM(amount)</code>. Which stage turns 7 order documents into 3 restaurant summaries?</p>
-  </div>
-  <p><code>$group</code> needs an <code>_id</code>: the value to group by. Documents with the same <code>_id</code> value land in the same bin. Every other field you write must be an <strong>accumulator</strong>, a rule for folding the values in one bin into one value.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A teacher sorting answer sheets into piles by section (A, B, C): that is the <code>_id</code>. For each pile she writes on a sticky note: number of sheets (<code>$sum: 1</code>), total marks (<code>$sum</code>), highest (<code>$max</code>), list of roll numbers (<code>$push</code>). Only the sticky notes go forward; the sheets don't.</p>
-  </div>
-  <p>By hand first, on the 7 delivered orders, grouped by <code>restaurant_id</code>:</p>
+  <h2 id="ma-group"><span class="num">03</span>$group and Accumulators</h2>
+  <p>"Revenue per restaurant" is a <em>per-something</em> question, and in SQL it would be <code>GROUP BY restaurant_id</code> with <code>SUM(amount)</code>. The stage that turns seven order documents into three restaurant summaries is <strong>$group</strong>. It needs an <code>_id</code>, which is the <strong>group key</strong>: the value to group by. All documents with the same key value land in the same bin. Every other field you write in the stage must be an <strong>accumulator</strong>, a rule for folding the many values in one bin into a single value, such as a sum, an average or a maximum.</p>
+  <p>Picture a teacher sorting answer sheets into piles by section, A, B and C; the section is the key. For each pile she writes a sticky note: the number of sheets, the total marks, the highest mark, the list of roll numbers. Then only the sticky notes go forward; the sheets themselves do not. Here is that work done by hand first, on the seven delivered orders grouped by <code>restaurant_id</code>:</p>
   <table class="tbl">
-    <tr><th>bin (_id)</th><th>orders in it</th><th>$sum: 1</th><th>$sum: "$amount"</th><th>$avg: "$delivery_minutes"</th><th>$max: "$amount"</th></tr>
+    <tr><th>key (_id)</th><th>orders in the bin</th><th>$sum: 1</th><th>$sum: "$amount"</th><th>$avg: "$delivery_minutes"</th><th>$max: "$amount"</th></tr>
     <tr><td>10 Dosa Hut</td><td>101 (240, 32 min), 108 (260, 29)</td><td>2</td><td>240 + 260 = 500</td><td>(32 + 29) / 2 = 30.5</td><td>260</td></tr>
     <tr><td>11 Biryani Bros</td><td>102 (450, 41), 106 (180, 25), 109 (600, 52)</td><td>3</td><td>450 + 180 + 600 = 1230</td><td>(41 + 25 + 52) / 3 = 39.33…</td><td>600</td></tr>
     <tr><td>12 Pizza Point</td><td>103 (520, 38), 104 (380, <strong>null</strong>)</td><td>2</td><td>520 + 380 = 900</td><td>38 / 1 = 38 (null skipped)</td><td>520</td></tr>
   </table>
-  <div class="fx" data-lang="js">db.orders.aggregate([
+  <p>And the real pipeline, with one extra accumulator, <code>$push</code>, which collects every value in the bin into an array:</p>
+  <div class="fx" data-lang="mongo">db.orders.aggregate([
   { $match: { status: "delivered" } },
   { $group: { _id: "$restaurant_id",
               orders:      { $sum: 1 },
@@ -252,33 +187,37 @@ db.orders.aggregate([ { $match: { $expr: { $gt: ["$amount", 400] } } }, { $count
     order_ids: [ 103, 104 ]
   }
 ]</div>
-  <p>Every number matches the hand trace. Note Pizza Point's <code>avg_minutes: 38</code>: order 104's <code>delivery_minutes</code> is null, and <code>$avg</code> ignores null and missing values, exactly as SQL's <code>AVG</code> ignores NULL. The same question in PostgreSQL on the SQL tables:</p>
+  <p>Every number matches the hand trace. Look closely at Pizza Point's <code>avg_minutes: 38</code>. Order 104's delivery time is null, and <code>$avg</code> ignores null and missing values, so the average is taken over order 103 alone, exactly as SQL's <code>AVG</code> ignores NULL. The same question in PostgreSQL gives the same counts, sums, averages and maxima:</p>
   <div class="fx" data-lang="sql">SELECT restaurant_id, COUNT(*) AS orders, SUM(amount) AS revenue,
        ROUND(AVG(delivery_minutes), 2) AS avg_minutes, MAX(amount) AS biggest
 FROM orders WHERE status = 'delivered'
 GROUP BY restaurant_id ORDER BY restaurant_id;</div>
-  <table class="tbl out"><caption>PostgreSQL 17: identical counts, sums, averages and maxima</caption><tr><th>restaurant_id</th><th>orders</th><th>revenue</th><th>avg_minutes</th><th>biggest</th></tr><tr><td>10</td><td>2</td><td>500.00</td><td>30.50</td><td>260.00</td></tr><tr><td>11</td><td>3</td><td>1230.00</td><td>39.33</td><td>600.00</td></tr><tr><td>12</td><td>2</td><td>900.00</td><td>38.00</td><td>520.00</td></tr></table>
+  <div class="fx" data-lang="text"> restaurant_id | orders | revenue | avg_minutes | biggest 
+---------------+--------+---------+-------------+---------
+            10 |      2 |  500.00 |       30.50 |  260.00
+            11 |      3 | 1230.00 |       39.33 |  600.00
+            12 |      2 |  900.00 |       38.00 |  520.00
+(3 rows)</div>
+  <p>The common accumulators map neatly onto SQL's aggregate functions:</p>
   <table class="tbl">
     <tr><th>Accumulator</th><th>SQL cousin</th><th>Note</th></tr>
     <tr><td><code>$sum: 1</code></td><td><code>COUNT(*)</code></td><td>adds 1 per document</td></tr>
-    <tr><td><code>$sum: "$x"</code></td><td><code>SUM(x)</code></td><td>non-numbers are skipped</td></tr>
-    <tr><td><code>$avg $min $max</code></td><td><code>AVG MIN MAX</code></td><td>ignore null and missing</td></tr>
-    <tr><td><code>$push</code></td><td><code>ARRAY_AGG(x)</code></td><td>all values, duplicates kept</td></tr>
-    <tr><td><code>$addToSet</code></td><td><code>ARRAY_AGG(DISTINCT x)</code></td><td>unique values, order not guaranteed</td></tr>
+    <tr><td><code>$sum: "$x"</code></td><td><code>SUM(x)</code></td><td>values that are not numbers are skipped</td></tr>
+    <tr><td><code>$avg $min $max</code></td><td><code>AVG MIN MAX</code></td><td>ignore null and missing values</td></tr>
+    <tr><td><code>$push</code></td><td><code>ARRAY_AGG(x)</code></td><td>every value, duplicates kept</td></tr>
+    <tr><td><code>$addToSet</code></td><td><code>ARRAY_AGG(DISTINCT x)</code></td><td>unique values, in no promised order</td></tr>
     <tr><td><code>$first $last</code></td><td>—</td><td>meaningful only after a <code>$sort</code> (section 05)</td></tr>
   </table>
-  <p>Three variations: one bin for everything (<code>_id: null</code>), HAVING (a <code>$match</code> <em>after</em> the group), and a two-field key (an object as <code>_id</code>):</p>
-  <div class="fx" data-lang="js">db.orders.aggregate([ { $match: { status: "delivered" } },
-  { $group: { _id: null, orders: { $sum: 1 }, revenue: { $sum: "$amount" } } } ])
-db.orders.aggregate([ { $match: { status: "delivered" } },
+  <p>Two more patterns come up constantly. SQL's <code>HAVING</code>, a filter on the group results, needs no special keyword: it is simply a second <code>$match</code> placed <em>after</em> the <code>$group</code>, where the documents in the stream are now group summaries. And grouping by two fields at once uses an object as the key:</p>
+  <div class="fx" data-lang="mongo">db.orders.aggregate([
+  { $match: { status: "delivered" } },
   { $group: { _id: "$restaurant_id", revenue: { $sum: "$amount" } } },
-  { $match: { revenue: { $gte: 900 } } },
+  { $match: { revenue: { $gte: 900 } } },                  // HAVING
   { $sort: { _id: 1 } } ])
 db.orders.aggregate([
   { $group: { _id: { restaurant: "$restaurant_id", status: "$status" }, n: { $sum: 1 } } },
   { $sort: { "_id.restaurant": 1, "_id.status": 1 } } ])</div>
-  <div class="fx" data-lang="text">[ { _id: null, orders: 7, revenue: 2630 } ]
-[ { _id: 11, revenue: 1230 }, { _id: 12, revenue: 900 } ]
+  <div class="fx" data-lang="text">[ { _id: 11, revenue: 1230 }, { _id: 12, revenue: 900 } ]
 [
   { _id: { restaurant: 10, status: 'delivered' }, n: 2 },
   { _id: { restaurant: 10, status: 'pending' }, n: 1 },
@@ -287,99 +226,67 @@ db.orders.aggregate([
   { _id: { restaurant: 12, status: 'delivered' }, n: 2 },
   { _id: { restaurant: 13, status: 'cancelled' }, n: 1 }
 ]</div>
-  <p><code>_id: null</code> gave the grand total: 7 delivered orders, ₹2,630. The second <code>$match</code> ran on the <em>group results</em>, so it filtered on the computed <code>revenue</code>: only Biryani Bros (1230) and Pizza Point (900) reach ₹900. The compound key made one bin per (restaurant, status) pair that exists: 6 bins. Momo Magic (14) has no orders, so it has no bin.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>$group</strong>: <code>{ $group: { _id: &lt;key expression&gt;, field: { &lt;accumulator&gt;: &lt;expression&gt; }, … } }</code>. <strong>Group key</strong>: the <code>_id</code>; <code>null</code> means one group. <strong>Accumulator</strong>: folds many values into one per group.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: text that looks like a number, and vanished fields</span>
-    <p>On four scratch documents with amounts <code>240</code>, <code>"450"</code> (text), <code>520</code> and none:</p>
-    <div class="fx" data-lang="js">db.scratch.insertMany([ { _id: 1, amount: 240 }, { _id: 2, amount: "450" }, { _id: 3, amount: 520 }, { _id: 4, note: "no amount" } ])
-db.scratch.aggregate([ { $group: { _id: null, n: { $sum: 1 }, total: { $sum: "$amount" }, avg: { $avg: "$amount" } } } ])
+  <p>The second <code>$match</code> ran on the group summaries, so it could filter on the computed <code>revenue</code>: only Biryani Bros (1230) and Pizza Point (900) reach ₹900. The compound key in the second pipeline made one bin for every (restaurant, status) pair that actually occurs, six in all; Momo Magic (14) has no orders, so it has no bin. Note how the sort refers to the parts of the key with dot notation, <code>"_id.restaurant"</code>.</p>
+  <p>Two traps belong to <code>$group</code>. The first is that after the stage, only <code>_id</code> and the accumulator fields exist. <code>status</code>, <code>items</code> and every other original field are gone, and the grouping field is now called <code>_id</code>, so a later stage that refers to <code>"$restaurant_id"</code> or filters on <code>status</code> silently finds nothing. The second is that <code>$sum</code> quietly skips values that are not numbers. On four scratch documents where one amount was stored as the text <code>"450"</code> (a common result of CSV imports) and one has no amount at all:</p>
+  <div class="fx" data-lang="mongo">db.scratch.insertMany([ { _id: 1, amount: 240 }, { _id: 2, amount: "450" },
+                        { _id: 3, amount: 520 }, { _id: 4, note: "no amount" } ])
+db.scratch.aggregate([ { $group: { _id: null, n: { $sum: 1 },
+                                   total: { $sum: "$amount" }, avg: { $avg: "$amount" } } } ])
 db.scratch.drop()</div>
-    <div class="fx" data-lang="text">{
-  acknowledged: true,
-  insertedIds: {
-    '0': ObjectId('6ad6b27670372c73082b06dc'),
-    '1': ObjectId('6ad6b27670372c73082b06dd'),
-    '2': ObjectId('6ad6b27670372c73082b06de'),
-    '3': ObjectId('6ad6b27670372c73082b06df')
-  }
-}
+  <div class="fx" data-lang="text">{ acknowledged: true, insertedIds: { '0': 1, '1': 2, '2': 3, '3': 4 } }
 [ { _id: null, n: 4, total: 760, avg: 380 } ]
 true</div>
-    <p>4 documents counted, but the total is 760, not 1,210: <code>$sum</code> skipped the string without a word, and <code>$avg</code> averaged only the two real numbers. Data loaded from CSV often stores numbers as text; convert with <code>$toDouble</code> or fix it on load. Second trap: after <code>$group</code> only <code>_id</code> and the accumulators exist. <code>status</code>, <code>items</code>, everything else is gone, and the grouping field is now called <code>_id</code>.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: $project and $addFields.</b> <code>$group</code> can only fold fields that already exist. Questions like "does each stored bill equal the sum of its lines?", "lunch or dinner (in IST)?", or "how many lines per order?" need values computed from fields <em>before</em> grouping.</div>
+  <p>All four documents were counted, but the total is 760, not 1,210: the text "450" was skipped without a word, and <code>$avg</code> averaged only the two real numbers. When numbers may have been stored as text, fix the data on load or convert inside the pipeline with <code>$toDouble</code> before summing.</p>
 
-  <h2 id="ma-shape"><span class="num">04</span>$project &amp; $addFields: Compute New Fields</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Each order stores <code>amount</code>, and each line stores <code>qty</code> and <code>unit_price</code>. Is every stored bill really the sum of its lines? No field holds "sum of qty × unit_price"; it has to be calculated for every order. Which stage computes new values?</p>
-  </div>
-  <div class="cards">
-    <div><b>$addFields</b><p>Alias <code>$set</code>. Adds or overwrites fields and keeps all the rest.</p></div>
-    <div><b>$project</b><p>Chooses the output fields: keep, drop, rename, compute. Unlisted fields are dropped (except <code>_id</code>).</p></div>
-    <div><b>Expressions</b><p><code>$multiply $sum $map $filter $size $cond $ifNull $hour $dateToString</code> …</p></div>
-  </div>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Filling in the "Total" box at the bottom of each bill: go down the lines, multiply quantity by rate for each, add them up. <code>$map</code> is "do this for every line"; <code>$sum</code> is "add them up".</p>
-  </div>
-  <p>By hand for order 102 first:</p>
-  <table class="tbl">
-    <tr><th>Step</th><th>Value</th></tr>
-    <tr><td><code>$items</code></td><td>[ {Chicken Biryani, qty 1, 350}, {Raita, qty 2, 50} ]</td></tr>
-    <tr><td><code>$map</code>: qty × unit_price per line <code>l</code></td><td>[ 350, 100 ]</td></tr>
-    <tr><td><code>$sum</code> of that array</td><td>450 = the stored <code>amount</code> ✓</td></tr>
-  </table>
-  <div class="fx" data-lang="js">db.orders.aggregate([
-  { $addFields: {
-      lines_total: { $sum: { $map: { input: "$items", as: "l",
-                                     in: { $multiply: ["$$l.qty", "$$l.unit_price"] } } } } } },
-  { $project: { amount: 1, lines_total: 1,
-                n_lines: { $size: "$items" },
-                ok: { $eq: ["$amount", "$lines_total"] } } }
+  <h2 id="ma-shape"><span class="num">04</span>$project and $addFields</h2>
+  <p><code>$group</code> can only fold values that already exist in the documents. Many questions need values that no field stores: the total of each order line (quantity times unit price), the number of lines in an order, the hour of day in Indian time, or a label such as "lunch" or "dinner". Two stages compute new values. <strong>$addFields</strong> (also spelled <code>$set</code>) adds or overwrites fields and keeps everything else. <strong>$project</strong> chooses the output fields: it keeps, drops, renames or computes them, and any field you do not list is dropped (except <code>_id</code>). Inside both stages, values are computed with <strong>expressions</strong> such as <code>$multiply</code>, <code>$size</code>, <code>$cond</code> or <code>$hour</code>.</p>
+  <p>The most useful expression for documents with embedded arrays is <code>$map</code>, which does something to every element of an array and returns the new array, like a <code>for</code> loop that builds a list. Think of filling in the "Total" column of a bill: go down the lines and multiply quantity by rate for each one. By hand for order 102, the lines are a biryani (1 × 350) and two raitas (2 × 50), so the line totals are [350, 100]:</p>
+  <div class="fx" data-lang="mongo">db.orders.aggregate([
+  { $match: { _id: { $in: [102, 108] } } },
+  { $project: {
+      line_totals: { $map: { input: "$items", as: "l",
+                             in: { $multiply: ["$$l.qty", "$$l.unit_price"] } } },
+      n_lines: { $size: "$items" },
+      amount: 1 } }
 ])</div>
   <div class="fx" data-lang="text">[
-  { _id: 101, amount: 240, lines_total: 240, n_lines: 1, ok: true },
-  { _id: 102, amount: 450, lines_total: 450, n_lines: 2, ok: true },
-  { _id: 103, amount: 520, lines_total: 520, n_lines: 1, ok: true },
-  { _id: 104, amount: 380, lines_total: 380, n_lines: 2, ok: true },
-  { _id: 105, amount: 310, lines_total: 310, n_lines: 1, ok: true },
-  { _id: 106, amount: 180, lines_total: 180, n_lines: 1, ok: true },
-  { _id: 107, amount: 260, lines_total: 260, n_lines: 1, ok: true },
-  { _id: 108, amount: 260, lines_total: 260, n_lines: 2, ok: true },
-  { _id: 109, amount: 600, lines_total: 600, n_lines: 2, ok: true },
-  { _id: 110, amount: 310, lines_total: 310, n_lines: 2, ok: true }
+  { _id: 102, amount: 450, line_totals: [ 350, 100 ], n_lines: 2 },
+  { _id: 108, amount: 260, line_totals: [ 120, 140 ], n_lines: 2 }
 ]</div>
-  <p>All 10 stored bills equal the sum of their lines (<code>ok: true</code>), the same invariant the SQL schema notes (<code>orders.amount = SUM(qty × unit_price)</code>). Inside <code>$map</code>, <code>input</code> is the array, <code>as: "l"</code> names the loop variable, and <code>in</code> is what to compute per element. The variable is read with a <strong>double</strong> dollar, <code>"$$l.qty"</code>; a single <code>$</code> would look for a field called <code>l</code> on the order. <code>$project</code> then listed what to show, with two more computed fields.</p>
-  <p>More expressions, on three orders: a default for missing values, the hour in IST vs UTC, and an if-then-else:</p>
-  <div class="fx" data-lang="js">db.orders.aggregate([
+  <p>Inside <code>$map</code>, <code>input</code> is the array to walk over, <code>as: "l"</code> names the loop variable, and <code>in</code> is what to compute for each element. The loop variable is read with a <strong>double</strong> dollar, <code>"$$l.qty"</code>; a single dollar, <code>"$l.qty"</code>, would look for a field called <code>l</code> on the order itself, find nothing, and quietly produce wrong numbers. Order 102's line totals are [350, 100], order 108's are [120, 140], and <code>$size</code> counted two lines in each. (Adding the line totals up per order is easiest with <code>$unwind</code>, in section 06.)</p>
+  <p>Three more expressions cover most everyday needs: a default for missing values, the hour of a date in a chosen time zone, and an if-then-else:</p>
+  <div class="fx" data-lang="mongo">db.orders.aggregate([
   { $match: { _id: { $in: [101, 104, 105] } } },
-  { $project: { _id: 1,
+  { $project: {
       minutes:  { $ifNull: ["$delivery_minutes", "not recorded"] },
-      ist_hour: { $hour: { date: "$ordered_at", timezone: "Asia/Kolkata" } },
       utc_hour: { $hour: "$ordered_at" },
-      meal:     { $cond: [ { $lt: [ { $hour: { date: "$ordered_at", timezone: "Asia/Kolkata" } }, 16 ] }, "lunch", "dinner" ] } } }
-])
-db.orders.aggregate([ { $match: { _id: 102 } }, { $project: { n_lines: { $size: "$items" } } } ])
-db.orders.aggregate([ { $match: { _id: 102 } }, { $addFields: { n_lines: { $size: "$items" } } }, { $project: { items: 0 } } ])</div>
+      ist_hour: { $hour: { date: "$ordered_at", timezone: "Asia/Kolkata" } },
+      meal: { $cond: [ { $lt: [ { $hour: { date: "$ordered_at", timezone: "Asia/Kolkata" } }, 16 ] },
+                       "lunch", "dinner" ] } } }
+])</div>
   <div class="fx" data-lang="text">[
-  { _id: 101, minutes: 32, ist_hour: 12, utc_hour: 6, meal: 'lunch' },
+  { _id: 101, minutes: 32, utc_hour: 6, ist_hour: 12, meal: 'lunch' },
   {
     _id: 104,
     minutes: 'not recorded',
-    ist_hour: 13,
     utc_hour: 7,
+    ist_hour: 13,
     meal: 'lunch'
   },
   {
     _id: 105,
     minutes: 'not recorded',
-    ist_hour: 19,
     utc_hour: 14,
+    ist_hour: 19,
     meal: 'dinner'
   }
-]
-[ { _id: 102, n_lines: 2 } ]
+]</div>
+  <p><code>$ifNull</code> replaced order 104's null and order 105's missing delivery time with a label. The hour columns show why time zones matter in reports. Order 101 was placed at 12:10 in India, which is 06:40 UTC, and BSON stores UTC, so <code>$hour</code> without a time zone says 6; with <code>timezone: "Asia/Kolkata"</code> it says 12. Any report "by hour" or "by day" must pass the time zone, or late-evening orders will land on the wrong hour or even the wrong date. Finally, <code>$cond: [if, then, else]</code> labelled the orders as lunch or dinner using the Indian hour.</p>
+  <p>The difference between the two stages is easy to forget, and forgetting it loses data:</p>
+  <div class="fx" data-lang="mongo">db.orders.aggregate([ { $match: { _id: 102 } }, { $project: { n_lines: { $size: "$items" } } } ])
+db.orders.aggregate([ { $match: { _id: 102 } }, { $addFields: { n_lines: { $size: "$items" } } },
+                      { $project: { items: 0 } } ])</div>
+  <div class="fx" data-lang="text">[ { _id: 102, n_lines: 2 } ]
 [
   {
     _id: 102,
@@ -392,24 +299,11 @@ db.orders.aggregate([ { $match: { _id: 102 } }, { $addFields: { n_lines: { $size
     n_lines: 2
   }
 ]</div>
-  <p>(1) <code>$ifNull</code> replaced 104's null and 105's missing time with a label. (2) Order 101 was placed at 12:10 IST, which is 06:40 UTC: <code>$hour</code> without a timezone says 6. Any "orders by hour" or "orders per day" report must pass <code>timezone: "Asia/Kolkata"</code>. (3) <code>$cond</code> labels lunch or dinner. Then the trap pair: <code>$project</code> with one computed field returned <em>only</em> <code>_id</code> and <code>n_lines</code>; <code>$addFields</code> kept everything and added <code>n_lines</code> (we hid <code>items</code> just to keep the print short).</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Expression</strong>: a computed value inside a stage, e.g. <code>{ $multiply: [a, b] }</code>. <strong>"$$var"</strong>: a variable from <code>$map</code>, <code>$filter</code> or <code>$lookup</code>'s <code>let</code>. <strong>$project</strong> shapes the output; <strong>$addFields</strong>/<strong>$set</strong> adds to it.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: $project drops, and single vs double dollar</span>
-    <p>Listing one computed field in <code>$project</code> drops every other field (order 102 kept only <code>n_lines</code>). Inside <code>$map</code>, <code>"$l.qty"</code> (one dollar) silently reads a non-existent field and the total becomes 0; write <code>"$$l.qty"</code>.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: $sort and $limit.</b> We can filter, group and compute. But the outputs come out in arbitrary order, and the questions are often "the top 2 restaurants" or "each customer's latest order", which need ordering and cutting <em>inside</em> the pipeline.</div>
+  <p><code>$project</code> with one computed field returned <em>only</em> <code>_id</code> and <code>n_lines</code>; every other field of order 102 disappeared. <code>$addFields</code> kept everything and added <code>n_lines</code> (the <code>items</code> array was hidden afterwards only to keep the print short). Use <code>$addFields</code> while building up intermediate values, and <code>$project</code> at the end to shape exactly what the application should receive.</p>
 
-  <h2 id="ma-sort"><span class="num">05</span>$sort &amp; $limit: Top-N and "Latest per Customer"</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>"Which 2 restaurants earned the most?" needs the group results ordered by revenue and cut to 2. "What is each customer's latest order?" needs ordering <em>before</em> grouping. Where do sorting and cutting go in a pipeline?</p>
-  </div>
-  <p><code>$sort</code>, <code>$limit</code> and <code>$skip</code> work like their <code>find</code> cousins, but they are stages, so they can sit anywhere: after a group (to rank groups) or before one (so that <code>$first</code> and <code>$last</code> pick a meaningful document).</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Arranging the teacher's sticky notes by total marks and keeping the top two. Or, before making piles, stacking each student's sheets newest first, so the first sheet in each pile is the latest one.</p>
-  </div>
-  <div class="fx" data-lang="js">db.orders.aggregate([
+  <h2 id="ma-sort"><span class="num">05</span>$sort, $limit and $first</h2>
+  <p>Many business questions are rankings. "Which two restaurants earned the most?" needs the group results ordered by revenue and cut to two. "What is each customer's latest order?" needs the orders arranged by date <em>before</em> grouping, so that the first one in each bin is the newest. <code>$sort</code>, <code>$limit</code> and <code>$skip</code> work like their <code>find</code> cousins, but as stages they can be placed anywhere in the pipeline: after a group, to rank the groups, or before one, so that <code>$first</code> and <code>$last</code> pick a meaningful document. In the teacher's terms: arrange the sticky notes by total and keep the top two; or, before making the piles, stack each student's sheets newest first, so the top sheet of each pile is the latest.</p>
+  <div class="fx" data-lang="mongo">db.orders.aggregate([
   { $match: { status: "delivered" } },
   { $group: { _id: "$restaurant_id", revenue: { $sum: "$amount" } } },
   { $sort: { revenue: -1 } },
@@ -417,7 +311,8 @@ db.orders.aggregate([ { $match: { _id: 102 } }, { $addFields: { n_lines: { $size
 ])
 db.orders.aggregate([
   { $sort: { ordered_at: -1 } },
-  { $group: { _id: "$customer_id", latest_order: { $first: "$_id" }, latest_status: { $first: "$status" } } },
+  { $group: { _id: "$customer_id", latest_order: { $first: "$_id" },
+              latest_status: { $first: "$status" } } },
   { $sort: { _id: 1 } }
 ])</div>
   <div class="fx" data-lang="text">[ { _id: 11, revenue: 1230 }, { _id: 12, revenue: 900 } ]
@@ -429,23 +324,11 @@ db.orders.aggregate([
   { _id: 5, latest_order: 107, latest_status: 'cancelled' },
   { _id: 6, latest_order: 109, latest_status: 'delivered' }
 ]</div>
-  <p>Traced. The first pipeline grouped (500, 1230, 900), sorted by revenue descending, kept 2: Biryani Bros, Pizza Point. The second sorted <em>all</em> orders newest first, then grouped by customer; <code>$first</code> took the first document that entered each bin, which after the sort is the latest: Asha's latest is pending order 110, Dia's is cancelled 105. Without the <code>$sort</code>, <code>$first</code> returns whichever order the server happened to read first.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>$sort</strong>: order the stream (<code>1</code>/<code>-1</code>, several keys left to right). <strong>$limit / $skip</strong>: keep the first n / drop the first n. <strong>$first / $last</strong>: in <code>$group</code>, the value from the first / last document of each bin in stream order.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: ties and position</span>
-    <p>As in <a class="xref" data-note="mongo_basics">find</a>, ties (orders 107 and 108 at ₹260) need a tie-breaker such as <code>_id</code>. And position matters: <code>$limit</code> before <code>$group</code> groups only the first n documents, a different question from "top n groups".</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: $unwind.</b> Every stage so far worked on whole orders. "Revenue per <em>item</em>" asks about lines, which live inside each order's <code>items</code> array; one order can contain a dosa and a coffee. <code>$group</code> needs one key per document, and an order has several items.</div>
+  <p>The first pipeline grouped the delivered orders into three restaurants (500, 1230 and 900), sorted them by revenue from high to low, and kept two: Biryani Bros and Pizza Point. The second sorted <em>all</em> orders newest first and then grouped by customer. <code>$first</code> takes the value from the first document that entered each bin, which, after the sort, is the latest order: Asha's latest is the pending order 110, Dia's is the cancelled order 105. Without that <code>$sort</code>, <code>$first</code> would return whichever order the server happened to read first, and the answer could change from one run to the next.</p>
+  <p>Position matters for these stages in a way that is easy to get wrong. A <code>$limit: 2</code> placed <em>before</em> the <code>$group</code> would group only the first two documents, which answers a completely different question from "the top two groups". And as with <code>find</code>, sorting on a value with ties (orders 107 and 108 both cost ₹260) needs a unique tie-breaker such as <code>_id</code> to give a stable order.</p>
 
-  <h2 id="ma-unwind"><span class="num">06</span>$unwind: One Order Becomes n Lines</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Which items earn the most? Item names are inside the <code>items</code> array, and order 108 holds two (a dosa and a coffee). A document can only go into one <code>$group</code> bin. How does order 108 contribute to two different item bins?</p>
-  </div>
-  <p><code>$unwind</code> splits a document by an array field: one output document per element, with that field replaced by the single element and every other field (order <code>_id</code>, customer, status) copied onto each. After it, each document holds exactly one line, and grouping by item works.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Photocopying a bill once per line and cutting each copy so it shows only one line. Each slip still carries the bill number and customer, so you can sort slips into item trays.</p>
-  </div>
+  <h2 id="ma-unwind"><span class="num">06</span>$unwind</h2>
+  <p>Every stage so far worked on whole orders. "Which items earn the most?" asks about order <em>lines</em>, and the lines live inside each order's <code>items</code> array; order 108 holds both a dosa and a coffee. <code>$group</code> needs one key per document, and a document can go into only one bin, so how can order 108 contribute to two different item bins? The answer is to split it first. <strong>$unwind</strong> takes an array field and outputs one document per element of the array; in each output document, the array field is replaced by that single element, and every other field (the order's <code>_id</code>, customer, status and so on) is copied unchanged. Think of photocopying a bill once per line and cutting each copy so it shows only one line; every slip still carries the bill number and the customer, so the slips can be sorted into trays by item.</p>
   <figure class="viz"><svg viewBox="0 0 620 130" width="620">
     <defs><marker id="ma-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <rect x="0" y="20" width="240" height="90" rx="6" class="fb sb"/>
@@ -458,8 +341,10 @@ db.orders.aggregate([
     <rect x="320" y="34" width="210" height="20" rx="4" class="ft st"/><text x="328" y="48" font-size="11">items: Chicken Biryani (object)</text>
     <rect x="310" y="70" width="300" height="50" rx="6" class="fb sb"/><text x="320" y="90" font-size="11">_id 102 · customer 2 · delivered</text>
     <rect x="320" y="96" width="210" height="20" rx="4" class="fv sb"/><text x="328" y="110" font-size="11">items: Raita (object)</text>
-  </svg><figcaption>One document per array element; parent fields are copied onto each. The same _id appears twice.</figcaption></figure>
-  <div class="fx" data-lang="js">db.orders.aggregate([ { $match: { _id: 102 } }, { $unwind: "$items" }, { $project: { customer_id: 1, status: 1, items: 1 } } ])
+  </svg><figcaption>One output document per array element, with the parent's fields copied onto each; the same _id now appears twice.</figcaption></figure>
+  <p>The figure shows order 102 being split; here is the real output, followed by a count of all the documents that <code>$unwind</code> produces from the whole collection:</p>
+  <div class="fx" data-lang="mongo">db.orders.aggregate([ { $match: { _id: 102 } }, { $unwind: "$items" },
+                      { $project: { customer_id: 1, status: 1, items: 1 } } ])
 db.orders.aggregate([ { $unwind: "$items" }, { $count: "lines" } ])</div>
   <div class="fx" data-lang="text">[
   {
@@ -476,8 +361,8 @@ db.orders.aggregate([ { $unwind: "$items" }, { $count: "lines" } ])</div>
   }
 ]
 [ { lines: 15 } ]</div>
-  <p>Order 102 became 2 documents, both with <code>_id: 102</code>, and <code>items</code> is now one object, so <code>"$items.item"</code> is one plain value. Over all 10 orders: 1+2+1+2+1+1+1+2+2+2 = <strong>15</strong> documents, exactly the 15 rows of SQL's <code>order_items</code> table. <code>$unwind</code> is the document world's way back to the line grain. Now revenue per item for delivered orders:</p>
-  <div class="fx" data-lang="js">db.orders.aggregate([
+  <p>Order 102 became two documents, both with <code>_id: 102</code>, and <code>items</code> is now a single object in each, so <code>"$items.item"</code> is one plain value instead of an array. Over all ten orders, the line counts are 1 + 2 + 1 + 2 + 1 + 1 + 1 + 2 + 2 + 2 = <strong>15</strong> documents, exactly the 15 rows of SQL's <code>order_items</code> table. <code>$unwind</code> is how the document world gets back to "one row per line". With it, revenue per item for delivered orders is a short pipeline:</p>
+  <div class="fx" data-lang="mongo">db.orders.aggregate([
   { $match: { status: "delivered" } },
   { $unwind: "$items" },
   { $group: { _id: "$items.item",
@@ -492,30 +377,59 @@ db.orders.aggregate([ { $unwind: "$items" }, { $count: "lines" } ])</div>
   { _id: 'Masala Dosa', qty: 3, revenue: 360 },
   { _id: 'Margherita', qty: 1, revenue: 280 }
 ]</div>
+  <p>Chicken Biryani leads with 1 × 350 from order 102 plus 1 × 350 from order 109, ₹700. Masala Dosa earned 2 × 120 (order 101) + 1 × 120 (order 108) = ₹360; order 110's two dosas do not count, because 110 is still pending. In SQL the same answer needs a join from <code>orders</code> to <code>order_items</code>; in MongoDB the lines are already inside the orders and only need unwinding. The rows are identical:</p>
   <div class="fx" data-lang="sql">SELECT i.item, SUM(i.qty) AS qty, SUM(i.qty * i.unit_price) AS revenue
 FROM orders o JOIN order_items i ON i.order_id = o.order_id
 WHERE o.status = 'delivered'
 GROUP BY i.item ORDER BY revenue DESC, i.item LIMIT 4;</div>
-  <table class="tbl out"><caption>PostgreSQL 17: SQL joins order_items where MongoDB unwinds items: same 4 rows</caption><tr><th>item</th><th>qty</th><th>revenue</th></tr><tr><td>Chicken Biryani</td><td>2</td><td>700.00</td></tr><tr><td>Farmhouse Pizza</td><td>2</td><td>520.00</td></tr><tr><td>Masala Dosa</td><td>3</td><td>360.00</td></tr><tr><td>Margherita</td><td>1</td><td>280.00</td></tr></table>
-  <p>Chicken Biryani: 1 × 350 (order 102) + 1 × 350 (order 109) = 700. Masala Dosa: 2 × 120 (101) + 1 × 120 (108) = 360; order 110's two dosas don't count because 110 is pending. The SQL version needs a join to <code>order_items</code>; the pipeline needs an <code>$unwind</code> of the embedded array. Same answer.</p>
-  <h3>Counting after $unwind, and forgetting it</h3>
-  <div class="fx" data-lang="js">db.orders.aggregate([
+  <div class="fx" data-lang="text">      item       | qty | revenue 
+-----------------+-----+---------
+ Chicken Biryani |   2 |  700.00
+ Farmhouse Pizza |   2 |  520.00
+ Masala Dosa     |   3 |  360.00
+ Margherita      |   1 |  280.00
+(4 rows)</div>
+  <p>Unwinding followed by grouping on the order's own <code>_id</code> also lets us check a business rule that the SQL schema stated: every order's stored <code>amount</code> must equal the sum of its lines. After the unwind, each line document still carries its order's <code>_id</code> and <code>amount</code>, so grouping them back by <code>_id</code> rebuilds one result per order:</p>
+  <div class="fx" data-lang="mongo">db.orders.aggregate([
+  { $unwind: "$items" },
+  { $group: { _id: "$_id", amount: { $first: "$amount" },
+              lines_total: { $sum: { $multiply: ["$items.qty", "$items.unit_price"] } } } },
+  { $project: { amount: 1, lines_total: 1, ok: { $eq: ["$amount", "$lines_total"] } } },
+  { $sort: { _id: 1 } }
+])</div>
+  <div class="fx" data-lang="text">[
+  { _id: 101, amount: 240, lines_total: 240, ok: true },
+  { _id: 102, amount: 450, lines_total: 450, ok: true },
+  { _id: 103, amount: 520, lines_total: 520, ok: true },
+  { _id: 104, amount: 380, lines_total: 380, ok: true },
+  { _id: 105, amount: 310, lines_total: 310, ok: true },
+  { _id: 106, amount: 180, lines_total: 180, ok: true },
+  { _id: 107, amount: 260, lines_total: 260, ok: true },
+  { _id: 108, amount: 260, lines_total: 260, ok: true },
+  { _id: 109, amount: 600, lines_total: 600, ok: true },
+  { _id: 110, amount: 310, lines_total: 310, ok: true }
+]</div>
+  <p>All ten stored bills equal the sum of their lines (<code>ok: true</code>). <code>$first: "$amount"</code> is safe here because every line document of one order carries the same amount.</p>
+  <p>That last remark points to the most important idea in this note. The <strong>grain</strong> of the stream is what one document means at a given point: before <code>$unwind</code>, one document is an order; after it, one document is a line. Values that belong to the order, such as <code>amount</code>, are now repeated on every line of that order. Counting or summing them at the line grain gives wrong answers, with no error:</p>
+  <div class="fx" data-lang="mongo">db.orders.aggregate([
   { $match: { customer_id: 1 } },
   { $unwind: "$items" },
-  { $group: { _id: "$customer_id", docs_after_unwind: { $sum: 1 }, orders: { $addToSet: "$_id" } } },
-  { $project: { docs_after_unwind: 1, n_orders: { $size: "$orders" } } }
-])
-db.orders.aggregate([ { $group: { _id: "$items.item", n: { $sum: 1 } } }, { $sort: { n: -1, _id: 1 } }, { $limit: 3 } ])</div>
-  <div class="fx" data-lang="text">[ { _id: 1, docs_after_unwind: 5, n_orders: 3 } ]
-[
+  { $group: { _id: "$customer_id", docs: { $sum: 1 }, spend: { $sum: "$amount" },
+              orders: { $addToSet: "$_id" } } },
+  { $project: { docs: 1, spend: 1, n_orders: { $size: "$orders" } } }
+])</div>
+  <div class="fx" data-lang="text">[ { _id: 1, docs: 5, spend: 1620, n_orders: 3 } ]</div>
+  <p>Asha has 3 orders (101, 104 and 110) but 5 lines, so <code>$sum: 1</code> after unwinding counted 5 "orders". Worse, summing <code>amount</code> added each order's bill once per line: 240 + 380 + 380 + 310 + 310 = ₹1,620, while her three orders actually total ₹930. This is the document version of the <a class="xref" data-note="sql_joins">join fan-out</a> problem from the SQL notes, where joining orders to their lines repeated each order's values on every line. The fixes are the same in both worlds: count or sum order-level values <em>before</em> changing the grain, or count distinct orders with <code>$addToSet: "$_id"</code> followed by <code>$size</code> (3, as above); and after unwinding, sum only line-level values such as quantity times unit price.</p>
+  <p>Forgetting <code>$unwind</code> altogether also gives a wrong answer without an error. Without it, <code>"$items.item"</code> is an array per order, so <code>$group</code> groups by whole arrays:</p>
+  <div class="fx" data-lang="mongo">db.orders.aggregate([ { $group: { _id: "$items.item", n: { $sum: 1 } } },
+                      { $sort: { n: -1 } }, { $limit: 3 } ])</div>
+  <div class="fx" data-lang="text">[
   { _id: [ 'Farmhouse Pizza' ], n: 2 },
   { _id: [ 'Masala Dosa', 'Filter Coffee' ], n: 2 },
   { _id: [ 'Buddha Bowl' ], n: 1 }
 ]</div>
-  <p>Asha has 3 orders (101, 104, 110) but 5 lines, so <code>$sum: 1</code> after unwinding counts 5. This is the document version of <a class="xref" data-note="sql_joins">join fan-out</a>: every line carries a copy of its order. Count distinct orders with <code>$addToSet: "$_id"</code> + <code>$size</code> (3), or count before unwinding. The second pipeline forgot <code>$unwind</code>: <code>"$items.item"</code> is an <em>array</em> per order, so it grouped by whole arrays like <code>['Masala Dosa', 'Filter Coffee']</code>. Wrong answer, no error.</p>
-  <h3>Empty arrays disappear</h3>
-  <p>A temporary order 111 with <code>items: []</code> (added and removed for this test):</p>
-  <div class="fx" data-lang="js">db.orders.insertOne({ _id: 111, customer_id: 4, restaurant_id: 13, status: "pending", amount: 0, items: [] })
+  <p>The keys are lists such as <code>[ 'Masala Dosa', 'Filter Coffee' ]</code> (orders 108 and 110), not item names, so the counts mean nothing useful. Finally, an edge case: an order whose <code>items</code> array is empty produces <em>no</em> documents at all from <code>$unwind</code>. A temporary order 111 with no lines shows it:</p>
+  <div class="fx" data-lang="mongo">db.orders.insertOne({ _id: 111, customer_id: 4, restaurant_id: 13, status: "pending", amount: 0, items: [] })
 db.orders.aggregate([ { $unwind: "$items" }, { $count: "n" } ])
 db.orders.aggregate([ { $unwind: { path: "$items", preserveNullAndEmptyArrays: true } }, { $count: "n" } ])
 db.orders.deleteOne({ _id: 111 })</div>
@@ -523,31 +437,18 @@ db.orders.deleteOne({ _id: 111 })</div>
 [ { n: 15 } ]
 [ { n: 16 } ]
 { acknowledged: true, deletedCount: 1 }</div>
-  <p>Plain <code>$unwind</code> produced 15 documents: order 111 vanished, like an inner join. With <code>preserveNullAndEmptyArrays: true</code> it stayed (16), with no <code>items</code> field.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>$unwind</strong>: <code>{ $unwind: "$arrayField" }</code> or <code>{ $unwind: { path, preserveNullAndEmptyArrays, includeArrayIndex } }</code>; outputs one document per element. <strong>Grain</strong>: what one document means (an order before, a line after).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: the grain changed</span>
-    <p>After <code>$unwind</code>, one document is a line, not an order. Summing <code>"$amount"</code> after unwinding adds each order's bill once per line (Asha: 240 + 380 + 380 + 310 + 310 = 1,620 instead of 930), the exact fan-out bug of the SQL notes. Sum line values (<code>qty × unit_price</code>) after unwinding, order values before.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: $lookup.</b> We can reach inside arrays. But the reports still print <code>customer_id: 3</code> and <code>restaurant_id: 11</code>; the names live in other collections. And "every customer with their order count" must include Gita, who has no orders at all.</div>
+  <p>Plain <code>$unwind</code> produced 15 documents, so order 111 vanished, just as a row with no matches vanishes from an inner join. With the option <code>preserveNullAndEmptyArrays: true</code> the order is kept (16 documents), with no <code>items</code> field. Use that option whenever documents with empty or missing arrays must still appear in the result, for example "every order with its number of lines, including zero".</p>
 
-  <h2 id="ma-lookup"><span class="num">07</span>$lookup: The Join, Traced</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Orders store only <code>customer_id</code>. A report needs the customer's <em>name</em> beside their spend, and a list of every customer with their number of orders, Gita included. In SQL that is a JOIN (a LEFT JOIN, for Gita). Which stage reaches into another collection?</p>
-  </div>
-  <p><code>$lookup</code> takes each incoming document, finds the matching documents in another collection, and attaches them as an <strong>array field</strong>. You give four things: <code>from</code> (the other collection), <code>localField</code> (field here), <code>foreignField</code> (field there) and <code>as</code> (name of the new array).</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A clerk going through the customer register. For each customer she walks to the order cabinet, pulls every order slip with that customer number, and staples them to the customer's page. A customer with no slips keeps the page, with nothing stapled.</p>
-  </div>
-  <p>Traced for three customers before running it:</p>
+  <h2 id="ma-lookup"><span class="num">07</span>$lookup</h2>
+  <p>The reports so far print <code>customer_id: 3</code> and <code>restaurant_id: 11</code>, because orders only <em>reference</em> customers and restaurants; the names live in other collections. A report that shows each customer's name next to their number of orders needs data from two collections, and it must include Gita, who has never ordered. In SQL that is a <code>LEFT JOIN</code>. In a pipeline it is <strong>$lookup</strong>: for each incoming document, it searches another collection for matching documents and attaches them as an <strong>array field</strong>. You give it four things: <code>from</code> (the other collection), <code>localField</code> (the field in the incoming document), <code>foreignField</code> (the field in the other collection) and <code>as</code> (the name of the new array).</p>
+  <p>Think of a clerk going through the customer register. For each customer she walks to the order cabinet, pulls every order slip with that customer's number, and staples them to the customer's page; a customer with no slips keeps their page, with nothing stapled to it. By hand for three customers:</p>
   <table class="tbl">
     <tr><th>customer (_id)</th><th>search orders where customer_id =</th><th>found</th><th>attached <code>orders</code> array</th></tr>
     <tr><td>Asha (1)</td><td>1</td><td>101, 104, 110</td><td>3 order documents</td></tr>
     <tr><td>Ben (2)</td><td>2</td><td>102, 106</td><td>2 order documents</td></tr>
-    <tr><td>Gita (7)</td><td>7</td><td>none</td><td><code>[]</code>, Gita is kept</td></tr>
+    <tr><td>Gita (7)</td><td>7</td><td>none</td><td><code>[]</code>, and Gita is kept</td></tr>
   </table>
-  <div class="fx" data-lang="js">db.customers.aggregate([
+  <div class="fx" data-lang="mongo">db.customers.aggregate([
   { $lookup: { from: "orders", localField: "_id", foreignField: "customer_id", as: "orders" } },
   { $project: { _id: 0, name: 1, order_ids: "$orders._id", n_orders: { $size: "$orders" } } }
 ])</div>
@@ -560,11 +461,20 @@ db.orders.deleteOne({ _id: 111 })</div>
   { name: 'Farah', order_ids: [ 109 ], n_orders: 1 },
   { name: 'Gita', order_ids: [], n_orders: 0 }
 ]</div>
+  <p><code>"$orders._id"</code> pulled just the ids out of the attached array, and <code>$size</code> counted them. Gita came through with an empty array and 0 orders, which makes <code>$lookup</code> a <strong>left outer join</strong>: every input document survives, matched or not. The SQL <code>LEFT JOIN</code> gives the same seven counts:</p>
   <div class="fx" data-lang="sql">SELECT c.name, COUNT(o.order_id) AS n_orders
 FROM customers c LEFT JOIN orders o ON o.customer_id = c.customer_id
 GROUP BY c.customer_id, c.name ORDER BY c.customer_id;</div>
-  <table class="tbl out"><caption>PostgreSQL 17: the LEFT JOIN from the JOINs note gives the same 7 counts</caption><tr><th>name</th><th>n_orders</th></tr><tr><td>Asha</td><td>3</td></tr><tr><td>Ben</td><td>2</td></tr><tr><td>Chen</td><td>2</td></tr><tr><td>Dia</td><td>1</td></tr><tr><td>Esha</td><td>1</td></tr><tr><td>Farah</td><td>1</td></tr><tr><td>Gita</td><td>0</td></tr></table>
-  <p><code>"$orders._id"</code> pulled just the ids out of the attached array. Gita got <code>[]</code> and 0, so <code>$lookup</code> behaves as a <strong>left outer join</strong>, like SQL's LEFT JOIN with <code>COUNT(o.order_id)</code>.</p>
+  <div class="fx" data-lang="text"> name  | n_orders 
+-------+----------
+ Asha  |        3
+ Ben   |        2
+ Chen  |        2
+ Dia   |        1
+ Esha  |        1
+ Farah |        1
+ Gita  |        0
+(7 rows)</div>
   <figure class="viz"><svg viewBox="0 0 620 150" width="620">
     <text x="0" y="14" font-size="11" class="tm">customers</text><text x="200" y="14" font-size="11" class="tm">+ as: "orders" (array from orders)</text>
     <g font-size="11">
@@ -580,9 +490,8 @@ GROUP BY c.customer_id, c.name ORDER BY c.customer_id;</div>
     </g>
     <g stroke="currentColor" opacity=".5"><line x1="120" y1="35" x2="198" y2="35"/><line x1="120" y1="67" x2="198" y2="67"/><line x1="120" y1="99" x2="198" y2="99"/><line x1="120" y1="131" x2="198" y2="131"/></g>
   </svg><figcaption>$lookup keeps every input document and attaches its matches as an array; no match gives an empty array.</figcaption></figure>
-  <h3>Group first, then look up names</h3>
-  <p>Delivered spend per customer, with names. Group first (4 groups), then look up (4 lookups), rather than looking up for every one of the 7 orders:</p>
-  <div class="fx" data-lang="js">db.orders.aggregate([
+  <p>Where you place a <code>$lookup</code> matters, because it performs one search per incoming document. To show delivered spend per customer with names, it is cheaper to group first (four groups, so four lookups) than to look up a name for each of the seven orders and group afterwards:</p>
+  <div class="fx" data-lang="mongo">db.orders.aggregate([
   { $match: { status: "delivered" } },
   { $group: { _id: "$customer_id", spent: { $sum: "$amount" } } },
   { $lookup: { from: "customers", localField: "_id", foreignField: "_id", as: "c" } },
@@ -596,47 +505,30 @@ GROUP BY c.customer_id, c.name ORDER BY c.customer_id;</div>
   { spent: 620, name: 'Asha' },
   { spent: 600, name: 'Farah' }
 ]</div>
-  <p>Chen: 520 + 260 = 780; Ben: 450 + 180 = 630; Asha: 240 + 380 = 620 (110 is pending); Farah: 600. <code>$lookup</code> returned an array <code>c</code> holding one customer; <code>$unwind: "$c"</code> turned it into a plain object so <code>"$c.name"</code> works.</p>
-  <h3>Inner joins, and conditions on the joined side</h3>
-  <div class="fx" data-lang="js">db.customers.aggregate([
+  <p>Chen spent 520 + 260 = ₹780, Ben 450 + 180 = ₹630, Asha 240 + 380 = ₹620 (order 110 is pending), and Farah ₹600. Because <code>$lookup</code> always returns an array, even when exactly one customer matches, the <code>$unwind: "$c"</code> turns that one-element array into a plain object so that <code>"$c.name"</code> reads the name directly.</p>
+  <p>That <code>$unwind</code> has a side effect worth knowing: it changes the join from a left join to an inner join, because a document whose array is empty produces nothing when unwound:</p>
+  <div class="fx" data-lang="mongo">db.customers.aggregate([
   { $lookup: { from: "orders", localField: "_id", foreignField: "customer_id", as: "o" } },
   { $unwind: "$o" }, { $count: "rows" } ])
 db.customers.aggregate([
   { $lookup: { from: "orders", localField: "_id", foreignField: "customer_id", as: "o" } },
-  { $unwind: { path: "$o", preserveNullAndEmptyArrays: true } }, { $count: "rows" } ])
-db.restaurants.aggregate([
+  { $unwind: { path: "$o", preserveNullAndEmptyArrays: true } }, { $count: "rows" } ])</div>
+  <div class="fx" data-lang="text">[ { rows: 10 } ]
+[ { rows: 11 } ]</div>
+  <p>With a plain <code>$unwind</code> there are 10 rows, one per customer–order pair, and Gita has vanished; that is an <strong>inner join</strong>. With <code>preserveNullAndEmptyArrays: true</code> she comes back and there are 11 rows, the same as SQL's <code>LEFT JOIN</code> row count. Choose deliberately which one the report needs.</p>
+  <p>Sometimes the joined side needs its own filter: for example, each restaurant with only its <em>delivered</em> orders. <code>$lookup</code> accepts a <code>pipeline</code> of stages to run on the matching documents (mongomock does not implement this form, so it is shown without output):</p>
+  <div class="fx" data-lang="mongo">db.restaurants.aggregate([
   { $lookup: { from: "orders", localField: "_id", foreignField: "restaurant_id",
                pipeline: [ { $match: { status: "delivered" } }, { $project: { _id: 1 } } ],
                as: "delivered" } },
   { $project: { _id: 0, name: 1, delivered: "$delivered._id" } }
 ])</div>
-  <div class="fx" data-lang="text">[ { rows: 10 } ]
-[ { rows: 11 } ]
-[
-  { name: 'Dosa Hut', delivered: [ 101, 108 ] },
-  { name: 'Biryani Bros', delivered: [ 102, 106, 109 ] },
-  { name: 'Pizza Point', delivered: [ 103, 104 ] },
-  { name: 'Green Bowl', delivered: [] },
-  { name: 'Momo Magic', delivered: [] }
-]</div>
-  <p><code>$lookup</code> + <code>$unwind</code> gave 10 rows (one per customer–order pair): Gita vanished, an <strong>inner join</strong>. With <code>preserveNullAndEmptyArrays</code> she came back: 11 rows, the LEFT JOIN count from <a class="xref" data-note="sql_joins">JOINs</a>. The last pipeline gives <code>$lookup</code> its own small <code>pipeline</code> to filter the joined side (delivered only): Green Bowl's only order was cancelled and Momo Magic has none, so both get <code>[]</code>. Filtering inside the lookup keeps them, the same idea as putting the condition in <code>ON</code> rather than <code>WHERE</code>.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>$lookup</strong>: a left outer join that stores matches in an array. Forms: <code>{ from, localField, foreignField, as }</code>; add <code>pipeline: [...]</code> to filter or reshape matches (5.0+), or use <code>let</code> + <code>$expr</code> for arbitrary conditions.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: a $lookup on every page view is a schema smell</span>
-    <p><code>$lookup</code> runs a search per input document; without an index on <code>foreignField</code> each search scans the whole other collection. If the order page always shows the customer's name, copying the name into the order (the <em>extended reference</em> pattern in <a class="xref" data-note="mongo_design">Schema Design</a>) removes the join entirely.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: $facet, $bucket and windows.</b> We can filter, group, compute, unwind and join. A dashboard still wants several summaries at once (counts by status <em>and</em> the biggest order), amount bands, and running totals that keep every order row. Running three pipelines, or collapsing rows with <code>$group</code>, is not what it needs.</div>
+  <p>Each restaurant would receive only its delivered order ids: Dosa Hut [101, 108], Biryani Bros [102, 106, 109], Pizza Point [103, 104], while Green Bowl (whose only order was cancelled) and Momo Magic (no orders) would get empty arrays and still appear. Filtering inside the lookup keeps them, whereas a <code>$match</code> after an unwind would drop them; it is the same idea as putting a condition in SQL's <code>ON</code> clause instead of <code>WHERE</code>. One caution about <code>$lookup</code> in general: it runs a search per input document, so the <code>foreignField</code> should be indexed, and if the order page shows the customer's name on every view, copying the name into the order (the <em>extended reference</em> pattern in <a class="xref" data-note="mongo_design">Schema Design</a>) removes the join entirely.</p>
 
-  <h2 id="ma-facet"><span class="num">08</span>$facet, $bucket &amp; Windows (Briefly)</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Three dashboard tiles: orders by status, the single biggest order, and the total, from one query. A histogram of order amounts. A "spend so far" column next to each delivered order. Each is awkward with the stages we have.</p>
-  </div>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p><code>$facet</code> is one exam paper photocopied for three examiners, each marking a different section at the same time. <code>$bucket</code> is sorting parcels into weight bands. A window function is the running balance column in a bank passbook: every row stays, and each row also shows the total so far.</p>
-  </div>
-  <h3>$facet: several answers in one pass</h3>
-  <div class="fx" data-lang="js">db.orders.aggregate([
+  <h2 id="ma-facet"><span class="num">08</span>$facet, $bucket and Windows</h2>
+  <p>Three kinds of question are awkward with the stages so far. A dashboard wants several summaries of the same data at once: orders by status, the single biggest order and the total count. A histogram wants orders grouped into amount bands. And a "spend so far" column wants a running total next to every order, without collapsing the orders into groups. MongoDB has a stage for each.</p>
+  <p><strong>$facet</strong> runs several sub-pipelines on the same input and returns one document holding all their results; think of one exam paper photocopied for three examiners who each mark a different section at the same time:</p>
+  <div class="fx" data-lang="mongo">db.orders.aggregate([
   { $facet: {
       by_status: [ { $group: { _id: "$status", n: { $sum: 1 } } }, { $sort: { _id: 1 } } ],
       top_order: [ { $sort: { amount: -1 } }, { $limit: 1 }, { $project: { amount: 1 } } ],
@@ -654,9 +546,9 @@ db.restaurants.aggregate([
     total: [ { orders: 10 } ]
   }
 ]</div>
-  <p>Each key in <code>$facet</code> is a mini pipeline fed the same 10 orders. The output is <strong>one</strong> document holding every sub-result as an array.</p>
-  <h3>$bucket: a histogram</h3>
-  <div class="fx" data-lang="js">db.orders.aggregate([
+  <p>Each key inside <code>$facet</code> is a small pipeline fed the same ten orders, and the output is a <strong>single</strong> document with each sub-result as an array. Because it is one document, all the results together must fit within the 16 MB document limit, so never put an unlimited list inside a facet without a <code>$limit</code>; and the sub-pipelines cannot use indexes, so any filter that applies to all of them should be a <code>$match</code> placed before the <code>$facet</code>.</p>
+  <p><strong>$bucket</strong> groups documents by ranges of a value, like sorting parcels into weight bands. You give the boundaries, and each document falls into the band whose lower bound it reaches:</p>
+  <div class="fx" data-lang="mongo">db.orders.aggregate([
   { $bucket: { groupBy: "$amount", boundaries: [0, 250, 400, 1000], default: "other",
                output: { n: { $sum: 1 }, ids: { $push: "$_id" } } } }
 ])</div>
@@ -665,60 +557,43 @@ db.restaurants.aggregate([
   { _id: 250, n: 5, ids: [ 104, 105, 107, 108, 110 ] },
   { _id: 400, n: 3, ids: [ 102, 103, 109 ] }
 ]</div>
-  <p>Amounts 240 and 180 fall in [0, 250); 380, 310, 260, 260, 310 in [250, 400); 450, 520, 600 in [400, 1000). Each bucket's <code>_id</code> is its lower bound, which is included; the upper bound is excluded. Values outside all boundaries go to <code>default</code>.</p>
-  <h3>$setWindowFields: running spend per customer</h3>
-  <div class="fx" data-lang="js">db.orders.aggregate([
+  <p>The amounts 240 and 180 fall in the band from 0 up to (but not including) 250; 380, 310, 260, 260 and 310 fall in [250, 400); and 450, 520 and 600 fall in [400, 1000). Each bucket's <code>_id</code> is its lower bound, which is included, while the upper bound is excluded; any value outside all the boundaries would go to the <code>default</code> bucket. (<code>$bucketAuto</code> chooses the boundaries for you, given a number of buckets.)</p>
+  <p><strong>$setWindowFields</strong> is MongoDB's version of SQL's window functions (see <a class="xref" data-note="sql_windows">Window Functions</a>): it adds to every document a value computed over a "window" of related documents, without collapsing them the way <code>$group</code> does. A bank passbook's running-balance column is the picture: every row stays, and each row also shows the total so far. Here is a running spend per customer over delivered orders (mongomock does not implement this stage, so it is shown without output):</p>
+  <div class="fx" data-lang="mongo">db.orders.aggregate([
   { $match: { status: "delivered" } },
   { $setWindowFields: {
       partitionBy: "$customer_id",
       sortBy: { ordered_at: 1 },
       output: { running_spend: { $sum: "$amount",
                                  window: { documents: ["unbounded", "current"] } } } } },
-  { $project: { customer_id: 1, amount: 1, running_spend: 1 } },
-  { $sort: { customer_id: 1, _id: 1 } }
+  { $project: { customer_id: 1, amount: 1, running_spend: 1 } }
 ])</div>
-  <div class="fx" data-lang="text">[
-  { _id: 101, customer_id: 1, amount: 240, running_spend: 240 },
-  { _id: 104, customer_id: 1, amount: 380, running_spend: 620 },
-  { _id: 102, customer_id: 2, amount: 450, running_spend: 450 },
-  { _id: 106, customer_id: 2, amount: 180, running_spend: 630 },
-  { _id: 103, customer_id: 3, amount: 520, running_spend: 520 },
-  { _id: 108, customer_id: 3, amount: 260, running_spend: 780 },
-  { _id: 109, customer_id: 6, amount: 600, running_spend: 600 }
-]</div>
-  <p>Read it like SQL's <code>SUM(amount) OVER (PARTITION BY customer_id ORDER BY ordered_at ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)</code> from <a class="xref" data-note="sql_windows">Window Functions</a>. Each customer is a partition; within it, rows sorted by time are summed from the first to the current: Chen 520 → 780. All 7 rows survive, unlike <code>$group</code>.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>$facet</strong>: run several sub-pipelines on the same input, output one document. <strong>$bucket</strong>: group by ranges given as boundaries (<code>$bucketAuto</code> picks them). <strong>$setWindowFields</strong>: add a value computed over a window of related documents without collapsing them (5.0+).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: $facet's single document</span>
-    <p><code>$facet</code> returns one document, so all its sub-results together must fit in 16 MB: never put an unlimited result list in a facet without <code>$limit</code>. Its sub-pipelines also cannot use indexes; put the shared <code>$match</code> before the <code>$facet</code>.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: SQL → pipeline mapping.</b> Every SQL clause from the SQL notes now has a stage. When you face a SQL query (or think in SQL), how do you translate it systematically, and in what order do the stages go?</div>
+  <p>It reads like SQL's <code>SUM(amount) OVER (PARTITION BY customer_id ORDER BY ordered_at ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)</code>. <code>partitionBy</code> splits the documents into one partition per customer, <code>sortBy</code> orders each partition by time, and the window <code>["unbounded", "current"]</code> means "from the first document of the partition up to this one". Worked through by hand, all seven delivered orders survive, each with its running total:</p>
+  <table class="tbl">
+    <tr><th>customer</th><th>order (in time order)</th><th>amount</th><th>running_spend</th></tr>
+    <tr><td>1 Asha</td><td>101, then 104</td><td>240, 380</td><td>240, 620</td></tr>
+    <tr><td>2 Ben</td><td>102, then 106</td><td>450, 180</td><td>450, 630</td></tr>
+    <tr><td>3 Chen</td><td>103, then 108</td><td>520, 260</td><td>520, 780</td></tr>
+    <tr><td>6 Farah</td><td>109</td><td>600</td><td>600</td></tr>
+  </table>
+  <p>Compare this with <code>$group</code>, which would have produced four documents (Chen: 780). The window version keeps all seven orders and shows that Chen's spend went from 520 to 780. Window functions are the right tool for running totals, ranks within a group, and moving averages.</p>
 
-  <h2 id="ma-sql"><span class="num">09</span>SQL → Pipeline Mapping</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>You can write "revenue per cuisine, delivered only, cuisines with at least ₹500, biggest first" in SQL without thinking. SQL is written <code>SELECT … FROM … WHERE … GROUP BY</code> but executed in a different order. How does it become stages, and in which order?</p>
-  </div>
-  <p>A pipeline runs exactly in the order written. So translate SQL in its <em>logical execution</em> order (from <a class="xref" data-note="sql_fundamentals">SQL Fundamentals</a>): FROM/JOIN, WHERE, GROUP BY, HAVING, SELECT, ORDER BY, LIMIT.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>SQL is ordering at a restaurant: you say what you want and the kitchen decides the steps. A pipeline is cooking from a recipe card yourself: step 1, step 2, step 3, in that order. More control, and more ways to put a step in the wrong place.</p>
-  </div>
+  <h2 id="ma-sql"><span class="num">09</span>Translating SQL into a Pipeline</h2>
+  <p>Every SQL clause from the SQL notes now has a matching stage, so a SQL query you already know can be translated mechanically. The one subtlety is order. A SQL query is <em>written</em> as <code>SELECT … FROM … WHERE … GROUP BY …</code> but <em>executed</em> in a different logical order: FROM and JOIN first, then WHERE, GROUP BY, HAVING, SELECT, ORDER BY and LIMIT (see <a class="xref" data-note="sql_fundamentals">SQL Fundamentals</a>). A pipeline has no such separation: it runs exactly in the order you write it. So translate SQL in its execution order. Ordering in a restaurant is like SQL, where you say what you want and the kitchen decides the steps; a pipeline is cooking from a recipe card yourself, step 1, step 2, step 3, which gives you more control and more ways to put a step in the wrong place.</p>
   <table class="tbl">
     <tr><th>SQL</th><th>Pipeline stage</th><th>Where it goes</th></tr>
-    <tr><td><code>WHERE</code></td><td><code>$match</code></td><td>first (before <code>$group</code>)</td></tr>
-    <tr><td><code>JOIN</code> (to a parent)</td><td><code>$lookup</code> + <code>$unwind</code></td><td>after the first <code>$match</code>, or after <code>$group</code> when only names are needed</td></tr>
-    <tr><td><code>JOIN</code> to a child table that is embedded</td><td><code>$unwind</code> of the array</td><td>after <code>$match</code></td></tr>
-    <tr><td><code>LEFT JOIN</code></td><td><code>$lookup</code> (or <code>$unwind</code> with <code>preserveNullAndEmptyArrays</code>)</td><td>—</td></tr>
+    <tr><td><code>WHERE</code></td><td><code>$match</code></td><td>first</td></tr>
+    <tr><td><code>JOIN</code> to a parent table</td><td><code>$lookup</code> + <code>$unwind</code></td><td>after the first <code>$match</code>, or after <code>$group</code> if only names are needed</td></tr>
+    <tr><td><code>JOIN</code> to an embedded child</td><td><code>$unwind</code> of the array</td><td>after <code>$match</code></td></tr>
+    <tr><td><code>LEFT JOIN</code></td><td><code>$lookup</code> alone, or <code>$unwind</code> with <code>preserveNullAndEmptyArrays</code></td><td>—</td></tr>
     <tr><td><code>GROUP BY</code> + aggregates</td><td><code>$group</code> with accumulators</td><td>after filters and unwinds</td></tr>
     <tr><td><code>HAVING</code></td><td><code>$match</code> after <code>$group</code></td><td>right after the group</td></tr>
-    <tr><td><code>SELECT col, expr AS x</code></td><td><code>$project</code> / <code>$addFields</code></td><td>where the value is needed (often last)</td></tr>
+    <tr><td><code>SELECT col, expr AS x</code></td><td><code>$project</code> / <code>$addFields</code></td><td>where the value is needed, often last</td></tr>
     <tr><td><code>ORDER BY</code> / <code>LIMIT</code> / <code>OFFSET</code></td><td><code>$sort</code> / <code>$limit</code> / <code>$skip</code></td><td>end</td></tr>
-    <tr><td><code>COUNT(*)</code> of a result</td><td><code>$count</code></td><td>end</td></tr>
-    <tr><td><code>OVER (…)</code></td><td><code>$setWindowFields</code></td><td>—</td></tr>
-    <tr><td><code>UNION ALL</code></td><td><code>$unionWith</code></td><td>—</td></tr>
+    <tr><td><code>OVER (…)</code> / <code>UNION ALL</code></td><td><code>$setWindowFields</code> / <code>$unionWith</code></td><td>—</td></tr>
     <tr><td><code>CREATE TABLE AS</code> / <code>INSERT … SELECT</code></td><td><code>$out</code> / <code>$merge</code></td><td>last stage</td></tr>
   </table>
-  <p>The worked translation, SQL first (on the SQL tables), then the pipeline (on the documents), with each stage commented by the clause it replaces:</p>
+  <p>Here is a full translation: revenue per cuisine from delivered orders, only cuisines with at least ₹500, biggest first. The SQL version runs on the SQL tables:</p>
   <div class="fx" data-lang="sql">SELECT r.cuisine, COUNT(*) AS orders, SUM(o.amount) AS revenue
 FROM orders o
 JOIN restaurants r ON r.restaurant_id = o.restaurant_id
@@ -726,12 +601,18 @@ WHERE o.status = 'delivered'
 GROUP BY r.cuisine
 HAVING SUM(o.amount) &gt;= 500
 ORDER BY revenue DESC;</div>
-  <table class="tbl out"><caption>PostgreSQL 17</caption><tr><th>cuisine</th><th>orders</th><th>revenue</th></tr><tr><td>Biryani</td><td>3</td><td>1230.00</td></tr><tr><td>Pizza</td><td>2</td><td>900.00</td></tr><tr><td>South Indian</td><td>2</td><td>500.00</td></tr></table>
-  <div class="fx" data-lang="js">db.orders.aggregate([
+  <div class="fx" data-lang="text">   cuisine    | orders | revenue 
+--------------+--------+---------
+ Biryani      |      3 | 1230.00
+ Pizza        |      2 |  900.00
+ South Indian |      2 |  500.00
+(3 rows)</div>
+  <p>And the pipeline on the documents, with each stage labelled by the clause it replaces:</p>
+  <div class="fx" data-lang="mongo">db.orders.aggregate([
   { $match: { status: "delivered" } },                                   // WHERE
   { $lookup: { from: "restaurants", localField: "restaurant_id",
                foreignField: "_id", as: "r" } },                         // JOIN
-  { $unwind: "$r" },                                                     //   (one restaurant per order)
+  { $unwind: "$r" },                                                     //   one restaurant per order
   { $group: { _id: "$r.cuisine", orders: { $sum: 1 },
               revenue: { $sum: "$amount" } } },                          // GROUP BY + aggregates
   { $match: { revenue: { $gte: 500 } } },                                // HAVING
@@ -742,156 +623,74 @@ ORDER BY revenue DESC;</div>
   { _id: 'Pizza', orders: 2, revenue: 900 },
   { _id: 'South Indian', orders: 2, revenue: 500 }
 ]</div>
-  <p>Identical rows. Notice the order: <code>$match</code> (WHERE) before <code>$lookup</code>, so only 7 orders are joined instead of 10; the HAVING <code>$match</code> sees group results; <code>$sort</code> last. Healthy (Green Bowl) never appears: its only order was cancelled, so it has no delivered revenue.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>$out</strong>: write the pipeline result into a collection, replacing it. <strong>$merge</strong>: insert or update the result into a collection, keeping other documents (incremental summary tables). Both must be the last stage. <strong>$unionWith</strong>: append another collection's documents to the stream.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: writing the stages in SQL's written order</span>
-    <p>SQL users write the <code>$project</code> (their SELECT) first. A pipeline that projects first and then groups works only on the projected fields; one that groups and then matches on a raw field (<code>status</code>) finds nothing, because that field no longer exists. Write stages in the order the data should be processed.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: performance.</b> On 10 orders every pipeline returns instantly, whatever its order. On Biteful at real size the same pipeline can read every document or a tenth of them. What decides, and what happens when a stage runs out of memory?</div>
+  <p>The rows are identical. Notice the order of the stages: the WHERE <code>$match</code> comes before the <code>$lookup</code>, so only 7 orders are joined instead of 10; the <code>$unwind</code> turns each one-restaurant array into an object; the HAVING <code>$match</code> sees group summaries; and the sort comes last. "Healthy" (Green Bowl) never appears, because its only order was cancelled. The two write stages in the table deserve a word: <code>$out</code> replaces a collection with the pipeline's result, and <code>$merge</code> inserts or updates the results into an existing collection, which is how incremental summary tables are maintained. Both must be the last stage.</p>
+  <p>The classic translation mistake is writing the stages in SQL's <em>written</em> order: putting the <code>$project</code> (the SELECT) first, so later stages only see the projected fields, or putting a <code>$match</code> on a raw field such as <code>status</code> after the <code>$group</code>, where that field no longer exists and the match quietly returns nothing.</p>
 
-  <h2 id="ma-perf"><span class="num">10</span>Performance: $match Early, Indexes, allowDiskUse</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>"Revenue lost to cancellations per restaurant" is instant on 10 orders. On 200,000, does the pipeline read all of them to find the 20,000 cancelled ones? Does stage order matter? What if a sort needs more memory than the server allows?</p>
-  </div>
-  <p>An <strong>index</strong> is a sorted list of one field's values with pointers to the documents (a B-tree, the same structure as in <a class="xref" data-note="sql_optimization">Indexes &amp; Performance</a>), so the server can jump to <code>status = "cancelled"</code> instead of reading everything. The same idea at scale: a separate database <code>biteful_big</code> with 200,000 orders of Biteful's shape (two lines each, 10% cancelled, 5 restaurants, 5,000 customers).</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Finding every "cancelled" slip in a warehouse. Without an index you walk every aisle (a collection scan). With an index you open the register at "cancelled" and go straight to those shelves. The register helps only at the door: once slips are on your trolley (inside the pipeline), the register is no use for re-sorting them.</p>
-  </div>
-  <div class="fx" data-lang="js">use biteful_big
-db.dropDatabase()
+  <h2 id="ma-perf"><span class="num">10</span>Pipeline Performance</h2>
+  <p>On ten orders, every pipeline returns instantly whatever its shape. At real size, the same pipeline can read every document in the collection or only a tenth of them, and a sort can run out of memory. To see the effect of stage order, here is a larger copy of Biteful, <code>biteful_big</code>, with 20,000 orders of the same shape (two lines each, 10% cancelled, 5 restaurants, 5,000 customers):</p>
+  <div class="fx" data-lang="mongo">use biteful_big
 const statuses = ["delivered", "delivered", "delivered", "delivered", "delivered",
                   "delivered", "delivered", "delivered", "pending", "cancelled"]
 const menu = [["Masala Dosa", 120], ["Chicken Biryani", 350], ["Farmhouse Pizza", 260],
               ["Buddha Bowl", 310], ["Momos", 150], ["Filter Coffee", 70]]
 let docs = []
-for (let i = 0; i &lt; 200000; i++) {
+for (let i = 0; i &lt; 20000; i++) {
   const a = menu[i % 6], b = menu[(i * 7) % 6]
   docs.push({ _id: i, customer_id: i % 5000, restaurant_id: 10 + (Math.floor(i / 10) % 5),
               ordered_at: new Date(Date.UTC(2026, 0, 1) + (i % 90) * 86400000 + (i % 1440) * 60000),
               status: statuses[i % 10], amount: a[1] * (1 + i % 2) + b[1],
-              items: [ { item: a[0], qty: 1 + i % 2, unit_price: a[1] }, { item: b[0], qty: 1, unit_price: b[1] } ] })
-  if (docs.length === 20000) { db.orders.insertMany(docs); docs = [] }
+              items: [ { item: a[0], qty: 1 + i % 2, unit_price: a[1] },
+                       { item: b[0], qty: 1, unit_price: b[1] } ] })
 }
+db.orders.insertMany(docs)
 db.orders.countDocuments()
 db.orders.countDocuments({ status: "cancelled" })</div>
-  <div class="fx" data-lang="text">200000
-20000</div>
-  <p>A small helper reads <code>explain("executionStats")</code> and reports the plan of the first stage (the part that reads the collection) and how many index keys and documents it examined:</p>
-  <div class="fx" data-lang="js">use biteful_big
-function summary(e) {                 // stages, keys and documents read by the first stage
-  const c = e.stages ? e.stages[0].$cursor : e
-  let p = c.queryPlanner.winningPlan, names = []
-  for (p = p.queryPlan || p; p; p = p.inputStage) names.push(p.stage)
-  const s = c.executionStats
-  return { plan: names.join(" &lt;- "), keys: s.totalKeysExamined, docs: s.totalDocsExamined }
-}
-const p = [ { $match: { status: "cancelled" } },
-            { $group: { _id: "$restaurant_id", lost: { $sum: "$amount" } } },
-            { $sort: { _id: 1 } } ]
-db.orders.aggregate(p)
-summary(db.orders.explain("executionStats").aggregate(p))
-db.orders.createIndex({ status: 1 })
-summary(db.orders.explain("executionStats").aggregate(p))</div>
-  <div class="fx" data-lang="text">switched to db biteful_big
-[Function: summary]
+  <div class="fx" data-lang="text">20000
+2000</div>
+  <p>Now consider "revenue lost to cancellations per restaurant". The <code>$count</code> stages below measure how many documents flow through each point of three variants:</p>
+  <div class="fx" data-lang="mongo">db.orders.aggregate([ { $match: { status: "cancelled" } }, { $count: "after_match" } ])
+db.orders.aggregate([ { $match: { status: "cancelled" } }, { $unwind: "$items" }, { $count: "after_unwind" } ])
+db.orders.aggregate([ { $unwind: "$items" }, { $count: "unwind_first" } ])
+db.orders.aggregate([ { $match: { status: "cancelled" } },
+                      { $group: { _id: "$restaurant_id", lost: { $sum: "$amount" } } },
+                      { $sort: { _id: 1 } } ])</div>
+  <div class="fx" data-lang="text">[ { after_match: 2000 } ]
+[ { after_unwind: 4000 } ]
+[ { unwind_first: 40000 } ]
 [
-  { _id: 10, lost: 2920200 },
-  { _id: 11, lost: 2920320 },
-  { _id: 12, lost: 2919480 },
-  { _id: 13, lost: 2920200 },
-  { _id: 14, lost: 2920320 }
-]
-{ plan: 'GROUP &lt;- COLLSCAN', keys: 0, docs: 200000 }
-status_1
-{ plan: 'GROUP &lt;- FETCH &lt;- IXSCAN', keys: 20000, docs: 20000 }</div>
-  <p>Before the index: <code>COLLSCAN</code>, all 200,000 documents read to find 20,000. After <code>createIndex({ status: 1 })</code>: <code>IXSCAN</code> (walk the index), 20,000 keys, 20,000 documents. Same answer, 10× less reading. The <code>$group</code> appears inside the plan because MongoDB 8 runs simple <code>$match</code> + <code>$group</code> prefixes in its faster query engine.</p>
-  <h3>What the optimizer moves, and what it can't</h3>
-  <div class="fx" data-lang="js">const late = [ { $unwind: "$items" }, { $match: { status: "cancelled" } }, { $count: "lines" } ]
-db.orders.aggregate(late)
-summary(db.orders.explain("executionStats").aggregate(late))
-const computed = [ { $addFields: { big: { $gt: ["$amount", 600] } } }, { $match: { big: true } }, { $count: "n" } ]
-db.orders.aggregate(computed)
-summary(db.orders.explain("executionStats").aggregate(computed))
-const topk = [ { $sort: { amount: -1, _id: 1 } }, { $limit: 3 }, { $project: { amount: 1 } } ]
-db.orders.aggregate(topk)
-const t = db.orders.explain("executionStats").aggregate(topk)
-summary(t)
-const w = t.queryPlanner.winningPlan
-(w.queryPlan || w).inputStage.limitAmount</div>
-  <div class="fx" data-lang="text">[ { lines: 40000 } ]
-{ plan: 'PROJECTION_SIMPLE &lt;- FETCH &lt;- IXSCAN', keys: 20000, docs: 20000 }
-[ { n: 66667 } ]
-{ plan: 'PROJECTION_SIMPLE &lt;- COLLSCAN', keys: 0, docs: 200000 }
-[
-  { _id: 1, amount: 1050 },
-  { _id: 7, amount: 1050 },
-  { _id: 13, amount: 1050 }
-]
-{ plan: 'PROJECTION_SIMPLE &lt;- SORT &lt;- COLLSCAN', keys: 0, docs: 200000 }
-3</div>
-  <table class="tbl out"><caption>Reading the three runs (real explain output on 200,000 orders)</caption>
-    <tr><th>Pipeline</th><th>What the server did</th><th>Docs read</th></tr>
-    <tr><td><code>$unwind</code> then <code>$match: { status }</code></td><td>moved the <code>$match</code> in front of the <code>$unwind</code>; used the index</td><td>20,000</td></tr>
-    <tr><td><code>$addFields: { big }</code> then <code>$match: { big }</code></td><td>cannot move: <code>big</code> does not exist until computed; full scan</td><td>200,000</td></tr>
-    <tr><td><code>$sort</code> + <code>$limit: 3</code></td><td>merged into one top-k <code>SORT</code> that keeps only 3 in memory (<code>limitAmount: 3</code>)</td><td>200,000 (no index on amount)</td></tr>
-  </table>
-  <h3>Memory limits and allowDiskUse</h3>
-  <p><code>$sort</code> and <code>$group</code> are <strong>blocking</strong> stages: they must see all their input before emitting anything, so they hold it in memory. The default limit is 100 MB per stage. To show what happens past it without generating gigabytes, we <strong>lowered the sort limit to 10 MB on our private test server</strong> (and set it back to 100 MB afterwards):</p>
-  <div class="fx" data-lang="js">db.adminCommand({ setParameter: 1, internalQueryMaxBlockingSortMemoryUsageBytes: 10 * 1024 * 1024 }).ok
-const big = [ { $sort: { ordered_at: -1, _id: 1 } }, { $skip: 199990 }, { $count: "n" } ]
-try { db.orders.aggregate(big, { allowDiskUse: false }).toArray() } catch (e) { print(e.codeName) }
-db.orders.aggregate(big, { allowDiskUse: true })
-function findSort(o) {                // walk the explain tree to the sort stage
-  if (o &amp;&amp; typeof o === "object") {
-    if (/^sort$/i.test(o.stage) &amp;&amp; "usedDisk" in o) return { memLimit: o.memLimit, usedDisk: o.usedDisk, spills: o.spills }
-    for (const k in o) { const r = findSort(o[k]); if (r) return r }
-  }
-}
-findSort(db.orders.explain("executionStats").aggregate(big, { allowDiskUse: true }))
-db.adminCommand({ setParameter: 1, internalQueryMaxBlockingSortMemoryUsageBytes: 100 * 1024 * 1024 }).ok</div>
-  <div class="fx" data-lang="text">1
-QueryExceededMemoryLimitNoDiskUseAllowed
-[ { n: 10 } ]
-[Function: findSort]
-{ memLimit: 10485760, usedDisk: true, spills: 2 }
-1</div>
-  <p>With <code>allowDiskUse: false</code> the sort of all 200,000 orders failed with <code>QueryExceededMemoryLimitNoDiskUseAllowed</code>. With <code>allowDiskUse: true</code> it succeeded, and explain shows the sort stage <code>usedDisk: true</code> with 2 spills: it wrote sorted runs to temporary files and merged them, which is correct but slower. Since MongoDB 6.0, <code>allowDiskUse</code> is on by default (server parameter <code>allowDiskUseByDefault</code>).</p>
-  <ul>
-    <li><strong>$match (and $sort) first.</strong> Only the stages that read the collection can use an index.</li>
-    <li><strong>Project away what you don't need early</strong>, so blocking stages hold less.</li>
-    <li><strong>$unwind multiplies.</strong> 1M orders × 5 lines = 5M documents in the next stage.</li>
-    <li><strong>$lookup is a search per document.</strong> Index the <code>foreignField</code>; group before looking up.</li>
-    <li><strong>Pre-aggregate</strong> reused results with <code>$merge</code> into a summary collection.</li>
-  </ul>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>explain("executionStats")</strong>: run and report the plan and work done. <strong>COLLSCAN</strong>: read every document. <strong>IXSCAN</strong>: walk an index. <strong>Blocking stage</strong>: one that must consume all input first (<code>$sort</code>, <code>$group</code>). <strong>allowDiskUse</strong>: let blocking stages spill to temporary files past the memory limit.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: trusting the optimizer, testing on tiny data</span>
-    <p>The optimizer rescued the badly ordered <code>$unwind</code> → <code>$match</code>, but not the match on a computed field, and it never creates an index for you. Write <code>$match</code> first anyway, and run <code>explain</code> on realistic data: on Biteful's 10 orders every plan "looks fast".</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Python.</b> Pipelines usually run from a script or notebook, and the result goes into pandas for a chart. How does a pipeline look in pymongo, and how do we get a clean DataFrame from compound group keys?</div>
+  { _id: 10, lost: 292200 },
+  { _id: 11, lost: 292320 },
+  { _id: 12, lost: 291480 },
+  { _id: 13, lost: 292200 },
+  { _id: 14, lost: 292320 }
+]</div>
+  <p>A <code>$match</code> placed first passes 2,000 documents to the next stage, and unwinding those produces 4,000 line documents. Placing the <code>$unwind</code> first would push all 40,000 lines through the pipeline before anything is filtered. The last pipeline gives the actual answer, the revenue lost per restaurant.</p>
+  <p>Stage order matters for a deeper reason than the size of the stream: <strong>only the stages at the start of a pipeline, which read the collection itself, can use an index</strong>. An index is a sorted list of one field's values with pointers to the documents (a B-tree, the same structure as in <a class="xref" data-note="sql_optimization">Indexes &amp; Performance</a>), so with an index on <code>status</code>, a leading <code>$match: { status: "cancelled" }</code> can jump straight to the 2,000 cancelled orders instead of reading all 20,000. Think of finding every "cancelled" slip in a warehouse: without a register you walk every aisle (a <strong>collection scan</strong>); with one you open it at "cancelled" and go straight to those shelves. But the register helps only at the door; once slips are on your trolley, inside the pipeline, it is no use for re-sorting them. The way to check is <code>explain</code> (mongomock has no query planner, so this is shown without output):</p>
+  <div class="fx" data-lang="mongo">db.orders.createIndex({ status: 1 })
+db.orders.explain("executionStats").aggregate([
+  { $match: { status: "cancelled" } },
+  { $group: { _id: "$restaurant_id", lost: { $sum: "$amount" } } } ])</div>
+  <p>On a real server, the plan for the first stage would show <code>COLLSCAN</code> (read every document, 20,000 examined) before the index exists, and <code>IXSCAN</code> (walk the index) followed by <code>FETCH</code> afterwards, with about 2,000 index keys and 2,000 documents examined. The numbers to compare in any explain output are "keys examined" and "documents examined" against "documents returned"; when they are far apart, the query is doing work it throws away.</p>
+  <p>MongoDB's optimizer helps with some ordering mistakes but not all. It moves a <code>$match</code> on an original field in front of an <code>$unwind</code> or <code>$addFields</code> that does not affect that field, so a badly ordered pipeline can still use the index. It cannot move a <code>$match</code> on a <em>computed</em> field, because that field does not exist until the earlier stage has run; such a pipeline always reads every document. It also merges a <code>$sort</code> immediately followed by a <code>$limit</code> into a "top-k" sort that keeps only k documents in memory, instead of sorting everything. It never creates an index for you.</p>
+  <p>The last performance limit is memory. <code>$sort</code> and <code>$group</code> are <strong>blocking stages</strong>: they must see all their input before they can emit anything, so they hold it in memory, and each such stage is limited to 100 MB by default. Past that limit, a stage either fails or, if allowed, <strong>spills</strong> to disk, writing sorted chunks to temporary files and merging them, which is correct but slower. The option is <code>allowDiskUse</code> (on by default since MongoDB 6.0); sorting all the orders by date to skip to the last few (on a collection large enough to pass the limit) is the kind of pipeline that can need it (shown without output):</p>
+  <div class="fx" data-lang="mongo">db.orders.aggregate([ { $sort: { ordered_at: -1, _id: 1 } }, { $skip: 19990 } ],
+                    { allowDiskUse: true })</div>
+  <p>In practice the rules are short. Put <code>$match</code> (and any <code>$sort</code> that an index can serve) first. Remove fields you do not need early, so blocking stages hold less. Remember that <code>$unwind</code> multiplies documents: a million orders with five lines each become five million documents in the next stage. Treat <code>$lookup</code> as a search per document: index its <code>foreignField</code> and group before looking up when you can. And for results that are needed again and again, pre-aggregate them into a summary collection with <code>$merge</code>. Above all, run <code>explain</code> on realistic data, because on ten documents every plan looks fast.</p>
 
-  <h2 id="ma-py"><span class="num">11</span>From Python: Pipeline to pandas</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>An analyst wants a day × restaurant table of delivered revenue for a chart. You could pull every order into pandas and group there, but for big collections that moves far more data than needed. What is the right split between MongoDB and pandas?</p>
-  </div>
-  <p>Let MongoDB reduce many documents to a small summary (push-down), then let pandas reshape and plot it. In pymongo a pipeline is a Python list of dicts; every operator is a quoted string.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Asking the warehouse to send a one-page stock summary instead of shipping the whole warehouse to your office so you can count it yourself.</p>
-  </div>
-  <div class="fx" data-lang="py">from pymongo import MongoClient
-import pandas as pd
+  <h2 id="ma-py"><span class="num">11</span>Pipelines from Python</h2>
+  <p>Pipelines usually run from a script or a notebook, and the result often goes into pandas for a chart or a table. The right split of work is called <strong>push-down</strong>: let MongoDB reduce many documents to a small summary, then let pandas reshape and plot that summary. It is the difference between asking the warehouse for a one-page stock summary and having the whole warehouse shipped to your office so you can count it yourself. In pymongo, a pipeline is simply a Python list of dictionaries, with every operator as a quoted string. This one computes delivered revenue per day and restaurant:</p>
+  <div class="fx" data-lang="py">import mongomock, pandas as pd
 
-db = MongoClient("mongodb://127.0.0.1:27347/?directConnection=true")["biteful"]
+db = mongomock.MongoClient()["biteful"]      # real code: MongoClient(uri)["biteful"]
+db.orders.insert_many(orders)                # the Biteful documents, as Python dicts
+db.restaurants.insert_many(restaurants)
+
 pipeline = [
     {"$match": {"status": "delivered"}},
     {"$lookup": {"from": "restaurants", "localField": "restaurant_id",
                  "foreignField": "_id", "as": "r"}},
     {"$unwind": "$r"},
-    {"$group": {"_id": {"day": {"$dateToString": {"format": "%m-%d", "date": "$ordered_at",
-                                                  "timezone": "Asia/Kolkata"}},
+    {"$group": {"_id": {"day": {"$dateToString": {"format": "%m-%d", "date": "$ordered_at"}},
                         "restaurant": "$r.name"},
                 "revenue": {"$sum": "$amount"}}},
     {"$project": {"_id": 0, "day": "$_id.day", "restaurant": "$_id.restaurant", "revenue": 1}},
@@ -909,167 +708,96 @@ day
 03-03                  0         0          380
 03-04                180         0            0
 03-05                600       260            0</div>
-  <p>The pipeline returned 7 small rows (one per day and restaurant with delivered revenue). The <code>$project</code> stage is the important line for pandas: it flattens the compound <code>_id</code> into plain <code>day</code> and <code>restaurant</code> columns; without it every row would carry a nested dict. Days are computed in IST (<code>timezone</code>), so each order lands on its local date. The pivot fills missing combinations with 0: Dosa Hut sold nothing on 03-03 and 03-04.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Push-down</strong>: doing filtering and aggregation in the database so only the small result crosses the network. <code>collection.aggregate(pipeline)</code> returns a cursor; <code>list()</code> materialises it.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: Python spelling</span>
-    <p>Write <code>None</code> where mongosh writes <code>null</code> (<code>{"_id": None}</code>) and quote every <code>$</code> key. An unquoted <code>$match</code> is a Python syntax error; a misspelled stage (<code>"$mach"</code>) is a server error "Unrecognized pipeline stage name".</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: how it all connects.</b> Before the traps and the revision sheet, one picture of how the stages relate to each other and to SQL.</div>
+  <p>The pipeline returned 7 small rows, one per day and restaurant with delivered revenue, and pandas pivoted them into a day-by-restaurant table, filling missing combinations with 0 (Dosa Hut sold nothing delivered on 3 and 4 March). The <code>$project</code> stage is the important line for pandas: it flattens the compound <code>_id</code> into plain <code>day</code> and <code>restaurant</code> columns, without which every row would carry a nested dictionary. One caution: this <code>$dateToString</code> works in UTC. For Biteful's orders, all placed between noon and 9:10 p.m. Indian time, the UTC date and the Indian date happen to be the same, but an order at 11 p.m. in India would land on the previous UTC date; on a real server you pass <code>timezone: "Asia/Kolkata"</code> to <code>$dateToString</code>, as with <code>$hour</code>. Two Python spellings also trip people up: write <code>None</code> where mongosh writes <code>null</code> (as in <code>{"_id": None}</code>), and quote every key that starts with <code>$</code>.</p>
 
-  <h2 id="ma-connect"><span class="num">12</span>How It All Connects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>$match, $group, $project, $sort, $unwind, $lookup, $facet, $bucket, windows, explain: a bag of operators, or one model?</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 720 290" width="720">
-<defs><marker id="ma-a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<g font-size="10.5">
-<rect x="10" y="20" width="120" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="70" y="40" text-anchor="middle" font-weight="700">collection</text><text x="70" y="57" text-anchor="middle" class="tm">10 orders</text>
-<line x1="130" y1="45" x2="148" y2="45" stroke="currentColor" marker-end="url(#ma-a9)"/>
-<rect x="150" y="20" width="110" height="50" rx="8" class="fb sb"/><text x="205" y="40" text-anchor="middle" font-weight="700">$match</text><text x="205" y="57" text-anchor="middle" class="tm">7 · index here</text>
-<line x1="260" y1="45" x2="278" y2="45" stroke="currentColor" marker-end="url(#ma-a9)"/>
-<rect x="280" y="20" width="120" height="50" rx="8" class="ft st"/><text x="340" y="40" text-anchor="middle" font-weight="700">$unwind</text><text x="340" y="57" text-anchor="middle" class="tm">grain: order → line</text>
-<line x1="400" y1="45" x2="418" y2="45" stroke="currentColor" marker-end="url(#ma-a9)"/>
-<rect x="420" y="20" width="130" height="50" rx="8" class="fv sb"/><text x="485" y="40" text-anchor="middle" font-weight="700">$group</text><text x="485" y="57" text-anchor="middle" class="tm">grain: line → item</text>
-<line x1="550" y1="45" x2="568" y2="45" stroke="currentColor" marker-end="url(#ma-a9)"/>
-<rect x="570" y="20" width="140" height="50" rx="8" class="fg sg"/><text x="640" y="40" text-anchor="middle" font-weight="700">$sort / $limit</text><text x="640" y="57" text-anchor="middle" class="tm">present</text>
-<rect x="150" y="105" width="250" height="46" rx="8" class="fb sb"/><text x="275" y="124" text-anchor="middle">$project / $addFields (anywhere)</text><text x="275" y="141" text-anchor="middle" class="tm">compute per document: $map, $cond, $hour</text>
-<rect x="420" y="105" width="290" height="46" rx="8" class="fr sr"/><text x="565" y="124" text-anchor="middle">$lookup (+ $unwind)</text><text x="565" y="141" text-anchor="middle" class="tm">attach another collection: left join → inner join</text>
-<line x1="485" y1="70" x2="485" y2="103" stroke="currentColor" stroke-dasharray="4 3"/>
-<line x1="275" y1="70" x2="275" y2="103" stroke="currentColor" stroke-dasharray="4 3"/>
-<rect x="150" y="175" width="250" height="46" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="275" y="194" text-anchor="middle">$facet · $bucket · $setWindowFields</text><text x="275" y="211" text-anchor="middle" class="tm">many groupings · ranges · keep rows</text>
-<rect x="420" y="175" width="290" height="46" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="565" y="194" text-anchor="middle">SQL: WHERE · JOIN · GROUP BY · HAVING · ORDER BY</text><text x="565" y="211" text-anchor="middle" class="tm">same clauses, in execution order</text>
-<text x="10" y="250" class="tm">One stream of documents. Every stage either filters it, changes its grain ($unwind up, $group down), computes fields, attaches data, or orders it.</text>
-<text x="10" y="268" class="tm">Only the front of the line touches the collection, so only the front can use indexes. Every count bug is a grain mistake.</text>
-</g>
-</svg><figcaption>The pipeline is one stream; stages differ only in what they do to it. Grain (what one document means) is the thread that ties $unwind, $group and the counting traps together.</figcaption></figure>
-  <table class="tbl"><caption>Every stage on the same Biteful orders</caption>
-    <tr><th>Concept</th><th>Built from</th><th>Answers which question</th><th>Value on Biteful</th><th>Use when</th></tr>
-    <tr><td>Pipeline</td><td>array of stages</td><td>compute across documents in the database</td><td>delivered per customer: 2, 2, 2, 1</td><td>anything find can't do</td></tr>
-    <tr><td>$match</td><td>find's filter</td><td>which documents enter?</td><td>10 → 7 delivered</td><td>first, to use indexes</td></tr>
-    <tr><td>$group</td><td>key + accumulators</td><td>one answer per group</td><td>₹500 / ₹1,230 / ₹900; avg 38 skips null</td><td>per-X questions</td></tr>
-    <tr><td>HAVING</td><td>$match after $group</td><td>filter on a computed total</td><td>revenue ≥ 900 → 11, 12</td><td>thresholds on groups</td></tr>
-    <tr><td>$project / $addFields</td><td>expressions</td><td>values no field stores</td><td>10/10 bills = sum of lines; 12:10 IST = hour 6 UTC</td><td>computed fields, cleanup</td></tr>
-    <tr><td>$sort / $limit / $first</td><td>ordering the stream</td><td>top-N, latest per group</td><td>top 2: Biryani Bros, Pizza Point; Asha's latest 110</td><td>rankings, "latest"</td></tr>
-    <tr><td>$unwind</td><td>array → documents</td><td>work at the line grain</td><td>10 orders → 15 lines; Chicken Biryani ₹700</td><td>per-item questions</td></tr>
-    <tr><td>$lookup</td><td>per-document search</td><td>bring in another collection</td><td>Gita: <code>[]</code>, 0 orders; inner = 10 rows, left = 11</td><td>names, reference data</td></tr>
-    <tr><td>$facet / $bucket / windows</td><td>sub-pipelines, ranges, partitions</td><td>many views, bands, running totals</td><td>2 / 5 / 3 by band; Chen 520 → 780</td><td>dashboards, histograms</td></tr>
-    <tr><td>SQL mapping</td><td>logical execution order</td><td>translate a SQL query</td><td>Biryani 1230, Pizza 900, South Indian 500</td><td>every translation</td></tr>
-    <tr><td>Indexes / explain</td><td>B-tree on the first stage</td><td>why fast or slow?</td><td>200,000 → 20,000 docs read</td><td>every production pipeline</td></tr>
-    <tr><td>allowDiskUse</td><td>memory limit per blocking stage</td><td>what if a sort/group is too big?</td><td>10 MB limit: error vs <code>usedDisk: true</code></td><td>big sorts and groups</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>One sentence holds the note: <strong>a pipeline is one stream of documents, and every stage either filters it, changes its grain, computes on it, attaches to it, or orders it.</strong> <code>$unwind</code> makes the grain finer (order → line), <code>$group</code> makes it coarser (line → item). Every wrong count in this note (Asha's 5 "orders", 1,620 instead of 930, grouping by arrays) is a grain mistake, the same one the SQL notes called fan-out.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: common mistakes.</b> Which slips produce numbers that look fine?</div>
-
-  <h2 id="ma-traps"><span class="num">13</span>Common Mistakes</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Aggregation mistakes rarely crash. They produce a number that looks fine. Which ones should you check whenever a result surprises you?</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: no $match, or $match in the wrong place</span>
-    <p>Forgetting <code>{ status: "delivered" }</code> turns ₹2,630 into ₹3,510. A <code>$match</code> on a raw field after <code>$group</code> matches nothing, because the field is gone.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: grouping by an array field</span>
-    <p>Without <code>$unwind</code>, <code>_id: "$items.item"</code> grouped by whole arrays such as <code>['Masala Dosa', 'Filter Coffee']</code>.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: counting or summing at the wrong grain after $unwind</span>
-    <p><code>$sum: 1</code> counted Asha's 5 lines, not 3 orders; summing <code>amount</code> after unwinding repeats each bill per line.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: losing documents in $unwind or $lookup + $unwind</span>
-    <p>Empty arrays vanish (order 111: 16 → 15); Gita vanished after <code>$lookup</code> + <code>$unwind</code>. Use <code>preserveNullAndEmptyArrays: true</code> when they must stay.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: $project when you meant $addFields</span>
-    <p>One computed field in <code>$project</code> dropped every other field of order 102.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: $ vs $$, and text numbers</span>
-    <p><code>"status"</code> is text, <code>"$status"</code> a field, <code>"$$l"</code> a variable. <code>$sum</code> silently skipped <code>"450"</code>: 760 instead of 1,210.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: UTC hours and days</span>
-    <p>12:10 IST is hour 6 in UTC. Pass <code>timezone: "Asia/Kolkata"</code> to <code>$hour</code>, <code>$dateToString</code>, <code>$dateTrunc</code>.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: $first/$last without $sort, and no final $sort</span>
-    <p>Both give arbitrary results. Sort first, and sort the output.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: the revision sheet.</b> Everything above, condensed to one page.</div>
+  <h2 id="ma-traps"><span class="num">12</span>Common Mistakes</h2>
+  <p>Aggregation mistakes rarely crash; they produce a number that looks reasonable. The most common is a missing or misplaced <code>$match</code>. Leaving out the status filter turned ₹2,630 of delivered revenue into ₹3,510, and a <code>$match</code> on an original field placed after a <code>$group</code> matches nothing, because the field no longer exists:</p>
+  <div class="fx" data-lang="mongo">// wrong: status no longer exists after $group → empty result
+[ { $group: { _id: "$restaurant_id", revenue: { $sum: "$amount" } } },
+  { $match: { status: "delivered" } } ]
+// right: filter orders first, then group
+[ { $match: { status: "delivered" } },
+  { $group: { _id: "$restaurant_id", revenue: { $sum: "$amount" } } } ]</div>
+  <p>The second family are grain mistakes around <code>$unwind</code>. Counting after unwinding counted Asha's 5 lines instead of her 3 orders, and summing <code>amount</code> after unwinding gave ₹1,620 instead of ₹930. Grouping by <code>"$items.item"</code> without unwinding grouped by whole arrays. And both a plain <code>$unwind</code> on empty arrays and <code>$lookup</code> followed by <code>$unwind</code> silently drop documents (order 111, and Gita); use <code>preserveNullAndEmptyArrays: true</code> when they must stay.</p>
+  <div class="fx" data-lang="mongo">// wrong: counts lines (5) and repeats each bill per line (1,620)
+[ { $match: { customer_id: 1 } }, { $unwind: "$items" },
+  { $group: { _id: "$customer_id", orders: { $sum: 1 }, spend: { $sum: "$amount" } } } ]
+// right: order-level values are summed before the grain changes (3 orders, 930)
+[ { $match: { customer_id: 1 } },
+  { $group: { _id: "$customer_id", orders: { $sum: 1 }, spend: { $sum: "$amount" } } } ]</div>
+  <p>The third family are expression mistakes. <code>$project</code> with one computed field drops every other field, when <code>$addFields</code> was meant. Inside <code>$map</code>, a single dollar (<code>"$l.qty"</code>) reads a non-existent field instead of the loop variable (<code>"$$l.qty"</code>). <code>$sum</code> silently skips numbers stored as text (760 instead of 1,210). And hours and days computed without a time zone are UTC hours and days: 12:10 in India is hour 6.</p>
+  <p>The last family are ordering mistakes: <code>$first</code> or <code>$last</code> without a <code>$sort</code> before the group return an arbitrary document, a pipeline without a final <code>$sort</code> has no guaranteed output order, and a <code>$limit</code> placed before a <code>$group</code> limits documents, not groups.</p>
 
   <h2 id="ma-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>The whole note on one sheet. Running example: Biteful documents. <code>orders</code> (10): 101–110, amounts 240, 450, 520, 380, 310, 180, 260, 260, 600, 310; restaurants 10 (101, 108, 110), 11 (102, 106, 109), 12 (103, 104, 107), 13 (105); 105 and 107 cancelled, 110 pending; 15 embedded lines; 104's delivery time null. <code>customers</code> (7, Gita has no orders), <code>restaurants</code> (5, Momo Magic has no orders).</p>
-  <h3>The question ladder</h3>
+  <h3>Running example</h3>
+  <p>Biteful <code>orders</code> (10): 101–110, amounts 240, 450, 520, 380, 310, 180, 260, 260, 600, 310; restaurant 10 has 101, 108, 110; 11 has 102, 106, 109; 12 has 103, 104, 107; 13 has 105. 105 and 107 cancelled, 110 pending, 104's delivery time null; 15 embedded lines. Delivered revenue: Dosa Hut 500, Biryani Bros 1,230, Pizza Point 900; total 2,630.</p>
+  <h3>Definitions</h3>
+  <ul>
+    <li><b>Pipeline</b>: <code>db.c.aggregate([stage, …])</code>; each stage transforms the stream of documents from the previous one.</li>
+    <li><b>Field path</b>: <code>"$field"</code> (a value), <code>"$a.b"</code> (nested, or an array of values); <b>variable</b>: <code>"$$name"</code>.</li>
+    <li><b>Group key</b>: the <code>_id</code> of <code>$group</code>; <code>null</code> = one group. <b>Accumulator</b>: folds a group's values into one.</li>
+    <li><b>Grain</b>: what one document means at a point in the pipeline (order before <code>$unwind</code>, line after).</li>
+    <li><b>Blocking stage</b>: must consume all input before emitting (<code>$sort</code>, <code>$group</code>); 100 MB limit, <code>allowDiskUse</code> spills.</li>
+    <li><b>Push-down</b>: aggregate in the database so only the small result crosses the network.</li>
+  </ul>
+  <h3>SQL to pipeline</h3>
   <table class="tbl">
-    <tr><th>Concept</th><th>Question it answers</th><th>On Biteful</th><th>Weakness → next</th></tr>
-    <tr><td>Pipeline</td><td>compute across documents</td><td>delivered per customer 2/2/2/1</td><td>which docs? → $match</td></tr>
-    <tr><td>$match</td><td>keep the right documents</td><td>10 → 7</td><td>still one per order → $group</td></tr>
-    <tr><td>$group</td><td>one answer per group</td><td>500 / 1230 / 900; avg 38</td><td>values not stored → $project</td></tr>
-    <tr><td>$project / $addFields</td><td>compute new fields</td><td>bills = sum of lines (10/10)</td><td>unordered → $sort</td></tr>
-    <tr><td>$sort / $limit</td><td>top-N, latest per group</td><td>Biryani Bros, Pizza Point</td><td>items in arrays → $unwind</td></tr>
-    <tr><td>$unwind</td><td>work per array element</td><td>10 → 15 lines; Biryani ₹700</td><td>names elsewhere → $lookup</td></tr>
-    <tr><td>$lookup</td><td>join another collection</td><td>Gita [] / 0; 11 vs 10 rows</td><td>many views → $facet etc.</td></tr>
-    <tr><td>$facet / $bucket / windows</td><td>several summaries, bands, running totals</td><td>2/5/3; Chen 520 → 780</td><td>translate SQL → mapping</td></tr>
-    <tr><td>SQL mapping</td><td>SQL clause → stage</td><td>per cuisine = Postgres</td><td>slow at scale? → performance</td></tr>
-    <tr><td>Performance</td><td>fast vs slow</td><td>200,000 → 20,000 read; spill</td><td>→ <a class="xref" data-note="mongo_design">Schema Design</a></td></tr>
+    <tr><th>SQL</th><th>Stage</th></tr>
+    <tr><td>WHERE</td><td><code>$match</code> (first)</td></tr>
+    <tr><td>JOIN / LEFT JOIN</td><td><code>$lookup</code> (+ <code>$unwind</code> = inner join)</td></tr>
+    <tr><td>join to an embedded child table</td><td><code>$unwind</code></td></tr>
+    <tr><td>GROUP BY + COUNT/SUM/AVG/MIN/MAX</td><td><code>$group</code> with <code>$sum: 1</code>, <code>$sum</code>, <code>$avg</code>, <code>$min</code>, <code>$max</code></td></tr>
+    <tr><td>HAVING</td><td><code>$match</code> after <code>$group</code></td></tr>
+    <tr><td>SELECT expressions</td><td><code>$project</code> / <code>$addFields</code></td></tr>
+    <tr><td>ORDER BY / LIMIT / OFFSET</td><td><code>$sort</code> / <code>$limit</code> / <code>$skip</code></td></tr>
+    <tr><td>window function OVER()</td><td><code>$setWindowFields</code></td></tr>
   </table>
-  <h3>Definitions and syntax</h3>
-  <table class="tbl">
-    <tr><th>Item</th><th>Syntax / meaning</th></tr>
-    <tr><td>Pipeline</td><td><code>db.c.aggregate([ {stage}, {stage}, … ], { allowDiskUse })</code></td></tr>
-    <tr><td>References</td><td><code>"$field"</code> value · <code>"$a.b"</code> nested / array of values · <code>"$$var"</code> variable · <code>"text"</code> literal</td></tr>
-    <tr><td>$match</td><td>find filter; <code>$expr</code> for expressions</td></tr>
-    <tr><td>$group</td><td><code>{ _id: key, f: { $sum | $avg | $min | $max | $push | $addToSet | $first | $last: expr } }</code>; <code>_id: null</code> = all; <code>$sum: 1</code> = count</td></tr>
-    <tr><td>$project / $addFields</td><td>keep/compute only listed fields / add fields; <code>$map: { input, as, in }</code>, <code>$cond: [if, then, else]</code>, <code>$ifNull: [x, default]</code></td></tr>
-    <tr><td>$sort / $limit / $skip / $count</td><td>order / cut / drop / count the stream</td></tr>
-    <tr><td>$unwind</td><td><code>"$arr"</code> or <code>{ path, preserveNullAndEmptyArrays: true }</code></td></tr>
-    <tr><td>$lookup</td><td><code>{ from, localField, foreignField, as }</code> (+ <code>pipeline</code>): left join into an array</td></tr>
-    <tr><td>$facet / $bucket / $setWindowFields</td><td>sub-pipelines → 1 doc / ranges <code>[lo, hi)</code> / <code>{ partitionBy, sortBy, output: { f: { $sum, window } } }</code></td></tr>
-    <tr><td>$out / $merge</td><td>write results (replace / upsert), last stage</td></tr>
-    <tr><td>explain</td><td><code>db.c.explain("executionStats").aggregate(p)</code>: COLLSCAN vs IXSCAN, keys and docs examined</td></tr>
-  </table>
-  <h3>When to use, when not</h3>
-  <div class="cards">
-    <div><b>$match first</b><p>Always; it is the only place an index helps.</p><small>A $match on a computed field can't use one</small></div>
-    <div><b>$unwind</b><p>Use for per-element questions (per item).</p><small>Count orders before it, or with $addToSet</small></div>
-    <div><b>$lookup</b><p>Use for occasional joins and reports; group first.</p><small>Every page view? Embed or copy instead</small></div>
-    <div><b>$group vs windows</b><p>$group collapses to one row per group.</p><small>$setWindowFields keeps every row</small></div>
-    <div><b>$facet</b><p>Use for dashboard tiles from one input.</p><small>Output must fit 16 MB; no indexes inside</small></div>
-    <div><b>Push-down</b><p>Aggregate in MongoDB, reshape in pandas.</p><small>Don't pull millions of docs into Python</small></div>
-  </div>
-  <div class="callout trap"><span class="label">Key traps</span>
-    <p>No <code>$match</code> (₹3,510 vs ₹2,630); grouping by an array without <code>$unwind</code>; counting lines as orders (5 vs 3); summing an order field after <code>$unwind</code>; empty arrays and unmatched lookups vanish after <code>$unwind</code>; <code>$project</code> drops fields; fields gone after <code>$group</code>; <code>$</code> vs <code>$$</code>; <code>$sum</code> skips text; UTC hours; <code>$first</code> without <code>$sort</code>; testing performance on 10 documents.</p>
-  </div>
-  <h3>Five rapid-fire checks</h3>
-  <table class="tbl">
-    <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td><code>[ { $unwind: "$items" }, { $count: "n" } ]</code> on Biteful?</td><td>15: lines, not orders</td></tr>
-    <tr><td>Pizza Point's <code>$avg</code> of delivery_minutes, with 38 and null?</td><td>38: null is ignored</td></tr>
-    <tr><td>How do you write HAVING?</td><td>A <code>$match</code> after <code>$group</code></td></tr>
-    <tr><td>customers <code>$lookup</code> orders: is Gita in the output?</td><td>Yes, with <code>[]</code>; she disappears only after <code>$unwind</code></td></tr>
-    <tr><td>Which stages can use an index?</td><td>Only the first ones that read the collection (<code>$match</code>, <code>$sort</code>)</td></tr>
-  </table>
+  <h3>Syntax</h3>
+  <div class="fx" data-lang="mongo">db.orders.aggregate([
+  { $match: { status: "delivered" } },
+  { $unwind: { path: "$items", preserveNullAndEmptyArrays: true } },
+  { $group: { _id: "$items.item", qty: { $sum: "$items.qty" },
+              revenue: { $sum: { $multiply: ["$items.qty", "$items.unit_price"] } } } },
+  { $match: { revenue: { $gte: 300 } } },                        // HAVING
+  { $lookup: { from: "x", localField: "a", foreignField: "b", as: "joined" } },
+  { $addFields: { n: { $size: "$joined" } } },
+  { $project: { _id: 0, item: "$_id", revenue: 1 } },
+  { $sort: { revenue: -1, item: 1 } }, { $limit: 5 }
+])
+// expressions: $map { input, as, in }  $cond [if, then, else]  $ifNull [x, default]
+//              $hour { date, timezone }  $size  $multiply  $literal
+// others: $count  $facet  $bucket  $setWindowFields  $out  $merge  $unionWith</div>
+  <h3>Gotchas</h3>
+  <ul>
+    <li>No <code>$match</code> → wrong totals (3,510 vs 2,630); fields are gone after <code>$group</code>.</li>
+    <li>After <code>$unwind</code>, count and sum at the line grain (5 lines ≠ 3 orders).</li>
+    <li>Group by <code>"$items.item"</code> only after <code>$unwind</code>.</li>
+    <li>Empty arrays and unmatched lookups vanish after <code>$unwind</code> unless preserved.</li>
+    <li><code>$project</code> drops unlisted fields; <code>$$</code> for variables; <code>$sum</code> skips text.</li>
+    <li>Pass a time zone to date expressions; sort before <code>$first</code> and at the end.</li>
+    <li>Only the first stages use indexes; the optimizer cannot move a match on a computed field.</li>
+  </ul>
 
-  <h2 id="ma-qa"><span class="num">14</span>Questions &amp; Answers</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Can you write each pipeline before revealing it, and say what the numbers are on Biteful? The last questions connect the stages to each other.</p>
-  </div>
+  <h2 id="ma-qa"><span class="num">13</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>When do you need <code>aggregate()</code> instead of <code>find()</code>?</summary><div class="qa-body">Whenever you compute across documents (counts or sums per group), compute fields beyond simple projection, flatten arrays, join collections, or use window functions. <code>find()</code> only filters, projects, sorts and pages.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between <code>"status"</code>, <code>"$status"</code> and <code>"$$l"</code>?</summary><div class="qa-body"><code>"status"</code> is the literal text. <code>"$status"</code> is the value of the field in the current document. <code>"$$l"</code> is a variable, e.g. the loop variable named by <code>as: "l"</code> in <code>$map</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Write the pipeline: number of orders per status, most common first.</summary><div class="qa-body"><code>[ { $group: { _id: "$status", n: { $sum: 1 } } }, { $sort: { n: -1, _id: 1 } } ]</code> → delivered 7, cancelled 2, pending 1.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Write the pipeline: revenue per restaurant from delivered orders, only restaurants with at least ₹900.</summary><div class="qa-body"><code>[ { $match: { status: "delivered" } }, { $group: { _id: "$restaurant_id", revenue: { $sum: "$amount" } } }, { $match: { revenue: { $gte: 900 } } } ]</code> → 11 (1230) and 12 (900). The second <code>$match</code> is HAVING.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Pizza Point has delivered orders with 38 minutes and an unrecorded time. What does <code>$avg: "$delivery_minutes"</code> give, and what would SQL give?</summary><div class="qa-body">38 in both: <code>$avg</code> ignores null and missing values like SQL's <code>AVG</code> ignores NULL. If you wanted unrecorded times to count as 0 you would need <code>$ifNull</code> first (giving 19), which is usually wrong.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Write the pipeline: quantity sold per item over delivered orders.</summary><div class="qa-body"><code>[ { $match: { status: "delivered" } }, { $unwind: "$items" }, { $group: { _id: "$items.item", qty: { $sum: "$items.qty" } } }, { $sort: { qty: -1, _id: 1 } } ]</code>. Masala Dosa 3, Chicken Biryani 2, Farmhouse Pizza 2, Filter Coffee 2, Raita 2, then the 1s.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What's the output of <code>[ { $match: { customer_id: 1 } }, { $unwind: "$items" }, { $group: { _id: "$customer_id", n: { $sum: 1 } } } ]</code>?</summary><div class="qa-body"><code>{ _id: 1, n: 5 }</code>: Asha's 5 lines, not her 3 orders. Count orders with <code>$addToSet: "$_id"</code> and <code>$size</code>, or before unwinding.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>A pipeline groups by <code>"$items.item"</code> without <code>$unwind</code>. What goes wrong?</summary><div class="qa-body"><code>"$items.item"</code> is an array per order, e.g. <code>['Masala Dosa', 'Filter Coffee']</code> for 108 and 110, so groups form per distinct array. No error, wrong numbers.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Write the pipeline: each customer's name and number of orders, including customers with none.</summary><div class="qa-body">On <code>customers</code>: <code>[ { $lookup: { from: "orders", localField: "_id", foreignField: "customer_id", as: "o" } }, { $project: { name: 1, n: { $size: "$o" } } } ]</code>. Gita appears with 0. Don't <code>$unwind</code> the array, or Gita disappears (10 rows instead of 11).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Translate: <code>SELECT r.cuisine, SUM(o.amount) FROM orders o JOIN restaurants r … WHERE o.status = 'delivered' GROUP BY r.cuisine HAVING SUM(o.amount) &gt;= 500 ORDER BY 2 DESC</code>.</summary><div class="qa-body"><code>$match</code> (status) → <code>$lookup</code> restaurants as <code>r</code> → <code>$unwind: "$r"</code> → <code>$group: { _id: "$r.cuisine", revenue: { $sum: "$amount" } }</code> → <code>$match: { revenue: { $gte: 500 } }</code> → <code>$sort: { revenue: -1 }</code>. Biryani 1230, Pizza 900, South Indian 500, identical to PostgreSQL.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why should <code>$match</code> come first?</summary><div class="qa-body">(1) Only the stage reading the collection can use an index: 20,000 documents read instead of 200,000 on <code>biteful_big</code>. (2) It shrinks the stream, so later stages (and their memory limits) handle less. The optimizer moves some late <code>$match</code>es forward but not ones on computed fields.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>A <code>$sort</code> fails with "exceeded memory limit". Options?</summary><div class="qa-body">Allow spilling (<code>allowDiskUse: true</code>, default since 6.0; slower), filter and project earlier, use an index whose order matches the sort so no in-memory sort is needed, add <code>$limit</code> right after <code>$sort</code> (top-k keeps only k), or pre-aggregate into a summary collection with <code>$merge</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span><code>$group</code> vs <code>$setWindowFields</code>?</summary><div class="qa-body"><code>$group</code> collapses each group to one document (spend per customer: Chen 780). <code>$setWindowFields</code> keeps every document and adds a value over its partition (Chen's orders show 520, then 780). Same difference as SQL GROUP BY vs OVER().</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does <code>$unwind</code> reproduce SQL's fan-out bug?</summary><div class="qa-body">Both change the grain from order to line by repeating the order's fields on every line: SQL by joining <code>order_items</code>, MongoDB by unwinding <code>items</code>. Any order-level value (count of orders, <code>amount</code>) is then repeated per line, so Asha's orders count as 5 and her spend as 1,620. Fix in both worlds: aggregate order values before changing the grain, line values after.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does the order of <code>$match</code> and <code>$group</code> decide whether a filter is WHERE or HAVING?</summary><div class="qa-body">Before <code>$group</code>, documents are orders, so <code>$match</code> filters orders (WHERE). After <code>$group</code>, documents are group results with only <code>_id</code> and accumulators, so <code>$match</code> can only filter on those (HAVING). A pipeline has no separate keywords; position is meaning.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: what does schema design have to do with how long a pipeline is?</summary><div class="qa-body">Lines are embedded, so per-order questions need no join and per-item questions need one <code>$unwind</code>. Customers are referenced, so every name needs a <code>$lookup</code>. Copy the customer name into each order and that <code>$lookup</code> disappears; keep a running daily total and the whole pipeline becomes one read. Deciding those trade-offs is <a class="xref" data-note="mongo_design">Schema Design</a>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks if you skip <code>$sort</code> before <code>$group</code> with <code>$first</code>?</summary><div class="qa-body"><code>$first</code> takes the first document that entered each bin, in stream order. Without a sort that order is whatever the server read first, so "Asha's latest order" could come out as 101 instead of 110, and change between runs.</div></details>
-  <div class="bridge"><b>What this still can't tell us → next: <a class="xref" data-note="mongo_design">Schema Design &amp; Scaling</a>.</b> Every pipeline here ran on a shape we were given: lines embedded, customers referenced. Was that the right shape? When should data be embedded, when referenced, which patterns remove <code>$lookup</code>s, which indexes make <code>$match</code> fast, and how does it all scale past one server?</div>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the aggregation pipeline, and when do you need it instead of <code>find</code>?</summary><div class="qa-body">It is an array of stages that MongoDB runs in order, each transforming the stream of documents from the previous stage, so that computation happens inside the database. You need it whenever you compute across documents (counts, sums or averages per group), compute new fields beyond a simple projection, flatten arrays, join collections, or use window functions. <code>find</code> can only filter, project, sort and page.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between <code>"status"</code>, <code>"$status"</code> and <code>"$$l"</code> inside a stage?</summary><div class="qa-body"><code>"$status"</code> is a field path, the value of the <code>status</code> field in the current document. <code>"$$l"</code> is a variable, such as the loop variable named with <code>as: "l"</code> in <code>$map</code>, or a variable defined with <code>let</code>. A plain string is text; <code>$literal</code> makes text explicit, which matters when the text itself starts with a dollar sign.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you write SQL's <code>HAVING</code> in a pipeline?</summary><div class="qa-body">As a <code>$match</code> placed after the <code>$group</code>. At that point the documents in the stream are group summaries containing only <code>_id</code> and the accumulator fields, so the match filters on computed values such as <code>revenue</code>. The same <code>$match</code> placed before the group acts as <code>WHERE</code>; in a pipeline, position decides the meaning.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does <code>$group</code> output, and what happens to the other fields?</summary><div class="qa-body">One document per distinct value of the group key, containing only <code>_id</code> (the key) and the accumulator fields you defined. All other original fields are gone, and the grouped field is now called <code>_id</code>. If you need another field later, carry it through with an accumulator such as <code>$first</code>, or group by it as part of a compound key.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do <code>$avg</code> and <code>$sum</code> treat null, missing and non-numeric values?</summary><div class="qa-body">Both ignore null and missing values, so an average is taken over the documents that have a number, like SQL's <code>AVG</code> ignoring NULL. <code>$sum</code> also skips values that are not numbers, including numbers stored as strings, without any error, so <code>"450"</code> silently drops out of a total. Convert types with <code>$toDouble</code> or <code>$toInt</code>, or fix the data on load.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between <code>$project</code> and <code>$addFields</code>?</summary><div class="qa-body"><code>$addFields</code> (alias <code>$set</code>) adds or overwrites the listed fields and keeps every other field. <code>$project</code> defines the output shape: unlisted fields are dropped (except <code>_id</code>, unless excluded). A common bug is using <code>$project</code> to add one computed field and losing everything else.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does <code>$unwind</code> do, and what is the grain problem?</summary><div class="qa-body"><code>$unwind</code> outputs one document per element of an array, copying the other fields onto each. This changes the grain from one document per order to one per line, so order-level values like <code>amount</code> are repeated per line: counting gives lines instead of orders and summing <code>amount</code> double-counts. It is the same fan-out problem as joining a parent table to a child table in SQL; aggregate order values before unwinding, and only line values after.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What happens to documents with an empty array in <code>$unwind</code>?</summary><div class="qa-body">They produce no output documents, so they disappear from the pipeline, like unmatched rows in an inner join. The option <code>preserveNullAndEmptyArrays: true</code> keeps them (with the array field removed). The same applies to documents where the field is missing or null.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Is <code>$lookup</code> an inner join or a left join?</summary><div class="qa-body">A left outer join: every input document is kept and its matches are attached as an array, which is empty when nothing matches. Following it with <code>$unwind</code> drops the documents with empty arrays, which turns it into an inner join, unless <code>preserveNullAndEmptyArrays</code> is set. On Biteful, customers with orders unwound gives 10 rows, and preserving gives 11, including Gita.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How would you get each customer's latest order with a pipeline?</summary><div class="qa-body">Sort by date descending, then group by customer and take <code>$first</code> of the fields you need: <code>[{ $sort: { ordered_at: -1 } }, { $group: { _id: "$customer_id", latest: { $first: "$_id" } } }]</code>. <code>$first</code> takes the first document that entered each group in stream order, so without the sort the result is arbitrary. <code>$setWindowFields</code> with a rank, or <code>$top</code> in newer versions, are alternatives.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span><code>$group</code> vs <code>$setWindowFields</code>?</summary><div class="qa-body"><code>$group</code> collapses each group into one document, for example total spend per customer. <code>$setWindowFields</code> keeps every document and adds a value computed over its partition, such as a running total or a rank within the customer's orders. It is the same difference as SQL's <code>GROUP BY</code> versus window functions with <code>OVER()</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is <code>$facet</code> used for, and what are its limits?</summary><div class="qa-body">It runs several sub-pipelines on the same input and returns one document containing each sub-result, which suits dashboards that need counts by status, a top list and a total in a single query. Because the output is a single document, everything must fit within 16 MB, so limit large lists. Sub-pipelines cannot use indexes, so put shared filters in a <code>$match</code> before the facet.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Translate: <code>SELECT cuisine, SUM(amount) FROM orders JOIN restaurants … WHERE status = 'delivered' GROUP BY cuisine HAVING SUM(amount) &gt;= 500 ORDER BY 2 DESC</code>.</summary><div class="qa-body"><code>$match</code> on status, then <code>$lookup</code> into restaurants with <code>$unwind</code>, then <code>$group</code> by <code>"$r.cuisine"</code> with <code>$sum: "$amount"</code>, then <code>$match</code> on the revenue (HAVING), then <code>$sort</code> descending. The stages follow SQL's logical execution order, not its written order. On Biteful the result is Biryani 1,230, Pizza 900 and South Indian 500, identical to PostgreSQL.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why should <code>$match</code> come first in a pipeline?</summary><div class="qa-body">Only the stages at the start, which read the collection directly, can use an index, so a leading <code>$match</code> on an indexed field reads only the matching documents instead of scanning everything. It also shrinks the stream, so later stages, especially blocking ones with memory limits, handle less data. The optimizer moves some later matches forward, but not matches on computed fields.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>A <code>$sort</code> stage fails with a memory-limit error. What are your options?</summary><div class="qa-body">Allow spilling to disk with <code>allowDiskUse</code> (the default since 6.0, but slower); filter and project earlier so less data reaches the sort; create an index whose order matches the sort so the first stage reads documents already sorted; put a <code>$limit</code> right after the sort so it becomes a top-k sort; or pre-aggregate into a summary collection with <code>$merge</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What do <code>$out</code> and <code>$merge</code> do?</summary><div class="qa-body">Both write the pipeline's result to a collection and must be the last stage. <code>$out</code> replaces the target collection entirely with the result. <code>$merge</code> inserts, updates or merges the result documents into an existing collection, matching on a field such as <code>_id</code>, which makes it the tool for incrementally maintained summary tables or materialised views.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you see whether a pipeline uses an index?</summary><div class="qa-body">Run <code>db.collection.explain("executionStats").aggregate(pipeline)</code> and look at the plan of the first stage: <code>COLLSCAN</code> means every document was read, <code>IXSCAN</code> means an index was used. Compare keys examined and documents examined with documents returned; a large gap means wasted work, even when an index is used.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Should you aggregate in MongoDB or in pandas?</summary><div class="qa-body">Do the filtering, joining and grouping in MongoDB so that only a small summary crosses the network (push-down), then use pandas for reshaping, pivoting and plotting the summary. Pulling millions of raw documents into pandas to compute a handful of totals wastes network, memory and time. Flatten compound group keys with a final <code>$project</code> so the rows convert cleanly into a DataFrame.</div></details>
 </main>
 `
 });
