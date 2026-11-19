@@ -180,34 +180,33 @@ for label in ("cold (from disk)", "warm (page cache)"):
     t0 = time.perf_counter(); n = random_read(); t = time.perf_counter() - t0
     print(f"{label:18} random 4 KB reads: {n / t:8.0f} IOPS = {n * 4096 / t / 1e6:5.0f} MB/s")
 os.remove(path)</div>
-  <div class="fx" data-lang="text">sequential write + fsync:    288 MB/s
-cold (from disk)   sequential read 1 MB chunks:   2604 MB/s
-warm (page cache)  sequential read 1 MB chunks:   8566 MB/s
-cold (from disk)   random 4 KB reads:    26333 IOPS =   108 MB/s
-warm (page cache)  random 4 KB reads:   639125 IOPS =  2618 MB/s</div>
-  <p>There is a lot in these six lines. Writing 256 MB and forcing it to disk with <code>fsync</code> ran at a couple of hundred MB/s. Reading it back sequentially in 1 MB chunks from the disk ran in the low gigabytes per second, a figure only an SSD-backed disk can reach, which tells us the virtual disk sits on fast flash despite the <code>ROTA</code> flag. Random 4 KB reads from the cold disk achieved about twenty thousand IOPS, but because each operation moves only 4 KB, that is under 100 MB/s, more than twenty times less throughput than sequential reading of the same file. This is the sequential-versus-random gap on an SSD; on a hard disk the same random test would manage about 80 IOPS, a third of a megabyte per second. Finally, the warm runs show the page cache: the same random reads served from RAM ran at around half a million IOPS, more than twenty times faster than the disk, and sequential reads also sped up. Every "my code got faster on the second run" story starts here.</p>
+  <div class="fx" data-lang="text">sequential write + fsync:    269 MB/s
+cold (from disk)   sequential read 1 MB chunks:   2200 MB/s
+warm (page cache)  sequential read 1 MB chunks:   7538 MB/s
+cold (from disk)   random 4 KB reads:    27172 IOPS =   111 MB/s
+warm (page cache)  random 4 KB reads:   561674 IOPS =  2301 MB/s</div>
+  <p>There is a lot in these six lines. Writing 256 MB and forcing it to disk with <code>fsync</code> ran at a couple of hundred MB/s. Reading it back sequentially in 1 MB chunks from the disk ran in the low gigabytes per second, a figure only an SSD-backed disk can reach, which tells us the virtual disk sits on fast flash despite the <code>ROTA</code> flag. Random 4 KB reads from the cold disk achieved a few tens of thousands of IOPS, but because each operation moves only 4 KB, that is only about 100 MB/s, more than twenty times less throughput than sequential reading of the same file. This is the sequential-versus-random gap on an SSD; on a hard disk the same random test would manage about 80 IOPS, a third of a megabyte per second. Finally, the warm runs show the page cache: the same random reads served from RAM ran at over half a million IOPS, more than twenty times faster than the disk, and sequential reads also sped up. Every "my code got faster on the second run" story starts here.</p>
   <p>The practical lessons follow directly. Prefer formats and access patterns that read large contiguous chunks: one big file read front to back beats many small reads. Databases use indexes precisely so that finding a row needs a few random reads instead of a scan, and they keep hot data in their own memory cache (<a class="xref" data-note="sql_optimization">SQL Query Optimization</a>). When you read about a cloud disk's "3,000 IOPS and 125 MB/s", you now know these are two separate limits, and a workload of tiny random reads will hit the first long before the second. And when you benchmark anything that touches files, run it more than once and say whether the cache was warm.</p>
 
   <h2 id="cfs-fs"><span class="num">05</span>File Systems</h2>
   <p>A disk, by itself, is just an enormous numbered row of fixed-size blocks; it has no idea what a "file" or a "folder" is. If programs had to remember "the orders data is in blocks 81,920 to 82,045", sharing a disk between programs would be impossible and a single mistake would overwrite someone else's data. A <strong>file system</strong> is the layer of the operating system that organises a disk's raw blocks into named files and directories, keeps track of which blocks belong to which file and which are free, and records information about each file such as its size, owner and permissions. Common file systems are ext4 and XFS on Linux, NTFS on Windows and APFS on macOS. This machine's root file system, as <code>findmnt</code> showed earlier, is ext4.</p>
   <p>Think of a library. The books are stored on shelves in whatever positions have space, not in title order. To find a book, you look it up in the catalogue, which gives its catalogue number; the catalogue card for that number lists the author, the date, and the exact shelves where its volumes are. The file system works the same way. The data of a file is stored in <strong>blocks</strong>, usually 4 KB each, wherever there is free space on the disk. Each file has an <strong>inode</strong> (index node), a small record holding everything about the file except its name: its size, owner, permissions, timestamps, and the list of blocks that hold its data. A <strong>directory</strong> is just a special file containing a table of names and the inode number each name points to. So opening <code>data/orders.csv</code> means: look up <code>data</code> in the root directory to find its inode, read that directory to find the inode number for <code>orders.csv</code>, read that inode to find the blocks, and finally read the blocks. The <code>stat</code> command shows a file's inode information directly:</p>
   <div class="fx" data-lang="text">$ printf 'order_id,amount,city\n1,120.0,Pune\n2,80.0,Delhi\n' &gt; orders.csv
-
 $ stat orders.csv
   File: orders.csv
   Size: 47        	Blocks: 8          IO Block: 4096   regular file
-Device: 254,0	Inode: 2048087     Links: 1
+Device: 254,0	Inode: 2048030     Links: 1
 Access: (0644/-rw-r--r--)  Uid: (    0/    root)   Gid: (    0/    root)
-Access: 2026-11-19 05:39:16.791273945 +0000
-Modify: 2026-11-19 05:39:16.793436400 +0000
-Change: 2026-11-19 05:39:16.793436400 +0000
- Birth: 2026-11-19 05:39:16.791273945 +0000
+Access: 2026-11-19 05:39:46.195275693 +0000
+Modify: 2026-11-19 05:39:46.199966024 +0000
+Change: 2026-11-19 05:39:46.199966024 +0000
+ Birth: 2026-11-19 05:39:46.195275693 +0000
 $ ls -i orders.csv
-2048087 orders.csv
+2048030 orders.csv
 $ df -i /
 Filesystem       Inodes  IUsed    IFree IUse% Mounted on
-/dev/vda       16777216 453604 16323612    3% /</div>
-  <p>Read the <code>stat</code> output line by line. The file holds 47 bytes of data, but "Blocks: 8" means 8 units of 512 bytes, which is 4 KB: the smallest piece of disk a file can occupy here is one 4,096-byte block ("IO Block: 4096"), so even a tiny file uses a whole block. "Inode: 2048031" is the inode number, the file's real identity on this disk; <code>ls -i</code> shows the same number next to the name. "Links: 1" says one directory entry points to this inode (a hard link adds another name for the same inode). The permission bits, owner and the four timestamps (last access, last modification of the content, last change of the inode, and creation) are all stored in the inode, not in the file's data. (Updating the access time on every read would turn each read into a write, which is why this disk is mounted with <code>noatime</code>.) Finally <code>df -i</code> shows that the file system was created with a fixed number of inodes, 16.7 million here. Running out of inodes, which happens when a program creates millions of tiny files, makes the disk "full" even though <code>df -h</code> shows free space.</p>
+/dev/vda       16777216 453620 16323596    3% /</div>
+  <p>Read the <code>stat</code> output line by line. The file holds 47 bytes of data, but "Blocks: 8" means 8 units of 512 bytes, which is 4 KB: the smallest piece of disk a file can occupy here is one 4,096-byte block ("IO Block: 4096"), so even a tiny file uses a whole block. The "Inode:" value is the inode number, the file's real identity on this disk; <code>ls -i</code> shows the same number next to the name. "Links: 1" says one directory entry points to this inode (a hard link adds another name for the same inode). The permission bits, owner and the four timestamps (last access, last modification of the content, last change of the inode, and creation) are all stored in the inode, not in the file's data. (Updating the access time on every read would turn each read into a write, which is why this disk is mounted with <code>noatime</code>.) Finally <code>df -i</code> shows that the file system was created with a fixed number of inodes, 16.7 million here. Running out of inodes, which happens when a program creates millions of tiny files, makes the disk "full" even though <code>df -h</code> shows free space.</p>
   <p>This structure explains why many tiny files are slow, a problem every data engineer eventually meets. Each file costs a directory lookup, an inode read or write, at least one whole block, and separate system calls to open and close it, however little data it holds. With large files that overhead is negligible; with tiny files it is the entire cost. Here are the same 5,000 order rows written as 5,000 separate files and as one file:</p>
   <div class="fx" data-lang="py">import os, shutil, time
 
@@ -239,8 +238,8 @@ print(f"read:  5000 files {t_read_many * 1000:6.1f} ms   one file {t_read_one * 
 print(f"actual data: {data_bytes / 1e3:.0f} KB   disk used by the 5000 files: {disk_bytes / 1e6:.1f} MB")
 print(f"disk used by one.csv: {os.stat('one.csv').st_blocks * 512 / 1e3:.0f} KB")
 shutil.rmtree("tiny"); os.remove("one.csv")</div>
-  <div class="fx" data-lang="text">write: 5000 files   79.5 ms   one file  0.32 ms
-read:  5000 files   48.6 ms   one file  0.24 ms
+  <div class="fx" data-lang="text">write: 5000 files 1150.9 ms   one file  0.46 ms
+read:  5000 files   54.3 ms   one file  0.14 ms
 actual data: 83 KB   disk used by the 5000 files: 20.5 MB
 disk used by one.csv: 86 KB</div>
   <p>The data is only about 83 KB in total. Writing it as 5,000 files took hundreds of times longer than writing one file, and reading it back was similarly slow, because almost all the time went into creating, opening and closing files rather than moving data. The 5,000 files also used 20.5 MB of disk, since each one rounds up to a 4 KB block, about 250 times the size of the data, while the single file used 86 KB. The same "small files problem" is far worse in distributed systems: in HDFS each file costs memory on the central NameNode, and in cloud object storage each file is a separate network request costing tens of milliseconds. That is why Spark jobs that write thousands of tiny output files are a known anti-pattern, fixed by repartitioning or compacting into fewer files of about 100 MB–1 GB each (<a class="xref" data-note="de_spark">Apache Spark</a>). For more command-line tools around files, see <a class="xref" data-note="se_linux">Linux &amp; the Command Line</a>.</p>
@@ -283,9 +282,9 @@ safe = append_orders("log_fsync.csv", n, sync=True)
 print(f"{n} writes, buffered:      {fast * 1000:7.1f} ms  ({fast / n * 1e6:6.1f} µs each)")
 print(f"{n} writes, fsync each:    {safe * 1000:7.1f} ms  ({safe / n * 1e6:6.1f} µs each)")
 os.remove("log_buffered.csv"); os.remove("log_fsync.csv")</div>
-  <div class="fx" data-lang="text">1000 writes, buffered:          0.3 ms  (   0.3 µs each)
-1000 writes, fsync each:      165.3 ms  ( 165.3 µs each)</div>
-  <p>Buffered, each write cost about a microsecond and a half, because it only copied a few bytes in memory. With an <code>fsync</code> after each write, each one cost a couple of hundred microseconds, more than a hundred times slower, because every call waited for the device to confirm. On a hard disk each <code>fsync</code> would cost several milliseconds. This is the fundamental trade-off behind database settings: a database that promises durability, the D in ACID (<a class="xref" data-note="sql_transactions">Transactions &amp; Concurrency</a>), must <code>fsync</code> its log before saying "committed", and databases make it affordable by grouping many transactions into one <code>fsync</code> ("group commit"). Message systems like Kafka make a similar trade, often relying on copies on several machines instead of an <code>fsync</code> on each (<a class="xref" data-note="de_kafka">Apache Kafka</a>).</p>
+  <div class="fx" data-lang="text">1000 writes, buffered:          0.2 ms  (   0.2 µs each)
+1000 writes, fsync each:      188.1 ms  ( 188.1 µs each)</div>
+  <p>Buffered, each write cost around a microsecond or less, because it only copied a few bytes in memory. With an <code>fsync</code> after each write, each one cost a hundred microseconds or more, hundreds of times slower, because every call waited for the device to confirm. On a hard disk each <code>fsync</code> would cost several milliseconds. This is the fundamental trade-off behind database settings: a database that promises durability, the D in ACID (<a class="xref" data-note="sql_transactions">Transactions &amp; Concurrency</a>), must <code>fsync</code> its log before saying "committed", and databases make it affordable by grouping many transactions into one <code>fsync</code> ("group commit"). Message systems like Kafka make a similar trade, often relying on copies on several machines instead of an <code>fsync</code> on each (<a class="xref" data-note="de_kafka">Apache Kafka</a>).</p>
   <p>A second danger is a crash <em>during</em> a write, which can leave a file half old and half new, or truncated. If our script overwrites <code>daily_totals.json</code> in place and crashes halfway, the file is now corrupt and the old version is gone. The standard fix is the <strong>atomic write</strong> pattern: write the new content to a temporary file next to the target, <code>fsync</code> it, then rename it over the original with <code>os.replace</code>. On POSIX file systems a rename within one file system is atomic, meaning other programs see either the complete old file or the complete new file, never a mixture:</p>
   <div class="fx" data-lang="py">import json, os
 
@@ -384,11 +383,11 @@ print(pd.read_parquet("orders.parquet").dtypes.to_dict())   # types survive the 
 for p in ("orders.csv", "orders.csv.gz", "orders.parquet"):
     os.remove(p)</div>
   <div class="fx" data-lang="text">format               size   read all   read amount only
-orders.csv         25.2 MB     275 ms           135 ms
-orders.csv.gz       6.3 MB     332 ms           205 ms
-orders.parquet      6.9 MB      27 ms             9 ms
+orders.csv         25.2 MB     287 ms           129 ms
+orders.csv.gz       6.3 MB     338 ms           212 ms
+orders.parquet      6.9 MB      23 ms             9 ms
 {'order_id': dtype('int64'), 'amount': dtype('float64'), 'city': &lt;StringDtype(na_value=nan)&gt;, 'paid': dtype('bool')}</div>
-  <p>The plain CSV is 25 MB. Gzip shrinks it to about a quarter, but reading it is slightly <em>slower</em> than plain CSV, because the data must be decompressed and then still parsed as text. Parquet is nearly as small as the gzipped CSV and reads several times faster than either CSV, because it stores numbers in binary form that needs no text parsing, and its fast Snappy compression costs almost nothing to undo. The last column is the columnar advantage: reading only the <code>amount</code> column from Parquet took a small fraction of reading the whole file, while the CSV still had to scan every row even with <code>usecols</code>. The final line shows another benefit: Parquet stores the schema, so integers, floats and booleans come back with their types, whereas CSV is just text and every reader has to guess the types again.</p>
+  <p>The plain CSV is 25 MB. Gzip shrinks it to about a quarter, but reading it is slightly <em>slower</em> than plain CSV, because the data must be decompressed and then still parsed as text. Parquet is nearly as small as the gzipped CSV and reads many times faster than either CSV, because it stores numbers in binary form that needs no text parsing, and its fast Snappy compression costs almost nothing to undo. The last column is the columnar advantage: reading only the <code>amount</code> column from Parquet took a small fraction of reading the whole file, while the CSV still had to scan every row even with <code>usecols</code>. The final line shows another benefit: Parquet stores the schema, so integers, floats and booleans come back with their types, whereas CSV is just text and every reader has to guess the types again.</p>
   <p>This is why the standard data lake layout is Parquet files of a few hundred megabytes each in object storage, often split into folders by a column like date (<code>orders/date=2026-11-19/</code>, called partitioning) so that a query for one day reads only that day's files. Spark, DuckDB, BigQuery external tables and pandas all read it natively (<a class="xref" data-note="de_spark">Apache Spark</a>). CSV and JSON remain useful for small files, human inspection and exchanging data with other systems; the details of reading and writing files in Python are in <a class="xref" data-note="py_files">File Handling</a>.</p>
 
   <h2 id="cfs-traps"><span class="num">10</span>Common Mistakes</h2>

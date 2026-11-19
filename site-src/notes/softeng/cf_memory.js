@@ -105,13 +105,13 @@ Object.assign(TOPIC_CONTENT, {
   <p>RAM is measured in gigabytes. A laptop typically has 8–32 GB, a data science workstation 64–256 GB, and large cloud servers have a terabyte or more. On Linux you can see how much there is and how it is being used with <code>free -h</code> (the <code>-h</code> means "human-readable units") or by reading the file <code>/proc/meminfo</code>, which the kernel (the core of the operating system) fills in live:</p>
   <div class="fx" data-lang="text">$ free -h
                total        used        free      shared  buff/cache   available
-Mem:            15Gi       830Mi        14Gi        12Mi       881Mi        14Gi
+Mem:            15Gi       739Mi        14Gi        12Mi       1.0Gi        14Gi
 Swap:             0B          0B          0B
 $ grep -E '^(MemTotal|MemFree|MemAvailable|Cached|SwapTotal)' /proc/meminfo
 MemTotal:       16473756 kB
-MemFree:        15046052 kB
-MemAvailable:   15623148 kB
-Cached:           709668 kB
+MemFree:        14991000 kB
+MemAvailable:   15716836 kB
+Cached:           851920 kB
 SwapTotal:             0 kB</div>
   <p>This virtual machine has about 15 GiB of RAM (MemTotal is given in kilobytes, 16,473,756 kB). The "used" column is what programs are holding, which is small here. The "buff/cache" column is RAM the operating system is using to keep recently read files, so that reading them again is fast; the OS gives this memory back the moment a program needs it, which is why the most useful number is "available", not "free". Beginners often panic when "free" is low on a long-running server, but if "available" is high, the machine is fine. The "Swap" line is disk space used as overflow when RAM runs out; this machine has none, which we will come back to in the virtual memory section.</p>
   <p>When your data does not fit in RAM, you have three choices: get a machine with more RAM, make the data smaller (better types, fewer columns, as shown at the end of this page), or stop loading it all at once and process it in pieces, either by reading in chunks or by using a tool like Spark that spreads the data over many machines (<a class="xref" data-note="de_spark">Apache Spark</a>). Knowing roughly how big your data is in memory is therefore a basic skill, and it starts with understanding what happens between RAM and the CPU.</p>
@@ -157,10 +157,10 @@ print(f"in-order gather:  {seq*1000:6.1f} ms")
 print(f"random gather:    {rnd*1000:6.1f} ms")</div>
   <div class="fx" data-lang="text">bytes: 128000000  stored row by row: True
 strides (bytes to next row, next column): (32000, 8)
-row by row:         13.4 ms
-column by column:   50.1 ms
-in-order gather:    68.0 ms
-random gather:     282.0 ms</div>
+row by row:         14.5 ms
+column by column:   52.5 ms
+in-order gather:    54.6 ms
+random gather:     245.7 ms</div>
   <p>The strides <code>(32000, 8)</code> say that moving to the next column means stepping 8 bytes (the very next number), while moving to the next row means jumping 32,000 bytes (4,000 numbers × 8 bytes). Summing row by row walks through memory in order: every cache line brings in eight useful numbers and the prefetcher stays ahead. Summing column by column reads one number, then jumps 32,000 bytes for the next, so each number needs its own cache line and seven-eighths of every line is wasted; it was several times slower even though it did exactly the same additions. The last two lines are the same lesson in a stronger form: gathering all 16 million values in their memory order versus in a random order does identical work, but the random order defeats both the cache lines and the prefetcher and takes several times as long.</p>
   <p>The same idea explains why NumPy is so much faster than a plain Python list for numeric work. A NumPy array stores raw 8-byte numbers side by side in one block, which is perfect for the cache. A Python list does not store numbers at all; it stores <strong>pointers</strong> (addresses, explained in the next section) to separate float objects scattered around memory, and each of those objects carries extra bookkeeping:</p>
   <div class="fx" data-lang="py">import sys, time
@@ -182,7 +182,7 @@ print(f"sum(list): {(t1-t0)*1000:.0f} ms   arr.sum(): {(t2-t1)*1000:.1f} ms   sa
 list (just the pointers): 89 MB
 list incl. float objects: 329 MB
 numpy array: 80 MB
-sum(list): 94 ms   arr.sum(): 12.0 ms   same: True</div>
+sum(list): 58 ms   arr.sum(): 5.2 ms   same: True</div>
   <p>Each Python float is a full object of 24 bytes (a reference count, a pointer to its type, and only then the 8-byte number), and the list adds an 8-byte pointer per item on top, so ten million floats take over 300 MB as a list against 80 MB as an array. Summing them is also several times faster with NumPy, partly because NumPy's loop is compiled C code rather than the Python interpreter, and partly because it streams through contiguous memory instead of following ten million pointers to scattered objects. This is the "vectorisation" advice you hear in data science, explained from the hardware up.</p>
   <p>You meet locality everywhere once you know to look for it. Pandas stores each column as its own array, so operations down a column are fast and looping over rows with <code>iterrows()</code> is slow. Column-oriented file formats such as Parquet and column-store databases exist because analytics reads a few columns of many rows. Matrix multiplication libraries split matrices into small tiles that fit in cache. And in PyTorch, a tensor that has been transposed becomes "non-contiguous" and some operations first copy it into a fresh contiguous block for exactly this reason.</p>
 
@@ -205,11 +205,11 @@ amounts = np.array([120.0, 80.0, 45.0, 60.0])
 base = amounts.ctypes.data           # address of the first byte of the data
 print("address of amounts[0]:", hex(base))
 print("amounts[1] is", amounts.itemsize, "bytes further on, amounts[3] is", 3 * amounts.itemsize)</div>
-  <div class="fx" data-lang="text">id(orders): 139691741462912 = 0x7f0c84a0c180
-id(alias):  139691741462912  same object: True
+  <div class="fx" data-lang="text">id(orders): 140557892370816 = 0x7fd62f3ec180
+id(alias):  140557892370816  same object: True
 [120, 80, 45, 60]
-id(copy):   139691743336000  same object: False
-address of amounts[0]: 0x1af623e0
+id(copy):   140557894374976  same object: False
+address of amounts[0]: 0x1cbe73e0
 amounts[1] is 8 bytes further on, amounts[3] is 24</div>
   <p>The number from <code>id()</code> is just a large integer; written in hexadecimal (base 16, the usual way to write addresses) it is <code>0x7f…</code>, a typical address for objects in a 64-bit Linux process. <code>alias = orders</code> did not copy the list; it made a second name holding the same reference, so both names show the same address, <code>is</code> is <code>True</code>, and appending through <code>alias</code> changed what <code>orders</code> shows. <code>list(orders)</code> built a new list at a different address. This is the same behaviour that surprises beginners when a function modifies a list they passed in, and it is covered in depth in <a class="xref" data-note="py_values">Values, References &amp; Mutability</a>. The NumPy lines show the other side: an array's numbers sit at consecutive addresses, each one <code>itemsize</code> (8) bytes after the last, which is precisely what makes it cache-friendly.</p>
   <p>Two practical points follow. First, <code>id()</code> values are only unique among objects alive at the same time; once an object is freed, a new object can be given the same address. Second, the address you see is not a physical position on a RAM chip but a <em>virtual</em> address that the operating system translates, an idea we come to in the virtual memory section. With addresses understood, we can look at the two main regions a program keeps its data in.</p>
@@ -433,7 +433,7 @@ bounded, batch 3:   0.9 MB in use, cache size 1000</div>
 4096
 $ grep -E '^(MemTotal|MemAvailable|SwapTotal|SwapFree|Committed_AS|CommitLimit|Hugepagesize)' /proc/meminfo
 MemTotal:       16473756 kB
-MemAvailable:   15451772 kB
+MemAvailable:   15356032 kB
 SwapTotal:             0 kB
 SwapFree:              0 kB
 CommitLimit:     8236876 kB
@@ -463,12 +463,12 @@ print("after filling:  ", status())
 print("100 MB /", 4096, "bytes per page =", 100_000_000 // 4096, "pages")
 huge = [l for l in open("/proc/self/smaps_rollup") if l.startswith("AnonHugePages")][0]
 print("held in 2 MB huge pages:", int(huge.split()[1]) // 1024, "MB")</div>
-  <div class="fx" data-lang="text">start:           virtual   238 MB   resident   28 MB   page faults so far 3771
-after np.empty:  virtual   333 MB   resident   28 MB   page faults so far 3772
-after filling:   virtual   333 MB   resident  124 MB   page faults so far 4170
+  <div class="fx" data-lang="text">start:           virtual   238 MB   resident   28 MB   page faults so far 3774
+after np.empty:  virtual   333 MB   resident   28 MB   page faults so far 3775
+after filling:   virtual   333 MB   resident  124 MB   page faults so far 4173
 100 MB / 4096 bytes per page = 24414 pages
 held in 2 MB huge pages: 94 MB</div>
-  <p>This is virtual memory in action. <code>np.empty</code> asked for 100 MB, and the process's virtual size went up by about 95 MiB immediately, but its <strong>resident</strong> memory (RSS, the RAM it actually occupies) did not move at all: the pages were promised, not provided. Only when <code>a[:] = 1.0</code> wrote to every page did the faults happen and resident memory rise by the same amount. You might expect 24,414 faults, one per 4 KB page, but there were only a few hundred, because the kernel backed most of this large block with 2 MB huge pages (the last line), each covering 512 small pages with a single fault. This is why a program's "virtual" size in <code>top</code> is often huge and harmless, while its resident size is the number to watch.</p>
+  <p>This is virtual memory in action. <code>np.empty</code> asked for 100 MB, and the process's virtual size went up by about 95 MiB immediately, but its <strong>resident</strong> memory (RSS, the RAM it actually occupies) barely moved: the pages were promised, not provided. Only when <code>a[:] = 1.0</code> wrote to every page did the faults happen and resident memory rise by the same amount. You might expect 24,414 faults, one per 4 KB page, but there were only a few hundred, because the kernel backed most of this large block with 2 MB huge pages (the last line), each covering 512 small pages with a single fault. This is why a program's "virtual" size in <code>top</code> is often huge and harmless, while its resident size is the number to watch.</p>
   <p>What if programs actually use more memory than there is RAM? Linux can move pages that have not been used recently out to a reserved area on disk called <strong>swap</strong>, freeing their frames for other work, and bring them back with a major page fault when they are next touched. Swap is a safety net that lets a machine survive a short spike. But we saw that a disk read is tens of thousands of times slower than a RAM read, so if the working data truly does not fit, the machine spends its time moving pages in and out instead of computing. This is called <strong>thrashing</strong>: the disk light is constantly on and everything slows to a crawl. If there is no swap, as on this VM and on most Kubernetes nodes and containers, Linux has another last resort, the <strong>OOM killer</strong> (out of memory killer), which picks a process using a lot of memory and terminates it. That is the meaning of a training job that just prints "Killed", or a container that exits with code 137: it asked for more memory than its limit (see <a class="xref" data-note="se_docker">Docker</a> and <a class="xref" data-note="mlops_k8s">Kubernetes</a> for memory limits).</p>
   <p>One more memory problem is worth a paragraph. <strong>Memory fragmentation</strong> happens when free memory is broken into many small pieces scattered between blocks that are still in use, so that even though plenty of memory is free in total, there is no single piece big enough for a large request. It is like a car park with twenty empty spaces scattered one by one between parked cars: a bus still cannot park. Fragmentation shows up as a long-running process whose memory use stays high after it has freed many objects, because the allocator cannot hand partly used blocks back to the operating system. Virtual memory hides fragmentation of physical RAM (pages can go in any frame), but not inside a process's heap. In GPU work you meet it in PyTorch error messages that mention "reserved but unallocated" memory.</p>
 
@@ -562,8 +562,8 @@ arr2 = np.array(values)                    # one conversion at the end
 t_good = time.perf_counter() - t0
 print(f"np.append in a loop: {t_bad * 1000:6.0f} ms")
 print(f"list, then np.array: {t_good * 1000:6.1f} ms   equal: {np.array_equal(arr, arr2)}")</div>
-  <div class="fx" data-lang="text">np.append in a loop:   1672 ms
-list, then np.array:    5.0 ms   equal: True</div>
+  <div class="fx" data-lang="text">np.append in a loop:   1845 ms
+list, then np.array:    4.6 ms   equal: True</div>
   <p>Collecting values in a Python list (which over-allocates, as we saw) and converting once at the end, or preallocating with <code>np.empty(n)</code> and filling it, avoids the repeated copies; here it was many times faster.</p>
   <p>Finally, three habits cause most memory incidents in practice. Unbounded caches and lists that only ever grow turn into leaks in long-running services; give every cache a <code>maxsize</code>. Deleting a variable does not free a large object while another name, a list or a notebook output still refers to it; check for other references. And confusing virtual size with real usage leads to false alarms: watch resident memory (RSS), and on Linux treat "available", not "free", as the memory you have left.</p>
 

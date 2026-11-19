@@ -140,7 +140,7 @@ write(3, "east,92469\nnorth,93266\nsouth,950"..., 35) = 35
 close(3)                                = 0
 $ strace -c -o counts.txt python3 report.py &gt; /dev/null
 $ tail -1 counts.txt
-100.00    0.002773           4       669        85 total</div>
+100.00    0.005728           8       675        84 total</div>
   <p>This is the report job seen from the kernel's side. Python's <code>open("sales.csv")</code> became an <code>openat</code> call, and the kernel answered <code>3</code>: a small number, called a <strong>file descriptor</strong>, that the program uses from then on to refer to that open file. Reading the CSV became a handful of <code>read</code> calls of up to 8192 bytes each, because Python reads in chunks rather than asking the kernel once per row: 8192 + 8192 + 4200 bytes is the whole 20,584-byte file, and the fourth read returned 0, which is how the kernel says "end of file". Writing the summary became one <code>openat</code> with the flags <code>O_WRONLY|O_CREAT|O_TRUNC</code> ("write only, create it if missing, empty it if present", which is exactly what mode <code>"w"</code> means), one <code>write</code> of 35 bytes and a <code>close</code>. The last line is the surprise: the whole run made about 670 system calls, most of them while Python itself was starting up and loading its modules.</p>
   <p>Python's <code>os</code> module exposes many system calls almost directly, which makes the idea concrete:</p>
   <div class="fx" data-lang="py">import os
@@ -166,14 +166,14 @@ for line in open("/proc/self/status"):           # the kernel's record of this p
     if line.split(":")[0] in wanted:
         print(line.rstrip())
 print("open file descriptors:", sorted(os.listdir("/proc/self/fd"), key=int))</div>
-  <div class="fx" data-lang="text">my PID: 26264   my parent's PID: 26243
+  <div class="fx" data-lang="text">my PID: 28239   my parent's PID: 28218
 Name:	python3
 State:	R (running)
-Pid:	26264
-PPid:	26243
+Pid:	28239
+PPid:	28218
 Uid:	0	0	0	0
 VmSize:	   35552 kB
-VmRSS:	   11088 kB
+VmRSS:	   11128 kB
 Threads:	1
 open file descriptors: ['0', '1', '2', '3']</div>
   <p>The process found its own PID, and the PID of its parent (the shell that started it). The <code>/proc/self/status</code> lines are the kernel's record: the program is <code>python3</code>, its state is <code>R</code> (running), it runs as user ID 0 (root, in this VM), and it has exactly one thread. <code>VmSize</code> is the total address space it has reserved, about 35 MB, while <code>VmRSS</code> (resident set size) is the part actually sitting in physical RAM right now, about 11 MB; the difference is memory that has been reserved but not yet touched. Finally, its open files are descriptors 0, 1 and 2, the standard streams, plus 3, the <code>/proc/self/fd</code> folder it was in the middle of listing.</p>
@@ -186,8 +186,8 @@ subprocess.run(["ps", "-o", "pid,ppid,stat,rss,etime,cmd", "-p", f"{os.getpid()}
 child.wait()
 print("child finished with exit code", child.returncode)</div>
   <div class="fx" data-lang="text">  PID  PPID STAT   RSS     ELAPSED CMD
-26265 26243 S    13372       00:00 python3 ps_demo.py
-26266 26265 R     8160       00:00 python3 -c import time; time.sleep(2)  # pretend report job
+28240 28218 S    13416       00:00 python3 ps_demo.py
+28241 28240 R     8924       00:00 python3 -c import time; time.sleep(2)  # pretend report job
 child finished with exit code 0</div>
   <p>The two rows show the parent-child relationship directly: the child's <code>PPID</code> is the parent's <code>PID</code>. <code>STAT</code> is the state, where <code>R</code> means running or ready to run and <code>S</code> means sleeping (waiting for something; here the parent was waiting for <code>ps</code> to finish). <code>RSS</code> is resident memory in kilobytes, and <code>ELAPSED</code> is how long it has existed. Every process on a Linux machine is started by another process, so together they form a family tree with process 1 at the root.</p>
   <p>How does a process start another? On Linux and macOS it happens in two steps. The system call <code>fork()</code> makes an almost exact copy of the calling process, and then the copy usually calls <code>exec()</code>, which replaces its program with a different one (this is what <code>subprocess</code> and the shell do behind the scenes). Watching <code>fork</code> on its own shows the most important property of processes, which is that their memory is separate:</p>
@@ -201,8 +201,8 @@ if pid == 0:                         # fork() returns 0 in the child
     os._exit(0)
 os.waitpid(pid, 0)                   # the parent waits for its child to finish
 print(f"parent: PID {os.getpid()}, child was {pid}, rows_done = {rows_done}")</div>
-  <div class="fx" data-lang="text">child : PID 26283, parent 26279, rows_done = 150
-parent: PID 26279, child was 26283, rows_done = 100</div>
+  <div class="fx" data-lang="text">child : PID 28253, parent 28252, rows_done = 150
+parent: PID 28252, child was 28253, rows_done = 100</div>
   <p><code>fork()</code> returns twice, once in each process: in the child it returns 0, and in the parent it returns the child's PID, which is how the code knows which branch it is in. Both processes started with <code>rows_done = 100</code>, because the child got a copy of the parent's memory. The child then added 50 and printed 150, yet the parent still printed 100. The child changed its own copy, and nothing it does can change the parent's memory. (Linux makes this copy cheap with <strong>copy-on-write</strong>: parent and child share the same physical memory pages until one of them writes to a page, and only then is that page copied.)</p>
   <p>The parent also called <code>waitpid</code> to collect its child's exit status. A process that has finished but whose parent has not yet collected that status is a <strong>zombie</strong> (state <code>Z</code> in <code>ps</code>); it uses no CPU or memory but still occupies a slot in the process table. A process whose parent dies first is an <strong>orphan</strong>, and it is adopted by process 1. This isolation is exactly why <code>multiprocessing</code>, Spark executors and the worker processes of a web server such as Gunicorn are separate processes: if one crashes, the others survive, and none of them can corrupt the others' memory. The price is that processes cannot simply share Python objects; data has to be copied between them.</p>
 
@@ -228,11 +228,11 @@ print([line for line in status.splitlines() if line.startswith("Threads")][0])
 for t in threads:
     t.join()
 print(f"main   PID {os.getpid()}  thread id {threading.get_native_id()}  results = {results}")</div>
-  <div class="fx" data-lang="text">north  PID 26284  thread id 26286
-south  PID 26284  thread id 26288
-east   PID 26284  thread id 26294
+  <div class="fx" data-lang="text">north  PID 28254  thread id 28255
+south  PID 28254  thread id 28256
+east   PID 28254  thread id 28257
 Threads:	4
-main   PID 26284  thread id 26284  results = ['north', 'south', 'east']</div>
+main   PID 28254  thread id 28254  results = ['north', 'south', 'east']</div>
   <p>All three worker threads report the same PID as the main thread, because they live in the same process, but each has its own thread ID: the kernel tracks and schedules them separately. (Notice that the main thread's ID equals the PID; on Linux the first thread's ID is the process ID.) While they were running, <code>/proc/self/status</code> reported <code>Threads: 4</code>, the main thread plus three workers. And all three appended to the one <code>results</code> list, so the main thread sees all three shop names without any copying. Compare this with the <code>fork</code> example, where the child's change never reached the parent.</p>
   <figure class="viz"><svg viewBox="0 0 620 220" width="620">
 <text x="150" y="16" text-anchor="middle" font-size="12">two processes</text>
@@ -264,7 +264,7 @@ main   PID 26284  thread id 26284  results = ['north', 'south', 'east']</div>
   <p>You meet both every day. A web browser runs each tab as a separate process so one crashing page does not take down the others. PyTorch's <code>DataLoader</code> with <code>num_workers</code> greater than zero uses worker processes, while NumPy's matrix multiply quietly uses several threads inside your one Python process. A FastAPI or Flask server may run several worker processes, each with threads or an event loop inside.</p>
 
   <h2 id="cfo-multi"><span class="num">05</span>Multitasking, Concurrency and Parallelism</h2>
-  <p>Your laptop is running a browser, a music player, a chat app and your report job all at the same time, yet it may have only a few CPU cores, and right now this VM shows hundreds of processes and threads on 4 cores. If each core can only run one thread at a time, how do hundreds of programs all seem to be running?</p>
+  <p>Your laptop is running a browser, a music player, a chat app and your report job all at the same time, yet it may have only a few CPU cores, and even this quiet VM has more than a hundred threads alive on its 4 cores. If each core can only run one thread at a time, how do all of them seem to be running at once?</p>
   <p>The answer is <strong>multitasking</strong>: the OS runs many tasks on a few cores by switching between them very quickly, giving each a few milliseconds of CPU time in turn, so fast that to a human they all appear to run continuously. Modern operating systems use <strong>preemptive multitasking</strong>, which means the OS does not wait for a program to give up the CPU politely; a hardware timer interrupts the running program at regular intervals and the kernel decides who runs next. (Old systems used cooperative multitasking, where each program had to hand back control itself, and one badly written program could freeze the whole machine.) <strong>Multithreading</strong> is the same idea inside one program: a process runs several threads, and the OS schedules each of them like any other task.</p>
   <p>This leads to two words that people often mix up. <strong>Concurrency</strong> means several tasks are in progress during the same period of time, making progress by taking turns, even if only one is running at any instant. <strong>Parallelism</strong> means several tasks are literally executing at the same instant, on different CPU cores. A single cook preparing three dishes by chopping for one, stirring another, then checking the oven, is concurrent: three dishes are in progress, but one pair of hands does one thing at a time. Three cooks each making one dish is parallel. Concurrency is about structuring work so that waiting does not waste time; parallelism is about doing more work per second by using more hardware. You can have concurrency on one core, but parallelism needs several.</p>
   <p>Python adds an important twist. The standard CPython interpreter has a <strong>Global Interpreter Lock</strong> (GIL), a lock that lets only one thread run Python code at a time within a process. Threads still help when the work is mostly waiting (for the network, a disk or a database), because a thread releases the GIL while it waits. But for pure CPU work, Python threads take turns rather than running in parallel. The fix for CPU-heavy Python is several processes, each with its own interpreter and its own GIL. Here is the same counting work done four ways on this 4-core VM:</p>
@@ -290,9 +290,9 @@ if __name__ == "__main__":
     print(f"{'one after another':22} {time.perf_counter() - start:.2f} s")
     timed("4 threads", ThreadPoolExecutor)
     timed("4 processes", ProcessPoolExecutor)</div>
-  <div class="fx" data-lang="text">one after another      0.70 s
-4 threads              0.64 s
-4 processes            0.24 s</div>
+  <div class="fx" data-lang="text">one after another      0.63 s
+4 threads              0.62 s
+4 processes            0.33 s</div>
   <p>The timings are approximate and vary from run to run, but the pattern is reliable. Four counting tasks one after another took about half a second. Four threads were no faster, and actually a little slower, because they took turns holding the GIL and paid the cost of switching between each other: concurrency without parallelism. Four processes finished in about half the time, because each process had its own interpreter and the OS ran them on different cores at the same moment: real parallelism. (They are not a full four times faster because starting the worker processes and sending them the work has a cost of its own.) Python 3.13 also offers an experimental "free-threaded" build without the GIL, but the standard build used by most projects still has it.</p>
   <p>The practical rule follows directly: use threads, or <code>asyncio</code>, for work that waits (calling APIs, downloading files, querying databases), and use processes for work that computes (feature engineering in pure Python, simulations). Libraries such as NumPy, pandas and PyTorch release the GIL inside their C code, which is why their heavy operations can use several cores even from one Python thread. The details and the right tool for each case are in <a class="xref" data-note="py_concurrency">Concurrency Overview</a>, <a class="xref" data-note="py_threading">Threading</a> and <a class="xref" data-note="py_multiprocessing">Multiprocessing</a>.</p>
 
@@ -328,8 +328,8 @@ if __name__ == "__main__":
     for j in jobs: j.start()
     for j in jobs: j.join()</div>
   <div class="fx" data-lang="text">sleeper  {'voluntary': 50, 'nonvoluntary': 0}
-busy-1   {'voluntary': 1, 'nonvoluntary': 125}
-busy-2   {'voluntary': 1, 'nonvoluntary': 125}</div>
+busy-1   {'voluntary': 1, 'nonvoluntary': 124}
+busy-2   {'voluntary': 1, 'nonvoluntary': 124}</div>
   <p>The sleeper slept 50 times and made exactly 50 voluntary switches: each <code>sleep</code> handed the CPU back, and it was never forced off. The two busy workers were deliberately pinned to the same core and never waited for anything, so neither ever gave the CPU away voluntarily; instead the kernel pushed each one off about 125 times in one second. That means the core was being handed back and forth about 250 times a second, every 4 milliseconds or so: that 4 ms is the length of each turn on this machine.</p>
   <figure class="viz"><svg viewBox="0 0 620 170" width="620">
 <defs><marker id="cfo-a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
@@ -367,8 +367,8 @@ if __name__ == "__main__":
     total = sum(r.value for r in results.values())
     for n, r in results.items():
         print(f"nice {n:2}: {r.value:&gt;11,} loop turns ({r.value / total:.0%} of the CPU)")</div>
-  <div class="fx" data-lang="text">nice  0:  23,163,701 loop turns (90% of the CPU)
-nice 10:   2,575,216 loop turns (10% of the CPU)</div>
+  <div class="fx" data-lang="text">nice  0:  21,557,577 loop turns (90% of the CPU)
+nice 10:   2,376,638 loop turns (10% of the CPU)</div>
   <p>Both workers were ready to run the entire time, but the scheduler gave the nice-0 worker about nine times as much CPU (roughly 90% against 10%), because each step on the nice scale changes a thread's share by about 25%. This is useful in practice: if you start a long model-training job with <code>nice -n 10 python3 train.py</code>, your notebook and editor stay responsive, and the training job still gets every spare cycle when nothing else wants the CPU. Kubernetes and Docker offer a different control, CPU limits and requests, which are enforced by the same kernel scheduler through a feature called cgroups.</p>
 
   <h2 id="cfo-deadlock"><span class="num">07</span>Deadlock</h2>
@@ -409,10 +409,10 @@ thread B: finished</div>
   <p>A disk is, physically, just a huge numbered array of storage blocks. Programs, however, want named files in folders. Providing that view is the job of a <strong>file system</strong>: the part of the OS that organises a disk's raw blocks into named files and directories, keeps track of which blocks belong to which file, and records information about each file such as its size, owner and permissions. Common ones are ext4 and XFS on Linux, APFS on macOS and NTFS on Windows; how they lay data out on the disk is covered in <a class="xref" data-note="cf_storage">Storage: HDD, SSD &amp; File Systems</a>. From a program's point of view, the OS offers a simple, uniform interface: open a file by name, get a file descriptor, read and write bytes, close it, exactly as the <code>strace</code> output showed. Unix systems push this idea further with the motto "everything is a file": the terminal, pipes between programs, network connections and even the kernel's process information under <code>/proc</code> are all used through the same file-descriptor calls.</p>
   <p>On a machine shared by many users and services, the OS must also decide who may use each file. Unix-style systems attach three pieces of information to every file: an <strong>owner</strong> (a user), a <strong>group</strong>, and a set of <strong>permissions</strong> saying what the owner, the group and everybody else may do. There are three kinds of access: <strong>r</strong>ead, <strong>w</strong>rite and e<strong>x</strong>ecute (for a directory, "execute" means being allowed to enter it). It is like a building where each room has a sign saying what the owner, the owner's team and visitors may do inside. The kernel checks these permissions on every <code>open</code>. Here a private file is created and another user, <code>nobody</code>, tries to read it:</p>
   <div class="fx" data-lang="text">$ ls -l report.py sales.csv
--rw-r--r-- 1 root root   347 Nov 19 05:33 report.py
+-rw-r--r-- 1 root root   347 Nov 19 05:39 report.py
 -rw-r--r-- 1 root root 20584 Nov 19 05:26 sales.csv
 $ echo "salaries" &gt; private.txt &amp;&amp; chmod 600 private.txt &amp;&amp; ls -l private.txt
--rw------- 1 root root 9 Nov 19 05:33 private.txt
+-rw------- 1 root root 9 Nov 19 05:40 private.txt
 $ runuser -u nobody -- cat private.txt
 cat: private.txt: Permission denied
 $ chmod 644 private.txt &amp;&amp; runuser -u nobody -- cat private.txt
@@ -470,7 +470,7 @@ SIGKILL (signal  9) -&gt; exit code -9: nothing printed, killed instantly</div>
   <p>Linux hands out memory optimistically. When a program asks for memory, the kernel usually says yes immediately but only finds real RAM for each page when the program first writes to it (the reserved-but-untouched gap between <code>VmSize</code> and <code>VmRSS</code> earlier is exactly this). Most of the time this works well, because programs often reserve more than they use. But if the programs on the machine really do touch more memory than exists, and there is no swap space on disk to push pages out to, the kernel has a problem it must solve immediately, or the whole system will freeze. Its last resort is the <strong>OOM killer</strong> (out-of-memory killer): a part of the kernel that, when memory is exhausted, chooses a process and kills it with SIGKILL to free its memory. It is like a lifeboat that is about to sink: someone has to go overboard so that everyone else survives, and the choice is made by a rule, not by asking.</p>
   <div class="fx" data-lang="text">$ grep -E 'MemTotal|MemAvailable|SwapTotal' /proc/meminfo
 MemTotal:       16473756 kB
-MemAvailable:   15702032 kB
+MemAvailable:   15536416 kB
 SwapTotal:             0 kB
 $ cat /proc/self/oom_score_adj
 0</div>
