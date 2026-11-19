@@ -101,8 +101,8 @@ print(f"one call per order     : ~{one_by_one_ms:.0f} ms")</div>
     50001          1.1      5     0 Dosa Corner         24.7
     50002          2.3      2     0 Pizza Point         27.0
     50003          6.5      5     0 Dosa Corner         42.6
-one call for 1000 orders: 22.7 ms
-one call per order     : ~2170 ms</div>
+one call for 1000 orders: 22.6 ms
+one call per order     : ~2103 ms</div>
   <p>The first three rows are what the app will show tomorrow, for example 24.7 minutes for a 1.1 km Dosa Corner order. The timings, which are approximate and vary from run to run, tell the real story: one call for all 1,000 orders took a few tens of milliseconds, while one call per order would have taken a couple of seconds, roughly a hundred times more. The model does the same arithmetic in both cases, walking each order down 300 small trees. The difference is the fixed <strong>per-call overhead</strong>: every call to <code>predict</code> builds a DataFrame, checks the column names and types, allocates arrays and so on, and that cost is the same whether the call carries one row or a thousand. A batch job pays it once; a real-time server pays it on every request, because each request arrives alone. We will come back to this when we look at batching in section 06.</p>
   <p>Streaming needs a message broker such as <a class="xref" data-note="de_kafka">Kafka</a>, which this page cannot run, so here is the shape of a streaming scorer as a sketch. It is just a loop that never ends: read an event, build features, predict, publish the new ETA on another stream.</p>
   <div class="fx" data-lang="py"># stream_eta.py: re-score the ETA whenever a rider's GPS ping arrives (sketch: needs a Kafka broker)
@@ -155,7 +155,7 @@ for _ in range(20):
 print("order 2   :", r.status_code, r.json(), f"({(time.perf_counter() - t0) / 20 * 1000:.1f} ms per request)")
 r = client.post("/predict", json=bad)
 print("bad order :", r.status_code, r.json())</div>
-  <div class="fx" data-lang="text">order 2   : 200 {'eta_minutes': 55.0} (65.1 ms per request)
+  <div class="fx" data-lang="text">order 2   : 200 {'eta_minutes': 55.0} (74.5 ms per request)
 bad order : 200 {'eta_minutes': 56.2}</div>
   <p>It works, in the sense that order 2 gets a sensible answer of 55.0 minutes. But two problems are already visible. The first is speed: each request takes tens of milliseconds, and almost all of that is <code>joblib.load</code> reading the model file again on every single request. The second is worse. The "bad order" claims a 120 km trip, rain equal to 2 (rain is supposed to be 0 or 1) and a restaurant, "Momo Hut", that Biteful has never seen. The server did not complain at all; it returned 200 OK with an ETA of 56.2 minutes. The feature function quietly turned the unknown restaurant into four zero columns, and the tree model, which cannot extrapolate beyond the distances it saw in training, treated 120 km roughly like 8 km. A customer would be shown a confident, meaningless number. A model will happily produce an output for any numbers you give it, so the server must decide what counts as a valid question before the model is asked.</p>
   <p>That decision is called <strong>input validation</strong>: checking that every request has the right fields, types and ranges before doing any work. Think of a restaurant's order counter. A good cashier refuses "one pizza from the dosa counter" at the till, rather than letting it reach the kitchen and come back as a strange plate. In FastAPI, validation is done by declaring a <strong>Pydantic</strong> model, a class that describes the shape of the data. When an endpoint's parameter has that type, FastAPI parses the request body into it and, if anything does not fit, rejects the request automatically with HTTP status <strong>422 Unprocessable Content</strong>, listing every problem. Our handler code never even runs.</p>
@@ -255,8 +255,8 @@ if __name__ == "__main__":                          # try it in-process
             r = client.post("/predict", json=order2)
         print("order 2 :", r.json(), f"({(time.perf_counter() - t0) / 20 * 1000:.1f} ms per request)")
     print("after the with block, state =", state)   # leaving "with" ran the shutdown half</div>
-  <div class="fx" data-lang="text">startup : model v2 loaded in 0.871 s
-order 2 : {'eta_minutes': 55.0, 'model_version': '2'} (6.5 ms per request)
+  <div class="fx" data-lang="text">startup : model v2 loaded in 0.764 s
+order 2 : {'eta_minutes': 55.0, 'model_version': '2'} (7.2 ms per request)
 shutdown: model released
 after the with block, state = {}</div>
   <p>Follow the output line by line. Entering the <code>with TestClient(app)</code> block started the server, which ran the startup half of the lifespan: the "startup" line shows the model being loaded once, in well under a second. Then twenty requests ran at a few milliseconds each, compared with tens of milliseconds in the naive server, because no request ever touches the model file. The response also carries <code>"model_version": "2"</code>; returning the version with every answer means any ETA that appears in a log or a complaint can be traced to the exact model that produced it. Leaving the <code>with</code> block stopped the server, which ran the shutdown half: the model was released and <code>state</code> is empty again.</p>
@@ -278,7 +278,7 @@ with TestClient(app) as client:       # entering runs the startup half (model lo
     print("after startup   /ready :", client.get("/ready").status_code, client.get("/ready").json())</div>
   <div class="fx" data-lang="text">before startup  /health: 200 {'status': 'ok'}
 before startup  /ready : 503 {'ready': False}
-startup : model v2 loaded in 0.742 s
+startup : model v2 loaded in 0.731 s
 after startup   /health: 200 {'status': 'ok'}
 after startup   /ready : 200 {'ready': True, 'model_version': '2'}
 shutdown: model released</div>
@@ -322,10 +322,10 @@ print(f"whole request over 500 calls: mean {full.mean():.2f}  p50 {p50:.2f}  p95
       f"p99 {p99:.2f}  max {full.max():.2f} ms")
 print(f"where the median goes: build_features {np.median(feats):.2f} ms | model.predict "
       f"{np.median(model_only):.2f} ms | HTTP + validation + JSON {p50 - np.median(feats) - np.median(model_only):.2f} ms")</div>
-  <div class="fx" data-lang="text">startup : model v2 loaded in 0.72 s
+  <div class="fx" data-lang="text">startup : model v2 loaded in 0.777 s
 shutdown: model released
-whole request over 500 calls: mean 5.75  p50 5.53  p95 7.57  p99 8.97  max 10.52 ms
-where the median goes: build_features 0.93 ms | model.predict 0.68 ms | HTTP + validation + JSON 3.93 ms</div>
+whole request over 500 calls: mean 5.58  p50 5.36  p95 7.06  p99 8.30  max 15.75 ms
+where the median goes: build_features 0.85 ms | model.predict 0.56 ms | HTTP + validation + JSON 3.95 ms</div>
   <p>The first line shows a median of a few milliseconds, with p95 and p99 noticeably higher and a maximum higher still: even an idle server on one machine has a tail, caused by things like garbage collection and the operating system scheduling other work. The second line is the more surprising one. The model itself, 300 trees, takes well under a millisecond. Building the features takes about the same. The largest share is everything around them: receiving the request, parsing and validating the JSON, running the endpoint, and serialising the answer. (The in-process <code>TestClient</code> adds some overhead of its own; a real network adds more, typically a millisecond or so inside a data centre.) This is common for small models, and it tells you where to optimise: making the trees faster would barely change the total. For large neural networks the balance flips and the model dominates, which is where the techniques in sections 08 and 09 come in.</p>
   <p>In production you measure latency continuously, not in a one-off script: the server records each request's duration and a monitoring system such as Prometheus computes percentiles over time (see the monitoring note, <a class="xref" data-note="sd_monitoring">Monitoring, Drift &amp; Retraining</a>). Before launch, a <strong>load test</strong> with a tool like Locust or k6 sends many concurrent requests to find the point where the tail starts to grow, which tells you how much traffic one copy of the server can take.</p>
 
@@ -386,8 +386,8 @@ async def main():
     print("same answers:", np.allclose(alone, batched))
 
 asyncio.run(main())</div>
-  <div class="fx" data-lang="text">no batching : 256 model calls, 515 ms in total
-micro-batch : 8 model calls, 26 ms in total
+  <div class="fx" data-lang="text">no batching : 256 model calls, 486 ms in total
+micro-batch : 8 model calls, 27 ms in total
 same answers: True</div>
   <p>Without batching, 256 requests meant 256 model calls and took about half a second in total. With the micro-batcher, the same 256 requests were served by only 8 model calls (each carrying up to 32 orders) and the whole set finished an order of magnitude faster. The last line confirms that every customer got exactly the same ETA either way; batching changes how the work is grouped, not the answers.</p>
   <p>The price is a little extra waiting. A request that arrives when the queue is empty waits up to the full 5 ms window before its batch runs, so at quiet times batching slightly increases latency, while at busy times it greatly increases <strong>throughput</strong> (requests served per second) and, because the queue no longer builds up, often lowers tail latency too. The two settings, maximum wait and maximum batch size, are the knobs that trade one against the other. For small tree models like ours the gain is real but modest in absolute terms; for neural networks on a GPU it is enormous, because a GPU does the arithmetic for 32 inputs in almost the same time as for one. That is why serving frameworks such as BentoML and NVIDIA Triton build dynamic batching in, so you set the two knobs in a config rather than writing the worker yourself. Large language model servers go further with continuous batching, covered in <a class="xref" data-note="llm_prod">Guardrails, Cost &amp; Deployment</a>.</p>
@@ -433,7 +433,7 @@ print("same predictions as joblib:", np.allclose(model.predict(X), safe.predict(
 Only add the specific types you have reviewed and trust to the &#96;trusted&#96; argument; avoid passing everything reported by get_untrusted_types() just to make a file load.
 types to review: ['sklearn.tree._tree.Tree']
 same predictions as joblib: True</div>
-  <p>The first attempt to load fails on purpose: skops found a type, scikit-learn's internal <code>Tree</code> class, that is not on its built-in safe list, and it refuses to build it until a human approves it. The message even explains the specific risk of that type. We then list the unknown types, approve exactly those after reviewing them (we created this file ourselves), and the loaded model gives the same predictions as the joblib one. A malicious file could not slip <code>os.system</code> past this check, because it would show up in the list of types needing approval. MLflow 3 switched its default format for scikit-learn models to skops for this reason.</p>
+  <p>The first attempt to load fails on purpose: skops found a type, scikit-learn's internal <code>Tree</code> class, that is not on its built-in safe list, and it refuses to build it until a human approves it. The message even explains that this particular type could be abused by a crafted file to crash the process, so approving a type is a real decision about trusting the file, not a formality. We then list the unknown types, approve exactly those after reviewing them (we created this file ourselves), and the loaded model gives the same predictions as the joblib one. A malicious file could not slip <code>os.system</code> past this check, because it would appear in the list of types needing approval, and nobody reviewing that list would approve it.</p>
   <table class="tbl">
     <tr><th>Format</th><th>Can loading run code?</th><th>Works with</th><th>Use for</th></tr>
     <tr><td>pickle / joblib</td><td>yes</td><td>same Python and library versions</td><td>models you built yourself, internal use only</td></tr>
@@ -482,10 +482,10 @@ print(f"550 orders: sklearn {ms_per_call(lambda: model.predict(X_df), 50):.3f} m
   <div class="fx" data-lang="text">graph input: X [None, 7] tensor(float)
 file sizes : joblib 391 KB | onnx 164 KB
 largest difference over 550 orders: 0.000008 minutes
-one order : sklearn 0.695 ms | onnxruntime 0.014 ms
-550 orders: sklearn 3.147 ms | onnxruntime 1.598 ms</div>
+one order : sklearn 1.114 ms | onnxruntime 0.012 ms
+550 orders: sklearn 3.068 ms | onnxruntime 1.116 ms</div>
   <p>Read the output from the top. The graph has one input called <code>X</code> with shape <code>[None, 7]</code>: any number of rows (<code>None</code>) of 7 feature columns, as 32-bit floats. The ONNX file is less than half the size of the joblib file. The largest difference between the two models over 550 orders is a few millionths of a minute, which comes from ONNX using 32-bit floats where scikit-learn uses 64-bit; for practical purposes it is the same model. Always run this comparison after converting, ideally as a test in CI, because converters can silently mishandle unusual settings.</p>
-  <p>The timings are the interesting part. For a single order, ONNX Runtime is many times faster than scikit-learn, because almost all of scikit-learn's time for one row is per-call overhead (checking the DataFrame, validating inputs), which ONNX Runtime does not have. For all 550 orders in one call the two are much closer, because now the actual tree walking dominates and both engines do similar work. So ONNX's biggest win is exactly the real-time, one-request-at-a-time case. Its limits are that not every model converts (custom Python transformers inside a pipeline usually do not), types change from float64 to float32, and text or category columns must be encoded before the graph, as we did with <code>build_features</code>.</p>
+  <p>The timings are the interesting part. For a single order, ONNX Runtime is many times faster than scikit-learn, because almost all of scikit-learn's time for one row is per-call overhead (checking the DataFrame, validating inputs), which ONNX Runtime does not have. For all 550 orders in one call the gap is far smaller, because now the actual tree walking dominates and both engines do similar work. So ONNX's biggest win is exactly the real-time, one-request-at-a-time case. Its limits are that not every model converts (custom Python transformers inside a pipeline usually do not), types change from float64 to float32, and text or category columns must be encoded before the graph, as we did with <code>build_features</code>.</p>
 
   <h2 id="sv-quant"><span class="num">09</span>Quantisation</h2>
   <p>Tree models are small, but neural networks are made of large tables of numbers called <strong>weights</strong>, and each weight is normally stored as a 32-bit float, 4 bytes. A network with a million weights is already 4 MB; a large language model with seven billion weights is 28 GB, which is more memory than most GPUs have. Size matters for serving in three ways: the model must fit in memory, it must be read from memory for every prediction (which is often the slowest part), and it must be shipped to wherever it runs.</p>
