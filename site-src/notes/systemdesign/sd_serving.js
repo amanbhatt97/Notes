@@ -3,101 +3,43 @@ Object.assign(TOPIC_CONTENT, {
   "sd_serving": `<main>
 <h1>Feature Stores &amp; Online/Offline Serving</h1>
   <div class="where"><span>ML System Design</span><span>Serving</span></div>
-  <p class="lead">The framework note ended with a trained ETA model that beats the baseline offline. Now it has to answer for real: Asha opens Biteful at 8:10 pm and 20 restaurant cards each need "34 min", 11,111 times a second at the dinner peak, inside a 60 ms slice of the page. This note follows one need at a time: when to compute (batch, online, streaming), how to spend 60 ms, how features reach the model, what to cache, where the model runs, why live numbers can silently differ from training, and how a new version reaches users safely (shadow, then canary). Same running example throughout: Biteful's ETA, orders 101–108, Dosa Hut, Biryani Bros and Pizza Point.</p>
+  <p class="lead">A trained model sitting in a file on a laptop helps nobody. <strong>Serving</strong> is everything that happens between "the model is trained" and "the right number appears on a user's screen in time": deciding when predictions are computed, getting fresh feature values to the model in a few milliseconds, making sure those values mean exactly what they meant during training, and swapping in a new model version without hurting anyone. Most ML systems that fail in production fail here, not in the training notebook, and interviewers spend a large part of every ML system design round on it. The running example is the one from <a class="xref" data-note="sd_framework">How to Approach ML System Design</a>: Biteful, a food delivery app, shows an estimated delivery time ("34 min") on every restaurant card. When Asha opens the app at 20:11, her feed has 20 cards, the ETA service gets 60 ms of the page's 200 ms, and at the dinner peak it must produce about 11,111 ETAs a second. Every idea on this page is added to that one request.</p>
 
-  <h2 id="ss-fits" class="open"><span class="num">★</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 680 130" width="680">
-    <defs><marker id="ss-t0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
-    <rect x="8" y="22" width="122" height="46" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="69" y="42" text-anchor="middle" font-size="12">1 Framework</text><text x="69" y="58" text-anchor="middle" font-size="10" class="tm">the whole path once</text>
-    <rect x="145" y="22" width="122" height="46" rx="6" class="fg sg" stroke-width="2.5"/><text x="206" y="42" text-anchor="middle" font-size="12" font-weight="700">2 Serving</text><text x="206" y="58" text-anchor="middle" font-size="10" class="tm">answer in 60 ms</text>
-    <rect x="282" y="22" width="122" height="46" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="343" y="42" text-anchor="middle" font-size="12">3 Monitoring</text><text x="343" y="58" text-anchor="middle" font-size="10" class="tm">still right next month?</text>
-    <rect x="419" y="22" width="122" height="46" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="480" y="42" text-anchor="middle" font-size="12">4 Experiments</text><text x="480" y="58" text-anchor="middle" font-size="10" class="tm">is v2 really better?</text>
-    <rect x="556" y="22" width="116" height="46" rx="6" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="614" y="42" text-anchor="middle" font-size="12">5 Case studies</text><text x="614" y="58" text-anchor="middle" font-size="10" class="tm">four full designs</text>
-    <line x1="130" y1="45" x2="143" y2="45" stroke="currentColor" marker-end="url(#ss-t0)"/>
-    <line x1="267" y1="45" x2="280" y2="45" stroke="currentColor" marker-end="url(#ss-t0)"/>
-    <line x1="404" y1="45" x2="417" y2="45" stroke="currentColor" marker-end="url(#ss-t0)"/>
-    <line x1="541" y1="45" x2="554" y2="45" stroke="currentColor" marker-end="url(#ss-t0)"/>
-    <text x="340" y="96" text-anchor="middle" font-size="11">One story across all five notes: Biteful's delivery-time (ETA) prediction</text>
-    <text x="340" y="114" text-anchor="middle" font-size="11" class="tm">this note: the top row of the architecture — request → features → model → "34 min"</text>
-  </svg><figcaption>The ML System Design track in reading order. You are on the green note. Serving comes before monitoring because you can only watch a system that runs.</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: <a class="xref" data-note="sd_framework">How to Approach ML System Design</a></b><span>The framework sized the problem (139 QPS average, 556 at peak, 20 cards, 11,111 ETAs/s, 60 ms), named the features (km, kitchen queue, rain, prep_7d), and drew the architecture. <a class="xref" data-note="api_production">Production Backend</a> gave the boxes (workers, Redis, caching, health checks).</span></li>
-    <li><b>This note adds: the request path in detail</b><span>Batch vs online vs streaming, a computed latency budget, the feature store and feature fetch, caching with a measured hit ratio, model placement and batching, training-serving skew reproduced, and safe release with shadow and canary.</span></li>
-    <li><b>Leads to: <a class="xref" data-note="sd_monitoring">Monitoring, Drift &amp; Retraining</a></b><span>A system that answers in time can still answer wrongly next month. Monitoring watches it; <a class="xref" data-note="sd_experiments">Experiments</a> then proves whether v2 is better. Running these services on real machines is <a class="xref" data-note="mlops_serving">model serving in MLOps</a> and <a class="xref" data-note="mlops_deploy">deployment</a>.</span></li>
-  </ol>
-
-  <h2 id="ss-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
-  <p>The note as one chain. Running example: Asha opens Biteful at 20:11 in Pune. The feed needs ETAs for Dosa Hut (4 km, queue 6), Biryani Bros (3 km, queue 8), Pizza Point (6 km, queue 1) and the brand-new Chai Corner (2 km, no data yet). The model is the framework's linear ETA: 13.87 + 3.25·km + 2.42·queue + 8.71·rain.</p>
-  <ol class="story">
-    <li><b>Batch, online or streaming</b><span>Q: compute the ETA in advance or when asked? → Precomputing every (restaurant, map cell) pair every 5 min costs 20,000 predictions/s and 86% of them are never looked at; nightly is 24 h stale. Online it is: 2,778/s average, 11,111 at peak, with streaming for the queue feature. But online means the user waits…</span></li>
-    <li><b>Latency budget</b><span>Q: how do we fit 20 ETAs into 60 ms? → split it: network 8, fetch 12 ∥ route 15, model 10, post 3 → critical path 36 ms, 24 ms headroom; 20 separate GETs push p99 from 5.1 to 10.0 ms. Where do the 12 ms of features come from?</span></li>
-    <li><b>Feature fetch &amp; feature store</b><span>Q: how do queue and prep_7d reach the model in milliseconds, and the same values reach training? → one definition, offline store (history) + online store (latest), one MGET, defaults for Chai Corner. Many requests ask the same thing…</span></li>
-    <li><b>Caching &amp; precompute</b><span>Q: why recompute the same ETA? → TTL 60 s caches 73.5% of lookups at +0.20 min of error; TTL 300 s caches 85.5% at +1.52 min. Then: where does the model itself run, and how many machines?</span></li>
-    <li><b>Where the model runs &amp; scaling</b><span>Q: embedded, model server or batch job; how to scale? → 20 rows in one call: 0.94 ms vs 9.67 ms for 20 calls; ~1,063 feeds per core-second. Everything runs — but are live inputs the same as training inputs?</span></li>
-    <li><b>Training-serving skew</b><span>Q: why is live worse than offline? → reproduced: serving used straight-line km, training used road km: MAE 1.66 → 3.15, late 42% → 84%; PSI 0.19 on logged km catches it. With skew fixed, how do we release v2 without hurting users?</span></li>
-    <li><b>Shadow deployment</b><span>Q: does v2 even work on real traffic? → mirror requests, show nobody: overall only 2.7 min apart, but Mumbai-in-rain is −9.6 min (a null weather feed). Shadow can't show user impact…</span></li>
-    <li><b>Canary &amp; blue-green</b><span>Q: how few users see v2 first, and how do we undo? → 10% for 10 min = 33,360 requests; 55 errors vs 33.4 expected → p = 0.0004, roll back. Whether v2 is <em>better</em> is the experiments note's job.</span></li>
-  </ol>
-
-  <h2 id="ss-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="ss-map"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">Serving Biteful's ETA</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">When to compute</div>
+        <div class="mm-title">When and how fast</div>
         <ul>
-          <li><b>Batch</b> — precompute, look up; cheap, stale</li>
-          <li><b>Online</b> — per request; fresh, pays latency</li>
-          <li><b>Streaming</b> — features updated from events (Kafka)</li>
-          <li>ETA: online model + streaming queue + nightly prep_7d</li>
-          <li>💡 tiffin service vs dhaba</li>
+          <li><b>Batch</b> precomputes; <b>online</b> computes per request; <b>streaming</b> keeps features fresh</li>
+          <li>Budget the <b>p99</b>, not the mean; critical path = sequential steps + slowest parallel step</li>
+          <li><b>Fan-out</b>: 20 parallel calls, 1 − 0.99<sup>20</sup> = 18% hit a slow one</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Latency budget</div>
+        <div class="mm-title">Features</div>
         <ul>
-          <li><b>p99</b>, not average</li>
-          <li>60 ms: 8 + max(15, 12) + 10 + 3 = 36 critical path</li>
-          <li><b>Fan-out</b> — 20 calls: 1 − 0.99<sup>20</sup> = 18.2% hit a slow one</li>
-          <li>One MGET; parallel independent steps; fallback</li>
+          <li><b>Offline</b>: full history with timestamps (training)</li>
+          <li><b>Online</b>: latest value per key, ~1 ms (serving)</li>
+          <li><b>Point-in-time join</b>: only values known at prediction time</li>
+          <li><b>Feature store</b>: one definition, both stores (Feast, Tecton)</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Feature store</div>
+        <div class="mm-title">Running the model</div>
         <ul>
-          <li><b>Offline store</b> — history + timestamps (training)</li>
-          <li><b>Online store</b> — latest per key (Redis)</li>
-          <li><b>Registry</b> — one definition</li>
-          <li><b>Materialize</b> — offline → online</li>
-          <li>Feast, Tecton</li>
+          <li><b>Cache</b> with a TTL; key includes model version</li>
+          <li>Embedded, model server, sidecar or batch job</li>
+          <li><b>Batch rows</b> per call; dynamic batching on GPUs</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Cache &amp; run</div>
+        <div class="mm-title">Staying correct</div>
         <ul>
-          <li><b>TTL</b> trades hit ratio for staleness</li>
-          <li>60 s: 73.5% hits, +0.20 min error</li>
-          <li><b>Model placement</b> — embedded, server, sidecar, batch</li>
-          <li><b>Batching</b> — 20 rows/call: 10× faster</li>
-          <li>Autoscale on latency/queue, not CPU (GPU)</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Skew</div>
-        <ul>
-          <li><b>Two code paths</b> — road vs straight km</li>
-          <li>MAE 1.66 → 3.15, late 42% → 84%</li>
-          <li><b>Detect</b> — compare logged served features (PSI 0.19)</li>
-          <li><b>Fix</b> — shared code; log-and-wait training</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Safe release</div>
-        <ul>
-          <li><b>Shadow</b> — mirror, log, compare; zero user risk</li>
-          <li>slice it: Mumbai + rain −9.6 min</li>
-          <li><b>Canary</b> — 10% → widen; binomial test on errors</li>
-          <li><b>Blue-green</b> — warm copy, flip back</li>
+          <li><b>Skew</b>: training and serving compute a feature differently</li>
+          <li>Detect by comparing logged served features with training ones</li>
+          <li><b>Shadow</b> (0 users) → <b>canary</b> (small %) → A/B test</li>
         </ul>
       </div>
     </div>
@@ -106,32 +48,28 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="ss-modes"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Batch, Online or Streaming?</span><span class="rm-sub">Precompute or compute now</span></div></div>
-      <div class="rm-item rm-done" data-target="ss-budget"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">The Latency Budget</span><span class="rm-sub">Spending 60 ms, computed</span></div></div>
-      <div class="rm-item rm-done" data-target="ss-fs"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Feature Fetch &amp; Feature Stores</span><span class="rm-sub">Offline, online, registry</span></div></div>
-      <div class="rm-item rm-done" data-target="ss-cache"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Caching &amp; Precompute</span><span class="rm-sub">Hit ratio vs staleness</span></div></div>
-      <div class="rm-item rm-done" data-target="ss-run"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Where the Model Runs</span><span class="rm-sub">Patterns, batching, scaling</span></div></div>
-      <div class="rm-item rm-done" data-target="ss-skew"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Training-Serving Skew</span><span class="rm-sub">Reproduced and caught</span></div></div>
-      <div class="rm-item rm-done" data-target="ss-shadow"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Shadow Deployment</span><span class="rm-sub">Real traffic, zero risk</span></div></div>
-      <div class="rm-item rm-done" data-target="ss-canary"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Canary &amp; Blue-Green</span><span class="rm-sub">Limit the blast radius</span></div></div>
-      <div class="rm-item rm-done" data-target="ss-connect"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One 20:11 request</span></div></div>
-      <div class="rm-item rm-done" data-target="ss-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note in 10 minutes</span></div></div>
-      <div class="rm-item rm-done" data-target="ss-qa"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
+      <div class="rm-item rm-done" data-target="ss-modes"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Batch, Online and Streaming Serving</span><span class="rm-sub">compute in advance, or when asked?</span></div></div>
+      <div class="rm-item rm-done" data-target="ss-latency"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Latency Budgets and Percentiles</span><span class="rm-sub">how to spend 60 ms, and why the average lies</span></div></div>
+      <div class="rm-item rm-done" data-target="ss-features"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Online and Offline Features</span><span class="rm-sub">history for training, latest value for serving</span></div></div>
+      <div class="rm-item rm-done" data-target="ss-pit"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Point-in-Time Correct Joins</span><span class="rm-sub">a naive join leaks the future, shown for real</span></div></div>
+      <div class="rm-item rm-done" data-target="ss-fs"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Feature Stores</span><span class="rm-sub">one definition, two stores, with real Feast</span></div></div>
+      <div class="rm-item rm-done" data-target="ss-cache"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Caching</span><span class="rm-sub">hit ratio against staleness</span></div></div>
+      <div class="rm-item rm-done" data-target="ss-run"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Where the Model Runs</span><span class="rm-sub">placement, batching and scaling</span></div></div>
+      <div class="rm-item rm-done" data-target="ss-skew"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Training-Serving Skew</span><span class="rm-sub">same model, worse live, reproduced</span></div></div>
+      <div class="rm-item rm-done" data-target="ss-shadow"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Shadow Deployment</span><span class="rm-sub">real traffic, nobody sees the answer</span></div></div>
+      <div class="rm-item rm-done" data-target="ss-canary"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Canary and Blue-Green Releases</span><span class="rm-sub">a few users first, and a fast way back</span></div></div>
+      <div class="rm-item rm-done" data-target="ss-traps"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">defaults, cache keys, averages</span></div></div>
+      <div class="rm-item rm-done" data-target="ss-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">definitions, numbers, comparisons</span></div></div>
+      <div class="rm-item rm-done" data-target="ss-qa"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">serving questions from ML system design rounds</span></div></div>
     </div>
   </div>
 
-  <h2 id="ss-modes"><span class="num">01</span>Batch, Online or Streaming?</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We have <code>model.pkl</code> and a laptop. Asha's phone has neither. Should Biteful compute every possible ETA in advance and just look it up, or compute each one at the moment she opens the app? And what about a feature like the kitchen queue, which changes every minute?</p>
-  </div>
-  <p>Getting a model's answers to the people who need them, in time, is called <strong>serving</strong>. There are three ways, and real systems mix them:</p>
-  <ul>
-    <li><strong>Batch</strong>: a scheduled job scores everything at once and saves the results in a fast <strong>key-value store</strong> (give it a key, get a value back in ~1 ms; Redis is the common one). The app only looks them up.</li>
-    <li><strong>Online</strong> (real-time): nothing is saved in advance. When the request arrives, the service fetches features, runs the model, and replies. Everything it does sits on the <strong>request path</strong>, the work done while the user waits.</li>
-    <li><strong>Streaming</strong>: a job reads events as they happen (order placed, order picked up) from a stream such as <a class="xref" data-note="de_kafka">Kafka</a> and keeps a feature up to date continuously, so online serving can read a value that is seconds old.</li>
-  </ul>
-  <figure class="viz"><svg viewBox="0 0 740 168" width="740" role="img"><defs><marker id="ss-m1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs><text x="10" y="16" text-anchor="start" class="tb" font-weight="600">Batch: precompute for everyone</text><rect x="10" y="24" width="155" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity=".55"/><text x="87.5" y="43" text-anchor="middle" font-weight="600">Scheduler</text><text x="87.5" y="57" text-anchor="middle" class="tm">nightly</text><rect x="199" y="24" width="155" height="44" rx="6" class="fv" stroke="currentColor" stroke-opacity=".55"/><text x="276.5" y="43" text-anchor="middle" font-weight="600">Batch job</text><text x="276.5" y="57" text-anchor="middle" class="tm">score all users</text><rect x="388" y="24" width="155" height="44" rx="6" class="ft" stroke="currentColor" stroke-opacity=".55"/><text x="465.5" y="43" text-anchor="middle" font-weight="600">Key-value store</text><text x="465.5" y="57" text-anchor="middle" class="tm">predictions</text><rect x="577" y="24" width="155" height="44" rx="6" class="fg" stroke="currentColor" stroke-opacity=".55"/><text x="654.5" y="43" text-anchor="middle" font-weight="600">App lookup</text><text x="654.5" y="57" text-anchor="middle" class="tm">~5 ms</text><line x1="167" y1="46" x2="196" y2="46" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m1)"/><line x1="356" y1="46" x2="385" y2="46" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m1)"/><line x1="545" y1="46" x2="574" y2="46" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m1)"/><text x="10" y="100" text-anchor="start" class="tb" font-weight="600">Real-time: compute per request</text><rect x="10" y="108" width="155" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity=".55"/><text x="87.5" y="134" text-anchor="middle" font-weight="600">User request</text><rect x="199" y="108" width="155" height="44" rx="6" class="ft" stroke="currentColor" stroke-opacity=".55"/><text x="276.5" y="127" text-anchor="middle" font-weight="600">Feature fetch</text><text x="276.5" y="141" text-anchor="middle" class="tm">online store</text><rect x="388" y="108" width="155" height="44" rx="6" class="fv" stroke="currentColor" stroke-opacity=".55"/><text x="465.5" y="127" text-anchor="middle" font-weight="600">Model server</text><text x="465.5" y="141" text-anchor="middle" class="tm">predict</text><rect x="577" y="108" width="155" height="44" rx="6" class="fg" stroke="currentColor" stroke-opacity=".55"/><text x="654.5" y="127" text-anchor="middle" font-weight="600">Response</text><text x="654.5" y="141" text-anchor="middle" class="tm">~50 ms</text><line x1="167" y1="130" x2="196" y2="130" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m1)"/><line x1="356" y1="130" x2="385" y2="130" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m1)"/><line x1="545" y1="130" x2="574" y2="130" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m1)"/></svg><figcaption>Batch moves the model off the request path. Real-time pays latency to use fresh context.</figcaption></figure>
-  <p>Count the work on the request path. In the top row the request touches only the key-value store (~5 ms). In the bottom row it waits for a feature fetch and a model call too (~50 ms). So why not always batch? Cost it for Biteful:</p>
+  <h2 id="ss-modes"><span class="num">01</span>Batch, Online and Streaming Serving</h2>
+  <p>The first serving decision is about time: should Biteful compute ETAs before anyone asks for them, or at the moment Asha opens the app? It sounds like a detail, but it decides the cost of the system, how fresh its answers are, and how much engineering it needs. There are three basic patterns, and real systems usually mix them.</p>
+  <p>In <strong>batch serving</strong>, a scheduled job scores every possible input at once and saves the results in a fast <strong>key-value store</strong>, a database that returns a value for a given key in about a millisecond (Redis is the common one). The app never runs the model; it only looks the answer up. In <strong>online serving</strong> (also called real-time serving), nothing is prepared in advance: when a request arrives, the service fetches the features, runs the model and replies. All of that work sits on the <strong>request path</strong>, meaning the user is waiting while it happens. The third pattern, <strong>streaming</strong>, is not a way of running the model but a way of keeping features fresh: a job reads events as they happen (order placed, order picked up) from an event stream such as <a class="xref" data-note="de_kafka">Kafka</a> and updates a feature like "orders currently waiting in this kitchen" every few seconds, so online serving can read a value that is barely old.</p>
+  <p>Think of a tiffin service and a dhaba. The tiffin service cooks 500 identical lunches in the morning; handing one out takes a second, but nobody gets anything made for them, and if it rains and half the customers stay home the food is wasted. That is batch. The dhaba cooks each dish when you order it; it is fresh and made for you, but the cook has to be fast because you are sitting there. That is online. The boy who keeps shouting the latest count of waiting customers to the cook is the streaming job.</p>
+  <figure class="viz"><svg viewBox="0 0 740 168" width="740" role="img"><defs><marker id="ss-m1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs><text x="10" y="16" text-anchor="start" class="tb" font-weight="600">Batch: precompute for everyone</text><rect x="10" y="24" width="155" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity=".55"/><text x="87.5" y="43" text-anchor="middle" font-weight="600">Scheduler</text><text x="87.5" y="57" text-anchor="middle" class="tm">nightly</text><rect x="199" y="24" width="155" height="44" rx="6" class="fv" stroke="currentColor" stroke-opacity=".55"/><text x="276.5" y="43" text-anchor="middle" font-weight="600">Batch job</text><text x="276.5" y="57" text-anchor="middle" class="tm">score all inputs</text><rect x="388" y="24" width="155" height="44" rx="6" class="ft" stroke="currentColor" stroke-opacity=".55"/><text x="465.5" y="43" text-anchor="middle" font-weight="600">Key-value store</text><text x="465.5" y="57" text-anchor="middle" class="tm">predictions</text><rect x="577" y="24" width="155" height="44" rx="6" class="fg" stroke="currentColor" stroke-opacity=".55"/><text x="654.5" y="43" text-anchor="middle" font-weight="600">App lookup</text><text x="654.5" y="57" text-anchor="middle" class="tm">~5 ms</text><line x1="167" y1="46" x2="196" y2="46" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m1)"/><line x1="356" y1="46" x2="385" y2="46" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m1)"/><line x1="545" y1="46" x2="574" y2="46" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m1)"/><text x="10" y="100" text-anchor="start" class="tb" font-weight="600">Online: compute per request</text><rect x="10" y="108" width="155" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity=".55"/><text x="87.5" y="134" text-anchor="middle" font-weight="600">User request</text><rect x="199" y="108" width="155" height="44" rx="6" class="ft" stroke="currentColor" stroke-opacity=".55"/><text x="276.5" y="127" text-anchor="middle" font-weight="600">Feature fetch</text><text x="276.5" y="141" text-anchor="middle" class="tm">online store</text><rect x="388" y="108" width="155" height="44" rx="6" class="fv" stroke="currentColor" stroke-opacity=".55"/><text x="465.5" y="127" text-anchor="middle" font-weight="600">Model</text><text x="465.5" y="141" text-anchor="middle" class="tm">predict</text><rect x="577" y="108" width="155" height="44" rx="6" class="fg" stroke="currentColor" stroke-opacity=".55"/><text x="654.5" y="127" text-anchor="middle" font-weight="600">Response</text><text x="654.5" y="141" text-anchor="middle" class="tm">~50 ms</text><line x1="167" y1="130" x2="196" y2="130" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m1)"/><line x1="356" y1="130" x2="385" y2="130" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m1)"/><line x1="545" y1="130" x2="574" y2="130" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m1)"/></svg><figcaption>Batch takes the model off the request path. Online pays latency in exchange for using this request's context.</figcaption></figure>
+  <p>The figure shows the difference in what the user waits for. In the top row the scheduler, batch job and model all run long before the request; when Asha opens the app, the only thing on the request path is a key lookup of a few milliseconds. In the bottom row the request itself sets off a feature fetch and a model call, so she waits for both. Batch is clearly faster at request time, so why not always batch? The answer is cost and freshness, and the way to find out is to count, as an interviewer would expect you to. Biteful has 20,000 restaurants, each delivering to about 300 small map cells, and 12 million feed loads a day:</p>
   <div class="fx" data-lang="py"># Three ways to get an ETA onto Asha's screen, costed for Biteful
 DAY = 86_400
 restaurants, cells = 20_000, 300          # each restaurant delivers to ~300 map cells (8 km)
@@ -140,7 +78,7 @@ pairs = restaurants * cells
 # (a) Batch: score every (restaurant, cell) pair nightly, store, look up
 print(f"(a) nightly batch : {pairs/1e6:.0f} M predictions/day, values up to 24 h old")
 
-# (b) Near-real-time: re-score every pair every 5 minutes
+# (b) Near-real-time batch: re-score every pair every 5 minutes
 every = 300
 print(f"(b) every 5 min   : {pairs/every:,.0f} predictions/s, all day -&gt; {pairs/every*DAY/1e9:.2f} B/day")
 
@@ -150,64 +88,77 @@ peak_qps, cards = avg_qps * 4, 20
 online_day = avg_qps * cards * DAY
 print(f"(c) online        : {avg_qps*cards:,.0f}/s avg, {peak_qps*cards:,.0f}/s peak -&gt; {online_day/1e9:.2f} B/day")
 print(f"share of 5-min precomputed pairs anyone looks at: {online_day/(pairs/every*DAY):.1%}")</div>
-<div class="fx" data-lang="text">(a) nightly batch : 6 M predictions/day, values up to 24 h old
+  <div class="fx" data-lang="text">(a) nightly batch : 6 M predictions/day, values up to 24 h old
 (b) every 5 min   : 20,000 predictions/s, all day -&gt; 1.73 B/day
 (c) online        : 2,778/s avg, 11,111/s peak -&gt; 0.24 B/day
 share of 5-min precomputed pairs anyone looks at: 13.9%</div>
-  <ul>
-    <li><strong>(a) Nightly batch</strong> is cheap (6M predictions) but the queue at Dosa Hut tonight is not knowable last night. Useless for ETA.</li>
-    <li><strong>(b) Every 5 minutes</strong> keeps values fresh-ish but burns 20,000 predictions every second, all day, and only <strong>13.9%</strong> of them are ever shown to anyone.</li>
-    <li><strong>(c) Online</strong> computes only what is asked: 2,778/s on average, 11,111 at peak. The cost is latency on the request path, which section 02 budgets.</li>
-  </ul>
-  <p>So Biteful's ETA is <strong>online</strong> for the model, <strong>streaming</strong> for the kitchen queue, and <strong>batch</strong> for slow features like prep_7d. That mix is the norm.</p>
+  <p>Read the three lines in turn. A nightly batch is cheap, 6 million predictions a day, but tonight's kitchen queue at Dosa Hut did not exist last night, so a nightly ETA would ignore the single most important input. Re-scoring every pair every 5 minutes keeps values fairly fresh, but it burns 20,000 predictions every second, all day, and only 13.9% of them are ever looked at by anyone; the rest are pairs like "a restaurant in Hadapsar to an empty field at 4 am". Online serving computes only what is actually requested, 2,778 predictions a second on average and 11,111 at peak, about a seventh of the precompute work. The price is that the user waits, which is the subject of the next section.</p>
+  <p>So Biteful runs the ETA model <strong>online</strong>, keeps the kitchen queue fresh with <strong>streaming</strong>, and computes slow-moving features such as a restaurant's average preparation time over the last seven days (<code>prep_7d</code>) in a nightly <strong>batch</strong> job. That mix is normal. The question that decides each piece is simple: does the answer depend on something that exists only at request time, such as this delivery address, this minute's queue or this payment? If yes, compute online. If no, batch is cheaper and simpler, which is why daily "recommended for you" emails and demand forecasts are batch jobs.</p>
   <table class="tbl">
-    <tr><th></th><th>Batch (offline)</th><th>Online (real-time)</th><th>Streaming features</th></tr>
-    <tr><td>When computed</td><td>On a schedule, for all entities</td><td>Per request</td><td>Per event, continuously</td></tr>
+    <tr><th></th><th>Batch</th><th>Online</th><th>Streaming features</th></tr>
+    <tr><td>When computed</td><td>On a schedule, for every entity</td><td>Per request</td><td>Per event, continuously</td></tr>
     <tr><td>Freshness</td><td>Hours old</td><td>Uses this request's context</td><td>Seconds old</td></tr>
-    <tr><td>Latency at read</td><td>~ms (key lookup)</td><td>Model + feature time</td><td>~ms (key lookup)</td></tr>
-    <tr><td>Cost</td><td>Wasted on entities nobody asks about</td><td>Pay per request; autoscaling</td><td>Always-on stream job</td></tr>
-    <tr><td>Biteful examples</td><td>prep_7d, "we miss you" emails, demand forecasts</td><td>ETA, fraud check, feed ranking</td><td>kitchen queue, rider supply, card velocity</td></tr>
+    <tr><td>Latency at read time</td><td>A key lookup (~ms)</td><td>Feature fetch + model time</td><td>A key lookup (~ms)</td></tr>
+    <tr><td>Main cost</td><td>Work wasted on things nobody asks for</td><td>Latency; servers sized for peak</td><td>An always-on stream job</td></tr>
+    <tr><td>Biteful examples</td><td>prep_7d, emails, demand forecasts</td><td>ETA, fraud check, feed ranking</td><td>Kitchen queue, rider supply</td></tr>
   </table>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A tiffin service packs 500 tiffins in the morning (batch): slow once, then handing each out takes a second, but nobody gets a custom dish. A dhaba cooks each order when you sit down (online): fresh and made for you, but the cook must be fast. The boy who keeps shouting the latest count of waiting customers to the cook is the stream job.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Serving</strong>: delivering model predictions to the place they are used. <strong>Batch serving</strong>: precompute and store. <strong>Online serving</strong>: compute per request. <strong>Streaming features</strong>: features maintained continuously from an event stream.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Choosing by habit. Ask one question: does the answer depend on something that exists only at request time (this address, this minute's queue, this payment)? If yes, online. If no, batch is cheaper and simpler.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: the latency budget.</b> Online means Asha waits while we fetch features, get distances and run the model, for 20 cards. The feed must load in 200 ms and the ETA service gets 60 ms. How do we spend 60 ms, and what quietly makes it longer?</div>
 
-  <h2 id="ss-budget"><span class="num">02</span>The Latency Budget</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Five steps sit on the ETA request path. If each team takes "as long as it needs", the total blows past 60 ms. Which number do we budget (average or slow tail), how do we split it, and why does calling 20 things at once make the tail worse?</p>
-  </div>
-  <p><strong>Latency</strong> is the time from asking to getting the answer, in milliseconds (ms). A <strong>latency budget</strong> gives each step a fixed slice of the total in advance. We budget the <strong>p99</strong> — the time within which 99 of 100 requests finish — not the average, because the slow 1% is what users notice, and heavy users hit it most. (p50 is the median.)</p>
+  <h2 id="ss-latency"><span class="num">02</span>Latency Budgets and Percentiles</h2>
+  <p>Choosing online serving means Asha waits while Biteful fetches features, asks the route engine for road distances and runs the model, for 20 cards at once. The whole feed must load in 200 ms, and the ETA service gets 60 ms of that. If every team working on one of those steps takes "as long as it needs", the total quietly grows past 60 ms and the page feels slow. To prevent that, we need to agree what "how long" means and then share out the time.</p>
+  <p><strong>Latency</strong> is the time from sending a request to receiving the answer, measured in milliseconds. The tricky part is that latency is not one number: the same service answers some requests in 5 ms and others in 120 ms, depending on garbage-collection pauses, a slow database call or a busy machine. So we describe it with <strong>percentiles</strong>. The p99 (99th percentile) latency is the time within which 99 out of 100 requests finish; the p50 is the median, the time half the requests beat. Imagine 100 runners finishing a race: the p50 is the time of the 50th finisher and the p99 the time of the 99th. Here is why the average is the wrong number to watch:</p>
+  <div class="fx" data-lang="py">import numpy as np
+
+# 10,000 ETA requests: most are quick, about 2% hit a slow Redis call or a pause
+rng = np.random.default_rng(7)
+lat = rng.gamma(4, 2.5, 10_000)                       # typical requests: around 10 ms
+slow = rng.random(10_000) &lt; 0.02
+lat[slow] += rng.uniform(40, 120, slow.sum())         # the unlucky ones
+
+print(f"mean  {lat.mean():6.1f} ms")
+for q in [50, 90, 95, 99, 99.9]:
+    print(f"p{q:&lt;5}{np.percentile(lat, q):6.1f} ms")
+print(f"max   {lat.max():6.1f} ms")
+
+# A percentile by hand: sort, then read the value 99% of the way along
+s = np.sort(lat)
+print(f"\n9,900th of 10,000 sorted values: {s[9_899]:.1f} ms")
+print(f"share of requests slower than the mean: {np.mean(lat &gt; lat.mean()):.0%}")</div>
+  <div class="fx" data-lang="text">mean    11.5 ms
+p50      9.3 ms
+p90     17.5 ms
+p95     21.1 ms
+p99     88.8 ms
+p99.9  126.6 ms
+max    139.3 ms
+
+9,900th of 10,000 sorted values: 88.8 ms
+share of requests slower than the mean: 34%</div>
+  <p>The mean is 11.5 ms and the median 9.3 ms, which both sound excellent. But the p99 is 88.8 ms, eight times the mean, because about 2% of requests hit something slow. The middle block shows what a percentile actually is: sort all 10,000 latencies and read the 9,900th value, which is exactly the 88.8 ms numpy reported. And the last line explains why the average misleads: the few very slow requests pull the mean up, yet 66% of requests are faster than it and the slow ones are hidden inside it. Users do not experience averages; a heavy user who loads the feed 50 times a day will meet the slow tail every single day. That is why services are designed and monitored against their p99 (sometimes p99.9), not their mean.</p>
+  <p>A <strong>latency budget</strong> gives each step on the request path a fixed slice of the p99 target before anyone writes code, the way a household divides its monthly salary into rent, food and savings. Two more ideas make the budget work. The <strong>critical path</strong> is the longest chain of steps that must happen one after another; steps that do not need each other's results can run at the same time, and then only the slower of them counts. <strong>Fan-out</strong> is when one request calls many downstream services or keys at once; the request can only finish when the slowest call finishes. The code splits the 60 ms and then simulates fetching 20 restaurants' features with 20 separate calls:</p>
   <div class="fx" data-lang="py">import numpy as np
 
 # The ETA service's 60 ms p99 slice of the 200 ms feed, split per step (ms)
 budget = {"network in+out": 8, "feature fetch (Redis)": 12, "route engine (km x20)": 15,
           "model (20 rows)": 10, "post-process": 3}
-used = sum(budget.values())
 for k, v in budget.items():
     print(f"{k:&lt;32}{v:&gt;4} ms")
+used = sum(budget.values())
 print(f"{'sum if run one after another':&lt;32}{used} ms, headroom {60 - used} ms")
-# feature fetch and route engine don't depend on each other: run them in parallel
-crit = budget["network in+out"] + max(budget["feature fetch (Redis)"], budget["route engine (km x20)"]) \\
-       + budget["model (20 rows)"] + budget["post-process"]
+# feature fetch and route engine don't need each other's answers: run them in parallel
+crit = (budget["network in+out"] + max(budget["feature fetch (Redis)"], budget["route engine (km x20)"])
+        + budget["model (20 rows)"] + budget["post-process"])
 print(f"{'critical path, parallel fetch':&lt;32}{crit} ms, headroom {60 - crit} ms")
 
-# Fan-out: 20 separate Redis GETs vs one MGET. Each call's latency: mostly ~1 ms, sometimes slow.
+# Fan-out: 20 separate Redis GETs in parallel. Each call is mostly ~1 ms, sometimes slow.
 rng = np.random.default_rng(0)
 calls = rng.lognormal(mean=0.0, sigma=0.7, size=(100_000, 20))    # ms, 100k simulated requests
 single_p99 = np.quantile(calls[:, 0], 0.99)
-print(f"\\none GET:   p50 {np.median(calls[:, 0]):.1f} ms  p99 {single_p99:.1f} ms")
-slowest = calls.max(axis=1)                    # parallel GETs: the request waits for the slowest
+print(f"\none GET:   p50 {np.median(calls[:, 0]):.1f} ms  p99 {single_p99:.1f} ms")
+slowest = calls.max(axis=1)                    # the request waits for the slowest of its 20 calls
 print(f"20 GETs:   p50 {np.median(slowest):.1f} ms  p99 {np.quantile(slowest, 0.99):.1f} ms")
-print(f"requests that hit at least one call above the single-call p99: {np.mean(slowest &gt; single_p99):.1%}")
+print(f"requests with at least one call above the single-call p99: {np.mean(slowest &gt; single_p99):.1%}")
 print(f"theory 1 - 0.99**20 = {1 - 0.99**20:.1%}")</div>
-<div class="fx" data-lang="text">network in+out                     8 ms
+  <div class="fx" data-lang="text">network in+out                     8 ms
 feature fetch (Redis)             12 ms
 route engine (km x20)             15 ms
 model (20 rows)                   10 ms
@@ -217,113 +168,217 @@ critical path, parallel fetch   36 ms, headroom 24 ms
 
 one GET:   p50 1.0 ms  p99 5.1 ms
 20 GETs:   p50 3.6 ms  p99 10.0 ms
-requests that hit at least one call above the single-call p99: 18.0%
+requests with at least one call above the single-call p99: 18.0%
 theory 1 - 0.99**20 = 18.2%</div>
-  <p>Trace the top half. Added one after another, the five steps take 8 + 12 + 15 + 10 + 3 = 48 ms, leaving 12 ms. But the feature fetch and the route engine don't need each other's answers, so they run in parallel: the request waits only for the slower of the two. Critical path = 8 + max(12, 15) + 10 + 3 = <strong>36 ms</strong>, headroom <strong>24 ms</strong>.</p>
-  <figure class="viz"><svg viewBox="0 0 680 150" width="680" role="img"><rect x="40" y="40" width="80" height="60" rx="3" class="fs" stroke="currentColor" stroke-opacity=".45"/><text x="80.0" y="74.0" text-anchor="middle" font-size="11">network</text><rect x="120" y="40" width="150" height="29" rx="3" class="ft" stroke="currentColor" stroke-opacity=".45"/><text x="195.0" y="58.5" text-anchor="middle" font-size="11">route km 15</text><rect x="120" y="71" width="120" height="29" rx="3" class="ft" stroke="currentColor" stroke-opacity=".45"/><text x="180.0" y="89.5" text-anchor="middle" font-size="11">fetch 12</text><rect x="270" y="40" width="100" height="60" rx="3" class="fv" stroke="currentColor" stroke-opacity=".45"/><text x="320.0" y="74.0" text-anchor="middle" font-size="11">model 10</text><rect x="370" y="40" width="30" height="60" rx="3" class="fs" stroke="currentColor" stroke-opacity=".45"/><text x="385.0" y="74.0" text-anchor="middle" font-size="11">3</text><rect x="400" y="40" width="240" height="60" rx="3" class="fg" stroke="currentColor" stroke-opacity=".45"/><text x="520.0" y="74.0" text-anchor="middle" font-size="11">headroom 24</text><line x1="40" y1="30" x2="40" y2="108" stroke="currentColor" stroke-opacity=".35"/><text x="40" y="24" text-anchor="middle" font-size="10" class="tm">0</text><line x1="120" y1="30" x2="120" y2="108" stroke="currentColor" stroke-opacity=".35"/><text x="120" y="24" text-anchor="middle" font-size="10" class="tm">8</text><line x1="270" y1="30" x2="270" y2="108" stroke="currentColor" stroke-opacity=".35"/><text x="270" y="24" text-anchor="middle" font-size="10" class="tm">23</text><line x1="370" y1="30" x2="370" y2="108" stroke="currentColor" stroke-opacity=".35"/><text x="370" y="24" text-anchor="middle" font-size="10" class="tm">33</text><line x1="400" y1="30" x2="400" y2="108" stroke="currentColor" stroke-opacity=".35"/><text x="400" y="24" text-anchor="middle" font-size="10" class="tm">36</text><line x1="640" y1="30" x2="640" y2="108" stroke="currentColor" stroke-opacity=".35"/><text x="640" y="24" text-anchor="middle" font-size="10" class="tm">60</text><text x="40" y="128" font-size="11">critical path 36 ms = 8 + max(15, 12) + 10 + 3; the two teal steps run in parallel</text><text x="40" y="144" font-size="10" class="tm">ms of the ETA service's 60 ms p99 slice (the whole feed has 200 ms)</text></svg><figcaption>The ETA service's 60 ms budget. Fetch and route overlap; the headroom absorbs bad days.</figcaption></figure>
-  <p>Now the bottom half: <strong>fan-out</strong>, one request calling many services. Suppose we fetched each of the 20 restaurants' features with its own GET. A single GET is usually ~1 ms (p50 1.0) and occasionally slow (p99 5.1). With 20 in parallel, the request waits for the slowest, so its p50 becomes 3.6 ms and its p99 10.0 ms. 18.0% of requests hit at least one call slower than the single-call p99; the formula 1 − 0.99<sup>20</sup> = 18.2% predicts it. The fix: one <strong>MGET</strong> for all 20 keys (one round trip), a timeout, and a default value.</p>
-  <ul>
-    <li>Budget the <strong>p99</strong>, and give every step a slice plus headroom.</li>
-    <li>Run independent steps in parallel; the critical path is what counts.</li>
-    <li>Fan-out multiplies tail risk: batch the calls (MGET), use timeouts with defaults.</li>
-    <li>Always define a <strong>fallback</strong>: if the model times out, show the baseline 15 + 4 × km. A rough ETA beats a blank card.</li>
-  </ul>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A relay race with a fixed finish time. If one runner is slow, the others can't recover it, so each leg gets a strict slice. And two runners who don't need the baton from each other can run at the same time.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>p99 latency</strong>: the time 99% of requests beat. <strong>Critical path</strong>: the longest chain of dependent steps. <strong>Fan-out</strong>: one request calling many downstream services; the request is as slow as the slowest call.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Budgeting the average. An average of 30 ms can hide a p99 of 200 ms. And measuring each step's p99 separately: the request's p99 is worse than any single step's when steps fan out.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: feature fetch.</b> We gave "feature fetch" 12 ms. But where do queue and prep_7d actually live, how are they kept fresh, and how do we make sure training used the same numbers?</div>
+  <p>Added end to end, the five steps take 48 ms and leave 12 ms of headroom. But the feature fetch and the route engine do not depend on each other, so they run in parallel, and the request waits only for the slower one: 8 + max(12, 15) + 10 + 3 = 36 ms, leaving 24 ms of headroom for bad days. The figure below draws exactly this.</p>
+  <figure class="viz"><svg viewBox="0 0 680 150" width="680" role="img"><rect x="40" y="40" width="80" height="60" rx="3" class="fs" stroke="currentColor" stroke-opacity=".45"/><text x="80.0" y="74.0" text-anchor="middle" font-size="11">network</text><rect x="120" y="40" width="150" height="29" rx="3" class="ft" stroke="currentColor" stroke-opacity=".45"/><text x="195.0" y="58.5" text-anchor="middle" font-size="11">route km 15</text><rect x="120" y="71" width="120" height="29" rx="3" class="ft" stroke="currentColor" stroke-opacity=".45"/><text x="180.0" y="89.5" text-anchor="middle" font-size="11">fetch 12</text><rect x="270" y="40" width="100" height="60" rx="3" class="fv" stroke="currentColor" stroke-opacity=".45"/><text x="320.0" y="74.0" text-anchor="middle" font-size="11">model 10</text><rect x="370" y="40" width="30" height="60" rx="3" class="fs" stroke="currentColor" stroke-opacity=".45"/><text x="385.0" y="74.0" text-anchor="middle" font-size="11">3</text><rect x="400" y="40" width="240" height="60" rx="3" class="fg" stroke="currentColor" stroke-opacity=".45"/><text x="520.0" y="74.0" text-anchor="middle" font-size="11">headroom 24</text><line x1="40" y1="30" x2="40" y2="108" stroke="currentColor" stroke-opacity=".35"/><text x="40" y="24" text-anchor="middle" font-size="10" class="tm">0</text><line x1="120" y1="30" x2="120" y2="108" stroke="currentColor" stroke-opacity=".35"/><text x="120" y="24" text-anchor="middle" font-size="10" class="tm">8</text><line x1="270" y1="30" x2="270" y2="108" stroke="currentColor" stroke-opacity=".35"/><text x="270" y="24" text-anchor="middle" font-size="10" class="tm">23</text><line x1="370" y1="30" x2="370" y2="108" stroke="currentColor" stroke-opacity=".35"/><text x="370" y="24" text-anchor="middle" font-size="10" class="tm">33</text><line x1="400" y1="30" x2="400" y2="108" stroke="currentColor" stroke-opacity=".35"/><text x="400" y="24" text-anchor="middle" font-size="10" class="tm">36</text><line x1="640" y1="30" x2="640" y2="108" stroke="currentColor" stroke-opacity=".35"/><text x="640" y="24" text-anchor="middle" font-size="10" class="tm">60</text><text x="40" y="128" font-size="11">critical path 36 ms = 8 + max(15, 12) + 10 + 3; the two teal steps run in parallel</text><text x="40" y="144" font-size="10" class="tm">ms of the ETA service's 60 ms p99 slice (the whole feed has 200 ms)</text></svg><figcaption>The ETA service's 60 ms budget. Fetch and route overlap, so the model starts at 23 ms, not 35.</figcaption></figure>
+  <p>Time runs left to right. The network takes the first 8 ms. Then the two teal bars start together: the route engine finishes at 23 ms and the feature fetch earlier, at 20 ms, so the model can start at 23 ms. The model ends at 33, post-processing at 36, and everything from 36 to 60 is headroom.</p>
+  <p>Now the second half of the output, the fan-out. A single Redis GET has a p50 of 1.0 ms and a p99 of 5.1 ms. With 20 GETs in parallel, the request waits for the slowest of the 20, so its median rises to 3.6 ms and its p99 to 10.0 ms. In 18.0% of requests at least one of the 20 calls was slower than the single-call p99, almost exactly the 1 − 0.99<sup>20</sup> = 18.2% the formula predicts: if each call has a 1% chance of being slow, the chance that none of 20 is slow is 0.99<sup>20</sup>. Fan-out turns one call's rare bad luck into a common event. The cures are to make fewer calls (one <strong>MGET</strong>, Redis's "get many keys in one round trip", instead of 20 GETs), to put a timeout on every call with a sensible default value when it expires, and to define a <strong>fallback</strong> for the whole service: if the model times out, show the simple baseline 15 + 4 × km minutes, because a rough ETA is better than a blank card.</p>
 
-  <h2 id="ss-fs"><span class="num">03</span>Feature Fetch &amp; Feature Stores</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Two teams need Dosa Hut's queue count. The training job wants every value from the last six months, with timestamps, read once a week. The ETA service wants today's value, now, in ~1 ms. If each team writes its own code, the numbers drift apart. How do we serve both from one definition?</p>
-  </div>
-  <p>A <strong>feature store</strong> defines each feature once, computes it once, and stores it in two shapes: an <strong>offline store</strong> (full history with timestamps, for building training sets with point-in-time joins) and an <strong>online store</strong> (the latest value per key, for serving). A <strong>registry</strong> holds the definitions, and <strong>materialization</strong> copies fresh values from offline to online.</p>
-  <figure class="viz"><svg viewBox="0 0 740 236" width="740" role="img"><defs><marker id="ss-m3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs><rect x="190" y="4" width="350" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity=".55"/><text x="365" y="22" text-anchor="middle" font-weight="600">Registry: one feature definition for both paths</text><rect x="10" y="60" width="140" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity=".55"/><text x="80" y="79" text-anchor="middle" font-weight="600">Warehouse</text><text x="80" y="93" text-anchor="middle" class="tm">batch tables</text><rect x="10" y="160" width="140" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity=".55"/><text x="80" y="179" text-anchor="middle" font-weight="600">Event stream</text><text x="80" y="193" text-anchor="middle" class="tm">Kafka</text><rect x="190" y="110" width="140" height="44" rx="6" class="fv" stroke="currentColor" stroke-opacity=".55"/><text x="260" y="129" text-anchor="middle" font-weight="600">Feature</text><text x="260" y="143" text-anchor="middle" class="tm">pipelines</text><rect x="380" y="60" width="160" height="44" rx="6" class="fb" stroke="currentColor" stroke-opacity=".55"/><text x="460" y="79" text-anchor="middle" font-weight="600">Offline store</text><text x="460" y="93" text-anchor="middle" class="tm">full history</text><rect x="380" y="160" width="160" height="44" rx="6" class="ft" stroke="currentColor" stroke-opacity=".55"/><text x="460" y="179" text-anchor="middle" font-weight="600">Online store</text><text x="460" y="193" text-anchor="middle" class="tm">latest values</text><rect x="585" y="60" width="145" height="44" rx="6" class="fb" stroke="currentColor" stroke-opacity=".55"/><text x="657.5" y="79" text-anchor="middle" font-weight="600">Training sets</text><text x="657.5" y="93" text-anchor="middle" class="tm">point-in-time</text><rect x="585" y="160" width="145" height="44" rx="6" class="fg" stroke="currentColor" stroke-opacity=".55"/><text x="657.5" y="179" text-anchor="middle" font-weight="600">Online serving</text><text x="657.5" y="193" text-anchor="middle" class="tm">&lt;10 ms lookup</text><line x1="152" y1="82" x2="188" y2="124" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m3)"/><line x1="152" y1="182" x2="188" y2="142" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m3)"/><line x1="332" y1="124" x2="378" y2="86" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m3)"/><line x1="332" y1="142" x2="378" y2="178" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m3)"/><line x1="460" y1="106" x2="460" y2="157" stroke="currentColor" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#ss-m3)"/><text x="468" y="136" text-anchor="start" class="tm">materialize</text><line x1="542" y1="82" x2="582" y2="82" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m3)"/><line x1="542" y1="182" x2="582" y2="182" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m3)"/></svg><figcaption>Same definitions feed a history store (for training) and a fast latest-value store (for serving).</figcaption></figure>
-  <p>Follow the arrows: raw data on the left (warehouse tables, the Kafka order stream) is turned into features in the middle, then written to the top (full history, for training) and the bottom (latest value, for serving). Here is the whole idea in miniature, on Asha's 20:11 feed:</p>
+  <h2 id="ss-features"><span class="num">03</span>Online and Offline Features</h2>
+  <p>The budget gave "feature fetch" 12 ms. Now we need to look at where the features actually come from, because the ETA model uses three very different kinds. The road distance <code>km</code> and whether it is raining are <strong>request-time features</strong>: they can only be computed when the request arrives, from this address and this minute's weather. The kitchen queue is a <strong>streaming feature</strong>, updated every few seconds from order events. And <code>prep_7d</code> is a <strong>batch feature</strong>, recomputed once a night. Whatever their source, every feature is needed by two very different consumers.</p>
+  <p>The training job needs the <em>history</em> of each feature: for every past order in the last six months, what was Dosa Hut's queue at the moment that order was placed? It reads millions of rows, once a week, and does not mind waiting minutes. The serving path needs only the <em>latest</em> value of each feature, for 20 restaurants, in about a millisecond. No single database is good at both, so features are kept in two shapes. The <strong>offline store</strong> holds every value ever computed together with the time it became true; it is usually a warehouse table or Parquet files, big, slow and cheap. The <strong>online store</strong> holds only the current value per key, usually in Redis or DynamoDB, small and fast. A school works the same way: the office keeps the full register of every term's marks for report cards, while the notice board shows only each student's latest result so anyone can check it in a second.</p>
+  <p>The code below builds both shapes from the same queue values. Copying the latest values from the offline history into the online store is called <strong>materialization</strong>. Then it serves Asha's 20:11 request, including a restaurant that opened today and therefore has no queue value at all:</p>
   <div class="fx" data-lang="py">import pandas as pd
 
-# A feature store in miniature: one definition, two stores.
-# OFFLINE store: every value ever computed, with its timestamp (for training)
+# OFFLINE features: every value ever computed, with the time it became true (for training)
 offline = pd.DataFrame({
     "restaurant": ["Dosa Hut", "Dosa Hut", "Biryani Bros", "Pizza Point", "Dosa Hut", "Biryani Bros"],
     "ts": pd.to_datetime(["20:00", "20:05", "20:05", "20:05", "20:10", "20:10"], format="%H:%M"),
     "queue": [4, 5, 7, 1, 6, 8]})
 
-# MATERIALIZE: copy the latest value per key into the ONLINE store (a dict here, Redis in prod)
+# ONLINE features: only the latest value per key (a dict here, Redis in production)
 online = {}
 for r in offline.sort_values("ts").itertuples():
     online[f"queue:{r.restaurant}"] = r.queue
-online["rain:pune"] = 0
 print("online store:", online)
 
-DEFAULTS = {"queue": 3}            # same default in training and serving: the median queue
+DEFAULT_QUEUE = 3            # the median queue - the SAME fill value training used
 
 def get_online_features(restaurants):
     keys = [f"queue:{r}" for r in restaurants]
-    values = [online.get(k) for k in keys]            # in Redis: ONE MGET call for all keys
-    return {r: (v if v is not None else DEFAULTS["queue"]) for r, v in zip(restaurants, values)}
+    values = [online.get(k) for k in keys]                 # in Redis: ONE MGET for all keys
+    return {r: (v if v is not None else DEFAULT_QUEUE) for r, v in zip(restaurants, values)}
 
-# Asha opens the feed at 20:11: four cards, one restaurant is brand new
-feed = ["Dosa Hut", "Biryani Bros", "Pizza Point", "Chai Corner"]
+# Asha opens the feed at 20:11. km and rain are REQUEST-TIME features: known only now.
+feed = ["Dosa Hut", "Biryani Bros", "Pizza Point", "Chai Corner"]       # Chai Corner opened today
 km = {"Dosa Hut": 4.0, "Biryani Bros": 3.0, "Pizza Point": 6.0, "Chai Corner": 2.0}   # route engine
+rain = 0                                                                # weather API, right now
 q = get_online_features(feed)
-rain = online["rain:pune"]
 for r in feed:
-    eta = 13.87 + 3.25 * km[r] + 2.42 * q[r] + 8.71 * rain      # the linear model from the framework note
+    eta = 13.87 + 3.25 * km[r] + 2.42 * q[r] + 8.71 * rain             # the framework note's model
     print(f"{r:&lt;13} km={km[r]}  queue={q[r]}  ETA={eta:.1f} min")</div>
-<div class="fx" data-lang="text">online store: {'queue:Dosa Hut': 6, 'queue:Biryani Bros': 8, 'queue:Pizza Point': 1, 'rain:pune': 0}
+  <div class="fx" data-lang="text">online store: {'queue:Dosa Hut': 6, 'queue:Biryani Bros': 8, 'queue:Pizza Point': 1}
 Dosa Hut      km=4.0  queue=6  ETA=41.4 min
 Biryani Bros  km=3.0  queue=8  ETA=43.0 min
 Pizza Point   km=6.0  queue=1  ETA=35.8 min
 Chai Corner   km=2.0  queue=3  ETA=27.6 min</div>
-  <p>Walk through it:</p>
-  <ul>
-    <li><strong>Offline store</strong>: six rows of history. Dosa Hut's queue went 4 → 5 → 6 between 20:00 and 20:10. Training would use these with a point-in-time join (<a class="xref" data-note="sd_framework">framework</a> §06).</li>
-    <li><strong>Materialize</strong>: the loop keeps only the latest value per key, so the online store holds <code>queue:Dosa Hut = 6</code>. In production this is a scheduled or streaming job writing to Redis.</li>
-    <li><strong>Fetch</strong>: <code>get_online_features</code> builds four keys and reads them together (one MGET in Redis). Chai Corner opened today and has no key, so it gets the <strong>default</strong> 3 — the same default the training pipeline used for missing values.</li>
-    <li><strong>Predict</strong>: Dosa Hut = 13.87 + 3.25 × 4 + 2.42 × 6 + 0 = 41.4 minutes, exactly order 102's situation (actual 41).</li>
-  </ul>
-  <div class="cards">
-    <div><b>Offline store</b><p>Every historical value with timestamps. Big, slow, cheap.</p><small>Parquet, BigQuery, Snowflake</small></div>
-    <div><b>Online store</b><p>Latest value per entity. Small and fast.</p><small>Redis, DynamoDB, Bigtable</small></div>
-    <div><b>Registry</b><p>Feature definitions, owners, versions.</p><small>Reuse across teams</small></div>
-    <div><b>Materialization</b><p>Job that copies fresh values offline → online.</p><small>Batch or streaming</small></div>
-  </div>
-  <p>Real tools do the same four things. In <strong>Feast</strong> (open source): a <code>FeatureView</code> is the registry entry; <code>get_historical_features(entity_df)</code> does the point-in-time join for training; <code>materialize(start, end)</code> copies values to the online store; <code>get_online_features(entity_rows)</code> is our fetch. <strong>Tecton</strong> (managed, now part of Databricks) also runs the batch and streaming transforms for you.</p>
-  <table class="tbl">
-    <tr><th>Our miniature</th><th>Feast call</th><th>Production version</th></tr>
-    <tr><td><code>offline</code> DataFrame</td><td>FileSource / BigQuerySource in a FeatureView</td><td>Warehouse table with event timestamps</td></tr>
-    <tr><td>merge_asof (framework note)</td><td><code>get_historical_features</code></td><td>Point-in-time join at scale</td></tr>
-    <tr><td>the materialize loop</td><td><code>materialize</code> / <code>materialize_incremental</code></td><td>Scheduled job or stream writer</td></tr>
-    <tr><td><code>get_online_features</code> + DEFAULTS</td><td><code>get_online_features</code></td><td>Redis MGET with timeout and defaults</td></tr>
-  </table>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A school's marks. The office keeps every term's full register (offline store) for report cards. The notice board shows only the latest result per student (online store) so anyone can check it in a second. Both come from the same exam sheets (registry).</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Feature store</strong>: one place to define, compute, store and serve features, so training and serving read the same values. <strong>Entity / join key</strong>: what a feature describes (restaurant id). <strong>Default value</strong>: what serving returns when a key is missing; it must match training's fill value.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>A feature store is not required for every design. One batch model with three features does fine with a table. Bring it up when several models share features, or real-time features are needed, as for ETA.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: caching.</b> Features now arrive in milliseconds. But at 8 pm thousands of people in Kothrud ask for Dosa Hut's ETA to almost the same address within the same minute. Do we really need to run the model for every one of them?</div>
+  <p>The offline table has six rows: Dosa Hut's queue went 4, 5, 6 between 20:00 and 20:10. The materialization loop walks through the rows in time order and keeps overwriting, so the online store ends up holding only the latest value for each restaurant: <code>queue:Dosa Hut</code> is 6. When the request arrives, <code>get_online_features</code> builds four keys and reads them together, which in Redis is one MGET. Chai Corner has no key, so it receives the <strong>default value</strong> 3. That default is not arbitrary: it must be the same value the training pipeline used to fill missing queues (here, the median), otherwise the model sees a number at serving time that means something different from what it learnt. Finally the model, the linear formula from the framework note, combines the fetched queue with the request-time features: Dosa Hut is 13.87 + 3.25 × 4 + 2.42 × 6 = 41.4 minutes.</p>
+  <p>This tiny program contains the whole architecture of feature serving, but it hides one dangerous question. The serving path asks "what is the queue <em>now</em>?", which is easy. The training path asks "what was the queue <em>then</em>?" for every past order, and answering that carelessly is one of the most common bugs in machine learning.</p>
 
-  <h2 id="ss-cache"><span class="num">04</span>Caching &amp; Precompute</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The same (restaurant, neighbourhood) ETA is requested again and again within seconds. Recomputing it wastes work; reusing it risks showing a stale number after the queue changed. How much do we save, and how wrong do we get?</p>
-  </div>
-  <p>The fastest work is work you did earlier. <strong>Precomputing</strong> moves slow, slowly-changing work (prep_7d, embeddings) off the request path. A <strong>cache</strong> keeps a recent answer and reuses it until its <strong>TTL</strong> (time to live) expires. The <strong>hit ratio</strong> is the share of lookups answered from the cache. For the ETA the key is (restaurant, map cell): Asha and her neighbour two streets away get the same answer.</p>
-  <p>We simulate 10 minutes of dinner traffic at 1/10 scale: 1,111 lookups per second over 2,000 restaurants and 50 cells each, popular restaurants asked far more often. Each kitchen's queue drifts by up to one order per minute, and since every queue order is worth 2.42 minutes in our model, a cached ETA built on an old queue is off by 2.42 × (change in queue).</p>
+  <h2 id="ss-pit"><span class="num">04</span>Point-in-Time Correct Joins</h2>
+  <p>To build a training set, we take a table of past orders (each with its timestamp and its actual delivery time, the label) and attach the feature values that belong to each order. Attaching columns from one table to another is a <strong>join</strong>. The danger is attaching a value that was computed <em>after</em> the order, using information the model could never have at prediction time. This is called <strong>data leakage</strong> (or label leakage, when the leaked information includes the answer itself), and it is dangerous precisely because it makes the model look better in testing, not worse.</p>
+  <p>Here is a concrete case. Biteful computes each restaurant's average delivery time at the end of every day. On 14 July Dosa Hut was short-staffed and its average was 47.5 minutes. The obvious way to attach this feature to orders is to join on restaurant and date. Watch what that does, compared with a <strong>point-in-time correct join</strong>, which attaches to each order the most recent feature value that already existed when the order was placed:</p>
+  <div class="fx" data-lang="py">import pandas as pd
+
+# Feature table: Dosa Hut's average delivery time, recomputed at the END of each day
+daily = pd.DataFrame({
+    "restaurant": ["Dosa Hut"] * 3,
+    "date": pd.to_datetime(["2026-07-13", "2026-07-14", "2026-07-15"]),
+    "avg_delivery_min": [34.0, 47.5, 36.0]})          # 14 July was a bad day: the kitchen was short-staffed
+daily["valid_from"] = daily["date"] + pd.Timedelta(days=1)   # a day's value exists only after midnight
+
+# Training rows: past orders, each with the moment the ETA was shown
+orders = pd.DataFrame({
+    "order_id": [101, 102, 103],
+    "restaurant": ["Dosa Hut"] * 3,
+    "ts": pd.to_datetime(["2026-07-14 12:30", "2026-07-14 20:05", "2026-07-15 13:10"]),
+    "actual_min": [44, 51, 35]})
+orders["date"] = orders["ts"].dt.normalize()
+
+# NAIVE join on (restaurant, date): picks the value computed at the end of the SAME day
+naive = orders.merge(daily[["restaurant", "date", "avg_delivery_min"]], on=["restaurant", "date"])
+print("naive join\n", naive[["order_id", "ts", "actual_min", "avg_delivery_min"]].to_string(index=False))
+
+# POINT-IN-TIME join: the latest value whose valid_from is at or before the order time
+pit = pd.merge_asof(orders.sort_values("ts"),
+                    daily[["restaurant", "valid_from", "avg_delivery_min"]].sort_values("valid_from"),
+                    left_on="ts", right_on="valid_from", by="restaurant", direction="backward")
+print("\npoint-in-time join\n", pit[["order_id", "ts", "actual_min", "avg_delivery_min"]].to_string(index=False))</div>
+  <div class="fx" data-lang="text">naive join
+  order_id                  ts  actual_min  avg_delivery_min
+      101 2026-07-14 12:30:00          44              47.5
+      102 2026-07-14 20:05:00          51              47.5
+      103 2026-07-15 13:10:00          35              36.0
+
+point-in-time join
+  order_id                  ts  actual_min  avg_delivery_min
+      101 2026-07-14 12:30:00          44              34.0
+      102 2026-07-14 20:05:00          51              34.0
+      103 2026-07-15 13:10:00          35              47.5</div>
+  <p>Look at order 101, placed at 12:30 on 14 July. The naive join gives it 47.5, the average of 14 July. But at 12:30 the day was not over; that 47.5 was computed at midnight from every order of the day, <em>including order 101's own 44-minute delivery</em> and the 51-minute order 102 that had not even been placed yet. The feature contains the answer. The point-in-time join uses <code>valid_from</code>, the moment each value became available (midnight after the day it describes), and pandas' <code>merge_asof</code>, which for every order finds the latest feature row whose timestamp is at or before the order's timestamp. Order 101 gets 34.0, the value from 13 July, which really was the newest number available at 12:30. Order 103 on 15 July gets 47.5, because by then 14 July's average truly existed.</p>
+  <p>It is like a student who is allowed to study last year's question paper, compared with one who has been handed this year's paper the night before. The second student scores brilliantly in the mock exam and badly in the real one. To see how much this matters, the next program builds a realistic history: 200 restaurants over 60 days, where each restaurant-day has a "kitchen mood" (staff, rush) that partly carries into the next day. It trains one model on the naive join and one on the point-in-time join, then tests both on the last 15 days:</p>
+  <div class="fx" data-lang="py">import numpy as np, pandas as pd, lightgbm as lgb
+
+rng = np.random.default_rng(4)
+R, D, per_day = 200, 60, 25                      # 200 restaurants, 60 days, 25 orders each per day
+# Each restaurant-day has its own "kitchen mood" (staffing, rush) that partly carries into the next day
+mood = np.zeros((R, D))
+for d in range(1, D):
+    mood[:, d] = 0.5 * mood[:, d - 1] + rng.normal(0, 5, R)
+
+rows = []
+for r in range(R):
+    base = rng.normal(0, 3)
+    for d in range(D):
+        km = np.clip(rng.gamma(2.2, 1.4, per_day), 0.3, 9)
+        actual = 20 + 3 * km + base + mood[r, d] + rng.normal(0, 3, per_day)
+        rows.append(pd.DataFrame({"r": r, "day": d, "km": km, "actual": actual}))
+orders = pd.concat(rows, ignore_index=True)
+
+# Daily feature: each restaurant's average delivery time, computed at the end of each day
+daily = orders.groupby(["r", "day"], as_index=False)["actual"].mean().rename(columns={"actual": "avg_day"})
+naive = orders.merge(daily, on=["r", "day"])                          # same day's value: includes the future
+pit = orders.merge(daily.assign(day=daily.day + 1), on=["r", "day"])  # yesterday's value: known at order time
+
+def fit(df):
+    return lgb.LGBMRegressor(n_estimators=200, verbose=-1, random_state=0).fit(df[["km", "avg_day"]], df.actual)
+
+def mae(model, df):
+    return np.abs(df.actual - model.predict(df[["km", "avg_day"]])).mean()
+
+tr, te = (lambda d: d[d.day &lt; 45]), (lambda d: d[d.day &gt;= 45])
+leaky = fit(tr(naive))
+honest = fit(tr(pit))
+print(f"leaky model,  offline test (leaky features) : MAE {mae(leaky, te(naive)):.2f} min")
+print(f"leaky model,  live (features known at the time): MAE {mae(leaky, te(pit)):.2f} min")
+print(f"honest model, offline test = live            : MAE {mae(honest, te(pit)):.2f} min")</div>
+  <div class="fx" data-lang="text">leaky model,  offline test (leaky features) : MAE 2.52 min
+leaky model,  live (features known at the time): MAE 5.28 min
+honest model, offline test = live            : MAE 4.85 min</div>
+  <p>Three numbers tell the whole story. The leaky model, evaluated the way its own pipeline would evaluate it (with leaky features in the test set too), reports an MAE (mean absolute error) of 2.52 minutes. That is the number that goes into the launch slide. But in production, serving can only supply yesterday's average, because today's does not exist yet; fed those honest values, the same model's error is 5.28 minutes, more than double. The honest model, trained on point-in-time values from the start, scores 4.85, and that number is the same offline and live because nothing it uses is from the future. Notice the twist: the leaky model is not just over-promised, it is actually <em>worse</em> live than the honest one, because it learnt to lean almost entirely on a feature that is far less informative in real life than it was during training.</p>
+  <p>The rule that follows is simple to say and easy to break: every feature in a training row must be computed only from data that was available at that row's prediction time. In practice this means storing a timestamp with every feature value (when it became true, not when the job happened to run), joining with an "as of" join like <code>merge_asof</code> rather than an equality join on date, and being suspicious of any offline result that looks much better than expected. Doing this correctly at scale, over billions of rows and hundreds of features, is the main reason feature stores exist.</p>
+
+  <h2 id="ss-fs"><span class="num">05</span>Feature Stores</h2>
+  <p>So far we have built three things by hand: an offline history, an online latest-value store with a materialization loop, and a point-in-time join. In a company with one model this is fine. With twenty models and ten teams, each team writes its own version of "kitchen queue", with its own SQL, its own default value and its own join, and the versions drift apart. A <strong>feature store</strong> is a system that defines each feature once and then provides all three pieces from that single definition: an offline store with point-in-time joins for training, an online store for serving, and the materialization job that keeps them in sync. A <strong>registry</strong> holds the definitions (name, entity, source, owner, how long a value stays valid) so other teams can find and reuse them.</p>
+  <figure class="viz"><svg viewBox="0 0 740 236" width="740" role="img"><defs><marker id="ss-m3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs><rect x="190" y="4" width="350" height="28" rx="6" class="fs" stroke="currentColor" stroke-opacity=".55"/><text x="365" y="22" text-anchor="middle" font-weight="600">Registry: one feature definition for both paths</text><rect x="10" y="60" width="140" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity=".55"/><text x="80" y="79" text-anchor="middle" font-weight="600">Warehouse</text><text x="80" y="93" text-anchor="middle" class="tm">batch tables</text><rect x="10" y="160" width="140" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity=".55"/><text x="80" y="179" text-anchor="middle" font-weight="600">Event stream</text><text x="80" y="193" text-anchor="middle" class="tm">Kafka</text><rect x="190" y="110" width="140" height="44" rx="6" class="fv" stroke="currentColor" stroke-opacity=".55"/><text x="260" y="129" text-anchor="middle" font-weight="600">Feature</text><text x="260" y="143" text-anchor="middle" class="tm">pipelines</text><rect x="380" y="60" width="160" height="44" rx="6" class="fb" stroke="currentColor" stroke-opacity=".55"/><text x="460" y="79" text-anchor="middle" font-weight="600">Offline store</text><text x="460" y="93" text-anchor="middle" class="tm">full history</text><rect x="380" y="160" width="160" height="44" rx="6" class="ft" stroke="currentColor" stroke-opacity=".55"/><text x="460" y="179" text-anchor="middle" font-weight="600">Online store</text><text x="460" y="193" text-anchor="middle" class="tm">latest values</text><rect x="585" y="60" width="145" height="44" rx="6" class="fb" stroke="currentColor" stroke-opacity=".55"/><text x="657.5" y="79" text-anchor="middle" font-weight="600">Training sets</text><text x="657.5" y="93" text-anchor="middle" class="tm">point-in-time</text><rect x="585" y="160" width="145" height="44" rx="6" class="fg" stroke="currentColor" stroke-opacity=".55"/><text x="657.5" y="179" text-anchor="middle" font-weight="600">Online serving</text><text x="657.5" y="193" text-anchor="middle" class="tm">&lt;10 ms lookup</text><line x1="152" y1="82" x2="188" y2="124" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m3)"/><line x1="152" y1="182" x2="188" y2="142" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m3)"/><line x1="332" y1="124" x2="378" y2="86" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m3)"/><line x1="332" y1="142" x2="378" y2="178" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m3)"/><line x1="460" y1="106" x2="460" y2="157" stroke="currentColor" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#ss-m3)"/><text x="468" y="136" text-anchor="start" class="tm">materialize</text><line x1="542" y1="82" x2="582" y2="82" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m3)"/><line x1="542" y1="182" x2="582" y2="182" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m3)"/></svg><figcaption>One set of definitions feeds a history store for training and a fast latest-value store for serving.</figcaption></figure>
+  <p>Follow the figure from left to right. Raw data arrives from two kinds of sources: warehouse tables updated in batches, and the Kafka stream of order events. Feature pipelines in the middle turn raw data into feature values and write them to the offline store (top, full history) and the online store (bottom, latest values); the dashed arrow is materialization, copying recent offline values into the online store. On the right, training sets are built from the offline store with point-in-time joins, and online serving reads the online store. The registry across the top is what makes both paths use the same definition.</p>
+  <p><strong>Feast</strong> is the most widely used open-source feature store, and it runs entirely on a laptop with files and SQLite, so we can use it for real. A Feast project has a small configuration file saying where each store lives. Here the offline store is plain files and the online store is a local SQLite database (in production it would be BigQuery or Snowflake offline and Redis or DynamoDB online):</p>
+  <div class="fx" data-lang="text">project: biteful
+provider: local
+registry: data/registry.db
+online_store:
+  type: sqlite
+  path: data/online.db
+offline_store:
+  type: file
+entity_key_serialization_version: 3</div>
+  <p>The feature definitions are ordinary Python. An <strong>entity</strong> is the thing a feature describes, identified by a join key (here <code>restaurant_id</code>). A <strong>feature view</strong> groups features that come from the same source, and its <code>ttl</code> (time to live) says how old a value may be before it counts as missing:</p>
+  <div class="fx" data-lang="py">from datetime import timedelta
+from feast import Entity, FeatureView, Field, FileSource
+from feast.types import Int64
+
+restaurant = Entity(name="restaurant", join_keys=["restaurant_id"])
+
+queue_source = FileSource(path="data/kitchen_queue.parquet",
+                          timestamp_field="event_timestamp")
+
+kitchen_queue = FeatureView(
+    name="kitchen_queue",
+    entities=[restaurant],
+    ttl=timedelta(hours=1),            # a value older than 1 hour counts as missing
+    schema=[Field(name="queue", dtype=Int64)],
+    source=queue_source,
+)</div>
+  <p>Running <code>feast apply</code> in the project folder registers these definitions in the registry. The program below then writes the queue history, asks Feast for a point-in-time training set for three past orders, materializes into the online store, and reads the latest values for a live request:</p>
+  <div class="fx" data-lang="py">from feast import FeatureStore
+
+# Raw history: kitchen queue of Dosa Hut (id 1) and Biryani Bros (id 2), with timestamps
+pd.DataFrame({
+    "restaurant_id": [1, 1, 2, 1, 2],
+    "event_timestamp": pd.to_datetime(["2026-07-14 20:00", "2026-07-14 20:05", "2026-07-14 20:05",
+                                       "2026-07-14 20:10", "2026-07-14 20:10"], utc=True),
+    "queue": [4, 5, 7, 6, 8],
+}).to_parquet("data/kitchen_queue.parquet")
+store = FeatureStore(repo_path=".")          # reads feature_store.yaml + the registered views
+
+# TRAINING: point-in-time join - the queue as it was when each past order was placed
+orders = pd.DataFrame({"order_id": [101, 102, 103], "restaurant_id": [1, 1, 2],
+                       "event_timestamp": pd.to_datetime(["2026-07-14 20:03", "2026-07-14 20:07",
+                                                          "2026-07-14 20:09"], utc=True)})
+train = store.get_historical_features(entity_df=orders, features=["kitchen_queue:queue"]).to_df()
+print(train.sort_values("order_id")[["order_id", "restaurant_id", "event_timestamp", "queue"]]
+      .to_string(index=False))
+
+# SERVING: materialize (copy latest values into the SQLite online store), then look up
+    store.materialize(start_date=pd.Timestamp("2026-07-14 19:00", tz="UTC"),
+                      end_date=pd.Timestamp("2026-07-14 20:11", tz="UTC"))
+live = store.get_online_features(features=["kitchen_queue:queue"],
+                                 entity_rows=[{"restaurant_id": 1}, {"restaurant_id": 2},
+                                              {"restaurant_id": 3}]).to_dict()
+print(live)</div>
+  <div class="fx" data-lang="text"> order_id  restaurant_id           event_timestamp  queue
+      101              1 2026-07-14 20:03:00+00:00      4
+      102              1 2026-07-14 20:07:00+00:00      5
+      103              2 2026-07-14 20:09:00+00:00      7
+{'restaurant_id': [1, 2, 3], 'queue': [6, 8, None]}</div>
+  <p>The first table is the training set. Order 101 at 20:03 gets queue 4, the value from 20:00, not the 5 that appeared at 20:05; order 102 at 20:07 gets 5; order 103 for Biryani Bros at 20:09 gets 7. Feast's <code>get_historical_features</code> performed exactly the point-in-time join we wrote with <code>merge_asof</code>, but from the registered definition, so every team gets it right without thinking about it. The second line is serving: after <code>materialize</code>, the online store returns the latest queue for Dosa Hut (6) and Biryani Bros (8), and <code>None</code> for restaurant 3, which has no data, so the serving code must apply the same default as training. One definition produced both the training values and the serving values, which is the entire point.</p>
+  <p>Managed products such as <strong>Tecton</strong> (now part of Databricks) and the feature stores built into Databricks, SageMaker and Vertex AI do the same job and also run the batch and streaming transformations for you. A feature store is not required for every design, though. One batch model with three features is perfectly well served by a table. In an interview, bring it in when several models share features, when real-time features are involved, or when training-serving consistency is a stated risk, all of which apply to ETA.</p>
+  <table class="tbl">
+    <tr><th>What we built by hand</th><th>Feast</th><th>Production equivalent</th></tr>
+    <tr><td>offline DataFrame with timestamps</td><td><code>FileSource</code> in a <code>FeatureView</code></td><td>Warehouse table with event timestamps</td></tr>
+    <tr><td><code>merge_asof</code></td><td><code>get_historical_features</code></td><td>Point-in-time join at scale</td></tr>
+    <tr><td>the materialization loop</td><td><code>materialize</code> / <code>materialize_incremental</code></td><td>Scheduled job or stream writer</td></tr>
+    <tr><td><code>get_online_features</code> + default</td><td><code>get_online_features</code></td><td>Redis MGET with timeout and default</td></tr>
+  </table>
+
+  <h2 id="ss-cache"><span class="num">06</span>Caching</h2>
+  <p>Features now arrive in milliseconds, but there is still waste. At 20:00 thousands of people in Kothrud ask for Dosa Hut's ETA to almost the same address within the same minute, and the service computes the same answer for each of them. A <strong>cache</strong> keeps recent answers and reuses them. The standard pattern, called <strong>cache-aside</strong>, is: look in the cache; on a miss, compute the answer, store it, and return it (<a class="xref" data-note="api_production">Production Backend</a> covers it in general). Each entry has a <strong>TTL</strong> (time to live) after which it expires, and the <strong>hit ratio</strong> is the share of lookups answered from the cache.</p>
+  <p>Think of the "today's specials" board in a restaurant. The waiter does not run to the kitchen for every customer who asks what is available; he reads the board. But if nobody rewrites the board, customers order dishes that ran out an hour ago. The TTL is how often the board is rewritten, and choosing it is a trade between saved work and stale answers. For the ETA the cache key is (restaurant, map cell), so Asha and her neighbour two streets away share an answer. The simulation below runs 10 minutes of dinner traffic at a tenth of real scale, with popular restaurants asked about far more often than others, while each kitchen's queue drifts by up to one order a minute. Since each queued order adds 2.42 minutes in our model, a cached ETA built on an old queue is off by 2.42 × the change in queue:</p>
   <div class="fx" data-lang="py">import numpy as np
 
 # 10 minutes of dinner traffic at 1/10 scale: 1,111 ETA lookups per second
-# key = (restaurant, map cell); popular restaurants are asked about far more often
+# cache key = (restaurant, map cell); popular restaurants are asked about far more often
 rng = np.random.default_rng(1)
 R, C, secs, per_s = 2_000, 50, 600, 1_111
 pop = 1 / np.arange(1, R + 1) ** 1.1; pop /= pop.sum()          # Zipf-like popularity
@@ -338,57 +393,31 @@ for ttl in [0, 30, 60, 120, 300]:
     hits, extra_err = 0, 0.0
     for ti, r, c in zip(t, rest, cell):
         key = (r, c)
-        hit = key in cached and ti - cached[key][0] &lt; ttl
-        if hit:
+        if key in cached and ti - cached[key][0] &lt; ttl:
             hits += 1
-            extra_err += 2.42 * abs(queue[ti // 60, r] - cached[key][1])   # minutes, from a stale queue
+            extra_err += 2.42 * abs(queue[ti // 60, r] - cached[key][1])   # minutes off, stale queue
         else:
             cached[key] = (ti, queue[ti // 60, r])
     print(f"TTL {ttl:&gt;3} s: hit ratio {hits/t.size:5.1%}   model calls saved {hits:&gt;7,}   "
           f"extra error {extra_err/t.size:.2f} min per lookup")</div>
-<div class="fx" data-lang="text">TTL   0 s: hit ratio  0.0%   model calls saved       0   extra error 0.00 min per lookup
+  <div class="fx" data-lang="text">TTL   0 s: hit ratio  0.0%   model calls saved       0   extra error 0.00 min per lookup
 TTL  30 s: hit ratio 67.0%   model calls saved 446,340   extra error 0.11 min per lookup
 TTL  60 s: hit ratio 73.5%   model calls saved 489,700   extra error 0.20 min per lookup
 TTL 120 s: hit ratio 79.2%   model calls saved 528,226   extra error 0.62 min per lookup
 TTL 300 s: hit ratio 85.5%   model calls saved 570,166   extra error 1.52 min per lookup</div>
-  <p>Read the trade-off row by row. TTL 30 s already serves two thirds of lookups from the cache, because popular keys repeat constantly. Going to 60 s adds a little more (73.5%) for 0.20 minutes of extra error per lookup on average. At 300 s the cache answers 85.5% of lookups but the ETAs are 1.52 minutes worse — almost as much as the gap between a good and a mediocre model. Biteful picks <strong>60 s</strong>: about 3.8× fewer model calls for a fifth of a minute.</p>
-  <table class="tbl">
-    <tr><th>What</th><th>Where</th><th>Refresh</th></tr>
-    <tr><td>prep_7d, zone history</td><td>Online store</td><td>Nightly batch</td></tr>
-    <tr><td>Kitchen queue, rider supply</td><td>Online store</td><td>Streaming, seconds</td></tr>
-    <tr><td>ETA per (restaurant, cell)</td><td>Cache with TTL</td><td>60 s</td></tr>
-    <tr><td>Restaurant embeddings + ANN index (for recommendations)</td><td>In-memory on retrieval servers</td><td>Daily</td></tr>
-  </table>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>The "today's specials" board at a restaurant. The waiter doesn't run to the kitchen for every customer; he reads the board. But if the board is never rewritten, customers order dishes that ran out an hour ago. TTL is how often someone rewrites the board.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Cache-aside</strong>: read the cache; on a miss, compute, store with a TTL, return (see <a class="xref" data-note="api_production">Production Backend</a>). <strong>Hit ratio</strong> = hits ÷ lookups. <strong>Staleness</strong>: how old a served value is.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Caching predictions without the model version in the key. After v13 ships, users keep getting v12's ETAs until every entry expires — and an A/B test of v13 is silently diluted. Key = (model version, restaurant, cell).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: where the model runs.</b> Caching removed three quarters of the model calls. The rest still have to run somewhere: inside the ETA service, in a separate model server, or as a batch job? And how many machines at 11,111 rows a second?</div>
+  <p>A 30-second TTL already answers 67.0% of lookups from the cache, because popular keys repeat constantly. Going to 60 seconds raises that to 73.5% for an average extra error of 0.20 minutes per lookup. Beyond that the trade gets worse quickly: at 300 seconds the cache answers 85.5% of lookups but each ETA is on average 1.52 minutes further from what a fresh model call would say, which is about the difference between a good model and a mediocre one. Biteful chooses 60 seconds, which cuts model calls by roughly 3.8 times (only 26.5% of lookups reach the model) for a fifth of a minute of error.</p>
+  <p>Precomputation is the cousin of caching: values that change slowly (prep_7d, restaurant embeddings for recommendations) are computed ahead of time and stored, so they never touch the request path at all. One detail matters enormously, and we return to it in Common Mistakes: the cache key must include the model version, otherwise users keep receiving the old model's answers after a release.</p>
 
-  <h2 id="ss-run"><span class="num">05</span>Where the Model Runs &amp; Scaling</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The model file must be loaded by some process. Should the ETA service load it itself, or call a separate model service over the network? And at peak, is the model call cheap enough per row, or do we need GPUs and tricks?</p>
-  </div>
-  <p><strong>Inference</strong> means running the model to get a prediction. There are four common placements:</p>
-  <div class="cards">
-    <div><b>Embedded</b><p>Model loaded inside the app process.</p><small>Lowest latency; redeploy app to update model</small></div>
-    <div><b>Model server</b><p>Separate service behind REST/gRPC.</p><small>Triton, TorchServe, KServe, BentoML</small></div>
-    <div><b>Sidecar</b><p>Model container next to the app in the same pod, via localhost.</p><small>Independent deploys, no network hop</small></div>
-    <div><b>Batch job</b><p>Spark / Ray scores a table on a schedule.</p><small>Writes to a key-value store</small></div>
-  </div>
+  <h2 id="ss-run"><span class="num">07</span>Where the Model Runs</h2>
+  <p>Caching removed about three quarters of the model calls; the rest still have to run somewhere. Running a trained model to get predictions is called <strong>inference</strong>, and there are four common places to do it. An <strong>embedded</strong> model is loaded inside the application process itself, so a prediction is a function call with no network hop; the cost is that updating the model means redeploying the app, and the app must be written in a language that can load it. A <strong>model server</strong> is a separate service, reached over REST or gRPC, built with tools such as Triton, TorchServe, KServe or BentoML (<a class="xref" data-note="mlops_serving">Model Serving</a> covers them); it adds a millisecond or more of network time but scales independently, can live on GPUs, and serves many callers. A <strong>sidecar</strong> is a model container running next to the app in the same Kubernetes pod and reached over localhost: almost as fast as embedded, but deployable separately. A <strong>batch job</strong> (Spark, Ray) scores whole tables on a schedule, as in section 01.</p>
   <table class="tbl">
     <tr><th></th><th>Embedded</th><th>Model server</th><th>Sidecar</th></tr>
     <tr><td>Latency</td><td>Best</td><td>+1–5 ms network</td><td>Near embedded</td></tr>
-    <tr><td>Independent scaling</td><td>No</td><td>Yes (GPU pool)</td><td>No (scales with app)</td></tr>
-    <tr><td>Language lock-in</td><td>Yes</td><td>No</td><td>No</td></tr>
-    <tr><td>Use when</td><td>Small model, one service, mobile/edge</td><td>Big models, many callers</td><td>Per-service model, tight latency</td></tr>
+    <tr><td>Scales independently</td><td>No</td><td>Yes (e.g. a GPU pool)</td><td>No (scales with the app)</td></tr>
+    <tr><td>Update the model alone</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Use when</td><td>Small model, one service, mobile or edge</td><td>Large models, many callers</td><td>One service's model, tight latency</td></tr>
   </table>
-  <p>Biteful's ETA model is a few-MB GBM used by one service, so <strong>embedded</strong> fits: no network hop. The biggest per-call lever is <strong>batching</strong>: every model call has a fixed overhead, so scoring 20 rows in one call is far cheaper than 20 calls of one row. Measured with a real 300-tree LightGBM, one thread:</p>
+  <p>Biteful's ETA model is a gradient-boosted tree model of a few megabytes used by one service, so embedded fits. The largest single lever on inference cost is then <strong>batching</strong>: every model call has a fixed overhead (input checks, converting data, setting up the computation), so scoring 20 rows in one call is far cheaper than 20 calls of one row. A bus works the same way; it costs almost the same to drive with 1 passenger or 20, so waiting a moment to fill it beats sending 20 autos. Measured on a real 300-tree LightGBM model on one CPU thread (timings are approximate and vary by machine):</p>
   <div class="fx" data-lang="py">import time, numpy as np, lightgbm as lgb
 
 # A real LightGBM ETA-style model (300 trees), single-threaded
@@ -407,36 +436,15 @@ batched = ms(lambda: model.predict(feed))
 print(f"20 calls of 1 row : {one_by_one:6.2f} ms per feed")
 print(f"1 call of 20 rows : {batched:6.2f} ms per feed  ({one_by_one / batched:.0f}x faster)")
 print(f"feeds per second per core, batched: {1000 / batched:,.0f}")</div>
-<div class="fx" data-lang="text">20 calls of 1 row :   9.67 ms per feed
-1 call of 20 rows :   0.94 ms per feed  (10x faster)
-feeds per second per core, batched: 1,063</div>
-  <p>One call of 20 rows takes about a tenth of the time of 20 separate calls (exact timings vary by machine). At ~1,063 feeds per core-second, peak (556 feeds/s) needs about one core for the model — the framework's 0.56-core estimate, confirmed. The expensive parts of ETA serving are features and the route engine, not the model.</p>
-  <p>For bigger models (deep rankers, embeddings) the same idea becomes <strong>dynamic batching</strong> on GPUs: the server waits a few milliseconds, collects requests from many users, and runs them as one call.</p>
-  <div class="flow"><span>Requests</span><span>Queue (wait ≤ 5 ms)</span><span>Batch of 32</span><span>One GPU call</span><span>Split responses</span></div>
-  <table class="tbl">
-    <tr><th>Lever</th><th>Gain</th><th>Cost</th></tr>
-    <tr><td><strong>Batching</strong></td><td>Throughput up many times (10× here)</td><td>Dynamic batching adds a few ms of queueing</td></tr>
-    <tr><td><strong>GPU vs CPU</strong></td><td>Large DNNs, embeddings</td><td>Expensive; GBMs are fine on CPU</td></tr>
-    <tr><td><strong>Quantization / distillation</strong></td><td>Smaller, faster model</td><td>Small accuracy loss; re-validate</td></tr>
-    <tr><td><strong>Horizontal autoscaling</strong></td><td>Add replicas with traffic (on QPS, latency, queue depth)</td><td>Cold start of new pods; keep a warm minimum</td></tr>
-    <tr><td><strong>Cascades</strong></td><td>Cheap model first, heavy model on hard cases</td><td>Two models to maintain</td></tr>
-  </table>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A GPU (or any model call) is like a bus: it costs almost the same to carry 1 passenger or 20. Waiting a moment to fill the bus beats sending 20 autos.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Inference</strong>: computing predictions from a trained model. <strong>Batch inference call</strong>: many rows per call. <strong>Dynamic batching</strong>: a server combining concurrent requests into one model call. <strong>Autoscaling</strong>: adding or removing replicas automatically from a load metric (<a class="xref" data-note="mlops_k8s">Kubernetes</a> HPA).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Autoscaling a GPU model server on CPU usage. CPU can stay low while the GPU is saturated; scale on request queue length or latency instead.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: training-serving skew.</b> Every piece now runs within budget. Biteful launches — and the live late rate is double what offline evaluation promised. No errors, no timeouts. What could make the same model worse live than on paper?</div>
+  <div class="fx" data-lang="text">20 calls of 1 row :   9.17 ms per feed
+1 call of 20 rows :   1.14 ms per feed  (8x faster)
+feeds per second per core, batched: 874</div>
+  <p>Twenty single-row calls took about 9.2 ms; one call with all 20 rows took about 1.1 ms, roughly eight times faster. That gives about 874 feeds per second on one core, and since the peak is 556 feeds per second, the model needs less than one core at peak. This is a useful interview point: for tree models the expensive parts of ETA serving are the feature fetch and the route engine, not the model.</p>
+  <p>For large neural models the same idea becomes <strong>dynamic batching</strong>: the model server holds incoming requests for a few milliseconds, combines requests from many users into one GPU call, and splits the results. Throughput rises sharply while each request pays a small queueing delay, so the maximum wait is tuned against the latency budget. Other levers for heavy models are quantization and distillation (a smaller, faster model at a small accuracy cost) and cascades (a cheap model for easy cases, the heavy one only for hard ones). Finally, servers are added and removed automatically with load, called <strong>autoscaling</strong> (<a class="xref" data-note="mlops_k8s">Kubernetes</a> does it with the Horizontal Pod Autoscaler). For a GPU model server, scale on request queue length or latency, not CPU usage, because the CPU can sit idle while the GPU is saturated; and keep a warm minimum of replicas, since a new one takes time to start and load the model.</p>
 
-  <h2 id="ss-skew"><span class="num">06</span>Training-Serving Skew</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The model scored MAE 1.66 offline. Live it behaves much worse, and nothing crashes. The model file is identical. What differs, how do we prove it, and how do we prevent it?</p>
-  </div>
-  <p><strong>Training-serving skew</strong> means the features the model sees live are not the same as the features it trained on. Here is a real way it happens. The training pipeline takes <code>km</code> from completed trips: the <em>road</em> distance the rider drove. The serving team, needing km before any trip exists, writes a quick haversine formula: the <em>straight-line</em> distance between restaurant and door. Roads are 1.2–1.5× longer than the crow flies. Both are called "km".</p>
+  <h2 id="ss-skew"><span class="num">08</span>Training-Serving Skew</h2>
+  <p>Suppose every piece above is built and within budget. Biteful launches, and the live late rate is twice what offline evaluation promised. There are no errors, no timeouts, and the model file is byte-for-byte the one that was evaluated. What could make the same model worse in production than on paper?</p>
+  <p>The usual answer is <strong>training-serving skew</strong>: the feature values the model receives in production are not computed the same way as the values it was trained on. Here is a way it really happens. The training pipeline takes <code>km</code> from completed trips, which is the <em>road</em> distance the rider actually drove. The serving team needs km before any trip exists, so it writes a quick haversine formula, the <em>straight-line</em> distance from restaurant to door. Roads are 1.2 to 1.5 times longer than the straight line. Both columns are called "km", both look reasonable, and nobody notices. It is like a student who practises with a calculator set to degrees and sits the exam with one set to radians: same student, same knowledge, wrong answers, and nothing tells him why.</p>
   <div class="fx" data-lang="py">import numpy as np, lightgbm as lgb
 
 rng = np.random.default_rng(3)
@@ -453,7 +461,7 @@ model = lgb.LGBMRegressor(n_estimators=300, n_jobs=1, verbose=-1).fit(np.c_[road
 
 # Next week, live traffic
 s, road, q, rain, y = orders(5_000)
-offline = model.predict(np.c_[road, q, rain])   # what the training-style feature gives
+offline = model.predict(np.c_[road, q, rain])   # the feature as training computed it
 live    = model.predict(np.c_[s, q, rain])      # SERVING code computed km with haversine (straight line)
 
 for name, p in [("offline (road km)", offline), ("live (straight km)", live)]:
@@ -461,48 +469,33 @@ for name, p in [("offline (road km)", offline), ("live (straight km)", live)]:
     print(f"{name:&lt;20} MAE {np.abs(e).mean():5.2f}  bias {e.mean():+5.2f}  late {np.mean(e &gt; 0):4.0%}")
 
 # Detect it: compare the km values serving LOGGED with the km values training USED
-print(f"\\nmean km  training {road.mean():.2f}   served {s.mean():.2f}   ratio {s.mean()/road.mean():.2f}")
+print(f"\nmean km  training {road.mean():.2f}   served {s.mean():.2f}   ratio {s.mean()/road.mean():.2f}")
 edges = np.quantile(road, np.linspace(0, 1, 11)); edges[0], edges[-1] = -np.inf, np.inf
 e_ = np.clip(np.histogram(road, edges)[0] / len(road), 1e-6, None)
 a_ = np.clip(np.histogram(s, edges)[0] / len(s), 1e-6, None)
 print(f"PSI(served km vs training km) = {np.sum((a_ - e_) * np.log(a_ / e_)):.2f}")</div>
-<div class="fx" data-lang="text">offline (road km)    MAE  1.66  bias +0.05  late  42%
+  <div class="fx" data-lang="text">offline (road km)    MAE  1.66  bias +0.05  late  42%
 live (straight km)   MAE  3.15  bias +2.87  late  84%
 
 mean km  training 3.21   served 2.38   ratio 0.74
 PSI(served km vs training km) = 0.19</div>
-  <p>Trace the damage:</p>
-  <ul>
-    <li><strong>Offline</strong> (road km, as in training): MAE 1.66, bias +0.05, 42% late — the model is fine.</li>
-    <li><strong>Live</strong> (straight km): the model thinks every trip is shorter, so it promises too little. MAE nearly doubles to 3.15, bias +2.87 minutes, and <strong>84%</strong> of orders arrive late.</li>
-    <li><strong>Catch it</strong>: compare the km values serving <em>logged</em> with the km values training used. The served mean is 0.74× the training mean, and PSI = 0.19 (section 04 of <a class="xref" data-note="sd_monitoring">Monitoring</a> explains PSI; 0.1–0.25 means "investigate"). One dashboard line finds a bug that no error log would.</li>
-  </ul>
+  <p>With road km, as in training, the model is healthy: MAE 1.66 minutes, almost no bias, 42% of orders late (roughly half, as you would expect from a model aiming at the middle). With straight-line km the model believes every trip is shorter than it is, so it promises too little: the MAE nearly doubles to 3.15, the bias is +2.87 minutes (actual minus predicted), and 84% of orders arrive late. Every individual prediction looks plausible, which is why no error log catches this.</p>
+  <p>What does catch it is the last two lines. If the serving service <strong>logs the exact features it used</strong> for every prediction, we can compare them with the training features: the served km averages 2.38 against 3.21 in training, a ratio of 0.74, and the PSI (population stability index, a standard measure of how far a distribution has moved, explained in <a class="xref" data-note="sd_monitoring">Monitoring, Drift &amp; Retraining</a>) is 0.19, above the usual 0.1 "investigate" line. One chart on a dashboard finds a bug that would otherwise take weeks.</p>
   <table class="tbl">
-    <tr><th>Cause</th><th>Biteful example</th><th>Fix</th></tr>
-    <tr><td>Two code paths</td><td>Road km in training, straight km in serving</td><td>One feature function, imported by both; or a feature store</td></tr>
-    <tr><td>Freshness gap</td><td>Trained on end-of-day queues, served 10-minute-old ones</td><td>Log served features and train on those</td></tr>
-    <tr><td>Leakage</td><td>prep_7d joined at today's value (<a class="xref" data-note="sd_framework">framework</a> §06)</td><td>Point-in-time joins</td></tr>
-    <tr><td>Missing values</td><td>Online miss returns 0, training had the median 3</td><td>Same default both sides; monitor null rates</td></tr>
+    <tr><th>Cause of skew</th><th>Biteful example</th><th>Fix</th></tr>
+    <tr><td>Two code paths for one feature</td><td>Road km in training, straight-line km in serving</td><td>One feature function imported by both, or a feature store</td></tr>
+    <tr><td>Freshness gap</td><td>Trained on end-of-day queues, served 10-minute-old ones</td><td>Log served features and train on those ("log and wait")</td></tr>
+    <tr><td>Leakage in training joins</td><td>Same-day average joined to the order (section 04)</td><td>Point-in-time joins</td></tr>
+    <tr><td>Missing-value handling</td><td>Serving returns 0 on a miss, training filled the median</td><td>One default, shared; monitor null rates</td></tr>
     <tr><td>Preprocessing</td><td>Training scaled features, serving forgot</td><td>Ship the whole sklearn <a class="xref" data-note="ml_pipelines">Pipeline</a>, not just the model</td></tr>
   </table>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A student practises maths with a calculator set to degrees, then sits the exam with one set to radians. Same student, same knowledge, wrong answers — and nothing tells him why.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Training-serving skew</strong>: a difference between the feature values (or preprocessing) used in training and at serving time. <strong>Log-and-wait</strong>: log the exact features used at prediction time, join the labels when they arrive, and train on those rows, so training matches serving by construction.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Debugging the model when the features are wrong. When live is worse than offline, first compare logged served features with training features for the same entities; most "model problems" are pipeline problems.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: shadow deployment.</b> Skew is fixed and v12 is serving. The team has v13, with a new weather feed. If we switch over and it has a bug like the km one, every customer feels it at once. Can v13 see real traffic without any customer seeing v13?</div>
+  <p>The strongest prevention is called <strong>log and wait</strong>: log the exact feature vector used at prediction time, join the true label when it arrives, and train the next model on those logged rows, so training matches serving by construction. And when live performance is worse than offline, check the features before touching the model; most "model problems" turn out to be pipeline problems.</p>
 
-  <h2 id="ss-shadow"><span class="num">07</span>Shadow Deployment</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Real requests have missing fields, odd cities and 8 pm spikes. A model that was fine on a test file can time out or output nonsense on them. How do we try v2 on real traffic with zero risk to users?</p>
-  </div>
-  <p><strong>Shadow deployment</strong>: send a copy of every live request to v2 as well. v1 still answers the user; v2's answer is logged and thrown away. You get v2's real latency, errors and outputs on real inputs, and nobody sees them.</p>
-  <figure class="viz"><svg viewBox="0 0 720 160" width="720" role="img"><defs><marker id="se-m2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs><rect x="10" y="50" width="110" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity=".55"/><text x="65" y="76" text-anchor="middle" font-weight="600">Request</text><rect x="160" y="50" width="110" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity=".55"/><text x="215" y="76" text-anchor="middle" font-weight="600">Router</text><rect x="320" y="10" width="160" height="44" rx="6" class="fg" stroke="currentColor" stroke-opacity=".55"/><text x="400" y="36" text-anchor="middle" font-weight="600">Prod model v1</text><rect x="320" y="100" width="160" height="44" rx="6" class="ft" stroke="currentColor" stroke-opacity=".55"/><text x="400" y="126" text-anchor="middle" font-weight="600">Shadow v2</text><rect x="540" y="10" width="170" height="44" rx="6" class="fg" stroke="currentColor" stroke-opacity=".55"/><text x="625" y="36" text-anchor="middle" font-weight="600">Response to user</text><rect x="540" y="100" width="170" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity=".55"/><text x="625" y="119" text-anchor="middle" font-weight="600">Log only</text><text x="625" y="133" text-anchor="middle" class="tm">compare later</text><line x1="122" y1="72" x2="157" y2="72" stroke="currentColor" stroke-width="1.4" marker-end="url(#se-m2)"/><line x1="272" y1="66" x2="318" y2="34" stroke="currentColor" stroke-width="1.4" marker-end="url(#se-m2)"/><line x1="272" y1="80" x2="318" y2="120" stroke="currentColor" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#se-m2)"/><line x1="482" y1="32" x2="537" y2="32" stroke="currentColor" stroke-width="1.4" marker-end="url(#se-m2)"/><line x1="482" y1="122" x2="537" y2="122" stroke="currentColor" stroke-width="1.4" marker-end="url(#se-m2)"/><text x="250" y="128" text-anchor="middle" class="tm">copy</text></svg><figcaption>Shadow gets real traffic but its answers are thrown away: zero user risk, real latency and output checks.</figcaption></figure>
-  <p>Biteful's v2 reads rain from a new weather feed. We shadow it on 10,000 requests. (The simulation plants the kind of bug shadows exist to find: the new feed has no Mumbai data, the null becomes 0.)</p>
+  <h2 id="ss-shadow"><span class="num">09</span>Shadow Deployment</h2>
+  <p>With skew fixed, version 1 is serving. The team now has version 2, which reads rain from a new weather feed. A model that looked fine on a test file can still time out, crash on an unusual input, or produce nonsense for a city the test set barely covered. If we simply switch over, every user meets those problems at once. We want v2 to face real traffic without any user seeing its answers.</p>
+  <p>That is <strong>shadow deployment</strong> (also called a dark launch or shadow mode): every live request is copied to v2 as well as v1. v1 still answers the user; v2's answer is logged and thrown away. Picture a new cashier on her first day at a kirana shop. The owner bills every customer as usual, while the new cashier writes her own bill on a notepad that nobody receives. In the evening the owner compares the two piles page by page.</p>
+  <figure class="viz"><svg viewBox="0 0 720 160" width="720" role="img"><defs><marker id="ss-m4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs><rect x="10" y="50" width="110" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity=".55"/><text x="65" y="76" text-anchor="middle" font-weight="600">Request</text><rect x="160" y="50" width="110" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity=".55"/><text x="215" y="76" text-anchor="middle" font-weight="600">Router</text><rect x="320" y="10" width="160" height="44" rx="6" class="fg" stroke="currentColor" stroke-opacity=".55"/><text x="400" y="36" text-anchor="middle" font-weight="600">Live model v1</text><rect x="320" y="100" width="160" height="44" rx="6" class="ft" stroke="currentColor" stroke-opacity=".55"/><text x="400" y="126" text-anchor="middle" font-weight="600">Shadow v2</text><rect x="540" y="10" width="170" height="44" rx="6" class="fg" stroke="currentColor" stroke-opacity=".55"/><text x="625" y="36" text-anchor="middle" font-weight="600">Response to user</text><rect x="540" y="100" width="170" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity=".55"/><text x="625" y="119" text-anchor="middle" font-weight="600">Log only</text><text x="625" y="133" text-anchor="middle" class="tm">compare later</text><line x1="122" y1="72" x2="157" y2="72" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m4)"/><line x1="272" y1="66" x2="318" y2="34" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m4)"/><line x1="272" y1="80" x2="318" y2="120" stroke="currentColor" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#ss-m4)"/><line x1="482" y1="32" x2="537" y2="32" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m4)"/><line x1="482" y1="122" x2="537" y2="122" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m4)"/><text x="250" y="128" text-anchor="middle" class="tm">copy</text></svg><figcaption>The shadow receives a copy of real traffic, but its answers only reach a log.</figcaption></figure>
+  <p>In the figure the router sends each request to v1 (solid arrow), whose answer goes back to the user, and a copy to v2 (dashed arrow), whose answer goes only to a log. Later, a comparison job reads the log. The simulation below shadows v2 on 10,000 requests. It plants the kind of bug shadows exist to find: the new weather feed has no Mumbai data, and the null is quietly filled with 0, meaning "not raining":</p>
   <div class="fx" data-lang="py">import numpy as np
 
 # Shadow test: every live ETA request also goes to v2; users only ever see v1's answer
@@ -525,42 +518,21 @@ for c in ["Pune", "Mumbai"]:
         print(f"{c:&lt;6} rain={r}  mean v2-v1 {d[m].mean():+5.1f} min   differ by &gt;5 min: {np.mean(np.abs(d[m]) &gt; 5):5.1%}  (n={m.sum()})")
 lat_v1 = rng.gamma(4, 2.5, n); lat_v2 = rng.gamma(4, 3.5, n)                # ms, ETA service time
 print(f"p99 latency  v1 {np.quantile(lat_v1, .99):.0f} ms   v2 {np.quantile(lat_v2, .99):.0f} ms   (budget 60)")</div>
-<div class="fx" data-lang="text">overall      mean |v2-v1|  2.7 min   differ by &gt;5 min: 15.9%
+  <div class="fx" data-lang="text">overall      mean |v2-v1|  2.7 min   differ by &gt;5 min: 15.9%
 Pune   rain=0  mean v2-v1  -0.9 min   differ by &gt;5 min:  0.3%  (n=3464)
 Pune   rain=1  mean v2-v1  -0.6 min   differ by &gt;5 min:  0.1%  (n=1506)
 Mumbai rain=0  mean v2-v1  -0.9 min   differ by &gt;5 min:  0.4%  (n=3463)
 Mumbai rain=1  mean v2-v1  -9.6 min   differ by &gt;5 min: 99.8%  (n=1567)
 p99 latency  v1 25 ms   v2 35 ms   (budget 60)</div>
-  <p>Read it top to bottom. Overall, v2 is only 2.7 minutes from v1 on average and differs by more than 5 minutes on 15.9% of requests. That could pass as "v2 is a bit different". The <strong>slices</strong> tell the truth: Pune dry, Pune rain and Mumbai dry all move by under a minute, but <strong>Mumbai in rain</strong> is −9.6 minutes, with 99.8% of requests off by more than 5. v2 ignores Mumbai's rain entirely. Latency is fine (p99 35 ms against a 60 ms budget). The rollout stops here, and nobody was ever shown a wrong ETA.</p>
-  <ul>
-    <li><strong>Proves</strong>: runs at production load, within latency, with sane outputs, by slice.</li>
-    <li><strong>Compare</strong>: mean and share of large differences, distributions, by city, weather, new restaurants.</li>
-    <li><strong>Cost</strong>: double compute while the shadow runs.</li>
-    <li><strong>Can't prove</strong>: user impact (did more people order? fewer complaints?), because users never see v2.</li>
-  </ul>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A new cashier at a kirana shop on day one. The owner bills every customer as usual. The new cashier also writes a bill on a notepad, which nobody receives. In the evening the owner compares the two piles, page by page.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Shadow deployment</strong> (dark launch, shadow mode): mirroring live traffic to a candidate whose outputs are logged, not served. <strong>Slice</strong>: a subset of traffic (a city, a weather condition) checked separately.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Shadow calls with side effects: sending an SMS, assigning a rider, writing to the orders table. The shadow path must be read-only. And judging by the overall average only: the Mumbai bug was invisible in "2.7 minutes".</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: canary.</b> Suppose v2 is fixed and the shadow is clean. Users must eventually see it. If it is broken in a way shadow couldn't catch (it affects how users or riders behave), how do we limit how many people are hurt, and undo it fast?</div>
+  <p>Read from the top. Overall, v2 is only 2.7 minutes away from v1 on average and differs by more than 5 minutes on 15.9% of requests; that could easily pass as "v2 is a bit different". The <strong>slices</strong> (subsets of traffic checked separately) tell the truth. Pune dry, Pune rain and Mumbai dry all move by under a minute, but Mumbai in rain moves by −9.6 minutes, with 99.8% of requests off by more than 5. v2 is ignoring Mumbai's rain entirely. Its latency is fine (p99 35 ms against a 60 ms budget), so a latency-only check would have passed it. The rollout stops here, and no customer was ever shown a wrong ETA.</p>
+  <p>Shadowing proves that a new model runs at production load, within latency, with sensible outputs on real inputs, slice by slice. It costs double compute while it runs, and the shadow path must have no side effects: a shadow model must never send an SMS, assign a rider or write to the orders table. What a shadow cannot prove is user impact, because users never see v2. Whether people order more or complain less with v2's ETAs needs v2 to be shown to someone.</p>
 
-  <h2 id="ss-canary"><span class="num">08</span>Canary &amp; Blue-Green</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The first time real users see v2, we want the number of affected people small and the way back instant. How small, for how long, and what number tells us to stop?</p>
-  </div>
-  <p><strong>Canary</strong>: send a small share of traffic (here 10%) to v2, the rest to v1. Watch errors and latency. If healthy, widen to 25%, 50%, 100%; if not, shrink to 0%. <strong>Blue-green</strong>: keep two full copies; "blue" serves everyone, "green" has v2 warmed up. Flip the router to move everyone at once, and flip back to roll back instantly. The share of users exposed is the <strong>blast radius</strong>.</p>
-  <figure class="viz"><svg viewBox="0 0 720 160" width="720" role="img"><defs><marker id="se-m3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs><text x="170" y="16" text-anchor="middle" font-weight="600">Canary: split traffic</text><rect x="10" y="52" width="100" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity=".55"/><text x="60" y="71" text-anchor="middle" font-weight="600">Load</text><text x="60" y="85" text-anchor="middle" class="tm">balancer</text><rect x="170" y="26" width="150" height="40" rx="6" class="fg" stroke="currentColor" stroke-opacity=".55"/><text x="245" y="50" text-anchor="middle" font-weight="600">v1  90%</text><rect x="170" y="92" width="150" height="40" rx="6" class="ft" stroke="currentColor" stroke-opacity=".55"/><text x="245" y="116" text-anchor="middle" font-weight="600">v2  10%</text><line x1="112" y1="68" x2="168" y2="46" stroke="currentColor" stroke-width="1.4" marker-end="url(#se-m3)"/><line x1="112" y1="80" x2="168" y2="112" stroke="currentColor" stroke-width="1.4" marker-end="url(#se-m3)"/><text x="540" y="16" text-anchor="middle" font-weight="600">Blue-green: switch all at once</text><rect x="380" y="52" width="100" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity=".55"/><text x="430" y="78" text-anchor="middle" font-weight="600">Router</text><rect x="560" y="26" width="150" height="40" rx="6" class="fb" stroke="currentColor" stroke-opacity=".55"/><text x="635" y="50" text-anchor="middle" font-weight="600">Blue v1  live</text><rect x="560" y="92" width="150" height="40" rx="6" class="fg" stroke="currentColor" stroke-opacity=".55"/><text x="635" y="116" text-anchor="middle" font-weight="600">Green v2  idle</text><line x1="482" y1="68" x2="558" y2="46" stroke="currentColor" stroke-width="1.4" marker-end="url(#se-m3)"/><line x1="482" y1="80" x2="558" y2="112" stroke="currentColor" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#se-m3)"/><text x="545" y="152" text-anchor="middle" class="tm">flip pointer → instant swap / rollback</text></svg><figcaption>Canary limits blast radius by %, blue-green by having a warm copy to flip back to.</figcaption></figure>
-  <p><strong>Worked numbers: how long must the canary run?</strong> Long enough for a real problem to stand out from noise. The ETA service gets 556 requests/s at peak; v1 fails (timeout or error) on 0.1%.</p>
-  <ol>
-    <li>Canary requests in 10 minutes = 556 × 0.10 × 60 × 10 = <strong>33,360</strong>.</li>
-    <li>Errors expected if v2 is as good as v1 = 33,360 × 0.001 ≈ <strong>33.4</strong>.</li>
-    <li>If we see 40, or 55, is that bad luck or a real problem? A <strong>binomial test</strong> answers "if the true error rate were still 0.1%, how likely is a count this high?" (<a class="xref" data-note="st_hypothesis">Hypothesis Testing</a>).</li>
-  </ol>
+  <h2 id="ss-canary"><span class="num">10</span>Canary and Blue-Green Releases</h2>
+  <p>Suppose v2 is fixed and the shadow comparison is clean. Users must eventually see it, and some problems only appear when they do: riders behaving differently when ETAs are shorter, a memory leak that grows under real load. The goal of the first exposure is to keep the number of affected users small and the way back instant. The share of users a failure can reach is called the <strong>blast radius</strong>.</p>
+  <p>A <strong>canary release</strong> sends a small share of traffic, say 10%, to v2 and the rest to v1, watches errors and latency, and then widens step by step (25%, 50%, 100%) if healthy, or shrinks to 0% if not. The name comes from coal miners, who carried a canary underground: bad gas harmed the small bird first, warning the miners in time. A <strong>blue-green deployment</strong> keeps two complete copies of the service: "blue" serves everyone while "green" has v2 loaded and warmed up; the router flips everyone to green at once, and flipping back is an instant rollback. A wedding caterer who keeps a second full kitchen ready is doing blue-green.</p>
+  <figure class="viz"><svg viewBox="0 0 720 160" width="720" role="img"><defs><marker id="ss-m5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs><text x="170" y="16" text-anchor="middle" font-weight="600">Canary: split traffic</text><rect x="10" y="52" width="100" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity=".55"/><text x="60" y="71" text-anchor="middle" font-weight="600">Load</text><text x="60" y="85" text-anchor="middle" class="tm">balancer</text><rect x="170" y="26" width="150" height="40" rx="6" class="fg" stroke="currentColor" stroke-opacity=".55"/><text x="245" y="50" text-anchor="middle" font-weight="600">v1  90%</text><rect x="170" y="92" width="150" height="40" rx="6" class="ft" stroke="currentColor" stroke-opacity=".55"/><text x="245" y="116" text-anchor="middle" font-weight="600">v2  10%</text><line x1="112" y1="68" x2="168" y2="46" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m5)"/><line x1="112" y1="80" x2="168" y2="112" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m5)"/><text x="540" y="16" text-anchor="middle" font-weight="600">Blue-green: switch all at once</text><rect x="380" y="52" width="100" height="44" rx="6" class="fs" stroke="currentColor" stroke-opacity=".55"/><text x="430" y="78" text-anchor="middle" font-weight="600">Router</text><rect x="560" y="26" width="150" height="40" rx="6" class="fb" stroke="currentColor" stroke-opacity=".55"/><text x="635" y="50" text-anchor="middle" font-weight="600">Blue v1  live</text><rect x="560" y="92" width="150" height="40" rx="6" class="fg" stroke="currentColor" stroke-opacity=".55"/><text x="635" y="116" text-anchor="middle" font-weight="600">Green v2  idle</text><line x1="482" y1="68" x2="558" y2="46" stroke="currentColor" stroke-width="1.4" marker-end="url(#ss-m5)"/><line x1="482" y1="80" x2="558" y2="112" stroke="currentColor" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#ss-m5)"/><text x="545" y="152" text-anchor="middle" class="tm">flip the router → instant swap or rollback</text></svg><figcaption>A canary limits the blast radius by percentage; blue-green limits it by having a warm copy to flip back to.</figcaption></figure>
+  <p>On the left, the load balancer splits traffic 90/10, so if v2 is broken only a tenth of users are affected. On the right, the router sends everything to blue while green waits (dashed arrow); the switch moves everyone at once, so blue-green protects through speed of rollback rather than through a small share.</p>
+  <p>The practical question about a canary is how long it must run and what number tells it to stop. It must run long enough for a real problem to stand out from random noise. Biteful's ETA service gets 556 requests per second at peak and v1 fails (timeout or server error) on 0.1% of them. A 10% canary for 10 minutes sees 556 × 0.10 × 600 = 33,360 requests, so if v2 were exactly as good as v1 we would expect about 33.4 errors. Seeing 40 or 55 could be bad luck or a real problem. A <strong>binomial test</strong> answers "if the true error rate were still 0.1%, how likely is a count at least this high?" (<a class="xref" data-note="st_hypothesis">Hypothesis Testing</a>):</p>
   <div class="fx" data-lang="py">from scipy.stats import binomtest
 
 peak_rps = 556             # ETA requests per second at the dinner peak
@@ -574,138 +546,137 @@ for errors in [40, 55, 80]:
     p = binomtest(errors, n, base_err, alternative="greater").pvalue
     verdict = "ROLL BACK" if p &lt; 0.01 else "keep going"
     print(f"errors={errors:&gt;3}  rate={errors/n:.4%}  p={p:.4f}  {verdict}")</div>
-<div class="fx" data-lang="text">canary requests in 10 min: 33360 | expected errors at baseline: 33.4
+  <div class="fx" data-lang="text">canary requests in 10 min: 33360 | expected errors at baseline: 33.4
 errors= 40  rate=0.1199%  p=0.1443  keep going
 errors= 55  rate=0.1649%  p=0.0004  ROLL BACK
 errors= 80  rate=0.2398%  p=0.0000  ROLL BACK</div>
-  <p>40 errors happen 14% of the time by luck: keep going. 55 errors happen only 0.04% of the time by luck: the canary controller rolls back. The jump is tiny (0.10% → 0.16%); only the volume makes it visible. That is why canaries widen in timed steps, and why a 1% canary for 2 minutes can't see anything.</p>
+  <p>Forty errors would happen by luck about 14% of the time (p = 0.1443), so the canary keeps going. Fifty-five errors would happen by luck only 0.04% of the time, so the canary controller rolls back automatically, and only 10% of users for 10 minutes ever saw the problem. Notice how small the real change is: 0.10% to 0.16%. Only the volume of requests makes it visible, which is why canaries widen in timed steps and why a 1% canary for 2 minutes cannot see anything.</p>
+  <p>A canary is not an A/B test. It is too small and too short to measure a 1% change in orders or on-time rate; it answers "is v2 broken?", not "is v2 better?". Measuring "better" is the job of a properly sized experiment, covered in <a class="xref" data-note="sd_experiments">Experiments</a>. The full safe-release ladder is therefore shadow (zero users, does it work?), canary (a few users, is it broken?), then an A/B test (is it better?), each rung cheaper and safer than the next. The deployment mechanics live in <a class="xref" data-note="mlops_cicd">CI/CD for ML</a> and <a class="xref" data-note="mlops_deploy">Deployment</a>.</p>
   <table class="tbl">
     <tr><th></th><th>Shadow</th><th>Canary</th><th>Blue-green</th><th>A/B test</th></tr>
-    <tr><td>Goal</td><td>Does it work?</td><td>Is it broken for real users?</td><td>Zero-downtime swap</td><td>Is it better?</td></tr>
-    <tr><td>Users exposed</td><td>0%</td><td>1–10%, then widen</td><td>0% → 100% at once</td><td>Fixed split for weeks</td></tr>
-    <tr><td>Decided by</td><td>Diffs, slices, latency</td><td>Errors, latency, guardrails</td><td>Smoke tests</td><td>Statistical test on primary metric</td></tr>
-    <tr><td>Rollback</td><td>Nothing to roll back</td><td>Shrink to 0%</td><td>Flip back</td><td>End experiment</td></tr>
+    <tr><td>Question</td><td>Does it work?</td><td>Is it broken for real users?</td><td>Can we swap with no downtime?</td><td>Is it better?</td></tr>
+    <tr><td>Users exposed</td><td>0%</td><td>1–10%, then widen</td><td>0% then 100% at once</td><td>Fixed split for weeks</td></tr>
+    <tr><td>Decided by</td><td>Diffs by slice, latency</td><td>Errors, latency, guardrails</td><td>Smoke tests</td><td>Statistical test on the main metric</td></tr>
+    <tr><td>Rollback</td><td>Nothing to roll back</td><td>Shrink to 0%</td><td>Flip back</td><td>End the experiment</td></tr>
   </table>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Canary: miners carried a canary into coal mines; bad gas hurt the small bird first, warning the miners in time. Blue-green: a wedding caterer keeps a second full kitchen ready; if the first one's gas runs out, service switches in a minute.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Canary release</strong>: exposing a new version to a small, growing share of traffic with automatic rollback. <strong>Blue-green deployment</strong>: two full environments and an instant switch. <strong>Blast radius</strong>: how many users a failure can reach. Rollouts in practice: <a class="xref" data-note="mlops_cicd">CI/CD for ML</a>, <a class="xref" data-note="mlops_k8s">Kubernetes</a>.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Calling a canary an A/B test. A canary is too small and too short to measure a 1% change in orders or on-time rate. It answers "is it broken?", not "is it better?" — that is <a class="xref" data-note="sd_experiments">Experiments</a>.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: How It All Connects.</b> Every piece of the request path on one 20:11 request. After that, two questions remain that serving can't answer: will v12 still be right in July (<a class="xref" data-note="sd_monitoring">Monitoring</a>), and is v13 actually better for customers (<a class="xref" data-note="sd_experiments">Experiments</a>)?</div>
 
-  <h2 id="ss-connect"><span class="num">09</span>How It All Connects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Which serving decision depends on which, and what did each one measure on Biteful?</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 700 250" width="700" role="img">
-    <defs><marker id="ss-c0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs>
-    <text x="10" y="16" font-size="12" font-weight="600">One request at 20:11 (Asha, 20 cards)</text>
-    <rect x="10" y="28" width="120" height="50" rx="6" class="fb" stroke="currentColor" stroke-opacity=".5"/><text x="70" y="48" text-anchor="middle" font-size="12" font-weight="600">Online mode</text><text x="70" y="65" text-anchor="middle" font-size="10" class="tm">11,111/s peak</text>
-    <rect x="150" y="28" width="120" height="50" rx="6" class="fs" stroke="currentColor" stroke-opacity=".5"/><text x="210" y="48" text-anchor="middle" font-size="12" font-weight="600">Cache (60 s)</text><text x="210" y="65" text-anchor="middle" font-size="10" class="tm">73.5% hits</text>
-    <rect x="290" y="28" width="120" height="50" rx="6" class="ft" stroke="currentColor" stroke-opacity=".5"/><text x="350" y="48" text-anchor="middle" font-size="12" font-weight="600">Feature fetch</text><text x="350" y="65" text-anchor="middle" font-size="10" class="tm">1 MGET, default 3</text>
-    <rect x="430" y="28" width="120" height="50" rx="6" class="fv" stroke="currentColor" stroke-opacity=".5"/><text x="490" y="48" text-anchor="middle" font-size="12" font-weight="600">Model, 20 rows</text><text x="490" y="65" text-anchor="middle" font-size="10" class="tm">0.94 ms batched</text>
-    <rect x="570" y="28" width="120" height="50" rx="6" class="fg" stroke="currentColor" stroke-opacity=".5"/><text x="630" y="48" text-anchor="middle" font-size="12" font-weight="600">"41 min"</text><text x="630" y="65" text-anchor="middle" font-size="10" class="tm">36 ms path</text>
-    <line x1="130" y1="53" x2="147" y2="53" stroke="currentColor" marker-end="url(#ss-c0)"/>
-    <line x1="270" y1="53" x2="287" y2="53" stroke="currentColor" marker-end="url(#ss-c0)"/>
-    <line x1="410" y1="53" x2="427" y2="53" stroke="currentColor" marker-end="url(#ss-c0)"/>
-    <line x1="550" y1="53" x2="567" y2="53" stroke="currentColor" marker-end="url(#ss-c0)"/>
-    <rect x="150" y="110" width="400" height="34" rx="6" class="fr" stroke="currentColor" stroke-opacity=".5"/><text x="350" y="131" text-anchor="middle" font-size="12">Latency budget 60 ms p99: every box above gets a slice</text>
-    <line x1="350" y1="80" x2="350" y2="108" stroke="currentColor" stroke-dasharray="4 3"/>
-    <rect x="10" y="170" width="200" height="50" rx="6" class="ft" stroke="currentColor" stroke-opacity=".5"/><text x="110" y="190" text-anchor="middle" font-size="12" font-weight="600">Same feature code</text><text x="110" y="207" text-anchor="middle" font-size="10" class="tm">skew: MAE 1.66 vs 3.15</text>
-    <rect x="250" y="170" width="200" height="50" rx="6" class="fs" stroke="currentColor" stroke-opacity=".5"/><text x="350" y="190" text-anchor="middle" font-size="12" font-weight="600">Shadow v2</text><text x="350" y="207" text-anchor="middle" font-size="10" class="tm">Mumbai+rain −9.6 min</text>
-    <rect x="490" y="170" width="200" height="50" rx="6" class="fs" stroke="currentColor" stroke-opacity=".5"/><text x="590" y="190" text-anchor="middle" font-size="12" font-weight="600">Canary 10%</text><text x="590" y="207" text-anchor="middle" font-size="10" class="tm">55 vs 33.4 → roll back</text>
-    <line x1="210" y1="195" x2="247" y2="195" stroke="currentColor" marker-end="url(#ss-c0)"/>
-    <line x1="450" y1="195" x2="487" y2="195" stroke="currentColor" marker-end="url(#ss-c0)"/>
-    <path d="M350,78 V96 H110 V167" fill="none" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#ss-c0)"/>
-    <text x="350" y="242" text-anchor="middle" font-size="10" class="tm">bottom row: keeping the top row correct (skew) and changing it safely (shadow → canary)</text>
-  </svg><figcaption>Top: the request path, each box with its measured number. Bottom: what keeps it honest and what lets it change.</figcaption></figure>
-  <table class="tbl"><caption>Every serving concept on Biteful's ETA</caption>
-    <tr><th>Concept</th><th>Built from</th><th>Answers which question</th><th>Value on Biteful</th><th>When to use</th></tr>
-    <tr><td>Online serving</td><td>requirements (framework)</td><td>compute now or before?</td><td>2,778/s avg, 11,111 peak vs 20,000/s precompute (13.9% used)</td><td>answer depends on request context</td></tr>
-    <tr><td>Streaming features</td><td>Kafka order events</td><td>how fresh is the queue?</td><td>seconds old</td><td>fast-changing aggregates</td></tr>
-    <tr><td>Latency budget</td><td>p99 + critical path</td><td>how to spend 60 ms?</td><td>8 + max(12, 15) + 10 + 3 = 36; 24 headroom</td><td>every online system</td></tr>
-    <tr><td>Fan-out control</td><td>1 − 0.99<sup>n</sup></td><td>why is the tail worse?</td><td>20 GETs: p99 5.1 → 10.0 ms; 18.0% slow</td><td>many downstream calls</td></tr>
-    <tr><td>Feature store</td><td>registry + offline + online</td><td>same values for training and serving?</td><td>Dosa Hut queue 6; Chai Corner default 3</td><td>shared or real-time features</td></tr>
-    <tr><td>Cache</td><td>TTL + key with model version</td><td>why recompute?</td><td>60 s: 73.5% hits, +0.20 min</td><td>repeated requests</td></tr>
-    <tr><td>Batching</td><td>fixed per-call overhead</td><td>cheaper per row?</td><td>9.67 → 0.94 ms per 20 rows</td><td>always for multi-item requests</td></tr>
-    <tr><td>Skew check</td><td>logged served features</td><td>why is live worse?</td><td>MAE 1.66 → 3.15; PSI 0.19</td><td>before and after every launch</td></tr>
-    <tr><td>Shadow</td><td>mirrored traffic</td><td>does v2 work on real inputs?</td><td>Mumbai+rain −9.6 min</td><td>every new model or feature</td></tr>
-    <tr><td>Canary</td><td>small split + binomial test</td><td>is v2 broken for users?</td><td>33,360 req; 55 errors → p 0.0004</td><td>every rollout</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span><p><strong>Serving is a chain of budgets: the requirement (online, 60 ms) decides the feature plumbing (streaming + online store + one MGET), caching and batching buy back time, one shared feature definition keeps live inputs equal to training inputs, and shadow then canary let the chain change without users paying for mistakes.</strong></p></div>
-  <div class="bridge"><b>What this still can't tell us → next: the Revision Sheet.</b> After it, <a class="xref" data-note="sd_monitoring">Monitoring</a> asks what happens when the monsoon arrives and the world drifts away from the training data.</div>
+  <h2 id="ss-traps"><span class="num">11</span>Common Mistakes</h2>
+  <p>The quietest serving bug is a default value that differs between training and serving. Training filled missing kitchen queues with the median, 3. The serving code, written later by another team, returns 0 when Redis has no key. For a brand-new restaurant, the model then receives a value that means "empty kitchen" instead of "we don't know":</p>
+  <div class="fx" data-lang="py">import numpy as np, lightgbm as lgb
+
+# Training filled a missing queue with the median (3). The serving code returns 0 on a cache miss.
+rng = np.random.default_rng(2)
+km = np.clip(rng.gamma(2.2, 1.4, 5_000), 0.3, 9); q = rng.poisson(4, 5_000).astype(float)
+y = 14 + 3.2 * km + 2.4 * q + rng.normal(0, 2, 5_000)
+q_train = q.copy(); q_train[rng.random(5_000) &lt; 0.05] = 3          # 5% missing -&gt; median
+model = lgb.LGBMRegressor(n_estimators=200, verbose=-1).fit(np.c_[km, q_train], y)
+
+chai_corner = [[2.0, 3.0], [2.0, 0.0]]                             # same new restaurant, two defaults
+print("default 3 (as in training):", model.predict(np.array(chai_corner[:1])).round(1))
+print("default 0 (serving bug)   :", model.predict(np.array(chai_corner[1:])).round(1))</div>
+  <div class="fx" data-lang="text">default 3 (as in training): [27.5]
+default 0 (serving bug)   : [21.6]</div>
+  <p>The same new restaurant gets 27.5 minutes with the training default and 21.6 minutes with the serving bug, six minutes of optimism for every new restaurant, and nothing crashes. The fix is a single shared constant (or the feature store's default) used by both pipelines, plus a monitored null rate per feature.</p>
+  <p>A second classic is caching predictions without the model version in the key. After v13 ships, users keep receiving v12's cached answers until every entry expires, which also dilutes any canary or A/B test of v13:</p>
+  <div class="fx" data-lang="py"># A prediction cache keyed WITHOUT the model version keeps serving the old model after a release
+cache = {}
+def eta(model_version, restaurant, cell, predict, versioned):
+    key = (model_version, restaurant, cell) if versioned else (restaurant, cell)
+    if key not in cache:
+        cache[key] = predict()
+    return cache[key]
+
+for versioned in [False, True]:
+    cache.clear()
+    eta("v12", "Dosa Hut", 41, lambda: 41.4, versioned)              # v12 answer is cached at 20:10
+    shown = eta("v13", "Dosa Hut", 41, lambda: 38.9, versioned)      # v13 ships at 20:11
+    print(f"versioned key={versioned!s:&lt;5}  user sees {shown} (v13 says 38.9)")</div>
+  <div class="fx" data-lang="text">versioned key=False  user sees 41.4 (v13 says 38.9)
+versioned key=True   user sees 38.9 (v13 says 38.9)</div>
+  <p>Without the version in the key, the user still sees 41.4, v12's answer, even though v13 is live and says 38.9. With the version in the key, the lookup misses and v13's answer is computed. The same problem appears in reverse after a rollback, when v13's answers linger.</p>
+  <p>Three more mistakes come up constantly in design reviews. Budgeting or monitoring the average latency hides the tail; an average of 30 ms can sit on top of a p99 of 200 ms. Judging a shadow or canary by the overall average hides slice-level failures, exactly as the Mumbai rain bug hid inside "2.7 minutes". And joining features to training rows by date instead of by point in time leaks the future, producing offline numbers that collapse in production.</p>
 
   <h2 id="ss-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>The note on one page. Running example: Biteful's ETA at 20:11, Asha's feed of 20 cards (Dosa Hut 4 km queue 6 → 41.4 min; Chai Corner new → default queue 3). Model: 13.87 + 3.25·km + 2.42·queue + 8.71·rain. Peak 556 feeds/s = 11,111 ETAs/s; ETA service budget 60 ms p99.</p>
-  <h3>The question ladder</h3>
-  <table class="tbl">
-    <tr><th>Concept</th><th>Question</th><th>On Biteful</th><th>Weakness → next</th></tr>
-    <tr><td>Batch / online / streaming</td><td>compute when?</td><td>online model, streaming queue, nightly prep_7d</td><td>user waits → budget</td></tr>
-    <tr><td>Latency budget</td><td>how to spend 60 ms?</td><td>36 ms critical path; fan-out 18%</td><td>features from where? → feature store</td></tr>
-    <tr><td>Feature store</td><td>same values, fast?</td><td>offline + online + MGET + defaults</td><td>repeated work → cache</td></tr>
-    <tr><td>Cache</td><td>why recompute?</td><td>60 s TTL: 73.5% hits, +0.20 min</td><td>rest must run → placement</td></tr>
-    <tr><td>Placement &amp; batching</td><td>where, how many machines?</td><td>embedded; 20 rows 10× faster</td><td>live ≠ offline → skew</td></tr>
-    <tr><td>Skew</td><td>why worse live?</td><td>straight vs road km: MAE 1.66 → 3.15</td><td>release safely → shadow</td></tr>
-    <tr><td>Shadow</td><td>does v2 work?</td><td>Mumbai+rain −9.6 min</td><td>no user impact → canary</td></tr>
-    <tr><td>Canary</td><td>broken for users?</td><td>55 vs 33.4 → roll back</td><td>better? → experiments</td></tr>
-  </table>
-  <h3>Formulas and numbers</h3>
-  <table class="tbl">
-    <tr><th>Formula</th><th>Symbols</th><th>On Biteful</th></tr>
-    <tr><td>critical path = sum of sequential steps, max over parallel ones</td><td>steps in ms</td><td>8 + max(12, 15) + 10 + 3 = 36</td></tr>
-    <tr><td>P(at least one slow) = 1 − (1 − p)<sup>n</sup></td><td>p = chance one call is slow, n calls</td><td>1 − 0.99<sup>20</sup> = 18.2%</td></tr>
-    <tr><td>hit ratio = hits ÷ lookups</td><td>lookups answered from cache</td><td>TTL 60 s: 73.5%</td></tr>
-    <tr><td>stale error ≈ coefficient × |Δfeature|</td><td>2.42 min per queue order</td><td>+0.20 min (60 s), +1.52 (300 s)</td></tr>
-    <tr><td>canary requests = rps × share × seconds</td><td>rps at peak</td><td>556 × 0.10 × 600 = 33,360</td></tr>
-    <tr><td>expected errors = requests × base rate</td><td>base error rate 0.1%</td><td>33.4</td></tr>
-    <tr><td>PSI = Σ (a − e) · ln(a / e)</td><td>e training share, a served share per bin</td><td>served vs training km: 0.19</td></tr>
-  </table>
-  <h3>Definitions</h3>
+  <h3>Serving modes</h3>
+  <ul>
+    <li><b>Batch serving</b>: precompute predictions on a schedule, store in a key-value store, look up. Cheap at read time, stale, wastes work on unrequested inputs.</li>
+    <li><b>Online serving</b>: compute per request; needed when the answer depends on request-time context.</li>
+    <li><b>Streaming features</b>: features updated continuously from an event stream (Kafka), seconds old.</li>
+    <li>Biteful: online model, streaming queue, nightly prep_7d; 2,778/s average, 11,111/s peak vs 20,000/s for 5-minute precompute (13.9% ever used).</li>
+  </ul>
+  <h3>Latency</h3>
+  <ul>
+    <li><b>p50 / p99</b>: time beaten by 50% / 99% of requests. Budget and monitor p99; the mean hides the tail (mean 11.5 ms, p99 88.8 ms).</li>
+    <li><b>Critical path</b> = sequential steps + the slowest of each parallel group: 8 + max(12, 15) + 10 + 3 = 36 ms of 60.</li>
+    <li><b>Fan-out</b>: P(at least one slow of n) = 1 − (1 − p)<sup>n</sup>; 20 calls at 1% → 18.2%. Use MGET, timeouts with defaults, a fallback answer.</li>
+  </ul>
+  <h3>Features</h3>
   <table class="tbl">
     <tr><th>Term</th><th>Meaning</th></tr>
-    <tr><td>Batch / online serving</td><td>precompute and store / compute per request</td></tr>
-    <tr><td>Streaming feature</td><td>kept up to date from an event stream</td></tr>
-    <tr><td>p99, critical path, fan-out</td><td>time 99% beat; longest dependent chain; one request calling many</td></tr>
-    <tr><td>Feature store (offline, online, registry, materialize)</td><td>history for training; latest for serving; definitions; copy offline → online</td></tr>
-    <tr><td>TTL, hit ratio, staleness</td><td>cache lifetime; share served from cache; age of served value</td></tr>
-    <tr><td>Embedded / model server / sidecar</td><td>in-process / separate service / same pod</td></tr>
-    <tr><td>Training-serving skew</td><td>features or preprocessing differ between training and serving</td></tr>
-    <tr><td>Shadow, canary, blue-green</td><td>mirror and log; small growing split; two copies and a switch</td></tr>
+    <tr><td>Offline store</td><td>Every feature value with its timestamp; for training</td></tr>
+    <tr><td>Online store</td><td>Latest value per key, ~1 ms; for serving</td></tr>
+    <tr><td>Materialization</td><td>Copying recent values offline → online</td></tr>
+    <tr><td>Point-in-time join</td><td>Attach the latest value that existed at prediction time (<code>merge_asof</code>, Feast <code>get_historical_features</code>)</td></tr>
+    <tr><td>Data leakage</td><td>Training features use information from after prediction time (leaky MAE 2.52 offline, 5.28 live)</td></tr>
+    <tr><td>Feature store</td><td>Registry + offline + online + materialization from one definition (Feast, Tecton)</td></tr>
+    <tr><td>Training-serving skew</td><td>A feature computed differently in training and serving (road vs straight km: MAE 1.66 → 3.15)</td></tr>
   </table>
-  <h3>Use / avoid</h3>
-  <div class="cards">
-    <div><b>Use</b><p>Online serving when the answer depends on the request; streaming for minute-level features; a p99 budget with parallel steps and headroom; one MGET with timeouts and defaults; a TTL cache keyed by model version; batched model calls; one shared feature function and logged served features; shadow with slices, then a canary with a statistical stop rule.</p></div>
-    <div><b>Avoid</b><p>Precomputing what nobody asks for; budgeting averages; 20 separate GETs; caches without version or TTL; two implementations of one feature; trusting overall averages in a shadow report; side effects in the shadow path; treating a canary as an A/B test.</p></div>
-  </div>
-  <h3>Five rapid-fire checks</h3>
-  <ol>
-    <li>Fetch 12 ms and route 15 ms run in parallel; network 8, model 10, post 3. Critical path? <em>8 + 15 + 10 + 3 = 36 ms.</em></li>
-    <li>Each of 20 parallel calls is slow 1% of the time. Share of requests with a slow call? <em>1 − 0.99<sup>20</sup> ≈ 18.2%.</em></li>
-    <li>Why not cache ETAs for 5 minutes? <em>85.5% hits but +1.52 min error per lookup: the queue changes too fast.</em></li>
-    <li>Offline MAE 1.66, live 3.15, no errors in logs. First check? <em>Compare logged served features with training features (served km was 0.74× training: skew).</em></li>
-    <li>Shadow says v2 differs by 2.7 min on average. Ship to canary? <em>Not before slicing: Mumbai in rain was −9.6 min.</em></li>
-  </ol>
+  <h3>Running the model</h3>
+  <table class="tbl">
+    <tr><th>Choice</th><th>Key fact</th></tr>
+    <tr><td>Cache (cache-aside, TTL)</td><td>60 s: 73.5% hits, +0.20 min error; 300 s: 85.5%, +1.52 min; key includes model version</td></tr>
+    <tr><td>Embedded / server / sidecar / batch</td><td>In-process / separate service / same pod / scheduled job</td></tr>
+    <tr><td>Batching</td><td>20 rows in one call ~8× faster than 20 calls (timings approximate)</td></tr>
+    <tr><td>Dynamic batching</td><td>Server groups concurrent requests into one GPU call; adds a few ms of queueing</td></tr>
+    <tr><td>Autoscaling</td><td>Scale GPU servers on queue length or latency, not CPU</td></tr>
+  </table>
+  <h3>Safe release</h3>
+  <table class="tbl">
+    <tr><th></th><th>Shadow</th><th>Canary</th><th>Blue-green</th><th>A/B</th></tr>
+    <tr><td>Exposed</td><td>0%</td><td>small %, growing</td><td>all at once</td><td>fixed split</td></tr>
+    <tr><td>Answers</td><td>works?</td><td>broken?</td><td>zero-downtime swap</td><td>better?</td></tr>
+  </table>
+  <div class="fx" data-lang="py"># point-in-time join
+pd.merge_asof(orders.sort_values("ts"), feats.sort_values("valid_from"),
+              left_on="ts", right_on="valid_from", by="restaurant", direction="backward")
 
-  <h2 id="ss-qa"><span class="num">10</span>Questions &amp; Answers</h2>
+# canary: n = rps * share * seconds; roll back if one-sided binomial p &lt; 0.01
+binomtest(errors, n, base_rate, alternative="greater").pvalue
+
+# Feast
+store.get_historical_features(entity_df=orders, features=["kitchen_queue:queue"])  # training
+store.materialize(start_date, end_date)                                            # offline -&gt; online
+store.get_online_features(features=[...], entity_rows=[{"restaurant_id": 1}])      # serving</div>
+  <h3>Gotchas</h3>
+  <ul>
+    <li>Different default for missing values in training and serving (27.5 vs 21.6 minutes).</li>
+    <li>Prediction cache without the model version in the key.</li>
+    <li>Joining features by date instead of point in time.</li>
+    <li>Budgeting the mean; ignoring fan-out.</li>
+    <li>Judging shadows and canaries by the overall average; side effects in the shadow path.</li>
+    <li>Treating a canary as an A/B test.</li>
+  </ul>
+
+  <h2 id="ss-qa"><span class="num">12</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between p50 and p99 latency, and which do you budget?</summary><div class="qa-body">p50 is the median: half of requests finish faster. p99 is the time within which 99% finish. Budget p99, because the slow tail is what users notice, and fan-out makes it worse.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Daily "recommended for you" email to 20M users. Batch or real-time?</summary><div class="qa-body">Batch. The send happens once a day, there is no request context, and scoring everyone in a Spark/Ray job is cheaper than standing up a low-latency service.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why have two feature stores instead of one?</summary><div class="qa-body">Training needs every historical value to rebuild the past (large, scan-friendly, columnar). Serving needs one latest value per key in ~1 ms (small, key-value, in memory). No single store is good and cheap at both.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How would you build "orders to this kitchen in the last 15 minutes"?</summary><div class="qa-body">A streaming job (Flink, Kafka Streams, Spark Structured Streaming) consumes order events, keeps a 15-minute window count per restaurant, and writes it to the online store. Log the served value so training uses the same numbers.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>A request fans out to 20 feature lookups, each with p99 = 5 ms. What's the request p99?</summary><div class="qa-body">Higher than 5 ms: the request waits for the slowest. ~18% of requests see at least one slow call; our simulation gave 10.0 ms. Fix with one MGET, hedged requests or timeouts with defaults.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is dynamic batching and its trade-off?</summary><div class="qa-body">The server holds requests for a few ms and runs them as one call. Throughput rises a lot (20 rows: 0.94 ms vs 9.67 ms as 20 calls); each request pays a small queueing delay. Tune max batch size and max wait against the latency budget.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Embedded model vs model server: which for a 500 MB deep ranker used by three services?</summary><div class="qa-body">Model server. It scales on its own GPU pool, is updated once for all callers, and doesn't bloat three apps. Embedded suits small models in one service, like Biteful's ETA GBM.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Your ETA model is 1.66 MAE offline and 3.15 live. What do you check first?</summary><div class="qa-body">Training-serving skew: compare logged served feature distributions with training ones for the same orders (mean, PSI). Then leakage in training joins, defaults for missing values and preprocessing differences.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Shadow vs canary: what does each prove?</summary><div class="qa-body">Shadow proves the model runs correctly on real traffic (latency, errors, output sanity by slice) with zero exposure. Canary proves it is safe with a small share of real users. Neither measures the causal business effect; that's the A/B test.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>556 rps, 10% canary, 0.1% baseline errors. Expected errors in 10 minutes, and when do you roll back?</summary><div class="qa-body">33,360 canary requests, 33.4 expected errors. One-sided binomial test against 0.1%: 40 errors gives p ≈ 0.14 (keep going), 55 gives p ≈ 0.0004 (roll back).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>When the model times out, what do you return?</summary><div class="qa-body">A fallback that is never blank: the cached ETA if fresh enough, else the baseline 15 + 4 × km. Log the fallback rate as a monitored metric.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does the latency budget depend on the framework's back-of-envelope numbers?</summary><div class="qa-body">The numbers said 11,111 predictions/s, 20 per feed, inside a 200 ms page. That fixed the mode (online), the slice (60 ms) and the shape (20 rows per call). Without them you can't tell whether 10 ms of model time is generous or impossible.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: how are the feature store and training-serving skew related?</summary><div class="qa-body">Skew is two different computations of "the same" feature; a feature store removes the second computation by giving training (offline store, point-in-time joins) and serving (online store) one definition. It doesn't remove all skew (freshness gaps, defaults), so you still log served features and compare.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks if you cache ETAs but skip the model version in the key?</summary><div class="qa-body">After a release, users keep seeing the old model's ETAs until entries expire, so a canary or A/B of v2 measures a mix of v1 and v2 and its results are diluted or wrong. Rollback also leaves v2 answers in the cache.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does shadow come before canary, and canary before the A/B test?</summary><div class="qa-body">Each rung is cheaper and safer than the next. Shadow (0 users) catches bugs like the Mumbai rain null; canary (10%) catches breakage that needs real users; only then is it worth spending weeks of split traffic on an A/B test to measure whether v2 is better.</div></details>
-</main>`
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between batch and online inference, and how do you choose?</summary><div class="qa-body">Batch inference scores many inputs on a schedule and stores the results for lookup; online inference computes a prediction when a request arrives. Choose online when the answer depends on information that only exists at request time (location, current queue, a payment) or when the space of possible inputs is too large to precompute. Choose batch when inputs are known in advance and some staleness is acceptable, such as daily recommendation emails, because it is cheaper and simpler.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What are p50 and p99 latency, and why do we budget p99?</summary><div class="qa-body">p50 is the median latency; p99 is the time within which 99% of requests finish. We budget p99 because the slow tail is what users notice, heavy users hit it daily, and fan-out makes it worse. A service with a 10 ms average can have an 80 ms p99, and the average hides it.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>A request fans out to 20 feature lookups, each with p99 = 5 ms. What is the request's p99?</summary><div class="qa-body">Higher than 5 ms, because the request waits for the slowest call. If each call is slow 1% of the time, 1 − 0.99<sup>20</sup> ≈ 18% of requests see at least one slow call, so the request p99 is set by the single-call tail (about 10 ms in our simulation). Fix it with one batched call (MGET), timeouts with defaults, or hedged requests.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How would you split a 60 ms latency budget for a prediction service?</summary><div class="qa-body">List the steps on the request path (network, feature fetch, any external calls, model, post-processing), assign each a p99 slice, run independent steps in parallel so only the critical path counts, and leave headroom (Biteful: 8 + max(12, 15) + 10 + 3 = 36 ms, 24 ms spare). Add a timeout and fallback for each step so a slow dependency degrades the answer instead of breaking it.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a feature store and what problems does it solve?</summary><div class="qa-body">A feature store defines each feature once and serves it two ways: an offline store with full timestamped history for building training sets with point-in-time joins, and an online store with the latest values for low-latency serving, kept in sync by materialization. It solves duplicated feature code across teams, training-serving inconsistency, leakage in training joins, and discovery and reuse of features. Feast is the common open-source one; Tecton and cloud platforms offer managed versions.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why have separate online and offline stores instead of one database?</summary><div class="qa-body">Their access patterns are opposite. Training scans months of history for millions of entities, which suits cheap columnar storage (Parquet, BigQuery). Serving reads one latest value per key for a handful of keys in about a millisecond, which suits an in-memory key-value store (Redis, DynamoDB). No single store does both well and cheaply.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a point-in-time correct join, and what goes wrong without one?</summary><div class="qa-body">For each training row, it attaches the most recent feature value whose timestamp is at or before that row's prediction time. Without it, a naive join (for example on date) can attach values computed later, sometimes including the label itself, so the model learns from the future. Offline metrics look excellent and production collapses; in our demo the leaky model reported 2.52 minutes MAE offline but scored 5.28 live, worse than an honest model's 4.85.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is training-serving skew? Give causes and fixes.</summary><div class="qa-body">It is a difference between how features (or preprocessing) are computed in training and in serving. Causes include two code paths for one feature (road vs straight-line distance), freshness differences, different missing-value defaults, leaky training joins and forgotten preprocessing. Fixes: one shared feature definition or a feature store, shipping the full preprocessing pipeline with the model, logging served features and training on them, and monitoring served-vs-training feature distributions.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Your model scores 1.66 MAE offline and 3.15 live. What do you check first?</summary><div class="qa-body">Training-serving skew: compare the logged features serving actually used with the training features for comparable traffic (means, null rates, PSI). Then check training joins for leakage, default values for missing features, and preprocessing differences. Only after the inputs are proven identical would I suspect genuine drift or the model itself.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you choose a cache TTL for predictions?</summary><div class="qa-body">Measure the trade-off: a longer TTL raises the hit ratio but serves staler answers. Simulate or measure hit ratio and the error introduced by staleness (for ETA, how much the queue changes within the TTL) and pick the knee of the curve; Biteful chose 60 s for 73.5% hits at +0.20 min. Always include the model version in the key and set the TTL shorter than the fastest-changing input you care about.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Embedded model vs model server: which for a 500 MB deep ranker used by three services?</summary><div class="qa-body">A model server. It can run on its own GPU pool, scale independently of the callers, be updated once for all three services, and keep three applications from each loading 500 MB. Embedded suits small models used by one service, like a few-megabyte tree model for ETA, where avoiding the network hop matters most.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is dynamic batching and what is its trade-off?</summary><div class="qa-body">The model server waits a few milliseconds to collect concurrent requests and runs them as one batched call, which uses GPUs far more efficiently and multiplies throughput. The cost is added queueing latency per request, so you tune the maximum batch size and maximum wait time against the latency budget.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Shadow vs canary: what does each prove?</summary><div class="qa-body">A shadow sends a copy of live traffic to the new model and logs its answers without showing them, proving it runs correctly at production load with sensible outputs, by slice, with zero user risk. A canary shows the new model to a small, growing share of users with automatic rollback, proving it is not broken for real users. Neither measures whether it is better; that requires an A/B test.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How long should a canary run, and when do you roll back?</summary><div class="qa-body">Long enough for a meaningful degradation to be statistically visible. At 556 requests/s, a 10% canary for 10 minutes sees 33,360 requests; with a 0.1% baseline error rate you expect 33.4 errors. A one-sided binomial test gives p ≈ 0.14 for 40 errors (continue) and p ≈ 0.0004 for 55 (roll back). Also watch latency and guardrail metrics, and widen in timed steps.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is blue-green deployment and when would you prefer it to a canary?</summary><div class="qa-body">Two full environments run side by side; one serves all traffic while the other holds the new version, and a router switch moves everyone at once, with an instant switch back for rollback. Prefer it when versions cannot run side by side on split traffic (for example an incompatible schema or protocol change) or when you need a clean, fast cutover; it costs double infrastructure during the switch and gives no gradual exposure.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What should a prediction service return when the model times out?</summary><div class="qa-body">A fallback that is never blank: a recent cached prediction if fresh enough, otherwise a simple baseline (for ETA, 15 + 4 × km minutes). Log every fallback and monitor the fallback rate as a metric, because a rising rate means users are silently getting worse answers.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How would you build the feature "orders to this kitchen in the last 15 minutes" for real-time serving?</summary><div class="qa-body">A streaming job (Flink, Kafka Streams or Spark Structured Streaming) consumes order events, maintains a 15-minute window count per restaurant, and writes it to the online store every few seconds, while also appending timestamped values to the offline store for training. Log the value used at prediction time so training sees exactly what serving saw, and set a default and TTL for restaurants with no recent events.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Design the serving path for an ETA model at 11,000 predictions per second within 60 ms.</summary><div class="qa-body">Run the model online (answers depend on live queue and address), embedded in the ETA service since it is a small tree model, scoring all 20 cards in one batched call. Features come from an online store via one MGET (streaming queue, nightly prep_7d) plus parallel request-time calls to the route engine and weather, with timeouts, shared defaults and a baseline fallback. Put a 60 s TTL cache keyed by (model version, restaurant, map cell) in front, log every served feature vector, autoscale on latency, and release new versions through shadow, then canary, then an A/B test.</div></details>
+</main>
+`
 });
