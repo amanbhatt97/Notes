@@ -99,10 +99,10 @@ print(f"8 requests in {time.perf_counter() - t0:.2f} s; "
   <p>Now we run the API the way we did on the laptop, as one uvicorn process, and fire eight requests at it. Then we kill the process, as a crash or an out-of-memory error would, and try one more request:</p>
   <div class="fx" data-lang="text">$ INSTANCE=api-1 uvicorn prod_app:app --port 18512 &amp;
 $ curl -s 'localhost:18512/v1/recommend?customer=asha'
-{"customer":"asha","top":["Masala Dosa","Idli"],"served_by":"api-1","pid":6391}
+{"customer":"asha","top":["Masala Dosa","Idli"],"served_by":"api-1","pid":7434}
 
 $ python fire8.py 18512
-8 requests in 2.12 s; requests per process: [8]
+8 requests in 2.11 s; requests per process: [8]
 
 $ kill -9 $(pgrep -f 'uvicorn prod_app')    # the process crashes
 $ curl -sS 'localhost:18512/v1/recommend?customer=asha'
@@ -144,35 +144,35 @@ curl: (7) Failed to connect to localhost port 18512 after 0 ms: Couldn't connect
   <p>When gunicorn starts, the first process it creates is the <strong>master</strong> (or arbiter). The master opens the listening port, then creates the workers as child processes that all share that port, so the operating system can hand each new connection to whichever worker accepts it first. The master itself never handles requests; it only watches its children. We start four workers (<code>-w 4</code>) on port 18510, fire the same eight requests twice, then look up the process ids and kill one worker with <code>kill -9</code>, which ends a process instantly the way the operating system's out-of-memory killer would:</p>
   <div class="fx" data-lang="text">$ INSTANCE=api-1 gunicorn prod_app:app -k uvicorn_worker.UvicornWorker -w 4 -b 127.0.0.1:18510 &amp;
 $ python fire8.py 18510
-8 requests in 0.90 s; requests per process: [3, 2, 2, 1]
+8 requests in 0.86 s; requests per process: [3, 3, 1, 1]
 $ python fire8.py 18510
-8 requests in 0.87 s; requests per process: [3, 2, 2, 1]
+8 requests in 0.88 s; requests per process: [3, 3, 1, 1]
 
 $ pgrep -f '[g]unicorn prod_app'          # the master, then its 4 workers
-6430
-6431
-6432
-6433
-6434
-$ kill -9 6431                           # one worker dies, as if out of memory
+7481
+7482
+7483
+7484
+7485
+$ kill -9 7482                           # one worker dies, as if out of memory
 $ pgrep -f '[g]unicorn prod_app'
-6430
-6432
-6433
-6434
-6470
+7481
+7483
+7484
+7485
+7520
 $ python fire8.py 18510
-8 requests in 0.87 s; requests per process: [3, 2, 2, 1]
+8 requests in 0.89 s; requests per process: [3, 2, 2, 1]
 
 $ grep -E 'Starting|Booting|SIGKILL' gunicorn.log
-[2026-11-19 07:32:54 +0000] [6430] [INFO] Starting gunicorn 27.0.1
-[2026-11-19 07:32:54 +0000] [6431] [INFO] Booting worker with pid: 6431
-[2026-11-19 07:32:54 +0000] [6432] [INFO] Booting worker with pid: 6432
-[2026-11-19 07:32:54 +0000] [6433] [INFO] Booting worker with pid: 6433
-[2026-11-19 07:32:54 +0000] [6434] [INFO] Booting worker with pid: 6434
-[2026-11-19 07:32:58 +0000] [6430] [ERROR] Worker (pid:6431) was sent SIGKILL! Perhaps out of memory?
-[2026-11-19 07:32:58 +0000] [6470] [INFO] Booting worker with pid: 6470</div>
-  <p>The same eight requests now take about 0.9 s instead of 2 s, because four processes computed in parallel on four cores. The perfect result would be 8 × 0.25 ÷ 4 = 0.5 s, but the "requests per process" lists show why we did not get it: the operating system does not hand out connections perfectly evenly, so one worker received 3 or 4 requests while another received only 1, and the batch is only finished when the busiest worker finishes (3 × 0.25 = 0.75 s, plus overhead). After the kill, <code>pgrep</code> lists a brand-new pid in place of the dead one, and the gunicorn log shows exactly what happened: the master noticed that a worker "was sent SIGKILL! Perhaps out of memory?" and booted a replacement in the same second. The next batch of eight requests was served normally, and requests on the other three workers were never interrupted.</p>
+[2026-11-19 07:34:25 +0000] [7481] [INFO] Starting gunicorn 27.0.1
+[2026-11-19 07:34:25 +0000] [7482] [INFO] Booting worker with pid: 7482
+[2026-11-19 07:34:25 +0000] [7483] [INFO] Booting worker with pid: 7483
+[2026-11-19 07:34:26 +0000] [7484] [INFO] Booting worker with pid: 7484
+[2026-11-19 07:34:26 +0000] [7485] [INFO] Booting worker with pid: 7485
+[2026-11-19 07:34:30 +0000] [7481] [ERROR] Worker (pid:7482) was sent SIGKILL! Perhaps out of memory?
+[2026-11-19 07:34:30 +0000] [7520] [INFO] Booting worker with pid: 7520</div>
+  <p>The same eight requests now take about 0.9 s instead of 2 s, because four processes computed in parallel on four cores. The perfect result would be 8 × 0.25 ÷ 4 = 0.5 s, but the "requests per process" lists show why we did not get it: the operating system does not hand out connections perfectly evenly, so one worker received 3 requests while another received only 1, and the batch is only finished when the busiest worker finishes (3 × 0.25 = 0.75 s, plus overhead). After the kill, <code>pgrep</code> lists a brand-new pid in place of the dead one, and the gunicorn log shows exactly what happened: the master noticed that a worker "was sent SIGKILL! Perhaps out of memory?" and booted a replacement in the same second. The next batch of eight requests was served normally, and requests on the other three workers were never interrupted.</p>
   <p>How many workers should you run? Each worker can run Python on one core at a time, so for CPU-heavy or async apps a good starting point is one worker per core. The classic formula you will see in gunicorn's documentation, 2 × cores + 1, comes from synchronous (WSGI) apps that spend most of their time waiting on databases, where extra workers fill the waiting time. The other limit is memory. Every worker is a separate process that loads its own copy of everything the app loads at startup, so an ML model of 3 GB in eight workers needs 24 GB of RAM. The practical method is to start near the number of cores, cap the number by memory, and then measure under realistic load.</p>
   <p>gunicorn also handles a few operational chores that matter in production. Its <code>--timeout</code> setting (30 s by default) kills and replaces a worker that has stopped responding, which protects you from a worker stuck in an endless loop. Sending the master the signal <code>HUP</code> makes it start fresh workers with new code and retire the old ones gracefully, which is how a deployment can happen without dropping requests. And <code>--max-requests</code> restarts each worker after a set number of requests, a common safety net against slow memory leaks. What gunicorn cannot do is go beyond one machine: one machine has a ceiling on how many requests it can handle, and if it dies, everything on it dies. For that we need several machines and something in front of them.</p>
 
@@ -255,17 +255,17 @@ $ INSTANCE=api-2 gunicorn prod_app:app -k uvicorn_worker.UvicornWorker -w 2 -b 1
 $ python lb.py 18520 &amp;
 
 $ for i in 1 2 3 4; do curl -s 'localhost:18520/v1/recommend?customer=asha'; echo; done
-{"customer":"asha","top":["Masala Dosa","Idli"],"served_by":"api-1","pid":6519}
-{"customer":"asha","top":["Masala Dosa","Idli"],"served_by":"api-2","pid":6528}
-{"customer":"asha","top":["Masala Dosa","Idli"],"served_by":"api-1","pid":6519}
-{"customer":"asha","top":["Masala Dosa","Idli"],"served_by":"api-2","pid":6528}
+{"customer":"asha","top":["Masala Dosa","Idli"],"served_by":"api-1","pid":7559}
+{"customer":"asha","top":["Masala Dosa","Idli"],"served_by":"api-2","pid":7564}
+{"customer":"asha","top":["Masala Dosa","Idli"],"served_by":"api-1","pid":7559}
+{"customer":"asha","top":["Masala Dosa","Idli"],"served_by":"api-2","pid":7564}
 
 $ kill api-2                                    # the whole second server goes down
 $ for i in 1 2 3 4; do curl -s -w ' [%{http_code}]' 'localhost:18520/v1/recommend?customer=asha'; echo; done
-{"customer":"asha","top":["Masala Dosa","Idli"],"served_by":"api-1","pid":6519} [200]
-{"customer":"asha","top":["Masala Dosa","Idli"],"served_by":"api-1","pid":6519} [200]
-{"customer":"asha","top":["Masala Dosa","Idli"],"served_by":"api-1","pid":6519} [200]
-{"customer":"asha","top":["Masala Dosa","Idli"],"served_by":"api-1","pid":6515} [200]
+{"customer":"asha","top":["Masala Dosa","Idli"],"served_by":"api-1","pid":7560} [200]
+{"customer":"asha","top":["Masala Dosa","Idli"],"served_by":"api-1","pid":7559} [200]
+{"customer":"asha","top":["Masala Dosa","Idli"],"served_by":"api-1","pid":7559} [200]
+{"customer":"asha","top":["Masala Dosa","Idli"],"served_by":"api-1","pid":7560} [200]
 
 $ cat lb.log
 lb: http://127.0.0.1:18511 refused the connection, trying the next server
@@ -307,12 +307,12 @@ r.delete("menu:v1:10")                                   # Dosa Hut changes a pr
 t = time.perf_counter()
 get_menu(10)
 print(f"after invalidation: {(time.perf_counter() - t) * 1000:.1f} ms")</div>
-  <div class="fx" data-lang="text">Asha    500.9 ms
+  <div class="fx" data-lang="text">Asha    501.0 ms
 Ben       0.2 ms
 Chen      0.1 ms
 stored  : {"restaurant_id": 10, "Masala Dosa": 120, "Idli": 60, "Filter Coffee": 40}
 TTL left: 300 s
-after invalidation: 501.0 ms</div>
+after invalidation: 500.8 ms</div>
   <p>Asha's request was a miss and paid the full half-second. Ben and Chen were hits and took a fraction of a millisecond, more than a thousand times faster, and the database was not touched at all. Redis stores strings, so the menu dictionary goes in through <code>json.dumps</code> and comes back through <code>json.loads</code>; the "stored" line shows the exact JSON text in Redis. <code>ex=ttl</code> set the TTL, and <code>r.ttl</code> reports 300 seconds left, so even if we forget an invalidation somewhere, nobody sees a menu more than five minutes old. After the price change we deleted the key, and the next read was a miss again (about 500 ms) that loaded the new prices. The <code>v1</code> in the key is a version label: if the menu's format ever changes, the code switches to <code>menu:v2:10</code> and the old entries are simply never read again and expire on their own.</p>
   <p>Cache-aside is not the only strategy, and interviewers often ask for the alternatives. They differ in when the cache is written:</p>
   <table class="tbl">
@@ -362,7 +362,7 @@ for fn in (get_naive, get_with_lock):
     for th in threads: th.start()
     for th in threads: th.join()
     print(f"{fn.__name__:14} 50 customers at once -&gt; {db_calls:2} DB queries, {time.perf_counter() - t:.2f} s")</div>
-  <div class="fx" data-lang="text">get_naive      50 customers at once -&gt; 50 DB queries, 0.52 s
+  <div class="fx" data-lang="text">get_naive      50 customers at once -&gt; 50 DB queries, 0.53 s
 get_with_lock  50 customers at once -&gt;  1 DB queries, 0.55 s</div>
   <p>The plain version sent 50 identical queries to the database. The locked version sent 1: the caller that won the lock loaded the menu and stored it, while the other 49 found the lock taken, slept 50 ms at a time, and then found the fresh value in the cache. Both took about half a second in total, but the database did one fiftieth of the work. The lock's own <code>ex=10</code> is important: if the winner crashes before deleting the lock, the lock expires by itself and someone else can refill. Two other common defences are adding a little random variation (<strong>jitter</strong>) to TTLs so that many keys do not expire at the same instant, and refreshing very popular keys shortly before they expire. Caching makes reads fast, but it does nothing for the receipt email, which is slow work that must happen after an order is placed.</p>
 
@@ -441,7 +441,7 @@ print("unknown id  -&gt;", c.get("/v1/jobs/no-such-job").json())</div>
   <p>We start one Celery worker with two worker processes (<code>--concurrency=2</code>) in the background, writing its log to a file, then run the script and look at the worker's log:</p>
   <div class="fx" data-lang="text">$ celery -A tasks worker --concurrency=2 --loglevel=info &gt; celery.log &amp;
 $ python submit.py
-POST /v1/orders -&gt; 201 in 48 ms: {'order_id': 101, 'status': 'placed', 'receipt_job': '6697e901-61da-48f3-9ee0-8af82bdcd8ff'}
+POST /v1/orders -&gt; 201 in 50 ms: {'order_id': 101, 'status': 'placed', 'receipt_job': '954de537-ddbf-46f4-a4b4-83fd232dd237'}
 t= 0.1s  state=STARTED
 t= 1.1s  state=RETRY
 t= 2.1s  state=STARTED
@@ -450,13 +450,13 @@ redelivered -&gt; {'order_id': 101, 'skipped': 'receipt already sent'}
 unknown id  -&gt; {'job_id': 'no-such-job', 'state': 'PENDING'}
 
 $ grep -E 'received|retry|succeeded' celery.log | cut -c1-200
-[2026-11-19 07:33:14,577: INFO/MainProcess] Task tasks.send_receipt_email[6697e901-61da-48f3-9ee0-8af82bdcd8ff] received
-[2026-11-19 07:33:14,593: INFO/MainProcess] Task tasks.send_receipt_email[6697e901-61da-48f3-9ee0-8af82bdcd8ff] received
-[2026-11-19 07:33:14,596: INFO/ForkPoolWorker-2] Task tasks.send_receipt_email[6697e901-61da-48f3-9ee0-8af82bdcd8ff] retry: Retry in 2s: ConnectionError('email provider timed out')
-[2026-11-19 07:33:17,590: INFO/ForkPoolWorker-2] Task tasks.send_receipt_email[6697e901-61da-48f3-9ee0-8af82bdcd8ff] succeeded in 1.0028824609998992s: {'order_id': 101, 'sent_to': 'asha', 'total': 240
-[2026-11-19 07:33:17,615: INFO/MainProcess] Task tasks.send_receipt_email[3085b9e1-7812-4c5f-be51-53d95f78869e] received
-[2026-11-19 07:33:17,616: INFO/ForkPoolWorker-2] Task tasks.send_receipt_email[3085b9e1-7812-4c5f-be51-53d95f78869e] succeeded in 0.0011736760000076174s: {'order_id': 101, 'skipped': 'receipt already</div>
-  <p>Read the two outputs side by side. <code>POST /v1/orders</code> returned 201 in a few tens of milliseconds (the first call also opened the connection to Redis), so Asha's app showed "order placed" without waiting for any email. Behind the scenes, the worker received the job, the provider "timed out", and <code>self.retry</code> scheduled a new attempt in 2 seconds; that is why the log shows the job "received" twice and a "retry" line, and why the status endpoint reported RETRY. The second attempt took about a second and succeeded, and the final status shows the task's return value with <code>'attempt': 2</code>. The states moved through PENDING (waiting in the queue), RETRY, STARTED and SUCCESS. If all retries had failed, the state would have been FAILURE, and the failure would be visible instead of silently lost.</p>
+[2026-11-19 07:34:45,591: INFO/MainProcess] Task tasks.send_receipt_email[954de537-ddbf-46f4-a4b4-83fd232dd237] received
+[2026-11-19 07:34:45,607: INFO/MainProcess] Task tasks.send_receipt_email[954de537-ddbf-46f4-a4b4-83fd232dd237] received
+[2026-11-19 07:34:45,611: INFO/ForkPoolWorker-2] Task tasks.send_receipt_email[954de537-ddbf-46f4-a4b4-83fd232dd237] retry: Retry in 2s: ConnectionError('email provider timed out')
+[2026-11-19 07:34:48,604: INFO/ForkPoolWorker-2] Task tasks.send_receipt_email[954de537-ddbf-46f4-a4b4-83fd232dd237] succeeded in 1.003049762999808s: {'order_id': 101, 'sent_to': 'asha', 'total': 240,
+[2026-11-19 07:34:48,629: INFO/MainProcess] Task tasks.send_receipt_email[3c808f9f-b5d7-46e9-b4d4-f31206854817] received
+[2026-11-19 07:34:48,632: INFO/ForkPoolWorker-2] Task tasks.send_receipt_email[3c808f9f-b5d7-46e9-b4d4-f31206854817] succeeded in 0.00257081399990966s: {'order_id': 101, 'skipped': 'receipt already se</div>
+  <p>Read the two outputs side by side. <code>POST /v1/orders</code> returned 201 in a few tens of milliseconds (the first call also opened the connection to Redis), so Asha's app showed "order placed" without waiting for any email. Behind the scenes, the worker received the job, the provider "timed out", and <code>self.retry</code> scheduled a new attempt in 2 seconds; that is why the log shows the job "received" twice and a "retry" line, and why the status endpoint reported RETRY. The second attempt took about a second and succeeded, and the final status shows the task's return value with <code>'attempt': 2</code>. The states moved through STARTED, RETRY, STARTED again and SUCCESS; a job still waiting in the queue would have shown PENDING. If all retries had failed, the state would have been FAILURE, and the failure would be visible instead of silently lost.</p>
   <p>The line "redelivered" shows why the idempotency check exists. Retries and acks_late make Celery's guarantee "at least once": if a worker finishes sending the email but crashes before acking, the broker delivers the message again, and the task runs a second time. A task is <strong>idempotent</strong> when running it twice has the same effect as running it once. Our task records <code>receipt-sent:101</code> after sending and checks for it first, so the second delivery returned "receipt already sent" instead of emailing Asha twice. For payouts to restaurants this check is the difference between paying Dosa Hut once and paying it twice. A related habit is to pass ids rather than data: the message carries <code>order_id</code>, not a large order object, so the worker always reads the current order from the database.</p>
   <p>The last line is a well-known surprise. An id that never existed also reports PENDING, because Celery's result backend only knows about jobs that have started, so "waiting in the queue" and "no such job" look the same. If that difference matters, store job ids in your own database. Typical uses for a task queue are emails and SMS, payments and payouts, monthly statements, image resizing, report generation and model retraining; a separate tool called Celery beat can also put tasks on the queue on a schedule, like a cron job. With slow work moved out of requests, the system is fast, until one client starts sending far more requests than anyone else.</p>
 
@@ -588,14 +588,14 @@ $ python lb.py 18520 &amp;
 
 $ curl -si 'localhost:18520/v1/recommend?customer=asha' | grep -iE '^HTTP|^x-request-id'
 HTTP/1.0 200 OK
-x-request-id: efb1f96e413c44a4b909edd27e246d85
+x-request-id: 8c6ccab47c774c30804cb3bbaf556120
 $ curl -s -o /dev/null localhost:18520/v1/restaurants/10/menuu
 
-$ grep -h efb1f96e413c44a4b909edd27e246d85 api-*.log                  # find Asha's request
-{"ts": 1795073606.474, "level": "INFO", "msg": "request", "request_id": "efb1f96e413c44a4b909edd27e246d85", "method": "GET", "path": "/v1/recommend", "status": 200, "ms": 252.9, "instance": "api-1", "pid": 6855}
+$ grep -h 8c6ccab47c774c30804cb3bbaf556120 api-*.log                  # find Asha's request
+{"ts": 1795073697.375, "level": "INFO", "msg": "request", "request_id": "8c6ccab47c774c30804cb3bbaf556120", "method": "GET", "path": "/v1/recommend", "status": 200, "ms": 256.8, "instance": "api-1", "pid": 7739}
 $ grep -h '"status": 404' api-*.log                                # every 404, from both servers
-{"ts": 1795073606.51, "level": "INFO", "msg": "request", "request_id": "98714fbb165547e5b2aa2c2f13079446", "method": "GET", "path": "/v1/restaurants/10/menuu", "status": 404, "ms": 0.3, "instance": "api-2", "pid": 6862}</div>
-  <p>The <code>x-request-id</code> header in the response carried the id that the proxy stamped. Searching both servers' logs for that id found exactly one line, which tells us everything about Asha's request: it went to api-1, worker pid shown, took about 260 ms (the 0.25 s of CPU), and returned 200. The second search shows the other strength of structured logs: we asked for every line with <code>"status": 404</code> across both servers and found the typo request, on api-2. In production these lines are shipped to a central log system (such as Loki, Elasticsearch or a cloud provider's logging service), where you can filter by any field, for example <code>status=500 AND path="/v1/orders"</code> in the last hour, across every copy at once.</p>
+{"ts": 1795073697.413, "level": "INFO", "msg": "request", "request_id": "d1ad6f03d9c24cd484cc33f058705aeb", "method": "GET", "path": "/v1/restaurants/10/menuu", "status": 404, "ms": 0.4, "instance": "api-2", "pid": 7742}</div>
+  <p>The <code>x-request-id</code> header in the response carried the id that the proxy stamped. Searching both servers' logs for that id found exactly one line, which tells us everything about Asha's request: it went to api-1, worker pid shown, took about 250 ms (the 0.25 s of CPU), and returned 200. The second search shows the other strength of structured logs: we asked for every line with <code>"status": 404</code> across both servers and found the typo request, on api-2. In production these lines are shipped to a central log system (such as Loki, Elasticsearch or a cloud provider's logging service), where you can filter by any field, for example <code>status=500 AND path="/v1/orders"</code> in the last hour, across every copy at once.</p>
   <p>Two habits matter as much as the format. Use log levels consistently: DEBUG for detail you only want while developing, INFO for normal events such as each request, WARNING for something odd but handled, ERROR for a failed operation. And never log secrets or personal data: passwords, tokens, full card numbers and customers' addresses must not appear in logs, because logs are copied widely and kept for a long time. Logs answer "what happened to this particular request?". They are poor at answering "is the whole system healthy right now?", which is the job of metrics.</p>
 
   <h2 id="ap-metrics"><span class="num">08</span>Metrics, Monitoring &amp; Alerting</h2>
@@ -636,10 +636,10 @@ def metrics():
   <div class="fx" data-lang="text">$ INSTANCE=api-1 gunicorn prod_app:app -k uvicorn_worker.UvicornWorker -w 2 -b 127.0.0.1:18510 &amp;
 $ for i in $(seq 10); do curl -s -o /dev/null 'localhost:18510/v1/recommend?customer=asha'; done
 $ for i in 1 2 3 4; do curl -s localhost:18510/metrics | grep '^http_requests_total'; done
-http_requests_total{path="/v1/recommend",status="200"} 6.0
-http_requests_total{path="/v1/recommend",status="200"} 6.0
-http_requests_total{path="/v1/recommend",status="200"} 4.0
-http_requests_total{path="/v1/recommend",status="200"} 6.0
+http_requests_total{path="/v1/recommend",status="200"} 9.0
+http_requests_total{path="/v1/recommend",status="200"} 1.0
+http_requests_total{path="/v1/recommend",status="200"} 9.0
+http_requests_total{path="/v1/recommend",status="200"} 9.0
 
 $ PROMETHEUS_MULTIPROC_DIR=./prom INSTANCE=api-1 gunicorn prod_app:app -k uvicorn_worker.UvicornWorker -w 2 -b 127.0.0.1:18510 &amp;
 $ for i in $(seq 10); do curl -s -o /dev/null 'localhost:18510/v1/recommend?customer=asha'; done
@@ -655,7 +655,7 @@ http_request_seconds_bucket{le="0.1",path="/v1/recommend"} 0.0
 http_request_seconds_bucket{le="0.5",path="/v1/recommend"} 10.0
 http_request_seconds_bucket{le="1.0",path="/v1/recommend"} 10.0
 http_request_seconds_bucket{le="+Inf",path="/v1/recommend"} 10.0</div>
-  <p>In the first run the counter said 6, 6, 6 and 4, and never 10. Each worker is a separate process with its own counters in its own memory, and each scrape was answered by whichever worker happened to accept it: one worker had handled 6 requests, the other 4. Both were right about themselves, and neither reported the truth. In multiprocess mode each worker writes its numbers to files in the shared directory, and the <code>/metrics</code> endpoint adds them all up with <code>MultiProcessCollector</code>, so every scrape reported 10. This is the same "state inside one process" problem as the rate limiter, and it has the same kind of fix: move the numbers somewhere shared. The histogram lines show the bucket counts: no request was under 0.1 s, and all 10 were under 0.5 s, which matches 0.25 s of CPU each. Prometheus would estimate the p95 from these buckets with a query such as <code>histogram_quantile(0.95, rate(http_request_seconds_bucket[5m]))</code>.</p>
+  <p>In the first run the counter said 9, 1, 9 and 9, and never 10. Each worker is a separate process with its own counters in its own memory, and each scrape was answered by whichever worker happened to accept it: one worker had handled 9 requests, the other just 1. Both were right about themselves, and neither reported the truth. In multiprocess mode each worker writes its numbers to files in the shared directory, and the <code>/metrics</code> endpoint adds them all up with <code>MultiProcessCollector</code>, so every scrape reported 10. This is the same "state inside one process" problem as the rate limiter, and it has the same kind of fix: move the numbers somewhere shared. The histogram lines show the bucket counts: no request was under 0.1 s, and all 10 were under 0.5 s, which matches 0.25 s of CPU each. Prometheus would estimate the p95 from these buckets with a query such as <code>histogram_quantile(0.95, rate(http_request_seconds_bucket[5m]))</code>.</p>
   <p>Good alerts are written on symptoms that customers feel, not on causes. "Error rate above 1% for 5 minutes" or "p99 latency of order requests above 300 ms for 10 minutes" are good alerts, because they mean customers are suffering right now. "CPU above 80%" is a poor alert on its own, because a busy CPU with happy customers is simply an efficient system. Teams usually write the target down as an <strong>SLO</strong> (service level objective), for example "99% of order requests complete in under 300 ms over 30 days", and alert when they are burning through it too fast. An alert rule in Prometheus's configuration looks like this (illustrative, not run here):</p>
   <div class="fx" data-lang="text"># alert when more than 1% of order requests fail for 5 minutes
 - alert: OrdersErrorRateHigh
@@ -746,14 +746,14 @@ $ for i in $(seq 30); do curl -s -o /dev/null -w '%{http_code}\\n' localhost:185
 $ for i in $(seq 30); do curl -s -o /dev/null -w '%{http_code}\\n' localhost:18520/v1/orders/shared-limit -H 'X-Customer: ben'; done | sort | uniq -c
       5 200
      25 429</div>
-  <p>The in-memory limit of 5 let 19 calls through. Each of the four processes counted only the calls that happened to reach it and allowed up to 5 of them, so the real limit became roughly 5 × 4; add a third server and it grows again. The Redis limit let through exactly 5, no matter how many copies exist, because every copy reads and writes the same counter. Nothing in the in-memory code is wrong in isolation. It is wrong only because the state it relies on lives inside one copy, and the load balancer spreads one customer's requests across many copies.</p>
+  <p>The in-memory limit of 5 let 20 calls through. Each of the four processes counted only the calls that happened to reach it and allowed up to 5 of them, so the real limit became roughly 5 × 4; add a third server and it grows again. The Redis limit let through exactly 5, no matter how many copies exist, because every copy reads and writes the same counter. Nothing in the in-memory code is wrong in isolation. It is wrong only because the state it relies on lives inside one copy, and the load balancer spreads one customer's requests across many copies.</p>
   <p>The same failure appears wherever a copy keeps changing state in its own memory, and the fix is always to move that state to a shared service:</p>
   <table class="tbl">
     <tr><th>State kept inside one copy</th><th>What goes wrong</th><th>Stateless fix</th></tr>
     <tr><td>login sessions in a dict</td><td>logged in on copy A, "401" on copy B</td><td>JWTs, or sessions in Redis</td></tr>
-    <tr><td>rate-limit counters in memory</td><td>19 calls instead of 5</td><td>Redis counter or sorted set</td></tr>
+    <tr><td>rate-limit counters in memory</td><td>20 calls instead of 5</td><td>Redis counter or sorted set</td></tr>
     <tr><td>cache in a dict</td><td>each copy has its own stale copy</td><td>Redis</td></tr>
-    <tr><td>metrics per process</td><td>scrapes say 6 or 4 instead of 10</td><td>multiprocess mode, or scrape each worker</td></tr>
+    <tr><td>metrics per process</td><td>scrapes say 9 or 1 instead of 10</td><td>multiprocess mode, or scrape each worker</td></tr>
     <tr><td>uploaded menu photos on local disk</td><td>photo exists on one server only</td><td>object storage (S3 or similar)</td></tr>
     <tr><td>background work in the web process</td><td>lost on restart</td><td>Celery workers with a broker</td></tr>
   </table>
@@ -796,7 +796,7 @@ print("TTL without ex:", r.ttl("menu:v1:11"), "| TTL with ex:", r.ttl("menu:v1:1
 Ben sees: {'owner': 'ben', 'items': []}
 TTL without ex: -1 | TTL with ex: 300</div>
   <p>Ben was shown Asha's cart because both used the key <code>cart</code>; including the customer in the key (<code>cart:ben</code>) fixed it. The same rule applies to ML predictions: key them by a hash of the input <em>and</em> the model version, or a new model will serve the old model's cached answers. The TTL line shows −1 for the key written without <code>ex=</code> and 300 for the key written with it.</p>
-  <p>Per-process state is the mistake behind several earlier demos: rate-limit counters, caches, sessions or metrics kept in a Python dictionary all behave correctly with one process and wrongly with four (19 calls instead of 5; scrapes of 6 or 4 instead of 10). Anything that changes and must be the same for every copy belongs in Redis, the database or another shared service.</p>
+  <p>Per-process state is the mistake behind several earlier demos: rate-limit counters, caches, sessions or metrics kept in a Python dictionary all behave correctly with one process and wrongly with four (20 calls instead of 5; scrapes of 9 or 1 instead of 10). Anything that changes and must be the same for every copy belongs in Redis, the database or another shared service.</p>
   <p>Doing slow work inside the request, or in <code>BackgroundTasks</code>, is the next one. Emails, statements and retraining jobs belong on a queue, with the endpoint returning 201 or 202 Accepted and a job id. Once they are on a queue, the related mistake is a task that is not idempotent: with retries and acks_late a task can run twice, so a receipt is emailed twice or a restaurant is paid twice unless the task records completion and checks it first.</p>
   <p>On the operations side, three mistakes cause real outages. Alerting on average latency hides the slow tail (a mean of 247 ms next to a p99 of 2.3 s). Putting dependency checks in the liveness endpoint turns a short Redis blip into a restart of every copy at once. And choosing the number of gunicorn workers by CPU alone ignores memory: each worker loads its own copy of the model, so eight workers with a 3 GB model need 24 GB. Finally, behind a proxy, reading the client's IP from the connection instead of a trusted <code>X-Forwarded-For</code> makes every customer look like the same user to your logs and per-IP limits.</p>
 
@@ -820,12 +820,12 @@ TTL without ex: -1 | TTL with ex: 300</div>
     <tr><th>Piece</th><th>Problem</th><th>Measured here (approximate)</th></tr>
     <tr><td>gunicorn, 4 workers</td><td>one process, one core, stays dead</td><td>8 × 0.25 s CPU: ~2.1 s → ~0.9 s; killed worker replaced in 1 s</td></tr>
     <tr><td>Reverse proxy</td><td>many servers, one address</td><td>replies alternate api-1/api-2; api-2 down → still 200</td></tr>
-    <tr><td>Redis cache-aside</td><td>same 0.5 s query repeated</td><td>~500 ms → ~0.3 ms; stampede 50 → 1 DB query</td></tr>
+    <tr><td>Redis cache-aside</td><td>same 0.5 s query repeated</td><td>~500 ms → ~0.2 ms; stampede 50 → 1 DB query</td></tr>
     <tr><td>Celery</td><td>slow, flaky, must-not-lose email</td><td>201 in tens of ms; RETRY → SUCCESS on attempt 2; redelivery skipped</td></tr>
     <tr><td>Rate limits</td><td>one client floods the API</td><td>fixed 10/10 at boundary, sliding 5/10; bucket ok×5 then 429×3</td></tr>
     <tr><td>Logs + metrics</td><td>failures invisible</td><td>one grep finds a request id; mean 247 ms vs p99 2300 ms</td></tr>
     <tr><td>Health checks</td><td>broken copy still gets traffic</td><td>Redis down: /health 200, /ready 503</td></tr>
-    <tr><td>Shared state</td><td>limits break with more copies</td><td>in-memory 19 of 30 passed; Redis 5 of 30</td></tr>
+    <tr><td>Shared state</td><td>limits break with more copies</td><td>in-memory 20 of 30 passed; Redis 5 of 30</td></tr>
   </table>
   <h3>Rate-limiting algorithms</h3>
   <table class="tbl">
@@ -879,7 +879,7 @@ job = send_receipt_email.delay(101)
   <details class="qa"><summary><span class="qmark">Q</span>What are the broker and the result backend in Celery?</summary><div class="qa-body">The broker is the queue that holds task messages until a worker takes them, commonly Redis or RabbitMQ. The result backend stores each task's state (PENDING, STARTED, RETRY, SUCCESS, FAILURE) and return value so the API can report progress. They can be the same Redis server using different databases.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What does idempotent mean, and why must Celery tasks be idempotent?</summary><div class="qa-body">An operation is idempotent if doing it twice has the same effect as doing it once. With retries and acks_late, Celery delivers tasks at least once, so a task can run twice after a crash or timeout. Recording completion (for example "receipt sent for order 101") and checking it first prevents duplicate emails or double payments.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Compare fixed window, sliding window and token bucket rate limiting.</summary><div class="qa-body">A fixed window counts per clock window, which is cheap but lets up to twice the limit through around a window boundary (10 of 10 in our test). A sliding window counts requests in the last N seconds, which is accurate (5 of 10) but stores more. A token bucket allows bursts up to its capacity and then a steady rate, which matches real client behaviour well.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How would you rate-limit an API that runs on many servers?</summary><div class="qa-body">Keep the counters in a shared store such as Redis, not in process memory, otherwise the real limit becomes the limit times the number of processes (19 instead of 5 in our test). Use atomic operations, such as <code>INCR</code> with <code>EXPIRE</code> for a fixed window, a sorted set or a Lua script for a sliding window. Layer a coarse per-IP limit at the edge with per-key limits in the app, and return 429 with Retry-After.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How would you rate-limit an API that runs on many servers?</summary><div class="qa-body">Keep the counters in a shared store such as Redis, not in process memory, otherwise the real limit becomes the limit times the number of processes (20 instead of 5 in our test). Use atomic operations, such as <code>INCR</code> with <code>EXPIRE</code> for a fixed window, a sorted set or a Lua script for a sliding window. Layer a coarse per-IP limit at the edge with per-key limits in the app, and return 429 with Retry-After.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What is structured logging and why use request ids?</summary><div class="qa-body">Structured logging writes each event as a machine-readable record, usually one JSON object per line, so a log system can filter on fields like status or path across every server. A request id is generated at the edge and passed along in a header and every log line, so one search reconstructs a single request's path through the proxy, the app and its workers.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Why alert on p99 latency rather than the average?</summary><div class="qa-body">The average mixes fast and slow requests and can look fine while some customers wait seconds: our example had a mean of 247 ms while the p99 was 2.3 s. Percentiles show the experience of the slowest requests, which at scale are many real users. Alerts should target customer-facing symptoms such as error rate and tail latency.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>What are the four golden signals?</summary><div class="qa-body">Latency (how long requests take, ideally as percentiles), traffic (requests per second), errors (rate of failed requests) and saturation (how full resources are: CPU, memory, queue length). Together they cover most of what you need to know about a service's health. For ML services you also watch prediction distributions, drift and model version.</div></details>
