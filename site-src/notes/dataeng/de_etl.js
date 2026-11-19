@@ -852,9 +852,9 @@ biteful_daily()</div>
 ds=2026-03-02  data_interval_start=2026-03-01 18:30:00+00:00  business day=2026-03-02
 Done. Returned value was: warehouse/bronze/orders_2026-03-02.parquet
 [DAG TEST] end task task_id=extract_orders
+[DAG TEST] end task task_id=wait_for_sheet
 Done. Returned value was: warehouse/bronze/deliveries_2026-03-02.parquet
 [DAG TEST] end task task_id=extract_deliveries
-[DAG TEST] end task task_id=wait_for_sheet
 Done. Returned value was: warehouse/bronze/restaurants.parquet
 [DAG TEST] end task task_id=extract_restaurants
 Done. Returned value was: {'path': 'warehouse/silver/orders_2026-03-02.parquet', 'day': '2026-03-02', 'rows': 3, 'source_rows': 3}
@@ -897,13 +897,13 @@ if __name__ == "__main__":
     open("state/fail_once", "w").close()          # the API will answer 503 once
     biteful_daily("2026-03-05")</div>
   <div class="fx" data-lang="text">$ python prefect_flow.py        # Prefect 3.9.3, log trimmed (timestamps removed)
-Flow run 'invaluable-kagu' - Beginning flow run 'invaluable-kagu' for flow 'biteful-daily'
-Task run 'extract-cd8' - Task run failed with exception: &lt;HTTPError 503: 'Service Unavailable'&gt; - Retry 1/2 will start 1 second(s) from now
-Task run 'extract-cd8' - Finished in state Completed()
-Task run 'transform-155' - Finished in state Completed()
-Task run 'check_and_load-007' - Finished in state Completed()
-Flow run 'invaluable-kagu' - loaded 2 orders for 2026-03-05
-Flow run 'invaluable-kagu' - Finished in state Completed()</div>
+Flow run 'cobalt-mongoose' - Beginning flow run 'cobalt-mongoose' for flow 'biteful-daily'
+Task run 'extract-a5d' - Task run failed with exception: &lt;HTTPError 503: 'Service Unavailable'&gt; - Retry 1/2 will start 1 second(s) from now
+Task run 'extract-a5d' - Finished in state Completed()
+Task run 'transform-342' - Finished in state Completed()
+Task run 'check_and_load-c36' - Finished in state Completed()
+Flow run 'cobalt-mongoose' - loaded 2 orders for 2026-03-05
+Flow run 'cobalt-mongoose' - Finished in state Completed()</div>
   <p>The extract task hit the 503, Prefect scheduled "Retry 1/2" one second later, and the second attempt completed; the flow then loaded the two orders of 5 March. To record the run, Prefect started a temporary local server for the length of the script; in production you run a Prefect server (or use Prefect Cloud) and deploy flows with schedules.</p>
   <p>Airflow and Prefect are not the only choices. <strong>Dagster</strong> organises pipelines around <em>assets</em> (the tables and models a pipeline produces) and their lineage, with built-in partitions and backfills, and suits teams who think in terms of data products. <strong>Luigi</strong> is an older, simpler task runner that is mostly found in legacy stacks. Airflow is the default in most companies because of its huge library of operators and its managed versions (Amazon MWAA, Google Cloud Composer, Astronomer); Prefect appeals to small, Python-heavy teams because it needs so little boilerplate.</p>
 
