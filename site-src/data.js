@@ -66,7 +66,7 @@ const CATEGORIES = [
   { key: "dataanalysis", label: "Data Analysis Stack", emoji: "\ud83d\udcca", tag: "Core", blurb: "NumPy \u00b7 Pandas \u00b7 Matplotlib \u00b7 Plotly", hue: 160, topics: [
     {"key": "da_numpy", "label": "NumPy"},
     {"key": "grp_da_pd", "label": "Pandas", "children": [
-      {"key": "da_pandas",      "label": "The Map: Pandas"},
+      {"key": "da_pandas",      "label": "How Pandas Works"},
       {"key": "da_pd_basics",   "label": "Series, DataFrames & Selection"},
       {"key": "da_pd_cleaning", "label": "Cleaning & Missing Data"},
       {"key": "da_pd_groupby",  "label": "GroupBy, Merge & Reshape"},
