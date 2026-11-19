@@ -3,91 +3,50 @@ Object.assign(TOPIC_CONTENT, {
   "st_abtesting": `<main>
   <h1>A/B Testing</h1>
   <div class="where"><span>Mathematics &amp; Statistics</span><span>Statistics</span><span>A/B Testing</span></div>
-  <p class="lead">An A/B test is how tech companies decide what to ship: split users at random, show one group the change, and measure the difference. It is <a class="xref" data-note="st_hypothesis">hypothesis testing</a> plus real-world mess: picking the metric, sizing the test, broken splits, people peeking early, novelty and users who affect each other. This note follows the same one-page checkout as the Hypothesis Testing note, from its small pilots to a full experiment and a business decision, works each formula by hand, and checks it in Python. It is the most common data-science case-interview topic.</p>
+  <p class="lead">An A/B test is how tech companies decide whether a change actually helps: they show the current version to one random half of their users and the new version to the other half, at the same time, and compare a number such as the share of users who buy. It is the hypothesis test from the <a class="xref" data-note="st_hypothesis">Hypothesis Testing</a> note, put to work in production, with all the real-world mess that comes with it: choosing what to measure, deciding how many users you need, catching a broken split, resisting the urge to stop early, and turning the result into money a manager can weigh. Data scientists are asked to design and read these experiments constantly, and "design an A/B test for feature X" is one of the most common interview questions in the field. The whole page follows one experiment: an online shop testing a new one-page checkout against its current three-step checkout, with about 2,200 checkout visitors a day and 10% of them buying. Every idea is added to that same experiment, from the first coin flip to the final slide for leadership.</p>
 
-  <h2 id="sab-fit" class="open"><span class="num">★</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 680 110" width="680"><defs><marker id="sab-trk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs><rect x="10.0" y="20" width="100" height="56" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="60.0" y="42" text-anchor="middle" font-size="11">Descriptive</text><text x="60.0" y="58" text-anchor="middle" class="tm" font-size="9.5">summarise one column</text><line x1="110.0" y1="48" x2="120.0" y2="48" stroke="currentColor" marker-end="url(#sab-trk)"/><rect x="122.0" y="20" width="100" height="56" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="172.0" y="42" text-anchor="middle" font-size="11">Probability</text><text x="172.0" y="58" text-anchor="middle" class="tm" font-size="9.5">quantify uncertainty</text><line x1="222.0" y1="48" x2="232.0" y2="48" stroke="currentColor" marker-end="url(#sab-trk)"/><rect x="234.0" y="20" width="100" height="56" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="284.0" y="42" text-anchor="middle" font-size="11">Distributions</text><text x="284.0" y="58" text-anchor="middle" class="tm" font-size="9.5">named shapes of chance</text><line x1="334.0" y1="48" x2="344.0" y2="48" stroke="currentColor" marker-end="url(#sab-trk)"/><rect x="346.0" y="20" width="100" height="56" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="396.0" y="42" text-anchor="middle" font-size="11">Correlation</text><text x="396.0" y="58" text-anchor="middle" class="tm" font-size="9.5">two columns together</text><line x1="446.0" y1="48" x2="456.0" y2="48" stroke="currentColor" marker-end="url(#sab-trk)"/><rect x="458.0" y="20" width="100" height="56" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="508.0" y="42" text-anchor="middle" font-size="11">Hypothesis Testing</text><text x="508.0" y="58" text-anchor="middle" class="tm" font-size="9.5">real or luck?</text><line x1="558.0" y1="48" x2="568.0" y2="48" stroke="currentColor" marker-end="url(#sab-trk)"/><rect x="570.0" y="20" width="100" height="56" rx="8" class="fg sg" stroke-width="3"/><text x="620.0" y="42" text-anchor="middle" font-size="11.5" font-weight="700">A/B Testing</text><text x="620.0" y="58" text-anchor="middle" class="tm" font-size="9.5">decide with an experiment</text><text x="620.0" y="96" text-anchor="middle" class="tg" font-size="10">YOU ARE HERE</text></svg><figcaption>The Statistics track, in reading order. Each note answers a question the previous one left open.</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: <a class="xref" data-note="st_hypothesis">Hypothesis Testing</a></b><span>We built the recipe (H₀, statistic, null distribution, p-value, α, CI, power) and a family of tests. The checkout pilots ended with a problem: conversion 13% vs 10% gave p = 0.036, but the CI was +0.2 to +5.8 pp and the pilot had only 11% power for a realistic +1 pp lift. And from <a class="xref" data-note="st_correlation">Correlation</a>: observational data cannot prove cause, because confounders hide everywhere.</span></li>
-    <li><b>This note adds: the full experiment, run in production</b><span>Random assignment (which kills confounders), a pre-registered hypothesis, the right metric and unit, a sample size from the power formula, variance reduction (CUPED), sanity checks (SRM), the z-test and CI on real numbers, practical significance, the four classic threats (peeking, novelty, interference, many variants) and the business-impact story.</span></li>
-    <li><b>Leads to: Machine Learning</b><span>An A/B test answers one decision at a time with a lot of traffic. Predicting outcomes for every user calls for models, starting at <a class="xref" data-note="ml_intro">What is Machine Learning</a>; comparing models offline uses the metrics in <a class="xref" data-note="ml_evaluation">Classification Metrics</a>, and online A/B tests return in <a class="xref" data-note="ml_rs_ranking">Ranking, Evaluation &amp; Cold Start</a>.</span></li>
-  </ol>
-
-  <h2 id="sab-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
-  <p>The whole note as one chain. Each concept answers the question above it; its weakness raises the next question. All numbers come from the one-page checkout experiment.</p>
-  <ol class="story">
-    <li><b>Randomised experiment</b><span>Q: sales rose 8% the week the new checkout launched; did the checkout cause it? → A before/after can't tell (payday, a festival, a competitor outage); run both pages at the same time and let a coin flip pick each user's page. But what exactly are we claiming?</span></li>
-    <li><b>Hypothesis &amp; pre-registration</b><span>Q: what is the testable claim? → "Conversion 10% → at least 11% (MDE 1 pp); H₀ no difference; α 0.05, power 0.8", written down before launch. But measured how, and who gets the coin flip?</span></li>
-    <li><b>Metrics &amp; randomisation unit</b><span>Q: which number decides, and what is randomised? → One primary metric (purchase conversion per user), guardrails, and the user as unit via md5(experiment:user) % 100. But how many users?</span></li>
-    <li><b>Sample size &amp; duration</b><span>Q: how many users and days? → 14,745 per arm from the power formula; 13.4 days → 14 (full weeks). But two weeks of traffic is expensive…</span></li>
-    <li><b>CUPED</b><span>Q: can we need fewer users? → Subtract what each user's pre-test behaviour predicts: variance × (1 − ρ²) = 0.22. The data is in; but did the experiment itself work?</span></li>
-    <li><b>Sample ratio mismatch (SRM)</b><span>Q: is the split as planned? → χ² on user counts: 15,400 / 15,380, p = 0.91, fine; 15,400 / 14,700 would be p = 0.00005, a bug. Now: is the lift real?</span></li>
-    <li><b>z-test, CI, guardrails</b><span>Q: real or luck, and how big? → 11.10% vs 10.00%, z = 3.14, p = 0.0017, CI +0.41 to +1.79 pp; guardrails flat. But significant is not the same as worth shipping…</span></li>
-    <li><b>Practical significance</b><span>Q: is it big enough to act on? → Compare the CI with 0 and with the MDE: centre 1.1 ≥ 1 → ship. But all of this assumed we looked at the result only once…</span></li>
-    <li><b>Peeking</b><span>Q: what if we check every day and stop at p &lt; 0.05? → False positives rise from 5% to 21.6%. And we assumed behaviour is stable over time…</span></li>
-    <li><b>Novelty &amp; primacy</b><span>Q: does the lift last? → Early lifts fade (novelty) or grow (primacy); plot lift by day. And we assumed users don't affect each other…</span></li>
-    <li><b>Interference</b><span>Q: what if treated users change control users' outcomes? → Randomise clusters or time slots (switchback). And we assumed one comparison…</span></li>
-    <li><b>Multiple variants</b><span>Q: four new designs at once? → P(≥ 1 false alarm) = 18.5%; use α/4, which needs 20,948 users per arm. Finally: how do we tell leadership?</span></li>
-    <li><b>Business impact</b><span>Q: what is it worth? → lift × users × value: ≈ $530k a year, range $198k–$862k from the CI ends.</span></li>
-  </ol>
-
-  <h2 id="sab-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="sab-map"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">A/B Testing</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">Lifecycle</div>
+        <div class="mm-title">Design (before launch)</div>
         <ul>
-          <li><b>Flow</b> — hypothesis → metrics → unit → sample size → run → checks → analyse → decide</li>
-          <li><b>Why random</b> — breaks every confounder, measured or not</li>
-          <li><b>Hypothesis</b> — "Change X will raise metric Y by ≥ Z because …"</li>
-          <li><b>Pre-register</b> — metric, MDE, duration, test fixed before launch</li>
+          <li>Random assignment, same time → only the change differs</li>
+          <li>Hypothesis, MDE, α, power written down first (pre-registration)</li>
+          <li>One primary metric + guardrails; randomise and analyse by user</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Metrics &amp; Unit</div>
+        <div class="mm-title">Sizing</div>
         <ul>
-          <li><b>Primary (OEC)</b> — one decision metric; sensitive and tied to value</li>
-          <li><b>Secondary</b> — explain the why · <b>Guardrails</b> — must not get worse</li>
-          <li><b>Unit</b> — user; <code>md5(exp:user) % 100 &lt; 50</code> → sticky, even split</li>
-          <li>⚠ randomise users, analyse clicks → SE too small</li>
+          <li>n per arm = (1.96 + 0.84)² × [p₁(1−p₁) + p₂(1−p₂)] ÷ δ²</li>
+          <li>Halve the MDE → 4× the users</li>
+          <li>Run whole weeks; CUPED cuts variance by (1 − ρ²)</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Size, Duration, CUPED</div>
+        <div class="mm-title">Analysis</div>
         <ul>
-          <li><code>(1.96 + 0.84)² · [p₁(1−p₁) + p₂(1−p₂)] / δ²</code> = 14,749 for 10% → 11%</li>
-          <li><b>Rule of thumb</b> — <code>16·p(1−p)/δ²</code> = 14,400 per arm</li>
-          <li><b>MDE halves → n ×4</b> — 0.5 pp needs 57,756</li>
-          <li><b>Duration</b> — 29,490 / 2,200 a day = 13.4 → 14 days</li>
-          <li><b>CUPED</b> — Y − θ(X − X̄); variance × (1 − ρ²) = 0.22</li>
+          <li>SRM check first (χ² on user counts)</li>
+          <li>Two-proportion z-test + CI for the difference</li>
+          <li>Decide by comparing the CI with 0 and with the MDE</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Analysis &amp; Decision</div>
+        <div class="mm-title">Threats</div>
         <ul>
-          <li><b>SRM first</b> — χ² on user counts: p 0.91 ok; p &lt; 0.001 stop</li>
-          <li><b>z-test</b> — pooled 0.1055, SE 0.0035, z 3.14, p 0.0017</li>
-          <li><b>CI</b> — +0.41 to +1.79 pp (unpooled SE)</li>
-          <li><b>Decide</b> — CI vs 0 and vs MDE: ship / tiny / inconclusive / null / kill</li>
+          <li>Peeking: 5% false alarms → ~22%</li>
+          <li>Many variants / metrics: correct α (Bonferroni, Holm, FDR)</li>
+          <li>Novelty, primacy, interference between users</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Validity Threats</div>
+        <div class="mm-title">Business impact</div>
         <ul>
-          <li><b>Peeking</b> — daily looks: false positives 5% → 21.6%; sequential tests</li>
-          <li><b>Novelty / primacy</b> — plot lift by day; new vs returning users</li>
-          <li><b>Interference</b> — cluster or switchback designs (SUTVA)</li>
-          <li><b>Many variants</b> — 4 arms: 18.5% → α/4; 20,948 per arm</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Business Impact</div>
-        <ul>
-          <li><b>Formula</b> — lift × users/yr × value per conversion</li>
-          <li><b>Range</b> — CI ends: $198k–$862k, point $530k</li>
-          <li><b>Story</b> — what changed, how sure, worth it, risks, recommendation</li>
-          <li>⚠ winner's curse — keep a holdout</li>
+          <li>lift × users per year × value per conversion</li>
+          <li>Use both CI ends for an honest range</li>
+          <li>Winner's curse → keep a holdout</li>
         </ul>
       </div>
     </div>
@@ -96,102 +55,87 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="sab-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain</span></div></div>
-      <div class="rm-item rm-done" data-target="sab-flow"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Why Randomise</span><span class="rm-sub">Before/after vs a coin flip</span></div></div>
-      <div class="rm-item rm-done" data-target="sab-hyp"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Hypothesis &amp; Lifecycle</span><span class="rm-sub">Decide before data</span></div></div>
-      <div class="rm-item rm-done" data-target="sab-metrics"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Metrics &amp; Unit</span><span class="rm-sub">OEC, guardrails, hashing users</span></div></div>
-      <div class="rm-item rm-done" data-target="sab-size"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Sample Size &amp; Duration</span><span class="rm-sub">Power by hand</span></div></div>
-      <div class="rm-item rm-done" data-target="sab-cuped"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">CUPED</span><span class="rm-sub">Needing fewer users</span></div></div>
-      <div class="rm-item rm-done" data-target="sab-srm"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">SRM Check</span><span class="rm-sub">Did the split work?</span></div></div>
-      <div class="rm-item rm-done" data-target="sab-analysis"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">z-test &amp; CI</span><span class="rm-sub">The result, by hand</span></div></div>
-      <div class="rm-item rm-done" data-target="sab-practical"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Practical Significance</span><span class="rm-sub">Ship, kill or extend</span></div></div>
-      <div class="rm-item rm-done" data-target="sab-peek"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Peeking</span><span class="rm-sub">5% becomes 21.6%</span></div></div>
-      <div class="rm-item rm-done" data-target="sab-novelty"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Novelty &amp; Primacy</span><span class="rm-sub">Lifts that change over time</span></div></div>
-      <div class="rm-item rm-done" data-target="sab-network"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Interference</span><span class="rm-sub">When users affect each other</span></div></div>
-      <div class="rm-item rm-done" data-target="sab-variants"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Multiple Variants</span><span class="rm-sub">A/B/n corrections</span></div></div>
-      <div class="rm-item rm-done" data-target="sab-impact"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Business Impact</span><span class="rm-sub">Presenting the result</span></div></div>
-      <div class="rm-item rm-done" data-target="sab-connect"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">Design, analysis, threats</span></div></div>
-      <div class="rm-item rm-done" data-target="sab-traps"><span class="rm-num">15</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Quick checklist</span></div></div>
-      <div class="rm-item rm-done" data-target="sab-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note on one page</span></div></div>
-      <div class="rm-item rm-done" data-target="sab-qa"><span class="rm-num">16</span><div class="rm-text"><span class="rm-label">Case Questions</span><span class="rm-sub">Interview-style Q&amp;A</span></div></div>
+      <div class="rm-item rm-done" data-target="sab-rand"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Randomised Controlled Experiments</span><span class="rm-sub">control vs treatment, and why a coin flip proves cause</span></div></div>
+      <div class="rm-item rm-done" data-target="sab-hyp"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Hypothesis, MDE and Pre-registration</span><span class="rm-sub">deciding everything before the data arrives</span></div></div>
+      <div class="rm-item rm-done" data-target="sab-metrics"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Metrics, Guardrails and the Randomisation Unit</span><span class="rm-sub">what to measure and who gets the coin flip</span></div></div>
+      <div class="rm-item rm-done" data-target="sab-size"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Sample Size, Power and Duration</span><span class="rm-sub">how many users and how many days</span></div></div>
+      <div class="rm-item rm-done" data-target="sab-cuped"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Variance Reduction with CUPED</span><span class="rm-sub">the same answer from fewer users</span></div></div>
+      <div class="rm-item rm-done" data-target="sab-srm"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Sample Ratio Mismatch</span><span class="rm-sub">checking the split before reading results</span></div></div>
+      <div class="rm-item rm-done" data-target="sab-analysis"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">The z-test and Confidence Interval</span><span class="rm-sub">is the lift real, and how big is it?</span></div></div>
+      <div class="rm-item rm-done" data-target="sab-practical"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Statistical vs Practical Significance</span><span class="rm-sub">ship, kill or keep testing</span></div></div>
+      <div class="rm-item rm-done" data-target="sab-peek"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Peeking and Sequential Testing</span><span class="rm-sub">why daily checking breaks the 5%</span></div></div>
+      <div class="rm-item rm-done" data-target="sab-multi"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Multiple Testing and A/B/n Tests</span><span class="rm-sub">many variants, many metrics, one honest α</span></div></div>
+      <div class="rm-item rm-done" data-target="sab-novelty"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Novelty, Primacy and Interference</span><span class="rm-sub">effects that fade, grow or leak between users</span></div></div>
+      <div class="rm-item rm-done" data-target="sab-impact"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Business Impact</span><span class="rm-sub">turning a lift into money and a decision</span></div></div>
+      <div class="rm-item rm-done" data-target="sab-traps"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">the errors real teams make most</span></div></div>
+      <div class="rm-item rm-done" data-target="sab-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">formulas, numbers and traps on one page</span></div></div>
+      <div class="rm-item rm-done" data-target="sab-qa"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">design cases and classic pitfalls</span></div></div>
     </div>
   </div>
 
-  <h2 id="sab-flow"><span class="num">01</span>Why Randomise: Before/After vs a Coin Flip</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The pilots in the Hypothesis Testing note were small and hand-picked. If we simply launch the one-page checkout and compare this week with last week, can we credit any change to the checkout?</p>
-  </div>
-  <h3>The running example: the one-page checkout, at full scale</h3>
-  <p>The shop from the Hypothesis Testing note now tests its <strong>one-page checkout</strong> (treatment, "B") against the current three-step checkout (control, "A") on real traffic: about 2,200 checkout visitors a day, baseline conversion 10%. Every section uses this experiment.</p>
-  <p>Suppose instead the shop launched the new checkout on Monday and by Friday sales were up 8%. The team celebrates. But Friday was also payday, a festival sale started, and a competitor's site was down. Was it the checkout? Nobody can tell. A before/after comparison mixes your change with everything else that changed at the same time: every one of those is a <strong>confounder</strong> (Correlation note).</p>
-  <p>The idea of an A/B test: run both versions <strong>at the same time</strong>, and let a coin flip decide which version each user sees. Payday, festivals and competitors then hit both groups equally. The only systematic difference left between the groups is your change, so any gap bigger than luck must come from it.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A clinical trial for a new medicine. Patients are randomly given the medicine or a sugar pill, at the same hospital, in the same season. Random assignment makes the groups alike on average in age, diet and luck, so a difference in recovery can be credited to the medicine.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>A/B test</strong> (online controlled experiment): users are randomly assigned to control or treatment at the same time, and a pre-chosen metric is compared. Randomisation makes the arms alike on every variable, measured or not, so the difference estimates the <em>causal</em> effect of the change.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"We'll compare users who chose the new checkout with those who didn't" is not an A/B test: users who opt in differ (more engaged, newer phones). Only <em>assignment</em> by a coin flip removes confounders.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Hypothesis &amp; lifecycle.</b> A coin flip makes the comparison fair, but fair comparison of <em>what</em>? Before any data arrives, we must state the claim, the size that matters and the test, or we will end up fishing.</div>
+  <h2 id="sab-rand"><span class="num">01</span>Randomised Controlled Experiments</h2>
+  <p>The shop's designers have built a one-page checkout and believe it will make more visitors finish their purchase than the current three-step checkout. The obvious way to find out is to launch it for everyone and compare this week's sales with last week's. Suppose that is exactly what happens: the new checkout goes live on Monday, and by the end of the week the share of visitors who bought has risen. The team celebrates. But that same week was payday, a festival sale started, and a competitor's website was down for a day. Any one of those could have raised sales on its own. Something that changes the outcome and also happens to line up with your change is called a <strong>confounder</strong>, and a before/after comparison mixes your change with every confounder that happened at the same time, so you cannot tell which one did the work. (The <a class="xref" data-note="st_correlation">Correlation</a> note showed the same problem in observational data.)</p>
+  <p>The simulation below makes this concrete. In week 2 a festival lifts every visitor's chance of buying from 10% to 11.2%, and the new checkout itself does nothing at all. First we compare the two weeks, as the team did. Then, inside the festival week only, we let a coin flip send each visitor to the old page or the new one and compare the two groups:</p>
+  <div class="fx" data-lang="py">import numpy as np
+from statsmodels.stats.proportion import proportions_ztest
+rng = np.random.default_rng(7)
+n = 2200 * 7                                   # one week of checkout visitors
 
-  <h2 id="sab-hyp"><span class="num">02</span>Hypothesis &amp; the Experiment Lifecycle</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>What exactly will we test, how big an effect do we care about, and what will we decide in each case, all before the experiment starts?</p>
-  </div>
-  <p>Every serious experiment follows the same steps, and most are decided <em>before</em> any data arrives.</p>
-  <div class="flow"><span>Hypothesis</span><span>Metrics + guardrails</span><span>Randomisation unit</span><span>Sample size</span><span>Run full weeks</span><span>Sanity checks (SRM)</span><span>Analyse</span><span>Decide &amp; communicate</span></div>
+# Week 1: old checkout, a normal week -&gt; 10% of visitors buy.
+# Week 2: new checkout for everyone, but a festival sale lifts everyone to 11.2%.
+# The new checkout itself does NOTHING (true effect = 0).
+week1 = rng.binomial(n, 0.100)
+week2 = rng.binomial(n, 0.112)
+z, p = proportions_ztest([week2, week1], [n, n])
+print(f"before/after : {week1/n:.2%} -&gt; {week2/n:.2%}  diff {100*(week2-week1)/n:+.2f} pp  p={p:.3f}")
+
+# Same festival week, but a coin flip sends each visitor to A or B.
+coin = rng.integers(0, 2, n)                   # 0 = control (A), 1 = treatment (B)
+bought = rng.random(n) &lt; 0.112                 # the festival hits both arms equally
+x = [bought[coin == 1].sum(), bought[coin == 0].sum()]
+m = [(coin == 1).sum(), (coin == 0).sum()]
+z, p = proportions_ztest(x, m)
+print(f"A/B, week 2  : A {x[1]/m[1]:.2%}  B {x[0]/m[0]:.2%}  diff {100*(x[0]/m[0]-x[1]/m[1]):+.2f} pp  p={p:.3f}")</div>
+  <div class="fx" data-lang="text">before/after : 9.97% -&gt; 10.86%  diff +0.89 pp  p=0.011
+A/B, week 2  : A 10.93%  B 11.17%  diff +0.24 pp  p=0.634</div>
+  <p>The before/after comparison shows a rise of 0.89 percentage points with a p-value of 0.011, which looks like a clear, statistically significant win, yet the checkout had no effect; the festival produced the whole rise. The coin-flip comparison inside the same week shows a gap of only 0.24 points with p = 0.634, which is exactly what pure luck looks like. The festival was still there, but it raised both groups equally, so it cancelled out of the comparison.</p>
+  <p>That second design is an <strong>A/B test</strong>, also called a <strong>randomised controlled experiment</strong> or online controlled experiment: users are assigned at random, at the same time, either to the current version, called the <strong>control</strong> (group A), or to the new version, called the <strong>treatment</strong> (group B), and a pre-chosen number is compared between the two groups. Each group is called an <strong>arm</strong> of the experiment. Think of a clinical trial for a new medicine. Patients are randomly given either the medicine or a sugar pill, in the same hospital, in the same season. Because chance decided who got what, the two groups end up alike on average in age, diet, mood and everything else, including things nobody thought to measure. So if the medicine group recovers more often, and the gap is bigger than luck would produce, the medicine must be the cause.</p>
+  <p>This is the real reason A/B tests are trusted. Random assignment does not try to measure and adjust for every confounder; it makes every confounder, measured or not, equally likely to land in either arm. The only systematic difference left between the arms is the change you made. The statistics then has a single, narrow job: to decide whether the observed gap is bigger than the gap random assignment alone would create, which is precisely what a hypothesis test does. It also explains a common mistake. Comparing users who chose to try the new checkout (say, through an opt-in "try the new design" button) with those who did not is <em>not</em> an A/B test, because the people who opt in are different to begin with: more engaged, often on newer phones, more likely to buy anyway. Only assignment by chance removes that difference.</p>
+
+  <h2 id="sab-hyp"><span class="num">02</span>Hypothesis, MDE and Pre-registration</h2>
+  <p>A coin flip makes the comparison fair, but we still have to say what exactly we are comparing and what result would change our minds. If we leave that until after the data arrives, we will be tempted to look at twenty numbers, find the one that moved, and tell a story about it. The fix is to make every important decision before the experiment starts.</p>
+  <p>The first decision is the <strong>hypothesis</strong>, a specific, testable claim with a reason behind it. For the checkout it is: "Removing two checkout steps will raise purchase conversion from 10% to at least 11%, because every extra step is a point where people drop off." In the language of hypothesis testing, the <strong>null hypothesis</strong> H₀ is "the two checkouts have the same conversion rate", and the alternative is "they differ". We use a two-sided test (we would want to know if the new page is worse, too), a <strong>significance level</strong> α = 0.05, which is the false-alarm rate we accept when there is truly no difference, and a <strong>power</strong> of 0.8, which is the chance we want of detecting a real lift of the size we care about.</p>
+  <p>That "size we care about" is the second decision, and it is the one beginners skip. The <strong>minimum detectable effect</strong>, or MDE, is the smallest lift that would be worth acting on. Here it is +1 percentage point (10% → 11%). A percentage point, written pp, is an absolute difference between two percentages; +1 pp from 10% is the same as a 10% relative increase. The MDE is a business judgement, not a statistical one: below about +1 pp, the engineering work and the risk of changing checkout are not worth it. As we will see, the MDE drives almost everything else, especially how many users we need.</p>
+  <p>Writing all of this down before launch, together with the metric, the duration and the exact analysis, is called <strong>pre-registration</strong>. Think of placing a bet at a cricket match: you name the team and the margin before the first ball is bowled. Naming them after the match is not a prediction, it is a story. In the same way, "conversion did not move, but look, time-on-page went up!" is a story told after the fact, and with enough numbers to choose from, something will always look significant by luck. Every serious experiment follows the same sequence, and most of it happens before any data exists:</p>
   <table class="tbl">
-    <tr><th>Step</th><th>Our checkout test</th><th>Section</th></tr>
-    <tr><td>Hypothesis</td><td>Fewer steps → fewer drop-offs → conversion 10% → at least 11%</td><td>02</td></tr>
+    <tr><th>Step</th><th>For the checkout test</th><th>Section</th></tr>
+    <tr><td>Hypothesis and MDE</td><td>10% → at least 11%; H₀ no difference; α 0.05, power 0.8</td><td>02</td></tr>
     <tr><td>Metrics</td><td>Primary: purchase conversion per user. Guardrails: latency, payment errors, refunds</td><td>03</td></tr>
-    <tr><td>Unit</td><td>User (hash of user_id)</td><td>03</td></tr>
-    <tr><td>Size &amp; time</td><td>14,745 users per arm, 14 days (fewer with CUPED)</td><td>04–05</td></tr>
-    <tr><td>Checks &amp; analysis</td><td>SRM, two-proportion z-test, CI for the difference</td><td>06–07</td></tr>
-    <tr><td>Decision</td><td>Compare CI with the minimum lift worth shipping</td><td>08</td></tr>
+    <tr><td>Randomisation unit</td><td>User, assigned by hashing the user id</td><td>03</td></tr>
+    <tr><td>Sample size and duration</td><td>14,745 users per arm, 14 days (fewer with CUPED)</td><td>04–05</td></tr>
+    <tr><td>Run, then sanity checks</td><td>Sample ratio mismatch check on user counts</td><td>06</td></tr>
+    <tr><td>Analyse</td><td>Two-proportion z-test and confidence interval</td><td>07</td></tr>
+    <tr><td>Decide and communicate</td><td>CI against 0 and the MDE; value in money</td><td>08, 12</td></tr>
   </table>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Placing a bet at a cricket match: you name the team and the margin before the first ball. Naming them after the match is not a prediction, it is a story.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Hypothesis</strong>: "Removing two checkout steps will raise purchase conversion from 10% to at least 11%, because fewer steps mean fewer drop-offs." H₀: no difference. Two-sided, α = 0.05, power 0.8. <strong>MDE</strong> (minimum detectable effect): the smallest lift worth detecting, here +1 percentage point (pp). <strong>Pre-registration</strong>: writing all of this down before launch.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Fix the metric, MDE, duration and analysis <em>before</em> launch, and write them down. Choosing them after seeing data ("conversion didn't move, but look at time-on-page!") turns the test into a fishing trip, and something will always look significant (the multiple-testing problem).</p>
-  </div>
-  <p>Where you meet it: product teams at Flipkart, Swiggy, Netflix and Google run thousands of these a year. In interviews, "design an experiment for feature X" is a standard case question; walking through these eight steps in order is most of the answer.</p>
-  <div class="bridge"><b>What this still can't tell us → next: Metrics &amp; unit.</b> "Conversion" sounds obvious, but conversion of what: page views, sessions, users? And how does a backend flip a coin for millions of users consistently?</div>
+  <p>In an interview, "design an experiment for feature X" is mostly answered by walking through these steps in order and giving a sensible choice at each one.</p>
 
-  <h2 id="sab-metrics"><span class="num">03</span>Metrics &amp; Randomisation Unit</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Which single number decides the test, which numbers must not get worse, and what thing (user, session, city) gets the coin flip?</p>
-  </div>
-  <p>A test can only answer the question you measure. Pick "clicks" and a clickbait headline wins, even while users get annoyed and leave. Pick "annual revenue" and nothing moves within two weeks. And if you assign the coin flip to the wrong thing (each page view instead of each person), the same person sees both checkouts and the maths quietly breaks.</p>
-  <p>The idea: choose <strong>one</strong> primary metric that is close to real value and moves within weeks; add a few metrics that explain <em>why</em>; and add "guardrails" that must not get worse. Then choose the unit that gets the coin flip, usually the user.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A cricket team trying a new batting order judges it by runs scored (primary). It also watches strike rate (secondary, the why) and makes sure wickets lost don't shoot up (guardrail). Judging only by boundaries hit would reward reckless shots.</p>
-  </div>
-  <div class="cards">
-    <div><b>Primary (OEC)</b><p>The one metric that decides. Sensitive, moves within weeks, tied to value.</p><small>Purchase conversion per user</small></div>
-    <div><b>Secondary</b><p>Explain <em>why</em> the primary moved.</p><small>Step drop-off, time to purchase</small></div>
-    <div><b>Guardrails</b><p>Must not get worse, even if the primary wins.</p><small>Page latency, payment errors, refund rate, AOV</small></div>
-  </div>
+  <h2 id="sab-metrics"><span class="num">03</span>Metrics, Guardrails and the Randomisation Unit</h2>
+  <p>A test can only answer the question you measure. Judge a news headline by clicks and the most misleading clickbait wins, even while readers get annoyed and leave. Judge the checkout by yearly revenue and nothing will move within two weeks, so every test is inconclusive. Choosing the metric is therefore a real design decision, and teams usually pick three kinds of number.</p>
+  <p>The <strong>primary metric</strong>, sometimes called the OEC (overall evaluation criterion), is the single number that decides the test. It should be close to real value for the business and sensitive enough to move within the length of the test. For the checkout it is <em>purchase conversion per user</em>: the share of users who reached checkout and bought. <strong>Secondary metrics</strong> explain why the primary moved, such as the drop-off at each step or the time taken to pay. <strong>Guardrail metrics</strong> are numbers that must not get worse even if the primary wins: page load time, payment errors, refund rate, average order value. A cricket team trying a new batting order is a good picture: it judges the idea by runs scored (primary), watches the strike rate to understand why (secondary), and makes sure wickets lost do not shoot up (guardrail). Judging only by boundaries hit would reward reckless batting.</p>
   <table class="tbl">
-    <tr><th>Unit</th><th>Pros</th><th>Cons</th><th>Use for</th></tr>
-    <tr><td><strong>User</strong> (hash of user_id)</td><td>Consistent experience; independent units</td><td>Needs login or stable cookie</td><td>Most product tests (our checkout)</td></tr>
-    <tr><td><strong>Session / page view</strong></td><td>More samples, faster</td><td>Same person sees both versions</td><td>Invisible changes: ranking, latency</td></tr>
-    <tr><td><strong>Cluster</strong> (city, school)</td><td>Contains interference</td><td>Few units → low power</td><td>Marketplaces, social features</td></tr>
+    <tr><th>Kind</th><th>Role</th><th>Checkout test</th></tr>
+    <tr><td>Primary (OEC)</td><td>Decides the test; sensitive and tied to value</td><td>Purchase conversion per user</td></tr>
+    <tr><td>Secondary</td><td>Explains why the primary moved</td><td>Step drop-off, time to purchase</td></tr>
+    <tr><td>Guardrail</td><td>Must not get worse</td><td>Latency, payment errors, refunds, order value</td></tr>
   </table>
-  <h3>How the coin flip is done in a backend</h3>
-  <p>You cannot store a random coin flip per user in every service. Instead, hash the user id with the experiment name, turn the hash into a number 0 to 99, and send 0 to 49 to treatment. Steps for user "u1": key = "checkout_v2:u1" → md5 → a huge hex number → mod 100 → bucket. Same input always gives the same bucket, so the user is "sticky". The code builds this, splits 10,000 users, and checks the split is even.</p>
+  <p>The next decision is what gets the coin flip. The <strong>randomisation unit</strong> is the thing that is assigned to an arm: a user, a session, a page view, or a whole city. For the checkout it must be the user. If we flipped a coin on every page view, the same person could see the three-step checkout in the morning and the one-page checkout in the evening, which is confusing for them and blurs the comparison. Assigning per user gives each person one consistent experience. Session- or page-level assignment is only used for changes users cannot notice, such as search ranking tweaks or speed improvements, and city-level assignment is used when users affect each other (section 11).</p>
+  <p>A real backend serving millions of users cannot store a random coin flip for every user in every service. Instead it uses <strong>hashing</strong>: a hash function such as MD5 turns any text into a long, random-looking number, and the same text always gives the same number. We hash the experiment name joined to the user id, take the remainder after dividing by 100 to get a bucket from 0 to 99, and send buckets 0–49 to treatment. Because the result depends only on the input, a user always lands in the same arm (they are "sticky") and no lookup table is needed:</p>
   <div class="fx" data-lang="py">import hashlib
-import numpy as np
 from scipy import stats
 
 def bucket(user_id, experiment="checkout_v2"):
     key = f"{experiment}:{user_id}".encode()
-    return int(hashlib.md5(key).hexdigest(), 16) % 100        # 0..99, same every time
+    return int(hashlib.md5(key).hexdigest(), 16) % 100    # 0..99, same every time
 
 def arm(user_id):
     return "treatment" if bucket(user_id) &lt; 50 else "control"
@@ -200,205 +144,710 @@ print([arm(u) for u in ["u1", "u2", "u3"]], arm("u1") == arm("u1"))
 counts = {"control": 0, "treatment": 0}
 for i in range(10000):
     counts[arm(f"user{i}")] += 1
-print(counts, " SRM p =", round(stats.chisquare(list(counts.values())).pvalue, 3))
-print("other experiment, same user:", bucket("u1"), bucket("u1", "search_rank"))</div>
+print(counts)
+print("same user, two experiments:", bucket("u1"), bucket("u1", "search_rank"))</div>
   <div class="fx" data-lang="text">['control', 'treatment', 'control'] True
-{'control': 5021, 'treatment': 4979}  SRM p = 0.674
-other experiment, same user: 64 38</div>
-  <p><code>hashlib.md5(...).hexdigest()</code> turns the key into a fixed hex string; <code>int(..., 16) % 100</code> maps it to a bucket. Calling <code>arm("u1")</code> twice gives the same answer (True). 10,000 users split 5,021 / 4,979, and the chi-square check (section 06) says that is normal luck. Putting the experiment name in the key matters: user u1 is bucket 64 in one test and 38 in another, so experiments don't all hit the same users.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>OEC</strong> (overall evaluation criterion): the primary metric that decides. <strong>Guardrail metric</strong>: a metric that must not degrade. <strong>Randomisation unit</strong>: the thing assigned to an arm (user, session, city). <strong>Analysis unit</strong>: the thing each data row describes.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Randomise by user but analyse per page view, and views from one user are correlated (a keen user makes many). The SE comes out too small and false positives soar: the independence assumption behind the test's null distribution is broken. Analyse at the randomisation unit (one row per user), or use the delta method for ratio metrics like clicks per view.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Sample size &amp; duration.</b> We know what to measure and how to split. The pilot with 1,000 users per page had only 11% power for +1 pp. How many users do we need, and how many days is that?</div>
+{'control': 5021, 'treatment': 4979}
+same user, two experiments: 64 38</div>
+  <p><code>hashlib.md5(key).hexdigest()</code> produces the hash as a hexadecimal string, <code>int(..., 16)</code> turns it into a whole number, and <code>% 100</code> keeps the remainder. Calling <code>arm("u1")</code> twice gives the same answer (<code>True</code>). Ten thousand users split 5,021 to 4,979, which is the kind of small imbalance pure chance produces; section 06 shows how to test that formally. The last line shows why the experiment name belongs in the key: user u1 is in bucket 64 for the checkout test and bucket 38 for a search test, so the same users are not always the ones in treatment across every experiment the company runs.</p>
+  <p>The randomisation unit has one more consequence that catches many people out. The z-test we will use assumes each row of data is an independent observation. If we randomise by user but then analyse every page view as its own row, that assumption breaks: a user who loves shopping views checkout many times and buys often, so their rows move together. The test then thinks it has far more independent evidence than it really has, its standard error comes out too small, and it declares "significant" too often. The simulation runs 2,000 <strong>A/A tests</strong>, experiments where both arms get exactly the same experience, so any "significant" result is a false alarm and should happen 5% of the time:</p>
+  <div class="fx" data-lang="py">import numpy as np
+from statsmodels.stats.proportion import proportions_ztest
+rng = np.random.default_rng(1)
 
-  <h2 id="sab-size"><span class="num">04</span>Sample Size &amp; Run Duration</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>How many users per arm give an 80% chance of detecting a true +1 pp lift at α = 0.05, and how long must the test run to collect them?</p>
-  </div>
-  <p>Run the checkout test on 500 users and a real +1 pp lift will drown in noise: the test will usually say "not significant", and a good idea gets killed. Run it on 5 million and you waste weeks of traffic that other experiments needed. You must decide the size in advance, from four inputs: baseline rate, MDE, α, power.</p>
-  <p>The idea: the smaller the effect you want to catch, the more users you need, and it grows fast. Halving the effect needs <strong>four times</strong> the users, because noise in an average shrinks only with √n.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Listening for a friend's voice in a noisy railway station. A shout is heard at once; a whisper needs you to listen much longer (or move closer) before you are sure it was your name. The MDE is how loud the voice is; the sample size is how long you listen.</p>
-  </div>
-  <h3>The formula by hand</h3>
-  <p>Per arm, for two proportions (from the power section of the Hypothesis Testing note): <code>n = (z₁₋α/₂ + z₁₋β)² · [p₁(1−p₁) + p₂(1−p₂)] / δ²</code>, where δ = p₂ − p₁.</p>
-  <ol>
-    <li>α = 0.05 two-sided → z₁₋α/₂ = 1.96. Power 0.8 → z₁₋β = 0.84. (1.96 + 0.84)² = 7.85.</li>
-    <li>Noise part: 0.10 × 0.90 + 0.11 × 0.89 = 0.090 + 0.0979 = 0.1879.</li>
-    <li>Effect part: δ² = 0.01² = 0.0001.</li>
-    <li>n = 7.85 × 0.1879 / 0.0001 ≈ <strong>14,749</strong> per arm.</li>
-    <li>Shortcut: with α 0.05 and power 0.8, 7.85 × 2 ≈ 16, so n ≈ 16·p(1−p)/δ² = 16 × 0.09 / 0.0001 = 14,400.</li>
-  </ol>
-  <p>The code repeats the hand calculation, then uses <code>statsmodels</code> (which uses a slightly different scale, "Cohen's h") and loops over three MDEs. Finally it turns users into days.</p>
-  <div class="fx" data-lang="py">z_a, z_b = stats.norm.ppf(0.975), stats.norm.ppf(0.80)
+def aa_test():
+    # 2,000 users per arm and NO real difference between the arms.
+    # Each user has their own taste for buying and their own number of checkout views.
+    taste = rng.beta(1, 9, 4000)                  # 10% on average, but varies a lot by user
+    views = rng.geometric(1 / 6, 4000)            # most users view a few times, some many
+    buys = rng.binomial(views, taste)             # purchases per user
+    arm = np.repeat([0, 1], 2000)
+    # Wrong: every page view treated as an independent row
+    p_views = proportions_ztest([buys[arm == k].sum() for k in (0, 1)],
+                                [views[arm == k].sum() for k in (0, 1)])[1]
+    # Right: one row per user, the unit that was randomised ("did this user buy?")
+    p_users = proportions_ztest([(buys[arm == k] &gt; 0).sum() for k in (0, 1)], [2000, 2000])[1]
+    return p_views &lt; 0.05, p_users &lt; 0.05
+
+res = np.array([aa_test() for _ in range(2000)])
+print(f"false positives, analysed per page view: {res[:, 0].mean():.1%}")
+print(f"false positives, analysed per user:      {res[:, 1].mean():.1%}")</div>
+  <div class="fx" data-lang="text">false positives, analysed per page view: 15.1%
+false positives, analysed per user:      5.1%</div>
+  <p>Analysed per user, the false-alarm rate is 5.1%, as promised. Analysed per page view, it is 15.1%, three times higher, with nothing at all going on. The rule is to analyse at the unit you randomised: one row per user. When the metric is a ratio of two counts, such as clicks per page view, there is a method called the <strong>delta method</strong> that computes the correct standard error from per-user totals. A/A tests are also a standard health check for an experimentation platform: if they come out significant much more than 5% of the time, something in the pipeline is broken.</p>
+
+  <h2 id="sab-size"><span class="num">04</span>Sample Size, Power and Duration</h2>
+  <p>Run the checkout test on 500 users and a real +1 pp lift will drown in noise; the test will usually say "not significant" and a good idea will be thrown away. Run it on five million and you waste weeks of traffic that other experiments needed. The number of users must be chosen before launch, and it comes from four inputs: the baseline rate (10%), the MDE (+1 pp), α (0.05) and the power (0.8).</p>
+  <p>Think of listening for a friend calling your name across a noisy railway station. A shout you hear at once. A whisper needs you to listen much longer before you are sure it was your name and not the crowd. The MDE is how loud the voice is, the random variation in conversion is the crowd, and the sample size is how long you listen. The quieter the voice, the longer you must listen, and the relationship is steep: the noise in an average shrinks only with the square root of the number of users, so to halve the effect you can detect you need four times as many users.</p>
+  <p>The formula for the number of users needed <em>per arm</em> when comparing two proportions (it is derived in the power section of the Hypothesis Testing note) is:</p>
+  <div class="fx" data-lang="text">n = (z<sub>1−α/2</sub> + z<sub>1−β</sub>)² × [p₁(1 − p₁) + p₂(1 − p₂)] ÷ δ²</div>
+  <p>In words: p₁ is the control rate (0.10) and p₂ the rate we hope treatment reaches (0.11), so δ = p₂ − p₁ is the MDE. Each p(1 − p) is the variance of a single yes/no outcome, so the bracket measures how noisy the data is. The z values translate α and power into standard-normal distances: z<sub>1−α/2</sub> = 1.96 is how far out the significance cut-off sits, and z<sub>1−β</sub> = 0.84 is how much further a true effect must sit to be detected 80% of the time. The formula says: users needed = (how strict we are)² × (how noisy the data is) ÷ (how small the effect is)². By hand: (1.96 + 0.84)² = 7.85; the noise part is 0.10 × 0.90 + 0.11 × 0.89 = 0.090 + 0.0979 = 0.1879; the effect part is 0.01² = 0.0001. So n = 7.85 × 0.1879 ÷ 0.0001 ≈ 14,750 per arm. A handy shortcut follows from 7.85 × 2 ≈ 16: with α 0.05 and power 0.8, n ≈ 16 × p(1 − p) ÷ δ² = 16 × 0.09 ÷ 0.0001 = 14,400. Here is the same calculation in code:</p>
+  <div class="fx" data-lang="py">import numpy as np
+from scipy import stats
+z_a, z_b = stats.norm.ppf(0.975), stats.norm.ppf(0.80)
 p1, p2 = 0.10, 0.11
 n = (z_a + z_b)**2 * (p1*(1-p1) + p2*(1-p2)) / (p2 - p1)**2
-print(f"z_alpha/2={z_a:.3f} z_beta={z_b:.3f} (sum)^2={(z_a+z_b)**2:.2f}")
-print(f"variance part={p1*(1-p1) + p2*(1-p2):.4f}  n per arm={np.ceil(n):,.0f}")
-print(f"rule of thumb 16*p(1-p)/d^2 = {16*0.1*0.9/0.01**2:,.0f}")
-
+print(f"z_alpha/2={z_a:.3f}  z_beta={z_b:.3f}  (sum)^2={(z_a+z_b)**2:.2f}")
+print(f"noise part={p1*(1-p1) + p2*(1-p2):.4f}  n per arm={np.ceil(n):,.0f}")
+print(f"rule of thumb 16*p(1-p)/d^2 = {16*0.1*0.9/0.01**2:,.0f}")</div>
+  <div class="fx" data-lang="text">z_alpha/2=1.960  z_beta=0.842  (sum)^2=7.85
+noise part=0.1879  n per arm=14,749
+rule of thumb 16*p(1-p)/d^2 = 14,400</div>
+  <p><code>stats.norm.ppf</code> turns a probability into a z value: 0.975 gives 1.960 and 0.80 gives 0.842. The exact answer, 14,749 per arm, matches the hand calculation, and the rule of thumb lands within 3%. In practice people use a library, which also makes it easy to see how strongly the answer depends on the MDE. statsmodels measures the effect on a slightly different scale called Cohen's h, so it gives a figure a few users different:</p>
+  <div class="fx" data-lang="py">import numpy as np
 from statsmodels.stats.power import NormalIndPower
 from statsmodels.stats.proportion import proportion_effectsize
-baseline, target = 0.10, 0.11                      # MDE = +1 pp (10% relative)
-h = proportion_effectsize(target, baseline)        # Cohen's h for proportions
-n = NormalIndPower().solve_power(effect_size=h, alpha=0.05, power=0.8)
-print(f"per arm: {np.ceil(n):,.0f}   total: {2*np.ceil(n):,.0f}")
-for mde in [0.005, 0.01, 0.02]:
-    h = proportion_effectsize(baseline + mde, baseline)
-    print(f"MDE {mde*100:.1f} pp -&gt; {np.ceil(NormalIndPower().solve_power(h, alpha=0.05, power=0.8)):,.0f} per arm")
-daily_users = 2200                                  # eligible checkout visitors/day
-days = 2 * 14745 / daily_users
-print(f"{days:.1f} days -&gt; run {int(np.ceil(days / 7) * 7)} days (full weeks)")</div>
-  <div class="fx" data-lang="text">z_alpha/2=1.960 z_beta=0.842 (sum)^2=7.85
-variance part=0.1879  n per arm=14,749
-rule of thumb 16*p(1-p)/d^2 = 14,400
-per arm: 14,745   total: 29,490
-MDE 0.5 pp -&gt; 57,756 per arm
-MDE 1.0 pp -&gt; 14,745 per arm
-MDE 2.0 pp -&gt; 3,835 per arm
-13.4 days -&gt; run 14 days (full weeks)</div>
-  <p><code>stats.norm.ppf</code> turns a probability into a z value (0.975 → 1.96). The hand formula gives 14,749; statsmodels gives 14,745. Same answer. The loop shows the square law: 2 pp needs 3,835, 1 pp needs 14,745 (about 4×), 0.5 pp needs 57,756 (4× again). With 2,200 checkout visitors a day, 29,490 users take 13.4 days, rounded up to 14 so every weekday appears twice.</p>
-  <figure class="viz"><svg viewBox="0 0 560 190" width="560"><line x1="40" y1="162" x2="546" y2="162" stroke="currentColor" stroke-opacity=".5"/><text x="121.6" y="177" text-anchor="middle" font-size="11">0.5</text><text x="203.2" y="177" text-anchor="middle" font-size="11">1.0</text><text x="284.8" y="177" text-anchor="middle" font-size="11">1.5</text><text x="366.5" y="177" text-anchor="middle" font-size="11">2.0</text><text x="448.1" y="177" text-anchor="middle" font-size="11">2.5</text><text x="529.7" y="177" text-anchor="middle" font-size="11">3.0</text><text x="546" y="157" text-anchor="end" font-size="11" class="tm">MDE (pp)</text><path d="M105.3,18.2 L116.2,56.1 L127.1,80.7 L137.9,97.6 L148.8,109.7 L159.7,118.6 L170.6,125.4 L181.5,130.8 L192.3,135.0 L203.2,138.4 L214.1,141.2 L225.0,143.5 L235.9,145.5 L246.8,147.1 L257.6,148.5 L268.5,149.8 L279.4,150.8 L290.3,151.7 L301.2,152.6 L312.0,153.3 L322.9,153.9 L333.8,154.5 L344.7,155.0 L355.6,155.5 L366.5,155.9 L377.3,156.2 L388.2,156.6 L399.1,156.9 L410.0,157.2 L420.9,157.4 L431.7,157.7 L442.6,157.9 L453.5,158.1 L464.4,158.3 L475.3,158.5 L486.2,158.6 L497.0,158.8 L507.9,158.9 L518.8,159.0 L529.7,159.2" fill="none" class="sb" stroke-width="2"/><text x="34" y="166.0" text-anchor="end" font-size="10" class="tm">0k</text><text x="34" y="134.0" text-anchor="end" font-size="10" class="tm">20k</text><text x="34" y="102.0" text-anchor="end" font-size="10" class="tm">40k</text><text x="34" y="70.0" text-anchor="end" font-size="10" class="tm">60k</text><text x="34" y="38.0" text-anchor="end" font-size="10" class="tm">80k</text><path d="M121.6,69.6h0M203.2,138.4h0M366.5,155.9h0" class="sr" stroke-width="7.0" stroke-linecap="round"/><text x="134.7" y="69.6" text-anchor="start" font-size="10">57.8k</text><text x="216.3" y="134.8" text-anchor="start" font-size="10">14.7k (our test)</text><text x="374.6" y="150.8" text-anchor="start" font-size="10">3.8k</text></svg><figcaption>Users per arm vs the smallest lift you want to detect (baseline 10%). Halving the MDE quadruples the sample.</figcaption></figure>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Power analysis</strong>: choosing n so that a real effect of size MDE is detected with probability 1 − β. Inputs: baseline rate, MDE, α, power. n ∝ (noise)/δ².</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Run whole weeks. Weekend shoppers behave differently from weekday shoppers; stopping on a Thursday over-represents some days. Run at least one, ideally two, full weekly cycles even if the sample size is reached earlier.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: CUPED.</b> 14 days of all checkout traffic is a lot to spend on one question. n is proportional to the noise in the metric. Can we remove some noise we already know about?</div>
 
-  <h2 id="sab-cuped"><span class="num">05</span>Needing Fewer Users: CUPED</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Much of the spread in spend per user is just "some users always spend more". We know that from before the test. Can we subtract it and detect the same lift with less data?</p>
-  </div>
-  <p>Users differ hugely in spend: some spend ₹200 a month, some ₹5,000. That spread is noise that hides your effect. But you already know how much each user spent <em>before</em> the test. CUPED (controlled-experiment using pre-experiment data) subtracts the part of each user's metric that their past predicts: <code>Y_adj = Y − θ(X − X̄)</code>, with θ = cov(X, Y)/var(X), the regression slope from the Correlation note. Variance shrinks by a factor of (1 − ρ²), where ρ is the correlation between before and after.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Judging a coaching class by students' final marks is noisy because some students were always toppers. Judging by "final mark minus what their mock predicted" removes that, and the class's real effect stands out.</p>
-  </div>
-  <h3>By hand, then simulated</h3>
-  <p>If before and after spend correlate at ρ = 0.88, the adjusted variance is (1 − 0.88²) = 1 − 0.774 = 0.226 of the original. Since n ∝ variance, the same test needs only about 23% of the users it would otherwise need. The simulation below has 20,000 users and a true lift of ₹15.</p>
-  <div class="fx" data-lang="py">rng = np.random.default_rng(3)
+baseline = 0.10
+for mde in [0.02, 0.01, 0.005]:
+    h = proportion_effectsize(baseline + mde, baseline)    # Cohen's h for two proportions
+    n = NormalIndPower().solve_power(effect_size=h, alpha=0.05, power=0.8)
+    print(f"MDE {mde*100:.1f} pp -&gt; {np.ceil(n):&gt;7,.0f} per arm")
+
+n_arm, daily_users = 14745, 2200
+days = 2 * n_arm / daily_users
+print(f"{days:.1f} days -&gt; run {int(np.ceil(days / 7) * 7)} days (whole weeks)")</div>
+  <div class="fx" data-lang="text">MDE 2.0 pp -&gt;   3,835 per arm
+MDE 1.0 pp -&gt;  14,745 per arm
+MDE 0.5 pp -&gt;  57,756 per arm
+13.4 days -&gt; run 14 days (whole weeks)</div>
+  <p>The library gives 14,745 for our MDE of 1 pp, essentially the same answer. The loop shows the square law plainly: 2 pp needs 3,835 users per arm, 1 pp needs 14,745 (about four times as many), and 0.5 pp needs 57,756 (four times again). The chart draws the whole curve; the cost of chasing small effects rises very fast on the left.</p>
+  <figure class="viz"><svg viewBox="0 0 407.388359 215.919219" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="max-width:640px;width:100%;height:auto">
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="sabszfigure_1">
+  <g id="sabszpatch_1">
+   <path d="M 0 215.919219 
+L 407.388359 215.919219 
+L 407.388359 0 
+L 0 0 
+L 0 215.919219 
+z
+" style="fill: none"/>
+  </g>
+  <g id="sabszaxes_1">
+   <g id="sabszpatch_2">
+    <path d="M 43.068359 173.52 
+L 400.188359 173.52 
+L 400.188359 7.2 
+L 43.068359 7.2 
+L 43.068359 173.52 
+z
+" style="fill: none"/>
+   </g>
+   <g id="sabszmatplotlib.axis_1">
+    <g id="sabszxtick_1">
+     <g id="sabszline2d_1">
+      <defs>
+       <path id="sabszmedb56decd0" d="M 0 0 
+L 0 3.5 
+" style="stroke: currentColor; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#sabszmedb56decd0" x="71.7878" y="173.52" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabsztext_1">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="71.7878" y="190.2075" transform="rotate(-0 71.7878 190.2075)">0.5</text>
+     </g>
+    </g>
+    <g id="sabszxtick_2">
+     <g id="sabszline2d_2">
+      <g>
+       <use xlink:href="#sabszmedb56decd0" x="134.221366" y="173.52" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabsztext_2">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="134.221366" y="190.2075" transform="rotate(-0 134.221366 190.2075)">1.0</text>
+     </g>
+    </g>
+    <g id="sabszxtick_3">
+     <g id="sabszline2d_3">
+      <g>
+       <use xlink:href="#sabszmedb56decd0" x="196.654933" y="173.52" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabsztext_3">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="196.654933" y="190.2075" transform="rotate(-0 196.654933 190.2075)">1.5</text>
+     </g>
+    </g>
+    <g id="sabszxtick_4">
+     <g id="sabszline2d_4">
+      <g>
+       <use xlink:href="#sabszmedb56decd0" x="259.088499" y="173.52" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabsztext_4">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="259.088499" y="190.2075" transform="rotate(-0 259.088499 190.2075)">2.0</text>
+     </g>
+    </g>
+    <g id="sabszxtick_5">
+     <g id="sabszline2d_5">
+      <g>
+       <use xlink:href="#sabszmedb56decd0" x="321.522066" y="173.52" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabsztext_5">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="321.522066" y="190.2075" transform="rotate(-0 321.522066 190.2075)">2.5</text>
+     </g>
+    </g>
+    <g id="sabszxtick_6">
+     <g id="sabszline2d_6">
+      <g>
+       <use xlink:href="#sabszmedb56decd0" x="383.955632" y="173.52" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabsztext_6">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="383.955632" y="190.2075" transform="rotate(-0 383.955632 190.2075)">3.0</text>
+     </g>
+    </g>
+    <g id="sabsztext_7">
+     <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="221.628359" y="206.307109" transform="rotate(-0 221.628359 206.307109)">MDE: smallest lift to detect (percentage points)</text>
+    </g>
+   </g>
+   <g id="sabszmatplotlib.axis_2">
+    <g id="sabszytick_1">
+     <g id="sabszline2d_7">
+      <defs>
+       <path id="sabszmcf30224eca" d="M 0 0 
+L -3.5 0 
+" style="stroke: currentColor; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#sabszmcf30224eca" x="43.068359" y="168.994828" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabsztext_8">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="36.068359" y="173.838578" transform="rotate(-0 36.068359 173.838578)">0</text>
+     </g>
+    </g>
+    <g id="sabszytick_2">
+     <g id="sabszline2d_8">
+      <g>
+       <use xlink:href="#sabszmcf30224eca" x="43.068359" y="134.666042" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabsztext_9">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="36.068359" y="139.509792" transform="rotate(-0 36.068359 139.509792)">20</text>
+     </g>
+    </g>
+    <g id="sabszytick_3">
+     <g id="sabszline2d_9">
+      <g>
+       <use xlink:href="#sabszmcf30224eca" x="43.068359" y="100.337256" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabsztext_10">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="36.068359" y="105.181006" transform="rotate(-0 36.068359 105.181006)">40</text>
+     </g>
+    </g>
+    <g id="sabszytick_4">
+     <g id="sabszline2d_10">
+      <g>
+       <use xlink:href="#sabszmcf30224eca" x="43.068359" y="66.00847" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabsztext_11">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="36.068359" y="70.85222" transform="rotate(-0 36.068359 70.85222)">60</text>
+     </g>
+    </g>
+    <g id="sabszytick_5">
+     <g id="sabszline2d_11">
+      <g>
+       <use xlink:href="#sabszmcf30224eca" x="43.068359" y="31.679685" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabsztext_12">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="36.068359" y="36.523435" transform="rotate(-0 36.068359 36.523435)">80</text>
+     </g>
+    </g>
+    <g id="sabsztext_13">
+     <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="16.8875" y="90.36" transform="rotate(-90 16.8875 90.36)">users per arm (thousands)</text>
+    </g>
+   </g>
+   <g id="sabszline2d_12">
+    <path d="M 59.301087 14.76 
+L 63.410638 37.133226 
+L 67.520189 54.946942 
+L 71.62974 69.362304 
+L 75.739291 81.192893 
+L 79.848843 91.02251 
+L 83.958394 99.278891 
+L 88.067945 106.281233 
+L 92.177496 112.27165 
+L 96.287048 117.436488 
+L 100.396599 121.92106 
+L 104.50615 125.840038 
+L 108.615701 129.284888 
+L 112.725252 132.329294 
+L 116.834804 135.03315 
+L 120.944355 137.445544 
+L 125.053906 139.607021 
+L 129.163457 141.551305 
+L 133.273008 143.306634 
+L 137.38256 144.896795 
+L 141.492111 146.341942 
+L 145.601662 147.659244 
+L 149.711213 148.863397 
+L 153.820764 149.967043 
+L 157.930316 150.981103 
+L 162.039867 151.915054 
+L 166.149418 152.777147 
+L 170.258969 153.574599 
+L 174.36852 154.313741 
+L 178.478072 155.000144 
+L 182.587623 155.638731 
+L 186.697174 156.233861 
+L 190.806725 156.789408 
+L 194.916277 157.308821 
+L 199.025828 157.795182 
+L 203.135379 158.251251 
+L 207.24493 158.679504 
+L 211.354481 159.08217 
+L 215.464033 159.461257 
+L 219.573584 159.81858 
+L 223.683135 160.155784 
+L 227.792686 160.474359 
+L 231.902237 160.77566 
+L 236.011789 161.06092 
+L 240.12134 161.331266 
+L 244.230891 161.587725 
+L 248.340442 161.831238 
+L 252.449993 162.062667 
+L 256.559545 162.282803 
+L 260.669096 162.492375 
+L 264.778647 162.692052 
+L 268.888198 162.882451 
+L 272.997749 163.064142 
+L 277.107301 163.237652 
+L 281.216852 163.403468 
+L 285.326403 163.562041 
+L 289.435954 163.71379 
+L 293.545506 163.859105 
+L 297.655057 163.998346 
+L 301.764608 164.131849 
+L 305.874159 164.259929 
+L 309.98371 164.382876 
+L 314.093262 164.500965 
+L 318.202813 164.614449 
+L 322.312364 164.723566 
+L 326.421915 164.828541 
+L 330.531466 164.929581 
+L 334.641018 165.026882 
+L 338.750569 165.120628 
+L 342.86012 165.210992 
+L 346.969671 165.298136 
+L 351.079222 165.382212 
+L 355.188774 165.463364 
+L 359.298325 165.541727 
+L 363.407876 165.617429 
+L 367.517427 165.69059 
+L 371.626978 165.761323 
+L 375.73653 165.829736 
+L 379.846081 165.895929 
+L 383.955632 165.96 
+" clip-path="url(#sabszpdd851e30cf)" style="fill: none; stroke: #2a78d6; stroke-width: 2.2; stroke-linecap: square"/>
+   </g>
+   <g id="sabszline2d_13">
+    <defs>
+     <path id="sabszmb374cfb68b" d="M 0 3 
+C 0.795609 3 1.55874 2.683901 2.12132 2.12132 
+C 2.683901 1.55874 3 0.795609 3 0 
+C 3 -0.795609 2.683901 -1.55874 2.12132 -2.12132 
+C 1.55874 -2.683901 0.795609 -3 0 -3 
+C -0.795609 -3 -1.55874 -2.683901 -2.12132 -2.12132 
+C -2.683901 -1.55874 -3 -0.795609 -3 0 
+C -3 0.795609 -2.683901 1.55874 -2.12132 2.12132 
+C -1.55874 2.683901 -0.795609 3 0 3 
+z
+" style="stroke: #e8743b"/>
+    </defs>
+    <g clip-path="url(#sabszpdd851e30cf)">
+     <use xlink:href="#sabszmb374cfb68b" x="71.7878" y="69.86078" style="fill: #e8743b; stroke: #e8743b"/>
+    </g>
+   </g>
+   <g id="sabszline2d_14">
+    <g clip-path="url(#sabszpdd851e30cf)">
+     <use xlink:href="#sabszmb374cfb68b" x="134.221366" y="143.687467" style="fill: #e8743b; stroke: #e8743b"/>
+    </g>
+   </g>
+   <g id="sabszline2d_15">
+    <g clip-path="url(#sabszpdd851e30cf)">
+     <use xlink:href="#sabszmb374cfb68b" x="259.088499" y="162.412977" style="fill: #e8743b; stroke: #e8743b"/>
+    </g>
+   </g>
+   <g id="sabszpatch_3">
+    <path d="M 43.068359 173.52 
+L 43.068359 7.2 
+" style="fill: none; stroke: currentColor; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="sabszpatch_4">
+    <path d="M 43.068359 173.52 
+L 400.188359 173.52 
+" style="fill: none; stroke: currentColor; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="sabsztext_14">
+    <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: start" x="79.7878" y="65.86078" transform="rotate(-0 79.7878 65.86078)">57.8k</text>
+   </g>
+   <g id="sabsztext_15">
+    <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: start" x="142.221366" y="139.687467" transform="rotate(-0 142.221366 139.687467)">14.7k (our test)</text>
+   </g>
+   <g id="sabsztext_16">
+    <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: start" x="267.088499" y="158.412977" transform="rotate(-0 267.088499 158.412977)">3.8k</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="sabszpdd851e30cf">
+   <rect x="43.068359" y="7.2" width="357.12" height="166.32"/>
+  </clipPath>
+ </defs>
+</svg><figcaption>Users needed per arm against the MDE, for a 10% baseline, α 0.05 and power 0.8. Halving the MDE quadruples the sample.</figcaption></figure>
+  <p>The last line of the output turns users into time. Both arms together need 29,490 users; at 2,200 checkout visitors a day that is 13.4 days, which we round up to 14. We round up to <em>whole weeks</em> rather than to the next day because people shop differently on weekends and weekdays, and a test that stops on a Thursday over-represents some days. Most teams run at least one, ideally two, full weekly cycles even if the sample size is reached sooner. The same calculation also tells you when not to run a test: if your traffic would need six months to detect any lift worth having, an A/B test is the wrong tool.</p>
+
+  <h2 id="sab-cuped"><span class="num">05</span>Variance Reduction with CUPED</h2>
+  <p>Fourteen days of all checkout traffic is a lot to spend on one question, and the sample size formula tells us where the cost comes from: n is proportional to the noise in the metric. Much of that noise is not random at all. Suppose the metric is spend per user. Some users spend ₹200 a month and others ₹5,000, and they did so long before the experiment began. That spread hides the treatment effect, but we already know most of it from each user's history.</p>
+  <p>Think of judging a coaching class by its students' final exam marks. The marks are noisy, mostly because some students were always toppers and some always struggled. If instead you judge each student by "final mark minus what their mock exam predicted", that old difference disappears and the class's real effect stands out much more clearly. <strong>CUPED</strong> (Controlled-experiment Using Pre-Experiment Data) does exactly this for experiments: it subtracts from each user's metric the part that their pre-experiment behaviour predicts.</p>
+  <div class="fx" data-lang="text">Y<sub>adj</sub> = Y − θ × (X − X̄),   θ = cov(X, Y) ÷ var(X)
+Var(Y<sub>adj</sub>) = Var(Y) × (1 − ρ²)</div>
+  <p>Here Y is the metric during the test, X is the same user's metric in the weeks before the test, and X̄ is the average of X. θ is the regression slope of Y on X from the Correlation note, so θ × (X − X̄) is "how much more than average this user is expected to spend, given their past". Subtracting it leaves only the part their past did not predict. Because we subtract something centred on zero, the average of Y does not change, only its spread. The second line says how much the spread shrinks: ρ is the correlation between before and during, and the variance is multiplied by (1 − ρ²). If ρ = 0.88, then 1 − 0.88² = 1 − 0.774 = 0.226, so the adjusted metric has under a quarter of the original variance, and since n is proportional to variance the same test needs only about 23% of the users. The simulation gives 20,000 users a true treatment lift of ₹15 and compares the plain t-test with the CUPED-adjusted one:</p>
+  <div class="fx" data-lang="py">import numpy as np
+from scipy import stats
+rng = np.random.default_rng(3)
 n_users = 20000
-pre = rng.gamma(2, 250, n_users)                      # spend in the 4 weeks BEFORE the test (Rs)
-arm = rng.integers(0, 2, n_users)                     # 0 = control, 1 = treatment
+pre = rng.gamma(2, 250, n_users)                 # spend in the 4 weeks BEFORE the test (Rs)
+arm = rng.integers(0, 2, n_users)                # 0 = control, 1 = treatment
 post = 0.8 * pre + rng.normal(100, 150, n_users) + 15 * arm   # true lift = Rs 15
+
 theta = np.cov(pre, post)[0, 1] / np.var(pre, ddof=1)
-adj = post - theta * (pre - pre.mean())               # CUPED-adjusted metric
+adj = post - theta * (pre - pre.mean())          # CUPED-adjusted metric
 rho = np.corrcoef(pre, post)[0, 1]
 print(f"corr(pre, post)={rho:.2f}  theta={theta:.2f}")
-print(f"variance: raw={post.var():,.0f}  cuped={adj.var():,.0f}  ratio={adj.var()/post.var():.2f}  (1-rho^2={1-rho**2:.2f})")
+print(f"variance: raw={post.var():,.0f}  cuped={adj.var():,.0f}  "
+      f"ratio={adj.var()/post.var():.2f}  (1-rho^2={1-rho**2:.2f})")
 for name, y in [("raw  ", post), ("cuped", adj)]:
     r = stats.ttest_ind(y[arm == 1], y[arm == 0], equal_var=False)
     ci = r.confidence_interval()
-    print(f"{name} lift={y[arm == 1].mean() - y[arm == 0].mean():6.1f}  95% CI [{ci.low:6.1f}, {ci.high:6.1f}]  p={r.pvalue:.2g}")</div>
+    print(f"{name} lift={y[arm == 1].mean() - y[arm == 0].mean():5.1f}  "
+          f"95% CI [{ci.low:5.1f}, {ci.high:5.1f}]  p={r.pvalue:.2g}")</div>
   <div class="fx" data-lang="text">corr(pre, post)=0.88  theta=0.80
 variance: raw=103,538  cuped=22,772  ratio=0.22  (1-rho^2=0.22)
-raw   lift=   8.0  95% CI [  -0.9,   17.0]  p=0.077
-cuped lift=  14.8  95% CI [  10.7,   19.0]  p=3.5e-12</div>
-  <p>Variance drops to 22% of the original, exactly 1 − 0.88². The raw t-test misses the ₹15 lift (CI −0.9 to 17.0, p = 0.077). The adjusted metric finds it clearly (CI 10.7 to 19.0). Same users, same days, about 4.5× less noise: equivalent to running the test on 4.5× more users. Because <code>pre</code> was measured before assignment, the adjustment cannot create a fake effect.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>CUPED</strong>: variance reduction using a pre-experiment covariate X: Y_adj = Y − θ(X − X̄), θ = cov(X, Y)/var(X). Var(Y_adj) = Var(Y)(1 − ρ²). The treatment effect estimate stays unbiased because X is unaffected by assignment.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>The covariate must be measured <em>before</em> assignment. Adjusting for something the treatment can change (in-test sessions, for example) can remove part of the real effect or invent one.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: SRM check.</b> The test has run its 14 days. Before reading the lift, one question: did the experiment itself work, with users split as planned?</div>
+raw   lift=  8.0  95% CI [ -0.9,  17.0]  p=0.077
+cuped lift= 14.8  95% CI [ 10.7,  19.0]  p=3.5e-12</div>
+  <p>The correlation is 0.88, and the variance drops to 22% of the original, exactly as 1 − ρ² predicted. The raw comparison misses the ₹15 lift: its estimate is ₹8.0, its confidence interval runs from −0.9 to 17.0, and p = 0.077. The adjusted metric finds it clearly: estimate ₹14.8, interval 10.7 to 19.0, p tiny. Same users, same days; the adjustment simply removed noise we already knew about, which is worth the same as running the test on about 4.5 times as many users.</p>
+  <p>One rule keeps CUPED honest: X must be measured <em>before</em> assignment. Then the treatment cannot have affected it, so subtracting it cannot create or remove a real effect. Adjusting for something measured during the test, such as in-test sessions, which the new checkout itself might change, can wipe out part of the true effect or invent one. CUPED works best when the metric is stable per user (spend, sessions); for a new-user feature with no history, there is no X to use.</p>
 
-  <h2 id="sab-srm"><span class="num">06</span>Sanity Check: Sample Ratio Mismatch</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Control has 15,400 users and treatment 15,380 in a planned 50/50 split. Is that normal luck, or a sign that something broke the randomisation?</p>
-  </div>
-  <p>14 days later the data is in: control had 15,400 users and 1,540 purchases; treatment had 15,380 users and 1,707 purchases. The temptation is to compute the lift and announce it. But first you must check that the experiment itself worked, because a broken split makes every number after it meaningless.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Before reading an exam's results, the examiner checks that both halls got the same number of question papers. If one hall got 10% fewer, something went wrong in distribution, and comparing marks between halls is unfair no matter how good the marking was.</p>
-  </div>
-  <h3>By hand with chi-square</h3>
-  <p>This is the goodness-of-fit χ² from the Distributions note. Expected = 30,780 / 2 = 15,390 per arm. χ² = (15,400 − 15,390)²/15,390 + (15,380 − 15,390)²/15,390 = 200 / 15,390 = 0.013 → p ≈ 0.91, fine. A broken split of 15,400 / 14,700: expected 15,050 each, χ² = 2 × 350² / 15,050 = 16.3 → p ≈ 0.00005.</p>
-  <div class="fx" data-lang="py">print("ours  :", stats.chisquare([15400, 15380]).pvalue.round(4))
-print("broken:", stats.chisquare([15400, 14700]).pvalue)</div>
+  <h2 id="sab-srm"><span class="num">06</span>Sample Ratio Mismatch</h2>
+  <p>Fourteen days later the data is in. Control had 15,400 users and 1,540 purchases; treatment had 15,380 users and 1,707 purchases. The temptation is to compute the lift straight away. But first we must check that the experiment itself worked, because if the split was broken, every number after it is meaningless. Before reading an exam's results, an examiner checks that both halls received the right number of question papers; if one hall got 10% fewer, something went wrong in distribution, and comparing marks between halls is unfair however careful the marking was.</p>
+  <p>A <strong>sample ratio mismatch</strong>, or SRM, is when the number of users in each arm differs from the planned ratio by more than chance allows. We planned 50/50, so we expect 30,780 ÷ 2 = 15,390 users in each arm. The test is the chi-square goodness-of-fit test from the <a class="xref" data-note="st_distributions">Distributions</a> note, which adds up (observed − expected)² ÷ expected over the arms: (15,400 − 15,390)² ÷ 15,390 + (15,380 − 15,390)² ÷ 15,390 = 200 ÷ 15,390 = 0.013. That is tiny, giving p ≈ 0.91. Now imagine the counts had been 15,400 and 14,700: expected is 15,050 each, χ² = 2 × 350² ÷ 15,050 = 16.3, and p ≈ 0.00005.</p>
+  <div class="fx" data-lang="py">from scipy import stats
+print("ours  :", round(stats.chisquare([15400, 15380]).pvalue, 4))
+print("broken:", f"{stats.chisquare([15400, 14700]).pvalue:.1e}")
+print("90/10 plan, 27,100 vs 3,000:",
+      round(stats.chisquare([27100, 3000], f_exp=[0.9 * 30100, 0.1 * 30100]).pvalue, 4))</div>
   <div class="fx" data-lang="text">ours  : 0.9092
-broken: 5.466443968511142e-05</div>
-  <p><code>stats.chisquare</code> assumes equal expected counts unless told otherwise, which is exactly the 50/50 plan. Ours passes. For the broken split the rule is: <strong>stop, find the bug, don't read the results</strong>. Common causes: the new page crashes on old browsers so those users never log a visit, bot filtering hits one arm more, or a redirect loses users.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Sample ratio mismatch (SRM)</strong>: the user split differs from the planned ratio more than luck allows, tested with a χ² goodness-of-fit on the arm counts. Usual alarm threshold: p &lt; 0.001.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"The split is only 2% off, close enough" is how broken experiments ship. With 30,000 users a 2% imbalance is far beyond luck; the users that went missing are rarely random (they are often exactly the users the change affected).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: z-test &amp; CI.</b> The split is healthy. Now the main question: is 11.10% vs 10.00% a real lift, and how big might it truly be?</div>
+broken: 5.5e-05
+90/10 plan, 27,100 vs 3,000: 0.8476</div>
+  <p><code>stats.chisquare</code> assumes equal expected counts unless told otherwise, which is exactly the 50/50 plan, and our split passes with p = 0.91. The broken split gives p = 0.000055, far below the usual SRM alarm threshold of p &lt; 0.001 (a stricter cut-off than 0.05, because this check runs on every experiment and should rarely false-alarm). The last line shows that unequal plans work too: for a 90/10 split you pass the expected proportions with <code>f_exp</code>.</p>
+  <p>When SRM fires, the rule is: stop, find the bug, and do not read the results. A 2% imbalance can look harmless, but with 30,000 users it is far beyond chance, and the users who went missing are rarely random. Typical causes are a new page that crashes on old browsers so those users never log a visit, bot filtering that hits one arm harder, a redirect that loses some users, or logging that fires at different moments in the two versions. In each case the missing users are often exactly the ones the change affected, so the remaining comparison is biased in an unknown direction.</p>
 
-  <h2 id="sab-analysis"><span class="num">07</span>The Result: z-test, CI and Guardrails</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Treatment 1,707 / 15,380, control 1,540 / 15,400. Real or luck, and what range of true lifts is consistent with the data?</p>
-  </div>
-  <p>This is the two-proportion z-test from the Hypothesis Testing note, on the full data. The pilot (1,000 per arm) gave a CI 5.6 pp wide; with 15× more users per arm the CI should be about √15 ≈ 4× narrower.</p>
-  <h3>By hand</h3>
-  <ol>
-    <li>Rates: treatment 1,707/15,380 = 0.1110; control 1,540/15,400 = 0.1000. Difference = 0.0110 (1.1 pp; 11% relative).</li>
-    <li>For the test, assume H₀ (no difference) and pool both groups: p̂ = 3,247 / 30,780 = 0.1055.</li>
-    <li>SE under H₀ = √(p̂(1 − p̂)(1/15,380 + 1/15,400)) = √(0.0944 × 0.0001299) = 0.00350.</li>
-    <li>z = 0.0110 / 0.00350 = 3.14. Two-sided p = 2 × P(Z &gt; 3.14) = 0.0017.</li>
-    <li>For the CI, don't pool (we no longer assume H₀): SE = √(0.111 × 0.889/15,380 + 0.1 × 0.9/15,400) = 0.00350. CI = 0.0110 ± 1.96 × 0.00350 = [+0.0041, +0.0179].</li>
-  </ol>
-  <div class="fx" data-lang="py">pt, pc = 1707 / 15380, 1540 / 15400
-pool = (1707 + 1540) / (15380 + 15400)
-se_pool = np.sqrt(pool * (1 - pool) * (1/15380 + 1/15400))
-se_unpool = np.sqrt(pt * (1 - pt) / 15380 + pc * (1 - pc) / 15400)
+  <h2 id="sab-analysis"><span class="num">07</span>The z-test and Confidence Interval</h2>
+  <p>The split is healthy, so we can ask the main question: is 1,707 out of 15,380 (11.10%) versus 1,540 out of 15,400 (10.00%) a real lift, or the kind of gap luck produces? And if it is real, how big might it truly be? This is the <strong>two-proportion z-test</strong> from the Hypothesis Testing note: it measures how many standard errors apart the two conversion rates are, where the <strong>standard error</strong> (SE) is the typical amount a rate would wobble by chance with this many users.</p>
+  <p>Step by step. The rates are 1,707 ÷ 15,380 = 0.1110 and 1,540 ÷ 15,400 = 0.1000, a difference of 0.0110, which is 1.1 pp, or 11% relative. For the test we pretend H₀ is true (no difference), so the best estimate of the one shared rate is the <em>pooled</em> rate: p̂ = 3,247 ÷ 30,780 = 0.1055. The SE of the difference under H₀ is √(p̂(1 − p̂)(1/n<sub>T</sub> + 1/n<sub>C</sub>)) = √(0.0944 × 0.0001299) = 0.00350. Then z = 0.0110 ÷ 0.00350 = 3.14: the gap is 3.14 standard errors wide. The two-sided p-value is the chance of a gap at least that far from zero in either direction if H₀ were true, 2 × P(Z &gt; 3.14) = 0.0017.</p>
+  <p>For the confidence interval we no longer assume H₀, so we use each arm's own rate in the SE (the <em>unpooled</em> SE): √(0.111 × 0.889 ÷ 15,380 + 0.100 × 0.900 ÷ 15,400) = 0.00350. The 95% interval is the difference ± 1.96 SE = 0.0110 ± 0.0069, from +0.0041 to +0.0179. The code repeats this by hand, then does it the library way:</p>
+  <div class="fx" data-lang="py">import numpy as np
+from scipy import stats
+xt, nt, xc, nc = 1707, 15380, 1540, 15400          # purchases, users: treatment, control
+pt, pc = xt / nt, xc / nc
+pool = (xt + xc) / (nt + nc)
+se_pool = np.sqrt(pool * (1 - pool) * (1/nt + 1/nc))
+se_unpool = np.sqrt(pt * (1 - pt) / nt + pc * (1 - pc) / nc)
 z = (pt - pc) / se_pool
 print(f"pt={pt:.4f} pc={pc:.4f} diff={pt-pc:.4f} pooled={pool:.4f}")
 print(f"se_pooled={se_pool:.5f}  z={z:.2f}  p={2*stats.norm.sf(z):.4f}")
-print(f"se_unpooled={se_unpool:.5f}  CI=[{pt-pc-1.96*se_unpool:+.4f}, {pt-pc+1.96*se_unpool:+.4f}]")
-
+print(f"se_unpooled={se_unpool:.5f}  "
+      f"CI=[{pt-pc-1.96*se_unpool:+.4f}, {pt-pc+1.96*se_unpool:+.4f}]")</div>
+  <div class="fx" data-lang="text">pt=0.1110 pc=0.1000 diff=0.0110 pooled=0.1055
+se_pooled=0.00350  z=3.14  p=0.0017
+se_unpooled=0.00350  CI=[+0.0041, +0.0179]</div>
+  <div class="fx" data-lang="py">import numpy as np
 from statsmodels.stats.proportion import proportions_ztest, confint_proportions_2indep
 conv, users = np.array([1707, 1540]), np.array([15380, 15400])   # treatment, control
 rates = conv / users
 z, p = proportions_ztest(conv, users)
 lo, hi = confint_proportions_2indep(conv[0], users[0], conv[1], users[1], compare="diff")
 print(f"control {rates[1]:.2%}  treatment {rates[0]:.2%}")
-print(f"abs lift {rates[0]-rates[1]:+.2%}  rel lift {rates[0]/rates[1]-1:+.1%}")
+print(f"absolute lift {rates[0]-rates[1]:+.2%} (pp)  relative lift {rates[0]/rates[1]-1:+.1%}")
 print(f"z={z:.2f}  p={p:.4f}  95% CI for diff: [{lo:+.2%}, {hi:+.2%}]")</div>
-  <div class="fx" data-lang="text">pt=0.1110 pc=0.1000 diff=0.0110 pooled=0.1055
-se_pooled=0.00350  z=3.14  p=0.0017
-se_unpooled=0.00350  CI=[+0.0041, +0.0179]
-control 10.00%  treatment 11.10%
-abs lift +1.10%  rel lift +11.0%
+  <div class="fx" data-lang="text">control 10.00%  treatment 11.10%
+absolute lift +1.10% (pp)  relative lift +11.0%
 z=3.14  p=0.0017  95% CI for diff: [+0.41%, +1.79%]</div>
-  <p>The first block is the hand calculation in code; the second is the library way. <code>proportions_ztest</code> uses the pooled SE and agrees: z = 3.14, p = 0.0017. <code>confint_proportions_2indep(..., compare="diff")</code> gives the CI for treatment minus control: [+0.41, +1.79] pp, the same as our ±1.96 × SE, and 1.4 pp wide instead of the pilot's 5.6. In plain words: "if the new checkout did nothing, a gap this big would appear about 2 times in 1,000 tests; our best guess of the true lift is 1.1 pp, and the method we used puts it between 0.4 and 1.8 pp."</p>
-  <h3>Guardrails</h3>
-  <p>Run the same kind of test on each guardrail (latency with a Welch t-test, payment errors and refunds with z-tests), each with its CI. If none got meaningfully worse, move to the decision.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A new bowling plan that takes more wickets is only good if it doesn't also leak runs. The z-test checks the wickets; the guardrails check the runs.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Two-proportion z-test</strong>: z = (p̂_T − p̂_C) / SE, with the pooled SE under H₀. Valid when each arm has at least about 10 successes and 10 failures. For means (revenue per user), use Welch's t-test. <strong>Absolute lift</strong>: p_T − p_C (pp). <strong>Relative lift</strong>: p_T / p_C − 1 (%).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Mixing up absolute and relative lift. "+1.1%" might mean 10.0% → 11.1% (absolute, pp) or 10.0% → 10.11% (relative). Always say "percentage points" for absolute changes.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Practical significance.</b> p = 0.0017 says the lift is almost surely not zero. It does not say the lift is big enough to be worth the engineering, maintenance and risk.</div>
+  <p>The hand calculation and the library agree: z = 3.14, p = 0.0017, and a 95% CI for treatment minus control from +0.41 to +1.79 pp. <code>proportions_ztest</code> uses the pooled SE, and <code>confint_proportions_2indep(..., compare="diff")</code> gives the interval for the difference. In plain words: "if the new checkout made no difference, a gap this big would appear about 2 times in 1,000 experiments; our best estimate of the true lift is 1.1 pp, and the data are consistent with anything from about 0.4 to 1.8 pp." Notice the output prints both kinds of lift. Saying "+1.1%" is ambiguous: it could mean 10.0% → 11.1% (absolute) or 10.0% → 10.11% (relative). Always say "percentage points" for the absolute change.</p>
+  <p>The z-test is valid when each arm has at least about ten successes and ten failures, which any real A/B test easily has. For a metric that is an average rather than a yes/no rate, such as revenue per user, the equivalent is Welch's t-test, which is what CUPED used above. The guardrails are checked the same way: a Welch t-test for page load time, z-tests for payment errors and refunds, each with its interval. A new bowling plan that takes more wickets is only good if it does not also leak runs; the z-test counted the wickets, and the guardrails count the runs. For the checkout, none moved meaningfully.</p>
 
   <h2 id="sab-practical"><span class="num">08</span>Statistical vs Practical Significance</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Given the CI [+0.41, +1.79] pp and an MDE of 1 pp, do we ship? What would we do with other possible CIs?</p>
-  </div>
-  <p>"p &lt; 0.05" only says the effect is probably not zero. With millions of users, a 0.02 pp lift is "significant" but worth nothing. With few users, a valuable lift can be "not significant". The p-value alone cannot make the decision.</p>
-  <p>The idea: look at the whole confidence interval and compare it with two lines. Zero answers "is there any effect?". The MDE (the smallest lift worth shipping, chosen in section 02) answers "is it worth it?".</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A new route to office saves time "for sure", but somewhere between 10 seconds and 40 seconds a day. It is a real saving, but not worth an extra toll. Another route saves between −5 and +25 minutes: you don't know yet; drive it a few more days before deciding.</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 560 200" width="560"><line x1="150" y1="172" x2="546" y2="172" stroke="currentColor" stroke-opacity=".5"/><text x="150" y="187" text-anchor="middle" font-size="11">−2</text><text x="240" y="187" text-anchor="middle" font-size="11">−1</text><text x="330" y="187" text-anchor="middle" font-size="11">0</text><text x="420" y="187" text-anchor="middle" font-size="11">+1</text><text x="510" y="187" text-anchor="middle" font-size="11">+2</text><text x="546" y="167" text-anchor="end" font-size="11" class="tm">lift (pp)</text><line x1="330" y1="165.3" x2="330" y2="22.7" class="sr" stroke-width="1.2" stroke-dasharray="4 3"/><line x1="420" y1="165.3" x2="420" y2="22.7" class="sg" stroke-width="1.2" stroke-dasharray="4 3"/><text x="330" y="21.6" text-anchor="middle" font-size="10" class="tr">0</text><text x="420" y="21.6" text-anchor="middle" font-size="10" class="tg">MDE</text><line x1="384" y1="38.3" x2="492" y2="38.3" class="sg" stroke-width="3"/><path d="M438,38.3h0" class="sg" stroke-width="7.0" stroke-linecap="round"/><text x="142" y="42.3" text-anchor="end" font-size="11">A: ship</text><line x1="339" y1="60.6" x2="375" y2="60.6" class="sb" stroke-width="3"/><path d="M357,60.6h0" class="sb" stroke-width="7.0" stroke-linecap="round"/><text x="142" y="64.6" text-anchor="end" font-size="11">B: real but tiny</text><line x1="249" y1="82.9" x2="465" y2="82.9" class="sb" stroke-width="3"/><path d="M357,82.9h0" class="sb" stroke-width="7.0" stroke-linecap="round"/><text x="142" y="86.9" text-anchor="end" font-size="11">C: inconclusive</text><line x1="307.5" y1="105.1" x2="357" y2="105.1" class="sb" stroke-width="3"/><path d="M332.2,105.1h0" class="sb" stroke-width="7.0" stroke-linecap="round"/><text x="142" y="109.1" text-anchor="end" font-size="11">D: confident null</text><line x1="186" y1="127.4" x2="294" y2="127.4" class="sr" stroke-width="3"/><path d="M240,127.4h0" class="sr" stroke-width="7.0" stroke-linecap="round"/><text x="142" y="131.4" text-anchor="end" font-size="11">E: kill</text><line x1="366.9" y1="149.7" x2="491.1" y2="149.7" class="sg" stroke-width="3"/><path d="M429,149.7h0" class="sg" stroke-width="7.0" stroke-linecap="round"/><text x="142" y="153.7" text-anchor="end" font-size="11" font-weight="bold">ours</text></svg><figcaption>Each bar is a 95% CI for the lift. Judge it against 0 (is it real?) and against the MDE (is it worth it?).</figcaption></figure>
-  <table class="tbl">
-    <tr><th>CI for the lift</th><th>Decision</th></tr>
-    <tr><td>Entirely above 0, centre at or above MDE</td><td><strong>Ship</strong></td></tr>
-    <tr><td>Above 0 but entirely below MDE</td><td>Real but tiny: ship only if cheap and low risk</td></tr>
-    <tr><td>Spans 0, wide</td><td>Inconclusive: underpowered. Don't call it "no effect"</td></tr>
-    <tr><td>Spans 0, narrow around 0</td><td>Confident null: kill, move on</td></tr>
-    <tr><td>Entirely below 0</td><td><strong>Kill</strong> and learn why</td></tr>
-  </table>
-  <p>The same table as a function, applied to the five example bars in the picture and to our result, with MDE = 1 pp.</p>
+  <p>p = 0.0017 tells us the lift is very unlikely to be zero. It does not tell us the lift is big enough to be worth the engineering, maintenance and risk. These are two different questions. With ten million users, a 0.02 pp lift is "statistically significant" and worth nothing; with very few users, a valuable lift can fail to be significant. <strong>Statistical significance</strong> means the data would be unlikely if there were no effect (p &lt; α). <strong>Practical significance</strong> means the effect is large enough to matter to the business. A good decision needs both, and the p-value alone cannot make it.</p>
+  <p>Think of a new route to the office that saves time "for certain", but somewhere between 10 and 40 seconds a day. It is a real saving, but not worth paying an extra toll for. Another route saves somewhere between −5 and +25 minutes: you simply do not know yet, and should drive it a few more days before deciding. In both cases the useful information is the <em>range</em>, not a yes/no answer about zero.</p>
+  <p>So the decision is made from the whole confidence interval, compared against two lines. Zero answers "is there any effect?", and the MDE chosen in section 02 answers "is it worth it?". The chart shows five typical intervals and ours:</p>
+  <figure class="viz"><svg viewBox="0 0 452.280937 215.919219" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="max-width:640px;width:100%;height:auto">
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="sabcifigure_1">
+  <g id="sabcipatch_1">
+   <path d="M 0 215.919219 
+L 452.280937 215.919219 
+L 452.280937 0 
+L 0 0 
+L 0 215.919219 
+z
+" style="fill: none"/>
+  </g>
+  <g id="sabciaxes_1">
+   <g id="sabcipatch_2">
+    <path d="M 87.960938 173.52 
+L 445.080938 173.52 
+L 445.080938 7.2 
+L 87.960938 7.2 
+L 87.960938 173.52 
+z
+" style="fill: none"/>
+   </g>
+   <g id="sabcimatplotlib.axis_1">
+    <g id="sabcixtick_1">
+     <g id="sabciline2d_1">
+      <defs>
+       <path id="sabcimedb56decd0" d="M 0 0 
+L 0 3.5 
+" style="stroke: currentColor; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#sabcimedb56decd0" x="113.742328" y="173.52" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabcitext_1">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="113.742328" y="190.2075" transform="rotate(-0 113.742328 190.2075)">−1.5</text>
+     </g>
+    </g>
+    <g id="sabcixtick_2">
+     <g id="sabciline2d_2">
+      <g>
+       <use xlink:href="#sabcimedb56decd0" x="161.485643" y="173.52" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabcitext_2">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="161.485643" y="190.2075" transform="rotate(-0 161.485643 190.2075)">−1.0</text>
+     </g>
+    </g>
+    <g id="sabcixtick_3">
+     <g id="sabciline2d_3">
+      <g>
+       <use xlink:href="#sabcimedb56decd0" x="209.228959" y="173.52" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabcitext_3">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="209.228959" y="190.2075" transform="rotate(-0 209.228959 190.2075)">−0.5</text>
+     </g>
+    </g>
+    <g id="sabcixtick_4">
+     <g id="sabciline2d_4">
+      <g>
+       <use xlink:href="#sabcimedb56decd0" x="256.972274" y="173.52" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabcitext_4">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="256.972274" y="190.2075" transform="rotate(-0 256.972274 190.2075)">0.0</text>
+     </g>
+    </g>
+    <g id="sabcixtick_5">
+     <g id="sabciline2d_5">
+      <g>
+       <use xlink:href="#sabcimedb56decd0" x="304.71559" y="173.52" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabcitext_5">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="304.71559" y="190.2075" transform="rotate(-0 304.71559 190.2075)">0.5</text>
+     </g>
+    </g>
+    <g id="sabcixtick_6">
+     <g id="sabciline2d_6">
+      <g>
+       <use xlink:href="#sabcimedb56decd0" x="352.458905" y="173.52" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabcitext_6">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="352.458905" y="190.2075" transform="rotate(-0 352.458905 190.2075)">1.0</text>
+     </g>
+    </g>
+    <g id="sabcixtick_7">
+     <g id="sabciline2d_7">
+      <g>
+       <use xlink:href="#sabcimedb56decd0" x="400.202221" y="173.52" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabcitext_7">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="400.202221" y="190.2075" transform="rotate(-0 400.202221 190.2075)">1.5</text>
+     </g>
+    </g>
+    <g id="sabcitext_8">
+     <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="266.520938" y="206.307109" transform="rotate(-0 266.520938 206.307109)">95% CI for the lift (percentage points)</text>
+    </g>
+   </g>
+   <g id="sabcimatplotlib.axis_2">
+    <g id="sabciytick_1">
+     <g id="sabciline2d_8"/>
+     <g id="sabcitext_9">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="84.460938" y="162.77125" transform="rotate(-0 84.460938 162.77125)">our test</text>
+     </g>
+    </g>
+    <g id="sabciytick_2">
+     <g id="sabciline2d_9"/>
+     <g id="sabcitext_10">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="84.460938" y="136.78375" transform="rotate(-0 84.460938 136.78375)">E: kill</text>
+     </g>
+    </g>
+    <g id="sabciytick_3">
+     <g id="sabciline2d_10"/>
+     <g id="sabcitext_11">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="84.460938" y="110.79625" transform="rotate(-0 84.460938 110.79625)">D: confident null</text>
+     </g>
+    </g>
+    <g id="sabciytick_4">
+     <g id="sabciline2d_11"/>
+     <g id="sabcitext_12">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="84.460938" y="84.80875" transform="rotate(-0 84.460938 84.80875)">C: inconclusive</text>
+     </g>
+    </g>
+    <g id="sabciytick_5">
+     <g id="sabciline2d_12"/>
+     <g id="sabcitext_13">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="84.460938" y="58.82125" transform="rotate(-0 84.460938 58.82125)">B: real but tiny</text>
+     </g>
+    </g>
+    <g id="sabciytick_6">
+     <g id="sabciline2d_13"/>
+     <g id="sabcitext_14">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="84.460938" y="32.83375" transform="rotate(-0 84.460938 32.83375)">A: ship</text>
+     </g>
+    </g>
+   </g>
+   <g id="sabciline2d_14">
+    <path d="M 296.121793 157.9275 
+L 427.893344 157.9275 
+" clip-path="url(#sabcipf839272669)" style="fill: none; stroke: #e8743b; stroke-width: 4"/>
+   </g>
+   <g id="sabciline2d_15">
+    <defs>
+     <path id="sabcimb374cfb68b" d="M 0 3 
+C 0.795609 3 1.55874 2.683901 2.12132 2.12132 
+C 2.683901 1.55874 3 0.795609 3 0 
+C 3 -0.795609 2.683901 -1.55874 2.12132 -2.12132 
+C 1.55874 -2.683901 0.795609 -3 0 -3 
+C -0.795609 -3 -1.55874 -2.683901 -2.12132 -2.12132 
+C -2.683901 -1.55874 -3 -0.795609 -3 0 
+C -3 0.795609 -2.683901 1.55874 -2.12132 2.12132 
+C -1.55874 2.683901 -0.795609 3 0 3 
+z
+" style="stroke: #e8743b"/>
+    </defs>
+    <g clip-path="url(#sabcipf839272669)">
+     <use xlink:href="#sabcimb374cfb68b" x="362.007569" y="157.9275" style="fill: #e8743b; stroke: #e8743b"/>
+    </g>
+   </g>
+   <g id="sabciline2d_16">
+    <path d="M 104.193665 131.94 
+L 218.777622 131.94 
+" clip-path="url(#sabcipf839272669)" style="fill: none; stroke: #2a78d6; stroke-width: 4"/>
+   </g>
+   <g id="sabciline2d_17">
+    <defs>
+     <path id="sabcime8e5dd379e" d="M 0 3 
+C 0.795609 3 1.55874 2.683901 2.12132 2.12132 
+C 2.683901 1.55874 3 0.795609 3 0 
+C 3 -0.795609 2.683901 -1.55874 2.12132 -2.12132 
+C 1.55874 -2.683901 0.795609 -3 0 -3 
+C -0.795609 -3 -1.55874 -2.683901 -2.12132 -2.12132 
+C -2.683901 -1.55874 -3 -0.795609 -3 0 
+C -3 0.795609 -2.683901 1.55874 -2.12132 2.12132 
+C -1.55874 2.683901 -0.795609 3 0 3 
+z
+" style="stroke: #2a78d6"/>
+    </defs>
+    <g clip-path="url(#sabcipf839272669)">
+     <use xlink:href="#sabcime8e5dd379e" x="161.485643" y="131.94" style="fill: #2a78d6; stroke: #2a78d6"/>
+    </g>
+   </g>
+   <g id="sabciline2d_18">
+    <path d="M 233.100617 105.9525 
+L 285.618264 105.9525 
+" clip-path="url(#sabcipf839272669)" style="fill: none; stroke: #2a78d6; stroke-width: 4"/>
+   </g>
+   <g id="sabciline2d_19">
+    <g clip-path="url(#sabcipf839272669)">
+     <use xlink:href="#sabcime8e5dd379e" x="259.35944" y="105.9525" style="fill: #2a78d6; stroke: #2a78d6"/>
+    </g>
+   </g>
+   <g id="sabciline2d_20">
+    <path d="M 171.034306 79.965 
+L 400.202221 79.965 
+" clip-path="url(#sabcipf839272669)" style="fill: none; stroke: #2a78d6; stroke-width: 4"/>
+   </g>
+   <g id="sabciline2d_21">
+    <g clip-path="url(#sabcipf839272669)">
+     <use xlink:href="#sabcime8e5dd379e" x="285.618264" y="79.965" style="fill: #2a78d6; stroke: #2a78d6"/>
+    </g>
+   </g>
+   <g id="sabciline2d_22">
+    <path d="M 266.520938 53.9775 
+L 304.71559 53.9775 
+" clip-path="url(#sabcipf839272669)" style="fill: none; stroke: #2a78d6; stroke-width: 4"/>
+   </g>
+   <g id="sabciline2d_23">
+    <g clip-path="url(#sabcipf839272669)">
+     <use xlink:href="#sabcime8e5dd379e" x="285.618264" y="53.9775" style="fill: #2a78d6; stroke: #2a78d6"/>
+    </g>
+   </g>
+   <g id="sabciline2d_24">
+    <path d="M 314.264253 27.99 
+L 428.84821 27.99 
+" clip-path="url(#sabcipf839272669)" style="fill: none; stroke: #2a78d6; stroke-width: 4"/>
+   </g>
+   <g id="sabciline2d_25">
+    <g clip-path="url(#sabcipf839272669)">
+     <use xlink:href="#sabcime8e5dd379e" x="371.556232" y="27.99" style="fill: #2a78d6; stroke: #2a78d6"/>
+    </g>
+   </g>
+   <g id="sabciline2d_26">
+    <path d="M 256.972274 173.52 
+L 256.972274 7.2 
+" clip-path="url(#sabcipf839272669)" style="fill: none; stroke: currentColor; stroke-linecap: square"/>
+   </g>
+   <g id="sabciline2d_27">
+    <path d="M 352.458905 173.52 
+L 352.458905 7.2 
+" clip-path="url(#sabcipf839272669)" style="fill: none; stroke-dasharray: 4.44,1.92; stroke-dashoffset: 0; stroke: #3a9d5d; stroke-width: 1.2"/>
+   </g>
+   <g id="sabcipatch_3">
+    <path d="M 87.960938 173.52 
+L 445.080938 173.52 
+" style="fill: none; stroke: currentColor; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="sabcitext_15">
+    <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: start; fill: #3a9d5d" x="355.323504" y="18.894375" transform="rotate(-0 355.323504 18.894375)">MDE = 1 pp</text>
+   </g>
+   <g id="sabcitext_16">
+    <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: start" x="259.836873" y="18.894375" transform="rotate(-0 259.836873 18.894375)">0</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="sabcipf839272669">
+   <rect x="87.960938" y="7.2" width="357.12" height="166.32"/>
+  </clipPath>
+ </defs>
+</svg><figcaption>Each bar is a 95% CI for the lift and the dot is its centre. Judge each against 0 (is it real?) and the MDE of 1 pp (is it worth it?).</figcaption></figure>
+  <p>A lies entirely above zero and is centred above the MDE: ship. B is above zero but entirely below the MDE: the effect is real but too small to matter, so ship only if it is cheap and safe. C crosses zero and is wide: the test was underpowered, and it rules out almost nothing, so it must not be reported as "no effect". D also crosses zero but is narrow, ruling out any lift as big as the MDE: that is a confident null, so stop and move on. E is entirely below zero: the change hurts. The same rules written as a function:</p>
   <div class="fx" data-lang="py">def decide(lo, hi, mde):
     """lo, hi = 95% CI for the lift; mde = smallest lift worth shipping (same units)."""
     if hi &lt; 0:
@@ -422,293 +871,812 @@ C     CI [-0.90, +1.50] pp -&gt; inconclusive: underpowered
 D     CI [-0.25, +0.30] pp -&gt; confident null: kill, move on
 E     CI [-1.60, -0.40] pp -&gt; kill: it hurts
 ours  CI [+0.41, +1.79] pp -&gt; ship</div>
-  <p>The order of the checks matters. "Entirely below 0" is tested first, then "entirely above 0", and only then the cases that span 0. C and D both include 0, but D is narrow (it rules out any lift as big as the MDE) while C is wide (it rules out nothing). Our CI [+0.41, +1.79] pp is above 0 and centred at 1.1, above the MDE. With guardrails clean, the call is ship.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Statistical significance</strong>: the data is unlikely under H₀ (p &lt; α). <strong>Practical significance</strong>: the effect is large enough to matter for the business. A good decision needs both, plus guardrails and cost.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"Not significant, so the feature does nothing" is wrong for case C. Its CI still allows a +1.5 pp lift. Say "inconclusive", and either extend the test (if traffic allows) or accept the uncertainty knowingly.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Peeking.</b> Everything so far assumed a clean experiment analysed once, at the planned end. In reality a dashboard shows the p-value every day, and people act on it.</div>
+  <p>The order of the checks matters: "entirely below 0" first, then "entirely above 0", and only then the two cases that span zero, separated by whether the interval is narrow enough to rule out the MDE. Our interval, +0.41 to +1.79 pp, is above zero with its centre at 1.1, above the MDE, and the guardrails are clean, so the decision is to ship. The case to remember for interviews is C: "not significant" is not the same as "the feature does nothing". Its interval still allows a +1.5 pp lift; the honest reading is "we don't know", and the options are to extend the test or accept the uncertainty knowingly.</p>
 
-  <h2 id="sab-peek"><span class="num">09</span>Peeking</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>On day 6 the live p-value dips to 0.017 and the PM wants to ship. If we check daily and stop at the first p &lt; 0.05, is our false-alarm rate still 5%?</p>
-  </div>
-  <p>The problem: p-values wander up and down by chance, even when there is no effect at all. Checking every day and stopping at the first dip gives noise 14 chances to cross 0.05: it is multiple testing (Hypothesis Testing note) in disguise.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Declaring a cricket match result the first moment your team is ahead. Look after every over and some team will be "winning" at some point, even if the final result is a draw. The scorecard only counts at the end of the match.</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 560 180" width="560"><line x1="40" y1="152" x2="548" y2="152" stroke="currentColor" stroke-opacity=".5"/><text x="94.4" y="167" text-anchor="middle" font-size="11">d2</text><text x="167" y="167" text-anchor="middle" font-size="11">d4</text><text x="239.6" y="167" text-anchor="middle" font-size="11">d6</text><text x="312.1" y="167" text-anchor="middle" font-size="11">d8</text><text x="384.7" y="167" text-anchor="middle" font-size="11">d10</text><text x="457.3" y="167" text-anchor="middle" font-size="11">d12</text><text x="529.9" y="167" text-anchor="middle" font-size="11">d14</text><text x="34" y="149.1" text-anchor="end" font-size="10" class="tm">0.05</text><text x="34" y="87.0" text-anchor="end" font-size="10" class="tm">0.5</text><text x="34" y="18.0" text-anchor="end" font-size="10" class="tm">1.0</text><rect x="40.0" y="145.1" width="508.0" height="6.9" class="fr"/><path d="M58.1,69.5 L94.4,25.6 L130.7,121.2 L167.0,144.4 L203.3,138.5 L239.6,149.6 L275.9,125.3 L312.1,122.6 L348.4,105.2 L384.7,52.8 L421.0,82.4 L457.3,60.3 L493.6,48.4 L529.9,62.8" fill="none" class="sb" stroke-width="2"/><path d="M58.1,69.5h0M94.4,25.6h0M130.7,121.2h0M167,144.4h0M203.3,138.5h0M239.6,149.6h0M275.9,125.3h0M312.1,122.6h0M348.4,105.2h0M384.7,52.8h0M421,82.4h0M457.3,60.3h0M493.6,48.4h0M529.9,62.8h0" class="sb" stroke-width="6" stroke-linecap="round"/><text x="250.5" y="135.4" text-anchor="start" font-size="11" class="tr">day 6: p = 0.017 → 'ship!'</text><text x="540.7" y="20.9" text-anchor="end" font-size="11">day 14 (planned end): p = 0.65</text></svg><figcaption>One simulated A/A test (no real difference). Its daily p-value dips into the red zone (p &lt; 0.05), then wanders back. Stopping at the dip ships noise.</figcaption></figure>
-  <p>The code runs 2,000 A/A tests (both arms identical, 10% conversion, 1,100 users per arm per day) for 14 days, and compares two rules: stop the first day p &lt; 0.05, or look only on day 14.</p>
-  <div class="fx" data-lang="py">rng = np.random.default_rng(0)                 # A/A test: no real difference
+  <h2 id="sab-peek"><span class="num">09</span>Peeking and Sequential Testing</h2>
+  <p>Everything so far assumed we looked at the result once, at the planned end. Real experimentation tools show a live p-value on a dashboard every day, and people act on it. Suppose on day 6 the p-value dips to 0.017 and the product manager wants to ship immediately. Is the false-alarm rate still 5%?</p>
+  <p>It is not, because p-values wander. Even when there is no effect at all, the running p-value drifts up and down as data arrives, and over fourteen days it has fourteen chances to dip below 0.05 by luck. <strong>Peeking</strong> means checking an experiment repeatedly while it runs and stopping as soon as it looks significant. It is the multiple-testing problem in disguise. Think of declaring a cricket match result the first moment your team is ahead: check after every over, and some team will be "winning" at some point even if the match ends in a draw. Only the final scorecard counts. The chart shows one simulated A/A test, where both arms are identical:</p>
+  <figure class="viz"><svg viewBox="0 0 410.016484 212.066498" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="max-width:640px;width:100%;height:auto">
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="sabpkfigure_1">
+  <g id="sabpkpatch_1">
+   <path d="M 0 212.066498 
+L 410.016484 212.066498 
+L 410.016484 0 
+L 0 0 
+L 0 212.066498 
+z
+" style="fill: none"/>
+  </g>
+  <g id="sabpkaxes_1">
+   <g id="sabpkpatch_2">
+    <path d="M 45.696484 169.667279 
+L 402.816484 169.667279 
+L 402.816484 8.891279 
+L 45.696484 8.891279 
+L 45.696484 169.667279 
+z
+" style="fill: none"/>
+   </g>
+   <g id="sabpkpatch_3">
+    <path d="M 45.696484 169.667279 
+L 402.816484 169.667279 
+L 402.816484 161.786103 
+L 45.696484 161.786103 
+z
+" clip-path="url(#sabpkpe3c232d22a)" style="fill: #d64545; opacity: 0.18"/>
+   </g>
+   <g id="sabpkmatplotlib.axis_1">
+    <g id="sabpkxtick_1">
+     <g id="sabpkline2d_1">
+      <defs>
+       <path id="sabpkmedb56decd0" d="M 0 0 
+L 0 3.5 
+" style="stroke: currentColor; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#sabpkmedb56decd0" x="61.929212" y="169.667279" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabpktext_1">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="61.929212" y="186.354779" transform="rotate(-0 61.929212 186.354779)">1</text>
+     </g>
+    </g>
+    <g id="sabpkxtick_2">
+     <g id="sabpkline2d_2">
+      <g>
+       <use xlink:href="#sabpkmedb56decd0" x="86.902638" y="169.667279" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabpktext_2">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="86.902638" y="186.354779" transform="rotate(-0 86.902638 186.354779)">2</text>
+     </g>
+    </g>
+    <g id="sabpkxtick_3">
+     <g id="sabpkline2d_3">
+      <g>
+       <use xlink:href="#sabpkmedb56decd0" x="111.876065" y="169.667279" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabpktext_3">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="111.876065" y="186.354779" transform="rotate(-0 111.876065 186.354779)">3</text>
+     </g>
+    </g>
+    <g id="sabpkxtick_4">
+     <g id="sabpkline2d_4">
+      <g>
+       <use xlink:href="#sabpkmedb56decd0" x="136.849491" y="169.667279" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabpktext_4">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="136.849491" y="186.354779" transform="rotate(-0 136.849491 186.354779)">4</text>
+     </g>
+    </g>
+    <g id="sabpkxtick_5">
+     <g id="sabpkline2d_5">
+      <g>
+       <use xlink:href="#sabpkmedb56decd0" x="161.822918" y="169.667279" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabpktext_5">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="161.822918" y="186.354779" transform="rotate(-0 161.822918 186.354779)">5</text>
+     </g>
+    </g>
+    <g id="sabpkxtick_6">
+     <g id="sabpkline2d_6">
+      <g>
+       <use xlink:href="#sabpkmedb56decd0" x="186.796345" y="169.667279" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabpktext_6">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="186.796345" y="186.354779" transform="rotate(-0 186.796345 186.354779)">6</text>
+     </g>
+    </g>
+    <g id="sabpkxtick_7">
+     <g id="sabpkline2d_7">
+      <g>
+       <use xlink:href="#sabpkmedb56decd0" x="211.769771" y="169.667279" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabpktext_7">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="211.769771" y="186.354779" transform="rotate(-0 211.769771 186.354779)">7</text>
+     </g>
+    </g>
+    <g id="sabpkxtick_8">
+     <g id="sabpkline2d_8">
+      <g>
+       <use xlink:href="#sabpkmedb56decd0" x="236.743198" y="169.667279" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabpktext_8">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="236.743198" y="186.354779" transform="rotate(-0 236.743198 186.354779)">8</text>
+     </g>
+    </g>
+    <g id="sabpkxtick_9">
+     <g id="sabpkline2d_9">
+      <g>
+       <use xlink:href="#sabpkmedb56decd0" x="261.716624" y="169.667279" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabpktext_9">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="261.716624" y="186.354779" transform="rotate(-0 261.716624 186.354779)">9</text>
+     </g>
+    </g>
+    <g id="sabpkxtick_10">
+     <g id="sabpkline2d_10">
+      <g>
+       <use xlink:href="#sabpkmedb56decd0" x="286.690051" y="169.667279" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabpktext_10">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="286.690051" y="186.354779" transform="rotate(-0 286.690051 186.354779)">10</text>
+     </g>
+    </g>
+    <g id="sabpkxtick_11">
+     <g id="sabpkline2d_11">
+      <g>
+       <use xlink:href="#sabpkmedb56decd0" x="311.663477" y="169.667279" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabpktext_11">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="311.663477" y="186.354779" transform="rotate(-0 311.663477 186.354779)">11</text>
+     </g>
+    </g>
+    <g id="sabpkxtick_12">
+     <g id="sabpkline2d_12">
+      <g>
+       <use xlink:href="#sabpkmedb56decd0" x="336.636904" y="169.667279" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabpktext_12">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="336.636904" y="186.354779" transform="rotate(-0 336.636904 186.354779)">12</text>
+     </g>
+    </g>
+    <g id="sabpkxtick_13">
+     <g id="sabpkline2d_13">
+      <g>
+       <use xlink:href="#sabpkmedb56decd0" x="361.610331" y="169.667279" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabpktext_13">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="361.610331" y="186.354779" transform="rotate(-0 361.610331 186.354779)">13</text>
+     </g>
+    </g>
+    <g id="sabpkxtick_14">
+     <g id="sabpkline2d_14">
+      <g>
+       <use xlink:href="#sabpkmedb56decd0" x="386.583757" y="169.667279" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabpktext_14">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="386.583757" y="186.354779" transform="rotate(-0 386.583757 186.354779)">14</text>
+     </g>
+    </g>
+    <g id="sabpktext_15">
+     <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="224.256484" y="202.454389" transform="rotate(-0 224.256484 202.454389)">day of the experiment</text>
+    </g>
+   </g>
+   <g id="sabpkmatplotlib.axis_2">
+    <g id="sabpkytick_1">
+     <g id="sabpkline2d_15">
+      <defs>
+       <path id="sabpkmcf30224eca" d="M 0 0 
+L -3.5 0 
+" style="stroke: currentColor; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#sabpkmcf30224eca" x="45.696484" y="169.667279" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabpktext_16">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="38.696484" y="174.511029" transform="rotate(-0 38.696484 174.511029)">0.0</text>
+     </g>
+    </g>
+    <g id="sabpkytick_2">
+     <g id="sabpkline2d_16">
+      <g>
+       <use xlink:href="#sabpkmcf30224eca" x="45.696484" y="138.142574" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabpktext_17">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="38.696484" y="142.986324" transform="rotate(-0 38.696484 142.986324)">0.2</text>
+     </g>
+    </g>
+    <g id="sabpkytick_3">
+     <g id="sabpkline2d_17">
+      <g>
+       <use xlink:href="#sabpkmcf30224eca" x="45.696484" y="106.617868" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabpktext_18">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="38.696484" y="111.461618" transform="rotate(-0 38.696484 111.461618)">0.4</text>
+     </g>
+    </g>
+    <g id="sabpkytick_4">
+     <g id="sabpkline2d_18">
+      <g>
+       <use xlink:href="#sabpkmcf30224eca" x="45.696484" y="75.093162" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabpktext_19">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="38.696484" y="79.936912" transform="rotate(-0 38.696484 79.936912)">0.6</text>
+     </g>
+    </g>
+    <g id="sabpkytick_5">
+     <g id="sabpkline2d_19">
+      <g>
+       <use xlink:href="#sabpkmcf30224eca" x="45.696484" y="43.568456" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabpktext_20">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="38.696484" y="48.412206" transform="rotate(-0 38.696484 48.412206)">0.8</text>
+     </g>
+    </g>
+    <g id="sabpkytick_6">
+     <g id="sabpkline2d_20">
+      <g>
+       <use xlink:href="#sabpkmcf30224eca" x="45.696484" y="12.04375" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabpktext_21">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="38.696484" y="16.8875" transform="rotate(-0 38.696484 16.8875)">1.0</text>
+     </g>
+    </g>
+    <g id="sabpktext_22">
+     <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="16.8875" y="89.279279" transform="rotate(-90 16.8875 89.279279)">p-value so far</text>
+    </g>
+   </g>
+   <g id="sabpkline2d_21">
+    <path d="M 45.696484 161.786103 
+L 402.816484 161.786103 
+" clip-path="url(#sabpkpe3c232d22a)" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #d64545"/>
+   </g>
+   <g id="sabpkline2d_22">
+    <path d="M 61.929212 75.437213 
+L 86.902638 25.239624 
+L 111.876065 134.447092 
+L 136.849491 160.973438 
+L 161.822918 154.204946 
+L 186.796345 166.913775 
+L 211.769771 139.186563 
+L 236.743198 136.061347 
+L 261.716624 116.202878 
+L 286.690051 56.412947 
+L 311.663477 90.211245 
+L 336.636904 64.97452 
+L 361.610331 51.295338 
+L 386.583757 67.764269 
+" clip-path="url(#sabpkpe3c232d22a)" style="fill: none; stroke: #2a78d6; stroke-width: 2; stroke-linecap: square"/>
+    <defs>
+     <path id="sabpkmc92999a729" d="M 0 2 
+C 0.530406 2 1.03916 1.789267 1.414214 1.414214 
+C 1.789267 1.03916 2 0.530406 2 0 
+C 2 -0.530406 1.789267 -1.03916 1.414214 -1.414214 
+C 1.03916 -1.789267 0.530406 -2 0 -2 
+C -0.530406 -2 -1.03916 -1.789267 -1.414214 -1.414214 
+C -1.789267 -1.03916 -2 -0.530406 -2 0 
+C -2 0.530406 -1.789267 1.03916 -1.414214 1.414214 
+C -1.03916 1.789267 -0.530406 2 0 2 
+z
+" style="stroke: #2a78d6"/>
+    </defs>
+    <g clip-path="url(#sabpkpe3c232d22a)">
+     <use xlink:href="#sabpkmc92999a729" x="61.929212" y="75.437213" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabpkmc92999a729" x="86.902638" y="25.239624" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabpkmc92999a729" x="111.876065" y="134.447092" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabpkmc92999a729" x="136.849491" y="160.973438" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabpkmc92999a729" x="161.822918" y="154.204946" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabpkmc92999a729" x="186.796345" y="166.913775" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabpkmc92999a729" x="211.769771" y="139.186563" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabpkmc92999a729" x="236.743198" y="136.061347" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabpkmc92999a729" x="261.716624" y="116.202878" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabpkmc92999a729" x="286.690051" y="56.412947" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabpkmc92999a729" x="311.663477" y="90.211245" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabpkmc92999a729" x="336.636904" y="64.97452" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabpkmc92999a729" x="361.610331" y="51.295338" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabpkmc92999a729" x="386.583757" y="67.764269" style="fill: #2a78d6; stroke: #2a78d6"/>
+    </g>
+   </g>
+   <g id="sabpkpatch_4">
+    <path d="M 45.696484 169.667279 
+L 45.696484 8.891279 
+" style="fill: none; stroke: currentColor; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="sabpkpatch_5">
+    <path d="M 45.696484 169.667279 
+L 402.816484 169.667279 
+" style="fill: none; stroke: currentColor; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="sabpkpatch_6">
+    <path d="M 268.653941 155.442634 
+Q 228.715638 161.039401 189.884549 166.481009 
+" style="fill: none; stroke: currentColor; stroke-linecap: round"/>
+    <path d="M 194.123401 167.906538 
+L 189.884549 166.481009 
+L 193.568284 163.945245 
+" style="fill: none; stroke: currentColor; stroke-linecap: round"/>
+   </g>
+   <g id="sabpktext_23">
+    <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: start" x="269.208652" y="150.752456" transform="rotate(-0 269.208652 150.752456)">day 6: p = 0.017  'ship it!'</text>
+   </g>
+   <g id="sabpkpatch_7">
+    <path d="M 329.719787 28.623551 
+Q 357.327481 47.626532 384.014221 65.9956 
+" style="fill: none; stroke: currentColor; stroke-linecap: round"/>
+    <path d="M 381.853295 62.080195 
+L 384.014221 65.9956 
+L 379.585341 65.375098 
+" style="fill: none; stroke: currentColor; stroke-linecap: round"/>
+   </g>
+   <g id="sabpktext_24">
+    <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: start" x="244.235226" y="23.077397" transform="rotate(-0 244.235226 23.077397)">day 14 (planned end): p = 0.65</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="sabpkpe3c232d22a">
+   <rect x="45.696484" y="8.891279" width="357.12" height="160.776"/>
+  </clipPath>
+ </defs>
+</svg><figcaption>Daily p-value of one simulated A/A test (no real difference). It dips into the red zone on day 6, then wanders back up. Stopping at the dip would ship pure noise.</figcaption></figure>
+  <p>On day 6 the p-value touched 0.017; by the planned end it was 0.65. Anyone who stopped on day 6 would have shipped a change that does nothing. One picture could be bad luck, so the code runs 2,000 such A/A tests and compares two rules: stop the first day p &lt; 0.05, or look only on day 14.</p>
+  <div class="fx" data-lang="py">import numpy as np
+from statsmodels.stats.proportion import proportions_ztest
+rng = np.random.default_rng(0)                   # A/A tests: no real difference
 sims, days, per_day = 2000, 14, 1100
 peek_fp = end_fp = 0
 for _ in range(sims):
-    a = rng.binomial(per_day, 0.10, days).cumsum()
+    a = rng.binomial(per_day, 0.10, days).cumsum()     # running totals, like a dashboard
     b = rng.binomial(per_day, 0.10, days).cumsum()
     n_ = per_day * np.arange(1, days + 1)
     ps = [proportions_ztest([a[d], b[d]], [n_[d], n_[d]])[1] for d in range(days)]
-    peek_fp += min(ps) &lt; 0.05                  # stop the first day p &lt; 0.05
-    end_fp += ps[-1] &lt; 0.05                    # look once, at the planned end
+    peek_fp += min(ps) &lt; 0.05                    # stop the first day p &lt; 0.05
+    end_fp += ps[-1] &lt; 0.05                      # look once, at the planned end
 print(f"false positive rate, peeking daily: {peek_fp/sims:.1%}")
 print(f"false positive rate, fixed horizon: {end_fp/sims:.1%}")</div>
   <div class="fx" data-lang="text">false positive rate, peeking daily: 21.6%
 false positive rate, fixed horizon: 5.0%</div>
-  <p><code>rng.binomial(per_day, 0.10, days)</code> simulates daily purchases; <code>cumsum()</code> turns them into running totals, like a live dashboard. <code>min(ps) &lt; 0.05</code> asks "was p ever below 0.05?". Looking once gives the promised 5% false alarms; peeking daily gives 21.6%, more than four times as many.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Peeking</strong>: repeatedly testing an experiment while it runs and stopping when significant. <strong>Fixed-horizon test</strong>: analysed once at a pre-set n. <strong>Sequential testing</strong> (alpha-spending such as O'Brien-Fleming, or always-valid p-values): designs that allow interim looks while keeping the overall false-alarm rate at α. <strong>A/A test</strong>: both arms get the same experience; used to check the pipeline (it should show "significant" only about 5% of the time).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"We'll just peek but not act" rarely holds under business pressure. If stakeholders will want early answers, plan a sequential design from the start.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Novelty &amp; primacy.</b> Looking once at day 14 fixes peeking. But it still assumes the effect is the same on day 1 and day 100. Do users react to a new checkout the same way in its first week as later?</div>
+  <p><code>rng.binomial(per_day, 0.10, days)</code> simulates each day's purchases, and <code>cumsum()</code> turns them into running totals, as a live dashboard would show. <code>min(ps) &lt; 0.05</code> asks "was the p-value ever below 0.05?". Looking once gives the promised 5.0% false alarms. Peeking daily gives 21.6%, more than four times as many.</p>
+  <p>The simplest fix is a <strong>fixed-horizon test</strong>: decide n in advance, analyse once when it is reached, and ignore the dashboard until then. When the business genuinely needs the option to stop early, for example to kill a harmful change fast, the answer is <strong>sequential testing</strong>, a family of designs built to allow repeated looks while keeping the overall false-alarm rate at α. Alpha-spending methods such as O'Brien–Fleming set a very strict threshold for early looks (needing a much smaller p on day 3 than on day 14) and spend most of the α at the end; "always-valid" p-values, used by several commercial platforms, stay correct however often you look. They cost a little power in exchange for that flexibility. "We'll peek but we won't act on it" rarely survives business pressure, so if early answers will be wanted, plan a sequential design from the start.</p>
 
-  <h2 id="sab-novelty"><span class="num">10</span>Novelty &amp; Primacy Effects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>If the lift is +4% in week 1 and +1% in week 3, which one do we report, and how would we even notice?</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 560 170" width="560"><line x1="30" y1="142" x2="548" y2="142" stroke="currentColor" stroke-opacity=".5"/><text x="47.9" y="157" text-anchor="middle" font-size="11">1</text><text x="155" y="157" text-anchor="middle" font-size="11">7</text><text x="280.1" y="157" text-anchor="middle" font-size="11">14</text><text x="405.1" y="157" text-anchor="middle" font-size="11">21</text><text x="530.1" y="157" text-anchor="middle" font-size="11">28</text><text x="548" y="137" text-anchor="end" font-size="11" class="tm">day</text><path d="M47.9,46.3 L65.7,61.0 L83.6,73.1 L101.4,83.0 L119.3,91.2 L137.2,97.8 L155.0,103.2 L172.9,107.7 L190.8,111.3 L208.6,114.3 L226.5,116.7 L244.3,118.7 L262.2,120.4 L280.1,121.7 L297.9,122.8 L315.8,123.7 L333.7,124.5 L351.5,125.1 L369.4,125.6 L387.2,126.0 L405.1,126.3 L423.0,126.6 L440.8,126.8 L458.7,127.0 L476.6,127.1 L494.4,127.2 L512.3,127.3 L530.1,127.4" fill="none" class="sb" stroke-width="2"/><line x1="30" y1="127.8" x2="548" y2="127.8" class="sg" stroke-width="1.2" stroke-dasharray="4 3"/><text x="539.1" y="120.7" text-anchor="end" font-size="11" class="tg">true long-run lift ≈ 1%</text><text x="83.6" y="38.2" text-anchor="start" font-size="11">week 1 average: +4.4% (novelty)</text><text x="24" y="146.0" text-anchor="end" font-size="10" class="tm">0%</text><text x="24" y="89.1" text-anchor="end" font-size="10" class="tm">4%</text><text x="24" y="32.2" text-anchor="end" font-size="10" class="tm">8%</text></svg><figcaption>Illustrative: daily lift of a shiny new feature. A one-week test would report +4.4%; the lasting effect is ~1%.</figcaption></figure>
-  <p><strong>Novelty</strong>: users click the shiny new thing, then lose interest, so week 1 overstates the lasting lift. <strong>Primacy</strong>: users resist change at first, then adapt, so week 1 understates it. For the checkout, returning users who learned the three-step flow may hesitate on the new page at first (primacy). Detect: plot the lift by day, or compare new users (who have no "old" habit) with returning users. Fix: run longer, or analyse only after the curve flattens.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A new restaurant in the colony is packed in its first fortnight because it is new; the crowd after two months tells you whether the food is good.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Novelty effect</strong>: a temporary lift caused by newness. <strong>Primacy (change-aversion) effect</strong>: a temporary drop caused by users' existing habits. Both make a short test's estimate differ from the long-run effect.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Stopping as soon as the sample size is reached, in week 1, bakes the novelty into the decision. Look at the daily lift curve before deciding.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Interference.</b> Our test also assumes each user's outcome depends only on their own arm. On a marketplace that is often false: treated users can change what control users experience.</div>
-
-  <h2 id="sab-network"><span class="num">11</span>Network Effects (Interference)</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>If treatment users grab limited stock or delivery slots, control users get less. Is the measured difference still the effect of the change?</p>
-  </div>
-  <div class="cards">
-    <div><b>Problem</b><p>Treated users affect control users: shared drivers, stock, chat, auctions.</p><small>Violates "units are independent" (SUTVA)</small></div>
-    <div><b>Cluster randomisation</b><p>Randomise whole cities or friend clusters.</p><small>Fewer units → less power</small></div>
-    <div><b>Switchback</b><p>Alternate the whole market between A and B over time slots.</p><small>Ride-sharing pricing, delivery dispatch</small></div>
-  </div>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Testing a new lane-changing rule by giving it to half the cars on one road: the treated cars push in, the untreated cars slow down, and the "difference" partly measures the treated cars stealing space.</p>
-  </div>
-  <div class="callout intu"><span class="label">Example</span>
-    <p>A ride app gives treatment riders a discount. They book more, taking drivers away, so control riders wait longer and book less. Treatment goes up and control goes down, so the measured lift is inflated twice over. For our shop: if the faster checkout makes treatment users buy limited-stock items first, control users find them sold out. The same happens with Swiggy delivery partners or a shared ad budget.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>SUTVA</strong> (stable unit treatment value assumption): one unit's outcome is not affected by another unit's assignment. <strong>Interference</strong>: SUTVA is violated. Fixes randomise at a level that contains the spill-over (cluster) or in time (switchback).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Cluster designs have far fewer units (20 cities, not 30,000 users), so their SE must be computed at the cluster level. Analysing per user after randomising per city gives falsely tiny p-values.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Multiple variants.</b> The design team now wants to test four checkout designs against control at once. Each comparison is a test at 5%. What does four comparisons do to our false alarms and our sample size?</div>
-
-  <h2 id="sab-variants"><span class="num">12</span>Multiple Variants (A/B/n)</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>With four treatments vs one control, how likely is at least one false "winner", and what does correcting for it cost in users?</p>
-  </div>
-  <p>Testing 4 checkout designs vs control = 4 comparisons. By hand: P(at least one false alarm) = 1 − 0.95⁴ = 1 − 0.815 = 18.5%, not 5%. Correct with Bonferroni (α/4 = 0.0125) or Dunnett's test (built for "many vs one control"). The price: a smaller α needs a bigger n per arm.</p>
-  <div class="fx" data-lang="py">from statsmodels.stats.power import NormalIndPower
+  <h2 id="sab-multi"><span class="num">10</span>Multiple Testing and A/B/n Tests</h2>
+  <p>Peeking is one way of running many tests without noticing. Two more are very common. The design team now wants to test four checkout designs against control at once, which is called an <strong>A/B/n test</strong>. And every experiment dashboard reports twenty or more metrics. Each comparison is a test at α = 0.05, so each has a 5% chance of a false alarm, and those chances add up. The probability of at least one false alarm across m independent comparisons is 1 − (1 − α)<sup>m</sup>, called the <strong>family-wise error rate</strong>. For four variants that is 1 − 0.95⁴ = 1 − 0.815 = 18.5%; for twenty metrics, 64%. Think of five friends each tossing a coin hoping for three heads in a row: one of them will probably manage it, and that does not make his coin special.</p>
+  <div class="fx" data-lang="py">import numpy as np
+from statsmodels.stats.power import NormalIndPower
 from statsmodels.stats.proportion import proportion_effectsize
-print(f"4 variants vs control at 0.05 each: P(&gt;=1 false alarm) = {1 - 0.95**4:.3f}")
+from statsmodels.stats.multitest import multipletests
+
+for m in (1, 4, 20):
+    print(f"{m:2d} comparisons at 0.05 each: P(&gt;=1 false alarm) = {1 - 0.95**m:.3f}")
 h = proportion_effectsize(0.11, 0.10)
 for a in (0.05, 0.05 / 4):
     n_ = NormalIndPower().solve_power(effect_size=h, alpha=a, power=0.8)
-    print(f"alpha={a:.4f}: {np.ceil(n_):,.0f} users per arm")</div>
-  <div class="fx" data-lang="text">4 variants vs control at 0.05 each: P(&gt;=1 false alarm) = 0.185
+    print(f"alpha={a:.4f}: {np.ceil(n_):,.0f} users per arm")
+
+pvals = [0.004, 0.019, 0.03, 0.21]             # four variants vs control
+for method in ("bonferroni", "holm", "fdr_bh"):
+    reject, adj, _, _ = multipletests(pvals, alpha=0.05, method=method)
+    print(f"{method:10s} adjusted p = {np.round(adj, 3)}  winners = {reject.sum()}")</div>
+  <div class="fx" data-lang="text"> 1 comparisons at 0.05 each: P(&gt;=1 false alarm) = 0.050
+ 4 comparisons at 0.05 each: P(&gt;=1 false alarm) = 0.185
+20 comparisons at 0.05 each: P(&gt;=1 false alarm) = 0.642
 alpha=0.0500: 14,745 users per arm
-alpha=0.0125: 20,948 users per arm</div>
-  <p>At α = 0.0125 each arm needs 20,948 users instead of 14,745 (42% more), and there are now five arms instead of two: about 104,700 users in total vs 29,490, or roughly seven weeks of checkout traffic instead of two. That is why teams test few variants, or screen many cheaply first.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Five friends each toss a coin hoping for three heads in a row. One of them will probably manage it; that does not make his coin special.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>A/B/n test</strong>: one control and several treatments. <strong>Family-wise error</strong> for m comparisons: 1 − (1 − α)^m. <strong>Dunnett's test</strong>: compares each treatment with control while controlling the family-wise error, less conservative than Bonferroni.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Picking the best of four arms and reporting its uncorrected lift overstates it (winner's curse). Correct the α, and re-test the winner or keep a holdout.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Business impact.</b> Our two-arm test is clean: no SRM, looked at once after 14 full days, stable lift, no interference, one comparison. Leadership will not decide on "z = 3.14". What is the result worth?</div>
+alpha=0.0125: 20,948 users per arm
+bonferroni adjusted p = [0.016 0.076 0.12  0.84 ]  winners = 1
+holm       adjusted p = [0.016 0.057 0.06  0.21 ]  winners = 1
+fdr_bh     adjusted p = [0.016 0.038 0.04  0.21 ]  winners = 3</div>
+  <p>The first three lines show the error rate climbing from 5% to 18.5% to 64%. The simplest correction is <strong>Bonferroni</strong>: divide α by the number of comparisons, so each of the four variants is tested at 0.05 ÷ 4 = 0.0125. That keeps the family-wise rate at or below 5%, but it has a price, shown in the next two lines: a stricter α needs more users, 20,948 per arm instead of 14,745 (42% more), and there are now five arms instead of two. That is about 104,700 users in total against 29,490, roughly seven weeks of checkout traffic instead of two. This is why teams test only a few variants at once, or screen many ideas cheaply first. Dunnett's test is a method designed specifically for "several treatments against one control" and is slightly less strict than Bonferroni.</p>
+  <p>The last three lines apply three corrections to four example p-values with <code>multipletests</code>, which returns adjusted p-values you compare directly with 0.05. Bonferroni multiplies each p by 4, leaving one winner. <strong>Holm</strong> is a step-by-step version of Bonferroni that is never worse and often a little more powerful; here it still finds one. The <strong>Benjamini–Hochberg</strong> method (<code>fdr_bh</code>) controls a different quantity, the <strong>false discovery rate</strong>: the expected share of your "winners" that are false, rather than the chance of even one false alarm. It finds three winners. Family-wise control suits decisions where any false win is costly, such as choosing which variant to ship; FDR suits screening many secondary metrics, where a few false leads are acceptable.</p>
+  <p>There is a related trap even after correction. If you pick the best of several arms and report its lift, the estimate is biased upwards, because the arm that came out on top is partly the one luck pushed highest. This is the <strong>winner's curse</strong>. The protection is to treat the winner's lift as optimistic, re-test it, or confirm it with a holdout (section 12). And it is why naming one primary metric in advance matters so much: with one decision metric there is nothing to correct.</p>
 
-  <h2 id="sab-impact"><span class="num">13</span>Presenting Business Impact</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>How do we turn +1.1 pp (CI +0.41 to +1.79) into money, with the uncertainty still visible?</p>
-  </div>
-  <p>Leadership decides on money, risk and effort. A data scientist who stops at the p-value leaves the most important step to someone who may misread it. Translating the result into annual value, with an honest range, is what gets features shipped (or saved from a bad launch).</p>
-  <p>The idea: multiply the lift by how many users will see it per year and by what each extra conversion is worth. Do it for the point estimate and for both ends of the CI, so the range carries the uncertainty.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A shopkeeper deciding whether to open on Sundays doesn't care that "Sunday footfall is significantly above zero". He wants "about ₹12,000 extra a month, at worst ₹5,000, at best ₹20,000", which he can weigh against an extra staff salary.</p>
-  </div>
-  <p>By hand, point estimate: 2,200 users/day × 365 = 803,000 users/year; × 0.0110 extra conversion = 8,833 extra purchases; × $60 margin = $529,980. Low end uses 0.0041, high end 0.0179.</p>
+  <h2 id="sab-novelty"><span class="num">11</span>Novelty, Primacy and Interference</h2>
+  <p>Our analysis made two more quiet assumptions: that the effect is the same in week 1 as in month 6, and that each user's outcome depends only on their own arm. Both can fail.</p>
+  <p>A <strong>novelty effect</strong> is a temporary lift caused simply by something being new: users click the shiny new thing out of curiosity, then lose interest. A new restaurant in the neighbourhood is packed for its first fortnight because it is new; the crowd after two months tells you whether the food is good. The opposite is a <strong>primacy effect</strong>, also called change aversion: users who are used to the old design are slowed down or put off by the new one at first, then adapt, so the early result understates the lasting effect. For the checkout, regular customers who have learned the three-step flow might hesitate on the new page for a few days. The chart shows what a novelty effect looks like in an illustrative daily-lift curve:</p>
+  <figure class="viz"><svg viewBox="0 0 401.078984 210.375219" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="max-width:640px;width:100%;height:auto">
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="sabnvfigure_1">
+  <g id="sabnvpatch_1">
+   <path d="M 0 210.375219 
+L 401.078984 210.375219 
+L 401.078984 0 
+L 0 0 
+L 0 210.375219 
+z
+" style="fill: none"/>
+  </g>
+  <g id="sabnvaxes_1">
+   <g id="sabnvpatch_2">
+    <path d="M 36.758984 167.976 
+L 393.878984 167.976 
+L 393.878984 7.2 
+L 36.758984 7.2 
+L 36.758984 167.976 
+z
+" style="fill: none"/>
+   </g>
+   <g id="sabnvmatplotlib.axis_1">
+    <g id="sabnvxtick_1">
+     <g id="sabnvline2d_1">
+      <defs>
+       <path id="sabnvmedb56decd0" d="M 0 0 
+L 0 3.5 
+" style="stroke: currentColor; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#sabnvmedb56decd0" x="52.991712" y="167.976" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabnvtext_1">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="52.991712" y="184.6635" transform="rotate(-0 52.991712 184.6635)">1</text>
+     </g>
+    </g>
+    <g id="sabnvxtick_2">
+     <g id="sabnvline2d_2">
+      <g>
+       <use xlink:href="#sabnvmedb56decd0" x="125.137166" y="167.976" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabnvtext_2">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="125.137166" y="184.6635" transform="rotate(-0 125.137166 184.6635)">7</text>
+     </g>
+    </g>
+    <g id="sabnvxtick_3">
+     <g id="sabnvline2d_3">
+      <g>
+       <use xlink:href="#sabnvmedb56decd0" x="209.306863" y="167.976" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabnvtext_3">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="209.306863" y="184.6635" transform="rotate(-0 209.306863 184.6635)">14</text>
+     </g>
+    </g>
+    <g id="sabnvxtick_4">
+     <g id="sabnvline2d_4">
+      <g>
+       <use xlink:href="#sabnvmedb56decd0" x="293.47656" y="167.976" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabnvtext_4">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="293.47656" y="184.6635" transform="rotate(-0 293.47656 184.6635)">21</text>
+     </g>
+    </g>
+    <g id="sabnvxtick_5">
+     <g id="sabnvline2d_5">
+      <g>
+       <use xlink:href="#sabnvmedb56decd0" x="377.646257" y="167.976" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabnvtext_5">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="377.646257" y="184.6635" transform="rotate(-0 377.646257 184.6635)">28</text>
+     </g>
+    </g>
+    <g id="sabnvtext_6">
+     <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="215.318984" y="200.763109" transform="rotate(-0 215.318984 200.763109)">day of the experiment</text>
+    </g>
+   </g>
+   <g id="sabnvmatplotlib.axis_2">
+    <g id="sabnvytick_1">
+     <g id="sabnvline2d_6">
+      <defs>
+       <path id="sabnvmcf30224eca" d="M 0 0 
+L -3.5 0 
+" style="stroke: currentColor; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#sabnvmcf30224eca" x="36.758984" y="166.725483" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabnvtext_7">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="29.758984" y="171.569233" transform="rotate(-0 29.758984 171.569233)">0</text>
+     </g>
+    </g>
+    <g id="sabnvytick_2">
+     <g id="sabnvline2d_7">
+      <g>
+       <use xlink:href="#sabnvmcf30224eca" x="36.758984" y="143.798162" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabnvtext_8">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="29.758984" y="148.641912" transform="rotate(-0 29.758984 148.641912)">1</text>
+     </g>
+    </g>
+    <g id="sabnvytick_3">
+     <g id="sabnvline2d_8">
+      <g>
+       <use xlink:href="#sabnvmcf30224eca" x="36.758984" y="120.870841" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabnvtext_9">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="29.758984" y="125.714591" transform="rotate(-0 29.758984 125.714591)">2</text>
+     </g>
+    </g>
+    <g id="sabnvytick_4">
+     <g id="sabnvline2d_9">
+      <g>
+       <use xlink:href="#sabnvmcf30224eca" x="36.758984" y="97.943521" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabnvtext_10">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="29.758984" y="102.787271" transform="rotate(-0 29.758984 102.787271)">3</text>
+     </g>
+    </g>
+    <g id="sabnvytick_5">
+     <g id="sabnvline2d_10">
+      <g>
+       <use xlink:href="#sabnvmcf30224eca" x="36.758984" y="75.0162" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabnvtext_11">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="29.758984" y="79.85995" transform="rotate(-0 29.758984 79.85995)">4</text>
+     </g>
+    </g>
+    <g id="sabnvytick_6">
+     <g id="sabnvline2d_11">
+      <g>
+       <use xlink:href="#sabnvmcf30224eca" x="36.758984" y="52.088879" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabnvtext_12">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="29.758984" y="56.932629" transform="rotate(-0 29.758984 56.932629)">5</text>
+     </g>
+    </g>
+    <g id="sabnvytick_7">
+     <g id="sabnvline2d_12">
+      <g>
+       <use xlink:href="#sabnvmcf30224eca" x="36.758984" y="29.161558" style="stroke: currentColor; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="sabnvtext_13">
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="29.758984" y="34.005308" transform="rotate(-0 29.758984 34.005308)">6</text>
+     </g>
+    </g>
+    <g id="sabnvtext_14">
+     <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="16.8875" y="87.588" transform="rotate(-90 16.8875 87.588)">daily lift (%)</text>
+    </g>
+   </g>
+   <g id="sabnvline2d_13">
+    <path d="M 52.991712 14.508 
+L 65.015954 54.085798 
+L 77.040196 68.675741 
+L 89.064439 81.081911 
+L 101.088681 88.207198 
+L 113.112924 109.698952 
+L 125.137166 124.725782 
+L 137.161409 133.277719 
+L 149.185651 122.082689 
+L 161.209893 116.418124 
+L 173.234136 133.08327 
+L 185.258378 150.585613 
+L 197.282621 149.223222 
+L 209.306863 123.93747 
+L 221.331106 139.185393 
+L 233.355348 159.775707 
+L 245.37959 143.238833 
+L 257.403833 154.730269 
+L 269.428075 149.487205 
+L 281.452318 148.229244 
+L 293.47656 150.703871 
+L 305.500803 137.747807 
+L 317.525045 144.192795 
+L 329.549287 149.686936 
+L 341.57353 139.427103 
+L 353.597772 135.127558 
+L 365.622015 160.668 
+L 377.646257 146.385513 
+" clip-path="url(#sabnvp8b877bee5b)" style="fill: none; stroke: #2a78d6; stroke-width: 2; stroke-linecap: square"/>
+    <defs>
+     <path id="sabnvmbc0315f6a1" d="M 0 1.75 
+C 0.464105 1.75 0.909265 1.565609 1.237437 1.237437 
+C 1.565609 0.909265 1.75 0.464105 1.75 0 
+C 1.75 -0.464105 1.565609 -0.909265 1.237437 -1.237437 
+C 0.909265 -1.565609 0.464105 -1.75 0 -1.75 
+C -0.464105 -1.75 -0.909265 -1.565609 -1.237437 -1.237437 
+C -1.565609 -0.909265 -1.75 -0.464105 -1.75 0 
+C -1.75 0.464105 -1.565609 0.909265 -1.237437 1.237437 
+C -0.909265 1.565609 -0.464105 1.75 0 1.75 
+z
+" style="stroke: #2a78d6"/>
+    </defs>
+    <g clip-path="url(#sabnvp8b877bee5b)">
+     <use xlink:href="#sabnvmbc0315f6a1" x="52.991712" y="14.508" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="65.015954" y="54.085798" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="77.040196" y="68.675741" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="89.064439" y="81.081911" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="101.088681" y="88.207198" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="113.112924" y="109.698952" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="125.137166" y="124.725782" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="137.161409" y="133.277719" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="149.185651" y="122.082689" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="161.209893" y="116.418124" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="173.234136" y="133.08327" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="185.258378" y="150.585613" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="197.282621" y="149.223222" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="209.306863" y="123.93747" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="221.331106" y="139.185393" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="233.355348" y="159.775707" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="245.37959" y="143.238833" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="257.403833" y="154.730269" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="269.428075" y="149.487205" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="281.452318" y="148.229244" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="293.47656" y="150.703871" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="305.500803" y="137.747807" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="317.525045" y="144.192795" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="329.549287" y="149.686936" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="341.57353" y="139.427103" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="353.597772" y="135.127558" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="365.622015" y="160.668" style="fill: #2a78d6; stroke: #2a78d6"/>
+     <use xlink:href="#sabnvmbc0315f6a1" x="377.646257" y="146.385513" style="fill: #2a78d6; stroke: #2a78d6"/>
+    </g>
+   </g>
+   <g id="sabnvline2d_14">
+    <path d="M 36.758984 143.798162 
+L 393.878984 143.798162 
+" clip-path="url(#sabnvp8b877bee5b)" style="fill: none; stroke-dasharray: 4.44,1.92; stroke-dashoffset: 0; stroke: #3a9d5d; stroke-width: 1.2"/>
+   </g>
+   <g id="sabnvline2d_15">
+    <path d="M 52.991712 77.28334 
+L 125.137166 77.28334 
+" clip-path="url(#sabnvp8b877bee5b)" style="fill: none; stroke: #e8743b; stroke-width: 2.5; stroke-linecap: square"/>
+   </g>
+   <g id="sabnvpatch_3">
+    <path d="M 36.758984 167.976 
+L 36.758984 7.2 
+" style="fill: none; stroke: currentColor; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="sabnvpatch_4">
+    <path d="M 36.758984 167.976 
+L 393.878984 167.976 
+" style="fill: none; stroke: currentColor; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="sabnvtext_15">
+    <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: start; fill: #e8743b" x="132.351712" y="72.697876" transform="rotate(-0 132.351712 72.697876)">week-1 average: +3.9%</text>
+   </g>
+   <g id="sabnvtext_16">
+    <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: start; fill: #3a9d5d" x="257.403833" y="135.7736" transform="rotate(-0 257.403833 135.7736)">lasting lift = +1%</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="sabnvp8b877bee5b">
+   <rect x="36.758984" y="7.2" width="357.12" height="160.776"/>
+  </clipPath>
+ </defs>
+</svg><figcaption>Illustrative daily lift of a new feature with a novelty effect. A one-week test would report about +3.9%; the lasting effect is about +1%.</figcaption></figure>
+  <p>A test that stopped after the first week would report a lift of about 3.9%, nearly four times the lasting effect of about 1%, and the business case would be built on a number that will never appear again. Both effects are found the same way: plot the lift by day and look for a trend rather than a flat line, and compare new users (who have no old habit to break and nothing to be curious about) with returning users. The fix is to run long enough for the curve to flatten, and to base the decision on the stable part.</p>
+  <p><strong>Interference</strong> is the second problem: one user's treatment changes another user's outcome. The standard tests rely on an assumption called SUTVA (the stable unit treatment value assumption), which says that a unit's outcome depends only on its own assignment. On a marketplace that is often false. Suppose a ride-sharing app gives treatment riders a discount. They book more rides, taking drivers away, so control riders wait longer and book fewer rides. Treatment goes up, control goes down, and the measured gap is inflated from both sides; when the discount is launched for everyone, most of that "lift" disappears. For our shop, if the faster checkout lets treatment users grab limited-stock items first, control users find them sold out, which makes treatment look better than it would at full launch. Think of testing a new lane-changing rule by giving it to half the cars on a road: the treated cars push in, the untreated cars slow down, and the difference partly measures the treated cars taking space from the others.</p>
+  <p>The fixes randomise at a level that contains the spill-over. <strong>Cluster randomisation</strong> assigns whole groups, such as cities or friend circles, to one arm, so treated and control users do not share supply. <strong>Switchback testing</strong> switches a whole market between A and B over random time slots (say, every hour), which is how ride-sharing pricing and delivery dispatch are tested. Both have far fewer independent units, perhaps 20 cities rather than 30,000 users, so power is lower and, by the rule from section 03, the analysis must be done at the cluster or time-slot level; analysing per user after randomising per city gives falsely tiny p-values.</p>
+
+  <h2 id="sab-impact"><span class="num">12</span>Business Impact</h2>
+  <p>Our checkout test is clean: no SRM, analysed once after 14 full days, stable lift, no interference, one primary comparison. But leadership does not decide on "z = 3.14". They decide on money, risk and effort, and a data scientist who stops at the p-value leaves the most important step to someone who may misread it. Translating the result into yearly value, with an honest range, is what gets good features shipped and bad launches stopped.</p>
+  <p>A shopkeeper deciding whether to open on Sundays does not care that "Sunday footfall is significantly above zero". He wants "about ₹12,000 extra a month, at worst ₹5,000, at best ₹20,000", which he can weigh against an extra salary. The calculation for us is the same: multiply the lift by the number of users who will see the change per year and by the value of each extra conversion. By hand for the point estimate: 2,200 users a day × 365 = 803,000 users a year; × 0.0110 extra conversion rate = 8,833 extra purchases; × $60 average margin per purchase = about $530,000 a year. Doing the same with the two ends of the confidence interval carries the uncertainty into the money:</p>
   <div class="fx" data-lang="py">users_per_year = 2200 * 365
-value_per_purchase = 60                       # $ average order margin, from finance
+value_per_purchase = 60                         # $ average margin per order, from finance
 for name, lift in [("low (CI)", 0.0041), ("point", 0.0110), ("high (CI)", 0.0179)]:
-    print(f"{name:9s} \${lift * users_per_year * value_per_purchase:,.0f} / year")</div>
-  <div class="fx" data-lang="text">low (CI)  $197,538 / year
-point     $529,980 / year
-high (CI) $862,422 / year</div>
-  <p>The loop reuses one formula with three lifts. The CI ends give $198k to $862k a year. Note the assumptions in the comment: the value per purchase comes from finance, and we assume traffic stays at today's level and the effect lasts. State these on the slide.</p>
-  <div class="callout def"><span class="label">One-slide summary</span>
-    <p><strong>What:</strong> one-page checkout vs three-step, 14 days, 30,780 users. <strong>Result:</strong> conversion 10.0% → 11.1% (+11% relative, p = 0.002, 95% CI +0.4 to +1.8 pp). <strong>Worth:</strong> ≈ $530k/yr (range $200k–$860k). <strong>Guardrails:</strong> latency, errors, refunds unchanged. <strong>Recommendation:</strong> ship to 100%, keep a 5% holdout for a month to confirm.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: winner's curse</span>
-    <p>Experiments that "won" tend to overstate their lift: among many tests, the ones noise pushed up are the ones that crossed the line. Quote the range, discount the point estimate a little, and use a <strong>holdout</strong> (a small group kept on the old version) to confirm the long-term impact.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: How it all connects.</b> Thirteen steps from "did it work?" to "$530k a year". How do they form one system, and which statistics from earlier notes does each reuse?</div>
+    print(f"{name:9s} &#36;{lift * users_per_year * value_per_purchase:&gt;9,.0f} / year")</div>
+  <div class="fx" data-lang="text">low (CI)  $  197,538 / year
+point     $  529,980 / year
+high (CI) $  862,422 / year</div>
+  <p>The point estimate is about $530k a year and the interval ends give $198k to $862k. Even the pessimistic end is clearly positive, which is a strong case. The comment in the code records an assumption that belongs on the slide: the value per purchase comes from finance. Others are that traffic stays at today's level and the effect lasts, which is why the novelty check mattered. A one-slide readout then looks like this: <em>What</em>: one-page checkout vs three-step, 14 days, 30,780 users. <em>Result</em>: conversion 10.0% → 11.1% (+11% relative, p = 0.002, 95% CI +0.4 to +1.8 pp). <em>Worth</em>: about $530k a year (range $200k–$860k). <em>Guardrails</em>: latency, payment errors and refunds unchanged. <em>Recommendation</em>: ship to everyone, and keep a 5% holdout for a month.</p>
+  <p>A <strong>holdout</strong> is a small group of users kept on the old version after launch. It guards against the winner's curse from section 10: across many experiments, the ones that crossed the significance line are disproportionately the ones noise pushed upwards, so launched features tend to deliver less than their tests promised. Comparing the holdout with everyone else over the following weeks measures the real, long-run impact, and it is also the honest answer when leadership later asks "did that checkout change actually pay off?".</p>
 
-  <h2 id="sab-connect"><span class="num">14</span>How It All Connects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Which parts of an A/B test are design, which are analysis, which are threats, and where does each piece of statistics come from?</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 680 340" width="680">
-<defs><marker id="sab-a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="10" y="10" width="140" height="44" rx="7" class="fr sr"/><text x="80" y="29" text-anchor="middle" font-size="11.5" font-weight="700">before/after</text><text x="80" y="45" text-anchor="middle" class="tm" font-size="10">+8%, but payday, festival…</text>
-<line x1="150" y1="32" x2="183" y2="32" stroke="currentColor" marker-end="url(#sab-a9)"/><text x="167" y="24" text-anchor="middle" class="tm" font-size="9.5">fix</text>
-<rect x="185" y="10" width="150" height="44" rx="7" class="fb sb"/><text x="260" y="29" text-anchor="middle" font-size="11.5" font-weight="700">randomise + hypothesis</text><text x="260" y="45" text-anchor="middle" class="tm" font-size="10">10% → ≥ 11%, pre-registered</text>
-<line x1="335" y1="32" x2="368" y2="32" stroke="currentColor" marker-end="url(#sab-a9)"/>
-<rect x="370" y="10" width="140" height="44" rx="7" class="fb sb"/><text x="440" y="29" text-anchor="middle" font-size="11.5" font-weight="700">metric + unit</text><text x="440" y="45" text-anchor="middle" class="tm" font-size="10">conversion/user, md5 % 100</text>
-<line x1="510" y1="32" x2="543" y2="32" stroke="currentColor" marker-end="url(#sab-a9)"/>
-<rect x="545" y="10" width="125" height="44" rx="7" class="fb sb"/><text x="607" y="29" text-anchor="middle" font-size="11.5" font-weight="700">sample size</text><text x="607" y="45" text-anchor="middle" class="tm" font-size="10">14,745/arm, 14 days</text>
-<line x1="607" y1="54" x2="607" y2="88" stroke="currentColor" marker-end="url(#sab-a9)"/>
-<rect x="545" y="90" width="125" height="44" rx="7" class="ft st"/><text x="607" y="109" text-anchor="middle" font-size="11.5" font-weight="700">CUPED</text><text x="607" y="125" text-anchor="middle" class="tm" font-size="10">variance × 0.22</text>
-<line x1="545" y1="112" x2="512" y2="112" stroke="currentColor" marker-end="url(#sab-a9)"/>
-<rect x="370" y="90" width="140" height="44" rx="7" class="fg sg"/><text x="440" y="109" text-anchor="middle" font-size="11.5" font-weight="700">SRM check (χ²)</text><text x="440" y="125" text-anchor="middle" class="tm" font-size="10">15,400 / 15,380: p 0.91</text>
-<line x1="370" y1="112" x2="337" y2="112" stroke="currentColor" marker-end="url(#sab-a9)"/>
-<rect x="185" y="90" width="150" height="44" rx="7" class="fg sg"/><text x="260" y="109" text-anchor="middle" font-size="11.5" font-weight="700">z-test + CI</text><text x="260" y="125" text-anchor="middle" class="tm" font-size="10">z 3.14, CI +0.41 to +1.79 pp</text>
-<line x1="185" y1="112" x2="152" y2="112" stroke="currentColor" marker-end="url(#sab-a9)"/>
-<rect x="10" y="90" width="140" height="44" rx="7" class="fg sg"/><text x="80" y="109" text-anchor="middle" font-size="11.5" font-weight="700">CI vs MDE</text><text x="80" y="125" text-anchor="middle" class="tm" font-size="10">centre 1.1 ≥ 1 → ship</text>
-<line x1="80" y1="134" x2="80" y2="168" stroke="currentColor" marker-end="url(#sab-a9)"/>
-<rect x="10" y="170" width="140" height="44" rx="7" class="fv" stroke="currentColor" stroke-opacity="0.4"/><text x="80" y="189" text-anchor="middle" font-size="11.5" font-weight="700">business impact</text><text x="80" y="205" text-anchor="middle" class="tm" font-size="10">$198k – $862k / year</text>
-<rect x="185" y="250" width="110" height="44" rx="7" class="fr sr"/><text x="240" y="269" text-anchor="middle" font-size="11.5" font-weight="700">peeking</text><text x="240" y="285" text-anchor="middle" class="tm" font-size="10">5% → 21.6%</text>
-<rect x="305" y="250" width="110" height="44" rx="7" class="fr sr"/><text x="360" y="269" text-anchor="middle" font-size="11.5" font-weight="700">novelty</text><text x="360" y="285" text-anchor="middle" class="tm" font-size="10">+4.4% → ~1%</text>
-<rect x="425" y="250" width="115" height="44" rx="7" class="fr sr"/><text x="482" y="269" text-anchor="middle" font-size="11.5" font-weight="700">interference</text><text x="482" y="285" text-anchor="middle" class="tm" font-size="10">cluster, switchback</text>
-<rect x="550" y="250" width="120" height="44" rx="7" class="fr sr"/><text x="610" y="269" text-anchor="middle" font-size="11.5" font-weight="700">many variants</text><text x="610" y="285" text-anchor="middle" class="tm" font-size="10">18.5% → α/4</text>
-<line x1="240" y1="250" x2="250" y2="136" stroke="currentColor" stroke-opacity=".5" stroke-dasharray="4 3" marker-end="url(#sab-a9)"/><line x1="360" y1="250" x2="280" y2="136" stroke="currentColor" stroke-opacity=".5" stroke-dasharray="4 3" marker-end="url(#sab-a9)"/><line x1="482" y1="250" x2="300" y2="136" stroke="currentColor" stroke-opacity=".5" stroke-dasharray="4 3" marker-end="url(#sab-a9)"/><line x1="610" y1="250" x2="320" y2="136" stroke="currentColor" stroke-opacity=".5" stroke-dasharray="4 3" marker-end="url(#sab-a9)"/>
-<text x="428" y="318" text-anchor="middle" class="tm" font-size="10.5">each threat breaks one assumption behind the z-test: look once · stable behaviour · independent units · one comparison</text>
-<text x="440" y="215" text-anchor="middle" class="tm" font-size="10.5">from Hypothesis Testing: power, χ², z-test, CI, multiple testing</text>
-</svg><figcaption>Top row, left to right: the design decisions made before launch. Second row, right to left: the analysis after the data is in, ending in a decision. Bottom: the four threats, each attacking the analysis by breaking one assumption of the test.</figcaption></figure>
-  <table class="tbl"><caption>Every concept on the checkout experiment</caption>
-    <tr><th>Concept</th><th>Built from</th><th>Answers</th><th>Our value</th><th>Use when</th></tr>
-    <tr><td>Randomisation</td><td>coin flip per user (hash)</td><td>can we credit the change?</td><td>5,021 / 4,979 in 10,000</td><td>always</td></tr>
-    <tr><td>Hypothesis, MDE</td><td>H₀/H₁ from Hypothesis Testing</td><td>what are we testing, what size matters?</td><td>10% → ≥ 11%, MDE 1 pp</td><td>before launch</td></tr>
-    <tr><td>OEC, guardrails, unit</td><td>business goal</td><td>which number decides? what is randomised?</td><td>conversion per user</td><td>before launch</td></tr>
-    <tr><td>Sample size</td><td>power formula</td><td>how many users, how long?</td><td>14,745/arm, 14 days</td><td>before launch</td></tr>
-    <tr><td>CUPED</td><td>regression slope θ, correlation ρ</td><td>can we need fewer users?</td><td>variance × 0.22</td><td>pre-period data exists</td></tr>
-    <tr><td>SRM</td><td>χ² goodness of fit</td><td>did the split work?</td><td>p 0.91 (broken: 0.00005)</td><td>first analysis step</td></tr>
-    <tr><td>z-test, CI</td><td>two-proportion z, unpooled SE</td><td>real? how big?</td><td>z 3.14, CI +0.41 to +1.79 pp</td><td>binary metrics (Welch t for means)</td></tr>
-    <tr><td>Practical significance</td><td>CI vs 0 and MDE</td><td>ship?</td><td>centre 1.1 ≥ 1 → ship</td><td>every decision</td></tr>
-    <tr><td>Peeking</td><td>repeated tests</td><td>can we stop early?</td><td>5% → 21.6%</td><td>live dashboards → sequential</td></tr>
-    <tr><td>Novelty / primacy</td><td>lift by day</td><td>does it last?</td><td>+4.4% → ~1% (illustrative)</td><td>visible UI changes</td></tr>
-    <tr><td>Interference</td><td>SUTVA</td><td>do users affect each other?</td><td>(marketplaces)</td><td>shared supply → cluster, switchback</td></tr>
-    <tr><td>Many variants</td><td>FWER, Bonferroni</td><td>several treatments?</td><td>18.5% → α/4, 20,948/arm</td><td>A/B/n</td></tr>
-    <tr><td>Business impact</td><td>lift × users × value</td><td>what is it worth?</td><td>$198k–$862k, point $530k</td><td>every readout</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>One sentence holds the note: <strong>an A/B test is a hypothesis test whose assumptions are made true by design.</strong> Randomisation removes confounders, pre-registration and one look keep α honest, the right unit keeps observations independent, power sets n, and every pitfall is one of those assumptions breaking.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Common mistakes.</b> The checklist.</div>
-
-  <h2 id="sab-traps"><span class="num">15</span>Common Mistakes</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>What goes wrong most often when real teams run experiments?</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: reading results before the SRM check</span>
-    <p>A broken split invalidates everything. Check the user counts with a chi-square test first; p &lt; 0.001 means stop and debug.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: peeking and stopping early</span>
-    <p>Daily looks with "stop at p &lt; 0.05" raised false alarms from 5% to 21.6% in our simulation. Fix the horizon, or use a sequential method.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: wrong analysis unit</span>
-    <p>Randomised by user, analysed by page view → SE too small. One row per randomisation unit, or the delta method.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: too many metrics, no primary</span>
-    <p>With 20 metrics, about one will be "significant" by luck. Name one primary metric before launch; treat the rest as explanations, with FDR correction.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: "not significant" = "no effect"</span>
-    <p>A wide CI spanning 0 means "we don't know". Only a narrow CI around 0 supports "no meaningful effect".</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: stopping mid-week or after a few days</span>
-    <p>Day-of-week patterns and novelty both distort short tests. Run whole weeks; plot lift by day.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: ignoring interference</span>
-    <p>Marketplaces, social features and shared budgets leak between arms. Use cluster or switchback designs.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: underpowered pilots as verdicts</span>
-    <p>The 1,000-per-arm pilot had 11% power for +1 pp. A "not significant" pilot is not evidence of no effect; size the real test with the power formula.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Revision.</b> The whole note condensed onto one sheet.</div>
+  <h2 id="sab-traps"><span class="num">13</span>Common Mistakes</h2>
+  <p>The most damaging mistake is reading results before checking the split. If the user counts are off, every metric is suspect, however good it looks. The check takes one line and should always come first:</p>
+  <div class="fx" data-lang="py">from scipy import stats
+# Wrong: compute the lift straight away. Right: check the split first.
+p_srm = stats.chisquare([50000, 48500]).pvalue
+print(f"SRM p = {p_srm:.1e}", "-&gt; STOP, find the bug" if p_srm &lt; 0.001 else "-&gt; ok")</div>
+  <div class="fx" data-lang="text">SRM p = 1.8e-06 -&gt; STOP, find the bug</div>
+  <p>A 50,000 to 48,500 split looks only 3% off, but the p-value is about two in a million, so the experiment is broken and its lift should not be read at all.</p>
+  <p>The second is peeking: checking the dashboard daily and stopping at the first p &lt; 0.05 raised false alarms from 5% to 21.6% in our simulation. Fix the horizon, or use a sequential design if early stopping is genuinely needed. The third is analysing at the wrong unit: randomising by user and analysing by page view tripled the false-alarm rate in section 03. Keep one row per randomised user, or use the delta method for ratio metrics.</p>
+  <p>The fourth is reading "not significant" as "no effect". A wide interval that crosses zero means "we don't know"; only a narrow interval around zero supports "no meaningful effect". A closely related error is trusting an underpowered pilot as a verdict. The arithmetic shows how easily it happens:</p>
+  <div class="fx" data-lang="py">from statsmodels.stats.power import NormalIndPower
+from statsmodels.stats.proportion import proportion_effectsize
+h = proportion_effectsize(0.11, 0.10)
+for n in (1000, 7700, 14745):          # pilot, "just run it a week", properly sized
+    print(f"{n:6,d} per arm -&gt; power {NormalIndPower().power(h, nobs1=n, alpha=0.05):.0%}")</div>
+  <div class="fx" data-lang="text"> 1,000 per arm -&gt; power 11%
+ 7,700 per arm -&gt; power 53%
+14,745 per arm -&gt; power 80%</div>
+  <p>A 1,000-per-arm pilot catches a real +1 pp lift only 11% of the time, and "just run it for a week" (about 7,700 per arm) only about half the time (53%): a coin flip on whether a $530k-a-year improvement shows up. Size the test before running it.</p>
+  <p>The remaining mistakes are about discipline. Tracking many metrics with no named primary guarantees that something is "significant" by luck; name one before launch and treat the rest as explanations, with an FDR correction. Stopping mid-week or after a few days lets weekday patterns and novelty distort the result; run whole weeks and plot the lift by day. Confusing absolute and relative lift misleads everyone downstream; say "pp" for absolute changes. And ignoring interference on marketplaces or social features inflates the lift; use cluster or switchback designs there.</p>
 
   <h2 id="sab-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>The whole note on one sheet. Running example: one-page checkout (B) vs three-step (A). Baseline conversion 10%, MDE +1 pp, α 0.05, power 0.8, 2,200 eligible users a day. Result after 14 days: control 1,540 / 15,400, treatment 1,707 / 15,380. Margin $60 per purchase.</p>
-  <h3>The question ladder</h3>
-  <table class="tbl">
-    <tr><th>Concept</th><th>Question it answers</th><th>Our answer</th><th>Weakness → next</th></tr>
-    <tr><td>Randomisation</td><td>can we credit the change?</td><td>coin flip per user, same time</td><td>what exactly is the claim?</td></tr>
-    <tr><td>Hypothesis</td><td>what are we testing?</td><td>10% → ≥ 11%, pre-registered</td><td>which metric, which unit?</td></tr>
-    <tr><td>Metrics, unit</td><td>which number, what is randomised?</td><td>conversion per user; md5 % 100</td><td>how many users?</td></tr>
-    <tr><td>Sample size</td><td>how many, how long?</td><td>14,745/arm; 14 days</td><td>expensive</td></tr>
-    <tr><td>CUPED</td><td>fewer users?</td><td>variance × (1 − 0.88²) = 0.22</td><td>did the split work?</td></tr>
-    <tr><td>SRM</td><td>split as planned?</td><td>p 0.91</td><td>is the lift real?</td></tr>
-    <tr><td>z-test, CI</td><td>real? how big?</td><td>z 3.14, p 0.0017, CI +0.41 to +1.79 pp</td><td>worth it?</td></tr>
-    <tr><td>Practical significance</td><td>ship?</td><td>centre 1.1 ≥ MDE 1 → ship</td><td>assumed one look</td></tr>
-    <tr><td>Peeking</td><td>stop early?</td><td>5% → 21.6% false alarms</td><td>assumed stable behaviour</td></tr>
-    <tr><td>Novelty / primacy</td><td>does it last?</td><td>plot lift by day</td><td>assumed independent users</td></tr>
-    <tr><td>Interference</td><td>users affect each other?</td><td>cluster / switchback</td><td>assumed one comparison</td></tr>
-    <tr><td>Variants</td><td>several treatments?</td><td>18.5% → α/4; 20,948/arm</td><td>how to tell leadership?</td></tr>
-    <tr><td>Impact</td><td>what is it worth?</td><td>$530k (198k–862k)/yr</td><td>winner's curse → holdout</td></tr>
-  </table>
+  <h3>Running example</h3>
+  <ul>
+    <li>One-page checkout (B, treatment) vs three-step (A, control); 2,200 checkout visitors a day; baseline conversion 10%.</li>
+    <li>MDE +1 pp, α 0.05 two-sided, power 0.8 → 14,745 per arm, 14 days.</li>
+    <li>Result: control 1,540 / 15,400 (10.00%), treatment 1,707 / 15,380 (11.10%); z 3.14, p 0.0017, CI +0.41 to +1.79 pp; ≈ $530k/yr ($198k–$862k).</li>
+  </ul>
+  <h3>Definitions</h3>
+  <ul>
+    <li><b>A/B test</b>: users randomly assigned, at the same time, to control or treatment; a pre-chosen metric is compared. Randomisation balances every confounder, so the gap estimates the causal effect.</li>
+    <li><b>MDE</b>: smallest lift worth detecting/acting on; a business choice that drives n.</li>
+    <li><b>Pre-registration</b>: hypothesis, metric, MDE, duration and analysis fixed before launch.</li>
+    <li><b>Primary metric (OEC)</b>: the one decision metric. <b>Guardrails</b>: must not get worse.</li>
+    <li><b>Randomisation unit</b>: what gets the coin flip (user, session, city). Analyse at that unit.</li>
+    <li><b>A/A test</b>: both arms identical; should be "significant" only ~5% of the time.</li>
+    <li><b>SRM</b>: arm counts differ from the planned split beyond chance (χ², alarm at p &lt; 0.001).</li>
+    <li><b>CUPED</b>: subtract what pre-experiment data predicts; variance × (1 − ρ²).</li>
+    <li><b>Peeking</b>: stopping when the live p-value dips below α; inflates false positives.</li>
+    <li><b>Novelty / primacy</b>: temporary lift from newness / temporary drop from habit.</li>
+    <li><b>SUTVA / interference</b>: one unit's outcome must not depend on others' assignment.</li>
+    <li><b>Winner's curse</b>: winning tests overstate their lift; confirm with a holdout.</li>
+  </ul>
   <h3>Formulas</h3>
   <table class="tbl">
-    <tr><th>Name</th><th>Formula</th><th>Symbols</th></tr>
-    <tr><td>Bucket</td><td>int(md5(experiment:user), 16) % 100 &lt; 50 → treatment</td><td>sticky, independent across experiments</td></tr>
-    <tr><td>Sample size</td><td>n = (z₁₋α/₂ + z₁₋β)² [p₁(1 − p₁) + p₂(1 − p₂)] / δ²</td><td>1.96 + 0.84; δ = MDE</td></tr>
-    <tr><td>Rule of thumb</td><td>n ≈ 16 p(1 − p)/δ²</td><td>α 0.05, power 0.8</td></tr>
-    <tr><td>Duration</td><td>2n / daily users, rounded up to whole weeks</td><td>29,490/2,200 = 13.4 → 14</td></tr>
-    <tr><td>CUPED</td><td>Y − θ(X − X̄), θ = cov(X, Y)/var(X); var × (1 − ρ²)</td><td>X pre-period metric</td></tr>
-    <tr><td>SRM</td><td>χ² = Σ (O − E)²/E on arm counts</td><td>alarm at p &lt; 0.001</td></tr>
-    <tr><td>z-test</td><td>(p̂_T − p̂_C)/√(p̂(1 − p̂)(1/n_T + 1/n_C))</td><td>p̂ pooled rate</td></tr>
-    <tr><td>CI</td><td>diff ± 1.96 √(p_T(1 − p_T)/n_T + p_C(1 − p_C)/n_C)</td><td>unpooled SE</td></tr>
-    <tr><td>Variants</td><td>1 − (1 − α)^m; α/m</td><td>m comparisons</td></tr>
-    <tr><td>Impact</td><td>lift × users per year × value per conversion</td><td>use CI ends for the range</td></tr>
+    <tr><th>What</th><th>Formula</th><th>Checkout value</th></tr>
+    <tr><td>Sample size per arm</td><td>(z<sub>1−α/2</sub> + z<sub>1−β</sub>)² [p₁(1−p₁) + p₂(1−p₂)] ÷ δ²</td><td>7.85 × 0.1879 ÷ 0.0001 ≈ 14,750</td></tr>
+    <tr><td>Rule of thumb</td><td>16 p(1−p) ÷ δ²</td><td>14,400</td></tr>
+    <tr><td>Duration</td><td>2n ÷ daily users, round up to whole weeks</td><td>13.4 → 14 days</td></tr>
+    <tr><td>CUPED</td><td>Y − θ(X − X̄), θ = cov(X,Y) ÷ var(X)</td><td>variance × 0.22</td></tr>
+    <tr><td>SRM</td><td>χ² = Σ (O − E)² ÷ E on arm counts</td><td>0.013, p 0.91</td></tr>
+    <tr><td>z-test</td><td>(p̂<sub>T</sub> − p̂<sub>C</sub>) ÷ √(p̂(1−p̂)(1/n<sub>T</sub> + 1/n<sub>C</sub>)), p̂ pooled</td><td>z 3.14, p 0.0017</td></tr>
+    <tr><td>CI for the difference</td><td>diff ± 1.96 √(p<sub>T</sub>(1−p<sub>T</sub>)/n<sub>T</sub> + p<sub>C</sub>(1−p<sub>C</sub>)/n<sub>C</sub>)</td><td>+0.41 to +1.79 pp</td></tr>
+    <tr><td>Family-wise error</td><td>1 − (1 − α)<sup>m</sup>; Bonferroni α ÷ m</td><td>4 arms: 18.5% → 0.0125</td></tr>
+    <tr><td>Impact</td><td>lift × users per year × value per conversion</td><td>$530k ($198k–$862k)</td></tr>
   </table>
-  <h3>When to use, when not</h3>
-  <div class="cards">
-    <div><b>Run an A/B test</b><p>A change you can show to some users and not others, enough traffic for a useful MDE, a metric that moves within weeks.</p><small>The default for product decisions</small></div>
-    <div><b>Don't</b><p>Too little traffic, changes that can't be hidden (brand, pricing PR), ethical or legal issues, tiny one-off decisions.</p><small>Use qualitative research, diff-in-diff</small></div>
-    <div><b>Change the design</b><p>Interference → cluster or switchback. Early looks needed → sequential. Many variants → correct α.</p><small>Each fixes one assumption</small></div>
-    <div><b>Report</b><p>Lift with CI, guardrails, value range, recommendation, holdout.</p><small>Never a bare p-value</small></div>
-  </div>
-  <div class="callout trap"><span class="label">Key traps</span>
-    <p>Skipping SRM; peeking; analysing at the wrong unit; no primary metric; "not significant" read as "no effect"; stopping mid-week; ignoring novelty and interference; absolute vs relative lift confusion; uncorrected multiple variants; trusting the winner's point estimate.</p>
-  </div>
-  <h3>Five rapid-fire checks</h3>
+  <h3>Reading the CI</h3>
   <table class="tbl">
-    <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td>Baseline 10%, MDE 1 pp, α 0.05, power 0.8: users per arm (rule of thumb)?</td><td>16 × 0.09/0.0001 = 14,400 (exact ≈ 14,750)</td></tr>
-    <tr><td>MDE halves. What happens to n?</td><td>×4 (57,756 per arm for 0.5 pp)</td></tr>
-    <tr><td>15,400 vs 15,380 users in a 50/50 test: SRM?</td><td>χ² 0.013, p 0.91: fine</td></tr>
-    <tr><td>1,707/15,380 vs 1,540/15,400: z and CI?</td><td>z 3.14, p 0.0017; CI +0.41 to +1.79 pp</td></tr>
-    <tr><td>Before/after correlation 0.88: CUPED variance factor?</td><td>1 − 0.88² ≈ 0.22</td></tr>
+    <tr><th>CI for the lift</th><th>Decision</th></tr>
+    <tr><td>Above 0, centre ≥ MDE</td><td>Ship</td></tr>
+    <tr><td>Above 0, entirely below MDE</td><td>Real but tiny: ship only if cheap</td></tr>
+    <tr><td>Spans 0, wide</td><td>Inconclusive (underpowered), not "no effect"</td></tr>
+    <tr><td>Spans 0, narrow (within ±MDE)</td><td>Confident null: kill</td></tr>
+    <tr><td>Entirely below 0</td><td>Kill, learn why</td></tr>
   </table>
+  <h3>Syntax</h3>
+  <div class="fx" data-lang="py">from scipy import stats
+from statsmodels.stats.power import NormalIndPower
+from statsmodels.stats.proportion import (proportion_effectsize, proportions_ztest,
+                                          confint_proportions_2indep)
+from statsmodels.stats.multitest import multipletests
 
-  <h2 id="sab-qa"><span class="num">16</span>Case Questions</h2>
+h = proportion_effectsize(0.11, 0.10)                          # effect size
+n = NormalIndPower().solve_power(h, alpha=0.05, power=0.8)     # users per arm
+stats.chisquare([15400, 15380])                                # SRM check
+proportions_ztest([1707, 1540], [15380, 15400])                # z, p
+confint_proportions_2indep(1707, 15380, 1540, 15400, compare="diff")   # CI
+stats.ttest_ind(y_t, y_c, equal_var=False)                     # Welch t (means)
+multipletests(pvals, method="holm")                            # or "bonferroni", "fdr_bh"</div>
+  <h3>Gotchas</h3>
+  <ul>
+    <li>SRM check before anything else; p &lt; 0.001 → stop and debug.</li>
+    <li>No peeking (daily looks: 5% → ~22% false alarms) unless the design is sequential.</li>
+    <li>Analyse at the randomisation unit (per-view analysis: 5% → 15% false alarms).</li>
+    <li>Halving the MDE needs 4× the users; run whole weeks.</li>
+    <li>"Not significant" ≠ "no effect"; read the CI width.</li>
+    <li>Say pp for absolute lift; 10% → 11% is +1 pp and +10% relative.</li>
+    <li>Correct for many variants or metrics; expect the winner's lift to shrink.</li>
+    <li>CUPED covariate must be measured before assignment.</li>
+    <li>Marketplaces and social features: cluster or switchback, analysed at that level.</li>
+  </ul>
+
+  <h2 id="sab-qa"><span class="num">14</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>Walk me through designing an A/B test for a new recommendation widget.</summary><div class="qa-body">Hypothesis (widget raises items bought per user). Primary metric: purchases or revenue per user; secondary: widget CTR; guardrails: latency, page errors, overall engagement. Unit: user. Sample size from baseline, MDE, α 0.05, power 0.8; duration in full weeks. Launch 50/50, check SRM, don't peek, analyse with a t-test/z-test and CI, check guardrails and novelty, decide against the MDE.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Estimate the sample size: baseline 10%, MDE +1 pp, α 0.05, power 0.8.</summary><div class="qa-body">Rule of thumb n ≈ 16·p(1−p)/δ² = 16 × 0.09 / 0.0001 = 14,400 per arm. The exact formula gives about 14,750. Halving the MDE to 0.5 pp would need about 4× as many (≈ 58k per arm).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Your test shows p = 0.03 after 3 days of a planned 14. The PM wants to ship. What do you say?</summary><div class="qa-body">Not yet. Stopping at the first significant peek inflates the false-positive rate (our simulation: 5% → 22%). Three days also misses weekly patterns and novelty effects. Finish the planned 14 days, or switch to a sequential design next time if early stopping matters.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Control has 50,000 users and treatment 48,500 in a 50/50 test. What now?</summary><div class="qa-body">SRM check: χ² p ≈ 2e-6, so the split is broken. Don't trust any metric. Look for causes: treatment crashes for some browsers, redirects losing users, bot filtering applied unevenly, logging differences. Fix and rerun.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Explain the p-value and CI of this test to a non-technical manager.</summary><div class="qa-body">"If the new checkout made no difference, a gap as large as 1.1 points would show up only about 2 times in 1,000 tests, so we're confident it's real. Our best estimate is +1.1 points, and the plausible range is +0.4 to +1.8 points, which is roughly $200k to $860k a year."</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>The result is significant but the lift is 0.1% and the CI is [0.02%, 0.18%]. Ship?</summary><div class="qa-body">Statistically real, practically small. Compare against the MDE and costs: if the feature adds maintenance, complexity or risk, probably not. If it's a free config change, maybe. Significance isn't the decision; business value is.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you reduce the sample size you need?</summary><div class="qa-body">Lower variance: CUPED (adjust for each user's pre-experiment metric; variance × (1 − ρ²)), stratification, trimming outliers. Use a more sensitive metric closer to the change. Accept a larger MDE. Avoid many arms. Bigger effect = smaller n (n ∝ 1/δ²).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Engagement jumped 8% in week 1 and is +1% in week 3. What's happening?</summary><div class="qa-body">Likely a novelty effect: curiosity wears off. Report the stabilised effect, check new vs returning users (new users have no novelty), and run longer if needed. The long-run lift (~1%) is what matters.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How would you A/B test a new surge-pricing algorithm at a ride-sharing company?</summary><div class="qa-body">User-level randomisation fails: riders and drivers share a market, so treatment changes control's supply (interference). Use switchback testing (alternate the whole city between algorithms in random time blocks) or randomise by city/region and analyse at that level.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you assign users to arms in a backend, consistently?</summary><div class="qa-body">Hash experiment name + user id (e.g. md5), take mod 100, and map bucket ranges to arms. It is deterministic (same user, same arm, no lookup table), evenly spread, and independent across experiments because the experiment name is in the key.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Conversion rose overall, but fell in both mobile and desktop. How?</summary><div class="qa-body">Simpson's paradox (Correlation note): the treatment's traffic mix shifted towards the higher-converting segment (e.g. more desktop users). Check SRM within segments; the mix shift may itself indicate a bug, since randomisation should balance segments.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>You track 20 metrics and one guardrail is "significantly" worse at p = 0.04. Panic?</summary><div class="qa-body">With 20 metrics, about one false alarm is expected at α 0.05. Check its size and plausibility, apply an FDR correction, and look for a mechanism. If it's a critical guardrail (payments), rerun or investigate before shipping.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>When should you NOT run an A/B test?</summary><div class="qa-body">Too little traffic for any useful MDE; changes that can't be hidden from control (brand redesign, pricing PR); ethical or legal issues; one-off decisions where the cost of being wrong is tiny. Alternatives: qualitative research, diff-in-diff, before/after with caution.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does an A/B test prove causation when a correlation can't?</summary><div class="qa-body">Correlation in observational data can come from confounders (motivation, payday, user type). Random assignment makes the arms alike on every variable, measured or not, so the only systematic difference is the change. The hypothesis test then only has to rule out luck.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: which pieces of Hypothesis Testing does each step reuse?</summary><div class="qa-body">Sample size = the power formula; SRM = χ² goodness of fit; the result = two-proportion z-test and CI; guardrails on means = Welch t; peeking and many variants = multiple testing; practical significance = reading the CI against the MDE.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks if you skip the power calculation and just "run it for a week"?</summary><div class="qa-body">One week at 2,200 users a day gives about 7,700 per arm, roughly 50% power for +1 pp: a coin flip whether a real +$530k/year improvement shows as significant. You also miss a full second weekly cycle and may bake in novelty. Size first, then run.</div></details>
-</main>`
+  <details class="qa"><summary><span class="qmark">Q</span>What is an A/B test, and why does it show causation when a correlation can't?</summary><div class="qa-body">An A/B test randomly assigns users, at the same time, to the current version (control) or a new version (treatment) and compares a pre-chosen metric. In observational data a correlation can come from confounders such as payday, motivation or user type. Random assignment makes the two groups alike on average on every variable, measured or not, so the only systematic difference is the change; the hypothesis test then only has to rule out luck.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Walk me through designing an A/B test for a new recommendation widget.</summary><div class="qa-body">State the hypothesis (the widget raises purchases per user, because it surfaces relevant items) and the MDE. Pick one primary metric (purchases or revenue per user), secondary metrics (widget click-through) and guardrails (latency, errors, overall engagement). Randomise by user with a hash, compute the sample size from baseline, MDE, α 0.05 and power 0.8, and run whole weeks. Then check SRM, analyse once with a z-test or t-test and CI, check guardrails and novelty, and decide by comparing the CI with the MDE.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between a primary metric and a guardrail metric?</summary><div class="qa-body">The primary metric (OEC) is the single number that decides whether the change wins; it should be sensitive within the test period and tied to business value. Guardrail metrics are numbers that must not get worse even if the primary improves, such as latency, crash rate, refunds or unsubscribes. A change that wins on the primary but breaks a guardrail is usually not shipped.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Estimate the sample size: baseline 10%, MDE +1 pp, α 0.05, power 0.8.</summary><div class="qa-body">The rule of thumb is n ≈ 16 × p(1 − p) ÷ δ² = 16 × 0.09 ÷ 0.0001 = 14,400 per arm; the exact formula gives about 14,750. With 2,200 eligible users a day that is about 13.4 days for both arms, rounded up to two full weeks.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What happens to the required sample size if you halve the MDE? If you want 90% power instead of 80%?</summary><div class="qa-body">n is proportional to 1 ÷ δ², so halving the MDE multiplies n by four (about 58,000 per arm for 0.5 pp). Raising power to 90% changes z<sub>1−β</sub> from 0.84 to 1.28, so (1.96 + 1.28)² ÷ (1.96 + 0.84)² ≈ 10.5 ÷ 7.85 ≈ 1.34, about a third more users.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain Type I and Type II errors and power in the context of an A/B test.</summary><div class="qa-body">A Type I error is shipping a change that does nothing because noise looked like a win; its rate is α (5%). A Type II error is missing a real improvement because the test said "not significant"; its rate is β. Power is 1 − β, the chance of detecting a true effect of size MDE; 80% is the usual target, and it is set through the sample size.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Your test shows p = 0.03 after 3 days of a planned 14. The PM wants to ship. What do you say?</summary><div class="qa-body">Not yet. Stopping at the first significant look inflates the false-positive rate; checking daily over 14 days pushes it from 5% to roughly 20%. Three days also misses weekly patterns and any novelty effect. Finish the planned run, and if early stopping matters for future tests, use a sequential design such as alpha-spending or always-valid p-values.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Control has 50,000 users and treatment 48,500 in a planned 50/50 test. What now?</summary><div class="qa-body">Run an SRM check: a chi-square test on the counts gives p ≈ 2 × 10⁻⁶, so the split is broken and no metric can be trusted. Look for the cause: treatment crashing on some browsers, a redirect losing users, uneven bot filtering, or logging that fires at different points. Fix it and rerun rather than reading the results.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain this test's p-value and confidence interval to a non-technical manager.</summary><div class="qa-body">"If the new checkout made no difference, a gap as large as 1.1 points would appear only about 2 times in 1,000 experiments, so we're confident the improvement is real. Our best estimate is +1.1 points of conversion, and the plausible range is +0.4 to +1.8 points, which is roughly $200k to $860k a year." Avoid saying the p-value is "the probability the result is due to chance".</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>The result is significant, but the lift is 0.1 pp with a CI of [0.02, 0.18] pp. Ship?</summary><div class="qa-body">It is statistically real but practically small. Compare it with the MDE and the costs: if the feature adds maintenance, complexity or risk, probably not; if it is a free configuration change, maybe. Statistical significance answers "is it non-zero?", not "is it worth it?".</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>The test came out "not significant". Can you conclude the feature has no effect?</summary><div class="qa-body">Only if the confidence interval is narrow and sits inside ±MDE, which rules out any effect worth having. If the interval is wide and spans zero, the test was underpowered and the honest answer is "we don't know": it may still contain a valuable lift. Absence of evidence is not evidence of absence.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How can you reduce the sample size an experiment needs?</summary><div class="qa-body">Reduce variance: CUPED (adjust for each user's pre-experiment metric, which multiplies variance by 1 − ρ²), stratification, or capping extreme values. Use a more sensitive metric closer to the change, such as checkout completion rather than monthly revenue. Accept a larger MDE, or test fewer variants so α need not be split.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>You randomised by user but computed click-through rate per page view. What's wrong?</summary><div class="qa-body">Page views from the same user are correlated, so treating them as independent rows overstates the amount of evidence; the standard error is too small and false positives rise (three times higher in a simulated A/A test). Analyse at the randomisation unit with one row per user, or use the delta method to get the correct variance for the ratio metric.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>You test four variants against control at α = 0.05 each. What's the problem and how do you fix it?</summary><div class="qa-body">The chance of at least one false winner is 1 − 0.95⁴ ≈ 18.5%, not 5%. Correct with Bonferroni (test each at 0.0125), Holm, or Dunnett's test, which is built for many-versus-one-control comparisons; this needs more users per arm. Also expect the best arm's lift to be overstated (winner's curse) and confirm it with a re-test or holdout.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between controlling the family-wise error rate and the false discovery rate?</summary><div class="qa-body">Family-wise error rate (Bonferroni, Holm) controls the chance of making even one false discovery, which suits a ship decision. False discovery rate (Benjamini–Hochberg) controls the expected share of discoveries that are false, which is less strict and suits screening many secondary metrics, where a few false leads are acceptable in exchange for more power.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Engagement rose 8% in week 1 but is only +1% in week 3. What's happening?</summary><div class="qa-body">Most likely a novelty effect: curiosity about the new feature wears off. Plot the lift by day, compare new users (who have no novelty) with returning users, and run until the curve flattens. Report the stable long-run lift, around 1%, not the week-1 number.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How would you A/B test a new surge-pricing algorithm at a ride-sharing company?</summary><div class="qa-body">User-level randomisation fails because riders and drivers share one market: treatment changes the supply control sees, violating SUTVA. Use switchback testing, alternating the whole city between algorithms in random time blocks, or randomise by city or region. Analyse at the level of the time block or city, accepting lower power because there are fewer units.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Conversion rose overall in treatment, but fell for both mobile and desktop users separately. How?</summary><div class="qa-body">This is Simpson's paradox: treatment's traffic mix shifted towards the segment that converts better (for example more desktop users), so the overall rate rose while each segment fell. Randomisation should balance segments, so a mix shift like this suggests a bug; check SRM within each segment before trusting anything.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is CUPED and when can it go wrong?</summary><div class="qa-body">CUPED adjusts each user's metric by subtracting θ(X − X̄), where X is the same metric measured before the experiment and θ is the regression slope; variance falls by a factor of 1 − ρ², so fewer users are needed. It stays unbiased only if X is measured before assignment; using an in-experiment covariate that the treatment can affect can remove or invent effect. It helps little for new users with no history.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When should you NOT run an A/B test?</summary><div class="qa-body">When traffic is too low to detect any useful effect in reasonable time; when the change cannot be hidden from the control group (a brand redesign or a public price change); when there are ethical or legal problems with withholding something; or when the decision is small and cheap to reverse. Alternatives include qualitative user research, difference-in-differences on observational data, or a careful before/after with its limitations stated.</div></details>
+</main>
+`
 });
