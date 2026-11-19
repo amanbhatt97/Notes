@@ -132,8 +132,8 @@ int main(int argc, char *argv[]) {
   <p>Compared with Python, two things stand out. Every variable has a declared type: <code>long</code> means "a whole number stored in 8 bytes", so the compiler knows exactly how much memory each value needs and which machine instructions to use for it. And there is a <code>main</code> function where the program starts. Now we compile it and run it:</p>
   <div class="fx" data-lang="text">$ gcc -O1 -o squares squares.c
 $ ls -l squares.c squares
--rwxr-xr-x 1 root root 16048 Nov 19 05:38 squares
--rw-r--r-- 1 root root   359 Nov 19 05:38 squares.c
+-rwxr-xr-x 1 root root 16048 Nov 19 05:39 squares
+-rw-r--r-- 1 root root   359 Nov 19 05:39 squares.c
 $ ./squares
 333332833333500000
 $ file squares | cut -d, -f1-2
@@ -292,13 +292,13 @@ garbage collector on: True</div>
   <p>Almost every program on a computer needs the same basic functions: printing, reading files, allocating memory, doing maths. If each executable carried its own private copy of all that code, every program would be bigger, the same code would be loaded into memory many times over, and fixing a security bug in that code would mean rebuilding every program on the machine. Operating systems solve this with shared libraries.</p>
   <p>A <strong>shared library</strong> is a file of compiled machine code that is not a program on its own but is loaded into programs when they start (or later, on demand), so that many programs can use one copy of it. On Linux these files end in <code>.so</code> (shared object), on Windows <code>.dll</code> (dynamic-link library), and on macOS <code>.dylib</code>. Joining a program to its shared libraries at start-up is called <strong>dynamic linking</strong>; copying the library code into the executable when it is built is <strong>static linking</strong>. Think of a public library compared with buying your own books: with dynamic linking, every program borrows the one shared copy, and when the library replaces a damaged book everyone gets the fixed version; with static linking, each program owns its own copy, which nobody can take away but which also never gets fixed. The tool <code>ldd</code> lists the shared libraries a program needs:</p>
   <div class="fx" data-lang="text">$ ldd squares
-	linux-vdso.so.1 (0x00007fe040ff6000)
-	libc.so.6 =&gt; /lib/x86_64-linux-gnu/libc.so.6 (0x00007fe040c00000)
-	/lib64/ld-linux-x86-64.so.2 (0x00007fe040ff8000)
+	linux-vdso.so.1 (0x00007f955f06e000)
+	libc.so.6 =&gt; /lib/x86_64-linux-gnu/libc.so.6 (0x00007f955ee00000)
+	/lib64/ld-linux-x86-64.so.2 (0x00007f955f070000)
 $ gcc -O1 -static -o squares_static squares.c
 $ ls -l squares squares_static
--rwxr-xr-x 1 root root  16048 Nov 19 05:38 squares
--rwxr-xr-x 1 root root 785352 Nov 19 05:38 squares_static
+-rwxr-xr-x 1 root root  16048 Nov 19 05:39 squares
+-rwxr-xr-x 1 root root 785352 Nov 19 05:39 squares_static
 $ ldd squares_static
 	not a dynamic executable</div>
   <p>Our 16 KB program needs three things at run time: <code>libc.so.6</code>, the C standard library, which contains <code>printf</code>; <code>ld-linux-x86-64.so.2</code>, the <strong>dynamic loader</strong>, the small program that finds and loads the shared libraries whenever <code>squares</code> starts; and <code>linux-vdso.so.1</code>, a tiny library the kernel provides itself to make a few system calls faster. The hexadecimal numbers are the memory addresses where each library was loaded in this run. Building the same program with <code>-static</code> copied the parts of libc it uses into the executable: it grew from 16 KB to 785 KB, and <code>ldd</code> confirms it no longer depends on any shared library. That is the trade-off: static programs are bigger but self-contained (Go programs are built this way by default, which makes them easy to drop into a minimal container), while dynamic ones are small and share fixes but break if the right library version is missing. The classic error <code>error while loading shared libraries: libxyz.so.1: cannot open shared object file</code> means exactly that: the program was built against a shared library that this machine does not have.</p>
@@ -352,10 +352,13 @@ def sum_squares(n):                          # pure Python loop
         total += i * i
     return total
 
-def timed(label, fn):
-    start = time.perf_counter()
-    result = fn()
-    ms = (time.perf_counter() - start) * 1000
+def timed(label, fn):                        # best of 5 runs, in milliseconds
+    times = []
+    for _ in range(5):
+        start = time.perf_counter()
+        result = fn()
+        times.append(time.perf_counter() - start)
+    ms = min(times) * 1000
     print(f"{label:34} {ms:8.2f} ms   result {int(result)}")
 
 timed("Python loop (interpreted)", lambda: sum_squares(N))
@@ -363,11 +366,11 @@ x = np.arange(N, dtype=np.int64)
 timed("NumPy vectorised (C inside)", lambda: (x * x).sum())
 timed("NumPy dot product (C inside)", lambda: x @ x)
 timed("compiled C program (+ start-up)", lambda: int(subprocess.run(["./squares", str(N)], capture_output=True, text=True).stdout))</div>
-  <div class="fx" data-lang="text">Python loop (interpreted)             56.35 ms   result 333332833333500000
-NumPy vectorised (C inside)            7.11 ms   result 333332833333500000
-NumPy dot product (C inside)           1.58 ms   result 333332833333500000
-compiled C program (+ start-up)        2.25 ms   result 333332833333500000</div>
-  <p>All four give the same answer. The pure-Python loop took about 50 milliseconds, because each of the million turns went through several bytecode instructions, type checks and the creation of new integer objects. The NumPy version, <code>(x * x).sum()</code>, took a few milliseconds, more than ten times faster, because the multiply and the sum each ran as one compiled loop over the whole array; this style of replacing a Python loop with whole-array operations is called <strong>vectorisation</strong>. The dot product <code>x @ x</code> computes the same sum in a single optimised routine without even building the intermediate array of squares, and it was around 50 times faster than the Python loop. The C program was in the same range as NumPy even though its time includes starting a whole new process. Exact numbers vary between runs and machines, but the size of the gap does not, which is the practical lesson for data work: keep the loops inside NumPy, pandas, Polars, PyTorch or Spark, and write Python only for the logic around them. This also explains why such libraries can use several cores from one Python thread: the GIL is released while their compiled code runs.</p>
+  <div class="fx" data-lang="text">Python loop (interpreted)             40.39 ms   result 333332833333500000
+NumPy vectorised (C inside)            1.04 ms   result 333332833333500000
+NumPy dot product (C inside)           0.64 ms   result 333332833333500000
+compiled C program (+ start-up)        1.57 ms   result 333332833333500000</div>
+  <p>All four give the same answer, and each time is the best of five runs. The pure-Python loop took nearly 40 milliseconds, because each of the million turns went through several bytecode instructions, type checks and the creation of new integer objects. The NumPy version, <code>(x * x).sum()</code>, took about 1 millisecond, more than 30 times faster, because the multiply and the sum each ran as one compiled loop over the whole array; this style of replacing a Python loop with whole-array operations is called <strong>vectorisation</strong>. The dot product <code>x @ x</code> computes the same sum in a single optimised OpenBLAS routine without even building the intermediate array of squares, and was as fast or faster again. The C program came out a little slower than NumPy only because its time includes starting a whole new process; the sum itself takes well under a millisecond. Exact numbers vary between runs and machines, but the size of the gap does not, which is the practical lesson for data work: keep the loops inside NumPy, pandas, Polars, PyTorch or Spark, and write Python only for the logic around them. This also explains why such libraries can use several cores from one Python thread: the GIL is released while their compiled code runs.</p>
 
   <h2 id="cfp-deps"><span class="num">10</span>Dependencies and "Works on My Machine"</h2>
   <p>Your report script runs perfectly on your laptop. A colleague runs it and gets an <code>ImportError</code>; the server runs it and the numbers come out slightly different; a Docker build fails with a compiler error while installing a package. Everyone has heard, or said, "but it works on my machine". The script is identical in each case. What differs is everything the script relies on.</p>
@@ -427,7 +430,7 @@ vec_s = time.perf_counter() - start
 
 print(f"iterrows loop : {loop_s * 1000:8.1f} ms  total {total}")
 print(f"vectorised    : {vec_s * 1000:8.1f} ms  total {total_vec}")</div>
-  <div class="fx" data-lang="text">iterrows loop :   1428.0 ms  total 68570179
+  <div class="fx" data-lang="text">iterrows loop :   1277.2 ms  total 68570179
 vectorised    :      1.1 ms  total 68570179</div>
   <p>Both versions compute the same total, but the row-by-row loop with <code>iterrows</code> took far longer than the single vectorised expression (the timings are approximate). The fix is to express the work as whole-column operations, such as arithmetic on columns, <code>np.where</code> for conditions and <code>groupby</code> for per-group totals, and to keep row loops for genuinely small data.</p>
   <p>A second mistake is not pinning dependencies. A <code>requirements.txt</code> containing just <code>pandas</code> and <code>scikit-learn</code> installs different versions on every machine and every month, and one day a major release changes behaviour, as the pandas example showed. Pin exact versions, or use a lock file, and upgrade deliberately, running your tests when you do. Closely related is installing packages into the system Python rather than a virtual environment, which leaves projects silently sharing, and fighting over, the same packages.</p>
@@ -462,7 +465,7 @@ vectorised    :      1.1 ms  total 68570179</div>
     <li>Data stored as raw numbers side by side, not as Python objects.</li>
     <li>Loops run in compiled C/Fortran shared libraries (OpenBLAS for linear algebra), not in the bytecode interpreter.</li>
     <li>The GIL is released inside, and BLAS routines use several cores.</li>
-    <li>On this VM: Python loop ≈ 50 ms, <code>(x*x).sum()</code> ≈ 4 ms, <code>x @ x</code> ≈ 1 ms for a million values (approximate).</li>
+    <li>On this VM (best of 5, approximate): Python loop ≈ 40 ms, <code>(x*x).sum()</code> ≈ 1 ms, <code>x @ x</code> ≈ 0.5–1 ms for a million values.</li>
   </ul>
   <h3>Commands</h3>
   <div class="fx" data-lang="py">import dis, sys, importlib.metadata as md
