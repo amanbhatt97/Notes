@@ -275,7 +275,7 @@ def read_table(table="fact_orders"):                  # all day-folders back as 
     df["order_date"] = df["order_date"].astype(str)   # folder name becomes a column
     return df.sort_values("order_id").reset_index(drop=True)</div>
   <p><code>load_overwrite</code> writes the day's file into a temporary folder ending in <code>.tmp</code>, and only when the file is completely written does it delete the old day-folder and rename the temporary one into its place. The reason is crashes. If the job wrote straight into the final folder and died half-way, readers would see a half-written day. With the write-then-swap pattern, readers see either the old complete day or the new complete day, never something in between. (Warehouses and table formats like Delta Lake and Iceberg give the same guarantee with transactions.) <code>read_table</code> reads every day-folder back as one DataFrame. Load 2 March and look at what landed on disk:</p>
-  <div class="fx" data-lang="py">import pandas as pd, pyarrow.parquet as pq
+  <div class="fx" data-lang="py">import os, pandas as pd, pyarrow.parquet as pq
 from biteful_etl import extract_orders, extract_restaurants, extract_deliveries, transform, load_overwrite
 
 ds = "2026-03-02"
@@ -303,7 +303,8 @@ delivery_minutes: int64
 2       103    Pune   520.0  2026-03-02</div>
   <p>There is one file in one day-folder. The schema printed from inside the file says <code>order_id: int64</code> and <code>amount: double</code>: the types travel with the data, whereas a CSV would hand back text that every reader must parse again. Reading with <code>columns=[...]</code> loaded only the columns asked for, and <code>order_date</code> came back as a column even though it is not stored in the file at all; it came from the folder name. Notice the size, too: about 5.8 KB for three rows is much bigger than a CSV would be, because every Parquet file carries a schema and statistics. That overhead pays off with millions of rows, and it is why thousands of tiny Parquet files are a well-known performance problem (see <a class="xref" data-note="de_spark">Spark</a>).</p>
   <p>Storing many days side by side brings a new rule: every partition of a table must have the same schema. The <code>astype("Int64")</code> line in the transform exists because this rule was broken while these notes were being written. On 2 March every order has a delivery time; on 4 March cancelled order 107 has none, and pandas turns an integer column with a gap into floating-point numbers. Here is what happens when two days are loaded without that line and Spark (the engine of the next note) reads the folder:</p>
-  <div class="fx" data-lang="py">from biteful_etl import extract_orders, extract_deliveries
+  <div class="fx" data-lang="py">import os, re
+from biteful_etl import extract_orders, extract_deliveries
 from pyspark.sql import SparkSession
 
 for ds in ["2026-03-02", "2026-03-04"]:          # load WITHOUT pinning the type
@@ -316,11 +317,11 @@ spark = SparkSession.builder.master("local[2]").getOrCreate()
 spark.sparkContext.setLogLevel("ERROR")
 try:
     spark.read.parquet("drift").select("order_id", "delivery_minutes").show()
-except Exception as e:
-    print([line.strip() for line in str(e).splitlines() if "Data type" in line][0])</div>
+except Exception as e:                           # print just the key sentence of Spark's error
+    print("Spark:", re.search(r"Data type mismatches[^.]*\\.[^.]*\\.", str(e)).group())</div>
   <div class="fx" data-lang="text">2026-03-02 [32, 41, 38] int64
 2026-03-04 [25.0, nan] float64
-: org.apache.spark.SparkException: [FAILED_READ_FILE.PARQUET_COLUMN_DATA_TYPE_MISMATCH] Encountered error while reading file file:///tmp/claude-0/-home-user-Notes/9194a449-83bf-5a50-8c23-8ca2c91926cd/scratchpad/e1/work/drift/order_date=2026-03-04/part-0.parquet. Data type mismatches when reading Parquet column [delivery_minutes]. Expected Spark type bigint, actual Parquet type DOUBLE. SQLSTATE: KD001</div>
+Spark: Data type mismatches when reading Parquet column [delivery_minutes]. Expected Spark type bigint, actual Parquet type DOUBLE.</div>
   <p>2 March was stored as <code>int64</code> and 4 March as <code>float64</code>, purely because of one missing value. pandas would read this folder without complaint, but Spark refused, because one column cannot be two types. This kind of slow, accidental change in a table's shape is called <strong>schema drift</strong>, and the fix is to set the output types explicitly in the transform, as ours now does.</p>
   <p>Teams usually keep the data in three <strong>layers</strong>, so that a bug in cleaning never destroys the original. <strong>Bronze</strong> holds the raw data exactly as extracted. <strong>Silver</strong> holds cleaned tables at a clear grain; our <code>fact_orders</code> table is silver. <strong>Gold</strong> holds business-level tables such as revenue per city per day. In the vocabulary of <a class="xref" data-note="sql_modeling">Data Modeling</a>, <code>fact_orders</code> is a <strong>fact table</strong> (one row per event, with measures like amount and minutes), and the cleaned restaurant sheet is a <strong>dimension</strong> (descriptive attributes of something the facts point at).</p>
 
@@ -849,10 +850,10 @@ biteful_daily()</div>
   <p>Read the top of the file first. <code>CronDataIntervalTimetable</code> in India's time zone gives "the run for day D starts after D ends", as in section 10. <code>catchup=False</code> stops Airflow from creating a run for every day since <code>start_date</code> the moment the DAG is deployed, and <code>max_active_runs=1</code> keeps runs from overlapping. <code>default_args</code> gives every task two retries with growing delays and calls <code>alert</code> when a task finally fails; <code>quality_check</code> overrides this with <code>retries=0</code>, because bad data will not fix itself. <code>ist_day</code> turns the data interval into Biteful's business day, avoiding the UTC <code>ds</code> trap. The <code>FileSensor</code> waits for the partner sheet to exist, checking every 30 seconds for up to an hour; <code>mode="reschedule"</code> makes it give back its worker slot between checks instead of occupying it while it sleeps. At the bottom, the last two lines wire the DAG: the sensor must finish before the restaurant extract, and the nested calls draw every other arrow.</p>
   <p><code>airflow dags test</code> runs one complete DAG run in a single process, without the scheduler, which makes it ideal for trying a DAG out. (The sensor uses Airflow's default file-system connection, provided here through the environment variable <code>AIRFLOW_CONN_FS_DEFAULT='fs://'</code>.) For a run at 3 March 00:00 India time, this timetable processes the day that just ended, 2 March:</p>
   <div class="fx" data-lang="text">$ airflow dags test biteful_daily 2026-03-03T00:00:00+05:30     # Airflow 3.1.8, log trimmed
+[DAG TEST] end task task_id=wait_for_sheet
 ds=2026-03-02  data_interval_start=2026-03-01 18:30:00+00:00  business day=2026-03-02
 Done. Returned value was: warehouse/bronze/orders_2026-03-02.parquet
 [DAG TEST] end task task_id=extract_orders
-[DAG TEST] end task task_id=wait_for_sheet
 Done. Returned value was: warehouse/bronze/deliveries_2026-03-02.parquet
 [DAG TEST] end task task_id=extract_deliveries
 Done. Returned value was: warehouse/bronze/restaurants.parquet
@@ -865,7 +866,7 @@ overwrote partition order_date=2026-03-02 with 3 rows
 Done. Returned value was: None
 [DAG TEST] end task task_id=load_fact
 DagRun Finished: logical_date=2026-03-02 18:30:00+00:00 state=success</div>
-  <p>The first line is printed by the <code>extract_orders</code> task and shows all three dates side by side: <code>ds</code> is 2026-03-02 here because this manually triggered run's logical date is 2 March 18:30 UTC; the data interval starts on 1 March at 18:30 UTC, which is 2 March 00:00 in India; and the business day computed by <code>ist_day</code> is 2026-03-02. The three extracts and the sensor ran in whatever order the executor picked, since nothing connects them. Each "Returned value" line is a value being stored as an XCom: three file paths, then a small dictionary from <code>transform</code> that <code>quality_check</code> passes on. Finally <code>load_fact</code> overwrote the 2 March partition with three rows and the DAG run finished in state success. It is the same result as our mini orchestrator, but now with a scheduler, a web UI and a permanent history of runs behind it.</p>
+  <p>The line starting <code>ds=</code> is printed by the <code>extract_orders</code> task and shows all three dates side by side: <code>ds</code> is 2026-03-02 here because this manually triggered run's logical date is 2 March 18:30 UTC; the data interval starts on 1 March at 18:30 UTC, which is 2 March 00:00 in India; and the business day computed by <code>ist_day</code> is 2026-03-02. The three extracts and the sensor ran in whatever order the executor picked, since nothing connects them. Each "Returned value" line is a value being stored as an XCom: three file paths, then a small dictionary from <code>transform</code> that <code>quality_check</code> passes on. Finally <code>load_fact</code> overwrote the 2 March partition with three rows and the DAG run finished in state success. It is the same result as our mini orchestrator, but now with a scheduler, a web UI and a permanent history of runs behind it.</p>
   <p>Two habits matter when writing Airflow DAGs. First, keep XComs small: passing a DataFrame through XCom bloats the metadata database and slows every task, so pass paths, table names and counts. Second, keep work inside tasks: the scheduler re-parses every DAG file every few seconds, so code at the top level of the file (an API call, a database query) runs far more often than you expect.</p>
   <p><strong>Prefect</strong> takes a lighter approach. A pipeline is just a Python function decorated with <code>@flow</code>, its steps are functions decorated with <code>@task</code>, and the order comes from normal function calls rather than a separate DAG object. Retries are an argument to the decorator. Here is Biteful's pipeline in Prefect, run with the API forced to fail once:</p>
   <div class="fx" data-lang="py">from prefect import flow, task
@@ -897,13 +898,13 @@ if __name__ == "__main__":
     open("state/fail_once", "w").close()          # the API will answer 503 once
     biteful_daily("2026-03-05")</div>
   <div class="fx" data-lang="text">$ python prefect_flow.py        # Prefect 3.9.3, log trimmed (timestamps removed)
-Flow run 'cobalt-mongoose' - Beginning flow run 'cobalt-mongoose' for flow 'biteful-daily'
-Task run 'extract-a5d' - Task run failed with exception: &lt;HTTPError 503: 'Service Unavailable'&gt; - Retry 1/2 will start 1 second(s) from now
-Task run 'extract-a5d' - Finished in state Completed()
-Task run 'transform-342' - Finished in state Completed()
-Task run 'check_and_load-c36' - Finished in state Completed()
-Flow run 'cobalt-mongoose' - loaded 2 orders for 2026-03-05
-Flow run 'cobalt-mongoose' - Finished in state Completed()</div>
+Flow run 'papaya-chimpanzee' - Beginning flow run 'papaya-chimpanzee' for flow 'biteful-daily'
+Task run 'extract-9a8' - Task run failed with exception: &lt;HTTPError 503: 'Service Unavailable'&gt; - Retry 1/2 will start 1 second(s) from now
+Task run 'extract-9a8' - Finished in state Completed()
+Task run 'transform-c19' - Finished in state Completed()
+Task run 'check_and_load-b6e' - Finished in state Completed()
+Flow run 'papaya-chimpanzee' - loaded 2 orders for 2026-03-05
+Flow run 'papaya-chimpanzee' - Finished in state Completed()</div>
   <p>The extract task hit the 503, Prefect scheduled "Retry 1/2" one second later, and the second attempt completed; the flow then loaded the two orders of 5 March. To record the run, Prefect started a temporary local server for the length of the script; in production you run a Prefect server (or use Prefect Cloud) and deploy flows with schedules.</p>
   <p>Airflow and Prefect are not the only choices. <strong>Dagster</strong> organises pipelines around <em>assets</em> (the tables and models a pipeline produces) and their lineage, with built-in partitions and backfills, and suits teams who think in terms of data products. <strong>Luigi</strong> is an older, simpler task runner that is mostly found in legacy stacks. Airflow is the default in most companies because of its huge library of operators and its managed versions (Amazon MWAA, Google Cloud Composer, Astronomer); Prefect appeals to small, Python-heavy teams because it needs so little boilerplate.</p>
 
@@ -951,11 +952,11 @@ nightly("2026-03-04")</div>
   <p>Night 1 published 3 March normally. Night 2 failed at the quality gate with no retries, because bad data will not fix itself in half a second, and the alert says exactly why. Most importantly, the 3 March partition still holds the good data from night 1: <code>load_overwrite</code> never ran, and even if it had crashed, it writes to a <code>.tmp</code> folder first. Night 3 retried twice, waiting 0.5 seconds and then 1 second, and then gave up and alerted with the underlying network error.</p>
   <p>Airflow does the same with real state tracking. Here is the Biteful DAG on a night when the sheet has lost Green Bowl, followed by the state of every task in that run:</p>
   <div class="fx" data-lang="text">$ airflow dags test biteful_daily 2026-03-04T00:00:00+05:30     # processes 3 March; log trimmed
+Done. Returned value was: warehouse/bronze/deliveries_2026-03-03.parquet
+[DAG TEST] end task task_id=extract_deliveries
 ds=2026-03-03  data_interval_start=2026-03-02 18:30:00+00:00  business day=2026-03-03
 Done. Returned value was: warehouse/bronze/orders_2026-03-03.parquet
 [DAG TEST] end task task_id=extract_orders
-Done. Returned value was: warehouse/bronze/deliveries_2026-03-03.parquet
-[DAG TEST] end task task_id=extract_deliveries
 [DAG TEST] end task task_id=wait_for_sheet
 Done. Returned value was: warehouse/bronze/restaurants.parquet
 [DAG TEST] end task task_id=extract_restaurants
