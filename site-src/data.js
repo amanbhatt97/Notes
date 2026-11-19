@@ -47,7 +47,18 @@ const CATEGORIES = [
       ]}
     ]}
   ] },
-  { key: "softeng", label: "Software Engineering", emoji: "\u2699\ufe0f", tag: "Foundation", blurb: "Git \u00b7 Linux \u00b7 Docker", hue: 28, topics: [
+  { key: "softeng", label: "Software Engineering", emoji: "\u2699\ufe0f", tag: "Foundation", blurb: "Computer fundamentals \u00b7 Git \u00b7 Linux \u00b7 Docker", hue: 28, topics: [
+    {"key": "grp_se_cf", "label": "Computer Fundamentals", "children": [
+      {"key": "cf_computer",     "label": "How a Computer Works"},
+      {"key": "cf_data",         "label": "How Data Is Stored as Bits"},
+      {"key": "cf_memory",       "label": "Memory: RAM, Cache, Stack & Heap"},
+      {"key": "cf_storage",      "label": "Storage: HDD, SSD & File Systems"},
+      {"key": "cf_os",           "label": "Operating Systems"},
+      {"key": "cf_programs",     "label": "From Code to a Running Program"},
+      {"key": "cf_networking",   "label": "Networking"},
+      {"key": "cf_architecture", "label": "Architecture & Scaling Basics"},
+      {"key": "cf_cloud",        "label": "Virtualization, Cloud & Performance"}
+    ]},
     {"key": "se_git", "label": "Git & GitHub"},
     {"key": "se_linux", "label": "Linux & Terminal"},
     {"key": "se_docker", "label": "Docker"}
