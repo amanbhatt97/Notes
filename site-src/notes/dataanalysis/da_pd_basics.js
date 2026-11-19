@@ -3,124 +3,42 @@ Object.assign(TOPIC_CONTENT, {
   "da_pd_basics": `<main>
 <h1>Series, DataFrames &amp; Selection</h1>
   <div class="where"><span>Data Analysis</span><span>Pandas</span><span>Series, DataFrames &amp; Selection</span></div>
-  <p class="lead">The first pandas note. It starts from a list of dicts, shows why a table object is needed, and builds it up one idea at a time: the Series (a column with labels), index alignment traced by hand, the DataFrame and its dtypes, reading CSV and Parquet (measured), the first look with <code>head</code>/<code>info</code>/<code>describe</code>, picking columns and rows with <code>[]</code>, <code>loc</code> and <code>iloc</code> (traced), boolean masks and <code>query</code>, why chained assignment never writes and what Copy-on-Write means, adding columns with <code>assign</code>, and why <code>apply</code> is slower than vectorised maths. The running example is the group's Biteful orders table (12 raw rows), with a generated 200,000-row version as "the same idea at scale". Run on pandas 3.0.5, Python 3.13.</p>
+  <p class="lead">Before you can answer any question with pandas, you need three everyday skills: getting your data into a DataFrame, finding out what is in it, and pointing at exactly the rows and columns you want. Selection sounds simple, but it is where most pandas confusion lives: square brackets mean different things in different places, <code>loc</code> and <code>iloc</code> disagree about where a slice ends, and an assignment that looks correct can silently change nothing. This note builds those skills one at a time: creating tables, inspecting them, selecting columns, selecting rows by label and by position, filtering by condition, adding, removing and sorting, and finally how Copy-on-Write decides whether an assignment reaches your table. The running example is the raw export of Biteful, a food-delivery company in Pune and Mumbai: 12 orders from 2 to 6 March 2026, complete with a duplicate row, inconsistent city names and a missing amount. If Series, the index and dtypes are new to you, read <a class="xref" data-note="da_pandas">How Pandas Works</a> first; every output here comes from a real run on pandas 3.1 with Python 3.13.</p>
 
-  <h2 id="pdb-fits" class="open"><span class="num">★</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 640 262" width="640">
-<defs><marker id="pdb-ga" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="100" y="6" width="440" height="36" rx="8" fill="none" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.5"/>
-<text x="320" y="22" text-anchor="middle" class="tm" font-size="10">came from</text>
-<text x="320" y="36" text-anchor="middle" font-size="11">Python Collections (dicts, lists) · Files · NumPy arrays</text>
-<line x1="320" y1="42" x2="320" y2="60" stroke="currentColor" marker-end="url(#pdb-ga)"/>
-<line x1="320" y1="102" x2="83" y2="130" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#pdb-ga)"/>
-<line x1="320" y1="102" x2="241" y2="130" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#pdb-ga)"/>
-<line x1="320" y1="102" x2="399" y2="130" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#pdb-ga)"/>
-<line x1="320" y1="102" x2="557" y2="130" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#pdb-ga)"/>
-<line x1="158" y1="152" x2="164" y2="152" stroke="currentColor" stroke-dasharray="3 3" marker-end="url(#pdb-ga)"/>
-<line x1="316" y1="152" x2="322" y2="152" stroke="currentColor" stroke-dasharray="3 3" marker-end="url(#pdb-ga)"/>
-<line x1="474" y1="152" x2="480" y2="152" stroke="currentColor" stroke-dasharray="3 3" marker-end="url(#pdb-ga)"/>
-<rect x="200" y="62" width="240" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="320" y="79" text-anchor="middle" font-size="12" font-weight="400">Pandas: the map</text>
-<text x="320" y="94" text-anchor="middle" class="tm" font-size="10">why each tool, in what order</text>
-<rect x="8" y="132" width="150" height="40" rx="8" class="fg sg" stroke-width="2.5"/>
-<text x="83" y="149" text-anchor="middle" font-size="12" font-weight="700">Basics &amp; Selection</text>
-<text x="83" y="164" text-anchor="middle" class="tg" font-size="9.5">YOU ARE HERE</text>
-<rect x="166" y="132" width="150" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="241" y="149" text-anchor="middle" font-size="12" font-weight="400">Cleaning</text>
-<text x="241" y="164" text-anchor="middle" class="tm" font-size="10">NaN · types · text</text>
-<rect x="324" y="132" width="150" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="399" y="149" text-anchor="middle" font-size="12" font-weight="400">GroupBy &amp; Merge</text>
-<text x="399" y="164" text-anchor="middle" class="tm" font-size="10">summarise · combine · reshape</text>
-<rect x="482" y="132" width="150" height="40" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="557" y="149" text-anchor="middle" font-size="12" font-weight="400">Time &amp; Speed</text>
-<text x="557" y="164" text-anchor="middle" class="tm" font-size="10">dates · windows · fast</text>
-<line x1="320" y1="172" x2="320" y2="208" stroke="currentColor" stroke-opacity="0.5" marker-end="url(#pdb-ga)"/>
-<rect x="40" y="210" width="560" height="44" rx="8" fill="none" stroke="currentColor" stroke-dasharray="4 4" stroke-opacity="0.5"/>
-<text x="320" y="227" text-anchor="middle" class="tm" font-size="10">leads to</text>
-<text x="320" y="245" text-anchor="middle" font-size="11">Visualisation · SQL joins &amp; windows · Feature Engineering · Time Series · Spark</text>
-</svg><figcaption>The Pandas group. Read the map first, then left to right: each note answers a question the one before could not. Dotted arrows show the reading order.</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: <a class="xref" data-note="da_pandas">Pandas: the map</a></b><span>The map placed this note on the first two steps of the chain: "a table of mixed columns" and "pick rows and columns". Before that, <a class="xref" data-note="py_dicts_sets">Dicts &amp; Sets</a> gave us records as dicts, <a class="xref" data-note="py_files">Files</a> gave us data as CSV text, and <a class="xref" data-note="da_numpy">NumPy</a> gave fast maths on arrays of one type. Left open: a fast table whose columns have different types and whose rows have names.</span></li>
-    <li><b>This note adds: the table itself, and how to point at parts of it</b><span>Series, index, DataFrame, dtypes, file reading, inspection, selection by label, position and condition, safe assignment, new columns, and the vectorised way of computing.</span></li>
-    <li><b>Leads to: <a class="xref" data-note="da_pd_cleaning">Cleaning &amp; Missing Data</a></b><span>By the end we can select anything, and selection itself shows that the raw table cannot be trusted: "Pune" misses " pune", the duplicate order counts twice, minutes are text. The next note fixes that.</span></li>
-  </ol>
-
-  <h2 id="pdb-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
-  <p>The whole note as one chain. Each concept answers the question above it; its weakness raises the next question. Numbers come from the running example.</p>
-  <ol class="story">
-    <li><b>A list of dicts</b><span>Q: how do we hold orders in plain Python? → Three dicts and a loop: Pune revenue 240 + 520 = 760. But every new question ("Mumbai?", "above ₹400?") needs another loop…</span></li>
-    <li><b>Series</b><span>Q: one column that is fast like NumPy and knows which value belongs to which row? → Values + an index of labels: <code>day2["Pizza Point"]</code> is 520, <code>day2 * 1.05</code> scales all at once. But what happens when two Series have different labels?</span></li>
-    <li><b>Index alignment</b><span>Q: Monday + Tuesday revenue per restaurant? → pandas matches labels, not positions: Biryani Bros 450 + 380 = 830, the others NaN unless <code>fill_value=0</code>. One column at a time is not a table…</span></li>
-    <li><b>DataFrame, dtypes, read_csv</b><span>Q: the whole export as one object? → <code>read_csv</code> gives 12 rows × 7 columns, Series sharing one index, one dtype per column (amount float64, minutes str). But 12 rows fit on screen; 200,000 do not…</span></li>
-    <li><b>head / info / describe</b><span>Q: what is in a table we cannot read line by line? → <code>info</code>: 11 of 12 amounts filled, minutes stored as text; <code>describe</code>: mean amount 385.5. And CSV threw away the date type when saved and re-read…</span></li>
-    <li><b>CSV vs Parquet</b><span>Q: which file format keeps types and loads fast? → Parquet: dates come back as dates, and two columns of 200,000 rows read ten or more times faster. Now: how do we ask for part of the table?</span></li>
-    <li><b>[ ] for columns</b><span>Q: one column, a few columns? → <code>orders["amount"]</code> (Series), <code>orders[["customer", "amount"]]</code> (DataFrame). But <code>orders[1:3]</code> suddenly means rows. We need an unambiguous way to point at rows…</span></li>
-    <li><b>loc vs iloc</b><span>Q: rows by name or by position? → <code>loc[102:104]</code> = 3 rows (labels, end included), <code>iloc[1:3]</code> = 2 rows (positions, end excluded); after sorting, <code>loc[103]</code> is still 520 but <code>iloc[0]</code> is 700. But we rarely know the labels; we know a condition…</span></li>
-    <li><b>Boolean masks &amp; query</b><span>Q: "orders above ₹400"? → a True/False per row: 102, 103, 109, 111. "Pune and above ₹200" misses order 104 (" pune"). Now we can find rows; can we change them?</span></li>
-    <li><b>Chained assignment &amp; Copy-on-Write</b><span>Q: set Pizza Point amounts to 0? → <code>df[mask]["amount"] = 0</code> changes nothing (it writes into a temporary copy); <code>df.loc[mask, "amount"] = 0</code> works. In pandas 3 every subset behaves as a copy. Changing values is fine; how do we add new columns cleanly?</span></li>
-    <li><b>assign</b><span>Q: a new column without editing the original? → <code>assign(total=amount + 30)</code> returns a new table: 240 → 270. And a rule with an if/else, Pune fee 30, Mumbai 40?</span></li>
-    <li><b>apply vs vectorised</b><span>Q: per-row logic? → <code>apply(axis=1)</code> calls Python once per row; <code>np.where</code> does it on whole columns. Same answers, a few hundred times faster on 100,000 rows. And order 104 got the Mumbai fee, because its city is " pune": the table needs cleaning (next note).</span></li>
-  </ol>
-
-  <h2 id="pdb-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="pdb-map"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">Series, DataFrames &amp; Selection</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">Series &amp; index</div>
+        <div class="mm-title">Getting data in and looking</div>
         <ul>
-          <li><b>Series</b> = 1-D values + index labels + name + dtype</li>
-          <li><code>s["label"]</code> vs <code>s.iloc[0]</code></li>
-          <li><b>Alignment</b>: <code>a + b</code> matches labels; unmatched → NaN</li>
-          <li><code>a.add(b, fill_value=0)</code>; NumPy adds by position</li>
-          <li>💡 a column of a register with line names</li>
+          <li><code>pd.DataFrame</code> from a list of dicts (rows) or dict of lists (columns)</li>
+          <li><code>read_csv(parse_dates=, index_col=, usecols=, dtype=)</code></li>
+          <li><code>shape</code>, <code>head</code>, <code>info</code>, <code>describe</code>, <code>value_counts</code></li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">DataFrame &amp; I/O</div>
+        <div class="mm-title">Selecting</div>
         <ul>
-          <li>Columns are Series sharing one index; one <b>dtype</b> per column</li>
-          <li><code>shape</code>, <code>columns</code>, <code>index</code>, <code>dtypes</code></li>
-          <li><code>read_csv(parse_dates=…, usecols=…, dtype=…)</code></li>
-          <li><b>Parquet</b>: columnar, compressed, keeps types; read only needed columns</li>
-          <li>⚠ CSV loses types: dates come back as text</li>
+          <li><code>df["c"]</code> Series · <code>df[["a","b"]]</code> DataFrame · <code>df[1:3]</code> rows</li>
+          <li><b>loc</b>: labels, slice end included · <b>iloc</b>: positions, end excluded</li>
+          <li>Masks with <code>&amp;</code> <code>|</code> <code>~</code> and brackets; <code>isin</code>, <code>between</code>, <code>query</code></li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">First look</div>
+        <div class="mm-title">Changing the table</div>
         <ul>
-          <li><code>head(n)</code>: first rows</li>
-          <li><code>info()</code>: dtype + non-null count per column</li>
-          <li><code>describe()</code>: count, mean, std, quartiles</li>
-          <li>Biteful: 11/12 amounts; minutes are <code>str</code></li>
-          <li>⚠ describe on raw data counts the duplicate</li>
+          <li><code>df["new"] = …</code>, <code>assign</code> (returns a new table)</li>
+          <li><code>drop</code>, <code>rename</code>, <code>pop</code>; <code>sort_values</code>, <code>nlargest</code>, <code>reset_index</code></li>
+          <li>Most methods return a new table: keep the result</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Selection</div>
+        <div class="mm-title">Copy-on-Write</div>
         <ul>
-          <li><code>df["c"]</code> Series · <code>df[["a","b"]]</code> DataFrame · <code>df[1:3]</code> rows!</li>
-          <li><b>loc</b>: labels, end included · <b>iloc</b>: positions, end excluded</li>
-          <li><b>Mask</b>: <code>df[(df.a &gt; 1) &amp; (df.b == "x")]</code></li>
-          <li><code>isin</code>, <code>between</code>, <code>query("a &gt; @x")</code></li>
-          <li>⚠ <code>and</code>/<code>or</code> fail on columns: use <code>&amp;</code> <code>|</code> <code>~</code> + brackets</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Changing data</div>
-        <ul>
-          <li>✔ <code>df.loc[mask, "c"] = v</code> (one step)</li>
-          <li>✘ <code>df[mask]["c"] = v</code>: chained, never writes</li>
-          <li><b>Copy-on-Write</b> (pandas 3): subsets behave as copies</li>
-          <li><code>assign(new=…)</code> returns a new frame; lambdas see earlier columns</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Computing</div>
-        <ul>
-          <li><b>Vectorised</b>: column maths, <code>np.where</code>, <code>map</code>, <code>.str</code></li>
-          <li><code>apply(axis=1)</code>: Python per row, a few hundred times slower here</li>
-          <li>⚠ dirty keys (" pune") give wrong rules silently</li>
+          <li>✔ <code>df.loc[mask, "c"] = v</code>: one step, changes df</li>
+          <li>✘ <code>df[mask]["c"] = v</code>: chained, never changes df</li>
+          <li>A subset in a variable is independent of its parent</li>
         </ul>
       </div>
     </div>
@@ -129,141 +47,49 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="pdb-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain</span></div></div>
-      <div class="rm-item rm-done" data-target="pdb-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Why a Table Object?</span><span class="rm-sub">From a list of dicts</span></div></div>
-      <div class="rm-item rm-done" data-target="pdb-series"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Series: a Labelled Array</span><span class="rm-sub">Values + index</span></div></div>
-      <div class="rm-item rm-done" data-target="pdb-align"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Index Alignment</span><span class="rm-sub">Adding two Series, traced</span></div></div>
-      <div class="rm-item rm-done" data-target="pdb-df"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">DataFrame &amp; dtypes</span><span class="rm-sub">Reading the CSV</span></div></div>
-      <div class="rm-item rm-done" data-target="pdb-look"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">First Look</span><span class="rm-sub">head, info, describe</span></div></div>
-      <div class="rm-item rm-done" data-target="pdb-files"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">CSV vs Parquet</span><span class="rm-sub">Measured at 200k rows</span></div></div>
-      <div class="rm-item rm-done" data-target="pdb-brackets"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">[ ] for Columns</span><span class="rm-sub">And its one surprise</span></div></div>
-      <div class="rm-item rm-done" data-target="pdb-loc"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">loc vs iloc</span><span class="rm-sub">Labels vs positions, traced</span></div></div>
-      <div class="rm-item rm-done" data-target="pdb-mask"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Boolean Masks &amp; query</span><span class="rm-sub">Rows by condition</span></div></div>
-      <div class="rm-item rm-done" data-target="pdb-cow"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Chained Assignment &amp; CoW</span><span class="rm-sub">Why your edit vanished</span></div></div>
-      <div class="rm-item rm-done" data-target="pdb-assign"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">New Columns with assign</span><span class="rm-sub">Without touching the original</span></div></div>
-      <div class="rm-item rm-done" data-target="pdb-apply"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">apply vs Vectorised</span><span class="rm-sub">Measured</span></div></div>
-      <div class="rm-item rm-done" data-target="pdb-connect"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One picture, one table</span></div></div>
-      <div class="rm-item rm-done" data-target="pdb-traps"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">And how to spot them</span></div></div>
-      <div class="rm-item rm-done" data-target="pdb-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note in 10 minutes</span></div></div>
-      <div class="rm-item rm-done" data-target="pdb-qa"><span class="rm-num">15</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
+      <div class="rm-item rm-done" data-target="pdb-create"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Creating a DataFrame</span><span class="rm-sub">from Python data and from a CSV file</span></div></div>
+      <div class="rm-item rm-done" data-target="pdb-look"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Inspecting a Table</span><span class="rm-sub">head, info, describe, value_counts</span></div></div>
+      <div class="rm-item rm-done" data-target="pdb-cols"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Selecting Columns</span><span class="rm-sub">square brackets and their one surprise</span></div></div>
+      <div class="rm-item rm-done" data-target="pdb-loc"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">loc and iloc</span><span class="rm-sub">rows by label or by position</span></div></div>
+      <div class="rm-item rm-done" data-target="pdb-mask"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Boolean Filtering</span><span class="rm-sub">rows that pass a test</span></div></div>
+      <div class="rm-item rm-done" data-target="pdb-query"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">query</span><span class="rm-sub">filters written as readable strings</span></div></div>
+      <div class="rm-item rm-done" data-target="pdb-add"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Adding Columns</span><span class="rm-sub">direct assignment and assign</span></div></div>
+      <div class="rm-item rm-done" data-target="pdb-drop"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Removing and Renaming</span><span class="rm-sub">drop, rename, pop</span></div></div>
+      <div class="rm-item rm-done" data-target="pdb-sort"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Sorting</span><span class="rm-sub">by values, by index, top n</span></div></div>
+      <div class="rm-item rm-done" data-target="pdb-cow"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Copy-on-Write When Assigning</span><span class="rm-sub">why an edit can vanish</span></div></div>
+      <div class="rm-item rm-done" data-target="pdb-traps"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">lost results, shifted labels, and/or</span></div></div>
+      <div class="rm-item rm-done" data-target="pdb-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">selectors table, syntax, gotchas</span></div></div>
+      <div class="rm-item rm-done" data-target="pdb-qa"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">loc vs iloc, filtering, CoW and more</span></div></div>
     </div>
   </div>
 
-  <h2 id="pdb-why"><span class="num">01</span>Why a Table Object?</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>From <a class="xref" data-note="py_dicts_sets">Dicts &amp; Sets</a> we can store each order as a dict and the day as a list of dicts. That holds the data. But how much work is it to <em>ask</em> something of it, and what happens when we ask ten different things?</p>
-  </div>
-  <h3>The running example</h3>
-  <p>Biteful delivers food in Pune and Mumbai. Its app exports one row per order: <code>order_id, customer, restaurant, city, order_time, amount, delivery_minutes</code>. The full export for 2–6 March 2026 has 12 rows and is shown in section 04. To start, take just the first three orders, as plain Python:</p>
-  <div class="fx" data-lang="py"># One evening of orders as plain Python: a list of dicts (see the Collections notes)
-rows = [
-    {"order_id": 101, "customer": "Asha", "city": "Pune",   "amount": 240},
-    {"order_id": 102, "customer": "Ben",  "city": "Mumbai", "amount": 450},
-    {"order_id": 103, "customer": "Chen", "city": "Pune",   "amount": 520},
-]
-pune_total = 0
-for r in rows:                      # a loop for every question we ask
-    if r["city"] == "Pune":
-        pune_total += r["amount"]
-print("Pune revenue:", pune_total)</div>
-  <div class="fx" data-lang="text">Pune revenue: 760</div>
-  <p>Correct: 240 + 520 = 760. But look at the cost. The question "Pune revenue" became five lines of loop. "Mumbai revenue", "orders above ₹400", "average per restaurant" would each be another loop, and on 200,000 orders each loop runs Python code 200,000 times.</p>
-  <h3>The same rows as a DataFrame</h3>
+  <h2 id="pdb-create"><span class="num">01</span>Creating a DataFrame</h2>
+  <p>A DataFrame is a table of columns that share one row index (<a class="xref" data-note="da_pandas">How Pandas Works</a> explains the structure). There are two everyday ways to make one: build it from data you already have in Python, or read it from a file. In Python, data usually arrives in one of two shapes. Records from an API or a database driver come as a list of dictionaries, one dictionary per row. Data you collected column by column comes as a dictionary of lists, one list per column. Pandas accepts both, and it is worth noticing which way round each one is:</p>
   <div class="fx" data-lang="py">import pandas as pd
-pd.set_option("display.width", 120, "display.max_columns", None)   # show every column
-df3 = pd.DataFrame(rows)            # the same list of dicts becomes a table
-print(df3)
-print("Pune revenue:", df3.loc[df3["city"] == "Pune", "amount"].sum())</div>
-  <div class="fx" data-lang="text">   order_id customer    city  amount
-0       101     Asha    Pune     240
-1       102      Ben  Mumbai     450
-2       103     Chen    Pune     520
-Pune revenue: 760</div>
-  <p><code>pd.DataFrame(rows)</code> turns the list of dicts into a table: the dict keys became column names, each dict became a row, and pandas numbered the rows 0, 1, 2 on the left (the <strong>index</strong>). The question is now one line: "rows where city is Pune, column amount, sum". The first line, <code>pd.set_option(...)</code>, only tells pandas to print every column instead of hiding some behind "…"; we use it in every note.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A list of dicts is a pile of index cards, one per order: easy to write, slow to total. A DataFrame is the same information copied into a ledger with ruled columns: you can run your finger down the "amount" column and add it up at once.</p></div>
-  <div class="callout def"><span class="label">Definition</span><p>A <strong>DataFrame</strong> is a two-dimensional labelled table: named columns, labelled rows (the <strong>index</strong>), and one data type per column. It can be built from a list of dicts (one dict per row), a dict of lists (one list per column), a NumPy array, or a file.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Converting to pandas and then looping over the rows anyway (<code>for i in range(len(df))</code>) throws away the benefit. The point of the table is to ask questions of whole columns.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Series.</b> The table is made of columns. What exactly is one column, and how does it know which value belongs to which row?</div>
+pd.set_option("display.width", 120, "display.max_columns", None)
 
-  <h2 id="pdb-series"><span class="num">02</span>Series: a Labelled Array</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>A NumPy array of amounts is fast, but <code>[240, 450, 520]</code> does not say which restaurant earned what. A dict says that, but cannot do maths on all values at once. Can one object do both?</p>
-  </div>
-  <p>Monday's revenue per restaurant, as a <strong>Series</strong>: the values, plus a label for each value.</p>
-  <div class="fx" data-lang="py">import pandas as pd
-day2 = pd.Series([240, 450, 520],
-                 index=["Dosa Hut", "Biryani Bros", "Pizza Point"],
-                 name="revenue")
-print(day2)
-print("by label   :", day2["Pizza Point"])
-print("by position:", day2.iloc[0])
-print("values     :", day2.to_numpy(), " index:", list(day2.index))
-print(day2 * 1.05)                  # maths on every value at once, labels kept</div>
-  <div class="fx" data-lang="text">Dosa Hut        240
-Biryani Bros    450
-Pizza Point     520
-Name: revenue, dtype: int64
-by label   : 520
-by position: 240
-values     : [240 450 520]  index: ['Dosa Hut', 'Biryani Bros', 'Pizza Point']
-Dosa Hut        252.0
-Biryani Bros    472.5
-Pizza Point     546.0
-Name: revenue, dtype: float64</div>
-  <p>Reading the output line by line:</p>
-  <ul>
-    <li>The printout has two columns: the labels (the <strong>index</strong>) on the left and the values on the right, then the Series' <code>name</code> and <code>dtype</code> (int64, whole numbers).</li>
-    <li><code>day2["Pizza Point"]</code> finds a value by its label, like a dict: 520.</li>
-    <li><code>day2.iloc[0]</code> finds it by position, like a list: the first value, 240. (<code>iloc</code> means "integer location"; section 08 explains it fully.)</li>
-    <li><code>to_numpy()</code> shows what is underneath: a plain NumPy array <code>[240 450 520]</code>. The labels live alongside it.</li>
-    <li><code>day2 * 1.05</code> multiplies every value at once, like NumPy, and the labels come along: Dosa Hut 252.0. The dtype became float64 because the results have decimals.</li>
-  </ul>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A Series is a row of labelled jars on a shelf: you can ask for "the Pizza Point jar" (label) or "the first jar" (position), and you can pour 5% more into every jar at once.</p></div>
-  <div class="callout def"><span class="label">Definition</span><p>A <strong>Series</strong> is a one-dimensional array of values of one dtype, together with an <strong>index</strong> (one label per value) and an optional <strong>name</strong>. Operations on a Series run on the whole array (vectorised) and keep the labels attached to their values.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p><code>s[0]</code> on a Series whose labels are words used to fall back to "position 0"; in pandas 3 square brackets on a Series mean <em>label</em> only, so <code>day2[0]</code> raises KeyError. Say what you mean: <code>s.iloc[0]</code> for position, <code>s.loc["Dosa Hut"]</code> or <code>s["Dosa Hut"]</code> for label.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Index Alignment.</b> Labels are nice for reading. But what do they do when we combine two Series that do not have the same labels?</div>
-
-  <h2 id="pdb-align"><span class="num">03</span>Index Alignment: Adding Two Series, Traced</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Monday's revenue covers Dosa Hut, Biryani Bros and Pizza Point. Tuesday's covers Biryani Bros and Green Bowl. "Revenue over both days, per restaurant" means adding them. With lists we would add position 0 to position 0. Is that right here?</p>
-  </div>
-  <h3>By hand first</h3>
-  <table class="tbl"><caption>Matching by label</caption>
-    <tr><th>label</th><th>day2</th><th>day3</th><th>day2 + day3</th><th>add(fill_value=0)</th></tr>
-    <tr><td>Biryani Bros</td><td>450</td><td>380</td><td>830</td><td>830</td></tr>
-    <tr><td>Dosa Hut</td><td>240</td><td>(none)</td><td>NaN</td><td>240 + 0 = 240</td></tr>
-    <tr><td>Green Bowl</td><td>(none)</td><td>310</td><td>NaN</td><td>0 + 310 = 310</td></tr>
-    <tr><td>Pizza Point</td><td>520</td><td>(none)</td><td>NaN</td><td>520 + 0 = 520</td></tr>
-  </table>
-  <p>Pandas first lines the two Series up by label (the union of both label sets, sorted), then adds the pairs. Where one side has no value, the honest answer is "unknown", which pandas writes as <strong>NaN</strong> (not a number). If you know that "missing" means "zero revenue that day", say so with <code>fill_value=0</code>.</p>
-  <div class="fx" data-lang="py">day3 = pd.Series([380, 310], index=["Biryani Bros", "Green Bowl"], name="revenue")
-print(day2 + day3)                  # matched by LABEL, not by position
-print(day2.add(day3, fill_value=0)) # treat a missing label as 0</div>
-  <div class="fx" data-lang="text">Biryani Bros    830.0
-Dosa Hut          NaN
-Green Bowl        NaN
-Pizza Point       NaN
-Name: revenue, dtype: float64
-Biryani Bros    830.0
-Dosa Hut        240.0
-Green Bowl      310.0
-Pizza Point     520.0
-Name: revenue, dtype: float64</div>
-  <p>Exactly the hand table. Now the same arrays without labels, in NumPy:</p>
-  <div class="fx" data-lang="py">import numpy as np
-print(np.array([240, 450, 520])[:2] + np.array([380, 310]))   # numpy: by position</div>
-  <div class="fx" data-lang="text">[620 760]</div>
-  <p>NumPy adds by position: 240 + 380 = 620 adds Dosa Hut's Monday to Biryani Bros' Tuesday, which is meaningless. (We had to cut the first array to 2 values just to make the shapes match.) Alignment is the reason pandas exists alongside NumPy: values can never be paired with the wrong row by accident.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Two class registers from two days. You add marks by matching roll numbers, not by matching "the 1st line of each sheet", because the sheets list different students.</p></div>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Index alignment</strong>: in any operation between two Series (or DataFrames), pandas first matches values by index label, producing the union of labels; labels present on only one side give NaN unless a <code>fill_value</code> is passed to the method form (<code>add</code>, <code>sub</code>, <code>mul</code>, <code>div</code>).</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Alignment also happens when you assign a Series as a new column: <code>df["x"] = other_series</code> matches <code>other_series</code>'s labels to <code>df</code>'s index, and rows with no matching label get NaN. If you sorted or filtered one of them and expected position-by-position copying, use <code>.to_numpy()</code> on purpose.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: DataFrame &amp; dtypes.</b> We can handle one column. The export has seven columns of different kinds. How do they become one object, and how does it come from a file?</div>
-
-  <h2 id="pdb-df"><span class="num">04</span>DataFrame Anatomy &amp; dtypes: Reading the CSV</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Real data arrives as a file (see <a class="xref" data-note="py_files">Files</a>): Biteful's app exports a CSV, text with commas. How do we turn the whole file into a table, and what does pandas decide about each column on the way in?</p>
-  </div>
-  <p>Here is the full export, saved as a real file and read back with <code>read_csv</code>. <code>parse_dates=["order_time"]</code> tells pandas that column holds date-times, not text:</p>
+by_rows = pd.DataFrame([                        # list of dicts: one dict per ROW
+    {"order_id": 101, "city": "Pune",   "amount": 240},
+    {"order_id": 102, "city": "Mumbai", "amount": 450},
+])
+by_cols = pd.DataFrame({                        # dict of lists: one list per COLUMN
+    "order_id": [101, 102],
+    "city":     ["Pune", "Mumbai"],
+    "amount":   [240, 450],
+})
+print(by_rows)
+print(by_rows.equals(by_cols))
+labelled = pd.DataFrame({"amount": [240, 450]}, index=[101, 102])   # choose the index
+print(labelled)</div>
+  <div class="fx" data-lang="text">   order_id    city  amount
+0       101    Pune     240
+1       102  Mumbai     450
+True
+     amount
+101     240
+102     450</div>
+  <p>The list of dicts was read row by row: each dictionary became one row, and its keys became the column names. The dict of lists was read column by column: each key became a column and its list became that column's values. The two tables are identical, as <code>equals</code> confirms. In both cases pandas invented an index of 0, 1, because we did not give one. The last example passes <code>index=[101, 102]</code>, so the rows are labelled by order number instead. Labels matter because <code>loc</code> selects by them (section 04), so when your data has a natural identifier, it is often the right index.</p>
+  <p>Real data usually arrives as a file. Biteful's app exports a CSV, plain text with one line per order and commas between the values. <code>pd.read_csv</code> reads it, guesses a dtype for each column, and builds the table. We save the export to disk first so it is a real file. <code>parse_dates=["order_time"]</code> tells pandas to turn that column into date-times rather than leaving it as text:</p>
   <div class="fx" data-lang="py">from pathlib import Path
 RAW = """order_id,customer,restaurant,city,order_time,amount,delivery_minutes
 101,Asha,Dosa Hut,Pune,2026-03-02 12:10,240,32
@@ -279,7 +105,7 @@ RAW = """order_id,customer,restaurant,city,order_time,amount,delivery_minutes
 110,Asha,Green Bowl,Pune,2026-03-06 13:00,290,unknown
 111,Dia,Pizza Point,Mumbai,2026-03-06 20:50,700,35
 """
-Path("orders_raw.csv").write_text(RAW)          # save it as a real file on disk
+Path("orders_raw.csv").write_text(RAW)                 # save it as a real file
 orders = pd.read_csv("orders_raw.csv", parse_dates=["order_time"])
 print(orders)</div>
   <div class="fx" data-lang="text">    order_id customer    restaurant    city          order_time  amount delivery_minutes
@@ -295,109 +121,27 @@ print(orders)</div>
 9        109    Farah  Biryani Bros  Mumbai 2026-03-05 20:05:00   600.0               52
 10       110     Asha    Green Bowl    Pune 2026-03-06 13:00:00   290.0          unknown
 11       111      Dia   Pizza Point  Mumbai 2026-03-06 20:50:00   700.0               35</div>
-  <p>Twelve rows, seven columns, and the mess is visible already: row 3's city is " pune" (with a space), row 4 is MUMBAI and is repeated as row 5, row 7's amount is NaN (blank in the file), row 8 has 240 minutes, row 10 says "unknown". Now the anatomy:</p>
-  <div class="fx" data-lang="py">print("shape  :", orders.shape)                 # (rows, columns)
-print("columns:", list(orders.columns))
-print("index  :", orders.index)
-print(orders.dtypes)
-print(type(orders["amount"]))                   # one column = a Series</div>
-  <div class="fx" data-lang="text">shape  : (12, 7)
-columns: ['order_id', 'customer', 'restaurant', 'city', 'order_time', 'amount', 'delivery_minutes']
-index  : RangeIndex(start=0, stop=12, step=1)
-order_id                     int64
-customer                       str
-restaurant                     str
-city                           str
-order_time          datetime64[us]
-amount                     float64
-delivery_minutes               str
-dtype: object
-&lt;class 'pandas.Series'&gt;</div>
-  <ul>
-    <li><code>shape</code> is (rows, columns): (12, 7).</li>
-    <li><code>index</code> is a <code>RangeIndex</code> 0 to 11: pandas numbered the rows because the file had no label column. Later we will make <code>order_id</code> the index.</li>
-    <li><code>dtypes</code> lists one type per column. <code>int64</code>: whole numbers. <code>str</code>: text (the pandas 3 string type). <code>datetime64[us]</code>: date-times to the microsecond, thanks to <code>parse_dates</code>. <code>float64</code>: decimals.</li>
-    <li>Two surprises. <code>amount</code> is float64 although every amount is whole: one blank became NaN, and NaN is a float, so the whole column became float. <code>delivery_minutes</code> is <code>str</code>: "28 min" and "unknown" are not numbers, so pandas kept the whole column as text and we cannot average it yet.</li>
-    <li>Each column, taken alone, is a Series: <code>type(orders["amount"])</code>.</li>
-  </ul>
-  <figure class="viz"><svg viewBox="0 0 640 170" width="640">
-    <rect x="10" y="34" width="50" height="104" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="14" y="26" class="tm" font-size="11">index</text>
-    <text x="28" y="58" font-size="11">0</text><text x="28" y="84" font-size="11">1</text><text x="28" y="110" font-size="11">2</text><text x="26" y="132" class="tm" font-size="11">…</text>
-    <rect x="60" y="34" width="90" height="104" class="fb sb"/><rect x="150" y="34" width="110" height="104" class="ft st"/><rect x="260" y="34" width="150" height="104" class="fg sg"/><rect x="410" y="34" width="80" height="104" class="fb sb"/>
-    <text x="66" y="26" font-size="11">order_id</text><text x="156" y="26" font-size="11">city</text><text x="266" y="26" font-size="11">order_time</text><text x="416" y="26" font-size="11">amount</text>
-    <text x="66" y="58" font-size="11">101</text><text x="156" y="58" font-size="11">Pune</text><text x="266" y="58" font-size="11">2026-03-02 12:10</text><text x="416" y="58" font-size="11">240.0</text>
-    <text x="66" y="84" font-size="11">102</text><text x="156" y="84" font-size="11">Mumbai</text><text x="266" y="84" font-size="11">2026-03-02 13:05</text><text x="416" y="84" font-size="11">450.0</text>
-    <text x="66" y="110" font-size="11">103</text><text x="156" y="110" font-size="11">Pune</text><text x="266" y="110" font-size="11">2026-03-02 20:30</text><text x="416" y="110" font-size="11">520.0</text>
-    <text x="66" y="156" class="tm" font-size="10">int64</text><text x="156" y="156" class="tm" font-size="10">str</text><text x="266" y="156" class="tm" font-size="10">datetime64[us]</text><text x="416" y="156" class="tm" font-size="10">float64</text>
-    <text x="505" y="66" font-size="11">each column</text><text x="505" y="82" font-size="11">= one Series</text><text x="505" y="98" font-size="11">= one typed array</text><text x="505" y="122" class="tm" font-size="10">all share the index</text>
-  </svg><figcaption>A DataFrame is a set of Series (columns) that share one index. Each column is one array with one dtype, which is what lets pandas do maths on a whole column at NumPy speed.</figcaption></figure>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A school marksheet: every column is one subject and holds one kind of thing (marks are numbers, names are text, dates are dates), and the roll numbers down the side are shared by every column.</p></div>
-  <div class="callout def"><span class="label">Definition</span><p>A <strong>DataFrame</strong> is a dict-like collection of Series (its columns) that share one row index and one column index. A <strong>dtype</strong> is the data type of one column; the common ones are <code>int64</code>, <code>float64</code>, <code>bool</code>, <code>str</code> (text; <code>object</code> in pandas before 3), <code>datetime64</code>, <code>timedelta64</code> and <code>category</code>. <code>read_csv</code> infers each column's dtype from its text; <code>parse_dates</code>, <code>dtype=</code> and <code>usecols=</code> let you control it.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>A single bad value changes a whole column's dtype: one blank makes an int column float; one "unknown" makes a number column text. Always check <code>dtypes</code> right after reading. A number column showing <code>str</code> is a cleaning job, not something to work around.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: First Look.</b> Twelve rows can be read by eye. A real export has 200,000. How do we find out what is in a table without reading it?</div>
-
-  <h2 id="pdb-look"><span class="num">05</span>First Look: head, info, describe</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We spotted the blank amount and the text minutes by reading every row. That does not scale. Which three commands tell us the shape, the types, the gaps and the ranges of any table in seconds?</p>
-  </div>
-  <h3>head: what does a row look like?</h3>
-  <div class="fx" data-lang="py">print(orders.head(3))</div>
-  <div class="fx" data-lang="text">   order_id customer    restaurant    city          order_time  amount delivery_minutes
-0       101     Asha      Dosa Hut    Pune 2026-03-02 12:10:00   240.0               32
-1       102      Ben  Biryani Bros  Mumbai 2026-03-02 13:05:00   450.0               41
-2       103     Chen   Pizza Point    Pune 2026-03-02 20:30:00   520.0               38</div>
-  <p><code>head(3)</code> shows the first 3 rows (default 5); <code>tail</code> shows the last. Use it to see real values and spot obvious format problems.</p>
-  <h3>info: types and gaps</h3>
-  <div class="fx" data-lang="py">orders.info()</div>
-  <div class="fx" data-lang="text">&lt;class 'pandas.DataFrame'&gt;
-RangeIndex: 12 entries, 0 to 11
-Data columns (total 7 columns):
- #   Column            Non-Null Count  Dtype         
----  ------            --------------  -----         
- 0   order_id          12 non-null     int64         
- 1   customer          12 non-null     str           
- 2   restaurant        12 non-null     str           
- 3   city              12 non-null     str           
- 4   order_time        12 non-null     datetime64[us]
- 5   amount            11 non-null     float64       
- 6   delivery_minutes  11 non-null     str           
-dtypes: datetime64[us](1), float64(1), int64(1), str(4)
-memory usage: 1.0 KB</div>
-  <p>One line per column: its position, name, how many cells are filled ("non-null") and its dtype. With 12 entries, <code>amount</code> 11 non-null means 1 blank; <code>delivery_minutes</code> 11 non-null and <code>str</code> means one blank plus text where numbers should be. The last line is the memory the table uses.</p>
-  <h3>describe: the numbers at a glance</h3>
-  <div class="fx" data-lang="py">print(orders.describe().round(1))</div>
-  <div class="fx" data-lang="text">       order_id           order_time  amount
-count      12.0                   12    11.0
-mean      105.9  2026-03-04 11:02:55   385.5
-min       101.0  2026-03-02 12:10:00   180.0
-25%       103.8  2026-03-03 09:03:45   275.0
-50%       105.5  2026-03-04 04:12:30   310.0
-75%       108.2  2026-03-05 18:46:15   485.0
-max       111.0  2026-03-06 20:50:00   700.0
-std         3.2                  NaN   163.4</div>
-  <p>For each numeric or date column: count of filled values, mean, min, the 25th/50th/75th percentiles (50% is the median) and max (the summary statistics of <a class="xref" data-note="st_descriptive">Descriptive Statistics</a>). Check one by hand: the 11 amounts are 240, 450, 520, 380, 310, 310, 180, 260, 600, 290, 700; their sum is 4240 and 4240 / 11 = 385.5. Notice that 310 appears twice, because the duplicate order is still in the table, and that <code>describe</code> silently skipped <code>delivery_minutes</code> because it is text. The <code>order_id</code> statistics are meaningless (an id is a label, not a quantity).</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A doctor's first check: look at the patient (head), read the chart of vital signs (info), take the measurements (describe). You do not operate before doing all three.</p></div>
-  <div class="callout def"><span class="label">Definition</span><p><code>head(n)</code>/<code>tail(n)</code>: first/last n rows. <code>info()</code>: index type, columns, non-null counts, dtypes, memory. <code>describe()</code>: count, mean, std, min, quartiles, max of numeric (and date) columns; <code>describe(include="all")</code> adds counts, unique values and the most frequent value for text columns.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Numbers from <code>describe</code> on raw data include duplicates and exclude blanks and text columns. The mean 385.5 is not Biteful's real average order (that is 393.0 after cleaning). Inspect to find problems, not to report results.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: CSV vs Parquet.</b> When we save this table and read it back, does it come back the same? And does the file format matter at 200,000 rows?</div>
-
-  <h2 id="pdb-files"><span class="num">06</span>CSV vs Parquet: Measured</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We told <code>read_csv</code> that <code>order_time</code> is a date. A CSV file cannot store that fact: it is just text. What happens on the next read, and is there a format that remembers types and reads faster?</p>
-  </div>
-  <div class="fx" data-lang="py">orders.to_csv("orders.csv", index=False)
-orders.to_parquet("orders.parquet")             # needs pyarrow installed
-back_csv = pd.read_csv("orders.csv")
-back_pq = pd.read_parquet("orders.parquet")
-print("from CSV    :", back_csv["order_time"].dtype)
-print("from Parquet:", back_pq["order_time"].dtype)</div>
-  <div class="fx" data-lang="text">from CSV    : str
-from Parquet: datetime64[us]</div>
-  <p>Saved as CSV and read back without <code>parse_dates</code>, <code>order_time</code> is text again: CSV kept the characters but lost the type. <strong>Parquet</strong> stores the schema (each column's name and type) inside the file, so it comes back as <code>datetime64</code>. (Parquet needs the <code>pyarrow</code> package installed.)</p>
-  <h3>The same idea at scale</h3>
-  <p>To measure, we need a bigger version of the same table. This generator makes n orders with the same seven columns (random customers, five restaurants, two cities, 90 days of times, gamma-distributed amounts). The other notes reuse it.</p>
+  <p>This is the running example. Twelve rows and seven columns, with the mess real exports have: row 3's city is " pune" with a leading space, row 4 says MUMBAI and is repeated exactly as row 5, row 7's amount is missing (NaN), and the delivery times include "28 min", "unknown" and an impossible 240. We will not fix any of that here; that is the job of <a class="xref" data-note="da_pd_cleaning">Cleaning &amp; Missing Data</a>. Selection is how we will find these problems.</p>
+  <p><code>read_csv</code> has many options, and a few are worth knowing from the start. <code>index_col</code> makes a column the index as the file is read; <code>usecols</code> loads only the columns you name, which saves memory and time on wide files; <code>dtype={...}</code> sets column types yourself instead of letting pandas guess; and <code>chunksize</code> reads a file too big for memory in pieces. Here we read just four columns with <code>order_id</code> as the index:</p>
+  <div class="fx" data-lang="py">by_id = pd.read_csv("orders_raw.csv", index_col="order_id",
+                    usecols=["order_id", "customer", "city", "amount"])
+print(by_id.head(3))
+print("index unique?", by_id.index.is_unique)
+print(by_id.loc[105])                                  # label 105 appears twice</div>
+  <div class="fx" data-lang="text">         customer    city  amount
+order_id                         
+101          Asha    Pune   240.0
+102           Ben  Mumbai   450.0
+103          Chen    Pune   520.0
+index unique? False
+         customer    city  amount
+order_id                         
+105           Dia  MUMBAI   310.0
+105           Dia  MUMBAI   310.0</div>
+  <p>The table now has <code>order_id</code> down the left as its index, and only the three other columns we asked for. But <code>is_unique</code> is <code>False</code>: pandas does not require index labels to be unique, and because order 105 appears twice in the file, label 105 does too. Asking for <code>loc[105]</code> therefore returns two rows, not one. A duplicated index is legal but makes selection ambiguous, which is why later sections drop the duplicate row before setting <code>order_id</code> as the index.</p>
+  <p>Finally, some examples in this group need a large table to measure speed. This helper generates a random table with the same seven columns as the Biteful export, any number of rows long; the other notes reuse it as "the same idea at scale":</p>
   <div class="fx" data-lang="py">def make_orders(n, seed=0):
-    """The same shape of table as our 12 rows, but n rows (the idea at scale)."""
+    """A random table with the same seven columns as the Biteful export, n rows long."""
     rng = np.random.default_rng(seed)
     rest = np.array(["Dosa Hut", "Biryani Bros", "Pizza Point", "Green Bowl", "Momo Magic"])
     return pd.DataFrame({
@@ -417,42 +161,63 @@ print(big.head(3))</div>
 0         1    17013  Biryani Bros    Pune 2026-01-09 08:57:00   120.0              20.0
 1         2    12740    Green Bowl    Pune 2026-02-08 21:14:00   330.0              36.0
 2         3    10223    Green Bowl  Mumbai 2026-01-14 09:21:00   600.0              34.0</div>
-  <div class="fx" data-lang="py">import os, time
-big.to_csv("big.csv", index=False); big.to_parquet("big.parquet")
-def ms(f, reps=3):
-    best = 1e9
-    for _ in range(reps):
-        t = time.perf_counter(); f(); best = min(best, time.perf_counter() - t)
-    return round(best * 1000)
-print("size MB   csv", round(os.path.getsize("big.csv") / 1e6, 1),
-      " parquet", round(os.path.getsize("big.parquet") / 1e6, 1))
-print("read all  csv", ms(lambda: pd.read_csv("big.csv", parse_dates=["order_time"])), "ms",
-      " parquet", ms(lambda: pd.read_parquet("big.parquet")), "ms")
-print("2 columns csv", ms(lambda: pd.read_csv("big.csv", usecols=["city", "amount"])), "ms",
-      " parquet", ms(lambda: pd.read_parquet("big.parquet", columns=["city", "amount"])), "ms")</div>
-  <div class="fx" data-lang="text">size MB   csv 12.0  parquet 3.2
-read all  csv 196 ms  parquet 21 ms
-2 columns csv 82 ms  parquet 7 ms</div>
-  <p>Timing code: <code>ms</code> runs a function a few times and keeps the fastest run in milliseconds (exact numbers vary by machine; the ratios are what matter; measured single-threaded). The Parquet file is several times smaller (compressed, column by column), reading everything is several times faster (no text to parse), and reading 2 of 7 columns is ten or more times faster, because Parquet stores each column separately and reads only those, while CSV must scan every character of every line.</p>
-  <table class="tbl"><caption>Which file format?</caption>
-    <tr><th>Format</th><th>Keeps dtypes</th><th>Read some columns</th><th>Human-readable</th><th>Use for</th></tr>
-    <tr><td>CSV</td><td>no (dates → text)</td><td>must parse all</td><td>yes</td><td>exchange with anyone, small files</td></tr>
-    <tr><td>Parquet</td><td>yes (schema stored)</td><td>reads only those columns</td><td>no</td><td>analysis, storage, data lakes, Spark</td></tr>
-    <tr><td>Excel</td><td>partly</td><td>slow</td><td>yes</td><td>people; <code>read_excel</code> needs openpyxl</td></tr>
-    <tr><td>JSON</td><td>partly</td><td>must parse all</td><td>yes</td><td>APIs, nested records (<code>read_json</code>, <code>json_normalize</code>)</td></tr>
-  </table>
-  <p>Useful <code>read_csv</code> options for big files: <code>usecols=[…]</code> (load only some columns), <code>dtype={…}</code> (set types instead of letting pandas guess), <code>chunksize=100_000</code> (read in pieces when the file does not fit in memory).</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A CSV is a register written as one long paragraph: to find the amounts you must read every line. Parquet is a register with each column on its own sheet, labelled with what it holds: to read amounts you pick up one sheet.</p></div>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Parquet</strong> is a binary, <strong>columnar</strong> (stored column by column), compressed file format that stores a schema with the data. <code>df.to_parquet(path)</code> / <code>pd.read_parquet(path, columns=[…])</code>.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Round-tripping through CSV silently changes types: dates become text, <code>category</code> becomes text, ids with leading zeros ("007") become numbers (7). If you must use CSV, re-apply <code>parse_dates</code> and <code>dtype</code> on every read.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: [ ] for Columns.</b> The table is loaded and understood. Now: how do we ask for just part of it?</div>
+  <p>The columns match the real export, but the values are random: customer ids from 1 to 20,000, one of five restaurants, Pune about 55% of the time, a time within the first 90 days of 2026, and amounts drawn from a skewed (gamma) distribution, like real order values. Creating a 200,000-row table this way takes a fraction of a second because every column is generated as a whole array, never row by row. Other formats (Parquet, Excel) and why CSV loses types are compared in <a class="xref" data-note="da_pandas">How Pandas Works</a>.</p>
 
-  <h2 id="pdb-brackets"><span class="num">07</span>[ ] for Columns, and Its One Surprise</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Most questions need only a few columns ("who ordered, and how much?"). What is the shortest way to pick columns, and what comes back?</p>
-  </div>
-  <div class="fx" data-lang="py">print(orders["amount"].head(3))                 # one name  -&gt; Series
-print(orders[["customer", "amount"]].head(3))   # a list    -&gt; DataFrame</div>
+  <h2 id="pdb-look"><span class="num">02</span>Inspecting a Table</h2>
+  <p>We spotted the problems in the export by reading all twelve rows, but a real export has hundreds of thousands, and nobody can read those by eye. Before asking any question of a new table, you need to know its size, what a row looks like, what type each column has, where the gaps are, and roughly what range the numbers cover. Pandas has a small set of commands for exactly that, and running them should become a reflex, like a doctor checking pulse, temperature and blood pressure before deciding anything.</p>
+  <div class="fx" data-lang="py">print(orders.shape)
+print(orders.head(3))
+orders.info()</div>
+  <div class="fx" data-lang="text">(12, 7)
+   order_id customer    restaurant    city          order_time  amount delivery_minutes
+0       101     Asha      Dosa Hut    Pune 2026-03-02 12:10:00   240.0               32
+1       102      Ben  Biryani Bros  Mumbai 2026-03-02 13:05:00   450.0               41
+2       103     Chen   Pizza Point    Pune 2026-03-02 20:30:00   520.0               38
+&lt;class 'pandas.DataFrame'&gt;
+RangeIndex: 12 entries, 0 to 11
+Data columns (total 7 columns):
+ #   Column            Non-Null Count  Dtype         
+---  ------            --------------  -----         
+ 0   order_id          12 non-null     int64         
+ 1   customer          12 non-null     str           
+ 2   restaurant        12 non-null     str           
+ 3   city              12 non-null     str           
+ 4   order_time        12 non-null     datetime64[us]
+ 5   amount            11 non-null     float64       
+ 6   delivery_minutes  11 non-null     str           
+dtypes: datetime64[us](1), float64(1), int64(1), str(4)
+memory usage: 1.0 KB</div>
+  <p><code>shape</code> gives (rows, columns): 12 by 7. <code>head(3)</code> prints the first three rows (five by default; <code>tail</code> prints the last ones), which is how you see what real values look like. <code>info()</code> is the most useful of all: one line per column with its position, its name, how many cells are filled ("non-null") and its dtype, then the memory used. Reading it against the 12 entries tells us a lot without looking at any data: <code>amount</code> has 11 non-null values, so one is missing, and it is <code>float64</code> because of that gap. <code>delivery_minutes</code> also has a gap, and its dtype is <code>str</code>, text, which means some values are not numbers and the column cannot be averaged yet. A number column showing <code>str</code> is always a cleaning job.</p>
+  <div class="fx" data-lang="py">print(orders.describe().round(1))</div>
+  <div class="fx" data-lang="text">       order_id           order_time  amount
+count      12.0                   12    11.0
+mean      105.9  2026-03-04 11:02:55   385.5
+min       101.0  2026-03-02 12:10:00   180.0
+25%       103.8  2026-03-03 09:03:45   275.0
+50%       105.5  2026-03-04 04:12:30   310.0
+75%       108.2  2026-03-05 18:46:15   485.0
+max       111.0  2026-03-06 20:50:00   700.0
+std         3.2                  NaN   163.4</div>
+  <p><code>describe()</code> summarises the numeric and date columns: the count of filled values, the mean, the minimum, the 25th, 50th and 75th percentiles (the 50% row is the median), the maximum and the standard deviation (these statistics are explained in <a class="xref" data-note="st_descriptive">Descriptive Statistics</a>). It is worth checking one by hand: the 11 known amounts are 240, 450, 520, 380, 310, 310, 180, 260, 600, 290 and 700, which add to 4240, and 4240 / 11 = 385.5, the mean shown. But 310 appears twice because the duplicate order is still in the table, so this is not Biteful's true average order. <code>describe</code> also silently left out <code>delivery_minutes</code>, because it is text, and it computed statistics for <code>order_id</code>, which are meaningless since an id is a label, not a quantity. Inspection is for finding problems, not for reporting results.</p>
+  <p>For text columns the best inspection tool is <code>value_counts()</code>, which counts how often each distinct value appears:</p>
+  <div class="fx" data-lang="py">print(orders["city"].value_counts())
+print("distinct restaurants:", orders["restaurant"].nunique())
+print("duplicated rows     :", orders.duplicated().sum())</div>
+  <div class="fx" data-lang="text">city
+Pune      5
+Mumbai    4
+MUMBAI    2
+ pune     1
+Name: count, dtype: int64
+distinct restaurants: 5
+duplicated rows     : 1</div>
+  <p>This one line exposes the city problem completely. The column should have two values, but it has four spellings: "Pune" five times, "Mumbai" four times, "MUMBAI" twice (the duplicated order), and " pune" once. Any filter or total on <code>city == "Pune"</code> will miss that last order. <code>nunique()</code> counts distinct values (five restaurants, as expected), and <code>duplicated().sum()</code> counts rows that are exact copies of an earlier row: one. Three short commands have found three of the cleaning problems.</p>
+
+  <h2 id="pdb-cols"><span class="num">03</span>Selecting Columns</h2>
+  <p>Most questions only need a few of a table's columns: "who ordered, and how much?" needs two of seven. The shortest way to pick columns is square brackets after the table's name, and what comes back depends on what you put inside:</p>
+  <div class="fx" data-lang="py">print(orders["amount"].head(3))                  # one name  -&gt; Series
+print(orders[["customer", "amount"]].head(3))    # a list    -&gt; DataFrame
+print(orders[1:3])                               # a slice   -&gt; ROWS by position!</div>
   <div class="fx" data-lang="text">0    240.0
 1    450.0
 2    520.0
@@ -460,27 +225,30 @@ Name: amount, dtype: float64
   customer  amount
 0     Asha   240.0
 1      Ben   450.0
-2     Chen   520.0</div>
-  <p>One column name in brackets returns that column as a <strong>Series</strong> (one-dimensional, with a name). A <em>list</em> of names (note the double brackets: outer for "select", inner for the Python list) returns a smaller <strong>DataFrame</strong>. Attribute access <code>orders.amount</code> also works for simple names, but not for names with spaces or names that clash with methods (<code>orders.size</code> is the number of cells, not a column), so this note uses brackets.</p>
-  <div class="fx" data-lang="py">print(orders[1:3])                              # a slice inside [] means ROWS (by position)</div>
-  <div class="fx" data-lang="text">   order_id customer    restaurant    city          order_time  amount delivery_minutes
+2     Chen   520.0
+   order_id customer    restaurant    city          order_time  amount delivery_minutes
 1       102      Ben  Biryani Bros  Mumbai 2026-03-02 13:05:00   450.0               41
 2       103     Chen   Pizza Point    Pune 2026-03-02 20:30:00   520.0               38</div>
-  <p>The surprise: a <em>slice</em> inside plain brackets selects <strong>rows</strong> by position, not columns. <code>orders[1:3]</code> gives rows 1 and 2. This double meaning of <code>[]</code> (column names or row slices or, as we will see, masks) is why pandas also has two explicit selectors.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Asking a librarian for "History" gets you that shelf; asking for "History and Maths" gets you a trolley with two shelves on it. Asking for "1 to 3" gets you rows of books, not shelves, which is confusing; hence the explicit forms next.</p></div>
-  <div class="callout def"><span class="label">Definition</span><p><code>df["c"]</code> → Series; <code>df[["a", "b"]]</code> → DataFrame with those columns in that order; <code>df[i:j]</code> → rows i to j−1 by position; <code>df[bool_series]</code> → rows where True (section 09).</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p><code>df["a", "b"]</code> (single brackets, two names) looks for one column literally named <code>("a", "b")</code> and raises KeyError. Two columns need a list: <code>df[["a", "b"]]</code>.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: loc vs iloc.</b> Rows deserve an unambiguous selector. Should we point at a row by its name (label) or by where it sits (position)?</div>
+  <p>One column name in brackets returns that column as a <strong>Series</strong>: one-dimensional, printed with its index and with its name and dtype underneath. A <em>list</em> of names returns a smaller <strong>DataFrame</strong> with just those columns in the order you listed them. The double brackets in <code>orders[["customer", "amount"]]</code> are not special syntax: the outer pair means "select", and the inner pair is an ordinary Python list. Asking for a list of one, <code>orders[["amount"]]</code>, gives a one-column DataFrame rather than a Series, which matters when a later step expects a table.</p>
+  <p>The third line is the surprise. A <em>slice</em> inside plain brackets selects <strong>rows</strong>, by position, not columns: <code>orders[1:3]</code> returns rows 1 and 2. And, as section 05 shows, a True/False Series inside brackets also selects rows. So plain <code>[]</code> means three different things depending on what you give it: a name or list of names picks columns, a slice picks rows by position, and a boolean Series picks rows by condition. That flexibility is convenient for quick work, but it is exactly why pandas also offers the two explicit selectors in the next section, which always mean the same thing.</p>
+  <div class="fx" data-lang="py">print(orders.amount.sum())                       # attribute access works...
+print(orders.size)                               # ...but this is a method, not a column
+try:
+    orders["customer", "amount"]                 # forgot the inner list
+except KeyError as e:
+    print("KeyError:", e)</div>
+  <div class="fx" data-lang="text">4240.0
+84
+KeyError: ('customer', 'amount')</div>
+  <p>You can also reach a column as an attribute, <code>orders.amount</code>, and it works for simple names: the sum of the known amounts is 4240. But it fails for names with spaces or other symbols, and it is ambiguous when a column name clashes with a DataFrame method or property. <code>orders.size</code> is not a column called "size" but the number of cells in the table, 12 × 7 = 84; a column named <code>size</code> could only be reached with brackets. Attribute access also cannot create a new column. Brackets always work, so this note uses them. The last line shows a classic slip: <code>orders["customer", "amount"]</code>, with single brackets and two names, asks for one column whose name is the pair <code>("customer", "amount")</code>, which does not exist, so it raises <code>KeyError</code>. Two columns need the inner list.</p>
 
-  <h2 id="pdb-loc"><span class="num">08</span>loc vs iloc, Traced</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>"Show me order 103" is a question about a label. "Show me the top row" is a question about a position. In a fresh table labels 0, 1, 2 equal positions 0, 1, 2, so the difference is invisible. When does it matter, and which tool asks which question?</p>
-  </div>
-  <p>First, make the index meaningful: drop the duplicate row (so each order id appears once; the Cleaning note explains this properly) and use <code>order_id</code> as the index. Then ask the same thing two ways:</p>
-  <div class="fx" data-lang="py">o = orders.drop_duplicates().set_index("order_id")   # labels = order ids (duplicate dropped first)
-print(o.loc[103, "customer"], "|", o.iloc[2]["customer"])
-print(o.loc[102:104, ["customer", "amount"]])     # labels 102..104, end INCLUDED
-print(o.iloc[1:3, [0, 4]])                        # positions 1, 2, end EXCLUDED</div>
+  <h2 id="pdb-loc"><span class="num">04</span>loc and iloc</h2>
+  <p>To select rows unambiguously, you have to say what kind of address you are giving. "Show me order 103" is a question about a <em>label</em>: the row's name, whatever position it is in. "Show me the top row" is a question about a <em>position</em>: whatever row happens to be first. Pandas has one selector for each. <strong><code>loc</code></strong> selects by label, and <strong><code>iloc</code></strong> ("integer location") selects by position, counting from 0 like a Python list. Think of seats on a train: <code>loc</code> is the seat number printed on your ticket, which stays with that seat wherever the coach ends up in the train; <code>iloc</code> is "the third seat from the door", which points somewhere else as soon as the coaches are rearranged.</p>
+  <p>Both take the same form: <code>df.loc[rows, columns]</code> and <code>df.iloc[rows, columns]</code>, with the column part optional. Each part can be a single item, a list or a slice. In a freshly read table the labels are 0, 1, 2 and so are the positions, so the difference is invisible. To make it visible, we drop the duplicate row (so every order id is unique) and make <code>order_id</code> the index:</p>
+  <div class="fx" data-lang="py">o = orders.drop_duplicates().set_index("order_id")   # each order once, labelled by id
+print(o.loc[103, "customer"], "|", o.iloc[2, 0])    # one cell, by label and by position
+print(o.loc[102:104, ["customer", "amount"]])       # labels 102..104, end INCLUDED
+print(o.iloc[1:3, [0, 4]])                          # positions 1, 2, end EXCLUDED</div>
   <div class="fx" data-lang="text">Chen | Chen
          customer  amount
 order_id                 
@@ -491,38 +259,34 @@ order_id
 order_id                 
 102           Ben   450.0
 103          Chen   520.0</div>
-  <table class="tbl"><caption>Tracing the two slices</caption>
-    <tr><th>position</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>…</th></tr>
-    <tr><td>label (order_id)</td><td>101</td><td>102</td><td>103</td><td>104</td><td>105</td><td>…</td></tr>
-    <tr><td><code>loc[102:104]</code></td><td></td><td>✔</td><td>✔</td><td>✔ (end included)</td><td></td><td></td></tr>
-    <tr><td><code>iloc[1:3]</code></td><td></td><td>✔</td><td>✔</td><td>✘ (end excluded)</td><td></td><td></td></tr>
-  </table>
-  <ul>
-    <li><code>o.loc[103, "customer"]</code>: row <em>labelled</em> 103, column named customer → Chen. <code>o.iloc[2]</code>: the row at <em>position</em> 2 (the third) → also Chen, because nothing has moved yet.</li>
-    <li><code>loc[102:104, [...]]</code> slices by label and <strong>includes</strong> the end label: 102, 103, 104 (3 rows). Labels have no "one past the end", so inclusive is the only sensible rule.</li>
-    <li><code>iloc[1:3, [0, 4]]</code> slices by position like a Python list, <strong>excluding</strong> the end: positions 1 and 2 (2 rows); columns at positions 0 and 4 (customer and amount, since order_id is now the index).</li>
-  </ul>
-  <h3>When labels and positions part ways</h3>
-  <div class="fx" data-lang="py">s = o.sort_values("amount", ascending=False)
-print(s[["customer", "amount"]].head(3))
-print("loc[103] -&gt;", s.loc[103, "amount"], "  iloc[0] -&gt;", s.iloc[0]["amount"])</div>
+  <p>The first line asks for the same cell two ways. <code>o.loc[103, "customer"]</code> means "the row labelled 103, the column named customer". <code>o.iloc[2, 0]</code> means "the row at position 2 (the third row), the column at position 0 (the first column, now that <code>order_id</code> has become the index)". Both give Chen, because nothing has moved yet.</p>
+  <p>The two slices show the rule that trips everybody up. <code>o.loc[102:104]</code> slices by label and <strong>includes</strong> the end label, returning orders 102, 103 and 104: three rows. <code>o.iloc[1:3]</code> slices by position like a Python list and <strong>excludes</strong> the end, returning positions 1 and 2: two rows. The difference is deliberate. Positions are numbers, and "up to but not including 3" is the standard Python convention. Labels are names, and there is no sensible "label just before 104" to stop at (the labels could be words, or dates), so the only rule that makes sense for labels is "from this one to that one, both included". The column part follows the same rules: <code>["customer", "amount"]</code> is a list of names for <code>loc</code>, and <code>[0, 4]</code> a list of positions for <code>iloc</code>.</p>
+  <p>Labels and positions part ways as soon as the rows are reordered or filtered:</p>
+  <div class="fx" data-lang="py">by_amount = o.sort_values("amount", ascending=False)
+print(by_amount[["customer", "amount"]].head(3))
+print("loc[103] -&gt;", by_amount.loc[103, "amount"], "| iloc[0] -&gt;", by_amount.iloc[0]["amount"])</div>
   <div class="fx" data-lang="text">         customer  amount
 order_id                 
 111           Dia   700.0
 109         Farah   600.0
 103          Chen   520.0
-loc[103] -&gt; 520.0   iloc[0] -&gt; 700.0</div>
-  <p>After sorting by amount, the most expensive order (111) sits at position 0. <code>loc[103]</code> still finds order 103 (520), wherever it moved; <code>iloc[0]</code> now gives order 111's 700. Filtering has the same effect: labels stay with their rows, positions are recounted.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>In a train, <code>loc</code> is the seat number printed on your ticket; <code>iloc</code> is "the third seat from the door". If passengers change coaches the printed numbers stay with the seats, but "third from the door" now points somewhere else.</p></div>
-  <div class="callout def"><span class="label">Definition</span><p><code>df.loc[rows, cols]</code> selects by <strong>label</strong>: single labels, lists of labels, label slices (end included) or boolean masks. <code>df.iloc[rows, cols]</code> selects by integer <strong>position</strong>: single positions, lists, slices (end excluded). Both take a row part and an optional column part separated by a comma.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>On the default RangeIndex <code>df.loc[0:2]</code> returns 3 rows and <code>df.iloc[0:2]</code> returns 2. Code that "worked" on a fresh table breaks after a sort or filter if it used the wrong one. Decide: do I mean <em>this order</em> (loc) or <em>the n-th row</em> (iloc)?</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Boolean Masks.</b> We rarely know which labels we want. We know a condition: "orders above ₹400", "Pune orders". How do we select by condition?</div>
+loc[103] -&gt; 520.0 | iloc[0] -&gt; 700.0</div>
+  <p>After sorting by amount from highest to lowest, order 111 (₹700) sits at position 0. <code>loc[103]</code> still finds order 103 and its ₹520, because the label travelled with its row; <code>iloc[0]</code> now gives order 111's ₹700. Filtering has the same effect: kept rows keep their labels, and positions are recounted from 0. So choose by meaning. If you mean a specific record, use <code>loc</code>; if you mean "the first n rows of whatever order the table is in now", such as the top three after a sort, use <code>iloc</code> or <code>head</code>.</p>
+  <p>The same distinction applies to a single Series, with one pandas 3 detail worth knowing:</p>
+  <div class="fx" data-lang="py">amounts = o["amount"]                  # a Series whose labels are order ids
+print(amounts[103], amounts.iloc[0])   # [] on a Series means LABEL
+try:
+    amounts[0]                         # there is no order 0
+except KeyError as e:
+    print("KeyError:", e)
+print(o.at[103, "city"], o.iat[0, 2])  # fast single-cell access</div>
+  <div class="fx" data-lang="text">520.0 240.0
+KeyError: 0
+Pune Pune</div>
+  <p>Taking the amount column gives a Series whose labels are order ids. Plain brackets on a Series select by <em>label</em>, so <code>amounts[103]</code> is 520, while <code>amounts.iloc[0]</code> is the first value, 240. <code>amounts[0]</code> raises <code>KeyError</code>, because there is no order labelled 0. With integer labels like these, plain brackets have always meant labels. With non-integer labels, such as restaurant names, older pandas quietly fell back to treating <code>s[0]</code> as "position 0", so the same code meant different things depending on the index; pandas 3 removed that fallback and raises <code>KeyError</code> there too. Say what you mean with <code>.loc</code> or <code>.iloc</code>. The last line shows <code>at</code> and <code>iat</code>, the single-cell versions of <code>loc</code> and <code>iloc</code>: they accept exactly one row and one column and are faster when you need one value.</p>
 
-  <h2 id="pdb-mask"><span class="num">09</span>Boolean Masks &amp; query</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>"Which orders were above ₹400?" names no label and no position. It is a test applied to every row. How do we turn a test into a selection?</p>
-  </div>
-  <h3>A mask, traced</h3>
+  <h2 id="pdb-mask"><span class="num">05</span>Boolean Filtering</h2>
+  <p>Most real questions do not name a label or a position. "Which orders were above ₹400?" names a <em>condition</em> that every row either passes or fails. Pandas answers it in two steps. First, a comparison on a column, such as <code>o["amount"] &gt; 400</code>, is applied to every value at once and returns a Series of True and False with the same index as the table. This True/False Series is called a <strong>boolean mask</strong>. Second, putting the mask inside the table's brackets keeps the rows where it is True. Picture a stencil laid over the register, with holes cut where the condition is true: whatever shows through the holes is your selection.</p>
   <div class="fx" data-lang="py">mask = o["amount"] &gt; 400
 print(mask.tolist())
 print(o[mask][["customer", "city", "amount"]])</div>
@@ -533,55 +297,152 @@ order_id
 103          Chen    Pune   520.0
 109         Farah  Mumbai   600.0
 111           Dia  Mumbai   700.0</div>
-  <p><code>o["amount"] &gt; 400</code> compares every amount with 400 at once and returns a Series of True/False with the same index: the <strong>mask</strong>. By hand on the 11 amounts 240, 450, 520, 380, 310, 180, NaN, 260, 600, 290, 700: False, True, True, False, False, False, <strong>False</strong> (NaN &gt; 400 is False: unknown is never "greater"), False, True, False, True. Putting the mask in brackets keeps the True rows: 102, 103, 109, 111.</p>
-  <h3>Two conditions</h3>
-  <div class="fx" data-lang="py">print(o[(o["amount"] &gt; 200) &amp; (o["city"] == "Pune")][["customer", "city", "amount"]])</div>
+  <p>The first line prints the mask. Check it by hand against the 11 amounts in order, 240, 450, 520, 380, 310, 180, NaN, 260, 600, 290, 700: False, True, True, False, False, False, then <strong>False</strong> for the missing amount, False, True, False, True. A missing value is never "greater than" anything, because we do not know what it is, so comparisons with NaN are always False. The selection keeps the four True rows: orders 102, 103, 109 and 111, still carrying their own labels. <code>o.loc[mask, columns]</code> does the same thing and lets you pick the columns in the same step.</p>
+  <p>Conditions are combined with <code>&amp;</code> for "and", <code>|</code> for "or" and <code>~</code> for "not", and each comparison must be wrapped in parentheses:</p>
+  <div class="fx" data-lang="py">pune_big = o[(o["amount"] &gt; 200) &amp; (o["city"] == "Pune")]
+print(pune_big[["customer", "city", "amount"]])
+print("not Pune:", o[~(o["city"] == "Pune")].index.tolist())
+try:
+    o[o["amount"] &gt; 200 and o["city"] == "Pune"]
+except ValueError as e:
+    print("ValueError:", e)</div>
   <div class="fx" data-lang="text">         customer  city  amount
 order_id                       
 101          Asha  Pune   240.0
 103          Chen  Pune   520.0
 108          Chen  Pune   260.0
-110          Asha  Pune   290.0</div>
-  <p>Combine masks with <code>&amp;</code> (and), <code>|</code> (or), <code>~</code> (not), and put each comparison in parentheses (Python's operator precedence would otherwise read <code>200 &amp; o["city"]</code> first). Pune orders above ₹200: 101, 103, 108, 110. Order 104 is a Pune order of ₹380 and is <strong>missing</strong>: its city is " pune", which is not equal to "Pune". The selection was correct; the data is not.</p>
-  <h3>isin, between, query</h3>
+110          Asha  Pune   290.0
+not Pune: [102, 104, 105, 107, 109, 111]
+ValueError: The truth value of a Series is ambiguous. Use a.empty, a.item(), a.any() or a.all().</div>
+  <p>Pune orders above ₹200 are 101, 103, 108 and 110. Look closely and something is missing: order 104 was a ₹380 order in Pune, but its city is stored as " pune", which is not equal to "Pune", so it fails the test. The filter did exactly what we asked; the data is wrong, and only cleaning can fix that. The <code>~</code> line inverts a mask, listing every order whose city is not exactly "Pune", which shows the same problem from the other side: 104 and the MUMBAI order 105 appear among the "not Pune" orders.</p>
+  <p>The last line shows why we cannot write the natural Python <code>and</code>. Python's <code>and</code> needs a single True or False on each side, but <code>o["amount"] &gt; 200</code> is a whole column of them, and pandas refuses to guess whether you mean "all true" or "any true", raising "The truth value of a Series is ambiguous". The operators <code>&amp;</code>, <code>|</code> and <code>~</code> work element by element instead, which is what a filter needs. The parentheses are needed because in Python <code>&amp;</code> binds more tightly than <code>&gt;</code> or <code>==</code>; without them, <code>o["amount"] &gt; 200 &amp; o["city"]</code> would try to compute <code>200 &amp; o["city"]</code> first.</p>
+  <p>A few helper methods make common masks shorter and clearer:</p>
   <div class="fx" data-lang="py">print(o[o["restaurant"].isin(["Dosa Hut", "Green Bowl"])].index.tolist())
-print(o[o["amount"].between(250, 400)].index.tolist())</div>
+print(o[o["amount"].between(250, 400)].index.tolist())
+print(o[o["amount"].isna()].index.tolist())
+print(o.loc[o["amount"] &gt; 500, "customer"].tolist())   # mask + column in one loc</div>
   <div class="fx" data-lang="text">[101, 105, 106, 110]
-[104, 105, 108, 110]</div>
-  <p><code>isin([...])</code>: is the value one of these? (Dosa Hut or Green Bowl → 101, 105, 106, 110.) <code>between(250, 400)</code>: inclusive range → 104 (380), 105 (310), 108 (260), 110 (290).</p>
+[104, 105, 108, 110]
+[107]
+['Chen', 'Farah', 'Dia']</div>
+  <p><code>isin([...])</code> tests whether each value is one of a list, replacing a chain of <code>==</code> joined by <code>|</code>: orders from Dosa Hut or Green Bowl are 101, 105, 106 and 110. <code>between(250, 400)</code> tests a range with both ends included: 104 (₹380), 105 (₹310), 108 (₹260) and 110 (₹290). <code>isna()</code> builds a mask of missing values, the reliable way to find them since <code>== np.nan</code> is always False: order 107 has no amount. The last line uses a mask inside <code>loc</code> together with a column name, the idiomatic way to say "these rows, this column" in one step: the customers who spent over ₹500 were Chen, Farah and Dia.</p>
+
+  <h2 id="pdb-query"><span class="num">06</span>query</h2>
+  <p>Bracket filters get hard to read as conditions pile up: every column needs the table's name in front of it, every comparison needs its own parentheses, and the operators are symbols rather than words. <code>query</code> is an alternative where you write the condition as a string, using column names directly and the words <code>and</code>, <code>or</code> and <code>not</code>. Pandas parses the string and evaluates it against the table's columns, producing the same mask you would have built by hand.</p>
   <div class="fx" data-lang="py">limit = 400
-print(o.query("amount &gt; @limit and restaurant == 'Pizza Point'")[["customer", "amount"]])</div>
+print(o.query("amount &gt; @limit and restaurant == 'Pizza Point'")[["customer", "amount"]])
+print(o.query("city in ['Pune', 'Mumbai'] and delivery_minutes.notna()").shape)
+wide = o.rename(columns={"amount": "amount inr"})
+print(wide.query("&#96;amount inr&#96; &gt;= 600").index.tolist())   # backticks for spaces</div>
   <div class="fx" data-lang="text">         customer  amount
 order_id                 
 103          Chen   520.0
-111           Dia   700.0</div>
-  <p><code>query</code> takes the condition as a string, reads column names directly, uses <code>and</code>/<code>or</code>, and refers to Python variables with <code>@</code>. Shorter for long filters; the bracket form is easier to build programmatically.</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p>A mask is a stencil laid over the register: holes where the condition is true. Whatever shows through the holes is your selection.</p></div>
-  <div class="callout def"><span class="label">Definition</span><p>A <strong>boolean mask</strong> is a Series of True/False aligned to the table's index. <code>df[mask]</code> or <code>df.loc[mask, cols]</code> keeps rows where it is True. <code>df.query("expr")</code> evaluates a string condition over columns; <code>@name</code> inserts a Python variable.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p><code>o[o.amount &gt; 200 and o.city == "Pune"]</code> raises "The truth value of a Series is ambiguous": Python's <code>and</code> wants one True/False, not a column of them. Use <code>&amp;</code> with parentheses. And a mask is only as good as the data: dirty text silently drops rows.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Chained Assignment &amp; Copy-on-Write.</b> We can find any rows. Now we want to <em>change</em> some of them. Why does the obvious way silently do nothing?</div>
+111           Dia   700.0
+(9, 6)
+[109, 111]</div>
+  <p>The first query reads almost like English: amount above the limit and restaurant equal to Pizza Point, giving orders 103 and 111. The <code>@</code> in front of <code>limit</code> tells <code>query</code> that this name is a Python variable, not a column. The second line uses <code>in</code> with a list and a method call, <code>delivery_minutes.notna()</code>, and returns 9 rows: the two badly spelt city rows (" pune" and MUMBAI) fail the <code>in</code> test, leaving the 5 clean Pune orders and the 4 clean Mumbai ones. The last example shows how to use a column whose name contains a space: wrap it in backticks inside the query string, as in <code>&#96;amount inr&#96; &gt;= 600</code>.</p>
+  <p>Whether to use <code>query</code> or brackets is mostly a matter of readability. <code>query</code> is shorter and clearer for long, hand-written filters and fits neatly into method chains (<a class="xref" data-note="da_pandas">How Pandas Works</a>). Bracket masks are better when the condition is built up in code, for example combining a list of masks in a loop, or when you already have a mask stored in a variable. The two give identical results; on large tables <code>query</code> can also be slightly faster if the optional <code>numexpr</code> package is installed.</p>
 
-  <h2 id="pdb-cow"><span class="num">10</span>Chained Assignment &amp; Copy-on-Write</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Suppose Pizza Point's amounts must be set to 0 for a refund report. The line <code>df[mask]["amount"] = 0</code> reads naturally. Does it change <code>df</code>? And if we save a filtered subset in a variable and edit it, does the original change too?</p>
-  </div>
-  <p>We work on a copy <code>o2</code> so the running example stays intact:</p>
-  <div class="fx" data-lang="py">import warnings
-o2 = o.copy()
-o2[o2["restaurant"] == "Pizza Point"]["amount"] = 0      # chained: two steps
+  <h2 id="pdb-add"><span class="num">07</span>Adding Columns</h2>
+  <p>Analysis constantly creates new columns from existing ones: a total including the delivery fee, a flag for large orders, a cuisine looked up from the restaurant. The direct way is to assign to a new column name with square brackets, and pandas computes the right-hand side for every row at once:</p>
+  <div class="fx" data-lang="py">o["total"] = o["amount"] + 30                                 # new column from a column
+o["fee"] = np.where(o["city"] == "Pune", 30, 40)              # if/else, vectorised
+o["cuisine"] = o["restaurant"].map({"Dosa Hut": "South Indian", "Pizza Point": "Pizza"})
+o.loc[o["amount"] &gt; 500, "big"] = True                        # set only some rows
+print(o[["city", "amount", "total", "fee", "cuisine", "big"]].head(5))</div>
+  <div class="fx" data-lang="text">            city  amount  total  fee       cuisine   big
+order_id                                                
+101         Pune   240.0  270.0   30  South Indian   NaN
+102       Mumbai   450.0  480.0   40           NaN   NaN
+103         Pune   520.0  550.0   30         Pizza  True
+104         pune   380.0  410.0   40           NaN   NaN
+105       MUMBAI   310.0  340.0   40           NaN   NaN</div>
+  <p>Each line shows a different common pattern. <code>o["total"] = o["amount"] + 30</code> computes a column from another column; the missing amount gives a missing total. <code>np.where(condition, 30, 40)</code> is a vectorised if/else that picks 30 for every Pune row and 40 for every other row; notice that order 104, stored as " pune", gets the Mumbai fee, another symptom of dirty data. <code>map</code> with a dictionary looks up each value: Dosa Hut becomes South Indian and Pizza Point becomes Pizza, and restaurants not in the dictionary get NaN. The last line uses <code>loc</code> with a mask to set a value only in some rows; the column did not exist, so pandas created it, putting <code>True</code> in rows where the amount is over ₹500 and NaN in every other row.</p>
+  <p>Direct assignment changes the table in place. Often you would rather leave the original alone, for example so the same starting table can be reused for several questions, or because you are writing a method chain. <code>assign</code> does that: it returns a <em>new</em> DataFrame with the extra columns and leaves the original untouched. Think of it as photocopying the register and writing the new column on the photocopy:</p>
+  <div class="fx" data-lang="py">with_total = o.assign(
+    total=o["amount"] + 30,
+    big_order=lambda d: d["total"] &gt; 400,          # can use 'total' from the line above
+)
+print(with_total[["amount", "total", "big_order"]].head(4))
+print("original columns unchanged:", list(o.columns))</div>
+  <div class="fx" data-lang="text">          amount  total  big_order
+order_id                          
+101        240.0  270.0      False
+102        450.0  480.0       True
+103        520.0  550.0       True
+104        380.0  410.0       True
+original columns unchanged: ['customer', 'restaurant', 'city', 'order_time', 'amount', 'delivery_minutes']</div>
+  <p>Each keyword argument to <code>assign</code> becomes a column. A plain expression, like <code>o["amount"] + 30</code>, is computed from the original table. A <code>lambda d: ...</code> is a function that receives the table being built, including the columns created earlier in the same call, so <code>big_order</code> can refer to <code>total</code>, which did not exist in <code>o</code>. By hand: 240 + 30 = 270, not over 400; 450 + 30 = 480, over 400; 380 + 30 = 410, just over. The last line confirms that <code>o</code> still has its original six columns. Because <code>assign</code> returns its result, you must keep it in a variable (here <code>with_total</code>) or chain the next step onto it; calling it on its own line achieves nothing.</p>
+
+  <h2 id="pdb-drop"><span class="num">08</span>Removing and Renaming</h2>
+  <p>Tables often carry columns you do not need, rows you want to exclude and column names that are awkward to type. <code>drop</code> removes columns or rows by name, <code>rename</code> changes names, and <code>pop</code> takes a column out and hands it to you. Like most pandas methods, <code>drop</code> and <code>rename</code> return a new table and leave the original as it was:</p>
+  <div class="fx" data-lang="py">slim = o.drop(columns=["order_time", "delivery_minutes"])    # remove columns
+print(list(slim.columns))
+print(slim.drop(index=[101, 102]).index.tolist())             # remove rows by label
+print(slim[slim["city"] != "MUMBAI"].index.tolist())          # remove rows by condition
+renamed = slim.rename(columns={"amount": "amount_inr"})
+print(list(renamed.columns))
+cities = slim.pop("city")                                     # remove AND return
+print(list(slim.columns), "| popped:", cities.name)</div>
+  <div class="fx" data-lang="text">['customer', 'restaurant', 'city', 'amount']
+[103, 104, 105, 106, 107, 108, 109, 110, 111]
+[101, 102, 103, 104, 106, 107, 108, 109, 110, 111]
+['customer', 'restaurant', 'city', 'amount_inr']
+['customer', 'restaurant', 'amount'] | popped: city</div>
+  <p><code>drop(columns=[...])</code> removed the two time-related columns, leaving four. <code>drop(index=[101, 102])</code> removed two rows by label; the remaining labels start at 103. Dropping rows by a condition is just filtering with the opposite condition: keeping rows where the city is not "MUMBAI" removes order 105. <code>rename(columns={old: new})</code> renamed one column and left the others alone. Finally, <code>pop("city")</code> is the exception to "returns a new table": it removes the column from <code>slim</code> itself and returns it as a Series, which is handy when you want to separate one column, such as a target to predict, from the rest. If you ask <code>drop</code> to remove a name that does not exist it raises <code>KeyError</code>; passing <code>errors="ignore"</code> makes it skip missing names silently.</p>
+  <p>You may also see <code>del df["col"]</code>, which deletes a column in place, and <code>inplace=True</code> on <code>drop</code> and <code>rename</code>. Both still work on a whole DataFrame, but <code>inplace=True</code> rarely saves memory and cannot be part of a chain, so the usual style is to assign the result: <code>o = o.drop(columns=[...])</code>.</p>
+
+  <h2 id="pdb-sort"><span class="num">09</span>Sorting</h2>
+  <p>"Biggest orders first", "restaurants in alphabetical order", "latest orders at the top": many questions are really requests to sort. <code>sort_values</code> sorts the rows by the values in one or more columns, and the index labels travel with their rows, so every row keeps its identity:</p>
+  <div class="fx" data-lang="py">print(o.sort_values("amount", ascending=False)[["restaurant", "amount"]].head(4))
+print(o.sort_values("amount")[["amount"]].tail(2))                  # NaN goes last
+two = o.sort_values(["restaurant", "amount"], ascending=[True, False])
+print(two[["restaurant", "amount"]].head(4))</div>
+  <div class="fx" data-lang="text">            restaurant  amount
+order_id                      
+111        Pizza Point   700.0
+109       Biryani Bros   600.0
+103        Pizza Point   520.0
+102       Biryani Bros   450.0
+          amount
+order_id        
+111        700.0
+107          NaN
+            restaurant  amount
+order_id                      
+109       Biryani Bros   600.0
+102       Biryani Bros   450.0
+104       Biryani Bros   380.0
+101           Dosa Hut   240.0</div>
+  <p>The first table sorts by amount with <code>ascending=False</code> to put the largest first: 111, 109, 103, 102, each still labelled by its order id. The second sorts in the default ascending order and shows the last two rows: the highest amount, 700, and then the missing amount. Missing values go to the end by default whichever direction you sort; <code>na_position="first"</code> puts them at the start. The third table sorts by two columns: rows are ordered by restaurant name first, and within each restaurant by amount. The <code>ascending</code> list gives one direction per column, so restaurants run A to Z while amounts within each run from high to low: Biryani Bros' 600, 450 and 380, then Dosa Hut.</p>
+  <div class="fx" data-lang="py">print(o.nlargest(3, "amount")[["customer", "amount"]])
+top = o.sort_values("amount", ascending=False).head(3)
+print(top.sort_index().index.tolist())                  # back to label order
+print(top.reset_index()[["order_id", "amount"]])        # labels become a column again</div>
+  <div class="fx" data-lang="text">         customer  amount
+order_id                 
+111           Dia   700.0
+109         Farah   600.0
+103          Chen   520.0
+[103, 109, 111]
+   order_id  amount
+0       111   700.0
+1       109   600.0
+2       103   520.0</div>
+  <p>For the common "top n" question, <code>nlargest(3, "amount")</code> (and <code>nsmallest</code>) gives the same rows as sorting and taking the head, but it is shorter and faster on big tables because it does not need to sort everything. <code>sort_index()</code> sorts by the index labels instead of a column, returning the top three to order-id order: 103, 109, 111. <code>reset_index()</code> moves the index back into an ordinary column and gives the table a fresh 0, 1, 2 index. This matters after sorting or filtering if you need positions and labels to agree again; <code>reset_index(drop=True)</code> throws the old labels away instead of keeping them as a column. Like <code>drop</code>, <code>sort_values</code> returns a new table; a sort you do not store is lost, as Common Mistakes shows.</p>
+
+  <h2 id="pdb-cow"><span class="num">10</span>Copy-on-Write When Assigning</h2>
+  <p>Changing values in an existing table is where pandas used to be most confusing. Suppose Biteful refunds every Pizza Point order and wants those amounts set to 0. A natural way to write that is to select the Pizza Point rows, then the amount column, then assign: <code>o2[mask]["amount"] = 0</code>. It looks right, and it runs. We try it on a copy, <code>o2</code>, so the running example stays intact:</p>
+  <div class="fx" data-lang="py">o2 = o.copy()
+o2[o2["restaurant"] == "Pizza Point"]["amount"] = 0       # chained: two steps
 print("after chained:", o2.loc[[103, 107, 111], "amount"].tolist())
-o2.loc[o2["restaurant"] == "Pizza Point", "amount"] = 0  # one step on o2
+o2.loc[o2["restaurant"] == "Pizza Point", "amount"] = 0   # one step
 print("after loc    :", o2.loc[[103, 107, 111], "amount"].tolist())</div>
   <div class="fx" data-lang="text">ChainedAssignmentError: A value is being set on a copy of a DataFrame or Series through chained assignment.
-Such chained assignment never works to update the original DataFrame or Series, because the intermediate object on which we are setting values always behaves as a copy (due to Copy-on-Write).
-
-Try using '.loc[row_indexer, col_indexer] = value' instead, to perform the assignment in a single step.
-
-See the documentation for a more detailed explanation: https://pandas.pydata.org/pandas-docs/stable/user_guide/copy_on_write.html#chained-assignment
 after chained: [520.0, nan, 700.0]
 after loc    : [0.0, 0.0, 0.0]</div>
-  <p>The chained line printed a <code>ChainedAssignmentError</code> warning and changed nothing: Pizza Point's amounts are still 520, NaN, 700. Why: <code>o2[mask]</code> is one operation that creates a <em>new temporary table</em> of Pizza Point rows; <code>["amount"] = 0</code> is a second operation that writes into that temporary table, which is then thrown away. The <code>.loc[mask, "amount"] = 0</code> line is <em>one</em> operation on <code>o2</code> itself, so it works.</p>
-  <figure class="viz"><svg viewBox="0 0 600 110" width="600">
+  <p>The chained line printed a <code>ChainedAssignmentError</code> warning and changed nothing: the three Pizza Point orders still have 520, NaN and 700. The <code>loc</code> line changed all three to 0. To see why, count the operations. <code>o2[mask]["amount"] = 0</code> is <strong>chained assignment</strong>: two indexing operations in a row, followed by an assignment. The first, <code>o2[mask]</code>, creates a new, temporary table holding just the Pizza Point rows. The second, <code>["amount"] = 0</code>, writes into that temporary table. Nothing keeps a reference to the temporary table, so it is thrown away, and <code>o2</code> was never touched. <code>o2.loc[mask, "amount"] = 0</code> is a single operation on <code>o2</code> itself: "in this table, in these rows, in this column, put 0".</p>
+  <figure class="viz"><svg viewBox="0 0 600 110" width="600" style="max-width:100%">
     <defs><marker id="pdb-ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
     <rect x="10" y="20" width="90" height="34" class="fb sb"/><text x="40" y="42" font-size="12">o2</text>
     <path d="M100 37 L170 37" stroke="currentColor" marker-end="url(#pdb-ar3)"/><text x="104" y="30" class="tm" font-size="10">[mask]</text>
@@ -590,202 +451,125 @@ after loc    : [0.0, 0.0, 0.0]</div>
     <text x="386" y="42" font-size="12">edits the copy, then it is discarded</text>
     <rect x="10" y="66" width="90" height="34" class="fg sg"/><text x="40" y="88" font-size="12">o2</text>
     <path d="M100 83 L170 83" stroke="currentColor" marker-end="url(#pdb-ar3)"/><text x="178" y="88" font-size="12">.loc[mask, "amount"] = 0 → one step, edits o2</text>
-  </svg><figcaption>Two brackets in a row are two operations; the write lands on the intermediate object. One <code>.loc</code> call is one operation on the real table.</figcaption></figure>
-  <h3>A subset in its own variable</h3>
-  <div class="fx" data-lang="py">pp = o[o["restaurant"] == "Pizza Point"]   # a subset in its own variable
-pp["amount"] = 999                          # edit the subset
+  </svg><figcaption>Two brackets in a row are two operations, and the write lands on the temporary object in the middle. One <code>.loc</code> call is one operation on the real table.</figcaption></figure>
+  <p>The figure traces both lines. In the top path, <code>[mask]</code> produces the red temporary table, and the assignment lands on it, not on <code>o2</code>. In the bottom path there is no intermediate object: <code>.loc</code> receives the rows and the column together and writes straight into <code>o2</code>. The rule to remember is simple: when you want to change values in a table, use one <code>.loc[rows, column] = value</code> on that table.</p>
+  <p>What about saving a subset in its own variable and editing that? Should the original change too?</p>
+  <div class="fx" data-lang="py">pp = o[o["restaurant"] == "Pizza Point"]      # a subset in its own variable
+pp["amount"] = 999                             # edit the subset
 print("subset  :", pp["amount"].tolist())
 print("original:", o.loc[[103, 107, 111], "amount"].tolist())
 print("pandas", pd.__version__)</div>
   <div class="fx" data-lang="text">subset  : [999, 999, 999]
 original: [520.0, nan, 700.0]
-pandas 3.0.5</div>
-  <p>Editing <code>pp</code> (the Pizza Point subset) changed only <code>pp</code>; the original <code>o</code> still has 520, NaN, 700. This is <strong>Copy-on-Write</strong> (CoW): in pandas 3, any table derived from another (a selection, a filter, a column) <em>behaves</em> as an independent copy. Pandas does not actually copy the data until one of them is written to (that is the "on write"), so subsets stay cheap. The installed version printed above is 3.0.5, where CoW is always on and cannot be switched off.</p>
-  <h3>What older pandas did (not run here)</h3>
-  <p>We can only run pandas 3.0.5 in this environment, so the following is described from the pandas documentation rather than executed. Before pandas 3 (and in 2.x without the CoW option), a subset was sometimes a <em>view</em> sharing memory with the parent and sometimes a copy, depending on how it was made. Writing into it raised <code>SettingWithCopyWarning</code> ("A value is trying to be set on a copy of a slice from a DataFrame"), and the parent might or might not change. The standard advice was to write <code>.loc</code> in one step on the original, or call <code>.copy()</code> on a subset you intend to modify. Both still work in pandas 3; the defensive <code>.copy()</code> is simply no longer needed.</p>
+pandas 3.1.0</div>
+  <p>Editing <code>pp</code>, the Pizza Point subset, changed only <code>pp</code>; the original <code>o</code> still has 520, NaN and 700. This is <strong>Copy-on-Write</strong>, always on in pandas 3: any table or column derived from another (a filter, a selection, a column taken out) behaves as an independent copy. To keep subsets cheap, pandas does not copy any data when the subset is made; both objects share memory until one of them is written to, and only then is a real copy made (<a class="xref" data-note="da_pandas">How Pandas Works</a> shows the shared memory being split at the moment of writing). The result is a single, predictable rule: a subset never changes its parent, and the parent never changes the subset.</p>
+  <p>Older pandas was much less predictable, and you will meet its traces in tutorials, Stack Overflow answers and interviews. Before pandas 3 (and in pandas 2 unless Copy-on-Write was switched on), a subset was sometimes a <em>view</em> sharing memory with its parent and sometimes a copy, depending on exactly how it was created. Writing into one raised <code>SettingWithCopyWarning</code>, "A value is trying to be set on a copy of a slice from a DataFrame", and the parent might or might not change. The standard advice was to assign through <code>.loc</code> in one step, or to call <code>.copy()</code> on any subset you intended to modify. That advice still works in pandas 3; the defensive <code>.copy()</code> is simply no longer needed.</p>
   <table class="tbl">
-    <tr><th></th><th>pandas &lt; 3 (no CoW)</th><th>pandas 3 (CoW always on)</th></tr>
+    <tr><th></th><th>pandas 2 (without CoW)</th><th>pandas 3 (CoW always on)</th></tr>
     <tr><td><code>df[mask]["c"] = v</code></td><td>SettingWithCopyWarning; usually no effect</td><td>ChainedAssignmentError warning; never has an effect</td></tr>
     <tr><td><code>sub = df[mask]; sub["c"] = v</code></td><td>warning; parent may or may not change</td><td>only <code>sub</code> changes; no warning</td></tr>
+    <tr><td><code>col = df["c"]; col.iloc[0] = v</code></td><td>usually changed <code>df</code> too (a view)</td><td>only <code>col</code> changes</td></tr>
     <tr><td><code>df.loc[mask, "c"] = v</code></td><td>works</td><td>works</td></tr>
   </table>
-  <div class="callout anlg"><span class="label">Analogy</span><p>Chained assignment is photocopying the Pizza Point page of the register, correcting the photocopy, and throwing it in the bin. Copy-on-Write is a library that lends you "your own copy" of a book, but only actually prints one the moment you start writing in it.</p></div>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Chained assignment</strong>: assigning through two consecutive indexing operations (<code>df[a][b] = v</code>); it writes into an intermediate object. <strong>Copy-on-Write</strong>: every derived DataFrame or Series behaves as a copy of its parent; the actual copy is made lazily at the first write.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Interviewers still ask about <code>SettingWithCopyWarning</code>. Answer: "use <code>df.loc[rows, col] = value</code> in one step, or <code>.copy()</code> the subset; in pandas 3 Copy-on-Write makes subsets behave as copies and chained assignment never writes".</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: assign.</b> Changing values in place works with <code>.loc</code>. Often we want something different: a <em>new</em> column computed from others, without modifying the table we started from.</div>
+  <p>The table summarises the differences. The only row that behaves the same in both versions is the last one, which is why <code>.loc</code> in a single step is the habit to build.</p>
 
-  <h2 id="pdb-assign"><span class="num">11</span>New Columns with assign</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Biteful adds a ₹30 delivery fee. We want <code>total = amount + 30</code> and a flag "big order" for totals above ₹400. <code>o["total"] = …</code> works but edits <code>o</code> in place. Is there a way that leaves <code>o</code> untouched and can be part of a step-by-step pipeline?</p>
-  </div>
-  <div class="fx" data-lang="py">fee = 30
-o3 = o.assign(total=o["amount"] + fee,
-              big_order=lambda d: d["total"] &gt; 400)
-print(o3[["amount", "total", "big_order"]].head(4))</div>
-  <div class="fx" data-lang="text">          amount  total  big_order
-order_id                          
-101        240.0  270.0      False
-102        450.0  480.0       True
-103        520.0  550.0       True
-104        380.0  410.0       True</div>
-  <p><code>assign</code> returns a <strong>new</strong> DataFrame with the extra columns; <code>o</code> itself is unchanged. Each keyword becomes a column. A plain expression (<code>o["amount"] + fee</code>) is computed once; a <code>lambda d: …</code> receives the table being built, so <code>big_order</code> can use <code>total</code>, created one line earlier. By hand: 240 + 30 = 270 (not big), 450 + 30 = 480 (big), 380 + 30 = 410 (big, just). Because it returns a new table, <code>assign</code> fits in method chains (<a class="xref" data-note="da_pd_time">Time Series &amp; Performance</a>).</p>
-  <div class="callout anlg"><span class="label">Analogy</span><p><code>df["x"] = …</code> writes in pen on the original register. <code>assign</code> photocopies the register and writes the new column on the photocopy, so the original stays clean for the next question.</p></div>
-  <div class="callout def"><span class="label">Definition</span><p><code>df.assign(name=value_or_function, …)</code> returns a new DataFrame with columns added or replaced. A callable receives the DataFrame (including columns assigned earlier in the same call) and must return a column.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p>Forgetting to keep the result: <code>o.assign(total=…)</code> on its own line does nothing visible to <code>o</code>. Write <code>o3 = o.assign(...)</code> or chain the next step onto it.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: apply vs Vectorised.</b> A flat fee is easy. A rule with an if/else (₹30 in Pune, ₹40 in Mumbai) tempts us to write a Python function per row. Is that a good idea?</div>
-
-  <h2 id="pdb-apply"><span class="num">12</span>apply vs Vectorised</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The fee depends on the city. The obvious solution is a Python function that looks at one row and returns its total, run on every row with <code>apply</code>. It works. What does it cost, and what is the alternative?</p>
-  </div>
-  <div class="fx" data-lang="py">def with_fee(row):
-    return row["amount"] + 30 if row["city"] == "Pune" else row["amount"] + 40
-slow = o.apply(with_fee, axis=1)                              # Python function, row by row
-fast = o["amount"] + np.where(o["city"] == "Pune", 30, 40)    # whole columns at once
-print(pd.DataFrame({"city": o["city"], "amount": o["amount"], "apply": slow, "vectorised": fast}).head(5))</div>
-  <div class="fx" data-lang="text">            city  amount  apply  vectorised
-order_id                                   
-101         Pune   240.0  270.0       270.0
-102       Mumbai   450.0  490.0       490.0
-103         Pune   520.0  550.0       550.0
-104         pune   380.0  420.0       420.0
-105       MUMBAI   310.0  350.0       350.0</div>
-  <p><code>apply(with_fee, axis=1)</code> calls the Python function once per row (<code>axis=1</code> means "row by row"), building a small Series for each row. The vectorised line does the same logic on whole columns: <code>np.where(condition, 30, 40)</code> builds the fee column in one step, and <code>+</code> adds it to all amounts at once. Same results. Look at order 104: city " pune" is not equal to "Pune", so <em>both</em> methods charged it the Mumbai fee (420 instead of 410). Speed cannot fix dirty data.</p>
-  <h3>The same idea at scale</h3>
-  <div class="fx" data-lang="py">b = big.head(100_000)
-t1 = ms(lambda: b.apply(lambda r: r["amount"] + (30 if r["city"] == "Pune" else 40), axis=1), reps=1)
-t2 = ms(lambda: b["amount"] + np.where(b["city"] == "Pune", 30, 40))
-print("apply(axis=1):", t1, "ms   vectorised:", t2, "ms   -&gt;", round(t1 / max(t2, 1)), "x")</div>
-  <div class="fx" data-lang="text">apply(axis=1): 538 ms   vectorised: 2 ms   -&gt; 269 x</div>
-  <p>On 100,000 generated orders the row-by-row <code>apply</code> takes hundreds of milliseconds; the vectorised version takes a few. The gap grows with the number of rows, and with the complexity of the function. <a class="xref" data-note="da_pd_time">Time Series &amp; Performance</a> measures <code>iterrows</code>, <code>itertuples</code>, <code>apply</code> and vectorised side by side.</p>
-  <table class="tbl"><caption>Vectorised replacements for common per-row logic</caption>
-    <tr><th>Need</th><th>Vectorised tool</th></tr>
-    <tr><td>Maths between columns</td><td><code>df["a"] * df["b"]</code></td></tr>
-    <tr><td>If / else</td><td><code>np.where(cond, x, y)</code>; many branches: <code>np.select([c1, c2], [x1, x2], default=z)</code></td></tr>
-    <tr><td>Look up a value per category</td><td><code>df["city"].map({"Pune": 30, "Mumbai": 40})</code></td></tr>
-    <tr><td>Text operations</td><td><code>df["city"].str.strip().str.title()</code> (Cleaning note)</td></tr>
-    <tr><td>Numbers into buckets</td><td><code>pd.cut(df["amount"], bins=[…], labels=[…])</code></td></tr>
-  </table>
-  <div class="callout anlg"><span class="label">Analogy</span><p><code>apply</code> is a cashier adding a fee to each bill by hand, one customer at a time. Vectorised is a till that adds the right fee to the whole queue's bills in one press.</p></div>
-  <div class="callout def"><span class="label">Definition</span><p><strong>Vectorised</strong> code expresses an operation on whole columns, so the loop runs in compiled C code inside NumPy/pandas. <code>Series.apply(f)</code> calls <code>f</code> per value; <code>DataFrame.apply(f, axis=1)</code> calls <code>f</code> per row (as a Series); both run Python for every element.</p></div>
-  <div class="callout trap"><span class="label">Trap</span><p><code>apply</code> looks "pandas-like" but is a Python loop in disguise. Use it only when no vectorised form exists (a complex function from another library, say), and then on as few rows as possible.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: How It All Connects</b>, and then the next note, <a class="xref" data-note="da_pd_cleaning">Cleaning &amp; Missing Data</a>. We can now hold, inspect, select, change and compute. Every section also showed the same problem: " pune" escapes the Pune filter and gets the wrong fee, the duplicate inflates <code>describe</code>, minutes cannot be averaged. Before any real answer, the table must be cleaned.</div>
-
-  <h2 id="pdb-connect"><span class="num">13</span>How It All Connects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Series, index, DataFrame, dtypes, files, inspection, three selectors, assignment rules, assign, apply. Which is built from which, and which answers which question?</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 660 270" width="660">
-<defs><marker id="pdb-a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="20" y="10" width="170" height="40" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="105" y="28" text-anchor="middle" font-size="11.5" font-weight="700">NumPy array</text><text x="105" y="43" text-anchor="middle" class="tm" font-size="10">fast, one type, positions</text>
-<rect x="245" y="10" width="170" height="40" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="330" y="28" text-anchor="middle" font-size="11.5" font-weight="700">index (labels)</text><text x="330" y="43" text-anchor="middle" class="tm" font-size="10">names for rows</text>
-<rect x="470" y="10" width="170" height="40" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="555" y="28" text-anchor="middle" font-size="11.5" font-weight="700">file (CSV / Parquet)</text><text x="555" y="43" text-anchor="middle" class="tm" font-size="10">where data comes from</text>
-<line x1="105" y1="50" x2="200" y2="78" stroke="currentColor" marker-end="url(#pdb-a9)"/><line x1="330" y1="50" x2="250" y2="78" stroke="currentColor" marker-end="url(#pdb-a9)"/>
-<rect x="140" y="80" width="170" height="40" rx="7" class="fb sb"/><text x="225" y="98" text-anchor="middle" font-size="11.5" font-weight="700">Series</text><text x="225" y="113" text-anchor="middle" class="tm" font-size="10">array + index → alignment</text>
-<line x1="310" y1="100" x2="378" y2="100" stroke="currentColor" marker-end="url(#pdb-a9)"/><line x1="555" y1="50" x2="470" y2="78" stroke="currentColor" marker-end="url(#pdb-a9)"/>
-<rect x="380" y="80" width="190" height="40" rx="7" class="fb sb"/><text x="475" y="98" text-anchor="middle" font-size="11.5" font-weight="700">DataFrame</text><text x="475" y="113" text-anchor="middle" class="tm" font-size="10">Series sharing an index · dtypes</text>
-<line x1="420" y1="120" x2="120" y2="152" stroke="currentColor" stroke-opacity="0.6" marker-end="url(#pdb-a9)"/><line x1="450" y1="120" x2="330" y2="152" stroke="currentColor" stroke-opacity="0.6" marker-end="url(#pdb-a9)"/><line x1="500" y1="120" x2="540" y2="152" stroke="currentColor" stroke-opacity="0.6" marker-end="url(#pdb-a9)"/>
-<rect x="30" y="154" width="180" height="40" rx="7" class="ft st"/><text x="120" y="172" text-anchor="middle" font-size="11.5" font-weight="700">inspect</text><text x="120" y="187" text-anchor="middle" class="tm" font-size="10">head · info · describe</text>
-<rect x="240" y="154" width="180" height="40" rx="7" class="ft st"/><text x="330" y="172" text-anchor="middle" font-size="11.5" font-weight="700">select</text><text x="330" y="187" text-anchor="middle" class="tm" font-size="10">[] · loc · iloc · mask · query</text>
-<rect x="450" y="154" width="180" height="40" rx="7" class="ft st"/><text x="540" y="172" text-anchor="middle" font-size="11.5" font-weight="700">compute</text><text x="540" y="187" text-anchor="middle" class="tm" font-size="10">assign · vectorised · (apply)</text>
-<line x1="330" y1="194" x2="330" y2="214" stroke="currentColor" marker-end="url(#pdb-a9)"/>
-<rect x="210" y="216" width="240" height="40" rx="7" class="fg sg"/><text x="330" y="234" text-anchor="middle" font-size="11.5" font-weight="700">change safely</text><text x="330" y="249" text-anchor="middle" class="tm" font-size="10">.loc[mask, col] = v · Copy-on-Write</text>
-</svg><figcaption>A Series is a NumPy array plus an index; a DataFrame is Series sharing an index, usually read from a file. Everything else in this note works on that object: inspecting it, selecting parts of it (by label, position or condition), computing new columns, and changing values safely.</figcaption></figure>
-  <table class="tbl"><caption>Every concept on the Biteful orders</caption>
-    <tr><th>Concept</th><th>Built from</th><th>Answers which question</th><th>Value on the running example</th><th>When to use</th></tr>
-    <tr><td>Series</td><td>array + index</td><td>labelled, fast column?</td><td>day2["Pizza Point"] = 520</td><td>any single column</td></tr>
-    <tr><td>Alignment</td><td>index labels</td><td>combine by meaning?</td><td>Biryani Bros 450 + 380 = 830; others NaN / fill 0</td><td>every Series operation</td></tr>
-    <tr><td>DataFrame + dtypes</td><td>Series sharing an index</td><td>whole table?</td><td>12 × 7; amount float64 (one blank); minutes str</td><td>always</td></tr>
-    <tr><td>head / info / describe</td><td>DataFrame</td><td>what is in it?</td><td>11/12 amounts; mean 385.5 (duplicate included)</td><td>right after loading</td></tr>
-    <tr><td>Parquet</td><td>typed columns on disk</td><td>save and reload safely, fast?</td><td>dates survive; 2 columns 10× or more faster at 200k rows</td><td>storing analysis data</td></tr>
-    <tr><td><code>[]</code></td><td>column names</td><td>which columns?</td><td>orders[["customer", "amount"]]</td><td>picking columns</td></tr>
-    <tr><td>loc / iloc</td><td>index / positions</td><td>which rows, by name or place?</td><td>loc[102:104] 3 rows; iloc[1:3] 2 rows</td><td>loc by default; iloc for "n-th"</td></tr>
-    <tr><td>Masks / query</td><td>vectorised comparisons</td><td>rows by condition?</td><td>&gt; 400 → 102, 103, 109, 111; Pune &gt; 200 misses 104</td><td>almost every filter</td></tr>
-    <tr><td><code>.loc</code> assignment, CoW</td><td>loc + masks</td><td>change values safely?</td><td>chained: unchanged; loc: Pizza Point → 0</td><td>every in-place edit</td></tr>
-    <tr><td>assign</td><td>columns + lambdas</td><td>new column, original untouched?</td><td>total 270, 480, 550, 410</td><td>pipelines, chains</td></tr>
-    <tr><td>Vectorised vs apply</td><td>NumPy operations</td><td>per-row logic, fast?</td><td>same fees; hundreds of times faster at 100k rows</td><td>always prefer vectorised</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span><p><strong>The index is the thread through the whole note.</strong> It is what makes a Series more than an array (labels), what alignment matches, what <code>loc</code> selects by, what masks are aligned to, and what keeps a row's identity when it is filtered or sorted.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Common Mistakes.</b> The usual ways these tools are misused.</div>
-
-  <h2 id="pdb-traps"><span class="num">14</span>Common Mistakes</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Which slips with Series, selection and assignment cause most wrong answers, and how do you spot them?</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: positional thinking on labelled data</span><p>Adding Series with different indexes gives NaN, not position-wise sums. Check <code>index</code> on both sides or use <code>fill_value</code>.</p></div>
-  <div class="callout trap"><span class="label">Trap: not checking dtypes after reading</span><p>A number column stored as <code>str</code> cannot be summed or compared numerically. Look at <code>info()</code> first.</p></div>
-  <div class="callout trap"><span class="label">Trap: CSV round trip</span><p>Dates and categories come back as text. Use Parquet, or re-apply <code>parse_dates</code>/<code>dtype</code>.</p></div>
-  <div class="callout trap"><span class="label">Trap: loc vs iloc slice ends</span><p><code>loc</code> includes the end label; <code>iloc</code> excludes the end position.</p></div>
-  <div class="callout trap"><span class="label">Trap: <code>and</code>/<code>or</code> on columns</span><p>Use <code>&amp;</code>, <code>|</code>, <code>~</code> and parentheses around each comparison.</p></div>
-  <div class="callout trap"><span class="label">Trap: chained assignment</span><p><code>df[mask]["c"] = v</code> never writes. Use <code>df.loc[mask, "c"] = v</code>.</p></div>
-  <div class="callout trap"><span class="label">Trap: forgetting assign returns a new frame</span><p>Store or chain the result.</p></div>
-  <div class="callout trap"><span class="label">Trap: apply for arithmetic</span><p>Row loops are hundreds of times slower than column maths; use <code>np.where</code>, <code>map</code>, <code>.str</code>, <code>pd.cut</code>.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Revision Sheet.</b> The whole note on one page.</div>
+  <h2 id="pdb-traps"><span class="num">11</span>Common Mistakes</h2>
+  <p>The most frequent mistake with this note's methods is forgetting that they return a new table. <code>sort_values</code>, <code>drop</code>, <code>rename</code>, <code>assign</code> and <code>reset_index</code> all leave the original alone, so calling one on its own line computes a result and throws it away:</p>
+  <div class="fx" data-lang="py">o.sort_values("amount")                     # result thrown away
+o.drop(columns=["delivery_minutes"])        # result thrown away
+print(o.index[:3].tolist(), o.shape)        # o is unchanged
+o = o.sort_values("amount").drop(columns=["delivery_minutes"])   # keep the result
+print(o.index[:3].tolist(), o.shape)</div>
+  <div class="fx" data-lang="text">[101, 102, 103] (11, 6)
+[106, 101, 108] (11, 5)</div>
+  <p>After the first two lines, <code>o</code> still starts with orders 101, 102, 103 and still has six columns: the sorted, slimmer table was computed and discarded. Assigning the result back, or chaining the next step onto it, keeps it: the table now starts with the cheapest orders and has five columns. No error warns you about this, so if a change "did not happen", check whether you kept the result.</p>
+  <p>The second mistake is using <code>loc</code> and <code>iloc</code> interchangeably because they gave the same answer on a fresh table:</p>
+  <div class="fx" data-lang="py">print(len(orders.loc[0:2]), len(orders.iloc[0:2]))     # fresh RangeIndex: 3 vs 2
+f = orders[orders["amount"] &gt; 300]                     # labels now 1, 2, 3, 4, 5, ...
+print(f.index[:4].tolist())
+print(f.loc[2, "customer"], "|", f.iloc[2]["customer"])</div>
+  <div class="fx" data-lang="text">3 2
+[1, 2, 3, 4]
+Chen | Asha</div>
+  <p>On the freshly read table, <code>loc[0:2]</code> returns 3 rows (labels 0 to 2, end included) while <code>iloc[0:2]</code> returns 2 (positions 0 and 1). After filtering to amounts above ₹300, the kept rows keep their old labels 1, 2, 3, 4 and so on, so label 2 and position 2 are now different rows: <code>f.loc[2]</code> is Chen's order and <code>f.iloc[2]</code> is Asha's. Code that "worked" before a filter quietly returns the wrong row after it. Decide each time whether you mean a record (<code>loc</code>) or a place (<code>iloc</code>).</p>
+  <p>Three more mistakes were shown in earlier sections. Writing <code>and</code> or <code>or</code> between column conditions raises "The truth value of a Series is ambiguous"; use <code>&amp;</code>, <code>|</code> and <code>~</code> with parentheses around each comparison (section 05). Selecting two columns with single brackets, <code>df["a", "b"]</code>, raises <code>KeyError</code>; use <code>df[["a", "b"]]</code> (section 03). And chained assignment, <code>df[mask]["c"] = v</code>, never changes <code>df</code> in pandas 3; use <code>df.loc[mask, "c"] = v</code> (section 10). Finally, remember that a correct filter on dirty data gives a wrong answer: " pune" escapes every <code>== "Pune"</code> test until the column is cleaned.</p>
 
   <h2 id="pdb-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>Running example: Biteful's raw export, 12 rows, columns <code>order_id, customer, restaurant, city, order_time, amount, delivery_minutes</code>, 2–6 March 2026. Amounts (raw, with the duplicate 105): 240, 450, 520, 380, 310, 310, 180, blank, 260, 600, 290, 700. Messy: city " pune"/"MUMBAI", minutes "28 min"/"unknown"/blank, one 240.</p>
-  <h3>The ladder in one line each</h3>
+  <h3>Definitions</h3>
+  <ul>
+    <li><b>DataFrame</b>: a table of columns (Series) sharing one row index; one dtype per column.</li>
+    <li><b>Index</b>: row labels; need not be unique (a duplicated label returns several rows).</li>
+    <li><b><code>loc</code></b>: select by label (or mask); slices include the end.</li>
+    <li><b><code>iloc</code></b>: select by integer position; slices exclude the end.</li>
+    <li><b>Boolean mask</b>: a True/False Series aligned to the index; <code>df[mask]</code> keeps the True rows.</li>
+    <li><b>Chained assignment</b>: <code>df[a][b] = v</code>; writes into a temporary object.</li>
+    <li><b>Copy-on-Write</b>: derived objects behave as copies; real copy made at the first write.</li>
+  </ul>
+  <h3>What square brackets mean</h3>
   <table class="tbl">
-    <tr><th>Concept</th><th>Question</th><th>Answer on our data</th><th>Weakness → next</th></tr>
-    <tr><td>list of dicts</td><td>hold rows in Python?</td><td>loop: Pune 760</td><td>a loop per question</td></tr>
-    <tr><td>Series</td><td>labelled fast column?</td><td>day2["Pizza Point"] 520; ×1.05</td><td>different labels?</td></tr>
-    <tr><td>Alignment</td><td>combine by label?</td><td>830 for Biryani Bros, NaN others</td><td>one column only</td></tr>
-    <tr><td>DataFrame, dtypes</td><td>the whole file?</td><td>12 × 7; float64 amount, str minutes</td><td>too big to read</td></tr>
-    <tr><td>head/info/describe</td><td>what is in it?</td><td>11/12 amounts; mean 385.5</td><td>CSV loses types</td></tr>
-    <tr><td>Parquet</td><td>keep types, read fast?</td><td>dates survive; 10×+ for 2 columns</td><td>how to pick parts?</td></tr>
-    <tr><td><code>[]</code></td><td>columns?</td><td>Series / DataFrame; slice = rows</td><td>ambiguous for rows</td></tr>
-    <tr><td>loc / iloc</td><td>rows by label / position?</td><td>3 rows vs 2 rows</td><td>need conditions</td></tr>
-    <tr><td>Mask / query</td><td>rows by condition?</td><td>&gt; 400: 102, 103, 109, 111</td><td>how to change rows?</td></tr>
-    <tr><td>loc assignment, CoW</td><td>change safely?</td><td>chained: no change; loc: done</td><td>new columns?</td></tr>
-    <tr><td>assign</td><td>new column, no side effects?</td><td>total = amount + 30</td><td>if/else rules?</td></tr>
-    <tr><td>Vectorised vs apply</td><td>per-row logic fast?</td><td>same answer, hundreds of times faster</td><td>dirty keys → Cleaning</td></tr>
+    <tr><th>Expression</th><th>Returns</th></tr>
+    <tr><td><code>df["c"]</code></td><td>column c as a Series</td></tr>
+    <tr><td><code>df[["a", "b"]]</code></td><td>DataFrame with columns a, b</td></tr>
+    <tr><td><code>df[1:3]</code></td><td>rows at positions 1, 2</td></tr>
+    <tr><td><code>df[mask]</code></td><td>rows where mask is True</td></tr>
+    <tr><td><code>s[label]</code> (Series)</td><td>value by label only (pandas 3)</td></tr>
   </table>
-  <h3>Syntax to remember</h3>
+  <h3>loc vs iloc</h3>
   <table class="tbl">
-    <tr><th>Task</th><th>Code</th><th>Meaning of the parts</th></tr>
-    <tr><td>Build</td><td><code>pd.Series(values, index=labels, name=n)</code>; <code>pd.DataFrame(list_of_dicts)</code></td><td>values + labels; keys → columns</td></tr>
-    <tr><td>Align with default</td><td><code>a.add(b, fill_value=0)</code></td><td>missing label counts as 0</td></tr>
-    <tr><td>Read</td><td><code>pd.read_csv(path, parse_dates=[…], usecols=[…], dtype={…})</code></td><td>types, columns, explicit dtypes</td></tr>
-    <tr><td>Inspect</td><td><code>df.head()</code>, <code>df.info()</code>, <code>df.describe()</code></td><td>rows · types and gaps · summary numbers</td></tr>
-    <tr><td>Select</td><td><code>df.loc[row_labels, cols]</code>, <code>df.iloc[row_pos, col_pos]</code></td><td>label (end incl.) · position (end excl.)</td></tr>
-    <tr><td>Filter</td><td><code>df[(df.a &gt; x) &amp; (df.b == "y")]</code>, <code>df.query("a &gt; @x")</code></td><td>mask of True/False per row</td></tr>
-    <tr><td>Change</td><td><code>df.loc[mask, "c"] = v</code></td><td>one step on the real table</td></tr>
-    <tr><td>New columns</td><td><code>df.assign(c=lambda d: d.a + 1)</code></td><td>returns a new DataFrame</td></tr>
-    <tr><td>If/else</td><td><code>np.where(cond, x, y)</code></td><td>vectorised choice</td></tr>
+    <tr><th></th><th><code>loc</code></th><th><code>iloc</code></th></tr>
+    <tr><td>Selects by</td><td>label, list of labels, mask</td><td>position, list of positions</td></tr>
+    <tr><td>Slice end</td><td>included: <code>loc[102:104]</code> = 3 rows</td><td>excluded: <code>iloc[1:3]</code> = 2 rows</td></tr>
+    <tr><td>After sort/filter</td><td>still finds the same record</td><td>points at whatever is now there</td></tr>
+    <tr><td>Single cell</td><td><code>at[row, col]</code></td><td><code>iat[i, j]</code></td></tr>
   </table>
-  <h3>When to use, when not</h3>
-  <div class="cards">
-    <div><b>loc</b><p>You mean a specific row (order 103) or a condition.</p><small>Not for "the first n rows" after sorting</small></div>
-    <div><b>iloc</b><p>You mean a position: top 3 after sorting, every 10th row.</p><small>Not for named rows</small></div>
-    <div><b>query</b><p>Long readable filters, variables via @.</p><small>Not for column names with spaces (use backticks) or built masks</small></div>
-    <div><b>Parquet</b><p>Storing tables between steps, big files, Spark.</p><small>Not for sending to a person who opens Excel</small></div>
-    <div><b>apply</b><p>Only when no vectorised form exists.</p><small>Never for arithmetic or simple if/else</small></div>
-  </div>
-  <div class="callout trap"><span class="label">Key traps</span><p>Alignment NaNs; dtypes changed by one bad value; CSV losing types; loc includes the end, iloc excludes it; <code>and</code> instead of <code>&amp;</code>; chained assignment; ignoring <code>assign</code>'s return value; row loops; dirty text silently escaping filters.</p></div>
-  <h3>Five rapid-fire checks</h3>
-  <table class="tbl">
-    <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td><code>day2 + day3</code> for Dosa Hut?</td><td>NaN (only in day2); with <code>add(…, fill_value=0)</code> it is 240</td></tr>
-    <tr><td>How many rows does <code>o.loc[102:104]</code> return? <code>o.iloc[1:3]</code>?</td><td>3 and 2</td></tr>
-    <tr><td>Why is <code>amount</code> float64?</td><td>One blank became NaN, which is a float</td></tr>
-    <tr><td>Does <code>df[df.city == "Pune"]["amount"] = 0</code> change df in pandas 3?</td><td>No; it warns (ChainedAssignmentError). Use <code>df.loc[df.city == "Pune", "amount"] = 0</code></td></tr>
-    <tr><td>Why did order 104 get the Mumbai fee?</td><td>Its city is " pune", not "Pune": a cleaning problem, not a code problem</td></tr>
-  </table>
+  <h3>Syntax</h3>
+  <div class="fx" data-lang="py">df = pd.DataFrame(list_of_dicts)                # or dict of lists, index=[...]
+df = pd.read_csv("f.csv", parse_dates=["order_time"], index_col="order_id",
+                 usecols=[...], dtype={...})
+df.shape; df.head(); df.info(); df.describe(); df["city"].value_counts()
+df.loc[103, "customer"]; df.loc[102:104, ["customer", "amount"]]
+df.iloc[0]; df.iloc[1:3, [0, 4]]
+df[(df["amount"] &gt; 200) &amp; (df["city"] == "Pune")]
+df[df["restaurant"].isin([...])]; df[df["amount"].between(250, 400)]
+df.query("amount &gt; @limit and restaurant == 'Pizza Point'")
+df["fee"] = np.where(df["city"] == "Pune", 30, 40)
+df = df.assign(total=lambda d: d["amount"] + 30)
+df = df.drop(columns=[...]).rename(columns={"old": "new"})
+df = df.sort_values(["restaurant", "amount"], ascending=[True, False])
+df.nlargest(3, "amount"); df.sort_index(); df.reset_index(drop=True)
+df.loc[mask, "amount"] = 0                       # the one safe way to change values</div>
+  <h3>Gotchas</h3>
+  <ul>
+    <li>A slice in plain <code>[]</code> selects rows, not columns.</li>
+    <li><code>df["a", "b"]</code> is a KeyError; use <code>df[["a", "b"]]</code>.</li>
+    <li><code>loc</code> includes the slice end; <code>iloc</code> excludes it; they diverge after sort/filter.</li>
+    <li><code>s[0]</code> on a Series means label 0; with no such label it is a KeyError (pandas 3 dropped the positional fallback).</li>
+    <li><code>and</code>/<code>or</code> on columns fail; use <code>&amp;</code> <code>|</code> <code>~</code> with parentheses.</li>
+    <li>Comparisons with NaN are False; find gaps with <code>isna()</code>.</li>
+    <li><code>sort_values</code>, <code>drop</code>, <code>assign</code> return new tables: keep the result.</li>
+    <li>Chained assignment never writes; use one <code>.loc</code>.</li>
+  </ul>
 
-  <h2 id="pdb-qa"><span class="num">15</span>Questions &amp; Answers</h2>
+  <h2 id="pdb-qa"><span class="num">12</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between a Series and a NumPy array?</summary><div class="qa-body">A Series is a NumPy-style array plus an index of labels (and a name). Operations between Series align on labels; between arrays they pair by position. Series also handle missing values and mixed label types.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does <code>s1 + s2</code> do when the indexes differ?</summary><div class="qa-body">It takes the union of the labels, adds values whose labels match, and gives NaN for labels on only one side. <code>s1.add(s2, fill_value=0)</code> treats a missing side as 0.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span><code>loc</code> vs <code>iloc</code>?</summary><div class="qa-body"><code>loc</code> selects by label (and masks), slice end included. <code>iloc</code> selects by integer position, slice end excluded. After sorting or filtering, labels and positions differ, so pick by meaning.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why did <code>pd.read_csv</code> make an integer column float?</summary><div class="qa-body">The column had a blank cell, read as NaN, which is a floating-point value; one NaN makes the whole column float64. Use the nullable <code>"Int64"</code> dtype to keep integers with missing values.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why Parquet over CSV?</summary><div class="qa-body">Parquet stores types (dates stay dates), compresses, and is columnar, so reading a few columns reads only those. On 200,000 orders it was several times smaller and ten or more times faster for two columns. CSV is still best for exchanging small files with people and tools that cannot read Parquet.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Filter orders in Pune above ₹200 in two ways.</summary><div class="qa-body"><code>o[(o["city"] == "Pune") &amp; (o["amount"] &gt; 200)]</code> or <code>o.query("city == 'Pune' and amount &gt; 200")</code>. On the raw table both miss order 104, whose city is " pune".</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why did <code>df[df.x &gt; 0]["y"] = 1</code> not change <code>df</code>?</summary><div class="qa-body">It is chained: <code>df[df.x &gt; 0]</code> creates a new object and the assignment edits that. Write <code>df.loc[df.x &gt; 0, "y"] = 1</code>. pandas 3 warns with ChainedAssignmentError; older versions raised SettingWithCopyWarning.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is Copy-on-Write?</summary><div class="qa-body">In pandas 3, every object derived from another behaves as an independent copy; pandas shares memory until one of them is written to, and copies only then. So editing a subset never changes its parent, and chained assignment never works.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does selection need the index from section 02?</summary><div class="qa-body"><code>loc</code> selects by index label, masks are Series aligned to the index, and filtered rows keep their labels so you can still find order 103 after sorting. Without an index there would only be positions, which change after every sort or filter.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why must you check dtypes before writing masks or maths?</summary><div class="qa-body">A comparison like <code>delivery_minutes &gt; 30</code> on a <code>str</code> column compares text, not numbers (or fails), and sums concatenate or fail. dtypes decide what every later operation means.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks if you skip the vectorised habit and use apply everywhere?</summary><div class="qa-body">Correctness is the same, speed is not: a few hundred times slower on 100,000 rows here, more with heavier functions. The grouping and time-series tools in later notes are all vectorised, so the apply habit also hides the right tool.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: which problems seen in this note does the Cleaning note fix?</summary><div class="qa-body">The duplicate order 105 (inflating <code>describe</code>), " pune"/"MUMBAI" (escaping filters, wrong fees), text minutes ("28 min", "unknown") that cannot be averaged, the impossible 240, and the blank amount whose meaning must be decided.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you create a DataFrame from Python data?</summary><div class="qa-body">From a list of dicts, where each dict becomes a row and the keys become columns, or from a dict of lists, where each key is a column and its list holds the values. You can pass <code>index=</code> to choose the row labels; otherwise pandas uses 0, 1, 2… DataFrames can also be built from NumPy arrays or read from files.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What are the first things you run on a newly loaded DataFrame?</summary><div class="qa-body"><code>shape</code> for size, <code>head()</code> to see real values, <code>info()</code> for dtypes and non-null counts (gaps, and numbers stored as text), <code>describe()</code> for numeric ranges, and <code>value_counts()</code> on key text columns to spot inconsistent spellings. Also <code>duplicated().sum()</code> to check for repeated rows.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between <code>df["a"]</code> and <code>df[["a"]]</code>?</summary><div class="qa-body"><code>df["a"]</code> returns a Series, one-dimensional. <code>df[["a"]]</code> passes a list containing one name and returns a DataFrame with one column. The distinction matters when the next step expects a table, such as a model's feature matrix.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between <code>loc</code> and <code>iloc</code>?</summary><div class="qa-body"><code>loc</code> selects by label (and accepts boolean masks); <code>iloc</code> selects by integer position. <code>loc</code> slices include the end label, while <code>iloc</code> slices exclude the end position like Python lists. After sorting or filtering, labels stay with their rows but positions are recounted, so the two can return different rows.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does <code>loc</code> include the end of a slice when <code>iloc</code> does not?</summary><div class="qa-body">Positions are integers, so "up to but not including" follows the Python convention. Labels can be any values, such as words or dates, with no natural "next label" to stop before, so the only sensible rule is to include both named ends: <code>loc["2026-03-02":"2026-03-04"]</code> means those dates inclusive.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>On a default RangeIndex, how many rows do <code>df.loc[0:2]</code> and <code>df.iloc[0:2]</code> return?</summary><div class="qa-body"><code>loc[0:2]</code> returns 3 rows (labels 0, 1, 2) and <code>iloc[0:2]</code> returns 2 (positions 0, 1). This is a classic trick question.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you filter rows on two conditions, and why can't you use <code>and</code>?</summary><div class="qa-body"><code>df[(df["amount"] &gt; 200) &amp; (df["city"] == "Pune")]</code>, with <code>|</code> for or and <code>~</code> for not. Python's <code>and</code> needs one boolean per side, but each comparison is a Series of booleans, so pandas raises "truth value of a Series is ambiguous". The parentheses are required because <code>&amp;</code> binds more tightly than comparison operators.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What happens to NaN in a filter like <code>df["amount"] &gt; 400</code>?</summary><div class="qa-body">Any comparison with NaN is False, so rows with a missing amount are excluded from both <code>&gt; 400</code> and <code>&lt;= 400</code>. To find or keep missing values explicitly, use <code>isna()</code> or <code>notna()</code>; <code>== np.nan</code> is always False.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>When would you use <code>query</code> instead of a boolean mask?</summary><div class="qa-body"><code>query</code> is more readable for long hand-written filters: column names appear directly, conditions use <code>and</code>/<code>or</code>, Python variables are referenced with <code>@</code>, and names with spaces go in backticks. It also fits method chains. Masks are better when conditions are built programmatically or already stored in variables.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does <code>isin</code> do, and what does <code>between</code> do?</summary><div class="qa-body"><code>isin(list)</code> returns True where a value is in the list, replacing several <code>==</code> conditions joined by <code>|</code>. <code>between(a, b)</code> returns True where a value lies in the range, inclusive of both ends by default (<code>inclusive=</code> can change that).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between <code>df["new"] = ...</code> and <code>df.assign(new=...)</code>?</summary><div class="qa-body">Direct assignment modifies <code>df</code> in place. <code>assign</code> returns a new DataFrame and leaves <code>df</code> unchanged, which suits method chains. Inside <code>assign</code>, a lambda receives the frame being built, so later columns can use earlier ones from the same call.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you remove columns and rows?</summary><div class="qa-body"><code>df.drop(columns=[...])</code> for columns and <code>df.drop(index=[...])</code> for rows by label; to drop rows by condition, filter with the opposite mask, <code>df[~mask]</code>. <code>pop("c")</code> removes a column in place and returns it. All but <code>pop</code> return a new table, so assign the result.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you sort by several columns in different directions?</summary><div class="qa-body"><code>df.sort_values(["restaurant", "amount"], ascending=[True, False])</code> sorts by restaurant A to Z, and by amount high to low within each restaurant. Missing values go last by default (<code>na_position</code>). For the top n rows, <code>nlargest(n, col)</code> is shorter and avoids a full sort.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does <code>reset_index</code> do and when do you need it?</summary><div class="qa-body">It moves the current index into a regular column and replaces it with a fresh 0…n−1 RangeIndex; <code>drop=True</code> discards the old labels instead. Use it after filtering, sorting or grouping when you want positions and labels to agree again, or to turn a group key index back into a column.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does <code>df[df.x &gt; 0]["y"] = 1</code> not change <code>df</code>?</summary><div class="qa-body">It is chained assignment: <code>df[df.x &gt; 0]</code> creates a new temporary DataFrame and the assignment writes into it, then it is discarded. Pandas 3 warns with ChainedAssignmentError; older pandas raised SettingWithCopyWarning. Write <code>df.loc[df.x &gt; 0, "y"] = 1</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What was <code>SettingWithCopyWarning</code> and how do you avoid it?</summary><div class="qa-body">In pandas before 3 it warned that you might be writing into a copy of a slice, because a subset could be either a view or a copy and the parent might not change. Avoid it by assigning with <code>.loc[rows, col] = value</code> on the original in one step, or by calling <code>.copy()</code> on a subset you mean to modify. Pandas 3's Copy-on-Write removes the warning: subsets always behave as copies.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>In pandas 3, if you take <code>col = df["amount"]</code> and set <code>col.iloc[0] = 0</code>, does <code>df</code> change?</summary><div class="qa-body">No. Under Copy-on-Write <code>col</code> shares memory with <code>df</code> only until it is written to; the write triggers a real copy, so only <code>col</code> changes. In pandas 2 without CoW, a column taken with <code>[]</code> was usually a view, so <code>df</code> would have changed too.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between <code>at</code>/<code>iat</code> and <code>loc</code>/<code>iloc</code>?</summary><div class="qa-body"><code>at</code> and <code>iat</code> access exactly one cell, by label or by position, and are faster for that because they skip the general indexing machinery. <code>loc</code> and <code>iloc</code> can select single cells too, but also lists, slices and masks.</div></details>
 </main>
 `
 });

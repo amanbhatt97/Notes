@@ -285,8 +285,8 @@ def vectorised():                              # 3. whole columns at once
 assert loop().equals(with_apply()) and with_apply().equals(vectorised())
 for f, reps in [(loop, 1), (with_apply, 1), (vectorised, 5)]:
     print(f"{f.__name__:11} {ms(f, reps):9.1f} ms")</div>
-  <div class="fx" data-lang="text">loop           1774.9 ms
-with_apply      433.6 ms
+  <div class="fx" data-lang="text">loop           1789.7 ms
+with_apply      430.5 ms
 vectorised        1.8 ms</div>
   <p>The <code>assert</code> line confirms that all three produced exactly the same totals. The loop took about two seconds, <code>apply</code> about four hundred milliseconds, and the vectorised version under two milliseconds: roughly a thousand times faster than the loop and a couple of hundred times faster than <code>apply</code>. The gap grows with the number of rows and with the complexity of the logic.</p>
   <p>The reason goes back to how the table is stored. Each column is one typed array in memory. A vectorised operation hands the whole array to compiled C code inside NumPy or Arrow, which runs a tight loop over raw numbers with no Python involved, the way a till adds the right fee to every bill in the queue at the press of one button. The loop and <code>apply</code> do the opposite: for every row, pandas has to build a new Series object holding that row's values (gathering them from seven separate column arrays), call your Python function, have the interpreter look up <code>row["city"]</code>, compare two strings, add two numbers, and store the result, then throw the row object away and start again. That is a cashier adding the fee to each bill by hand. <code>apply</code> is faster than the explicit loop only because it builds rows a little more cheaply; it is still a Python loop in disguise.</p>
@@ -369,8 +369,8 @@ print("read all   csv", round(ms(lambda: pd.read_csv("big.csv", parse_dates=["or
 print("2 columns  csv", round(ms(lambda: pd.read_csv("big.csv", usecols=["city", "amount"]))), "ms",
       "| parquet", round(ms(lambda: pd.read_parquet("big.parquet", columns=["city", "amount"]))), "ms")</div>
   <div class="fx" data-lang="text">size MB    csv 12.0 | parquet 3.2
-read all   csv 37 ms | parquet 10 ms
-2 columns  csv 19 ms | parquet 6 ms</div>
+read all   csv 42 ms | parquet 12 ms
+2 columns  csv 27 ms | parquet 6 ms</div>
   <p>The Parquet file is under a third of the CSV's size, reading the whole table is about three times faster because there is no text to parse into numbers and dates, and reading just two of the seven columns is faster still, since Parquet skips the other five entirely while CSV still has to scan every line. The usual practice is: CSV for exchanging small files with people and other tools, Parquet for storing tables between steps of your own work and for anything large, Excel only when a person will open the file. Useful <code>read_csv</code> options (<code>usecols</code>, <code>dtype</code>, <code>parse_dates</code>, <code>index_col</code>, <code>chunksize</code> for files bigger than memory) are covered in <a class="xref" data-note="da_pd_basics">Series, DataFrames &amp; Selection</a>.</p>
 
   <h2 id="pdm-beyond"><span class="num">09</span>When to Reach for Polars or DuckDB</h2>
@@ -408,10 +408,10 @@ shape: (2, 3)
 │ Mumbai ┆ 899207  ┆ 399.924644 │
 │ Pune   ┆ 1100793 ┆ 399.845204 │
 └────────┴─────────┴────────────┘
-with_pandas      114 ms
+with_pandas      117 ms
 with_polars       17 ms
-with_duckdb       12 ms</div>
-  <p>All three give the same answer (899,207 Mumbai orders averaging ₹399.92, and 1,100,793 Pune orders averaging ₹399.85); Polars prints its own style of table with each column's type under the header. Pandas took about 140 ms, most of it reading every column of the file into memory, while Polars and DuckDB took 10 to 20 ms, because they read only the two columns the query needs and use every core. Timings are approximate, and on small tables the difference disappears.</p>
+with_duckdb       13 ms</div>
+  <p>All three give the same answer (899,207 Mumbai orders averaging ₹399.92, and 1,100,793 Pune orders averaging ₹399.85); Polars prints its own style of table with each column's type under the header. Pandas took over 100 ms, most of it reading every column of the file into memory, while Polars and DuckDB took 10 to 20 ms, because they read only the two columns the query needs and use every core. Timings are approximate, and on small tables the difference disappears.</p>
   <p>In practice: stay with pandas when the data fits comfortably in memory, which is most of the time; it has the largest ecosystem, and plotting, statistics and machine-learning libraries expect its DataFrames. Reach for DuckDB when the question is naturally SQL, or when the data sits in large Parquet files you want to filter and aggregate before bringing a small result into pandas (<code>.df()</code> does that, as above). Reach for Polars when a pandas pipeline is too slow and you are happy to learn a slightly different API. When even one machine is not enough, the same DataFrame ideas carry over to <a class="xref" data-note="de_spark">Apache Spark</a>. Scaling decisions are discussed further in <a class="xref" data-note="da_pd_time">Time Series &amp; Performance</a>.</p>
 
   <h2 id="pdm-traps"><span class="num">10</span>Common Mistakes</h2>
