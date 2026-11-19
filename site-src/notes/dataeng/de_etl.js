@@ -3,117 +3,54 @@ Object.assign(TOPIC_CONTENT, {
   "de_etl": `<main>
   <h1>ETL &amp; Orchestration</h1>
   <div class="where"><span>Data Engineering</span><span>ETL &amp; Orchestration</span></div>
-  <p class="lead">Every morning at Biteful, the small food-delivery company from the SQL and pandas notes, someone downloads yesterday's orders, pastes them into Excel, fixes the city spellings, looks up each restaurant, totals the revenue per city and e-mails the result. This note turns that chore into a pipeline that runs by itself every night: <strong>extract</strong> the data from where it lives, <strong>transform</strong> it into one clean table, <strong>load</strong> it into a Parquet "warehouse", then make it safe to re-run, cheap to update, checked for bad data, and scheduled with retries and alerts by an <strong>orchestrator</strong> (Airflow or Prefect). Each idea is introduced because the previous one left a problem. ONE running example is used throughout: Biteful's 10 orders from 2 to 8 March 2026 (the same rows as the SQL notes) coming from three sources. Every output on this page comes from a real run: Python 3.13 with pandas 3.0, pyarrow and DuckDB, plus a real <strong>Airflow 3.1.8</strong> and a real <strong>Prefect 3.8</strong>. The only stand-ins are named where they appear: SQLite plays the app's PostgreSQL database, and a 25-line local web server plays the delivery partner's API.</p>
+  <p class="lead">A <strong>data pipeline</strong> is a program that collects data from the systems where it is created, cleans and combines it, and stores the result where analysts, dashboards and models can use it, every day, without anyone pressing a button. ETL (extract, transform, load) is the name for those three steps, and an <strong>orchestrator</strong> such as Airflow or Prefect is the program that runs them on time, in the right order, and again when something fails. Almost every number a company looks at in the morning was produced overnight by a pipeline like this, so knowing how to make one correct, safe to re-run and loud when it breaks is the core of data engineering. Our running example is Biteful, the small food-delivery company from the SQL and pandas notes: we will start from an analyst doing the job by hand in Excel, write a naive script, watch it fail, and then add one idea at a time until we have a scheduled, self-checking pipeline. Every output on this page comes from a real run (pandas, DuckDB, Spark, Airflow 3.1.8 and Prefect 3.9.3); the only stand-ins are SQLite playing the app's PostgreSQL database and a 25-line local web server playing the delivery partner's API.</p>
 
-  <h2 id="et-fit" class="open"><span class="num">★</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 660 170" width="660">
-<defs><marker id="et-a0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="10" y="20" width="120" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="70" y="41" text-anchor="middle" font-size="12">pandas · SQL</text><text x="70" y="58" text-anchor="middle" class="tm" font-size="10">clean one table, once</text>
-<line x1="130" y1="45" x2="158" y2="45" stroke="currentColor" marker-end="url(#et-a0)"/>
-<rect x="160" y="20" width="130" height="50" rx="8" class="fg sg" stroke-width="3"/><text x="225" y="41" text-anchor="middle" font-size="12" font-weight="700">ETL &amp; Orchestration</text><text x="225" y="59" text-anchor="middle" class="tg" font-size="10">YOU ARE HERE</text>
-<line x1="290" y1="45" x2="318" y2="45" stroke="currentColor" marker-end="url(#et-a0)"/>
-<rect x="320" y="20" width="150" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="395" y="41" text-anchor="middle" font-size="12">Apache Spark</text><text x="395" y="58" text-anchor="middle" class="tm" font-size="10">same pipeline, 50 GB+</text>
-<line x1="470" y1="45" x2="498" y2="45" stroke="currentColor" marker-end="url(#et-a0)"/>
-<rect x="500" y="20" width="150" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="575" y="41" text-anchor="middle" font-size="12">Kafka &amp; Streaming</text><text x="575" y="58" text-anchor="middle" class="tm" font-size="10">same data, seconds old</text>
-<line x1="225" y1="70" x2="225" y2="108" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#et-a0)"/>
-<rect x="140" y="110" width="170" height="46" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="225" y="130" text-anchor="middle" font-size="12">MLOps · feature pipelines</text><text x="225" y="147" text-anchor="middle" class="tm" font-size="10">training data, every night</text>
-<text x="340" y="130" class="tm" font-size="10.5">pandas cleans a table once, by hand;</text><text x="340" y="146" class="tm" font-size="10.5">ETL cleans it every night, by itself</text>
-</svg><figcaption>The Data Engineering track, in reading order: ETL → Spark → Kafka. All three use the same Biteful orders.</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: cleaning a table once</b><span><a class="xref" data-note="da_pandas">Pandas</a> taught you to read, clean and merge a DataFrame; <a class="xref" data-note="da_pd_groupby">GroupBy</a> to total it; <a class="xref" data-note="sql_joins">JOINs</a> why a join can double your rows; <a class="xref" data-note="sql_modeling">Data Modeling</a> what a fact table is; <a class="xref" data-note="py_files">File Handling</a> what CSV, JSON and Parquet are. All of that was done once, by you, in a notebook.</span></li>
-    <li><b>This note adds: doing it every night, safely, with nobody watching</b><span>Extract from a database, a file and an API; transform with pandas; load Parquet partitions; ELT; idempotency (so a re-run cannot double revenue); incremental loads with watermarks; data-quality gates; DAGs, schedules, retries and backfills; Airflow and Prefect; alerts.</span></li>
-    <li><b>Leads to: <a class="xref" data-note="de_spark">Apache Spark</a> and <a class="xref" data-note="de_kafka">Kafka</a></b><span>When a night's orders no longer fit in pandas, the transform step moves to Spark (same steps, many machines). When "tomorrow morning" is too late, the same order events flow through Kafka within seconds. Pipelines like this one also feed models: see <a class="xref" data-note="mlops_lifecycle">the ML lifecycle</a> and <a class="xref" data-note="sd_serving">feature pipelines and serving</a>. Airflow itself usually runs in containers (<a class="xref" data-note="se_docker">Docker</a>).</span></li>
-  </ol>
-
-  <h2 id="et-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
-  <p>The whole note as one chain. Each idea answers the question above it, and its weakness raises the next question. All numbers come from Biteful's orders of 2–8 March 2026.</p>
-  <ol class="story">
-    <li><b>The manual ritual</b><span>Q: why not keep doing it in Excel? → it takes an hour, depends on one person, and a quick script that copies the steps gives three cities for two (<code>' pune '</code>, <code>'Pune'</code>, <code>'MUMBAI'</code>). We need repeatable steps, each with one job: get the data, fix it, store it.</span></li>
-    <li><b>Extract</b><span>Q: how do we get the data out of where it lives? → a SQL query for the app DB (3 orders on 2 March), a CSV read for the partner sheet (6 rows), a page-by-page loop for the API (2 pages). But the raw data is messy and spread over three tables…</span></li>
-    <li><b>Transform</b><span>Q: how do three messy sources become one clean table? → clean (dedupe the sheet, fix types), normalise (<code>' pune '</code> → <code>Pune</code>, IST → UTC), enrich (join restaurant and delivery time): Pune 760, Mumbai 450. A forgotten dedupe would fan order 105 out into 2 rows. Now the table exists only in memory…</span></li>
-    <li><b>Load</b><span>Q: where do we keep the result so others can query it? → a Parquet file per day: <code>warehouse/fact_orders/order_date=2026-03-02/</code>, types kept, columns readable one at a time. But we cleaned in Python <em>before</em> storing; is that the only order?</span></li>
-    <li><b>ETL vs ELT</b><span>Q: should we transform before or after loading? → ELT lands the raw data first and transforms with SQL in the warehouse (DuckDB gave the identical 3 rows). Either way the job will be re-run one day, by a retry or by you…</span></li>
-    <li><b>Idempotency</b><span>Q: what happens if the same day runs twice? → plain append: 6 rows, revenue 2420 instead of 1210. Partition overwrite and upsert make a re-run harmless. But re-loading whole days misses changes to <em>old</em> orders (order 110 was delivered later)…</span></li>
-    <li><b>Incremental loads &amp; watermarks</b><span>Q: how do we pick up only what changed since last time? → remember the newest <code>updated_at</code> seen (the watermark) and ask for rows after it: run 1 gets 10 rows, run 2 gets just 110 and 111, run 3 gets 0. Then merge by <code>order_id</code>. But a job can now load bad data quickly and silently…</span></li>
-    <li><b>Data quality checks</b><span>Q: how do we stop bad data before anyone sees it? → checks between transform and load: row count = source count, unique keys, valid amounts and statuses, enrich succeeded. 3 bad batches caught, the empty 6 March correctly passed. Now we have 7 steps that must run in order, every night…</span></li>
-    <li><b>Orchestration: DAGs, schedules, retries, backfills</b><span>Q: who runs the steps in the right order, at the right time, and again when they fail? → a DAG (3 extracts in parallel, then transform → check → load), a schedule tied to the day the run is FOR, retries with backoff (the 503 healed on attempt 2), backfills that re-run past days safely. Writing that runner ourselves is fragile…</span></li>
-    <li><b>Airflow (and Prefect)</b><span>Q: what do real teams use? → Airflow: operators/tasks, XComs for small values, sensors that wait for files, a scheduler and executors; ran the Biteful DAG for real. Prefect: the same with plain decorated functions. Retries cover temporary errors; what about the failures retries can't fix?</span></li>
-    <li><b>Error handling &amp; alerting</b><span>Q: what happens when it fails anyway? → bad data fails at once (no retries), transient errors retry then alert, nothing half-loaded is published (the 3 March partition stayed correct), and a human is paged with the day and the task.</span></li>
-  </ol>
-
-  <h2 id="et-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="et-map"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">ETL &amp; Orchestration</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">Extract</div>
+        <div class="mm-title">Moving the data</div>
         <ul>
-          <li><b>Database</b> — a SQL query for one day: <code>WHERE ordered_at</code> on 2 March → 3 rows</li>
-          <li><b>File</b> — read as text first (<code>dtype=str</code>); types are fixed later</li>
-          <li><b>API</b> — loop over pages until <code>next_page</code> is empty; retry 429/5xx</li>
-          <li><b>Full vs incremental vs CDC</b> — copy all / rows after a watermark / read the DB's change log</li>
-          <li>⚠ never run heavy extracts on the production primary; use a replica</li>
+          <li><b>Extract</b>: query the DB, read the file, page through the API</li>
+          <li><b>Transform</b>: clean, normalise, enrich (joins)</li>
+          <li><b>Load</b>: Parquet day-folders, bronze → silver → gold</li>
+          <li><b>ELT</b>: load raw first, transform with SQL in the warehouse</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Transform</div>
+        <div class="mm-title">Safe to repeat</div>
         <ul>
-          <li><b>Clean</b> — dedupe, fix types, handle missing values</li>
-          <li><b>Normalise</b> — <code>' pune '</code> → <code>Pune</code>; times in UTC; one currency</li>
-          <li><b>Enrich</b> — join reference data (restaurant city, delivery minutes)</li>
-          <li>⚠ joining a sheet with a duplicate key fans out rows → <code>validate="many_to_one"</code></li>
-          <li>💡 washing, chopping and seasoning before cooking</li>
+          <li><b>Idempotent</b>: running twice = running once</li>
+          <li>Partition overwrite or upsert, never plain append</li>
+          <li>Every run takes its <b>logical date</b>, not the clock</li>
+          <li><b>Watermark</b>: load only rows changed since last time</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Load &amp; ELT</div>
+        <div class="mm-title">Trust</div>
         <ul>
-          <li><b>Targets</b> — warehouse (BigQuery, Snowflake), lake (Parquet on S3), Postgres</li>
-          <li><b>Parquet</b> — columnar, typed, compressed; one folder per day</li>
-          <li><b>Layers</b> — bronze (raw) → silver (clean) → gold (business tables)</li>
-          <li><b>ELT</b> — load raw, transform with SQL inside the warehouse (dbt)</li>
-          <li>💡 ETL = cook then deliver; ELT = deliver groceries, cook in a big kitchen</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Idempotency</div>
-        <ul>
-          <li><b>Definition</b> — running twice leaves the same result as once</li>
-          <li><b>Partition overwrite</b> — replace the day's folder (Biteful: 1210 stays 1210)</li>
-          <li><b>Upsert / MERGE</b> — <code>INSERT … ON CONFLICT (key) DO UPDATE</code></li>
-          <li><b>Logical date</b> — pass the day the run is FOR; never compute it from the clock</li>
-          <li>⚠ plain append: 1210 → 2420 on a retry</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Incremental &amp; Quality</div>
-        <ul>
-          <li><b>Watermark</b> — newest <code>updated_at</code> loaded; next run asks for rows after it</li>
-          <li><b>Merge</b> — upsert changed rows by key (110: pending → delivered)</li>
-          <li>⚠ hard deletes are invisible to a watermark (107 stayed)</li>
-          <li><b>Checks</b> — counts reconcile, unique keys, valid values, enrich succeeded, freshness</li>
-          <li>⚠ a green run with 0 or doubled rows is the worst failure</li>
+          <li>Quality gate between transform and load</li>
+          <li>Reconcile with the source; test invariants</li>
+          <li>Failed run publishes nothing; previous data stays</li>
+          <li>Alert names the pipeline, day and task</li>
         </ul>
       </div>
       <div class="mm-branch">
         <div class="mm-title">Orchestration</div>
         <ul>
-          <li><b>DAG</b> — tasks + dependencies, no cycles; independent tasks run in parallel</li>
-          <li><b>Schedule</b> — the run for day D starts after D ends; parameterised by D</li>
-          <li><b>Retries</b> — transient errors only, with exponential backoff</li>
-          <li><b>Backfill</b> — re-run past days; safe only if each run is idempotent</li>
-          <li><b>Alert</b> — tell a human which day and which task failed</li>
+          <li><b>DAG</b>: tasks + dependencies, no cycles</li>
+          <li>Schedule: the run for day D starts after D ends</li>
+          <li>Retry transient errors only, with backoff</li>
+          <li><b>Backfill</b>: re-run past days (needs idempotency)</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Airflow &amp; Prefect</div>
+        <div class="mm-title">Tools</div>
         <ul>
-          <li><b>Operator / task</b> — a template / its use in a DAG</li>
-          <li><b>XCom</b> — small values between tasks (paths, counts), not DataFrames</li>
-          <li><b>Sensor</b> — waits for a file or partition; <code>mode="reschedule"</code></li>
-          <li><b>Scheduler + executor</b> — decides what is due / where it runs (Local, Celery, Kubernetes)</li>
-          <li><b>Prefect</b> — <code>@flow</code> / <code>@task(retries=2)</code> on plain functions</li>
-          <li>⚠ <code>ds</code> is the UTC date: in India, use the IST data interval</li>
+          <li><b>Airflow</b>: operators, tasks, XCom, sensors, scheduler, executor</li>
+          <li><b>Prefect</b>: <code>@flow</code> and <code>@task</code> on plain functions</li>
+          <li>dbt for SQL transforms in ELT</li>
         </ul>
       </div>
     </div>
@@ -122,32 +59,27 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="et-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain</span></div></div>
-      <div class="rm-item rm-done" data-target="et-need"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">The Morning Excel Ritual</span><span class="rm-sub">Why pipelines exist</span></div></div>
-      <div class="rm-item rm-done" data-target="et-ext"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Extract</span><span class="rm-sub">DB, file, API</span></div></div>
-      <div class="rm-item rm-done" data-target="et-tr"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Transform</span><span class="rm-sub">Clean, normalise, enrich</span></div></div>
-      <div class="rm-item rm-done" data-target="et-load"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Load</span><span class="rm-sub">Parquet warehouse, layers</span></div></div>
-      <div class="rm-item rm-done" data-target="et-elt"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">ETL vs ELT</span><span class="rm-sub">Where the transform runs</span></div></div>
-      <div class="rm-item rm-done" data-target="et-idem"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Idempotency</span><span class="rm-sub">1210 became 2420</span></div></div>
-      <div class="rm-item rm-done" data-target="et-incr"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Incremental Loads</span><span class="rm-sub">Watermarks and merges</span></div></div>
-      <div class="rm-item rm-done" data-target="et-dq"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Data Quality Checks</span><span class="rm-sub">Stop bad data at the gate</span></div></div>
-      <div class="rm-item rm-done" data-target="et-dag"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Orchestration</span><span class="rm-sub">DAGs, schedules, retries, backfills</span></div></div>
-      <div class="rm-item rm-done" data-target="et-air"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Airflow &amp; Prefect</span><span class="rm-sub">Operators, XComs, sensors, executors</span></div></div>
-      <div class="rm-item rm-done" data-target="et-err"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Error Handling &amp; Alerting</span><span class="rm-sub">Fail loudly, publish nothing wrong</span></div></div>
-      <div class="rm-item rm-done" data-target="et-build"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Build It: Biteful's Week</span><span class="rm-sub">The whole pipeline, one run</span></div></div>
-      <div class="rm-item rm-done" data-target="et-connect"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One pipeline, many guards</span></div></div>
-      <div class="rm-item rm-done" data-target="et-traps"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Bugs that pass silently</span></div></div>
-      <div class="rm-item rm-done" data-target="et-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note in 10 minutes</span></div></div>
-      <div class="rm-item rm-done" data-target="et-qa"><span class="rm-num">15</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
+      <div class="rm-item rm-done" data-target="et-need"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Why Pipelines Exist</span><span class="rm-sub">the morning Excel job, and a script that gets it wrong</span></div></div>
+      <div class="rm-item rm-done" data-target="et-ext"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">Extract</span><span class="rm-sub">getting data out of a database, a file and an API</span></div></div>
+      <div class="rm-item rm-done" data-target="et-tr"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Transform</span><span class="rm-sub">cleaning, normalising and enriching into one table</span></div></div>
+      <div class="rm-item rm-done" data-target="et-load"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Load</span><span class="rm-sub">storing the result as Parquet, one folder per day</span></div></div>
+      <div class="rm-item rm-done" data-target="et-elt"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">ETL vs ELT</span><span class="rm-sub">transform before storing, or after</span></div></div>
+      <div class="rm-item rm-done" data-target="et-idem"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Idempotency</span><span class="rm-sub">why a re-run must not double the numbers</span></div></div>
+      <div class="rm-item rm-done" data-target="et-incr"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Incremental Loads and Watermarks</span><span class="rm-sub">loading only what changed since last time</span></div></div>
+      <div class="rm-item rm-done" data-target="et-dq"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Data Quality Checks</span><span class="rm-sub">stopping bad data before anyone sees it</span></div></div>
+      <div class="rm-item rm-done" data-target="et-dag"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">DAGs and Retries</span><span class="rm-sub">running steps in order and healing temporary failures</span></div></div>
+      <div class="rm-item rm-done" data-target="et-sched"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Schedules, Logical Dates and Backfills</span><span class="rm-sub">which day a run is for, and re-running the past</span></div></div>
+      <div class="rm-item rm-done" data-target="et-air"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Airflow and Prefect</span><span class="rm-sub">the real tools and their vocabulary</span></div></div>
+      <div class="rm-item rm-done" data-target="et-err"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Error Handling and Alerting</span><span class="rm-sub">failing loudly without publishing anything wrong</span></div></div>
+      <div class="rm-item rm-done" data-target="et-build"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">The Whole Pipeline</span><span class="rm-sub">Biteful's first week, end to end</span></div></div>
+      <div class="rm-item rm-done" data-target="et-traps"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">bugs that pass silently</span></div></div>
+      <div class="rm-item rm-done" data-target="et-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">definitions, tables, syntax, gotchas</span></div></div>
+      <div class="rm-item rm-done" data-target="et-qa"><span class="rm-num">15</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">what interviewers ask about pipelines</span></div></div>
     </div>
   </div>
 
-  <h2 id="et-need"><span class="num">01</span>The Morning Excel Ritual: Why Pipelines Exist</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>In the pandas and SQL notes, the data was already sitting in one tidy table and you cleaned it once. In a real company nobody hands you that table. The orders are in the app's database, the restaurant details are in a sheet another team keeps, and delivery times are in a partner's system. Who builds the tidy table, every day, without mistakes?</p>
-  </div>
-  <h3>The running example: Biteful</h3>
-  <p>Biteful delivers food in Pune and Mumbai. Its data is the same as in the SQL notes: 7 customers, 5 restaurants, 10 orders between 2 and 8 March 2026. Here are the orders as the app stores them (times in India Standard Time, IST):</p>
+  <h2 id="et-need"><span class="num">01</span>Why Pipelines Exist</h2>
+  <p>Biteful delivers food in Pune and Mumbai. Its data is the same as in the SQL notes: a handful of customers, five restaurants, and ten orders placed between 2 and 8 March 2026. Here are the orders as the app stores them, with times in India Standard Time (IST):</p>
   <table class="tbl">
     <tr><th>order</th><th>day</th><th>restaurant</th><th>status</th><th>amount ₹</th><th>delivery min</th></tr>
     <tr><td>101</td><td>02 Mar</td><td>10 Dosa Hut</td><td>delivered</td><td>240</td><td>32</td></tr>
@@ -161,22 +93,10 @@ Object.assign(TOPIC_CONTENT, {
     <tr><td>109</td><td>05 Mar</td><td>11 Biryani Bros</td><td>delivered</td><td>600</td><td>52</td></tr>
     <tr><td>110</td><td>08 Mar</td><td>10 Dosa Hut</td><td>pending</td><td>310</td><td>—</td></tr>
   </table>
-  <p>Nobody ordered on 6 and 7 March. That is not a mistake, and it will matter in section 08.</p>
-  <p>Every morning Priya, the operations analyst, produces "yesterday's delivered revenue per city". Her steps:</p>
-  <ol>
-    <li>Download yesterday's orders from the admin panel as a CSV.</li>
-    <li>Open the restaurant sheet the partner team keeps (restaurant → city, cuisine).</li>
-    <li>Look up delivery times in the logistics partner's portal.</li>
-    <li>VLOOKUP each order's restaurant to get its city; fix the spellings by eye.</li>
-    <li>Keep only delivered orders, total per city, e-mail the table.</li>
-  </ol>
-  <p>It works, until Priya is on leave, or makes a typo, or the business asks for two years of history. The data lives in three places, with three ways of getting it out:</p>
-  <div class="cards">
-    <div><b>App database</b><p>The <code>orders</code> table (PostgreSQL in production; SQLite here, same SQL).</p><small>Typed, reliable, always up to date</small></div>
-    <div><b>Partner sheet</b><p><code>inbox/restaurants_sheet.csv</code>, kept by hand.</p><small>Messy: <code>' pune '</code>, <code>MUMBAI</code>, Green Bowl pasted twice, Momo Magic has no rating</small></div>
-    <div><b>Delivery API</b><p>The logistics partner's web API, 2 rows per page.</p><small>Can be slow or down</small></div>
-  </div>
-  <p>A first attempt: copy Priya's steps into one quick script for 2 March. <code>pd.read_sql</code> runs a SQL query and returns a DataFrame; <code>merge</code> is the VLOOKUP.</p>
+  <p>Nobody ordered on 6 and 7 March. That is not a mistake in the data, and it will matter when we write data quality checks.</p>
+  <p>Every morning Priya, the operations analyst, produces one small table: yesterday's delivered revenue per city. To do it she downloads yesterday's orders from the admin panel, opens the restaurant sheet that the partner team keeps by hand (restaurant, city, cuisine, rating), looks up delivery times in the logistics partner's web portal, uses VLOOKUP to give each order its restaurant's city, fixes the spellings by eye, keeps only delivered orders, totals them per city and e-mails the result. It takes about an hour. It works, until Priya is on leave, or makes a typo, or the business asks for the same table for the last two years.</p>
+  <p>The difficulty is that the data lives in three different places, each with its own way of getting it out. The orders are in the app's database (PostgreSQL in production; SQLite plays it here, with the same SQL). The restaurant details are in a CSV file, <code>inbox/restaurants_sheet.csv</code>, which is messy because people type into it: Dosa Hut's city is written <code>' pune '</code> with spaces, Biryani Bros is in <code>MUMBAI</code>, Green Bowl has been pasted in twice, and Momo Magic has no rating yet. The delivery times come from the logistics partner's web API, which hands them out two rows at a time and is sometimes slow or down.</p>
+  <p>The obvious first step is to copy Priya's routine into a quick script for 2 March. <code>pd.read_sql</code> runs a SQL query and returns a pandas DataFrame, and <code>merge</code> plays the part of VLOOKUP:</p>
   <div class="fx" data-lang="py">import sqlite3, pandas as pd
 pd.set_option("display.width", 120)
 
@@ -195,40 +115,23 @@ city
 MUMBAI    450
 Pune      520
 Name: amount, dtype: int64</div>
-  <p>Trace it. Order 101 is at Dosa Hut, whose city the sheet spells <code>' pune '</code> (with spaces). Order 103 is at Pizza Point, spelled <code>'Pune'</code>. To a computer these are different words, so Pune's ₹760 is split into 240 and 520, and Mumbai is shouted as <code>MUMBAI</code>. Priya fixes this by eye every morning. A script must be told. And this script mixes everything in one place: if the sheet is late, if the API is down, if it runs twice, nothing tells us.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A restaurant kitchen does not cook a dish from field to plate in one movement. Suppliers deliver (extract), cooks wash, chop and season (transform), and the dish is plated and served (load). A head chef decides the order and checks each plate (orchestration). Each station has one job, so when a dish is wrong you know which station to look at.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A <strong>data pipeline</strong> is a program that moves data from where it is created to where it is used, changing it on the way, and runs by itself on a schedule. <strong>ETL</strong> names its three steps: <strong>Extract</strong> (read from the sources), <strong>Transform</strong> (clean, combine, reshape), <strong>Load</strong> (write to the place people query). An <strong>orchestrator</strong> is the program that runs pipelines on time, in order, with retries and alerts.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"It's just a quick script" is how most broken pipelines start. One script that reads, fixes and writes in one go cannot be re-run safely, tested step by step, or told apart when it fails. Keep the three steps as separate functions from day one; the rest of this note builds on that.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Extract.</b> We know the three steps. The first one is not trivial: a database, a file and an API each hand over data differently, and each can fail differently.</div>
+  <p>The script runs without any error, and the answer is wrong. Order 101 is at Dosa Hut, whose city the sheet spells <code>' pune '</code>; order 103 is at Pizza Point, spelled <code>'Pune'</code>. To a computer those are two different words, so Pune's real revenue of ₹760 is split into 240 and 520, and Mumbai appears in capitals. Priya fixes this by eye every morning without thinking about it; a script has to be told. And the problem is bigger than spelling. This script mixes everything into one block: if the sheet arrives late, if the API is down, or if someone runs it twice, nothing tells us, and when the number is wrong there is no way to see which part went wrong.</p>
+  <p>Think of a restaurant kitchen. Nobody cooks a dish from field to plate in one movement. Suppliers deliver the ingredients, cooks wash, chop and season them, and the dish is plated and served. A head chef decides the order of the work and checks each plate before it leaves. Because each station has one job, a bad dish can be traced to the station that caused it.</p>
+  <p>A data pipeline is organised the same way, and the three stations have standard names. <strong>Extract</strong> means reading the data from each source system. <strong>Transform</strong> means cleaning, combining and reshaping it. <strong>Load</strong> means writing the result to the place where people query it. Together they are called <strong>ETL</strong>. The program that plays head chef, running the steps every night in the right order, retrying them when they fail and telling someone when they cannot be fixed, is the <strong>orchestrator</strong>. The rest of this note builds each step as a separate Python function in a module called <code>biteful_etl.py</code>, then makes the whole thing safe to repeat, checks its output, and hands it to an orchestrator.</p>
 
-  <h2 id="et-ext"><span class="num">02</span>Extract: Database, File, API</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Biteful's data lives in three systems that speak different languages: SQL, a CSV file, and HTTP. How do we get one day's data out of each, in a form the next step can use, without hurting the systems we read from?</p>
-  </div>
-  <p>In plain words: extracting means <em>asking each source for the data and getting it into memory</em> (here, a pandas DataFrame). Three kinds of source, three ways of asking:</p>
-  <ul>
-    <li><strong>Database</strong>: send a SQL query and read the rows back. Ask only for the day you need.</li>
-    <li><strong>File</strong>: read it from a folder. Read every column as text first, because a hand-kept sheet may contain anything; fix types in the transform step.</li>
-    <li><strong>API</strong> (a web service that answers HTTP requests with JSON): APIs rarely return everything at once. They return a <strong>page</strong> (here 2 rows) plus a pointer to the next page, and you keep asking until there is none. This is <strong>pagination</strong>.</li>
-  </ul>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Collecting ingredients for one day's cooking: you phone the wholesaler for exactly today's order (a query), pick up the list a friend left on your door (a file), and collect vegetables from a market stall that hands them over two bags at a time (pages).</p>
-  </div>
-  <p>The three extract functions, one per source. They live in <code>biteful_etl.py</code>, the module the whole note builds up:</p>
+  <h2 id="et-ext"><span class="num">02</span>Extract</h2>
+  <p>Extracting means asking each source for the data one run needs and getting it, unchanged, into the pipeline (here, into a pandas DataFrame). The word "unchanged" matters: extract's only job is to bring the data in faithfully. Fixing it is the next step's job, and keeping the two apart means that when a number is wrong you can check whether the raw data was already wrong or whether your cleaning broke it.</p>
+  <p>Each kind of source is asked in a different way. A database is asked with a SQL query, and you should ask only for the day you need, not the whole table. A file is read from a folder; with a hand-kept sheet it is safest to read every column as text, because a person may have typed anything into it, and to convert types later. A web API (a service that answers HTTP requests with JSON) usually does not return everything at once. It returns one <strong>page</strong> of results plus a pointer to the next page, and the client keeps asking until there is no next page. This is called <strong>pagination</strong>. It is like collecting vegetables from a market stall that will only hand you two bags at a time: you keep going back until the stall-holder says that was the last one.</p>
+  <p>Here are the three extract functions, one per source. They are the first part of <code>biteful_etl.py</code>, and every later section adds to the same module:</p>
   <div class="fx" data-lang="py">import json, os, shutil, sqlite3
 from urllib.request import urlopen
 import pandas as pd
 
 APP_DB = "src/biteful_app.db"                 # the app's database (SQLite stand-in for Postgres)
 SHEET = "inbox/restaurants_sheet.csv"         # the partner team's hand-kept sheet
-API = "http://127.0.0.1:18947"                 # the logistics partner's delivery API
+API = "http://127.0.0.1:18947"                # the logistics partner's delivery API
 WH = "warehouse"                              # our Parquet "warehouse" (a folder of files)
+STATE = "state/watermark.json"                # where the incremental load keeps its bookmark
 
 def extract_orders(ds):                       # source 1: a database
     con = sqlite3.connect(APP_DB)
@@ -237,7 +140,7 @@ def extract_orders(ds):                       # source 1: a database
     return df
 
 def extract_restaurants():                    # source 2: a file
-    return pd.read_csv(SHEET, dtype=str)      # read everything as text; types are fixed in transform
+    return pd.read_csv(SHEET, dtype=str)      # read everything as text; fix types later
 
 def extract_deliveries(ds):                   # source 3: an API, 2 rows per page
     rows, page = [], 1
@@ -247,9 +150,11 @@ def extract_deliveries(ds):                   # source 3: an API, 2 rows per pag
         rows += body["rows"]
         page = body["next_page"]
     return pd.DataFrame(rows, columns=["order_id", "delivery_minutes"])</div>
-  <p>Line by line: <code>params=(ds,)</code> passes the date separately from the SQL text (never paste values into SQL strings; that is how SQL injection happens). <code>substr(ordered_at, 1, 10)</code> takes the date part of the IST timestamp. The API loop asks for page 1, adds its rows, and moves to <code>next_page</code> until the API says <code>None</code>. Now run all three for 2 March:</p>
-  <div class="fx" data-lang="py">import pandas as pd
+  <p>A few details are worth pointing at. Each function that depends on the day takes a parameter <code>ds</code> (short for "date stamp", the name Airflow uses) instead of working out the date itself; section 06 explains why that is essential. <code>params=(ds,)</code> passes the date to the database separately from the SQL text; pasting values into SQL strings is how SQL injection happens. <code>substr(ordered_at, 1, 10)</code> takes the date part of a timestamp like <code>2026-03-02T12:10:00+05:30</code>. The API loop starts at page 1, adds that page's rows, moves to <code>next_page</code>, and stops when the API answers <code>None</code>. Now run all three for 2 March, and also print what the API actually sent, page by page:</p>
+  <div class="fx" data-lang="py">import json
+from urllib.request import urlopen
 from biteful_etl import extract_orders, extract_restaurants, extract_deliveries
+import pandas as pd
 pd.set_option("display.width", 120)
 
 ds = "2026-03-02"
@@ -262,10 +167,7 @@ print("deliveries :", deliv.shape)
 print(orders[["order_id", "restaurant_id", "ordered_at", "status", "amount"]])
 print(deliv)
 
-# what the API actually sent, page by page
-import json
-from urllib.request import urlopen
-for page in (1, 2):
+for page in (1, 2):                       # what the API actually sent, page by page
     with urlopen(f"http://127.0.0.1:18947/deliveries?date={ds}&amp;page={page}") as r:
         print("page", page, "-&gt;", json.load(r))</div>
   <div class="fx" data-lang="text">orders     : (3, 7) | columns: ['order_id', 'customer_id', 'restaurant_id', 'ordered_at', 'status', 'amount', 'updated_at']
@@ -281,40 +183,14 @@ deliveries : (3, 2)
 2       103                38
 page 1 -&gt; {'rows': [{'order_id': 101, 'delivery_minutes': 32}, {'order_id': 102, 'delivery_minutes': 41}], 'next_page': 2}
 page 2 -&gt; {'rows': [{'order_id': 103, 'delivery_minutes': 38}], 'next_page': None}</div>
-  <p>Trace the API part: 3 deliveries on 2 March, 2 per page. Page 1 returned orders 101 and 102 with <code>next_page: 2</code>; page 2 returned 103 with <code>next_page: None</code>, so the loop stopped. The sheet came back with 6 rows for 5 restaurants (Green Bowl twice), still messy. That is fine: extract's only job is to bring the data in faithfully.</p>
-  <h3>How much to extract: full, incremental, CDC</h3>
-  <p>Here we asked for one day. Real tables are huge (crores of orders), so the question "how do I get only what changed?" has three standard answers. Section 07 builds the middle one.</p>
-  <table class="tbl">
-    <tr><th>Method</th><th>How</th><th>Catch</th></tr>
-    <tr><td>Full snapshot</td><td><code>SELECT *</code> every run</td><td>Simple; fine for the 5-row restaurant sheet, too heavy for orders</td></tr>
-    <tr><td>Incremental</td><td><code>WHERE updated_at &gt; :watermark</code></td><td>Cheap; misses hard deletes; needs a reliable <code>updated_at</code></td></tr>
-    <tr><td><strong>CDC</strong> (change data capture)</td><td>Read the database's own change log (Postgres WAL, MySQL binlog) with a tool like Debezium</td><td>Sees every insert, update and delete within seconds; needs Kafka-style infrastructure (see <a class="xref" data-note="de_kafka">Kafka</a>)</td></tr>
-    <tr><td>API</td><td>Paginated HTTP calls</td><td>Rate limits (HTTP 429 = "too many requests"), outages (503), fields renamed without warning</td></tr>
-    <tr><td>Files</td><td>CSV/JSON/Parquet dropped in a folder or S3</td><td>You must wait until the file has arrived (a <em>sensor</em>, section 10)</td></tr>
-  </table>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Extract</strong>: read the data needed for one run from each source system, unchanged, into the pipeline. <strong>Pagination</strong>: an API returns results in pages; the client requests page after page until none is left.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>A big extract from the app's <em>primary</em> database competes with live customers: the app slows down because your job is hogging the database. Read from a <strong>replica</strong> (a read-only copy) or use CDC. With APIs, never fire requests in a tight loop: respect rate limits and back off on 429.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Transform.</b> We now hold three DataFrames for 2 March: 3 orders, 6 sheet rows (one duplicate, three spellings of two cities), 3 delivery times. They are still separate and still messy. Nothing can be totalled yet.</div>
+  <p>The database returned the three orders of 2 March with all seven columns, including <code>updated_at</code>, the time each row last changed, which section 07 will need. The sheet came back with six rows for five restaurants, still messy, and that is correct for an extract. The last two lines show pagination at work: three deliveries on 2 March, two per page, so page 1 carried orders 101 and 102 and said <code>next_page: 2</code>, and page 2 carried order 103 and said <code>next_page: None</code>, which ended the loop.</p>
+  <p>Asking for one day is fine here, but real tables have crores of rows, so "how much do I extract each run?" becomes an important design question. There are three standard answers. A <strong>full snapshot</strong> copies the whole table every run, which is simple and fine for the five-row restaurant sheet but far too heavy for orders. An <strong>incremental</strong> extract asks only for rows that changed since the last run, using a column like <code>updated_at</code>; section 07 builds this. <strong>Change data capture</strong> (CDC) reads the database's own internal change log (the write-ahead log in PostgreSQL, the binlog in MySQL) with a tool like Debezium, which sees every insert, update and delete within seconds but needs streaming infrastructure such as <a class="xref" data-note="de_kafka">Kafka</a>. Files and APIs have their own catches: you must wait for a file to actually arrive before reading it (an Airflow <em>sensor</em> does this, section 11), and APIs impose rate limits (HTTP 429, "too many requests"), go down (HTTP 503, "service unavailable") and rename fields without warning.</p>
+  <p>One operational rule belongs here too. A big extract run against the app's <em>primary</em> database competes with live customers for the same machine, and the app slows down because your job is hogging it. Production pipelines read from a <strong>replica</strong> (a read-only copy kept in sync with the primary) or use CDC, and they never fire API requests in a tight loop.</p>
 
-  <h2 id="et-tr"><span class="num">03</span>Transform: Clean, Normalise, Enrich</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Section 01 showed what happens if we total the raw data: Pune is split in two. How do three messy inputs become one table where each row is one order, every city is spelled one way, and each order carries its restaurant's city and its delivery time?</p>
-  </div>
-  <p>In plain words: transforming means <em>changing the data until it can be trusted and used</em>. The work falls into three kinds, usually in this order:</p>
-  <div class="flow"><span>Clean: dedupe, fix types</span><span>Normalise: one spelling, one time zone</span><span>Enrich: join the extra facts</span></div>
-  <ul>
-    <li><strong>Clean</strong>: remove duplicates (Green Bowl pasted twice), turn text into proper types (<code>'4.5'</code> → 4.5, an empty rating → missing).</li>
-    <li><strong>Normalise</strong>: make equal things look equal. <code>' pune '</code>, <code>'Pune'</code> and <code>'PUNE'</code> become <code>Pune</code>. Times are converted to one time zone (UTC), so data from different countries lines up.</li>
-    <li><strong>Enrich</strong>: add columns from other tables. Each order gets its restaurant's name, city and cuisine, and its delivery minutes from the API.</li>
-  </ul>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Before cooking: throw out the duplicate bag of onions (clean), cut everything to the same size (normalise), and add the spices that turn vegetables into a dish (enrich).</p>
-  </div>
-  <p>The code is plain pandas (<a class="xref" data-note="da_pandas">Pandas</a> covers each method). <code>validate=</code> in <code>merge</code> is the important new piece:</p>
+  <h2 id="et-tr"><span class="num">03</span>Transform</h2>
+  <p>We now hold three separate DataFrames for 2 March, and section 01 already showed what happens if we total them as they are. Transforming means changing the data until it can be trusted and used. The work falls into three kinds, usually done in this order. <strong>Cleaning</strong> fixes errors: removing the duplicate Green Bowl row, turning the text <code>'4.5'</code> into the number 4.5, turning an empty rating into a proper missing value. <strong>Normalising</strong> makes things that mean the same look the same: <code>' pune '</code>, <code>'Pune'</code> and <code>'PUNE'</code> all become <code>Pune</code>, and all times are converted to one time zone (UTC, Coordinated Universal Time) so that data from different places lines up. <strong>Enriching</strong> adds columns from other tables, usually with a join: each order gets its restaurant's name, city and cuisine from the sheet, and its delivery minutes from the API.</p>
+  <p>Back in the kitchen, this is the work between delivery and cooking: throw out the duplicate bag of onions (clean), cut everything to the same size (normalise), and add the spices that turn vegetables into a dish (enrich). The result of a transform should have a clear <strong>grain</strong>, meaning a clear answer to "what does one row represent?". For Biteful's main table the grain is one row per order.</p>
+  <p>The code is ordinary pandas (each method is covered in <a class="xref" data-note="da_pandas">Pandas</a> and <a class="xref" data-note="da_pd_cleaning">Data Cleaning</a>). The one new piece is the <code>validate=</code> argument to <code>merge</code>:</p>
   <div class="fx" data-lang="py">def clean_restaurants(rest):
     rest = rest.drop_duplicates("restaurant_id").copy()               # clean: dedupe
     rest["restaurant_id"] = rest["restaurant_id"].astype(int)          # clean: fix types
@@ -331,11 +207,11 @@ def transform(orders, rest, deliv, ds):
     df = df.merge(clean_restaurants(rest)[["restaurant_id", "restaurant", "city", "cuisine"]],
                   on="restaurant_id", how="left", validate="many_to_one")   # enrich
     df = df.merge(deliv, on="order_id", how="left", validate="one_to_one")  # enrich
-    df["delivery_minutes"] = df["delivery_minutes"].astype("Int64")   # pin the type: whole minutes or &lt;NA&gt;
+    df["delivery_minutes"] = df["delivery_minutes"].astype("Int64")   # whole minutes or &lt;NA&gt;
     cols = ["order_id", "order_date", "ordered_at_utc", "customer_id", "restaurant",
             "city", "cuisine", "status", "amount", "delivery_minutes"]
     return df[cols].sort_values("order_id").reset_index(drop=True)</div>
-  <p>Walk through it. <code>drop_duplicates("restaurant_id")</code> keeps the first Green Bowl row. <code>.str.strip().str.title()</code> removes the spaces and fixes the capitals. <code>pd.to_datetime(..., utc=True)</code> reads <code>2026-03-02T12:10:00+05:30</code> and converts it to UTC. <code>order_date = ds</code> keeps the <em>business</em> day in India, because "2 March's revenue" means 2 March in IST. <code>how="left"</code> keeps every order even if a lookup fails. <code>astype("Int64")</code> (capital I: pandas' nullable integer) pins <code>delivery_minutes</code> to whole numbers that may be missing (<code>&lt;NA&gt;</code>); without it the column is an integer on days where every time is known and a float on days with a gap, and section 04 shows what that does. <code>validate="many_to_one"</code> tells pandas: "many orders may point at one restaurant, but each restaurant must appear only once on the right; otherwise stop." Run it:</p>
+  <p>Walk through it once. <code>drop_duplicates("restaurant_id")</code> keeps the first Green Bowl row and drops the second. <code>.str.strip().str.title()</code> removes the spaces around <code>' pune '</code> and fixes the capitals of <code>MUMBAI</code>. <code>pd.to_datetime(..., utc=True)</code> reads <code>2026-03-02T12:10:00+05:30</code> and converts it to UTC. At the same time <code>order_date = ds</code> keeps the <em>business</em> day, because "2 March's revenue" means 2 March in India, not in UTC. <code>how="left"</code> keeps every order even if its lookup fails, so a missing restaurant shows up as an empty city instead of silently removing the order. <code>astype("Int64")</code>, with a capital I, is pandas' nullable integer type: whole numbers that may be missing (<code>&lt;NA&gt;</code>); section 04 shows what goes wrong without it. Finally, <code>validate="many_to_one"</code> tells pandas "many orders may point at the same restaurant, but each restaurant must appear only once in the right-hand table; if not, stop". Here is the transform on 2 March:</p>
   <div class="fx" data-lang="py">import pandas as pd
 from biteful_etl import extract_orders, extract_restaurants, extract_deliveries, clean_restaurants, transform
 pd.set_option("display.width", 200); pd.set_option("display.max_columns", None)
@@ -346,16 +222,7 @@ print(clean_restaurants(rest))
 ds = "2026-03-02"
 clean = transform(extract_orders(ds), rest, extract_deliveries(ds), ds)
 print(clean)
-print(clean[clean["status"] == "delivered"].groupby("city")["amount"].sum())
-
-# the trap: enrich with the raw sheet (Green Bowl is in it twice) on 3 March
-ds = "2026-03-03"
-o = extract_orders(ds)
-print("orders:", len(o), "-&gt; after a plain merge:", len(o.merge(rest.astype({"restaurant_id": int}), on="restaurant_id")))
-try:
-    o.merge(rest.astype({"restaurant_id": int}), on="restaurant_id", validate="many_to_one")
-except pd.errors.MergeError as e:
-    print("MergeError:", str(e).splitlines()[0])</div>
+print(clean[clean["status"] == "delivered"].groupby("city")["amount"].sum())</div>
   <div class="fx" data-lang="text">   restaurant_id    restaurant    city       cuisine  rating
 0             10      Dosa Hut    Pune  South Indian     4.5
 1             11  Biryani Bros  Mumbai       Biryani     4.2
@@ -369,47 +236,47 @@ except pd.errors.MergeError as e:
 city
 Mumbai    450.0
 Pune      760.0
-Name: amount, dtype: float64
-orders: 2 -&gt; after a plain merge: 3
-MergeError: Merge keys are not unique in right dataset; not a many-to-one merge</div>
-  <p>Trace one order by hand. Order 101 was placed at 12:10 IST; IST is UTC + 5:30, so 12:10 − 5:30 = 06:40 UTC ✓. Its restaurant id is 10; the clean sheet says 10 is Dosa Hut, city <code>' pune '</code> → <code>Pune</code>; the API says 32 minutes. Totals: Pune = 240 (101) + 520 (103) = 760, Mumbai = 450 (102). That is the number Priya e-mails, now produced by code.</p>
-  <p>The last lines show why <code>validate</code> matters. On 3 March, order 105 is at Green Bowl, which the raw sheet lists twice. A plain merge matched 105 to <em>both</em> rows: 2 orders became 3, and 105's ₹310 would be counted twice. This is the same <strong>fan-out</strong> as in <a class="xref" data-note="sql_joins">JOINs</a>: a join key that repeats on the "one" side multiplies rows. With <code>validate="many_to_one"</code>, pandas refused the merge with a MergeError instead of silently doubling.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Transform</strong>: turn extracted data into the target shape. <strong>Clean</strong> = fix errors (duplicates, types, missing values). <strong>Normalise</strong> = one representation for one meaning (spelling, units, time zone, currency). <strong>Enrich</strong> = add attributes from reference data, usually by a join. The output has a clear <strong>grain</strong>: here, one row per order.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Every enrichment join can change the row count: a duplicate on the lookup side multiplies rows (fan-out), and an inner join silently drops orders whose restaurant is missing from the sheet. Use <code>how="left"</code>, <code>validate=</code>, and count rows before and after. The quality checks in section 08 catch whatever slips through.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Load.</b> The clean table exists, but only in this Python process's memory. When the script ends it is gone, and the analyst, the dashboard and the ML model can't query a variable in someone's script.</div>
+Name: amount, dtype: float64</div>
+  <p>The cleaned sheet has five restaurants (the duplicate at index 4 is gone), every city is spelled one way, and Momo Magic's missing rating is a real <code>NaN</code> instead of an empty string. Trace one order by hand to be sure the transform is right. Order 101 was placed at 12:10 IST, and IST is UTC plus 5 hours 30 minutes, so in UTC it is 06:40, which is what the table shows. Its restaurant id is 10, which the clean sheet maps to Dosa Hut in Pune, and the API said 32 minutes. The totals at the bottom are Pune = 240 + 520 = 760 and Mumbai = 450: the number Priya e-mails, now produced by code.</p>
+  <p>Why bother with <code>validate</code>? Because every enrichment join can quietly change the number of rows. On 3 March, order 105 is at Green Bowl, which the <em>raw</em> sheet lists twice. Watch what a plain merge does with it, and what <code>validate</code> does instead:</p>
+  <div class="fx" data-lang="py">import pandas as pd
+from biteful_etl import extract_orders, extract_restaurants
 
-  <h2 id="et-load"><span class="num">04</span>Load: A Parquet Warehouse</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We have a correct table for 2 March in memory. Where do we put it so that anyone can query it tomorrow, next to the tables for every other day, with its types intact and cheap to read?</p>
-  </div>
-  <p>In plain words: loading means <em>writing the result into the place where people and programs read it</em>. The place depends on who reads it:</p>
-  <div class="cards">
-    <div><b>Warehouse</b><p>BigQuery, Snowflake, Redshift: a database built for big analytical SQL.</p><small>Load in bulk (COPY), never row by row</small></div>
-    <div><b>Data lake</b><p>Files (usually Parquet) in S3 or a folder, one folder per day.</p><small>Cheap; Delta Lake and Iceberg add transactions on top</small></div>
-    <div><b>Operational DB</b><p>Postgres, when an app needs the result (e.g. today's ETA per restaurant).</p><small>Upsert on a key (section 06)</small></div>
-  </div>
-  <p>Biteful's "warehouse" is a folder of <strong>Parquet</strong> files, which is how real data lakes work. Parquet (from <a class="xref" data-note="py_files">File Handling</a>) stores a table <em>column by column</em>, with the column types saved inside the file and each column compressed. A reader that needs 3 of 9 columns reads only those 3. We also give each day its own folder, named <code>order_date=2026-03-02</code>. That name style is called <strong>Hive partitioning</strong>, and pandas, Spark and DuckDB all understand it: the folder name becomes a column.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A school office files attendance sheets in one drawer per month, with the month written on the drawer. To answer "how many absences in March?" you open one drawer, not the whole cabinet. The drawers are the date partitions; filing column by column is like keeping one register per subject, so the maths teacher never has to flip through the art register.</p>
-  </div>
+ds = "2026-03-03"                        # order 105 is at Green Bowl, listed twice in the raw sheet
+o = extract_orders(ds)
+raw = extract_restaurants().astype({"restaurant_id": int})
+print("orders:", len(o), "-&gt; after a plain merge:", len(o.merge(raw, on="restaurant_id")))
+try:
+    o.merge(raw, on="restaurant_id", validate="many_to_one")
+except pd.errors.MergeError as e:
+    print("MergeError:", e)</div>
+  <div class="fx" data-lang="text">orders: 2 -&gt; after a plain merge: 3
+MergeError: Merge keys are not unique in right dataset; not a many-to-one merge</div>
+  <p>The plain merge matched order 105 to both Green Bowl rows, so two orders became three, and 105's ₹310 would be counted twice in any total. This is the same <strong>fan-out</strong> described in <a class="xref" data-note="sql_joins">JOINs</a>: if the join key repeats on the side that should have one row per key, every match multiplies rows. With <code>validate="many_to_one"</code>, pandas refused the merge with a <code>MergeError</code> instead of silently doubling the money. The opposite danger is an inner join that drops orders whose restaurant is missing from the sheet. The habits that protect you are the ones in our transform: left joins, <code>validate=</code>, and comparing row counts before and after (section 08 turns that last habit into an automatic check).</p>
+
+  <h2 id="et-load"><span class="num">04</span>Load</h2>
+  <p>The clean table exists, but only in the memory of one Python process. When the script ends, it is gone, and nobody else can query a variable in someone's script. Loading means writing the result into the place where people and programs read it. Which place depends on who reads it: a <strong>data warehouse</strong> (BigQuery, Snowflake, Redshift) is a database built for large analytical SQL queries; a <strong>data lake</strong> is a cheap store of files, usually in cloud storage like S3; and sometimes an ordinary operational database such as PostgreSQL receives a result because an app needs it. Whatever the target, data is loaded in bulk (a COPY command, or a whole file at a time), never row by row.</p>
+  <p>Biteful's warehouse is a folder of <strong>Parquet</strong> files, which is how real data lakes work. Parquet (introduced in <a class="xref" data-note="py_files">Files &amp; Data Formats</a>) stores a table column by column, with each column's type saved inside the file and each column compressed separately. A reader that needs three of nine columns reads only those three. We also give each day its own folder, named like <code>order_date=2026-03-02</code>. A <strong>partition</strong> is exactly this: the slice of a table for one value of a column, stored separately so that a job can read or replace one day without touching the others. The <code>column=value</code> folder naming is called <strong>Hive-style partitioning</strong>, and pandas, Spark and DuckDB all understand it: when they read the table, the folder name becomes a column again.</p>
+  <p>A school office filing attendance registers is a good picture. It keeps one drawer per month with the month written on the front, so answering "how many absences in March?" means opening one drawer, not searching the whole cabinet; the drawers are the date partitions. And it keeps one register per subject, so the maths teacher never flips through the art register; that is column-by-column storage.</p>
   <div class="fx" data-lang="py">def part_dir(table, ds):
     return f"{WH}/{table}/order_date={ds}"
 
-def load_overwrite(df, ds, table="fact_orders"):     # idempotent: replace the day's folder
+def load_overwrite(df, ds, table="fact_orders"):     # replace the day's folder
     d = part_dir(table, ds)
     tmp = d + ".tmp"
     shutil.rmtree(tmp, ignore_errors=True)
     os.makedirs(tmp)
     df.drop(columns="order_date").to_parquet(f"{tmp}/part-0.parquet", index=False)
     shutil.rmtree(d, ignore_errors=True)              # swap: old folder out, new folder in
-    os.rename(tmp, d)</div>
-  <p>(Why write to a <code>.tmp</code> folder and then rename it: section 06.) Load 2 March and look at what landed:</p>
-  <div class="fx" data-lang="py">import os, pandas as pd, pyarrow.parquet as pq
-from biteful_etl import extract_orders, extract_restaurants, extract_deliveries, transform, load_overwrite, read_table
+    os.rename(tmp, d)
+
+def read_table(table="fact_orders"):                  # all day-folders back as one table
+    df = pd.read_parquet(f"{WH}/{table}")
+    df["order_date"] = df["order_date"].astype(str)   # folder name becomes a column
+    return df.sort_values("order_id").reset_index(drop=True)</div>
+  <p><code>load_overwrite</code> writes the day's file into a temporary folder ending in <code>.tmp</code>, and only when the file is completely written does it delete the old day-folder and rename the temporary one into its place. The reason is crashes. If the job wrote straight into the final folder and died half-way, readers would see a half-written day. With the write-then-swap pattern, readers see either the old complete day or the new complete day, never something in between. (Warehouses and table formats like Delta Lake and Iceberg give the same guarantee with transactions.) <code>read_table</code> reads every day-folder back as one DataFrame. Load 2 March and look at what landed on disk:</p>
+  <div class="fx" data-lang="py">import pandas as pd, pyarrow.parquet as pq
+from biteful_etl import extract_orders, extract_restaurants, extract_deliveries, transform, load_overwrite
 
 ds = "2026-03-02"
 clean = transform(extract_orders(ds), extract_restaurants(), extract_deliveries(ds), ds)
@@ -419,45 +286,47 @@ for root, dirs, files in os.walk("warehouse"):
     for f in files:
         print(os.path.join(root, f), os.path.getsize(os.path.join(root, f)), "bytes")
 print(pq.read_schema("warehouse/fact_orders/order_date=2026-03-02/part-0.parquet").remove_metadata())
-print(pd.read_parquet("warehouse/fact_orders", columns=["order_id", "city", "amount"]))</div>
-  <div class="fx" data-lang="text">warehouse/fact_orders/order_date=2026-03-02/part-0.parquet 5800 bytes
+print(pd.read_parquet("warehouse/fact_orders", columns=["order_id", "city", "amount", "order_date"]))</div>
+  <div class="fx" data-lang="text">warehouse/fact_orders/order_date=2026-03-02/part-0.parquet 5844 bytes
 order_id: int64
-ordered_at_utc: large_string
+ordered_at_utc: string
 customer_id: int64
-restaurant: large_string
-city: large_string
-cuisine: large_string
-status: large_string
+restaurant: string
+city: string
+cuisine: string
+status: string
 amount: double
 delivery_minutes: int64
-   order_id    city  amount
-0       101    Pune   240.0
-1       102  Mumbai   450.0
-2       103    Pune   520.0</div>
-  <p>Read the output. One file in one day-folder. The schema printed from inside the file says <code>order_id: int64</code>, <code>amount: double</code>: a CSV would have given back text that we would have to parse again. Reading with <code>columns=[...]</code> loaded only 3 columns. Notice also: 5,800 bytes for 3 rows is far bigger than a CSV would be, because Parquet stores a schema and statistics in every file. It pays off with millions of rows, not three; that is also why thousands of tiny Parquet files are a known problem (see <a class="xref" data-note="de_spark">Spark</a>).</p>
-  <p>Teams usually keep three <strong>layers</strong>, so a bug in cleaning never destroys the raw copy. The names are a convention:</p>
-  <div class="flow"><span>bronze: raw, as extracted</span><span>silver: cleaned, one row per order (our fact_orders)</span><span>gold: business tables (revenue per city per day)</span></div>
-  <p><code>fact_orders</code> is a <strong>fact table</strong> in the sense of <a class="xref" data-note="sql_modeling">Data Modeling</a>: one row per event (an order), with measures (amount, minutes) and keys/attributes describing it. The restaurant sheet, once cleaned, is a <strong>dimension</strong>.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Load</strong>: write transformed data into the target store. <strong>Partition</strong>: the slice of a table for one value of a column (here one day), stored as its own folder, so a job can replace or read one day without touching the others.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Writing straight into the final folder means a crash half-way leaves a half-written day that readers will see. Write somewhere temporary, then swap it in with one rename (or use a table format/warehouse with transactions).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: schema drift between partitions</span>
-    <p>This really happened while building these notes. Before <code>transform</code> pinned the type, the 2 March file stored <code>delivery_minutes</code> as int64 (all three times known) and the 3 March file as double (order 104's time is missing, and pandas turns an integer column with a gap into floats). pandas read the folder happily. Spark, pointed at the same warehouse in the next note, refused: <code>Data type mismatches when reading Parquet column [delivery_minutes]. Expected Spark type bigint, actual Parquet type DOUBLE.</code> Every partition of a table must have the same schema; set the output types explicitly in the transform.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: ETL vs ELT.</b> We cleaned in Python <em>before</em> storing. If the business changes its mind next month ("also count cancelled orders"), the raw data is gone, and we must extract it all again. Is transforming first the only order?</div>
+   order_id    city  amount  order_date
+0       101    Pune   240.0  2026-03-02
+1       102  Mumbai   450.0  2026-03-02
+2       103    Pune   520.0  2026-03-02</div>
+  <p>There is one file in one day-folder. The schema printed from inside the file says <code>order_id: int64</code> and <code>amount: double</code>: the types travel with the data, whereas a CSV would hand back text that every reader must parse again. Reading with <code>columns=[...]</code> loaded only the columns asked for, and <code>order_date</code> came back as a column even though it is not stored in the file at all; it came from the folder name. Notice the size, too: about 5.8 KB for three rows is much bigger than a CSV would be, because every Parquet file carries a schema and statistics. That overhead pays off with millions of rows, and it is why thousands of tiny Parquet files are a well-known performance problem (see <a class="xref" data-note="de_spark">Spark</a>).</p>
+  <p>Storing many days side by side brings a new rule: every partition of a table must have the same schema. The <code>astype("Int64")</code> line in the transform exists because this rule was broken while these notes were being written. On 2 March every order has a delivery time; on 4 March cancelled order 107 has none, and pandas turns an integer column with a gap into floating-point numbers. Here is what happens when two days are loaded without that line and Spark (the engine of the next note) reads the folder:</p>
+  <div class="fx" data-lang="py">from biteful_etl import extract_orders, extract_deliveries
+from pyspark.sql import SparkSession
 
-  <h2 id="et-elt"><span class="num">05</span>ETL vs ELT: Where the Transform Runs</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Our pipeline transforms first and stores only the clean result. If a cleaning rule turns out wrong, or a new question needs a column we dropped, the raw data is not kept anywhere. Could we store first and clean later?</p>
-  </div>
-  <p>Yes, and that swap has a name. Both use the same three steps; only the order differs:</p>
-  <ul>
-    <li><strong>ETL</strong>: transform first, on a separate machine (our Python script, a Spark cluster), then load only the clean result.</li>
-    <li><strong>ELT</strong>: load the raw data as-is into the warehouse first (bronze), then transform it there with SQL. <strong>dbt</strong> is the popular tool for organising those SQL transforms.</li>
-  </ul>
+for ds in ["2026-03-02", "2026-03-04"]:          # load WITHOUT pinning the type
+    df = extract_orders(ds).merge(extract_deliveries(ds), on="order_id", how="left")
+    print(ds, df["delivery_minutes"].tolist(), df["delivery_minutes"].dtype)
+    os.makedirs(f"drift/order_date={ds}")
+    df.to_parquet(f"drift/order_date={ds}/part-0.parquet", index=False)
+
+spark = SparkSession.builder.master("local[2]").getOrCreate()
+spark.sparkContext.setLogLevel("ERROR")
+try:
+    spark.read.parquet("drift").select("order_id", "delivery_minutes").show()
+except Exception as e:
+    print([line.strip() for line in str(e).splitlines() if "Data type" in line][0])</div>
+  <div class="fx" data-lang="text">2026-03-02 [32, 41, 38] int64
+2026-03-04 [25.0, nan] float64
+: org.apache.spark.SparkException: [FAILED_READ_FILE.PARQUET_COLUMN_DATA_TYPE_MISMATCH] Encountered error while reading file file:///tmp/claude-0/-home-user-Notes/9194a449-83bf-5a50-8c23-8ca2c91926cd/scratchpad/e1/work/drift/order_date=2026-03-04/part-0.parquet. Data type mismatches when reading Parquet column [delivery_minutes]. Expected Spark type bigint, actual Parquet type DOUBLE. SQLSTATE: KD001</div>
+  <p>2 March was stored as <code>int64</code> and 4 March as <code>float64</code>, purely because of one missing value. pandas would read this folder without complaint, but Spark refused, because one column cannot be two types. This kind of slow, accidental change in a table's shape is called <strong>schema drift</strong>, and the fix is to set the output types explicitly in the transform, as ours now does.</p>
+  <p>Teams usually keep the data in three <strong>layers</strong>, so that a bug in cleaning never destroys the original. <strong>Bronze</strong> holds the raw data exactly as extracted. <strong>Silver</strong> holds cleaned tables at a clear grain; our <code>fact_orders</code> table is silver. <strong>Gold</strong> holds business-level tables such as revenue per city per day. In the vocabulary of <a class="xref" data-note="sql_modeling">Data Modeling</a>, <code>fact_orders</code> is a <strong>fact table</strong> (one row per event, with measures like amount and minutes), and the cleaned restaurant sheet is a <strong>dimension</strong> (descriptive attributes of something the facts point at).</p>
+
+  <h2 id="et-elt"><span class="num">05</span>ETL vs ELT</h2>
+  <p>Our pipeline cleans the data in Python first and stores only the clean result. That raises an uncomfortable question. If the business changes its mind next month ("also count cancelled orders", "we need the customer's phone area"), or a cleaning rule turns out to be wrong, the raw data has not been kept anywhere, and we must extract everything again from the sources, which may no longer have it. Could we store first and clean later?</p>
+  <p>We can, and the swap has a name. In <strong>ETL</strong> the transform happens on a separate machine (our Python script, or a Spark cluster) and only the clean result is loaded. In <strong>ELT</strong> (extract, load, transform) the raw data is loaded as it is into the warehouse first, into the bronze layer, and the transform then runs <em>inside</em> the warehouse, usually as SQL. The three steps are the same; only the order and the place of the transform change. <strong>dbt</strong> (data build tool) is the popular tool for organising those in-warehouse SQL transforms as version-controlled, tested models.</p>
   <figure class="viz"><svg viewBox="0 0 600 170" width="600">
     <defs><marker id="et-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <text x="10" y="45" font-weight="bold">ETL</text>
@@ -477,10 +346,8 @@ delivery_minutes: int64
     <line x1="335" y1="130" x2="368" y2="130" stroke="currentColor" marker-end="url(#et-ar)"/>
     <line x1="450" y1="130" x2="478" y2="130" stroke="currentColor" marker-end="url(#et-ar)"/>
   </svg><figcaption>Same three steps, different order. ELT keeps the raw copy inside the warehouse.</figcaption></figure>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>ETL is a meal-kit company that cooks before delivering: you get the dish, never the ingredients. ELT delivers raw groceries into a huge kitchen and cooks there, so tomorrow you can cook a different dish from the same groceries.</p>
-  </div>
-  <p>Here is Biteful done the ELT way: land the three raw extracts as bronze Parquet files, then write the transform as SQL. DuckDB (an in-process SQL engine that reads Parquet files directly) plays the warehouse. The last line checks the SQL result against our pandas transform.</p>
+  <p>Read the figure row by row. In the top row the data passes through a transform machine on its way to the warehouse, so what arrives is already clean and the raw form is left behind. In the bottom row the raw data goes straight into the warehouse's bronze area, and the transform is an arrow <em>inside</em> the warehouse, from bronze to silver. A meal-kit company that cooks before delivering is ETL: you get the dish, never the ingredients. ELT delivers raw groceries into a huge kitchen and cooks there, so tomorrow you can cook a different dish from the same groceries.</p>
+  <p>Here is Biteful done the ELT way. The three raw extracts are landed untouched as bronze Parquet files, and the transform is written as SQL. DuckDB, an in-process SQL engine that reads Parquet files directly, plays the warehouse. The last line compares the SQL result with our pandas transform:</p>
   <div class="fx" data-lang="py">import os, duckdb
 from biteful_etl import extract_orders, extract_restaurants, extract_deliveries, transform
 
@@ -514,120 +381,77 @@ print("same result as the pandas (ETL) transform:",
 1       102  delivered   450.0  Biryani Bros  Mumbai                41
 2       103  delivered   520.0   Pizza Point    Pune                38
 same result as the pandas (ETL) transform: True</div>
-  <p>Map the SQL to section 03: <code>SELECT DISTINCT</code> is the dedupe, <code>upper(left(trim(city), 1)) || lower(...)</code> is the normalise, the two <code>LEFT JOIN</code>s are the enrichment. Same 3 rows, same values. The difference is where the work ran and what was kept: the raw files in <code>warehouse/bronze/</code> are still there, so a new rule is just a new SQL query.</p>
-  <p>Why ELT took over in the cloud: storage became very cheap, and warehouses can throw hundreds of machines at one SQL query. ETL still wins when personal data (<strong>PII</strong>, like phone numbers) must be masked <em>before</em> it lands anywhere, and when the transform is not SQL-shaped (resizing images, running a model on text).</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>ETL</strong> = Extract → Transform → Load: clean outside the target, store only the result. <strong>ELT</strong> = Extract → Load → Transform: store raw data in the target first, transform inside it (usually SQL).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"ELT, so we don't need to clean" is wrong: ELT moves the cleaning, it doesn't remove it. Raw tables that analysts query directly become ten slightly different versions of "revenue". Keep the bronze → silver → gold layers and let people query silver and gold.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: idempotency.</b> ETL or ELT, the pipeline will be run more than once for the same day: a network blip and a retry, a colleague clicking "rerun", a fix applied to last week. What does a second run of 2 March do to our table?</div>
+  <p>Map the SQL back to section 03: <code>SELECT DISTINCT</code> is the dedupe, <code>upper(left(trim(city), 1)) || lower(...)</code> is the city normalisation, and the two <code>LEFT JOIN</code>s are the enrichment. The result is the same three rows with the same values, and the comparison prints <code>True</code>. What differs is where the work ran and what was kept: the raw files in <code>warehouse/bronze/</code> are still there, so a new rule next month is just a new SQL query over data we already have.</p>
+  <p>ELT became the default with cloud warehouses for two reasons: storage became very cheap, and a warehouse can throw hundreds of machines at one SQL query, so there is little reason to transform elsewhere. ETL still wins in two situations. When personal data (<strong>PII</strong>, personally identifiable information, such as phone numbers) must be masked <em>before</em> it lands anywhere, the transform has to come first. And when the transform is not SQL-shaped (resizing images, running a model over text), it runs better in Python or Spark. One misunderstanding to avoid: ELT moves the cleaning, it does not remove it. If analysts query raw bronze tables directly, the company soon has ten slightly different versions of "revenue"; the silver and gold layers are still needed.</p>
 
-  <h2 id="et-idem"><span class="num">06</span>Idempotency: Re-running Must Be Safe</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The load for 2 March succeeds, then the job is retried (the orchestrator thought it had failed). Is 2 March now in the warehouse once or twice? Does the revenue dashboard still say ₹1,210?</p>
-  </div>
-  <p>Jobs <em>will</em> run more than once: automatic retries, crashes half-way, a manual rerun, a backfill (section 09). So we want a job that can run any number of times and leave the same result as running once.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A light switch with an "ON" position is idempotent: pressing ON twice still means on. A toggle button is not: press it twice and the light is back off. Write load steps like the ON switch.</p>
-  </div>
-  <p>The tiny version first, then the real Parquet warehouse. The first <code>load_append</code> adds a new file every time; <code>load_overwrite</code> replaces the day's folder (both were defined in <code>biteful_etl.py</code>):</p>
-  <div class="fx" data-lang="py">def load_append(df, ds, table="fact_orders"):        # NOT idempotent
+  <h2 id="et-idem"><span class="num">06</span>Idempotency</h2>
+  <p>ETL or ELT, a pipeline will run more than once for the same day. The orchestrator retries a task it thinks failed, a job crashes half-way and is started again, a colleague clicks "rerun", or a bug fix means last week must be processed again. So we have to ask what a second run of 2 March does to our table. The first load function many people write simply adds the day's rows to the table. Here it is, added to <code>biteful_etl.py</code>, next to the <code>load_overwrite</code> we already have:</p>
+  <div class="fx" data-lang="py">def load_append(df, ds, table="fact_orders"):        # NOT idempotent: adds a new file each run
     d = part_dir(table, ds)
     os.makedirs(d, exist_ok=True)
     n = len(os.listdir(d))
     df.drop(columns="order_date").to_parquet(f"{d}/part-{n}.parquet", index=False)</div>
-  <div class="fx" data-lang="py">import os, shutil, sqlite3
+  <p>Now load 2 March with each function and then run it again, as a retry would:</p>
+  <div class="fx" data-lang="py">import os, shutil
 from biteful_etl import extract_orders, extract_restaurants, extract_deliveries, transform
 from biteful_etl import load_append, load_overwrite, read_table, part_dir
 
-# 1. toy version: the 2 March batch, and the job runs twice (a retry)
-batch = [(101, 240), (102, 450), (103, 520)]
-table = []
-table.extend(batch)
-table.extend(batch)                                   # the retry
-print("toy append   :", len(table), "rows, revenue", sum(a for _, a in table))
-parts = {}
-parts["2026-03-02"] = list(batch)
-parts["2026-03-02"] = list(batch)                     # the retry
-rows = [r for day in parts.values() for r in day]
-print("toy overwrite:", len(rows), "rows, revenue", sum(a for _, a in rows))
-
-# 2. the real thing: Parquet files in the warehouse
 ds = "2026-03-02"
 clean = transform(extract_orders(ds), extract_restaurants(), extract_deliveries(ds), ds)
 for load in (load_append, load_overwrite):
-    shutil.rmtree("warehouse/fact_orders", ignore_errors=True)
-    for run in (1, 2):
+    shutil.rmtree("warehouse/fact_orders", ignore_errors=True)   # start from an empty table
+    for run in (1, 2):                                           # run 2 = the retry
         load(clean, ds)
         f = read_table()
         print(f"{load.__name__:14} run {run}: rows={len(f)} revenue={f['amount'].sum():.0f} "
               f"files={sorted(os.listdir(part_dir('fact_orders', ds)))}")</div>
-  <div class="fx" data-lang="text">toy append   : 6 rows, revenue 2420
-toy overwrite: 3 rows, revenue 1210
-load_append    run 1: rows=3 revenue=1210 files=['part-0.parquet']
+  <div class="fx" data-lang="text">load_append    run 1: rows=3 revenue=1210 files=['part-0.parquet']
 load_append    run 2: rows=6 revenue=2420 files=['part-0.parquet', 'part-1.parquet']
 load_overwrite run 1: rows=3 revenue=1210 files=['part-0.parquet']
 load_overwrite run 2: rows=3 revenue=1210 files=['part-0.parquet']</div>
-  <table class="tbl out"><caption>Trace: what each run did to the 2 March folder</caption>
+  <table class="tbl"><caption>What each run did to the 2 March folder</caption>
     <tr><th>Load</th><th>After run 1</th><th>After run 2 (the retry)</th><th>Revenue</th></tr>
     <tr><td>append</td><td>part-0 (101, 102, 103)</td><td>part-0 + part-1 (101, 102, 103 twice)</td><td>1210 → <strong>2420</strong> ✗</td></tr>
     <tr><td>overwrite</td><td>part-0 (101, 102, 103)</td><td>folder replaced: part-0 (101, 102, 103)</td><td>1210 → 1210 ✓</td></tr>
   </table>
-  <p>Append is the toggle button: every run adds. Overwrite is the ON switch: every run produces "2 March = these 3 orders", no matter what was there. This is <strong>partition overwrite</strong>: replace exactly the slice this run is responsible for. In a SQL warehouse it is <code>DELETE FROM fact_orders WHERE order_date = :ds; INSERT …</code> inside one transaction; in Spark it is "dynamic partition overwrite".</p>
-  <h3>Upsert: idempotent at the row level</h3>
-  <p>Sometimes the unit is a row, not a day. Biteful keeps a restaurant dimension table, and Momo Magic gets its first rating on Tuesday. An <strong>upsert</strong> ("update if the key exists, insert if not") is idempotent by key. SQLite and PostgreSQL share this syntax:</p>
+  <p>With append, the retry added a second file holding the same three orders, and 2 March's revenue doubled from 1210 to 2420. No error was raised; the dashboard would simply show twice the money. With overwrite, the second run replaced the folder with an identical one, and the revenue stayed 1210 however many times it ran.</p>
+  <p>The property overwrite has is called <strong>idempotency</strong>: a job is idempotent if running it once or many times with the same input leaves the target in the same state. A light switch with a fixed ON position is idempotent; pressing ON twice still means the light is on. A toggle button is not; press it twice and the light is off again. Load steps should be written like the ON switch, because a pipeline that is safe only when it runs exactly once will eventually be run twice. The dangerous part is that a non-idempotent load passes every test, because tests run it once; the first production retry doubles the numbers, and nobody may notice for a week.</p>
+  <p>Our <code>load_overwrite</code> uses <strong>partition overwrite</strong>: each run replaces exactly the slice of the table it is responsible for, here one day-folder. In a SQL warehouse the same idea is <code>DELETE FROM fact_orders WHERE order_date = :ds</code> followed by <code>INSERT</code>, inside one transaction; Spark calls it dynamic partition overwrite. Sometimes, though, the unit of work is a row rather than a day. Biteful keeps a restaurant dimension table, and Momo Magic receives its first rating on Tuesday. For this we use an <strong>upsert</strong> (update if the key exists, insert if it does not), which is idempotent per key. SQLite and PostgreSQL share this syntax:</p>
   <div class="fx" data-lang="py">import sqlite3
-wh = sqlite3.connect(":memory:")       # same SQL works in PostgreSQL
+wh = sqlite3.connect(":memory:")       # the same SQL works in PostgreSQL
 wh.execute("CREATE TABLE dim_restaurant (restaurant_id INT PRIMARY KEY, name TEXT, rating REAL)")
 upsert = """INSERT INTO dim_restaurant VALUES (?, ?, ?)
             ON CONFLICT (restaurant_id) DO UPDATE SET rating = excluded.rating"""
 wh.execute(upsert, (14, "Momo Magic", None))   # Monday's run: not rated yet
-wh.execute(upsert, (14, "Momo Magic", None))   # Monday's run again (retry)
+wh.execute(upsert, (14, "Momo Magic", None))   # Monday's run again (a retry)
 print(wh.execute("SELECT * FROM dim_restaurant").fetchall())
-wh.execute(upsert, (14, "Momo Magic", 4.0))    # Tuesday's run: first rating arrived
+wh.execute(upsert, (14, "Momo Magic", 4.0))    # Tuesday's run: the first rating arrived
 print(wh.execute("SELECT * FROM dim_restaurant").fetchall())</div>
   <div class="fx" data-lang="text">[(14, 'Momo Magic', None)]
 [(14, 'Momo Magic', 4.0)]</div>
-  <p>Monday's run twice: still one row. Tuesday's run: the same row now holds 4.0. <code>excluded.rating</code> means "the value I tried to insert". Warehouses spell the same idea <code>MERGE INTO … WHEN MATCHED THEN UPDATE WHEN NOT MATCHED THEN INSERT</code>.</p>
-  <h3>The third rule: the run must know which day it is for</h3>
-  <p>A job that computes "yesterday" from the clock is not idempotent across time: rerun it next week and it loads a different day.</p>
+  <p>Monday's run executed twice and the table still has one row for restaurant 14, because the second insert hit the existing primary key and turned into an update. On Tuesday the same statement updated the rating to 4.0. <code>excluded.rating</code> means "the value I tried to insert". Warehouses spell the same idea <code>MERGE INTO ... WHEN MATCHED THEN UPDATE WHEN NOT MATCHED THEN INSERT</code>.</p>
+  <p>There is a third, less obvious rule. A job is idempotent only if it processes the same input each time it runs for the same day, and a job that works out "yesterday" from the clock does not:</p>
   <div class="fx" data-lang="py">from datetime import date, timedelta
 
-def job_with_clock():                  # "load yesterday", computed from the clock
+def job_with_clock():                  # "load yesterday", worked out from the clock
     return str(date.today() - timedelta(days=1))
 
-def job_with_ds(ds):                   # the date the run is FOR, passed in
+def job_with_ds(ds):                   # the day the run is FOR, passed in
     return ds
 
-# re-running 2 March's job (for a backfill), today:
+# re-running 2 March's job (say, after a bug fix), today:
+print("today              :", date.today())
 print("clock version loads:", job_with_clock())
 print("ds version loads   :", job_with_ds("2026-03-02"))</div>
-  <div class="fx" data-lang="text">clock version loads: 2026-10-19
+  <div class="fx" data-lang="text">today              : 2026-11-19
+clock version loads: 2026-11-18
 ds version loads   : 2026-03-02</div>
-  <p>This was run on 20 October 2026, so the clock version loaded 19 October into what should have been 2 March's re-run. The fix is to pass the day the run is <em>for</em> as a parameter. Orchestrators call it the <strong>logical date</strong> (Airflow's <code>ds</code>), and every function in <code>biteful_etl.py</code> takes it as <code>ds</code>.</p>
-  <div class="cards">
-    <div><b>Partition overwrite</b><p>Replace the run's day-folder (or DELETE + INSERT the day in one transaction).</p><small>Use for daily facts: fact_orders</small></div>
-    <div><b>Upsert / MERGE</b><p>Insert new keys, update existing ones.</p><small>Use for dimensions and late changes</small></div>
-    <div><b>Logical date</b><p>The run's day is an input, never <code>now()</code>.</p><small>Makes reruns and backfills load the right day</small></div>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A job is <strong>idempotent</strong> if running it once or many times with the same input leaves the target in the same state.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>A plain <code>INSERT</code> (or append) with no delete and no key is the most common non-idempotent job. It passes every test, because tests run it once. The first retry in production doubles the numbers, and nobody notices for a week.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: incremental loads.</b> Overwriting whole days works for the day we just extracted. But order 110 was <em>pending</em> on 8 March and was delivered later. Re-extracting every past day every night to catch such changes is wasteful; not re-extracting means 110 stays "pending" in the warehouse forever.</div>
+  <p>This was run on the date shown in the first line, so the clock version would have loaded the day before that into what was supposed to be a re-run of 2 March. The version that receives the date as a parameter loads 2 March whenever it runs. Orchestrators call this parameter the <strong>logical date</strong>: the day a run is <em>for</em>, as opposed to the day it happens to execute. That is why every function in <code>biteful_etl.py</code> takes <code>ds</code>. Put together, the three tools of idempotency are partition overwrite for daily facts, upsert for dimensions and late changes, and the logical date as an input rather than <code>now()</code>.</p>
 
-  <h2 id="et-incr"><span class="num">07</span>Incremental Loads &amp; Watermarks</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Rows change after the day they were created: an order is delivered, refunded, corrected. A daily extract by <code>ordered_at</code> never looks back. How do we pick up exactly the rows that are new <em>or changed</em> since the last run, without reading the whole table?</p>
-  </div>
-  <p>The idea: the app's <code>orders</code> table also carries <code>updated_at</code>, the time the row last changed (the SQL notes left this column out to stay small). If we remember the largest <code>updated_at</code> we have loaded, next time we only ask for rows with a later one. That remembered value is the <strong>watermark</strong>. Changed rows are then <strong>merged</strong> into the warehouse by key: an upsert, done one affected day-folder at a time.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Reading a busy WhatsApp group: you don't reread the whole chat every evening; you scroll to "unread messages" and read from there. The watermark is the "last read" line. An edited old message shows up again as "edited", because its time changed.</p>
-  </div>
+  <h2 id="et-incr"><span class="num">07</span>Incremental Loads and Watermarks</h2>
+  <p>Overwriting whole days works for the day we just extracted, but rows change after the day they were created. Order 110 was <em>pending</em> on 8 March and was delivered later that evening. A daily extract that selects by <code>ordered_at</code> never looks back, so 110 would stay "pending" in the warehouse forever. Re-extracting every past day every night would catch the change, but on a table with years of orders that is enormously wasteful. We want to pick up exactly the rows that are new <em>or changed</em> since the last run, without reading the whole table.</p>
+  <p>The tool is the <code>updated_at</code> column, which the app sets to the current time whenever it inserts or changes a row. If we remember the largest <code>updated_at</code> we have already loaded, the next run only needs rows with a later one. That remembered value is the <strong>watermark</strong>: the stored high point of an always-increasing column, up to which data has been loaded. Loading only the rows beyond it is an <strong>incremental load</strong>, and applying those rows to the warehouse by key (replace the old version if present, insert if new) is a <strong>merge</strong>. Think of reading a busy WhatsApp group: you do not reread the whole chat every evening; you scroll to the "unread messages" line and read from there. An old message that someone edits shows up again, because its time changed. The "last read" line is the watermark.</p>
+  <p>Here is the incremental part of <code>biteful_etl.py</code>. The watermark lives in a small JSON file, <code>state/watermark.json</code>:</p>
   <div class="fx" data-lang="py">def get_watermark():
     if not os.path.exists(STATE):
         return "1970-01-01"                            # first run: everything is "new"
@@ -665,24 +489,26 @@ def incremental_run(label):
     if len(changed):
         merge_into_fact(changed)
         save_watermark(changed["updated_at"].max())     # move the bookmark only after the load</div>
-  <p>Between runs 1 and 2, the app does two things (written as a script so we can replay it): order 110 is delivered, and Gita, who had never ordered, orders from Momo Magic.</p>
+  <p>Follow <code>incremental_run</code> from the top. It reads the watermark (on the very first run there is none, so it uses 1970 and everything counts as new), asks the database for every row whose <code>updated_at</code> is later, and hands those rows to <code>merge_into_fact</code>. The merge groups the changed rows by the day each order belongs to, transforms them, reads that day's existing folder, throws away the old versions of the changed orders, adds the new versions, and overwrites the folder with <code>load_overwrite</code>. Because the merge overwrites whole day-folders, it is idempotent too. Only after the merge succeeds does <code>save_watermark</code> move the bookmark forward.</p>
+  <p>Between the first and second runs, Biteful's app does two things, written here as a script so we can replay them: order 110 is delivered, and Gita, who had never ordered before, orders from Momo Magic on 9 March.</p>
   <div class="fx" data-lang="py">import json, sqlite3
-# what Biteful's app did after our last run (the ETL doesn't know any of this yet)
+# what Biteful's app did after our last run (the pipeline doesn't know any of this yet)
 con = sqlite3.connect("src/biteful_app.db")
 con.execute("""UPDATE orders SET status = 'delivered', updated_at = '2026-03-08T21:28:00+05:30'
                WHERE order_id = 110""")                         # Asha's pending order arrived
 con.execute("""INSERT INTO orders VALUES (111, 7, 14, '2026-03-09T13:00:00+05:30',
-               'delivered', 220, '2026-03-09T13:35:00+05:30')""")   # Gita's first order!
+               'delivered', 220, '2026-03-09T13:35:00+05:30')""")   # Gita's first order
 con.commit()
 api = json.load(open("src/delivery_api_data.json"))                 # the partner API learns too
-api.setdefault("2026-03-08", []).append({"order_id": 110, "delivery_minutes": 38})
+api["2026-03-08"] = [{"order_id": 110, "delivery_minutes": 38}]
 api["2026-03-09"] = [{"order_id": 111, "delivery_minutes": 35}]
 json.dump(api, open("src/delivery_api_data.json", "w"))</div>
+  <p>Now run the incremental load four times: once to start, once after the app changes, once with nothing new, and once after the app hard-deletes cancelled order 107:</p>
   <div class="fx" data-lang="py">import shutil, sqlite3, subprocess, sys
 from biteful_etl import incremental_run, read_table
 shutil.rmtree("warehouse/fact_orders", ignore_errors=True)
 
-incremental_run("run 1")                          # first run: initial full load
+incremental_run("run 1")                          # first run: the initial full load
 f = read_table()
 print("   warehouse:", len(f), "orders; order 110 is", f.loc[f.order_id == 110, "status"].item())
 
@@ -707,40 +533,20 @@ run 2: watermark 2026-03-08T20:50:00+05:30 -&gt; 2 changed: [110, 111]
 run 3: watermark 2026-03-09T13:35:00+05:30 -&gt; 0 changed: []
 run 4: watermark 2026-03-09T13:35:00+05:30 -&gt; 0 changed: []
    107 still in warehouse? True</div>
-  <table class="tbl out"><caption>Trace: the watermark run by run</caption>
-    <tr><th>Run</th><th>Watermark before</th><th>Rows with updated_at after it</th><th>Merged into</th><th>Watermark after</th></tr>
+  <table class="tbl"><caption>The watermark, run by run</caption>
+    <tr><th>Run</th><th>Watermark before</th><th>Rows with a later updated_at</th><th>Merged into</th><th>Watermark after</th></tr>
     <tr><td>1</td><td>1970-01-01 (nothing loaded)</td><td>all 10</td><td>5 day-folders (2, 3, 4, 5, 8 Mar)</td><td>03-08 20:50 (110, still pending)</td></tr>
     <tr><td>2</td><td>03-08 20:50</td><td>110 (updated 21:28), 111 (13:35 on 9 Mar)</td><td>order_date=2026-03-08 and 2026-03-09</td><td>03-09 13:35</td></tr>
-    <tr><td>3</td><td>03-09 13:35</td><td>none</td><td>—</td><td>unchanged</td></tr>
-    <tr><td>4</td><td>03-09 13:35</td><td>none (107 was deleted, so it has no row to be "after" anything)</td><td>—</td><td>unchanged</td></tr>
+    <tr><td>3</td><td>03-09 13:35</td><td>none</td><td>nothing</td><td>unchanged</td></tr>
+    <tr><td>4</td><td>03-09 13:35</td><td>none: 107 was deleted, so there is no row to be "later"</td><td>nothing</td><td>unchanged</td></tr>
   </table>
-  <p>Three things to notice. Run 2 read 2 rows, not 11: that is the saving. Order 110 was <em>replaced</em> inside the 8 March folder (pending → delivered, delivery minutes 38), because <code>merge_into_fact</code> dropped the old version and wrote the new one, and the 8 March folder was overwritten as a whole, so the merge is idempotent too. And the watermark was saved only <em>after</em> the merge succeeded: if the merge had crashed, the next run would ask for the same rows again instead of skipping them.</p>
-  <p>Run 4 shows the blind spot. The app hard-deleted order 107; a deleted row has no <code>updated_at</code>, so the watermark query can never see it, and the warehouse still has 107. Fixes: the app marks rows as deleted instead (<strong>soft delete</strong>, a <code>deleted_at</code> column), or the pipeline reads the database's change log (<strong>CDC</strong>, which sees deletes), or a periodic full reconciliation.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Incremental load</strong>: extract only rows inserted or changed since the last successful run. <strong>Watermark</strong>: the stored high point of a monotonically increasing column (<code>updated_at</code>, an id) up to which data has been loaded. <strong>Merge</strong>: apply the changed rows to the target by key (update if present, insert if new).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Saving the watermark before the load finishes loses rows on a crash. Using <code>&gt;</code> when two rows share the same <code>updated_at</code> and only one was loaded skips the other (load with <code>&gt;=</code> and dedupe by key, or watermark on a unique increasing id). Comparing timestamps as text, as we did, only works because every value has the same format and offset (<code>+05:30</code>); mixed time zones break it.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: data quality checks.</b> The pipeline is now correct for correct input, safe to re-run and cheap. But it trusts its input completely. If the partner sheet loses a restaurant, or a "quick fix" removes the dedupe, it will load wrong numbers quickly, quietly and every night.</div>
+  <p>Three things are worth noticing. First, run 2 read two rows, not eleven; on a real table that is the difference between seconds and hours. Second, order 110 was <em>replaced</em> inside the 8 March folder, changing from pending to delivered and gaining its 38 delivery minutes, rather than appearing twice. Third, the watermark was saved only after the merge finished. If the merge had crashed, the watermark would still be at 20:50 and the next run would simply ask for 110 and 111 again. That is safe precisely because the merge is idempotent: seeing a row twice does no harm. The opposite order, saving the watermark first, would make a crash skip those rows forever.</p>
+  <p>Run 4 shows the blind spot of watermarks. The app deleted order 107 outright, and a deleted row has no <code>updated_at</code>, so no query of the form "rows changed after X" can ever see it; the warehouse still has 107. There are three standard fixes: have the app mark rows as deleted instead of removing them (a <strong>soft delete</strong>, usually a <code>deleted_at</code> column, which does change <code>updated_at</code>); read the database's change log with CDC, which records deletes; or run a periodic full comparison between source and warehouse. Two smaller cautions apply as well. Comparing timestamps as text, as we do, only works because every value has exactly the same format and the same <code>+05:30</code> offset; mixed time zones would break it. And when two rows share the same <code>updated_at</code>, a watermark on time alone can skip one of them, a problem shown in Common Mistakes.</p>
 
   <h2 id="et-dq"><span class="num">08</span>Data Quality Checks</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>A job that runs green while loading 0 rows, or doubled rows, is worse than a job that crashes: the dashboard and the model trust it. How do we notice bad data <em>before</em> it is published, and what counts as "bad"?</p>
-  </div>
-  <p>In plain words: a <strong>data quality check</strong> is an automatic test on the data itself (not on the code), run between transform and load. If any check fails, the load does not happen. The useful checks compare the data with what we <em>know</em> must be true:</p>
-  <table class="tbl">
-    <tr><th>Check</th><th>What it compares</th><th>Catches</th></tr>
-    <tr><td>Reconcile row count</td><td>rows out = rows extracted from the source</td><td>Fan-out from a join, dropped rows</td></tr>
-    <tr><td>Unique key</td><td><code>order_id</code> appears once</td><td>Duplicates from a join or a re-delivered file</td></tr>
-    <tr><td>Valid values</td><td>amount &gt; 0; status in a known set</td><td>New, unexpected kinds of data</td></tr>
-    <tr><td>Enrichment succeeded</td><td>every order found a city</td><td>Missing reference data</td></tr>
-    <tr><td>Freshness</td><td>newest <code>updated_at</code> is recent</td><td>The source stopped sending</td></tr>
-    <tr><td>Schema</td><td>expected columns and types</td><td>A column renamed upstream</td></tr>
-  </table>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A pharmacy's final check before handing over medicine: right patient, right count of tablets, not expired. It does not re-do the prescription; it compares the bag against what must be true, and holds the bag back if anything is off.</p>
-  </div>
+  <p>The pipeline is now correct for correct input, safe to re-run and cheap to keep up to date. But it trusts its input completely. If the partner sheet loses a restaurant, or a hurried "quick fix" removes the dedupe, the pipeline will load wrong numbers quickly, quietly and every night. A job that crashes is annoying; a job that runs green while loading doubled or missing rows is far worse, because the dashboard and the models believe it.</p>
+  <p>A <strong>data quality check</strong> is an automatic test on the data itself, not on the code, run after the transform and before the load. If any check fails, the load does not happen. A set of such checks placed in the pipeline is often called a <strong>quality gate</strong>. Think of a pharmacy's final check before handing over medicine: right patient, right number of tablets, not expired. The pharmacist does not rewrite the prescription; they compare the bag with what must be true and hold it back if anything is off.</p>
+  <p>The useful checks compare the batch with things we <em>know</em> must be true, either by <strong>reconciling</strong> it with the source (the number of orders out must equal the number extracted) or by testing an <strong>invariant</strong>, a rule that always holds (<code>order_id</code> is unique, amounts are positive, status is one of a known set, every order found its restaurant's city). Other common checks are freshness (is the newest <code>updated_at</code> recent, or did the source stop sending?) and schema (are the expected columns and types present?). Here is Biteful's gate:</p>
   <div class="fx" data-lang="py">class DataQualityError(Exception):
     pass
 
@@ -759,7 +565,7 @@ def check(df, source_rows):
     if problems:
         raise DataQualityError("; ".join(problems))
     return "ok"</div>
-  <p>Now feed it two good days and three realistic bad batches:</p>
+  <p>Now feed it two good days and three realistic bad batches. Each bad batch is something that really happens in companies: a code change that drops a cleaning step, a new restaurant that the partner team has not added to the sheet yet, and the app starting to send refunds in a new format:</p>
   <div class="fx" data-lang="py">from biteful_etl import extract_orders, extract_restaurants, extract_deliveries, transform
 from biteful_etl import check, DataQualityError
 
@@ -799,22 +605,12 @@ bad: forgot the dedupe             -&gt; FAIL: row count 3 != source 2; duplicat
 bad: restaurant missing from sheet -&gt; FAIL: order with no restaurant city (enrich failed)
 bad: refund rows                   -&gt; FAIL: amount &lt;= 0; unknown status
 naive 'rows &gt; 0' check on 2026-03-06: FAIL (but the day really was empty)</div>
-  <p>Read each line. 3 March: 2 orders in, 2 out, all valid → ok. 6 March: 0 orders in, 0 out → ok, because nobody ordered. The forgotten dedupe gave 3 rows from a source of 2 and a repeated <code>order_id</code>: two checks caught the fan-out from section 03. The new restaurant 15 left an order with no city. The refund row broke two value rules. The last line is a lesson about checks themselves: "rows &gt; 0" sounds sensible but fails on a genuinely empty day. Compare with the <em>source</em>, not with a guess, or the team learns to ignore alerts.</p>
-  <p>Libraries package these checks: Great Expectations, dbt tests, Soda, Pandera. The idea is the same as our ten-line function.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A <strong>data quality gate</strong> is a set of assertions on a batch, run after transform and before load; any failure stops the load. Good checks <strong>reconcile</strong> against the source (counts, sums) and test <strong>invariants</strong> (unique keys, valid ranges) rather than fixed guesses.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Dropping bad rows silently ("just filter them out") hides the problem and changes the totals. Write rejected rows to a <strong>quarantine</strong> table with the reason, fail if there are too many, and tell someone.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: orchestration.</b> We now have seven steps: three extracts, transform, check, load, gold. They must run in the right order, every night after the day ends, retry when the API hiccups, and re-run for past days when we fix a bug. Who does all that?</div>
+  <p>Read the output line by line. On 3 March, two orders went in and two valid rows came out, so the gate passed. On 6 March, zero orders went in and zero came out, and the gate also passed, because nobody ordered that day. The forgotten dedupe produced three rows from a source of two and a repeated <code>order_id</code>: two separate checks caught the fan-out from section 03. The new restaurant 15 left an order with no city. The refund broke two value rules at once. In each case the error message says exactly what was wrong, which is what the person woken by the alert needs.</p>
+  <p>The last line is a lesson about checks themselves. "The batch must have more than zero rows" sounds sensible, but it fails on 6 March, a genuinely empty day. A check that cries wolf teaches the team to ignore alerts, which is worse than having no check. That is why our gate compares with the source rather than with a guess. When bad rows should not stop the whole batch, the right move is not to filter them out silently (that hides the problem and changes the totals) but to write them to a <strong>quarantine</strong> table with the reason, fail if there are too many, and tell someone. Libraries package these ideas, including Great Expectations, dbt tests, Soda and Pandera, but they all do what our fifteen-line function does.</p>
 
-  <h2 id="et-dag"><span class="num">09</span>Orchestration: DAGs, Schedules, Retries, Backfills</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>A pipeline is a set of steps with an order ("transform needs all three extracts"), a timetable ("every night, for yesterday"), and failures ("the API answered 503"). Cron can start a script at midnight, but it can't say which steps depend on which, retry one step, or re-run last Tuesday. What do we need?</p>
-  </div>
-  <h3>The DAG: dependencies, traced</h3>
-  <p>Write down, for each task, which tasks must finish first. Drawn as boxes and arrows, that is a <strong>DAG</strong>: a <em>directed acyclic graph</em>. Directed: arrows point from "first" to "then". Acyclic: no arrow path leads back to where it started, because "load needs build_gold needs load" could never begin.</p>
+  <h2 id="et-dag"><span class="num">09</span>DAGs and Retries</h2>
+  <p>We now have seven steps: three extracts, transform, quality check, load, and the gold table. They must run in a particular order (the transform needs all three extracts), every night, and failures must be handled sensibly. The traditional Unix scheduler, cron, can start a script at midnight, but it knows nothing about which steps depend on which, cannot retry one step, and cannot re-run last Tuesday. This is the job of an orchestrator, and the first thing it needs is a description of the dependencies.</p>
+  <p>If you write down, for each task, which tasks must finish before it can start, and draw it as boxes and arrows, you get a <strong>DAG</strong>, a <em>directed acyclic graph</em>. "Directed" means each arrow points one way, from "first" to "then". "Acyclic" means that following the arrows never brings you back to where you started; a loop such as "load needs gold, gold needs load" could never begin, so it is not allowed.</p>
   <figure class="viz"><svg viewBox="0 0 640 150" width="640">
     <defs><marker id="et-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <g font-size="11" text-anchor="middle">
@@ -829,7 +625,7 @@ naive 'rows &gt; 0' check on 2026-03-06: FAIL (but the day really was empty)</di
     <g stroke="currentColor" marker-end="url(#et-ar2)"><line x1="130" y1="26" x2="173" y2="68"/><line x1="130" y1="74" x2="173" y2="74"/><line x1="130" y1="122" x2="173" y2="80"/><line x1="265" y1="74" x2="293" y2="74"/><line x1="400" y1="74" x2="428" y2="74"/><line x1="515" y1="74" x2="543" y2="74"/></g>
     <text x="67" y="148" font-size="10" text-anchor="middle" class="tm">wave 1: run in parallel</text>
   </svg><figcaption>Biteful's nightly DAG. The three extracts don't depend on each other, so they can run at the same time.</figcaption></figure>
-  <p>An orchestrator turns this graph into an order of execution: run every task whose needs are all done, mark it done, repeat. Python's standard library has exactly this algorithm (<code>graphlib</code>, a topological sort):</p>
+  <p>In Biteful's DAG the three extracts on the left have no arrows coming into them, so nothing has to happen before them. All three arrows converge on <code>transform</code>, which therefore waits for the slowest extract. After that the tasks form a single chain. An orchestrator turns such a graph into an order of execution with a simple loop: find every task whose prerequisites are all done, run those, mark them done, repeat. This is a <strong>topological sort</strong>, and Python's standard library has it in <code>graphlib</code>:</p>
   <div class="fx" data-lang="py">from graphlib import TopologicalSorter, CycleError
 
 needs = {                                   # task -&gt; the tasks that must finish first
@@ -860,13 +656,13 @@ wave 3: ['quality_check']
 wave 4: ['load_fact']
 wave 5: ['build_gold']
 CycleError: ['load_fact', 'build_gold', 'load_fact']</div>
-  <p>Trace it. Wave 1: the three extracts need nothing, so all are ready at once. Once they are marked done, transform's three needs are met: wave 2. Then check, load, gold, one per wave. A loop was refused immediately with the cycle spelled out. This "waves" view is also why a DAG is fast: independent tasks run in parallel.</p>
-  <h3>Retries: for temporary failures only</h3>
-  <p>A failed task can be retried automatically, but only some failures heal by waiting. A <strong>transient</strong> failure (a timeout, HTTP 503 "service unavailable", 429 "slow down") will probably work in a minute. A bad-data failure fails the same way a hundred times, so retrying just delays the alert. <strong>Exponential backoff</strong> waits longer after each failure (0.5 s, then 1 s, then 2 s), so a struggling server is not hammered. Here is a 30-line orchestrator that runs Biteful's tasks in DAG order with exactly these rules:</p>
+  <p>In wave 1 the three extracts need nothing, so all of them are ready at once and could run in parallel. Once they are marked done, all of transform's needs are met, so it forms wave 2, followed by the check, the load and the gold table one per wave. The attempt to schedule a two-task loop was refused immediately, with the cycle spelled out. The waves also explain why expressing a pipeline as a DAG makes it faster: anything not connected by an arrow can run at the same time.</p>
+  <p>The second thing an orchestrator does is retry failed tasks, and here a distinction matters. Some failures heal by themselves: a network timeout, an HTTP 503 from an overloaded server, a 429 telling you to slow down, a database failing over to its standby. These are called <strong>transient</strong> failures, and trying again in a moment will probably work. Other failures are permanent for this input: bad data, a schema mismatch, a bug in the code. Retrying those fails the same way every time and only delays the alert. A good retry policy also waits longer after each failure, for example 0.5 seconds, then 1, then 2, so that a struggling server is not hammered by clients that all retry at once. This is <strong>exponential backoff</strong>.</p>
+  <p>Here is a 30-line orchestrator, <code>mini_orchestrator.py</code>, that runs Biteful's tasks in DAG order with exactly these rules. Only network errors are caught and retried; anything else propagates immediately, and the quality check gets no retries at all:</p>
   <div class="fx" data-lang="py">import time
 from urllib.error import URLError
 from biteful_etl import (extract_orders, extract_restaurants, extract_deliveries, transform,
-                         check, load_overwrite, build_daily_city_revenue)
+                         check, load_overwrite)
 
 RETRYABLE = (URLError, TimeoutError, ConnectionError)    # transient: worth another try
 
@@ -893,20 +689,12 @@ def run_pipeline(ds, verbose=True):
     run_task("quality_check", lambda: check(df, len(o)), retries=0, verbose=verbose)
     run_task("load_fact", lambda: load_overwrite(df, ds), verbose=verbose)
     return len(df)</div>
-  <h3>Backfills: re-running past days</h3>
-  <p>A <strong>backfill</strong> is running the pipeline again for past days: after fixing a bug, adding a column, or on the first deployment. It is just a loop over logical dates, and it is safe only because each run is idempotent (section 06) and parameterised by its day. The script below makes the API fail once, runs 2 March, then backfills 2–5 March (re-running 2 March on purpose):</p>
-  <div class="fx" data-lang="py">import pandas as pd
-from mini_orchestrator import run_pipeline
-from biteful_etl import build_daily_city_revenue
+  <p>To see a retry happen, the stand-in API can be told to answer the next request with a 503:</p>
+  <div class="fx" data-lang="py">from mini_orchestrator import run_pipeline
 
 open("state/fail_once", "w").close()          # the API will answer 503 once
 print("run for ds=2026-03-02")
-run_pipeline("2026-03-02")
-
-print("backfill 2026-03-02 .. 2026-03-05")
-for ds in pd.date_range("2026-03-02", "2026-03-05").strftime("%Y-%m-%d"):
-    print(f"  {ds}: loaded {run_pipeline(ds, verbose=False)} orders")
-print(build_daily_city_revenue())</div>
+run_pipeline("2026-03-02")</div>
   <div class="fx" data-lang="text">run for ds=2026-03-02
   extract_orders       ok (attempt 1)
   extract_restaurants  ok (attempt 1)
@@ -914,8 +702,47 @@ print(build_daily_city_revenue())</div>
   extract_deliveries   ok (attempt 2)
   transform            ok (attempt 1)
   quality_check        ok (attempt 1)
-  load_fact            ok (attempt 1)
-backfill 2026-03-02 .. 2026-03-05
+  load_fact            ok (attempt 1)</div>
+  <p>The first call to the API failed with "503 Service Unavailable", the orchestrator waited half a second and tried again, and attempt 2 succeeded. Every other task succeeded on its first attempt, and the run completed without any human noticing the hiccup. That is what retries are for.</p>
+
+  <h2 id="et-sched"><span class="num">10</span>Schedules, Logical Dates and Backfills</h2>
+  <p>A pipeline also needs a timetable, and getting it right takes a little care. Biteful wants "yesterday's revenue" every morning, so the run that processes 2 March must not start until 2 March is over, that is, at midnight going into 3 March. Orchestrators describe this with three linked ideas. The <strong>schedule</strong> says when runs happen. Each run processes a <strong>data interval</strong>, the period of data it is responsible for (here, 2 March 00:00 to 3 March 00:00). And the run is labelled with a <strong>logical date</strong>, normally the start of that interval, which is the <code>ds</code> passed to every task. A school attendance clerk files Monday's register on Tuesday morning and labels it "Monday": the label is the logical date and the filing time is the run time. If the register has to be re-filed a month later, it is still labelled "Monday".</p>
+  <p>Airflow 3 has two daily timetables, and they differ in exactly this respect. Asking Airflow's own timetable classes for their first run, with India's time zone, shows the difference:</p>
+  <div class="fx" data-lang="py">import pendulum
+from airflow.timetables.trigger import CronTriggerTimetable          # what "@daily" means in Airflow 3
+from airflow.timetables.interval import CronDataIntervalTimetable    # the Airflow 2 style
+from airflow.timetables.base import TimeRestriction
+
+start = pendulum.datetime(2026, 3, 2, tz="Asia/Kolkata")
+f = lambda t: t.in_tz("Asia/Kolkata").format("MM-DD HH:mm")
+for tt in [CronTriggerTimetable("0 0 * * *", timezone="Asia/Kolkata"),
+           CronDataIntervalTimetable("0 0 * * *", timezone="Asia/Kolkata")]:
+    run = tt.next_dagrun_info(last_automated_data_interval=None,
+                              restriction=TimeRestriction(earliest=start, latest=None, catchup=True))
+    print(type(tt).__name__)
+    print(f"   starts at {f(run.run_after)} | logical date {f(run.logical_date)}"
+          f" | data interval {f(run.data_interval.start)} -&gt; {f(run.data_interval.end)}"
+          f" | ds (UTC) {run.logical_date.in_tz('UTC').to_date_string()}")</div>
+  <div class="fx" data-lang="text">CronTriggerTimetable
+   starts at 03-02 00:00 | logical date 03-02 00:00 | data interval 03-02 00:00 -&gt; 03-02 00:00 | ds (UTC) 2026-03-01
+CronDataIntervalTimetable
+   starts at 03-03 00:00 | logical date 03-02 00:00 | data interval 03-02 00:00 -&gt; 03-03 00:00 | ds (UTC) 2026-03-01</div>
+  <p><code>CronTriggerTimetable</code>, which is what a plain <code>schedule="@daily"</code> means in Airflow 3, fires <em>at</em> 2 March 00:00 and has an empty data interval: it describes something that happens at midnight, with no notion of "the day just finished". <code>CronDataIntervalTimetable</code>, Airflow 2's behaviour, starts on 3 March at 00:00 and covers 2 March 00:00 to 3 March 00:00, which is the right shape for a nightly ETL. Look also at the last column. Airflow's <code>ds</code> is the logical date's <em>UTC</em> date, and 2 March 00:00 in India is 1 March 18:30 in UTC, so <code>ds</code> says 2026-03-01. For a business outside UTC the business day must be derived from the data interval in the local time zone, which is what Biteful's Airflow DAG does in the next section.</p>
+  <p>Because every run is labelled with the day it is for, the orchestrator can also run the pipeline for days in the past. This is a <strong>backfill</strong>: running the pipeline again for a range of past logical dates, after a bug fix, after adding a new column, or on the first deployment of a new pipeline. Mechanically it is just a loop over dates. It is <em>safe</em> only because of section 06: each run touches only its own day's partition and overwrites it, so re-running a day that was already loaded replaces it instead of doubling it. The script below backfills 2 to 5 March, which includes 2 March, already loaded by the retry demonstration above, and then builds the gold table from <code>fact_orders</code>:</p>
+  <div class="fx" data-lang="py">def build_daily_city_revenue():                       # gold: delivered revenue per city per day
+    f = read_table("fact_orders")
+    d = f[f["status"] == "delivered"]
+    return (d.groupby(["order_date", "city"], as_index=False)
+              .agg(orders=("order_id", "count"), revenue=("amount", "sum")))</div>
+  <div class="fx" data-lang="py">import pandas as pd
+from mini_orchestrator import run_pipeline
+from biteful_etl import build_daily_city_revenue
+
+print("backfill 2026-03-02 .. 2026-03-05")      # 2 March was already loaded above
+for ds in pd.date_range("2026-03-02", "2026-03-05").strftime("%Y-%m-%d"):
+    print(f"  {ds}: loaded {run_pipeline(ds, verbose=False)} orders")
+print(build_daily_city_revenue())</div>
+  <div class="fx" data-lang="text">backfill 2026-03-02 .. 2026-03-05
   2026-03-02: loaded 3 orders
   2026-03-03: loaded 2 orders
   2026-03-04: loaded 2 orders
@@ -927,66 +754,19 @@ backfill 2026-03-02 .. 2026-03-05
 3  2026-03-04  Mumbai       1    180.0
 4  2026-03-05  Mumbai       1    600.0
 5  2026-03-05    Pune       1    260.0</div>
-  <p>The API's 503 was retried after 0.5 s and worked on attempt 2: the run healed itself. The backfill re-ran 2 March, and the gold table still says Pune 760, Mumbai 450, not double. Check one more number by hand: 5 March = 108 at Dosa Hut (Pune, 260) + 109 at Biryani Bros (Mumbai, 600) ✓.</p>
-  <h3>Schedules: the run for a day starts after the day ends</h3>
-  <p>A <strong>schedule</strong> says when runs happen; each run is <em>for</em> a <strong>data interval</strong> (the period of data it processes), identified by its <strong>logical date</strong>. For a nightly load of "yesterday", the run for 2 March can only start once 2 March is over, at midnight going into 3 March. Airflow 3 has two daily timetables, and they differ exactly here. This is real output from Airflow 3.1.8's own timetable classes, with India time:</p>
-  <div class="fx" data-lang="py">import pendulum
-from airflow.timetables.trigger import CronTriggerTimetable          # what "@daily" means in Airflow 3
-from airflow.timetables.interval import CronDataIntervalTimetable    # the Airflow 2 style
-from airflow.timetables.base import TimeRestriction
+  <p>The backfill loaded each day, and the gold table still says Pune 760 and Mumbai 450 for 2 March, not double, even though 2 March was loaded twice. Check another row by hand: on 5 March, order 108 at Dosa Hut (Pune, 260) and order 109 at Biryani Bros (Mumbai, 600), which is exactly what the last two rows say. A backfill of a non-idempotent job, by contrast, would be a disaster multiplied by the number of days in the range. Orchestrators can also backfill automatically: when a DAG is deployed with a start date in the past and <code>catchup=True</code>, Airflow creates one run for every missed interval at once. That is occasionally what you want, but usually you set <code>catchup=False</code> and run backfills deliberately.</p>
 
-start = pendulum.datetime(2026, 3, 2, tz="Asia/Kolkata")
-for tt in [CronTriggerTimetable("0 0 * * *", timezone="Asia/Kolkata"),
-           CronDataIntervalTimetable("0 0 * * *", timezone="Asia/Kolkata")]:
-    run = tt.next_dagrun_info(last_automated_data_interval=None,
-                              restriction=TimeRestriction(earliest=start, latest=None, catchup=True))
-    f = lambda t: t.in_tz("Asia/Kolkata").format("MM-DD HH:mm")
-    print(f"{type(tt).__name__:25} starts at {f(run.run_after)} | logical date {f(run.logical_date)}"
-          f" | data interval {f(run.data_interval.start)} -&gt; {f(run.data_interval.end)}"
-          f" | ds (UTC) {run.logical_date.in_tz('UTC').to_date_string()}")</div>
-  <div class="fx" data-lang="text">CronTriggerTimetable      starts at 03-02 00:00 | logical date 03-02 00:00 | data interval 03-02 00:00 -&gt; 03-02 00:00 | ds (UTC) 2026-03-01
-CronDataIntervalTimetable starts at 03-03 00:00 | logical date 03-02 00:00 | data interval 03-02 00:00 -&gt; 03-03 00:00 | ds (UTC) 2026-03-01</div>
-  <p>Read the two lines. <code>CronTriggerTimetable</code> (what a plain <code>schedule="@daily"</code> means in Airflow 3) fires <em>at</em> 2 March 00:00 with an empty interval: a run that "happens at midnight", with no notion of yesterday. <code>CronDataIntervalTimetable</code> (Airflow 2's behaviour) starts on 3 March at 00:00 and covers 2 March 00:00 → 3 March 00:00: the right shape for a nightly ETL. Also look at the last column: Airflow's <code>ds</code> is the logical date's <em>UTC</em> date, and 2 March 00:00 IST is 1 March 18:30 UTC, so <code>ds</code> says 2026-03-01. Biteful's business day must come from the data interval in IST, which is what our DAG does in the next section.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A school's attendance clerk files Monday's register on Tuesday morning, labelled "Monday". The label is the logical date; the filing time is the run time. Re-filing Monday's register in a month still says "Monday".</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>DAG</strong>: tasks plus "must run before" edges, with no cycles. <strong>Schedule / data interval / logical date</strong>: when runs happen / the slice of time a run processes / the label of that slice. <strong>Retry</strong>: re-run a failed task after a delay, for transient errors. <strong>Backfill</strong>: run the pipeline for past logical dates.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Retrying everything (including bad data and bugs) wastes hours and hides the real error under "attempt 3 of 3". Retry only errors that can heal by themselves; fail fast on the rest. And a backfill of a non-idempotent job is a disaster multiplied by the number of days.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Airflow and Prefect.</b> Our 30-line orchestrator runs one pipeline in one terminal. It has no calendar, no record of which days ran, no web page showing failures, no way to wait for a file, and it dies with the terminal. Real teams use a dedicated orchestrator.</div>
-
-  <h2 id="et-air"><span class="num">10</span>Airflow &amp; Prefect</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We know what an orchestrator must do: run a DAG in order, on a schedule tied to a logical date, with retries, backfills and alerts, and remember every run. How do the real tools express that, and what are their pieces called?</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Apache Airflow</strong> is the most widely used open-source orchestrator. You describe a pipeline in a Python file as a <strong>DAG</strong>; Airflow's <strong>scheduler</strong> creates a <strong>DAG run</strong> for each data interval, and an <strong>executor</strong> runs each <strong>task</strong>, recording its state (queued, running, success, failed, up_for_retry, upstream_failed) in a metadata database.</p>
-  </div>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Airflow is a conductor. It doesn't play the instruments (pandas, Spark, the warehouse do the heavy work); it tells each player when to start, waits for the ones who are late, and notices who stopped playing.</p>
-  </div>
-  <table class="tbl">
-    <tr><th>Airflow piece</th><th>Meaning</th><th>In Biteful's DAG</th></tr>
-    <tr><td><strong>Operator</strong></td><td>A template for one kind of work (PythonOperator, BashOperator, SQL operators, S3 operators…)</td><td><code>FileSensor</code>; each <code>@task</code> function is a Python operator</td></tr>
-    <tr><td><strong>Task</strong></td><td>An operator placed in a DAG with an id; a <strong>task instance</strong> is one task in one run</td><td><code>extract_orders</code>, <code>transform</code>, …</td></tr>
-    <tr><td><strong>XCom</strong></td><td>"Cross-communication": small values passed between tasks, stored in the metadata DB</td><td>A file path, a dict of counts</td></tr>
-    <tr><td><strong>Sensor</strong></td><td>A task that waits until something is true (file exists, partition landed, other DAG done)</td><td><code>wait_for_sheet</code></td></tr>
-    <tr><td><strong>Scheduler</strong></td><td>Decides which runs and tasks are due</td><td>Creates the run for 2 March on 3 March 00:00 IST</td></tr>
-    <tr><td><strong>Executor</strong></td><td>Decides where tasks run: Local (processes on one machine), Celery (a pool of worker machines fed by a queue), Kubernetes (one pod per task)</td><td><code>dags test</code> runs tasks in-process</td></tr>
-    <tr><td><strong>Connection</strong></td><td>Where a system lives and how to log in, kept as config, not code</td><td><code>fs_default</code> for the sensor</td></tr>
-    <tr><td><strong>TaskGroup</strong></td><td>A visual folder of tasks in the UI (e.g. "extracts")</td><td>Not used; 7 tasks are readable flat</td></tr>
-  </table>
-  <p>Biteful's real DAG file. Each <code>@task</code> function becomes one task. Calling <code>transform(extract_orders(), r, extract_deliveries())</code> does two things at once: it draws the arrows (extracts → transform) <em>and</em> passes each return value into the next task through XCom. Returning a <em>path</em>, not a DataFrame, keeps XComs small.</p>
+  <h2 id="et-air"><span class="num">11</span>Airflow and Prefect</h2>
+  <p>Our mini orchestrator runs one pipeline in one terminal. It has no calendar, no record of which days ran or failed, no web page, no way to wait for a file, and it dies when the terminal closes. Real teams use a dedicated orchestrator, and the most widely used one is <strong>Apache Airflow</strong>. Think of Airflow as the conductor of an orchestra: it does not play any instrument itself (pandas, Spark and the warehouse do the heavy work), but it tells each player when to start, waits for the ones who are late, and notices who stopped playing.</p>
+  <p>In Airflow you describe a pipeline in a Python file as a <strong>DAG</strong>. Each step in it is a <strong>task</strong>, made from an <strong>operator</strong>, which is a reusable template for one kind of work (run a Python function, run a shell command, run SQL, copy a file to S3). One task in one particular run is called a <strong>task instance</strong>, and Airflow records the state of each one (queued, running, success, failed, up_for_retry, upstream_failed) in its <strong>metadata database</strong>. The <strong>scheduler</strong> is the long-running process that reads the DAG files, decides which runs and tasks are due, and creates a <strong>DAG run</strong> for each data interval. The <strong>executor</strong> decides where tasks actually run: the LocalExecutor runs them as processes on one machine, the CeleryExecutor sends them through a queue to a pool of worker machines, and the KubernetesExecutor starts one container (pod) per task. Small values passed from one task to the next, such as a file path or a row count, travel through <strong>XCom</strong> ("cross-communication"), which is stored in the metadata database. A <strong>sensor</strong> is a special task that waits until something is true, such as a file existing or another DAG finishing. A <strong>connection</strong> stores where an external system lives and how to log in to it, as configuration rather than code.</p>
+  <p>Here is Biteful's real DAG file. In Airflow's TaskFlow style, each function decorated with <code>@task</code> becomes one task, and calling one task function with another's result does two things at once: it draws the arrow between them and passes the return value through XCom. Each task returns a <em>path</em> to a Parquet file, not a DataFrame, so the XComs stay small:</p>
   <div class="fx" data-lang="py">import os, sys
 from datetime import datetime, timedelta
 from airflow.sdk import dag, task
 from airflow.providers.standard.sensors.filesystem import FileSensor
 from airflow.timetables.interval import CronDataIntervalTimetable
 
-BASE = "/opt/biteful"
+BASE = "/opt/biteful"                         # where the project and biteful_etl.py live
 sys.path.insert(0, BASE)
 
 def etl():                                    # run inside the project folder, import the ETL code
@@ -998,7 +778,8 @@ def ist_day(data_interval_start):            # the business day this run is FOR,
     return data_interval_start.in_timezone("Asia/Kolkata").to_date_string()
 
 def alert(context):                           # on_failure_callback: page a human
-    print(f"ALERT biteful_daily day={ist_day(context['data_interval_start'])} task={context['task_instance'].task_id} failed")
+    print(f"ALERT biteful_daily day={ist_day(context['data_interval_start'])} "
+          f"task={context['task_instance'].task_id} failed")
 
 @dag(
     schedule=CronDataIntervalTimetable("0 0 * * *", timezone="Asia/Kolkata"),  # run for day D starts after D ends
@@ -1065,16 +846,15 @@ def biteful_daily():
     load_fact(quality_check(transform(extract_orders(), r, extract_deliveries())))
 
 biteful_daily()</div>
-  <p>(The real <code>BASE</code> path is shortened to <code>/opt/biteful</code> here.) Reading the top: <code>CronDataIntervalTimetable</code> gives "the run for day D starts after D ends" in India time (section 09). <code>catchup=False</code> stops Airflow from creating a run for every day since <code>start_date</code> the moment the DAG is deployed. <code>default_args</code> gives every task 2 retries with growing delays and an alert on failure; <code>quality_check</code> overrides retries to 0. <code>ist_day</code> turns the data interval into Biteful's business day, avoiding the UTC <code>ds</code>. <code>mode="reschedule"</code> makes the sensor give back its worker slot between checks instead of sleeping on it.</p>
-  <p>A real test run. <code>airflow dags test</code> runs one DAG run in a single process; for a manual run at a given time, this timetable processes the day that just ended, so 3 March 00:00 IST processes 2 March:</p>
-  <div class="fx" data-lang="text">$ export AIRFLOW_CONN_FS_DEFAULT='fs://'        # the connection FileSensor uses
-$ airflow dags test biteful_daily 2026-03-03T00:00:00+05:30        # Airflow 3.1.8, log trimmed
+  <p>Read the top of the file first. <code>CronDataIntervalTimetable</code> in India's time zone gives "the run for day D starts after D ends", as in section 10. <code>catchup=False</code> stops Airflow from creating a run for every day since <code>start_date</code> the moment the DAG is deployed, and <code>max_active_runs=1</code> keeps runs from overlapping. <code>default_args</code> gives every task two retries with growing delays and calls <code>alert</code> when a task finally fails; <code>quality_check</code> overrides this with <code>retries=0</code>, because bad data will not fix itself. <code>ist_day</code> turns the data interval into Biteful's business day, avoiding the UTC <code>ds</code> trap. The <code>FileSensor</code> waits for the partner sheet to exist, checking every 30 seconds for up to an hour; <code>mode="reschedule"</code> makes it give back its worker slot between checks instead of occupying it while it sleeps. At the bottom, the last two lines wire the DAG: the sensor must finish before the restaurant extract, and the nested calls draw every other arrow.</p>
+  <p><code>airflow dags test</code> runs one complete DAG run in a single process, without the scheduler, which makes it ideal for trying a DAG out. (The sensor uses Airflow's default file-system connection, provided here through the environment variable <code>AIRFLOW_CONN_FS_DEFAULT='fs://'</code>.) For a run at 3 March 00:00 India time, this timetable processes the day that just ended, 2 March:</p>
+  <div class="fx" data-lang="text">$ airflow dags test biteful_daily 2026-03-03T00:00:00+05:30     # Airflow 3.1.8, log trimmed
 ds=2026-03-02  data_interval_start=2026-03-01 18:30:00+00:00  business day=2026-03-02
 Done. Returned value was: warehouse/bronze/orders_2026-03-02.parquet
 [DAG TEST] end task task_id=extract_orders
-[DAG TEST] end task task_id=wait_for_sheet
 Done. Returned value was: warehouse/bronze/deliveries_2026-03-02.parquet
 [DAG TEST] end task task_id=extract_deliveries
+[DAG TEST] end task task_id=wait_for_sheet
 Done. Returned value was: warehouse/bronze/restaurants.parquet
 [DAG TEST] end task task_id=extract_restaurants
 Done. Returned value was: {'path': 'warehouse/silver/orders_2026-03-02.parquet', 'day': '2026-03-02', 'rows': 3, 'source_rows': 3}
@@ -1085,9 +865,9 @@ overwrote partition order_date=2026-03-02 with 3 rows
 Done. Returned value was: None
 [DAG TEST] end task task_id=load_fact
 DagRun Finished: logical_date=2026-03-02 18:30:00+00:00 state=success</div>
-  <p>Follow it. The <code>ds=…</code> line shows the three dates: <code>ds</code> 2026-03-02 (the UTC date of the logical date, 2 March 18:30 UTC), the interval start 1 March 18:30 UTC (= 2 March 00:00 IST), and the business day 2026-03-02. Extract tasks ran in parallel waves, in whatever order the executor picked; each "Returned value" is an XCom; transform received the three paths and returned a small dict; quality_check passed it on; load_fact overwrote the 2 March partition with 3 rows. Same result as our 30-line orchestrator, now with a scheduler, a UI and a history of runs behind it.</p>
-  <h3>Prefect: the same pipeline, lighter</h3>
-  <p><strong>Prefect</strong> takes a different style: a pipeline is just a Python function marked <code>@flow</code>, and steps are functions marked <code>@task</code>. No DAG object: the order comes from normal function calls. Retries are a decorator argument. This is Biteful's pipeline in Prefect 3.8, with the API forced to fail once:</p>
+  <p>The first line is printed by the <code>extract_orders</code> task and shows all three dates side by side: <code>ds</code> is 2026-03-02 here because this manually triggered run's logical date is 2 March 18:30 UTC; the data interval starts on 1 March at 18:30 UTC, which is 2 March 00:00 in India; and the business day computed by <code>ist_day</code> is 2026-03-02. The three extracts and the sensor ran in whatever order the executor picked, since nothing connects them. Each "Returned value" line is a value being stored as an XCom: three file paths, then a small dictionary from <code>transform</code> that <code>quality_check</code> passes on. Finally <code>load_fact</code> overwrote the 2 March partition with three rows and the DAG run finished in state success. It is the same result as our mini orchestrator, but now with a scheduler, a web UI and a permanent history of runs behind it.</p>
+  <p>Two habits matter when writing Airflow DAGs. First, keep XComs small: passing a DataFrame through XCom bloats the metadata database and slows every task, so pass paths, table names and counts. Second, keep work inside tasks: the scheduler re-parses every DAG file every few seconds, so code at the top level of the file (an API call, a database query) runs far more often than you expect.</p>
+  <p><strong>Prefect</strong> takes a lighter approach. A pipeline is just a Python function decorated with <code>@flow</code>, its steps are functions decorated with <code>@task</code>, and the order comes from normal function calls rather than a separate DAG object. Retries are an argument to the decorator. Here is Biteful's pipeline in Prefect, run with the API forced to fail once:</p>
   <div class="fx" data-lang="py">from prefect import flow, task
 import biteful_etl as etl
 
@@ -1116,42 +896,21 @@ def biteful_daily(ds: str):
 if __name__ == "__main__":
     open("state/fail_once", "w").close()          # the API will answer 503 once
     biteful_daily("2026-03-05")</div>
-  <div class="fx" data-lang="text">$ python prefect_flow.py        # Prefect 3.8.8, log trimmed (timestamps removed)
-Flow run 'hopping-ibex' - Beginning flow run 'hopping-ibex' for flow 'biteful-daily'
-Task run 'extract-e9f' - Task run failed with exception: &lt;HTTPError 503: 'Service Unavailable'&gt; - Retry 1/2 will start 1 second(s) from now
-Task run 'extract-e9f' - Finished in state Completed()
-Task run 'transform-de9' - Finished in state Completed()
-Task run 'check_and_load-553' - Finished in state Completed()
-Flow run 'hopping-ibex' - loaded 2 orders for 2026-03-05
-Flow run 'hopping-ibex' - Finished in state Completed()</div>
-  <p>The extract task hit the 503, Prefect scheduled "Retry 1/2" after 1 second, and the second attempt completed; 5 March loaded 2 orders. Prefect started a temporary local server to record the run; in production you run a Prefect server (or Prefect Cloud) and deploy flows with schedules.</p>
-  <table class="tbl">
-    <tr><th></th><th>Airflow</th><th>Prefect</th><th>Dagster</th><th>Luigi</th></tr>
-    <tr><td>Core idea</td><td>Tasks in a scheduled DAG</td><td>Plain Python functions as flows</td><td><strong>Assets</strong> (tables, models) and their lineage</td><td>Tasks with target outputs</td></tr>
-    <tr><td>Strength</td><td>Industry standard, huge operator library, managed versions (MWAA, Cloud Composer, Astronomer)</td><td>Little boilerplate, dynamic flows, easy local runs</td><td>Typed I/O, testing, built-in partitions and backfills</td><td>Simple, no scheduler service</td></tr>
-    <tr><td>Weakness</td><td>Heavier to run; task-centric, not data-centric</td><td>Smaller ecosystem</td><td>New concepts to learn</td><td>Legacy; little development</td></tr>
-    <tr><td>Pick when</td><td>Default in most companies</td><td>Small team, Python-heavy ML</td><td>Asset-centric data/ML platforms</td><td>Maintaining an old stack</td></tr>
-  </table>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Passing a DataFrame through XCom bloats the metadata database and slows every task; pass a path or table name. Code at the top level of a DAG file (API calls, database queries) runs every time the scheduler parses the file, every few seconds; keep it inside tasks. And <code>ds</code> is a UTC date: for a business outside UTC, derive the day from the data interval in the local time zone.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: error handling and alerting.</b> Retries fix the failures that heal by themselves. Some never will: the partner sheet loses a restaurant, the API is down all night. What should the pipeline do then, and who finds out?</div>
+  <div class="fx" data-lang="text">$ python prefect_flow.py        # Prefect 3.9.3, log trimmed (timestamps removed)
+Flow run 'invaluable-kagu' - Beginning flow run 'invaluable-kagu' for flow 'biteful-daily'
+Task run 'extract-cd8' - Task run failed with exception: &lt;HTTPError 503: 'Service Unavailable'&gt; - Retry 1/2 will start 1 second(s) from now
+Task run 'extract-cd8' - Finished in state Completed()
+Task run 'transform-155' - Finished in state Completed()
+Task run 'check_and_load-007' - Finished in state Completed()
+Flow run 'invaluable-kagu' - loaded 2 orders for 2026-03-05
+Flow run 'invaluable-kagu' - Finished in state Completed()</div>
+  <p>The extract task hit the 503, Prefect scheduled "Retry 1/2" one second later, and the second attempt completed; the flow then loaded the two orders of 5 March. To record the run, Prefect started a temporary local server for the length of the script; in production you run a Prefect server (or use Prefect Cloud) and deploy flows with schedules.</p>
+  <p>Airflow and Prefect are not the only choices. <strong>Dagster</strong> organises pipelines around <em>assets</em> (the tables and models a pipeline produces) and their lineage, with built-in partitions and backfills, and suits teams who think in terms of data products. <strong>Luigi</strong> is an older, simpler task runner that is mostly found in legacy stacks. Airflow is the default in most companies because of its huge library of operators and its managed versions (Amazon MWAA, Google Cloud Composer, Astronomer); Prefect appeals to small, Python-heavy teams because it needs so little boilerplate.</p>
 
-  <h2 id="et-err"><span class="num">11</span>Error Handling &amp; Alerting</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Some failures survive every retry. When that happens, what must be true of the warehouse (did half a day get published?), and how does a human find out before the business does?</p>
-  </div>
-  <p>Three rules, in plain words. <strong>Classify</strong> the failure: transient (retry, then alert), bad data (don't retry, quarantine, alert), bug (don't retry, fix, then backfill). <strong>Publish nothing wrong</strong>: a failed run must leave the previous good data in place, never a half-written day. <strong>Fail loudly</strong>: an alert that names the pipeline, the day and the failing step, sent to a person (chat, e-mail, on-call pager).</p>
-  <table class="tbl">
-    <tr><th>Failure type</th><th>Biteful example</th><th>Response</th></tr>
-    <tr><td>Transient</td><td>API 503, timeout, DB failover</td><td>Retry with exponential backoff; alert only if retries run out</td></tr>
-    <tr><td>Bad data</td><td>Sheet lost Green Bowl, refund rows</td><td>No retries; block the load; quarantine; alert the data owner</td></tr>
-    <tr><td>Logic bug</td><td>Wrong join, wrong time zone</td><td>Fix the code, then backfill the affected days</td></tr>
-  </table>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A smoke alarm is useful because it is loud, specific to a room, and does not go off for toast. A pipeline alert should be the same: loud, specific (which day, which task), and rare enough that people still read it.</p>
-  </div>
-  <p>The mini orchestrator again, wrapped with an alert, through three nights: a normal one, a bad partner sheet, and the API down all night (we point the API address at a port where nothing listens):</p>
+  <h2 id="et-err"><span class="num">12</span>Error Handling and Alerting</h2>
+  <p>Retries fix the failures that heal by themselves. Some never will: the partner sheet loses a restaurant, or the API is down all night. When that happens, two questions matter. What state is the warehouse left in? And how does a human find out before the business does?</p>
+  <p>Good pipelines follow three rules. The first is to <strong>classify</strong> the failure, because each kind needs a different response. A transient failure (API 503, timeout) should be retried with backoff, and someone alerted only if the retries run out. A bad-data failure (the sheet lost Green Bowl, refund rows) should not be retried at all; the load is blocked, bad rows go to quarantine, and the data owner is told. A logic bug (a wrong join, a wrong time zone) needs a code fix followed by a backfill of the affected days. The second rule is to <strong>publish nothing wrong</strong>: a failed run must leave the previous good data in place, never a half-written day. The third is to <strong>fail loudly</strong>, with an alert that names the pipeline, the day and the failing step and reaches a person through chat, e-mail or an on-call pager. A smoke alarm is useful because it is loud, says which room, and does not go off for toast; pipeline alerts should be the same, and rare enough that people still read them.</p>
+  <p>Here is the mini orchestrator again, wrapped with an alert, through three nights: a normal one, one where the partner sheet has lost Green Bowl's row, and one where the API is down all night (we point the API address at a port where nothing listens):</p>
   <div class="fx" data-lang="py">import shutil
 from mini_orchestrator import run_pipeline
 from biteful_etl import read_partition
@@ -1189,13 +948,14 @@ nightly("2026-03-04")</div>
   extract_deliveries   failed: &lt;urlopen error [Errno 111] Connection refused&gt; -&gt; retry in 0.5s
   extract_deliveries   failed: &lt;urlopen error [Errno 111] Connection refused&gt; -&gt; retry in 1.0s
   ALERT biteful_daily ds=2026-03-04: URLError: &lt;urlopen error [Errno 111] Connection refused&gt;</div>
-  <p>Night 2 failed at the quality gate with no retries (bad data won't fix itself in 0.5 s), and the 3 March partition still holds the good data from night 1: <code>load_overwrite</code> never ran, and even if it had crashed it writes to a <code>.tmp</code> folder first. Night 3 retried twice with growing delays, then gave up and alerted. Airflow does the same with real state tracking. Here is the Biteful DAG on a night when the sheet lost Green Bowl:</p>
-  <div class="fx" data-lang="text">$ airflow dags test biteful_daily 2026-03-04T00:00:00+05:30        # processes 3 March; log trimmed
-Done. Returned value was: warehouse/bronze/deliveries_2026-03-03.parquet
-[DAG TEST] end task task_id=extract_deliveries
+  <p>Night 1 published 3 March normally. Night 2 failed at the quality gate with no retries, because bad data will not fix itself in half a second, and the alert says exactly why. Most importantly, the 3 March partition still holds the good data from night 1: <code>load_overwrite</code> never ran, and even if it had crashed, it writes to a <code>.tmp</code> folder first. Night 3 retried twice, waiting 0.5 seconds and then 1 second, and then gave up and alerted with the underlying network error.</p>
+  <p>Airflow does the same with real state tracking. Here is the Biteful DAG on a night when the sheet has lost Green Bowl, followed by the state of every task in that run:</p>
+  <div class="fx" data-lang="text">$ airflow dags test biteful_daily 2026-03-04T00:00:00+05:30     # processes 3 March; log trimmed
 ds=2026-03-03  data_interval_start=2026-03-02 18:30:00+00:00  business day=2026-03-03
 Done. Returned value was: warehouse/bronze/orders_2026-03-03.parquet
 [DAG TEST] end task task_id=extract_orders
+Done. Returned value was: warehouse/bronze/deliveries_2026-03-03.parquet
+[DAG TEST] end task task_id=extract_deliveries
 [DAG TEST] end task task_id=wait_for_sheet
 Done. Returned value was: warehouse/bronze/restaurants.parquet
 [DAG TEST] end task task_id=extract_restaurants
@@ -1205,7 +965,7 @@ biteful_etl.DataQualityError: order with no restaurant city (enrich failed)
 ALERT biteful_daily day=2026-03-03 task=quality_check failed
 [DAG TEST] end task task_id=quality_check
 DagRun Finished: logical_date=2026-03-03 18:30:00+00:00 state=failed
-$ airflow tasks states-for-dag-run biteful_daily &lt;run_id&gt;        # columns trimmed
+$ airflow tasks states-for-dag-run biteful_daily &lt;run_id&gt;     # columns trimmed
 task_id              state
 wait_for_sheet       success
 extract_restaurants  success
@@ -1214,27 +974,17 @@ extract_deliveries   success
 transform            success
 quality_check        failed
 load_fact            upstream_failed</div>
-  <p><code>quality_check</code> raised the DataQualityError, the <code>on_failure_callback</code> printed the alert with the business day, and <code>load_fact</code> became <strong>upstream_failed</strong>: it never ran, so nothing wrong was published. In production the callback posts to Slack or PagerDuty, and Airflow can also alert when a run is late (an SLA or deadline alert), which catches the pipeline that is stuck rather than failed.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Error handling</strong> in a pipeline means: classify failures (transient / data / bug), retry only the transient ones, keep the target unchanged on failure (atomic loads), and quarantine bad records. <strong>Alerting</strong> means notifying a human with enough context (pipeline, logical date, task, error) to act.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Too many alerts are as bad as none: if every flaky retry pages someone, people mute the channel and miss the real one. Alert on final failure and on lateness, not on every attempt. And never <code>except Exception: pass</code> inside a task: a swallowed error turns a loud failure into a silent wrong number.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: build it.</b> Every piece exists. Let's run the whole pipeline over Biteful's first week, the way it would run after its first deployment.</div>
+  <p><code>quality_check</code> raised the <code>DataQualityError</code>, the <code>on_failure_callback</code> printed the alert with the business day and the task name, and the run finished as failed. The task states tell the rest of the story: every task before the check succeeded, the check failed, and <code>load_fact</code> is in state <strong>upstream_failed</strong>, meaning Airflow never started it because something it depends on failed. Nothing wrong was published. In production the callback posts to Slack or PagerDuty, and Airflow can also alert when a run is late rather than failed (a deadline or SLA alert), which catches the pipeline that is stuck.</p>
+  <p>Two mistakes undo all of this. One is alerting on every retry attempt: if every flaky network call pages someone, people mute the channel and miss the real failure, so alert on final failure and on lateness only. The other is writing <code>except Exception: pass</code> inside a task: a swallowed error turns a loud failure into a silent wrong number.</p>
 
-  <h2 id="et-build"><span class="num">12</span>Build It: Biteful's First Week</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Each section ran one piece on one day. Does the whole pipeline (three extracts, transform, check, overwrite-load, gold table) produce the right warehouse for a whole week, including the empty days?</p>
-  </div>
-  <p>The first deployment is itself a backfill: run every day from 2 to 8 March, then build the gold table <code>daily_city_revenue</code> with the same overwrite rule.</p>
+  <h2 id="et-build"><span class="num">13</span>The Whole Pipeline: Biteful's First Week</h2>
+  <p>Each section ran one piece on one day. Now put everything together the way it runs after the pipeline's first deployment. The first deployment is itself a backfill: run every day from 2 to 8 March through the mini orchestrator (three extracts, transform, quality gate, overwrite load), then build the gold table <code>daily_city_revenue</code> and store it with the same overwrite rule:</p>
   <div class="fx" data-lang="py">import pandas as pd
 from mini_orchestrator import run_pipeline
 from biteful_etl import read_table, build_daily_city_revenue, load_overwrite
 pd.set_option("display.width", 200); pd.set_option("display.max_columns", None)
 
-days = pd.date_range("2026-03-02", "2026-03-08").strftime("%Y-%m-%d")
-for ds in days:                                   # the first week, as a backfill
+for ds in pd.date_range("2026-03-02", "2026-03-08").strftime("%Y-%m-%d"):   # first deployment = backfill
     print(ds, "loaded", run_pipeline(ds, verbose=False))
 gold = build_daily_city_revenue()
 for ds in gold["order_date"].unique():            # gold table: same overwrite rule
@@ -1242,12 +992,6 @@ for ds in gold["order_date"].unique():            # gold table: same overwrite r
 print(read_table()[["order_id", "order_date", "restaurant", "city", "status", "amount", "delivery_minutes"]])
 print(gold)
 print("total delivered revenue:", gold["revenue"].sum())</div>
-  <div class="fx" data-lang="py">def build_daily_city_revenue():
-    f = read_table("fact_orders")
-    d = f[f["status"] == "delivered"]
-    g = (d.groupby(["order_date", "city"], as_index=False)
-           .agg(orders=("order_id", "count"), revenue=("amount", "sum")))
-    return g</div>
   <div class="fx" data-lang="text">2026-03-02 loaded 3
 2026-03-03 loaded 2
 2026-03-04 loaded 2
@@ -1274,171 +1018,149 @@ print("total delivered revenue:", gold["revenue"].sum())</div>
 4  2026-03-05  Mumbai       1    600.0
 5  2026-03-05    Pune       1    260.0
 total delivered revenue: 2630.0</div>
-  <p>Check it against the table in section 01. 6 and 7 March loaded 0 orders and passed the checks (empty days are real). 104 has no delivery time (the partner never recorded it): kept as missing (<code>&lt;NA&gt;</code>), not invented, and the column stays an integer column on every day. 105 and 107 are in the fact table but not in revenue (cancelled), and 110 is still pending. Total delivered revenue: 240 + 450 + 520 + 380 + 180 + 260 + 600 = 2,630 ✓. Priya's morning e-mail is now one gold table that rebuilds itself every night, and a rerun of any day cannot change it.</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>The gold table is built from silver, so it must be rebuilt whenever silver changes (a backfill, an incremental merge like order 110's). In an orchestrator that means <code>build_gold</code> is downstream of <code>load_fact</code> in the DAG, never a separate cron job on its own clock.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: how it all connects.</b> We added one idea per section. Seen together, what does each one guard against, and what is built on what?</div>
-
-  <h2 id="et-connect"><span class="num">13</span>How It All Connects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Extract, transform, load, ELT, idempotency, watermarks, checks, DAGs, retries, backfills, Airflow, alerts: twelve separate topics, or one design?</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 720 300" width="720">
-<defs><marker id="et-a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<g font-size="10.5">
-<rect x="10" y="20" width="130" height="50" rx="8" class="fb sb"/><text x="75" y="40" text-anchor="middle" font-weight="700">Extract</text><text x="75" y="57" text-anchor="middle" class="tm">DB · file · API</text>
-<line x1="140" y1="45" x2="173" y2="45" stroke="currentColor" marker-end="url(#et-a9)"/>
-<rect x="175" y="20" width="130" height="50" rx="8" class="fv" stroke="currentColor" stroke-opacity="0.4"/><text x="240" y="40" text-anchor="middle" font-weight="700">Transform</text><text x="240" y="57" text-anchor="middle" class="tm">Pune 760 · Mumbai 450</text>
-<line x1="305" y1="45" x2="338" y2="45" stroke="currentColor" marker-end="url(#et-a9)"/>
-<rect x="340" y="20" width="130" height="50" rx="8" class="fr sr"/><text x="405" y="40" text-anchor="middle" font-weight="700">Quality gate</text><text x="405" y="57" text-anchor="middle" class="tm">3 bad batches stopped</text>
-<line x1="470" y1="45" x2="503" y2="45" stroke="currentColor" marker-end="url(#et-a9)"/>
-<rect x="505" y="20" width="205" height="50" rx="8" class="fg sg"/><text x="607" y="40" text-anchor="middle" font-weight="700">Load (overwrite / merge)</text><text x="607" y="57" text-anchor="middle" class="tm">Parquet day-folders → gold</text>
-<line x1="75" y1="70" x2="75" y2="113" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#et-a9)"/>
-<rect x="10" y="115" width="150" height="44" rx="8" class="fb sb"/><text x="85" y="133" text-anchor="middle">watermark: what changed?</text><text x="85" y="149" text-anchor="middle" class="tm">run 2: only 110, 111</text>
-<line x1="607" y1="70" x2="607" y2="113" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#et-a9)"/>
-<rect x="520" y="115" width="190" height="44" rx="8" class="fg sg"/><text x="615" y="133" text-anchor="middle">idempotent: rerun-safe</text><text x="615" y="149" text-anchor="middle" class="tm">1210 stays 1210 (append: 2420)</text>
-<line x1="240" y1="70" x2="240" y2="113" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#et-a9)"/>
-<rect x="175" y="115" width="150" height="44" rx="8" class="fv" stroke="currentColor" stroke-opacity="0.4"/><text x="250" y="133" text-anchor="middle">ELT: same T, in SQL</text><text x="250" y="149" text-anchor="middle" class="tm">DuckDB: identical rows</text>
-<rect x="10" y="190" width="700" height="56" rx="10" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="360" y="210" text-anchor="middle" font-weight="700">Orchestrator (our 30 lines · Airflow · Prefect): DAG order · schedule per logical day · retries · backfills · alerts</text>
-<text x="360" y="230" text-anchor="middle" class="tm">waves: 3 extracts ∥ → transform → check → load → gold · 503 healed on attempt 2 · bad sheet → upstream_failed + ALERT</text>
-<line x1="360" y1="190" x2="360" y2="75" stroke="currentColor" stroke-dasharray="2 4"/>
-<text x="10" y="275" class="tm">Top row = what the data goes through. Middle = the guards that make each step safe to repeat and cheap to run.</text>
-<text x="10" y="292" class="tm">Bottom = the program that runs it all, by date, again and again. Backfills are only safe because of the middle row.</text>
-</g>
-</svg><figcaption>One pipeline. E, T and L move the data; idempotency, watermarks and the quality gate make repetition safe; the orchestrator supplies the repetition.</figcaption></figure>
-  <table class="tbl"><caption>Every concept on Biteful's orders</caption>
-    <tr><th>Concept</th><th>Built from</th><th>Answers which question</th><th>Value on Biteful</th><th>Use when</th></tr>
-    <tr><td>Extract</td><td>SQL, file reads, HTTP</td><td>how do we get the data out?</td><td>3 orders, 6 sheet rows, 2 API pages for 2 Mar</td><td>always; read replicas, not the primary</td></tr>
-    <tr><td>Transform</td><td>pandas: dedupe, strip/title, to_datetime, merge</td><td>how do messy inputs become one table?</td><td>Pune 760, Mumbai 450; 12:10 IST = 06:40 UTC</td><td>always; validate every join</td></tr>
-    <tr><td>Load (Parquet partitions)</td><td>one folder per day</td><td>where do results live?</td><td><code>order_date=2026-03-02/part-0.parquet</code>, 5,800 bytes</td><td>analytics; bulk loads</td></tr>
-    <tr><td>ELT</td><td>load raw, then SQL</td><td>transform before or after storing?</td><td>DuckDB result = pandas result (True)</td><td>cloud warehouses; keep raw for replays</td></tr>
-    <tr><td>Idempotency</td><td>partition overwrite, upsert, logical date</td><td>is a re-run safe?</td><td>append 2420 vs overwrite 1210</td><td>every load, always</td></tr>
-    <tr><td>Incremental + watermark</td><td>idempotent merge + stored max <code>updated_at</code></td><td>what changed since last time?</td><td>10 → 2 (110, 111) → 0 rows; 107's delete missed</td><td>big tables that change; CDC if deletes matter</td></tr>
-    <tr><td>Quality gate</td><td>assertions vs source and invariants</td><td>is this batch fit to publish?</td><td>3 bad batches failed; empty 6 Mar passed</td><td>between transform and load, every run</td></tr>
-    <tr><td>DAG</td><td>tasks + dependencies, topological order</td><td>in which order, what in parallel?</td><td>5 waves; 3 extracts in parallel</td><td>any multi-step pipeline</td></tr>
-    <tr><td>Retries + backoff</td><td>error classification</td><td>which failures heal by waiting?</td><td>503 → ok on attempt 2</td><td>transient errors only</td></tr>
-    <tr><td>Backfill</td><td>loop over logical dates + idempotency</td><td>how do we fix past days?</td><td>2–5 Mar re-run, gold unchanged</td><td>after bug fixes, first deployment</td></tr>
-    <tr><td>Airflow / Prefect</td><td>all of the above, as a service</td><td>who runs it every night and remembers?</td><td>real run: 7 tasks success; bad night: load upstream_failed</td><td>production pipelines</td></tr>
-    <tr><td>Alerting</td><td>failure callbacks</td><td>who finds out, with what context?</td><td><code>ALERT biteful_daily day=2026-03-03 task=quality_check</code></td><td>final failures and lateness</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>One sentence holds the note: <strong>a pipeline will be run again and again, by machines, on data you have not seen, so every step must be safe to repeat and must refuse to publish what it cannot trust.</strong> Extract/transform/load move the data. Idempotency and watermarks make repetition harmless and cheap. Quality gates and alerts make failure loud instead of silent. The orchestrator is what does the repeating; backfills are just repetition you ask for on purpose.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: common mistakes.</b> Knowing the design, which slips still turn up in real pipelines and code reviews?</div>
+  <p>Check it against the table in section 01. 6 and 7 March loaded zero orders and passed the gate, because empty days are real. Order 104 has no delivery time, because the partner never recorded one; it is kept as missing (<code>&lt;NA&gt;</code>) rather than invented, and thanks to <code>Int64</code> the column has the same type on every day. Orders 105 and 107 are in the fact table but not in the revenue, because they were cancelled, and 110 is still pending. Total delivered revenue is 240 + 450 + 520 + 380 + 180 + 260 + 600 = 2,630, which matches the output.</p>
+  <p>Look back at how the pieces depend on each other. Extract, transform and load move the data. Idempotency and the logical date make it safe to run any day any number of times, and that is what makes retries, backfills and the incremental merge possible. The watermark makes daily runs cheap. The quality gate turns bad data into an error, which is the only kind of problem retries and alerts can respond to. And the orchestrator supplies the repetition: on schedule, in DAG order, with a record of every run. The gold table is built from silver, so it must be rebuilt whenever silver changes; in a real orchestrator that means <code>build_gold</code> sits downstream of <code>load_fact</code> in the same DAG, never on a separate clock. Priya's morning e-mail is now one gold table that rebuilds itself every night, and a rerun of any day cannot change it. When a night's orders no longer fit in pandas, the transform moves to <a class="xref" data-note="de_spark">Apache Spark</a> with the same design; when "tomorrow morning" is too late, the same order events flow through <a class="xref" data-note="de_kafka">Kafka</a> within seconds.</p>
 
   <h2 id="et-traps"><span class="num">14</span>Common Mistakes</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Pipeline bugs rarely crash. The job is green, the dashboard fills, and the number is wrong. Which ones should you look for first?</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: plain append as the load</span>
-    <p>The first retry doubles the day (1210 → 2420). Overwrite the run's partition or upsert by key.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: "yesterday" from the clock</span>
-    <p>A rerun or backfill loads the wrong day (our clock version loaded 19 October for 2 March). Parameterise every step by the logical date.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: enrichment joins that change the row count</span>
-    <p>A duplicate row in a lookup sheet fans out orders; an inner join drops orders with unknown keys. Left join, <code>validate=</code>, reconcile counts.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: saving the watermark too early</span>
-    <p>If the load then fails, the next run skips the rows. Save it only after a successful load. And remember hard deletes never appear.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: checks that guess instead of reconcile</span>
-    <p>"rows &gt; 0" fails on genuinely empty days and teaches people to ignore alerts. Compare with the source.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: retrying bad data</span>
-    <p>Three retries of a DataQualityError only delay the alert. Retry transient errors only.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: DataFrames in XCom, work at DAG top level</span>
-    <p>XCom is for paths and counts; top-level code runs on every parse.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: UTC <code>ds</code> for a non-UTC business</span>
-    <p>Midnight in India is 18:30 UTC the day before, so <code>ds</code> is off by a day. Use the data interval in the business time zone.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: <code>catchup=True</code> by accident</span>
-    <p>Deploying a DAG with an old <code>start_date</code> creates a run for every missed day at once. Use <code>catchup=False</code> and run backfills on purpose.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: the revision sheet.</b> Everything above, condensed to one page.</div>
+  <p>Pipeline bugs rarely crash. The job is green, the dashboard fills up, and the number is wrong. The most common is a load that is not idempotent: a plain append or a bare <code>INSERT</code> with no delete and no key. It passes every test, because tests run it once, and the first retry doubles the day, as Biteful's 2 March went from 1210 to 2420. Overwrite the run's partition or upsert by key. Close behind it is computing "yesterday" from the clock instead of taking the logical date as a parameter, which makes every rerun and backfill load the wrong day.</p>
+  <p>Enrichment joins that change the row count are the next family. A duplicate row in a lookup sheet fans out orders (105 counted twice), and an inner join silently drops orders whose key is missing. Use left joins and <code>validate=</code>, and reconcile counts in the quality gate. Related to this is dropping bad rows "to keep the job green": it hides the problem and changes the totals, so quarantine them and alert instead.</p>
+  <p>Watermarks have their own traps. Saving the watermark before the load finishes loses rows when the load then fails; save it after. Hard deletes never appear. And a watermark on time alone can skip rows that share a timestamp, because the next run asks for rows strictly later than the last one it saw. Here the extract takes at most two rows per run, oldest first, and orders 202 and 203 were both updated at 10:05:</p>
+  <div class="fx" data-lang="py">import sqlite3
+db = sqlite3.connect(":memory:")
+db.execute("CREATE TABLE orders (order_id INT, updated_at TEXT)")
+db.executemany("INSERT INTO orders VALUES (?, ?)",
+               [(201, "10:00"), (202, "10:05"), (203, "10:05"), (204, "10:09"), (205, "10:12")])
+
+def run_time_only(wm):               # watermark = updated_at alone, 2 rows per run
+    rows = db.execute("""SELECT order_id, updated_at FROM orders WHERE updated_at &gt; ?
+                         ORDER BY updated_at, order_id LIMIT 2""", (wm,)).fetchall()
+    return rows, (rows[-1][1] if rows else wm)
+
+def run_pair(wm):                    # watermark = (updated_at, order_id): no two rows share it
+    rows = db.execute("""SELECT order_id, updated_at FROM orders WHERE (updated_at, order_id) &gt; (?, ?)
+                         ORDER BY updated_at, order_id LIMIT 2""", wm).fetchall()
+    return rows, ((rows[-1][1], rows[-1][0]) if rows else wm)
+
+for name, run, wm in [("time only", run_time_only, "00:00"), ("pair", run_pair, ("00:00", 0))]:
+    loaded = []
+    for _ in range(3):
+        rows, wm = run(wm)
+        loaded += [r[0] for r in rows]
+    print(f"{name:9}: loaded {loaded}")</div>
+  <div class="fx" data-lang="text">time only: loaded [201, 202, 204, 205]
+pair     : loaded [201, 202, 203, 204, 205]</div>
+  <p>With a time-only watermark, the first run loaded 201 and 202 and saved 10:05; the second run asked for rows after 10:05 and never saw 203, which shares that timestamp. Using the pair <code>(updated_at, order_id)</code> as the watermark makes every position unique, so the next run resumes exactly after 202 and all five orders arrive. The same problem appears without a batch limit when a row with the same timestamp is committed just after the extract read the table; the usual remedies are the pair watermark, or re-reading a small overlap window and relying on the idempotent merge to absorb duplicates.</p>
+  <p>Checks can be wrong too. "Rows &gt; 0" fails on genuinely empty days and teaches people to ignore alerts; compare with the source instead. Retrying bad data, as in giving a quality check three retries, only delays the alert by however long the retries take; retry transient errors only. In Airflow, passing DataFrames through XCom and doing work at the top level of a DAG file both slow the whole system down. Using the UTC <code>ds</code> for a business in India puts every run one day off, because midnight in India is 18:30 UTC the day before. And deploying a DAG with an old <code>start_date</code> and <code>catchup=True</code> by accident creates a run for every missed day at once, hammering the sources; set <code>catchup=False</code> and run backfills on purpose. Finally, writing straight into the final partition folder means a crash leaves a half-written day that readers will see; write to a temporary location and swap it in.</p>
 
   <h2 id="et-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>The whole note on one sheet. Running example: <strong>Biteful</strong>'s orders 101–110 (2–8 March 2026, IST). Delivered: 101 (Dosa Hut, Pune, 240), 102 (Biryani Bros, Mumbai, 450), 103 (Pizza Point, Pune, 520), 104 (Pizza Point, 380), 106 (Biryani Bros, 180), 108 (Dosa Hut, 260), 109 (Biryani Bros, 600); cancelled 105 (Green Bowl), 107; pending 110; no orders on 6–7 March. Sources: the app DB (orders), a hand-kept restaurant sheet (<code>' pune '</code>, <code>MUMBAI</code>, Green Bowl twice), and a delivery API (2 rows per page).</p>
-  <h3>The question ladder</h3>
+  <h3>Definitions</h3>
+  <ul>
+    <li><b>Data pipeline</b>: a program that moves data from where it is created to where it is used, changing it on the way, on a schedule.</li>
+    <li><b>ETL</b>: Extract → Transform → Load; clean outside the target, store only the result. <b>ELT</b>: Extract → Load → Transform; store raw in the warehouse, transform there with SQL (dbt).</li>
+    <li><b>Clean / normalise / enrich</b>: fix errors (dupes, types, missing) / one form per meaning (spelling, UTC, currency) / add columns by joining reference data.</li>
+    <li><b>Grain</b>: what one row represents (fact_orders: one order).</li>
+    <li><b>Partition</b>: the slice of a table for one value (one day), stored as its own folder <code>order_date=…</code>.</li>
+    <li><b>Bronze / silver / gold</b>: raw as extracted / cleaned at a clear grain / business aggregates.</li>
+    <li><b>Idempotent</b>: running once or N times leaves the target in the same state.</li>
+    <li><b>Partition overwrite</b>: replace the run's slice. <b>Upsert / MERGE</b>: insert new keys, update existing ones.</li>
+    <li><b>Logical date / data interval</b>: the label of a run / the time range it processes. The run for day D starts after D ends.</li>
+    <li><b>Watermark</b>: stored high point of an increasing column (updated_at) already loaded; next extract asks for rows after it.</li>
+    <li><b>CDC</b>: change data capture; reads the DB's change log and sees inserts, updates and deletes.</li>
+    <li><b>Quality gate</b>: checks between transform and load; failure blocks the load. Reconcile with the source, test invariants.</li>
+    <li><b>DAG</b>: directed acyclic graph of tasks; run in topological order, independent tasks in parallel.</li>
+    <li><b>Transient failure</b>: heals by waiting (timeout, 429, 503). <b>Exponential backoff</b>: waits that double between retries.</li>
+    <li><b>Backfill</b>: run the pipeline for past logical dates; safe only if each run is idempotent.</li>
+  </ul>
+  <h3>Choosing an approach</h3>
   <table class="tbl">
-    <tr><th>Concept</th><th>Question it answers</th><th>On Biteful</th><th>Weakness → next</th></tr>
-    <tr><td>Manual ritual / naive script</td><td>why a pipeline?</td><td>Pune split into 240 + 520</td><td>no separate steps → E, T, L</td></tr>
-    <tr><td>Extract</td><td>how to get data out?</td><td>3 orders, 6 sheet rows, 2 API pages</td><td>raw, messy, separate → transform</td></tr>
-    <tr><td>Transform</td><td>one clean table?</td><td>Pune 760, Mumbai 450; plain merge fans 105 out</td><td>only in memory → load</td></tr>
-    <tr><td>Load</td><td>where does it live?</td><td><code>order_date=2026-03-02/part-0.parquet</code></td><td>raw is lost → ELT</td></tr>
-    <tr><td>ETL vs ELT</td><td>transform before or after storing?</td><td>DuckDB SQL = pandas (True)</td><td>reruns happen → idempotency</td></tr>
-    <tr><td>Idempotency</td><td>is a rerun safe?</td><td>append 2420 vs overwrite 1210</td><td>old rows change → incremental</td></tr>
-    <tr><td>Incremental + watermark</td><td>what changed?</td><td>10 → [110, 111] → 0; 107 delete missed</td><td>trusts input → quality checks</td></tr>
-    <tr><td>Quality checks</td><td>publish this batch?</td><td>fan-out, missing city, refund caught</td><td>7 steps to run in order → orchestration</td></tr>
-    <tr><td>DAG, schedule, retries, backfills</td><td>order, timing, healing, history</td><td>5 waves; 503 ok on attempt 2; backfill 2–5 Mar</td><td>DIY runner is fragile → Airflow/Prefect</td></tr>
-    <tr><td>Airflow / Prefect</td><td>run it as a service</td><td>7 tasks success; XCom = paths, counts</td><td>some failures never heal → alerting</td></tr>
-    <tr><td>Error handling &amp; alerting</td><td>what when it fails anyway?</td><td>load upstream_failed; ALERT day=2026-03-03</td><td>→ <a class="xref" data-note="de_spark">Spark</a> (bigger), <a class="xref" data-note="de_kafka">Kafka</a> (faster)</td></tr>
+    <tr><th>Choice</th><th>Use when</th><th>Avoid when / catch</th></tr>
+    <tr><td>Full extract</td><td>small reference tables (5 restaurants)</td><td>big, growing tables</td></tr>
+    <tr><td>Incremental (watermark)</td><td>big tables with a reliable <code>updated_at</code></td><td>misses hard deletes; ties on the timestamp</td></tr>
+    <tr><td>CDC</td><td>deletes matter, need low latency</td><td>needs Kafka/Debezium infrastructure</td></tr>
+    <tr><td>ETL</td><td>PII must be masked before landing; non-SQL transforms</td><td>raw data lost unless a bronze copy is kept</td></tr>
+    <tr><td>ELT</td><td>cloud warehouse; keep raw for replays</td><td>still needs silver/gold layers and tests</td></tr>
+    <tr><td>Partition overwrite</td><td>daily facts</td><td>needs the run's slice to be well defined</td></tr>
+    <tr><td>Upsert / MERGE</td><td>dimensions, late-changing rows</td><td>needs a reliable key</td></tr>
+    <tr><td>Retry</td><td>timeouts, 429, 503, failovers</td><td>never for bad data or bugs</td></tr>
   </table>
-  <h3>Definitions and rules</h3>
+  <h3>Failure types</h3>
+  <table class="tbl">
+    <tr><th>Type</th><th>Biteful example</th><th>Response</th></tr>
+    <tr><td>Transient</td><td>API 503, timeout</td><td>retry with backoff; alert only if retries run out</td></tr>
+    <tr><td>Bad data</td><td>sheet lost Green Bowl, refund rows</td><td>no retries; block the load; quarantine; alert</td></tr>
+    <tr><td>Logic bug</td><td>wrong join, wrong time zone</td><td>fix the code, then backfill the affected days</td></tr>
+  </table>
+  <h3>Airflow vocabulary</h3>
   <table class="tbl">
     <tr><th>Term</th><th>Meaning</th></tr>
-    <tr><td>ETL / ELT</td><td>Extract → Transform → Load (clean outside, store result) / Extract → Load → Transform (store raw, clean inside with SQL)</td></tr>
-    <tr><td>Clean / normalise / enrich</td><td>fix errors (dupes, types) / one form per meaning (spelling, UTC, currency) / add columns by joining reference data</td></tr>
-    <tr><td>Partition</td><td>the slice of a table for one value (one day), stored as its own folder <code>order_date=…</code></td></tr>
-    <tr><td>Bronze / silver / gold</td><td>raw as extracted / cleaned, one row per entity / business aggregates</td></tr>
-    <tr><td>Idempotent</td><td>running once or N times leaves the same target state</td></tr>
-    <tr><td>Partition overwrite / upsert</td><td>replace the run's slice / insert new keys, update existing (<code>ON CONFLICT … DO UPDATE</code>, <code>MERGE</code>)</td></tr>
-    <tr><td>Watermark</td><td>stored max of an increasing column (updated_at) already loaded; next extract: <code>updated_at &gt; watermark</code></td></tr>
-    <tr><td>CDC</td><td>change data capture: read the DB's change log; sees deletes</td></tr>
-    <tr><td>Quality gate</td><td>assertions between transform and load; failure blocks the load</td></tr>
-    <tr><td>DAG</td><td>directed acyclic graph of tasks; run in topological order, independent tasks in parallel</td></tr>
-    <tr><td>Logical date / data interval</td><td>the label / the time range a run processes; the run for day D starts after D ends</td></tr>
-    <tr><td>Retry + exponential backoff</td><td>re-run after waits that double (0.5 s, 1 s, 2 s…); transient errors only</td></tr>
-    <tr><td>Backfill</td><td>run the pipeline for past logical dates</td></tr>
-    <tr><td>Operator / task / XCom / sensor / executor</td><td>work template / its use in a DAG / small value passed between tasks / task that waits for a condition / where tasks run (Local, Celery, Kubernetes)</td></tr>
+    <tr><td>Operator / task / task instance</td><td>template for a kind of work / its use in a DAG / one task in one run</td></tr>
+    <tr><td>XCom</td><td>small value passed between tasks (paths, counts), stored in the metadata DB</td></tr>
+    <tr><td>Sensor</td><td>task that waits for a condition; <code>mode="reschedule"</code> frees the worker slot</td></tr>
+    <tr><td>Scheduler / executor</td><td>decides what is due / decides where it runs (Local, Celery, Kubernetes)</td></tr>
+    <tr><td>Task states</td><td>queued, running, success, failed, up_for_retry, upstream_failed</td></tr>
+    <tr><td>catchup</td><td><code>True</code>: create runs for every missed interval since start_date</td></tr>
   </table>
-  <h3>When to use, when not</h3>
-  <div class="cards">
-    <div><b>Full extract</b><p>Use for small reference tables (the 5 restaurants).</p><small>Avoid for big, growing tables: use incremental or CDC</small></div>
-    <div><b>Incremental (watermark)</b><p>Use for big tables with a reliable <code>updated_at</code>.</p><small>Not if hard deletes matter: use CDC or soft deletes</small></div>
-    <div><b>ETL</b><p>Use when data must be masked before landing, or the transform is not SQL.</p><small>Loses raw data unless you keep a bronze copy</small></div>
-    <div><b>ELT</b><p>Use with a cloud warehouse; keep raw, transform with SQL/dbt.</p><small>Still needs silver/gold layers and tests</small></div>
-    <div><b>Retries</b><p>Use for timeouts, 429, 503, failovers.</p><small>Never for bad data or bugs</small></div>
-    <div><b>Airflow</b><p>Use as the team's standard scheduler with a big operator library.</p><small>Heavy for one small script; Prefect is lighter</small></div>
-  </div>
-  <div class="callout trap"><span class="label">Key traps</span>
-    <p>Append loads double on retry (1210 → 2420); clock-based dates break reruns; lookup duplicates fan out rows; watermark saved before the load loses rows, and deletes are invisible to it; "rows &gt; 0" fails on empty days; retrying bad data; DataFrames in XCom; UTC <code>ds</code> vs IST business day; accidental <code>catchup=True</code>; half-written partitions (write to temp, then swap).</p>
-  </div>
-  <h3>Five rapid-fire checks</h3>
-  <table class="tbl">
-    <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td>2 March is loaded with append, then retried. Revenue?</td><td>2420 (each of 240, 450, 520 twice). With partition overwrite: 1210.</td></tr>
-    <tr><td>Watermark is 03-08 20:50; 110 updated at 21:28 and 111 inserted. What does the next run extract?</td><td>Exactly 110 and 111; then it saves 03-09 13:35 as the new watermark.</td></tr>
-    <tr><td>Order 107 is hard-deleted. Does the watermark extract notice?</td><td>No. A deleted row has no updated_at. Use soft deletes or CDC.</td></tr>
-    <tr><td>In Biteful's DAG, which tasks can run in parallel?</td><td>The three extracts (wave 1); everything after depends on transform.</td></tr>
-    <tr><td>The API returns 503; the sheet is missing a restaurant. Retry which?</td><td>The 503 (transient). The missing restaurant is bad data: fail at once, alert.</td></tr>
-  </table>
+  <h3>Syntax</h3>
+  <div class="fx" data-lang="py"># idempotent loads
+DELETE FROM fact_orders WHERE order_date = :ds;  INSERT INTO fact_orders ...   -- one transaction
+INSERT INTO dim VALUES (...) ON CONFLICT (id) DO UPDATE SET rating = excluded.rating
+MERGE INTO t USING s ON t.id = s.id WHEN MATCHED THEN UPDATE ... WHEN NOT MATCHED THEN INSERT ...
 
-  <h2 id="et-qa"><span class="num">15</span>Questions &amp; Answers</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Can you explain, out loud and without notes, why each piece of a pipeline exists and what breaks without it?</p>
-  </div>
+# incremental extract
+SELECT * FROM orders WHERE updated_at &gt; :watermark ORDER BY updated_at   # save max AFTER the load
+
+# pandas: protect joins
+df.merge(rest, on="restaurant_id", how="left", validate="many_to_one")
+
+# Airflow (TaskFlow)
+@dag(schedule=CronDataIntervalTimetable("0 0 * * *", timezone="Asia/Kolkata"),
+     start_date=datetime(2026, 3, 2), catchup=False,
+     default_args={"retries": 2, "retry_exponential_backoff": True, "on_failure_callback": alert})
+def biteful_daily():
+    @task(retries=0)
+    def quality_check(stats: dict) -&gt; dict: ...
+    load_fact(quality_check(transform(extract_orders(), r, extract_deliveries())))
+
+# Prefect
+@task(retries=2, retry_delay_seconds=1)
+def extract(ds): ...
+@flow
+def biteful_daily(ds: str): ...</div>
+  <h3>Gotchas</h3>
+  <ul>
+    <li>Plain append doubles on retry (1210 → 2420); overwrite or upsert.</li>
+    <li>"Yesterday" from the clock breaks reruns; pass the logical date.</li>
+    <li>Duplicate lookup keys fan out rows; inner joins drop rows.</li>
+    <li>Save the watermark after the load; deletes are invisible to it; ties need <code>(updated_at, id)</code>.</li>
+    <li>"rows &gt; 0" fails on empty days; reconcile with the source.</li>
+    <li>Never retry bad data; never <code>except Exception: pass</code>.</li>
+    <li>Airflow <code>ds</code> is a UTC date; derive the local business day from the data interval.</li>
+    <li>No DataFrames in XCom; no work at DAG top level; beware accidental <code>catchup=True</code>.</li>
+    <li>Pin output types (<code>Int64</code>) so every partition has the same schema.</li>
+    <li>Write to temp, then swap, so a crash never leaves a half-written partition.</li>
+  </ul>
+
+  <h2 id="et-qa"><span class="num">15</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>ETL vs ELT: which is more common today, and why?</summary><div class="qa-body">ELT. Cloud warehouses have cheap storage and elastic compute, so you land raw data and transform it with SQL/dbt inside; the raw copy stays available for reprocessing. ETL remains for data that must be masked before landing (PII) and for non-SQL transforms.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does idempotent mean for a pipeline? Give two ways to achieve it.</summary><div class="qa-body">Running it N times leaves the same result as once. (1) Partition overwrite: replace the run's day (DELETE + INSERT in one transaction, or swap the day-folder). (2) Upsert/MERGE on a key. Both need the run to be parameterised by its logical date, not <code>now()</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>A daily job does <code>INSERT INTO sales SELECT … WHERE date = current_date - 1</code>. It failed after inserting, and was retried. What's wrong?</summary><div class="qa-body">The retry inserts the same rows again, so revenue doubles (Biteful: 1210 → 2420). And "current_date − 1" from the clock means a rerun next week loads the wrong day. Fix: <code>DELETE WHERE date = :ds</code> + <code>INSERT</code> in one transaction, with <code>ds</code> passed by the orchestrator.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is a backfill and what must be true for it to be safe?</summary><div class="qa-body">Re-running a pipeline for past logical dates, e.g. after fixing a bug or on first deployment. Safe only if each run is idempotent and reads/writes only its own date's data, using the logical date. Our backfill re-ran 2 March and the gold table stayed Pune 760, Mumbai 450.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Incremental extract by <code>updated_at</code> vs CDC?</summary><div class="qa-body">Watermark queries are simple but miss hard deletes (107 stayed in our warehouse), need a reliable <code>updated_at</code>, and query the source. CDC reads the database's change log (WAL/binlog, e.g. Debezium), captures every insert/update/delete in order within seconds, with little load on the source; it needs more infrastructure (Kafka, connectors).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Which errors should be retried and which shouldn't?</summary><div class="qa-body">Retry transient ones (timeouts, 429, 503, connection resets) with exponential backoff. Don't retry deterministic ones (bad data, schema mismatch, code bugs): they fail the same way and the retries only delay the alert. Quarantine bad rows and fail loudly.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Name five data-quality checks you'd put before publishing an orders table.</summary><div class="qa-body">Row count equals the source count (reconcile); order_id unique; amount &gt; 0 and status in the known set; every order found its restaurant (enrichment succeeded); freshness (newest updated_at is recent); schema unchanged. Block the load on failure.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is XCom, and what should you not put in it?</summary><div class="qa-body">Airflow's way of passing small values between tasks, stored in the metadata DB; TaskFlow return values become XComs automatically. Pass paths, table names, counts; never DataFrames or files. Our DAG passed <code>warehouse/bronze/orders_2026-03-02.parquet</code> and a dict of counts.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does a sensor do, and why use <code>mode="reschedule"</code>?</summary><div class="qa-body">It waits until a condition is true: a file exists, a partition lands, another DAG finishes. In "poke" mode it holds a worker slot while sleeping; "reschedule" gives the slot back between checks, so many waiting sensors don't block real work.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>A DAG has <code>start_date=2025-01-01</code>, a daily schedule and <code>catchup=True</code>, and is deployed today. What happens?</summary><div class="qa-body">The scheduler creates a run for every missed day since 2025-01-01, hundreds of runs, possibly hammering the sources. Use <code>catchup=False</code> and run backfills deliberately, with <code>max_active_runs</code> limits.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Name the Airflow executors and when you'd use each.</summary><div class="qa-body">LocalExecutor: tasks as processes on the scheduler's machine; small teams. CeleryExecutor: a fixed pool of worker machines fed through a message queue; steady, high volume. KubernetesExecutor: one pod per task, scaled to zero when idle, isolated dependencies per task; bursty or heterogeneous workloads.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does a backfill need idempotency?</summary><div class="qa-body">A backfill re-runs days that were already loaded. If the load appends, every backfilled day is doubled (and for N re-runs, multiplied). With partition overwrite or upsert, re-running a day replaces it with the same or corrected rows, so the backfill can run any number of times.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does an incremental load need a merge (upsert) rather than an append?</summary><div class="qa-body">The changed rows include rows already in the warehouse with an old version (110 was there as "pending"). Appending would keep both versions: 110 twice, once pending and once delivered. A merge by <code>order_id</code> replaces the old version; doing it by overwriting the affected day-folders keeps it idempotent too.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks if you skip the quality gate but keep everything else?</summary><div class="qa-body">The pipeline becomes very good at publishing wrong numbers: on schedule, retried until "successful", idempotently. The duplicate Green Bowl row would double order 105 every night; a missing restaurant would produce orders with no city. Nothing crashes, so nobody is alerted. Retries and alerts only help with failures that raise errors; the gate turns bad data into an error.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why must the watermark be saved after the load, and what does that require of the load?</summary><div class="qa-body">Saving it first means a crash between saving and loading skips those rows forever. Saving it after means a crash makes the next run fetch the same rows again, so the load must tolerate seeing rows twice: it must be idempotent (merge by key). The watermark gives "at least once"; idempotency turns that into "exactly once" results, the same idea you'll meet in <a class="xref" data-note="de_kafka">Kafka</a>.</div></details>
-  <div class="bridge"><b>What this still can't tell us → next: <a class="xref" data-note="de_spark">Apache Spark</a>.</b> Every step here ran in pandas on one machine, because Biteful's week fits in a few kilobytes. A year of a real delivery company's orders is 50 GB or more, and <code>pd.read_parquet</code> runs out of memory. The pipeline's design stays; the transform needs many machines.</div>
+  <details class="qa"><summary><span class="qmark">Q</span>What is ETL, and what does each step do?</summary><div class="qa-body">ETL stands for extract, transform, load. Extract reads the data a run needs from each source (databases, files, APIs) without changing it. Transform cleans it (duplicates, types), normalises it (one spelling, one time zone) and enriches it (joins reference data) into a table with a clear grain. Load writes the result in bulk to the warehouse or lake where people query it.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>ETL vs ELT: what is the difference, and which is more common today?</summary><div class="qa-body">In ETL the transform runs outside the target and only clean data is stored; in ELT raw data is loaded into the warehouse first and transformed there, usually with SQL and dbt. ELT is more common with cloud warehouses because storage is cheap, compute is elastic, and keeping the raw copy allows reprocessing. ETL remains the right choice when PII must be masked before it lands, or when the transform is not SQL-shaped.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does idempotent mean for a pipeline, and how do you achieve it?</summary><div class="qa-body">A job is idempotent if running it once or many times with the same input leaves the target in the same state. You achieve it with partition overwrite (replace the run's day, e.g. DELETE + INSERT in one transaction), with upsert/MERGE on a key, and by passing the logical date as a parameter instead of computing it from the clock. It matters because retries, reruns and backfills are guaranteed to happen.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>A daily job runs <code>INSERT INTO sales SELECT ... WHERE date = current_date - 1</code>. It failed after inserting and was retried. What is wrong, and how do you fix it?</summary><div class="qa-body">The retry inserts the same rows again, so the day's revenue doubles. Also, <code>current_date - 1</code> depends on when the job runs, so a rerun next week loads the wrong day. Fix both: take the date as a parameter from the orchestrator and do <code>DELETE WHERE date = :ds</code> followed by the <code>INSERT</code> inside one transaction (or a MERGE).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a watermark in an incremental load, and when should it be saved?</summary><div class="qa-body">A watermark is the stored high point of an always-increasing column, usually <code>updated_at</code> or an id, up to which data has been loaded; the next run extracts only rows beyond it. It must be saved only after the load succeeds, so a crash causes rows to be fetched again rather than skipped. That in turn requires the load to be idempotent (a merge by key), so re-seeing rows is harmless.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Incremental loads by <code>updated_at</code> vs CDC: what are the trade-offs?</summary><div class="qa-body">Watermark queries are simple, but they miss hard deletes, need a reliable <code>updated_at</code>, can skip rows that share a timestamp, and put query load on the source. CDC reads the database's change log (WAL, binlog) with a tool like Debezium, capturing every insert, update and delete in order within seconds with little load on the source. The cost is more infrastructure, usually Kafka and connectors.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why do joins during enrichment deserve special care?</summary><div class="qa-body">A join can silently change the row count. If the lookup table has a duplicate key, each matching row is multiplied (fan-out), so amounts are counted twice; an inner join drops rows whose key is missing from the lookup. Use left joins, assert the expected cardinality (pandas <code>validate="many_to_one"</code>), and reconcile row counts before loading.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Which data quality checks would you put before publishing an orders table?</summary><div class="qa-body">Row count equals the source count; <code>order_id</code> is unique; amounts are positive and status is in the known set; every order found its restaurant (enrichment succeeded); the newest <code>updated_at</code> is recent (freshness); the schema has the expected columns and types. A failure blocks the load and alerts; bad rows can go to a quarantine table. Prefer reconciliation and invariants over guesses like "more than zero rows".</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a DAG, and why must it be acyclic?</summary><div class="qa-body">A DAG is a directed acyclic graph: tasks as nodes and "must run before" relationships as arrows. The orchestrator runs it in topological order, starting every task whose prerequisites are done, so independent tasks run in parallel. A cycle would mean a task indirectly waits for itself, so no valid starting point exists.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Which errors should be retried, and which should not?</summary><div class="qa-body">Retry transient errors such as timeouts, HTTP 429 and 503, connection resets and database failovers, with exponential backoff so the struggling system is not hammered. Do not retry deterministic failures such as bad data, schema mismatches or code bugs: they fail identically and retries only delay the alert. Those should fail fast, quarantine bad rows where relevant, and alert a person.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a backfill, and what must be true for it to be safe?</summary><div class="qa-body">A backfill re-runs a pipeline for past logical dates, for example after a bug fix, when adding a column, or on first deployment. It is safe only if each run is idempotent and reads and writes only its own date's data, using the logical date passed in. Otherwise every backfilled day is duplicated or the wrong days are loaded.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain logical date and data interval in Airflow. What is the timezone trap with <code>ds</code>?</summary><div class="qa-body">The data interval is the period of data a run processes, and the logical date labels the run (normally the interval's start); for a daily ETL the run for day D starts after D ends. <code>ds</code> is the logical date's UTC date. For a business in India, midnight local time is 18:30 UTC the previous day, so <code>ds</code> is one day off; derive the business day from the data interval in the local time zone.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is XCom, and what should you not put in it?</summary><div class="qa-body">XCom is Airflow's mechanism for passing small values between tasks; it is stored in the metadata database, and TaskFlow return values become XComs automatically. Pass paths, table names, counts and small dictionaries. Never pass DataFrames or files: they bloat the database and slow every task; write the data to storage and pass its location.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does a sensor do, and why use <code>mode="reschedule"</code>?</summary><div class="qa-body">A sensor is a task that waits until a condition is true, such as a file arriving, a partition landing or another DAG finishing. In the default "poke" mode it holds a worker slot while it sleeps between checks. In "reschedule" mode it releases the slot between checks, so many waiting sensors do not block real work.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Name the main Airflow executors and when you would use each.</summary><div class="qa-body">The LocalExecutor runs tasks as processes on the scheduler's machine, which suits small deployments. The CeleryExecutor sends tasks through a message queue to a fixed pool of worker machines, good for steady, high volume. The KubernetesExecutor starts one pod per task, giving isolation and per-task dependencies and scaling to zero, good for bursty or varied workloads.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>A DAG with <code>start_date=2025-01-01</code>, a daily schedule and <code>catchup=True</code> is deployed today. What happens?</summary><div class="qa-body">The scheduler creates a run for every missed daily interval since 1 January 2025, hundreds of runs, which may hammer the sources and the warehouse. Usually you set <code>catchup=False</code> and run backfills deliberately, limited by <code>max_active_runs</code>. If the job is not idempotent, the damage is even worse.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do you make sure a failed run never publishes partial data?</summary><div class="qa-body">Put a quality gate before the load so bad batches never reach it, and make the load atomic: write to a temporary location and swap it in with one rename, or use a transaction (DELETE + INSERT, MERGE) or a table format like Delta Lake or Iceberg. Downstream tasks such as the gold table must depend on the load in the DAG, so a failure marks them upstream_failed instead of running them on stale or partial data.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Airflow vs Prefect vs Dagster: how would you choose?</summary><div class="qa-body">Airflow is the industry default: task-centric DAGs, a huge operator library and managed offerings, at the cost of heavier operation. Prefect turns plain Python functions into flows and tasks with little boilerplate and easy local runs, suiting small Python-heavy teams. Dagster centres on assets and lineage with built-in partitions, typing and testing, suiting teams that think in data products.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What breaks if you keep retries, idempotency and alerts but skip the quality gate?</summary><div class="qa-body">The pipeline becomes very good at publishing wrong numbers: on schedule, retried until it succeeds, idempotently. A duplicated lookup row would double an order every night, and a missing restaurant would produce rows with no city, yet nothing crashes, so nobody is alerted. Retries and alerts only respond to errors; the gate is what turns bad data into an error.</div></details>
 </main>
 `
 });

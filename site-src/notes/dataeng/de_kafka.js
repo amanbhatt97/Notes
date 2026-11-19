@@ -3,112 +3,50 @@ Object.assign(TOPIC_CONTENT, {
   "de_kafka": `<main>
   <h1>Kafka &amp; Streaming</h1>
   <div class="where"><span>Data Engineering</span><span>Kafka &amp; Streaming</span></div>
-  <p class="lead">The nightly ETL and Spark jobs tell Biteful what happened <em>yesterday</em>. But when Asha places an order, the restaurant must start cooking now, the rider must be assigned now, and the "open orders" screen must change now. That needs data that flows as <strong>events</strong>, seconds after they happen. Kafka is the system that carries those events from the app to everyone who needs them, keeps them, and lets each reader go at its own pace. This note builds Kafka one need at a time on ONE running example: <strong>Biteful's 10 orders from the SQL, ETL and Spark notes, replayed as the stream the app emits</strong>: 19 events (<code>placed</code>, then <code>delivered</code> or <code>cancelled</code>), keyed by order id. Every Kafka output comes from a real run on a single-node <strong>Kafka 3.9.1</strong> broker (KRaft mode, no ZooKeeper) with the <code>confluent-kafka</code> Python client, plus a real Kafka Connect run and a real Spark Structured Streaming job. Two short demos are plain-Python <strong>simulations</strong> (a lost acknowledgement, a consumer crash), because those failures can't be produced on cue; they are labelled where they appear. The Kafka Streams example is Java and was <strong>not run</strong>.</p>
+  <p class="lead">The nightly ETL and Spark jobs tell Biteful what happened <em>yesterday</em>, but when Asha orders a dosa the restaurant has to start cooking now, a rider has to be assigned now, and the operations screen has to change now. That needs data that moves as <strong>events</strong>, small facts sent seconds after they happen, and <strong>Apache Kafka</strong> is the system most companies use to carry those events from the app to every service that needs them, keep them, and let each service read at its own pace. Throughout this page we use one running example: Biteful's ten orders from the SQL, ETL and Spark notes, replayed as the 19 events the app emits (each order is <code>placed</code>, then <code>delivered</code> or <code>cancelled</code>), sent to a topic called <code>order-events</code> and keyed by order id. Kafka is a server, and no Kafka server runs in these notes, so the real <code>confluent_kafka</code> client code is shown exactly as you would write it but without output, and every mechanism (partitioning, offsets, rebalancing, retries, compaction, watermarks) is demonstrated with a small plain-Python simulation that really runs and is labelled <code>SIMULATION</code>. The one exception is the windows section, where a real Spark Structured Streaming job runs on a laptop and its output is real.</p>
 
-  <h2 id="kf-fit" class="open"><span class="num">★</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 660 170" width="660">
-<defs><marker id="kf-a0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="10" y="20" width="150" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="85" y="41" text-anchor="middle" font-size="12">ETL &amp; Orchestration</text><text x="85" y="58" text-anchor="middle" class="tm" font-size="10">nightly batch</text>
-<line x1="160" y1="45" x2="188" y2="45" stroke="currentColor" marker-end="url(#kf-a0)"/>
-<rect x="190" y="20" width="140" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="260" y="41" text-anchor="middle" font-size="12">Apache Spark</text><text x="260" y="58" text-anchor="middle" class="tm" font-size="10">big batch, many machines</text>
-<line x1="330" y1="45" x2="358" y2="45" stroke="currentColor" marker-end="url(#kf-a0)"/>
-<rect x="360" y="20" width="150" height="50" rx="8" class="fg sg" stroke-width="3"/><text x="435" y="41" text-anchor="middle" font-size="12" font-weight="700">Kafka &amp; Streaming</text><text x="435" y="59" text-anchor="middle" class="tg" font-size="10">YOU ARE HERE</text>
-<line x1="510" y1="45" x2="538" y2="45" stroke="currentColor" marker-end="url(#kf-a0)"/>
-<rect x="540" y="20" width="110" height="50" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="595" y="41" text-anchor="middle" font-size="12">Serving</text><text x="595" y="58" text-anchor="middle" class="tm" font-size="10">fresh features</text>
-<line x1="435" y1="70" x2="435" y2="108" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#kf-a0)"/>
-<rect x="350" y="110" width="170" height="46" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="435" y="130" text-anchor="middle" font-size="12">asyncio · queues</text><text x="435" y="147" text-anchor="middle" class="tm" font-size="10">waiting on many things</text>
-<text x="20" y="130" class="tm" font-size="10.5">batch answers "what happened yesterday?";</text><text x="20" y="146" class="tm" font-size="10.5">streaming answers "what is happening now?"</text>
-</svg><figcaption>Data Engineering, in reading order: ETL → Spark → Kafka, all on Biteful's orders.</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: batch pipelines</b><span><a class="xref" data-note="de_etl">ETL &amp; Orchestration</a> loaded Biteful's orders every night, idempotently, with watermarks for changed rows; <a class="xref" data-note="de_spark">Apache Spark</a> did the same on many machines. Both run on a schedule, so the freshest answer is hours old. The ETL note also named CDC (reading a database's change log) as the better extract, which needs a log like Kafka.</span></li>
-    <li><b>This note adds: events, seconds after they happen</b><span>Log-based messaging; topics and partitions with key hashing; producers (acks, retries, idempotence); consumer groups and rebalancing; offsets and at-most/at-least/exactly-once; retention and compaction; streaming pipelines with event-time windows and watermarks; Kafka Connect and Kafka Streams; when a plain queue is better.</span></li>
-    <li><b>Leads to: serving and system design</b><span>The live numbers built here (open orders per restaurant, average delivery minutes) are exactly the "fresh features" a model reads at request time: see <a class="xref" data-note="sd_serving">feature pipelines and serving</a> and <a class="xref" data-note="mlops_lifecycle">the ML lifecycle</a>. Writing consumers that wait on many things at once uses <a class="xref" data-note="py_asyncio">asyncio</a>; brokers and connectors usually run in <a class="xref" data-note="se_docker">Docker</a>.</span></li>
-  </ol>
-
-  <h2 id="kf-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
-  <p>The whole note as one chain. Each idea answers the question above it, and its weakness raises the next question. All numbers come from Biteful's 19 order events (plus Gita's order 111 where noted).</p>
-  <ol class="story">
-    <li><b>Batch vs streaming</b><span>Q: why isn't tomorrow's batch good enough? → order 101 was placed at 12:10; the nightly ETL learns of it 11 h 50 min later. The restaurant needed it in a second. So the app must publish each event as it happens, but to whom, and how?</span></li>
-    <li><b>Log-based messaging</b><span>Q: how do several services get the same events at their own pace? → an append-only log with numbered records (offsets); each reader keeps its own bookmark: the kitchen notifier is at 4, the slow warehouse loader at 2, a new ETA service replays from 0. One log on one machine can't take a whole country's orders, though…</span></li>
-    <li><b>Topics &amp; partitions</b><span>Q: how does the log scale while each order's events stay in order? → split the topic into partitions; <code>crc32(key) % 3</code> sends every event of an order to the same partition (101 → 2, 102 → 0, 107 → 1, traced by hand and confirmed by the broker). Order exists only within a partition. And sending over a network can fail…</span></li>
-    <li><b>Producers: acks, retries, idempotence</b><span>Q: when is an event safely stored, and does retrying duplicate it? → <code>acks=0</code> never learns the offset, <code>acks=all</code> waits for every in-sync copy; a retry after a lost ack writes "101 delivered" twice unless the producer is idempotent. Now the events are stored; how do many readers share them?</span></li>
-    <li><b>Consumers &amp; consumer groups</b><span>Q: how do several copies of a service split the work without double-handling? → a group shares partitions, one owner each: alone, A had [0, 1, 2]; when B joined, a rebalance split them; when B left, A took all back. But a crash in the middle loses track of what was done…</span></li>
-    <li><b>Offsets &amp; delivery semantics</b><span>Q: after a crash, what is lost or repeated? → commit before processing: 103 is never sent to the kitchen (at-most-once); process before commit: 103 twice (at-least-once); a transaction: 11 tickets and the offsets together (exactly-once, inside Kafka). Meanwhile the log grows forever…</span></li>
-    <li><b>Retention &amp; compaction</b><span>Q: how long are events kept, and can a topic hold "the latest status per order"? → retention deletes by age or size; compaction kept 11 of 21 records, one per order, and a tombstone deleted 105. Now we have reliable streams; how do we compute on them?</span></li>
-    <li><b>Streaming pipelines</b><span>Q: how do you total revenue over data that never ends, arriving late? → event-time windows plus a watermark: with 1 day of lateness, 104's late event is dropped; with 3 days, the result equals the ETL's gold table, and a real Spark streaming job reading the topic produced it. Must every pipeline be hand-written?</span></li>
-    <li><b>Kafka Connect &amp; Kafka Streams</b><span>Q: what do teams use instead of writing consumers by hand? → Connect moves data in and out with configuration only (all 21 events copied to a file, no code); Kafka Streams is a Java library for windows and joins. Is Kafka always the right tool?</span></li>
-    <li><b>Kafka vs queues</b><span>Q: when is a plain message queue better? → a queue deletes a message once one worker has done it: right for "send this SMS once", wrong for "five teams need every order and a replay". Then we build the live restaurant board on the real topic.</span></li>
-  </ol>
-
-  <h2 id="kf-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="kf-map"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">Kafka &amp; Streaming</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">Batch vs Streaming</div>
+        <div class="mm-title">Why streaming</div>
         <ul>
-          <li><b>Batch</b> — bounded data, on a schedule; hours late (101 seen after 11 h 50 min)</li>
-          <li><b>Streaming</b> — unbounded events, handled as they arrive; seconds</li>
-          <li><b>Event time vs processing time</b> — when it happened vs when we saw it</li>
-          <li>💡 newspaper (batch) vs live cricket score (stream)</li>
-          <li>⚠ ask what latency the decision really needs</li>
+          <li>Batch: bounded data on a schedule, hours late</li>
+          <li>Streaming: unbounded events, handled in seconds</li>
+          <li>Event time (when it happened) vs processing time (when we saw it)</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">The Log</div>
+        <div class="mm-title">The log</div>
         <ul>
-          <li><b>Log</b> — append-only, ordered records; reading doesn't delete</li>
-          <li><b>Offset</b> — a record's position in a partition: 0, 1, 2 …</li>
-          <li><b>Each group</b> keeps its own bookmark; replay is possible</li>
-          <li>💡 a society visitor register</li>
+          <li>Topic → partitions → append-only logs with <b>offsets</b></li>
+          <li><code>hash(key) % partitions</code>: same key, same partition, kept in order</li>
+          <li>Reading never deletes; retention or compaction does</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Topics &amp; Producers</div>
+        <div class="mm-title">Writing safely</div>
         <ul>
-          <li><b>Topic</b> → <b>partitions</b>; broker = one Kafka server</li>
-          <li><b>Key → partition</b> — <code>crc32(key) % n</code> (Java client: murmur2)</li>
-          <li><b>Ordering</b> — per partition only; key by order_id</li>
-          <li><b>acks</b> — 0 / 1 / all; <b>idempotence</b> drops retry duplicates</li>
-          <li>⚠ adding partitions remaps keys (3 → 5 moved 8 of 11)</li>
+          <li><b>acks</b> 0 / 1 / all; replicas and the ISR</li>
+          <li><b>Idempotent producer</b>: retries never duplicate</li>
+          <li><code>produce()</code> buffers; <code>flush()</code> waits</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Consumer Groups</div>
+        <div class="mm-title">Reading safely</div>
         <ul>
-          <li><b>Group</b> — members share a <code>group.id</code>; one owner per partition</li>
-          <li><b>Scale</b> — useful consumers ≤ partitions</li>
-          <li><b>Different groups</b> — each gets every event</li>
-          <li><b>Rebalance</b> — on join / leave / crash</li>
-          <li><b>Lag</b> — log-end offset − committed offset</li>
+          <li><b>Consumer group</b>: one owner per partition; rebalance on change</li>
+          <li>Commit after processing = <b>at-least-once</b>; make the sink idempotent</li>
+          <li>Transactions = exactly-once inside Kafka; <b>lag</b> = end − committed</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Offsets &amp; Semantics</div>
+        <div class="mm-title">Computing on streams</div>
         <ul>
-          <li><b>At-most-once</b> — commit, then process; crash loses</li>
-          <li><b>At-least-once</b> — process, then commit; crash repeats (usual)</li>
-          <li><b>Exactly-once</b> — transactions (Kafka → Kafka) or idempotent sink</li>
-          <li>⚠ auto-commit can commit before you finish</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Retention &amp; Streams</div>
-        <ul>
-          <li><b>Retention</b> — delete old segments by age/size (default 7 days)</li>
-          <li><b>Compaction</b> — keep the latest record per key; null value = tombstone</li>
-          <li><b>Windows</b> — tumbling, hopping, session; <b>watermark</b> = how late is too late</li>
-          <li><b>Connect</b> — config-only connectors (Debezium CDC, S3, JDBC)</li>
-          <li><b>Kafka Streams / Flink / Spark</b> — stream processors</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Kafka vs Queues</div>
-        <ul>
-          <li><b>Queue</b> (RabbitMQ, SQS) — a message goes to one worker, then is gone</li>
-          <li><b>Kafka</b> — every group reads everything; replay; high throughput</li>
-          <li>💡 a to-do list vs a diary</li>
-          <li>⚠ "Kafka is a queue" is the classic wrong answer</li>
+          <li><b>Windows</b>: tumbling, hopping, session (by event time)</li>
+          <li><b>Watermark</b> = newest event time − allowed lateness</li>
+          <li>Spark, Flink, Kafka Streams; Connect moves data in and out</li>
         </ul>
       </div>
     </div>
@@ -117,39 +55,33 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="kf-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain</span></div></div>
-      <div class="rm-item rm-done" data-target="kf-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">React As It Happens</span><span class="rm-sub">Batch vs streaming</span></div></div>
-      <div class="rm-item rm-done" data-target="kf-log"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">The Log</span><span class="rm-sub">Kafka's one big idea</span></div></div>
-      <div class="rm-item rm-done" data-target="kf-part"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Topics &amp; Partitions</span><span class="rm-sub">Key hashing traced</span></div></div>
-      <div class="rm-item rm-done" data-target="kf-prod"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Producers</span><span class="rm-sub">acks, retries, idempotence</span></div></div>
-      <div class="rm-item rm-done" data-target="kf-group"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Consumer Groups</span><span class="rm-sub">Assignment and rebalancing</span></div></div>
-      <div class="rm-item rm-done" data-target="kf-sem"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Offsets &amp; Semantics</span><span class="rm-sub">At-most, at-least, exactly once</span></div></div>
-      <div class="rm-item rm-done" data-target="kf-ret"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Retention &amp; Compaction</span><span class="rm-sub">How long, which records</span></div></div>
-      <div class="rm-item rm-done" data-target="kf-stream"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Streaming Pipelines</span><span class="rm-sub">Windows, watermarks, Spark</span></div></div>
-      <div class="rm-item rm-done" data-target="kf-eco"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Connect &amp; Streams</span><span class="rm-sub">Config and libraries</span></div></div>
-      <div class="rm-item rm-done" data-target="kf-vs"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Kafka vs Queues</span><span class="rm-sub">Diary or to-do list</span></div></div>
-      <div class="rm-item rm-done" data-target="kf-build"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Build It: Restaurant Board</span><span class="rm-sub">Live numbers, real broker</span></div></div>
-      <div class="rm-item rm-done" data-target="kf-traps"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">Ordering, commits, hot keys</span></div></div>
-      <div class="rm-item rm-done" data-target="kf-connect"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One log, many readers</span></div></div>
-      <div class="rm-item rm-done" data-target="kf-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The whole note in 10 minutes</span></div></div>
-      <div class="rm-item rm-done" data-target="kf-qa"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
+      <div class="rm-item rm-done" data-target="kf-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Batch vs Streaming</span><span class="rm-sub">why tomorrow's answer is too late</span></div></div>
+      <div class="rm-item rm-done" data-target="kf-log"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">The Log</span><span class="rm-sub">Kafka's one big idea: append, never consume away</span></div></div>
+      <div class="rm-item rm-done" data-target="kf-part"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Topics, Partitions and Keys</span><span class="rm-sub">how events are split and what stays in order</span></div></div>
+      <div class="rm-item rm-done" data-target="kf-prod"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Producers: acks, Replication, Idempotence</span><span class="rm-sub">when an event is safely stored, exactly once</span></div></div>
+      <div class="rm-item rm-done" data-target="kf-group"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Consumer Groups and Rebalancing</span><span class="rm-sub">sharing the reading work</span></div></div>
+      <div class="rm-item rm-done" data-target="kf-sem"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Offsets and Delivery Semantics</span><span class="rm-sub">what a crash costs: lost, repeated or once</span></div></div>
+      <div class="rm-item rm-done" data-target="kf-ret"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Retention and Compaction</span><span class="rm-sub">how long Kafka keeps events, and which ones</span></div></div>
+      <div class="rm-item rm-done" data-target="kf-stream"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Windows and Watermarks</span><span class="rm-sub">totals over endless, late data, in real Spark</span></div></div>
+      <div class="rm-item rm-done" data-target="kf-eco"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Kafka Connect and Stream Processors</span><span class="rm-sub">configuration instead of code; Flink, Kafka Streams</span></div></div>
+      <div class="rm-item rm-done" data-target="kf-vs"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Kafka vs Message Queues</span><span class="rm-sub">a diary or a to-do list</span></div></div>
+      <div class="rm-item rm-done" data-target="kf-build"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Putting It Together: The Live Board</span><span class="rm-sub">a correct live view under at-least-once delivery</span></div></div>
+      <div class="rm-item rm-done" data-target="kf-traps"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">missing keys, wrong clocks, auto-commit, hot keys</span></div></div>
+      <div class="rm-item rm-done" data-target="kf-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">definitions, settings, gotchas</span></div></div>
+      <div class="rm-item rm-done" data-target="kf-qa"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">the streaming questions interviewers ask</span></div></div>
     </div>
   </div>
 
-  <h2 id="kf-why"><span class="num">01</span>React As It Happens: Batch vs Streaming</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The ETL note produced a correct revenue table every night, and Spark made it fast at any size. But the restaurant can't wait until midnight to learn that Asha ordered a dosa. What is wrong with batch here, and what has to change?</p>
-  </div>
-  <p>There are two ways to process data. <strong>Batch</strong>: collect data for a period, then process all of it on a schedule ("every night, yesterday's orders"). The data is <strong>bounded</strong>: it has a start and an end. <strong>Streaming</strong>: handle each event as soon as it arrives, forever. The data is <strong>unbounded</strong>. An <strong>event</strong> is one small fact that happened: "order 101 was placed at Dosa Hut at 12:10".</p>
-  <p>Biteful's app emits an event every time an order changes. Our running example is Biteful's 10 orders as that stream: 10 <code>placed</code>, 7 <code>delivered</code> and 2 <code>cancelled</code> events (110 is still pending), in time order:</p>
-  <div class="fx" data-lang="py">"""Biteful's 10 orders as the stream of events the app emits (same rows as the SQL and ETL notes)."""
+  <h2 id="kf-why"><span class="num">01</span>Batch vs Streaming</h2>
+  <p>Everything in the earlier Data Engineering notes was <strong>batch processing</strong>: collect data for a period, then process all of it on a schedule, such as "every night at midnight, load yesterday's orders". The data a batch job reads is <strong>bounded</strong>, meaning it has a clear start and end, and that is what makes batch simple: you can rerun it, test it on a file, and know when it is finished. The cost is delay. Let us first write down Biteful's orders as the app actually produces them, one event each time an order changes:</p>
+  <div class="fx" data-lang="py">"""Biteful's 10 orders as the stream of events the app emits."""
 from datetime import datetime, timedelta
 
-ORDERS = [  # order_id, restaurant, city, placed at (IST), final status, amount, delivery minutes
+ORDERS = [  # order_id, restaurant, city, placed at, final status, amount, delivery minutes
     (101, "Dosa Hut", "Pune", "2026-03-02 12:10", "delivered", 240, 32),
     (102, "Biryani Bros", "Mumbai", "2026-03-02 13:05", "delivered", 450, 41),
     (103, "Pizza Point", "Pune", "2026-03-02 20:30", "delivered", 520, 38),
-    (104, "Pizza Point", "Pune", "2026-03-03 13:15", "delivered", 380, None),
+    (104, "Pizza Point", "Pune", "2026-03-03 13:15", "delivered", 380, 45),
     (105, "Green Bowl", "Mumbai", "2026-03-03 19:45", "cancelled", 310, None),
     (106, "Biryani Bros", "Mumbai", "2026-03-04 12:40", "delivered", 180, 25),
     (107, "Pizza Point", "Pune", "2026-03-04 21:10", "cancelled", 260, None),
@@ -164,8 +96,8 @@ def events():
         t = datetime.fromisoformat(ts)
         base = {"order_id": oid, "restaurant": rest, "city": city, "amount": amount}
         out.append({**base, "event": "placed", "ts": t})
-        if status == "delivered":       # 104's time wasn't recorded; the app logged delivery at +45 min
-            out.append({**base, "event": "delivered", "ts": t + timedelta(minutes=mins or 45)})
+        if status == "delivered":
+            out.append({**base, "event": "delivered", "ts": t + timedelta(minutes=mins)})
         elif status == "cancelled":
             out.append({**base, "event": "cancelled", "ts": t + timedelta(minutes=10)})
     out.sort(key=lambda e: e["ts"])
@@ -173,74 +105,79 @@ def events():
         e["ts"] = e["ts"].strftime("%Y-%m-%d %H:%M")
     return out
 
-if __name__ == "__main__":
-    for e in events():
-        print(e["ts"], e["order_id"], e["event"])</div>
-  <p>When does each system first <em>know</em> about a new order? The nightly ETL runs at midnight after the day; a stream sees the event as it is published:</p>
+
+for e in events():
+    print(e["ts"], e["order_id"], e["event"], e["restaurant"])</div>
+  <div class="fx" data-lang="text">2026-03-02 12:10 101 placed Dosa Hut
+2026-03-02 12:42 101 delivered Dosa Hut
+2026-03-02 13:05 102 placed Biryani Bros
+2026-03-02 13:46 102 delivered Biryani Bros
+2026-03-02 20:30 103 placed Pizza Point
+2026-03-02 21:08 103 delivered Pizza Point
+2026-03-03 13:15 104 placed Pizza Point
+2026-03-03 14:00 104 delivered Pizza Point
+2026-03-03 19:45 105 placed Green Bowl
+2026-03-03 19:55 105 cancelled Green Bowl
+2026-03-04 12:40 106 placed Biryani Bros
+2026-03-04 13:05 106 delivered Biryani Bros
+2026-03-04 21:10 107 placed Pizza Point
+2026-03-04 21:20 107 cancelled Pizza Point
+2026-03-05 18:20 108 placed Dosa Hut
+2026-03-05 18:49 108 delivered Dosa Hut
+2026-03-05 20:05 109 placed Biryani Bros
+2026-03-05 20:57 109 delivered Biryani Bros
+2026-03-08 20:50 110 placed Dosa Hut</div>
+  <p>This is our running example for the whole page: 19 events in time order, 10 <code>placed</code>, 7 <code>delivered</code> and 2 <code>cancelled</code>, with order 110 still waiting. Each line is an <strong>event</strong>, one small fact about something that happened at a specific time ("order 101 was placed at Dosa Hut at 12:10"). Now ask a simple question: when does each system first find out about a new order? The nightly batch can only see an order after the next midnight run:</p>
   <div class="fx" data-lang="py">from datetime import datetime, timedelta
-from biteful_events import events
 
 # When does each system first KNOW about a new order?
 for e in events():
     if e["event"] != "placed":
         continue
-    t = datetime.fromisoformat(e["ts"])
-    nightly = datetime.combine(t.date() + timedelta(days=1), datetime.min.time())   # next 00:00 run
-    print(f"order {e['order_id']} placed {e['ts'][5:]}  nightly ETL sees it after {nightly - t}"
-          f"  | a stream sees it within a second")</div>
-  <div class="fx" data-lang="text">order 101 placed 03-02 12:10  nightly ETL sees it after 11:50:00  | a stream sees it within a second
-order 102 placed 03-02 13:05  nightly ETL sees it after 10:55:00  | a stream sees it within a second
-order 103 placed 03-02 20:30  nightly ETL sees it after 3:30:00  | a stream sees it within a second
-order 104 placed 03-03 13:15  nightly ETL sees it after 10:45:00  | a stream sees it within a second
-order 105 placed 03-03 19:45  nightly ETL sees it after 4:15:00  | a stream sees it within a second
-order 106 placed 03-04 12:40  nightly ETL sees it after 11:20:00  | a stream sees it within a second
-order 107 placed 03-04 21:10  nightly ETL sees it after 2:50:00  | a stream sees it within a second
-order 108 placed 03-05 18:20  nightly ETL sees it after 5:40:00  | a stream sees it within a second
-order 109 placed 03-05 20:05  nightly ETL sees it after 3:55:00  | a stream sees it within a second
-order 110 placed 03-08 20:50  nightly ETL sees it after 3:10:00  | a stream sees it within a second</div>
-  <p>The batch was correct, just too late: from 2 h 50 min (107, placed at 21:10) up to 11 h 50 min (101, placed at lunch). For the monthly revenue report that is fine. For "tell the kitchen", "assign a rider", "show the customer an ETA" it is useless. The logic doesn't change; only <em>when</em> it runs.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Batch is the morning newspaper: complete, cheap, but it tells you yesterday's score. Streaming is the live cricket score on your phone: every ball updates it within seconds. You need the live score only if you will act on it right now.</p>
-  </div>
+    placed = datetime.fromisoformat(e["ts"])
+    nightly_run = datetime.combine(placed.date() + timedelta(days=1), datetime.min.time())  # next 00:00
+    print(f"order {e['order_id']} placed {e['ts'][5:]}: nightly batch learns of it {nightly_run - placed} later")</div>
+  <div class="fx" data-lang="text">order 101 placed 03-02 12:10: nightly batch learns of it 11:50:00 later
+order 102 placed 03-02 13:05: nightly batch learns of it 10:55:00 later
+order 103 placed 03-02 20:30: nightly batch learns of it 3:30:00 later
+order 104 placed 03-03 13:15: nightly batch learns of it 10:45:00 later
+order 105 placed 03-03 19:45: nightly batch learns of it 4:15:00 later
+order 106 placed 03-04 12:40: nightly batch learns of it 11:20:00 later
+order 107 placed 03-04 21:10: nightly batch learns of it 2:50:00 later
+order 108 placed 03-05 18:20: nightly batch learns of it 5:40:00 later
+order 109 placed 03-05 20:05: nightly batch learns of it 3:55:00 later
+order 110 placed 03-08 20:50: nightly batch learns of it 3:10:00 later</div>
+  <p>The batch was never wrong, only late: order 107, placed at 21:10, reached it 2 h 50 min later, and order 101, placed at lunch, nearly 12 hours later. For the monthly revenue report that is perfectly fine. For "tell the kitchen", "assign a rider" or "show the customer an ETA" it is useless, because the decision has to be made within seconds. The logic would not change at all; only <em>when</em> it runs.</p>
+  <p><strong>Stream processing</strong> is the other way of working: handle each event as soon as it arrives, continuously, forever. The data is <strong>unbounded</strong>: there is no "end of the file", only "everything so far". Think of the difference between the morning newspaper and the live cricket score on your phone. The newspaper is complete, cheap and easy to read, but it tells you yesterday's result. The live score updates within seconds of every ball. You only need the live score if you are going to act on it right now, and the same is true of streaming: it is more expensive to run (it is always on), harder to test and harder to fix after a bug, so the first question in any design is "how quickly does someone really need to act on this?"</p>
   <table class="tbl">
     <tr><th></th><th>Batch</th><th>Streaming</th></tr>
-    <tr><td>Data</td><td>Bounded: "yesterday's orders"</td><td>Unbounded: events keep coming</td></tr>
-    <tr><td>Latency</td><td>Minutes to hours</td><td>Milliseconds to seconds</td></tr>
-    <tr><td>Tools</td><td>Airflow + pandas / Spark / SQL</td><td>Kafka + Flink / Spark Streaming / Kafka Streams</td></tr>
-    <tr><td>Biteful use</td><td>Daily revenue, training data</td><td>Kitchen tickets, rider dispatch, live dashboards, fresh features</td></tr>
-    <tr><td>Cost</td><td>Simple, cheap, easy to rerun</td><td>Always on, harder to test and backfill</td></tr>
+    <tr><td>Data</td><td>bounded: "yesterday's orders"</td><td>unbounded: events keep coming</td></tr>
+    <tr><td>Latency</td><td>minutes to hours</td><td>milliseconds to seconds</td></tr>
+    <tr><td>Typical tools</td><td>Airflow + SQL / pandas / Spark</td><td>Kafka + Flink / Spark Structured Streaming / Kafka Streams</td></tr>
+    <tr><td>Biteful uses</td><td>daily revenue, model training data</td><td>kitchen tickets, rider dispatch, live dashboards, fresh model features</td></tr>
+    <tr><td>Operating cost</td><td>simple, cheap, easy to rerun</td><td>always running, harder to test and backfill</td></tr>
   </table>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Event time</strong>: when the event really happened (the rider tapped "delivered" at 14:00). <strong>Processing time</strong>: when our system saw it (the phone was offline and sent it two days later). Streams arrive late and out of order, so streaming code groups by event time; section 08 shows how.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"Real-time" is often not needed. If people look at a dashboard once each morning, an hourly batch is cheaper and simpler. First ask: "what latency does the decision really need?"</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: the log.</b> The app must publish each event as it happens. But the kitchen notifier, the rider dispatcher, the ETA service and the warehouse loader all need the <em>same</em> events, at different speeds, and a new service next month will want the history too. Where do the events go?</div>
+  <p>Streaming also introduces a distinction batch could mostly ignore. The <strong>event time</strong> is when something really happened (the rider tapped "delivered" at 14:00). The <strong>processing time</strong> is when our system received it (the rider's phone had no signal, so the event arrived two days later). In a nightly batch both are long in the past by the time the job runs, so the difference rarely matters. In a stream, events arrive late and out of order all the time, and any calculation of the form "revenue per day" has to decide which clock it means. We will come back to this in the windows section; for now, remember that the events carry their own timestamp, the <code>ts</code> field above, and that is the event time.</p>
+  <p>So the app must publish each event the moment it happens. The next question is where those events go, because the kitchen notifier, the rider dispatcher, the ETA service and the warehouse loader all need the same events, at different speeds.</p>
 
-  <h2 id="kf-log"><span class="num">02</span>The Log: Log-Based Messaging</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Four services need every order event. If the app calls each of them directly, a slow or crashed service blocks the app or misses events, and a service added later has no history. How can one stream of events feed many readers independently?</p>
-  </div>
-  <p>Kafka's one big idea: store events in a <strong>log</strong>, a list that is only ever added to at the end. Nothing is edited, and reading removes nothing. Each record gets a position number, its <strong>offset</strong>: 0, 1, 2… Each reader keeps its own bookmark ("I have read up to offset 4"). Reading moves your bookmark, not the data. The app (a <strong>producer</strong>) writes once; every reader (a <strong>consumer</strong>) reads at its own pace.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>The visitor register at a housing society gate. The guard only adds lines at the bottom. The secretary reads it weekly, the police read it after a theft, and each keeps a slip saying "I read up to line 212". Reading never tears out a page; old pages are thrown away only when they are too old (retention, section 07).</p>
-  </div>
-  <p>A toy log in plain Python, fed with Biteful's first events of 2 March. <code>append</code> adds at the end and returns the offset; <code>poll</code> returns records from a group's bookmark; <code>commit</code> moves the bookmark.</p>
-  <div class="fx" data-lang="py">from biteful_events import events
+  <h2 id="kf-log"><span class="num">02</span>The Log</h2>
+  <p>The obvious design is for the app to call each service directly: after saving an order, call the kitchen service, then the rider service, then the warehouse. This breaks quickly. If the warehouse loader is slow, the app waits for it while the customer stares at a spinner. If the kitchen service is down for a minute, its events are simply lost. And when a new ETA service is added next month, it has no history to learn from, and the app has to be changed to call it. The app and its readers are tied together too tightly.</p>
+  <p>Kafka's answer is a single, very simple data structure: the <strong>log</strong>. A log here does not mean a debug log file; it means an ordered list of records that is only ever added to at the end. Nothing in it is edited, and, crucially, <em>reading a record does not remove it</em>. Each record gets a position number called its <strong>offset</strong>: the first record is offset 0, the next 1, and so on. The app, called a <strong>producer</strong>, appends events to the log and moves on. Each reader, called a <strong>consumer</strong>, keeps its own bookmark, the offset of the next record it needs, and reads forward from there at its own speed.</p>
+  <p>Think of the visitor register at the gate of a housing society. The guard only ever writes new lines at the bottom. The secretary reads it once a week, the police read it after a theft, and each of them keeps a slip saying "I have read up to line 212". Reading never tears out a page, so any number of people can read the same register, and someone who arrives later can start from the first page. Old pages are thrown away only when they become too old, which is Kafka's retention, covered later.</p>
+  <p>Here is that idea as a toy log in plain Python. <code>append</code> adds a record and returns its offset, <code>poll</code> returns records starting from a reader's bookmark, and <code>commit</code> moves the bookmark. We feed it Biteful's first events of 2 March:</p>
+  <div class="fx" data-lang="py"># A toy log in plain Python (not Kafka): an append-only list plus one bookmark per reader
 
 class Log:
-    """A toy Kafka partition: an append-only list plus one bookmark per reader group."""
     def __init__(self):
-        self.records = []          # the log itself
-        self.committed = {}        # group name -&gt; next offset to read
+        self.records = []          # the log itself: only ever appended to
+        self.committed = {}        # reader group -&gt; next offset it needs
 
     def append(self, value):
         self.records.append(value)
         return len(self.records) - 1          # the new record's offset
 
     def poll(self, group, max_n=10):
-        start = self.committed.get(group, 0)
+        start = self.committed.get(group, 0)  # a new group starts at the beginning
         return list(enumerate(self.records))[start:start + max_n]
 
     def commit(self, group, next_offset):
@@ -251,30 +188,30 @@ evs = events()
 for e in evs[:4]:                                       # 2 March, lunchtime: 4 events
     print("appended at offset", log.append(f"{e['order_id']} {e['event']}"))
 
-batch = log.poll("kitchen-notifier")                    # tells restaurants about new orders
+batch = log.poll("kitchen-notifier")                    # fast reader
 print("kitchen-notifier got:", batch)
 log.commit("kitchen-notifier", batch[-1][0] + 1)
 
-batch = log.poll("warehouse-loader", max_n=2)           # slower: loads events into the warehouse
+batch = log.poll("warehouse-loader", max_n=2)           # slow reader
 print("warehouse-loader got:", batch)
 log.commit("warehouse-loader", batch[-1][0] + 1)
 
 log.append(f"{evs[4]['order_id']} {evs[4]['event']}")  # 20:30, order 103 is placed
-print("bookmarks:", log.committed, "| log length:", len(log.records))
+print("bookmarks:", log.committed, "| records in log:", len(log.records))
 print("kitchen-notifier next:", log.poll("kitchen-notifier"))
 print("warehouse-loader next:", log.poll("warehouse-loader"))
-print("new eta-service replays from 0:", log.poll("eta-service")[:2])</div>
+print("new eta-service starts at 0:", log.poll("eta-service")[:2])</div>
   <div class="fx" data-lang="text">appended at offset 0
 appended at offset 1
 appended at offset 2
 appended at offset 3
 kitchen-notifier got: [(0, '101 placed'), (1, '101 delivered'), (2, '102 placed'), (3, '102 delivered')]
 warehouse-loader got: [(0, '101 placed'), (1, '101 delivered')]
-bookmarks: {'kitchen-notifier': 4, 'warehouse-loader': 2} | log length: 5
+bookmarks: {'kitchen-notifier': 4, 'warehouse-loader': 2} | records in log: 5
 kitchen-notifier next: [(4, '103 placed')]
 warehouse-loader next: [(2, '102 placed'), (3, '102 delivered'), (4, '103 placed')]
-new eta-service replays from 0: [(0, '101 placed'), (1, '101 delivered')]</div>
-  <p>Trace it. The kitchen notifier read all four records and committed 4 ("next time start at 4"). The warehouse loader read two and committed 2. When order 103 was placed (offset 4), the kitchen got just that one, while the loader still had three to catch up on; neither slowed the other. A brand-new ETA service with no bookmark started at 0 and <strong>replayed</strong> history. Real Kafka works the same way: the log is a file on disk, and bookmarks are stored in an internal topic, <code>__consumer_offsets</code>.</p>
+new eta-service starts at 0: [(0, '101 placed'), (1, '101 delivered')]</div>
+  <p>Follow the bookmarks. The kitchen notifier read all four records and committed 4, meaning "next time, start at offset 4". The slower warehouse loader read only two and committed 2. When order 103 was placed and appended at offset 4, the kitchen notifier received just that one record, while the warehouse loader still had three to catch up on, and neither reader slowed the other down. Finally, a brand-new ETA service with no bookmark started at offset 0 and read the history from the beginning; this is called <strong>replay</strong>, and it is something a system that deletes messages after reading cannot do.</p>
   <figure class="viz"><svg viewBox="0 0 600 150" width="600">
     <defs><marker id="kf-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <g font-size="11" text-anchor="middle">
@@ -290,25 +227,16 @@ new eta-service replays from 0: [(0, '101 placed'), (1, '101 delivered')]</div>
     <text x="195" y="142" text-anchor="middle" font-size="11" class="tg">warehouse-loader @ 2</text>
     <line x1="335" y1="125" x2="335" y2="90" class="sb" stroke-width="2" marker-end="url(#kf-ar)"/>
     <text x="370" y="142" text-anchor="middle" font-size="11" class="tb">kitchen-notifier @ 4</text>
-    <text x="300" y="20" text-anchor="middle" font-size="12" font-weight="bold">one partition of topic "order-events"</text>
-  </svg><figcaption>Records are only appended. Each consumer group keeps its own offset, so slow and fast readers don't interfere.</figcaption></figure>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A Kafka <strong>log</strong> is an immutable, ordered, append-only sequence of records. An <strong>offset</strong> is a record's position in it. <strong>Log-based messaging</strong>: producers append; consumers read from their own committed offset; reading never deletes, so any number of readers can read the same data, and any reader can rewind.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"Kafka is a queue" is the most common wrong answer. Kafka never deletes a message because someone read it. That is why many teams can read the same events and why you can reprocess after fixing a bug, as long as retention hasn't expired (section 10 compares with real queues).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: topics and partitions.</b> One log is one file on one disk on one machine. A national delivery app emits thousands of events a second, and many consumers must read in parallel. But splitting the log must not break the order of one order's events: "delivered" must never come before "placed".</div>
+    <text x="300" y="20" text-anchor="middle" font-size="12" font-weight="bold">one log: records are only appended</text>
+  </svg><figcaption>The state after the code above: one log, two bookmarks. Each reader's offset points at the next record it needs.</figcaption></figure>
+  <p>The figure shows the moment after order 103 arrived. The records sit in one row and never move; the only things that change are the arrows. That is the whole design of Kafka in one picture, and it is why it is called <strong>log-based messaging</strong>: producers append, consumers read from their own committed offset, reading never deletes, so many independent readers can share one stream and any reader can rewind. Real Kafka keeps the log as files on disk and stores each reader's committed offset in a special internal topic called <code>__consumer_offsets</code>. The most common wrong answer in interviews is "Kafka is a queue"; a queue deletes a message once it has been handled, and Kafka does not, which is the difference the rest of this page builds on.</p>
+  <p>One log file on one disk on one machine cannot hold a whole country's orders, though, and one reader cannot keep up with a lunchtime rush. The log has to be split, and the split must not break the order of each order's events: "delivered" must never be read before "placed".</p>
 
-  <h2 id="kf-part"><span class="num">03</span>Topics &amp; Partitions: Key Hashing Traced</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We need to split the log across machines for capacity and parallel reading, yet keep each order's events in order. Which event goes to which piece, and what ordering survives the split?</p>
-  </div>
-  <p>Kafka splits each named stream, a <strong>topic</strong> (here <code>order-events</code>), into <strong>partitions</strong>. Each partition is its own log with its own offsets, and can live on a different <strong>broker</strong> (one Kafka server). Each event carries a <strong>key</strong>; Biteful uses the order id. The producer hashes the key into a number and takes the remainder: <code>partition = hash(key) % number_of_partitions</code>. Same key → same number → same partition, every time, so all of one order's events land in one log, in the order they were sent.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A bank with three counters and a rule based on account number. All of Mr Sharma's deposits go to counter 3, so his passbook entries are in order. But nobody can say whether counter 1's 10:05 entry came before counter 3's 10:05 entry. Order exists per counter, not across the bank.</p>
-  </div>
-  <p>The hash, traced. <code>confluent-kafka</code> (librdkafka) hashes keys with CRC32 by default; Python's <code>zlib.crc32</code> is the same function, so we can predict the broker:</p>
+  <h2 id="kf-part"><span class="num">03</span>Topics, Partitions and Keys</h2>
+  <p>In Kafka, a named stream of related events is called a <strong>topic</strong>; Biteful's is <code>order-events</code>. A topic is split into a fixed number of <strong>partitions</strong>, and each partition is a separate log exactly like the toy above, with its own offsets starting at 0. Different partitions can live on different <strong>brokers</strong> (a broker is one Kafka server; a group of brokers is a <strong>cluster</strong>), so a topic can grow beyond one machine, and different consumers can read different partitions in parallel.</p>
+  <p>Splitting raises the obvious question: which partition does each event go to? If events were scattered at random, order 101's "placed" could land in partition 0 and its "delivered" in partition 1, and a consumer reading partition 1 first would see the delivery of an order that does not exist yet. Kafka solves this with a <strong>key</strong>. Every event can carry a key, and Biteful uses the order id. The producer turns the key into a number with a <strong>hash function</strong> (a function that always gives the same number for the same input, but spreads different inputs evenly), and takes the remainder after dividing by the number of partitions: <code>partition = hash(key) % number_of_partitions</code>. Same key, same number, same partition, every time, so all events of one order land in one log, in the order they were sent.</p>
+  <p>A bank with three counters works the same way if it sends customers to a counter by their account number. All of Mr Sharma's deposits go to counter 3, so his passbook entries are always in order. But nobody can say whether counter 1's 10:05 entry came before counter 3's 10:05 entry, because nothing orders the counters against each other. Order exists per counter, not across the bank, and in Kafka order exists per partition, not across the topic.</p>
+  <p>The Python client <code>confluent_kafka</code> is built on a C library called librdkafka, whose default partitioner hashes keys with CRC32. Python's <code>zlib.crc32</code> is the same function, so we can work out by hand where each of Biteful's orders will go:</p>
   <div class="fx" data-lang="py">import zlib
 
 def pick_partition(key, num_partitions):
@@ -316,191 +244,176 @@ def pick_partition(key, num_partitions):
 
 for order_id in range(101, 111):
     h = zlib.crc32(str(order_id).encode())
-    print(f"key '{order_id}': crc32 = {h:&gt;10}  % 3 = {h % 3}  -&gt; partition {pick_partition(str(order_id), 3)}")</div>
-  <div class="fx" data-lang="text">key '101': crc32 = 1416650876  % 3 = 2  -&gt; partition 2
-key '102': crc32 = 3447271878  % 3 = 0  -&gt; partition 0
-key '103': crc32 = 3128820048  % 3 = 0  -&gt; partition 0
-key '104': crc32 =  605721843  % 3 = 0  -&gt; partition 0
-key '105': crc32 = 1394451557  % 3 = 2  -&gt; partition 2
-key '106': crc32 = 3390371295  % 3 = 0  -&gt; partition 0
-key '107': crc32 = 3172189513  % 3 = 1  -&gt; partition 1
-key '108': crc32 =  766302424  % 3 = 1  -&gt; partition 1
-key '109': crc32 = 1521215566  % 3 = 1  -&gt; partition 1
-key '110': crc32 =  980181419  % 3 = 2  -&gt; partition 2</div>
-  <p>Check one by hand: 1,416,650,876 ÷ 3 = 472,216,958 remainder 2, so key 101 → partition 2. Prediction: partition 0 gets 102, 103, 104, 106; partition 1 gets 107, 108, 109; partition 2 gets 101, 105, 110. Now the real thing: create the topic with 3 partitions, then produce all 19 events in time order.</p>
-  <div class="fx" data-lang="text">$ kafka-topics.sh --bootstrap-server localhost:19092 --create --topic order-events --partitions 3 --replication-factor 1
-Created topic order-events.</div>
+    print(f"key '{order_id}': crc32 = {h:&gt;10}   % 3 = {h % 3}   -&gt; partition {pick_partition(str(order_id), 3)}")</div>
+  <div class="fx" data-lang="text">key '101': crc32 = 1416650876   % 3 = 2   -&gt; partition 2
+key '102': crc32 = 3447271878   % 3 = 0   -&gt; partition 0
+key '103': crc32 = 3128820048   % 3 = 0   -&gt; partition 0
+key '104': crc32 =  605721843   % 3 = 0   -&gt; partition 0
+key '105': crc32 = 1394451557   % 3 = 2   -&gt; partition 2
+key '106': crc32 = 3390371295   % 3 = 0   -&gt; partition 0
+key '107': crc32 = 3172189513   % 3 = 1   -&gt; partition 1
+key '108': crc32 =  766302424   % 3 = 1   -&gt; partition 1
+key '109': crc32 = 1521215566   % 3 = 1   -&gt; partition 1
+key '110': crc32 =  980181419   % 3 = 2   -&gt; partition 2</div>
+  <p>You can check one line yourself: 1,416,650,876 divided by 3 is 472,216,958 with remainder 2, so key 101 goes to partition 2. Partition 0 should therefore receive orders 102, 103, 104 and 106, partition 1 should receive 107, 108 and 109, and partition 2 should receive 101, 105 and 110. Here is a simulated topic that uses exactly this rule, with all 19 events produced in time order:</p>
+  <div class="fx" data-lang="py"># SIMULATION: a toy topic in plain Python (no Kafka broker is running here)
+import zlib
+
+class Topic:
+    def __init__(self, name, num_partitions):
+        self.name = name
+        self.partitions = [[] for _ in range(num_partitions)]   # one append-only log each
+
+    def produce(self, key, value):
+        p = zlib.crc32(key.encode()) % len(self.partitions)      # librdkafka's default rule for keyed messages
+        self.partitions[p].append((key, value))
+        return p, len(self.partitions[p]) - 1                     # (partition, offset)
+
+topic = Topic("order-events", 3)
+for e in events():                                                # in time order, as the app sends them
+    topic.produce(str(e["order_id"]), e)
+
+for p, records in enumerate(topic.partitions):
+    print(f"partition {p}:")
+    print("   " + "  ".join(f"[{off}] {key} {e['event']}" for off, (key, e) in enumerate(records)))</div>
+  <div class="fx" data-lang="text">partition 0:
+   [0] 102 placed  [1] 102 delivered  [2] 103 placed  [3] 103 delivered  [4] 104 placed  [5] 104 delivered  [6] 106 placed  [7] 106 delivered
+partition 1:
+   [0] 107 placed  [1] 107 cancelled  [2] 108 placed  [3] 108 delivered  [4] 109 placed  [5] 109 delivered
+partition 2:
+   [0] 101 placed  [1] 101 delivered  [2] 105 placed  [3] 105 cancelled  [4] 110 placed</div>
+  <p>Look at partition 0. Its records are 102 placed (offset 0), 102 delivered (offset 1), 103 placed (offset 2), and so on: every order's events are together and in the right order, which is all the kitchen and the board need. Now compare across partitions. Order 106 was placed on 4 March and sits at offset 6 of partition 0, while order 107, placed later the same evening, sits at offset 0 of partition 1. Offsets in different partitions mean nothing relative to each other, and there is no "global order" of the topic at all. This is the central trade-off of Kafka: a <strong>partition</strong> is both the unit of ordering and the unit of parallelism, and you buy parallelism by giving up any order between keys.</p>
+  <p>In the real client, producing an event with a key looks like this. It is shown without output because no broker runs here; against a real cluster each delivery report would print the partition and offset, matching the simulation above:</p>
   <div class="fx" data-lang="py">import json
 from confluent_kafka import Producer
 from biteful_events import events
 
-p = Producer({"bootstrap.servers": "localhost:19092",
-              "acks": "all",                    # wait until the write is safely stored
-              "enable.idempotence": True})      # retries never create duplicates
+p = Producer({"bootstrap.servers": "broker1:9092,broker2:9092"})
 
-def report(err, msg):                           # called once per message, after the broker answers
+def report(err, msg):                      # called once per message, when the broker has answered
     if err is not None:
         print("FAILED:", err)
     else:
-        e = json.loads(msg.value())
-        print(f"key={msg.key().decode()} {e['event']:&lt;9} -&gt; partition {msg.partition()} offset {msg.offset()}")
+        print(f"key={msg.key().decode()} -&gt; partition {msg.partition()} offset {msg.offset()}")
 
-for e in events():                              # in time order, as the app would send them
+for e in events():
     p.produce("order-events", key=str(e["order_id"]), value=json.dumps(e), callback=report)
-p.flush()                                       # block until every message is acknowledged</div>
-  <div class="fx" data-lang="text">key=101 placed    -&gt; partition 2 offset 0
-key=101 delivered -&gt; partition 2 offset 1
-key=105 placed    -&gt; partition 2 offset 2
-key=105 cancelled -&gt; partition 2 offset 3
-key=110 placed    -&gt; partition 2 offset 4
-key=102 placed    -&gt; partition 0 offset 0
-key=102 delivered -&gt; partition 0 offset 1
-key=103 placed    -&gt; partition 0 offset 2
-key=103 delivered -&gt; partition 0 offset 3
-key=104 placed    -&gt; partition 0 offset 4
-key=104 delivered -&gt; partition 0 offset 5
-key=106 placed    -&gt; partition 0 offset 6
-key=106 delivered -&gt; partition 0 offset 7
-key=107 placed    -&gt; partition 1 offset 0
-key=107 cancelled -&gt; partition 1 offset 1
-key=108 placed    -&gt; partition 1 offset 2
-key=108 delivered -&gt; partition 1 offset 3
-key=109 placed    -&gt; partition 1 offset 4
-key=109 delivered -&gt; partition 1 offset 5</div>
-  <p>Exactly as predicted. <code>produce</code> doesn't send at once: it puts the event in a local buffer and returns; the client sends batches in the background, and <code>flush()</code> waits until the broker has confirmed all of them, calling <code>report</code> for each. Look at partition 0: 102 placed (0), 102 delivered (1), 103 placed (2) … each order's events are in order. Across partitions there is no order: the reports came back partition by partition, and 107 (placed on 4 March) has offset 0 in its partition while 106 (also 4 March) has offset 6 in another. Nobody needs a global order here; the kitchen only needs each order's own events in order.</p>
-  <p>What if Biteful later grows the topic to 5 partitions?</p>
+    p.poll(0)                              # serve delivery reports that have arrived
+p.flush()                                  # wait until every message is acknowledged</div>
+  <p>Two details matter. Messages without a key (<code>key=None</code>) are spread across partitions for throughput, so they have no ordering at all. And the Java client uses a different hash function, murmur2, so if a Java service and a Python service both produce to the same topic, they must agree on one partitioner or the same key will land in different partitions.</p>
+  <p>The partition count also matters more than it first appears. Suppose Biteful's traffic grows and someone raises <code>order-events</code> from 3 to 5 partitions:</p>
   <div class="fx" data-lang="py">import zlib
+
 moved = []
 for order_id in range(101, 112):
     h = zlib.crc32(str(order_id).encode())
     if h % 3 != h % 5:
         moved.append(f"{order_id}: {h % 3}-&gt;{h % 5}")
-print("3 -&gt; 5 partitions moves", len(moved), "of 11 keys:", moved)</div>
-  <div class="fx" data-lang="text">3 -&gt; 5 partitions moves 8 of 11 keys: ['101: 2-&gt;1', '102: 0-&gt;3', '103: 0-&gt;3', '104: 0-&gt;3', '107: 1-&gt;3', '108: 1-&gt;4', '110: 2-&gt;4', '111: 2-&gt;1']</div>
-  <p>8 of 11 keys would now hash to a different partition. An order placed before the change and delivered after it would have its two events in two partitions, read by different consumers in either order.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A <strong>partition</strong> is the unit of both parallelism and ordering in Kafka: order is guaranteed only within one partition. Records with the same key go to the same partition while the partition count stays the same. The Java client uses the murmur2 hash instead of CRC32, so mixed-language producers should agree on a partitioner.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Choose the partition count up front with room to grow; adding partitions later remaps keys. Events with no key are spread for throughput, with no ordering at all. One huge key (a mega-sale restaurant, or <code>"unknown"</code>) overloads one partition: a <strong>hot key</strong>, the Kafka cousin of Spark's skew.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: producers.</b> The events landed where we predicted. But the network between the app and the broker can drop a request or a reply. When can the app treat an event as stored, and if it retries, could "101 delivered" end up in the log twice?</div>
+print("growing 3 -&gt; 5 partitions moves", len(moved), "of 11 keys:")
+print(moved)</div>
+  <div class="fx" data-lang="text">growing 3 -&gt; 5 partitions moves 8 of 11 keys:
+['101: 2-&gt;1', '102: 0-&gt;3', '103: 0-&gt;3', '104: 0-&gt;3', '107: 1-&gt;3', '108: 1-&gt;4', '110: 2-&gt;4', '111: 2-&gt;1']</div>
+  <p>Because the remainder is taken modulo a different number, 8 of 11 keys would now map to a different partition. An order placed just before the change and delivered just after it would have its two events in two different partitions, read by two different consumers in no particular order. For this reason teams choose a partition count with room to grow when they create a topic. A related problem is a <strong>hot key</strong>: if one key carries a huge share of the traffic (a restaurant running a mega-sale, or a default key like <code>"unknown"</code>), its single partition and the single consumer reading it become the bottleneck, which is Kafka's version of the data skew you met in the Spark note.</p>
+  <p>The events now land in a predictable place. But the network between the app and the broker can lose a request or a reply, and the broker machine itself can fail. When is it safe for the app to treat an event as stored, and if it retries, can "101 delivered" end up in the log twice?</p>
 
-  <h2 id="kf-prod"><span class="num">04</span>Producers: acks, Retries, Idempotence</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The app hands an event to the broker. If the reply never arrives, the app doesn't know whether the event was stored. Retry, and it may be stored twice; don't retry, and it may be lost. How do producers get "stored exactly once"?</p>
-  </div>
-  <p>Three settings answer it. <strong>acks</strong> says when the broker should reply: <code>0</code> = don't reply (fire and forget), <code>1</code> = after the partition's <strong>leader</strong> wrote it, <code>all</code> = after every <strong>in-sync replica</strong> (ISR: the follower copies that are fully caught up) wrote it. <strong>Retries</strong>: if no reply arrives, send again. <strong>Idempotence</strong>: the producer gets an id from the broker and numbers every message per partition (a <em>sequence number</em>); the broker drops any message whose (producer id, sequence) it already has, so a retry can't create a duplicate.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Sending a parcel. acks=0 is dropping it in a letterbox: no proof. acks=1 is the counter clerk's receipt. acks=all is a receipt signed after copies are filed in two branches. Idempotence is the tracking number: if you send the same parcel again because the receipt got lost, the post office sees the number and says "already have it".</p>
-  </div>
-  <p>First, real runs of the three acks levels, one event each (Gita's order 111) to a fresh topic:</p>
-  <div class="fx" data-lang="py">import json, time
+  <h2 id="kf-prod"><span class="num">04</span>Producers: acks, Replication and Idempotence</h2>
+  <p>The first surprise when you use a Kafka producer is that <code>produce()</code> does not send anything. It puts the message into a buffer in your own process and returns immediately; a background thread groups buffered messages into batches and sends them, and later, when the broker answers, the client calls your <strong>delivery report</strong> callback with either the offset or an error. This is what makes producers fast, but it also means "I called produce" is not the same as "the event is stored". We can see this with the real client and no broker at all: nothing is listening on <code>localhost:1</code>, so every message will eventually fail, and we can watch the client honestly report it.</p>
+  <div class="fx" data-lang="py"># REAL client, NO broker: nothing listens on localhost:1, so we can watch the client on its own
 from confluent_kafka import Producer
 
-event = {"order_id": 111, "event": "placed", "restaurant": "Momo Magic", "city": "Pune",
-         "amount": 220, "ts": "2026-03-09 13:00"}
-for acks in ["0", "1", "all"]:
-    p = Producer({"bootstrap.servers": "localhost:19092", "acks": acks})
-    got = {}
-    def report(err, msg):
-        got["offset"] = msg.offset()
-    t = time.time()
-    p.produce("acks-demo", key="111", value=json.dumps(event), callback=report)
-    p.flush()
-    print(f"acks={acks:&lt;3}  delivery report offset = {str(got['offset']):&gt;4}   ({(time.time() - t) * 1000:.1f} ms)")</div>
-  <div class="fx" data-lang="text">acks=0    delivery report offset = None   (5.9 ms)
-acks=1    delivery report offset =    1   (5.1 ms)
-acks=all  delivery report offset =    2   (4.8 ms)</div>
-  <p>With <code>acks=0</code> the broker sent no reply, so the producer never learned the offset (<code>None</code>), even though the event was in fact stored at offset 0: the next two landed at 1 and 2. On one local broker all three take about 5 ms; on a real cluster <code>all</code> waits for the slowest in-sync copy, the price of safety.</p>
-  <p>The duplicate problem can't be produced on cue (it needs a reply lost on the network at the right moment), so here is a <strong>simulation</strong> in plain Python of what the broker does, with the acknowledgement for "101 delivered" lost once:</p>
-  <div class="fx" data-lang="py"># SIMULATION (no broker): what a lost acknowledgement does to a producer's retry
-def send(partition_log, batch, idempotent, lose_first_ack):
-    seen = set()                                 # broker side: (producer_id, sequence) already written
+p = Producer({"bootstrap.servers": "localhost:1",
+              "message.timeout.ms": 1500,         # give up on undelivered messages after 1.5 s
+              "log_level": 0})                    # keep librdkafka's connection warnings quiet
+
+results = []
+def report(err, msg):
+    results.append((msg.key().decode(), err.name() if err else f"offset {msg.offset()}"))
+
+for order_id in (101, 102, 103):
+    p.produce("order-events", key=str(order_id), value="placed", callback=report)
+print("produce() returned; messages waiting in the local buffer:", len(p))
+print("delivery reports so far:", results)
+
+left = p.flush(5)                                 # wait (up to 5 s) for every message to be settled
+print("after flush: still buffered =", left)
+print("delivery reports:", results)</div>
+  <div class="fx" data-lang="text">produce() returned; messages waiting in the local buffer: 3
+delivery reports so far: []
+after flush: still buffered = 0
+delivery reports: [('101', '_MSG_TIMED_OUT'), ('102', '_MSG_TIMED_OUT'), ('103', '_MSG_TIMED_OUT')]</div>
+  <p>Right after the three <code>produce()</code> calls, all three messages are still sitting in the local buffer and no delivery report has arrived. <code>flush()</code> waits until every buffered message has been settled one way or the other; here, after the 1.5-second timeout, each one is reported as <code>_MSG_TIMED_OUT</code>. Two lessons follow. A script that exits without calling <code>flush()</code> silently throws away whatever is still in its buffer, and only the delivery report tells you whether an event really reached Kafka. (This output is from the real client library; there was no broker, so it shows the client's behaviour, not a broker's.)</p>
+  <p>When a broker does receive a message, when should it reply "stored"? That depends on <strong>replication</strong>. Each partition is copied to several brokers, typically three (the <strong>replication factor</strong>). One copy is the <strong>leader</strong>: producers write to it and consumers read from it. The others are <strong>followers</strong> that continuously copy the leader. The followers that are fully caught up form the <strong>in-sync replica set</strong>, or <strong>ISR</strong>. If the leader's broker dies, one of the in-sync followers becomes the new leader. The producer setting <strong>acks</strong> decides how much of this must happen before the producer is told "done": with <code>acks=0</code> the broker does not reply at all, with <code>acks=1</code> it replies as soon as the leader has written the record, and with <code>acks=all</code> it replies only after every in-sync replica has it.</p>
+  <p>Sending a parcel is a good comparison. <code>acks=0</code> is dropping it in a post box with no proof of posting. <code>acks=1</code> is getting a receipt from the counter clerk. <code>acks=all</code> is getting a receipt only after copies of the paperwork are filed in every branch. The difference shows up only when something fails at the wrong moment, as in this sequence:</p>
+  <table class="tbl">
+    <tr><th>Step</th><th>With acks=1</th><th>With acks=all</th></tr>
+    <tr><td>1. Leader writes "101 delivered"</td><td>broker replies "stored" immediately</td><td>broker waits for the followers</td></tr>
+    <tr><td>2. Leader's broker crashes before followers copy it</td><td>producer already believes it is stored</td><td>no reply yet, so producer retries</td></tr>
+    <tr><td>3. A follower becomes the new leader</td><td>it never had the record: <strong>silently lost</strong></td><td>the retry is written to the new leader</td></tr>
+  </table>
+  <p>So <code>acks=all</code> is the safe choice and is the default in current clients. It is usually combined with the topic setting <code>min.insync.replicas=2</code>, which makes the broker refuse writes when fewer than two copies are in sync; with three replicas, an acknowledged event then survives the loss of any one broker. The price is latency, because the slowest in-sync follower decides when the reply comes.</p>
+  <p>Look again at step 3 of the <code>acks=all</code> column: the producer retried because no reply came. But "no reply" does not always mean "not stored". Sometimes the broker stored the record perfectly and only the reply was lost on the network. A naive retry then writes the same event a second time. This simulation shows the broker's side, with the acknowledgement for "101 delivered" lost once:</p>
+  <div class="fx" data-lang="py"># SIMULATION (no broker): the broker's side of a retry after a lost acknowledgement
+def send(batch, idempotent):
+    partition, seen = [], set()                  # seen = (producer id, sequence) already written
     for seq, event in enumerate(batch):
-        attempts = 2 if (lose_first_ack and seq == 1) else 1   # the ack for event #1 is lost -&gt; resend
-        for _ in range(attempts):
+        attempts = 2 if seq == 1 else 1          # the ack for message #1 is lost, so it is sent again
+        for attempt in range(attempts):
             if idempotent and ("producer-7", seq) in seen:
-                continue                         # broker: "already have seq 1 from producer-7", drops it
-            partition_log.append(event)
+                print(f"   broker: seq {seq} from producer-7 already written -&gt; drop the retry")
+                continue
+            partition.append(event)
             seen.add(("producer-7", seq))
+    return partition
 
 batch = ["101 placed", "101 delivered", "105 placed"]
 for idem in (False, True):
-    log = []
-    send(log, batch, idempotent=idem, lose_first_ack=True)
-    print(f"enable.idempotence={idem!s:5} -&gt; partition 2 holds {log}")</div>
-  <div class="fx" data-lang="text">enable.idempotence=False -&gt; partition 2 holds ['101 placed', '101 delivered', '101 delivered', '105 placed']
-enable.idempotence=True  -&gt; partition 2 holds ['101 placed', '101 delivered', '105 placed']</div>
-  <p>Without idempotence the retry wrote "101 delivered" twice, and every consumer would see the order delivered twice (a revenue counter would count ₹240 twice). With it, the broker recognised sequence 1 from the same producer and dropped the copy. In the real run of section 03 you can see the first step of this: librdkafka logged <code>Failed to acquire idempotence PID from broker … Coordinator load in progress: retrying</code> while the freshly started broker was still loading, then got its producer id and sent all 19 events.</p>
-  <table class="tbl">
-    <tr><th>Producer setting</th><th>Meaning</th></tr>
-    <tr><td><code>acks=0 / 1 / all</code></td><td>No reply / leader wrote it / all in-sync replicas wrote it (safest; default in current clients)</td></tr>
-    <tr><td><code>enable.idempotence=true</code></td><td>Producer id + per-partition sequence numbers; broker drops retry duplicates and keeps order</td></tr>
-    <tr><td><code>retries</code>, <code>delivery.timeout.ms</code></td><td>Keep retrying until this overall deadline (default 2 minutes), then report failure</td></tr>
-    <tr><td><code>min.insync.replicas</code> (topic)</td><td>With acks=all, refuse writes unless at least this many copies are in sync (e.g. 2 of 3)</td></tr>
-    <tr><td><code>linger.ms</code>, <code>batch.size</code></td><td>Wait a little to fill bigger batches: more throughput, slightly more latency</td></tr>
-  </table>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>An <strong>idempotent producer</strong> guarantees that retries never write duplicates or reorder messages within a partition. Combined with <code>acks=all</code> and replication, an acknowledged event survives a broker failure.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p><code>produce()</code> only buffers. A script that exits without <code>flush()</code> silently loses its last events. Long-running producers must also call <code>poll(0)</code> regularly so delivery reports (and errors) are handled.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: consumers and consumer groups.</b> The events are stored safely and once. On the reading side, one kitchen-notifier process can't keep up with a national lunch rush. Start three copies, and how do they split the events without sending the same ticket twice?</div>
+    print(f"enable.idempotence={idem}")
+    print("   partition 2 now holds:", send(batch, idem))</div>
+  <div class="fx" data-lang="text">enable.idempotence=False
+   partition 2 now holds: ['101 placed', '101 delivered', '101 delivered', '105 placed']
+enable.idempotence=True
+   broker: seq 1 from producer-7 already written -&gt; drop the retry
+   partition 2 now holds: ['101 placed', '101 delivered', '105 placed']</div>
+  <p>Without protection, the retry put "101 delivered" into the partition twice, and every consumer would see the order delivered twice; a revenue counter would add Dosa Hut's ₹240 twice. The fix is the <strong>idempotent producer</strong>. "Idempotent" means that doing something twice has the same effect as doing it once. When <code>enable.idempotence</code> is on, the broker gives the producer an id, the producer numbers every message it sends to each partition with a <strong>sequence number</strong>, and the broker remembers the last sequence numbers it has written for that producer. A retry carries the same (producer id, sequence) pair, so the broker recognises it and drops the copy, as in the second run. Sequence numbers also stop retries from reordering messages within a partition. A production producer's configuration usually looks like this (shown without output):</p>
+  <div class="fx" data-lang="py">from confluent_kafka import Producer
 
-  <h2 id="kf-group"><span class="num">05</span>Consumers &amp; Consumer Groups</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We want several copies of the kitchen notifier to share the work, never handling the same event twice, while the warehouse loader reads the very same events independently. And when a copy crashes, someone must take over its share. Who decides?</p>
-  </div>
-  <p>The rule. Consumers with the same <code>group.id</code> form a <strong>consumer group</strong>, and Kafka gives each partition to exactly one member of the group. Different groups are independent: each group gets every event. When a member joins, leaves or stops sending heartbeats, the group redistributes partitions: a <strong>rebalance</strong>.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Exam answer sheets from three classrooms (partitions) and a team of examiners (one group). Each classroom's bundle goes to exactly one examiner, so no sheet is marked twice. When a second examiner arrives, the head examiner moves a bundle over (rebalance). The moderation board is a different group: it sees every sheet too. A fourth examiner with only three bundles has nothing to do.</p>
-  </div>
-  <p>How are partitions shared? The default "range" rule, by hand: sort the partitions and the members, give each member a consecutive block, the first members one extra if it doesn't divide evenly:</p>
-  <div class="fx" data-lang="py"># The "range" rule, by hand: sort partitions and members, give each member a consecutive block
+p = Producer({
+    "bootstrap.servers": "broker1:9092,broker2:9092,broker3:9092",
+    "acks": "all",                   # reply only when every in-sync replica has the record
+    "enable.idempotence": True,      # producer id + sequence numbers: retries never duplicate
+    "delivery.timeout.ms": 120000,   # keep retrying for up to 2 minutes, then report failure
+    "linger.ms": 5,                  # wait up to 5 ms to fill a batch: fewer, bigger requests
+    "compression.type": "lz4",       # compress each batch
+})</div>
+  <p><code>linger.ms</code> and <code>compression.type</code> are throughput settings: waiting a few milliseconds lets the client fill bigger batches, which costs a little latency and saves a lot of network and disk. <code>delivery.timeout.ms</code> is the overall deadline after which a message that still could not be stored is reported as failed in the delivery report, which is where your code must log it or stop.</p>
+  <p>Events are now stored safely and exactly once in the log. The reading side has its own problem: one kitchen-notifier process cannot keep up with a national lunch rush, but if we start three copies, how do they split the events without sending the same kitchen ticket three times?</p>
+
+  <h2 id="kf-group"><span class="num">05</span>Consumer Groups and Rebalancing</h2>
+  <p>Kafka handles this with a <strong>consumer group</strong>: a set of consumers that share the same <code>group.id</code> and divide a topic's partitions between them, with each partition owned by exactly one member at a time. Because a partition has one owner, no event is handled twice within the group, and because that owner reads the partition in offset order, each order's events are still processed in order. Different groups are completely independent: the <code>kitchen-notifier</code> group and the <code>warehouse-loader</code> group each receive every event, each with its own committed offsets, which is the "many readers" property of the log at work.</p>
+  <p>Picture an exam with answer sheets from three classrooms, and a team of examiners. Each classroom's bundle goes to exactly one examiner, so no sheet is marked twice. When a second examiner arrives, the head examiner hands one bundle over. If an examiner goes home sick, their bundles are given to the others. The moderation board is a separate team: it sees every sheet too, without disturbing the examiners. And a fourth examiner, with only three bundles to go round, has nothing to do.</p>
+  <p>Redistributing partitions when the group changes is called a <strong>rebalance</strong>. It happens when a consumer joins, when one leaves cleanly, and when one is presumed dead because it stopped sending <strong>heartbeats</strong> (regular "I'm alive" signals). One broker acts as the group's <strong>coordinator</strong> and tracks membership; one member computes the new assignment using an <strong>assignment strategy</strong>. The simplest is "range": sort the members, and give each a consecutive block of partitions, with the first members getting one extra if the numbers do not divide evenly. Here it is by hand, applied to the life of a kitchen-notifier group on our 3-partition topic:</p>
+  <div class="fx" data-lang="py"># The "range" rule by hand: sort the members, give each a consecutive block of partitions
 def range_assign(partitions, members):
     members = sorted(members)
     per, extra = divmod(len(partitions), len(members))
     out, start = {}, 0
     for i, m in enumerate(members):
-        n = per + (1 if i &lt; extra else 0)          # the first \`extra\` members get one more
+        n = per + (1 if i &lt; extra else 0)          # the first "extra" members get one more
         out[m] = partitions[start:start + n]
         start += n
     return out
 
-for members in (["A"], ["A", "B"], ["A", "B", "C"], ["A", "B", "C", "D"]):
-    print(f"{len(members)} consumer(s):", range_assign([0, 1, 2], members))</div>
-  <div class="fx" data-lang="text">1 consumer(s): {'A': [0, 1, 2]}
-2 consumer(s): {'A': [0, 1], 'B': [2]}
-3 consumer(s): {'A': [0], 'B': [1], 'C': [2]}
-4 consumer(s): {'A': [0], 'B': [1], 'C': [2], 'D': []}</div>
-  <p>With 3 partitions, the fourth consumer gets nothing: useful consumers in a group ≤ partitions. Now a real group. The script is one kitchen-notifier process; it prints whenever Kafka assigns it partitions. We start A for 30 seconds, and B 8 seconds later for 10 seconds:</p>
-  <div class="fx" data-lang="py">import sys, time
-from confluent_kafka import Consumer
-
-name, lifetime = sys.argv[1], float(sys.argv[2])     # e.g. "A" 30  -&gt; run for 30 seconds
-c = Consumer({"bootstrap.servers": "localhost:19092",
-              "group.id": "kitchen-notifier",          # same group id = share the work
-              "auto.offset.reset": "earliest"})
-
-def on_assign(consumer, partitions):
-    print(f"{time.strftime('%H:%M:%S')} {name} assigned {sorted(p.partition for p in partitions)}", flush=True)
-
-c.subscribe(["order-events"], on_assign=on_assign)
-end = time.time() + lifetime
-while time.time() &lt; end:
-    c.poll(0.5)                                        # polling also sends heartbeats
-c.close()                                              # leave the group cleanly
-print(f"{time.strftime('%H:%M:%S')} {name} left", flush=True)</div>
-  <div class="fx" data-lang="text">$ python k05_group.py A 30 &amp;  sleep 8;  python k05_group.py B 10
-04:54:08 A assigned [0, 1, 2]
-04:54:12 B assigned [0, 1]
-04:54:12 A assigned [2]
-04:54:20 B left
-04:54:21 A assigned [0, 1, 2]
-04:54:32 A left</div>
-  <p>Read the timeline. Alone, A owned all three partitions. When B joined, a rebalance split them 2 + 1, as the range rule says, but B got [0, 1] and A got [2]: members are sorted by their generated member ids, not by the names we print, so the trace above predicts the shape, not who gets which block. When B closed, another rebalance gave everything back to A within a second. No partition ever had two owners. <code>poll()</code> is more than "fetch": it is also how a consumer tells the group "I'm alive".</p>
+# SIMULATION of a group's life: who owns which partition of order-events after each change
+timeline = [("A starts", ["A"]), ("B joins", ["A", "B"]), ("C joins", ["A", "B", "C"]),
+            ("D joins", ["A", "B", "C", "D"]), ("B crashes", ["A", "C", "D"])]
+for what, members in timeline:
+    print(f"{what:10} -&gt; {range_assign([0, 1, 2], members)}")</div>
+  <div class="fx" data-lang="text">A starts   -&gt; {'A': [0, 1, 2]}
+B joins    -&gt; {'A': [0, 1], 'B': [2]}
+C joins    -&gt; {'A': [0], 'B': [1], 'C': [2]}
+D joins    -&gt; {'A': [0], 'B': [1], 'C': [2], 'D': []}
+B crashes  -&gt; {'A': [0], 'C': [1], 'D': [2]}</div>
+  <p>Read it line by line. Alone, A owns all three partitions. When B joins, the partitions are split 2 + 1, and when C joins each member owns one. When D joins, there is no partition left for it, so D sits idle: <em>the useful size of a group is at most the number of partitions</em>, which is another reason the partition count is chosen with care. When B crashes, its partition is not lost; the next rebalance gives it to someone else, and the idle D finally gets work. In the real system, the new owner of B's partition starts reading from B's last <em>committed</em> offset, which is the subject of the next section.</p>
   <figure class="viz"><svg viewBox="0 0 600 200" width="600">
     <defs><marker id="kf-ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <text x="70" y="18" text-anchor="middle" font-weight="bold">order-events</text>
@@ -509,8 +422,8 @@ print(f"{time.strftime('%H:%M:%S')} {name} left", flush=True)</div>
     <rect x="20" y="130" width="100" height="32" rx="4" class="fs"/><text x="70" y="151" text-anchor="middle">P2</text>
     <rect x="240" y="22" width="150" height="150" rx="8" fill="none" stroke="currentColor" stroke-dasharray="4 3"/>
     <text x="315" y="190" text-anchor="middle" font-size="11">group "kitchen-notifier"</text>
-    <rect x="265" y="40" width="100" height="36" rx="6" class="fb"/><text x="315" y="63" text-anchor="middle">consumer B</text>
-    <rect x="265" y="115" width="100" height="36" rx="6" class="ft"/><text x="315" y="138" text-anchor="middle">consumer A</text>
+    <rect x="265" y="40" width="100" height="36" rx="6" class="fb"/><text x="315" y="63" text-anchor="middle">consumer A</text>
+    <rect x="265" y="115" width="100" height="36" rx="6" class="ft"/><text x="315" y="138" text-anchor="middle">consumer B</text>
     <g stroke="currentColor" marker-end="url(#kf-ar2)">
       <line x1="120" y1="46" x2="263" y2="56"/>
       <line x1="120" y1="96" x2="263" y2="64"/>
@@ -519,188 +432,182 @@ print(f"{time.strftime('%H:%M:%S')} {name} left", flush=True)</div>
     <rect x="440" y="70" width="150" height="36" rx="6" class="fv"/><text x="515" y="93" text-anchor="middle">"warehouse-loader"</text>
     <text x="515" y="125" text-anchor="middle" font-size="11" class="tm">separate group:</text>
     <text x="515" y="140" text-anchor="middle" font-size="11" class="tm">gets ALL partitions too</text>
-  </svg><figcaption>The real split while B was in the group: B had P0 and P1, A had P2. Another group reads everything independently.</figcaption></figure>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A <strong>consumer group</strong> is a set of consumers sharing a <code>group.id</code>; each partition is assigned to exactly one member. A <strong>rebalance</strong> reassigns partitions when membership changes. Assignment strategies: range, round-robin, (cooperative-)sticky, which moves as few partitions as possible.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>If handling one batch takes longer than <code>max.poll.interval.ms</code> (default 5 minutes), for example a slow model call, the group assumes the consumer is dead and rebalances; another member re-reads the uncommitted events, is also too slow, and the group loops: a <strong>rebalance storm</strong>. Keep per-poll work small or raise the limit.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: offsets and delivery semantics.</b> A new owner after a rebalance or a crash must know where the previous owner stopped. If the old owner had sent order 103 to the kitchen but not yet saved its bookmark, is 103 sent twice? Or lost?</div>
-
-  <h2 id="kf-sem"><span class="num">06</span>Offsets &amp; Delivery Semantics</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>For each event a consumer does two things: <strong>process</strong> it (send the kitchen ticket) and <strong>commit</strong> its offset (save the bookmark). A crash can happen between the two. What happens to that event depends only on which step comes first. Which order do we want, and can we have neither loss nor duplicates?</p>
-  </div>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Reading a textbook with a bookmark. Move the bookmark first, then read: if you fall asleep, you wake up past a page you never read. Read first, then move it: if you fall asleep, you re-read one page. Re-reading is usually the cheaper mistake.</p>
-  </div>
-  <p>A <strong>simulation</strong> (crashes can't be scheduled on a real broker): the kitchen notifier handles the five "placed" events of 2–3 March and crashes once at offset 2 (order 103), right after its first step, then restarts from the last committed offset, exactly as a real consumer does.</p>
-  <div class="fx" data-lang="py"># SIMULATION (no broker): the kitchen-notifier crashes once, right after the first step for offset 2
-def run(order, crash_at):
-    log = ["101 placed", "102 placed", "103 placed", "104 placed", "105 placed"]
-    committed, sent_to_kitchen, crashed = 0, [], False
-    while committed &lt; len(log):
-        off = committed
-        for step in order:
-            if step == "commit":
-                committed = off + 1
-            else:
-                sent_to_kitchen.append(log[off][:3])
-            if off == 2 and step == crash_at and not crashed:
-                crashed = True
-                break                       # crash! restart from the committed offset
-    return sent_to_kitchen
-
-print("commit then process:", run(["commit", "process"], "commit"))
-print("process then commit:", run(["process", "commit"], "process"))</div>
-  <div class="fx" data-lang="text">commit then process: ['101', '102', '104', '105']
-process then commit: ['101', '102', '103', '103', '104', '105']</div>
-  <table class="tbl out"><caption>Trace of the crash at order 103 (offset 2)</caption>
-    <tr><th>Order of steps</th><th>Before the crash</th><th>Committed offset</th><th>After restart</th><th>Result</th></tr>
-    <tr><td>commit → process</td><td>committed 3; ticket for 103 not sent</td><td>3</td><td>starts at 104</td><td>103 <strong>lost</strong>: at-most-once</td></tr>
-    <tr><td>process → commit</td><td>ticket for 103 sent; not committed</td><td>2</td><td>starts at 103 again</td><td>103 <strong>twice</strong>: at-least-once</td></tr>
-  </table>
-  <h3>Lag: is the group keeping up?</h3>
-  <p>A real group, <code>warehouse-loader</code>, reads all 19 events and commits after each (process, then commit). Then Gita places her first order (111, two more events), and we ask Kafka how far behind the group is:</p>
+  </svg><figcaption>The "B joins" line above: A owns P0 and P1, B owns P2. Another group reads every partition independently.</figcaption></figure>
+  <p>The figure is the second line of the output. Each partition has exactly one arrow into the kitchen-notifier group, while the warehouse-loader group, drawn separately, has its own arrows to all three partitions (not drawn) and its own bookmarks. In real code you never compute assignments yourself; you call <code>subscribe()</code> and Kafka tells you what you own through callbacks. This is a real consumer, shown without output:</p>
   <div class="fx" data-lang="py">import json
 from confluent_kafka import Consumer
 
-c = Consumer({"bootstrap.servers": "localhost:19092", "group.id": "warehouse-loader",
-              "auto.offset.reset": "earliest", "enable.auto.commit": False})
+c = Consumer({"bootstrap.servers": "broker1:9092",
+              "group.id": "kitchen-notifier",        # same group id = share the partitions
+              "auto.offset.reset": "earliest"})      # no committed offset yet? start at the beginning
+
+def on_assign(consumer, partitions):
+    print("now own", [p.partition for p in partitions])
+
+def on_revoke(consumer, partitions):
+    print("giving up", [p.partition for p in partitions])   # last chance to commit finished work
+
+c.subscribe(["order-events"], on_assign=on_assign, on_revoke=on_revoke)
+try:
+    while True:
+        msg = c.poll(1.0)                            # fetch AND tell the group "I'm alive"
+        if msg is None or msg.error():
+            continue
+        e = json.loads(msg.value())
+        if e["event"] == "placed":
+            print(f"ticket for {e['restaurant']}: order {e['order_id']}")
+finally:
+    c.close()                                        # leave the group cleanly: fast rebalance</div>
+  <p><code>on_assign</code> is called after each rebalance with the partitions this process now owns, and <code>on_revoke</code> just before it loses some, which is the right moment to commit work that is finished. Notice that <code>poll()</code> does two jobs: it fetches records and it keeps the consumer's membership alive. If one call to your processing code takes longer than <code>max.poll.interval.ms</code> (five minutes by default), for example because it calls a slow model for every event, the group decides the consumer is dead and rebalances; the partition goes to another member, which re-reads the same uncommitted events, is just as slow, and the group can loop like this indefinitely, a so-called <strong>rebalance storm</strong>. Keep the work per poll small, or raise the limit deliberately.</p>
+  <p>The range strategy is "eager": every member gives up all its partitions during a rebalance, so the whole group pauses briefly. Newer strategies such as <strong>cooperative-sticky</strong> move only the partitions that must change hands and let everyone keep reading the rest. Either way, a new owner must know exactly where the previous owner stopped, and if the old owner had sent order 103's ticket but not yet saved its bookmark, the question becomes: is 103 sent twice, or lost?</p>
+
+  <h2 id="kf-sem"><span class="num">06</span>Offsets and Delivery Semantics</h2>
+  <p>For every event, a consumer does two separate things: it <strong>processes</strong> the event (sends the kitchen ticket, writes to the warehouse) and it <strong>commits</strong> the offset (saves its bookmark in Kafka). A <strong>committed offset</strong> is the offset of the next record the group needs from that partition. A crash can happen between those two steps, and what happens to that one event depends entirely on which step came first. Think of reading a textbook with a bookmark: if you move the bookmark first and then fall asleep, you wake up past a page you never read; if you read first and fall asleep before moving the bookmark, you read one page again. This simulation crashes the kitchen notifier once, between its two steps, at order 103, and restarts it from the committed offset exactly as a real consumer would:</p>
+  <div class="fx" data-lang="py"># SIMULATION (no broker): the kitchen-notifier crashes once, between its two steps, at offset 2
+def run(steps):
+    log = ["101 placed", "102 placed", "103 placed", "104 placed", "105 placed"]
+    committed, tickets, crashed = 0, [], False
+    while committed &lt; len(log):
+        offset = committed                     # (re)start from the committed offset
+        for i, step in enumerate(steps):
+            if step == "commit":
+                committed = offset + 1
+            else:                              # "process": send the kitchen ticket
+                tickets.append(log[offset][:3])
+            if offset == 2 and i == 0 and not crashed:
+                crashed = True                 # crash after the FIRST step for order 103
+                break
+    return tickets
+
+print("commit, then process -&gt; tickets sent:", run(["commit", "process"]))
+print("process, then commit -&gt; tickets sent:", run(["process", "commit"]))</div>
+  <div class="fx" data-lang="text">commit, then process -&gt; tickets sent: ['101', '102', '104', '105']
+process, then commit -&gt; tickets sent: ['101', '102', '103', '103', '104', '105']</div>
+  <p>With "commit, then process", the bookmark had already moved past 103 when the crash happened, so after the restart the consumer began at 104 and order 103's ticket was <em>never sent</em>. This is called <strong>at-most-once</strong> delivery: each event is processed once or not at all. With "process, then commit", the ticket for 103 had been sent but the bookmark had not moved, so after the restart the consumer read 103 again and sent the ticket <em>twice</em>. This is <strong>at-least-once</strong> delivery: nothing is lost, but some events are processed more than once. These names, plus a third, <strong>exactly-once</strong>, are called <strong>delivery semantics</strong>, and they describe what a failure costs.</p>
+  <p>At-least-once is the normal choice, because a lost order is much worse than a repeated one, and repeats can be made harmless. A repeated ticket is harmless if the kitchen system ignores a ticket it has already received; a repeated warehouse row is harmless if the load is an <strong>upsert</strong> (insert or update by a key) rather than a plain insert. This is exactly the idempotency idea from the <a class="xref" data-note="de_etl">ETL &amp; Orchestration</a> note, applied to one event instead of one batch. In real code, at-least-once means turning off automatic commits and committing after processing (shown without output):</p>
+  <div class="fx" data-lang="py">import json
+from confluent_kafka import Consumer
+
+c = Consumer({"bootstrap.servers": "broker1:9092",
+              "group.id": "warehouse-loader",
+              "auto.offset.reset": "earliest",
+              "enable.auto.commit": False})          # WE decide when the bookmark moves
 c.subscribe(["order-events"])
-n, empty = 0, 0
-while empty &lt; 5:                                   # stop after 5 quiet seconds (demo only)
-    m = c.poll(1.0)
-    if m is None:
-        empty += 1; continue
-    n += 1                                         # 1. process (here: just count)
-    c.commit(message=m, asynchronous=False)        # 2. then commit -&gt; at-least-once
-c.close()
-print("warehouse-loader processed", n, "events")</div>
-  <div class="fx" data-lang="text">warehouse-loader processed 19 events
-produced 2 events for order 111
-$ kafka-consumer-groups.sh --bootstrap-server localhost:19092 --describe --group warehouse-loader   # columns trimmed
-GROUP             TOPIC         PARTITION CURRENT-OFFSET LOG-END-OFFSET LAG
-warehouse-loader  order-events  2         5              7              2
-warehouse-loader  order-events  1         6              6              0
-warehouse-loader  order-events  0         8              8              0</div>
-  <p>Key 111 hashes to partition 2 (CRC32 % 3 = 2), which now ends at offset 7 while the group's committed offset is 5: <strong>lag</strong> 2, exactly the two new events. Lag that stays small is healthy; lag that keeps growing means the consumers are too slow.</p>
-  <h3>Exactly-once inside Kafka: transactions</h3>
-  <p>The third option makes the result and the commit one all-or-nothing step. The ticket printer reads <code>order-events</code>, writes a kitchen ticket for every <code>placed</code> event to a <code>kitchen-tickets</code> topic, and puts its own consumer offsets in the <em>same</em> transaction. Real run:</p>
+
+def load_into_warehouse(event):                     # must be idempotent: upsert by (order_id, event)
+    ...
+
+while True:
+    msg = c.poll(1.0)
+    if msg is None or msg.error():
+        continue
+    load_into_warehouse(json.loads(msg.value()))    # 1. process
+    c.commit(message=msg, asynchronous=False)       # 2. then commit: at-least-once</div>
+  <p>The setting <code>enable.auto.commit</code> deserves a warning. When it is true (the default), the client commits the offsets of whatever <code>poll()</code> has returned on a timer, every five seconds, whether or not your code has finished with those records. If your code hands records to another thread or writes them in batches, a crash after the timer fired and before the write completed loses those events: at-most-once by accident. Committing explicitly, after the work is done, removes that surprise.</p>
+  <p>Committed offsets also tell you whether a group is keeping up. The <strong>log-end offset</strong> of a partition is the offset the next new record will get, and the <strong>lag</strong> is the log-end offset minus the group's committed offset: the number of records written but not yet processed. Here the warehouse loader has processed everything, and then Gita places her first order, 111, at Momo Magic:</p>
+  <div class="fx" data-lang="py"># SIMULATION (no broker): lag = log-end offset - committed offset, per partition
+
+topic = Topic("order-events", 3)                    # the toy topic from the partitions section
+for e in events():
+    topic.produce(str(e["order_id"]), e)
+
+# warehouse-loader has processed and committed everything so far
+committed = {p: len(records) for p, records in enumerate(topic.partitions)}
+
+# Gita places order 111 at Momo Magic: two new events
+for event in ("placed", "delivered"):
+    p, off = topic.produce("111", {"order_id": 111, "event": event})
+    print(f"order 111 {event:9} -&gt; partition {p}, offset {off}")
+
+print("partition  committed  log-end  lag")
+for p, records in enumerate(topic.partitions):
+    print(f"{p:&gt;9}  {committed[p]:&gt;9}  {len(records):&gt;7}  {len(records) - committed[p]:&gt;3}")</div>
+  <div class="fx" data-lang="text">order 111 placed    -&gt; partition 2, offset 5
+order 111 delivered -&gt; partition 2, offset 6
+partition  committed  log-end  lag
+        0          8        8    0
+        1          6        6    0
+        2          5        7    2</div>
+  <p>Key 111 hashes to partition 2, which now ends at offset 7, while the group's committed offset there is still 5, so the lag is 2: exactly the two new events. On a real cluster the same numbers come from <code>kafka-consumer-groups.sh --describe --group warehouse-loader</code> or a monitoring dashboard. Lag that rises and falls is healthy. Lag that keeps growing means the consumers are slower than the producers, and lag growing on just one partition usually means a hot key.</p>
+  <p>Can we avoid both loss and duplicates entirely? Within Kafka, yes, using <strong>transactions</strong>. Consider a ticket printer that reads <code>order-events</code> and writes a ticket for each <code>placed</code> event to another topic, <code>kitchen-tickets</code>. Its output is a Kafka write, and its progress (the committed offset) is also a Kafka write. A transaction makes both one all-or-nothing step: the tickets and the new offsets become visible together, or, if the process crashes before committing the transaction, neither does, and the restarted process redoes the batch from the old offsets. Consumers downstream set <code>isolation.level=read_committed</code> so they never see records from a transaction that was aborted. The real code looks like this (shown without output):</p>
   <div class="fx" data-lang="py">import json
 from confluent_kafka import Consumer, Producer
 
-c = Consumer({"bootstrap.servers": "localhost:19092", "group.id": "ticket-printer",
-              "auto.offset.reset": "earliest", "enable.auto.commit": False,
-              "isolation.level": "read_committed"})
-p = Producer({"bootstrap.servers": "localhost:19092", "transactional.id": "ticket-printer-1"})
-p.init_transactions()                       # register with the broker; fences old "zombie" copies
+c = Consumer({"bootstrap.servers": "broker1:9092", "group.id": "ticket-printer",
+              "enable.auto.commit": False,
+              "isolation.level": "read_committed"})       # never read aborted transactions
+p = Producer({"bootstrap.servers": "broker1:9092",
+              "transactional.id": "ticket-printer-1"})   # stable identity across restarts
+p.init_transactions()                                    # register; fences any old "zombie" copy
 c.subscribe(["order-events"])
 
-batch, empty = [], 0
-while empty &lt; 5:                            # read what is there now (demo only)
-    m = c.poll(1.0)
-    if m is None:
-        empty += 1; continue
-    batch.append(m)
-
-p.begin_transaction()
-tickets = 0
-for m in batch:
-    e = json.loads(m.value())
-    if e["event"] == "placed":              # every new order becomes a kitchen ticket
-        p.produce("kitchen-tickets", key=m.key(),
-                  value=json.dumps({"order_id": e["order_id"], "restaurant": e["restaurant"]}))
-        tickets += 1
-# the consumer's progress is written INSIDE the same transaction
-p.send_offsets_to_transaction(c.position(c.assignment()), c.consumer_group_metadata())
-p.commit_transaction()                      # tickets + offsets become visible together, or neither
-print(f"read {len(batch)} events, wrote {tickets} tickets; committed offsets:",
-      sorted((tp.partition, tp.offset) for tp in c.committed(c.assignment())))
-c.close()</div>
-  <div class="fx" data-lang="text">read 21 events, wrote 11 tickets; committed offsets: [(0, 8), (1, 6), (2, 7)]</div>
-  <p>21 events read, 11 tickets written (orders 101–111 each placed once), and the committed offsets equal the ends of the partitions (8, 6, 7). Either all 11 tickets and those offsets became visible, or none did: a crash before <code>commit_transaction</code> aborts both, and the restart redoes the batch with no duplicate tickets visible to <code>read_committed</code> readers. <code>transactional.id</code> gives the producer a stable identity, so if an old copy of the program comes back from the dead, the broker rejects it (<strong>fencing</strong>).</p>
+while True:
+    msgs = c.consume(num_messages=100, timeout=1.0)
+    if not msgs:
+        continue
+    p.begin_transaction()
+    for m in msgs:
+        e = json.loads(m.value())
+        if e["event"] == "placed":                       # every new order becomes a kitchen ticket
+            p.produce("kitchen-tickets", key=m.key(),
+                      value=json.dumps({"order_id": e["order_id"], "restaurant": e["restaurant"]}))
+    # the consumer's new offsets are written INSIDE the same transaction
+    p.send_offsets_to_transaction(c.position(c.assignment()), c.consumer_group_metadata())
+    p.commit_transaction()                               # tickets + offsets visible together, or neither</div>
+  <p>The <code>transactional.id</code> gives the producer a stable identity. If a frozen old copy of the program wakes up after a new copy has taken over, the broker sees the same id with an older "epoch" and rejects its writes; this is called <strong>fencing</strong>, and it stops "zombie" processes from adding duplicates. This combination, idempotent producer plus transactions plus <code>read_committed</code>, is what Kafka calls <strong>exactly-once semantics</strong>. Its limit is important: it covers only reads and writes to Kafka itself. If the consumer writes to Postgres or sends an SMS, Kafka cannot roll that back, so for external systems "exactly-once" in practice means at-least-once delivery plus an idempotent write (upsert by event id), which gives an <em>effectively once</em> result.</p>
   <table class="tbl">
-    <tr><th>Semantics</th><th>How</th><th>Use when</th></tr>
-    <tr><td>At-most-once</td><td>Commit first (or careless auto-commit)</td><td>Losing a few metrics or logs is fine</td></tr>
-    <tr><td><strong>At-least-once</strong></td><td><code>enable.auto.commit=false</code>; process, then commit</td><td>The usual default; make the sink idempotent</td></tr>
-    <tr><td>Exactly-once</td><td>Transactions for Kafka → Kafka; to an external DB: at-least-once + idempotent writes (upsert by event id)</td><td>Payments, billing, counters</td></tr>
+    <tr><th>Semantics</th><th>How you get it</th><th>A crash causes</th><th>Use when</th></tr>
+    <tr><td>At-most-once</td><td>commit before processing (or careless auto-commit)</td><td>lost events</td><td>losing a few metrics or logs is acceptable</td></tr>
+    <tr><td><strong>At-least-once</strong></td><td>auto-commit off; process, then commit</td><td>repeated events</td><td>the usual default; make the sink idempotent</td></tr>
+    <tr><td>Exactly-once</td><td>Kafka → Kafka: transactions; to an external system: at-least-once + idempotent writes</td><td>nothing visible</td><td>billing, payments, counters</td></tr>
   </table>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A <strong>committed offset</strong> is a group's bookmark per partition: the next offset to read. <strong>Delivery semantics</strong> describe what a crash does: at-most-once (may lose), at-least-once (may repeat), exactly-once (effects happen once). <strong>Lag</strong> = log-end offset − committed offset.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Kafka transactions only cover Kafka. If the consumer writes to Postgres and then commits the offset, a crash between them still repeats the Postgres write. The fix is the ETL note's idempotency: upsert by a key, so a repeat changes nothing. And <code>enable.auto.commit=true</code> commits on a timer (every 5 s), whether or not you finished: crash after the timer and before your write, and the event is silently lost.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: retention and compaction.</b> Reading never deletes, so the log only grows. How long does Kafka keep events? And the rider app only needs each order's <em>current</em> status, not its whole history: can a topic hold just that?</div>
+  <p>Since reading never deletes anything, the log only grows. How long does Kafka keep events, and could a topic hold just the current status of each order instead of its whole history?</p>
 
-  <h2 id="kf-ret"><span class="num">07</span>Retention &amp; Compaction</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>A log that keeps everything forever fills every disk. But deleting by age alone also deletes the only record of an order's current status if it hasn't changed in a while. How does Kafka decide what to throw away?</p>
-  </div>
-  <p>Two policies, set per topic. <strong>Retention</strong> (<code>cleanup.policy=delete</code>, the default): Kafka stores each partition as a series of files called <strong>segments</strong>, and deletes whole old segments when they pass an age (<code>retention.ms</code>, default 7 days) or the partition passes a size (<code>retention.bytes</code>). Consumers that fall further behind than that lose data. <strong>Compaction</strong> (<code>cleanup.policy=compact</code>): instead of deleting by age, a background cleaner keeps at least the <em>latest</em> record for every key and removes older ones. The topic becomes a table: "current status of each order". A record with a null value, a <strong>tombstone</strong>, means "delete this key"; after a while the tombstone itself is removed too.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Retention is a CCTV recorder that overwrites footage older than a week. Compaction is a school's contact register: when a parent's phone number changes, the old line is struck out and only the newest number per student remains; a student who leaves gets a "left school" entry, and later their line goes too.</p>
-  </div>
-  <p>A real compacted topic, <code>order-status</code>, with cleaning made aggressive so it happens within seconds (segments roll after 1 s, the cleaner runs as soon as 1% of the log is old versions). Every status change of Biteful's orders is written with key = order id, then a tombstone for cancelled order 105:</p>
-  <div class="fx" data-lang="text">$ kafka-topics.sh --bootstrap-server localhost:19092 --create --topic order-status --partitions 1 \\
-    --replication-factor 1 --config cleanup.policy=compact --config segment.ms=1000 \\
-    --config min.cleanable.dirty.ratio=0.01 --config delete.retention.ms=100
-Created topic order-status.</div>
-  <div class="fx" data-lang="py">import time
-from confluent_kafka import Consumer, Producer
-from biteful_events import events
+  <h2 id="kf-ret"><span class="num">07</span>Retention and Compaction</h2>
+  <p>A log that keeps every event forever will eventually fill every disk, so each topic has a <strong>cleanup policy</strong> that decides what may be thrown away. The default policy, <code>cleanup.policy=delete</code>, is called <strong>retention</strong>: events are kept for a set time (<code>retention.ms</code>, seven days by default) or until the partition reaches a set size (<code>retention.bytes</code>), and older data is deleted. Retention is like a CCTV recorder that overwrites footage older than a week: it does not care what is in the footage, only how old it is.</p>
+  <p>To delete efficiently, Kafka stores each partition not as one file but as a series of files called <strong>segments</strong>. New records are written to the newest, <strong>active</strong> segment; when it reaches a size or age limit it is closed and a new one begins. Retention deletes whole closed segments, never single records, and a segment is deleted only when even its newest record is past the limit. This simulation applies a five-day retention to our 19 events, stored in segments of four records:</p>
+  <div class="fx" data-lang="py"># SIMULATION (no broker): retention deletes whole old segments, never single records
+from datetime import datetime, timedelta
 
-p = Producer({"bootstrap.servers": "localhost:19092"})
-for e in events():                                        # every status change, keyed by order
-    p.produce("order-status", key=str(e["order_id"]), value=e["event"])
-p.produce("order-status", key="105", value=None)          # tombstone: forget cancelled order 105
-p.flush()
+SEGMENT_SIZE = 4                                 # real segments are files of ~1 GB; 4 records here
+records = [(off, e["ts"], f"{e['order_id']} {e['event']}") for off, e in enumerate(events())]
+segments = [records[i:i + SEGMENT_SIZE] for i in range(0, len(records), SEGMENT_SIZE)]
 
-def read_all(label):
-    c = Consumer({"bootstrap.servers": "localhost:19092", "group.id": f"reader-{time.time()}",
-                  "auto.offset.reset": "earliest"})
-    c.subscribe(["order-status"])
-    rows, empty = [], 0
-    while empty &lt; 3:
-        m = c.poll(1.0)
-        if m is None:
-            empty += 1; continue
-        rows.append((m.offset(), m.key().decode(), m.value().decode() if m.value() else None))
-    c.close()
-    print(f"{label}: {len(rows)} records")
-    for r in rows:
-        print("  offset %2d  key %s  %s" % r)
+now = datetime(2026, 3, 10, 12, 0)
+cutoff = (now - timedelta(days=5)).strftime("%Y-%m-%d %H:%M")    # retention.ms = 5 days here
+print("cutoff:", cutoff)
+for seg in segments:
+    newest = seg[-1][1]                          # a segment goes only when its NEWEST record is too old
+    verdict = "DELETE" if newest &lt; cutoff else "keep  "
+    print(f"{verdict} segment offsets {seg[0][0]:&gt;2}-{seg[-1][0]:&gt;2}   oldest {seg[0][1]}   newest {newest}")</div>
+  <div class="fx" data-lang="text">cutoff: 2026-03-05 12:00
+DELETE segment offsets  0- 3   oldest 2026-03-02 12:10   newest 2026-03-02 13:46
+DELETE segment offsets  4- 7   oldest 2026-03-02 20:30   newest 2026-03-03 14:00
+DELETE segment offsets  8-11   oldest 2026-03-03 19:45   newest 2026-03-04 13:05
+keep   segment offsets 12-15   oldest 2026-03-04 21:10   newest 2026-03-05 18:49
+keep   segment offsets 16-18   oldest 2026-03-05 20:05   newest 2026-03-08 20:50</div>
+  <p>The first three segments contain only records older than the cutoff of 5 March 12:00, so they are deleted whole. The fourth segment starts with order 107's events from the evening of 4 March, which are older than the cutoff, but it is kept because its newest record (5 March 18:49) is not, so retention is "at least this long", never "exactly this long". The consequence for consumers is serious: a consumer group that falls further behind than the retention period finds that the records at its committed offset no longer exist, and it has to jump forward (losing data) or back to the earliest available record, as decided by <code>auto.offset.reset</code>.</p>
+  <p>Some topics should not be cleaned by age at all. The rider app does not need the full history of each order, only its <em>current</em> status, and an order whose status has not changed for a week must not disappear. For this Kafka offers <code>cleanup.policy=compact</code>, called <strong>log compaction</strong>: a background process, the <strong>log cleaner</strong>, keeps at least the most recent record for every key and removes older records with the same key. The topic then behaves like a table of "latest value per key". To delete a key completely, a producer writes a record with that key and an empty (null) value, called a <strong>tombstone</strong>. A school's contact register is a good picture: when a parent's phone number changes, the old line is struck out and only the newest number remains, and when a student leaves, a "left school" line is added, after which that student's lines are removed. This simulation compacts a topic <code>order-status</code> holding every status change, plus a tombstone for cancelled order 105:</p>
+  <div class="fx" data-lang="py"># SIMULATION (no broker): what the log cleaner does to a compacted topic "order-status"
 
-read_all("before compaction")
-time.sleep(3)
-p.produce("order-status", key="111", value="placed")      # a new record rolls the old segment
-p.flush()
-time.sleep(20)                                            # give the log cleaner time to run
-read_all("after compaction")</div>
-  <div class="fx" data-lang="text">before compaction: 20 records
-  offset  0  key 101  placed
-  offset  1  key 101  delivered
-  offset  2  key 102  placed
-  offset  3  key 102  delivered
-  offset  4  key 103  placed
-  offset  5  key 103  delivered
-  offset  6  key 104  placed
-  offset  7  key 104  delivered
-  offset  8  key 105  placed
-  offset  9  key 105  cancelled
-  offset 10  key 106  placed
-  offset 11  key 106  delivered
-  offset 12  key 107  placed
-  offset 13  key 107  cancelled
-  offset 14  key 108  placed
-  offset 15  key 108  delivered
-  offset 16  key 109  placed
-  offset 17  key 109  delivered
-  offset 18  key 110  placed
-  offset 19  key 105  None
-after compaction: 11 records
+log = [(off, str(e["order_id"]), e["event"]) for off, e in enumerate(events())]
+log.append((len(log), "105", None))              # tombstone (value None): "forget order 105"
+
+def compact(log, drop_tombstones=False):
+    newest = {}                                  # key -&gt; offset of its newest record
+    for off, key, value in log:
+        newest[key] = off
+    kept = [(off, k, v) for off, k, v in log if newest[k] == off]   # offsets are NOT renumbered
+    if drop_tombstones:                          # once delete.retention.ms has passed
+        kept = [(off, k, v) for off, k, v in kept if v is not None]
+    return kept
+
+first = compact(log)
+print(f"before: {len(log)} records   after cleaning: {len(first)} records")
+for off, key, value in first:
+    print(f"  offset {off:&gt;2}  key {key}  {value}")
+print("later, tombstones removed too:", [k for _, k, _ in compact(log, drop_tombstones=True)])</div>
+  <div class="fx" data-lang="text">before: 20 records   after cleaning: 10 records
   offset  1  key 101  delivered
   offset  3  key 102  delivered
   offset  5  key 103  delivered
@@ -711,215 +618,314 @@ after compaction: 11 records
   offset 17  key 109  delivered
   offset 18  key 110  placed
   offset 19  key 105  None
-  offset 20  key 111  placed</div>
-  <p>Trace it. Before cleaning: 20 records, two per finished order. After: 11. Each order kept only its last status (101 delivered at offset 1; the "placed" at offset 0 is gone). Offsets did not change: compaction leaves gaps, it never renumbers. Order 105's "placed" and "cancelled" were removed because of the tombstone at offset 19, which is itself kept for <code>delete.retention.ms</code> so that readers can learn about the deletion. The newest records (110, the tombstone, 111) sat in recent segments; the cleaner never touches the active segment. A new rider app reading this topic from the start rebuilds "current status of every order" from 11 records instead of the full history.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Retention</strong>: delete old segments by time or size, regardless of key. <strong>Log compaction</strong>: keep at least the latest record per key; a <strong>tombstone</strong> (null value) deletes a key. Compacted topics act as changelogs for state; Kafka's own <code>__consumer_offsets</code> is compacted.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Compaction is not instant and not exact: a reader may still see older versions of a key (the active segment is never cleaned), so consumers must treat the topic as "latest wins". And on a compacted topic, a consumer that needs the full history (the warehouse loader) is reading the wrong topic.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: streaming pipelines.</b> Events are stored, shared, deduplicated and kept for the right time. Now Biteful wants answers computed on the stream: delivered revenue per city per day, updated as deliveries happen. But the stream never ends and some events arrive late. When is "2 March's revenue" finished?</div>
+later, tombstones removed too: ['101', '102', '103', '104', '106', '107', '108', '109', '110']</div>
+  <p>Before cleaning there were 20 records; afterwards there are 10. Each order kept only its last status: order 101 is now just "delivered" at offset 1, and its "placed" record at offset 0 is gone. The offsets did not change. Compaction leaves gaps; it never renumbers, so a consumer's committed offset still means the same thing. Order 105's "placed" and "cancelled" records were removed because a newer record for key 105 exists, the tombstone. The tombstone itself is kept for a while (<code>delete.retention.ms</code>, one day by default) so that consumers reading the topic learn that 105 was deleted; after that it is removed too, as the last line shows. In real Kafka the active segment is never cleaned, so a reader can still see several versions of a recently updated key, and consumers must always treat a compacted topic as "the latest record per key wins".</p>
+  <p>Compacted topics are how Kafka stores state. Kafka's own <code>__consumer_offsets</code> topic is compacted (only the latest committed offset per group and partition matters), and stream processors back up their state to compacted topics. A new rider app can rebuild "current status of every order" by reading a compacted topic from the start, which is far quicker than replaying the full history. The opposite mistake is also common: a consumer that needs every event, like the warehouse loader, must never read a compacted topic, because the history it needs has been cleaned away.</p>
+  <table class="tbl">
+    <tr><th></th><th>Retention (<code>delete</code>)</th><th>Compaction (<code>compact</code>)</th></tr>
+    <tr><td>What is removed</td><td>whole old segments, by age or size</td><td>older records that have a newer record with the same key</td></tr>
+    <tr><td>What the topic represents</td><td>a history of events</td><td>the current state per key</td></tr>
+    <tr><td>Delete a key</td><td>not possible; wait for retention</td><td>write a tombstone (null value)</td></tr>
+    <tr><td>Biteful example</td><td><code>order-events</code> for the warehouse and replays</td><td><code>order-status</code> for the rider app</td></tr>
+  </table>
+  <p>Events are now stored, shared, de-duplicated and kept for the right time. The next step is to compute answers on the stream itself, such as delivered revenue per city per day, updated as deliveries happen. But the stream never ends and some events arrive days late. When is "3 March's revenue" finished?</p>
 
-  <h2 id="kf-stream"><span class="num">08</span>Streaming Pipelines: Windows &amp; Watermarks</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>"Total delivered revenue" has no final answer on an endless stream. And a rider's phone that was offline sends 104's "delivered" event two days late. How do we compute the ETL's daily revenue table continuously, and how long do we wait for stragglers?</p>
-  </div>
-  <p>Two ideas. A <strong>window</strong> cuts the endless stream into finite pieces by <em>event time</em>: a <strong>tumbling</strong> window is a fixed, non-overlapping slot (one calendar day); a <strong>hopping</strong> window is fixed-size but overlapping ("last 60 minutes, every 5 minutes"); a <strong>session</strong> window closes after a gap with no events. A <strong>watermark</strong> answers "how late is too late": it is the newest event time seen minus an allowed lateness; a window whose end is before the watermark is closed and forgotten, and later events for it are dropped.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A school accepts homework for "Monday" until Wednesday evening. Monday is the window; "two days late is fine" is the allowed lateness; once Wednesday evening passes, Monday's marks are final and a sheet that turns up on Thursday is not counted.</p>
-  </div>
-  <p>By hand first: the 7 delivered events, with 104's arriving last (after the 5 March events), summed into one-day windows per city, with two lateness settings:</p>
-  <div class="fx" data-lang="py">from datetime import datetime, timedelta
-from biteful_events import events
+  <h2 id="kf-stream"><span class="num">08</span>Windows and Watermarks</h2>
+  <p>A batch job can compute "total delivered revenue" because it knows where the data ends. On a stream there is no end, so a plain total never becomes final, and you cannot group "all events of 3 March" without knowing whether more are still coming. Stream processors solve this with two ideas that work together.</p>
+  <p>A <strong>window</strong> cuts the endless stream into finite pieces by event time, so that each piece can have a finished answer. The three common kinds are easiest to see on a single timestamp. A <strong>tumbling window</strong> is a fixed, non-overlapping slot, like "each hour" or "each calendar day"; every event belongs to exactly one. A <strong>hopping window</strong> (also called a sliding window in some tools) has a fixed size but starts at regular steps that are shorter than its size, like "the last 60 minutes, recomputed every 15 minutes"; windows overlap, so one event belongs to several. A <strong>session window</strong> has no fixed size: it groups events that are close together and closes after a gap with no activity, which suits user behaviour like app sessions.</p>
+  <div class="fx" data-lang="py"># Which windows does an event belong to? (plain Python)
+from datetime import datetime, timedelta
+
+def tumbling(t, size):
+    start = datetime.min + ((t - datetime.min) // size) * size
+    return [(start, start + size)]
+
+def hopping(t, size, hop):
+    first = datetime.min + ((t - datetime.min) // hop) * hop    # the latest window starting at or before t
+    out, start = [], first
+    while start + size &gt; t:
+        out.insert(0, (start, start + size))
+        start -= hop
+    return out
+
+t = datetime(2026, 3, 2, 12, 42)                                # 101 delivered
+fmt = lambda ws: ", ".join(f"{a:%H:%M}-{b:%H:%M}" for a, b in ws)
+print("tumbling 1 h          :", fmt(tumbling(t, timedelta(hours=1))))
+print("hopping 1 h every 15 m:", fmt(hopping(t, timedelta(hours=1), timedelta(minutes=15))))
+
+# session windows: a gap of more than 30 minutes with no events closes the session
+taps = ["12:10", "12:12", "12:20", "13:30", "13:31"]             # one user's app taps
+sessions, current = [], [taps[0]]
+for prev, nxt in zip(taps, taps[1:]):
+    gap = datetime.strptime(nxt, "%H:%M") - datetime.strptime(prev, "%H:%M")
+    if gap &gt; timedelta(minutes=30):
+        sessions.append(current); current = []
+    current.append(nxt)
+sessions.append(current)
+print("session, 30 m gap     :", sessions)</div>
+  <div class="fx" data-lang="text">tumbling 1 h          : 12:00-13:00
+hopping 1 h every 15 m: 11:45-12:45, 12:00-13:00, 12:15-13:15, 12:30-13:30
+session, 30 m gap     : [['12:10', '12:12', '12:20'], ['13:30', '13:31']]</div>
+  <p>Order 101's delivery at 12:42 falls in one tumbling hour, 12:00–13:00, but in four overlapping hopping windows, because every window that started within the hour before 12:42 still contains it. The session example groups one user's taps into two sessions because the 70-minute gap between 12:20 and 13:30 is longer than the 30-minute limit.</p>
+  <p>The second idea answers "how long do we wait for stragglers?". A <strong>watermark</strong> is the stream processor's estimate of how far event time has progressed: the newest event time seen so far, minus an <strong>allowed lateness</strong> you choose. Any window that ends before the watermark is considered complete; its result is final, its memory can be freed, and an event that arrives later for it is dropped. Think of a teacher who accepts Monday's homework until Wednesday evening. Monday is the window, "up to two days late is fine" is the allowed lateness, and once Wednesday evening passes, Monday's marks are final and a sheet handed in on Thursday is not counted.</p>
+  <p>Here is the idea in plain Python, before any framework is involved. We take the seven delivered events and sum them into one-day tumbling windows per city, but order 104's delivery event is stuck on a rider's phone without signal and arrives last, after the 5 March events. We run it with two different allowed latenesses:</p>
+  <div class="fx" data-lang="py"># SIMULATION in plain Python: one-day tumbling windows per city, with a watermark
+from datetime import datetime, timedelta
 
 delivered = [e for e in events() if e["event"] == "delivered"]
-# arrival order: 104's "delivered" event is stuck on a rider's offline phone and arrives last
-late = next(e for e in delivered if e["order_id"] == 104)
-arrivals = [e for e in delivered if e is not late] + [late]
+late = next(e for e in delivered if e["order_id"] == 104)      # stuck on an offline phone...
+arrivals = [e for e in delivered if e is not late] + [late]     # ...so it arrives last
 
 def run(allowed_lateness):
     max_seen, revenue = None, {}
     for e in arrivals:
-        t = datetime.fromisoformat(e["ts"])
-        max_seen = t if max_seen is None or t &gt; max_seen else max_seen
-        watermark = max_seen - allowed_lateness       # "nothing older than this should still come"
-        window = t.date()                             # tumbling window: one calendar day
-        window_end = datetime.combine(window + timedelta(days=1), datetime.min.time())
+        t = datetime.fromisoformat(e["ts"])                     # EVENT time, from the event itself
+        max_seen = t if max_seen is None else max(max_seen, t)
+        watermark = max_seen - allowed_lateness                 # "nothing older should still come"
+        day = t.date()                                          # its tumbling window: one calendar day
+        window_end = datetime.combine(day + timedelta(days=1), datetime.min.time())
         if window_end &lt;= watermark:
-            print(f"  {e['order_id']} ({e['ts']}) arrives, watermark {watermark:%m-%d %H:%M}"
-                  f" -&gt; window {window:%m-%d} already closed: DROPPED")
+            print(f"  order {e['order_id']} (event time {e['ts']}) arrives; watermark is"
+                  f" {watermark:%m-%d %H:%M}; window {day:%m-%d} is closed -&gt; DROPPED")
             continue
-        key = (str(window), e["city"])
+        key = (f"{day:%m-%d}", e["city"])
         revenue[key] = revenue.get(key, 0) + e["amount"]
-    return revenue
+    return dict(sorted(revenue.items()))
 
-for lateness in (timedelta(hours=24), timedelta(days=3)):
-    print(f"allowed lateness {lateness}:")
+for lateness in (timedelta(days=1), timedelta(days=3)):
+    print(f"allowed lateness {lateness.days} day(s):")
     print("  ", run(lateness))</div>
-  <div class="fx" data-lang="text">allowed lateness 1 day, 0:00:00:
-  104 (2026-03-03 14:00) arrives, watermark 03-04 20:57 -&gt; window 03-03 already closed: DROPPED
-   {('2026-03-02', 'Pune'): 760, ('2026-03-02', 'Mumbai'): 450, ('2026-03-04', 'Mumbai'): 180, ('2026-03-05', 'Pune'): 260, ('2026-03-05', 'Mumbai'): 600}
-allowed lateness 3 days, 0:00:00:
-   {('2026-03-02', 'Pune'): 760, ('2026-03-02', 'Mumbai'): 450, ('2026-03-04', 'Mumbai'): 180, ('2026-03-05', 'Pune'): 260, ('2026-03-05', 'Mumbai'): 600, ('2026-03-03', 'Pune'): 380}</div>
-  <p>Trace the drop. When 104 (event time 3 March 14:00) arrives, the newest event seen is 109's delivery at 5 March 20:57. With 1 day of lateness the watermark is 4 March 20:57, already past the end of the 3 March window (4 March 00:00), so Pune's ₹380 for 3 March is dropped. With 3 days the watermark is 2 March 20:57, the window is still open, and the result is exactly the ETL's gold table: 2 Mar Pune 760 / Mumbai 450, 3 Mar Pune 380, 4 Mar Mumbai 180, 5 Mar Pune 260 / Mumbai 600. More lateness = more correct, but more windows held in memory for longer.</p>
-  <h3>The same pipeline on the real topic, in Spark Structured Streaming</h3>
-  <p>Stream processors do this for you, with state that survives restarts. This Spark job reads <code>order-events</code> (now 21 events, including order 111), parses the JSON, uses the event's own <code>ts</code> as event time, and keeps one-day windows per city with a 3-day watermark. <code>trigger(availableNow=True)</code> processes what is in the topic now and stops, which suits a demo; a production job runs forever.</p>
-  <div class="fx" data-lang="py">import os, sys
+  <div class="fx" data-lang="text">allowed lateness 1 day(s):
+  order 104 (event time 2026-03-03 14:00) arrives; watermark is 03-04 20:57; window 03-03 is closed -&gt; DROPPED
+   {('03-02', 'Mumbai'): 450, ('03-02', 'Pune'): 760, ('03-04', 'Mumbai'): 180, ('03-05', 'Mumbai'): 600, ('03-05', 'Pune'): 260}
+allowed lateness 3 day(s):
+   {('03-02', 'Mumbai'): 450, ('03-02', 'Pune'): 760, ('03-03', 'Pune'): 380, ('03-04', 'Mumbai'): 180, ('03-05', 'Mumbai'): 600, ('03-05', 'Pune'): 260}</div>
+  <p>Trace the drop. When 104's event (event time 3 March 14:00) finally arrives, the newest event time seen is 109's delivery at 5 March 20:57. With one day of allowed lateness the watermark is therefore 4 March 20:57, which is already past the end of the 3 March window (midnight at the start of 4 March), so the window was closed and Pune's ₹380 for 3 March is dropped. With three days of lateness the watermark is 2 March 20:57, the 3 March window is still open, 104 is counted, and the result is exactly the gold table from the ETL note: 2 March Pune 760 and Mumbai 450, 3 March Pune 380, 4 March Mumbai 180, 5 March Pune 260 and Mumbai 600. The trade-off is clear: more allowed lateness gives more correct results but keeps more windows open in memory for longer and delays the moment a result is final.</p>
+  <p>Stream processors do this for you, and keep the state safe across restarts. The next program is a <strong>real</strong> Spark Structured Streaming job, run in local mode on two cores. Because there is no Kafka broker here, its source is a folder that receives the delivered events as three files, read one file per <strong>micro-batch</strong> (Spark processes a stream as a series of small batches); the late 104 event is in the last file. Everything after the source, the event-time column, the watermark and the window, is exactly what you would write against Kafka. It takes about 20 seconds to run, mostly Spark starting up:</p>
+  <div class="fx" data-lang="py">import json, os, sys, tempfile
 from pyspark.sql import SparkSession, functions as F
 os.environ["PYSPARK_PYTHON"] = sys.executable
 
 spark = (SparkSession.builder.master("local[2]")
-         .config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.13:4.2.0")
          .config("spark.sql.shuffle.partitions", "2")
-         .config("spark.sql.session.timeZone", "UTC")    # keep Biteful's IST wall-clock times as they are
+         .config("spark.sql.session.timeZone", "UTC")      # keep Biteful's wall-clock times as written
          .config("spark.ui.showConsoleProgress", "false")
          .getOrCreate())
 spark.sparkContext.setLogLevel("ERROR")
 
+# Delivered events reach an inbox folder as three files, one micro-batch each.
+# 104's delivery (3 March) is stuck on an offline phone and arrives last.
+delivered = [e for e in events() if e["event"] == "delivered"]
+arrivals = [[e for e in delivered if e["order_id"] not in (104, 109)],   # batch 0
+            [e for e in delivered if e["order_id"] == 109],              # batch 1: 5 March 20:57
+            [e for e in delivered if e["order_id"] == 104]]              # batch 2: the late one
+inbox = tempfile.mkdtemp()
+for i, batch in enumerate(arrivals):
+    with open(os.path.join(inbox, f"part{i}.json"), "w") as f:
+        f.write("\n".join(json.dumps(e) for e in batch))
+    os.utime(f.name, (1_000_000 + i, 1_000_000 + i))     # Spark picks files oldest first
+
+schema = "order_id INT, restaurant STRING, city STRING, amount INT, event STRING, ts STRING"
+
+def daily_revenue(lateness):
+    ev = (spark.readStream.schema(schema)
+          .option("maxFilesPerTrigger", 1)                   # one file per micro-batch
+          .json(inbox)
+          .withColumn("ts", F.to_timestamp("ts", "yyyy-MM-dd HH:mm")))   # event time
+    revenue = (ev.withWatermark("ts", lateness)              # how late is too late
+                 .groupBy(F.window("ts", "1 day"), "city")   # tumbling one-day windows
+                 .agg(F.sum("amount").alias("revenue")))
+    name = "rev_" + lateness.replace(" ", "_")
+    q = (revenue.writeStream.outputMode("update").format("memory").queryName(name)
+         .option("checkpointLocation", tempfile.mkdtemp())
+         .trigger(availableNow=True)                         # process what is there, then stop
+         .start())
+    q.awaitTermination()
+    print(f"allowed lateness = {lateness}")
+    for p in q.recentProgress:
+        print(f"  batch {p['batchId']}: {p['numInputRows']} row(s), watermark {p['eventTime']['watermark'][:16]},"
+              f" dropped as late: {p['stateOperators'][0]['numRowsDroppedByWatermark']}")
+    spark.sql(f"""SELECT date_format(window.start, 'yyyy-MM-dd') AS day, city, max(revenue) AS revenue
+                  FROM {name} GROUP BY 1, 2 ORDER BY 1, 2""").show()
+
+daily_revenue("1 day")
+daily_revenue("3 days")</div>
+  <div class="fx" data-lang="text">allowed lateness = 1 day
+  batch 0: 5 row(s), watermark 1970-01-01T00:00, dropped as late: 0
+  batch 1: 1 row(s), watermark 2026-03-04T18:49, dropped as late: 0
+  batch 2: 1 row(s), watermark 2026-03-04T20:57, dropped as late: 1
++----------+------+-------+
+|       day|  city|revenue|
++----------+------+-------+
+|2026-03-02|Mumbai|    450|
+|2026-03-02|  Pune|    760|
+|2026-03-04|Mumbai|    180|
+|2026-03-05|Mumbai|    600|
+|2026-03-05|  Pune|    260|
++----------+------+-------+
+
+allowed lateness = 3 days
+  batch 0: 5 row(s), watermark 1970-01-01T00:00, dropped as late: 0
+  batch 1: 1 row(s), watermark 2026-03-02T18:49, dropped as late: 0
+  batch 2: 1 row(s), watermark 2026-03-02T20:57, dropped as late: 0
++----------+------+-------+
+|       day|  city|revenue|
++----------+------+-------+
+|2026-03-02|Mumbai|    450|
+|2026-03-02|  Pune|    760|
+|2026-03-03|  Pune|    380|
+|2026-03-04|Mumbai|    180|
+|2026-03-05|Mumbai|    600|
+|2026-03-05|  Pune|    260|
++----------+------+-------+</div>
+  <p>The progress lines are Spark's own metrics for each micro-batch, and they show the watermark moving. Spark updates the watermark <em>between</em> micro-batches, from the newest event time seen so far: batch 0 runs with no watermark yet, batch 1 runs with 4 March 18:49 (the newest event of batch 0, 108's delivery, minus one day), and batch 2 runs with 4 March 20:57, after 109's delivery arrived in batch 1. When 104's event arrives in batch 2, its 3 March window ended before that watermark, so Spark drops it and counts it in <code>numRowsDroppedByWatermark</code>, and the 3 March row is missing from the table. With three days of lateness the watermark in batch 2 is only 2 March 20:57, nothing is dropped, and the table matches the ETL's gold table row for row. The plain-Python version and Spark agree.</p>
+  <p>A few lines of the job deserve explanation. <code>withWatermark("ts", "1 day")</code> names the event-time column and the allowed lateness; <code>groupBy(F.window("ts", "1 day"), "city")</code> is a one-day tumbling window per city (<code>F.window(ts, "1 hour", "15 minutes")</code> would be hopping, and <code>F.session_window</code> gives session windows). <code>outputMode("update")</code> writes each window's new total whenever it changes, while <code>"append"</code> would write each window only once, when the watermark closes it. The <code>checkpointLocation</code> is where Spark saves its progress (source offsets) and its window state, so that a restarted job carries on where it stopped; with a Kafka source plus checkpoints and an idempotent sink, Spark gives exactly-once results. To read from the real topic instead of a folder, only the source changes (shown without output, since there is no broker):</p>
+  <div class="fx" data-lang="py">from pyspark.sql import SparkSession, functions as F
+
+spark = SparkSession.builder.getOrCreate()   # needs the spark-sql-kafka package on the classpath
 raw = (spark.readStream.format("kafka")
-       .option("kafka.bootstrap.servers", "localhost:19092")
+       .option("kafka.bootstrap.servers", "broker1:9092")
        .option("subscribe", "order-events")
        .option("startingOffsets", "earliest")
-       .load())                                 # columns: key, value (bytes), partition, offset, timestamp…
+       .load())                              # columns: key, value (bytes), topic, partition, offset, timestamp
 schema = "order_id INT, restaurant STRING, city STRING, amount INT, event STRING, ts STRING"
 ev = (raw.select(F.from_json(F.col("value").cast("string"), schema).alias("e")).select("e.*")
-         .withColumn("ts", F.to_timestamp("ts", "yyyy-MM-dd HH:mm")))   # event time from the event
+         .withColumn("ts", F.to_timestamp("ts", "yyyy-MM-dd HH:mm")))
+# ...then exactly the same filter / withWatermark / groupBy(window) as above</div>
+  <p>The most damaging mistake in this area is windowing by processing time, the moment an event reached you, instead of the event's own timestamp. Then 104's delivery would be counted on the day the phone uploaded it, and the revenue for both days would be wrong without any error. Always window by event time and choose the allowed lateness by measuring how late your events really arrive.</p>
 
-revenue = (ev.filter(F.col("event") == "delivered")
-             .withWatermark("ts", "3 days")                      # accept events up to 3 days late
-             .groupBy(F.window("ts", "1 day"), "city")           # tumbling window: one day
-             .agg(F.sum("amount").alias("revenue"), F.count("*").alias("orders")))
-
-q = (revenue.writeStream.outputMode("update").format("memory").queryName("daily_city_revenue")
-     .option("checkpointLocation", "ckpt/daily_city_revenue")
-     .trigger(availableNow=True)                 # process what is there now, then stop (demo)
-     .start())
-q.awaitTermination()
-spark.sql("""SELECT date_format(window.start, 'yyyy-MM-dd') AS day, city, revenue, orders
-             FROM daily_city_revenue ORDER BY day, city""").show()</div>
-  <div class="fx" data-lang="text">+----------+------+-------+------+
-|       day|  city|revenue|orders|
-+----------+------+-------+------+
-|2026-03-02|Mumbai|    450|     1|
-|2026-03-02|  Pune|    760|     2|
-|2026-03-03|  Pune|    380|     1|
-|2026-03-04|Mumbai|    180|     1|
-|2026-03-05|Mumbai|    600|     1|
-|2026-03-05|  Pune|    260|     1|
-|2026-03-09|  Pune|    220|     1|
-+----------+------+-------+------+</div>
-  <p>Day for day, the same numbers as the nightly ETL and the Spark batch, plus Gita's 9 March order, but each row was ready as soon as its delivery event arrived. <code>checkpointLocation</code> is where Spark saves its Kafka offsets and window state, so a restarted job continues instead of starting over (at-least-once reading plus checkpointed state: exactly-once results inside Spark). The session time zone is UTC so that one-day windows are Biteful's IST calendar days as written in the events.</p>
-  <table class="tbl">
-    <tr><th></th><th>Kafka Streams</th><th>Apache Flink</th><th>Spark Structured Streaming</th></tr>
-    <tr><td>What</td><td>Java library inside your app</td><td>Distributed stream engine</td><td>Spark's streaming DataFrame API</td></tr>
-    <tr><td>Model</td><td>Record at a time</td><td>Record at a time, event-time native</td><td>Micro-batches (100 ms+)</td></tr>
-    <tr><td>Latency</td><td>ms</td><td>ms</td><td>~0.1 to a few s</td></tr>
-    <tr><td>State &amp; windows</td><td>Local RocksDB, backed up to Kafka (compacted topics)</td><td>Large state, checkpoints, best watermark support</td><td>State store, watermarks, checkpoints</td></tr>
-    <tr><td>Pick when</td><td>JVM microservice, Kafka in and out</td><td>Low latency, complex event-time logic at scale</td><td>Team already on Spark/Databricks, Python</td></tr>
-  </table>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>A <strong>streaming pipeline</strong> continuously reads events, keeps state (counts, sums, windows), and writes results. <strong>Tumbling / hopping / session windows</strong> group events by event time. A <strong>watermark</strong> = max event time seen − allowed lateness; windows ending before it are finalised.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Windowing by processing time (when the event reached you) instead of event time makes results depend on network delays: the offline rider's "delivered" would count on the day it was <em>uploaded</em>. Use the event's own timestamp plus a watermark.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Kafka Connect and Kafka Streams.</b> Every pipeline so far was code we wrote: a producer, consumers, a Spark job. Two jobs come up in every company: copying data between Kafka and other systems (databases, S3, the warehouse), and computing on streams inside ordinary services. Must everyone write those by hand?</div>
-
-  <h2 id="kf-eco"><span class="num">09</span>Kafka Connect &amp; Kafka Streams</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Moving events from Kafka into S3 or a warehouse, or from a database into Kafka, means handling offsets, retries, batching and restarts every time. And a Java service that wants "revenue per city per day" shouldn't need a Spark cluster. What does the Kafka ecosystem offer?</p>
-  </div>
-  <p><strong>Kafka Connect</strong> moves data in and out with configuration instead of code. A <strong>source connector</strong> pulls data into Kafka; a <strong>sink connector</strong> pushes it out. Connect runs the connectors as workers, tracks their offsets and restarts them. The classic source is <strong>CDC</strong>: Debezium reads the Postgres write-ahead log and publishes every insert, update and delete as an event, which is the extract method the ETL note said a watermark can't match (it sees deletes).</p>
-  <div class="flow"><span>Postgres WAL</span><span>Debezium source</span><span>Kafka topic</span><span>S3 / Snowflake sink</span><span>Warehouse</span></div>
-  <p>A real Connect run, using the file sink connector that ships with Kafka: copy every event of <code>order-events</code> into a file, with no code. The worker config says where Kafka is and how to (de)serialise; the connector config says what to copy where:</p>
-  <div class="fx" data-lang="text">name=order-events-to-file
-connector.class=org.apache.kafka.connect.file.FileStreamSinkConnector
-tasks.max=1
-topics=order-events
-file=/opt/de/kafka/connect/order_events.jsonl</div>
-  <div class="fx" data-lang="text">$ connect-standalone.sh worker.properties order-events-to-file.properties     # stopped after 45 s
-$ wc -l order_events.jsonl; head -2 order_events.jsonl
-lines in order_events.jsonl: 21
-{"order_id": 101, "restaurant": "Dosa Hut", "city": "Pune", "amount": 240, "event": "placed", "ts": "2026-03-02 12:10"}
-{"order_id": 101, "restaurant": "Dosa Hut", "city": "Pune", "amount": 240, "event": "delivered", "ts": "2026-03-02 12:42"}</div>
-  <p>All 21 events arrived in the file. Swap the class for an S3, JDBC or Snowflake sink and the same 5 lines land Biteful's events in the warehouse; the ETL's "load" step becomes continuous. For Biteful's app database, a Debezium source would look like this (<strong>example config, not run here</strong>):</p>
+  <h2 id="kf-eco"><span class="num">09</span>Kafka Connect and Stream Processors</h2>
+  <p>Every pipeline so far has been code we wrote by hand: a producer, consumers, a Spark job. Two jobs come up in every company again and again. The first is copying data between Kafka and other systems: from the app's Postgres database into Kafka, and from Kafka into S3, Snowflake or Elasticsearch. Writing that by hand means solving batching, retries, offset tracking and restarts every single time. The second is computing on streams inside ordinary services, which should not always require running a Spark cluster.</p>
+  <p><strong>Kafka Connect</strong> handles the first job with configuration instead of code. It is a runtime that runs <strong>connectors</strong>: a <strong>source connector</strong> reads from an external system and writes to Kafka, and a <strong>sink connector</strong> reads from Kafka and writes to an external system. Connect tracks the connectors' offsets, retries failures, spreads work over several worker machines and restarts tasks that die. Think of a courier company with standard routes: you fill in a form saying what goes where, and they handle the vans, the drivers and the lost parcels. A sink that copies <code>order-events</code> into S3 looks roughly like this (example configuration, not run here):</p>
+  <div class="fx" data-lang="text">{ "name": "order-events-to-s3",
+  "config": {
+    "connector.class": "io.confluent.connect.s3.S3SinkConnector",
+    "topics": "order-events",
+    "s3.bucket.name": "biteful-lake",
+    "format.class": "io.confluent.connect.s3.format.parquet.ParquetFormat",
+    "flush.size": "1000",
+    "tasks.max": "3" } }</div>
+  <p>The most important source connector in data engineering is <strong>change data capture</strong>, or <strong>CDC</strong>. The ETL note extracted changed rows with a watermark column like <code>updated_at</code>, which cannot see deleted rows and can miss updates made within the same second. A CDC connector such as <strong>Debezium</strong> instead reads the database's own <strong>write-ahead log</strong> (the internal journal in which Postgres records every insert, update and delete before applying it) and publishes each change as an event, so nothing is missed and the database is not queried at all. For Biteful's app database it would look like this (example configuration, not run here):</p>
   <div class="fx" data-lang="text">{ "name": "biteful-cdc",
   "config": {
     "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
-    "database.hostname": "app-db-replica", "database.dbname": "biteful",
-    "topic.prefix": "biteful", "table.include.list": "public.orders" } }</div>
-  <p><strong>Kafka Streams</strong> is a Java library (no cluster): your service reads topics, computes, and writes topics, with state kept in local RocksDB and backed up to compacted topics. The daily revenue pipeline of section 08 would look like this in Kafka Streams (<strong>Java, not run here</strong>; serde and timestamp-extractor setup omitted):</p>
+    "database.hostname": "app-db-replica",
+    "database.dbname": "biteful",
+    "topic.prefix": "biteful",
+    "table.include.list": "public.orders" } }</div>
+  <p>Connectors still need the discipline of the ETL note. A sink into a database receives events at least once, so it should upsert by key. And when the producer changes the shape of its events (renames a field, changes a type), every consumer can break. Teams prevent that with a <strong>schema registry</strong>: producers register the schema of their events (in Avro, Protobuf or JSON Schema), the registry refuses changes that would break existing readers, and each message carries a small schema id so readers know how to decode it.</p>
+  <p>For the second job, computing on streams, there are three main choices. <strong>Kafka Streams</strong> is a Java library, not a cluster: it runs inside your own service, reads topics, computes, and writes topics, keeping its state in a local database (RocksDB) that is backed up to compacted topics. Spark Structured Streaming is the engine used in the previous section. <strong>Apache Flink</strong> is a dedicated distributed stream engine that processes each record as it arrives, with very low latency and the most complete event-time support. Section 08's daily revenue job would look like this in Kafka Streams (Java, not run here; setup omitted):</p>
   <div class="fx" data-lang="text">StreamsBuilder b = new StreamsBuilder();
 KStream&lt;String, OrderEvent&gt; events = b.stream("order-events");
 events.filter((orderId, e) -&gt; e.event.equals("delivered"))
-      .groupBy((orderId, e) -&gt; e.city)                                   // re-key by city (a shuffle via a topic)
+      .groupBy((orderId, e) -&gt; e.city)                       // re-key by city
       .windowedBy(TimeWindows.ofSizeAndGrace(Duration.ofDays(1), Duration.ofDays(3)))
-      .aggregate(() -&gt; 0L, (city, e, total) -&gt; total + e.amount)       // state in RocksDB
+      .aggregate(() -&gt; 0L, (city, e, total) -&gt; total + e.amount)
       .toStream()
       .to("daily-city-revenue");</div>
-  <p>Read it against section 08: the filter, the one-day tumbling window, the 3-day grace (Kafka Streams' name for allowed lateness), the sum. <code>groupBy</code> re-keys by city, which Kafka Streams implements by writing to an internal "repartition" topic, its version of Spark's shuffle.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Connect is a courier service with standard routes: you fill in a form (config), they move the parcels. Kafka Streams is a kitchen gadget you install in your own kitchen (your service), instead of sending food to a central factory (a Spark or Flink cluster).</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Kafka Connect</strong>: a framework and runtime for source/sink connectors configured declaratively, with offset tracking and fault tolerance. <strong>Kafka Streams</strong>: a client library for stateful stream processing (filters, joins, windows, aggregations) whose input and output are Kafka topics.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Connectors still need the ETL's discipline: a sink into a database should upsert by key (at-least-once delivery will repeat records), and a schema change upstream breaks sinks unless you use a schema registry (Avro/Protobuf/JSON Schema) and compatible changes.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Kafka vs queues.</b> Kafka now carries Biteful's orders, feeds the warehouse, and computes live revenue. Is it the right tool for every message? Sending each customer exactly one "your order is on the way" SMS feels like a different job.</div>
+  <p>Read it against the Spark job and the pieces line up: the filter, the one-day tumbling window, the three-day "grace" (Kafka Streams' name for allowed lateness) and the sum. <code>groupBy</code> changes the key from order id to city, and since all events for one city must reach the same task, Kafka Streams writes them to an internal "repartition" topic keyed by city, which is its version of a Spark shuffle.</p>
+  <table class="tbl">
+    <tr><th></th><th>Kafka Streams</th><th>Apache Flink</th><th>Spark Structured Streaming</th></tr>
+    <tr><td>What it is</td><td>Java library inside your service</td><td>distributed stream engine</td><td>Spark's DataFrame API on streams</td></tr>
+    <tr><td>Processing model</td><td>record at a time</td><td>record at a time</td><td>micro-batches</td></tr>
+    <tr><td>Typical latency</td><td>milliseconds</td><td>milliseconds</td><td>about 0.1 s to a few seconds</td></tr>
+    <tr><td>State</td><td>local RocksDB, backed up to Kafka</td><td>large state, checkpoints</td><td>state store, checkpoints</td></tr>
+    <tr><td>Pick it when</td><td>JVM microservice, Kafka in and out</td><td>low latency, complex event-time logic at scale</td><td>the team already uses Spark and Python</td></tr>
+  </table>
 
-  <h2 id="kf-vs"><span class="num">10</span>Kafka vs Queues</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>RabbitMQ and AWS SQS also move messages between services. When is a message queue the better choice, and what does Kafka's log give that a queue can't?</p>
-  </div>
-  <p>A <strong>message queue</strong> is a to-do list for workers: a message is delivered to <em>one</em> worker, acknowledged, and then deleted. Queues track each message individually (retry this one, delay that one, send failures to a dead-letter queue) and scale workers freely, with no partition limit. A <strong>log</strong> is a diary: messages stay; every group reads all of them in order per partition; you can replay; throughput is very high because reading and writing are sequential disk operations in batches.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A queue is a restaurant's ticket rail: a cook takes a ticket, cooks it, and the ticket is gone. A log is the restaurant's order book: every department (kitchen, billing, inventory) reads every line, at its own pace, and last month's pages are still there.</p>
-  </div>
+  <h2 id="kf-vs"><span class="num">10</span>Kafka vs Message Queues</h2>
+  <p>RabbitMQ and Amazon SQS also move messages between services, and interviewers often ask when to use them instead of Kafka. The difference is what happens after a message is read. A <strong>message queue</strong> is a to-do list for workers: each message is delivered to <em>one</em> worker, the worker acknowledges it when done, and the queue deletes it. A log, as we have seen, keeps every message, and every group reads all of them. This simulation sends the same three events through each and lets two services read:</p>
+  <div class="fx" data-lang="py"># SIMULATION: the same three events, read by two services, through a queue and through a log
+from collections import deque
+
+events = ["101 placed", "102 placed", "103 placed"]
+
+queue = deque(events)                       # a queue: receiving + acknowledging removes the message
+got = {"kitchen": [], "warehouse": []}
+while queue:
+    for service in got:                     # both services pull from the same queue
+        if queue:
+            got[service].append(queue.popleft())
+print("queue:", got)
+
+log = list(events)                          # a log: reading moves only the reader's own bookmark
+bookmark = {"kitchen": 0, "warehouse": 0}
+got = {service: log[start:] for service, start in bookmark.items()}
+print("log:  ", got)</div>
+  <div class="fx" data-lang="text">queue: {'kitchen': ['101 placed', '103 placed'], 'warehouse': ['102 placed']}
+log:   {'kitchen': ['101 placed', '102 placed', '103 placed'], 'warehouse': ['101 placed', '102 placed', '103 placed']}</div>
+  <p>With the queue, the kitchen and the warehouse competed for messages: the kitchen got 101 and 103, the warehouse got only 102, and each event was handled once by someone. That is exactly right for a <em>task</em>, such as "send this customer one SMS" or "resize this photo", where you want the work done once by whichever worker is free. It is exactly wrong for <em>events</em> that several teams need: the warehouse missed two orders. With the log, both services received all three events, because each just moved its own bookmark.</p>
+  <p>A restaurant has both. Its ticket rail is a queue: a cook takes a ticket, cooks the dish, and the ticket is gone. Its order book is a log: the kitchen, billing and inventory all read every line at their own pace, and last month's pages are still there for the accountant. Queues have real strengths of their own: they track each message individually, so one failing message can be retried or delayed or moved to a <strong>dead-letter queue</strong> (a side queue for messages that keep failing) without holding up the others, and you can add as many workers as you like, with no partition limit.</p>
   <table class="tbl">
     <tr><th></th><th>Kafka (log)</th><th>RabbitMQ / SQS (queue)</th></tr>
-    <tr><td>After a message is read</td><td>Stays until retention</td><td>Deleted when acknowledged</td></tr>
-    <tr><td>Many independent readers</td><td>Yes: one group each, all get everything</td><td>Needs a copy per reader (fan-out exchange / SNS)</td></tr>
-    <tr><td>Replay history</td><td>Yes, reset offsets</td><td>No</td></tr>
-    <tr><td>Ordering</td><td>Per partition (per key)</td><td>Per queue, weakened by parallel workers and redelivery</td></tr>
-    <tr><td>Per-message control</td><td>Coarse (an offset per partition)</td><td>Fine: per-message ack, delay, priority, dead-letter</td></tr>
-    <tr><td>Scaling consumers</td><td>Up to the partition count</td><td>Any number of workers</td></tr>
-    <tr><td>Biteful example</td><td>order-events for kitchen, ETA, warehouse, analytics</td><td>"send this SMS once", "resize this photo"</td></tr>
+    <tr><td>After a message is read</td><td>stays until retention</td><td>deleted when acknowledged</td></tr>
+    <tr><td>Many independent readers</td><td>yes, one consumer group each</td><td>needs a copy per reader (fan-out exchange, SNS)</td></tr>
+    <tr><td>Replay history</td><td>yes, reset the offsets</td><td>no</td></tr>
+    <tr><td>Ordering</td><td>per partition, so per key</td><td>per queue, weakened by parallel workers and redelivery</td></tr>
+    <tr><td>Per-message control</td><td>coarse: one offset per partition</td><td>fine: per-message ack, delay, priority, dead-letter</td></tr>
+    <tr><td>Scaling consumers</td><td>up to the partition count</td><td>any number of workers</td></tr>
   </table>
-  <div class="callout def"><span class="label">Definition</span>
-    <p>Use a <strong>queue</strong> for <em>task distribution</em>: each job done once by some worker, with per-job retries. Use a <strong>log</strong> (Kafka) for <em>event distribution</em>: facts that many systems need, in order per key, with history and replay.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Using Kafka as a job queue hurts: one slow job blocks every event behind it in that partition (head-of-line blocking), and you can't retry one message without stopping the partition. Using a queue as an event bus hurts the other way: no replay, and a new consumer misses all history.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: build it.</b> We have every piece. Let's build the live restaurant board Biteful's operations team asked for, on the real topic: open orders per restaurant and average delivery minutes, always current.</div>
+  <p>Using Kafka as a job queue hurts because of <strong>head-of-line blocking</strong>: one slow or failing message holds up every message behind it in that partition, since the bookmark cannot move past it. Using a queue as an event bus hurts the other way round: there is no replay, and a service added later has no history. The rule of thumb: queues for task distribution, Kafka for event distribution.</p>
 
-  <h2 id="kf-build"><span class="num">11</span>Build It: The Live Restaurant Board</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Can the pieces (keyed events, a consumer group, at-least-once commits, idempotent processing) produce a correct live view, the kind of fresh feature an ETA model reads at request time?</p>
-  </div>
-  <p>The board is a consumer in its own group, <code>restaurant-board</code>. For each event it updates two numbers per restaurant, then commits (at-least-once). Because events can be re-delivered after a crash, it remembers which (order, event) pairs it has applied, so a repeat changes nothing: the idempotency idea from the ETL note, inside a consumer.</p>
+  <h2 id="kf-build"><span class="num">11</span>Putting It Together: The Live Restaurant Board</h2>
+  <p>Biteful's operations team wants a live board showing, for each restaurant, how many orders are open right now and the average delivery time in minutes. The same numbers are exactly the "fresh features" an ETA model would read when a customer places an order (see <a class="xref" data-note="sd_serving">feature pipelines and serving</a>). The board is a consumer in its own group, <code>restaurant-board</code>, so it reads every event without disturbing the kitchen or the warehouse. It relies on almost everything above: events keyed by order id, so that each order's "placed" arrives before its "delivered"; at-least-once commits, so nothing is lost; and therefore an idempotent update, because some events will arrive twice.</p>
+  <p>The simulation reads the toy topic from section 03 partition by partition, as a consumer does, and replays the at-least-once crash from section 06: the board processed the first three records of partition 0 (102 placed, 102 delivered, 103 placed), crashed before committing, and received them again after the restart. We build the board twice, once naively and once remembering which (order, event) pairs it has already applied:</p>
+  <div class="fx" data-lang="py"># SIMULATION (no broker): the live restaurant board, reading the toy topic like a consumer
+from datetime import datetime
+
+topic = Topic("order-events", 3)
+for e in events():
+    topic.produce(str(e["order_id"]), e)
+
+def build_board(deliveries, dedupe):
+    open_orders, placed_at, minutes, seen = {}, {}, {}, set()
+    for e in deliveries:
+        if dedupe:
+            if (e["order_id"], e["event"]) in seen:        # already applied: a repeat changes nothing
+                continue
+            seen.add((e["order_id"], e["event"]))
+        r, t = e["restaurant"], datetime.fromisoformat(e["ts"])
+        if e["event"] == "placed":
+            open_orders[r] = open_orders.get(r, 0) + 1
+            placed_at[e["order_id"]] = t
+        else:
+            open_orders[r] -= 1
+            if e["event"] == "delivered":
+                minutes.setdefault(r, []).append((t - placed_at[e["order_id"]]).seconds // 60)
+    return ({r: n for r, n in open_orders.items() if n},
+            {r: round(sum(v) / len(v), 1) for r, v in sorted(minutes.items())})
+
+# At-least-once: the consumer crashed after processing partition 0's first 3 records but
+# before committing, so after the restart those 3 records are delivered a second time.
+p0, p1, p2 = ([e for _, e in records] for records in topic.partitions)
+deliveries = p0[:3] + p0 + p1 + p2
+
+for dedupe in (False, True):
+    open_now, avg_mins = build_board(deliveries, dedupe)
+    print(f"dedupe={dedupe}:  open orders {open_now}")
+    print(f"              avg delivery minutes {avg_mins}")</div>
+  <div class="fx" data-lang="text">dedupe=False:  open orders {'Pizza Point': 1, 'Dosa Hut': 1}
+              avg delivery minutes {'Biryani Bros': 39.8, 'Dosa Hut': 30.5, 'Pizza Point': 41.5}
+dedupe=True:  open orders {'Dosa Hut': 1}
+              avg delivery minutes {'Biryani Bros': 39.3, 'Dosa Hut': 30.5, 'Pizza Point': 41.5}</div>
+  <p>The naive board is wrong in two ways that would never raise an error. Pizza Point shows an open order that does not exist, because "103 placed" was counted twice but "103 delivered" only once. And Biryani Bros' average is 39.8 minutes instead of 39.3, because order 102's 41 minutes was counted twice: (41 + 41 + 25 + 52) / 4 = 39.75. With de-duplication the repeats change nothing, and the numbers are right: Dosa Hut has one open order (110, still pending), Biryani Bros averages (41 + 25 + 52) / 3 = 39.3 minutes, Dosa Hut (32 + 29) / 2 = 30.5, and Pizza Point (38 + 45) / 2 = 41.5. The real consumer is the same logic inside a poll loop (shown without output):</p>
   <div class="fx" data-lang="py">import json
 from datetime import datetime
 from confluent_kafka import Consumer
 
-c = Consumer({"bootstrap.servers": "localhost:19092",
+c = Consumer({"bootstrap.servers": "broker1:9092",
               "group.id": "restaurant-board",
-              "auto.offset.reset": "earliest",      # no saved offset yet -&gt; start at the beginning
-              "enable.auto.commit": False})         # we decide when to commit
+              "auto.offset.reset": "earliest",
+              "enable.auto.commit": False})
 c.subscribe(["order-events"])
 
-open_orders, placed_at, minutes = {}, {}, {}        # the live board (a toy online store)
-seen = set()                                        # (order_id, event) already applied: dedupe
-empty = 0
-while empty &lt; 5:                                    # stop after 5 quiet seconds (demo only)
+open_orders, placed_at, minutes, seen = {}, {}, {}, set()
+while True:
     m = c.poll(1.0)
-    if m is None:
-        empty += 1; continue
+    if m is None or m.error():
+        continue
     e = json.loads(m.value())
-    if (e["order_id"], e["event"]) not in seen:     # a re-delivered event changes nothing
+    if (e["order_id"], e["event"]) not in seen:          # dedupe: re-deliveries change nothing
         seen.add((e["order_id"], e["event"]))
         r, t = e["restaurant"], datetime.fromisoformat(e["ts"])
         if e["event"] == "placed":
@@ -928,170 +934,134 @@ while empty &lt; 5:                                    # stop after 5 quiet seco
         else:
             open_orders[r] -= 1
             if e["event"] == "delivered":
-                mins = (t - placed_at[e["order_id"]]).seconds // 60
-                minutes.setdefault(r, []).append(mins)
-    c.commit(message=m, asynchronous=False)         # process first, then commit: at-least-once
-c.close()
-print("open orders now  :", {r: n for r, n in open_orders.items() if n})
-print("avg delivery mins:", {r: round(sum(v) / len(v), 1) for r, v in sorted(minutes.items())})</div>
-  <div class="fx" data-lang="text">open orders now  : {'Dosa Hut': 1}
-avg delivery mins: {'Biryani Bros': 39.3, 'Dosa Hut': 30.5, 'Momo Magic': 35.0, 'Pizza Point': 41.5}</div>
-  <p>Check by hand. Open orders: every order was placed and later delivered or cancelled except 110 (Dosa Hut, pending): {Dosa Hut: 1} ✓. Average minutes: Biryani Bros (41 + 25 + 52) / 3 = 39.3; Dosa Hut (32 + 29) / 2 = 30.5; Pizza Point (38 + 45) / 2 = 41.5 (104's time comes from the event times, since the partner never recorded it); Momo Magic 35 (Gita's order 111) ✓. The board works only because each order's "placed" and "delivered" are in the same partition, in order: keyed by <code>order_id</code>, "delivered" can never arrive before "placed" and fail the subtraction. In production the dicts would be Redis (an <strong>online store</strong> the ETA model reads in milliseconds), the same numbers would also be written to the lake for training (see <a class="xref" data-note="sd_serving">serving</a>), and the <code>seen</code> set would be bounded state with a TTL.</p>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>This board lives in memory: a restart rebuilds it by replaying the topic from the beginning (fine for 21 events, slow for a year). Real jobs keep state in a stream processor's checkpoints or in Redis, and snapshot it, so a restart resumes from the committed offset.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: common mistakes.</b> The board is right. Which mistakes make real streaming systems wrong in ways nobody notices?</div>
+                minutes.setdefault(r, []).append((t - placed_at[e["order_id"]]).seconds // 60)
+        # in production: write open_orders[r] and the average to Redis here
+    c.commit(message=m, asynchronous=False)              # process, then commit: at-least-once</div>
+  <p>Two simplifications would not survive production. The board lives in memory, so a restart has to rebuild it by replaying the topic from the beginning, which is fine for 19 events and far too slow for a year; real jobs keep state in a stream processor's checkpoints or in an external store such as Redis, and the ETA model reads that store in milliseconds. And the <code>seen</code> set grows forever; in practice it is kept only for a limited time (a time-to-live), long enough to catch redeliveries after a crash or rebalance.</p>
 
   <h2 id="kf-traps"><span class="num">12</span>Common Mistakes</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Streaming bugs show up as a number that is slightly off, a lag that slowly grows, or an event that silently vanished. Which ones should you check first?</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: expecting order across a topic</span>
-    <p>Kafka orders records within a partition only. Events that must stay in order need the same key (order_id); nothing orders order 101 against order 107.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: auto-commit with slow processing</span>
-    <p>The client commits on a timer whether or not you finished. Crash after the commit, before the write: silent loss. Turn it off and commit after processing.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: more consumers than partitions</span>
-    <p>With 3 partitions the 4th consumer of a group gets nothing. Scaling further needs more partitions, which remaps keys (8 of 11 moved for 3 → 5).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: non-idempotent sinks</span>
-    <p>At-least-once repeats events during crashes and rebalances. "INSERT a row" or "add 1" double-counts; "UPSERT by event id" or "SET value" doesn't.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: hot keys</span>
-    <p>One giant key (a mega-sale restaurant, <code>"unknown"</code>, null) sends a big share of traffic to one partition and one consumer; lag grows on that partition only.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: forgetting <code>flush()</code></span>
-    <p><code>produce()</code> only buffers; a script that exits without <code>flush()</code> loses its last events with no error.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: processing-time windows</span>
-    <p>A late event lands in the wrong window. Use event time and a watermark sized to how late events really arrive.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: streaming when batch would do</span>
-    <p>Streaming jobs run 24×7, are harder to test and backfill, and need on-call. If nobody acts within minutes, schedule a batch job.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: how it all connects.</b> Ten ideas, one system. How does each build on the one before?</div>
+  <p>The most common streaming bug is expecting order where Kafka does not promise it. Kafka orders records within a partition only, so events that must be processed in order need the same key. Send them without a key, and they are spread across partitions for throughput:</p>
+  <div class="fx" data-lang="py"># SIMULATION: what happens to one order's events when they are sent WITHOUT a key
+from itertools import cycle
 
-  <h2 id="kf-connect"><span class="num">13</span>How It All Connects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Log, partitions, keys, acks, idempotence, groups, offsets, semantics, retention, compaction, windows, watermarks, Connect, Streams: a list of features, or one design?</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 720 300" width="720">
-<defs><marker id="kf-a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<g font-size="10.5">
-<rect x="10" y="20" width="140" height="50" rx="8" class="fb sb"/><text x="80" y="40" text-anchor="middle" font-weight="700">Producer</text><text x="80" y="57" text-anchor="middle" class="tm">acks=all · idempotent</text>
-<line x1="150" y1="45" x2="183" y2="45" stroke="currentColor" marker-end="url(#kf-a9)"/>
-<rect x="185" y="20" width="190" height="50" rx="8" class="fg sg"/><text x="280" y="40" text-anchor="middle" font-weight="700">Topic = partitioned logs</text><text x="280" y="57" text-anchor="middle" class="tm">crc32(order_id) % 3 · offsets</text>
-<line x1="375" y1="45" x2="408" y2="45" stroke="currentColor" marker-end="url(#kf-a9)"/>
-<rect x="410" y="20" width="150" height="50" rx="8" class="ft st"/><text x="485" y="40" text-anchor="middle" font-weight="700">Consumer groups</text><text x="485" y="57" text-anchor="middle" class="tm">1 owner per partition</text>
-<line x1="560" y1="45" x2="593" y2="45" stroke="currentColor" marker-end="url(#kf-a9)"/>
-<rect x="595" y="20" width="115" height="50" rx="8" class="fv" stroke="currentColor" stroke-opacity="0.4"/><text x="652" y="40" text-anchor="middle" font-weight="700">Results</text><text x="652" y="57" text-anchor="middle" class="tm">tickets · board · revenue</text>
-<line x1="280" y1="70" x2="280" y2="108" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#kf-a9)"/>
-<rect x="185" y="110" width="190" height="46" rx="8" class="fs" stroke="currentColor" stroke-opacity="0.4"/><text x="280" y="128" text-anchor="middle">retention / compaction</text><text x="280" y="144" text-anchor="middle" class="tm">20 → 11 records, latest per key</text>
-<line x1="485" y1="70" x2="485" y2="108" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#kf-a9)"/>
-<rect x="400" y="110" width="170" height="46" rx="8" class="fr sr"/><text x="485" y="128" text-anchor="middle">committed offsets</text><text x="485" y="144" text-anchor="middle" class="tm">lag 2 · at-least / exactly-once</text>
-<line x1="652" y1="70" x2="652" y2="108" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#kf-a9)"/>
-<rect x="585" y="110" width="125" height="46" rx="8" class="fv" stroke="currentColor" stroke-opacity="0.4"/><text x="647" y="128" text-anchor="middle">windows + watermark</text><text x="647" y="144" text-anchor="middle" class="tm">= ETL gold table</text>
-<rect x="10" y="190" width="700" height="50" rx="10" class="fs" stroke="currentColor" stroke-opacity="0.5"/>
-<text x="360" y="210" text-anchor="middle" font-weight="700">Ecosystem: Connect (config-only in/out: 21 events → file; Debezium CDC) · Kafka Streams / Flink / Spark (stateful processing)</text>
-<text x="360" y="228" text-anchor="middle" class="tm">Queue instead when each task must be done once by one worker</text>
-<text x="10" y="268" class="tm">Write side: keys decide partitions, partitions decide order and parallelism. Read side: offsets decide what a crash costs.</text>
-<text x="10" y="286" class="tm">Everything else (compaction, windows, connectors) is built on "an ordered log per partition that readers never consume away".</text>
-</g>
-</svg><figcaption>One log, many readers. Producers append by key; groups read by offset; retention/compaction and stream processing are built on the same log.</figcaption></figure>
-  <table class="tbl"><caption>Every concept on Biteful's order events</caption>
-    <tr><th>Concept</th><th>Built from</th><th>Answers which question</th><th>Value on Biteful</th><th>Use when</th></tr>
-    <tr><td>Streaming</td><td>events instead of nightly tables</td><td>why not tomorrow's batch?</td><td>101 known 11 h 50 min sooner</td><td>someone must act within seconds/minutes</td></tr>
-    <tr><td>Log + offsets</td><td>append-only list, bookmarks</td><td>many readers, own pace, replay?</td><td>kitchen @4, loader @2, ETA replays from 0</td><td>always (it is Kafka)</td></tr>
-    <tr><td>Partitions + keys</td><td>log split by <code>crc32(key) % n</code></td><td>scale while keeping per-order order?</td><td>101 → 2, 102 → 0, 107 → 1</td><td>key by the entity whose order matters</td></tr>
-    <tr><td>acks / idempotence</td><td>replicas, producer id + sequence</td><td>stored? duplicated by retries?</td><td>acks=0: offset None; sim: duplicate dropped</td><td>acks=all + idempotence by default</td></tr>
-    <tr><td>Consumer groups</td><td>partition ownership</td><td>share work without double-handling?</td><td>A [0,1,2] → B [0,1] + A [2] → A [0,1,2]</td><td>scale a service up to the partition count</td></tr>
-    <tr><td>Delivery semantics</td><td>order of process vs commit; transactions</td><td>what does a crash cost?</td><td>at-most: 103 lost; at-least: 103 twice; EOS: 11 tickets + offsets</td><td>at-least-once + idempotent sink</td></tr>
-    <tr><td>Lag</td><td>log-end − committed offset</td><td>are we keeping up?</td><td>partition 2: 7 − 5 = 2</td><td>monitor always</td></tr>
-    <tr><td>Retention / compaction</td><td>segments; latest per key</td><td>how long, which records?</td><td>20 → 11 records; tombstone removed 105</td><td>delete for event history; compact for current state</td></tr>
-    <tr><td>Windows + watermark</td><td>event time, allowed lateness</td><td>totals on endless, late data?</td><td>1 day: 104 dropped; 3 days: = ETL gold</td><td>any streaming aggregate</td></tr>
-    <tr><td>Connect / Streams</td><td>connectors; Java library</td><td>avoid hand-written plumbing?</td><td>21 events → file, config only</td><td>moving data in/out; JVM services</td></tr>
-    <tr><td>Kafka vs queue</td><td>log vs delete-on-ack</td><td>which tool?</td><td>order-events (log) vs "send SMS once" (queue)</td><td>events vs tasks</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span>
-    <p>One sentence holds the note: <strong>Kafka is an ordered log per partition that readers never consume away; keys decide where an event goes and therefore what stays in order, and offsets decide where each reader is and therefore what a crash costs.</strong> Idempotent producers and idempotent sinks turn "at least once" into "effectively once", exactly like the ETL note's idempotent loads; windows and watermarks turn the endless log into the same tables the batch pipeline builds, just sooner.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: the revision sheet.</b> Everything above, condensed to one page.</div>
+partitions = [[], [], []]
+next_partition = cycle([0, 1, 2])                    # no key: messages are spread for throughput
+for event in ["101 placed", "101 delivered", "102 placed", "102 delivered"]:
+    partitions[next(next_partition)].append(event)
+print("partitions:", partitions)
+
+# two consumers read partitions 0 and 1 at different speeds; the board sees partition 1 first
+for event in partitions[1] + partitions[0]:
+    print("board receives:", event)</div>
+  <div class="fx" data-lang="text">partitions: [['101 placed', '102 delivered'], ['101 delivered'], ['102 placed']]
+board receives: 101 delivered
+board receives: 101 placed
+board receives: 102 delivered</div>
+  <p>Order 101's "placed" landed in partition 0 and its "delivered" in partition 1. A consumer that happens to read partition 1 first receives "101 delivered" for an order it has never seen, and the board's <code>open_orders[r] -= 1</code> would fail or go negative. The fix is to key every event by the entity whose order matters, here <code>order_id</code>.</p>
+  <p>The second is grouping by the wrong clock. If a job buckets events by when they arrived instead of when they happened, late events silently move to the wrong day:</p>
+  <div class="fx" data-lang="py"># SIMULATION: windowing by processing time (arrival) instead of event time
+
+delivered = [e for e in events() if e["event"] == "delivered" and e["city"] == "Pune"]
+arrived = {e["order_id"]: e["ts"][:10] for e in delivered}
+arrived[104] = "2026-03-05"                          # 104's phone was offline; uploaded two days later
+
+by_event_time, by_arrival = {}, {}
+for e in delivered:
+    by_event_time[e["ts"][:10]] = by_event_time.get(e["ts"][:10], 0) + e["amount"]
+    day = arrived[e["order_id"]]
+    by_arrival[day] = by_arrival.get(day, 0) + e["amount"]
+print("Pune revenue by event time:", by_event_time)
+print("Pune revenue by arrival   :", by_arrival)</div>
+  <div class="fx" data-lang="text">Pune revenue by event time: {'2026-03-02': 760, '2026-03-03': 380, '2026-03-05': 260}
+Pune revenue by arrival   : {'2026-03-02': 760, '2026-03-05': 640}</div>
+  <p>By event time, Pune earned ₹380 on 3 March; by arrival, 3 March shows nothing and 5 March shows ₹640, because 104's delivery was uploaded two days late. No error appears, only wrong numbers. Use the event's own timestamp and a watermark.</p>
+  <p>Several other mistakes come up again and again. Leaving <code>enable.auto.commit</code> on while processing asynchronously commits offsets for work that has not finished, so a crash loses events. Writing to a database with a plain insert or "add 1" under at-least-once delivery double-counts during every crash and rebalance; use upserts keyed by event id. Starting more consumers than partitions leaves the extra ones idle, and adding partitions later to fix it remaps keys. A single hot key overloads one partition and one consumer, which shows up as lag on that partition only. Forgetting <code>flush()</code> before a producer script exits loses its last events with no error. Slow work inside the poll loop beyond <code>max.poll.interval.ms</code> causes rebalance storms. Using a compacted topic for a consumer that needs full history, or Kafka as a job queue, picks the wrong tool. And building a streaming pipeline when nobody acts on the result within minutes adds an always-on system, harder testing and on-call duty where an hourly batch would do.</p>
 
   <h2 id="kf-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>The whole note on one sheet. Running example: Biteful's orders 101–110 as 19 events (10 placed, 7 delivered, 2 cancelled; 110 pending) in topic <code>order-events</code> with 3 partitions, key = order id: partition 0 ← 102, 103, 104, 106; partition 1 ← 107, 108, 109; partition 2 ← 101, 105, 110 (and later 111, Gita's order).</p>
-  <h3>The question ladder</h3>
+  <h3>Core terms</h3>
+  <ul>
+    <li><b>Event</b>: a small fact that happened at a time. <b>Batch</b>: bounded data on a schedule. <b>Streaming</b>: unbounded data, handled as it arrives.</li>
+    <li><b>Event time</b>: when it happened. <b>Processing time</b>: when the system saw it.</li>
+    <li><b>Broker</b>: one Kafka server; <b>cluster</b>: several brokers.</li>
+    <li><b>Topic</b>: a named stream. <b>Partition</b>: one ordered, append-only log inside a topic; the unit of ordering and parallelism.</li>
+    <li><b>Offset</b>: a record's position in its partition (0, 1, 2…); never renumbered.</li>
+    <li><b>Key → partition</b>: <code>hash(key) % partitions</code> (CRC32 in librdkafka, murmur2 in Java). Same key, same partition, in order.</li>
+    <li><b>Replication factor</b>: copies per partition; <b>leader</b> takes writes; <b>ISR</b>: followers fully caught up.</li>
+    <li><b>Consumer group</b>: consumers sharing a <code>group.id</code>; one owner per partition. <b>Rebalance</b>: reassignment on join, leave or missed heartbeats.</li>
+    <li><b>Committed offset</b>: the next record a group needs. <b>Lag</b> = log-end offset − committed offset.</li>
+    <li><b>Retention</b>: delete old segments by time or size. <b>Compaction</b>: keep the latest record per key; <b>tombstone</b> (null value) deletes a key.</li>
+    <li><b>Window</b>: tumbling (fixed, no overlap), hopping (fixed, overlapping), session (closes after a gap). <b>Watermark</b> = newest event time − allowed lateness.</li>
+    <li><b>Kafka Connect</b>: config-only source and sink connectors. <b>CDC</b>: publishing a database's changes from its write-ahead log (Debezium).</li>
+  </ul>
+  <h3>Delivery semantics</h3>
   <table class="tbl">
-    <tr><th>Concept</th><th>Question it answers</th><th>On Biteful</th><th>Weakness → next</th></tr>
-    <tr><td>Batch vs streaming</td><td>why not tomorrow?</td><td>101 seen 11 h 50 min late by batch</td><td>many readers → log</td></tr>
-    <tr><td>Log</td><td>same events, own pace</td><td>bookmarks 4 and 2; replay from 0</td><td>one machine → partitions</td></tr>
-    <tr><td>Partitions &amp; keys</td><td>scale + per-key order</td><td>crc32 % 3: 101 → 2</td><td>network failures → producers</td></tr>
-    <tr><td>Producers</td><td>stored? duplicated?</td><td>acks=0 → None; idempotence drops repeat</td><td>share reading → groups</td></tr>
-    <tr><td>Consumer groups</td><td>split work</td><td>[0,1,2] → [0,1]+[2] → [0,1,2]</td><td>crashes → offsets</td></tr>
-    <tr><td>Offsets &amp; semantics</td><td>what a crash costs</td><td>103 lost / twice; 11 tickets in a transaction; lag 2</td><td>log grows → retention</td></tr>
-    <tr><td>Retention &amp; compaction</td><td>keep what, how long</td><td>20 → 11 records</td><td>compute on streams → windows</td></tr>
-    <tr><td>Windows &amp; watermarks</td><td>totals on endless, late data</td><td>3-day lateness = ETL gold</td><td>plumbing by hand → Connect/Streams</td></tr>
-    <tr><td>Connect &amp; Streams</td><td>config-only movement; library processing</td><td>21 events → file</td><td>right tool? → queues</td></tr>
-    <tr><td>Kafka vs queues</td><td>events vs tasks</td><td>order-events vs SMS jobs</td><td>→ <a class="xref" data-note="sd_serving">serving fresh features</a></td></tr>
+    <tr><th>Semantics</th><th>Order of steps</th><th>Crash causes</th><th>Notes</th></tr>
+    <tr><td>At-most-once</td><td>commit → process</td><td>loss</td><td>also what careless auto-commit gives</td></tr>
+    <tr><td>At-least-once</td><td>process → commit</td><td>repeats</td><td>default; pair with an idempotent sink</td></tr>
+    <tr><td>Exactly-once</td><td>output + offsets in one transaction</td><td>nothing visible</td><td>Kafka → Kafka only; external sinks need idempotent writes</td></tr>
   </table>
-  <h3>Definitions and formulas</h3>
+  <h3>Settings that matter</h3>
   <table class="tbl">
-    <tr><th>Term</th><th>Meaning</th></tr>
-    <tr><td>Broker / topic / partition</td><td>one Kafka server / a named stream / one ordered log inside a topic</td></tr>
-    <tr><td>Offset</td><td>a record's position in a partition: 0, 1, 2…; never changes (compaction leaves gaps)</td></tr>
-    <tr><td>Partition of a key</td><td><code>hash(key) % n</code>: hash = CRC32 (librdkafka) or murmur2 (Java); n = partition count</td></tr>
-    <tr><td>acks</td><td>0: no reply; 1: leader wrote it; all: all in-sync replicas (ISR) wrote it</td></tr>
-    <tr><td>Idempotent producer</td><td>producer id + per-partition sequence number; broker drops duplicates</td></tr>
-    <tr><td>Consumer group / rebalance</td><td>members sharing a group.id, one owner per partition / reassignment on join, leave, crash</td></tr>
-    <tr><td>Committed offset / lag</td><td>next offset a group will read / lag = log-end offset − committed offset</td></tr>
-    <tr><td>At-most / at-least / exactly-once</td><td>commit then process / process then commit / atomic output + offsets (transactions) or idempotent sink</td></tr>
-    <tr><td>Retention / compaction / tombstone</td><td>delete old segments by age/size / keep latest per key / null value deletes a key</td></tr>
-    <tr><td>Window / watermark</td><td>a slice of event time (tumbling, hopping, session) / max event time − allowed lateness</td></tr>
-    <tr><td>Connect / Kafka Streams</td><td>config-only source/sink connectors / Java library for stateful processing</td></tr>
+    <tr><th>Setting</th><th>Meaning</th></tr>
+    <tr><td><code>acks=0 / 1 / all</code></td><td>no reply / leader wrote it / every in-sync replica wrote it</td></tr>
+    <tr><td><code>enable.idempotence</code></td><td>producer id + sequence numbers; broker drops retried duplicates</td></tr>
+    <tr><td><code>min.insync.replicas</code></td><td>with acks=all, refuse writes unless this many copies are in sync</td></tr>
+    <tr><td><code>linger.ms</code>, <code>compression.type</code></td><td>bigger, compressed batches: more throughput, slightly more latency</td></tr>
+    <tr><td><code>enable.auto.commit</code></td><td>commit on a timer (default true); turn off and commit after processing</td></tr>
+    <tr><td><code>auto.offset.reset</code></td><td>where to start with no committed offset: <code>earliest</code> or <code>latest</code></td></tr>
+    <tr><td><code>max.poll.interval.ms</code></td><td>max time between polls before the consumer is presumed dead (5 min)</td></tr>
+    <tr><td><code>isolation.level=read_committed</code></td><td>never read records from aborted transactions</td></tr>
+    <tr><td><code>cleanup.policy</code>, <code>retention.ms</code></td><td><code>delete</code> (default, 7 days) or <code>compact</code></td></tr>
   </table>
-  <h3>When to use, when not</h3>
-  <div class="cards">
-    <div><b>Streaming</b><p>Use when someone acts within seconds: kitchens, riders, fraud, live features.</p><small>Not for a once-a-day report</small></div>
-    <div><b>Key by entity</b><p>Use the id whose events must stay in order (order_id).</p><small>No key = no order; hot keys overload one partition</small></div>
-    <div><b>At-least-once + idempotent sink</b><p>The default for writes to databases.</p><small>Never "add 1" or plain INSERT in the sink</small></div>
-    <div><b>Transactions (EOS)</b><p>Kafka → Kafka processing where duplicates are unacceptable.</p><small>Don't cover external databases</small></div>
-    <div><b>Compacted topic</b><p>Current state per key (order status, user profile).</p><small>Not for full history</small></div>
-    <div><b>Queue instead</b><p>Tasks done once by any worker, per-message retry/delay.</p><small>No replay, no many-reader fan-out</small></div>
-  </div>
-  <div class="callout trap"><span class="label">Key traps</span>
-    <p>Expecting order across partitions; adding partitions remaps keys; auto-commit before processing; more consumers than partitions; non-idempotent sinks under at-least-once; hot keys; no <code>flush()</code>; processing-time windows; slow processing beyond <code>max.poll.interval.ms</code> → rebalance storm; using Kafka as a job queue; streaming where batch would do.</p>
-  </div>
-  <h3>Five rapid-fire checks</h3>
-  <table class="tbl">
-    <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td>crc32("101") = 1,416,650,876. Which of 3 partitions?</td><td>1,416,650,876 % 3 = 2 → partition 2.</td></tr>
-    <tr><td>A group of 4 consumers reads a 3-partition topic. How many are busy?</td><td>3; the fourth is idle.</td></tr>
-    <tr><td>Committed offset 5, log-end offset 7. Lag?</td><td>2.</td></tr>
-    <tr><td>Commit, then process; crash between. Lost or repeated?</td><td>Lost (at-most-once).</td></tr>
-    <tr><td>A compacted topic has "101 placed" then "101 delivered". What survives?</td><td>"101 delivered" (latest per key), at its original offset.</td></tr>
-  </table>
+  <h3>Syntax</h3>
+  <div class="fx" data-lang="py">from confluent_kafka import Producer, Consumer
 
-  <h2 id="kf-qa"><span class="num">14</span>Questions &amp; Answers</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Can you explain, out loud and without notes, why each Kafka idea exists and what breaks without it?</p>
-  </div>
+p = Producer({"bootstrap.servers": "b1:9092", "acks": "all", "enable.idempotence": True})
+p.produce("order-events", key="101", value=payload, callback=report)   # buffers only
+p.poll(0); p.flush()                                                    # reports; wait for all
+
+c = Consumer({"bootstrap.servers": "b1:9092", "group.id": "warehouse-loader",
+              "auto.offset.reset": "earliest", "enable.auto.commit": False})
+c.subscribe(["order-events"])
+msg = c.poll(1.0)                        # fetch + heartbeat
+process(msg); c.commit(message=msg)      # at-least-once
+
+# Spark: event-time windows with a watermark
+df.withWatermark("ts", "3 days").groupBy(F.window("ts", "1 day"), "city").agg(F.sum("amount"))</div>
+  <h3>Gotchas</h3>
+  <ul>
+    <li>Order is per partition only; key by the entity whose order matters.</li>
+    <li>Adding partitions remaps keys (3 → 5 moved 8 of 11 Biteful keys).</li>
+    <li>Consumers in a group beyond the partition count sit idle.</li>
+    <li><code>produce()</code> only buffers; without <code>flush()</code> the last events are lost.</li>
+    <li>At-least-once repeats events: upsert or dedupe by event id.</li>
+    <li>Transactions do not cover databases or emails.</li>
+    <li>Window by event time, never processing time; size the watermark to real lateness.</li>
+    <li>Slow processing per poll → rebalance storm; hot keys → lag on one partition.</li>
+    <li>Kafka is not a queue: reading never deletes.</li>
+  </ul>
+
+  <h2 id="kf-qa"><span class="num">13</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>How is Kafka different from a traditional message queue like RabbitMQ or SQS?</summary><div class="qa-body">Kafka is a durable, partitioned log: reading doesn't delete, so many consumer groups read the same events independently and can replay from any offset until retention expires. Queues usually delete a message once acknowledged and give each message to one worker, with fine per-message control. Kafka also has very high throughput thanks to sequential disk I/O and batching.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is an offset?</summary><div class="qa-body">The position of a record inside one partition: 0, 1, 2 … It never changes. A group's committed offset is its bookmark: "the next record I need is at offset N".</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Does Kafka guarantee ordering?</summary><div class="qa-body">Only within a partition. Records with the same key go to the same partition, so per-key order is kept (each Biteful order's placed → delivered). There is no order across partitions. The idempotent producer keeps order even with retries.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>A topic has 6 partitions; your group has 8 consumers. What happens?</summary><div class="qa-body">6 consumers get one partition each; 2 sit idle as standbys. To use more, add partitions, which remaps keys and breaks per-key ordering during the change, so plan partition counts up front.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Explain at-most-once, at-least-once and exactly-once.</summary><div class="qa-body">At-most-once: commit before processing; a crash loses the event. At-least-once: process, then commit; a crash repeats it. Exactly-once: output and offset commit happen atomically (Kafka transactions, for Kafka → Kafka), or at-least-once plus an idempotent sink (upsert by event id) for external systems.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does <code>acks=all</code> mean, and what is the ISR?</summary><div class="qa-body">The producer waits until the leader and all in-sync replicas (followers fully caught up) have the record. With <code>min.insync.replicas=2</code> and replication factor 3, an acknowledged write survives one broker dying. <code>acks=1</code> can lose data if the leader dies before followers copy it; <code>acks=0</code> doesn't even learn the offset.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Your consumer lag keeps growing. What do you check?</summary><div class="qa-body">Is per-event work too slow (model calls, sync DB writes)? Batch or parallelise. Fewer consumers than partitions? Add consumers. One partition hot (skewed key)? Fix the key. Frequent rebalances (<code>max.poll.interval.ms</code> exceeded)? Check consumer logs.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Retention vs log compaction?</summary><div class="qa-body">Retention deletes old segments by time or size, regardless of key. Compaction keeps at least the latest record per key and drops older ones, so the topic acts as current state (Biteful's order-status went 20 → 11 records). A null value (tombstone) deletes a key.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Event time vs processing time: why does it matter?</summary><div class="qa-body">Event time is when it happened; processing time is when you saw it. Events arrive late and out of order (offline phones, retries). Windows by processing time put events in the wrong bucket. Use event time plus a watermark (104's late delivery was dropped with 1 day of lateness, kept with 3).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Kafka Streams vs Flink vs Spark Structured Streaming: how do you choose?</summary><div class="qa-body">Kafka Streams: a library inside JVM services, Kafka in and out, no cluster. Flink: lowest latency, true per-record processing, best event-time and large-state handling. Spark Structured Streaming: micro-batches with the same DataFrame API as batch; good when the team already uses Spark and Python.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does at-least-once delivery need the ETL note's idempotency?</summary><div class="qa-body">At-least-once means some events are processed twice (after a crash, 103's ticket was sent again). If the sink adds or appends, the effect is doubled, like the ETL's 1210 → 2420. If the sink upserts by key or dedupes by event id (the board's <code>seen</code> set), a repeat changes nothing, so the result is effectively exactly once.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why must the key be order_id rather than restaurant or random?</summary><div class="qa-body">The key decides the partition, and only a partition is ordered. With order_id, each order's placed and delivered events are in one partition in order, so the board can compute minutes from placed to delivered. With random keys, "delivered" could be read before "placed". Keying by restaurant would also keep order, but a mega-sale restaurant would become a hot key.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks if consumers commit offsets but the producer is not idempotent?</summary><div class="qa-body">Duplicates enter the log itself: a retried "101 delivered" is stored twice at two offsets. Consumer-side semantics can't help, because these are two real records; every reader sees the order delivered twice. Duplicates must be prevented at each hop: idempotent producer into Kafka, offsets or transactions out of it, idempotent sink at the end.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: how does the streaming revenue table relate to the ETL's gold table?</summary><div class="qa-body">Same question, same answer, different timing. The ETL computed delivered revenue per city per day once a night from the warehouse; the streaming job computed it from events with one-day tumbling windows and a 3-day watermark, and produced identical rows as soon as each delivery arrived. The watermark plays the role of the ETL's "wait until the day is over"; late events play the role of the incremental watermark's changed rows.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Design a real-time "open orders per restaurant" feature for an ETA model.</summary><div class="qa-body">The app produces order events keyed by order_id with acks=all and idempotence. A stream job (Flink, Spark, Kafka Streams, or a consumer group) keeps open orders and recent delivery minutes per restaurant, deduplicating by event id, checkpointing state. It writes to an online store (Redis) for the model API and to the lake for training, so both use the same definition. Monitor lag and alert when it grows.</div></details>
-  <div class="bridge"><b>What this still can't tell us → next: <a class="xref" data-note="sd_serving">serving and feature pipelines</a>.</b> Kafka gives Biteful fresh, ordered, replayable events, and the board turns them into live numbers. How a model reads those numbers at request time, keeps them consistent with training, and is monitored in production is the subject of ML system design.</div>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between batch and stream processing, and how do you choose?</summary><div class="qa-body">Batch processes bounded data on a schedule, so results are minutes to hours old but the jobs are simple, cheap and easy to rerun. Streaming processes unbounded events continuously, with latency of milliseconds to seconds, at the cost of always-on infrastructure and harder testing. Choose by asking how quickly someone must act on the result: kitchen tickets and fraud checks need streaming; a daily revenue report does not.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is Kafka, in one or two sentences?</summary><div class="qa-body">Kafka is a distributed, replicated, append-only log. Producers append events to partitioned topics, and any number of consumer groups read them independently from their own offsets, because reading never deletes; events are kept until retention or compaction removes them.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How is Kafka different from a message queue like RabbitMQ or SQS?</summary><div class="qa-body">A queue gives each message to one worker and deletes it once acknowledged, with fine per-message control such as retries, delays and dead-letter queues. Kafka keeps messages after they are read, so many groups each get every message and can replay history, and ordering is guaranteed per partition. Queues suit tasks done once by any worker; Kafka suits events many systems need.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What are topics, partitions and offsets?</summary><div class="qa-body">A topic is a named stream of events. It is split into partitions, each an ordered append-only log that can live on a different broker, which is how Kafka scales. An offset is a record's position within its partition, starting at 0; it never changes, and a consumer group's committed offset is its bookmark in each partition.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Does Kafka guarantee message ordering?</summary><div class="qa-body">Only within a single partition. Records with the same key go to the same partition, so per-key order is preserved, which is why Biteful keys events by order id. There is no ordering across partitions. The idempotent producer preserves order within a partition even when it retries.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How does a producer decide which partition a record goes to, and what happens if you add partitions?</summary><div class="qa-body">With a key, the partitioner computes <code>hash(key) % number_of_partitions</code> (CRC32 in librdkafka, murmur2 in the Java client); without a key, records are spread for throughput. Adding partitions changes the modulus, so most keys map to a new partition, and an entity's old and new events can end up in different partitions and be processed out of order. Choose partition counts with headroom up front.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does <code>acks=all</code> mean, and what is the ISR?</summary><div class="qa-body">With <code>acks=all</code> the leader replies only after every in-sync replica has the record. The ISR is the set of followers that are fully caught up with the leader. Combined with replication factor 3 and <code>min.insync.replicas=2</code>, an acknowledged write survives the loss of one broker; <code>acks=1</code> can lose data if the leader dies before followers copy it.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is an idempotent producer and what problem does it solve?</summary><div class="qa-body">When a reply is lost, the producer retries, and the broker may store the same record twice. With idempotence enabled, the producer has an id and numbers its messages per partition; the broker remembers the latest sequence numbers and drops a retry it has already written. This removes duplicates and reordering caused by retries.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a consumer group, and what happens if a group has more consumers than partitions?</summary><div class="qa-body">A consumer group is a set of consumers with the same <code>group.id</code> that share a topic's partitions, each partition owned by exactly one member, while other groups read the same data independently. With more consumers than partitions, the extra consumers are idle standbys. To scale further you need more partitions.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a rebalance, and what is a rebalance storm?</summary><div class="qa-body">A rebalance reassigns partitions when a consumer joins, leaves, or misses heartbeats or polls. A storm happens when processing between polls exceeds <code>max.poll.interval.ms</code>: the consumer is kicked out, its partition goes to another member that re-reads the same slow batch and is kicked out too, and the group never makes progress. Fix it with smaller batches, faster processing, or a deliberately higher limit; cooperative-sticky assignment reduces the pause each rebalance causes.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Explain at-most-once, at-least-once and exactly-once delivery.</summary><div class="qa-body">At-most-once commits the offset before processing, so a crash loses the event. At-least-once processes first and commits after, so a crash repeats the event; this is the usual default. Exactly-once makes output and offset commit atomic with Kafka transactions for Kafka-to-Kafka pipelines, or uses at-least-once plus idempotent writes for external systems.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why is auto-commit dangerous?</summary><div class="qa-body">With <code>enable.auto.commit=true</code>, the client commits the offsets of records returned by <code>poll()</code> on a timer, whether or not your code has finished with them. If processing is asynchronous or batched and the process crashes after a commit but before the work completes, those events are lost. Turn it off and commit after the work is done.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is consumer lag, and what would you check if it keeps growing?</summary><div class="qa-body">Lag is the log-end offset minus the group's committed offset: records written but not yet processed. If it grows, check whether per-record work is too slow (synchronous database writes, model calls), whether there are fewer consumers than partitions, whether one partition is hot because of a skewed key, and whether frequent rebalances are interrupting the group.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between retention and log compaction?</summary><div class="qa-body">Retention deletes whole old segments once they pass an age or size limit, regardless of key, so the topic is a history window. Compaction keeps at least the latest record for each key and removes older ones, so the topic acts as a table of current state; a tombstone (null value) deletes a key. Kafka's own <code>__consumer_offsets</code> is compacted.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Event time vs processing time: why does it matter in streaming?</summary><div class="qa-body">Event time is when something happened; processing time is when the system received it. Events arrive late and out of order because of offline devices, retries and network delays. Aggregating by processing time puts late events in the wrong window silently, so correct pipelines group by event time and use a watermark to decide how long to wait.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What are tumbling, hopping and session windows, and what is a watermark?</summary><div class="qa-body">Tumbling windows are fixed, non-overlapping slots; hopping windows are fixed-size but overlapping, starting every step; session windows group events separated by less than a gap. A watermark is the newest event time seen minus an allowed lateness: windows that end before it are finalised and their state freed, and later events for them are dropped. More lateness means more correct results but more state and later final answers.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is Kafka Connect, and what is CDC?</summary><div class="qa-body">Kafka Connect is a runtime for source and sink connectors configured declaratively, with offset tracking, retries and scaling handled for you, used for moving data between Kafka and databases, S3 or warehouses. CDC (change data capture) publishes every insert, update and delete from a database's write-ahead log as events, for example with Debezium; unlike watermark-based extraction it captures deletes and never misses updates.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Kafka Streams vs Flink vs Spark Structured Streaming: how do you choose?</summary><div class="qa-body">Kafka Streams is a Java library inside your service, ideal for Kafka-in, Kafka-out microservices with no extra cluster. Flink is a distributed engine with per-record processing, millisecond latency and the strongest event-time and state handling. Spark Structured Streaming uses micro-batches with the same DataFrame API as batch Spark, which suits teams already on Spark and Python who can accept sub-second to second latency.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Design a real-time "open orders per restaurant" feature for an ETA model.</summary><div class="qa-body">The app produces order events keyed by order id with <code>acks=all</code> and idempotence. A stream job (Flink, Spark or a consumer group) reads them with at-least-once commits, deduplicates by event id, keeps open orders and recent delivery times per restaurant in checkpointed state, and writes the results to an online store such as Redis for the model to read in milliseconds, and to the lake for training so both use the same definition. Monitor consumer lag and alert when it grows.</div></details>
 </main>
 `
 });
