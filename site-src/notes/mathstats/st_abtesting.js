@@ -590,27 +590,27 @@ z=3.14  p=0.0017  95% CI for diff: [+0.41%, +1.79%]</div>
   <p>p = 0.0017 tells us the lift is very unlikely to be zero. It does not tell us the lift is big enough to be worth the engineering, maintenance and risk. These are two different questions. With ten million users, a 0.02 pp lift is "statistically significant" and worth nothing; with very few users, a valuable lift can fail to be significant. <strong>Statistical significance</strong> means the data would be unlikely if there were no effect (p &lt; α). <strong>Practical significance</strong> means the effect is large enough to matter to the business. A good decision needs both, and the p-value alone cannot make it.</p>
   <p>Think of a new route to the office that saves time "for certain", but somewhere between 10 and 40 seconds a day. It is a real saving, but not worth paying an extra toll for. Another route saves somewhere between −5 and +25 minutes: you simply do not know yet, and should drive it a few more days before deciding. In both cases the useful information is the <em>range</em>, not a yes/no answer about zero.</p>
   <p>So the decision is made from the whole confidence interval, compared against two lines. Zero answers "is there any effect?", and the MDE chosen in section 02 answers "is it worth it?". The chart shows five typical intervals and ours:</p>
-  <figure class="viz"><svg viewBox="0 0 452.280937 215.919219" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="max-width:640px;width:100%;height:auto">
+  <figure class="viz"><svg viewBox="0 0 431.971562 251.919219" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="max-width:640px;width:100%;height:auto">
  <defs>
   <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
  </defs>
  <g id="sabcifigure_1">
   <g id="sabcipatch_1">
-   <path d="M 0 215.919219 
-L 452.280937 215.919219 
-L 452.280937 0 
+   <path d="M 0 251.919219 
+L 431.971562 251.919219 
+L 431.971562 0 
 L 0 0 
-L 0 215.919219 
+L 0 251.919219 
 z
 " style="fill: none"/>
   </g>
   <g id="sabciaxes_1">
    <g id="sabcipatch_2">
-    <path d="M 87.960938 173.52 
-L 445.080938 173.52 
-L 445.080938 7.2 
-L 87.960938 7.2 
-L 87.960938 173.52 
+    <path d="M 49.651563 191.52 
+L 406.771563 191.52 
+L 406.771563 25.2 
+L 49.651563 25.2 
+L 49.651563 191.52 
 z
 " style="fill: none"/>
    </g>
@@ -623,119 +623,119 @@ L 0 3.5
 " style="stroke: currentColor; stroke-width: 0.8"/>
       </defs>
       <g>
-       <use xlink:href="#sabcimedb56decd0" x="113.742328" y="173.52" style="stroke: currentColor; stroke-width: 0.8"/>
+       <use xlink:href="#sabcimedb56decd0" x="75.432953" y="191.52" style="stroke: currentColor; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="sabcitext_1">
-      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="113.742328" y="190.2075" transform="rotate(-0 113.742328 190.2075)">−1.5</text>
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="75.432953" y="208.2075" transform="rotate(-0 75.432953 208.2075)">−1.5</text>
      </g>
     </g>
     <g id="sabcixtick_2">
      <g id="sabciline2d_2">
       <g>
-       <use xlink:href="#sabcimedb56decd0" x="161.485643" y="173.52" style="stroke: currentColor; stroke-width: 0.8"/>
+       <use xlink:href="#sabcimedb56decd0" x="123.176268" y="191.52" style="stroke: currentColor; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="sabcitext_2">
-      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="161.485643" y="190.2075" transform="rotate(-0 161.485643 190.2075)">−1.0</text>
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="123.176268" y="208.2075" transform="rotate(-0 123.176268 208.2075)">−1.0</text>
      </g>
     </g>
     <g id="sabcixtick_3">
      <g id="sabciline2d_3">
       <g>
-       <use xlink:href="#sabcimedb56decd0" x="209.228959" y="173.52" style="stroke: currentColor; stroke-width: 0.8"/>
+       <use xlink:href="#sabcimedb56decd0" x="170.919584" y="191.52" style="stroke: currentColor; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="sabcitext_3">
-      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="209.228959" y="190.2075" transform="rotate(-0 209.228959 190.2075)">−0.5</text>
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="170.919584" y="208.2075" transform="rotate(-0 170.919584 208.2075)">−0.5</text>
      </g>
     </g>
     <g id="sabcixtick_4">
      <g id="sabciline2d_4">
       <g>
-       <use xlink:href="#sabcimedb56decd0" x="256.972274" y="173.52" style="stroke: currentColor; stroke-width: 0.8"/>
+       <use xlink:href="#sabcimedb56decd0" x="218.662899" y="191.52" style="stroke: currentColor; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="sabcitext_4">
-      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="256.972274" y="190.2075" transform="rotate(-0 256.972274 190.2075)">0.0</text>
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="218.662899" y="208.2075" transform="rotate(-0 218.662899 208.2075)">0.0</text>
      </g>
     </g>
     <g id="sabcixtick_5">
      <g id="sabciline2d_5">
       <g>
-       <use xlink:href="#sabcimedb56decd0" x="304.71559" y="173.52" style="stroke: currentColor; stroke-width: 0.8"/>
+       <use xlink:href="#sabcimedb56decd0" x="266.406215" y="191.52" style="stroke: currentColor; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="sabcitext_5">
-      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="304.71559" y="190.2075" transform="rotate(-0 304.71559 190.2075)">0.5</text>
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="266.406215" y="208.2075" transform="rotate(-0 266.406215 208.2075)">0.5</text>
      </g>
     </g>
     <g id="sabcixtick_6">
      <g id="sabciline2d_6">
       <g>
-       <use xlink:href="#sabcimedb56decd0" x="352.458905" y="173.52" style="stroke: currentColor; stroke-width: 0.8"/>
+       <use xlink:href="#sabcimedb56decd0" x="314.14953" y="191.52" style="stroke: currentColor; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="sabcitext_6">
-      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="352.458905" y="190.2075" transform="rotate(-0 352.458905 190.2075)">1.0</text>
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="314.14953" y="208.2075" transform="rotate(-0 314.14953 208.2075)">1.0</text>
      </g>
     </g>
     <g id="sabcixtick_7">
      <g id="sabciline2d_7">
       <g>
-       <use xlink:href="#sabcimedb56decd0" x="400.202221" y="173.52" style="stroke: currentColor; stroke-width: 0.8"/>
+       <use xlink:href="#sabcimedb56decd0" x="361.892846" y="191.52" style="stroke: currentColor; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="sabcitext_7">
-      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="400.202221" y="190.2075" transform="rotate(-0 400.202221 190.2075)">1.5</text>
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="361.892846" y="208.2075" transform="rotate(-0 361.892846 208.2075)">1.5</text>
      </g>
     </g>
     <g id="sabcitext_8">
-     <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="266.520938" y="206.307109" transform="rotate(-0 266.520938 206.307109)">95% CI for the lift (percentage points)</text>
+     <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: middle" x="228.211563" y="224.307109" transform="rotate(-0 228.211563 224.307109)">95% CI for the lift (percentage points)</text>
     </g>
    </g>
    <g id="sabcimatplotlib.axis_2">
     <g id="sabciytick_1">
      <g id="sabciline2d_8"/>
      <g id="sabcitext_9">
-      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="84.460938" y="162.77125" transform="rotate(-0 84.460938 162.77125)">our test</text>
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="46.151563" y="182.308539" transform="rotate(-0 46.151563 182.308539)">ours</text>
      </g>
     </g>
     <g id="sabciytick_2">
      <g id="sabciline2d_9"/>
      <g id="sabcitext_10">
-      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="84.460938" y="136.78375" transform="rotate(-0 84.460938 136.78375)">E: kill</text>
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="46.151563" y="158.883187" transform="rotate(-0 46.151563 158.883187)">E</text>
      </g>
     </g>
     <g id="sabciytick_3">
      <g id="sabciline2d_10"/>
      <g id="sabcitext_11">
-      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="84.460938" y="110.79625" transform="rotate(-0 84.460938 110.79625)">D: confident null</text>
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="46.151563" y="135.457835" transform="rotate(-0 46.151563 135.457835)">D</text>
      </g>
     </g>
     <g id="sabciytick_4">
      <g id="sabciline2d_11"/>
      <g id="sabcitext_12">
-      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="84.460938" y="84.80875" transform="rotate(-0 84.460938 84.80875)">C: inconclusive</text>
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="46.151563" y="112.032482" transform="rotate(-0 46.151563 112.032482)">C</text>
      </g>
     </g>
     <g id="sabciytick_5">
      <g id="sabciline2d_12"/>
      <g id="sabcitext_13">
-      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="84.460938" y="58.82125" transform="rotate(-0 84.460938 58.82125)">B: real but tiny</text>
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="46.151563" y="88.60713" transform="rotate(-0 46.151563 88.60713)">B</text>
      </g>
     </g>
     <g id="sabciytick_6">
      <g id="sabciline2d_13"/>
      <g id="sabcitext_14">
-      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="84.460938" y="32.83375" transform="rotate(-0 84.460938 32.83375)">A: ship</text>
+      <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="46.151563" y="65.181778" transform="rotate(-0 46.151563 65.181778)">A</text>
      </g>
     </g>
    </g>
    <g id="sabciline2d_14">
-    <path d="M 296.121793 157.9275 
-L 427.893344 157.9275 
-" clip-path="url(#sabcipf839272669)" style="fill: none; stroke: #e8743b; stroke-width: 4"/>
+    <path d="M 257.812418 177.464789 
+L 389.583969 177.464789 
+" clip-path="url(#sabcip5071130e4c)" style="fill: none; stroke: #e8743b; stroke-width: 4"/>
    </g>
    <g id="sabciline2d_15">
     <defs>
@@ -751,14 +751,14 @@ C -1.55874 2.683901 -0.795609 3 0 3
 z
 " style="stroke: #e8743b"/>
     </defs>
-    <g clip-path="url(#sabcipf839272669)">
-     <use xlink:href="#sabcimb374cfb68b" x="362.007569" y="157.9275" style="fill: #e8743b; stroke: #e8743b"/>
+    <g clip-path="url(#sabcip5071130e4c)">
+     <use xlink:href="#sabcimb374cfb68b" x="323.698194" y="177.464789" style="fill: #e8743b; stroke: #e8743b"/>
     </g>
    </g>
    <g id="sabciline2d_16">
-    <path d="M 104.193665 131.94 
-L 218.777622 131.94 
-" clip-path="url(#sabcipf839272669)" style="fill: none; stroke: #2a78d6; stroke-width: 4"/>
+    <path d="M 65.88429 154.039437 
+L 180.468247 154.039437 
+" clip-path="url(#sabcip5071130e4c)" style="fill: none; stroke: #2a78d6; stroke-width: 4"/>
    </g>
    <g id="sabciline2d_17">
     <defs>
@@ -774,79 +774,79 @@ C -1.55874 2.683901 -0.795609 3 0 3
 z
 " style="stroke: #2a78d6"/>
     </defs>
-    <g clip-path="url(#sabcipf839272669)">
-     <use xlink:href="#sabcime8e5dd379e" x="161.485643" y="131.94" style="fill: #2a78d6; stroke: #2a78d6"/>
+    <g clip-path="url(#sabcip5071130e4c)">
+     <use xlink:href="#sabcime8e5dd379e" x="123.176268" y="154.039437" style="fill: #2a78d6; stroke: #2a78d6"/>
     </g>
    </g>
    <g id="sabciline2d_18">
-    <path d="M 233.100617 105.9525 
-L 285.618264 105.9525 
-" clip-path="url(#sabcipf839272669)" style="fill: none; stroke: #2a78d6; stroke-width: 4"/>
+    <path d="M 194.791242 130.614085 
+L 247.308889 130.614085 
+" clip-path="url(#sabcip5071130e4c)" style="fill: none; stroke: #2a78d6; stroke-width: 4"/>
    </g>
    <g id="sabciline2d_19">
-    <g clip-path="url(#sabcipf839272669)">
-     <use xlink:href="#sabcime8e5dd379e" x="259.35944" y="105.9525" style="fill: #2a78d6; stroke: #2a78d6"/>
+    <g clip-path="url(#sabcip5071130e4c)">
+     <use xlink:href="#sabcime8e5dd379e" x="221.050065" y="130.614085" style="fill: #2a78d6; stroke: #2a78d6"/>
     </g>
    </g>
    <g id="sabciline2d_20">
-    <path d="M 171.034306 79.965 
-L 400.202221 79.965 
-" clip-path="url(#sabcipf839272669)" style="fill: none; stroke: #2a78d6; stroke-width: 4"/>
+    <path d="M 132.724931 107.188732 
+L 361.892846 107.188732 
+" clip-path="url(#sabcip5071130e4c)" style="fill: none; stroke: #2a78d6; stroke-width: 4"/>
    </g>
    <g id="sabciline2d_21">
-    <g clip-path="url(#sabcipf839272669)">
-     <use xlink:href="#sabcime8e5dd379e" x="285.618264" y="79.965" style="fill: #2a78d6; stroke: #2a78d6"/>
+    <g clip-path="url(#sabcip5071130e4c)">
+     <use xlink:href="#sabcime8e5dd379e" x="247.308889" y="107.188732" style="fill: #2a78d6; stroke: #2a78d6"/>
     </g>
    </g>
    <g id="sabciline2d_22">
-    <path d="M 266.520938 53.9775 
-L 304.71559 53.9775 
-" clip-path="url(#sabcipf839272669)" style="fill: none; stroke: #2a78d6; stroke-width: 4"/>
+    <path d="M 228.211563 83.76338 
+L 266.406215 83.76338 
+" clip-path="url(#sabcip5071130e4c)" style="fill: none; stroke: #2a78d6; stroke-width: 4"/>
    </g>
    <g id="sabciline2d_23">
-    <g clip-path="url(#sabcipf839272669)">
-     <use xlink:href="#sabcime8e5dd379e" x="285.618264" y="53.9775" style="fill: #2a78d6; stroke: #2a78d6"/>
+    <g clip-path="url(#sabcip5071130e4c)">
+     <use xlink:href="#sabcime8e5dd379e" x="247.308889" y="83.76338" style="fill: #2a78d6; stroke: #2a78d6"/>
     </g>
    </g>
    <g id="sabciline2d_24">
-    <path d="M 314.264253 27.99 
-L 428.84821 27.99 
-" clip-path="url(#sabcipf839272669)" style="fill: none; stroke: #2a78d6; stroke-width: 4"/>
+    <path d="M 275.954878 60.338028 
+L 390.538835 60.338028 
+" clip-path="url(#sabcip5071130e4c)" style="fill: none; stroke: #2a78d6; stroke-width: 4"/>
    </g>
    <g id="sabciline2d_25">
-    <g clip-path="url(#sabcipf839272669)">
-     <use xlink:href="#sabcime8e5dd379e" x="371.556232" y="27.99" style="fill: #2a78d6; stroke: #2a78d6"/>
+    <g clip-path="url(#sabcip5071130e4c)">
+     <use xlink:href="#sabcime8e5dd379e" x="333.246857" y="60.338028" style="fill: #2a78d6; stroke: #2a78d6"/>
     </g>
    </g>
    <g id="sabciline2d_26">
-    <path d="M 256.972274 173.52 
-L 256.972274 7.2 
-" clip-path="url(#sabcipf839272669)" style="fill: none; stroke: currentColor; stroke-linecap: square"/>
+    <path d="M 218.662899 191.52 
+L 218.662899 25.2 
+" clip-path="url(#sabcip5071130e4c)" style="fill: none; stroke: currentColor; stroke-linecap: square"/>
    </g>
    <g id="sabciline2d_27">
-    <path d="M 352.458905 173.52 
-L 352.458905 7.2 
-" clip-path="url(#sabcipf839272669)" style="fill: none; stroke-dasharray: 4.44,1.92; stroke-dashoffset: 0; stroke: #3a9d5d; stroke-width: 1.2"/>
+    <path d="M 314.14953 191.52 
+L 314.14953 25.2 
+" clip-path="url(#sabcip5071130e4c)" style="fill: none; stroke-dasharray: 4.44,1.92; stroke-dashoffset: 0; stroke: #3a9d5d; stroke-width: 1.2"/>
    </g>
    <g id="sabcipatch_3">
-    <path d="M 87.960938 173.52 
-L 445.080938 173.52 
+    <path d="M 49.651563 191.52 
+L 406.771562 191.52 
 " style="fill: none; stroke: currentColor; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
    </g>
    <g id="sabcitext_15">
-    <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: start; fill: #3a9d5d" x="355.323504" y="18.894375" transform="rotate(-0 355.323504 18.894375)">MDE = 1 pp</text>
+    <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end; fill: #3a9d5d" x="311.284931" y="38.083944" transform="rotate(-0 311.284931 38.083944)">MDE = 1 pp</text>
    </g>
    <g id="sabcitext_16">
-    <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: start" x="259.836873" y="18.894375" transform="rotate(-0 259.836873 18.894375)">0</text>
+    <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: start" x="221.527498" y="38.083944" transform="rotate(-0 221.527498 38.083944)">0</text>
    </g>
   </g>
  </g>
  <defs>
-  <clipPath id="sabcipf839272669">
-   <rect x="87.960938" y="7.2" width="357.12" height="166.32"/>
+  <clipPath id="sabcip5071130e4c">
+   <rect x="49.651563" y="25.2" width="357.12" height="166.32"/>
   </clipPath>
  </defs>
-</svg><figcaption>Each bar is a 95% CI for the lift and the dot is its centre. Judge each against 0 (is it real?) and the MDE of 1 pp (is it worth it?).</figcaption></figure>
+</svg><figcaption>Each bar is a 95% CI for the lift and the dot is its centre: A ship, B real but tiny, C inconclusive, D confident null, E kill, and our test. Judge each against 0 (is it real?) and the MDE of 1 pp (is it worth it?).</figcaption></figure>
   <p>A lies entirely above zero and is centred above the MDE: ship. B is above zero but entirely below the MDE: the effect is real but too small to matter, so ship only if it is cheap and safe. C crosses zero and is wide: the test was underpowered, and it rules out almost nothing, so it must not be reported as "no effect". D also crosses zero but is narrow, ruling out any lift as big as the MDE: that is a confident null, so stop and move on. E is entirely below zero: the change hurts. The same rules written as a function:</p>
   <div class="fx" data-lang="py">def decide(lo, hi, mde):
     """lo, hi = 95% CI for the lift; mde = smallest lift worth shipping (same units)."""
@@ -1190,28 +1190,28 @@ L 402.816484 169.667279
 " style="fill: none; stroke: currentColor; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
    </g>
    <g id="sabpkpatch_6">
-    <path d="M 268.653941 155.442634 
-Q 228.715638 161.039401 189.884549 166.481009 
+    <path d="M 162.789276 97.15926 
+Q 174.466786 131.089229 185.780454 163.962023 
 " style="fill: none; stroke: currentColor; stroke-linecap: round"/>
-    <path d="M 194.123401 167.906538 
-L 189.884549 166.481009 
-L 193.568284 163.945245 
+    <path d="M 186.369863 159.528898 
+L 185.780454 163.962023 
+L 182.5876 160.830621 
 " style="fill: none; stroke: currentColor; stroke-linecap: round"/>
    </g>
    <g id="sabpktext_23">
-    <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: start" x="269.208652" y="150.752456" transform="rotate(-0 269.208652 150.752456)">day 6: p = 0.017  'ship it!'</text>
+    <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: start" x="121.865435" y="90.855515" transform="rotate(-0 121.865435 90.855515)">day 6: p = 0.017</text>
    </g>
    <g id="sabpkpatch_7">
-    <path d="M 329.719787 28.623551 
-Q 357.327481 47.626532 384.014221 65.9956 
+    <path d="M 332.614943 28.662881 
+Q 358.790674 47.627674 384.061026 65.936504 
 " style="fill: none; stroke: currentColor; stroke-linecap: round"/>
-    <path d="M 381.853295 62.080195 
-L 384.014221 65.9956 
-L 379.585341 65.375098 
+    <path d="M 381.995267 61.970065 
+L 384.061026 65.936504 
+L 379.648419 65.209249 
 " style="fill: none; stroke: currentColor; stroke-linecap: round"/>
    </g>
    <g id="sabpktext_24">
-    <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: start" x="244.235226" y="23.077397" transform="rotate(-0 244.235226 23.077397)">day 14 (planned end): p = 0.65</text>
+    <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: end" x="371.599701" y="23.077397" transform="rotate(-0 371.599701 23.077397)">day 14 (end): p = 0.65</text>
    </g>
   </g>
  </g>
@@ -1536,7 +1536,7 @@ L 393.878984 167.976
     <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: start; fill: #e8743b" x="132.351712" y="72.697876" transform="rotate(-0 132.351712 72.697876)">week-1 average: +3.9%</text>
    </g>
    <g id="sabnvtext_16">
-    <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: start; fill: #3a9d5d" x="257.403833" y="135.7736" transform="rotate(-0 257.403833 135.7736)">lasting lift = +1%</text>
+    <text fill="currentColor" style="font-size: 10px; font-family: inherit; text-anchor: start; fill: #3a9d5d" x="221.331106" y="109.407181" transform="rotate(-0 221.331106 109.407181)">lasting lift = +1%</text>
    </g>
   </g>
  </g>
