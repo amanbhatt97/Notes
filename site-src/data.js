@@ -211,7 +211,7 @@ const CATEGORIES = [
     {"key": "mlops_lifecycle", "label": "The ML Lifecycle"},
     {"key": "mlops_mlflow", "label": "MLflow & Experiment Tracking"},
     {"key": "grp_mlops_ship", "label": "Shipping Models", "children": [
-      {"key": "mlops_deploy",  "label": "The Map: Shipping Models"},
+      {"key": "mlops_deploy",  "label": "Deployment Patterns"},
       {"key": "mlops_cicd",    "label": "CI/CD for ML"},
       {"key": "mlops_serving", "label": "Model Serving & Inference"},
       {"key": "mlops_k8s",     "label": "Kubernetes for ML"},
