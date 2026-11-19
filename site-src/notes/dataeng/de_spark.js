@@ -289,9 +289,9 @@ from common import spark
 # two day-files written by pandas WITHOUT a pinned type
 os.makedirs("out/drift/order_date=2026-03-02", exist_ok=True)
 os.makedirs("out/drift/order_date=2026-03-03", exist_ok=True)
-pd.DataFrame({"order_id": [101, 102, 103], "delivery_minutes": [32, 41, 38]}) \
+pd.DataFrame({"order_id": [101, 102, 103], "delivery_minutes": [32, 41, 38]}) \\
   .to_parquet("out/drift/order_date=2026-03-02/part-0.parquet")      # all known -&gt; int64
-pd.DataFrame({"order_id": [104, 105], "delivery_minutes": [None, None]}).astype({"delivery_minutes": float}) \
+pd.DataFrame({"order_id": [104, 105], "delivery_minutes": [None, None]}).astype({"delivery_minutes": float}) \\
   .to_parquet("out/drift/order_date=2026-03-03/part-0.parquet")      # gaps -&gt; float64
 
 print(pd.read_parquet("out/drift").shape, "&lt;- pandas reads the folder")
@@ -498,7 +498,7 @@ by_api.show()
 
 def plan(df):                                           # physical plan text without the #ids
     text = df._jdf.queryExecution().executedPlan().toString()
-    return re.sub(r"#\d+L?|plan_id=\d+", "", text)
+    return re.sub(r"#\\d+L?|plan_id=\\d+", "", text)
 print("same physical plan:", plan(by_sql) == plan(by_api))</div>
   <div class="fx" data-lang="text">+------+-------+------+
 |  city|revenue|orders|
@@ -597,7 +597,7 @@ def show_join(label):
     q = revenue_by_city()
     plan = q._jdf.queryExecution().executedPlan().toString().splitlines()
     print(f"--- {label} ---")
-    print("\n".join(l.strip() for l in plan if "Join" in l or "Exchange" in l))
+    print("\\n".join(l.strip() for l in plan if "Join" in l or "Exchange" in l))
     best = 1e9
     for _ in range(3):                                          # best of 3 runs
         t = time.time(); q.write.format("noop").mode("overwrite").save(); best = min(best, time.time() - t)
